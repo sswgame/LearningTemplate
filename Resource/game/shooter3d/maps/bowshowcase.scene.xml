@@ -87,7 +87,7 @@
 					                       _bAnimateWhenOffscreen="false" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.json"
+					                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.xml"
 					                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
 					                           _initialState="Idle"
 					                           _currentState=""

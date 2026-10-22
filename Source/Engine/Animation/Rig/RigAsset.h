@@ -1,6 +1,6 @@
 /**
  * @file RigAsset.h
- * @brief 후처리 리그 에셋(`*.rig.json`)입니다. 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 레지스트리(이름에서 생성 함수로)를 담습니다.
+ * @brief 후처리 리그 에셋(`*.rig.xml`)입니다. 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 레지스트리(이름에서 생성 함수로)를 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -81,14 +81,19 @@ namespace sw
     /**
      * @class RigAsset
      * @brief 리그 하나입니다. 대상과 노드(원형)를 담습니다. 노드 순서가 결과를 바꾸므로 파일 순서 그대로 평가합니다.
-     * @details 형식은 JSON 이며, 모르는 키, 종류, 겹친 이름은 오류다.
+     * @details 형식은 XML 이며, 모르는 속성 · 자식, 종류, 겹친 이름은 오류다. 값은 속성이고, 벡터는 `x,y,z`, 이름 목록과 객체 목록은 칸 이름의 요소 안에 `<item>` 으로 늘어놓는다.
      *          @code
-     *          { "planar": false,
-     *            "targets": [ { "name": "Grip", "socket": "Grip", "unit": "Weapon", "space": "handslot.r" },
-     *                         { "name": "Look", "object": "LookTarget" },
-     *                         { "name": "Chest", "bone": "chest", "unit": "Body", "translation": [0,0,0], "rotation": [0,0,0] } ],
-     *            "nodes": [ { "type": "TwoBoneIK", "name": "LeftHand", "weight": 1, "weight_curve": "HandIK", "weight_slot": "Grip",
-     *                         "root": "upperarm.l", "mid": "lowerarm.l", "end": "hand.l", "target": "Grip", "match_rotation": true } ] }
+     *          <RigAsset planar="false">
+     *            <targets>
+     *              <item name="Grip" socket="Grip" unit="Weapon" space="handslot.r" />
+     *              <item name="Look" object="LookTarget" />
+     *              <item name="Chest" bone="chest" unit="Body" translation="0,0,0" rotation="0,0,0" />
+     *            </targets>
+     *            <nodes>
+     *              <item type="TwoBoneIK" name="LeftHand" weight="1" weight_curve="HandIK" weight_slot="Grip"
+     *                    root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" match_rotation="true" />
+     *            </nodes>
+     *          </RigAsset>
      *          @endcode
      *          대상은 `bone`, `socket`, `object` 중 하나를 쓰고, `rotation` 은 도 단위 [피치, 요, 롤] 이다. 노드 종류별 키는 `README.md` 의 테이블에 있다.
      */
@@ -96,7 +101,7 @@ namespace sw
     {
     public:
         /** @brief 리그 에셋 확장자입니다. */
-        static constexpr string_view kExtension = ".rig.json";
+        static constexpr string_view kExtension = ".rig.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -112,20 +117,20 @@ namespace sw
         /** @brief 캐시가 제자리에서 다시 읽을 때 씁니다. 쓰는 쪽은 내용 번호가 바뀐 것을 보고 다시 바인딩합니다. */
         RigAsset& operator=( RigAsset&& ) noexcept;
 
-        /** @brief JSON 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 모두 비웁니다. */
         void clear();
         /**
-         * @brief 리그 파일 글(@p jsonText)의 노드 `weight` · `enabled` 와 대상 `translation` · `rotation` 을 @p params 의 값으로 바꾼 글을 @p outJSONText 에 씁니다
+         * @brief 리그 파일 글(@p xmlText)의 노드 `weight` · `enabled` 와 대상 `translation` · `rotation` 을 @p params 의 값으로 바꾼 글을 @p outXMLText 에 씁니다
          *        (리그 디버그 창의 "Save to rig" 와 대상 오프셋 기즈모).
-         * @details 다른 키는 그대로 둔다 — 쓰는 쪽이 노드 · 대상 종류를 몰라도 된다. `enabled` 는 끈 노드이거나 파일에 이미 있을 때만, `translation` · `rotation` 은
+         * @details 다른 속성 · 요소는 그대로 둔다 — 쓰는 쪽이 노드 · 대상 종류를 몰라도 된다. `enabled` 는 끈 노드이거나 파일에 이미 있을 때만, `translation` · `rotation` 은
          *          0 · 단위가 아니거나 파일에 이미 있을 때만 쓴다(적지 않음 = 기본). `rotation` 은 도 단위 [피치, 요, 롤]이다(읽기와 같은 배치).
-         *          이름의 노드 · 대상이 없거나 결과가 리그 규칙에 맞지 않으면(다시 읽어 본다) 오류를 남기고 false 이며 @p outJSONText 는 그대로다.
+         *          이름의 노드 · 대상이 없거나 결과가 리그 규칙에 맞지 않으면(다시 읽어 본다) 오류를 남기고 false 이며 @p outXMLText 는 그대로다.
          */
-        [[nodiscard]] static bool rewriteSettings( string_view jsonText, string_view sourceLabel, const RigSaveParams& params, string& outJSONText );
+        [[nodiscard]] static bool rewriteSettings( string_view xmlText, string_view sourceLabel, const RigSaveParams& params, string& outXMLText );
 
         const vector<RigTargetDef>&        getTargets() const { return _listTarget; }
         const vector<unique_ptr<RigNode>>& getNodes() const { return _listNode; }
@@ -137,9 +142,9 @@ namespace sw
         int32 findTargetIndex( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
-        [[nodiscard]] bool parseTarget( const JSONValue& value, string_view sourceLabel );
-        [[nodiscard]] bool parseNode( const JSONValue& value, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
+        [[nodiscard]] bool parseTarget( const XMLNode& value, string_view sourceLabel );
+        [[nodiscard]] bool parseNode( const XMLNode& value, string_view sourceLabel );
 
         vector<RigTargetDef>        _listTarget;
         vector<unique_ptr<RigNode>> _listNode;

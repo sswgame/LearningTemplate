@@ -36,7 +36,7 @@
 
 ## 텍스처
 
-런타임은 DDS만 읽습니다. BC 압축과 밉맵이 이미 끝난 파일입니다. 그래서 `textures/` 폴더에는 `.dds` 와 데이터 파일(`.sprite.json`, `.meta`)만 둡니다.
+런타임은 DDS만 읽습니다. BC 압축과 밉맵이 이미 끝난 파일입니다. 그래서 `textures/` 폴더에는 `.dds` 와 데이터 파일(`.sprite.xml`, `.meta`)만 둡니다.
 
 원본 이미지(PNG, JPG, TGA, HDR 등)는 같은 도메인의 `textures_raw/` 에 같은 상대 경로로 둡니다. 예를 들어 `editor/textures_raw/splash.png` 를 임포트하면 `editor/textures/splash.dds` 가 됩니다.
 포맷, sRGB, 밉맵 규칙은 `Config/Editor/TextureImportConfig.json` 이 정합니다. 쿠킹할 때 `textures_raw/` 는 팩에서 뺍니다.
@@ -54,7 +54,7 @@ BC7 압축은 Debug 빌드에서 느리므로 큰 원본은 Release 빌드의 Ap
 ## 함정과 주의
 
 **임포트와 수집 결과물은 줄 끝 변환을 받지 않게 둡니다.** `.gitattributes` 가 `Resource/**/models_raw/**`, `Resource/**/models/**`, `Resource/**/localization/**` 를 `-text` 로 지정합니다.
-스탬프는 원본과 결과를 바이트 해시로 비교합니다. `core.autocrlf=true` 로 체크아웃하면 `*.skeleton.json` 같은 텍스트 결과물이 CRLF로 바뀌고, 임포트한 워크트리가 아닌 곳에서는 "손으로 고친 파일"로 판정됩니다.
+스탬프는 원본과 결과를 바이트 해시로 비교합니다. `core.autocrlf=true` 로 체크아웃하면 `*.skeleton.xml` 같은 텍스트 결과물이 CRLF로 바뀌고, 임포트한 워크트리가 아닌 곳에서는 "손으로 고친 파일"로 판정됩니다.
 텍스트 결과물을 새로 만들면 같은 규칙에 넣습니다. 넣지 않으면 `App --check-text` 같은 검사가 CRLF 체크아웃에서 "OUT OF DATE" 를 냅니다.
 
 **고아 에셋 검사(`orphans`)는 전체 경로와 파일 이름만 찾습니다.** 코드가 `"game/<게임>/models/" + 이름 + ".mesh"` 처럼 경로를 조립해서 쓰는 메시는 찾지 못합니다.

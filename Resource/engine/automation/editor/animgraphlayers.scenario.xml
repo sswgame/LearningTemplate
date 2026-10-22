@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 레이어 탭(AnimationGraphLayers): 레이어 하나 · 본 마스크 하나를 가진 테스트 그래프
-  (animgraphlayers/animgraphlayers.animgraph.json)를 Quick Open 으로 열고, 인스펙터의 Layers 탭에서 레이어와 마스크를 하나씩 더한다
+  (animgraphlayers/animgraphlayers.animgraph.xml)를 Quick Open 으로 열고, 인스펙터의 Layers 탭에서 레이어와 마스크를 하나씩 더한다
   (탐침 Editor.AnimationGraphLayerCount · Editor.AnimationGraphBoneMaskCount). 저장한 뒤 레이어를 지워도 Load 가 저장한 레이어 둘 · 마스크 둘을 되읽는다 —
   패널이 노드와 링크만 들고 있던 때는 저장이 레이어와 마스크를 버렸다.
   끝에서 더한 레이어와 마스크를 지우고 저장해 테스트 그래프를 처음 모양으로 돌려 둔다(다시 실행해도 같은 상태로 시작한다).
@@ -12,7 +12,7 @@
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><DevCommand line="panel.focus animation_graph"/></At>
 	<At frame="60"><EditorKey key="Ctrl+P"/></At>
-	<At frame="75"><EditorText value="animgraphlayers.animgraph.json"/></At>
+	<At frame="75"><EditorText value="animgraphlayers.animgraph.xml"/></At>
 	<At frame="90"><EditorKey key="Enter"/></At>
 	<At frame="100"><WaitUntil probe="Editor.AnimationGraphLayerCount" equals="1"/></At>
 	<At frame="130"><Expect probe="Editor.AnimationGraphBoneMaskCount" equals="1"/><Expect probe="Editor.AnimationGraphLinkCount" equals="1"/></At>

@@ -1,0 +1,19 @@
+<RigAsset>
+	<targets>
+		<item name="Shoulders" bone="chest" unit="Body" translation="0.0,0.2433,0.0" />
+	</targets>
+	<nodes>
+		<item type="CopyTransform" name="Pin" bone="cape0" target="Shoulders" />
+		<item type="SpringChain" name="Cape" stiffness="0.06" damping="0.12" particle_radius="0.03" min_screen_size="0.07">
+			<bones>
+				<item>cape0</item>
+				<item>cape1</item>
+				<item>cape2</item>
+				<item>cape3</item>
+			</bones>
+			<colliders>
+				<item bone="cape0" shape="Capsule" a="0,-0.15,0.16" b="0,-0.75,0.16" radius="0.2" />
+			</colliders>
+		</item>
+	</nodes>
+</RigAsset>

@@ -25,18 +25,19 @@ namespace
         /** @brief 프레임 넷(각 100 ms)을 도는 반복 구간 `all` 의 클립을 쓰고 경로를 돌려줍니다. */
         static string writeClip()
         {
-            const string clipPath = test::makeTempPath( "walker.sprite.json" );
-            const bool   bWritten = FileUtil::writeTextFile( clipPath, R"({
-  "_atlasPath": "engine/textures/test/quadrants.dds",
-  "_listFrame": [
-    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 100 }
-  ],
-  "_listKey": [],
-  "_listAnimation": [ { "_name": "all", "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1 } ]
-})" );
+            const string clipPath = test::makeTempPath( "walker.sprite.xml" );
+            const bool   bWritten = FileUtil::writeTextFile( clipPath, R"(<SpriteClipAsset _atlasPath="engine/textures/test/quadrants.dds">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0.0,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.5,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.0,0.5,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.5,0.5,0.5,0.5" _durationMs="100" />
+	</_listFrame>
+	<_listKey />
+	<_listAnimation>
+		<SpriteClipAnimation _name="all" _firstFrame="0" _frameCount="4" _bLoop="1" />
+	</_listAnimation>
+</SpriteClipAsset>)" );
             return bWritten ? clipPath : string{};
         }
 

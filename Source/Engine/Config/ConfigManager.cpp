@@ -93,6 +93,43 @@ namespace sw
                 }
             }
         }
+
+        /**
+         * @brief `PROPERTY( Required )` 칸 가운데 @p element 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다. `collectMissingRequired` 의 XML 판입니다.
+         * @details 적는 자리는 속성이거나 자식 요소다. 구조체 칸은 이름이 칸 이름인 자식 요소, 구조체 목록은 칸 이름의 자식 요소 안에 원소가 차례로 들어 있다(`XMLSerializer`).
+         *          그 안으로 들어가 원소마다 본다 — 최상위만 보면 목록 원소 안의 빠진 칸이 초기값으로 읽힌다.
+         */
+        void collectMissingRequiredXML( const XMLNode& element, const TypeInfo& typeInfo, const string& prefix, vector<string>& outListPath )
+        {
+            for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+            {
+                const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+                const XMLNode child    = element.findChild( prop._name.c_str(), false );
+                const bool    bWritten = element.findAttribute( prop._name.c_str(), false ) != nullptr || child.isValid();
+                if ( bWritten == false )
+                {
+                    if ( prop._metadata->_bRequired != SW_FALSE )
+                        outListPath.push_back( path );
+                    continue;
+                }
+                if ( child.isValid() == false )
+                    continue;
+                const bool      bContainer = prop._bIsContainer == SW_TRUE;
+                const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                if ( pNested == nullptr )
+                    continue;
+                if ( bContainer == false )
+                {
+                    collectMissingRequiredXML( child, *pNested, path, outListPath );
+                    continue;
+                }
+                size_t elementIndex{ 0 };
+                for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
+                {
+                    collectMissingRequiredXML( item, *pNested, path + "[" + to_string( static_cast<uint64>( elementIndex ) ) + "]", outListPath );
+                }
+            }
+        }
     } // namespace
 } // namespace sw
 
@@ -148,20 +185,14 @@ namespace sw
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
             SW_LOG_ERROR( "Config %#: '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(), orphan._text.c_str() );
         }
-        // 필수 칸은 속성이나 자식으로 적혀 있어야 한다 — 초기값은 형식이지 기본값이 아니다.
-        const XMLNode element       = document.getRoot();
-        bool          bRequiredRead = true;
-        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        // 필수 칸은 속성이나 자식으로 적혀 있어야 한다(구조체 칸 · 목록 원소 안까지) — 초기값은 형식이지 기본값이 아니다.
+        vector<string> listMissing;
+        collectMissingRequiredXML( document.getRoot(), typeInfo, string(), listMissing );
+        for ( const string& missingPath : listMissing )
         {
-            if ( prop._metadata->_bRequired == SW_FALSE )
-                continue;
-            const bool bWritten = element.findAttribute( prop._name.c_str(), false ) != nullptr || element.findChild( prop._name.c_str(), false ).isValid();
-            if ( bWritten )
-                continue;
-            SW_LOG_ERROR( "Config %#: required '%#' of %# is missing", pSourceLabel, prop._name.c_str(), typeInfo._fullyQualifiedName.c_str() );
-            bRequiredRead = false;
+            SW_LOG_ERROR( "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
-        return bWithinRange && listOrphan.empty() && bRequiredRead;
+        return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
 
     bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )

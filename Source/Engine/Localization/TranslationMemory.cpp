@@ -7,7 +7,8 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -34,30 +35,34 @@ namespace sw
 
 namespace sw
 {
-    bool TranslationMemory::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool TranslationMemory::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        JSONDocument document;
-        string       error;
-        if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
+        XMLDocument document;
+        string      error;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "TranslationMemory", root ) != XMLRootStatus::Found )
+        {
             error = document.getLastError();
-        const JSONValue root    = document.getRoot();
-        const JSONValue entries = root.isObject() ? root.get( "entries", false ) : JSONValue{};
-        if ( error.empty() && ( root.isObject() == false || root.getMemberNames().size() != 2 || entries.isArray() == false || root.has( "culture", false ) == false ) )
-            error = string( sourceName ) + ": needs { \"culture\", \"entries\": [ ... ] } and nothing else";
+            if ( error.empty() )
+                error = string( sourceName ) + ": root must be <TranslationMemory>";
+        }
+        const XMLNode entries = root.findChild( "entries", false );
+        if ( error.empty() && ( XMLReadUtil::hasOnlyKnownNames( root, { "culture" }, { "entries" }, sourceName ) == false || entries.isValid() == false ||
+                                root.findAttribute( "culture", false ) == nullptr ) )
+            error = string( sourceName ) + ": needs <TranslationMemory culture=\"…\"><entries>…</entries></TranslationMemory> and nothing else";
 
         map<string, string> mapPair;
-        for ( size_t index = 0; error.empty() && index < entries.size(); ++index )
+        size_t              index{ 0 };
+        for ( XMLNode entry = entries.findChild(); error.empty() && entry.isValid(); entry = entry.findNextSibling(), ++index )
         {
-            const JSONValue entry           = entries.at( index );
-            const JSONValue source          = entry.get( "source", false );
-            const JSONValue text            = entry.get( "text", false );
-            const bool      bMalformedEntry = entry.isObject() == false || entry.getMemberNames().size() != 2 || source.isString() == false || text.isString() == false;
+            const bool bMalformedEntry = string_view{ entry.getName() } != "entry" || XMLReadUtil::hasOnlyKnownNames( entry, { "source", "text" }, {}, sourceName ) == false ||
+                                         entry.findAttribute( "source", false ) == nullptr || entry.findAttribute( "text", false ) == nullptr;
             if ( bMalformedEntry )
             {
                 error = string( sourceName ) + ": entries[" + to_string( static_cast<uint64>( index ) ) + "] needs exactly \"source\" and \"text\"";
                 break;
             }
-            mapPair[source.asString()] = text.asString();
+            mapPair[string{ entry.getAttributeText( "source", false ) }] = string{ entry.getAttributeText( "text", false ) };
         }
         if ( error.empty() == false )
         {
@@ -65,7 +70,7 @@ namespace sw
                 *pOutError = error;
             return false;
         }
-        _culture         = CultureTable::normalizeCode( root.get( "culture", false ).asString() );
+        _culture         = CultureTable::normalizeCode( root.getAttributeText( "culture", false ) );
         _mapSourceToText = std::move( mapPair );
         return true;
     }
@@ -79,29 +84,27 @@ namespace sw
                 *pOutError = "cannot read '" + string( absolutePath ) + "'";
             return false;
         }
-        return loadFromJSONText( text, absolutePath, pOutError );
+        return loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string TranslationMemory::toJSONText() const
+    string TranslationMemory::toXMLText() const
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        root.set( "culture", false ).setString( _culture );
-        const JSONValue entries = root.set( "entries", false );
-        entries.setArray();
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "TranslationMemory" );
+        root.appendAttribute( "culture", string_view{ _culture } );
+        const XMLNode entries = root.appendChild( "entries" );
         for ( const auto& [source, text] : _mapSourceToText )
         {
-            const JSONValue entry = entries.pushBack();
-            entry.setObject();
-            entry.set( "source", false ).setString( source );
-            entry.set( "text", false ).setString( text );
+            const XMLNode entry = entries.appendChild( "entry" );
+            entry.appendAttribute( "source", string_view{ source } );
+            entry.appendAttribute( "text", string_view{ text } );
         }
-        return document.dump( 4 ) + "\n";
+        return document.saveToString();
     }
 
     bool TranslationMemory::saveToFile( string_view absolutePath ) const
     {
-        const string text = toJSONText();
+        const string text = toXMLText();
         string       existing;
         const bool   bFileContentUnchanged = FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text;
         if ( bFileContentUnchanged )

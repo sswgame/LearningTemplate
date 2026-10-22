@@ -6,7 +6,8 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -64,16 +65,17 @@ namespace sw
         _translationMode = mode;
     }
 
-    bool RetargetProfile::parseJSON( string_view json, string_view sourceLabel )
+    bool RetargetProfile::parseXML( string_view xml, string_view sourceLabel )
     {
         clear();
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RetargetProfile", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Retarget profile '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Retarget profile '%#': malformed XML (expected a <RetargetProfile> root)", sourceLabel );
             return false;
         }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        if ( parseRoot( root, sourceLabel ) )
             return true;
         clear();
         return false;
@@ -88,12 +90,12 @@ namespace sw
             clear();
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    bool RetargetProfile::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool RetargetProfile::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        RigJSONReader reader( root, sourceLabel );
+        RigXMLReader  reader( root, sourceLabel );
         hashed_string sourceSkeleton{};
         hashed_string targetSkeleton{};
         uint32        modeIndex = 0;
@@ -104,16 +106,16 @@ namespace sw
         _targetSkeletonPath = targetSkeleton.empty() ? string{} : string{ targetSkeleton.c_str() };
         _translationMode    = static_cast<RetargetTranslationMode>( modeIndex );
 
-        const JSONValue arrPair[2]  = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
-        const JSONValue chains      = reader.readArray( "chains", true );
-        const JSONValue boneMap     = reader.readArray( "bone_map", false );
-        bool            bMapSame    = false;
-        float32         heightRatio = 0.0f;
-        bOk                         = reader.readBool( "map_same_names", bMapSame, false ) && reader.readFloat( "height_ratio", heightRatio, false ) && bOk;
-        bOk                         = reader.finish() && bOk;
+        const XMLNode    arrPair[2]  = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
+        const RigXMLList chains      = reader.readArray( "chains", true );
+        const RigXMLList boneMap     = reader.readArray( "bone_map", false );
+        bool             bMapSame    = false;
+        float32          heightRatio = 0.0f;
+        bOk                          = reader.readBool( "map_same_names", bMapSame, false ) && reader.readFloat( "height_ratio", heightRatio, false ) && bOk;
+        bOk                          = reader.finish() && bOk;
         if ( bOk == false )
             return false;
-        if ( root.has( "height_ratio" ) && heightRatio <= 0.0f )
+        if ( root.findAttribute( "height_ratio", false ) != nullptr && heightRatio <= 0.0f )
         {
             SW_LOG_ERROR( "Retarget profile '%#': 'height_ratio' must be positive", sourceLabel );
             return false;
@@ -121,9 +123,9 @@ namespace sw
         _bMapSameNames       = bMapSame ? SW_TRUE : SW_FALSE;
         _heightRatioOverride = heightRatio;
 
-        for ( size_t index = 0; index < boneMap.size(); ++index )
+        for ( size_t index = 0; boneMap.isValid() && index < boneMap.size(); ++index )
         {
-            RigJSONReader    entryReader( boneMap.at( index ), sourceLabel );
+            RigXMLReader     entryReader( boneMap.at( index ), sourceLabel );
             RetargetBonePair pair{};
             bOk = entryReader.readName( "source", pair._source, true ) && entryReader.readName( "target", pair._target, true );
             if ( ( entryReader.finish() && bOk ) == false )
@@ -135,7 +137,7 @@ namespace sw
         hashed_string* arrTarget[2] = { &_targetRoot, &_targetPelvis };
         for ( uint32 pairIndex = 0; pairIndex < 2; ++pairIndex )
         {
-            RigJSONReader pairReader( arrPair[pairIndex], sourceLabel );
+            RigXMLReader pairReader( arrPair[pairIndex], sourceLabel );
             bOk = pairReader.readName( "source", *arrSource[pairIndex], true ) && pairReader.readName( "target", *arrTarget[pairIndex], true );
             if ( ( pairReader.finish() && bOk ) == false )
                 return false;
@@ -143,7 +145,7 @@ namespace sw
 
         for ( size_t index = 0; index < chains.size(); ++index )
         {
-            RigJSONReader chainReader( chains.at( index ), sourceLabel );
+            RigXMLReader  chainReader( chains.at( index ), sourceLabel );
             RetargetChain chain{};
             bool          bIKGoal = false;
             bOk                   = chainReader.readName( "name", chain._name, true ) && chainReader.readNameList( "source", chain._listSourceBone, true ) &&

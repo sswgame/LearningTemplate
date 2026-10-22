@@ -1,6 +1,6 @@
 /**
  * @file SkeletonBoneLOD.h
- * @brief 스켈레톤 하나의 본 LOD 테이블(`<이름>.bonelod.json`)입니다. 화면에서 작아진 캐릭터는 끝 본을 계산하지 않습니다(언리얼 스켈레탈 메시 LOD 의 본 줄이기에 해당합니다).
+ * @brief 스켈레톤 하나의 본 LOD 테이블(`<이름>.bonelod.xml`)입니다. 화면에서 작아진 캐릭터는 끝 본을 계산하지 않습니다(언리얼 스켈레탈 메시 LOD 의 본 줄이기에 해당합니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,8 +13,8 @@
 
 namespace sw
 {
-    class JSONValue;
     class Skeleton;
+    class XMLNode;
 
     /**
      * @struct SkeletonBoneLODLevel
@@ -32,8 +32,8 @@ namespace sw
     /**
      * @class SkeletonBoneLOD
      * @brief 스켈레톤 옆에 두는 데이터입니다. 임포트가 다시 써도 지워지지 않게 스켈레톤 파일과 따로 둡니다.
-     *        임포트한 스켈레톤(`a/knight/knight.skeleton.json`)이면 옆 폴더 밖의 `a/knight.bonelod.json` 이고, 옆 폴더는 다시 임포트할 때 통째로 지워집니다. 아니면 같은 폴더의 `<이름>.bonelod.json` 입니다.
-     * @details 형식은 `{ "levels": [ { "max_screen_size": 0.12, "remove": [ "kneeIK.l", ... ] }, ... ] }` 이다. 단계는 화면 크기가 작아지는 순서이고(앞 단계보다
+     *        임포트한 스켈레톤(`a/knight/knight.skeleton.xml`)이면 옆 폴더 밖의 `a/knight.bonelod.xml` 이고, 옆 폴더는 다시 임포트할 때 통째로 지워집니다. 아니면 같은 폴더의 `<이름>.bonelod.xml` 입니다.
+     * @details 형식은 `<SkeletonBoneLOD><levels><level max_screen_size="0.12"><remove><item>kneeIK.l</item>…</remove></level>…</levels></SkeletonBoneLOD>` 이다. 단계는 화면 크기가 작아지는 순서이고(앞 단계보다
      *          `max_screen_size` 가 작아야 한다), 뒤 단계는 앞 단계가 뺀 본을 이어받는다. 화면 크기는 경계 구의 지름이 화면 높이에서 차지하는 비율이다
      *          (`AnimationLODUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라가며, 스키닝에는 그대로 쓰인다.
      *          모르는 키나 스켈레톤에 없는 본 이름은 오류다(`computeMasks`).
@@ -42,7 +42,7 @@ namespace sw
     {
     public:
         /** @brief 본 LOD 파일의 확장자입니다. */
-        static constexpr string_view kExtension = ".bonelod.json";
+        static constexpr string_view kExtension = ".bonelod.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -50,8 +50,8 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `SkeletonBoneLOD.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "SkeletonBoneLOD", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        /** @brief JSON 을 읽습니다. 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 을 읽습니다. 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
 
@@ -70,8 +70,8 @@ namespace sw
         [[nodiscard]] bool computeMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const;
 
         /**
-         * @brief 스켈레톤 경로 옆의 본 LOD 경로를 반환합니다. `a/knight/knight.skeleton.json`(임포트 옆 폴더, 폴더 이름 = 파일 이름)은 `a/knight.bonelod.json`,
-         *        `a/b.skeleton.json` 은 `a/b.bonelod.json` 입니다. 스켈레톤 확장자가 아니면 빈 문자열입니다.
+         * @brief 스켈레톤 경로 옆의 본 LOD 경로를 반환합니다. `a/knight/knight.skeleton.xml`(임포트 옆 폴더, 폴더 이름 = 파일 이름)은 `a/knight.bonelod.xml`,
+         *        `a/b.skeleton.xml` 은 `a/b.bonelod.xml` 입니다. 스켈레톤 확장자가 아니면 빈 문자열입니다.
          */
         static string makePathForSkeleton( string_view skeletonPath );
         /** @brief `makePathForSkeleton` 의 역함수입니다. 본 LOD 경로에서 스켈레톤 후보 둘(임포트 옆 폴더 안, 같은 폴더)을 구합니다. */
@@ -79,7 +79,7 @@ namespace sw
 
     private:
         /** @brief 뿌리 객체를 읽습니다. */
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
         vector<SkeletonBoneLODLevel> _listLevel;
         uint64                       _revision{ 0 };

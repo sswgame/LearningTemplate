@@ -1,6 +1,6 @@
 /**
  * @file SyntheticRigTestUtil.h
- * @brief 합성 리그(`game/empty/rigs_raw/` 의 `.glb` + `.rig.json`, `Scripts/dev/MakeSyntheticRig.py --representatives`)를 임포터로 읽어 런타임 자산(스켈레톤 · 스킨 메시 · 클립 폴더 · 리그)으로 만듭니다.
+ * @brief 합성 리그(`game/empty/rigs_raw/` 의 `.glb` + `.rig.xml`, `Scripts/dev/MakeSyntheticRig.py --representatives`)를 임포터로 읽어 런타임 자산(스켈레톤 · 스킨 메시 · 클립 폴더 · 리그)으로 만듭니다.
  * @details 임포트 테스트(`SyntheticRigImportTest`)와 비용 벤치(`SyntheticRigBenchTest`)가 함께 쓴다. 목록은 폴더의 파일이 정한다 — 대표를 더하면 두 테스트가 같이 받는다.
  */
 #pragma once
@@ -30,7 +30,7 @@ namespace test
         sw::shared_ptr<sw::Skeleton>       _skeleton;   ///< 캐릭터가 나누는 스켈레톤
         sw::shared_ptr<sw::Mesh>           _mesh;       ///< 스킨 · 모프를 포함한 원본 메시
         sw::string                         _clipFolder; ///< 클립을 쓴 임시 폴더(`<클립 이름>.animclip`)
-        sw::shared_ptr<const sw::RigAsset> _rig;        ///< 옆 `.rig.json`
+        sw::shared_ptr<const sw::RigAsset> _rig;        ///< 옆 `.rig.xml`
     };
 
     /** @brief 대표 합성 리그 폴더의 리소스 경로입니다(`MakeSyntheticRig.kRepresentativeFolder`). */
@@ -47,7 +47,7 @@ namespace test
     }
 
     /**
-     * @brief `.glb` 하나를 임포트해 런타임 자산을 만듭니다. 클립은 임시 폴더에 쓰고(애니메이터가 폴더에서 읽는다), 리그는 옆 `.rig.json` 을 디스크에서 읽습니다.
+     * @brief `.glb` 하나를 임포트해 런타임 자산을 만듭니다. 클립은 임시 폴더에 쓰고(애니메이터가 폴더에서 읽는다), 리그는 옆 `.rig.xml` 을 디스크에서 읽습니다.
      * @return 임포트 · 클립 쓰기 · 리그 읽기 가운데 하나라도 실패하면 false 입니다.
      */
     [[nodiscard]] inline bool loadSyntheticRig( const sw::string& glbPath, SyntheticRig& outRig )
@@ -70,12 +70,12 @@ namespace test
         }
         // 리그도 `.glb` 처럼 그 옆 디스크 파일을 임포터처럼 파일로 읽는다. 둘 다 쿠킹에서 빠지는 원본(`rigs_raw`)이라 `ResourceIO` 로 읽으면 배포본(팩만 읽고
         // 절대 경로의 낱개 읽기도 거절한다)에서 찾지 못한다. 한 경로에서 둘을 끌어내므로 임포트 입력과 리그 입력이 다른 곳을 볼 수 없다.
-        const sw::string rigPath = glbPath.substr( 0, glbPath.size() - 4 ) + ".rig.json";
+        const sw::string rigPath = glbPath.substr( 0, glbPath.size() - 4 ) + ".rig.xml";
         sw::string       rigText;
         if ( sw::FileUtil::readTextFile( rigPath, rigText ) == false )
             return false;
         sw::shared_ptr<sw::RigAsset> rig = sw::make_shared<sw::RigAsset>();
-        if ( rig->parseJSON( rigText, rigPath ) == false )
+        if ( rig->parseXML( rigText, rigPath ) == false )
             return false;
         outRig._rig = rig;
         return true;

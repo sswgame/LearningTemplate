@@ -1,7 +1,7 @@
 /**
  * @file LocalizationBinaryTable.h
  * @brief 쿠킹된 이진 번역 표(`.locres`)를 정의합니다. 문화권 하나의 "키 해시 → 화면에 나오는 글" 표를 한 덩어리 바이트로 굳힌 것입니다(언리얼 `.locres`).
- * @details JSON 저작 파일(`*.strings.json`, `<문화권>.translation.json`)은 읽을 때마다 파싱하고 낡은 번역을 가려내야 하지만, 이 표는 **이미 가려낸 결과**라서
+ * @details 저작 파일(`*.strings.xml`, `<문화권>.translation.xml`)은 읽을 때마다 파싱하고 낡은 번역을 가려내야 하지만, 이 표는 **이미 가려낸 결과**라서
  *          그대로 실행 테이블(`StringTable`)에 넣으면 된다. 키 문자열은 담지 않는다(조회는 해시로만 한다) — 원문 수집 · 번역 가져오기에는 JSON 이 계속 정본이다.
  *          형식(리틀 엔디언):
  * @code

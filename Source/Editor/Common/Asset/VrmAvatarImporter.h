@@ -1,6 +1,6 @@
 /**
  * @file VrmAvatarImporter.h
- * @brief VRM 의 아바타 정보(humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭)를 읽어 엔진 이름(본 · 모프 타깃)으로 풀고, 모델 옆 폴더의 `<이름>.avatar.json` 으로 씁니다.
+ * @brief VRM 의 아바타 정보(humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭)를 읽어 엔진 이름(본 · 모프 타깃)으로 풀고, 모델 옆 폴더의 `<이름>.avatar.xml` 로 씁니다.
  * @details 0.x(`extensions.VRM` 의 humanoid · blendShapeMaster · secondaryAnimation · firstPerson)와 1.0(`VRMC_vrm` · `VRMC_springBone`)을 한 모양으로 모은다.
  *          이름은 1.0 의 것을 쓴다(0.x 의 표정 프리셋 joy 는 happy, 엄지 Proximal 은 Metacarpal). 본은 glTF 노드 번호가 아니라 스켈레톤 본 이름이고,
  *          표정은 메시 · 타깃 번호가 아니라 엔진 메시의 모프 타깃 이름이다(`ModelImportUtil::makeMorphTargetName` 과 같은 규칙).
@@ -177,16 +177,16 @@ namespace sw::editor
 {
     /**
      * @struct VrmAvatarImporter
-     * @brief VRM 아바타 정보 읽기와 `.avatar.json` 쓰기를 담당합니다. 모든 함수가 static 입니다.
+     * @brief VRM 아바타 정보 읽기와 `.avatar.xml` 쓰기를 담당합니다. 모든 함수가 static 입니다.
      * @details 번호가 범위를 벗어나면(없는 노드 · 메시 · 모프 타깃) 오류다. 모르는 키와, 알지만 옮기지 않는 값(시선 · 머티리얼 표정 · humanoid 관절 한계)은
      *          @p pOutListIgnored 에 경로를 모은다. 호출하는 쪽이 경고로 알린다. 아바타 정보는 모델 없이도 그릴 수 있는 부가 정보라 모르는 키로 임포트를 막지 않는다.
      */
     struct VrmAvatarImporter
     {
-        /** @brief 모델 옆 폴더에 쓰는 아바타 파일의 접미사입니다(`<이름>.avatar.json`). */
-        static constexpr string_view kExtension = ".avatar.json";
+        /** @brief 모델 옆 폴더에 쓰는 아바타 파일의 접미사입니다(`<이름>.avatar.xml`). */
+        static constexpr string_view kExtension = ".avatar.xml";
         /** @brief 아바타 파일의 형식과 읽기 규칙 버전입니다. 바꾸면 올립니다. VRM 원본의 해시에 섞여 다시 임포트하게 합니다. */
-        static constexpr uint32 kVersion = 2; // 2: 얼굴 리그 · 후처리 리그도 쓴다(VrmRuntimeAssets)
+        static constexpr uint32 kVersion = 3; // 2: 얼굴 리그 · 후처리 리그도 쓴다(VrmRuntimeAssets), 3: 아바타 파일이 XML(`.avatar.xml`)
 
         /**
          * @brief VRM 0.x 의 `extensions.VRM` 을 읽습니다.
@@ -203,7 +203,7 @@ namespace sw::editor
         [[nodiscard]] static bool readVrm1Avatar( const JSONValue& vrmcVrm, const JSONValue& vrmcSpringBone, const VrmGltfNames& names, VrmAvatarDef& outDef,
                                                   vector<string>* pOutListIgnored, string& outError );
 
-        /** @brief 아바타 정보를 `.avatar.json` 문자열로 만듭니다. 같은 값이면 같은 바이트입니다. */
-        static string makeAvatarJSON( const VrmAvatarDef& def );
+        /** @brief 아바타 정보를 `.avatar.xml` 문자열로 만듭니다. 같은 값이면 같은 바이트입니다. */
+        static string makeAvatarXML( const VrmAvatarDef& def );
     };
 } // namespace sw::editor

@@ -1,0 +1,41 @@
+<SequenceAsset _frameMin="0"
+               _frameMax="100"
+               _note="sequencerkeys scenario: key GameCamera location X at two frames"
+               _cameraBlendInSeconds="0"
+               _cameraBlendOutSeconds="0"
+               _cameraPrerollFrames="0">
+	<_listItem />
+	<_listTrack>
+		<SequenceKeyTrack _name="Move" _targetObject="GameCamera" _propertyPath="" _kind="Transform">
+			<_listChannel>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+				<FloatCurve>
+					<_listKey />
+				</FloatCurve>
+			</_listChannel>
+		</SequenceKeyTrack>
+	</_listTrack>
+</SequenceAsset>

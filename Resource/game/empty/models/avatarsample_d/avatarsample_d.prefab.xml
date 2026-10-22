@@ -6,7 +6,7 @@
 			                       _meshID="game/empty/models/avatarsample_d.mesh"
 			                       _materialPath="game/empty/models/avatarsample_d/materials/f00_000_00_facemouth_00_face.material"
 			                       _sectionName="f00_000_00_facemouth_00_face_tp"
-			                       _skeletonPath="game/empty/models/avatarsample_d/avatarsample_d.skeleton.json" />
+			                       _skeletonPath="game/empty/models/avatarsample_d/avatarsample_d.skeleton.xml" />
 			<MeshSectionComponent _componentName="MeshSectionComponent"
 			                      _bActive="true"
 			                      _attachComponent="SkeletalMeshComponent#0"
@@ -99,10 +99,10 @@
 			                      _sectionName="f00_000_hair_00_hair_02_tp" />
 			<FacialAnimationComponent _componentName="FacialAnimationComponent"
 			                          _bActive="true"
-			                          _facialRigPath="game/empty/models/avatarsample_d/avatarsample_d.facial.json" />
+			                          _facialRigPath="game/empty/models/avatarsample_d/avatarsample_d.facial.xml" />
 			<PoseModifierComponent _componentName="PoseModifierComponent"
 			                       _bActive="true"
-			                       _rigPath="game/empty/models/avatarsample_d/avatarsample_d.rig.json" />
+			                       _rigPath="game/empty/models/avatarsample_d/avatarsample_d.rig.xml" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

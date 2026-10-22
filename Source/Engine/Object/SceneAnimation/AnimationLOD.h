@@ -2,7 +2,7 @@
  * @file AnimationLOD.h
  * @brief 애니메이션 LOD — 뷰(카메라 절두체) 가시성 · 화면 크기별 갱신 주기(URO) · 본 LOD · 중요도 예산(언리얼 Animation Budget Allocator)의 데이터와 식입니다.
  * @details 판정은 `AnimationSystem::updateLOD` 가 게임 스레드에서 프레임마다 한 번 합니다. 뷰는 엔진 루프가 주 시점 + 추가 뷰(화면 사각형 · 렌더 텍스처)로
- *          넣습니다(`AnimationSystem::setLODViews`). 표(단계 · 예산)는 데이터(`engine/animation/animationlod.json`)입니다.
+ *          넣습니다(`AnimationSystem::setLODViews`). 표(단계 · 예산)는 데이터(`engine/animation/animationlod.xml`)입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -84,10 +84,10 @@ namespace sw
 {
     /**
      * @struct AnimationLODSettings
-     * @brief LOD 표(데이터)입니다(`engine/animation/animationlod.json`). 단계는 `_minScreenSize` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다(`validate`).
+     * @brief LOD 표(데이터)입니다(`engine/animation/animationlod.xml`). 단계는 `_minScreenSize` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다(`validate`).
      * @details `_offscreenUpdateRateDivisor` 가 0 이면 화면 밖 유닛은 포즈를 만들지 않습니다(시간 · 알림은 흐릅니다). `_budgetMilliseconds` 가 0 이면 예산을 보지 않습니다.
      *          `_vertexAnimationScreenSize` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
-     *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
      */
     REFLECT()
     struct SW_API AnimationLODSettings
@@ -95,7 +95,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 표 파일의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/animation/animationlod.json";
+        static constexpr string_view kResourcePath = "engine/animation/animationlod.xml";
 
         PROPERTY( Tooltip = "Update-rate levels from the largest on-screen size to 0 (at least one; the last must start at 0)" )
         vector<AnimationLODRateLevel> _listRateLevel;
@@ -108,8 +108,8 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Crowd units smaller than this on screen are drawn with vertex animation (0: never)" )
         float32 _vertexAnimationScreenSize{ 0.0f };
 
-        /** @brief JSON 을 읽고 검사합니다. 모르는 키 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 을 읽고 검사합니다. 모르는 속성 · 자식 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 단계가 비지 않았고, `_minScreenSize` 가 줄어드는 순이며, 마지막이 0 인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */

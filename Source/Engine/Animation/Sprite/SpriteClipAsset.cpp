@@ -8,7 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -65,8 +65,8 @@ namespace sw
     bool SpriteClipAsset::loadText( const string& text, string_view sourceLabel )
     {
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값은 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, text, label.c_str() ) && resolveLoadedValues( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), text, label.c_str() ) && resolveLoadedValues( sourceLabel ) )
             return true;
         clear();
         return false;
@@ -77,13 +77,13 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 
-    bool SpriteClipAsset::parseJSON( string_view json )
+    bool SpriteClipAsset::parseXML( string_view xml )
     {
         clear();
-        if ( ConfigManager::readConfigJSON( *this, json, "<sprite clip text>" ) && resolveLoadedValues( "<sprite clip text>" ) )
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, "<sprite clip text>" ) && resolveLoadedValues( "<sprite clip text>" ) )
             return true;
         clear();
         return false;
@@ -179,9 +179,9 @@ namespace sw
         return droppedCount;
     }
 
-    string SpriteClipAsset::toJSON() const
+    string SpriteClipAsset::toXML() const
     {
-        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
+        return XMLSerializer::serialize( this, *StaticType() );
     }
 
     const SpriteClipFrame* SpriteClipAsset::findFrame( int32 frameIndex ) const

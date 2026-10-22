@@ -121,18 +121,40 @@ SW_TEST_CASE( AnimationGraphLayersTest, BoneMaskPropagatesRootsAndOverridesSingl
 }
 
 /**
- * @brief [AnimationGraphLayersTest] 그래프 JSON — 본 마스크와 레이어를 읽고, 쓰고 다시 읽어도 같다
+ * @brief [AnimationGraphLayersTest] 그래프 XML — 본 마스크와 레이어를 읽고, 쓰고 다시 읽어도 같다
  */
-SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughJSON )
+SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughXML )
 {
-    const string_view   json = R"({ "nodes": [ { "id": 1, "name": "Idle" } ],
-        "bone_masks": [ { "name": "Upper", "roots": [ { "bone": "spine", "weight": 1 } ], "bones": [ { "bone": "spine", "weight": 0.5 } ] } ],
-        "layers": [ { "name": "Aim", "clip": "AimClip", "mask": "Upper", "weight": 0.75, "blend": "Additive", "loop": false, "weight_param": "AimWeight", "half_life": 0.15 },
-                    { "name": "Breath", "clip": "BreathClip", "weight": 1, "blend": "Override" } ] })";
+    const string_view   json = R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" />
+	</nodes>
+	<bone_masks>
+		<bone_mask name="Upper">
+			<roots>
+				<entry bone="spine" weight="1" />
+			</roots>
+			<bones>
+				<entry bone="spine" weight="0.5" />
+			</bones>
+		</bone_mask>
+	</bone_masks>
+	<layers>
+		<layer name="Aim"
+		       clip="AimClip"
+		       mask="Upper"
+		       weight="0.75"
+		       blend="Additive"
+		       loop="false"
+		       weight_param="AimWeight"
+		       half_life="0.15" />
+		<layer name="Breath" clip="BreathClip" weight="1" blend="Override" />
+	</layers>
+</AnimationGraphAsset>)";
     AnimationGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJSON( json ) );
+    SW_ASSERT_TRUE( parsed.parseXML( json ) );
     AnimationGraphAsset again;
-    SW_ASSERT_TRUE( again.parseJSON( parsed.toJSON() ) );
+    SW_ASSERT_TRUE( again.parseXML( parsed.toXML() ) );
     for ( const AnimationGraphAsset* pGraph : { &parsed, &again } )
     {
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pGraph->_listBoneMask.size() ) );
@@ -167,7 +189,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughJSON )
 SW_TEST_CASE( AnimationGraphLayersTest, Shooter3DPlayerGraphCarriesTheUpperBodyLayers )
 {
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.loadFromFile( "game/shooter3d/data/anim/adventurer.animgraph.json" ) );
+    SW_ASSERT_TRUE( graph.loadFromFile( "game/shooter3d/data/anim/adventurer.animgraph.xml" ) );
     const AnimationBoneMaskDef* pMask = graph.findBoneMask( "UpperBody" );
     SW_ASSERT_NOT_NULL( pMask );
     SW_EXPECT_FALSE( pMask->_listEntry.empty() );
@@ -186,21 +208,21 @@ SW_TEST_CASE( AnimationGraphLayersTest, Shooter3DPlayerGraphCarriesTheUpperBodyL
  */
 SW_TEST_CASE( AnimationGraphLayersTest, InvalidLayerDataFailsTheGraphLoad )
 {
-    const string_view arrJSON[] = {
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "mask": "Nope", "weight": 1, "blend": "Override" } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1, "blend": "Multiply" } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "blend": "Override" } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1.5, "blend": "Override" } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "layers": [ { "name": "A", "clip": "C", "weight": 1, "blend": "Override", "half_life": 0 } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M", "file": "x.bonemask.json", "roots": [ { "bone": "b", "weight": 1 } ] } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M", "roots": [ { "bone": "b", "weight": 1 } ] }, { "name": "M", "roots": [ { "bone": "b", "weight": 1 } ] } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M" } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "Idle" } ], "bone_masks": [ { "name": "M", "roots": [ { "bone": "b" } ] } ] })",
+    const string_view arrXML[] = {
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><layers><layer name="A" clip="C" mask="Nope" weight="1" blend="Override" /></layers></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><layers><layer name="A" clip="C" weight="1" blend="Multiply" /></layers></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><layers><layer name="A" clip="C" blend="Override" /></layers></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><layers><layer name="A" clip="C" weight="1.5" blend="Override" /></layers></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><layers><layer name="A" clip="C" weight="1" blend="Override" half_life="0" /></layers></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M" file="x.bonemask.xml"><roots><entry bone="b" weight="1" /></roots></bone_mask></bone_masks></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M"><roots><entry bone="b" weight="1" /></roots></bone_mask><bone_mask name="M"><roots><entry bone="b" weight="1" /></roots></bone_mask></bone_masks></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M" /></bone_masks></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><bone_masks><bone_mask name="M"><roots><entry bone="b" /></roots></bone_mask></bone_masks></AnimationGraphAsset>)",
     };
-    for ( const string_view json : arrJSON )
+    for ( const string_view json : arrXML )
     {
         AnimationGraphAsset graph;
-        SW_EXPECT_FALSE( graph.parseJSON( json ) );
+        SW_EXPECT_FALSE( graph.parseXML( json ) );
         SW_EXPECT_TRUE( graph._listNode.empty() );
         SW_EXPECT_TRUE( graph._listLayer.empty() );
         SW_EXPECT_TRUE( graph._listBoneMask.empty() );
@@ -228,7 +250,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, AnimatorPlaysBlendSpaceStateFromGraph )
     node._blendSpace._space.addSample( float2{ 0.0f, 0.0f }, hashed_string( "Slow" ) );
     node._blendSpace._space.addSample( float2{ 1.0f, 0.0f }, hashed_string( "Fast" ) );
     graph._listNode.push_back( node );
-    const string graphPath = FileUtil::joinPath( folder, "move.animgraph.json" );
+    const string graphPath = FileUtil::joinPath( folder, "move.animgraph.xml" );
     SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
 
     GameObjectManager manager;
@@ -282,27 +304,60 @@ SW_TEST_CASE( AnimationGraphLayersTest, BlendSpaceStateFiresSampleClipNotifies )
     struct ModeCase
     {
         const utf8* _pMode;
-        const utf8* _pJSON;
+        const utf8* _pXML;
         float32     _speed;
         uint32      _expectedCount;
     };
     const ModeCase arrCase[] = {
-        {           "all",            R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "all",
-              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+        {           "all", R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Move">
+			<blend_space x="Speed" notify="all">
+				<samples>
+					<sample clip="Slow" x="0" />
+					<sample clip="Fast" x="1" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+	<links />
+</AnimationGraphAsset>)",
          0.5f, 2u },
-        {"highest_weight", R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "highest_weight",
-              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+        {"highest_weight", R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Move">
+			<blend_space x="Speed" notify="highest_weight">
+				<samples>
+					<sample clip="Slow" x="0" />
+					<sample clip="Fast" x="1" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+	<links />
+</AnimationGraphAsset>)",
          0.25f, 1u},
-        {          "none",           R"({ "nodes": [ { "id": 1, "name": "Move", "blend_space": { "x": "Speed", "notify": "none",
-              "samples": [ { "clip": "Slow", "x": 0 }, { "clip": "Fast", "x": 1 } ] } } ], "links": [] })",
+        {          "none", R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Move">
+			<blend_space x="Speed" notify="none">
+				<samples>
+					<sample clip="Slow" x="0" />
+					<sample clip="Fast" x="1" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+	<links />
+</AnimationGraphAsset>)",
          0.5f, 0u },
     };
     for ( const ModeCase& modeCase : arrCase )
     {
         AnimationGraphAsset graph;
-        SW_ASSERT_TRUE( graph.parseJSON( modeCase._pJSON ) );
+        SW_ASSERT_TRUE( graph.parseXML( modeCase._pXML ) );
         fixed_string<constant::kMaxBuffer64> fileName;
-        formatstring( fileName.data(), fileName.capacity(), "%#.animgraph.json", modeCase._pMode );
+        formatstring( fileName.data(), fileName.capacity(), "%#.animgraph.xml", modeCase._pMode );
         const string graphPath = FileUtil::joinPath( folder, fileName.c_str() );
         SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
 
@@ -371,7 +426,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, GraphLayerMasksUpperBodyFromData )
     layer._weight          = 1.0f;
     layer._blend           = AnimationLayerBlend::Override;
     graph._listLayer.push_back( layer );
-    const string graphPath = FileUtil::joinPath( folder, "layers.animgraph.json" );
+    const string graphPath = FileUtil::joinPath( folder, "layers.animgraph.xml" );
     SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
 
     GameObjectManager manager;
@@ -459,9 +514,18 @@ SW_TEST_CASE( AnimationGraphLayersTest, InertializationSkipsPoseNobodySaw )
     SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Idle", 0.0f, 31 ) );
     SW_ASSERT_TRUE( TestAnimationGraphLayersInternal::saveOffsetClip( skeleton, folder, "Walk", 2.0f, 31 ) );
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( R"({ "nodes": [ { "id": 1, "name": "Idle" }, { "id": 2, "name": "Walk" } ],
-        "links": [ { "id": 1, "from": 1, "to": 2, "blend_mode": "inertialization", "half_life": 0.2, "condition": { "param": "Speed", "op": ">", "value": 0.5 } } ] })" ) );
-    const string graphPath = FileUtil::joinPath( folder, "walk.animgraph.json" );
+    SW_ASSERT_TRUE( graph.parseXML( R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" />
+		<node id="2" name="Walk" />
+	</nodes>
+	<links>
+		<link id="1" from="1" to="2" blend_mode="inertialization" half_life="0.2">
+			<condition param="Speed" op="&gt;" value="0.5" />
+		</link>
+	</links>
+</AnimationGraphAsset>)" ) );
+    const string graphPath = FileUtil::joinPath( folder, "walk.animgraph.xml" );
     SW_ASSERT_TRUE( graph.saveToFile( graphPath ) );
 
     for ( const bool bHiddenDuringTransition : { false, true } )
@@ -527,7 +591,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, UnplayableGraphIsNotUsed )
     layer._weight   = 1.0f;
     layer._blend    = AnimationLayerBlend::Override;
     layerGraph._listLayer.push_back( layer );
-    const string layerGraphPath = FileUtil::joinPath( folder, "missing_layer.animgraph.json" );
+    const string layerGraphPath = FileUtil::joinPath( folder, "missing_layer.animgraph.xml" );
     SW_ASSERT_TRUE( layerGraph.saveToFile( layerGraphPath ) );
 
     GameObjectManager manager;

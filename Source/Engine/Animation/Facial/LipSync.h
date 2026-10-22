@@ -42,8 +42,8 @@ namespace sw
 {
     /**
      * @struct LipSyncSettings
-     * @brief 분석 표(데이터, `engine/animation/lipsync.json`)입니다. 첫 비즘은 무음(sil)으로 씁니다.
-     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     * @brief 분석 표(데이터, `engine/animation/lipsync.xml`)입니다. 첫 비즘은 무음(sil)으로 씁니다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
      *          대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
      */
     REFLECT()
@@ -52,7 +52,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 테이블 파일의 리소스 경로입니다. */
-        static constexpr string_view kResourcePath = "engine/animation/lipsync.json";
+        static constexpr string_view kResourcePath = "engine/animation/lipsync.xml";
 
         PROPERTY( Tooltip = "Visemes the analysis picks from (at least two; the first one is silence)" )
         vector<LipSyncViseme> _listViseme;
@@ -77,8 +77,8 @@ namespace sw
         PROPERTY( Tooltip = "Viseme the amplitude drives when there is no track" )
         hashed_string _fallbackViseme;
 
-        /** @brief JSON 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
@@ -91,13 +91,13 @@ namespace sw
 {
     /**
      * @struct VisemeTrack
-     * @brief 비즘 가중치 트랙(곡선 묶음)입니다. 프레임 × 비즘 가중치이며, `<음성>.visemes.json` 으로 저장합니다(`App --import-lipsync`, `LipSyncImport`).
-     * @details 형식은 `{ "frame_rate", "visemes": [ 이름 ... ], "frames": [ [ 가중치 ... ] ... ] }` 이다.
+     * @brief 비즘 가중치 트랙(곡선 묶음)입니다. 프레임 × 비즘 가중치이며, `<음성>.visemes.xml` 로 저장합니다(`App --import-lipsync`, `LipSyncImport`).
+     * @details 형식은 `<VisemeTrack _frameRate="30"><_listViseme><item>이름</item>…</_listViseme><_listFrame><Frame>가중치,가중치,…</Frame>…</_listFrame></VisemeTrack>` 이다.
      */
     struct SW_API VisemeTrack
     {
         /** @brief 트랙 파일 확장자입니다(음성 파일의 확장자를 이것으로 바꾼다). */
-        static constexpr string_view kExtension = ".visemes.json";
+        static constexpr string_view kExtension = ".visemes.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -115,11 +115,11 @@ namespace sw
         /** @brief 시각 @p time(초)의 비즘 가중치들입니다(두 프레임 사이 선형). @p outListWeight 는 비즘 수입니다. 끝을 지나면 모두 0 입니다. */
         void sample( float32 time, vector<float32>& outListWeight ) const;
 
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
-        string             toJSON() const;
+        string             toXML() const;
         [[nodiscard]] bool saveToFile( string_view path ) const;
-        /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.json`). */
+        /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.xml`). */
         static string makePathForAudio( string_view audioPath );
     };
 } // namespace sw

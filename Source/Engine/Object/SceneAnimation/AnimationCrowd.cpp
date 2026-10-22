@@ -7,7 +7,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -15,7 +14,8 @@
 #include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -51,16 +51,17 @@ namespace sw
 
 namespace sw
 {
-    bool AnimationCrowdSettings::parseJSON( string_view json, string_view sourceLabel )
+    bool AnimationCrowdSettings::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = AnimationCrowdSettings{};
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "AnimationCrowdSettings", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Animation crowd settings '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Animation crowd settings '%#': malformed XML (expected an <AnimationCrowdSettings> root)", sourceLabel );
             return false;
         }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        if ( parseRoot( root, sourceLabel ) )
             return true;
         *this = AnimationCrowdSettings{};
         return false;
@@ -75,17 +76,17 @@ namespace sw
             *this = AnimationCrowdSettings{};
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    bool AnimationCrowdSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, {}, sourceLabel ) == false )
             return false;
         // 셋 다 필수다. 범위 밖 값은 자르지 않고 거절한다.
-        const std::optional<uint32>  variations            = root.readRequired<uint32>( "variations_per_clip" );
-        const std::optional<float32> keep                  = root.readRequired<float32>( "bucket_keep_seconds" );
-        const std::optional<float32> frameRate             = root.readRequired<float32>( "vertex_animation_frames_per_second" );
+        const std::optional<uint32>  variations            = root.readRequiredAttribute<uint32>( "variations_per_clip" );
+        const std::optional<float32> keep                  = root.readRequiredAttribute<float32>( "bucket_keep_seconds" );
+        const std::optional<float32> frameRate             = root.readRequiredAttribute<float32>( "vertex_animation_frames_per_second" );
         const bool                   bAllRead              = variations.has_value() && keep.has_value() && frameRate.has_value();
         const bool                   bInvalidCrowdSettings = bAllRead == false || *variations < 1 || *keep < 0.0f || *frameRate <= 0.0f;
         if ( bInvalidCrowdSettings )

@@ -20,7 +20,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 시퀀서 — 타임라인 프레임 적용 · 이벤트 교차 판정 · 키 트랙 · 카메라 컷 · JSON 왕복.
+// 시퀀서 — 타임라인 프레임 적용 · 이벤트 교차 판정 · 키 트랙 · 카메라 컷 · XML 왕복.
 
 namespace sw
 {
@@ -239,12 +239,12 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
 }
 
 /**
- * @brief [SequencerTest] JSON 왕복이 값을 잃지 않는다 (파일 경유 포함)
- * @details loadFromFile 과 parseJSON 은 같은 읽기(`readText`)로 모인다. 이 테스트는 파일 경로가 같은 결과를 내는지 본다.
+ * @brief [SequencerTest] XML 왕복이 값을 잃지 않는다 (파일 경유 포함)
+ * @details loadFromFile 과 parseXML 은 같은 읽기(`readText`)로 모인다. 이 테스트는 파일 경로가 같은 결과를 내는지 본다.
  */
-SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
+SW_TEST_CASE( SequencerTest, XMLRoundTripThroughFileKeepsValues )
 {
-    const sw::string  path   = test::makeTempPath( "sw_test_sequence.json" );
+    const sw::string  path   = test::makeTempPath( "sw_test_sequence.seq.xml" );
     sw::SequenceAsset source = sw::makeSequenceWithFirstFrameEvent();
     source._note             = "round trip";
     SW_ASSERT_TRUE( source.saveToFile( path ) );
@@ -272,7 +272,7 @@ SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
 
 /**
  * @brief [SequencerTest] 파싱이 실패하면 애셋에 반쯤 남은 상태가 없다
- * @details parseJSON 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아,
+ * @details parseXML 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아,
  *          트랙 없는 옛 시퀀스가 새 시퀀스인 척한다.
  */
 SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
@@ -283,7 +283,7 @@ SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( asset.parseJSON( "{ this is not json" ) );
+        SW_EXPECT_FALSE( asset.parseXML( "<SequenceAsset _frameMin=\"0\" this is not xml" ) );
     }
 
     SW_EXPECT_TRUE( asset._listItem.empty() );
@@ -331,16 +331,16 @@ SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
 
 /**
  * @brief [SequencerTest] 파일이 준 프레임 번호가 `kSequenceFrameLimit` 밖이거나 끝이 시작보다 앞이면 읽지 않는다
- * @details 프레임 번호는 JSON 에서 온다. int32 최대값이 그대로 들어오면 `_frameMax - _frameMin` 과 트랙의 `_end - _start` 가
+ * @details 프레임 번호는 파일에서 온다. int32 최대값이 그대로 들어오면 `_frameMax - _frameMin` 과 트랙의 `_end - _start` 가
  *          부호 있는 넘침이 된다. 예전에는 잘라서 읽었지만 잘린 값은 파일이 말한 값이 아니므로 읽기 오류로 멈춘다.
  */
 SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
 {
     test::ScopedDefensiveTestLog expected( "frame numbers past the sequence frame limit" );
     sw::SequenceAsset            asset;
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 2147483647, "_frameMax": 0 })" ) );
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 0, "_frameMax": 10, "_listItem": [ { "_name": "Wide", "_start": 2147483647, "_end": -2147483648 } ] })" ) );
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_frameMin": 10, "_frameMax": 10 })" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="2147483647" _frameMax="0" />)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="0" _frameMax="10"><_listItem><SequenceTrackItem _name="Wide" _start="2147483647" _end="-2147483648" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<SequenceAsset _frameMin="10" _frameMax="10" />)" ) );
     SW_EXPECT_TRUE( asset._listItem.empty() );
     SW_EXPECT_EQUAL( 0, asset._frameMin );
     SW_EXPECT_EQUAL( 100, asset._frameMax );
@@ -465,89 +465,77 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 
 /**
  * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 열거자 이름, 키 트랙은 채널마다 키 배열), 모르는 종류 이름은 읽기 오류다
- * @details 아래 문서는 `toJSON` 출력이다. 종류는 리플렉션 열거자 이름이 정본이다 — 모르는 이름(새 버전의 종류, 옛 정수)을 읽어 두고
+ * @details 아래 문서는 `toXML` 출력이다. 종류는 리플렉션 열거자 이름이 정본이다 — 모르는 이름(새 버전의 종류, 옛 정수)을 읽어 두고
  *          적용만 하지 않던 예전 규칙은 없앴다(출시한 데이터가 없어 별칭 · 호환을 두지 않는다).
  */
 SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsKindNames )
 {
-    const sw::string_view kSequenceJSON = R"({
-  "_frameMin": 0,
-  "_frameMax": 48,
-  "_note": "golden",
-  "_listItem": [
-    {
-      "_name": "Walk",
-      "_targetObject": "Hero",
-      "_preset": "",
-      "_start": 0,
-      "_end": 24,
-      "_prerollFrames": -1,
-      "_amplitude": 1,
-      "_color": 4289364096,
-      "_kind": "Clip"
-    },
-    {
-      "_name": "Door",
-      "_targetObject": "Gate",
-      "_preset": "",
-      "_start": 12,
-      "_end": 12,
-      "_prerollFrames": -1,
-      "_amplitude": 1,
-      "_color": 4286611626,
-      "_kind": "Event"
-    }
-  ],
-  "_listTrack": [
-    {
-      "_name": "Priority",
-      "_targetObject": "Hero",
-      "_propertyPath": "CameraComponent._priority",
-      "_listChannel": [
-        {
-          "_listKey": [
-            {
-              "_time": 0,
-              "_value": 1,
-              "_arriveTangent": 0,
-              "_leaveTangent": 0,
-              "_interpolation": "Cubic",
-              "_bAutoTangent": true
-            },
-            {
-              "_time": 24,
-              "_value": 3,
-              "_arriveTangent": 0,
-              "_leaveTangent": 0,
-              "_interpolation": "Linear",
-              "_bAutoTangent": true
-            }
-          ]
-        }
-      ],
-      "_kind": "Property"
-    }
-  ],
-  "_cameraBlendInSeconds": 0,
-  "_cameraBlendOutSeconds": 0,
-  "_cameraPrerollFrames": 0
-})";
+    const sw::string_view kSequenceXML = R"(<SequenceAsset _frameMin="0"
+               _frameMax="48"
+               _note="golden"
+               _cameraBlendInSeconds="0"
+               _cameraBlendOutSeconds="0"
+               _cameraPrerollFrames="0">
+	<_listItem>
+		<SequenceTrackItem _name="Walk"
+		                   _targetObject="Hero"
+		                   _preset=""
+		                   _start="0"
+		                   _end="24"
+		                   _prerollFrames="-1"
+		                   _amplitude="1"
+		                   _color="4289364096"
+		                   _kind="Clip" />
+		<SequenceTrackItem _name="Door"
+		                   _targetObject="Gate"
+		                   _preset=""
+		                   _start="12"
+		                   _end="12"
+		                   _prerollFrames="-1"
+		                   _amplitude="1"
+		                   _color="4286611626"
+		                   _kind="Event" />
+	</_listItem>
+	<_listTrack>
+		<SequenceKeyTrack _name="Priority" _targetObject="Hero" _propertyPath="CameraComponent._priority" _kind="Property">
+			<_listChannel>
+				<FloatCurve>
+					<_listKey>
+						<FloatCurveKey _time="0"
+						               _value="1"
+						               _arriveTangent="0"
+						               _leaveTangent="0"
+						               _interpolation="Cubic"
+						               _bAutoTangent="true" />
+						<FloatCurveKey _time="24"
+						               _value="3"
+						               _arriveTangent="0"
+						               _leaveTangent="0"
+						               _interpolation="Linear"
+						               _bAutoTangent="true" />
+					</_listKey>
+				</FloatCurve>
+			</_listChannel>
+		</SequenceKeyTrack>
+	</_listTrack>
+</SequenceAsset>
+)";
 
     sw::SequenceAsset asset;
-    SW_ASSERT_TRUE( asset.parseJSON( kSequenceJSON ) );
+    SW_ASSERT_TRUE( asset.parseXML( kSequenceXML ) );
     SW_ASSERT_EQUAL( size_t( 2 ), asset._listItem.size() );
     SW_EXPECT_TRUE( asset._listItem[0]._kind == sw::SequenceItemKind::Clip );
     SW_EXPECT_TRUE( asset._listItem[1]._kind == sw::SequenceItemKind::Event );
     SW_ASSERT_EQUAL( size_t( 1 ), asset._listTrack.size() );
     SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Property );
     SW_EXPECT_TRUE( asset._listTrack[0]._listChannel[0]._listKey[1]._interpolation == sw::CurveInterpolation::Linear );
-    SW_EXPECT_TRUE_MSG( asset.toJSON() == kSequenceJSON, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
+    SW_EXPECT_TRUE_MSG( asset.toXML() == kSequenceXML, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
 
     test::ScopedDefensiveTestLog expected( "unknown sequence kind names and old keys are load errors" );
     sw::SequenceAsset            unknown;
-    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listItem": [ { "_name": "Future", "_kind": "Teleport" } ] })" ) );
-    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "frameMin": 0, "frameMax": 48, "items": [] })" ) );
-    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listTrack": [ { "_name": "Short", "_kind": "Transform", "_listChannel": [ { "_listKey": [] } ] } ] })" ) );
+    SW_EXPECT_FALSE( unknown.parseXML( R"(<SequenceAsset><_listItem><SequenceTrackItem _name="Future" _kind="Teleport" /></_listItem></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( unknown.parseXML( R"(<SequenceAsset frameMin="0" frameMax="48"><items /></SequenceAsset>)" ) );
+    SW_EXPECT_FALSE( unknown.parseXML( R"(<SequenceAsset><_listTrack><SequenceKeyTrack _name="Short" _kind="Transform"><_listChannel><FloatCurve><_listKey /></FloatCurve></_listChannel></SequenceKeyTrack></_listTrack></SequenceAsset>)" ) );
 }
 
 /**
@@ -556,7 +544,7 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsKindNames )
  */
 SW_TEST_CASE( SequencerTest, RepositorySequenceResavesByteForByte )
 {
-    constexpr const utf8* kSequencePath = "engine/automation/editor/sequencerkeys/sequencerkeys.seq.json";
+    constexpr const utf8* kSequencePath = "engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml";
     sw::string            fileText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kSequencePath, fileText ) );
     // core.autocrlf 체크아웃은 줄끝을 CRLF 로 바꾼다 — 저장소의 바이트(LF)로 비교한다.
@@ -567,7 +555,7 @@ SW_TEST_CASE( SequencerTest, RepositorySequenceResavesByteForByte )
     SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Transform );
     SW_EXPECT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), asset._listTrack[0]._listChannel.size() );
     SW_EXPECT_STREQ( "GameCamera", asset._listTrack[0]._targetObject.c_str() );
-    SW_EXPECT_STREQ( fileText.c_str(), asset.toJSON().c_str() );
+    SW_EXPECT_STREQ( fileText.c_str(), asset.toXML().c_str() );
 }
 
 /**
@@ -671,7 +659,7 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
  */
 SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
 {
-    const sw::string  pathDisk = test::makeTempPath( "sw_test_state_sequence.json" );
+    const sw::string  pathDisk = test::makeTempPath( "sw_test_state_sequence.seq.xml" );
     const sw::string  path     = test::makeTempResourceID( pathDisk );
     sw::SequenceAsset asset    = sw::makeSequenceWithFirstFrameEvent();
     SW_ASSERT_TRUE( asset.saveToFile( pathDisk ) );
@@ -985,13 +973,13 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCameraSignals )
 }
 
 /**
- * @brief [SequencerTest] 카메라 필드(프리셋 · 세기 · 프리롤 · 블렌드 인/아웃)는 JSON 으로 왕복하고, 다시 쓴 글은 바이트까지 같다
+ * @brief [SequencerTest] 카메라 필드(프리셋 · 세기 · 프리롤 · 블렌드 인/아웃)는 XML 로 왕복하고, 다시 쓴 글은 바이트까지 같다
  */
-SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
+SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughXML )
 {
     const sw::SequenceAsset source = sw::makeCameraSequence();
     sw::SequenceAsset       restored;
-    SW_ASSERT_TRUE( restored.parseJSON( source.toJSON() ) );
+    SW_ASSERT_TRUE( restored.parseXML( source.toXML() ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, restored._cameraBlendInSeconds, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, restored._cameraBlendOutSeconds, 1.0e-6f );
     SW_EXPECT_EQUAL( 3, restored._cameraPrerollFrames );
@@ -1001,7 +989,7 @@ SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
     SW_EXPECT_EQUAL( 0, restored._listItem[1]._prerollFrames );
     SW_EXPECT_TRUE( restored._listItem[2]._kind == sw::SequenceItemKind::CameraShake );
     SW_EXPECT_NEAR_EQUAL( 0.4f, restored._listItem[2]._amplitude, 1.0e-6f );
-    SW_EXPECT_TRUE( restored.toJSON() == source.toJSON() );
+    SW_EXPECT_TRUE( restored.toXML() == source.toXML() );
 }
 
 /** 리그 슬롯 트랙 — 키가 없으면 1(슬롯 미설정), 키 값은 0..1 로 자른다. */

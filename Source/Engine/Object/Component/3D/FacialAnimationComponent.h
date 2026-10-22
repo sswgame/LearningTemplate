@@ -50,10 +50,10 @@ namespace sw
 {
     /**
      * @class FacialAnimationComponent
-     * @brief 얼굴 리그(`_facialRigPath`, `.facial.json`)대로 얼굴을 움직입니다. 자기 onTick 이 아니라 유닛의 단계 일로 돕니다.
+     * @brief 얼굴 리그(`_facialRigPath`, `.facial.xml`)대로 얼굴을 움직입니다. 자기 onTick 이 아니라 유닛의 단계 일로 돕니다.
      * @details - **표정**: `setExpressionWeight` 로 정한 값 + 같은 오브젝트 애니메이터의 같은 이름 커브(표정 커브 — 언리얼 MetaHuman 커브 · Live Link Face
      *            의 자리)를 더해, 리그의 타깃 가중치에 곱해 유닛의 모프 가중치에 더합니다(GPU 모프 풀이 스키닝 앞에 적용).
-     *          - **립싱크**: `speak( 음성 )` — 임포트가 만든 비즘 트랙(`<음성>.visemes.json`)이 있으면 그 곡선을, 없으면 PCM 의 진폭을 런타임에 측정해서
+     *          - **립싱크**: `speak( 음성 )` — 임포트가 만든 비즘 트랙(`<음성>.visemes.xml`)이 있으면 그 곡선을, 없으면 PCM 의 진폭을 런타임에 측정해서
      *            리그의 대체 비즘(립싱크 표의 `_fallbackViseme`)을 엽니다. 비즘 → 타깃은 리그 데이터입니다.
      *          - **깜빡임**: 간격(최소 ~ 최대, 결정적 난수) · 길이로 눈꺼풀 타깃을 올렸다 내립니다.
      *          - **시선**: `setLookAtTarget( 월드 위치 )` — 눈 본을 목표 쪽으로 돌립니다(최대 각으로 자름). 사카드는 간격마다 작은 각으로 튑니다.
@@ -140,7 +140,7 @@ namespace sw
         /** @brief 눈 본을 목표 쪽으로 돌립니다. */
         void applyGaze( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Facial", DisplayName = "Facial Rig", AssetPath, AssetType = "FacialRig", Tooltip = "Facial rig (.facial.json): expressions, visemes, blink, gaze" )
+        PROPERTY( Category = "Facial", DisplayName = "Facial Rig", AssetPath, AssetType = "FacialRig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         string _facialRigPath;
 
         FacialAnimationBinding                      _binding;

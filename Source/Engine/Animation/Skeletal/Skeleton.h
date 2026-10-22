@@ -1,6 +1,6 @@
 /**
  * @file Skeleton.h
- * @brief 스켈레톤 에셋(`.skeleton.json`)입니다. 본 이름, 부모, 레퍼런스 포즈, 역 바인드와, 임포트가 본에 붙어 있던 메시를 기록한 읽기 전용 테이블을 담습니다.
+ * @brief 스켈레톤 에셋(`.skeleton.xml`)입니다. 본 이름, 부모, 레퍼런스 포즈, 역 바인드와, 임포트가 본에 붙어 있던 메시를 기록한 읽기 전용 테이블을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -68,7 +68,7 @@ namespace sw
     /**
      * @class Skeleton
      * @brief 본 배열입니다(부모가 자식보다 앞에 옵니다). 런타임 포즈 계산(`Pose`)과 스킨 팔레트가 이것을 읽습니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 정본이고
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 정본이고
      *          모두 필수다(`PROPERTY( Required )`) — 빠진 키 · 모르는 키 · 읽지 못한 값은 오류다. 벡터 · 쿼터니언 · 행렬은 쉼표로 이은 숫자 글이다.
      *          `_parentIndex` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 행렬은 행 우선 16 개다. 읽은 뒤 부모 순서와 부착 본 이름을 따로 본다.
      */
@@ -79,7 +79,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 스켈레톤 에셋 확장자입니다. */
-        static constexpr string_view kExtension = ".skeleton.json";
+        static constexpr string_view kExtension = ".skeleton.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -111,12 +111,12 @@ namespace sw
         /** @brief 모두 비웁니다. */
         void clear();
 
-        /** @brief JSON 본문을 읽습니다. 형식이 틀리면(모르는 키, 빠진 키, 앞에 없는 부모, 모르는 본 이름) false 를 반환하고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 본문을 읽습니다. 형식이 틀리면(모르는 키, 빠진 키, 앞에 없는 부모, 모르는 본 이름) false 를 반환하고 내용은 비웁니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
-        string toJSON() const;
+        /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
+        string toXML() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
 

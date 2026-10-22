@@ -76,7 +76,7 @@ namespace sw
         /** @brief `_sequencePath` 의 시퀀스를 플레이어에 엽니다. 경로가 비었으면 아무것도 하지 않고, 열지 못하면 경고합니다. */
         void loadSequenceFromPath();
 
-        PROPERTY( Category = "Sequence", DisplayName = "Sequence", AssetPath, AssetType = "Sequence", Tooltip = "Sequence asset (.seq / .seq.json)" )
+        PROPERTY( Category = "Sequence", DisplayName = "Sequence", AssetPath, AssetType = "Sequence", Tooltip = "Sequence asset (.seq.xml)" )
         string _sequencePath;
         PROPERTY( Category = "Playback", DisplayName = "Frames Per Second", Min = 1.0, Max = 120.0 )
         float32 _framesPerSecond;

@@ -8,6 +8,8 @@
  *          - 종류의 열쇠는 이름(`_name`)이다. 정의는 헤더의 `static constexpr` 라 DLL 마다 사본이 있을 수 있어 주소로 견주지 않는다.
  *          - 등록 줄은 정의를 가진 기능의 .cpp(캐시가 있으면 캐시 등록 옆)에 둔다. 모듈이 등록한 종류는 등록자가 사라질 때 표에서 빠진다.
  *          - 이름 · 접미사가 겹치는 등록은 표가 받지 않고 문제로 남긴다(`collectProblems` — `AssetTypeRegistryTest` 가 본다).
+ *          - **에셋 파일 형식은 XML 이나 바이너리다**(계획 `StructureSimplification` TX7). JSON 접미사는 쿠킹 입력(`CookSource` — 쿠킹이 바이너리로 바꾼다)만 받고,
+ *            그대로 읽는 접미사(`Plain` · `Cooked`)로는 올리지 못한다(`isSuffixFormatAllowed`). JSON 은 도구 · 설정 데이터의 형식이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -93,8 +95,11 @@ namespace sw
         /** @brief @p group 을 제외 묶음으로 가진 종류가 올라와 있으면 true 입니다(쿠킹 표가 모르는 묶음 이름을 가리키지 않는지 테스트가 본다). */
         static bool hasExcludeGroup( string_view group );
 
-        /** @brief 올리지 못한 등록(겹친 이름 · 접미사)을 사람이 읽는 글로 @p outListProblem 에 더합니다. */
+        /** @brief 올리지 못한 등록(겹친 이름 · 접미사 · JSON 으로 그대로 읽는 접미사)을 사람이 읽는 글로 @p outListProblem 에 더합니다. */
         static void collectProblems( vector<string>& outListProblem );
+
+        /** @brief 에셋 접미사의 형식이 허용되는지입니다. `.json` 으로 끝나는 접미사는 쿠킹 입력(`CookSource`)일 때만 true 입니다. */
+        [[nodiscard]] static bool isSuffixFormatAllowed( const AssetSuffix& suffix );
     };
 } // namespace sw
 

@@ -8,7 +8,6 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -18,7 +17,8 @@
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -39,16 +39,17 @@ namespace sw
 
 namespace sw
 {
-    bool VertexAnimationCookList::parseJSON( string_view json, string_view sourceLabel )
+    bool VertexAnimationCookList::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = VertexAnimationCookList{};
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "VertexAnimationCookList", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Vertex animation list '%#': malformed XML (expected a <VertexAnimationCookList> root)", sourceLabel );
             return false;
         }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        if ( parseRoot( root, sourceLabel ) )
             return true;
         *this = VertexAnimationCookList{};
         return false;
@@ -63,32 +64,32 @@ namespace sw
             *this = VertexAnimationCookList{};
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    bool VertexAnimationCookList::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool VertexAnimationCookList::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, { "mesh", "skeleton", "clip_folder" }, { "clips" }, sourceLabel ) == false )
             return false;
-        const JSONValue clips                 = root.get( "clips" );
-        const bool      bInvalidAnimationList = root.get( "mesh" ).isString() == false || root.get( "skeleton" ).isString() == false || root.get( "clip_folder" ).isString() == false ||
-                                           clips.isArray() == false || clips.size() == 0;
+        const XMLNode clips                 = root.findChild( "clips", false );
+        const bool    bInvalidAnimationList = root.findAttribute( "mesh", false ) == nullptr || root.findAttribute( "skeleton", false ) == nullptr ||
+                                           root.findAttribute( "clip_folder", false ) == nullptr || clips.isValid() == false || clips.findChild().isValid() == false;
         if ( bInvalidAnimationList )
         {
-            SW_LOG_ERROR( "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty clips array", sourceLabel );
+            SW_LOG_ERROR( "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty <clips> list", sourceLabel );
             return false;
         }
-        _meshPath     = root.get( "mesh" ).asString();
-        _skeletonPath = root.get( "skeleton" ).asString();
-        _clipFolder   = root.get( "clip_folder" ).asString();
-        for ( size_t clipIndex = 0; clipIndex < clips.size(); ++clipIndex )
+        _meshPath     = string{ root.getAttributeText( "mesh", false ) };
+        _skeletonPath = string{ root.getAttributeText( "skeleton", false ) };
+        _clipFolder   = string{ root.getAttributeText( "clip_folder", false ) };
+        for ( XMLNode clip = clips.findChild(); clip.isValid(); clip = clip.findNextSibling() )
         {
-            if ( clips.at( clipIndex ).isString() == false )
+            if ( string_view{ clip.getName() } != "item" )
             {
-                SW_LOG_ERROR( "Vertex animation list '%#': clips must be names", sourceLabel );
+                SW_LOG_ERROR( "Vertex animation list '%#': <clips> must hold <item> names", sourceLabel );
                 return false;
             }
-            _listClip.push_back( hashed_string( clips.at( clipIndex ).asString() ) );
+            _listClip.push_back( hashed_string( string_view{ clip.getText() } ) );
         }
         // 가리키는 파일이 모두 있어야 한다 — 이름이 틀린 목록이 쿠킹 때 조용히 빠지지 않게.
         if ( ResourceIO::hasResource( _meshPath ) == false || ResourceIO::hasResource( _skeletonPath ) == false )
@@ -176,7 +177,7 @@ namespace sw
                                            uint32& outFailedCount )
     {
         vector<string> listFile;
-        FileUtil::collectFiles( resourceRoot, ".json", listFile, true );
+        FileUtil::collectFiles( resourceRoot, ".xml", listFile, true );
         std::sort( listFile.begin(), listFile.end() );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot.get() ) );

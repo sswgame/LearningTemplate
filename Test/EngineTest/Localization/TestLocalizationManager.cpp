@@ -138,16 +138,16 @@ SW_TEST_CASE( LocalizationManagerTest, UnknownFieldsInTablesAreLoadErrors )
 {
     sw::SourceStringTable source;
     sw::string            error;
-    SW_EXPECT_FALSE( source.loadFromJSONText( R"({ "culture": "en", "entries": { "a": { "source": "A", "maxLenght": 3 } } })", "test", &error ) );
+    SW_EXPECT_FALSE( source.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="a" source="A" maxLenght="3" /></entries></SourceStringTable>)", "test", &error ) );
     SW_EXPECT_TRUE( error.find( "maxLenght" ) != sw::string::npos );
 
     sw::TranslationTable translation;
-    SW_EXPECT_FALSE( translation.loadFromJSONText( R"({ "culture": "ko", "entries": { "a": { "txt": "가" } } })", "test", &error ) );
-    SW_EXPECT_FALSE( translation.loadFromJSONText( R"({ "culture": "ko", "entries": { "a": { "text": "가", "sourceHash": "zz" } } })", "test", &error ) );
+    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" txt="가" /></entries></TranslationTable>)", "test", &error ) );
+    SW_EXPECT_FALSE( translation.loadFromXMLText( R"(<TranslationTable culture="ko"><entries><entry key="a" text="가" sourceHash="zz" /></entries></TranslationTable>)", "test", &error ) );
 
     sw::LocalizationProject project;
-    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a.strings.json" ], "culture": [] })", "test", &error ) );
-    SW_EXPECT_TRUE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en-US", "stringTables": [ "a.strings.json" ] })", "test", &error ) );
+    SW_EXPECT_FALSE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en"><stringTables><item>a.strings.xml</item></stringTables><culture /></LocalizationProject>)", "test", &error ) );
+    SW_EXPECT_TRUE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en-US"><stringTables><item>a.strings.xml</item></stringTables></LocalizationProject>)", "test", &error ) );
     SW_EXPECT_STREQ( "en_us", project._sourceCulture.c_str() );
 }
 
@@ -171,7 +171,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     const uint32 revisionBefore = loc.getTextRevision();
 
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
-    const sw::string changedPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
+    const sw::string changedPath = sw::FileUtil::joinPath( folder, "ko.translation.xml" );
     SW_EXPECT_TRUE( loc.isProjectFile( ::test::makeTempResourceID( changedPath ) ) );
     SW_EXPECT_TRUE( loc.reloadChangedFile( ::test::makeTempResourceID( changedPath ) ) == sw::ReloadOutcome::Reloaded );
     SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
@@ -208,7 +208,7 @@ SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry
 
     sw::AssetManager resources;
     sw::IAssetCache* pCache          = resources.findAssetCache( "StringTable" );
-    const sw::string translationPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
+    const sw::string translationPath = sw::FileUtil::joinPath( folder, "ko.translation.xml" );
     SW_ASSERT_NOT_NULL( pCache );
     SW_EXPECT_TRUE( pCache->isCached( ::test::makeTempResourceID( translationPath ) ) );
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
@@ -230,9 +230,9 @@ SW_TEST_CASE( LocalizationManagerTest, UnmountingGameProjectsKeepsEngineStrings 
 {
     const sw::string engineFolder = test::makeTempDirectory( "loc_scope_engine" );
     const sw::string gameFolder   = test::makeTempDirectory( "loc_scope_game" );
-    const sw::string enginePath   = sw::FileUtil::joinPath( engineFolder, "engine.locproject.json" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( enginePath, R"({ "name": "engineTest", "sourceCulture": "en", "stringTables": [ "e.strings.json" ] })" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( engineFolder, "e.strings.json" ), R"({ "culture": "en", "entries": { "e.key": { "source": "Engine" } } })" ) );
+    const sw::string enginePath   = sw::FileUtil::joinPath( engineFolder, "engine.locproject.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( enginePath, R"(<LocalizationProject name="engineTest" sourceCulture="en"><stringTables><item>e.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( engineFolder, "e.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="e.key" source="Engine" /></entries></SourceStringTable>)" ) );
     LocalizationTestUtil::writeSourceTable( gameFolder, "en", R"("g.key": { "source": "Game" })" );
 
     sw::LocalizationManager loc;
@@ -470,9 +470,9 @@ SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPack
     sw::string             error;
     SW_ASSERT_TRUE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
     SW_ASSERT_EQUAL( size_t{ 1 }, listExcluded.size() );
-    SW_EXPECT_TRUE( sw::StringUtil::endsWith( listExcluded[0], "ja.translation.json", true ) );
+    SW_EXPECT_TRUE( sw::StringUtil::endsWith( listExcluded[0], "ja.translation.xml", true ) );
 
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "test.locproject.json" ), "{ broken" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "test.locproject.xml" ), "<LocalizationProject name=\"broken\"" ) );
     listExcluded.clear();
     SW_EXPECT_FALSE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
     SW_EXPECT_FALSE( error.empty() );

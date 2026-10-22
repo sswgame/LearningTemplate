@@ -66,12 +66,12 @@ namespace sw::editor
         using Animation    = SpriteClipAnimation;
 
         // ------------------------------------------------------------------------------
-        // 3) SpriteClip.json 로드/저장
+        // 3) SpriteClip.xml 로드/저장
         // ------------------------------------------------------------------------------
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
-        /** @brief SpriteClip.json을 저장합니다. */
-        void saveJSON();
+        /** @brief SpriteClip.xml을 저장합니다. */
+        void saveClip();
 
     private:
         fixed_string<constant::kMaxBuffer256> _atlasPath;

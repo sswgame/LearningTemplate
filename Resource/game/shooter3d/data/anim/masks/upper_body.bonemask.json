@@ -1,8 +1,0 @@
-{
-  "roots": [
-    { "bone": "spine", "weight": 1.0 }
-  ],
-  "bones": [
-    { "bone": "spine", "weight": 0.5 }
-  ]
-}

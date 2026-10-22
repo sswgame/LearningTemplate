@@ -82,7 +82,7 @@ namespace sw::editor
 
         const string   gameFolder = getLocalizationFolderPath();
         vector<string> listFile;
-        if ( gameFolder.empty() == false && FileUtil::collectFiles( gameFolder, ".json", listFile, false ) )
+        if ( gameFolder.empty() == false && FileUtil::collectFiles( gameFolder, ".xml", listFile, false ) )
         {
             for ( const string& filePath : listFile )
             {

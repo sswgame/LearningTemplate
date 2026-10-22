@@ -744,8 +744,8 @@ msgstr "켜면 가중치가 모든 자식 본에 퍼지고, 끄면 이 본 하�
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 msgctxt "EditorAnimationGraph.BoneMaskPresetTip"
-msgid "Drop a .bonemask.json preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph."
-msgstr ".bonemask.json 프리셋을 놓으면 그것을 쓰고, 그 본은 여기서 읽기만 합니다. 비우면 본을 이 그래프에 바로 적습니다."
+msgid "Drop a .bonemask.xml preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph."
+msgstr ".bonemask.xml 프리셋을 놓으면 그것을 쓰고, 그 본은 여기서 읽기만 합니다. 비우면 본을 이 그래프에 바로 적습니다."
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EditorAnimationGraph.ConditionOpTip"

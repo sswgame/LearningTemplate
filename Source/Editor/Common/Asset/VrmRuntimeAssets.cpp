@@ -10,7 +10,8 @@
 
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw::editor
 {
@@ -18,7 +19,7 @@ namespace sw::editor
     {
         /**
          * @struct VrmRuntimeAssetsInternal
-         * @brief 사슬 끊기, 물성 옮기기, JSON 쓰기를 담당합니다.
+         * @brief 사슬 끊기, 물성 옮기기, XML 쓰기를 담당합니다.
          */
         struct VrmRuntimeAssetsInternal
         {
@@ -35,13 +36,8 @@ namespace sw::editor
                     pOutListIgnored->push_back( name );
             }
 
-            static void writeFloat3( const JSONValue& target, const float3& value )
-            {
-                target.setArray();
-                target.pushBack().setFloat( static_cast<float64>( value._x ) );
-                target.pushBack().setFloat( static_cast<float64>( value._y ) );
-                target.pushBack().setFloat( static_cast<float64>( value._z ) );
-            }
+            /** @brief 벡터를 `x,y,z` 글로 만듭니다(후처리 리그 XML 의 벡터 표기). */
+            static string makeFloat3Text( const float3& value ) { return XMLReadUtil::makeFloatListText( &value._x, 3 ); }
 
             static const VrmExpression* findExpression( const VrmAvatarDef& def, string_view name )
             {
@@ -53,20 +49,17 @@ namespace sw::editor
                 return nullptr;
             }
 
-            static void writePose( const JSONValue& entry, string_view name, const VrmExpression* pExpression )
+            static void writePose( const XMLNode& entry, string_view name, const VrmExpression* pExpression )
             {
-                entry.setObject();
-                entry.set( "_name", false ).setString( name );
-                if ( pExpression == nullptr || pExpression->_listBind.empty() )
+                entry.appendAttribute( "_name", name );
+                const XMLNode list = entry.appendChild( "_listTarget" );
+                if ( pExpression == nullptr )
                     return;
-                const JSONValue list = entry.set( "_listTarget", false );
-                list.setArray();
                 for ( const VrmExpressionBind& bind : pExpression->_listBind )
                 {
-                    const JSONValue target = list.pushBack();
-                    target.setObject();
-                    target.set( "_target", false ).setString( bind._morphTarget );
-                    target.set( "_weight", false ).setFloat( static_cast<float64>( bind._weight ) );
+                    const XMLNode target = list.appendChild( "FacialTargetWeight" );
+                    target.appendAttribute( "_target", string_view{ bind._morphTarget } );
+                    target.appendAttribute( "_weight", bind._weight );
                 }
             }
 
@@ -84,7 +77,7 @@ namespace sw::editor
                 return pTail;
             }
 
-            /** @brief 스프링 하나의 관절을 스켈레톤 부모를 따라 사슬로 끊습니다(VrmRuntimeAssets::makeSpringRigJSON 의 규칙). */
+            /** @brief 스프링 하나의 관절을 스켈레톤 부모를 따라 사슬로 끊습니다(VrmRuntimeAssets::makeSpringRigXML 의 규칙). */
             static void splitSpring( const VrmAvatarDef& def, uint32 springIndex, const Skeleton& skeleton, vector<SpringChainSpec>& inoutListChain,
                                      vector<string>* pOutListIgnored )
             {
@@ -132,17 +125,16 @@ namespace sw::editor
         return def._listExpression.empty() == false;
     }
 
-    string VrmRuntimeAssets::makeFacialRigJSON( const VrmAvatarDef& def, vector<string>* pOutListIgnored )
+    string VrmRuntimeAssets::makeFacialRigXML( const VrmAvatarDef& def, vector<string>* pOutListIgnored )
     {
         using Internal = VrmRuntimeAssetsInternal;
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "FacialRig" );
 
-        const JSONValue listExpression = root.set( "_listExpression", false );
-        listExpression.setArray();
+        const XMLNode listExpression = root.appendChild( "_listExpression" );
         for ( const VrmExpression& expression : def._listExpression )
         {
-            Internal::writePose( listExpression.pushBack(), expression._name, &expression );
+            Internal::writePose( listExpression.appendChild( "FacialPose" ), expression._name, &expression );
             const bool bOverrides = expression._overrideBlink != VrmExpressionOverride::None || expression._overrideLookAt != VrmExpressionOverride::None ||
                                     expression._overrideMouth != VrmExpressionOverride::None;
             if ( bOverrides )
@@ -152,14 +144,13 @@ namespace sw::editor
         }
 
         // 비즘 — 무음 하나와 VRM 입 모양 셋. 립싱크 표의 이름이다.
-        const JSONValue listViseme = root.set( "_listViseme", false );
-        listViseme.setArray();
-        Internal::writePose( listViseme.pushBack(), kSilenceViseme, nullptr );
+        const XMLNode listViseme = root.appendChild( "_listViseme" );
+        Internal::writePose( listViseme.appendChild( "FacialPose" ), kSilenceViseme, nullptr );
         for ( const VisemeMapping& mapping : kArrVisemeMapping )
         {
             const VrmExpression* pExpression = Internal::findExpression( def, mapping._vrmPreset );
             if ( pExpression != nullptr )
-                Internal::writePose( listViseme.pushBack(), mapping._viseme, pExpression );
+                Internal::writePose( listViseme.appendChild( "FacialPose" ), mapping._viseme, pExpression );
         }
 
         // 깜빡임 — blink, 없으면 blinkLeft + blinkRight 의 타깃. 얼굴 리그의 깜빡임 타깃은 가중치 1 이다.
@@ -185,16 +176,14 @@ namespace sw::editor
         }
         if ( listBlinkTarget.empty() == false )
         {
-            const JSONValue blink = root.set( "_blink", false );
-            blink.setObject();
-            const JSONValue list = blink.set( "_listTarget", false );
-            list.setArray();
+            const XMLNode blink = root.appendChild( "_blink" );
+            const XMLNode list  = blink.appendChild( "_listTarget" );
             for ( const string& target : listBlinkTarget )
             {
-                list.pushBack().setString( target );
+                (void)list.appendChild( "item", string_view{ target } );
             }
         }
-        return document.dump( 1 );
+        return document.saveToString();
     }
 
     bool VrmRuntimeAssets::hasSpringRig( const VrmAvatarDef& def, const Skeleton& skeleton )
@@ -207,7 +196,7 @@ namespace sw::editor
         return listChain.empty() == false;
     }
 
-    string VrmRuntimeAssets::makeSpringRigJSON( const VrmAvatarDef& def, const Skeleton& skeleton, vector<string>* pOutListIgnored )
+    string VrmRuntimeAssets::makeSpringRigXML( const VrmAvatarDef& def, const Skeleton& skeleton, vector<string>* pOutListIgnored )
     {
         using Internal = VrmRuntimeAssetsInternal;
         vector<Internal::SpringChainSpec> listChain;
@@ -217,13 +206,12 @@ namespace sw::editor
         }
 
         // 물성 옮기기의 스텝은 리그 사슬의 고정 스텝 기본값 하나다(RigSpringSettings).
-        const float32   step = RigSpringSettings{}._fixedStep;
-        JSONDocument    document;
-        const JSONValue root  = document.makeObject();
-        const JSONValue nodes = root.set( "nodes", false );
-        nodes.setArray();
-        uint32 previousSpring = MathUtil::kMaxUInt32;
-        uint32 partIndex      = 0;
+        const float32 step = RigSpringSettings{}._fixedStep;
+        XMLDocument   document;
+        const XMLNode root           = document.appendRoot( "RigAsset" );
+        const XMLNode nodes          = root.appendChild( "nodes" );
+        uint32        previousSpring = MathUtil::kMaxUInt32;
+        uint32        partIndex      = 0;
         for ( const Internal::SpringChainSpec& chain : listChain )
         {
             const VrmSpring& spring = def._listSpring[chain._springIndex];
@@ -233,38 +221,34 @@ namespace sw::editor
             if ( spring._centerBone.empty() == false )
                 Internal::addIgnored( pOutListIgnored, "springBone '" + spring._name + "' center" );
 
-            const JSONValue node = nodes.pushBack();
-            node.setObject();
-            node.set( "type", false ).setString( "SpringChain" );
-            node.set( "name", false ).setString( "Spring" + to_string( chain._springIndex ) + ( partIndex > 0 ? "_" + to_string( partIndex ) : string{} ) );
-            const JSONValue bones = node.set( "bones", false );
-            bones.setArray();
-            for ( const string& bone : chain._listBone )
-            {
-                bones.pushBack().setString( bone );
-            }
+            const XMLNode node = nodes.appendChild( "item" );
+            node.appendAttribute( "type", "SpringChain" );
+            node.appendAttribute( "name", string_view{ "Spring" + to_string( chain._springIndex ) + ( partIndex > 0 ? "_" + to_string( partIndex ) : string{} ) } );
             // VRM(three-vrm VRMSpringBoneJoint.update) 의 한 프레임: 다음 끝 = 끝 + (끝 − 이전 끝) × (1 − dragForce) + 뼈 방향 × stiffness × dt + gravityDir × gravityPower × dt,
             // 그 뒤 길이를 맞추고 충돌체(hitRadius + 반지름)에서 밀어낸다. 리그 사슬의 고정 스텝과 항마다 같다 — 감쇠 = dragForce, axis_pull = stiffness(m/s),
             // 중력 가속도 = gravityDir × gravityPower ÷ 스텝(스텝마다 가속도 × 스텝² = gravityPower × 스텝), 비율 당김(stiffness) 은 0, 반지름 = hitRadius.
             // 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 이다 — 사슬 본 k 의 관절 값이 joints[k] 다. 가지에서 새로 시작한 사슬의 뿌리(부모 본)는 이 스프링의 관절이다.
             const VrmSpringJoint& first = *Internal::findJoint( spring, chain._listBone[0], chain._listBone[1] );
-            node.set( "stiffness", false ).setFloat( 0.0 );
-            node.set( "axis_pull", false ).setFloat( static_cast<float64>( first._stiffness ) );
-            node.set( "damping", false ).setFloat( static_cast<float64>( MathUtil::saturate( first._dragForce ) ) );
-            Internal::writeFloat3( node.set( "gravity", false ), first._gravityDirection * ( first._gravityPower / step ) );
-            node.set( "particle_radius", false ).setFloat( static_cast<float64>( first._hitRadius ) );
-            const JSONValue joints = node.set( "joints", false );
-            joints.setArray();
+            node.appendAttribute( "stiffness", 0.0f );
+            node.appendAttribute( "axis_pull", first._stiffness );
+            node.appendAttribute( "damping", MathUtil::saturate( first._dragForce ) );
+            node.appendAttribute( "gravity", string_view{ Internal::makeFloat3Text( first._gravityDirection * ( first._gravityPower / step ) ) } );
+            node.appendAttribute( "particle_radius", first._hitRadius );
+            const XMLNode bones = node.appendChild( "bones" );
+            for ( const string& bone : chain._listBone )
+            {
+                (void)bones.appendChild( "item", string_view{ bone } );
+            }
+            const XMLNode joints = node.appendChild( "joints" );
             for ( size_t boneIndex = 0; boneIndex + 1 < chain._listBone.size(); ++boneIndex )
             {
                 const VrmSpringJoint& joint = *Internal::findJoint( spring, chain._listBone[boneIndex], chain._listBone[boneIndex + 1] );
-                const JSONValue       entry = joints.pushBack();
-                entry.setObject();
-                entry.set( "stiffness", false ).setFloat( 0.0 );
-                entry.set( "axis_pull", false ).setFloat( static_cast<float64>( joint._stiffness ) );
-                entry.set( "damping", false ).setFloat( static_cast<float64>( MathUtil::saturate( joint._dragForce ) ) );
-                Internal::writeFloat3( entry.set( "gravity", false ), joint._gravityDirection * ( joint._gravityPower / step ) );
-                entry.set( "radius", false ).setFloat( static_cast<float64>( joint._hitRadius ) );
+                const XMLNode         entry = joints.appendChild( "item" );
+                entry.appendAttribute( "stiffness", 0.0f );
+                entry.appendAttribute( "axis_pull", joint._stiffness );
+                entry.appendAttribute( "damping", MathUtil::saturate( joint._dragForce ) );
+                entry.appendAttribute( "gravity", string_view{ Internal::makeFloat3Text( joint._gravityDirection * ( joint._gravityPower / step ) ) } );
+                entry.appendAttribute( "radius", joint._hitRadius );
             }
 
             vector<uint32> listCollider;
@@ -276,8 +260,7 @@ namespace sw::editor
                         listCollider.push_back( colliderIndex );
                 }
             }
-            const JSONValue colliders = node.set( "colliders", false );
-            colliders.setArray();
+            const XMLNode colliders = node.appendChild( "colliders" );
             for ( const uint32 colliderIndex : listCollider )
             {
                 const VrmSpringCollider& collider = def._listCollider[colliderIndex];
@@ -286,16 +269,15 @@ namespace sw::editor
                     Internal::addIgnored( pOutListIgnored, "springBone collider on '" + collider._bone + "' (not a skeleton bone)" );
                     continue;
                 }
-                const JSONValue entry = colliders.pushBack();
-                entry.setObject();
-                entry.set( "bone", false ).setString( collider._bone );
-                entry.set( "shape", false ).setString( collider._bCapsule != SW_FALSE ? "Capsule" : "Sphere" );
-                Internal::writeFloat3( entry.set( "a", false ), collider._offset );
+                const XMLNode entry = colliders.appendChild( "item" );
+                entry.appendAttribute( "bone", string_view{ collider._bone } );
+                entry.appendAttribute( "shape", collider._bCapsule != SW_FALSE ? "Capsule" : "Sphere" );
+                entry.appendAttribute( "a", string_view{ Internal::makeFloat3Text( collider._offset ) } );
                 if ( collider._bCapsule != SW_FALSE )
-                    Internal::writeFloat3( entry.set( "b", false ), collider._tail );
-                entry.set( "radius", false ).setFloat( static_cast<float64>( collider._radius ) );
+                    entry.appendAttribute( "b", string_view{ Internal::makeFloat3Text( collider._tail ) } );
+                entry.appendAttribute( "radius", collider._radius );
             }
         }
-        return document.dump( 1 );
+        return document.saveToString();
     }
 } // namespace sw::editor

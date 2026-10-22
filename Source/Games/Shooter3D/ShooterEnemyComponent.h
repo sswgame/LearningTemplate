@@ -38,7 +38,7 @@ namespace sw
      *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
      *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 위치 · 막는 상자를 읽고 **자기 오브젝트에만**
      *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
-     *          애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
+     *          애니메이터 그래프(`data/anim/skeleton.animgraph.xml`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `GameplayEvent` →
      *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.

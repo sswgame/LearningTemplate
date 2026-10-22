@@ -75,15 +75,15 @@ namespace sw
     {
     }
 
-    bool DialogueRunnerComponent::loadGraphFile( string_view jsonPath )
+    bool DialogueRunnerComponent::loadGraphFile( string_view xmlPath )
     {
-        _graphPath = string( jsonPath );
-        return _graph.loadFromFile( jsonPath );
+        _graphPath = string( xmlPath );
+        return _graph.loadFromFile( xmlPath );
     }
 
-    bool DialogueRunnerComponent::loadGraphJSON( string_view jsonContent )
+    bool DialogueRunnerComponent::loadGraphXML( string_view xmlContent )
     {
-        return _graph.parseJSON( jsonContent );
+        return _graph.parseXML( xmlContent );
     }
 
     void DialogueRunnerComponent::setGraph( DialogueGraphAsset graph )

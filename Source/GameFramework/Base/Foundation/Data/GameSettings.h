@@ -47,7 +47,7 @@ namespace sw
         DataPath _defaultSavePath; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`). 없으면 경로 없는 저장은 오류다
 
         PROPERTY()
-        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
+        DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
 
         PROPERTY()
         string _defaultLanguage{ "ko_kr" }; ///< 기본 활성 언어

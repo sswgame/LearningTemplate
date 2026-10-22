@@ -1,0 +1,35 @@
+<LocalizationProject name="shooter3d" sourceCulture="en">
+	<cultures>
+		<item>ko</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+	</stagedCultures>
+	<stringTables>
+		<item>shooter3d.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/Games/Shooter3D</item>
+	</codeRoots>
+	<assetRoots>
+		<item>game/shooter3d</item>
+	</assetRoots>
+	<assetRules>
+		<rule files="items.xml" attribute="name" kind="text" context="Item name">
+			<elements>
+				<item>Item</item>
+			</elements>
+		</rule>
+		<rule files="weapons.xml" attribute="name" kind="text" context="Weapon name">
+			<elements>
+				<item>Weapon</item>
+			</elements>
+		</rule>
+		<rule files=".settings.xml" attribute="text" kind="key">
+			<elements>
+				<item>Setting</item>
+				<item>Option</item>
+			</elements>
+		</rule>
+	</assetRules>
+</LocalizationProject>

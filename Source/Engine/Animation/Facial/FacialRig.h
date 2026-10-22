@@ -1,6 +1,6 @@
 /**
  * @file FacialRig.h
- * @brief 얼굴 리그(`<얼굴>.facial.json`)입니다. 표정과 비즘을 모프 타깃 가중치로 바꾸고, 눈 깜빡임과 시선(눈 본, 사카드)의 수치를 데이터로 둡니다.
+ * @brief 얼굴 리그(`<얼굴>.facial.xml`)입니다. 표정과 비즘을 모프 타깃 가중치로 바꾸고, 눈 깜빡임과 시선(눈 본, 사카드)의 수치를 데이터로 둡니다.
  * @details 코드는 이름으로 고를 뿐이고(표정 "Happy", 비즘 "AA"), 어느 타깃을 얼마나 움직일지는 이 테이블이 정한다(언리얼 MetaHuman 의 포즈 에셋과
  *          Live Link Face 의 커브 컨트롤 매핑에 해당한다). 모르는 키는 오류이고, 메시에 없는 타깃이나 스켈레톤에 없는 본은 바인딩할 때 오류다(`validate`).
  */
@@ -93,8 +93,8 @@ namespace sw
 {
     /**
      * @class FacialRig
-     * @brief 얼굴 리그 파일(`<얼굴>.facial.json`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.json`)의 것과 맞춥니다.
-     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     * @brief 얼굴 리그 파일(`<얼굴>.facial.xml`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.xml`)의 것과 맞춥니다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
      *          `_blink` · `_gaze` 를 적지 않으면 기본값이고, 타깃 · 눈 본이 비면 그 기능을 쓰지 않는다. 읽은 뒤 `validateFile` 이 이름 중복 · 간격 순서를 본다.
      */
     REFLECT()
@@ -104,7 +104,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 얼굴 리그 확장자입니다. */
-        static constexpr string_view kExtension = ".facial.json";
+        static constexpr string_view kExtension = ".facial.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -112,7 +112,7 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `FacialRig.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "FacialRig", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 메시의 모프 타깃 이름에 없는 타깃, 스켈레톤에 없는 눈 본, 타깃과 같은 이름의 표정(커브가 둘 다 움직임)이 있으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;

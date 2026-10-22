@@ -1,0 +1,3 @@
+<SQLMigrationList>
+	<Migration _name="0001_local_slot" />
+</SQLMigrationList>

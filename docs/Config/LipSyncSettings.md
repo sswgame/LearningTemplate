@@ -6,19 +6,19 @@
 
 | | |
 |---|---|
-| 파일 | `Resource/engine/animation/lipsync.json` |
+| 파일 | `Resource/engine/animation/lipsync.xml` |
 | 층 | 엔진 기본값 |
 | 읽는 곳 | `LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`) |
 | 언제 | 처음 말할 때 · 립싱크 임포트 |
 | 배포본 | 엔진 팩에 실림 |
 | 커밋 | 한다 |
-| 참고 | 비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다 |
+| 참고 | 비즘 이름은 얼굴 리그(`*.facial.xml`)의 `_listViseme` 와 맞춘다 |
 
 JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다.
 
 ## 필드
 
-분석 표(데이터, `engine/animation/lipsync.json`)입니다. 첫 비즘은 무음(sil)으로 씁니다. 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다. 대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
+분석 표(데이터, `engine/animation/lipsync.xml`)입니다. 첫 비즘은 무음(sil)으로 씁니다. 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다. 대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
 
 원본: [`Source/Engine/Animation/Facial/LipSync.h`](../../Source/Engine/Animation/Facial/LipSync.h)
 

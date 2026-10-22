@@ -1,0 +1,229 @@
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="Already used by" text="이미 사용 중:" sourceHash="cbdae832bc5ce48d" />
+		<entry key="Apply" text="적용" sourceHash="b8f855b49234b81b" />
+		<entry key="Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
+		<entry key="Corner" text="모서리" sourceHash="d66afae9aedadcf0" />
+		<entry key="Debug HUD" text="디버그 HUD" sourceHash="e7b16707c98cf071" />
+		<entry key="Defaults" text="기본값" sourceHash="48022f6d5501d677" />
+		<entry key="Discard" text="버리기" sourceHash="c00a88b90cd60661" />
+		<entry key="EdAbilityDebug.ColumnActive" text="실행 중" sourceHash="a45a194b58837e4f" />
+		<entry key="EdAbilityDebug.ColumnBase" text="기본값" sourceHash="c1a4e2a7a8e20d58" />
+		<entry key="EdAbilityDebug.ColumnCooldown" text="쿨다운" sourceHash="8b59db90be866528" />
+		<entry key="EdAbilityDebug.ColumnCount" text="개수" sourceHash="71a5c9f4b68ef4d4" />
+		<entry key="EdAbilityDebug.ColumnCurrent" text="현재값" sourceHash="ab8b4cbbb1fa71fa" />
+		<entry key="EdAbilityDebug.ColumnName" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdAbilityDebug.ColumnRemaining" text="남은 시간" sourceHash="dd9423c2ce1195a3" />
+		<entry key="EdAbilityDebug.ColumnStacks" text="스택" sourceHash="1d286181862db5e4" />
+		<entry key="EdAbilityDebug.ColumnTag" text="태그" sourceHash="6ce0cb19e201b153" />
+		<entry key="EdAbilityDebug.HintNoTarget"
+		       text="AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
+		       sourceHash="937bde747e495279" />
+		<entry key="EdAbilityDebug.HintPlayOnly"
+		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
+		       sourceHash="7adebb387e539a62" />
+		<entry key="EdAbilityDebug.Infinite" text="무한" sourceHash="0c024c0024360a2d" />
+		<entry key="EdAbilityDebug.NoComponentsInScene"
+		       text="활성 씬에 AbilitySystemComponent 가 없습니다"
+		       sourceHash="f9aceb1e918e73da" />
+		<entry key="EdAbilityDebug.PickTarget" text="어빌리티 시스템 고르기..." sourceHash="0f5befa1ba0a7140" />
+		<entry key="EdAbilityDebug.SectionAbilities" text="부여된 어빌리티" sourceHash="59c749c8cdb544fa" />
+		<entry key="EdAbilityDebug.SectionAttributes" text="어트리뷰트" sourceHash="16b9446e3a70e1f4" />
+		<entry key="EdAbilityDebug.SectionEffects" text="걸린 이펙트" sourceHash="6991d93fa865e70d" />
+		<entry key="EdAbilityDebug.SectionTags" text="소유 태그" sourceHash="35d4aac5d07d7ce3" />
+		<entry key="EdMeshModifiers.AddItem" text="항목 추가" sourceHash="1373a4ab54d88333" />
+		<entry key="EdMeshModifiers.AddModifier" text="모디파이어 추가" sourceHash="f4d95a66cf236fed" />
+		<entry key="EdMeshModifiers.Axis" text="축" sourceHash="b035a78b241ed7d4" />
+		<entry key="EdMeshModifiers.Bake" text="굽기" sourceHash="c152d2a7a89be800" />
+		<entry key="EdMeshModifiers.CPUOnly" text="(CPU 전용)" sourceHash="0c5c8598488eecee" />
+		<entry key="EdMeshModifiers.Center" text="중심" sourceHash="b38d497d992ab4a4" />
+		<entry key="EdMeshModifiers.ControlPoints" text="제어점" sourceHash="7551ef17ae7e064d" />
+		<entry key="EdMeshModifiers.CurveEditHint" text="눌러서 곡선 편집" sourceHash="d2457db110d81830" />
+		<entry key="EdMeshModifiers.DuplicateRow" text="행 복제" sourceHash="1eb11810b6d41e8e" />
+		<entry key="EdMeshModifiers.EnterNestedStack"
+		       text="이 묶음의 하위 스택 편집"
+		       sourceHash="a8e48d4c6a6a8255" />
+		<entry key="EdMeshModifiers.ExportWarp" text="월드 워프로 내보내기" sourceHash="0cc4a3640140e0f5" />
+		<entry key="EdMeshModifiers.FitBounds" text="경계 상자에 맞추기" sourceHash="402ad59bb6ed0112" />
+		<entry key="EdMeshModifiers.GPUPreviewBlockedBy" text="CPU 전용:" sourceHash="cc44e27c6bf4732d" />
+		<entry key="EdMeshModifiers.GPUPreviewBlockedByStack"
+		       text="CPU 전용(법선 다시 계산)"
+		       sourceHash="e6d737e3073915e4" />
+		<entry key="EdMeshModifiers.HintPickTarget"
+		       text=".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요."
+		       sourceHash="150c002cb25c2c9e" />
+		<entry key="EdMeshModifiers.HintSelectModifier"
+		       text="스택에서 모디파이어를 고르세요."
+		       sourceHash="c17f55d8a9720295" />
+		<entry key="EdMeshModifiers.HintTargetGone"
+		       text="대상 오브젝트가 더 이상 없습니다."
+		       sourceHash="1bc0e1e113faeb86" />
+		<entry key="EdMeshModifiers.Mirror" text="대칭" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdMeshModifiers.MoveRowDown" text="행을 아래로" sourceHash="e614e211c8b34f94" />
+		<entry key="EdMeshModifiers.MoveRowUp" text="행을 위로" sourceHash="8ae65593ed9e4275" />
+		<entry key="EdMeshModifiers.Name" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdMeshModifiers.NestedDepth" text="깊이" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="EdMeshModifiers.NestedEmpty"
+		       text="비어 있음 - 모디파이어를 더해 묶습니다."
+		       sourceHash="7af7ec639534480a" />
+		<entry key="EdMeshModifiers.NestedStack" text="하위 스택" sourceHash="0d6be80e0ced25ae" />
+		<entry key="EdMeshModifiers.NestedUp" text="위로" sourceHash="09313a07b5c3ab60" />
+		<entry key="EdMeshModifiers.NoTarget" text="대상 없음" sourceHash="88b4f03b7af48b9f" />
+		<entry key="EdMeshModifiers.PlayPreviewTime" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdMeshModifiers.PointIndex" text="점" sourceHash="8a439296ced9ed11" />
+		<entry key="EdMeshModifiers.PointPosition" text="위치" sourceHash="c1611c0558728a2a" />
+		<entry key="EdMeshModifiers.PreviewTime" text="미리보기 시간" sourceHash="c6552dd0fb586094" />
+		<entry key="EdMeshModifiers.RecomputeNormals" text="법선 다시 계산" sourceHash="2a5bbf4552aa7855" />
+		<entry key="EdMeshModifiers.Redo" text="다시 하기" sourceHash="7417792bbe720149" />
+		<entry key="EdMeshModifiers.ReferenceNoMatch"
+		       text="이 컴포넌트를 가진 오브젝트가 없습니다:"
+		       sourceHash="4e824d53a2525bd0" />
+		<entry key="EdMeshModifiers.ReferenceNone" text="(없음)" sourceHash="cc766cf900364200" />
+		<entry key="EdMeshModifiers.ReloadStack" text="스택 다시 읽기" sourceHash="372f2d0fa36ebb0c" />
+		<entry key="EdMeshModifiers.RemoveRow" text="행 삭제" sourceHash="77318393dfdb0775" />
+		<entry key="EdMeshModifiers.ResetLattice" text="격자 초기화" sourceHash="11fff1797b257282" />
+		<entry key="EdMeshModifiers.ResetParams" text="매개변수 초기화" sourceHash="aca3bdbe9d0ddaf4" />
+		<entry key="EdMeshModifiers.Rotation" text="회전" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdMeshModifiers.SaveStack" text="스택 저장" sourceHash="03376e0fb812a6d0" />
+		<entry key="EdMeshModifiers.ShadedPreview" text="셰이딩 미리보기" sourceHash="3a001a59df5db872" />
+		<entry key="EdMeshModifiers.ShadedPreviewTooltip"
+		       text="대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다."
+		       sourceHash="7d5df56f33074e8f" />
+		<entry key="EdMeshModifiers.SpaceReference" text="기준 오브젝트" sourceHash="f99ff83cb627c00d" />
+		<entry key="EdMeshModifiers.Undo" text="되돌리기" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdMeshModifiers.UseSelection" text="선택 사용" sourceHash="18163441a7dc78f2" />
+		<entry key="EdMeshModifiers.UseSelectionForParam" text="선택 사용" sourceHash="18163441a7dc78f2" />
+		<entry key="EdMeshModifiers.WarpExportPath" text="워프 파일(.mfwarp)" sourceHash="ab63f8ba7f42ead5" />
+		<entry key="EdMeshModifiers.WorldSpace" text="월드 공간" sourceHash="704e1344b9026739" />
+		<entry key="EdSchedule.ColumnActivity" text="행동" sourceHash="6c76b294d740446c" />
+		<entry key="EdSchedule.ColumnPlace" text="장소" sourceHash="13b3f5afa0862d1c" />
+		<entry key="EdSchedule.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />
+		<entry key="EdSchedule.ColumnTime" text="시각" sourceHash="48e186fb300e5464" />
+		<entry key="EdSchedule.ColumnTravel" text="이동" sourceHash="bb87af74ab3706b9" />
+		<entry key="EdSchedule.EmptyHint"
+		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요."
+		       sourceHash="c440b029ca8db326" />
+		<entry key="EdSchedule.EmptyPlan" text="오늘 계획이 없습니다" sourceHash="b3a79d044bf5027f" />
+		<entry key="EdSchedule.FollowClock" text="게임 시계 따라가기" sourceHash="9331e1eca52eafa8" />
+		<entry key="EdSchedule.GameTime" text="게임 시각" sourceHash="312a78762d9ad9a4" />
+		<entry key="EdSchedule.NpcListTitle" text="NPC 목록" sourceHash="578931c5a8afe279" />
+		<entry key="EdSchedule.RawTimeline" text="타임라인 원문" sourceHash="60d9224c1e5f1898" />
+		<entry key="EdSchedule.SelectNpcHint" text="왼쪽에서 NPC 를 고르세요" sourceHash="2d4aa57458132d18" />
+		<entry key="EdSchedule.SystemIndex" text="일정 시스템" sourceHash="22b2a2f792a7281d" />
+		<entry key="EdSchedule.WhyNow" text="지금 왜 이 행동인가" sourceHash="998a39497efff850" />
+		<entry key="Keep" text="유지" sourceHash="d60a7dde73859828" />
+		<entry key="Keep these display settings?"
+		       text="이 디스플레이 설정을 유지할까요?"
+		       sourceHash="0048bd736e33dcdf" />
+		<entry key="Loading" text="로딩 중" sourceHash="b59d68ed12d46377" />
+		<entry key="Notification.GameSaved" text="게임을 저장했습니다" sourceHash="820b2b70b4c9f0c4" />
+		<entry key="Notification.RestartRequired"
+		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
+		       sourceHash="14441b823018dda4" />
+		<entry key="Opacity" text="불투명도" sourceHash="ba64d8954d027206" />
+		<entry key="Options" text="옵션" sourceHash="463b8c4e92751ba5" />
+		<entry key="Paused" text="일시 정지" sourceHash="95bc8722b2708f8b" />
+		<entry key="Press a key. Escape cancels; hold Escape for one second to bind it."
+		       text="키를 누르세요. Esc 는 취소, Esc 를 1초 누르고 있으면 Esc 를 지정합니다."
+		       sourceHash="2fe6a469745a3551" />
+		<entry key="Quit Game" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
+		<entry key="Resume" text="계속하기" sourceHash="89118d3a7be870ca" />
+		<entry key="Return to Title" text="타이틀로 돌아가기" sourceHash="6769de3e1eac7922" />
+		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
+		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
+		<entry key="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" sourceHash="8f553b077c9a458d" />
+		<entry key="Some changes take effect after a restart."
+		       text="일부 변경은 다시 시작한 뒤 적용됩니다."
+		       sourceHash="14441b823018dda4" />
+		<entry key="Swap" text="맞바꾸기" sourceHash="cf28302518a72dee" />
+		<entry key="You have changes that are not applied."
+		       text="적용하지 않은 변경이 있습니다."
+		       sourceHash="9ea9ff2b01f83378" />
+		<entry key="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" sourceHash="484163e56235b950" />
+		<entry key="settings.accessibility.colorVision" text="색각 보정" sourceHash="dbb8616605f92363" />
+		<entry key="settings.accessibility.colorVision.deuteranopia" text="녹색약" sourceHash="eaffd5d797c0d636" />
+		<entry key="settings.accessibility.colorVision.protanopia" text="적색약" sourceHash="ebd58127ad3cb56a" />
+		<entry key="settings.accessibility.colorVision.tritanopia" text="청색약" sourceHash="0cb4b4d963fc5f44" />
+		<entry key="settings.accessibility.reduceFlashing" text="번쩍임 줄이기" sourceHash="81cf7ea1fe1b0e77" />
+		<entry key="settings.accessibility.reduceMotion" text="움직임 줄이기" sourceHash="4c7266515b845807" />
+		<entry key="settings.accessibility.subtitleBackground" text="자막 배경" sourceHash="2b9911a132958e47" />
+		<entry key="settings.accessibility.subtitleSize" text="자막 크기" sourceHash="6b7868a86e8badfa" />
+		<entry key="settings.accessibility.subtitles" text="자막" sourceHash="8d4efa71fde7e9be" />
+		<entry key="settings.accessibility.textSize" text="글자 크기" sourceHash="e92d136588dd09a3" />
+		<entry key="settings.accessibility.uiScale" text="UI 배율" sourceHash="deba5e3543cd9735" />
+		<entry key="settings.accessibility.uiTheme" text="UI 테마" sourceHash="ad5a6165f8ac74b6" />
+		<entry key="settings.accessibility.uiTheme.default" text="기본" sourceHash="11326fd2590f4e5e" />
+		<entry key="settings.accessibility.uiTheme.highcontrast" text="고대비" sourceHash="480fd2e6a8201911" />
+		<entry key="settings.audio.ambientVolume" text="환경음 음량" sourceHash="7083aeea6de6277b" />
+		<entry key="settings.audio.masterVolume" text="전체 음량" sourceHash="14ade2902b12eee3" />
+		<entry key="settings.audio.musicVolume" text="음악 음량" sourceHash="9f650daa8068041e" />
+		<entry key="settings.audio.mute" text="음소거" sourceHash="675ad12a7174c7e7" />
+		<entry key="settings.audio.sfxVolume" text="효과음 음량" sourceHash="1c5962fcd2ea2f59" />
+		<entry key="settings.audio.speakerMode" text="스피커 구성" sourceHash="d29256f633294933" />
+		<entry key="settings.audio.speakerMode.auto" text="자동" sourceHash="d200028b9f6015e4" />
+		<entry key="settings.audio.speakerMode.headphones" text="헤드폰 (3D)" sourceHash="cb35278216cbcf90" />
+		<entry key="settings.audio.speakerMode.stereo" text="스테레오" sourceHash="5c73b6a46de9972d" />
+		<entry key="settings.audio.speakerMode.surround51" text="5.1 서라운드" sourceHash="9eff77e9f0d62ca5" />
+		<entry key="settings.audio.speakerMode.surround71" text="7.1 서라운드" sourceHash="e3b7d24b4997a35f" />
+		<entry key="settings.audio.uiVolume" text="인터페이스 음량" sourceHash="b821b9172a51c8c2" />
+		<entry key="settings.audio.voiceVolume" text="음성 음량" sourceHash="1424176a6e3d6685" />
+		<entry key="settings.category.accessibility" text="접근성" sourceHash="11fdceabe7befeff" />
+		<entry key="settings.category.audio" text="오디오" sourceHash="08e6bd98452e6bb9" />
+		<entry key="settings.category.controls" text="조작" sourceHash="83cd32b685ccc9b7" />
+		<entry key="settings.category.display" text="화면" sourceHash="1125d159f7e64df5" />
+		<entry key="settings.category.gameplay" text="게임플레이" sourceHash="28235c3f4dd70e95" />
+		<entry key="settings.category.graphics" text="그래픽" sourceHash="6cc99c2f3cbc7008" />
+		<entry key="settings.category.language" text="언어" sourceHash="efcf950b3cc4fc3b" />
+		<entry key="settings.category.privacy" text="개인 정보" sourceHash="e78c02e9a98a0f47" />
+		<entry key="settings.common.off" text="끔" sourceHash="302cbb19bf9a174a" />
+		<entry key="settings.confirm.keepChanges"
+		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다."
+		       sourceHash="d8bd8dfcd7e97078" />
+		<entry key="settings.controls.aimMode" text="조준" sourceHash="f9a3e0199ffcbd16" />
+		<entry key="settings.controls.crouchMode" text="앉기" sourceHash="cd7743f6969479eb" />
+		<entry key="settings.controls.gamepadSensitivity" text="게임패드 감도" sourceHash="524014273006eb8b" />
+		<entry key="settings.controls.hold" text="누르고 있기" sourceHash="6ab6f7d87fdbe998" />
+		<entry key="settings.controls.invertY" text="상하 시점 반전" sourceHash="e9c878ae44ea1e14" />
+		<entry key="settings.controls.mouseSensitivity" text="마우스 감도" sourceHash="67b03bcb89cd52cf" />
+		<entry key="settings.controls.pauseMenu" text="일시정지 메뉴" sourceHash="2889ddc771329148" />
+		<entry key="settings.controls.sprintMode" text="달리기" sourceHash="f3b65f24b2611635" />
+		<entry key="settings.controls.stickDeadzone" text="스틱 데드존" sourceHash="7b03bd1e88a3ce47" />
+		<entry key="settings.controls.toggle" text="전환" sourceHash="2729d39ee6c0cca5" />
+		<entry key="settings.display.resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
+		<entry key="settings.display.vsync" text="수직 동기화" sourceHash="b08b0fa02c4c669e" />
+		<entry key="settings.display.windowMode" text="창 모드" sourceHash="74e7a95114592520" />
+		<entry key="settings.display.windowMode.borderless" text="테두리 없음" sourceHash="60c26ddb9c7ef1fa" />
+		<entry key="settings.display.windowMode.windowed" text="창" sourceHash="c73eba7da7d67b64" />
+		<entry key="settings.gameplay.cameraShake" text="카메라 흔들림" sourceHash="0d4412b117d8c5c4" />
+		<entry key="settings.gameplay.fieldOfView" text="시야각" sourceHash="cfc03af4e2ec2dd9" />
+		<entry key="settings.gameplay.headBob" text="걸음 흔들림" sourceHash="6b009c84219aa0f8" />
+		<entry key="settings.gameplay.showTutorials" text="튜토리얼 표시" sourceHash="f7f7f982c0020167" />
+		<entry key="settings.graphics.effectsQuality" text="효과 품질" sourceHash="2f1d73eefe0d67e4" />
+		<entry key="settings.graphics.foliageDensity" text="초목 밀도" sourceHash="2fbb57da1cea22f8" />
+		<entry key="settings.graphics.motionBlur" text="모션 블러" sourceHash="bb0dd4796cb70d98" />
+		<entry key="settings.graphics.postQuality" text="후처리 품질" sourceHash="25d945a94bd08004" />
+		<entry key="settings.graphics.quality" text="그래픽 품질" sourceHash="207b31ba362cec89" />
+		<entry key="settings.graphics.quality.custom" text="사용자 지정" sourceHash="f0cab2483f66aa2e" />
+		<entry key="settings.graphics.quality.high" text="높음" sourceHash="9deeefd89ca8a81d" />
+		<entry key="settings.graphics.quality.low" text="낮음" sourceHash="24f3a319b88552c1" />
+		<entry key="settings.graphics.quality.medium" text="중간" sourceHash="ac6bdc71f750ac96" />
+		<entry key="settings.graphics.quality.ultra" text="최고" sourceHash="311b3da2e76753d5" />
+		<entry key="settings.graphics.renderScale" text="렌더 배율" sourceHash="c17a07578d87a8f7" />
+		<entry key="settings.graphics.shadowQuality" text="그림자 품질" sourceHash="d055b83933ce0048" />
+		<entry key="settings.graphics.textureQuality" text="텍스처 품질" sourceHash="8dec707fb7d9325d" />
+		<entry key="settings.graphics.upscaler" text="업스케일러" sourceHash="523e5f717170c790" />
+		<entry key="settings.graphics.upscaler.spatial" text="공간" sourceHash="07d754eb51a3ee43" />
+		<entry key="settings.graphics.viewDistance" text="시야 거리" sourceHash="f2a71c8e84cbc543" />
+		<entry key="settings.language.text" text="표시 언어" sourceHash="8b38f66b7ca61de8" />
+		<entry key="settings.privacy.crashReports" text="크래시 보고" sourceHash="b4a986fd6964c2d3" />
+		<entry key="settings.privacy.crashReports.ask" text="매번 묻기" sourceHash="44254bb1ef85bac8" />
+		<entry key="settings.privacy.crashReports.local" text="로컬에만 보관" sourceHash="8b3c1bab8e4d3093" />
+		<entry key="settings.privacy.crashReports.send" text="자동으로 보내기" sourceHash="9fa9bb8c8057dbfa" />
+		<entry key="settings.privacy.telemetry" text="사용 데이터 공유" sourceHash="35369209785d4d0d" />
+		<entry key="settings.restartRequired"
+		       text="설정 {count}개는 다시 시작한 뒤에 적용됩니다."
+		       sourceHash="6462a7414eb6a4f5" />
+	</entries>
+</TranslationTable>

@@ -11,7 +11,7 @@
 
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
@@ -96,7 +96,7 @@ namespace sw
             /** @brief 폴더(리소스 경로나 절대 경로) 아래 파일 경로입니다. 리소스 키는 `/` 로 잇는다. */
             static string joinPath( string_view folder, string_view fileName ) { return formatText( "%#/%#", folder, fileName ); }
 
-            /** @brief 목록 파일(`{ "migrations": [ "NNNN_이름", ... ] }`)을 읽습니다. 다른 키 · 문자열이 아닌 항목 · 빈 목록은 오류입니다. */
+            /** @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" />…</SQLMigrationList>`)을 읽습니다. 다른 요소 · 속성 · 빈 이름 · 빈 목록은 오류입니다. */
             [[nodiscard]] static bool readList( string_view folder, vector<string>& outListStem, string& outError )
             {
                 const string listPath = joinPath( folder, SQLMigrationRunner::kListFileName );
@@ -106,30 +106,35 @@ namespace sw
                     outError = formatText( "cannot read the migration list '%#'", listPath );
                     return false;
                 }
-                JSONDocument document;
-                if ( document.tryParse( text ) == false || document.getRoot().isObject() == false )
+                XMLDocument document;
+                if ( document.parse( text, listPath ) == false )
                 {
-                    outError = formatText( "migration list '%#' is not a JSON object", listPath );
+                    outError = formatText( "migration list '%#' is not XML: %#", listPath, document.getLastError() );
                     return false;
                 }
-                const JSONValue root               = document.getRoot();
-                const JSONValue migrations         = root.get( "migrations", false );
-                const bool      bOnlyMigrationsKey = root.size() == 1 && migrations.isValid() && migrations.isArray();
-                if ( bOnlyMigrationsKey == false || migrations.size() == 0 )
+                const XMLNode root = document.getRoot( "SQLMigrationList", false );
+                if ( root.isValid() == false || root.getFirstAttribute().isValid() )
                 {
-                    outError = formatText( "migration list '%#' must hold only a non-empty \"migrations\" array", listPath );
+                    outError = formatText( "migration list '%#' must be a <SQLMigrationList> element without attributes", listPath );
                     return false;
                 }
                 outListStem.clear();
-                for ( size_t entryIndex = 0; entryIndex < migrations.size(); ++entryIndex )
+                for ( XMLNode entry = root.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
-                    const JSONValue entry = migrations.at( entryIndex );
-                    if ( entry.isString() == false )
+                    const XMLAttribute nameAttribute = entry.getFirstAttribute();
+                    const bool         bValidEntry   = string_view{ entry.getName() } == "Migration" && nameAttribute.isValid() && nameAttribute.getNext().isValid() == false &&
+                                             string_view{ nameAttribute.getName() } == "_name" && string_view{ nameAttribute.getValue() }.empty() == false;
+                    if ( bValidEntry == false )
                     {
-                        outError = formatText( "migration list '%#' holds an entry that is not a string", listPath );
+                        outError = formatText( "migration list '%#' must hold only <Migration _name=\"NNNN_name\" /> elements", listPath );
                         return false;
                     }
-                    outListStem.push_back( entry.asString() );
+                    outListStem.push_back( nameAttribute.getValue() );
+                }
+                if ( outListStem.empty() )
+                {
+                    outError = formatText( "migration list '%#' must hold at least one <Migration>", listPath );
+                    return false;
                 }
                 return true;
             }

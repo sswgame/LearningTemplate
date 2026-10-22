@@ -1,9 +1,9 @@
 /**
  * @file LocalizationDocuments.h
- * @brief 로컬라이제이션 저작 파일 세트를 정의합니다. 원문 문자열 테이블(`*.strings.json`), 문화권 번역 테이블(`<culture>.translation.json`), 프로젝트(`*.locproject.json`)입니다.
+ * @brief 로컬라이제이션 저작 파일 세트를 정의합니다. 원문 문자열 테이블(`*.strings.xml`), 문화권 번역 테이블(`<culture>.translation.xml`), 프로젝트(`*.locproject.xml`)입니다.
  * @details 원문 테이블이 원본이다(언리얼 String Table, 유니티 Shared Table Data). 키마다 원문, 맥락, 설명, 최대 길이, 나온 위치를 가진다.
  *          번역 테이블은 번역마다 **번역할 때의 원문 해시**를 가지며, 원문이 바뀌면 그 번역은 낡은(stale) 것이 되어 화면에 나오지 않는다(언리얼과 같다.
- *          낡은 번역 대신 다음 문화권으로 넘어간다). 모르는 필드는 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작다.
+ *          낡은 번역 대신 다음 문화권으로 넘어간다). 모르는 속성 · 자식은 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작다. 형식은 XML 이다(키는 `<entry key="…">` 의 속성 — 키가 값마다 다른 맵이라 칸 이름으로 쓸 수 없다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -50,13 +50,13 @@ namespace sw
 {
     /**
      * @class SourceStringTable
-     * @brief 원문 문자열 테이블 파일 하나(`*.strings.json`)입니다.
-     * @details `{ "culture": "en", "entries": { "Menu.Start": { "source": "Start", "context": "…", "comment": "…", "maxLength": 12, "origins": [ … ] } } }`
+     * @brief 원문 문자열 테이블 파일 하나(`*.strings.xml`)입니다.
+     * @details `<SourceStringTable culture="en"><entries><entry key="Menu.Start" source="Start" context="…" comment="…" maxLength="12"><origins><item>…</item></origins></entry></entries></SourceStringTable>`
      */
     class SW_API SourceStringTable
     {
     public:
-        static constexpr const utf8* kExtension = ".strings.json";
+        static constexpr const utf8* kExtension = ".strings.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -64,9 +64,9 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "SourceStringTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJSONText() const;
+        string             toXMLText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         const SourceTextEntry* findEntry( string_view key ) const;
@@ -113,13 +113,13 @@ namespace sw
 {
     /**
      * @class TranslationTable
-     * @brief 문화권 하나의 번역 테이블 파일(`<culture>.translation.json`)입니다.
-     * @details `{ "culture": "ko", "entries": { "Menu.Start": { "text": "시작", "sourceHash": "…16 진수…", "review": true, "translatorComment": "…" } } }`
+     * @brief 문화권 하나의 번역 테이블 파일(`<culture>.translation.xml`)입니다.
+     * @details `<TranslationTable culture="ko"><entries><entry key="Menu.Start" text="시작" sourceHash="…16 진수…" review="true" translatorComment="…" /></entries></TranslationTable>`
      */
     class SW_API TranslationTable
     {
     public:
-        static constexpr const utf8* kExtension = ".translation.json";
+        static constexpr const utf8* kExtension = ".translation.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -127,9 +127,9 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "TranslationTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJSONText() const;
+        string             toXMLText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         const TranslationEntry* findEntry( string_view key ) const;
@@ -155,7 +155,7 @@ namespace sw
     /**
      * @struct LocalizationAssetRule
      * @brief 리플렉션으로 읽지 않는 데이터(손으로 읽는 XML 카탈로그, 스키마)에서 텍스트를 모으는 규칙 한 줄입니다(프로젝트의 `assetRules`).
-     * @details `{ "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" }` 형태이며, 파일 이름이 `files` 로
+     * @details `<rule files="items.xml" attribute="name" kind="text" context="Item name"><elements><item>Item</item></elements></rule>` 형태이며, 파일 이름이 `files` 로
      *          끝나는 XML 에서 그 요소들의 속성 값을 모은다. `kind` 는 `text`(키이거나 텍스트 그대로)와 `key`(키 참조이며 테이블에 있어야 한다)가 있다.
      */
     struct LocalizationAssetRule
@@ -172,18 +172,18 @@ namespace sw
 {
     /**
      * @class LocalizationProject
-     * @brief 로컬라이제이션 프로젝트 파일(`*.locproject.json`)입니다. 원문 문화권, 대상 문화권, 수집 설정을 담습니다(언리얼 Localization Dashboard 의 타깃 하나에 해당).
-     * @details `{ "name": "engine", "sourceCulture": "en", "cultures": [ "ko", "ja" ], "stringTables": [ "engine.strings.json" ],
-     *            "codeRoots": [ "Source/Engine" ], "assetRoots": [ "engine/settings" ] }` 형태이며, 테이블 이름은 프로젝트 파일 옆의 상대 경로, `codeRoots` 는 저장소 상대 경로,
-     *          `assetRoots` 는 리소스 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.json`,
-     *          번역 메모리는 `tm/<culture>.tm.json`, 교환 파일은 `po/<culture>.po` 이다. 파일을 훑지 않고 이름으로 읽으므로 팩 안에서도 같다.
+     * @brief 로컬라이제이션 프로젝트 파일(`*.locproject.xml`)입니다. 원문 문화권, 대상 문화권, 수집 설정을 담습니다(언리얼 Localization Dashboard 의 타깃 하나에 해당).
+     * @details `<LocalizationProject name="engine" sourceCulture="en"><cultures><item>ko</item><item>ja</item></cultures><stringTables><item>engine.strings.xml</item></stringTables>
+     *            <codeRoots><item>Source/Engine</item></codeRoots><assetRoots><item>engine/settings</item></assetRoots></LocalizationProject>` 형태이며, 테이블 이름은 프로젝트 파일 옆의 상대 경로, `codeRoots` 는 저장소 상대 경로,
+     *          `assetRoots` 는 리소스 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.xml`,
+     *          번역 메모리는 `tm/<culture>.tm.xml`, 교환 파일은 `po/<culture>.po` 이다. 파일을 훑지 않고 이름으로 읽으므로 팩 안에서도 같다.
      *          `stagedCultures` 는 출시하는 문화권이다(언리얼 패키징 설정의 Cultures to Stage). `cultures` 의 부분 집합이어야 하고, `--check-text` 는 이 문화권의
      *          빠지거나 낡은 번역을 실패로 본다. 목록 밖 문화권은 번역 중으로 보고 개수만 보고한다.
      */
     class SW_API LocalizationProject
     {
     public:
-        static constexpr const utf8* kExtension = ".locproject.json";
+        static constexpr const utf8* kExtension = ".locproject.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -191,12 +191,12 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
 
         /** @brief 프로젝트 파일 옆 @p fileName 의 경로입니다. */
         static string makeSiblingPath( string_view projectPath, string_view fileName );
-        /** @brief 문화권 번역 테이블 경로(`<폴더>/<culture>.translation.json`)입니다. */
+        /** @brief 문화권 번역 테이블 경로(`<폴더>/<culture>.translation.xml`)입니다. */
         static string makeTranslationPath( string_view projectPath, string_view culture );
         /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
         bool isStagedCulture( string_view culture ) const;

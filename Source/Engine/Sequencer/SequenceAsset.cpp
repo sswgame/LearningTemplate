@@ -9,7 +9,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include <algorithm>
 
@@ -96,21 +96,21 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 
-    bool SequenceAsset::parseJSON( string_view jsonView )
+    bool SequenceAsset::parseXML( string_view xmlView )
     {
-        return readText( jsonView, "<sequence text>" );
+        return readText( xmlView, "<sequence text>" );
     }
 
-    bool SequenceAsset::readText( string_view json, string_view sourceLabel )
+    bool SequenceAsset::readText( string_view xml, string_view sourceLabel )
     {
         // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
         *this = SequenceAsset{};
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) == false || validateFile( sourceLabel ) == false )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) == false || validateFile( sourceLabel ) == false )
         {
             *this = SequenceAsset{};
             return false;
@@ -173,9 +173,9 @@ namespace sw
         return bValid;
     }
 
-    string SequenceAsset::toJSON() const
+    string SequenceAsset::toXML() const
     {
-        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
+        return XMLSerializer::serialize( this, *StaticType() );
     }
 
     const SequenceItemKindInfo* SequenceAsset::findItemKindInfo( SequenceItemKind kind )

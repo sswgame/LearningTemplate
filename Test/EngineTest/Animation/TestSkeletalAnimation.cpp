@@ -237,10 +237,10 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
 }
 
 /**
- * @brief [SkeletalAnimationTest] 스켈레톤 JSON 왕복과 검증 — 모르는 키 · 빠진 필수 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류다
+ * @brief [SkeletalAnimationTest] 스켈레톤 XML 왕복과 검증 — 모르는 키 · 빠진 필수 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류다
  * @details 키는 리플렉션 PROPERTY 이름이고 모두 `Required` 다. 빠진 `_parentIndex` 를 초기값(-1)으로 읽으면 그 본이 조용히 루트가 된다.
  */
-SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
+SW_TEST_CASE( SkeletalAnimationTest, SkeletonXMLRoundTripsAndValidates )
 {
     Skeleton           skeleton = test::makeChainSkeleton( 3 );
     SkeletonAttachment attachment{};
@@ -250,9 +250,9 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
     attachment._localTransform = test::makeBoneTransform( float3{ 0.0f, 0.1f, 0.0f } );
     skeleton.addAttachment( attachment );
 
-    const string written = skeleton.toJSON();
+    const string written = skeleton.toXML();
     Skeleton     loaded;
-    SW_ASSERT_TRUE( loaded.parseJSON( written, "round trip" ) );
+    SW_ASSERT_TRUE( loaded.parseXML( written, "round trip" ) );
     SW_EXPECT_EQUAL( 3u, loaded.getBoneCount() );
     SW_EXPECT_EQUAL( 1, loaded.getBone( 2 )._parentIndex );
     SW_EXPECT_EQUAL( 1, loaded.getParentIndices()[2] );
@@ -260,24 +260,25 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded.getAttachments().size() ) );
     SW_EXPECT_TRUE( loaded.getAttachments()[0]._parentBone == hashed_string( "bone2" ) );
     SW_EXPECT_NEAR_EQUAL( 0.1f, loaded.getAttachments()[0]._localTransform._translation._y, 1e-6f );
-    SW_EXPECT_STREQ( written.c_str(), loaded.toJSON().c_str() ); // 다시 읽어 쓰면 바이트까지 같다
+    SW_EXPECT_STREQ( written.c_str(), loaded.toXML().c_str() ); // 다시 읽어 쓰면 바이트까지 같다
 
     test::ScopedDefensiveTestLog expected( "malformed skeleton data is rejected" );
     string                       unknownKey = written;
-    unknownKey.replace( unknownKey.find( "\"_parentIndex\"" ), 14, "\"_parnt\": 0, \"_parentIndex\"" );
+    unknownKey.replace( unknownKey.find( "_parentIndex=" ), 13, "_parnt=\"0\" _parentIndex=" );
     Skeleton broken;
-    SW_EXPECT_FALSE( broken.parseJSON( unknownKey, "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseXML( unknownKey, "unknown key" ) );
     SW_EXPECT_EQUAL( 0u, broken.getBoneCount() );
-    // 첫 본의 `_parentIndex` 줄을 지운다 — 남은 글은 올바른 JSON 이고 모르는 키도 없다.
+    // 첫 본의 `_parentIndex` 속성을 지운다 — 남은 글은 올바른 XML 이고 모르는 속성도 없다.
     string       missingKey   = written;
-    const size_t missingStart = missingKey.find( "\"_parentIndex\"" );
-    missingKey.erase( missingStart, missingKey.find( '\n', missingStart ) + 1 - missingStart );
-    SW_EXPECT_FALSE( broken.parseJSON( missingKey, "missing parent index" ) );
+    const size_t missingStart = missingKey.find( "_parentIndex=" );
+    const size_t missingEnd   = missingKey.find( '"', missingKey.find( '"', missingStart ) + 1 );
+    missingKey.erase( missingStart, missingEnd + 1 - missingStart );
+    SW_EXPECT_FALSE( broken.parseXML( missingKey, "missing parent index" ) );
     string badBone = written;
-    badBone.replace( badBone.find( "\"bone2\"", badBone.find( "\"_listAttachment\"" ) ), 7, "\"bone9\"" );
-    SW_EXPECT_FALSE( broken.parseJSON( badBone, "unknown attachment bone" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "bones": [], "attachments": [] })", "old keys" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listBone": [], "_listAttachment": [] })", "no bones" ) );
+    badBone.replace( badBone.find( "\"bone2\"", badBone.find( "_listAttachment" ) ), 7, "\"bone9\"" );
+    SW_EXPECT_FALSE( broken.parseXML( badBone, "unknown attachment bone" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<Skeleton><bones /><attachments /></Skeleton>)", "old keys" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<Skeleton><_listBone /><_listAttachment /></Skeleton>)", "no bones" ) );
 }
 
 /**
@@ -287,8 +288,8 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
 SW_TEST_CASE( SkeletalAnimationTest, RepositorySkeletonResavesByteForByte )
 {
     const utf8* const arrSkeletonPath[] = {
-        "game/empty/models/testhead/testhead.skeleton.json",
-        "game/shooter3d/rigs/knight_cape.skeleton.json",
+        "game/empty/models/testhead/testhead.skeleton.xml",
+        "game/shooter3d/rigs/knight_cape.skeleton.xml",
     };
     for ( const utf8* pSkeletonPath : arrSkeletonPath )
     {
@@ -299,7 +300,7 @@ SW_TEST_CASE( SkeletalAnimationTest, RepositorySkeletonResavesByteForByte )
         Skeleton skeleton;
         SW_ASSERT_TRUE_MSG( skeleton.loadFromResource( pSkeletonPath ), pSkeletonPath );
         SW_EXPECT_TRUE( skeleton.getBoneCount() > 0u );
-        SW_EXPECT_TRUE_MSG( fileText == skeleton.toJSON(), pSkeletonPath );
+        SW_EXPECT_TRUE_MSG( fileText == skeleton.toXML(), pSkeletonPath );
     }
 }
 

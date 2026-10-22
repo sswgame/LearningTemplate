@@ -11,7 +11,7 @@
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -108,7 +108,7 @@ namespace sw
 
             const utf8* getTypeName() const override { return "SpringChain"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 bool bShared               = false;
                 _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
@@ -123,14 +123,14 @@ namespace sw
                 _settings._bUseGravityOverride = ( _settings._gravityOverride._x != MathUtil::kMaxFloat ) ? SW_TRUE : SW_FALSE;
                 if ( _settings._bUseGravityOverride == SW_FALSE )
                     _settings._gravityOverride = float3{};
-                _bUseSharedColliders      = bShared ? SW_TRUE : SW_FALSE;
-                const JSONValue colliders = reader.readArray( "colliders", false );
+                _bUseSharedColliders       = bShared ? SW_TRUE : SW_FALSE;
+                const RigXMLList colliders = reader.readArray( "colliders", false );
                 for ( size_t index = 0; bOk && colliders.isValid() && index < colliders.size(); ++index )
                 {
-                    RigJSONReader colliderReader( colliders.at( index ), reader.getContext() );
-                    ColliderSpec  spec{};
-                    uint32        shape = 0;
-                    bOk                 = colliderReader.readName( "bone", spec._boneName, true ) &&
+                    RigXMLReader colliderReader( colliders.at( index ), reader.getContext() );
+                    ColliderSpec spec{};
+                    uint32       shape = 0;
+                    bOk                = colliderReader.readName( "bone", spec._boneName, true ) &&
                           colliderReader.readChoice( "shape", RigSecondaryNodesInternal::kArrColliderShape, SW_COUNT_OF( RigSecondaryNodesInternal::kArrColliderShape ),
                                                      shape, true ) &&
                           colliderReader.readFloat3( "a", spec._collider._pointA, false ) && colliderReader.readFloat3( "b", spec._collider._pointB, false ) &&
@@ -140,11 +140,11 @@ namespace sw
                     _listColliderSpec.push_back( spec );
                 }
                 // 입자마다의 물성(VRM 관절마다 값) — 적지 않은 키는 사슬 값이다. 길이는 본 수 − 1 이어야 한다(입자 하나에 하나).
-                const JSONValue joints = reader.readArray( "joints", false );
+                const RigXMLList joints = reader.readArray( "joints", false );
                 _settings._listParticle.clear();
                 for ( size_t index = 0; bOk && joints.isValid() && index < joints.size(); ++index )
                 {
-                    RigJSONReader             jointReader( joints.at( index ), reader.getContext() );
+                    RigXMLReader              jointReader( joints.at( index ), reader.getContext() );
                     RigSpringParticleSettings particle{ float3{}, _settings._stiffness, _settings._axisPull, _settings._damping, _settings._particleRadius };
                     bOk = jointReader.readFloat( "stiffness", particle._stiffness, false ) && jointReader.readFloat( "axis_pull", particle._axisPull, false ) &&
                           jointReader.readFloat( "damping", particle._damping, false ) && jointReader.readFloat3( "gravity", particle._gravity, false ) &&
@@ -228,30 +228,30 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigPoseDriverNode>( *this ); }
             const utf8*         getTypeName() const override { return "PoseDriver"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
-                float32 radiusDegrees = 45.0f;
-                bool    bOk           = reader.readName( "driver", _driverName, true ) && reader.readFloat( "radius_degrees", radiusDegrees, false );
-                _radius               = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::kDegreeToRadian;
-                const JSONValue poses = reader.readArray( "poses", true );
+                float32 radiusDegrees  = 45.0f;
+                bool    bOk            = reader.readName( "driver", _driverName, true ) && reader.readFloat( "radius_degrees", radiusDegrees, false );
+                _radius                = MathUtil::max( radiusDegrees, 1.0f ) * MathUtil::kDegreeToRadian;
+                const RigXMLList poses = reader.readArray( "poses", true );
                 for ( size_t index = 0; bOk && poses.isValid() && index < poses.size(); ++index )
                 {
-                    RigJSONReader poseReader( poses.at( index ), reader.getContext() );
-                    DriverPose    pose{};
-                    bOk                    = poseReader.readName( "name", pose._name, true ) && poseReader.readRotationDegrees( "rotation", pose._rotation, true );
-                    const JSONValue morphs = poseReader.readArray( "morphs", false );
+                    RigXMLReader poseReader( poses.at( index ), reader.getContext() );
+                    DriverPose   pose{};
+                    bOk                     = poseReader.readName( "name", pose._name, true ) && poseReader.readRotationDegrees( "rotation", pose._rotation, true );
+                    const RigXMLList morphs = poseReader.readArray( "morphs", false );
                     for ( size_t morphIndex = 0; bOk && morphs.isValid() && morphIndex < morphs.size(); ++morphIndex )
                     {
-                        RigJSONReader  morphReader( morphs.at( morphIndex ), reader.getContext() );
+                        RigXMLReader   morphReader( morphs.at( morphIndex ), reader.getContext() );
                         RigMorphWeight morph{};
                         bOk = morphReader.readName( "morph", morph._name, true ) && morphReader.readFloat( "weight", morph._weight, true );
                         bOk = morphReader.finish() && bOk;
                         pose._listMorph.push_back( morph );
                     }
-                    const JSONValue bones = poseReader.readArray( "bones", false );
+                    const RigXMLList bones = poseReader.readArray( "bones", false );
                     for ( size_t boneIndex = 0; bOk && bones.isValid() && boneIndex < bones.size(); ++boneIndex )
                     {
-                        RigJSONReader  boneReader( bones.at( boneIndex ), reader.getContext() );
+                        RigXMLReader   boneReader( bones.at( boneIndex ), reader.getContext() );
                         CorrectiveBone corrective{};
                         bOk = boneReader.readName( "bone", corrective._name, true ) && boneReader.readRotationDegrees( "rotation", corrective._rotation, false ) &&
                               boneReader.readFloat3( "translation", corrective._translation, false );

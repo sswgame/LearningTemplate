@@ -61,7 +61,7 @@ namespace sw
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 프로필 경로(`*.retarget.json`)를 바꾸고 읽습니다. */
+        /** @brief 프로필 경로(`*.retarget.xml`)를 바꾸고 읽습니다. */
         void setProfilePath( string_view path );
         /** @brief 프로필을 런타임에 정합니다(저장되지 않습니다). */
         void setProfile( const RetargetProfile& profile );
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 기본 포즈 단계입니다(워커). */
         void populateBasePose( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Retarget", DisplayName = "Profile", AssetPath, AssetType = "RetargetProfile", Tooltip = "Retarget profile (*.retarget.json)" )
+        PROPERTY( Category = "Retarget", DisplayName = "Profile", AssetPath, AssetType = "RetargetProfile", Tooltip = "Retarget profile (*.retarget.xml)" )
         string _profilePath;
 
         PoseRetargetBinding                     _binding;

@@ -38,13 +38,13 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, PicksOnlyEditableJSONFiles )
         {"page":"ModuleManifest","path":"Source/*.module.json","type":"ModuleManifestFile"},
         {"page":"TextureImportConfig","path":"Config/Editor/TextureImportConfig.json","type":""},
         {"page":"GameConfig","path":"Config/Game/*.json","type":"GameConfig"},
-        {"page":"LipSyncSettings","path":"Resource/engine/animation/lipsync.json","type":"LipSyncSettings"}]})";
+        {"page":"MemoryBudget","path":"Config/Engine/MemoryBudget.json","type":"MemoryBudget"}]})";
     sw::vector<sw::editor::ProjectSettingsEntry> listEntry;
     SW_ASSERT_TRUE( sw::editor::ProjectSettingsCatalog::parseReference( referenceJSON, listEntry ) );
     SW_ASSERT_EQUAL( size_t( 3 ), listEntry.size() );
     SW_EXPECT_TRUE( listEntry[0]._page == "EngineConfig" );
     SW_EXPECT_TRUE( listEntry[1]._page == "GameConfig" );
-    SW_EXPECT_TRUE( listEntry[2]._relativePath == "Resource/engine/animation/lipsync.json" );
+    SW_EXPECT_TRUE( listEntry[2]._relativePath == "Config/Engine/MemoryBudget.json" );
     SW_EXPECT_FALSE( sw::editor::ProjectSettingsCatalog::parseReference( "not json", listEntry ) );
 }
 

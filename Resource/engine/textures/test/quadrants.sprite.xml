@@ -1,0 +1,14 @@
+<SpriteClipAsset _atlasPath="engine/textures/test/quadrants.dds" _atlasPixelSize="0,0">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0,0,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />
+		<SpriteClipFrame _uvRect="0.5,0,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />
+		<SpriteClipFrame _uvRect="0.5,0.5,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />
+		<SpriteClipFrame _uvRect="0,0.5,0.5,0.5" _borderPixels="0,0,0,0" _durationMs="250" />
+	</_listFrame>
+	<_listKey />
+	<_listAnimation>
+		<SpriteClipAnimation _name="cycle" _firstFrame="0" _frameCount="4" _bLoop="1">
+			<_listNotify />
+		</SpriteClipAnimation>
+	</_listAnimation>
+</SpriteClipAsset>

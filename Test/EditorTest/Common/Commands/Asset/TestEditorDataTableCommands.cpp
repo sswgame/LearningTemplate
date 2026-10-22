@@ -14,14 +14,14 @@ using namespace sw::editor;
 namespace
 {
     /** @brief 원문 표 하나 · 문화권 ko 를 가진 프로젝트를 임시 폴더에 만들고 프로젝트 경로를 돌려줍니다. */
-    string writeProject( const string& folder, const string& koreanJSON )
+    string writeProject( const string& folder, const string& koreanXML )
     {
-        const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
+        const string projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
         // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤 단언이 깨진다
-        (void)FileUtil::writeTextFile( projectPath, R"({ "name": "test", "sourceCulture": "en", "cultures": [ "ko" ], "stringTables": [ "test.strings.json" ] })" );
-        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 위와 같다
-                                       R"({ "culture": "en", "entries": { "greeting": { "source": "Hello", "comment": "Title screen" } } })" );
-        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.json" ), koreanJSON ); // 위와 같다
+        (void)FileUtil::writeTextFile( projectPath, R"(<LocalizationProject name="test" sourceCulture="en"><cultures><item>ko</item></cultures><stringTables><item>test.strings.xml</item></stringTables></LocalizationProject>)" );
+        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.xml" ), // 위와 같다
+                                       R"(<SourceStringTable culture="en"><entries><entry key="greeting" source="Hello" comment="Title screen" /></entries></SourceStringTable>)" );
+        (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "ko.translation.xml" ), koreanXML ); // 위와 같다
         return projectPath;
     }
 } // namespace
@@ -35,13 +35,13 @@ namespace
 SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileItCouldNotRead )
 {
     const string folder        = test::makeTempDirectory( "localization" );
-    const string kBrokenKorean = "{ \"culture\": \"ko\", \"entries\": { \"greeting\": { \"text\": \"안녕하세요\" }, } }\n";
+    const string kBrokenKorean = "<TranslationTable culture=\"ko\"><entries><entry key=\"greeting\" text=\"안녕하세요\" /></entries>\n";
     const string projectPath   = writeProject( folder, kBrokenKorean );
-    const string koPath        = FileUtil::joinPath( folder, "ko.translation.json" );
+    const string koPath        = FileUtil::joinPath( folder, "ko.translation.xml" );
 
     LocalizationSheet sheet;
     {
-        test::ScopedDefensiveTestLog expected( "a translation file with a trailing comma" );
+        test::ScopedDefensiveTestLog expected( "a translation file that is not well formed" );
         SW_EXPECT_FALSE( EditorDataTableCommands::loadLocalizationProject( projectPath, sheet ) );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), sheet._listRecord.size() );
@@ -62,7 +62,7 @@ SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileI
     SW_EXPECT_TRUE( sheet._listRecord[0]._bModified );         // 저장되지 않은 것이 남아 있다
 
     // 고친 뒤에는 모두 저장되고 표시가 풀린다.
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( koPath, R"({ "culture": "ko", "entries": { "greeting": { "text": "안녕하세요" } } })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( koPath, R"(<TranslationTable culture="ko"><entries><entry key="greeting" text="안녕하세요" /></entries></TranslationTable>)" ) );
     SW_EXPECT_TRUE( EditorDataTableCommands::saveLocalizationProject( sheet ) );
     SW_EXPECT_FALSE( sheet._listRecord[0]._bModified );
 }
@@ -76,7 +76,7 @@ SW_TEST_CASE( EditorDataTableCommandsTest, EditedTranslationIsCurrentAndSourceEd
 {
     const string folder      = test::makeTempDirectory( "localization_states" );
     const string projectPath = writeProject(
-        folder, R"({ "culture": "ko", "entries": { "greeting": { "text": "안녕", "translatorComment": "반말로" } } })" );
+        folder, R"(<TranslationTable culture="ko"><entries><entry key="greeting" text="안녕" translatorComment="반말로" /></entries></TranslationTable>)" );
 
     LocalizationSheet sheet;
     SW_ASSERT_TRUE( EditorDataTableCommands::loadLocalizationProject( projectPath, sheet ) );
@@ -88,8 +88,8 @@ SW_TEST_CASE( EditorDataTableCommandsTest, EditedTranslationIsCurrentAndSourceEd
     SW_ASSERT_TRUE( EditorDataTableCommands::saveLocalizationProject( sheet ) );
     TranslationTable  korean;
     SourceStringTable source;
-    SW_ASSERT_TRUE( korean.loadFromFile( FileUtil::joinPath( folder, "ko.translation.json" ) ) );
-    SW_ASSERT_TRUE( source.loadFromFile( FileUtil::joinPath( folder, "test.strings.json" ) ) );
+    SW_ASSERT_TRUE( korean.loadFromFile( FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
+    SW_ASSERT_TRUE( source.loadFromFile( FileUtil::joinPath( folder, "test.strings.xml" ) ) );
     SW_EXPECT_TRUE( korean.computeState( "greeting", source.findEntry( "greeting" ) ) == TranslationState::Current );
     SW_EXPECT_STREQ( "반말로", korean.findEntry( "greeting" )->_translatorComment.c_str() );
     SW_EXPECT_STREQ( "Title screen", source.findEntry( "greeting" )->_comment.c_str() );
@@ -107,6 +107,6 @@ SW_TEST_CASE( EditorDataTableCommandsTest, EditedTranslationIsCurrentAndSourceEd
     sheet._listRemovedKey.push_back( sheet._listRecord[0]._key );
     sheet._listRecord.clear();
     SW_ASSERT_TRUE( EditorDataTableCommands::saveLocalizationProject( sheet ) );
-    SW_ASSERT_TRUE( korean.loadFromFile( FileUtil::joinPath( folder, "ko.translation.json" ) ) );
+    SW_ASSERT_TRUE( korean.loadFromFile( FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
     SW_EXPECT_NULL( korean.findEntry( "greeting" ) );
 }

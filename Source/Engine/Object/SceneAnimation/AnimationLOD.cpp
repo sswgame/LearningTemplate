@@ -14,12 +14,12 @@ namespace sw
 {
     SW_LOG_CALLER( "AnimationLOD" );
 
-    bool AnimationLODSettings::parseJSON( string_view json, string_view sourceLabel )
+    bool AnimationLODSettings::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = AnimationLODSettings{};
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validate( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && validate( sourceLabel ) )
             return true;
         *this = AnimationLODSettings{};
         return false;
@@ -34,7 +34,7 @@ namespace sw
             *this = AnimationLODSettings{};
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
     bool AnimationLODSettings::validate( string_view sourceLabel ) const

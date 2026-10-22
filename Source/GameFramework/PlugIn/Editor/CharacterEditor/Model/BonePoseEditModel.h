@@ -1,6 +1,6 @@
 /**
  * @file BonePoseEditModel.h
- * @brief 스켈레톤(`.skeleton.json`)을 읽어 본 목록 · 본 트리를 주고, 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`)를 편집하는 모델입니다. ImGui 와 씬을 모릅니다.
+ * @brief 스켈레톤(`.skeleton.xml`)을 읽어 본 목록 · 본 트리를 주고, 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`)를 편집하는 모델입니다. ImGui 와 씬을 모릅니다.
  * @details 스켈레톤은 재임포트가 다시 쓰는 산출물이라 **읽기만** 한다. 편집은 `ReferencePoseOverride` 에만 쌓고 파일로 쓴다(적은 필드만 쓴다 — 위치만 고치면 회전 · 스케일은 임포트 값).
  *          본의 "지금 값"(`getEffectiveTransform`)은 스켈레톤의 레퍼런스 포즈 위에 덮어쓰기를 얹은 결과이다. 좌우 짝은 이름 규칙(`MirrorNameRules`)으로 찾아 쌍으로 등록한다.
  */

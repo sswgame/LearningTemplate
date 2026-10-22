@@ -7,7 +7,7 @@
 
 - 그리는 맵과 걷는 맵을 **한 데이터**로 두는 방법 — 디렉터가 씬의 `TileMapRendererComponent` 가 읽은 맵 · 타일셋을 그대로 받고, 막힘은 타일셋 브러시의 `solid` 하나가 정한다
 - 타일 레이어 둘(땅 · 소품)을 겹치는 방법 — 소품 칸은 바탕이 투명이라 땅이 비치고, 소품 레이어의 `solid` 브러시도 막는다
-- 4 방향 스프라이트 애니메이션 — 클립(`.sprite.json`)의 구간 이름 `<idle|walk>_<down|left|right|up>` 을 뷰가 고른다
+- 4 방향 스프라이트 애니메이션 — 클립(`.sprite.xml`)의 구간 이름 `<idle|walk>_<down|left|right|up>` 을 뷰가 고른다
 - 대화를 워커 틱이 아니라 틱 뒤 게임 스레드(디렉터 플러시)에서 돌리는 방법
 
 그림은 엔진 팩의 CC0 픽셀 아트 16 px 세트입니다(`Resource/engine/credits.md`): 땅은 Shade "Puny World", 집 · 나무는 ArMM1998 "Zelda-like",
@@ -43,8 +43,8 @@ cd build/Ninja-Debug/Bin
 | `Resource/game/pixeltown/maps/townprops.tilemap.xml` | 소품(집 · 나무 · 덤불) — 땅과 같은 크기 |
 | `Resource/game/pixeltown/tilesets/town.tileset.xml` | 땅 브러시 — 길 · 물은 규칙 타일, 물은 `solid` |
 | `Resource/game/pixeltown/tilesets/townprops.tileset.xml` | 소품 브러시 — 모두 `solid` |
-| `Resource/game/pixeltown/sprites/*.sprite.json` | 주인공 4 방향 걷기 · 서기, 촌장 숨쉬기 |
-| `Resource/game/pixeltown/dialogue/elder.dialogue.json` | 촌장 대화 두 줄 |
+| `Resource/game/pixeltown/sprites/*.sprite.xml` | 주인공 4 방향 걷기 · 서기, 촌장 숨쉬기 |
+| `Resource/game/pixeltown/dialogue/elder.dialogue.xml` | 촌장 대화 두 줄 |
 
 주민은 `DialogueRunnerComponent` 를 단 오브젝트이고, 선 칸이 막힙니다. 선택지가 있는 대화는 이 게임에 선택 UI 가 없어 오류로 알리고 닫습니다.
 

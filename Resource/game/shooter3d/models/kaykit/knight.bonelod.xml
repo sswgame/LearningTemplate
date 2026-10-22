@@ -1,0 +1,26 @@
+<SkeletonBoneLOD>
+	<levels>
+		<level max_screen_size="0.15">
+			<remove>
+				<item>kneeIK.l</item>
+				<item>control-toe-roll.l</item>
+				<item>elbowIK.l</item>
+				<item>handIK.l</item>
+				<item>kneeIK.r</item>
+				<item>control-toe-roll.r</item>
+				<item>elbowIK.r</item>
+				<item>handIK.r</item>
+				<item>handslot.l</item>
+				<item>handslot.r</item>
+			</remove>
+		</level>
+		<level max_screen_size="0.05">
+			<remove>
+				<item>toes.l</item>
+				<item>toes.r</item>
+				<item>hand.l</item>
+				<item>hand.r</item>
+			</remove>
+		</level>
+	</levels>
+</SkeletonBoneLOD>

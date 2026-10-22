@@ -1,6 +1,6 @@
 /**
  * @file VrmAvatarImporter.cpp
- * @brief VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.json` 쓰기입니다.
+ * @brief VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.xml` 쓰기입니다.
  * @details 0.x 와 1.0 의 대응:
  *          - humanoid: 0.x `humanBones[] { bone, node }` · 1.0 `humanBones { <이름>: { node } }`. 0.x 엄지 `ThumbProximal` · `ThumbIntermediate` 는 1.0 의
  *            `ThumbMetacarpal` · `ThumbProximal` 이다. 유니티 Mecanim 근육 값(armStretch, min/max 등)은 엔진에 대응이 없어 옮기지 않는다.
@@ -18,6 +18,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
@@ -322,25 +323,26 @@ namespace sw::editor
                 }
             }
 
-            static void writeNumber( const JSONValue& target, float32 value )
+            /** @brief 실수를 1 μm 로 반올림해 글로 만듭니다(`kWrittenPrecision`). 같은 값이면 같은 글입니다. */
+            static string makeNumberText( float32 value )
             {
-                target.setFloat( static_cast<float64>( std::llround( static_cast<float64>( value ) * kWrittenPrecision ) ) / kWrittenPrecision );
+                return to_string( static_cast<float64>( std::llround( static_cast<float64>( value ) * kWrittenPrecision ) ) / kWrittenPrecision );
             }
 
-            static void writeVector( const JSONValue& target, const float3& value )
+            /** @brief 벡터를 `x,y,z` 글로 만듭니다(성분마다 `makeNumberText`). */
+            static string makeVectorText( const float3& value )
             {
-                target.setArray();
-                writeNumber( target.pushBack(), value._x );
-                writeNumber( target.pushBack(), value._y );
-                writeNumber( target.pushBack(), value._z );
+                return makeNumberText( value._x ) + "," + makeNumberText( value._y ) + "," + makeNumberText( value._z );
             }
 
-            static void writeIndices( const JSONValue& target, const vector<uint32>& listIndex )
+            static string_view makeBoolName( bool bValue ) { return bValue ? "true" : "false"; }
+
+            /** @brief 번호 목록을 @p target 요소 안에 `<item>` 으로 씁니다. */
+            static void writeIndices( const XMLNode& target, const vector<uint32>& listIndex )
             {
-                target.setArray();
                 for ( const uint32 index : listIndex )
                 {
-                    target.pushBack().setUint( index );
+                    (void)target.appendChild( "item", index );
                 }
             }
 
@@ -780,82 +782,70 @@ namespace sw::editor
             }
 
             /** @brief 표정 목록(`_listExpression`)을 @p root 에 씁니다. */
-            static void writeExpressions( const JSONValue& root, const VrmAvatarDef& def )
+            static void writeExpressions( const XMLNode& root, const VrmAvatarDef& def )
             {
-                const JSONValue list = root.set( "_listExpression", false );
-                list.setArray();
+                const XMLNode list = root.appendChild( "_listExpression" );
                 for ( const VrmExpression& expression : def._listExpression )
                 {
-                    const JSONValue entry = list.pushBack();
-                    entry.setObject();
-                    entry.set( "_name", false ).setString( expression._name );
-                    entry.set( "_bPreset", false ).setBool( expression._bPreset == SW_TRUE );
-                    entry.set( "_bBinary", false ).setBool( expression._bBinary == SW_TRUE );
-                    entry.set( "_overrideBlink", false ).setString( makeOverrideName( expression._overrideBlink ) );
-                    entry.set( "_overrideLookAt", false ).setString( makeOverrideName( expression._overrideLookAt ) );
-                    entry.set( "_overrideMouth", false ).setString( makeOverrideName( expression._overrideMouth ) );
-                    const JSONValue listBind = entry.set( "_listBind", false );
-                    listBind.setArray();
+                    const XMLNode entry = list.appendChild( "VrmExpression" );
+                    entry.appendAttribute( "_name", string_view{ expression._name } );
+                    entry.appendAttribute( "_bPreset", makeBoolName( expression._bPreset == SW_TRUE ) );
+                    entry.appendAttribute( "_bBinary", makeBoolName( expression._bBinary == SW_TRUE ) );
+                    entry.appendAttribute( "_overrideBlink", makeOverrideName( expression._overrideBlink ) );
+                    entry.appendAttribute( "_overrideLookAt", makeOverrideName( expression._overrideLookAt ) );
+                    entry.appendAttribute( "_overrideMouth", makeOverrideName( expression._overrideMouth ) );
+                    const XMLNode listBind = entry.appendChild( "_listBind" );
                     for ( const VrmExpressionBind& bind : expression._listBind )
                     {
-                        const JSONValue bindEntry = listBind.pushBack();
-                        bindEntry.setObject();
-                        bindEntry.set( "_morphTarget", false ).setString( bind._morphTarget );
-                        writeNumber( bindEntry.set( "_weight", false ), bind._weight );
+                        const XMLNode bindEntry = listBind.appendChild( "VrmExpressionBind" );
+                        bindEntry.appendAttribute( "_morphTarget", string_view{ bind._morphTarget } );
+                        bindEntry.appendAttribute( "_weight", string_view{ makeNumberText( bind._weight ) } );
                     }
                 }
             }
 
             /** @brief 스프링 본(콜라이더 · 콜라이더 그룹 · 스프링)을 @p root 에 씁니다. 그룹과 스프링은 앞 목록의 번호로 가리킵니다. */
-            static void writeSprings( const JSONValue& root, const VrmAvatarDef& def )
+            static void writeSprings( const XMLNode& root, const VrmAvatarDef& def )
             {
                 {
-                    const JSONValue list = root.set( "_listCollider", false );
-                    list.setArray();
+                    const XMLNode list = root.appendChild( "_listCollider" );
                     for ( const VrmSpringCollider& collider : def._listCollider )
                     {
-                        const JSONValue entry = list.pushBack();
-                        entry.setObject();
-                        entry.set( "_bone", false ).setString( collider._bone );
-                        entry.set( "_bCapsule", false ).setBool( collider._bCapsule == SW_TRUE );
-                        writeNumber( entry.set( "_radius", false ), collider._radius );
-                        writeVector( entry.set( "_offset", false ), collider._offset );
-                        writeVector( entry.set( "_tail", false ), collider._tail );
+                        const XMLNode entry = list.appendChild( "VrmSpringCollider" );
+                        entry.appendAttribute( "_bone", string_view{ collider._bone } );
+                        entry.appendAttribute( "_bCapsule", makeBoolName( collider._bCapsule == SW_TRUE ) );
+                        entry.appendAttribute( "_radius", string_view{ makeNumberText( collider._radius ) } );
+                        entry.appendAttribute( "_offset", string_view{ makeVectorText( collider._offset ) } );
+                        entry.appendAttribute( "_tail", string_view{ makeVectorText( collider._tail ) } );
                     }
                 }
                 {
-                    const JSONValue list = root.set( "_listColliderGroup", false );
-                    list.setArray();
+                    const XMLNode list = root.appendChild( "_listColliderGroup" );
                     for ( const VrmSpringColliderGroup& group : def._listColliderGroup )
                     {
-                        const JSONValue entry = list.pushBack();
-                        entry.setObject();
-                        entry.set( "_name", false ).setString( group._name );
-                        writeIndices( entry.set( "_listCollider", false ), group._listCollider );
+                        const XMLNode entry = list.appendChild( "VrmSpringColliderGroup" );
+                        entry.appendAttribute( "_name", string_view{ group._name } );
+                        writeIndices( entry.appendChild( "_listCollider" ), group._listCollider );
                     }
                 }
                 {
-                    const JSONValue list = root.set( "_listSpring", false );
-                    list.setArray();
+                    const XMLNode list = root.appendChild( "_listSpring" );
                     for ( const VrmSpring& spring : def._listSpring )
                     {
-                        const JSONValue entry = list.pushBack();
-                        entry.setObject();
-                        entry.set( "_name", false ).setString( spring._name );
-                        entry.set( "_centerBone", false ).setString( spring._centerBone );
-                        writeIndices( entry.set( "_listColliderGroup", false ), spring._listColliderGroup );
-                        const JSONValue listJoint = entry.set( "_listJoint", false );
-                        listJoint.setArray();
+                        const XMLNode entry = list.appendChild( "VrmSpring" );
+                        entry.appendAttribute( "_name", string_view{ spring._name } );
+                        entry.appendAttribute( "_centerBone", string_view{ spring._centerBone } );
+                        writeIndices( entry.appendChild( "_listColliderGroup" ), spring._listColliderGroup );
+                        const XMLNode listJoint = entry.appendChild( "_listJoint" );
                         for ( const VrmSpringJoint& joint : spring._listJoint )
                         {
-                            const JSONValue jointEntry = listJoint.pushBack();
-                            jointEntry.setObject();
-                            jointEntry.set( "_bone", false ).setString( joint._bone );
-                            writeNumber( jointEntry.set( "_hitRadius", false ), joint._hitRadius );
-                            writeNumber( jointEntry.set( "_stiffness", false ), joint._stiffness );
-                            writeNumber( jointEntry.set( "_gravityPower", false ), joint._gravityPower );
-                            writeVector( jointEntry.set( "_gravityDirection", false ), joint._gravityDirection );
-                            writeNumber( jointEntry.set( "_dragForce", false ), joint._dragForce );
+                            const XMLNode jointEntry = listJoint.appendChild( "VrmSpringJoint" );
+                            jointEntry.appendAttribute( "_bone", string_view{ joint._bone } );
+                            jointEntry.appendAttribute( "_hitRadius", string_view{ makeNumberText( joint._hitRadius ) } );
+                            jointEntry.appendAttribute( "_stiffness", string_view{ makeNumberText( joint._stiffness ) } );
+                            jointEntry.appendAttribute( "_gravityPower", string_view{ makeNumberText( joint._gravityPower ) } );
+                            jointEntry.appendAttribute( "_gravityDirection", string_view{ makeVectorText( joint._gravityDirection ) } );
+                            jointEntry.appendAttribute( "_dragForce", string_view{ makeNumberText( joint._dragForce ) } );
                         }
                     }
                 }
@@ -988,36 +978,34 @@ namespace sw::editor
         return true;
     }
 
-    string VrmAvatarImporter::makeAvatarJSON( const VrmAvatarDef& def )
+    string VrmAvatarImporter::makeAvatarXML( const VrmAvatarDef& def )
     {
         using Internal = VrmAvatarImporterInternal;
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        root.set( "_version", false ).setUint( kVersion );
-        root.set( "_sourceMajorVersion", false ).setUint( def._sourceMajorVersion );
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "VrmAvatar" );
+        root.appendAttribute( "_version", kVersion );
+        root.appendAttribute( "_sourceMajorVersion", static_cast<uint32>( def._sourceMajorVersion ) );
+        root.appendAttribute( "_firstPersonBone", string_view{ def._firstPersonBone } );
+        root.appendAttribute( "_firstPersonOffset", string_view{ Internal::makeVectorText( def._firstPersonOffset ) } );
         {
-            const JSONValue map = root.set( "_mapHumanBone", false );
-            map.setObject();
+            // humanoid 이름은 속성 이름이다(`hips="J_Bip_C_Hips"`) — 이름이 값마다 다른 맵이라 칸 이름을 고정할 수 없다.
+            const XMLNode map = root.appendChild( "_mapHumanBone" );
             for ( const VrmHumanBone& bone : def._listHumanBone )
             {
-                map.set( bone._humanBone, false ).setString( bone._bone );
+                map.appendAttribute( bone._humanBone.c_str(), string_view{ bone._bone } );
             }
         }
-        root.set( "_firstPersonBone", false ).setString( def._firstPersonBone );
-        Internal::writeVector( root.set( "_firstPersonOffset", false ), def._firstPersonOffset );
         {
-            const JSONValue list = root.set( "_listFirstPersonMesh", false );
-            list.setArray();
+            const XMLNode list = root.appendChild( "_listFirstPersonMesh" );
             for ( const VrmFirstPersonMesh& mesh : def._listFirstPersonMesh )
             {
-                const JSONValue entry = list.pushBack();
-                entry.setObject();
-                entry.set( "_mesh", false ).setString( mesh._mesh );
-                entry.set( "_mode", false ).setString( Internal::makeFirstPersonModeName( mesh._mode ) );
+                const XMLNode entry = list.appendChild( "VrmFirstPersonMesh" );
+                entry.appendAttribute( "_mesh", string_view{ mesh._mesh } );
+                entry.appendAttribute( "_mode", Internal::makeFirstPersonModeName( mesh._mode ) );
             }
         }
         Internal::writeExpressions( root, def );
         Internal::writeSprings( root, def );
-        return document.dump( 1 );
+        return document.saveToString();
     }
 } // namespace sw::editor

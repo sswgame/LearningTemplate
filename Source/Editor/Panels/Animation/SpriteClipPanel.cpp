@@ -80,7 +80,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
-            saveJSON();
+            saveClip();
             const string savedPath = getLoadedAssetPath().empty() ? string{ EditorPaths::kSpriteClipDocumentFileName } : getLoadedAssetPath();
             _status                = SW_LOCKEYFORMAT( "EditorSpriteClip", "SavedStatus", TextArgumentList().addText( "path", savedPath ) );
         }
@@ -350,7 +350,7 @@ namespace sw::editor
         }
     }
 
-    void SpriteClipPanel::saveJSON()
+    void SpriteClipPanel::saveClip()
     {
         if ( getLoadedAssetPath().empty() )
             return;
@@ -386,13 +386,13 @@ namespace sw::editor
 
     string SpriteClipPanel::captureDocumentText() const
     {
-        return captureClipData().toJSON();
+        return captureClipData().toXML();
     }
 
     void SpriteClipPanel::applyDocumentText( string_view text )
     {
         SpriteClipAsset restored;
-        if ( text.empty() == false && restored.parseJSON( text ) == false )
+        if ( text.empty() == false && restored.parseXML( text ) == false )
             SW_LOG_WARNING( "Sprite clip undo snapshot could not be read - showing an empty clip" );
         adoptClip( std::move( restored ) );
     }

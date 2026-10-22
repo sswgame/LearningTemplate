@@ -12,7 +12,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -76,21 +76,21 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 
-    bool DialogueGraphAsset::parseJSON( string_view jsonView )
+    bool DialogueGraphAsset::parseXML( string_view xmlView )
     {
-        return readText( jsonView, "<dialogue graph text>" );
+        return readText( xmlView, "<dialogue graph text>" );
     }
 
-    bool DialogueGraphAsset::readText( string_view json, string_view sourceLabel )
+    bool DialogueGraphAsset::readText( string_view xml, string_view sourceLabel )
     {
         _listNode.clear();
         _listLink.clear();
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validateFile( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && validateFile( sourceLabel ) )
             return true;
         _listNode.clear();
         _listLink.clear();
@@ -131,9 +131,9 @@ namespace sw
         return bValid;
     }
 
-    string DialogueGraphAsset::toJSON() const
+    string DialogueGraphAsset::toXML() const
     {
-        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
+        return XMLSerializer::serialize( this, *StaticType() );
     }
 
     const DialogueAssetNode* DialogueGraphAsset::findStartNode() const

@@ -24,13 +24,13 @@ namespace sw::editor
         static constexpr const utf8* kAnimationGraphCanvasFileName   = "AnimationGraph.json";      ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kDialogueGraphCanvasFileName    = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
         static constexpr const utf8* kAudioGraphCanvasFileName       = "AudioGraphEditor.json";    ///< 소리 그래프 캔버스 상태(노드 위치는 그래프 데이터에 있다)
-        static constexpr const utf8* kAnimationGraphDocumentFileName = "AnimationGraphData.json";  ///< 경로가 없는 애니메이션 그래프 문서
-        static constexpr const utf8* kDialogueGraphDocumentFileName  = "DialogueGraphData.json";   ///< 경로가 없는 대화 그래프 문서
-        static constexpr const utf8* kSpriteClipDocumentFileName     = "SpriteClip.json";          ///< 경로가 없는 스프라이트 클립 문서
+        static constexpr const utf8* kAnimationGraphDocumentFileName = "AnimationGraphData.xml";   ///< 경로가 없는 애니메이션 그래프 문서
+        static constexpr const utf8* kDialogueGraphDocumentFileName  = "DialogueGraphData.xml";    ///< 경로가 없는 대화 그래프 문서
+        static constexpr const utf8* kSpriteClipDocumentFileName     = "SpriteClip.xml";           ///< 경로가 없는 스프라이트 클립 문서
         static constexpr const utf8* kTextureImportConfigFileName    = "TextureImportConfig.json";
         static constexpr const utf8* kModelImportConfigFileName      = "ModelImportConfig.json";
         /** @brief 에디터 UI 문구의 로컬라이제이션 프로젝트(리소스 경로)입니다. 에디터가 시작할 때 로드하고 끝날 때 언로드합니다. 엔진 테이블과 따로 있으므로 배포본에 실리지 않습니다. */
-        static constexpr const utf8* kLocalizationProject = "editor/localization/editor.locproject.json";
+        static constexpr const utf8* kLocalizationProject = "editor/localization/editor.locproject.xml";
 
         /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";

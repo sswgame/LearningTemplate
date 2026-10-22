@@ -330,7 +330,7 @@ namespace sw::editor
             _status = RigDebugPanelInternal::saveNodeSettings( *pModifier );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "rigdebug.save" );
-        EditorWidgets::drawTooltip( "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.json); other keys stay as they are" );
+        EditorWidgets::drawTooltip( "Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are" );
 
         GameObject*                  pObject = pModifier->getOwner();
         const SkeletalMeshComponent* pUnit   = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;

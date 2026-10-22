@@ -1,0 +1,233 @@
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="(CPU only)" text="(CPU 전용)" />
+		<entry source="(None)" text="(없음)" />
+		<entry source="5.1 Surround" text="5.1 서라운드" />
+		<entry source="7.1 Surround" text="7.1 서라운드" />
+		<entry source="A wild {name} appeared!" text="야생의 {name}(이)가 나타났다!" />
+		<entry source="Accessibility" text="접근성" />
+		<entry source="Active" text="실행 중" />
+		<entry source="Active Effects" text="걸린 이펙트" />
+		<entry source="Activity" text="행동" />
+		<entry source="Add Item" text="항목 추가" />
+		<entry source="Add Key" text="키 추가" />
+		<entry source="Add Modifier" text="모디파이어 추가" />
+		<entry source="Aim" text="조준" />
+		<entry source="Already used by" text="이미 사용 중:" />
+		<entry source="Ambient Volume" text="환경음 음량" />
+		<entry source="Apply" text="적용" />
+		<entry source="Ask Each Time" text="매번 묻기" />
+		<entry source="Attributes" text="어트리뷰트" />
+		<entry source="Audio" text="오디오" />
+		<entry source="Automatic" text="자동" />
+		<entry source="Axis" text="축" />
+		<entry source="Background opacity of the Debug HUD panels."
+		       text="디버그 HUD 패널의 배경 불투명도입니다." />
+		<entry source="Bake" text="굽기" />
+		<entry source="Base" text="기본값" />
+		<entry source="Borderless" text="테두리 없음" />
+		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
+		<entry source="CPU only:" text="CPU 전용:" />
+		<entry source="Camera Shake" text="카메라 흔들림" />
+		<entry source="Cancel" text="취소" />
+		<entry source="Center" text="중심" />
+		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />
+		<entry source="Close" text="닫기" />
+		<entry source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
+		       text="카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요." />
+		<entry source="Color Vision Mode" text="색각 보정" />
+		<entry source="Control Points" text="제어점" />
+		<entry source="Controls" text="조작" />
+		<entry source="Cooldown" text="쿨다운" />
+		<entry source="Corner" text="모서리" />
+		<entry source="Count" text="개수" />
+		<entry source="Crash Reports" text="크래시 보고" />
+		<entry source="Crouch" text="앉기" />
+		<entry source="Current" text="현재값" />
+		<entry source="Custom" text="사용자 지정" />
+		<entry source="Debug HUD" text="디버그 HUD" />
+		<entry source="Default" text="기본" />
+		<entry source="Defaults" text="기본값" />
+		<entry source="Depth" text="깊이" />
+		<entry source="Deuteranopia" text="녹색약" />
+		<entry source="Discard" text="버리기" />
+		<entry source="Display" text="화면" />
+		<entry source="Duplicate row" text="행 복제" />
+		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
+		<entry source="Effects Quality" text="효과 품질" />
+		<entry source="Effects Volume" text="효과음 음량" />
+		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
+		<entry source="Export as World Warp" text="월드 워프로 내보내기" />
+		<entry source="Farthest distance the camera draws. Geometry beyond this is clipped."
+		       text="카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다." />
+		<entry source="Field of View" text="시야각" />
+		<entry source="Fight: 1/2 moves, Enter=Move0, Esc=Run" text="싸운다: 1/2 기술, Enter=기술0, Esc=도망" />
+		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
+		<entry source="Foliage Density" text="초목 밀도" />
+		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="Game saved" text="게임을 저장했습니다" />
+		<entry source="Game time" text="게임 시각" />
+		<entry source="Gamepad Sensitivity" text="게임패드 감도" />
+		<entry source="Gameplay" text="게임플레이" />
+		<entry source="Got away safely!" text="무사히 도망쳤다!" />
+		<entry source="Granted Abilities" text="부여된 어빌리티" />
+		<entry source="Graphics" text="그래픽" />
+		<entry source="Graphics Quality" text="그래픽 품질" />
+		<entry source="Head Bob" text="걸음 흔들림" />
+		<entry source="Headphones (3D)" text="헤드폰 (3D)" />
+		<entry source="High" text="높음" />
+		<entry source="High Contrast" text="고대비" />
+		<entry source="Hold" text="누르고 있기" />
+		<entry source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
+		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다." />
+		<entry source="Infinite" text="무한" />
+		<entry source="Interface Volume" text="인터페이스 음량" />
+		<entry source="Invert Vertical Look" text="상하 시점 반전" />
+		<entry source="Keep" text="유지" />
+		<entry source="Keep Local" text="로컬에만 보관" />
+		<entry source="Keep these display settings?" text="이 디스플레이 설정을 유지할까요?" />
+		<entry source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
+		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다." />
+		<entry source="Language" text="언어" />
+		<entry source="Loading" text="로딩 중" />
+		<entry source="Low" text="낮음" />
+		<entry source="Master Volume" text="전체 음량" />
+		<entry source="Medium" text="중간" />
+		<entry source="Mirror" text="대칭" />
+		<entry source="Motion Blur" text="모션 블러" />
+		<entry source="Mouse Sensitivity" text="마우스 감도" />
+		<entry source="Move row down" text="행을 아래로" />
+		<entry source="Move row up" text="행을 위로" />
+		<entry source="Music Volume" text="음악 음량" />
+		<entry source="Mute All" text="음소거" />
+		<entry source="NPCs" text="NPC 목록" />
+		<entry source="Name" text="이름" />
+		<entry source="Nested Stack" text="하위 스택" />
+		<entry source="No AbilitySystemComponent in the active scene"
+		       text="활성 씬에 AbilitySystemComponent 가 없습니다" />
+		<entry source="No object has component:" text="이 컴포넌트를 가진 오브젝트가 없습니다:" />
+		<entry source="No plan for today" text="오늘 계획이 없습니다" />
+		<entry source="No schedule system is running. Start play with NPCs that have schedules."
+		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요." />
+		<entry source="No target" text="대상 없음" />
+		<entry source="Off" text="끔" />
+		<entry source="Opacity" text="불투명도" />
+		<entry source="Options" text="옵션" />
+		<entry source="Owned Tags" text="소유 태그" />
+		<entry source="Pause Menu" text="일시정지 메뉴" />
+		<entry source="Paused" text="일시 정지" />
+		<entry source="Pick an ability system..." text="어빌리티 시스템 고르기..." />
+		<entry source="Place" text="장소" />
+		<entry source="Play" text="재생" />
+		<entry source="Point" text="점" />
+		<entry source="Position" text="위치" />
+		<entry source="Post-Processing Quality" text="후처리 품질" />
+		<entry source="Press a key. Escape cancels; hold Escape for one second to bind it."
+		       text="키를 누르세요. Esc 는 취소, Esc 를 1초 누르고 있으면 Esc 를 지정합니다." />
+		<entry source="Preview Time" text="미리보기 시간" />
+		<entry source="Privacy" text="개인 정보" />
+		<entry source="Protanopia" text="적색약" />
+		<entry source="Quit Game" text="게임 종료" />
+		<entry source="Raw timeline" text="타임라인 원문" />
+		<entry source="Recompute Normals" text="법선 다시 계산" />
+		<entry source="Redo" text="다시 하기" />
+		<entry source="Reduce Flashing" text="번쩍임 줄이기" />
+		<entry source="Reduce Motion" text="움직임 줄이기" />
+		<entry source="Reference Object" text="기준 오브젝트" />
+		<entry source="Reload Stack" text="스택 다시 읽기" />
+		<entry source="Remaining" text="남은 시간" />
+		<entry source="Remove Item" text="항목 제거" />
+		<entry source="Remove row" text="행 삭제" />
+		<entry source="Render Scale" text="렌더 배율" />
+		<entry source="Reset Lattice" text="격자 초기화" />
+		<entry source="Reset Parameters" text="매개변수 초기화" />
+		<entry source="Resolution" text="해상도" />
+		<entry source="Resume" text="계속하기" />
+		<entry source="Return to Title" text="타이틀로 돌아가기" />
+		<entry source="Revert" text="되돌리기" />
+		<entry source="Reverting in" text="되돌리기까지" />
+		<entry source="Rotation" text="회전" />
+		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
+		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
+		<entry source="Save Stack" text="스택 저장" />
+		<entry source="Schedule system" text="일정 시스템" />
+		<entry source="Sections" text="섹션" />
+		<entry source="Select a modifier in the stack." text="스택에서 모디파이어를 고르세요." />
+		<entry source="Select an NPC on the left" text="왼쪽에서 NPC 를 고르세요" />
+		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
+		       text=".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요." />
+		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
+		       text="AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요." />
+		<entry source="Send Automatically" text="자동으로 보내기" />
+		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
+		       text="대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다." />
+		<entry source="Shaded Preview" text="셰이딩 미리보기" />
+		<entry source="Shadow Quality" text="그림자 품질" />
+		<entry source="Share Usage Data" text="사용 데이터 공유" />
+		<entry source="Show HUD (Ctrl+F3)" text="HUD 표시 (Ctrl+F3)" />
+		<entry source="Show Tutorials" text="튜토리얼 표시" />
+		<entry source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
+		       text="게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다." />
+		<entry source="Some changes take effect after a restart."
+		       text="일부 변경은 다시 시작한 뒤 적용됩니다." />
+		<entry source="Source" text="출처" />
+		<entry source="Spatial" text="공간" />
+		<entry source="Speaker Setup" text="스피커 구성" />
+		<entry source="Sprint" text="달리기" />
+		<entry source="Stacks" text="스택" />
+		<entry source="Stereo" text="스테레오" />
+		<entry source="Stick Dead Zone" text="스틱 데드존" />
+		<entry source="Subtitle Background" text="자막 배경" />
+		<entry source="Subtitle Size" text="자막 크기" />
+		<entry source="Subtitles" text="자막" />
+		<entry source="Swap" text="맞바꾸기" />
+		<entry source="Tag" text="태그" />
+		<entry source="Text Language" text="표시 언어" />
+		<entry source="Text Size" text="글자 크기" />
+		<entry source="Texture Quality" text="텍스처 품질" />
+		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
+		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
+		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
+		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
+		<entry source="Time" text="시각" />
+		<entry source="Toggle" text="전환" />
+		<entry source="Travel" text="이동" />
+		<entry source="Tritanopia" text="청색약" />
+		<entry source="UI Scale" text="UI 배율" />
+		<entry source="UI Theme" text="UI 테마" />
+		<entry source="Ultra" text="최고" />
+		<entry source="Undo" text="되돌리기" />
+		<entry source="Up" text="위로" />
+		<entry source="Upscaler" text="업스케일러" />
+		<entry source="Use Selection" text="선택 사용" />
+		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
+		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
+		<entry source="Vertical Sync" text="수직 동기화" />
+		<entry source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."
+		       text="세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다." />
+		<entry source="View Distance" text="시야 거리" />
+		<entry source="Voice Volume" text="음성 음량" />
+		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
+		<entry source="What will {name} do?" text="{name}은(는) 무엇을 할까?" />
+		<entry source="When the key sits on the curve's time axis. It stays between its neighbouring keys."
+		       text="이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다." />
+		<entry source="Which screen corner the Debug HUD is anchored to."
+		       text="디버그 HUD 를 붙여 둘 화면 모서리입니다." />
+		<entry source="Why this activity now" text="지금 왜 이 행동인가" />
+		<entry source="Window Mode" text="창 모드" />
+		<entry source="Windowed" text="창" />
+		<entry source="World Space" text="월드 공간" />
+		<entry source="World-space height of the visible area; the width follows the aspect ratio."
+		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />
+		<entry source="You have changes that are not applied." text="적용하지 않은 변경이 있습니다." />
+		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" />
+		<entry source="{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
+		       text="설정 {count}개는 다시 시작한 뒤에 적용됩니다." />
+		<entry source="{name} fainted! You won!" text="{name}(이)가 쓰러졌다! 승리!" />
+		<entry source="{name} fainted..." text="{name}(이)가 쓰러졌다..." />
+		<entry source="{name} has no PP!" text="{name}의 PP가 없다!" />
+		<entry source="{name} has no usable move!" text="{name}에게는 쓸 수 있는 기술이 없다!" />
+		<entry source="{name} used {move}!" text="{name}의 {move}!" />
+		<entry source="{name} used {move}! ({damage} dmg)" text="{name}의 {move}! ({damage} 피해)" />
+	</entries>
+</TranslationMemory>

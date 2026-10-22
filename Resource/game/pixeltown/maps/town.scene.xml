@@ -80,7 +80,7 @@
 					                 _localScale="1,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/pixeltown/sprites/hero.sprite.json"
+					                 _clipPath="game/pixeltown/sprites/hero.sprite.xml"
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
@@ -114,7 +114,7 @@
 					                 _localScale="2,2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="game/pixeltown/sprites/elder.sprite.json"
+					                 _clipPath="game/pixeltown/sprites/elder.sprite.xml"
 					                 _materialPath="engine/materials/sprite2dpixel.material"
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
@@ -125,7 +125,7 @@
 					                         _attachComponent="None"
 					                         _currentAnimation="idle_down"
 					                         _bRepeat="true" />
-					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.json" _bPostSubtitles="true" />
+					<DialogueRunnerComponent _graphPath="game/pixeltown/dialogue/elder.dialogue.xml" _bPostSubtitles="true" />
 				</_listComponent>
 			</GameObject>
 		</entity>

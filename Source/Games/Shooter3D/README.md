@@ -115,8 +115,8 @@ cd build/Ninja-Debug/Bin
 | 적 모습 | `SkeletonMinion`, `SkeletonRaider`(씨앗마다 몸과 두건과 무기), `SkeletonRogue`, 정예 `SkeletonWarrior`(투구가 두건을 감춥니다 — 규칙 `HelmetHidesHood`) |
 | 몸 소켓 | `data/sockets/kaykit_humanoid.sockets.xml`. Helmet, Back, Gun, Blade, Shield 와 Eyes(1인칭 눈높이), Chest(히트박스 중심) |
 | 무기 소켓 | `data/sockets/blaster_*.sockets.xml` 의 `Muzzle`(탄도선, 섬광)과 `SupportHand`. 외형에서는 `MainHand.Muzzle` |
-| 애니메이션 그래프 | `data/anim/adventurer.animgraph.json`, `skeleton.animgraph.json` |
-| 상체 레이어 | 그래프 `data/anim/adventurer.animgraph.json` 의 레이어 `Aim` · `Shoot`(마스크 `data/anim/masks/upper_body.bonemask.json`)이 겨눈 자세와 막 쏜 자세를 덮습니다. `ShooterAvatarComponent` 는 가중치 파라미터 `AimWeight` · `ShootWeight` 만 쓰고, 맞음과 쓰러짐 동안은 내립니다 |
+| 애니메이션 그래프 | `data/anim/adventurer.animgraph.xml`, `skeleton.animgraph.xml` |
+| 상체 레이어 | 그래프 `data/anim/adventurer.animgraph.xml` 의 레이어 `Aim` · `Shoot`(마스크 `data/anim/masks/upper_body.bonemask.xml`)이 겨눈 자세와 막 쏜 자세를 덮습니다. `ShooterAvatarComponent` 는 가중치 파라미터 `AimWeight` · `ShootWeight` 만 쓰고, 맞음과 쓰러짐 동안은 내립니다 |
 | 텍스처와 머티리얼 | 원본 GLB 의 아틀라스를 `textures_raw/kaykit_*.png` 로 꺼내 BC1 DDS 로 만들고, `materials/kaykit_*.material` 로 씁니다 |
 
 플레이어 그래프의 `Move` 파라미터는 0 서기, 1 걷기, 2 달리기, 3 뒷걸음, 4 와 5 옆걸음, 6 공중이고, `Hit` 와 `Dead`, 상체 레이어 가중치 `AimWeight` 와 `ShootWeight` 가 있습니다. 스켈레톤 그래프는 땅에서 일어나기로 시작합니다.
@@ -146,7 +146,7 @@ cd build/Ninja-Debug/Bin
 | 감시 카메라와 모니터 | `CctvCamera` 가 렌더 텍스처 `rendertarget/shooter_cctv` 에 `cctv_sweep` 프리셋으로 그리고, 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽습니다 |
 
 HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이름은 현지화 키 그대로 넣고, 글 위젯이 문화권에 맞게 바꿉니다. 적 HP 바는 스켈레톤 프리팹의 화면 마커와 `HealthBarComponent` 입니다.
-1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/player_body.rig.json` 의 `ScaleBone` 과 외형의 숨기는 슬롯 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
+1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/player_body.rig.xml` 의 `ScaleBone` 과 외형의 숨기는 슬롯 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
 적 몸(`skeleton.prefab.xml`)은 군중 공유(`_bShareCrowdPose`)를 켜 같은 반복 클립의 적끼리 포즈 하나를 나눕니다. 스킨드 외형 부품은 몸의 값을 따릅니다.
 내비메시는 쿠킹이 `maps/arena.navmesh` 로 쓰고, Dev 는 플레이 첫 프레임에 베이크합니다.
 
@@ -177,7 +177,7 @@ HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이�
   막는 상자(`ShooterBlockerComponent`)는 플레이 시작에 같은 상자의 정적 강체를 만들고, 바닥은 씬의 정적 강체입니다 — 래그돌과 떨어진 무기가 그 위에 눕습니다.
 - **휘두름이 닿는 시각은 클립 알림입니다.** 공격 클립의 `Impact`(곁 데이터 `models_raw/kaykit/skeleton_minion.clips.json`)를 알림 표가 `SwingLands` 로 보냅니다. 곁 데이터를 바꾸면 `App --import-models` 로 다시 가져와야 클립에 알림이 들어갑니다.
 - **왼손 IK 와 스프링 망토는 아직 없습니다.** 무기 부품이 정적 메시라 리그의 소켓 대상(스킨드 유닛만 받는다)이 `MainHand.SupportHand` 를 따라갈 수 없고, 망토는 사슬 뼈가 없는 정적 메시입니다.
-- **1인칭에서도 몸이 보입니다.** 리그(`rigs/player_body.rig.json` — 보폭 워핑 `Stride` 과 같은 리그)의 `HideHead`(ScaleBone, 슬롯 `FirstPersonHead`)가 머리를, 외형의 숨기는 슬롯(`setHiddenSlots` — `Head` · `MainHand`)이 머리 장비 · 몸의 무기를 숨기고 손에 든 총이 남습니다.
+- **1인칭에서도 몸이 보입니다.** 리그(`rigs/player_body.rig.xml` — 보폭 워핑 `Stride` 과 같은 리그)의 `HideHead`(ScaleBone, 슬롯 `FirstPersonHead`)가 머리를, 외형의 숨기는 슬롯(`setHiddenSlots` — `Head` · `MainHand`)이 머리 장비 · 몸의 무기를 숨기고 손에 든 총이 남습니다.
 - **플레이어 몸은 재생 속도와 보폭으로 발 미끄러짐을 줄입니다.** `ShooterAvatarComponent` 가 지금 이동 클립의 발 속도를 한 번 측정하고(`LocomotionSpeedUtil`), 수평 속도를 그 값으로 나눈 재생 속도를
   `_minPlayRate` 와 `_maxPlayRate` 사이로 씁니다. 재생 속도는 애니메이터 전체에 걸리므로 상체 레이어도 같은 비율로 빨라집니다.
   뒷걸음과 옆걸음처럼 상한에 걸린 몫은 리그의 보폭 워핑 노드(`Stride`)가 보폭으로 맞춥니다.

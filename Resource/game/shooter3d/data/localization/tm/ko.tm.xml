@@ -1,0 +1,33 @@
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="/" text="/" />
+		<entry source="Assault Blaster" text="돌격 블래스터" />
+		<entry source="Assault Rifle" text="돌격 소총" />
+		<entry source="Bone Axe" text="뼈 도끼" />
+		<entry source="Bone Shield" text="뼈 방패" />
+		<entry source="Combat Helmet" text="전투 헬멧" />
+		<entry source="Difficulty" text="난이도" />
+		<entry source="Easy" text="쉬움" />
+		<entry source="Fatigues" text="전투복" />
+		<entry source="Field Pack" text="야전 배낭" />
+		<entry source="Hard" text="어려움" />
+		<entry source="Knight Helmet" text="기사 투구" />
+		<entry source="Longbow" text="장궁" />
+		<entry source="M4 Rifle" text="M4 소총" />
+		<entry source="M9 Pistol" text="M9 권총" />
+		<entry source="Normal" text="보통" />
+		<entry source="Notched Blade" text="이 빠진 칼" />
+		<entry source="Pistol" text="권총" />
+		<entry source="Pump Shotgun" text="펌프 산탄총" />
+		<entry source="Recon Boots" text="정찰 부츠" />
+		<entry source="Recon Helmet" text="정찰 헬멧" />
+		<entry source="Recon Patch" text="정찰 패치" />
+		<entry source="Recon Vest" text="정찰 조끼" />
+		<entry source="Round Shield" text="둥근 방패" />
+		<entry source="Rusted Helm" text="녹슨 투구" />
+		<entry source="Scatter Blaster" text="산탄 블래스터" />
+		<entry source="Sidearm Blaster" text="보조 블래스터" />
+		<entry source="Tattered Cape" text="해진 망토" />
+		<entry source="Travel Cape" text="여행 망토" />
+	</entries>
+</TranslationMemory>

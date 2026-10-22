@@ -476,19 +476,19 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
 {
     DialogueRunnerComponent runner;
 
-    const string testJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Hello traveler!" },
-			{ "_id": 3, "_type": "End" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 202, "_toPin": 301 }
-		]
-	})";
+    const string testJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Dialogue" _speaker="NPC" _text="Hello traveler!" />
+		<DialogueAssetNode _id="3" _type="End" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="202" _toPin="301" />
+	</_listLink>
+</DialogueGraphAsset>)";
 
-    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
+    SW_EXPECT_TRUE( runner.loadGraphXML( testJSON ) );
 
     string heardSpeaker;
     string heardText;
@@ -524,26 +524,31 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
     DialogueRunnerComponent runner;
     runner.setFlags( &flags );
 
-    const string testJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Take quest?", "_listChoice": ["Accept", "Decline"] },
-			{ "_id": 3, "_type": "Action", "_actionCommand": "set_flag:quest_started:1" },
-			{ "_id": 4, "_type": "Dialogue", "_speaker": "Guide", "_text": "Quest accepted!" },
-			{ "_id": 5, "_type": "Dialogue", "_speaker": "Guide", "_text": "Maybe next time." },
-			{ "_id": 6, "_type": "End" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 210, "_toPin": 301 },
-			{ "_id": 3, "_fromPin": 211, "_toPin": 501 },
-			{ "_id": 4, "_fromPin": 302, "_toPin": 401 },
-			{ "_id": 5, "_fromPin": 402, "_toPin": 601 },
-			{ "_id": 6, "_fromPin": 502, "_toPin": 601 }
-		]
-	})";
+    const string testJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Choice" _speaker="Guide" _text="Take quest?">
+			<_listChoice>
+				<item>Accept</item>
+				<item>Decline</item>
+			</_listChoice>
+		</DialogueAssetNode>
+		<DialogueAssetNode _id="3" _type="Action" _actionCommand="set_flag:quest_started:1" />
+		<DialogueAssetNode _id="4" _type="Dialogue" _speaker="Guide" _text="Quest accepted!" />
+		<DialogueAssetNode _id="5" _type="Dialogue" _speaker="Guide" _text="Maybe next time." />
+		<DialogueAssetNode _id="6" _type="End" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="210" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="211" _toPin="501" />
+		<DialogueAssetLink _id="4" _fromPin="302" _toPin="401" />
+		<DialogueAssetLink _id="5" _fromPin="402" _toPin="601" />
+		<DialogueAssetLink _id="6" _fromPin="502" _toPin="601" />
+	</_listLink>
+</DialogueGraphAsset>)";
 
-    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
+    SW_EXPECT_TRUE( runner.loadGraphXML( testJSON ) );
 
     vector<string> listCurrentChoice;
     runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
@@ -577,21 +582,26 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
     // DialogueGraphPanel 형식:
     // Start(1) Output(102) -> Dialogue(2) Input(201)
     // Dialogue(2) Choice 0(210) -> End(3) Input(301)
-    const string testJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Are you ready?", "_listChoice": ["Yes", "No"] },
-			{ "_id": 3, "_type": "Dialogue", "_speaker": "Guide", "_text": "Let us go!" },
-			{ "_id": 4, "_type": "Dialogue", "_speaker": "Guide", "_text": "Take your time." }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 210, "_toPin": 301 },
-			{ "_id": 3, "_fromPin": 211, "_toPin": 401 }
-		]
-	})";
+    const string testJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Choice" _speaker="Guide" _text="Are you ready?">
+			<_listChoice>
+				<item>Yes</item>
+				<item>No</item>
+			</_listChoice>
+		</DialogueAssetNode>
+		<DialogueAssetNode _id="3" _type="Dialogue" _speaker="Guide" _text="Let us go!" />
+		<DialogueAssetNode _id="4" _type="Dialogue" _speaker="Guide" _text="Take your time." />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="210" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="211" _toPin="401" />
+	</_listLink>
+</DialogueGraphAsset>)";
 
-    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
+    SW_EXPECT_TRUE( runner.loadGraphXML( testJSON ) );
     SW_EXPECT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::WaitingForChoice ), static_cast<uint8>( runner.getState() ) );
 
@@ -619,12 +629,34 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
     {
         DialogueRunnerComponent runner;
         runner.setFlags( &flags );
-        string json = R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 2, "_type": "Branch", "_condition": ")";
-        json += pCondition;
-        json += R"(" }, { "_id": 3, "_type": "Dialogue", "_speaker": "S", "_text": "yes" },
-		                 { "_id": 4, "_type": "Dialogue", "_speaker": "S", "_text": "no" } ],
-		    "_listLink": [ { "_id": 1, "_fromPin": 102, "_toPin": 201 }, { "_id": 2, "_fromPin": 203, "_toPin": 301 }, { "_id": 3, "_fromPin": 204, "_toPin": 401 } ] })";
-        SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
+        // 조건 글에는 `<` `>` 가 들어가 속성 값으로 직접 쓰면 XML 이 깨진다 — 에셋 구조체로 지어 직렬화기에 맡긴다.
+        DialogueGraphAsset graph;
+        const auto         addNode = [&graph]( int32 id, DialogueAssetNodeType type ) -> DialogueAssetNode&
+        {
+            DialogueAssetNode& node = graph._listNode.emplace_back();
+            node._id                = id;
+            node._type              = type;
+            return node;
+        };
+        const auto addLink = [&graph]( int32 id, int32 fromPin, int32 toPin )
+        {
+            DialogueAssetLink& link = graph._listLink.emplace_back();
+            link._id                = id;
+            link._fromPin           = fromPin;
+            link._toPin             = toPin;
+        };
+        addNode( 1, DialogueAssetNodeType::Start );
+        addNode( 2, DialogueAssetNodeType::Branch )._condition = pCondition;
+        DialogueAssetNode& yesNode                             = addNode( 3, DialogueAssetNodeType::Dialogue );
+        yesNode._speaker                                       = "S";
+        yesNode._text                                          = "yes";
+        DialogueAssetNode& noNode                              = addNode( 4, DialogueAssetNodeType::Dialogue );
+        noNode._speaker                                        = "S";
+        noNode._text                                           = "no";
+        addLink( 1, 102, 201 );
+        addLink( 2, 203, 301 );
+        addLink( 3, 204, 401 );
+        SW_EXPECT_TRUE( runner.loadGraphXML( graph.toXML() ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
     };
@@ -674,12 +706,34 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionAgreesWithWorldFlagConditions 
     {
         DialogueRunnerComponent runner;
         runner.setFlags( &flags );
-        string json = R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 2, "_type": "Branch", "_condition": ")";
-        json += pCondition;
-        json += R"(" }, { "_id": 3, "_type": "Dialogue", "_speaker": "S", "_text": "yes" },
-		                 { "_id": 4, "_type": "Dialogue", "_speaker": "S", "_text": "no" } ],
-		    "_listLink": [ { "_id": 1, "_fromPin": 102, "_toPin": 201 }, { "_id": 2, "_fromPin": 203, "_toPin": 301 }, { "_id": 3, "_fromPin": 204, "_toPin": 401 } ] })";
-        SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
+        // 조건 글에는 `<` `>` 가 들어가 속성 값으로 직접 쓰면 XML 이 깨진다 — 에셋 구조체로 지어 직렬화기에 맡긴다.
+        DialogueGraphAsset graph;
+        const auto         addNode = [&graph]( int32 id, DialogueAssetNodeType type ) -> DialogueAssetNode&
+        {
+            DialogueAssetNode& node = graph._listNode.emplace_back();
+            node._id                = id;
+            node._type              = type;
+            return node;
+        };
+        const auto addLink = [&graph]( int32 id, int32 fromPin, int32 toPin )
+        {
+            DialogueAssetLink& link = graph._listLink.emplace_back();
+            link._id                = id;
+            link._fromPin           = fromPin;
+            link._toPin             = toPin;
+        };
+        addNode( 1, DialogueAssetNodeType::Start );
+        addNode( 2, DialogueAssetNodeType::Branch )._condition = pCondition;
+        DialogueAssetNode& yesNode                             = addNode( 3, DialogueAssetNodeType::Dialogue );
+        yesNode._speaker                                       = "S";
+        yesNode._text                                          = "yes";
+        DialogueAssetNode& noNode                              = addNode( 4, DialogueAssetNodeType::Dialogue );
+        noNode._speaker                                        = "S";
+        noNode._text                                           = "no";
+        addLink( 1, 102, 201 );
+        addLink( 2, 203, 301 );
+        addLink( 3, 204, 401 );
+        SW_EXPECT_TRUE( runner.loadGraphXML( graph.toXML() ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
     };
@@ -1602,18 +1656,18 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 {
-    const utf8* dialogueJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Action", "_actionCommand": "CloseMenu" },
-			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Should not appear" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 1, "_toPin": 2 }
-		]
-	})";
+    const utf8* dialogueJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Action" _actionCommand="CloseMenu" />
+		<DialogueAssetNode _id="2" _type="Dialogue" _speaker="NPC" _text="Should not appear" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="1" _toPin="2" />
+	</_listLink>
+</DialogueGraphAsset>)";
 
     DialogueRunnerComponent runner;
-    SW_EXPECT_TRUE( runner.loadGraphJSON( dialogueJSON ) );
+    SW_EXPECT_TRUE( runner.loadGraphXML( dialogueJSON ) );
 
     bool bActionExecuted = false;
     runner.setOnDialogueEvent( [&]( const string& cmd )
@@ -2534,20 +2588,20 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
 {
     DialogueRunnerComponent runner;
 
-    const string testJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "First line" },
-			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Second line" },
-			{ "_id": 4, "_type": "End" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 202, "_toPin": 301 },
-			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
-		]
-	})";
-    SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
+    const string testJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Dialogue" _speaker="NPC" _text="First line" />
+		<DialogueAssetNode _id="3" _type="Dialogue" _speaker="NPC" _text="Second line" />
+		<DialogueAssetNode _id="4" _type="End" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="202" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="302" _toPin="401" />
+	</_listLink>
+</DialogueGraphAsset>)";
+    SW_ASSERT_TRUE( runner.loadGraphXML( testJSON ) );
 
     int32  lineCount{ 0 };
     string firstLineAfterAdvancing;
@@ -2578,20 +2632,26 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 {
     DialogueRunnerComponent runner;
 
-    const string testJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Choice", "_speaker": "Guide", "_text": "Pick", "_listChoice": ["Alpha", "Beta", "Gamma"] },
-			{ "_id": 3, "_type": "Dialogue", "_speaker": "Guide", "_text": "Took Beta" },
-			{ "_id": 4, "_type": "End" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 211, "_toPin": 301 },
-			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
-		]
-	})";
-    SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
+    const string testJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Choice" _speaker="Guide" _text="Pick">
+			<_listChoice>
+				<item>Alpha</item>
+				<item>Beta</item>
+				<item>Gamma</item>
+			</_listChoice>
+		</DialogueAssetNode>
+		<DialogueAssetNode _id="3" _type="Dialogue" _speaker="Guide" _text="Took Beta" />
+		<DialogueAssetNode _id="4" _type="End" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="211" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="302" _toPin="401" />
+	</_listLink>
+</DialogueGraphAsset>)";
+    SW_ASSERT_TRUE( runner.loadGraphXML( testJSON ) );
 
     vector<string> listCollectedChoice;
     runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
@@ -2878,11 +2938,11 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     ScopedRunState runState;
 
     const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.locproject.json" ),
-                                             R"({ "name": "boot", "sourceCulture": "en_us", "cultures": [ "ko_kr" ], "stringTables": [ "boot.strings.json" ] })" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.strings.json" ),
-                                             R"({ "culture": "en_us", "entries": { "UI_PLAY": { "source": "Play" }, "UI_ONLY_EN": { "source": "English" } } })" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.json" ), R"({ "culture": "ko_kr", "entries": { "UI_PLAY": { "text": "플레이" } } })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.locproject.xml" ),
+                                             R"(<LocalizationProject name="boot" sourceCulture="en_us"><cultures><item>ko_kr</item></cultures><stringTables><item>boot.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.strings.xml" ),
+                                             R"(<SourceStringTable culture="en_us"><entries><entry key="UI_PLAY" source="Play" /><entry key="UI_ONLY_EN" source="English" /></entries></SourceStringTable>)" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.xml" ), R"(<TranslationTable culture="ko_kr"><entries><entry key="UI_PLAY" text="플레이" /></entries></TranslationTable>)" ) );
 
     class BootstrapGame : public GameInstanceBase
     {
@@ -2899,10 +2959,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
                                "<titleScene>game/test/maps/title.scene.xml</titleScene>"
                                "<inputMap>engine/input/default.input.xml</inputMap>"
                                "<localizationProject>" +
-                               test::makeTempResourceID( FileUtil::joinPath( _localeDir, "boot.locproject.json" ) ) + "</localizationProject>"
-                                                                                                                      "<defaultLanguage>ko_KR</defaultLanguage>" // 파일 이름(ko_kr)과 철자가 다르다
-                                                                                                                      "<fallbackLanguage>en-US</fallbackLanguage>"
-                                                                                                                      "<defaultSavePath>" +
+                               test::makeTempResourceID( FileUtil::joinPath( _localeDir, "boot.locproject.xml" ) ) + "</localizationProject>"
+                                                                                                                     "<defaultLanguage>ko_KR</defaultLanguage>" // 파일 이름(ko_kr)과 철자가 다르다
+                                                                                                                     "<fallbackLanguage>en-US</fallbackLanguage>"
+                                                                                                                     "<defaultSavePath>" +
                                _savePath + "</defaultSavePath>"
                                            "</GameSettings>";
             return _bootstrap._data.loadFromXMLText( xml, "test" );

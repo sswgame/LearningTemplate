@@ -1,0 +1,11 @@
+<AnimationLODSettings _offscreenUpdateRateDivisor="0"
+                      _budgetMilliseconds="2.0"
+                      _maxUpdateRateDivisor="16"
+                      _vertexAnimationScreenSize="0.05">
+	<_listRateLevel>
+		<AnimationLODRateLevel _minScreenSize="0.25" _updateRateDivisor="1" _bInterpolate="false" />
+		<AnimationLODRateLevel _minScreenSize="0.10" _updateRateDivisor="2" _bInterpolate="true" />
+		<AnimationLODRateLevel _minScreenSize="0.04" _updateRateDivisor="4" _bInterpolate="true" />
+		<AnimationLODRateLevel _minScreenSize="0.0" _updateRateDivisor="8" _bInterpolate="false" />
+	</_listRateLevel>
+</AnimationLODSettings>

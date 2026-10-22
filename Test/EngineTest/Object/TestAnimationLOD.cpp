@@ -125,12 +125,17 @@ SW_TEST_CASE( AnimationLODTest, ScreenSizeFromViewProjection )
 SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 {
     AnimationLODSettings settings;
-    SW_ASSERT_TRUE( settings.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.25, "_updateRateDivisor": 1, "_bInterpolate": false },
-                                                              { "_minScreenSize": 0.1, "_updateRateDivisor": 2, "_bInterpolate": true },
-                                                              { "_minScreenSize": 0.0, "_updateRateDivisor": 8, "_bInterpolate": false } ],
-                                            "_offscreenUpdateRateDivisor": 0, "_budgetMilliseconds": 1.5, "_maxUpdateRateDivisor": 16,
-                                            "_vertexAnimationScreenSize": 0.02 })",
-                                        "test" ) );
+    SW_ASSERT_TRUE( settings.parseXML( R"(<AnimationLODSettings _offscreenUpdateRateDivisor="0"
+                      _budgetMilliseconds="1.5"
+                      _maxUpdateRateDivisor="16"
+                      _vertexAnimationScreenSize="0.02">
+	<_listRateLevel>
+		<AnimationLODRateLevel _minScreenSize="0.25" _updateRateDivisor="1" _bInterpolate="false" />
+		<AnimationLODRateLevel _minScreenSize="0.1" _updateRateDivisor="2" _bInterpolate="true" />
+		<AnimationLODRateLevel _minScreenSize="0.0" _updateRateDivisor="8" _bInterpolate="false" />
+	</_listRateLevel>
+</AnimationLODSettings>)",
+                                       "test" ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( settings._listRateLevel.size() ) );
     SW_EXPECT_EQUAL( 0u, settings.selectRateLevel( 0.5f ) );
     SW_EXPECT_EQUAL( 1u, settings.selectRateLevel( 0.1f ) );
@@ -147,12 +152,17 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 
     test::ScopedDefensiveTestLog expected( "malformed animation LOD tables are rejected" );
     AnimationLODSettings         bad;
-    SW_EXPECT_FALSE( bad.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.0, "_updateRateDivisor": 1, "_bInterpolate": false } ], "typo": 1 })", "test" ) );
-    SW_EXPECT_FALSE( bad.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.1, "_updateRateDivisor": 1, "_bInterpolate": false },
-                                                        { "_minScreenSize": 0.2, "_updateRateDivisor": 2, "_bInterpolate": false } ],
-                                       "_offscreenUpdateRateDivisor": 0, "_budgetMilliseconds": 0, "_maxUpdateRateDivisor": 8,
-                                       "_vertexAnimationScreenSize": 0 })",
-                                    "test" ) );
+    SW_EXPECT_FALSE( bad.parseXML( R"(<AnimationLODSettings typo="1"><_listRateLevel><AnimationLODRateLevel _minScreenSize="0.0" _updateRateDivisor="1" _bInterpolate="false" /></_listRateLevel></AnimationLODSettings>)", "test" ) );
+    SW_EXPECT_FALSE( bad.parseXML( R"(<AnimationLODSettings _offscreenUpdateRateDivisor="0"
+                      _budgetMilliseconds="0"
+                      _maxUpdateRateDivisor="8"
+                      _vertexAnimationScreenSize="0">
+	<_listRateLevel>
+		<AnimationLODRateLevel _minScreenSize="0.1" _updateRateDivisor="1" _bInterpolate="false" />
+		<AnimationLODRateLevel _minScreenSize="0.2" _updateRateDivisor="2" _bInterpolate="false" />
+	</_listRateLevel>
+</AnimationLODSettings>)",
+                                   "test" ) );
     SW_EXPECT_TRUE( bad._listRateLevel.empty() );
 }
 
@@ -191,9 +201,21 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
 {
     const Skeleton  skeleton = test::makeChainSkeleton( 4 ); // bone0 → bone1 → bone2 → bone3
     SkeletonBoneLOD boneLOD;
-    SW_ASSERT_TRUE( boneLOD.parseJSON( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] },
-                                                       { "max_screen_size": 0.05, "remove": [ "bone2" ] } ] })",
-                                       "test" ) );
+    SW_ASSERT_TRUE( boneLOD.parseXML( R"(<SkeletonBoneLOD>
+	<levels>
+		<level max_screen_size="0.2">
+			<remove>
+				<item>bone3</item>
+			</remove>
+		</level>
+		<level max_screen_size="0.05">
+			<remove>
+				<item>bone2</item>
+			</remove>
+		</level>
+	</levels>
+</SkeletonBoneLOD>)",
+                                      "test" ) );
     vector<vector<uint8>> listMask;
     SW_ASSERT_TRUE( boneLOD.computeMasks( skeleton, listMask, "test" ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listMask.size() ) );
@@ -207,29 +229,41 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
     SW_EXPECT_EQUAL( 0u, boneLOD.selectLevel( 0.5f ) );
     SW_EXPECT_EQUAL( 1u, boneLOD.selectLevel( 0.1f ) );
     SW_EXPECT_EQUAL( 2u, boneLOD.selectLevel( 0.01f ) );
-    SW_EXPECT_TRUE( SkeletonBoneLOD::makePathForSkeleton( "a/knight.skeleton.json" ) == "a/knight.bonelod.json" );
+    SW_EXPECT_TRUE( SkeletonBoneLOD::makePathForSkeleton( "a/knight.skeleton.xml" ) == "a/knight.bonelod.xml" );
     // 임포트 옆 폴더(이름이 같다)는 다시 임포트할 때 지워진다 — 그 밖에 둔다.
-    SW_EXPECT_TRUE( SkeletonBoneLOD::makePathForSkeleton( "a/knight/knight.skeleton.json" ) == "a/knight.bonelod.json" );
+    SW_EXPECT_TRUE( SkeletonBoneLOD::makePathForSkeleton( "a/knight/knight.skeleton.xml" ) == "a/knight.bonelod.xml" );
     string importedPath;
     string siblingPath;
-    SkeletonBoneLOD::makeSkeletonCandidatePaths( "a/knight.bonelod.json", importedPath, siblingPath );
-    SW_EXPECT_TRUE( importedPath == "a/knight/knight.skeleton.json" );
-    SW_EXPECT_TRUE( siblingPath == "a/knight.skeleton.json" );
+    SkeletonBoneLOD::makeSkeletonCandidatePaths( "a/knight.bonelod.xml", importedPath, siblingPath );
+    SW_EXPECT_TRUE( importedPath == "a/knight/knight.skeleton.xml" );
+    SW_EXPECT_TRUE( siblingPath == "a/knight.skeleton.xml" );
 
     // 자손까지 — bone1 을 빼면 bone2 · bone3 도 빠진다.
     SkeletonBoneLOD parentOnly;
-    SW_ASSERT_TRUE( parentOnly.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "bone1" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( parentOnly.parseXML( R"(<SkeletonBoneLOD><levels><level max_screen_size="0.1"><remove><item>bone1</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
     SW_ASSERT_TRUE( parentOnly.computeMasks( skeleton, listMask, "test" ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listMask[0][3] ) );
 
     test::ScopedDefensiveTestLog expected( "bone LOD tables naming unknown bones or out of order are rejected" );
     SkeletonBoneLOD              unknownBone;
-    SW_ASSERT_TRUE( unknownBone.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "nope" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( unknownBone.parseXML( R"(<SkeletonBoneLOD><levels><level max_screen_size="0.1"><remove><item>nope</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
     SW_EXPECT_FALSE( unknownBone.computeMasks( skeleton, listMask, "test" ) );
     SkeletonBoneLOD badOrder;
-    SW_EXPECT_FALSE( badOrder.parseJSON( R"({ "levels": [ { "max_screen_size": 0.05, "remove": [ "bone3" ] },
-                                                         { "max_screen_size": 0.2, "remove": [ "bone2" ] } ] })",
-                                         "test" ) );
+    SW_EXPECT_FALSE( badOrder.parseXML( R"(<SkeletonBoneLOD>
+	<levels>
+		<level max_screen_size="0.05">
+			<remove>
+				<item>bone3</item>
+			</remove>
+		</level>
+		<level max_screen_size="0.2">
+			<remove>
+				<item>bone2</item>
+			</remove>
+		</level>
+	</levels>
+</SkeletonBoneLOD>)",
+                                        "test" ) );
 }
 
 /**
@@ -279,7 +313,7 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
     shared_ptr<SkeletonBoneLOD> boneLOD = make_shared<SkeletonBoneLOD>();
-    SW_ASSERT_TRUE( boneLOD->parseJSON( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( boneLOD->parseXML( R"(<SkeletonBoneLOD><levels><level max_screen_size="0.2"><remove><item>bone3</item></remove></level></levels></SkeletonBoneLOD>)", "test" ) );
     pUnit->setBoneLOD( boneLOD );
     pAnimator->setClipFolder( ::test::makeTempResourceID( folder ) );
     pAnimator->setInitialState( "Wave" );
@@ -489,7 +523,7 @@ SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
 }
 
 /**
- * @brief [AnimationLODTest] 스켈레톤 경로를 정하면 곁의 본 LOD 파일(`knight.bonelod.json`)을 그 스켈레톤으로 풀어 마스크를 짓는다
+ * @brief [AnimationLODTest] 스켈레톤 경로를 정하면 곁의 본 LOD 파일(`knight.bonelod.xml`)을 그 스켈레톤으로 풀어 마스크를 짓는다
  * @details 스켈레톤을 정하기 전에 마스크를 지으면 암묵 스켈레톤(본 하나)에서 이름을 찾아 "없는 본" 오류가 난다 — 순서를 지킨다.
  */
 SW_TEST_CASE( AnimationLODTest, BoneLODLoadsBesideSkeletonPath )
@@ -501,7 +535,7 @@ SW_TEST_CASE( AnimationLODTest, BoneLODLoadsBesideSkeletonPath )
     SW_ASSERT_NOT_NULL( pUnit );
     {
         const test::ScopedLogCollector log;
-        pUnit->setSkeletonPath( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" );
+        pUnit->setSkeletonPath( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" );
         SW_EXPECT_EQUAL( 0u, log.countContaining( "Bone LOD" ) );
     }
     SW_ASSERT_NOT_NULL( pUnit->findBoneLOD() );

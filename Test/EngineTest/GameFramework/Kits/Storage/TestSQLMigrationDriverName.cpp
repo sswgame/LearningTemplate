@@ -40,7 +40,7 @@ SW_TEST_CASE( SQLMigrationDriverNameTest, MissingDialectBranchIsCaughtForTheAdde
     // 1 번은 postgres 갈래만 있다 — 등록 표에 postgres 가 없어도 폴더가 그 이름을 내므로 sqlite 로 읽기가 실패해 드러난다.
     const string folder = test::makeTempDirectory( "migration_missing_branch" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_first.postgres.sql" ), "SELECT 1;" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), R"({ "migrations": [ "0001_first" ] })" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), R"(<SQLMigrationList><Migration _name="0001_first" /></SQLMigrationList>)" ) );
 
     vector<string> listDriverName{ string( "sqlite" ) };
     string         error;

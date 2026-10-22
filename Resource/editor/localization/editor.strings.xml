@@ -1,0 +1,4104 @@
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.AssetSlotClear" source="Clear this asset reference.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.AssetSlotDrop" source="Drag an asset from the Content Browser and drop it here to assign it.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.AutoplayToggle" source="{game} autoplay: {description} ({variable}, console: autoplay on|off)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BoneNoSelection" source="No selection. Select an object in the Hierarchy.">
+			<origins>
+				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BoneObjectNotFound" source="Object not found in the active scene.">
+			<origins>
+				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BuildCompiling" source="Modules are being built in the background.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BuildFailed" source="The build failed. See the console window for the detailed errors.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BuildReady" source="Live Coding is ready to build.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.BuildSucceeded" source="The last build finished successfully.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CameraBookmarkPosition" source="Position: {position}">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CameraBookmarks" source="Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CameraSpeed"
+		       source="Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CommandPaletteHint" source="Type a command or search objects... (Esc to close)">
+			<origins>
+				<item>Source/Editor/Popups/CommandPalettePopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CompileGame"
+		       source="Live Coding: compile the SWGame module now and hot-reload it (Ctrl+Alt+F11)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ComponentCardActive" source="Enable or disable this component.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ComponentCardOptions" source="More options for this component, including removing it.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CurveEditorHint" source="Click a key to edit it. Right-click to add a key. F fits the view.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CurveNoKeys" source="(no keys)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.CurvePreviewEdit" source="Click to edit the curve">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DebugHUDNotRunning" source="Debug HUD is not running">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DebugHUDNotRunningHost" source="Debug HUD is not running (Shipping or a test host).">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DebugHUDSavedIn"
+		       source="Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DebugHUDShow"
+		       source="Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DeleteLayout" source="Delete this saved layout.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.DocumentOpen"
+		       source="Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GizmoLocalSpace"
+		       source="Local space: the gizmo follows the object's rotation. Click to switch to world space.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GizmoRotate" source="Rotate: turn the selection around an axis (E)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GizmoScale" source="Scale: resize the selection along an axis, or uniformly from the center (R)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GizmoTranslate" source="Translate: move the selection along an axis or plane (W)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GizmoWorldSpace"
+		       source="World space: the gizmo follows the world axes. Click to switch to local space.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GridSnap" source="Grid snap: moved objects jump in steps of the grid size on the right.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.GridSnapSize" source="Grid snap step, in world units.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LayoutNameHint" source="layout name">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LiveCodingAllModules" source="All Modules">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LiveCodingFailed" source="{target} build failed (exit code {code}). See the Output Log.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LiveCodingFailedTitle" source="Live Coding Failed">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LiveCodingSucceeded" source="{target} compiled and reloaded in {seconds}s">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.LiveCodingSucceededTitle" source="Live Coding Succeeded">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NetMode"
+		       source="Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer).">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NetPlayClients"
+		       source="Connected clients / launched clients. The process list and server pause are in Window > Multiplayer.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NetPlayStart"
+		       source="Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NetPlayStop"
+		       source="Shut down every process cleanly and, if tracing is on, merge the traces into one file.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NetPlayerCount"
+		       source="Number of players: the client count for a dedicated server, or the count including the host for a listen host.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoAssetsOfKind" source="No assets of this kind under Resource/.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoComponentTypes" source="No registered component types.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorComponentMenu.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoDocument" source="(no document)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoMatches" source="No matches.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoMatchesForFilter" source="No matches for &quot;{filter}&quot;.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoMatchingComponents" source="No matching components.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorComponentMenu.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoNodeMatches" source="No node matches.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoRecentDocuments" source="No recent documents">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NoSavedLayouts" source="No saved layouts.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyBugReportFailed" source="The bug report could not be saved (see the log)">
+			<origins>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyBugReportSaved" source="Bug report saved">
+			<origins>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyBugReportTitle" source="Bug report">
+			<origins>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyClipboardEmpty" source="Clipboard is empty">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyDocumentSaveFailed" source="Document save failed">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyEditorTitle" source="Editor">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyKeepSimulation" source="The selected objects keep their state after Stop">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyKeepSimulationTitle" source="Keep Simulation Changes">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyNewScene" source="New scene">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPasteTitle" source="Paste">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPlayNewWindowSaveFirst"
+		       source="Save the scene first. The new window opens the saved file.">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPlayNewWindowTitle" source="Play in New Window">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPlayNewWindowUnsaved" source="Unsaved scene edits are not in the new window">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPlayTitle" source="Play">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPlayUnsaved" source="The scene has unsaved changes. Use Play on the toolbar to confirm.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPrefabIsolated" source="Opened the prefab in the Prefab Window">
+			<origins>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPrefabIsolationExited" source="Exited prefab isolation">
+			<origins>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPrefabTitle" source="Prefab">
+			<origins>
+				<item>Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPresetApplyFailed" source="Failed to apply the preset to this component">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPresetTitle" source="Preset">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyPresetWriteFailed" source="Failed to write the preset file">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySaveFailed" source="Save failed">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySaveTitle" source="Save">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySaved" source="Saved">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySceneOpenFailed" source="Failed to open the scene">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySceneReadOnly"
+		       source="The scene file is read-only. Check it out (lock it) in the Content Browser first.">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySceneTitle" source="Scene">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyScreenshotFailed" source="The screenshot was not written (see the log)">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyScreenshotNoSceneView" source="The scene view is not drawn. Open the Scene tab first.">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyScreenshotSaved" source="Screenshot saved">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyScreenshotTitle" source="Screenshot">
+			<origins>
+				<item>Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySelectComponent" source="Select a component first">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifySelectObject" source="Select an object first">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorCommandGUI.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.NotifyStopPlayFirst" source="Stop play before opening or creating a scene">
+			<origins>
+				<item>Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.OverlayCollapse" source="Collapse">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.OverlayExpand" source="Expand">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.OverlayGrip"
+		       source="Drag to move. Near an edge it docks there (left and right stack vertically). Right-click for the overlay menu.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.OverlaysMenu"
+		       source="Show or hide the scene view overlay bars, or put them back where they started">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportOverlays.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayPause" source="Pause the game.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayPaused" source="The game is paused.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayRunning"
+		       source="The game is running. The game view draws the game camera, and the scene view lets you look around with the editor camera.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStart" source="Start play mode (enables game view input and player control).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStartAtCamera"
+		       source="Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStarting" source="Opening the scene. Play starts when loading finishes (Stop cancels it).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStepFrameCount" source="Number of frames 'Step N' advances (1 or more).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStepFrames" source="Advance by the number of frames in the box on the left, then pause.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStepOnce" source="Advance the game by exactly one frame.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayStop" source="Stop the game and restore the scene to its state before Play.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.PlayTimeScale"
+		       source="Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.QuickOpenHint" source="Type to search assets, scenes, game objects (ESC to cancel)...">
+			<origins>
+				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.QuickOpenIndexing" source="Indexing assets...">
+			<origins>
+				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.QuickOpenNoMatches" source="No matching assets or game objects found.">
+			<origins>
+				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RHIBackend" source="Current graphics RHI backend: {backend} ({fps} FPS)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RHISwitch" source="Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RecentDocuments" source="Recently opened documents. Pick one to open it again.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RenderDocCapture" source="Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RenderDocUnavailable"
+		       source="RenderDoc is not attached to this process. Start with -renderdoc or launch from RenderDoc.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ResetLayout" source="Reset the docked windows to the default editor layout.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RotationSnap" source="Rotation snap: rotations jump in steps of the angle on the right.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.RotationSnapSize" source="Rotation snap step, in degrees.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SaveLayout"
+		       source="Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorMenuBar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SearchAssetsHint" source="Search assets">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorDocumentPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SearchClear" source="Clear the search text.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SearchHint" source="Search...">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorComponentMenu.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SearchNodesHint" source="Search nodes...">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SimulateRunning" source="Only the world is ticking: no game module update and no game input.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SimulateStart"
+		       source="Start simulate mode (ticks the scene only: no game module update and no game input).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.SurfaceSnap" source="Surface snap: objects you drag land on the surface under the cursor.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeAccentColor"
+		       source="The accent color used for buttons, selection highlights, folders and active items.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeAccentSwatch" source="A recommended accent color. Click to apply it.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeFrameRounding"
+		       source="Corner rounding of buttons, input fields and control frames, in pixels (0 to 8).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemePreset"
+		       source="Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeReset"
+		       source="Drop your accent and rounding changes and use the values of the current theme.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeTabRounding" source="Corner rounding of dock tabs and panel tabs, in pixels (0 to 8).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ThemeWindowRounding"
+		       source="Corner rounding of editor windows and popup dialogs, in pixels (0 to 12).">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorThemeUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.UnknownPin" source="Unknown pin">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.Vec3AxisDrag" source="Drag to change the value, or double-click to type a number.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.Vec3AxisReset" source="Click to reset this axis to its default value.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.View2D" source="2D view (XY plane grid). Click to switch to 3D.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.View3D" source="3D view (XZ plane grid). Click to switch to 2D.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ViewMode"
+		       source="Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ViewModeNoRenderer" source="The renderer is not attached yet.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ViewportGrid" source="Show or hide the ground grid.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ViewportHUD"
+		       source="Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdCommon.ViewportOrientationCube"
+		       source="Show or hide the orientation cube that shows which way the camera faces.">
+			<origins>
+				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddAttackTip"
+		       source="Add an Attack state node. Its name is the clip it plays; rename it in the inspector.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddBoneMaskTip"
+		       source="Add a bone mask that starts at the spine. Rename its bones to match your skeleton.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddIdleTip"
+		       source="Add an Idle state node. Its name is the clip it plays; rename it in the inspector.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddLayerTip"
+		       source="Add a layer. Layers stack in list order; the last one is on top.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AddWalkTip"
+		       source="Add a Walk state node. Its name is the clip it plays; rename it in the inspector.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.AdvanceTip" source="Step the preview to the next state by one transition.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.BoneMaskChildrenTip"
+		       source="Checked: the weight spreads to every child bone. Unchecked: only this bone.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.BoneMaskPresetTip"
+		       source="Drop a .bonemask.xml preset to use it; its bones are then read-only here. Clear it to keep the bones in this graph.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.ConditionOpTip"
+		       source="How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.ConditionParamTip"
+		       source="Graph parameter the condition reads (set by game code through the player)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.ConditionValueTip" source="The threshold the parameter is compared against.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.ContextCreateFailed" source="Failed to create Animation Graph editor context.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerBlendTip"
+		       source="Override replaces the masked bones; Additive adds the clip's difference from its first frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerClipTip" source="Clip this layer plays (its name in the clip folder).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerHalfLifeTip"
+		       source="When the layer restarts, blend out of the interrupted pose with this half-life. 0 switches at once.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerMaskTip"
+		       source="Bones the layer affects. (all bones) applies it to the whole skeleton.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerOrderTip"
+		       source="Move the selected layer up or down. Order changes the result: later layers are applied on top.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerWeightParamTip"
+		       source="Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LayerWeightTip"
+		       source="How much of the layer pose is applied. Ignored while Weight Param is set.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LinkSelectedTip"
+		       source="Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.LoadTip" source="Reload the graph from disk, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.NoBoneMasksHint"
+		       source="No bone masks. A mask chooses the bones a layer affects and how strongly.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.NoLayersHint"
+		       source="No layers. A layer plays one clip over the state machine pose, on the bones of its mask.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.PlayTip"
+		       source="Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.SaveTip" source="Write the graph and its node layout to the asset file.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.StateClipTip"
+		       source="The state's clip name - the player plays the clip with this name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.StateLoopTip"
+		       source="Whether this state's clip repeats. Default keeps the clip's own loop setting.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.StopTip" source="Stop the preview.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationGraph.TransitionBlendTip" source="Crossfade seconds; below zero uses the player default">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.AllTracksTip"
+		       source="Draw every recorded character's skeleton, not only the selected one.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.NothingRecorded"
+		       source="Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.RecordTip"
+		       source="Record every animated character's pose and state each frame while the game plays, so you can scrub back and inspect them. Same as 'anim.rewind on'.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.ResumeTip"
+		       source="Return to the live state and resume Play In Editor if scrubbing paused it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.SelectCharacter"
+		       source="Select a character (Hierarchy or Scene view) to see its recorded state.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.SkeletonTip"
+		       source="Draw the recorded skeleton in the viewport at the time being viewed.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.TimelineTip"
+		       source="Drag to scrub through the recorded history; the left end is the oldest frame. Scrubbing pauses Play In Editor.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAnimationRewind.WindowTip"
+		       source="How many seconds of history to keep, 1 to 60. Older frames are dropped; longer windows use more memory.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.AllVoices" source="All voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.Clips" source="Clips">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnBus" source="Bus">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnElapsed" source="Elapsed">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnEvent" source="Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnField" source="Field">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnRemaining" source="Remaining">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnValue" source="Value">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.ColumnVoices" source="Voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.DeleteEvent" source="Delete Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.DeleteEventTip"
+		       source="Removes the event from the edited copy; saving writes the library file">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.DuplicateEvent" source="Duplicate Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.EditEvent" source="Edit">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.EditEventTip"
+		       source="Edits a copy of this event's library file; Save writes it only when it passes validation, and hot reload applies it">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.EditedEvent" source="Edited Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldBus" source="Bus">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldClipCount" source="Clips">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldContainer" source="Container">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldCooldown" source="Cooldown">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldFade" source="Fade">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldLoop" source="Loop">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldMaxInstances" source="Max instances">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldParameterCount" source="Parameter curves">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldPitch" source="Pitch">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldPriority" source="Priority">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldRadius" source="Radius">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldSteal" source="Steal policy">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldVirtual" source="Virtual mode">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.FieldVolume" source="Volume">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.Instances" source="Instances">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.LibrarySettings" source="Library Parameters and Attenuation">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.NoLibrary" source="No event library loaded">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.NoService" source="The audio service is not running">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.NothingPlaying" source="Nothing is playing">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.OnlySelected" source="Only the selected event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.OpenDataFile" source="Open Data File">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.OpenDataFileTip"
+		       source="Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PeakRealVoices" source="Peak real voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PlayedDropped" source="Played / dropped">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PlayedDroppedTip"
+		       source="Events posted since start, and events dropped by cooldown, limit or slot shortage">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PostEvent" source="Post Event">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PublishCost" source="Publish cost (avg / peak)">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.PublishCostTip"
+		       source="Time the audio thread spends per block copying instances and voices for this window">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.RealVoices" source="Real voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.RemainingLoop" source="loop">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.SaveEdits" source="Save">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.SaveEditsTip"
+		       source="Writes the library file; an invalid library is not written and the error is logged">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.SelectEvent" source="Select an event on the left">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.StopEditing" source="Stop Editing">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.TabPlaying" source="Playing">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.TabProperties" source="Properties">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.TabVoices" source="Voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.Unsaved" source="Unsaved changes">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioEvents.VirtualVoices" source="Virtual voices">
+			<origins>
+				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.BrokenLinks"
+		       source="The graph has links to missing nodes or a cycle - it is not processed">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.CanvasFailed" source="The node canvas could not be drawn">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.NoGraph" source="Open an audio graph (.audiograph.json) to edit it">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.Open" source="Open">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.PathHint" source="Audio graph resource id">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.Preview" source="Preview">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.PreviewTip" source="Play the graph through the editor audio device">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.ProcessingOrder" source="Processing order">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.Save" source="Save">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.SaveTip" source="Write the graph to its file">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.SelectNodeHint" source="Select a node to edit its settings">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.SetOutput" source="Set as output">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.StopPreview" source="Stop preview">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorAudioGraph.Unsaved" source="Unsaved changes">
+			<origins>
+				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.Capture"
+		       source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/&lt;time>/ with the note above">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.CopyPath" source="Copy the absolute folder path">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.GoTo" source="Open that scene and move the camera to the saved position (bugitgo)">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.NoReports" source="No bug reports yet. Collect Now saves one under Saved/BugIt.">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.NoteHint" source="Note to attach (what you did and what went wrong)">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorBugIt.ShowInExplorer" source="Open this folder in the file explorer">
+			<origins>
+				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.AutoScroll"
+		       source="Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.Clear" source="Clear all console log output">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ClearOnPlay" source="Clear the log when Play starts">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.Collapse" source="Fold identical log lines into one and show the count in front">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.CommandHint" source="> command or gv_name [value] (Tab completes, Up/Down history, help)">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.CopyAll" source="Copy every filtered console log to the clipboard">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.EntrySource" source="{file}({line}) - double-click to open in IDE">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ErrorPause" source="Pause Play when an error log appears during Play">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.FilterHint" source="Filter (tag / message / file)">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.FilterTooltip" source="Filter by log message, module tag or file name">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.NoLogOutput" source="No log output yet.">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.OpenLogFile" source="Open the most recent saved log file in the file explorer">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ShowErrors" source="Toggle showing Error-level logs">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ShowInfo" source="Toggle showing Info-level logs">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ShowTrace" source="Toggle showing Trace-level logs">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.ShowWarnings" source="Toggle showing Warning-level logs">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorConsole.TagFilter" source="Show or hide each log tag (category)">
+			<origins>
+				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.AddAsset"
+		       source="Create a new folder or asset (material, scene, prefab) in the current folder">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.AllPacks"
+		       source="Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.Import"
+		       source="Import external files (textures, shaders, sounds, ...) into the current folder">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.ImportNeedsFolder" source="Select a target folder to import assets into first">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.IndexingReferences" source="Indexing references. Try again in a moment.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.ListView" source="Show assets as a detailed list of name, type and path">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NavigateBack"
+		       source="Go to the previous folder (Mouse Back button / Alt+Left / Backspace)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NavigateForward" source="Go to the next folder (Mouse Forward button / Alt+Right)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NoDependencies" source="This asset names no other asset.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NoReferencers" source="No text asset names this asset.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.NoResourceRoots" source="No resource roots found.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.OpenOnDoubleClick" source="Double-click to open">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.Refresh" source="Refresh the disk files and the resource root list">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.SearchHint" source="Search Content">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.SearchTooltip" source="Filter assets by name or extension">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.SelectFolder" source="Select a folder">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.TileSize" source="Adjust the tile thumbnail size (64px to 160px)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.TilesView" source="Show assets as square thumbnail cards (tiles)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.TypeFilter" source="Filter by asset type (texture, scene, prefab, sound, ...)">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.AddKeyTip"
+		       source="Add a string with the key typed on the left. Keys already in the table are ignored.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.DeleteKeyTip"
+		       source="Remove this key from the source table and every translation table when you save.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.KeyTip" source="Context: {context}&#10;Comment: {comment}&#10;Max length: {maxLength}">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.LoadingLocalization" source="Loading localization...">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.NewKeyHint" source="New string key...">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.NoProject" source="(no project)">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.NoRecordsHint" source="No localization records. Add a key or run App --gather-text.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.OverMaxLength" source=" (over the maximum length)">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ProjectTip"
+		       source="Localization project whose string tables are shown. Save or reload before switching; a project with unsaved edits stays selected.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.RefreshFilesTip"
+		       source="Scan the game data folders again for XML tables added or removed outside the editor.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ReloadTip" source="Read the project's tables from disk again, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.RevertTip" source="Discard the edits and read the file from disk again.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.SaveFileTip"
+		       source="Write the edited XML text back to this file. The text is saved as typed, without validation.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.SaveLocalizationTip"
+		       source="Write the source table and every translation table of this project.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.SearchHint" source="Search keys, source or translations...">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.SelectTableHint" source="Select an XML data table from the list on the left.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.StateMissing" source="missing">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.StateReview" source="needs review (translation memory suggestion or fuzzy import)">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.StateStale" source="stale - the source changed after this translation">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.StateTranslated" source="translated">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.TranslationCellTip" source="{context}&#10;State: {state}&#10;Length: {length}{overflow}">
+			<origins>
+				<item>Source/Editor/Panels/Data/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.AddChoiceTip"
+		       source="Add an option the player can pick. Each option gets its own output pin.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.AddNodeTip"
+		       source="Add a node of this type to the graph. You can also right-click empty canvas to search for one.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.AdvancePreviewTip" source="Move the preview to the next node without waiting.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.CommandExample" source="Ex: give_item:potion:3">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.CommandTip"
+		       source="Command the game runs when the conversation passes this node, written as name:argument:argument.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ConditionExample" source="Ex: boss_defeated &amp;&amp; gold >= 10">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ConditionTip"
+		       source="Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ContextCreateFailed" source="Failed to create Dialogue Node Editor context.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.NoSpeaker" source="(No Speaker)">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.PlayPreviewTip"
+		       source="Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.PreviewChoiceTip" source="Pick this choice and follow its link.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.PreviewFalseTip" source="Treat the condition as not met and follow the False link.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.PreviewTrueTip" source="Treat the condition as met and follow the True link.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ReloadTip" source="Reload the graph from disk, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.RemoveChoiceTip" source="Remove this choice option.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ResetDefaultTip" source="Replace the whole graph with the sample conversation.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.SaveTip" source="Write the dialogue graph and its node layout to the asset file.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.SpeakerTip" source="Name shown as the speaker of this line.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.StopPreviewTip" source="End the preview.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.TextTip"
+		       source="The line the player reads. On a Choice node it is the prompt shown above the options.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDialogueGraph.ZoomFitTip" source="Zoom and pan the canvas so every node is visible.">
+			<origins>
+				<item>Source/Editor/Panels/Data/DialogueGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ActionConflictTip"
+		       source="Shares a key with another action on the same layer - see the details">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.CaptureInstruction" source="Press any keyboard key, or click a button below to bind...">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ConflictCount" source="{count, plural, one {# conflict} other {# conflicts}}">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.CreateActionTip"
+		       source="Add the action with no bindings; select it in the list to add keys.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.FilterActionsHint" source="Filter actions...">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.InjectKeyDownTip"
+		       source="Send a key-press event for the chosen key, as if it were pressed and held. Send KeyUp to release it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.InjectKeyUpTip" source="Send a key-release event for the chosen key.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.InjectStickTip"
+		       source="Hold gamepad 0's left stick at the tilt set above until you reset it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.InjectorHint"
+		       source="Inject virtual key, mouse, or stick events directly into the engine without physical hardware.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.LayerEnabledTip"
+		       source="Whether this layer starts enabled. The enabled layer with the highest priority receives input first.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.LeftMotorTip"
+		       source="Strength of the left (low-frequency) motor for the test pulse, 0 to 1.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.LoadReplayTip"
+		       source="Read frames from the replay file, replacing the current recording. Stops any playback first.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.MapPathTip"
+		       source="Resource path of the input map (*.input.xml) to edit. Press Reload after changing it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NewActionNameTip"
+		       source="Name game code uses to query the new action, for example Jump or Move.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NewActionTypeTip"
+		       source="Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NoBindings" source="No bindings">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NoGamepad" source="No Gamepad Connected on Port 0.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NoInputManager" source="InputManager service is not available.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NotRebindableTip"
+		       source="This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.OverlayAnchorTip" source="Viewport corner the overlay is drawn in.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.OverlayEnableTip"
+		       source="Draw a live controller display over the game viewport. Useful for recording videos or checking input while playing.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.OverlayHistoryTip"
+		       source="List the most recent inputs and triggered actions, as in fighting-game training modes.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.OverlayOpacityTip" source="Overlay opacity, 0.1 (faint) to 1 (solid).">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.OverlayScaleTip" source="Overlay size multiplier, 0.5 to 2.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.PatternExample"
+		       source="236P = down, down-right, right + punch (the map's command history, 0.8 s window)">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.PatternTip"
+		       source="Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.PauseGraphTip" source="Freeze the graphs so you can read a past spike.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.PauseReplayTip"
+		       source="Stop playback at the current frame, keeping the input state of that frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.PlayReplayTip"
+		       source="Feed the recorded frames to the engine in place of real devices, starting from the current frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.RebindThisTip"
+		       source="Give this action's binding a different key to resolve the conflict.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.RebindTip"
+		       source="Replace this binding's key: press a key or pick one from the list that opens.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ReloadTip"
+		       source="Read the input map from the path on the left, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ReplayFileTip" source="Resource path of the .swreplay file that Save and Load use.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ReplayHint"
+		       source="Playback attaches the replay as exclusive virtual input: recorded frame n is applied on the n-th input frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ResetActionTip" source="Put this action's bindings back to the ones it was loaded with.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.ResetStickTip" source="Return the injected stick to the center.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.RevertAllTip" source="Put every action back to the bindings it was loaded with.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.RightMotorTip"
+		       source="Strength of the right (high-frequency) motor for the test pulse, 0 to 1.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.SaveReplayTip" source="Write the recorded frames to the replay file.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.SaveTip"
+		       source="Write the default bindings to the input map file. Player remaps are stored separately in user settings.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.SelectActionHint" source="Select an action to edit its bindings and triggers.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.SimStickXTip"
+		       source="Horizontal tilt to inject on gamepad 0's left stick, -1 (left) to 1 (right).">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.SimStickYTip"
+		       source="Vertical tilt to inject on gamepad 0's left stick, -1 (down) to 1 (up).">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StartRecordingTip"
+		       source="Record every input event, frame by frame, to replay later for bug reproduction or QA. Replaces the current recording.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StepBackTip" source="Go back one recorded frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StepForwardTip" source="Apply the next recorded frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StopRecordingTip"
+		       source="Stop recording. The frames stay in memory until you save or record again.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StopReplayTip" source="Stop playback and rewind to the first frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.StopVibrationTip" source="Stop any vibration on gamepad 0.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.TapKeyTip" source="Send a press and a release in the same frame, like a quick tap.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.TestPulseTip"
+		       source="Vibrate gamepad 0 for 0.3 seconds with the motor strengths on the left.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.TimelineFrameTip"
+		       source="Drag to jump to any recorded frame; the input state is rebuilt up to that frame.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.TriggerTip"
+		       source="When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.UnbindOtherTip"
+		       source="Clear the key from the other action's binding so this action keeps it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.UnsavedChanges" source="* Unsaved changes">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.WaitingForInput" source="Waiting for input...">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.AddToFavorites" source="Add to Favorites">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ApplyToPrefab" source="Save this object's changes to the source prefab file">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ClearAssetReference" source="Clear asset reference">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.FavoriteProperty" source="Favorite property">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.FavoritesSection" source="Favorites">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.FollowingSelection" source="Following the selection - click to lock to this object">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.LockedToObject" source="Locked to this object - click to follow the selection">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.MultipleValues" source="Multiple values">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NewElementHint" source="new element (Enter)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NewKeyHint" source="new key (Enter)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NoFunctionMethods" source="No FUNCTION() methods.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NoMatchingAssets" source="No matching assets.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NoTypeInfo" source="No TypeInfo registered for this component.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NothingSelected" source="Nothing selected. Pick in the Scene view or use Hierarchy.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ObjectActive" source="Toggle whether the GameObject is active">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ObjectName" source="Unique name of the GameObject (Enter to apply)">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.PickAsset" source="Pick an asset">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.PrefabInstance" source="This is a prefab instance">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.PresetNameHint" source="Preset Name...">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.RemoveFromFavorites" source="Remove from Favorites">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ResetToDefaultTooltip" source="Reset to the default value">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.RevertToPrefab" source="Revert this object to the contents of the source prefab file">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.SearchAssetsHint" source="Search assets...">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.SearchPropertiesHint" source="Search properties...">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.SearchTooltip" source="Filter by property and component name">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.SelectionGone" source="Selected object no longer exists.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ShowInContentBrowser" source="Show in the Content Browser">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.TransientProperty" source="Transient property: not saved to disk">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.UnlinkPrefab"
+		       source="Break the link to the prefab and turn this into a standalone object">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.Unparent" source="Detach from the parent object and move to the scene root">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ViewOptions"
+		       source="View options: show only modified properties, expand or collapse all sections">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.CheckMap" source="Validate every object of the active scene again">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.NoIssues"
+		       source="No validation issues. Check Map validates every object of the active scene.">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.NotInActiveScene" source="This object is not in the active scene">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.SceneIssuesToast"
+		       source="{errorCount} error(s), {warningCount} warning(s). Open Map Check from the status bar.">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.SearchHint" source="Search">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.ShowErrors" source="Show error rows">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.ShowWarnings" source="Show warning rows">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.StatusTooltip" source="Map Check: {errorCount} error(s), {warningCount} warning(s)">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.ApplyToSelectionTip"
+		       source="Show the edited material on the selected object in the viewport without saving, to judge it with the real shader and lighting.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.LoadFailedStatus" source="Load failed - saving is disabled so the file is not overwritten">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.LoadedStatus" source="Loaded">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.NameTip" source="Display name stored in the material file.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.OpenMaterialHint"
+		       source="Open a material (Open..., Quick Open or a Content Browser double-click) to edit.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.PreviewTip"
+		       source="Preview computed from the material values (base color, roughness, metallic, emissive). It does not run the shader code - use Apply to Selection to check it in the scene.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.ReloadTip" source="Read the material from disk again, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.SaveFailedStatus" source="Save failed">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.SaveTip" source="Write the material file and reload it in the running scene.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.SavedStatus" source="Saved">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterial.ShaderTip"
+		       source="HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser.">
+			<origins>
+				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ArrangeWindows"
+		       source="Place the client windows side by side (window size and position per App process) instead of letting them overlap">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ClientArgumentsHint" source="client arguments (e.g. -vk)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsApplyToAll"
+		       source="Send each change to every process of the session instead of the selected one">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsBandwidth" source="Line speed in KB/s (0 = unlimited)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsDisconnect"
+		       source="Drop every connection of the selected process (a client stays disconnected until Reconnect)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsDown" source="Packets this process receives">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsNoSession"
+		       source="Start a multiplayer session (Session tab) to change its line conditions.">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsNoStats" source="No stats yet - press Refresh stats">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsPreset" source="Set both directions of the selected process to a line preset">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsReconnect" source="Connect a disconnected client to the server again">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsRefreshStats"
+		       source="Ask the selected process for its line and connection numbers">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsSpike"
+		       source="Drop everything the selected process sends and receives for this many seconds">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ConditionsUp" source="Packets this process sends (client to server for a client)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.DeletePreset" source="Delete the selected preset from your preset file">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.FollowLog" source="Keep scrolling to the newest log line">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.InspectorAttach"
+		       source="Attach to a server that is already running: its debug channel address (127.0.0.1:port) and token, as given with -gv_debugChannelPort and -gv_debugChannelToken">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.InspectorConsoleHint"
+		       source="Dev command for the server (help lists them, Tab completes the name)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.InspectorNoChannel"
+		       source="The Inspector reads a dedicated server through its debug channel. Start a Dedicated Server session, or attach by address">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.InspectorRefresh"
+		       source="Read the server's hierarchy again (scene.tree). Click a name to read its component values (object.dump) - this works while the server is paused">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.LogSource" source="Show the log of one process or of every process">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.NoProcesses" source="No processes - pick a Net Mode and press Play (toolbar or here).">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.NoTarget" source="No multiplayer session is running. Start one in the Session tab.">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.PauseServer" source="Pause the dedicated server's game tick">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.Play" source="Start the server and clients for the selected Net Mode">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.Preset"
+		       source="Saved multiplayer setups (Saved/Editor/NetPlayPresets.json, not committed). Picking one replaces the setup below and is restored when the editor starts">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.PresetNameHint" source="preset name">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerClear" source="Forget the collected history">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerKinds" source="Received messages by kind">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerKindsAllProcesses"
+		       source="Add up the message kinds every process received instead of only the selected one">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerKindsSent"
+		       source="Show the message kinds the process queued to send instead of the ones it received (one process shows both directions)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerLoss" source="Packet loss (highest connection, %)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerNoKinds" source="No messages received yet">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerNoSession"
+		       source="Start a multiplayer session (Net Mode on the toolbar) to see its traffic">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerReceivedBytes"
+		       source="Received bytes per second (last second, all connections)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerReceivedPackets" source="Received packets per second">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerResent" source="Reliable messages resent per second">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerRtt" source="Round-trip time (highest connection, ms)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerSentBytes" source="Sent bytes per second (last second, all connections)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerSentPackets" source="Sent packets per second">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerSource"
+		       source="Numbers the process already counts (connection stats, message kinds), asked with net.stats every 0.5 s while this tab is shown">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerWaiting" source="Waiting for the first net.stats report from this process">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.RecordTraces"
+		       source="Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ResumeServer" source="Resume the paused server's game tick">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SavePreset"
+		       source="Save the setup below under the typed name (empty: overwrite the selected preset)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.StepServer"
+		       source="Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.StepTickCount" source="Number of server ticks that Step runs (1 or more)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.Stop" source="Stop every process and merge the recorded traces">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncClient"
+		       source="Read this client's state hash history (the latest ticks it recorded under the server tick numbers)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncCompare"
+		       source="Find the earliest tick both histories hold with different state hashes (scene transforms: name, active, world position)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncFile"
+		       source="Load a saved history, or save this one in the same format (&lt;tick> &lt;hex hash> per line)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncReadServer"
+		       source="Read the history of another server through its debug channel (it must run with -gv_stateHashHistory)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncSessionServer"
+		       source="Read the per-tick state hash history of the dedicated server this session started">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.Target" source="Process the tabs act on: the server or one client">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.WindowColumns" source="Windows per row before the next row starts">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.WindowSize" source="Client area size of each App window (pixels)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.Game" source="Game to package">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.OpenFolder"
+		       source="Open the output folder of the last successful package in the file explorer">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.OutputFolder" source="Folder the packaged build is staged into">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.Package"
+		       source="Configure, build, cook and stage the selected game into the output folder">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.RHIBackend"
+		       source="Backend that Shipping links statically (client only). The server does not render">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.SkipBuild" source="Skip configure and build, and stage this editor's Bin">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.SkipCook" source="Skip cooking the resource packs (a build cooks them itself)">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorPackaging.Target" source="Package the client (game) or the dedicated server">
+			<origins>
+				<item>Source/Editor/Panels/Packaging/PackagingPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.CallTreeRecord"
+		       source="The call tree folds the timeline recording (same recording as the Timeline tab)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.FilterScopesHint" source="Filter scopes...">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.FindScopeHint" source="Find scope...">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.Fit" source="Reset the zoom so the recorded frames fit the view">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.Freeze" source="Keep recording but stop updating the view">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.LoadCapture" source="Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.LoadTrace"
+		       source="Load the newest Saved/Traces/*.trace.json under the live threads (first times aligned) - a failing run next to a healthy one">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.MemoryProfilerInactive" source="MemoryProfiler is not active.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.NoActiveScene" source="No active scene loaded.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.NoComponents" source="No components in the active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.NoRHIDevice" source="No RHI device.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.PauseOnSpike"
+		       source="Pause capturing automatically on a frame slower than the threshold on the right">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.RenderDocCapture" source="Capture the next frame with RenderDoc">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.RenderDocNotAttached"
+		       source="RenderDoc is not attached to this process - start with -renderdoc or launch from RenderDoc">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.RenderDocOpenUI" source="Open the RenderDoc replay UI to inspect captures">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.ResumeCapture"
+		       source="Capturing is paused (a spike or an opened capture) - resume live capture">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.SaveCapture"
+		       source="Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.SaveTrace"
+		       source="Save the frames shown as Saved/Traces/trace_&lt;time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.SpikeThreshold"
+		       source="GT.Frame above this pauses capturing (and a running play session) on that frame">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.TaskManagerInactive" source="TaskManager is not active.">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.TimelineRecord"
+		       source="Record profile scopes per thread into a ring (8192 events per thread) - only while recording">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorProfiler.UnloadTrace" source="Remove the loaded trace from the timeline">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.AutoRangeTip"
+		       source="Stretch the depth values present in the image to the full black-to-white range.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.AutoRefreshTip"
+		       source="Refresh the snapshot every 30 editor frames. Costs a GPU wait each time.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.ChannelTip"
+		       source="Show all channels, or one channel as grayscale. RGBA shows the live GPU texture; a single channel uses the CPU snapshot.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.DepthLabel" source="depth">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.FormatNotReadable" source="This format cannot be read back.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.LinearLabel" source="linear">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.LinearizeTip"
+		       source="Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.NearFarTip"
+		       source="Near and far clip planes of the camera that rendered the depth, in world units. Match them to that camera for correct distances.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.NoFilterMatch" source="No target matches the filter.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.NoTargets" source="Renderer has not published any targets yet.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.PickTargetHint" source="Pick a render target on the left.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.ReadingTarget" source="Reading the target...">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.RefreshTip"
+		       source="Read the selected target back to the CPU again. Channel views, depth views and pixel values use this snapshot; reading waits for the GPU.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.RegisterFailed" source="Could not register this target as an ImGui texture.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.SearchHint" source="Search render targets...">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRenderTarget.ZoomTip"
+		       source="Preview scale, 0 to 2. At 0 the image fits the panel; set 1 to inspect pixels at native resolution.">
+			<origins>
+				<item>Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRigDebug.BoneMarkersTip" source="Draw the bones written by the selected node in the viewport">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRigDebug.RigNotReady" source="The rig is not bound yet (check the rig asset and skeleton)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorRigDebug.SelectRig" source="Select an object with a Pose Modifier component">
+			<origins>
+				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.ApplyAllOverrides" source="Write every override of this instance back to the prefab template">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.CommandStackUnavailable" source="CommandStack service is not available.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.CreateGameObject" source="Create a new GameObject at the root of the current scene">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.DebugDrawCategories" source="Turn DebugDrawQueue categories on or off">
+			<origins>
+				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.EditNestedPrefab" source="Open this nested prefab in isolation mode">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.ExitIsolation" source="Leave isolation mode without saving the prefab">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.GameViewAspect"
+		       source="Game view aspect ratio - Free (whole panel) or 16:9 (letterboxed on the spare side)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/GameViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.GameViewScreenshot"
+		       source="Save the game view image to Saved/Screenshots/&lt;time>.png (F9 - the focused view)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/GameViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HiddenInEditor" source="Hidden in the editor - click to show">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HierarchyNoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HierarchySearch"
+		       source="Search by object name, or filter by component type (t:Mesh) or tag (tag:Player)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HierarchySearchHint" source="Search (t:Mesh, tag:Player)...">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryClear" source="Clear the whole undo history. This cannot be undone">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryRedo" source="Redo the edit that was undone. Ctrl+Y">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.HistoryUndo" source="Undo the last edit. Ctrl+Z">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HistoryPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.LockedInViewport" source="Locked - the viewport does not pick it; click to unlock">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.MaximizeOnPlay"
+		       source="Maximize On Play - keep only the game view while playing and restore the layout on Stop">
+			<origins>
+				<item>Source/Editor/Panels/Scene/GameViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.OpenPrefabIsolation" source="Edit the selected prefab on its own in isolation mode">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.PickableInViewport" source="Pickable in the viewport - click to lock">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.PlayModeRunning" source="Play mode is running (scene edits are restricted)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.RefreshOverrides" source="Scan the instance for overrides again">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.RevertAllOverrides"
+		       source="Discard every override of this instance and match the prefab template">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.RevertOverride" source="Revert this property to the prefab value">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.SavePrefabExitIsolation" source="Save the prefab and leave isolation mode">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.SceneEditsLocked" source="Scene edits locked until Stop.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.SceneViewScreenshot"
+		       source="Save the scene view image (editor camera) to Saved/Screenshots/&lt;time>.png - the grid and gizmos are ImGui overlays and are not included">
+			<origins>
+				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.ShowModifiedOnly" source="Show only the properties that differ from the prefab">
+			<origins>
+				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorScene.VisibleInEditor" source="Visible in the editor - click to hide (not saved)">
+			<origins>
+				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddKeyTip" source="Key the target's current values on every channel at this frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddPropertyTrackTip"
+		       source="Add a track that keys one numeric property of a component on the selected object.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddRigSlotTrackTip"
+		       source="Add a track that keys a rig slot weight (PoseModifierComponent)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddTransformTrackTip"
+		       source="Add a track that keys the selected object's position, rotation and scale.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CinematicNoteTip"
+		       source="Free-form notes saved with the sequence. It does not affect playback.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteKeyTip" source="Remove this track's keys at the current frame on every channel.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteTrackTip" source="Remove the selected key track and all of its keys.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this clip, event or camera cut acts on.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.LoadTip" source="Reload the focused .seq file from disk, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NextKeyTip" source="Go to the next key">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NoKeyTracksHint"
+		       source="No key tracks. Select an object and add a transform or property track.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.OpenCurveTip"
+		       source="Open this channel in the curve editor to shape the interpolation between keys.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PauseTip" source="Pause playback at the current frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PlayTip"
+		       source="Play the sequence in the viewport from the current frame, looping at the end.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PreviousKeyTip" source="Go to the previous key">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PropertyPathTip"
+		       source="&lt;ComponentType>.&lt;Property> - a float32 or int32 property (for example CameraComponent._fov)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PropertyTargetNotFound" source="Target or numeric property not found">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.RigSlotTargetNotFound" source="Target has no Pose Modifier">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.RigSlotTip"
+		       source="Rig slot name (weight_slot in the rig asset); value is clamped to 0..1">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SaveTip" source="Write the sequence to the focused .seq file.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ScrubTip"
+		       source="Drag to move the current frame; the viewport follows so you can check any moment of the sequence.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SelectItemHint" source="Select a clip, event or camera cut on the timeline to edit it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.StopTip"
+		       source="Stop playback, return to the first frame and give the camera back from any camera cut.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TargetNotFound" source="Target object not found">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.BuildModules" source="Compile every module with the changed module set">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.FilterVariablesHint" source="Filter variables...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.GroupByModule" source="Group the variables by the module that defines them">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleChangeNoCascade" source="No other modules change.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleChangeTarget" source="Module">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleChangeTurnsOff" source="Also turns off">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleChangeTurnsOn" source="Also turns on">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleDefaultState" source="Default">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleDependencies" source="Depends on">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleDependents" source="Required by">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleKindAll" source="All categories">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleKindFilter" source="Show only one module category">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleLocked" source="Editor and game modules cannot be turned off here">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleOverride" source="Project override">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleOverrideNone" source="None (uses default)">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleResetOverride" source="Reset to default">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleResetOverrideTip"
+		       source="Remove this module's line from the project manifest (previews the change first)">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleSetChanged" source="Module set changed - build to apply, then restart the editor.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleStateAll" source="On and off">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleStateFilter" source="Filter modules by whether they are on">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleStateOff" source="Off only">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleStateOn" source="On only">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleToggle"
+		       source="Turn this module on or off (the affected modules are shown before it applies)">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ModuleVersion" source="Version">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.NoDescription" source="(no description)">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.NoGlobalVariables" source="No global variables registered.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.NoPresets" source="No presets found.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.NoSectionMatches" source="No section matches the search.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/PreferencesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.PinVariable" source="Pin to favorites">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.PresetNameHint" source="Preset Name...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.Presets" source="Save or load named sets of global variable values">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.PressKeyCombo" source="Press a key combo (Esc cancels, Backspace clears)">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.RefreshModules" source="Read the module catalog from the module folder again">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ReplaceShortcut"
+		       source="Give this combo to the selected command and remove it from the other command">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ResetAllShortcuts" source="Restore every shortcut to its default binding">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ResetAllVariables" source="Reset every global variable to its default value">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ResetSection" source="Reset every value in this section to its default">
+			<origins>
+				<item>Source/Editor/Panels/Settings/PreferencesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ResetShortcut" source="Restore this command's default shortcut">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ResetVariable" source="Reset this variable to its default value">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.SaveSession" source="Save the current values to the session file">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ScanningPresets" source="Scanning presets...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.SearchModulesHint" source="Search modules...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.SearchShortcutsHint" source="Search commands or keys (Ctrl+S)...">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.SetShortcut" source="Record a new shortcut for this command">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.ShortcutInUse"
+		       source="This combo is already used. Replace clears it from the other command.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/ShortcutsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.UnpinVariable" source="Unpin from favorites">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.UserSettingsNotLoaded" source="User settings are not loaded.">
+			<origins>
+				<item>Source/Editor/Panels/Settings/UserSettingsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.VariableDescription" source="Description: {description}">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSettings.VariableModule" source="Module: {module}">
+			<origins>
+				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AnimationFirstFrameTip"
+		       source="Index of the frame this animation starts on, counting from 0.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AnimationFrameCountTip"
+		       source="How many consecutive frames, from the first frame, this animation plays.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AnimationLoopTip"
+		       source="Repeat from the first frame after the last one; off stops on the last frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AnimationNameTip" source="Name game code uses to play this animation.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AtlasCellTip"
+		       source="Click a cell to set the selected frame's rectangle to it. Shift+click adds a new frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AtlasTip"
+		       source="Path of the texture the frames are cut from. The UV rectangles below are fractions of this image.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.FrameDurationTip" source="How long this frame stays on screen, in milliseconds.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.FrameHTip" source="Frame height as a fraction of the atlas height (0-1).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.FrameUTip"
+		       source="Left edge of the frame in the atlas, as a fraction of its width (0-1).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.FrameVTip"
+		       source="Top edge of the frame in the atlas, as a fraction of its height (0-1).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.FrameWTip" source="Frame width as a fraction of the atlas width (0-1).">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.KeyAngleTip" source="Rotation of the sprite at this key, in degrees.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.KeyTimeTip" source="When this key applies, in seconds from the start of the clip.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.LoadTip" source="Reload the clip from disk, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.LoadingAtlas" source="Loading atlas...">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.NoAtlas" source="No atlas">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.SaveTip" source="Write the frames, animations and keys to the clip file.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.SavedStatus" source="Saved {path}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.SliceColumnsTip" source="Number of grid columns the atlas is cut into, 1 to 64.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.SliceRowsTip" source="Number of grid rows the atlas is cut into, 1 to 64.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.AddDataLayerTip"
+		       source="Add a named integer data layer (terrain cost, footstep sound) to this map. The name must be new.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.ApplyEdgeTip" source="Turn every cell on this edge into a walkable warp to the target map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.ApplySizeTip"
+		       source="Resize the map to the width and height above. This clears every layer.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.AtlasIdTip" source="Atlas cell index to paint, 0 to 255.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.BrushTip" source="Paint every cell you press and drag over (B)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.DataLayerDefaultTip"
+		       source="Value of every cell of the new layer, and the value Erase paints.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.DataLayerNameTip"
+		       source="Name of the new data layer. The game reads the layer by this name.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.DataLayerRejectedStatus" source="Data layer not added: the name is empty or already used">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.DataValueTip" source="Integer to paint on the selected data layer.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.EdgeTargetTip"
+		       source="Map that walking off this edge (north, east, south or west) leads to.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.EdgeTargetXTip" source="Cell column the player arrives at in the target map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.EdgeTargetYTip" source="Cell row the player arrives at in the target map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.EraseTip" source="Make the paint tools clear cells instead of painting them.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.FillTip"
+		       source="Paint every connected cell that has the same value as the pressed cell (G)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.HeightTip" source="Map height in cells. Takes effect when you press Apply Size.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.LayerTip"
+		       source="Layer the canvas shows and the tools paint: Visual (height and tint), Warp (exits to other maps), Tile (tile set brushes) or one of the gameplay flag layers.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.LoadTip"
+		       source="Read the map at Path, discarding unsaved edits. Nothing changes if no file is there.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.NameTip" source="Display name stored in the map file.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.NoTileSet" source="No tile set loaded">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.PaintHeightTip" source="Height level to paint, 0 to 255.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.PathTip" source="Resource path of the tile map file that Load and Save use.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.PickerTip" source="Take the pressed cell's value as the value to paint (I)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.RectTip" source="Paint the rectangle you drag out when you release the mouse (U)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.ResetViewTip"
+		       source="Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SaveFailedStatus" source="Save failed">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SaveTip" source="Write the map to Path.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SavedStatus" source="Saved {path}">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.TileSetReadFailed" source="Tile set could not be read: {path}">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.TileSetTip"
+		       source="Resource path of the tile set whose brushes this map paints with. Press Use to apply it.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.TintTip" source="Color to paint into the cells' tint.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.UseTileSetTip" source="Make this map use the tile set on the left and load its brushes.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.WarpTargetTip"
+		       source="Map a painted warp cell sends the player to. Painted warp cells also become walkable.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.WarpTargetXTip" source="Cell column the player arrives at in the target map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.WarpTargetYTip" source="Cell row the player arrives at in the target map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.WidthTip" source="Map width in cells. Takes effect when you press Apply Size.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CameraFar" source="Farthest distance the camera draws. Geometry beyond this is clipped.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CameraFov"
+		       source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CameraNear"
+		       source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CameraOrthoHeight"
+		       source="World-space height of the visible area; the width follows the aspect ratio.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CameraOrthographic"
+		       source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CurveKeyInterpolation"
+		       source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CurveKeyTime"
+		       source="When the key sits on the curve's time axis. It stays between its neighbouring keys.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.CurveKeyValue" source="The curve's value at this key.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.DebugHUDCorner" source="Which screen corner the Debug HUD is anchored to.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.DebugHUDOpacity" source="Background opacity of the Debug HUD panels.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.DebugHUDOpenWindow"
+		       source="The same checklist as a runtime UI window (shows in the game view while playing)">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.DebugHUDSection"
+		       source="Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name.">
+			<origins>
+				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorBottomCenter" source="Bottom Center">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorBottomLeft" source="Bottom Left">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorBottomRight" source="Bottom Right">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorCenter" source="Center">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorCenterLeft" source="Center Left">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorCenterRight" source="Center Right">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorStretchAll" source="Stretch All">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorStretchHorizontal" source="Stretch Horizontal">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorStretchVertical" source="Stretch Vertical">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorTopCenter" source="Top Center">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorTopLeft" source="Top Left">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.AnchorTopRight" source="Top Right">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.BuildFailed" source="Could not build the document (see the log).">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.DocumentPathTip"
+		       source="Resource path of the UI document (*.ui.xml) to preview. The preview rebuilds when it changes.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.EnterPathHint" source="Enter a UI document path (*.ui.xml).">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.LayoutRectsTip"
+		       source="Outline every visible widget's layout rectangle over the preview.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.ReloadTip"
+		       source="Rebuild the preview from the file, for example after editing the XML outside the editor.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.ResolutionTip"
+		       source="Screen size to lay the document out for. Check layouts at several aspect ratios before shipping.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SafeZoneTip"
+		       source="Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SelectWidgetHint"
+		       source="{width} x {height} UI units, scale {scale} - click the image or the tree to select a widget">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotAnchorMax" source="Anchor Max">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotAnchorMin" source="Anchor Min">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotAnchorPreset" source="Anchors">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotAnchorPresetTip"
+		       source="Sets the anchors and recomputes the offsets so the widget stays where it is.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotAutoSize" source="Auto Size">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotColumn" source="Column">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotColumnSpan" source="Column Span">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotFillWeight" source="Fill Weight">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotGrowHorizontal" source="Grow Horizontal">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotGrowVertical" source="Grow Vertical">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotHeader" source="Slot">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotHeightOverride" source="Height Override">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotHorizontalAlignment" source="Horizontal Alignment">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotMaxSize" source="Max Size">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotMaxSizeTip" source="0 means unbounded">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotMinSize" source="Min Size">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotOffsetMax" source="Offset Max">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotOffsetMin" source="Offset Min">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotOverrideTip" source="0 means none">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotPadding" source="Padding">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotPaddingTip" source="Left, top, right, bottom (UI units)">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotRow" source="Row">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotRowSpan" source="Row Span">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotSizeRule" source="Size Rule">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotSizeRuleTip"
+		       source="Auto takes the desired size on the main axis; Fill shares the rest by fill weight.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotVerticalAlignment" source="Vertical Alignment">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotWidthOverride" source="Width Override">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.SlotZOrder" source="Z Order">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.TextScaleTip"
+		       source="Player text size setting to simulate, 0.75 to 2. Use it to find labels that overflow.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.ThemeTip"
+		       source="UI theme to preview with. (game theme) uses the theme the game selects.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.UINotRunning" source="Runtime UI is not running.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.UIScaleTip" source="Player UI scale setting to simulate, 0.5 to 2.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.WaitingForTexture"
+		       source="Waiting for the render thread to create the preview texture...">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.AlwaysLoadedTip"
+		       source="Select the entities the cook keeps in the base list (always loaded, or without a position).">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.CookedScene"
+		       source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.NoGameCamera" source="No game camera - the load and unload column needs one.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.NoPreview" source="Press Preview Split to split the scene into cells as the cook would.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.NotStreaming"
+		       source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.PreviewTip"
+		       source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.SplitFailed" source="The scene could not be split - see the log.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.ViolationHeader" source="Cross-cell references that fail the cook:">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorWorldCells.ViolationTip"
+		       source="Selects both objects. Mark the target always loaded or move it into the same cell.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/WorldCellsPanel.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

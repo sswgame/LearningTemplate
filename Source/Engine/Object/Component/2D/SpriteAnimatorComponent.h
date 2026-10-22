@@ -65,7 +65,7 @@ namespace sw
 {
     /**
      * @class SpriteAnimatorComponent
-     * @brief 같은 오브젝트의 `SpriteComponent` 가 가진 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
+     * @brief 같은 오브젝트의 `SpriteComponent` 가 가진 클립(`.sprite.xml`)의 프레임을 시간에 맞춰 넘깁니다.
      * @details 애니메이션 이름은 클립의 이름 붙은 구간(`SpriteClipAsset::findFrameRange`)을 고르고, 프레임 수와 프레임별 시간도 클립에서 가져온다.
      *          프레임에 시간이 없으면(0) `_frameRate` 로 넘긴다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음"을 정한다.
      *          넘긴 프레임은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)로 간다.

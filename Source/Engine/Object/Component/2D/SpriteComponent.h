@@ -38,7 +38,7 @@ namespace sw
      *
      *          **무엇을 보여 주나.** 아틀라스의 한 프레임(UV 사각형)과 색이다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실린다
      *          (`MeshComponent::getSpriteInstanceData` → `GPUInstance::_sprite`). 그래서 프레임이 넘어가거나 알파가 줄어도 배치는 그대로다.
-     *          프레임은 클립(`_clipPath`, `.sprite.json`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
+     *          프레임은 클립(`_clipPath`, `.sprite.xml`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
      *          텍스처 경로가 비어 있으면 클립의 아틀라스를 쓴다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임 번호만 넘긴다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component", Meta = "Icon=Sprite" )
@@ -70,7 +70,7 @@ namespace sw
         /** @brief 노멀 맵을 바꾸고 텍스처 인스턴스를 다시 맞춥니다. */
         void setNormalMapName( string_view normalMap );
 
-        /** @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
+        /** @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
         const string& getClipPath() const { return _clipPath; }
         /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 공유합니다. `SharedAssetCache<SpriteClipAsset>::acquire` 참고). */
         void setClipPath( string_view path );
@@ -156,11 +156,11 @@ namespace sw
         hashed_string _appliedTexture;   ///< 이 컴포넌트가 등록한 텍스처 인스턴스의 텍스처다. 비어 있으면 등록한 것이 없다
         hashed_string _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
         /**
-         * @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 보여 줄 프레임은 번호(`_clipFrame`)로 따로 가집니다. 프레임마다 문자열을 만들어
+         * @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 보여 줄 프레임은 번호(`_clipFrame`)로 따로 가집니다. 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.
          */
         PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", AssetPath, AssetType = "SpriteClip",
-                  Tooltip = "Sprite clip (.sprite.json): atlas frames and named animations" )
+                  Tooltip = "Sprite clip (.sprite.xml): atlas frames and named animations" )
         string _clipPath;
         PROPERTY( Category = "Rendering", DisplayName = "Clip Frame", Tooltip = "Frame of the sprite clip to show", Min = 0.0 )
         int32 _clipFrame;

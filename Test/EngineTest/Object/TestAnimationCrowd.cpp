@@ -519,7 +519,7 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
     SW_ASSERT_FALSE( folder.empty() );
     const string  meshPath     = FileUtil::joinPath( folder, "cube.mesh" );
-    const string  skeletonPath = FileUtil::joinPath( folder, "cube.skeleton.json" );
+    const string  skeletonPath = FileUtil::joinPath( folder, "cube.skeleton.xml" );
     MeshAssetData meshData;
     meshData._listVertex     = mesh->getVertices();
     meshData._listSkinVertex = mesh->getSkinVertices();

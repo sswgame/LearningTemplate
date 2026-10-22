@@ -29,7 +29,7 @@
 					                 _localScale="1.2,1.2,1"
 					                 _attachOwner="None"
 					                 _attachComponent="None"
-					                 _clipPath="engine/textures/test/quadrants.sprite.json" />
+					                 _clipPath="engine/textures/test/quadrants.sprite.xml" />
 					<SpriteAnimatorComponent _localPosition="0,0,0"
 					                         _localRotation="0,0,0"
 					                         _localScale="1,1,1"

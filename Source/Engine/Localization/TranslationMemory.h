@@ -1,6 +1,6 @@
 /**
  * @file TranslationMemory.h
- * @brief 번역 메모리를 정의합니다. 원문과 번역 쌍을 문화권마다 모아 두고(`tm/<culture>.tm.json`), 새 원문이나 바뀐 원문에 같거나 비슷한 이전 번역을 미리 채웁니다.
+ * @brief 번역 메모리를 정의합니다. 원문과 번역 쌍을 문화권마다 모아 두고(`tm/<culture>.tm.xml`), 새 원문이나 바뀐 원문에 같거나 비슷한 이전 번역을 미리 채웁니다.
  * @details 수집(`--gather-text`)과 가져오기(`--import-po`)가 지금 원문의 번역(Current)을 쌍으로 넣으므로, 원문이 바뀌거나 키가 사라진 뒤에도 이전 쌍이 남는다.
  *          - 정확히 같은 원문은 그대로 채우고 지금 원문의 번역으로 받는다.
  *          - 정규화(대소문자, 공백, 끝 문장부호)가 같거나 유사도가 `kFuzzyThreshold` 이상이면 채우되 검토 표시(review)를 붙인다(화면에 나오지 않으며, PO 의 `#, fuzzy` 에 해당한다).
@@ -30,12 +30,12 @@ namespace sw
 {
     /**
      * @class TranslationMemory
-     * @brief 문화권 하나의 원문 → 번역 쌍입니다. `{ "culture": "ko", "entries": [ { "source": "…", "text": "…" } ] }`
+     * @brief 문화권 하나의 원문 → 번역 쌍입니다. `<TranslationMemory culture="ko"><entries><entry source="…" text="…" /></entries></TranslationMemory>`
      */
     class SW_API TranslationMemory
     {
     public:
-        static constexpr const utf8* kExtension = ".tm.json";
+        static constexpr const utf8* kExtension = ".tm.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -45,9 +45,9 @@ namespace sw
         static constexpr const utf8*  kFolderName     = "tm";
         static constexpr float32      kFuzzyThreshold = 0.75f;
 
-        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJSONText() const;
+        string             toXMLText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         /** @brief 쌍을 넣습니다(같은 원문이면 번역을 바꿉니다). 바뀌었으면 true 입니다. */

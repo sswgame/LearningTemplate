@@ -1,0 +1,10 @@
+<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" x="40.0" y="80.0" loop="true" />
+		<node id="2" name="Walk" x="280.0" y="80.0" loop="true" />
+	</nodes>
+	<links>
+		<link id="100" from="1" to="2" blend="0.10000000149011612" />
+		<link id="101" from="2" to="1" blend="0.10000000149011612" />
+	</links>
+</AnimationGraphAsset>

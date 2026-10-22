@@ -6,23 +6,23 @@
      강체 메시를 프리팹(prefabs/kaykit/)으로 감싼 것이다. 블래스터는 Kenney Blaster Kit — offset 은 손잡이를 손에 맞추는 Gun 소켓 기준 자리다. -->
 <ItemVisualCatalog>
   <ItemVisual id="body_knight">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight.mesh" skeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.json"
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight.mesh" skeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.xml"
           material="game/shooter3d/materials/kaykit_knight.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_rogue">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/rogue.mesh" skeleton="game/shooter3d/models/kaykit/rogue/rogue.skeleton.json"
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/rogue.mesh" skeleton="game/shooter3d/models/kaykit/rogue/rogue.skeleton.xml"
           material="game/shooter3d/materials/kaykit_rogue.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_minion">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_minion.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.json"
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_minion.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
           material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_warrior">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_warrior.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.json"
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_warrior.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"
           material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
   <ItemVisual id="body_skeleton_rogue">
-    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_rogue.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.json"
+    <Part name="Body" kind="Skinned" mesh="game/shooter3d/models/kaykit/skeleton_rogue.mesh" skeleton="game/shooter3d/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"
           material="game/shooter3d/materials/kaykit_skeleton.material" sockets="game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
 

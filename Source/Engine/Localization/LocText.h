@@ -5,12 +5,12 @@
  *          실행 중에는 지금 문화권의 텍스트를 돌려주고, 테이블에 없으면 빠진 키로 알린 뒤 원문을 돌려준다(화면이 비지 않는다).
  *          돌려준 포인터는 영구히 유효하다. 인자가 있는 메시지는 `SW_LOCFORMAT( ns, key, source, arguments )` 로 포맷한다.
  *
- *          원문을 코드에 두지 않으려면 `SW_LOCKEY( "Namespace", "Key" )` 나 `SW_LOCKEYFORMAT( ns, key, arguments )` 를 쓴다. 텍스트는 원문 테이블(`*.strings.json`)에만 있고
+ *          원문을 코드에 두지 않으려면 `SW_LOCKEY( "Namespace", "Key" )` 나 `SW_LOCKEYFORMAT( ns, key, arguments )` 를 쓴다. 텍스트는 원문 테이블(`*.strings.xml`)에만 있고
  *          코드는 키만 가리킨다(언리얼 `LOCTABLE` 에 해당). 테이블에 없는 키는 수집이 오류로 알리고, 실행 중에는 키 자체가 보인다.
  *
  * @code
  *   label.setText( SW_LOCTEXT( "Menu", "Start", "Start Game" ) );
- *   tooltip = SW_LOCKEY( "EditorTip", "CurveKeyTime" ); // 원문은 editor.strings.json
+ *   tooltip = SW_LOCKEY( "EditorTip", "CurveKeyTime" ); // 원문은 editor.strings.xml
  *   const string line = SW_LOCFORMAT( "Battle", "Fainted", "{name} fainted!", TextArgumentList().addText( "name", foeName ) );
  * @endcode
  */

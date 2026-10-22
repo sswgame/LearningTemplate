@@ -1,6 +1,6 @@
 /**
  * @file DialogueGraphAsset.h
- * @brief 에디터와 런타임이 함께 쓰는 대화 그래프 JSON 에셋입니다.
+ * @brief 에디터와 런타임이 함께 쓰는 대화 그래프 XML 에셋입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -146,8 +146,8 @@ namespace sw
 {
     /**
      * @class DialogueGraphAsset
-     * @brief 대화 그래프 JSON 입니다. 노드 text 는 로컬라이즈 키로 해석합니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 모르는 노드 종류 · 빠진 필수 칸은 오류).
+     * @brief 대화 그래프 XML 입니다. 노드 text 는 로컬라이즈 키로 해석합니다.
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 모르는 노드 종류 · 빠진 필수 칸은 오류).
      *          키는 PROPERTY 이름(`_listNode`, `_listLink`)이 정본이다. 읽은 뒤 id 가 1 이상이고 겹치지 않는지, 링크의 핀이 있는지만 따로 본다.
      */
     REFLECT()
@@ -157,7 +157,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 대화 그래프 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
-        static constexpr string_view kExtension = ".dialogue.json";
+        static constexpr string_view kExtension = ".dialogue.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -168,16 +168,16 @@ namespace sw
         /** @brief 빈 그래프를 만듭니다. */
         DialogueGraphAsset() = default;
 
-        /** @brief 리소스 id 의 JSON 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 이고 그래프는 비어 있습니다. */
+        /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 이고 그래프는 비어 있습니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
-        /** @brief **디스크 파일**의 JSON 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief JSON 파일을 씁니다. */
+        /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
-        /** @brief JSON 본문을 읽습니다. 틀린 글이면 false 이고 그래프는 비어 있습니다. */
-        [[nodiscard]] bool parseJSON( string_view json );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
-        string toJSON() const;
+        /** @brief XML 본문을 읽습니다. 틀린 글이면 false 이고 그래프는 비어 있습니다. */
+        [[nodiscard]] bool parseXML( string_view xml );
+        /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
+        string toXML() const;
         /** @brief 노드 타입의 화면 이름을 반환합니다. 모르는 값이면 "Unknown" 입니다. */
         static const utf8* nodeTypeName( DialogueAssetNodeType type );
         /** @brief 노드 타입의 특성 줄입니다. 범위 밖 값이면 nullptr 입니다. */
@@ -242,8 +242,8 @@ namespace sw
         vector<DialogueAssetLink> _listLink;
 
     private:
-        /** @brief 읽은 본문(@p json)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
-        [[nodiscard]] bool readText( string_view json, string_view sourceLabel );
+        /** @brief 읽은 본문(@p xml)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
+        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel );
         /** @brief 노드 · 링크 id 가 1 이상이고 겹치지 않는지, 링크의 두 핀이 있는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
     };

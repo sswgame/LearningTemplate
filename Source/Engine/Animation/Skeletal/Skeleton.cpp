@@ -8,7 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -63,12 +63,12 @@ namespace sw
         _listAttachment.clear();
     }
 
-    bool Skeleton::parseJSON( string_view json, string_view sourceLabel )
+    bool Skeleton::parseXML( string_view xml, string_view sourceLabel )
     {
         clear();
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 빠진 키 · 읽지 못한 값은 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 빠진 칸 · 읽지 못한 값은 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
             return true;
         clear();
         return false;
@@ -84,7 +84,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )
@@ -118,16 +118,16 @@ namespace sw
         return true;
     }
 
-    string Skeleton::toJSON() const
+    string Skeleton::toXML() const
     {
-        return JSONSerializer::serializePretty( this, *StaticType(), 2 );
+        return XMLSerializer::serialize( this, *StaticType() );
     }
 
     bool Skeleton::saveToFile( string_view path ) const
     {
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 } // namespace sw
 
