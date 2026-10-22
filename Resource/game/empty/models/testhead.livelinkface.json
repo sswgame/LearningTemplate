@@ -1,0 +1,7 @@
+{
+    "_layoutPath": "engine/animation/livelinkface.json",
+    "_listExpression": [
+        { "_expression": "Happy", "_listChannel": [ { "_channel": "MouthSmileLeft", "_scale": 0.5 }, { "_channel": "MouthSmileRight", "_scale": 0.5 } ] },
+        { "_expression": "Surprised", "_listChannel": [ { "_channel": "JawOpen", "_scale": 1.0 } ] }
+    ]
+}

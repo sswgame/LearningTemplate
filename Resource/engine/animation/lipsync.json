@@ -5,6 +5,9 @@
     "_sharpness": 8.0,
     "_formantWeight": 6.0,
     "_unvoicedHighBandRatio": 0.5,
+    "_consonantWeight": 6.0,
+    "_plosiveOnsetRatio": 4.0,
+    "_fricativeZeroCrossingHz": 3000.0,
     "_fallbackViseme": "AA",
     "_lowBandHz": "150,600",
     "_midBandHz": "600,1600",
@@ -14,8 +17,8 @@
         { "_name": "AA", "_bandShape": "0.10,0.80,0.10", "_formantHz": "730,1090" },
         { "_name": "EE", "_bandShape": "0.50,0.05,0.45", "_formantHz": "270,2290" },
         { "_name": "OO", "_bandShape": "0.55,0.43,0.02", "_formantHz": "300,870" },
-        { "_name": "SS", "_bandShape": "0.02,0.03,0.95" },
-        { "_name": "FF", "_bandShape": "0.25,0.25,0.50" },
-        { "_name": "PP", "_bandShape": "0.75,0.15,0.10" }
+        { "_name": "SS", "_bandShape": "0.02,0.03,0.95", "_consonant": "Fricative" },
+        { "_name": "FF", "_bandShape": "0.25,0.25,0.50", "_consonant": "Fricative" },
+        { "_name": "PP", "_bandShape": "0.75,0.15,0.10", "_consonant": "Plosive" }
     ]
 }

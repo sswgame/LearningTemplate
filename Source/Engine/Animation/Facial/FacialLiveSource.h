@@ -20,5 +20,11 @@ namespace sw
         virtual ~IFacialLiveSource() = default;
         /** @brief 채널 @p channel 의 지금 값(보통 0..1)입니다. 이 입력이 내지 않는 채널이면 false 입니다. */
         [[nodiscard]] virtual bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const = 0;
+
+    protected:
+        // 값을 가진 구현(Live Link Face 수신 값)이 컴포넌트와 함께 복사된다 — 복사를 명시해 둔다(소멸자를 적은 클래스의 암묵 복사는 폐기 예정).
+        IFacialLiveSource()                                      = default;
+        IFacialLiveSource( const IFacialLiveSource& )            = default;
+        IFacialLiveSource& operator=( const IFacialLiveSource& ) = default;
     };
 } // namespace sw

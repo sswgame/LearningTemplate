@@ -23,6 +23,7 @@
 | `Resource/engine/settings/netemulation.presets.xml` | `NetEmulationPresetTable::loadFromResource` (개발 명령 `net.emulation` · 에디터 Multiplayer · 부하 시나리오 `<Load network>`) — 쓸 때마다 | 엔진 팩에 실림(회선 흉내는 Dev 전용) | 한다 | [형식 설명](../../Source/Engine/Config/NetEmulationPresetTable.h) |
 | `Resource/engine/navigation/navmeshsettings.xml` | `NavMeshSettings` (`ResourceCatalog`) — 처음 쓸 때 · 내비메시 쿠킹 | 엔진 팩에 실림 | 한다 | [NavMeshSettings](NavMeshSettings.md) |
 | `Resource/engine/animation/lipsync.json` | `LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`) — 처음 말할 때 · 립싱크 임포트. 비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다 | 엔진 팩에 실림 | 한다 | [LipSyncSettings](LipSyncSettings.md) |
+| `Resource/engine/animation/livelinkface.json` | `LiveLinkFaceLayout::loadFromResource` (연결 표 `*.livelinkface.json` 의 `_layoutPath`) — `LiveLinkFaceComponent` 시작. Live Link Face 패킷의 판 번호와 채널 순서 — 앱 판이 바뀌면 이 파일을 고친다 | 엔진 팩에 실림 | 한다 | [LiveLinkFaceLayout](LiveLinkFaceLayout.md) |
 | `Resource/engine/data/render2d.xml` | `Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류) — 처음 쓸 때 · `reloadActive`. 활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 |  |
 | `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`) — 기동(UI 단계) | 엔진 팩에 실림 | 한다 |  |
@@ -46,6 +47,7 @@
 | `Resource/game/*/data/*.settings.xml` | `UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`) — 기동. 엔진 스키마에 덧붙는 게임 설정 | 게임 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 | `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 |  |
 | `Resource/game/*/models/*.facial.json` | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) — 컴포넌트 시작 · 경로를 바꿀 때. 메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`) | 게임 팩에 실림 | 한다 | [FacialRig](FacialRig.md) |
+| `Resource/game/*/models/*.livelinkface.json` | `LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`) — 컴포넌트 시작. 패킷 채널 → 얼굴 리그 표정 연결. 배치 표(`livelinkface.json`)에 없는 채널은 오류 | 게임 팩에 실림 | 한다 | [LiveLinkFaceMapping](LiveLinkFaceMapping.md) |
 
 ## 사용자 설정
 
