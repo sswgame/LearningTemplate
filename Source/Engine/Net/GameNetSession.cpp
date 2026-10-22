@@ -329,9 +329,11 @@ namespace sw
         , _connectFuture{}
         , _listEventScratch{}
         , _serverAddress{}
+        , _credentials{}
         , _latestServerTick{ 0 }
         , _listenPort{ 0 }
         , _role{ GameNetRole::None }
+        , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
     {
@@ -437,6 +439,28 @@ namespace sw
         return true;
     }
 
+    bool GameNetSession::makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams )
+    {
+        outParams = GameNetSessionParams{};
+        if ( serverAddress.isValid() == false || credentials._tokenSize <= 0 )
+        {
+            SW_LOG_ERROR( "A ticket client needs a server address and a game connect ticket" );
+            return false;
+        }
+        INetSecurityProvider* pProvider = GameConnectSecurity::get().findProvider();
+        if ( pProvider == nullptr )
+        {
+            SW_LOG_ERROR( "A ticket client needs the network security provider (GameFramework) - it does not connect without credentials instead" );
+            return false;
+        }
+        outParams._role                              = GameNetRole::Client;
+        outParams._serverAddress                     = serverAddress;
+        outParams._credentials                       = credentials;
+        outParams._hostSettings._security._mode      = NetSecurityMode::Encrypted;
+        outParams._hostSettings._security._pProvider = pProvider;
+        return true;
+    }
+
     unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, uint16 transportPort, const NetEmulationConditions& emulationConditions )
     {
         unique_ptr<Shard> shard = make_unique<Shard>();
@@ -470,6 +494,13 @@ namespace sw
             return false;
         if ( GameNetSessionInternal::isValidShardLayout( params ) == false )
             return false;
+        const bool bHasTicket = params._credentials._tokenSize > 0;
+        if ( bHasTicket && ( params._role != GameNetRole::Client || params._hostSettings._security._mode != NetSecurityMode::Encrypted ) )
+        {
+            // 티켓은 암호화된 클라이언트 연결에만 실린다 — 평문 연결에 비밀을 실어 보내지 않는다.
+            SW_LOG_ERROR( "Net session params carry a game connect ticket but are not an encrypted client - use makeTicketClientParams" );
+            return false;
+        }
         NetEmulationConditions emulationConditions;
 #if !defined( SW_SHIPPING )
         emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
@@ -526,7 +557,9 @@ namespace sw
                 return false;
             }
             _serverAddress = params._serverAddress;
-            _connectFuture = getClientHost().connectAsync( _serverAddress );
+            _credentials   = params._credentials;
+            _bTicketBound  = bHasTicket ? SW_TRUE : SW_FALSE;
+            _connectFuture = startClientConnect();
         }
         for ( const unique_ptr<Shard>& shard : _listShard )
         {
@@ -603,6 +636,8 @@ namespace sw
         _peers.shutdown();
         _listShard.clear(); // 샤드마다 스레드 → 호스트 → 흉내 → 소켓 순으로 내린다(`Shard` 의 선언 순서)
         _connectFuture = TaskFuture<NetConnectResult>{};
+        _credentials   = NetConnectCredentials{};
+        _bTicketBound  = SW_FALSE;
         _listEventScratch.clear();
         _latestServerTick        = 0;
         _listenPort              = 0;
@@ -661,6 +696,11 @@ namespace sw
         return _listShard.front()->_host;
     }
 
+    TaskFuture<NetConnectResult> GameNetSession::startClientConnect()
+    {
+        return _bTicketBound == SW_TRUE ? getClientHost().connectAsync( _serverAddress, _credentials ) : getClientHost().connectAsync( _serverAddress );
+    }
+
     void GameNetSession::sendServerTick( uint64 tick )
     {
         if ( _role != GameNetRole::Server )
@@ -707,8 +747,13 @@ namespace sw
         const bool bCannotReconnect = _role != GameNetRole::Client || _connectFuture.isValid() || getClientHost().getConnectedCount() > 0;
         if ( bCannotReconnect )
             return false;
+        if ( _bTicketBound == SW_TRUE && _credentials._tokenSize <= 0 )
+        {
+            SW_LOG_WARNING( "Net session cannot reconnect to %# - the server refused the game connect ticket, ask for a new one", _serverAddress.toString() );
+            return false;
+        }
         _bConnectFailureReported = SW_FALSE;
-        _connectFuture           = getClientHost().connectAsync( _serverAddress );
+        _connectFuture           = startClientConnect();
         SW_LOG_INFO( "Net session reconnecting to %#", _serverAddress.toString() );
         return true;
     }
@@ -785,7 +830,9 @@ namespace sw
             SW_LOG_WARNING( "Net session could not connect to %# (%#)%#", _serverAddress.toString(), toString( result._reason ), bRetry ? " - retrying" : "" );
         _bConnectFailureReported = SW_TRUE;
         if ( bRetry )
-            _connectFuture = getClientHost().connectAsync( _serverAddress );
+            _connectFuture = startClientConnect();
+        else
+            _credentials = NetConnectCredentials{}; // 거절된 티켓은 다시 내밀지 않는다 — 새 티켓이 필요하다
     }
 } // namespace sw
 
