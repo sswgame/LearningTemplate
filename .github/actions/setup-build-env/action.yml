@@ -37,7 +37,8 @@ runs:
         libclang-dev libtinfo6 zlib1g-dev \
         libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
         libxext-dev libxfixes-dev libxcb1-dev libx11-xcb-dev \
-        libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev vulkan-validationlayers
+        libgl1-mesa-dev libglu1-mesa-dev libvulkan-dev vulkan-validationlayers \
+        libwayland-dev libxkbcommon-dev wayland-protocols
       for candidate in $(ls -d /usr/lib/llvm-* 2>/dev/null | sort -V -r) /usr; do
         if [ -f "$candidate/include/clang-c/Index.h" ]; then
           echo "LLVM_DIR=$candidate" >> "$GITHUB_ENV"
