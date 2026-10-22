@@ -35,15 +35,27 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 	// GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
 	swLoadAnimatedVertex( context.instance, vertexId, input.position, input.normal, context.localPosition, context.localNormal );
 	// 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
-	const float4 worldPosition = swComputeWorldPosition( context.localPosition, context.instance.world );
-	context.worldPosition      = worldPosition.xyz;
+	float4 worldPosition  = swComputeWorldPosition( context.localPosition, context.instance.world );
+	context.worldPosition = worldPosition.xyz;
 	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
 	context.worldNormal        = swComputeWorldNormal( context.localNormal, context.instance.world );
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
 	context.material = SW_MATERIAL( context.instance.materialIndex );
 #endif
 
-	output.position      = swComputeClipPosition( worldPosition, SW_MATERIAL_VIEW_PROJECTION );
+#if defined( MATERIAL_VERTEX_DEFORM )
+	// 정점 셰이더가 정점을 옮기는 머티리얼(바람 · 파도) — 오프셋만 받고 위치는 여기서 만든다.
+	worldPosition.xyz += computeWorldPositionOffset( context );
+#endif
+#if defined( SW_PASS_MESH_OUTLINE )
+	const SwOutlineOffset outline = computeMaterialOutline( context );
+	worldPosition.xyz += outline.worldOffset;
+#endif
+	float4 clipPosition = swComputeClipPosition( worldPosition, SW_MATERIAL_VIEW_PROJECTION );
+#if defined( SW_PASS_MESH_OUTLINE )
+	clipPosition.xy += outline.clipOffset;
+#endif
+	output.position      = clipPosition;
 	output.worldPosition = worldPosition.xyz;
 	output.color         = input.color;
 	// UV 는 정점 속성이다. 위치로 지어내면(`position.xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙는다.

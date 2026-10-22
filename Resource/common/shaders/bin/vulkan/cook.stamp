@@ -1,5 +1,5 @@
 SWCOOK 4
-025a0f7d89de4bbc engine:materialshadermain.hlsli
+04f05e6df31dcc2a engine:materialshader.hlsli
 082019df2dbbcbd5 instanceslotprobe.hlsl
 1187a981e0d7d421 computetexturewrite.hlsl
 153cc5877d034c77 engine:lighting2d.hlsli
@@ -7,9 +7,9 @@ SWCOOK 4
 1795b4868f75033e engine:gerstner.hlsli
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
-2a7daafc563d2645 engine:lighting.hlsli
 30ca18ffc0224bf4 engine:postbloom.hlsli
 432da0d9b59901be engine:meshmodifier.hlsli
+48d1ceb8bcf7e1dc engine:lighting.hlsli
 5fc1348423cd9ebe engine:lightdata.hlsli
 65613229fe8a27cd waterwaveprobe.hlsl
 744349509539c766 engine:bindingslots.hlsli
@@ -18,7 +18,7 @@ SWCOOK 4
 a16db7b2113a3424 engine:colorvision.hlsli
 b0bce93ab1112469 engine:batchdata.hlsli
 b536aa3df9bce513 @toolchain
-dc4bda57c243a315 engine:materialshader.hlsli
+bab1bb6823fabd02 engine:materialshadermain.hlsli
 dedea23699e7654f engine:vfxsimulate.hlsli
 ee5aa6943269e9ee engine:common.hlsli
 f2c35bb0e3b0ee12 engine:postgrade.hlsli

@@ -21,7 +21,7 @@
  *   월드 위치 오프셋 `float3 computeWorldPositionOffset( SwVertexContext context )`        MATERIAL_VERTEX_DEFORM 퍼뮤테이션에서만 부른다
  *   사용자 보간 칸  `MaterialVaryings computeMaterialVaryings( SwVertexContext context )`
  *             SW_MATERIAL_CUSTOM_VARYINGS(구조체 + 훅 정의) · SW_MATERIAL_DEFAULT_VARYINGS(칸 없음) 중 하나. 시맨틱은 TEXCOORD8 ~ TEXCOORD14.
- *   외곽선    메시 외곽선 패스(SW_PASS_MESH_OUTLINE)에서만 부른다.
+ *   외곽선    `SwOutlineOffset computeMaterialOutline( SwVertexContext context )`  메시 외곽선 패스(SW_PASS_MESH_OUTLINE)에서만 부른다.
  * 선택이 없거나 겹치면 이 파일의 `#error` 가 멈춘다. 훅 정의가 없는데 선택했으면 컴파일러가 미선언 식별자로 멈춘다.
  *
  * 머티리얼은 **한 단계에서만 읽는다**(GL 은 구조버퍼를 정점 · 픽셀 두 단계가 읽으면 링크를 거절한다 — binding.hlsli 9 절).
@@ -96,6 +96,15 @@ struct SwVertexContext
 	SwMaterialData material;      ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
 #endif
 };
+
+#if defined( SW_PASS_MESH_OUTLINE )
+/** @brief 외곽선 훅의 결과 — 월드 위치에 더할 오프셋과, 클립 위치를 만든 뒤 xy 에 더할 오프셋(화면 두께). 훅은 위치를 직접 만들지 못하고 오프셋만 준다. */
+struct SwOutlineOffset
+{
+	float3 worldOffset;
+	float2 clipOffset;
+};
+#endif
 
 /** @brief 정점 → 픽셀 보간 칸. 모든 패스가 같은 칸을 쓴다(훅이 패스마다 다른 문맥을 받지 않게). 위치는 뼈대 한 곳이 만든다. */
 struct SwMaterialInterpolants

@@ -465,7 +465,7 @@ SwSurfacePBR swMakeSurfacePbr( float3 baseColor, float roughness, float metallic
 float3 swComputeToView( float3 worldPosition )
 {
 	const float4 clip      = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-	const float2 ndcXy     = clip.xy / clip.w;
+	const float2 ndcXy     = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
 	const float4 nearPoint = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
 	const float4 farPoint  = mul( float4( ndcXy, 1.0f, 1.0f ), g_InvViewProj );
 	return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
