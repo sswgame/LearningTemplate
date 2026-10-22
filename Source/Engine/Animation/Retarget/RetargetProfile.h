@@ -82,7 +82,9 @@ namespace sw
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
-        void               clear();
+        /** @brief 같은 형식의 JSON 으로 씁니다(`parseJSON` 이 그대로 다시 읽는다 — 에디터 리타깃 창이 저장한다). 기본값인 선택 키는 쓰지 않습니다. */
+        string toJSON() const;
+        void   clear();
 
         const string&                getSourceSkeletonPath() const { return _sourceSkeletonPath; }
         const string&                getTargetSkeletonPath() const { return _targetSkeletonPath; }
@@ -100,6 +102,12 @@ namespace sw
         float32 getHeightRatioOverride() const { return _heightRatioOverride; }
         /** @brief 사슬을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
+        /** @brief 사슬 목록입니다(에디터 리타깃 창이 고친다). 이름이 겹치면 다시 읽을 때 오류이므로 고치는 쪽이 지킨다. */
+        vector<RetargetChain>& getChainsForEdit() { return _listChain; }
+        /** @brief 본 이름 테이블입니다(에디터 리타깃 창이 고친다). */
+        vector<RetargetBonePair>& getBonePairsForEdit() { return _listBonePair; }
+        /** @brief 두 스켈레톤 경로를 정합니다. */
+        void setSkeletonPaths( string_view sourcePath, string_view targetPath );
         /** @brief 본 이름 테이블에 한 줄을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addBonePair( const RetargetBonePair& pair ) { _listBonePair.push_back( pair ); }
         /** @brief 같은 이름 자동 짝짓기를 정합니다(코드로 만드는 프로필과 테스트용). */

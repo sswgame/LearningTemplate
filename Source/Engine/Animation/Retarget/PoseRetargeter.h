@@ -52,6 +52,8 @@ namespace sw
         float32 getHeightRatio() const { return _heightRatio; }
         /** @brief 대상 레퍼런스 포즈입니다(덮어쓰기 포함). */
         const Pose& getTargetReference() const { return _targetReference; }
+        /** @brief 짝지은 대상 본 수입니다(뿌리 · 골반 · 사슬 · 이름 테이블 · 같은 이름, 겹침 제외). 나머지 대상 본은 레퍼런스 그대로입니다. */
+        uint32 getMappedBoneCount() const { return static_cast<uint32>( _listPair.size() ); }
         /** @brief 원본과 대상의 뿌리 본 번호입니다(루트 모션 트랙 쌍). */
         uint32 getSourceRootBone() const { return _sourceRoot; }
         uint32 getTargetRootBone() const { return _targetRoot; }
@@ -117,5 +119,41 @@ namespace sw
          *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.
          */
         [[nodiscard]] static bool bakeClipFile( string_view profilePath, string_view sourceClipPath, string_view outClipPath );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 사슬 하나의 레퍼런스 길이 쌍입니다(m). 비가 크게 다르면 IK 목표 사슬이 필요하다는 신호다. */
+    struct RetargetChainInspection
+    {
+        hashed_string _name{};
+        float32       _sourceLength{ 0.0f };
+        float32       _targetLength{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 프로필 점검 결과입니다(에디터 리타깃 창이 보인다). */
+    struct RetargetProfileInspection
+    {
+        vector<RetargetChainInspection> _listChain{};
+        float32                         _heightRatio{ 0.0f };
+        uint32                          _mappedTargetBoneCount{ 0 };
+        uint32                          _targetBoneCount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 프로필을 두 스켈레톤에 묶어 보는 점검입니다 — 런타임 리타기터와 같은 검사 하나(에디터 쪽 사본 규칙을 두지 않는다). */
+    struct SW_API RetargetProfileInspector
+    {
+        /**
+         * @brief 프로필이 적은 두 스켈레톤을 읽고 리타기터를 묶어 봅니다. 사슬마다 레퍼런스 길이와 짝지은 대상 본 수를 냅니다.
+         * @return 스켈레톤을 읽지 못하거나 묶이지 않으면 false 이고 까닭을 @p outError 에 영어 한 문장으로 담습니다(본 이름은 로그).
+         */
+        [[nodiscard]] static bool inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError );
     };
 } // namespace sw

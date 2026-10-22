@@ -2,6 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -176,6 +177,86 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
         SW_EXPECT_FALSE( failing.initialize( parsed, skeleton, nullptr, "test" ) );
         SW_EXPECT_FALSE( failing.isInitialized() );
     }
+}
+
+/**
+ * @brief [RigAssetTest] 전신 IK — 손이 닿지 않으면 골반이 손 쪽으로 옮겨 가고(발이 끄는 만큼 덜), 닿는 목표에는 골반이 그대로다. 골반 이동은 상한을 넘지 않는다
+ * @details 몸: hips(y 1) 아래 팔(어깨 (0.2, 1.5) · 길이 0.6)과 오른 다리(길이 0.9, 발 (0.2, 0.1)). 손 목표 (1.5, 1.5) 는 어깨에서 1.3 이라 0.7 모자란다.
+ *          발 목표는 지금 발 자리라 골반이 옆으로 가면 다리가 모자라 골반을 되끈다 — 두 당김의 가중 평균에서 멈춘다.
+ */
+SW_TEST_CASE( RigAssetTest, FullBodyIKShiftsPelvisTowardWeightedEffectors )
+{
+    const Skeleton skeleton = TestRigAssetInternal::makeSkeleton( {
+        {      "root", -1,                       float3{}},
+        {      "hips",  0,     float3{ 0.0f, 1.0f, 0.0f }},
+        {  "shoulder",  1,     float3{ 0.2f, 0.5f, 0.0f }},
+        {     "elbow",  2,   float3{ 0.3f, -0.03f, 0.0f }}, // 팔꿈치를 살짝 굽혀 둔다 — 곧게 편 사슬은 FABRIK 이 굽힐 쪽을 정하지 못한다
+        {      "hand",  3,    float3{ 0.3f, 0.03f, 0.0f }},
+        {"upperleg.r",  1,     float3{ 0.2f, 0.0f, 0.0f }},
+        {"lowerleg.r",  5,  float3{ 0.0f, -0.45f, 0.02f }},
+        {    "foot.r",  6, float3{ 0.0f, -0.45f, -0.02f }},
+    } );
+    auto           makeRig  = []( float32 footWeight, float32 maxOffset )
+    {
+        StringBuilder<constant::kMaxBuffer1024> json;
+        json.append( R"({ "targets": [ { "name": "Hand", "object": "Hand" }, { "name": "Foot", "object": "Foot" } ], "nodes": [ { "type": "FullBodyIK", "name": "Body",
+            "pelvis": "hips", "pelvis_iterations": 8, "max_pelvis_offset": )" )
+            .append( maxOffset )
+            .append( R"(, "chains": [ { "bones": ["shoulder", "elbow", "hand"], "target": "Hand" },
+            { "bones": ["upperleg.r", "lowerleg.r", "foot.r"], "target": "Foot", "weight": )" )
+            .append( footWeight )
+            .append( " } ] } ] }" );
+        return TestRigAssetInternal::parseRig( string_view( json.c_str(), json.size() ) );
+    };
+    // 골반 · 손의 모델 위치를 냅니다.
+    auto solve = [&skeleton]( const shared_ptr<const RigAsset>& asset, const float3& hand, float3& outPelvis, float3& outHand )
+    {
+        RigInstance instance;
+        if ( instance.initialize( asset, skeleton, nullptr, "test" ) == false )
+            return false;
+        instance.setExternalTarget( 0, TestRigAssetInternal::makeTargetAt( hand ) );
+        instance.setExternalTarget( 1, TestRigAssetInternal::makeTargetAt( float3{ 0.2f, 0.1f, 0.0f } ) );
+        Pose             pose;
+        vector<float4x4> listModel;
+        TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
+        outPelvis = listModel[1].getTranslation();
+        outHand   = listModel[4].getTranslation();
+        return true;
+    };
+    const float3 farHand{ 1.5f, 1.5f, 0.0f };
+    float3       lightPelvis{};
+    float3       lightHand{};
+    float3       heavyPelvis{};
+    float3       heavyHand{};
+    SW_ASSERT_TRUE( solve( makeRig( 1.0f, 1.0f ), farHand, lightPelvis, lightHand ) );
+    SW_ASSERT_TRUE( solve( makeRig( 4.0f, 1.0f ), farHand, heavyPelvis, heavyHand ) );
+    SW_EXPECT_TRUE( lightPelvis._x > 0.4f );                   // 손 쪽으로 기운다
+    SW_EXPECT_TRUE( heavyPelvis._x < lightPelvis._x - 0.05f ); // 발이 무거우면 덜 기운다
+    SW_EXPECT_TRUE( ( farHand - lightHand ).getLength() < 0.25f );
+    SW_EXPECT_TRUE( ( farHand - lightHand ).getLength() < ( farHand - heavyHand ).getLength() );
+
+    // 상한 — 골반은 애니메이션 자리에서 0.2 m 넘게 가지 않는다.
+    float3 clampedPelvis{};
+    float3 clampedHand{};
+    SW_ASSERT_TRUE( solve( makeRig( 1.0f, 0.2f ), farHand, clampedPelvis, clampedHand ) );
+    SW_EXPECT_TRUE( ( clampedPelvis - float3{ 0.0f, 1.0f, 0.0f } ).getLength() <= 0.2f + 1e-4f );
+
+    // 닿는 목표 — 골반은 그대로, 손은 목표에 붙는다.
+    const float3 nearHand{ 0.6f, 1.5f, 0.0f };
+    float3       stillPelvis{};
+    float3       reachedHand{};
+    SW_ASSERT_TRUE( solve( makeRig( 1.0f, 1.0f ), nearHand, stillPelvis, reachedHand ) );
+    SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 0.0f, 1.0f, 0.0f }, stillPelvis, 1e-4f ) );
+    SW_EXPECT_TRUE( TestRigAssetInternal::isNear( nearHand, reachedHand, 2e-3f ) );
+
+    // 골반 아래에서 시작하지 않는 사슬은 묶이지 않는다.
+    test::ScopedDefensiveTestLog expected( "a FullBodyIK chain above the pelvis is rejected" );
+    shared_ptr<const RigAsset>   above = TestRigAssetInternal::parseRig( R"({ "targets": [ { "name": "Hand", "object": "Hand" } ], "nodes": [ { "type": "FullBodyIK",
+        "name": "Body", "pelvis": "hips", "max_pelvis_offset": 1, "chains": [ { "bones": ["root", "hips", "shoulder"], "target": "Hand" } ] } ] })" );
+    SW_ASSERT_NOT_NULL( above );
+    RigInstance failing;
+    SW_EXPECT_FALSE( failing.initialize( above, skeleton, nullptr, "test" ) );
+    SW_EXPECT_TRUE( TestRigAssetInternal::parseRig( R"({ "nodes": [ { "type": "FullBodyIK", "name": "Body", "pelvis": "hips", "max_pelvis_offset": 1, "chains": [] } ] })" ) == nullptr );
 }
 
 /**

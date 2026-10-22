@@ -156,6 +156,55 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
 }
 
 /**
+ * @brief [RetargetTest] 프로필 쓰기와 점검 — 리소스 프로필을 JSON 으로 써서 다시 읽으면 같은 내용이고, 점검은 두 스켈레톤에 묶어 사슬 길이 · 짝지은 본 수를 낸다
+ * @details 에디터 리타깃 창이 저장(`toJSON`)과 점검(`RetargetProfileInspector`)을 이 둘로 한다. 모르는 본을 적은 프로필은 점검이 묶기 실패로 거절한다.
+ */
+SW_TEST_CASE( RetargetTest, ProfileWritesBackAndInspectsAgainstSkeletons )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    RetargetProfile profile;
+    SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
+    RetargetProfile copy;
+    SW_ASSERT_TRUE( copy.parseJSON( profile.toJSON(), "roundtrip.retarget.json" ) );
+    SW_EXPECT_TRUE( copy.toJSON() == profile.toJSON() );
+    SW_EXPECT_TRUE( copy.getSourceSkeletonPath() == profile.getSourceSkeletonPath() );
+    SW_EXPECT_TRUE( copy.getTargetPelvis() == profile.getTargetPelvis() );
+    SW_ASSERT_EQUAL( profile.getChains().size(), copy.getChains().size() );
+    for ( size_t chainIndex = 0; chainIndex < profile.getChains().size(); ++chainIndex )
+    {
+        SW_EXPECT_TRUE( copy.getChains()[chainIndex]._name == profile.getChains()[chainIndex]._name );
+        SW_EXPECT_TRUE( copy.getChains()[chainIndex]._listTargetBone == profile.getChains()[chainIndex]._listTargetBone );
+        SW_EXPECT_EQUAL( profile.getChains()[chainIndex]._bIKGoal, copy.getChains()[chainIndex]._bIKGoal );
+    }
+    SW_EXPECT_EQUAL( profile.isMappingSameNames(), copy.isMappingSameNames() );
+    SW_EXPECT_NEAR_EQUAL( profile.getHeightRatioOverride(), copy.getHeightRatioOverride(), 1e-5f );
+
+    RetargetProfileInspection inspection;
+    string                    error;
+    SW_ASSERT_TRUE_MSG( RetargetProfileInspector::inspect( profile, inspection, error ), error.c_str() );
+    SW_EXPECT_EQUAL( profile.getChains().size(), inspection._listChain.size() );
+    SW_EXPECT_TRUE( inspection._mappedTargetBoneCount > 2u );
+    SW_EXPECT_TRUE( inspection._mappedTargetBoneCount <= inspection._targetBoneCount );
+    SW_EXPECT_TRUE( inspection._heightRatio > 0.0f );
+    // 본 하나짜리 사슬(머리)은 길이가 0 이다 — IK 목표 다리 사슬(4 번)은 두 쪽 다 길이가 있고 비가 1 근처다(같은 KayKit 리그).
+    const RetargetChainInspection& leg = inspection._listChain[4];
+    SW_EXPECT_TRUE( leg._sourceLength > 0.1f );
+    SW_EXPECT_TRUE( leg._targetLength > 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, leg._targetLength / leg._sourceLength, 0.5f );
+    for ( const RetargetChainInspection& chain : inspection._listChain )
+    {
+        SW_EXPECT_TRUE( chain._sourceLength >= 0.0f );
+    }
+
+    test::ScopedDefensiveTestLog expected( "a profile naming a bone the skeleton lacks fails the inspection" );
+    copy.getChainsForEdit()[0]._listTargetBone.push_back( hashed_string( "no_such_bone" ) );
+    SW_EXPECT_FALSE( RetargetProfileInspector::inspect( copy, inspection, error ) );
+    SW_EXPECT_FALSE( error.empty() );
+    copy.setSkeletonPaths( "game/shooter3d/models/kaykit/knight/missing.skeleton.json", profile.getTargetSkeletonPath() );
+    SW_EXPECT_FALSE( RetargetProfileInspector::inspect( copy, inspection, error ) );
+}
+
+/**
  * @brief [RetargetTest] 회전은 모델 공간 차이로 옮긴다 — 대상의 로컬 축 약속이 달라도(본 1 의 레퍼런스가 X 축으로 90° 돌아 있음) 같은 굽힘이 같은 자리를 낸다
  */
 SW_TEST_CASE( RetargetTest, RotationTransfersAcrossLocalAxisConventions )

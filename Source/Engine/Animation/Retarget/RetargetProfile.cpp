@@ -18,6 +18,24 @@ namespace sw
         {
             /** @brief `RetargetTranslationMode` 순서의 표기입니다. */
             static constexpr const utf8* kArrTranslationMode[] = { "ScaleByPelvisHeight", "Copy", "None" };
+
+            /** @brief 이름 목록을 문자열 배열로 씁니다. */
+            static void writeNames( const JSONValue& array, const vector<hashed_string>& listName )
+            {
+                array.setArray();
+                for ( const hashed_string& name : listName )
+                {
+                    array.pushBack().setString( name.c_str() );
+                }
+            }
+
+            /** @brief `{ "source", "target" }` 쌍 하나를 씁니다. */
+            static void writePair( const JSONValue& object, const hashed_string& source, const hashed_string& target )
+            {
+                object.setObject();
+                object.set( "source" ).setString( source.c_str() );
+                object.set( "target" ).setString( target.c_str() );
+            }
         };
     } // namespace
 } // namespace sw
@@ -89,6 +107,53 @@ namespace sw
             return false;
         }
         return parseJSON( text, path );
+    }
+
+    string RetargetProfile::toJSON() const
+    {
+        using Internal = RetargetProfileInternal;
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
+        // 형제 핸들은 하나씩 받아 다 채운 뒤 다음 것을 받는다(같은 부모에 더하면 앞 핸들이 무효가 된다).
+        if ( _sourceSkeletonPath.empty() == false )
+            root.set( "source_skeleton" ).setString( _sourceSkeletonPath );
+        if ( _targetSkeletonPath.empty() == false )
+            root.set( "target_skeleton" ).setString( _targetSkeletonPath );
+        root.set( "translation" ).setString( Internal::kArrTranslationMode[static_cast<uint32>( _translationMode )] );
+        Internal::writePair( root.set( "root" ), _sourceRoot, _targetRoot );
+        Internal::writePair( root.set( "pelvis" ), _sourcePelvis, _targetPelvis );
+        const JSONValue chains = root.set( "chains" );
+        chains.setArray();
+        for ( const RetargetChain& chain : _listChain )
+        {
+            const JSONValue entry = chains.pushBack();
+            entry.setObject();
+            entry.set( "name" ).setString( chain._name.c_str() );
+            Internal::writeNames( entry.set( "source" ), chain._listSourceBone );
+            Internal::writeNames( entry.set( "target" ), chain._listTargetBone );
+            if ( chain._bIKGoal == SW_TRUE )
+                entry.set( "ik_goal" ).setBool( true );
+        }
+        if ( _listBonePair.empty() == false )
+        {
+            const JSONValue boneMap = root.set( "bone_map" );
+            boneMap.setArray();
+            for ( const RetargetBonePair& pair : _listBonePair )
+            {
+                Internal::writePair( boneMap.pushBack(), pair._source, pair._target );
+            }
+        }
+        if ( _bMapSameNames == SW_TRUE )
+            root.set( "map_same_names" ).setBool( true );
+        if ( _heightRatioOverride > 0.0f )
+            root.set( "height_ratio" ).setFloat( static_cast<float64>( _heightRatioOverride ) );
+        return document.dump( 2 );
+    }
+
+    void RetargetProfile::setSkeletonPaths( string_view sourcePath, string_view targetPath )
+    {
+        _sourceSkeletonPath = string{ sourcePath };
+        _targetSkeletonPath = string{ targetPath };
     }
 
     bool RetargetProfile::parseRoot( const JSONValue& root, string_view sourceLabel )
