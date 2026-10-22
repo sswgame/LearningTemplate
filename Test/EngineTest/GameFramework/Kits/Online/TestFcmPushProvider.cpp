@@ -331,9 +331,9 @@ SW_TEST_CASE( FcmPushProviderTest, TheMessageCarriesLocalizationKeysAndEscapesTe
 
     PushNotificationMessage silent;
     silent._deepLink            = "mailbox"; // 문구가 없으면 데이터 메시지만 보낸다
-    const sw::string silentJson = FcmPushProvider::makeMessageJSON( {}, "liveops.all", silent );
-    SW_EXPECT_TRUE( silentJson.find( "android" ) == sw::string::npos );
-    SW_EXPECT_TRUE( silentJson.find( "apns" ) == sw::string::npos );
+    const sw::string silentJSON = FcmPushProvider::makeMessageJSON( {}, "liveops.all", silent );
+    SW_EXPECT_TRUE( silentJSON.find( "android" ) == sw::string::npos );
+    SW_EXPECT_TRUE( silentJSON.find( "apns" ) == sw::string::npos );
     SW_EXPECT_TRUE( FcmPushProvider::isValidTopic( "liveops.us-west" ) );
     SW_EXPECT_FALSE( FcmPushProvider::isValidTopic( "liveops kr" ) );
     SW_EXPECT_FALSE( FcmPushProvider::isValidTopic( "" ) );

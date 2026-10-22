@@ -46,7 +46,7 @@ namespace test
             sw::INetSecurityProvider& provider = sw::NetSecurity::getProvider();
             sw::string                certificatePem;
             sw::string                privateKeyPem;
-            (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem );
+            (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
             sw::TLSContextConfig serverTLS;
             serverTLS._role           = sw::TLSRole::Server;
             serverTLS._certificatePem = certificatePem;

@@ -33,9 +33,10 @@ namespace sw
             [[nodiscard]] static unique_ptr<IPushNotificationProvider> createFcm( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient,
                                                                                   string& outError )
             {
-                string serviceAccountJSON;
-                if ( config._serviceAccountEnvironment.empty() || ServerSecret::read( config._serviceAccountEnvironment, serviceAccountJSON ) == false ||
-                     serviceAccountJSON.empty() )
+                string     serviceAccountJSON;
+                const bool bNamed      = config._serviceAccountEnvironment.empty() == false;
+                const bool bSecretRead = bNamed && ServerSecret::read( config._serviceAccountEnvironment, serviceAccountJSON ) && serviceAccountJSON.empty() == false;
+                if ( bSecretRead == false )
                 {
                     outError = "the FCM service account environment variable '" + config._serviceAccountEnvironment + "' is not set";
                     return nullptr;
