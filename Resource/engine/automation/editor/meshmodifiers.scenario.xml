@@ -19,10 +19,11 @@
 	<!-- 씬 뷰가 상자를 비추게 한다(F = 고른 것에 맞추기) -->
 	<At frame="105"><DevCommand line="panel.focus scene_view"/></At>
 	<At frame="115"><EditorKey key="F"/></At>
-	<At frame="150"><Screenshot file="rest.ppm"/></At>
-	<At frame="152"><DevCommand line="panel.focus game_view"/></At>
-	<At frame="157"><Screenshot file="game.ppm"/></At>
-	<At frame="159"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="140"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="145"><Screenshot file="game.ppm"/></At>
+	<At frame="147"><DevCommand line="panel.focus scene_view"/></At>
+	<!-- 기준 그림은 게임 뷰 탭을 다녀온 뒤에 찍는다 — 탭을 바꾼 뒤 씬 뷰 폭이 1 px 달라져 앞에서 찍으면 뒤의 그림과 크기가 다르다 -->
+	<At frame="152"><Screenshot file="rest.ppm"/></At>
 
 	<!-- ① 대상 고르기 · 휘기 더하기 · 각 넣기 -->
 	<At frame="160"><DevCommand line="panel.focus meshmodifiers.stack"/></At>

@@ -8,7 +8,9 @@
 	<At frame="0"><Variable name="gv_frontierAutoPlay" value="0"/></At>
 	<At frame="10">
 		<Expect probe="Clock.Day" equals="0"/>
-		<Expect probe="Clock.Hour" near="6" tolerance="0.2"/>
+		<!-- 시계는 6 시에 시작하고 하루가 실제 24 초다(FrontierTownData) — 시작 전 프레임까지 합쳐 한 시간이 지나기 전이다. -->
+		<Expect probe="Clock.Hour" atLeast="6"/>
+		<Expect probe="Clock.Hour" atMost="7"/>
 	</At>
 	<At frame="11"><AdvanceGameTime hours="24"/></At>
 	<At after="2"><Expect probe="Clock.Day" equals="1"/></At>

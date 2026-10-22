@@ -10,6 +10,8 @@
 	<!-- 5 초 안에 적을 겨눠 쏘고, 10 초 안에 적을 맞힌다. -->
 	<At frame="11"><WaitUntil probe="AI.State" target="ShooterAutoPlay" is="Fire" timeoutSeconds="5"/></At>
 	<At after="1"><WaitUntil probe="Shooter3D.EnemyHitCount" atLeast="1" timeoutSeconds="10"/></At>
+	<!-- 히트스캔은 쏜 프레임에 맞는다 — 맞음이 쏨에서 겨눔으로 돌아가기보다 먼저 올 수 있어, 다시 겨눌 때까지 기다린 뒤 이력을 본다. -->
+	<At after="1"><WaitUntil probe="AI.State" target="ShooterAutoPlay" is="Aim" timeoutSeconds="5"/></At>
 	<At after="1">
 		<ExpectVisited probe="AI.State" target="ShooterAutoPlay" sequence="Aim, Fire, Aim"/>
 		<Expect probe="AI.Blackboard" target="ShooterAutoPlay" key="TargetDistance" atMost="40"/>

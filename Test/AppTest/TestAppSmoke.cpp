@@ -701,7 +701,7 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorExtensionRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings,editor.preferences,editor.projectSettings,-,"
         "scene.moveSiblingUp,scene.moveSiblingDown,scene.createFolder,-,help.reportBug,automation.toggleScenarioRecord",
         "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel,-,navigation.bake,"
-        "lighting.bakeProbes",
+        "lighting.bakeProbes,lighting.bakeReflectionProbes",
     };
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12 -gv_editorRegistryDump=1", "EditorExtensionRegistry|" );
