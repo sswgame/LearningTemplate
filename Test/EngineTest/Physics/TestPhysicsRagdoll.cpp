@@ -235,3 +235,39 @@ SW_TEST_CASE( PhysicsRagdollTest, SampleAssetLoadsAndBuilds )
     SW_EXPECT_TRUE( sw::PhysicsRagdollBuilder::create( *pScene, asset, skeleton.makeView(), sw::float4x4{}, sw::PhysicsRagdollOptions{}, ragdoll ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), ragdoll._listBody.size() );
 }
+
+/**
+ * @brief [PhysicsRagdollTest] 파워드 래그돌(`driveToPoseWithMotors`)은 머리를 포즈대로 0.3 rad 꺾고, 토크 0 이면 꺾지 않는다
+ * @details 중력을 끄고 바닥에서 떨어진 채로 돌려 모터만 자세를 정한다. 포즈는 머리 뼈를 Z 둘레로 0.3 rad 돌린 것이다(스윙 한계 0.4 안).
+ */
+SW_TEST_CASE( PhysicsRagdollTest, PoweredMotorsBendJointsToThePose )
+{
+    for ( const float32 maxTorque : { 500.0f, 0.0f } )
+    {
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeSceneWithFloor();
+        SW_ASSERT_NOT_NULL( pScene.get() );
+        pScene->setGravity( sw::float3{} );
+        ChainSkeleton          skeleton;
+        const sw::PhysicsAsset asset = makeAsset();
+        sw::PhysicsRagdoll     ragdoll;
+        SW_ASSERT_TRUE( sw::PhysicsRagdollBuilder::create( *pScene, asset, skeleton.makeView(), sw::float4x4{}, sw::PhysicsRagdollOptions{}, ragdoll ) );
+
+        constexpr float32 kBend = 0.3f;
+        skeleton._listModel[2]  = sw::float4x4::makeRotationZ( kBend ) * sw::float4x4::makeTranslation( 0.0f, 3.0f, 0.0f );
+        for ( uint32 stepIndex = 0; stepIndex < 180; ++stepIndex )
+        {
+            sw::PhysicsRagdollBuilder::driveToPoseWithMotors( *pScene, asset, ragdoll, skeleton.makeView(), sw::float4x4{}, maxTorque );
+            pScene->step( kRagdollStep );
+        }
+        sw::float3     position{};
+        sw::quaternion spineRotation{};
+        sw::quaternion headRotation{};
+        SW_ASSERT_TRUE( pScene->getBodyTransform( ragdoll._listBody[1], position, spineRotation ) );
+        SW_ASSERT_TRUE( pScene->getBodyTransform( ragdoll._listBody[2], position, headRotation ) );
+        const float32 bend = sw::quaternion::getAngleBetween( spineRotation, headRotation );
+        if ( maxTorque > 0.0f )
+            SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( bend - kBend ) < 0.05f, ( "powered head bends " + std::to_string( bend ) + " rad" ).c_str() );
+        else
+            SW_EXPECT_TRUE_MSG( bend < 0.05f, ( "limp head bends " + std::to_string( bend ) + " rad" ).c_str() );
+    }
+}

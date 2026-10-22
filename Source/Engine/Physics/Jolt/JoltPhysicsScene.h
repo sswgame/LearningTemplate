@@ -249,6 +249,8 @@ namespace sw
             uint8                           _layer{ 0 };
             bool                            _bTrigger{ false };
             bool                            _bEnabled{ true };
+            /// 캐릭터의 속 바디다(`PhysicsCharacterDesc::_bInnerBody`). Jolt 가 캐릭터와 함께 만들고 지우므로 `destroyBody` · 소멸자는 지우지 않고 `destroyCharacter` 가 표에서만 뺀다.
+            bool _bCharacterInner{ false };
         };
 
         struct JointRecord
@@ -267,6 +269,7 @@ namespace sw
             JPH::Ref<JPH::CharacterVirtual> _pCharacter;
             PhysicsCharacterDesc3D          _desc{};
             PhysicsCharacterState3D         _state{};
+            PhysicsBodyHandle               _innerBody{}; ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
         };
 
         /** @brief 바퀴 차 하나입니다. 구속(스텝 리스너이기도 합니다)과 바퀴 충돌 테스터, 차체 바디를 담습니다. */

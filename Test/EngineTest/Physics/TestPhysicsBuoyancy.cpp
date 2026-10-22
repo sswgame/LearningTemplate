@@ -57,7 +57,8 @@ SW_TEST_CASE( PhysicsBuoyancyTest, LightCrateFloatsAtTheSurface )
     manager.beginPlay();
     test::updateFrames( manager, 600 );
     const float32 height = pCrate->getWorldPosition()._y;
-    SW_EXPECT_TRUE_MSG( height > -0.6f && height < 0.6f, ( "crate rests at y = " + std::to_string( height ) ).c_str() );
+    // 부력 2 = 물 밀도가 상자의 두 배라 반만 잠긴다 — 중심이 수면(0)에 온다(Debug 실측 -0.0008, 2026-10-22).
+    SW_EXPECT_TRUE_MSG( height > -0.1f && height < 0.1f, ( "crate rests at y = " + std::to_string( height ) ).c_str() );
     SW_EXPECT_EQUAL( 1u, pWater->getSubmergedBodyCount() );
     manager.endPlay();
 }

@@ -398,12 +398,49 @@ namespace sw
                                                                                  &_system );
         record._desc            = desc;
         record._state._position = desc._position;
+        if ( desc._bInnerBody )
+        {
+            // 속 바디도 엔진 바디 표에 올린다 — Jolt 는 속 바디의 사용자 값으로 캐릭터의 것(오브젝트 id)을 넣는데, 접촉 알림 · 질의 거르기는 Jolt 사용자 값을
+            // 엔진 핸들로 읽는다. 핸들을 넣어야 닿음 · 이벤트가 캐릭터 오브젝트로 풀리고 `_ignoreUserData` 가 제 속 바디를 거른다.
+            const JPH::BodyID innerBodyID = record._pCharacter->GetInnerBodyID();
+            if ( innerBodyID.IsInvalid() )
+            {
+                SW_LOG_ERROR( "createCharacter: Jolt is out of bodies for the inner body" );
+                return PhysicsCharacterHandle{};
+            }
+            PhysicsShapeDesc3D capsuleDesc;
+            capsuleDesc._type          = PhysicsShapeType3D::Capsule;
+            capsuleDesc._radius        = desc._radius;
+            capsuleDesc._halfHeight    = desc._halfHeight;
+            capsuleDesc._localPosition = float3{ 0.0f, centerHeight, 0.0f };
+            BodyRecord inner;
+            inner._pListShape      = make_shared<const ShapeDescList>( ShapeDescList{ capsuleDesc } );
+            inner._userData        = desc._userData;
+            inner._bodyID          = innerBodyID;
+            inner._type            = PhysicsBodyType::Kinematic;
+            inner._layer           = desc._layer;
+            inner._bCharacterInner = true;
+            record._innerBody      = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( inner ) ) );
+            _system.GetBodyInterface().SetUserData( innerBodyID, record._innerBody.packed() );
+            setHandle( innerBodyID, record._innerBody );
+        }
         return PhysicsCharacterHandle::fromSlot( _characters.insert( std::move( record ) ) );
     }
 
     void JoltPhysicsScene::destroyCharacter( PhysicsCharacterHandle character )
     {
-        _characters.erase( character.getSlot() );
+        CharacterRecord record;
+        if ( _characters.take( character.getSlot(), record ) == false )
+            return;
+        BodyRecord inner;
+        if ( record._innerBody.isValid() && _bodies.take( record._innerBody.getSlot(), inner ) )
+        {
+            setHandle( inner._bodyID, PhysicsBodyHandle{} );
+            const span<const PhysicsBodyHandle> removed{ &record._innerBody, 1 };
+            _contactTracker.removeBodies( removed );
+            _pairFilter.removeBodies( removed );
+        }
+        // `record` 가 여기서 소멸하며 Jolt 가 속 바디를 지운다.
     }
 
     PhysicsCharacterState3D JoltPhysicsScene::moveCharacter( PhysicsCharacterHandle character, const float3& velocity, float32 deltaTime )

@@ -149,6 +149,8 @@ namespace sw
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         _bodies.forEach( [&bodyInterface]( BodyRecord& record )
         {
+            if ( record._bCharacterInner )
+                return; // 위 `_characters.clear()` 에서 Jolt 가 이미 지웠다
             if ( record._bEnabled )
                 bodyInterface.RemoveBody( record._bodyID );
             bodyInterface.DestroyBody( record._bodyID );
@@ -641,6 +643,12 @@ namespace sw
         vector<PhysicsBodyHandle> listDestroyed;
         for ( const PhysicsBodyHandle& body : listBody )
         {
+            const BodyRecord* pRecord = findBody( body );
+            if ( pRecord != nullptr && pRecord->_bCharacterInner )
+            {
+                SW_LOG_ERROR( "destroyBody: this body is a character's inner body - destroy the character instead" );
+                continue;
+            }
             BodyRecord record;
             if ( _bodies.take( body.getSlot(), record ) == false )
                 continue;

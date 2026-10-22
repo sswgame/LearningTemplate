@@ -746,3 +746,105 @@ SW_TEST_CASE( PhysicsScene3DTest, CompoundOfBuiltShapesKeepsChildOffsets )
     const sw::PhysicsShapeHandle arrStale[1] = { lowerShape };
     SW_EXPECT_FALSE( pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrStale, 1 } ).isValid() );
 }
+
+/**
+ * @brief [PhysicsScene3DTest] Cone 관절 모터(`driveJointToRotation`)가 자식 바디를 목표 월드 자세로 끈다 — 부모가 돌아 있어도 맞는다(상대 회전의 곱 순서)
+ * @details 부모(정적)는 Y 둘레 30 도, 자식의 목표는 X 둘레 40 도다. 두 회전은 교환되지 않아 곱 순서가 틀리면(qB × conj(qA)) 목표에서 크게 벗어난다.
+ *          자식은 중력을 받지 않아 모터만 자세를 정한다. 모터를 끄면(토크 0) 자식은 그 자리에 멈춘 채 남는다.
+ */
+SW_TEST_CASE( PhysicsScene3DTest, ConeMotorDrivesChildToTargetRotation )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::quaternion  parentRotation = sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 1.0f, 0.0f }, sw::MathUtil::toRadian( 30.0f ) );
+    sw::PhysicsBodyDesc3D parentDesc;
+    parentDesc._listShape.push_back( makeBox( sw::float3{ 0.2f, 0.2f, 0.2f } ) );
+    parentDesc._position               = sw::float3{ 0.0f, 1.0f, 0.0f };
+    parentDesc._rotation               = parentRotation;
+    parentDesc._type                   = sw::PhysicsBodyType::Static;
+    const sw::PhysicsBodyHandle parent = pScene->createBody( parentDesc );
+    sw::PhysicsBodyDesc3D       childDesc;
+    childDesc._listShape.push_back( makeBox( sw::float3{ 0.1f, 0.4f, 0.1f } ) );
+    childDesc._position               = sw::float3{ 0.0f, 0.0f, 0.0f };
+    childDesc._gravityFactor          = 0.0f;
+    childDesc._bAllowSleep            = false;
+    const sw::PhysicsBodyHandle child = pScene->createBody( childDesc );
+    sw::PhysicsJointDesc3D      cone;
+    cone._bodyA                        = parent;
+    cone._bodyB                        = child;
+    cone._type                         = sw::PhysicsJointType::Cone;
+    cone._anchor                       = sw::float3{ 0.0f, 0.0f, 0.0f };
+    cone._axis                         = sw::float3{ 0.0f, -1.0f, 0.0f };
+    cone._normalAxis                   = sw::float3{ 1.0f, 0.0f, 0.0f };
+    cone._swingLimitNormal             = 2.0f;
+    cone._swingLimitPlane              = 2.0f;
+    cone._minLimit                     = -2.0f;
+    cone._maxLimit                     = 2.0f;
+    const sw::PhysicsJointHandle joint = pScene->createJoint( cone );
+    SW_ASSERT_TRUE( pScene->isJointValid( joint ) );
+
+    const sw::quaternion target = sw::quaternion::makeFromAxisAngle( sw::float3{ 1.0f, 0.0f, 0.0f }, sw::MathUtil::toRadian( 40.0f ) );
+    for ( uint32 stepIndex = 0; stepIndex < 240; ++stepIndex )
+    {
+        pScene->driveJointToRotation( joint, parentRotation, target, 1000.0f );
+        pScene->step( kStep3D );
+    }
+    sw::float3     childPosition{};
+    sw::quaternion childRotation{};
+    SW_ASSERT_TRUE( pScene->getBodyTransform( child, childPosition, childRotation ) );
+    const float32 error = sw::quaternion::getAngleBetween( childRotation, target );
+    SW_EXPECT_TRUE_MSG( error < 0.05f, ( "child is " + std::to_string( error ) + " rad off the target rotation" ).c_str() );
+
+    // 모터를 끄면 더 끌지 않는다 — 각속도가 남지 않은 자식은 그 자세에 머문다.
+    pScene->driveJointToRotation( joint, parentRotation, sw::quaternion{}, 0.0f );
+    stepFor( *pScene, 60 );
+    SW_ASSERT_TRUE( pScene->getBodyTransform( child, childPosition, childRotation ) );
+    SW_EXPECT_TRUE( sw::quaternion::getAngleBetween( childRotation, target ) < 0.1f );
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 속 바디(`_bInnerBody`)를 켠 캐릭터는 레이에 캐릭터의 사용자 값으로 잡히고, 그 값을 거르는 질의 · 끈 캐릭터 · 지운 캐릭터에는 잡히지 않는다
+ * @details 속 바디의 Jolt 사용자 값이 엔진 핸들이어야 닿음이 캐릭터 오브젝트로 풀리고 쏘는 쪽이 제 속 바디를 거른다(`_ignoreUserData`).
+ */
+SW_TEST_CASE( PhysicsScene3DTest, CharacterInnerBodyIsQueriedAsTheCharacter )
+{
+    constexpr uint64 kCharacterObject = 77;
+    for ( const bool bInnerBody : { true, false } )
+    {
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+        SW_ASSERT_NOT_NULL( pScene.get() );
+        sw::PhysicsCharacterDesc3D desc;
+        desc._userData                             = kCharacterObject;
+        desc._bInnerBody                           = bInnerBody;
+        const sw::PhysicsCharacterHandle character = pScene->createCharacter( desc );
+        SW_ASSERT_TRUE( character.isValid() );
+        SW_EXPECT_EQUAL( 0u, pScene->getBodyCount() );                   // 속 바디는 만든 바디 수에 들지 않는다
+        (void)pScene->moveCharacter( character, sw::float3{}, kStep3D ); // 제자리 갱신 — 속 바디를 캐릭터 자리로 맞출 뿐이라 상태는 보지 않는다
+
+        // 캡슐 가운데(y = 0.9)를 옆에서 쏜다.
+        const sw::float3       origin{ -5.0f, 0.9f, 0.0f };
+        const sw::float3       direction{ 1.0f, 0.0f, 0.0f };
+        sw::PhysicsQueryFilter filter;
+        sw::PhysicsCastHit3D   hit;
+        const bool             bHit = pScene->raycast( origin, direction, 10.0f, filter, hit );
+        SW_EXPECT_EQUAL( bInnerBody, bHit );
+        if ( bInnerBody == false )
+            continue;
+        SW_EXPECT_TRUE( hit._body.isValid() );
+        SW_EXPECT_EQUAL( kCharacterObject, hit._userData );
+        SW_EXPECT_EQUAL( kCharacterObject, pScene->getBodyUserData( hit._body ) );
+        SW_EXPECT_NEAR_EQUAL( 4.7f, hit._distance, 0.02f ); // 캡슐 반지름 0.3
+
+        filter._ignoreUserData = kCharacterObject;
+        SW_EXPECT_FALSE( pScene->raycast( origin, direction, 10.0f, filter, hit ) );
+
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the inner body belongs to the character" );
+            pScene->destroyBody( hit._body );
+        }
+        filter._ignoreUserData = 0;
+        SW_EXPECT_TRUE( pScene->raycast( origin, direction, 10.0f, filter, hit ) );
+        pScene->destroyCharacter( character );
+        SW_EXPECT_FALSE( pScene->raycast( origin, direction, 10.0f, filter, hit ) );
+    }
+}
