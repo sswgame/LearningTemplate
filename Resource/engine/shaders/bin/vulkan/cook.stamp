@@ -1,9 +1,9 @@
 SWCOOK 4
+025a0f7d89de4bbc materialshadermain.hlsli
 03c54d10a1c6143d postoutline.hlsl
 153cc5877d034c77 lighting2d.hlsli
 154e02b9ead9efc9 lightgridcommon.hlsli
 15988ca8d6fbfb5a taa.hlsl
-15e120b86d722476 forwardlit.hlsl
 1795b4868f75033e gerstner.hlsli
 1dbf3da4a35817e4 shadowdepth.hlsl
 2634f1e7dd1ddc24 postbloom.hlsl
@@ -23,6 +23,7 @@ SWCOOK 4
 7e1b319689474394 water.hlsl
 7fc422e76e88cc29 binding.hlsli
 8687732d87cba8ec fullscreenblit.hlsl
+8c9c7b1cefa0b7cf forwardlit.hlsl
 969e8df05bff145b sky.hlsl
 980c18c4c174d3fb postoutline.hlsli
 997cfbc36784e999 particle.hlsl
@@ -43,6 +44,7 @@ cffb2bc2e2e7436a meshskin.hlsl
 d223d57fbd06c2dc lightgrid.hlsl
 d52bbee362ada1ee toon.hlsl
 d9fa8b9e446a24fe foliage.hlsl
+dc4bda57c243a315 materialshader.hlsli
 dedea23699e7654f vfxsimulate.hlsli
 df99ce7308ca1787 fullscreentriangle.hlsl
 e0248e53bf576113 highlightoutline.hlsl

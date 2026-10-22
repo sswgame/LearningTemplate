@@ -1,17 +1,13 @@
+/**
+ * @file forwardlit.hlsl
+ * @brief 기본 PBR 머티리얼 셰이더 — 정점 색 × 머티리얼 색 × 알베도 텍스처를 금속도 · 거칠기 PBR 로 비춘다.
+ * @details 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 훅만 정의한다.
+ *          정점 변형 · 그림자 · 깊이 패스 · G버퍼 서명 · 보기 모드 · 반투명 알파는 뼈대가 한다.
+ *          조명 훅은 포워드 림 라이트를 더하려고 직접 정의한다(디퍼드 조명 패스는 같은 림을 다른 식으로 더한다 — docs/plans/MaterialShaderHooks.md H7).
+ *          머티리얼 define: `MATERIAL_WORLD_UV`(월드 좌표 트라이플래너 UV — 블록아웃용) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 blendMode 와 짝).
+ *          알파 컷오프는 이 셰이더에 없다(`MATERIAL_ALPHA_CUTOFF` 는 `#error`) — 컷오프 프로퍼티가 필요하면 머티리얼 구조체에 더하고 표면 훅이 채운다.
+ */
 #include "lighting.hlsli"
-
-struct PSInput
-{
-	float4 position                    : SV_POSITION;
-	float4 color                       : COLOR;
-	float2 uv                          : TEXCOORD0;
-	float3 normal                      : TEXCOORD1;
-	nointerpolation uint materialIndex : TEXCOORD2; // GPUScene 인스턴스가 준 머티리얼 원소
-	// 월드 위치를 넘긴다 — 점광의 거리 감쇠와 그림자 투영이 둘 다 이걸 쓴다(로컬 좌표로 만든 UV 로 그림자를 읽으면
-	// 그림자가 아니라 무늬다).
-	float3 worldPosition : TEXCOORD3;
-	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
-};
 
 // defaultmaterial.material 의 프로퍼티 순서·타입과 1:1 (color/roughness/metallic/albedoMap). 머티리얼 패커는
 // 리플렉션 오프셋(StructuredBuffer 원소 레이아웃)으로 채우므로 여기 순서를 바꾸면 에셋도 같이 바꿔야 한다.
@@ -25,91 +21,63 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
-{
-	PSInput output;
-	// 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작·정점 풀 시작이 배치 표에 있다.
-	SwInstanceData instance = swLoadInstance(input.instanceSlot);
-	// GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-	float3 localPosition;
-	float3 localNormal;
-	swLoadAnimatedVertex(instance, vertexId, input.position, input.normal, localPosition, localNormal);
-	// 위치는 깊이 프리패스와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 LessEqual 을 통과한다(binding.hlsli).
-	float4 worldPosition = swComputeWorldPosition(localPosition, instance.world);
-	output.position = swComputeClipPosition(worldPosition, g_ViewProj);
-	output.worldPosition = worldPosition.xyz;
-	output.color = input.color;
-	// UV 는 정점 속성이다. 주의: `localPosition.xy * 0.5 + 0.5` 로 **지어내면** — 노멀과 같은 함정이다 — 원점 중심
-	// 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙고, 도형의 옆면과 뚜껑이 같은 자리를 문다(XY 평면 투영이라 앞뒤가 겹친다).
-	output.uv = input.uv;
-	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal). 트랜스폼은
-	// 비균등 스케일을 받으므로 월드 행렬을 그대로 곱하면 늘린 메시의 조명이 틀린다.
-	output.normal = swComputeWorldNormal(localNormal, instance.world);
-	output.materialIndex = instance.materialIndex;
-	SW_APPEARANCE_WRITE( output, instance )
-	return output;
-}
+#if defined( MATERIAL_ALPHA_CUTOFF )
+#error "forwardlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+#endif
+
+#define SW_MATERIAL_CUSTOM_LIGHTING
+#define SW_MATERIAL_DEFAULT_VARYINGS
+#include "materialshader.hlsli"
 
 #if defined( MATERIAL_WORLD_UV )
 // 월드 좌표 UV(트라이플래너) — 메시 UV 대신 월드 위치로 텍스처를 읽는다. 텍스처 한 장이 1 m 이고 면의 방향(노멀)에 따라 세 축 투영을 섞는다.
 // 언리얼 WorldGridMaterial 과 같은 블록아웃용이다 — 메시 크기와 상관없이 한 칸이 1 m 라 거리 · 높이를 눈으로 잴 수 있다(prototypegrid_*.material).
 static const float kWorldUvTilesPerMeter = 1.0f;
 static const float kTriplanarSharpness   = 4.0f; // 노멀 성분의 거듭제곱 — 클수록 축 사이 섞이는 띠가 좁다
-float4 sampleWorldTriplanar(uint textureIndex, float3 worldPosition, float3 worldNormal)
+float4 sampleWorldTriplanar( uint textureIndex, float3 worldPosition, float3 worldNormal )
 {
-	float3 weight = pow(abs(worldNormal), kTriplanarSharpness);
-	weight /= max(weight.x + weight.y + weight.z, 1e-4f);
+	float3 weight = pow( abs( worldNormal ), kTriplanarSharpness );
+	weight /= max( weight.x + weight.y + weight.z, 1e-4f );
 	const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
 	// 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
-	const float4 alongX = swSampleMaterialTexture(textureIndex, float2(scaledPosition.z, -scaledPosition.y));
-	const float4 alongY = swSampleMaterialTexture(textureIndex, float2(scaledPosition.x, scaledPosition.z));
-	const float4 alongZ = swSampleMaterialTexture(textureIndex, float2(scaledPosition.x, -scaledPosition.y));
+	const float4 alongX = swSampleMaterialTexture( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
+	const float4 alongY = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
+	const float4 alongZ = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
 	return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
 }
 #endif
 
-// 반환 타입이 **패스에 따라 갈린다** — 포워드는 SV_TARGET 하나, G버퍼 패스는 알베도·노멀 둘.
-// 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 이 파일로 그린다. float4 하나로 고정하면 **G버퍼의 노멀
-// 타깃이 클리어 값 그대로** 남는다(binding.hlsli 12 절 '픽셀 출력').
-SW_SURFACE_OUTPUT PSMain(PSInput input)
+SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	SW_APPEARANCE_CLIP( input )
-	float3 normal = normalize(input.normal);
-
-	// 정점 색 x 머티리얼 색 x 알베도 텍스처. 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음.
-	// 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
+	// 정점 색 x 머티리얼 색 x 알베도 텍스처. 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
 	// 자세한 이유는 binding.hlsli 의 swSampleMaterialTexture 주석 참고.
-	SwMaterialData material = SW_MATERIAL(input.materialIndex);
 #if defined( MATERIAL_WORLD_UV )
-	const float4 surfaceTexture = sampleWorldTriplanar(material.albedoMap, input.worldPosition, normal);
+	const float4 surfaceTexture = sampleWorldTriplanar( context.material.albedoMap, context.worldPosition, context.normal );
 #else
-	const float4 surfaceTexture = swSampleMaterialTexture(material.albedoMap, input.uv);
+	const float4 surfaceTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
 #endif
-	float4 albedo = input.color * material.color * surfaceTexture;
+	SwMaterialSurface surface;
+	surface.albedo    = context.color * context.material.color * surfaceTexture;
+	surface.normal    = context.normal;
+	surface.roughness = context.material.roughness;
+	surface.metallic  = context.material.metallic;
+	return surface;
+}
 
-#if defined( SW_PASS_GBUFFER )
-	// G버퍼 패스는 **조명을 계산하지 않는다** — 표면만 적어 두고 셰이딩은 디퍼드 조명 패스가 한다.
-	// 조명 코드가 통째로 컴파일 아웃되므로 런타임 분기가 아니다(언리얼의 베이스 패스와 같은 구성).
-	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal, input.worldPosition, material.roughness, material.metallic);
-#else
+float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
+{
+	float3 lit;
 #if SW_VIEWMODE_SKIPS_LIGHTING
 	// 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
-	float3 lit = albedo.rgb;
+	lit = surface.albedo.rgb;
 #else
 	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-	float  shadow = swSampleShadowAtWorld(input.worldPosition, normal);
-	float3 lit = swShadeLights(albedo.rgb, input.worldPosition, normal, shadow, material.roughness, material.metallic);
-	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 2.0f) * 0.15f;
+	const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
+	lit                = swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
+	const float rim    = pow( 1.0f - saturate( dot( surface.normal, float3( 0, 0, 1 ) ) ), 2.0f ) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;
 #endif
-
-	// 알파를 쓰는지가 **퍼뮤테이션으로 갈린다**. 반투명 머티리얼만 MATERIAL_BLEND_TRANSLUCENT 를 always-define
-	// 으로 들고 있고(glassmaterial.material), 불투명 변형은 알파 경로가 아예 컴파일되지 않는다 — 불투명
-	// 패스에서 머티리얼 알파가 새어 나오는 일이 없다. 언리얼도 블렌드 모드가 머티리얼의 퍼뮤테이션이다.
-#if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface(float4(lit, albedo.a), albedo, normal, input.worldPosition, material.roughness, material.metallic);
-#else
-	return swStoreSurface(float4(lit, 1.0f), albedo, normal, input.worldPosition, material.roughness, material.metallic);
-#endif
-#endif
+	return float4( lit, surface.albedo.a );
 }
+
+#include "materialshadermain.hlsli"
