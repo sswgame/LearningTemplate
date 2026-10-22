@@ -10,6 +10,8 @@
  *          - `login_external`: `<제공자>/<주체 다이제스트 16진 64자>` 에서 계정 id 로 가는 테이블이다.
  *          - `login_account_external`: `<계정 16진>/<제공자>` 에서 주체 다이제스트로 가는 테이블이다. 연동 목록과 해제에 쓴다.
  *          - `account_deletion`: `<예약 시각 16진>/<계정 16진>` 키이며 지울 순서를 찾는 인덱스이다.
+ *          - `login_account_secret`: `<계정 16진>/<제공자>` 에서 연동 비밀(암호화된 refresh token)로 가는 테이블이다. 같은 제공자로 로그인할 때마다 덮어쓴다.
+ *          - `login_revoke_queue`: `<제공자>/<계정 16진>` 에서 암호화된 연동 비밀로 가는 테이블이다. 탈퇴 정리와 연동 해제가 비밀을 여기로 옮기고, 서비스가 제공자에 철회한 뒤 지운다.
  *
  *          레코드의 첫 바이트는 형식 버전(1)이며 다른 버전은 읽지 않는다. 비밀번호, 장치 비밀, 외부 주체는 다이제스트만 저장한다.
  *          같은 계정의 동시 로그인은 `login_account_session` 의 조건부 쓰기로 한쪽만 이기고, 진 쪽은 다시 읽어 이긴 세션을 밀어낸다. 마지막 로그인이 이기는 것이다.
@@ -29,6 +31,18 @@ namespace sw
     class IServiceStoreConnection;
     class ServiceTransaction;
 
+    /** @brief 철회 대기열의 항목 하나입니다(탈퇴한 계정의 연동 비밀 — 암호화된 채로). */
+    struct LoginRevocationEntry
+    {
+        vector<uint8> _sealedSecret{};
+        string        _key{}; ///< 대기열의 키(`<제공자>/<계정 16진>`). 철회가 끝나면 이 키로 지운다
+        string        _provider{};
+        uint64        _accountID{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief (계정, 세션) 한 쌍과 이유입니다. */
     struct LoginSessionRef
     {
@@ -68,7 +82,8 @@ namespace sw
         /** @brief 장치 비밀로 들어옵니다. 그 장치의 게스트 계정이 없으면 만들고 `_bCreated` 를 켭니다. 비밀은 저장하지 않고 다이제스트만 저장합니다. */
         LoginResult guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant );
         /** @brief 제공자가 확인한 주체로 들어옵니다. 연결된 계정이 없으면 만들고 `_bCreated` 를 켜며, 표시 이름은 @p displayNameHint 에서 가져옵니다. */
-        LoginResult platformLogin( string_view provider, string_view subject, string_view displayNameHint, int64 nowMs, LoginGrant& outGrant );
+        LoginResult platformLogin( string_view provider, string_view subject, string_view displayNameHint, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                   LoginGrant& outGrant );
         LoginResult resumeSession( const LoginSessionToken& token, int64 nowMs, LoginGrant& outGrant );
         LoginResult validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr );
         LoginResult logout( const LoginSessionToken& token, int64 nowMs );
@@ -79,7 +94,8 @@ namespace sw
         /** @brief 세션의 계정에 이름과 비밀번호를 붙여 게스트를 정식 계정으로 바꿉니다. 이 계정에 이미 이름이 있거나 그 이름이 다른 계정의 것이면 `AlreadyLinked` 입니다. */
         LoginResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity );
         /** @brief 세션의 계정에 외부 계정을 붙입니다. 그 주체가 다른 계정의 것이거나 이 계정에 그 제공자가 이미 있으면 `AlreadyLinked` 입니다. */
-        LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, int64 nowMs, AccountIdentity& outIdentity );
+        LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                  AccountIdentity& outIdentity );
         /** @brief 외부 계정 연결을 해제합니다. 마지막 로그인 수단(이름과 외부 계정의 합이 1)이면 `LastLoginMethod` 입니다. */
         LoginResult unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs );
         LoginResult listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary );
@@ -95,6 +111,10 @@ namespace sw
 
         /** @brief 서비스가 고른 세션을 다시 읽어, 다른 프로세스가 밀어냈거나 끝난 세션을 `_listRevoked` 에 넣습니다. 저장소에 문제가 있으면 아무도 끊지 않습니다. */
         void refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
+        /** @brief 철회 대기열을 @p maxCount 개까지 읽어 @p outListEntry 뒤에 붙입니다(키 순서). 키가 깨진 항목은 건너뜁니다. */
+        [[nodiscard]] static ServiceStoreResult listRevocations( IServiceStoreConnection& connection, int32 maxCount, vector<LoginRevocationEntry>& outListEntry );
+        /** @brief 철회가 끝난 항목을 지웁니다. */
+        [[nodiscard]] static ServiceStoreResult eraseRevocation( IServiceStoreConnection& connection, string_view key );
         /** @brief 계정 id 의 공개 신원을 반환합니다. 이름 인덱스 `AccountNameIndex` 가 다른 키트의 저장소 작업 안에서 부릅니다. */
         [[nodiscard]] static ServiceStoreResult readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity );
         /** @brief 정식 계정을 이름으로 찾습니다. 정식 계정은 소문자 로그인 이름이 곧 표시 이름입니다. 규칙에 맞지 않는 이름이면 NotFound 를 반환합니다. */

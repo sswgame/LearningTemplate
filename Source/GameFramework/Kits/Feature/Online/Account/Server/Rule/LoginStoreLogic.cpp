@@ -80,6 +80,18 @@ namespace sw
                 return s_table;
             }
 
+            static const hashed_string& getAccountSecretTable()
+            {
+                static const hashed_string s_table{ "login_account_secret" };
+                return s_table;
+            }
+
+            static const hashed_string& getRevokeTable()
+            {
+                static const hashed_string s_table{ "login_revoke_queue" };
+                return s_table;
+            }
+
             struct AccountRecord
             {
                 NetPasswordHashParams _params{};
@@ -326,6 +338,38 @@ namespace sw
                 key.push_back( '/' );
                 key += provider;
                 return key;
+            }
+
+            /** @brief 철회 대기열의 키 `<제공자>/<계정 16진>` 입니다. */
+            static string makeRevokeKey( string_view provider, uint64 accountID )
+            {
+                string key{ provider };
+                key.push_back( '/' );
+                ServiceKeyUtil::appendHex64( key, accountID );
+                return key;
+            }
+
+            /** @brief 외부 로그인이 준 연동 비밀(이미 암호화됨)을 계정 옆 칸에 씁니다. 비밀이 없으면 아무것도 붙이지 않습니다(같은 제공자로 다시 로그인하면 덮어쓴다). */
+            static void stageLinkSecret( ServiceTransaction& inoutTransaction, uint64 accountID, string_view provider, const vector<uint8>* pSealedSecret )
+            {
+                if ( pSealedSecret == nullptr || pSealedSecret->empty() )
+                    return;
+                inoutTransaction.put( getAccountSecretTable(), makeAccountExternalKey( accountID, provider ), *pSealedSecret );
+            }
+
+            /** @brief 계정의 연동 비밀이 있으면 칸에서 지우고 철회 대기열로 옮기는 쓰기를 붙입니다(탈퇴 · 연동 해제). 비밀이 없으면 아무것도 붙이지 않습니다. */
+            static ServiceStoreResult stageSecretToRevokeQueue( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, uint64 accountID, string_view provider )
+            {
+                const string             secretKey = makeAccountExternalKey( accountID, provider );
+                ServiceRecord            raw;
+                const ServiceStoreResult readResult = connection.readRecord( getAccountSecretTable(), secretKey, raw );
+                if ( readResult == ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Ok;
+                if ( readResult != ServiceStoreResult::Ok )
+                    return readResult;
+                inoutTransaction.erase( getAccountSecretTable(), secretKey, raw._version );
+                inoutTransaction.put( getRevokeTable(), makeRevokeKey( provider, accountID ), raw._bytes );
+                return ServiceStoreResult::Ok;
             }
 
             static string makeDeletionKey( int64 dueMs, uint64 accountID )
@@ -656,7 +700,8 @@ namespace sw
         return LoginResult::StoreUnavailable;
     }
 
-    LoginResult LoginStoreLogic::platformLogin( string_view provider, string_view subject, string_view displayNameHint, int64 nowMs, LoginGrant& outGrant )
+    LoginResult LoginStoreLogic::platformLogin( string_view provider, string_view subject, string_view displayNameHint, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                                LoginGrant& outGrant )
     {
         using Internal = LoginStoreLogicInternal;
         outGrant       = LoginGrant{};
@@ -705,6 +750,7 @@ namespace sw
             const LoginResult staged            = stageSessionOpen( accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
+            Internal::stageLinkSecret( transaction, accountID, provider, pSealedLinkSecret );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
@@ -947,7 +993,8 @@ namespace sw
         return LoginResult::StoreUnavailable;
     }
 
-    LoginResult LoginStoreLogic::linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, int64 nowMs, AccountIdentity& outIdentity )
+    LoginResult LoginStoreLogic::linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
+                                               AccountIdentity& outIdentity )
     {
         using Internal = LoginStoreLogicInternal;
         if ( AccountUtil::isValidLowerToken( provider, LoginConstant::kMaxProviderNameSize ) == false || subject.empty() )
@@ -976,6 +1023,7 @@ namespace sw
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.link.platform", nowMs );
             audit._after            = string( provider );
             ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, profileVersion );
+            Internal::stageLinkSecret( transaction, identity._accountID, provider, pSealedLinkSecret ); // 쓰기 번호가 뒤라서 위의 충돌 번호 판정(0 · 1)을 흔들지 않는다
             ServiceCommitInfo        info;
             const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
             const bool               bTaken       = commitResult == ServiceStoreResult::Conflict && ( info._conflictIndex == 0 || info._conflictIndex == 1 );
@@ -1022,6 +1070,8 @@ namespace sw
             ServiceTransaction transaction;
             transaction.erase( Internal::getAccountExternalTable(), linkKey, pLink->_version );
             transaction.erase( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ) );
+            if ( Internal::stageSecretToRevokeQueue( _connection, transaction, identity._accountID, provider ) != ServiceStoreResult::Ok )
+                return LoginResult::StoreUnavailable;
             transaction.requireVersion( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), profile._version );
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.unlink.platform", nowMs );
             audit._before           = string( provider );
@@ -1191,6 +1241,9 @@ namespace sw
             const string digestHex( reinterpret_cast<const utf8*>( link._bytes.data() ), link._bytes.size() );
             transaction.erase( Internal::getAccountExternalTable(), link._key );
             transaction.erase( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ) );
+            // 연동 비밀(애플의 refresh token)은 계정과 함께 사라지기 전에 철회 대기열로 옮긴다 — 철회는 서비스가 제공자에 알린다.
+            if ( Internal::stageSecretToRevokeQueue( _connection, transaction, accountID, provider ) != ServiceStoreResult::Ok )
+                return LoginResult::StoreUnavailable;
         }
         ServiceRecord            linkRaw;
         const ServiceStoreResult linkRead = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
@@ -1224,6 +1277,38 @@ namespace sw
             const LoginRevokeReason reason = bReadable ? session._revokeReason : LoginRevokeReason::Administrative;
             _outcome._listRevoked.push_back( LoginSessionRef{ online._accountID, online._sessionID, reason } );
         }
+    }
+
+    ServiceStoreResult LoginStoreLogic::listRevocations( IServiceStoreConnection& connection, int32 maxCount, vector<LoginRevocationEntry>& outListEntry )
+    {
+        using Internal = LoginStoreLogicInternal;
+        vector<ServiceRecord>    listRecord;
+        const ServiceStoreResult listResult = connection.listRecords( Internal::getRevokeTable(), "", "", maxCount, false, listRecord );
+        if ( listResult != ServiceStoreResult::Ok )
+            return listResult;
+        for ( ServiceRecord& record : listRecord )
+        {
+            const size_t slash     = record._key.find( '/' );
+            uint64       accountID = 0;
+            if ( slash == string::npos || ServiceKeyUtil::parseHex64( string_view( record._key ).substr( slash + 1 ), accountID ) == false )
+            {
+                SW_LOG_WARNING( "login revoke queue key '%#' is malformed", record._key.c_str() );
+                continue;
+            }
+            LoginRevocationEntry& entry = outListEntry.emplace_back();
+            entry._key                  = record._key;
+            entry._provider             = record._key.substr( 0, slash );
+            entry._accountID            = accountID;
+            entry._sealedSecret         = std::move( record._bytes );
+        }
+        return ServiceStoreResult::Ok;
+    }
+
+    ServiceStoreResult LoginStoreLogic::eraseRevocation( IServiceStoreConnection& connection, string_view key )
+    {
+        ServiceTransaction transaction;
+        transaction.erase( LoginStoreLogicInternal::getRevokeTable(), key );
+        return connection.commit( transaction );
     }
 
     ServiceStoreResult LoginStoreLogic::readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity )

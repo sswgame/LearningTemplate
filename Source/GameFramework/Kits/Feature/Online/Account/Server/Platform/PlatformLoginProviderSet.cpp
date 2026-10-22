@@ -2,13 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Network/Transport/IStreamTransport.h"
-
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
-#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
 
 namespace sw
 {
@@ -28,23 +24,39 @@ namespace sw
         for ( const PlatformLoginProviderConfig& settings : listSettings )
         {
             Entry& entry      = _listEntry.emplace_back();
-            entry._httpClient = make_unique<HTTPClient>();
-            if ( entry._httpClient->initialize( StreamTransportFactory::createPlatformTransport(), StreamTransportConfig{}, HTTPClientConfig{} ) == false )
+            entry._httpClient = make_unique<OwnedHTTPClient>();
+            if ( entry._httpClient->initialize() == false )
             {
                 outError = "cannot start the HTTP client of platform login provider '" + settings._name + "'";
                 shutdown();
                 return false;
             }
-            vector<string> listHost;
-            const bool     bTLSReady = registerHostTLS( entry, settings._jwksURL, trustFile, listHost, outError ) &&
-                                   registerHostTLS( entry, settings._profileURL, trustFile, listHost, outError );
+            const bool bTLSReady = entry._httpClient->registerHostTLS( settings._jwksURL, trustFile, outError ) &&
+                                   entry._httpClient->registerHostTLS( settings._profileURL, trustFile, outError );
             if ( bTLSReady == false )
             {
                 outError = "platform login provider '" + settings._name + "': " + outError;
                 shutdown();
                 return false;
             }
-            entry._provider = PlatformLoginProviderFactory::create( settings, &NetSecurity::getProvider(), entry._httpClient.get() );
+            if ( settings._kind == PlatformLoginProviderKind::AppleSignIn )
+            {
+                // 교환 · 철회는 JWKS 와 다른 클라이언트로 한다(클라이언트의 응답은 소유한 쪽이 모두 회수한다).
+                entry._secondHTTPClient   = make_unique<OwnedHTTPClient>();
+                const string tokenURL     = settings._tokenURL.empty() ? string( AppleLoginProvider::kDefaultTokenURL ) : settings._tokenURL;
+                const string revokeURL    = settings._revokeURL.empty() ? string( AppleLoginProvider::kDefaultRevokeURL ) : settings._revokeURL;
+                const bool   bSecondReady = entry._secondHTTPClient->initialize() && entry._secondHTTPClient->registerHostTLS( tokenURL, trustFile, outError ) &&
+                                          entry._secondHTTPClient->registerHostTLS( revokeURL, trustFile, outError );
+                if ( bSecondReady == false )
+                {
+                    outError = "platform login provider '" + settings._name + "': " + ( outError.empty() ? string( "cannot start the HTTP client" ) : outError );
+                    shutdown();
+                    return false;
+                }
+                entry._provider = AppleLoginProvider::create( settings, &NetSecurity::getProvider(), &entry._httpClient->get(), &entry._secondHTTPClient->get() );
+            }
+            else
+                entry._provider = PlatformLoginProviderFactory::create( settings, &NetSecurity::getProvider(), &entry._httpClient->get() );
             if ( entry._provider == nullptr )
             {
                 outError = "platform login provider '" + settings._name + "' has invalid settings";
@@ -61,35 +73,9 @@ namespace sw
         {
             if ( entry._httpClient != nullptr )
                 entry._httpClient->shutdown(); // 날아가던 요청을 끝내고 TLS 컨텍스트를 놓는다
+            if ( entry._secondHTTPClient != nullptr )
+                entry._secondHTTPClient->shutdown();
         }
         _listEntry.clear();
-    }
-
-    bool PlatformLoginProviderSet::registerHostTLS( Entry& entry, string_view url, string_view trustFile, vector<string>& inoutListHost, string& outError )
-    {
-        if ( url.empty() )
-            return true;
-        HTTPAddress address;
-        if ( HTTPAddress::parse( url, address ) == false )
-        {
-            outError = "malformed URL '" + string( url ) + "'";
-            return false;
-        }
-        if ( address._bSecure == SW_FALSE )
-            return true;
-        if ( VectorUtil::contains( inoutListHost, address._host ) )
-            return true;
-        if ( trustFile.empty() )
-        {
-            outError = "https URL '" + string( url ) + "' needs platformTrustFile (a CA bundle PEM that verifies the provider)";
-            return false;
-        }
-        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( trustFile, address._host, outError );
-        if ( context == nullptr )
-            return false;
-        entry._httpClient->registerTLSContext( address._host, context.get() );
-        entry._listTLSContext.push_back( std::move( context ) );
-        inoutListHost.push_back( address._host );
-        return true;
     }
 } // namespace sw
