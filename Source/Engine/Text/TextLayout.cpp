@@ -199,7 +199,7 @@ namespace sw
 {
     TextLayoutEngine::TextLayoutEngine( FontService& fontService )
         : _fontService{ fontService }
-        , _pShaper{ ITextShaper::createDefault() }
+        , _pShaper{ fontService.getRasterizer().createShaper() }
         , _listRunScratch{}
         , _listShapedScratch{}
         , _listBreakScratch{}

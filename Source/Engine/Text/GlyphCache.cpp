@@ -15,9 +15,9 @@ namespace sw
 
 namespace sw
 {
-    GlyphCache::GlyphCache( IFontRasterizer& rasterizer )
+    GlyphCache::GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind )
         : _rasterizer{ rasterizer }
-        , _atlas{}
+        , _atlas{ kind }
         , _mapGlyph{}
         , _rasterParams{}
         , _scratchBitmap{}
@@ -35,7 +35,9 @@ namespace sw
             return &iter->second;
         }
 
-        if ( _rasterizer.rasterizeSdf( face, glyphIndex, _rasterParams, _scratchBitmap ) == false )
+        const bool bRasterized = _atlas.getFieldKind() == GlyphFieldKind::Msdf ? _rasterizer.rasterizeMsdf( face, glyphIndex, _rasterParams, _scratchBitmap )
+                                                                               : _rasterizer.rasterizeSdf( face, glyphIndex, _rasterParams, _scratchBitmap );
+        if ( bRasterized == false )
             return nullptr;
         SW_PROFILE_COUNT( "Text.GlyphsRasterized", 1 );
 

@@ -11,6 +11,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Text/TextTypes.h"
+
 namespace sw
 {
     /** @brief 아틀라스 안의 사각형 하나입니다(페이지와 텍셀 좌표). */
@@ -29,7 +31,8 @@ namespace sw
     /** @brief 렌더러에 넘기는 업로드 한 건입니다. 페이지의 한 구간과 그 바이트 사본(빈틈없는 행)을 가집니다. */
     struct GlyphAtlasUpload
     {
-        vector<uint8> _bytes{};                ///< 구간 바이트 사본입니다(행 우선이며 `_width` 바이트 행).
+        vector<uint8> _bytes{};                ///< 구간 바이트 사본입니다(행 우선이며 `_width` × `_bytesPerTexel` 바이트 행).
+        uint8         _bytesPerTexel{ 1 };     ///< 텍셀당 바이트입니다(SDF 1, MSDF 4). 렌더러가 페이지 텍스처 형식을 이것으로 고른다.
         uint16        _page{ 0 };              ///< 페이지 번호입니다.
         uint16        _x{ 0 };                 ///< 구간 왼쪽(텍셀)
         uint16        _y{ 0 };                 ///< 구간 위(텍셀)
@@ -43,23 +46,24 @@ namespace sw
 {
     /**
      * @class GlyphAtlas
-     * @brief 글리프 SDF 를 담는 페이지 모음입니다(게임 스레드 전용).
+     * @brief 글리프 거리장(SDF 는 R8, MSDF 는 RGBA8)을 담는 페이지 모음입니다(게임 스레드 전용).
+     * @details 종류는 만들 때 정하고 바뀌지 않는다 — 페이지 형식이 모두 같아야 사각형 하나가 어느 페이지에 있든 같은 셰이더 경로로 그려진다.
      */
     class SW_API GlyphAtlas
     {
     public:
-        static constexpr uint32 kPageSize     = 1024; ///< 페이지 한 변(텍셀). R8 이라 페이지 1 MiB
+        static constexpr uint32 kPageSize     = 1024; ///< 페이지 한 변(텍셀). SDF(R8)면 페이지 1 MiB, MSDF(RGBA8)면 4 MiB
         static constexpr uint32 kMaxPageCount = 8;    ///< 이 수를 넘으면 오래된 페이지를 비웁니다.
         static constexpr uint32 kPadding      = 1;    ///< 글리프 사이 빈 텍셀(쌍선형 표본이 이웃을 읽지 않게)
 
-        GlyphAtlas();
+        explicit GlyphAtlas( GlyphFieldKind kind );
 
         /**
          * @brief @p width × @p height 영역을 잡습니다(여백은 이쪽이 더합니다). 지금 페이지들에 자리가 없으면 페이지를 늘립니다.
          * @return 최대 페이지까지 다 차서 자리가 없으면 false 입니다. 부르는 쪽(GlyphCache)이 `evictLeastRecentlyUsedPage` 뒤에 다시 부릅니다.
          */
         [[nodiscard]] bool allocate( uint32 width, uint32 height, GlyphAtlasRect& outRect );
-        /** @brief 잡은 영역에 바이트를 씁니다(행 우선, 빈틈없는 행). 업로드 구간으로 기록합니다. */
+        /** @brief 잡은 영역에 바이트를 씁니다(행 우선, 빈틈없는 행 — 행마다 영역 너비 × 텍셀당 바이트). 업로드 구간으로 기록합니다. */
         void write( const GlyphAtlasRect& rect, const uint8* pBytes );
         /** @brief 이번 프레임에 그 페이지를 썼다고 적습니다(비우기 순서의 근거). */
         void markPageUsed( uint32 page, uint64 frameIndex );
@@ -72,9 +76,13 @@ namespace sw
         /** @brief 지난 호출 뒤 바뀐 구간들을 바이트 사본과 함께 @p outListUpload 뒤에 붙이고 비웁니다(게임 스레드가 패킷을 채울 때). */
         void takeUploads( vector<GlyphAtlasUpload>& outListUpload );
 
+        /** @brief 이 아틀라스가 담는 거리장 종류입니다. */
+        GlyphFieldKind getFieldKind() const { return _kind; }
+        /** @brief 텍셀당 바이트입니다(SDF 1, MSDF 4). */
+        uint32 getBytesPerTexel() const { return getFieldBytesPerTexel( _kind ); }
         /** @brief 지금 페이지 수입니다. */
         uint32 getPageCount() const { return static_cast<uint32>( _listPage.size() ); }
-        /** @brief 페이지 바이트입니다(`kPageSize` × `kPageSize`, 행 우선). */
+        /** @brief 페이지 바이트입니다(`kPageSize` × `kPageSize` × 텍셀당 바이트, 행 우선). */
         const uint8* getPageBytes( uint32 page ) const { return _listPage[page]._bytes.data(); }
         /** @brief 페이지를 비울 때마다 오릅니다. 칠해 둔 글자 사각형이 이 값과 다르면 다시 칠합니다. */
         uint32 getGeneration() const { return _generation; }
@@ -103,7 +111,8 @@ namespace sw
         /** @brief 마디 @p nodeIndex 에서 시작해 너비 @p width 가 들어가면 그 위치의 바닥 높이를 반환합니다. */
         [[nodiscard]] static bool findFitHeight( const Page& page, size_t nodeIndex, uint32 width, uint32 height, uint32& outY );
 
-        vector<Page> _listPage;
-        uint32       _generation;
+        vector<Page>   _listPage;
+        GlyphFieldKind _kind;
+        uint32         _generation;
     };
 } // namespace sw

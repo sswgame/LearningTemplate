@@ -14,6 +14,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/IFontRasterizer.h"
+#include "Engine/Text/SimpleTextShaper.h"
 
 namespace sw::test
 {
@@ -149,6 +150,23 @@ namespace sw::test
             outBitmap._width     = _sdfSize;
             outBitmap._height    = _sdfSize;
             outBitmap._bearingPx = float2{ 0.0f, static_cast<float32>( _sdfSize ) };
+            return true;
+        }
+
+        /** @brief 가짜 면에는 폰트 바이트가 없어 HarfBuzz 가 셰이핑할 수 없다 — cmap 만 보는 단순 셰이퍼를 낸다(복합 문자 빌드에서도 같다). */
+        unique_ptr<ITextShaper> createShaper() const override { return make_unique<SimpleTextShaper>(); }
+
+        /** @brief MSDF 도 SDF 와 같은 크기 · 베어링의 RGBA 128(윤곽 위의 값)로 채운다 — 아틀라스 자리 계산만 보는 테스트용이다. */
+        bool rasterizeMsdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
+        {
+            SdfGlyphBitmap sdf{};
+            if ( rasterizeSdf( face, glyphIndex, params, sdf ) == false )
+                return false;
+            outBitmap._advancePx = sdf._advancePx;
+            outBitmap._bearingPx = sdf._bearingPx;
+            outBitmap._width     = sdf._width;
+            outBitmap._height    = sdf._height;
+            outBitmap._bytes.assign( sdf._bytes.size() * 4, static_cast<uint8>( 128 ) );
             return true;
         }
 

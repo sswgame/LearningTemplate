@@ -69,6 +69,27 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 글리프 아틀라스에 담는 거리장 종류입니다(폰트 카탈로그 `_glyphField`).
+     * @details `Sdf` 는 단일 채널 R8(FreeType `sdf` 렌더러, 결정 R2)이고 `Msdf` 는 RGBA8 이다 — RGB 가 멀티채널 거리장, A 가 일반 SDF 다. MSDF 는 큰 글자의 모서리가 날카롭지만
+     *          글리프당 CPU 비용이 더 들고 페이지 메모리가 네 배다. 셰이더가 알도록 글리프 사각형에 `CanvasQuadFlag::kMultiChannelGlyph` 가 붙는다.
+     */
+    ENUM()
+    enum class GlyphFieldKind : uint8
+    {
+        Sdf,
+        Msdf
+    };
+
+    /** @brief 거리장 한 종류의 텍셀당 바이트 수입니다(`Sdf` 1, `Msdf` 4). */
+    inline constexpr uint32 getFieldBytesPerTexel( GlyphFieldKind kind )
+    {
+        return kind == GlyphFieldKind::Msdf ? 4u : 1u;
+    }
+} // namespace sw
+
+namespace sw
+{
     /** @brief SDF 래스터화 인자입니다. */
     struct SdfRasterParams
     {
@@ -80,12 +101,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief SDF 글리프 비트맵입니다(1 채널 8 비트, 128 = 윤곽, 큰 값 = 안쪽).
+     * @brief 거리장 글리프 비트맵입니다(SDF 는 1 채널 8 비트, MSDF 는 RGBA 4 채널 8 비트 — 128 = 윤곽, 큰 값 = 안쪽).
      * @details 비트맵은 윤곽 둘레로 `_spreadPx` 만큼 넓다. 빈 글리프(공백)는 크기 0 이고 `_advancePx` 만 있다.
      */
     struct SdfGlyphBitmap
     {
-        vector<uint8> _bytes{};           ///< 행 우선이며 빈틈없는 행(`_width` 바이트)입니다.
+        vector<uint8> _bytes{};           ///< 행 우선이며 빈틈없는 행(`_width` × 텍셀당 바이트)입니다.
         float2        _bearingPx{};       ///< 원점에서 비트맵 왼쪽 위까지(y 는 기준선 위가 +, 래스터 픽셀)
         float32       _advancePx{ 0.0f }; ///< 래스터 픽셀 단위 전진입니다.
         uint32        _width{ 0 };

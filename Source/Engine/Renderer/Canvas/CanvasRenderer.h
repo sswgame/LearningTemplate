@@ -94,11 +94,12 @@ namespace sw
         static void mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount );
 
     private:
-        /** @brief 아틀라스 페이지 하나입니다. CPU 미러(R8, 페이지 크기²)와 그 텍스처, SRV, 이번 프레임에 바뀐 구간을 담습니다. */
+        /** @brief 아틀라스 페이지 하나입니다. CPU 미러(SDF 는 R8, MSDF 는 RGBA8, 페이지 크기²)와 그 텍스처, SRV, 이번 프레임에 바뀐 구간을 담습니다. */
         struct AtlasPage
         {
-            vector<uint8>          _bytes{};     ///< 미러(행 우선, `GlyphAtlas::kPageSize` 바이트 행)
-            vector<GlyphAtlasRect> _listDirty{}; ///< 업로드할 구간(미러 기준)
+            vector<uint8>          _bytes{};            ///< 미러(행 우선, `GlyphAtlas::kPageSize` × 텍셀당 바이트 행)
+            uint8                  _bytesPerTexel{ 1 }; ///< 미러의 텍셀당 바이트입니다(첫 업로드가 정하고, 페이지 텍스처 형식이 이것을 따른다).
+            vector<GlyphAtlasRect> _listDirty{};        ///< 업로드할 구간(미러 기준)
             RHITextureHandle       _texture{ 0 };
             RHIDescriptorIndex     _srv{ kInvalidDescriptorIndex };
             uint8                  _bWholePageDirty{ SW_FALSE }; ///< 페이지 전체를 업로드해야 한다(새 텍스처이거나 비운 페이지)

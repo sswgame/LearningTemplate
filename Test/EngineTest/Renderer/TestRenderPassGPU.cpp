@@ -8606,7 +8606,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
         const sw::FontFaceID face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
         SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
-        sw::GlyphCache      glyphCache( *rasterizer );
+        sw::GlyphCache      glyphCache( *rasterizer, sw::GlyphFieldKind::Sdf );
         sw::CanvasFrameData canvas{};
         canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( without.getWidth() ), static_cast<float32>( without.getHeight() ) };
         {

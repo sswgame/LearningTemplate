@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    class ITextShaper;
+
     /**
      * @class IFontRasterizer
      * @brief 폰트 면과 글리프 래스터화를 담당하는 인터페이스입니다(언리얼 `FFreeTypeFace`, 유니티 `FontEngine` 에 해당).
@@ -50,6 +52,11 @@ namespace sw
         [[nodiscard]] virtual bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const = 0;
         /** @brief 두 글리프 사이 커닝(em 비율, 보통 음수)입니다. 테이블이 없으면 0 입니다. */
         virtual float32 getKerning( FontFaceID face, uint32 leftGlyph, uint32 rightGlyph ) const = 0;
+        /**
+         * @brief 이 래스터라이저의 면을 셰이핑할 셰이퍼를 만듭니다. 셰이퍼는 면 바이트(`findFaceBytes`)로 자기 면을 만들기 때문에 바이트를 주는 래스터라이저가 고른다 —
+         *        FreeType 은 이 빌드의 기본 셰이퍼(`ITextShaper::createDefault`, 복합 문자 빌드는 HarfBuzz)이고, 폰트 바이트가 없는 테스트의 가짜는 단순 셰이퍼다.
+         */
+        [[nodiscard]] virtual unique_ptr<ITextShaper> createShaper() const = 0;
         /** @brief 면을 열 때 받은 파일 바이트입니다(셰이퍼가 같은 바이트로 자기 면을 만듭니다). 없는 면이면 nullptr 입니다. */
         virtual const vector<uint8>* findFaceBytes( FontFaceID face ) const = 0;
 
@@ -58,5 +65,10 @@ namespace sw
          * @return 실패(없는 면, 윤곽 없는 비트맵 폰트, SDF 모듈 없음)면 false 를 반환하고 로그를 남깁니다. 공백처럼 윤곽이 빈 글리프는 true 이며 크기가 0 입니다.
          */
         [[nodiscard]] virtual bool rasterizeSdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) = 0;
+        /**
+         * @brief 글리프를 MSDF(RGBA8 — RGB 멀티채널, A 일반 SDF)로 래스터화합니다. 크기 · 베어링 · 전진은 `rasterizeSdf` 와 같은 규약이라 같은 아틀라스 자리 계산을 쓴다.
+         * @return 실패(없는 면, 윤곽 없는 비트맵 폰트)면 false 를 반환하고 로그를 남깁니다. 공백처럼 윤곽이 빈 글리프는 true 이며 크기가 0 입니다.
+         */
+        [[nodiscard]] virtual bool rasterizeMsdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) = 0;
     };
 } // namespace sw
