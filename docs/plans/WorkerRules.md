@@ -64,6 +64,7 @@ py -3 -m Scripts worktree-make <이름> --base main
 
 ## 7. 재현 명령 (이 PC)
 
+- `vcpkg.exe` 를 손으로 부르지 않는다. 설치는 CMake 구성이 `--x-install-root`(`VCPKG_INSTALLED_DIR`)를 명시해 한다. 설치 루트를 안 준 채 작업 폴더에서 부르면 그 폴더에 `x64-windows/` · `vcpkg/` 가 생긴다(2026-10-22 main 루트에서 생겨 지움).
 - Release 빌드 폴더는 `-DSW_GAMES=ALL` 로 구성돼 있습니다(구성은 `shared-lock acquire vcpkg --owner <이름>` 안에서). 게임 모듈만: `cmake --build build/Ninja-Release --target SWGame_<게임>`.
 - 벤치: `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=GameObjectBenchTest.<이름> --load_suites=only --host_suites=all`. 합성 A/B: `py -3 -m Scripts perf-compare --app build/Ninja-Release/Bin/App.exe --cases tickCostMovers tickCostSmallScene tickCostChurn tickCostRagdolls --runs 5`.
 - 시나리오: `App.exe -game=<게임> -dx12 -scenario=game/<게임>/automation/<이름>.scenario.xml`(종료 코드 0 = 통과). GPU 잠금은 [작업 방식](../11_Workflow.md) 2절.
