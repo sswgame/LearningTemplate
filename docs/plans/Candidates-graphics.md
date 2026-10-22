@@ -82,4 +82,10 @@
 왜 필요한가: `rhi.removeDevice` 로 DX12(장치 제거) · Vulkan(손실 상태로 둠) 모두 프레임을 계속 돌고 종료 코드 0 으로 끝난다(2026-10-15 Vulkan 런타임 3/3 · 에디터 2/2, DX12 1/1). 남은 것은 드라이버 안의 대기(첫 `VK_ERROR_DEVICE_LOST` 를 돌려주기 전)뿐이다.
 착수 조건 / 남은 것: 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 매달린 스레드의 스택을 남긴다.
 
+### ShaderPrefixAndFormat
+제목: 셰이더 이름의 sw 접두를 없애고 clang-format 을 셰이더에도 건다
+옛번호: 없음
+왜 필요한가: (1) 공유 헤더 함수 · 타입의 `sw` / `Sw` 접두는 FXC(DX11 전용 — `ShaderCompiler.cpp`) 에 네임스페이스가 없어서 붙였다. 이름이 겹치면 셰이더 컴파일 오류로 멈추므로(오버로드만 조용히 공존) 접두의 이득이 작다. `SW_` 매크로 접두와 `g_` 전역은 매크로가 조용히 덮이고 C++ 이 이름으로 묶으므로 그대로 둔다. DX11 백엔드를 접으면 `sw::` 네임스페이스도 쓸 수 있다(결정 필요). (2) `.hlsl` / `.hlsli` 59 개는 어떤 포맷 도구에도 안 걸린다(고정판 20.1.8 로 59/59 가 다르다, 탭 들여쓰기). 그대로 `.clang-format` 을 걸면 cbuffer 멤버 들여쓰기가 사라지고 `[numthreads(...)]` 가 `void` 와 한 줄로 붙는다 — 셰이더용 설정(`Resource/` 아래 `.clang-format`)을 먼저 만들어 확인한다.
+착수 조건 / 남은 것: MaterialShaderHooks H3~H6 병합 뒤(같은 파일을 고치는 중). 접두 제거는 `CheckShaderConventions.py` 와 [NamingScripts](../agents/NamingScripts.md) HLSL 절을 같은 커밋에서 고치고 C++ 이 이름으로 묶는 함수가 없는지 확인한다. 포맷은 설정 → `FormatClangFormat` 대상에 셰이더 추가 → 한 번에 포맷 + 쿠킹 스탬프 갱신 순서.
+
 ## 조건부
