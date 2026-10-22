@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -61,6 +62,7 @@ namespace sw
          *          `wait()` 한 쪽이 그 자리에서 한다. 렌더 텍스처 · CPU 텍스처는 읽을 파일이 없어 업로드 단계만 있다.
          *          **수명 계약**: 핸들이 준비된 텍스처의 참조 하나를 쥐고, 마지막 핸들이 사라질 때 놓는다. 업로드가 끝나면 `getReloadGeneration` 이 올라
          *          로드 중 텍스처를 빌려 둔 머티리얼이 새 SRV 를 받는다(`Material::refreshTextureBindings`).
+         *          같은 경로를 읽는 중인 로드를 받으면 그 로드가 올릴 디바이스를 @p pDevice 로 바꾼다 — 앞서 요청한 디바이스는 이미 내려갔을 수 있다.
          * @param start 새 로드의 로드 단계(디스크 읽기)를 어디서 시작하는가입니다. `OnCallingThread` 여도 업로드는 `wait()` 나 펌프가 한다.
          */
         TextureHandle request( string_view relativePath, IRHIDevice* pDevice, AssetLoadStart start );
@@ -72,10 +74,11 @@ namespace sw
          */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /**
-         * @brief 워커가 읽기를 마친 텍스처를 GPU 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 올린 수를 반환합니다.
+         * @brief 워커가 읽기를 마친 텍스처를 @p pDevice 에 올립니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). 올린 수를 반환합니다.
          * @details 한 프레임에 @p maxCount 개까지만 올린다 — 한꺼번에 도착한 수백 장이 한 프레임을 늘리지 않게(언리얼 텍스처 스트리밍의 프레임당 예산과 같다).
+         *          요청한 디바이스가 아니라 지금 올리는 디바이스로 올린다 — 요청 뒤 디바이스가 내려가고(백엔드 교체 · 테스트의 디바이스 차례) 새로 섰으면 옛 주소는 죽었다.
          */
-        uint32 completePendingLoads( uint32 maxCount );
+        uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
         /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
         static constexpr uint32 kMaxUploadsPerFrame = 8;
         /** @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 시나리오의 스크린샷이 로드 중 텍스처를 찍지 않게 기다릴 때 씁니다(`AutomationRunner`). */
@@ -197,7 +200,7 @@ namespace sw
         unique_ptr<DDSImageData>     _pImage;    ///< 로드 단계가 읽은 그림(파일만). 완료 단계가 올리고 버린다
         string                       _loadError; ///< 로드 단계의 실패 이유 — 완료 단계가 드러낸다
         weak_ptr<TextureCache::Impl> _pCache;
-        IRHIDevice*                  _pDevice;
+        atomic<IRHIDevice*>          _pDevice;  ///< 올릴 디바이스 — 마지막으로 요청한 쪽 · 펌프가 자기 것으로 바꾼다(처음 요청한 디바이스는 이미 내려갔을 수 있다)
         Texture2D*                   _pTexture; ///< 항목의 텍스처 객체(항목이 소유한다)
         uint32                       _renderTargetWidth;
         uint32                       _renderTargetHeight;

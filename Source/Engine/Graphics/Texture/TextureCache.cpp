@@ -174,7 +174,11 @@ namespace sw
             {
                 shared_ptr<TextureLoadBlock> pInFlight = entry._pLoadBlock.lock();
                 if ( pInFlight != nullptr )
+                {
+                    // 기다린 쪽이 완료를 이 디바이스로 실행한다 — 앞선 요청의 디바이스는 내려갔을 수 있다(펌프 없는 테스트의 디바이스 차례).
+                    pInFlight->_pDevice.store( pDevice, std::memory_order_release );
                     return TextureHandle{ std::move( pInFlight ) };
+                }
                 // 로드 블록이 아닌 길(`reload` · `resizeRenderTarget`, 디바이스 스레드)이 올리는 중이다 — 짧게 기다린다.
                 _impl->_cvLoaded.wait( lock );
                 continue;
@@ -231,8 +235,10 @@ namespace sw
         return pTexture.get();
     }
 
-    uint32 TextureCache::completePendingLoads( uint32 maxCount )
+    uint32 TextureCache::completePendingLoads( IRHIDevice* pDevice, uint32 maxCount )
     {
+        if ( pDevice == nullptr )
+            return 0;
         vector<shared_ptr<TextureLoadBlock>> listBlock;
         {
             std::scoped_lock<mutex> lock{ _impl->_awaitingMutex };
@@ -246,6 +252,7 @@ namespace sw
         uint32 completedCount = 0;
         for ( const shared_ptr<TextureLoadBlock>& pBlock : listBlock )
         {
+            pBlock->_pDevice.store( pDevice, std::memory_order_release );
             if ( pBlock->runCompletionIfPending() )
                 ++completedCount;
         }
@@ -608,7 +615,7 @@ namespace sw
         // 캐시가 먼저 사라졌으면(종료) 놓을 항목이 없다.
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache != nullptr )
-            pCache->releaseReference( getPath(), _pDevice );
+            pCache->releaseReference( getPath(), _pDevice.load( std::memory_order_acquire ) );
     }
 
     shared_ptr<Texture2D> TextureLoadBlock::getAsset() const
@@ -666,24 +673,25 @@ namespace sw
                 break;
             }
         }
-        bool bReady = false;
+        bool              bReady  = false;
+        IRHIDevice* const pDevice = _pDevice.load( std::memory_order_acquire );
         if ( _loadError.empty() )
         {
             switch ( _source )
             {
                 case Source::File:
                 {
-                    bReady = _pTexture->loadFromImage( _pDevice, getPath(), *_pImage );
+                    bReady = _pTexture->loadFromImage( pDevice, getPath(), *_pImage );
                     break;
                 }
                 case Source::RenderTarget:
                 {
-                    bReady = _pTexture->createRenderTarget( _pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::kOffscreenColorFormat );
+                    bReady = _pTexture->createRenderTarget( pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::kOffscreenColorFormat );
                     break;
                 }
                 case Source::CPUBytes:
                 {
-                    bReady = _pTexture->loadFromCPUBytes( _pDevice );
+                    bReady = _pTexture->loadFromCPUBytes( pDevice );
                     break;
                 }
             }
