@@ -19,6 +19,7 @@ SWCOOK 4
 5fc1348423cd9ebe lightdata.hlsli
 72c27ab06dc24b4b postchain.hlsl
 73901f74d7f63010 canvas.hlsl
+744349509539c766 bindingslots.hlsli
 7e1b319689474394 water.hlsl
 7fc422e76e88cc29 binding.hlsli
 8687732d87cba8ec fullscreenblit.hlsl
@@ -28,7 +29,6 @@ SWCOOK 4
 a16db7b2113a3424 colorvision.hlsli
 aead2c48133aba58 gpucull.hlsl
 b0bce93ab1112469 batchdata.hlsli
-b38b3c262cd6db12 bindingslots.hlsli
 b536aa3df9bce513 @toolchain
 bafa2f47c5c9e297 vfxsimulate.hlsl
 bc272d7686702654 tonemap.hlsl
