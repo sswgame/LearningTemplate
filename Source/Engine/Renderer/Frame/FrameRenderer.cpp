@@ -104,6 +104,7 @@ namespace sw
         , _listMaterialFallback{}
         , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
+        , _occlusionTilesPlaceholder{}
         , _psoCache{}
         , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
@@ -113,6 +114,7 @@ namespace sw
         , _particlePSOKey{ 0 }
         , _canvasFrame{}
         , _pLastSwapchainWriter{ nullptr }
+        , _bUpscalePostChainLogged{ SW_FALSE }
         , _pMainOutputCanvasView{ nullptr }
         , _listScenePreviewRenderer{}
         , _statusMessage{}

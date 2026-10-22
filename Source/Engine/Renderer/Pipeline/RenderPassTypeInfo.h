@@ -50,6 +50,9 @@ namespace sw
      */
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
 
+    /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
+    inline constexpr const utf8* kPassFsrRcasDefine = "SW_PASS_FSR_RCAS=1";
+
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
      * @details 머티리얼의 정적 스위치(`Outline`)가 켭니다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
@@ -91,8 +94,14 @@ namespace sw
     /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";
 
+    /**
+     * @brief 후처리 체인(postchain.hlsl)이 톤맵까지 하게 하는 퍼뮤테이션 이름입니다(값을 붙인 `SW_POST_TONEMAP=1` 도 켠 것이다). 파이프라인 XML 의 Present 패스가 적습니다.
+     * @details 자동 노출은 톤맵하는 패스 앞에서 잰다(`passAppliesTonemap`). 이 철자와 postchain.hlsl 의 `#if defined( SW_POST_TONEMAP )` 이 어긋나면 노출을 재지 않는다.
+     */
+    inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
+
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::DepthHistory ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::OcclusionTiles ) + 1;
 
     /**
      * @struct RenderPassTraitFlag
@@ -201,4 +210,7 @@ namespace sw
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
      */
     SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
+
+    /** @brief 패스가 HDR 색을 톤맵하는지 반환합니다 — Tonemap 이거나 퍼뮤테이션 `kPostTonemapDefine` 을 켠 Present(후처리 체인)입니다. */
+    SW_API bool passAppliesTonemap( const RenderGraphPassDesc& passDesc );
 } // namespace sw

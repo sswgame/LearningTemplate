@@ -413,6 +413,10 @@ namespace sw
                 case RenderPassType::VfxSimulation:
                 case RenderPassType::VfxMeshInstance:
                 case RenderPassType::DepthHistory:
+                case RenderPassType::AutoExposure:
+                case RenderPassType::UpscaleEasu:
+                case RenderPassType::UpscaleRcas:
+                case RenderPassType::OcclusionTiles:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;
@@ -446,6 +450,7 @@ namespace sw
         FramePassContext&          context  = input._context;
         const RenderGraphPassDesc& passDesc = input._passDesc;
         registerDeclaredInputs( context, passDesc );
+        recordAutoExposure( context, passDesc );
         const hashed_string* pTarget = &input._declaredColor[0]._attachment;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
@@ -677,10 +682,10 @@ namespace sw
                 return;
             }
         }
-        // 컷 프레임(언리얼 `bCameraCut`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을 바인딩해 섞어도 이번 이미지만 남게
-        // 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며 D3D 의 복사는 같은
-        // 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = ( activeView._settings._bCut == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 — `ViewTarget::_bHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
+        // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
+        const bool bCut = ( activeView._bHistoryReset == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
         if ( bCut )
             registerPassTexture( context, names._gbufferAlbedo, pSrcName );
         else if ( activeView._taaHistory != 0 )
@@ -732,6 +737,10 @@ namespace sw
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
+            // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 잰다(Tonemap 패스와 같은 자리).
+            recordAutoExposure( context, passDesc );
+            // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
+            const bool             bUpscale = recordUpscaleEasu( context, srcName );
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = dstTarget;
@@ -763,7 +772,17 @@ namespace sw
                 }
                 context._pCmd->setViewport( viewport );
             }
-            drawFullscreen( context, psoBlit );
+            if ( bUpscale )
+            {
+                const float4& rect      = activeView._settings._screenRect;
+                const float32 viewportX = bFullRect ? 0.0f : rect._x * static_cast<float32>( outputWidth );
+                const float32 viewportY = bFullRect ? 0.0f : rect._y * static_cast<float32>( outputHeight );
+                drawUpscaleRcas( context, target._format, viewportX, viewportY );
+            }
+            else
+            {
+                drawFullscreen( context, psoBlit );
+            }
             context._pCmd->endRenderPass();
             if ( bCaptureToBack )
                 context._pCmd->blitTexture( dstTarget, 0 );
@@ -1005,23 +1024,25 @@ namespace sw
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
         const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
         const RHIDescriptorIndex cookie = srvOf( names._light2DCookieAtlas );
+        const RHIDescriptorIndex expo   = srvOf( names._autoExposure );
         // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
         const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
         if ( material != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
-        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom, depth|shadow].
-        // 한 슬롯을 나눠 쓰는 것들은 같은 패스에서 함께 읽히지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom, 쿠키는 빛 받는 스프라이트 — 2D 패스엔 알베도 · AO 가 없다).
+        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom|autoExposure, depth|shadow].
+        // 한 슬롯을 나눠 쓰는 것들은 같은 패스에서 함께 읽히지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom, 쿠키는 빛 받는 스프라이트 — 2D 패스엔 알베도 · AO 가 없다,
+        // 자동 노출은 톤맵하는 패스 — Tonemap · 후처리 체인 Present 는 노멀 · 반해상도 블룸을 읽지 않는다).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
         const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ( ao != kInvalidDescriptorIndex ? ao : cookie );
-        const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : bloom;
+        const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : ( bloom != kInvalidDescriptorIndex ? bloom : expo );
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );
         if ( slot1 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot1, 1 );
-        if ( normal != kInvalidDescriptorIndex || bloom != kInvalidDescriptorIndex )
+        if ( slot2 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot2, 2 );
         if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot3, 3 );
@@ -1063,6 +1084,16 @@ namespace sw
     bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const
     {
         return _pLastSwapchainWriter == nullptr || &passDesc == _pLastSwapchainWriter;
+    }
+
+    const RenderGraphPassDesc* FrameRenderer::findTonemapPass() const
+    {
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( passAppliesTonemap( pass ) )
+                return &pass;
+        }
+        return nullptr;
     }
 
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const

@@ -52,6 +52,10 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
             publishRenderTargets();
+        // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
+        const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
+        const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
+        prepareUpscale( _mainView, viewportWidth, viewportHeight );
         _capture.ensurePresent( _outputWidth, _outputHeight );
     }
 
@@ -82,8 +86,11 @@ namespace sw
         // 그래서 코드가 이름으로 포맷 · 클리어 색을 짐작해 첨부를 더 만드는 길이 없다(Swapchain 은 첨부가 아니라 백버퍼다).
         ensureTaaHistory( view );
         ensureDepthHistory( view );
-        // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다.
+        ensureOcclusionTiles( view );
+        ensureAutoExposureHistory( view );
+        // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다. 시간 누적 기록(TAA · 지난 뷰-투영 · 노출)도 새것이라 첫 프레임은 버린다.
         view._bLastFrameDepthValid = SW_FALSE;
+        view._bHasHistory          = SW_FALSE;
         return true;
     }
 
@@ -172,8 +179,12 @@ namespace sw
 
     void FrameRenderer::releaseViewTransients( ViewTarget& view )
     {
+        releaseAutoExposureHistory( view );
+        releaseUpscaleIntermediate( view );
+        view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {
+            view._occlusionTiles = RHIStructuredBufferSlot{};
             view._transientPool.forget();
             view._taaHistory           = 0;
             view._taaHistorySrv        = kInvalidDescriptorIndex;
@@ -183,6 +194,8 @@ namespace sw
             return;
         }
 
+        // 가림 타일은 깊이 히스토리 크기를 따른다.
+        view._occlusionTiles.release( _pDevice );
         // 깊이 히스토리도 풀 크기를 따른다. UAV 등록을 먼저 놓고 텍스처를 지운다(버퍼 슬롯과 같은 순서 — 레지스트리에 죽은 핸들을 남기지 않는다).
         if ( view._depthHistoryUav != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessUav( view._depthHistoryUav );

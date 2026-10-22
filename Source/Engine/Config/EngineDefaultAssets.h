@@ -152,6 +152,12 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderDepthHistory; ///< 뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다
         PROPERTY( Required )
+        DataPath _shaderAutoExposure; ///< 자동 노출 측정 · 적응(풀스크린 1x1) — 톤맵이 그 EV 를 읽는다
+        PROPERTY( Required )
+        DataPath _shaderUpscale; ///< FSR 1 업스케일(EASU · RCAS) — Present 가 배율 크기 뷰를 출력 크기로 키울 때(graphics.upscaler)
+        PROPERTY( Required )
+        DataPath _shaderOcclusionTiles; ///< 가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다
+        PROPERTY( Required )
         DataPath _shaderFullscreenTriangle; ///< 전체 화면 삼각형 정점 셰이더
         PROPERTY( Required )
         DataPath _shaderSsao; ///< SSAO

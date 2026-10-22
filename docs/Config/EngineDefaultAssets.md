@@ -80,6 +80,9 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderVfxSimulation` | `DataPath` | — |  |  | GPU 방출기의 입자 시뮬레이션(컴퓨트) |
 | `_shaderVfxMeshInstance` | `DataPath` | — |  |  | GPU 메시 입자의 인스턴스 쓰기(컴퓨트) |
 | `_shaderDepthHistory` | `DataPath` | — |  |  | 뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다 |
+| `_shaderAutoExposure` | `DataPath` | — |  |  | 자동 노출 측정 · 적응(풀스크린 1x1) — 톤맵이 그 EV 를 읽는다 |
+| `_shaderUpscale` | `DataPath` | — |  |  | FSR 1 업스케일(EASU · RCAS) — Present 가 배율 크기 뷰를 출력 크기로 키울 때(graphics.upscaler) |
+| `_shaderOcclusionTiles` | `DataPath` | — |  |  | 가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다 |
 | `_shaderFullscreenTriangle` | `DataPath` | — |  |  | 전체 화면 삼각형 정점 셰이더 |
 | `_shaderSsao` | `DataPath` | — |  |  | SSAO |
 | `_shaderTaa` | `DataPath` | — |  |  | TAA |

@@ -50,12 +50,12 @@
 		<Option value="ultra" text="settings.graphics.quality.ultra"/>
 		<Option value="custom" text="settings.graphics.quality.custom"/>
 	</Setting>
+	<!-- 업스케일러는 렌더 배율(graphics.renderScale)로 작게 그린 화면을 키우는 필터다 — off 선형, spatial FSR 1(EASU + RCAS). 배율 1 이면 키울 것이 없다. -->
 	<Setting id="graphics.upscaler" category="graphics" type="enum" default="off" target="gv:gv_upscaler" text="settings.graphics.upscaler">
 		<Option value="off" text="settings.common.off"/>
 		<Option value="spatial" text="settings.graphics.upscaler.spatial"/>
 	</Setting>
-	<Setting id="graphics.renderScale" category="graphics" type="float" default="1" min="0.5" max="1" step="0.05" target="gv:gv_renderScale"
-	         enabledWhen="graphics.upscaler=off" text="settings.graphics.renderScale"/>
+	<Setting id="graphics.renderScale" category="graphics" type="float" default="1" min="0.5" max="1" step="0.05" target="gv:gv_renderScale" text="settings.graphics.renderScale"/>
 	<Setting id="graphics.shadowQuality" category="graphics" type="enum" default="high" target="gv:gv_shadowMapResolution" text="settings.graphics.shadowQuality">
 		<Option value="low" targetValue="1024"/>
 		<Option value="medium" targetValue="1536"/>

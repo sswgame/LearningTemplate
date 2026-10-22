@@ -109,6 +109,20 @@ namespace sw
         VfxMeshInstance,
         /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depthhistory.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
         DepthHistory,
+        /**
+         * @brief 자동 노출의 측정 · 적응 풀스크린(autoexposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
+         *        톤맵하는 패스(Tonemap, 후처리 체인 Present)가 자기 그리기 바로 앞에 같은 리스트로 기록한다(`FrameRenderer::recordAutoExposure`).
+         */
+        AutoExposure,
+        /// @brief FSR 1 의 EASU(fsr1.hlsl) — Present 원본(배율 크기)을 뷰포트 크기 중간 RT 로 키웁니다. Present 가 렌더 패스를 열기 전에 기록한다(`FrameRenderer::recordUpscaleEasu`).
+        UpscaleEasu,
+        /// @brief FSR 1 의 RCAS(fsr1.hlsl 의 `SW_PASS_FSR_RCAS`) — 중간 RT 를 선명하게 해 Present 대상에 그립니다. 대상 포맷마다 PSO 가 다른 출력 패스다(Present 와 같다).
+        UpscaleRcas,
+        /**
+         * @brief 가림 타일 컴퓨트(occlusiontiles.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 16 px 타일마다 최대 깊이 하나로 줄여 구조 버퍼에 씁니다.
+         *        컬링(gpucull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FrameRenderer::recordOcclusionTiles`).
+         */
+        OcclusionTiles,
     };
 
     /**

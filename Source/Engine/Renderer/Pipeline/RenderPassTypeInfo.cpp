@@ -14,6 +14,12 @@ namespace sw
         /// 깊이 히스토리의 고정 포맷입니다(깊이 하나 — 컴퓨트가 RW 텍스처로 읽는다. R32 실수는 네 백엔드 모두 형식 있는 UAV 읽기가 된다).
         constexpr RHIFormat kArrDepthHistoryFormat[] = { RHIFormat::R32_FLOAT };
 
+        /// 자동 노출 EV 의 고정 포맷입니다(값 하나 — 음수 EV 가 있어 UNORM 은 안 된다).
+        constexpr RHIFormat kArrAutoExposureFormat[] = { RHIFormat::R32_FLOAT };
+
+        /// FSR 1 중간 RT 의 고정 포맷입니다(EASU 출력 — 톤맵한 [0,1] 색이라 AMD 권고대로 32 bpp).
+        constexpr RHIFormat kArrUpscaleIntermediateFormat[] = { RHIFormat::R8G8B8A8_UNORM };
+
         using Role = RenderPassInputRole;
         using Flag = RenderPassTraitFlag;
 
@@ -304,6 +310,37 @@ namespace sw
                         info._colorTargetCount = 1;
                         break;
                     }
+                    case RenderPassType::AutoExposure:
+                    {
+                        // 1x1 R32 실수 RT 하나에 적응한 EV 를 쓴다. 입력(원본 · 지난 EV)은 C++ 가 루트 상수 · 엔진 슬롯으로 직접 건다(깊이 히스토리와 같은 모양).
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderAutoExposure;
+                        info._pColorFormat     = kArrAutoExposureFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::UpscaleEasu:
+                    {
+                        // 뷰포트 크기 중간 RT(RGBA8 — 톤맵한 [0,1] 색) 하나에 그린다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
+                        info._pColorFormat     = kArrUpscaleIntermediateFormat;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::UpscaleRcas:
+                    {
+                        // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(createOutputPSOVariants). 엔진 PSO 는 쓰지 않는다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
+                        info._pPassDefine      = kPassFsrRcasDefine;
+                        info._colorTargetCount = 1;
+                        break;
+                    }
+                    case RenderPassType::OcclusionTiles:
+                    {
+                        // 컬링이 읽는 타일이라 컬링과 같은 조건이다(간접 인자 능력 — DX11 은 컬링이 없다). 깊이 히스토리는 RW 텍스처로 읽는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderOcclusionTiles;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
                 }
                 return info;
             }
@@ -393,5 +430,22 @@ namespace sw
                 selection._listDefine.push_back( passDefine );
         }
         return selection;
+    }
+
+    bool passAppliesTonemap( const RenderGraphPassDesc& passDesc )
+    {
+        if ( passDesc._resolvedType == RenderPassType::Tonemap )
+            return true;
+        if ( passDesc._resolvedType != RenderPassType::Present )
+            return false;
+        const string_view define{ kPostTonemapDefine };
+        for ( const string& permutation : passDesc._listPermutation )
+        {
+            // "이름" 또는 "이름=값" — 이름 부분만 비교한다(postchain.hlsl 은 `defined()` 로 본다).
+            const string_view name = string_view{ permutation }.substr( 0, permutation.find( '=' ) );
+            if ( name == define )
+                return true;
+        }
+        return false;
     }
 } // namespace sw

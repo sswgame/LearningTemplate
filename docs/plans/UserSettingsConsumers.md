@@ -4,7 +4,8 @@
 
 옵션 메뉴 백엔드(`Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`)의 그래픽 · 접근성 값에 읽는 쪽을 이었다. 읽는 곳은 `UserSettingsVariables.h` 각 줄에 있다.
 
-- 렌더 스케일(`gv_renderScale`): 화면 출력 뷰(주 시점 · 화면 사각형)의 내부 해상도에 곱하고 Present 가 선형 업샘플한다(`RenderViewCollector::applyUserRenderScale`). 렌더 텍스처 뷰와 정수 업스케일 뷰는 곱하지 않는다.
+- 렌더 스케일(`gv_renderScale`): 화면 출력 뷰(주 시점 · 화면 사각형)의 내부 해상도에 곱하고 Present 가 출력 크기로 키운다(`RenderViewCollector::applyUserRenderScale`). 렌더 텍스처 뷰와 정수 업스케일 뷰는 곱하지 않는다.
+  키우는 필터는 업스케일러(`gv_upscaler`)다 — off 선형, spatial FSR 1(`FrameRendererUpscale.cpp`, [ThirdPartyGaps](ThirdPartyGaps.md) F2). 업스케일러가 배율을 정하지 않는다(배율 항목의 `enabledWhen` 을 뺐다).
 - 시야 거리(`gv_viewDistanceScale`): 원근 카메라의 먼 평면에 곱한다(`CameraComponent::getProjectionMatrix`) — 절두체 컬링이 같은 평면으로 자른다.
 - 후처리 품질(`gv_postQuality`): 파이프라인 패스의 `_minPostQuality` 보다 낮으면 후처리를 끈 뷰와 같은 길로 건너뛴다(`FrameRenderer::executePass`). 건너뛸 수 있는 타입(`kSkipsWithoutPostProcess`)만 받는다(검증). 디퍼드: SSAO 2 · PostBloom 1.
 - 텍스처 품질(`gv_textureMipDrop`, 스키마 선택지의 `targetValue`): 읽을 때 위쪽 밉을 버린다(`Texture2D::computeMipDrop`, 밉 하나뿐인 텍스처 · 64 미만 · 블록 배수가 아닌 크기는 줄이지 않는다).
@@ -29,4 +30,4 @@
   이펙트 low 에서 입자 수 감소, 모션 블러가 카메라를 돌릴 때만 흐림(서 있으면 원본), 색각 보정이 장면과 UI 에 한 번씩만 걸림(렌더 텍스처 모니터가 두 번 보정되지 않음).
 - 머리 흔들림 진폭은 데이터라 화면을 보고 고친다(Shooter3D 0.03 · 0.015, VoxelCraft 0.025 · 0.012).
 - 포워드 파이프라인(`forwardpipelinestaged.xml` 의 블룸)에는 `_minPostQuality` 를 아직 두지 않았다. 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다.
-- `gv_upscaler`(spatial)는 읽는 곳이 없다 — 업스케일러는 [Candidates-project](Candidates-project.md) 의 FSR 후보다. X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+- X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.

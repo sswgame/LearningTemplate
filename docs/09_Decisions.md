@@ -721,6 +721,16 @@
 - **`GPUInstance` 의 끝 칸은 강조(`highlight`) · 등장 비율(`appearance`) · 예약 하나입니다**(2026-10-22). 두 브랜치가 같은 예약 칸을 썼다 — 칸은 128 바이트 원소 안에서 나누고, 레이아웃 테스트가 둘 다 본다.
 - **다른 스레드가 놓은 RHI 핸들은 "해제 시점에 넘긴 프레임 수 + 1" 번째 프레임이 끝난 뒤에 내립니다**(2026-10-22, `IRHIDevice::releaseHandle`). 게임 스레드가 지었지만 아직 넘기지 않은 패킷도 옛 bindless 번호를 값으로 든다 — "렌더 스레드가 든 프레임이 있을 때만 미룬다" 는 규칙은 그 패킷을 놓쳤다(DX11 로드 중 텍스처). 언리얼의 지연 삭제(렌더 명령 뒤에 줄을 세운다)와 같은 자리다.
 - **엔진 내부 PSO 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정합니다**(2026-10-22, `RenderPassTypeInfo::_targetSourceType` — `ForwardOpaqueNoDepthWrite` → `ForwardOpaque`). 셰이더 · 깊이 · 블렌드는 자기 표(쿠커와 같은 답)다. 선언 없는 패스의 RGBA8 짐작(`fillPassRenderTargetFormats`)은 아직 남은 폴백이다.
+- **시간 누적 기록(TAA · 모션 블러의 지난 뷰-투영 · 자동 노출 · 가림 판정)을 버릴지는 뷰마다 한 곳에서 정합니다**(2026-10-22, `FrameRenderer::beginViewHistory` → `ViewTarget::_bHistoryReset`). 처음 그리는 프레임(풀이 새것)과 컷(언리얼 `bCameraCut`)이다.
+  기능마다 컷을 따로 읽으면 한 기능만 빠뜨린다 — TAA 는 컷만 보고 새 풀의 첫 프레임에는 빈 히스토리를 0.9 로 섞었다. 컬링(가림)이 기록 전에 돌아 그리기 때가 아니라 셋업(주 시점 `updatePassConstants`, 추가 뷰 `prepareExtraView`)에서 정한다.
+- **자동 노출은 카메라 후처리 값의 EV 범위(`_autoExposureMinEv` · `_autoExposureMaxEv`)로 켜고, 범위가 한 점이면 재지 않는 고정 노출 2^-EV 입니다**(2026-10-22). 언리얼 PostProcessSettings 의 Min/MaxBrightness(EV100) 와 같은 모양이고,
+  기본 0 · 0 이 노출 1 이라 켜고 끄는 표시 없이 두 카메라 사이를 직선으로 섞는다. 재기는 톤맵하는 패스 앞의 1x1 풀스크린 하나(32 x 32 표본의 평균 로그 휘도, 지수 적응)다 — 히스토그램(밝은 끝 · 어두운 끝 자르기)은 없다.
+- **FSR 1 은 톤맵 뒤 · UI 앞의 Present 필터입니다**(2026-10-22, `FrameRendererUpscale.cpp`). 계획은 "톤맵 앞" 이었지만 AMD 가 EASU 를 톤맵 뒤 지각 공간에 두라고 한다 — 톤맵 앞 업스케일은 TSR · FSR 2 같은 시간 누적 업스케일러의 자리다.
+  업스케일러(`gv_upscaler`)는 필터만 고르고 배율은 렌더 배율(`gv_renderScale`)이 정한다(유니티 URP 의 Render Scale + Upscaling Filter 와 같다). Present 가 톤맵하는 파이프라인(포워드 후처리 체인)에는 톤맵한 중간 그림이 없어 쓰지 않고 오류를 한 번 남긴다.
+  셰이더는 ffx_fsr1.h 를 엔진 셰이더 규칙으로 옮겼다(원본 헤더를 두면 C++ 린트가 `.h` 를 보고, ffx_a.h 이름이 셰이더 규칙에 맞지 않는다). 고지는 `ThirdParty/fidelityfx-fsr1/LICENSE.md` 가 서드파티 고지 파일로 간다.
+- **GPU 컬링의 가림 판정은 지난 프레임 장면 깊이를 16 px 타일마다 최대 깊이로 줄인 한 단(가림 타일)이고 기본은 끔입니다**(2026-10-22, `gv_occlusionCulling`). 언리얼 HZB 는 밉 사슬이지만 에뮬 백엔드의 컴퓨트는 RW 텍스처 슬롯이 넷뿐이고
+  같은 텍스처의 밉 사이 UAV 배리어가 RHI 에 없어, 깊이 히스토리(이미 있는 RW 사본)에서 구조 버퍼 하나를 짓는다. 타일 8 x 8 을 넘게 덮는 물체는 판정하지 않는다. 드러난 물체가 한 프레임 늦게 나오는 한계가 있어 Release 측정으로 이득을 보인 뒤 켠다.
+- **셰이더 쿠커의 표 단계는 런타임과 같은 함수(`selectRenderPassShader`)로 define 을 붙입니다**(2026-10-22). 빈 목록으로 쿠킹하면 표의 패스 define 이 있는 종류(FSR 의 RCAS 등 서술 없이 만드는 엔진 PSO)는 런타임이 찾는 해시를 아무도 쿠킹하지 않는다.
 
 ### 5-6. 오브젝트, 조종, 입력
 

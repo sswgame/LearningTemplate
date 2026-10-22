@@ -375,13 +375,21 @@ namespace sw
              * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
              *          장면 깊이 첨부는 프레임 사이에 그대로 남아 있으므로 옮기는 때는 다음 프레임의 컴퓨트 프리패스다(복사본을 프레임 끝에 따로 만들지 않는다).
              */
-            RHITextureHandle        _depthHistory{ 0 };
-            RHIDescriptorIndex      _depthHistoryUav{ kInvalidDescriptorIndex };
-            float4x4                _depthHistoryViewProj{};           ///< 장면 깊이를 그린 프레임의 뷰-투영(그 프레임 끝에 적는다)
-            float3                  _depthHistoryEye{};                ///< 그 프레임의 눈 위치
-            uint8                   _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
-            RHIStructuredBufferSlot _transparentRank;                  ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
-            vector<uint32>          _listTransparentBatchOrder;        ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
+            RHITextureHandle   _depthHistory{ 0 };
+            RHIDescriptorIndex _depthHistoryUav{ kInvalidDescriptorIndex };
+            float4x4           _depthHistoryViewProj{};           ///< 장면 깊이를 그린 프레임의 뷰-투영(그 프레임 끝에 적는다)
+            float3             _depthHistoryEye{};                ///< 그 프레임의 눈 위치
+            uint8              _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
+            /**
+             * @brief 가림 타일 — 깊이 히스토리를 `FrameRendererUtil::kOcclusionTileSize` px 타일마다 최대 깊이 하나로 줄인 구조 버퍼(float, SRV + UAV)입니다. 컬링의 가림 판정(t2)이 읽는다.
+             * @details 깊이 히스토리와 수명이 같다(`ensureOcclusionTiles`). `_bOcclusionTilesThisFrame` 은 이번 프레임에 타일을 지었는지다(`recordOcclusionTiles`).
+             */
+            RHIStructuredBufferSlot _occlusionTiles;
+            uint32                  _occlusionColumns{ 0 };
+            uint32                  _occlusionRows{ 0 };
+            uint8                   _bOcclusionTilesThisFrame{ SW_FALSE };
+            RHIStructuredBufferSlot _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
+            vector<uint32>          _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
             /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.
             vector<GPUTransparentParticleSlot> _listParticleSlot;
             uint8                              _bHasParticleOrder{ SW_FALSE }; ///< `_listParticleSlot` 이 이 뷰의 배치 순서와 짝인지
@@ -401,15 +409,45 @@ namespace sw
             uint32     _outputHeight{ 0 };
             uint32     _shadowMapResolution{ 0 };                 ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
             uint32     _lightGridIndex{ invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
-            /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). `_prevViewID` 가 지금 뷰와 다르거나 컷이면 이번 것으로 둔다(속도 0).
-            float4x4             _prevViewProj{};
-            uint64               _prevViewID{ 0 };
+            /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
+            float4x4 _prevViewProj{};
+            /**
+             * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT)과 그 SRV 입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
+             * @details 풀과 수명이 같다 — `ensureViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
+             */
+            RHITextureHandle   _arrAutoExposure[2]{};
+            RHIDescriptorIndex _arrAutoExposureSrv[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
+            /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
+            float4  _autoExposureParams{};
+            float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 잰 렌더러 시각(초, `getAnimationTime`)
+            /**
+             * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
+             * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.
+             */
+            RHITextureHandle     _upscaleIntermediate{ 0 };
+            RHIDescriptorIndex   _upscaleIntermediateSrv{ kInvalidDescriptorIndex };
+            uint32               _upscaleWidth{ 0 };
+            uint32               _upscaleHeight{ 0 };
             RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
             uint8                _bRenderThisFrame{ SW_FALSE };
             uint8                _bSeenThisFrame{ SW_FALSE };
             uint8                _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임에 `_transparentRank` 로 정렬한다.
             uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
-            uint8                _bHasPrevViewProj{ SW_FALSE };    ///< `_prevViewProj` 가 그려 본 값이다(처음 그리는 뷰는 아니다).
+            /**
+             * @brief 지금 풀로 이 뷰를 한 번 이상 그렸다 — 시간 누적 기록(TAA 히스토리 · `_prevViewProj` · 자동 노출 EV)에 지난 프레임 값이 있다.
+             * @details 풀을 새로 만들면(`ensureViewTransients`) 기록도 새것이라 내린다.
+             */
+            uint8 _bHasHistory{ SW_FALSE };
+            /**
+             * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
+             * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
+             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다.
+             */
+            uint8 _bHistoryReset{ SW_TRUE };
+            uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
+            uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 잰다(`prepareAutoExposure`)
+            uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 잰 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
+            uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
         };
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
@@ -511,6 +549,36 @@ namespace sw
          * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
          */
         void ensureDepthHistory( ViewTarget& view );
+        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다(`ensureTaaHistory` 와 같은 이유). 톤맵하는 패스가 없으면 만들지 않습니다. */
+        void ensureAutoExposureHistory( ViewTarget& view );
+        /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
+        void releaseAutoExposureHistory( ViewTarget& view );
+        /**
+         * @brief 지금 그리는 뷰의 이번 프레임 노출을 정합니다 — 잴지, 측정 상수(EV 범위 · 다가가는 비율), 쓰는 기록 칸입니다.
+         * @details 셋업에서 뷰마다 한 번(`applyViewPassConstants`) 부른다. 기록 중의 패스(`recordAutoExposure`)는 여기서 정한 것을 읽기만 한다(병렬 기록 — 뷰 상태를 쓰지 않는다).
+         *          카메라의 최소 EV 와 최대 EV 가 같으면 재지 않고 고정 노출 2^-EV 를 `g_CameraGrade.x` 가 될 @p inoutExposureScale 에 곱한다.
+         */
+        void prepareAutoExposure( float32& inoutExposureScale );
+        /**
+         * @brief 톤맵하는 패스(`findTonemapPass`) 앞에서 자동 노출 측정 · 적응 풀스크린을 같은 리스트에 기록하고, 그 패스가 읽을 이번 EV 를 `AutoExposure` 이름으로 겁니다(autoexposure.hlsl).
+         * @details @p passDesc 가 톤맵하는 패스가 아니거나 이번 프레임에 재지 않는 뷰면 아무것도 하지 않는다. 재는 원본은 그 패스의 SourceColor 입력이다.
+         */
+        void recordAutoExposure( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /**
+         * @brief 뷰 @p view 가 이번 프레임에 Present 에서 FSR 1 로 키울지 정하고, 키우면 중간 RT 를 **셋업 단계에서** 뷰포트 크기로 맞춥니다.
+         * @details 키우는 조건: 업스케일러가 spatial(`gv_upscaler`), 정수 업스케일이 아님, 풀이 뷰포트보다 작음, Present 가 톤맵하지 않음(EASU 는 톤맵한 색을 받는다).
+         *          Present 가 톤맵하는 파이프라인(후처리 체인)에서 켜면 한 번 오류를 남기고 선형으로 키운다 — 그 파이프라인에는 톤맵한 중간 그림이 없다.
+         */
+        void prepareUpscale( ViewTarget& view, uint32 viewportWidth, uint32 viewportHeight );
+        /** @brief 뷰의 FSR 중간 RT 를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
+        void releaseUpscaleIntermediate( ViewTarget& view );
+        /**
+         * @brief Present 렌더 패스를 열기 **전에** EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
+         * @return true 면 Present 는 블릿 대신 `drawUpscaleRcas` 로 그린다
+         */
+        bool recordUpscaleEasu( FramePassContext& context, string_view sourceName );
+        /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
+        void drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const ViewTarget& view ) const;
         /**
@@ -522,6 +590,24 @@ namespace sw
         void recordDepthHistory( ViewTarget& target );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
+        /** @brief 뷰의 가림 타일 버퍼를 **셋업 단계에서** 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면(2D 파이프라인) 만들지 않습니다. */
+        void ensureOcclusionTiles( ViewTarget& view );
+        /**
+         * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusiontiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
+         * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
+         */
+        void recordOcclusionTiles( ViewTarget& target );
+        /**
+         * @brief 뷰 @p view 의 컬링 상수에 가림 판정 값을 채웁니다. 이번 프레임에 타일을 지었고 기록을 버리는 프레임(처음 · 컷)이 아닐 때만 켭니다.
+         * @details 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다(언리얼의 지난 프레임 HZB 와 같은 한계). 컷 프레임은 지난 깊이가
+         *          다른 장면이라 보지 않는다.
+         */
+        void fillOcclusionParams( const ViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const;
+        /**
+         * @brief 뷰의 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`: 이 풀로 처음 그리거나 컷)를 정하고 그렸다고 표시합니다.
+         * @details 셋업에서 뷰마다 프레임에 한 번 부른다(주 시점은 `updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
+         */
+        void beginViewHistory( ViewTarget& view );
         /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
         VfxSimulationFrameInput makeVfxSimulationInput() const;
         /** @brief 트랜지언트 텍스처를 해제합니다. */
@@ -794,6 +880,12 @@ namespace sw
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
+        /**
+         * @brief HDR 색을 톤맵하는 첫 패스입니다(Tonemap, 또는 퍼뮤테이션 `SW_POST_TONEMAP` 을 켠 후처리 체인 Present — `passAppliesTonemap`). 없으면(2D 파이프라인) nullptr 입니다.
+         * @details 자동 노출은 이 패스의 원본을 재고 이 패스 바로 앞에 기록한다(뷰마다 프레임에 한 번). 포인터를 들고 있지 않고 지금 파이프라인에서 찾는다 —
+         *          파이프라인을 다시 읽으면 패스 목록이 바뀌는데, 트랜지언트 준비가 콜백 바인딩보다 먼저라 들고 있던 포인터는 옛 목록을 가리킨다.
+         */
+        const RenderGraphPassDesc* findTonemapPass() const;
 
         /**
          * @brief 패스 종류 테이블(RenderPassTypeInfo)과 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
@@ -1045,6 +1137,8 @@ namespace sw
         unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
+        /// @brief 가림 타일이 없는 컬링(그림자 슬롯 · 가림을 보지 않는 뷰)이 t2 에 바인딩하는 원소 하나(깊이 1 — 아무것도 가리지 않는다)짜리 자리 표시 버퍼입니다. 셰이더는 가림이 꺼지면 읽지 않습니다.
+        RHIStructuredBufferSlot _occlusionTilesPlaceholder;
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
         RenderPSOCache _psoCache;
@@ -1069,6 +1163,8 @@ namespace sw
         CanvasFrameData _canvasFrame;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
         const RenderGraphPassDesc* _pLastSwapchainWriter;
+        /// @brief Present 가 톤맵하는 파이프라인에서 FSR 1 을 켰다는 오류를 남겼다(셋업에서만 읽고 쓴다 — 한 번만 알린다).
+        uint8 _bUpscalePostChainLogged;
         /**
          * @brief 이번 프레임에 주 출력의 캔버스(화면 2D)를 그리는 뷰입니다. 주 출력에 마지막으로 그리는 뷰(마지막 화면 사각형 뷰, 없으면 주 시점)입니다.
          * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.

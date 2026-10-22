@@ -17,9 +17,13 @@ namespace sw
             values._saturation           = MathUtil::lerp( from._saturation, to._saturation, weight );
             values._contrast             = MathUtil::lerp( from._contrast, to._contrast, weight );
             // 레터박스는 양쪽에 있을 때만 비율을 섞는다. 한쪽에만 있으면 0(없음)과 섞을 비율이 없으므로 투영처럼 절반에서 바꾼다.
-            const bool bBoth             = from._letterboxAspectRatio > 0.0f && to._letterboxAspectRatio > 0.0f;
-            values._letterboxAspectRatio = bBoth ? MathUtil::lerp( from._letterboxAspectRatio, to._letterboxAspectRatio, weight )
-                                                 : ( weight < 0.5f ? from._letterboxAspectRatio : to._letterboxAspectRatio );
+            const bool bBoth              = from._letterboxAspectRatio > 0.0f && to._letterboxAspectRatio > 0.0f;
+            values._letterboxAspectRatio  = bBoth ? MathUtil::lerp( from._letterboxAspectRatio, to._letterboxAspectRatio, weight )
+                                                  : ( weight < 0.5f ? from._letterboxAspectRatio : to._letterboxAspectRatio );
+            values._autoExposureMinEv     = MathUtil::lerp( from._autoExposureMinEv, to._autoExposureMinEv, weight );
+            values._autoExposureMaxEv     = MathUtil::lerp( from._autoExposureMaxEv, to._autoExposureMaxEv, weight );
+            values._autoExposureSpeedUp   = MathUtil::lerp( from._autoExposureSpeedUp, to._autoExposureSpeedUp, weight );
+            values._autoExposureSpeedDown = MathUtil::lerp( from._autoExposureSpeedDown, to._autoExposureSpeedDown, weight );
             return values;
         }
     } // namespace

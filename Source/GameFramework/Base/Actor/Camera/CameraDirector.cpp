@@ -16,7 +16,7 @@ namespace sw
         struct CameraDirectorInternal
         {
             static constexpr uint32 kStateTag      = FourCcUtil::make( "CDIR" );
-            static constexpr uint32 kStateVersion  = 2;  ///< 2: 포즈에 센서 높이(피사계 심도)가 붙었다
+            static constexpr uint32 kStateVersion  = 3;  ///< 3: 포즈의 후처리에 자동 노출 범위 · 속도가 붙었다
             static constexpr uint32 kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 
             static bool isCut( const BlendCurveDef& blend ) { return blend._curve == BlendCurve::Cut || blend._duration <= 0.0f; }
@@ -39,6 +39,10 @@ namespace sw
                 outArchive << pose._postProcess._saturation;
                 outArchive << pose._postProcess._contrast;
                 outArchive << pose._postProcess._letterboxAspectRatio;
+                outArchive << pose._postProcess._autoExposureMinEv;
+                outArchive << pose._postProcess._autoExposureMaxEv;
+                outArchive << pose._postProcess._autoExposureSpeedUp;
+                outArchive << pose._postProcess._autoExposureSpeedDown;
                 outArchive << pose._bOrthographic;
             }
 
@@ -62,6 +66,10 @@ namespace sw
                 archive >> outPose._postProcess._saturation;
                 archive >> outPose._postProcess._contrast;
                 archive >> outPose._postProcess._letterboxAspectRatio;
+                archive >> outPose._postProcess._autoExposureMinEv;
+                archive >> outPose._postProcess._autoExposureMaxEv;
+                archive >> outPose._postProcess._autoExposureSpeedUp;
+                archive >> outPose._postProcess._autoExposureSpeedDown;
                 archive >> outPose._bOrthographic;
             }
 
