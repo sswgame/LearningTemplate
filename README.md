@@ -27,7 +27,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 구현중 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 구현중 | 3/4 | 없음 | gameplay | D4-6 |
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 구현중 | 6/7 | 없음 | engine | 없음 |
-| - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 구현중 | 7/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 2/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 1/3 | 없음 | engine | G-5 |
@@ -79,6 +78,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 측정대기 | 0/4 | 없음 | gameplay | D4-16 |
 | - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 측정대기 | 7/7 | 없음 | engine | 없음 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
+| - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 측정대기 | 8/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
 | - | [NetChannelSchemaHashHandshake](docs/plans/NetChannelSchemaHashHandshake.md) — 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기 | 측정대기 | 2/2 | 없음 | network | D7-7 |
 | - | [PersistentRecordUnknownFields](docs/plans/PersistentRecordUnknownFields.md) — 영속 레코드의 모르는 필드 보관 | 측정대기 | 2/2 | 없음 | network | F-3 |

@@ -94,6 +94,16 @@ jobs:
             os: linux
             preset: CI-Debug
 
+          # Wayland 창 계층까지 짓는다(`configureArgs`, 계획 WaylandWindowLayer W2). 기본 창 계층은 그대로 X11 이라 nogpu · swrender 가
+          # 켠 채의 X11 길을 지키고, Wayland 길은 "Wayland window layer smoke" 단계가 본다. Wayland 코드가 CI 에서 처음 컴파일되므로
+          # 보고만 한다 — 첫 실행들이 초록이면 `reportOnly` 를 지우고 위 Linux Debug 잡에 `configureArgs` 를 옮겨 이 잡을 없앤다.
+          - name: Build Linux Debug Wayland (Clang)
+            os: linux
+            preset: CI-Debug
+            configureArgs: -DSW_ENABLE_WAYLAND=ON
+            wayland: true
+            reportOnly: true
+
           - name: Build Linux ASan (Clang)
             os: linux
             preset: CI-Debug-ASAN
@@ -154,7 +164,7 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force build | Out-Null
-        cmake --preset ${{ matrix.preset }} 2>&1 | Tee-Object -FilePath build/configure.log
+        cmake --preset ${{ matrix.preset }} ${{ matrix.configureArgs }} 2>&1 | Tee-Object -FilePath build/configure.log
         exit $LASTEXITCODE
 
     # 구성(vcpkg 설치)에서 진 잡은 "vcpkg install failed" 한 줄만 남는다 — vcpkg 가 가리킨 포트 로그의 끝을 주석으로 올린다.
@@ -186,6 +196,24 @@ jobs:
       shell: bash
       run: |
         $PY Scripts/dev/CiFailureReport.py build --log build/build.log
+
+    # 전용 서버는 X 가 없는 기계에서 선다 — 서버 실행 파일과 함께 싣는 공유 라이브러리(엔진 · 게임)가 libX11 · libxcb 를 요구하면 동적 링커가
+    # main 전에 진다. 화면이 없는 러너의 ServerTest 도 이것을 잡지만 어느 파일이 끌어왔는지는 여기서 보인다(계획 DedicatedServerNoRenderer S3).
+    # 처음 켜는 검사라 보고만 한다(Bin 에 함께 놓이는 서드파티 .so 가 걸리는지 모른다) — 첫 실행들이 초록이면 이 줄을 지운다.
+    - name: Dedicated server has no X11 dependency (Linux)
+      if: matrix.preset == 'CI-Shipping-Server' && matrix.os == 'linux'
+      continue-on-error: true
+      shell: bash
+      run: |
+        cd build/${{ matrix.preset }}/Bin
+        found=0
+        while IFS= read -r file; do
+          if readelf -d "$file" | grep -E 'NEEDED.*\[(libX11|libxcb|libX11-xcb)[.-]'; then
+            echo "::error file=$file::$file needs X11 (dedicated server must not)"
+            found=1
+          fi
+        done < <(find . -maxdepth 4 -type f \( -name Server -o -name '*.so' -o -name '*.so.*' \))
+        exit $found
 
     # (`SW_ENABLE_DEADLOCK_DETECTION` 컴파일 확인은 전 TU 를 다시 훑느라 이 잡의 14 분을 차지해 매일 도는 header-self-contained.yml 로 옮겼다.)
 
@@ -232,6 +260,46 @@ jobs:
       run: |
         $PY Scripts/dev/CiFailureReport.py tests --ctest-dir build/${{ matrix.preset }}
 
+    # Wayland 창 계층(계획 WaylandWindowLayer W2) — headless weston 위에서 Vulkan(lavapipe)으로 창을 세우고 120 프레임 뒤 0 으로
+    # 끝나는지, GL · 모르는 계층 값은 X11 로 새지 않고 오류로 서는지 본다. 러너의 headless 컴포지터에는 seat 가 없을 수 있어 입력 리스너
+    # 없이 창이 서는 것까지가 확인 대상이다. nogpu 가 져도 돈다. 잡 전체가 보고만 한다(위 매트릭스의 `reportOnly`).
+    - name: Wayland window layer smoke (Linux)
+      if: always() && matrix.wayland == true && steps.build.outcome == 'success'
+      shell: bash
+      run: |
+        sudo timeout 300 apt-get install -y --no-install-recommends weston mesa-vulkan-drivers
+        export XDG_RUNTIME_DIR="$(mktemp -d)"
+        chmod 700 "$XDG_RUNTIME_DIR"
+        weston --backend=headless-backend.so --socket=wayland-ci --idle-time=0 > "$XDG_RUNTIME_DIR/weston.log" 2>&1 &
+        for _ in $(seq 1 50); do [ -S "$XDG_RUNTIME_DIR/wayland-ci" ] && break; sleep 0.2; done
+        if [ ! -S "$XDG_RUNTIME_DIR/wayland-ci" ]; then
+          cat "$XDG_RUNTIME_DIR/weston.log"
+          echo "::error::weston headless did not open wayland-ci"
+          exit 1
+        fi
+        unset DISPLAY
+        export WAYLAND_DISPLAY=wayland-ci SW_RHI_SOFTWARE_ADAPTER=1
+        cd build/${{ matrix.preset }}/Bin
+        failed=0
+        expect() { # <로그> <기대 종료: zero|nonzero> <종료 코드> <로그에 있어야 할 줄>...
+          local log="$1" want="$2" code="$3"; shift 3
+          if { [ "$want" = zero ] && [ "$code" -ne 0 ]; } || { [ "$want" = nonzero ] && [ "$code" -eq 0 ]; }; then
+            echo "::error::$log: exit code $code (want $want)"; failed=1
+          fi
+          for line in "$@"; do
+            grep -qF -- "$line" "$log" || { echo "::error::$log: missing '$line'"; failed=1; }
+          done
+          tail -n 40 "$log"
+        }
+        # 액션의 bash 는 `-e` 라 종료 코드는 `|| code=$?` 로 받는다.
+        code=0; SW_WINDOW_BACKEND=wayland timeout 300 ./App -vk -gv_profileFrames=120 > wayland-vk.log 2>&1 || code=$?
+        expect wayland-vk.log zero $code "Window backend: Wayland" "Native Wayland Window created"
+        code=0; SW_WINDOW_BACKEND=wayland timeout 120 ./App -gl -gv_profileFrames=20 > wayland-gl.log 2>&1 || code=$?
+        expect wayland-gl.log nonzero $code "OpenGL on Linux needs an X11 window"
+        code=0; SW_WINDOW_BACKEND=foo timeout 120 ./App -vk -gv_profileFrames=20 > wayland-foo.log 2>&1 || code=$?
+        expect wayland-foo.log nonzero $code "is not a window backend"
+        exit $failed
+
     # 진 테스트를 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
     # 졌는지 밖에서 보이는 곳은 주석뿐이다. 테스트마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
     - name: Report failed tests as annotations
@@ -247,7 +315,7 @@ jobs:
       if: failure() && steps.test.outcome == 'failure'
       uses: actions/upload-artifact@v7
       with:
-        name: test-logs-${{ runner.os }}-${{ matrix.preset }}
+        name: test-logs-${{ runner.os }}-${{ matrix.preset }}${{ matrix.wayland && '-wayland' || '' }}
         path: |
           build/${{ matrix.preset }}/Testing/Temporary/LastTest*.log
           build/${{ matrix.preset }}/Bin/*.log

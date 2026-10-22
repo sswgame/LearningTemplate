@@ -119,8 +119,13 @@ SW_TEST_CASE( DevCommandRegistryTest, RegistrarAddsAndRemovesByScope )
 {
     DevCommandRegistry& registry = DevCommandRegistry::get();
     SW_EXPECT_NOT_NULL( registry.findCommand( "timescale" ) ); // 엔진이 내주는 명령
-    SW_EXPECT_NOT_NULL( registry.findCommand( "bugit" ) );     // 버그 리포트 한 방(BugItReport)
+    #if defined( SW_WITH_CLIENT_CODE )
+    SW_EXPECT_NOT_NULL( registry.findCommand( "bugit" ) ); // 버그 리포트 한 방(BugItReport)
     SW_EXPECT_NOT_NULL( registry.findCommand( "bugitgo" ) );
+    #else
+    // Server 타깃은 렌더러 폴더(BugItReport 가 든 Engine/Renderer/Capture)를 짓지 않아 그 명령이 없다.
+    SW_EXPECT_NULL( registry.findCommand( "bugit" ) );
+    #endif
     SW_EXPECT_NULL( registry.findCommand( "test.echo" ) );
     {
         test::ScopedLogSuppressor suppressor;

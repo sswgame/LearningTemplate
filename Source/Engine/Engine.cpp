@@ -82,17 +82,22 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Capture/PortraitBatchUtil.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
-#include "Engine/Renderer/Cook/ShaderCookDriver.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
-#include "Engine/Renderer/LiveShaderSubsystem.h"
-#include "Engine/Renderer/RHISubsystem.h"
-#include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/RenderThreadSubsystem.h"
-#include "Engine/Renderer/SceneRHISubsystem.h"
+
+// 렌더러 헤더는 클라이언트 코드에서만 읽는다 — 내보낸(SW_ENGINE_API) 클래스의 인라인 멤버는 include 한 번역 단위마다 만들어지고, 렌더러 폴더를
+// 짓지 않는 Server 타깃에서는 그 멤버가 부르는 정의가 없어 링크가 진다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`).
+#if defined( SW_WITH_CLIENT_CODE )
+    #include "Engine/Renderer/Capture/PortraitBatchUtil.h"
+    #include "Engine/Renderer/Capture/RenderDocCapture.h"
+    #include "Engine/Renderer/Cook/ShaderCookDriver.h"
+    #include "Engine/Renderer/Frame/FrameRenderer.h"
+    #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+    #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+    #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #include "Engine/Renderer/RHISubsystem.h"
+    #include "Engine/Renderer/RenderThread.h"
+    #include "Engine/Renderer/RenderThreadSubsystem.h"
+    #include "Engine/Renderer/SceneRHISubsystem.h"
+#endif
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -276,9 +281,11 @@ namespace sw
         }
 
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
-        TelemetryService*      pTelemetryService      = nullptr;
+        TelemetryService* pTelemetryService = nullptr;
+#if defined( SW_WITH_CLIENT_CODE )
         RenderThreadSubsystem* pRenderThreadSubsystem = nullptr;
         LiveShaderSubsystem*   pLiveShaderSubsystem   = nullptr;
+#endif
         BLOCK( "기동 단계 구성" )
         {
             // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).
@@ -402,11 +409,8 @@ namespace sw
     #else
         (void)pLiveShaderSubsystem; // 배포본은 라이브 리로드가 없다
     #endif
-#else
-        // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
-        (void)pRenderThreadSubsystem;
-        (void)pLiveShaderSubsystem;
 #endif
+        // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
         {
             SW_LOG_ERROR( "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
