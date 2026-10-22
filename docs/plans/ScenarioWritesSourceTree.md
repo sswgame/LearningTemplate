@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: 없음 · 진행: 2/4
 
-에디터 시나리오를 한 번 돌리면 추적 중인 리소스가 바뀌거나 잔여 파일이 남았다(2026-10-20 DX12 묶음). `animgraphlayers/animgraphlayers.animgraph.json` 이 줄바꿈이 바뀐 채 남고, `assetmanage` 가 `new_material.material` · `new_material_2.material` 을 남기고 추적 중인 `probe.material(.meta)` 를 지웠다. 잔여 파일이 있으면 다음 실행이 다른 이름(`new_material_2`)을 만들어 시나리오가 진다.
+에디터 시나리오를 한 번 돌리면 추적 중인 리소스가 바뀌거나 잔여 파일이 남았다(2026-10-20 DX12 묶음). `animgraphlayers/animgraphlayers.animgraph.xml` 이 줄바꿈이 바뀐 채 남고, `assetmanage` 가 `new_material.material` · `new_material_2.material` 을 남기고 추적 중인 `probe.material(.meta)` 를 지웠다. 잔여 파일이 있으면 다음 실행이 다른 이름(`new_material_2`)을 만들어 시나리오가 진다.
 
 **근본 원인**: 시나리오가 `Resource/` 원본에 쓴다. 파일을 지우거나 되돌리는 것은 증상 처리다.
 

@@ -9,7 +9,7 @@
 
 | 물음 | 결정 | 이유 |
 |---|---|---|
-| 창에서 고친 값을 어디에 쓰나 | 리그 에셋(`*.rig.json`)의 노드 `weight` 와 새 공통 키 `enabled`(적지 않으면 켜짐), 대상 `translation` · `rotation` | 값의 정본은 데이터다. 런타임 인스턴스의 복제본만 바꾸면 다시 읽을 때 사라진다 |
+| 창에서 고친 값을 어디에 쓰나 | 리그 에셋(`*.rig.xml`)의 노드 `weight` 와 새 공통 키 `enabled`(적지 않으면 켜짐), 대상 `translation` · `rotation` | 값의 정본은 데이터다. 런타임 인스턴스의 복제본만 바꾸면 다시 읽을 때 사라진다 |
 | 파일을 어떻게 고치나 | `RigAsset::rewriteSettings`(노드 · 대상 목록을 한 묶음 `RigSaveParams` 로) — JSON 문서에서 이름의 노드 · 대상만 그 키를 바꾸고 다른 키는 그대로 둔 뒤, 결과를 런타임 로더로 다시 읽어 규칙을 본다 | 리그 전체 쓰기(노드 종류마다 키 쓰기)는 노드 종류가 늘 때마다 쓰기 · 읽기가 어긋날 자리를 만든다. 고칠 키만 바꾸면 쓰는 쪽이 종류를 몰라도 된다. 노드용 · 대상용 함수를 따로 두지 않는다(같은 읽기 · 검사 · 다시 읽기) |
 | `enabled` 를 언제 쓰나 | 끈 노드이거나 파일에 이미 있을 때만 | 켜진 노드마다 `"enabled": true` 가 붙으면 파일이 시끄럽다. "적지 않음 = 켜짐" 은 형식이 정한 값이다 |
 | 대상 기즈모가 무엇을 옮기나 | 자기 유닛 대상(본 · 소켓)만. 부모 공간 = 데이터 오프셋의 역 × 인스턴스의 합친 오프셋(`RigInstance::tryGetOwnTargetBinding`) × 본 모델 × 유닛 월드 | 바깥 대상(다른 유닛 · 오브젝트)의 부모 공간은 호스트(`PoseModifierComponent`)가 프레임마다 넣는 값이라 창이 되짚을 수 없다 — 그 오브젝트를 옮긴다 |
@@ -27,5 +27,5 @@
 ## 남은 것
 
 - 테스트: `EngineTest --test_filter=RigAssetTest.*`.
-- 화면 확인(`-EnableEditor`, Shooter3D `arena.scene.xml` 플레이): 플레이어 몸을 고르고 리그 디버그 창에서 가중치 · 켜짐을 바꾸고 "Save to rig" 뒤 파일 감시가 다시 읽어도 값이 남는지(`rigs/shooter_knight.rig.json`).
-- 화면 확인(대상 기즈모): 자기 유닛 대상이 있는 리그(벤치 `knight_cape.rig.json` 의 `Shoulders` 는 다른 유닛이라 안 되고, 본 · 소켓 대상이 자기 유닛인 리그)를 고르고 "Gizmo" 를 켜 이동 · 회전으로 끈 뒤 놓으면 파일의 `translation` · `rotation` 이 바뀌고 다시 읽은 자리에 기즈모가 남는지, Ctrl+Z 가 파일을 되돌리는지. 창 캡처는 `-gv_screenshotEditor`.
+- 화면 확인(`-EnableEditor`, Shooter3D `arena.scene.xml` 플레이): 플레이어 몸을 고르고 리그 디버그 창에서 가중치 · 켜짐을 바꾸고 "Save to rig" 뒤 파일 감시가 다시 읽어도 값이 남는지(`rigs/shooter_knight.rig.xml`).
+- 화면 확인(대상 기즈모): 자기 유닛 대상이 있는 리그(벤치 `knight_cape.rig.xml` 의 `Shoulders` 는 다른 유닛이라 안 되고, 본 · 소켓 대상이 자기 유닛인 리그)를 고르고 "Gizmo" 를 켜 이동 · 회전으로 끈 뒤 놓으면 파일의 `translation` · `rotation` 이 바뀌고 다시 읽은 자리에 기즈모가 남는지, Ctrl+Z 가 파일을 되돌리는지. 창 캡처는 `-gv_screenshotEditor`.

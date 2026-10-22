@@ -3,7 +3,7 @@
 > 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 2/6
 
 형상 쪽(`Source/Engine/Character`, README "외형 조립 순서")과 GPU 모프 풀(`Mesh::setGPUMorphEnabled`), 장비 해석 데이터 · 해석기(`GameFramework/Base/Gameplay/Appearance`)와 외형 컴포넌트(`CharacterAppearanceComponent`)는 들어갔습니다. 이어 붙이는 일이 남았습니다.
-스켈레톤 에셋(`.skeleton.json`)의 편집 창은 [EditorCharacterEditor](EditorCharacterEditor.md) 입니다.
+스켈레톤 에셋(`.skeleton.xml`)의 편집 창은 [EditorCharacterEditor](EditorCharacterEditor.md) 입니다.
 
 ## 1. 단위
 
