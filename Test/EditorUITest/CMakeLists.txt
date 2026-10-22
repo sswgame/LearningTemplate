@@ -24,6 +24,7 @@ sw_addTestExecutable(EditorUITest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiOsInputFilter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiKeyForward.cpp"
 	LIBS
 		Engine
 		imgui

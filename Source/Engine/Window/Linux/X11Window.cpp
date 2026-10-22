@@ -3,6 +3,7 @@
 #include "Engine/Window/Linux/X11Window.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -35,6 +36,8 @@ namespace sw
         constexpr int32 kClipboardPollCount = 20;
         /** @brief 클립보드 속성을 한 번에 읽는 최대 길이(32 비트 단위)입니다. 64 MB 다. */
         constexpr int64 kClipboardMaxLongs = int64{ 1 } << 24;
+        /** @brief INCR 로 보내는 중 상대가 다음 조각을 청하지 않고 기다려 주는 시간(ms)입니다. 넘으면 상대가 사라진 것으로 보고 건을 버린다. */
+        constexpr int64 kClipboardIncrIdleMilliseconds = 10 * constant::kMillisecondsPerSecond;
 
         struct X11ClipboardWait
         {
@@ -90,6 +93,7 @@ namespace sw
 
     X11Window::X11Window()
         : _clipboardText{}
+        , _listClipboardIncr{}
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
@@ -164,6 +168,7 @@ namespace sw
             _pX11Display = nullptr;
         }
         _clipboardText.clear(); // 창이 없어지면 서버가 선택 주인을 거둔다
+        _listClipboardIncr.clear();
     }
 
     void X11Window::applyWindowVisibility( bool bShow )
@@ -295,13 +300,14 @@ namespace sw
             return _bShouldClose == SW_FALSE;
 
         Display* pDisplay = static_cast<Display*>( _pX11Display );
+        expireClipboardIncr();
         while ( XPending( pDisplay ) > 0 )
         {
             XEvent event;
             XNextEvent( pDisplay, &event );
 
             // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
-            if ( handleSelectionEvent( &event ) )
+            if ( handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
                 continue;
 
             if ( _customHandler.isBound() )
@@ -436,6 +442,72 @@ namespace sw
         }
     }
 
+    void X11Window::beginClipboardIncr( uint64 requestor, uint64 property )
+    {
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        // 같은 창 · 속성의 옛 건은 상대가 포기한 것이다.
+        VectorUtil::removeIf( _listClipboardIncr, [requestor, property]( const X11ClipboardIncrTransfer& transfer )
+        { return transfer._requestor == requestor && transfer._property == property; } );
+
+        // 상대의 속성 삭제를 놓치지 않도록 표지를 적기 전에 그 창의 PropertyNotify 를 받기 시작한다(ICCCM 2.7.2).
+        XSelectInput( pDisplay, static_cast<Window>( requestor ), PropertyChangeMask );
+        const int64 lowerBoundBytes = static_cast<int64>( _clipboardText.size() ); // 형식 32 는 C `long` 배열이다
+        XChangeProperty( pDisplay, static_cast<Window>( requestor ), static_cast<Atom>( property ), XInternAtom( pDisplay, "INCR", 0 ), 32, PropModeReplace,
+                         reinterpret_cast<const uint8*>( &lowerBoundBytes ), 1 );
+        _listClipboardIncr.emplace_back( requestor, property, _clipboardText, Deadline::afterMilliseconds( kClipboardIncrIdleMilliseconds ) );
+    }
+
+    bool X11Window::handleIncrPropertyEvent( const void* pEvent )
+    {
+        const XEvent& event = *static_cast<const XEvent*>( pEvent );
+        if ( event.type != PropertyNotify || event.xproperty.state != PropertyDelete )
+            return false;
+
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        for ( size_t index = 0; index < _listClipboardIncr.size(); ++index )
+        {
+            X11ClipboardIncrTransfer& transfer = _listClipboardIncr[index];
+            if ( transfer._requestor != event.xproperty.window || transfer._property != event.xproperty.atom )
+                continue;
+
+            const Window requestor = static_cast<Window>( transfer._requestor );
+            if ( transfer._bFinished )
+            {
+                // 끝 신호를 상대가 지웠다. 건을 마치고 그 창의 알림을 끊는다.
+                XSelectInput( pDisplay, requestor, NoEventMask );
+                VectorUtil::removeAtSwap( _listClipboardIncr, index );
+                return true;
+            }
+            const size_t chunkBytes = std::min( transfer._text.size() - transfer._offset, X11ClipboardWait::getMaxSingleTransferBytes( pDisplay ) / 2 );
+            XChangeProperty( pDisplay, requestor, static_cast<Atom>( transfer._property ), XInternAtom( pDisplay, "UTF8_STRING", 0 ), 8, PropModeReplace,
+                             reinterpret_cast<const uint8*>( transfer._text.c_str() + transfer._offset ), static_cast<int32>( chunkBytes ) );
+            XFlush( pDisplay );
+            transfer._offset += chunkBytes;
+            transfer._bFinished = chunkBytes == 0; // 길이 0 조각이 끝 신호다
+            transfer._deadline  = Deadline::afterMilliseconds( kClipboardIncrIdleMilliseconds );
+            return true;
+        }
+        return false;
+    }
+
+    void X11Window::expireClipboardIncr()
+    {
+        if ( _listClipboardIncr.empty() )
+            return;
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        for ( const X11ClipboardIncrTransfer& transfer : _listClipboardIncr )
+        {
+            if ( transfer._deadline.isExpired() )
+            {
+                SW_LOG_WARNING( "Clipboard pasting program stopped asking for the large (INCR) text after %# of %# bytes - dropped", static_cast<uint64>( transfer._offset ),
+                                static_cast<uint64>( transfer._text.size() ) );
+                XSelectInput( pDisplay, static_cast<Window>( transfer._requestor ), NoEventMask );
+            }
+        }
+        VectorUtil::removeIf( _listClipboardIncr, []( const X11ClipboardIncrTransfer& transfer )
+        { return transfer._deadline.isExpired(); } );
+    }
+
     bool X11Window::handleSelectionEvent( const void* pEvent )
     {
         const XEvent& event    = *static_cast<const XEvent*>( pEvent );
@@ -472,10 +544,11 @@ namespace sw
         }
         else if ( bOwned && request.target == utf8String )
         {
-            // 요청 한 번보다 큰 글은 INCR 로 나눠 보내야 한다 — 보내는 쪽 INCR 은 없어서 거절한다(받는 쪽은 `readClipboardText` 가 받는다).
+            // 요청 한 번보다 큰 글은 INCR 로 나눠 보낸다(표지만 지금 적고 조각은 `handleIncrPropertyEvent` 가 상대가 지울 때마다 적는다).
             if ( _clipboardText.size() > X11ClipboardWait::getMaxSingleTransferBytes( pDisplay ) )
             {
-                SW_LOG_WARNING( "Clipboard text (%# bytes) is larger than one X request - refused to the pasting program", static_cast<uint64>( _clipboardText.size() ) );
+                beginClipboardIncr( request.requestor, property );
+                reply.property = property;
             }
             else
             {

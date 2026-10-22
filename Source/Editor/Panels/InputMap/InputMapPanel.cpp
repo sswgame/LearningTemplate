@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -80,98 +81,6 @@ namespace sw::editor
                 ImGui::TableNextColumn();
                 ImGui::TextUnformatted( name.c_str() );
                 ImGui::TableNextColumn();
-            }
-
-            /** @brief ImGui 키 하나와 엔진 키 하나의 대응입니다. 두 열거형에서 연속이 아닌 키만 테이블에 둡니다. */
-            struct ImGuiKeyPair
-            {
-                ImGuiKey _imguiKey;
-                Key      _key;
-            };
-
-            static constexpr ImGuiKeyPair kArrNamedKey[] = {
-                {           ImGuiKey_Tab,            Key::Tab},
-                {     ImGuiKey_LeftArrow,           Key::Left},
-                {    ImGuiKey_RightArrow,          Key::Right},
-                {       ImGuiKey_UpArrow,             Key::Up},
-                {     ImGuiKey_DownArrow,           Key::Down},
-                {        ImGuiKey_PageUp,         Key::PageUp},
-                {      ImGuiKey_PageDown,       Key::PageDown},
-                {          ImGuiKey_Home,           Key::Home},
-                {           ImGuiKey_End,            Key::End},
-                {        ImGuiKey_Insert,         Key::Insert},
-                {        ImGuiKey_Delete,         Key::Delete},
-                {     ImGuiKey_Backspace,      Key::Backspace},
-                {         ImGuiKey_Space,          Key::Space},
-                {         ImGuiKey_Enter,          Key::Enter},
-                {        ImGuiKey_Escape,         Key::Escape},
-                {      ImGuiKey_LeftCtrl,    Key::LeftControl},
-                {     ImGuiKey_LeftShift,      Key::LeftShift},
-                {       ImGuiKey_LeftAlt,        Key::LeftAlt},
-                {     ImGuiKey_LeftSuper,      Key::LeftSuper},
-                {     ImGuiKey_RightCtrl,   Key::RightControl},
-                {    ImGuiKey_RightShift,     Key::RightShift},
-                {      ImGuiKey_RightAlt,       Key::RightAlt},
-                {    ImGuiKey_RightSuper,     Key::RightSuper},
-                {          ImGuiKey_Menu,           Key::Menu},
-                {    ImGuiKey_Apostrophe,     Key::Apostrophe},
-                {         ImGuiKey_Comma,          Key::Comma},
-                {         ImGuiKey_Minus,          Key::Minus},
-                {        ImGuiKey_Period,         Key::Period},
-                {         ImGuiKey_Slash,          Key::Slash},
-                {     ImGuiKey_Semicolon,      Key::Semicolon},
-                {         ImGuiKey_Equal,          Key::Equal},
-                {   ImGuiKey_LeftBracket,    Key::LeftBracket},
-                {     ImGuiKey_Backslash,      Key::Backslash},
-                {  ImGuiKey_RightBracket,   Key::RightBracket},
-                {   ImGuiKey_GraveAccent,          Key::Grave},
-                {      ImGuiKey_CapsLock,       Key::CapsLock},
-                {    ImGuiKey_ScrollLock,     Key::ScrollLock},
-                {       ImGuiKey_NumLock,        Key::NumLock},
-                {   ImGuiKey_PrintScreen,    Key::PrintScreen},
-                {         ImGuiKey_Pause,          Key::Pause},
-                { ImGuiKey_KeypadDecimal,  Key::NumpadDecimal},
-                {  ImGuiKey_KeypadDivide,   Key::NumpadDivide},
-                {ImGuiKey_KeypadMultiply, Key::NumpadMultiply},
-                {ImGuiKey_KeypadSubtract, Key::NumpadSubtract},
-                {     ImGuiKey_KeypadAdd,      Key::NumpadAdd},
-                {   ImGuiKey_KeypadEnter,    Key::NumpadEnter},
-            };
-
-            /** @brief ImGuiKey 의 연속 구간(시작, 개수)을 엔진 키의 연속 구간으로 변환합니다. */
-            static Key findPressedInRange( ImGuiKey firstImGuiKey, Key firstKey, int32 count )
-            {
-                for ( int32 offset = 0; offset < count; ++offset )
-                {
-                    if ( ImGui::IsKeyPressed( static_cast<ImGuiKey>( firstImGuiKey + offset ), false ) )
-                        return static_cast<Key>( static_cast<int32>( firstKey ) + offset );
-                }
-                return Key::Unknown;
-            }
-
-            /**
-             * @brief 이번 프레임에 눌린 키를 ImGui 에서 읽습니다. 없으면 `Key::Unknown` 입니다.
-             * @details 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 가져가고(`WantCaptureKeyboard`), 에디터는 그 키를
-             *          게임 입력으로 넘기지 않는다(`ImGuiEditor::processEvent`). 그래서 `InputManager::wasKeyPressed` 로
-             *          물으면 키가 영원히 오지 않는다. 키는 창이 받은 곳에서 읽는다.
-             */
-            static Key findPressedKey()
-            {
-                Key key = findPressedInRange( ImGuiKey_A, Key::A, 26 );
-                if ( key == Key::Unknown )
-                    key = findPressedInRange( ImGuiKey_0, Key::Digit0, 10 );
-                if ( key == Key::Unknown )
-                    key = findPressedInRange( ImGuiKey_F1, Key::F1, 12 );
-                if ( key == Key::Unknown )
-                    key = findPressedInRange( ImGuiKey_Keypad0, Key::Numpad0, 10 );
-                if ( key != Key::Unknown )
-                    return key;
-                for ( const ImGuiKeyPair& pair : kArrNamedKey )
-                {
-                    if ( ImGui::IsKeyPressed( pair._imguiKey, false ) )
-                        return pair._key;
-                }
-                return Key::Unknown;
             }
 
             /**
@@ -719,8 +628,9 @@ namespace sw::editor
             ImGui::TextUnformatted( SW_LOCKEY( "EditorInputMap", "CaptureInstruction" ) );
             ImGui::Separator();
 
-            // 실시간 활성 입력 감지. 모달이 떠 있는 동안 키는 ImGui 로만 들어온다(`findPressedKey` 설명 참고).
-            const Key pressedKey = InputMapPanelInternal::findPressedKey();
+            // 실시간 활성 입력 감지. 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 가져가고(`WantCaptureKeyboard`),
+            // 에디터는 그 키를 게임 입력으로 넘기지 않는다(`ImGuiEditor::processEvent`). 그래서 키는 창이 받은 곳(ImGui)에서 읽는다.
+            const Key pressedKey = ImGuiKeyForward::findPressedKey();
             if ( pressedKey != Key::Unknown )
             {
                 rebindSelectedAction( pressedKey );
