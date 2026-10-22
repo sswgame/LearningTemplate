@@ -195,7 +195,7 @@ namespace sw::editor
         TextureImportRule splashRule;
         SW_ASSERT_TRUE( config.findMatchingRule( "editor/textures_raw/splash.png", splashRule ) );
         SW_EXPECT_EQUAL( string( "Editor_Splash" ), splashRule._name );
-        SW_EXPECT_EQUAL( string( "B8G8R8A8_UNORM" ), splashRule._format );
+        SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::B8G8R8A8 ), static_cast<uint8>( splashRule._format ) );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( splashRule._swizzle ) );
         SW_EXPECT_EQUAL( SW_FALSE, splashRule._bGenerateMips );
 
@@ -203,7 +203,7 @@ namespace sw::editor
         TextureImportRule normalRule;
         SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_n.png", normalRule ) );
         SW_EXPECT_EQUAL( string( "Normal_Maps" ), normalRule._name );
-        SW_EXPECT_EQUAL( string( "BC5_UNORM" ), normalRule._format );
+        SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::BC5 ), static_cast<uint8>( normalRule._format ) );
         SW_EXPECT_EQUAL( SW_TRUE, normalRule._bInvertGreen );
         SW_EXPECT_EQUAL( SW_FALSE, normalRule._bSrgb );
 
@@ -211,14 +211,14 @@ namespace sw::editor
         TextureImportRule previewRule;
         SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_preview_n.png", previewRule ) );
         SW_EXPECT_EQUAL( string( "Fallback_Default" ), previewRule._name );
-        SW_EXPECT_EQUAL( string( "BC7_UNORM" ), previewRule._format );
+        SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::BC7 ), static_cast<uint8>( previewRule._format ) );
         SW_EXPECT_EQUAL( SW_TRUE, previewRule._bSrgb );
 
         // 4. UI path matching
         TextureImportRule uiRule;
         SW_ASSERT_TRUE( config.findMatchingRule( "ui/hud/crosshair.png", uiRule ) );
         SW_EXPECT_EQUAL( string( "UI_Textures" ), uiRule._name );
-        SW_EXPECT_EQUAL( string( "B8G8R8A8_UNORM" ), uiRule._format );
+        SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::B8G8R8A8 ), static_cast<uint8>( uiRule._format ) );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( uiRule._swizzle ) );
     }
 
@@ -250,7 +250,7 @@ namespace sw::editor
         // 2. Import to DDS via TextureImporter
         TextureImportRule rule;
         rule._name          = "Test_Splash";
-        rule._format        = "B8G8R8A8_UNORM";
+        rule._format        = TextureImportFormat::B8G8R8A8;
         rule._swizzle       = TextureSwizzle::BGRA;
         rule._bGenerateMips = SW_FALSE;
         rule._bSrgb         = SW_TRUE;
@@ -320,7 +320,7 @@ namespace sw::editor
             FileUtil::ensureParentDirectoryExists( sourcePath );
             SW_ASSERT_TRUE_MSG( FileUtil::writeFile( sourcePath, tgaBytes.data(), tgaBytes.size() ), testCase._pName );
             TextureImportRule rule;
-            rule._format        = "R8G8B8A8_UNORM";
+            rule._format        = TextureImportFormat::R8G8B8A8;
             rule._bSrgb         = SW_FALSE;
             rule._bGenerateMips = SW_FALSE;
             TextureImportResult result;
@@ -350,20 +350,20 @@ namespace sw::editor
 
         struct SwizzleCase
         {
-            TextureSwizzle _swizzle;
-            const utf8*    _pName;
-            uint8          _arrExpected[4];
-            const utf8*    _pFormat;            ///< 이 배치를 부르는 가져오기 규칙의 포맷 이름
-            uint32         _expectedDxgiFormat; ///< sRGB 없이 임포트된 DDS 가 들고 있어야 할 포맷
+            TextureSwizzle      _swizzle;
+            const utf8*         _pName;
+            uint8               _arrExpected[4];
+            TextureImportFormat _format;             ///< 이 배치를 부르는 가져오기 규칙의 포맷
+            uint32              _expectedDxgiFormat; ///< sRGB 없이 임포트된 DDS 가 들고 있어야 할 포맷
         };
 
         // BGRA 와 ARGB 는 **같은 것**이다. D3D9 의 D3DFMT_A8R8G8B8 은 메모리에서 B,G,R,A 이고,
         // DXGI 가 그것을 B8G8R8A8 이라 부른다 — 열거형 주석의 "레거시 ARGB" 가 그 뜻이다.
         const SwizzleCase arrCase[] = {
-            {TextureSwizzle::RGBA, "RGBA",  { 10, 20, 30, 40 }, "R8G8B8A8_UNORM", 28u},
-            {TextureSwizzle::BGRA, "BGRA",  { 30, 20, 10, 40 }, "B8G8R8A8_UNORM", 87u},
-            {TextureSwizzle::ARGB, "ARGB",  { 30, 20, 10, 40 }, "B8G8R8A8_UNORM", 87u}, // 레거시 이름, 같은 배치
-            {TextureSwizzle::RGB1, "RGB1", { 10, 20, 30, 255 }, "R8G8B8A8_UNORM", 28u}, // 알파만 불투명으로
+            {TextureSwizzle::RGBA, "RGBA",  { 10, 20, 30, 40 }, TextureImportFormat::R8G8B8A8, 28u},
+            {TextureSwizzle::BGRA, "BGRA",  { 30, 20, 10, 40 }, TextureImportFormat::B8G8R8A8, 87u},
+            {TextureSwizzle::ARGB, "ARGB",  { 30, 20, 10, 40 }, TextureImportFormat::B8G8R8A8, 87u}, // 레거시 이름, 같은 배치
+            {TextureSwizzle::RGB1, "RGB1", { 10, 20, 30, 255 }, TextureImportFormat::R8G8B8A8, 28u}, // 알파만 불투명으로
         };
 
         for ( const SwizzleCase& testCase : arrCase )
@@ -387,7 +387,7 @@ namespace sw::editor
             // 임포트의 포맷 변환이 바이트를 한 번 더 섞는다.
             const string sourcePath = test::makeTempPath( string( testCase._pName ) + ".tga" );
             SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 1, 1, vector<uint8>( arrSourcePixel, arrSourcePixel + 4 ) ) );
-            rule._format         = testCase._pFormat;
+            rule._format         = testCase._format;
             rule._bSrgb          = SW_FALSE;
             rule._bGenerateMips  = SW_FALSE;
             const string ddsPath = test::makeTempPath( string( testCase._pName ) + ".dds" );
@@ -415,7 +415,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 2, 1, vector<uint8>( arrSourcePixel, arrSourcePixel + 8 ) ) );
 
         TextureImportRule rule;
-        rule._format         = "R8_UNORM";
+        rule._format         = TextureImportFormat::R8;
         rule._bSrgb          = SW_FALSE;
         rule._bGenerateMips  = SW_FALSE;
         const string ddsPath = test::makeTempPath( "mask_r8.dds" );
@@ -427,10 +427,6 @@ namespace sw::editor
         SW_ASSERT_TRUE( dds._bytes.size() == 2 );
         SW_EXPECT_EQUAL( 10u, static_cast<uint32>( dds._bytes[0] ) );
         SW_EXPECT_EQUAL( 200u, static_cast<uint32>( dds._bytes[1] ) );
-
-        TextureImportRule unknownRule;
-        unknownRule._format = "R8_SNORM";
-        SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "mask_unknown.dds" ), unknownRule ) );
 
         TextureImportConfig config;
         SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
@@ -594,7 +590,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 128, 64, 200, 255 ) ) );
 
         TextureImportRule rule;
-        rule._format        = "B8G8R8A8_UNORM";
+        rule._format        = TextureImportFormat::B8G8R8A8;
         rule._swizzle       = TextureSwizzle::BGRA;
         rule._bGenerateMips = SW_FALSE;
         rule._bSrgb         = SW_TRUE;
@@ -611,7 +607,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 128, static_cast<int32>( bgraImage._bytes[2] ) );
         SW_EXPECT_EQUAL( 255, static_cast<int32>( bgraImage._bytes[3] ) );
 
-        rule._format  = "BC7_UNORM";
+        rule._format  = TextureImportFormat::BC7;
         rule._swizzle = TextureSwizzle::RGBA;
 
         const string bc7Path = test::makeTempPath( "srgb_bc7.dds" );
@@ -784,7 +780,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
 
         TextureImportRule rule;
-        rule._format         = "bc6h";
+        rule._format         = TextureImportFormat::BC6H;
         rule._bSrgb          = SW_FALSE;
         rule._bGenerateMips  = SW_FALSE;
         const string ddsPath = test::makeTempPath( "bright.dds" );
@@ -811,7 +807,7 @@ namespace sw::editor
         SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[2], 0.1f );
 
         // 무압축 HDR(rgba16f)도 같은 갈래다.
-        rule._format             = "rgba16f";
+        rule._format             = TextureImportFormat::R16G16B16A16Float;
         const string halfDDSPath = test::makeTempPath( "bright_rgba16f.dds" );
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );
         DDSImageData halfDDS;
@@ -819,7 +815,7 @@ namespace sw::editor
         SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
-        rule._format = "bc7";
+        rule._format = TextureImportFormat::BC7;
         SW_EXPECT_FALSE( TextureImporter::importTexture( sourcePath, test::makeTempPath( "bright_bc7.dds" ), rule ) );
     }
 

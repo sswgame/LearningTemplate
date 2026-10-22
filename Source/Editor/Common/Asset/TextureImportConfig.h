@@ -64,6 +64,8 @@ namespace sw::editor
     {
         /** @brief @p name 을 형식으로 읽습니다. 모르는 이름이면 false 이고 @p outFormat 은 그대로입니다. */
         [[nodiscard]] static bool parse( string_view name, TextureImportFormat& outFormat );
+        /** @brief @p format 의 DXGI 이름(`BC7_UNORM` …)입니다. 로그에 씁니다. */
+        [[nodiscard]] static string_view getName( TextureImportFormat format );
     };
 } // namespace sw::editor
 
@@ -72,13 +74,14 @@ namespace sw::editor
     /**
      * @struct TextureImportRule
      * @brief 텍스처 임포트와 압축 규칙입니다.
+     * @details 형식은 이름이 아니라 `TextureImportFormat` 으로 든다 — 이름은 설정을 읽을 때 한 번 풀고 모르는 이름은 그때 거절한다. 쓰는 쪽에 "못 푸는 형식" 이 없다.
      */
     struct TextureImportRule
     {
         string                 _name;
         string                 _inherits;
         AssetImportPathFilter  _filter;
-        string                 _format;
+        TextureImportFormat    _format;
         TextureSwizzle         _swizzle;
         uint8                  _bGenerateMips : 1;
         uint8                  _bSrgb         : 1;
@@ -89,7 +92,7 @@ namespace sw::editor
             : _name{}
             , _inherits{}
             , _filter{}
-            , _format{ "BC7_UNORM" }
+            , _format{ TextureImportFormat::BC7 }
             , _swizzle{ TextureSwizzle::RGBA }
             , _bGenerateMips{ SW_TRUE }
             , _bSrgb{ SW_TRUE }

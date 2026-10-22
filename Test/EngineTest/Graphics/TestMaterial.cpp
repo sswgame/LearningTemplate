@@ -918,6 +918,80 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanFailsTheLoad )
 }
 
 /**
+ * @brief [MaterialTest] 머티리얼의 숫자가 아닌 글은 읽기 오류다 — 0 으로 패킹하지 않는다
+ * @details Range 와 숫자 벡터는 패커(`MaterialUtil::packPropertyIntoBuffer`)가 못 읽는 글을 거절하고, 로드는 같은 패커로 확인해 멈춘다.
+ */
+SW_TEST_CASE( MaterialTest, UnreadableNumberFailsTheLoad )
+{
+    const sw::string rangeXML =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"NumberProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"half\" min=\"0\" max=\"1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    const sw::string vectorXML =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"NumberProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 red 1 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "non-numeric material text" );
+        SW_EXPECT_FALSE( material->loadFromXML( rangeXML ) );
+        SW_EXPECT_FALSE( material->loadFromXML( vectorXML ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material parameter 'roughness' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "has an unreadable number 'red'" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [MaterialTest] 셰이더 구조체에 있는데 머티리얼이 적지 않은 필드는 동기화 오류다 — 0 으로 두지 않는다
+ * @details 텍스처 인덱스 필드의 0 은 Vulkan 의 첫 실제 텍스처라, 적지 않은 필드를 0 으로 두면 엉뚱한 텍스처를 읽는다.
+ */
+SW_TEST_CASE( MaterialTest, ShaderFieldMissingFromTheMaterialFailsTheSync )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"FieldProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 1 1 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+
+    sw::ShaderReflectionData reflection{};
+    sw::ShaderBufferInfo     element{};
+    element._name      = "g_SwMaterials";
+    element._totalSize = 20;
+    sw::ShaderVariableInfo varColor{};
+    varColor._name   = "color";
+    varColor._type   = "Float4";
+    varColor._offset = 0;
+    varColor._size   = 16;
+    element._listVariable.push_back( varColor );
+    sw::ShaderVariableInfo varAlbedo{};
+    varAlbedo._name   = "albedoMap";
+    varAlbedo._type   = "Uint";
+    varAlbedo._offset = 16;
+    varAlbedo._size   = 4;
+    element._listVariable.push_back( varAlbedo );
+    reflection._listStructuredElement.push_back( element );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "material missing a shader field" );
+        SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "does not list shader field 'albedoMap'" ) == 1, logs.joined().c_str() );
+}
+
+/**
  * @brief [MaterialTest] 없는 머티리얼 파일은 GPU 에 올리지 않는다 — 빈 기본값으로 계속하지 않는다
  * @details 못 읽은 머티리얼을 빈 값으로 올리면 화면에서 빠진 것을 알 수 없다. 대신 그릴 것(누락 머티리얼)은 부르는 쪽이 정한다.
  */

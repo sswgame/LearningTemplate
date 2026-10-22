@@ -115,23 +115,23 @@ namespace sw
             }
 
             /**
-             * @brief 방출기 @p def 의 시뮬레이션 대상입니다 — 모듈이 허락한 곳(`computeSupportedTargets`)과 빌드가 원하는 곳(Shipping 은 GPU, 개발 빌드는
-             *        `gv_vfxSimulation`)의 교집합입니다.
-             * @details 교집합이 비면(모듈이 한 곳만 허락하고 빌드는 다른 곳을 원한다) 모듈이 허락한 곳이다 — 데이터가 정한 대상이고, `gv_vfxSimulation` 은
-             *          둘 다 되는 방출기만 고르는 비교 스위치다. 허락한 곳이 하나도 없는 방출기는 검증이 로드를 막았다.
+             * @brief 방출기 @p def 의 시뮬레이션 대상입니다. 모듈이 한 곳만 허락하면(`computeSupportedTargets`) 데이터가 정한 그곳이고,
+             *        둘 다 허락할 때만 빌드가 고릅니다(Shipping 은 GPU, 개발 빌드는 `gv_vfxSimulation`).
+             * @details `gv_vfxSimulation` 은 둘 다 되는 방출기의 비교 스위치라 한 곳만 되는 방출기에는 묻지 않는다. 허락한 곳이 하나도 없는 방출기는 검증이 로드를 막았다.
              */
             [[nodiscard]] static VfxSimulationTarget selectSimulationTarget( const VfxEmitterDef& def )
             {
                 const VfxSimulationTargetSet supported = def.computeSupportedTargets();
                 SW_ASSERT( supported.isEmpty() == false );
+                if ( supported.has( VfxSimulationTarget::GPU ) == false )
+                    return VfxSimulationTarget::CPU;
+                if ( supported.has( VfxSimulationTarget::CPU ) == false )
+                    return VfxSimulationTarget::GPU;
 #if defined( SW_SHIPPING )
-                const VfxSimulationTarget wanted = VfxSimulationTarget::GPU;
+                return VfxSimulationTarget::GPU;
 #else
-                const VfxSimulationTarget wanted = gv_vfxSimulation;
+                return gv_vfxSimulation;
 #endif
-                if ( supported.has( wanted ) )
-                    return wanted;
-                return supported.has( VfxSimulationTarget::GPU ) ? VfxSimulationTarget::GPU : VfxSimulationTarget::CPU;
             }
         };
     } // namespace

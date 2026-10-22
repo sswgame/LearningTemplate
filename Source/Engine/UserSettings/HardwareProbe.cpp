@@ -31,12 +31,13 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             using PfnCreateDXGIFactory1 = HRESULT( WINAPI* )( REFIID, void** );
 
-            /** @brief 기본 어댑터(RHI 가 고르는 0 번)의 이름과 전용 메모리를 읽습니다. dxgi.dll 을 링크하지 않고 올려 쓴다 — Engine 은 DXGI 를 링크하지 않는다. */
+            /**
+             * @brief 기본 어댑터(RHI 가 고르는 0 번)의 이름과 전용 메모리를 읽습니다. dxgi.dll 을 링크하지 않고 올려 쓴다 — Engine 은 DXGI 를 링크하지 않는다.
+             * @details 이미 올라와 있어도 `LoadLibraryExW` 로 참조를 하나 가진다(프로세스 끝까지 둔다). `GetModuleHandleW` 로 빌리면 다른 코드가 내릴 때 함수 포인터가 허공을 가리킨다.
+             */
             static void probeAdapter( HardwareProbeResult& result )
             {
-                HMODULE hModule = GetModuleHandleW( L"dxgi.dll" );
-                if ( hModule == nullptr )
-                    hModule = LoadLibraryExW( L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                const HMODULE hModule = LoadLibraryExW( L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
                 if ( hModule == nullptr )
                     return;
                 const PfnCreateDXGIFactory1 pfnCreateFactory = reinterpret_cast<PfnCreateDXGIFactory1>( reinterpret_cast<void*>( GetProcAddress( hModule, "CreateDXGIFactory1" ) ) );

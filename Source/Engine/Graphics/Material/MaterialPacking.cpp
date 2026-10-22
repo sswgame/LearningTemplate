@@ -209,56 +209,55 @@ namespace sw
                 if ( bInvalidPackArguments )
                     return false;
 
+                const bool       bFloatPackedType = shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color;
+                const bool       bUintPackedType  = shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4;
+                const bool       bIntPackedType   = shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4;
+                constexpr uint32 kMaxWords        = 16; // Float4x4
+                const uint32     count            = need / 4;
+                const bool       bKnownType       = bFloatPackedType || bUintPackedType || bIntPackedType;
+                if ( bKnownType == false || count > kMaxWords )
+                    return false;
+
+                // 칸을 모두 읽은 뒤 한 번에 쓴다 — 못 읽은 칸이 있으면 0 으로 채우지 않고 버퍼를 건드리지 않은 채 실패한다. 글이 모자란 칸은 기본값(색의 알파는 1)이다.
                 string_splitter splitter( value, { " ", "	", "," } );
-                const auto&     tokens           = splitter.getSplitList();
-                const bool      bFloatPackedType = shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color;
-                if ( bFloatPackedType )
+                const auto&     tokens = splitter.getSplitList();
+                uint32          arrWord[kMaxWords]{};
+                for ( uint32 wordIndex = 0; wordIndex < count; ++wordIndex )
                 {
-                    float32* pPtr  = reinterpret_cast<float32*>( pDst );
-                    uint32   count = need / 4;
-                    for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+                    if ( wordIndex >= tokens.size() )
                     {
-                        // 글이 모자란 칸은 기본값(색의 알파는 1)이다. 있는데 못 읽은 칸은 알리고 0 이다.
-                        float32 component = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
-                        if ( propIndex < tokens.size() )
-                        {
-                            component = 0.0f;
-                            if ( StringUtil::parseFloat( tokens[propIndex], component ) == false )
-                                SW_LOG_WARNING( "Material value '%#' has an unreadable number '%#' - packed as 0", value, tokens[propIndex] );
-                        }
-                        pPtr[propIndex] = component;
+                        const float32 alpha = 1.0f;
+                        if ( wordIndex == 3 && shaderType == MaterialPropertyType::Color )
+                            Memory::copy( &arrWord[wordIndex], &alpha, sizeof( alpha ) );
+                        continue;
                     }
-                    return true;
-                }
-                const bool bUintPackedType = shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4;
-                if ( bUintPackedType )
-                {
-                    uint32* pPtr  = reinterpret_cast<uint32*>( pDst );
-                    uint32  count = need / 4;
-                    for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+                    bool bRead{ false };
+                    if ( bFloatPackedType )
+                    {
+                        float32 component{ 0.0f };
+                        bRead = StringUtil::parseFloat( tokens[wordIndex], component );
+                        Memory::copy( &arrWord[wordIndex], &component, sizeof( component ) );
+                    }
+                    else if ( bUintPackedType )
                     {
                         uint64 component{ 0 };
-                        if ( propIndex < tokens.size() && StringUtil::parseUint64( tokens[propIndex], component, 10 ) == false )
-                            SW_LOG_WARNING( "Material value '%#' has an unreadable integer '%#' - packed as 0", value, tokens[propIndex] );
-                        pPtr[propIndex] = static_cast<uint32>( component );
+                        bRead              = StringUtil::parseUint64( tokens[wordIndex], component, 10 );
+                        arrWord[wordIndex] = static_cast<uint32>( component );
                     }
-                    return true;
-                }
-                const bool bIntPackedType = shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4;
-                if ( bIntPackedType )
-                {
-                    int32* pPtr  = reinterpret_cast<int32*>( pDst );
-                    uint32 count = need / 4;
-                    for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
+                    else
                     {
                         int32 component{ 0 };
-                        if ( propIndex < tokens.size() && StringUtil::parseInt( tokens[propIndex], component, 10 ) == false )
-                            SW_LOG_WARNING( "Material value '%#' has an unreadable integer '%#' - packed as 0", value, tokens[propIndex] );
-                        pPtr[propIndex] = component;
+                        bRead = StringUtil::parseInt( tokens[wordIndex], component, 10 );
+                        Memory::copy( &arrWord[wordIndex], &component, sizeof( component ) );
                     }
-                    return true;
+                    if ( bRead == false )
+                    {
+                        SW_LOG_ERROR( "Material value '%#' has an unreadable number '%#'", value, tokens[wordIndex] );
+                        return false;
+                    }
                 }
-                return false;
+                Memory::copy( pDst, arrWord, need );
+                return true;
             }
             // `packPropertyIntoBuffer` 의 종류별 쓰기 — 셰이더 타입에 맞는 바이트를 pDst 의 packSize 안에 쓴다.
 
@@ -334,12 +333,15 @@ namespace sw
                 return writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }
 
-            /** @brief Range — float 로 읽어 [min, max] 로 자릅니다(min < max 일 때). */
+            /** @brief Range — float 로 읽어 [min, max] 로 자릅니다(min < max 일 때). 못 읽는 글(빈 글 포함)이면 0 으로 쓰지 않고 false 입니다. */
             [[nodiscard]] static bool packRange( const MaterialProperty& prop, uint8* pDst, uint32 packSize )
             {
                 float32 floatVal{ 0.0f };
                 if ( StringUtil::parseFloat( prop._value, floatVal ) == false )
-                    SW_LOG_WARNING( "Material parameter '%#' has an unreadable number '%#' - using 0", prop._name, prop._value );
+                {
+                    SW_LOG_ERROR( "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
+                    return false;
+                }
                 if ( prop._min < prop._max )
                     floatVal = MathUtil::clamp( floatVal, prop._min, prop._max );
                 return writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );

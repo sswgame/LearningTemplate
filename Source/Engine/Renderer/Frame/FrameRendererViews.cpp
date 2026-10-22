@@ -117,13 +117,19 @@ namespace sw
         }
         view._cullInput.setViewProjection( request._viewProj );
         view._cullInput._position = request._position;
-        // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다. 게임 스레드가 채우지 않았으면(쉬는 뷰 · 그림자 빛 없음) 주 시점의 것을 쓴다.
-        view._shadow = request._shadow._bValid == SW_TRUE ? request._shadow : _mainView._shadow;
-        view._shadowCullInput.setViewProjection( view._shadow._cullViewProj );
-        view._shadowCullInput._position = request._position;
-
         if ( view._bRenderThisFrame == SW_FALSE )
             return;
+        // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다 — 그리는 뷰는 게임 스레드가 늘 채운다(그림자 빛이 없으면 그림자 없는 뷰, `ShadowSetupUtil::makeViewShadowFor`).
+        // 비었으면 주 시점 것을 빌리지 않는다(다른 곳을 보는 뷰는 그림자가 빠진다) — 이 뷰를 그리지 않는다.
+        if ( request._shadow._bValid == SW_FALSE )
+        {
+            SW_LOG_ERROR( "Extra view %# has no shadow data of its own - it is not drawn", view._viewID );
+            view._bRenderThisFrame = SW_FALSE;
+            return;
+        }
+        view._shadow = request._shadow;
+        view._shadowCullInput.setViewProjection( view._shadow._cullViewProj );
+        view._shadowCullInput._position = request._position;
         // 정수 업스케일(화면 사각형 뷰)이면 사각형 픽셀 / 배율(내림)이다. 렌더 텍스처 · 호스트 타깃은 자기 크기에 그대로 그린다.
         const float32 scale  = MathUtil::clamp( view._settings._resolutionScale, 0.1f, 2.0f );
         const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;

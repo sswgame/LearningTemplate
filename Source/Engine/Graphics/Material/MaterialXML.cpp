@@ -167,7 +167,15 @@ namespace sw
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
         const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
         bool       bUnused{ false };
-        return bBooleanValue == false || MaterialUtil::parseBoolToken( prop._value, prop._name, bUnused );
+        if ( bBooleanValue && MaterialUtil::parseBoolToken( prop._value, prop._name, bUnused ) == false )
+            return false;
+        // 숫자 값도 읽을 때 확인한다 — 패커가 못 읽는 글을 0 으로 쓰지 않고 거절하므로 로드를 멈춘다. 같은 패커로 확인해 규칙이 하나다.
+        const bool bNumericValue = prop._type <= MaterialPropertyType::Int4 || prop._type == MaterialPropertyType::Range || prop._type == MaterialPropertyType::Color;
+        if ( bNumericValue == false )
+            return true;
+        MaterialProperty probe = prop;
+        vector<uint8>    listScratch;
+        return MaterialUtil::packPropertyIntoBuffer( probe, listScratch );
     }
 
     void MaterialUtil::appendAttribute( XMLNode parent, const utf8* pName, string_view value )
@@ -183,11 +191,17 @@ namespace sw
         parent.appendAttribute( pName, value );
     }
 
-    RHIBlendMode MaterialUtil::parseBlendMode( string_view modeName )
+    bool MaterialUtil::parseBlendMode( string_view modeName, RHIBlendMode& outMode )
     {
-        if ( StringUtil::equals( modeName, "Transparent", true ) || StringUtil::equals( modeName, "AlphaBlend", true ) )
-            return RHIBlendMode::Transparent;
-        return RHIBlendMode::Opaque;
+        const bool bTransparent = StringUtil::equals( modeName, "Transparent", true ) || StringUtil::equals( modeName, "AlphaBlend", true );
+        const bool bOpaque      = StringUtil::equals( modeName, "Opaque", true );
+        if ( bTransparent == false && bOpaque == false )
+        {
+            SW_LOG_ERROR( "Material blend mode '%#' is unknown (Opaque, Transparent, AlphaBlend)", modeName );
+            return false;
+        }
+        outMode = bTransparent ? RHIBlendMode::Transparent : RHIBlendMode::Opaque;
+        return true;
     }
 
     const utf8* MaterialUtil::blendModeToString( RHIBlendMode mode )
@@ -474,7 +488,12 @@ namespace sw
         _desc       = MaterialDesc{};
         _desc._name = MaterialUtil::fieldText( root, "name" );
         setShaderPath( MaterialUtil::fieldText( root, "shaderPath" ) );
-        _desc._blendMode = MaterialUtil::fieldText( root, "blendMode" );
+        // 블렌드 모드는 읽을 때 푼다 — 적지 않으면 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
+        const string blendModeText = MaterialUtil::fieldText( root, "blendMode" );
+        RHIBlendMode blendMode{ RHIBlendMode::Opaque };
+        if ( blendModeText.empty() == false && MaterialUtil::parseBlendMode( blendModeText, blendMode ) == false )
+            return false;
+        _desc._blendMode = MaterialUtil::blendModeToString( blendMode );
 
         XMLNode props = root.findChild( "_properties" );
         if ( props.isValid() )
@@ -492,6 +511,7 @@ namespace sw
         if ( MaterialUtil::parsePermutationNode( root, _desc._permutations ) == false )
             return false;
 
+        _blendMode = blendMode;
         applyDescToRuntime();
         return true;
     }
@@ -499,7 +519,6 @@ namespace sw
     void Material::applyDescToRuntime()
     {
         _data._listProperty = _desc._listProperty;
-        _blendMode          = MaterialUtil::parseBlendMode( _desc._blendMode );
         // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
         _bShaderLayoutSynced = SW_FALSE;

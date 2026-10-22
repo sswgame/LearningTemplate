@@ -33,7 +33,10 @@ namespace sw
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
     #if defined( SW_PLATFORM_WINDOWS )
-                HMODULE hModule = GetModuleHandleW( L"renderdoc.dll" );
+                // 주입된 RenderDoc 은 참조 없이 빌리지 않는다 — 고정(PIN)해 API 포인터(`_s_pAPI`)가 사는 동안 내려가지 않게 한다.
+                HMODULE hModule = nullptr;
+                if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, L"renderdoc.dll", &hModule ) == FALSE )
+                    hModule = nullptr;
                 if ( hModule == nullptr && bLoadIfMissing )
                 {
                     utf16       arrPath[constant::kMaxPathSize]{};
