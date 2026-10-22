@@ -167,9 +167,9 @@ namespace sw
             return false;
         }
 
-        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( kAssetType, doc, root ) == false )
+        if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
         {
-            SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
+            SW_LOG_ERROR( "formatVersion mismatch: %#", absPath );
             return false;
         }
 

@@ -191,7 +191,7 @@ namespace sw
                 // 현재 타입에 없는 필드는 건너뛰고 읽는다. 세 형식이 같은 규칙이다. 바이너리가 실패하면 컴포넌트 PROPERTY 하나를 지웠을 때 그
                 // 컴포넌트를 가진 모든 오브젝트의 세이브와 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다. 오브젝트 자기 필드도 같다. 바이너리의
                 // 버전 붙은 읽기가 이 값을 같은 버전의 orphan 정책으로 읽는다(`SchemaOrphanPolicy::Ignore`). 버전이 다른 상태는 그래도 거절한다.
-                // 버린 필드는 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이름과 함께 로드마다 한 번 알린다.
+                // 버린 필드는 세 형식이 같이 지나는 `finishVersionedRead` 이 이름과 함께 로드마다 한 번 알린다.
                 serializeContext.setAllowUnknownProperties( true );
                 // 컴포넌트 핸들 텍스트는 두 형태를 읽는다(숫자 런타임 id, 파일 형태의 키). 바이너리는 같은 16 바이트다.
                 serializeContext.registerTextHandler( getComponentHandleTypeName(), componentTextWriter, SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, &readComponentHandleText ) );
@@ -505,7 +505,7 @@ namespace sw
 
         return loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
-            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, nullptr, serializeContext );
+            return TSerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, text, kObjectReflectedSchemaVersion, serializeContext );
         } );
     }
 
@@ -568,7 +568,7 @@ namespace sw
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( uint32& outVersion, const SerializeContext& serializeContext )
         {
             return BinarySerializer::deserializeVersioned( outVersion, pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
-                                                           kObjectReflectedSchemaVersion, nullptr, serializeContext );
+                                                           kObjectReflectedSchemaVersion, serializeContext );
         } );
         return bLoaded ? bodyStart + bodySize : 0;
     }

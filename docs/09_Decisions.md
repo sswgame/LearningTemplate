@@ -496,11 +496,12 @@
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
-  - 이 결정은 지금 이관할 데이터가 없다는 사실에 기댄 것이지 영구 금지가 아닙니다(사용자 확인, 2026-10-17). 출시한 데이터가 생겼을 때 바로 쓰도록 별칭(`Alias` · `ValueAlias` · `Removed`)과 이관 등록은 미리 갖춥니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md)).
+  - 이 결정은 지금 이관할 데이터가 없다는 사실에 기댄 것이지 영구 금지가 아닙니다(사용자 확인, 2026-10-17). 출시한 데이터가 생겼을 때 바로 쓰도록 별칭(`Alias` · `ValueAlias` · `Removed`)은 미리 갖춥니다(이관 등록은 아래 2026-10-23 결정으로 지웠습니다 — [이름 변경 리다이렉트 계획](plans/RenameRedirects.md)).
    - 기능은 갖추되 출시 데이터가 이관할 것이 생기기 전에는 사용하지 않습니다 — 제품 데이터 · 게임 코드에 별칭을 두지 않습니다(2026-10-18 사용자 결정).
-- **이관 함수는 타입 옆 한 번 등록입니다**(2026-10-17). 정책은 위 결정 그대로입니다. 스키마가 바뀌면 기본은 데이터를 다시 쓰는 것이고, 이관은 값 계산이 불가피한 예외입니다. `SW_SCHEMA_MIGRATION` 이 (타입, 기록된 버전)으로 `SchemaMigrationRegistry` 에 올리고, 세 형식의 버전 붙은 읽기가 타입과 그 부모로 찾으므로 `deserializeVersioned` · `Archive` 는 이관 함수를 받지 않습니다. 필요한데 없으면 오류로 멈추고, 같은 자리의 중복 등록은 모든 구성에서 프로세스를 멈춥니다. 같은 버전에서 지운 필드를 버려도 되는지는 이관이 아니라 orphan 정책이라 호출부가 컨텍스트로 정합니다(`setAllowUnknownProperties`, 오브젝트 상태만 켬).
-  - 등록은 생성기가 모으지 않고 정적 등록자로 했습니다([이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R5 초안과 다름). 이관 함수는 손으로 쓰는 C++ 이라 생성기가 읽을 선언이 없습니다. 언리얼 `FCustomVersionRegistration` 과 같고, 기존 `RegistrationList` 가 핫 리로드 대체와 언로드 때 빼기를 이미 맡습니다.
-  - 찾은 이관 함수는 잠금 밖에서 부릅니다. 그래서 모듈 언로드는 직렬화가 도는 동안 하지 않습니다(`LiveReloadManager::drainTasksBeforeUnload` 가 비동기 씬 로드를 취소하고 작업을 비운 뒤 내림).
+- **첫 출시 전에는 이관 없이 데이터를 다시 쓰고, 판은 정확히 같을 때만 읽습니다**(2026-10-23 사용자 결정). 출시된 빌드가 없어 지금 코드와 데이터 전부가 현재 판입니다. 형식이 바뀌면 저장소의 데이터를 다시 쓰고, 옛 판 리더 · 이관 함수 · 판 범위 읽기를 두지 않습니다. 판이 다르면 읽지 않고 오류로 멈춥니다.
+  - 지운 것: `SW_SCHEMA_MIGRATION` · `SchemaMigrationRegistry`(2026-10-17 에 둔 정적 등록 — 프로덕션 등록이 0 이었다), 세 형식의 `deserializeVersioned` · `Archive` 의 옛 TypeInfo 인자(`legacyTypeInfo`), `AssetFormatRegistry` 의 XML 판 이관 등록부(대신 `AssetXMLFormat::isCurrentXMLVersion` 이 정확 일치만 본다), 판 범위로 읽는 `StateArchiveUtil::readHeaderInRange`와 FarmVillage 상태의 1 판 리더, 외형 공유 코드의 "높은 판도 받는" 범위 검사. 근본 원인은 판 번호를 범위로 받는 API 라서, 정확 일치 형식만 남겼다.
+  - 남긴 것은 호환 분기가 아니라 계약이거나 출시 뒤에도 필요한 것이다: `BinaryWireVersion`, orphan 정책(`SchemaOrphanPolicy` — 텍스트 Ignore · 바이너리 Reject), 네트워크 `combine` 버전, 서버 레코드 판 거절, SQL 마이그레이션 번호, 팩 형식 거절, 쿠킹 기록의 "옛 형식은 읽지 않고 다시 굽는다", 사용자 설정 `<Upgrade>` 체인. 호환 의무는 출시를 자르는 순간부터이고, 그때 판 번호를 기준값으로 굳힌다.
+  - 같은 버전에서 지운 필드를 버려도 되는지는 이관이 아니라 orphan 정책이라 호출부가 컨텍스트로 정합니다(`setAllowUnknownProperties`, 오브젝트 상태만 켬).
 - **설정 파일에는 기본값과 다른 값만 적습니다**(2026-10-06). 언리얼의 `Default*.ini` 와 같은 규칙이고, `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막습니다.
 - **설정 값의 출처는 하나씩입니다**(2026-10-06). 시작 씬은 팩의 `gamesettings.xml`, 창 제목은 게임 프리셋의 `GameConfig::_windowTitle`(언리얼 ProjectName), 고정 스텝은 `EngineConfig::_fixedDeltaTime` 입니다.
   물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다(유니티 `Time.fixedDeltaTime` 과 같음). 기본 RHI 도 한 곳에만 적습니다.
@@ -991,7 +992,7 @@
     다시 만들 수 있는 캐시는 `readCache` 로 읽어 없는 것으로 봅니다.
     A 는 `MaxCount` 를 보지 않으므로 두 읽기는 B 코덱이 있는 타입이면 B 쓰기 검사로 범위를 다시 보고, 없는 타입은 쓰기 때의 규칙 함수(`LiveEventRules::isValid`, 서버 디렉터리 `isValidWindow` · `isValidNotice`)를 다시 지나며, 어기면 오류로 읽기를 멈춥니다.
     A 는 필드를 이름으로 짝짓고 모르는 필드(orphan)를 거절합니다. 필드를 더하면 옛 레코드의 그 필드는 기본값이 되고, 필드를 빼면 옛 레코드 전부가 읽기 실패입니다. 필드를 빼거나 뜻을 바꿀 때는 판을 올리고 데이터를 다시 씁니다.
-    값 계산이 불가피한 예외만 `SW_SCHEMA_MIGRATION` 으로 그 판의 이관을 등록합니다(5-4).
+    이관 함수는 없습니다(5-4).
     쓰기(`ServiceRecordUtil::encode`)는 `[[nodiscard]] bool` 이고 읽기가 거절할 레코드는 쓰지 않습니다(2026-10-17, 백로그 `A-17`). 실을 수 없는 필드가 있거나 B 코덱이 있는 타입인데 범위를 벗어나면 오류 로그와 false 입니다.
     (바이트를 돌려주던 옛 모양은 실패를 Debug 단언으로만 막아 Release 에서 끊긴 레코드가 저장소에 들어갔다.) 호출부는 저장소 작업을 하지 않고 요청을 `Invalid` 로 끝냅니다(재시도로 풀리지 않으므로 `Unavailable` 이 아님).
     요청이 없는 쓰기(채팅 기록 묶음, 접속 상태 시한 연장)는 그 값만 빼고 오류 로그를 남깁니다. 서비스마다 손 규칙(`isValidLobbyRequest` 등)이 같은 범위를 먼저 보므로 호출부의 실패 분기는 공개 API 로 닿지 않아, 테스트는 쓰기 함수에서 거절을 봅니다.

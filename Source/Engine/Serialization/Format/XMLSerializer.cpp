@@ -324,7 +324,7 @@ namespace sw
             /**
              * @brief 안쪽 원소(컴포넌트 · 구조체 칸 · 컨테이너의 구조체 원소)를 읽고, orphan 목록이 있으면 그 원소의 모르는 속성 · 자식도 orphan 으로 남깁니다.
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
-             *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
+             *          로드가 끝난 뒤 `finishVersionedRead` 이 루트 타입 이름과 함께 경고한다.
              */
             [[nodiscard]] static FieldReadResult readNestedXMLIntoInstance( const MutableObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
                                                                             vector<SchemaOrphanValue>* pOutListOrphan )
@@ -534,7 +534,7 @@ namespace sw
             static void appendUnknownNameOrphan( const utf8* pWrittenName, const utf8* pText, const utf8* pOwnerTypeName,
                                                  vector<SchemaOrphanValue>& outListOrphan )
             {
-                // 파일의 모르는 이름을 전역 이름 표에 넣지 않는다 — 아는 이름이면 그것을, 아니면 해시만 든다(`SchemaMigrateContext::findOrphan`).
+                // 파일의 모르는 이름을 전역 이름 표에 넣지 않는다 — 아는 이름이면 그것을, 아니면 해시만 든다(`SchemaOrphanValue`).
                 SchemaOrphanValue orphan;
                 orphan._name     = hashed_string::findInterned( string_view{ pWrittenName } );
                 orphan._nameHash = hashed_string::computeHash( string_view{ pWrittenName } );
@@ -980,13 +980,12 @@ namespace sw
     }
 
     bool XMLSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                              string_view xmlStr, uint32 currentVersion,
-                                              const TypeInfo* pLegacyTypeInfo, const SerializeContext& context )
+                                              string_view xmlStr, uint32 currentVersion, const SerializeContext& context )
     {
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
-            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool

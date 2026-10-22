@@ -645,7 +645,7 @@ namespace sw
     }
 
     bool Archive::deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                              uint32 currentVersion, const TypeInfo* pLegacyTypeInfo )
+                                              uint32 currentVersion )
     {
         if ( pInstance == nullptr )
         {
@@ -659,7 +659,7 @@ namespace sw
 
         return BinarySerializer::deserializeVersioned( outVersion, pInstance, typeInfo,
                                                        versionedBytes.data(), versionedBytes.size(),
-                                                       currentVersion, pLegacyTypeInfo );
+                                                       currentVersion );
     }
 
     bool Archive::serializeJSONObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty )

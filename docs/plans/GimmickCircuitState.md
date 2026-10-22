@@ -35,7 +35,7 @@
 |---|---|---|
 | 필드 추가 | 옛 데이터는 선언한 기본값으로 읽힙니다 | 스키마 해시가 바뀌어 다른 빌드의 바이트는 `SchemaMismatch` 입니다. 같은 빌드끼리만 오가므로 문제가 없습니다 |
 | 필드 이름 변경 | `PROPERTY( Alias = "old" )` | 해시가 바뀝니다(리다이렉트는 해시에 넣지 않습니다, RenameRedirects 규칙 5) |
-| 값 계산이 필요한 변환 | 소유 타입(`sw::GimmickCircuitComponent`)의 기록 버전을 올리고 `SW_SCHEMA_MIGRATION( id, sw::GimmickCircuitComponent, 옛 버전, fn )` 을 등록합니다. 등록이 없으면 오류로 멈춥니다 | 해당 없음 |
+| 값 계산이 필요한 변환 | 기록 버전을 올리고 저장소의 데이터를 다시 씁니다(이관 함수는 없다, 결정 기록 5-4). 판이 다르면 오류로 멈춥니다 | 해당 없음 |
 | 회로 데이터 변경(노드 추가 등) | 노드 id 로 짝지어 이어 읽습니다(8절) | 정확히 맞는 상태만 받습니다 |
 
 `GimmickNodeState` 의 의미가 바뀌는 변경(예: 비트 마스크를 두 필드로 나눔)은 기본값으로 메울 수 없으므로 종류의 상태 버전(`GimmickNodeKind::_stateVersion`)을 올리거나 변환 함수가 필요합니다. 지금은 출시 데이터가 없어 변환을 등록하지 않았습니다.
@@ -69,6 +69,6 @@
   같은 입력을 두 번 돌려 해시를 견주는 `GimmickTest.SameInputsSameStateHash`(`runA` · `runB`)와 위의 N 스텝 왕복 해시 일치가 통과해, 저장 · 복원이 스텝 결과를 바꾸지 않음은 확인했습니다. 옛 코드 대비 바이트 동일성은 보증하지 않습니다.
 - **측정(Release).** 쇼케이스 회로 5 개와 프리팹 13 개 모두 한 조각, 가장 큰 244 바이트(상한 3,920 의 6 %), `saveState` ≤ 60 ns, 첫 호출 뒤 할당 0. 표와 방법은 [검증 문서](../08_Verification.md)의 기믹 회로 상태 항목.
   조각 수가 스텝에 따라 바뀌지 않아 "varuint 길이로 엔티티가 다시 보내짐" 걱정은 이 데이터에서 실현되지 않습니다. 측정 케이스는 `Test/EngineTest/GameFramework/Gimmick/TestGimmickStateBench.cpp`(`GimmickStateBenchTest`, 호스트 스위트).
-- **XML 읽기의 모르는 요소는 오류가 아니라 건너뜁니다**(코드 읽기로 확인, 실행 테스트는 따로 없음). 오브젝트 · 컴포넌트 읽기는 `setAllowUnknownProperties( true )` 로 모르는 요소를 건너뛰고 `runSchemaMigrateStep` 이 버린 이름을 로드마다 한 번 경고합니다
+- **XML 읽기의 모르는 요소는 오류가 아니라 건너뜁니다**(코드 읽기로 확인, 실행 테스트는 따로 없음). 오브젝트 · 컴포넌트 읽기는 `setAllowUnknownProperties( true )` 로 모르는 요소를 건너뛰고 `finishVersionedRead` 가 버린 이름을 로드마다 한 번 경고합니다
   (`ObjectStateSerializer.cpp`, 정책 `SchemaOrphanPolicy::Ignore`, 고정 테스트 `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`). 그래서 옛 `_stateBytes` 가 남은 쿠킹 산출물이나 게임 폴더도 오류 없이 읽히고 그 요소만 버려집니다. 바이너리 오브젝트 상태도 같은 규칙입니다.
   엄격한 `XMLSerializer::deserialize` 는 모르는 요소가 있으면 실패하지만 오브젝트 읽기는 그 경로가 아닙니다.

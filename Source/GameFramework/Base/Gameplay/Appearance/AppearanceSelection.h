@@ -151,7 +151,7 @@ namespace sw
 {
     /**
      * @struct AppearanceShareCode
-     * @brief 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 높거나 체크섬이 틀리면 거절합니다.
+     * @brief 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 다르거나 체크섬이 틀리면 거절합니다(정확히 같은 판만 읽습니다).
      */
     struct SW_GF_API AppearanceShareCode
     {

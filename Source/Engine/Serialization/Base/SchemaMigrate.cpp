@@ -9,7 +9,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
-#include "Engine/Serialization/Base/SchemaMigrationRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
@@ -142,7 +141,7 @@ namespace sw
              * @brief 기록 타입(wire type)을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
              * @details **크기만으로는 타입을 가를 수 없다.** `sizeof(float32) == sizeof(int32)` 이고
              *          `sizeof(float64) == sizeof(int64)` 이다. 크기로만 고르면 `float32` 분기가 돌지 않아(앞의 int32 분기가
-             *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값 `"1069547520"` 으로 적는다.
+             *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 강제 변환이 `1.5f` 를 비트값 `"1069547520"` 으로 적는다.
              *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 가지고 있다.
              * @return 기록 타입을 모르거나, 스칼라가 아니거나, payload 크기가 그 타입과 다르면 false 입니다.
              */
@@ -198,128 +197,23 @@ namespace sw
                 return false;
             }
 
-            static vector<string> splitPath( const utf8* pDottedPath )
-            {
-                vector<string> listPart;
-                if ( StringUtil::isNullOrEmpty( pDottedPath ) )
-                    return listPart;
-                string_splitter splitter( pDottedPath, { "." } );
-                for ( string_view token : splitter.getSplitList() )
-                {
-                    string_view trimmedToken = StringUtil::trim( token );
-                    if ( trimmedToken.empty() == false )
-                        listPart.push_back( string{ trimmedToken } );
-                }
-                return listPart;
-            }
-
-            /**
-             * @brief orphan 의 바이너리 값을 프로퍼티 위치에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 가 함께 씁니다.
-             * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽는다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
-             *          보낸다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙이다. 기록 타입으로 프로퍼티 위치에
-             *          먼저 읽으면 구조가 다른 타입(int32 → int16, string 등)에서 그 위치와 이웃 필드를 덮어쓴다.
-             *          프로퍼티 단위로 쓴다. 비트필드는 그 비트만 쓴다(값 주소로 쓰면 같은 바이트의 다른 플래그를 덮는다).
-             * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
-             */
-            [[nodiscard]] static bool applyOrphanBinary( const ResolvedPropertyPath& target, const SchemaOrphanValue& orphan, hashed_string wireTypeName,
-                                                         const SerializeContext& context )
-            {
-                const PropertyInfo& prop        = *target._pProp;
-                const uint8*        pPayload    = orphan._listBinary.data();
-                const size_t        payloadSize = orphan._listBinary.size();
-                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다. 끝까지 읽혀야 받는다(`SerializerUtil::applyPropertyBinary`).
-                // 이관 함수가 bool 로 받으므로 객체째 실패도 적용 실패다(이관이 실패하면 읽기 전체가 실패한다).
-                if ( wireTypeName == prop._typeName &&
-                     SerializerUtil::applyPropertyBinary( prop, target._owner, pPayload, payloadSize, context, orphan._wireVersion ) == FieldReadResult::Read )
-                    return true;
-                return tryCoercePropertyBinary( prop, target._owner, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion ) == FieldReadResult::Read;
-            }
-
-            /**
-             * @brief 프로퍼티 하나의 값을 텍스트로 씁니다(`SerializerUtil::valueToText` 의 프로퍼티 판). 비트필드는 그 비트를 bool 로 씁니다.
-             * @return 값 주소가 없으면(접근자만 있는 프로퍼티) false 입니다.
-             */
-            [[nodiscard]] static bool propertyValueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const ResolvedPropertyPath& source, const SerializeContext& context )
-            {
-                const PropertyInfo& prop   = *source._pProp;
-                void* const         pOwner = source._owner.get();
-                if ( prop._bIsBitField == SW_TRUE )
-                {
-                    const bool bValue = prop.getValue<bool>( pOwner );
-                    SerializerUtil::valueToText( ss, ValueAddress{ &bValue }, hashed_string( "bool" ), context );
-                    return true;
-                }
-                const void* const pValue = prop.getRawPtr( pOwner );
-                if ( pValue == nullptr )
-                    return false;
-                SerializerUtil::valueToText( ss, ValueAddress{ pValue }, prop._typeName, context );
-                return true;
-            }
-
-            /**
-             * @brief orphan 값을 경로 `pPath` 의 프로퍼티에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 는 orphan 을 찾는 법만 다릅니다.
-             * @details 텍스트가 있으면 텍스트로, 없으면 바이너리로 적용한다. 바이너리의 기록 타입은 `wireTypeHint` 로 정하고, 비었으면 orphan 에
-             *          남은 기록 타입 해시로 정한다. 프로퍼티 타입을 기록 타입으로 가정하면 타입이 바뀐 orphan(int32 → float32 등)을
-             *          그 비트 그대로 제자리에 읽게 된다.
-             */
-            [[nodiscard]] static bool applyOrphanAt( const MutableObjectAddress instance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
-                                                     hashed_string wireTypeHint, const SerializeContext& context )
-            {
-                ResolvedPropertyPath target;
-                if ( resolvePropertyPath( instance, typeInfo, pPath, target ) == false )
-                    return false;
-
-                if ( orphan._text.empty() == false )
-                    return applyPropertyTextCoerced( *target._pProp, target._owner, orphan._text, context );
-                if ( orphan._listBinary.empty() )
-                    return false;
-
-                hashed_string hint = wireTypeHint;
-                if ( hint.empty() )
-                    hint = findWireTypeName( orphan._wireTypeHash );
-                // 기록 타입이 적혀 있는데 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 옮기지 않는다(바이너리 필드 읽기와 같은 규칙이다).
-                if ( hint.empty() && orphan._wireTypeHash != 0 )
-                    return false;
-                return applyOrphanBinary( target, orphan, hint, context );
-            }
-
             /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 가집니다. */
             static uint32 getOrphanNameHash( const SchemaOrphanValue& orphan )
             {
                 return orphan._nameHash != 0 ? orphan._nameHash : orphan._name.getHash();
             }
 
-            /** @brief 타입(상속 포함)의 프로퍼티 이름과 별칭 가운데 orphan 의 이름이 있는지 확인합니다. */
-            static bool isOrphanNameKnownTo( const TypeInfo& typeInfo, const SchemaOrphanValue& orphan )
-            {
-                const uint32 nameHash = getOrphanNameHash( orphan );
-                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-                {
-                    if ( prop.matchesNameHash( nameHash ) )
-                        return true;
-                }
-                return false;
-            }
-
             /**
              * @brief 로드가 성공으로 끝난 뒤 아무 데도 쓰이지 않은 orphan(읽지 못한 값, 타입에 없는 필드)을 **로드마다 한 번** 알립니다.
-             * @details 이관 함수가 찾아 본 orphan(`_bClaimed`)은 그 함수가 처리했으므로 뺀다. 옛 TypeInfo 를 스테이징했으면 같은 본문을
-             *          두 타입으로 읽어 한쪽만 아는 필드는 반드시 다른 쪽의 orphan 이 되므로, 두 타입 중 하나라도 아는 이름은 스테이징된
-             *          인스턴스가 처리했다고 보고 뺀다. 이름은 필드마다 한 번만 적는다(컨테이너 원소가 여럿 실패해도 필드 하나로 센다).
+             * @details 이름은 필드마다 한 번만 적는다(컨테이너 원소가 여럿 실패해도 필드 하나로 센다).
              *          JSON, XML 의 Ignore 정책도 여기서 알린다. 숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다.
              */
-            static void warnDroppedOrphans( const TypeInfo& typeInfo, const TypeInfo* pLegacyTypeInfo, const vector<SchemaOrphanValue>& listOrphan )
+            static void warnDroppedOrphans( const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan )
             {
                 vector<uint32> listListedHash;
                 string         names;
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
-                    if ( orphan._bClaimed )
-                        continue;
-                    const bool bStagedElsewhere =
-                        pLegacyTypeInfo != nullptr && ( isOrphanNameKnownTo( typeInfo, orphan ) || isOrphanNameKnownTo( *pLegacyTypeInfo, orphan ) );
-                    if ( bStagedElsewhere )
-                        continue;
                     // 적힌 텍스트가 먼저다. 파일의 모르는 이름은 intern 하지 않고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
                     const uint32 nameHash = getOrphanNameHash( orphan );
                     string       shownName;
@@ -420,115 +314,6 @@ namespace sw
         }, true /* 상속 PROPERTY 포함 */ );
     }
 
-    const SchemaOrphanValue* SchemaMigrateContext::findOrphan( hashed_string name ) const
-    {
-        if ( _pOrphans == nullptr )
-            return nullptr;
-        const uint32             nameHash = name.getHash();
-        const SchemaOrphanValue* pFirst   = nullptr;
-        for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
-        {
-            // 파일에서 읽은 orphan 은 이름을 intern 하지 않고 해시만 가질 수 있다(XML, JSON 읽기). 그때는 해시로 맞춰 본다.
-            if ( orphanValue._name != name && ( orphanValue._name.empty() == false || orphanValue._nameHash != nameHash ) )
-                continue;
-            // 같은 이름은 모두 이관이 처리한 것이다. 컨테이너 원소가 여럿 실패하면 같은 필드 이름의 orphan 이 여럿 생긴다.
-            orphanValue._bClaimed = true;
-            if ( pFirst == nullptr )
-                pFirst = &orphanValue;
-        }
-        return pFirst;
-    }
-
-    const SchemaOrphanValue* SchemaMigrateContext::findOrphanHash( uint32 nameHash ) const
-    {
-        if ( _pOrphans == nullptr || nameHash == 0 )
-            return nullptr;
-        const SchemaOrphanValue* pFirst = nullptr;
-        for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
-        {
-            if ( orphanValue._nameHash != nameHash )
-                continue;
-            orphanValue._bClaimed = true;
-            if ( pFirst == nullptr )
-                pFirst = &orphanValue;
-        }
-        return pFirst;
-    }
-
-    bool SchemaMigrateContext::applyOrphanTo( hashed_string propName, hashed_string wireTypeHint ) const
-    {
-        const SchemaOrphanValue* pOrphan = findOrphan( propName );
-        if ( pOrphan == nullptr )
-            pOrphan = findOrphanHash( propName.getHash() );
-        const bool bCannotApplyOrphan = pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr;
-        if ( bCannotApplyOrphan )
-            return false;
-
-        const SerializeContext& context = _serializeContext;
-        return SchemaMigrateInternal::applyOrphanAt( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, context );
-    }
-
-    bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
-    {
-        // `applyOrphanTo` 와 같은 검사.
-        const bool bInvalidDottedPath = pDottedPath == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr;
-        if ( bInvalidDottedPath )
-            return false;
-        const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
-        if ( listPart.empty() )
-            return false;
-
-        // orphan 이름은 보통 리프 이름이거나 옛 키 전체다
-        const hashed_string      leaf( listPart.back().c_str() );
-        const SchemaOrphanValue* pOrphan = findOrphan( leaf );
-        if ( pOrphan == nullptr )
-            pOrphan = findOrphan( hashed_string( pDottedPath ) );
-        if ( pOrphan == nullptr )
-            return false;
-
-        const SerializeContext& context = _serializeContext;
-        return SchemaMigrateInternal::applyOrphanAt( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, context );
-    }
-
-    bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const
-    {
-        return movePropertyPath( fromProp.c_str(), toProp.c_str() );
-    }
-
-    bool SchemaMigrateContext::movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const
-    {
-        const bool bCannotMovePath = _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr;
-        if ( bCannotMovePath )
-            return false;
-
-        const SerializeContext& context = _serializeContext;
-
-        ResolvedPropertyPath       source;
-        const MutableObjectAddress srcRoot{ _pLegacyInstance != nullptr ? _pLegacyInstance : _pInstance };
-        const TypeInfo*            pSrcType = _pLegacyTypeInfo != nullptr ? _pLegacyTypeInfo : _pTypeInfo;
-        if ( resolvePropertyPath( srcRoot, *pSrcType, pFromPath, source ) == false )
-            return false;
-
-        ResolvedPropertyPath target;
-        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, pToPath, target ) == false )
-            return false;
-
-        StringBuilder<constant::kMaxBuffer8192> ss;
-        if ( SchemaMigrateInternal::propertyValueToText( ss, source, context ) == false )
-            return false;
-        return applyPropertyTextCoerced( *target._pProp, target._owner, ss.view(), context );
-    }
-
-    bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
-    {
-        if ( _pInstance == nullptr || _pTypeInfo == nullptr )
-            return false;
-        ResolvedPropertyPath target;
-        if ( resolvePropertyPath( MutableObjectAddress{ _pInstance }, *_pTypeInfo, propName.c_str(), target ) == false )
-            return false;
-        return applyPropertyTextCoerced( *target._pProp, target._owner, text, _serializeContext );
-    }
-
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
     {
         if ( wireTypeName.empty() || wireTypeName == targetTypeName )
@@ -576,7 +361,7 @@ namespace sw
             return ContainerVisitor::fieldResultOf( parseTextValueCoerced( value, targetTypeName, wireText, context ) );
         }
 
-        // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 이관 대상이 아니다. 값 읽기를 시도하지 않는다.
+        // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 강제 변환 대상이 아니다. 값 읽기를 시도하지 않는다.
         if ( SerializerUtil::hasBinaryValueCodec( targetTypeName, context ) == false )
             return FieldReadResult::FieldFailed;
 
@@ -725,79 +510,26 @@ namespace sw
         return false;
     }
 
-    bool resolvePropertyPath( const MutableObjectAddress root, const TypeInfo& typeInfo, const utf8* pDottedPath, ResolvedPropertyPath& outResolved )
-    {
-        outResolved = ResolvedPropertyPath{};
-        if ( root.get() == nullptr || pDottedPath == nullptr )
-            return false;
-
-        const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
-        if ( listPart.empty() )
-            return false;
-
-        // 경로 중간의 구조체 값은 다음 부분의 객체 주소다. 끝의 프로퍼티는 주소를 꺼내지 않는다(비트필드는 값 주소가 없다).
-        void*           pCur     = root.get();
-        const TypeInfo* pCurType = &typeInfo;
-
-        for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
-        {
-            const hashed_string name( listPart[partIndex].c_str() );
-            const PropertyInfo* pProp = pCurType->findPropertyInHierarchy( name );
-            if ( pProp == nullptr )
-                return false;
-
-            if ( partIndex + 1 == listPart.size() )
-            {
-                outResolved = ResolvedPropertyPath{ MutableObjectAddress{ pCur }, pProp };
-                return true;
-            }
-
-            const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( pProp->_typeName );
-            void* const     pNext   = pProp->getRawPtr( pCur );
-            if ( pNested == nullptr || pNext == nullptr )
-                return false;
-            pCur     = pNext;
-            pCurType = pNested;
-        }
-        return false;
-    }
-
     SW_LOG_CALLER( "SchemaMigrate" );
 
-    bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
-                               void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
-                               const vector<SchemaOrphanValue>& listOrphan,
-                               bool bMigrateRequired, const SerializeContext& context )
+    bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
+                              SchemaOrphanPolicy orphanPolicy )
     {
-        const bool bMigrateApplies = fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr;
-        // 찾기는 이관이 쓰일 수 있을 때만 한다. 버전이 같고 남은 값이 없는 읽기(거의 모든 읽기)는 표를 보지 않는다.
-        const SchemaMigrateFn migrate = bMigrateApplies ? SchemaMigrationRegistry::find( typeInfo, fromVersion ) : nullptr;
-        if ( migrate != nullptr )
+        if ( fromVersion != currentVersion )
         {
-            SchemaMigrateContext migrateContext{ context };
-            migrateContext._fromVersion     = fromVersion;
-            migrateContext._toVersion       = currentVersion;
-            migrateContext._pInstance       = pInstance;
-            migrateContext._pTypeInfo       = &typeInfo;
-            migrateContext._pLegacyInstance = pLegacyInstance;
-            migrateContext._pLegacyTypeInfo = pLegacyTypeInfo;
-            migrateContext._pOrphans        = &listOrphan;
-            if ( migrate( migrateContext ) == false )
-                return false;
-            // 이관이 받아 준 로드다. 이관이 찾아 보지 않은 orphan 은 버려진다.
-            SchemaMigrateInternal::warnDroppedOrphans( typeInfo, pLegacyTypeInfo, listOrphan );
-            return true;
-        }
-
-        if ( bMigrateRequired )
-        {
-            SW_LOG_ERROR( "(%#) schema version %# -> %# needs a migration and none is registered for (%#, %#) - rewrite the data, or register SW_SCHEMA_MIGRATION only when a value must be computed (%# orphans: %#)",
-                          typeInfo._name.c_str(), fromVersion, currentVersion, typeInfo._fullyQualifiedName.c_str(), fromVersion,
-                          static_cast<uint32>( listOrphan.size() ), listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
+            SW_LOG_ERROR( "(%#) schema version %# does not match the supported %# - rewrite the data (no migration before the first release) (%# orphans: %#)",
+                          typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
+                          listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
             return false;
         }
-        // 이관 없이 받아 주는 로드다(JSON, XML 의 Ignore 정책). orphan 은 모두 버려진다.
-        SchemaMigrateInternal::warnDroppedOrphans( typeInfo, pLegacyTypeInfo, listOrphan );
+        if ( orphanPolicy == SchemaOrphanPolicy::Reject && listOrphan.empty() == false )
+        {
+            SW_LOG_ERROR( "(%#) schema version %# has %# unknown or unreadable field(s) and the format rejects them (first: %#) - rewrite the data (no migration before the first release)",
+                          typeInfo._name.c_str(), fromVersion, static_cast<uint32>( listOrphan.size() ), listOrphan[0]._name.c_str() );
+            return false;
+        }
+        // 받아 주는 로드다(JSON, XML 의 Ignore 정책, 또는 orphan 이 없다). orphan 은 모두 버려진다.
+        SchemaMigrateInternal::warnDroppedOrphans( typeInfo, listOrphan );
         return true;
     }
 

@@ -28,20 +28,6 @@ namespace sw
         return archive.isOk() && readTag == tag && readVersion == version;
     }
 
-    bool StateArchiveUtil::readHeaderInRange( Archive& archive, uint32 tag, uint32 oldestVersion, uint32 currentVersion, uint32& outVersion )
-    {
-        uint32 readTag     = 0;
-        uint32 readVersion = 0;
-        archive >> readTag;
-        archive >> readVersion;
-        const bool bKnownVersion = oldestVersion <= readVersion && readVersion <= currentVersion;
-        const bool bSameFormat   = archive.isOk() && readTag == tag;
-        if ( bSameFormat == false || bKnownVersion == false )
-            return false;
-        outVersion = readVersion;
-        return true;
-    }
-
     void StateArchiveUtil::writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body )
     {
         writeHeader( outArchive, tag, version );

@@ -31,11 +31,6 @@ namespace sw
         /** @brief 머리를 읽고 @p tag 와 @p version 이 같으면 true 입니다. */
         [[nodiscard]] static bool readHeader( Archive& archive, uint32 tag, uint32 version );
         /**
-         * @brief 머리를 읽어 @p tag 가 같고 판이 [@p oldestVersion, @p currentVersion] 안이면 그 판을 @p outVersion 에 두고 true 입니다.
-         * @details 옛 판을 읽는 상태는 판마다 이관 함수를 둔다(판 번호로 고른다). 범위 밖 판은 거절한다 — 모르는 판을 새 판처럼 읽지 않는다.
-         */
-        [[nodiscard]] static bool readHeaderInRange( Archive& archive, uint32 tag, uint32 oldestVersion, uint32 currentVersion, uint32& outVersion );
-        /**
          * @brief 구간 하나를 씁니다. 표, 버전, 본문 길이(uint32), 본문 순입니다. 읽는 쪽은 모르는 표를 길이로 건너뜁니다.
          * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`SessionStateComponent`, 키트 여럿을 든 디렉터).
          *          한 구간의 형식이 바뀌어도 다른 구간은 그대로 읽히고, 빠진 구간은 읽는 쪽이 새 판으로 둔다.

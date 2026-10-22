@@ -1,9 +1,9 @@
 /**
  * @file AssetTypeRegistry.h
  * @brief 에셋 종류 하나의 정의(`AssetTypeDef`)와 그 등록표입니다. 종류를 더하는 일은 정의 하나와 등록 줄(`SW_ASSET_TYPE`) 하나입니다.
- * @details 한 종류의 사실(접미사 · 쿠킹 역할 · 이관 판)을 여러 표에 따로 적으면 한쪽만 늘어난다 — 예전에는 `AssetKind` 열거 · 판 상수 표 ·
+ * @details 한 종류의 사실(접미사 · 쿠킹 역할 · 판)을 여러 표에 따로 적으면 한쪽만 늘어난다 — 예전에는 `AssetKind` 열거 · 판 상수 표 ·
  *          쿠킹 표의 `cook_suffixes`(JSON) 가 같은 종류를 따로 적었다(계획 `StructureSimplification` AT1). 지금은 파생하는 쪽(쿠킹 경로 `AssetCookPath`,
- *          이관 레지스트리의 키, 팩 쿠커의 잔재 판정)이 모두 이 표를 읽는다.
+ *          판 검사, 팩 쿠커의 잔재 판정)이 모두 이 표를 읽는다.
  *          - **접미사 우선순위는 이 표가 정렬로 가진다**: 가장 긴 접미사가 먼저, 길이가 같으면 등록 순이다(`.scene.xml` 이 `.scene` 보다 먼저). 표의 적은 순서에 기대지 않는다.
  *          - 종류의 열쇠는 이름(`_name`)이다. 정의는 헤더의 `static constexpr` 라 DLL 마다 사본이 있을 수 있어 주소로 견주지 않는다.
  *          - 등록 줄은 정의를 가진 기능의 .cpp(캐시가 있으면 캐시 등록 옆)에 둔다. 모듈이 등록한 종류는 등록자가 사라질 때 표에서 빠진다.
@@ -48,7 +48,7 @@ namespace sw
      */
     struct AssetTypeDef
     {
-        string_view        _name;          ///< 종류 이름 — 이관 키 · 로그 · 에디터 레이블 키. 등록된 종류끼리 겹치지 않는다
+        string_view        _name;          ///< 종류 이름 — 로그 · 에디터 레이블 키. 등록된 종류끼리 겹치지 않는다
         const AssetSuffix* _pSuffix;       ///< 접미사 목록(파일로 가르지 않는 종류는 nullptr)
         uint32             _suffixCount;   ///< `_pSuffix` 의 수
         string_view        _cookedSuffix;  ///< 쿠킹본 접미사(쿠킹하지 않는 종류는 빈 글)

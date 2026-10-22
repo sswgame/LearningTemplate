@@ -115,23 +115,20 @@ namespace sw
                                                       const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief 버전 헤더를 읽고 soft 역직렬화한 뒤, 필요하면 등록된 이관(`SchemaMigrationRegistry`, (타입, 기록된 버전)으로 찾는다)을 부릅니다.
-         * @param pLegacyTypeInfo 주면 그 스키마로도 스테이징 로드해 migrate 컨텍스트의 `_pLegacyInstance` 로 넘깁니다.
-         * @return 등록된 이관 없이 버전이 다르거나 orphan 이 있으면 false 입니다.
+         * @brief 버전 헤더를 읽고 soft 역직렬화합니다. 판이 @p currentVersion 과 정확히 같을 때만 받습니다(이관하지 않는다).
+         * @return 버전이 다르거나 orphan 이 있으면(`SchemaOrphanPolicy::Reject`) false 입니다.
          */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                        uint32                  currentVersion  = 0,
-                                                        const TypeInfo*         pLegacyTypeInfo = nullptr,
-                                                        const SerializeContext& context         = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                                                        uint32                  currentVersion = 0,
+                                                        const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief Archive 에서 버전 바이너리를 역직렬화합니다. */
         [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                        uint32                  currentVersion  = 0,
-                                                        const TypeInfo*         pLegacyTypeInfo = nullptr,
-                                                        const SerializeContext& context         = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                                                        uint32                  currentVersion = 0,
+                                                        const SerializeContext& context        = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /**
-         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. 이관 레지스트리와 orphan 수집을 지나지 않습니다.
+         * @brief `serializeVersioned` 가 쓴 바이트를 버전 머리가 @p expectedVersion 과 같을 때만 **엄격하게** 읽습니다. orphan 수집을 지나지 않습니다.
          * @details 혼합 빌드 사이의 메시지와 캐시가 씁니다(docs/plans/ServerBusFormat.md 3.3). 모르는 이름 · 읽지 못한 필드의 처리는 @p context 의 두 플래그
          *          (`setSkipUnknownProperties` · `setSkipUnreadableProperties`)가 정하고, 중첩 구조체까지 같은 정책입니다. 기본 컨텍스트를 받지 않습니다 —
          *          부르는 쪽이 정책을 고릅니다. 실패해도 이미 쓴 프로퍼티는 되돌리지 않으므로 임시 객체에 읽습니다.

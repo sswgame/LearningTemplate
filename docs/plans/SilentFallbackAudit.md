@@ -27,10 +27,6 @@
 ### SilentFallbackAudit.EmulatedSlotTable
 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `swSampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 담당과 함께 하고 DX11 · GL 화면으로 확인한다.
 
-### SilentFallbackAudit.StateVersionRange
-`StateArchiveUtil::readHeader` 는 판 번호가 정확히 같아야 읽는다(호출 20 곳 — GameFramework 다섯, Games 열다섯). 판을 올리면 옛 세이브의 상태가 소리 없이 버려진다.
-상태마다 `{ 태그, 가장 옛 판, 지금 판 }` 을 한 값으로 선언하고 읽기는 그 값으로 `readHeaderInRange` 만 쓰게 한다(정확한 판 읽기를 없앤다). 게임 파일을 고치므로 게임 담당과 겹치지 않을 때 한다.
-
 ### SilentFallbackAudit.FunctionStaticCaches
 함수 안 `static` 컨테이너가 남았다(엔진 수명 범위 `ScopeOwned` 로 옮기지 않음). 엔진: `SystemFontLocator`(리눅스 글꼴 색인), `ModuleTypeRegistry` 의 모듈 머리 표, `DebugDrawCanvas` 의 선 버퍼. 에디터: `InspectorPropertyUndo` · `InspectorPropertyManager` · `EditorColliderHandleTool` · `EditorVisualizerGeometry` · `DebugDrawVisualizer` · `EditorViewportBillboard` · `EditorCaptureSteps` · `EditorSettingsRegistry`. GameFramework: `ServerBus` · `OnlinePushRelay` 의 로그 키 집합, `MeshModifiersVisualizer`.
 등록 표(`NavGeometryContributor` · `ISceneService` · `BuiltInAssetCache` · `NetSimGameRegistry` · `EditorExtensionRegistry`)는 정적 초기화에 쓰여 범위가 열리기 전에 불리는지 하나씩 본다. 기준은 [StorageOwnershipLeftovers](Candidates-engine.md#storageownershipleftovers).
