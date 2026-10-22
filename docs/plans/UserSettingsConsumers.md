@@ -31,4 +31,6 @@
   포워드 파이프라인(게임 기본)에는 MotionBlur 패스가 없어 `gv_motionBlur` 가 아무것도 바꾸지 않는다. 그 사진에서 본 것: TAA(`taa.hlsl`)가 기록을 재투영 · 이웃 클램프 없이 0.9 로 섞어 카메라가 움직인 프레임에 앞 그림이 겹친다(셰이더 담당에 넘길 일).
 - 머리 흔들림 진폭은 데이터라 화면을 보고 고친다(Shooter3D 0.03 · 0.015, VoxelCraft 0.025 · 0.012).
 - 포워드 파이프라인(`forwardpipelinestaged.xml` 의 블룸)에는 `_minPostQuality` 를 아직 두지 않았다. 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다.
+- 모션 블러는 이제 포워드 파이프라인 넷(forward · staged · prepass · toon)에도 있다 — 피사계 심도 뒤(toon 은 장면 색 뒤) · 후처리 체인 앞, `_minPostQuality` 1. TAA 는 기록을 깊이로 재투영하고
+  이번 원본의 3x3 이웃으로 잘라 섞는다(계약에 `SceneDepth` 필수, `RenderPassGPUTest.TaaLeavesNoGhostOfAMovedObject`) — 셰이더(`taa.hlsl`)는 셰이더 쿠킹과 함께 병합 담당이 얹는다. 화면 확인(카메라를 돌릴 때 앞 그림이 겹치지 않음)은 위 캡처에 더한다.
 - `gv_upscaler`(spatial)는 읽는 곳이 없다 — 업스케일러는 [Candidates-project](Candidates-project.md) 의 FSR 후보다. X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.

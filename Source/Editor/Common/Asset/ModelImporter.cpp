@@ -28,10 +28,13 @@
 
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/MeshFracture.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -565,10 +568,39 @@ namespace sw::editor
         return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
     }
 
+    bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
+    {
+        const shared_ptr<Mesh> body = MeshCache::acquire( rule._bodySurface );
+        if ( body == nullptr )
+        {
+            SW_LOG_ERROR( "Import rule '%#': body mesh '%#' for the surface transfer of %# cannot be read", rule._name.c_str(), rule._bodySurface.c_str(), sourcePath );
+            return false;
+        }
+        shared_ptr<Mesh> garment = Mesh::create();
+        garment->setVerticesWithTangents( vector<RHIVertex>( inoutMesh._listVertex ) );
+        if ( inoutMesh._listSkinVertex.empty() == false )
+            garment->setSkin( inoutMesh._listSkinVertex, body->getSkinBoneCount() );
+        garment->setMorphTargets( inoutMesh._listMorphTarget );
+        const uint32 unboundCount = CharacterMeshUtil::transferBodySurface( *body, *garment, rule._bodySurfaceDistance );
+        if ( unboundCount > 0 )
+        {
+            SW_LOG_ERROR( "Import rule '%#': %# of %# vertices of %# are farther than %# m from body '%#' - move the garment onto the body or raise body_surface_distance",
+                          rule._name.c_str(), unboundCount, garment->getVertexCount(), sourcePath, rule._bodySurfaceDistance, rule._bodySurface.c_str() );
+            return false;
+        }
+        inoutMesh._listSkinVertex  = garment->getSkinVertices();
+        inoutMesh._listMorphTarget = garment->getMorphTargets();
+        SW_LOG_INFO( "Transferred skin and %# morph targets of '%#' onto %#", static_cast<uint32>( inoutMesh._listMorphTarget.size() ), rule._bodySurface.c_str(), sourcePath );
+        return true;
+    }
+
     bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
     {
         ModelImportResult result{};
         if ( readModelAsset( sourcePath, rule, result ) == false )
+            return false;
+        // 장비 메시 — 몸의 스킨 · 체형 모프를 옮겨 쓴다(쿠킹 단계 전이, 외형 피팅이 같은 체형을 장비에 굽는다).
+        if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath, rule, result._mesh ) == false )
             return false;
 
         // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.

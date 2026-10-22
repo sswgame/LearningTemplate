@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/CharacterDataCache.h"
+
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 
 namespace sw
@@ -14,8 +16,7 @@ namespace sw
     {
         struct AppearanceSocketRigInternal
         {
-            static constexpr const utf8* kDefaultSocketKinds = "engine/character/default.socketkinds.xml";
-            static constexpr const utf8* kRigidRootBone      = "root";
+            static constexpr const utf8* kRigidRootBone = "root";
 
             /** @brief 몸 부품입니다. 주인이 비어 있는 첫 스킨드 부품이며, 없으면 -1 입니다. */
             static int32 findBodyPart( const ResolvedAppearance& resolved )
@@ -36,10 +37,7 @@ namespace sw
 {
     AppearanceSocketSetCache::AppearanceSocketSetCache()
         : _mapSocketSet{}
-        , _kinds{}
-        , _bKindsLoaded{ SW_FALSE }
-        , _bKindsValid{ SW_FALSE }
-        , _reserved{ 0 }
+        , _seenReloadCount{ SharedAssetCache<SocketSet>::getReloadCount() }
     {
     }
 
@@ -57,22 +55,10 @@ namespace sw
         const auto found = _mapSocketSet.find( path );
         if ( found != _mapSocketSet.end() )
             return found->second;
-        if ( _bKindsLoaded == SW_FALSE )
-        {
-            _bKindsLoaded = SW_TRUE;
-            _bKindsValid  = _kinds.loadFromResource( AppearanceSocketRigInternal::kDefaultSocketKinds ) ? SW_TRUE : SW_FALSE;
-            if ( _bKindsValid == SW_FALSE )
-                SW_LOG_ERROR( "Socket kinds '%#' could not be loaded - no socket asset is handed out", AppearanceSocketRigInternal::kDefaultSocketKinds );
-        }
-        // 종류 표 없이 읽은 소켓은 종류 검사를 건너뛴 반쪽짜리다 — 내주지 않는다(위 오류가 이유다).
-        if ( _bKindsValid == SW_FALSE )
-            return nullptr;
-        shared_ptr<SocketSet> socketSet = make_shared<SocketSet>();
-        if ( socketSet->loadFromResource( path.c_str(), _kinds ) == false )
-        {
+        // 공유 캐시가 종류 표(엔진 기본)와 대조해 읽는다. 읽지 못하면 읽는 함수가 까닭을 남긴다.
+        shared_ptr<const SocketSet> socketSet = SharedAssetCache<SocketSet>::acquire( path.c_str() );
+        if ( socketSet == nullptr )
             SW_LOG_ERROR( "Socket asset '%#' could not be loaded", path.c_str() );
-            socketSet.reset();
-        }
         _mapSocketSet[path] = socketSet;
         return socketSet;
     }
@@ -80,9 +66,12 @@ namespace sw
     void AppearanceSocketSetCache::clear()
     {
         _mapSocketSet.clear();
-        _kinds        = SocketKindTable{};
-        _bKindsLoaded = SW_FALSE;
-        _bKindsValid  = SW_FALSE;
+        _seenReloadCount = SharedAssetCache<SocketSet>::getReloadCount();
+    }
+
+    bool AppearanceSocketSetCache::isStale() const
+    {
+        return _seenReloadCount != SharedAssetCache<SocketSet>::getReloadCount();
     }
 } // namespace sw
 

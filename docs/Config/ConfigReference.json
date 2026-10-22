@@ -2399,6 +2399,24 @@
        "description": "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"
       },
       {
+       "name": "body_surface",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "장비 메시면 몸 `.mesh` 리소스 id — 정점마다 가장 가까운 몸 삼각형의 스킨 · 체형 모프를 옮긴다"
+      },
+      {
+       "name": "body_surface_distance",
+       "type": "number",
+       "default": "0.05",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "몸 표면에 묶는 최대 거리(미터) — 넘는 정점이 있으면 임포트 오류"
+      },
+      {
        "name": "lods",
        "type": "object[]",
        "default": "",

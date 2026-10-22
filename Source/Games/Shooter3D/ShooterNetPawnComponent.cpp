@@ -10,8 +10,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Base/Actor/Control/ControlSystem.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -33,6 +35,18 @@ namespace sw
             {
                 bool bLanded = false;
                 return movement.simulate( listBox, state, input, tickInterval, bLanded );
+            }
+
+            /**
+             * @brief 씬의 틱 함수 바닥(`TickedPathMoverComponent`)을 서버 틱 @p serverTick 의 자리에 둔다 — 바닥은 조종 시스템 틱에 차이를 더해 움직인다.
+             *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 둘 것이 없다.
+             */
+            static void alignTickedMovers( const GameObject* pOwner, int64 serverTick )
+            {
+                GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const ControlSystem* pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
+                if ( pControl != nullptr )
+                    TickedPathMoverComponent::setTickOffsetInScene( *pManager, serverTick - static_cast<int64>( pControl->getTick() ) );
             }
         };
     } // namespace
@@ -167,6 +181,7 @@ namespace sw
     void ShooterNetPawnComponent::stepServer( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
     {
         ++_tick;
+        ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) );
         GameNetSession* pSession = game::findSubsystem<GameNetSession>();
         if ( pSession == nullptr )
             return;
@@ -211,6 +226,10 @@ namespace sw
     void ShooterNetPawnComponent::stepClient( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
     {
         ++_tick;
+        // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
+        const std::optional<int64> serverTickOffset = _client.findServerTickOffset();
+        if ( serverTickOffset.has_value() )
+            ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
         const ShooterMoveInput input = movement.makeInput();
         writeInput( input, _bytesScratch );
         if ( _client.sendInput( _tick, _bytesScratch ) == false )

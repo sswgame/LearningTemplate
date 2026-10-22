@@ -446,7 +446,11 @@ namespace
             const sw::FitSolver solver;
             sw::FitTables       tables;
             sw::FitPartData     data;
-            return tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceID, tables );
+            sw::string          nameError;
+            const bool          bLoaded = tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceID );
+            if ( bLoaded && data.validateNames( tables, &nameError ) == false )
+                SW_LOG_WARNING( "'%#' %#", resourceID.c_str(), nameError.c_str() );
+            return bLoaded && nameError.empty();
         }
 
         /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */

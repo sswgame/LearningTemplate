@@ -70,6 +70,8 @@ namespace sw::editor
         float32        _animationSampleRate;
         float32        _animationPrecision;
         float32        _animationShellDistance;
+        string         _bodySurface;         ///< 장비 메시면 몸 `.mesh` 리소스 id — 몸의 스킨 · 체형 모프를 옮긴다(`CharacterMeshUtil::transferBodySurface`). 비면 하지 않는다
+        float32        _bodySurfaceDistance; ///< 몸 표면에 묶는 최대 거리(미터). 넘는 정점이 있으면 임포트 오류다
         ModelRecenter  _recenter;
         uint8          _bImportAnimations;
         uint8          _bImportAttachments;
@@ -87,6 +89,8 @@ namespace sw::editor
             , _animationSampleRate{ 30.0f }
             , _animationPrecision{ 0.0001f }
             , _animationShellDistance{ 0.1f }
+            , _bodySurface{}
+            , _bodySurfaceDistance{ 0.05f }
             , _recenter{ ModelRecenter::None }
             , _bImportAnimations{ SW_TRUE }
             , _bImportAttachments{ SW_TRUE }

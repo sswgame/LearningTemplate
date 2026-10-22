@@ -1,6 +1,6 @@
 # 움직이는 바닥 위 캐릭터의 남은 일
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 3/4
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 4/4
 
 `moveCharacter` 가 딛은 바닥의 속도(선속도 + 회전)를 실어 주게 된 뒤(2026-10-20, 결정은 `IPhysicsCharacterScene.h` 머리말과 `JoltPhysicsSceneQuery.cpp`) 남은 일입니다.
 
@@ -16,9 +16,9 @@
 | M1 | 바닥이 돌면 캐릭터 방향(yaw)도 돈다 — `CharacterControllerComponent` 가 스텝마다 돈 각을 모아 트랜스폼을 쓸 때 얹는다 | 코드 · 테스트(`PhysicsScene3DTest.CharacterIsCarriedByRotatingKinematicPlatform`, `PhysicsWiringTest.ControllerFollowsMovingGroundYawAndKeepsItsMomentum`), 빌드 미확인 |
 | M2 | 바닥을 떠난 뒤의 관성 — 떠나는 스텝에 바닥 속도를 수평은 `_airVelocity` 로, 오르는 바닥이면 수직 속도에도(3D · 2D 같은 규칙) | 코드 · 테스트(위 PhysicsWiringTest), 빌드 미확인 |
 | M3 | 틱 함수 바닥 — `TickedPathMoverComponent`(경유점 · 구간 시간 · 틱 길이 · 왕복, 틱 = 조종 시스템 틱 + `_tickOffset`). 조종 시스템이 없는 씬에서는 움직이지 않고 알린다 | 코드 · 테스트(`GimmickGenreTest.TickedPathMoverIsAPureFunctionOfTheTick`), 빌드 미확인 |
-| M4 | 클라이언트의 네트워크 키트가 서버 틱과의 차이를 `setTickOffset` 으로 넣는 연결 | 남음 — 움직이는 바닥을 쓰는 넷 게임이 생기면(클라이언트 틱 ↔ 서버 틱 대응은 `ReplicationClient` 의 렌더 틱이 안다) |
+| M4 | 넷 틱 차이 연결 — 서버 틱 − 입력 틱(`ReplicationClient::findServerTickOffset`, 가장 새 스냅샷의 틱과 그 스냅샷이 실은 내 상태의 입력 틱)을 씬의 바닥에 한 번에 넣는다(`TickedPathMoverComponent::setTickOffsetInScene`). 넷 루프가 틱마다 — 서버는 `넷 틱 − 조종 시스템 틱`, 클라이언트는 `입력 틱 + 서버 차이 − 조종 시스템 틱`(Shooter3D `ShooterNetPawnComponent` 가 건다) | 코드 · 테스트(`NetClientServerTest.ReplicationInterpolatesOverLossyLatencyAndCarriesRedundantInputs`, `GimmickGenreTest.TickedPathMoverIsAPureFunctionOfTheTick`), 바닥이 있는 넷 씬 실행 미확인 |
 
 ## 남은 것
 
-- M1 ~ M3 확인: 빌드 뒤 위 테스트 필터.
+- M1 ~ M3 확인: 빌드 뒤 위 테스트 필터. M4 확인: 바닥을 놓은 넷 씬(서버 + 클라이언트)에서 바닥 위 예측이 보정 없이 맞는지 — 아직 그런 씬이 없다.
 - 함정: 큰 Kinematic 메시(공중 요새)는 캐릭터 쓸기 충돌 비용이 크다 — 측정 전에 단순 상자로 바닥을 대신할 수 있는지 먼저 본다.

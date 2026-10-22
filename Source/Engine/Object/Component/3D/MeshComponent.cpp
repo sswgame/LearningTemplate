@@ -300,7 +300,7 @@ namespace sw
         const MeshSection& section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
         outFirstVertex             = section._firstVertex;
         outVertexCount             = section._vertexCount;
-        return true;
+        return section._vertexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
     }
 
     void MeshComponent::validateSectionName() const

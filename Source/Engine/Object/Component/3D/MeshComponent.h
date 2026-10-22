@@ -174,7 +174,7 @@ namespace sw
         void          setSectionName( hashed_string sectionName );
         hashed_string getSectionName() const { return _sectionName; }
         /**
-         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체 = LOD 0)이고 true, 메시에 그 구간이 없으면 false(그리지 않는다)입니다.
+         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체 = LOD 0)이고 true, 메시에 그 구간이 없거나 구간이 비었으면 false(그리지 않는다)입니다.
          *        LOD 단계(`setLODIndex`)가 1 이상이면 그 단계의 범위(`Mesh::getLODs`, 그릴 정점 흐름 기준)입니다.
          * @details 렌더 수집(`GPUSceneBuilder::fillCandidateFromPrimitive`)이 워커에서 부르므로 로그를 남기지 않는다 — 오류는 `resolveRenderAssets` 가 남긴다.
          */

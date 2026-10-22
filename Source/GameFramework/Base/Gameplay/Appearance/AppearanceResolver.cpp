@@ -418,6 +418,8 @@ namespace sw
                 resolved._skeleton    = part._skeleton;
                 resolved._socketSet   = part._socketSet;
                 resolved._rig         = part._rig;
+                resolved._fit         = part._fit;
+                resolved._fitTables   = part._fitTables;
                 resolved._layer       = part._layer;
                 resolved._bDeforms    = part._bDeforms;
                 resolved._state       = entry._state;
@@ -832,6 +834,8 @@ namespace sw
             builder.addName( part._asset );
             builder.addName( part._material );
             builder.addName( part._skeleton );
+            builder.addName( part._fit );
+            builder.addName( part._fitTables );
             builder.addInt( part._bDeforms );
         }
         for ( const ResolvedMorph& morph : resolved._listMorph )

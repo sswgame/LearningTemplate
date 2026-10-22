@@ -136,8 +136,9 @@ namespace sw
                     }
                     case RenderPassType::TAA:
                     {
+                        // 기록은 깊이로 지난 프레임 자리에 재투영하고 이번 원본의 이웃 범위로 자른다(taa.hlsl) — 깊이가 없으면 움직일 때 앞 그림이 겹친다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderTaa;
-                        info._inputContract  = makeContract( { Role::SourceColor }, {} );
+                        info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
                         info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
                         break;
                     }

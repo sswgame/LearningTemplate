@@ -2,15 +2,15 @@
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -32,37 +32,7 @@ namespace sw
         struct DismembermentComponentInternal
         {
             static constexpr const utf8* kDefaultSurfaceChannels = "engine/character/default.surfacechannels.xml";
-            static constexpr float32     kWeldScale              = 1.0e5f; ///< 위치 용접 격자다(10 마이크로미터).
-            static constexpr uint32      kMaxHullPoint           = 256;    ///< 볼록 껍질 점 상한(넘으면 고르게 솎는다)
-
-            struct WeldKey
-            {
-                int64 _x{ 0 };
-                int64 _y{ 0 };
-                int64 _z{ 0 };
-
-                bool operator==( const WeldKey& other ) const { return _x == other._x && _y == other._y && _z == other._z; }
-                /** @brief 키의 해시입니다. `unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다. */
-                [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _x, _y, _z ); }
-            };
-
-            static WeldKey makeKey( const float3& position )
-            {
-                return WeldKey{ static_cast<int64>( MathUtil::round( position._x * kWeldScale ) ), static_cast<int64>( MathUtil::round( position._y * kWeldScale ) ),
-                                static_cast<int64>( MathUtil::round( position._z * kWeldScale ) ) };
-            }
-
-            /** @brief 메시 정점 하나의 스킨을 형상 쪽 스킨으로 옮깁니다. */
-            static SkinInfluence toInfluence( const MeshSkinVertex& skin )
-            {
-                SkinInfluence influence;
-                for ( uint32 slot = 0; slot < CharacterGeometryConstant::kMaxSkinInfluence; ++slot )
-                {
-                    influence._arrJoint[slot]  = skin._arrJoint[slot];
-                    influence._arrWeight[slot] = skin._arrWeight[slot];
-                }
-                return influence;
-            }
+            static constexpr uint32      kMaxHullPoint           = 256; ///< 볼록 껍질 점 상한(넘으면 고르게 솎는다)
 
             static MeshSkinVertex toMeshSkin( const SkinInfluence& influence )
             {
@@ -73,36 +43,6 @@ namespace sw
                     skin._arrWeight[slot] = influence._arrWeight[slot];
                 }
                 return skin;
-            }
-
-            /**
-             * @brief 인덱스 없는 삼각형 목록을 위치로 이은 형상으로 만듭니다(위상: 경계 고리, 캡). 삼각형 순서는 그대로라 삼각형 i 가 목록의 삼각형 i 입니다.
-             * @details 같은 위치의 첫 정점의 노멀, UV, 스킨을 쓴다(캡과 영역 매기기에만 쓰이고, 남은 메시는 원래 정점을 쓴다).
-             */
-            static void weld( const vector<RHIVertex>& listVertex, const vector<MeshSkinVertex>& listSkin, AppearanceGeometry& outGeometry )
-            {
-                outGeometry.clear();
-                unordered_map<WeldKey, uint32> mapVertex;
-                outGeometry._listIndex.reserve( listVertex.size() );
-                for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
-                {
-                    const RHIVertex& vertex = listVertex[vertexIndex];
-                    const float3     position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
-                    const WeldKey    key = makeKey( position );
-                    const auto       it  = mapVertex.find( key );
-                    if ( it != mapVertex.end() )
-                    {
-                        outGeometry._listIndex.push_back( it->second );
-                        continue;
-                    }
-                    const uint32 welded = outGeometry.getVertexCount();
-                    mapVertex.emplace( key, welded );
-                    outGeometry._listPosition.push_back( position );
-                    outGeometry._listNormal.push_back( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );
-                    outGeometry._listUv.push_back( float2{ vertex._arrUv[0], vertex._arrUv[1] } );
-                    outGeometry._listSkin.push_back( toInfluence( listSkin[vertexIndex] ) );
-                    outGeometry._listIndex.push_back( welded );
-                }
             }
 
             /** @brief 형상(인덱스)을 인덱스 없는 정점 목록으로 펼쳐 덧붙입니다(캡). 색은 흰색입니다. */
@@ -155,20 +95,17 @@ namespace sw
             }
 
             /**
-             * @brief 1 단계입니다. 위치로 이은 형상과 정점마다의 영역을 구하고, @p regionIndex 영역을 잘라 삼각형마다 잘렸는지와 두 캡을 냅니다.
+             * @brief 1 단계입니다. 위치로 이은 형상(`CharacterMeshUtil::makeWeldedGeometry` — 위상: 경계 고리, 캡)과 정점마다의 영역을 구하고, @p regionIndex 영역을 잘라
+             *        삼각형마다 잘렸는지와 두 캡을 냅니다. 삼각형 i 는 메시의 삼각형 i 이고, 남은 메시는 원래 정점을 쓴다.
              * @details 영역 매기기는 스켈레톤의 레퍼런스 포즈로 한다.
              */
             [[nodiscard]] static bool computeSeveredTriangles( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, int32 regionIndex,
                                                                DismembermentResult& outResult )
             {
                 AppearanceGeometry welded;
-                weld( mesh.getVertices(), mesh.getSkinVertices(), welded );
+                CharacterMeshUtil::makeWeldedGeometry( mesh, welded );
                 CharacterBoneArray bones;
-                for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
-                {
-                    (void)bones.addBone( skeleton.getBone( boneIndex )._name, skeleton.getBone( boneIndex )._parentIndex, skeleton.getBone( boneIndex )._referencePose.toMatrix() );
-                }
-                bones.computeModelTransforms();
+                CharacterPoseUtil::makeBindBones( skeleton, bones );
                 vector<uint16> listVertexRegion;
                 regionTable.assignRegions( welded, bones, listVertexRegion );
                 const uint16 severedRegion = static_cast<uint16>( regionIndex );

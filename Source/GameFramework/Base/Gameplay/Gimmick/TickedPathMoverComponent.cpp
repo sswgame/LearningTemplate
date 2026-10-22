@@ -52,6 +52,12 @@ namespace sw
         applyTick( static_cast<uint32>( MathUtil::max( tick, int64{ 0 } ) ) );
     }
 
+    void TickedPathMoverComponent::setTickOffsetInScene( GameObjectManager& manager, int64 tickOffset )
+    {
+        manager.forEachComponentOfType<TickedPathMoverComponent>( [tickOffset]( TickedPathMoverComponent* pMover )
+        { pMover->setTickOffset( tickOffset ); } );
+    }
+
     void TickedPathMoverComponent::applyTick( uint32 tick )
     {
         GameObject*     pOwner = getOwner();

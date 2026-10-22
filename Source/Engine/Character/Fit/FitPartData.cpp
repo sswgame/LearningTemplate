@@ -3,6 +3,7 @@
 #include "Engine/Character/Fit/FitPartData.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -29,33 +30,41 @@ namespace sw
                     *pOutError += "\n";
                 *pOutError += message;
             }
+
+            /** @brief "names unknown <종류> '<이름>'" 오류를 덧붙입니다(피팅 표에 없는 이름). */
+            static void appendNameError( string* pOutError, const utf8* pKind, const hashed_string& name )
+            {
+                utf8 arrMessage[constant::kMaxBuffer256]{};
+                formatstring( arrMessage, constant::kMaxBuffer256, "names unknown %# '%#'", pKind, name.c_str() );
+                appendError( pOutError, string( arrMessage ) );
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    bool FitPartData::loadFromXMLText( string_view xmlText, string_view sourceName, const FitTables& tables )
+    bool FitPartData::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "PartFit", root ) )
-            readRoot( root, tables, reader );
+            readRoot( root, reader );
         return reader.finish();
     }
 
-    bool FitPartData::loadFromResource( string_view path, const FitTables& tables )
+    bool FitPartData::loadFromResource( string_view path )
     {
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
         if ( reader.loadRoot( document, path, "PartFit", root ) )
-            readRoot( root, tables, reader );
+            readRoot( root, reader );
         return reader.finish();
     }
 
-    void FitPartData::readRoot( const XMLNode& root, const FitTables& tables, CharacterDataReader& reader )
+    void FitPartData::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         _listHiddenRegion.clear();
         _listRing.clear();
@@ -63,10 +72,6 @@ namespace sw
         reader.reportUnknownAttributes( root, FitPartDataInternal::kArrRootAttribute );
         _layer   = reader.readName( root, "layer", true );
         _profile = reader.readName( root, "profile", true );
-        if ( _layer.empty() == false && tables.findLayer( _layer ) == nullptr )
-            reader.addError( root, string( "names unknown layer '" ) + _layer.c_str() + "'" );
-        if ( _profile.empty() == false && tables.findProfile( _profile ) == nullptr )
-            reader.addError( root, string( "names unknown profile '" ) + _profile.c_str() + "'" );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
@@ -74,11 +79,7 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrHideAttribute );
                 const hashed_string region = reader.readName( child, "region", true );
-                if ( region.empty() )
-                    continue;
-                if ( tables.findRegionIndex( region ) < 0 )
-                    reader.addError( child, string( "names unknown region '" ) + region.c_str() + "'" );
-                else
+                if ( region.empty() == false )
                     _listHiddenRegion.push_back( region );
             }
             else if ( StringUtil::equals( pName, "Ring", true ) )
@@ -127,6 +128,29 @@ namespace sw
                 reader.reportUnknownElement( child );
             }
         }
+    }
+
+    bool FitPartData::validateNames( const FitTables& tables, string* pOutError ) const
+    {
+        bool bValid = true;
+        if ( _layer.empty() == false && tables.findLayer( _layer ) == nullptr )
+        {
+            bValid = false;
+            FitPartDataInternal::appendNameError( pOutError, "layer", _layer );
+        }
+        if ( _profile.empty() == false && tables.findProfile( _profile ) == nullptr )
+        {
+            bValid = false;
+            FitPartDataInternal::appendNameError( pOutError, "profile", _profile );
+        }
+        for ( const hashed_string& region : _listHiddenRegion )
+        {
+            if ( tables.findRegionIndex( region ) >= 0 )
+                continue;
+            bValid = false;
+            FitPartDataInternal::appendNameError( pOutError, "region", region );
+        }
+        return bValid;
     }
 
     bool FitPartData::validate( const CharacterBoneArray* pBones, const AppearanceGeometry* pGeometry, string* pOutError ) const

@@ -49,6 +49,8 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 | `root_motion_bone` | `string` | — |  |  | 루트 모션 트랙이 될 본(비면 없음) |
 | `attachments` | `bool` | `true` |  |  | 본 아래 스킨 없는 메시를 따로 임포트한다 |
 | `fracture` | `object` | — |  |  | 있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키) |
+| `body_surface` | `string` | — |  |  | 장비 메시면 몸 `.mesh` 리소스 id — 정점마다 가장 가까운 몸 삼각형의 스킨 · 체형 모프를 옮긴다 |
+| `body_surface_distance` | `number` | `0.05` |  |  | 몸 표면에 묶는 최대 거리(미터) — 넘는 정점이 있으면 임포트 오류 |
 | `lods` | `object[]` | — |  |  | 메시 LOD 1 이상(아래 키, 순서대로 단계). 스킨 · 모프 · 머티리얼 구간이 없는 메시만 |
 
 ## `kArrModelImportFractureKeyDoc`
