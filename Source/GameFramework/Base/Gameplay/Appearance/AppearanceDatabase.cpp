@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -127,7 +129,39 @@ namespace sw
         {
             bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
         }
-        return finishLoad( pItemCatalog ) && bPresetsRead;
+        // 몸 부품이 피팅 표를 가리키면 그 표들의 영역이 숨김 영역 이름의 정본이다 — 표가 하나도 없으면 영역을 대조할 근거가 없다(숨김 영역은 피팅 표 없이는 쓰이지 않는다).
+        vector<hashed_string> listBodyRegion;
+        const bool            bHasFitTables = collectBodyRegions( listBodyRegion );
+        return finishLoad( pItemCatalog, bHasFitTables ? &listBodyRegion : nullptr ) && bPresetsRead;
+    }
+
+    bool AppearanceDatabase::collectBodyRegions( vector<hashed_string>& outListRegion )
+    {
+        outListRegion.clear();
+        vector<hashed_string> listTablesPath;
+        for ( const ItemVisualDef& visual : _visuals.getVisuals() )
+        {
+            for ( const AppearancePartDef& part : visual._listPart )
+            {
+                if ( part._fitTables.empty() == false && AppearanceXMLUtil::containsName( listTablesPath, part._fitTables ) == false )
+                    listTablesPath.push_back( part._fitTables );
+            }
+        }
+        for ( const hashed_string& path : listTablesPath )
+        {
+            const shared_ptr<const FitTables> tables = SharedAssetCache<FitTables>::acquire( path.c_str() );
+            if ( tables == nullptr )
+            {
+                _report.addError( "fit tables '%#' cannot be read (the loader logged why)", path.c_str() );
+                continue;
+            }
+            for ( const BodyRegionDef& region : tables->getRegions() )
+            {
+                if ( AppearanceXMLUtil::containsName( outListRegion, region._name ) == false )
+                    outListRegion.push_back( region._name );
+            }
+        }
+        return listTablesPath.empty() == false;
     }
 
     bool AppearanceDatabase::loadPresetFile( string_view path )

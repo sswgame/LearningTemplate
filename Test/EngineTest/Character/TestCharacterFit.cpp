@@ -436,14 +436,18 @@ SW_TEST_CASE( FitSolverTest, HiddenRegionRemovesInnerTriangles )
     SW_ASSERT_TRUE( Internal::loadTables( solver, "", tables ) );
 
     FitPartData glove;
-    SW_ASSERT_TRUE( glove.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='LowerArm'/></PartFit>", "glove.partfit.xml", tables ) );
+    SW_ASSERT_TRUE( glove.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='LowerArm'/></PartFit>", "glove.partfit.xml" ) );
+    string nameError;
+    SW_EXPECT_TRUE( glove.validateNames( tables, &nameError ) );
     {
-        test::ScopedLogCollector logs;
-        SW_TEST_DEFENSIVE_SCOPE( "unknown names in part fit data are load errors" );
+        // 부품 피팅 데이터는 표와 따로 읽는다 — 모르는 이름은 표와 만날 때(조립 · 데이터 검사) 오류다.
         FitPartData broken;
-        SW_EXPECT_FALSE( broken.loadFromXMLText( "<PartFit layer='Hat' profile='Rigid'/>", "broken.partfit.xml", tables ) );
-        SW_EXPECT_FALSE( broken.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='Tail'/></PartFit>", "broken.partfit.xml", tables ) );
-        SW_EXPECT_TRUE( logs.countContaining( "unknown region 'Tail'" ) > 0 );
+        SW_ASSERT_TRUE( broken.loadFromXMLText( "<PartFit layer='Hat' profile='Rigid'/>", "broken.partfit.xml" ) );
+        SW_EXPECT_FALSE( broken.validateNames( tables, &nameError ) );
+        SW_ASSERT_TRUE( broken.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='Tail'/></PartFit>", "broken.partfit.xml" ) );
+        nameError.clear();
+        SW_EXPECT_FALSE( broken.validateNames( tables, &nameError ) );
+        SW_EXPECT_TRUE( nameError.find( "unknown region 'Tail'" ) != string::npos );
     }
 
     const CharacterBoneArray bones = test::CharacterTestUtil::makeArmBones();
@@ -478,7 +482,7 @@ SW_TEST_CASE( FitSolverTest, CorrectiveDeltasFollowMorphWeight )
                                           "  <Corrective><Delta vertex='0' offset='0 0.01 0'/></Corrective>"
                                           "  <Corrective morph='Heavy'><Delta vertex='1' offset='0 0 0.02'/></Corrective>"
                                           "</PartFit>",
-                                          "shirt.partfit.xml", tables ) );
+                                          "shirt.partfit.xml" ) );
     const AppearanceGeometry shirt = Internal::makeCylinder( 0.06f, 0.0f, 1.0f, 12, 4 );
     string                   error;
     SW_EXPECT_TRUE( data.validate( nullptr, &shirt, &error ) );

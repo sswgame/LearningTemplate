@@ -529,4 +529,13 @@ SW_TEST_CASE( GimmickGenreTest, TickedPathMoverIsAPureFunctionOfTheTick )
     SW_EXPECT_NEAR_EQUAL( 0.0f, Mover::computeOffset( listWaypoint, 1.0f, true, 4.0 )._y, 1.0e-5f );
     // 경유점이 없으면 움직이지 않는다.
     SW_EXPECT_NEAR_EQUAL( 0.0f, Mover::computeOffset( sw::vector<sw::float3>{}, 1.0f, true, 1.0 ).getLength(), 1.0e-6f );
+
+    // 넷 루프는 씬의 모든 바닥에 같은 차이를 넣는다(서버 틱에 맞추기).
+    sw::GameObjectManager manager;
+    Mover*                pFirst  = manager.createGameObject( sw::hashed_string( "Lift" ) )->addComponent<Mover>();
+    Mover*                pSecond = manager.createGameObject( sw::hashed_string( "Platform" ) )->addComponent<Mover>();
+    SW_ASSERT_TRUE( pFirst != nullptr && pSecond != nullptr );
+    Mover::setTickOffsetInScene( manager, -42 );
+    SW_EXPECT_EQUAL( int64( -42 ), pFirst->getTickOffset() );
+    SW_EXPECT_EQUAL( int64( -42 ), pSecond->getTickOffset() );
 }

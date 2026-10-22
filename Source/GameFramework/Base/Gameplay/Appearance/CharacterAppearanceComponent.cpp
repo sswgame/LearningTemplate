@@ -2,10 +2,17 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
+#include "Core/Common/HashUtil.h"
+#include "Core/Container/formatString.h"
+
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -16,6 +23,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceMeshAssembly.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 
@@ -30,6 +38,17 @@ namespace sw
             static bool isSamePart( const ResolvedPart& part, const hashed_string& owner, const hashed_string& partName, const hashed_string& asset )
             {
                 return part._owner == owner && part._partName == partName && part._asset == asset;
+            }
+
+            /** @brief 보고에 한 줄을 덧붙입니다. */
+            template <typename... Args>
+            static void appendReport( string& inoutReport, string_view format, Args&&... args )
+            {
+                utf8 arrMessage[constant::kMaxBuffer512]{};
+                formatstring( arrMessage, constant::kMaxBuffer512, format, std::forward<Args>( args )... );
+                if ( inoutReport.empty() == false )
+                    inoutReport += "\n";
+                inoutReport += arrMessage;
             }
 
             /** @brief 오브젝트의 메시 컴포넌트마다 @p func 를 부릅니다. */
@@ -134,6 +153,7 @@ namespace sw
     CharacterAppearanceComponent::CharacterAppearanceComponent()
         : _presetID{}
         , _seed{ 0 }
+        , _partPoolSize{ 4 }
         , _socketTask{ *this }
         , _rig{}
         , _socketCache{}
@@ -142,6 +162,7 @@ namespace sw
         , _bodyBindBones{}
         , _bodyBones{}
         , _listSpawnedPart{}
+        , _listPooledPart{}
         , _listSlotOverride{}
         , _listHiddenSlot{}
         , _taskUnit{}
@@ -149,11 +170,16 @@ namespace sw
         , _pPreviewDatabase{ nullptr }
         , _pReloadDatabase{ nullptr }
         , _reloadSubscription{}
+        , _listMeshAssemblyLoad{}
+        , _fitTablesLoad{}
         , _assembleCount{ 0 }
+        , _seenFitReloadStamp{ 0 }
         , _bodyPart{ -1 }
         , _bPartsVisible{ true }
         , _bAssembleScheduled{ SW_FALSE }
         , _bStarted{ SW_FALSE }
+        , _bMeshAssemblyPending{ SW_FALSE }
+        , _bMeshAssembled{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -170,6 +196,32 @@ namespace sw
             _reloadSubscription = _pReloadDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
         if ( _presetID.empty() == false )
             requestAssemble();
+    }
+
+    void CharacterAppearanceComponent::onTick( float32 deltaTime )
+    {
+        Component::onTick( deltaTime );
+        GameObjectManager* pManager = findManager();
+        if ( pManager == nullptr || _assembleCount == 0 )
+            return;
+        if ( _bMeshAssemblyPending == SW_TRUE )
+        {
+            if ( isMeshAssemblyLoading() )
+                return;
+            // 유닛의 메시를 바꾸는 일은 렌더 상태라 틱 뒤에 한다.
+            _bMeshAssemblyPending = SW_FALSE;
+            pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
+            { appearance.applyMeshAssembly(); } );
+            return;
+        }
+        // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
+        // 구운 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
+        const bool bSocketsStale = _socketCache.isStale();
+        if ( bSocketsStale == false && isMeshAssemblyStale() == false )
+            return;
+        if ( bSocketsStale )
+            _socketCache.clear();
+        requestAssemble();
     }
 
     void CharacterAppearanceComponent::onAppearanceDataReloaded()
@@ -189,7 +241,10 @@ namespace sw
         _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
         despawnParts();
-        _bStarted = SW_FALSE;
+        _listMeshAssemblyLoad.clear();
+        _fitTablesLoad.reset();
+        _bMeshAssemblyPending = SW_FALSE;
+        _bStarted             = SW_FALSE;
         Component::onEndPlay();
     }
 
@@ -278,8 +333,44 @@ namespace sw
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
             }
+            for ( const SpawnedPart& part : _listPooledPart )
+            {
+                GameObject* pObject = pManager->resolveGameObject( part._object );
+                if ( pObject != nullptr )
+                    pManager->destroyObject( pObject );
+            }
         }
         _listSpawnedPart.clear();
+        _listPooledPart.clear();
+    }
+
+    bool CharacterAppearanceComponent::poolPart( GameObject& object, const SpawnedPart& spawned )
+    {
+        const bool bPoolFull = _listPooledPart.size() >= static_cast<size_t>( _partPoolSize );
+        if ( spawned._bSocketPart == SW_FALSE || bPoolFull )
+            return false;
+        SocketBindingComponent* pBinding = object.getComponent<SocketBindingComponent>();
+        if ( pBinding != nullptr && pBinding->getState() == SocketBindingState::Bound )
+            (void)pBinding->release( SocketReleaseMode::Animated, float3{} ); // 애니메이션 떼기는 물리 바디가 없어도 된다 — 다시 쓸 때 다시 붙인다
+        object.setActive( false );
+        _listPooledPart.push_back( spawned );
+        return true;
+    }
+
+    GameObject* CharacterAppearanceComponent::takePooledPart( GameObjectManager& manager, const hashed_string& asset )
+    {
+        for ( size_t index = 0; index < _listPooledPart.size(); ++index )
+        {
+            if ( _listPooledPart[index]._asset != asset )
+                continue;
+            GameObject* pObject = manager.resolveGameObject( _listPooledPart[index]._object );
+            _listPooledPart.erase( _listPooledPart.begin() + static_cast<ptrdiff_t>( index ) );
+            if ( pObject == nullptr )
+                return nullptr; // 누가 지웠다 — 새로 스폰한다
+            pObject->setActive( true );
+            return pObject;
+        }
+        return nullptr;
     }
 
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
@@ -389,6 +480,7 @@ namespace sw
         applyVisibility( *pManager );
         registerSocketTask( *pBody );
         ++_assembleCount;
+        requestMeshAssembly( *pManager );
     }
 
     bool CharacterAppearanceComponent::expandSpec( const AppearanceDatabase& database, CharacterAppearanceSpec& outSpec ) const
@@ -478,7 +570,11 @@ namespace sw
             GameObject* pObject = manager.resolveGameObject( spawned._object );
             if ( matched < 0 || pObject == nullptr )
             {
-                if ( pObject != nullptr && releaseDetachedPart( *pObject, spawned, listDetachEvent ) == false )
+                if ( pObject == nullptr )
+                    continue;
+                // 떨어져 나간 부품은 물리로, 벗은 소켓 부품은 숨겨 두고(다시 입으면 그 인스턴스), 나머지는 지운다.
+                const bool bKeptAlive = releaseDetachedPart( *pObject, spawned, listDetachEvent ) || poolPart( *pObject, spawned );
+                if ( bKeptAlive == false )
                     manager.destroyObject( pObject );
                 continue;
             }
@@ -506,7 +602,10 @@ namespace sw
             spawned._partIndex = static_cast<uint32>( partIndex );
             if ( part._kind == AppearancePartKind::SocketPrefab )
             {
-                pObject = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() ) : nullptr;
+                // 같은 에셋을 숨겨 둔 인스턴스가 있으면 그것을 다시 쓴다 — 다른 칸 · 소켓으로 옮겨 가는 무기는 같은 인스턴스다.
+                pObject = takePooledPart( manager, part._asset );
+                if ( pObject == nullptr && pAssetManager != nullptr )
+                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() );
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
             }
@@ -622,6 +721,183 @@ namespace sw
             if ( pBinding != nullptr && _rig.computePlacement( _state.getResolved()._listPart[spawned._partIndex]._placement, _bodyBones, inUnit, unitIndex ) )
                 pBinding->updateSocketTransform( inUnit );
         }
+    }
+
+    // ------------------------------------------------------------------------------
+    // 구운 메시(체형 · 피팅)
+    // ------------------------------------------------------------------------------
+    void CharacterAppearanceComponent::requestMeshAssembly( GameObjectManager& manager )
+    {
+        _listMeshAssemblyLoad.clear();
+        _fitTablesLoad.reset();
+        _bMeshAssemblyPending                    = SW_FALSE;
+        const ResolvedAppearance& resolved       = _state.getResolved();
+        const ResolvedPart*       pBodyPart      = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
+        const bool                bHasTables     = pBodyPart != nullptr && pBodyPart->_fitTables.empty() == false;
+        const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false;
+        const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 굽지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
+        if ( pBodyPart == nullptr || bNothingToBake )
+            return;
+
+        if ( bHasTables )
+            _fitTablesLoad = SharedAssetCache<FitTables>::request( pBodyPart->_fitTables.c_str() );
+        // 몸이 먼저, 그 뒤 몸을 따르는 스킨드 부품. 피팅은 몸 스켈레톤의 바인드 공간에서 풀므로 다른 스켈레톤의 부품은 피팅하지 않는다(데이터 오류로 알린다).
+        vector<uint32> listPartIndex{ static_cast<uint32>( _bodyPart ) };
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( spawned._bSocketPart == SW_FALSE )
+                listPartIndex.push_back( spawned._partIndex );
+        }
+        for ( const uint32 partIndex : listPartIndex )
+        {
+            const ResolvedPart& part = resolved._listPart[partIndex];
+            MeshAssemblyLoad    load;
+            load._partIndex             = partIndex;
+            load._mesh                  = MeshCache::request( part._asset.c_str() );
+            const bool bForeignSkeleton = part._skeleton.empty() == false && part._skeleton != pBodyPart->_skeleton;
+            if ( part._fit.empty() == false && bForeignSkeleton )
+                SW_LOG_ERROR( "Appearance '%#' part '%#' has fit data but its own skeleton '%#' - it is drawn unfitted", _presetID.c_str(), part._partName.c_str(), part._skeleton.c_str() );
+            else if ( part._fit.empty() == false )
+                load._fit = SharedAssetCache<FitPartData>::request( part._fit.c_str() );
+            _listMeshAssemblyLoad.push_back( std::move( load ) );
+        }
+        _bMeshAssemblyPending = SW_TRUE;
+        // 새로 입은 피팅 부품은 구운 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 구운 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            GameObject* pObject    = manager.resolveGameObject( spawned._object );
+            const bool  bUnfitted  = spawned._bSocketPart == SW_FALSE && spawned._bBaked == SW_FALSE;
+            const bool  bHidesPart = bUnfitted && resolved._listPart[spawned._partIndex]._fit.empty() == false;
+            if ( pObject != nullptr && bHidesPart )
+                CharacterAppearanceComponentInternal::forEachMesh( *pObject, []( MeshComponent& mesh )
+                { mesh.setVisible( false ); } );
+        }
+        // 플레이하지 않는 씬(에디터 미리보기)은 틱이 돌지 않는다 — 이 자리에서 기다려 건다.
+        if ( _bStarted == SW_FALSE )
+        {
+            for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
+            {
+                (void)load._mesh.wait(); // 실패는 applyMeshAssembly 가 알린다
+                if ( load._fit.isValid() )
+                    (void)load._fit.wait();
+            }
+            if ( _fitTablesLoad.isValid() )
+                (void)_fitTablesLoad.wait();
+            _bMeshAssemblyPending = SW_FALSE;
+            applyMeshAssembly();
+        }
+    }
+
+    bool CharacterAppearanceComponent::isMeshAssemblyLoading() const
+    {
+        if ( _fitTablesLoad.isLoading() )
+            return true;
+        for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
+        {
+            if ( load._mesh.isLoading() || load._fit.isLoading() )
+                return true;
+        }
+        return false;
+    }
+
+    void CharacterAppearanceComponent::applyMeshAssembly()
+    {
+        // 틱이 이 걸기를 예약한 뒤 같은 틱 뒤에 다시 조립했으면(새 요청) 새 것이 아직 읽는 중이다 — 다음 틱이 건다.
+        GameObjectManager* pManager        = findManager();
+        const bool         bSuperseded     = _bMeshAssemblyPending == SW_TRUE || isMeshAssemblyLoading();
+        const bool         bNothingToApply = _listMeshAssemblyLoad.empty() || bSuperseded;
+        if ( pManager == nullptr || bNothingToApply )
+            return;
+        const ResolvedAppearance&  resolved = _state.getResolved();
+        vector<AppearanceMeshPart> listPart;
+        vector<shared_ptr<Mesh>>   listSource;
+        string                     report;
+        // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(구운 것과 원본이 섞인 차림을 만들지 않는다).
+        if ( _fitTablesLoad.hasFailed() )
+            CharacterAppearanceComponentInternal::appendReport( report, "fit tables: %#", _fitTablesLoad.getError().c_str() );
+        for ( MeshAssemblyLoad& load : _listMeshAssemblyLoad )
+        {
+            const ResolvedPart& part = resolved._listPart[load._partIndex];
+            shared_ptr<Mesh>    mesh = load._mesh.get();
+            if ( load._fit.hasFailed() || mesh == nullptr )
+                CharacterAppearanceComponentInternal::appendReport( report, "part '%#' mesh or fit data could not be read", part._partName.c_str() );
+            load._sourceContentID = mesh != nullptr ? mesh->getContentID() : 0;
+            listPart.push_back( AppearanceMeshPart{ part._partName, part._owner, mesh.get(), load._fit.get().get() } );
+            listSource.push_back( std::move( mesh ) );
+        }
+        _seenFitReloadStamp = computeFitReloadStamp();
+        // 같은 차림이면 이미 구운 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
+        uint64 bakeKey = HashUtil::combine( resolved._meshHash, _seenFitReloadStamp );
+        for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
+        {
+            bakeKey = HashUtil::combine( HashUtil::combine( bakeKey, load._partIndex ), load._sourceContentID );
+        }
+        vector<shared_ptr<Mesh>> listBaked;
+        const bool               bRead   = report.empty();
+        const FitTables*         pTables = _fitTablesLoad.isValid() ? _fitTablesLoad.get().get() : nullptr;
+        if ( bRead && AppearanceBakedMeshCache::tryGet( bakeKey, listBaked ) == false )
+        {
+            if ( AppearanceMeshAssembly::assemble( resolved, listPart, pTables, _bodyBindBones, listBaked, report ) )
+                AppearanceBakedMeshCache::store( bakeKey, listBaked );
+        }
+        if ( listBaked.size() != listPart.size() )
+        {
+            SW_LOG_ERROR( "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), report.c_str() );
+            listBaked.assign( listPart.size(), nullptr );
+        }
+        bool bAnyBaked = false;
+        for ( size_t index = 0; index < _listMeshAssemblyLoad.size(); ++index )
+        {
+            SkeletalMeshComponent* pUnit = findSkinnedUnit( *pManager, _listMeshAssemblyLoad[index]._partIndex );
+            shared_ptr<Mesh>       mesh  = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
+            bAnyBaked                    = bAnyBaked || listBaked[index] != nullptr;
+            // 지난번에도 원본이었고 이번에도 원본이면 건드리지 않는다(사본 · 군중 묶음을 다시 만들지 않게).
+            const bool bUnchanged = listBaked[index] == nullptr && _bMeshAssembled == SW_FALSE;
+            const bool bApplies   = pUnit != nullptr && mesh != nullptr;
+            if ( bApplies && bUnchanged == false )
+                pUnit->setSkinSourceMesh( std::move( mesh ) );
+            for ( SpawnedPart& spawned : _listSpawnedPart )
+            {
+                if ( spawned._partIndex == _listMeshAssemblyLoad[index]._partIndex && spawned._bSocketPart == SW_FALSE )
+                    spawned._bBaked = listBaked[index] != nullptr ? SW_TRUE : SW_FALSE;
+            }
+        }
+        _bMeshAssembled = bAnyBaked ? SW_TRUE : SW_FALSE;
+        applyVisibility( *pManager );
+    }
+
+    bool CharacterAppearanceComponent::isMeshAssemblyStale() const
+    {
+        if ( _listMeshAssemblyLoad.empty() )
+            return false;
+        if ( _seenFitReloadStamp != computeFitReloadStamp() )
+            return true;
+        for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
+        {
+            const shared_ptr<Mesh> mesh = load._mesh.get();
+            if ( mesh != nullptr && mesh->getContentID() != load._sourceContentID )
+                return true;
+        }
+        return false;
+    }
+
+    SkeletalMeshComponent* CharacterAppearanceComponent::findSkinnedUnit( GameObjectManager& manager, uint32 partIndex ) const
+    {
+        if ( static_cast<int32>( partIndex ) == _bodyPart )
+            return getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( spawned._partIndex != partIndex || spawned._bSocketPart == SW_TRUE )
+                continue;
+            GameObject* pObject = manager.resolveGameObject( spawned._object );
+            return pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
+        }
+        return nullptr;
+    }
+
+    uint32 CharacterAppearanceComponent::computeFitReloadStamp()
+    {
+        return SharedAssetCache<FitTables>::getReloadCount() + SharedAssetCache<FitPartData>::getReloadCount();
     }
 
     void CharacterAppearanceComponent::registerSocketTask( SkeletalMeshComponent& body )

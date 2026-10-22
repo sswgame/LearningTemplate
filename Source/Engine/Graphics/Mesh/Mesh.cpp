@@ -244,7 +244,7 @@ namespace sw
         for ( size_t index = 0; index < listSection.size(); ++index )
         {
             const MeshSection& section    = listSection[index];
-            const bool         bInRange   = section._vertexCount > 0 && section._firstVertex <= vertexCount && section._vertexCount <= vertexCount - section._firstVertex;
+            const bool         bInRange   = section._firstVertex <= vertexCount && section._vertexCount <= vertexCount - section._firstVertex;
             const bool         bTriangles = section._firstVertex % 3 == 0 && section._vertexCount % 3 == 0;
             bool               bUnique    = section._name.empty() == false && section._personVisibility < MeshPersonVisibility::Count;
             for ( size_t other = 0; bUnique && other < index; ++other )

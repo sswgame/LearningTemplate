@@ -1,17 +1,22 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearancePreload.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
@@ -207,6 +212,88 @@ SW_TEST_CASE( AppearanceSocketRigTest, SocketOverridesMoveBodySocketsAndBadBones
     error.clear();
     SW_EXPECT_FALSE( rig.rebuild( resolved, bindBones, badSource, &error ) );
     SW_EXPECT_TRUE( error.find( "hand.missing" ) != string::npos );
+}
+
+/**
+ * @brief [AppearancePreloadTest] 프리셋 참조를 따라 미리 올릴 경로를 모은다 — 몸 메시 · 소켓, 장비 프리팹 · 소켓, 겹치지 않게. 모르는 프리셋은 실패
+ */
+SW_TEST_CASE( AppearancePreloadTest, PresetAssetsFollowItsReferences )
+{
+    using Internal = AppearanceSocketRigTestInternal;
+    Internal::Data data;
+    SW_ASSERT_TRUE_MSG( data.load(), data._database.getReport().joined().c_str() );
+    vector<string> listPath;
+    SW_ASSERT_TRUE( AppearancePreloadUtil::collectPresetAssets( data._database, "Hero", 0u, listPath ) );
+    SW_ASSERT_TRUE( AppearancePreloadUtil::collectPresetAssets( data._database, "LeftyHero", 0u, listPath ) ); // 같은 경로는 다시 넣지 않는다
+    const vector<string> listExpected{ "m/body.mesh", "mem/body.sockets.xml", "p/gun_short.prefab.xml", "mem/gun_short.sockets.xml" };
+    SW_EXPECT_EQUAL( listExpected.size(), listPath.size() );
+    for ( const string& expected : listExpected )
+    {
+        SW_EXPECT_TRUE_MSG( VectorUtil::contains( listPath, expected ), expected.c_str() );
+    }
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown preset collects nothing" );
+    SW_EXPECT_FALSE( AppearancePreloadUtil::collectPresetAssets( data._database, "Nobody", 0u, listPath ) );
+}
+
+/**
+ * @brief [AppearancePreloadTest] 몸 부품이 가리키는 피팅 표의 영역이 숨김 영역 이름의 정본이다 — 표에 없는 영역을 숨기는 몸 수정은 폴더를 읽을 때 오류다
+ */
+SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folderDisk = test::makeTempPath( "appearanceregions" );
+    const string folder     = test::makeTempResourceID( folderDisk );
+    const string tablesPath = FileUtil::joinPath( folder, "body.fit.xml" );
+    FileUtil::ensureParentDirectoryExists( FileUtil::joinPath( folderDisk, "slots.xml" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folderDisk, "body.fit.xml" ), "<FitTables><Region name='LowerArm' bones='lowerarm'/></FitTables>" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folderDisk, "slots.xml" ), "<SlotTable><Slot name='Hands' accept='Glove'/></SlotTable>" ) );
+    const auto writeVisuals = [&folderDisk, &tablesPath]( const utf8* pRegion )
+    {
+        string text( "<ItemVisualCatalog><ItemVisual id='body'><Part name='Body' kind='Skinned' mesh='m/body.mesh' fitTables='" );
+        text += tablesPath;
+        text += "'/></ItemVisual><ItemVisual id='bare'><Part name='Bare' kind='BodyModification'><HideRegion name='";
+        text += pRegion;
+        text += "'/></Part></ItemVisual></ItemVisualCatalog>";
+        return FileUtil::writeTextFile( FileUtil::joinPath( folderDisk, "itemvisuals.xml" ), text );
+    };
+
+    SW_ASSERT_TRUE( writeVisuals( "LowerArm" ) );
+    AppearanceDatabase known;
+    SW_EXPECT_TRUE_MSG( known.loadFromFolder( folder, nullptr ), known.getReport().joined().c_str() );
+
+    SW_ASSERT_TRUE( writeVisuals( "Tail" ) );
+    AppearanceDatabase unknown;
+    SW_EXPECT_FALSE( unknown.loadFromFolder( folder, nullptr ) );
+    SW_EXPECT_TRUE( unknown.getReport().joined().find( "unknown body region 'Tail'" ) != string::npos );
+}
+
+/**
+ * @brief [AppearanceSocketRigTest] 외형의 소켓 캐시는 엔진 공유 캐시의 객체를 쥔다 — 파일을 고쳐 다시 읽으면 낡았다고 알리고, 비운 뒤에는 새 내용을 준다
+ */
+SW_TEST_CASE( AppearanceSocketRigTest, SocketCacheSeesAHotReloadedSocketAsset )
+{
+    using Internal = AppearanceSocketRigTestInternal;
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string pathDisk = FileUtil::joinPath( test::makeTempPath( "appearancesocketreload" ), "gun.sockets.xml" );
+    const string path     = test::makeTempResourceID( pathDisk );
+    FileUtil::ensureParentDirectoryExists( pathDisk );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, Internal::kShortSocketXML ) );
+
+    AppearanceSocketSetCache cache;
+    const SocketSet*         pFirst = cache.findSocketSet( hashed_string( path ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_FALSE( cache.isStale() );
+
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, Internal::kLongSocketXML ) );
+    SW_ASSERT_TRUE( SharedAssetCache<SocketSet>::reloadShared( path ) );
+    SW_EXPECT_TRUE( cache.isStale() );
+    cache.clear();
+    SW_EXPECT_FALSE( cache.isStale() );
+    const SocketSet* pSecond = cache.findSocketSet( hashed_string( path ) );
+    SW_ASSERT_NOT_NULL( pSecond );
+    const SocketDef* pMuzzle = pSecond->findSocket( "Muzzle" );
+    SW_ASSERT_NOT_NULL( pMuzzle );
+    SW_EXPECT_NEAR_EQUAL( 0.9f, pMuzzle->_translation._z, 1.0e-5f );
 }
 
 /**

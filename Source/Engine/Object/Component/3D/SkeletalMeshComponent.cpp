@@ -237,6 +237,16 @@ namespace sw
         return _skeleton != SkeletalMeshComponentInternal::getImplicitSkeleton();
     }
 
+    void SkeletalMeshComponent::setSkinSourceMesh( shared_ptr<Mesh> source )
+    {
+        leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
+        _skinSourceMesh      = nullptr;
+        _skinSourceContentID = 0;
+        setMesh( std::move( source ) );
+        resolveSkinInstanceMesh();
+        _bPoseDirty = SW_TRUE;
+    }
+
     void SkeletalMeshComponent::resolveSkeleton()
     {
         // 경로가 비었고 런타임에 정한 스켈레톤이면 그대로 둔다 — 렌더 에셋을 다시 풀어도(resolveRenderAssets) 암묵 스켈레톤으로 덮지 않는다.

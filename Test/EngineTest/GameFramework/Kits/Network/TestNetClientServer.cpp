@@ -307,6 +307,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     clientSettings._tickInterval = 1.0f / 30.0f;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, &policy ) );
     SW_EXPECT_TRUE( client.initialize( &clientHost, clientSettings ) );
+    SW_EXPECT_FALSE( client.findServerTickOffset().has_value() ); // 서버가 아직 내 상태를 싣지 않았다
 
     // 30 Hz 서버 틱, 60 Hz 프레임. 엔티티 1 은 x = 틱 × 0.1 로 움직인다.
     float64       time          = 0.0;
@@ -396,6 +397,10 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     SW_ASSERT_NOT_NULL( pOwnerState );
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( pOwnerState->_inputTick ), readFloatBytes( pOwnerState->_buffer ), 1.0e-3f );
     SW_EXPECT_TRUE( pOwnerState->_inputTick + 20 > serverTick ); // 손실이 있어도 최근 틱의 상태이다
+    // 서버 틱 − 입력 틱 — 틱 함수 바닥을 예측 입력이 서버에서 도는 자리에 두는 차이다.
+    const std::optional<int64> serverTickOffset = client.findServerTickOffset();
+    SW_ASSERT_TRUE( serverTickOffset.has_value() );
+    SW_EXPECT_EQUAL( static_cast<int64>( client.getLatest()->_tick ) - static_cast<int64>( pOwnerState->_inputTick ), *serverTickOffset );
 }
 
 /**

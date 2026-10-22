@@ -46,8 +46,9 @@ namespace sw
 {
     /**
      * @class AppearanceSocketSetCache
-     * @brief 리소스에서 소켓 에셋을 한 번 읽어 캐시하는 기본 구현입니다. 소켓 종류는 엔진 기본 테이블(`engine/character/default.socketkinds.xml`)과 대조합니다.
-     * @details 읽지 못한 경로도 기억해 두고 다시 읽지 않는다. 오류 로그는 한 번만 남는다. 데이터를 고친 뒤 다시 읽으려면 `clear` 를 부른다.
+     * @brief 엔진의 공유 소켓 캐시(`SharedAssetCache<SocketSet>`, 종류는 엔진 기본 테이블과 대조)에서 받은 소켓 에셋을 쥐는 기본 구현입니다.
+     * @details 에셋 매니저가 파일을 고치면 공유 캐시가 제자리에서 다시 읽고 다시 읽은 횟수를 올린다(`isStale`). 쥔 쪽은 그때 `clear` 하고 다시 조립한다 —
+     *          그래서 외형이 읽는 소켓과 소켓 편집 창 · 소켓 컴포넌트가 읽는 소켓이 한 객체다. 읽지 못한 경로는 기억해 두고 다시 읽지 않으므로 오류 로그는 한 번이다.
      */
     class SW_GF_API AppearanceSocketSetCache final : public IAppearanceSocketSource
     {
@@ -56,15 +57,14 @@ namespace sw
         ~AppearanceSocketSetCache() override;
 
         const SocketSet* findSocketSet( const hashed_string& path ) override;
-        /** @brief 캐시한 것을 모두 버립니다. */
+        /** @brief 쥔 것을 모두 버리고 지금의 다시 읽은 횟수를 기준으로 삼습니다. */
         void clear();
+        /** @brief 쥔 뒤에 공유 캐시가 소켓 에셋을 다시 읽었으면(핫 리로드) true 입니다. */
+        bool isStale() const;
 
     private:
-        unordered_map<hashed_string, unique_ptr<SocketSet>> _mapSocketSet; ///< 값이 null 이면 읽지 못한 경로이다
-        SocketKindTable                                     _kinds;
-        uint8                                               _bKindsLoaded : 1; ///< 소켓 종류 표를 읽어 봤다
-        uint8                                               _bKindsValid  : 1; ///< 그 읽기가 성공했다. 실패했으면 소켓 에셋을 하나도 내주지 않는다
-        [[maybe_unused]] uint8                              _reserved     : 6;
+        unordered_map<hashed_string, shared_ptr<const SocketSet>> _mapSocketSet;    ///< 값이 null 이면 읽지 못한 경로이다
+        uint32                                                    _seenReloadCount; ///< 마지막 `clear` 때 공유 캐시의 다시 읽은 횟수
     };
 } // namespace sw
 

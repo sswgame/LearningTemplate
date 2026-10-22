@@ -154,6 +154,11 @@ namespace sw::editor
 
         /** @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다. */
         [[nodiscard]] static bool importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath );
+        /**
+         * @brief 규칙의 몸 메시(`body_surface`)에서 스킨 · 체형 모프를 장비 메시 @p inoutMesh 로 옮깁니다(`CharacterMeshUtil::transferBodySurface`).
+         * @return 몸 메시를 읽지 못했거나 몸 표면에서 `body_surface_distance` 보다 먼 정점이 있으면 오류를 남기고 false 입니다(메시는 그대로).
+         */
+        [[nodiscard]] static bool transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh );
 
         /**
          * @brief 핫 리로드가 넘긴 파일이 모델 원본이면 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.

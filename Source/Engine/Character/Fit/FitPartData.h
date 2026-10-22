@@ -1,7 +1,8 @@
 /**
  * @file FitPartData.h
  * @brief 장비(부품) 하나의 피팅 데이터(`*.partfit.xml`)입니다. 겹, 프로필, 숨김 영역, 조임 고리, 보정 조각을 담습니다. 메시와 따로 둔 원본 에셋입니다.
- * @details 소켓처럼 재임포트가 지우지 않는다. 겹, 프로필, 영역 이름은 피팅 테이블(`FitTables`)에 대조한다(모르면 로드 오류다).
+ * @details 소켓처럼 재임포트가 지우지 않는다. 겹, 프로필, 영역 이름은 피팅 테이블(`FitTables`)과 만나는 곳에서 대조한다(`validateNames`, 모르면 오류다).
+ *          보정 조각의 `vertex` 는 메시를 위치로 이은 형상의 정점 번호다(`CharacterMeshUtil::makeWeldedGeometry` — 피팅이 푸는 형상).
  *
  *          XML 예:
  *          @code
@@ -72,10 +73,17 @@ namespace sw
     class SW_API FitPartData
     {
     public:
-        /** @brief XML 텍스트에서 읽습니다. 이름은 @p tables 에 대조합니다. */
-        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitTables& tables );
+        /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소와 빠진 값은 오류입니다. 겹 · 프로필 · 영역 이름은 피팅 표와 만나는 곳에서 `validateNames` 로 대조합니다. */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromResource( string_view path, const FitTables& tables );
+        [[nodiscard]] bool loadFromResource( string_view path );
+        /**
+         * @brief 겹 · 프로필 · 숨김 영역 이름이 @p tables 에 있는지 봅니다.
+         * @details 부품 피팅 데이터는 표와 따로 읽는 에셋이다(같은 장비를 표가 다른 캐릭터가 입는다, 공유 캐시가 경로만으로 나눠 준다). 그래서 대조는 읽을 때가 아니라
+         *          둘이 만나는 조립(외형 메시 조립)과 데이터 검사에서 한다.
+         * @return 없는 이름이 있으면 오류 글을 더하고 false 입니다.
+         */
+        bool validateNames( const FitTables& tables, string* pOutError ) const;
         /**
          * @brief 고리의 본이 @p bones 에, 보정 정점이 @p geometry 안에 있는지 봅니다(널이면 그쪽은 건너뜀).
          * @return 아니면 오류 글을 더하고 false 입니다.
@@ -103,7 +111,7 @@ namespace sw
         void addCorrective( const FitCorrectiveDef& corrective ) { _listCorrective.push_back( corrective ); }
 
     private:
-        void readRoot( const XMLNode& root, const FitTables& tables, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
 
     private:
         vector<hashed_string>    _listHiddenRegion;

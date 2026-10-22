@@ -16,12 +16,11 @@
 | 단위 | 내용 | 상태 |
 |---|---|---|
 | H1 | 인스턴스 강조 칸 — `MeshComponent::setHighlight` → `GPUSceneBuilder` → `GPUInstance::_highlight`, 상호작용 정의의 색, `InteractableComponent::applyHighlightToMeshes` | 코드 · 테스트(`InteractionTest.HighlightRequestReachesTheOwnersMeshes`), 빌드 미확인 |
-| H2 | 강조 패스 둘(`RenderPassType::HighlightOutline` · `HighlightSense`) · 셰이더(`highlightoutline.hlsl`, `instancedata.hlsli` 의 `highlight` 칸) · 다섯 파이프라인 XML · 엔진 기본 에셋 `_shaderHighlightOutline` | 코드는 패치로만 있다 — 셰이더 쿠킹 게이트(`CheckShaderStamps`)가 쿠킹 전 커밋을 막아 `wt/gpB` 의 stash(`gpB highlight renderer`)와 스크래치패드 `gpB-highlight-renderer.patch` 로 남겼다 |
+| H2 | 강조 패스 둘(`RenderPassType::HighlightOutline` · `HighlightSense`) · 셰이더(`highlightoutline.hlsl`, `instancedata.hlsli` 의 `highlight` 칸) · 다섯 파이프라인 XML · 엔진 기본 에셋 `_shaderHighlightOutline` | 들어감 — 묶음 6 셰이더 병합(`f33a7f91f`)이 패치를 얹고 쿠킹했다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct` 가 `highlight` · `appearance` 칸을 대조한다 |
 | H3 | 화면 확인 — 네 백엔드에서 외곽선이 대상 둘레에만, 감각 모드가 벽 너머로 보이는지 | 남음(GPU) |
 | H4 | 몽타주 실행 확인 — 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬). 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다 | 남음(씬 실행) |
 
 ## 남은 것
 
-- H2 적용: 패치를 얹고(`git apply gpB-highlight-renderer.patch`) `App.exe --cook-shaders`, `ShaderCookRequestTest` 가 알리는 낡은 바이너리를 지운 뒤 `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct`(이제 `highlight` 칸을 대조한다)와 `RenderPassTest` 필터.
-- 함정: 같은 시기의 다른 작업자(비동기 로드 · 디더 등장)도 `GPUInstance` 의 예약 칸을 쓴다 — 병합 때 칸을 하나씩 나눠 가져야 한다(원소 크기 128 바이트를 지킨다).
+- `GPUInstance` 의 예약 칸은 이제 하나(`reserved1`)다 — 강조(`highlight`)와 디더 등장(`appearance`)이 둘을 가져갔다. 새 칸이 더 필요하면 원소를 144 바이트로 늘리는 결정이 먼저다(128 바이트 · 16 의 배수를 지킨다).
 - 반투명 메시는 강조 패스가 보지 않는다(불투명 배치만 그린다). 필요해지면 반투명 꼬리 배치를 같은 셰이더로 그리는 패스를 더한다.

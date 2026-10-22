@@ -37,6 +37,8 @@ namespace sw
         hashed_string       _material{};        ///< 변형과 규칙을 반영한 머티리얼(비어 있으면 에셋의 것)
         hashed_string       _skeleton{};        ///< 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         hashed_string       _socketSet{};
+        hashed_string       _fit{};         ///< 피팅 데이터(`*.partfit.xml`). 비어 있으면 피팅하지 않는다
+        hashed_string       _fitTables{};   ///< 피팅 표(`*.fit.xml`). 몸 부품만 가진다
         hashed_string       _state{};       ///< 외형 상태
         hashed_string       _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
         int32               _layer{ 0 };

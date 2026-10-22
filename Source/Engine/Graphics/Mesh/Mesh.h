@@ -226,6 +226,7 @@ namespace sw
         void setMorphTargets( vector<MeshMorphTarget> listTarget );
         /**
          * @brief 구간을 설정합니다. 구간은 정점 범위 안이고 3 의 배수이며 이름이 겹치지 않아야 합니다 — 아니면 오류를 남기고 구간을 비운 채 false 입니다.
+         *        정점이 0 인 구간은 이름은 있되 그릴 것이 없는 구간입니다(외형 조립이 덮인 삼각형을 모두 뺀 구간 — 그 구간 컴포넌트는 아무것도 그리지 않는다).
          * @details 내용 번호는 바꾸지 않는다(정점이 그대로라 정점 · 모프 풀을 다시 올릴 이유가 없다). 그리는 범위는 배치 키라 다음 수집이 다시 나눈다.
          */
         [[nodiscard]] bool setSections( vector<MeshSection> listSection );

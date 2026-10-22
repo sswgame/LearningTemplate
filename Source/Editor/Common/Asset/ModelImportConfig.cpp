@@ -29,22 +29,24 @@ namespace sw::editor
         };
         /** @brief 규칙 하나입니다. 적용 순서는 `translation` 다음 `recenter` — 스킨드 모델에는 둘 다 쓸 수 없다(바인드 행렬이 어긋난다). */
         static constexpr ConfigKeyDoc kArrModelImportRuleKeyDoc[] = {
-            {                    "name",    "string",        "",                                                        "규칙 이름(로그에 나온다)"},
-            {        "include_patterns",  "string[]",        "",                                "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시)"},
-            {        "exclude_patterns",  "string[]",        "",                                                          "맞으면 빼는 와일드카드"},
-            {           "include_paths",  "string[]",        "",                                                      "들어 있어야 하는 경로 조각"},
-            {           "exclude_paths",  "string[]",        "",                                                      "들어 있으면 빼는 경로 조각"},
-            {             "translation", "number[3]", "0, 0, 0",                  "모든 노드 월드 위치에 더하는 이동(glTF 원본 공간 — 축 변환 전)"},
-            {                "recenter",    "string",    "none", "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"},
-            {              "animations",      "bool",    "true",                                                           "애니메이션을 가져온다"},
-            {                   "clips",  "string[]",        "",                    "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"},
-            {         "animation_codec",    "string",     "acl",              "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"},
-            {   "animation_sample_rate",    "number",      "30",                                                                    "초당 표본 수"},
-            {     "animation_precision",    "number",  "0.0001",                                           "코덱 정밀도(`AnimationCodecSettings`)"},
-            {"animation_shell_distance",    "number",     "0.1",                                                            "코덱 껍질 거리(미터)"},
-            {        "root_motion_bone",    "string",        "",                                               "루트 모션 트랙이 될 본(비면 없음)"},
-            {             "attachments",      "bool",    "true",                                        "본 아래 스킨 없는 메시를 따로 임포트한다"},
-            {                "fracture",    "object",        "",              "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"},
+            {                    "name",    "string",        "",                                                                      "규칙 이름(로그에 나온다)"},
+            {        "include_patterns",  "string[]",        "",                                              "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시)"},
+            {        "exclude_patterns",  "string[]",        "",                                                                        "맞으면 빼는 와일드카드"},
+            {           "include_paths",  "string[]",        "",                                                                    "들어 있어야 하는 경로 조각"},
+            {           "exclude_paths",  "string[]",        "",                                                                    "들어 있으면 빼는 경로 조각"},
+            {             "translation", "number[3]", "0, 0, 0",                                "모든 노드 월드 위치에 더하는 이동(glTF 원본 공간 — 축 변환 전)"},
+            {                "recenter",    "string",    "none",               "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"},
+            {              "animations",      "bool",    "true",                                                                         "애니메이션을 가져온다"},
+            {                   "clips",  "string[]",        "",                                  "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"},
+            {         "animation_codec",    "string",     "acl",                            "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"},
+            {   "animation_sample_rate",    "number",      "30",                                                                                  "초당 표본 수"},
+            {     "animation_precision",    "number",  "0.0001",                                                         "코덱 정밀도(`AnimationCodecSettings`)"},
+            {"animation_shell_distance",    "number",     "0.1",                                                                          "코덱 껍질 거리(미터)"},
+            {        "root_motion_bone",    "string",        "",                                                             "루트 모션 트랙이 될 본(비면 없음)"},
+            {             "attachments",      "bool",    "true",                                                      "본 아래 스킨 없는 메시를 따로 임포트한다"},
+            {                "fracture",    "object",        "",                            "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"},
+            {            "body_surface",    "string",        "", "장비 메시면 몸 `.mesh` 리소스 id — 정점마다 가장 가까운 몸 삼각형의 스킨 · 체형 모프를 옮긴다"},
+            {   "body_surface_distance",    "number",    "0.05",                               "몸 표면에 묶는 최대 거리(미터) — 넘는 정점이 있으면 임포트 오류"},
         };
         // 기본값 글은 `FractureSettings::FractureSettings` 와 맞춘 것이다 — 그 생성자를 바꾸면 이 표도 바꾼다.
         /** @brief `fracture` 객체입니다(`FractureSettings`). */
@@ -76,8 +78,9 @@ namespace sw::editor
         {
             text += clipName + ",";
         }
+        text += ";body=" + _bodySurface;
         // 실수는 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
-        const float32 arrValue[3] = { _animationSampleRate, _animationPrecision, _animationShellDistance };
+        const float32 arrValue[4] = { _animationSampleRate, _animationPrecision, _animationShellDistance, _bodySurfaceDistance };
         for ( const float32 value : arrValue )
         {
             uint32 bits = 0;
@@ -236,9 +239,12 @@ namespace sw::editor
                 return false;
             }
         }
-        const utf8* const arrNumberKey[3]   = { "animation_sample_rate", "animation_precision", "animation_shell_distance" };
-        float32* const    arrNumberValue[3] = { &inoutRule._animationSampleRate, &inoutRule._animationPrecision, &inoutRule._animationShellDistance };
-        for ( uint32 keyIndex = 0; keyIndex < 3; ++keyIndex )
+        if ( ruleValue.has( "body_surface" ) )
+            inoutRule._bodySurface = ruleValue.get( "body_surface" ).asString();
+        const utf8* const arrNumberKey[]   = { "animation_sample_rate", "animation_precision", "animation_shell_distance", "body_surface_distance" };
+        float32* const    arrNumberValue[] = { &inoutRule._animationSampleRate, &inoutRule._animationPrecision, &inoutRule._animationShellDistance,
+                                               &inoutRule._bodySurfaceDistance };
+        for ( size_t keyIndex = 0; keyIndex < std::size( arrNumberKey ); ++keyIndex )
         {
             if ( ruleValue.has( arrNumberKey[keyIndex] ) == false )
                 continue;

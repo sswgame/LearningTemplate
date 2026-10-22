@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    class GameObjectManager;
+
     /**
      * @class TickedPathMoverComponent
      * @brief 플레이 시작 자리에서 경유점(`_listWaypoint`, 시작 자리 기준 오프셋)을 차례로 지나는 바닥입니다. 자리는 **틱 번호의 순수 함수**입니다(`computeOffset`).
@@ -45,6 +47,12 @@ namespace sw
         /** @brief 이 씬의 틱에 더할 차이입니다(클라이언트가 서버 틱에 맞출 때). */
         void  setTickOffset( int64 tickOffset ) { _tickOffset = tickOffset; }
         int64 getTickOffset() const { return _tickOffset; }
+        /**
+         * @brief 씬의 모든 틱 함수 바닥에 같은 차이를 넣습니다. 넷 시뮬레이션 틱을 가진 루프가 틱마다 부릅니다.
+         * @details 바닥은 "서버가 그 입력을 시뮬레이션하는 서버 틱" 의 자리여야 서버 · 클라이언트 · 되감기가 같은 자리를 본다. 그래서 서버는 `넷 틱 − 조종 시스템 틱`,
+         *          클라이언트는 `예측하는 입력 틱 + ReplicationClient::findServerTickOffset − 조종 시스템 틱` 을 넣는다(Shooter3D `ShooterNetPawnComponent`).
+         */
+        static void setTickOffsetInScene( GameObjectManager& manager, int64 tickOffset );
 
     private:
         PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m )
