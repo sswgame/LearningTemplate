@@ -204,6 +204,9 @@ namespace sw
     uint32 D3D12RHIDevice::acquireOnlineBlock()
     {
         std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        // 프레임 끝까지 기다리지 않고 펜스가 지난 묶음을 먼저 거둔다 — 한 프레임에 리스트가 많으면(미리보기 씬 · 컴퓨트) 블록 수보다 리스트가 많다.
+        if ( _listFreeOnlineBlock.empty() )
+            recycleCompletedOnlineBlocksLocked( _fence->GetCompletedValue() );
         if ( _listFreeOnlineBlock.empty() )
         {
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
@@ -243,6 +246,11 @@ namespace sw
     void D3D12RHIDevice::recycleCompletedOnlineBlocks( uint64 completedFence )
     {
         std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        recycleCompletedOnlineBlocksLocked( completedFence );
+    }
+
+    void D3D12RHIDevice::recycleCompletedOnlineBlocksLocked( uint64 completedFence )
+    {
         for ( size_t index = 0; index < _listPendingOnlineRecycle.size(); )
         {
             OnlineBlockRecycleBatch& batch = _listPendingOnlineRecycle[index];

@@ -199,6 +199,8 @@ namespace sw
         void releaseOnlineBlocksDeferred( D3D12RecordingState& state );
         /** @brief 펜스가 지난 묶음의 블록을 프리리스트로 돌려보냅니다. 펜스 완료 값을 읽는 지점에서 부릅니다. */
         void recycleCompletedOnlineBlocks( uint64 completedFence );
+        /** @brief `recycleCompletedOnlineBlocks` 의 본문입니다. `_onlineBlockMutex` 를 잡은 쪽이 부릅니다(`acquireOnlineBlock` 이 바닥났을 때). */
+        void recycleCompletedOnlineBlocksLocked( uint64 completedFence );
         /** @brief 오프라인(CPU 전용) 뷰 힙의 index 번째 핸들을 반환합니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE offlineDescriptorAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들을 반환합니다(복사 목적지). */
