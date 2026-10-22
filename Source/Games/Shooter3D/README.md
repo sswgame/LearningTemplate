@@ -147,7 +147,7 @@ cd build/Ninja-Debug/Bin
 | 내비메시 | 씬의 `NavMeshSurfaceComponent`(보이는 메시로 Humanoid 베이크), 플레이어의 `NavMeshModifierComponent`(손에 든 총과 카메라를 뺍니다), 스켈레톤의 `NavMeshAgentComponent`(`SteerOnly`) |
 | 1인칭 시점과 손에 든 총 위치 | GameFramework `FirstPersonCameraComponent` |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent`. 프리셋은 `data/shooter.cameras.xml` 입니다 |
-| 감시 카메라와 모니터 | `CctvCamera` 가 렌더 텍스처 `rendertarget/shooter_cctv` 에 `cctv_sweep` 프리셋으로 그리고, 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽습니다 |
+| 감시 카메라와 모니터 | `CctvCamera` 가 렌더 텍스처 `rendertarget/shooter_cctv` 에 `cctv_sweep` 프리셋으로 그리고, 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽습니다. 모니터 머티리얼은 게임 셰이더 `shaders/cctvmonitor.hlsl`(빛을 받지 않는 화면 + 가로 주사선, 줄 수와 세기는 `materials/cctvmonitor.material`)입니다 |
 
 HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이름은 현지화 키 그대로 넣고, 글 위젯이 문화권에 맞게 바꿉니다. 적 HP 바는 스켈레톤 프리팹의 화면 마커와 `HealthBarComponent` 입니다.
 1인칭 프리셋이면 플레이어가 몸의 머리만 숨기고(리그 `rigs/player_body.rig.xml` 의 `ScaleBone` 과 외형의 숨기는 슬롯 `Head` · `MainHand`, 값은 `player_body.prefab.xml`) 손에 든 총과 조준선을 보이며, 다른 프리셋에서는 반대입니다.
