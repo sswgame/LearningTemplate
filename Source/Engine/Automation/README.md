@@ -41,6 +41,11 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 그래서 사진 뒤에 적은 순간이동 · 변수 바꾸기는 사진에 들어가지 않습니다. 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 옮기는 카메라)는
 `waitForSettle="false"` 로 그 프레임을 바로 찍고, 자리 잡기는 앞에서 보통 `<Screenshot>` 한 장으로 기다려 둡니다.
 
+**전경.** 실제 커서 클립(`ExpectCursorClip`)이나 화면 복사(`CaptureWindow`)를 보는 시나리오는 루트에 `requireForeground="true"` 를 적습니다.
+실행기는 첫 프레임부터 창을 전경으로 가져오고 얻을 때까지 시작하지 않으며, 시작 시한(`startTimeoutFrames`)까지 못 얻으면 건너뜀(13)입니다.
+단계가 아닌 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦습니다. ctest 처럼 뒤에서 띄운 App 은 전경 없이 시작하고, 전경이 아닐 때 켠 1인칭 커서 잠금은
+클라이언트를 눌러야 잡으므로(`InputManager::setMouseLockMode`) 시작 뒤에 전경을 가져오면 잠금이 잡히지 않습니다.
+
 **기록.** `<Record>` 가 남긴 값은 보고의 `records` 에 적힙니다. 게임 상태는 CPU 에서만 정해지므로 같은 시나리오는 백엔드마다 같은 기록을 내야 하고, `AppScenarioTest` 가 이를 비교합니다.
 
 ## 따라 해 보기

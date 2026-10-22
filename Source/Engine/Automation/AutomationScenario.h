@@ -107,7 +107,13 @@ namespace sw
          * @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 게임 팩 시나리오가 그 게임의 에디터 창(일정 디버그 창 등)을 확인할 때 적는다.
          * @details 실행기는 이 값을 쓰지 않고 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다.
          */
-        bool                          requiresEditor() const { return _bRequiresEditor; }
+        bool requiresEditor() const { return _bRequiresEditor; }
+        /**
+         * @brief 창이 전경이어야 도는 시나리오입니다(루트 `requireForeground="true"` — 실제 커서 클립 · 화면 복사를 본다).
+         * @details 실행기가 시작 조건을 기다리는 프레임부터 창을 전경으로 가져온다 — 게임이 시작하며 켜는 상태(1인칭 커서 잠금)가 전경에서 켜진다.
+         *          시작하는 프레임까지 전경을 얻지 못하면 건너뜀(13)으로 끝낸다. 단계가 아니라 루트 속성인 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦다.
+         */
+        bool                          requiresForeground() const { return _bRequiresForeground; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
         /** @brief 부하 선언입니다(`<Load>` 가 없으면 `_bDeclared` 가 false). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며, `timeoutFrames` 를 보지 않는다. */
         const AutomationLoad& getLoad() const { return _load; }
@@ -139,5 +145,6 @@ namespace sw
         VirtualInputMode                _inputMode;
         bool                            _bIsolated;
         bool                            _bRequiresEditor;
+        bool                            _bRequiresForeground;
     };
 } // namespace sw

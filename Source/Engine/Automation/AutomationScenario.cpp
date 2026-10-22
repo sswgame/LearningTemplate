@@ -230,6 +230,7 @@ namespace sw
         , _inputMode{ VirtualInputMode::Exclusive }
         , _bIsolated{ false }
         , _bRequiresEditor{ false }
+        , _bRequiresForeground{ false }
     {
     }
 
@@ -319,6 +320,14 @@ namespace sw
                 _bIsolated              = value == "true";
                 if ( bOk == false )
                     reason = string( "isolated must be true or false, got '" ) + pText + "'";
+            }
+            else if ( name == "requireForeground" )
+            {
+                const string_view value = pText;
+                bOk                     = value == "true" || value == "false";
+                _bRequiresForeground    = value == "true";
+                if ( bOk == false )
+                    reason = string( "requireForeground must be true or false, got '" ) + pText + "'";
             }
             else if ( name == "editor" )
             {

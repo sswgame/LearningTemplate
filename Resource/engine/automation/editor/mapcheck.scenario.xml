@@ -4,9 +4,9 @@
   상태줄의 경고 수(statusBar.mapCheck)를 누르면 Map Check 창이 열리고, 첫 줄(mapCheck.row.0 — 오류가 먼저다)을 누르면 그 점광 오브젝트가 골라진다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/mapcheck.scenario.xml -dx12
 -->
-<Scenario name="editor.mapcheck" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.mapcheck" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="20">
-		<RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/>
+		<ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/>
 		<Variable name="gv_editorProbePanel" value="map_check"/>
 	</At>
 	<At frame="30"><DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/></At>

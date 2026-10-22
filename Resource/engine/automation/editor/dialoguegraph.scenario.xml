@@ -4,8 +4,7 @@
   CaptureWindow 는 에디터 UI 까지 든 실제 화면을 찍는다 — Saved/Automation/editor.dialoguegraph/ 의 PNG 를 사람이(또는 에이전트가) 본다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/dialoguegraph.scenario.xml -dx12
 -->
-<Scenario name="editor.dialoguegraph" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<At frame="30"><RequireForeground/></At>
+<Scenario name="editor.dialoguegraph" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<At frame="40"><DevCommand line="panel.focus dialogue_graph"/></At>
 	<At frame="80"><CaptureWindow file="open.png"/></At>
 	<At frame="90"><Pass/></At>

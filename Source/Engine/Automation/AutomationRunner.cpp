@@ -16,6 +16,7 @@
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
@@ -1329,12 +1330,19 @@ namespace sw
                 input.attachVirtualInput( &_inputScript, VirtualInputMode::Exclusive );
                 input.setOsDeviceInputBlocked( true );
             }
+            // 전경이 필요한 시나리오는 첫 프레임부터 창을 전경으로 가져오고, 얻을 때까지 시작하지 않는다 — 게임이 시작하며 켜는 상태(1인칭 커서 잠금)가
+            // 전경에서 켜지게. 시작 뒤의 단계로는 늦다(게임의 첫 틱이 먼저 돈다). 시작 시한까지 얻지 못하면 이 세션에서 볼 수 없는 시나리오라 건너뛴다.
+            const bool bForegroundMissing = _scenario.requiresForeground() && AutomationWindowUtil::bringToForeground() == false;
             // 앞 시나리오(체인)가 남긴 백그라운드 작업이 끝나야 시작한다 — 그 결과 줄이 이 시나리오 창에 떨어지지 않게. 시작 시한은 세지 않는다(벽시계 시한이 본다).
             if ( holdClockForBackgroundWork( input ) )
                 return;
-            if ( bReady == false )
+            if ( bReady == false || bForegroundMissing )
             {
-                if ( ++_waitFrameCount > _scenario.getStartTimeoutFrames() )
+                if ( ++_waitFrameCount <= _scenario.getStartTimeoutFrames() )
+                    return;
+                if ( bReady )
+                    finish( AutomationResult::Skipped, "the window could not become the foreground window in this session" );
+                else
                     finish( AutomationResult::TimedOut, "the start condition never became true" );
                 return;
             }

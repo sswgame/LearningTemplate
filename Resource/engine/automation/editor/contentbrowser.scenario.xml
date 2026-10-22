@@ -5,8 +5,8 @@
   CaptureWindow 의 PNG(Saved/Automation/editor.contentbrowser/)는 결과 창까지 든 화면이다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/contentbrowser.scenario.xml -dx12
 -->
-<Scenario name="editor.contentbrowser" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<At frame="20"><RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+<Scenario name="editor.contentbrowser" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="40"><DevCommand line="panel.focus content_browser"/></At>
 	<At frame="60"><Expect probe="Editor.ContentGameRootCount" equals="1"/></At>
 	<!-- 체크박스는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->

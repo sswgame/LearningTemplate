@@ -404,6 +404,35 @@ SW_TEST_CASE( AutomationScenarioTest, EditorRootAttributeMarksEditorScenarios )
 }
 
 /**
+ * @brief [AutomationScenarioTest] 루트 requireForeground 시나리오는 창이 전경이 될 때까지 시작하지 않고, 시작 시한까지 못 얻으면 건너뜀이다
+ * @details 테스트 호스트에는 창이 없어 전경을 얻을 수 없다 — 단계(프레임 0 의 TestMark)는 한 번도 돌지 않고 시한 뒤 Skipped 로 끝나야 한다.
+ *          전경은 시작 뒤의 단계가 아니라 시작 조건이다(게임의 첫 틱이 켜는 커서 잠금이 전경에서 켜지게 — Automation README "전경").
+ */
+SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWithoutTheForeground )
+{
+    using Internal = TestAutomationScenarioInternal;
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( scenario.requiresForeground() );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" requireForeground="true"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( scenario.requiresForeground() );
+    SW_EXPECT_FALSE( scenario.parse( R"(<Scenario name="t" requireForeground="yes"><At frame="0"><Pass/></At></Scenario>)", "", error ) );
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" requireForeground="true" startAfter="Immediately" startTimeoutFrames="3">
+        <At frame="0"><TestMark/><Pass/></At>
+      </Scenario>)" ) );
+    const sw::AutomationResult result = Internal::run( runner, input, 20 );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Skipped, runner.getFinishReason().c_str() );
+    SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
+    SW_EXPECT_EQUAL( 4u, Internal::s_runFrameCount ); // 시한 3 프레임을 기다린 뒤 넷째 프레임에 끝난다
+    input.shutdown();
+}
+
+/**
  * @brief [AutomationScenarioTest] 시나리오는 리소스 ID 로 읽히고, 못 읽으면 어느 단계에서 막혔는지가 오류에 든다
  * @details `-scenario=` 가 리소스 ID 를 받는 길(`loadFromPath`)이 그대로 도는지 잠그고, 없는 파일은 `[read]` 로 시작해 리소스 루트 · 작업 폴더가 함께 보인다.
  */

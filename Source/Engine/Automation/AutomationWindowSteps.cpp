@@ -1,12 +1,15 @@
 /**
  * @file AutomationWindowSteps.cpp
- * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 커서 클립(`ExpectCursorClip`)과 전경(`RequireForeground`)을 확인하고,
- *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`).
+ * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 커서 클립(`ExpectCursorClip`)을 확인하고,
+ *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`). 전경은 단계가 아니라 시나리오 루트 속성(`requireForeground`)이고 실행기가 이 파일의
+ *        `AutomationWindowUtil::bringToForeground` 로 가져온다.
  * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). Windows 에만 구현이 있고,
  *          다른 플랫폼에서는 같은 이름의 단계가 시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
  *          등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
  */
 #include "pch.h"
+
+#include "Engine/Automation/AutomationWindowSteps.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -55,8 +58,6 @@ namespace sw
                 outError = step.describe() + ": state must be locked or free, got '" + state + "'";
                 return false;
             }
-
-            static bool validateForeground( const AutomationStep& step, string& outError ) { return step.hasOnlyAttributes( {}, outError ); }
 
             static bool validateCapture( const AutomationStep& step, string& outError )
             {
@@ -151,7 +152,7 @@ namespace sw
                 if ( bWantLocked ? bInsideClient : bWholeScreen )
                     return true;
                 // 커서는 전경 창만 가둔다(`InputManager::applyMouseLockMode`). 도는 사이 다른 창이 전경을 가져갔으면 잠금은 볼 수 없는 것이지 틀린 것이 아니다 —
-                // `RequireForeground` 가 전경을 못 얻을 때와 같이 건너뜀(13)으로 끝낸다.
+                // 시작할 때 전경을 못 얻을 때(`requireForeground`)와 같이 건너뜀(13)으로 끝낸다.
                 const bool bLostForeground = bWantLocked && GetForegroundWindow() != hwnd;
                 if ( bLostForeground )
                 {
@@ -164,20 +165,10 @@ namespace sw
                 return true;
             }
 
-            static bool runForeground( AutomationRunner& runner, const AutomationStep& /*step*/ )
-            {
-                const HWND hwnd = findWindowHandle();
-                if ( hwnd != nullptr )
-                    bringToForeground( hwnd );
-                if ( hwnd == nullptr || GetForegroundWindow() != hwnd )
-                    runner.finish( AutomationResult::Skipped, "the window could not become the foreground window in this session" );
-                return true;
-            }
-
             /**
              * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다. 에디터 UI 까지 포함한 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력입니다).
              * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
-             *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 앞에 `RequireForeground` 를 둔다.
+             *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 루트에 `requireForeground="true"` 를 둔다.
              */
             static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -255,15 +246,22 @@ namespace sw
             }
             static bool runMessage( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runClip( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
-            static bool runForeground( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runCapture( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #endif
         };
     } // namespace
 
+    bool AutomationWindowUtil::bringToForeground()
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        const HWND hwnd = AutomationWindowStepsInternal::findWindowHandle();
+        return hwnd != nullptr && AutomationWindowStepsInternal::bringToForeground( hwnd );
+#else
+        return false;
+#endif
+    }
+
     SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationWindowStepsInternal::validateMessage, false );
     SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
-    SW_AUTOMATION_STEP( windowForeground, "RequireForeground", &AutomationWindowStepsInternal::runForeground, &AutomationWindowStepsInternal::validateForeground,
-                        false );
     SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, false );
 } // namespace sw
