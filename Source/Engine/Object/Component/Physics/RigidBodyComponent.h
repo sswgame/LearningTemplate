@@ -127,6 +127,8 @@ namespace sw
         void postPhysicsStep( ScenePhysics& physics ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 정적이고 트리거가 아니면 지금 자리의 바디 서술자 하나를 냅니다(`createBody` 와 같은 서술자). */
+        void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const override;
 
     private:
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
@@ -135,6 +137,8 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
+        /** @brief 지금 속성과 자세 @p position · @p rotation · @p scale 의 바디 서술자입니다. */
+        PhysicsBodyDesc3D makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const;
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale );
 

@@ -4,7 +4,8 @@
  * @details 프로브가 담는 것은 **간접광**입니다 — 레이가 닿은 면이 직접광을 받아 튕긴 빛(한 번 튐)과, 아무것도 닿지 않은 방향의 하늘입니다.
  *          직접광 자체는 담지 않습니다. 조명 식이 라이트를 이미 직접 계산하므로 프로브에 또 담으면 두 번 비춘다(유니티 · 언리얼의 간접광 베이크와 같은 나눔).
  *          닿은 면의 밝기는 조명 식(`lighting.hlsli` `swShadeLights`)과 같은 식이다 — 반사율 × Σ 세기 × 감쇠 × max(0, n·l) × 그림자.
- *          그림자와 가림은 물리 레이캐스트로 봅니다(물리 셰이프가 없는 메시는 빛을 가리지 않는다). 면의 반사율은 볼륨이 정한 값 하나입니다
+ *          그림자와 가림은 물리 레이캐스트로 봅니다(물리 셰이프가 없는 메시는 빛을 가리지 않는다). 레이를 쏘는 씬은 플레이 씬이 아니라 굽기마다 세우는
+ *          정적 콜라이더만의 씬입니다(`ScenePhysics::createStaticScene3D` — 편집 중에는 바디가 없고, 플레이 중이어도 움직이는 바디는 굽지 않는다). 면의 반사율은 볼륨이 정한 값 하나입니다
  *          (`LightProbeVolumeComponent::getBounceAlbedo` — 물리 씬은 머티리얼을 모른다).
  *          하늘은 스카이 컴포넌트(D3-7.4)의 그러데이션을 빈 방향마다 그대로 셉니다(`SkyGradient::evaluateRadiance` — 셰이더 `sky.hlsl` 과 같은 식).
  *          스카이가 없으면 세기 0 이라 0 입니다(폴백 없음 — 하늘이 없는 씬의 빈 방향은 어둡다).
@@ -17,11 +18,13 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
+#include "Engine/Physics/IPhysicsScene.h"
 
 namespace sw
 {
@@ -49,10 +52,12 @@ namespace sw
     {
     public:
         /**
-         * @brief 씬과 볼륨에서 굽기 입력을 모읍니다 — 라이트(`collectSceneLights`), 하늘(`SkyComponent::findSky`), 물리 씬, 볼륨의 레이 수 · 반사율.
-         * @return 3D 물리 씬이 없으면 false 이고 @p pOutError 에 이유를 적습니다(가림 없이 굽지 않는다).
+         * @brief 씬과 볼륨에서 굽기 입력을 모읍니다 — 라이트(`collectSceneLights`), 하늘(`SkyComponent::findSky`), 가림 씬, 볼륨의 레이 수 · 반사율.
+         * @details 가림 씬은 씬의 정적 콜라이더로 새로 세워 @p outOccluders 가 갖고, @p outInput 의 `_pPhysics` 는 그것을 빌린다 — 굽는 동안 @p outOccluders 를 살려 둔다.
+         * @return 물리 서비스가 없어 가림 씬을 세우지 못하면 false 이고 @p pOutError 에 이유를 적습니다(가림 없이 굽지 않는다).
          */
-        [[nodiscard]] static bool collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, LightProbeBakeInput& outInput, string* pOutError = nullptr );
+        [[nodiscard]] static bool collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
+                                                LightProbeBakeInput& outInput, string* pOutError = nullptr );
 
         /**
          * @brief 격자 @p layout 의 프로브마다 간접광을 투영해 @p outGrid 를 채웁니다.
@@ -81,8 +86,8 @@ namespace sw
      * @class LightProbeBakeJob
      * @brief 볼륨 하나의 굽기를 프로브 단위로 나눠 진행합니다(에디터의 비동기 굽기 — IndirectLighting P6). `LightProbeBaker::bakeGrid` 도 이 길 하나로 굽는다.
      * @details 프로브는 서로 독립이고 방향 수열이 고정이라, 몇 번에 나눠 굽든 한 번에 구운 것과 비트까지 같다.
-     *          입력(라이트 · 하늘 · 레이 수 · 반사율)은 `begin` 때 복사해 두지만 물리 씬은 빌린다 — 굽는 동안 씬의 물리 셰이프가 바뀌면 결과가 섞인다.
-     *          그래서 에디터는 굽는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits`).
+     *          입력(라이트 · 하늘 · 레이 수 · 반사율)은 `begin` 때 복사해 두지만 가림 씬은 빌린다 — 부르는 쪽이 굽는 동안 살려 둔다(`LightProbeBaker::collectInput`).
+     *          에디터는 굽는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 굽는 볼륨과 결과를 쓸 오브젝트가 그대로여야 한다).
      */
     class SW_API LightProbeBakeJob
     {

@@ -170,6 +170,29 @@ namespace sw
         return _pScene3D.get();
     }
 
+    unique_ptr<IPhysicsScene3D> ScenePhysics::createStaticScene3D() const
+    {
+        const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
+        if ( pSystem == nullptr )
+            return nullptr;
+        vector<PhysicsBodyDesc3D> listDesc;
+        for ( const vector<PhysicsComponent*>& listComponent : _arrListComponent )
+        {
+            for ( const PhysicsComponent* pComponent : listComponent )
+            {
+                if ( pComponent->isActive() && pComponent->isPendingDestroy() == false )
+                    pComponent->appendStaticBodies3D( *this, listDesc );
+            }
+        }
+        unique_ptr<IPhysicsScene3D> pScene = pSystem->createScene3D();
+        if ( pScene != nullptr && listDesc.empty() == false )
+        {
+            vector<PhysicsBodyHandle> listBody;
+            pScene->createBodies( listDesc, listBody );
+        }
+        return pScene;
+    }
+
     IPhysicsScene2D* ScenePhysics::getScene2D()
     {
         if ( _pScene2D == nullptr )

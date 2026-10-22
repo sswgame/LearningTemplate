@@ -80,8 +80,12 @@ namespace sw
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         void releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 청크마다 정적 바디 서술자 하나를 냅니다(`beginPhysicsFrame` 과 같은 메시 · 레이어 · 재질, 모두 구멍인 청크는 뺀다). */
+        void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const override;
 
     private:
+        /** @brief 청크 바디의 공통 서술자입니다(높이장 원점, 회전 없음, 정적, 이 컴포넌트의 레이어 · 재질). 셰이프 칸 하나는 부르는 쪽이 채운다. */
+        PhysicsBodyDesc3D makeChunkBodyDesc( const ScenePhysics& physics, const float3& origin ) const;
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
         /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */

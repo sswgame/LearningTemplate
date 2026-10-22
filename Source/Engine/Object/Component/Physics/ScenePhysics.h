@@ -102,6 +102,12 @@ namespace sw
         IPhysicsScene3D* findScene3D() const { return _pScene3D.get(); }
         /** @brief 2D 씬이 이미 있으면 그것을, 없으면 nullptr 입니다. */
         IPhysicsScene2D* findScene2D() const { return _pScene2D.get(); }
+        /**
+         * @brief 등록된 컴포넌트의 3D 정적 바디(`PhysicsComponent::appendStaticBodies3D`)만 담은 새 3D 씬을 만듭니다. 플레이 씬(`getScene3D`)과 따로이고 편집 중에도 됩니다.
+         * @details 오프라인 굽기(라이트 프로브)의 가림 씬이다 — 바디는 시작 뒤에만 생기므로 편집 중에는 플레이 씬이 없고, 있더라도 움직이는 바디가 섞인다.
+         *          만든 뒤의 편집은 이 씬에 들지 않는다(굽는 동안의 사본). 물리 서비스가 없으면 nullptr 입니다.
+         */
+        [[nodiscard]] unique_ptr<IPhysicsScene3D> createStaticScene3D() const;
         /** @brief 물리 서비스의 설정 표입니다. 서비스가 없으면 nullptr 입니다. */
         const PhysicsSettings* findSettings() const;
         /** @brief 레이어 이름의 번호입니다. 없는 이름이면 오류를 남기고 0(첫 레이어)입니다. 이름이 비면 0 입니다. */

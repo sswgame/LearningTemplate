@@ -183,7 +183,7 @@ namespace sw
         return pScene != nullptr && pScene->isBodySleeping( _body );
     }
 
-    void RigidBodyComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale )
+    PhysicsBodyDesc3D RigidBodyComponent::makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const
     {
         PhysicsBodyDesc3D desc;
         desc._listShape.reserve( _listShape.size() );
@@ -191,21 +191,38 @@ namespace sw
         {
             desc._listShape.push_back( PhysicsComponentUtil::makeScaledShape( shape, scale ) );
         }
-        desc._position           = position;
-        desc._rotation           = rotation;
-        desc._userData           = getOwner()->getObjectID();
-        desc._material           = _material;
-        desc._mass               = _mass;
-        desc._linearDamping      = _linearDamping;
-        desc._angularDamping     = _angularDamping;
-        desc._gravityFactor      = _gravityFactor;
-        desc._type               = _bodyType;
-        desc._layer              = physics.resolveLayer( _layer );
-        desc._bTrigger           = _bTrigger;
-        desc._bContinuous        = _bContinuous;
-        desc._bLockRotation      = _bLockRotation;
-        desc._bAllowTypeChange   = true; // 컴포넌트는 플레이 중에 종류를 바꿀 수 있다(문이 부서져 떨어진다)
-        _body                    = scene.createBody( desc );
+        desc._position         = position;
+        desc._rotation         = rotation;
+        desc._userData         = getOwner()->getObjectID();
+        desc._material         = _material;
+        desc._mass             = _mass;
+        desc._linearDamping    = _linearDamping;
+        desc._angularDamping   = _angularDamping;
+        desc._gravityFactor    = _gravityFactor;
+        desc._type             = _bodyType;
+        desc._layer            = physics.resolveLayer( _layer );
+        desc._bTrigger         = _bTrigger;
+        desc._bContinuous      = _bContinuous;
+        desc._bLockRotation    = _bLockRotation;
+        desc._bAllowTypeChange = true; // 컴포넌트는 플레이 중에 종류를 바꿀 수 있다(문이 부서져 떨어진다)
+        return desc;
+    }
+
+    void RigidBodyComponent::appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const
+    {
+        const bool bStaticBlocker = _bodyType == PhysicsBodyType::Static && _bTrigger == false && _listShape.empty() == false && getOwner() != nullptr;
+        if ( bStaticBlocker == false )
+            return;
+        float3     position{};
+        quaternion rotation{};
+        float3     scale{};
+        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
+        outListBody.push_back( makeBodyDesc( physics, position, rotation, scale ) );
+    }
+
+    void RigidBodyComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale )
+    {
+        _body                    = scene.createBody( makeBodyDesc( physics, position, rotation, scale ) );
         _appliedBodyType         = _bodyType;
         _previousPosition        = position;
         _currentPosition         = position;

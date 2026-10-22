@@ -157,15 +157,8 @@ namespace sw
 
         const TerrainHeightfield& heightfield = pTerrain->getHeightfield();
         const TerrainChunkLayout& layout      = pTerrain->getChunkLayout();
-        PhysicsBodyDesc3D         desc;
-        desc._position = heightfield.getOrigin();
-        desc._rotation = quaternion{};
-        desc._userData = getOwner()->getObjectID();
-        desc._material = _material;
-        desc._type     = PhysicsBodyType::Static;
-        desc._layer    = physics.resolveLayer( _layer );
-        desc._listShape.resize( 1 );
-        bool bBuiltAny{ false };
+        PhysicsBodyDesc3D         desc        = makeChunkBodyDesc( physics, heightfield.getOrigin() );
+        bool                      bBuiltAny{ false };
         for ( uint32 chunkIndex = 0; chunkIndex < listGeneration.size(); ++chunkIndex )
         {
             PhysicsBodyHandle& body      = _listBody[chunkIndex];
@@ -192,6 +185,35 @@ namespace sw
         }
         if ( bBuiltAny && _triangleCount == 0 )
             SW_LOG_WARNING( "Terrain collider on '%#': the terrain has no solid cells", getOwner()->getName().c_str() );
+    }
+
+    PhysicsBodyDesc3D TerrainColliderComponent::makeChunkBodyDesc( const ScenePhysics& physics, const float3& origin ) const
+    {
+        PhysicsBodyDesc3D desc;
+        desc._position = origin;
+        desc._rotation = quaternion{};
+        desc._userData = getOwner()->getObjectID();
+        desc._material = _material;
+        desc._type     = PhysicsBodyType::Static;
+        desc._layer    = physics.resolveLayer( _layer );
+        desc._listShape.resize( 1 );
+        return desc;
+    }
+
+    void TerrainColliderComponent::appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const
+    {
+        const TerrainComponent* pTerrain = getOwner() != nullptr ? getOwner()->getComponent<TerrainComponent>() : nullptr;
+        if ( pTerrain == nullptr || pTerrain->getHeightfield().isValid() == false )
+            return;
+        const TerrainHeightfield& heightfield = pTerrain->getHeightfield();
+        const TerrainChunkLayout& layout      = pTerrain->getChunkLayout();
+        const uint32              chunkCount  = layout._chunkCountX * layout._chunkCountZ;
+        PhysicsBodyDesc3D         desc        = makeChunkBodyDesc( physics, heightfield.getOrigin() );
+        for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
+        {
+            if ( TerrainCollisionUtil::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) )
+                outListBody.push_back( desc );
+        }
     }
 
     void TerrainColliderComponent::releasePhysics( ScenePhysics& physics )

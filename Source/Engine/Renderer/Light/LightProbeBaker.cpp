@@ -44,18 +44,20 @@ namespace sw
 
 namespace sw
 {
-    bool LightProbeBaker::collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, LightProbeBakeInput& outInput, string* pOutError )
+    bool LightProbeBaker::collectInput( const Scene& scene, const LightProbeVolumeComponent& volume, unique_ptr<IPhysicsScene3D>& outOccluders,
+                                        LightProbeBakeInput& outInput, string* pOutError )
     {
-        outInput                             = LightProbeBakeInput{};
-        const GameObjectManager*    pObjects = scene.getObjectManager();
-        const IPhysicsQueryScene3D* pPhysics = ( pObjects != nullptr ) ? pObjects->getSubsystem<ScenePhysics>().findScene3D() : nullptr;
-        if ( pPhysics == nullptr )
+        outInput                          = LightProbeBakeInput{};
+        const GameObjectManager* pObjects = scene.getObjectManager();
+        // 플레이 씬이 아니라 정적 콜라이더만의 새 씬에 쏜다 — 편집 중에는 바디가 없고, 플레이 중이어도 움직이는 바디는 굽기에 들지 않는다.
+        outOccluders = ( pObjects != nullptr ) ? pObjects->getSubsystem<ScenePhysics>().createStaticScene3D() : nullptr;
+        if ( outOccluders == nullptr )
         {
             if ( pOutError != nullptr )
-                *pOutError = "the scene has no 3D physics scene - light probes are not baked without occlusion";
+                *pOutError = "the physics service is not running - light probes are not baked without occlusion";
             return false;
         }
-        outInput._pPhysics = pPhysics;
+        outInput._pPhysics = outOccluders.get();
         // 하늘이 없으면 findSky 가 세기 0 으로 비운다 — 빈 방향은 0 이다(폴백 없음).
         (void)SkyComponent::findSky( *pObjects, outInput._sky );
         outInput._sampleCount  = volume.getBakeSampleCount();

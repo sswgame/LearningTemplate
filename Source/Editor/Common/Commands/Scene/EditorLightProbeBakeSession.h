@@ -3,8 +3,9 @@
  * @brief 라이트 프로브 굽기를 에디터 프레임에 나눠 진행하는 세션입니다(IndirectLighting.md P6). 커맨드 `lighting.bakeProbes` 가 시작합니다.
  * @details 세션은 프레임마다 정해진 시간(`kFrameBudgetMilliseconds`) 안에서 프로브를 굽고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorLightProbeBakeStatus.cpp`)이
  *          진행과 Cancel 단추를 보인다. 에디터는 굽는 동안 멈추지 않는다.
- *          물리 씬은 굽는 내내 빌려 쓰므로 굽는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 인스펙터 · 기즈모 · Undo 가 잠긴다).
- *          작업 스레드로 옮기지 않은 이유: 레이캐스트가 게임 스레드의 물리 씬을 읽는다. 편집을 막아도 물리 씬은 게임 스레드가 계속 갱신하므로 동시에 읽으면 레이스다.
+ *          레이는 볼륨마다 씬의 정적 콜라이더로 새로 세운 가림 씬(`_pOccluders`, `LightProbeBaker::collectInput`)에 쏜다 — 편집 중에는 플레이 물리 씬이 없다.
+ *          굽는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 인스펙터 · 기즈모 · Undo 가 잠긴다). 굽는 볼륨과 결과를 받을 오브젝트가 그대로여야 하고,
+ *          세운 뒤의 편집은 가림 씬에 들지 않기 때문이다. 가림 씬은 굽기의 사본이라 게임 스레드가 갱신하지 않는다(작업 스레드로 옮기는 일은 남음 — IndirectLighting P6).
  *          씬이 바뀌거나(세대) 플레이가 시작되면 굽던 볼륨을 버리고 멈춘다. 볼륨마다 끝나면 파일을 쓰고 볼륨에 넘긴다(앞서 끝난 볼륨은 취소해도 남는다).
  *          결과 파일은 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.probes` 이고 볼륨의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
  */
@@ -71,15 +72,16 @@ namespace sw::editor
         /** @brief 편집 잠금을 풀고 결과를 알립니다. */
         void finish( bool bCanceled );
 
-        vector<uint64>    _listObjectID; ///< 굽을 볼륨의 오브젝트(프레임을 넘어 포인터를 들지 않는다)
-        LightProbeBakeJob _job;
-        string            _lastError;
-        uint64            _sceneGeneration; ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
-        uint32            _heldEditCount;   ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
-        uint32            _nextVolumeIndex;
-        uint32            _bakedCount;
-        uint32            _finishedRunCount;
-        bool              _bRunning;
-        bool              _bJobActive;
+        vector<uint64>              _listObjectID; ///< 굽을 볼륨의 오브젝트(프레임을 넘어 포인터를 들지 않는다)
+        unique_ptr<IPhysicsScene3D> _pOccluders;   ///< 굽는 볼륨의 가림 씬 — `_job` 이 빌리므로 `_job` 보다 앞에 둔다(뒤에 사라진다)
+        LightProbeBakeJob           _job;
+        string                      _lastError;
+        uint64                      _sceneGeneration; ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
+        uint32                      _heldEditCount;   ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
+        uint32                      _nextVolumeIndex;
+        uint32                      _bakedCount;
+        uint32                      _finishedRunCount;
+        bool                        _bRunning;
+        bool                        _bJobActive;
     };
 } // namespace sw::editor

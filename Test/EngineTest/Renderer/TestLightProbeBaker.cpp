@@ -217,36 +217,41 @@ SW_TEST_CASE( LightProbeBakerTest, SteppedBakeMatchesOneShotBake )
 }
 
 /**
- * @brief [LightProbeBakerTest] 실제 물리 씬(정적 바디 — 바닥과 닫힌 방)으로 굽는다 — 열린 자리의 프로브는 하늘과 바닥 튕김을, 방 안의 프로브는 아무 빛도 받지 않는다
+ * @brief [LightProbeBakerTest] 편집 중(시작 전) 씬의 정적 콜라이더로 세운 가림 씬으로 굽는다 — 열린 자리의 프로브는 하늘과 바닥 튕김을, 방 안의 프로브는 아무 빛도 받지 않는다
  * @details 방은 바닥 위 x 4..6 · y 0..2 · z −1..1 을 지붕과 벽 넷으로 닫는다. 빛은 위에서 오고 지붕이 가리므로 방 안의 면은 직접광이 0 이고,
  *          하늘 방향은 모두 벽에 닿는다 — 방 안 프로브의 계수는 정확히 0 이어야 한다(가림이 새면 하늘 · 튕김이 섞인다).
+ *          시작하지 않았으므로 플레이 물리 씬은 없다(에디터의 편집 모드). 열린 프로브 위의 동적 상자는 굽기에 들지 않아야 한다 — 들면 위쪽 하늘이 가려진다.
  */
-SW_TEST_CASE( LightProbeBakerTest, PhysicsSceneOccludesTheEnclosedProbe )
+SW_TEST_CASE( LightProbeBakerTest, StaticCollidersOccludeTheEnclosedProbeBeforePlay )
 {
     sw::GameObjectManager manager;
-    const auto            spawnBox = [&manager]( const utf8* pName, const sw::float3& center, const sw::float3& halfExtents )
+    const auto            spawnBox = [&manager]( const utf8* pName, const sw::float3& center, const sw::float3& halfExtents, sw::PhysicsBodyType bodyType )
     {
         sw::GameObject*         pObject = manager.createGameObject( sw::hashed_string( pName ) );
         sw::RigidBodyComponent* pBody   = pObject->addComponent<sw::RigidBodyComponent>();
         sw::PhysicsShapeDesc3D  box;
         box._halfExtents = halfExtents;
         pBody->setShape( box );
-        pBody->setBodyType( sw::PhysicsBodyType::Static );
+        pBody->setBodyType( bodyType );
         pBody->setLocalPosition( center );
     };
-    spawnBox( "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 20.0f, 0.5f, 20.0f } );
-    spawnBox( "Roof", sw::float3{ 5.0f, 2.1f, 0.0f }, sw::float3{ 1.2f, 0.1f, 1.2f } );
-    spawnBox( "WallWest", sw::float3{ 3.9f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f } );
-    spawnBox( "WallEast", sw::float3{ 6.1f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f } );
-    spawnBox( "WallSouth", sw::float3{ 5.0f, 1.0f, -1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f } );
-    spawnBox( "WallNorth", sw::float3{ 5.0f, 1.0f, 1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f } );
-    manager.beginPlay();
-    manager.update( 1.0f / 60.0f ); // 바디가 물리 씬에 들어간 뒤 굽는다
-    const sw::IPhysicsScene3D* pPhysics = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
-    SW_ASSERT_NOT_NULL( pPhysics );
+    constexpr sw::PhysicsBodyType kStatic = sw::PhysicsBodyType::Static;
+    spawnBox( "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 20.0f, 0.5f, 20.0f }, kStatic );
+    spawnBox( "Roof", sw::float3{ 5.0f, 2.1f, 0.0f }, sw::float3{ 1.2f, 0.1f, 1.2f }, kStatic );
+    spawnBox( "WallWest", sw::float3{ 3.9f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f }, kStatic );
+    spawnBox( "WallEast", sw::float3{ 6.1f, 1.0f, 0.0f }, sw::float3{ 0.1f, 1.2f, 1.2f }, kStatic );
+    spawnBox( "WallSouth", sw::float3{ 5.0f, 1.0f, -1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f }, kStatic );
+    spawnBox( "WallNorth", sw::float3{ 5.0f, 1.0f, 1.1f }, sw::float3{ 1.2f, 1.2f, 0.1f }, kStatic );
+    spawnBox( "Crate", sw::float3{ -5.0f, 3.0f, 0.0f }, sw::float3{ 1.0f, 0.1f, 1.0f }, sw::PhysicsBodyType::Dynamic );
+    manager.flushSceneTransforms();
+    sw::ScenePhysics& scenePhysics = manager.getSubsystem<sw::ScenePhysics>();
+    SW_EXPECT_NULL( scenePhysics.findScene3D() ); // 편집 중에는 플레이 물리 씬이 없다
+    const sw::unique_ptr<sw::IPhysicsScene3D> pOccluders = scenePhysics.createStaticScene3D();
+    SW_ASSERT_NOT_NULL( pOccluders.get() );
+    SW_EXPECT_EQUAL( 6u, pOccluders->getBodyCount() ); // 정적 여섯만 — 동적 상자는 빠진다
 
     sw::LightProbeBakeInput input{};
-    input._pPhysics       = pPhysics;
+    input._pPhysics       = pOccluders.get();
     input._sampleCount    = 512;
     input._bounceAlbedo   = 0.5f;
     sw::GPULight light    = sw::LightProbeBakerTestInternal::makeDirectionalLight( sw::float3{ 0.0f, -1.0f, 0.0f }, 2.0f );
@@ -275,5 +280,4 @@ SW_TEST_CASE( LightProbeBakerTest, PhysicsSceneOccludesTheEnclosedProbe )
     {
         SW_EXPECT_EQUAL( 0.0f, grid._listProbe[1]._arrCoefficient[index] ); // 방 안 — 하늘도 직접광도 닿지 않는다
     }
-    manager.endPlay();
 }

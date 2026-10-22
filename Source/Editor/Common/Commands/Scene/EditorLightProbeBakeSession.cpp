@@ -116,6 +116,7 @@ namespace sw::editor
 
     EditorLightProbeBakeSession::EditorLightProbeBakeSession()
         : _listObjectID{}
+        , _pOccluders{}
         , _job{}
         , _lastError{}
         , _sceneGeneration{ 0 }
@@ -223,7 +224,7 @@ namespace sw::editor
         }
         LightProbeBakeInput input{};
         string              error;
-        const bool          bStarted = LightProbeBaker::collectInput( scene, *pVolume, input, &error ) && _job.begin( pVolume->computeLayout(), input, &error );
+        const bool          bStarted = LightProbeBaker::collectInput( scene, *pVolume, _pOccluders, input, &error ) && _job.begin( pVolume->computeLayout(), input, &error );
         if ( bStarted == false )
         {
             reportFailure( error );
@@ -276,6 +277,7 @@ namespace sw::editor
         _bRunning   = false;
         _bJobActive = false;
         _job        = LightProbeBakeJob{};
+        _pOccluders.reset(); // 작업이 빌리던 가림 씬 — 작업을 비운 뒤에 놓는다
         ++_finishedRunCount;
         EditorPlaySession::releaseSceneEdits();
         EditorContext* pContext = EditorContext::get();
