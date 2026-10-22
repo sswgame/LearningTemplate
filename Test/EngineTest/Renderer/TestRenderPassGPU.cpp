@@ -6305,7 +6305,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
 
 /**
  * @brief [RenderPassGPUTest] 반 크기 원본을 읽는 블룸은 그 원본의 텍셀로 비켜 읽는다 — 4 백엔드
- * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · DepthOfFieldColor · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본(피사계 심도 출력)을 읽어 반 크기에 쓴다. 블룸의 블러는
+ * @details `forwardpipelinestaged.xml` 의 SceneColor · SceneDepth · DepthOfFieldColor · MotionBlurColor · BloomColor 를 나눗수 2 로 바꾸면 PostBloom 은 반 크기 원본(피사계 심도 출력)을 읽어 반 크기에 쓴다. 블룸의 블러는
  *          원본 텍셀 반 칸을 비켜 두 번 읽으므로 출력 텍셀마다 이웃 넷의 평균이 된다. 프레임 텍셀로 비키면 반의 반 칸이라 자기 텍셀 쪽으로 기운다.
  *          CPU 로 두 비킴(원본 텍셀 0.5 칸 · 0.25 칸, 바이리니어)을 흉내 내 GPU 결과가 어느 쪽에 가까운지 본다(비킴은 좌우 · 위아래 대칭이라 행 방향이 상관없다).
  */
@@ -6313,8 +6313,9 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
-    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 피사계 심도의 출력(조리개 0 이면 장면 색 그대로)이다.
-    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "BloomColor" } )
+    // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 모션 블러의 출력(카메라가 서 있으면 피사계 심도 출력
+    // 그대로, 조리개 0 이면 장면 색 그대로)이다.
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor" } )
     {
         const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
         SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );
@@ -6408,7 +6409,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
             {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
-            bOk = bOk && sceneColor.readTransient( renderer, "DepthOfFieldColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            bOk = bOk && sceneColor.readTransient( renderer, "MotionBlurColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
             renderer.shutdown();
         }

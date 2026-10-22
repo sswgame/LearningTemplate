@@ -19,6 +19,10 @@
 		                      _format="R16G16B16A16_FLOAT"
 		                      _clearColor="0.12,0.15,0.18,1"
 		                      _bClear="true" />
+		<RenderPassAttachment _name="MotionBlurColor"
+		                      _format="R16G16B16A16_FLOAT"
+		                      _clearColor="0.12,0.15,0.18,1"
+		                      _bClear="true" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"
@@ -195,6 +199,26 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 카메라 모션 블러(motionblur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
+		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 서 있으면 원본 그대로다. -->
+		<RenderGraphPassDesc _name="MotionBlur"
+		                     _type="MotionBlur"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="false"
+		                     _minPostQuality="1">
+			<_listInput>
+				<item>DepthOfFieldColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>MotionBlurColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
 		                     _shaderPath="engine/shaders/postchain.hlsl"
@@ -205,7 +229,7 @@
 		                     _bEnableDepthWrite="false"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>DepthOfFieldColor</item>
+				<item>MotionBlurColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>

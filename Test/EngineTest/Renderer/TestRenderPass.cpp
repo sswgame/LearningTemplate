@@ -640,11 +640,18 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         sw::RenderPassAttachment source{};
         source._name = "SceneColor";
         res.getDesc()._listAttachment.push_back( source );
+        sw::RenderPassAttachment depth{};
+        depth._name   = "SceneDepth";
+        depth._format = "D24_UNORM_S8_UINT";
+        res.getDesc()._listAttachment.push_back( depth );
         sw::RenderGraphPassDesc pass{};
         pass._name = "NoColor";
         pass._type = pType;
         if ( sw::string_view( pType ) != "MeshOutline" )
             pass._listInput.push_back( "SceneColor" ); // 계약의 필수 입력은 채워 컬러 출력 오류 하나만 남긴다
+        if ( sw::string_view( pType ) == "TAA" )
+            pass._listInput.push_back( "SceneDepth" ); // TAA 는 기록을 깊이로 재투영한다
+
         res.getDesc()._listPass.push_back( pass );
         SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, pType );
     }

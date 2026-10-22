@@ -269,6 +269,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 시간 누적 — 기록을 깊이로 지난 프레임 자리에 재투영하고 이번 원본의 3x3 이웃 범위로 잘라 섞는다(taa.hlsl). 화면 밖에서 온 픽셀은 이번 원본이다. -->
 		<RenderGraphPassDesc _name="TAA"
 		                     _type="TAA"
 		                     _vertexEntryPoint="VSMain"
@@ -279,6 +280,7 @@
 		                     _bEnableBlend="false">
 			<_listInput>
 				<item>OutlineColor</item>
+				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>
 				<item>TaaColor</item>
