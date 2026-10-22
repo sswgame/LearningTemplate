@@ -9,8 +9,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 // 그래픽: 품질 번들(`graphics.quality`)이 함께 바꾸는 값
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 화면 출력 뷰의 내부 해상도에 곱하고 Present 가 선형 업샘플한다(`RenderViewCollector`).
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< 업스케일러(0 끔). 켜지면 `gv_renderScale` 은 업스케일러가 정한다.
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 화면 출력 뷰의 내부 해상도에 곱하고(`RenderViewCollector`) Present 가 출력 크기로 키운다 — 업스케일러(`gv_upscaler`)가 그 필터를 고른다.
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< Present 가 배율 크기 뷰를 키우는 필터(선택지 순번 — 0 off 선형, 1 spatial FSR 1 EASU + RCAS). Present 가 톤맵하지 않는 파이프라인에서 쓴다(`FrameRenderer::prepareUpscale`).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 한 변의 텍셀 수입니다. 품질 단계마다의 값은 설정 스키마 `graphics.shadowQuality` 선택지의 `targetValue` 입니다.
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_foliageDensity );    ///< 식생 밀도 배율. 식생 배치가 읽는다(env-world).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3. 파이프라인 패스의 `_minPostQuality` 보다 낮으면 그 패스를 건너뛴다(SSAO · 블룸, `FrameRenderer::executePass`).

@@ -567,6 +567,47 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
 }
 
 /**
+ * @brief [RenderPassTest] 톤맵하는 패스는 Tonemap 이거나 `SW_POST_TONEMAP` 을 켠 Present(후처리 체인)다 — 자동 노출이 그 패스 앞에서 잰다
+ * @details 디퍼드는 Tonemap 뒤 Present 가 그냥 블릿이고, 포워드는 Present 가 톤맵까지 한다. 둘 다 톤맵하는 패스가 정확히 하나여야 노출 기록이 프레임에 한 번 넘어간다.
+ */
+SW_TEST_CASE( RenderPassTest, TonemapPassIsTonemapOrPostChainPresent )
+{
+    sw::RenderGraphPassDesc tonemap;
+    tonemap._resolvedType = sw::RenderPassType::Tonemap;
+    SW_EXPECT_TRUE( sw::passAppliesTonemap( tonemap ) );
+
+    sw::RenderGraphPassDesc blit;
+    blit._resolvedType = sw::RenderPassType::Present;
+    SW_EXPECT_FALSE( sw::passAppliesTonemap( blit ) );
+    sw::RenderGraphPassDesc chain = blit;
+    chain._listPermutation        = { "SW_POST_BLOOM=1", "SW_POST_TONEMAP=1" };
+    SW_EXPECT_TRUE( sw::passAppliesTonemap( chain ) );
+    chain._listPermutation = { "SW_POST_TONEMAP" };
+    SW_EXPECT_TRUE( sw::passAppliesTonemap( chain ) );
+    chain._listPermutation = { "SW_POST_TONEMAPPED=1" }; // 이름이 같아야 한다(앞부분만 같은 이름은 아니다)
+    SW_EXPECT_FALSE( sw::passAppliesTonemap( chain ) );
+
+    sw::RenderGraphPassDesc bloom;
+    bloom._resolvedType    = sw::RenderPassType::Bloom;
+    bloom._listPermutation = { "SW_POST_TONEMAP=1" }; // Present 가 아니면 퍼뮤테이션을 보지 않는다
+    SW_EXPECT_FALSE( sw::passAppliesTonemap( bloom ) );
+
+    // 엔진의 3D 파이프라인은 모두 톤맵하는 패스가 정확히 하나다.
+    const utf8* arrPipeline[] = { "engine/pipeline/deferredpipeline.xml", "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml" };
+    for ( const utf8* pPath : arrPipeline )
+    {
+        sw::RenderPipelineAsset pipeline;
+        SW_ASSERT_TRUE_MSG( pipeline.loadFromXMLFile( pPath ), pPath );
+        uint32 tonemapCount = 0;
+        for ( const sw::RenderGraphPassDesc& pass : pipeline.getGraphPass() )
+        {
+            tonemapCount += sw::passAppliesTonemap( pass ) ? 1u : 0u;
+        }
+        SW_EXPECT_TRUE_MSG( tonemapCount == 1u, pPath );
+    }
+}
+
+/**
  * @brief 파이프라인 검증이 실제로 문제를 잡는지 — 잡지 못하는 검증은 없느니만 못하다.
  */
 SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )

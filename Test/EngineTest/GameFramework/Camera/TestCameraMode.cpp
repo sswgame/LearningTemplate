@@ -650,6 +650,32 @@ SW_TEST_CASE( CameraModeTest, LensPhysicalValuesReachThePose )
 }
 
 /**
+ * @brief [CameraModeTest] 자동 노출 범위는 포즈에 실려 직선으로 섞인다 — 기본 0 · 0 은 재지 않는 노출 1 이고, 범위가 한 점이면 고정 노출이다
+ */
+SW_TEST_CASE( CameraModeTest, AutoExposureRangeBlendsInThePose )
+{
+    CameraPresetDef def;
+    def._view._mode                       = CameraPresetMode::Fixed;
+    def._postProcess._autoExposureMinEv   = -2.0f;
+    def._postProcess._autoExposureMaxEv   = 4.0f;
+    def._postProcess._autoExposureSpeedUp = 5.0f;
+    const CameraPose pose                 = evaluatePreset( def, CameraTarget{} );
+    SW_EXPECT_TRUE( pose._postProcess.usesAutoExposure() );
+
+    CameraPose plain;
+    SW_EXPECT_FALSE( plain._postProcess.usesAutoExposure() );
+    const CameraPose half = blendPoses( plain, pose, 0.5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, half._postProcess._autoExposureMinEv, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, half._postProcess._autoExposureMaxEv, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, half._postProcess._autoExposureSpeedUp, 1.0e-6f );
+
+    CameraPostProcessValues fixedExposure;
+    fixedExposure._autoExposureMinEv = 1.0f;
+    fixedExposure._autoExposureMaxEv = 1.0f;
+    SW_EXPECT_FALSE( fixedExposure.usesAutoExposure() );
+}
+
+/**
  * @brief [CameraModeTest] 렌즈 시프트는 카메라 컴포넌트에 쓰여 투영 중심을 옮긴다 — +y 시프트면 앞축 위의 점이 화면 가운데보다 아래(NDC y = -2 · 시프트)에 온다
  * @details 투영 행렬 하나가 옮기므로 뷰-투영을 쓰는 렌더 뷰 · 컬링 절두체 · 피킹이 같은 값을 본다(`CameraComponent::getProjectionMatrix`).
  */

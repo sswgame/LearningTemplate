@@ -88,6 +88,10 @@ namespace sw
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
             SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
+        // 컬링 디스패치의 t2 자리표 — 가림을 보지 않는 슬롯도 빈 슬롯으로 디스패치하지 않는다(위와 같은 이유). 깊이 1 은 아무것도 가리지 않는다.
+        constexpr float32 kFarDepth = 1.0f;
+        if ( _occlusionTilesPlaceholder.ensureCapacity( _pDevice, sizeof( float32 ), 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, &kFarDepth ) == false )
+            SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
 
         _bPassResourcesReady = SW_TRUE;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
@@ -151,6 +155,7 @@ namespace sw
             releaseViewTransparentOrder( *pView );
         }
         _transparentRankPlaceholder.release( _pDevice );
+        _occlusionTilesPlaceholder.release( _pDevice );
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
@@ -260,9 +265,9 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 주 출력에 그리는 패스(Present · Canvas)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
+        // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
-        const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas };
+        const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas, RenderPassType::UpscaleRcas };
         const RHIFormat      arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
         for ( const RenderPassType passType : arrPassType )
         {

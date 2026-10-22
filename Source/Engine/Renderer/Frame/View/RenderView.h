@@ -152,7 +152,7 @@ namespace sw
         float32        _projectionScaleY{ 0.0f };
         uint8          _bShadows{ SW_TRUE };             ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 하므로 모두 밝다).
         uint8          _bPostProcess{ SW_TRUE };         ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
-        uint8          _bCut{ SW_FALSE };                ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
+        uint8          _bCut{ SW_FALSE };                ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). 시간 누적 기록(TAA · 모션 블러 · 자동 노출)을 버린다(`FrameRenderer::ViewTarget::_bHistoryReset`).
         RenderViewMode _viewMode{ RenderViewMode::Lit }; ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
         /**
          * @brief 정수 업스케일 배율입니다(0 = 끔). N 이면 내부 해상도가 사각형 픽셀 / N(내림)이고 Present 가 점 샘플로 N 배 키워 사각형 가운데에 놓는다.

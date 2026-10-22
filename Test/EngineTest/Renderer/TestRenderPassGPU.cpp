@@ -949,6 +949,35 @@ namespace
         }
         return maxValue > minValue ? maxValue - minValue : 0u;
     }
+
+    /** @brief 바이트 배열의 평균(0~255)입니다. 비어 있으면 음수입니다. */
+    float64 computeMeanByte( const sw::vector<uint8>& bytes )
+    {
+        uint64 sum = 0;
+        for ( const uint8 value : bytes )
+        {
+            sum += value;
+        }
+        return bytes.empty() ? -1.0 : static_cast<float64>( sum ) / static_cast<float64>( bytes.size() );
+    }
+
+    /** @brief G버퍼 알베도에서 붉은 픽셀(가림 판정 테스트의 큐브 색) 수입니다. 읽지 못하면 -1 입니다. */
+    int64 countRedAlbedoPixels( sw::FrameRenderer& renderer )
+    {
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "GBufferAlbedo" ) == false )
+            return -1;
+        int64 count = 0;
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                count += ( pixel._r > 150 && pixel._g < 80 && pixel._b < 80 ) ? 1 : 0;
+            }
+        }
+        return count;
+    }
 } // namespace
 
 /**
@@ -7600,6 +7629,207 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the camera-cut TAA test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 자동 노출은 장면 밝기를 재어 노출을 맞추고, 컷 프레임은 지난 EV 를 버리고 그 프레임의 측정값을 쓴다 — 고정 노출은 재지 않고 2^-EV 를 곱한다(4 백엔드, 포워드)
+ * @details 적응 속도를 거의 0 으로 둔다. 어두운 장면의 EV 가 남아 있으면 장면을 밝게 바꾼 프레임은 컷이 없을 때 그대로 밝고, 컷을 표시하면 밝은 장면을 잰 EV 로
+ *          노출이 내려가 어둡다. 범위가 한 점(최소 = 최대 = 2 EV)이면 노출이 1/4 이라 범위 0 · 0(중립)보다 어둡다.
+ *          포워드(후처리 체인 Present 가 톤맵한다)로 그린다 — 디퍼드의 TAA 는 지난 프레임을 섞어 컷 없는 그림이 노출 말고도 달라진다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        // [0] 자동 · 컷 없음, [1] 자동 · 컷, [2] 중립(0 · 0), [3] 고정 2 EV
+        float64 arrMean[4]{};
+        bool    bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 4 && bOk; ++caseIndex )
+        {
+            sw::FrameRenderer renderer;
+            LitCubeScene      stage;
+            bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+            if ( bOk )
+                renderer.getCapture().setPresentEnabled( true );
+            sw::CameraComponent* pCamera = bOk ? stage._scene.getActiveGameCamera() : nullptr;
+            bOk                          = bOk && pCamera != nullptr;
+            if ( bOk == false )
+                break;
+            sw::CameraPostProcessValues post;
+            const bool                  bAuto = caseIndex < 2;
+            post._autoExposureMinEv           = bAuto ? -12.0f : ( caseIndex == 3 ? 2.0f : 0.0f );
+            post._autoExposureMaxEv           = bAuto ? 12.0f : post._autoExposureMinEv;
+            post._autoExposureSpeedUp         = 1.0e-4f;
+            post._autoExposureSpeedDown       = 1.0e-4f;
+            pCamera->setPostProcess( post );
+            const utf8* pFirstColor = bAuto ? "0.02 0.02 0.02 1.0" : "1.0 0.5 0.25 1.0";
+            bOk                     = stage._material->setParameter( nullptr, sw::hashed_string( "color" ), pFirstColor );
+            for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene );
+            }
+            if ( bAuto )
+            {
+                bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+                if ( bOk && caseIndex == 1 )
+                    pCamera->markCut();
+                bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
+            }
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            bOk                = bOk && renderer.getCapture().readbackPresent( bytes, layout );
+            arrMean[caseIndex] = bOk ? computeMeanByte( bytes ) : -1.0;
+            bOk                = bOk && arrMean[caseIndex] >= 0.0;
+            renderer.shutdown();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "포워드 자동 노출 그리기 · Present 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        SW_LOG_INFO( "%#Present mean - auto no cut %#, auto cut %#, neutral %#, fixed 2 EV %#", label, arrMean[0], arrMean[1], arrMean[2], arrMean[3] );
+        SW_EXPECT_TRUE_MSG( arrMean[0] > arrMean[1] + 8.0, ( label + "컷 프레임이 밝은 장면을 재어 노출을 내리지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrMean[2] > arrMean[3] + 8.0, ( label + "고정 노출 2 EV 가 화면을 어둡게 하지 않았다" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the auto exposure test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 렌더 배율 0.5 의 뷰를 업스케일러 spatial 이면 Present 가 FSR 1(EASU + RCAS)로 키운다 — 선형과 그림이 다르고 밝기는 같다, 배율 1 이면 키울 것이 없어 같다(4 백엔드, 디퍼드)
+ */
+SW_TEST_CASE( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent )
+{
+    sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    sw::GlobalVariableInfo*    pScale    = variables.findVariable( "gv_renderScale" );
+    sw::GlobalVariableInfo*    pUpscaler = variables.findVariable( "gv_upscaler" );
+    SW_ASSERT_TRUE( pScale != nullptr && pUpscaler != nullptr );
+    const sw::string previousScale    = pScale->getValueAsString();
+    const sw::string previousUpscaler = pUpscaler->getValueAsString();
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        // [0] 0.5 선형, [1] 0.5 FSR, [2] 1 선형, [3] 1 FSR
+        sw::vector<uint8>     arrCapture[4];
+        sw::RHITextureMipSpan layout{};
+        bool                  bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 4 && bOk; ++caseIndex )
+        {
+            bOk = pScale->setValueAsFloat( caseIndex < 2 ? 0.5f : 1.0f ) && pUpscaler->setValueAsInt( static_cast<int32>( caseIndex % 2 ) );
+            LitCubeScene stage;
+            bOk = bOk && stage.populate() &&
+                  renderPresentCaptureOf( device.get(), stage._scene, test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), arrCapture[caseIndex], layout );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 Present 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        const CaptureDifference halfScale = compareCaptures( arrCapture[0], arrCapture[1] );
+        const CaptureDifference fullScale = compareCaptures( arrCapture[2], arrCapture[3] );
+        SW_EXPECT_TRUE_MSG( halfScale._notBackgroundCount > 0, ( label + "배율 0.5 그림이 배경뿐이다" ).c_str() );
+        SW_EXPECT_FALSE_MSG( halfScale.isSameImage(), ( label + "FSR 로 키운 그림이 선형과 같다 — FSR 이 돌지 않았다 (" + halfScale.describe() + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( fullScale.isSameImage(), ( label + "배율 1 인데 업스케일러가 그림을 바꿨다 (" + fullScale.describe() + ")" ).c_str() );
+        // 선명화 · 가장자리 적응은 밝기를 옮기지 않는다 — 평균이 거의 같다.
+        const float64 arrMean[2] = { computeMeanByte( arrCapture[0] ), computeMeanByte( arrCapture[1] ) };
+        SW_LOG_INFO( "%#FSR vs linear at 0.5 - %#, mean %# vs %#", label, halfScale.describe(), arrMean[1], arrMean[0] );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( arrMean[1] - arrMean[0] ) < 2.0, ( label + "FSR 그림의 평균 밝기가 선형과 다르다" ).c_str() );
+    }
+    (void)pScale->setValueFromString( previousScale );       // 되돌리기 — 실패해도 위 기대가 이미 이 테스트의 결과다
+    (void)pUpscaler->setValueFromString( previousUpscaler ); // 같다
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the spatial upscaler test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 가림 판정은 지난 프레임 깊이로 거른다 — 벽 뒤에 있던 큐브는 벽을 치운 첫 프레임에 빠지고 다음 프레임에 나오며, 끄거나 컷이면 바로 나온다(컬링이 있는 백엔드, 디퍼드)
+ * @details 지난 깊이로 보는 한계(드러난 물체가 한 프레임 늦다)를 그대로 재는 것이 곧 가림 판정이 돈다는 증거다 — 바르게 가린 물체는 그림에 없으니 다른 방법으로는 볼 수 없다.
+ *          큐브는 화면에서 타일 8 줄 안에 들도록 작게 둔다(넘으면 판정하지 않는다).
+ */
+SW_TEST_CASE( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth )
+{
+    sw::GlobalVariableManager& variables  = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    sw::GlobalVariableInfo*    pOcclusion = variables.findVariable( "gv_occlusionCulling" );
+    SW_ASSERT_TRUE( pOcclusion != nullptr );
+    const sw::string previousOcclusion = pOcclusion->getValueAsString();
+
+    test::RHIBackendSweep sweep;
+    uint32                culledBackendCount = 0;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        if ( device->getCapabilities()._bGPUCulling == SW_FALSE )
+            continue; // DX11 — GPU 컬링이 없다(가림 판정도 없다)
+        ++culledBackendCount;
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        // [case][0] 벽을 치운 첫 프레임, [case][1] 그다음 프레임 — case 0 끔, 1 켬, 2 켬 + 컷
+        int64 arrRed[3][2]{};
+        bool  bOk = true;
+        for ( uint32 caseIndex = 0; caseIndex < 3 && bOk; ++caseIndex )
+        {
+            bOk = pOcclusion->setValueAsBool( caseIndex != 0 );
+            sw::FrameRenderer renderer;
+            sw::Scene         scene( "OcclusionScene" );
+            bOk                                = bOk && renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && scene.ensureDefaultCameras();
+            sw::shared_ptr<sw::Mesh>     cube  = bOk ? sw::MeshUtil::createUnitCube() : nullptr;
+            sw::shared_ptr<sw::Material> red   = sw::Material::create();
+            sw::shared_ptr<sw::Material> blue  = sw::Material::create();
+            const utf8*                  pPath = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
+            bOk                                = bOk && cube != nullptr && red->loadFromFile( pPath ) && blue->loadFromFile( pPath ) &&
+                  red->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" ) && blue->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
+            sw::MeshComponent* pCube = nullptr;
+            sw::MeshComponent* pWall = nullptr;
+            if ( bOk )
+            {
+                sw::GameObject* pCubeObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "HiddenCube" ) );
+                sw::GameObject* pWallObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Wall" ) );
+                pCube                       = pCubeObject != nullptr ? pCubeObject->addComponent<sw::MeshComponent>() : nullptr;
+                pWall                       = pWallObject != nullptr ? pWallObject->addComponent<sw::MeshComponent>() : nullptr;
+                bOk                         = pCube != nullptr && pWall != nullptr;
+            }
+            if ( bOk )
+            {
+                // 기본 카메라는 (0, 1.2, 3.2) 에서 원점을 본다. 벽은 그 사이에서 큐브를 가린다.
+                pCube->setMesh( cube );
+                pCube->setMaterial( red.get() );
+                pCube->setLocalScale( sw::float3{ 0.3f, 0.3f, 0.3f } );
+                pWall->setMesh( cube );
+                pWall->setMaterial( blue.get() );
+                pWall->setLocalPosition( sw::float3{ 0.0f, 0.6f, 1.6f } );
+                pWall->setLocalScale( sw::float3{ 4.0f, 4.0f, 0.2f } );
+            }
+            for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( renderer, device.get(), scene );
+            }
+            const int64 hiddenRed = bOk ? countRedAlbedoPixels( renderer ) : -1;
+            bOk                   = bOk && hiddenRed == 0; // 벽이 큐브를 다 가린다(장면 구성 확인)
+            if ( bOk )
+            {
+                pWall->setLocalPosition( sw::float3{ 0.0f, 0.6f, 40.0f } ); // 카메라 뒤 — 절두체 밖
+                if ( caseIndex == 2 )
+                    scene.getActiveGameCamera()->markCut();
+            }
+            for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            {
+                bOk                           = renderSceneFrame( renderer, device.get(), scene );
+                arrRed[caseIndex][frameIndex] = bOk ? countRedAlbedoPixels( renderer ) : -1;
+                bOk                           = bOk && arrRed[caseIndex][frameIndex] >= 0;
+            }
+            renderer.shutdown();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "가림 장면 그리기 · 되읽기(벽이 큐브를 다 가려야 한다)" ).c_str() );
+        if ( bOk == false )
+            continue;
+        SW_LOG_INFO( "%#red pixels after removing the wall - off %# %#, on %# %#, on + cut %# %#", label, arrRed[0][0], arrRed[0][1], arrRed[1][0], arrRed[1][1], arrRed[2][0],
+                     arrRed[2][1] );
+        SW_EXPECT_TRUE_MSG( arrRed[0][0] > 50, ( label + "가림 판정을 끄면 벽을 치운 프레임에 큐브가 보여야 한다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrRed[1][0] == 0, ( label + "가림 판정을 켜면 벽을 치운 첫 프레임은 지난 깊이(벽)로 큐브를 거른다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrRed[1][1] > 50, ( label + "다음 프레임에는 큐브가 나와야 한다(지난 깊이에 벽이 없다)" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrRed[2][0] > 50, ( label + "컷 프레임은 지난 깊이로 거르지 않는다" ).c_str() );
+    }
+    (void)pOcclusion->setValueFromString( previousOcclusion ); // 되돌리기 — 실패해도 위 기대가 이미 이 테스트의 결과다
+    if ( culledBackendCount == 0 )
+        SW_TEST_SKIP( "No RHI backend with GPU culling for the occlusion test" );
 }
 
 /**

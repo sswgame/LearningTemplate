@@ -136,6 +136,9 @@ namespace sw
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
         (void)ensureViewTransients( view, width, height );
+        // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
+        beginViewHistory( view );
+        prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 
     void FrameRenderer::releaseExtraView( ViewTarget& view )

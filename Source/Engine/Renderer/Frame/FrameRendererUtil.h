@@ -130,14 +130,23 @@ namespace sw
         static constexpr float32 kMeshMorphAmplitude = 0.12f;
         static constexpr float32 kMeshMorphFrequency = 6.0f;
 
-        /** @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다. */
+        /**
+         * @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다.
+         * @details 뒤 셋은 가림 판정이다(`FrameRenderer::recordOcclusionTiles`) — 지난 프레임 장면 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
+         *          타일 격자(열 · 행 · 타일 한 변 px · 켬), 깊이 크기(px). 켬이 0 이면 셰이더가 나머지를 읽지 않는다(그림자 슬롯 · 기록을 버린 프레임 · `gv_occlusionCulling` 끔).
+         */
         struct GPUCullParams
         {
             float32 _arrPlane[6][4]{};
             uint32  _instanceCount{ 0 };
             uint32  _batchCount{ 0 };
             uint32  _arrPad[2]{};
+            float32 _arrOcclusionViewProj[16]{};
+            uint32  _arrOcclusionGrid[4]{};
+            float32 _arrOcclusionDepthSize[4]{};
         };
+        /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusiontiles.hlsl 이 루트 상수로 받는다).
+        static constexpr uint32 kOcclusionTileSize = 16;
         /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanimation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {
@@ -463,6 +472,8 @@ namespace sw
         hashed_string _bloomBright{ "BloomBright" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
+        /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
+        hashed_string _autoExposure{ "AutoExposure" };
     };
 } // namespace sw
 

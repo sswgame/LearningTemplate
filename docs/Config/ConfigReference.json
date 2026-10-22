@@ -693,6 +693,33 @@
        "description": "뷰의 깊이 히스토리 복사(풀스크린) — GPU 입자의 깊이 충돌이 읽는다"
       },
       {
+       "name": "_shaderAutoExposure",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "자동 노출 측정 · 적응(풀스크린 1x1) — 톤맵이 그 EV 를 읽는다"
+      },
+      {
+       "name": "_shaderUpscale",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "FSR 1 업스케일(EASU · RCAS) — Present 가 배율 크기 뷰를 출력 크기로 키울 때(graphics.upscaler)"
+      },
+      {
+       "name": "_shaderOcclusionTiles",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "가림 타일(컴퓨트) — 지난 장면 깊이를 타일마다 최대 깊이로 줄인다. GPU 컬링의 가림 판정이 읽는다"
+      },
+      {
        "name": "_shaderFullscreenTriangle",
        "type": "DataPath",
        "default": "",
@@ -4011,6 +4038,14 @@
    "source": "Source/Games/NileCity/NileDirectorComponent.cpp"
   },
   {
+   "name": "gv_occlusionCulling",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "GPU 컬링의 가림 판정 — 지난 프레임 장면 깊이의 타일 최대 깊이 뒤의 인스턴스를 거른다 (컬링이 있는 백엔드)",
+   "source": "Source/Engine/Renderer/Frame/FrameRendererOcclusion.cpp"
+  },
+  {
    "name": "gv_parkAutoBuild",
    "type": "int32",
    "default": "0",
@@ -4455,8 +4490,16 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "업스케일러 (0 끔, 사용자 설정 graphics.upscaler)",
+   "description": "업스케일 필터 0 선형 1 FSR 1 — 렌더 배율 뷰를 Present 가 키울 때 (사용자 설정 graphics.upscaler)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_upscalerSharpness",
+   "type": "float32",
+   "default": "0.2",
+   "kind": "일반",
+   "description": "FSR 1 선명화(RCAS) 를 줄이는 단계 — 0 가장 선명, 1 마다 절반 (graphics.upscaler 가 spatial 일 때)",
+   "source": "Source/Engine/Renderer/Frame/FrameRendererUpscale.cpp"
   },
   {
    "name": "gv_useRenderThread",

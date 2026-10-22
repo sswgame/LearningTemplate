@@ -17,7 +17,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | [DataDriven](docs/plans/DataDriven.md) — 데이터 주도 구조 정리 계획 (2026-10-16) | 구현중 | 13/14 | 없음 | engine | C-30, C-36 |
 | 2 | [Vfx](docs/plans/Vfx.md) — 파티클 · VFX 구현 단위 (`D2-11`) | 구현중 | 11/12 | 없음 | graphics | D2-11 |
-| 3 | [CameraRendererIntegration](docs/plans/CameraRendererIntegration.md) — 카메라의 렌더러 쪽 연결과 다중 뷰 검증 | 구현중 | 2/4 | 없음 | gameplay | D4-5 |
+| 3 | [CameraRendererIntegration](docs/plans/CameraRendererIntegration.md) — 카메라의 렌더러 쪽 연결과 다중 뷰 검증 | 구현중 | 3/4 | 없음 | gameplay | D4-5 |
 | 5 | [SerializerSilentSkips](docs/plans/SerializerSilentSkips.md) — 직렬화가 조용히 넘기는 곳 (2026-10-21) | 구현중 | 4/4 | 없음 | engine | C-66 |
 | 6 | [StructureSimplification](docs/plans/StructureSimplification.md) — 구조 단순화 계획 (2026-10-20) | 구현중 | 21/21 | 없음 | engine | 없음 |
 | 7 | [ScriptsStructure](docs/plans/ScriptsStructure.md) — Scripts 구조 — import 루트 하나 · 3층 · 층 게이트 (2026-10-21) | 측정대기 | 10/10 | 없음 | project | 없음 |
@@ -68,7 +68,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [SingleChannelDdsImport](docs/plans/SingleChannelDdsImport.md) — 1 채널(R8) DDS 를 내는 임포트 규칙 | 구현중 | 1/2 | 없음 | graphics | G-12 |
 | - | [StepEncounterRules](docs/plans/StepEncounterRules.md) — 걸음 조우 판정 하나로 | 구현중 | 1/2 | 없음 | gameplay | G-7 |
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 3/4 | 없음 | graphics | D2-5.6, D2-5.7 |
-| - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 3/7 | 없음 | project | G-11 |
+| - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 5/7 | 없음 | project | G-11 |
 | - | [TilemapCellDataLayers](docs/plans/TilemapCellDataLayers.md) — 타일맵 칸 데이터를 일반 레이어로 | 구현중 | 1/2 | 없음 | gameplay | G-6 |
 | - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 구현중 | 2/3 | 없음 | ui | D6-2 |
 | - | [UiNotificationRemaining](docs/plans/UiNotificationRemaining.md) — 알림 · 힌트 · 목표 마커의 남은 것 | 구현중 | 1/2 | 없음 | ui | D6-5 |

@@ -71,6 +71,7 @@ namespace sw
         applyViewShadowConstants( context, _mainView._shadow );
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
+        beginViewHistory( _mainView );
         applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
@@ -98,8 +99,11 @@ namespace sw
         float4                         bloomParams{ kDefaultBloomParams };
         bloomParams._y *= MathUtil::max( 0.0f, post._bloomScale );
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
-        context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ MathUtil::pow( 2.0f, post._exposureCompensation ), MathUtil::max( 0.0f, post._saturation ),
-                                                                                 MathUtil::max( 0.0f, post._contrast ), MathUtil::saturate( post._vignetteIntensity ) } );
+        // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 재는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
+        float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
+        prepareAutoExposure( exposureScale );
+        context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),
+                                                                                 MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
         // 색각 보정은 화면 · 호스트 출력 뷰만 건다. 렌더 텍스처는 주 화면에 그려진 뒤 그 뷰의 톤맵에서 보정된다(두 번 걸지 않는다).
         const bool    bScreenOutput   = _pActiveView->_pOutputTexture == nullptr;
@@ -139,13 +143,17 @@ namespace sw
         // 컬링은 기록 시작 전에 도는데 그때는 상수 버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
 
-        // 모션 블러의 지난 뷰-투영 — 뷰마다 프레임에 한 번 이 함수를 지난다. 처음 그리는 뷰 · 다른 카메라가 쓰던 칸 · 컷 프레임은 이번 것으로 둬 속도가 0 이다.
-        ViewTarget& view          = *_pActiveView;
-        const bool  bFreshHistory = view._bHasPrevViewProj == SW_FALSE || view._prevViewID != view._viewID || view._settings._bCut == SW_TRUE;
-        context._passValues.setMatrix( passConstantNames()._prevViewProj, bFreshHistory ? viewProj : view._prevViewProj );
-        view._prevViewProj     = viewProj;
-        view._prevViewID       = view._viewID;
-        view._bHasPrevViewProj = SW_TRUE;
+        // 시간 누적 기록을 버릴지는 셋업이 뷰마다 프레임에 한 번 정했다(`beginViewHistory` — 처음 그리는 프레임과 컷). TAA · 모션 블러 · 자동 노출 · 가림 판정이
+        // 모두 `_bHistoryReset` 하나를 본다 — 모션 블러는 지난 뷰-투영을 이번 것으로 둬 속도가 0 이다.
+        ViewTarget& view = *_pActiveView;
+        context._passValues.setMatrix( passConstantNames()._prevViewProj, view._bHistoryReset == SW_TRUE ? viewProj : view._prevViewProj );
+        view._prevViewProj = viewProj;
+    }
+
+    void FrameRenderer::beginViewHistory( ViewTarget& view )
+    {
+        view._bHistoryReset = ( view._bHasHistory == SW_FALSE || view._settings._bCut == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        view._bHasHistory   = SW_TRUE;
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& context )

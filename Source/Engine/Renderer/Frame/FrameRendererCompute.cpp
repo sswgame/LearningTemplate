@@ -359,10 +359,16 @@ namespace sw
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
         // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 패스가 쓰기 전이다).
+        // 가림 타일은 옮긴 깊이 히스토리에서 바로 짓는다 — 컬링(dispatchCullAndSort)이 이 뒤에 읽는다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
         recordDepthHistory( _mainView );
+        recordOcclusionTiles( _mainView );
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             recordDepthHistory( *pView );
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                recordOcclusionTiles( *pView );
+            else
+                pView->_bOcclusionTilesThisFrame = SW_FALSE;
         }
     }
 
@@ -454,6 +460,12 @@ namespace sw
         Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
         cullParams._instanceCount = instanceCount;
         cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
+        // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
+        const ViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
+        if ( pOcclusionView != nullptr )
+            fillOcclusionParams( *pOcclusionView, cullParams );
+        const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;
+        const RHIDescriptorIndex occlusionSrv = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusionTilesPlaceholder._srv;
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
@@ -463,11 +475,13 @@ namespace sw
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::GPUCull ) );
-        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
-        // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체만 다르다).
+        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
+        // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
         _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
+        if ( occlusionSrv != kInvalidDescriptorIndex )
+            _pCmd->bindComputeShaderResource( occlusionSrv, 2 );
         _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
         _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
