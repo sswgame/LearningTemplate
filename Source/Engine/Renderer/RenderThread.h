@@ -119,6 +119,11 @@ namespace sw
          * @details 게임 스레드가 프레임마다 물어 `Engine::requestQuit` 으로 잇습니다. 사진을 요청한 종류가 하나도 없으면 끝낼 근거가 없어 늘 `kNoCaptureExitCode` 입니다.
          */
         [[nodiscard]] static int32 getCaptureExitCode();
+        /**
+         * @brief 시작 인자 캡처가 화면의 자리 잡음을 기다리는 중이면(`-gv_screenshot` 과 `-gv_screenshotSettledFrames`) true 입니다.
+         * @details 게임 스레드가 패킷을 채울 때 이것이 참이면 `RenderFramePacket::_bReadyForCapture` 를 판정해 싣는다(그 판정은 텍스처 표를 훑으므로 필요할 때만 한다).
+         */
+        [[nodiscard]] static bool needsCaptureReadiness();
 
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */
@@ -133,8 +138,8 @@ namespace sw
         bool executeFrameBody( RenderFramePacket& packet );
         /** @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다. */
         void drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream );
-        /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 간격 · 장 수)면 화면이나 지정 첨부를 파일로 씁니다. `endFrame` 뒤에 부릅니다. */
-        void takeCommandLineScreenshotIfDue();
+        /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 자리 잡음 · 간격 · 장 수)면 화면이나 지정 첨부를 파일로 씁니다. `endFrame` 뒤에 부릅니다. */
+        void takeCommandLineScreenshotIfDue( const RenderFramePacket& packet );
         /** @brief 화면에 나간 이미지(Present 캡처, 없으면 Present 가 읽는 첨부)를 @p path 에 씁니다(`.png` 면 PNG, 아니면 PPM). `endFrame` 뒤에 부릅니다. */
         [[nodiscard]] bool writePresentedImage( const string& path );
         /** @brief 우편함의 `requestScreenshot` 요청을 이번 프레임의 작업으로 받습니다. 프레임 본문 앞에서 부릅니다. */
@@ -161,8 +166,9 @@ namespace sw
         bool             _bLastImmediateSubmit;
         uint8            _bScreenshotTaken;                 ///< -gv_screenshot 은 한 장만 찍는다.
         uint8            _bScreenshotWriteFailed;           ///< -gv_screenshot 의 장 중 쓰지 못한 것이 있다(`-gv_screenshotQuit` 의 종료 코드).
-        uint32           _screenshotFrameCounter;           ///< 씬이 채워질 때까지 몇 프레임을 기다린다.
+        uint32           _screenshotFrameCounter;           ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
         uint32           _screenshotShotCount;              ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
+        int64            _screenshotWaitStartMicroseconds;  ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 잰다.
         uint32           _budgetFrameCounter;               ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
         atomic<uint32>   _completedScenarioScreenshotCount; ///< 패킷이 요청한 스크린샷을 처리한 수(쓰지 못했어도 센다. 시나리오가 기다림을 끝낸다)
         atomic<bool>     _bScenarioCaptureEnabled;          ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).

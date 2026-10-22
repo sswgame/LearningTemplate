@@ -181,9 +181,10 @@
 | `gv_screenshot` | `string` | — | 테스트 · 배포본에도 | 화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshotAttachment` | `string` | — | 테스트 | Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshotCount` | `int32` | `1` | 테스트 | 연속으로 찍을 스크린샷 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
-| `gv_screenshotFrame` | `int32` | `10` | 테스트 · 배포본에도 | 스크린샷을 찍을 프레임 번호 (기본 10) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotFrame` | `int32` | `10` | 테스트 | 스크린샷을 찍을 프레임 번호 (기본 10) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshotInterval` | `int32` | `1` | 테스트 | 연속 스크린샷 사이 프레임 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshotQuit` | `bool` | `false` | 테스트 · 배포본에도 | 요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotSettledFrames` | `int32` | `0` | 테스트 · 배포본에도 | 1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |

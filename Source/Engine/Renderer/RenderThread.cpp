@@ -12,6 +12,7 @@
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -34,6 +35,8 @@ namespace sw
         {
             /** @brief Present 캡처를 켠 뒤 쓰기 전에 더 그릴 프레임 수입니다. 켠 프레임의 캡처 텍스처는 아직 비어 있을 수 있습니다. */
             static constexpr uint32 kPresentCaptureWaitFrames = 1;
+            /** @brief `-gv_screenshotSettledFrames` 가 화면이 자리 잡기를 기다리는 벽시계 시한(초)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
+            static constexpr float64 kSettleTimeoutSeconds = 120.0;
 
             /** @brief `requestScreenshot` 의 엔진 전역 우편함입니다. 게임 스레드, 개발 명령, 에디터가 넣고 렌더 스레드가 꺼냅니다. */
             struct ScreenshotMailbox
@@ -91,7 +94,16 @@ namespace sw
      *          필요하다. 주의: `-gv_profileFrames` 는 찍는 시각을 바꾸지 않는다. 같은 프레임 번호끼리 비교하면
      *          "움직이지 않는다" 는 잘못된 결론이 나온다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
+
+    /**
+     * @brief `-gv_screenshotSettledFrames=<N>` 입니다. 1 이상이면 `-gv_screenshotFrame` 대신, 화면이 자리 잡은 패킷부터 N 프레임을 이어 센 뒤 찍습니다.
+     * @details 자리 잡음은 활성 씬이 플레이를 시작했고 로딩 화면 · 화면 페이드 · 에셋 읽기가 끝난 것이다(`RenderFramePacket::_bReadyForCapture`).
+     *          로딩 화면의 최소 표시 시간과 페이드는 실제 시간이라, 프레임이 빠른 기계에서는 고정 프레임 번호가 로딩 화면을 찍는다(골든 이미지).
+     *          N 프레임을 다 세기 전에 자리 잡음이 풀리면(새 에셋이 디더로 나타나는 중) 처음부터 다시 센다. `kSettleTimeoutSeconds` 안에 다 세지 못하면 오류로 적고 찍지 않는다
+     *          (`-gv_screenshotQuit` 은 14 로 끝난다). 언리얼 자동화 스크린샷이 로드 · 스트리밍이 끝나기를 기다린 뒤 지연을 두고 찍는 것과 같다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotSettledFrames, 0, "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)" );
 
     /**
      * @brief `-gv_screenshotCount=<N>` 과 `-gv_screenshotInterval=<K>` 입니다. 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임과 튐 확인용).
@@ -130,6 +142,7 @@ namespace sw
         , _bScreenshotWriteFailed{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
         , _screenshotShotCount{ 0 }
+        , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
         , _completedScenarioScreenshotCount{ 0 }
         , _bScenarioCaptureEnabled{ false }
@@ -519,7 +532,7 @@ namespace sw
             }
         }
 
-        takeCommandLineScreenshotIfDue();
+        takeCommandLineScreenshotIfDue( packet );
 
         // 자동화 시나리오의 `<Screenshot>` 이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다. gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(시나리오가 시작 조건 뒤에 찍는다).
         if ( packet._screenshotPath.empty() == false )
@@ -561,7 +574,12 @@ namespace sw
         }
     }
 
-    void RenderThread::takeCommandLineScreenshotIfDue()
+    bool RenderThread::needsCaptureReadiness()
+    {
+        return gv_screenshot.empty() == false && gv_screenshotSettledFrames > 0;
+    }
+
+    void RenderThread::takeCommandLineScreenshotIfDue( const RenderFramePacket& packet )
     {
         // -gv_screenshot=<path>: 한 장(또는 -gv_screenshotCount 장)을 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 되었고 아직 큐에 나가지 않아,
@@ -571,17 +589,37 @@ namespace sw
         if ( bScreenshotPending )
         {
             // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다.
-            // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다).
+            // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다). -gv_screenshotSettledFrames 면 자리 잡은 패킷부터 센다.
             constexpr uint32 kScreenshotMinWarmupFrames = 10;
-            const uint32     targetFrame                = ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) )
-                                                            ? static_cast<uint32>( gv_screenshotFrame )
-                                                            : kScreenshotMinWarmupFrames;
+            const bool       bCountFromSettled          = gv_screenshotSettledFrames > 0;
+            const uint32     targetFrame                = bCountFromSettled                                                         ? static_cast<uint32>( gv_screenshotSettledFrames )
+                                                        : ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) ) ? static_cast<uint32>( gv_screenshotFrame )
+                                                                                                                                    : kScreenshotMinWarmupFrames;
             const uint32     shotCount                  = gv_screenshotCount > 1 ? static_cast<uint32>( gv_screenshotCount ) : 1u;
             const uint32     interval                   = gv_screenshotInterval > 1 ? static_cast<uint32>( gv_screenshotInterval ) : 1u;
-            const uint32     frame                      = ++_screenshotFrameCounter;
-            if ( frame == 1u )
+            if ( _screenshotWaitStartMicroseconds == 0 )
+            {
+                _screenshotWaitStartMicroseconds = MonotonicClock::nowMicroseconds();
                 expectCapture( CaptureKind::GameView ); // 에디터 사진의 알림(첫 UI 프레임)과 어느 쪽이 먼저든, 첫 사진(10 프레임 뒤)보다 앞선다
-            const bool bShotDue = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
+            }
+            // 첫 장 전에 자리 잡음이 풀리면 처음부터 다시 센다 — N 프레임 내내 자리 잡은 그림을 찍는다. 시한을 넘기면 찍지 않고 오류로 끝낸다.
+            const bool bWaitingForSettle = bCountFromSettled && _screenshotShotCount == 0u && _screenshotFrameCounter < targetFrame;
+            if ( bWaitingForSettle && packet._bReadyForCapture == SW_FALSE )
+            {
+                _screenshotFrameCounter     = 0;
+                const float64 waitedSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() - _screenshotWaitStartMicroseconds ) * 1.0e-6;
+                if ( waitedSeconds > RenderThreadInternal::kSettleTimeoutSeconds )
+                {
+                    SW_LOG_ERROR( "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
+                                  static_cast<uint32>( RenderThreadInternal::kSettleTimeoutSeconds ), gv_screenshot.c_str() );
+                    _bScreenshotTaken       = SW_TRUE;
+                    _bScreenshotWriteFailed = SW_TRUE;
+                    reportCaptureFinished( CaptureKind::GameView, false );
+                }
+                return;
+            }
+            const uint32 frame    = ++_screenshotFrameCounter;
+            const bool   bShotDue = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
             if ( bShotDue )
             {
                 // 연속 촬영이면 장 번호를 확장자 앞에 붙인다.

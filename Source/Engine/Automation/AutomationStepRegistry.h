@@ -51,21 +51,30 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 지금 시나리오 시작을 막아야 하면 true 입니다(로딩 화면이 게임 입력을 막는 동안). 게임 스레드입니다. */
-    using AutomationStartBlockFunction = bool ( * )();
+    /** @brief 지금 막아야 하면 true 입니다(로딩 화면이 게임 입력을 막는 동안, 화면 페이드가 그림을 덮는 동안). 게임 스레드입니다. */
+    using AutomationBlockFunction = bool ( * )();
+
+    /** @brief 차단 조건이 무엇을 미루는지입니다. 넓은 쪽이 좁은 쪽을 포함한다 — 시작을 미루는 조건은 캡처도 미룬다. */
+    enum class AutomationBlockScope : uint8
+    {
+        Capture, ///< 화면 캡처만 미룹니다(화면 페이드 — 입력은 막지 않으므로 시작은 미루지 않는다).
+        Start,   ///< `ScenePlaying` 시작과 캡처를 미룹니다(로딩 화면).
+        Clock,   ///< 시작 · 캡처를 미루고 도는 시나리오의 시계도 멈춥니다(`SW_AUTOMATION_CLOCK_HOLDER`).
+    };
 
     /**
-     * @struct AutomationStartBlocker
-     * @brief `ScenePlaying` 시작 조건을 미루는 조건 하나입니다. 실행기보다 위 계층(UI 의 로딩 화면)이 아래로 등록하며, 실행기는 그 계층을 include 하지 않습니다.
-     * @details `_bHoldsClock` 이면 시계 잡기 조건이다(`SW_AUTOMATION_CLOCK_HOLDER`) — 참인 동안 어떤 시나리오도 시작하지 않고, 도는 시나리오는 시계를 멈춘다.
-     *          결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
+     * @struct AutomationBlocker
+     * @brief 시나리오 시작 · 시계 · 화면 캡처를 미루는 조건 하나입니다. 실행기보다 위 계층(UI 의 로딩 화면, 게임 프레임워크의 화면 페이드)이 아래로 등록하며,
+     *        실행기는 그 계층을 include 하지 않습니다.
+     * @details `Clock` 은 결과를 로그로 늦게 내는 백그라운드 작업(저장 검증)이 쓴다. 시계가 그 작업보다 앞서 가면 뒤 단계(임시 폴더 지우기)가 작업이 읽을 파일을 바꾸고,
      *          결과 줄이 다음 시나리오 창에 떨어진다. 언리얼 자동화가 셰이더 · 에셋 컴파일을 기다린 뒤 다음 명령을 도는 것과 같다.
+     *          `Capture` 는 그림을 덮는 것(페이드)이다 — 캡처가 자리 잡은 화면을 찍게 한다(`AutomationCaptureUtil::isReadyForCapture`).
      */
-    struct AutomationStartBlocker
+    struct AutomationBlocker
     {
-        const utf8*                  _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
-        AutomationStartBlockFunction _pIsBlocking;
-        bool                         _bHoldsClock{ false }; ///< 시나리오 도중에도 시계를 잡는다
+        const utf8*             _pName; ///< 로그와 중복 판정에 쓰는 이름입니다.
+        AutomationBlockFunction _pIsBlocking;
+        AutomationBlockScope    _scope;
     };
 } // namespace sw
 
@@ -85,12 +94,14 @@ namespace sw
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationStepRegistration* find( string_view kind );
 
-        /** @brief 시작 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
-        static bool registerStartBlocker( const AutomationStartBlocker* pBlocker );
-        static void unregisterStartBlocker( const AutomationStartBlocker* pBlocker );
-        /** @brief 등록된 조건 중 하나라도 시작을 막으면 true 입니다. */
+        /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
+        static bool registerBlocker( const AutomationBlocker* pBlocker );
+        static void unregisterBlocker( const AutomationBlocker* pBlocker );
+        /** @brief 시작을 미루는 조건(`Start` · `Clock`) 중 하나라도 참이면 true 입니다. */
         static bool isStartBlocked();
-        /** @brief 지금 시계를 잡고 있는 조건(`_bHoldsClock`)의 이름입니다. 없으면 nullptr 입니다. */
+        /** @brief 지금 화면 캡처를 미루는 조건(모든 범위)의 이름입니다. 없으면 nullptr 입니다. */
+        static const utf8* findCaptureBlocker();
+        /** @brief 지금 시계를 잡고 있는 조건(`Clock`)의 이름입니다. 없으면 nullptr 입니다. */
         static const utf8* findClockHolder();
     };
 } // namespace sw
@@ -111,15 +122,15 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_AUTOMATION_START_BLOCKER` 가 두는 정적 등록자입니다. */
-    struct SW_API AutomationStartBlockerRegistrar
+    /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` 가 두는 정적 등록자입니다. */
+    struct SW_API AutomationBlockerRegistrar
     {
-        explicit AutomationStartBlockerRegistrar( const AutomationStartBlocker* pBlocker );
-        ~AutomationStartBlockerRegistrar();
-        AutomationStartBlockerRegistrar( const AutomationStartBlockerRegistrar& )            = delete;
-        AutomationStartBlockerRegistrar& operator=( const AutomationStartBlockerRegistrar& ) = delete;
+        explicit AutomationBlockerRegistrar( const AutomationBlocker* pBlocker );
+        ~AutomationBlockerRegistrar();
+        AutomationBlockerRegistrar( const AutomationBlockerRegistrar& )            = delete;
+        AutomationBlockerRegistrar& operator=( const AutomationBlockerRegistrar& ) = delete;
 
-        const AutomationStartBlocker* _pBlocker;
+        const AutomationBlocker* _pBlocker;
     };
 } // namespace sw
 
@@ -139,18 +150,26 @@ namespace sw
         &sw_automationStep_##id                                                                                                    \
     }
 
-/** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
-#define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )                                                \
-    static const ::sw::AutomationStartBlocker          sw_automationStartBlocker_##id{ pName, pIsBlocking }; \
-    static const ::sw::AutomationStartBlockerRegistrar sw_automationStartBlockerRegistrar_##id               \
-    {                                                                                                        \
-        &sw_automationStartBlocker_##id                                                                      \
+/** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */
+#define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )                                                                              \
+    static const ::sw::AutomationBlocker          sw_automationStartBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Start }; \
+    static const ::sw::AutomationBlockerRegistrar sw_automationStartBlockerRegistrar_##id                                                  \
+    {                                                                                                                                      \
+        &sw_automationStartBlocker_##id                                                                                                    \
     }
 
-/** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationStartBlocker::_bHoldsClock`). */
-#define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding )                                                      \
-    static const ::sw::AutomationStartBlocker          sw_automationClockHolder_##id{ pName, pIsHolding, true }; \
-    static const ::sw::AutomationStartBlockerRegistrar sw_automationClockHolderRegistrar_##id                    \
-    {                                                                                                            \
-        &sw_automationClockHolder_##id                                                                           \
+/** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationBlockScope::Clock`). */
+#define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pIsHolding )                                                                              \
+    static const ::sw::AutomationBlocker          sw_automationClockHolder_##id{ pName, pIsHolding, ::sw::AutomationBlockScope::Clock }; \
+    static const ::sw::AutomationBlockerRegistrar sw_automationClockHolderRegistrar_##id                                                 \
+    {                                                                                                                                    \
+        &sw_automationClockHolder_##id                                                                                                   \
+    }
+
+/** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */
+#define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pIsBlocking )                                                                                \
+    static const ::sw::AutomationBlocker          sw_automationCaptureBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Capture }; \
+    static const ::sw::AutomationBlockerRegistrar sw_automationCaptureBlockerRegistrar_##id                                                    \
+    {                                                                                                                                          \
+        &sw_automationCaptureBlocker_##id                                                                                                      \
     }

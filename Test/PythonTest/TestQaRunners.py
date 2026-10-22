@@ -157,7 +157,7 @@ class GameTableTest(unittest.TestCase):
         listGame = sorted(path.name for path in (kRepositoryRoot / "Source/Games").iterdir() if (path / "CMakeLists.txt").is_file())
         self.assertEqual(listGame, sorted(table["games"]))
         for name, game in table["games"].items():
-            self.assertGreater(int(game["screenshot_frame"]), 10, name)
+            self.assertGreater(int(game["settled_frames"]), 0, name)
             for argument in game["arguments"]:
                 self.assertTrue(argument.startswith("-gv_"), f"{name}: {argument}")
                 variable = argument[1:].split("=", 1)[0]
@@ -173,7 +173,7 @@ class GameTableTest(unittest.TestCase):
             record = json.loads(referencePath.read_text(encoding="utf-8"))
             game = table["games"][referencePath.parent.name]
             self.assertEqual(game["arguments"], record["capture"]["arguments"], referencePath)
-            self.assertEqual(game["screenshot_frame"], record["capture"]["frame"], referencePath)
+            self.assertEqual(game["settled_frames"], record["capture"]["settled_frames"], referencePath)
             self.assertTrue(referencePath.with_suffix(".png").is_file(), referencePath)
 
 

@@ -3963,7 +3963,7 @@
    "name": "gv_screenshotFrame",
    "type": "int32",
    "default": "10",
-   "kind": "테스트 · 배포본에도",
+   "kind": "테스트",
    "description": "스크린샷을 찍을 프레임 번호 (기본 10)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
@@ -3981,6 +3981,14 @@
    "default": "false",
    "kind": "테스트 · 배포본에도",
    "description": "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)",
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotSettledFrames",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트 · 배포본에도",
+   "description": "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {

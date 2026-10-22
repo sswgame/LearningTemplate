@@ -11,13 +11,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -26,10 +26,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -717,24 +715,10 @@ namespace sw
                 return true;
             }
 
-            /**
-             * @brief 씬이 기다리는 에셋 일의 수입니다 — 읽는 중이거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시(씬 프레임 도착 단계의 대기), 읽거나 올리는 중인 텍스처.
-             * @details 스크린샷(`holdScreenshot`)과 탐침 `Assets.Pending` 이 같은 셈을 쓴다 — 첫 프레임을 찍는 시나리오가 로드 중 회색 · 빈 메시를 찍지 않게.
-             */
-            [[nodiscard]] static uint32 countPendingAssetWork( const GameObjectManager* pManager )
-            {
-                uint32 count = 0;
-                if ( pManager != nullptr )
-                    count += static_cast<uint32>( pManager->getPrimitiveRegistry().countAssetWaiters() );
-                if ( engine::areEngineServicesBound() )
-                    count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
-                return count;
-            }
-
-            /** @brief 탐침 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
+            /** @brief 탐침 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
             [[nodiscard]] static bool readAssetsPending( const GameObjectManager* pManager, float64& outValue )
             {
-                outValue = static_cast<float64>( countPendingAssetWork( pManager ) );
+                outValue = static_cast<float64>( AutomationCaptureUtil::countPendingAssetWork( pManager ) );
                 return true;
             }
 
@@ -1146,8 +1130,9 @@ namespace sw
         }
 
         /**
-         * @brief 씬의 에셋 일이 끝나고(`countPendingAssetWork` 가 0) 몇 프레임이 더 지날 때까지 스크린샷을 미룹니다. 상한을 넘기면 실패로 적고 그대로 찍는다.
-         * @details 메시 · 텍스처는 워커가 읽는다 — 첫 프레임을 찍으면 빈 메시와 로드 중 회색이 찍힌다. 시나리오마다 기다림을 적지 않고 찍는 단계가 기다린다.
+         * @brief 화면이 자리 잡고(`AutomationCaptureUtil::isReadyForCapture` — 로딩 화면 · 페이드 · 에셋 일이 끝남) 몇 프레임이 더 지날 때까지 스크린샷을 미룹니다.
+         *        상한을 넘기면 실패로 적고 그대로 찍는다.
+         * @details 메시 · 텍스처는 워커가 읽고 페이드는 실제 시간으로 걷힌다 — 첫 프레임을 찍으면 빈 메시 · 로드 중 회색 · 어두운 화면이 찍힌다. 시나리오마다 기다림을 적지 않고 찍는 단계가 기다린다.
          *          기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡는다 — 세면 뒤 단계의 프레임이 지나 버려 사진을 요청한 프레임에 한꺼번에 돌고,
          *          그 변화(순간이동 · 변수)가 다음 패킷이 찍는 사진에 들어간다.
          */
@@ -1155,14 +1140,18 @@ namespace sw
         {
             if ( AutomationRunnerInternal::capturesWithoutSettling( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled             = AutomationRunnerInternal::countPendingAssetWork( runner.findActiveObjectManager() ) == 0;
+            const bool bSettled             = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
             runner._assetSettledFrameCount  = bSettled ? runner._assetSettledFrameCount + 1 : 0;
             const bool               bReady = runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames;
             const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationRunnerInternal::kMaxAssetSettleFrames );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
-                    runner.recordFailure( step, "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
+                {
+                    const utf8* pBlocker = AutomationStepRegistry::findCaptureBlocker();
+                    runner.recordFailure( step, pBlocker != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pBlocker + ")"
+                                                                    : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
+                }
                 runner._assetSettledFrameCount = 0;
             }
             return hold;

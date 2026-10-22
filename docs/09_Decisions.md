@@ -318,6 +318,7 @@
   Tracy 는 C++14 기본값으로 빌드되지 않아 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 두고, Shipping 은 링크하지 않으며, 뷰어(tracy-profiler.exe)는 저장소에 넣지 않습니다.
   OpenSSL 은 Windows 에서 DLL 이고, SQLite 는 `GF_SQLStore`, libpq 는 `GF_Server_SQLStore` 의 CMakeLists 에서만 링크합니다.
 - **테스트 골든 기준은 기계별로 만들지 않습니다**(2026-10-06, 사용자 결정). 기준은 그린 장치(GPU 이름, 드라이버)를 함께 적고, 다른 기계에서 지면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가릅니다.
+- **골든 · 시나리오 캡처는 시작부터 센 프레임이 아니라 화면이 자리 잡은 뒤에 찍습니다**(2026-10-22). 자리 잡음 = 씬 플레이 시작 + 캡처 차단 조건 없음(로딩 화면 · 화면 페이드 · 시계 잡기, `AutomationBlockScope`) + 에셋 일 0(`AutomationCaptureUtil::isReadyForCapture`). 골든은 `Test/QA/Games.json` 의 `settled_frames` → `-gv_screenshotSettledFrames` 이고, 120 초 안에 자리 잡지 않으면 오류로 사진 없이 끝납니다. 언리얼 자동화 스크린샷이 로드 · 스트리밍 · 셰이더 컴파일을 기다린 뒤 지연을 두고 찍는 것과 같습니다. 로딩 화면 최소 표시와 페이드가 실제 시간이라 빠른 기계(프레임 1 ms)에서 고정 프레임 180 이 로딩 화면을 찍었습니다.
 - **조건 세 부분 이상은 이름을 붙이고 기준선은 0 입니다**(2026-10-15, `CheckConditionParts`). 언리얼 코딩 표준의 "복잡한 식은 이름 있는 지역 변수로" 와 같은 쪽입니다.
   `if` 는 바로 앞에 `const bool` 을 두어 평가 순서와 횟수를 그대로 둡니다. `else if` 는 식에 부작용이 없고 앞 조건의 보호(널 검사)가 필요 없을 때만
   체인 앞으로 올리고, 부작용이 있으면(`++` · 출력 인자를 채우는 호출) `else { const bool …; if ( … ) }` 로 감쌉니다. `while` 은 `while ( true )` 와

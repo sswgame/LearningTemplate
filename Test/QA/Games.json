@@ -1,5 +1,5 @@
 {
-  "_comment": "QA runners (Scripts/qa) read this table: how each test game plays itself. arguments go to App as-is; screenshot_frame is the render-thread frame the golden capture takes.",
+  "_comment": "QA runners (Scripts/qa) read this table: how each test game plays itself. arguments go to App as-is; settled_frames is how many render-thread frames the golden capture waits after the screen settled (scene playing, loading screen and screen fade gone, no asset loads in flight - -gv_screenshotSettledFrames); a fixed frame from start would catch the wall-clock loading screen on a fast machine.",
   "capture_width": 320,
   "capture_height": 180,
   "reference_width": 160,
@@ -7,51 +7,51 @@
   "games": {
     "Empty": {
       "arguments": ["-gv_benchMeshes=8", "-gv_benchAnimate=0"],
-      "screenshot_frame": 30
+      "settled_frames": 30
     },
     "AbilityArena": {
       "arguments": ["-gv_arenaAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "FrontierTown": {
       "arguments": ["-gv_frontierAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "HarvestValley": {
       "arguments": ["-gv_farmAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "MeadowVillage": {
       "arguments": ["-gv_meadowAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "NileCity": {
       "arguments": ["-gv_nileAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "PixelTown": {
       "arguments": [],
-      "screenshot_frame": 30
+      "settled_frames": 30
     },
     "Shooter3D": {
       "arguments": ["-gv_shooterAutoPlay=1", "-gv_cameraPreset=cctv"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "StarSkirmish": {
       "arguments": ["-gv_skirmishAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "ThemeParkTycoon": {
       "arguments": ["-gv_parkAutoBuild=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "VoxelCraft": {
       "arguments": ["-gv_voxelAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     },
     "WildWest": {
       "arguments": ["-gv_wildWestAutoPlay=1"],
-      "screenshot_frame": 180
+      "settled_frames": 180
     }
   }
 }

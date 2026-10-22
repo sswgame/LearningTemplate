@@ -70,11 +70,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있습니다. `ScenePlaying` 시나리오는 로딩 화면이 사라질 때까지 시작하지 않습니다. */
+            /**
+             * @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있고 그림이 덮여 있습니다. `ScenePlaying` 시나리오는 로딩 화면이 사라질 때까지 시작하지 않고, 화면 캡처도 미뤄집니다.
+             * @details 화면 UI 를 막은 동안(멈춘 에디터, `isOnScreenSuppressed`)은 로딩 화면이 그려지지도 입력을 막지도 않는다 — 그동안 닫을 게임 update 가 돌지 않아 남아 있을 뿐이다.
+             */
             static bool isLoadingScreenBlocking()
             {
                 const UISystem* pUISystem = engine::findSubsystem<UISystem>();
-                return pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isLoadingScreenShown();
+                return pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isOnScreenSuppressed() == false && pUISystem->isLoadingScreenShown();
             }
         };
     } // namespace

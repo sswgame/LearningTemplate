@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-골든 이미지 회귀 — 테스트 게임의 자동 플레이를 네 백엔드(dx12 · dx11 · vk · gl)로 그려 정해 둔 프레임을 캡처하고, 기준과 **배경을 뺀 지표**로 견준다.
+골든 이미지 회귀 — 테스트 게임의 자동 플레이를 네 백엔드(dx12 · dx11 · vk · gl)로 그려 화면이 자리 잡은 뒤 정해 둔 프레임을 캡처하고, 기준과 **배경을 뺀 지표**로 견준다.
 
     py -3 -m Scripts golden --app build/Ninja-Debug/Bin/App.exe --game NileCity       # 그 게임(-game=), 네 백엔드
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
@@ -13,6 +13,9 @@
 판정은 픽셀이 아니라 지표다(`Scripts/common/ImageMetrics.py`) — 자동 플레이는 프레임 시간이 벽시계를 따라가 같은 프레임 번호에서도 장면이
 조금씩 다르다. 허용 오차는 기록할 때 같은 조건 여러 판의 퍼짐에서 정한다. 언리얼 Automation Screenshot Comparison 의 "Tolerance"
 (Low/Medium/High) 를 손으로 고르는 대신 잡음 바닥을 측정해서 정하는 것이 다르다.
+캡처 시점은 시작부터 센 프레임이 아니라 화면이 자리 잡은(씬 플레이 · 로딩 화면과 페이드 끝 · 에셋 읽기 끝) 뒤의 프레임 수다(`settled_frames` →
+`-gv_screenshotSettledFrames`). 로딩 화면의 최소 표시 시간과 페이드는 실제 시간이라 빠른 기계에서는 고정 프레임이 로딩 화면을 찍는다. 끝내 자리 잡지
+않으면 App 이 오류를 적고 사진 없이 14 로 끝나 그 판이 진다(조용히 다른 장면을 찍지 않는다).
 
 종료 코드: 0 = 모두 맞음, 1 = 하나라도 어긋남 · App 이 실패함, 77 = 견줄 것이 없음(기준이 없거나 이 기계에서 도는 백엔드가 없음 — ctest 는 건너뜀).
 진 캡처는 `--diff-dir` 에 PNG 로 남는다.
@@ -43,9 +46,10 @@ kGoldenRelativeDir = "Test/QA/Golden"
 def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDir: Path, runIndex: int) -> tuple[str, object]:
     """한 판 그려 축소본을 돌려줍니다. ("ok", RgbImage) · ("skip", 이유) · ("fail", 이유)."""
     screenshotPath = workDir / f"{backend}_{runIndex}.ppm"
-    frame = int(game["screenshot_frame"])
+    settledFrames = int(game["settled_frames"])
+    # 사진을 다 찍으면(또는 자리 잡지 않아 못 찍으면 14 로) App 이 스스로 끝난다 — 프레임 수로 끝내면 자리 잡기 전에 끝날 수 있다.
     listArgument = [f"-W={table['capture_width']}", f"-H={table['capture_height']}", *game["arguments"],
-                    f"-gv_profileFrames={max(30, frame)}", f"-gv_screenshotFrame={frame}", f"-gv_screenshot={screenshotPath}",
+                    f"-gv_screenshotSettledFrames={settledFrames}", "-gv_screenshotQuit=1", f"-gv_screenshot={screenshotPath}",
                     kBackendSwitch[backend], *game["extra_arguments"]]
     result = runApp(appPath, listArgument, timeoutSeconds=300.0)
     if result.bBackendUnusable:
@@ -108,7 +112,7 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
         "game": gameName,
         "backend": backend,
         "runs": runCount,
-        "capture": {"width": table["capture_width"], "height": table["capture_height"], "frame": game["screenshot_frame"],
+        "capture": {"width": table["capture_width"], "height": table["capture_height"], "settled_frames": game["settled_frames"],
                     "arguments": game["arguments"]},
         "metrics": averageMetrics(listMetrics).toJSON(),
         "tolerance": tolerance,
@@ -124,8 +128,8 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
     if not referencePath.is_file():
         return "skip", f"no reference ({referencePath.relative_to(goldenDir.parents[2])}) - record it with --record"
     record = json.loads(referencePath.read_text(encoding="utf-8"))
-    if record["capture"]["arguments"] != game["arguments"] or record["capture"]["frame"] != game["screenshot_frame"]:
-        return "fail", "the reference was captured with other arguments/frame than Test/QA/Games.json - re-record it"
+    if record["capture"]["arguments"] != game["arguments"] or record["capture"].get("settled_frames") != game["settled_frames"]:
+        return "fail", "the reference was captured with other arguments/settled_frames than Test/QA/Games.json - re-record it"
     status, payload = captureInternal(appPath, game, table, backend, workDir, 0)
     if status != "ok":
         return status, str(payload)

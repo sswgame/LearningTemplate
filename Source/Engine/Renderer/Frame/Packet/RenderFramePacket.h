@@ -74,8 +74,13 @@ namespace sw
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
         uint8 _bHasLight : 1;
         /** @brief 씬에 활성 `SkyComponent` 가 있어 `_sky` 가 유효하면 1 입니다. */
-        uint8                  _bHasSky  : 1;
-        [[maybe_unused]] uint8 _reserved : 4;
+        uint8 _bHasSky : 1;
+        /**
+         * @brief 게임 스레드가 이 패킷을 채울 때 화면이 자리 잡았으면 1 입니다 — 활성 씬이 플레이를 시작했고 로딩 화면 · 페이드 · 에셋 읽기가 끝났다(`AutomationCaptureUtil::isReadyForCapture`).
+         * @details 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 이 패킷부터 프레임을 센다. 그 캡처를 기다리는 동안만 채우고(`RenderThread::needsCaptureReadiness`), 아니면 0 이다.
+         */
+        uint8                  _bReadyForCapture : 1;
+        [[maybe_unused]] uint8 _reserved         : 3;
 
         RenderFramePacket()
             : _gpuScene{}
@@ -104,6 +109,7 @@ namespace sw
             , _bValid{ SW_FALSE }
             , _bHasLight{ SW_FALSE }
             , _bHasSky{ SW_FALSE }
+            , _bReadyForCapture{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -151,6 +157,7 @@ namespace sw
             _bValid             = SW_FALSE;
             _bHasLight          = SW_FALSE;
             _bHasSky            = SW_FALSE;
+            _bReadyForCapture   = SW_FALSE;
         }
     };
 } // namespace sw

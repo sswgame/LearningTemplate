@@ -5,7 +5,7 @@
   "capture": {
     "width": 320,
     "height": 180,
-    "frame": 30,
+    "settled_frames": 30,
     "arguments": [
       "-gv_benchMeshes=8",
       "-gv_benchAnimate=0"

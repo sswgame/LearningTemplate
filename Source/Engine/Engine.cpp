@@ -25,6 +25,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
+#include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
 #include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
@@ -782,6 +783,13 @@ namespace sw
                 {
                     pObserver->onBuildRenderPacket( packetContext );
                 }
+            }
+
+            // 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 기다리는 동안만 판정한다 — 첫 씬이 플레이를 시작하기 전(로딩 화면을 열기 전)은 자리 잡지 않았다.
+            if ( RenderThread::needsCaptureReadiness() )
+            {
+                const GameObjectManager* pManager = pActiveScene != nullptr ? pActiveScene->getObjectManager() : nullptr;
+                packet._bReadyForCapture          = pManager != nullptr && pManager->hasBegunPlay() && AutomationCaptureUtil::isReadyForCapture( pManager );
             }
 
             _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_pRHI, _pFrameRenderer );
