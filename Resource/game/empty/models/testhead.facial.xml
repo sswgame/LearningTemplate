@@ -1,0 +1,69 @@
+<FacialRig>
+	<_listExpression>
+		<FacialPose _name="Happy">
+			<_listTarget>
+				<FacialTargetWeight _target="smile" _weight="1.0" />
+				<FacialTargetWeight _target="mouthWide" _weight="0.3" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="Surprised">
+			<_listTarget>
+				<FacialTargetWeight _target="jawOpen" _weight="0.6" />
+				<FacialTargetWeight _target="mouthRound" _weight="0.4" />
+			</_listTarget>
+		</FacialPose>
+	</_listExpression>
+	<_listViseme>
+		<FacialPose _name="sil" />
+		<FacialPose _name="AA">
+			<_listTarget>
+				<FacialTargetWeight _target="jawOpen" _weight="1.0" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="EE">
+			<_listTarget>
+				<FacialTargetWeight _target="mouthWide" _weight="0.8" />
+				<FacialTargetWeight _target="jawOpen" _weight="0.3" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="OO">
+			<_listTarget>
+				<FacialTargetWeight _target="mouthRound" _weight="1.0" />
+				<FacialTargetWeight _target="jawOpen" _weight="0.3" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="SS">
+			<_listTarget>
+				<FacialTargetWeight _target="mouthWide" _weight="0.5" />
+				<FacialTargetWeight _target="jawOpen" _weight="0.1" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="FF">
+			<_listTarget>
+				<FacialTargetWeight _target="mouthClose" _weight="0.6" />
+				<FacialTargetWeight _target="jawOpen" _weight="0.1" />
+			</_listTarget>
+		</FacialPose>
+		<FacialPose _name="PP">
+			<_listTarget>
+				<FacialTargetWeight _target="mouthClose" _weight="1.0" />
+			</_listTarget>
+		</FacialPose>
+	</_listViseme>
+	<_blink _minInterval="2.0" _maxInterval="5.0" _duration="0.15">
+		<_listTarget>
+			<item>blinkLeft</item>
+			<item>blinkRight</item>
+		</_listTarget>
+	</_blink>
+	<_gaze _forwardAxis="0,0,1"
+	       _maxAngle="0.5235988"
+	       _saccadeMinInterval="0.4"
+	       _saccadeMaxInterval="1.6"
+	       _saccadeAmplitude="0.0349066">
+		<_listEyeBone>
+			<item>eye.l</item>
+			<item>eye.r</item>
+		</_listEyeBone>
+	</_gaze>
+</FacialRig>

@@ -83,15 +83,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 데이터: 문화권 테이블, 프로젝트, 낱개 테이블
         // ------------------------------------------------------------------------------
-        /** @brief 문화권 테이블(`*.cultures.json`)을 읽습니다. 의사 문화권의 테이블도 다시 만듭니다. */
+        /** @brief 문화권 테이블(`*.cultures.xml`)을 읽습니다. 의사 문화권의 테이블도 다시 만듭니다. */
         [[nodiscard]] bool loadCultureTable( string_view resourcePath );
-        /** @brief 문화권 테이블을 JSON 텍스트에서 읽습니다(테스트와 도구). */
-        [[nodiscard]] bool loadCultureTableJSON( string_view jsonText );
+        /** @brief 문화권 테이블을 XML 텍스트에서 읽습니다(테스트와 도구). */
+        [[nodiscard]] bool loadCultureTableXML( string_view xmlText );
         /** @brief @p culture 의 형식 데이터를 값으로 반환합니다(없으면 부모, 끝까지 없으면 기본값). */
         CultureInfo resolveCulture( string_view culture ) const;
 
         /**
-         * @brief 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
+         * @brief 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
          * @details 같은 이름의 프로젝트가 이미 있으면 바꾼다. 원문 테이블 두 개에 같은 키가 있으면 오류이고 앞의 것을 쓴다.
          */
         [[nodiscard]] bool mountProject( string_view projectPath, LocalizationScope scope );
@@ -114,15 +114,15 @@ namespace sw
         /** @brief 그 경로가 로드한 프로젝트의 파일(프로젝트, 원문 테이블, 번역 테이블)인지 확인합니다. */
         bool isProjectFile( string_view path ) const;
 
-        /** @brief 번역 테이블 JSON(`TranslationTable` 형식)을 낱개 테이블로 로드합니다. 원문 확인 없이 프로젝트 위에 덮어씁니다(테스트와 도구). */
-        [[nodiscard]] bool loadLanguageJSON( string_view languageCode, string_view jsonText );
+        /** @brief 번역 테이블 XML(`TranslationTable` 형식)을 낱개 테이블로 로드합니다. 원문 확인 없이 프로젝트 위에 덮어씁니다(테스트와 도구). */
+        [[nodiscard]] bool loadLanguageXML( string_view languageCode, string_view xmlText );
         /** @brief 낱개 테이블에 문자열 하나를 넣습니다. */
         void setString( string_view languageCode, const hashed_string& key, string_view value );
         /** @brief 그 언어의 낱개 테이블과 이진 표를 언로드합니다(프로젝트의 텍스트는 남습니다). */
         void unloadLanguage( string_view languageCode );
 
         /**
-         * @brief 쿠킹된 이진 번역 표(`LocalizationBinaryTable`, `.locres`)를 읽어 그 문화권의 글을 프로젝트 위에 덮습니다. 낱개 테이블(`loadLanguageJSON`)보다는 아래입니다.
+         * @brief 쿠킹된 이진 번역 표(`LocalizationBinaryTable`, `.locres`)를 읽어 그 문화권의 글을 프로젝트 위에 덮습니다. 낱개 테이블(`loadLanguageXML`)보다는 아래입니다.
          * @details 저작 파일을 두지 않는 배포본이 쓴다. 같은 문화권의 표를 다시 로드하면 바꿉니다. 깨진 바이트는 거절하고 아무것도 바꾸지 않습니다.
          */
         [[nodiscard]] bool loadBinaryTable( const uint8* pData, size_t size );

@@ -113,7 +113,7 @@ namespace sw
         [[nodiscard]] static bool bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
                                             float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip );
         /**
-         * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.json`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
+         * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.xml`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
          *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.
          */
         [[nodiscard]] static bool bakeClipFile( string_view profilePath, string_view sourceClipPath, string_view outClipPath );

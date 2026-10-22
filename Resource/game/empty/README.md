@@ -73,7 +73,7 @@ build/Ninja-Debug/Bin/App.exe -dx12 "-gv_firstScene=game/empty/maps/twod.scene.x
 
 ## 합성 리그
 
-`rigs_raw/` 는 애니메이션 비용 측정용 합성 리그(`.glb` + 후처리 리그 `.rig.json`)의 대표 네 개입니다. 씬은 쓰지 않고, 임포트 테스트(`SyntheticRigImportTest`)와
+`rigs_raw/` 는 애니메이션 비용 측정용 합성 리그(`.glb` + 후처리 리그 `.rig.xml`)의 대표 네 개입니다. 씬은 쓰지 않고, 임포트 테스트(`SyntheticRigImportTest`)와
 벤치(`SyntheticRigBenchTest`)가 임포터로 그 자리에서 읽습니다. `models_raw/` 가 아니라서 임포트 스탬프가 없고, 쿠킹에서 빠집니다.
 
 ```powershell

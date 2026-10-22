@@ -479,22 +479,22 @@ SW_TEST_CASE( UIAccessibilityTest, DialogueRunnerPostsSubtitlesWhenEnabled )
 {
     UIAccessibilityFixture fixture;
     SW_ASSERT_TRUE( fixture._bReady );
-    const sw::string            graph = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Dialogue", "_speaker": "NPC", "_text": "Hello traveler!" },
-			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Safe travels." },
-			{ "_id": 4, "_type": "End" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 202, "_toPin": 301 },
-			{ "_id": 3, "_fromPin": 302, "_toPin": 401 }
-		]
-	})";
+    const sw::string            graph = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Dialogue" _speaker="NPC" _text="Hello traveler!" />
+		<DialogueAssetNode _id="3" _type="Dialogue" _speaker="NPC" _text="Safe travels." />
+		<DialogueAssetNode _id="4" _type="End" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="202" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="302" _toPin="401" />
+	</_listLink>
+</DialogueGraphAsset>)";
     sw::DialogueRunnerComponent runner;
     runner.setUISystem( &fixture._ui );
-    SW_ASSERT_TRUE( runner.loadGraphJSON( graph ) );
+    SW_ASSERT_TRUE( runner.loadGraphXML( graph ) );
     SW_EXPECT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( 0u, fixture._ui.getSubtitles().getQueuedLineCount() ); // 기본은 끔
 

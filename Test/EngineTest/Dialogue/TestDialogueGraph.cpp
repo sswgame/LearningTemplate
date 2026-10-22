@@ -172,20 +172,20 @@ SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
         node._type = static_cast<DialogueAssetNodeType>( typeIndex );
         source._listNode.push_back( node );
     }
-    const string       written = source.toJSON();
+    const string       written = source.toXML();
     DialogueGraphAsset reread;
-    SW_ASSERT_TRUE( reread.parseJSON( written ) );
+    SW_ASSERT_TRUE( reread.parseXML( written ) );
     SW_ASSERT_EQUAL( static_cast<uint32>( source._listNode.size() ), static_cast<uint32>( reread._listNode.size() ) );
     for ( size_t nodeIndex = 0; nodeIndex < source._listNode.size(); ++nodeIndex )
     {
         SW_EXPECT_TRUE( reread._listNode[nodeIndex]._type == source._listNode[nodeIndex]._type );
     }
     SW_EXPECT_TRUE( written.find( "\"Choice\"" ) != string::npos ); // 종류는 열거자 이름으로 적힌다
-    SW_EXPECT_STREQ( written.c_str(), reread.toJSON().c_str() );    // 다시 읽어 쓰면 바이트까지 같다
+    SW_EXPECT_STREQ( written.c_str(), reread.toXML().c_str() );     // 다시 읽어 쓰면 바이트까지 같다
 
     test::ScopedDefensiveTestLog expected( "an unknown node type name is a load error" );
     DialogueGraphAsset           unknown;
-    SW_EXPECT_FALSE( unknown.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "NoSuchType" } ] })" ) );
+    SW_EXPECT_FALSE( unknown.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="NoSuchType" /></_listNode></DialogueGraphAsset>)" ) );
     SW_EXPECT_TRUE( unknown._listNode.empty() );
 }
 
@@ -198,10 +198,10 @@ SW_TEST_CASE( DialogueGraphTest, MissingRequiredOrDuplicateIDIsRejected )
 {
     test::ScopedDefensiveTestLog expected( "malformed dialogue graphs are rejected" );
     DialogueGraphAsset           asset;
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_type": "Start" } ] })" ) );
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "Start" } ], "_listLink": [ { "_fromPin": 102, "_toPin": 201 } ] })" ) );
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "_listNode": [ { "_id": 1, "_type": "Start" }, { "_id": 1, "_type": "End" } ] })" ) );
-    SW_EXPECT_FALSE( asset.parseJSON( R"({ "nodes": [ { "id": 1, "type": "Start" } ], "links": [] })" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode><_listLink><DialogueAssetLink _fromPin="102" _toPin="201" /></_listLink></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="1" _type="End" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><nodes><node id="1" type="Start" /></nodes><links /></DialogueGraphAsset>)" ) );
     SW_EXPECT_TRUE( asset._listNode.empty() );
     SW_EXPECT_TRUE( asset._listLink.empty() );
 }
@@ -228,22 +228,22 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
 }
 
 /**
- * @brief [DialogueGraphTest] JSON 왕복과 loadFromFile 이 같은 결과를 내는지 검증
+ * @brief [DialogueGraphTest] XML 왕복과 loadFromFile 이 같은 결과를 내는지 검증
  * @details 두 경로는 같은 읽기(`readText`)로 모인다. 두 경로의 결과가 같음을 못박아 둔다.
  */
-SW_TEST_CASE( DialogueGraphTest, JSONRoundTripAndLoadFromFileAgree )
+SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
 {
     const DialogueGraphAsset source = makeChoiceGraph();
 
     DialogueGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
+    SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeType::Choice );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
     SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeID( 2, 0 ) );
 
-    const string filePath = test::makeTempPath( "test_dialogue_graph.json" );
+    const string filePath = test::makeTempPath( "test_dialogue_graph.dialogue.xml" );
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
     DialogueGraphAsset loaded;
@@ -387,20 +387,20 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
  */
 SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
 {
-    const utf8* pJSON = R"({
-		"_listNode": [
-			{ "_id": 1, "_type": "Start" },
-			{ "_id": 2, "_type": "Action", "_actionCommand": "open_curtain" },
-			{ "_id": 3, "_type": "Dialogue", "_speaker": "NPC", "_text": "Welcome" }
-		],
-		"_listLink": [
-			{ "_id": 1, "_fromPin": 102, "_toPin": 201 },
-			{ "_id": 2, "_fromPin": 202, "_toPin": 301 }
-		]
-	})";
+    const utf8* pJSON = R"(<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" />
+		<DialogueAssetNode _id="2" _type="Action" _actionCommand="open_curtain" />
+		<DialogueAssetNode _id="3" _type="Dialogue" _speaker="NPC" _text="Welcome" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="202" _toPin="301" />
+	</_listLink>
+</DialogueGraphAsset>)";
 
     DialogueRunnerComponent runner;
-    SW_EXPECT_TRUE( runner.loadGraphJSON( pJSON ) );
+    SW_EXPECT_TRUE( runner.loadGraphXML( pJSON ) );
     string eventCommand;
     runner.setOnDialogueEvent( [&eventCommand]( const string& command )
     { eventCommand = command; } );
@@ -441,7 +441,7 @@ SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
  */
 SW_TEST_CASE( DialogueGraphTest, RunnerReopensItsGraphAfterStateLoad )
 {
-    const string filePathDisk = test::makeTempPath( "test_state_dialogue_graph.json" );
+    const string filePathDisk = test::makeTempPath( "test_state_dialogue_graph.dialogue.xml" );
     const string filePath     = test::makeTempResourceID( filePathDisk );
     SW_ASSERT_TRUE( makeChoiceGraph().saveToFile( filePathDisk ) );
 

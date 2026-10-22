@@ -644,13 +644,13 @@ namespace sw::editor
 
     string SequencerPanel::captureDocumentText() const
     {
-        return captureAsset().toJSON();
+        return captureAsset().toXML();
     }
 
     void SequencerPanel::applyDocumentText( string_view text )
     {
         SequenceAsset restored;
-        if ( text.empty() == false && restored.parseJSON( text ) == false )
+        if ( text.empty() == false && restored.parseXML( text ) == false )
             SW_LOG_WARNING( "Sequence undo snapshot could not be read - showing an empty sequence" );
         applyAsset( restored );
     }

@@ -645,6 +645,10 @@
   에디터 되돌리기 · 복사 · 복제 · "시뮬레이션 변경 남기기" 는 Authoring 이다(사용자가 고치는 대상은 저작 데이터 — 언리얼 복사도 `TextExportTransient` 를 뺀다). 게임 상태 봉투는 핫 리로드(Snapshot)와 세이브 파일(SaveGame)이 함께 쓰므로 부르는 쪽이 목적을 넘긴다.
   컴포넌트 필드에는 `RuntimeState` 만 붙이고 `SaveGame` 을 함께 붙이지 않는다 — 붙이면 그 타입이 옵트인 세이브가 되어, 씬 오브젝트 전체를 싣는 세이브에서 나머지 필드가 빠진다. 런타임 값이 저작 값에서 시작하면 "남은 수" 가 아니라 "쓴 수" 를 둔다(`GatheringNodeComponent::_usesTaken`) — 저작 값이 바뀌어도 첫 플레이가 따른다.
 - **녹화 시나리오는 `saved` 도메인의 id 로 다시 돌린다(2026-10-22, DiskPathVsResourceId).** 시나리오 실행은 작업 폴더의 `Saved` 를 디스크 도메인 `saved` 로 붙이고(`ScenarioRecorder::mountSavedDomain`), 녹화는 디스크 경로로 쓰고 `makeReplayID` 의 id 로 읽는다. 시나리오 목록에 디스크 입구를 두는 안은 입구가 다시 둘로 갈라져 기각했다 — Godot 의 `res://` · `user://` 가르기와 같은 자리다.
+- **에셋 파일 형식은 XML 이나 바이너리이고, JSON 은 도구 입력 · 설정 · 사용자 상태다**(2026-10-22, 구조 단순화 TX5~TX7). 스켈레톤 · 리그 · 애니메이션 그래프 · 본 마스크 · 스프라이트 클립 · 얼굴 · 비즘 · 대화 · 시퀀스 · 지역화 문서(`.strings` · `.translation` · `.locproject` · `.cultures` · `.tm`) · VRM 아바타 · SQL 마이그레이션 목록 · 애니메이션 조정 표 세 개를 XML 로 옮겼다.
+  로더는 리플렉션 구조체(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 필수 칸을 중첩까지 검사)이거나 `XMLNode` 로 손으로 읽는 것(`XMLReadUtil::hasOnlyKnownNames` · `readFloatList`)이고, 옛 JSON 리더는 두지 않았다. 임포터는 XML 을 쓰며 커밋된 결과를 `App --import-models` 로 다시 만들었다.
+  형식은 `AssetTypeRegistry::isSuffixFormatAllowed` 로 굳혔다 — `.json` 접미사는 쿠킹 입력으로만 등록된다. **변환한 데이터는 엔진이 다시 쓴 결과와 바이트가 같아야 한다**: 속성값의 `>` 는 이스케이프하지 않고(본문 글은 한다), 120 바이트(글자 수가 아니다)를 넘는 여는 태그는 속성별로 접는다. 이 규칙을 놓치면 `--gather-text` · 재임포트가 파일을 다시 쓰고 `--check-text` 가 낡았다고 한다.
+  재임포트는 `skeleton_minion` 의 메시 · 클립도 다시 만들었다(저장소의 옛 산출물이 지금 임포터와 부동소수 끝자리가 달랐다 — 사원수 두 값의 마지막 한 자리). 다른 모델은 스켈레톤 글만 바뀌었다.
 
 ### 5-5. 그래픽스와 RHI
 
@@ -1169,6 +1173,8 @@
   언리얼 `FGlobalTabmanager::TryInvokeTab( TabId )` 와 같다. 제목 글로 받던 때 오타 · 제목 변경이 요청을 말없이 버렸다. 제목은 셸이 찾은 인스턴스에서 읽는다.
 - **결과를 로그로 늦게 내는 에디터 백그라운드 작업은 자동화 시나리오 시계를 잡는다(`SW_AUTOMATION_CLOCK_HOLDER`, 첫 사용자는 저장 검증)**(2026-10-20).
   언리얼 자동화가 셰이더 · 에셋 컴파일을 다 기다린 뒤 다음 잠복 명령을 도는 것과 같다. 결과를 버리거나 취소하면 진짜 검증 오류도 사라지므로 택하지 않았다. 검증 한 번(쉬는 기계 약 2 초)만큼 체인이 길어진다.
+- **에디터의 에셋 종류 판정은 엔진 레지스트리의 이름 · 접미사를 읽고, 열거 `EditorAssetType` 은 에디터 분류로 남긴다**(2026-10-22, 구조 단순화 AT6). 엔진 종류의 접미사 · 쿠킹 역할을 에디터 표에 다시 적던 사본을 지웠다(행은 엔진 타입의 `kAssetType._name` 을 들고 첫 사용 때 `AssetTypeRegistry::findType` 으로 푼다 — 에디터 DLL 에서 엔진 `kAssetType` 의 주소는 상수식이 아니다).
+  레지스트리에 없는 종류는 목록(`kArrUnlistedType`)에 이유와 함께 적고, 엔진에 등록된 모든 종류가 에디터 행이거나 그 목록에 있는지는 `EditorAssetTypeTest.EveryEngineAssetTypeIsAccountedFor` 가 본다. 열거를 레이블 핸들로 바꾸는 일(35 파일 205 곳)은 사본 제거와 무관한 모양 변경이라 하지 않았다.
 
 ### 5-12. 기능 대기열 결정 (2026-10-17)
 

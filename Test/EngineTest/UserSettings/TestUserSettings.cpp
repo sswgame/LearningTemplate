@@ -813,9 +813,9 @@ SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
 SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSetting )
 {
     const sw::string folder      = test::makeTempDirectory( "settings_pseudo" );
-    const sw::string projectPath = sw::FileUtil::joinPath( folder, "p.locproject.json" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( projectPath, R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ] })" ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "p.strings.json" ), R"({ "culture": "en", "entries": { "MENU_START": { "source": "Start" } } })" ) );
+    const sw::string projectPath = sw::FileUtil::joinPath( folder, "p.locproject.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( projectPath, R"(<LocalizationProject name="p" sourceCulture="en"><stringTables><item>p.strings.xml</item></stringTables></LocalizationProject>)" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "p.strings.xml" ), R"(<SourceStringTable culture="en"><entries><entry key="MENU_START" source="Start" /></entries></SourceStringTable>)" ) );
 
     sw::LocalizationManager localization;
     SW_ASSERT_TRUE( localization.loadCultureTable( ::test::getEngineDefaultAssets()._cultureTable.c_str() ) );

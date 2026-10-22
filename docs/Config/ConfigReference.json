@@ -1256,7 +1256,7 @@
   },
   {
    "page": "LipSyncSettings",
-   "path": "Resource/engine/animation/lipsync.json",
+   "path": "Resource/engine/animation/lipsync.xml",
    "layer": "엔진 기본값",
    "type": "LipSyncSettings",
    "types": [
@@ -1478,7 +1478,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음"
+       "description": "로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음"
       },
       {
        "name": "_defaultLanguage",
@@ -1637,7 +1637,7 @@
   },
   {
    "page": "FacialRig",
-   "path": "Resource/game/*/models/*.facial.json",
+   "path": "Resource/game/*/models/*.facial.xml",
    "layer": "팩 데이터",
    "type": "FacialRig",
    "types": [
@@ -4567,7 +4567,7 @@
     "import-lipsync"
    ],
    "value": "플래그(`-이름`)",
-   "description": "음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스)."
+   "description": "음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.xml`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스)."
   },
   {
    "name": "BAKE_RETARGET",
@@ -4575,7 +4575,7 @@
     "bake-retarget"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "리타깃 베이크. 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스)."
+   "description": "리타깃 베이크. 값은 `<프로필 *.retarget.xml>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스)."
   },
   {
    "name": "RENDER_PORTRAITS",

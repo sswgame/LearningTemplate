@@ -101,13 +101,13 @@ SW_TEST_CASE( CultureTableTest, BadDataIsALoadError )
 {
     sw::CultureTable table;
     sw::string       error;
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "english", "decimalSep": "." } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx" pluralRule="english" decimalSep="." /></cultures></CultureTable>)", "t", &error ) );
     SW_EXPECT_TRUE( error.find( "decimalSep" ) != sw::string::npos );
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "klingon" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "parent": "yy" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "parent": "zz" }, "zz": { "parent": "xx" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx-YY": { "pluralRule": "none" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "none", "monthNames": [ "a" ] } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx" pluralRule="klingon" /></cultures></CultureTable>)", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx" parent="yy" /></cultures></CultureTable>)", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx" parent="zz" /><culture code="zz" parent="xx" /></cultures></CultureTable>)", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx-YY" pluralRule="none" /></cultures></CultureTable>)", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<CultureTable><cultures><culture code="xx" pluralRule="none"><monthNames><item>a</item></monthNames></culture></cultures></CultureTable>)", "t", &error ) );
     SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
 }
 

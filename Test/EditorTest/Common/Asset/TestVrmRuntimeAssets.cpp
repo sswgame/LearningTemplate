@@ -69,9 +69,9 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, ExpressionsBecomeFacialRig )
     SW_ASSERT_TRUE( sw::editor::VrmRuntimeAssets::hasFacialRig( def ) );
 
     sw::vector<sw::string> listIgnored;
-    const sw::string       text = sw::editor::VrmRuntimeAssets::makeFacialRigJSON( def, &listIgnored );
+    const sw::string       text = sw::editor::VrmRuntimeAssets::makeFacialRigXML( def, &listIgnored );
     sw::FacialRig          rig;
-    SW_ASSERT_TRUE_MSG( rig.parseJSON( text, "vrm.facial.json" ), text.c_str() );
+    SW_ASSERT_TRUE_MSG( rig.parseXML( text, "vrm.facial.xml" ), text.c_str() );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( rig.getExpressions().size() ) );
     SW_EXPECT_TRUE( rig.findExpressionIndex( sw::hashed_string( "happy" ) ) >= 0 );
     SW_EXPECT_TRUE( rig.findVisemeIndex( sw::hashed_string( "AA" ) ) >= 0 );
@@ -105,9 +105,9 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringsBecomeSpringChainRig )
     SW_ASSERT_TRUE( sw::editor::VrmRuntimeAssets::hasSpringRig( def, skeleton ) );
 
     sw::vector<sw::string> listIgnored;
-    const sw::string       text = sw::editor::VrmRuntimeAssets::makeSpringRigJSON( def, skeleton, &listIgnored );
+    const sw::string       text = sw::editor::VrmRuntimeAssets::makeSpringRigXML( def, skeleton, &listIgnored );
     sw::RigAsset           rig;
-    SW_ASSERT_TRUE_MSG( rig.parseJSON( text, "vrm.rig.json" ), text.c_str() );
+    SW_ASSERT_TRUE_MSG( rig.parseXML( text, "vrm.rig.xml" ), text.c_str() );
     // hair0 → hair1 → hair2 한 사슬, braid0 는 부모 hair0 에서 시작하는 두 번째 사슬.
     SW_EXPECT_EQUAL( size_t( 2 ), rig.getNodes().size() );
     SW_EXPECT_TRUE( listIgnored.empty() );
@@ -115,7 +115,7 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringsBecomeSpringChainRig )
     // 스켈레톤에 없는 관절은 넣지 않고 무시 목록에 남는다.
     def._listSpring[0]._listJoint.push_back( Internal::makeJoint( "missing" ) );
     listIgnored.clear();
-    (void)sw::editor::VrmRuntimeAssets::makeSpringRigJSON( def, skeleton, &listIgnored );
+    (void)sw::editor::VrmRuntimeAssets::makeSpringRigXML( def, skeleton, &listIgnored );
     SW_EXPECT_EQUAL( size_t( 1 ), listIgnored.size() );
 }
 
@@ -124,11 +124,24 @@ SW_TEST_CASE( VrmRuntimeAssetsTest, SpringsBecomeSpringChainRig )
  */
 SW_TEST_CASE( VrmRuntimeAssetsTest, SpringChainJointsMustMatchBones )
 {
-    const utf8*  pGood = R"({ "nodes": [ { "type": "SpringChain", "name": "A", "bones": ["b0", "b1", "b2"], "axis_pull": 1.0,
-        "joints": [ { "axis_pull": 1.0, "damping": 0.4 }, { "axis_pull": 0.5, "radius": 0.02 } ] } ] })";
-    const utf8*  pBad  = R"({ "nodes": [ { "type": "SpringChain", "name": "A", "bones": ["b0", "b1", "b2"], "joints": [ { "axis_pull": 1.0 } ] } ] })";
+    const utf8*  pGood = R"(<RigAsset>
+	<nodes>
+		<item type="SpringChain" name="A" axis_pull="1.0">
+			<bones>
+				<item>b0</item>
+				<item>b1</item>
+				<item>b2</item>
+			</bones>
+			<joints>
+				<item axis_pull="1.0" damping="0.4" />
+				<item axis_pull="0.5" radius="0.02" />
+			</joints>
+		</item>
+	</nodes>
+</RigAsset>)";
+    const utf8*  pBad  = R"(<RigAsset><nodes><item type="SpringChain" name="A"><bones><item>b0</item><item>b1</item><item>b2</item></bones><joints><item axis_pull="1.0" /></joints></item></nodes></RigAsset>)";
     sw::RigAsset good;
-    SW_EXPECT_TRUE( good.parseJSON( pGood, "good.rig.json" ) );
+    SW_EXPECT_TRUE( good.parseXML( pGood, "good.rig.xml" ) );
     sw::RigAsset bad;
-    SW_EXPECT_FALSE( bad.parseJSON( pBad, "bad.rig.json" ) );
+    SW_EXPECT_FALSE( bad.parseXML( pBad, "bad.rig.xml" ) );
 }

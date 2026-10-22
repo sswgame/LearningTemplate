@@ -61,7 +61,7 @@ namespace
         static shared_ptr<const RigAsset> parseRig( string_view json )
         {
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->parseJSON( json, "test.rig.json" ) == false )
+            if ( asset->parseXML( json, "test.rig.xml" ) == false )
                 return nullptr;
             return asset;
         }
@@ -123,9 +123,16 @@ namespace
 SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
 {
     const Skeleton             skeleton = test::makeChainSkeleton( 3 );
-    const string_view          valid    = R"({ "targets": [ { "name": "Goal", "object": "Ball" }, { "name": "Tip", "bone": "bone2", "translation": [0, 0.5, 0] } ],
-        "nodes": [ { "type": "TwoBoneIK", "name": "Arm", "root": "bone0", "mid": "bone1", "end": "bone2", "target": "Goal" },
-                   { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal", "max_degrees": 45 } ] })";
+    const string_view          valid    = R"(<RigAsset>
+	<targets>
+		<item name="Goal" object="Ball" />
+		<item name="Tip" bone="bone2" translation="0,0.5,0" />
+	</targets>
+	<nodes>
+		<item type="TwoBoneIK" name="Arm" root="bone0" mid="bone1" end="bone2" target="Goal" />
+		<item type="Aim" name="Look" bone="bone2" target="Goal" max_degrees="45" />
+	</nodes>
+</RigAsset>)";
     shared_ptr<const RigAsset> asset    = TestRigAssetInternal::parseRig( valid );
     SW_ASSERT_NOT_NULL( asset );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( asset->getNodes().size() ) );
@@ -148,13 +155,13 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
 
     test::ScopedDefensiveTestLog expected( "malformed rig data is rejected with an error" );
     const string_view            listBad[] = {
-        R"({ "nodes": [ { "type": "NoSuchNode", "name": "X" } ] })",
-        R"({ "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T", "colour": 1 } ] })",
-        R"({ "targets": [ { "name": "T", "bone": "bone1", "object": "Ball" } ], "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" } ] })",
-        R"({ "targets": [ { "name": "T", "bone": "bone1" }, { "name": "T", "bone": "bone2" } ], "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" } ] })",
-        R"({ "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" }, { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" } ] })",
-        R"({ "nodes": [ { "type": "CcdChain", "name": "X", "bones": ["bone0", "bone1"], "target": "T", "limits": [ { "bone": "bone0", "type": "Ball" } ] } ] })",
-        R"({ "nodes": [], "extra": true })",
+        R"(<RigAsset><nodes><item type="NoSuchNode" name="X" /></nodes></RigAsset>)",
+        R"(<RigAsset><nodes><item type="Aim" name="X" bone="bone1" target="T" colour="1" /></nodes></RigAsset>)",
+        R"(<RigAsset><targets><item name="T" bone="bone1" object="Ball" /></targets><nodes><item type="Aim" name="X" bone="bone1" target="T" /></nodes></RigAsset>)",
+        R"(<RigAsset><targets><item name="T" bone="bone1" /><item name="T" bone="bone2" /></targets><nodes><item type="Aim" name="X" bone="bone1" target="T" /></nodes></RigAsset>)",
+        R"(<RigAsset><nodes><item type="Aim" name="X" bone="bone1" target="T" /><item type="Aim" name="X" bone="bone1" target="T" /></nodes></RigAsset>)",
+        R"(<RigAsset><nodes><item type="CcdChain" name="X" target="T"><bones><item>bone0</item><item>bone1</item></bones><limits><item bone="bone0" type="Ball" /></limits></item></nodes></RigAsset>)",
+        R"(<RigAsset extra="true"><nodes /></RigAsset>)",
     };
     for ( const string_view bad : listBad )
     {
@@ -163,10 +170,10 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
 
     // 읽히지만 묶이지 않는다 — 없는 대상 · 없는 본 · 사슬이 아닌 본 순서.
     const string_view listUnbindable[] = {
-        R"({ "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "Missing" } ] })",
-        R"({ "targets": [ { "name": "T", "bone": "nose" } ], "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" } ] })",
-        R"({ "targets": [ { "name": "T", "bone": "bone0" } ], "nodes": [ { "type": "FabrikChain", "name": "X", "bones": ["bone2", "bone0"], "target": "T" } ] })",
-        R"({ "targets": [ { "name": "T", "socket": "Grip" } ], "nodes": [ { "type": "Aim", "name": "X", "bone": "bone1", "target": "T" } ] })",
+        R"(<RigAsset><nodes><item type="Aim" name="X" bone="bone1" target="Missing" /></nodes></RigAsset>)",
+        R"(<RigAsset><targets><item name="T" bone="nose" /></targets><nodes><item type="Aim" name="X" bone="bone1" target="T" /></nodes></RigAsset>)",
+        R"(<RigAsset><targets><item name="T" bone="bone0" /></targets><nodes><item type="FabrikChain" name="X" target="T"><bones><item>bone2</item><item>bone0</item></bones></item></nodes></RigAsset>)",
+        R"(<RigAsset><targets><item name="T" socket="Grip" /></targets><nodes><item type="Aim" name="X" bone="bone1" target="T" /></nodes></RigAsset>)",
     };
     for ( const string_view unbindable : listUnbindable )
     {
@@ -184,12 +191,26 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
 SW_TEST_CASE( RigAssetTest, NodeOrderChangesResult )
 {
     const Skeleton    skeleton      = test::makeChainSkeleton( 3 );
-    const string_view copyThenLimit = R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [
-        { "type": "Position", "name": "Copy", "bone": "bone2", "target": "A" },
-        { "type": "Distance", "name": "Limit", "bone": "bone2", "target": "B", "max": 0.5 } ] })";
-    const string_view limitThenCopy = R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [
-        { "type": "Distance", "name": "Limit", "bone": "bone2", "target": "B", "max": 0.5 },
-        { "type": "Position", "name": "Copy", "bone": "bone2", "target": "A" } ] })";
+    const string_view copyThenLimit = R"(<RigAsset>
+	<targets>
+		<item name="A" object="A" />
+		<item name="B" object="B" />
+	</targets>
+	<nodes>
+		<item type="Position" name="Copy" bone="bone2" target="A" />
+		<item type="Distance" name="Limit" bone="bone2" target="B" max="0.5" />
+	</nodes>
+</RigAsset>)";
+    const string_view limitThenCopy = R"(<RigAsset>
+	<targets>
+		<item name="A" object="A" />
+		<item name="B" object="B" />
+	</targets>
+	<nodes>
+		<item type="Distance" name="Limit" bone="bone2" target="B" max="0.5" />
+		<item type="Position" name="Copy" bone="bone2" target="A" />
+	</nodes>
+</RigAsset>)";
     const float3      pointA{ 3.0f, 0.0f, 0.0f };
     const float3      pointB{ 0.0f, 2.0f, 0.0f };
     float3            arrResult[2]{};
@@ -215,8 +236,14 @@ SW_TEST_CASE( RigAssetTest, NodeOrderChangesResult )
 SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const string_view json     = R"({ "targets": [ { "name": "A", "object": "A" } ], "nodes": [
-        { "type": "Position", "name": "Copy", "bone": "bone2", "target": "A", "weight_curve": "IK", "weight_slot": "Shot" } ] })";
+    const string_view json     = R"(<RigAsset>
+	<targets>
+		<item name="A" object="A" />
+	</targets>
+	<nodes>
+		<item type="Position" name="Copy" bone="bone2" target="A" weight_curve="IK" weight_slot="Shot" />
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     TestRigAssetInternal::TestCurveSource curve;
@@ -253,8 +280,20 @@ SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
 SW_TEST_CASE( RigAssetTest, ParentSwitchKeepsOffsetThenSettles )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const string_view json     = R"({ "targets": [ { "name": "Hand", "object": "Hand" }, { "name": "Back", "object": "Back" } ], "nodes": [
-        { "type": "ParentSwitch", "name": "Weapon", "bone": "bone2", "parents": ["Hand", "Back"], "settle_seconds": 0.5 } ] })";
+    const string_view json     = R"(<RigAsset>
+	<targets>
+		<item name="Hand" object="Hand" />
+		<item name="Back" object="Back" />
+	</targets>
+	<nodes>
+		<item type="ParentSwitch" name="Weapon" bone="bone2" settle_seconds="0.5">
+			<parents>
+				<item>Hand</item>
+				<item>Back</item>
+			</parents>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     const float3 hand{ 1.0f, 1.0f, 0.0f };
@@ -300,8 +339,15 @@ SW_TEST_CASE( RigAssetTest, TwistDistributionSpreadsForearmTwist )
         {   "wrist",  0, float3{ 0.0f, 0.25f, 0.0f }},
         {    "hand",  1, float3{ 0.0f, 0.08f, 0.0f }},
     } );
-    const string_view json     = R"({ "nodes": [ { "type": "TwistDistribution", "name": "Forearm", "source": "hand", "axis": [0, 1, 0],
-        "bones": [ { "bone": "wrist", "weight": 0.5 } ] } ] })";
+    const string_view json     = R"(<RigAsset>
+	<nodes>
+		<item type="TwistDistribution" name="Forearm" source="hand" axis="0,1,0">
+			<bones>
+				<item bone="wrist" weight="0.5" />
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     Pose pose;
@@ -328,10 +374,23 @@ SW_TEST_CASE( RigAssetTest, TwistDistributionSpreadsForearmTwist )
 SW_TEST_CASE( RigAssetTest, PoseDriverInterpolatesCorrectives )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const string_view json     = R"({ "nodes": [ { "type": "PoseDriver", "name": "Elbow", "driver": "bone1", "radius_degrees": 60, "poses": [
-        { "name": "Rest", "rotation": [0, 0, 0] },
-        { "name": "Bent", "rotation": [90, 0, 0], "morphs": [ { "morph": "ElbowBend", "weight": 1 } ],
-          "bones": [ { "bone": "bone2", "translation": [0, 0, 0.1] } ] } ] } ] })";
+    const string_view json     = R"(<RigAsset>
+	<nodes>
+		<item type="PoseDriver" name="Elbow" driver="bone1" radius_degrees="60">
+			<poses>
+				<item name="Rest" rotation="0,0,0" />
+				<item name="Bent" rotation="90,0,0">
+					<morphs>
+						<item morph="ElbowBend" weight="1" />
+					</morphs>
+					<bones>
+						<item bone="bone2" translation="0,0,0.1" />
+					</bones>
+				</item>
+			</poses>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
 
@@ -364,8 +423,16 @@ SW_TEST_CASE( RigAssetTest, PoseDriverInterpolatesCorrectives )
 SW_TEST_CASE( RigAssetTest, FootPlacementPlantsFeetOnSlope )
 {
     const Skeleton    skeleton = TestRigAssetInternal::makeLegs();
-    const string_view json     = R"({ "nodes": [ { "type": "FootPlacement", "name": "Feet", "pelvis": "hips", "interp_speed": 0, "max_align_degrees": 45,
-        "feet": [ { "root": "upperleg.l", "mid": "lowerleg.l", "end": "foot.l" }, { "root": "upperleg.r", "mid": "lowerleg.r", "end": "foot.r" } ] } ] })";
+    const string_view json     = R"(<RigAsset>
+	<nodes>
+		<item type="FootPlacement" name="Feet" pelvis="hips" interp_speed="0" max_align_degrees="45">
+			<feet>
+				<item root="upperleg.l" mid="lowerleg.l" end="foot.l" />
+				<item root="upperleg.r" mid="lowerleg.r" end="foot.r" />
+			</feet>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     TestRigAssetInternal::SlopeGround ground;
@@ -411,8 +478,16 @@ SW_TEST_CASE( RigAssetTest, StrideWarpingStretchesStrideAlongMoveDirection )
     SW_EXPECT_NEAR_EQUAL( 1.0f, LocomotionSpeedUtil::computeStrideScale( 3.0f, 0.0f, 2.0f ), 1e-6f );
 
     const Skeleton    skeleton = TestRigAssetInternal::makeLegs();
-    const string_view json     = R"({ "nodes": [ { "type": "StrideWarping", "name": "Stride", "pelvis": "hips", "min_scale": 0.5, "max_scale": 1.5, "max_pelvis_drop": 0.3,
-        "feet": [ { "root": "upperleg.l", "mid": "lowerleg.l", "end": "foot.l" }, { "root": "upperleg.r", "mid": "lowerleg.r", "end": "foot.r" } ] } ] })";
+    const string_view json     = R"(<RigAsset>
+	<nodes>
+		<item type="StrideWarping" name="Stride" pelvis="hips" min_scale="0.5" max_scale="1.5" max_pelvis_drop="0.3">
+			<feet>
+				<item root="upperleg.l" mid="lowerleg.l" end="foot.l" />
+				<item root="upperleg.r" mid="lowerleg.r" end="foot.r" />
+			</feet>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     SW_EXPECT_FALSE( instance.setNodeControl( hashed_string( "Stride" ), hashed_string( "unknown" ), 1.0f ) );
@@ -466,9 +541,26 @@ SW_TEST_CASE( RigAssetTest, StrideWarpingStretchesStrideAlongMoveDirection )
 SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 4 );
-    const string_view json     = R"({ "planar": true, "targets": [ { "name": "Goal", "object": "Goal" } ], "nodes": [
-        { "type": "CcdChain", "name": "Arm", "bones": ["bone0", "bone1", "bone2"], "target": "Goal", "iterations": 32 },
-        { "type": "SpringChain", "name": "Tail", "bones": ["bone2", "bone3"], "gravity": [0, -9.8, 4], "stiffness": 0 } ] })";
+    const string_view json     = R"(<RigAsset planar="true">
+	<targets>
+		<item name="Goal" object="Goal" />
+	</targets>
+	<nodes>
+		<item type="CcdChain" name="Arm" target="Goal" iterations="32">
+			<bones>
+				<item>bone0</item>
+				<item>bone1</item>
+				<item>bone2</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="Tail" gravity="0,-9.8,4" stiffness="0">
+			<bones>
+				<item>bone2</item>
+				<item>bone3</item>
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     SW_EXPECT_TRUE( instance.getSolveSpace()._bPlanar == SW_TRUE );
@@ -495,8 +587,16 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
 SW_TEST_CASE( RigAssetTest, MinScreenSizeTurnsNodeOffWhenSmallOnScreen )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const string_view json     = R"({ "nodes": [
-        { "type": "SpringChain", "name": "Tail", "bones": ["bone1", "bone2"], "gravity": [4, 0, 0], "stiffness": 0, "min_screen_size": 0.2 } ] })";
+    const string_view json     = R"(<RigAsset>
+	<nodes>
+		<item type="SpringChain" name="Tail" gravity="4,0,0" stiffness="0" min_screen_size="0.2">
+			<bones>
+				<item>bone1</item>
+				<item>bone2</item>
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
 
@@ -529,7 +629,7 @@ SW_TEST_CASE( RigAssetTest, MinScreenSizeTurnsNodeOffWhenSmallOnScreen )
 
     test::ScopedDefensiveTestLog expected( "negative min_screen_size is rejected" );
     RigAsset                     negative;
-    SW_EXPECT_FALSE( negative.parseJSON( R"({ "nodes": [ { "type": "SpringChain", "name": "Tail", "bones": ["bone1", "bone2"], "min_screen_size": -1 } ] })", "test" ) );
+    SW_EXPECT_FALSE( negative.parseXML( R"(<RigAsset><nodes><item type="SpringChain" name="Tail" min_screen_size="-1"><bones><item>bone1</item><item>bone2</item></bones></item></nodes></RigAsset>)", "test" ) );
 }
 
 /**
@@ -538,7 +638,7 @@ SW_TEST_CASE( RigAssetTest, MinScreenSizeTurnsNodeOffWhenSmallOnScreen )
 SW_TEST_CASE( RigAssetTest, ScaleBoneCollapsesDescendantsBySlot )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const string_view json     = R"({ "nodes": [ { "type": "ScaleBone", "name": "HideHead", "bone": "bone1", "weight_slot": "FirstPerson" } ] })";
+    const string_view json     = R"(<RigAsset><nodes><item type="ScaleBone" name="HideHead" bone="bone1" weight_slot="FirstPerson" /></nodes></RigAsset>)";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
 
@@ -556,20 +656,20 @@ SW_TEST_CASE( RigAssetTest, ScaleBoneCollapsesDescendantsBySlot )
 
     test::ScopedDefensiveTestLog expected( "negative bone scale is rejected" );
     RigAsset                     negative;
-    SW_EXPECT_FALSE( negative.parseJSON( R"({ "nodes": [ { "type": "ScaleBone", "name": "A", "bone": "bone1", "scale": [1, -1, 1] } ] })", "test" ) );
+    SW_EXPECT_FALSE( negative.parseXML( R"(<RigAsset><nodes><item type="ScaleBone" name="A" bone="bone1" scale="1,-1,1" /></nodes></RigAsset>)", "test" ) );
 }
 
 /**
- * @brief [RigAssetTest] 데모 리그 비용 — 기사(`knight.rig.json`, 41 본: 발 디딤 · 시선 · 왼손 IK · 팔뚝 비틀림)와 망토(스프링 사슬)를 한 번 평가하는 시간을 측정한다
+ * @brief [RigAssetTest] 데모 리그 비용 — 기사(`knight.rig.xml`, 41 본: 발 디딤 · 시선 · 왼손 IK · 팔뚝 비틀림)와 망토(스프링 사슬)를 한 번 평가하는 시간을 측정한다
  * @details 숫자를 남기는 테스트다(Release 로 돌려 읽는다). 단언은 넉넉한 상한 하나 — 회귀가 몇 배로 커졌을 때만 걸린다.
  */
 SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
-    SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" ) );
+    SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" ) );
     shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-    SW_ASSERT_TRUE( asset->loadFromResource( "game/shooter3d/rigs/knight.rig.json" ) );
+    SW_ASSERT_TRUE( asset->loadFromResource( "game/shooter3d/rigs/knight.rig.xml" ) );
     RigInstance instance;
     SW_ASSERT_TRUE( instance.initialize( asset, knight, nullptr, "knight" ) );
     instance.setExternalTarget( static_cast<uint32>( instance.findTargetIndex( "LookTarget" ) ), TestRigAssetInternal::makeTargetAt( float3{ 0.5f, 1.4f, 1.2f } ) );
@@ -606,9 +706,9 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 
     // 망토 리그(뿌리 고정 + 스프링 사슬 4 본 · 캡슐 하나) — 프레임 시간 1/60 이라 스텝 하나씩.
     Skeleton cape;
-    SW_ASSERT_TRUE( cape.loadFromResource( "game/shooter3d/rigs/knight_cape.skeleton.json" ) );
+    SW_ASSERT_TRUE( cape.loadFromResource( "game/shooter3d/rigs/knight_cape.skeleton.xml" ) );
     shared_ptr<RigAsset> capeAsset = make_shared<RigAsset>();
-    SW_ASSERT_TRUE( capeAsset->loadFromResource( "game/shooter3d/rigs/knight_cape.rig.json" ) );
+    SW_ASSERT_TRUE( capeAsset->loadFromResource( "game/shooter3d/rigs/knight_cape.rig.xml" ) );
     RigInstance capeInstance;
     SW_ASSERT_TRUE( capeInstance.initialize( capeAsset, cape, nullptr, "cape" ) );
     Pose capeReference;
@@ -635,14 +735,20 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
  */
 SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
 {
-    const string_view source = R"({ "targets": [ { "name": "Goal", "object": "Ball" } ],
-        "nodes": [ { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal", "max_degrees": 45 },
-                   { "type": "Aim", "name": "Head", "bone": "bone1", "target": "Goal", "weight": 0.5 } ] })";
+    const string_view source = R"(<RigAsset>
+	<targets>
+		<item name="Goal" object="Ball" />
+	</targets>
+	<nodes>
+		<item type="Aim" name="Look" bone="bone2" target="Goal" max_degrees="45" />
+		<item type="Aim" name="Head" bone="bone1" target="Goal" weight="0.5" />
+	</nodes>
+</RigAsset>)";
     string            rewritten;
     RigSaveParams     nodeSave;
     nodeSave._listNode.push_back( RigNodeSaveParams{ hashed_string( "Look" ), 0.25f, false } );
     nodeSave._listNode.push_back( RigNodeSaveParams{ hashed_string( "Head" ), 0.5f, true } );
-    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.json", nodeSave, rewritten ) );
+    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.xml", nodeSave, rewritten ) );
     shared_ptr<const RigAsset> asset = TestRigAssetInternal::parseRig( rewritten );
     SW_ASSERT_NOT_NULL( asset );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( asset->getNodes().size() ) );
@@ -650,16 +756,16 @@ SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
     SW_EXPECT_FALSE( asset->getNodes()[0]->isEnabled() );
     SW_EXPECT_TRUE( asset->getNodes()[1]->isEnabled() );
     SW_EXPECT_TRUE( rewritten.find( "max_degrees" ) != string::npos );
-    SW_EXPECT_TRUE( rewritten.find( "\"enabled\"" ) == rewritten.rfind( "\"enabled\"" ) ); // 끈 노드 하나에만
+    SW_EXPECT_TRUE( rewritten.find( " enabled=\"" ) == rewritten.rfind( " enabled=\"" ) ); // 끈 노드 하나에만
 
     test::ScopedDefensiveTestLog expected( "rewriting a rig refuses an unknown node and an out-of-range weight" );
     string                       unchanged = "keep";
     RigSaveParams                unknownNode;
     unknownNode._listNode.push_back( RigNodeSaveParams{ hashed_string( "Nobody" ), 1.0f, true } );
-    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", unknownNode, unchanged ) );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.xml", unknownNode, unchanged ) );
     RigSaveParams outOfRange;
     outOfRange._listNode.push_back( RigNodeSaveParams{ hashed_string( "Look" ), 2.0f, true } );
-    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", outOfRange, unchanged ) );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.xml", outOfRange, unchanged ) );
     SW_EXPECT_TRUE( unchanged == "keep" );
 }
 
@@ -669,8 +775,15 @@ SW_TEST_CASE( RigAssetTest, RewriteNodeSettingsKeepsOtherKeys )
  */
 SW_TEST_CASE( RigAssetTest, RewriteTargetOffsetRoundTrips )
 {
-    const string_view source = R"({ "targets": [ { "name": "Goal", "bone": "bone1" }, { "name": "Other", "object": "Ball", "translation": [1, 2, 3] } ],
-        "nodes": [ { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal" } ] })";
+    const string_view source = R"(<RigAsset>
+	<targets>
+		<item name="Goal" bone="bone1" />
+		<item name="Other" object="Ball" translation="1,2,3" />
+	</targets>
+	<nodes>
+		<item type="Aim" name="Look" bone="bone2" target="Goal" />
+	</nodes>
+</RigAsset>)";
     RigSaveParams     save;
     const quaternion  rotation = quaternion::makeFromYawPitchRoll( float3{ 0.1f, 0.4f, -0.2f } );
     save._listTarget.push_back( RigTargetSaveParams{
@@ -678,7 +791,7 @@ SW_TEST_CASE( RigAssetTest, RewriteTargetOffsetRoundTrips )
         rotation
     } );
     string rewritten;
-    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.json", save, rewritten ) );
+    SW_ASSERT_TRUE( RigAsset::rewriteSettings( source, "test.rig.xml", save, rewritten ) );
     shared_ptr<const RigAsset> asset = TestRigAssetInternal::parseRig( rewritten );
     SW_ASSERT_NOT_NULL( asset );
     const int32 goal = asset->findTargetIndex( hashed_string( "Goal" ) );
@@ -696,6 +809,6 @@ SW_TEST_CASE( RigAssetTest, RewriteTargetOffsetRoundTrips )
     string                       unchanged = "keep";
     RigSaveParams                unknownTarget;
     unknownTarget._listTarget.push_back( RigTargetSaveParams{ hashed_string( "Nobody" ), float3{}, quaternion{} } );
-    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.json", unknownTarget, unchanged ) );
+    SW_EXPECT_FALSE( RigAsset::rewriteSettings( source, "test.rig.xml", unknownTarget, unchanged ) );
     SW_EXPECT_TRUE( unchanged == "keep" );
 }

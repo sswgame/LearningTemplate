@@ -1,0 +1,15 @@
+<LocalizationProject name="editor" sourceCulture="en">
+	<cultures>
+		<item>ko</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+	</stagedCultures>
+	<stringTables>
+		<item>editor.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/Editor</item>
+	</codeRoots>
+	<assetRoots />
+</LocalizationProject>

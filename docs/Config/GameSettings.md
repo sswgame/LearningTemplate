@@ -28,7 +28,7 @@ XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뺀 것입
 | `_titleScene` | `DataPath` | — |  |  | 타이틀 씬. 없으면 처음 씬은 시작 맵이고 "타이틀로" 명령을 걸지 않는다 |
 | `_entranceScene` | `DataPath` | — |  |  | 타이틀 다음 씬. 없으면 시작 맵이다 |
 | `_defaultSavePath` | `DataPath` | — |  |  | 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`). 없으면 경로 없는 저장은 오류다 |
-| `_localizationProject` | `DataPath` | — |  |  | 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음 |
+| `_localizationProject` | `DataPath` | — |  |  | 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음 |
 | `_defaultLanguage` | `string` | `ko_kr` |  |  | 기본 활성 언어 |
 | `_fallbackLanguage` | `string` | `en_us` |  |  | 대체(Fallback) 언어 |
 | `_inputMap` | `DataPath` | — |  |  | 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다). 없으면 입력 맵을 바꾸지 않는다 |

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-애니메이션 비용 측정용 합성 리그(스킨드 glTF `.glb` + 후처리 리그 `.rig.json`)를 만듭니다.
+애니메이션 비용 측정용 합성 리그(스킨드 glTF `.glb` + 후처리 리그 `.rig.xml`)를 만듭니다.
 
 저장소의 캐릭터 스켈레톤은 관절이 수십 개라 스키닝 · 리그 노드 · 군중 비용을 실제 규모(수백 관절)로 잴 수 없다. 눈에 보이는 품질은
 CC0 리소스가, 비용 측정은 이 도구가 만든 합성 데이터가 맡는다(라이선스 문제 없음, 본 수 · 위상 · 모프 · 클립을 통제한다).
@@ -10,7 +10,7 @@ CC0 리소스가, 비용 측정은 이 도구가 만든 합성 데이터가 맡�
   <out>.glb       스킨 · 관절 · 애니메이션(관절마다 회전 키, 메시에 모프 가중치) · 모프 타깃을 포함한 glTF 2.0 바이너리.
                   엔진 임포터(`ModelImporter::readModelAsset`)가 읽는 범위 안이다 — 스킨 하나, 삼각형 프리미티브 하나,
                   JOINTS_0(u16) · WEIGHTS_0(f32) 영향 4 개, 조밀한 모프 POSITION, 선형 보간 샘플러.
-  <out>.rig.json  같은 스켈레톤의 후처리 리그(`RigAsset`) — 다리마다 TwoBoneIK(대상은 루트 본 기준 발 위치), 꼬리 · 머리 ·
+  <out>.rig.xml   같은 스켈레톤의 후처리 리그(`RigAsset`) — 다리마다 TwoBoneIK(대상은 루트 본 기준 발 위치), 꼬리 · 머리 ·
                   손가락 · 뱀 몸통 사슬마다 SpringChain. 좌표는 엔진 공간(glTF 의 X 를 뒤집는다).
 
 위상(topology): 뿌리 본 하나에 사슬(척추 · 머리 · 팔 · 다리 · 손가락 · 꼬리)을 붙인다. 사슬마다 최소 본 수(다리는 IK 라 3)를 먼저
@@ -45,6 +45,7 @@ import pathlib
 import struct
 import sys
 from dataclasses import dataclass, field
+from xml.sax.saxutils import quoteattr
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.GltfBufferWriter import BufferWriter
@@ -508,13 +509,43 @@ def makeRigDocument(skeleton: Skeleton) -> dict:
     return {"targets": listTarget, "nodes": listNode}
 
 
+def makeRigXmlInternal(document: dict) -> str:
+    """`RigAsset` XML 글. 값은 속성(벡터는 `x,y,z`), 이름 목록은 칸 이름의 요소 안 `<item>` 이다(엔진 `RigXMLReader` 의 배치)."""
+    listLine: list[str] = ["<RigAsset>"]
+    for section in ("targets", "nodes"):
+        listLine.append(f"\t<{section}>")
+        for entry in document[section]:
+            listAttribute: list[str] = []
+            listChild: list[tuple[str, list[str]]] = []
+            for key, value in entry.items():
+                if isinstance(value, list) and all(isinstance(element, str) for element in value):
+                    listChild.append((key, value))
+                elif isinstance(value, list):
+                    listAttribute.append(f"{key}={quoteattr(','.join(repr(element) for element in value))}")
+                else:
+                    listAttribute.append(f"{key}={quoteattr(str(value))}")
+            attributeText = (" " + " ".join(listAttribute)) if listAttribute else ""
+            if not listChild:
+                listLine.append(f"\t\t<item{attributeText} />")
+                continue
+            listLine.append(f"\t\t<item{attributeText}>")
+            for key, listName in listChild:
+                listLine.append(f"\t\t\t<{key}>")
+                listLine.extend(f"\t\t\t\t<item>{name}</item>" for name in listName)
+                listLine.append(f"\t\t\t</{key}>")
+            listLine.append("\t\t</item>")
+        listLine.append(f"\t</{section}>")
+    listLine.append("</RigAsset>")
+    return "\n".join(listLine) + "\n"
+
+
 def makeRig(options: RigOptions) -> tuple[bytes, bytes]:
-    """(glb 바이트, rig.json 바이트). 같은 인자는 같은 바이트다."""
+    """(glb 바이트, rig.xml 바이트). 같은 인자는 같은 바이트다."""
     validateOptions(options)
     skeleton = buildSkeleton(options)
     mesh = buildMesh(skeleton, options)
     document, binary = makeGltfInternal(skeleton, mesh, options)
-    rigText = json.dumps(makeRigDocument(skeleton), indent=2, ensure_ascii=True) + "\n"
+    rigText = makeRigXmlInternal(makeRigDocument(skeleton))
     return encodeGlbInternal(document, binary), rigText.encode("ascii")
 
 
@@ -529,18 +560,18 @@ def makeRepresentativeOptions(topology: str, bones: int) -> RigOptions:
 
 
 def writeRig(outPath: pathlib.Path, options: RigOptions) -> tuple[int, int]:
-    """`<out>.glb` 와 옆 `<out>.rig.json` 을 쓰고 두 크기를 돌려줍니다."""
+    """`<out>.glb` 와 옆 `<out>.rig.xml` 을 쓰고 두 크기를 돌려줍니다."""
     if outPath.suffix != ".glb":
         raise ValueError(f"--out '{outPath}' must end with .glb")
     glbBytes, rigBytes = makeRig(options)
     outPath.parent.mkdir(parents=True, exist_ok=True)
     outPath.write_bytes(glbBytes)
-    outPath.with_suffix(".rig.json").write_bytes(rigBytes)
+    outPath.with_suffix(".rig.xml").write_bytes(rigBytes)
     return len(glbBytes), len(rigBytes)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="애니메이션 비용 측정용 합성 리그(.glb + .rig.json)를 결정적으로 만든다")
+    parser = argparse.ArgumentParser(description="애니메이션 비용 측정용 합성 리그(.glb + .rig.xml)를 결정적으로 만든다")
     parser.add_argument("--representatives", action="store_true", help=f"대표 네 개를 Resource/{kRepresentativeFolder}/ 에 쓴다(--out-dir 만 함께 받는다)")
     parser.add_argument("--out-dir", type=pathlib.Path, default=None, help="--representatives 의 출력 폴더(기본: Resource/" + kRepresentativeFolder + ")")
     parser.add_argument("--topology", choices=kTopologies, default=None)
@@ -550,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--clip-seconds", type=float, default=1.0, help=f"클립 길이(초, {kMinClipSeconds} ~ {kMaxClipSeconds}), 키는 {kSampleRate} Hz")
     parser.add_argument("--vertices-per-bone", type=int, default=kRingSides, help=f"본 하나의 정점 수({kRingSides} 의 배수) — 메시 정점 수를 정한다")
     parser.add_argument("--seed", type=int, default=1, help="씨앗(32 비트) — 회전 축 · 위상을 고른다")
-    parser.add_argument("--out", type=pathlib.Path, default=None, help="출력 .glb 경로(옆에 .rig.json)")
+    parser.add_argument("--out", type=pathlib.Path, default=None, help="출력 .glb 경로(옆에 .rig.xml)")
     args = parser.parse_args(argv)
 
     try:
@@ -561,13 +592,13 @@ def main(argv: list[str] | None = None) -> int:
             for topology, bones in kRepresentatives:
                 outPath = outDir / (makeRepresentativeName(topology, bones) + ".glb")
                 glbSize, rigSize = writeRig(outPath, makeRepresentativeOptions(topology, bones))
-                print(f"wrote {outPath} ({glbSize} bytes) + .rig.json ({rigSize} bytes)")
+                print(f"wrote {outPath} ({glbSize} bytes) + .rig.xml ({rigSize} bytes)")
             return 0
         if args.topology is None or args.bones is None or args.out is None:
             raise ValueError("--topology, --bones and --out are required (or --representatives)")
         options = RigOptions(args.topology, args.bones, args.morphs, args.clips, args.clip_seconds, args.vertices_per_bone, args.seed)
         glbSize, rigSize = writeRig(args.out, options)
-        print(f"wrote {args.out} ({glbSize} bytes) + .rig.json ({rigSize} bytes)")
+        print(f"wrote {args.out} ({glbSize} bytes) + .rig.xml ({rigSize} bytes)")
         return 0
     except ValueError as error:
         print(f"error: {error}", file=sys.stderr)

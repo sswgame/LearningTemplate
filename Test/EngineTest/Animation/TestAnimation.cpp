@@ -426,8 +426,8 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
 {
-    const string graphA = test::makeTempPath( "animator_a.animgraph.json" );
-    const string graphB = test::makeTempPath( "animator_b.animgraph.json" );
+    const string graphA = test::makeTempPath( "animator_a.animgraph.xml" );
+    const string graphB = test::makeTempPath( "animator_b.animgraph.xml" );
     SW_ASSERT_TRUE( writeNamedGraph( graphA, { "Idle", "Run" } ) );
     SW_ASSERT_TRUE( writeNamedGraph( graphB, { "Jump", "Fall" } ) );
 
@@ -461,22 +461,21 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
 SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string clipPath = test::makeTempPath( "hero.sprite.json" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
-  "_atlasPath": "engine/textures/test/quadrants.dds",
-  "_listFrame": [
-    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 50 },
-    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 300 },
-    { "_uvRect": "0.25,0.25,0.5,0.5", "_durationMs": 0 }
-  ],
-  "_listKey": [],
-  "_listAnimation": [
-    { "_name": "idle", "_firstFrame": 0, "_frameCount": 2, "_bLoop": 1 },
-    { "_name": "run", "_firstFrame": 2, "_frameCount": 3, "_bLoop": 0 }
-  ]
-})" ) );
+    const string clipPath = test::makeTempPath( "hero.sprite.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"(<SpriteClipAsset _atlasPath="engine/textures/test/quadrants.dds">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0.0,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.5,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.0,0.5,0.5,0.5" _durationMs="50" />
+		<SpriteClipFrame _uvRect="0.5,0.5,0.5,0.5" _durationMs="300" />
+		<SpriteClipFrame _uvRect="0.25,0.25,0.5,0.5" _durationMs="0" />
+	</_listFrame>
+	<_listKey />
+	<_listAnimation>
+		<SpriteClipAnimation _name="idle" _firstFrame="0" _frameCount="2" _bLoop="1" />
+		<SpriteClipAnimation _name="run" _firstFrame="2" _frameCount="3" _bLoop="0" />
+	</_listAnimation>
+</SpriteClipAsset>)" ) );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Hero" ) );
@@ -540,25 +539,24 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
 SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string clipPath = test::makeTempPath( "keyed.sprite.json" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
-  "_atlasPath": "engine/textures/test/quadrants.dds",
-  "_listFrame": [
-    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 100 },
-    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 100 }
-  ],
-  "_listKey": [
-    { "_time": 0.4, "_position": "4.0,2.0", "_angle": 0.0 },
-    { "_time": 0.0, "_position": "0.0,0.0", "_angle": 0.0 },
-    { "_time": 0.2, "_position": "2.0,0.0", "_angle": 1.5707964 }
-  ],
-  "_listAnimation": [
-    { "_name": "a", "_firstFrame": 0, "_frameCount": 2, "_bLoop": 1 },
-    { "_name": "b", "_firstFrame": 2, "_frameCount": 2, "_bLoop": 0 }
-  ]
-})" ) );
+    const string clipPath = test::makeTempPath( "keyed.sprite.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"(<SpriteClipAsset _atlasPath="engine/textures/test/quadrants.dds">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0.0,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.5,0.0,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.0,0.5,0.5,0.5" _durationMs="100" />
+		<SpriteClipFrame _uvRect="0.5,0.5,0.5,0.5" _durationMs="100" />
+	</_listFrame>
+	<_listKey>
+		<SpriteClipKey _time="0.4" _position="4.0,2.0" _angle="0.0" />
+		<SpriteClipKey _time="0.0" _position="0.0,0.0" _angle="0.0" />
+		<SpriteClipKey _time="0.2" _position="2.0,0.0" _angle="1.5707964" />
+	</_listKey>
+	<_listAnimation>
+		<SpriteClipAnimation _name="a" _firstFrame="0" _frameCount="2" _bLoop="1" />
+		<SpriteClipAnimation _name="b" _firstFrame="2" _frameCount="2" _bLoop="0" />
+	</_listAnimation>
+</SpriteClipAsset>)" ) );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Keyed" ) );

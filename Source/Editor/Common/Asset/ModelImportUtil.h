@@ -376,7 +376,7 @@ namespace sw::editor
         /** @brief 아바타 정보의 본이 스켈레톤에 있는지 봅니다. 없는 본은 경고합니다(런타임이 그 본을 건너뛴다). */
         static void warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath );
 
-        /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.json` 에 쓰고, 무시한 키를 경고로 알립니다. */
+        /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.xml` 에 쓰고, 무시한 키를 경고로 알립니다. */
         [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
 
         /**

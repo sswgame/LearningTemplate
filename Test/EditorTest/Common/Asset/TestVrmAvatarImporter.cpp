@@ -7,6 +7,7 @@
 
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -237,9 +238,9 @@ SW_TEST_CASE( VrmAvatarImporterTest, BadReferencesFailAndUnknownKeysAreListed )
 }
 
 /**
- * @brief [VrmAvatarImporterTest] `.avatar.json` — humanoid 는 맵, 나머지는 배열이고 실수는 1 μm 로 반올림한다(0.06 이 0.0599999… 가 되지 않는다)
+ * @brief [VrmAvatarImporterTest] `.avatar.xml` — humanoid 는 맵, 나머지는 배열이고 실수는 1 μm 로 반올림한다(0.06 이 0.0599999… 가 되지 않는다)
  */
-SW_TEST_CASE( VrmAvatarImporterTest, AvatarJSONIsReadable )
+SW_TEST_CASE( VrmAvatarImporterTest, AvatarXMLIsReadable )
 {
     using Internal = TestVrmAvatarImporterInternal;
     sw::JSONDocument         document;
@@ -247,20 +248,26 @@ SW_TEST_CASE( VrmAvatarImporterTest, AvatarJSONIsReadable )
     sw::string               error;
     SW_ASSERT_TRUE( sw::editor::VrmAvatarImporter::readVrm0Avatar( Internal::parse( document, Internal::kVrm0 ), Internal::makeNames(), def, nullptr, error ) );
 
-    const sw::string text = sw::editor::VrmAvatarImporter::makeAvatarJSON( def );
-    SW_EXPECT_TRUE( text == sw::editor::VrmAvatarImporter::makeAvatarJSON( def ) );
-    sw::JSONDocument written;
-    SW_ASSERT_TRUE( written.parse( text ) );
-    const sw::JSONValue root = written.getRoot();
-    SW_EXPECT_EQUAL( uint64( sw::editor::VrmAvatarImporter::kVersion ), root.get( "_version", false ).read<uint64>().value() );
-    SW_EXPECT_STREQ( "Hips", root.get( "_mapHumanBone", false ).get( "hips", false ).asString().c_str() );
-    SW_EXPECT_STREQ( "Head", root.get( "_firstPersonBone", false ).asString().c_str() );
-    SW_EXPECT_STREQ( "0.06", root.get( "_firstPersonOffset", false ).at( 1 ).dump().c_str() );
-    const sw::JSONValue expression = root.get( "_listExpression", false ).at( 0 );
-    SW_EXPECT_STREQ( "happy", expression.get( "_name", false ).asString().c_str() );
-    SW_EXPECT_STREQ( "target1", expression.get( "_listBind", false ).at( 0 ).get( "_morphTarget", false ).asString().c_str() );
-    SW_EXPECT_EQUAL( size_t( 2 ), root.get( "_listSpring", false ).at( 0 ).get( "_listJoint", false ).size() );
-    SW_EXPECT_STREQ( "ThirdPersonOnly", root.get( "_listFirstPersonMesh", false ).at( 0 ).get( "_mode", false ).asString().c_str() );
+    const sw::string text = sw::editor::VrmAvatarImporter::makeAvatarXML( def );
+    SW_EXPECT_TRUE( text == sw::editor::VrmAvatarImporter::makeAvatarXML( def ) );
+    sw::XMLDocument written;
+    SW_ASSERT_TRUE( written.parse( text, "avatar" ) );
+    const sw::XMLNode root = written.getRoot( "VrmAvatar", false );
+    SW_ASSERT_TRUE( root.isValid() );
+    SW_EXPECT_EQUAL( sw::editor::VrmAvatarImporter::kVersion, root.readRequiredAttribute<uint32>( "_version" ).value() );
+    SW_EXPECT_STREQ( "Hips", sw::string( root.findChild( "_mapHumanBone", false ).getAttributeText( "hips", false ) ).c_str() );
+    SW_EXPECT_STREQ( "Head", sw::string( root.getAttributeText( "_firstPersonBone", false ) ).c_str() );
+    SW_EXPECT_STREQ( "-0.01,0.06,-0.02", sw::string( root.getAttributeText( "_firstPersonOffset", false ) ).c_str() );
+    const sw::XMLNode expression = root.findChild( "_listExpression", false ).findChild();
+    SW_EXPECT_STREQ( "happy", sw::string( expression.getAttributeText( "_name", false ) ).c_str() );
+    SW_EXPECT_STREQ( "target1", sw::string( expression.findChild( "_listBind", false ).findChild().getAttributeText( "_morphTarget", false ) ).c_str() );
+    size_t jointCount{ 0 };
+    for ( sw::XMLNode joint = root.findChild( "_listSpring", false ).findChild().findChild( "_listJoint", false ).findChild(); joint.isValid(); joint = joint.findNextSibling() )
+    {
+        ++jointCount;
+    }
+    SW_EXPECT_EQUAL( size_t( 2 ), jointCount );
+    SW_EXPECT_STREQ( "ThirdPersonOnly", sw::string( root.findChild( "_listFirstPersonMesh", false ).findChild().getAttributeText( "_mode", false ) ).c_str() );
 }
 
 /**

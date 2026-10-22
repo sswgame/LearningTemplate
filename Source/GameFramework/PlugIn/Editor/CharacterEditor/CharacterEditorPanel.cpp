@@ -12,10 +12,12 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -33,6 +35,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
 
+#include <algorithm>
 #include <imgui.h>
 
 namespace sw::editor
@@ -101,6 +104,7 @@ namespace sw::editor
                 uint32 _presetCount{ 0 };
                 uint32 _exportCount{ 0 };          ///< 이 실행에서 데이터 프리셋으로 내보낸 수
                 uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
+                uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
             };
             static Published& getPublished()
             {
@@ -143,6 +147,11 @@ namespace sw::editor
                 outValue = static_cast<float64>( getPublished()._previewAssembleCount );
                 return true;
             }
+            [[nodiscard]] static bool readClipPlaying( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._clipPlaying );
+                return true;
+            }
         };
     } // namespace
 
@@ -159,6 +168,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorPreviewAssembleCount, "Editor.CharacterEditorPreviewAssembleCount",
                          "Times the Character Editor preview body was assembled (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewAssembleCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorPreviewClipPlaying, "Editor.CharacterEditorPreviewClipPlaying", "1 while the Character Editor preview body plays the selected clip (published while the Preview tab draws)",
+                         &CharacterEditorPanelInternal::readClipPlaying );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -178,6 +189,7 @@ namespace sw::editor
         , _refPosePath{}
         , _itemsPath{}
         , _appearanceFolder{}
+        , _clipFolder{}
         , _presetPath{ CharacterEditorPanelInternal::kDefaultPresetPath }
         , _presetName{ "MyLook" }
         , _exportFolder{}
@@ -187,6 +199,10 @@ namespace sw::editor
         , _status{}
         , _selectedSocket{}
         , _selectedBone{}
+        , _listClipName{}
+        , _selectedClip{}
+        , _bClipLoop{ true }
+        , _bClipNamesLoaded{ false }
         , _bKindTableReady{ false }
         , _bDatabaseLoaded{ false }
         , _bHasFit{ false }
@@ -371,6 +387,13 @@ namespace sw::editor
         return true;
     }
 
+    ScenePreviewPolicy CharacterEditorPanel::getPreviewPolicy() const
+    {
+        ScenePreviewPolicy policy = EditorPreviewPanel::getPreviewPolicy();
+        policy._bPlay             = true; // 몸의 애니메이터는 onBeginPlay 에서 유닛에 붙는다(외형 조립은 `previewSelection` 이 시작을 기다리지 않는다)
+        return policy;
+    }
+
     void CharacterEditorPanel::populatePreviewScene( Scene& scene )
     {
         (void)scene; // 몸은 외형 데이터를 읽은 뒤에 세운다(`syncPreviewBody`)
@@ -387,10 +410,14 @@ namespace sw::editor
             return;
         }
         syncPreviewBody();
-        const GameObjectManager*            pManager    = findPreviewManager();
-        const GameObject*                   pBody       = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
-        const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-        const AppearanceSelection&          selection   = _appearance.getSelection();
+        const GameObjectManager*            pManager     = findPreviewManager();
+        GameObject*                         pMutableBody = pManager != nullptr ? findPreviewManager()->resolveGameObject( _previewBody ) : nullptr;
+        const GameObject*                   pBody        = pMutableBody;
+        const CharacterAppearanceComponent* pAppearance  = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
+        SkeletalAnimatorComponent*          pAnimator    = pMutableBody != nullptr ? pMutableBody->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        if ( pAnimator != nullptr )
+            drawAnimationControls( *pAnimator );
+        const AppearanceSelection& selection = _appearance.getSelection();
         ImGui::TextDisabled( "Wearing %s on base preset '%s' (assembled %u times)", selection._listSlot.empty() ? "no slot items" : "the selection",
                              selection._basePresetID.empty() ? _previewPresetID.c_str() : selection._basePresetID.c_str(), pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u );
         CharacterEditorPanelInternal::getPublished()._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
@@ -457,13 +484,18 @@ namespace sw::editor
                 _status = "The preview body could not be created";
                 return;
             }
-            const bool bComponents = pBody->addComponent<SkeletalMeshComponent>() != nullptr && pBody->addComponent<CharacterAppearanceComponent>() != nullptr;
+            // 애니메이터는 클립 폴더만 가진다(그래프 없이 클립 하나를 재생). 포즈는 같은 오브젝트의 유닛이 외형 조립으로 받은 스켈레톤으로 낸다.
+            // 유닛(`SkeletalMeshComponent`)을 먼저 둔다 — 애니메이터는 시작할 때 같은 오브젝트의 유닛에 붙는다.
+            const bool                 bUnitAndLook = pBody->addComponent<SkeletalMeshComponent>() != nullptr && pBody->addComponent<CharacterAppearanceComponent>() != nullptr;
+            SkeletalAnimatorComponent* pAnimator    = bUnitAndLook ? pBody->addComponent<SkeletalAnimatorComponent>() : nullptr;
+            const bool                 bComponents  = bUnitAndLook && pAnimator != nullptr;
             if ( bComponents == false )
             {
                 pManager->destroyObject( pBody );
                 _status = "The preview body could not take its components";
                 return;
             }
+            pAnimator->setClipFolder( string_view( _clipFolder.c_str() ) );
             _previewBody         = pBody->getHandle();
             _bPreviewBodyDressed = false;
         }
@@ -479,6 +511,72 @@ namespace sw::editor
         _previewBodyRevision     = _appearance.getRevision();
         _previewDatabaseRevision = _database.getRevision();
         _bPreviewBodyDressed     = true;
+    }
+
+    void CharacterEditorPanel::loadClipNames()
+    {
+        _listClipName.clear();
+        _bClipNamesLoaded = true;
+        if ( _clipFolder.empty() )
+            return;
+        // 클립 목록은 디스크의 폴더를 훑어 얻는다 — 에디터는 원본 트리에서 도는 도구다(배포 팩에는 폴더 목록이 없어 목록이 빈다).
+        const string   diskFolder = ResourcePaths::makeAbsolutePath( string_view( _clipFolder.c_str() ) );
+        vector<string> listFile;
+        if ( diskFolder.empty() || FileUtil::collectFiles( diskFolder, string( AnimationClip::kExtension ), listFile, false ) == false )
+            return;
+        const size_t extensionLength = AnimationClip::kExtension.size();
+        for ( const string& filePath : listFile )
+        {
+            const string fileName = FileUtil::getFileNamePart( filePath );
+            if ( fileName.size() > extensionLength )
+                _listClipName.push_back( hashed_string( string_view( fileName ).substr( 0, fileName.size() - extensionLength ) ) );
+        }
+        std::sort( _listClipName.begin(), _listClipName.end(), []( const hashed_string& left, const hashed_string& right )
+        { return string_view( left.c_str() ) < string_view( right.c_str() ); } );
+    }
+
+    void CharacterEditorPanel::drawAnimationControls( SkeletalAnimatorComponent& animator )
+    {
+        if ( _bClipNamesLoaded == false )
+            loadClipNames();
+        if ( _listClipName.empty() )
+        {
+            ImGui::TextDisabled( "No animation clips in '%s'", _clipFolder.c_str() );
+            return;
+        }
+        ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+        if ( ImGui::BeginCombo( "##PreviewClip", _selectedClip.empty() ? "(select a clip)" : _selectedClip.c_str() ) )
+        {
+            bool bFirst = true;
+            for ( const hashed_string& name : _listClipName )
+            {
+                if ( ImGui::Selectable( name.c_str(), name == _selectedClip ) )
+                    _selectedClip = name;
+                if ( bFirst )
+                    EditorSelfTestMarks::note( "charactereditor.clip.first" ); // 자동화가 첫 클립을 누를 자리
+                bFirst = false;
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::note( "charactereditor.clip" );
+        ImGui::SameLine();
+        ImGui::Checkbox( "Loop##PreviewClip", &_bClipLoop );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _selectedClip.empty() );
+        if ( ImGui::Button( "Play##PreviewClip" ) )
+        {
+            if ( animator.preloadClip( _selectedClip ) && animator.play( _selectedClip, _bClipLoop, 0.0f ) )
+                _status.clear();
+            else
+                _status = "The clip could not be played (see log)";
+        }
+        EditorSelfTestMarks::note( "charactereditor.playClip" );
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        if ( ImGui::Button( "Stop##PreviewClip" ) )
+            animator.stop();
+        const bool bPlaying                                       = animator.getCurrentStateName() == _selectedClip && _selectedClip.empty() == false && animator.isAnimationActive();
+        CharacterEditorPanelInternal::getPublished()._clipPlaying = bPlaying ? 1u : 0u;
     }
 
     GameObjectManager* CharacterEditorPanel::findPreviewManager() const
@@ -1205,6 +1303,9 @@ namespace sw::editor
         _refPosePath      = data._refPosePath;
         _itemsPath        = data._itemsPath;
         _appearanceFolder = data._appearanceFolder;
+        _clipFolder       = data._clipFolder;
+        _bClipNamesLoaded = false; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
+        _selectedClip     = hashed_string{};
         _previewPresetID  = hashed_string( string_view( data._previewPresetID ) );
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(정본은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );

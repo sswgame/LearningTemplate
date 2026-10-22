@@ -72,8 +72,8 @@ namespace sw
         /** @brief `_graphPath` 가 바뀌면 그 그래프를 다시 엽니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        [[nodiscard]] bool loadGraphFile( string_view jsonPath );
-        [[nodiscard]] bool loadGraphJSON( string_view jsonContent );
+        [[nodiscard]] bool loadGraphFile( string_view xmlPath );
+        [[nodiscard]] bool loadGraphXML( string_view xmlContent );
         /** @brief 이미 만든 그래프를 씁니다. 코드로 만든 그래프나 에디터에서 넘긴 그래프를 받으며, 진행 중인 대화는 멈추지 않습니다. */
         void setGraph( DialogueGraphAsset graph );
 

@@ -5,7 +5,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -15,44 +16,35 @@ namespace sw
     {
         struct AnimationBoneMaskInternal
         {
-            /** @brief 항목 배열 이름입니다. 순서는 `_bPropagate` 의 참(roots), 거짓(bones)입니다. */
+            /** @brief 항목 목록 요소 이름입니다. 순서는 `_bPropagate` 의 참(roots), 거짓(bones)입니다. */
             static constexpr const utf8* kArrListKey[] = { "roots", "bones" };
-            /** @brief 항목 객체가 가질 수 있는 키입니다. */
-            static constexpr const utf8* kArrEntryKey[] = { "bone", "weight" };
+            /** @brief 목록 안 항목 요소의 이름입니다. */
+            static constexpr const utf8* kEntryTag = "entry";
 
-            /** @brief 배열 하나의 항목을 읽어 덧붙입니다. 잘못되었으면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool parseEntries( const JSONValue& object, const utf8* pListKey, bool bPropagate, string_view context,
+            /** @brief 목록 요소 하나의 항목을 읽어 덧붙입니다. 요소가 없으면 항목이 없는 것입니다. 잘못되었으면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool parseEntries( const XMLNode& element, const utf8* pListKey, bool bPropagate, string_view context,
                                                     vector<AnimationBoneMaskEntry>& inoutListEntry )
             {
-                const JSONValue listJSON = object.get( pListKey );
-                if ( listJSON.isValid() == false )
+                const XMLNode listNode = element.findChild( pListKey, false );
+                if ( listNode.isValid() == false )
                     return true;
-                if ( listJSON.isArray() == false )
+                bool   bValid = true;
+                size_t index{ 0 };
+                for ( XMLNode entryNode = listNode.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling(), ++index )
                 {
-                    SW_LOG_ERROR( "%#: bone mask '%#' must be an array", context, pListKey );
-                    return false;
-                }
-                bool bValid = true;
-                for ( size_t index = 0; index < listJSON.size(); ++index )
-                {
-                    const JSONValue entryJSON = listJSON.at( index );
-                    if ( entryJSON.isObject() == false )
+                    if ( string_view{ entryNode.getName() } != kEntryTag )
                     {
-                        SW_LOG_ERROR( "%#: bone mask '%#' item %# is not an object", context, pListKey, index );
+                        SW_LOG_ERROR( "%#: bone mask '%#' item %# is not an <%#> element", context, pListKey, index, kEntryTag );
                         bValid = false;
                         continue;
                     }
-                    for ( const string& key : entryJSON.getMemberNames() )
+                    if ( XMLReadUtil::hasOnlyKnownNames( entryNode, { "bone", "weight" }, {}, context ) == false )
                     {
-                        const bool bKnown = key == kArrEntryKey[0] || key == kArrEntryKey[1];
-                        if ( bKnown == false )
-                        {
-                            SW_LOG_ERROR( "%#: bone mask '%#' item %# has unknown key '%#'", context, pListKey, index, key.c_str() );
-                            bValid = false;
-                        }
+                        bValid = false;
+                        continue;
                     }
                     AnimationBoneMaskEntry entry{};
-                    entry._bone       = hashed_string( entryJSON.get( "bone" ).asString() );
+                    entry._bone       = hashed_string( string_view{ entryNode.getAttributeText( "bone", false ) } );
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
                     if ( entry._bone.empty() )
                     {
@@ -60,7 +52,7 @@ namespace sw
                         bValid = false;
                         continue;
                     }
-                    const std::optional<float32> weight = entryJSON.get( "weight" ).isNumber() ? entryJSON.readRequired<float32>( "weight" ) : std::nullopt;
+                    const std::optional<float32> weight = entryNode.readRequiredAttribute<float32>( "weight" );
                     if ( weight.has_value() == false )
                     {
                         SW_LOG_ERROR( "%#: bone mask entry '%#' needs a numeric 'weight'", context, entry._bone.c_str() );
@@ -85,16 +77,26 @@ namespace sw
 
 namespace sw
 {
-    bool AnimationBoneMaskDef::parseObject( const JSONValue& object, string_view context )
+    bool AnimationBoneMaskDef::parseObject( const XMLNode& element, string_view context )
     {
         _listEntry.clear();
-        if ( object.isObject() == false )
+        if ( element.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: bone mask must be an object", context );
+            SW_LOG_ERROR( "%#: bone mask must be an element", context );
             return false;
         }
-        const bool bRootsValid = AnimationBoneMaskInternal::parseEntries( object, AnimationBoneMaskInternal::kArrListKey[0], true, context, _listEntry );
-        const bool bBonesValid = AnimationBoneMaskInternal::parseEntries( object, AnimationBoneMaskInternal::kArrListKey[1], false, context, _listEntry );
+        // 알려진 이름은 목록 둘뿐이다. 그래프 안에 적을 때는 `name` · `file` 속성이 더해진다(`AnimationGraphAsset`) — 그 이름은 부르는 쪽이 이미 걸렀다.
+        for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
+        {
+            const string_view childName{ child.getName() };
+            if ( childName != AnimationBoneMaskInternal::kArrListKey[0] && childName != AnimationBoneMaskInternal::kArrListKey[1] )
+            {
+                SW_LOG_ERROR( "%#: bone mask has unknown element '%#'", context, child.getName() );
+                return false;
+            }
+        }
+        const bool bRootsValid = AnimationBoneMaskInternal::parseEntries( element, AnimationBoneMaskInternal::kArrListKey[0], true, context, _listEntry );
+        const bool bBonesValid = AnimationBoneMaskInternal::parseEntries( element, AnimationBoneMaskInternal::kArrListKey[1], false, context, _listEntry );
         if ( bRootsValid == false || bBonesValid == false )
             return false;
         if ( _listEntry.empty() )
@@ -108,19 +110,25 @@ namespace sw
     bool AnimationBoneMaskDef::loadFromFile( string_view path )
     {
         _listEntry.clear();
-        JSONDocument doc;
+        XMLDocument doc;
         if ( path.empty() || doc.loadResource( path ) == false )
         {
             SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
             return false;
         }
-        if ( parseObject( doc.getRoot(), path ) == false )
+        const XMLNode root = doc.getRoot( "AnimationBoneMaskDef", false );
+        if ( root.isValid() == false || XMLReadUtil::hasOnlyKnownNames( root, {}, { "roots", "bones" }, path ) == false )
+        {
+            SW_LOG_ERROR( "Bone mask file '%#' must be an <AnimationBoneMaskDef> element", path );
+            return false;
+        }
+        if ( parseObject( root, path ) == false )
             return false;
         _filePath = string{ path };
         return true;
     }
 
-    void AnimationBoneMaskDef::writeObject( const JSONValue& object ) const
+    void AnimationBoneMaskDef::writeObject( const XMLNode& element ) const
     {
         for ( uint32 listIndex = 0; listIndex < 2; ++listIndex )
         {
@@ -132,16 +140,14 @@ namespace sw
             }
             if ( bAny == false )
                 continue;
-            const JSONValue listJSON = object.set( AnimationBoneMaskInternal::kArrListKey[listIndex] );
-            listJSON.setArray();
+            const XMLNode listNode = element.appendChild( AnimationBoneMaskInternal::kArrListKey[listIndex] );
             for ( const AnimationBoneMaskEntry& entry : _listEntry )
             {
                 if ( entry._bPropagate != bPropagate )
                     continue;
-                const JSONValue entryJSON = listJSON.pushBack();
-                entryJSON.setObject();
-                entryJSON.set( "bone" ).setString( entry._bone.c_str() );
-                entryJSON.set( "weight" ).setFloat( static_cast<float64>( entry._weight ) );
+                const XMLNode entryNode = listNode.appendChild( AnimationBoneMaskInternal::kEntryTag );
+                entryNode.appendAttribute( "bone", entry._bone.c_str() );
+                entryNode.appendAttribute( "weight", entry._weight );
             }
         }
     }

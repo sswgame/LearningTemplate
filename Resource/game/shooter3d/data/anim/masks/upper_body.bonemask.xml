@@ -1,0 +1,8 @@
+<AnimationBoneMaskDef>
+	<roots>
+		<entry bone="spine" weight="1.0" />
+	</roots>
+	<bones>
+		<entry bone="spine" weight="0.5" />
+	</bones>
+</AnimationBoneMaskDef>

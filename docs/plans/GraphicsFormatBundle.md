@@ -17,7 +17,7 @@
 | G5 | 보기 모드 `ShadedWireframe`(11) — 표의 `_bOverlay`, 지오메트리 패스가 Lit 과 선(`SW_VIEWMODE_WIREOVERLAY`, 와이어프레임 · 바이어스 · 깊이 쓰기 끔)으로 두 번 그린다 | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
 | G6 | 2D 조명: 자유 모양 빛(`FreeformLight2DComponent`) · 부드러운 그림자 · 섞는 방식(`Light2DBlendStyle`). `GPULight` 에 덧칸 `_extra`(80 바이트) | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
 | G7 | 2D 빛 쿠키: `PointLight2DComponent::_cookieTexturePath`, 렌더러의 쿠키 아틀라스(`Light2DCookieAtlas` — 1024² 에 칸 16, 칸마다 fullscreenblit 로 옮겨 그림), 패스 역할 `Light2DCookieAtlas`(PassCB `g_Light2DCookieAtlasIndex`, 에뮬 백엔드는 t1 을 알베도 · AO 와 나눔), 빛 원소 `_extra.w` 가 칸 번호 | 들어감 · 화면 확인(2026-10-22, 시나리오 `game/empty/automation/light2dcookie`, 네 백엔드) |
-| G8 | VRM 런타임: 임포트가 표정 → 얼굴 리그(`.facial.json`), 스프링 본 → 후처리 리그(`.rig.json`, `SpringChain`)를 쓴다(`VrmRuntimeAssets`) | 커밋됨 |
+| G8 | VRM 런타임: 임포트가 표정 → 얼굴 리그(`.facial.xml`), 스프링 본 → 후처리 리그(`.rig.xml`, `SpringChain`)를 쓴다(`VrmRuntimeAssets`) | 커밋됨 |
 | G9 | 조용한 폴백 정리: 보기 모드 범위 밖 값(`isRenderViewModeIndex`), Vulkan 와이어프레임 미지원(`RHICapabilities::_bWireframeFill`) | 커밋됨 |
 | G10 | 메시 구간(`MeshSection`, `.mesh` 의 `SECT`) · `MeshComponent::_sectionName` · `MeshSectionComponent` · 1인칭 가시성(`MeshPersonVisibility`, `setFirstPersonViewOnObject`) · VRM 을 메시 한 벌 + 캐릭터 프리팹(`<y>.prefab.xml` — 얼굴 리그 · 후처리 리그 컴포넌트가 참조)으로 임포트 | 들어감(VAT 구간 오프셋 셰이더는 통합) |
 | G11 | 같은 모양 결함: 머티리얼 PSO 변형을 못 만들면 패스 PSO 로 그리던 폴백을 오류 + 그리지 않음으로, 라이트 · 배치 원소 구조체를 공용 헤더 하나로(`lightdata.hlsli` · `batchdata.hlsli`, stride 검사 `ShaderBindingValidatorTest.LightElementLayoutMatchesCPUStruct`) | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |

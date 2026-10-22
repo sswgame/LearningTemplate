@@ -1090,7 +1090,7 @@ SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceID )
 /**
  * @brief [ResourceTest] 쿠킹이 올리는 소스 트리 콘텐츠(`ContentSource::SourceTree`)는 팩을 마운트하지 않고 느슨한 소스 파일을 읽는다 — 배포 구성도 같다
  * @details 배포 구성의 씬 쿠킹(`App --cook-scenes`)이 실행처럼 팩을 마운트하고 느슨한 파일을 막으면, 팩은 쿠킹의 산출물이라 첫 빌드에서는
- *          아무것도 없어 `enginedefaultassets.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못하고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
+ *          아무것도 없어 `enginedefaultassets.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.xml` 을 읽지 못하고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
  *          읽는다. 배포 구성에서는 실행 파일 옆에 팩이 있으므로 이 테스트가 그것을 마운트하지 않는지까지 본다.
  */
 SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
@@ -1157,6 +1157,24 @@ SW_TEST_CASE( AssetTypeRegistryTest, TypesAreUniqueAndLongerSuffixWins )
     SW_EXPECT_STREQ( "ShaderBinary", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/shaders/bin/dx12/reflection.manifest" ) ).c_str() );
     SW_EXPECT_STREQ( "Texture", sw::string( sw::AssetTypeRegistry::findExcludeGroup( "engine/textures/Perlin.DDS" ) ).c_str() );
     SW_EXPECT_TRUE( sw::AssetTypeRegistry::findExcludeGroup( "game/empty/models/crate.mesh" ).empty() );
+}
+
+/**
+ * @brief [AssetTypeRegistryTest] JSON 접미사는 쿠킹 입력으로만 올라온다 — 그대로 읽는 에셋 파일은 XML 이나 바이너리다(StructureSimplification TX7)
+ */
+SW_TEST_CASE( AssetTypeRegistryTest, JSONSuffixIsOnlyACookSource )
+{
+    SW_EXPECT_TRUE( sw::AssetTypeRegistry::isSuffixFormatAllowed( { ".prefab.json", sw::AssetSuffixRole::CookSource } ) );
+    SW_EXPECT_FALSE( sw::AssetTypeRegistry::isSuffixFormatAllowed( { ".skeleton.json", sw::AssetSuffixRole::Plain } ) );
+    SW_EXPECT_FALSE( sw::AssetTypeRegistry::isSuffixFormatAllowed( { ".SKELETON.JSON", sw::AssetSuffixRole::Cooked } ) );
+    SW_EXPECT_TRUE( sw::AssetTypeRegistry::isSuffixFormatAllowed( { ".skeleton.xml", sw::AssetSuffixRole::Plain } ) );
+    for ( const sw::AssetTypeDef* pType : sw::AssetTypeRegistry::collectTypes() )
+    {
+        for ( uint32 index = 0; index < pType->_suffixCount; ++index )
+        {
+            SW_EXPECT_TRUE_MSG( sw::AssetTypeRegistry::isSuffixFormatAllowed( pType->_pSuffix[index] ), sw::string( pType->_pSuffix[index]._text ).c_str() );
+        }
+    }
 }
 
 /**

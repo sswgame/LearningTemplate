@@ -49,8 +49,8 @@ namespace
     struct TestFacialAnimationInternal
     {
         static constexpr string_view kMeshPath     = "game/empty/models/testhead.mesh";
-        static constexpr string_view kSkeletonPath = "game/empty/models/testhead/testhead.skeleton.json";
-        static constexpr string_view kRigPath      = "game/empty/models/testhead.facial.json";
+        static constexpr string_view kSkeletonPath = "game/empty/models/testhead/testhead.skeleton.xml";
+        static constexpr string_view kRigPath      = "game/empty/models/testhead.facial.xml";
         static constexpr string_view kClipFolder   = "game/empty/models/testhead/clips";
         static constexpr uint32      kSampleRate   = 16000;
 
@@ -229,13 +229,13 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 
     test::ScopedDefensiveTestLog expected( "a rig naming a missing morph target fails validation" );
     FacialRig                    broken;
-    SW_ASSERT_TRUE( broken.parseJSON( R"({ "_listExpression": [ { "_name": "Frown", "_listTarget": [ { "_target": "browDown", "_weight": 1.0 } ] } ] })", "broken" ) );
+    SW_ASSERT_TRUE( broken.parseXML( R"(<FacialRig><_listExpression><FacialPose _name="Frown"><_listTarget><FacialTargetWeight _target="browDown" _weight="1.0" /></_listTarget></FacialPose></_listExpression></FacialRig>)", "broken" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "broken" ) );
-    SW_ASSERT_TRUE( broken.parseJSON( R"({ "_listExpression": [ { "_name": "Smile", "_listTarget": [ { "_target": "smile", "_weight": 1.0 } ] } ] })", "clash" ) );
+    SW_ASSERT_TRUE( broken.parseXML( R"(<FacialRig><_listExpression><FacialPose _name="Smile"><_listTarget><FacialTargetWeight _target="smile" _weight="1.0" /></_listTarget></FacialPose></_listExpression></FacialRig>)", "clash" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "clash" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listExpression": [], "eyebrows": {} })", "unknown key" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "AA" }, { "_name": "AA" } ] })", "duplicate pose" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_blink": { "_minInterval": 3.0, "_maxInterval": 1.0 } })", "unordered blink" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<FacialRig><_listExpression /><eyebrows /></FacialRig>)", "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<FacialRig><_listViseme><FacialPose _name="AA" /><FacialPose _name="AA" /></_listViseme></FacialRig>)", "duplicate pose" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<FacialRig><_blink _minInterval="3.0" _maxInterval="1.0" /></FacialRig>)", "unordered blink" ) );
     SW_EXPECT_TRUE( broken.getExpressions().empty() );
 }
 
@@ -309,18 +309,18 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
     SW_EXPECT_NEAR_EQUAL( 0.0f, LipSyncAnalyzer::computeOpenness( 0.0f, settings ), 0.0f );
 
     VisemeTrack copy;
-    SW_ASSERT_TRUE( copy.parseJSON( track.toJSON(), "roundtrip" ) );
+    SW_ASSERT_TRUE( copy.parseXML( track.toXML(), "roundtrip" ) );
     SW_EXPECT_EQUAL( track.getFrameCount(), copy.getFrameCount() );
     SW_EXPECT_TRUE( copy._listViseme == track._listViseme );
     for ( size_t index = 0; index < track._listWeight.size(); ++index )
     {
         SW_EXPECT_NEAR_EQUAL( track._listWeight[index], copy._listWeight[index], 0.0006f );
     }
-    SW_EXPECT_TRUE( VisemeTrack::makePathForAudio( "game/empty/voice/line.wav" ) == "game/empty/voice/line.visemes.json" );
+    SW_EXPECT_TRUE( VisemeTrack::makePathForAudio( "game/empty/voice/line.wav" ) == "game/empty/voice/line.visemes.xml" );
     SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.wav" ) );
     SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "voice/line.ogg" ) );
     SW_EXPECT_FALSE( LipSyncImport::isVoiceAudio( "game/empty/sounds/click.ogg" ) );
-    SW_EXPECT_FALSE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.visemes.json" ) );
+    SW_EXPECT_FALSE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.visemes.xml" ) );
     // 스테레오는 채널 평균으로 모노가 된다(분석 입력).
     AudioClipData stereo{};
     stereo._channelCount = 2;
@@ -335,12 +335,12 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 
     test::ScopedDefensiveTestLog expected( "unknown keys in lip sync data are rejected" );
     LipSyncSettings              broken;
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_frameRate": 30, "pitch": 1 })", "broken" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "sil" }, { "_name": "AA" } ], "_fallbackViseme": "OO" })", "unknown fallback" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "sil" }, { "_name": "AA" } ], "_fallbackViseme": "AA", "_lowBandHz": "600,150" })",
-                                       "reversed band" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<LipSyncSettings _frameRate="30" pitch="1" />)", "broken" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<LipSyncSettings _fallbackViseme="OO"><_listViseme><LipSyncViseme _name="sil" /><LipSyncViseme _name="AA" /></_listViseme></LipSyncSettings>)", "unknown fallback" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<LipSyncSettings _fallbackViseme="AA" _lowBandHz="600,150"><_listViseme><LipSyncViseme _name="sil" /><LipSyncViseme _name="AA" /></_listViseme></LipSyncSettings>)",
+                                      "reversed band" ) );
     SW_EXPECT_TRUE( broken._listViseme.empty() );
-    SW_EXPECT_FALSE( copy.parseJSON( R"({ "frame_rate": 30, "visemes": [ "sil" ], "frames": [ [ 0 ] ], "phonemes": [] })", "broken" ) );
+    SW_EXPECT_FALSE( copy.parseXML( R"(<VisemeTrack _frameRate="30"><_listViseme><item>sil</item></_listViseme><_listFrame><Frame>0</Frame></_listFrame><phonemes /></VisemeTrack>)", "broken" ) );
 }
 
 /**

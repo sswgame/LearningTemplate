@@ -153,7 +153,7 @@ SW_TEST_CASE( SpriteComponentTest, FrameAndTintTravelInTheInstanceNotTheMaterial
 SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string    clipPath = test::makeTempPath( "atlas.sprite.json" );
+    const sw::string    clipPath = test::makeTempPath( "atlas.sprite.xml" );
     sw::SpriteClipAsset clip;
     clip._atlasPath = kTextureB;
     clip._listFrame.resize( 3 );
@@ -185,7 +185,7 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
     // 읽을 수 없는 클립: 알리고 UV 사각형으로 그린다.
     {
         test::ScopedDefensiveTestLog expected( "a sprite clip that cannot be read" );
-        pSprite->setClipPath( test::makeTempPath( "missing.sprite.json" ) );
+        pSprite->setClipPath( test::makeTempPath( "missing.sprite.xml" ) );
     }
     SW_EXPECT_TRUE( pSprite->getClip() == nullptr );
     SW_EXPECT_NEAR_EQUAL( 0.25f, pSprite->getSpriteInstanceData().getUvRect()._z, 1e-4f );
@@ -199,12 +199,12 @@ SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "ClipSprite" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pObject, "<GameObject _name=\"ClipSprite\"><_listComponent><SpriteComponent _clipPath=\"engine/textures/test/quadrants.sprite.json\" "
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pObject, "<GameObject _name=\"ClipSprite\"><_listComponent><SpriteComponent _clipPath=\"engine/textures/test/quadrants.sprite.xml\" "
                                                                            "/></_listComponent></GameObject>",
                                                                   sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     const sw::SpriteComponent* pSprite = pObject->getComponent<sw::SpriteComponent>();
     SW_ASSERT_NOT_NULL( pSprite );
-    SW_EXPECT_STREQ( "engine/textures/test/quadrants.sprite.json", pSprite->getClipPath().c_str() );
+    SW_EXPECT_STREQ( "engine/textures/test/quadrants.sprite.xml", pSprite->getClipPath().c_str() );
     SW_ASSERT_NOT_NULL( pSprite->getClip() );
     SW_EXPECT_EQUAL( 4, pSprite->getClip()->getFrameCount() );
 }
@@ -217,7 +217,7 @@ SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
 SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string    clipPath = test::makeTempPath( "reloaded.sprite.json" );
+    const sw::string    clipPath = test::makeTempPath( "reloaded.sprite.xml" );
     sw::SpriteClipAsset clip;
     clip._atlasPath = kTextureA;
     clip._listFrame.resize( 2 );
@@ -251,8 +251,8 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
 
     // 아무도 쓰지 않는 경로는 다시 읽을 것이 없다(다음 `acquire` 가 새 내용을 읽는다).
-    SW_EXPECT_FALSE( sw::SharedAssetCache<sw::SpriteClipAsset>::reloadShared( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
-    SW_EXPECT_FALSE( pCache->isCached( test::makeTempPath( "nobody_holds.sprite.json" ) ) );
+    SW_EXPECT_FALSE( sw::SharedAssetCache<sw::SpriteClipAsset>::reloadShared( test::makeTempPath( "nobody_holds.sprite.xml" ) ) );
+    SW_EXPECT_FALSE( pCache->isCached( test::makeTempPath( "nobody_holds.sprite.xml" ) ) );
 }
 
 /**
@@ -292,7 +292,7 @@ SW_TEST_CASE( SpriteComponentTest, SlicedSpritesShareTheSliceMeshAndReadTheBorde
     SW_EXPECT_TRUE( pPanelB->getMesh() == quad ); // 공유 사각형으로 돌아간다
 
     // 클립 프레임의 테두리가 컴포넌트 값을 이긴다.
-    const sw::string    clipPath = test::makeTempPath( "panel.sprite.json" );
+    const sw::string    clipPath = test::makeTempPath( "panel.sprite.xml" );
     sw::SpriteClipAsset clip;
     clip._atlasPath      = kTextureB;
     clip._atlasPixelSize = sw::float2{ 100.0f, 100.0f }; // 테두리는 픽셀로 적는다 — 프레임이 아틀라스 전체라 10 px = 0.1

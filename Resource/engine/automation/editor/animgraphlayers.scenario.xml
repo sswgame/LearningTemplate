@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 레이어 탭(AnimationGraphLayers): 레이어 하나 · 본 마스크 하나를 가진 테스트 그래프
-  (animgraphlayers/animgraphlayers.animgraph.json)의 실행마다 새 사본(scratch/animgraphlayers — <Scratch>)을 `asset.openScratch` 로 열고, 인스펙터의 Layers 탭에서 레이어와 마스크를 하나씩 더한다
+  (animgraphlayers/animgraphlayers.animgraph.xml)의 실행마다 새 사본(scratch/animgraphlayers — <Scratch>)을 `asset.openScratch` 로 열고, 인스펙터의 Layers 탭에서 레이어와 마스크를 하나씩 더한다
   (탐침 Editor.AnimationGraphLayerCount · Editor.AnimationGraphBoneMaskCount). 저장한 뒤 레이어를 지워도 Load 가 저장한 레이어 둘 · 마스크 둘을 되읽는다 —
   패널이 노드와 링크만 들고 있던 때는 저장이 레이어와 마스크를 버렸다.
   사본에만 쓰므로 추적 중인 원본은 바뀌지 않는다(끝에서 더한 레이어와 마스크를 지우고 저장하는 것은 저장 왕복 확인의 일부다).
@@ -12,7 +12,7 @@
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><DevCommand line="panel.focus animation_graph"/></At>
-	<At frame="60"><DevCommand line="asset.openScratch scratch/animgraphlayers/animgraphlayers.animgraph.json"/></At>
+	<At frame="60"><DevCommand line="asset.openScratch scratch/animgraphlayers/animgraphlayers.animgraph.xml"/></At>
 	<At frame="100"><WaitUntil probe="Editor.AnimationGraphLayerCount" equals="1"/></At>
 	<At frame="130"><Expect probe="Editor.AnimationGraphBoneMaskCount" equals="1"/><Expect probe="Editor.AnimationGraphLinkCount" equals="1"/></At>
 	<At frame="135"><EditorClick mark="animationGraph.tab.layers" state="down"/></At>

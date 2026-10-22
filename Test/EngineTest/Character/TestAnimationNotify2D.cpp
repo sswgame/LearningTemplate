@@ -84,7 +84,7 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteClipRangeCarriesNotifies )
     attack._frameCount = 4;
     attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
     clip._listAnimation.push_back( attack );
-    const string path = test::makeTempPath( "attack.sprite.json" );
+    const string path = test::makeTempPath( "attack.sprite.xml" );
     SW_ASSERT_TRUE( clip.saveToFile( path ) );
     SpriteClipAsset loaded;
     SW_ASSERT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( path ) ) );
@@ -121,7 +121,7 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D
     attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Step" ), 0.05f, 0.0f } );
     attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
     clip._listAnimation.push_back( attack );
-    const string clipPath = test::makeTempPath( "fighter.sprite.json" );
+    const string clipPath = test::makeTempPath( "fighter.sprite.xml" );
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
     const string socketPath = test::makeTempPath( "fighter.sockets.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( socketPath, R"(<SocketSet><Socket name="BladeA" translation="0.5 0 0"/><Socket name="BladeB" translation="1.5 0 0"/></SocketSet>)" ) );

@@ -24,7 +24,7 @@
 | 포즈 | `PoseModifier/ReferencePoseOverride`, `CharacterPoseUtil`, `PoseModifierComponent` | 레퍼런스 포즈 편집 |
 | 데이터 | `CharacterDataReader` · `CharacterDataCache` | 파일 로드 · 핫 리로드 |
 
-스켈레톤 에셋은 `Engine/Animation/Skeletal/Skeleton.h`(`SkeletonBone` · `SkeletonAttachment`, `.skeleton.json`)이며 본 · 레퍼런스 포즈 · 역 바인드와 임포트가 적은 본 부착 메시 테이블뿐입니다. 편집 진입점은 없습니다.
+스켈레톤 에셋은 `Engine/Animation/Skeletal/Skeleton.h`(`SkeletonBone` · `SkeletonAttachment`, `.skeleton.xml`)이며 본 · 레퍼런스 포즈 · 역 바인드와 임포트가 적은 본 부착 메시 테이블뿐입니다. 편집 진입점은 없습니다.
 
 ### 2.2 게임프레임워크 — `Source/GameFramework/Base/Gameplay/Appearance`
 - `CharacterAppearanceComponent` — 프리셋(`CharacterAppearance`)을 펼쳐 `AppearanceResolver` 로 해석하고 몸 메시 · 장비 부품 · 소켓 부착 · 염색을 조립합니다. 소켓 위치 갱신은 `CharacterAppearanceSocketTask`(포즈가 끝난 프레임).
@@ -89,7 +89,7 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 - **편집 대상은 원본 데이터 파일**(소켓 XML · 프리셋 · 레퍼런스 포즈)입니다. 조립 결과(병합 메시)는 저장하지 않습니다.
 - **피팅 표시는 보기 전용**입니다. 보정 조각 작성은 이 창의 범위 밖(DCC 도구)입니다.
 - **좌우 대칭은 이름 규칙으로** 짝을 찾습니다. 위치 기반 짝 찾기는 비대칭 리그에서 틀리므로 쓰지 않습니다.
-- 위험: 스켈레톤 `.skeleton.json` 은 임포트 산출물이라, 레퍼런스 포즈를 여기에 직접 쓰면 다시 임포트할 때 덮어씁니다 — 그래서 `ReferencePoseOverride` 파일에 씁니다.
+- 위험: 스켈레톤 `.skeleton.xml` 은 임포트 산출물이라, 레퍼런스 포즈를 여기에 직접 쓰면 다시 임포트할 때 덮어씁니다 — 그래서 `ReferencePoseOverride` 파일에 씁니다.
 
 ## 남은 것
 
@@ -100,9 +100,11 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
   - 미리보기 몸: 팩 데이터에 필수 칸 `previewPreset`(몸 프리셋 id, Shooter3D · Empty 는 `Adventurer` = 기사 몸)을 더했다. 몸은 프리팹이 아니라 외형 조립이다 — 미리보기 씬에 `SkeletalMeshComponent` + `CharacterAppearanceComponent` 오브젝트 하나를 세우고 `CharacterAppearanceComponent::previewSelection( 선택, 창의 AppearanceDatabase )` 로 입힌다.
     그 길을 고르면 컴포넌트는 게임 서비스와 프리셋 id 를 보지 않는다(두 길이 섞이지 않는다). 선택에 기준 프리셋이 없으면 `previewPreset` 위에 입히고, 선택 · 외형 데이터의 세대가 바뀔 때만 다시 입힌다. 미리보기 씬은 플레이를 돌리지 않아 시작을 기다리지 않고 조립한다.
   - 미리보기 탭(다른 탭의 줄을 밀지 않는다)과 소켓 축 표시(몸이 조립한 소켓 = 저장된 파일, 고른 소켓은 길고 밝게). 탐침 `Editor.CharacterEditorPreviewAssembleCount`, 시나리오 `engine/automation/editor/charactereditor` 에 미리보기 탭 · 스크린샷을 더했다.
+- **애니메이션 재생은 들어갔다(2026-10-22, Debug 빌드 · 시나리오 `charactereditor` 로 확인 — 클립을 고르고 Play 하면 T 자세의 몸이 그 클립의 자세로 움직이는 것을 화면으로 봤다)**: 미리보기 탭 위의 줄에서 팩 데이터의 클립 폴더(필수 칸 `clipFolder`, 비면 읽기 오류)에 있는 `.animclip` 을 콤보로 고르고 반복 · Play · Stop 한다. 미리보기 몸에 `SkeletalAnimatorComponent` 를 더했다.
+  함정 둘이 드러났다 — (1) 애니메이터는 `onBeginPlay` 에서 같은 오브젝트의 유닛(`SkeletalMeshComponent`)에 붙는데 미리보기 씬은 기본 정책에서 플레이를 돌리지 않는다. 그래서 이 창은 정책 `_bPlay` 를 켠다(`getPreviewPolicy`). (2) 컴포넌트는 유닛을 먼저 더하고 애니메이터를 나중에 더한다(순서가 거꾸로면 붙지 못한다). 탐침 `Editor.CharacterEditorPreviewClipPlaying`.
 - dirty 는 들어갔다(2026-10-21): 모델의 미저장 상태를 패널 dirty 로 옮기고(`syncDocumentDirty`, 이제 미리보기 창 스택의 편집도 더한다) "Don't Save" 는 두 모델을 저장된 상태로 돌린다(`revertDocument` → `revertToSaved`).
 - 남은 것(선행이 다른 계획에 있다):
   - 단계 3 체형 · 얼굴 슬라이더 — `CharacterAppearanceIntegration` 의 GPU 모프 풀 연결이 먼저다(꾸미기 값 모델 · 직렬화는 있다).
   - 단계 5 피팅 확인 — 몸 메시 → `AppearanceGeometry` 변환(외형 통합 항목)이 먼저다. 그 뒤 슬라이더를 놓을 때 한 번 풀어 `CharacterEditorPanel::setFitResult` 로 넘긴다(표시는 있다).
-  - 단계 6 의 나머지 — 애니메이션 재생(미리보기 몸에 애니메이터 · 클립 폴더), 썸네일 렌더(미리보기 렌더 타깃을 읽어 `UserAppearancePresetStore::setThumbnailPath`). 좌우 대칭 · 프리셋 저장은 있다.
+  - 단계 6 의 나머지 — 썸네일 렌더(미리보기 렌더 타깃을 읽어 `UserAppearancePresetStore::setThumbnailPath`). 렌더 타깃을 되읽는 길(`RenderTargetRegistry::requestReadback`)과 `PortraitRenderer` 는 있으나 프리팹 썸네일 전용이고, 미리보기 씬의 뷰를 읽어 파일로 쓰는 길이 없다 — 렌더 쪽(미리보기 뷰 되읽기)이 먼저다. 좌우 대칭 · 프리셋 저장 · 애니메이션 재생은 있다.
   - 뷰포트 기즈모 포즈 편집 · 제약 리그 미리보기 · 편집 중(저장 전) 소켓을 미리보기에 바로 보이기(지금은 조립한 소켓 파일의 자리) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).

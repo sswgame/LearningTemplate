@@ -24,7 +24,7 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 |---|---|---|
 | S1 | 쓰러질 때 무기 떨어뜨리기 — 적 무기 프리팹 셋에 강체, `requestDropSocketParts` | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | S2 | 알림으로 휘두름 피해 — 곁 데이터 `skeleton_minion.clips.json`, 알림 표 `characters/skeleton_minion/skeleton_minion.notifies.xml`, 적 프리팹 `AnimationNotifyComponent`, `onAnimationNotify` · `_attackHitTime` 삭제 | 코드 · 데이터 작성(임포트 · 빌드 미확인) |
-| S3 | 1인칭 머리 숨기기 — 몸 리그 `rigs/player_body.rig.json`(`HideHead` — 보폭 워핑 `Stride` 와 같은 리그), 몸 프리팹 `PoseModifierComponent` 하나, `ShooterAvatarComponent::setFirstPerson` | 코드 · 데이터 작성(빌드 · 화면 미확인) |
+| S3 | 1인칭 머리 숨기기 — 몸 리그 `rigs/player_body.rig.xml`(`HideHead` — 보폭 워핑 `Stride` 와 같은 리그), 몸 프리팹 `PoseModifierComponent` 하나, `ShooterAvatarComponent::setFirstPerson` | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | S4 | 래그돌 쓰러짐 · 부위 히트박스 · 물리 질의 히트스캔 · 시야 · 보폭 워핑(`Stride`, `ShooterAvatarComponent::updateStrideWarping`) | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | S5 | 왼손 IK · 스프링 망토 | 아래 "남은 것" — 엔진 · 에셋 선행 |
 | S6 | 외형 부품 풀 | 아래 "남은 것" |
@@ -32,7 +32,7 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 ## 남은 것
 
 - S5 왼손 IK: 무기 부품은 정적 메시라 리그의 소켓 대상이 고르는 유닛 목록(`PoseModifierComponent::setSocketTable` — `SkeletalMeshComponent` 만)에 들 수 없고, 외형도 그 표를 리그에 잇지 않는다. 먼저 (1) 외형이 조립 뒤 같은 오브젝트의 리그에 소켓 표를 잇고, (2) 정적 부품 소켓은 "부품 오브젝트 월드 × 소켓 로컬" 바깥 대상으로 해석하게 `resolveSocketTarget` 을 넓힌다. 그다음 몸 리그에 `{ "name": "Grip", "socket": "MainHand.SupportHand" }` 와 `TwoBoneIK`(`upperarm.l` · `lowerarm.l` · `hand.l`)를 더한다.
-- S5 스프링 망토: Shooter3D 의 기사 망토(`prefabs/kaykit/knight_cape.prefab.xml`)는 사슬 뼈가 없는 정적 메시다. `knight_cape.rig.json`(`cape0..3`)을 쓰려면 사슬 뼈가 있는 스킨드 망토 에셋(벤치 데모 데이터와 같은 것)을 가져와 외형의 스킨드 부품으로 바꾸는 것이 먼저다.
+- S5 스프링 망토: Shooter3D 의 기사 망토(`prefabs/kaykit/knight_cape.prefab.xml`)는 사슬 뼈가 없는 정적 메시다. `knight_cape.rig.xml`(`cape0..3`)을 쓰려면 사슬 뼈가 있는 스킨드 망토 에셋(벤치 데모 데이터와 같은 것)을 가져와 외형의 스킨드 부품으로 바꾸는 것이 먼저다.
 - S6 외형 부품 풀: 스켈레톤마다 부품 프리팹을 세우고 지운다(`CharacterAppearanceComponent::syncParts` · `despawnParts`). 짧은 설계 — 씬마다 에셋 경로별 쉬는 부품 목록을 두고, 지울 때 소켓 부착을 풀고(`SocketBindingComponent` 를 붙은 상태로 되돌리고 강체를 키네마틱으로) 숨겨 넣으며, 스폰할 때 꺼낸다. 떨어진 무기(물리로 뗀 것)는 풀로 돌리지 않고 지운다. 잰 뒤에 정한다(스켈레톤 하나의 부품 셋 스폰 비용).
 - 확인(S1 · S2 · S3 · S4, 빌드 뒤):
   - 병합 뒤 `App --import-models` 로 Shooter3D 모델을 다시 가져와 `skeleton_minion/clips/1h_melee_attack_chop.animclip` 에 `Impact` 알림이 들어갔는지, 임포트 결과와 곁 데이터를 한 커밋으로 남긴다. 그 전에는 적의 휘두름이 맞지 않는다.

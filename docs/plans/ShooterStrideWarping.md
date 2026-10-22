@@ -3,7 +3,7 @@
 > 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 1/2
 
 앞으로 걷기 · 달리기는 재생 속도 매칭(`LocomotionSpeedUtil`, 범위 0.6 ~ 1.8)으로 맞추고, 범위를 넘는 몫은 리그 노드 `StrideWarping` 이 맡는다.
-연결은 들어갔다: 몸 프리팹(`prefabs/player_body.prefab.xml`)의 `PoseModifierComponent` 가 `rigs/player_body.rig.json`(노드 `Stride`)을 돌리고,
+연결은 들어갔다: 몸 프리팹(`prefabs/player_body.prefab.xml`)의 `PoseModifierComponent` 가 `rigs/player_body.rig.xml`(노드 `Stride`)을 돌리고,
 `ShooterAvatarComponent::applyStrideWarping` 이 프레임마다 `stride_scale`(`LocomotionSpeedUtil::computeStrideScale`) · 모델 공간 이동 방향을 넣는다. 노드가 없으면 오류를 한 번 남긴다.
 뒷걸음 · 옆걸음도 같은 길이다(방향은 몸 요 기준 수평 속도). 남은 클립 쪽 일은 [ShooterCharacterIntegration](ShooterCharacterIntegration.md).
 

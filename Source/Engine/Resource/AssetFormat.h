@@ -3,7 +3,7 @@
  * @brief XML 에셋 스키마 판의 N→N+1 이관 레지스트리와 저작 소스 · 쿠킹본 경로 규칙입니다. 둘 다 에셋 종류 표(`AssetTypeRegistry`)에서 파생합니다.
  * @details 판은 루트 속성 `formatVersion` 에 적습니다(XML 선언이 아닙니다). 없으면 세대 0(현재 기준)입니다.
  *          스키마가 깨지면 그 종류의 정의(`AssetTypeDef::_formatVersion`)를 올리고 registerXMLMigrator 로 N→N+1 을 등록합니다 — 판 상수 표를 따로 두지 않는다.
- *          저작 기본 포맷은 XML 입니다. JSON 은 도구 · 설정을 주고받는 데 씁니다.
+ *          저작 기본 포맷은 XML 입니다. JSON 은 도구 · 설정을 주고받는 데 쓰고, JSON 접미사는 쿠킹 입력으로만 에셋 종류가 된다(`AssetTypeRegistry::isSuffixFormatAllowed`).
  *          Shipping 런타임은 쿠킹된 바이너리(PFB2 등)를 로드합니다.
  */
 #pragma once

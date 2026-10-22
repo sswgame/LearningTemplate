@@ -1,0 +1,12 @@
+<SpriteClipAsset _atlasPath="engine/textures/pixel/puny_characters/mage_cyan.dds" _atlasPixelSize="768,256">
+	<_listFrame>
+		<SpriteClipFrame _uvRect="0.0,0.0,0.04166667,0.125" _borderPixels="0,0,0,0" _durationMs="400" />
+		<SpriteClipFrame _uvRect="0.04166667,0.0,0.04166667,0.125" _borderPixels="0,0,0,0" _durationMs="400" />
+	</_listFrame>
+	<_listKey />
+	<_listAnimation>
+		<SpriteClipAnimation _name="idle_down" _firstFrame="0" _frameCount="2" _bLoop="1">
+			<_listNotify />
+		</SpriteClipAnimation>
+	</_listAnimation>
+</SpriteClipAsset>

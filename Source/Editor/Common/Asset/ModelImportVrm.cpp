@@ -1,6 +1,6 @@
 /**
  * @file ModelImportVrm.cpp
- * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.json` · 얼굴 리그(`.facial.json`) · 후처리 리그(`.rig.json`) 쓰기입니다.
+ * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.xml` · 얼굴 리그(`.facial.xml`) · 후처리 리그(`.rig.xml`) 쓰기입니다.
  * @details 값의 해석은 `VrmAvatarImporter`, 런타임 형식으로 옮기기는 `VrmRuntimeAssets` 가 합니다.
  */
 #include "pch.h"
@@ -181,7 +181,7 @@ namespace sw::editor
             SW_LOG_WARNING( "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarImporter::kExtension ) );
         FileUtil::ensureDirectoryExists( sideFolder );
-        if ( FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarJSON( result._avatar ) ) == false )
+        if ( FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR( "Failed to write avatar %#", avatarPath.c_str() );
             return false;
@@ -194,7 +194,7 @@ namespace sw::editor
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
         {
             const string facialPath = FileUtil::joinPath( sideFolder, string( stem ) + string( FacialRig::kExtension ) );
-            if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigJSON( result._avatar, &listNotConverted ) ) == false )
+            if ( FileUtil::writeTextFile( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR( "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
@@ -205,7 +205,7 @@ namespace sw::editor
         if ( bHasSpringRig )
         {
             const string rigPath = FileUtil::joinPath( sideFolder, string( stem ) + string( RigAsset::kExtension ) );
-            if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigJSON( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            if ( FileUtil::writeTextFile( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR( "Failed to write spring rig %#", rigPath.c_str() );
                 return false;

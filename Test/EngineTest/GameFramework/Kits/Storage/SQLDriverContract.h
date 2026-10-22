@@ -153,9 +153,9 @@ namespace test
             const string    second     = fixture.makeTableName( "second" );
             writeMigration( folder, "0001_first.sql", "CREATE TABLE " + first + " ( id BIGINT PRIMARY KEY, bytes {{blob}} );\r\n" );
             writeMigration( folder, "0002_second.sql", "CREATE TABLE common_only_must_not_run ( id BIGINT );" );
-            writeMigration( folder, "0002_second." + driverName + ".sql", "CREATE TABLE " + second + " ( id BIGINT );" );        // 방언 갈래가 공통 파일을 대신한다
-            writeMigration( folder, "0002_second.otherdriver.sql", "THIS IS NOT SQL" );                                          // 다른 드라이버 갈래는 읽지 않는다
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second" ] })" ); // 목록이 정본이다(팩은 폴더를 훑을 수 없다)
+            writeMigration( folder, "0002_second." + driverName + ".sql", "CREATE TABLE " + second + " ( id BIGINT );" );                                                             // 방언 갈래가 공통 파일을 대신한다
+            writeMigration( folder, "0002_second.otherdriver.sql", "THIS IS NOT SQL" );                                                                                               // 다른 드라이버 갈래는 읽지 않는다
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /></SQLMigrationList>)" ); // 목록이 정본이다(팩은 폴더를 훑을 수 없다)
 
             vector<SQLMigration> listMigration;
             string               error;
@@ -173,7 +173,7 @@ namespace test
             const string fourth = fixture.makeTableName( "fourth" );
             writeMigration( folder, "0003_third.sql", "CREATE TABLE " + third + " ( id BIGINT );" );
             writeMigration( folder, "0004_broken.sql", "CREATE TABLE " + fourth + " ( id BIGINT ); THIS IS NOT SQL;" );
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third", "0004_broken" ] })" );
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /><Migration _name="0003_third" /><Migration _name="0004_broken" /></SQLMigrationList>)" );
             listMigration.clear();
             SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, 300, error ) );
@@ -182,7 +182,7 @@ namespace test
 
             // 적용된 파일을 고치면 거절한다.
             SW_ASSERT_TRUE( FileUtil::tryRemoveFile( FileUtil::joinPath( folder, "0004_broken.sql" ) ) );
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third" ] })" );
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /><Migration _name="0003_third" /></SQLMigrationList>)" );
             writeMigration( folder, "0001_first.sql", "CREATE TABLE " + first + " ( id BIGINT PRIMARY KEY, bytes {{blob}}, extra BIGINT );" );
             listMigration.clear();
             SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
@@ -193,12 +193,12 @@ namespace test
 
             // 목록의 번호에 빈틈이 있으면 읽지 않는다.
             writeMigration( folder, "0006_gap.sql", "CREATE TABLE gap ( id BIGINT );" );
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third", "0006_gap" ] })" );
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /><Migration _name="0003_third" /><Migration _name="0006_gap" /></SQLMigrationList>)" );
             listMigration.clear();
             SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
 
             // 폴더에 목록에 없는 .sql 이 있으면 읽지 않는다(목록에 빠뜨린 마이그레이션을 조용히 건너뛰지 않는다).
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"({ "migrations": [ "0001_first", "0002_second", "0003_third" ] })" );
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /><Migration _name="0003_third" /></SQLMigrationList>)" );
             listMigration.clear();
             SW_EXPECT_FALSE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             SW_EXPECT_TRUE( error.find( "is not listed" ) != string::npos );

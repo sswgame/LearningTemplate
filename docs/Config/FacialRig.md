@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 파일 | `Resource/game/*/models/*.facial.json` |
+| 파일 | `Resource/game/*/models/*.facial.xml` |
 | 층 | 팩 데이터 |
 | 읽는 곳 | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) |
 | 언제 | 컴포넌트 시작 · 경로를 바꿀 때 |
@@ -18,7 +18,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 ## 필드
 
-얼굴 리그 파일(`<얼굴>.facial.json`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.json`)의 것과 맞춥니다. 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다. `_blink` · `_gaze` 를 적지 않으면 기본값이고, 타깃 · 눈 본이 비면 그 기능을 쓰지 않는다. 읽은 뒤 `validateFile` 이 이름 중복 · 간격 순서를 본다.
+얼굴 리그 파일(`<얼굴>.facial.xml`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.xml`)의 것과 맞춥니다. 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다. `_blink` · `_gaze` 를 적지 않으면 기본값이고, 타깃 · 눈 본이 비면 그 기능을 쓰지 않는다. 읽은 뒤 `validateFile` 이 이름 중복 · 간격 순서를 본다.
 
 원본: [`Source/Engine/Animation/Facial/FacialRig.h`](../../Source/Engine/Animation/Facial/FacialRig.h)
 

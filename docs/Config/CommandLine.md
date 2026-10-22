@@ -38,8 +38,8 @@
 | `-check-textures` | 플래그(`-이름`) | 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `CHECK_TEXTURES` |
 | `-import-models` | 플래그(`-이름`) | 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `IMPORT_MODELS` |
 | `-check-models` | 플래그(`-이름`) | 모델 원본(`models_raw/` 의 glTF)을 `.mesh` 로 임포트한다 · 원본과 `.mesh` 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `CHECK_MODELS` |
-| `-import-lipsync` | 플래그(`-이름`) | 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스). | `IMPORT_LIPSYNC` |
-| `-bake-retarget` | 글 값(`-이름=값`) | 리타깃 베이크. 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스). | `BAKE_RETARGET` |
+| `-import-lipsync` | 플래그(`-이름`) | 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.xml`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스). | `IMPORT_LIPSYNC` |
+| `-bake-retarget` | 글 값(`-이름=값`) | 리타깃 베이크. 값은 `<프로필 *.retarget.xml>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스). | `BAKE_RETARGET` |
 | `-render-portraits` | 글 값(`-이름=값`) | 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits). | `RENDER_PORTRAITS` |
 | `-portrait-size` | 숫자 값(`-이름=값`) | 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits). | `PORTRAIT_SIZE` |
 | `-portrait-dir` | 글 값(`-이름=값`) | 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits). | `PORTRAIT_DIR` |

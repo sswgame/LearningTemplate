@@ -74,7 +74,7 @@ namespace
         static PoseModifierComponent* addRig( SkeletalMeshComponent& unit, string_view json )
         {
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->parseJSON( json, "test.rig.json" ) == false )
+            if ( asset->parseXML( json, "test.rig.xml" ) == false )
                 return nullptr;
             PoseModifierComponent* pModifier = unit.getOwner()->addComponent<PoseModifierComponent>();
             if ( pModifier == nullptr )
@@ -102,7 +102,7 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     GameObject* pBall = TestPoseModifierInternal::createMarker( manager, "Ball", float3{ 5.0f, 1.5f, 1.0f } );
     SW_ASSERT_NOT_NULL( pBall );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig(
-        *pUnit, R"({ "targets": [ { "name": "Ball", "object": "Ball" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "Ball" } ] })" );
+        *pUnit, R"(<RigAsset><targets><item name="Ball" object="Ball" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="Ball" /></nodes></RigAsset>)" );
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->dispatchBeginPlay();
     SW_EXPECT_TRUE( pModifier->isRigReady() );
@@ -136,8 +136,14 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     TestPoseModifierInternal::RootTurnTask turn;
     pBody->registerAnimationPhaseTask( &turn );
 
-    PoseModifierComponent* pFollow = TestPoseModifierInternal::addRig( *pProp, R"({ "targets": [ { "name": "Hand", "bone": "bone2", "unit": "Body" } ],
-        "nodes": [ { "type": "CopyTransform", "name": "Follow", "bone": "bone0", "target": "Hand" } ] })" );
+    PoseModifierComponent* pFollow = TestPoseModifierInternal::addRig( *pProp, R"(<RigAsset>
+	<targets>
+		<item name="Hand" bone="bone2" unit="Body" />
+	</targets>
+	<nodes>
+		<item type="CopyTransform" name="Follow" bone="bone0" target="Hand" />
+	</nodes>
+</RigAsset>)" );
     SW_ASSERT_NOT_NULL( pFollow );
     pFollow->dispatchBeginPlay();
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pProp->getAnimationDependencies().size() ) );
@@ -158,8 +164,14 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     // 몸이 소품을 대상으로 하면 고리다 — 대상은 꺼지고, 시스템은 고리 없이 돈다.
     {
         test::ScopedDefensiveTestLog expected( "a rig target that would create a dependency cycle is rejected" );
-        PoseModifierComponent*       pBack = TestPoseModifierInternal::addRig( *pBody, R"({ "targets": [ { "name": "Prop", "bone": "bone0", "unit": "Prop" } ],
-            "nodes": [ { "type": "Position", "name": "Back", "bone": "bone1", "target": "Prop" } ] })" );
+        PoseModifierComponent*       pBack = TestPoseModifierInternal::addRig( *pBody, R"(<RigAsset>
+	<targets>
+		<item name="Prop" bone="bone0" unit="Prop" />
+	</targets>
+	<nodes>
+		<item type="Position" name="Back" bone="bone1" target="Prop" />
+	</nodes>
+</RigAsset>)" );
         SW_ASSERT_NOT_NULL( pBack );
         pBack->dispatchBeginPlay();
         SW_EXPECT_FALSE( pBack->isTargetBound( "Prop" ) );
@@ -182,8 +194,14 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
     pBody->registerAnimationPhaseTask( &turn );
     GameObject* pGrip = TestPoseModifierInternal::createMarker( manager, "Grip", float3{} );
     SW_ASSERT_NOT_NULL( pGrip );
-    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"({ "targets": [ { "name": "Grip", "object": "Grip", "space": "bone1" } ],
-        "nodes": [ { "type": "Position", "name": "Hold", "bone": "bone2", "target": "Grip" } ] })" );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"(<RigAsset>
+	<targets>
+		<item name="Grip" object="Grip" space="bone1" />
+	</targets>
+	<nodes>
+		<item type="Position" name="Hold" bone="bone2" target="Grip" />
+	</nodes>
+</RigAsset>)" );
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->dispatchBeginPlay();
     SW_EXPECT_TRUE( pBody->getAnimationDependencies().empty() );
@@ -221,10 +239,16 @@ SW_TEST_CASE( PoseModifierTest, SocketTargetsResolveOnOwnAndOtherUnits )
     SW_ASSERT_TRUE( bodySockets->loadFromXMLText( R"(<SocketSet><Socket name="Chest" parent="bone1" kind="Attach" translation="0 0 0.2"/></SocketSet>)", "body", kinds ) );
     SW_ASSERT_TRUE( weaponSockets->loadFromXMLText( R"(<SocketSet><Socket name="Grip" parent="bone2" kind="Attach" translation="0.1 0 0"/></SocketSet>)", "weapon", kinds ) );
 
-    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"({ "targets": [ { "name": "Chest", "socket": "Chest" },
-        { "name": "Grip", "socket": "Grip", "unit": "Weapon" } ], "nodes": [
-        { "type": "Position", "name": "ToChest", "bone": "bone0", "target": "Chest" },
-        { "type": "Position", "name": "ToGrip", "bone": "bone2", "target": "Grip" } ] })" );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"(<RigAsset>
+	<targets>
+		<item name="Chest" socket="Chest" />
+		<item name="Grip" socket="Grip" unit="Weapon" />
+	</targets>
+	<nodes>
+		<item type="Position" name="ToChest" bone="bone0" target="Chest" />
+		<item type="Position" name="ToGrip" bone="bone2" target="Grip" />
+	</nodes>
+</RigAsset>)" );
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->setOwnSockets( bodySockets );
     pModifier->bindUnit( "Weapon", pWeapon, weaponSockets );
@@ -271,8 +295,16 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
     (void)skeleton.addBone( "foot.r", 6, test::makeBoneTransform( float3{ 0.0f, -0.45f, -0.03f } ), float4x4::Identity );
     skeleton.computeInverseBindFromReference();
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
-    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"({ "nodes": [ { "type": "FootPlacement", "name": "Feet", "pelvis": "hips",
-        "interp_speed": 0, "feet": [ { "root": "thigh.l", "mid": "shin.l", "end": "foot.l" }, { "root": "thigh.r", "mid": "shin.r", "end": "foot.r" } ] } ] })" );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"(<RigAsset>
+	<nodes>
+		<item type="FootPlacement" name="Feet" pelvis="hips" interp_speed="0">
+			<feet>
+				<item root="thigh.l" mid="shin.l" end="foot.l" />
+				<item root="thigh.r" mid="shin.r" end="foot.r" />
+			</feet>
+		</item>
+	</nodes>
+</RigAsset>)" );
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->dispatchBeginPlay();
 
@@ -301,12 +333,12 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
 SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const string      pathDisk = FileUtil::joinPath( test::makeTempPath( "rigreload" ), "reach.rig.json" );
+    const string      pathDisk = FileUtil::joinPath( test::makeTempPath( "rigreload" ), "reach.rig.xml" );
     const string      path     = test::makeTempResourceID( pathDisk );
     const string_view firstJSON =
-        R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "A" } ] })";
+        R"(<RigAsset><targets><item name="A" object="A" /><item name="B" object="B" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="A" /></nodes></RigAsset>)";
     const string_view secondJSON =
-        R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "B" } ] })";
+        R"(<RigAsset><targets><item name="A" object="A" /><item name="B" object="B" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="B" /></nodes></RigAsset>)";
     FileUtil::ensureParentDirectoryExists( pathDisk );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, firstJSON ) );
 
@@ -341,8 +373,16 @@ SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
     (void)skeleton.addBone( "tail0", 2, test::makeBoneTransform( float3{ 0.0f, 0.5f, 0.0f } ), float4x4::Identity );
     (void)skeleton.addBone( "tail1", 3, test::makeBoneTransform( float3{ 0.4f, 0.0f, 0.0f } ), float4x4::Identity );
     skeleton.computeInverseBindFromReference();
-    const string_view json = R"({ "nodes": [ { "type": "SpringChain", "name": "Tail", "bones": ["tail0", "tail1"], "stiffness": 0, "damping": 0.2,
-        "use_shared_colliders": true } ] })";
+    const string_view json = R"(<RigAsset>
+	<nodes>
+		<item type="SpringChain" name="Tail" stiffness="0" damping="0.2" use_shared_colliders="true">
+			<bones>
+				<item>tail0</item>
+				<item>tail1</item>
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>)";
 
     float32 arrClearance[2]{};
     for ( uint32 bShared = 0; bShared < 2; ++bShared )
@@ -414,9 +454,20 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
     };
     ElbowTask elbow;
     pUnit->registerAnimationPhaseTask( &elbow );
-    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"({ "nodes": [ { "type": "PoseDriver", "name": "Elbow", "driver": "bone1",
-        "radius_degrees": 60, "poses": [ { "name": "Rest", "rotation": [0, 0, 0] },
-        { "name": "Bent", "rotation": [90, 0, 0], "morphs": [ { "morph": "ElbowBend", "weight": 1 } ] } ] } ] })" );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"(<RigAsset>
+	<nodes>
+		<item type="PoseDriver" name="Elbow" driver="bone1" radius_degrees="60">
+			<poses>
+				<item name="Rest" rotation="0,0,0" />
+				<item name="Bent" rotation="90,0,0">
+					<morphs>
+						<item morph="ElbowBend" weight="1" />
+					</morphs>
+				</item>
+			</poses>
+		</item>
+	</nodes>
+</RigAsset>)" );
     SW_ASSERT_NOT_NULL( pModifier );
     pModifier->dispatchBeginPlay();
 

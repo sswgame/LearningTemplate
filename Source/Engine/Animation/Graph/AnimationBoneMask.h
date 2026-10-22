@@ -1,9 +1,9 @@
 /**
  * @file AnimationBoneMask.h
  * @brief 애니메이션 레이어가 쓰는 본 마스크 데이터입니다(언리얼 Layered Blend Per Bone 의 Branch Filter, 유니티 Avatar Mask 에 해당합니다).
- * @details JSON 형식은 다음과 같다. 그래프 에셋의 "bone_masks" 항목에 바로 적거나, 같은 객체를 `*.bonemask.json` 프리셋 파일에 두고 "file" 로 가리킨다.
+ * @details XML 형식은 다음과 같다. 그래프 에셋의 `<bone_masks>` 항목에 바로 적거나, 같은 내용을 `*.bonemask.xml` 프리셋 파일(루트 `AnimationBoneMaskDef`)에 두고 "file" 로 가리킨다.
  *          @code
- *          { "roots": [ { "bone": "Spine", "weight": 1.0 } ], "bones": [ { "bone": "Spine", "weight": 0.5 } ] }
+ *          <AnimationBoneMaskDef><roots><entry bone="Spine" weight="1" /></roots><bones><entry bone="Spine" weight="0.5" /></bones></AnimationBoneMaskDef>
  *          @endcode
  *          - **roots**: 그 본과 모든 자손에 가중치를 퍼뜨린다. 자손 쪽에 다른 root 가 있으면 그 아래는 그 root 의 값이다.
  *          - **bones**: 그 본 하나만 가중치를 바꾼다(퍼뜨리지 않는다). 퍼뜨린 뒤에 적용한다.
@@ -20,8 +20,8 @@
 
 namespace sw
 {
-    class JSONValue;
     class Skeleton;
+    class XMLNode;
 
     /** @brief 본 마스크의 항목 하나입니다. */
     struct AnimationBoneMaskEntry
@@ -41,7 +41,7 @@ namespace sw
     struct SW_API AnimationBoneMaskDef
     {
         /** @brief 본 마스크 프리셋 파일의 접미사입니다. */
-        static constexpr string_view kExtension = ".bonemask.json";
+        static constexpr string_view kExtension = ".bonemask.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -54,14 +54,14 @@ namespace sw
         vector<AnimationBoneMaskEntry> _listEntry{};
 
         /**
-         * @brief "roots" 와 "bones" 를 읽습니다(지금 항목을 비우고). 항목이 하나도 없거나, 본 이름이 비었거나, 가중치가 없거나 범위 밖이면 오류를 남기고 false 입니다.
+         * @brief 요소의 "roots" 와 "bones" 자식을 읽습니다(지금 항목을 비우고). 항목이 하나도 없거나, 본 이름이 비었거나, 가중치가 없거나 범위 밖이면 오류를 남기고 false 입니다.
          * @param context 오류 문장에 넣을 위치(그래프 파일과 마스크 이름)입니다.
          */
-        [[nodiscard]] bool parseObject( const JSONValue& object, string_view context );
+        [[nodiscard]] bool parseObject( const XMLNode& element, string_view context );
         /** @brief 프리셋 파일을 읽습니다. 성공하면 `_filePath` 를 그 경로로 둡니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
-        /** @brief "roots" 와 "bones" 를 @p object(이미 객체여야 합니다)에 씁니다. */
-        void writeObject( const JSONValue& object ) const;
+        /** @brief "roots" 와 "bones" 를 @p element(이미 만든 요소여야 합니다)의 자식으로 씁니다. */
+        void writeObject( const XMLNode& element ) const;
         /**
          * @brief 스켈레톤의 본마다 가중치를 구해 @p outListWeight(본 수 크기)에 씁니다.
          * @return 스켈레톤에 없는 본을 가리키면 오류를 남기고 false 입니다. 그때 @p outListWeight 는 모두 0 입니다.

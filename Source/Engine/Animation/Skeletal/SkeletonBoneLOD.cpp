@@ -8,10 +8,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -31,16 +31,17 @@ namespace sw
 namespace sw
 {
 
-    bool SkeletonBoneLOD::parseJSON( string_view json, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseXML( string_view xml, string_view sourceLabel )
     {
         _listLevel.clear();
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "SkeletonBoneLOD", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Bone LOD '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Bone LOD '%#': malformed XML (expected a <SkeletonBoneLOD> root)", sourceLabel );
             return false;
         }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        if ( parseRoot( root, sourceLabel ) )
         {
             _revision = allocateRevision();
             return true;
@@ -59,30 +60,33 @@ namespace sw
             _listLevel.clear();
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    bool SkeletonBoneLOD::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, {}, { "levels" }, sourceLabel ) == false )
             return false;
-        const JSONValue levels = root.get( "levels" );
-        if ( levels.isArray() == false )
+        const XMLNode levels = root.findChild( "levels", false );
+        if ( levels.isValid() == false )
         {
-            SW_LOG_ERROR( "Bone LOD '%#': 'levels' must be an array", sourceLabel );
+            SW_LOG_ERROR( "Bone LOD '%#': a <levels> element is required", sourceLabel );
             return false;
         }
-        for ( size_t levelIndex = 0; levelIndex < levels.size(); ++levelIndex )
+        size_t levelIndex{ 0 };
+        for ( XMLNode level = levels.findChild(); level.isValid(); level = level.findNextSibling(), ++levelIndex )
         {
-            const JSONValue level = levels.at( levelIndex );
-            if ( AnimationJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
+            if ( string_view{ level.getName() } != "level" || XMLReadUtil::hasOnlyKnownNames( level, { "max_screen_size" }, { "remove" }, sourceLabel ) == false )
+            {
+                SW_LOG_ERROR( "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );
                 return false;
-            const JSONValue              removed          = level.get( "remove" );
-            const std::optional<float32> maxScreenSize    = level.readRequired<float32>( "max_screen_size" );
-            const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isArray() == false || removed.size() == 0;
+            }
+            const XMLNode                removed          = level.findChild( "remove", false );
+            const std::optional<float32> maxScreenSize    = level.readRequiredAttribute<float32>( "max_screen_size" );
+            const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isValid() == false || removed.findChild().isValid() == false;
             if ( bInvalidLODLevel )
             {
-                SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty 'remove' array", sourceLabel, levelIndex );
+                SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty <remove> list", sourceLabel, levelIndex );
                 return false;
             }
             SkeletonBoneLODLevel entry{};
@@ -92,14 +96,14 @@ namespace sw
                 SW_LOG_ERROR( "Bone LOD '%#': level %# max_screen_size %# must be smaller than the previous level's", sourceLabel, levelIndex, entry._maxScreenSize );
                 return false;
             }
-            for ( size_t boneIndex = 0; boneIndex < removed.size(); ++boneIndex )
+            for ( XMLNode bone = removed.findChild(); bone.isValid(); bone = bone.findNextSibling() )
             {
-                if ( removed.at( boneIndex ).isString() == false )
+                if ( string_view{ bone.getName() } != "item" )
                 {
-                    SW_LOG_ERROR( "Bone LOD '%#': level %# 'remove' must hold bone names", sourceLabel, levelIndex );
+                    SW_LOG_ERROR( "Bone LOD '%#': level %# <remove> must hold <item> bone names", sourceLabel, levelIndex );
                     return false;
                 }
-                entry._listRemovedBone.push_back( hashed_string( removed.at( boneIndex ).asString() ) );
+                entry._listRemovedBone.push_back( hashed_string( string_view{ bone.getText() } ) );
             }
             _listLevel.push_back( std::move( entry ) );
         }

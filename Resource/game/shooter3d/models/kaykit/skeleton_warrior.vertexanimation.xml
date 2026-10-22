@@ -1,0 +1,8 @@
+<VertexAnimationCookList mesh="game/shooter3d/models/kaykit/skeleton_warrior.mesh"
+                         skeleton="game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"
+                         clip_folder="game/shooter3d/models/kaykit/skeleton_warrior/clips">
+	<clips>
+		<item>Idle</item>
+		<item>Walking_A</item>
+	</clips>
+</VertexAnimationCookList>

@@ -1,6 +1,6 @@
 /**
  * @file SpriteClipAsset.h
- * @brief 에디터와 런타임이 함께 쓰는 스프라이트 클립(`.sprite.json`) 에셋입니다. 아틀라스, 프레임(UV 사각형과 시간), 이름 붙은 애니메이션을 담습니다.
+ * @brief 에디터와 런타임이 함께 쓰는 스프라이트 클립(`.sprite.xml`) 에셋입니다. 아틀라스, 프레임(UV 사각형과 시간), 이름 붙은 애니메이션을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -101,8 +101,8 @@ namespace sw
 {
     /**
      * @class SpriteClipAsset
-     * @brief `.sprite.json` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent, SpriteAnimatorComponent)이 읽는 **하나의 파서**입니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값은 오류). 키는 PROPERTY 이름이 정본이다
+     * @brief `.sprite.xml` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent, SpriteAnimatorComponent)이 읽는 **하나의 파서**입니다.
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값은 오류). 키는 PROPERTY 이름이 정본이다
      *          (`_atlasPath`, `_atlasPixelSize`, `_listFrame`, `_listKey`, `_listAnimation`). 적지 않은 칸은 구조체 초기값이다.
      *          `_listAnimation` 이 빈 클립은 **프레임 전체가 이름 없는 애니메이션 하나**다(`findFrameRange`).
      *          읽은 뒤 의미만 따로 본다: 프레임 밖 구간은 자르고 알리며, 이름이 비거나 길이가 0 인 구간과 이름이 빈 알림은 버린다.
@@ -114,7 +114,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 스프라이트 클립 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
-        static constexpr string_view kExtension = ".sprite.json";
+        static constexpr string_view kExtension = ".sprite.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -131,10 +131,10 @@ namespace sw
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
-        /** @brief JSON 본문을 읽습니다. 구문이 틀렸거나, 루트가 객체가 아니거나, 모르는 키 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
-        [[nodiscard]] bool parseJSON( string_view json );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
-        string toJSON() const;
+        /** @brief XML 본문을 읽습니다. 구문이 틀렸거나, 모르는 속성 · 자식 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
+        [[nodiscard]] bool parseXML( string_view xml );
+        /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
+        string toXML() const;
         /** @brief 내용을 비웁니다. */
         void clear();
 

@@ -103,7 +103,7 @@ namespace
         static bool isAutomationScenario( sw::string_view resourceID ) { return endsWith( resourceID, ".scenario.xml" ); }
         static bool isAutomationAllowList( sw::string_view resourceID ) { return resourceID == sw::AutomationLogPolicy::kAllowListPath; }
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
-        static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.json" ); }
+        static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.xml" ); }
         static bool isDialogueGraph( sw::string_view resourceID ) { return endsWith( resourceID, sw::DialogueGraphAsset::kExtension ); }
         static bool isTelemetrySchema( sw::string_view resourceID ) { return endsWith( resourceID, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceID ) { return endsWith( resourceID, ".settings.xml" ); }
@@ -111,7 +111,7 @@ namespace
         static bool isNavMeshSettings( sw::string_view resourceID ) { return endsWith( resourceID, "navmeshsettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceID ) { return endsWith( resourceID, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceID ) { return endsWith( resourceID, sw::Skeleton::kExtension ); }
-        static bool isAnimationGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.json" ); }
+        static bool isAnimationGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.xml" ); }
         /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
         [[nodiscard]] static bool loadAnimationGraph( const sw::string& resourceID )
         {
@@ -294,7 +294,7 @@ namespace
             return settings.loadFromResource( resourceID );
         }
 
-        /** @brief 로컬라이제이션 JSON 문서(`loadFromJSONText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
+        /** @brief 로컬라이제이션 XML 문서(`loadFromXMLText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
         template <typename TDocument>
         [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceID )
         {
@@ -303,13 +303,13 @@ namespace
                 return false;
             TDocument  document;
             sw::string error;
-            if ( document.loadFromJSONText( text, resourceID, &error ) )
+            if ( document.loadFromXMLText( text, resourceID, &error ) )
                 return true;
             SW_LOG_WARNING( "%#", error.c_str() );
             return false;
         }
 
-        static bool isSequence( sw::string_view resourceID ) { return endsWith( resourceID, ".seq.json" ); }
+        static bool isSequence( sw::string_view resourceID ) { return endsWith( resourceID, ".seq.xml" ); }
         /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류 이름 · 채널 수가 틀린 트랙은 읽기 오류다). */
         [[nodiscard]] static bool loadSequence( const sw::string& resourceID )
         {
@@ -503,16 +503,16 @@ namespace
         static bool isLipSync( sw::string_view resourceID ) { return resourceID == sw::LipSyncSettings::kResourcePath; }
         static bool isVisemeTrack( sw::string_view resourceID ) { return endsWith( resourceID, sw::VisemeTrack::kExtension ); }
         static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
-        static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.json" ); }
+        static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.xml" ); }
 
-        /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.json`) — 런타임은 이 파일 대신 임포트가 옮긴 얼굴 리그 · 후처리 리그를 읽는다(VrmRuntimeAssets) — 여기는 humanoid · 1인칭 기록이다. JSON 객체이고 `_version` · `_mapHumanBone` 이 있는지만 본다. */
+        /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.xml`) — 런타임은 이 파일 대신 임포트가 옮긴 얼굴 리그 · 후처리 리그를 읽는다(VrmRuntimeAssets) — 여기는 humanoid · 1인칭 기록이다. 루트 `VrmAvatar` 에 `_version` 속성과 `_mapHumanBone` 요소가 있는지만 본다. */
         [[nodiscard]] static bool loadVrmAvatar( const sw::string& resourceID )
         {
-            sw::JSONDocument document;
+            sw::XMLDocument document;
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
-            const sw::JSONValue root = document.getRoot();
-            return root.isObject() && root.get( "_version" ).isNumber() && root.get( "_mapHumanBone" ).isObject();
+            const sw::XMLNode root = document.getRoot( "VrmAvatar", false );
+            return root.isValid() && root.findAttribute( "_version", false ) != nullptr && root.findChild( "_mapHumanBone", false ).isValid();
         }
 
         // 엔진 카탈로그(`XMLCatalog`) 로더입니다. 게임 데이터(키트 · 기반 카탈로그)는 각자의 `*DataKind.cpp` 가 `SW_RESOURCE_DATA_KIND` 로 올린 종류를 `ResourceDataKindRegistry` 에서 찾습니다.

@@ -2,7 +2,7 @@
  * @file RigDebugPanel.h
  * @brief 리그 디버그 창 — 고른 오브젝트의 `PoseModifierComponent` 노드 목록(종류 · 대상 본 · 가중치 · 켜짐)을 보이고 가중치와 켜짐을 고칩니다.
  * @details 언리얼 Control Rig 의 디버그 보기와 Animation Blueprint 디버그, 유니티 Animation Rigging 의 Rig 가중치 · 제약 켜짐에 해당합니다.
- *          고친 값은 실행 중인 인스턴스의 노드 복제본에 들어가고, "Save to rig" 를 누르면 리그 에셋(`*.rig.json`)의 노드 `weight` · `enabled` 에
+ *          고친 값은 실행 중인 인스턴스의 노드 복제본에 들어가고, "Save to rig" 를 누르면 리그 에셋(`*.rig.xml`)의 노드 `weight` · `enabled` 에
  *          되써 넣는다(`RigAsset::rewriteSettings` — 다른 키는 그대로, 결과를 다시 읽어 규칙을 본다). 되돌리기는 문서 명령(`EditorTransaction::push`)으로 기록한다.
  *          고른 노드가 쓰는 본은 디버그 드로우 큐에 구와 이름으로 표시한다.
  *          대상 표에서 자기 유닛 대상(본 · 소켓)의 "Gizmo" 를 켜면 뷰포트 시각화 "Rig Target" 이 그 대상에 기즈모를 놓고, 끌기를 놓으면 대상의

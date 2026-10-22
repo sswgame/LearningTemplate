@@ -1,6 +1,6 @@
 /**
  * @file RetargetProfile.h
- * @brief 리타깃 프로필(`*.retarget.json`)입니다. 원본과 대상 스켈레톤 사이의 사슬 쌍(이름, 본 목록), 골반과 뿌리 처리, IK 목표 사슬을 담습니다.
+ * @brief 리타깃 프로필(`*.retarget.xml`)입니다. 원본과 대상 스켈레톤 사이의 사슬 쌍(이름, 본 목록), 골반과 뿌리 처리, IK 목표 사슬을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    class JSONValue;
+    class XMLNode;
 
     /** @brief 뿌리와 골반 이동을 옮기는 방법입니다. */
     enum class RetargetTranslationMode : uint8
@@ -50,13 +50,20 @@ namespace sw
 {
     /**
      * @class RetargetProfile
-     * @brief 프로필 하나입니다. 형식은 JSON 이며, 모르는 키나 겹친 사슬 이름은 오류입니다.
+     * @brief 프로필 하나입니다. 형식은 XML 이며, 모르는 속성 · 자식이나 겹친 사슬 이름은 오류입니다(읽기는 후처리 리그와 같은 `RigXMLReader` 다 — 값은 속성, 목록은 `<item>`).
      * @code
-     * { "source_skeleton": "game/.../knight.skeleton.json", "target_skeleton": "game/.../skeleton_minion.skeleton.json",
-     *   "root": { "source": "root", "target": "root" }, "pelvis": { "source": "hips", "target": "hips" },
-     *   "translation": "ScaleByPelvisHeight",
-     *   "chains": [ { "name": "LeftLeg", "source": ["upperleg.l", "lowerleg.l", "foot.l"], "target": ["upperleg.l", "lowerleg.l", "foot.l"], "ik_goal": true } ],
-     *   "bone_map": [ { "source": "head", "target": "Head" } ], "map_same_names": true, "height_ratio": 1.25 }
+     * <RetargetProfile source_skeleton="game/.../knight.skeleton.xml" target_skeleton="game/.../skeleton_minion.skeleton.xml"
+     *                  translation="ScaleByPelvisHeight" map_same_names="true" height_ratio="1.25">
+     *   <root source="root" target="root" />
+     *   <pelvis source="hips" target="hips" />
+     *   <chains>
+     *     <item name="LeftLeg" ik_goal="true">
+     *       <source><item>upperleg.l</item><item>lowerleg.l</item><item>foot.l</item></source>
+     *       <target><item>upperleg.l</item><item>lowerleg.l</item><item>foot.l</item></target>
+     *     </item>
+     *   </chains>
+     *   <bone_map><item source="head" target="Head" /></bone_map>
+     * </RetargetProfile>
      * @endcode
      *          - `bone_map`(선택): 본 이름 테이블이다. 사슬로 묶지 않은 본을 한 줄에 하나씩 짝짓는다.
      *          - `map_same_names`(선택): 사슬, 테이블 어디에도 없는 대상 본 중 원본에 같은 이름이 있으면 짝짓는다(언리얼 IK Retargeter 의 이름 자동 매핑).
@@ -68,7 +75,7 @@ namespace sw
     {
     public:
         /** @brief 프로필 확장자입니다. */
-        static constexpr string_view kExtension = ".retarget.json";
+        static constexpr string_view kExtension = ".retarget.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -78,8 +85,8 @@ namespace sw
 
         RetargetProfile();
 
-        /** @brief JSON 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         void               clear();
@@ -111,7 +118,7 @@ namespace sw
                                RetargetTranslationMode mode );
 
     private:
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
         vector<RetargetChain>    _listChain;
         vector<RetargetBonePair> _listBonePair;

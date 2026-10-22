@@ -15,7 +15,7 @@
 			                       _blendMode="Opaque"
 			                       _gpuSpinSeed="0"
 			                       _bVisible="true"
-			                       _skeletonPath="game/shooter3d/models/props/arrow/arrow.skeleton.json"
+			                       _skeletonPath="game/shooter3d/models/props/arrow/arrow.skeleton.xml"
 			                       _updateRateDivisor="1"
 			                       _bFollowParentPose="false"
 			                       _bAnimateWhenOffscreen="false" />

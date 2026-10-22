@@ -1,6 +1,6 @@
 /**
  * @file SequenceAsset.h
- * @brief 에디터와 런타임이 함께 쓰는 시퀀서 타임라인 JSON 에셋입니다.
+ * @brief 에디터와 런타임이 함께 쓰는 시퀀서 타임라인 XML 에셋입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -19,7 +19,7 @@ namespace sw
 {
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
-     * @details 프레임 번호는 JSON 에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
+     * @details 프레임 번호는 파일에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
      *          **차**를 그냥 빼기로 구하는데(`_frameMax - _frameMin`, `_end - _start`), int32 의
      *          양 끝값이 쌍으로 들어오면 그 빼기가 부호 있는 오버플로(UB)가 된다. 범위를 절반으로
      *          묶으면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 곳마다 넓은 타입으로
@@ -186,7 +186,7 @@ namespace sw
     /**
      * @class SequenceAsset
      * @brief 구간 항목(클립, 이벤트, 카메라 컷)과 키 트랙(트랜스폼, 프로퍼티)을 담는 타임라인 에셋입니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigJSON` — 모르는 키 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류).
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류).
      *          키는 PROPERTY 이름이 정본이다. 읽은 뒤 프레임 번호의 범위(`kSequenceFrameLimit`) · 순서, 종류마다의 채널 수를 따로 보고,
      *          커브는 시각 순으로 정렬해 자동 접선을 다시 센다.
      */
@@ -197,7 +197,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
-        static constexpr string_view kExtension = ".seq.json";
+        static constexpr string_view kExtension = ".seq.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -208,28 +208,28 @@ namespace sw
         /** @brief 빈 시퀀스를 만듭니다. */
         SequenceAsset() = default;
 
-        /** @brief 리소스 id 의 JSON 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
-        /** @brief **디스크 파일**의 JSON 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
+        /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief JSON 파일을 씁니다. */
+        /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /**
-         * @brief JSON 본문을 파싱합니다.
+         * @brief XML 본문을 파싱합니다.
          * @details **실패하면 빈 에셋이 남는다.** 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전
          *          시퀀스가 새 시퀀스인 척한다.
          */
-        [[nodiscard]] bool parseJSON( string_view json );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2, 모든 PROPERTY). */
-        string toJSON() const;
+        [[nodiscard]] bool parseXML( string_view xml );
+        /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
+        string toXML() const;
         /** @brief 종류의 특성 항목을 반환합니다. 테이블에 없는 값이면 nullptr 입니다. */
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 
     private:
-        /** @brief 읽은 본문(@p json)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
-        [[nodiscard]] bool readText( string_view json, string_view sourceLabel );
+        /** @brief 읽은 본문(@p xml)을 이 에셋에 채우고 의미를 봅니다. 파일 경로와 문자열 경로가 모이는 지점이며, 틀리면 빈 에셋이 남습니다. */
+        [[nodiscard]] bool readText( string_view xml, string_view sourceLabel );
         /** @brief 프레임 번호의 범위 · 순서와 종류 · 채널 수를 봅니다. 어긋난 곳마다 오류를 남깁니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 

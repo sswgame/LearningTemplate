@@ -9,6 +9,7 @@ import struct
 import sys
 import unittest
 from pathlib import Path
+from xml.etree import ElementTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
@@ -77,13 +78,13 @@ class MakeSyntheticRigTest(unittest.TestCase):
                         rotationCount = sum(1 for channel in animation["channels"] if channel["target"]["path"] == "rotation")
                         weightCount = sum(1 for channel in animation["channels"] if channel["target"]["path"] == "weights")
                         self.assertEqual((bones, 1), (rotationCount, weightCount))
-                    rigDocument = json.loads(rigBytes.decode("ascii"))
+                    listRigNode = [node.attrib | {"bones": [item.text for item in node.findall("bones/item")]} for node in ElementTree.fromstring(rigBytes.decode("ascii")).findall("nodes/item")]
                     setName = set(listName)
-                    for node in rigDocument["nodes"]:
+                    for node in listRigNode:
                         listBone = node["bones"] if node["type"] == "SpringChain" else [node["root"], node["mid"], node["end"]]
                         self.assertTrue(set(listBone) <= setName, node["name"])
                     legCount = sum(1 for name in listName if name.startswith("leg_") and name.endswith("_00"))
-                    self.assertEqual(legCount, sum(1 for node in rigDocument["nodes"] if node["type"] == "TwoBoneIK"))
+                    self.assertEqual(legCount, sum(1 for node in listRigNode if node["type"] == "TwoBoneIK"))
 
     def testVerticesHaveFourInfluencesSummingToOne(self) -> None:
         glbBytes, _ = rig.makeRig(makeOptionsInternal("quadruped", 60))
@@ -123,7 +124,7 @@ class MakeSyntheticRigTest(unittest.TestCase):
                 stem = rig.makeRepresentativeName(topology, bones)
                 glbBytes, rigBytes = rig.makeRig(rig.makeRepresentativeOptions(topology, bones))
                 self.assertEqual(glbBytes, (folder / f"{stem}.glb").read_bytes(), "run: py -3 Scripts/dev/MakeSyntheticRig.py --representatives")
-                self.assertEqual(rigBytes, (folder / f"{stem}.rig.json").read_bytes())
+                self.assertEqual(rigBytes, (folder / f"{stem}.rig.xml").read_bytes())
 
 
 if __name__ == "__main__":

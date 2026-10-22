@@ -8,10 +8,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -105,17 +105,18 @@ namespace sw
         return -1;
     }
 
-    bool RigAsset::parseJSON( string_view json, string_view sourceLabel )
+    bool RigAsset::parseXML( string_view xml, string_view sourceLabel )
     {
         SW_MEMORY_SCOPE( Animation );
         clear();
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Rig '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Rig '%#': malformed XML (expected a <RigAsset> root)", sourceLabel );
             return false;
         }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        if ( parseRoot( root, sourceLabel ) )
         {
             _contentID = allocateContentID();
             return true;
@@ -124,28 +125,28 @@ namespace sw
         return false;
     }
 
-    bool RigAsset::rewriteSettings( string_view jsonText, string_view sourceLabel, const RigSaveParams& saveParams, string& outJSONText )
+    bool RigAsset::rewriteSettings( string_view xmlText, string_view sourceLabel, const RigSaveParams& saveParams, string& outXMLText )
     {
-        JSONDocument document;
-        if ( document.parse( jsonText, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xmlText, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Rig '%#': malformed JSON, rig settings not saved", sourceLabel );
+            SW_LOG_ERROR( "Rig '%#': malformed XML, rig settings not saved", sourceLabel );
             return false;
         }
-        const JSONValue nodes = document.getRoot().get( "nodes" );
+        const XMLNode nodes = root.findChild( "nodes", false );
         if ( nodes.isValid() == false )
         {
             SW_LOG_ERROR( "Rig '%#': no 'nodes', rig settings not saved", sourceLabel );
             return false;
         }
-        const JSONValue targets = document.getRoot().get( "targets" );
+        const XMLNode targets = root.findChild( "targets", false );
         for ( const RigTargetSaveParams& params : saveParams._listTarget )
         {
             bool bFound = false;
-            for ( size_t index = 0; targets.isValid() && index < targets.size(); ++index )
+            for ( XMLNode target = targets.findChild(); target.isValid(); target = target.findNextSibling() )
             {
-                const JSONValue target = targets.at( index );
-                const bool      bNamed = hashed_string( target.get( "name" ).asString() ) == params._name;
+                const bool bNamed = hashed_string( string_view{ target.getAttributeText( "name", false ) } ) == params._name;
                 if ( bNamed == false )
                     continue;
                 bFound = true;
@@ -153,12 +154,12 @@ namespace sw
                 const float3 degrees           = params._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
                 const bool   bHasTranslation   = params._translation.getLengthSquared() > 0.0f;
                 const bool   bHasRotation      = degrees.getLengthSquared() > 0.0f;
-                const bool   bWriteTranslation = bHasTranslation || target.has( "translation" );
-                const bool   bWriteRotation    = bHasRotation || target.has( "rotation" );
+                const bool   bWriteTranslation = bHasTranslation || target.findAttribute( "translation", false ) != nullptr;
+                const bool   bWriteRotation    = bHasRotation || target.findAttribute( "rotation", false ) != nullptr;
                 if ( bWriteTranslation )
-                    AnimationJSONUtil::writeFloats( target.set( "translation" ), &params._translation._x, 3 );
+                    target.setAttribute( "translation", string_view{ XMLReadUtil::makeFloatListText( &params._translation._x, 3 ) } );
                 if ( bWriteRotation )
-                    AnimationJSONUtil::writeFloats( target.set( "rotation" ), &degrees._x, 3 );
+                    target.setAttribute( "rotation", string_view{ XMLReadUtil::makeFloatListText( &degrees._x, 3 ) } );
             }
             if ( bFound == false )
             {
@@ -169,17 +170,16 @@ namespace sw
         for ( const RigNodeSaveParams& params : saveParams._listNode )
         {
             bool bFound = false;
-            for ( size_t index = 0; index < nodes.size(); ++index )
+            for ( XMLNode node = nodes.findChild(); node.isValid(); node = node.findNextSibling() )
             {
-                const JSONValue node   = nodes.at( index );
-                const bool      bNamed = hashed_string( node.get( "name" ).asString() ) == params._name;
+                const bool bNamed = hashed_string( string_view{ node.getAttributeText( "name", false ) } ) == params._name;
                 if ( bNamed == false )
                     continue;
                 bFound = true;
-                node.set( "weight" ).setFloat( static_cast<float64>( params._weight ) );
-                const bool bWriteEnabled = params._bEnabled == false || node.has( "enabled" );
+                node.setAttribute( "weight", params._weight );
+                const bool bWriteEnabled = params._bEnabled == false || node.findAttribute( "enabled", false ) != nullptr;
                 if ( bWriteEnabled )
-                    node.set( "enabled" ).setBool( params._bEnabled );
+                    node.setAttribute( "enabled", string_view{ params._bEnabled ? "true" : "false" } );
             }
             if ( bFound == false )
             {
@@ -187,11 +187,11 @@ namespace sw
                 return false;
             }
         }
-        const string text = document.dump( 2 );
+        const string text = document.saveToString();
         RigAsset     check;
-        if ( check.parseJSON( text, sourceLabel ) == false )
+        if ( check.parseXML( text, sourceLabel ) == false )
             return false; // 다시 읽기가 이유를 남겼다
-        outJSONText = text;
+        outXMLText = text;
         return true;
     }
 
@@ -204,18 +204,18 @@ namespace sw
             clear();
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    bool RigAsset::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool RigAsset::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        RigJSONReader reader( root, sourceLabel );
-        bool          bPlanar = false;
+        RigXMLReader reader( root, sourceLabel );
+        bool         bPlanar = false;
         if ( reader.readBool( "planar", bPlanar, false ) == false )
             return false;
-        _bPlanar                = bPlanar ? SW_TRUE : SW_FALSE;
-        const JSONValue targets = reader.readArray( "targets", false );
-        const JSONValue nodes   = reader.readArray( "nodes", true );
+        _bPlanar                 = bPlanar ? SW_TRUE : SW_FALSE;
+        const RigXMLList targets = reader.readArray( "targets", false );
+        const RigXMLList nodes   = reader.readArray( "nodes", true );
         if ( reader.finish() == false )
             return false;
         if ( nodes.size() == 0 )
@@ -236,11 +236,11 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::parseTarget( const JSONValue& value, string_view sourceLabel )
+    bool RigAsset::parseTarget( const XMLNode& value, string_view sourceLabel )
     {
-        RigJSONReader reader( value, sourceLabel );
-        RigTargetDef  target{};
-        bool          bOk = reader.readName( "name", target._name, true ) && reader.readName( "bone", target._bone, false ) &&
+        RigXMLReader reader( value, sourceLabel );
+        RigTargetDef target{};
+        bool         bOk = reader.readName( "name", target._name, true ) && reader.readName( "bone", target._bone, false ) &&
                    reader.readName( "socket", target._socket, false ) && reader.readName( "object", target._object, false ) &&
                    reader.readName( "unit", target._unit, false ) && reader.readName( "space", target._space, false ) &&
                    reader.readFloat3( "translation", target._offset._translation, false ) &&
@@ -270,9 +270,9 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::parseNode( const JSONValue& value, string_view sourceLabel )
+    bool RigAsset::parseNode( const XMLNode& value, string_view sourceLabel )
     {
-        RigJSONReader reader( value, sourceLabel );
+        RigXMLReader  reader( value, sourceLabel );
         hashed_string typeName{};
         if ( reader.readName( "type", typeName, true ) == false )
             return false;

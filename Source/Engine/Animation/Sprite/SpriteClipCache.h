@@ -1,6 +1,6 @@
 /**
  * @file SpriteClipCache.h
- * @brief 스프라이트 클립(`.sprite.json`)을 경로별로 나눠 주는 캐시입니다("SpriteClip").
+ * @brief 스프라이트 클립(`.sprite.xml`)을 경로별로 나눠 주는 캐시입니다("SpriteClip").
  * @details 구현은 `SharedAssetCache` 하나다. 표는 프로세스에 하나이고 씬 로드 워커와 게임 모듈이 서비스 없이 부른다(`acquire`). 같은 클립을 쓰는
  *          스프라이트 백 개가 파일을 백 번 읽지 않는다. 약한 참조(`MeshUtil::acquirePrimitive` 와 같은 구조)라 마지막 사용자가 놓으면 사라진다.
  *

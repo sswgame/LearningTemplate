@@ -7,7 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -64,11 +65,11 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JSONDocument doc;
+        XMLDocument doc;
         if ( doc.loadResource( path ) == false )
             return false;
-        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJSON 에 다시 넘기지 않는다).
-        return parseRoot( doc.getRoot() );
+        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseXML 에 다시 넘기지 않는다).
+        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), path );
     }
 
     bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
@@ -78,10 +79,10 @@ namespace sw
         if ( diskPath.empty() )
             return false;
 
-        JSONDocument doc;
+        XMLDocument doc;
         if ( doc.loadFile( diskPath ) == false )
             return false;
-        return parseRoot( doc.getRoot() );
+        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), diskPath );
     }
 
     bool AnimationGraphAsset::saveToFile( string_view path ) const
@@ -89,26 +90,28 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 
-    bool AnimationGraphAsset::parseJSON( string_view jsonView )
+    bool AnimationGraphAsset::parseXML( string_view xmlView )
     {
         clear();
 
-        JSONDocument doc;
-        if ( doc.parse( jsonView ) == false )
+        XMLDocument doc;
+        if ( doc.parse( xmlView, "<animation graph text>" ) == false )
             return false;
 
-        return parseRoot( doc.getRoot() );
+        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), "<animation graph text>" );
     }
 
-    bool AnimationGraphAsset::parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode )
+    bool AnimationGraphAsset::parseBlendSpace( const XMLNode& blendSpaceXML, AnimationGraphNode& inoutNode )
     {
+        if ( XMLReadUtil::hasOnlyKnownNames( blendSpaceXML, { "x", "y", "notify" }, { "samples" }, inoutNode._name ) == false )
+            return false;
         AnimationGraphBlendSpaceDef& def = inoutNode._blendSpace;
-        def._parameterX                  = hashed_string( blendSpaceJSON.get( "x" ).asString() );
-        if ( blendSpaceJSON.has( "y" ) )
-            def._parameterY = hashed_string( blendSpaceJSON.get( "y" ).asString() );
+        def._parameterX                  = hashed_string( string_view{ blendSpaceXML.getAttributeText( "x", false ) } );
+        if ( blendSpaceXML.findAttribute( "y", false ) != nullptr )
+            def._parameterY = hashed_string( string_view{ blendSpaceXML.getAttributeText( "y", false ) } );
         def._space.clear();
         def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
         if ( def._parameterX.empty() )
@@ -117,10 +120,10 @@ namespace sw
             return false;
         }
         def._notifyMode = AnimationBlendSpaceNotifyMode::All;
-        if ( blendSpaceJSON.has( "notify" ) )
+        if ( blendSpaceXML.findAttribute( "notify", false ) != nullptr )
         {
-            const string notifyText = blendSpaceJSON.get( "notify" ).asString();
-            bool         bKnown     = false;
+            const string notifyText{ blendSpaceXML.getAttributeText( "notify", false ) };
+            bool         bKnown = false;
             for ( uint32 index = 0; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendSpaceNotifyText ) ); ++index )
             {
                 if ( notifyText == AnimationGraphAssetInternal::kArrBlendSpaceNotifyText[index] )
@@ -136,26 +139,34 @@ namespace sw
             }
         }
 
-        bool bValid = true;
-        forEachObjectInArray( blendSpaceJSON, "samples", [&def, &bValid, &inoutNode]( const JSONValue& sampleJSON, size_t sampleIndex )
+        bool   bValid = true;
+        size_t sampleIndex{ 0 };
+        for ( XMLNode sampleXML = blendSpaceXML.findChild( "samples", false ).findChild(); sampleXML.isValid(); sampleXML = sampleXML.findNextSibling(), ++sampleIndex )
         {
-            const string clipName = sampleJSON.get( "clip" ).asString();
+            if ( string_view{ sampleXML.getName() } != "sample" || XMLReadUtil::hasOnlyKnownNames( sampleXML, { "clip", "x", "y" }, {}, inoutNode._name ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' blend space <samples> holds only <sample clip x y> elements", inoutNode._name.c_str() );
+                bValid = false;
+                continue;
+            }
+            const string clipName{ sampleXML.getAttributeText( "clip", false ) };
             if ( clipName.empty() )
             {
                 SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has no 'clip'", inoutNode._name.c_str(), sampleIndex );
                 bValid = false;
-                return;
+                continue;
             }
             // 적지 않은 축은 0 이다("y" 가 없으면 1D).
-            float2 position{};
-            if ( sampleJSON.readOptionalInto( "x", position._x ) == false || sampleJSON.readOptionalInto( "y", position._y ) == false )
+            std::optional<float32> positionX;
+            std::optional<float32> positionY;
+            if ( sampleXML.readOptionalAttribute( "x", positionX ) == false || sampleXML.readOptionalAttribute( "y", positionY ) == false )
             {
                 SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has a non-numeric position", inoutNode._name.c_str(), sampleIndex );
                 bValid = false;
-                return;
+                continue;
             }
-            def._space.addSample( position, hashed_string( clipName ) );
-        } );
+            def._space.addSample( float2{ positionX.value_or( 0.0f ), positionY.value_or( 0.0f ) }, hashed_string( clipName ) );
+        }
         if ( bValid && def._space.getSampleCount() == 0 )
         {
             SW_LOG_ERROR( "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
@@ -164,11 +175,13 @@ namespace sw
         return bValid;
     }
 
-    bool AnimationGraphAsset::parsePoseNode( const JSONValue& poseNodeJSON, AnimationGraphNode& inoutNode )
+    bool AnimationGraphAsset::parsePoseNode( const XMLNode& poseNodeXML, AnimationGraphNode& inoutNode )
     {
-        AnimationGraphPoseNodeDef& def      = inoutNode._poseNode;
-        const string               typeText = poseNodeJSON.get( "type" ).asString();
-        def                                 = AnimationGraphPoseNodeDef{};
+        if ( XMLReadUtil::hasOnlyKnownNames( poseNodeXML, { "type", "weight" }, { "inputs" }, inoutNode._name ) == false )
+            return false;
+        AnimationGraphPoseNodeDef& def = inoutNode._poseNode;
+        const string               typeText{ poseNodeXML.getAttributeText( "type", false ) };
+        def = AnimationGraphPoseNodeDef{};
         for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrPoseNodeTypeText ) ); ++index )
         {
             if ( typeText == AnimationGraphAssetInternal::kArrPoseNodeTypeText[index] )
@@ -179,13 +192,12 @@ namespace sw
             SW_LOG_ERROR( "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
             return false;
         }
-        const JSONValue inputsJSON = poseNodeJSON.get( "inputs" );
-        for ( size_t inputIndex = 0; inputsJSON.isArray() && inputIndex < inputsJSON.size(); ++inputIndex )
+        for ( XMLNode input = poseNodeXML.findChild( "inputs", false ).findChild(); input.isValid(); input = input.findNextSibling() )
         {
-            def._listInput.push_back( hashed_string( inputsJSON.at( inputIndex ).asString() ) );
+            def._listInput.push_back( hashed_string( string_view{ input.getText() } ) );
         }
-        if ( poseNodeJSON.has( "weight" ) )
-            def._weightParameter = hashed_string( poseNodeJSON.get( "weight" ).asString() );
+        if ( poseNodeXML.findAttribute( "weight", false ) != nullptr )
+            def._weightParameter = hashed_string( string_view{ poseNodeXML.getAttributeText( "weight", false ) } );
 
         // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
         const bool bHasEmptyInput     = VectorUtil::contains( def._listInput, hashed_string{} );
@@ -198,35 +210,52 @@ namespace sw
         return true;
     }
 
-    bool AnimationGraphAsset::parseRoot( const JSONValue& root )
+    bool AnimationGraphAsset::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        bool bValid = true;
-        forEachObjectInArray( root, "nodes", [this, &bValid]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
+        if ( root.isValid() == false )
+        {
+            SW_LOG_ERROR( "Animation graph '%#': expected an <AnimationGraphAsset> root element", sourceLabel );
+            return false;
+        }
+        bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers" }, sourceLabel );
+        for ( XMLNode nodeXML = root.findChild( "nodes", false ).findChild(); nodeXML.isValid(); nodeXML = nodeXML.findNextSibling() )
         {
             // id 는 필수이고 1 이상이다. 위치는 없으면 노드의 초기 자리다. 반복은 적었을 때만 클립 설정을 덮는다.
             AnimationGraphNode node{};
-            node._name                                 = nodeJSON.get( "name" ).asString();
-            const std::optional<int32> nodeID          = nodeJSON.readRequired<int32>( "id" );
-            bool                       bLoop           = false;
-            const bool                 bHasLoop        = nodeJSON.has( "loop" );
-            const bool                 bNodeFieldsRead = nodeID.has_value() && *nodeID > 0 && nodeJSON.readOptionalInto( "x", node._position._x ) &&
-                                         nodeJSON.readOptionalInto( "y", node._position._y ) && nodeJSON.readOptionalInto( "loop", bLoop );
+            node._name = string{ nodeXML.getAttributeText( "name", false ) };
+            if ( string_view{ nodeXML.getName() } != "node" ||
+                 XMLReadUtil::hasOnlyKnownNames( nodeXML, { "id", "name", "x", "y", "loop", "sync_group" }, { "blend_space", "pose_node" }, node._name ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph '%#': <nodes> holds only <node> elements", sourceLabel );
+                bValid = false;
+                continue;
+            }
+            const std::optional<int32> nodeID = nodeXML.readRequiredAttribute<int32>( "id" );
+            std::optional<float32>     positionX;
+            std::optional<float32>     positionY;
+            std::optional<bool>        loop;
+            const bool                 bNodeFieldsRead = nodeID.has_value() && *nodeID > 0 && nodeXML.readOptionalAttribute( "x", positionX ) && nodeXML.readOptionalAttribute( "y", positionY ) &&
+                                         nodeXML.readOptionalAttribute( "loop", loop );
             if ( bNodeFieldsRead == false )
             {
                 SW_LOG_ERROR( "Animation graph node '%#' needs an 'id' of 1 or more and numeric 'x', 'y' and boolean 'loop'", node._name.c_str() );
                 bValid = false;
-                return;
+                continue;
             }
             node._id = *nodeID;
-            if ( bHasLoop )
-                node._loopOverride = bLoop ? 1 : 0;
-            if ( nodeJSON.has( "sync_group" ) )
-                node._syncGroup = hashed_string( nodeJSON.get( "sync_group" ).asString() );
-            const JSONValue blendSpaceJSON = nodeJSON.get( "blend_space" );
-            if ( blendSpaceJSON.isObject() && parseBlendSpace( blendSpaceJSON, node ) == false )
+            if ( positionX.has_value() )
+                node._position._x = *positionX;
+            if ( positionY.has_value() )
+                node._position._y = *positionY;
+            if ( loop.has_value() )
+                node._loopOverride = *loop ? 1 : 0;
+            if ( nodeXML.findAttribute( "sync_group", false ) != nullptr )
+                node._syncGroup = hashed_string( string_view{ nodeXML.getAttributeText( "sync_group", false ) } );
+            const XMLNode blendSpaceXML = nodeXML.findChild( "blend_space", false );
+            if ( blendSpaceXML.isValid() && parseBlendSpace( blendSpaceXML, node ) == false )
                 bValid = false;
-            const JSONValue poseNodeJSON = nodeJSON.get( "pose_node" );
-            if ( poseNodeJSON.isObject() && parsePoseNode( poseNodeJSON, node ) == false )
+            const XMLNode poseNodeXML = nodeXML.findChild( "pose_node", false );
+            if ( poseNodeXML.isValid() && parsePoseNode( poseNodeXML, node ) == false )
                 bValid = false;
             if ( node.hasBlendSpace() && node.hasPoseNode() )
             {
@@ -234,29 +263,42 @@ namespace sw
                 bValid = false;
             }
             _listNode.push_back( std::move( node ) );
-        } );
+        }
 
-        forEachObjectInArray( root, "links", [this, &bValid]( const JSONValue& linkJSON, size_t /*linkIndex*/ )
+        for ( XMLNode linkXML = root.findChild( "links", false ).findChild(); linkXML.isValid(); linkXML = linkXML.findNextSibling() )
         {
             // id · from · to 는 필수다. 크로스페이드 길이 · 반감기는 없으면 링크의 초기값(플레이어 기본 · 즉시)이다.
+            if ( string_view{ linkXML.getName() } != "link" ||
+                 XMLReadUtil::hasOnlyKnownNames( linkXML, { "id", "from", "to", "blend", "blend_mode", "half_life" }, { "condition" }, sourceLabel ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph '%#': <links> holds only <link> elements", sourceLabel );
+                bValid = false;
+                continue;
+            }
             AnimationGraphLink         link{};
-            const std::optional<int32> linkID          = linkJSON.readRequired<int32>( "id" );
-            const std::optional<int32> fromNode        = linkJSON.readRequired<int32>( "from" );
-            const std::optional<int32> toNode          = linkJSON.readRequired<int32>( "to" );
-            const bool                 bLinkFieldsRead = linkID.has_value() && *linkID > 0 && fromNode.has_value() && toNode.has_value() && linkJSON.readOptionalInto( "blend", link._blendSeconds ) &&
-                                         linkJSON.readOptionalInto( "half_life", link._halfLifeSeconds );
+            const std::optional<int32> linkID   = linkXML.readRequiredAttribute<int32>( "id" );
+            const std::optional<int32> fromNode = linkXML.readRequiredAttribute<int32>( "from" );
+            const std::optional<int32> toNode   = linkXML.readRequiredAttribute<int32>( "to" );
+            std::optional<float32>     blendSeconds;
+            std::optional<float32>     halfLifeSeconds;
+            const bool                 bLinkFieldsRead = linkID.has_value() && *linkID > 0 && fromNode.has_value() && toNode.has_value() && linkXML.readOptionalAttribute( "blend", blendSeconds ) &&
+                                         linkXML.readOptionalAttribute( "half_life", halfLifeSeconds );
             if ( bLinkFieldsRead == false )
             {
                 SW_LOG_ERROR( "Animation graph link needs an 'id' of 1 or more, 'from' and 'to' node ids and numeric 'blend' and 'half_life'" );
                 bValid = false;
-                return;
+                continue;
             }
             link._id       = *linkID;
             link._fromNode = *fromNode;
             link._toNode   = *toNode;
-            if ( linkJSON.has( "blend_mode" ) )
+            if ( blendSeconds.has_value() )
+                link._blendSeconds = *blendSeconds;
+            if ( halfLifeSeconds.has_value() )
+                link._halfLifeSeconds = *halfLifeSeconds;
+            if ( linkXML.findAttribute( "blend_mode", false ) != nullptr )
             {
-                const string modeText = linkJSON.get( "blend_mode" ).asString();
+                const string modeText{ linkXML.getAttributeText( "blend_mode", false ) };
                 if ( parseBlendMode( modeText, link._blendMode ) == false )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
@@ -268,24 +310,29 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
                 bValid = false;
             }
-            const JSONValue condition = linkJSON.get( "condition" );
-            if ( condition.isObject() )
+            const XMLNode condition = linkXML.findChild( "condition", false );
+            if ( condition.isValid() )
             {
-                const string opText = condition.get( "op" ).asString();
+                if ( XMLReadUtil::hasOnlyKnownNames( condition, { "param", "op", "value" }, {}, sourceLabel ) == false )
+                    bValid = false;
+                const string opText{ condition.getAttributeText( "op", false ) };
                 if ( parseConditionOp( opText, link._op ) == false || link._op == AnimationConditionOp::None )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has unknown condition op '%#'", link._id, opText.c_str() );
                     bValid = false;
                 }
-                link._parameter = hashed_string( condition.get( "param" ).asString() );
-                if ( condition.readOptionalInto( "value", link._threshold ) == false )
+                link._parameter = hashed_string( string_view{ condition.getAttributeText( "param", false ) } );
+                std::optional<float32> threshold;
+                if ( condition.readOptionalAttribute( "value", threshold ) == false )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has a non-numeric condition value", link._id );
                     bValid = false;
                 }
+                if ( threshold.has_value() )
+                    link._threshold = *threshold;
             }
             _listLink.push_back( link );
-        } );
+        }
         if ( parseLayers( root ) == false )
             bValid = false;
         if ( bValid == false )
@@ -301,20 +348,20 @@ namespace sw
         _listLayer.clear();
     }
 
-    bool AnimationGraphAsset::parseLayers( const JSONValue& root )
+    bool AnimationGraphAsset::parseLayers( const XMLNode& root )
     {
-        bool            bValid    = true;
-        const JSONValue masksJSON = root.get( "bone_masks" );
-        if ( masksJSON.isValid() && masksJSON.isArray() == false )
+        bool   bValid = true;
+        size_t maskIndex{ 0 };
+        for ( XMLNode maskXML = root.findChild( "bone_masks", false ).findChild(); maskXML.isValid(); maskXML = maskXML.findNextSibling(), ++maskIndex )
         {
-            SW_LOG_ERROR( "Animation graph 'bone_masks' must be an array" );
-            bValid = false;
-        }
-        for ( size_t maskIndex = 0; masksJSON.isArray() && maskIndex < masksJSON.size(); ++maskIndex )
-        {
-            const JSONValue      maskJSON = masksJSON.at( maskIndex );
             AnimationBoneMaskDef mask{};
-            mask._name = hashed_string( maskJSON.get( "name" ).asString() );
+            mask._name = hashed_string( string_view{ maskXML.getAttributeText( "name", false ) } );
+            if ( string_view{ maskXML.getName() } != "bone_mask" )
+            {
+                SW_LOG_ERROR( "Animation graph <bone_masks> holds only <bone_mask> elements" );
+                bValid = false;
+                continue;
+            }
             if ( mask._name.empty() )
             {
                 SW_LOG_ERROR( "Animation graph bone mask %# has no 'name'", maskIndex );
@@ -327,9 +374,14 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            // 프리셋 파일("file")이나 바로 적은 본문("roots", "bones") 중 하나다. 둘 다 적으면 어느 쪽이 정본인지 모르므로 오류다.
-            const bool bFromFile = maskJSON.has( "file" );
-            const bool bInline   = maskJSON.has( "roots" ) || maskJSON.has( "bones" );
+            // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 정본인지 모르므로 오류다.
+            if ( XMLReadUtil::hasOnlyKnownNames( maskXML, { "name", "file" }, { "roots", "bones" }, mask._name.c_str() ) == false )
+            {
+                bValid = false;
+                continue;
+            }
+            const bool bFromFile = maskXML.findAttribute( "file", false ) != nullptr;
+            const bool bInline   = maskXML.findChild( "roots", false ).isValid() || maskXML.findChild( "bones", false ).isValid();
             if ( bFromFile && bInline )
             {
                 SW_LOG_ERROR( "Animation graph bone mask '%#' has both 'file' and inline bones", mask._name.c_str() );
@@ -337,7 +389,7 @@ namespace sw
                 continue;
             }
             const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromFile( maskJSON.get( "file" ).asString() ) : mask.parseObject( maskJSON, context );
+            const bool   bLoaded = bFromFile ? mask.loadFromFile( maskXML.getAttributeText( "file", false ) ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;
@@ -346,18 +398,18 @@ namespace sw
             _listBoneMask.push_back( std::move( mask ) );
         }
 
-        const JSONValue layersJSON = root.get( "layers" );
-        if ( layersJSON.isValid() && layersJSON.isArray() == false )
+        size_t layerIndex{ 0 };
+        for ( XMLNode layerXML = root.findChild( "layers", false ).findChild(); layerXML.isValid(); layerXML = layerXML.findNextSibling(), ++layerIndex )
         {
-            SW_LOG_ERROR( "Animation graph 'layers' must be an array" );
-            bValid = false;
-        }
-        for ( size_t layerIndex = 0; layersJSON.isArray() && layerIndex < layersJSON.size(); ++layerIndex )
-        {
-            const JSONValue        layerJSON = layersJSON.at( layerIndex );
             AnimationGraphLayerDef layer{};
-            layer._name     = hashed_string( layerJSON.get( "name" ).asString() );
-            layer._clipName = hashed_string( layerJSON.get( "clip" ).asString() );
+            layer._name     = hashed_string( string_view{ layerXML.getAttributeText( "name", false ) } );
+            layer._clipName = hashed_string( string_view{ layerXML.getAttributeText( "clip", false ) } );
+            if ( string_view{ layerXML.getName() } != "layer" || XMLReadUtil::hasOnlyKnownNames( layerXML, { "name", "clip", "mask", "weight", "blend", "loop", "weight_param", "half_life" }, {}, "Animation graph layer" ) == false )
+            {
+                SW_LOG_ERROR( "Animation graph <layers> holds only <layer> elements" );
+                bValid = false;
+                continue;
+            }
             if ( layer._name.empty() || layer._clipName.empty() )
             {
                 SW_LOG_ERROR( "Animation graph layer %# needs 'name' and 'clip'", layerIndex );
@@ -370,11 +422,11 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            const std::optional<float32> weight       = layerJSON.get( "weight" ).isNumber() ? layerJSON.readRequired<float32>( "weight" ) : std::nullopt;
+            const std::optional<float32> weight       = layerXML.readRequiredAttribute<float32>( "weight" );
             const bool                   bWeightValid = weight.has_value() && 0.0f <= *weight && *weight <= 1.0f;
             if ( bWeightValid )
                 layer._weight = *weight;
-            const string blendText   = layerJSON.get( "blend" ).asString();
+            const string blendText{ layerXML.getAttributeText( "blend", false ) };
             bool         bBlendValid = false;
             for ( uint32 blendIndex = 0; blendIndex < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ); ++blendIndex )
             {
@@ -388,20 +440,21 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph layer '%#' needs a 'weight' in [0, 1]", layer._name.c_str() );
             if ( bBlendValid == false )
                 SW_LOG_ERROR( "Animation graph layer '%#' has unknown 'blend' '%#' (Override, Additive)", layer._name.c_str(), blendText.c_str() );
-            bool       bLayerLoop = layer._bLoop != SW_FALSE;
-            const bool bLoopValid = layerJSON.readOptionalInto( "loop", bLayerLoop );
-            layer._bLoop          = bLayerLoop ? SW_TRUE : SW_FALSE;
-            if ( layerJSON.has( "weight_param" ) )
-                layer._weightParameter = hashed_string( layerJSON.get( "weight_param" ).asString() );
-            if ( layerJSON.has( "mask" ) )
-                layer._maskName = hashed_string( layerJSON.get( "mask" ).asString() );
+            std::optional<bool> layerLoop;
+            const bool          bLoopValid = layerXML.readOptionalAttribute( "loop", layerLoop );
+            if ( layerLoop.has_value() )
+                layer._bLoop = *layerLoop ? SW_TRUE : SW_FALSE;
+            if ( layerXML.findAttribute( "weight_param", false ) != nullptr )
+                layer._weightParameter = hashed_string( string_view{ layerXML.getAttributeText( "weight_param", false ) } );
+            if ( layerXML.findAttribute( "mask", false ) != nullptr )
+                layer._maskName = hashed_string( string_view{ layerXML.getAttributeText( "mask", false ) } );
             const bool bMaskValid = layer._maskName.empty() || findBoneMask( layer._maskName ) != nullptr;
             if ( bMaskValid == false )
                 SW_LOG_ERROR( "Animation graph layer '%#' names unknown bone mask '%#'", layer._name.c_str(), layer._maskName.c_str() );
             bool bHalfLifeValid = true;
-            if ( layerJSON.has( "half_life" ) )
+            if ( layerXML.findAttribute( "half_life", false ) != nullptr )
             {
-                const std::optional<float32> halfLife = layerJSON.get( "half_life" ).isNumber() ? layerJSON.readRequired<float32>( "half_life" ) : std::nullopt;
+                const std::optional<float32> halfLife = layerXML.readRequiredAttribute<float32>( "half_life" );
                 bHalfLifeValid                        = halfLife.has_value() && *halfLife > 0.0f;
                 if ( bHalfLifeValid )
                     layer._halfLifeSeconds = *halfLife;
@@ -419,42 +472,38 @@ namespace sw
         return bValid;
     }
 
-    void AnimationGraphAsset::writeLayers( const JSONValue& root ) const
+    void AnimationGraphAsset::writeLayers( const XMLNode& root ) const
     {
         if ( _listBoneMask.empty() == false )
         {
-            const JSONValue masksJSON = root.set( "bone_masks" );
-            masksJSON.setArray();
+            const XMLNode masksXML = root.appendChild( "bone_masks" );
             for ( const AnimationBoneMaskDef& mask : _listBoneMask )
             {
-                const JSONValue maskJSON = masksJSON.pushBack();
-                maskJSON.setObject();
-                maskJSON.set( "name" ).setString( mask._name.c_str() );
+                const XMLNode maskXML = masksXML.appendChild( "bone_mask" );
+                maskXML.appendAttribute( "name", mask._name.c_str() );
                 if ( mask._filePath.empty() == false )
-                    maskJSON.set( "file" ).setString( mask._filePath );
+                    maskXML.appendAttribute( "file", string_view{ mask._filePath } );
                 else
-                    mask.writeObject( maskJSON );
+                    mask.writeObject( maskXML );
             }
         }
         if ( _listLayer.empty() )
             return;
-        const JSONValue layersJSON = root.set( "layers" );
-        layersJSON.setArray();
+        const XMLNode layersXML = root.appendChild( "layers" );
         for ( const AnimationGraphLayerDef& layer : _listLayer )
         {
-            const JSONValue layerJSON = layersJSON.pushBack();
-            layerJSON.setObject();
-            layerJSON.set( "name" ).setString( layer._name.c_str() );
-            layerJSON.set( "clip" ).setString( layer._clipName.c_str() );
+            const XMLNode layerXML = layersXML.appendChild( "layer" );
+            layerXML.appendAttribute( "name", layer._name.c_str() );
+            layerXML.appendAttribute( "clip", layer._clipName.c_str() );
             if ( layer._maskName.empty() == false )
-                layerJSON.set( "mask" ).setString( layer._maskName.c_str() );
-            layerJSON.set( "weight" ).setFloat( static_cast<float64>( layer._weight ) );
-            layerJSON.set( "blend" ).setString( getLayerBlendText( layer._blend ) );
-            layerJSON.set( "loop" ).setBool( layer._bLoop == SW_TRUE );
+                layerXML.appendAttribute( "mask", layer._maskName.c_str() );
+            layerXML.appendAttribute( "weight", layer._weight );
+            layerXML.appendAttribute( "blend", getLayerBlendText( layer._blend ) );
+            layerXML.appendAttribute( "loop", string_view{ layer._bLoop == SW_TRUE ? "true" : "false" } );
             if ( layer._weightParameter.empty() == false )
-                layerJSON.set( "weight_param" ).setString( layer._weightParameter.c_str() );
+                layerXML.appendAttribute( "weight_param", layer._weightParameter.c_str() );
             if ( layer._halfLifeSeconds > 0.0f )
-                layerJSON.set( "half_life" ).setFloat( static_cast<float64>( layer._halfLifeSeconds ) );
+                layerXML.appendAttribute( "half_life", layer._halfLifeSeconds );
         }
     }
 
@@ -468,94 +517,84 @@ namespace sw
         return VectorUtil::findBy<&AnimationGraphLayerDef::_name>( _listLayer, name );
     }
 
-    string AnimationGraphAsset::toJSON() const
+    string AnimationGraphAsset::toXML() const
     {
-        JSONDocument    doc;
-        const JSONValue root = doc.makeObject();
+        XMLDocument   doc;
+        const XMLNode root = doc.appendRoot( "AnimationGraphAsset" );
 
-        const JSONValue nodesVal = root.set( "nodes" );
-        nodesVal.setArray();
+        const XMLNode nodesXML = root.appendChild( "nodes" );
         for ( const AnimationGraphNode& node : _listNode )
         {
-            const JSONValue nodeJSON = nodesVal.pushBack();
-            nodeJSON.setObject();
-            nodeJSON.set( "id" ).setInt( node._id );
-            nodeJSON.set( "name" ).setString( node._name );
-            nodeJSON.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
-            nodeJSON.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
+            const XMLNode nodeXML = nodesXML.appendChild( "node" );
+            nodeXML.appendAttribute( "id", node._id );
+            nodeXML.appendAttribute( "name", string_view{ node._name } );
+            nodeXML.appendAttribute( "x", node._position._x );
+            nodeXML.appendAttribute( "y", node._position._y );
             if ( node._loopOverride >= 0 )
-                nodeJSON.set( "loop" ).setBool( node._loopOverride != 0 );
+                nodeXML.appendAttribute( "loop", string_view{ node._loopOverride != 0 ? "true" : "false" } );
             if ( node._syncGroup.empty() == false )
-                nodeJSON.set( "sync_group" ).setString( node._syncGroup.c_str() );
+                nodeXML.appendAttribute( "sync_group", node._syncGroup.c_str() );
             if ( node.hasBlendSpace() )
             {
-                const AnimationGraphBlendSpaceDef& def            = node._blendSpace;
-                const JSONValue                    blendSpaceJSON = nodeJSON.set( "blend_space" );
-                blendSpaceJSON.setObject();
-                blendSpaceJSON.set( "x" ).setString( def._parameterX.c_str() );
+                const AnimationGraphBlendSpaceDef& def           = node._blendSpace;
+                const XMLNode                      blendSpaceXML = nodeXML.appendChild( "blend_space" );
+                blendSpaceXML.appendAttribute( "x", def._parameterX.c_str() );
                 if ( def._parameterY.empty() == false )
-                    blendSpaceJSON.set( "y" ).setString( def._parameterY.c_str() );
-                // 기본값(all)은 이 키가 생기기 전 파일과 같은 모양으로 쓴다(키가 없으면 all 이다).
+                    blendSpaceXML.appendAttribute( "y", def._parameterY.c_str() );
+                // 기본값(all)은 적지 않는다(속성이 없으면 all 이다).
                 if ( def._notifyMode != AnimationBlendSpaceNotifyMode::All )
-                    blendSpaceJSON.set( "notify" ).setString( AnimationGraphAssetInternal::kArrBlendSpaceNotifyText[static_cast<uint32>( def._notifyMode )] );
-                const JSONValue samplesJSON = blendSpaceJSON.set( "samples" );
-                samplesJSON.setArray();
+                    blendSpaceXML.appendAttribute( "notify", AnimationGraphAssetInternal::kArrBlendSpaceNotifyText[static_cast<uint32>( def._notifyMode )] );
+                const XMLNode samplesXML = blendSpaceXML.appendChild( "samples" );
                 for ( const BlendSpaceSample& sample : def._space.getSamples() )
                 {
-                    const JSONValue sampleJSON = samplesJSON.pushBack();
-                    sampleJSON.setObject();
-                    sampleJSON.set( "clip" ).setString( sample._clipName.c_str() );
-                    sampleJSON.set( "x" ).setFloat( static_cast<float64>( sample._position._x ) );
+                    const XMLNode sampleXML = samplesXML.appendChild( "sample" );
+                    sampleXML.appendAttribute( "clip", sample._clipName.c_str() );
+                    sampleXML.appendAttribute( "x", sample._position._x );
                     if ( def._space.getAxisCount() == 2 )
-                        sampleJSON.set( "y" ).setFloat( static_cast<float64>( sample._position._y ) );
+                        sampleXML.appendAttribute( "y", sample._position._y );
                 }
             }
             if ( node.hasPoseNode() )
             {
-                const AnimationGraphPoseNodeDef& def          = node._poseNode;
-                const JSONValue                  poseNodeJSON = nodeJSON.set( "pose_node" );
-                poseNodeJSON.setObject();
-                poseNodeJSON.set( "type" ).setString( AnimationGraphAssetInternal::kArrPoseNodeTypeText[static_cast<uint32>( def._type )] );
-                const JSONValue inputsJSON = poseNodeJSON.set( "inputs" );
-                inputsJSON.setArray();
+                const AnimationGraphPoseNodeDef& def         = node._poseNode;
+                const XMLNode                    poseNodeXML = nodeXML.appendChild( "pose_node" );
+                poseNodeXML.appendAttribute( "type", AnimationGraphAssetInternal::kArrPoseNodeTypeText[static_cast<uint32>( def._type )] );
+                if ( def._weightParameter.empty() == false )
+                    poseNodeXML.appendAttribute( "weight", def._weightParameter.c_str() );
+                const XMLNode inputsXML = poseNodeXML.appendChild( "inputs" );
                 for ( const hashed_string& input : def._listInput )
                 {
-                    inputsJSON.pushBack().setString( input.c_str() );
+                    (void)inputsXML.appendChild( "item", string_view{ input.c_str() } );
                 }
-                if ( def._weightParameter.empty() == false )
-                    poseNodeJSON.set( "weight" ).setString( def._weightParameter.c_str() );
             }
         }
 
-        const JSONValue linksVal = root.set( "links" );
-        linksVal.setArray();
+        const XMLNode linksXML = root.appendChild( "links" );
         for ( const AnimationGraphLink& link : _listLink )
         {
-            const JSONValue linkJSON = linksVal.pushBack();
-            linkJSON.setObject();
-            linkJSON.set( "id" ).setInt( link._id );
-            linkJSON.set( "from" ).setInt( link._fromNode );
-            linkJSON.set( "to" ).setInt( link._toNode );
+            const XMLNode linkXML = linksXML.appendChild( "link" );
+            linkXML.appendAttribute( "id", link._id );
+            linkXML.appendAttribute( "from", link._fromNode );
+            linkXML.appendAttribute( "to", link._toNode );
             if ( link._blendSeconds >= 0.0f )
-                linkJSON.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
-            // 크로스페이드는 이 키가 생기기 전 파일과 같은 모양으로 쓴다(키가 없으면 크로스페이드다).
+                linkXML.appendAttribute( "blend", link._blendSeconds );
+            // 크로스페이드는 적지 않는다(속성이 없으면 크로스페이드다).
             if ( link._blendMode != AnimationBlendMode::Crossfade )
             {
-                linkJSON.set( "blend_mode" ).setString( getBlendModeText( link._blendMode ) );
-                linkJSON.set( "half_life" ).setFloat( static_cast<float64>( link._halfLifeSeconds ) );
+                linkXML.appendAttribute( "blend_mode", getBlendModeText( link._blendMode ) );
+                linkXML.appendAttribute( "half_life", link._halfLifeSeconds );
             }
             if ( link._op != AnimationConditionOp::None )
             {
-                const JSONValue condition = linkJSON.set( "condition" );
-                condition.setObject();
-                condition.set( "param" ).setString( link._parameter.c_str() );
-                condition.set( "op" ).setString( getConditionOpText( link._op ) );
-                condition.set( "value" ).setFloat( static_cast<float64>( link._threshold ) );
+                const XMLNode condition = linkXML.appendChild( "condition" );
+                condition.appendAttribute( "param", link._parameter.c_str() );
+                condition.appendAttribute( "op", getConditionOpText( link._op ) );
+                condition.appendAttribute( "value", link._threshold );
             }
         }
         writeLayers( root );
 
-        return doc.dump( 2 );
+        return doc.saveToString();
     }
 
     void AnimationGraphAsset::collectNodeNames( vector<string>& outListName ) const

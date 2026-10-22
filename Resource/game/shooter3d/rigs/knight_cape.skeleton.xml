@@ -1,0 +1,17 @@
+<Skeleton>
+	<_listBone>
+		<SkeletonBone _name="cape0" _parentIndex="-1" _inverseBind="1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1">
+			<_referencePose _translation="0,-0,0" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="cape1" _parentIndex="0" _inverseBind="1,0,0,0,0,1,0,0,0,0,1,0,0,0.3739,0.3567,1">
+			<_referencePose _translation="0,-0.3739,-0.3567" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="cape2" _parentIndex="1" _inverseBind="1,0,0,0,0,1,0,0,0,0,1,0,0,0.7479,0.3674,1">
+			<_referencePose _translation="0,-0.374,-0.0107" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+		<SkeletonBone _name="cape3" _parentIndex="2" _inverseBind="1,0,0,0,0,1,0,0,0,0,1,0,0,1.1218,0.3602,1">
+			<_referencePose _translation="0,-0.3739,0.0072" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonBone>
+	</_listBone>
+	<_listAttachment />
+</Skeleton>

@@ -31,10 +31,10 @@ namespace
 {
     struct TestRetargetInternal
     {
-        static constexpr const utf8* kKnightSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
-        static constexpr const utf8* kMinionSkeleton = "game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.json";
+        static constexpr const utf8* kKnightSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.xml";
+        static constexpr const utf8* kMinionSkeleton = "game/shooter3d/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml";
         static constexpr const utf8* kKnightWalk     = "game/shooter3d/models/kaykit/knight/clips/walking_a.animclip";
-        static constexpr const utf8* kProfile        = "game/shooter3d/rigs/knight_to_minion.retarget.json";
+        static constexpr const utf8* kProfile        = "game/shooter3d/rigs/knight_to_minion.retarget.xml";
 
         static bool isNear( const float3& expected, const float3& actual, float32 tolerance ) { return ( expected - actual ).getLength() <= tolerance; }
 
@@ -136,20 +136,32 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
 
     test::ScopedDefensiveTestLog expected( "malformed retarget profiles are rejected" );
     const string_view            listBad[] = {
-        R"({ "root": { "source": "r", "target": "r" }, "pelvis": { "source": "h", "target": "h" }, "chains": [], "colour": 1 })",
-        R"({ "root": { "source": "r", "target": "r" }, "chains": [] })",
-        R"({ "root": { "source": "r", "target": "r" }, "pelvis": { "source": "h", "target": "h" }, "chains": [ { "name": "A", "source": ["x"], "target": ["x"] }, { "name": "A", "source": ["y"], "target": ["y"] } ] })",
-        R"({ "root": { "source": "r", "target": "r" }, "pelvis": { "source": "h", "target": "h" }, "translation": "Stretch", "chains": [] })",
+        R"(<RetargetProfile colour="1"><root source="r" target="r" /><pelvis source="h" target="h" /><chains /></RetargetProfile>)",
+        R"(<RetargetProfile><root source="r" target="r" /><chains /></RetargetProfile>)",
+        R"(<RetargetProfile><root source="r" target="r" /><pelvis source="h" target="h" /><chains><item name="A"><source><item>x</item></source><target><item>x</item></target></item><item name="A"><source><item>y</item></source><target><item>y</item></target></item></chains></RetargetProfile>)",
+        R"(<RetargetProfile translation="Stretch"><root source="r" target="r" /><pelvis source="h" target="h" /><chains /></RetargetProfile>)",
     };
     for ( const string_view bad : listBad )
     {
         RetargetProfile broken;
-        SW_EXPECT_FALSE( broken.parseJSON( bad, "bad.retarget.json" ) );
+        SW_EXPECT_FALSE( broken.parseXML( bad, "bad.retarget.xml" ) );
     }
     RetargetProfile missingBone;
-    SW_ASSERT_TRUE( missingBone.parseJSON( R"({ "root": { "source": "bone0", "target": "bone0" }, "pelvis": { "source": "bone0", "target": "bone0" },
-        "chains": [ { "name": "Arm", "source": ["bone1"], "target": ["elbow"] } ] })",
-                                           "missing.retarget.json" ) );
+    SW_ASSERT_TRUE( missingBone.parseXML( R"(<RetargetProfile>
+	<root source="bone0" target="bone0" />
+	<pelvis source="bone0" target="bone0" />
+	<chains>
+		<item name="Arm">
+			<source>
+				<item>bone1</item>
+			</source>
+			<target>
+				<item>elbow</item>
+			</target>
+		</item>
+	</chains>
+</RetargetProfile>)",
+                                          "missing.retarget.xml" ) );
     const Skeleton chain = test::makeChainSkeleton( 3 );
     PoseRetargeter retargeter;
     SW_EXPECT_FALSE( retargeter.initialize( missingBone, chain, chain, nullptr ) );
@@ -205,9 +217,15 @@ SW_TEST_CASE( RetargetTest, BoneMapAndSameNamesTransferWithoutChains )
     renamed.computeInverseBindFromReference();
 
     RetargetProfile profile;
-    SW_ASSERT_TRUE( profile.parseJSON( R"({ "root": { "source": "bone0", "target": "bone0" }, "pelvis": { "source": "bone0", "target": "bone0" },
-        "translation": "Copy", "chains": [], "bone_map": [ { "source": "bone1", "target": "Elbow" } ], "map_same_names": true, "height_ratio": 1.25 })",
-                                       "names.retarget.json" ) );
+    SW_ASSERT_TRUE( profile.parseXML( R"(<RetargetProfile translation="Copy" map_same_names="true" height_ratio="1.25">
+	<root source="bone0" target="bone0" />
+	<pelvis source="bone0" target="bone0" />
+	<chains />
+	<bone_map>
+		<item source="bone1" target="Elbow" />
+	</bone_map>
+</RetargetProfile>)",
+                                      "names.retarget.xml" ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( profile.getBonePairs().size() ) );
     SW_EXPECT_TRUE( profile.isMappingSameNames() );
     PoseRetargeter retargeter;
@@ -231,8 +249,8 @@ SW_TEST_CASE( RetargetTest, BoneMapAndSameNamesTransferWithoutChains )
 
     test::ScopedDefensiveTestLog expected( "bad bone table rows are rejected" );
     RetargetProfile              negative;
-    SW_EXPECT_FALSE( negative.parseJSON( R"({ "root": { "source": "r", "target": "r" }, "pelvis": { "source": "h", "target": "h" }, "chains": [], "height_ratio": 0 })",
-                                         "bad.retarget.json" ) );
+    SW_EXPECT_FALSE( negative.parseXML( R"(<RetargetProfile height_ratio="0"><root source="r" target="r" /><pelvis source="h" target="h" /><chains /></RetargetProfile>)",
+                                        "bad.retarget.xml" ) );
     RetargetProfile unknownTarget;
     unknownTarget.setRootAndPelvis( "bone0", "bone0", "bone0", "bone0", RetargetTranslationMode::Copy );
     unknownTarget.addBonePair( RetargetBonePair{ hashed_string( "bone1" ), hashed_string( "Wrist" ) } );

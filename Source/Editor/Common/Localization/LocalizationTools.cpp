@@ -32,7 +32,6 @@ namespace sw
         struct LocalizationToolsInternal
         {
             static constexpr const utf8* kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
-            static constexpr const utf8* kDialogueSuffix     = ".dialogue.json";
 
             /** @brief 리소스 경로 또는 절대 경로를 디스크의 절대 경로로 변환합니다. */
             static string resolveAbsolutePath( string_view path )
@@ -106,7 +105,7 @@ namespace sw
                     inoutReport._listIssue.push_back( { location, "translation is " + to_string( length ) + " characters, over maxLength " + to_string( source._maxLength ), false } );
             }
 
-            /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.json`)입니다. */
+            /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
             static string makeMemoryPath( string_view projectPath, string_view culture )
             {
                 return LocalizationProject::makeSiblingPath( projectPath, string( TranslationMemory::kFolderName ) + "/" + CultureTable::normalizeCode( culture ) +
@@ -243,13 +242,13 @@ namespace sw
                 TranslationMemory memory;
                 if ( loadMemory( memoryPath, culture, memory, inoutResult._report ) == false )
                     return;
-                const string memoryBefore = memory.toJSONText();
+                const string memoryBefore = memory.toXMLText();
 
                 reconcileTranslation( mapSource, translation, memory, cultureReport );
                 prefillFromMemory( mapSource, memory, translation, cultureReport );
                 countAndValidate( culture, mapSource, translation, cultureReport, inoutResult._report );
 
-                const bool bMemoryChanged = memory.toJSONText() != memoryBefore;
+                const bool bMemoryChanged = memory.toXMLText() != memoryBefore;
                 if ( cultureReport._bChanged == false && bMemoryChanged == false )
                     return;
                 cultureReport._bChanged = true;
@@ -414,7 +413,7 @@ namespace sw
                     std::sort( listFile.begin(), listFile.end() );
                     for ( const string& filePath : listFile )
                     {
-                        const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ) || StringUtil::endsWith( filePath, kDialogueSuffix, true );
+                        const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
                         string     text;
                         if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
                             continue;
@@ -466,7 +465,7 @@ namespace sw
         for ( const string& gameFolder : listGameFolder )
         {
             vector<string> listFile;
-            const bool     bSkipGameFolder = gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".json", listFile, false ) == false;
+            const bool     bSkipGameFolder = gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".xml", listFile, false ) == false;
             if ( bSkipGameFolder )
                 continue;
             for ( const string& filePath : listFile )
@@ -479,10 +478,10 @@ namespace sw
 
     void LocalizationTools::gatherAssetFile( const LocalizationProject& project, TextGatherer& gatherer, string_view fileText, string_view origin )
     {
-        if ( StringUtil::endsWith( origin, LocalizationToolsInternal::kDialogueSuffix, true ) )
+        if ( StringUtil::endsWith( origin, DialogueGraphAsset::kExtension, true ) )
         {
             DialogueGraphAsset dialogue;
-            if ( dialogue.parseJSON( fileText ) == false )
+            if ( dialogue.parseXML( fileText ) == false )
             {
                 gatherer.addIssue( origin, "dialogue cannot be parsed", true );
                 return;
@@ -541,7 +540,7 @@ namespace sw
 
         // 3) 합치기와 쓰기
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
-        const string newText = gatherTable.toJSONText();
+        const string newText = gatherTable.toXMLText();
         string       diskText;
         const bool   bSameOnDisk = FileUtil::exists( outResult._gatherTablePath ) && FileUtil::readTextFile( outResult._gatherTablePath, diskText ) && diskText == newText;
         if ( bSameOnDisk == false )

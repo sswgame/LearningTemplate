@@ -3,9 +3,9 @@
  * @brief 로컬라이제이션 도구 명령입니다. 텍스트 수집(`App --gather-text`, `--check-text`)과 번역 교환(`--export-po`, `--import-po=<파일>`)을 제공합니다. 소스 트리를 읽는 개발 도구이므로 에디터 모듈이 맡습니다.
  * @details 언리얼의 Localization Dashboard 에 있는 Gather Text 에 해당한다. 프로젝트마다 다음 순서로 처리한다.
  *          1) `codeRoots`(저장소 상대 경로)의 `.h`, `.cpp`, `.inl` 에서 `SW_LOCTEXT` 와 `SW_LOCFORMAT` 을 모은다.
- *          2) `assetRoots`(리소스 경로)의 리플렉션 XML(`Meta = "Localizable"` 프로퍼티), `.dialogue.json`, 프로젝트의 `assetRules` 에 맞는 XML 속성을 모은다.
+ *          2) `assetRoots`(리소스 경로)의 리플렉션 XML(`Meta = "Localizable"` 프로퍼티), `.dialogue.xml`, 프로젝트의 `assetRules` 에 맞는 XML 속성을 모은다.
  *          모은 문구는 첫 원문 테이블에 합치고(추가, 변경, 삭제를 보고한다), 문화권 번역 테이블의 상태(최신, 오래됨, 검토, 없음)와 자리 표시자, 최대 길이를 검사한다.
- *          그다음 번역 메모리(`tm/<culture>.tm.json`)에 현재 번역을 쌓는다. 없거나 오래된 번역은 메모리의 같은 번역(그대로)이나 비슷한 번역(검토 표시)으로 미리 채운다.
+ *          그다음 번역 메모리(`tm/<culture>.tm.xml`)에 현재 번역을 쌓는다. 없거나 오래된 번역은 메모리의 같은 번역(그대로)이나 비슷한 번역(검토 표시)으로 미리 채운다.
  *          원문 테이블에서 사라진 키의 번역은 번역 테이블에서 빼고, 메모리에는 남긴다.
  */
 #pragma once

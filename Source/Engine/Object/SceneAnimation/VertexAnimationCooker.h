@@ -1,6 +1,6 @@
 /**
  * @file VertexAnimationCooker.h
- * @brief 정점 애니메이션(VAT) 쿠킹 — 데이터(`*.vertexanimation.json`)가 고른 (메시, 클립)을 쿠킹 때 `.vat` 로 굽습니다.
+ * @brief 정점 애니메이션(VAT) 쿠킹 — 데이터(`*.vertexanimation.xml`)가 고른 (메시, 클립)을 쿠킹 때 `.vat` 로 굽습니다.
  * @details 배포본은 쿠킹본을 팩에서 읽고(`AnimationCrowd::findVertexAnimationMesh`), Dev 는 쿠킹 폴더를 마운트하지 않아 처음 쓸 때 같은 함수
  *          (`MeshVertexAnimationBaker`)로 굽습니다 — 두 길의 결과가 바이트까지 같습니다. 쿠킹은 `App --cook-scenes` 단계가 부릅니다.
  */
@@ -18,18 +18,18 @@ namespace sw
     struct CookJobDesc;
 
     class CookStore;
-    class JSONValue;
+    class XMLNode;
 
     /**
      * @struct VertexAnimationCookList
-     * @brief 쿠킹 목록 하나(`<이름>.vertexanimation.json`): `{ "mesh", "skeleton", "clip_folder", "clips": [ 클립 이름 ... ] }`.
-     * @details 모르는 키 · 없는 메시 · 스켈레톤 · 클립 파일은 오류입니다(`ResourceDataSchemaTest` 가 확인합니다). 루트 모션은 묶지 않고 굽습니다
+     * @brief 쿠킹 목록 하나(`<이름>.vertexanimation.xml`): `<VertexAnimationCookList mesh skeleton clip_folder><clips><item>클립 이름</item>…</clips></VertexAnimationCookList>`.
+     * @details 모르는 속성 · 자식 · 없는 메시 · 스켈레톤 · 클립 파일은 오류입니다(`ResourceDataSchemaTest` 가 확인합니다). 루트 모션은 묶지 않고 굽습니다
      *          (루트 모션을 뽑는 유닛은 쿠킹본을 쓰지 않고 처음 쓸 때 굽는다).
      */
     struct SW_API VertexAnimationCookList
     {
         /** @brief 목록 파일의 확장자입니다. */
-        static constexpr string_view kExtension = ".vertexanimation.json";
+        static constexpr string_view kExtension = ".vertexanimation.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -42,15 +42,15 @@ namespace sw
         string                _clipFolder;
         vector<hashed_string> _listClip;
 
-        /** @brief JSON 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
+        /** @brief XML 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 클립 이름의 파일 경로입니다(`<clip_folder>/<소문자>.animclip` — 애니메이터와 같은 규칙). */
         string makeClipPath( const hashed_string& clipName ) const;
 
     private:
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
     };
 } // namespace sw
 
@@ -67,7 +67,7 @@ namespace sw
 
         /**
          * @brief 모든 목록을 굽습니다. 활성 게임이 아닌 게임 팩의 목록은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
-         * @param framesPerSecond VAT 프레임율(군중 표 `animationcrowd.json` 과 같은 값이어야 런타임 굽기와 같다). 작업 키의 설정이다.
+         * @param framesPerSecond VAT 프레임율(군중 표 `animationcrowd.xml` 과 같은 값이어야 런타임 굽기와 같다). 작업 키의 설정이다.
          * @param store 기록과 DDC 입니다. (목록, 클립)마다 작업 하나로 굽고 — 목록 · 메시 · 스켈레톤 · 클립이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 `.vat` 수입니다. 읽지 못한 목록 · 굽지 못한 클립은 @p outFailedCount 에 셉니다.
          */

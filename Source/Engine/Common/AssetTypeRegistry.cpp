@@ -73,6 +73,14 @@ namespace sw
         }
         for ( uint32 index = 0; index < def._suffixCount; ++index )
         {
+            if ( isSuffixFormatAllowed( def._pSuffix[index] ) == false )
+            {
+                AssetTypeRegistryInternal::addProblem( table, "asset suffix read as-is must be XML or binary, not JSON", def._name, def._pSuffix[index]._text );
+                return;
+            }
+        }
+        for ( uint32 index = 0; index < def._suffixCount; ++index )
+        {
             for ( const AssetTypeRegistryInternal::SuffixEntry& entry : table._listSuffix )
             {
                 if ( StringUtil::equals( entry._pSuffix->_text, def._pSuffix[index]._text, true ) )
@@ -88,6 +96,11 @@ namespace sw
             table._listSuffix.push_back( AssetTypeRegistryInternal::SuffixEntry{ &def, &def._pSuffix[index], table._nextOrder++ } );
         }
         std::stable_sort( table._listSuffix.begin(), table._listSuffix.end(), &AssetTypeRegistryInternal::isLongerFirst );
+    }
+
+    bool AssetTypeRegistry::isSuffixFormatAllowed( const AssetSuffix& suffix )
+    {
+        return suffix._role == AssetSuffixRole::CookSource || StringUtil::endsWith( suffix._text, ".json", true ) == false;
     }
 
     void AssetTypeRegistry::unregisterType( const AssetTypeDef& def )

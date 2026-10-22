@@ -3,13 +3,15 @@
 #include "Engine/Localization/CultureInfo.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Localization/CurrencyUtil.h"
 #include "Engine/Localization/TimeZoneUtil.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -185,10 +187,44 @@ namespace sw
                 return nullptr;
             }
 
-            static constexpr const utf8* kArrCultureField[] = { "parent", "nativeName", "pluralRule", "ordinalRule", "rightToLeft",
-                                                                "digits", "decimalSeparator", "groupSeparator", "percentPattern", "currencyCode",
-                                                                "currencyPattern", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations",
-                                                                "dayPeriods", "fonts", "pseudo" };
+            /** @brief 문화권 요소의 속성 이름입니다(`code` 는 문화권 코드, 나머지는 덮어쓰는 값). */
+            static constexpr string_view kArrCultureAttribute[] = { "code", "parent", "nativeName", "pluralRule", "ordinalRule", "rightToLeft", "digits", "decimalSeparator",
+                                                                    "groupSeparator", "percentPattern", "currencyCode", "currencyPattern", "pseudo" };
+            /** @brief 문화권 요소의 자식 요소 이름입니다(패턴 묶음 둘과 문자열 목록 넷). */
+            static constexpr string_view kArrCultureChild[] = { "datePatterns", "timePatterns", "monthNames", "monthAbbreviations", "dayPeriods", "fonts" };
+
+            template <size_t N>
+            static bool isListed( const string_view ( &arrName )[N], string_view name )
+            {
+                for ( const string_view listed : arrName )
+                {
+                    if ( listed == name )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 문화권 요소에서 알려지지 않은 첫 속성 · 자식 이름을 @p outName 에 적고 true 를 반환합니다. 모두 알려져 있으면 false 입니다. */
+            static bool findUnknownName( const XMLNode& entry, string& outName )
+            {
+                for ( XMLAttribute attribute = entry.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    if ( isListed( kArrCultureAttribute, string_view{ attribute.getName() } ) == false )
+                    {
+                        outName = attribute.getName();
+                        return true;
+                    }
+                }
+                for ( XMLNode child = entry.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( isListed( kArrCultureChild, string_view{ child.getName() } ) == false )
+                    {
+                        outName = child.getName();
+                        return true;
+                    }
+                }
+                return false;
+            }
 
             /** @brief 숫자 체계의 숫자 0 의 코드 포인트입니다. 숫자 1 ~ 9 는 그 뒤에 이어진다. */
             static uint32 getDigitZeroCodePoint( NumeralSystem numeralSystem )
@@ -203,16 +239,6 @@ namespace sw
                         return 0x06F0u;
                 }
                 return '0';
-            }
-
-            static bool isKnownField( string_view name )
-            {
-                for ( const utf8* pField : kArrCultureField )
-                {
-                    if ( name == pField )
-                        return true;
-                }
-                return false;
             }
 
             /**
@@ -246,67 +272,62 @@ namespace sw
                 return text;
             }
 
-            /** @brief 문자열 배열 필드를 읽습니다. 배열이 아니거나 원소가 문자열이 아니면 false 입니다. */
-            [[nodiscard]] static bool readStringArray( const JSONValue& value, vector<string>& outList )
+            /** @brief 문자열 목록 요소(`<monthNames><item>…</item></monthNames>`)를 읽습니다. 원소가 `<item>` 이 아니면 false 입니다. */
+            [[nodiscard]] static bool readStringArray( const XMLNode& listNode, vector<string>& outList )
             {
-                if ( value.isArray() == false )
-                    return false;
                 outList.clear();
-                for ( size_t index = 0; index < value.size(); ++index )
+                for ( XMLNode element = listNode.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    const JSONValue element = value.at( index );
-                    if ( element.isString() == false )
+                    if ( string_view{ element.getName() } != "item" )
                         return false;
-                    outList.push_back( element.asString() );
+                    outList.push_back( string{ element.getText() } );
                 }
                 return true;
             }
 
-            /** @brief 패턴 모음(`{ "short": …, "medium": … }`)을 읽습니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool readPatternGroup( const JSONValue& value, string* pShort, string* pMedium, string* pLong, string& outError )
+            /** @brief 패턴 모음(`<datePatterns short="…" medium="…" long="…" />`)을 읽습니다. 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool readPatternGroup( const XMLNode& group, string* pShort, string* pMedium, string* pLong, string& outError )
             {
-                if ( value.isObject() == false )
+                if ( group.findChild().isValid() )
                 {
-                    outError = "patterns must be an object";
+                    outError = "patterns take attributes only";
                     return false;
                 }
-                for ( const string& styleName : value.getMemberNames() )
+                for ( XMLAttribute attribute = group.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    const JSONValue pattern = value.get( styleName, false );
-                    string*         pTarget = nullptr;
+                    const string_view styleName{ attribute.getName() };
+                    string*           pTarget = nullptr;
                     if ( styleName == "short" )
                         pTarget = pShort;
                     else if ( styleName == "medium" )
                         pTarget = pMedium;
                     else if ( styleName == "long" )
                         pTarget = pLong;
-                    if ( pTarget == nullptr || pattern.isString() == false )
+                    if ( pTarget == nullptr )
                     {
-                        outError = "unknown or non-string pattern style '" + styleName + "'";
+                        outError = "unknown pattern style '" + string( styleName ) + "'";
                         return false;
                     }
-                    *pTarget = pattern.asString();
+                    *pTarget = string{ attribute.getValue() };
                 }
                 return true;
             }
 
             /** @brief 문자열 필드 하나(적힌 것만)를 덮어씁니다. */
-            static void applyStringField( const JSONValue& entry, const utf8* pFieldName, string& outTarget )
+            static void applyStringField( const XMLNode& entry, const utf8* pFieldName, string& outTarget )
             {
-                const JSONValue field = entry.get( pFieldName, false );
-                if ( field.isValid() )
-                    outTarget = field.asString();
+                if ( entry.findAttribute( pFieldName, false ) != nullptr )
+                    outTarget = string{ entry.getAttributeText( pFieldName, false ) };
             }
 
             /** @brief 복수형 규칙 이름 필드(적힌 것만)를 규칙 함수로 풀어 덮어씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool applyRuleField( const JSONValue& entry, const utf8* pFieldName, PluralRuleFunc ( *pFindRule )( string_view ), string& outRuleName, PluralRuleFunc& outRule,
+            [[nodiscard]] static bool applyRuleField( const XMLNode& entry, const utf8* pFieldName, PluralRuleFunc ( *pFindRule )( string_view ), string& outRuleName, PluralRuleFunc& outRule,
                                                       string& outError )
             {
-                const JSONValue field = entry.get( pFieldName, false );
-                if ( field.isValid() == false )
+                if ( entry.findAttribute( pFieldName, false ) == nullptr )
                     return true;
-                const string   ruleName = field.asString();
-                PluralRuleFunc pRule    = pFindRule( ruleName );
+                const string   ruleName{ entry.getAttributeText( pFieldName, false ) };
+                PluralRuleFunc pRule = pFindRule( ruleName );
                 if ( pRule == nullptr )
                 {
                     outError = string( "unknown " ) + pFieldName + " '" + ruleName + "'";
@@ -318,23 +339,19 @@ namespace sw
             }
 
             /** @brief 글쓰기 방향 · 숫자 체계 · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool applyScriptFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static bool applyScriptFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
             {
-                const JSONValue rightToLeft = entry.get( "rightToLeft", false );
-                if ( rightToLeft.isValid() )
+                std::optional<bool> bRightToLeft;
+                if ( entry.readOptionalAttribute( "rightToLeft", bRightToLeft ) == false )
                 {
-                    const std::optional<bool> bRightToLeft = rightToLeft.read<bool>();
-                    if ( bRightToLeft.has_value() == false )
-                    {
-                        outError = "rightToLeft must be true or false";
-                        return false;
-                    }
-                    inoutInfo._bRightToLeft = *bRightToLeft;
+                    outError = "rightToLeft must be true or false";
+                    return false;
                 }
-                const JSONValue digits = entry.get( "digits", false );
-                if ( digits.isValid() )
+                if ( bRightToLeft.has_value() )
+                    inoutInfo._bRightToLeft = *bRightToLeft;
+                if ( entry.findAttribute( "digits", false ) != nullptr )
                 {
-                    const string digitsName = digits.asString();
+                    const string digitsName{ entry.getAttributeText( "digits", false ) };
                     if ( digitsName == "latn" )
                         inoutInfo._numeralSystem = NumeralSystem::Latin;
                     else if ( digitsName == "arab" )
@@ -347,10 +364,9 @@ namespace sw
                         return false;
                     }
                 }
-                const JSONValue pseudo = entry.get( "pseudo", false );
-                if ( pseudo.isValid() )
+                if ( entry.findAttribute( "pseudo", false ) != nullptr )
                 {
-                    const string pseudoName = pseudo.asString();
+                    const string pseudoName{ entry.getAttributeText( "pseudo", false ) };
                     if ( pseudoName == "accented" )
                         inoutInfo._pseudoMode = PseudoLocaleMode::Accented;
                     else if ( pseudoName == "mirrored" )
@@ -364,7 +380,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 문자열 배열 필드 한 칸의 규칙입니다. `_expectedCount` 가 0 이 아니면 그 개수여야 합니다. */
+            /** @brief 문자열 목록 필드 한 칸의 규칙입니다. `_expectedCount` 가 0 이 아니면 그 개수여야 합니다. */
             struct ListFieldRow
             {
                 const utf8*    _pName;
@@ -374,24 +390,24 @@ namespace sw
             };
 
             static constexpr ListFieldRow kArrListField[] = {
-                {        "monthNames",         &CultureInfo::_listMonthName, 12,         "monthNames must be 12 strings"},
-                {"monthAbbreviations", &CultureInfo::_listMonthAbbreviation, 12, "monthAbbreviations must be 12 strings"},
-                {        "dayPeriods",         &CultureInfo::_listDayPeriod,  2,          "dayPeriods must be 2 strings"},
-                {             "fonts",              &CultureInfo::_listFont,  0,     "fonts must be an array of strings"},
+                {        "monthNames",         &CultureInfo::_listMonthName, 12,          "monthNames must be 12 strings"},
+                {"monthAbbreviations", &CultureInfo::_listMonthAbbreviation, 12,  "monthAbbreviations must be 12 strings"},
+                {        "dayPeriods",         &CultureInfo::_listDayPeriod,  2,           "dayPeriods must be 2 strings"},
+                {             "fonts",              &CultureInfo::_listFont,  0, "fonts must be a list of <item> strings"},
             };
 
-            /** @brief 날짜 · 시간 패턴 모음과 문자열 배열 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
-            [[nodiscard]] static bool applyPatternAndListFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            /** @brief 날짜 · 시간 패턴 모음과 문자열 목록 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
+            [[nodiscard]] static bool applyPatternAndListFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
             {
-                const JSONValue datePatterns = entry.get( "datePatterns", false );
+                const XMLNode datePatterns = entry.findChild( "datePatterns", false );
                 if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
                     return false;
-                const JSONValue timePatterns = entry.get( "timePatterns", false );
+                const XMLNode timePatterns = entry.findChild( "timePatterns", false );
                 if ( timePatterns.isValid() && readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr, outError ) == false )
                     return false;
                 for ( const ListFieldRow& row : kArrListField )
                 {
-                    const JSONValue field = entry.get( row._pName, false );
+                    const XMLNode field = entry.findChild( row._pName, false );
                     if ( field.isValid() == false )
                         continue;
                     vector<string>& list      = inoutInfo.*( row._pMember );
@@ -405,16 +421,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief 한 문화권 객체의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
-            [[nodiscard]] static bool applyFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
+            /** @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
+            [[nodiscard]] static bool applyFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
             {
-                for ( const string& fieldName : entry.getMemberNames() )
+                string unknownName;
+                if ( findUnknownName( entry, unknownName ) )
                 {
-                    if ( isKnownField( fieldName ) == false )
-                    {
-                        outError = "unknown field '" + fieldName + "'";
-                        return false;
-                    }
+                    outError = "unknown field '" + unknownName + "'";
+                    return false;
                 }
 
                 applyStringField( entry, "nativeName", inoutInfo._nativeName );
@@ -783,68 +797,81 @@ namespace sw
         return string( normalizedCode.substr( 0, separatorPos ) );
     }
 
-    bool CultureTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        string       error;
-        JSONDocument document;
-        if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
+        string      error;
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
         {
             if ( pOutError != nullptr )
+            {
                 *pOutError = document.getLastError();
+                if ( pOutError->empty() )
+                    *pOutError = string( sourceName ) + ": root must be <CultureTable>";
+            }
             return false;
         }
-        const JSONValue root     = document.getRoot();
-        const JSONValue cultures = root.isObject() ? root.get( "cultures", false ) : JSONValue{};
-        if ( cultures.isObject() == false || root.getMemberNames().size() != 1 )
+        const XMLNode cultures           = root.findChild( "cultures", false );
+        const bool    bRootHasOtherParts = root.getFirstAttribute().isValid() || cultures.findNextSibling().isValid() || cultures.getFirstAttribute().isValid();
+        if ( cultures.isValid() == false || bRootHasOtherParts )
         {
             if ( pOutError != nullptr )
-                *pOutError = string( sourceName ) + ": root must be { \"cultures\": { ... } }";
+                *pOutError = string( sourceName ) + ": root must be <CultureTable><cultures><culture code=\"…\" …/>…</cultures></CultureTable>";
             return false;
         }
 
         // 부모가 먼저 해석되도록 몇 바퀴 돈다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환이다.
         map<string, CultureInfo> mapResolved;
-        vector<string>           listPending;
-        for ( const string& rawCode : cultures.getMemberNames() )
+        vector<XMLNode>          listPending;
+        vector<string>           listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
+        for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
         {
-            listPending.push_back( rawCode );
+            const string rawCode{ entry.getAttributeText( "code", false ) };
+            if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
+            {
+                error = "<cultures> holds only <culture code=\"…\"> elements";
+                break;
+            }
+            if ( VectorUtil::contains( listFileCode, rawCode ) )
+            {
+                error = "culture '" + rawCode + "' is written twice";
+                break;
+            }
+            listFileCode.push_back( rawCode );
+            listPending.push_back( entry );
         }
 
-        while ( listPending.empty() == false )
+        while ( error.empty() && listPending.empty() == false )
         {
-            vector<string> listNext;
-            for ( const string& rawCode : listPending )
+            vector<XMLNode> listNext;
+            for ( const XMLNode& entry : listPending )
             {
-                const JSONValue entry = cultures.get( rawCode, false );
-                if ( entry.isObject() == false )
-                {
-                    error = "culture '" + rawCode + "' must be an object";
-                    break;
-                }
+                const string rawCode{ entry.getAttributeText( "code", false ) };
                 const string code = normalizeCode( rawCode );
                 if ( code != rawCode )
                 {
                     error = "culture code '" + rawCode + "' must be written as '" + code + "'";
                     break;
                 }
-                const string parentCode = normalizeCode( entry.get( "parent", false ).asString() );
+                const string parentCode = normalizeCode( entry.getAttributeText( "parent", false ) );
                 CultureInfo  info;
                 if ( parentCode.empty() == false )
                 {
                     const auto resolvedIt = mapResolved.find( parentCode );
                     const auto existingIt = _mapCulture.find( parentCode );
-                    const bool bInFile    = cultures.has( parentCode, true );
+                    const bool bInFile    = VectorUtil::contains( listFileCode, parentCode );
                     if ( resolvedIt != mapResolved.end() )
                         info = resolvedIt->second;
                     else if ( bInFile == false && existingIt != _mapCulture.end() )
                         info = existingIt->second;
                     else
                     {
-                        listNext.push_back( rawCode );
+                        listNext.push_back( entry );
                         continue;
                     }
                 }
-                else if ( entry.has( "pluralRule", false ) == false )
+                else if ( entry.findAttribute( "pluralRule", false ) == nullptr )
                 {
                     error = "culture '" + rawCode + "' has no parent and no pluralRule";
                     break;
@@ -852,7 +879,7 @@ namespace sw
                 info._code       = code;
                 info._parentCode = parentCode;
                 info._nativeName.clear();
-                if ( info._pseudoMode != PseudoLocaleMode::None && entry.has( "pseudo", false ) == false )
+                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo", false ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
                 string fieldError;
                 if ( CultureInfoInternal::applyFields( entry, info, fieldError ) == false )
@@ -866,7 +893,7 @@ namespace sw
                 break;
             if ( listNext.size() == listPending.size() )
             {
-                error = "culture '" + listNext.front() + "' has an unknown parent or a parent cycle";
+                error = "culture '" + string{ listNext.front().getAttributeText( "code", false ) } + "' has an unknown parent or a parent cycle";
                 break;
             }
             listPending = std::move( listNext );
@@ -894,7 +921,7 @@ namespace sw
             return false;
         }
         string error;
-        if ( loadFromJSONText( text, resourcePath, &error ) == false )
+        if ( loadFromXMLText( text, resourcePath, &error ) == false )
         {
             SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
             return false;

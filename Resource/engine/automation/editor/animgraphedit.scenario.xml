@@ -3,8 +3,8 @@
   에디터 시나리오 — 애니메이션 그래프 전이 편집(N8): 노드를 하나 찾아 넣고, Walk 를 누른 뒤 Ctrl 로 Attack 을 골라 Link Selected 로 잇는다
   (탐침 Editor.AnimationGraphLinkCount). 오른쪽 인스펙터에서 그 전이를 골라 조건(파라미터 Speed · 비교 >)을 적으면 조건 있는 전이가 하나가 되고
   (Editor.AnimationGraphConditionCount), 저장한 뒤 조건을 지워도 Load 가 저장한 조건을 되읽는다.
-  문서: Quick Open 으로 테스트 그래프(animgraphedit/animgraphedit.animgraph.json — 노드 Idle · Walk, 전이 둘)를 열어 거기에 저장한다.
-  경로 없는 기본 문서(상태 폴더의 AnimationGraphData.json)에 쓰면 체인의 뒤 시나리오(graphaddnode)가 노드 셋으로 시작한다.
+  문서: Quick Open 으로 테스트 그래프(animgraphedit/animgraphedit.animgraph.xml — 노드 Idle · Walk, 전이 둘)를 열어 거기에 저장한다.
+  경로 없는 기본 문서(상태 폴더의 AnimationGraphData.xml)에 쓰면 체인의 뒤 시나리오(graphaddnode)가 노드 셋으로 시작한다.
   기본 문서는 노드 둘 · 전이 하나라 테스트 그래프는 전이를 둘로 두어 열렸는지 가린다(Quick Open 은 파일 목록이 온 뒤에 열므로 WaitUntil 로 기다린다).
   끝에서 추가한 노드를 지우고 저장해 테스트 그래프를 처음 모양으로 돌려 둔다 — 다시 실행해도 같은 상태로 시작하고 작업 트리가 더러워지지 않는다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphedit.scenario.xml -dx12
@@ -14,7 +14,7 @@
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><DevCommand line="panel.focus animation_graph"/></At>
 	<At frame="60"><EditorKey key="Ctrl+P"/></At>
-	<At frame="75"><EditorText value="animgraphedit.animgraph.json"/></At>
+	<At frame="75"><EditorText value="animgraphedit.animgraph.xml"/></At>
 	<At frame="90"><EditorKey key="Enter"/></At>
 	<At frame="100"><WaitUntil probe="Editor.AnimationGraphLinkCount" equals="2"/></At>
 	<At frame="130"><Expect probe="Editor.GraphNodeCount" equals="2"/><Expect probe="Editor.AnimationGraphLinkCount" equals="2"/></At>

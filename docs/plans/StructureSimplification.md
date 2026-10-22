@@ -1,6 +1,6 @@
 # 구조 단순화 계획 (2026-10-20)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 17/21
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 21/21
 
 상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
 순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
@@ -141,7 +141,7 @@
 - **종류 정의는 `AssetTypeDef` 하나다.** 접미사 목록, 레이블, 저작 소스인지 쿠킹본인지(쿠킹 역할), 팩에서 뺄 수 있는 그룹(Texture · ShaderBinary · Audio 에 해당하는 값), 이관 버전 상수를 한 구조체에 둔다. 각 타입 헤더의 `kExtension` 은 이 정의의 접미사로 대신하고, 캐시의 `.cpp` 에 있는 `SW_BUILT_IN_ASSET_CACHE` 줄이 `SW_ASSET_TYPE( Type, def )` 한 줄로 바뀐다 — 캐시 등록이 곧 종류 등록이다.
 - **파생하는 쪽은 레지스트리를 순회한다.** 쿠커(`AssetCookPath`), 접미사 우선순위(접미사 길이가 긴 것이 먼저라는 규칙을 레지스트리가 정렬로 가진다 — JSON 순서에 기대지 않는다), 팩 제외 그룹, 이관 키(`AssetKind`), 에디터의 경로 판정이 모두 같은 목록을 읽는다. 종류를 하나 더하는 일은 등록 줄 하나다.
 - **카탈로그 종류(`ResourceDataKind`)는 같은 레지스트리에 들어올 수 있는지 AT4 에서 가른다.** 접미사 규칙이 아니라 경로 규칙(`game/` 접두 + `/data/appearance/` 포함 + `.xml` 접미 등)이라 형태가 다르다. 한 구조체에 "접미사 규칙 또는 경로 규칙"을 두는 것이 두 레지스트리를 두는 것보다 단순하면 합친다. 아니면 이 문서는 카탈로그를 따로 둔 이유를 적고 끝낸다.
-- **에디터는 표시 정보만 가진다.** 아이콘 · 색 · 패널 제목 · 임포터는 Editor 에만 있어야 하므로 `EditorAssetTypeInfo` 는 남기되, 접미사 · 캐시 이름 · 핫 리로드 경로는 엔진 레지스트리에서 읽고 표시 정보는 레이블 키로 짝짓는다. 열거 `EditorAssetType` 은 레이블 핸들로 바뀐다. 엔진 종류가 에디터 표시 정보를 빠뜨리는 것은 `AssetTypeCoverageTest` 가 막는다(표시 없음을 명시한 종류는 허용). 형식으로 막지 못하는 틈은 에디터가 엔진 헤더를 모르는 경계뿐이라 테스트를 둔다.
+- **에디터는 표시 정보만 가진다.** 아이콘 · 색 · 패널 제목 · 임포터는 Editor 에만 있어야 하므로 `EditorAssetTypeInfo` 는 남기되, 접미사 · 캐시 이름 · 핫 리로드 경로는 엔진 레지스트리에서 읽고 표시 정보는 레이블 키로 짝짓는다. 열거 `EditorAssetType` 은 에디터 안의 분류(콘텐츠 브라우저 · 아이콘 · 패널 연결)라 남기고, 엔진 종류와의 짝은 종류 이름 열(`AssetMatchRow::_engineTypeName`)로 둔다. 엔진 종류가 에디터 표시 정보를 빠뜨리는 것은 `AssetTypeCoverageTest` 가 막는다(표시 없음을 명시한 종류는 허용). 형식으로 막지 못하는 틈은 에디터가 엔진 헤더를 모르는 경계뿐이라 테스트를 둔다.
 - **`CookContract.json` 은 줄어든다.** PK4 뒤에는 파이썬 소비자가 없으므로 `cook_suffixes` · `asset_kinds` 는 레지스트리로 옮겨 지우고, `rhi_backends`(CMake 가 필요) · `default_rhi_backend` · 타깃별 제외 그룹 이름(`target_excluded_asset_kinds`, 레지스트리의 그룹 이름을 가리키며 모르는 이름은 로드 오류)만 남는다.
 
 ### 5.3 대안과 기각 이유
@@ -158,7 +158,6 @@
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
 | AT 검증 | **AT1~AT5 코드는 끝(`wt/structpk`, 빌드 없이 썼다).** AT1 `AssetTypeDef` · `AssetTypeRegistry` · `SW_ASSET_TYPE`(`Engine/Common/` — 티어 0 이라 TileMap · Navigation 도 include 한다), 접미사는 길이 내림차순 · 같으면 등록 순, 겹친 이름 · 접미사는 등록하지 않고 문제로 남김. `AssetKind` · `AssetFormatVersions` 를 지우고 판은 정의(`_formatVersion`), 이관 키는 종류 이름. 씬(`SceneDocument`) · 프리팹 · 머티리얼 · 머티리얼 인스턴스를 옮겼다(RenderPipeline · RenderPass 는 쓰는 곳이 없어 뺐다). `cook_suffixes` 를 JSON · 생성기 · 파이썬에서 지움. AT2 · AT3 `kExtension` 을 가진 엔진 타입 33 종에 정의 · 등록(글자는 `kExtension` 하나를 정의가 가리킨다). 캐시 등록과 종류 등록은 한 줄로 합치지 않고 나란히 — 캐시 없는 종류가 많다. AT4 아래 5.3절. AT5 정의의 제외 묶음(`_excludeGroup`)과 Texture · Audio · ShaderBinary 종류, `asset_kinds` 를 지우고 `target_excluded_asset_kinds` 는 묶음 이름만(`SW_TARGET_EXCLUDED_GROUP_TABLE`), `ResourcePaths` 의 호스트 · 타깃 제외가 종류 표로 판정. **남은 것**: 전 프리셋 컴파일, `AssetTypeRegistryTest` · `ResourceHostTargetTest` · 씬 · 프리팹 쿠킹 왕복, 전용 서버 팩이 텍스처 · 셰이더 바이너리 · 오디오를 빼는지, `-L lint` · `-L nogpu` | 위 폴더 | PK | 위 남은 것 | 없음 |
-| AT6 | 에디터를 레지스트리로 옮깁니다. `EditorAssetType` 열거를 레이블 핸들로 바꾸고 `kArrAssetMatch` · 접미사 배열을 지웁니다. `AssetTypeCoverageTest` 를 더합니다. **아직 안 함** — 에디터 35 파일 205 곳이고 콘텐츠 브라우저 · 핫 리로드 시나리오와 `ux-reviewer` 캡처가 검증이라 빌드 없이 하지 않았다(`wt/structpk` 작업자, 2026-10-22). 엔진 표는 AT1~AT5 로 다 섰다 — 에디터 판정은 씬 · 프리팹만 정의(`SceneDocument::kAssetType` · `PrefabAsset::kAssetType`)를 넘긴다 | `Editor/Common/Workspace/`, `Editor/Common/Commands/Asset/`, `Editor/Common/GUI/`, `Editor/Panels/` | AT 검증 | 에디터 테스트, 콘텐츠 브라우저 · 핫 리로드 시나리오, `ux-reviewer` 캡처 | 없음 |
 
 단위가 끝날 때 고칠 문서: 결정 기록 2절의 로더 등록제 문장(이 문서가 열면서 이미 고친다), `IAssetCache.h` 머리 주석, `docs/Config/` 생성물, `CookContract.json` 의 `$schema_note`.
 
@@ -182,7 +181,7 @@
 ### 6.2 해법
 
 - **역할 규칙.** 저작자가 편집하고 리소스 id · GUID 로 참조되며 쿠킹 대상인 데이터는 XML, 시작할 때 `ConfigManager` 가 읽는 호스트 · 도구 설정과 사용자 상태(에디터 상태, 플레이어 설정)는 JSON 이다. 역할이 모호한 파일(`tokens` · `lipsync` · `animationlod` 등)은 TX4 에서 하나씩 가르고 결과를 테이블로 남긴다.
-- **형식은 로더 서명이 막는다.** AT 의 `AssetTypeDef` 에 형식 필드를 두지 않고 에셋 로더가 `XMLDocument` 만 받게 한다. JSON 읽기는 `ConfigManager`/`IConfig` 에서만 닿는다. 에셋 로더가 `JSONValue` 를 손으로 읽는 경로 자체가 서명에 없다. 형식으로 못 막는 틈(에셋 폴더의 코드가 `JSONSerializer` 를 직접 부르는 것)만 마지막에 린트 게이트로 둔다.
+- **형식은 등록이 막는다**(TX7 에서 이렇게 굳혔다 — 에셋 로더 서명은 종류마다 달라 한 서명으로 모을 수 없었다). `AssetTypeRegistry::isSuffixFormatAllowed` 가 `.json` 접미사는 쿠킹 입력(`CookSource`, 지금은 `.prefab.json` 하나)으로만 받고, 그대로 읽는 접미사로 올린 종류는 표가 받지 않고 문제로 남긴다(`AssetTypeRegistryTest.JSONSuffixIsOnlyACookSource`). 아래는 처음 설계다. AT 의 `AssetTypeDef` 에 형식 필드를 두지 않고 에셋 로더가 `XMLDocument` 만 받게 한다. JSON 읽기는 `ConfigManager`/`IConfig` 에서만 닿는다. 에셋 로더가 `JSONValue` 를 손으로 읽는 경로 자체가 서명에 없다. 형식으로 못 막는 틈(에셋 폴더의 코드가 `JSONSerializer` 를 직접 부르는 것)만 마지막에 린트 게이트로 둔다.
 - **`.meta` 는 XML 이다**(에셋 곁의 에셋 메타). `<AssetMeta guid="…" sourcePath="…" imported="0"/>` 한 요소를 리플렉션 구조체가 읽고, `guid` · `sourcePath` 는 `Required` 다.
 - **에디터 · 사용자 상태는 JSON 이다.** 리플렉션 구조체 + `JSONSerializer` 로 읽고 쓴다. `Saved/Editor/` 의 파일은 git 이 무시하는 사용자 상태라 옛 형식 리더를 두지 않고 새 형식으로 다시 쓴다(결정 기록의 "옛 형식 리더를 두지 않는다"). 플레이어 외형 프리셋은 출시 전 데이터라 같은 처리를 한다 — 확인이 필요하면 8절.
 - **외부 규격은 건드리지 않는다.** `.po` · `.xlf`(번역 교환), glTF · VRM, ImGui 의 `imgui.ini` 는 엔진 형식이 아니다.
@@ -199,9 +198,6 @@
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
 | TX 검증 | **TX1~TX4 는 끝(`wt/structpk`, 빌드 없이 썼다).** TX1 `AssetMeta`(REFLECT, `_guid` · `_sourcePath` Required)를 `toXML` · `parseXML` 로만 읽고 쓴다 — `AssetDatabase` 와 모델 임포터가 같은 함수. `loadMetaFile` 은 `AssetMetaReadResult`(없음 · 깨짐을 가른다)이고 깨진 `.meta` 를 새 GUID 로 덮어쓰지 않는다. `.meta` 167 개를 다시 썼고 변환 스크립트가 GUID 가 모두 같음을 확인했다(스크립트는 저장소에 두지 않음). TX2 `EditorPanelVisibility`(windows.json) · `EditorViewportOverlayFile` · `UserAppearancePresetFile`(판 3)을 리플렉션 JSON 으로 — 외형 프리셋은 8절 권고안대로 옛 판 리더를 지웠다. TX3 `KeyValueFile` · 퍼즈 대상 · 케이스를 지우고 남은 무관한 두 케이스는 `TestStringTableAndGameConfig.cpp`. TX4 아래 6.5절. **남은 것**: 전 프리셋 컴파일, 에셋 레지스트리 생성 결과 비교 · GUID 복구 · 임포트 테스트, 에디터 레이아웃 저장 · 복원, 외형 프리셋 왕복, `-L lint` · `-L nogpu`, Dev 기동 `.meta` 스캔 시간 전후 | 위 폴더 | AT 검증 | 위 남은 것 | 있습니다(`.meta` 스캔 시간) |
-| TX5 | 애니메이션 · 캐릭터 계열 JSON(`.skeleton` 10, `.rig` 7, `.vertexanimation` 5, `.bonelod` 5, `.animgraph` 4, `.sprite` 3, `.bonemask` 2, `.retarget` · `.facial` · `.visemes` 각 1, `clips`)을 XML 로 바꿉니다. 임포터 출력도 XML 로 바꾸고 커밋된 결과를 다시 임포트합니다 **아직 안 함** — 로더를 JSON 에서 XML 로 바꾸고 임포터로 커밋된 결과를 다시 만들어야 해 빌드 · 실행 없이 하지 않았다(2026-10-22). 대상 파일은 6.5절 표 | `Engine/Animation/`, `Engine/Character/`, `Editor/Common/Asset/`, `Resource/**` | AT2, TX4 | 해당 폴더 테스트, 임포트 테스트, 애니메이션 대표 셋 실행, `-L nogpu` | 있습니다. 가장 큰 파일(`avatarsample_d.skeleton.json` 46 KB 등) 로드 시간 전후 |
-| TX6 | 지역화 계열 JSON(`.strings` · `.translation` · `.locproject` · `.cultures` · `.tm`)을 XML 로 바꿉니다. `.po` · `.xlf` 교환 가져오기 · 내보내기는 그대로 둡니다 **아직 안 함** — 로더를 JSON 에서 XML 로 바꾸고 임포터로 커밋된 결과를 다시 만들어야 해 빌드 · 실행 없이 하지 않았다(2026-10-22). 대상 파일은 6.5절 표 | `Engine/Localization/`, `Editor/Common/Localization/`, `Resource/editor/localization/`, `Resource/game/*/data/localization/` | AT3, TX4 | 지역화 테스트, 교환 왕복 테스트, 에디터 글 편집 시나리오 | 있습니다. `editor.strings.json`(174 KB) · `ko.translation.json`(136 KB) 로드 시간 전후 |
-| TX7 | 남은 에셋 JSON(`.dialogue` · `.seq` · `.avatar` · `.tokens` 중 TX4 가 에셋으로 분류한 것)을 XML 로 바꾸고, 에셋 로더가 `XMLDocument` 만 받게 하는 서명을 굳힙니다. 에셋 폴더에서 `JSONSerializer` 호출을 막는 린트는 서명이 못 막는 틈이 남는 경우에만 둡니다 **아직 안 함** — 로더를 JSON 에서 XML 로 바꾸고 임포터로 커밋된 결과를 다시 만들어야 해 빌드 · 실행 없이 하지 않았다(2026-10-22). 대상 파일은 6.5절 표 | `Engine/Dialogue/`, `Engine/Sequencer/`, `Editor/Common/Config/`, `Scripts/lint/` | AT2, AT3, TX4 | 대화 · 시퀀서 테스트, `-L lint`, `-L nogpu` | 없음 |
 
 단위가 끝날 때 고칠 문서: [설정 문서](../07_Configuration.md)의 형식 문단, `AssetFormat.h` 머리 주석("JSON 은 도구 · 설정을 주고받는 데 씁니다"), 결정 기록 5-4 의 형식 항목, DataDriven 7.2절의 `KeyValueFile` 문장(D9 가 이 문서를 가리키게).
 

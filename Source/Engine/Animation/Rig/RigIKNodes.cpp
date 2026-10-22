@@ -10,7 +10,7 @@
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -42,21 +42,21 @@ namespace sw
                 RigJointLimit _limit{};
             };
 
-            [[nodiscard]] static bool parseLimits( RigJSONReader& reader, vector<LimitSpec>& outListSpec )
+            [[nodiscard]] static bool parseLimits( RigXMLReader& reader, vector<LimitSpec>& outListSpec )
             {
-                const JSONValue limits = reader.readArray( "limits", false );
+                const RigXMLList limits = reader.readArray( "limits", false );
                 if ( reader.isOk() == false )
                     return false;
                 for ( size_t index = 0; limits.isValid() && index < limits.size(); ++index )
                 {
-                    RigJSONReader limitReader( limits.at( index ), reader.getContext() );
-                    LimitSpec     spec{};
-                    uint32        typeIndex    = 0;
-                    float32       swingDegrees = 180.0f;
-                    float32       twistDegrees = 180.0f;
-                    float32       minDegrees   = -180.0f;
-                    float32       maxDegrees   = 180.0f;
-                    bool          bOk          = limitReader.readName( "bone", spec._bone, true ) &&
+                    RigXMLReader limitReader( limits.at( index ), reader.getContext() );
+                    LimitSpec    spec{};
+                    uint32       typeIndex    = 0;
+                    float32      swingDegrees = 180.0f;
+                    float32      twistDegrees = 180.0f;
+                    float32      minDegrees   = -180.0f;
+                    float32      maxDegrees   = 180.0f;
+                    bool         bOk          = limitReader.readName( "bone", spec._bone, true ) &&
                                limitReader.readChoice( "type", kArrLimitType, SW_COUNT_OF( kArrLimitType ), typeIndex, true ) &&
                                limitReader.readFloat( "swing_degrees", swingDegrees, false ) && limitReader.readFloat( "twist_degrees", twistDegrees, false ) &&
                                limitReader.readFloat3( "axis", spec._limit._hingeAxis, false ) && limitReader.readFloat( "min_degrees", minDegrees, false ) &&
@@ -128,7 +128,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigTwoBoneIKNode>( *this ); }
             const utf8*         getTypeName() const override { return "TwoBoneIK"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 bool       bMatch = false;
                 bool       bKeep  = true;
@@ -206,7 +206,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigChainIKNode>( *this ); }
             const utf8*         getTypeName() const override { return _bFabrik == SW_TRUE ? "FabrikChain" : "CcdChain"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 bool    bMatch         = false;
                 float32 maxStepDegrees = 180.0f;
@@ -271,18 +271,18 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigAimNode>( *this ); }
             const utf8*         getTypeName() const override { return "Aim"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 float32 maxDegrees = 180.0f;
                 bool    bOk        = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
                            reader.readFloat3( "aim_axis", _aimAxis, false ) && reader.readFloat( "max_degrees", maxDegrees, false );
-                _maxAngle             = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
-                _aimAxis              = _aimAxis.normalize();
-                const JSONValue chain = reader.readArray( "chain", false );
+                _maxAngle              = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
+                _aimAxis               = _aimAxis.normalize();
+                const RigXMLList chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
                 {
-                    RigJSONReader entryReader( chain.at( index ), reader.getContext() );
-                    ChainEntry    entry{};
+                    RigXMLReader entryReader( chain.at( index ), reader.getContext() );
+                    ChainEntry   entry{};
                     bOk = entryReader.readName( "bone", entry._name, true ) && entryReader.readFloat( "weight", entry._weight, true );
                     bOk = entryReader.finish() && bOk;
                     _listChain.push_back( entry );
@@ -378,7 +378,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigFootPlacementNode>( *this ); }
             const utf8*         getTypeName() const override { return "FootPlacement"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 float32 maxAlignDegrees = 30.0f;
                 bool    bAlign          = true;
@@ -386,13 +386,13 @@ namespace sw
                            reader.readFloat( "trace_down", _traceDown, false ) && reader.readFloat( "max_pelvis_drop", _maxPelvisDrop, false ) &&
                            reader.readFloat( "max_raise", _maxRaise, false ) && reader.readFloat( "interp_speed", _interpSpeed, false ) &&
                            reader.readBool( "align_to_normal", bAlign, false ) && reader.readFloat( "max_align_degrees", maxAlignDegrees, false );
-                _bAlignToNormal      = bAlign ? SW_TRUE : SW_FALSE;
-                _maxAlignAngle       = maxAlignDegrees * MathUtil::kDegreeToRadian;
-                const JSONValue feet = reader.readArray( "feet", true );
+                _bAlignToNormal       = bAlign ? SW_TRUE : SW_FALSE;
+                _maxAlignAngle        = maxAlignDegrees * MathUtil::kDegreeToRadian;
+                const RigXMLList feet = reader.readArray( "feet", true );
                 for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
                 {
-                    RigJSONReader footReader( feet.at( index ), reader.getContext() );
-                    Foot          foot{};
+                    RigXMLReader footReader( feet.at( index ), reader.getContext() );
+                    Foot         foot{};
                     bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
                           footReader.readName( "end", foot._endName, true );
                     bOk = footReader.finish() && bOk;
@@ -548,15 +548,15 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigStrideWarpingNode>( *this ); }
             const utf8*         getTypeName() const override { return "StrideWarping"; }
 
-            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
                 bool bOk = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "min_scale", _minScale, true ) &&
                            reader.readFloat( "max_scale", _maxScale, true ) && reader.readFloat( "max_pelvis_drop", _maxPelvisDrop, true );
-                const JSONValue feet = reader.readArray( "feet", true );
+                const RigXMLList feet = reader.readArray( "feet", true );
                 for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
                 {
-                    RigJSONReader footReader( feet.at( index ), reader.getContext() );
-                    Foot          foot{};
+                    RigXMLReader footReader( feet.at( index ), reader.getContext() );
+                    Foot         foot{};
                     bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
                           footReader.readName( "end", foot._endName, true );
                     bOk = footReader.finish() && bOk;

@@ -147,7 +147,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, DialogueGraphSaveFailureIsReported )
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
 {
-    const string path = test::makeTempPath( "sw_test_animgraph_ok.animgraph.json" );
+    const string path = test::makeTempPath( "sw_test_animgraph_ok.animgraph.xml" );
 
     AnimationGraphAsset asset;
 
@@ -165,9 +165,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
 SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
 {
     const string folder      = test::makeTempDirectory( "sw_graph_load" );
-    const string missingPath = FileUtil::joinPath( folder, "never_written.animgraph.json" );
-    const string brokenPath  = FileUtil::joinPath( folder, "broken.animgraph.json" );
-    const string goodPath    = FileUtil::joinPath( folder, "good.animgraph.json" );
+    const string missingPath = FileUtil::joinPath( folder, "never_written.animgraph.xml" );
+    const string brokenPath  = FileUtil::joinPath( folder, "broken.animgraph.xml" );
+    const string goodPath    = FileUtil::joinPath( folder, "good.animgraph.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( brokenPath, "{ this is not json" ) );
 
     AnimationGraphAsset good;

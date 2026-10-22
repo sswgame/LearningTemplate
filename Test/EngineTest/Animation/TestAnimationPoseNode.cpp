@@ -13,15 +13,26 @@
 using namespace sw;
 
 // ------------------------------------------------------------------------------
-// 1) AnimationPoseNodeTest — 그래프 JSON 의 "pose_node" 와 포즈를 평가해 내는 노드(BlendPosesNode)
+// 1) AnimationPoseNodeTest — 그래프 XML 의 "pose_node" 와 포즈를 평가해 내는 노드(BlendPosesNode)
 // ------------------------------------------------------------------------------
 
 namespace
 {
     /** @brief "Idle", "Wave" 클립과 그 둘을 섞는 포즈 노드 상태 "Mix" 를 가진 그래프입니다. */
-    constexpr string_view kMixGraphJSON = R"({ "nodes": [
-        { "id": 1, "name": "Mix", "pose_node": { "type": "blend_poses", "inputs": [ "Idle", "Wave" ], "weight": "WaveWeight" } },
-        { "id": 2, "name": "Idle" } ], "links": [] })";
+    constexpr string_view kMixGraphXML = R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Mix">
+			<pose_node type="blend_poses" weight="WaveWeight">
+				<inputs>
+					<item>Idle</item>
+					<item>Wave</item>
+				</inputs>
+			</pose_node>
+		</node>
+		<node id="2" name="Idle" />
+	</nodes>
+	<links />
+</AnimationGraphAsset>)";
 
     /**
      * @class TestPoseSampler
@@ -52,14 +63,14 @@ namespace
 } // namespace
 
 /**
- * @brief [AnimationPoseNodeTest] "pose_node" 가 JSON 왕복에서 남는다(종류 · 입력 · 가중치 파라미터)
+ * @brief [AnimationPoseNodeTest] "pose_node" 가 XML 왕복에서 남는다(종류 · 입력 · 가중치 파라미터)
  */
 SW_TEST_CASE( AnimationPoseNodeTest, PoseNodeRoundTrip )
 {
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( kMixGraphJSON ) );
+    SW_ASSERT_TRUE( graph.parseXML( kMixGraphXML ) );
     AnimationGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
+    SW_ASSERT_TRUE( parsed.parseXML( graph.toXML() ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( parsed._listNode.size() ) );
 
     const AnimationGraphNode& mix = parsed._listNode[0];
@@ -78,17 +89,32 @@ SW_TEST_CASE( AnimationPoseNodeTest, PoseNodeRoundTrip )
 SW_TEST_CASE( AnimationPoseNodeTest, InvalidPoseNodeIsLoadError )
 {
     const string_view arrBad[] = {
-        R"({ "nodes": [ { "id": 1, "name": "A", "pose_node": { "type": "motion_magic", "inputs": [ "Idle", "Wave" ], "weight": "W" } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "pose_node": { "type": "blend_poses", "inputs": [ "Idle" ], "weight": "W" } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "pose_node": { "type": "blend_poses", "inputs": [ "Idle", "Wave" ] } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "pose_node": { "type": "blend_poses", "inputs": [ "Idle", "Wave" ], "weight": "W" },
-                          "blend_space": { "x": "Speed", "samples": [ { "clip": "Idle", "x": 0 } ] } } ] })",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><pose_node type="motion_magic" weight="W"><inputs><item>Idle</item><item>Wave</item></inputs></pose_node></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><pose_node type="blend_poses" weight="W"><inputs><item>Idle</item></inputs></pose_node></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><pose_node type="blend_poses"><inputs><item>Idle</item><item>Wave</item></inputs></pose_node></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="A">
+			<pose_node type="blend_poses" weight="W">
+				<inputs>
+					<item>Idle</item>
+					<item>Wave</item>
+				</inputs>
+			</pose_node>
+			<blend_space x="Speed">
+				<samples>
+					<sample clip="Idle" x="0" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+</AnimationGraphAsset>)",
     };
     test::ScopedDefensiveTestLog expected( "invalid pose nodes are rejected" );
     for ( const string_view bad : arrBad )
     {
         AnimationGraphAsset graph;
-        SW_EXPECT_FALSE( graph.parseJSON( bad ) );
+        SW_EXPECT_FALSE( graph.parseXML( bad ) );
         SW_EXPECT_TRUE( graph._listNode.empty() );
     }
 }
@@ -100,7 +126,7 @@ SW_TEST_CASE( AnimationPoseNodeTest, InvalidPoseNodeIsLoadError )
 SW_TEST_CASE( AnimationPoseNodeTest, NodeSetResolvesNodesAndClips )
 {
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( kMixGraphJSON ) );
+    SW_ASSERT_TRUE( graph.parseXML( kMixGraphXML ) );
     test::TestPlayable       idle( 1.0f, true );
     test::TestPlayable       wave( 2.0f, false );
     test::TestPlayableSource clipSource;
@@ -139,7 +165,7 @@ SW_TEST_CASE( AnimationPoseNodeTest, NodeSetResolvesNodesAndClips )
 SW_TEST_CASE( AnimationPoseNodeTest, BlendPosesEvaluatesWeightedPose )
 {
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( kMixGraphJSON ) );
+    SW_ASSERT_TRUE( graph.parseXML( kMixGraphXML ) );
     test::TestPlayable       idle( 1.0f, true );
     test::TestPlayable       wave( 2.0f, false );
     test::TestPlayableSource clipSource;

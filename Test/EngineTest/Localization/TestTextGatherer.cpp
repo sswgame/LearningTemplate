@@ -141,20 +141,31 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
 {
     sw::SourceStringTable gatherTable;
     sw::string            error;
-    SW_ASSERT_TRUE( gatherTable.loadFromJSONText( R"({ "culture": "en", "entries": {
-        "Menu.Start": { "source": "Start", "comment": "Main menu", "maxLength": 12, "origins": [ "Old.cpp" ] },
-        "Menu.Gone": { "source": "Gone", "origins": [ "Old.cpp" ] },
-        "Manual.Only": { "source": "Hand written" } } })",
-                                                  "gather", &error ) );
+    SW_ASSERT_TRUE( gatherTable.loadFromXMLText( R"(<SourceStringTable culture="en">
+	<entries>
+		<entry key="Menu.Start" source="Start" comment="Main menu" maxLength="12">
+			<origins>
+				<item>Old.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Menu.Gone" source="Gone">
+			<origins>
+				<item>Old.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Manual.Only" source="Hand written" />
+	</entries>
+</SourceStringTable>)",
+                                                 "gather", &error ) );
     sw::SourceStringTable otherTable;
-    SW_ASSERT_TRUE( otherTable.loadFromJSONText( R"({ "culture": "en", "entries": { "settings.title": { "source": "Settings" } } })", "other", &error ) );
+    SW_ASSERT_TRUE( otherTable.loadFromXMLText( R"(<SourceStringTable culture="en"><entries><entry key="settings.title" source="Settings" /></entries></SourceStringTable>)", "other", &error ) );
 
     sw::TextGatherer gatherer;
     gatherer.addKeyedText( "Menu.Start", "Start Game", {}, "Menu.cpp" );
     gatherer.addKeyedText( "Menu.Quit", "Quit", {}, "Menu.cpp" );
     gatherer.addKeyReference( "settings.title", ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() );
     gatherer.addKeyReference( "settings.unknown", ::test::getEngineDefaultAssets()._userSettingsSchema.c_str() );
-    gatherer.addTextOrKey( "Welcome, traveler!", "Dialogue line", "game/x/intro.dialogue.json" );
+    gatherer.addTextOrKey( "Welcome, traveler!", "Dialogue line", "game/x/intro.dialogue.xml" );
     gatherer.addTextOrKey( "Manual.Only", "Sign.text", "game/x/maps/a.scene.xml" );
 
     const sw::TextGatherReport report = gatherer.mergeInto( gatherTable, { &otherTable } );
@@ -205,10 +216,13 @@ SW_TEST_CASE( TextGathererTest, KeyOnlyMacrosGatherReferencesAndNeverWriteSource
 
     sw::SourceStringTable table;
     sw::string            error;
-    SW_ASSERT_TRUE( table.loadFromJSONText( R"({ "culture": "en", "entries": {
-        "EditorTip.Known": { "source": "Hand written text" },
-        "EditorTip.Counted": { "source": "{n} items" } } })",
-                                            "gather", &error ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( R"(<SourceStringTable culture="en">
+	<entries>
+		<entry key="EditorTip.Known" source="Hand written text" />
+		<entry key="EditorTip.Counted" source="{n} items" />
+	</entries>
+</SourceStringTable>)",
+                                           "gather", &error ) );
     const sw::TextGatherReport report = gatherer.mergeInto( table, {} );
     SW_EXPECT_TRUE( report._listAdded.empty() );
     SW_EXPECT_TRUE( report._listChanged.empty() );

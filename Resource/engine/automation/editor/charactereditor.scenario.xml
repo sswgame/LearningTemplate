@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 캐릭터 편집 창: 커맨드로 열고 탭마다 눈으로 볼 화면을 찍는다.
   소켓 탭: 창을 열면 팩 데이터의 소켓 파일이 문서로 읽힌다(Load 는 다시 읽기) — 목록 · 상세. 스켈레톤 탭: 스켈레톤을 읽어 본 트리 · 포즈 편집(읽은 본 이름이 소켓 부모 검증에 연결된다).
-  외형 탭: 아이템 · 외형 데이터를 읽고 세트를 입혀 칸 · 규칙 설명이 나오는지 본다. 미리보기 탭: 그 선택을 입은 몸이 미리보기 씬에 조립된다(메인 씬은 그대로).
+  외형 탭: 아이템 · 외형 데이터를 읽고 세트를 입혀 칸 · 규칙 설명이 나오는지 본다. 미리보기 탭: 그 선택을 입은 몸이 미리보기 씬에 조립된다(메인 씬은 그대로). 클립을 골라 Play 하면 몸이 그 클립으로 움직인다(팩 데이터의 clipFolder).
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/charactereditor.scenario.xml -dx12
 -->
 <Scenario name="editor.charactereditor" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
@@ -16,13 +16,13 @@
 	<At frame="155"><EditorClick mark="charactereditor.loadSockets"/></At>
 	<At frame="185"><Expect probe="Editor.CharacterEditorSocketCount" atLeast="3"/></At>
 	<At frame="190"><EditorClick mark="charactereditor.socket.first"/></At>
-	<At frame="220"><DevCommand line="screenshot Saved/Automation/editor.charactereditor/charactereditor_sockets.png"/></At>
+	<At frame="220"><CaptureEditorUI file="charactereditor/sockets.png"/></At>
 	<At frame="230"><EditorClick mark="charactereditor.tab.skeleton" state="down"/></At>
 	<At frame="231"><EditorClick mark="charactereditor.tab.skeleton" state="up"/></At>
 	<At frame="250"><EditorClick mark="charactereditor.loadSkeleton"/></At>
 	<At frame="280"><Expect probe="Editor.CharacterEditorBoneCount" atLeast="30"/></At>
 	<At frame="285"><EditorClick mark="charactereditor.bone.root"/></At>
-	<At frame="320"><DevCommand line="screenshot Saved/Automation/editor.charactereditor/charactereditor_skeleton.png"/></At>
+	<At frame="320"><CaptureEditorUI file="charactereditor/skeleton.png"/></At>
 	<At frame="330"><EditorClick mark="charactereditor.tab.appearance" state="down"/></At>
 	<At frame="331"><EditorClick mark="charactereditor.tab.appearance" state="up"/></At>
 	<At frame="350"><EditorClick mark="charactereditor.loadData"/></At>
@@ -31,10 +31,15 @@
 	<At frame="390"><EditorClick mark="charactereditor.equipSet"/></At>
 	<At frame="410"><EditorClick mark="charactereditor.equipSet.first"/></At>
 	<At frame="440"><Expect probe="Editor.CharacterEditorEquippedSlotCount" atLeast="1"/></At>
-	<At frame="450"><DevCommand line="screenshot Saved/Automation/editor.charactereditor/charactereditor_appearance.png"/></At>
+	<At frame="450"><CaptureEditorUI file="charactereditor/appearance.png"/></At>
 	<At frame="460"><EditorClick mark="charactereditor.tab.preview" state="down"/></At>
 	<At frame="461"><EditorClick mark="charactereditor.tab.preview" state="up"/></At>
 	<At frame="520"><Expect probe="Editor.CharacterEditorPreviewAssembleCount" atLeast="1"/></At>
-	<At frame="540"><DevCommand line="screenshot Saved/Automation/editor.charactereditor/charactereditor_preview.png"/></At>
-	<At frame="560"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+	<At frame="540"><CaptureEditorUI file="charactereditor/preview.png"/></At>
+	<At frame="545"><EditorClick mark="charactereditor.clip"/></At>
+	<At frame="555"><EditorClick mark="charactereditor.clip.first"/></At>
+	<At frame="565"><EditorClick mark="charactereditor.playClip"/></At>
+	<At frame="610"><Expect probe="Editor.CharacterEditorPreviewClipPlaying" atLeast="1"/></At>
+	<At frame="650"><CaptureEditorUI file="charactereditor/clip.png"/></At>
+	<At frame="680"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

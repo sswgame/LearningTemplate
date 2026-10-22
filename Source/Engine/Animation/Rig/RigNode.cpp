@@ -2,15 +2,15 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -27,75 +27,117 @@ namespace sw
             message += what;
             return message;
         }
+
+        /** @brief 목록 원소 요소의 이름입니다. */
+        constexpr string_view kItemTag = "item";
     } // namespace
 
-    RigJSONReader::RigJSONReader( const JSONValue& object, string_view context )
-        : _object{ object }
+    size_t RigXMLList::size() const
+    {
+        size_t count{ 0 };
+        for ( XMLNode item = _listNode.findChild(); item.isValid(); item = item.findNextSibling() )
+        {
+            ++count;
+        }
+        return count;
+    }
+
+    XMLNode RigXMLList::at( size_t index ) const
+    {
+        XMLNode item = _listNode.findChild();
+        for ( size_t skipped = 0; item.isValid() && skipped < index; ++skipped )
+        {
+            item = item.findNextSibling();
+        }
+        return item;
+    }
+
+    RigXMLReader::RigXMLReader( const XMLNode& element, string_view context )
+        : _element{ element }
         , _listUsedKey{}
         , _context{ context }
         , _bOk{ SW_TRUE }
     {
-        if ( _object.isObject() == false )
-            fail( "expected an object" );
+        if ( _element.isValid() == false )
+            fail( "expected an element" );
     }
 
-    void RigJSONReader::fail( string_view message )
+    void RigXMLReader::fail( string_view message )
     {
         SW_LOG_ERROR( "Rig '%#': %#", _context.c_str(), message );
         _bOk = SW_FALSE;
     }
 
-    JSONValue RigJSONReader::readMember( string_view key, bool bRequired )
+    const utf8* RigXMLReader::readAttribute( string_view key, bool bRequired )
     {
         _listUsedKey.push_back( string{ key } );
-        if ( _object.isObject() == false )
-            return JSONValue{};
-        const JSONValue value = _object.get( key, false );
-        if ( value.isValid() == false && bRequired )
+        if ( _element.isValid() == false )
+            return nullptr;
+        const string      keyText{ key };
+        const utf8* const pValue = _element.findAttribute( keyText.c_str(), false );
+        if ( pValue == nullptr && bRequired )
         {
             string message = "missing required key '";
             message += key;
             message += "'";
             fail( message );
         }
-        return value;
+        return pValue;
     }
 
-    bool RigJSONReader::readName( string_view key, hashed_string& outValue, bool bRequired )
+    XMLNode RigXMLReader::readChild( string_view key, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        _listUsedKey.push_back( string{ key } );
+        if ( _element.isValid() == false )
+            return XMLNode{};
+        const string  keyText{ key };
+        const XMLNode child = _element.findChild( keyText.c_str(), false );
+        if ( child.isValid() == false && bRequired )
+        {
+            string message = "missing required key '";
+            message += key;
+            message += "'";
+            fail( message );
+        }
+        return child;
+    }
+
+    bool RigXMLReader::readName( string_view key, hashed_string& outValue, bool bRequired )
+    {
+        const utf8* const pValue = readAttribute( key, bRequired );
+        if ( pValue == nullptr )
             return bRequired == false;
-        if ( value.isString() == false || value.asString().empty() )
+        if ( string_view{ pValue }.empty() )
         {
             fail( makeKeyMessage( key, "must be a non-empty string" ) );
             return false;
         }
-        outValue = hashed_string( value.asString() );
+        outValue = hashed_string( string_view{ pValue } );
         return true;
     }
 
-    bool RigJSONReader::readFloat( string_view key, float32& outValue, bool bRequired )
+    bool RigXMLReader::readFloat( string_view key, float32& outValue, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        const utf8* const pValue = readAttribute( key, bRequired );
+        if ( pValue == nullptr )
             return bRequired == false;
-        const std::optional<float32> number = value.isNumber() ? value.read<float32>() : std::nullopt;
-        if ( number.has_value() == false )
+        float32 number{ 0.0f };
+        if ( StringUtil::parseFloat( string_view{ pValue }, number ) == false )
         {
             fail( makeKeyMessage( key, "must be a number" ) );
             return false;
         }
-        outValue = *number;
+        outValue = number;
         return true;
     }
 
-    bool RigJSONReader::readUint( string_view key, uint32& outValue, bool bRequired )
+    bool RigXMLReader::readUint( string_view key, uint32& outValue, bool bRequired )
     {
         float32 number = 0.0f;
         if ( readFloat( key, number, bRequired ) == false )
             return false;
-        if ( _object.get( key, false ).isValid() == false )
+        const string keyText{ key };
+        if ( _element.findAttribute( keyText.c_str(), false ) == nullptr )
             return true;
         if ( number < 0.0f || MathUtil::floor( number ) != number )
         {
@@ -106,37 +148,37 @@ namespace sw
         return true;
     }
 
-    bool RigJSONReader::readBool( string_view key, bool& outValue, bool bRequired )
+    bool RigXMLReader::readBool( string_view key, bool& outValue, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        const utf8* const pValue = readAttribute( key, bRequired );
+        if ( pValue == nullptr )
             return bRequired == false;
-        const std::optional<bool> flag = value.isBool() ? value.read<bool>() : std::nullopt;
-        if ( flag.has_value() == false )
+        const string_view text{ pValue };
+        if ( text != "true" && text != "false" )
         {
             fail( makeKeyMessage( key, "must be true or false" ) );
             return false;
         }
-        outValue = *flag;
+        outValue = text == "true";
         return true;
     }
 
-    bool RigJSONReader::readFloat3( string_view key, float3& outValue, bool bRequired )
+    bool RigXMLReader::readFloat3( string_view key, float3& outValue, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        const utf8* const pValue = readAttribute( key, bRequired );
+        if ( pValue == nullptr )
             return bRequired == false;
         float32 arrValue[3]{};
-        if ( AnimationJSONUtil::readFloats( value, arrValue, 3 ) == false )
+        if ( XMLReadUtil::readFloatList( string_view{ pValue }, arrValue, 3 ) == false )
         {
-            fail( makeKeyMessage( key, "must be an array of 3 numbers" ) );
+            fail( makeKeyMessage( key, "must be 3 numbers (x,y,z)" ) );
             return false;
         }
         outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
         return true;
     }
 
-    bool RigJSONReader::readRotationDegrees( string_view key, quaternion& outValue, bool bRequired )
+    bool RigXMLReader::readRotationDegrees( string_view key, quaternion& outValue, bool bRequired )
     {
         float3 degrees{};
         if ( readFloat3( key, degrees, bRequired ) == false )
@@ -145,58 +187,54 @@ namespace sw
         return true;
     }
 
-    bool RigJSONReader::readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired )
+    bool RigXMLReader::readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        const XMLNode listNode = readChild( key, bRequired );
+        if ( listNode.isValid() == false )
             return bRequired == false;
-        if ( value.isArray() == false || value.size() == 0 )
+        if ( listNode.findChild().isValid() == false )
         {
-            fail( makeKeyMessage( key, "must be a non-empty array of names" ) );
+            fail( makeKeyMessage( key, "must be a non-empty list of names" ) );
             return false;
         }
         outListValue.clear();
-        for ( size_t index = 0; index < value.size(); ++index )
+        for ( XMLNode element = listNode.findChild(); element.isValid(); element = element.findNextSibling() )
         {
-            const JSONValue element = value.at( index );
-            if ( element.isString() == false || element.asString().empty() )
+            if ( string_view{ element.getName() } != kItemTag || string_view{ element.getText() }.empty() )
             {
-                fail( makeKeyMessage( key, "must hold only non-empty strings" ) );
+                fail( makeKeyMessage( key, "must hold only non-empty <item> names" ) );
                 return false;
             }
-            outListValue.push_back( hashed_string( element.asString() ) );
+            outListValue.push_back( hashed_string( string_view{ element.getText() } ) );
         }
         return true;
     }
 
-    JSONValue RigJSONReader::readArray( string_view key, bool bRequired )
+    RigXMLList RigXMLReader::readArray( string_view key, bool bRequired )
     {
-        JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() && value.isArray() == false )
+        const XMLNode listNode = readChild( key, bRequired );
+        for ( XMLNode element = listNode.findChild(); element.isValid(); element = element.findNextSibling() )
         {
-            fail( makeKeyMessage( key, "must be an array" ) );
-            value = JSONValue{};
+            if ( string_view{ element.getName() } != kItemTag )
+            {
+                fail( makeKeyMessage( key, "must hold only <item> elements" ) );
+                return RigXMLList{};
+            }
         }
-        return value;
+        return RigXMLList{ listNode };
     }
 
-    JSONValue RigJSONReader::readObject( string_view key, bool bRequired )
+    XMLNode RigXMLReader::readObject( string_view key, bool bRequired )
     {
-        JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() && value.isObject() == false )
-        {
-            fail( makeKeyMessage( key, "must be an object" ) );
-            value = JSONValue{};
-        }
-        return value;
+        return readChild( key, bRequired );
     }
 
-    bool RigJSONReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
+    bool RigXMLReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
-        if ( value.isValid() == false )
+        const utf8* const pValue = readAttribute( key, bRequired );
+        if ( pValue == nullptr )
             return bRequired == false;
-        const string text = value.isString() ? value.asString() : string{};
+        const string text{ pValue };
         for ( uint32 index = 0; index < choiceCount; ++index )
         {
             if ( text == ppChoice[index] )
@@ -209,19 +247,19 @@ namespace sw
         return false;
     }
 
-    bool RigJSONReader::finish()
+    bool RigXMLReader::finish()
     {
-        if ( _object.isObject() )
+        if ( _element.isValid() )
         {
-            for ( const string& member : _object.getMemberNames() )
+            for ( XMLAttribute attribute = _element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
             {
-                if ( VectorUtil::contains( _listUsedKey, member ) == false )
-                {
-                    string message = "unknown key '";
-                    message += member;
-                    message += "'";
-                    fail( message );
-                }
+                if ( VectorUtil::contains( _listUsedKey, string{ attribute.getName() } ) == false )
+                    fail( string{ "unknown key '" } + attribute.getName() + "'" );
+            }
+            for ( XMLNode child = _element.findChild(); child.isValid(); child = child.findNextSibling() )
+            {
+                if ( VectorUtil::contains( _listUsedKey, string{ child.getName() } ) == false )
+                    fail( string{ "unknown key '" } + child.getName() + "'" );
             }
         }
         return isOk();
@@ -290,9 +328,9 @@ namespace sw
     {
     }
 
-    bool RigNode::parseCommon( RigJSONReader& reader )
+    bool RigNode::parseCommon( RigXMLReader& reader )
     {
-        bool       bEnabled = true; // 적지 않으면 켜짐 — 형식이 정한 "적지 않음" 값이다(에디터가 끈 노드만 `"enabled": false` 를 쓴다)
+        bool       bEnabled = true; // 적지 않으면 켜짐 — 형식이 정한 "적지 않음" 값이다(에디터가 끈 노드만 `enabled="false"` 를 쓴다)
         const bool bOk      = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
                          reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false ) &&
                          reader.readFloat( "min_screen_size", _minScreenSize, false ) && reader.readBool( "enabled", bEnabled, false );

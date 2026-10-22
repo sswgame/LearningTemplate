@@ -840,11 +840,11 @@ SW_TEST_CASE( AppearanceTest, PaperDollFixtureResolvesSpritesAndPalettes )
       <Schema id="Cloth"><Color name="Dye" default="0.5 0.5 0.5 1"><Drive kind="PaletteSwap" target="Cloth"/></Color></Schema></CustomizationSchemaCatalog>)",
                                                      "PaperDoll.schemas" ) );
     SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<ItemVisualCatalog>
-        <ItemVisual id="doll"><Part name="Base" kind="Sprite" sprite="t/doll.sprite.json" socket="root" layer="0"/></ItemVisual>
-        <ItemVisual id="hair_spiky"><Part name="Hair" kind="Sprite" sprite="t/hair_spiky.sprite.json" socket="head" layer="3"/></ItemVisual>
-        <ItemVisual id="tunic" customization="Cloth"><Part name="Tunic" kind="Sprite" sprite="t/tunic.sprite.json" socket="root" layer="1"/></ItemVisual>
-        <ItemVisual id="hood" tags="Hat.Hood"><Part name="Hood" kind="Sprite" sprite="t/hood.sprite.json" socket="head" layer="4"/></ItemVisual>
-        <ItemVisual id="spear" defaultState="Held"><Part name="Spear" kind="Sprite" sprite="t/spear.sprite.json" socket="hand" layer="5"/>
+        <ItemVisual id="doll"><Part name="Base" kind="Sprite" sprite="t/doll.sprite.xml" socket="root" layer="0"/></ItemVisual>
+        <ItemVisual id="hair_spiky"><Part name="Hair" kind="Sprite" sprite="t/hair_spiky.sprite.xml" socket="head" layer="3"/></ItemVisual>
+        <ItemVisual id="tunic" customization="Cloth"><Part name="Tunic" kind="Sprite" sprite="t/tunic.sprite.xml" socket="root" layer="1"/></ItemVisual>
+        <ItemVisual id="hood" tags="Hat.Hood"><Part name="Hood" kind="Sprite" sprite="t/hood.sprite.xml" socket="head" layer="4"/></ItemVisual>
+        <ItemVisual id="spear" defaultState="Held"><Part name="Spear" kind="Sprite" sprite="t/spear.sprite.xml" socket="hand" layer="5"/>
           <State name="Held"/><State name="Stowed"><Place part="Spear" socket="back" rotation="0 0 90"/></State></ItemVisual></ItemVisualCatalog>)",
                                                      "PaperDoll.visuals" ) );
     SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<AppearanceRuleTable><Rule id="HoodHidesHair"><When target="Head" tag="Hat"/><Hide target="HairStyle"/></Rule></AppearanceRuleTable>)",

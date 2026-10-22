@@ -3,14 +3,14 @@ SWMODELIMPORT 1
 54184cece7d99cb3 7142c2de4bf8b2d3 blaster_d.glb
 f6808576ab1cb05d f6d5f25f2e9e479a blaster_h.glb
 ddad27a10f779198 277f67fd5a765356 crate_medium.glb
-af302d09d29dd824 058a0626fa288477 kaykit/knight.glb
-a44d36161657d7cc b65953763a33ff14 kaykit/rogue.glb
+af302d09d29dd824 2141fdcf17d6221f kaykit/knight.glb
+a44d36161657d7cc ffe91860b05a3d8f kaykit/rogue.glb
 ff12f8ff295a14b7 024bfa45c3018fb3 kaykit/skeleton_axe.glb
 9148ba481c1ff181 b666bf3f5d666d80 kaykit/skeleton_blade.glb
-afb44fbcb11684d9 3e19b8d5579a0671 kaykit/skeleton_minion.glb
-45c4d72f42581138 f1bd1e82b21c62b3 kaykit/skeleton_rogue.glb
+afb44fbcb11684d9 dc7f456f82d323c9 kaykit/skeleton_minion.glb
+45c4d72f42581138 10fc852c3d657320 kaykit/skeleton_rogue.glb
 04a939ee9a824552 34b1a1d74643a537 kaykit/skeleton_shield_small_a.glb
-efb930702fd857e5 d4ddfaa0652a4239 kaykit/skeleton_warrior.glb
+efb930702fd857e5 b948a424f6cb9bc5 kaykit/skeleton_warrior.glb
 eb29314180d1c3e4 2c3ef2eb72031c35 kaykit_dungeon/barrel_large.glb
 38a182cf0e624540 e2a4ce3ad32dc628 kaykit_dungeon/barrel_small.glb
 4482554b689e7fa8 be5f8f984c2e1faa kaykit_dungeon/barrier.glb
@@ -30,5 +30,5 @@ acc77fd01d68b2da 2de464833f486930 kaykit_dungeon/pillar.glb
 5e8729f2b63fc5ad 7a26ca7d4bad5307 kaykit_dungeon/wall_corner.glb
 c2adfdf8c55805b2 a36cf7b52673cd2b kaykit_dungeon/wall_doorway.glb
 8ffde962301e601a 9e3f860e977b52f2 kaykit_dungeon/wall_half.glb
-236d38185c2c085e bbbca36e9671f07f props/arrow.glb
-9698b0ab550ef528 63bab95877429878 props/bow.glb
+236d38185c2c085e 4f599ffe66c0108d props/arrow.glb
+9698b0ab550ef528 ff146e1417315878 props/bow.glb

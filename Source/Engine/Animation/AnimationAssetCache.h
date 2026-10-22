@@ -1,6 +1,6 @@
 /**
  * @file AnimationAssetCache.h
- * @brief 스켈레톤(`.skeleton.json`), 애니메이션 클립(`.animclip`), 본 LOD(`.bonelod.json`), 후처리 리그(`.rig.json`)를 경로별로 나눠 주는 캐시입니다.
+ * @brief 스켈레톤(`.skeleton.xml`), 애니메이션 클립(`.animclip`), 본 LOD(`.bonelod.xml`), 후처리 리그(`.rig.xml`)를 경로별로 나눠 주는 캐시입니다.
  * @details 구현은 `SharedAssetCache` 하나이고, 이 파일은 종류마다 인스턴스화 선언만 둡니다(쓰는 쪽은 `SharedAssetCache<Skeleton>` 처럼 템플릿 이름으로 부릅니다)(종류 이름 · 읽는 함수는 .cpp 의 특수화).
  *          표는 프로세스에 하나(Engine.dll 안)이고 약한 참조라 마지막 사용자가 놓으면 사라진다. 다시 읽기는 넷 모두 제자리에서 바꾼다.
  *          Animation(티어 2)이 아니라 Resource(티어 4)에 있는 것은 `IAssetCache` 를 구현하기 때문이다.

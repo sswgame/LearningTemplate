@@ -1,6 +1,6 @@
 """엔진이 들고 다니는 작은 스프라이트 텍스처와 그 클립을 만듭니다(DDS, RGBA8, 밉 하나).
 
-  - `engine/textures/test/quadrants.dds` + `quadrants.sprite.json` — 네 칸(왼쪽 위 빨강 · 오른쪽 위 초록 · 왼쪽 아래 파랑 · 오른쪽 아래 흰색)
+  - `engine/textures/test/quadrants.dds` + `quadrants.sprite.xml` — 네 칸(왼쪽 위 빨강 · 오른쪽 위 초록 · 왼쪽 아래 파랑 · 오른쪽 아래 흰색)
     테스트 텍스처입니다. 인스턴스마다 다른 UV 사각형 · 색을 픽셀로 확인하는 테스트(RenderPassGPUTest)과 확인용 씬의 애니메이션 아틀라스가 씁니다.
   - `engine/textures/missing.dds` — 마젠타 · 검정 체커(64x64, 16 텍셀 칸). 못 읽은 텍스처 · 머티리얼 대신 샘플합니다
     (`EngineDefaultAssets::_missingTexture` · `missingmaterial.material`).
@@ -100,7 +100,7 @@ def generate(repositoryRoot: str) -> None:
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
     writeFileInternal(resourceRoot / kQuadrantsTexturePath, makeDdsBytes(width, height, pixels))
     listAnimation = [{"_name": "cycle", "_listNotify": [], "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1}]
-    writeFileInternal(resourceRoot / "engine/textures/test/quadrants.sprite.json",
+    writeFileInternal(resourceRoot / "engine/textures/test/quadrants.sprite.xml",
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
     width, height, pixels = makeMissingTextureInternal()
     writeFileInternal(resourceRoot / kMissingTexturePath, makeDdsBytes(width, height, pixels))

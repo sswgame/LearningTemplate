@@ -1,6 +1,6 @@
 /**
  * @file LipSyncImport.h
- * @brief 립싱크 일괄 임포트입니다. `voice/` 폴더의 음성을 디코드해 분석(`LipSyncAnalyzer`)하고, 곁에 비즘 트랙(`.visemes.json`)을 씁니다(`App --import-lipsync`).
+ * @brief 립싱크 일괄 임포트입니다. `voice/` 폴더의 음성을 디코드해 분석(`LipSyncAnalyzer`)하고, 곁에 비즘 트랙(`.visemes.xml`)을 씁니다(`App --import-lipsync`).
  * @details 소리를 디코드하는 일(디코더)이 Audio 에 있으므로 이 기능도 여기에 있다. 분석기와 트랙 형식은 Animation(하위 티어)의 `Animation/Facial/LipSync` 에 있다.
  */
 #pragma once

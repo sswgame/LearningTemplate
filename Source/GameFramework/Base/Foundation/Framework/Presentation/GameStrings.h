@@ -25,7 +25,7 @@ namespace sw
 
         /**
          * @brief 게임의 로컬라이제이션 프로젝트를 로드하고 명령줄, 기본, 폴백 언어를 활성화합니다. 앞의 게임 프로젝트는 언로드합니다.
-         * @param projectPath 프로젝트 파일(`<팩루트>/data/localization/<게임>.locproject.json`)
+         * @param projectPath 프로젝트 파일(`<팩루트>/data/localization/<게임>.locproject.xml`)
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
          */

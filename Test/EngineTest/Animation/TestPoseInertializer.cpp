@@ -133,19 +133,29 @@ SW_TEST_CASE( PoseInertializerTest, MismatchedBoneCountIsError )
 }
 
 /**
- * @brief [PoseInertializerTest] 링크의 "blend_mode" 가 JSON 왕복에서 남고, 그래프 플레이어는 그 링크에서 섞지 않고 inertialization 을 요청한다
+ * @brief [PoseInertializerTest] 링크의 "blend_mode" 가 XML 왕복에서 남고, 그래프 플레이어는 그 링크에서 섞지 않고 inertialization 을 요청한다
  * @details 모르는 표기와 반감기 없는 inertialization 은 로드 오류다. 키가 없는 링크는 크로스페이드다(데이터 기본값).
  */
 SW_TEST_CASE( PoseInertializerTest, GraphLinkSelectsInertialization )
 {
-    const string_view   json = R"({ "nodes": [ { "id": 1, "name": "Idle" }, { "id": 2, "name": "Walk" } ],
-        "links": [ { "id": 1, "from": 1, "to": 2, "blend_mode": "inertialization", "half_life": 0.08,
-                     "condition": { "param": "Speed", "op": ">", "value": 0.5 } },
-                   { "id": 2, "from": 2, "to": 1, "blend": 0.2, "condition": { "param": "Speed", "op": "<", "value": 0.5 } } ] })";
+    const string_view   json = R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" />
+		<node id="2" name="Walk" />
+	</nodes>
+	<links>
+		<link id="1" from="1" to="2" blend_mode="inertialization" half_life="0.08">
+			<condition param="Speed" op="&gt;" value="0.5" />
+		</link>
+		<link id="2" from="2" to="1" blend="0.2">
+			<condition param="Speed" op="&lt;" value="0.5" />
+		</link>
+	</links>
+</AnimationGraphAsset>)";
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( json ) );
+    SW_ASSERT_TRUE( graph.parseXML( json ) );
     AnimationGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
+    SW_ASSERT_TRUE( parsed.parseXML( graph.toXML() ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listLink[0]._blendMode == AnimationBlendMode::Inertialization );
     SW_EXPECT_NEAR_EQUAL( 0.08f, parsed._listLink[0]._halfLifeSeconds, 1e-6f );
@@ -154,8 +164,8 @@ SW_TEST_CASE( PoseInertializerTest, GraphLinkSelectsInertialization )
     {
         test::ScopedDefensiveTestLog expected( "unknown blend_mode and inertialization without half_life are load errors" );
         AnimationGraphAsset          broken;
-        SW_EXPECT_FALSE( broken.parseJSON( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "blend_mode": "snap" } ] })" ) );
-        SW_EXPECT_FALSE( broken.parseJSON( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "blend_mode": "inertialization" } ] })" ) );
+        SW_EXPECT_FALSE( broken.parseXML( R"(<AnimationGraphAsset><nodes><node id="1" name="A" /></nodes><links><link id="1" from="1" to="1" blend_mode="snap" /></links></AnimationGraphAsset>)" ) );
+        SW_EXPECT_FALSE( broken.parseXML( R"(<AnimationGraphAsset><nodes><node id="1" name="A" /></nodes><links><link id="1" from="1" to="1" blend_mode="inertialization" /></links></AnimationGraphAsset>)" ) );
     }
 
     test::TestPlayable       idle( 1.0f, true );

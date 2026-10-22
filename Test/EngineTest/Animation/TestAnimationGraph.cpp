@@ -12,7 +12,7 @@
 using namespace sw;
 
 // ------------------------------------------------------------------------------
-// 1) AnimationGraphTest — 그래프 애셋의 JSON 왕복과 그래프 플레이어의 노드 이동
+// 1) AnimationGraphTest — 그래프 애셋의 XML 왕복과 그래프 플레이어의 노드 이동
 // ------------------------------------------------------------------------------
 
 namespace
@@ -44,14 +44,14 @@ namespace
 } // namespace
 
 /**
- * @brief [AnimationGraphTest] toJSON / parseJSON 왕복이 노드·링크·좌표를 모두 보존하는지 검증
+ * @brief [AnimationGraphTest] toXML / parseXML 왕복이 노드·링크·좌표를 모두 보존하는지 검증
  */
-SW_TEST_CASE( AnimationGraphTest, JSONRoundTripKeepsNodesAndLinks )
+SW_TEST_CASE( AnimationGraphTest, XMLRoundTripKeepsNodesAndLinks )
 {
     const AnimationGraphAsset source = makeTwoNodeGraph();
 
     AnimationGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
+    SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
 
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( parsed._listLink.size() ) );
@@ -63,13 +63,13 @@ SW_TEST_CASE( AnimationGraphTest, JSONRoundTripKeepsNodesAndLinks )
 }
 
 /**
- * @brief [AnimationGraphTest] loadFromFile 이 parseJSON 과 같은 결과를 내는지 검증
+ * @brief [AnimationGraphTest] loadFromFile 이 parseXML 과 같은 결과를 내는지 검증
  * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
-SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJSON )
+SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseXML )
 {
     const AnimationGraphAsset source   = makeTwoNodeGraph();
-    const string              filePath = test::makeTempPath( "test_animation_graph.json" );
+    const string              filePath = test::makeTempPath( "test_animation_graph.animgraph.xml" );
 
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
@@ -77,7 +77,7 @@ SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJSON )
     SW_EXPECT_TRUE( loaded.loadFromFile( ::test::makeTempResourceID( filePath ) ) );
 
     AnimationGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
+    SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
 
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
@@ -153,7 +153,7 @@ SW_TEST_CASE( AnimationGraphTest, StopClearsNodeAndPlayback )
 
 /**
  * @brief [AnimationGraphTest] 상태 기계 — 조건 링크는 파라미터가 참이 되는 갱신에 넘어가고, 트리거는 쓰이면 꺼지고, 조건 없는 링크는 반복 없이 끝날 때 넘어간다
- * @details Idle →(Speed > 0.5) Walk →(트리거 Jump) Jump →(끝나면) Land. 조건은 JSON 으로 왕복한다(모르는 비교 표기는 로드 오류).
+ * @details Idle →(Speed > 0.5) Walk →(트리거 Jump) Jump →(끝나면) Land. 조건은 XML 로 왕복한다(모르는 비교 표기는 로드 오류).
  */
 SW_TEST_CASE( AnimationGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
 {
@@ -186,16 +186,16 @@ SW_TEST_CASE( AnimationGraphTest, StateMachineFollowsConditionsTriggersAndFinish
     toLand._toNode   = 4;
     graph._listLink  = { toWalk, toJump, toLand };
 
-    // JSON 왕복 — 조건 · 반복이 남는다.
+    // XML 왕복 — 조건 · 반복이 남는다.
     AnimationGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
+    SW_ASSERT_TRUE( parsed.parseXML( graph.toXML() ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listLink[1]._op == AnimationConditionOp::Trigger );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( parsed._listNode[1]._loopOverride ) );
     {
         test::ScopedDefensiveTestLog expected( "unknown condition op is a load error" );
         AnimationGraphAsset          broken;
-        SW_EXPECT_FALSE( broken.parseJSON( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "condition": { "param": "x", "op": "~" } } ] })" ) );
+        SW_EXPECT_FALSE( broken.parseXML( R"(<AnimationGraphAsset><nodes><node id="1" name="A" /></nodes><links><link id="1" from="1" to="1"><condition param="x" op="~" /></link></links></AnimationGraphAsset>)" ) );
     }
 
     test::TestPlayable       idle( 1.0f, true );
@@ -235,21 +235,38 @@ SW_TEST_CASE( AnimationGraphTest, StateMachineFollowsConditionsTriggersAndFinish
 }
 
 /**
- * @brief [AnimationGraphTest] 블렌드 스페이스 상태와 동기 그룹이 JSON 왕복에서 남는다(1D 는 x 순으로 정렬, 2D 는 y 까지)
+ * @brief [AnimationGraphTest] 블렌드 스페이스 상태와 동기 그룹이 XML 왕복에서 남는다(1D 는 x 순으로 정렬, 2D 는 y 까지)
  */
 SW_TEST_CASE( AnimationGraphTest, BlendSpaceNodeAndSyncGroupRoundTrip )
 {
-    const string_view   json = R"({ "nodes": [
-        { "id": 1, "name": "Locomotion", "sync_group": "Feet",
-          "blend_space": { "x": "Speed", "samples": [ { "clip": "Running_A", "x": 6 }, { "clip": "Idle", "x": 0 }, { "clip": "Walking_A", "x": 2 } ] } },
-        { "id": 2, "name": "Strafe",
-          "blend_space": { "x": "Right", "y": "Forward", "notify": "highest_weight", "samples": [ { "clip": "Walking_Left", "x": -1, "y": 0 }, { "clip": "Walking_A", "x": 0, "y": 1 } ] } },
-        { "id": 3, "name": "Jump" } ], "links": [] })";
+    const string_view   json = R"(<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Locomotion" sync_group="Feet">
+			<blend_space x="Speed">
+				<samples>
+					<sample clip="Running_A" x="6" />
+					<sample clip="Idle" x="0" />
+					<sample clip="Walking_A" x="2" />
+				</samples>
+			</blend_space>
+		</node>
+		<node id="2" name="Strafe">
+			<blend_space x="Right" y="Forward" notify="highest_weight">
+				<samples>
+					<sample clip="Walking_Left" x="-1" y="0" />
+					<sample clip="Walking_A" x="0" y="1" />
+				</samples>
+			</blend_space>
+		</node>
+		<node id="3" name="Jump" />
+	</nodes>
+	<links />
+</AnimationGraphAsset>)";
     AnimationGraphAsset graph;
-    SW_ASSERT_TRUE( graph.parseJSON( json ) );
+    SW_ASSERT_TRUE( graph.parseXML( json ) );
 
     AnimationGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
+    SW_ASSERT_TRUE( parsed.parseXML( graph.toXML() ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( parsed._listNode.size() ) );
 
     const AnimationGraphNode& locomotion = parsed._listNode[0];
@@ -279,16 +296,16 @@ SW_TEST_CASE( AnimationGraphTest, BlendSpaceNodeAndSyncGroupRoundTrip )
 SW_TEST_CASE( AnimationGraphTest, InvalidBlendSpaceIsLoadError )
 {
     const string_view arrBad[] = {
-        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [] } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [ { "x": 1 } ] } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
-        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "notify": "loudest", "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><blend_space x="Speed"><samples /></blend_space></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><blend_space x="Speed"><samples><sample x="1" /></samples></blend_space></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><blend_space><samples><sample clip="Idle" x="1" /></samples></blend_space></node></nodes></AnimationGraphAsset>)",
+        R"(<AnimationGraphAsset><nodes><node id="1" name="A"><blend_space x="Speed" notify="loudest"><samples><sample clip="Idle" x="1" /></samples></blend_space></node></nodes></AnimationGraphAsset>)",
     };
     test::ScopedDefensiveTestLog expected( "invalid blend space nodes are rejected" );
     for ( const string_view bad : arrBad )
     {
         AnimationGraphAsset graph;
-        SW_EXPECT_FALSE( graph.parseJSON( bad ) );
+        SW_EXPECT_FALSE( graph.parseXML( bad ) );
         SW_EXPECT_TRUE( graph._listNode.empty() );
     }
 }

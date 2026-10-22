@@ -22,7 +22,7 @@
 			                       _bShareCrowdPose="true" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="game/shooter3d/data/anim/skeleton.animgraph.json"
+			                           _animationGraphPath="game/shooter3d/data/anim/skeleton.animgraph.xml"
 			                           _clipFolder="game/shooter3d/models/kaykit/skeleton_minion/clips"
 			                           _initialState="Spawn_Ground_Skeletons"
 			                           _currentState=""

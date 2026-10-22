@@ -9,7 +9,7 @@ ThirdParty/*/vcpkg-port/** -text
 *.ppm.z binary
 
 # 모델 임포트의 원본(models_raw/)과 결과(models/ — .mesh 옆 스켈레톤 JSON · 클립)는 스탬프가 바이트 해시로 대조한다 — 줄끝 변환 금지
-# (core.autocrlf 체크아웃이 *.skeleton.json 을 CRLF 로 바꾸면 갓 임포트한 LF 결과와 해시가 달라 "손으로 바꿨다" 가 된다)
+# (core.autocrlf 체크아웃이 *.skeleton.xml 을 CRLF 로 바꾸면 갓 임포트한 LF 결과와 해시가 달라 "손으로 바꿨다" 가 된다)
 Resource/**/models_raw/** -text
 # 합성 리그(rigs_raw/ — Scripts/dev/MakeSyntheticRig.py)는 생성기가 다시 만든 바이트와 PythonTest 가 대조한다 — 줄끝 변환 금지
 Resource/**/rigs_raw/** -text

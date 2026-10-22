@@ -93,7 +93,7 @@ SW_TEST_CASE( AssetHotReloadTest, AudioDataReloadsThroughTheEngineAudioCache )
 SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAssetPathProperty )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string    clipPath = test::makeTempPath( "hot_reload_users.sprite.json" );
+    const sw::string    clipPath = test::makeTempPath( "hot_reload_users.sprite.xml" );
     sw::SpriteClipAsset clip;
     clip._listFrame.resize( 2 );
     clip._listFrame[1]._uvRect = sw::float4{ 0.0f, 0.0f, 0.5f, 0.5f };
@@ -116,7 +116,7 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
     pCache->reload( ::test::makeTempResourceID( clipPath ), nullptr );
 
     // 다른 경로는 아무에게도 알리지 않는다.
-    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::notifyAssetUsers( manager, "other/unrelated.sprite.json" ) );
+    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::notifyAssetUsers( manager, "other/unrelated.sprite.xml" ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
 
     // 구분자가 달라도 같은 경로다 — 클립 프로퍼티 하나에 알린다.

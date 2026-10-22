@@ -493,7 +493,7 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
 
     // 저장소의 임포트 결과 — 스켈레톤과 클립 76 개.
     sw::Skeleton committed;
-    SW_ASSERT_TRUE( committed.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" ) );
+    SW_ASSERT_TRUE( committed.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" ) );
     SW_EXPECT_EQUAL( 41u, committed.getBoneCount() );
     SW_EXPECT_TRUE( committed.getAttachments().empty() == false );
     sw::vector<sw::string> listClipFile;

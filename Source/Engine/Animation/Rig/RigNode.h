@@ -1,6 +1,6 @@
 /**
  * @file RigNode.h
- * @brief 후처리 리그의 노드 기반입니다. 대상(본, 소켓, 오브젝트) 서술, 노드가 받는 컨텍스트(준비, 평가, 바인딩), 엄격한 JSON 읽기, 노드 기반 클래스를 담습니다.
+ * @brief 후처리 리그의 노드 기반입니다. 대상(본, 소켓, 오브젝트) 서술, 노드가 받는 컨텍스트(준비, 평가, 바인딩), 엄격한 XML 읽기, 노드 기반 클래스를 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -144,14 +144,43 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RigJSONReader
-     * @brief 노드나 대상 객체 하나를 읽는 엄격한 리더입니다. 읽은 키를 기록해 두고, `finish` 가 모르는 키를 오류로 냅니다.
-     * @details 모든 실패는 컨텍스트(파일, 노드 이름)와 함께 로그로 남고 리더는 실패 상태가 된다. 데이터가 조용히 기본값이 되지 않게 하려는 것이다.
+     * @class RigXMLList
+     * @brief 목록 요소(`<bones>`, `<feet>` …)의 원소 `<item>` 들입니다. 원소는 번호로 꺼냅니다.
      */
-    class SW_API RigJSONReader
+    class SW_API RigXMLList
     {
     public:
-        RigJSONReader( const JSONValue& object, string_view context );
+        RigXMLList() = default;
+        explicit RigXMLList( const XMLNode& listNode )
+            : _listNode{ listNode }
+        {
+        }
+
+        /** @brief 목록 요소가 있으면 true 입니다(목록을 적지 않은 선택 칸은 false). */
+        bool isValid() const { return _listNode.isValid(); }
+        /** @brief 원소(`<item>`) 수입니다. */
+        size_t size() const;
+        /** @brief @p index 번째 원소입니다. 범위 밖이면 무효 노드입니다. */
+        XMLNode at( size_t index ) const;
+
+    private:
+        XMLNode _listNode;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class RigXMLReader
+     * @brief 노드나 대상 요소 하나를 읽는 엄격한 리더입니다. 읽은 이름을 기록해 두고, `finish` 가 모르는 속성 · 자식을 오류로 냅니다.
+     * @details 값은 속성이다(`bone="spine"`, `weight="0.5"`, 벡터는 `x,y,z`). 이름 목록과 객체 목록은 칸 이름의 자식 요소 안에 `<item>` 으로 늘어놓는다
+     *          (`<bones><item>a</item><item>b</item></bones>`, `<feet><item root="…" mid="…" end="…" /></feet>`).
+     *          모든 실패는 컨텍스트(파일, 노드 이름)와 함께 로그로 남고 리더는 실패 상태가 된다. 데이터가 조용히 기본값이 되지 않게 하려는 것이다.
+     */
+    class SW_API RigXMLReader
+    {
+    public:
+        RigXMLReader( const XMLNode& element, string_view context );
 
         [[nodiscard]] bool readName( string_view key, hashed_string& outValue, bool bRequired );
         [[nodiscard]] bool readFloat( string_view key, float32& outValue, bool bRequired );
@@ -161,24 +190,27 @@ namespace sw
         /** @brief 도 단위 [피치, 요, 롤] 을 회전으로 읽습니다. */
         [[nodiscard]] bool readRotationDegrees( string_view key, quaternion& outValue, bool bRequired );
         [[nodiscard]] bool readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired );
-        /** @brief 배열(객체들)을 꺼냅니다. 없거나 배열이 아니면 무효 값입니다. */
-        JSONValue readArray( string_view key, bool bRequired );
-        /** @brief 객체 하나를 꺼냅니다. 없거나 객체가 아니면 무효 값입니다. */
-        JSONValue readObject( string_view key, bool bRequired );
+        /** @brief 객체 목록을 꺼냅니다. 없으면 무효 목록입니다. 원소가 `<item>` 이 아니면 실패입니다. */
+        RigXMLList readArray( string_view key, bool bRequired );
+        /** @brief 객체 하나(칸 이름의 자식 요소)를 꺼냅니다. 없으면 무효 노드입니다. */
+        XMLNode readObject( string_view key, bool bRequired );
         /** @brief 이름이나 열거 문자열 하나를 @p ppChoice 중에서 고릅니다(대소문자 구분). */
         [[nodiscard]] bool readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired );
 
         /** @brief 오류를 남기고 실패로 둡니다. */
         void fail( string_view message );
-        /** @brief 모르는 키를 오류로 내고 지금까지 성공했는지 반환합니다. */
+        /** @brief 모르는 속성 · 자식을 오류로 내고 지금까지 성공했는지 반환합니다. */
         [[nodiscard]] bool finish();
         bool               isOk() const { return _bOk == SW_TRUE; }
         string_view        getContext() const { return _context; }
 
     private:
-        JSONValue readMember( string_view key, bool bRequired );
+        /** @brief 칸 이름을 읽은 것으로 기록하고 속성 글을 돌려줍니다. 없으면 nullptr 이고 필수면 실패로 둡니다. */
+        const utf8* readAttribute( string_view key, bool bRequired );
+        /** @brief 칸 이름을 읽은 것으로 기록하고 자식 요소를 돌려줍니다. 없으면 무효 노드이고 필수면 실패로 둡니다. */
+        XMLNode readChild( string_view key, bool bRequired );
 
-        JSONValue      _object; ///< 값으로 보관한다. `array.at( i )` 같은 임시 객체를 받아도 리더보다 먼저 사라지지 않게 하려는 것이며, 핸들이라 복사가 싸다.
+        XMLNode        _element; ///< 값으로 보관한다. 핸들이라 복사가 싸다.
         vector<string> _listUsedKey;
         string         _context;
         uint8          _bOk;
@@ -226,7 +258,7 @@ namespace sw
         /** @brief 종류 이름(등록 이름)입니다. */
         virtual const utf8* getTypeName() const = 0;
         /** @brief 노드 자기 키를 읽습니다(공통 키는 에셋이 읽었습니다). */
-        [[nodiscard]] virtual bool parse( RigJSONReader& reader ) = 0;
+        [[nodiscard]] virtual bool parse( RigXMLReader& reader ) = 0;
         /** @brief 이름을 번호로 바인딩합니다. 모르는 본이나 대상은 오류입니다. */
         [[nodiscard]] virtual bool bind( const RigBindContext& context ) = 0;
         /** @brief 게임 스레드 준비 단계입니다(땅 광선, 거리 LOD). */
@@ -257,7 +289,7 @@ namespace sw
         /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
         float32 getMinScreenSize() const { return _minScreenSize; }
         /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size, enabled — 적지 않으면 켜짐)를 읽습니다(에셋이 호출합니다). */
-        [[nodiscard]] bool parseCommon( RigJSONReader& reader );
+        [[nodiscard]] bool parseCommon( RigXMLReader& reader );
 
     protected:
         hashed_string _name;

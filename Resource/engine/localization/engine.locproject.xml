@@ -1,0 +1,31 @@
+<LocalizationProject name="engine" sourceCulture="en">
+	<cultures>
+		<item>ko</item>
+		<item>ja</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+		<item>ja</item>
+	</stagedCultures>
+	<stringTables>
+		<item>engine.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/Engine</item>
+		<item>Source/GameFramework</item>
+	</codeRoots>
+	<assetRoots>
+		<item>engine/settings</item>
+		<item>engine/data</item>
+		<item>engine/ui</item>
+	</assetRoots>
+	<assetRules>
+		<rule files=".settings.xml" attribute="text" kind="key">
+			<elements>
+				<item>Category</item>
+				<item>Setting</item>
+				<item>Option</item>
+			</elements>
+		</rule>
+	</assetRules>
+</LocalizationProject>

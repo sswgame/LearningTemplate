@@ -10,7 +10,7 @@ Scripts/lint/gate/CheckTextureFolders.py
 `textures_raw/` 를 팩에서 뺍니다.
 
 검사 규칙:
-- `textures/` 아래에는 `.dds` 와 데이터(`.json` — 스프라이트 클립 · `.meta`)만 둡니다.
+- `textures/` 아래에는 `.dds` 와 데이터(`.xml` — 스프라이트 클립 · `.meta`)만 둡니다.
 - 원본 이미지 확장자는 `textures_raw/` 아래에만 둡니다(Resource 어디든).
 - `textures_raw/` 아래에 `.dds` 를 두지 않습니다(임포트된 결과는 `textures/` 로 갑니다).
 """
@@ -34,7 +34,7 @@ _kRawFolderName = "textures_raw"
 #: 원본 이미지를 두어도 되는 폴더 — 이미지를 읽는 임포터의 원본 폴더다(높이장 원본은 16 비트 PNG · `App --import-heightfields`).
 _kRawImageFolderNames = frozenset({_kRawFolderName, "heightfields_raw"})
 #: 런타임 텍스처 폴더에 둘 수 있는 확장자(임포트된 텍스처와 그 옆 데이터).
-_kImportedFolderSuffix = frozenset({".dds", ".json", ".meta"})
+_kImportedFolderSuffix = frozenset({".dds", ".xml", ".meta"})
 #: 원본 이미지 확장자 — `textures_raw/` 밖에 있으면 런타임이 읽지 못하는 파일이다.
 _kSourceImageSuffix = frozenset({".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr", ".psd", ".exr", ".gif"})
 

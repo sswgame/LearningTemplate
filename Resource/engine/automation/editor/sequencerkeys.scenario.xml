@@ -11,7 +11,7 @@
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><Variable name="gv_editorProbeObject" value="GameCamera"/></At>
 	<At frame="60"><EditorKey key="Ctrl+P"/></At>
-	<At frame="75"><EditorText value="sequencerkeys.seq.json"/></At>
+	<At frame="75"><EditorText value="sequencerkeys.seq.xml"/></At>
 	<At frame="90"><EditorKey key="Enter"/></At>
 	<At frame="100"><WaitUntil probe="Editor.SequencerKeyFrameCount" equals="0"/></At>
 	<At frame="110"><EditorClick mark="sequencer.addKey"/></At>

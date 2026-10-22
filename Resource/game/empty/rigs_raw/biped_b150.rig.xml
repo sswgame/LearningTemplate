@@ -1,0 +1,77 @@
+<RigAsset>
+	<targets>
+		<item name="foot_leg_l" bone="root" translation="-0.1,0.915,0.0" />
+		<item name="foot_leg_r" bone="root" translation="0.1,0.915,0.0" />
+	</targets>
+	<nodes>
+		<item type="SpringChain" name="spring_head">
+			<bones>
+				<item>head_00</item>
+				<item>head_01</item>
+				<item>head_02</item>
+				<item>head_03</item>
+				<item>head_04</item>
+				<item>head_05</item>
+				<item>head_06</item>
+				<item>head_07</item>
+				<item>head_08</item>
+			</bones>
+		</item>
+		<item type="TwoBoneIK" name="ik_leg_l" root="leg_l_00" mid="leg_l_01" end="leg_l_02" target="foot_leg_l" />
+		<item type="TwoBoneIK" name="ik_leg_r" root="leg_r_00" mid="leg_r_01" end="leg_r_02" target="foot_leg_r" />
+		<item type="SpringChain" name="spring_finger_l0">
+			<bones>
+				<item>finger_l0_00</item>
+				<item>finger_l0_01</item>
+				<item>finger_l0_02</item>
+				<item>finger_l0_03</item>
+				<item>finger_l0_04</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="spring_finger_l1">
+			<bones>
+				<item>finger_l1_00</item>
+				<item>finger_l1_01</item>
+				<item>finger_l1_02</item>
+				<item>finger_l1_03</item>
+				<item>finger_l1_04</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="spring_finger_l2">
+			<bones>
+				<item>finger_l2_00</item>
+				<item>finger_l2_01</item>
+				<item>finger_l2_02</item>
+				<item>finger_l2_03</item>
+				<item>finger_l2_04</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="spring_finger_r0">
+			<bones>
+				<item>finger_r0_00</item>
+				<item>finger_r0_01</item>
+				<item>finger_r0_02</item>
+				<item>finger_r0_03</item>
+				<item>finger_r0_04</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="spring_finger_r1">
+			<bones>
+				<item>finger_r1_00</item>
+				<item>finger_r1_01</item>
+				<item>finger_r1_02</item>
+				<item>finger_r1_03</item>
+				<item>finger_r1_04</item>
+			</bones>
+		</item>
+		<item type="SpringChain" name="spring_finger_r2">
+			<bones>
+				<item>finger_r2_00</item>
+				<item>finger_r2_01</item>
+				<item>finger_r2_02</item>
+				<item>finger_r2_03</item>
+				<item>finger_r2_04</item>
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>

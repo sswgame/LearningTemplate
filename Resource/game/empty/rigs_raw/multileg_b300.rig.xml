@@ -1,0 +1,40 @@
+<RigAsset>
+	<targets>
+		<item name="foot_leg_0l" bone="root" translation="-0.258519,0.641481,-0.811321" />
+		<item name="foot_leg_0r" bone="root" translation="0.258519,0.641481,-0.811321" />
+		<item name="foot_leg_1l" bone="root" translation="-0.258519,0.641481,-0.283019" />
+		<item name="foot_leg_1r" bone="root" translation="0.258519,0.641481,-0.283019" />
+		<item name="foot_leg_2l" bone="root" translation="-0.258519,0.641481,0.245283" />
+		<item name="foot_leg_2r" bone="root" translation="0.258519,0.641481,0.245283" />
+		<item name="foot_leg_3l" bone="root" translation="-0.258519,0.641481,0.773585" />
+		<item name="foot_leg_3r" bone="root" translation="0.258519,0.641481,0.773585" />
+	</targets>
+	<nodes>
+		<item type="SpringChain" name="spring_head">
+			<bones>
+				<item>head_00</item>
+				<item>head_01</item>
+				<item>head_02</item>
+				<item>head_03</item>
+				<item>head_04</item>
+				<item>head_05</item>
+				<item>head_06</item>
+				<item>head_07</item>
+				<item>head_08</item>
+				<item>head_09</item>
+				<item>head_10</item>
+				<item>head_11</item>
+				<item>head_12</item>
+				<item>head_13</item>
+			</bones>
+		</item>
+		<item type="TwoBoneIK" name="ik_leg_0l" root="leg_0l_00" mid="leg_0l_01" end="leg_0l_02" target="foot_leg_0l" />
+		<item type="TwoBoneIK" name="ik_leg_0r" root="leg_0r_00" mid="leg_0r_01" end="leg_0r_02" target="foot_leg_0r" />
+		<item type="TwoBoneIK" name="ik_leg_1l" root="leg_1l_00" mid="leg_1l_01" end="leg_1l_02" target="foot_leg_1l" />
+		<item type="TwoBoneIK" name="ik_leg_1r" root="leg_1r_00" mid="leg_1r_01" end="leg_1r_02" target="foot_leg_1r" />
+		<item type="TwoBoneIK" name="ik_leg_2l" root="leg_2l_00" mid="leg_2l_01" end="leg_2l_02" target="foot_leg_2l" />
+		<item type="TwoBoneIK" name="ik_leg_2r" root="leg_2r_00" mid="leg_2r_01" end="leg_2r_02" target="foot_leg_2r" />
+		<item type="TwoBoneIK" name="ik_leg_3l" root="leg_3l_00" mid="leg_3l_01" end="leg_3l_02" target="foot_leg_3l" />
+		<item type="TwoBoneIK" name="ik_leg_3r" root="leg_3r_00" mid="leg_3r_01" end="leg_3r_02" target="foot_leg_3r" />
+	</nodes>
+</RigAsset>

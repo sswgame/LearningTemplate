@@ -6,10 +6,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -125,12 +125,12 @@ namespace sw
 
 namespace sw
 {
-    bool LipSyncSettings::parseJSON( string_view json, string_view sourceLabel )
+    bool LipSyncSettings::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = LipSyncSettings{};
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
-        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validate( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLElement` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && validate( sourceLabel ) )
             return true;
         *this = LipSyncSettings{};
         return false;
@@ -145,7 +145,7 @@ namespace sw
             *this = LipSyncSettings{};
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
     bool LipSyncSettings::validate( string_view sourceLabel ) const
@@ -227,36 +227,37 @@ namespace sw
         }
     }
 
-    bool VisemeTrack::parseJSON( string_view json, string_view sourceLabel )
+    bool VisemeTrack::parseXML( string_view xml, string_view sourceLabel )
     {
         *this = VisemeTrack{};
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        XMLDocument document;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "VisemeTrack", root ) != XMLRootStatus::Found )
         {
-            SW_LOG_ERROR( "Viseme track '%#': malformed JSON", sourceLabel );
+            SW_LOG_ERROR( "Viseme track '%#': malformed XML (expected a <VisemeTrack> root)", sourceLabel );
             return false;
         }
-        const JSONValue root = document.getRoot();
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, { "_frameRate" }, { "_listViseme", "_listFrame" }, sourceLabel ) == false )
             return false;
-        const JSONValue              visemes              = root.get( "visemes" );
-        const JSONValue              frames               = root.get( "frames" );
-        const std::optional<float32> frameRate            = root.readRequired<float32>( "frame_rate" );
-        const bool                   bMissingVisemeFields = frameRate.has_value() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false;
+        const XMLNode                visemes              = root.findChild( "_listViseme", false );
+        const XMLNode                frames               = root.findChild( "_listFrame", false );
+        const std::optional<float32> frameRate            = root.readRequiredAttribute<float32>( "_frameRate" );
+        const bool                   bMissingVisemeFields = frameRate.has_value() == false || visemes.isValid() == false || visemes.findChild().isValid() == false || frames.isValid() == false;
         if ( bMissingVisemeFields )
         {
-            SW_LOG_ERROR( "Viseme track '%#' needs frame_rate, visemes and frames", sourceLabel );
+            SW_LOG_ERROR( "Viseme track '%#' needs _frameRate, _listViseme and _listFrame", sourceLabel );
             return false;
         }
         _frameRate = *frameRate;
-        for ( size_t visemeIndex = 0; visemeIndex < visemes.size(); ++visemeIndex )
+        for ( XMLNode viseme = visemes.findChild(); viseme.isValid(); viseme = viseme.findNextSibling() )
         {
-            _listViseme.push_back( hashed_string( visemes.at( visemeIndex ).asString() ) );
+            _listViseme.push_back( hashed_string( string_view{ viseme.getText() } ) );
         }
         vector<float32> listFrame( _listViseme.size() );
-        for ( size_t frameIndex = 0; frameIndex < frames.size(); ++frameIndex )
+        size_t          frameIndex{ 0 };
+        for ( XMLNode frame = frames.findChild(); frame.isValid(); frame = frame.findNextSibling(), ++frameIndex )
         {
-            if ( AnimationJSONUtil::readFloats( frames.at( frameIndex ), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
+            if ( XMLReadUtil::readFloatList( frame.getText(), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
             {
                 SW_LOG_ERROR( "Viseme track '%#': frame %# must hold one weight per viseme", sourceLabel, frameIndex );
                 *this = VisemeTrack{};
@@ -276,42 +277,40 @@ namespace sw
             *this = VisemeTrack{};
             return false;
         }
-        return parseJSON( text, path );
+        return parseXML( text, path );
     }
 
-    string VisemeTrack::toJSON() const
+    string VisemeTrack::toXML() const
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        root.set( "frame_rate" ).setFloat( static_cast<float64>( _frameRate ) );
-        const JSONValue visemes = root.set( "visemes" );
-        visemes.setArray();
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "VisemeTrack" );
+        root.appendAttribute( "_frameRate", _frameRate );
+        const XMLNode visemes = root.appendChild( "_listViseme" );
         for ( const hashed_string& name : _listViseme )
         {
-            visemes.pushBack().setString( name.c_str() );
+            (void)visemes.appendChild( "item", string_view{ name.c_str() } );
         }
-        const JSONValue frames = root.set( "frames" );
-        frames.setArray();
-        const uint32 visemeCount = getVisemeCount();
+        const XMLNode   frames      = root.appendChild( "_listFrame" );
+        const uint32    visemeCount = getVisemeCount();
+        vector<float32> listFrame( visemeCount );
         for ( uint32 frameIndex = 0; frameIndex < getFrameCount(); ++frameIndex )
         {
             // 소수 셋째 자리로 줄인다. 파일이 짧아지고 비교가 안정된다(가중치 정밀도로는 충분하다).
-            const JSONValue frame = frames.pushBack();
-            frame.setArray();
             for ( uint32 visemeIndex = 0; visemeIndex < visemeCount; ++visemeIndex )
             {
-                const float32 weight = _listWeight[static_cast<size_t>( frameIndex ) * visemeCount + visemeIndex];
-                frame.pushBack().setFloat( static_cast<float64>( MathUtil::round( weight * 1000.0f ) / 1000.0f ) );
+                const float32 weight   = _listWeight[static_cast<size_t>( frameIndex ) * visemeCount + visemeIndex];
+                listFrame[visemeIndex] = MathUtil::round( weight * 1000.0f ) / 1000.0f;
             }
+            (void)frames.appendChild( "Frame", string_view{ XMLReadUtil::makeFloatListText( listFrame.data(), visemeCount ) } );
         }
-        return document.dump( 0 );
+        return document.saveToString();
     }
 
     bool VisemeTrack::saveToFile( string_view path ) const
     {
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toJSON() );
+        return FileUtil::writeTextFile( path, toXML() );
     }
 
     string VisemeTrack::makePathForAudio( string_view audioPath )

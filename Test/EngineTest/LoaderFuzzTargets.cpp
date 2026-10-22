@@ -195,27 +195,27 @@ namespace test
             static void runSpriteClip( const uint8* pData, size_t size )
             {
                 SpriteClipAsset asset;
-                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runAnimationGraph( const uint8* pData, size_t size )
             {
                 AnimationGraphAsset asset;
-                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDialogue( const uint8* pData, size_t size )
             {
                 DialogueGraphAsset asset;
-                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSequence( const uint8* pData, size_t size )
             {
                 SequenceAsset asset;
-                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringTable( const uint8* pData, size_t size )
             {
                 SourceStringTable table;
-                (void)table.loadFromJSONText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)table.loadFromXMLText( asText( pData, size ), "fuzz.strings.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runTileMap( const uint8* pData, size_t size )
             {
@@ -336,26 +336,26 @@ namespace test
             }
             static void seedSurfaceChannels( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".surfacechannels.xml", 2, SeedPick::ByName, outListSeed ); }
             static void seedUserSettings( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".settings.xml", 2, SeedPick::ByName, outListSeed ); }
-            static void seedSpriteClip( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".sprite.json", 2, SeedPick::ByName, outListSeed ); }
+            static void seedSpriteClip( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".sprite.xml", 2, SeedPick::ByName, outListSeed ); }
             static void seedAnimationGraph( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".animgraph.json", 2, SeedPick::ByName, outListSeed );
-                appendTextSeed( R"({"nodes":[{"id":1,"type":"Clip","name":"Idle","x":0,"y":0}],"links":[{"from":1,"to":2}]})", outListSeed );
+                appendResourceSeeds( ".animgraph.xml", 2, SeedPick::ByName, outListSeed );
+                appendTextSeed( R"(<AnimationGraphAsset><nodes><node id="1" name="Idle" /></nodes><links><link id="1" from="1" to="2" /></links></AnimationGraphAsset>)", outListSeed );
             }
             static void seedDialogue( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".dialogue.json", 2, SeedPick::ByName, outListSeed );
-                appendTextSeed( R"({"nodes":[{"id":1,"kind":"Line","text":"Hi","speaker":"A"}],"links":[{"from":1,"to":1,"pin":0}]})", outListSeed );
+                appendResourceSeeds( ".dialogue.xml", 2, SeedPick::ByName, outListSeed );
+                appendTextSeed( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _text="Hi" _speaker="A" /></_listNode><_listLink><DialogueAssetLink _id="1" _fromPin="102" _toPin="101" /></_listLink></DialogueGraphAsset>)", outListSeed );
             }
             static void seedSequence( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( ".sequence.json", 2, SeedPick::ByName, outListSeed );
-                appendTextSeed( R"({"duration":3.5,"tracks":[{"name":"T","items":[{"kind":"Event","start":0.5,"end":1.0}]}]})", outListSeed );
+                appendResourceSeeds( SequenceAsset::kExtension, 2, SeedPick::ByName, outListSeed );
+                appendTextSeed( R"(<SequenceAsset _frameMin="0" _frameMax="48"><_listItem><SequenceTrackItem _name="T" _start="12" _end="12" _kind="Event" /></_listItem></SequenceAsset>)", outListSeed );
             }
             static void seedStringTable( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( SourceStringTable::kExtension, 2, SeedPick::ByName, outListSeed );
-                appendTextSeed( R"({"culture":"en","entries":{"Menu.Start":{"source":"Start","maxLength":12},"Greeting":{"source":"Hi {name}"}}})", outListSeed );
+                appendTextSeed( R"(<SourceStringTable culture="en"><entries><entry key="Menu.Start" source="Start" maxLength="12" /><entry key="Greeting" source="Hi {name}" /></entries></SourceStringTable>)", outListSeed );
             }
             static void seedTileMap( vector<vector<uint8>>& outListSeed )
             {

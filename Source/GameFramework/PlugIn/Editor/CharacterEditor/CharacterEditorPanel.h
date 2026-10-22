@@ -36,6 +36,7 @@ namespace sw
 
     class CharacterAppearanceComponent;
     class GameObjectManager;
+    class SkeletalAnimatorComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -81,8 +82,17 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬을 만든 직후 — 카메라를 몸 높이에 맞추고 몸 핸들을 비웁니다(다음 그리기의 `syncPreviewBody` 가 세운다). */
         void populatePreviewScene( Scene& scene ) override;
+        /** @brief 기본 정책에 플레이를 더합니다 — 몸의 애니메이터가 `onBeginPlay` 에서 스켈레톤 유닛에 붙어야 클립이 포즈를 낸다. */
+        ScenePreviewPolicy getPreviewPolicy() const override;
         /** @brief 미리보기 탭(뷰포트)을 그립니다. 외형 데이터를 읽기 전이면 안내 글입니다. */
         void drawPreviewTab();
+        /**
+         * @brief 미리보기 몸의 애니메이션 재생 줄을 그립니다 — 클립 콤보(팩 데이터의 클립 폴더), 반복, Play · Stop.
+         * @details 재생 중이면 미리보기 씬의 틱이 포즈를 낸다. 몸을 다시 입혀도(체형 · 장비 변경) 재생은 이어진다 — 스켈레톤이 같은 외형이면 같은 클립이 그대로 맞는다.
+         */
+        void drawAnimationControls( SkeletalAnimatorComponent& animator );
+        /** @brief 팩 데이터의 클립 폴더에서 클립 이름(`.animclip` 파일 이름)을 모읍니다. 폴더가 디스크에 없으면 목록이 빕니다(팩만 있는 배포본). */
+        void loadClipNames();
         /** @brief 몸 오브젝트를 세우고, 외형 선택이나 외형 데이터가 바뀌었으면 다시 입힙니다. */
         void syncPreviewBody();
         /** @brief 뷰포트 위에 소켓 파일의 소켓 축(몸이 조립한 자리)을 긋습니다. 고른 소켓은 길고 밝다. */
@@ -146,6 +156,7 @@ namespace sw::editor
         fixed_string<constant::kMaxPathSize>  _refPosePath;
         fixed_string<constant::kMaxPathSize>  _itemsPath;
         fixed_string<constant::kMaxPathSize>  _appearanceFolder;
+        fixed_string<constant::kMaxPathSize>  _clipFolder; ///< 미리보기 몸 애니메이터의 클립 폴더(팩 데이터의 `clipFolder`)
         fixed_string<constant::kMaxPathSize>  _presetPath;
         fixed_string<constant::kMaxBuffer128> _presetName;
         fixed_string<constant::kMaxPathSize>  _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
@@ -155,6 +166,10 @@ namespace sw::editor
         string                                _status;
         hashed_string                         _selectedSocket;
         hashed_string                         _selectedBone;
+        vector<hashed_string>                 _listClipName;     ///< 클립 폴더의 클립 이름들(콤보 목록, 이름순)
+        hashed_string                         _selectedClip;     ///< 콤보에서 고른 클립
+        bool                                  _bClipLoop;        ///< 고른 클립을 반복 재생하는지
+        bool                                  _bClipNamesLoaded; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
         bool                                  _bKindTableReady;
         bool                                  _bDatabaseLoaded;
         bool                                  _bHasFit;

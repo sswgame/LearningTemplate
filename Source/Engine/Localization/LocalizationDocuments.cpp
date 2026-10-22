@@ -8,7 +8,8 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -16,79 +17,106 @@ namespace sw
     {
         struct LocalizationDocumentsInternal
         {
-            /** @brief @p value 객체의 필드가 모두 @p arrKnown 안에 있는지 확인합니다. 모르는 필드면 이름을 적고 false 를 반환합니다. */
-            template <size_t N>
-            static bool hasOnlyKnownFields( const JSONValue& value, const utf8* const ( &arrKnown )[N], string& outUnknown )
+            /** @brief 목록 원소 요소의 이름입니다. */
+            static constexpr string_view kItemTag = "item";
+
+            /** @brief 문서 머리의 속성(`culture`)과 자식(`entries`) 이름입니다. */
+            static constexpr string_view kEntriesTag = "entries";
+            static constexpr string_view kEntryTag   = "entry";
+
+            /** @brief 요소의 속성 · 자식 이름이 모두 알려진 것인지 봅니다. 알려지지 않은 첫 이름을 @p outUnknown 에 적고 false 를 반환합니다. */
+            static bool hasOnlyKnownNames( const XMLNode& node, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string& outUnknown )
             {
-                for ( const string& fieldName : value.getMemberNames() )
+                for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    bool bKnown{ false };
-                    for ( const utf8* pKnown : arrKnown )
+                    if ( VectorUtil::contains( listAttribute, string_view{ attribute.getName() } ) == false )
                     {
-                        bKnown = bKnown || fieldName == pKnown;
+                        outUnknown = attribute.getName();
+                        return false;
                     }
-                    if ( bKnown == false )
+                }
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( VectorUtil::contains( listChild, string_view{ child.getName() } ) == false )
                     {
-                        outUnknown = fieldName;
+                        outUnknown = child.getName();
                         return false;
                     }
                 }
                 return true;
             }
 
-            [[nodiscard]] static bool readStringList( const JSONValue& value, vector<string>& outList )
+            /** @brief 목록 요소(`<origins><item>…</item></origins>`)를 읽습니다. 요소가 없으면 빈 목록입니다. 원소가 `<item>` 이 아니면 false 입니다. */
+            [[nodiscard]] static bool readStringList( const XMLNode& listNode, vector<string>& outList )
             {
                 outList.clear();
-                if ( value.isValid() == false )
+                if ( listNode.isValid() == false )
                     return true;
-                if ( value.isArray() == false )
-                    return false;
-                for ( size_t index = 0; index < value.size(); ++index )
+                for ( XMLNode element = listNode.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
-                    const JSONValue element = value.at( index );
-                    if ( element.isString() == false )
+                    if ( string_view{ element.getName() } != kItemTag )
                         return false;
-                    outList.push_back( element.asString() );
+                    outList.push_back( string{ element.getText() } );
                 }
                 return true;
             }
 
-            static void writeStringList( const JSONValue& parent, const utf8* pName, const vector<string>& listValue )
+            static void writeStringList( const XMLNode& parent, const utf8* pName, const vector<string>& listValue )
             {
-                const JSONValue arrayValue = parent.set( pName, false );
-                arrayValue.setArray();
+                const XMLNode listNode = parent.appendChild( pName );
                 for ( const string& value : listValue )
                 {
-                    arrayValue.pushBack().setString( value );
+                    (void)listNode.appendChild( "item", string_view{ value } );
                 }
             }
 
-            /** @brief 문서 머리(`culture`, `entries`)를 읽습니다. */
-            [[nodiscard]] static bool readHeader( JSONDocument& document, string_view jsonText, string_view sourceName, string& outCulture, JSONValue& outEntries, string& outError )
+            /** @brief 문서 머리(루트의 `culture` 속성, `entries` 자식)를 읽습니다. */
+            [[nodiscard]] static bool readHeader( XMLDocument& document, string_view xmlText, string_view sourceName, const utf8* pRootName, string& outCulture, XMLNode& outEntries,
+                                                  string& outError )
             {
-                if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
+                XMLNode root;
+                if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, pRootName, root ) != XMLRootStatus::Found )
                 {
                     outError = document.getLastError();
+                    if ( outError.empty() )
+                        outError = string( sourceName ) + ": root must be <" + pRootName + ">";
                     return false;
                 }
-                const JSONValue root = document.getRoot();
-                if ( root.isObject() == false )
-                {
-                    outError = string( sourceName ) + ": root must be an object";
-                    return false;
-                }
-                static constexpr const utf8* kArrRootField[] = { "culture", "entries" };
-                string                       unknown;
-                if ( hasOnlyKnownFields( root, kArrRootField, unknown ) == false )
+                string unknown;
+                if ( hasOnlyKnownNames( root, { "culture" }, { kEntriesTag }, unknown ) == false )
                 {
                     outError = string( sourceName ) + ": unknown field '" + unknown + "'";
                     return false;
                 }
-                outCulture = CultureTable::normalizeCode( root.get( "culture", false ).asString() );
-                outEntries = root.get( "entries", false );
-                if ( outCulture.empty() || ( outEntries.isValid() && outEntries.isObject() == false ) )
+                outCulture = CultureTable::normalizeCode( root.getAttributeText( "culture", false ) );
+                outEntries = root.findChild( "entries", false );
+                if ( outCulture.empty() )
                 {
-                    outError = string( sourceName ) + ": needs \"culture\" and an \"entries\" object";
+                    outError = string( sourceName ) + ": needs a \"culture\" attribute";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 항목 요소 하나의 이름 · 키를 확인합니다. 키는 비지 않아야 한다. 틀리면 오류 글을 채우고 false 입니다. */
+            [[nodiscard]] static bool readEntryKey( const XMLNode& entryNode, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild,
+                                                    string_view sourceName, string& outKey, string& outError )
+            {
+                string unknown;
+                if ( string_view{ entryNode.getName() } != kEntryTag )
+                {
+                    outError = string( sourceName ) + ": <entries> holds only <entry> elements";
+                    return false;
+                }
+                if ( hasOnlyKnownNames( entryNode, listAttribute, listChild, unknown ) == false )
+                {
+                    outError = string( sourceName ) + ": entry has unknown field '" + unknown + "'";
+                    return false;
+                }
+                outKey = string{ entryNode.getAttributeText( "key", false ) };
+                if ( outKey.empty() )
+                {
+                    outError = string( sourceName ) + ": entry needs a \"key\" attribute";
                     return false;
                 }
                 return true;
@@ -154,48 +182,51 @@ namespace sw
     // ------------------------------------------------------------------------------
     // SourceStringTable
     // ------------------------------------------------------------------------------
-    bool SourceStringTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool SourceStringTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        string       error;
-        JSONDocument document;
-        string       culture;
-        JSONValue    entries;
-        if ( LocalizationDocumentsInternal::readHeader( document, jsonText, sourceName, culture, entries, error ) == false )
+        using Internal = LocalizationDocumentsInternal;
+        string      error;
+        XMLDocument document;
+        string      culture;
+        XMLNode     entries;
+        if ( Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries, error ) == false )
         {
             if ( pOutError != nullptr )
                 *pOutError = error;
             return false;
         }
-        static constexpr const utf8* kArrEntryField[] = { "source", "context", "comment", "maxLength", "origins" };
         map<string, SourceTextEntry> mapEntry;
-        for ( const string& key : entries.getMemberNames() )
+        for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
-            const JSONValue value = entries.get( key, false );
-            string          unknown;
-            if ( value.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( value, kArrEntryField, unknown ) == false )
+            string key;
+            if ( Internal::readEntryKey( entryNode, { "key", "source", "context", "comment", "maxLength" }, { "origins" }, sourceName, key, error ) == false )
+                break;
+            if ( mapEntry.find( key ) != mapEntry.end() )
             {
-                error = string( sourceName ) + ": entry '" + key + "' " + ( unknown.empty() ? "must be an object" : "has unknown field '" + unknown + "'" );
+                error = string( sourceName ) + ": entry '" + key + "' is written twice";
                 break;
             }
-            const JSONValue source = value.get( "source", false );
-            if ( source.isString() == false )
+            if ( entryNode.findAttribute( "source", false ) == nullptr )
             {
-                error = string( sourceName ) + ": entry '" + key + "' needs a \"source\" string";
+                error = string( sourceName ) + ": entry '" + key + "' needs a \"source\" attribute";
                 break;
             }
             SourceTextEntry entry;
-            entry._source  = source.asString();
-            entry._context = value.get( "context", false ).asString();
-            entry._comment = value.get( "comment", false ).asString();
+            entry._source  = string{ entryNode.getAttributeText( "source", false ) };
+            entry._context = string{ entryNode.getAttributeText( "context", false ) };
+            entry._comment = string{ entryNode.getAttributeText( "comment", false ) };
             // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
-            if ( value.readOptionalInto( "maxLength", entry._maxLength ) == false )
+            std::optional<uint32> maxLength;
+            if ( entryNode.readOptionalAttribute( "maxLength", maxLength ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' maxLength must be a non-negative integer";
                 break;
             }
-            if ( LocalizationDocumentsInternal::readStringList( value.get( "origins", false ), entry._listOrigin ) == false )
+            if ( maxLength.has_value() )
+                entry._maxLength = *maxLength;
+            if ( Internal::readStringList( entryNode.findChild( "origins", false ), entry._listOrigin ) == false )
             {
-                error = string( sourceName ) + ": entry '" + key + "' origins must be strings";
+                error = string( sourceName ) + ": entry '" + key + "' origins must be <item> elements";
                 break;
             }
             mapEntry[key] = std::move( entry );
@@ -214,36 +245,35 @@ namespace sw
     bool SourceStringTable::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string SourceStringTable::toJSONText() const
+    string SourceStringTable::toXMLText() const
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        root.set( "culture", false ).setString( _culture );
-        const JSONValue entries = root.set( "entries", false );
-        entries.setObject();
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "SourceStringTable" );
+        root.appendAttribute( "culture", string_view{ _culture } );
+        const XMLNode entries = root.appendChild( "entries" );
         for ( const auto& [key, entry] : _mapEntry )
         {
-            const JSONValue value = entries.set( key, false );
-            value.setObject();
-            value.set( "source", false ).setString( entry._source );
+            const XMLNode value = entries.appendChild( "entry" );
+            value.appendAttribute( "key", string_view{ key } );
+            value.appendAttribute( "source", string_view{ entry._source } );
             if ( entry._context.empty() == false )
-                value.set( "context", false ).setString( entry._context );
+                value.appendAttribute( "context", string_view{ entry._context } );
             if ( entry._comment.empty() == false )
-                value.set( "comment", false ).setString( entry._comment );
+                value.appendAttribute( "comment", string_view{ entry._comment } );
             if ( entry._maxLength != 0 )
-                value.set( "maxLength", false ).setUint( entry._maxLength );
+                value.appendAttribute( "maxLength", entry._maxLength );
             if ( entry._listOrigin.empty() == false )
                 LocalizationDocumentsInternal::writeStringList( value, "origins", entry._listOrigin );
         }
-        return document.dump( 4 ) + "\n";
+        return document.saveToString();
     }
 
     bool SourceStringTable::saveToFile( string_view absolutePath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJSONText() );
+        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toXMLText() );
     }
 
     const SourceTextEntry* SourceStringTable::findEntry( string_view key ) const
@@ -270,45 +300,46 @@ namespace sw
     // ------------------------------------------------------------------------------
     // TranslationTable
     // ------------------------------------------------------------------------------
-    bool TranslationTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool TranslationTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        string       error;
-        JSONDocument document;
-        string       culture;
-        JSONValue    entries;
-        if ( LocalizationDocumentsInternal::readHeader( document, jsonText, sourceName, culture, entries, error ) == false )
+        using Internal = LocalizationDocumentsInternal;
+        string      error;
+        XMLDocument document;
+        string      culture;
+        XMLNode     entries;
+        if ( Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries, error ) == false )
         {
             if ( pOutError != nullptr )
                 *pOutError = error;
             return false;
         }
-        static constexpr const utf8*  kArrEntryField[] = { "text", "sourceHash", "review", "translatorComment" };
         map<string, TranslationEntry> mapEntry;
-        for ( const string& key : entries.getMemberNames() )
+        for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
-            const JSONValue value = entries.get( key, false );
-            string          unknown;
-            if ( value.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( value, kArrEntryField, unknown ) == false )
+            string key;
+            if ( Internal::readEntryKey( entryNode, { "key", "text", "sourceHash", "review", "translatorComment" }, {}, sourceName, key, error ) == false )
+                break;
+            if ( mapEntry.find( key ) != mapEntry.end() )
             {
-                error = string( sourceName ) + ": entry '" + key + "' " + ( unknown.empty() ? "must be an object" : "has unknown field '" + unknown + "'" );
+                error = string( sourceName ) + ": entry '" + key + "' is written twice";
                 break;
             }
-            const JSONValue text = value.get( "text", false );
-            if ( text.isString() == false )
+            if ( entryNode.findAttribute( "text", false ) == nullptr )
             {
-                error = string( sourceName ) + ": entry '" + key + "' needs a \"text\" string";
+                error = string( sourceName ) + ": entry '" + key + "' needs a \"text\" attribute";
                 break;
             }
             TranslationEntry entry;
-            entry._text              = text.asString();
-            entry._translatorComment = value.get( "translatorComment", false ).asString();
-            if ( value.readOptionalInto( "review", entry._bReview ) == false )
+            entry._text              = string{ entryNode.getAttributeText( "text", false ) };
+            entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment", false ) };
+            std::optional<bool> review;
+            if ( entryNode.readOptionalAttribute( "review", review ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' review must be true or false";
                 break;
             }
-            const JSONValue hashValue = value.get( "sourceHash", false );
-            if ( hashValue.isValid() && LocalizationTextUtil::tryParseSourceHash( hashValue.asString(), entry._sourceHash ) == false )
+            entry._bReview = review.value_or( false );
+            if ( entryNode.findAttribute( "sourceHash", false ) != nullptr && LocalizationTextUtil::tryParseSourceHash( entryNode.getAttributeText( "sourceHash", false ), entry._sourceHash ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' sourceHash must be 16 hex digits";
                 break;
@@ -329,34 +360,33 @@ namespace sw
     bool TranslationTable::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
     }
 
-    string TranslationTable::toJSONText() const
+    string TranslationTable::toXMLText() const
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        root.set( "culture", false ).setString( _culture );
-        const JSONValue entries = root.set( "entries", false );
-        entries.setObject();
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "TranslationTable" );
+        root.appendAttribute( "culture", string_view{ _culture } );
+        const XMLNode entries = root.appendChild( "entries" );
         for ( const auto& [key, entry] : _mapEntry )
         {
-            const JSONValue value = entries.set( key, false );
-            value.setObject();
-            value.set( "text", false ).setString( entry._text );
+            const XMLNode value = entries.appendChild( "entry" );
+            value.appendAttribute( "key", string_view{ key } );
+            value.appendAttribute( "text", string_view{ entry._text } );
             if ( entry._sourceHash != 0 )
-                value.set( "sourceHash", false ).setString( LocalizationTextUtil::formatSourceHash( entry._sourceHash ) );
+                value.appendAttribute( "sourceHash", string_view{ LocalizationTextUtil::formatSourceHash( entry._sourceHash ) } );
             if ( entry._bReview )
-                value.set( "review", false ).setBool( true );
+                value.appendAttribute( "review", string_view{ "true" } );
             if ( entry._translatorComment.empty() == false )
-                value.set( "translatorComment", false ).setString( entry._translatorComment );
+                value.appendAttribute( "translatorComment", string_view{ entry._translatorComment } );
         }
-        return document.dump( 4 ) + "\n";
+        return document.saveToString();
     }
 
     bool TranslationTable::saveToFile( string_view absolutePath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJSONText() );
+        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toXMLText() );
     }
 
     const TranslationEntry* TranslationTable::findEntry( string_view key ) const
@@ -396,42 +426,43 @@ namespace sw
     // ------------------------------------------------------------------------------
     // LocalizationProject
     // ------------------------------------------------------------------------------
-    bool LocalizationProject::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool LocalizationProject::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        JSONDocument document;
-        string       error;
-        if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
+        using Internal = LocalizationDocumentsInternal;
+        XMLDocument document;
+        string      error;
+        XMLNode     root;
+        if ( XMLReadUtil::parseRoot( document, FileUtil::skipUtf8Bom( xmlText ), sourceName, "LocalizationProject", root ) != XMLRootStatus::Found )
+        {
             error = document.getLastError();
-        const JSONValue              root            = document.getRoot();
-        static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" };
-        string                       unknown;
-        if ( error.empty() && ( root.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( root, kArrRootField, unknown ) == false ) )
-            error = string( sourceName ) + ": " + ( unknown.empty() ? "root must be an object" : "unknown field '" + unknown + "'" );
+            if ( error.empty() )
+                error = string( sourceName ) + ": root must be <LocalizationProject>";
+        }
+        string unknown;
+        if ( error.empty() &&
+             Internal::hasOnlyKnownNames( root, { "name", "sourceCulture" }, { "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" }, unknown ) == false )
+            error = string( sourceName ) + ": unknown field '" + unknown + "'";
 
         LocalizationProject loaded;
         if ( error.empty() )
         {
-            loaded._name          = root.get( "name", false ).asString();
-            loaded._sourceCulture = CultureTable::normalizeCode( root.get( "sourceCulture", false ).asString() );
-            const bool bListsRead = LocalizationDocumentsInternal::readStringList( root.get( "cultures", false ), loaded._listCulture ) &&
-                                    LocalizationDocumentsInternal::readStringList( root.get( "stagedCultures", false ), loaded._listStagedCulture ) &&
-                                    LocalizationDocumentsInternal::readStringList( root.get( "stringTables", false ), loaded._listStringTable ) &&
-                                    LocalizationDocumentsInternal::readStringList( root.get( "codeRoots", false ), loaded._listCodeRoot ) &&
-                                    LocalizationDocumentsInternal::readStringList( root.get( "assetRoots", false ), loaded._listAssetRoot );
-            const JSONValue rules = root.get( "assetRules", false );
-            if ( rules.isValid() && rules.isArray() == false )
-                error = string( sourceName ) + ": assetRules must be an array";
-            static constexpr const utf8* kArrRuleField[] = { "files", "elements", "attribute", "kind", "context" };
-            for ( size_t ruleIndex = 0; error.empty() && rules.isArray() && ruleIndex < rules.size(); ++ruleIndex )
+            loaded._name          = string{ root.getAttributeText( "name", false ) };
+            loaded._sourceCulture = CultureTable::normalizeCode( root.getAttributeText( "sourceCulture", false ) );
+            const bool bListsRead = Internal::readStringList( root.findChild( "cultures", false ), loaded._listCulture ) &&
+                                    Internal::readStringList( root.findChild( "stagedCultures", false ), loaded._listStagedCulture ) &&
+                                    Internal::readStringList( root.findChild( "stringTables", false ), loaded._listStringTable ) &&
+                                    Internal::readStringList( root.findChild( "codeRoots", false ), loaded._listCodeRoot ) &&
+                                    Internal::readStringList( root.findChild( "assetRoots", false ), loaded._listAssetRoot );
+            size_t ruleIndex{ 0 };
+            for ( XMLNode ruleNode = root.findChild( "assetRules", false ).findChild(); error.empty() && ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
             {
-                const JSONValue       ruleValue = rules.at( ruleIndex );
                 LocalizationAssetRule rule;
-                const bool            bShape = ruleValue.isObject() && LocalizationDocumentsInternal::hasOnlyKnownFields( ruleValue, kArrRuleField, unknown ) &&
-                                    LocalizationDocumentsInternal::readStringList( ruleValue.get( "elements", false ), rule._listElement );
-                rule._fileSuffix             = ruleValue.get( "files", false ).asString();
-                rule._attribute              = ruleValue.get( "attribute", false ).asString();
-                rule._context                = ruleValue.get( "context", false ).asString();
-                const string kind            = ruleValue.get( "kind", false ).asString();
+                const bool            bShape = string_view{ ruleNode.getName() } == "rule" && Internal::hasOnlyKnownNames( ruleNode, { "files", "attribute", "kind", "context" }, { "elements" }, unknown ) &&
+                                    Internal::readStringList( ruleNode.findChild( "elements", false ), rule._listElement );
+                rule._fileSuffix = string{ ruleNode.getAttributeText( "files", false ) };
+                rule._attribute  = string{ ruleNode.getAttributeText( "attribute", false ) };
+                rule._context    = string{ ruleNode.getAttributeText( "context", false ) };
+                const string kind{ ruleNode.getAttributeText( "kind", false ) };
                 rule._bKeyReference          = kind == "key";
                 const bool bKnownKind        = kind == "key" || kind == "text";
                 const bool bInvalidAssetRule = bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty();
@@ -471,7 +502,7 @@ namespace sw
     bool LocalizationProject::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromXMLText( text, absolutePath, pOutError );
     }
 
     string LocalizationProject::makeSiblingPath( string_view projectPath, string_view fileName )
@@ -487,10 +518,10 @@ namespace sw
 
     bool LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError )
     {
-        vector<string> listJSON;
-        (void)FileUtil::collectFiles( folder, ".json", listJSON, true ); // 폴더가 없으면 프로젝트도 없다
+        vector<string> listXML;
+        (void)FileUtil::collectFiles( folder, ".xml", listXML, true ); // 폴더가 없으면 프로젝트도 없다
         const size_t tableSuffixLength = string_view( TranslationTable::kExtension ).size();
-        for ( const string& projectPath : listJSON )
+        for ( const string& projectPath : listXML )
         {
             if ( StringUtil::endsWith( projectPath, kExtension, true ) == false )
                 continue;
@@ -498,7 +529,7 @@ namespace sw
             if ( project.loadFromFile( projectPath, &outError ) == false )
                 return false;
             const string projectFolder = FileUtil::getDirectoryPart( projectPath );
-            for ( const string& tablePath : listJSON )
+            for ( const string& tablePath : listXML )
             {
                 const bool bTableOfProject = StringUtil::endsWith( tablePath, TranslationTable::kExtension, true ) && FileUtil::getDirectoryPart( tablePath ) == projectFolder;
                 if ( bTableOfProject == false )

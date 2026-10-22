@@ -16,7 +16,7 @@
   `App --import-textures` 가 만든다(스탬프는 각 폴더의 `import.stamp`). 파일 이름은 원본의 camelCase · `-` 를 소문자 `_` 로 바꾼 것이다.
   모델은 모두 한 장의 팔레트 텍스처(`blaster_colormap`)에서 색을 읽는다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
-- KayKit 캐릭터는 스킨드 모델이라 `App --import-models` 가 `models/kaykit/<이름>.mesh` 와 옆 폴더 `models/kaykit/<이름>/`(스켈레톤 `<이름>.skeleton.json` ·
+- KayKit 캐릭터는 스킨드 모델이라 `App --import-models` 가 `models/kaykit/<이름>.mesh` 와 옆 폴더 `models/kaykit/<이름>/`(스켈레톤 `<이름>.skeleton.xml` ·
   본에 붙은 무기 · 투구 · 망토 `parts/*.mesh` · 클립 `clips/*.animclip`)를 만든다. 파일 이름은 원본의 `kaykit_` 접두어를 뗀 것이다. 원본 GLB 에 든 아틀라스
   텍스처(`knight_texture` · `rogue_texture` · `skeleton_texture`)는 `textures_raw/kaykit_knight.png` · `kaykit_rogue.png` · `kaykit_skeleton.png` 로 꺼냈다(바이트 그대로). CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kay Lousberg.
 - KayKit Dungeon 모델은 `models/kaykit_dungeon/<이름>.mesh` 로 임포트된다(원본의 `.gltf.glb` 를 `.glb` 로 줄인 이름). 색은 `textures/kaykit_dungeon.dds` 에서

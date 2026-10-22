@@ -18,7 +18,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     PairedAnimationDef def;
     SW_ASSERT_TRUE( def.loadFromXMLText( R"(<PairedAnimation duration="1.5">
         <Role name="Attacker" anchor="true" required="true" clip="Grab_A" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
-        <Role name="Victim" required="true" clip="Grab_V" align="warp" offset="0 0 1.2" yaw="180" warpEnd="0.4" maxAlignDistance="2" enterBlend="0.1" exitState="Idle" exitBlend="0.2" skeleton="characters/humanoid.skeleton.json"/>
+        <Role name="Victim" required="true" clip="Grab_V" align="warp" offset="0 0 1.2" yaw="180" warpEnd="0.4" maxAlignDistance="2" enterBlend="0.1" exitState="Idle" exitBlend="0.2" skeleton="characters/humanoid.skeleton.xml"/>
         <Notify name="Impact" time="0.9" role="Victim"/>
         <Notify name="Grip" time="0.2" role="Attacker"/>
     </PairedAnimation>)",
@@ -31,7 +31,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     SW_EXPECT_NEAR_EQUAL( 1.2f, victim._offset._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( MathUtil::kPi, victim._yawRadians, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.4f, victim._warpEndSeconds, 1e-6f );
-    SW_EXPECT_TRUE( victim._skeletonPath == "characters/humanoid.skeleton.json" );
+    SW_EXPECT_TRUE( victim._skeletonPath == "characters/humanoid.skeleton.xml" );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( def.getNotifies().size() ) );
     SW_EXPECT_TRUE( def.getNotifies()[0]._name == hashed_string( "Grip" ) );
     SW_EXPECT_TRUE( def.getNotifies()[1]._name == hashed_string( "Impact" ) );

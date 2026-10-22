@@ -20,4 +20,4 @@
 
 ## A4 리타게팅 도구
 
-- 에디터에서 리타깃 표(`*.retarget.json`)를 만드는 창(본 이름 짝 · 체인 · 기준 포즈 맞춤 미리보기). 지금은 손으로 쓴다(`game/shooter3d/rigs/knight_to_minion.retarget.json`).
+- 에디터에서 리타깃 표(`*.retarget.xml`)를 만드는 창(본 이름 짝 · 체인 · 기준 포즈 맞춤 미리보기). 지금은 손으로 쓴다(`game/shooter3d/rigs/knight_to_minion.retarget.xml`).

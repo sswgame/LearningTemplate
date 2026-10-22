@@ -1,0 +1,104 @@
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="/" source="/" context="TextWidget._text">
+			<origins>
+				<item>game/shooter3d/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Assault Blaster" source="Assault Blaster" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
+			<origins>
+				<item>game/shooter3d/data/weapons.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bone Axe" source="Bone Axe" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Bone Shield" source="Bone Shield" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Longbow" source="Longbow" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Notched Blade" source="Notched Blade" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Pistol" source="Pistol" context="Weapon name">
+			<origins>
+				<item>game/shooter3d/data/weapons.xml</item>
+			</origins>
+		</entry>
+		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
+			<origins>
+				<item>game/shooter3d/data/weapons.xml</item>
+			</origins>
+		</entry>
+		<entry key="Round Shield" source="Round Shield" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Scatter Blaster" source="Scatter Blaster" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Sidearm Blaster" source="Sidearm Blaster" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Tattered Cape" source="Tattered Cape" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Travel Cape" source="Travel Cape" context="Item name">
+			<origins>
+				<item>game/shooter3d/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.gameplay.difficulty" source="Difficulty" context="Options menu label" maxLength="32">
+			<origins>
+				<item>game/shooter3d/data/shooter3d.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.gameplay.difficulty.easy" source="Easy" context="Options menu label" maxLength="32">
+			<origins>
+				<item>game/shooter3d/data/shooter3d.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.gameplay.difficulty.hard" source="Hard" context="Options menu label" maxLength="32">
+			<origins>
+				<item>game/shooter3d/data/shooter3d.settings.xml</item>
+			</origins>
+		</entry>
+		<entry key="settings.gameplay.difficulty.normal" source="Normal" context="Options menu label" maxLength="32">
+			<origins>
+				<item>game/shooter3d/data/shooter3d.settings.xml</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

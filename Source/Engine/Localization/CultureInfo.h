@@ -1,6 +1,6 @@
 /**
  * @file CultureInfo.h
- * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.json`)을 정의합니다. 복수형 규칙, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
+ * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.xml`)을 정의합니다. 복수형 규칙, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
  * @details 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 표(`CultureInfo.cpp`)만 가진다.
  *          ICU 와 CLDR 를 들이지 않고 그 형식의 부분 집합을 따른다(패턴 기호는 y, M, d, H, h, m, s, a).
  */
@@ -27,7 +27,7 @@ namespace sw
         Count
     };
 
-    /** @brief 의사 로컬라이제이션 방식입니다(`*.cultures.json` 의 `pseudo`). */
+    /** @brief 의사 로컬라이제이션 방식입니다(`*.cultures.xml` 의 `pseudo`). */
     enum class PseudoLocaleMode : uint8
     {
         None = 0,
@@ -168,14 +168,14 @@ namespace sw
 {
     /**
      * @class CultureTable
-     * @brief 문화권 테이블(`*.cultures.json`)입니다. 부모를 따라 필드를 물려받고, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
-     * @details 모르는 필드, 모르는 복수형 규칙, 없는 부모, 부모 순환은 로드 오류다.
+     * @brief 문화권 테이블(`*.cultures.xml`)입니다. 부모를 따라 필드를 물려받고, 지역이 붙은 코드(`ko_kr`)는 없으면 언어(`ko`)로 찾습니다.
+     * @details 모르는 필드, 모르는 복수형 규칙, 없는 부모, 부모 순환은 로드 오류다. 형식은 `<CultureTable><cultures><culture code="ko" parent="" nativeName="한국어" pluralRule="other" …><monthNames><item>1월</item>…</monthNames></culture></cultures></CultureTable>` 이다(패턴은 `<datePatterns short="…" medium="…" long="…" />`).
      */
     class SW_API CultureTable
     {
     public:
         /** @brief 문화권 테이블 파일의 접미사입니다. */
-        static constexpr const utf8* kExtension = ".cultures.json";
+        static constexpr const utf8* kExtension = ".cultures.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
@@ -189,7 +189,7 @@ namespace sw
         static string makeParentCode( string_view normalizedCode );
 
         /** @brief 테이블을 읽습니다(이미 있는 문화권은 바꿉니다). 실패하면 @p pOutError 에 이유를 적고 false 를 반환하며, 테이블은 그대로 둡니다. */
-        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError = nullptr );
         /** @brief 리소스 경로의 테이블을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
 

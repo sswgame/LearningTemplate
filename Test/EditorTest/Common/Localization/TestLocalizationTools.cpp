@@ -65,8 +65,8 @@ namespace
                                                         "\" }, \"menu.removed\": { \"text\": \"사라진 메뉴\" }" );
             (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( folder, "tm" ) );
             // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
-            (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.json" ),
-                                               R"({ "culture": "ko", "entries": [ { "source": "Quit", "text": "종료" }, { "source": "Load game", "text": "불러오기" } ] })" );
+            (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.xml" ),
+                                               R"(<TranslationMemory culture="ko"><entries><entry source="Quit" text="종료" /><entry source="Load game" text="불러오기" /></entries></TranslationMemory>)" );
             return projectPath;
         }
     };
@@ -79,12 +79,26 @@ SW_TEST_CASE( LocalizationGatherTest, DialogueAndAssetRulesAreGathered )
 {
     sw::LocalizationProject project;
     sw::string              error;
-    SW_ASSERT_TRUE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ], "assetRules": [
-        { "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" },
-        { "files": ".settings.xml", "elements": [ "Setting" ], "attribute": "text", "kind": "key" } ] })",
+    SW_ASSERT_TRUE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en">
+	<stringTables>
+		<item>p.strings.xml</item>
+	</stringTables>
+	<assetRules>
+		<rule files="items.xml" attribute="name" kind="text" context="Item name">
+			<elements>
+				<item>Item</item>
+			</elements>
+		</rule>
+		<rule files=".settings.xml" attribute="text" kind="key">
+			<elements>
+				<item>Setting</item>
+			</elements>
+		</rule>
+	</assetRules>
+</LocalizationProject>)",
+                                             "p", &error ) );
+    SW_EXPECT_FALSE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en"><stringTables><item>a</item></stringTables><assetRules><rule files="x.xml" attribute="b" kind="maybe"><elements><item>A</item></elements></rule></assetRules></LocalizationProject>)",
                                               "p", &error ) );
-    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a" ], "assetRules": [ { "files": "x.xml", "elements": [ "A" ], "attribute": "b", "kind": "maybe" } ] })",
-                                               "p", &error ) );
 
     sw::TextGatherer gatherer;
     sw::LocalizationTools::gatherAssetFile( project, gatherer, R"(<ItemCatalog><Item id="a" name="Combat Helmet"/><Item id="b" name="Recon Vest"/></ItemCatalog>)",
@@ -92,8 +106,8 @@ SW_TEST_CASE( LocalizationGatherTest, DialogueAndAssetRulesAreGathered )
     sw::LocalizationTools::gatherAssetFile( project, gatherer, R"(<UserSettingsSchema><Setting id="a" text="settings.a"/></UserSettingsSchema>)",
                                             "game/x/data/x.settings.xml" );
     sw::LocalizationTools::gatherAssetFile(
-        project, gatherer, R"({ "_listNode": [ { "_id": 1, "_type": "Dialogue", "_speaker": "npc.elder", "_text": "Welcome back.", "_listChoice": [ "Yes", "No" ] } ], "_listLink": [] })",
-        "game/x/dialogue/intro.dialogue.json" );
+        project, gatherer, R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Dialogue" _speaker="npc.elder" _text="Welcome back."><_listChoice><item>Yes</item><item>No</item></_listChoice></DialogueAssetNode></_listNode><_listLink /></DialogueGraphAsset>)",
+        "game/x/dialogue/intro.dialogue.xml" );
 
     const sw::GatheredText* pHelmet = LocalizationToolsTestInternal::findText( gatherer, "Combat Helmet" );
     SW_ASSERT_NOT_NULL( pHelmet );
@@ -172,7 +186,7 @@ SW_TEST_CASE( LocalizationGatherTest, CheckFailsOnMissingTranslationOfAStagedCul
     sw::LocalizationProject project;
     sw::string              error;
     SW_TEST_DEFENSIVE_SCOPE( "staged cultures: a list outside cultures is rejected and missing staged translations fail --check-text" );
-    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "cultures": [ "ko" ], "stagedCultures": [ "ja" ], "stringTables": [ "a" ] })", "p", &error ) );
+    SW_EXPECT_FALSE( project.loadFromXMLText( R"(<LocalizationProject name="p" sourceCulture="en"><cultures><item>ko</item></cultures><stagedCultures><item>ja</item></stagedCultures><stringTables><item>a</item></stringTables></LocalizationProject>)", "p", &error ) );
     SW_EXPECT_TRUE( error.find( "stagedCultures" ) != sw::string::npos );
 
     const sw::string repositoryRoot = test::makeTempDirectory( "loc_check_staged" );
@@ -252,7 +266,7 @@ SW_TEST_CASE( TranslationExchangeTest, GatherPrefillsFromTranslationMemory )
     SW_EXPECT_EQUAL( uint32( 1 ), korean._orphanCount ); // 원문 표에 없는 키의 번역은 뺐다
 
     sw::TranslationTable translation;
-    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.json" ) ) );
+    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
     SW_EXPECT_NULL( translation.findEntry( "menu.removed" ) );
     const sw::TranslationEntry* pLoad = translation.findEntry( "menu.load" );
     SW_ASSERT_NOT_NULL( pLoad );
@@ -261,7 +275,7 @@ SW_TEST_CASE( TranslationExchangeTest, GatherPrefillsFromTranslationMemory )
 
     // 지금 번역은 메모리에 쌓였다.
     sw::TranslationMemory memory;
-    SW_ASSERT_TRUE( memory.loadFromFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.json" ) ) );
+    SW_ASSERT_TRUE( memory.loadFromFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.xml" ) ) );
     sw::TranslationMemoryMatch match;
     SW_ASSERT_TRUE( memory.findBestMatch( "Start Game", match ) );
     SW_EXPECT_TRUE( match._bExact );
@@ -275,7 +289,7 @@ SW_TEST_CASE( TranslationExchangeTest, ExportWithBrokenMemoryFailsAndWritesNothi
 {
     const sw::string folder      = test::makeTempDirectory( "loc_po_broken_tm" );
     const sw::string projectPath = LocalizationToolsTestInternal::writeExchangeProject( folder );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.json" ), "{ \"culture\": \"ko\", \"entries\": [ " ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.xml" ), "<TranslationMemory culture=\"ko\"><entries>" ) );
 
     sw::vector<sw::LocalizationExchangeResult> listResult;
     test::ScopedLogCollector                   collector;
@@ -287,7 +301,7 @@ SW_TEST_CASE( TranslationExchangeTest, ExportWithBrokenMemoryFailsAndWritesNothi
     SW_EXPECT_FALSE( bExported );
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_FALSE( sw::FileUtil::exists( listResult[0]._path ) );
-    SW_EXPECT_TRUE_MSG( collector.countContaining( "ko.tm.json" ) > 0, collector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( collector.countContaining( "ko.tm.xml" ) > 0, collector.joined().c_str() );
 }
 
 /**
@@ -350,8 +364,8 @@ SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
 
     sw::TranslationTable  translation;
     sw::SourceStringTable source;
-    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.json" ) ) );
-    SW_ASSERT_TRUE( source.loadFromFile( sw::FileUtil::joinPath( folder, "test.strings.json" ) ) );
+    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
+    SW_ASSERT_TRUE( source.loadFromFile( sw::FileUtil::joinPath( folder, "test.strings.xml" ) ) );
     SW_EXPECT_TRUE( translation.computeState( "menu.quit", source.findEntry( "menu.quit" ) ) == sw::TranslationState::Current );
     SW_EXPECT_TRUE( translation.computeState( "menu.load", source.findEntry( "menu.load" ) ) == sw::TranslationState::Review );
     SW_EXPECT_TRUE( translation.computeState( "menu.start", source.findEntry( "menu.start" ) ) == sw::TranslationState::Current );
@@ -369,6 +383,6 @@ SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( editedPath, oldPo.toText() ) );
     SW_ASSERT_TRUE( sw::LocalizationTools::importPo( projectPath, editedPath, imported ) );
     SW_EXPECT_EQUAL( uint32( 1 ), imported._staleCount );
-    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.json" ) ) );
+    SW_ASSERT_TRUE( translation.loadFromFile( sw::FileUtil::joinPath( folder, "ko.translation.xml" ) ) );
     SW_EXPECT_TRUE( translation.computeState( "menu.start", source.findEntry( "menu.start" ) ) == sw::TranslationState::Stale );
 }
