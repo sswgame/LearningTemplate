@@ -61,12 +61,6 @@ namespace sw
                 _listItem.push_back( Item{ pDevice, resource } );
             }
 
-            size_t countPending() const
-            {
-                std::scoped_lock<mutex> lock{ _mutex };
-                return _listItem.size();
-            }
-
             /** @brief @p pDevice 의 것을 모두 `releaseHandle` 로 해제합니다(게임 스레드 — 이미 만든 패킷이 끝날 때까지 미룬다). */
             void releaseFor( IRHIDevice* pDevice )
             {
