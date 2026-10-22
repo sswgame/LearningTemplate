@@ -74,8 +74,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorLightProbeBakeSession* pSession = editor::findSubsystem<EditorLightProbeBakeSession>();
-                outValue                                    = static_cast<float64>( pSession != nullptr ? pSession->getFinishedRunCount() : 0u );
+                const EditorLightProbeBakeSession* pSession      = editor::findSubsystem<EditorLightProbeBakeSession>();
+                const SceneManager*                pSceneManager = editor::findSubsystem<SceneManager>();
+                const bool                         bReadable     = pSession != nullptr && pSceneManager != nullptr;
+                outValue                                         = static_cast<float64>( bReadable ? pSession->getFinishedRunCount( pSceneManager->getSceneGeneration() ) : 0u );
                 return true;
             }
 
@@ -107,7 +109,7 @@ namespace sw::editor
     SW_EDITOR_SUBSYSTEM( EditorLightProbeBakeSession, 9100 );
     SW_EDITOR_FRAME_STEP( LightProbeBake, "lightProbeBake", EditorFrameStepOrder::kCommands + 20, &EditorLightProbeBakeSessionInternal::runFrame );
 
-    SW_AUTOMATION_PROBE( editorLightProbeBakeCount, "Editor.LightProbeBakeCount", "Times a lighting.bakeProbes run finished (or was canceled) in this editor session",
+    SW_AUTOMATION_PROBE( editorLightProbeBakeCount, "Editor.LightProbeBakeCount", "Times a lighting.bakeProbes run finished (or was canceled) in the active scene",
                          &EditorLightProbeBakeSessionInternal::readBakeRunCount );
     SW_AUTOMATION_PROBE( editorLightProbeBakeRunning, "Editor.LightProbeBakeRunning", "1 while a light probe bake is running over editor frames",
                          &EditorLightProbeBakeSessionInternal::readBakeRunning );
@@ -123,6 +125,7 @@ namespace sw::editor
         , _heldEditCount{ 0 }
         , _nextVolumeIndex{ 0 }
         , _bakedCount{ 0 }
+        , _finishedRunSceneGeneration{ 0 }
         , _finishedRunCount{ 0 }
         , _bRunning{ false }
         , _bJobActive{ false }
@@ -278,6 +281,11 @@ namespace sw::editor
         _bJobActive = false;
         _job        = LightProbeBakeJob{};
         _pOccluders.reset(); // 작업이 빌리던 가림 씬 — 작업을 비운 뒤에 놓는다
+        if ( _finishedRunSceneGeneration != _sceneGeneration )
+        {
+            _finishedRunSceneGeneration = _sceneGeneration;
+            _finishedRunCount           = 0;
+        }
         ++_finishedRunCount;
         EditorPlaySession::releaseSceneEdits();
         EditorContext* pContext = EditorContext::get();

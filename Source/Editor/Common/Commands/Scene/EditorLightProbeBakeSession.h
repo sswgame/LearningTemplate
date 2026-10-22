@@ -60,8 +60,11 @@ namespace sw::editor
         uint32 getVolumeIndex() const { return _nextVolumeIndex > 0 ? _nextVolumeIndex - 1 : 0; }
         /** @brief 지금 굽는 볼륨의 진행(0 ~ 1)입니다. */
         float32 getVolumeProgress() const;
-        /** @brief 이 세션에서 끝난(취소 포함) 굽기 횟수입니다(탐침 `Editor.LightProbeBakeCount`). */
-        uint32 getFinishedRunCount() const { return _finishedRunCount; }
+        /**
+         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 굽기 횟수입니다(탐침 `Editor.LightProbeBakeCount`). 다른 세대의 굽기는 세지 않는다.
+         * @details 세션은 에디터와 함께 살아 시나리오 체인(`-scenario=a,b`)을 넘어 남는다 — 앞 시나리오의 굽기가 뒤 시나리오의 수에 섞이지 않게 씬마다 센다.
+         */
+        uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return sceneGeneration == _finishedRunSceneGeneration ? _finishedRunCount : 0u; }
 
     private:
         /** @brief 다음 볼륨을 찾아 작업을 시작합니다. 볼륨이 사라졌거나 입력이 모자라면 오류를 남기고 false 입니다. 남은 볼륨이 없으면 끝냅니다. */
@@ -80,6 +83,7 @@ namespace sw::editor
         uint32                      _heldEditCount;   ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
         uint32                      _nextVolumeIndex;
         uint32                      _bakedCount;
+        uint64                      _finishedRunSceneGeneration; ///< `_finishedRunCount` 를 센 씬 세대
         uint32                      _finishedRunCount;
         bool                        _bRunning;
         bool                        _bJobActive;
