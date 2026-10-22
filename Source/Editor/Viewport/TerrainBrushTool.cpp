@@ -577,6 +577,14 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 크기 바꾸기 대상 지형의 높이장 해상도입니다(대상이 없으면 0). 시나리오가 `terrain.resize` 가 받아들여졌는지 읽는다. */
+            [[nodiscard]] static bool readResolution( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const TerrainComponent* pTerrain = findResizeTarget( getState() );
+                outValue                         = pTerrain != nullptr ? static_cast<float64>( pTerrain->getHeightfield().getResolution() ) : 0.0;
+                return true;
+            }
+
             /** @brief `terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]` — 시나리오가 브러시를 고정 값으로 맞춥니다. */
             static bool runBrush( const vector<string>& listArgument, string& outReply )
             {
@@ -720,6 +728,8 @@ namespace sw::editor
                          &TerrainBrushToolInternal::readHit );
     SW_AUTOMATION_PROBE( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
                          &TerrainBrushToolInternal::readToolActive );
+    SW_AUTOMATION_PROBE( editorTerrainResolution, "Editor.TerrainResolution", "Height samples per side of the terrain the resize control targets (0 when there is none)",
+                         &TerrainBrushToolInternal::readResolution );
     SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]",
                     "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolInternal::runBrush );
     SW_DEV_COMMAND( TerrainResize, "terrain.resize", "terrain.resize <resolution>", "Resample the last edited (or hovered) terrain to a new resolution, undoable",
