@@ -7568,9 +7568,9 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
 }
 
 /**
- * @brief [RenderPassGPUTest] 컷 표시는 TAA 기록을 버린다 — 큐브 색을 바꾼 컷 프레임의 TaaColor 에 지난 색이 섞이지 않는다(4 백엔드, 디퍼드)
- * @details TAA 는 이번 원본과 기록을 0.1 : 0.9 로 섞는다. 붉은 큐브를 몇 프레임 그린 뒤 푸르게 바꾸면 컷이 없을 때 TaaColor 는 여전히 붉은 쪽이고,
- *          주 카메라에 컷을 표시하면 그 프레임부터 푸르다.
+ * @brief [RenderPassGPUTest] 바뀐 색은 TAA 기록에 남지 않는다 — 큐브 색을 바꾼 프레임의 TaaColor 에 지난 색이 섞이지 않는다(컷이 있든 없든, 4 백엔드, 디퍼드)
+ * @details TAA 는 기록을 이번 원본의 3x3 이웃 범위로 잘라 0.9 로 섞는다(taa.hlsl). 붉은 큐브를 몇 프레임 그린 뒤 푸르게 바꾸면 큐브 안쪽의 이웃은 모두 푸르므로
+ *          컷이 없어도 붉은 기록이 잘린다. 주 카메라에 컷을 표시하면 C++ 가 기록 슬롯에 이번 원본을 걸어 기록 자체를 버린다.
  */
 SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
 {
@@ -7624,11 +7624,69 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
         if ( bOk == false )
             continue;
         SW_LOG_INFO( "%#TaaColor R-B without cut %#, with cut %#", label, arrDiff[0], arrDiff[1] );
-        SW_EXPECT_TRUE_MSG( arrDiff[0] > 0, ( label + "컷 없이도 지난 색이 남지 않았다 — 테스트가 TAA 기록을 재지 못한다 (R-B " + sw::to_string( arrDiff[0] ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( arrDiff[0] < -20, ( label + "컷 없이 바꾼 색에 지난 색이 섞였다 — 이웃 클램프가 기록을 자르지 않았다 (R-B " + sw::to_string( arrDiff[0] ) + ")" ).c_str() );
         SW_EXPECT_TRUE_MSG( arrDiff[1] < -20, ( label + "컷 프레임에 지난 색이 섞였다 (R-B " + sw::to_string( arrDiff[1] ) + ")" ).c_str() );
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the camera-cut TAA test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 움직인 큐브는 TAA 출력에 앞 자리의 그림을 남기지 않는다 — 그림이 바뀐 자리의 TaaColor 가 그 프레임의 원본(OutlineColor)과 같다(4 백엔드, 디퍼드)
+ * @details 기록을 재투영 · 이웃 클램프 없이 0.9 로 섞던 때는 옮긴 프레임에 앞 자리의 큐브가 90 % 남았다. 옮기기 전과 뒤의 원본이 다른 픽셀 가운데 이웃 3x3 이 고른 곳
+ *          (모서리가 아닌 곳 — 모서리는 이웃 범위에 두 색이 다 있어 기록이 남아도 된다)을 본다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && stage.populate();
+        for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
+        }
+        test::RHITestImage before;
+        bOk = bOk && before.readTransient( renderer, "OutlineColor" );
+        if ( bOk )
+            stage._pCube->setLocalPosition( sw::float3{ 1.5f, 1.0f, 0.0f } );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
+        test::RHITestImage resolved;
+        test::RHITestImage source;
+        bOk = bOk && resolved.readTransient( renderer, "TaaColor" ) && source.readTransient( renderer, "OutlineColor" );
+        renderer.shutdown();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 TAA 그리기 · 되읽기" ).c_str() );
+        if ( bOk == false )
+            continue;
+        uint32 changedCount = 0;
+        uint32 ghostCount   = 0;
+        for ( uint32 y = 1; y + 1 < source.getHeight(); ++y )
+        {
+            for ( uint32 x = 1; x + 1 < source.getWidth(); ++x )
+            {
+                const test::Rgba8 center   = source.getPixel( x, y );
+                const bool        bChanged = test::RHITestImage::getColorDistance( before.getPixel( x, y ), center ) >= 24;
+                bool              bFlat    = true;
+                for ( uint32 neighbor = 0; neighbor < 9 && bFlat; ++neighbor )
+                {
+                    bFlat = test::RHITestImage::getColorDistance( source.getPixel( x + neighbor % 3 - 1, y + neighbor / 3 - 1 ), center ) < 8;
+                }
+                if ( bChanged == false || bFlat == false )
+                    continue;
+                ++changedCount;
+                if ( test::RHITestImage::getColorDistance( resolved.getPixel( x, y ), center ) >= 24 )
+                    ++ghostCount;
+            }
+        }
+        SW_LOG_INFO( "%#TAA ghost pixels after the move: %# of %# changed flat pixels", label, ghostCount, changedCount );
+        SW_EXPECT_TRUE_MSG( changedCount > 100, ( label + "큐브를 옮겨도 원본이 바뀌지 않았다 — 테스트가 기록을 재지 못한다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( ghostCount * 100u <= changedCount, ( label + "옮긴 큐브의 앞 자리가 TAA 출력에 남았다(" + sw::to_string( ghostCount ) + " / " + sw::to_string( changedCount ) + ")" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the TAA ghosting test" );
 }
 
 /**

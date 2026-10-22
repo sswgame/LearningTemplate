@@ -10,10 +10,16 @@
 
 #include "colorvision.hlsli"
 
-/** @brief 톤맵 앞의 HDR 색에 카메라 노출 배율을 곱합니다. */
+/**
+ * @brief 톤맵 앞의 HDR 색에 카메라 노출 배율과 자동 노출을 곱합니다.
+ * @details 자동 노출은 이번 EV(autoexposure.hlsl 이 쓴 1x1)의 2^-EV 다. 재지 않는 뷰는 g_AutoExposureIndex 가 무효라 EV 0(배율 1)이다 —
+ *          swSampleIndexWith 가 무효 번호에 0 을 돌려준다. 고정 노출(카메라 범위가 한 점)은 C++ 가 g_CameraGrade.x 에 이미 곱했다.
+ *          점 샘플로 읽는다 — R32 실수의 선형 필터는 Vulkan 에서 선택 기능이다(텍셀 하나라 값은 같다).
+ */
 float3 swApplyCameraExposure( float3 hdrColor )
 {
-	return hdrColor * g_CameraGrade.x;
+	const float autoExposureEv = swSampleIndexWith( g_AutoExposureIndex, SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
+	return hdrColor * ( g_CameraGrade.x * exp2( -autoExposureEv ) );
 }
 
 /** @brief 톤맵 뒤의 [0,1] 색에 채도 · 대비 · 비네트 · 색각 보정 · 레터박스를 적용합니다. */

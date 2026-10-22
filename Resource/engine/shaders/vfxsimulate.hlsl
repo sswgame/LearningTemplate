@@ -166,37 +166,39 @@ float lerpFloat( float from, float to, float ratio )
 
 // ------------------------------------------------------------------------------
 // 수명 커브 — C++ FloatCurve::evaluate 와 같은 식(양 끝은 끝 키 값, 구간은 상수 · 직선 · 에르미트).
+// 이른 반환 없이 끝에서 한 번에 고른다 — 이른 반환 판은 DXC -O3 SPIR-V(spirv-opt --simplify-instructions 를 거친 것)에서 Vulkan · GL 이
+// 첫 키 값을 냈다(DXIL · -Od SPIR-V 는 맞음, Vfx.md V5). RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage 가 지킨다.
 // ------------------------------------------------------------------------------
 float evaluateCurve( uint firstRow, uint keyCount, float time )
 {
 	const float4 firstKey = asfloat( loadParamRow( firstRow ) );
-	if ( keyCount == 1u || time <= firstKey.x )
-		return firstKey.y;
-	const float4 lastKey = asfloat( loadParamRow( firstRow + ( keyCount - 1u ) * SW_VFX_PARAM_ROWS_PER_KEY ) );
-	if ( time >= lastKey.x )
-		return lastKey.y;
+	const float4 lastKey  = asfloat( loadParamRow( firstRow + ( keyCount - 1u ) * SW_VFX_PARAM_ROWS_PER_KEY ) );
 	// time 보다 늦은 첫 키 — 그 앞 키와 구간을 이룬다(키는 시각 순이라 C++ 의 이분 탐색과 같은 구간이다).
 	uint toIndex = 1u;
 	while ( toIndex + 1u < keyCount && asfloat( loadParamRow( firstRow + toIndex * SW_VFX_PARAM_ROWS_PER_KEY ).x ) <= time )
 	{
 		++toIndex;
 	}
-	const float4 fromKey  = asfloat( loadParamRow( firstRow + ( toIndex - 1u ) * SW_VFX_PARAM_ROWS_PER_KEY ) );
-	const uint4  fromMode = loadParamRow( firstRow + ( toIndex - 1u ) * SW_VFX_PARAM_ROWS_PER_KEY + 1u );
+	toIndex               = min( toIndex, keyCount - 1u );
+	const uint   fromRow  = firstRow + ( max( toIndex, 1u ) - 1u ) * SW_VFX_PARAM_ROWS_PER_KEY;
+	const float4 fromKey  = asfloat( loadParamRow( fromRow ) );
+	const uint4  fromMode = loadParamRow( fromRow + 1u );
 	const float4 toKey    = asfloat( loadParamRow( firstRow + toIndex * SW_VFX_PARAM_ROWS_PER_KEY ) );
 	const float  span     = toKey.x - fromKey.x;
-	if ( fromMode.x != 0u || span <= 0.0f )
-		return fromKey.y;
-	const float ratio = saturate( ( time - fromKey.x ) / span );
-	if ( fromMode.y != 0u )
-		return fromKey.y + ( toKey.y - fromKey.y ) * ratio;
-	const float ratio2 = ratio * ratio;
-	const float ratio3 = ratio2 * ratio;
-	const float h00    = 2.0f * ratio3 - 3.0f * ratio2 + 1.0f;
-	const float h10    = ratio3 - 2.0f * ratio2 + ratio;
-	const float h01    = -2.0f * ratio3 + 3.0f * ratio2;
-	const float h11    = ratio3 - ratio2;
-	return h00 * fromKey.y + h10 * span * fromKey.w + h01 * toKey.y + h11 * span * toKey.z;
+	const float  ratio    = span > 0.0f ? saturate( ( time - fromKey.x ) / span ) : 0.0f;
+	const float  ratio2   = ratio * ratio;
+	const float  ratio3   = ratio2 * ratio;
+	const float  h00      = 2.0f * ratio3 - 3.0f * ratio2 + 1.0f;
+	const float  h10      = ratio3 - 2.0f * ratio2 + ratio;
+	const float  h01      = -2.0f * ratio3 + 3.0f * ratio2;
+	const float  h11      = ratio3 - ratio2;
+	const float  hermite  = h00 * fromKey.y + h10 * span * fromKey.w + h01 * toKey.y + h11 * span * toKey.z;
+	const float  lerped   = fromKey.y + ( toKey.y - fromKey.y ) * ratio;
+	float        value    = fromMode.y != 0u ? lerped : hermite;
+	value                 = ( fromMode.x != 0u || span <= 0.0f ) ? fromKey.y : value;
+	value                 = time >= lastKey.x ? lastKey.y : value;
+	value                 = ( keyCount == 1u || time <= firstKey.x ) ? firstKey.y : value;
+	return value;
 }
 
 /** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서). */

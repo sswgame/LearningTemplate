@@ -25,7 +25,7 @@ namespace sw
                 float64 _x{ 0.0 };
                 float64 _y{ 0.0 };
             };
-            static Vec     makeVec( const float2& point ) { return Vec{ point._x, point._y }; }
+            static Vec     makeVec( const float2& point ) { return Vec{ static_cast<float64>( point._x ), static_cast<float64>( point._y ) }; }
             static Vec     add( Vec a, Vec b ) { return Vec{ a._x + b._x, a._y + b._y }; }
             static Vec     sub( Vec a, Vec b ) { return Vec{ a._x - b._x, a._y - b._y }; }
             static Vec     scale( Vec a, float64 s ) { return Vec{ a._x * s, a._y * s }; }
@@ -305,7 +305,7 @@ namespace sw
             }
 
             /** @brief 간선의 매개변수 구간 [t0, t1] 만 떼어 낸 간선입니다(블로섬 식). */
-            static MsdfEdge subdivide( const MsdfEdge& edge, float32 t0, float32 t1 )
+            static MsdfEdge subdivide( const MsdfEdge& edge, float64 t0, float64 t1 )
             {
                 MsdfEdge part{};
                 part._kind     = edge._kind;
@@ -344,9 +344,9 @@ namespace sw
 
             static void splitInThirds( const MsdfEdge& edge, MsdfEdge& outFirst, MsdfEdge& outSecond, MsdfEdge& outThird )
             {
-                outFirst  = subdivide( edge, 0.0f, 1.0f / 3.0f );
-                outSecond = subdivide( edge, 1.0f / 3.0f, 2.0f / 3.0f );
-                outThird  = subdivide( edge, 2.0f / 3.0f, 1.0f );
+                outFirst  = subdivide( edge, 0.0, 1.0 / 3.0 );
+                outSecond = subdivide( edge, 1.0 / 3.0, 2.0 / 3.0 );
+                outThird  = subdivide( edge, 2.0 / 3.0, 1.0 );
             }
 
             /** @brief 이웃 간선의 방향 @p a(앞 간선 끝) · @p b(뒤 간선 시작)가 모서리를 이루는지 봅니다. */

@@ -14,6 +14,7 @@ static const uint kCanvasQuadImage       = 1u;
 static const uint kCanvasQuadGlyph       = 2u;
 static const uint kCanvasQuadShadow      = 3u;
 static const uint kCanvasFlagRoundedClip = 1u;
+static const uint kCanvasFlagMultiChannelGlyph = 2u; // 글리프 아틀라스 페이지가 MSDF(RGBA) — RGB 의 중앙값이 거리값(C++ CanvasQuadFlag::kMultiChannelGlyph)
 
 struct CanvasQuad
 {
@@ -131,7 +132,11 @@ float4 PSMain( PSInput input ) : SV_TARGET
 	else if ( quad.kind == kCanvasQuadGlyph )
 	{
 		// 아틀라스 값 0..1 → 윤곽까지의 화면 픽셀 거리(안쪽 +). params.x = 2 × spread × (화면 px / 래스터 px).
-		const float sdfValue = swSampleMaterialTexture( selectTexture( quad.textureSlot ), input.uv ).r;
+		const float4 atlasSample = swSampleMaterialTexture( selectTexture( quad.textureSlot ), input.uv );
+		// MSDF 는 세 채널의 중앙값이 안팎을 정한다 — 쌍선형 보간해도 모서리가 둥글어지지 않는다. SDF 는 R 채널 하나다.
+		const float sdfValue = ( ( quad.flags & kCanvasFlagMultiChannelGlyph ) != 0u )
+		                           ? max( min( atlasSample.r, atlasSample.g ), min( max( atlasSample.r, atlasSample.g ), atlasSample.b ) )
+		                           : atlasSample.r;
 		const float distance = ( sdfValue - 0.5f ) * quad.params.x + quad.params.z;
 		const float fill     = saturate( distance + 0.5f );
 		const float outline  = ( quad.params.y > 0.0f ) ? saturate( distance + quad.params.y + 0.5f ) : fill;

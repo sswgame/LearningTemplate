@@ -125,6 +125,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_AmbientOcclusionIndex; // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
 	uint     g_BloomBrightIndex;      // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
 	uint     g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
+	uint     g_AutoExposureIndex;     // 자동 노출의 이번 EV(1x1 R32, autoexposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(postgrade.hlsli)
 	uint     g_Flags;
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
@@ -776,12 +777,12 @@ float4 swSampleIndex( uint index, float2 uv )
 {
 	if ( index == kInvalidIndex )
 		return float4( 0, 0, 0, 1 );
-	// FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
+	// FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright/autoExposure, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
 	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
 		return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
+	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
 		return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
 	if ( index == g_SceneDepthIndex )
 		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
@@ -810,7 +811,7 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 		return swSampleSlotWith( g_SwSlot0, samplerId, uv );
 	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return swSampleSlotWith( g_SwSlot1, samplerId, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
+	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
 		return swSampleSlotWith( g_SwSlot2, samplerId, uv );
 	if ( index == g_SceneDepthIndex )
 		return swSampleSlotWith( g_SwSlot3, samplerId, uv );
@@ -842,7 +843,7 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 		return swSampleSlotPoint( g_SwSlot0, uv );
 	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
 		return swSampleSlotPoint( g_SwSlot1, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
+	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
 		return swSampleSlotPoint( g_SwSlot2, uv );
 	if ( index == g_SceneDepthIndex )
 		return swSampleSlotPoint( g_SwSlot3, uv );

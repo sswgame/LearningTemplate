@@ -16,8 +16,12 @@
  *
  * 개수는 디스패치 전에 0 이어야 한다 — GPUScene 이 컬링이 켜져 있을 때 0 을 올린다.
  *
- * 바인딩 계약(bindingslots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 간접 인자 쓰기 u0,
+ * 바인딩 계약(bindingslots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1.
+ *
+ * 가림 판정(g_OcclusionGrid.w = 1, C++ FrameRenderer::fillOcclusionParams): 절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 지난 프레임 장면 깊이를 그린
+ * 뷰-투영(g_OcclusionViewProj)으로 옮겨 화면 사각형과 가장 가까운 깊이를 구하고, 사각형이 덮는 가림 타일(occlusiontiles.hlsl — 타일마다 최대 깊이)보다 모두
+ * 멀면 그리지 않는다. 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면, 타일 kMaxOcclusionTestTiles 줄을 넘게 덮으면(큰 물체) 판정하지 않는다(보인다).
  */
 
 // 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
@@ -42,16 +46,25 @@ struct RHIDrawIndirectCommand
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
-	float4 g_FrustumPlanes[6];
-	uint   g_InstanceCount;
-	uint   g_BatchCount;
-	uint2  g_Pad;
+	float4   g_FrustumPlanes[6];
+	uint     g_InstanceCount;
+	uint     g_BatchCount;
+	uint2    g_Pad;
+	float4x4 g_OcclusionViewProj;   // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — swComputeClipPosition 과 같다)
+	uint4    g_OcclusionGrid;       // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
+	float4   g_OcclusionDepthSize;  // xy 깊이 히스토리 크기(px)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
+
+/// 가림 판정이 읽는 타일의 한 축 상한 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(스레드 하나가 최대 8 x 8 = 64 번 읽는다).
+static const uint kMaxOcclusionTestTiles = 8u;
+/// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
+static const float kMinOcclusionClipW = 1.0e-4f;
 
 bool isVisible(float3 center, float radius)
 {
@@ -63,6 +76,47 @@ bool isVisible(float3 center, float radius)
 			return false;
 	}
 	return true;
+}
+
+bool isOccluded( float3 center, float radius )
+{
+	if ( g_OcclusionGrid.w == 0u )
+		return false;
+	float2 minUv    = float2( 1.0f, 1.0f );
+	float2 maxUv    = float2( 0.0f, 0.0f );
+	float  minDepth = 1.0f;
+	[unroll]
+	for ( uint corner = 0u; corner < 8u; ++corner )
+	{
+		const float3 offset = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
+		const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );
+		if ( clip.w <= kMinOcclusionClipW )
+			return false;
+		const float3 ndc = clip.xyz / clip.w;
+		const float2 uv  = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
+		minUv            = min( minUv, uv );
+		maxUv            = max( maxUv, uv );
+		minDepth         = min( minDepth, ndc.z );
+	}
+	// 가까운 평면을 걸치거나 지난 화면 밖이면 지난 깊이가 그 자리를 모른다.
+	const bool bOutsideHistory = minDepth <= 0.0f || maxUv.x <= 0.0f || maxUv.y <= 0.0f || minUv.x >= 1.0f || minUv.y >= 1.0f;
+	if ( bOutsideHistory )
+		return false;
+	const float2 depthSize = g_OcclusionDepthSize.xy;
+	const uint2  lastTile  = g_OcclusionGrid.xy - 1u;
+	const uint2  firstTile = min( uint2( saturate( minUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
+	const uint2  endTile   = min( uint2( saturate( maxUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
+	if ( endTile.x - firstTile.x >= kMaxOcclusionTestTiles || endTile.y - firstTile.y >= kMaxOcclusionTestTiles )
+		return false;
+	float maxTileDepth = 0.0f;
+	for ( uint tileY = firstTile.y; tileY <= endTile.y; ++tileY )
+	{
+		for ( uint tileX = firstTile.x; tileX <= endTile.x; ++tileX )
+		{
+			maxTileDepth = max( maxTileDepth, g_OcclusionTiles[tileY * g_OcclusionGrid.x + tileX] );
+		}
+	}
+	return minDepth > maxTileDepth;
 }
 
 [numthreads(64, 1, 1)]
@@ -90,6 +144,10 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 		g_VisibleInstanceIDs[instanceId] = instanceId;
 		return;
 	}
+
+	// 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
+	if (isOccluded(instance.boundsCenter, instance.boundsRadius))
+		return;
 
 	// 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
 	// 오프셋을 더해야 전역 자리가 된다.
