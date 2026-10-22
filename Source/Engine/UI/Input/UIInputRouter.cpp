@@ -84,6 +84,7 @@ namespace sw
     UIInputRouter::UIInputRouter()
         : _focus{}
         , _pointer{}
+        , _listFramePointerEvent{}
         , _consumption{}
         , _uiInputMap{}
         , _pInput{ nullptr }
@@ -141,6 +142,7 @@ namespace sw
     void UIInputRouter::update( float32 deltaSeconds )
     {
         _inputDeltaSeconds = deltaSeconds;
+        _listFramePointerEvent.clear();
         _consumption.update( *_pInput );
         if ( _uiInputMap != nullptr )
             _uiInputMap->update( deltaSeconds );
@@ -287,6 +289,10 @@ namespace sw
         }
         if ( pTarget == nullptr )
             pTarget = findPointerScreen( listScreen, event._position );
+        UIRoutedPointerEvent routed{};
+        routed._event             = event;
+        routed._bOverScreenWidget = pTarget != nullptr ? SW_TRUE : SW_FALSE;
+        _listFramePointerEvent.push_back( routed );
         if ( pTarget == nullptr )
         {
             _pointer.clearHover();

@@ -11,7 +11,7 @@
 | T1 | 위젯이 선언한다 — `Widget::_tooltip`(글) · `_cursorShape`(`UICursorShape`, `Inherit` 는 부모를 따름, 루트까지 `Inherit` 면 화살표) PROPERTY | 끝남(빌드 미확인) |
 | T2 | `UITooltipService`(`UISystem::getTooltips`) — 호버 경로에서 주인 · 모양을 고르고(`findTooltipOwner` · `resolveCursorShape`), `gv_uiTooltipDelay` 초 머물면 오버레이 문서(`EngineDefaultAssets::_uiTooltip` → `engine/ui/tooltip.ui.xml`, 위젯 `Body` · `Text`)를 포인터 옆에 띄운다. 테스트 `UITooltipTest.HoverPathPicksTheNearestCursorAndTooltip` | 끝남(빌드 미확인) |
 | T3 | OS 커서 — `CursorShape`(`Engine/Input/CursorShape.h`) · `InputManager::setCursorShape`, Win32 창 클래스 커서 + `SetCursor`, X11 글꼴 커서(`XDefineCursor`), 헤드리스 빈 구현. 숨긴 동안은 적용을 미루고 다시 보일 때 적용 | 끝남(빌드 미확인) |
-| T4 | 빌드 · 실기 확인(툴팁 위치 · 깜빡임, 에디터 게임 뷰에서 ImGui 커서와의 겹침), 월드 위젯 호버는 [WorldWidgetInput](Candidates-ui.md#worldwidgetinput) 뒤 | 남음 |
+| T4 | 빌드 · 실기 확인(툴팁 위치 · 깜빡임, 에디터 게임 뷰에서 ImGui 커서와의 겹침), 월드 위젯 호버는 [WorldWidgetInput](WorldWidgetInput.md) 에 들어갔다(입력을 켠 World 위젯의 호버 · 커서는 그 위젯의 `UIPointerState` 가 갖는다 — 툴팁 서비스는 화면 트리의 호버만 본다) | 남음 |
 
 ## 남은 것
 

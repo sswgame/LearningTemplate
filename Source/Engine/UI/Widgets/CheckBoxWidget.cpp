@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
@@ -99,5 +100,16 @@ namespace sw
         mark._cornerRadius = float4{ 2.0f, 2.0f, 2.0f, 2.0f };
         painter.fillRect( float2{ boxPosition._x + kMarkInset, boxPosition._y + kMarkInset }, float2{ kBoxSize - 2.0f * kMarkInset, kBoxSize - 2.0f * kMarkInset },
                           mark );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void CheckBoxWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        ButtonWidget::describeAccessible( outInfo );
+        outInfo._role = AccessibleRole::CheckBox;
+        if ( _bChecked )
+            outInfo._states |= AccessibleState::kChecked;
     }
 } // namespace sw

@@ -53,6 +53,8 @@ namespace sw
         /** @brief 텍스트를 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). 선택은 풀고 커서는 끝으로 갑니다. */
         void          setText( string_view text );
         const string& getText() const { return _text; }
+        /** @brief 입력 칸으로 내보입니다. 값은 지금 글입니다. 이름은 `accessibleName` 만 쓴다. */
+        void describeAccessible( AccessibleInfo& outInfo ) override;
         /** @brief 조합 중인 텍스트(IME, 확정 전)입니다. */
         const string& getComposition() const { return _composition; }
         /** @brief 비어 있을 때 흐리게 보일 텍스트입니다. */

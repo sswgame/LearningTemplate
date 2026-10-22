@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
@@ -162,5 +163,14 @@ namespace sw
             const float32 top = static_cast<float32>( itemIndex ) * _rowHeight - _scrollOffset;
             arrangeChild( context, row, float2{ 0.0f, top }, float2{ size._x, _rowHeight } );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void ListViewWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role = AccessibleRole::List;
+        outInfo._name = getAccessibleName();
     }
 } // namespace sw

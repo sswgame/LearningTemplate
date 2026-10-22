@@ -35,6 +35,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 이번 프레임에 `processPointer` 가 보낸 포인터 이벤트 하나와, 그 점 아래에 화면 위젯이 있었는지 나타냅니다. World 위젯 입력이 화면 위젯 아래가 아닌 이벤트만 가져간다. */
+    struct UIRoutedPointerEvent
+    {
+        UIPointerEvent _event{};
+        uint8          _bOverScreenWidget{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class UIInputRouter
      * @brief 입력 라우팅 규칙입니다(CommonUI 의 `UCommonUIActionRouter` 에 해당). 화면 스택은 갖지 않고, 부르는 쪽(`UISystem`)이 활성 화면과 화면 목록을 넘깁니다.
@@ -95,6 +105,8 @@ namespace sw
         UIFocusManager&       getFocusManager() { return _focus; }
         const UIFocusManager& getFocusManager() const { return _focus; }
         const UIPointerState& getPointerState() const { return _pointer; }
+        /** @brief 이번 프레임(`update` 뒤)에 `processPointer` 가 보낸 포인터 이벤트입니다. 다음 `update` 가 비웁니다. */
+        const vector<UIRoutedPointerEvent>& getFramePointerEvents() const { return _listFramePointerEvent; }
         /** @brief 마지막으로 처리한 포인터 위치입니다(UI 단위, 뷰포트 원점 기준). 툴팁이 이 옆에 뜬다. */
         const float2&             getLastPointerPosition() const { return _lastPointerPosition; }
         UIInputConsumption&       getConsumption() { return _consumption; }
@@ -127,19 +139,20 @@ namespace sw
         static UIScreen* findPointerScreen( const vector<unique_ptr<UIScreen>>& listScreen, const float2& point );
 
     private:
-        UIFocusManager        _focus;
-        UIPointerState        _pointer;
-        UIInputConsumption    _consumption;
-        unique_ptr<InputMap>  _uiInputMap; ///< UI 액션 맵입니다(레이어 `UI` 는 활성 화면이 있을 때만 켭니다).
-        InputManager*         _pInput;
-        float2                _lastPointerPosition;
-        int2                  _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 위치입니다(창 픽셀).
-        float32               _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간입니다.
-        float32               _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간입니다(액션 이벤트에 싣습니다).
-        UINavigationDirection _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
-        UIInputMode           _inputMode;
-        uint8                 _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
-        uint8                 _bStickHeld       : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
-        uint8                 _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
+        UIFocusManager               _focus;
+        UIPointerState               _pointer;
+        vector<UIRoutedPointerEvent> _listFramePointerEvent; ///< 이번 프레임에 보낸 포인터 이벤트입니다(`getFramePointerEvents`).
+        UIInputConsumption           _consumption;
+        unique_ptr<InputMap>         _uiInputMap; ///< UI 액션 맵입니다(레이어 `UI` 는 활성 화면이 있을 때만 켭니다).
+        InputManager*                _pInput;
+        float2                       _lastPointerPosition;
+        int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 위치입니다(창 픽셀).
+        float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간입니다.
+        float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간입니다(액션 이벤트에 싣습니다).
+        UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
+        UIInputMode                  _inputMode;
+        uint8                        _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
+        uint8                        _bStickHeld       : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
+        uint8                        _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
     };
 } // namespace sw

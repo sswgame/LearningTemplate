@@ -68,7 +68,7 @@ kSelectable: tuple[str, ...] = kAcronym + tuple(dict.fromkeys(product.acronym fo
 
 #: 서드파티 API 의 이름 앞머리 — 이 모양으로 시작하는 식별자는 남의 이름이다(Vulkan · GL · D3D · DXGI · ImGui · SDL · FreeType · …).
 kExternalPrefixRe = re.compile(
-    r"^(?:Vk|vk|VK_|PFN_|gl[A-Z]|GL[A-Z_]|D3D|ID3D|DXGI|IDXGI|Im[A-Z]|SDL|FT_|hb_|JPH|b2[A-Z]|ma_|stbi|XR_|Xr[A-Z]|xr[A-Z]|"
+    r"^(?:Vk|vk|VK_|PFN_|gl[A-Z]|GL[A-Z_]|D3D|ID3D|DXGI|IDXGI|Im[A-Z]|SDL|FT_|hb_|UIA_|JPH|b2[A-Z]|ma_|stbi|XR_|Xr[A-Z]|xr[A-Z]|"
     r"b2_|cgltf|ozz|rtm|WSA|SSL_|EVP_|BIO_|PQ|redis|sqlite3|curl|CURL)")
 
 #: 이 이름공간 뒤(`ns::`)의 식별자는 남의 이름이다.

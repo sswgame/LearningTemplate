@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Text/TextLayout.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Input/UIClipboardService.h"
@@ -563,5 +564,16 @@ namespace sw
         CanvasBrush  caret{};
         caret._color = Internal::makeCaretColor();
         painter.fillRect( float2{ computeEdgeX( caretDisplayByte ), top }, float2{ Internal::kCaretWidth, display._size._y }, caret );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void TextInputWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role  = AccessibleRole::TextInput;
+        outInfo._bLeaf = true;
+        outInfo._name  = getAccessibleName();
+        outInfo._value = _text;
     }
 } // namespace sw

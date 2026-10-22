@@ -16,6 +16,8 @@
 
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
@@ -35,6 +37,7 @@
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
+#include "Engine/UI/World/UIWorldPointerRouter.h"
 
 namespace sw
 {
@@ -212,6 +215,23 @@ namespace sw
          */
         [[nodiscard]] bool   setTheme( const hashed_string& name );
         const hashed_string& getThemeName() const { return _theme.getThemeName(); }
+        // --- 접근성(스크린 리더) -----------------------------------------------------------
+        /**
+         * @brief 플랫폼 접근성 브리지를 끼웁니다(호스트가 창을 만든 뒤. nullptr 로 빼며, 빼기 전에 브리지는 창에서 자기 훅을 풀어야 한다). 브리지는 이 시스템이 소유합니다.
+         * @details 스크린 리더가 붙어 있을 때만 일합니다. 붙지 않았으면 포커스 알림 · 접근성 트리 뽑기 · 알림 전달 모두 아무것도 하지 않는다.
+         */
+        void                    setAccessibilityBridge( unique_ptr<IUIAccessibilityBridge> bridge );
+        IUIAccessibilityBridge* findAccessibilityBridge() const { return _accessibilityBridge.get(); }
+        /**
+         * @brief 스크린 리더에 글 @p text 를 읽어 달라고 알립니다(저장했습니다, 경고 같은 화면에 잠깐 뜨는 알림). 스크린 리더가 붙어 있지 않으면 아무것도 하지 않습니다.
+         * @details 알림 서비스(`UINotificationService`)가 보이는 알림마다 부른다. 게임이 화면에 띄우지 않는 소식을 읽히고 싶으면 직접 부른다.
+         */
+        void announce( string_view text, UIAnnouncePriority priority );
+        /**
+         * @brief 지금 화면의 접근성 트리를 @p outSnapshot 에 새로 뽑습니다. 읽는 순서는 입력을 받는 화면의 위에서 아래(입력을 막는 화면 아래는 뺀다), 그다음 오버레이입니다.
+         * @details 화면마다 위젯 트리 순서입니다(`UIAccessibilityTree::appendTree`). 닫는 중인 화면은 뺀다.
+         */
+        void populateAccessibilitySnapshot( UIAccessibilitySnapshot& outSnapshot ) const;
         // --- 화면 마커(WidgetComponent Screen) -------------------------------------------
         /**
          * @brief 마커 화면(HUD 레이어, 캔버스 패널 루트, 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 반환합니다. 마커 화면은 처음 붙일 때 만들고, 마지막 위젯을 뗄 때 닫습니다.
@@ -231,6 +251,12 @@ namespace sw
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
         uint32 getWidgetComponentCount() const { return static_cast<uint32>( _listWidgetComponent.size() ); }
+        /**
+         * @brief 광선 @p ray 가 맞힌 가장 가까운 World 위젯(입력을 켠 `WidgetComponent`)에 포인터 이벤트 @p event 를 보냅니다(위치 · 변화량은 위젯 좌표로 채워진다).
+         * @details 마우스는 `processInput` 이 스스로 한다. 마우스를 잠근 1인칭의 크로스헤어나 패드 같은 다른 출처는 게임 코드가 자기 광선과 `Down` · `Up` · `Move` · `Wheel` 로 부른다.
+         * @return 위젯이 처리했으면 true 입니다.
+         */
+        bool routeWorldPointer( const WorldWidgetRay& ray, const UIPointerEvent& event );
         /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. `Engine` 가 렌더 패킷 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
@@ -374,6 +400,12 @@ namespace sw
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
+        /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */
+        void appendScreenAccessibility( const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot ) const;
+        /** @brief 스크린 리더가 붙어 있으면 포커스가 옮겨 갔는지 보고 브리지에 알립니다(`update`). */
+        void updateAccessibilityFocus();
+        /** @brief 이번 프레임의 마우스 이벤트 중 화면 위젯 아래가 아닌 것을 게임 카메라 광선으로 바꿔 World 위젯으로 보냅니다(`processInput`). */
+        void processWorldPointer();
         /** @brief 화면 마커 앵커(UI 단위)를 이번 프레임 배율의 물리 픽셀 정수로 바꿔 `getCanvasAnchors` 표로 냅니다. */
         void publishCanvasAnchors();
         /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값이거나 테마 목록이 없으면 그대로 둡니다). */
@@ -397,22 +429,24 @@ namespace sw
             UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
-        vector<unique_ptr<UIScreen>> _listScreen; ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
-        UIOffscreenScreens           _offscreen;  ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
-        UIDocumentCache              _documentCache;
-        UIStyleSheetCache            _styleSheetCache;
-        UIThemeController            _theme;
-        vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
-        UIBindingConverterRegistry   _bindingConverters;
-        UIClipboardService           _clipboard;      ///< 글 입력 위젯의 복사 · 붙여넣기 창구입니다.
-        UIGlobalCommandRegistry      _globalCommands; ///< 화면이 처리하지 않은 명령을 받는 전역 표입니다.
-        UINotificationService        _notifications;
-        UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
-        UIInputRouter                _input;        ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        FontService*                 _pFontService;
-        const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
-        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
-        unique_ptr<TextLayoutEngine> _textLayout;
+        vector<unique_ptr<UIScreen>>       _listScreen; ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
+        UIOffscreenScreens                 _offscreen;  ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
+        UIDocumentCache                    _documentCache;
+        UIStyleSheetCache                  _styleSheetCache;
+        UIThemeController                  _theme;
+        vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
+        UIBindingConverterRegistry         _bindingConverters;
+        UIClipboardService                 _clipboard;      ///< 글 입력 위젯의 복사 · 붙여넣기 창구입니다.
+        UIGlobalCommandRegistry            _globalCommands; ///< 화면이 처리하지 않은 명령을 받는 전역 표입니다.
+        UINotificationService              _notifications;
+        UIActionGlyphSource                _actionGlyphs;        ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
+        UIInputRouter                      _input;               ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
+        UIWorldPointerRouter               _worldPointer;        ///< World 위젯의 광선 입력 상태입니다.
+        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge; ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
+        FontService*                       _pFontService;
+        const LocalizationManager*         _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
+        UserSettingsManager*               _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
+        unique_ptr<TextLayoutEngine>       _textLayout;
 #if SW_DEV_COMMANDS_ENABLED
         unique_ptr<DebugHUD> _debugHUD; ///< 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용).
 #endif
@@ -427,16 +461,18 @@ namespace sw
         vector<const WidgetTree*> _listPaintedTree;     ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
         uint8                     _bLastCanvasReusable; ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
         UIScreenHandle            _activeScreen;
-        UIScreenHandle            _markerScreen;         ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
-        vector<CanvasAnchor>      _listMarkerAnchor;     ///< 화면 마커의 앵커입니다(번호 = 마커 위젯의 그리기 앵커, UI 단위).
-        vector<CanvasAnchor>      _listCanvasAnchor;     ///< 그리기 단계가 낸 앵커입니다(물리 픽셀 정수, `getCanvasAnchors`).
-        vector<uint32>            _listFreeMarkerAnchor; ///< 뗀 마커가 돌려준 앵커 번호입니다(다음 마커가 다시 쓴다).
-        vector<WidgetComponent*>  _listWidgetComponent;  ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
-        vector<UIScreenHandle>    _listTickScratch;      ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
-        vector<SwitchScreen>      _listSwitchScreen;     ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
-        UIEngineDocuments         _engineDocuments;      ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
-        string                    _optionsMenuDocument;  ///< 옵션 메뉴 문서입니다.
-        string                    _pauseMenuDocument;    ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
+        UIScreenHandle            _markerScreen;          ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
+        UIScreenHandle            _accessibleFocusScreen; ///< 브리지에 마지막으로 알린 포커스 위젯의 화면입니다.
+        WidgetID                  _accessibleFocusWidget; ///< 브리지에 마지막으로 알린 포커스 위젯입니다(없으면 `kInvalidWidgetID`).
+        vector<CanvasAnchor>      _listMarkerAnchor;      ///< 화면 마커의 앵커입니다(번호 = 마커 위젯의 그리기 앵커, UI 단위).
+        vector<CanvasAnchor>      _listCanvasAnchor;      ///< 그리기 단계가 낸 앵커입니다(물리 픽셀 정수, `getCanvasAnchors`).
+        vector<uint32>            _listFreeMarkerAnchor;  ///< 뗀 마커가 돌려준 앵커 번호입니다(다음 마커가 다시 쓴다).
+        vector<WidgetComponent*>  _listWidgetComponent;   ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
+        vector<UIScreenHandle>    _listTickScratch;       ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        vector<SwitchScreen>      _listSwitchScreen;      ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
+        UIEngineDocuments         _engineDocuments;       ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
+        string                    _optionsMenuDocument;   ///< 옵션 메뉴 문서입니다.
+        string                    _pauseMenuDocument;     ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
         UIScreenHandle            _nextScreenHandle;
         uint32                    _nextPushOrder;
         uint32                    _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.

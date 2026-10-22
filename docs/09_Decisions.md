@@ -782,7 +782,10 @@
 ### 5-7. 런타임 UI 와 글자
 
 - **저장소에는 CC0 라틴 글꼴만 둡니다**(2026-10-06, 사용자 결정). 한글과 CJK 는 OS 시스템 글꼴로 대체하고, 시스템 글꼴을 쓰는 테스트는 글리프가 있는지만 확인합니다.
-- **글리프는 단일 채널 SDF(FreeType 내장)로 그립니다**(2026-10-06). 유니티 TextMeshPro, 언리얼 SDF 글꼴과 같습니다. MSDF 는 [후보 문서](plans/Candidates-ui.md) `G-10` 입니다. FreeType 은 `vcpkg.json` 의 엔진 직접 의존입니다.
+- **글리프는 단일 채널 SDF(FreeType 내장)로 그립니다**(2026-10-06). 유니티 TextMeshPro, 언리얼 SDF 글꼴과 같습니다. MSDF 는 카탈로그 `_glyphField` 로 켜는 선택이고 기본은 SDF 입니다([MsdfGlyphs](plans/MsdfGlyphs.md), 2026-10-22). FreeType 은 `vcpkg.json` 의 엔진 직접 의존입니다.
+- **MSDF 는 직접 구현이고 카탈로그의 한 칸(`_glyphField`)이 고릅니다**(2026-10-22, [MsdfGlyphs](plans/MsdfGlyphs.md)). 윤곽을 선분 · 베지어 간선으로 받아 모서리에서 채널을 갈라 칠하고(msdfgen 의 단순 칠하기), 채널별 가장 가까운 간선의 의사 거리를 RGB 에 담는다.
+  알파에는 일반 SDF 를 같이 둔다(MTSDF, RGBA8 한 장). 아틀라스 페이지 형식이 모두 같아야 하므로 서비스 하나에 한 종류이고 기본은 SDF 다. 글리프당 CPU 비용이 SDF(FreeType, 약 2.3 ms)보다 크고 페이지 메모리가 네 배라 큰 글자의 모서리가 문제일 때만 켠다.
+  겹치는 윤곽은 합치지 않는다(가변 폰트 글리프에서 거짓 선 가능). 셰이더는 글리프 사각형의 플래그(`kMultiChannelGlyph`)를 보고 RGB 중앙값을 쓴다.
 - **백엔드 선택과 소유 객체의 서브시스템 판정**(2026-10-15, C-27 ⑤ 마감 — 코드를 다시 읽고 확정, 코드 변경 없음). 상용 엔진 비교는 모두 "~로 알고 있다" 로 기억에 의존한다.
   - **오디오는 이미 역할별 팩토리가 서브시스템 하나를 고른다.** `IAudioService::create()` 가 `SW_PLATFORM_WINDOWS` 와 `SW_WITH_CLIENT_CODE` 이면 `XAudio2AudioBackend`, 아니면 `NullAudioBackend` 를 돌려주고,
     `Engine` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
@@ -803,6 +806,13 @@
 - **엔진이 기본 옵션 메뉴와 일시정지 메뉴 문서를 두고, 게임 프리셋이 덮어씁니다**(2026-10-06). 언리얼 CommonUI 와 Lyra 의 방식입니다. 메뉴는 UI 입력 맵의 `UI.Pause` 로 열리고, UI 행동 맵은 `UISystem` 이 소유하는 별도 맵입니다.
 - **게임 정지는 시간 배율과 따로인 정지 요청 수입니다**(2026-10-06). 언리얼의 `SetGamePaused` 와 같습니다. UI, 페이드, 로딩 화면은 실제 경과 시간을 씁니다(유니티 `unscaledDeltaTime`).
 - **접근성**(2026-10-06): 글자 크기는 배율이 줄여도 12 UI 단위 밑으로 내려가지 않습니다(Xbox 접근성 지침 101). 색각 보정은 Machado 2009 흉내 행렬과 오차 재분배이고 UI 전체에 겁니다.
+- **스크린 리더는 접근성 트리 스냅샷과 플랫폼 브리지입니다**(2026-10-22, [ScreenReaderSupport](plans/ScreenReaderSupport.md)). 위젯이 `describeAccessible` 로 역할 · 이름 · 값 · 상태를 내고(`accessibleName` 은 현지화 가능한 PROPERTY),
+  `UIAccessibilityTree` 가 보이는 위젯만 읽는 순서로 스냅샷을 뽑는다. 브리지(`IUIAccessibilityBridge`)는 위젯 포인터를 쥐지 않고 (화면 핸들, 위젯 번호)로 스냅샷에서 노드를 찾는다 — 위젯이 사라지면 "요소 없음" 이다.
+  Windows 는 UI Automation 제공자(`WM_GETOBJECT`, 내레이터)를 만들었고 리눅스 AT-SPI 는 두지 않았다. 스크린 리더가 붙어 있지 않으면 트리를 뽑지도 알리지도 않는다. 에디터는 창을 ImGui 가 써서 게임 UI 브리지를 끼우지 않는다.
+  UIA 는 `ProviderOptions_UseComThreading` 으로 메인 스레드에서 처리한다. 언리얼 Slate 접근성(`FSlateAccessibleWidget` 을 플랫폼 접근성 API 에 잇는 구조)과 같은 모양으로 알고 있다.
+- **월드 위젯 입력은 광선 → 위젯 좌표 → 위젯마다의 포인터 상태입니다**(2026-10-22, [WorldWidgetInput](plans/WorldWidgetInput.md)). 입력을 켠(`_bAcceptsInput`) World 위젯 가운데 광선이 가장 가까이 맞힌 하나가 이벤트를 받고,
+  위젯 컴포넌트마다 `UIPointerState` 를 가져 Enter · Leave 와 끌기가 화면 위젯과 같은 규칙으로 돈다. 물리 가림(`_bOccludedByPhysics`)은 물리 씬 광선 질의로 하고 깊이 버퍼는 읽지 않는다(렌더러 의존이 없다).
+  언리얼 `WidgetInteractionComponent` 와 같은 일을 한다.
 - **HUD 문서 경로는 플레이어 오브젝트의 컴포넌트 필드이고, 로딩 화면 문서는 팩의 `gamesettings.xml` 에 둡니다**(2026-10-06). 언리얼의 `AHUD` 가 GameMode 에 붙는 것처럼 씬마다 다른 HUD 를 쓸 수 있습니다.
 - **UI 가 먹은 입력은 `UIInputMapView` 로 거릅니다**(2026-10-13). 입력 맵의 읽기 질의와 이름 · 뜻이 같고, 먹은 액션이거나 게임 입력이 막힌 상태면 "누르지 않음" 을 돌려줍니다.
   플레이어 조종자 · 명령 조종자 · 카메라는 입력 맵 읽기 한 줄만 바꿔 씁니다(언리얼 입력 소비 · 유니티 `EventSystem.IsPointerOverGameObject` 와 같은 자리).

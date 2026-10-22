@@ -25,6 +25,7 @@ namespace sw
     IWindow::IWindow()
         : _arrTitle{}
         , _customHandler{}
+        , _accessibilityQuery{}
         , _onResize{}
         , _closeQuery{}
         , _width{ 1280 }
@@ -117,6 +118,11 @@ namespace sw
         if ( _customHandler.isCodeWithin( pBegin, pEnd ) )
         {
             _customHandler = {};
+            ++releasedCount;
+        }
+        if ( _accessibilityQuery.isCodeWithin( pBegin, pEnd ) )
+        {
+            _accessibilityQuery = {};
             ++releasedCount;
         }
         if ( _onResize.isCodeWithin( pBegin, pEnd ) )

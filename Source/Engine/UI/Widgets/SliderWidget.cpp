@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Base/UIEvents.h"
 
 namespace sw
@@ -271,5 +272,32 @@ namespace sw
         CanvasBrush fill = background;
         fill._color      = _fillColor;
         painter.fillRect( float2{ isRightToLeft() ? size._x - fillWidth : 0.0f, 0.0f }, float2{ fillWidth, size._y }, fill );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void SliderWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role       = AccessibleRole::Slider;
+        outInfo._bLeaf      = true;
+        outInfo._name       = getAccessibleName();
+        outInfo._bHasRange  = true;
+        outInfo._rangeMin   = _minValue;
+        outInfo._rangeMax   = _maxValue;
+        outInfo._rangeValue = _value;
+        outInfo._rangeStep  = _step > 0.0f ? _step : ( _maxValue - _minValue ) * 0.05f; // 0 은 범위의 5% (좌우 액션과 같은 규칙)
+    }
+
+    void ProgressBarWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role  = AccessibleRole::ProgressBar;
+        outInfo._bLeaf = true;
+        outInfo._name  = getAccessibleName();
+        outInfo._states |= AccessibleState::kReadOnly;
+        outInfo._bHasRange  = true;
+        outInfo._rangeMin   = 0.0f;
+        outInfo._rangeMax   = 1.0f;
+        outInfo._rangeValue = _percent;
     }
 } // namespace sw

@@ -11,10 +11,12 @@
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Physics/IPhysicsQueryScene.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
@@ -43,6 +45,8 @@ namespace sw
             /** @brief 그리기 크기를 정하지 않은 World 위젯의 렌더 텍스처 크기입니다. */
             static constexpr float32 kDefaultWorldWidth  = 256.0f;
             static constexpr float32 kDefaultWorldHeight = 128.0f;
+            /** @brief 물리 바디가 사각형 · 마커 점에서 이만큼(m) 안쪽에서 닿으면 그 점 자신의 표면으로 보고 막지 않은 것으로 칩니다. */
+            static constexpr float32 kOcclusionTolerance = 0.05f;
 
             /**
              * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 UI 시스템입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
@@ -67,6 +71,7 @@ namespace sw
         , _pendingContent{}
         , _markerWidget{ kInvalidWidgetID }
         , _lastPlacement{}
+        , _worldPointer{}
         , _pUISystem{ nullptr }
         , _worldTree{}
         , _worldCanvas{}
@@ -85,6 +90,8 @@ namespace sw
         , _referenceDistance{ 10.0f }
         , _bClampToScreenEdge{ false }
         , _bScaleWithDistance{ false }
+        , _bAcceptsInput{ false }
+        , _bOccludedByPhysics{ false }
     {
     }
 
@@ -273,8 +280,17 @@ namespace sw
             applyPlacement( hidden );
             return;
         }
-        const float3 anchor = pScene->getWorldPosition() + _worldOffset;
-        applyPlacement( computeMarkerPlacement( inoutView._viewProjection, inoutView._cameraPosition, anchor, viewport._size ) );
+        const float3          anchor    = pScene->getWorldPosition() + _worldOffset;
+        WidgetMarkerPlacement placement = computeMarkerPlacement( inoutView._viewProjection, inoutView._cameraPosition, anchor, viewport._size );
+        const bool            bOnScreen = placement._bVisible == SW_TRUE && placement._bClamped == SW_FALSE && placement._distance > 0.0f;
+        if ( _bOccludedByPhysics && bOnScreen )
+        {
+            // 벽에 가려지면 숨긴다. 가장자리에 붙은 마커는 화면 밖 점이라 가림을 따지지 않는다(방향 화살표다).
+            const float3 toAnchor = ( anchor - inoutView._cameraPosition ) * ( 1.0f / placement._distance );
+            if ( isRayBlockedByPhysics( inoutView._cameraPosition, toAnchor, placement._distance ) )
+                placement._bVisible = SW_FALSE;
+        }
+        applyPlacement( placement );
     }
 
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )
@@ -367,6 +383,56 @@ namespace sw
         target._list._targetSize     = getWorldTextureSize();
         target._clearColor           = float4{};
         target._contentRevision      = _worldRevision;
+    }
+
+    bool WidgetComponent::computeWorldQuadMatrix( float4x4& outMatrix ) const
+    {
+        const GameObject*     pOwner = getOwner();
+        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+            return false;
+        // 사각형 오브젝트는 오너의 자식이고 로컬 스케일만 `_worldSize` 다(`createWorldQuad`) — 행벡터 규약이라 로컬 × 부모 순서다.
+        outMatrix = float4x4::makeScale( _worldSize._x, _worldSize._y, 1.0f ) * pScene->getWorldMatrix();
+        return true;
+    }
+
+    bool WidgetComponent::isRayBlockedByPhysics( const float3& origin, const float3& direction, float32 distance ) const
+    {
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return false;
+        const IPhysicsQueryScene3D* pPhysics = pManager->getSubsystem<ScenePhysics>().findScene3D();
+        if ( pPhysics == nullptr )
+            return false;
+        PhysicsQueryFilter filter{};
+        filter._ignoreUserData = pOwner->getObjectID();
+        PhysicsCastHit3D hit{};
+        if ( pPhysics->raycast( origin, direction, distance, filter, hit ) == false )
+            return false;
+        return hit._distance < distance - WidgetComponentInternal::kOcclusionTolerance;
+    }
+
+    bool WidgetComponent::pickWorld( const WorldWidgetRay& ray, bool bRequireInside, WorldWidgetHit& outHit ) const
+    {
+        float4x4 quadWorld{};
+        if ( acceptsWorldInput() == false || computeWorldQuadMatrix( quadWorld ) == false )
+            return false;
+        if ( WorldWidgetPick::intersectQuad( quadWorld, ray, getWorldTextureSize(), bRequireInside, outHit ) == false )
+            return false;
+        return _bOccludedByPhysics == false || isRayBlockedByPhysics( ray._origin, ray._direction, outHit._distance ) == false;
+    }
+
+    UIPointerResult WidgetComponent::dispatchWorldPointer( const UIPointerEvent& event )
+    {
+        if ( acceptsWorldInput() == false )
+            return UIPointerResult{};
+        return _worldPointer.process( *_worldTree, event );
+    }
+
+    void WidgetComponent::clearWorldHover()
+    {
+        _worldPointer.clearHover();
     }
 
     void WidgetComponent::createWorldQuad()

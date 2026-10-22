@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -224,5 +225,17 @@ namespace sw
         {
             painter.fillRect( float2{ centerX - arrWidth[step] * 0.5f, top + 2.0f * static_cast<float32>( step ) }, float2{ arrWidth[step], 2.0f }, arrow );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void ComboBoxWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        ButtonWidget::describeAccessible( outInfo );
+        outInfo._role = AccessibleRole::ComboBox;
+        outInfo._name = getAccessibleName(); // 안의 글은 고른 항목이라 이름이 아니라 값이다
+        if ( _selectedIndex < _listOption.size() )
+            outInfo._value = _listOption[_selectedIndex];
     }
 } // namespace sw

@@ -43,6 +43,8 @@ namespace sw
         /** @brief 항목 수를 바꿉니다. 모든 줄을 다시 연결하며 kLayout 입니다. */
         void   setItemCount( uint32 itemCount );
         uint32 getItemCount() const { return _itemCount; }
+        /** @brief 목록으로 내보입니다. 줄 위젯은 보이는 만큼만 있으므로 안의 줄은 일반 규칙대로 읽힌다. */
+        void describeAccessible( AccessibleInfo& outInfo ) override;
         /** @brief 줄 높이(UI 단위)를 바꿉니다. kLayout 입니다. */
         void    setRowHeight( float32 rowHeight );
         float32 getRowHeight() const { return _rowHeight; }

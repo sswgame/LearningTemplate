@@ -7,6 +7,7 @@
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/WidgetTree.h"
@@ -32,6 +33,8 @@ namespace sw
         , _slot{}
         , _navigation{}
         , _tooltip{}
+        , _accessibleName{}
+        , _accessibleLabelledBy{}
         , _paintCache{}
         , _computedStyle{}
         , _styleTransition{}
@@ -178,6 +181,12 @@ namespace sw
     bool Widget::hasFocus() const
     {
         return _pTree != nullptr && _pTree->getFocusedWidget() == _id;
+    }
+
+    void Widget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._name = _accessibleName;
+        outInfo._role = _accessibleName.empty() ? AccessibleRole::None : AccessibleRole::Group;
     }
 
     uint32 Widget::computeStyleStates() const

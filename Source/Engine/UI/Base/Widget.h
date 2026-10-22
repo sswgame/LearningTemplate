@@ -20,6 +20,7 @@ namespace sw
 {
     enum class UIStyleField : uint8;
 
+    struct AccessibleInfo;
     struct PropertyInfo;
     struct TypeInfo;
     struct UIComputedStyle;
@@ -175,6 +176,21 @@ namespace sw
          */
         const string& getTooltip() const { return _tooltip; }
         void          setTooltip( const string& tooltip ) { _tooltip = tooltip; }
+        // --- 접근성 ---------------------------------------------------------------
+        /**
+         * @brief 스크린 리더가 읽을 이름입니다(비면 위젯이 스스로 정한다: 글 위젯은 글, 단추는 안의 글). 현지화된 글이 들어가야 한다(문서의 `{loc:…}` 바인딩이 쓴다).
+         * @details 바뀌어도 무효화하지 않는다(그림이 아니다). 콤보 · 로테이터 · 슬라이더 · 입력 칸은 이름을 줘야 "무엇의 값인지" 읽힌다.
+         */
+        const string& getAccessibleName() const { return _accessibleName; }
+        void          setAccessibleName( const string& name ) { _accessibleName = name; }
+        /** @brief 이름이 비었을 때 이름이 되는 글 위젯의 이름입니다(같은 트리 안, 레이블 · UIA `LabeledBy`). 옵션 행의 슬라이더가 옆 레이블 글로 이름을 얻는 길이다. */
+        const hashed_string& getAccessibleLabelledBy() const { return _accessibleLabelledBy; }
+        void                 setAccessibleLabelledBy( const hashed_string& name ) { _accessibleLabelledBy = name; }
+        /**
+         * @brief 스크린 리더에 내보일 역할 · 이름 · 값 · 상태를 @p out 에 적습니다(접근성 트리가 보이는 위젯마다 부른다). 꺼짐 · 포커스 상태는 트리가 채우므로 적지 않는다.
+         * @details 기본은 이름을 준 위젯만 `Group` 이고 아니면 역할 `None`(트리에서 빠진다)이다. 파생 위젯이 자기 역할로 재정의한다. 자식을 걷는 `asPanel` 이 const 가 아니라 이 함수도 const 가 아니다.
+         */
+        virtual void describeAccessible( AccessibleInfo& outInfo );
         /** @brief 포인터가 이 위젯 위에 있을 때의 커서 모양입니다(`Inherit` 면 부모를 따른다). 바뀌어도 무효화하지 않습니다. */
         UICursorShape getCursorShape() const { return _cursorShape; }
         void          setCursorShape( UICursorShape shape ) { _cursorShape = shape; }
@@ -250,6 +266,10 @@ namespace sw
         WidgetNavigation _navigation;
         PROPERTY( DisplayName = "Tooltip", Tooltip = "Text shown when the pointer rests on this widget (empty: none; the nearest ancestor's tooltip shows instead)" )
         string _tooltip;
+        PROPERTY( DisplayName = "Accessible Name", Meta = "Localizable", Tooltip = "Name a screen reader reads (empty: derived from the widget's own text). Give sliders, combo boxes and inputs one" )
+        string _accessibleName;
+        PROPERTY( DisplayName = "Accessible Labelled By", Tooltip = "Name of a text widget in the same tree that names this widget when Accessible Name is empty (a setting row's label)" )
+        hashed_string _accessibleLabelledBy;
 
         unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀)입니다. `UIPaintPass` 가 채우며, 처음 칠할 때 만듭니다.
         shared_ptr<const UIComputedStyle>  _computedStyle;    ///< 계산된 스타일입니다(같은 조건의 위젯이 공유하며, `UIStylePass` 가 정합니다).

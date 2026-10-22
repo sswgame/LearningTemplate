@@ -140,12 +140,31 @@ namespace sw
             _listVisible.push_back( entry );
             showEntry( _listVisible.back() );
         }
+        announceVisible();
         // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
         const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle;
         if ( bIdleScreenOpen )
         {
             _ui.closeScreen( _screen );
             _screen = kInvalidUIScreenHandle;
+        }
+    }
+
+    void UINotificationService::announceVisible()
+    {
+        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _ui.findScreen( _screen ) : nullptr;
+        if ( pScreen == nullptr )
+            return;
+        for ( Entry& entry : _listVisible )
+        {
+            if ( entry._bAnnounced )
+                continue;
+            const TextWidget* pMessage = pScreen->getTree().findWidget<TextWidget>( getEntryWidgetName( entry._order, "Message" ) );
+            if ( pMessage == nullptr || pMessage->getDisplayText().empty() )
+                continue; // 아직 배치 전이다 — 다음 갱신에 다시 본다
+            const UIAnnouncePriority priority = entry._desc._kind == UINotificationKind::Warning ? UIAnnouncePriority::Assertive : UIAnnouncePriority::Polite;
+            _ui.announce( pMessage->getDisplayText(), priority );
+            entry._bAnnounced = true;
         }
     }
 

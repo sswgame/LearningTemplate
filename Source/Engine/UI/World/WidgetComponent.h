@@ -14,7 +14,9 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Base/UIPointerState.h"
 #include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/World/WorldWidgetPick.h"
 
 namespace sw
 {
@@ -105,6 +107,8 @@ namespace sw
         const float2& getDrawSize() const { return _drawSize; }
         void          setDrawSize( const float2& drawSize ) { _drawSize = drawSize; }
         const float2& getPivot() const { return _pivot; }
+        const float2& getWorldSize() const { return _worldSize; }
+        void          setWorldSize( const float2& worldSize ) { _worldSize = worldSize; }
         void          setPivot( const float2& pivot ) { _pivot = pivot; }
         void          setScreenOffset( const float2& offset ) { _screenOffset = offset; }
         const float3& getWorldOffset() const { return _worldOffset; }
@@ -161,6 +165,23 @@ namespace sw
         /** @brief World 사각형 오브젝트입니다(없으면 무효이며, 시작할 때 오브젝트 아래에 만듭니다). */
         GameObjectHandle getWorldQuad() const { return _worldQuad; }
 
+        // --- World 입력(광선으로 사건 보내기) ------------------------------------------
+        /** @brief 광선으로 이 위젯에 포인터를 보낼 수 있는지 나타냅니다(World 이고 입력을 켰고 트리가 있을 때). */
+        bool acceptsWorldInput() const { return _space == WidgetSpace::World && _bAcceptsInput && _worldTree != nullptr; }
+        void setAcceptsInput( bool bAccepts ) { _bAcceptsInput = bAccepts; }
+        /**
+         * @brief 광선이 이 위젯의 사각형을 맞히는 자리를 위젯 좌표로 구합니다. 사각형은 오브젝트의 주 씬 컴포넌트 월드 행렬에 `_worldSize` 를 곱한 것입니다(`createWorldQuad` 와 같다).
+         * @param bRequireInside false 면 사각형 밖의 평면 점도 돌려줍니다(포인터를 잡은 위젯의 끌기).
+         * @return 입력을 받지 않거나, 맞히지 않았거나, 물리 씬이 광선을 사각형보다 가까이에서 막으면(`_bOccludedByPhysics`) false 입니다.
+         */
+        [[nodiscard]] bool pickWorld( const WorldWidgetRay& ray, bool bRequireInside, WorldWidgetHit& outHit ) const;
+        /** @brief 포인터 이벤트 하나(위젯 좌표)를 이 위젯의 트리로 보냅니다. 이 위젯만 쓰는 호버 · 잡기 상태가 있어 Enter · Leave 가 맞는다. */
+        UIPointerResult dispatchWorldPointer( const UIPointerEvent& event );
+        /** @brief 이 위젯의 호버를 모두 풉니다(포인터가 떠났다). 잡은 위젯이 있으면 유지합니다. */
+        void clearWorldHover();
+        /** @brief 이 위젯 안의 위젯이 포인터를 잡고 있으면 true 입니다(끌기 중에는 광선이 벗어나도 이벤트를 이 위젯이 받는다). */
+        bool isWorldPointerCaptured() const { return _worldPointer.getCaptureTree() != nullptr; }
+
     protected:
         /** @brief 화면 마커를 이번 프레임 위치에 놓았을 때 부릅니다(보일 때만). 파생 클래스(목표 마커)가 방향 화살표와 거리 텍스트를 쓰는 곳입니다. 기본은 아무것도 하지 않습니다. */
         virtual void onMarkerPlaced( Widget& marker, const WidgetMarkerPlacement& placement );
@@ -179,11 +200,16 @@ namespace sw
         void createWorldQuad();
         /** @brief World 사각형 오브젝트를 지웁니다. */
         void destroyWorldQuad();
+        /** @brief 사각형(단위 → 월드) 행렬입니다. 주 씬 컴포넌트가 없으면 false 입니다. */
+        bool computeWorldQuadMatrix( float4x4& outMatrix ) const;
+        /** @brief @p origin 에서 @p direction(길이 1)으로 @p distance 보다 가까이에서 물리 바디가 광선을 막으면 true 입니다(이 오브젝트 자신은 보지 않는다). 물리 씬이 없으면 false 입니다. */
+        bool isRayBlockedByPhysics( const float3& origin, const float3& direction, float32 distance ) const;
 
     private:
         unique_ptr<Widget>     _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
         WidgetID               _markerWidget;   ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
         WidgetMarkerPlacement  _lastPlacement;
+        UIPointerState         _worldPointer;  ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
         UISystem*              _pUISystem;     ///< 등록한 UI 시스템입니다(없으면 nullptr).
         unique_ptr<WidgetTree> _worldTree;     ///< World 위젯 트리입니다(루트는 콘텐츠).
         CanvasDrawList         _worldCanvas;   ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
@@ -213,5 +239,9 @@ namespace sw
         bool _bClampToScreenEdge;
         PROPERTY( DisplayName = "Scale With Distance" )
         bool _bScaleWithDistance;
+        PROPERTY( DisplayName = "Accepts Input", Tooltip = "World: pointer rays (mouse, or code through UISystem) reach the widgets; they are not drawn differently" )
+        bool _bAcceptsInput;
+        PROPERTY( DisplayName = "Occluded By Physics", Tooltip = "World input: a physics body in front of the quad blocks the ray. Screen: hide the marker while a body is between the camera and the marker point" )
+        bool _bOccludedByPhysics;
     };
 } // namespace sw

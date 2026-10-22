@@ -227,6 +227,14 @@ namespace sw
 
             switch ( msg )
             {
+                case WM_GETOBJECT:
+                {
+                    // 접근성 클라이언트(내레이터)가 창의 UI Automation 제공자를 청한다. 답이 있으면 그 값을 돌려주고, 없으면 기본 처리(창 자체의 제공자)로 간다.
+                    intptr_t result = 0;
+                    if ( pThis->_accessibilityQuery.isBound() && pThis->_accessibilityQuery( static_cast<uintptr_t>( wParam ), static_cast<intptr_t>( lParam ), result ) )
+                        return static_cast<LRESULT>( result );
+                    break;
+                }
                 case WM_SIZE:
                 {
                     // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역

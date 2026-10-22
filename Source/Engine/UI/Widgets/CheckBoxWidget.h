@@ -39,8 +39,10 @@ namespace sw
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 값을 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). kPaint 입니다. */
-        void             setChecked( bool bChecked );
-        bool             isChecked() const { return _bChecked; }
+        void setChecked( bool bChecked );
+        bool isChecked() const { return _bChecked; }
+        /** @brief 체크 상자로 내보입니다(켜짐 상태 포함). */
+        void             describeAccessible( AccessibleInfo& outInfo ) override;
         CheckedDelegate& getOnCheckedChanged() { return _onCheckedChanged; }
 
     protected:

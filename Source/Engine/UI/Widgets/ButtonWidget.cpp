@@ -4,6 +4,7 @@
 
 #include "Core/String/hashed_string.h"
 
+#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -111,5 +112,17 @@ namespace sw
         UIScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
         if ( pScreen != nullptr )
             pScreen->dispatchCommand( _command, *this );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void ButtonWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role  = AccessibleRole::Button;
+        outInfo._bLeaf = true;
+        outInfo._name  = getAccessibleName().empty() ? UIAccessibilityTree::collectLabel( *this ) : getAccessibleName();
+        if ( _bPressed )
+            outInfo._states |= AccessibleState::kPressed;
     }
 } // namespace sw
