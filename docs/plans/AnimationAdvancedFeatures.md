@@ -22,5 +22,6 @@
 
 - 창(`RetargetPanel`, 캐릭터 에디터 플러그인)이 프로필(`*.retarget.json`)의 두 스켈레톤 · 뿌리와 골반 짝 · 사슬 쌍 · 본 이름 테이블 · 이동 방법을 고치고, 런타임 리타기터로 묶어 본 점검
   (`RetargetProfileInspector` — 사슬 길이 비 · 짝지은 본 수)을 보이며, 묶이지 않는 프로필은 저장하지 않는다(`RetargetProfile::toJSON`, `RetargetTest.ProfileWritesBackAndInspectsAgainstSkeletons`).
+- 창 화면: 2026-10-22 Release 에디터에서 명령 팔레트로 열고 "Open..." 으로 `knight_to_minion.retarget.json` 을 골라 `CaptureEditorUI` 로 봤다(스켈레톤 · 뿌리와 골반 · 선택 · 사슬 칸이 채워진다).
 - 남은 것: 두 스켈레톤을 겹쳐 그리는 3D 미리보기와 기준 포즈(리타깃 포즈 — 대상 레퍼런스를 원본에 맞춰 돌린 포즈) 편집. 기준 포즈는 프로필 형식에 칸이 없어 형식(대상 본별 회전 덮어쓰기)부터 정한다.
-  창의 화면 확인(`CaptureEditorUI`)도 아직이다.
+  없는 경로로 연 문서는 지금 "읽지 못함" 으로 막힌다 — 새 프로필 만들기(빈 문서)도 남은 것이다.

@@ -22,6 +22,8 @@ namespace sw::editor
         {
             /** @brief `RetargetTranslationMode` 순서의 표기입니다(파일 표기와 같다). */
             static constexpr const utf8* kArrTranslationMode[] = { "ScaleByPelvisHeight", "Copy", "None" };
+            /** @brief 글 칸 오른쪽에 붙는 이름표의 너비(96 DPI 픽셀)입니다 — 원본 · 대상 두 칸을 가른다. */
+            static constexpr float32 kLabelWidth = 150.0f;
 
             /** @brief 쉼표 · 빈칸으로 나눈 본 이름 목록입니다. */
             static vector<hashed_string> parseNames( string_view text )
@@ -173,12 +175,13 @@ namespace sw::editor
 
     void RetargetPanel::drawSkeletonRows()
     {
-        ImGui::SetNextItemWidth( -1.0f );
-        ImGui::InputTextWithHint( "##Source", "Source skeleton (*.skeleton.json)", _sourceSkeleton.data(), _sourceSkeleton.max_size() );
+        const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDpiScale();
+        ImGui::SetNextItemWidth( fieldWidth );
+        ImGui::InputTextWithHint( "Source skeleton", "*.skeleton.json", _sourceSkeleton.data(), _sourceSkeleton.max_size() );
         const bool bSourceDone = ImGui::IsItemDeactivatedAfterEdit();
         EditorSelfTestMarks::note( "retarget.sourceSkeleton" );
-        ImGui::SetNextItemWidth( -1.0f );
-        ImGui::InputTextWithHint( "##Target", "Target skeleton (*.skeleton.json)", _targetSkeleton.data(), _targetSkeleton.max_size() );
+        ImGui::SetNextItemWidth( fieldWidth );
+        ImGui::InputTextWithHint( "Target skeleton", "*.skeleton.json", _targetSkeleton.data(), _targetSkeleton.max_size() );
         const bool bTargetDone = ImGui::IsItemDeactivatedAfterEdit();
         EditorSelfTestMarks::note( "retarget.targetSkeleton" );
         if ( bSourceDone || bTargetDone )
@@ -248,15 +251,16 @@ namespace sw::editor
             ChainText&     text  = _listChainText[chainIndex];
             ImGui::PushID( static_cast<int32>( chainIndex ) );
             ImGui::SeparatorText( chain._name.c_str() );
-            ImGui::SetNextItemWidth( -1.0f );
-            ImGui::InputTextWithHint( "##Source", "Source bones, root to end (a, b, c)", text._source.data(), text._source.max_size() );
+            const float32 fieldWidth = -RetargetPanelInternal::kLabelWidth * EditorThemeUtil::getDpiScale();
+            ImGui::SetNextItemWidth( fieldWidth );
+            ImGui::InputTextWithHint( "Source bones", "root to end: a, b, c", text._source.data(), text._source.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
                 chain._listSourceBone = RetargetPanelInternal::parseNames( text._source.c_str() );
                 bChanged              = true;
             }
-            ImGui::SetNextItemWidth( -1.0f );
-            ImGui::InputTextWithHint( "##Target", "Target bones, root to end (a, b, c)", text._target.data(), text._target.max_size() );
+            ImGui::SetNextItemWidth( fieldWidth );
+            ImGui::InputTextWithHint( "Target bones", "root to end: a, b, c", text._target.data(), text._target.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
                 chain._listTargetBone = RetargetPanelInternal::parseNames( text._target.c_str() );
