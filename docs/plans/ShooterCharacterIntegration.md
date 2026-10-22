@@ -37,7 +37,9 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 ## 남은 것
 
 - S7 스프링 망토(임포트가 병합 뒤라 이 단계만 남았다): ① `py -3 Scripts/dev/MakeSkinnedCape.py` 로 `models_raw/kaykit/knight_cape_chain.glb` 를 만들고 ② `App --import-models`(휘두름 `SwingLands` 재임포트와 같은 실행)로 `models/kaykit/knight_cape_chain.mesh` · 스켈레톤을 쓴 뒤 ③ `itemvisuals.xml` 의 `cape_knight` 를 `<Part name="Cape" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_cape_chain.mesh" skeleton="game/shooter3d/models/kaykit/knight_cape_chain/knight_cape_chain.skeleton.json" rig="game/shooter3d/rigs/knight_cape.rig.json" material="game/shooter3d/materials/kaykit_knight.material" socket="Back"/>` 로 바꾼다. 원본 glb 를 임포트 없이 넣으면 `--check-models`(`AppSmokeTest.ModelCheckRunsHeadlessThroughTheEditorModule`)가 지므로 셋을 한 커밋으로 한다. 그다음 플레이어가 돌 때 망토가 뒤처져 흔들리는지 화면으로 본다.
-- S5 왼손 IK 화면 확인: Shooter3D 3인칭에서 소총 · 권총을 들 때 왼손이 총열 아래(`SupportHand`)에 붙는지, 팔꿈치가 꺾이는 쪽이 자연스러운지(어색하면 `pole` 대상을 더한다). 무기를 바꾸면 새 무기의 손잡이를 따르는지.
+- S5 왼손 IK 화면 확인: 2026-10-22 Release 에서 쇼케이스 씬을 베낀 임시 씬(플레이어 프리셋 · 몸 리그, `1H_Ranged_Aiming`)으로 리그를 켜고 끈 두 캡처를 견줘, 켜면 늘어져 있던 왼팔(방패를 든 팔)이
+  소총 쪽으로 끌려 오는 것을 봤다. 남은 것: 실제 게임 3인칭 시점에서 왼손이 총열 아래(`SupportHand`)에 자연스럽게 붙는지(기사 세트의 방패가 왼손에 함께 있어 가린다 — 총을 든 프리셋에서
+  방패 칸을 비울지 정한다), 팔꿈치 방향(어색하면 `pole`), 무기를 바꾸면 새 무기의 손잡이를 따르는지. 몸 리그의 `HideHead` 는 슬롯 가중치를 정하지 않으면 1(숨김)이라 아바타 없이 쓰면 머리가 사라진다.
 - S6 부품 풀 측정: 적 하나의 부품 셋 스폰 비용(풀 전 · 후)을 재어 효과를 적는다. 쉬는 부품은 꺼진 오브젝트로 씬에 남으므로 상태 저장 경로가 생기면 그 앞에서 풀을 비우는 길이 필요하다.
 - 확인(S1 · S2 · S3 · S4, 빌드 뒤):
   - 병합 뒤 `App --import-models` 로 Shooter3D 모델을 다시 가져와 `skeleton_minion/clips/1h_melee_attack_chop.animclip` 에 `Impact` 알림이 들어갔는지, 임포트 결과와 곁 데이터를 한 커밋으로 남긴다. 그 전에는 적의 휘두름이 맞지 않는다.

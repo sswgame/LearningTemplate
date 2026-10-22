@@ -153,21 +153,24 @@ PairedAnimationComponent(시작하는 쪽, 에셋 경로 · 자기 역할)
 | P3b | 네트워크 계층 연결(서버가 세션 시작 · 상태를 복제, 클라이언트가 복원, 롤백 소유 상태) — 키트 `GF_NetPairedAnimation` | 코드와 `PairedAnimationReplicationTest` 작성(빌드 · 테스트 미확인, 두 프로세스 확인은 아래 "남은 것") |
 | M3 | 에디터 미리보기(8절) — `PairedAnimationPanel` · `PairedAnimationEditModel` | 코드와 `PairedAnimationEditModelTest` 작성(빌드 · 테스트 미확인, 창 화면 확인은 아래 "남은 것") |
 | — | 상호작용 단계에서 세션 시작 · 에셋 캐시(핫 리로드) · 세트 고르기(`<Select>`) · 보폭 보정 쥠 | 완료(`InteractionTest` · `PairedAnimationTest`) |
-| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 활 · 화살 임포트(`models/props/`), 프리팹(`prefabs/props/bow` · `arrow` · `arrow_projectile` — 투사체는 동적 강체 + `LaunchVelocityComponent` 30 m/s), 활 알림 표(`characters/bow/bow.notifies.xml`), 외형 아이템 `bow_long` · 프리셋 `ShooterArcher`, 씬 `maps/bowshowcase.scene.xml`, 시나리오 `automation/showcase/bowshoot.scenario.xml`(자동 수집 밖) 작성(빌드 · 실행 미확인). 화면 확인은 아래 "남은 것" |
+| — | 시나리오 테스트(Shooter3D 궁수 · 활 · 화살 실제 클립) | 에셋: 궁수는 기사 `2H_Ranged_Shoot`, 활 · 화살은 `Scripts/dev/MakeBowProps.py`(`TestMakeBowProps` 통과). 활 · 화살 임포트(`models/props/`), 프리팹(`prefabs/props/bow` · `arrow` · `arrow_projectile` — 투사체는 동적 강체 + `LaunchVelocityComponent` 30 m/s), 활 알림 표(`characters/bow/bow.notifies.xml`), 외형 아이템 `bow_long` · 프리셋 `ShooterArcher`, 씬 `maps/bowshowcase.scene.xml`, 시나리오 `automation/showcase/bowshoot.scenario.xml`(자동 수집 밖). Release 네 백엔드 통과 · 당김 자세 화면 확인(활은 왼손 `BowGrip`). 투사체 방향 등은 아래 "남은 것" |
 | — | 프롭 역할을 데이터로 묶기 — 넘기지 않은 역할은 같은 에셋 · 그 역할을 적은 다른 `PairedAnimationComponent` 로(둘이면 오류), `_bStartOnPlay`, 탐침 `PairedAnimation.SessionState` | 코드와 `PairedAnimationTest.ComponentBindsRolesNamedByOtherComponents` 작성(빌드 미확인) |
 
 ## 남은 것
 
 - 에디터 미리보기(M3) 화면 확인: 창을 열어 역할 프리팹을 놓고 스크럽 · 기즈모로 오프셋을 옮기는 에디터 시나리오(`-EnableEditor`, `CaptureEditorUI`).
 - 네트워크(P3b) 두 프로세스 확인: `Server` 와 `App -gv_netConnectAddress` 에서 세션 시작 · 늦은 참가 · 끝이 복제되는지. 씬 문서 밖에서 생긴 참가자는 번호표의 생성 번호(`NetObjectTable::registerSpawned` · `bindSpawned`)로 부를 수 있게 됐다 — 스폰 자체를 복제하는 것(무엇을 스폰했는지 클라이언트에 알리고 묶는 일)은 게임의 몫이고 아직 쓰는 게임이 없다.
-- 쇼케이스 확인(빌드 뒤): `App -game=Shooter3D "-gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml" -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml` 를 네 백엔드로 돌리고 스크린샷 둘(당김 · 놓음)을 본다. 손 소켓(`Gun`)에 붙인 활의 자리 · 방향, 시위 본(`string`)에서 나간 투사체의 방향(프리팹의 `_localDirection` 0,0,1 이 화살 앞인지)을 확인하고 프리팹 값을 고친다. 날아가는 동안 화살 머리가 속도 쪽을 보게 하는 것(지금은 처음 자세 그대로 물리가 돌린다)은 그때 정한다.
+- 쇼케이스 남은 확인: 2026-10-22 Release 네 백엔드(DX12 · Vulkan · OpenGL · DX11)에서 `bowshoot` 시나리오가 통과하고 당김 스크린샷이 같다. 활 · 메긴 화살은 오른손 `Gun` 이 아니라 앞으로 뻗은
+  왼손 소켓 `BowGrip`(handslot.l, 피치 70°)으로 옮겨 활대가 서고 화살이 앞(살짝 위)을 본다. 남은 것: ① 쇼케이스 카메라(옆 고정)로는 놓은 뒤 날아가는 투사체가 한 프레임도 잡히지 않아
+  `_localDirection` 이 화살 앞인지 화면으로 못 봤다 — 앞에서 보는 카메라를 씬에 더해 본다. ② 당김 내내 화살 길이만 한 가는 줄 하나가 활 쪽에 붙어 보인다(메긴 화살 부품을 빼도 남는다 — 활 메시의
+  시위 띠 스킨이 의심된다). ③ 날아가는 동안 화살 머리가 속도 쪽을 보게 하는 것(지금은 처음 자세 그대로 물리가 돌린다).
 
 ## 11. 알려진 한계
 
 - 재생 속도를 매 프레임 쓰는 컴포넌트는 지금 `LocomotionWarpingComponent` 하나이고 세션이 쥐어 둔다. 재생 속도를 쓰는 새 컴포넌트가 생기면 같은 쥠을 받아야 한다 — 받지 않으면 세션 시각 검사가 어긋남으로 보고 중단한다(조용히 틀어지지는 않는다).
 - 상호작용의 누름(`Press`) 단계는 누름으로 이미 끝나므로, 세션 시작이 거절되면 경고만 남고 상호작용은 끝난 채다. 누르고 있기 · 연타 단계는 취소된다.
 - 애니메이션 되감기(`AnimationRewind`) 스크럽 중에는 시각이 예측과 달라 중단된다(개발 빌드 진단 기능).
-- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 쇼케이스(`maps/bowshowcase.scene.xml`)는 실행으로 확인하지 않았다. 데이터 형식 검사(`ResourceDataSchemaTest`)와 생성기 대조(`TestMakeBowProps`)만 돈다.
+- 샘플 에셋(`Resource/game/shooter3d/data/anim/bow_shoot.pairedanim.xml`)의 쇼케이스(`maps/bowshowcase.scene.xml`) 시나리오는 자동 수집 밖이라 손으로 돌린다(2026-10-22 네 백엔드 통과). 세션이 끝나면 시스템이 거둬 탐침 `PairedAnimation.SessionState` 는 Idle(0)이다.
 - 프롭 역할 묶기는 매니저 전체를 훑는다(시작할 때 한 번). 같은 에셋 · 같은 역할을 적은 프롭이 씬에 둘 이상이면(궁수 둘이 같은 활 프리팹) 고를 수 없어 거절한다 — 그때는 부르는 쪽이 바인딩을 넘긴다.
 - 복원(`restoreSession`)은 `warp` 창을 다시 열지 않는다. 창 도중에 이어 받은 클라이언트는 휘어지지 않은 루트 모션으로 가고 서버의 트랜스폼 보정을 받는다(7절).
 
