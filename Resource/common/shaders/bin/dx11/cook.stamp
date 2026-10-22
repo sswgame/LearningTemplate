@@ -8,7 +8,6 @@ SWCOOK 4
 2376b38d79149448 provokingvertex.hlsl
 30ca18ffc0224bf4 engine:postbloom.hlsli
 432da0d9b59901be engine:meshmodifier.hlsli
-48d1ceb8bcf7e1dc engine:lighting.hlsli
 5fc1348423cd9ebe engine:lightdata.hlsli
 65613229fe8a27cd waterwaveprobe.hlsl
 744349509539c766 engine:bindingslots.hlsli
@@ -19,6 +18,7 @@ a04ccf31b9c681f1 engine:materialshader.hlsli
 a16db7b2113a3424 engine:colorvision.hlsli
 b0bce93ab1112469 engine:batchdata.hlsli
 b536aa3df9bce513 @toolchain
+b5f51033549b952e engine:lighting.hlsli
 dedea23699e7654f engine:vfxsimulate.hlsli
 ee5aa6943269e9ee engine:common.hlsli
 f2c35bb0e3b0ee12 engine:postgrade.hlsli

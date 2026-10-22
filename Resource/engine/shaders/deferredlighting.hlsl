@@ -57,7 +57,6 @@ float4 PSMain(PSInput input) : SV_TARGET
 	if (albedoSample.a < 0.5f * (SW_GBUFFER_SHADING_LIT + SW_GBUFFER_SHADING_UNLIT))
 		return float4(albedo, 1.0f);
 
-	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 3.0f) * 0.12f;
-	lit += rim * g_KeyLightColor.rgb;
+	lit += swComputeRimLight(normal);
 	return float4(lit, 1.0f);
 }
