@@ -338,6 +338,56 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectVariableComparesGlobalVariables )
 }
 
 /**
+ * @brief [AutomationScenarioTest] `<Launch>` 는 기동 인자를 만들고, 실행기는 시작할 때 그 값이 아니면 읽기 오류로 멈춘다 — 틀린 선언(이름 · 공백 · 두 번)은 파일 읽기 오류다
+ */
+SW_TEST_CASE( AutomationScenarioTest, LaunchVariablesMustMatchTheCommandLine )
+{
+    using Internal                       = TestAutomationScenarioInternal;
+    sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    sw::GlobalVariableInfo*    pInt      = variables.findVariable( "gv_testInt" );
+    SW_ASSERT_NOT_NULL( pInt );
+    const sw::string oldInt = pInt->getValueAsString();
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [oldInt]()
+    { (void)sw::engine::getSubsystem<sw::GlobalVariableManager>().setValueFromString( "gv_testInt", oldInt ); } ) );
+    SW_ASSERT_TRUE( pInt->setValueAsInt( 60 ) );
+
+    const auto makeScenario = []( const utf8* pLaunch )
+    { return sw::string( R"(<Scenario name="t" startAfter="Immediately">)" ) + pLaunch + R"(<At frame="1"><Pass/></At></Scenario>)"; };
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( makeScenario( R"(<Launch variable="gv_testInt" value="60"/><Launch variable="gv_testString" value="a/b.xml"/>)" ), "launch", error ) );
+    SW_EXPECT_EQUAL( sw::string( "-gv_testInt=60 -gv_testString=a/b.xml" ), scenario.makeLaunchArguments() );
+    static constexpr const utf8* kArrBadLaunch[] = {
+        R"(<Launch variable="testInt" value="60"/>)",
+        R"(<Launch variable="gv_testInt" value="6 0"/>)",
+        R"(<Launch variable="gv_testInt"/>)",
+        R"(<Launch variable="gv_testInt" value="60" extra="1"/>)",
+        R"(<Launch variable="gv_testInt" value="60"/><Launch variable="gv_testInt" value="61"/>)",
+    };
+    for ( const utf8* pLaunch : kArrBadLaunch )
+    {
+        sw::AutomationScenario bad;
+        SW_EXPECT_FALSE_MSG( bad.parse( makeScenario( pLaunch ), "badLaunch", error ), pLaunch );
+    }
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<Launch variable="gv_testInt" value="60"/>)" ) ) );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+    }
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<Launch variable="gv_testInt" value="61"/>)" ) ) );
+        SW_TEST_DEFENSIVE_SCOPE( "a scenario launched without its declared variable stops with a load error" );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "-gv_testInt=61" ) != sw::string::npos, runner.getFinishReason().c_str() );
+    }
+    input.shutdown();
+}
+
+/**
  * @brief [AutomationScenarioTest] 루트 editor 속성은 에디터 실행이 필요한 시나리오를 표시한다 — 적지 않으면 false, true · false 만 받는다
  * @details AppScenarioTest 가 이 값으로 게임 팩 시나리오에 -EnableEditor 를 붙인다. 틀린 값("yes")은 위 읽기 오류 목록이 본다.
  */

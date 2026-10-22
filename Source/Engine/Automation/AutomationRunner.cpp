@@ -574,7 +574,27 @@ namespace sw
 
             static bool validateScreenshot( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "file" }, outError ) && step.requireAttribute( "file", outError ) != nullptr;
+                if ( step.hasOnlyAttributes( { "file", "waitForSettle" }, outError ) == false || step.requireAttribute( "file", outError ) == nullptr )
+                    return false;
+                const string* pWait         = step.findAttribute( "waitForSettle" );
+                const bool    bUnknownValue = pWait != nullptr && *pWait != "true" && *pWait != "false";
+                if ( bUnknownValue )
+                {
+                    outError = step.describe() + ": waitForSettle must be true or false, got '" + *pWait + "'";
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief `<Screenshot waitForSettle="false">` 면 true 입니다 — 그 프레임을 바로 찍는다.
+             * @details 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 움직이는 카메라)가 쓴다. 자리 잡기를 기다리면 등장이 끝나거나 카메라가 멈춘 뒤를 찍는다.
+             *          그런 시나리오는 앞에서 `<WaitUntil probe="Assets.Pending" equals="0">` 로 로드를 끝내 둔다.
+             */
+            [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
+            {
+                const string* pWait = step.findAttribute( "waitForSettle" );
+                return pWait != nullptr && *pWait == "false";
             }
 
             static bool validateExpectImage( const AutomationStep& step, string& outError )
@@ -1128,22 +1148,24 @@ namespace sw
         /**
          * @brief 씬의 에셋 일이 끝나고(`countPendingAssetWork` 가 0) 몇 프레임이 더 지날 때까지 스크린샷을 미룹니다. 상한을 넘기면 실패로 적고 그대로 찍는다.
          * @details 메시 · 텍스처는 워커가 읽는다 — 첫 프레임을 찍으면 빈 메시와 로드 중 회색이 찍힌다. 시나리오마다 기다림을 적지 않고 찍는 단계가 기다린다.
+         *          기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡는다 — 세면 뒤 단계의 프레임이 지나 버려 사진을 요청한 프레임에 한꺼번에 돌고,
+         *          그 변화(순간이동 · 변수)가 다음 패킷이 찍는 사진에 들어간다.
          */
         static AutomationStepHold holdScreenshot( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
         {
-            (void)input;
-            const bool bSettled            = AutomationRunnerInternal::countPendingAssetWork( runner.findActiveObjectManager() ) == 0;
-            runner._assetSettledFrameCount = bSettled ? runner._assetSettledFrameCount + 1 : 0;
-            if ( runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames )
-            {
-                runner._assetSettledFrameCount = 0;
+            if ( AutomationRunnerInternal::capturesWithoutSettling( step ) )
                 return AutomationStepHold::Run;
+            const bool bSettled             = AutomationRunnerInternal::countPendingAssetWork( runner.findActiveObjectManager() ) == 0;
+            runner._assetSettledFrameCount  = bSettled ? runner._assetSettledFrameCount + 1 : 0;
+            const bool               bReady = runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames;
+            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationRunnerInternal::kMaxAssetSettleFrames );
+            if ( hold == AutomationStepHold::Run )
+            {
+                if ( bReady == false )
+                    runner.recordFailure( step, "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
+                runner._assetSettledFrameCount = 0;
             }
-            if ( ++runner._imageWaitFrameCount <= AutomationRunnerInternal::kMaxAssetSettleFrames )
-                return AutomationStepHold::Hold;
-            runner.recordFailure( step, "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" );
-            runner._assetSettledFrameCount = 0;
-            return AutomationStepHold::Run;
+            return hold;
         }
 
         /** @brief 요청한 스크린샷이 다 써질 때까지 기다립니다. 상한을 넘기면 실패로 적고 측정하지 않고 넘깁니다. */
@@ -1381,9 +1403,13 @@ namespace sw
                 if ( hold == AutomationStepHold::Skip )
                     continue;
                 // 등록이 없으면 검사 뒤에 그 단계를 등록한 모듈이 내려갔다(핫 리로드). 실행 함수가 없는 단계(입력)는 준비에서 이미 끝났다.
-                const bool bRunsNow = pRegistration != nullptr && pRegistration->_bBeforeInput == false && pRegistration->_pRun != nullptr;
+                const bool   bRunsNow        = pRegistration != nullptr && pRegistration->_bBeforeInput == false && pRegistration->_pRun != nullptr;
+                const uint32 requestedBefore = _screenshotRequestedCount;
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
                     finish( AutomationResult::LoadError, step.describe() + ": the step could not run" );
+                // 사진은 다음 렌더 패킷이 찍는다 — 같은 프레임에 뒤 단계가 돌면 그 변화가 사진에 들어간다. 사진을 요청한 프레임은 여기서 닫고 뒤 단계는 다음 프레임에 돈다.
+                if ( _screenshotRequestedCount != requestedBefore )
+                    break;
             }
             const bool bExitDeadlineExceeded = _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
                                                _exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
@@ -1489,6 +1515,19 @@ namespace sw
 
     bool AutomationRunner::prepare( string& outError )
     {
+        // 기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오가 바꿀 수 없다 — 띄운 명령줄이 선언과 다르면 다른 화면을 단언하게 되므로 멈춘다.
+        for ( const AutomationAttribute& variable : _scenario.getLaunchVariables() )
+        {
+            const GlobalVariableInfo* pInfo           = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( variable._name ) : nullptr;
+            bool                      bMatched        = false;
+            const bool                bLaunchedWithIt = pInfo != nullptr && AutomationRunnerInternal::compareVariable( *pInfo, string_view{ variable._value }, 0.0f, bMatched ) && bMatched;
+            if ( bLaunchedWithIt == false )
+            {
+                outError = "<Launch> needs the command line -" + variable._name + "=" + variable._value + " (now " +
+                           ( pInfo != nullptr ? "'" + pInfo->getValueAsString() + "'" : string( "no such variable" ) ) + ")";
+                return false;
+            }
+        }
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );

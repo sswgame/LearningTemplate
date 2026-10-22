@@ -32,6 +32,15 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 **에디터 실행.** 루트에 `editor="true"` 를 적은 시나리오는 `AppScenarioTest` 가 `-EnableEditor` 와 빈 에디터 상태 폴더로 돌립니다. 게임 팩 시나리오가 그 게임의 에디터 창(HarvestValley 의 NPC 일정 창)을 볼 때 씁니다.
 `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않습니다. 실행기는 이 값을 보지 않습니다(`isolated` 와 같다).
 
+**기동 값.** 첫 씬과 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 값은 루트 아래 `<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>` 로 선언합니다.
+`AppScenarioTest` 가 선언을 읽어 `-gv_firstScene=…` 를 명령줄에 붙이고(언리얼 Gauntlet 이 테스트마다 명령줄을 정하는 자리), 손으로 돌릴 때도 같은 인자를 줍니다.
+실행기는 시작할 때 값을 견주어 다르면 읽기 오류로 멈춥니다 — 인자를 빠뜨린 실행이 다른 씬 · 다른 파이프라인의 그림을 단언하지 않게 합니다. 렌더 기능 시나리오(`game/empty/automation/motionblur` · `ditherappear` · `light2dcookie`)가 씁니다.
+
+**사진과 시계.** `<Screenshot>` 은 화면이 자리 잡을 때까지(에셋 일이 끝나고 몇 프레임 더) 기다렸다 찍고, 기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡습니다.
+사진은 다음 렌더 패킷이 찍으므로(프레임 N 에 요청한 사진은 프레임 N+1 의 그림이다 — 패킷은 단계보다 먼저 지어진다) 사진을 요청한 프레임은 거기서 닫히고, 같은 프레임의 뒤 단계는 다음 프레임에 돕니다.
+그래서 사진 뒤에 적은 순간이동 · 변수 바꾸기는 사진에 들어가지 않습니다. 찍는 프레임이 정해져야 하는 시나리오(디더 등장의 중간 단계, 프레임마다 옮기는 카메라)는
+`waitForSettle="false"` 로 그 프레임을 바로 찍고, 자리 잡기는 앞에서 보통 `<Screenshot>` 한 장으로 기다려 둡니다.
+
 **기록.** `<Record>` 가 남긴 값은 보고의 `records` 에 적힙니다. 게임 상태는 CPU 에서만 정해지므로 같은 시나리오는 백엔드마다 같은 기록을 내야 하고, `AppScenarioTest` 가 이를 비교합니다.
 
 ## 따라 해 보기

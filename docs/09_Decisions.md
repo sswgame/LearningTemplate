@@ -343,6 +343,7 @@
 - **부하 시나리오는 자동화 시나리오 형식에 `<Load>` 한 줄을 더한 것이고, 서버 쪽(`<LoadScenario driver="loadbot|cluster">`)도 같은 줄을 씁니다**(2026-10-15). 형식을 하나 더 만들면 App · 봇 · 클러스터가 클라이언트 수 · 램프업 · 시간 · 회선을 저마다 다른 이름으로 받게 됩니다.
   엔진은 `<Load>` 를 읽어 형식을 검사하고 시작 프레임에 측정 창(`gv_profileSeconds`, 늦게 건 목표를 `FrameProfileSession` 이 읽는다)을 열 뿐, 메시 · 회선 같은 값은 실행기가 명령줄로 옮깁니다(`-gv_benchMeshes`, `-gv_netEmuPreset` — 회선 프리셋 표를 밖에 다시 적지 않으려고 프리셋 이름 변수를 더했다).
   부하 시나리오는 `<Pass/>` 를 두지 않고 프레임 시한 대신 벽시계 그물만 봅니다. `automation/load/` 하위라 `AppScenarioTest` 가 줍지 않습니다.
+- **기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오 루트의 `<Launch variable value>` 로 선언하고, 띄우는 쪽이 명령줄로 옮기고 실행기는 시작할 때 견주어 다르면 읽기 오류다**(2026-10-22). 언리얼 Gauntlet 이 테스트마다 명령줄을 정하고 Functional Test 가 맵에 붙어 있는 자리다. 실행 중 씬 열기 · 파이프라인 바꾸기 단계는 두지 않았다 — 파이프라인은 기동 때만 정해지고, 씬을 바꾸면 첫 씬 로드가 한 번 더 돈다. 찍는 프레임이 정해져야 하는 렌더 시나리오는 `<Screenshot waitForSettle="false">` 로 자리 잡기를 기다리지 않는다.
 - **하드웨어 프로필(LowEnd · Mid · HighEnd)은 기기 없이 소프트웨어로 흉내 내고 결과에 `emulated` 를 적어 실제 기기 측정(Native)과 기준선 키를 가릅니다**(2026-10-15). 언리얼 Device Profiles 는 실제 기기를 고르는 자리로 알고 있는데, 기기가 없을 때 같은 판정을 미리 돌리는 길이 없습니다.
   CPU 코어 · 메모리는 Job Object(멈춘 채 만든 뒤 넣는다), 워커 풀은 친화도를 따르게 고쳤고(`thread::getUsableProcessorCount` — `hardware_concurrency` 는 친화도 · 컨테이너 제한을 못 본다), 디스크는 `gv_ioEmuRead*`, VRAM 은 `gv_emulatedGPUMemoryMb` 입니다.
   품질 단계는 기존 Scalability(`graphics.quality` 프리셋)를 프로필이 고르거나(`quality`) 흉내 낸 사양으로 엔진이 고릅니다(`auto`). 자동 조정은 밖에서 단계를 내려 가며 예산을 지키는 첫 단계를 찾는 `load scale` 로 두었고, 실행 중 동적 조정(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 측정으로 이득이 보일 때 들입니다(백로그 `C-29`).

@@ -84,6 +84,14 @@ namespace
             return scenario.loadFromPath( scenarioPath, error ) && scenario.requiresEditor();
         }
 
+        /** @brief 시나리오가 `<Launch>` 로 선언한 기동 인자(`-gv_firstScene=…`)입니다. 못 읽으면 빈 글 — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
+        static sw::string readLaunchArguments( const sw::string& scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            return scenario.loadFromPath( scenarioPath, error ) ? scenario.makeLaunchArguments() : sw::string{};
+        }
+
         /**
          * @brief 에디터를 켠 실행의 인자 — `-EnableEditor` 와 시나리오 · 백엔드마다 비운 에디터 상태 폴더입니다(에디터 시나리오 체인과 같은 규칙).
          * @details 사용자의 `Saved/Editor`(레이아웃 · 최근 씬)를 읽으면 실행마다 시작 화면이 달라진다.
@@ -107,9 +115,12 @@ namespace
                 sw::vector<sw::string> listFirstRecord;
                 const utf8*            pFirstSwitch    = nullptr;
                 const bool             bRequiresEditor = requiresEditor( scenarioPath );
+                const sw::string       launchArguments = readLaunchArguments( scenarioPath );
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
                     sw::string scenarioArguments{ extraArguments };
+                    if ( launchArguments.empty() == false )
+                        scenarioArguments += " " + launchArguments;
                     if ( bRequiresEditor )
                         scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
                     sw::string                scenarioLines;

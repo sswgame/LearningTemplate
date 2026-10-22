@@ -112,6 +112,48 @@ namespace sw
                 }
                 return true;
             }
+
+            /**
+             * @brief `<Launch variable="gv_…" value="…"/>` 하나를 읽어 @p inoutList 에 더합니다.
+             * @details 값은 명령줄 토큰 하나가 되므로 공백 · 따옴표를 받지 않는다. 같은 변수를 두 번 적으면 어느 쪽이 이기는지 모호하므로 오류다.
+             */
+            [[nodiscard]] static bool readLaunchVariable( const XMLNode& node, vector<AutomationAttribute>& inoutList, string& outReason )
+            {
+                AutomationAttribute entry{};
+                for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    const string_view name = attribute.getName();
+                    if ( name == "variable" )
+                    {
+                        entry._name = attribute.getValue();
+                    }
+                    else if ( name == "value" )
+                    {
+                        entry._value = attribute.getValue();
+                    }
+                    else
+                    {
+                        outReason = "unknown attribute '" + string( name ) + "' (variable · value)";
+                        return false;
+                    }
+                }
+                const bool bWellFormed = StringUtil::startsWith( entry._name, "gv_" ) && entry._value.empty() == false && entry._value.find_first_of( " \t\"'" ) == string::npos;
+                if ( bWellFormed == false )
+                {
+                    outReason = "needs variable=\"gv_…\" and a value without spaces or quotes, got variable='" + entry._name + "' value='" + entry._value + "'";
+                    return false;
+                }
+                for ( const AutomationAttribute& declared : inoutList )
+                {
+                    if ( declared._name == entry._name )
+                    {
+                        outReason = entry._name + " is declared twice";
+                        return false;
+                    }
+                }
+                inoutList.push_back( std::move( entry ) );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -177,6 +219,7 @@ namespace sw
     AutomationScenario::AutomationScenario()
         : _listStep{}
         , _listScratchFolder{}
+        , _listLaunchVariable{}
         , _load{}
         , _name{}
         , _sourcePath{}
@@ -350,9 +393,18 @@ namespace sw
                 _listScratchFolder.push_back( std::move( folder ) );
                 continue;
             }
+            if ( string_view{ atNode.getName() } == "Launch" )
+            {
+                if ( Internal::readLaunchVariable( atNode, _listLaunchVariable, reason ) == false )
+                {
+                    outError = _sourcePath + ": <Launch> " + reason;
+                    return false;
+                }
+                continue;
+            }
             if ( string_view{ atNode.getName() } != "At" )
             {
-                outError = _sourcePath + ": only <Load>, <Scratch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
+                outError = _sourcePath + ": only <Load>, <Scratch>, <Launch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
                 return false;
             }
             uint32 frameIndex = 0;
@@ -400,6 +452,16 @@ namespace sw
             }
         }
         return true;
+    }
+
+    string AutomationScenario::makeLaunchArguments() const
+    {
+        string arguments;
+        for ( const AutomationAttribute& variable : _listLaunchVariable )
+        {
+            arguments += ( arguments.empty() ? "-" : " -" ) + variable._name + "=" + variable._value;
+        }
+        return arguments;
     }
 
     bool AutomationScenario::parseLoad( const XMLNode& node, string& outReason )

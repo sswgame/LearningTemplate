@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디더 등장 — 순간이동한 메시(_bAppearOnTeleport)가 4 초 동안 0 → 1 로 나타나고, 남은 픽셀 비율이 등장 비율을 따라 단조롭게 는다.
+  무대(maps/rendertest3d)의 DitherCube 를 제자리로 순간이동해 등장을 다시 시작하고, 0 · 1/4 · 1/2 · 3/4 지점을 찍는다. 등장 비율은 고정 프레임 시간으로 정해진다
+  (순간이동한 다음 씬 프레임부터 프레임마다 1/240). 1/4 배수는 4x4 Bayer 문턱((k + 0.5) / 16)의 한가운데라 한두 프레임 어긋나도 남는 픽셀 수가 같다.
+  지표는 등장 0 사진과의 평균 차(differentFrom, 상자 영역) — 남은 픽셀 비율을 따라 오른다. 단계마다 겹치지 않는 구간(near)을 둬 단조 증가를 단언한다.
+  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -scenario=game/empty/automation/ditherappear.scenario.xml
+        (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
+-->
+<Scenario name="game.empty.ditherappear" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<At frame="40"><Screenshot file="dither_full.ppm"/></At>
+
+	<!-- 프레임 60 에 옮기면 프레임 61 부터 오른다. 프레임 N 에 요청한 사진은 프레임 N+1 의 그림이라 등장 비율은 (N + 1 - 60) / 240 이다. -->
+	<At frame="60"><DevCommand line="teleport DitherCube 0 1 0"/><Screenshot file="dither_0.ppm" waitForSettle="false"/></At>
+	<At frame="119"><Screenshot file="dither_25.ppm" waitForSettle="false"/></At>
+	<At frame="179"><Screenshot file="dither_50.ppm" waitForSettle="false"/></At>
+	<At frame="239"><Screenshot file="dither_75.ppm" waitForSettle="false"/></At>
+	<At frame="350"><Screenshot file="dither_end.ppm"/></At>
+
+	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값): 다 보임 0.357 · 1/4 0.088 · 1/2 0.197 · 3/4 0.288(비율 0.25 · 0.55 · 0.81 — 디더된 그림자가 뒤 단계를 조금 올린다),
+	     다 나타난 뒤와 처음 사진의 차 0. 구간 폭 ±0.035 는 이웃 단계와 겹치지 않는다(단조 증가). -->
+	<At frame="351">
+		<ExpectImage file="dither_end.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" atLeast="0.33"/>
+		<ExpectImage file="dither_25.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.088" tolerance="0.035"/>
+		<ExpectImage file="dither_50.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.197" tolerance="0.035"/>
+		<ExpectImage file="dither_75.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.288" tolerance="0.035"/>
+		<ExpectImage file="dither_end.ppm" metric="differentFrom" reference="dither_full.ppm" atMost="0.002"/>
+		<Pass/>
+	</At>
+</Scenario>

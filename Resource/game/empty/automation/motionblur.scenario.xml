@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모션 블러 — 카메라가 움직인 프레임만 흐리고(켬과 끔이 다르다), 멈춘 카메라는 원본 그대로다(켬과 끔이 같다). 디퍼드 파이프라인의 MotionBlur 패스(motionblur.hlsl)를 본다.
+  결정적: 애니메이션 없는 무대(maps/rendertest3d), 고정 프레임 시간, 카메라는 순간이동(teleport)으로만 옮긴다. 켬 · 끔은 같은 순서(정지 30 프레임 → 옆으로 0.25 m)를
+  64 프레임 간격으로 되풀이해 두 사진의 카메라 · 지난 카메라 · TAA 기록이 같다 — 차이는 블러뿐이다.
+  첫 사진이 자리 잡기(로드 · 페이드)를 기다린 뒤로는 찍는 프레임이 정해져야 하므로 기다리지 않는다(waitForSettle="false").
+  프레임 N 에 요청한 사진은 프레임 N+1 의 그림이다 — 같은 프레임에 옮긴 카메라가 그 그림의 카메라, 그 앞 그림의 카메라가 지난 카메라다.
+  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_deferred=1 -scenario=game/empty/automation/motionblur.scenario.xml
+        (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
+-->
+<Scenario name="game.empty.motionblur" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_deferred" value="1"/>
+	<At frame="40"><Screenshot file="settled.ppm"/></At>
+
+	<!-- 켬: 정지 → 한 걸음(움직이는 사진) → 정지(멈춘 사진) -->
+	<At frame="60"><Variable name="gv_motionBlur" value="1"/><DevCommand line="teleport GameCamera 0 1.6 -6"/></At>
+	<At frame="90"><DevCommand line="teleport GameCamera 0.25 1.6 -6"/><Screenshot file="moving_on.ppm" waitForSettle="false"/></At>
+	<At frame="120"><Screenshot file="still_on.ppm" waitForSettle="false"/></At>
+
+	<!-- 끔: 같은 순서를 64 프레임 뒤에 -->
+	<At frame="124"><Variable name="gv_motionBlur" value="0"/><DevCommand line="teleport GameCamera 0 1.6 -6"/></At>
+	<At frame="154"><DevCommand line="teleport GameCamera 0.25 1.6 -6"/><Screenshot file="moving_off.ppm" waitForSettle="false"/></At>
+	<At frame="184"><Screenshot file="still_off.ppm" waitForSettle="false"/></At>
+
+	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값, 상자 영역): 움직인 켬 · 끔 0.0067, 멈춘 켬 · 끔 0.00003. 문턱은 움직인 차이의 절반과 그 1/10 아래. -->
+	<At frame="190">
+		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differentFrom" reference="moving_off.ppm" atLeast="0.003"/>
+		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differentFrom" reference="still_off.ppm" atMost="0.0003"/>
+		<Variable name="gv_motionBlur" value="1"/>
+		<Pass/>
+	</At>
+</Scenario>

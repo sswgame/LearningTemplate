@@ -113,6 +113,14 @@ namespace sw
         const AutomationLoad& getLoad() const { return _load; }
         /** @brief 이 시나리오가 쓰는 폴더의 사본 선언입니다(루트 아래 `<Scratch from as>`, 여럿 가능). 실행기가 시작할 때 사본을 새로 만든다(`AutomationScratch::prepare`). */
         const vector<AutomationScratchFolder>& getScratchFolders() const { return _listScratchFolder; }
+        /**
+         * @brief 기동 때 정해지는 전역 변수 선언입니다(루트 아래 `<Launch variable value>`, 여럿 가능 — 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 값).
+         * @details 띄우는 쪽(`AppScenarioTest`, 손 실행)이 `makeLaunchArguments` 를 명령줄에 붙이고, 실행기는 시작할 때 값이 같은지 보고 다르면 읽기 오류로 멈춘다.
+         *          언리얼 Gauntlet 이 테스트마다 명령줄을 정하는 자리다.
+         */
+        const vector<AutomationAttribute>& getLaunchVariables() const { return _listLaunchVariable; }
+        /** @brief `getLaunchVariables` 를 명령줄 인자(`-gv_a=1 -gv_b=x`)로 씁니다. 선언이 없으면 빈 글입니다. */
+        string makeLaunchArguments() const;
 
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */
@@ -120,6 +128,7 @@ namespace sw
 
         vector<AutomationStep>          _listStep;
         vector<AutomationScratchFolder> _listScratchFolder;
+        vector<AutomationAttribute>     _listLaunchVariable; ///< `<Launch>` 의 변수 이름(`_name`)과 값(`_value`)
         AutomationLoad                  _load;
         string                          _name;
         string                          _sourcePath;

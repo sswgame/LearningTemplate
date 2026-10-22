@@ -15,6 +15,8 @@
 | `maps/gimmickshowcase.scene.xml` | 발판, 횃불, 스프링 같은 기믹 | Gimmick |
 | `maps/spriteui.scene.xml` | 머리 위 HP 바 같은 월드 UI | GameFramework |
 | `maps/clothshowcase.scene.xml` | 천(`ClothComponent`) — 윗변 고정 커튼이 정적 구에 걸치고, 양 끝 고정 깃발이 처진다 | 아래 |
+| `maps/rendertest3d.scene.xml` | 렌더 기능 시나리오의 무대 — 격자 바닥과 상자 셋, 순간이동하면 디더로 다시 나타나는 `DitherCube`. 애니메이션이 없다 | `automation/motionblur.scenario.xml` · `automation/ditherappear.scenario.xml` |
+| `maps/rendertest2d.scene.xml` | 2D 빛 쿠키 시나리오의 무대 — 격자 벽 앞의 같은 점광 둘(왼쪽만 창문 쿠키) | `automation/light2dcookie.scenario.xml` |
 
 ## 천 쇼케이스
 
