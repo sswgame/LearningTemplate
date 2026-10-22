@@ -1,13 +1,12 @@
 SWCOOK 4
 03c54d10a1c6143d postoutline.hlsl
+04f05e6df31dcc2a materialshader.hlsli
 153cc5877d034c77 lighting2d.hlsli
 154e02b9ead9efc9 lightgridcommon.hlsli
 15988ca8d6fbfb5a taa.hlsl
-15e120b86d722476 forwardlit.hlsl
 1795b4868f75033e gerstner.hlsli
 1dbf3da4a35817e4 shadowdepth.hlsl
 2634f1e7dd1ddc24 postbloom.hlsl
-2a7daafc563d2645 lighting.hlsli
 307f2a653ae2aa61 vfxmeshinstance.hlsl
 30ca18ffc0224bf4 postbloom.hlsli
 3af2e76bc6e5f1c0 depthhistory.hlsl
@@ -15,6 +14,7 @@ SWCOOK 4
 4319a9cc0d67c06a autoexposure.hlsl
 432da0d9b59901be meshmodifier.hlsli
 4854bbf7a7007e47 depthoffield.hlsl
+48d1ceb8bcf7e1dc lighting.hlsli
 50629c40b24a07ab gbuffer.hlsl
 5fc1348423cd9ebe lightdata.hlsli
 72c27ab06dc24b4b postchain.hlsl
@@ -23,13 +23,16 @@ SWCOOK 4
 7e1b319689474394 water.hlsl
 7fc422e76e88cc29 binding.hlsli
 8687732d87cba8ec fullscreenblit.hlsl
+8c9c7b1cefa0b7cf forwardlit.hlsl
 969e8df05bff145b sky.hlsl
 980c18c4c174d3fb postoutline.hlsli
 997cfbc36784e999 particle.hlsl
 a16db7b2113a3424 colorvision.hlsli
+ab464b29c1a26946 toon.hlsl
 aead2c48133aba58 gpucull.hlsl
 b0bce93ab1112469 batchdata.hlsli
 b536aa3df9bce513 @toolchain
+bab1bb6823fabd02 materialshadermain.hlsli
 bafa2f47c5c9e297 vfxsimulate.hlsl
 bc272d7686702654 tonemap.hlsl
 bfc1abf7672a9a07 ssao.hlsl
@@ -41,7 +44,6 @@ cb8ea5524b4aaf9b meshmorph.hlsl
 cd950cde23768c4b instanceanimation.hlsl
 cffb2bc2e2e7436a meshskin.hlsl
 d223d57fbd06c2dc lightgrid.hlsl
-d52bbee362ada1ee toon.hlsl
 d9fa8b9e446a24fe foliage.hlsl
 dedea23699e7654f vfxsimulate.hlsli
 df99ce7308ca1787 fullscreentriangle.hlsl
