@@ -466,12 +466,9 @@ namespace
             return output;
         }
 
-        /** @brief 렌더 텍스처를 되읽어 그려진(모서리와 다른) 픽셀의 평균 (R − B)와 그 수를 냅니다. 실패면 false 입니다. */
-        [[nodiscard]] static bool readTextureRedMinusBlue( sw::IRHIDevice* pDevice, const utf8* pPath, int64& outMeanRedMinusBlue, uint32& outDrawnCount,
-                                                           uint32& outWidth )
+        /** @brief 렌더 텍스처(캐시 경로 @p pPath)의 밉 0 을 되읽습니다. 텍스처가 없거나 되읽기에 실패하면 false 입니다. */
+        [[nodiscard]] static bool readTextureImage( sw::IRHIDevice* pDevice, const utf8* pPath, test::RHITestImage& outImage )
         {
-            outMeanRedMinusBlue           = 0;
-            outDrawnCount                 = 0;
             const sw::Texture2D* pTexture = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().find( pPath );
             if ( pTexture == nullptr || pTexture->isRHIValid() == false )
                 return false;
@@ -479,8 +476,47 @@ namespace
             sw::RHITextureMipSpan layout{};
             if ( pDevice->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout ) == false )
                 return false;
+            outImage.assign( std::move( bytes ), layout, pTexture->getFormat() );
+            return true;
+        }
+
+        /**
+         * @brief 두 렌더 텍스처를 화소 단위로 견줘 색이 다른 화소 수와 전체 화소 수를 냅니다. 크기가 다르거나 되읽기에 실패하면 false 입니다.
+         * @details 같은 카메라 · 같은 장면을 같은 경로로 그리면 두 그림은 화소가 같다 — 경로 하나(후처리 등)가 빠졌는지를 평균 같은 간접 지표가 아니라
+         *          "몇 화소가 달라졌나" 로 본다. 다름의 기준은 채널 차의 합이 @p minDistance 이상이다(같은 경로의 반올림 흔들림을 넘기 위한 것).
+         */
+        [[nodiscard]] static bool countDifferingPixels( sw::IRHIDevice* pDevice, const utf8* pPathA, const utf8* pPathB, uint32 minDistance, uint32& outDiffering,
+                                                        uint32& outTotal )
+        {
+            outDiffering = 0;
+            outTotal     = 0;
+            test::RHITestImage imageA;
+            test::RHITestImage imageB;
+            if ( readTextureImage( pDevice, pPathA, imageA ) == false || readTextureImage( pDevice, pPathB, imageB ) == false )
+                return false;
+            if ( imageA.getWidth() != imageB.getWidth() || imageA.getHeight() != imageB.getHeight() )
+                return false;
+            for ( uint32 y = 0; y < imageA.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < imageA.getWidth(); ++x )
+                {
+                    if ( test::RHITestImage::getColorDistance( imageA.getPixel( x, y ), imageB.getPixel( x, y ) ) >= minDistance )
+                        ++outDiffering;
+                    ++outTotal;
+                }
+            }
+            return true;
+        }
+
+        /** @brief 렌더 텍스처를 되읽어 그려진(모서리와 다른) 픽셀의 평균 (R − B)와 그 수를 냅니다. 실패면 false 입니다. */
+        [[nodiscard]] static bool readTextureRedMinusBlue( sw::IRHIDevice* pDevice, const utf8* pPath, int64& outMeanRedMinusBlue, uint32& outDrawnCount,
+                                                           uint32& outWidth )
+        {
+            outMeanRedMinusBlue = 0;
+            outDrawnCount       = 0;
             test::RHITestImage image;
-            image.assign( std::move( bytes ), layout, pTexture->getFormat() );
+            if ( readTextureImage( pDevice, pPath, image ) == false )
+                return false;
             outWidth                 = image.getWidth();
             const test::Rgba8 corner = image.getPixel( 0, 0 );
             int64             sum    = 0;
@@ -4188,24 +4224,21 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             SW_ASSERT_TRUE( firstBuffer != 0 );
             SW_ASSERT_TRUE( firstSize > 0 );
 
-            // 셰이더를 다시 쿠킹해 레이아웃이 커진 상황을 만든다 — 부모 상수버퍼가 256 을 넘게 한다.
+            // 셰이더를 다시 쿠킹해 레이아웃이 커진 상황을 만든다 — 실제 셰이더 스키마의 필드를 그대로 두고 구조체만 256 바이트 키운다.
+            // 필드를 빼거나 더한 리플렉션은 XML 과 어긋나 바이트를 비우는 것이 계약이다(MaterialTest 의 불일치 케이스) — 그래서 필드 집합은 같아야 한다.
             sw::ShaderReflectionData reflection{};
-            sw::ShaderBufferInfo     cb{};
-            cb._name      = "MaterialCB";
-            cb._totalSize = static_cast<uint32>( firstSize ) + 256;
-
-            sw::ShaderVariableInfo var{};
-            var._name   = "grownTail";
-            var._type   = "Float4";
-            var._offset = static_cast<uint32>( firstSize ) + 16;
-            var._size   = 16;
-            cb._listVariable.push_back( var );
-            reflection._listConstantBuffer.push_back( cb );
+            SW_ASSERT_TRUE( sw::Material::reflectMaterialSchema( parent->getDesc()._shaderPath, sw::RHI::getShaderTargetFormat( device->getBackendType() ),
+                                                                 reflection ) );
+            SW_ASSERT_TRUE( sw::Material::hasMaterialSchema( reflection ) );
+            for ( sw::ShaderBufferInfo& element : reflection._listStructuredElement )
             {
-                // 키운 레이아웃에는 grownTail 만 있다 — 원래 프로퍼티(color · roughness)가 리플렉션에 없다는 경고는 이 상황의 정상 반응이다.
-                SW_TEST_DEFENSIVE_SCOPE( "the grown reflection lists only grownTail" );
-                (void)parent->syncPropertiesFromReflection( reflection );
+                element._totalSize += 256;
             }
+            for ( sw::ShaderBufferInfo& cb : reflection._listConstantBuffer )
+            {
+                cb._totalSize += 256;
+            }
+            SW_ASSERT_TRUE( parent->syncPropertiesFromReflection( reflection ) );
             SW_ASSERT_TRUE( parent->getBuffer().size() > firstSize );
 
             // 파라미터를 건드려 인스턴스를 더럽힌다 — 이것이 실제로 겹치는 조합이다.
@@ -6614,6 +6647,8 @@ SW_TEST_CASE( RenderPassGPUTest, MultiViewRendersEachCaptureCameraToItsTexture )
 /**
  * @brief 후처리를 끈 뷰는 포스트 체인을 건너뛴다 — 같은 큐브를 같은 자리에서 보는 두 뷰(후처리 켬 · 끔)의 그림이 다르다.
  * @details 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 포스트 체인이 원본(톤맵 전 장면 색)을 고른다. 플래그를 무시하면 두 그림이 같아진다.
+ *          그래서 평균 색 같은 간접 지표가 아니라 **다른 화소 수**로 본다 — 평균 (R − B) 차이에 임계값을 걸면 조명 식이 바뀔 때마다 여유가 흔들린다.
+ *          후처리를 켠 같은 자리의 뷰 하나를 대조군으로 두어, 같은 설정이면 화소가 같다는 전제를 함께 확인한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain )
 {
@@ -6628,6 +6663,8 @@ SW_TEST_CASE( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain )
         outputOff._bPostProcess          = false;
         bool bOk                         = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
         bOk                              = bOk && stage.addViewCamera( "CameraPostOn", redTarget, MultiViewScene::makeTextureOutput( "rendertarget/test_post_on", 0.0f ),
+                                                                       sw::CameraRole::Capture ) != nullptr;
+        bOk                              = bOk && stage.addViewCamera( "CameraPostOn2", redTarget, MultiViewScene::makeTextureOutput( "rendertarget/test_post_on2", 0.0f ),
                                                                        sw::CameraRole::Capture ) != nullptr;
         bOk                              = bOk && stage.addViewCamera( "CameraPostOff", redTarget, outputOff, sw::CameraRole::Capture ) != nullptr;
         SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
@@ -6645,10 +6682,20 @@ SW_TEST_CASE( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain )
                             ( label + "후처리 켠 뷰를 읽지 못했다" ).c_str() );
         SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), "rendertarget/test_post_off", offDiff, offDrawn, width ),
                             ( label + "후처리 끈 뷰를 읽지 못했다" ).c_str() );
-        SW_LOG_INFO( "%#post on drawn %# R-B %#, post off drawn %# R-B %#", label, onDrawn, onDiff, offDrawn, offDiff );
         SW_EXPECT_TRUE_MSG( onDrawn > 100 && offDrawn > 100, ( label + "뷰에 큐브가 그려지지 않았다" ).c_str() );
-        const int64 gap = onDiff > offDiff ? onDiff - offDiff : offDiff - onDiff;
-        SW_EXPECT_TRUE_MSG( gap > 15, ( label + "후처리를 꺼도 그림이 같다 (켬 " + sw::to_string( onDiff ) + " · 끔 " + sw::to_string( offDiff ) + ")" ).c_str() );
+        // 대조군: 후처리를 켠 같은 자리의 두 뷰는 화소가 같아야 한다 — 같지 않으면 아래 비교가 플래그가 아닌 흔들림을 본다.
+        uint32 controlDiffering = 0;
+        uint32 offDiffering     = 0;
+        uint32 total            = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::countDifferingPixels( device.get(), "rendertarget/test_post_on", "rendertarget/test_post_on2", 6, controlDiffering, total ),
+                            ( label + "대조 뷰를 견주지 못했다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::countDifferingPixels( device.get(), "rendertarget/test_post_on", "rendertarget/test_post_off", 6, offDiffering, total ),
+                            ( label + "후처리 켬 · 끔 뷰를 견주지 못했다" ).c_str() );
+        SW_LOG_INFO( "%#post on R-B %#, post off R-B %#, differing pixels: control %# · off %# of %#", label, onDiff, offDiff, controlDiffering, offDiffering, total );
+        SW_EXPECT_TRUE_MSG( controlDiffering == 0, ( label + "같은 자리 · 같은 설정의 두 뷰가 다르게 그려졌다 (다른 화소 " + sw::to_string( controlDiffering ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( offDiffering * 2 > total, ( label + "후처리를 꺼도 그림이 같다 (다른 화소 " + sw::to_string( offDiffering ) + " / " +
+                                                        sw::to_string( total ) + ")" )
+                                                          .c_str() );
         renderer.shutdown();
     }
     if ( sweep.getReadyCount() == 0 )
