@@ -30,17 +30,25 @@ namespace sw
 {
     bool LiveEventRules::isWindowOpen( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowEndMs )
     {
+        int64 windowStartMs = 0;
+        return findOpenWindow( definition, nowMs, windowStartMs, outWindowEndMs );
+    }
+
+    bool LiveEventRules::findOpenWindow( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowStartMs, int64& outWindowEndMs )
+    {
         if ( nowMs < definition._startMs || nowMs >= definition._endMs )
             return false;
         if ( definition._recurrence == LiveEventRecurrence::Once )
         {
-            outWindowEndMs = definition._endMs;
+            outWindowStartMs = definition._startMs;
+            outWindowEndMs   = definition._endMs;
             return true;
         }
         const int64 occurrenceMs = ServiceScheduler::computeLatestOccurrence( makeSchedule( definition ), nowMs );
         if ( occurrenceMs < 0 || nowMs >= occurrenceMs + definition._activeDurationMs )
             return false;
-        outWindowEndMs = std::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
+        outWindowStartMs = std::max( occurrenceMs, definition._startMs );
+        outWindowEndMs   = std::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
         return true;
     }
 

@@ -32,9 +32,11 @@
 
 namespace sw
 {
+    struct LoginRevocationEntry;
     struct LoginStoreOutcome;
 
     class IServiceStore;
+    class LoginSecretVault;
     class RemoteConfig;
 
     /** @brief 로그인 서비스의 작업 종류입니다. */
@@ -90,6 +92,12 @@ namespace sw
 
         /** @brief 외부 로그인 제공자를 등록합니다. 빌려 쓰는 포인터입니다. 같은 이름이 있거나 이름 규칙(`[a-z0-9_]`)을 어기면 false 를 반환합니다. */
         [[nodiscard]] bool registerPlatformProvider( IPlatformLoginProvider* pProvider );
+        /**
+         * @brief 외부 로그인이 준 연동 비밀(`PlatformLoginVerification::_linkSecret`)을 암호화하는 도구를 지정합니다. 빌려 쓰는 포인터입니다.
+         * @details 연동 비밀을 주는 제공자(`supportsRevocation`)를 등록했다면 이것이 있어야 합니다 — 없으면 비밀을 버리고 오류를 남깁니다(평문으로 저장하지 않는다).
+         *          철회 대기열(탈퇴한 계정의 비밀)을 읽어 제공자에 철회하는 일도 이 도구로 비밀을 풀어서 한다.
+         */
+        void setSecretVault( const LoginSecretVault* pVault ) { _pSecretVault = pVault; }
         /** @brief 빌드 버전 확인에 쓸 원격 설정을 지정합니다. 빌려 쓰는 포인터이며, 없으면 확인하지 않습니다. */
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
         /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
@@ -149,6 +157,10 @@ namespace sw
 
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 부르며 바인딩과 게임은 부르지 않습니다. */
         void applyCompletion( LoginCompletion&& completion, const LoginStoreOutcome& outcome );
+        /** @brief 철회 대기열을 읽은 작업의 `complete` 가 호출합니다. 읽은 항목의 비밀을 풀어 제공자에 철회를 맡깁니다. */
+        void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, int64 nowMs );
+        /** @brief 완료가 할 일이 없는 작업(대기열 항목 지우기)의 `complete` 가 호출합니다. */
+        void noteStoreWorkDone() { --_pendingCount; }
 
     private:
         /** @brief 외부 제공자의 확인을 기다리는 요청입니다. */
@@ -165,8 +177,18 @@ namespace sw
             uint8                   _bUpdateRecommended{ SW_FALSE };
         };
 
+        /** @brief 철회를 맡기고 결과를 기다리는 항목입니다. */
+        struct PendingRevocation
+        {
+            string                  _queueKey{}; ///< 끝나면 대기열에서 지우는 키
+            IPlatformLoginProvider* _pProvider{ nullptr };
+            uint64                  _revocationID{ 0 };
+        };
+
         [[nodiscard]] bool consumeAttempt( uint64 clientKey, int64 nowMs, int64& outRetryAfterMs );
-        void               pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant );
+        /** @brief 철회할 제공자가 있으면 주기마다 철회 대기열을 읽고, 끝난 철회의 항목을 지웁니다. `update` 가 부릅니다. */
+        void updateRevocations( int64 nowMs );
+        void pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant );
         /** @brief 빌드 버전을 확인합니다. 최소 버전 미만이면 `UpdateRequired` 이고 @p outGrant 에 상점 주소를 채웁니다. 권장 버전 미만이면 Ok 와 `_bUpdateRecommended` 를 반환합니다. */
         LoginResult             evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
         IPlatformLoginProvider* findPlatformProvider( string_view provider ) const;
@@ -183,6 +205,8 @@ namespace sw
         vector<IPlatformLoginProvider*>        _listPlatformProvider;
         vector<PendingVerification>            _listPendingVerification;
         vector<PlatformLoginVerification>      _listVerificationScratch;
+        vector<PlatformLoginRevocation>        _listRevocationScratch;
+        vector<PendingRevocation>              _listPendingRevocation;
         unordered_map<uint64, uint64>          _mapAccountToSession;      ///< 이 프로세스에 접속해 있는 계정에서 세션으로 가는 맵이다
         unordered_map<uint64, AccountIdentity> _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
         unordered_map<string, uint64>          _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
@@ -190,7 +214,10 @@ namespace sw
         IServiceStore*                         _pStore;
         ILoginCrypto*                          _pCrypto;
         const RemoteConfig*                    _pRemoteConfig;
+        const LoginSecretVault*                _pSecretVault;
+        int64                                  _nextRevocationScanMs;
         size_t                                 _refreshCursor;
         int32                                  _pendingCount;
+        uint8                                  _bRevocationScanInFlight;
     };
 } // namespace sw

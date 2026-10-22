@@ -14,13 +14,12 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Service/ServicePendingTable.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 
 namespace sw
 {
     struct LiveOpsReply;
-
-    class LiveOpsService;
 
     /**
      * @class LiveOpsServer
@@ -45,12 +44,15 @@ namespace sw
 
     private:
         void attachHost( OnlineServiceHost& host );
+        /** @brief 새로 열린 이벤트 창의 시작 푸시를 지역 토픽으로 한 번 보냅니다(`LiveOpsPush`). 발송기가 없으면 버립니다. */
+        void announceStarts( int64 nowMs );
         void handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body );
         /** @brief 응답을 씁니다. 범위 밖 값이 있어 쓰지 못하면(로그가 남는다) `kInternal` 로 답합니다. */
         void respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply );
 
         ServicePendingTable          _pendingTable;
         vector<PushDeviceCompletion> _listDeviceCompletionScratch;
+        vector<LiveEventStart>       _listStartScratch;
         LiveOpsService*              _pService;
         PushNotificationDispatcher*  _pDispatcher;
         OnlineServiceHost*           _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다

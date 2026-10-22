@@ -137,5 +137,34 @@ namespace sw
         [[nodiscard]] virtual bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) = 0;
         /** @brief PEM 비밀 키로 서명합니다(ES256 은 r ‖ s 64 B) — 클라이언트 비밀 JWT(애플) · 테스트 발급자. */
         [[nodiscard]] virtual bool signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) = 0;
+        /**
+         * @brief 인증서 사슬(DER, 리프가 먼저)이 신뢰 루트(@p trustedRootsPem — PEM 여러 장)까지 이어지고 시각 @p unixSeconds 에 유효한지 확인해 리프의 공개 키를 꺼냅니다(스토어가 JWS 의 `x5c` 로 주는 사슬).
+         * @param leafRequiredOid 비어 있지 않으면 리프가 이 OID 의 확장을 가져야 합니다. @param issuerRequiredOid 비어 있지 않으면 리프를 발급한 인증서가 가져야 합니다(애플의 사슬 표지).
+         * @details 구현하지 않는 제공자는 false 입니다(지원하지 않음 — 확인한 것처럼 true 를 주지 않는다). 사슬 길이는 8 장까지.
+         */
+        [[nodiscard]] virtual bool verifyCertificateChain( const vector<vector<uint8>>& listChainDer, const string& trustedRootsPem, int64 unixSeconds, string_view leafRequiredOid,
+                                                           string_view issuerRequiredOid, NetPublicKey& outLeafPublicKey )
+        {
+            (void)listChainDer;
+            (void)trustedRootsPem;
+            (void)unixSeconds;
+            (void)leafRequiredOid;
+            (void)issuerRequiredOid;
+            outLeafPublicKey = NetPublicKey{};
+            return false;
+        }
+        /**
+         * @brief 루트 → 중간 → 리프(EC P-256) 인증서 사슬과 리프의 서명 키를 만듭니다 — 사슬을 확인하는 코드의 테스트가 가짜 스토어의 서명자로 씁니다.
+         * @param outListChainPem 리프, 중간, 루트 순(PEM). @param leafOid · @param issuerOid 는 비어 있지 않으면 리프 · 중간 인증서에 그 OID 의 확장을 넣는다.
+         */
+        [[nodiscard]] virtual bool createTestCertificateChain( int32 validDays, string_view leafOid, string_view issuerOid, vector<string>& outListChainPem, string& outLeafPrivateKeyPem )
+        {
+            (void)validDays;
+            (void)leafOid;
+            (void)issuerOid;
+            outListChainPem.clear();
+            outLeafPrivateKeyPem.clear();
+            return false;
+        }
     };
 } // namespace sw

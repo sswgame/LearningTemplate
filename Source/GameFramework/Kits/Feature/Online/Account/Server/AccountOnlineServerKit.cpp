@@ -10,6 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
 
@@ -20,6 +21,8 @@
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — Dev 만, 실제 비용을 재려면 끈다).
 //   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PlatformLoginProviderFactory::readSettings`). 비우면 외부 로그인이 없다.
 //   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
+//   linkSecretKeySecretEnvironment  연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름.
+//                               탈퇴 때 연동 토큰을 철회하는 제공자(애플 로그인)를 쓰면 필수다 — 평문으로 저장하지 않는다.
 
 namespace sw
 {
@@ -42,6 +45,7 @@ namespace sw
         public:
             AccountOnlineServerKit()
                 : _crypto{ &NetSecurity::getProvider() }
+                , _secretVault{}
                 , _platformProviders{}
                 , _loginService{}
                 , _accountServer{}
@@ -58,12 +62,14 @@ namespace sw
                 string             ticketKeyEnvironment;
                 string             providersFile;
                 string             trustFile;
+                string             linkSecretKeyEnvironment;
                 const bool         bOptionOk = entry.readOptions( {
-                                                              {"ticketKeySecretEnvironment",        ticketKeyEnvironment},
-                                                              {              "attemptBurst", loginSettings._attemptBurst},
-                                                              {         "lightPasswordHash",                  bLightHash},
-                                                              {     "platformProvidersFile",               providersFile},
-                                                              {         "platformTrustFile",                   trustFile}
+                                                              {    "ticketKeySecretEnvironment",        ticketKeyEnvironment},
+                                                              {                  "attemptBurst", loginSettings._attemptBurst},
+                                                              {             "lightPasswordHash",                  bLightHash},
+                                                              {         "platformProvidersFile",               providersFile},
+                                                              {             "platformTrustFile",                   trustFile},
+                                                              {"linkSecretKeySecretEnvironment",    linkSecretKeyEnvironment}
                 },
                                                                   outError );
                 if ( bOptionOk == false )
@@ -84,7 +90,7 @@ namespace sw
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
                 _bLoginStarted = true;
-                if ( createPlatformProviders( providersFile, trustFile, outError ) == false )
+                if ( createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, outError ) == false )
                     return false;
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 _accountServer.initialize( &_loginService, AccountServerConfig{} );
@@ -115,11 +121,12 @@ namespace sw
                     _loginService.shutdown();
                 _bLoginStarted = false;
                 _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 종료한다
+                _secretVault.shutdown();       // 로그인 서비스가 빌려 쓰던 연동 비밀 도구다
             }
 
         private:
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
-            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, string& outError )
+            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, const string& linkSecretKeyEnvironment, string& outError )
             {
                 if ( providersFile.empty() )
                 {
@@ -142,6 +149,7 @@ namespace sw
                     return false;
                 if ( _platformProviders.initialize( listSettings, trustFile, outError ) == false )
                     return false;
+                bool bNeedsSecretVault = false;
                 for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )
                 {
                     if ( _loginService.registerPlatformProvider( _platformProviders.getProvider( index ) ) == false )
@@ -149,11 +157,27 @@ namespace sw
                         outError = "platform login provider names must be unique and valid";
                         return false;
                     }
+                    bNeedsSecretVault = bNeedsSecretVault || _platformProviders.getProvider( index )->supportsRevocation();
                 }
+                if ( bNeedsSecretVault == false )
+                    return true;
+                // 탈퇴 때 토큰을 철회하는 제공자가 있다 — 연동 비밀을 암호화할 키가 반드시 있어야 한다(개발용 키로 대신하지 않는다).
+                if ( linkSecretKeyEnvironment.empty() )
+                {
+                    outError = "a login provider revokes link secrets on account deletion - set the option linkSecretKeySecretEnvironment";
+                    return false;
+                }
+                uint8 arrVaultKey[LoginSecretVault::kKeySize];
+                if ( LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey, outError ) == false )
+                    return false;
+                _secretVault.initialize( &NetSecurity::getProvider(), arrVaultKey );
+                Memory::set( arrVaultKey, 0, sizeof( arrVaultKey ) );
+                _loginService.setSecretVault( &_secretVault );
                 return true;
             }
 
             NetSecurityLoginCrypto   _crypto;
+            LoginSecretVault         _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
             PlatformLoginProviderSet _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
             LoginService             _loginService;
             AccountServer            _accountServer;

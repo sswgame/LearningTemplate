@@ -36,6 +36,8 @@ namespace sw
         int64                 _lockoutMs{ 5 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
         int64                 _attemptRefillMs{ 2000 };                                                             ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
         int64                 _deletionGraceMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
+        int64                 _revocationScanMs{ constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };  ///< 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 간격이다(철회할 제공자가 있을 때만)
+        int32                 _revocationBatchSize{ 16 };                                                           ///< 한 번에 읽어 철회를 맡기는 대기열 항목 수이다
         int32                 _maxFailedCount{ 5 };                                                                 ///< 이만큼 틀리면 계정을 잠근다
         int32                 _attemptBurst{ 10 };                                                                  ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };

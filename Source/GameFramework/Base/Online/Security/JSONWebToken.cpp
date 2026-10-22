@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
+#include "GameFramework/Base/Online/Security/JSONWebToken.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -42,6 +42,7 @@ namespace sw
 {
     JSONWebToken::JSONWebToken()
         : _payload{ make_unique<JSONDocument>() }
+        , _listCertificateDer{}
         , _signatureBytes{}
         , _signingInput{}
         , _keyID{}
@@ -79,7 +80,23 @@ namespace sw
             return false; // none, HS256, 그 밖의 알고리즘은 받지 않는다
         const JSONValue keyID = header.getRoot().get( "kid", false );
         _keyID                = keyID.isString() ? keyID.asString() : string{};
-        _signingInput         = string( compact.substr( 0, secondDot ) );
+        _listCertificateDer.clear();
+        const JSONValue chain = header.getRoot().get( "x5c", false );
+        if ( chain.isValid() )
+        {
+            if ( chain.isArray() == false )
+                return false;
+            for ( size_t index = 0; index < chain.size(); ++index )
+            {
+                const JSONValue element = chain.at( index );
+                vector<uint8>   listDer;
+                const bool      bDecoded = element.isString() && Base64Util::decode( element.asString(), listDer );
+                if ( bDecoded == false || listDer.empty() )
+                    return false; // 사슬이 깨졌다 — 일부만 믿지 않는다
+                _listCertificateDer.push_back( std::move( listDer ) );
+            }
+        }
+        _signingInput = string( compact.substr( 0, secondDot ) );
         return true;
     }
 
@@ -89,6 +106,26 @@ namespace sw
         if ( value.isString() == false )
             return false;
         outValue = value.asString();
+        return true;
+    }
+
+    bool JSONWebToken::findTextPath( string_view path, string& outValue ) const
+    {
+        JSONValue current = _payload->getRoot();
+        while ( path.empty() == false )
+        {
+            const size_t      dot  = path.find( '.' );
+            const string_view part = path.substr( 0, dot );
+            path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
+            if ( current.isObject() == false )
+                return false;
+            current = current.get( part, false );
+            if ( current.isValid() == false )
+                return false;
+        }
+        if ( current.isString() == false )
+            return false;
+        outValue = current.asString();
         return true;
     }
 

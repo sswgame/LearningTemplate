@@ -2,6 +2,7 @@
  * @file PlatformLoginProviderSet.h
  * @brief 설정 목록(`PlatformLoginProviderConfig`)에서 외부 로그인 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다.
  * @details - 제공자는 응답을 자기만 회수하므로(`PlatformLoginProviderFactory::create`) 제공자마다 HTTP 클라이언트 하나를 둡니다.
+ *            애플 로그인(`AppleSignIn`)은 JWKS 용과 교환 · 철회 용 둘을 둡니다.
  *          - `https://` 주소(JWKS, 프로필 API)의 호스트마다 클라이언트 TLS 컨텍스트를 만듭니다. 서버 체인은 @p trustFile(CA 번들 PEM)로 검증하고 이름도 봅니다.
  *            `https://` 주소가 있는데 신뢰 파일이 없으면 오류입니다. 개발용 인증서로 조용히 바꾸면 실제 제공자에 닿지 못한 채 기동이 끝나기 때문입니다.
  *          - 계정 키트 서버 조립(`AccountOnlineServerKit`)이 옵션 `platformProvidersFile` 과 `platformTrustFile` 로 이 객체를 채우고 로그인 서비스에 등록합니다.
@@ -18,8 +19,7 @@
 
 namespace sw
 {
-    class HTTPClient;
-    class ITLSContext;
+    class OwnedHTTPClient;
 
     /**
      * @class PlatformLoginProviderSet
@@ -45,13 +45,10 @@ namespace sw
     private:
         struct Entry
         {
-            vector<unique_ptr<ITLSContext>>    _listTLSContext{}; ///< HTTP 클라이언트보다 오래 산다(먼저 선언)
-            unique_ptr<HTTPClient>             _httpClient{};
-            unique_ptr<IPlatformLoginProvider> _provider{}; ///< HTTP 클라이언트를 빌려 쓰므로 먼저 소멸한다(나중 선언)
+            unique_ptr<OwnedHTTPClient>        _httpClient{};       ///< TLS 컨텍스트와 함께 소유한다
+            unique_ptr<OwnedHTTPClient>        _secondHTTPClient{}; ///< 애플 로그인의 교환 · 철회용. 다른 방식은 비어 있다
+            unique_ptr<IPlatformLoginProvider> _provider{};         ///< HTTP 클라이언트를 빌려 쓰므로 먼저 소멸한다(나중 선언)
         };
-
-        /** @brief @p url 이 `https://` 면 그 호스트의 TLS 컨텍스트를 만들어 @p entry 의 클라이언트에 등록합니다. 이미 등록한 호스트는 건너뜁니다. */
-        [[nodiscard]] static bool registerHostTLS( Entry& entry, string_view url, string_view trustFile, vector<string>& inoutListHost, string& outError );
 
         vector<Entry> _listEntry;
     };

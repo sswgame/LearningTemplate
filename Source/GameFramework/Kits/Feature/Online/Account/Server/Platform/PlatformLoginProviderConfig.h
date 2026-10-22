@@ -30,7 +30,12 @@ namespace sw
          * @brief 티켓(16 진 글)과 서버 비밀 키를 확인 API 의 쿼리 인자로 보내 주체 id 를 얻는다(`TicketQueryLoginProvider`).
          * @details 세션 티켓을 웹 API 로 확인하는 제공자(예: 게임 플랫폼의 사용자 인증 티켓)를 데이터로 정의한다 — 주소 · 인자 이름 · 결과 경로가 설정이다.
          */
-        TicketQuery
+        TicketQuery,
+        /**
+         * @brief OIDC ID 토큰(`Oidc` 와 같다)에 인가 코드를 교환해 받은 refresh token 을 연동 비밀로 보관하고 탈퇴 때 철회한다(`AppleLoginProvider`, OnlineKits A4).
+         * @details 티켓은 `ID 토큰|nonce|인가 코드`(nonce 가 없으면 `ID 토큰||인가 코드`)다. client secret 은 서명 키(`keySecretEnvironment` 의 PEM)로 서버가 JWT(ES256)로 만든다.
+         */
+        AppleSignIn
     };
 } // namespace sw
 
@@ -51,6 +56,10 @@ namespace sw
         string                    _keySecretEnvironment{}; ///< TicketQuery — 서버 비밀 키를 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
         string                    _resultPath{};           ///< TicketQuery — 확인 결과 글의 점 경로(예: "response.params.result")
         string                    _resultValue{};          ///< TicketQuery — 성공일 때 그 경로의 글(예: "OK")
+        string                    _teamID{};               ///< AppleSignIn — 개발자 팀 id(client secret 의 `iss`)
+        string                    _signingKeyID{};         ///< AppleSignIn — 서명 키 id(client secret 헤더의 `kid`). 서명 키 PEM 은 `_keySecretEnvironment` 의 환경 변수에서 읽는다
+        string                    _tokenURL{};             ///< AppleSignIn — 인가 코드 교환 주소. 비우면 제공자의 공식 주소이고 가짜 서버(테스트)를 가리킬 때만 쓴다
+        string                    _revokeURL{};            ///< AppleSignIn — 토큰 철회 주소. 비우면 제공자의 공식 주소
         int64                     _clockSkewMs{ 60000 };   ///< exp 와 iat 의 허용 오차이다
         int64                     _jwksRefreshMs{ 3600000 };
         int64                     _minRefetchMs{ 30000 }; ///< 모르는 kid 때문에 JWKS 를 다시 받는 최소 간격이다. 키 회전에 대응하면서 요청이 몰리는 것을 막는다
@@ -68,8 +77,8 @@ namespace sw
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰며 이 제공자만 응답을 회수합니다. 응답을 다른 쪽과 나누지 않습니다. 설정이 틀리면 nullptr 을 반환합니다. */
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
-         * @brief `{"providers":[{"name","kind":"oidc|profile|ticketQuery","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath",
-         *        "ticketParam","keyParam","keySecretEnvironment","resultPath","resultValue"}]}` 를 읽습니다.
+         * @brief `{"providers":[{"name","kind":"oidc|profile|ticketQuery|appleSignIn","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath",
+         *        "ticketParam","keyParam","keySecretEnvironment","resultPath","resultValue","teamId","signingKeyId","tokenUrl","revokeUrl"}]}` 를 읽습니다.
          * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류(@p outError)로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
          */
         [[nodiscard]] static bool readSettings( string_view jsonText, vector<PlatformLoginProviderConfig>& outListSettings, string& outError );

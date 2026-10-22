@@ -14,7 +14,8 @@
  *            샤드 여럿에 포트 0 은 받지 않는다(연이은 포트가 배정의 계약이다).
  *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
  *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
- *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다. 풀리지 않으면 기동 오류다.
+ *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다. 풀리지 않으면 기동 오류다. 이 길은 자격 없이 붙는다 — 접속 티켓을 요구하는 서버
+ *            (`ServerConfig::_bGameConnectTicket`)는 거절한다. 그 서버에는 로그인 뒤 `makeTicketClientParams` 의 인자로 `initialize` 해 붙는다.
  *          - 전용 서버가 아니고 인자도 없으면 세션을 열지 않는다. 혼자 하는 게임은 이전과 같이 동작한다.
  *          - 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면 게임 인스턴스가 기동을 멈춘다(`GameNetLaunch::Invalid`) — 혼자 하는 게임으로 대신 뜨지 않는다.
  *
@@ -81,6 +82,11 @@ namespace sw
         GameNetRole   _role{ GameNetRole::None };
         bool          _bLoopbackOnly{ true };     ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
         bool          _bShardsSharePort{ false }; ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`)
+        /**
+         * @brief 클라이언트 — 연결 때 내미는 접속 티켓입니다. 비어 있지 않으면 `_hostSettings._security` 가 암호화여야 합니다(`GameNetSession::makeTicketClientParams` 가 둘을 함께 채운다).
+         * @details 티켓을 내미는 클라이언트와 받는 서버는 프로토콜 id 의 기능 비트가 같아야 붙는다 — 자격 없이 붙는 클라이언트는 티켓 서버에 `SecurityMismatch` 로 거절된다.
+         */
+        NetConnectCredentials _credentials{};
     };
 
     /**
@@ -164,6 +170,13 @@ namespace sw
          *          다른 값으로 대신 열지 않는다.
          */
         [[nodiscard]] static bool makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams );
+        /**
+         * @brief 접속 티켓을 내밀어 @p serverAddress 에 붙는 클라이언트 세션 인자를 만듭니다(OnlineKits F5 의 클라이언트 쪽).
+         * @details 연결을 암호화하고 티켓의 세션 비밀에 묶는다. 주소는 서버 배정(`ServerDescriptor::pickPort`)이 정하고 티켓은 계정 키트의 `AccountClient::makeConnectCredentials` 가 만든다.
+         *          그래서 실행 인자(`-gv_netConnectAddress`, 자격 없이 붙는 길)가 아니라 로그인 뒤 게임 코드가 이 인자로 `initialize` 한다.
+         *          티켓이 비었거나 암호 제공자가 없으면(GameFramework 가 안 섰다) 오류 로그와 false 다 — 자격 없이 붙는 클라이언트로 대신 만들지 않는다.
+         */
+        [[nodiscard]] static bool makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams );
 
         /** @brief 소켓을 열고 역할을 시작합니다(서버는 샤드마다 listen, 클라이언트는 connectAsync). 하나라도 실패하면 연 것을 모두 닫고 로그를 남긴 뒤 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const GameNetSessionParams& params );
@@ -221,6 +234,8 @@ namespace sw
         void reportConnectResult();
         /** @brief 클라이언트의 유일한 호스트입니다(클라이언트는 샤드가 하나다). */
         NetHost& getClientHost();
+        /** @brief 클라이언트의 연결 시도를 시작합니다. 티켓에 묶인 세션이면 티켓을 내밀고, 아니면 자격 없이 붙습니다. */
+        TaskFuture<NetConnectResult> startClientConnect();
         /** @brief 사건을 어느 때 읽었는가 — 클라이언트가 서버를 잃은 것이 이상인지가 이것으로 갈린다. */
         enum class EventPhase : uint8
         {
@@ -238,9 +253,11 @@ namespace sw
         TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
         vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다
         NetAddress                   _serverAddress;
+        NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                       _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
         uint16                       _listenPort;
         GameNetRole                  _role;
+        uint8                        _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                        _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
         uint8                        _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
     };

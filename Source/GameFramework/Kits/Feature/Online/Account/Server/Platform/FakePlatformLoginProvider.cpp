@@ -18,9 +18,15 @@ namespace sw
     FakePlatformLoginProvider::FakePlatformLoginProvider( string_view name )
         : _listPending{}
         , _listDone{}
+        , _listPendingRevocation{}
+        , _listRevokedSecret{}
         , _name{ name }
+        , _linkSecret{}
         , _nextVerificationID{ 1 }
+        , _nextRevocationID{ 1 }
         , _submittedCount{ 0 }
+        , _bRevocationEnabled{ SW_FALSE }
+        , _bRevocationUnavailable{ SW_FALSE }
     {
     }
 
@@ -71,7 +77,33 @@ namespace sw
                 verification._displayName = string( rest.substr( colon + 1 ) );
             if ( verification._subject.empty() )
                 verification._bRejected = SW_TRUE;
+            else if ( _bRevocationEnabled == SW_TRUE )
+                verification._linkSecret = _linkSecret;
         }
         _listPending.clear();
+    }
+
+    uint64 FakePlatformLoginProvider::submitRevocation( string_view linkSecret, int64 nowMs )
+    {
+        (void)nowMs;
+        PendingRevocation& pending = _listPendingRevocation.emplace_back();
+        pending._secret            = string( linkSecret );
+        pending._revocationID      = _nextRevocationID++;
+        return pending._revocationID;
+    }
+
+    int32 FakePlatformLoginProvider::pollRevocations( vector<PlatformLoginRevocation>& outListRevocation )
+    {
+        const int32 count = static_cast<int32>( _listPendingRevocation.size() );
+        for ( const PendingRevocation& pending : _listPendingRevocation )
+        {
+            PlatformLoginRevocation& done = outListRevocation.emplace_back();
+            done._revocationID            = pending._revocationID;
+            done._bUnavailable            = _bRevocationUnavailable;
+            if ( _bRevocationUnavailable == SW_FALSE )
+                _listRevokedSecret.push_back( pending._secret );
+        }
+        _listPendingRevocation.clear();
+        return count;
     }
 } // namespace sw

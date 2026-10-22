@@ -15,6 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
@@ -357,6 +358,47 @@ namespace
         LoginNode* operator->() { return &_node; }
     };
 
+    /** @brief 연동 비밀 철회 테스트의 준비 — 비밀을 주는 가짜 제공자("apple") 와 암호화 도구를 서비스에 붙입니다. */
+    struct LinkSecretFixture
+    {
+        LoginFixture              _fixture;
+        FakePlatformLoginProvider _provider;
+        LoginSecretVault          _vault;
+
+        LinkSecretFixture()
+            : _fixture{}
+            , _provider{ "apple" }
+            , _vault{}
+        {
+            uint8 arrKey[LoginSecretVault::kKeySize];
+            for ( int32 index = 0; index < LoginSecretVault::kKeySize; ++index )
+            {
+                arrKey[index] = static_cast<uint8>( 0x40 + index );
+            }
+            _vault.initialize( &NetSecurity::getProvider(), arrKey );
+            _provider.enableRevocation();
+            _provider.setLinkSecret( "refresh-token-1" );
+            SW_EXPECT_TRUE( _fixture->_service->registerPlatformProvider( &_provider ) );
+            _fixture->_service->setSecretVault( &_vault );
+        }
+
+        ~LinkSecretFixture() { _fixture->_service->setSecretVault( nullptr ); }
+
+        /** @brief 철회 한 바퀴 — 대기열 읽기, 제공자 철회, 항목 지우기가 끝나도록 서비스와 저장소를 번갈아 돌립니다. */
+        void spinRevocation( int64 nowMs )
+        {
+            for ( int32 round = 0; round < 4; ++round )
+            {
+                _fixture->_service->update( nowMs );
+                (void)_fixture->_store.pollCompletions();
+            }
+        }
+
+        static bool containsText( const vector<uint8>& bytes, string_view text )
+        {
+            return std::search( bytes.begin(), bytes.end(), text.begin(), text.end() ) != bytes.end();
+        }
+    };
 } // namespace
 
 SW_TEST_CASE( LoginServiceTest, RegisterLoginAndValidate )
@@ -965,6 +1007,136 @@ SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButK
     SW_ASSERT_TRUE( fixture->guestLogin( 6, secondDueMs + 1, gone ) == LoginResult::Ok );
     SW_EXPECT_TRUE( gone._bCreated == SW_TRUE );
     SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_deletion" ) ) );
+}
+
+SW_TEST_CASE( LoginServiceTest, LinkSecretsAreSealedAndRevokedAfterAccountDeletion )
+{
+    LinkSecretFixture fixture;
+    LoginFixture&     login = fixture._fixture;
+    LoginGrant        grant;
+    SW_ASSERT_TRUE( login->platformLogin( "apple", "subject:a-1:Apple User", 0, grant ) == LoginResult::Ok );
+    const uint64 accountID = grant._identity._accountID;
+
+    // 연동 비밀은 암호화된 채로만 저장소에 있다(평문이 없다).
+    const hashed_string secretTable( "login_account_secret" );
+    SW_ASSERT_EQUAL( login._database.countRecords( secretTable ), 1 );
+    ServiceRecord secretRecord;
+    SW_ASSERT_TRUE( login._database.readRecord( secretTable, ServiceKeyUtil::makeHex64( accountID ) + "/apple", secretRecord ) == ServiceStoreResult::Ok );
+    SW_EXPECT_FALSE( LinkSecretFixture::containsText( secretRecord._bytes, "refresh-token-1" ) );
+    string opened;
+    SW_EXPECT_TRUE( fixture._vault.open( secretRecord._bytes, "apple", opened ) );
+    SW_EXPECT_EQUAL( string( "refresh-token-1" ), opened );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 );
+
+    // 철회 대기열이 비어 있는 동안에는 제공자에 아무것도 부르지 않는다.
+    fixture.spinRevocation( 1000 );
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
+
+    // 탈퇴 정리가 비밀을 칸에서 철회 대기열로 옮긴다.
+    int64 dueMs = 0;
+    SW_ASSERT_TRUE( login->requestDeletion( grant._token, 100, dueMs ) == LoginResult::Ok );
+    login->purgeDueDeletions( dueMs );
+    SW_EXPECT_EQUAL( login._database.countRecords( secretTable ), 0 );
+    SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
+
+    // 제공자에 닿지 못하면 대기열에 남아 다음 주기에 다시 한다.
+    fixture._provider.setRevocationUnavailable( true );
+    const int64 scanMs = login._settings._revocationScanMs;
+    fixture.spinRevocation( dueMs + 1 );
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
+    fixture._provider.setRevocationUnavailable( false );
+    fixture.spinRevocation( dueMs + 1 + scanMs / 2 ); // 주기 전에는 읽지 않는다
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
+    fixture.spinRevocation( dueMs + 1 + scanMs );
+    SW_ASSERT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets()[0], string( "refresh-token-1" ) );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 ); // 철회가 끝나 항목을 지웠다
+    SW_EXPECT_EQUAL( login->_service->getPendingCount(), 0 );
+}
+
+SW_TEST_CASE( LoginServiceTest, UnlinkingAProviderQueuesItsLinkSecretForRevocationAndAWrongKeyLeavesItQueued )
+{
+    using Internal = TestLoginServiceInternal;
+    LinkSecretFixture fixture;
+    LoginFixture&     login = fixture._fixture;
+    LoginGrant        grant;
+    SW_ASSERT_TRUE( login->guestLogin( 9, 0, grant ) == LoginResult::Ok );
+    AccountIdentity identity;
+    SW_ASSERT_TRUE( login->linkCredential( grant._token, Internal::makeCredential( "applefan", "password123" ), 10, identity ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->linkPlatform( grant._token, "apple", "subject:a-2", 20 ) == LoginResult::Ok );
+    SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_account_secret" ) ), 1 ); // 연동할 때도 비밀을 남긴다
+
+    SW_ASSERT_TRUE( login->unlinkPlatform( grant._token, "apple", 30 ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_account_secret" ) ), 0 );
+    SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
+
+    // 다른 키로는 풀리지 않는다 — 항목은 대기열에 남고 철회하지 않는다.
+    uint8            arrOtherKey[LoginSecretVault::kKeySize]{};
+    LoginSecretVault otherVault;
+    otherVault.initialize( &NetSecurity::getProvider(), arrOtherKey );
+    login->_service->setSecretVault( &otherVault );
+    const int64 firstMs = 100000; // 외부 로그인 도우미의 update 가 연 첫 읽기 주기(빈 대기열)보다 뒤
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the service logs that the queue entry cannot be opened" );
+        fixture.spinRevocation( firstMs );
+    }
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
+    login->_service->setSecretVault( &fixture._vault );
+    fixture.spinRevocation( firstMs + login._settings._revocationScanMs );
+    SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 );
+}
+
+SW_TEST_CASE( LoginServiceTest, ALinkSecretWithoutAVaultIsDroppedInsteadOfStoredInPlaintext )
+{
+    LoginFixture              fixture;
+    FakePlatformLoginProvider provider{ "apple" };
+    provider.enableRevocation();
+    provider.setLinkSecret( "refresh-token-2" );
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
+    LoginGrant grant;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the service logs that the link secret cannot be stored" );
+        SW_ASSERT_TRUE( fixture->platformLogin( "apple", "subject:a-3", 0, grant ) == LoginResult::Ok ); // 로그인은 성공이다
+    }
+    SW_EXPECT_EQUAL( fixture._database.countRecords( hashed_string( "login_account_secret" ) ), 0 );
+}
+
+SW_TEST_CASE( LoginSecretVaultTest, SealedSecretsOpenOnlyWithTheSameKeyAndContext )
+{
+    uint8 arrKey[LoginSecretVault::kKeySize];
+    for ( int32 index = 0; index < LoginSecretVault::kKeySize; ++index )
+    {
+        arrKey[index] = static_cast<uint8>( index );
+    }
+    LoginSecretVault vault;
+    vector<uint8>    sealed;
+    SW_EXPECT_FALSE( vault.seal( "x", "apple", sealed ) ); // 키를 정하기 전
+    vault.initialize( &NetSecurity::getProvider(), arrKey );
+    SW_ASSERT_TRUE( vault.seal( "refresh-token", "apple", sealed ) );
+    vector<uint8> sealedAgain;
+    SW_ASSERT_TRUE( vault.seal( "refresh-token", "apple", sealedAgain ) );
+    SW_EXPECT_TRUE( sealed != sealedAgain ); // nonce 가 매번 다르다
+    string plain;
+    SW_EXPECT_TRUE( vault.open( sealed, "apple", plain ) );
+    SW_EXPECT_EQUAL( string( "refresh-token" ), plain );
+    SW_EXPECT_FALSE( vault.open( sealed, "google", plain ) ); // 다른 제공자의 레코드로 바꿔 끼울 수 없다
+    vector<uint8> tampered = sealed;
+    tampered.back() ^= 0x01;
+    SW_EXPECT_FALSE( vault.open( tampered, "apple", plain ) );
+    vector<uint8> wrongVersion = sealed;
+    wrongVersion[0]            = 9;
+    SW_EXPECT_FALSE( vault.open( wrongVersion, "apple", plain ) );
+    SW_EXPECT_FALSE( vault.open( vector<uint8>( 5, 0 ), "apple", plain ) );
+
+    uint8            arrOther[LoginSecretVault::kKeySize]{};
+    LoginSecretVault otherVault;
+    otherVault.initialize( &NetSecurity::getProvider(), arrOther );
+    SW_EXPECT_FALSE( otherVault.open( sealed, "apple", plain ) );
+    vault.shutdown();
+    SW_EXPECT_FALSE( vault.open( sealed, "apple", plain ) );
 }
 
 /**

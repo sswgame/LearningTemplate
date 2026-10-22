@@ -51,6 +51,18 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 방금 열린 이벤트 창 하나의 시작 푸시입니다(`LiveOpsService::takeStartedEvents`). 문구는 이벤트 매개변수 `push.*` 를 풀어 채웁니다. */
+    struct LiveEventStart
+    {
+        PushNotificationMessage _message{};
+        vector<string>          _listRegion{}; ///< 비면 모든 지역(전체 토픽)이다
+        string                  _eventID{};
+        int64                   _windowEndMs{ 0 }; ///< 이 창을 가르는 값이다(같은 창은 서버 여럿이 한 번만 알린다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 라이브 운영 정의를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
     REFLECT()
     struct SW_KIT_SERVER_API LiveOpsChanged
@@ -95,6 +107,12 @@ namespace sw
         void notifyChanged() { _bReloadRequested = SW_TRUE; }
         /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
         [[nodiscard]] bool takeStateChange();
+        /**
+         * @brief 지난번 이후 새로 열린 이벤트 창 중 시작 푸시를 달아 둔 것(`push.title` 또는 `push.body`)을 @p outListStart 뒤에 붙이고 비웁니다.
+         * @details 열린 지 `LiveOpsPush::kStartGraceMs` 가 지난 창은 알리지 않는다 — 서버가 다시 떠서 이미 열려 있던 이벤트를 새로 알리지 않는다.
+         *          같은 창을 서버 여럿이 보지 않게 하는 일은 부르는 쪽이다(발송기의 `notifyTopicOnce`).
+         */
+        void takeStartedEvents( vector<LiveEventStart>& outListStart );
 
         /** @brief 이 계정에 지금 열린 이벤트를 반환합니다. @p bClientOnly 이면 클라이언트에 보이는 것만 반환합니다. */
         void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
@@ -120,8 +138,16 @@ namespace sw
         void applyWrite( uint64 requestTag, LiveOpsResult result );
 
     private:
+        /** @brief 지난번에 열려 있던 이벤트 창 하나입니다. */
+        struct OpenWindow
+        {
+            string _eventID{};
+            int64  _windowEndMs{ 0 };
+        };
+
         void                       startReload( int64 nowMs );
         void                       markIfChanged( int64 nowMs );
+        void                       collectStarts( int64 nowMs );
         uint64                     computeOpenHash( int64 nowMs ) const;
         string                     resolveValue( const string& value ) const;
         bool                       isKillSwitchOff() const;
@@ -129,6 +155,8 @@ namespace sw
         void                       submitWrite( unique_ptr<LiveOpsWriteWork> work );
 
         vector<LiveEventDefinition>    _listEvent;
+        vector<OpenWindow>             _listOpenWindow; ///< 지난번 판정에서 열려 있던 창
+        vector<LiveEventStart>         _listStarted;
         EventBuffer<LiveOpsCompletion> _completionBuffer;
         LiveOpsDependencies            _dependencies;
         int64                          _lastReloadMs;

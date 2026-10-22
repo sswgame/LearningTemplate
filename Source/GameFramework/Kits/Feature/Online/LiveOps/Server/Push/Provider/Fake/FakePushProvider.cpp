@@ -19,13 +19,26 @@ namespace sw
         script._retryAfterMs   = retryAfterMs;
     }
 
-    void FakePushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message )
+    void FakePushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs )
     {
         (void)locale;
-        _listSent.push_back( SentRecord{ message, deviceToken, deliveryID } );
+        (void)nowMs;
+        _listSent.push_back( SentRecord{ message, deviceToken, {}, deliveryID } );
+        queueResult( deliveryID, deviceToken );
+    }
+
+    void FakePushProvider::sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    {
+        (void)nowMs;
+        _listSent.push_back( SentRecord{ message, {}, string( topic ), deliveryID } );
+        queueResult( deliveryID, string( topic ) );
+    }
+
+    void FakePushProvider::queueResult( uint64 deliveryID, const string& scriptKey )
+    {
         PushDeliveryResult result;
         result._deliveryID  = deliveryID;
-        const auto scriptIt = _mapTokenToScript.find( deviceToken );
+        const auto scriptIt = _mapTokenToScript.find( scriptKey );
         if ( scriptIt != _mapTokenToScript.end() && scriptIt->second._remainingCount > 0 )
         {
             result._status       = scriptIt->second._status;

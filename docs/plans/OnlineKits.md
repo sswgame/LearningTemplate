@@ -18,7 +18,7 @@
 | A1 | 엔진 `IHTTPClient` 를 GameFramework `HTTPClient` 로 보내는 어댑터 `BlockingHTTPClient` | 없음 | 끝남(빌드 미확인) |
 | A2 | `IExternalBrowser` 의 OS 구현 `SystemExternalBrowser` | 없음 | 끝남(빌드 미확인) |
 | A3 | 계정 키트 서버 조립이 제공자 설정 파일과 신뢰 파일로 제공자를 만들어 등록(`PlatformLoginProviderSet`) | 없음 | 끝남(빌드 미확인) |
-| A4 | 애플 client secret JWT, 인가 코드 교환, 탈퇴 때 토큰 철회(`Provider/Apple/`) | 결정(4절) | 남음(설계 4절 — 갱신 토큰 보관 칸이 먼저) |
+| A4 | 애플 client secret JWT, 인가 코드 교환, 탈퇴 때 토큰 철회(`Provider/Apple/`) | 결정(4절) | 끝남(2026-10-22 Debug 빌드 · 테스트 통과) |
 | A5 | 실제 제공자 등록(client id), 스팀 티켓 확인, 모바일 SDK 클라이언트 | 결정(4절) | 일부(티켓 확인 API 제공자 `TicketQueryLoginProvider` — 스팀은 데이터 한 줄, 빌드 미확인. 등록 · 모바일 SDK 는 남음) |
 | B1 | 채팅 신고: 메시지 스냅숏을 영속 테이블에 남기고 GM 도구가 목록을 읽고 처리 | 없음 | 끝남(빌드 미확인) |
 | B2 | 채팅 채널 샤딩 | 부하 봇 측정 | 남음(측정 시나리오 `chat_send_p99` 들어감 — 숫자를 잰 뒤 정한다) |
@@ -31,23 +31,23 @@
 | F2 | 백필(경기 중 빈자리) | F1 | 끝남(빌드 미확인) |
 | F3 | 재접속 유예 중 파티와 로비 유지 | 없음 | 끝남(빌드 미확인) |
 | F4 | 파티 채팅 채널 | D1 | 끝남(빌드 미확인) |
-| F5 | 전용 게임 서버 조립이 접속 인증기(`AccountConnectAuthenticator` 와 `MatchServerAgent`)를 UDP `NetHost` 에 끼우고 배정 주제를 구독 | F1, ServerDebug 의 GameNetSession | 끝남(빌드 미확인) |
+| F5 | 전용 게임 서버 조립이 접속 인증기(`AccountConnectAuthenticator` 와 `MatchServerAgent`)를 UDP `NetHost` 에 끼우고 배정 주제를 구독 | F1, ServerDebug 의 GameNetSession | 끝남(서버 쪽 빌드 미확인, 클라이언트 티켓 제시는 2026-10-22 Debug 빌드 · 테스트 통과) |
 | G1 | A/B 실험(원격 설정 출시 비율과 지표) | 없음 | 끝남(빌드 미확인) |
 | G2 | 우편의 오프라인 푸시 연결(`IOfflinePushSender`) | 없음 | 끝남(빌드 미확인) |
-| G5 | 라이브 이벤트 시작의 오프라인 푸시(전체 대상이라 제공자의 토픽 발송이 필요하다) | G4 | 남음(설계 4절 — 제공자 계약에 토픽 발송) |
+| G5 | 라이브 이벤트 시작의 오프라인 푸시(전체 대상이라 제공자의 토픽 발송이 필요하다) | G4 | 끝남(2026-10-22 Debug 빌드 · 테스트 통과) |
 | G3 | 이벤트 운영 화면(GF_Admin 패널) | C1 | 끝남(빌드 미확인) |
-| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 남음(설계 4절 — FCM 먼저, APNs 는 HTTP/2 클라이언트가 먼저) |
+| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 공통 HTTP 클라이언트에 HTTP/2 가 들어온 뒤) |
 | H1 | 환불과 결제 취소 알림을 받아 `refund.revoke` 로 회수 | 없음 | 끝남(빌드 미확인) |
 | H2 | 유상 재화 청약철회 규칙 | H1 | 끝남(빌드 미확인) |
-| H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 남음(설계 4절 — 스팀 → 구글 → 애플 순서) |
+| H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 끝남(2026-10-22 Debug 빌드 · 테스트 통과. 애플은 가짜 앱 스토어 서버와 테스트용 인증서 사슬로만 확인했다 — 실제 앱 스토어 응답 확인은 iOS 빌드가 생길 때) |
 | I1 | 인스턴스 아이템(내구도, 강화) | 없음 | 끝남(빌드 미확인) |
 | I2 | 새 우편 알림(`mail_notice` 를 우편함 키트가 가져가 알림, 중계, 오프라인 푸시로 보냄) | 없음 | 끝남(빌드 미확인) |
 | I7 | 잔액 변경 알림(GM 지급과 환불 회수처럼 클라이언트 요청 없이 움직인 잔액) | I2 | 끝남(빌드 미확인) |
 | I3 | 원장 보존 검사와 만료 쓸기를 예약 작업으로, 발행과 소각 총량 지표 | 없음 | 끝남(빌드 미확인) |
 | I4 | 분개, 감사, 우편, 멱등, 구매 기록의 보존 기간 정리 | I3 | 끝남(빌드 미확인) |
 | I5 | 접속하지 않은 계정의 이름 찾기 | 없음 | 끝남(빌드 미확인) |
-| I6 | GM 전용 호스트 포트를 서버 설정에 | 없음 | 남음(포트 샤딩 `3e430c317` 이 들어와 막힘은 풀렸다 — 2026-10-22 작업에서 손대지 못했다) |
-| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 남음(2026-10-22 작업에서 손대지 못했다 — 화면 확인 없이 코드만 넣는 것도 위젯 단계와 묶는다) |
+| I6 | GM 전용 호스트 포트를 서버 설정에 | 없음 | 남음(구현해 보니 설계가 비어 있었다 — 아래 3절 I6) |
+| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 남음(UI 문서 · 화면 확인이 필요해 온라인 키트 작업자의 범위 밖 — 아래 3절 U1) |
 | M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 들어감 — 돌려 숫자를 남기는 일만 남았다) |
 
 ## 4. 결정 (2026-10-22, 권고안 — 사용자 지시로 되묻지 않고 정했다)
@@ -64,7 +64,7 @@
 - H3(설계, 순서): 스팀(`ISteamMicroTxn/QueryTxn` — 키 쿼리, 상태 `Succeeded` · `Refunded`, 환불은 `GetReport` 주기 조회) → 구글(서비스 계정 OAuth + `purchases.products.get`, 환불은 RTDN 구독) →
   애플(App Store Server API — ES256 JWT, 응답의 JWS 를 `x5c` 사슬로 애플 루트까지 확인해야 하므로 보안 제공자에 X.509 사슬 확인이 먼저다).
 - B2 · M1: 측정이 근거라는 결정(1 절)은 그대로다. 측정 도구(부하 봇 시나리오 `chat_send_p99` · `friend_presence_fanout`)를 넣었고, 숫자를 잰 뒤 샤딩을 정한다.
-- U1 · I6: 결정할 것은 없다(설계가 있는 구현 일). 2026-10-22 작업에서 손대지 못했다.
+- U1 · I6: 아래 3절 U1 · I6 에 이유와 남은 조건을 적었다.
 
 ## 3. 단위의 계약과 함정
 
@@ -72,7 +72,50 @@
 
 애플은 탈퇴한 계정의 토큰을 철회하라고 요구합니다(App Store 심사 지침 5.1.1(v)). 철회에는 ID 토큰이 아니라 인가 코드를 교환해 받은 refresh token 이 필요합니다.
 그래서 외부 로그인 티켓에 인가 코드를 싣고, 서버가 client secret JWT(`JSONWebToken::makeSigned`, ES256)로 코드를 교환해 refresh token 을 계정의 외부 연동 레코드 옆에 보관해야 합니다.
-탈퇴 정리(`LoginService::purgeDueDeletions`)가 그 토큰으로 `/auth/revoke` 를 부릅니다. 모바일 빌드가 없어 애플 로그인을 쓰는 클라이언트가 없으므로 미룹니다.
+탈퇴 정리(`LoginService::purgeDueDeletions`)가 그 토큰으로 `/auth/revoke` 를 부릅니다. 모바일 빌드가 없어 클라이언트는 아직 없지만 서버 쪽은 가짜 HTTPS 애플 서버로 확인했다(2026-10-22, `wt/onlinekits`).
+
+애플 로그인(`Provider/Apple/AppleLoginProvider`)의 인가 코드 교환과 탈퇴 때 토큰 철회. 설정 종류 `appleSignIn`(`teamId` · `signingKeyId` · `keySecretEnvironment` 의 PEM 서명 키).
+
+- **티켓**: `ID 토큰|nonce|인가 코드`. ID 토큰은 공통 OIDC 구현이 확인하고, 코드가 있으면 서버가 만든 client secret JWT(ES256)로 `POST /auth/token` 에 교환해 `refresh_token` 을 연동 비밀로 돌려준다. 교환이 실패해도 로그인은 성공한다(비밀만 없다).
+- **저장**: 로그인 서비스가 연동 비밀을 `LoginSecretVault`(AES-256-GCM, 제공자 이름이 추가 인증 데이터)로 봉인해 `login_account_secret` 에 쓴다. 키는 환경 변수(키트 옵션 `linkSecretKeySecretEnvironment`)이고, 철회하는 제공자를 등록했는데 키가 없으면 서버 기동이 실패한다.
+  도구가 없는 서비스는 비밀을 버리고 오류를 남긴다(평문으로 저장하지 않는다).
+- **철회**: 탈퇴 정리(`purgeAccount`)와 연동 해제(`unlinkPlatform`)가 비밀을 같은 트랜잭션에서 `login_revoke_queue` 로 옮긴다. 서비스가 `_revocationScanMs`(1 분)마다 대기열을 읽어 비밀을 풀고 제공자에 `POST /auth/revoke` 한다.
+  철회했거나 이미 무효(`invalid_grant`)면 항목을 지우고, 제공자에 닿지 못했으면(5xx · 전송 실패 · 설정 문제) 남겨 다음 주기에 다시 한다. 풀리지 않는 항목(키가 바뀜)과 설정에 없는 제공자의 항목은 남긴다.
+- **함정**: 탈퇴 계정 삭제 뒤에 철회를 하므로, 서버가 철회 전에 죽어도 대기열이 남아 이어서 한다. 철회 대기열 항목은 지워지기 전까지 암호화된 비밀을 들고 있다. 외부 로그인 제공자 둘 이상이 같은 이름의 철회를 요구하면 이름 규칙(`[a-z0-9_]`)이 키가 된다.
+
+### G4 · G5
+
+FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작의 토픽 푸시. 서비스 계정 OAuth 는 `ServiceAccountTokenSource`(기반 `Online/HTTP`)가 맡는다.
+
+- **자격**: 서비스 계정 JSON 을 환경 변수에서 읽는다(`PushProviderSet`, 키트 옵션 `pushProvidersFile` · `pushTrustFile`). 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenUrl":"…","sendUrl":"…"}]}` 이고 `tokenUrl` · `sendUrl` 은 가짜 서버를 가리킬 때만 쓴다.
+  변수가 없거나 서비스 계정이 틀리면 서버 기동이 실패한다. 설정 파일이 없으면 실제 제공자를 만들지 않는다.
+- **상태 대응**: 200 Delivered, 404 · `UNREGISTERED` InvalidToken, 429 RateLimited(`Retry-After`), 5xx · 전송 실패 Transient, 401 · 403 Rejected(액세스 토큰을 버려 다음 배달이 새로 받는다), 그 밖의 4xx Rejected. 토큰 요청이 5xx · 전송 실패면 기다리던 배달이 Transient, 4xx 면 Rejected 다.
+- **문구**: 현지화 키(`title_loc_key` · `loc-key` 와 인자)라 기기가 자기 언어로 푼다. `send` 의 `locale` 은 쓰지 않는다. 문구가 없으면 데이터 메시지만 보낸다.
+- **제공자 계약**: `send` 는 서비스 시각(`nowMs`)을 받고, 제공자는 `update( nowMs )`(HTTP 전송 돌리기)와 `supportsTopics` · `sendToTopic` 을 가진다. 발송기는 토픽 발송을 토픽을 아는 제공자에게만 맡기고(`notifyTopic`), 토픽 배달의 `InvalidToken` 은 해지할 기기가 없어 버린다.
+- **G5 이벤트 시작 푸시**: 이벤트 매개변수 `push.title` · `push.body`(현지화 키, `@키` 가능) · `push.link` 가 있으면 방금 열린 창(`LiveOpsPush::kStartGraceMs` 10 분 안)을 `liveops.<지역>` 토픽(지역 제한이 없으면 `liveops.all`)으로 한 번 보낸다.
+  언어 토픽은 두지 않는다(문구가 현지화 키라 기기가 푼다 — 4절의 "지역 · 언어 토픽"을 이것으로 바꿨다). 같은 창을 서버 여럿이 보내지 않도록 `liveops_push` 표를 "없어야 한다" 조건으로 써서(`notifyTopicOnce`) 쓴 서버만 보낸다.
+  앱은 자기 지역의 토픽을 구독한다(`LiveOpsPush::makeRegionTopic`). 서버가 다시 떠서 이미 열려 있던 이벤트를 새로 알리지 않는다(열린 지 10 분이 지난 창은 알리지 않는다).
+- **함정**: `liveops_push` 표는 창마다 한 줄이고 지우지 않는다(보존 기간 정리 규칙이 없다 — 하루 한 번 반복하는 이벤트는 한 해에 365 줄). 서버 하나의 `Retry` 가 없다 — 표를 쓴 서버가 제공자 호출 전에 죽으면 그 알림은 나가지 않는다(중복보다 놓침을 택했다).
+  APNs 는 HTTP/2 가 필수라 공통 HTTP 클라이언트(HTTP/1.1)에 HTTP/2 가 들어온 뒤 `Provider/` 에 더한다.
+
+### H3
+
+스팀 · 구글 · 애플 영수증 제공자. 자격은 환경 변수에서만 읽고(`ReceiptProviderSet`, 키트 옵션 `receiptProvidersFile` · `receiptTrustFile`), 없으면 서버 기동이 실패한다.
+설정 파일은 `{"providers":[{"kind":"steam","appId":"480","keySecretEnvironment":"<변수>","sandbox":false,"reportPollSeconds":3600},{"kind":"google","packageName":"<패키지>","serviceAccountEnvironment":"<변수>","voidedPollSeconds":3600},{"kind":"apple","issuerId":"<발급자 id>","keyId":"<키 id>","bundleId":"<번들>","signingKeySecretEnvironment":"<변수>","rootCertificateFile":"<Apple Root CA - G3 PEM>","historyPollSeconds":3600}]}` 이다.
+
+- **스팀**(`Provider/Steam`): 영수증은 주문 번호(십진 숫자)다. `ISteamMicroTxn/QueryTxn` 의 `Succeeded` 는 지급, 환불류 상태(`Refunded` · `PartialRefund` · `Chargedback` · 의심 둘 · `RefundedFraudulent`)는 환불, `Init` · `Approved` 는 다시 시도, 그 밖은 거절.
+  키 오류(401 · 403)는 플레이어 탓이 아니라 다시 시도로 끝내고 오류를 남긴다. 상품 id 는 첫 항목의 `itemid` 라 상점 카탈로그의 상품 id 를 그 숫자로 적는다. 환불은 `GetReport` 를 주기 조회해 한 번씩 알린다.
+  `sandbox` 면 `ISteamMicroTxnSandbox` 를 쓰고 결과가 샌드박스 결제로 표시된다(서비스가 스테이징 서버가 아니면 거절한다).
+- **구글**(`Provider/Google`): 영수증은 `<상품 id>|<구매 토큰>` 이다. 서비스 계정 OAuth 토큰으로 `purchases.products.get` 을 확인한다(`purchaseState` 0 지급 · 1 환불 · 2 다시 시도, `purchaseType` 0 은 테스트 구매).
+  유효한 구매는 확인 상태가 0 이면 `:acknowledge` 를 한 번 보낸다(3 일 안에 확인하지 않으면 구글이 환불한다). 환불은 RTDN 대신 `voidedpurchases` 를 조회한다(4절의 "RTDN 구독"을 이것으로 바꿨다 — Pub/Sub 구독 시설이 따로 필요하다).
+- **애플**(`Provider/Apple`): 영수증은 StoreKit 2 거래 id(십진 숫자)다. App Store Server API 에 서버가 만든 ES256 JWT(`iss` 발급자 id, `aud` `appstoreconnect-v1`, `bid` 번들, 수명 20 분)로 `GET /inApps/v1/transactions/{id}` 를 불러
+  `signedTransactionInfo`(JWS)를 받고, 머리의 `x5c` 사슬을 설정의 애플 루트(`rootCertificateFile`)까지 이어 확인한다(`INetSecurityProvider::verifyCertificateChain` — 리프와 그 발급 인증서의 애플 확장 표지 OID 포함)한 뒤 리프 키로 서명을 확인한다.
+  번들 id · 거래 id 가 요청과 같아야 하고, `revocationDate` 가 있으면 환불, `environment` 가 Sandbox 면 샌드박스 결제다. 환불은 서버 알림(웹훅) 대신 `POST /inApps/v1/notification/history`(종류 `REFUND`)를 주기 조회해 쪽(`hasMore` · `paginationToken`)을 열 쪽까지 읽는다.
+  보안 제공자에 사슬 확인(`verifyCertificateChain`)과 테스트용 사슬 만들기(`createTestCertificateChain`)를 더했다(기본 구현은 false — 지원하지 않음). `JSONWebToken` 은 머리의 `x5c` 와 중첩 문자열 클레임을 읽는다.
+- **애플 함정**: 응답의 모양(`signedTransactionInfo`, `notificationHistory`, `data.signedTransactionInfo`)과 애플 확장 표지 OID(`1.2.840.113635.100.6.11.1` 리프, `1.2.840.113635.100.6.2.1` 발급 인증서)는 애플 문서를 보고 쓴 것이고 실제 앱 스토어로 확인하지 못했다 —
+  iOS 빌드가 생기면 샌드박스 서버(`sandbox: true`)로 한 번 돌려 본다. 샌드박스 결제를 운영 서버에 물으면 404 라 `sandbox` 설정으로 서버를 가른다(운영에서 404 이면 샌드박스로 다시 묻는 길은 두지 않았다). 알림 기록 조회 기간은 애플 상한(180 일)보다 짧은 이틀이다.
+- **함정**: 스팀 · 구글의 환불 조회는 지난 성공 시각보다 이틀 앞에서 읽고(겹친 주문은 한 번만 알림) 한 번에 1000 건까지 읽는다 — 한 주기에 1000 건을 넘는 환불은 경고를 남기고 겹친 다음 조회에서만 닿을 수 있다. 환불 알림을 재시작 뒤 다시 받아도 환불 회수가 거래 id 로 한 번만 처리한다.
+  스팀은 주문 번호만으로 영수증이 되므로 주문을 연 계정과 올린 계정이 같은지 이 제공자는 모른다(주문 번호는 게임 서버가 `InitTxn` 때 만든 비밀에 가까운 값이고, 지급은 거래 id 로 한 번뿐이다).
 
 ### B2
 
@@ -87,7 +130,26 @@
 - 계정 키트의 새 조립 `gameConnect`(옵션 `ticketKeySecretEnvironment` · `serverName` 필수)가 로그인 서버와 같은 주 키로 티켓 확인기만 세우고 `AccountConnectAuthenticator` 를 자리에 묶는다(`start`), `stop` 이 푼다. 키 읽기는 `LoginTicketKey` 하나로 모았다.
 - 매칭 키트의 `gameServer` 옵션이 `MatchServerAgent` 를 세워 받아들이기 정책을 문맥(`OnlineServerKitContext::_pConnectAdmission`)에 내놓고, 배정 주제 구독 · 시한은 `MatchmakingServer` 가 돈다. 없으면 티켓이 맞는 모든 계정을 받는다(`AdmitEveryAccount`).
 - 묶이기 전에 온 접속은 거절한다. 서비스가 선 뒤에도 묶이지 않았으면 `ServerApp` 이 기동을 멈춘다(폴백 없음).
-- 남은 것: 클라이언트 쪽 — `GameNetSession` 클라이언트가 티켓(`NetConnectCredentials`)을 내밀어 붙는 길(지금 `-gv_netConnectAddress` 는 자격 없이 붙는다), 그리고 두 프로세스 시나리오 확인.
+- 클라이언트 쪽(2026-10-22, `wt/onlinekits`): `GameNetSession::makeTicketClientParams( 서버 주소, 티켓, 인자 )` 가 암호화 · 토큰 결속 클라이언트 인자를 만들고, 그 인자로 `initialize` 한 세션이 연결 시도 · 시간 초과 재시도 · `reconnect` 에 티켓을 내민다.
+  주소는 서버 배정(`ServerDescriptor::pickPort`), 티켓은 계정 키트(`AccountClient::makeConnectCredentials`)가 주므로 실행 인자가 아니라 로그인 뒤 게임 코드가 이 인자로 연다. `-gv_netConnectAddress` 는 자격 없이 붙는 길로 남아 티켓 서버에는 `SecurityMismatch` 로 거절된다.
+  거절된 티켓은 세션이 지워 새 티켓 없이 `reconnect` 하지 않는다. 암호 제공자(GameFramework)가 없으면 인자를 만들지 않는다(자격 없는 연결로 대신하지 않는다).
+- 남은 것: 두 프로세스 시나리오 확인(서버 `_bGameConnectTicket` + 로그인 서버, 클라이언트가 로그인해 티켓을 받아 붙는 흐름 — 로그인 서버와 게임 서버를 함께 띄우는 시나리오 시설이 필요하다).
+
+### I6
+
+GM 전용 호스트 포트를 서버 설정에 — 2026-10-22 `wt/onlinekits` 가 구현을 시도해 설계가 비어 있음을 확인했다. 지금 GM 키트의 서버 조립 주석이 권하는 길은 "GM 키트만 적은 온라인 설정으로 서버를 하나 더 띄운다"(계정 키트도 같이 — GM 이 로그인해야 한다)이다.
+서버 설정(`ServerConfig`)에 포트 칸을 더하는 것만으로는 같은 프로세스에서 포트를 가르지 못하고, 가르려면 아래 중 하나가 필요하다.
+
+- **전송 계층의 다중 리슨**: `IStreamTransport` 는 `listen` 이 하나이고(IOCP · epoll · 루프백 구현 셋이 `_listenSocket` 하나를 가정한다) 수락 사건이 어느 리슨 소켓에서 왔는지 알리지 않는다. 리슨 표지를 사건에 싣는 변경이 셋 모두에 필요하다.
+- **서비스 호스트 둘**: `OnlineServiceHost` 둘이 같은 저장소 · 캐시 · 버스를 쓰되 서비스 객체는 호스트 하나에 묶인다(`attachHost` 가 호스트 포인터를 하나만 들고 있다). 계정 바인딩(`AccountServer`)이 둘에 걸려야 GM 이 GM 포트에서 로그인할 수 있는데, 로그인 이벤트를 비우는 쪽이 하나여야 한다.
+- 작은 대안: 한 포트 위에서 GM 메서드 영역을 연결의 원격 주소(CIDR 허용 목록)로 거르는 방법. 포트 분리가 아니라 네트워크 격리라 I6 의 글자와 다르다.
+
+어느 쪽인지 정한 뒤에 구현한다(사용자 결정 후보). 지금은 위 "서버 하나 더" 운영 방식이 유일한 격리 방법이다.
+
+### U1
+
+클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) — 남음. UI 문서(`.ui.xml`) · 바인딩 · 화면 확인(자동화 시나리오 캡처)이 필요한 일이라 UI 영역 작업자의 범위이고, 온라인 키트 작업자(`wt/onlinekits`)는 UI 쪽을 건드리지 않는 범위로 일했다.
+위젯이 읽을 클라이언트 쪽 시설은 이미 있다(`ChatClient` 의 채널 · 메시지 꺼내기, `ServerDirectoryClient` 의 목록, `SocialClient` 의 친구 목록 응답). 남은 조건: UI 영역 작업자가 위 세 클라이언트의 `poll*` 결과를 `ListViewWidget` 에 묶는 문서와 시나리오 캡처를 만든다.
 
 ### F2
 

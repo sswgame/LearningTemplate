@@ -20,6 +20,8 @@ namespace sw
     {
         /** @brief 계정과 무관한 열림(기간과 회차)을 판정합니다. 열렸으면 이번 창의 끝을 @p outWindowEndMs 에 채웁니다. */
         static bool isWindowOpen( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowEndMs );
+        /** @brief `isWindowOpen` 과 같되 이번 창의 시작도 @p outWindowStartMs 에 채웁니다(정의의 시작보다 앞서지 않는다). 시작 푸시가 "방금 열렸나" 를 가릴 때 쓴다. */
+        static bool findOpenWindow( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowStartMs, int64& outWindowEndMs );
         /** @brief 이 계정, 지역, 빌드에 보이는지 판정합니다. 창은 따로 확인합니다. */
         static bool isAudienceMatch( const LiveEventDefinition& definition, AccountID accountID, string_view region, uint32 buildVersion );
         static bool isValid( const LiveEventDefinition& definition );

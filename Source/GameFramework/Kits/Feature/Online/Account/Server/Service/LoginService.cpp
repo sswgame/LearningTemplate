@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 
 #include <algorithm>
 
@@ -49,6 +50,7 @@ namespace sw
                 string            _subject;
                 string            _displayNameHint;
                 string            _storeURL;
+                vector<uint8>     _listSealedLinkSecret; ///< 외부 로그인이 준 연동 비밀(이미 암호화됨). 없으면 비어 있다
                 uint64            _accountID;
                 LoginRevokeReason _revokeReason;
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
@@ -62,6 +64,7 @@ namespace sw
                     , _subject{}
                     , _displayNameHint{}
                     , _storeURL{}
+                    , _listSealedLinkSecret{}
                     , _accountID{ 0 }
                     , _revokeReason{ LoginRevokeReason::Administrative }
                     , _arrDeviceSecret{}
@@ -102,7 +105,7 @@ namespace sw
                         }
                         case LoginOperation::PlatformLogin:
                         {
-                            _completion._result = logic.platformLogin( _provider, _subject, _displayNameHint, _nowMs, _completion._grant );
+                            _completion._result = logic.platformLogin( _provider, _subject, _displayNameHint, &_listSealedLinkSecret, _nowMs, _completion._grant );
                             break;
                         }
                         case LoginOperation::Resume:
@@ -137,7 +140,7 @@ namespace sw
                         }
                         case LoginOperation::LinkPlatform:
                         {
-                            _completion._result = logic.linkPlatform( _token, _provider, _subject, _nowMs, _completion._identity );
+                            _completion._result = logic.linkPlatform( _token, _provider, _subject, &_listSealedLinkSecret, _nowMs, _completion._identity );
                             break;
                         }
                         case LoginOperation::UnlinkPlatform:
@@ -181,6 +184,52 @@ namespace sw
                 LoginService*      _pService;
                 ILoginCrypto*      _pCrypto;
                 int64              _nowMs;
+            };
+
+            /** @brief 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 작업입니다. 읽은 항목은 서비스가 비밀을 풀어 제공자에 철회를 맡깁니다. */
+            class LoginRevocationScanWork final : public IServiceStoreWork
+            {
+            public:
+                LoginRevocationScanWork( LoginService* pService, int32 maxCount, int64 nowMs )
+                    : _listEntry{}
+                    , _pService{ pService }
+                    , _maxCount{ maxCount }
+                    , _nowMs{ nowMs }
+                    , _bReadOk{ SW_FALSE }
+                {
+                }
+
+                void run( IServiceStoreConnection& connection ) override
+                {
+                    _bReadOk = LoginStoreLogic::listRevocations( connection, _maxCount, _listEntry ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
+                }
+
+                void complete() override { _pService->applyRevocationScan( std::move( _listEntry ), _bReadOk == SW_TRUE, _nowMs ); }
+
+            private:
+                vector<LoginRevocationEntry> _listEntry;
+                LoginService*                _pService;
+                int32                        _maxCount;
+                int64                        _nowMs;
+                uint8                        _bReadOk;
+            };
+
+            /** @brief 철회가 끝난 대기열 항목 하나를 지우는 작업입니다. 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다). */
+            class LoginRevocationEraseWork final : public IServiceStoreWork
+            {
+            public:
+                LoginRevocationEraseWork( LoginService* pService, string key )
+                    : _key{ std::move( key ) }
+                    , _pService{ pService }
+                {
+                }
+
+                void run( IServiceStoreConnection& connection ) override { (void)LoginStoreLogic::eraseRevocation( connection, _key ); }
+                void complete() override { _pService->noteStoreWorkDone(); }
+
+            private:
+                string        _key;
+                LoginService* _pService;
             };
 
             /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리 작업입니다. 완료가 없고 부작용만 있습니다. */
@@ -243,6 +292,8 @@ namespace sw
         , _listPlatformProvider{}
         , _listPendingVerification{}
         , _listVerificationScratch{}
+        , _listRevocationScratch{}
+        , _listPendingRevocation{}
         , _mapAccountToSession{}
         , _mapAccountToIdentity{}
         , _mapNameKeyToAccount{}
@@ -250,8 +301,11 @@ namespace sw
         , _pStore{ nullptr }
         , _pCrypto{ nullptr }
         , _pRemoteConfig{ nullptr }
+        , _pSecretVault{ nullptr }
+        , _nextRevocationScanMs{ 0 }
         , _refreshCursor{ 0 }
         , _pendingCount{ 0 }
+        , _bRevocationScanInFlight{ SW_FALSE }
     {
     }
 
@@ -272,12 +326,15 @@ namespace sw
         _mapAccountToIdentity.clear();
         _mapNameKeyToAccount.clear();
         _listPendingVerification.clear();
+        _listPendingRevocation.clear();
         _listPlatformProvider.clear();
         _eventBuffer.clear();
         _remoteRevokeBuffer.clear();
-        _pStore        = nullptr;
-        _pCrypto       = nullptr;
-        _pRemoteConfig = nullptr;
+        _pStore                  = nullptr;
+        _pCrypto                 = nullptr;
+        _pRemoteConfig           = nullptr;
+        _pSecretVault            = nullptr;
+        _bRevocationScanInFlight = SW_FALSE;
     }
 
     bool LoginService::registerPlatformProvider( IPlatformLoginProvider* pProvider )
@@ -317,6 +374,72 @@ namespace sw
                     break;
                 }
             }
+        }
+        updateRevocations( nowMs );
+    }
+
+    void LoginService::updateRevocations( int64 nowMs )
+    {
+        bool bAnyRevoker = false;
+        for ( IPlatformLoginProvider* pProvider : _listPlatformProvider )
+        {
+            if ( pProvider->supportsRevocation() == false )
+                continue;
+            bAnyRevoker = true;
+            _listRevocationScratch.clear();
+            (void)pProvider->pollRevocations( _listRevocationScratch );
+            for ( const PlatformLoginRevocation& revocation : _listRevocationScratch )
+            {
+                for ( size_t pendingIndex = 0; pendingIndex < _listPendingRevocation.size(); ++pendingIndex )
+                {
+                    const PendingRevocation& pending = _listPendingRevocation[pendingIndex];
+                    if ( pending._pProvider != pProvider || pending._revocationID != revocation._revocationID )
+                        continue;
+                    if ( revocation._bUnavailable == SW_FALSE && _pStore != nullptr )
+                    {
+                        ++_pendingCount;
+                        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationEraseWork>( this, pending._queueKey ) );
+                    }
+                    _listPendingRevocation.erase( _listPendingRevocation.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
+                    break; // 제공자에 닿지 못했으면 대기열에 남아 다음 읽기가 다시 한다
+                }
+            }
+        }
+        const bool bSecretsReadable = _pSecretVault != nullptr && _pSecretVault->isReady();
+        const bool bMayScan         = bAnyRevoker && bSecretsReadable && _bRevocationScanInFlight == SW_FALSE && _listPendingRevocation.empty() && _pStore != nullptr;
+        if ( bMayScan == false || nowMs < _nextRevocationScanMs )
+            return;
+        _nextRevocationScanMs    = nowMs + _settings._revocationScanMs;
+        _bRevocationScanInFlight = SW_TRUE;
+        ++_pendingCount;
+        _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationScanWork>( this, _settings._revocationBatchSize, nowMs ) );
+    }
+
+    void LoginService::applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, int64 nowMs )
+    {
+        --_pendingCount;
+        _bRevocationScanInFlight = SW_FALSE;
+        if ( bReadOk == false || _pSecretVault == nullptr )
+            return; // 저장소에 문제가 있으므로 다음 주기에 다시 읽는다
+        for ( LoginRevocationEntry& entry : listEntry )
+        {
+            IPlatformLoginProvider* pProvider = findPlatformProvider( entry._provider );
+            if ( pProvider == nullptr || pProvider->supportsRevocation() == false )
+            {
+                SW_LOG_WARNING( "login revoke queue holds a secret of provider '%#' that is not configured here - it stays in the queue", entry._provider.c_str() );
+                continue;
+            }
+            string secret;
+            if ( _pSecretVault->open( entry._sealedSecret, entry._provider, secret ) == false )
+            {
+                SW_LOG_ERROR( "login revoke queue entry '%#' cannot be opened (wrong secret key?) - it stays in the queue", entry._key.c_str() );
+                continue;
+            }
+            PendingRevocation& pending = _listPendingRevocation.emplace_back();
+            pending._queueKey          = std::move( entry._key );
+            pending._pProvider         = pProvider;
+            pending._revocationID      = pProvider->submitRevocation( secret, nowMs );
+            Memory::set( secret.data(), 0, secret.size() ); // 풀어 낸 비밀을 남기지 않는다
         }
     }
 
@@ -729,6 +852,16 @@ namespace sw
         work->_displayNameHint    = verification._displayName;
         work->_bUpdateRecommended = pending._bUpdateRecommended;
         work->_storeURL           = pending._storeURL;
+        if ( verification._linkSecret.empty() == false )
+        {
+            // 연동 비밀은 암호화해서만 저장한다. 도구가 없거나 암호화에 실패하면 비밀을 버린다(로그인은 성공이다 — 탈퇴 때 철회할 것이 없을 뿐이다).
+            const bool bSealed = _pSecretVault != nullptr && _pSecretVault->isReady() && _pSecretVault->seal( verification._linkSecret, pending._provider, work->_listSealedLinkSecret );
+            if ( bSealed == false )
+            {
+                work->_listSealedLinkSecret.clear();
+                SW_LOG_ERROR( "login provider '%#' gave a link secret but the secret vault is not available - it is not stored", pending._provider.c_str() );
+            }
+        }
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
