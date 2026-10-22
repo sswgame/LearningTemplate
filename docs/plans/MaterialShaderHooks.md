@@ -36,7 +36,7 @@
 
 | 단계 | 내용 | 읽을 문서 | 고칠 문서 | 검증 | 상태 |
 |---|---|---|---|---|---|
-| D2 | 머티리얼 XML 과 셰이더 구조체의 불일치를 오류로 만든다 — 셰이더에만 있는 필드 · XML 에만 있는 필드 · 리플렉션 실패 폴백 셋 모두. `Material.cpp` 의 `matchPropertiesToSchema` · `packPropertiesIntoBytes` · `ensureShaderLayout` 이 대상이다. 훅과 독립이라 **가장 먼저** | 이 문서 2절, `Source/Engine/Resource/Material/` README | 이 문서 D2 행, 머티리얼 모듈 README | Debug nogpu 테스트(불일치 XML 이 오류), 네 백엔드 기존 머티리얼 전부 로드 | 남음 |
+| D2 | 머티리얼 XML 과 셰이더 구조체의 불일치를 오류로 만든다 — 셰이더에만 있는 필드 · XML 에만 있는 필드 · 리플렉션 실패 폴백 셋 모두. `Material.cpp` 의 `matchPropertiesToSchema` · `packPropertiesIntoBytes` · `ensureShaderLayout` 이 대상이다. 훅과 독립이라 **가장 먼저** | 이 문서 2절, `Source/Engine/Resource/Material/` README | 이 문서 D2 행, 머티리얼 모듈 README | Debug nogpu 테스트(불일치 XML 이 오류), 네 백엔드 기존 머티리얼 전부 로드 | 끝남(2026-10-23, main `71889fb71` — 저장소의 모든 `.material` 이 불일치 없음, 오류로 막는 단위 테스트 추가) |
 | H1 | 뼈대(`materialshader.hlsli` · `materialshadermain.hlsli`) + forwardlit. 림은 현재 식 그대로 둔다. **먼저 확인**: 사용자 보간 필드 구조체가 FXC(DX12 경로) · GL(SPIR-V 경유) 에서 되는지 | `Source/Engine/RHI` 셰이더 README, 이 문서 1절 | 이 문서 H1 행 | 셰이더 쿠킹 네 백엔드, forwardlit 화면이 바뀌기 전과 같다 | 남음 |
 | H2 | toon — VAT 통일, 시선 계산 통일 | 이 문서 2절 | 이 문서 | toon 화면(VAT 가 있는 메시), 그림자 | 남음 |
 | H3 | terrain · foliage | 이 문서 | 이 문서 | 화면 | 남음 |
@@ -44,7 +44,7 @@
 | H5 | sprite2d · sprite2dlit | 이 문서 | 이 문서 | 2D 화면 | 남음 |
 | H6 | gbuffer · shadowdepth 를 머티리얼 없는 뼈대 사용자로 | 이 문서 | 이 문서 | 깊이 비트 일치(훅이 위치를 만들 수 없음), 그림자 화면 | 남음 |
 | H7 | 포워드 · 디퍼드 림을 한 함수로 — **이미지가 바뀐다**(2절의 pow2 × 0.15 대 pow3 × 0.12) | 이 문서 2절 | 이 문서, QA 골든 | 골든을 다시 뜬다, 네 백엔드 | 남음 |
-| D1 | 도메인 발견 — `ShaderCooker::kArrIncludeRootDomain` 하드코딩을 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 기반 발견으로 바꾼다. 엔진은 도메인 종류만 알고 game 아래 폴더를 훑는다. 게임 셰이더는 자기 도메인 + engine + common 만 include 하고, 게임 폴더의 같은 이름 헤더가 엔진 헤더를 가리지 못하게 한다. 테스트 도메인의 최소 셰이더로 쿠킹 스탬프 · include · 머티리얼 경로 · 리플렉션을 증명한다 | `Config/Engine/EngineConfig.json`, 쿠커 README | 이 문서 | 테스트 도메인 셰이더가 쿠킹 → 머티리얼 → 리플렉션까지 통과, 같은 이름 헤더 가림 시도가 오류 | 완료(2026-10-23, wt/domains) |
+| D1 | 도메인 발견 — `ShaderCooker::kArrIncludeRootDomain` 하드코딩을 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 기반 발견으로 바꾼다. 엔진은 도메인 종류만 알고 game 아래 폴더를 훑는다. 게임 셰이더는 자기 도메인 + engine + common 만 include 하고, 게임 폴더의 같은 이름 헤더가 엔진 헤더를 가리지 못하게 한다. 테스트 도메인의 최소 셰이더로 쿠킹 스탬프 · include · 머티리얼 경로 · 리플렉션을 증명한다 | `Config/Engine/EngineConfig.json`, 쿠커 README | 이 문서 | 테스트 도메인 셰이더가 쿠킹 → 머티리얼 → 리플렉션까지 통과, 같은 이름 헤더 가림 시도가 오류 | 끝남(2026-10-23, main `25f8c863d`) |
 | G1 | 게임 셰이더 제작(첫 요구가 생길 때 착수) — 계약은 1절. 후보 문서에는 중복해 두지 않는다 | 이 문서 | 이 문서, 해당 게임 문서 | 게임 화면 | 남음 |
 
 ## 5. 확인하지 못한 것
