@@ -7,6 +7,7 @@
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -178,6 +179,56 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D
     SW_EXPECT_NEAR_EQUAL( 2.0f, pTargetHits->_listHit[0]._damageMultiplier, 1e-6f );
     SW_EXPECT_TRUE( pTargetHits->_listHit[0]._bIs2D );
     SW_EXPECT_EQUAL( size_t( 0 ), pSelfHits->_listHit.size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [AnimationNotify2DTest] 근접 판정은 칼날에 걸린 표적을 모두 찾고, 클라이언트(예측)는 찾기만 하고 맞음을 전달하지 않는다 — 서버 권위
+ * @details 칼날 (0, 0) ~ (3, 0) 에 표적 둘이 앞뒤로 있다. 예측 스윕은 둘을 돌려주지만 받는 쪽은 아무것도 받지 않는다. 권위 스윕은 둘 모두에 한 번씩
+ *          전달하고, 같은 창(이미 맞힌 목록)으로 다시 쓸면 새로 맞는 것이 없다. 공격자 자신의 바디는 칼날 안에 있어도 맞지 않는다.
+ */
+SW_TEST_CASE( AnimationNotify2DTest, MeleeHitWindowDeliversOnlyWithAuthority )
+{
+    GameObjectManager     manager;
+    RigidBody2DComponent* pNear = TestAnimationNotify2DInternal::spawnBox( manager, "Near", float2{ 1.0f, 0.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    RigidBody2DComponent* pFar  = TestAnimationNotify2DInternal::spawnBox( manager, "Far", float2{ 2.5f, 0.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    RigidBody2DComponent* pSelf = TestAnimationNotify2DInternal::spawnBox( manager, "Fighter", float2{ 0.0f, 0.0f }, float2{ 0.5f, 0.5f }, PhysicsBodyType::Kinematic, "Flesh" );
+    SW_ASSERT_TRUE( pNear != nullptr && pFar != nullptr && pSelf != nullptr );
+    MockHitRecorder2DComponent* pNearHits = pNear->getOwner()->addComponent<MockHitRecorder2DComponent>();
+    MockHitRecorder2DComponent* pFarHits  = pFar->getOwner()->addComponent<MockHitRecorder2DComponent>();
+    MockHitRecorder2DComponent* pSelfHits = pSelf->getOwner()->addComponent<MockHitRecorder2DComponent>();
+    SW_ASSERT_TRUE( pNearHits != nullptr && pFarHits != nullptr && pSelfHits != nullptr );
+    manager.beginPlay();
+    manager.update( TestAnimationNotify2DInternal::kFrame ); // 바디를 만든다
+
+    vector<float3> listBlade;
+    MeleeHitWindowUtil::makeBlade( float3{ 0.0f, 0.0f, 0.0f }, float3{ 3.0f, 0.0f, 0.0f }, 3, listBlade );
+    MeleeHitParams params;
+    params._kind         = hashed_string( "Slash" );
+    params._radius       = 0.1f;
+    params._damage       = 7.0f;
+    params._bIs2D        = true;
+    GameObject& attacker = *pSelf->getOwner();
+
+    vector<GameObjectHandle> listPredicted;
+    vector<MeleeHit>         listPredictedHit;
+    SW_EXPECT_EQUAL( 2u, MeleeHitWindowUtil::sweep( attacker, {}, listBlade, params, MeleeHitAuthority::Predicted, listPredicted, listPredictedHit ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), pNearHits->_listHit.size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), pFarHits->_listHit.size() );
+
+    vector<GameObjectHandle> listHitTarget;
+    vector<MeleeHit>         listHit;
+    SW_EXPECT_EQUAL( 2u, MeleeHitWindowUtil::sweep( attacker, {}, listBlade, params, MeleeHitAuthority::Authority, listHitTarget, listHit ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), pNearHits->_listHit.size() );
+    SW_ASSERT_EQUAL( size_t( 1 ), pFarHits->_listHit.size() );
+    SW_EXPECT_TRUE( pFarHits->_listHit[0]._kind == hashed_string( "Slash" ) );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pFarHits->_listHit[0]._damage, 1e-6f );
+    SW_EXPECT_TRUE( pFarHits->_listHit[0]._pInstigator == &attacker );
+    SW_EXPECT_EQUAL( size_t( 0 ), pSelfHits->_listHit.size() );
+
+    // 같은 창으로 다시 쓸면 이미 맞힌 표적은 건너뛴다.
+    SW_EXPECT_EQUAL( 0u, MeleeHitWindowUtil::sweep( attacker, listBlade, listBlade, params, MeleeHitAuthority::Authority, listHitTarget, listHit ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), pNearHits->_listHit.size() );
     manager.endPlay();
 }
 

@@ -143,6 +143,62 @@ namespace sw
         return true;
     }
 
+    uint32 CharacterHitUtil::sweepAll( const GameObjectManager& manager, const float3& from, const float3& to, float32 radius, uint32 layerMask, uint64 ignoreObjectID,
+                                       bool bIs2D, vector<CharacterRayHit>& outListHit )
+    {
+        const float3             delta  = to - from;
+        const PhysicsQueryFilter filter = CharacterHitInternal::makeFilter( layerMask, ignoreObjectID );
+        const size_t             first  = outListHit.size();
+        if ( bIs2D )
+        {
+            const IPhysicsQueryScene2D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene2D();
+            const float32               length = float2{ delta._x, delta._y }.getLength();
+            float2                      planar{};
+            if ( pScene == nullptr || CharacterHitInternal::makePlanarDirection( delta, planar ) == false )
+                return 0;
+            vector<PhysicsCastHit2D> listHit;
+            const float2             origin{ from._x, from._y };
+            if ( radius <= 0.0f )
+            {
+                (void)pScene->raycastAll( origin, planar, length, filter, listHit );
+            }
+            else
+            {
+                PhysicsShapeDesc2D circle;
+                circle._type   = PhysicsShapeType2D::Circle;
+                circle._radius = radius;
+                (void)pScene->shapeCastAll( circle, origin, 0.0f, planar, length, filter, listHit );
+            }
+            for ( const PhysicsCastHit2D& hit : listHit )
+            {
+                CharacterHitInternal::fillHit2D( manager, hit, outListHit.emplace_back() );
+            }
+            return static_cast<uint32>( outListHit.size() - first );
+        }
+        const IPhysicsQueryScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
+        const float32               length = delta.getLength();
+        if ( pScene == nullptr || length <= 1.0e-6f )
+            return 0;
+        const float3             direction = delta * ( 1.0f / length );
+        vector<PhysicsCastHit3D> listHit;
+        if ( radius <= 0.0f )
+        {
+            (void)pScene->raycastAll( from, direction, length, filter, listHit );
+        }
+        else
+        {
+            PhysicsShapeDesc3D sphere;
+            sphere._type   = PhysicsShapeType3D::Sphere;
+            sphere._radius = radius;
+            (void)pScene->shapeCastAll( sphere, from, quaternion::Identity, direction, length, filter, listHit );
+        }
+        for ( const PhysicsCastHit3D& hit : listHit )
+        {
+            CharacterHitInternal::fillHit3D( manager, hit, outListHit.emplace_back() );
+        }
+        return static_cast<uint32>( outListHit.size() - first );
+    }
+
     void CharacterHitUtil::resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit )
     {
         CharacterHitInternal::applyHitZone( PhysicsHitZoneDef{}, inoutHit );

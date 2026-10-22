@@ -3,17 +3,30 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Container/VectorUtil.h"
 
+#include "Engine/Character/Hit/MeleeHitWindow.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
+namespace sw
+{
+    SW_LOG_CALLER( "MeleeHitbox" );
+
+    namespace
+    {
+        /** @brief 칼날 표본점 수입니다. 두 끝과 가운데 — 칼날이 돌며 지나간 자리를 끝점 둘만으로는 놓친다. */
+        constexpr uint32 kMeleeHitboxBladeSampleCount = 3;
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
     MeleeHitboxComponent::MeleeHitboxComponent()
         : _listHitTarget{}
-        , _listOverlapping{}
+        , _listPreviousPoint{}
+        , _bladeStart{}
+        , _bladeEnd{}
+        , _bladeRadius{ 0.0f }
         , _damage{ 0 }
         , _duration{ 0.0f }
         , _currentDuration{ 0.0f }
@@ -24,9 +37,9 @@ namespace sw
     void MeleeHitboxComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::DuringPhysics );
-
-        _currentDuration = 0.0f;
+        // 물리가 이번 프레임 위치로 옮긴 뒤에 쓴다.
+        setTickGroup( TickGroup::PostPhysics );
+        _listPreviousPoint.clear();
     }
 
     void MeleeHitboxComponent::onTick( float32 deltaTime )
@@ -36,6 +49,7 @@ namespace sw
         if ( _bIsAttacking == false )
             return;
 
+        requestSweep();
         _currentDuration += deltaTime;
         if ( _duration > 0.0f && _currentDuration >= _duration )
         {
@@ -44,61 +58,28 @@ namespace sw
         }
     }
 
-    void MeleeHitboxComponent::onOverlapBegin( const OverlapInfo& overlap )
+    void MeleeHitboxComponent::setBlade( const float3& bladeStart, const float3& bladeEnd, float32 radius )
     {
-        Component::onOverlapBegin( overlap );
-        // 상대의 감지 범위(트리거)에 닿은 것은 맞은 것이 아니다. 몸(막는 콜라이더)에 닿아야 맞는다.
-        if ( overlap._pOther == nullptr || overlap._bOtherTrigger == SW_TRUE )
-            return;
-
-        // 접촉마다 하나씩 보관한다. 상대가 콜라이더 둘로 겹쳤다가 하나만 떨어져도 남은 접촉이 계속 남는다.
-        _listOverlapping.push_back( overlap._pOther->getHandle() );
-        if ( _bIsAttacking )
-            deliverHit( overlap._pOther );
-    }
-
-    void MeleeHitboxComponent::onOverlapEnd( const OverlapInfo& overlap )
-    {
-        Component::onOverlapEnd( overlap );
-        if ( overlap._bOtherTrigger == SW_TRUE )
-            return; // 시작 이벤트에서 보관하지 않은 접촉이다
-        if ( overlap._pOther != nullptr )
-        {
-            (void)VectorUtil::removeSingleSwap( _listOverlapping, overlap._pOther->getHandle() ); // 없으면 잊을 것도 없다
-            return;
-        }
-
-        // 상대가 사라져서 누구인지 알 수 없으므로, 더 이상 해제되지 않을 접촉을 모두 제거한다.
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        for ( size_t index = _listOverlapping.size(); index > 0; --index )
-        {
-            if ( pManager->resolveGameObject( _listOverlapping[index - 1] ) == nullptr )
-                VectorUtil::removeAtSwap( _listOverlapping, index - 1 );
-        }
+        _bladeStart  = bladeStart;
+        _bladeEnd    = bladeEnd;
+        _bladeRadius = radius;
     }
 
     void MeleeHitboxComponent::beginAttack( int32 damage, float32 duration )
     {
+        if ( ( _bladeEnd - _bladeStart ).getLengthSquared() <= 1.0e-12f )
+        {
+            SW_LOG_ERROR( "MeleeHitboxComponent: blade has no length - call setBlade() with two different points before beginAttack()" );
+            return;
+        }
         _damage          = damage;
         _duration        = duration;
         _currentDuration = 0.0f;
         _bIsAttacking    = true;
         _listHitTarget.clear();
-
-        // 휘두르기 전부터 판정 안에 서 있던 유닛도 맞는다. 그 겹침의 시작 이벤트는 이미 지나갔다(언리얼 `GetOverlappingActors` 에 해당).
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        for ( const GameObjectHandle overlapping : _listOverlapping )
-        {
-            GameObject* pTarget = pManager->resolveGameObject( overlapping );
-            if ( pTarget != nullptr )
-                deliverHit( pTarget );
-        }
+        _listPreviousPoint.clear();
+        // 휘두르기 전부터 칼날 안에 있던 오브젝트도 맞는다.
+        requestSweep();
     }
 
     GameObject* MeleeHitboxComponent::findAttackerRoot() const
@@ -111,21 +92,40 @@ namespace sw
         return pRoot;
     }
 
-    void MeleeHitboxComponent::deliverHit( GameObject* pTarget )
+    void MeleeHitboxComponent::collectBlade( vector<float3>& outListPoint ) const
     {
-        // 공격자 자신과 그 계층(몸, 다른 판정)은 맞지 않는다.
-        GameObject* pAttacker = findAttackerRoot();
-        if ( pTarget->isDescendantOf( pAttacker ) )
-            return;
-        UnitStatsComponent* pStats = pTarget->getComponent<UnitStatsComponent>();
-        if ( pStats == nullptr )
-            return;
+        const GameObject*     pOwner = getOwner();
+        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const float4x4        world  = pScene != nullptr ? pScene->getWorldMatrix() : float4x4::Identity;
+        MeleeHitWindowUtil::makeBlade( float3::transform( _bladeStart, world ), float3::transform( _bladeEnd, world ), kMeleeHitboxBladeSampleCount, outListPoint );
+    }
 
-        // 한 번 휘두를 때 유닛마다 한 번만 맞는다. 판정을 나갔다 다시 들어와도 다시 맞지 않는다.
-        const GameObjectHandle target = pTarget->getHandle();
-        if ( VectorUtil::contains( _listHitTarget, target ) )
+    void MeleeHitboxComponent::requestSweep()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
             return;
-        _listHitTarget.push_back( target );
-        pStats->takeDamage( _damage, ( pAttacker != nullptr ) ? pAttacker->getHandle() : GameObjectHandle{} );
+        pManager->executeOrDeferPostTickOnComponent( *this, []( MeleeHitboxComponent& self, GameObjectManager& manager )
+        {
+            (void)manager;
+            self.sweepBlade();
+        } );
+    }
+
+    void MeleeHitboxComponent::sweepBlade()
+    {
+        GameObject* pAttacker = findAttackerRoot();
+        if ( pAttacker == nullptr )
+            return;
+        vector<float3> listCurrent;
+        collectBlade( listCurrent );
+        MeleeHitParams params;
+        params._radius = _bladeRadius;
+        params._damage = static_cast<float32>( _damage );
+        params._bIs2D  = true;
+        vector<MeleeHit> listHit;
+        (void)MeleeHitWindowUtil::sweep( *pAttacker, _listPreviousPoint, listCurrent, params, MeleeHitWindowUtil::getProcessAuthority(), _listHitTarget, listHit );
+        _listPreviousPoint = std::move( listCurrent );
     }
 } // namespace sw

@@ -3,13 +3,13 @@
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Object/Component/Audio/SceneAudio.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -157,8 +157,8 @@ namespace sw
 
             /**
              * @class HitWindowHandler
-             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어서 맞힙니다. 칼날 위 샘플 점마다 지난 위치에서 현재 위치까지, 그리고 현재의 칼날 자체를 검사합니다.
-             *        한 구간에 오브젝트 하나는 한 번만 맞습니다(언리얼의 근접 판정 창과 AnimationNotifyState 의 trace 에 해당합니다).
+             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어서 맞힙니다. 판정은 `MeleeHitWindowUtil::sweep` 한 길이고, 이 처리기는 소켓에서 칼날을 만들고
+             *        맞음을 기록에 남기기만 합니다. 한 구간에 오브젝트 하나는 한 번만 맞고, 클라이언트는 맞음을 기록만 하고 전달하지 않습니다(서버 권위).
              */
             class HitWindowHandler final : public IAnimationNotifyHandler
             {
@@ -167,19 +167,18 @@ namespace sw
                 bool                                            supportsState() const override { return true; }
                 void                                            onNotify( AnimationNotifyContext& context ) const override
                 {
-                    // 길이 없는 판정이면 현재 칼날 하나만 측정한다.
+                    // 길이 없는 판정이면 현재 칼날 하나만 측정한다(지난 칼날이 없다).
                     AnimationNotifyStateData data{};
-                    AnimationNotifyContext   stateContext{ context._component, context._owner, context._entry, context._fired, &data, context._deltaSeconds };
-                    collectBlade( stateContext, data._listPreviousPoint );
-                    sweep( stateContext, data, data._listPreviousPoint );
+                    vector<float3>           listCurrent;
+                    collectBlade( context, listCurrent );
+                    sweep( context, data, listCurrent );
                 }
                 void onNotifyBegin( AnimationNotifyContext& context ) const override
                 {
                     if ( context._pState == nullptr )
                         return;
-                    context._pState->_listHitObjectID.clear();
+                    context._pState->_listHitTarget.clear();
                     collectBlade( context, context._pState->_listPreviousPoint );
-                    context._pState->_bHasPrevious = SW_TRUE;
                 }
                 void onNotifyTick( AnimationNotifyContext& context ) const override { trace( context ); }
                 void onNotifyEnd( AnimationNotifyContext& context ) const override { trace( context ); }
@@ -194,11 +193,7 @@ namespace sw
                     const float3               pointA      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketA ) );
                     const float3               pointB      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketB ) );
                     const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples ), 2.0f, 16.0f ) );
-                    outListPoint.resize( sampleCount );
-                    for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
-                    {
-                        outListPoint[sampleIndex] = float3::lerp( pointA, pointB, static_cast<float32>( sampleIndex ) / static_cast<float32>( sampleCount - 1 ) );
-                    }
+                    MeleeHitWindowUtil::makeBlade( pointA, pointB, sampleCount, outListPoint );
                 }
 
                 /** @brief 지난 위치에서 현재 위치까지 쓸고, 현재 위치를 다음 기준으로 넘깁니다. */
@@ -210,38 +205,27 @@ namespace sw
                     collectBlade( context, listCurrent );
                     sweep( context, *context._pState, listCurrent );
                     context._pState->_listPreviousPoint = std::move( listCurrent );
-                    context._pState->_bHasPrevious      = SW_TRUE;
                 }
 
                 static void sweep( AnimationNotifyContext& context, AnimationNotifyStateData& state, const vector<float3>& listCurrent )
                 {
                     static const hashed_string s_radius( "radius" );
-                    const float32              radius = MathUtil::max( context._entry.getFloatParam( s_radius ), 0.0f );
-                    const bool                 bMoved = state._bHasPrevious == SW_TRUE && state._listPreviousPoint.size() == listCurrent.size();
-                    for ( size_t pointIndex = 0; bMoved && pointIndex < listCurrent.size(); ++pointIndex )
-                    {
-                        castAndHit( context, state, state._listPreviousPoint[pointIndex], listCurrent[pointIndex], radius );
-                    }
-                    if ( listCurrent.size() >= 2 )
-                        castAndHit( context, state, listCurrent.front(), listCurrent.back(), radius );
-                }
-
-                static void castAndHit( AnimationNotifyContext& context, AnimationNotifyStateData& state, const float3& from, const float3& to, float32 radius )
-                {
                     static const hashed_string s_damage( "damage" );
                     static const hashed_string s_impulse( "impulse" );
-                    CharacterRayHit            rayHit;
-                    if ( context._component.castFromTo( from, to, radius, kAllLayers, rayHit ) == false || rayHit._pObject == nullptr )
-                        return;
-                    const uint64 targetID = rayHit._pObject->getObjectID();
-                    if ( VectorUtil::contains( state._listHitObjectID, targetID ) )
-                        return;
-                    state._listHitObjectID.push_back( targetID );
-                    HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, &context._owner, to - from, context._entry.getFloatParam( s_damage ),
-                                                                 context._entry.getFloatParam( s_impulse ) );
-                    hit._kind   = context._fired._name;
-                    record( context, hit._zone, hit._point, targetID, context._fired._phase );
-                    CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
+                    MeleeHitParams             params;
+                    params._kind      = context._fired._name;
+                    params._radius    = MathUtil::max( context._entry.getFloatParam( s_radius ), 0.0f );
+                    params._damage    = context._entry.getFloatParam( s_damage );
+                    params._impulse   = context._entry.getFloatParam( s_impulse );
+                    params._layerMask = kAllLayers;
+                    params._bIs2D     = context._component.is2D();
+                    vector<MeleeHit> listHit;
+                    (void)MeleeHitWindowUtil::sweep( context._owner, state._listPreviousPoint, listCurrent, params, MeleeHitWindowUtil::getProcessAuthority(),
+                                                     state._listHitTarget, listHit );
+                    for ( const MeleeHit& melee : listHit )
+                    {
+                        record( context, melee._hit._zone, melee._hit._point, melee._target.objectID(), context._fired._phase );
+                    }
                 }
 
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
