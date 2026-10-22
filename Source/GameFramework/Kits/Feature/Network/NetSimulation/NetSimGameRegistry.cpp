@@ -2,60 +2,49 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 
+#include "Core/String/RegistrationList.h"
+
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 namespace sw
 {
     namespace
     {
-        vector<NetSimGameEntry>& getEntries()
+        RegistrationList<const NetSimGameEntry>& getEntries()
         {
-            static vector<NetSimGameEntry> s_listEntry;
+            static RegistrationList<const NetSimGameEntry> s_listEntry( "NetSimGameRegistry", RegistrationOrder::Insertion, true );
             return s_listEntry;
         }
     } // namespace
 
-    bool NetSimGameRegistry::registerGame( string_view name, unique_ptr<INetSimGame> ( *pfnCreate )() )
+    bool NetSimGameRegistry::registerGame( const NetSimGameEntry& entry )
     {
-        if ( name.empty() || pfnCreate == nullptr )
+        if ( entry._name.empty() || entry._pfnCreate == nullptr )
         {
-            SW_LOG_ERROR( "NetSimGameRegistry: a game needs a name and a create function ('%#')", string( name ) );
+            SW_LOG_ERROR( "NetSimGameRegistry: a game needs a name and a create function ('%#')", entry._name );
             return false;
         }
-        if ( findGame( name ) != nullptr )
+        const RegistrationResult result = getEntries().add( &entry, entry._name );
+        if ( result == RegistrationResult::DuplicateName )
         {
-            SW_LOG_ERROR( "NetSimGameRegistry: '%#' is already registered", string( name ) );
+            SW_LOG_ERROR( "NetSimGameRegistry: '%#' is already registered", entry._name );
             return false;
         }
-        getEntries().push_back( NetSimGameEntry{ string( name ), pfnCreate } );
-        return true;
+        return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 
-    bool NetSimGameRegistry::unregisterGame( string_view name )
+    bool NetSimGameRegistry::unregisterGame( const NetSimGameEntry& entry )
     {
-        vector<NetSimGameEntry>& listEntry = getEntries();
-        for ( size_t index = 0; index < listEntry.size(); ++index )
-        {
-            if ( listEntry[index]._name != name )
-                continue;
-            listEntry.erase( listEntry.begin() + static_cast<std::ptrdiff_t>( index ) );
-            return true;
-        }
-        return false;
+        return getEntries().remove( &entry );
     }
 
-    const vector<NetSimGameEntry>& NetSimGameRegistry::getGames()
+    const vector<const NetSimGameEntry*>& NetSimGameRegistry::getGames()
     {
-        return getEntries();
+        return getEntries().getItems();
     }
 
     const NetSimGameEntry* NetSimGameRegistry::findGame( string_view name )
     {
-        for ( const NetSimGameEntry& entry : getEntries() )
-        {
-            if ( entry._name == name )
-                return &entry;
-        }
-        return nullptr;
+        return getEntries().findByName( name );
     }
 } // namespace sw

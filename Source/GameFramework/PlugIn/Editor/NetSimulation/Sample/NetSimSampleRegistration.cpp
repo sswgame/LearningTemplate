@@ -14,8 +14,10 @@ namespace sw::editor
          */
         struct NetSimSampleRegistrar
         {
-            NetSimSampleRegistrar() { (void)NetSimGameRegistry::registerGame( NetSimSampleGame::kName, &NetSimSampleGame::create ); }
-            ~NetSimSampleRegistrar() { (void)NetSimGameRegistry::unregisterGame( NetSimSampleGame::kName ); }
+            NetSimSampleRegistrar() { (void)NetSimGameRegistry::registerGame( _entry ); }
+            ~NetSimSampleRegistrar() { (void)NetSimGameRegistry::unregisterGame( _entry ); }
+
+            NetSimGameEntry _entry{ NetSimSampleGame::kName, &NetSimSampleGame::create };
         };
 
         const NetSimSampleRegistrar s_netSimSampleRegistrar;

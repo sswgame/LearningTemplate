@@ -34,7 +34,7 @@ namespace sw::editor
         void drawTab( const MultiplayerTabContext& context ) override
         {
             (void)context; // 멀티 프로세스 재생의 대상 고르기는 이 탭과 무관하다
-            const vector<NetSimGameEntry>& listGame = NetSimGameRegistry::getGames();
+            const vector<const NetSimGameEntry*>& listGame = NetSimGameRegistry::getGames();
             if ( _session.isRunning() == false )
             {
                 drawStartControls( listGame );
@@ -54,7 +54,7 @@ namespace sw::editor
         }
 
     private:
-        void drawStartControls( const vector<NetSimGameEntry>& listGame )
+        void drawStartControls( const vector<const NetSimGameEntry*>& listGame )
         {
             if ( listGame.empty() )
             {
@@ -62,11 +62,11 @@ namespace sw::editor
                 return;
             }
             _gameIndex = MathUtil::clamp( _gameIndex, 0, static_cast<int32>( listGame.size() ) - 1 );
-            if ( ImGui::BeginCombo( "Game", listGame[static_cast<size_t>( _gameIndex )]._name.c_str() ) )
+            if ( ImGui::BeginCombo( "Game", listGame[static_cast<size_t>( _gameIndex )]->_name.c_str() ) )
             {
                 for ( size_t index = 0; index < listGame.size(); ++index )
                 {
-                    if ( ImGui::Selectable( listGame[index]._name.c_str(), static_cast<int32>( index ) == _gameIndex ) )
+                    if ( ImGui::Selectable( listGame[index]->_name.c_str(), static_cast<int32>( index ) == _gameIndex ) )
                         _gameIndex = static_cast<int32>( index );
                 }
                 ImGui::EndCombo();
@@ -77,7 +77,7 @@ namespace sw::editor
             if ( bStartClicked )
             {
                 EditorNetSimSettings settings;
-                settings._gameName    = listGame[static_cast<size_t>( _gameIndex )]._name;
+                settings._gameName    = listGame[static_cast<size_t>( _gameIndex )]->_name;
                 settings._clientCount = _clientCount;
                 _lastError.clear();
                 if ( _session.start( settings, _lastError ) )

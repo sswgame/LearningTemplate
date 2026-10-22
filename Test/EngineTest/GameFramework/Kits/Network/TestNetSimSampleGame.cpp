@@ -184,7 +184,8 @@ SW_TEST_CASE( NetSimSampleGameTest, LeavingClientTakesItsAvatarAway )
  */
 SW_TEST_CASE( NetSimSampleGameTest, RegistryCreatesTheGameAndItDescribesTheFraming )
 {
-    SW_ASSERT_TRUE( NetSimGameRegistry::registerGame( NetSimSampleGame::kName, &NetSimSampleGame::create ) );
+    const NetSimGameEntry entry{ NetSimSampleGame::kName, &NetSimSampleGame::create };
+    SW_ASSERT_TRUE( NetSimGameRegistry::registerGame( entry ) );
     const NetSimGameEntry* pEntry = NetSimGameRegistry::findGame( NetSimSampleGame::kName );
     SW_ASSERT_NOT_NULL( pEntry );
     unique_ptr<INetSimGame> pGame = pEntry->_pfnCreate();
@@ -194,5 +195,5 @@ SW_TEST_CASE( NetSimSampleGameTest, RegistryCreatesTheGameAndItDescribesTheFrami
     const NetSimSampleSettings settings;
     SW_EXPECT_TRUE( framing._floorSize > settings._arenaHalfSize * 2.0f );
     SW_EXPECT_TRUE( framing._distance > settings._arenaHalfSize );
-    SW_EXPECT_TRUE( NetSimGameRegistry::unregisterGame( NetSimSampleGame::kName ) );
+    SW_EXPECT_TRUE( NetSimGameRegistry::unregisterGame( entry ) );
 }
