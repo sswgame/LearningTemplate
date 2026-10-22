@@ -27,7 +27,8 @@ namespace sw
     /**
      * @brief 곧 볼 시점(대기 뷰)입니다. 컷이나 뷰 타깃 전환 몇 초 전에 등록해, 그 시점에서 보일 것을 미리 준비하게 합니다.
      * @details 언리얼 Sequencer 의 preroll 과 스트리밍 소스(`AddViewLocation`)에 해당한다. 애니메이션 LOD 는 매니저가 프레임마다 그 카메라를 대기 뷰로 넣는다
-     *          (`AnimationSystem::setPendingLODView`). 나머지 듣는 쪽(메시 LOD, 밉 스트리밍, PSO 미리 만들기, 그림자 캐스케이드)은 아직 없다 — 생기면 `registerPendingViewListener` 로 등록한다.
+     *          (`AnimationSystem::setPendingLODView`), 메시 LOD 도 같다(`MeshLODSystem::setPendingView`). 나머지 듣는 쪽(밉 스트리밍, PSO 미리 만들기, 그림자 캐스케이드)은
+     *          `registerPendingViewListener` 로 등록한다.
      */
     struct CameraPendingView
     {
@@ -101,7 +102,7 @@ namespace sw
     private:
         /** @brief 미뤄 둔 블렌드 · 쓰기입니다(틱 뒤 게임 스레드). */
         void resolveCamera();
-        /** @brief 대기 뷰의 카메라를 애니메이션 LOD 의 대기 뷰로 넣거나(있을 때) 지웁니다(틱 뒤 게임 스레드, `resolveCamera` 끝). */
+        /** @brief 대기 뷰의 카메라를 애니메이션 LOD · 메시 LOD 의 대기 뷰로 넣거나(있을 때) 지웁니다(틱 뒤 게임 스레드, `resolveCamera` 끝). */
         void updatePendingLODView();
         /** @brief 핸들의 오브젝트에 있는 카메라입니다. 없거나 자기 오브젝트면 nullptr 입니다. */
         CameraComponent* findTargetCamera( const GameObjectHandle& target ) const;

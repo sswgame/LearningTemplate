@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -18,6 +19,18 @@ namespace sw
 {
     SW_LOG_CALLER( "MaterialCache" );
 
+    namespace
+    {
+        /** @brief 고정 토큰(`MaterialCache::pinAsset`)이 놓일 때 확보한 참조를 놓는 삭제자입니다. 머티리얼 객체는 캐시가 소유하므로 지우지 않는다. */
+        struct MaterialCachePinRelease
+        {
+            MaterialCache* _pCache;
+            string         _key;
+
+            void operator()( const Material* /*pMaterial*/ ) const { _pCache->release( _key ); }
+        };
+    } // namespace
+
     struct MaterialCache::Impl
     {
         struct Entry
@@ -29,13 +42,17 @@ namespace sw
 
         unordered_map<string, Entry> _mapEntry;
         vector<string>               _listPendingKey; ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
+        vector<string>               _listPSOWarmKey; ///< 고정(`pinAsset`)이 넣은, PSO 를 미리 만들 경로(`_mutex` 아래)
         atomic<uint32>               _pendingCount;   ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
+        atomic<uint32>               _psoWarmCount;   ///< `_listPSOWarmKey` 의 크기. 0 이면 `takePSOWarmMaterials` 가 잠그지 않는다(매 프레임 불린다)
         std::shared_mutex            _mutex;
 
         Impl()
             : _mapEntry{}
             , _listPendingKey{}
+            , _listPSOWarmKey{}
             , _pendingCount{ 0 }
+            , _psoWarmCount{ 0 }
             , _mutex{}
         {
         }
@@ -212,6 +229,46 @@ namespace sw
         }
     }
 
+    shared_ptr<const void> MaterialCache::pinAsset( string_view relativePath )
+    {
+        if ( AssetTypeRegistry::isPathOfType( relativePath, Material::kAssetType ) == false )
+            return {};
+        // 디바이스 없이 확보하면 항목만 만든다(실패는 빈 경로뿐인데 접미사가 맞았으니 비지 않았다).
+        const Material* pMaterial = acquire( relativePath, nullptr );
+        SW_ASSERT( pMaterial != nullptr );
+        requestInitialize( relativePath );
+        const string key = FileUtil::normalizePath( relativePath );
+        {
+            std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+            if ( VectorUtil::contains( _impl->_listPSOWarmKey, key ) == false )
+                _impl->_listPSOWarmKey.push_back( key );
+            _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+        }
+        return shared_ptr<const void>( pMaterial, MaterialCachePinRelease{ this, key } );
+    }
+
+    void MaterialCache::takePSOWarmMaterials( vector<shared_ptr<Material>>& outListMaterial )
+    {
+        outListMaterial.clear();
+        if ( _impl == nullptr || _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
+            return;
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        size_t                              keyIndex = 0;
+        while ( keyIndex < _impl->_listPSOWarmKey.size() )
+        {
+            const auto it = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
+            if ( it != _impl->_mapEntry.end() && it->second._material->isRHIValid() == false )
+            {
+                ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
+                continue;
+            }
+            if ( it != _impl->_mapEntry.end() )
+                outListMaterial.push_back( it->second._material );
+            VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
+        }
+        _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+    }
+
     /**
      * @brief 캐시를 통째로 비웁니다. **GPU 자원을 돌려주지는 않습니다.**
      * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** 이유는 `TextureCache::clear()` 와 같습니다.
@@ -229,6 +286,8 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
             _impl->_mapEntry.clear();
+            _impl->_listPSOWarmKey.clear();
+            _impl->_psoWarmCount.store( 0, std::memory_order_release );
         }
     }
 } // namespace sw

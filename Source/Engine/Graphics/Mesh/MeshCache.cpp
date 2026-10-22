@@ -121,8 +121,8 @@ namespace sw
                 loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
             if ( data._listMorphTarget.empty() == false )
                 loaded->setMorphTargets( std::move( data._listMorphTarget ) );
-            // 구간이 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 없는 메시로 두지 않고 읽기 실패로 알린다.
-            bLoaded = loaded->setSections( std::move( data._listSection ) );
+            // 구간 · LOD 가 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 · LOD 없는 메시로 두지 않고 읽기 실패로 알린다.
+            bLoaded = loaded->setSections( std::move( data._listSection ) ) && loaded->setLODs( std::move( data._listLOD ) );
             if ( bLoaded )
             {
                 loadScope.setSucceeded();
@@ -220,7 +220,7 @@ namespace sw
         live->setVerticesWithTangents( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         live->setMorphTargets( std::move( data._listMorphTarget ) );
-        return live->setSections( std::move( data._listSection ) );
+        return live->setSections( std::move( data._listSection ) ) && live->setLODs( std::move( data._listLOD ) );
     }
 
     bool MeshCache::isCached( string_view relativePath ) const
@@ -237,6 +237,13 @@ namespace sw
     size_t MeshCache::getCachedCount() const
     {
         return MeshCacheInternal::getSharedTable().countLive();
+    }
+
+    shared_ptr<const void> MeshCache::pinAsset( string_view relativePath )
+    {
+        if ( MeshAssetFormat::isMeshAssetPath( relativePath ) == false )
+            return {};
+        return request( relativePath ).getBlock();
     }
 
     void MeshCache::clear()

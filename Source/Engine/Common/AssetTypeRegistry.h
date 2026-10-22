@@ -90,6 +90,8 @@ namespace sw
 
         /** @brief @p path 끝에 맞는 접미사입니다 — 가장 긴 것이 먼저, 길이가 같으면 등록 순이다. 대소문자는 가리지 않습니다. */
         static AssetSuffixMatch findSuffix( string_view path );
+        /** @brief @p path 의 접미사가 종류 @p def 의 것이면 true 입니다(이름으로 견준다 — 정의는 DLL 마다 사본일 수 있다). 캐시가 "내 종류의 경로인가" 를 볼 때 씁니다. */
+        static bool isPathOfType( string_view path, const AssetTypeDef& def );
         /** @brief @p path 가 맞은 종류의 제외 묶음(`_excludeGroup`)입니다. 맞은 종류가 없거나 묶음이 없으면 빈 글입니다. */
         static string_view findExcludeGroup( string_view path );
         /** @brief @p group 을 제외 묶음으로 가진 종류가 올라와 있으면 true 입니다(쿠킹 표가 모르는 묶음 이름을 가리키지 않는지 테스트가 본다). */

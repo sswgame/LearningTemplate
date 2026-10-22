@@ -30,6 +30,7 @@ namespace sw
         , _width{ 0 }
         , _height{ 0 }
         , _mipCount{ 0 }
+        , _streamedMipCount{ 0 }
         , _format{ RHIFormat::Unknown }
         , _bRenderTarget{ SW_FALSE }
     {
@@ -37,7 +38,7 @@ namespace sw
 
     Texture2D::~Texture2D()
     {
-        if ( _handle != 0 )
+        if ( getHandle() != 0 )
             SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRHI first.", _path.c_str() );
     }
 
@@ -114,7 +115,7 @@ namespace sw
         DDSImageData image;
         if ( readImage( relativePath, image ) == false )
             return false;
-        return loadFromImage( pDevice, relativePath, image );
+        return loadFromImage( pDevice, relativePath, image, TextureResidency::Full );
     }
 
     bool Texture2D::readImage( string_view relativePath, DDSImageData& outImage )
@@ -140,34 +141,88 @@ namespace sw
         return true;
     }
 
-    bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image )
+    bool Texture2D::loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency )
     {
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
-        if ( _handle != 0 )
+        if ( getHandle() != 0 )
             releaseRHI( pDevice );
 
         const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
         SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
-        // 텍스처 품질(gv_textureMipDrop) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 올린다.
+        // 텍스처 품질(gv_textureMipDrop) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
+        // 스트리밍 기반(`StreamingBase`)은 같은 규칙으로 버릴 수 있는 만큼 버린다 — 품질이 버리는 밉보다 늘 많거나 같다(같은 식에 더 큰 요청).
         const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
-        const Texture2DMipDrop drop         = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        const Texture2DMipDrop residentDrop =
+            residency == TextureResidency::StreamingBase ? computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( fileMipCount ) ) : qualityDrop;
+        RHITextureDesc     desc{};
+        RHITextureHandle   handle = 0;
+        RHIDescriptorIndex srv    = kInvalidDescriptorIndex;
+        if ( createTextureWithMips( *pDevice, relativePath, image, format, residentDrop, desc, handle, srv ) == false )
+            return false;
+
+        // `_pDevice` 는 **성공한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
+        // 표시가 남는다. `isRHIValid` 는 핸들을 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
+        // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
+        _handle.store( handle, std::memory_order_release );
+        _srv.store( srv, std::memory_order_release );
+        _pDevice          = pDevice;
+        _path             = string{ relativePath };
+        _width            = desc._width;
+        _height           = desc._height;
+        _mipCount         = desc._mipLevels;
+        _streamedMipCount = residentDrop._mipCount - qualityDrop._mipCount;
+        _format           = format;
+        SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips (%# top mips streamed later), format %#, srv %#", _path.c_str(), _width, _height, _mipCount, _streamedMipCount,
+                     static_cast<uint32>( _format ), srv );
+        return true;
+    }
+
+    bool Texture2D::upgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, Texture2DRetiredResource& outRetired )
+    {
+        // 다른 디바이스의 텍스처(백엔드 교체 뒤 아직 다시 업로드하지 않은 것)는 그 디바이스로 다시 만들 때 밉 전부가 올라간다(`initRHI`).
+        const bool bUpgradable = pDevice != nullptr && _pDevice == pDevice && _streamedMipCount > 0 && isRHIValid();
+        if ( bUpgradable == false )
+            return false;
+        const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
+        SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
+        const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
+        const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );
+        RHITextureDesc         desc{};
+        RHITextureHandle       handle = 0;
+        RHIDescriptorIndex     srv    = kInvalidDescriptorIndex;
+        if ( createTextureWithMips( *pDevice, _path, image, format, qualityDrop, desc, handle, srv ) == false )
+            return false;
+        outRetired._handle = _handle.exchange( handle, std::memory_order_acq_rel );
+        outRetired._srv    = _srv.exchange( srv, std::memory_order_acq_rel );
+        _width             = desc._width;
+        _height            = desc._height;
+        _mipCount          = desc._mipLevels;
+        _streamedMipCount  = 0;
+        return true;
+    }
+
+    bool Texture2D::createTextureWithMips( IRHIDevice& device, string_view relativePath, const DDSImageData& image, RHIFormat format, const Texture2DMipDrop& drop,
+                                           RHITextureDesc& outDesc, RHITextureHandle& outHandle, RHIDescriptorIndex& outSrv )
+    {
+        const uint32 fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         if ( drop._skippedBytes >= image._bytes.size() )
         {
             SW_LOG_ERROR( "Texture2D: '%#' payload (%# bytes) is shorter than its mip chain (%# mips)", relativePath, image._bytes.size(), fileMipCount );
             return false;
         }
-        RHITextureDesc desc{};
-        desc._width                    = image._width >> drop._mipCount;
-        desc._height                   = image._height >> drop._mipCount;
-        desc._mipLevels                = fileMipCount - drop._mipCount;
-        desc._format                   = format;
-        desc._bIsShaderResource        = SW_TRUE;
-        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
-        _handle                        = pResource->createTexture2D( desc );
-        if ( _handle == 0 )
+        outDesc                        = RHITextureDesc{};
+        outDesc._width                 = image._width >> drop._mipCount;
+        outDesc._height                = image._height >> drop._mipCount;
+        outDesc._mipLevels             = fileMipCount - drop._mipCount;
+        outDesc._format                = format;
+        outDesc._bIsShaderResource     = SW_TRUE;
+        IRHIResourceFactory* pResource = device.getResourceFactory();
+        outHandle                      = pResource->createTexture2D( outDesc );
+        if ( outHandle == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, desc._width, desc._height, desc._mipLevels );
+            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
             return false;
         }
 
@@ -175,35 +230,23 @@ namespace sw
         RHITextureUploadDesc upload{};
         upload._pData     = image.getPixels() + drop._skippedBytes;
         upload._sizeBytes = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
-        upload._mipLevels = desc._mipLevels;
-        if ( pResource->uploadTexture2D( _handle, upload ) == false )
+        upload._mipLevels = outDesc._mipLevels;
+        if ( pResource->uploadTexture2D( outHandle, upload ) == false )
         {
             SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for '%#'", relativePath );
-            pResource->destroyTexture( _handle );
-            _handle = 0;
+            pResource->destroyTexture( outHandle );
+            outHandle = 0;
             return false;
         }
 
-        _srv = pResource->registerBindlessTexture( _handle );
-        if ( _srv == kInvalidDescriptorIndex )
+        outSrv = pResource->registerBindlessTexture( outHandle );
+        if ( outSrv == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", relativePath );
-            pResource->destroyTexture( _handle );
-            _handle = 0;
+            pResource->destroyTexture( outHandle );
+            outHandle = 0;
             return false;
         }
-
-        // `_pDevice` 는 **성공한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
-        // 표시가 남는다. `isRHIValid` 는 핸들을 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
-        // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
-        _pDevice  = pDevice;
-        _path     = string{ relativePath };
-        _width    = desc._width;
-        _height   = desc._height;
-        _mipCount = desc._mipLevels;
-        _format   = format;
-        SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
-                     static_cast<uint32>( _format ), _srv );
         return true;
     }
 
@@ -212,7 +255,7 @@ namespace sw
         const bool bInvalidRenderTargetArguments = pDevice == nullptr || name.empty() || width == 0 || height == 0;
         if ( bInvalidRenderTargetArguments )
             return false;
-        if ( _handle != 0 )
+        if ( getHandle() != 0 )
             releaseRHI( pDevice );
 
         RHITextureDesc desc{};
@@ -224,7 +267,7 @@ namespace sw
         desc._bIsShaderResource        = SW_TRUE;
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
         _handle                        = pResource->createTexture2D( desc );
-        if ( _handle == 0 )
+        if ( getHandle() == 0 )
         {
             SW_LOG_ERROR( "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
             return false;
@@ -244,7 +287,7 @@ namespace sw
         _mipCount      = 1;
         _format        = format;
         _bRenderTarget = SW_TRUE;
-        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, _srv );
+        SW_LOG_INFO( "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSrv() );
         return true;
     }
 
@@ -266,7 +309,7 @@ namespace sw
 
     void Texture2D::setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes )
     {
-        SW_ASSERT( _handle == 0 );
+        SW_ASSERT( getHandle() == 0 );
         _path     = string{ name };
         _width    = width;
         _height   = height;
@@ -289,7 +332,7 @@ namespace sw
         desc._bIsShaderResource        = SW_TRUE;
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
         _handle                        = pResource->createTexture2D( desc );
-        if ( _handle == 0 )
+        if ( getHandle() == 0 )
         {
             SW_LOG_ERROR( "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
             return false;
@@ -343,10 +386,11 @@ namespace sw
     {
         if ( _pDevice != pDevice )
             return;
-        // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다.
-        _handle  = 0;
-        _srv     = kInvalidDescriptorIndex;
-        _pDevice = nullptr;
+        // 디바이스가 이미 없다. 텍스처는 그와 함께 갔다. 새 디바이스에 다시 업로드할 때는 밉 전부가 올라간다(`initRHI`).
+        _handle           = 0;
+        _srv              = kInvalidDescriptorIndex;
+        _pDevice          = nullptr;
+        _streamedMipCount = 0;
     }
 
     void Texture2D::releaseRHI( IRHIDevice* pDevice )
@@ -359,14 +403,15 @@ namespace sw
         if ( pDevice != nullptr )
         {
             // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
-            if ( _srv != kInvalidDescriptorIndex )
-                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, _srv );
-            if ( _handle != 0 )
-                pDevice->releaseHandle( RHIHandleKind::Texture, _handle );
+            if ( getSrv() != kInvalidDescriptorIndex )
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, getSrv() );
+            if ( getHandle() != 0 )
+                pDevice->releaseHandle( RHIHandleKind::Texture, getHandle() );
         }
-        _handle  = 0;
-        _srv     = kInvalidDescriptorIndex;
-        _pDevice = nullptr;
+        _handle           = 0;
+        _srv              = kInvalidDescriptorIndex;
+        _pDevice          = nullptr;
+        _streamedMipCount = 0;
         // 렌더 타깃 · CPU 텍스처는 크기 · 포맷이 곧 정의다 — 다시 만들 때 쓴다.
         if ( _bRenderTarget == SW_TRUE || hasCPUBytes() )
             return;

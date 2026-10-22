@@ -6,6 +6,10 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/AssetPinSet.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PreloadSet.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -135,6 +139,92 @@ SW_TEST_CASE( AssetStreamingTest, PreloadSetWalksEveryPathWithinTheBudget )
     const sw::PreloadSet empty( {}, sw::StreamingPriority::Normal, 1u );
     SW_EXPECT_TRUE( empty.isComplete() );
     SW_EXPECT_NEAR_EQUAL( 1.0f, empty.getProgress(), 0.0f );
+    queue.shutdown();
+}
+
+/**
+ * @brief [AssetStreamingTest] 고정 묶음은 예산을 넘으면 마지막으로 쓴 때가 가장 오래된 것부터 놓고, 혼자 예산보다 큰 것은 붙들지 않는다
+ * @details 토큰은 놓이면 세는 삭제자를 단 값이다 — 묶음이 놓은 순간이 보인다.
+ */
+SW_TEST_CASE( AssetStreamingTest, PinSetEvictsLeastRecentlyUsedOverBudget )
+{
+    uint32     releasedCount = 0;
+    const auto makePin       = [&releasedCount]()
+    {
+        return sw::shared_ptr<const void>( &releasedCount, [&releasedCount]( const uint32* )
+        { ++releasedCount; } );
+    };
+    sw::AssetPinSet pins( 100 );
+    SW_EXPECT_TRUE( pins.add( "a.mesh", makePin(), 40 ) );
+    SW_EXPECT_TRUE( pins.add( "b.mesh", makePin(), 40 ) );
+    pins.touch( "a.mesh" ); // 이제 b 가 가장 오래 안 썼다
+    SW_EXPECT_TRUE( pins.add( "c.mesh", makePin(), 40 ) );
+    SW_EXPECT_TRUE( pins.contains( "a.mesh" ) );
+    SW_EXPECT_FALSE( pins.contains( "b.mesh" ) );
+    SW_EXPECT_TRUE( pins.contains( "c.mesh" ) );
+    SW_EXPECT_EQUAL( 1u, releasedCount );
+    SW_EXPECT_EQUAL( uint64( 80 ), pins.getPinnedBytes() );
+
+    // 이미 붙든 경로는 토큰을 바꾸지 않는다(새 토큰은 바로 놓인다).
+    SW_EXPECT_TRUE( pins.add( "A.MESH", makePin(), 40 ) );
+    SW_EXPECT_EQUAL( 2u, releasedCount );
+    SW_EXPECT_EQUAL( size_t( 2 ), pins.getCount() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "an asset larger than the whole pin budget is not pinned" );
+        SW_EXPECT_FALSE( pins.add( "huge.mesh", makePin(), 101 ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 2 ), pins.getCount() );
+    SW_EXPECT_FALSE( pins.add( "empty.mesh", sw::shared_ptr<const void>{}, 1 ) );
+
+    pins.clear();
+    SW_EXPECT_EQUAL( 5u, releasedCount );
+    SW_EXPECT_EQUAL( uint64( 0 ), pins.getPinnedBytes() );
+}
+
+/**
+ * @brief [AssetStreamingTest] 고정을 켠 프리로드 묶음은 읽은 메시를 캐시에 붙들고, 고정하지 않는 종류는 읽기만 하며, 묶음이 사라지면 놓는다
+ * @details 메시 캐시는 약한 참조라 묶음이 붙들지 않으면 읽은 메시가 쓰기 전에 사라진다(계획 PreloadAndLod P4).
+ */
+SW_TEST_CASE( AssetStreamingTest, PreloadSetPinsMeshesUntilReleased )
+{
+    const sw::string          meshDisk = test::makeTempPath( "sw_preload_pin.mesh" );
+    const sw::string          dataDisk = test::makeTempPath( "sw_preload_pin.dat" );
+    sw::vector<sw::RHIVertex> listVertex( 3 );
+    listVertex[1]._arrPosition[1] = 1.0f;
+    listVertex[2]._arrPosition[0] = 1.0f;
+    for ( sw::RHIVertex& vertex : listVertex )
+    {
+        vertex._arrNormal[2] = 1.0f;
+    }
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( meshDisk, listVertex ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( dataDisk, "bytes only" ) );
+    const sw::string meshPath = test::makeTempResourceID( meshDisk );
+    const sw::string dataPath = test::makeTempResourceID( dataDisk );
+
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+    sw::MeshCache cache;
+    {
+        sw::PreloadSet set( { meshPath, dataPath }, sw::StreamingPriority::Normal, 2u );
+        set.enablePinning( sw::engine::getSubsystem<sw::AssetManager>(), 1024u * 1024u );
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
+        while ( set.isComplete() == false && deadline.isExpired() == false )
+        {
+            set.update( queue );
+            queue.update();
+            std::this_thread::yield();
+        }
+        SW_ASSERT_TRUE( set.isComplete() );
+        SW_EXPECT_TRUE( set.getFailedAssets().empty() );
+        SW_ASSERT_NOT_NULL( set.findPins() );
+        SW_EXPECT_TRUE( set.findPins()->contains( meshPath ) );
+        SW_EXPECT_FALSE( set.findPins()->contains( dataPath ) ); // 고정하는 캐시가 없는 종류는 읽기만 한다
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+        SW_EXPECT_TRUE( cache.isCached( meshPath ) );
+    }
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    SW_EXPECT_FALSE( cache.isCached( meshPath ) );
     queue.shutdown();
 }
 

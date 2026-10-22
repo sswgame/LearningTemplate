@@ -155,6 +155,11 @@ namespace sw
             return static_cast<const TCache&>( getBuiltInAssetCache( TCache::kAssetKindName ) );
         }
         /**
+         * @brief 경로의 종류를 다루는 캐시에 로드를 걸고 그 에셋을 붙드는 토큰을 받습니다(`IAssetCache::pinAsset`). 고정하는 캐시가 없는 종류면 nullptr 입니다.
+         * @details 프리로드 세트의 고정(`AssetPinSet`)이 쓴다. 토큰은 이 매니저보다 먼저 놓는다.
+         */
+        shared_ptr<const void> pinAsset( string_view relativePath );
+        /**
          * @brief 등록된 캐시를 모두 비웁니다.
          * @details `shutdown` 이 이 함수를 쓴다. 종료 경로가 캐시 이름을 직접 나열하면 하나가 빠져 재초기화 뒤에도 이전 내용이 남는다.
          */

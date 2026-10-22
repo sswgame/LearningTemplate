@@ -174,10 +174,18 @@ namespace sw
         void          setSectionName( hashed_string sectionName );
         hashed_string getSectionName() const { return _sectionName; }
         /**
-         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체)이고 true, 메시에 그 구간이 없으면 false(그리지 않는다)입니다.
+         * @brief 그릴 정점 범위입니다. 구간 이름이 비면 (0, 0)(메시 전체 = LOD 0)이고 true, 메시에 그 구간이 없으면 false(그리지 않는다)입니다.
+         *        LOD 단계(`setLODIndex`)가 1 이상이면 그 단계의 범위(`Mesh::getLODs`, 그릴 정점 흐름 기준)입니다.
          * @details 렌더 수집(`GPUSceneBuilder::fillCandidateFromPrimitive`)이 워커에서 부르므로 로그를 남기지 않는다 — 오류는 `resolveRenderAssets` 가 남긴다.
          */
         [[nodiscard]] bool findDrawSection( uint32& outFirstVertex, uint32& outVertexCount ) const;
+        /**
+         * @brief 그릴 LOD 단계를 정합니다(0 = 원본). 메시의 단계 수를 넘으면 가장 낮은 단계입니다. 바뀌면 렌더 상태를 더티로 표시합니다(저장하지 않는 런타임 값).
+         * @details 단계는 메시 LOD 고르기(`MeshLODSystem`)가 화면 크기로 정한다. 단계가 하나뿐인 메시에는 뜻이 없다.
+         */
+        void setLODIndex( uint32 lodIndex );
+        /** @brief 지금 그리는 LOD 단계입니다(0 = 원본). */
+        uint32 getLODIndex() const { return _lodIndex; }
         /**
          * @brief 1인칭 시점인지를 정합니다(저장하지 않는 런타임 값). 구간의 시점 가시성(`MeshPersonVisibility`)이 이 값으로 보이고 숨습니다.
          * @details VRM firstPerson 의 자리다(1인칭 카메라에 머리 · 머리카락이 걸리지 않게). 시점은 컴포넌트 단위라 모든 뷰가 같은 판정을 쓴다 — 분할 화면에서
@@ -249,6 +257,11 @@ namespace sw
         /** @brief 메시를 바꾸되 따라 그리는 구간 컴포넌트에 알리지 않습니다 — 구간 컴포넌트가 자기 원본을 따라갈 때 쓴다(서로 알리며 돌지 않게). */
         void assignMeshWithoutFollowers( shared_ptr<Mesh> mesh );
         /**
+         * @brief `_mesh` 를 바꾼 뒤 부릅니다 — 구간 이름을 확인하고, LOD 단계를 원본으로 돌리고, 메시의 단계가 여럿이면 LOD 목록에 걸고(아니면 뗀다), 렌더 상태를 더티로 표시합니다.
+         * @details 메시를 바꾸는 길(해석 · 도착 · 런타임 지정 · 구간 따라가기)이 모두 이 함수로 모인다 — 한 길이라도 빠지면 LOD 목록에 남은 메시가 옛 단계를 그린다.
+         */
+        void onMeshAssigned();
+        /**
          * @brief 나타날 준비가 됐는지 묻습니다(씬 프레임마다, 게임 스레드, 등장을 미루는 동안). 기본은 늘 준비됨입니다.
          * @details 캐릭터(스켈레탈 메시)는 붙은 애니메이터의 클립이 다 읽혔을 때 준비된다 — 애니메이션 없이 기본 자세로 한 프레임이라도 보이지 않게.
          *          묻는 김에 기다리던 쪽을 마무리해도 된다(애니메이터가 그래프를 짓고 시작 상태를 재생한다).
@@ -303,6 +316,8 @@ namespace sw
         float32 _appearanceRate; ///< 등장 비율의 초당 변화(양수 등장 · 음수 사라지기 · 0 멈춤, 저장하지 않음)
         /** @brief 순간이동이 표시한 등장 요청입니다(`onTeleported`, 워커가 쓴다). 도착 단계가 꺼내 `beginAppearance` 한다. 비트필드에 두면 이웃 비트와 레이스다. */
         atomic<bool> _bTeleportAppearPending;
+        /** @brief 그리는 LOD 단계입니다(0 = 원본, `setLODIndex`). 저장하지 않습니다. 게임 스레드만 쓴다(렌더 수집은 그 프레임의 더티 뒤에 읽는다). */
+        uint8 _lodIndex;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 더티를 이 비트필드에 두면 워커의 더티 쓰기가

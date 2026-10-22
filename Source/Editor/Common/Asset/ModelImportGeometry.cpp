@@ -661,4 +661,43 @@ namespace sw::editor
             outData._listMorphTarget.push_back( std::move( target ) );
         }
     }
+
+    bool ModelImportUtil::makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, vector<MeshLODLevel>& outListLevel )
+    {
+        outListLevel.clear();
+        if ( rule._listLOD.empty() )
+            return true;
+        const size_t sourceIndexCount = mesh._listIndex.size();
+        const size_t vertexCount      = mesh._listVertex.size();
+        for ( size_t lodIndex = 0; lodIndex < rule._listLOD.size(); ++lodIndex )
+        {
+            const ModelImportLODRule& lodRule          = rule._listLOD[lodIndex];
+            const size_t              targetIndexCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( sourceIndexCount / 3 ) * lodRule._triangleRatio ), size_t( 1 ) ) * 3;
+            // 펼치기는 인덱스 메시를 받는다 — 정점은 원본 그대로, 인덱스만 단순화한 것으로 바꾼다(단순화는 정점을 옮기지 않고 고른다).
+            MergedMesh simplified{};
+            simplified._listVertex = mesh._listVertex;
+            simplified._listIndex.resize( sourceIndexCount );
+            float32      resultError = 0.0f;
+            const size_t indexCount  = meshopt_simplify( simplified._listIndex.data(), mesh._listIndex.data(), sourceIndexCount, &mesh._listVertex[0]._position._x, vertexCount,
+                                                         sizeof( ImportVertex ), targetIndexCount, lodRule._maxError, 0, &resultError );
+            const bool   bReduced    = 0 < indexCount && indexCount < sourceIndexCount;
+            if ( bReduced == false )
+            {
+                SW_LOG_ERROR( "glTF '%#': LOD %# of rule '%#' kept %# of %# indices - adjust triangle_ratio / max_error for this model", sourcePath, lodIndex + 1,
+                              rule._name.c_str(), indexCount, sourceIndexCount );
+                outListLevel.clear();
+                return false;
+            }
+            simplified._listIndex.resize( indexCount );
+            optimizeTriangleRange( simplified, 0, indexCount / 3 );
+            MeshAssetData expanded{};
+            expandTrianglesInOrder( simplified, 0, expanded );
+            MeshLODLevel level{};
+            level._listVertex = std::move( expanded._listVertex );
+            level._screenSize = lodRule._screenSize;
+            SW_LOG_INFO( "glTF '%#': LOD %# has %# of %# triangles (error %#)", sourcePath, lodIndex + 1, indexCount / 3, sourceIndexCount / 3, resultError );
+            outListLevel.push_back( std::move( level ) );
+        }
+        return true;
+    }
 } // namespace sw::editor

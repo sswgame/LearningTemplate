@@ -124,6 +124,7 @@
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 테스트 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_textureMipDrop` | `int32` | `0` | 일반 | 텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영) | [Texture2D.cpp](../../Source/Engine/Graphics/Texture/Texture2D.cpp) |
+| `gv_textureStreaming` | `int32` | `1` | 일반 | Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once) | [TextureCache.cpp](../../Source/Engine/Graphics/Texture/TextureCache.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 테스트 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |
 
 ## `Source/Engine/Net`
@@ -143,6 +144,7 @@
 | `gv_animationLod` | `int32` | `1` | 일반 | Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame) | [AnimationSystem.cpp](../../Source/Engine/Object/SceneAnimation/AnimationSystem.cpp) |
 | `gv_animationRewind` | `int32` | `0` | 테스트 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 테스트 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
+| `gv_meshLodForce` | `int32` | `-1` | 테스트 | Draw every LOD mesh at this LOD level regardless of screen size (-1 = pick by screen size) | [MeshLODSystem.cpp](../../Source/Engine/Object/Component/3D/MeshLODSystem.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 테스트 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/Tick/TickRegistry.cpp) |
 | `gv_tickCostDispatch` | `bool` | `false` | 테스트 | 씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본) | [SceneTickScheduler.cpp](../../Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance) | [CameraComponent.cpp](../../Source/Engine/Object/Component/CameraComponent.cpp) |

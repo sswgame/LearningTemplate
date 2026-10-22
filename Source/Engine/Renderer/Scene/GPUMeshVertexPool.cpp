@@ -78,7 +78,7 @@ namespace sw
             if ( pMesh == nullptr || pMesh->getVertices().empty() )
                 continue;
             const uint64 contentID   = pMesh->getContentID();
-            const uint32 vertexCount = static_cast<uint32>( pMesh->getVertices().size() );
+            const uint32 vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
             const auto   it          = _mapEntry.find( pMesh );
             if ( it == _mapEntry.end() )
             {
@@ -146,13 +146,12 @@ namespace sw
                 return false; // 이미 받은 구간들은 repack 이 처음부터 다시 나눈다.
             entry._base = base;
             _liveVertexCount += entry._count;
-            const vector<RHIVertex>& listMeshVertex = pMesh->getVertices();
-            RHIBufferCopyRegion      region{};
+            RHIBufferCopyRegion region{};
             region._srcOffset = static_cast<uint32>( _listScratchVertex.size() * sizeof( RHIVertex ) );
             region._dstOffset = base * static_cast<uint32>( sizeof( RHIVertex ) );
             region._sizeBytes = entry._count * static_cast<uint32>( sizeof( RHIVertex ) );
             _listScratchRegion.push_back( region );
-            _listScratchVertex.insert( _listScratchVertex.end(), listMeshVertex.begin(), listMeshVertex.end() );
+            appendDrawVertices( *pMesh );
         }
         if ( _listScratchRegion.empty() == false )
         {
@@ -201,8 +200,7 @@ namespace sw
                 continue;
             }
             // 맵의 메시는 모두 이번 update 에서 본 것이라 살아 있다(못 본 것은 쓸기에서 지웠다).
-            const vector<RHIVertex>& listMeshVertex = pMesh->getVertices();
-            _listScratchVertex.insert( _listScratchVertex.end(), listMeshVertex.begin(), listMeshVertex.end() );
+            appendDrawVertices( *pMesh );
             _liveVertexCount += entry._count;
         }
         if ( _liveVertexCount == 0 )
@@ -222,6 +220,14 @@ namespace sw
             _allocator.reset( 0 );
             _liveVertexCount = 0;
         }
+    }
+
+    void GPUMeshVertexPool::appendDrawVertices( const Mesh& mesh )
+    {
+        const vector<RHIVertex>& listVertex    = mesh.getVertices();
+        const vector<RHIVertex>& listLODVertex = mesh.getLODVertices();
+        _listScratchVertex.insert( _listScratchVertex.end(), listVertex.begin(), listVertex.end() );
+        _listScratchVertex.insert( _listScratchVertex.end(), listLODVertex.begin(), listLODVertex.end() );
     }
 
     void GPUMeshVertexPool::release( IRHIDevice* pDevice )

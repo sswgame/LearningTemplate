@@ -652,6 +652,8 @@ namespace sw
             (void)textures.flushRegionUpdates( pDevice );
             // 워커가 읽어 둔 비동기 텍스처를 올린다 — 디바이스를 쓰는 스레드는 여기다(DX11 즉시 컨텍스트 · GL). 프레임당 상한이 있다.
             (void)textures.completePendingLoads( pDevice, TextureCache::kMaxUploadsPerFrame );
+            // 아래쪽 밉만 올린 텍스처의 위쪽 밉을 프레임 예산 안에서 업로드한다(밉 스트리밍). 옛 자원은 게임 스레드가 해제한다(`Engine`).
+            (void)textures.updateStreaming( pDevice, TextureCache::kMaxStreamingUpgradesPerFrame );
         }
 
         _pDevice            = pDevice;
@@ -784,6 +786,8 @@ namespace sw
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPSOs();
+        // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다.
+        warmPinnedMaterialPSOs();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
@@ -80,6 +81,18 @@ namespace sw
         bool isCached( string_view relativePath ) const override;
         /** @brief 캐시를 비웁니다. GPU 자원은 돌려주지 않습니다(디바이스가 죽은 뒤에만 부릅니다). */
         void clear() override;
+        /**
+         * @brief 머티리얼 경로(`Material::kAssetType`)면 참조 하나를 확보하고(`acquire( path, nullptr )`) 다음 `initializePending` 에 초기화를 맡긴 뒤,
+         *        놓을 때 `release` 하는 토큰을 돌려줍니다. 아니면 nullptr 입니다.
+         * @details 초기화가 머티리얼의 텍스처를 확보하므로(비동기 로드) 머티리얼 고정이 그 텍스처도 붙든다.
+         */
+        shared_ptr<const void> pinAsset( string_view relativePath ) override;
+        /**
+         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FrameRenderer::warmPinnedMaterialPSOs`).
+         * @details 고정(`pinAsset`)이 줄에 넣는다. 아직 초기화하지 않은 것(셰이더 경로 · define 을 모른다)은 줄에 남고, 놓여 캐시에서 빠진 것은 버린다.
+         *          씬에 이미 든 머티리얼은 렌더러가 배치마다 PSO 를 만들므로, 이 줄은 아직 씬에 없는(다음 레벨 · 컷에 나올) 머티리얼의 PSO 생성 히치를 미리 치른다.
+         */
+        void takePSOWarmMaterials( vector<shared_ptr<Material>>& outListMaterial );
 
     private:
         struct Impl;

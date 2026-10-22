@@ -26,6 +26,17 @@ namespace sw
         return hash;
     }
 
+    GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const Material& material, const MaterialInstance* pInstance, bool bAppearanceDither )
+    {
+        GPUShaderPermutation permutation{};
+        permutation._shaderPath = material.getShaderPath();
+        permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : material.getCachedShaderDefines();
+        if ( bAppearanceDither )
+            permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 쿠커도 머티리얼 define 끝에 붙인다(`ShaderCookRequest`)
+        permutation._hash = permutationHashFor( &material, pInstance, bAppearanceDither );
+        return permutation;
+    }
+
     void GPUMaterialRegistry::reset( GPUSceneSnapshot& inoutSnapshot )
     {
         inoutSnapshot._listMaterialGroup.clear();
@@ -62,12 +73,7 @@ namespace sw
         if ( it != _mapPermutationToIndex.end() )
             return it->second;
 
-        GPUShaderPermutation permutation{};
-        permutation._shaderPath = pMaterial->getShaderPath();
-        permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
-        if ( bAppearanceDither )
-            permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 쿠커도 머티리얼 define 끝에 붙인다(`ShaderCookRequest`)
-        permutation._hash = hash;
+        GPUShaderPermutation permutation = makeShaderPermutation( *pMaterial, pInstance, bAppearanceDither );
 
         // copy-on-write: 목록은 RT 와 공유하므로 제자리에 추가하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
         shared_ptr<vector<GPUShaderPermutation>> pList = ( inoutSnapshot._pListShaderPermutation != nullptr )

@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
@@ -81,7 +82,24 @@ namespace sw
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
         /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
         static constexpr uint32 kMaxUploadsPerFrame = 8;
-        /** @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 시나리오의 스크린샷이 로드 중 텍스처를 찍지 않게 기다릴 때 씁니다(`AutomationRunner`). */
+        /**
+         * @brief 아래쪽 밉만 올린 텍스처(비동기 로드, `TextureResidency::StreamingBase`)의 위쪽 밉을 업로드합니다(렌더 스레드, 기록 전, `completePendingLoads` 뒤). 바꿔 끼운 수를 반환합니다.
+         * @details 텍스처 밉 스트리밍(계획 PreloadAndLod P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
+         *          새 GPU 텍스처 · SRV 로 바꿔 끼우고 리로드 세대를 올려 머티리얼이 새 번호를 받게 한다. 옛 자원은 게임 스레드가 해제한다(`releaseRetiredTextures`).
+         *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
+         */
+        uint32 updateStreaming( IRHIDevice* pDevice, uint32 maxCount );
+        /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
+        static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
+        /**
+         * @brief 스트리밍이 바꿔 끼운 옛 GPU 자원을 해제합니다(게임 스레드, 프레임마다 — `Engine`). `releaseHandle` 이 이미 만든 패킷이 끝날 때까지 미룬다.
+         * @details 렌더 스레드에서 바로 해제하면 옛 SRV 번호를 값으로 가진(게임 스레드가 이미 만든) 패킷이 끝나기 전에 그 번호가 다른 텍스처에 다시 쓰인다.
+         */
+        void releaseRetiredTextures( IRHIDevice* pDevice );
+        /**
+         * @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 위쪽 밉을 기다리는 텍스처도 셉니다.
+         * @details 시나리오의 스크린샷이 로드 중 텍스처 · 아직 작은 밉을 찍지 않게 기다릴 때 씁니다(`AutomationRunner`).
+         */
         uint32 countLoadsInFlight() const;
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)이면 true 입니다. */
         static bool isRenderTargetPath( string_view relativePath );
@@ -205,6 +223,7 @@ namespace sw
         uint32                       _renderTargetWidth;
         uint32                       _renderTargetHeight;
         Source                       _source;
+        TextureResidency             _residency;       ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
         bool                         _bHoldsReference; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
     };
 } // namespace sw

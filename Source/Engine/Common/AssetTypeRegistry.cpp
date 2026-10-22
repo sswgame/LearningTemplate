@@ -143,6 +143,12 @@ namespace sw
         return AssetSuffixMatch{};
     }
 
+    bool AssetTypeRegistry::isPathOfType( string_view path, const AssetTypeDef& def )
+    {
+        const AssetSuffixMatch match = findSuffix( path );
+        return match.isMatched() && match._pType->_name == def._name;
+    }
+
     string_view AssetTypeRegistry::findExcludeGroup( string_view path )
     {
         const AssetSuffixMatch match = findSuffix( path );

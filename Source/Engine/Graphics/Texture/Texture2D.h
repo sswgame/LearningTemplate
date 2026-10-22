@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
@@ -20,6 +21,29 @@ namespace sw
     {
         uint32 _mipCount{ 0 };     ///< 버리는 밉 수
         uint64 _skippedBytes{ 0 }; ///< 페이로드 앞에서 건너뛸 바이트(버린 밉들의 크기 합)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @enum TextureResidency
+     * @brief DDS 를 GPU 에 업로드할 때 밉 사슬을 어디까지 올리는지입니다(텍스처 밉 스트리밍, 계획 PreloadAndLod P6).
+     */
+    enum class TextureResidency : uint8
+    {
+        Full = 0,      ///< 품질 설정(`gv_textureMipDrop`)이 남긴 밉 사슬 전부
+        StreamingBase, ///< 아래쪽 밉만(밉 0 의 짧은 변이 `Texture2D::kMinMipDropExtent` 근처) — 위쪽 밉은 `upgradeResidency` 가 뒤에 올린다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스트리밍이 위쪽 밉을 올리며 내놓은 옛 GPU 자원입니다(`Texture2D::upgradeResidency`). 그 SRV 를 읽는 패킷이 끝난 뒤 해제합니다. */
+    struct Texture2DRetiredResource
+    {
+        RHITextureHandle   _handle{ 0 };
+        RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
     };
 } // namespace sw
 
@@ -57,8 +81,23 @@ namespace sw
          * @return 읽지 못했거나 포맷 · 차원이 맞지 않으면 오류를 남기고 false 를 반환합니다.
          */
         [[nodiscard]] static bool readImage( string_view relativePath, DDSImageData& outImage );
-        /** @brief `readImage` 가 읽은 그림을 GPU 에 올립니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다). */
-        [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image );
+        /**
+         * @brief `readImage` 가 읽은 이미지를 GPU 에 업로드합니다. 디바이스를 쓰는 스레드에서만 부릅니다(DX11 즉시 컨텍스트 · GL 컨텍스트는 스레드에 묶인다).
+         * @param residency `StreamingBase` 면 아래쪽 밉만 업로드합니다 — 위쪽 밉은 `upgradeResidency` 가 같은 이미지로 뒤에 업로드합니다(`isFullyResident`).
+         */
+        [[nodiscard]] bool loadFromImage( IRHIDevice* pDevice, string_view relativePath, const DDSImageData& image, TextureResidency residency );
+        /**
+         * @brief 아래쪽 밉만 있는 텍스처(`StreamingBase`)에 밉 사슬 전부를 새 GPU 텍스처로 업로드하고 바꿔 끼웁니다(렌더 스레드, 기록 전).
+         * @details 새 텍스처 · SRV 를 먼저 만들고 성공하면 바꾼다 — 실패하면 아래쪽 밉 그대로 남는다(오류를 남긴다). 옛 자원은 @p outRetired 로 내놓는다: 게임 스레드가 이미 만든
+         *          패킷이 옛 SRV 번호를 값으로 가지고 있으므로 그 패킷이 끝난 뒤에 해제한다(`TextureCache::releaseRetiredTextures`). SRV 가 바뀌므로 부르는 쪽이 리로드 세대를 올려
+         *          머티리얼이 새 번호를 다시 받게 한다.
+         * @return 바꿔 끼웠으면 true 입니다.
+         */
+        [[nodiscard]] bool upgradeResidency( IRHIDevice* pDevice, const DDSImageData& image, Texture2DRetiredResource& outRetired );
+        /** @brief 품질 설정이 남긴 밉 사슬이 모두 GPU 에 있으면 true 입니다(스트리밍이 아직 위쪽 밉을 올리지 않았으면 false). */
+        bool isFullyResident() const { return _streamedMipCount == 0; }
+        /** @brief 아직 GPU 에 없는 위쪽 밉 수입니다(품질 설정이 버린 밉은 세지 않는다). */
+        uint32 getStreamedMipCount() const { return _streamedMipCount; }
         /**
          * @brief 그리고 읽는 렌더 타깃으로 만듭니다(렌더 텍스처: CCTV 모니터, 백미러). 경로는 이름입니다(`rendertarget/<이름>`, 파일이 아닙니다).
          * @details 렌더러가 카메라의 이미지를 여기에 그리고, 머티리얼은 DDS 텍스처와 같은 SRV 로 읽습니다. 디바이스가 바뀌면 같은 크기로 다시 만듭니다(내용은 비어 있습니다).
@@ -90,9 +129,11 @@ namespace sw
          */
         bool initRHI( IRHIDevice* pDevice ) override;
 
-        bool               isRHIValid() const { return _handle != 0 && _srv != kInvalidDescriptorIndex; }
-        RHITextureHandle   getHandle() const { return _handle; }
-        RHIDescriptorIndex getSrv() const { return _srv; }
+        bool isRHIValid() const { return getHandle() != 0 && getSrv() != kInvalidDescriptorIndex; }
+        /** @brief GPU 텍스처 핸들입니다. 스트리밍이 렌더 스레드에서 바꿔 끼우므로 원자값으로 읽는다(`upgradeResidency`). */
+        RHITextureHandle getHandle() const { return _handle.load( std::memory_order_acquire ); }
+        /** @brief bindless SRV 번호입니다. 게임 스레드(머티리얼)가 읽는 동안 렌더 스레드가 바꿔 끼울 수 있어 원자값으로 읽는다. */
+        RHIDescriptorIndex getSrv() const { return _srv.load( std::memory_order_acquire ); }
         uint32             getWidth() const { return _width; }
         uint32             getHeight() const { return _height; }
         RHIFormat          getFormat() const { return _format; }
@@ -113,16 +154,25 @@ namespace sw
         static constexpr uint32 kMinMipDropExtent = 64;
 
     private:
+        /**
+         * @brief 새 GPU 텍스처를 만들고 위쪽 @p drop 밉을 뺀 사슬을 업로드한 뒤 SRV 를 등록합니다. 실패하면 오류를 남기고 만든 것을 지운 뒤 false 입니다.
+         * @details 처음 업로드(`loadFromImage`)와 스트리밍의 바꿔 끼우기(`upgradeResidency`)가 같은 순서를 쓴다 — 둘이 따로 쓰면 한쪽만 실패 정리를 빠뜨린다.
+         */
+        [[nodiscard]] static bool createTextureWithMips( IRHIDevice& device, string_view relativePath, const DDSImageData& image, RHIFormat format, const Texture2DMipDrop& drop,
+                                                         RHITextureDesc& outDesc, RHITextureHandle& outHandle, RHIDescriptorIndex& outSrv );
+
+    private:
         /** @brief 이 텍스처를 업로드한 디바이스입니다. 통보가 내 것인지 가릴 때 씁니다. */
-        IRHIDevice*        _pDevice;
-        string             _path;
-        RHITextureHandle   _handle;
-        RHIDescriptorIndex _srv;
-        uint32             _width;
-        uint32             _height;
-        uint32             _mipCount;
-        RHIFormat          _format;
-        uint8              _bRenderTarget; ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
-        vector<uint8>      _cpuBytes;      ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
+        IRHIDevice*                _pDevice;
+        string                     _path;
+        atomic<RHITextureHandle>   _handle;
+        atomic<RHIDescriptorIndex> _srv;
+        uint32                     _width;
+        uint32                     _height;
+        uint32                     _mipCount;
+        uint32                     _streamedMipCount; ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
+        RHIFormat                  _format;
+        uint8                      _bRenderTarget; ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
+        vector<uint8>              _cpuBytes;      ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
     };
 } // namespace sw
