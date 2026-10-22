@@ -1,40 +1,21 @@
-#include "binding.hlsli"
+/**
+ * shadowdepth.hlsl — 머티리얼 셰이더가 없는 배치의 깊이 패스(그림자 `SW_PASS_SHADOW` · 깊이 프리패스 `SW_PASS_DEPTH_PREPASS`).
+ *
+ * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 **머티리얼 없는 사용자**(SW_MATERIAL_NONE)다 — 훅을 하나도 정의하지 않는다.
+ * 위치는 뼈대가 만든다: 그림자도 같은 정점(VAT · 모프 · 스킨)을 봐야 하고, 깊이 프리패스는 **카메라** 깊이를 기본 패스(forwardlit · gbuffer)와 같은 함수로
+ * 내 LessEqual 을 통과한다(비트까지 같은 깊이 — 위치를 만드는 코드가 뼈대 한 곳뿐이다).
+ * 이 셰이더가 같은 자리를 못 만드는 배치는 뼈대가 빼 준다 — 정점을 옮기는 머티리얼(MATERIAL_VERTEX_DEFORM)은 깊이 프리패스에서(기본 패스의 흔들린 정점이 프리패스
+ * 깊이에 가려 구멍이 나지 않게), 그림자를 끈 머티리얼(MATERIAL_SHADOW_CAST_OFF)은 그림자에서. 그 머티리얼의 그림자와 알파 컷오프 머티리얼의 깊이는
+ * 머티리얼 셰이더가 그린다(FrameRendererUtil::drawsDepthWithMaterialShader).
+ * 픽셀 스테이지는 등장 디더 변형에만 붙는다(FrameRendererUtil::addsAppearanceDitherPixelStage) — 기본 패스와 같은 픽셀을 버려 프리패스 · 그림자가 맞는다.
+ */
+#include "lighting.hlsli"
 
-struct PSInput
-{
-	float4 position : SV_POSITION;
-	SW_APPEARANCE_VARYING // 등장 디더 변형만 — 깊이만 쓰는 패스도 이 변형에는 픽셀 스테이지가 붙는다(FrameRendererUtil::addsAppearanceDitherPixelStage)
-};
+#define SW_MATERIAL_NONE
+#define SW_MATERIAL_UNLIT
+#define SW_MATERIAL_DEFAULT_VARYINGS
+#include "materialshader.hlsli"
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
-{
-	PSInput output;
-	SwInstanceData instance = swLoadInstance(input.instanceSlot);
-	// 그림자도 같은 정점을 봐야 한다 — 모프를 여기서 빼면 물체와 그림자의 모양이 어긋난다.
-	float4 worldPosition = swComputeWorldPosition(swLoadAnimatedPosition(instance, vertexId, input.position), instance.world);
-#if defined(SW_PASS_DEPTH_PREPASS)
-	// 깊이 프리패스는 **카메라** 깊이를 쓴다 — 기본 패스(forwardlit · gbuffer)가 같은 함수로 같은 깊이를 내 LessEqual 을 통과한다. 이 분기가
-	// 없으면 프리패스가 그림자와 같은 광원 행렬로 그려 장면 깊이에 광원 공간의 깊이가 들어간다.
-	output.position = swComputeClipPosition(worldPosition, g_ViewProj);
-#else
-	output.position = swComputeClipPosition(worldPosition, g_LightViewProj);
-#endif
-	// 머티리얼이 빠지겠다고 한 패스 — 정점을 클립 공간 밖 한 점으로 모아 아무것도 그리지 않는다(드로우는 그대로 나가지만 래스터가 없다).
-	// 그림자를 드리우지 않는 머티리얼(풀): MATERIAL_SHADOW_CAST_OFF. 정점 셰이더가 정점을 옮기는 머티리얼(바람)은 이 셰이더가 같은 자리를 못 만들므로
-	// 깊이 프리패스에서 빠진다(MATERIAL_VERTEX_DEFORM) — 남으면 기본 패스의 흔들린 정점이 프리패스 깊이에 가려 구멍이 난다.
-	// 그 머티리얼의 그림자와 알파 컷오프 머티리얼의 깊이는 이 파일이 아니라 머티리얼 셰이더가 그린다(FrameRendererUtil::drawsDepthWithMaterialShader).
-#if defined(SW_PASS_DEPTH_PREPASS) && defined(MATERIAL_VERTEX_DEFORM)
-	output.position = float4(0.0f, 0.0f, -1.0f, 1.0f);
-#elif !defined(SW_PASS_DEPTH_PREPASS) && defined(MATERIAL_SHADOW_CAST_OFF)
-	output.position = float4(0.0f, 0.0f, -1.0f, 1.0f);
-#endif
-	SW_APPEARANCE_WRITE( output, instance )
-	return output;
-}
+// 깊이 패스는 표면을 읽지 않는다(알파 컷오프는 머티리얼 셰이더의 몫이다) — 정의할 훅이 없다.
 
-float4 PSMain(PSInput input) : SV_TARGET
-{
-	// 기본 패스와 같은 픽셀을 버린다 — 프리패스 깊이 · 그림자가 등장 중인 물체의 남은 픽셀과 맞는다.
-	SW_APPEARANCE_CLIP( input )
-	return float4(input.position.z, 0, 0, 1);
-}
+#include "materialshadermain.hlsli"

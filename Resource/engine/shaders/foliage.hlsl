@@ -1,29 +1,21 @@
+/**
+ * foliage.hlsl — 식생(FoliageComponent). GPU 인스턴스마다 바람에 흔들고, 휘게 하는 구(캐릭터)에서 밀려나고, 먼 인스턴스는 뿌리 쪽으로 줄여 사라지게 한다.
+ *
+ * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋 · 사용자 보간 칸 · 표면 훅만 정의한다.
+ * 위치는 뼈대가 만든다 — 훅은 오프셋(줄이기 + 바람 + 휘기)만 돌려준다(깊이 · 그림자와 같은 위치 함수).
+ *
+ * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 사용자 보간 칸으로 넘긴다.
+ * 흔들림 무게는 로컬 높이 / swayHeight 의 제곱이라 뿌리는 땅에 붙어 있다. 인스턴스마다 위상은 인스턴스 위치의 해시라 CPU 가 따로 싣지 않는다.
+ * 밝기 흔들기는 인스턴스 색 칸(swComputeInstanceTint)이다.
+ * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM — 두 머티리얼이 늘 가진다)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 —
+ * 정점 스테이지뿐이다(FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
+ * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadowdepth.hlsl 이 뺀다).
+ */
 #include "lighting.hlsli"
 
 // 보기 모드 Roughness · Metallic 이 보이는 값 — 잎은 거친 유전체다(PBR 칸이 없다).
 static const float kSurfaceRoughness = 1.0f;
 static const float kSurfaceMetallic  = 0.0f;
-
-/**
- * foliage.hlsl — 식생(FoliageComponent). GPU 인스턴스마다 바람에 흔들고, 휘게 하는 구(캐릭터)에서 밀려나고, 먼 인스턴스는 뿌리 쪽으로 줄여 사라지게 한다.
- *
- * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 보간 칸으로 넘긴다.
- * 흔들림 무게는 로컬 높이 / swayHeight 의 제곱이라 뿌리는 땅에 붙어 있다. 인스턴스마다 위상은 인스턴스 위치의 해시라 CPU 가 따로 싣지 않는다.
- * 밝기 흔들기는 인스턴스 색 칸(swComputeInstanceTint)이다.
- * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 — 정점 스테이지뿐이다
- * (FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(shadowdepth.hlsl — 흔들린 정점이 프리패스 깊이와 어긋나지 않게).
- * 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스는 shadowdepth.hlsl 이 정점을 모아 그리지 않는다).
- */
-
-struct PSInput
-{
-	float4 position                       : SV_POSITION;
-	float4 color                          : COLOR;
-	float2 uv                             : TEXCOORD0;
-	float3 normal                         : TEXCOORD1;
-	float3 worldPosition                  : TEXCOORD2;
-	nointerpolation uint albedoMap        : TEXCOORD3; // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
-};
 
 // foliage.material · grass.material 의 프로퍼티와 같은 이름 · 타입이다.
 SW_MATERIAL_BEGIN
@@ -40,6 +32,21 @@ SW_MATERIAL_BEGIN
 	uint   albedoMap;
 }
 SW_MATERIAL_END
+
+#if defined( MATERIAL_ALPHA_CUTOFF )
+#error "foliage.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+#endif
+
+// 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
+#define SW_MATERIAL_READ_IN_VERTEX
+#define SW_MATERIAL_DEFAULT_LIGHTING
+#define SW_MATERIAL_CUSTOM_VARYINGS
+struct MaterialVaryings
+{
+	float4 tintedColor                   : TEXCOORD8;  // 정점 색 × 머티리얼 색 × 인스턴스 밝기 × 뿌리 그늘
+	nointerpolation uint albedoMap       : TEXCOORD9;  // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
+};
+#include "materialshader.hlsli"
 
 /**
  * @brief 위치를 [0, 1) 로 섞는다 — 인스턴스마다 다른 흔들림 위상.
@@ -68,25 +75,31 @@ float2 computeBend( float4 influencer, float3 worldPosition )
 	return ( distance > 1e-4f ) ? away / distance * strength : float2( 0.0f, 0.0f );
 }
 
-PSInput VSMain( SwVertexInput input )
+/** @brief 흔들림 무게 — 로컬 높이 / swayHeight(뿌리 0, swayHeight 에서 1). 월드 위치 오프셋과 뿌리 그늘이 같은 값을 쓴다. */
+float computeSwayWeight( SwVertexContext context )
 {
-	PSInput        output;
-	SwInstanceData instance = swLoadInstance( input.instanceSlot );
-	SwMaterialData material = SW_MATERIAL( instance.materialIndex );
+	return saturate( context.localPosition.y / max( context.material.windWave.w, 1e-3f ) );
+}
 
-	const float3 instancePosition = instance.world[3].xyz;
+/**
+ * @brief 월드 위치 오프셋 — 거리 페이드(뿌리 쪽으로 줄이기) + 바람 + 휘게 하는 구. 뼈대가 이 오프셋을 더해 위치를 만든다.
+ * @details 줄인 위치 = 줄인 로컬 위치의 월드 변환(swComputeWorldPosition)이다. 바람 · 휘기는 그 위에 쌓인다.
+ */
+float3 computeWorldPositionOffset( SwVertexContext context )
+{
+	const SwMaterialData material = context.material;
+
+	const float3 instancePosition = context.instance.world[3].xyz;
 	const float3 toView           = material.viewParams.xyz - instancePosition;
 	const float  viewDistance     = length( toView );
 
 	// 거리 페이드 — 페이드 구간에서 인스턴스를 뿌리(로컬 원점) 쪽으로 줄인다. 끝을 넘으면 점 하나가 되어 그려지지 않는다.
 	const float fadeRange = max( material.fadeParams.y - material.fadeParams.x, 1e-3f );
 	const float fade      = saturate( ( material.fadeParams.y - viewDistance ) / fadeRange );
-	const float3 localPosition = input.position * fade;
-
-	float4 worldPosition = swComputeWorldPosition( localPosition, instance.world );
+	float4 worldPosition  = swComputeWorldPosition( context.localPosition * fade, context.instance.world );
 
 	// 바람 — 높이 무게(뿌리 0, swayHeight 에서 1) × (흔들림 + 돌풍). 위상은 인스턴스 위치 해시와 바람 방향 거리.
-	const float  swayWeight = saturate( input.position.y / max( material.windWave.w, 1e-3f ) );
+	const float  swayWeight = computeSwayWeight( context );
 	const float  weight     = swayWeight * swayWeight;
 	const float2 windDirection = material.windParams.xy;
 	const float  time          = material.windParams.w;
@@ -103,32 +116,27 @@ PSInput VSMain( SwVertexInput input )
 	worldPosition.xz += bend;
 	worldPosition.y -= length( bend ) * 0.5f;
 
-#if defined( SW_PASS_SHADOW )
-	output.position = swComputeClipPosition( worldPosition, g_LightViewProj );
-#else
-	output.position = swComputeClipPosition( worldPosition, g_ViewProj );
-#endif
-	output.worldPosition = worldPosition.xyz;
-	output.normal        = swComputeWorldNormal( input.normal, instance.world );
-	// 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.
-	const float rootShade = lerp( 0.55f, 1.0f, swayWeight );
-	output.color          = input.color * material.tint * swComputeInstanceTint( instance ) * float4( rootShade, rootShade, rootShade, 1.0f );
-	output.uv             = input.uv;
-	output.albedoMap      = material.albedoMap;
-	return output;
+	return worldPosition.xyz - context.worldPosition;
 }
 
-SW_SURFACE_OUTPUT PSMain( PSInput input )
+MaterialVaryings computeMaterialVaryings( SwVertexContext context )
 {
-	const float3 normal = normalize( input.normal );
-	const float4 albedo = input.color * swSampleMaterialTexture( input.albedoMap, input.uv );
-#if defined( SW_PASS_GBUFFER )
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( albedo.rgb, 1.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#else
-	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
-	const float3 lit    = swShadeLights( albedo.rgb, input.worldPosition, normal, shadow, kSurfaceRoughness, kSurfaceMetallic );
-	return swStoreSurface( float4( lit, 1.0f ), albedo, normal, input.worldPosition, kSurfaceRoughness, kSurfaceMetallic );
-#endif
+	// 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.
+	const float rootShade = lerp( 0.55f, 1.0f, computeSwayWeight( context ) );
+	MaterialVaryings varyings;
+	varyings.tintedColor = context.input.color * context.material.tint * swComputeInstanceTint( context.instance ) * float4( rootShade, rootShade, rootShade, 1.0f );
+	varyings.albedoMap   = context.material.albedoMap;
+	return varyings;
 }
+
+SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+{
+	SwMaterialSurface surface;
+	surface.albedo    = context.user.tintedColor * swSampleMaterialTexture( context.user.albedoMap, context.uv );
+	surface.normal    = context.normal;
+	surface.roughness = kSurfaceRoughness;
+	surface.metallic  = kSurfaceMetallic;
+	return surface;
+}
+
+#include "materialshadermain.hlsli"

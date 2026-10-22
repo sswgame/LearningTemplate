@@ -272,16 +272,6 @@ float4 swLoadMorphedTangent( uint batchIndex, uint vertexId, float4 restTangent 
 	return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
 }
 
-/**
- * @brief 위치만 필요한 패스(그림자·뎁스 프리패스)를 위한 짧은 형태.
- * @note 노멀을 읽지 않으므로 그 로드가 통째로 빠진다 — 뎁스 전용 패스는 그게 비용의 전부다.
- */
-float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition )
-{
-	const uint element = swComputeMorphElement( batchIndex, vertexId );
-	return ( element == kInvalidIndex ) ? restPosition : g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-}
-
 // ------------------------------------------------------------------------------
 // 6) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 베이크한 프레임 × 정점 테이블(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
 //    먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 테이블을 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
@@ -346,7 +336,8 @@ float3 swComputeVertexAnimationPosition( uint firstElement, uint secondElement, 
 
 /**
  * @brief 이 정점의 위치 · 노멀 — VAT 가 걸린 배치면 표에서, 아니면 모프 · 스킨 결과(swLoadMorphedVertex)에서, 그것도 아니면 입력 스트림에서.
- * @details 지오메트리 패스(forwardlit · gbuffer)가 쓴다. 위치만 필요한 패스는 swLoadAnimatedPosition 이다.
+ * @details 정점을 읽는 **모든** 패스(본 · G버퍼 · 그림자 · 깊이 프리패스)가 머티리얼 셰이더 뼈대(materialshadermain.hlsli)를 거쳐 이것 하나로 읽는다 —
+ *          위치만 읽는 짧은 형태를 따로 두면 패스마다 위치가 비트 단위로 갈라질 수 있어 없앴다.
  */
 void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
@@ -363,18 +354,6 @@ void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPo
 		outPosition               = swComputeVertexAnimationPosition( firstElement, secondElement, alpha );
 		outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
 	}
-}
-
-/** @brief 위치만 필요한 패스(그림자 · 깊이 프리패스)의 짧은 형태다. 노멀을 읽지 않는다. */
-float3 swLoadAnimatedPosition( SwInstanceData instance, uint vertexId, float3 restPosition )
-{
-	bool  bAnimated;
-	uint  firstElement;
-	uint  secondElement;
-	float alpha;
-	swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
-	const float3 morphed = swLoadMorphPosition( instance.meshBatchIndex, vertexId, restPosition );
-	return bAnimated ? swComputeVertexAnimationPosition( firstElement, secondElement, alpha ) : morphed;
 }
 
 // ------------------------------------------------------------------------------

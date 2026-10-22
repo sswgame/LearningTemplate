@@ -8,5 +8,9 @@
 		<item name="pointFilter" type="Bool" shaderType="Uint" defaultValue="1" displayName="Point Filter (pixel art)" group="Sprite"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+			<item>MATERIAL_VERTEX_DEFORM</item>
+		</_alwaysDefines>
 	</_permutations>
 </MaterialDesc>
