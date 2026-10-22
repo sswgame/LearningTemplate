@@ -40,7 +40,7 @@
   정점 입력이 진입점에 남아(`ShaderBindingValidatorTest.ConsumedVertexAttributeMaskFollowsShaderInputs` 실패) 컴파일러 옵션으로는 풀지 않았다. 고침: `evaluateCurve` 를 이른 반환 없이
   끝에서 한 번에 고르는 꼴로 — 기본 -O3 그대로 네 백엔드 통과(`CPUAndGPUParticleSimulationsDrawTheSameImage` · `ParticlesDrawInTheTransparentPass` · `ShaderBindingValidatorTest` · `ShaderCookRequestTest` 26/26, Debug).
   통합 파동 C 에서 쿠킹한 네 백엔드 바이너리와 함께 들어갔다.
-  같은 모양(반복 + 이른 반환을 여러 번 인라인)이 다른 셰이더에도 생길 수 있다 — 백엔드끼리 그림을 견주는 GPU 테스트가 마지막 그물이다. 업스트림(spirv-tools) 보고는 외부 공개라 사용자 결정이다.
+  같은 모양(반복 + 이른 반환을 여러 번 인라인)이 다른 셰이더에도 생길 수 있다 — 백엔드끼리 그림을 견주는 GPU 테스트가 마지막 그물이다. **정정(2026-10-23)**: 위 "SPIR-V 최적화가 틀리게 만든다"는 반증됐다 — 패치 직전 커밋의 SPIR-V 셋(최적화 전 · -Od · -O3)이 Vulkan 1.3 검증기를 통과하고, 첫 simplify 전후 차이는 자명한 phi 제거 · `LogicalNot(IEqual)`→`INotEqual` · `FDiv` 2^24→`FMul` 2^-24 · 추출 전달 · 삽입 체인→구성뿐이며, 스크래치 SPIR-V 해석기(순차 실행)로 256 스레드 그룹을 돌려 -O3 · GL 인자 · 새 셰이더 · 다시 최적화한 것이 -Od 와 비트까지 같았다. 그래서 틀린 값은 최적화된 모양을 컴파일하는 쪽(NVIDIA 드라이버)에서 나온다고 본다(확신 약 65%, GPU 없이는 확정 못 함). spirv-tools 보고는 하지 않는다. 이른 반환을 없앤 우회는 그대로 둔다.
 - DX11 의 오류 두 줄(깊이 히스토리 RT 가 컴퓨트 UAV 로 걸림)은 고쳤다(`D3D11RHICommandContext::bindComputeUav`).
 - GL 의 R32 실수 RW 텍스처 읽기(형식 없는 이미지 읽기)와 DX11 RAW 인자 버퍼의 SRV(메시 인스턴스 쓰기가 살아 있는 수를 읽는다)를 확인한다.
 
