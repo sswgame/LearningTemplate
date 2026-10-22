@@ -1092,6 +1092,50 @@ SW_TEST_CASE( MaterialTest, EveryRepositoryMaterialMatchesItsShaderStruct )
 }
 
 /**
+ * @brief [MaterialTest] 게임 도메인 셰이더의 머티리얼이 그 셰이더 구조체와 맞아 로드되고, 게임 전용 필드를 하나라도 빼면 동기화 오류다
+ * @details 첫 게임 셰이더(Shooter3D `cctvmonitor.hlsl`, 계획 MaterialShaderHooks G1)가 엔진 셰이더와 같은 계약을 쓴다는 증명이다.
+ *          리플렉션은 커밋된 쿠킹 산출물(`game/shooter3d/shaders/bin`)에서 온다 — 없으면 쿠킹이 빠진 것이라 건너뛰지 않고 실패한다.
+ */
+SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string materialDiskPath = sw::ResourcePaths::findLooseFile( "game/shooter3d/materials/cctvmonitor.material" ).getDiskPath();
+    SW_ASSERT_TRUE_MSG( materialDiskPath.empty() == false, "game/shooter3d/materials/cctvmonitor.material 를 찾지 못했다" );
+    sw::string xml;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( materialDiskPath, xml ) );
+
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+    SW_ASSERT_TRUE( material->getDesc()._shaderPath == "game/shooter3d/shaders/cctvmonitor.hlsl" );
+
+    sw::ShaderReflectionData reflection{};
+    SW_ASSERT_TRUE_MSG( sw::Material::reflectMaterialSchema( material->getDesc()._shaderPath, sw::ShaderTargetFormat::SPIRV_Vulkan, reflection ),
+                        "게임 셰이더의 리플렉션을 구하지 못했다(App.exe --cook-shaders 로 쿠킹했는가)" );
+    SW_ASSERT_TRUE( sw::Material::hasMaterialSchema( reflection ) );
+    SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
+    SW_EXPECT_FALSE( material->getBuffer().empty() );
+    SW_EXPECT_TRUE( material->findProperty( sw::hashed_string( "scanlineCount" ) ) != nullptr );
+    SW_EXPECT_TRUE( material->findProperty( sw::hashed_string( "scanlineStrength" ) ) != nullptr );
+
+    // 게임 전용 필드 하나를 XML 에서 빼면 셰이더에만 있는 필드가 된다 — 0 으로 채우지 않고 오류다.
+    const size_t fieldBegin = xml.find( "<item name=\"scanlineStrength\"" );
+    SW_ASSERT_TRUE( fieldBegin != sw::string::npos );
+    const size_t fieldEnd = xml.find( "/>", fieldBegin );
+    SW_ASSERT_TRUE( fieldEnd != sw::string::npos );
+    xml.erase( fieldBegin, fieldEnd + 2 - fieldBegin );
+
+    sw::shared_ptr<sw::Material> missingField = sw::Material::create();
+    SW_ASSERT_TRUE( missingField->loadFromXML( xml ) );
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "game material missing a game shader field" );
+        SW_EXPECT_FALSE( missingField->syncPropertiesFromReflection( reflection ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "does not list shader field 'scanlineStrength'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( missingField->getBuffer().empty() );
+}
+
+/**
  * @brief [MaterialTest] 없는 머티리얼 파일은 GPU 에 올리지 않는다 — 빈 기본값으로 계속하지 않는다
  * @details 못 읽은 머티리얼을 빈 값으로 올리면 화면에서 빠진 것을 알 수 없다. 대신 그릴 것(누락 머티리얼)은 부르는 쪽이 정한다.
  */
