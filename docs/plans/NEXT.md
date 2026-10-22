@@ -14,7 +14,11 @@
 
 한 일은 `git log` 가 정본입니다.
 
-## 00. 2026-10-22 통합 파동 B 뒤 검증 끝 — 남은 실패 셋과 구현을 못 끝낸 기능 (이것부터 읽는다)
+## 00. 2026-10-22 통합 파동 C 병합 대기 (이것부터 읽는다) — 파동 B 뒤 검증 기록은 그 아래
+
+**파동 C**: 작업자 브랜치 11개(`wt/engwave` · `onlinekits` · `inputdata` · `edwave` · `meleeunify` · `animwave` · `audit` · `streaming` · `uiwave` · `gfxshader` · `gfxrender`)가 구현을 끝냈고 원격에 올라 있다. 병합 11개는 `wt/integC-wip`(병합 커밋 머리 `4faa85fa9`)에 끝났으나 **빌드 · 검증 · 쿠킹 · main push 는 하지 못했다.** 이어서 할 순서 · 셰이더 패치 넷 · 커밋하지 못한 작업 트리는 그 브랜치의 `patches/handoff/HANDOFF.txt` 가 정본이다(패치 폴더는 main 에 넣지 말고 `4faa85fa9` 까지만 가져온다). 병합 결과는 한 번도 빌드하지 않았다.
+**사용자 결정 대기**: PatchDeltaDelivery P6(배포 경로 · 서명) · OnlineKits I6(서비스 호스트 분리) · spirv-tools 에 SPIR-V 최적화 결함 보고 여부 · main 루트 `x64-windows/`(1.1GB) · `vcpkg/` 삭제 여부.
+
 
 파동 B(27 개 브랜치, `f33a7f91f` 까지)를 병합한 뒤 Release · Shipping · Server 와 GPU 테스트를 돌려 나온 결함을 고쳤다(`git log 47213c2ab..HEAD` — 커밋 메시지가 정본).
 
