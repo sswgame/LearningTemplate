@@ -16,6 +16,7 @@
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -42,7 +43,7 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 {
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Scene, "maps/town.scene.xml" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Prefab, "prefabs/hero.prefab.xml" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.animgraph.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.animgraph.xml" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/overworld.tilemap.xml" ) );
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/town.scene.xml" ) );
     // 죽은 확장자는 **음성으로** 못 박는다. 되살아나면 여기서 걸린다.
@@ -157,15 +158,15 @@ SW_TEST_CASE( EditorAssetTypeTest, FindPanelKindLongestSuffix )
 {
     using sw::editor::EditorAssetType;
     using sw::editor::EditorAssetTypeRegistry;
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "content/hero.animgraph.json" ) == EditorAssetType::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "content/hero.animgraph.xml" ) == EditorAssetType::AnimationGraph );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "content/hero.material" ) == EditorAssetType::Material );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelKindForPath( "readme.md" ) == EditorAssetType::Unknown );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimationJSON )
 {
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.animgraph.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.animgraph.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.animgraph.xml" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.animgraph.xml" ) );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
@@ -178,9 +179,10 @@ SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
     // 쿠킹된 산출물은 셰이더 소스가 아니다.
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/bin/opengl/pbr_ps.spv" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/bgm.wav" ) );
-    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/sfx.ogg" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::DialogueGraph, "dialogue/intro.dialogue.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::SpriteClip, "sprites/run.sprite.json" ) );
+    // 엔진 소리 정의(`AudioClipData`)가 읽는 형식은 모두 소리다 — 에디터가 `.wav` 만 적던 때는 `.ogg` 가 빠졌다.
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/sfx.ogg" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::DialogueGraph, "dialogue/intro.dialogue.xml" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::SpriteClip, "sprites/run.sprite.xml" ) );
 
     // 2) matchesAny 및 matchesOther 검증
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matchesAny( "maps/town.scene.xml" ) );
@@ -282,8 +284,8 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     SW_EXPECT_TRUE( material._pfnImportSource == nullptr );
 
     // 로컬라이제이션 표는 엔진 매니저가 그 프로젝트를 다시 읽는다 — 다른 `.json` 데이터는 여전히 다시 읽지 않는다.
-    for ( const sw::string_view path : { sw::string_view( "engine/localization/ko.translation.json" ), sw::string_view( "engine/localization/engine.strings.json" ),
-                                         sw::string_view( "game/shooter3d/data/localization/shooter3d.locproject.json" ) } )
+    for ( const sw::string_view path : { sw::string_view( "engine/localization/ko.translation.xml" ), sw::string_view( "engine/localization/engine.strings.xml" ),
+                                         sw::string_view( "game/shooter3d/data/localization/shooter3d.locproject.xml" ) } )
     {
         const AssetReloadRoute localization = EditorAssetTypeRegistry::findReloadRoute( path );
         SW_ASSERT_NOT_NULL( localization._pCacheKindName );
@@ -305,7 +307,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     SW_ASSERT_NOT_NULL( prefab._pCacheKindName );
     SW_EXPECT_STREQ( "Prefab", prefab._pCacheKindName );
 
-    const AssetReloadRoute clip = EditorAssetTypeRegistry::findReloadRoute( "engine/textures/test/quadrants.sprite.json" );
+    const AssetReloadRoute clip = EditorAssetTypeRegistry::findReloadRoute( "engine/textures/test/quadrants.sprite.xml" );
     SW_ASSERT_NOT_NULL( clip._pCacheKindName );
     SW_EXPECT_STREQ( "SpriteClip", clip._pCacheKindName );
 
@@ -327,7 +329,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
         return false;
     };
     SW_EXPECT_TRUE( hasSuffix( ".material" ) );
-    SW_EXPECT_TRUE( hasSuffix( ".sprite.json" ) );
+    SW_EXPECT_TRUE( hasSuffix( ".sprite.xml" ) );
     SW_EXPECT_FALSE( hasSuffix( ".hlsl" ) );
 }
 
@@ -383,7 +385,7 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
 /**
  * @brief [EditorAssetTypeTest] 경로의 종류는 판정 표의 첫 일치 줄 하나다
  * @details 아이콘 · 색 · 퀵 런처 분류 · 카탈로그 · 썸네일 · 열기 · 드롭이 모두 `findKind` 로 종류를 정한다. 겹치는 접미사에서 어느 종류가
- *          이기는지를 못 박는다 — `.seq.json` 은 Data 가 아니라 Sequence 다.
+ *          이기는지를 못 박는다 — `.seq.xml` 은 Data 가 아니라 Sequence 다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
 {
@@ -393,8 +395,8 @@ SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetType::Scene );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetType::Prefab );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetType::Texture );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.animgraph.json" ) == EditorAssetType::AnimationGraph );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetType::Sequence );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.animgraph.xml" ) == EditorAssetType::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.xml" ) == EditorAssetType::Sequence );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetType::TileMap );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.json" ) == EditorAssetType::Data );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Unknown ); // 키=값 글은 데이터 형식이 아니다(TX3)
@@ -536,6 +538,40 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryEngineFormatMapsToItsKind )
     {
         const string path = string( "game/probe/sample" ) + string( row._extension );
         SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::findKind( path ) == row._kind, path.c_str() );
+    }
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 엔진에 등록된 에셋 종류는 모두 에디터가 알고 있다
+ * @details 엔진 종류 표(`AssetTypeRegistry`)에 종류가 늘 때 에디터 종류 표(`kArrAssetMatch`)나 '올리지 않음' 목록(`kArrUnlistedType`)에 넣지 않으면 여기서 걸린다.
+ *          에디터가 엔진 헤더 밖에서 종류를 따로 세지 않게 하는 경계의 테스트다. 에디터 종류에 오른 종류는 접미사가 그 에디터 종류로 판정되어야 하고,
+ *          올리지 않은 쿠킹 산출물은 어떤 에디터 종류(Data 제외)로도 판정되지 않아야 한다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, EveryEngineAssetTypeIsAccountedFor )
+{
+    using namespace sw;
+    using namespace sw::editor;
+    const vector<const AssetTypeDef*> listType = AssetTypeRegistry::collectTypes();
+    SW_EXPECT_TRUE( listType.empty() == false );
+    // 규칙 표가 이름으로 가리키는 종류가 엔진에 등록되어 있어야 한다 — 등록이 링크에서 빠지면 그 규칙은 어떤 경로에도 맞지 않는다.
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::areEngineTypeRowsResolved() );
+    for ( const AssetTypeDef* pType : listType )
+    {
+        const string name{ pType->_name };
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::isEngineTypeAccounted( pType->_name ), name.c_str() );
+
+        const EditorAssetType kind = EditorAssetTypeRegistry::findKindOfEngineType( pType->_name );
+        if ( kind == EditorAssetType::Unknown )
+            continue;
+        // 씬 · 프리팹의 쿠킹본 이름은 에셋으로 열지 않는다. 그 밖의 종류는 접미사마다 같은 에디터 종류여야 한다.
+        for ( uint32 index = 0; index < pType->_suffixCount; ++index )
+        {
+            const AssetSuffix& suffix = pType->_pSuffix[index];
+            if ( suffix._role == AssetSuffixRole::Cooked || suffix._role == AssetSuffixRole::CookedAlias )
+                continue;
+            const string path = string( "game/probe/sample" ) + string( suffix._text );
+            SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::findKind( path ) == kind, path.c_str() );
+        }
     }
 }
 

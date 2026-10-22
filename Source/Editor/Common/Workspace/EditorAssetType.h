@@ -41,11 +41,11 @@ namespace sw::editor
         TileMap,
         Sequence,
         Mesh,
-        Skeleton,      ///< 임포트가 만든 스켈레톤(`.skeleton.json`). 스켈레톤 캐시가 핫 리로드한다
+        Skeleton,      ///< 임포트가 만든 스켈레톤(`.skeleton.xml`). 스켈레톤 캐시가 핫 리로드한다
         AnimationClip, ///< 임포트가 만든 애니메이션 클립(`.animclip`). 클립 캐시가 핫 리로드한다
         Heightfield,   ///< 높이장. 원본(`heightfields_raw/` 의 `.png`, `.r16`)이 바뀌면 임포트하고, 결과는 `.heightfield` 이다
         LayerWeights,  ///< 지형 레이어 가중치(`.layerweights`). 원본 스플랫(`heightfields_raw/` 의 `.splat.png`)을 임포트한 결과이고, 지형 브러시가 칠해 저장한다
-        Rig,           ///< 후처리 리그(`.rig.json`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
+        Rig,           ///< 후처리 리그(`.rig.xml`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
         Fracture,      ///< 임포트가 만든 파쇄 에셋(`.fracture`). 파쇄 캐시가 핫 리로드한다
         UIDocument,    ///< 런타임 UI 문서(`.ui.xml`). 열면 UI Preview 패널이 그 문서를 보여 주고, 문서 캐시가 핫 리로드한다
         Count          ///< 종류의 개수이며 종류가 아니다. 종류 테이블(EditorAssetType.cpp)이 모든 종류를 한 번씩 담는지 컴파일 타임에 검사한다
@@ -139,10 +139,23 @@ namespace sw::editor
 
         /**
          * @brief 경로가 속한 종류 하나를 반환합니다. 해당하는 종류가 없으면 `Unknown` 입니다.
-         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.animgraph.json` 은 Data 보다 앞선 AnimationGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
+         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.animgraph.xml` 은 Data 보다 앞선 AnimationGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
          *          아이콘, 색, 퀵 런처 분류, 카탈로그, 썸네일, 열기, 드롭이 모두 이 함수 하나로 종류를 정한다.
          */
         static EditorAssetType findKind( string_view path );
+        /**
+         * @brief 엔진 에셋 종류(`AssetTypeDef::_name`)가 속한 에디터 종류를 반환합니다. 규칙 표에 오르지 않은 종류는 `Unknown` 입니다.
+         * @details 접미사가 아니라 엔진의 종류 정의로 가리키는 규칙(씬 · 프리팹 포함)만 찾는다. 이름으로 견주는 것은 정의가 DLL 마다 사본이라 주소로 견줄 수 없어서다.
+         */
+        static EditorAssetType findKindOfEngineType( string_view typeName );
+        /**
+         * @brief 엔진 에셋 종류가 에디터 쪽에 알려져 있으면 true 입니다 — 규칙 표에 있거나, 에디터가 종류로 올리지 않는다고 명시한 목록에 있습니다.
+         * @details 엔진에 종류가 새로 등록되고 에디터가 모르면 false 이며, `EditorAssetTypeTest.EveryEngineAssetTypeIsAccountedFor` 가 막는다(엔진은 에디터 헤더를 모르는 경계라 테스트가 잇는다).
+         */
+        static bool isEngineTypeAccounted( string_view typeName );
+        /** @brief 규칙 표가 이름으로 가리키는 엔진 에셋 종류가 모두 엔진에 등록되어 있으면 true 입니다(등록이 링크에서 빠지면 그 규칙은 어떤 경로에도 맞지 않는다). */
+        static bool areEngineTypeRowsResolved();
+
         /** @brief 종류의 표시 정보를 반환합니다. `Unknown` 이나 `Count` 이면 nullptr 입니다. */
         static const EditorAssetTypeInfo* findKindInfo( EditorAssetType kind );
         /** @brief 종류 테이블 전체를 표시 순서대로 반환합니다. outCount 에 개수를 씁니다. */
