@@ -638,6 +638,10 @@ namespace sw
         if ( pCache == nullptr )
             return;
         std::scoped_lock<mutex> lock{ pCache->_awaitingMutex };
+        // 단계를 알린 뒤라 기다리던 스레드가 이미 올렸을 수 있다 — 그러면 넣지 않는다(넣으면 펌프가 없는 동안 블록이 참조를 쥐고 남는다).
+        // 완료 본문은 같은 잠금 안에서 목록에서 빼므로, 여기서 아직 기다리는 중이면 넣은 것을 그쪽이 뺀다.
+        if ( isAwaitingCompletion() == false )
+            return;
         pCache->_listAwaitingUpload.push_back( shared_from_this() );
     }
 

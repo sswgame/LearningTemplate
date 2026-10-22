@@ -99,8 +99,14 @@ namespace sw
         virtual bool hasCompletion() const { return false; }
         /** @brief 완료 단계 본문입니다(정해진 스레드). 완료가 있는 종류만 덮어씁니다. */
         [[nodiscard]] virtual bool runCompletion( string& outError );
-        /** @brief 로드 단계가 성공해 완료를 기다리게 된 순간 불립니다(로드한 스레드). 완료 단계를 펌프에 맡기는 종류가 덮어씁니다. */
+        /**
+         * @brief 로드 단계가 성공해 완료를 기다리게 된 순간 불립니다(로드한 스레드). 완료 단계를 펌프에 맡기는 종류가 덮어씁니다.
+         * @warning 단계를 `AwaitingCompletion` 으로 알린 **뒤에** 불리므로, 기다리던 다른 스레드가 이미 완료를 집었을 수 있습니다. 펌프 목록에 넣는 쪽은
+         *          완료 본문이 목록에서 빼는 잠금 안에서 `isAwaitingCompletion()` 을 보고 넣어야 합니다 — 아니면 끝난 블록이 목록에 남아 참조를 쥡니다.
+         */
         virtual void onAwaitingCompletion() {}
+        /** @brief 로드가 끝나 완료를 아무도 집지 않은 단계면 true 입니다(`onAwaitingCompletion` 이 펌프 목록에 넣을지 볼 때). */
+        bool isAwaitingCompletion() const { return _phase.load( std::memory_order_acquire ) == kPhaseAwaitingCompletion; }
 
         /** @brief 이미 준비된 값으로 만든 블록을 `Ready` 로 표시합니다(캐시 적중). 단계를 실행하지 않습니다. */
         void markReadyWithoutLoad();
