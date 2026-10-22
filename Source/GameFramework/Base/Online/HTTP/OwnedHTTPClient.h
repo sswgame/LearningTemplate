@@ -36,9 +36,9 @@ namespace sw
 
         /**
          * @brief @p url 이 `https://` 면 그 호스트의 클라이언트 TLS 컨텍스트를 @p trustFile(CA 번들 PEM)로 만들어 등록합니다. `http://` 와 이미 등록한 호스트는 건너뜁니다.
-         * @details 빈 @p url 은 건너뜁니다. 주소가 틀렸거나 `https://` 인데 신뢰 파일이 비었으면 false 와 @p outError 입니다.
+         * @details 빈 @p url 은 건너뜁니다. 주소가 틀렸거나 `https://` 인데 신뢰 파일이 비었으면 false 와 @p outError 입니다(@p trustOption 은 그 파일을 정하는 설정 이름으로, 오류 글에 적는다).
          */
-        [[nodiscard]] bool registerHostTLS( string_view url, string_view trustFile, string& outError );
+        [[nodiscard]] bool registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError );
 
         HTTPClient& get() { return _client; }
 

@@ -50,8 +50,8 @@ namespace sw
                     settings._credentials._tokenURL = config._tokenURL;
                 if ( config._sendBaseURL.empty() == false )
                     settings._sendBaseURL = config._sendBaseURL;
-                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, outError ) == false ||
-                     httpClient.registerHostTLS( settings._sendBaseURL, trustFile, outError ) == false )
+                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "pushTrustFile", outError ) == false ||
+                     httpClient.registerHostTLS( settings._sendBaseURL, trustFile, "pushTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<FcmPushProvider>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
             }

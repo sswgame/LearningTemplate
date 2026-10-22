@@ -480,9 +480,11 @@ SW_TEST_CASE( ReceiptProviderSetTest, SettingsAreReadStrictlyAndTheSecretComesFr
     SW_EXPECT_FALSE( ReceiptProviderSet::readSettings( "{\"providers\":[{\"kind\":\"apple\"}]}", listSettings, error ) );
 
     // 환경 변수가 없으면 제공자를 만들지 못하고 기동이 멈춘다 — 가짜로 대신 뜨지 않는다.
-    ReceiptProviderSet                  providerSet;
-    const vector<ReceiptProviderConfig> listMissing{ listSettings[0] };
-    bool                                bInitialized = true;
+    ReceiptProviderSet            providerSet;
+    vector<ReceiptProviderConfig> listMissing;
+    SW_ASSERT_TRUE( ReceiptProviderSet::readSettings(
+        "{\"providers\":[{\"kind\":\"steam\",\"appId\":\"480\",\"keySecretEnvironment\":\"SW_TEST_STEAM_KEY\"}]}", listMissing, error ) );
+    bool bInitialized = true;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the missing environment variable is logged" );
         bInitialized = providerSet.initialize( listMissing, "", error );

@@ -358,7 +358,7 @@ namespace
         LoginNode* operator->() { return &_node; }
     };
 
-    /** @brief 연동 비밀 철회 시험의 준비 — 비밀을 주는 가짜 제공자("apple") 와 암호화 도구를 서비스에 붙입니다. */
+    /** @brief 연동 비밀 철회 테스트의 준비 — 비밀을 주는 가짜 제공자("apple") 와 암호화 도구를 서비스에 붙입니다. */
     struct LinkSecretFixture
     {
         LoginFixture              _fixture;

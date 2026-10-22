@@ -35,7 +35,7 @@ namespace sw
         _listHost.clear();
     }
 
-    bool OwnedHTTPClient::registerHostTLS( string_view url, string_view trustFile, string& outError )
+    bool OwnedHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError )
     {
         if ( url.empty() )
             return true;
@@ -49,7 +49,7 @@ namespace sw
             return true;
         if ( trustFile.empty() )
         {
-            outError = "https URL '" + string( url ) + "' needs a trust file (a CA bundle PEM that verifies the provider)";
+            outError = "https URL '" + string( url ) + "' needs " + string( trustOption ) + " (a CA bundle PEM that verifies the provider)";
             return false;
         }
         unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( trustFile, address._host, outError );

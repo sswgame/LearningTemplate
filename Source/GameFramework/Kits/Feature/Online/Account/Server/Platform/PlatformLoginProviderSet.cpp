@@ -31,8 +31,8 @@ namespace sw
                 shutdown();
                 return false;
             }
-            const bool bTLSReady = entry._httpClient->registerHostTLS( settings._jwksURL, trustFile, outError ) &&
-                                   entry._httpClient->registerHostTLS( settings._profileURL, trustFile, outError );
+            const bool bTLSReady = entry._httpClient->registerHostTLS( settings._jwksURL, trustFile, "platformTrustFile", outError ) &&
+                                   entry._httpClient->registerHostTLS( settings._profileURL, trustFile, "platformTrustFile", outError );
             if ( bTLSReady == false )
             {
                 outError = "platform login provider '" + settings._name + "': " + outError;
@@ -45,8 +45,8 @@ namespace sw
                 entry._secondHTTPClient   = make_unique<OwnedHTTPClient>();
                 const string tokenURL     = settings._tokenURL.empty() ? string( AppleLoginProvider::kDefaultTokenURL ) : settings._tokenURL;
                 const string revokeURL    = settings._revokeURL.empty() ? string( AppleLoginProvider::kDefaultRevokeURL ) : settings._revokeURL;
-                const bool   bSecondReady = entry._secondHTTPClient->initialize() && entry._secondHTTPClient->registerHostTLS( tokenURL, trustFile, outError ) &&
-                                          entry._secondHTTPClient->registerHostTLS( revokeURL, trustFile, outError );
+                const bool   bSecondReady = entry._secondHTTPClient->initialize() && entry._secondHTTPClient->registerHostTLS( tokenURL, trustFile, "platformTrustFile", outError ) &&
+                                          entry._secondHTTPClient->registerHostTLS( revokeURL, trustFile, "platformTrustFile", outError );
                 if ( bSecondReady == false )
                 {
                     outError = "platform login provider '" + settings._name + "': " + ( outError.empty() ? string( "cannot start the HTTP client" ) : outError );

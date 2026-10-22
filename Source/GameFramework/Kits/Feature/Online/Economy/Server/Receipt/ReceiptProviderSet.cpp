@@ -54,7 +54,7 @@ namespace sw
                     settings._baseURL = config._baseURL;
                 settings._bSandbox             = config._bSandbox;
                 settings._reportPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
-                if ( httpClient.registerHostTLS( settings._baseURL, trustFile, outError ) == false )
+                if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<SteamReceiptValidator>( std::move( settings ), &httpClient.get() );
             }
@@ -78,8 +78,8 @@ namespace sw
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._voidedPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
-                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, outError ) == false ||
-                     httpClient.registerHostTLS( settings._baseURL, trustFile, outError ) == false )
+                if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "receiptTrustFile", outError ) == false ||
+                     httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<GoogleReceiptValidator>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
             }
