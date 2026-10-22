@@ -4,7 +4,9 @@
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
+#include "Engine/Character/Socket/SocketPartPool.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -144,6 +146,7 @@ namespace sw
         , _listSpawnedPart{}
         , _listSlotOverride{}
         , _listHiddenSlot{}
+        , _listRigUnit{}
         , _taskUnit{}
         , _previewSelection{}
         , _pPreviewDatabase{ nullptr }
@@ -188,6 +191,7 @@ namespace sw
         _pReloadDatabase    = nullptr;
         _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
+        // 끝날 때 붙은 부품은 이미 이 오브젝트의 자식으로 함께 지울 예정이다 — 풀에 넣을 수 없다(넣으려면 부르는 쪽이 지우기 전에 `stowParts`).
         despawnParts();
         _bStarted = SW_FALSE;
         Component::onEndPlay();
@@ -269,6 +273,25 @@ namespace sw
 
     void CharacterAppearanceComponent::despawnParts()
     {
+        removeParts( false );
+    }
+
+    void CharacterAppearanceComponent::destroyOwnerStowingParts()
+    {
+        GameObjectManager* pManager = findManager();
+        if ( pManager == nullptr )
+            return;
+        // 소켓에서 떼기(계층 바꾸기)는 틱 밖의 일이다 — 지우기도 같은 때로 미뤄 순서를 지킨다.
+        pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        {
+            appearance.removeParts( true );
+            manager.destroyObject( appearance.getOwner() );
+        } );
+    }
+
+    void CharacterAppearanceComponent::removeParts( bool bPool )
+    {
+        unbindRigUnits();
         GameObjectManager* pManager = findManager();
         if ( pManager != nullptr )
         {
@@ -276,10 +299,26 @@ namespace sw
             {
                 GameObject* pObject = pManager->resolveGameObject( part._object );
                 if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
+                    retirePart( *pManager, *pObject, part, bPool );
             }
         }
         _listSpawnedPart.clear();
+    }
+
+    void CharacterAppearanceComponent::retirePart( GameObjectManager& manager, GameObject& object, const SpawnedPart& spawned, bool bPool ) const
+    {
+        // 소켓 부품만 풀에 넣는다 — 스킨드 부품은 이 컴포넌트가 만든 빈 오브젝트라 다시 세우는 비용이 작다. 풀이 거절하면(물리로 떨어짐) 지운다.
+        using Internal       = CharacterAppearanceComponentInternal;
+        const bool bPoolable = bPool && spawned._bSocketPart == SW_TRUE;
+        if ( bPoolable )
+        {
+            // 염색은 이 외형이 만든 런타임 인스턴스다(`applyParameter`) — 버려서 프리팹 그대로 쉬게 한다. 꺼낸 쪽의 외형이 자기 값을 다시 입힌다.
+            Internal::forEachMesh( object, []( MeshComponent& mesh )
+            { mesh.setMaterialInstance( nullptr ); } );
+            if ( manager.getSubsystem<SocketPartPool>().storePart( object, spawned._asset ) )
+                return;
+        }
+        manager.destroyObject( &object );
     }
 
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
@@ -385,6 +424,7 @@ namespace sw
 
         syncParts( *pManager, *pBody, _bodyPart, listDetachEvent );
         bindSocketParts( *pManager );
+        bindRigUnits( *pManager );
         applyMaterialValues( *pManager, *pBody );
         applyVisibility( *pManager );
         registerSocketTask( *pBody );
@@ -479,7 +519,7 @@ namespace sw
             if ( matched < 0 || pObject == nullptr )
             {
                 if ( pObject != nullptr && releaseDetachedPart( *pObject, spawned, listDetachEvent ) == false )
-                    manager.destroyObject( pObject );
+                    retirePart( manager, *pObject, spawned, true ); // 바꾼 무기는 쉬게 해 두고 다른 캐릭터가 꺼내 쓴다
                 continue;
             }
             listPartCovered[static_cast<size_t>( matched )] = SW_TRUE;
@@ -506,22 +546,43 @@ namespace sw
             spawned._partIndex = static_cast<uint32>( partIndex );
             if ( part._kind == AppearancePartKind::SocketPrefab )
             {
-                pObject = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() ) : nullptr;
+                pObject = manager.getSubsystem<SocketPartPool>().takePart( part._asset );
+                if ( pObject == nullptr && pAssetManager != nullptr )
+                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() );
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
             }
             else if ( part._kind == AppearancePartKind::Skinned )
             {
-                // 몸을 리더로 따르는 스킨드 부품(옷, 머리카락)이다. 몸의 자식이 되고 위치는 몸과 같다.
+                // 스킨드 부품이다. 몸의 자식이 되고 위치는 몸과 같다. 자기 리그가 없으면 몸을 리더로 따르고(옷, 머리카락), 있으면 자기 스켈레톤을
+                // 그 리그가 움직인다(스프링 망토 — 리그의 `Body` 유닛이 이 몸이다).
                 pObject                         = manager.createGameObject( part._partName );
                 SkeletalMeshComponent* pSkinned = pObject->addComponent<SkeletalMeshComponent>();
-                // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 정본은 몸 프리팹이다.
-                pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
                 pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
                 pSkinned->setMeshID( part._asset.c_str() );
                 if ( part._material.empty() == false )
                     pSkinned->setMaterialPath( part._material.c_str() );
-                pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
+                if ( part._rig.empty() )
+                {
+                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 정본은 몸 프리팹이다.
+                    pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
+                    pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
+                }
+                else
+                {
+                    PoseModifierComponent* pRig = pObject->addComponent<PoseModifierComponent>();
+                    pRig->setRigPath( part._rig.c_str() );
+                    pRig->bindUnit( hashed_string( kBodyRigUnit ), manager.resolveComponent( bodyHandle ) );
+                    // 소켓을 적었으면 부품을 몸 바인드 포즈의 그 소켓 자리에 둔다 — 리그가 돌지 않는 곳(플레이 없는 미리보기)에서도 제자리에 보인다.
+                    // 회전은 두지 않는다(리그가 뼈를 그 자리로 끈다).
+                    float4x4   restInUnit;
+                    uint32     restUnit    = AppearanceSocketRig::kNoUnit;
+                    const bool bRestPlaced = part._placement.isEmpty() == false && _rig.computePlacement( part._placement, _bodyBindBones, restInUnit, restUnit );
+                    if ( bRestPlaced && restUnit == AppearanceSocketRig::kBodyUnit )
+                        pSkinned->setLocalPosition( restInUnit.getTranslation() );
+                    else if ( part._placement.isEmpty() == false )
+                        SW_LOG_WARNING( "Appearance '%#' rigged part '%#' names no active body socket - it rests at the body origin", _presetID.c_str(), part._partName.c_str() );
+                }
                 if ( pBodyScene != nullptr )
                     (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
                 spawned._bSocketPart = SW_FALSE;
@@ -564,6 +625,46 @@ namespace sw
             else
                 (void)pBinding->bindToSocket( pHolder, socketName, inUnit );
         }
+    }
+
+    void CharacterAppearanceComponent::bindRigUnits( GameObjectManager& manager )
+    {
+        PoseModifierComponent* pModifier = getOwner() != nullptr ? getOwner()->getComponent<PoseModifierComponent>() : nullptr;
+        if ( pModifier == nullptr )
+            return;
+        vector<hashed_string> listBound;
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            const ResolvedPart& part     = _state.getResolved()._listPart[spawned._partIndex];
+            const bool          bRigUnit = spawned._bSocketPart == SW_TRUE && part._owner.empty() == false && part._socketSet.empty() == false;
+            if ( bRigUnit == false || AppearanceXMLUtil::containsName( listBound, part._owner ) )
+                continue; // 한 칸에 소켓 에셋을 가진 부품이 둘이면 소켓 테이블처럼 첫 부품이 그 칸의 이름을 갖는다
+            GameObject*                       pObject = manager.resolveGameObject( spawned._object );
+            const shared_ptr<const SocketSet> sockets = _socketCache.findSharedSocketSet( part._socketSet );
+            if ( pObject == nullptr || sockets == nullptr )
+                continue; // 소켓 에셋을 읽지 못한 것은 소켓 테이블을 다시 만들 때 이미 알렸다
+            pModifier->bindRigidUnit( part._owner, pObject, sockets );
+            listBound.push_back( part._owner );
+        }
+        for ( const hashed_string& slot : _listRigUnit )
+        {
+            if ( AppearanceXMLUtil::containsName( listBound, slot ) == false )
+                pModifier->bindRigidUnit( slot, nullptr, nullptr );
+        }
+        _listRigUnit = std::move( listBound );
+    }
+
+    void CharacterAppearanceComponent::unbindRigUnits()
+    {
+        PoseModifierComponent* pModifier = getOwner() != nullptr ? getOwner()->getComponent<PoseModifierComponent>() : nullptr;
+        if ( pModifier != nullptr )
+        {
+            for ( const hashed_string& slot : _listRigUnit )
+            {
+                pModifier->bindRigidUnit( slot, nullptr, nullptr );
+            }
+        }
+        _listRigUnit.clear();
     }
 
     void CharacterAppearanceComponent::applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body )

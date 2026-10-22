@@ -5,6 +5,7 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
+#include "Engine/Character/Socket/SocketPartPool.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -166,6 +167,53 @@ SW_TEST_CASE( SocketBindingTest, PhysicsReleaseStartsBodyAtBoundTransform )
     // 되돌아가면 바디를 끝낸다.
     SW_ASSERT_TRUE( rig._pBinding->returnToSocket() );
     SW_EXPECT_EQUAL( 2, body._endCount );
+}
+
+/**
+ * @brief [SocketPartPoolTest] 쉬게 한 부품은 소켓에서 떨어져 꺼지고(주인을 지워도 살아남는다), 같은 에셋으로 꺼내면 켜진다. 물리로 떨어진 것 · 지울 예정인 것은 받지 않는다
+ */
+SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOnes )
+{
+    using Internal = SocketBindingTestInternal;
+    Internal::Rig       rig;
+    SocketPartPool&     pool = rig._manager.getSubsystem<SocketPartPool>();
+    const hashed_string sword( "p/sword.prefab.xml" );
+    SW_ASSERT_TRUE( rig._pBinding->bindToSocket( rig._pHolder, hashed_string( "HandR" ), Internal::makeSocket() ) );
+    const GameObjectHandle unit = rig._pUnit->getHandle();
+
+    SW_ASSERT_TRUE( pool.storePart( *rig._pUnit, sword ) );
+    SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::ReleasedAnimated );
+    SW_EXPECT_TRUE( rig._pUnitScene->getParent() == nullptr );
+    SW_EXPECT_FALSE( rig._pUnit->isActive() );
+    SW_EXPECT_EQUAL( 1u, pool.getRestingCount( sword ) );
+    SW_EXPECT_EQUAL( 0u, pool.getRestingCount( hashed_string( "p/axe.prefab.xml" ) ) );
+
+    // 옛 주인을 지워도 쉬는 부품은 자식이 아니라 남는다.
+    rig._manager.destroyObject( rig._pHolder );
+    rig._manager.update( 0.016f );
+    SW_ASSERT_TRUE( rig._manager.resolveGameObject( unit ) != nullptr );
+    SW_EXPECT_TRUE( pool.takePart( hashed_string( "p/axe.prefab.xml" ) ) == nullptr );
+    GameObject* pTaken = pool.takePart( sword );
+    SW_ASSERT_TRUE( pTaken == rig._manager.resolveGameObject( unit ) );
+    SW_EXPECT_TRUE( pTaken->isActive() );
+    SW_EXPECT_TRUE( pool.takePart( sword ) == nullptr );
+
+    // 물리로 떨어진 부품(떨군 무기)은 받지 않는다 — 부르는 쪽이 지운다.
+    Internal::Rig             dropRig;
+    Internal::FakePhysicsBody body;
+    dropRig._pBinding->setPhysicsBody( dropRig._pUnitScene, &body );
+    SW_ASSERT_TRUE( dropRig._pBinding->bindToSocket( dropRig._pHolder, hashed_string( "HandR" ), Internal::makeSocket() ) );
+    SW_ASSERT_TRUE( dropRig._pBinding->release( SocketReleaseMode::Physics ) );
+    SocketPartPool& dropPool = dropRig._manager.getSubsystem<SocketPartPool>();
+    SW_EXPECT_FALSE( dropPool.storePart( *dropRig._pUnit, sword ) );
+    SW_EXPECT_TRUE( dropRig._pUnit->isActive() );
+
+    SW_EXPECT_EQUAL( 0u, dropPool.getRestingCount( sword ) );
+
+    // 지울 예정인 부품도 받지 않는다(떼어 둔 상태여도).
+    rig._manager.destroyObject( pTaken );
+    SW_EXPECT_FALSE( pool.storePart( *pTaken, sword ) );
+    SW_EXPECT_EQUAL( 0u, pool.getRestingCount( sword ) );
 }
 
 /**

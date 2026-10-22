@@ -89,6 +89,12 @@ namespace sw
          * @details 연결하지 않은 이름은 자식에서 먼저, 그다음 매니저 전체에서 같은 이름의 오브젝트를 찾는다. 외형 통합은 이 함수로 슬롯 유닛을 연결한다.
          */
         void bindUnit( const hashed_string& unitName, SkeletalMeshComponent* pUnit, shared_ptr<const SocketSet> sockets = nullptr );
+        /**
+         * @brief 리그의 `unit` 이름에 본 없는 강체 오브젝트(정적 메시 무기 같은 장비 부품)를 연결합니다. 그 유닛의 소켓 대상은 "오브젝트 월드 × 소켓 로컬" 로 풀립니다.
+         * @details 소켓 로컬은 오브젝트 원점 기준이다(강체 부품의 뿌리 — 외형 소켓 테이블의 강체 유닛과 같은 규약). 본 대상은 오류다. 의존은 걸지 않는다 — 부품 위치는
+         *          지난 프레임 값이므로 손에 붙은 부품은 `space` 로 손 본 기준으로 받아야 늦지 않는다. @p pObject 가 nullptr 이면 연결을 풀고 그 대상은 값이 없다(노드가 쉰다).
+         */
+        void bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets );
         /** @brief 리그의 `object` 이름에 오브젝트를 겁니다. 걸지 않은 이름은 같은 이름의 오브젝트를 찾습니다. */
         void bindObject( const hashed_string& objectName, GameObject* pObject );
         /**
@@ -143,6 +149,7 @@ namespace sw
             hashed_string                           _name{};
             shared_ptr<const SocketSet>             _sockets{};
             TComponentHandle<SkeletalMeshComponent> _unit{};
+            GameObjectHandle                        _rigidObject{}; ///< 강체 유닛(`bindRigidUnit`)이면 그 오브젝트다. 이때 `_unit` 은 비어 있다
         };
 
         struct ObjectBinding
@@ -157,6 +164,7 @@ namespace sw
         struct SocketTargetResolution
         {
             SkeletalMeshComponent* _pTargetUnit{ nullptr };
+            GameObject*            _pRigidObject{ nullptr }; ///< 강체 유닛의 소켓이면 그 오브젝트다(`_socketLocal` 이 오브젝트 원점 기준)
             hashed_string          _boneName{};
             BoneTransform          _socketLocal{};
             bool                   _bSocketRoot{ false };
@@ -169,6 +177,8 @@ namespace sw
         void releaseDependencies();
         /** @brief 이름의 유닛(명시 → 자식 → 매니저)입니다. */
         SkeletalMeshComponent* findUnitByName( const hashed_string& unitName, shared_ptr<const SocketSet>* pOutSockets ) const;
+        /** @brief 이름의 명시 연결입니다. 없으면 nullptr 입니다. */
+        const UnitBinding* findUnitBinding( const hashed_string& unitName ) const;
         /** @brief 이름의 오브젝트(명시 → 매니저)입니다. */
         GameObject* findObjectByName( const hashed_string& objectName ) const;
         /** @brief @p pUpstream 을 의존으로 걸면 고리가 생기는지입니다. */

@@ -47,11 +47,16 @@ namespace sw
 
     const SocketSet* AppearanceSocketSetCache::findSocketSet( const hashed_string& path )
     {
+        return findSharedSocketSet( path ).get();
+    }
+
+    shared_ptr<const SocketSet> AppearanceSocketSetCache::findSharedSocketSet( const hashed_string& path )
+    {
         if ( path.empty() )
             return nullptr;
         const auto found = _mapSocketSet.find( path );
         if ( found != _mapSocketSet.end() )
-            return found->second.get();
+            return found->second;
         if ( _bKindsLoaded == SW_FALSE )
         {
             _bKindsLoaded = SW_TRUE;
@@ -62,15 +67,14 @@ namespace sw
         // 종류 표 없이 읽은 소켓은 종류 검사를 건너뛴 반쪽짜리다 — 내주지 않는다(위 오류가 이유다).
         if ( _bKindsValid == SW_FALSE )
             return nullptr;
-        unique_ptr<SocketSet> socketSet = make_unique<SocketSet>();
+        shared_ptr<SocketSet> socketSet = make_shared<SocketSet>();
         if ( socketSet->loadFromResource( path.c_str(), _kinds ) == false )
         {
             SW_LOG_ERROR( "Socket asset '%#' could not be loaded", path.c_str() );
             socketSet.reset();
         }
-        const SocketSet* pSocketSet = socketSet.get();
-        _mapSocketSet[path]         = std::move( socketSet );
-        return pSocketSet;
+        _mapSocketSet[path] = socketSet;
+        return socketSet;
     }
 
     void AppearanceSocketSetCache::clear()

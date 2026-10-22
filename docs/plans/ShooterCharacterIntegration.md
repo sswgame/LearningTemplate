@@ -1,9 +1,10 @@
 # Shooter3D 캐릭터 통합의 남은 것
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-10 · 진행: 4/6
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-10 · 진행: 6/7
 
 KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵 · 탄도선 풀은 들어갔다(`Source/Games/Shooter3D/`).
-알림 휘두름 · 래그돌 히트박스 · 물리 질의 히트스캔 · 시야 · 1인칭 머리 숨김 · 보폭 워핑은 코드와 데이터를 썼다(빌드 · 화면 미확인, 아래 확인 목록). 손 IK · 스프링 망토 · 외형 부품 풀이 남았다.
+알림 휘두름 · 래그돌 히트박스 · 물리 질의 히트스캔 · 시야 · 1인칭 머리 숨김 · 보폭 워핑 · 왼손 IK · 외형 부품 풀은 코드와 데이터를 썼다(화면 미확인, 아래 확인 목록).
+스프링 망토는 엔진(외형의 자기 리그 스킨드 부품)과 에셋 생성기까지 했고, 임포트와 데이터 전환이 남았다.
 
 ## 1. 결정
 
@@ -17,6 +18,9 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 | 막는 상자와 물리 | `ShooterBlockerComponent` 가 플레이 시작에 같은 상자의 정적 강체를 만든다. 바닥은 씬의 정적 강체 | 상자의 정본은 `_halfSize` 하나다 — 데이터에 강체를 따로 적으면 두 크기가 어긋난다. 래그돌 · 떨어진 무기가 벽 · 바닥에 막힌다 |
 | 자동 조준의 시야 | 디렉터의 막는 상자 목록을 기하로 본다(`isVisible`) | 생각은 틱(워커)에서 돌아 물리를 묻지 못한다. 같은 상자로 정적 강체를 만들므로 물리 질의와 같은 벽이다 |
 | 1인칭의 무기 | 시점 무기(카메라 자식) 하나 — 몸은 보이되 머리(리그 `HideHead`, 슬롯 `FirstPersonHead`)와 머리 장비 · 몸의 무기(외형의 숨기는 슬롯 `Head` · `MainHand`, `setHiddenSlots`)를 숨긴다 | 조준 · 총구의 정본이 시점 무기다. 둘 다 보이면 총이 두 자루다 |
+| 왼손 IK 가 무기를 찾는 길 | 외형이 조립마다 소켓 에셋을 가진 소켓 부품을 칸 이름의 **강체 유닛**으로 같은 오브젝트의 리그에 잇는다(`PoseModifierComponent::bindRigidUnit`). 리그는 `{ "unit": "MainHand", "socket": "SupportHand", "space": "handslot.r" }` | 정적 메시 무기는 `SkeletalMeshComponent` 가 아니라 기존 유닛 연결에 들 수 없었다. 유닛 대상은 데이터로 바깥 대상이라 무기를 들기 전(맨손)에도 리그 묶기가 실패하지 않고 값만 없다. `space` 가 손 본 기준으로 받아 한 프레임 늦지 않는다 |
+| 부품 풀을 언제 쓰나 | 바꾼 소켓 부품(조립의 `syncParts`)과 `destroyOwnerStowingParts`(감독이 적을 걷을 때)가 씬 서비스 `SocketPartPool` 에 넣는다. `despawnParts`(상태 저장 앞)와 끝날 때는 지운다 | 붙은 부품은 캐릭터의 자식이라 캐릭터를 먼저 지우면 함께 지울 예정이 된다 — 거두기와 지우기를 한 함수(틱 뒤)로 묶어 순서를 형식으로 지킨다. 물리로 떨어진 무기는 풀이 받지 않는다 |
+| 스프링 망토의 모양 | 외형 부품 `kind="Skinned"` 에 자기 `skeleton` · `rig` 를 적으면 몸 리더 포즈 대신 그 리그(리그 유닛 `Body` = 몸)가 망토 뼈를 움직인다. `socket` 을 적으면 바인드 포즈의 그 소켓 자리에 둔다(플레이 없는 미리보기) | 몸 스켈레톤을 빌리는 리그 부품은 리더 포즈와 다툰다 — 로드 오류로 막는다 |
 
 ## 2. 단계
 
@@ -26,14 +30,15 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 | S2 | 알림으로 휘두름 피해 — 곁 데이터 `skeleton_minion.clips.json`, 알림 표 `characters/skeleton_minion/skeleton_minion.notifies.xml`, 적 프리팹 `AnimationNotifyComponent`, `onAnimationNotify` · `_attackHitTime` 삭제 | 코드 · 데이터 작성(임포트 · 빌드 미확인) |
 | S3 | 1인칭 머리 숨기기 — 몸 리그 `rigs/player_body.rig.json`(`HideHead` — 보폭 워핑 `Stride` 와 같은 리그), 몸 프리팹 `PoseModifierComponent` 하나, `ShooterAvatarComponent::setFirstPerson` | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | S4 | 래그돌 쓰러짐 · 부위 히트박스 · 물리 질의 히트스캔 · 시야 · 보폭 워핑(`Stride`, `ShooterAvatarComponent::updateStrideWarping`) | 코드 · 데이터 작성(빌드 · 화면 미확인) |
-| S5 | 왼손 IK · 스프링 망토 | 아래 "남은 것" — 엔진 · 에셋 선행 |
-| S6 | 외형 부품 풀 | 아래 "남은 것" |
+| S5 | 왼손 IK — 강체 유닛 연결(`bindRigidUnit`) · 외형의 리그 유닛 잇기(`bindRigUnits`) · 몸 리그 `Grip` + `TwoBoneIK LeftHandGrip` | 코드 · 데이터 작성, `PoseModifierTest.RigidUnitSocketFollowsObjectAndUnbinds`(화면 미확인) |
+| S6 | 외형 부품 풀 — 씬 서비스 `SocketPartPool`, `destroyOwnerStowingParts`, 감독이 적을 걷을 때 씀 | 코드 작성, `SocketPartPoolTest`(비용 측정 · 화면 미확인) |
+| S7 | 스프링 망토 | 엔진(자기 리그 스킨드 부품 `rig`) · 생성기 `Scripts/dev/MakeSkinnedCape.py`(`TestMakeSkinnedCape`) 완료. 아래 "남은 것" |
 
 ## 남은 것
 
-- S5 왼손 IK: 무기 부품은 정적 메시라 리그의 소켓 대상이 고르는 유닛 목록(`PoseModifierComponent::setSocketTable` — `SkeletalMeshComponent` 만)에 들 수 없고, 외형도 그 표를 리그에 잇지 않는다. 먼저 (1) 외형이 조립 뒤 같은 오브젝트의 리그에 소켓 표를 잇고, (2) 정적 부품 소켓은 "부품 오브젝트 월드 × 소켓 로컬" 바깥 대상으로 해석하게 `resolveSocketTarget` 을 넓힌다. 그다음 몸 리그에 `{ "name": "Grip", "socket": "MainHand.SupportHand" }` 와 `TwoBoneIK`(`upperarm.l` · `lowerarm.l` · `hand.l`)를 더한다.
-- S5 스프링 망토: Shooter3D 의 기사 망토(`prefabs/kaykit/knight_cape.prefab.xml`)는 사슬 뼈가 없는 정적 메시다. `knight_cape.rig.json`(`cape0..3`)을 쓰려면 사슬 뼈가 있는 스킨드 망토 에셋(벤치 데모 데이터와 같은 것)을 가져와 외형의 스킨드 부품으로 바꾸는 것이 먼저다.
-- S6 외형 부품 풀: 스켈레톤마다 부품 프리팹을 세우고 지운다(`CharacterAppearanceComponent::syncParts` · `despawnParts`). 짧은 설계 — 씬마다 에셋 경로별 쉬는 부품 목록을 두고, 지울 때 소켓 부착을 풀고(`SocketBindingComponent` 를 붙은 상태로 되돌리고 강체를 키네마틱으로) 숨겨 넣으며, 스폰할 때 꺼낸다. 떨어진 무기(물리로 뗀 것)는 풀로 돌리지 않고 지운다. 잰 뒤에 정한다(스켈레톤 하나의 부품 셋 스폰 비용).
+- S7 스프링 망토(임포트가 병합 뒤라 이 단계만 남았다): ① `py -3 Scripts/dev/MakeSkinnedCape.py` 로 `models_raw/kaykit/knight_cape_chain.glb` 를 만들고 ② `App --import-models`(휘두름 `SwingLands` 재임포트와 같은 실행)로 `models/kaykit/knight_cape_chain.mesh` · 스켈레톤을 쓴 뒤 ③ `itemvisuals.xml` 의 `cape_knight` 를 `<Part name="Cape" kind="Skinned" mesh="game/shooter3d/models/kaykit/knight_cape_chain.mesh" skeleton="game/shooter3d/models/kaykit/knight_cape_chain/knight_cape_chain.skeleton.json" rig="game/shooter3d/rigs/knight_cape.rig.json" material="game/shooter3d/materials/kaykit_knight.material" socket="Back"/>` 로 바꾼다. 원본 glb 를 임포트 없이 넣으면 `--check-models`(`AppSmokeTest.ModelCheckRunsHeadlessThroughTheEditorModule`)가 지므로 셋을 한 커밋으로 한다. 그다음 플레이어가 돌 때 망토가 뒤처져 흔들리는지 화면으로 본다.
+- S5 왼손 IK 화면 확인: Shooter3D 3인칭에서 소총 · 권총을 들 때 왼손이 총열 아래(`SupportHand`)에 붙는지, 팔꿈치가 꺾이는 쪽이 자연스러운지(어색하면 `pole` 대상을 더한다). 무기를 바꾸면 새 무기의 손잡이를 따르는지.
+- S6 부품 풀 측정: 적 하나의 부품 셋 스폰 비용(풀 전 · 후)을 재어 효과를 적는다. 쉬는 부품은 꺼진 오브젝트로 씬에 남으므로 상태 저장 경로가 생기면 그 앞에서 풀을 비우는 길이 필요하다.
 - 확인(S1 · S2 · S3 · S4, 빌드 뒤):
   - 병합 뒤 `App --import-models` 로 Shooter3D 모델을 다시 가져와 `skeleton_minion/clips/1h_melee_attack_chop.animclip` 에 `Impact` 알림이 들어갔는지, 임포트 결과와 곁 데이터를 한 커밋으로 남긴다. 그 전에는 적의 휘두름이 맞지 않는다.
   - Shooter3D autoplay 시나리오(네 백엔드)가 통과하는지 — `EnemyHitCount` 가 오르는지(히트박스 레이어 `Ragdoll` 질의), 적이 쓰러질 때 래그돌로 넘어져 바닥에 눕는지, 떨어진 무기 · 방패가 바닥(정적 강체)에 눕는지, 시체가 걷힐 때 같이 사라지는지(스크린샷).

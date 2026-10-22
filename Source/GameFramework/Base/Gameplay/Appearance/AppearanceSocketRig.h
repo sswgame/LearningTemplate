@@ -56,15 +56,17 @@ namespace sw
         ~AppearanceSocketSetCache() override;
 
         const SocketSet* findSocketSet( const hashed_string& path ) override;
+        /** @brief `findSocketSet` 과 같은 것을 공유 포인터로 내줍니다. 캐시를 비워도 받은 쪽(후처리 리그의 유닛 연결)이 쥔 소켓은 살아 있습니다. */
+        shared_ptr<const SocketSet> findSharedSocketSet( const hashed_string& path );
         /** @brief 캐시한 것을 모두 버립니다. */
         void clear();
 
     private:
-        unordered_map<hashed_string, unique_ptr<SocketSet>> _mapSocketSet; ///< 값이 null 이면 읽지 못한 경로이다
-        SocketKindTable                                     _kinds;
-        uint8                                               _bKindsLoaded : 1; ///< 소켓 종류 표를 읽어 봤다
-        uint8                                               _bKindsValid  : 1; ///< 그 읽기가 성공했다. 실패했으면 소켓 에셋을 하나도 내주지 않는다
-        [[maybe_unused]] uint8                              _reserved     : 6;
+        unordered_map<hashed_string, shared_ptr<const SocketSet>> _mapSocketSet; ///< 값이 null 이면 읽지 못한 경로이다
+        SocketKindTable                                           _kinds;
+        uint8                                                     _bKindsLoaded : 1; ///< 소켓 종류 표를 읽어 봤다
+        uint8                                                     _bKindsValid  : 1; ///< 그 읽기가 성공했다. 실패했으면 소켓 에셋을 하나도 내주지 않는다
+        [[maybe_unused]] uint8                                    _reserved     : 6;
     };
 } // namespace sw
 

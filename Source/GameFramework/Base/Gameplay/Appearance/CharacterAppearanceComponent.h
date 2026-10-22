@@ -64,6 +64,9 @@ namespace sw
      * @brief 몸 유닛(같은 오브젝트의 `SkeletalMeshComponent`)에 외형 프리셋을 입힙니다. 외형 데이터는 게임 서비스 `AppearanceDatabase` 에서 가져옵니다.
      * @details - **조립**: 프리셋을 시드로 펼치고(`CharacterAppearanceCatalog::expand`), 슬롯 덮어쓰기(`setSlotItem`, 무기 바꾸기에 씀)를 적용해 해석한다.
      *            몸 부품(주인이 비어 있는 첫 스킨드 부품)은 이 오브젝트의 유닛에 메시, 스켈레톤, 머티리얼로 적용한다. 다른 스킨드 부품은 몸을 리더로 따르는 자식 유닛으로 만든다.
+     *            자기 리그(`rig`)를 적은 스킨드 부품은 리더를 두지 않고 자기 스켈레톤을 그 리그가 움직인다(스프링 망토, 리그 유닛 `Body` = 몸).
+     *          - **리그 유닛**: 같은 오브젝트의 후처리 리그에 소켓 에셋을 가진 소켓 부품을 칸 이름의 강체 유닛으로 잇는다(왼손 IK 가 `MainHand` 의 `SupportHand` 를 따른다).
+     *          - **부품 풀**: 바꾼 소켓 부품과 `destroyOwnerStowingParts` 로 거둔 소켓 부품은 씬의 `SocketPartPool` 에 쉬게 하고, 다음 스폰이 같은 에셋을 꺼낸다.
      *            소켓 부품(`SocketPrefab`)은 프리팹을 스폰해서 `SocketBindingComponent` 로 소켓에 붙인다. 다시 조립할 때 같은 부품(주인, 이름, 에셋)은 그대로 둔다.
      *          - **소켓**: 몸과 부품의 소켓 에셋이 하나의 이름 공간을 이룬다(`AppearanceSocketRig`, 예: `MainHand.Muzzle`). 몸의 포즈가 끝난 프레임마다(단계 작업) 부품의
      *            소켓 위치를 고친다. `findSocketWorldTransform` 은 지난 프레임의 포즈와 월드로 답하며, 틱 안에서는 읽기만 한다.
@@ -81,6 +84,9 @@ namespace sw
 
     public:
         REFLECT_BODY();
+
+        /** @brief 자기 리그를 가진 스킨드 부품(`ItemVisual` 부품의 `rig`)에 몸을 이어 주는 리그 유닛 이름입니다 — 리그 데이터가 `"unit": "Body"` 로 몸 뼈를 가리킨다. */
+        static constexpr const utf8* kBodyRigUnit = "Body";
 
         CharacterAppearanceComponent();
         virtual ~CharacterAppearanceComponent() override;
@@ -114,8 +120,15 @@ namespace sw
          */
         void                         setHiddenSlots( const vector<hashed_string>& listSlot );
         const vector<hashed_string>& getHiddenSlots() const { return _listHiddenSlot; }
-        /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 끝낼 때 부릅니다. 다음 조립에서 다시 스폰합니다. */
+        /** @brief 스폰한 부품 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부릅니다(풀에도 남기지 않는다). 다음 조립에서 다시 스폰합니다. */
         void despawnParts();
+        /**
+         * @brief 캐릭터 오브젝트(이 컴포넌트의 주인)를 지웁니다. 지우기 전에 소켓 부품을 씬의 부품 풀(`SocketPartPool`)에 쉬게 하고(다음 캐릭터의 조립이 같은
+         *        에셋을 꺼내 쓴다), 나머지(스킨드 부품, 물리로 떨어진 부품)는 지웁니다. 틱 안이면 둘 다 틱 뒤에 합니다.
+         * @details 한 함수인 까닭: 붙은 부품은 캐릭터의 자식이라, 캐릭터를 먼저 지우면 함께 지울 예정이 되어 풀에 넣을 수 없다. 그냥 `destroyObject` 로 지우면
+         *          부품은 끝날 때 함께 지워진다(풀을 쓰지 않을 뿐 틀리지는 않는다).
+         */
+        void destroyOwnerStowingParts();
 
         /**
          * @brief 이름(접두어 포함, 예: `MainHand.Muzzle`, `Eyes`)의 소켓 월드 변환입니다. 지난 프레임의 몸 포즈와 부품 월드로 계산합니다.
@@ -170,8 +183,19 @@ namespace sw
          * @return 떨어져 나간 부품이 아니거나 뗄 수 없으면(물리 바디 없음 — 알린다) false 이고, 부르는 쪽이 지웁니다.
          */
         [[nodiscard]] bool releaseDetachedPart( GameObject& object, const SpawnedPart& spawned, const vector<AppearanceDetachEvent>& listDetachEvent ) const;
+        /** @brief 부품을 모두 거둡니다. @p bPool 이면 소켓 부품을 풀에 넣고, 아니면(끝날 때) 모두 지웁니다. */
+        void removeParts( bool bPool );
+        /** @brief 부품 하나를 거둡니다 — @p bPool 이고 소켓 부품이면 풀에 넣고, 풀이 거절하거나 아니면 지웁니다. */
+        void retirePart( GameObjectManager& manager, GameObject& object, const SpawnedPart& spawned, bool bPool ) const;
         /** @brief 소켓 부품을 붙을 위치에 부착합니다. */
         void bindSocketParts( GameObjectManager& manager );
+        /**
+         * @brief 같은 오브젝트의 후처리 리그(`PoseModifierComponent`)에 소켓 에셋을 가진 소켓 부품을 칸 이름의 강체 유닛으로 잇습니다(`bindRigidUnit`).
+         *        리그의 `{ "unit": "MainHand", "socket": "SupportHand" }` 가 지금 든 무기의 소켓을 따른다. 이번 조립에 없는 칸은 연결을 풉니다.
+         */
+        void bindRigUnits( GameObjectManager& manager );
+        /** @brief 리그에 이은 칸을 모두 풉니다. */
+        void unbindRigUnits();
         /** @brief 머티리얼 값을 주인의 부품마다 적용합니다. */
         void applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body );
         /** @brief 보임 여부를 몸과 부품에 적용합니다. */
@@ -205,6 +229,7 @@ namespace sw
         vector<SpawnedPart>                     _listSpawnedPart;
         vector<SlotOverride>                    _listSlotOverride;
         vector<hashed_string>                   _listHiddenSlot;     ///< 보임과 따로 숨기는 슬롯(`setHiddenSlots`)
+        vector<hashed_string>                   _listRigUnit;        ///< 후처리 리그에 강체 유닛으로 이은 칸(`bindRigUnits`)
         TComponentHandle<SkeletalMeshComponent> _taskUnit;           ///< 단계 작업을 등록한 몸 유닛
         AppearanceSelection                     _previewSelection;   ///< 미리보기 입히기의 선택(`previewSelection`)
         const AppearanceDatabase*               _pPreviewDatabase;   ///< 미리보기 입히기의 데이터(빌린 것). 있으면 프리셋 id · 게임 서비스를 보지 않는다
