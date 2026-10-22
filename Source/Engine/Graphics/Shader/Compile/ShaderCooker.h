@@ -107,7 +107,7 @@ namespace sw
          */
         static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
         /**
-         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`kArrIncludeRootDomain`)을 @p resourceRoot 아래에서 찾습니다.
+         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`collectIncludeRootDomains`)을 @p resourceRoot 아래에서 찾습니다.
          * @details 루트를 받지 않는 판은 `ResourcePaths` 의 루트를 넘긴다. 테스트는 임시 트리의 루트를 넘겨 실제 `Resource/` 를 보지 않는다
          *          (병렬로 도는 다른 프로세스가 그 트리를 건드려도 판정이 흔들리지 않는다).
          */
@@ -170,11 +170,29 @@ namespace sw
         static uint64 makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion );
 
         /**
-         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인입니다(`<도메인>/shaders`). 컴파일러의 검색 경로와 쿠킹 스탬프가 같은 테이블을 씁니다.
-         * @details 스탬프는 자기 도메인의 소스에 더해 이 도메인들의 `.hlsli` 를 `<도메인>:<상대 경로>` 키로 기록한다. common 셰이더가 include 하는
-         *          engine 헤더를 고치면 common 산출물도 낡은 것이 되어야 한다.
+         * @brief 셰이더를 가질 수 있는 도메인(`engine` · `common` · `game/<팩>` · 그 밖에 우선순위에 적힌 것)을 @p listPriority 에서 발견합니다.
+         * @param listPriority `EngineConfig._listResourcePriority`(`ResourcePaths::getSearchPriority()`) — 도메인 목록의 정본은 이 설정 데이터다.
+         *                     `game` 토큰은 @p resourceRoot 의 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 나머지 토큰은 그대로 도메인이다.
+         * @return 목록이 비었거나 include 루트 종류(`engine` · `common`)가 빠졌으면 오류를 남기고 false 입니다(기본 목록으로 넘어가지 않는다).
          */
-        inline static constexpr const utf8* kArrIncludeRootDomain[] = { "engine", "common" };
+        [[nodiscard]] static bool collectShaderDomains( string_view resourceRoot, const vector<string>& listPriority, vector<string>& outListDomain );
+
+        /**
+         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 **종류**(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
+         * @details 컴파일러의 검색 경로와 쿠킹 스탬프가 같은 함수를 쓴다. 게임 셰이더의 include 루트는 자기 도메인 + 이 둘이며 다른 게임은 들어가지 않는다.
+         *          스탬프는 자기 도메인의 소스에 더해 이 도메인들의 `.hlsli` 를 `<도메인>:<상대 경로>` 키로 기록한다. common 셰이더가 include 하는
+         *          engine 헤더를 고치면 common 산출물도 낡은 것이 되어야 한다.
+         * @return @p listPriority 에 두 종류 중 하나라도 없으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain );
+
+        /**
+         * @brief @p absShaderPath 가 속한 도메인의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
+         * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다.
+         *          도메인 밖의 파일(임시 폴더의 소스)은 검사할 것이 없어 true 입니다. 컴파일(`ShaderCompiler`)과 `verifyCookedShaders` 가 부른다.
+         * @return 문제가 없으면 true 입니다. 설정이 잘못됐을 때도 false 입니다(오류를 남김).
+         */
+        [[nodiscard]] static bool findShadowedHeaders( string_view resourceRoot, const vector<string>& listPriority, string_view absShaderPath, vector<string>& outListProblem );
 
         /**
          * @brief 쿠킹된 산출물이 지금 소스에서 나온 것인지 `bin/<rhi>/cook.stamp` 의 내용 해시로 확인합니다.
@@ -193,6 +211,8 @@ namespace sw
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
         static void verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem );
+        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 정본인 우선순위 설정을 직접 받습니다(위 판은 `ResourcePaths::getSearchPriority()` 를 넘긴다). */
+        static void verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view shaderFolder, vector<string>& outListProblem );
 
         /**
          * @brief 캐시된 공유 헤더 해시와 스탬프 읽기 결과를 버려, 다음 조회가 다시 스캔하게 합니다.

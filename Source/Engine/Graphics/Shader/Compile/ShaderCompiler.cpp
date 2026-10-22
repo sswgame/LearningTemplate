@@ -34,20 +34,24 @@ namespace sw
         struct ShaderCompilerInternal
         {
             /** @brief 셰이더 #include 검색 디렉터리(engine/shaders, common/shaders, 소스 폴더)를 모읍니다. */
-            static void collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outListDir )
+            [[nodiscard]] static bool collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outListDir )
             {
                 outListDir.clear();
                 const string shaderDir = FileUtil::getDirectoryPart( shaderAbsPath );
                 if ( shaderDir.empty() == false )
                     outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
-                // 쿠킹 스탬프도 같은 표의 헤더를 본다(`ShaderCooker::kArrIncludeRootDomain`).
-                for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
+                // 쿠킹 스탬프도 같은 도메인의 헤더를 본다(`ShaderCooker::collectIncludeRootDomains`). 도메인 종류는 우선순위 설정에서 온다.
+                vector<string> listDomain;
+                if ( ShaderCooker::collectIncludeRootDomains( ResourcePaths::getSearchPriority(), listDomain ) == false )
+                    return false;
+                for ( const string& domain : listDomain )
                 {
-                    const string domainShaders = ResourcePaths::findLooseDomainFolder( pDomain, "shaders" ).getDiskPath();
+                    const string domainShaders = ResourcePaths::findLooseDomainFolder( domain, "shaders" ).getDiskPath();
                     if ( domainShaders.empty() == false )
                         outListDir.push_back( domainShaders );
                 }
+                return true;
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -277,7 +281,11 @@ namespace sw
                 listMacro.push_back( { nullptr, nullptr } );
 
                 vector<string> listIncludeDir;
-                collectShaderIncludeDirs( absPathStr, listIncludeDir );
+                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
+                {
+                    outResult._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
+                    return false;
+                }
                 MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
 
                 HRESULT hr = D3DCompileFromFile(
@@ -478,7 +486,11 @@ namespace sw
 
                 vector<string>  listIncludeDir;
                 vector<wstring> listIncludeDirW;
-                collectShaderIncludeDirs( absPathStr, listIncludeDir );
+                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
+                {
+                    outResult._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
+                    return DxcOutcome::Rejected;
+                }
                 listIncludeDirW.reserve( listIncludeDir.size() );
                 for ( const string& dir : listIncludeDir )
                 {
@@ -644,6 +656,20 @@ namespace sw
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
+            return result;
+        }
+
+        // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
+        vector<string> listShadowed;
+        if ( ShaderCooker::findShadowedHeaders( ResourcePaths::getRootFolderPath(), ResourcePaths::getSearchPriority(), absPathStr, listShadowed ) == false )
+        {
+            for ( const string& problem : listShadowed )
+            {
+                result._errorMessage += problem + "\n";
+            }
+            if ( result._errorMessage.empty() )
+                result._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
+            SW_LOG_ERROR( "%#", result._errorMessage );
             return result;
         }
 

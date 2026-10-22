@@ -649,6 +649,7 @@
   로더는 리플렉션 구조체(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 필수 칸을 중첩까지 검사)이거나 `XMLNode` 로 손으로 읽는 것(`XMLReadUtil::hasOnlyKnownNames` · `readFloatList`)이고, 옛 JSON 리더는 두지 않았다. 임포터는 XML 을 쓰며 커밋된 결과를 `App --import-models` 로 다시 만들었다.
   형식은 `AssetTypeRegistry::isSuffixFormatAllowed` 로 굳혔다 — `.json` 접미사는 쿠킹 입력으로만 등록된다. **변환한 데이터는 엔진이 다시 쓴 결과와 바이트가 같아야 한다**: 속성값의 `>` 는 이스케이프하지 않고(본문 글은 한다), 120 바이트(글자 수가 아니다)를 넘는 여는 태그는 속성별로 접는다. 이 규칙을 놓치면 `--gather-text` · 재임포트가 파일을 다시 쓰고 `--check-text` 가 낡았다고 한다.
   재임포트는 `skeleton_minion` 의 메시 · 클립도 다시 만들었다(저장소의 옛 산출물이 지금 임포터와 부동소수 끝자리가 달랐다 — 사원수 두 값의 마지막 한 자리). 다른 모델은 스켈레톤 글만 바뀌었다.
+- **셰이더 도메인 목록은 설정 데이터에서 발견한다 — 코드는 include 루트 종류(engine · common)만 안다**(2026-10-23, 계획 `MaterialShaderHooks` D1). 정본은 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 이고, `game` 토큰은 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 게임 셰이더의 include 루트는 자기 도메인 + engine + common 이고 다른 게임은 넣지 않는다. 목록이 비었거나 종류가 빠지면 기본값 없이 오류로 멈추고, 게임 폴더의 같은 이름 헤더가 include 루트의 헤더를 가리면 컴파일 · 스탬프 쓰기 · 판정이 오류로 멈춘다(`ShaderCooker::collectShaderDomains` · `collectIncludeRootDomains` · `findShadowedHeaders`). 쿠킹 스탬프 값은 바뀌지 않는다.
 
 ### 5-5. 그래픽스와 RHI
 
