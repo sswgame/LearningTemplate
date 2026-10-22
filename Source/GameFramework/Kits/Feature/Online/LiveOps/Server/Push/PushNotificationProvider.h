@@ -1,8 +1,9 @@
 /**
  * @file PushNotificationProvider.h
  * @brief 푸시 알림 제공자 계약입니다. 기기 토큰으로 보내고 결과는 나중에 회수합니다. 구현은 `Provider/<제품>/` 안에 있으며 제품 이름은 그 폴더 밖에 쓰지 않습니다.
- * @details `send` 는 서비스 스레드를 막지 않는다. 실제 제공자는 자기 워커, HTTP/2 연결, 인증을 가진다. `pollResults` 는 발송기가 서비스 스레드의 틱마다 부른다.
- *          지금은 `Provider/Fake/` 하나뿐이다. 실제 제공자는 공통 HTTPS 클라이언트(기반 계층의 `Online/HTTP`) 위에 운영 비밀(인증서, 서비스 계정 키)과 함께 추가할 예정이다.
+ * @details `send` 와 `sendToTopic` 은 서비스 스레드를 막지 않는다. 실제 제공자는 자기 HTTP 클라이언트(기반 계층의 `Online/HTTP`), 인증, 재시도 상태를 가진다.
+ *          발송기가 서비스 스레드의 틱마다 `update` 로 제공자를 돌리고 `pollResults` 로 끝난 배달을 회수한다. 시각(@p nowMs)은 서비스 시각(UTC 밀리초)이다.
+ *          제공자는 `Provider/Fake/`(테스트와 개발)와 `Provider/Fcm/` 이다. 자격(서비스 계정 키)은 운영 비밀(환경 변수)에서만 읽는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -44,12 +45,27 @@ namespace sw
     class IPushNotificationProvider
     {
     public:
-        IPushNotificationProvider()                                                                                                            = default;
-        IPushNotificationProvider( const IPushNotificationProvider& )                                                                          = delete;
-        IPushNotificationProvider& operator=( const IPushNotificationProvider& )                                                               = delete;
-        virtual ~IPushNotificationProvider()                                                                                                   = default;
-        virtual string_view getProviderID() const                                                                                              = 0;
-        virtual void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message ) = 0;
+        IPushNotificationProvider()                                                                                                                         = default;
+        IPushNotificationProvider( const IPushNotificationProvider& )                                                                                       = delete;
+        IPushNotificationProvider& operator=( const IPushNotificationProvider& )                                                                            = delete;
+        virtual ~IPushNotificationProvider()                                                                                                                = default;
+        virtual string_view getProviderID() const                                                                                                           = 0;
+        virtual void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs ) = 0;
+        /** @brief 이 제공자가 토픽 발송(`sendToTopic`)을 하면 true 입니다. 발송기는 토픽 발송을 토픽을 아는 제공자에게만 맡깁니다. */
+        virtual bool supportsTopics() const { return false; }
+        /**
+         * @brief 토픽을 구독한 모든 기기에 한 번에 보냅니다(전체 대상 알림 — 계정마다 보내지 않는다). 토픽 이름 규칙은 제공자가 정하며, 틀리면 `Rejected` 로 끝납니다.
+         * @details `supportsTopics` 가 true 인 제공자만 구현한다. 결과는 `pollResults` 로 같은 배달 id 에 돌려준다(`InvalidToken` 은 토픽에 없다).
+         */
+        virtual void sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+        {
+            (void)deliveryID;
+            (void)topic;
+            (void)message;
+            (void)nowMs;
+        }
+        /** @brief 서비스 틱마다 한 번 불립니다. 제공자의 HTTP 전송과 인증 갱신을 돌립니다. */
+        virtual void update( int64 nowMs ) { (void)nowMs; }
         /** @brief 끝난 배달의 결과를 @p outListResult 뒤에 붙이고 붙인 개수를 반환합니다. */
         virtual int32 pollResults( vector<PushDeliveryResult>& outListResult ) = 0;
     };

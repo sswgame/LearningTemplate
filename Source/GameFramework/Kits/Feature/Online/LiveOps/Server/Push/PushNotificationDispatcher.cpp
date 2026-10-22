@@ -24,6 +24,12 @@ namespace sw
                 return s_table;
             }
 
+            static const hashed_string& getTopicClaimTable()
+            {
+                static const hashed_string s_table{ "liveops_push" };
+                return s_table;
+            }
+
             /** @brief 계정의 기기 레코드를 모두 읽습니다. 한도보다 하나 더 읽어서 넘친 것도 보이게 합니다. */
             static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountID accountID, vector<ServiceRecord>& outListRecord )
             {
@@ -74,6 +80,41 @@ namespace sw
         PushNotificationDispatcher*    _pDispatcher;
         AccountID                      _accountID;
         int64                          _nowMs;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 토픽 알림의 표를 "없어야 한다" 조건으로 쓰는 작업입니다. 쓰면 이 서버가 보낼 차례이고, 이미 있으면(Conflict) 다른 서버가 보냈다. */
+    class PushTopicClaimWork final : public IServiceStoreWork
+    {
+    public:
+        PushTopicClaimWork( PushNotificationDispatcher* pDispatcher, string claimKey, string topic, const PushNotificationMessage& message, int64 nowMs )
+            : _claimKey{ std::move( claimKey ) }
+            , _topic{ std::move( topic ) }
+            , _message{ message }
+            , _pDispatcher{ pDispatcher }
+            , _nowMs{ nowMs }
+            , _result{ ServiceStoreResult::Unavailable }
+        {
+        }
+
+        void run( IServiceStoreConnection& connection ) override
+        {
+            ServiceTransaction transaction;
+            transaction.put( PushNotificationDispatcherInternal::getTopicClaimTable(), _claimKey, vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+            _result = connection.commit( transaction );
+        }
+
+        void complete() override { _pDispatcher->applyTopicClaim( _topic, _message, _result, _nowMs ); }
+
+    private:
+        string                      _claimKey;
+        string                      _topic;
+        PushNotificationMessage     _message;
+        PushNotificationDispatcher* _pDispatcher;
+        int64                       _nowMs;
+        ServiceStoreResult          _result;
     };
 } // namespace sw
 
@@ -221,6 +262,49 @@ namespace sw
         return true;
     }
 
+    int32 PushNotificationDispatcher::notifyTopic( string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    {
+        int32 handedCount = 0;
+        for ( IPushNotificationProvider* pProvider : _listProvider )
+        {
+            if ( pProvider->supportsTopics() == false )
+                continue;
+            const uint64 deliveryID      = _nextDeliveryID++;
+            Delivery&    delivery        = _mapDelivery[deliveryID];
+            delivery._message            = message;
+            delivery._topic              = string( topic );
+            delivery._device._providerID = string( pProvider->getProviderID() );
+            delivery._nextAttemptMs      = nowMs;
+            delivery._bTopic             = SW_TRUE;
+            sendDelivery( deliveryID, delivery, nowMs );
+            ++handedCount;
+        }
+        return handedCount;
+    }
+
+    void PushNotificationDispatcher::notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    {
+        if ( _pStore == nullptr || ServiceTransaction::isValidKey( claimKey ) == false )
+        {
+            ++_stats._topicSkippedCount;
+            return;
+        }
+        ++_pendingWorkCount;
+        _pStore->submit( make_unique<PushTopicClaimWork>( this, string( claimKey ), string( topic ), message, nowMs ) );
+    }
+
+    void PushNotificationDispatcher::applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, int64 nowMs )
+    {
+        --_pendingWorkCount;
+        if ( result != ServiceStoreResult::Ok )
+        {
+            ++_stats._topicSkippedCount; // Conflict 는 다른 서버가 이미 보냈다는 뜻이다
+            return;
+        }
+        ++_stats._topicClaimedCount;
+        (void)notifyTopic( topic, message, nowMs );
+    }
+
     void PushNotificationDispatcher::applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs )
     {
         --_pendingWorkCount;
@@ -234,21 +318,26 @@ namespace sw
             delivery._device        = std::move( device );
             delivery._accountID     = accountID;
             delivery._nextAttemptMs = nowMs;
-            sendDelivery( deliveryID, delivery );
+            sendDelivery( deliveryID, delivery, nowMs );
         }
     }
 
-    void PushNotificationDispatcher::sendDelivery( uint64 deliveryID, Delivery& delivery )
+    void PushNotificationDispatcher::sendDelivery( uint64 deliveryID, Delivery& delivery, int64 nowMs )
     {
         delivery._bInFlight = SW_TRUE;
         ++_stats._sentCount;
-        findProvider( delivery._device._providerID )->send( deliveryID, delivery._device._token, delivery._device._locale, delivery._message );
+        IPushNotificationProvider* pProvider = findProvider( delivery._device._providerID );
+        if ( delivery._bTopic != SW_FALSE )
+            pProvider->sendToTopic( deliveryID, delivery._topic, delivery._message, nowMs );
+        else
+            pProvider->send( deliveryID, delivery._device._token, delivery._device._locale, delivery._message, nowMs );
     }
 
     void PushNotificationDispatcher::update( int64 nowMs )
     {
         for ( IPushNotificationProvider* pProvider : _listProvider )
         {
+            pProvider->update( nowMs );
             _listResultScratch.clear();
             (void)pProvider->pollResults( _listResultScratch );
             for ( const PushDeliveryResult& result : _listResultScratch )
@@ -269,7 +358,8 @@ namespace sw
                     case PushDeliveryStatus::InvalidToken:
                     {
                         ++_stats._invalidTokenCount;
-                        unregisterDevice( delivery._accountID, delivery._device._providerID, delivery._device._token, 0 ); // 요청 태그 0은 완료가 없다
+                        if ( delivery._bTopic == SW_FALSE )
+                            unregisterDevice( delivery._accountID, delivery._device._providerID, delivery._device._token, 0 ); // 요청 태그 0은 완료가 없다
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }
@@ -288,7 +378,8 @@ namespace sw
                     case PushDeliveryStatus::Rejected:
                     {
                         ++_stats._droppedCount;
-                        SW_LOG_WARNING( "PushDispatcher: provider '%#' rejected a notification for account %#", delivery._device._providerID.c_str(), delivery._accountID );
+                        SW_LOG_WARNING( "PushDispatcher: provider '%#' rejected a notification (account %#, topic '%#')", delivery._device._providerID.c_str(), delivery._accountID,
+                                        delivery._topic.c_str() );
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }
@@ -298,7 +389,7 @@ namespace sw
         for ( auto& [deliveryID, delivery] : _mapDelivery ) // 백오프가 끝난 배달을 다시 보낸다
         {
             if ( delivery._bInFlight == SW_FALSE && nowMs >= delivery._nextAttemptMs )
-                sendDelivery( deliveryID, delivery );
+                sendDelivery( deliveryID, delivery, nowMs );
         }
     }
 

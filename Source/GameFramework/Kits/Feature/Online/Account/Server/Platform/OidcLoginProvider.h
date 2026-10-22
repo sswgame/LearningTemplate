@@ -10,8 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Security/JSONWebToken.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 

@@ -15,6 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveEventRules.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
 
+#include <algorithm>
 #include <string>
 
 namespace sw
@@ -136,6 +137,8 @@ namespace sw
 {
     LiveOpsService::LiveOpsService()
         : _listEvent{}
+        , _listOpenWindow{}
+        , _listStarted{}
         , _completionBuffer{}
         , _dependencies{}
         , _lastReloadMs{ 0 }
@@ -201,8 +204,52 @@ namespace sw
         return bChanged;
     }
 
+    void LiveOpsService::takeStartedEvents( vector<LiveEventStart>& outListStart )
+    {
+        for ( LiveEventStart& start : _listStarted )
+        {
+            outListStart.push_back( std::move( start ) );
+        }
+        _listStarted.clear();
+    }
+
+    void LiveOpsService::collectStarts( int64 nowMs )
+    {
+        vector<OpenWindow> listOpen;
+        if ( isKillSwitchOff() == false )
+        {
+            for ( const LiveEventDefinition& definition : _listEvent )
+            {
+                int64 windowStartMs = 0;
+                int64 windowEndMs   = 0;
+                if ( LiveEventRules::findOpenWindow( definition, nowMs, windowStartMs, windowEndMs ) == false )
+                    continue;
+                listOpen.push_back( OpenWindow{ definition._eventID, windowEndMs } );
+                const auto isSameWindow = [&definition, windowEndMs]( const OpenWindow& window )
+                { return window._eventID == definition._eventID && window._windowEndMs == windowEndMs; };
+                const bool bKnown      = std::any_of( _listOpenWindow.begin(), _listOpenWindow.end(), isSameWindow );
+                const bool bJustOpened = nowMs - windowStartMs <= LiveOpsPush::kStartGraceMs;
+                if ( bKnown || bJustOpened == false )
+                    continue;
+                PushNotificationMessage message;
+                (void)findParameter( definition._eventID, LiveOpsPush::kTitleParameter, message._titleKey );
+                (void)findParameter( definition._eventID, LiveOpsPush::kBodyParameter, message._bodyKey );
+                (void)findParameter( definition._eventID, LiveOpsPush::kLinkParameter, message._deepLink );
+                if ( message._titleKey.empty() && message._bodyKey.empty() )
+                    continue; // 시작 푸시를 달지 않은 이벤트이다
+                LiveEventStart& start = _listStarted.emplace_back();
+                start._message        = std::move( message );
+                start._listRegion     = definition._listRegion;
+                start._eventID        = definition._eventID;
+                start._windowEndMs    = windowEndMs;
+            }
+        }
+        _listOpenWindow = std::move( listOpen );
+    }
+
     void LiveOpsService::markIfChanged( int64 nowMs )
     {
+        collectStarts( nowMs );
         const uint64 hash = computeOpenHash( nowMs );
         if ( hash == _lastOpenHash )
             return;

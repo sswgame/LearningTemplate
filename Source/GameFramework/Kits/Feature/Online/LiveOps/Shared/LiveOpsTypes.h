@@ -174,6 +174,27 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 라이브 이벤트 시작 푸시의 약속입니다(OnlineKits G5). 서버와 앱이 같은 이름을 씁니다.
+     * @details 이벤트 매개변수에 `push.title` · `push.body`(현지화 키, 원격 설정 `@키` 가능)가 있으면 이벤트가 열릴 때 지역 토픽으로 한 번 보낸다. `push.link` 는 앱이 열 화면이다.
+     *          토픽은 지역마다 `liveops.<지역>`, 지역 제한이 없는 이벤트는 `liveops.all` 이다 — 앱이 자기 지역의 토픽을 구독한다. 문구는 현지화 키라 기기가 자기 언어로 풀어서
+     *          언어 토픽은 따로 두지 않는다. 계정마다 보내지 않으므로 계정 도배 제한은 적용하지 않는다.
+     */
+    struct LiveOpsPush
+    {
+        static constexpr const utf8* kTitleParameter = "push.title";
+        static constexpr const utf8* kBodyParameter  = "push.body";
+        static constexpr const utf8* kLinkParameter  = "push.link";
+        static constexpr const utf8* kAllTopic       = "liveops.all";
+        static constexpr const utf8* kTopicPrefix    = "liveops.";
+        static constexpr int64       kStartGraceMs   = 600000; ///< 열린 지 이만큼 안에 처음 본 이벤트만 시작으로 알린다(서버가 다시 떠서 옛 이벤트를 다시 알리지 않는다)
+
+        static string makeRegionTopic( string_view region ) { return string( kTopicPrefix ) + string( region ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 라이브 운영의 상한 값들입니다. */
     struct LiveOpsLimit
     {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
+#include "GameFramework/Base/Online/Security/JSONWebToken.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

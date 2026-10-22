@@ -21,7 +21,7 @@ namespace sw
      * @class JSONWebToken
      * @brief 읽은 JWT 하나입니다. 헤더와 본문 JSON, 서명 입력, 서명을 가집니다.
      */
-    class SW_KIT_SERVER_API JSONWebToken
+    class SW_GF_API JSONWebToken
     {
     public:
         /** @brief @p payloadJSON 을 본문으로 서명한 압축 JWT 를 만듭니다. 헤더에는 `alg`, `typ`, `kid` 를 넣습니다. */
@@ -63,7 +63,7 @@ namespace sw
      * @class JwksKeyCache
      * @brief 발급자 하나의 JWKS 키(kid에서 공개 키로 가는 맵) 캐시입니다. 받은 시각과 다시 받을 시각을 보관합니다.
      */
-    class SW_KIT_SERVER_API JwksKeyCache
+    class SW_GF_API JwksKeyCache
     {
     public:
         /** @brief 공개 키를 JWK(JSON 객체 문자열)로 씁니다. 테스트의 가짜 JWKS 에 씁니다. */
