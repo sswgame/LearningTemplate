@@ -33,6 +33,27 @@ namespace sw::editor
             {   "exclude_paths", "string[]",          "",                                                                                                                  "들어 있으면 빼는 경로 조각"},
         };
 
+        /** @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식입니다. */
+        struct TextureImportFormatName
+        {
+            string_view         _dxgiName;
+            string_view         _shortName;
+            TextureImportFormat _format;
+        };
+        static constexpr TextureImportFormatName kArrTextureImportFormatName[] = {
+            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1},
+            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2},
+            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3},
+            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4},
+            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5},
+            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H},
+            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7},
+            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8},
+            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8},
+            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float},
+            {          "R8_UNORM",      "r8",                TextureImportFormat::R8},
+        };
+
         /** @brief 채널 순서 이름을 읽습니다. 모르는 이름이면 false 입니다(기본 RGBA 로 조용히 가지 않는다). */
         [[nodiscard]] bool parseSwizzleInternal( string_view swizzleStr, TextureSwizzle& outSwizzle )
         {
@@ -187,11 +208,10 @@ namespace sw::editor
 
         if ( jsonValue.has( "format" ) )
         {
-            inoutRule._format = jsonValue.get( "format" ).asString();
-            TextureImportFormat format{};
-            if ( TextureImportFormatUtil::parse( inoutRule._format, format ) == false )
+            const string formatName = jsonValue.get( "format" ).asString();
+            if ( TextureImportFormatUtil::parse( formatName, inoutRule._format ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown format '%#' (see TextureImportConfig key doc)", context, inoutRule._format.c_str() );
+                SW_LOG_ERROR( "%#: unknown format '%#' (see TextureImportConfig key doc)", context, formatName.c_str() );
                 return false;
             }
         }
@@ -227,26 +247,7 @@ namespace sw::editor
 
     bool TextureImportFormatUtil::parse( string_view name, TextureImportFormat& outFormat )
     {
-        struct FormatName
-        {
-            string_view         _dxgiName;
-            string_view         _shortName;
-            TextureImportFormat _format;
-        };
-        static constexpr FormatName kArrFormatName[] = {
-            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1},
-            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2},
-            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3},
-            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4},
-            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5},
-            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H},
-            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7},
-            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8},
-            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8},
-            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float},
-            {          "R8_UNORM",      "r8",                TextureImportFormat::R8},
-        };
-        for ( const FormatName& entry : kArrFormatName )
+        for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
         {
             if ( name == entry._dxgiName || name == entry._shortName )
             {
@@ -255,6 +256,17 @@ namespace sw::editor
             }
         }
         return false;
+    }
+
+    string_view TextureImportFormatUtil::getName( TextureImportFormat format )
+    {
+        for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
+        {
+            if ( entry._format == format )
+                return entry._dxgiName;
+        }
+        SW_ASSERT( false ); // 표는 열거자를 모두 담는다
+        return {};
     }
 
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )

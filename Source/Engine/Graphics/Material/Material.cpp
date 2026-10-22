@@ -406,8 +406,8 @@ namespace sw
             if ( ShaderReflectionLibrary::getOrReflect( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
                 reflection = std::move( vertexReflection );
         }
-        syncPropertiesFromReflection( reflection );
-        return _elementStride != 0;
+        const bool bAllPacked = syncPropertiesFromReflection( reflection );
+        return bAllPacked && _elementStride != 0;
     }
 
     bool Material::isShaderLayoutSynced( RHIBackend backend ) const
@@ -464,9 +464,9 @@ namespace sw
         // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
         {
-            SW_LOG_WARNING( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
-                            _desc._name.c_str() );
-            return true;
+            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
+                          _desc._name.c_str() );
+            return false;
         }
 
         if ( _data._listProperty.empty() )
@@ -561,6 +561,24 @@ namespace sw
             }
             prop._offset = var._offset;
             prop._size   = var._size;
+        }
+        // 셰이더 구조체엔 있는데 머티리얼에 없는 필드는 값을 적은 사람이 없다 — 0 으로 채우지 않고 알린다(텍스처 인덱스의 0 은 Vulkan 의 첫 실제 텍스처다).
+        for ( const ShaderVariableInfo& var : schema._listVariable )
+        {
+            bool bListed{ false };
+            for ( const MaterialProperty& prop : _data._listProperty )
+            {
+                if ( prop._name == var._name )
+                {
+                    bListed = true;
+                    break;
+                }
+            }
+            if ( bListed == false )
+            {
+                SW_LOG_ERROR( "Material '%#' does not list shader field '%#' - add it to the .material file", _desc._name.c_str(), var._name.c_str() );
+                bAllPacked = false;
+            }
         }
         return bAllPacked;
     }

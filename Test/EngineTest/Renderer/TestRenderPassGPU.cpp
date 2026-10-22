@@ -4210,6 +4210,8 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
         "  <_properties>"
         "    <item name=\"roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\" min=\"0.0\" max=\"1.0\"/>"
         "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"0 0 0 1\"/>"
+        "    <item name=\"albedoMap\" type=\"Texture2D\"/>"
+        "    <item name=\"metallic\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.0\" min=\"0.0\" max=\"1.0\"/>"
         "  </_properties>"
         "</MaterialDesc>";
     const auto readFloat = []( const sw::vector<uint8>& bytes, size_t offset )

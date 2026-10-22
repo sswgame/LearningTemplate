@@ -40,73 +40,37 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 규칙의 `format` 이름을 DXGI 형식으로 바꿉니다. 이름 표는 `TextureImportFormatUtil` 하나이고, 모르는 이름이면 false 입니다(BC7 로 가지 않는다).
+         * @brief 규칙의 형식을 DXGI 형식으로 바꿉니다. 규칙은 이미 푼 형식(`TextureImportFormat`)을 들므로 실패가 없다 — 모르는 이름은 설정 로드가 거절했다.
          * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
          */
-        [[nodiscard]] bool resolveFormatInternal( string_view formatStr, bool bSrgb, DXGI_FORMAT& outFormat )
+        [[nodiscard]] DXGI_FORMAT resolveFormatInternal( TextureImportFormat format, bool bSrgb )
         {
-            TextureImportFormat format{};
-            if ( TextureImportFormatUtil::parse( formatStr, format ) == false )
-                return false;
             switch ( format )
             {
                 case TextureImportFormat::BC1:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
                 case TextureImportFormat::BC2:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
                 case TextureImportFormat::BC3:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
                 case TextureImportFormat::BC4:
-                {
-                    outFormat = DXGI_FORMAT_BC4_UNORM;
-                    return true;
-                }
+                    return DXGI_FORMAT_BC4_UNORM;
                 case TextureImportFormat::BC5:
-                {
-                    outFormat = DXGI_FORMAT_BC5_UNORM;
-                    return true;
-                }
+                    return DXGI_FORMAT_BC5_UNORM;
                 case TextureImportFormat::BC6H:
-                {
-                    outFormat = DXGI_FORMAT_BC6H_UF16;
-                    return true;
-                }
+                    return DXGI_FORMAT_BC6H_UF16;
                 case TextureImportFormat::BC7:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
                 case TextureImportFormat::B8G8R8A8:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
                 case TextureImportFormat::R8G8B8A8:
-                {
-                    outFormat = bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-                    return true;
-                }
+                    return bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
                 case TextureImportFormat::R16G16B16A16Float:
-                {
-                    outFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-                    return true;
-                }
+                    return DXGI_FORMAT_R16G16B16A16_FLOAT;
                 case TextureImportFormat::R8:
-                {
-                    outFormat = DXGI_FORMAT_R8_UNORM;
-                    return true;
-                }
+                    return DXGI_FORMAT_R8_UNORM;
             }
-            return false;
+            return DXGI_FORMAT_UNKNOWN;
         }
 
         /**
@@ -313,10 +277,10 @@ namespace sw::editor
          */
         [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
         {
-            DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
-            if ( resolveFormatInternal( rule._format, false, targetFormat ) == false || ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT ) )
+            const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
+            if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
             {
-                SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule '%#'): %#", rule._format.c_str(), sourcePath );
+                SW_LOG_ERROR( "HDR source needs format bc6h or rgba16f (rule format '%#'): %#", TextureImportFormatUtil::getName( rule._format ), sourcePath );
                 return false;
             }
             const wstring         wSourcePath = StringUtil::utf8ToUtf16( string( sourcePath ).c_str() );
@@ -478,12 +442,7 @@ namespace sw::editor
 
         applyChannelManipulations( rawImage, rule, totalPixels );
 
-        DXGI_FORMAT targetFormat = DXGI_FORMAT_UNKNOWN;
-        if ( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE, targetFormat ) == false )
-        {
-            SW_LOG_ERROR( "Unknown texture format '%#' (rule '%#'): %#", rule._format.c_str(), rule._name.c_str(), sourcePath );
-            return false;
-        }
+        const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
 
         // 2) DirectXTex 기본 Image 구성
         DirectX::Image baseImage{};
@@ -588,11 +547,8 @@ namespace sw::editor
             return 0;
 
         // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
-        // 모르는 형식은 임포트도 실패하므로 해시를 만들지 않는다(0 = 읽지 못함과 같은 뜻).
-        DXGI_FORMAT resolvedFormat = DXGI_FORMAT_UNKNOWN;
-        if ( resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE, resolvedFormat ) == false )
-            return 0;
-        const SwizzleLayout&                   layout = swizzleLayoutInternal( rule._swizzle );
+        const DXGI_FORMAT                      resolvedFormat = resolveFormatInternal( rule._format, rule._bSrgb == SW_TRUE );
+        const SwizzleLayout&                   layout         = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",
                                TextureImporterInternal::kImporterVersion,
