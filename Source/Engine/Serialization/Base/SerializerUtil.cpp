@@ -20,45 +20,24 @@
 namespace sw
 {
     bool runVersionedDeserialize( uint32& outVersion, const MutableObjectAddress instance, const TypeInfo& typeInfo,
-                                  uint32          currentVersion,
-                                  const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
-                                  SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                  uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                   const SoftDeserializeFn& softDeserialize )
     {
         if ( softDeserialize.isBound() == false )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
-        ScopedScratchInstance     scratchLegacy( pLegacyTypeInfo );
-        void* const               pLegacyPtr = scratchLegacy.get();
-
         if ( versionSource == SchemaVersionSource::Payload )
             outVersion = 0;
-
-        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다. migrate 가 옛 필드를 그대로 볼 수 있게 하려는 것이다.
-        if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
-        {
-            uint32 legacyVersion{ 0 };
-            if ( pLegacyPtr == nullptr || softDeserialize( MutableObjectAddress{ pLegacyPtr }, *pLegacyTypeInfo, listOrphan, legacyVersion ) == false )
-                return false;
-            if ( versionSource == SchemaVersionSource::Payload )
-                outVersion = legacyVersion;
-        }
 
         uint32 softVersion{ 0 };
         if ( softDeserialize( instance, typeInfo, listOrphan, softVersion ) == false )
             return false;
-
-        // 레거시를 읽지 않았거나(그러면 이쪽이 유일한 출처다) 이번에 실제로 버전이 나왔으면 그것을 쓴다.
-        if ( versionSource == SchemaVersionSource::Payload && ( pLegacyPtr == nullptr || softVersion != 0 ) )
+        if ( versionSource == SchemaVersionSource::Payload )
             outVersion = softVersion;
 
-        // 포맷마다 갈리는 한 줄이다. 텍스트는 orphan 을 버리고 통과시키고, 바이너리는 이관 함수 없이는 거절한다(`SchemaOrphanPolicy` 의 계약).
-        const bool bOrphanBlocks = ( orphanPolicy == SchemaOrphanPolicy::Reject ) && ( listOrphan.empty() == false );
-        const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
-
-        return runSchemaMigrateStep( outVersion, currentVersion, instance.get(), typeInfo, pLegacyPtr, pLegacyTypeInfo,
-                                     listOrphan, bNeedsMigrate, context );
+        // 포맷마다 갈리는 한 줄은 orphan 정책이다. 텍스트는 orphan 을 버리고 통과시키고, 바이너리는 거절한다(`SchemaOrphanPolicy` 의 계약).
+        return finishVersionedRead( outVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
     }
 
     namespace

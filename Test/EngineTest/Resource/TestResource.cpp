@@ -168,7 +168,7 @@ SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
 }
 
 /**
- * @brief [ResourceTest] formatVersion=0 passthrough; legacy unmigrated XML은 거부
+ * @brief [ResourceTest] 현재 판(formatVersion=0)과 정확히 같은 XML 만 받는다; 다른 판은 거부
  */
 SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
 {
@@ -187,11 +187,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     sw::XMLNode root = doc.getRoot( "MaterialDesc" );
     SW_ASSERT_TRUE( root.isValid() );
 
-    sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root, &source ) );
-    SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, source );
-    SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
-    SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
+    SW_EXPECT_TRUE( sw::AssetXMLFormat::isCurrentXMLVersion( sw::Material::kAssetType, root ) );
+    SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, sw::AssetXMLFormat::readXMLVersion( root ) );
 
     const sw::string tempPath = test::makeTempPath( "test_current_material.material" );
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( tempPath, reinterpret_cast<const uint8*>( kCurrent ),
@@ -990,7 +987,7 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         sw::XMLNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::Material::kAssetType, doc, root ),
+        SW_EXPECT_FALSE_MSG( sw::AssetXMLFormat::isCurrentXMLVersion( sw::Material::kAssetType, root ),
                              pVersion );
     }
 }

@@ -81,13 +81,11 @@ namespace sw
      *                   `Payload` 면 0 으로 들어와 이 함수가 채웁니다.
      * @param softDeserialize (대상, 타입, orphan 수집함, 버전 출력)을 받아 성공 여부를 반환합니다.
      *                        `Stream` 포맷은 버전 출력을 건드리지 않습니다.
-     * @details 처리 순서는 다음과 같다. 레거시 스테이징 인스턴스를 준비하고, (있으면) 레거시로 soft 역직렬화한 뒤,
-     *          현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `runSchemaMigrateStep` 을 부른다.
+     * @details 처리 순서는 다음과 같다. 현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `finishVersionedRead` 를 부른다.
+     *          판이 현재 판과 다르면 이관하지 않고 실패한다.
      */
     SW_API bool runVersionedDeserialize( uint32& outVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
-                                         uint32          currentVersion,
-                                         const TypeInfo* pLegacyTypeInfo, const SerializeContext& context,
-                                         SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                         uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
                                          const SoftDeserializeFn& softDeserialize );
 
     /** @brief 직렬화기 TU 들이 함께 쓰는 도우미입니다. */

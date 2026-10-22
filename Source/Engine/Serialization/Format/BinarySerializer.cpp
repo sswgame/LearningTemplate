@@ -520,8 +520,7 @@ namespace sw
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                 uint32 currentVersion, const TypeInfo* pLegacyTypeInfo,
-                                                 const SerializeContext& context )
+                                                 uint32 currentVersion, const SerializeContext& context )
     {
         BinaryStreamReader reader( pData, dataSize );
         if ( reader.read( outVersion ) == false )
@@ -538,7 +537,7 @@ namespace sw
         const bool               bIgnoreOrphan = context.skipsUnknownProperties() && context.skipsUnreadableProperties();
         const SchemaOrphanPolicy orphanPolicy  = bIgnoreOrphan ? SchemaOrphanPolicy::Ignore : SchemaOrphanPolicy::Reject;
         return runVersionedDeserialize(
-            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion, pLegacyTypeInfo, context,
+            outVersion, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Stream, orphanPolicy,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( const MutableObjectAddress target, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
@@ -616,13 +615,12 @@ namespace sw
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                 uint32          currentVersion,
-                                                 const TypeInfo* pLegacyTypeInfo, const SerializeContext& context )
+                                                 uint32 currentVersion, const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureVersionedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, pLegacyTypeInfo, context );
+            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, context );
         } );
     }
 

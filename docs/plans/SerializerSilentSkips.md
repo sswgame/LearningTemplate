@@ -25,7 +25,7 @@
   다른 객체의 필드인 객체(구조체 칸, 소유 포인터 본문)는 `BinarySerializer::deserializeNested` 로 읽고, 맨 바깥을 읽는 `deserialize` 는 bool 그대로입니다 — 바깥에 이어 읽을 읽기가 없어 두 실패를 가를 쓸 곳이 없고, 부르는 곳이 50 곳이 넘습니다.
   태그 스트림 안에서는 페이로드 크기를 알므로 깨진 스트림도 그 칸의 `FieldFailed` 이고, 소유 포인터 본문을 못 읽은 것은 예전처럼 원소의 `StreamBroken` 입니다.
 - 기록 타입이 다른 필드의 이관은 프로퍼티 단위(`tryCoercePropertyBinary`, `SchemaMigrate.h`)로 합니다. 태그 스트림 읽기가 `getRawPtr` 로 값 주소를 꺼내 넘기던 때는 비트필드가 그 바이트 주소여서 bool 이 같은 바이트의 다른 비트필드를 덮었습니다(S4 에서 읽어 확인).
-- 스키마 이관의 점 경로(`resolvePropertyPath`)는 값 주소를 내주지 않고 프로퍼티와 그 주인 객체(`ResolvedPropertyPath`)를 내줍니다. orphan 적용(`applyOrphanTo` · `applyOrphanToPath`) · `movePropertyValue` · `setPropertyFromText` 는 프로퍼티 단위로 써서 비트필드는 그 비트만 씁니다(S4).
+- 프로퍼티 단위 쓰기(`tryCoercePropertyBinary` · `applyPropertyTextCoerced`)는 비트필드에 그 비트만 씁니다(S4). 스키마 이관 계층(점 경로 · orphan 적용 · `movePropertyValue`)은 2026-10-23 첫 출시 전 규칙으로 지웠다.
   예전에는 점 경로가 비트필드에도 그 바이트 주소를 값 주소로 줘, 같은 바이트의 다른 플래그를 덮었습니다.
 
 ## 2. 단위
@@ -55,9 +55,8 @@
   - 맨 바깥 소프트 읽기(`deserializeSoft`)에서 금지된 필드와 담지 · 되돌리지 못한 필드는 `NotParsed` 이던 것이 이제 `Rejected` 입니다(XML · JSON 과 같습니다). 스트림이 깨진 것만 `NotParsed` 입니다.
   - 기록 타입이 다른 비트필드(옛 빌드의 int32 등)는 이관이 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
   - 이관(`tryCoerceBinaryPayload`)이 구조체 대상 안에서 금지된 필드를 만나면 다른 해석(문자열 · 재해석)을 더 해 보지 않고 객체째 실패입니다.
-  - 스키마 이관의 orphan 적용(`applyOrphanTo` · `applyOrphanToPath`)과 diff 적용 · 값 복사는 bool 계약 그대로라 객체째 실패도 그 적용의 실패입니다.
-  - 스키마 이관이 비트필드에 orphan 을 적용하거나(`applyOrphanTo` · `applyOrphanToPath`) 텍스트를 쓰면(`setPropertyFromText` · `movePropertyValue`) 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
-    같은 타입 orphan 의 바이너리 적용은 `deserializeValueBinary` 대신 `SerializerUtil::applyPropertyBinary` 로 해 끝 검사도 그것이 합니다. 값 주소가 없는(접근자만 있는) 원본을 옮기면 빈 글로 이어 쓰지 않고 실패입니다.
+  - diff 적용 · 값 복사는 bool 계약 그대로라 객체째 실패도 그 적용의 실패입니다.
+  - 비트필드에 텍스트를 쓰면(`applyPropertyTextCoerced`) 그 비트만 씁니다. 예전에는 같은 바이트의 다른 비트필드가 지워졌습니다.
 - 근본 원인은 `PropertyInfo::getRawPtr` 가 비트필드에도 그 바이트 주소를 주는 것이었습니다. 이제 비트필드는 nullptr 이고(`[[nodiscard]]`), 비트필드는 `getValue` · `setValue` 로만 읽고 씁니다(S4, 2026-10-22).
   부르는 곳 전부(직렬화 · UI 바인딩 · 애니메이션 · 스타일 · 인스펙터 · 검증 · 보간)를 읽어, 비트필드를 먼저 거르거나 nullptr 을 실패로 받는지 확인했습니다. 걸러지지 않던 곳은 컴포넌트 기본값 패치(`ComponentDefaults::applyPatch`) 하나였습니다.
   그곳은 이제 `applyPropertyTextCoerced`(`SchemaMigrate.h`, 프로퍼티 단위 텍스트 쓰기)로 씁니다. 예전에는 기본값 XML 이 비트필드를 주면 같은 바이트의 다른 플래그가 지워졌습니다.

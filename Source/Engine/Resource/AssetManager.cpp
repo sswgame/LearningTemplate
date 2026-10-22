@@ -36,7 +36,6 @@ namespace sw
 {
     AssetManager::AssetManager()
         : _assetDatabase{}
-        , _assetFormatRegistry{}
         , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<ResourcePakManager>() }
         , _listBuiltInAssetCache{}
@@ -74,7 +73,6 @@ namespace sw
             return false;
         }
 
-        _assetFormatRegistry.ensureBuiltins();
         return true;
     }
 

@@ -10,7 +10,7 @@
  *          회로를 만들 때(`GimmickCircuit::populate`)와 종류를 등록할 때(`GimmickNodeRegistry::registerKind`) 이 상수로 막으므로, 만들어진 회로의 상태는 늘 B 로 쓸 수 있다.
  *
  *          구조가 바뀔 때의 규칙은 계획 문서 2.6 이다. 필드 추가는 선언한 기본값, 이름 변경은 `PROPERTY( Alias = "old" )`, 값 계산이 필요한 변환은
- *          소유 타입(`sw::GimmickCircuitComponent`)에 `SW_SCHEMA_MIGRATION` 을 등록한다. 지금은 변환할 출시 데이터가 없어 등록이 없다.
+ *          저장소의 데이터를 다시 쓴다(이관 함수는 없다, 결정 기록 5-4).
  */
 #pragma once
 #include "Core/Common/Macros.h"

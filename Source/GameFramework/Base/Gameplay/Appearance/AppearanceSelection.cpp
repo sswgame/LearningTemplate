@@ -622,7 +622,7 @@ namespace sw
         }
         BitReader    reader( bytes.data(), static_cast<int32>( payloadSize ) );
         const uint32 version = reader.readBits( Internal::kVersionBits );
-        if ( version == 0 || version > kVersion )
+        if ( version != kVersion )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "unsupported share code version";

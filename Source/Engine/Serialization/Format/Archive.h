@@ -253,13 +253,13 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 3) 버전 관리 객체 직렬화 (BinarySerializer + SchemaMigrate 연계)
+        // 3) 버전 관리 객체 직렬화 (BinarySerializer, 판이 정확히 같을 때만 읽음)
         // ------------------------------------------------------------------------------
         /** @brief 버전 헤더를 붙여 객체를 직렬화합니다. */
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
-        /** @brief 버전 헤더를 검증하고 필요하면 이관하며 객체를 역직렬화합니다. */
+        /** @brief 버전 헤더가 @p currentVersion 과 정확히 같을 때만 객체를 역직렬화합니다(이관하지 않는다). */
         [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                                       uint32 currentVersion = 0, const TypeInfo* pLegacyTypeInfo = nullptr );
+                                                       uint32 currentVersion = 0 );
 
         template <typename T>
         [[nodiscard]] bool serializeVersionedObject( uint32 version, const T& instance )
@@ -268,9 +268,9 @@ namespace sw
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0, const TypeInfo* pLegacyTypeInfo = nullptr )
+        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0 )
         {
-            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion, pLegacyTypeInfo );
+            return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion );
         }
 
         // ------------------------------------------------------------------------------

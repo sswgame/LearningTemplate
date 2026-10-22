@@ -1,8 +1,9 @@
 /**
  * @file AssetFormat.h
- * @brief XML 에셋 스키마 판의 N→N+1 이관 레지스트리와 저작 소스 · 쿠킹본 경로 규칙입니다. 둘 다 에셋 종류 표(`AssetTypeRegistry`)에서 파생합니다.
- * @details 판은 루트 속성 `formatVersion` 에 적습니다(XML 선언이 아닙니다). 없으면 세대 0(현재 기준)입니다.
- *          스키마가 깨지면 그 종류의 정의(`AssetTypeDef::_formatVersion`)를 올리고 registerXMLMigrator 로 N→N+1 을 등록합니다 — 판 상수 표를 따로 두지 않는다.
+ * @brief XML 에셋 스키마 판의 정확 일치 검사와 저작 소스 · 쿠킹본 경로 규칙입니다. 둘 다 에셋 종류 표(`AssetTypeRegistry`)에서 파생합니다.
+ * @details 판은 루트 속성 `formatVersion` 에 적습니다(XML 선언이 아닙니다). 없으면 세대 0 입니다.
+ *          스키마가 깨지면 그 종류의 정의(`AssetTypeDef::_formatVersion`)를 올리고 저장소의 데이터를 다시 씁니다. 첫 출시 전이라 이관 함수도 옛 판 리더도 없고,
+ *          판이 다르면 읽지 않고 오류로 멈춥니다(`AssetXMLFormat::isCurrentXMLVersion`, 결정 기록 5-4).
  *          저작 기본 포맷은 XML 입니다. JSON 은 도구 · 설정을 주고받는 데 쓰고, JSON 접미사는 쿠킹 입력으로만 에셋 종류가 된다(`AssetTypeRegistry::isSuffixFormatAllowed`).
  *          Shipping 런타임은 쿠킹된 바이너리(PFB2 등)를 로드합니다.
  */
@@ -15,8 +16,6 @@
 
 namespace sw
 {
-    using XMLAssetMigrator = bool ( * )( XMLDocument& doc, XMLNode& root );
-
     /**
      * @brief 저작 소스 경로와 쿠킹본 경로 사이의 이름 규칙입니다. 로더(씬 · 프리팹)와 쿠커가 모두 여기를 지납니다.
      * @details 규칙은 종류 표(`AssetTypeRegistry`)의 접미사와 역할에서 나온다 — 씬 로더 · 씬 쿠커 · 프리팹 로더 · 프리팹 쿠커 · 팩 쿠커 · 에디터가 각자 확장자를
@@ -56,61 +55,26 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 에셋 종류별 N→N+1 migrator 레지스트리입니다. 키는 종류 이름(`AssetTypeDef::_name`)과 출발 판입니다.
-    class SW_API AssetFormatRegistry
+    /**
+     * @brief XML 에셋의 판(`formatVersion`) 읽기 · 쓰기와 정확 일치 검사입니다. 상태가 없어 서비스 없이 부를 수 있습니다.
+     * @details 판이 다르면 이관하지 않고 거절한다. 형식이 바뀌면 저장소의 데이터를 다시 쓰고 그 종류의 `AssetTypeDef::_formatVersion` 을 올린다.
+     */
+    class SW_API AssetXMLFormat
     {
     public:
         static constexpr auto kXMLAttrName = "formatVersion";
         /** @brief 태그가 없는 파일의 판(세대 0)입니다. */
         static constexpr AssetFormatVersion kUnversioned = 0;
 
-        /** @brief 빈 레지스트리로 만듭니다. */
-        AssetFormatRegistry() = default;
-
-        /** @brief 엔진 내장 N→N+1 migrator 를 등록합니다. 멱등입니다. 지금은 등록할 것이 없습니다. */
-        void ensureBuiltins();
-
-        /** @brief @p type 의 XML migrator(@p fromVersion → +1)를 등록합니다. */
-        void registerXMLMigrator( const AssetTypeDef& type, AssetFormatVersion fromVersion, XMLAssetMigrator migrator );
-
-        /** @brief 루트의 formatVersion 을 읽습니다. */
+        /** @brief 루트의 formatVersion 을 읽습니다. 태그가 없으면 `kUnversioned`, 읽지 못하거나 담기지 않으면 가장 큰 판입니다(어느 쪽이든 현재 판과 달라 거절됩니다). */
         static AssetFormatVersion readXMLVersion( XMLNode root );
-        /** @brief 루트에 formatVersion 을 씁니다(레지스트리 상태를 쓰지 않아 서비스 없이 부를 수 있습니다). */
+        /** @brief 루트에 formatVersion 을 씁니다. */
         static void writeXMLVersion( XMLNode root, AssetFormatVersion version );
 
         /**
-         * @brief 판을 추정합니다. `formatVersion` 이 없으면 세대 0 으로 봅니다.
+         * @brief 루트의 판이 @p type 의 현재 판(`AssetTypeDef::_formatVersion`)과 **같을 때만** true 입니다.
+         * @details 다르면(옛 판 · 새 판 · 태그 없음 · 읽을 수 없는 값) 파일 종류와 두 판을 적어 오류를 알리고 false 입니다. 범위로 받지 않는다.
          */
-        AssetFormatVersion inferXMLVersion( const AssetTypeDef& type, XMLNode root ) const;
-
-        /**
-         * @brief migrator 를 그 종류의 현재 판(`AssetTypeDef::_formatVersion`)까지 차례로 실행하고, 성공하면 `formatVersion` 을 찍습니다.
-         * @return 파일이 지원하는 것보다 새것이거나, 필요한 migrator 가 없거나 실패하면 false 입니다.
-         */
-        bool upgradeXML( const AssetTypeDef& type, XMLDocument& doc, XMLNode& root, AssetFormatVersion* pOutSourceVersion = nullptr );
-
-        /**
-         * @brief 엔진 서비스가 묶여 있으면 `AssetManager` 의 레지스트리로, 아니면(단독 도구 · 테스트) 내장 migrator 만 든 임시 레지스트리로 `upgradeXML` 을 부릅니다.
-         * @details 에셋 로더(씬 · 프리팹)는 이것을 부릅니다 — 서비스 없이 `getAssetManager()` 를 부르면 assert 입니다. 등록해 둔 migrator 는 서비스가
-         *          묶여 있을 때만 쓰이고, 지원하는 것보다 새 파일은 어느 쪽이든 거절합니다.
-         */
-        static bool upgradeXMLWithActiveRegistry( const AssetTypeDef& type, XMLDocument& doc, XMLNode& root );
-
-    private:
-        /// @brief (종류 이름, fromVersion) → migrator 조회 키입니다.
-        struct MigratorKey
-        {
-            string_view        _typeName;
-            AssetFormatVersion _fromVersion{ 0 };
-
-            /** @brief 두 키가 같으면 true 입니다. */
-            bool operator==( const MigratorKey& other ) const { return _fromVersion == other._fromVersion && _typeName == other._typeName; }
-
-            /** @brief 키의 해시입니다(`unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다). */
-            [[nodiscard]] uint64 computeHash() const { return HashUtil::computeStringHash64( _typeName, false, static_cast<uint64>( _fromVersion ) ); }
-        };
-
-        unordered_map<MigratorKey, XMLAssetMigrator> _mapMigrator;
-        bool                                         _bBuiltins{ false };
+        [[nodiscard]] static bool isCurrentXMLVersion( const AssetTypeDef& type, XMLNode root );
     };
 } // namespace sw
