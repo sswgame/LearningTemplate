@@ -34,11 +34,13 @@ namespace sw
          * @param instigator 피해를 낸 쪽(쏘거나 휘두른 오브젝트). 이벤트에 그대로 실린다. 모르면 무효 핸들
          */
         void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
+        /** @brief 근접 판정의 맞음(`MeleeHitWindowUtil::sweep`)을 피해로 바꿉니다. 피해는 기본 피해 × 히트 존 배율을 반올림한 값이고 때린 쪽은 맞음의 공격자입니다. */
+        void onHitReceived( const HitInfo& hit ) override;
         void heal( int32 amount );
 
         /**
          * @brief HP 가 깎일 때 호출할 델리게이트를 등록합니다(언리얼 `OnTakeAnyDamage` 처럼 액터에 붙는 멀티캐스트입니다).
-         * @details 피해는 게임 스레드에서 적용된다. 틱 중의 피해는 틱 직후(같은 프레임)로 미뤄지고, 겹침 전달과 게임 코드도 게임 스레드에서 돈다.
+         * @details 피해는 게임 스레드에서 적용된다. 틱 중의 피해는 틱 직후(같은 프레임)로 미뤄지고, 근접 판정의 전달과 게임 코드도 게임 스레드에서 돈다.
          *          그래서 구독자는 같은 프레임에 받는다. 구독은 저장되지 않으므로, 컴포넌트를 다시 만들면(되돌리기, 핫 리로드) 다시 등록해야 한다.
          * @return 해제할 때 쓰는 핸들
          */

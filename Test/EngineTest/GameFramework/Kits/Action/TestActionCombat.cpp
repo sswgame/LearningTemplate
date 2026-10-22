@@ -490,10 +490,10 @@ SW_TEST_CASE( ActionCombatTest, PiercingProjectilePassesThroughAsManyUnitsAsItsP
 }
 
 /**
- * @brief [ActionCombatTest] 공격 판정은 휘두르는 동안 닿은 유닛마다 한 번 피해를 준다 — 이미 서 있던 유닛도, 들어온 유닛도, 공격자 자신은 빼고
- * @details 같은 오브젝트의 콜라이더가 판정이다. 휘두르기 전부터 판정 안에 있던 유닛은 시작할 때, 휘두르는 동안 들어온 유닛은 들어올 때 맞고,
- *          한 번 휘두를 때 유닛마다 한 번이다(나갔다 다시 들어와도). 공격자 계층(판정이 붙은 몸)은 맞지 않고, 피해 이벤트의 instigator 는 그 몸이다.
- *          판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
+ * @brief [ActionCombatTest] 공격 판정은 휘두르는 동안 칼날에 걸린 유닛마다 한 번 피해를 준다 — 이미 서 있던 유닛도, 들어온 유닛도, 공격자 자신은 빼고
+ * @details 판정은 오브젝트 기준 칼날(두 점 · 두께)을 쓰는 근접 판정 한 길(`MeleeHitWindowUtil::sweep`)이다. 휘두르기 전부터 칼날 안에 있던 유닛은
+ *          시작할 때, 휘두르는 동안 들어온 유닛은 그 프레임에 맞고, 한 번 휘두를 때 유닛마다 한 번이다(나갔다 다시 들어와도). 공격자 계층(판정이 붙은 몸)은
+ *          맞지 않고, 피해 이벤트의 instigator 는 그 몸이다. 판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
  */
 SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
 {
@@ -512,11 +512,12 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
     SW_ASSERT_TRUE( pHitbox->attachToParent( pAttacker->getOwner(), AttachRule::KeepWorld ) );
     MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
     SW_ASSERT_NOT_NULL( pAttack );
+    pAttack->setBlade( float3( -1.0f, 0.0f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), 0.5f ); // 월드 x 0..2 — 몸(-0.5..0.5)에도 걸친다
     SceneComponent* pWalkerBody = pWalker->getOwner()->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pWalkerBody );
 
     manager.beginPlay();
-    manager.update( 0.1f ); // 판정이 몸 · 서 있는 유닛과의 겹침을 받는다 — 아직 휘두르지 않았다
+    manager.update( 0.1f ); // 바디가 생긴다 — 아직 휘두르지 않았다
     SW_EXPECT_EQUAL( 100, pStanding->getHp() );
 
     // 휘두르기 전부터 서 있던 유닛은 시작할 때 맞는다. 몸은 맞지 않는다.
@@ -781,6 +782,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
     SW_ASSERT_TRUE( pShooter != nullptr && pVictim != nullptr && pHitbox != nullptr && pLive != nullptr && pOrphan != nullptr && pGone != nullptr );
     MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
     SW_ASSERT_NOT_NULL( pAttack );
+    pAttack->setBlade( float3( -1.0f, 0.0f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), 0.5f );
     pLive->getOwner()->setName( hashed_string( "LiveShot" ) );
     pOrphan->getOwner()->setName( hashed_string( "OrphanShot" ) );
     pLive->setInstigator( pShooter->getOwner()->getHandle() );
@@ -930,51 +932,48 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
 }
 
 /**
- * @brief [ActionCombatTest] 공격 판정은 접촉마다 기억하고, 판정 안에서 사라진 유닛은 잊는다 — 남은 접촉 · 새로 들어온 유닛은 제대로 맞는다
- * @details 판정은 겹친 상대를 핸들로 기억해 휘두를 때 맞힌다. 상대가 판정 안에서 사라지면 끝 이벤트가 상대 없이 오므로 풀리지 않는 핸들을 덜어
- *          낸다(아니면 핸들이 남고 목록이 줄지 않는다). 또 상대 하나가 콜라이더 둘로 겹치면 접촉 둘로 기억한다 — 하나만 떨어져도 남은 접촉으로 맞는다
- *          (오브젝트당 하나로 기억하면 한 콜라이더가 떨어질 때 다른 콜라이더가 겹쳐 있어도 잊는다). 상대의 트리거(감지 범위)는 접촉이 아니다.
+ * @brief [ActionCombatTest] 공격 판정은 칼날에 걸린 유닛을 모두 찾고, 콜라이더가 둘인 유닛도 한 번만 맞히며, 트리거와 사라진 유닛은 치지 않는다
+ * @details 칼날 한 토막에 걸린 바디를 모두 본다(`CharacterHitUtil::sweepAll`) — 처음 닿은 것에서 멈추면 앞의 유닛이 뒤의 유닛을 가린다. 바디가 아니라
+ *          오브젝트마다 한 번이라 콜라이더 둘인 유닛도 한 번 맞는다. 상대의 트리거(감지 범위)는 몸이 아니라 걸리지 않고, 사라진 유닛은 질의에 나오지 않는다.
+ *          휘두르는 동안 새로 들어온 유닛도 한 번 맞는다.
  */
-SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieInside )
+SW_TEST_CASE( ActionCombatTest, AttackSweepHitsEveryUnitOnTheBladeOnce )
 {
     GameObjectManager   manager;
-    GameObject*         pHitbox = spawnColliderObject( manager, "Hitbox", 0.0f, 0.0f, float2( 2.0f, 2.0f ) );
+    GameObject*         pHitbox = manager.createGameObject( hashed_string( "Hitbox" ) );
     UnitStatsComponent* pDoomed = spawnUnit( manager, "Doomed", 0.5f, 100, 0, 0.0f );
     UnitStatsComponent* pTwin   = spawnUnit( manager, "Twin", -0.5f, 100, 0, 0.0f );
+    UnitStatsComponent* pFar    = spawnUnit( manager, "Far", 1.5f, 100, 0, 0.0f );
     UnitStatsComponent* pSensed = spawnUnit( manager, "Sensed", 0.0f, 100, 0, 0.0f );
     UnitStatsComponent* pLate   = spawnUnit( manager, "Late", 8.0f, 100, 0, 0.0f );
-    SW_ASSERT_TRUE( pHitbox != nullptr && pDoomed != nullptr && pTwin != nullptr && pSensed != nullptr && pLate != nullptr );
-    MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
-    SW_ASSERT_NOT_NULL( pAttack );
-    // 쌍둥이는 몸 콜라이더가 둘이다 — 둘 다 판정 안에 있다.
+    SW_ASSERT_TRUE( pHitbox != nullptr && pDoomed != nullptr && pTwin != nullptr && pFar != nullptr && pSensed != nullptr && pLate != nullptr );
+    SceneComponent*       pHitboxRoot = pHitbox->addComponent<SceneComponent>();
+    MeleeHitboxComponent* pAttack     = pHitbox->addComponent<MeleeHitboxComponent>();
+    SW_ASSERT_TRUE( pHitboxRoot != nullptr && pAttack != nullptr );
+    pAttack->setBlade( float3( -2.0f, 0.0f, 0.0f ), float3( 2.0f, 0.0f, 0.0f ), 0.25f );
+    // 쌍둥이는 몸 콜라이더가 둘이다 — 둘 다 칼날에 걸린다.
     BoxCollider2DComponent* pTwinSecond = pTwin->getOwner()->addComponent<BoxCollider2DComponent>();
     SW_ASSERT_NOT_NULL( pTwinSecond );
     pTwinSecond->setOffsetScale( float2( 0.5f, 0.5f ) );
-    // 감지 범위만 판정에 닿은 유닛 — 몸은 판정 밖에 있다.
+    // 감지 범위(트리거)만 있는 유닛 — 몸이 아니다.
     pSensed->getOwner()->getComponent<BoxCollider2DComponent>()->setTrigger( true );
 
     manager.beginPlay();
     manager.update( 0.1f );
-    SW_EXPECT_EQUAL( 3u, pAttack->getOverlapCount() ); // 운 나쁜 유닛 하나 · 쌍둥이 둘(감지 범위는 아니다)
-
-    // 판정 안에서 사라지면 잊는다.
     manager.destroyObject( pDoomed->getOwner() );
     manager.update( 0.1f );
-    SW_EXPECT_EQUAL( 2u, pAttack->getOverlapCount() );
 
-    // 쌍둥이의 콜라이더 하나가 떨어져도 남은 하나로 맞는다.
-    pTwinSecond->setOffsetPosition( float2( 0.0f, 20.0f ) );
-    manager.update( 0.1f );
-    SW_EXPECT_EQUAL( 1u, pAttack->getOverlapCount() );
     pAttack->beginAttack( 10, 1.0f );
-    SW_EXPECT_EQUAL( 90, pTwin->getHp() );
+    SW_EXPECT_EQUAL( 90, pTwin->getHp() ); // 콜라이더 둘이어도 한 번
+    SW_EXPECT_EQUAL( 90, pFar->getHp() );  // 쌍둥이 뒤에 있어도 걸린다
     SW_EXPECT_EQUAL( 100, pSensed->getHp() );
 
-    // 휘두르는 동안 새로 들어온 유닛도 한 번 맞는다.
+    // 휘두르는 동안 새로 들어온 유닛도 한 번 맞는다. 이미 맞은 유닛은 다시 맞지 않는다.
     pLate->getOwner()->getPrimarySceneComponent()->setLocalPosition( float3( 0.5f, 0.0f, 0.0f ) );
     manager.update( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 90, pLate->getHp() );
-    SW_EXPECT_EQUAL( 2u, pAttack->getOverlapCount() );
+    SW_EXPECT_EQUAL( 90, pTwin->getHp() );
     manager.endPlay();
 }
 

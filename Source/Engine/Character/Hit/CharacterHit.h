@@ -1,13 +1,14 @@
 /**
  * @file CharacterHit.h
  * @brief 맞힘 도우미 모음입니다. 광선(3D, 2D)으로 맞은 오브젝트, 바디, 재질을 찾고, 히트 존(이름, 피해 배율)을 고르고, 맞은 오브젝트의 컴포넌트에 알립니다.
- * @details 근접 판정(알림 테이블의 `HitWindow`)과 무기의 레이캐스트가 같은 경로를 쓴다(언리얼의 LineTrace, `FHitResult::BoneName`, Physics Asset 바디의 부위,
+ * @details 근접 판정(`MeleeHitWindow.h` — 알림 테이블의 `HitWindow` 와 킷의 `MeleeHitboxComponent`)과 무기의 레이캐스트가 같은 경로를 쓴다(언리얼의 LineTrace, `FHitResult::BoneName`, Physics Asset 바디의 부위,
  *          `TakeDamage` 흐름에 해당한다). 쏘는 오브젝트의 바디는 모두 건너뛴다(`PhysicsQueryFilter::_ignoreUserData`, 래그돌 뼈와 든 무기). 맞은 바디는 사용자 값으로
  *          오브젝트가 되고, 히트 존은 그 오브젝트의 래그돌(물리 에셋 바디의 `_hitZone`)에서 먼저, 없으면 강체 컴포넌트의 히트 존 속성에서 찾는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -54,13 +55,20 @@ namespace sw
         static bool circleCast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
                                   uint64 ignoreObjectID, CharacterRayHit& outHit );
         /**
+         * @brief @p from 에서 @p to 까지 구(2D 는 원, @p radius 가 0 이면 광선)를 쓸어 닿은 바디를 **모두** @p outListHit 끝에 붙이고 그 수를 반환합니다.
+         * @details 바디마다 가장 가까운 닿음 하나이고 가까운 순서다. 출발점에서 이미 겹친 바디도 들어온다(`shapeCastAll`). 근접 판정(`MeleeHitWindowUtil`)이
+         *          칼날 한 토막에 걸린 것을 모두 찾는 데 쓴다 — 처음 닿은 것에서 멈추면 이미 맞힌 오브젝트가 뒤의 표적을 가린다. 길이가 거의 0 이거나 씬이 없으면 0 입니다.
+         */
+        static uint32 sweepAll( const GameObjectManager& manager, const float3& from, const float3& to, float32 radius, uint32 layerMask, uint64 ignoreObjectID, bool bIs2D,
+                                vector<CharacterRayHit>& outListHit );
+        /**
          * @brief 맞은 바디의 히트 존을 @p inoutHit 에 채웁니다(`_zone`, `_damageMultiplier`, `_bodyIndex`). 존이 없으면 이름은 비고 배율은 1 입니다.
          * @details 래그돌과 히트박스(`RagdollComponent`, 물리 에셋 바디의 `_hitZone`)가 먼저이고, 다음은 그 바디를 가진 강체 컴포넌트의 `_hitZone` 이다.
          */
         static void resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit );
         /**
          * @brief 광선이 맞은 것(@p rayHit)과 때린 쪽 값으로 맞음을 만들고 히트 존까지 채웁니다. `_pObject` 가 없으면 히트 존은 비어 있습니다.
-         * @details 무기 레이캐스트(`traceWeaponHit`)와 근접 판정(`HitWindow`)이 같은 맞음을 이 한 곳에서 만든다. 피해 배율은 히트 존이 정한다.
+         * @details 무기 레이캐스트(`traceWeaponHit`)와 근접 판정(`MeleeHitWindowUtil::sweep`)이 같은 맞음을 이 한 곳에서 만든다. 피해 배율은 히트 존이 정한다.
          * @param direction 때린 방향입니다(길이는 상관없고, 거의 0 이면 방향 없음).
          */
         static HitInfo makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse );

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -107,6 +109,13 @@ namespace sw
             return;
         }
         applyTakeDamage( amount, instigator );
+    }
+
+    void UnitStatsComponent::onHitReceived( const HitInfo& hit )
+    {
+        HealthSourceComponent::onHitReceived( hit );
+        const int32 amount = static_cast<int32>( MathUtil::round( hit._damage * hit._damageMultiplier ) );
+        takeDamage( amount, hit._pInstigator != nullptr ? hit._pInstigator->getHandle() : GameObjectHandle{} );
     }
 
     void UnitStatsComponent::heal( int32 amount )
