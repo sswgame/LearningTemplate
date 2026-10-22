@@ -45,7 +45,7 @@
 | H6 | gbuffer · shadowdepth 를 머티리얼 없는 뼈대 사용자로 | 이 문서 | 이 문서 | 깊이 비트 일치(훅이 위치를 만들 수 없음), 그림자 화면 | 끝남(2026-10-23, main `4f54ba646` — `SW_MATERIAL_NONE` 스위치. 위치 · 정점 로드는 뼈대 한 곳이라 `swLoadAnimatedPosition` · `swLoadMorphPosition` 을 없앴고, 깊이 프리패스의 `MATERIAL_VERTEX_DEFORM` · 그림자의 `MATERIAL_SHADOW_CAST_OFF` 배치 빼기는 뼈대가 한다. 프리패스 파이프라인 화면 = 포워드 화면 바이트 동일(깊이가 어긋나면 구멍이 난다), 그림자 장면 바이트 동일. 머티리얼 없는 G버퍼 배치가 이제 보기 모드 Normals · LightingOnly 등을 따른다) |
 | H7 | 포워드 · 디퍼드 림을 한 함수로 — **이미지가 바뀐다**(2절의 pow2 × 0.15 대 pow3 × 0.12) | 이 문서 2절 | 이 문서, QA 골든 | 골든을 다시 뜬다, 네 백엔드 | 남음 |
 | D1 | 도메인 발견 — `ShaderCooker::kArrIncludeRootDomain` 하드코딩을 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 기반 발견으로 바꾼다. 엔진은 도메인 종류만 알고 game 아래 폴더를 훑는다. 게임 셰이더는 자기 도메인 + engine + common 만 include 하고, 게임 폴더의 같은 이름 헤더가 엔진 헤더를 가리지 못하게 한다. 테스트 도메인의 최소 셰이더로 쿠킹 스탬프 · include · 머티리얼 경로 · 리플렉션을 증명한다 | `Config/Engine/EngineConfig.json`, 쿠커 README | 이 문서 | 테스트 도메인 셰이더가 쿠킹 → 머티리얼 → 리플렉션까지 통과, 같은 이름 헤더 가림 시도가 오류 | 끝남(2026-10-23, main `25f8c863d`) |
-| G1 | 게임 셰이더 제작(첫 요구가 생길 때 착수) — 계약은 1절. 후보 문서에는 중복해 두지 않는다 | 이 문서 | 이 문서, 해당 게임 문서 | 게임 화면 | 남음 |
+| G1 | 게임 셰이더 제작(첫 요구가 생길 때 착수) — 계약은 1절. 후보 문서에는 중복해 두지 않는다 | 이 문서 | 이 문서, 해당 게임 문서 | 게임 화면 | 끝남(2026-10-23, wt/shootershader `423c32db1` — Shooter3D CCTV 모니터를 `game/shooter3d/shaders/cctvmonitor.hlsl` 로: 표면 훅만 정의하고 `SW_MATERIAL_UNLIT` · `SW_MATERIAL_DEFAULT_VARYINGS` 를 명시, 주사선 줄 수 · 세기는 머티리얼 XML. 엔진 쪽 변경 없이 계약대로 쿠킹 · 로드됐다. `MaterialTest.GameDomainShaderMaterialMatchesItsStruct`, 시나리오 `shooter3d.cctvmonitor` 로 DX12 · DX11 · GL 화면 확인. Vulkan 은 이 변경 전 머티리얼로도 같은 `VK_ERROR_OUT_OF_DEVICE_MEMORY` 로 죽어 미확인) |
 
 ## 5. 확인하지 못한 것
 
@@ -59,4 +59,5 @@
 - **깊이만 쓰는 변형(`SW_MATERIAL_DEPTH_ONLY` — 깊이 패스이고 알파 컷오프가 아님)의 정점 → 픽셀 칸은 위치와 등장 디더뿐이다.** 그림자 맵은 모든 메시를 패스마다 그리므로 쓰이지 않는 칸을 내보내지 않는다. H1 · H2 의 forwardlit · toon 깊이 변형도 같이 바뀌었다.
 - **사용자 보간 칸 훅의 문맥에 `clipPosition`(오프셋 · 외곽선이 반영된 최종 클립 위치)을 읽기 전용으로 둔다.** 물의 시선 방향이 필요하다. 그 훅에서만 채워지고 다른 훅에서는 0 이다.
 - **스프라이트의 픽셀 스냅은 월드 위치 오프셋이다.** 오프셋 훅은 `MATERIAL_VERTEX_DEFORM` 퍼뮤테이션에서만 불리므로 세 스프라이트 머티리얼이 그 define 을 가진다. 대가로 스프라이트도 그림자 퍼뮤테이션을 하나씩 쿠킹하고 깊이 프리패스에서 빠진다(스프라이트는 투명이라 영향이 없다).
+- **게임 셰이더 한 개의 쿠킹 산출물은 백엔드마다 180 파일(네 백엔드 720, 스탬프 · 매니페스트 포함)이다**(G1, cctvmonitor). 머티리얼 셰이더는 패스 종류 × 머티리얼 퍼뮤테이션(포그 셋)을 모두 굽는다. 조명 없는 셰이더도 G버퍼 변형이 구워진다 — 디퍼드 파이프라인에서 어떻게 보이는지는 확인하지 않았다(Shooter3D 는 포워드).
 - 동작이 바뀌는 곳(모두 Lit 화면은 같다): 머티리얼 없는 G버퍼 배치와 스프라이트가 보기 모드를 따른다. 스프라이트의 Depth · Light Complexity 보기는 스프라이트 평면의 z 를 쓴다(예전 2D 조명 셰이더는 z = 0 으로 가정했다).
