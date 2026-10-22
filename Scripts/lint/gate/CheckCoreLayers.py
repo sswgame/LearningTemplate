@@ -16,7 +16,10 @@ Core 폴더 층 검사 — `Source/Core/` 바로 아래 폴더가 곧 층이고,
      include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 예외 표에 이유와 함께 적는다(줄일 대상).
   `Core/Network` 내부 방향은 `CheckCoreNetworkLayers.py` 가 따로 본다.
 
-티어 표(`[tier]`)와 예외 표(`[exemption]`)는 `Scripts/lint/rules/CheckCoreLayers.toml` 에 있다.
+전체를 훑을 때(`--files` 없이)는 include 그래프에서 티어를 직접 계산해 표와 맞춘다(`lint/LayerGraph.py`): 순환(SCC)은 실패, 표 < 계산값은 실패,
+표 > 계산값은 `[tierReason]` 에 이유가 있는 폴더만 허용, 계산값과 같아진 이유 줄은 낡은 줄이라 실패.
+
+티어 표(`[tier]`) · 이유 표(`[tierReason]`) · 예외 표(`[exemption]`)는 `Scripts/lint/rules/CheckCoreLayers.toml` 에 있다.
 
   python Scripts/lint/gate/CheckCoreLayers.py [--root <repo>] [--files a.h b.cpp]
 """
@@ -32,7 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import blankComments, firstFolderAfter, iterIncludes  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
-from lint.LayerRules import kCoreLayerSchema, readCoreTiers  # noqa: E402
+from lint.LayerGraph import edgesOfFile, findTierTableProblems, newEdgeMap  # noqa: E402
+from lint.LayerRules import kCoreLayerSchema, readCoreLayerRules  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
@@ -40,7 +44,10 @@ _kCorePrefix = "Core/"
 _kSourceCorePrefix = "Source/Core/"
 
 #: 폴더 → 티어(숫자가 큰 쪽이 위, `rules/CheckCoreLayers.toml` 의 `[tier]`).
-_kCoreTier: dict[str, int] = readCoreTiers()
+_kCoreRuleData = readCoreLayerRules()
+_kCoreTier: dict[str, int] = _kCoreRuleData["tier"]
+#: 표가 그래프 계산값보다 높은 폴더 → 이유(`[tierReason]`). 이유 없는 상향은 `finishSourceScan` 의 "표 = 계산값" 검사가 실패시킨다.
+_kCoreTierReason: dict[str, str] = _kCoreRuleData["tierReason"]
 
 _kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h")
 
@@ -84,10 +91,20 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
 
 
 def findViolationsInSource(source: SourceFile) -> FileFindings | None:
-    """`Source/Core/` 파일 하나 — 센 파일은 `value` 가 True 다."""
+    """`Source/Core/` 파일 하나 — 센 파일은 `value`(폴더 간 엣지 목록, 비어 있어도 None 이 아니다)가 있다."""
     if source.relative.startswith(_kSourceCorePrefix) is False:
         return None
-    return FileFindings(listViolation=findViolationsInFile(source.relative, source.text), value=True)
+    return FileFindings(listViolation=findViolationsInFile(source.relative, source.text), value=findEdgesInFile(source.relative, source.text))
+
+
+def findEdgesInFile(relative: str, text: str) -> list[tuple[str, str]]:
+    """`Source/Core/<폴더>/` 파일 하나가 만드는 폴더 간 엣지 — 루트 파일 · 루트 모음 헤더는 노드가 아니다(루트 모음 헤더는 따로 위반이다)."""
+    folder = firstFolderAfter(relative, _kSourceCorePrefix)
+    if folder == "":
+        return []
+    listDest = [firstFolderAfter(normalizePath(rawInclude), _kCorePrefix) for _, rawInclude in iterIncludes(text, bQuotedOnly=True)
+                if rawInclude.startswith(_kCorePrefix)]
+    return edgesOfFile(folder, [dest for dest in listDest if dest != ""])
 
 
 class CheckCoreLayersGate(LintGate):
@@ -118,6 +135,20 @@ class CheckCoreLayersGate(LintGate):
             "files": {"Source/Core/String/Probe.cpp": "#include \"pch.h\"\n#include \"Core/Time/MonotonicClock.h\"\n"},
         },
         {
+            "name": "표 > 계산값인데 [tierReason] 에 이유가 없다 (사유 없는 상향)",
+            "expectedViolation": "티어 표: Log: rules/CheckCoreLayers.toml [tier] 의 티어 5 가 계산값 1 보다 높은데 [tierReason] 에 이유가 없다",
+            "files": {"Source/Core/Log/Probe.h": "#pragma once\n#include \"Core/Common/Probe.h\"\n", "Source/Core/Common/Probe.h": "#pragma once\n"},
+        },
+        {
+            "name": "표 < 계산값 (Memory 가 Math · Concurrency 를 거쳐 Common 위로 올라가는데 표는 2)",
+            "expectedViolation": "티어 표: Memory: rules/CheckCoreLayers.toml [tier] 의 티어 2 가 그래프 계산값 3 보다 낮다",
+            "files": {
+                "Source/Core/Memory/Probe.h": "#pragma once\n#include \"Core/Math/Probe.h\"\n",
+                "Source/Core/Math/Probe.h": "#pragma once\n#include \"Core/Concurrency/Probe.h\"\n",
+                "Source/Core/Concurrency/Probe.h": "#pragma once\n#include \"Core/Predefined/Probe.h\"\n",
+            },
+        },
+        {
             "name": "폴더 파일이 루트 모음 헤더를 include 한다",
             "expectedViolation": "Source/Core/Memory/Probe.cpp:2: <Core/CoreMinimal.h> -> 폴더 파일이 루트 모음 헤더를 include 합니다",
             "files": {"Source/Core/Memory/Probe.cpp": "#include \"pch.h\"\n#include \"Core/CoreMinimal.h\"\n"},
@@ -142,8 +173,18 @@ class CheckCoreLayersGate(LintGate):
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         listViolation, _ = joinFindings(result.listFindings)
-        fileCount = sum(1 for findings in result.listFindings if findings.value)
-        return GateResult(listViolation=listViolation, summary=f"Core 파일 {fileCount} 개가 폴더 티어를 지킨다")
+        fileCount = sum(1 for findings in result.listFindings if findings.value is not None)
+        summary = f"Core 파일 {fileCount} 개가 폴더 티어를 지킨다"
+        if args.files is not None:
+            # 일부 파일만 보면 그래프가 일부라 티어를 계산할 수 없다 — 표 = 계산값 검사는 전체 훑기(린트 묶음 · CI)가 한다.
+            return GateResult(listViolation=listViolation, summary=summary + " (--files: 표 = 계산값 검사는 전체 훑기에서)")
+        mapEdge = newEdgeMap()
+        for findings in result.listFindings:
+            for sourceLayer, destLayer in findings.value or ():
+                mapEdge[sourceLayer][destLayer].append(None)
+        listViolation += [f"티어 표: {problem}" for problem in findTierTableProblems(
+            mapEdge, _kCoreTier, _kCoreTierReason, tableLabel="rules/CheckCoreLayers.toml [tier]", reasonLabel="[tierReason]")]
+        return GateResult(listViolation=listViolation, summary=f"{summary}, {len(mapEdge)} 폴더의 티어를 그래프 계산값과 맞춰 봄")
 
 
 main = CheckCoreLayersGate.run

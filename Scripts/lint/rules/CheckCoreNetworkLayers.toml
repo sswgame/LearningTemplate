@@ -1,0 +1,13 @@
+# CheckCoreNetworkLayers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckCoreNetworkLayers.py.
+
+# 폴더 → 층. 숫자가 큰 쪽이 위다(`Source/Core/Network/` 바로 아래 폴더).
+#   뿌리(NetTypes · BitStream) ← Transport · Security ← Connection ← Message ← Replication
+# `"<root>"` 는 `Core/Network/` 바로 아래 파일(뿌리)이다. 새 폴더는 층을 정해 여기에 넣는다(표에 없는 폴더는 실패다).
+[tier]
+"<root>" = 0
+Transport = 1
+# 암호 창구 — 뿌리만 본다. 같은 층의 Transport 와는 서로 include 할 일이 없다(같은 층의 다른 폴더끼리도 게이트가 막는다).
+Security = 1
+Connection = 2
+Message = 3
+Replication = 4
