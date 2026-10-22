@@ -1,6 +1,6 @@
 # 패치 · 델타 업데이트 배포 구조
 
-> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 5/7
+> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 7/7
 
 출시 뒤 바뀐 리소스만 내려받게 하는 팩 단위 차분 배포와 빌드 버전 관리가 없었다. 크래시 컨텍스트와 텔레메트리 코드는 있다. 스토어 제공자 연동(`StoreProviderIntegration`, 후보)은 이 일에 들지 않는다 — 내려받기는 런처나 스토어가 하고, 엔진은 받은 패치를 올바른 순서로 얹는다.
 
@@ -30,7 +30,7 @@
 | P4 | 시작 마운트가 팩 폴더의 `*.packpatch.xml` 을 읽어 설치된 빌드부터 이어지는 패치를 사슬 순서로 `mountPatchPack` 한다. **설치된 빌드의 출처는 프로젝트 설정이 아니라 팩 폴더의 `base.packbuild.xml`**(쿠커가 팩과 함께 남기는 빌드 내용 목록)이다 — 설정 칸을 두면 팩과 빌드 번호가 따로 어긋나고, 팩을 마운트하는 시점에는 팩 안의 설정을 아직 읽을 수 없다. `ResourcePakManager::scanAndMountPacks` 가 패치 목록이 가리키는 팩을 기본 팩에서 빼고, 빌드 기록 없음 · 사슬 끊김 · 갈림 · 고리 · 닿지 않는 패치 · 패치 팩 없음이면 이 호출이 올린 팩을 모두 내리고 실패한다(`PackPatchUtil::orderPatchChainToLatest`). 테스트 `PackPatchTest.StartupMountAppliesThePatchChainOnTopOfTheBasePacks` · `StartupMountMountsNothingWhenAPatchCannotBeApplied` · `ChainToLatestFollowsEveryPatchAndRefusesOrphans` | 끝남(Debug 테스트 확인) |
 | P5 | 팩 폴더에서 두 빌드의 내용 목록(`PackBuildRecord` — 전체 가상 경로 + 내용 해시)을 세고 그 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 만든다(`PackPatchBuilder`). 소스 트리가 아니라 **구운 팩**에서 센다 — 쿠킹 증분 기록과 상관없이 배포되는 바이트의 해시다. 명령줄: `-cook-packs`/`-cook-all` 에 `-pack-build=<빌드>` 를 주면 `base.packbuild.xml` 을 남기고, `-make-patch -pack-dir=<새 팩 폴더> -patch-base=<이전 빌드 목록> -pack-build=<새 빌드> -patch-dir=<출력>` 이 패치를 만든다. 테스트 `PackPatchTest.MadePatchOnTheOldBuildShowsTheNewBuildContent` · `MakePatchRefusesNothingToPatchAndUnusableInputs` · `BuildRecordRoundTripsAndRefusesBrokenOnes` | 끝남(Debug 테스트 · 명령줄 실행 확인) |
 | P6 | 배포 경로(런처 · CDN · 스토어)와 목록 서명 · 팩 해시 확인. 2026-10-23 결정: 출시가 스팀이면 SteamPipe 가 업로드 · 차이 받기 · 무결성을 맡으므로 스팀 전용이면 취소한다. 스팀 밖 채널이 생길 때 다시 연다(그때 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저). 팩 항목의 CRC32(`PackFlag::HasCrc32`)와 헤더 기하 검사는 이미 있어 잘린 · 깨진 팩은 읽을 때 거절된다 | 취소(스팀 전용이면 — 스팀 밖 채널이 생기면 다시 연다) |
-| P7 | **팩 레이아웃 안정성 점검**(읽기 + 측정). 같은 입력으로 팩을 두 번 만들어 바이트가 같은지, 파일 하나만 바꾸면 팩 바이트가 얼마나 달라지는지(항목 정렬 · 항목별 압축 · 오프셋 유지)를 측정해 스팀의 청크 단위 차이 비교에 유리한지 본다. 읽을 곳: 쿠커의 팩 쓰기와 `PackFormat.json`, 팩 정렬 규칙. 고칠 문서: 이 문서의 측정 결과와 결정(코드는 점검 결과가 나쁠 때만 별도 단위). 측정은 Release 에서 혼자 | 남음 |
+| P7 | **팩 레이아웃 안정성 점검**(2026-10-23, Debug · 합성 입력). 쓰기 정책은 이미 안정적이라 코드는 고치지 않고 회귀 테스트(`PackLayoutTest.*`: 결정성 · 항목 하나 변경 시 다른 바이트 유지 · 추가 · 삭제 시 남은 페이로드 유지)만 더했다. 측정과 한계는 아래 "P7 측정" | 끝남 |
 
 ## 남은 것
 
@@ -38,3 +38,13 @@
 - 낱개 파일로 배포하는 구성(`setAllowLooseFiles`)은 패치가 가리지 못한다 — 패치는 팩만 읽는 배포 구성의 일이다(1절).
 - 확인함(2026-10-22, Debug): `App -game=Empty -cook-all -pack-build=1.0` 이 `base.packbuild.xml`(5220 파일)을 남기고, `Resource/game/empty/data` 에 파일 하나를 더해 `-pack-build=1.1` 로 다시 구운 뒤 `-make-patch` 가 `1 changed, 0 removed` 패치(팩 12 KB)를 만들었다(같은 입력의 나머지는 해시가 같아 빠짐). 확인 못 한 것: 그 패치를 실제 `Packs/` 폴더에 두고 App 이 시작할 때 적용하는 실행(테스트는 `scanAndMountPacks` 를 직접 부른다).
 - 빌드 · `EngineTest --test_filter=PackPatchTest.*:ResourcePakTest.*` 실행.
+
+## P7 측정 (2026-10-23)
+
+입력은 **합성**이다: 파일 600개(200 B ~ 600 KB 로그 균등 분포, 합 47.9 MB, 절반 압축 가능한 본문), Debug · `ResourcePakWriter::makePackBytes` 직접 호출, 개발 PC 한 대. 작은 합성 입력의 결과는 이 규모의 결과일 뿐이다 — 실제 쿠킹 트리(Empty 5220 파일 등)와 스팀이 쓰는 실제 청크 경계로는 재지 않았다.
+
+- **결정성**: 같은 입력을 두 번, 담는 순서를 뒤집어도 None · Zlib · LZ4 · Zstd 모두 바이트가 같다(항목은 경로 해시 순, 항목별 압축).
+- **구조**: FAT 경로 해시 순 · 항목별 압축(전체 스트림 아님) · 페이로드와 FAT 와 스트링 풀이 4096 B 섹터 정렬. 압축 없는 팩 49.3 MB, Zstd 26.6 MB.
+- **항목 하나 바꿈**(같은 크기 · +100 B, 섹터 안): 항목 페이로드와 FAT 칸 밖 바이트는 그대로, 뒤 항목 안 밀림. 고정 1 MB 청크 2/50 (4.0 %, None), 2/27 (7.4 %, Zstd) — 바뀐 항목이 청크 경계에 걸려 둘. 내용 기준 청크(gear 해시, 평균 64 KB) 0.5 ~ 0.6 %.
+- **항목 하나 추가 · 삭제**: 해시 순으로 뒤에 오는 항목 37 ~ 45 %(221 · 272 / 600)의 오프셋이 섹터 단위로 밀린다. 고정 1 MB 청크는 46 ~ 56 % 가 달라지고, 내용 기준 청크는 0.9 ~ 1.3 %. 항목 크기가 섹터를 넘게 변해도 같다.
+- **결정**: 팩 형식(`PackFormat.json`)을 바꾸지 않는다. 밀림은 항목이 이어 붙는 가변 길이 배치의 성질이고, 없애려면 항목마다 청크 크기 단위의 빈 자리(패딩)나 슬롯 배치가 필요해 형식 변경이다. 스팀이 내용 기준으로 청크를 자르면(확인 못 함 — SteamPipe 의 청크 경계 방식은 문서로 확인하지 않았다) 지금 배치로 충분하다. 고정 청크라면 추가 · 삭제가 잦은 빌드에서 불리하므로 첫 스팀 업로드 두 번(빌드 사이)의 실제 업데이트 크기를 재고, 나쁘면 형식 변경안(슬롯 배치)을 연다.
