@@ -36,7 +36,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
-from lint.LayerRules import readCoreTiers  # noqa: E402
+from lint.LayerGraph import computeTiers, findComponents, listEdgeNodes  # noqa: E402
+from lint.LayerRules import readCoreLayerRules  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDirSourceCore = "Source/Core"
@@ -72,66 +73,7 @@ def collectEdges(repositoryRoot: Path) -> EdgeMap:
     return mapEdge
 
 
-def listNodes(mapEdge: EdgeMap) -> list[str]:
-    uniqueNode = set(mapEdge)
-    for sourceLayer in mapEdge:
-        uniqueNode.update(mapEdge[sourceLayer])
-    return sorted(uniqueNode)
-
-
-def findComponents(mapEdge: EdgeMap) -> list[list[str]]:
-    """Tarjan SCC. 크기 2 이상인 묶음만 돌려준다."""
-    mapIndex: dict[str, int] = {}
-    mapLow: dict[str, int] = {}
-    listStack: list[str] = []
-    uniqueOnStack: set[str] = set()
-    listComponent: list[list[str]] = []
-    counter = [0]
-
-    def visit(node: str) -> None:
-        mapIndex[node] = mapLow[node] = counter[0]
-        counter[0] += 1
-        listStack.append(node)
-        uniqueOnStack.add(node)
-        for nextNode in mapEdge.get(node, {}):
-            if nextNode not in mapIndex:
-                visit(nextNode)
-                mapLow[node] = min(mapLow[node], mapLow[nextNode])
-            elif nextNode in uniqueOnStack:
-                mapLow[node] = min(mapLow[node], mapIndex[nextNode])
-        if mapLow[node] == mapIndex[node]:
-            component: list[str] = []
-            while True:
-                popped = listStack.pop()
-                uniqueOnStack.discard(popped)
-                component.append(popped)
-                if popped == node:
-                    break
-            listComponent.append(sorted(component))
-
-    sys.setrecursionlimit(10000)
-    for node in listNodes(mapEdge):
-        if node not in mapIndex:
-            visit(node)
-    return [component for component in listComponent if len(component) > 1]
-
-
-def computeTiers(mapEdge: EdgeMap) -> dict[str, int]:
-    """Kahn — 의존 대상이 전부 놓인 뒤에 놓는다. 묶음 안의 노드는 빠진다."""
-    listNode = listNodes(mapEdge)
-    mapDependency = {node: set(mapEdge.get(node, {})) for node in listNode}
-    mapTier: dict[str, int] = {}
-    uniqueRemaining = set(listNode)
-    level = 0
-    while uniqueRemaining:
-        listReady = sorted(node for node in uniqueRemaining if all(dep in mapTier for dep in mapDependency[node]))
-        if not listReady:
-            break
-        for node in listReady:
-            mapTier[node] = level
-        uniqueRemaining -= set(listReady)
-        level += 1
-    return mapTier
+listNodes = listEdgeNodes   # 이름 호환 — 계산은 `lint.LayerGraph` 와 같다(게이트도 그 함수로 계산한다)
 
 
 def countBackwardEdges(mapEdge: EdgeMap, listOrder: list[str]) -> int:
@@ -199,7 +141,9 @@ class RunCoreLayerGraphReport(LintReport):
     def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
         mapEdge = collectEdges(context.repositoryRoot)
         listComponent = findComponents(mapEdge)
-        mapGateTier = readCoreTiers()   # 표가 없거나 틀리면 RuleDataError 로 멈춘다 — 비교를 건너뛰지 않는다
+        ruleData = readCoreLayerRules()   # 표가 없거나 틀리면 RuleDataError 로 멈춘다 — 비교를 건너뛰지 않는다
+        mapGateTier = ruleData["tier"]
+        mapReason = ruleData["tierReason"]
 
         if args.all_edges:
             print("[RunCoreLayerGraph] 폴더 간 간선:")
@@ -228,7 +172,7 @@ class RunCoreLayerGraphReport(LintReport):
         mapTier = computeTiers(mapEdge)
         print("\n티어 (0 = 토대). rules/CheckCoreLayers.toml 의 [tier] 와 다르면 표가 낡은 것이다:")
         for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
-            marker = "" if mapGateTier.get(layer) == mapTier[layer] else f"   <- 게이트 표는 {mapGateTier.get(layer)}"
+            marker = "" if mapGateTier.get(layer) == mapTier[layer] else f"   <- 게이트 표는 {mapGateTier.get(layer)}" + (" (이유 있음)" if layer in mapReason else "")
             print(f"  {mapTier[layer]:2d}  {layer:16s} -> {', '.join(sorted(mapEdge.get(layer, {})))}{marker}")
         return 0
 

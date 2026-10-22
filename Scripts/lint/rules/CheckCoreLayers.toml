@@ -1,6 +1,7 @@
 # CheckCoreLayers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckCoreLayers.py.
 
-# 폴더 → 티어. 숫자가 큰 쪽이 위다. Scripts/lint/report/RunCoreLayerGraph.py 의 Kahn 티어와 같아야 한다.
+# 폴더 → 티어. 숫자가 큰 쪽이 위다. Scripts/lint/report/RunCoreLayerGraph.py 의 Kahn 티어와 같아야 한다 — 게이트가 include 그래프에서 직접 계산해 맞춰 본다.
+# 일부러 계산값보다 높게 두려면 `[tierReason]` 표를 만들어 폴더 → 이유를 적는다(이유 없는 상향 · 계산값과 같아진 이유 줄은 실패). 지금은 없다.
 # 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 실패다).
 [tier]
 Common = 0
@@ -18,7 +19,7 @@ Compression = 6
 Process = 6         # 프로세스 · 종료 신호 · 스레드 크래시 스택
 String = 6          # 이름(hashed_string · TagID) · 고정 문자열 — 로그 매크로를 쓴다
 Time = 6
-Spatial = 6         # 공간 인덱스(해시 그리드 · 쿼드/옥트리 · BVH) — Math 의 AABB · Frustum 과 컨테이너, 단언을 쓴다
+Spatial = 4         # 공간 인덱스(해시 그리드 · 쿼드/옥트리 · BVH) — Math 의 AABB · Frustum 과 컨테이너, 단언을 쓴다(로그 매크로는 안 쓴다)
 Console = 7         # 개발 명령 · 디버그 HUD 섹션 레지스트리(Shipping 에서 빠진다)
 GlobalVariable = 7
 Task = 7

@@ -22,7 +22,8 @@
 - **Core folders are tiers** (`Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `LogSink`, table in
   `Scripts/lint/rules/CheckCoreLayers.toml`): a file includes only its own folder or a lower tier, `.cpp` included. A lower tier that must
   reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`, `RaceDetectContext::setReportFunction`).
-  Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`.
+  Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`, which also computes the tiers from the include graph and
+  fails when the table differs (a table value above the computed one needs a reason in `[tierReason]`).
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.

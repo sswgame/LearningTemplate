@@ -9,7 +9,8 @@ Core 네트워크 층 검사 — `Source/Core/Network/` 의 폴더가 곧 층이
   1) `Core/Network/` 아래 파일은 **자기 층 이하**의 `Core/Network/` 헤더만 include 한다(같은 폴더끼리는 된다).
      전송은 연결을 모르고, 연결은 메시지 라우터를 모르고, 메시지는 복제 부품을 모른다.
      보안(암호 창구 · 재전송 방지 창 · 세션 키 유도)은 뿌리만 본다 — 연결(UDP AEAD) · 메시지(TLS 엔드포인트)가 쓴다.
-  2) 표(_kNetworkTier)에 없는 하위 폴더는 실패다 — 새 폴더는 층을 정하고 넣는다.
+  2) 표(`rules/CheckCoreNetworkLayers.toml` 의 `[tier]`)에 없는 하위 폴더는 실패다 — 새 폴더는 층을 정하고 넣는다.
+  3) 같은 층의 **다른 폴더**끼리도 서로 include 하지 못한다(Transport ↔ Security) — 표가 낡을 때 같은 층 역방향이 통과하지 않게 한다.
 
   python Scripts/lint/gate/CheckCoreNetworkLayers.py [--root <repo>] [--files a.h b.cpp]
 """
@@ -24,21 +25,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import firstFolderAfter, iterIncludes  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
+from common.RuleData import kKindInteger  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings  # noqa: E402
 
 _kNetworkPrefix = "Core/Network/"
 _kSourceNetworkPrefix = "Source/Core/Network/"
 
-#: 폴더 → 층. 숫자가 큰 쪽이 위다. 빈 이름은 `Core/Network/` 바로 아래 파일(뿌리)이다.
-_kNetworkTier: dict[str, int] = {
-    "": 0,
-    "Transport": 1,
-    "Security": 1,  # 암호 창구 — 뿌리만 본다. 같은 층의 Transport 와는 서로 include 할 일이 없다
-    "Connection": 2,
-    "Message": 3,
-    "Replication": 4,
-}
+#: 층 표(`rules/CheckCoreNetworkLayers.toml` 의 `[tier]`)의 키 — `Core/Network/` 바로 아래 파일(뿌리)을 가리킨다(TOML 키는 빈 글을 두지 않는다).
+_kRootKey = "<root>"
+_kRuleData = LintGate.readRules("CheckCoreNetworkLayers", {"tier": kKindInteger}, requiredKeys=("tier",))
+#: 폴더 → 층. 숫자가 큰 쪽이 위다. 뿌리는 빈 이름(`firstFolderAfter` 의 답)으로 둔다.
+_kNetworkTier: dict[str, int] = {("" if folder == _kRootKey else folder): tier for folder, tier in _kRuleData["tier"].items()}
 
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp")
 
@@ -59,12 +57,15 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 층 표에 없는 폴더입니다")
         elif includeTier > tier:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 층 {tier}('{folder or '뿌리'}')가 위 층 {includeTier}('{includeFolder}')를 include 합니다")
+        elif includeTier == tier and includeFolder != folder:
+            listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 층 {tier}('{folder or '뿌리'}')가 같은 층의 다른 폴더 '{includeFolder}' 를 include 합니다")
     return listViolation
 
 
 class CheckCoreNetworkLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
+    ruleSchema = {"tier": kKindInteger}
     description = "Core/Network 의 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)을 거꾸로 include 하지 않는지 검사"
     buildComment = "Checking the Core/Network folder layers..."
     timeoutSeconds = 30
@@ -75,7 +76,7 @@ class CheckCoreNetworkLayersGate(LintGate):
     violationHeader = "Core/Network 층 위반"
     hint = (
         "  아래 층이 위 층을 알아야 하면 그 타입을 아래 층으로 내리거나(공용 타입은 NetTypes.h), 위 층이 아래 층에 콜백 · 인터페이스를 건넨다.\n"
-        "  새 폴더는 Scripts/lint/gate/CheckCoreNetworkLayers.py 의 _kNetworkTier 에 층을 정해 넣는다."
+        "  새 폴더는 Scripts/lint/rules/CheckCoreNetworkLayers.toml 의 [tier] 에 층을 정해 넣는다."
     )
     selfTestCases = [
         {
@@ -92,6 +93,11 @@ class CheckCoreNetworkLayersGate(LintGate):
             "name": "보안이 연결 헤더를 include 한다",
             "expectedViolation": "Source/Core/Network/Security/Probe.h:2: <Core/Network/Connection/NetHost.h> -> 층 1('Security')가 위 층 2('Connection')를 include 합니다",
             "files": {"Source/Core/Network/Security/Probe.h": "#pragma once\n#include \"Core/Network/Connection/NetHost.h\"\n"},
+        },
+        {
+            "name": "같은 층의 다른 폴더를 include 한다",
+            "expectedViolation": "Source/Core/Network/Security/Probe.h:2: <Core/Network/Transport/NetSocket.h> -> 층 1('Security')가 같은 층의 다른 폴더 'Transport' 를 include 합니다",
+            "files": {"Source/Core/Network/Security/Probe.h": "#pragma once\n#include \"Core/Network/Transport/NetSocket.h\"\n"},
         },
         {
             "name": "표에 없는 폴더",

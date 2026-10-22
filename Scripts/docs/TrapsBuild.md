@@ -68,7 +68,7 @@
   그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
 - **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면
   그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 레지스트리 · 제품 이름 · 함수 어휘)은
-  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `report/RunEngineLayerGraph.py --apply` 가 TOML 에 고쳐 쓴다.
+  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `report/RunEngineLayerGraph.py --apply` 가 TOML 에 고쳐 쓴다(내리기만 — 올리기는 `--raise-reason` 사유가 있어야 하고, `[tierReason]` 폴더는 건드리지 않는다).
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.
