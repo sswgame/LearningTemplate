@@ -32,6 +32,7 @@
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Resource/Cook/PackConfig.h"
 #include "Engine/Resource/Cook/PackCooker.h"
+#include "Engine/Resource/Pack/PackPatchBuilder.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
@@ -161,7 +162,36 @@ namespace sw
                     params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
                 }
                 uint32 packCount = 0;
-                return PackCooker::cookAllPacks( packConfig, params, cookStore, packCount );
+                if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
+                    return false;
+                // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 적용할 수 없는 빌드다.
+                string build;
+                (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
+                if ( build.empty() )
+                    return true;
+                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
+            }
+
+            /**
+             * @brief 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base`)으로 패치를 `-patch-dir` 에 만듭니다. 패치 팩의 압축은 팩 쿠킹 설정과 같습니다.
+             */
+            [[nodiscard]] static bool makePatchStage( const CommandLineManager& commandLine )
+            {
+                PackPatchBuildParams params;
+                (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packsDirectory ); // 비면 makePatch 가 오류로 멈춘다
+                (void)commandLine.getArgument( CommandLineArgument::PATCH_BASE, params._previousRecordPath );
+                (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, params._newBuild );
+                (void)commandLine.getArgument( CommandLineArgument::PATCH_DIR, params._outputDirectory );
+                PackConfig   packConfig;
+                const string packConfigPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), PackConfig::kConfigPath );
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
+                {
+                    SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
+                    return false;
+                }
+                params._writerDesc._compression      = packConfig._compression._codec;
+                params._writerDesc._compressionLevel = packConfig._compression._level;
+                return PackPatchBuilder::makePatch( params );
             }
         };
     } // namespace
@@ -266,6 +296,17 @@ namespace sw
             if ( bAllCurrent )
                 SW_LOG_INFO( "Committed shader binaries match their sources for every backend" );
             _state._bFailed = bAllCurrent == false;
+            return SubsystemInitResult::SkipDependents;
+        }
+
+        // 패치 만들기(`-make-patch`) — 구운 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다.
+        bool bMakePatch = false;
+        if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) && bMakePatch )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _state._bHeadless = true;
+            SW_LOG_INFO( "Starting Headless (MakePatch)..." );
+            _state._bFailed = HeadlessSubsystemInternal::makePatchStage( commandLine ) == false;
             return SubsystemInitResult::SkipDependents;
         }
 

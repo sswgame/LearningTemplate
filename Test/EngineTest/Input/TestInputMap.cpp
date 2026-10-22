@@ -2072,6 +2072,11 @@ SW_TEST_CASE( InputMapTest, ActionPressInstantCarriesFramePlaceAndLookBeforeIt )
     SW_EXPECT_NEAR_EQUAL( 3.0f, instant._lookDeltaBefore._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, instant._lookDeltaBefore._y, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 8.0f, input.getFrameLookDelta()._x, 1.0e-6f );
+    // 시선 액션 값에 곱하는 비율: x 는 8 중 3, y 는 프레임 합 +1 에 앞의 −1 이라 부호가 뒤집힌다(되돌린 이동). 합이 0 인 축은 폴링 값이라 1 이다.
+    const sw::float2 fraction = instant.computeLookFraction( input.getFrameLookDelta() );
+    SW_EXPECT_NEAR_EQUAL( 3.0f / 8.0f, fraction._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, fraction._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, instant.computeLookFraction( sw::float2{ 0.0f, 0.0f } )._x, 1.0e-6f );
     input.endFrame();
 
     // 다음 프레임은 누르지 않았다 — 순간이 없다(지난 프레임 값을 돌려주지 않는다).

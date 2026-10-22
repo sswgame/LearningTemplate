@@ -94,10 +94,21 @@ Sync 탭의 클라이언트 원천(2026-10-22): 칸마다 세션 클라이언트
    월드마다 미리보기 뷰포트(`EditorPreviewViewport::attachScene` — 남의 씬을 붙여 그린다, 씬은 내리지 않는다)를 나란히 그린다. 탭이 세션을 가지므로 탭이 보일 때만 진행한다.
 3. 입력 초점: `NetSimHarness::setInputFocus` · `NetSimWorld::hasInputFocus` — 한 번에 한 월드뿐이고, 탭에서 월드 칸을 클릭하면 옮겨 간다. 게임 세션은 이 값이 참일 때만 입력을 읽는다(계약). 확인: `NetSimHarnessTest.InputFocusBelongsToOneWorldAtATime`.
 
+2026-10-22(`wt/inputdata`, Debug 빌드 · 테스트 · 시나리오 확인) 네 조각이 더 들어갔다.
+
+4. 본보기 게임 `NetSimSampleGame`(`PlugIn/Editor/NetSimulation/Sample/`, 같은 확장 `GF_EditorPlugIn_NetSimulation` 이 목록에 등록한다): 서버 권위 아바타다. 게임 영역 메시지(`NetMessageRange::kGame`) 둘 — 클라이언트 → 서버 이동 입력, 서버 → 클라이언트 아바타 목록(둘 다 비신뢰, 낡은 틱은 받는 쪽이 버린다)이고, 복제 키트를 쓰지 않아 이 확장은 하니스 키트만 안다.
+   연결마다 상자 하나(엔티티 id = 연결 id + 1)를 서버가 입력으로 움직이고, 클라이언트 월드는 받은 위치로 다가가며 그린다. 입력은 입력 초점이 있는 월드만 읽고 나머지는 0 이동을 보낸다(안 보내면 서버가 마지막 입력을 계속 쓴다).
+   게임이 `INetSimGame` 을 구현하는 모양의 본보기다. 목록에 올리는 일은 모듈의 생성자 · 소멸자 쌍이 한다.
+   설계 메모(2026-10-22): 처음에는 복제 키트(`ReplicationServer` · `ReplicationClient`) 위에 짰으나 에디터 확장은 자기 키트만 include 할 수 있어(`CheckGameFrameworkLayers`) 하니스 키트와 복제 키트를 함께 쓰면 층 위반이었고, 복제 키트를 쓰는 게임에만 확장이 켜지는 부작용도 있었다. 복제 키트 위의 실제 게임 구현은 게임 모듈의 일이다(아래 남은 것).
+   테스트 `NetSimSampleGameTest.*` 넷(초점이 있는 클라이언트의 아바타만 움직이고 두 클라이언트 월드가 따라옴 · 벽에서 멈춤 · 클라이언트가 떠나면 아바타가 사라짐 · 등록 · 카메라).
+5. 카메라 창구: `INetSimGame::describePreviewFraming`(`NetSimPreviewFraming` — 오빗 카메라와 바닥 크기)을 게임이 알리면 `EditorNetSimSession::findViewport` 가 그 카메라로 잡고 조명 환경(방향광 · 하늘 · 바닥)을 월드 씬에 더한다. 안 알리면 기본 카메라 그대로이고 환경을 더하지 않는다. 클라이언트 폰 카메라를 따르는 보기는 아직 아니다(고정 오빗).
+6. 에디터 자동화: 탭의 단추 · 월드 뷰포트와 Multiplayer 창의 탭 제목에 자동화 레이블(`multiplayer.tab.<id>` · `multiplayer.inprocess.start|stop|world<N>`), 탐침 `Editor.NetSimRunning` · `NetSimTick` · `NetSimWorldCount` · `NetSimInputFocus` · `NetSimViewportCount` · `NetSimObjectX|Z`(target = 월드 번호, key = 오브젝트 이름 — 게임을 가리지 않는다).
+7. 시나리오 `engine/automation/editor/netsim.scenario.xml`: 시작(클라이언트 둘 + 서버), 세 월드가 같은 아바타를 같은 위치에 그림, 클라이언트 1 에서 D 를 누르면 아바타 1 만 오른쪽으로 가고 두 클라이언트 월드가 같은 값을 보임(`sameAs`), 클라이언트 2 뷰포트를 눌러 초점을 옮기고 W 로 아바타 2 만 앞으로, 멈춤. **네 백엔드(DX12 · Vulkan · DX11 · OpenGL) Debug 에서 통과**했고 DX12 의 캡처 셋(`Saved/Automation/editor.netsim/netsim/`)을 눈으로 봤다 — 세 월드가 모두 바닥 · 하늘 · 상자 둘이고 이동 뒤 같은 위치다. **DX12 는 세 번 중 한 번 `[RHI] [D3D12] 온라인 디스크립터 블록이 바닥났습니다 (64×512)` 오류 줄로 졌다**(같은 줄이 previewsky 디퍼드 DX12 에서도 난다 — 미리보기 렌더러가 여럿인 에디터의 DX12 디스크립터 블록 부족, 렌더러 담당의 일이다).
+
 남은 것:
-- 올라온 게임이 아직 없다 — 게임 하나가 `INetSimGame` 을 구현해 `NetSimGameRegistry::registerGame` 으로 올리고 세션이 `hasInputFocus` 로 입력을 거르는 일(게임 쪽).
-- 카메라는 오빗 카메라다 — 클라이언트 폰 카메라를 따르는 보기는 게임 세션이 카메라를 알리는 창구가 필요하다.
-- 에디터 시나리오(클라이언트 둘 + 서버, 한 클라이언트에서 움직이면 다른 창의 그 오브젝트가 움직임)와 네 백엔드 캡처.
+- 게임 모듈이 `INetSimGame` 을 구현한 실제 게임은 아직 없다(본보기뿐). Shooter3D 의 네트워크 몸 이동(`ShooterNetPawnComponent`)은 전역 `GameNetSession` 을 찾으므로, 월드마다 세션을 받게 바꾸는 일이 먼저다.
+- 캡처를 눈으로 본 것은 DX12 뿐이다(다른 세 백엔드는 시나리오 통과만 확인).
+- 아바타 상자가 작게 보인다(아레나 전체가 보이는 거리) — 월드 뷰포트 크기에 따른 거리 조정은 하지 않았다.
 
 ## 운영 단위 (실제 운용에 도움이 되는 것 — 디버깅 단위 S1 ~ S5 뒤에 순서를 정한다)
 

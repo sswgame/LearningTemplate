@@ -25,6 +25,10 @@
 | `-cook-all` | 플래그(`-이름`) | 씬 쿠킹(`-cook-scenes`)과 팩 쿠킹(`-cook-packs`)을 차례로 하고 끝낸다 — 빌드의 CookAssets 타깃과 배포 패키징이 부른다 | `COOK_ALL` |
 | `-cooked-dir` | 글 값(`-이름=값`) | `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더 | `COOKED_DIR` |
 | `-pack-dir` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더 | `PACK_DIR` |
+| `-pack-build` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 목록을 남기지 않는다(패치를 적용할 수 없는 빌드). `-make-patch` 에서는 새 빌드 번호다 | `PACK_BUILD` |
+| `-make-patch` | 플래그(`-이름`) | 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base=<파일>.packbuild.xml`)의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `-patch-dir` 에 만들고 끝낸다. 새 빌드 번호는 `-pack-build` 다 | `MAKE_PATCH` |
+| `-patch-base` | 글 값(`-이름=값`) | `-make-patch` 의 이전 빌드 내용 목록 파일 | `PATCH_BASE` |
+| `-patch-dir` | 글 값(`-이름=값`) | `-make-patch` 가 패치를 쓸 폴더 | `PATCH_DIR` |
 | `-verify-shaders` | 플래그(`-이름`) | 커밋된 셰이더 바이너리가 지금 소스에서 나온 것인지(`cook.stamp` · 매니페스트) 본다. 혼자면 쿠킹 표의 모든 백엔드를 보고 문제가 있으면 실패로 끝난다(커밋 훅). `-cook-all` · `-cook-packs` 와 함께면 팩에 담을 백엔드만 보고, 낡았으면 다시 쿠킹한 뒤 다시 보며 그래도 맞지 않으면 팩을 굽지 않는다(배포 빌드) | `VERIFY_SHADERS` |
 | `-server-config` | 글 값(`-이름=값`) | 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다. | `SERVER_CONFIG` |
 | `-game` | 글 값(`-이름=값`) | 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다. Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`) | `GAME` |

@@ -195,6 +195,16 @@ namespace sw
         return getFileEntry( HashUtil::computeStringHash64( relativePath ), outEntry );
     }
 
+    void ResourcePakReader::collectAllEntryPaths( vector<string>& outListPath ) const
+    {
+        std::scoped_lock<mutex> lock( _fileMutex );
+        outListPath.reserve( outListPath.size() + _mapEntry.size() );
+        for ( const auto& mapItem : _mapEntry )
+        {
+            outListPath.emplace_back( mapItem.second._relativePath );
+        }
+    }
+
     void ResourcePakReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
     {
         std::scoped_lock<mutex> lock( _fileMutex );

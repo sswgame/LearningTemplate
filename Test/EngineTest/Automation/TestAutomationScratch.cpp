@@ -76,3 +76,46 @@ SW_TEST_CASE( AutomationScratchTest, PrepareMakesAFreshRebasedCopy )
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( scratchDir ) );
 }
+
+/**
+ * @brief [AutomationScratchTest] 사본으로 옮긴 에디터 시나리오(assetmanage · animgraphlayers)는 쓰는 폴더를 선언하고, 주석을 뺀 글에서 원본 폴더를 `<Scratch from>` 에서만 이름 붙인다
+ * @details 단계가 원본 id 를 그대로 쓰면 사본을 만들어 놓고도 원본에 쓴다. 변이: 시나리오 한 단계를 원본 id 로 되돌리면 진다.
+ */
+SW_TEST_CASE( AutomationScratchTest, MigratedEditorScenariosNameTheSourceFolderOnlyInScratch )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    struct Migrated
+    {
+        const utf8* _pScenario;
+        const utf8* _pSourceFolder;
+    };
+    const Migrated arrMigrated[] = {
+        {    "engine/automation/editor/assetmanage.scenario.xml",     "engine/automation/editor/assetmanage"},
+        {"engine/automation/editor/animgraphlayers.scenario.xml", "engine/automation/editor/animgraphlayers"},
+    };
+    for ( const Migrated& migrated : arrMigrated )
+    {
+        sw::string text;
+        SW_ASSERT_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), migrated._pScenario ), text ), migrated._pScenario );
+        sw::AutomationScenario scenario;
+        sw::string             error;
+        SW_ASSERT_TRUE_MSG( scenario.parse( text, migrated._pScenario, error ), error.c_str() );
+        SW_ASSERT_EQUAL( size_t{ 1 }, scenario.getScratchFolders().size() );
+        SW_EXPECT_TRUE( scenario.getScratchFolders()[0]._sourceID == migrated._pSourceFolder );
+
+        // 주석을 뺀 글에서 원본 폴더는 `<Scratch from>` 에 한 번뿐이다.
+        sw::string body = text;
+        for ( size_t commentBegin = body.find( "<!--" ); commentBegin != sw::string::npos; commentBegin = body.find( "<!--" ) )
+        {
+            const size_t commentEnd = body.find( "-->", commentBegin );
+            SW_ASSERT_TRUE( commentEnd != sw::string::npos );
+            body.erase( commentBegin, commentEnd + 3 - commentBegin );
+        }
+        size_t occurrenceCount = 0;
+        for ( size_t hit = body.find( migrated._pSourceFolder ); hit != sw::string::npos; hit = body.find( migrated._pSourceFolder, hit + 1 ) )
+        {
+            ++occurrenceCount;
+        }
+        SW_EXPECT_EQUAL( size_t{ 1 }, occurrenceCount );
+    }
+}

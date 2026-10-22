@@ -14,8 +14,12 @@ namespace sw::editor
     {
         struct EditorReferenceIndexInternal
         {
-            /** @brief 참조가 시작할 수 있는 리소스 도메인입니다(리소스 id 의 첫 조각). */
-            static constexpr const utf8* kArrDomainPrefix[] = { "engine/", "common/", "game/", "editor/" };
+            /**
+             * @brief 참조가 시작할 수 있는 리소스 도메인입니다(리소스 id 의 첫 조각).
+             * @details `scratch/` 는 자동화 시나리오의 실행마다 새 사본 폴더(`AutomationScratch::kScratchDomain`)다 — 빠지면 사본 안의 참조(이름 바꾸기가 고칠 씬)를 세지 못한다.
+             *          테스트 `EditorReferenceIndexTest.ScratchCopiesAreReferenceDomains` 가 두 이름이 같은지 본다.
+             */
+            static constexpr const utf8* kArrDomainPrefix[] = { "engine/", "common/", "game/", "editor/", "scratch/" };
             /** @brief 참조를 훑는 텍스트 에셋의 확장자입니다. 바이너리(dds, mesh, 셰이더 바이너리)는 글이 아니다. */
             static constexpr const utf8* kArrTextExtension[] = { ".xml", ".json", ".material", ".hlsl", ".hlsli" };
             /**

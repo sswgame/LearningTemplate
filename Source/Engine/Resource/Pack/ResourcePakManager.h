@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    struct PackPatchManifest;
+
     /**
      * @brief 유료 DLC 소유권을 확인하는 델리게이트입니다(스팀 · 에픽 · 콘솔 플랫폼 서비스 연동용).
      * @param dlcAppID 확인할 DLC 식별자
@@ -132,14 +134,22 @@ namespace sw
         size_t getMountedPackCount() const;
 
         /**
-         * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트합니다.
+         * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트하고, 패치 목록(`*.packpatch.xml`)이 있으면 그 패치를 사슬 순서로 적용합니다.
          * @param packsDirectory .pack 파일들이 있는 디렉터리(예: "Bin/Packs")
          * @param listPriority EngineConfig._listResourcePriority 우선순위 토큰 목록
          * @return 팩을 하나 이상 마운트하면 true 입니다.
+         * @details 패치 목록이 가리키는 팩은 기본 팩으로 마운트하지 않는다. 설치된 빌드는 같은 폴더의 `PackPatchUtil::kBuildRecordFileName` 이 밝히고, 거기서 이어지는 패치를
+         *          모두 적용한다(`mountPatchChain`). 목록을 못 읽거나 · 빌드 기록이 없거나 · 사슬이 끊기거나 갈리거나 · 패치 팩이 없으면 이 호출이 마운트한 팩을 모두 해제하고 false 다 —
+         *          패치가 덜 적용된 채 돌지 않는다.
          */
         bool scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority );
 
     private:
+        /**
+         * @brief 폴더의 빌드 기록에서 설치된 빌드를 읽고 @p listManifest 의 패치를 그 빌드부터 이어지는 순서로 높은 우선순위에 마운트합니다.
+         * @param listMountedPath 마운트한 패치 팩 경로를 뒤에 덧붙입니다(실패했을 때 호출자가 내린다).
+         */
+        bool mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath );
         /** @brief 팩을 열어 지움 목록 해시(@p listRemovedPathHash, 정렬됨)와 함께 마운트합니다. `mountPack` 과 `mountPatchPack` 의 본문입니다. */
         bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash );
         /**

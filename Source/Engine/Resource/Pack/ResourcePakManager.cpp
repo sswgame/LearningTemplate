@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Resource/Pack/PackPatch.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -136,6 +137,41 @@ namespace sw
                         return true;
                 }
 
+                return false;
+            }
+
+            /** @brief 후보 파일 가운데 패치 목록(`*.packpatch.xml`)을 모두 읽습니다. 하나라도 읽지 못하면 이유를 남기고 false 입니다. */
+            [[nodiscard]] static bool collectPatchManifests( const vector<string>& listCandidateFile, vector<PackPatchManifest>& outListManifest )
+            {
+                outListManifest.clear();
+                for ( const string& candidate : listCandidateFile )
+                {
+                    if ( StringUtil::endsWith( candidate, PackPatchUtil::kManifestExtension, true ) == false )
+                        continue;
+                    string text;
+                    if ( FileUtil::readTextFile( candidate, text ) == false )
+                    {
+                        SW_LOG_ERROR( "Pack patch manifest could not be read: %#", candidate );
+                        return false;
+                    }
+                    PackPatchManifest manifest;
+                    if ( PackPatchUtil::parseManifest( text, candidate, manifest ) == false )
+                        return false;
+                    outListManifest.push_back( std::move( manifest ) );
+                }
+                return true;
+            }
+
+            /** @brief @p packPath 가 패치 목록이 가리키는 패치 팩이면 true 입니다(파일 이름 비교, 대소문자 무시). */
+            static bool isPatchPackFile( const string& packPath, const vector<PackPatchManifest>& listManifest )
+            {
+                string_view fileName;
+                FileUtil::getFileNamePart( packPath, fileName );
+                for ( const PackPatchManifest& manifest : listManifest )
+                {
+                    if ( StringUtil::equals( fileName, manifest._packFileName, true ) )
+                        return true;
+                }
                 return false;
             }
 
@@ -480,18 +516,83 @@ namespace sw
         if ( listCandidateFile.empty() )
             return false;
 
-        bool bAnyMounted = false;
+        // 패치 목록이 가리키는 팩은 기본 팩이 아니다 — 지움 목록과 함께 사슬 순서로 따로 마운트한다. 목록을 못 읽으면 어느 팩이 패치인지 모르므로 아무것도 마운트하지 않는다.
+        vector<PackPatchManifest> listManifest;
+        if ( ResourcePakManagerInternal::collectPatchManifests( listCandidateFile, listManifest ) == false )
+            return false;
+
+        bool           bAnyMounted = false;
+        vector<string> listMountedPath;
         for ( const string& packPath : listCandidateFile )
         {
-            if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false )
+            if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false || ResourcePakManagerInternal::isPatchPackFile( packPath, listManifest ) )
                 continue;
 
             const int32 priority = ResourcePakManagerInternal::computePackDefaultPriority( packPath, listPriority );
             if ( mountPack( packPath, priority ) )
+            {
                 bAnyMounted = true;
+                listMountedPath.push_back( packPath );
+            }
         }
+        if ( bAnyMounted == false || listManifest.empty() )
+            return bAnyMounted;
 
-        return bAnyMounted;
+        // 패치를 적용하지 못하면 기본 팩만 마운트된 절반만 패치된 게임이 되므로, 이 호출이 마운트한 팩을 모두 해제하고 실패한다.
+        if ( mountPatchChain( packsDirectory, listManifest, listMountedPath ) == false )
+        {
+            for ( const string& mountedPath : listMountedPath )
+            {
+                (void)unmountPack( mountedPath );
+            }
+            return false;
+        }
+        return true;
+    }
+
+    bool ResourcePakManager::mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath )
+    {
+        const string recordPath = FileUtil::joinPath( packsDirectory, PackPatchUtil::kBuildRecordFileName );
+        string       recordText;
+        if ( FileUtil::readTextFile( recordPath, recordText ) == false )
+        {
+            SW_LOG_ERROR( "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackPatchUtil::kBuildRecordFileName );
+            return false;
+        }
+        PackBuildRecord record;
+        if ( PackPatchUtil::parseBuildRecord( recordText, recordPath, record ) == false )
+            return false;
+        vector<size_t> listOrder;
+        string         latestBuild;
+        if ( PackPatchUtil::orderPatchChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )
+            return false;
+
+        int32 priority = 0;
+        {
+            std::scoped_lock<mutex> lock( _vfsMutex );
+            for ( const MountedPack& mounted : _listMountedPack )
+            {
+                priority = mounted._priority > priority ? mounted._priority : priority;
+            }
+        }
+        priority = ( priority / ResourcePakManagerInternal::kPriorityStep + 1 ) * ResourcePakManagerInternal::kPriorityStep; // 기본 팩 어느 것보다 높다
+        for ( const size_t manifestIndex : listOrder )
+        {
+            const PackPatchManifest& manifest = listManifest[manifestIndex];
+            const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
+            if ( FileUtil::exists( packPath ) == false )
+            {
+                SW_LOG_ERROR( "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );
+                return false;
+            }
+            priority += ResourcePakManagerInternal::kPriorityStep; // 뒤 패치가 앞 패치를 덮는다
+            if ( mountPatchPack( packPath, priority, manifest._listRemovedPath ) == false )
+                return false;
+            listMountedPath.push_back( packPath );
+        }
+        if ( listOrder.empty() == false )
+            SW_LOG_INFO( "Applied %# pack patch(es): build %# -> %#", listOrder.size(), record._build, latestBuild );
+        return true;
     }
 
 } // namespace sw

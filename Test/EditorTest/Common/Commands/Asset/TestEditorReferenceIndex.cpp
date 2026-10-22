@@ -4,6 +4,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 
+#include "Engine/Automation/AutomationScratch.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -107,4 +109,26 @@ SW_TEST_CASE( EditorReferenceIndexTest, RefreshFileDropsRemovedReferences )
     SW_ASSERT_TRUE( FileUtil::removeFile( FileUtil::joinPath( root._path, "game/test/maps/c.scene.xml" ) ) );
     index.refreshFile( root._path, "game/test/maps/c.scene.xml" );
     SW_EXPECT_EQUAL( 0u, index.countReferrerFiles( "game/test/models/b.mesh" ) );
+}
+
+/**
+ * @brief [EditorReferenceIndexTest] 시나리오 사본 폴더(`scratch/`)의 참조도 센다 — 사본 안의 씬이 사본의 머티리얼을 가리키는 참조를 이름 바꾸기가 고칠 수 있어야 한다
+ * @details 사본 도메인 이름은 `AutomationScratch::kScratchDomain` 에서 읽는다(참조 도메인 목록과 어긋나면 진다). 원본 폴더의 같은 이름 에셋과 섞이지 않는다.
+ */
+SW_TEST_CASE( EditorReferenceIndexTest, ScratchCopiesAreReferenceDomains )
+{
+    const ScopedResourceRoot root{ "sw_editor_reference_index_scratch" };
+    const string             scratchMaterial = string( AutomationScratch::kScratchDomain ) + "/assetmanage/probe.material";
+    const string             scratchScene    = string( AutomationScratch::kScratchDomain ) + "/assetmanage/assetmanage.scene.xml";
+    SW_ASSERT_TRUE( root.write( scratchMaterial, "{}" ) );
+    SW_ASSERT_TRUE( root.write( scratchScene, "<Mesh path=\"" + scratchMaterial + "\"/>" ) );
+    SW_ASSERT_TRUE( root.write( "engine/automation/editor/assetmanage/assetmanage.scene.xml", "<Mesh path=\"engine/automation/editor/assetmanage/probe.material\"/>" ) );
+    SW_ASSERT_TRUE( root.write( "engine/automation/editor/assetmanage/probe.material", "{}" ) );
+
+    EditorReferenceIndexData data{};
+    EditorReferenceIndex::scan( root._path, data );
+    EditorReferenceIndex index{};
+    index.assign( std::move( data ) );
+    SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( scratchMaterial ) );
+    SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( "engine/automation/editor/assetmanage/probe.material" ) );
 }

@@ -90,6 +90,11 @@ namespace
     {
         static constexpr float32 kDeltaTime = 1.0f / 60.0f;
 
+        /** @brief 주입 시계의 지금 시각(마이크로초)입니다 — 발동 시선 테스트가 프레임 창 안의 이벤트 시각을 정한다. */
+        static inline int64 s_triggerLookNowMicroseconds{ 0 };
+
+        static int64 readTriggerLookClock() { return s_triggerLookNowMicroseconds; }
+
         /** @brief 자리 · 폰(버튼 "Jump") · 테스트 이동을 가진 폰 오브젝트입니다. */
         static GameObject* spawnPawn( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
@@ -213,6 +218,7 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
     intent.setButton( 32, true, true ); // 범위 밖 — 할 일이 없다
     SW_EXPECT_TRUE( intent.isDown( 31 ) );
     SW_EXPECT_FALSE( intent.wasTriggered( 31 ) );
+    intent.setTriggerLook( 4.0f, 0.3f ); // 발동 순간의 시선도 요는 감아서 싣는다
 
     BitWriter writer;
     SW_ASSERT_TRUE( intent.write( writer ) );
@@ -227,6 +233,9 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
     SW_EXPECT_NEAR_EQUAL( 0.7f, decoded._move._x, 1.0f / ControlIntent::kAxisSteps );
     SW_EXPECT_NEAR_EQUAL( 4.0f - 2.0f * MathUtil::kPi, decoded._controlYaw, 1.0f / ControlIntent::kAngleStepsPerRadian );
     SW_EXPECT_NEAR_EQUAL( -1.0f, decoded._arrAnalog[3], 1.0e-6f );
+    SW_EXPECT_TRUE( decoded._bTriggerLook );
+    SW_EXPECT_NEAR_EQUAL( 4.0f - 2.0f * MathUtil::kPi, decoded._triggerYaw, 1.0f / ControlIntent::kAngleStepsPerRadian );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, decoded._triggerPitch, 1.0f / ControlIntent::kAngleStepsPerRadian );
     SW_EXPECT_TRUE( decoded.isDown( 0 ) && decoded.wasTriggered( 0 ) && decoded.isDown( 31 ) );
 
     // 한 번 더 양자화해도 그대로다(고정점).
@@ -887,6 +896,89 @@ SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
         Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( -0.2f, pPlayer->getControlPitch(), 1.0e-3f );
         SW_EXPECT_NEAR_EQUAL( -0.2f, pRig->getLook().getPitch(), 1.0e-3f );
+        manager.endPlay();
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] 발동 순간의 시선(서브틱 입력 B4) — 한 프레임 안에서 클릭 앞의 마우스 이동만 의도의 발동 시선에 들고, 프레임 끝의 조종 회전은 클릭 뒤 이동까지 담는다
+ * @details 시계를 주입해 프레임 창 안에서 이동 10 px, 클릭, 이동 30 px 를 넣는다(액션 배율 3, 감도 s). 조종 요는 40 × 3 × s, 발동 요는 10 × 3 × s 다.
+ *          폰이 발동 버튼을 지정하지 않으면 발동 시선은 비고, 누르지 않은 프레임에도 비며, 의도를 비트로 왕복해도 같다.
+ * @details 변이: `PlayerControllerComponent::produceIntent` 가 발동 시선을 프레임 끝의 조종 회전으로 채우면 진다.
+ */
+SW_TEST_CASE( ControlTest, TriggerLookCarriesTheControlRotationAtTheClick )
+{
+    using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setClock( &ControlTestInternal::readTriggerLookClock );
+    input.getInputMap().bindMouseDelta( "Look", 3.0f );
+    input.getInputMap().bind( "Fire", MouseButton::Left );
+    {
+        GameObjectManager manager;
+        GameObject*       pViewer = ControlTestInternal::spawnFirstPersonPawn( manager, false );
+        PawnComponent*    pPawn   = pViewer->getComponent<PawnComponent>();
+        pPawn->setButtonNames( vector<hashed_string>{ hashed_string( "Fire" ) } );
+        auto* pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pPawn );
+
+        ControlTestInternal::s_triggerLookNowMicroseconds = 1000000;
+        input.beginFrame( Internal::kDeltaTime );
+        input.endFrame();
+
+        const float32 sensitivity   = pPlayer->getLookSensitivity();
+        auto          runClickFrame = [&]()
+        {
+            ControlTestInternal::s_triggerLookNowMicroseconds += 4000;
+            SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 10.0f, 0.0f ) ) );
+            ControlTestInternal::s_triggerLookNowMicroseconds += 4000;
+            SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseButtonDown( MouseButton::Left ) ) );
+            ControlTestInternal::s_triggerLookNowMicroseconds += 4000;
+            SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 30.0f, 0.0f ) ) );
+            ControlTestInternal::s_triggerLookNowMicroseconds += 4000;
+            input.beginFrame( Internal::kDeltaTime );
+            manager.update( Internal::kDeltaTime );
+            input.endFrame();
+        };
+
+        // 발동 버튼을 지정하지 않았다 — 클릭해도 발동 시선이 비어 있다.
+        runClickFrame();
+        SW_EXPECT_TRUE( pPawn->wasButtonTriggered( 0 ) );
+        SW_EXPECT_FALSE( pPawn->getIntent()._bTriggerLook );
+        SW_EXPECT_NEAR_EQUAL( 40.0f * 3.0f * sensitivity, pPlayer->getControlYaw(), 1.0e-4f );
+
+        // 지정하면 클릭 앞의 이동(10 px)만 담는다. 프레임 끝의 조종 회전은 40 px 를 모두 담는다.
+        pPawn->setTriggerLookButton( hashed_string( "Fire" ) );
+        const float32 yawBefore = pPlayer->getControlYaw();
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseButtonUp( MouseButton::Left ) ) );
+        ControlTestInternal::s_triggerLookNowMicroseconds += 16000;
+        input.beginFrame( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
+        input.endFrame();
+        runClickFrame();
+        const ControlIntent& intent = pPawn->getIntent();
+        SW_ASSERT_TRUE( intent._bTriggerLook );
+        SW_EXPECT_NEAR_EQUAL( yawBefore + 10.0f * 3.0f * sensitivity, intent._triggerYaw, 2.0f / ControlIntent::kAngleStepsPerRadian );
+        SW_EXPECT_NEAR_EQUAL( yawBefore + 40.0f * 3.0f * sensitivity, intent._controlYaw, 2.0f / ControlIntent::kAngleStepsPerRadian );
+        SW_EXPECT_TRUE( intent._triggerYaw < intent._controlYaw );
+
+        // 비트로 왕복해도 같고, 누르지 않은 프레임은 비어 있다.
+        BitWriter writer;
+        SW_ASSERT_TRUE( intent.write( writer ) );
+        SW_EXPECT_TRUE( writer.getByteCount() <= ControlIntent::kMaxSerializedBytes );
+        ControlIntent decoded;
+        BitReader     reader( writer.getBytes().data(), writer.getByteCount() );
+        SW_ASSERT_TRUE( decoded.read( reader ) );
+        SW_EXPECT_TRUE( decoded == intent );
+
+        ControlTestInternal::s_triggerLookNowMicroseconds += 16000;
+        input.beginFrame( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
+        input.endFrame();
+        SW_EXPECT_FALSE( pPawn->getIntent()._bTriggerLook );
         manager.endPlay();
     }
     input.shutdown();

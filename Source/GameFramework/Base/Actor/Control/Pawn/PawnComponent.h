@@ -86,10 +86,13 @@ namespace sw
         const hashed_string&         getLookAction() const { return _lookAction; }
         const hashed_string&         getUpAction() const { return _upAction; }
         const hashed_string&         getInputLayer() const { return _inputLayer; }
-        void                         setInputLayer( const hashed_string& layer ) { _inputLayer = layer; }
-        float32                      getMaxPitch() const { return _maxPitch; }
-        PawnAutoPossess              getAutoPossess() const { return _autoPossess; }
-        void                         setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
+        /** @brief 눌린 순간의 조종 회전을 의도에 싣게 할 버튼 이름입니다(서브틱 입력). 비었으면 싣지 않는다. */
+        const hashed_string& getTriggerLookButton() const { return _triggerLookButton; }
+        void                 setTriggerLookButton( const hashed_string& button ) { _triggerLookButton = button; }
+        void                 setInputLayer( const hashed_string& layer ) { _inputLayer = layer; }
+        float32              getMaxPitch() const { return _maxPitch; }
+        PawnAutoPossess      getAutoPossess() const { return _autoPossess; }
+        void                 setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
         /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지 나타냅니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
         bool          wantsMouseLock() const { return _bLockMouse; }
         void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
@@ -124,6 +127,8 @@ namespace sw
         hashed_string _upAction;
         PROPERTY( Category = "Control", DisplayName = "Input Layer", Tooltip = "InputMap layer pushed while a player possesses this pawn (OnFoot, Horse, Car); empty = none" )
         hashed_string _inputLayer;
+        PROPERTY( Category = "Control", DisplayName = "Trigger Look Button", Tooltip = "Intent button whose press instant carries the control rotation at that moment (a shot fires along the look at the click, not at the frame end); empty = none" )
+        hashed_string _triggerLookButton;
         PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", AssetPath, AssetType = "Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )
         string _aiControllerPrefab;
         PROPERTY( Category = "Control", DisplayName = "Max Pitch", Min = 0.0, Max = 1.5707963, Tooltip = "Largest look up or down angle of the control rotation", Units = rad )

@@ -349,7 +349,14 @@ namespace sw
         const bool bTrigger     = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
         const bool bJustPressed = pPawn != nullptr && pPawn->wasButtonTriggered( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
         if ( bTrigger || bJustPressed )
-            fireWeapon( *pDirector, *pCamera, bJustPressed );
+        {
+            // 서브틱 입력: 막 누른 틱은 클릭한 순간의 시선으로 쏜다(프레임 끝의 시선이 아니라). 누르고 있는 틱은 지금 시선이다.
+            const ControlIntent& intent       = pPawn->getIntent();
+            float3               aimDirection = pCamera->getLook().getForward();
+            if ( bJustPressed && intent._bTriggerLook )
+                aimDirection = RayMath::computeLookDirection( intent._triggerYaw, intent._triggerPitch );
+            fireWeapon( *pDirector, *pCamera, aimDirection, bJustPressed );
+        }
 
         _lookYaw = pCamera->getLook().getYaw();
         pCamera->setEyePosition( getEyePosition() );
@@ -513,12 +520,12 @@ namespace sw
             SW_LOG_INFO( "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 
-    void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed )
+    void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
     {
         WeaponState& weapon = _arrWeapon[_weaponIndex];
         GameRay      aim;
         aim._origin    = getEyePosition();
-        aim._direction = camera.getLook().getForward();
+        aim._direction = aimDirection;
         WeaponShot             shot;
         const WeaponFireResult result = weapon.pullTrigger( aim, bJustPressed, shot );
         if ( result == WeaponFireResult::EmptyMagazine )

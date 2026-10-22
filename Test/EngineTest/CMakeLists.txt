@@ -46,6 +46,11 @@ list(APPEND swEngineTestExtensionSource ${swMeshModifierSource})
 # 캐릭터 편집(GF_EditorPlugIn_CharacterEditor)의 화면 없는 편집 모델(Model/)도 폴더째 모은다.
 file(GLOB swCharacterEditorModelSource CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/CharacterEditor/Model/*.cpp")
 list(APPEND swEngineTestExtensionSource ${swCharacterEditorModelSource})
+# 한 프로세스 재생의 본보기 게임(GF_EditorPlugIn_NetSimulation 의 Sample/)은 화면 없는 게임 로직이라 직접 컴파일한다 — 게임 목록에 올리는 일(NetSimSampleRegistration.cpp)은 확장 DLL 의 몫이라 뺀다.
+# 하니스 키트(GF_NetSimulation) 위에 있어 그 키트가 켜졌을 때만 컴파일한다(꺼지면 그 키트의 테스트 파일과 함께 빠진다).
+if(TARGET GF_NetSimulation)
+	list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/NetSimulation/Sample/NetSimSampleGame.cpp")
+endif()
 # 텍스처 표본기가 이미지 디코드를 맡기는 Editor 의 ImageUtil(stb_image 를 감싼다)도 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
 # stb include 는 `stb` 타깃을 직접 링크해 얻는다(아래 LIBS) — 다른 타깃이 끌어오는 vcpkg include 폴더는 구성마다 있거나 없다.
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")

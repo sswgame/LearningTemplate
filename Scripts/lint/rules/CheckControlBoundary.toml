@@ -34,3 +34,4 @@ pawn_side = [
 "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*" = "명령 조종자 — 조립 테스트 마을의 시간 빨리 감기(게임 규칙 명령)"
 "Source/Games/MeadowVillage/MeadowTownDirectorComponent.*" = "명령 조종자 — 조립 테스트 마을의 말 걸기(대화 명령)"
 "Source/Games/FrontierTown/FrontierCityDirectorComponent.*" = "명령 조종자 — 둘째 조립 테스트 마을의 시간 빨리 감기(게임 규칙 명령)"
+"Source/GameFramework/PlugIn/Editor/NetSimulation/Sample/NetSimSampleGame.*" = "한 프로세스 재생의 본보기 게임 — 입력 초점이 있는 월드 하나가 사람의 조종자이고 폰 · 조종자 구조가 없다(입력 → 아바타 이동 메시지). 입력 원천은 설정으로 바꿀 수 있다"

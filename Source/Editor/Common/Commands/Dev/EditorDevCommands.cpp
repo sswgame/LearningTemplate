@@ -27,6 +27,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -239,6 +240,36 @@ namespace sw::editor
                 }
                 getLastTempAssetPath() = absolutePath;
                 outReply               = "opening " + absolutePath;
+                return true;
+            }
+
+            /**
+             * @brief 시나리오 사본 폴더(`<Scratch as="scratch/…"/>`)의 에셋 하나를 콘텐츠 브라우저 더블클릭처럼 엽니다.
+             * @details Quick Open 은 파일 이름으로 찾아 원본과 사본이 같은 이름이면 둘 중 하나가 걸린다. 그래서 id 로 연다.
+             *          `scratch/` 밖의 id 는 받지 않는다 — 시나리오가 추적 중인 원본을 열어 고치는 경로를 형식으로 막는다.
+             */
+            static bool runOpenScratchAsset( const vector<string>& listArgument, string& outReply )
+            {
+                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || ResourcePaths::hasParentDirectoryComponent( listArgument[0] );
+                if ( bBadID )
+                {
+                    outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
+                    return false;
+                }
+                const string absolutePath = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
+                if ( FileUtil::exists( absolutePath ) == false )
+                {
+                    outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
+                    return false;
+                }
+                // 콘텐츠 브라우저 · Quick Open 과 같게 리소스 id 로 연다(`openPath` 의 인자는 id 다).
+                if ( EditorAssetCommands::openPath( listArgument[0] ) == false )
+                {
+                    outReply = "no editor opens '" + listArgument[0] + "'";
+                    return false;
+                }
+                outReply = "opening " + listArgument[0];
                 return true;
             }
 
@@ -495,6 +526,9 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenTempAsset, "asset.open", "asset.open <path>",
                     "Open a new document at a temp path under Saved/Automation/ in its editor panel (an old file there is removed first)",
                     &EditorDevCommandsInternal::runOpenTempAsset );
+    SW_DEV_COMMAND( OpenScratchAsset, "asset.openScratch", "asset.openScratch <scratch/...resource id>",
+                    "Open an asset of a scenario's <Scratch> copy in its editor panel by resource id (Quick Open matches by file name and can pick the original)",
+                    &EditorDevCommandsInternal::runOpenScratchAsset );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
                     &EditorDevCommandsInternal::runRemoveTempAsset );
     SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <editor/automationtemp/...folder>",

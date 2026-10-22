@@ -943,6 +943,7 @@
 					               _lookAction="Look"
 					               _upAction="None"
 					               _inputLayer="None"
+					               _triggerLookButton="Fire"
 					               _aiControllerPrefab=""
 					               _maxPitch="1.4835298"
 					               _autoPossess="Player0"

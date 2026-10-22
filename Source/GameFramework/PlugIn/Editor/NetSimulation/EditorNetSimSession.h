@@ -66,6 +66,14 @@ namespace sw::editor
         EditorPreviewViewport* findViewport( int32 worldIndex );
         /** @brief 하니스입니다. 돌고 있지 않으면 nullptr 입니다. */
         NetSimHarness* getHarness() const { return _pHarness.get(); }
+        /** @brief 이 세션이 만든 뷰포트 수입니다(탭이 보여 `findViewport` 로 월드의 씬을 붙인 월드 수). */
+        int32 getViewportCount() const { return static_cast<int32>( _listView.size() ); }
+
+        /**
+         * @brief 지금 돌고 있는 세션입니다. 없으면 nullptr 입니다. 자동화 탐침(`Editor.NetSim*`)이 탭이 든 세션을 읽는 창구입니다.
+         * @details 세션은 하나만 돈다는 전제다 — 두 번째 세션이 시작하면 그것이 이 값이 되고, 멈추면 앞의 것으로 돌아가지 않고 비운다.
+         */
+        static EditorNetSimSession* findRunning();
 
     private:
         struct WorldView

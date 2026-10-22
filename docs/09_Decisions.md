@@ -778,6 +778,12 @@
   핸들은 `TComponentHandle<T>` 로 타입을 싣고(7-d), 타입 없는 핸들에서 만들 때만 확인합니다. 찾기의 타입 확인은 Shipping 이 아닌 모든 구성에서 합니다.
 - **삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기이고, 컴포넌트 목록을 도는 곳은 컴포넌트 표시 하나만 본다**(2026-10-19, TypedComponents 8.4절). 오브젝트 표시는 비공개 하나이며 컴포넌트를 먼저 표시하고, 삭제 대기 오브젝트에 붙는 컴포넌트는 삭제 대기로 시작하며(유니티 `Destroy` 뒤 같은 프레임의 `AddComponent`), 해체 중 오브젝트에는 붙이기를 거절한다(유니티 "being destroyed", 언리얼 `IsActorBeingDestroyed`). 버킷에서 빼는 안은 지연 파괴 전까지 버킷과 목록이 어긋나고 병렬 틱 안에서 배타 잠금이 필요해 버렸다. 버킷 순회 10만 · 말단 8.3 → 3.0 µs.
 - **`runParallelByCost` 의 시계는 함수 포인터로 주입하고, 선행 조건 스테이지의 순서 키 비교는 한 곳에 둔다**(2026-10-16). 제품은 `MonotonicClock::nowNanoseconds` 를 넘기고(`runParallelByCostWithClock`), 테스트는 가짜 시계로 호출 스레드 선점 잡음 없이 직렬 · 분할 판단을 결정적으로 본다. 시계는 청크마다 한 번(로그 번)만 불려 핫 경로에 가상 호출이 없다. `TickRegistry` 의 재구축(`isBefore`)과 증분(`applyStageDelta`)은 `StageOrder` · `isOrderedBefore` 하나를 공유해 두 길의 순서가 어긋날 수 없다.
+- **서브틱 입력의 발사는 조종 의도의 선택 칸으로 싣고, 발동 순간의 시선은 폰이 지정한 버튼 하나에만 만든다. `GetMessageTime` 과 입력 스레드는 쓰지 않는다**(2026-10-22, 계획 `SubtickInput` B4 · B6).
+  CS2 는 입력에 서브틱 시각을 붙여 서버가 그 순간으로 되감는다. 여기서는 클라이언트가 클릭한 순간의 시선을 의도에 싣는다 — `ControlIntent::_bTriggerLook` · `_triggerYaw` · `_triggerPitch`(없으면 비트 하나)이고 `PawnComponent::_triggerLookButton` 이 어느 버튼의 순간인지 정한다(Shooter3D 는 `Fire`).
+  순간의 시선은 프레임 시작의 조종 회전에 시선 액션 값 × `InputPressInstant::computeLookFraction`(누름 직전까지의 원시 이동량 ÷ 프레임 전체)을 더해 만든다. 원시 이동량에 감도를 다시 곱하지 않으므로 액션의 배율 · 반전이 그대로 남는다. 누름이 이벤트로 오지 않는 바인딩(축 임계 · 길게 누름)은 순간을 지어내지 않고 프레임 끝의 조종 회전을 쓴다.
+  형식이 바뀌어 `ControlIntentHistory::kVersion` 2 · `NetKitWireVersion::kClientServer` 6 으로 올렸다(옛 `.swintent` 는 거절). 롤백 · 락스텝 키트는 프레임 단위 결정성이 계약이라 이 칸을 쓰지 않는 조종자만 쓴다.
+  B6 은 먼저 `GetMessageTime` 해상도를 측정했다 — 그 시계(`GetTickCount` 계열)의 변화 간격이 15 ~ 31 ms(평균 15.8 ms, 이 PC 에서 `GetTickCount64` 를 1.5 초 훑은 값)로 60 Hz 프레임 하나(16.7 ms)와 같아 프레임 안 자리를 가리지 못한다.
+  지금 시각(창 스레드가 큐에 넣는 순간의 단조 시계)이 더 세밀하고, 입력 스레드로 옮기면 에디터 · 콘솔이 먼저 소비하는 판정을 우회할 위험만 는다. 그래서 하지 않는다.
 
 ### 5-7. 런타임 UI 와 글자
 

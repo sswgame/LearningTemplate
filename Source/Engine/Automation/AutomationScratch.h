@@ -2,7 +2,7 @@
  * @file AutomationScratch.h
  * @brief 시나리오가 쓰는 리소스 폴더를 실행마다 새로 만드는 임시 사본(`Resource/scratch/…`, 저장소에 넣지 않음)으로 보냅니다.
  * @details 시나리오가 `Resource/` 원본에 쓰면 추적 중인 파일이 바뀌거나 잔여 파일이 남고, 중단된 실행의 잔여물이 다음 실행을 지게 한다(`new_material_2`).
- *          시나리오는 쓰는 폴더를 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/editor.assetmanage"/>` 로 선언하고, 실행기는 시작할 때
+ *          시나리오는 쓰는 폴더를 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 선언하고, 실행기는 시작할 때
  *          사본 폴더를 지운 뒤 원본을 복사한다(`prepare`). 사본은 리소스 id 가 있는 보통 도메인 폴더라 편집기의 모든 경로(루트를 붙이는 곳 · 감시 · 색인)가 같게 본다.
  *          복사하면서 글 파일 안의 원본 id 를 사본 id 로 바꾸고(씬이 사본의 머티리얼을 가리키게), `.meta` 의 guid 는 새로 만든다(원본과 겹치지 않게).
  *          `Resource/scratch/` 는 `.gitignore` 에 있다. 설계와 남은 단위는 docs/plans/ScenarioWritesSourceTree.md 이다.

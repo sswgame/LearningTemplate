@@ -190,23 +190,25 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
    고침(2026-10-20): 제목을 나눈 뒤 기본 배치가 종류 테이블 제목("Prefab Window")만 붙여 열린 채 시작하는 "Prefab Overrides" 가 떠 있는 큰 창으로 씬 뷰를 덮었다. 패널이 영역을 밝히게(`getDefaultDockSlot`) 바꿔 가운데 탭으로 돌렸다(결정 기록 5-11).
 3. **스카이** — 엔진에 `SkyComponent`(천정 · 지평선 · 땅 그러데이션, `SkyGradient::evaluateRadiance`)가 들어갔고(2026-10-21) 패킷(`RenderFramePacket::_sky`)과 패스 상수(`g_SkyZenith` · `g_SkyHorizon` · `g_SkyGround`)까지 실린다.
    조명 환경 프리셋이 하늘을 스폰한다(`EditorPreviewEnvironment::_bSky`). 스카이 패스도 **들어갔다**(`24eabda44` 병합 — `RenderPassType::Sky`, `sky.hlsl`, 엔진 파이프라인 다섯의 Sky 패스, 쿠킹 바이너리와 함께).
-   남은 확인(실행은 병합 뒤): 머티리얼 창 미리보기의 배경이 그러데이션인지 — 시나리오 `editor/previewsky`(2026-10-22 작성, **아직 돌리지 않았다**)가 창을 연 타깃과 닫고 다시 연 타깃을
-   `Saved/Automation/previewsky_<first|reopen>.ppm` 으로 저장한다(눈으로 본다 — 위가 천정색, 구 뒤는 하늘). 디퍼드에서도 빈 곳만 칠하는지는 같은 시나리오를 `-gv_deferred=1` 로 돌린다.
-   하늘이 없는 게임 씬의 그림이 그대로인지는 골든 이미지로 본다.
-   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewsky -scenario=engine/automation/editor/previewsky.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl`, 각각 `-gv_deferred=1` 도).
+   확인함(2026-10-22, `wt/inputdata`, Debug): 시나리오 `editor/previewsky` 가 네 백엔드(`-dx12` · `-vk` · `-dx11` · `-gl`)에서 통과하고, 창을 연 타깃과 닫고 다시 연 타깃(`Saved/Automation/previewsky_<first|reopen>.ppm`)을 PNG 로 바꿔 눈으로 봤다 —
+   위가 회청색 그러데이션이고 아래로 갈수록 밝아지며, 구 · 바닥은 하늘에 덮이지 않았다(네 백엔드가 같은 그림이다). 디퍼드(`-gv_deferred=1`)는 vk · dx11 · gl 이 통과하고 하늘이 빈 곳만 칠했다(눈으로 봄, 바닥이 어두운 것은 디퍼드 조명 쪽).
+   **디퍼드 DX12 는 시나리오가 진다**: `[RHI] [D3D12] [Error] 온라인 디스크립터 블록이 바닥났습니다 (64×512)` 로그 한 줄(실행기가 예기치 않은 오류 줄로 센다). 미리보기 창과 상관없는 디퍼드 DX12 에디터 전체의 문제인지는 확인하지 못했다 — 렌더러 담당에게 넘긴다.
+   하늘이 없는 게임 씬의 그림이 그대로인지는 골든 이미지로 본다(이 작업에서 보지 않았다).
+   - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewsky "-scenario=engine/automation/editor/previewsky.scenario.xml" -dx12` (`-vk` · `-dx11` · `-gl`, 각각 `-gv_deferred=1` 도). PowerShell 에서 `-scenario=` 인자는 따옴표로 묶는다(안 그러면 `.scenario.xml` 이 따로 읽힌다).
    하늘을 환경광으로 쓰는 것(반구 앰비언트 · SH)은 [IndirectLighting](IndirectLighting.md) P2 · P3 의 일이다.
 4. **풀 공유** — PSO 캐시는 주 렌더러의 것을 함께 쓴다(`FrameRenderer::_pPSOCache`, 2026-10-21). 미리보기 렌더러는 엔진 PSO 를 만들지 않고 캐시에 없는 것만 만들며, 해제는 소유자만 한다.
    창을 닫으면 렌더러를 내리므로 예전에는 다시 열 때마다 엔진 PSO 를 모두 다시 만들었다(첫 프레임 히치, 창 수만큼 중복). 셰이더 핫 리로드는 주 렌더러가 캐시를 다시 채운 뒤 미리보기 렌더러가 자기 몫을 다시 만든다.
    정점 풀(`GPUMeshVertexPool`) · 머티리얼 그룹 버퍼는 씬마다 그대로다 — 배치 표가 씬마다라 인덱스 공간이 씬을 건너지 않고(셰이더 계약이 같다), 텍스처의 bindless 인덱스는 이미 디바이스 전역이다.
    남은 것: 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간을 재서(공유 전 커밋과 비교) 정점 풀까지 나눌 값이 있는지 정한다.
-5. **미리보기 렌더러 내리기의 GPU 안전** — 구조는 `FrameRendererScenePreview.cpp` 머리 주석(해제 큐가 GPU 완료 뒤로 미룬다, PSO 는 주 렌더러 캐시에 남는다). 시나리오 `editor/previewreopen`(**아직 돌리지 않았다**)이
+5. **미리보기 렌더러 내리기의 GPU 안전** — 구조는 `FrameRendererScenePreview.cpp` 머리 주석(해제 큐가 GPU 완료 뒤로 미룬다, PSO 는 주 렌더러 캐시에 남는다).
+   **확인함(2026-10-22, `wt/inputdata`, Debug — DX12 디버그 레이어 · Vulkan 검증 레이어 켜짐)**: 시나리오 `editor/previewreopen` 이 네 백엔드(`-dx12` · `-vk` · `-dx11` · `-gl`)에서 통과했다(경고 · 오류 줄 없음). 시나리오 `editor/previewreopen` 이
    머티리얼 창과 프리팹 창을 각각 연 채 8 번 닫고 다시 연다. 렌더러 수는 탐침 `Editor.ScenePreviewRenderers`(렌더 스레드가 공개하는 `FrameRenderer::getScenePreviewRendererCount`)로 본다 —
    닫을 때마다 줄고, 다시 열면 닫기 전 수로 돌아오며, 끝에서 시작 전 수로 돌아온다. 시작 줄 수(`ExpectLog atLeast` 머티리얼 9 · 전체 18)도 함께 센다.
    GPU 쪽 오류는 로그 줄로 본다. DX12 디버그 레이어와 Vulkan 검증 레이어는 Debug 빌드에서만 켜지고 오류가 `[Warning]` · `[Error]` 줄로 나와 로그 게이트가 시나리오를 진다. 그래서 검증 레이어 확인은 `build/Ninja-Debug` 로 돌린다.
    - 실행(한 줄): `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewreopen -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl` 로 네 백엔드, 상태 폴더는 빈 곳).
    - 한계: 닫은 프레임에 바로 여는 경합과 창 여러 개를 동시에 닫는 것은 넣지 않았다.
 6. **미리보기 씬의 백엔드 교체**. 교체를 거는 길은 메뉴 · 콘솔 · 시나리오 단계 `SwapBackend` 이고(명령줄 `-gv_rhiSwapAtFrame` 은 2026-10-22 에 지웠다 — 시점은 시나리오 단계가 고른다),
-   시나리오 `editor/previewswap`(2026-10-20 작성, **아직 돌리지 않았다**)은 같은 길을 `SwapBackend` 로 머티리얼 창이 열려 그려지는 프레임에 요청한다(`other` 로 건너고 `start` 로 돌아와 창이 열린 교체를 두 번 거친다).
+   시나리오 `editor/previewswap`(2026-10-20 작성; **확인함(2026-10-22, `wt/inputdata`, Debug)**: 네 백엔드로 시작해 통과, 교체 앞 · 뒤 · 복귀 뒤 타깃 셋을 눈으로 봤고 모두 빨간 구 + 바닥 + 하늘이다)은 같은 길을 `SwapBackend` 로 머티리얼 창이 열려 그려지는 프레임에 요청한다(`other` 로 건너고 `start` 로 돌아와 창이 열린 교체를 두 번 거친다).
    교체마다 `RHI.SwapFailedCount` 0 · `Module.BindingsOk` 를 보고, 교체 뒤 같은 문서를 다시 열어(에디터 인스턴스가 다시 서므로 창이 닫혀 있어도 되고 그대로여도 된다) 프레임 수가 다시 오르는지와 새 디바이스 위에 새 렌더러가 서는지(시작 줄 수 2 · 3)를 본다.
    교체 뒤 살아 있는 렌더러 수(`Editor.ScenePreviewRenderers`)가 교체 앞과 같은지도 본다 — 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 다르다.
    **자동 단언으로 못 한 것**: 미리보기 타깃의 그림. 평균 색의 문턱값을 GPU 로 돌려 보기 전에는 맞출 수 없어, 시나리오가 `gv_editorPreviewScreenshot` 을 교체 앞 · 뒤 · 복귀 뒤에 걸어 `Saved/Automation/previewswap_<before|after1|after2>.ppm` 으로 저장한다 — PNG 로 바꿔 눈으로 본다(빨간 구 + 바닥).
@@ -215,5 +217,5 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
    - 남은 것: 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기([EditorCharacterEditor](EditorCharacterEditor.md), 헤더 계약을 따른다).
    고침(2026-10-20, 첫 측정): 두 시나리오가 DX11 에서만 졌다 — Quick Open 의 파일 목록을 일 스레드가 벽시계로 모으는데(DX12 약 450 프레임, DX11 약 650 프레임) `WaitUntil` 예산은 600 프레임이라 프레임이 빠른 DX11 이 먼저 바닥났다(`materialpreview` 도 같은 이유로 DX11 에서 졌다).
    `QuickLauncherPopup` 이 목록이 오는 동안 자동화 시계를 잡게(`SW_AUTOMATION_CLOCK_HOLDER`) 해, Quick Open 을 쓰는 모든 시나리오가 프레임 속도와 상관없이 같은 프레임에 연다.
-   포커스를 쥔 채 닫으면 `applyWindowFocus( false )` 가 안 불려 초점 씬 · Undo 스택이 남는 결함도 실제였다(닫힌 창은 그려지지 않는다) — 닫는 길을 `IEditorPanel::closeNow` 하나로 모아 `onPanelClosed` 를 부르게 했고, `previewreopen` 이 `Editor.ToolFocusIsMain` 으로 본다. 위 수정은 **아직 빌드 · 실행하지 않았다**.
+   포커스를 쥔 채 닫으면 `applyWindowFocus( false )` 가 안 불려 초점 씬 · Undo 스택이 남는 결함도 실제였다(닫힌 창은 그려지지 않는다) — 닫는 길을 `IEditorPanel::closeNow` 하나로 모아 `onPanelClosed` 를 부르게 했고, `previewreopen` 이 `Editor.ToolFocusIsMain` 으로 본다. 위 수정으로 두 시나리오가 네 백엔드에서 통과한다(2026-10-22, Debug).
    두 시나리오는 `engine/automation/editor/` 에 있어 `AppScenarioTest.EditorScenariosPassOn<백엔드>` 의 체인이 자동으로 줍는다. 처음 돌릴 때는 위 한 줄로 단독 실행해 본 뒤 체인에 맡긴다(교체 · 렌더러 내리기가 터지면 체인 프로세스가 죽는다).
