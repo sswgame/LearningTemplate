@@ -20,7 +20,14 @@
 **검증(Windows, 2026-10-23)**: 빌드 경고 0(Debug · Release(`SW_GAMES=ALL`) · Shipping · Shipping-Server). ctest — Debug nogpu 67/67 · race 5/5 · lint 46/46(`CheckTextureFolders` 는 병렬 부하에서 15 초 시한을 한 번 넘겼고 혼자 돌리면 2.6 초 통과), Release nogpu 67/67 · hostgpu 9/9(에디터 시나리오 체인 네 백엔드 포함), Shipping nogpu 61/61 · hostgpu 9/9, Server nogpu 63/63. QA 골든 Empty · Shooter3D · NileCity · StarSkirmish 네 백엔드 통과, Shooter3D dx12 · vk 캡처를 눈으로 봤다(같다).
 **병합 뒤 구조로 고친 것**: 리그 XML 의 불리언은 엔진 문법 하나(`StringUtil::tryParseBool` — 쓰는 쪽 1/0 과 맞춤), 파이썬 XML 쌍둥이 저장기는 엔진처럼 속성의 `>` 를 그대로 두고 120 열을 UTF-8 바이트로 잰다, 한 프로세스 재생 게임 목록은 `RegistrationList`(핫 리로드 대체 · 객체로 빼기), DX12 셰이더 가시 힙 524288 칸(온라인 블록 960 — previewsky 의 블록 바닥남도 같은 원인). 쿠킹은 더 만들지 않는 바이너리를 지우지 않는다(이번엔 gbuffer · shadowdepth 16 개를 손으로 지웠다 — 쿠커가 만든 목록 밖의 파일을 지우게 할 후보).
 **같은 결함이 남았을 곳**: 이름을 손으로 거절하는 레지스트리(`LocalStoreFactory` · `SQLDriverRegistry` · `LoginService` 플랫폼 제공자 · `ModuleRenderPassRegistry` · `EditorAssetTypeActions`)는 핫 리로드에서 같은 모양으로 질 수 있다 — `RegistrationList` 로 옮길 후보. 리그 밖의 손 불리언 파서(`AutomationScenario` · `CultureInfo` · `LocalizationDocuments` · 영수증 · 로그인 제공자 설정)도 true/false 만 받는다.
-**사용자 결정 대기**: PatchDeltaDelivery P6(배포 경로 · 서명) · OnlineKits I6(서비스 호스트 분리) · spirv-tools 에 SPIR-V 최적화 결함 보고 여부 · main 루트 `x64-windows/`(1.1GB) · `vcpkg/` 삭제 여부.
+**사용자 결정 대기**: spirv-tools 에 SPIR-V 최적화 결함을 보고할지 하나뿐이다. 단 Vfx V5 의 원인을 다시 확인하는 중이라 **우리 쪽 결함일 수 있어 보류**한다(근거: 셰이더가 정의되지 않은 동작 없이 보이고, `-Od` 는 맞고 첫 simplify 단계에서 틀린다. 최소 재현은 아직 없다).
+  뺀 것: PatchDeltaDelivery P6 은 출시가 스팀 기준이라 스팀 전용이면 취소(SteamPipe 가 업로드 · 차이 받기 · 무결성을 맡는다). OnlineKits I6 은 결정 일이 아니라 구현 일이다(설계 한 단락부터 — [OnlineKits](OnlineKits.md) 3절 I6). main 루트의 `x64-windows/` · `vcpkg/` 는 이미 지웠다(작업자가 `vcpkg.exe` 를 설치 루트 없이 불러 생겼을 가능성 — [작업자 규칙](WorkerRules.md) 7절에 규칙을 넣었다).
+**2026-10-23 사용자와 정한 일(남은 일, 한 묶음)**: 코드는 아직 안 고쳤고 계획 문서만 있다. 순서는 [로드맵](Roadmap.md) "지금 순서" 10번.
+- [PatchDeltaDelivery](PatchDeltaDelivery.md): 출시는 스팀 기준. P6 은 스팀 전용이면 취소, P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 우선순위를 내린다. 두 채널 공존 설계와 새 단위 P7(팩 레이아웃 안정성 점검 — 읽기 + 측정)을 적었다.
+- [OnlineKits](OnlineKits.md) I6: 구현 일(설계 한 단락부터).
+- [MaterialShaderHooks](MaterialShaderHooks.md): 머티리얼 셰이더 훅 구조. 가장 먼저 할 단위는 D2(머티리얼 XML 과 셰이더 구조체 불일치를 오류로 — 훅과 독립).
+- [AutomationSplit](AutomationSplit.md): Automation 을 형식 경계부터 고치고 일반 `Engine/Scenario` 와 테스트 `Engine/Automation` 으로 나눈다. 이름만 바꾸기는 먼저 하지 않는다.
+- [LayerTierGate](LayerTierGate.md): 층 게이트 — 티어 테이블과 계산값의 일치를 게이트 하나로 강제하고 같은 티어 간선 · 순환 검사를 더한다. 규칙 파일을 만지므로 AutomationSplit ① 탐침 단계(티어 테이블 수정)와 순서를 둔다.
 **인계의 알려진 확인 항목(아직 안 봄)**: 클라이언트 근접 피해 소실(meleeunify) · 활의 가는 줄과 투사체 방향 · `HideHead` 슬롯 가중치 기본값 1 · `PoseModifierComponent::setSocketTable` 호출처 없음. HUD 무기 이름은 Shooter3D 캡처에서 온전했다.
 
 

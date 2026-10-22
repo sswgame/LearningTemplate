@@ -1,8 +1,10 @@
 # 패치 · 델타 업데이트 배포 구조
 
-> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 5/6
+> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 5/7
 
 출시 뒤 바뀐 리소스만 내려받게 하는 팩 단위 차분 배포와 빌드 버전 관리가 없었다. 크래시 컨텍스트와 텔레메트리 코드는 있다. 스토어 제공자 연동(`StoreProviderIntegration`, 후보)은 이 일에 들지 않는다 — 내려받기는 런처나 스토어가 하고, 엔진은 받은 패치를 올바른 순서로 얹는다.
+
+**결정(2026-10-23, 사용자)**: 출시는 스팀 기준이다. 스팀은 SteamPipe 가 depot 업로드 · 브랜치 · 청크 단위 차이 받기 · 무결성을 맡는다. 그래서 이 문서의 배포 경로 · 서명(P6)은 스팀 전용이면 취소하고, 스팀 밖 채널이 생길 때 다시 연다. 시작 마운트(P4)와 패치 만들기(P5)는 이미 들어갔고 우선순위를 내려 스팀 밖 채널과 콘텐츠 핫픽스용으로 남긴다. 아래 "두 채널 공존" 설계와 P7(팩 레이아웃 안정성 점검)을 더했다.
 
 ## 1. 설계
 
@@ -11,7 +13,12 @@
 - **얹기**: 런타임은 패치 팩을 기본 팩보다 높은 우선순위로 `ResourcePakManager::mountPatchPack( 팩, 우선순위, 지움 목록 )` 한다. 바뀐 파일은 우선순위 스택이 덮고, 지운 경로는 그 패치보다 아래 팩에서 찾지 않는다(`hasFile` · `readFile` · 폴더 나열 모두). 패치를 내리면 그대로 되돌아간다. 낱개 파일은 가리지 않는다 — 패치는 팩만 읽는 배포 구성의 일이다.
 - **버전 관리**: 빌드 번호는 글 그대로 비교한다(대소 비교 없음). 설치된 빌드에서 시작하는 패치가 정확히 하나씩 이어져 목표 빌드에 닿아야 한다(`PackPatchUtil::orderPatchChain`) — 끊김 · 갈림 · 고리는 오류로 멈춘다(폴백 없음). 사슬 순서대로 우선순위를 올려 마운트하면 뒤 패치가 앞 패치를 덮는다.
   시작 마운트는 목표 빌드를 따로 받지 않고 폴더의 패치가 이어지는 끝까지 얹는다(`orderPatchChainToLatest`). 설치된 빌드는 같은 폴더의 `base.packbuild.xml` 이 밝히고, 사슬 밖에 남은 패치가 있으면 조용히 버리지 않고 실패한다.
-- **무결성**: 팩 항목 CRC32(`PackFlag::HasCrc32`)가 이미 있다. 목록 파일의 서명과 팩 전체 해시는 배포 경로(런처 · CDN)가 정해질 때 정한다(P6).
+- **무결성**: 팩 항목 CRC32(`PackFlag::HasCrc32`)가 이미 있다. 목록 파일의 서명과 팩 전체 해시는 배포 경로(런처 · CDN)가 정해질 때 정한다(P6, 스팀 전용이면 취소 — 스팀이 청크 무결성을 확인한다).
+- **두 채널 공존(2026-10-23 결정, 설계)**: 스팀 채널과 스팀 밖 채널이 한 코드로 돈다.
+  - 런타임은 같다. 패치 팩은 우선순위가 높은 팩일 뿐이다. 스팀 채널은 SteamPipe 가 새 빌드의 팩을 통째로 받아 주고, 패치 사슬은 쓰지 않는다. 스팀 밖 채널과 콘텐츠 핫픽스만 위 패치 사슬을 쓴다.
+  - 설치 빌드 번호의 원본은 프로젝트 설정의 필드 하나다. 스팀 빌드 ID 를 따로 읽지 않는다(두 값이 따로 있으면 어긋난다). 지금 P4 는 번호를 팩 폴더의 `base.packbuild.xml` 에서 읽는다 — 설정 필드로 옮기는 일은 P4 의 근거(팩을 마운트하는 시점에는 팩 안 설정을 읽을 수 없다)와 부딪히므로, 옮기기 전에 그 부딪힘을 풀 방법을 정한다(확인하지 못한 것).
+  - 패치를 쓰지 않는 빌드는 빈 값이 아니라 명시적 값(예: `patching="none"`)으로 표시한다. 값이 없으면 오류로 멈춘다(폴백 금지).
+  - 패치 목록이 있는데 사슬이 끊기면 지금처럼 오류로 멈춘다. `patching="none"` 인 빌드에 패치 목록이 있어도 오류다.
 
 ## 2. 단위
 
@@ -22,11 +29,12 @@
 | P3 | `ResourcePakManager::mountPatchPack` — `MountedPack::_listRemovedPathHash` 로 아래 팩 가리기(찾기 두 단계와 폴더 나열). 테스트 `PackPatchTest.PatchPackOverridesAndHidesRemovedPaths` | 끝남(빌드 미확인) |
 | P4 | 시작 마운트가 팩 폴더의 `*.packpatch.xml` 을 읽어 설치된 빌드부터 이어지는 패치를 사슬 순서로 `mountPatchPack` 한다. **설치된 빌드의 출처는 프로젝트 설정이 아니라 팩 폴더의 `base.packbuild.xml`**(쿠커가 팩과 함께 남기는 빌드 내용 목록)이다 — 설정 칸을 두면 팩과 빌드 번호가 따로 어긋나고, 팩을 마운트하는 시점에는 팩 안의 설정을 아직 읽을 수 없다. `ResourcePakManager::scanAndMountPacks` 가 패치 목록이 가리키는 팩을 기본 팩에서 빼고, 빌드 기록 없음 · 사슬 끊김 · 갈림 · 고리 · 닿지 않는 패치 · 패치 팩 없음이면 이 호출이 올린 팩을 모두 내리고 실패한다(`PackPatchUtil::orderPatchChainToLatest`). 테스트 `PackPatchTest.StartupMountAppliesThePatchChainOnTopOfTheBasePacks` · `StartupMountMountsNothingWhenAPatchCannotBeApplied` · `ChainToLatestFollowsEveryPatchAndRefusesOrphans` | 끝남(Debug 테스트 확인) |
 | P5 | 팩 폴더에서 두 빌드의 내용 목록(`PackBuildRecord` — 전체 가상 경로 + 내용 해시)을 세고 그 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 만든다(`PackPatchBuilder`). 소스 트리가 아니라 **구운 팩**에서 센다 — 쿠킹 증분 기록과 상관없이 배포되는 바이트의 해시다. 명령줄: `-cook-packs`/`-cook-all` 에 `-pack-build=<빌드>` 를 주면 `base.packbuild.xml` 을 남기고, `-make-patch -pack-dir=<새 팩 폴더> -patch-base=<이전 빌드 목록> -pack-build=<새 빌드> -patch-dir=<출력>` 이 패치를 만든다. 테스트 `PackPatchTest.MadePatchOnTheOldBuildShowsTheNewBuildContent` · `MakePatchRefusesNothingToPatchAndUnusableInputs` · `BuildRecordRoundTripsAndRefusesBrokenOnes` | 끝남(Debug 테스트 · 명령줄 실행 확인) |
-| P6 | 배포 경로(런처 · CDN · 스토어)와 목록 서명 · 팩 해시 확인 — 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저다. 팩 항목의 CRC32(`PackFlag::HasCrc32`)와 헤더 기하 검사는 이미 있어 잘린 · 깨진 팩은 읽을 때 거절된다 | 남음 |
+| P6 | 배포 경로(런처 · CDN · 스토어)와 목록 서명 · 팩 해시 확인. 2026-10-23 결정: 출시가 스팀이면 SteamPipe 가 업로드 · 차이 받기 · 무결성을 맡으므로 스팀 전용이면 취소한다. 스팀 밖 채널이 생길 때 다시 연다(그때 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저). 팩 항목의 CRC32(`PackFlag::HasCrc32`)와 헤더 기하 검사는 이미 있어 잘린 · 깨진 팩은 읽을 때 거절된다 | 취소(스팀 전용이면 — 스팀 밖 채널이 생기면 다시 연다) |
+| P7 | **팩 레이아웃 안정성 점검**(읽기 + 측정). 같은 입력으로 팩을 두 번 만들어 바이트가 같은지, 파일 하나만 바꾸면 팩 바이트가 얼마나 달라지는지(항목 정렬 · 항목별 압축 · 오프셋 유지)를 측정해 스팀의 청크 단위 차이 비교에 유리한지 본다. 읽을 곳: 쿠커의 팩 쓰기와 `PackFormat.json`, 팩 정렬 규칙. 고칠 문서: 이 문서의 측정 결과와 결정(코드는 점검 결과가 나쁠 때만 별도 단위). 측정은 Release 에서 혼자 | 남음 |
 
 ## 남은 것
 
-- P6. 결정이 나면: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`), 시작 마운트가 마운트 전에 확인한다(실패하면 지금처럼 이 호출이 올린 팩을 모두 내린다).
+- P6. 스팀 전용이면 취소다. 스팀 밖 채널이 생겨 다시 열면: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`), 시작 마운트가 마운트 전에 확인한다(실패하면 지금처럼 이 호출이 올린 팩을 모두 내린다).
 - 낱개 파일로 배포하는 구성(`setAllowLooseFiles`)은 패치가 가리지 못한다 — 패치는 팩만 읽는 배포 구성의 일이다(1절).
 - 확인함(2026-10-22, Debug): `App -game=Empty -cook-all -pack-build=1.0` 이 `base.packbuild.xml`(5220 파일)을 남기고, `Resource/game/empty/data` 에 파일 하나를 더해 `-pack-build=1.1` 로 다시 구운 뒤 `-make-patch` 가 `1 changed, 0 removed` 패치(팩 12 KB)를 만들었다(같은 입력의 나머지는 해시가 같아 빠짐). 확인 못 한 것: 그 패치를 실제 `Packs/` 폴더에 두고 App 이 시작할 때 적용하는 실행(테스트는 `scanAndMountPacks` 를 직접 부른다).
 - 빌드 · `EngineTest --test_filter=PackPatchTest.*:ResourcePakTest.*` 실행.
