@@ -52,6 +52,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [MeleeHitUnify](docs/plans/MeleeHitUnify.md) — 근접 판정 한 길로 | 구현중 | 2/3 | 없음 | gameplay | 없음 |
 | - | [MmoUpdateAckViaDelivery](docs/plans/MmoUpdateAckViaDelivery.md) — MMO 갱신 확인을 NetConnection 전달 통지로 | 구현중 | 3/4 | 없음 | network | G-8 |
 | - | [MovingGroundFollowUps](docs/plans/MovingGroundFollowUps.md) — 움직이는 바닥 위 캐릭터의 남은 일 | 구현중 | 3/4 | 없음 | gameplay | 없음 |
+| - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 3/5 | 없음 | ui | G-10 |
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 28/34 | 없음 | network | D7-5 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 구현중 | 6/6 | 없음 | gameplay | D4-6 |
 | - | [PanelIDLiterals](docs/plans/PanelIDLiterals.md) — 패널을 id 글자로 여는 남은 호출 | 구현중 | 2/3 | 없음 | editor | 없음 |
@@ -59,6 +60,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [PhysicsExtensions](docs/plans/PhysicsExtensions.md) — 물리 확장 — 부력 · 파워드 래그돌 · 천과 캐릭터 · 결정성 | 구현중 | 4/5 | 없음 | engine | D1-8 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 7/11 | 없음 | gameplay | D4-7 |
 | - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 구현중 | 3/3 | 없음 | gameplay | D4-6 |
+| - | [ScreenReaderSupport](docs/plans/ScreenReaderSupport.md) — 스크린 리더 | 구현중 | 5/7 | 없음 | ui | G-9 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 6/7 | 없음 | gameplay | D4-10 |
 | - | [ShooterStrideWarping](docs/plans/ShooterStrideWarping.md) — Shooter3D 발 미끄러짐 연결 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
@@ -66,7 +68,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [SingleChannelDdsImport](docs/plans/SingleChannelDdsImport.md) — 1 채널(R8) DDS 를 내는 임포트 규칙 | 구현중 | 1/2 | 없음 | graphics | G-12 |
 | - | [StepEncounterRules](docs/plans/StepEncounterRules.md) — 걸음 조우 판정 하나로 | 구현중 | 1/2 | 없음 | gameplay | G-7 |
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 3/4 | 없음 | graphics | D2-5.6, D2-5.7 |
-| - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 2/6 | 없음 | project | G-11 |
+| - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 3/7 | 없음 | project | G-11 |
 | - | [TilemapCellDataLayers](docs/plans/TilemapCellDataLayers.md) — 타일맵 칸 데이터를 일반 레이어로 | 구현중 | 1/2 | 없음 | gameplay | G-6 |
 | - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 구현중 | 2/3 | 없음 | ui | D6-2 |
 | - | [UiNotificationRemaining](docs/plans/UiNotificationRemaining.md) — 알림 · 힌트 · 목표 마커의 남은 것 | 구현중 | 1/2 | 없음 | ui | D6-5 |
@@ -76,6 +78,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [WaylandWindowLayer](docs/plans/WaylandWindowLayer.md) — Wayland 창 계층 | 구현중 | 1/3 | 없음 | engine | D1-6 |
 | - | [WildWestHorseMount](docs/plans/WildWestHorseMount.md) — WildWest 승마의 말 모델 | 구현중 | 1/3 | 없음 | gameplay | D4-15 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 구현중 | 6/7 | 없음 | engine | D1-7 |
+| - | [WorldWidgetInput](docs/plans/WorldWidgetInput.md) — 월드 공간 위젯의 입력 · 가려짐 | 구현중 | 2/4 | 없음 | ui | G-3 |
 | - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 측정대기 | 7/7 | 없음 | engine | 없음 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
 | - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 측정대기 | 8/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
@@ -86,7 +89,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 83개
+후보 문서 9개 · 후보 절 80개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

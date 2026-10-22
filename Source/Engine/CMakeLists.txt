@@ -207,7 +207,9 @@ if(WIN32)
 		synchronization.lib
 		mfuuid.lib
 		ole32.lib
+		oleaut32.lib
 		shell32.lib
+		uiautomationcore.lib
 	)
 endif()
 

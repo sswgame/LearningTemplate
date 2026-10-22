@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/IFontRasterizer.h"
@@ -96,4 +97,42 @@ SW_TEST_CASE( FontRasterizerTest, RejectsNonFontBytes )
     SW_TEST_DEFENSIVE_SCOPE( "garbage bytes are rejected with an error" );
     sw::vector<uint8> garbage( 64, 0x5Au );
     SW_EXPECT_EQUAL( sw::kInvalidFontFaceID, rasterizer->loadFace( std::move( garbage ), 0, "garbage" ) );
+}
+
+/**
+ * @brief [FontRasterizerTest] MSDF 는 SDF 와 같은 부호 규약이다 — 'H' 의 획 한가운데는 중앙값이 밝고(200 위) 모서리 바깥은 0 에 가까우며, 비트맵 크기는 SDF 와 몇 픽셀 안쪽으로 맞아 같은 아틀라스 자리 계산을 쓴다
+ * @details 알파는 일반 SDF(참 거리)다. 변이: 윤곽 방향을 뒤집지 않으면(TrueType 시계 방향) 안팎이 거꾸로라 획 한가운데가 어두워져 진다.
+ */
+SW_TEST_CASE( FontRasterizerTest, MsdfIsBrightInsideTheGlyphLikeSdf )
+{
+    sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
+    SW_ASSERT_NOT_NULL( rasterizer.get() );
+    const sw::FontFaceID face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
+    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
+    const uint32 glyph = rasterizer->findGlyphIndex( face, 'H' );
+
+    sw::SdfGlyphBitmap sdf{};
+    sw::SdfGlyphBitmap msdf{};
+    SW_ASSERT_TRUE( rasterizer->rasterizeSdf( face, glyph, sw::SdfRasterParams{}, sdf ) );
+    SW_ASSERT_TRUE( rasterizer->rasterizeMsdf( face, glyph, sw::SdfRasterParams{}, msdf ) );
+    SW_ASSERT_TRUE( msdf._width > 12 && msdf._height > 12 );
+    SW_ASSERT_EQUAL( static_cast<size_t>( msdf._width ) * msdf._height * 4, msdf._bytes.size() );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( static_cast<int32>( msdf._width ) - static_cast<int32>( sdf._width ) ) <= 2 );
+    SW_EXPECT_TRUE( sw::MathUtil::abs( static_cast<int32>( msdf._height ) - static_cast<int32>( sdf._height ) ) <= 2 );
+    SW_EXPECT_NEAR_EQUAL( sdf._advancePx, msdf._advancePx, 1e-3f );
+
+    uint8 maxMedian = 0;
+    for ( size_t texel = 0; texel < static_cast<size_t>( msdf._width ) * msdf._height; ++texel )
+    {
+        const uint8* pRgba   = &msdf._bytes[texel * 4];
+        const uint8  minimum = sw::MathUtil::min( pRgba[0], sw::MathUtil::min( pRgba[1], pRgba[2] ) );
+        const uint8  maximum = sw::MathUtil::max( pRgba[0], sw::MathUtil::max( pRgba[1], pRgba[2] ) );
+        const uint8  median  = static_cast<uint8>( pRgba[0] + pRgba[1] + pRgba[2] - minimum - maximum );
+        maxMedian            = sw::MathUtil::max( maxMedian, median );
+    }
+    SW_EXPECT_TRUE( maxMedian >= 200 ); // 획 한가운데
+    for ( uint32 channel = 0; channel < 4; ++channel )
+    {
+        SW_EXPECT_TRUE( msdf._bytes[channel] <= 40 ); // 왼쪽 위 모서리는 윤곽에서 spread 만큼 바깥
+    }
 }

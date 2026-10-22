@@ -46,6 +46,8 @@ namespace sw
         /** @brief 브러시를 바꿉니다. kPaint 만 합니다. */
         void           setBrush( const UIBrush& brush );
         const UIBrush& getBrush() const { return _brush; }
+        /** @brief 이름을 준 그림만 `Image` 로 내보입니다(이름이 없으면 장식이라 읽지 않는다). */
+        void describeAccessible( AccessibleInfo& outInfo ) override;
         /** @brief 원하는 크기를 정합니다(0 이면 텍스처 크기). kLayout 입니다. */
         void setImageSize( const float2& imageSize );
         /** @brief 오른쪽에서 왼쪽 배치에서 좌우로 뒤집을지 바꿉니다. kPaint 입니다. */

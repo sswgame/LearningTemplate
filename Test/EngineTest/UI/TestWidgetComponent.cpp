@@ -10,6 +10,7 @@
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
@@ -31,6 +32,14 @@ namespace
         {
             const sw::float4x4 view = sw::float4x4::makeLookAt( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, sw::float3{ 0.0f, 1.0f, 0.0f } );
             return view * sw::float4x4::makePerspectiveFieldOfView( 1.0f, kWidth / kHeight, 0.1f, 100.0f );
+        }
+
+        static sw::WorldWidgetRay makeRay( const sw::float3& origin, const sw::float3& direction )
+        {
+            sw::WorldWidgetRay ray{};
+            ray._origin    = origin;
+            ray._direction = direction.normalize();
+            return ray;
         }
 
         static sw::WidgetMarkerPlacement place( const sw::WidgetComponent& component, const sw::float3& worldPosition )
@@ -288,4 +297,60 @@ SW_TEST_CASE( WidgetComponentTest, EdgeClampArrowPointsToTarget )
     SW_EXPECT_NEAR_EQUAL( sw::MathUtil::kHalfPi, behindRight._edgeAngle, 0.001f );
     const sw::WidgetMarkerPlacement inside = Util::place( component, sw::float3{ 0.0f, 0.0f, 5.0f } );
     SW_EXPECT_TRUE( inside._bClamped == SW_FALSE ); // 화면 안 — 화살표 없음
+}
+
+/**
+ * @brief [WidgetComponentTest] 입력을 켠 World 위젯은 광선이 맞힌 자리로 포인터 이벤트를 받는다 — 단추 가운데를 겨눈 누름 · 뗌이 클릭이 되고, 사각형 밖을 겨누면 처리하지 않는다
+ * @details 입력을 끄면(기본) 같은 광선도 받지 않는다. 변이: `UIWorldPointerRouter::route` 가 맞힌 위젯이 바뀔 때 이전 위젯의 호버를 풀지 않으면 사각형 밖을 겨눈 뒤에도 단추가 호버로 남아 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, WorldInputClicksWidgetUnderRay )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::GameObjectManager manager;
+    sw::GameObject*       pPanel = manager.createGameObject( sw::hashed_string( "Panel" ) );
+    SW_ASSERT_NOT_NULL( pPanel );
+    sw::SceneComponent* pRoot = pPanel->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 5.0f } );
+    sw::WidgetComponent* pWidget = pPanel->addComponent<sw::WidgetComponent>();
+    SW_ASSERT_NOT_NULL( pWidget );
+    pWidget->setSpace( sw::WidgetSpace::World );
+    pWidget->setDrawSize( sw::float2{ 100.0f, 50.0f } );
+    pWidget->setWorldSize( sw::float2{ 2.0f, 1.0f } );
+    sw::unique_ptr<sw::ButtonWidget> button     = sw::make_unique<sw::ButtonWidget>();
+    sw::ButtonWidget*                pButton    = button.get();
+    int32                            clickCount = 0;
+    (void)pButton->getOnClicked().add( [&clickCount]( sw::WidgetID )
+    { ++clickCount; } );
+    pWidget->setContent( std::move( button ) );
+    pWidget->bindUISystem( &ui );
+    manager.flushSceneTransforms();
+    ui.update( 1.0f / 60.0f, viewport );
+
+    const sw::WorldWidgetRay center = WidgetComponentTestUtil::makeRay( sw::float3{}, sw::float3{ 0.0f, 0.0f, 1.0f } );
+    sw::UIPointerEvent       event{};
+    event._kind = sw::UIPointerEventKind::Move;
+    SW_EXPECT_FALSE( ui.routeWorldPointer( center, event ) ); // 입력을 끈 위젯은 받지 않는다
+    SW_EXPECT_TRUE( pButton->isHovered() == false );
+
+    pWidget->setAcceptsInput( true );
+    (void)ui.routeWorldPointer( center, event );
+    SW_EXPECT_TRUE( pButton->isHovered() );
+    event._kind = sw::UIPointerEventKind::Down;
+    SW_EXPECT_TRUE( ui.routeWorldPointer( center, event ) );
+    event._kind = sw::UIPointerEventKind::Up;
+    SW_EXPECT_TRUE( ui.routeWorldPointer( center, event ) );
+    SW_EXPECT_EQUAL( 1, clickCount );
+
+    // 사각형 밖(월드 x 1.5 — 로컬 0.75)을 겨누면 호버가 풀리고 누름은 처리되지 않는다.
+    const sw::WorldWidgetRay outside = WidgetComponentTestUtil::makeRay( sw::float3{ 1.5f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f } );
+    event._kind                      = sw::UIPointerEventKind::Move;
+    (void)ui.routeWorldPointer( outside, event );
+    SW_EXPECT_TRUE( pButton->isHovered() == false );
+    event._kind = sw::UIPointerEventKind::Down;
+    SW_EXPECT_FALSE( ui.routeWorldPointer( outside, event ) );
+    pWidget->bindUISystem( nullptr );
 }

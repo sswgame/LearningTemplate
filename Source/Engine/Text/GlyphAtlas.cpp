@@ -7,8 +7,9 @@
 
 namespace sw
 {
-    GlyphAtlas::GlyphAtlas()
+    GlyphAtlas::GlyphAtlas( GlyphFieldKind kind )
         : _listPage{}
+        , _kind{ kind }
         , _generation{ 0 }
     {
     }
@@ -16,7 +17,7 @@ namespace sw
     void GlyphAtlas::addPage()
     {
         Page page{};
-        page._bytes.assign( static_cast<size_t>( kPageSize ) * kPageSize, static_cast<uint8>( 0 ) ); // 0 = 가장 먼 바깥(SDF)
+        page._bytes.assign( static_cast<size_t>( kPageSize ) * kPageSize * getBytesPerTexel(), static_cast<uint8>( 0 ) ); // 0 = 가장 먼 바깥(모든 채널)
         page._listSkyline.push_back( SkylineNode{ 0, 0, static_cast<uint16>( kPageSize ) } );
         page._bWholePageDirty = SW_TRUE;
         _listPage.push_back( std::move( page ) );
@@ -143,11 +144,12 @@ namespace sw
 
     void GlyphAtlas::write( const GlyphAtlasRect& rect, const uint8* pBytes )
     {
-        Page& page = _listPage[rect._page];
+        Page&        page       = _listPage[rect._page];
+        const size_t texelBytes = getBytesPerTexel();
         for ( uint32 row = 0; row < rect._height; ++row )
         {
-            uint8* pDest = page._bytes.data() + ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x;
-            Memory::copy( pDest, pBytes + static_cast<size_t>( row ) * rect._width, rect._width );
+            uint8* pDest = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x ) * texelBytes;
+            Memory::copy( pDest, pBytes + static_cast<size_t>( row ) * rect._width * texelBytes, static_cast<size_t>( rect._width ) * texelBytes );
         }
         if ( page._bWholePageDirty == SW_FALSE )
             page._listDirty.push_back( rect );
@@ -195,6 +197,7 @@ namespace sw
             {
                 GlyphAtlasUpload& upload = outListUpload.emplace_back();
                 upload._page             = static_cast<uint16>( pageIndex );
+                upload._bytesPerTexel    = static_cast<uint8>( getBytesPerTexel() );
                 upload._width            = static_cast<uint16>( kPageSize );
                 upload._height           = static_cast<uint16>( kPageSize );
                 upload._bWholePage       = SW_TRUE;
@@ -207,15 +210,17 @@ namespace sw
             {
                 GlyphAtlasUpload& upload = outListUpload.emplace_back();
                 upload._page             = rect._page;
+                upload._bytesPerTexel    = static_cast<uint8>( getBytesPerTexel() );
                 upload._x                = rect._x;
                 upload._y                = rect._y;
                 upload._width            = rect._width;
                 upload._height           = rect._height;
-                upload._bytes.resize( static_cast<size_t>( rect._width ) * rect._height );
+                const size_t texelBytes  = getBytesPerTexel();
+                upload._bytes.resize( static_cast<size_t>( rect._width ) * rect._height * texelBytes );
                 for ( uint32 row = 0; row < rect._height; ++row )
                 {
-                    const uint8* pSource = page._bytes.data() + ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x;
-                    Memory::copy( upload._bytes.data() + static_cast<size_t>( row ) * rect._width, pSource, rect._width );
+                    const uint8* pSource = page._bytes.data() + ( ( static_cast<size_t>( rect._y ) + row ) * kPageSize + rect._x ) * texelBytes;
+                    Memory::copy( upload._bytes.data() + static_cast<size_t>( row ) * rect._width * texelBytes, pSource, static_cast<size_t>( rect._width ) * texelBytes );
                 }
             }
             page._listDirty.clear();

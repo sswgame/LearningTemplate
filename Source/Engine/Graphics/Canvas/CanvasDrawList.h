@@ -38,7 +38,8 @@ namespace sw
     /** @brief `CanvasQuad::_flags` 의 비트입니다. 숫자는 `canvas.hlsl` 의 `kCanvasFlag*` 와 같아야 합니다. */
     struct CanvasQuadFlag
     {
-        static constexpr uint32 kRoundedClip = SW_BIT( 0 ); ///< `_clipRect` 와 `_params._w`(반지름)로 둥근 자르기를 셰이더가 한다. 사각 자르기는 일괄의 가위가 한다.
+        static constexpr uint32 kRoundedClip       = SW_BIT( 0 ); ///< `_clipRect` 와 `_params._w`(반지름)로 둥근 자르기를 셰이더가 한다. 사각 자르기는 일괄의 가위가 한다.
+        static constexpr uint32 kMultiChannelGlyph = SW_BIT( 1 ); ///< 글리프 사각형의 아틀라스 페이지가 MSDF(RGBA)다 — 셰이더가 RGB 의 중앙값을 거리값으로 쓴다(아니면 R 채널 하나).
     };
 } // namespace sw
 

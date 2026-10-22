@@ -36,7 +36,8 @@ namespace sw
     class SW_API GlyphCache
     {
     public:
-        explicit GlyphCache( IFontRasterizer& rasterizer );
+        /** @brief @p kind 의 거리장으로 글리프를 만들어 아틀라스에 올립니다(종류는 만들 때 정해 바뀌지 않는다). */
+        GlyphCache( IFontRasterizer& rasterizer, GlyphFieldKind kind );
 
         GlyphCache( const GlyphCache& )            = delete;
         GlyphCache& operator=( const GlyphCache& ) = delete;
@@ -56,6 +57,8 @@ namespace sw
         const GlyphAtlas& getAtlas() const { return _atlas; }
         /** @brief 래스터화 인자입니다(래스터 픽셀 → em 비율 환산에 `_pixelSize`). */
         const SdfRasterParams& getRasterParams() const { return _rasterParams; }
+        /** @brief 글리프를 담는 거리장 종류입니다. */
+        GlyphFieldKind getFieldKind() const { return _atlas.getFieldKind(); }
         /** @brief 표의 글리프 수입니다. */
         uint32 getGlyphCount() const { return static_cast<uint32>( _mapGlyph.size() ); }
 

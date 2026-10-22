@@ -16,6 +16,10 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
@@ -92,6 +96,8 @@ namespace sw
         , _notifications{ *this }
         , _actionGlyphs{}
         , _input{}
+        , _worldPointer{}
+        , _accessibilityBridge{}
         , _pFontService{ nullptr }
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
@@ -111,6 +117,8 @@ namespace sw
         , _bLastCanvasReusable{ SW_FALSE }
         , _activeScreen{ kInvalidUIScreenHandle }
         , _markerScreen{ kInvalidUIScreenHandle }
+        , _accessibleFocusScreen{ kInvalidUIScreenHandle }
+        , _accessibleFocusWidget{ kInvalidWidgetID }
         , _listMarkerAnchor{}
         , _listCanvasAnchor{}
         , _listFreeMarkerAnchor{}
@@ -154,12 +162,14 @@ namespace sw
 
     void UISystem::shutdown()
     {
+        _accessibilityBridge.reset();
         _subtitles.clear();
         _tooltips.clear();
         _notifications.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있으므로 등록과 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
         {
+            _worldPointer.forgetComponent( *pComponent );
             pComponent->forgetUISystem();
         }
         _listWidgetComponent.clear();
@@ -260,7 +270,10 @@ namespace sw
         if ( _input.pollInputMode( mode ) )
             setInputMode( mode );
         if ( _bOnScreenSuppressed == SW_FALSE )
+        {
             _input.processPointer( _listScreen, _viewport );
+            processWorldPointer();
+        }
         // 액션: 화면이 없으면 일시정지 메뉴를 먼저 연다. 활성 화면은 여기서 한 번 정하며, 방금 연 메뉴는 다음 프레임부터 액션을 받는다.
         UIScreen* pActive = getActiveScreen();
         if ( pActive == nullptr && _input.pollPauseAction( _pauseMenuDocument.empty() == false ) )
@@ -296,6 +309,7 @@ namespace sw
             applyPendingCloses();                        // 닫기 애니메이션이 끝난 화면을 지운다
         }
         refreshInputGlyphs();
+        updateAccessibilityFocus();
         // 스타일: 스타일이 더티한 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞이다. 여백과 글꼴이 크기를 바꾸기 때문이다).
         {
             SW_PROFILE_SCOPE( "GT.UI.Style" );
@@ -1049,9 +1063,130 @@ namespace sw
         {
             if ( _listWidgetComponent[index] == &component )
             {
+                _worldPointer.forgetComponent( component );
                 _listWidgetComponent.erase( _listWidgetComponent.begin() + static_cast<ptrdiff_t>( index ) );
                 return;
             }
+        }
+    }
+
+    void UISystem::setAccessibilityBridge( unique_ptr<IUIAccessibilityBridge> bridge )
+    {
+        _accessibilityBridge   = std::move( bridge );
+        _accessibleFocusScreen = kInvalidUIScreenHandle;
+        _accessibleFocusWidget = kInvalidWidgetID;
+    }
+
+    void UISystem::announce( string_view text, UIAnnouncePriority priority )
+    {
+        const bool bListening = _accessibilityBridge != nullptr && _accessibilityBridge->isClientActive();
+        if ( bListening && text.empty() == false )
+            _accessibilityBridge->announce( text, priority );
+    }
+
+    void UISystem::appendScreenAccessibility( const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot ) const
+    {
+        // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
+        const WidgetTree* pFocusTree    = _input.getFocusManager().getFocusedTree();
+        const WidgetID    focusedWidget = pFocusTree == &screen.getTree() ? _input.getFocusManager().getFocusedWidget() : kInvalidWidgetID;
+        UIAccessibilityTree::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
+    }
+
+    void UISystem::populateAccessibilitySnapshot( UIAccessibilitySnapshot& outSnapshot ) const
+    {
+        outSnapshot.clear();
+        // 입력을 받는 화면: 위에서 아래로 읽는다. 입력을 막는 화면(모달) 아래는 읽지 않는다.
+        for ( size_t index = _listScreen.size(); index > 0; --index )
+        {
+            const UIScreen& screen = *_listScreen[index - 1];
+            if ( screen.isClosing() || screen.receivesPointer() == false )
+                continue;
+            appendScreenAccessibility( screen, outSnapshot );
+            if ( screen.blocksLowerInput() )
+                break;
+        }
+        // 오버레이(알림, 자막): 입력을 받지 않지만 읽을 글이다. 맨 뒤에 둔다.
+        for ( size_t index = _listScreen.size(); index > 0; --index )
+        {
+            const UIScreen& screen = *_listScreen[index - 1];
+            if ( screen.isClosing() == false && screen.receivesPointer() == false )
+                appendScreenAccessibility( screen, outSnapshot );
+        }
+    }
+
+    void UISystem::updateAccessibilityFocus()
+    {
+        if ( _accessibilityBridge != nullptr )
+            _accessibilityBridge->onUIUpdated();
+        const bool bListening = _accessibilityBridge != nullptr && _accessibilityBridge->isClientActive();
+        if ( bListening == false )
+        {
+            // 붙지 않은 동안 바뀐 포커스는 다시 붙을 때 새로 알린다.
+            _accessibleFocusScreen = kInvalidUIScreenHandle;
+            _accessibleFocusWidget = kInvalidWidgetID;
+            return;
+        }
+        const WidgetTree*    pTree   = _input.getFocusManager().getFocusedTree();
+        const UIScreen*      pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
+        const UIScreenHandle screen  = pScreen != nullptr ? pScreen->getHandle() : kInvalidUIScreenHandle;
+        const WidgetID       widget  = pScreen != nullptr ? _input.getFocusManager().getFocusedWidget() : kInvalidWidgetID;
+        if ( screen == _accessibleFocusScreen && widget == _accessibleFocusWidget )
+            return;
+        _accessibleFocusScreen = screen;
+        _accessibleFocusWidget = widget;
+        _accessibilityBridge->notifyFocusChanged( screen, widget );
+    }
+
+    bool UISystem::routeWorldPointer( const WorldWidgetRay& ray, const UIPointerEvent& event )
+    {
+        return _worldPointer.route( _listWidgetComponent, ray, event );
+    }
+
+    void UISystem::processWorldPointer()
+    {
+        // 입력을 켠 World 위젯이 하나도 없으면 광선을 만들 필요가 없다. 호버가 남아 있으면 푼다.
+        const WidgetComponent* pAnchorComponent = nullptr;
+        for ( const WidgetComponent* pComponent : _listWidgetComponent )
+        {
+            if ( pComponent->acceptsWorldInput() )
+            {
+                pAnchorComponent = pComponent;
+                break;
+            }
+        }
+        const bool bLocked     = _input.getInputManager()->isMouseLockActive();
+        const bool bNoViewport = _viewport._physicalSize._y <= 0.0f;
+        const bool bCannotAim  = bLocked || bNoViewport;
+        if ( pAnchorComponent == nullptr || bCannotAim )
+        {
+            _worldPointer.releaseHover();
+            return;
+        }
+        // 카메라는 입력을 켠 첫 위젯의 씬 것을 쓴다(한 UI 시스템은 한 게임 씬의 UI 다).
+        const GameObject*        pOwner   = pAnchorComponent->getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
+        if ( pCamera == nullptr )
+        {
+            _worldPointer.releaseHover();
+            return;
+        }
+        const float4x4 inverseViewProjection = pCamera->getViewProjectionMatrix( _viewport._physicalSize._x / _viewport._physicalSize._y ).invert();
+        for ( const UIRoutedPointerEvent& routed : _input.getFramePointerEvents() )
+        {
+            if ( routed._bOverScreenWidget == SW_TRUE )
+            {
+                _worldPointer.releaseHover(); // 화면 위젯이 World 위젯을 가린다
+                continue;
+            }
+            WorldWidgetRay ray{};
+            if ( WorldWidgetPick::makeRay( inverseViewProjection, routed._event._position, _viewport._size, ray ) == false )
+                continue;
+            const bool bHandled = _worldPointer.route( _listWidgetComponent, ray, routed._event );
+            // 위젯이 처리한 누름 · 뗌은 게임이 받지 않게 소비한다(화면 위젯과 같은 규칙).
+            const bool bButtonEvent = routed._event._kind == UIPointerEventKind::Down || routed._event._kind == UIPointerEventKind::Up;
+            if ( bHandled && bButtonEvent )
+                _input.getConsumption().consumeMouseButton( routed._event._button );
         }
     }
 

@@ -2,13 +2,17 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Text/IFontRasterizer.h"
+#include "Engine/Text/ITextShaper.h"
+#include "Engine/Text/Msdf/MsdfGenerator.h"
 
 #include <ft2build.h>
 #include <freetype/freetype.h>
 #include <freetype/ftmodapi.h>
+#include <freetype/ftoutln.h>
 
 namespace sw
 {
@@ -20,6 +24,74 @@ namespace sw
         float32 fromFixed26Dot6( FT_Pos value )
         {
             return static_cast<float32>( value ) / 64.0f;
+        }
+
+        /** @brief FreeType 윤곽을 훑으며 `MsdfShape` 로 옮기는 상태입니다(`FT_Outline_Decompose` 의 사용자 값). */
+        struct FreeTypeOutlineBuilder
+        {
+            MsdfShape* _pShape{ nullptr };
+            float2     _current{};
+
+            static float2 toPoint( const FT_Vector* pVector ) { return float2{ fromFixed26Dot6( pVector->x ), fromFixed26Dot6( pVector->y ) }; }
+
+            MsdfContour& getContour() { return _pShape->_listContour.back(); }
+
+            static int32 moveTo( const FT_Vector* pTo, void* pUser )
+            {
+                FreeTypeOutlineBuilder& builder = *static_cast<FreeTypeOutlineBuilder*>( pUser );
+                builder._pShape->_listContour.emplace_back();
+                builder._current = toPoint( pTo );
+                return 0;
+            }
+            static int32 lineTo( const FT_Vector* pTo, void* pUser )
+            {
+                FreeTypeOutlineBuilder& builder = *static_cast<FreeTypeOutlineBuilder*>( pUser );
+                MsdfEdge                edge{};
+                edge._kind        = MsdfEdgeKind::Linear;
+                edge._arrPoint[0] = builder._current;
+                edge._arrPoint[1] = toPoint( pTo );
+                builder.pushEdge( edge, edge._arrPoint[1] );
+                return 0;
+            }
+            static int32 conicTo( const FT_Vector* pControl, const FT_Vector* pTo, void* pUser )
+            {
+                FreeTypeOutlineBuilder& builder = *static_cast<FreeTypeOutlineBuilder*>( pUser );
+                MsdfEdge                edge{};
+                edge._kind        = MsdfEdgeKind::Quadratic;
+                edge._arrPoint[0] = builder._current;
+                edge._arrPoint[1] = toPoint( pControl );
+                edge._arrPoint[2] = toPoint( pTo );
+                builder.pushEdge( edge, edge._arrPoint[2] );
+                return 0;
+            }
+            static int32 cubicTo( const FT_Vector* pControl1, const FT_Vector* pControl2, const FT_Vector* pTo, void* pUser )
+            {
+                FreeTypeOutlineBuilder& builder = *static_cast<FreeTypeOutlineBuilder*>( pUser );
+                MsdfEdge                edge{};
+                edge._kind        = MsdfEdgeKind::Cubic;
+                edge._arrPoint[0] = builder._current;
+                edge._arrPoint[1] = toPoint( pControl1 );
+                edge._arrPoint[2] = toPoint( pControl2 );
+                edge._arrPoint[3] = toPoint( pTo );
+                builder.pushEdge( edge, edge._arrPoint[3] );
+                return 0;
+            }
+            void pushEdge( const MsdfEdge& edge, const float2& end )
+            {
+                getContour()._listEdge.push_back( edge );
+                _current = end;
+            }
+        };
+
+        /** @brief 윤곽의 진행 방향을 뒤집습니다(간선 순서와 간선 안의 점 순서). */
+        void reverseContour( MsdfContour& inoutContour )
+        {
+            std::reverse( inoutContour._listEdge.begin(), inoutContour._listEdge.end() );
+            for ( MsdfEdge& edge : inoutContour._listEdge )
+            {
+                const size_t pointCount = edge._kind == MsdfEdgeKind::Linear ? 2 : ( edge._kind == MsdfEdgeKind::Quadratic ? 3 : 4 );
+                std::reverse( edge._arrPoint, edge._arrPoint + pointCount );
+            }
         }
     } // namespace
 } // namespace sw
@@ -100,6 +172,76 @@ namespace sw
             const FontFaceID faceID = _nextFaceID++;
             _mapFace[faceID]        = std::move( entry );
             return faceID;
+        }
+
+        unique_ptr<ITextShaper> createShaper() const override { return ITextShaper::createDefault(); }
+
+        bool rasterizeMsdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
+        {
+            const FaceEntry* pEntry = findEntry( face );
+            if ( pEntry == nullptr )
+                return false;
+            FT_Face pFace = pEntry->_pFace;
+            if ( FT_Set_Pixel_Sizes( pFace, 0, params._pixelSize ) != 0 )
+                return false;
+            if ( FT_Load_Glyph( pFace, glyphIndex, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP ) != 0 )
+            {
+                SW_LOG_ERROR( "[Text] Failed to load glyph %# for MSDF", glyphIndex );
+                return false;
+            }
+            FT_GlyphSlot pSlot   = pFace->glyph;
+            outBitmap._advancePx = fromFixed26Dot6( pSlot->advance.x );
+            outBitmap._bytes.clear();
+            outBitmap._width     = 0;
+            outBitmap._height    = 0;
+            outBitmap._bearingPx = float2{};
+            if ( pSlot->format != FT_GLYPH_FORMAT_OUTLINE )
+            {
+                SW_LOG_ERROR( "[Text] Glyph %# has no outline - MSDF needs vector outlines", glyphIndex );
+                return false;
+            }
+            if ( pSlot->outline.n_points == 0 )
+                return true; // 공백이라 전진만 있다
+
+            MsdfShape              shape{};
+            FreeTypeOutlineBuilder builder{ &shape, float2{} };
+            FT_Outline_Funcs       funcs{};
+            funcs.move_to  = &FreeTypeOutlineBuilder::moveTo;
+            funcs.line_to  = &FreeTypeOutlineBuilder::lineTo;
+            funcs.conic_to = &FreeTypeOutlineBuilder::conicTo;
+            funcs.cubic_to = &FreeTypeOutlineBuilder::cubicTo;
+            if ( FT_Outline_Decompose( &pSlot->outline, &funcs, &builder ) != 0 )
+            {
+                SW_LOG_ERROR( "[Text] Failed to read the outline of glyph %# for MSDF", glyphIndex );
+                return false;
+            }
+            // MSDF 는 안쪽이 간선 왼쪽이어야 한다. TrueType 윤곽은 안쪽이 오른쪽(시계 방향)이라 뒤집는다. PostScript 윤곽은 이미 왼쪽이다.
+            if ( FT_Outline_Get_Orientation( &pSlot->outline ) == FT_ORIENTATION_TRUETYPE )
+            {
+                for ( MsdfContour& contour : shape._listContour )
+                {
+                    reverseContour( contour );
+                }
+            }
+            MsdfGenerator::colorEdges( shape );
+
+            FT_BBox box{};
+            FT_Outline_Get_CBox( &pSlot->outline, &box );
+            const int32 spread = static_cast<int32>( params._spreadPx );
+            const int32 left   = static_cast<int32>( MathUtil::floor( fromFixed26Dot6( box.xMin ) ) ) - spread;
+            const int32 right  = static_cast<int32>( MathUtil::ceil( fromFixed26Dot6( box.xMax ) ) ) + spread;
+            const int32 bottom = static_cast<int32>( MathUtil::floor( fromFixed26Dot6( box.yMin ) ) ) - spread;
+            const int32 top    = static_cast<int32>( MathUtil::ceil( fromFixed26Dot6( box.yMax ) ) ) + spread;
+            MsdfParams  msdfParams{};
+            msdfParams._width   = static_cast<uint32>( right - left );
+            msdfParams._height  = static_cast<uint32>( top - bottom );
+            msdfParams._origin  = float2{ static_cast<float32>( left ), static_cast<float32>( top ) };
+            msdfParams._rangePx = static_cast<float32>( spread );
+            MsdfGenerator::computeBitmap( shape, msdfParams, outBitmap._bytes );
+            outBitmap._width     = msdfParams._width;
+            outBitmap._height    = msdfParams._height;
+            outBitmap._bearingPx = float2{ static_cast<float32>( left ), static_cast<float32>( top ) };
+            return true;
         }
 
         void unloadFace( FontFaceID face ) override

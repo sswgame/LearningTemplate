@@ -21,7 +21,7 @@
 					<TextWidget _text="Corner" _bLocalized="false">
 						<_slot _widthOverride="140" _verticalAlignment="Center" />
 					</TextWidget>
-					<ComboBoxWidget _name="Corner" _selectedIndex="{setting:debug.hudCorner}">
+					<ComboBoxWidget _name="Corner" _accessibleName="Corner" _selectedIndex="{setting:debug.hudCorner}">
 						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
 					</ComboBoxWidget>
 				</BoxPanel>
@@ -29,7 +29,7 @@
 					<TextWidget _text="Opacity" _bLocalized="false">
 						<_slot _widthOverride="140" _verticalAlignment="Center" />
 					</TextWidget>
-					<SliderWidget _name="Opacity" _value="{setting:debug.hudOpacity}">
+					<SliderWidget _name="Opacity" _accessibleName="Opacity" _value="{setting:debug.hudOpacity}">
 						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
 					</SliderWidget>
 				</BoxPanel>

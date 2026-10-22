@@ -30,6 +30,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneStateHash.h"
+#include "Engine/UI/Accessibility/UIAccessibilityBridgeFactory.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -523,7 +524,10 @@ namespace sw
             pUI->getClipboard().setAPI( api );
         }
         if ( _bEnableEditor == SW_TRUE )
-            return;
+            return; // 에디터는 창을 ImGui 가 쓴다 — 게임 UI 만 스크린 리더에 내보이지 않는다
+        // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
+        if ( _window != nullptr )
+            pUI->setAccessibilityBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_window ) );
         pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
         _bQuitCommandRegistered = SW_TRUE;
     }
@@ -534,6 +538,7 @@ namespace sw
         if ( pUI == nullptr )
             return;
         pUI->getClipboard().setAPI( UIClipboardAPI{} );
+        pUI->setAccessibilityBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
         if ( _bQuitCommandRegistered == SW_FALSE )
             return;
         pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );

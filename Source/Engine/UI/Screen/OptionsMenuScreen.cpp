@@ -387,7 +387,9 @@ namespace sw
             SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", documentPath, Internal::kValueName );
             return false;
         }
-        entry._value            = pValue->getID();
+        entry._value = pValue->getID();
+        if ( pLabel != nullptr && pValue->getAccessibleName().empty() )
+            pValue->setAccessibleLabelledBy( pLabel->getName() ); // 스크린 리더가 슬라이더 · 콤보를 옆 레이블의 글로 읽는다
         const string expression = "{setting:" + prefix + "}";
         const utf8*  pProperty  = Internal::getRowWidget( setting._type )._pValueProperty;
         if ( pProperty != nullptr )

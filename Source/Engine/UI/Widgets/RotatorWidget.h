@@ -45,8 +45,10 @@ namespace sw
         void                  setOptions( const vector<string>& listOption );
         const vector<string>& getOptions() const { return _listOption; }
         /** @brief 고른 인덱스를 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). 범위 밖이면 없음(`invalid_index::kUint32`). */
-        void               setSelectedIndex( uint32 index );
-        uint32             getSelectedIndex() const { return _selectedIndex; }
+        void   setSelectedIndex( uint32 index );
+        uint32 getSelectedIndex() const { return _selectedIndex; }
+        /** @brief 선택기(스핀 버튼)로 내보입니다. 고른 항목이 값이고, 이름은 `accessibleName` 만 쓴다. */
+        void               describeAccessible( AccessibleInfo& outInfo ) override;
         SelectionDelegate& getOnSelectionChanged() { return _onSelectionChanged; }
 
         /**

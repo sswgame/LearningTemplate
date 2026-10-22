@@ -211,6 +211,8 @@ namespace sw
         quad._color                    = style._color;
         quad._borderColor              = style._outlineColor;
         // 아틀라스 값 0..1 은 윤곽에서 ±spread 래스터 픽셀 — 셰이더가 (값 − 0.5) × 이 배율로 화면 픽셀 거리를 만든다.
+        if ( glyphCache.getFieldKind() == GlyphFieldKind::Msdf )
+            quad._flags |= CanvasQuadFlag::kMultiChannelGlyph;
         quad._params._x = 2.0f * static_cast<float32>( rasterParams._spreadPx ) * rasterToPixel;
         quad._params._y = style._outlineWidth * _uiScale;
         quad._params._z = ( style._bFauxBold == SW_TRUE ) ? kFauxBoldEmFraction * style._fontSize * _uiScale : 0.0f;

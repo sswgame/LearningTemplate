@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 
 namespace sw
 {
@@ -94,5 +95,14 @@ namespace sw
             brush._nineSliceMargin._z = left;
         }
         painter.fillRect( float2{}, getGeometry()._size, brush );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void ImageWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._name = getAccessibleName();
+        outInfo._role = outInfo._name.empty() ? AccessibleRole::None : AccessibleRole::Image;
     }
 } // namespace sw

@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -169,5 +170,17 @@ namespace sw
                 painter.fillRect( float2{ bLeftSide ? alignX - width : alignX, top + Internal::kArrowThickness * static_cast<float32>( step ) }, float2{ width, Internal::kArrowThickness }, arrow );
             }
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void RotatorWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        ButtonWidget::describeAccessible( outInfo );
+        outInfo._role = AccessibleRole::SpinButton;
+        outInfo._name = getAccessibleName(); // 안의 글은 고른 항목이라 이름이 아니라 값이다
+        if ( _selectedIndex < _listOption.size() )
+            outInfo._value = _listOption[_selectedIndex];
     }
 } // namespace sw

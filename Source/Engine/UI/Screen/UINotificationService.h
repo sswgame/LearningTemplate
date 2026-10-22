@@ -89,6 +89,7 @@ namespace sw
             float32            _ageSeconds{ 0.0f };
             uint32             _count{ 1 };
             WidgetID           _widget{ kInvalidWidgetID };
+            bool               _bAnnounced{ false }; ///< 스크린 리더에 읽어 달라고 알렸는지 나타냅니다(보이는 글이 정해진 뒤 한 번).
         };
 
         /** @struct FadingEntry @brief 시간이 다 돼 사라지는 중인 항목의 위젯입니다. */
@@ -98,6 +99,8 @@ namespace sw
             float32  _remainingSeconds{ 0.0f };
         };
 
+        /** @brief 보이는 알림 중 아직 알리지 않은 것의 글(해석한 보이는 글)을 스크린 리더에 읽어 달라고 합니다. 글은 첫 레이아웃 뒤에야 정해지므로 정해진 알림부터 알린다. */
+        void announceVisible();
         /** @brief 같은 글의 알림을 찾습니다(없으면 nullptr). */
         Entry* findSameText( const string& text );
         /** @brief 알림 화면을 엽니다(이미 열렸으면 그것). 열지 못하면 nullptr 입니다. */

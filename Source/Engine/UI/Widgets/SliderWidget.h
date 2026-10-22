@@ -44,8 +44,12 @@ namespace sw
         /** @brief 범위와 단계를 정합니다(값은 범위로 제한합니다). */
         void setRange( float32 minValue, float32 maxValue, float32 step );
         /** @brief 값을 바꿉니다(범위로 제한). 바뀌면 알림을 보내고 kPaint 로 무효화합니다. */
-        void                  setValue( float32 value );
-        float32               getValue() const { return _value; }
+        void    setValue( float32 value );
+        float32 getValue() const { return _value; }
+        /** @brief 사용자 입력(드래그, 좌우 액션, 스크린 리더의 값 바꾸기)으로 값을 바꿉니다. 바뀌면 양방향 바인딩에 알립니다(`notifyValueEdited`). */
+        void setValueFromUser( float32 value );
+        /** @brief 슬라이더로 내보입니다(범위 · 값 · 단계). 이름은 `accessibleName` 만 쓴다. */
+        void                  describeAccessible( AccessibleInfo& outInfo ) override;
         ValueChangedDelegate& getOnValueChanged() { return _onValueChanged; }
 
         UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
@@ -56,8 +60,6 @@ namespace sw
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
-        /** @brief 사용자 입력(드래그, 좌우 액션)으로 값을 바꿉니다. 바뀌면 양방향 바인딩에 알립니다(`notifyValueEdited`). */
-        void setValueFromUser( float32 value );
         /** @brief 화면 점을 값으로 바꿉니다(트랙 위 비율이며, 오른쪽에서 왼쪽이면 뒤집습니다). */
         float32 computeValueAt( const float2& screenPoint ) const;
         /** @brief 지금 값의 트랙 위 비율(0..1)입니다. */
@@ -99,6 +101,8 @@ namespace sw
         /** @brief 비율을 바꿉니다(0..1 로 제한). kPaint 로 무효화합니다. */
         void    setPercent( float32 percent );
         float32 getPercent() const { return _percent; }
+        /** @brief 진행 막대로 내보입니다(0..1 읽기 전용 범위). */
+        void describeAccessible( AccessibleInfo& outInfo ) override;
         /** @brief 채움 색을 바꿉니다. kPaint 로 무효화합니다. */
         void          setFillColor( const float4& color );
         const float4& getFillColor() const { return _fillColor; }

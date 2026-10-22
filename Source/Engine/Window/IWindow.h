@@ -17,6 +17,7 @@ namespace sw
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
+    SW_DECLARE_DELEGATE( bool, WindowAccessibilityQueryDelegate, uintptr_t wParam, intptr_t lParam, intptr_t& outResult );
 
     /**
      * @brief 창을 화면에 놓는 방식입니다.
@@ -189,6 +190,13 @@ namespace sw
         /** @brief 외부 이벤트 처리기(예: ImGui)를 연결합니다. */
         void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = std::move( handler ); }
 
+        /**
+         * @brief 접근성 클라이언트(스크린 리더)의 객체 요청에 답하는 처리기를 설정합니다(Win32 `WM_GETOBJECT`). X11 은 보내는 메시지가 없어 부르지 않는다.
+         * @details 외부 이벤트 처리기(`setCustomMessageHandler`)와 따로 둔다 — 그쪽은 결과 값을 돌려줄 수 없고(처리하면 늘 1), 접근성 요청은 결과(제공자 핸들)가 답이다.
+         *          처리기는 @p outResult 에 창 프로시저가 돌려줄 값을 적고 true 를 돌려준다. false 면 기본 처리로 간다. 창 스레드(메인 스레드)에서 불린다. 빼려면 빈 델리게이트를 넘긴다.
+         */
+        void setAccessibilityQueryHandler( WindowAccessibilityQueryDelegate handler ) { _accessibilityQuery = std::move( handler ); }
+
         /** @brief 창 크기가 바뀔 때 부를 콜백을 설정합니다. */
         void setResizeCallback( WindowResizeDelegate callback ) { _onResize = std::move( callback ); }
 
@@ -251,13 +259,14 @@ namespace sw
          * @brief `recreate` 가 같은 제목으로 다시 만들 제목입니다.
          * @details 창 안의 고정 버퍼다. 창은 엔진 종료 뒤에 파괴되므로, 힙 문자열이면 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 누수 보고에 그 태그의 증가로 남았다.
          */
-        utf8                         _arrTitle[kTitleCapacity];
-        WindowMessageHandlerDelegate _customHandler;
-        WindowResizeDelegate         _onResize;
-        WindowCloseQueryDelegate     _closeQuery;
-        uint32                       _width;
-        uint32                       _height;
-        uint8                        _bShouldClose : 1;
+        utf8                             _arrTitle[kTitleCapacity];
+        WindowMessageHandlerDelegate     _customHandler;
+        WindowAccessibilityQueryDelegate _accessibilityQuery;
+        WindowResizeDelegate             _onResize;
+        WindowCloseQueryDelegate         _closeQuery;
+        uint32                           _width;
+        uint32                           _height;
+        uint8                            _bShouldClose : 1;
         /**
          * @brief 다시 만드는 중인지 나타냅니다.
          * @details 플랫폼 메시지 처리기가 이 플래그를 보고 그 사이의 리사이즈와 닫기 통보를 삼킨다.

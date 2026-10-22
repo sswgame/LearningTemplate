@@ -31,8 +31,8 @@ namespace
 /** @brief [GlyphAtlasTest] 같은 순서로 넣으면 같은 자리 — 패킹은 결정적이고 서로 겹치지 않으며 페이지 안에 있다 */
 SW_TEST_CASE( GlyphAtlasTest, PackingIsDeterministicAndDisjoint )
 {
-    sw::GlyphAtlas                 atlasA;
-    sw::GlyphAtlas                 atlasB;
+    sw::GlyphAtlas                 atlasA{ sw::GlyphFieldKind::Sdf };
+    sw::GlyphAtlas                 atlasB{ sw::GlyphFieldKind::Sdf };
     sw::vector<sw::GlyphAtlasRect> listRectA;
     for ( uint32 index = 0; index < 300; ++index )
     {
@@ -65,7 +65,7 @@ SW_TEST_CASE( GlyphAtlasTest, PackingIsDeterministicAndDisjoint )
 /** @brief [GlyphAtlasTest] 페이지 첫 업로드는 전체 한 건, 그 뒤에는 쓴 구간만 정확히 그 바이트로 넘어가고 다시 부르면 0 건 */
 SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
 {
-    sw::GlyphAtlas     atlas;
+    sw::GlyphAtlas     atlas{ sw::GlyphFieldKind::Sdf };
     sw::GlyphAtlasRect first{};
     SW_ASSERT_TRUE( atlas.allocate( 3, 2, first ) );
     sw::vector<sw::GlyphAtlasUpload> listUpload;
@@ -107,7 +107,7 @@ SW_TEST_CASE( GlyphAtlasTest, UploadsCarryOnlyWrittenRegions )
 /** @brief [GlyphAtlasTest] 다 차면 이번 프레임에 안 쓴 가장 오래된 페이지를 비우고 세대가 오르며 전체 업로드가 기록된다 — 모두 이번 프레임이면 비우지 않는다 */
 SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
 {
-    sw::GlyphAtlas atlas;
+    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::Sdf };
     const uint32   size = GlyphAtlasTestUtil::kPageFillSize;
     for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )
     {
@@ -147,7 +147,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
     sw::test::FakeFontRasterizer rasterizer;
     rasterizer.setSdfSize( GlyphAtlasTestUtil::kPageFillSize ); // 글리프 하나가 페이지 하나
     const sw::FontFaceID face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
-    sw::GlyphCache       cache( rasterizer );
+    sw::GlyphCache       cache( rasterizer, sw::GlyphFieldKind::Sdf );
 
     for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )
     {
@@ -174,4 +174,53 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
     SW_ASSERT_NOT_NULL( pSpace );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pSpace->_rect._width ) );
     SW_EXPECT_TRUE( pSpace->_advancePx > 0.0f );
+}
+
+/** @brief [GlyphAtlasTest] MSDF 아틀라스는 텍셀당 4 바이트다 — 페이지 바이트가 네 배이고, 쓴 구간의 업로드는 행마다 너비 × 4 바이트로 나가며 텍셀당 바이트가 업로드에 실린다 */
+SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
+{
+    sw::GlyphAtlas atlas{ sw::GlyphFieldKind::Msdf };
+    SW_EXPECT_EQUAL( 4u, atlas.getBytesPerTexel() );
+    sw::GlyphAtlasRect rect{};
+    SW_ASSERT_TRUE( atlas.allocate( 3, 2, rect ) );
+    sw::vector<sw::GlyphAtlasUpload> listUpload;
+    atlas.takeUploads( listUpload ); // 새 페이지 전체 한 건
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sw::GlyphAtlas::kPageSize ) * sw::GlyphAtlas::kPageSize * 4, listUpload[0]._bytes.size() );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( listUpload[0]._bytesPerTexel ) );
+    listUpload.clear();
+
+    sw::vector<uint8> bytes( static_cast<size_t>( rect._width ) * rect._height * 4 );
+    for ( size_t index = 0; index < bytes.size(); ++index )
+    {
+        bytes[index] = static_cast<uint8>( index + 1 );
+    }
+    atlas.write( rect, bytes.data() );
+    const uint8* pPage = atlas.getPageBytes( 0 );
+    // 둘째 행 첫 텍셀은 쓴 바이트의 (너비 × 4)번째부터다.
+    SW_EXPECT_EQUAL( bytes[static_cast<size_t>( rect._width ) * 4], pPage[( ( static_cast<size_t>( rect._y ) + 1 ) * sw::GlyphAtlas::kPageSize + rect._x ) * 4] );
+    atlas.takeUploads( listUpload );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listUpload.size() ) );
+    SW_EXPECT_EQUAL( bytes.size(), listUpload[0]._bytes.size() );
+    SW_EXPECT_TRUE( listUpload[0]._bytes == bytes );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( listUpload[0]._bytesPerTexel ) );
+}
+
+/** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 굽는다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
+SW_TEST_CASE( GlyphAtlasTest, MsdfCacheUsesTheMsdfRasterizer )
+{
+    sw::test::FakeFontRasterizer rasterizer;
+    const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Msdf );
+    SW_EXPECT_TRUE( cache.getFieldKind() == sw::GlyphFieldKind::Msdf );
+    const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A', 1 );
+    SW_ASSERT_NOT_NULL( pGlyph );
+    const sw::GlyphAtlasRect& rect = pGlyph->_rect;
+    SW_ASSERT_TRUE( rect._width > 0 );
+    const uint8* pPage = cache.getAtlas().getPageBytes( rect._page );
+    const size_t first = ( static_cast<size_t>( rect._y ) * sw::GlyphAtlas::kPageSize + rect._x ) * 4;
+    for ( size_t channel = 0; channel < 4; ++channel )
+    {
+        SW_EXPECT_EQUAL( static_cast<uint8>( 128 ), pPage[first + channel] );
+    }
 }

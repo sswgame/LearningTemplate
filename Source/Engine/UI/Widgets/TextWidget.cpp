@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
@@ -295,5 +296,19 @@ namespace sw
             glyphStyle._bFauxItalic = glyph._bFauxItalic;
             (void)painter.drawGlyph( glyph._origin, glyph._face, glyph._glyphIndex, glyphStyle, *context._pGlyphCache, context._frameIndex );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void TextWidget::describeAccessible( AccessibleInfo& outInfo )
+    {
+        outInfo._role = AccessibleRole::Text;
+        if ( getAccessibleName().empty() == false )
+            outInfo._name = getAccessibleName();
+        else
+            outInfo._name = _displayText.empty() ? _text : string( getPlainText() ); // 배치 전에는 해석한 글이 없어 원문(키일 수 있다)을 쓴다
+        if ( outInfo._name.empty() )
+            outInfo._role = AccessibleRole::None;
     }
 } // namespace sw

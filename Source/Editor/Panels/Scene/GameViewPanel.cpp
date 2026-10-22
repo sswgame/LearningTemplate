@@ -2,8 +2,10 @@
 
 #include "Editor/Panels/Scene/GameViewPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -55,7 +57,40 @@ namespace sw::editor
         : _aspect{ EditorGameViewAspect::Free }
         , _bNoCameraHintShown{ false }
         , _forwardedButtonMask{ 0 }
+        , _listForwardedKey{}
     {
+    }
+
+    void GameViewPanel::forwardDetachedKeyboard()
+    {
+        InputManager* pInput = findSubsystem<InputManager>();
+        if ( pInput == nullptr )
+            return;
+        const bool bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
+        const bool bForward  = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+        if ( bForward == false )
+        {
+            // 포커스를 잃었거나 패널을 주 창에 되돌렸다 — 누른 채 남은 키를 놓는다. 큐가 차서 못 넣은 키는 다음 프레임에 다시 시도한다.
+            for ( size_t index = _listForwardedKey.size(); index > 0; --index )
+            {
+                if ( pInput->postRawEvent( RawInputEvent::makeKeyUp( _listForwardedKey[index - 1] ) ) )
+                    VectorUtil::removeAtSwap( _listForwardedKey, index - 1 );
+            }
+            return;
+        }
+
+        vector<RawInputEvent> listEvent;
+        ImGuiKeyForward::appendKeyChanges( listEvent );
+        ImGuiKeyForward::appendTextInput( listEvent );
+        for ( const RawInputEvent& event : listEvent )
+        {
+            if ( pInput->postRawEvent( event ) == false )
+                continue; // 큐가 차면 이 사건만 잃는다
+            if ( event._type == RawInputEventType::KeyDown && VectorUtil::contains( _listForwardedKey, event._payload._keyData._key ) == false )
+                _listForwardedKey.push_back( event._payload._keyData._key );
+            else if ( event._type == RawInputEventType::KeyUp )
+                VectorUtil::removeValue( _listForwardedKey, event._payload._keyData._key );
+        }
     }
 
     void GameViewPanel::forwardDetachedPointer()
@@ -132,6 +167,7 @@ namespace sw::editor
         // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`HostViewTarget::_windowX`).
         pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
         forwardDetachedPointer();
+        forwardDetachedKeyboard();
         ImGui::SetCursorScreenPos( imagePos );
         const void* pTextureID        = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
