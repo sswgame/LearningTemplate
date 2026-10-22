@@ -26,6 +26,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/AssetArrivalTestUtil.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
@@ -634,6 +635,7 @@ SW_TEST_CASE( InteractionTest, PairedAnimationStepStartsSessionWithBothAnimators
     // 옆(방위 90°) — 세트가 맞지 않아 시작하지 않는다.
     pVictimRoot->setWorldPosition( float3{ 1.5f, 0.0f, 0.5f } );
     manager.beginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) ); // 클립을 읽는 중인 참가자는 세션에 받지 않는다(ParticipantNotReady)
     InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     InteractionTestInternal::updateFrames( manager, 1, pInteractor, true );
     PairedAnimationSystem* pSystem = PairedAnimationSystem::find( manager );
