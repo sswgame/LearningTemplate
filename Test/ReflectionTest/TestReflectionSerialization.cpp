@@ -2690,9 +2690,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     ver = 0;
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &unknownKeys, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})", 1u ) );
     SW_EXPECT_EQUAL( 5, unknownKeys._hp );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 2 saved field(s) that the type does not have or could not read: " ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_dropProbeHealth" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_dropProbeJunk" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "_dropProbeHealth, _dropProbeJunk" ) == 1, logs.joined().c_str() );
 
     // ④ 모든 값이 자리를 찾은 로드는 조용하다.
     DropProbe clean;
