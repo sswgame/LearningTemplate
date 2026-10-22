@@ -505,6 +505,17 @@ float3 swComputeEnvironmentSpecular( SwSurfacePBR surface, float normalDotView )
 }
 
 /**
+ * @brief 시선 쪽 가장자리를 키 라이트 색으로 살짝 밝히는 림 항입니다. 포워드 · 디퍼드가 **같은 함수**를 부릅니다.
+ * @param normal 월드 노멀
+ * @details 상수(지수 3 · 세기 0.12)는 이 함수 한 곳에만 있다. 예전에는 포워드(2 · 0.15)와 디퍼드(3 · 0.12)가 각자 들고 있어 같은 표면이 경로마다 달랐다.
+ */
+float3 swComputeRimLight( float3 normal )
+{
+	const float rim = pow( 1.0f - saturate( dot( normal, float3( 0.0f, 0.0f, 1.0f ) ) ), 3.0f ) * 0.12f;
+	return rim * g_KeyLightColor.rgb;
+}
+
+/**
  * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
  * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
  * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다

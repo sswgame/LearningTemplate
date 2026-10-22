@@ -74,8 +74,7 @@ float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surfac
 	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
 	const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
 	lit                = swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
-	const float rim    = pow( 1.0f - saturate( dot( surface.normal, float3( 0, 0, 1 ) ) ), 2.0f ) * 0.15f;
-	lit += rim * g_KeyLightColor.rgb;
+	lit += swComputeRimLight( surface.normal );
 #endif
 	return float4( lit, surface.albedo.a );
 }
