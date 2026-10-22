@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
@@ -54,7 +55,7 @@ namespace sw
         , _gpuUploadQueue{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
-        , _listAnimationLODView{}
+        , _listLODView{}
         , _listShadowLightIndex{}
         , _listScenePreviewBuilder{}
         , _listPreviewLODView{}
@@ -205,26 +206,27 @@ namespace sw
             if ( view._bRender == SW_TRUE )
                 view._shadow = ShadowSetupUtil::makeViewShadowFor( pLight != nullptr ? pShadowLight : nullptr, view._viewProj, packet._shadow );
         }
-        updateAnimationLODViews( packet, *pActiveScene );
+        updateLODViews( packet, *pActiveScene );
         populateGPUSceneSnapshot( packet, pActiveScene );
     }
 
-    void RenderPacketBuilder::updateAnimationLODViews( const RenderFramePacket& packet, Scene& activeScene )
+    void RenderPacketBuilder::updateLODViews( const RenderFramePacket& packet, Scene& activeScene )
     {
-        // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
+        // 애니메이션 LOD · 메시 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 판정이 이것으로 가시성 · 화면 크기를 본다.
         // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
         GameObjectManager* pObjects = activeScene.getObjectManager();
         if ( pObjects == nullptr )
             return;
-        _listAnimationLODView.clear();
+        _listLODView.clear();
         if ( packet._bHasViewProj == SW_TRUE )
-            _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
+            _listLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
         for ( const RenderViewRequest& view : packet._listView )
         {
             if ( view._bRender == SW_TRUE )
-                _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
+                _listLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
         }
-        pObjects->getSubsystem<AnimationSystem>().setLODViews( _listAnimationLODView );
+        pObjects->getSubsystem<AnimationSystem>().setLODViews( _listLODView );
+        pObjects->getSubsystem<MeshLODSystem>().setViews( _listLODView );
     }
 
     void RenderPacketBuilder::populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene )
@@ -308,12 +310,13 @@ namespace sw
             ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, FrameRenderer::getShadowMapResolution(), _listShadowLightIndex,
                                             preview._listLight, preview._shadow );
 
-            // 미리보기 씬의 애니메이션 LOD 는 이 눈 하나로 본다(뷰가 없으면 화면 밖으로 보고 포즈를 거른다).
+            // 미리보기 씬의 애니메이션 LOD · 메시 LOD 는 이 눈 하나로 본다(뷰가 없으면 화면 밖으로 보고 포즈를 거른다).
             if ( pScene->getObjectManager() != nullptr )
             {
                 _listPreviewLODView.clear();
                 _listPreviewLODView.push_back( AnimationLODView::make( preview._viewProj, preview._cameraPos ) );
                 pScene->getObjectManager()->getSubsystem<AnimationSystem>().setLODViews( _listPreviewLODView );
+                pScene->getObjectManager()->getSubsystem<MeshLODSystem>().setViews( _listPreviewLODView );
             }
 
             ScenePreviewBuilder& entry = getOrCreateScenePreviewBuilder( request._sceneKey );

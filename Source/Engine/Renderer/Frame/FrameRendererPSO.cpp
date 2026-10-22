@@ -9,6 +9,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -17,6 +18,8 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -365,6 +368,48 @@ namespace sw
         // 그 PSO 로 그려질 때 registerMaterialBuffer 가 t5 를 **비운 채** 드로우를 낸다.
         // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는 그 경로다.
         // 여기는 아직 기록 시작 전이라 버퍼를 만들 수 있다. 새 변형을 만든 프레임에만 돈다.
+        if ( bCreatedVariant )
+            ensureMaterialFallbackBuffers();
+    }
+
+    void FrameRenderer::warmPinnedMaterialPSOs()
+    {
+        // 줄은 하나라 주 렌더러만 꺼낸다 — 미리보기 렌더러는 자기 PSO 캐시를 가져 꺼내 가면 주 렌더러가 만들지 못한다.
+        const bool bNoWarm = _pDevice == nullptr || _bScenePreview == SW_TRUE || engine::areEngineServicesBound() == false;
+        if ( bNoWarm )
+            return;
+        vector<shared_ptr<Material>>& listMaterial = _listPSOWarmMaterialScratch;
+        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().takePSOWarmMaterials( listMaterial );
+        if ( listMaterial.empty() )
+            return;
+        SW_PROFILE_SCOPE( "RT.PSO.warmPinned" );
+        // 씬 배치와 같은 키로 만든다(`GPUMaterialRegistry::makeShaderPermutation`) — 그 머티리얼이 씬에 들어오는 프레임에는 이미 캐시에 있다.
+        // 비동기로 읽혀 나타나는 메시는 등장 디더 변형으로 먼저 그려지므로 그 변형도 만든다. 거울 배치(컬 반전)는 드물어 그 프레임에 만든다.
+        const uint32 viewModeMask = collectFrameViewModeMask();
+        bool         bCreatedVariant{ false };
+        for ( const shared_ptr<Material>& pMaterial : listMaterial )
+        {
+            const bool bTransparentMaterial = pMaterial->getBlendMode() == RHIBlendMode::Transparent;
+            for ( const bool bAppearanceDither : { false, true } )
+            {
+                const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( *pMaterial, nullptr, bAppearanceDither );
+                for ( const auto& [passType, passPSO] : _pPSOCache->getEnginePSOs() )
+                {
+                    const bool bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+                    const bool bSkippedPass     = passPSO == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false || bTransparentPass != bTransparentMaterial;
+                    if ( bSkippedPass || FrameRendererUtil::drawsMaterialInPass( passType, &permutation._listDefine ) == false )
+                        continue;
+                    for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
+                    {
+                        if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
+                            continue;
+                        if ( ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ) ) )
+                            bCreatedVariant = true;
+                    }
+                }
+            }
+        }
+        listMaterial.clear(); // 소유를 오래 쥐지 않는다 — 고정을 놓으면 머티리얼이 사라질 수 있어야 한다
         if ( bCreatedVariant )
             ensureMaterialFallbackBuffers();
     }

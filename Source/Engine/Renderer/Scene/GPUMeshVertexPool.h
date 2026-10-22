@@ -96,6 +96,8 @@ namespace sw
 
         /** @brief 더 큰 새 버퍼를 만들고 살아 있는 메시를 모두 앞에서부터 다시 이어 붙입니다. */
         void repack( IRHIDevice* pDevice );
+        /** @brief 메시의 그릴 정점 흐름(LOD 0 뒤에 낮은 단계, `Mesh::getDrawVertexCount`)을 올릴 정점 끝에 붙입니다. */
+        void appendDrawVertices( const Mesh& mesh );
         /** @brief 이번 목록의 메시를 표시합니다. 처음 보거나 내용이 바뀐 메시는 들어올 목록에, 예산 때문에 못 들어간 메시는 다시 시도할 목록에 넣습니다. 바뀐 것이 있으면 true 입니다. */
         [[nodiscard]] bool markListedMeshes( const vector<Mesh*>& listMesh, uint64 retireStamp );
         /** @brief 이번 목록에 없는 메시의 구간을 늦게 돌려주고 항목을 지웁니다(포인터는 따라가지 않는다). 지운 것이 있으면 true 입니다. */

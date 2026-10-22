@@ -304,6 +304,8 @@ namespace sw
         size_t getCachedCount() const override;
         /** @brief 캐시를 통째로 비웁니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다. */
         void clear() override;
+        /** @brief 프리팹 경로(`kAssetType` 의 접미사)면 `request` 의 로드 블록(곧 프리팹)을 붙드는 토큰입니다. 아니면 nullptr 입니다. */
+        shared_ptr<const void> pinAsset( string_view relativePath ) override;
 
         /**
          * @brief @p sourceRoot 아래(하위 폴더 포함)의 저작 프리팹(`*.prefab.xml`, `*.prefab.json`)을 `<cookedDir>/<상대 경로>/<이름>.prefab.bin` 으로 쿠킹합니다.

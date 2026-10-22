@@ -143,10 +143,64 @@ namespace sw
     void Mesh::setVerticesWithTangents( vector<RHIVertex>&& listVertex )
     {
         releaseVertexBuffer();
-        _listVertex       = std::move( listVertex );
+        _listVertex = std::move( listVertex );
+        // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
+        _listLOD.clear();
+        _listLODVertex.clear();
         _contentID        = allocateContentID();
         _sharedSkinDataID = 0;
         refreshBoundingRadius();
+    }
+
+    bool Mesh::setLODs( vector<MeshLODLevel> listLevel )
+    {
+        releaseVertexBuffer();
+        _listLOD.clear();
+        _listLODVertex.clear();
+        _contentID = allocateContentID();
+        if ( listLevel.empty() )
+            return true;
+        const bool bPlainMesh = hasSkin() == false && _listMorphTarget.empty() && _listSection.empty() && _vertexAnimation == nullptr;
+        if ( bPlainMesh == false )
+        {
+            SW_LOG_ERROR( "Mesh LODs need a mesh without skin, morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
+            return false;
+        }
+        float32 previousScreenSize = 1.0f;
+        uint32  firstVertex        = getVertexCount();
+        for ( size_t levelIndex = 0; levelIndex < listLevel.size(); ++levelIndex )
+        {
+            const MeshLODLevel& level       = listLevel[levelIndex];
+            const uint32        vertexCount = static_cast<uint32>( level._listVertex.size() );
+            const bool          bTriangles  = vertexCount > 0 && vertexCount % 3 == 0;
+            const bool          bThreshold  = MathUtil::isFinite( level._screenSize ) && 0.0f < level._screenSize && level._screenSize < previousScreenSize;
+            if ( bTriangles == false || bThreshold == false )
+            {
+                SW_LOG_ERROR( "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles and a threshold below %# - the mesh keeps LOD 0 only",
+                              levelIndex + 1, vertexCount, level._screenSize, previousScreenSize );
+                _listLOD.clear();
+                _listLODVertex.clear();
+                return false;
+            }
+            _listLOD.push_back( MeshLOD{ firstVertex, vertexCount, level._screenSize } );
+            _listLODVertex.insert( _listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
+            firstVertex += vertexCount;
+            previousScreenSize = level._screenSize;
+        }
+        return true;
+    }
+
+    uint32 Mesh::selectLOD( float32 screenSize ) const
+    {
+        // 임계값은 단계가 낮아질수록 작다(`setLODs`) — 화면 크기보다 큰 임계값의 수가 곧 단계다.
+        uint32 lodIndex = 0;
+        for ( const MeshLOD& lod : _listLOD )
+        {
+            if ( screenSize >= lod._screenSize )
+                break;
+            ++lodIndex;
+        }
+        return lodIndex;
     }
 
     void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex )
@@ -241,6 +295,12 @@ namespace sw
     bool Mesh::setSections( vector<MeshSection> listSection )
     {
         const uint32 vertexCount = getVertexCount();
+        if ( listSection.empty() == false && _listLOD.empty() == false )
+        {
+            SW_LOG_ERROR( "Mesh has LODs - sections are not supported with LODs (setLODs), the mesh has no sections" );
+            _listSection.clear();
+            return false;
+        }
         for ( size_t index = 0; index < listSection.size(); ++index )
         {
             const MeshSection& section    = listSection[index];
@@ -359,11 +419,20 @@ namespace sw
             return true;
         _vertex.forget();
 
-        const uint32         bytes     = static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
         IRHIResourceFactory* pResource = pDevice->getResourceFactory();
         if ( pResource == nullptr )
             return false;
-        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( _listVertex.data(), bytes );
+        // 그릴 정점 흐름 — LOD 가 있으면 LOD 0 뒤에 낮은 단계를 잇는다(배치가 단계의 범위로 그린다).
+        vector<RHIVertex> listDrawVertex;
+        if ( _listLODVertex.empty() == false )
+        {
+            listDrawVertex.reserve( getDrawVertexCount() );
+            listDrawVertex.insert( listDrawVertex.end(), _listVertex.begin(), _listVertex.end() );
+            listDrawVertex.insert( listDrawVertex.end(), _listLODVertex.begin(), _listLODVertex.end() );
+        }
+        const RHIVertex*      pDrawVertex  = listDrawVertex.empty() ? _listVertex.data() : listDrawVertex.data();
+        const uint32          bytes        = getDrawVertexCount() * static_cast<uint32>( sizeof( RHIVertex ) );
+        const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( pDrawVertex, bytes );
         if ( vertexBuffer == 0 )
         {
             SW_LOG_ERROR( "createVertexBuffer failed (%# verts)", _listVertex.size() );

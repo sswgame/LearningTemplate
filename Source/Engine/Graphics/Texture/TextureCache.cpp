@@ -6,8 +6,10 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -16,6 +18,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Image/DDSLoader.h"
@@ -35,7 +38,81 @@ namespace sw
                 return;
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
         }
+
+        /**
+         * @brief 스트리밍이 위쪽 밉을 업로드하며 바꿔 끼운 옛 GPU 자원의 목록입니다(`Texture2D::upgradeResidency`). 디바이스 수명 통보를 받아 종료 때 남은 것을 해제합니다.
+         * @details 렌더 스레드가 넣고 게임 스레드가 해제한다(`TextureCache::releaseRetiredTextures`) — 게임 스레드의 `releaseHandle` 은 이미 만든 패킷이 끝날 때까지 미루지만
+         *          렌더 스레드 자신의 해제는 곧바로라, 옛 SRV 번호를 값으로 가진 패킷이 끝나기 전에 그 번호가 다른 텍스처에 다시 쓰일 수 있다.
+         */
+        class TextureStreamingRetireList final : public RHIRenderResource
+        {
+        public:
+            struct Item
+            {
+                IRHIDevice*              _pDevice{ nullptr };
+                Texture2DRetiredResource _resource{};
+            };
+
+            TextureStreamingRetireList() = default;
+
+            void add( IRHIDevice* pDevice, const Texture2DRetiredResource& resource )
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                _listItem.push_back( Item{ pDevice, resource } );
+            }
+
+            size_t countPending() const
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                return _listItem.size();
+            }
+
+            /** @brief @p pDevice 의 것을 모두 `releaseHandle` 로 해제합니다(게임 스레드 — 이미 만든 패킷이 끝날 때까지 미룬다). */
+            void releaseFor( IRHIDevice* pDevice )
+            {
+                vector<Item> listRelease;
+                {
+                    std::scoped_lock<mutex> lock{ _mutex };
+                    for ( size_t index = 0; index < _listItem.size(); )
+                    {
+                        if ( _listItem[index]._pDevice != pDevice )
+                        {
+                            ++index;
+                            continue;
+                        }
+                        listRelease.push_back( _listItem[index] );
+                        VectorUtil::removeAtSwap( _listItem, index );
+                    }
+                }
+                for ( const Item& item : listRelease )
+                {
+                    if ( item._resource._srv != kInvalidDescriptorIndex )
+                        pDevice->releaseHandle( RHIHandleKind::BindlessTexture, item._resource._srv );
+                    if ( item._resource._handle != 0 )
+                        pDevice->releaseHandle( RHIHandleKind::Texture, item._resource._handle );
+                }
+            }
+
+            void releaseRHI( IRHIDevice* pDevice ) override { releaseFor( pDevice ); }
+
+            void forgetRHI( IRHIDevice* pDevice ) override
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                VectorUtil::removeIf( _listItem, [pDevice]( const Item& item )
+                { return item._pDevice == pDevice; } );
+            }
+
+        private:
+            mutable mutex _mutex;
+            vector<Item>  _listItem;
+        };
     } // namespace
+
+    /**
+     * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
+     * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
+     */
+    SW_GLOBAL_VARIABLE( int32, gv_textureStreaming, 1, "Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once)" );
 
     struct TextureCache::Impl
     {
@@ -47,6 +124,13 @@ namespace sw
             bool                       _bLoading{ false };   ///< 잠금 밖에서 올리는 중(로드 블록 · `reload` · `resizeRenderTarget`) — 블록이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다
             bool                       _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
             bool                       _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
+            bool                       _bUpgrading{ false }; ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다
+        };
+        /** @brief 위쪽 밉을 기다리는 텍스처 하나입니다 — 로드 단계가 읽은 DDS 이미지를 보관한다(다시 읽지 않는다). */
+        struct StreamingUpgrade
+        {
+            string                   _key;
+            unique_ptr<DDSImageData> _pImage;
         };
         struct RenderTargetSize
         {
@@ -73,6 +157,16 @@ namespace sw
         atomic<uint32>                          _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
         mutex                                   _awaitingMutex;
         vector<shared_ptr<TextureLoadBlock>>    _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다)
+        mutex                                   _streamingMutex;
+        vector<StreamingUpgrade>                _listStreamingUpgrade; ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
+        TextureStreamingRetireList              _retired;              ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+
+        /** @brief 위쪽 밉을 기다리는 줄에 넣습니다(로드 블록의 완료 단계). */
+        void queueStreamingUpgrade( const string& key, unique_ptr<DDSImageData> pImage )
+        {
+            std::scoped_lock<mutex> lock{ _streamingMutex };
+            _listStreamingUpgrade.push_back( StreamingUpgrade{ key, std::move( pImage ) } );
+        }
 
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(`TextureCache::release` · 로드 블록 소멸). */
         void releaseReference( const string& key, IRHIDevice* pDevice )
@@ -83,8 +177,9 @@ namespace sw
                 return;
             if ( it->second._refCount > 0 )
                 --it->second._refCount;
-            // 올리는 중(acquire · reload)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
-            if ( it->second._refCount == 0 && it->second._bLoading == false )
+            // 올리는 중(acquire · reload · 스트리밍)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
+            const bool bUnused = it->second._refCount == 0 && it->second._bLoading == false && it->second._bUpgrading == false;
+            if ( bUnused )
             {
                 if ( it->second._texture != nullptr )
                     it->second._texture->releaseRHI( pDevice );
@@ -204,6 +299,9 @@ namespace sw
         else if ( pTexture->hasCPUBytes() )
             source = TextureLoadBlock::Source::CPUBytes;
         shared_ptr<TextureLoadBlock> pBlock = sw::make_shared<TextureLoadBlock>( key, pDevice, source, pTexture, _impl );
+        // 비동기 로드(씬의 머티리얼)는 아래쪽 밉부터 — 위쪽 밉은 렌더 스레드가 뒤에 업로드한다. 동기 로드(도구 · 미리보기)는 받는 자리에서 밉 전부를 쓴다.
+        const bool bStreamed = start == AssetLoadStart::Async && gv_textureStreaming != 0;
+        pBlock->_residency   = bStreamed ? TextureResidency::StreamingBase : TextureResidency::Full;
         if ( source == TextureLoadBlock::Source::RenderTarget )
         {
             const auto sizeIter = _impl->_mapRenderTargetSize.find( key );
@@ -259,13 +357,81 @@ namespace sw
         return completedCount;
     }
 
+    uint32 TextureCache::updateStreaming( IRHIDevice* pDevice, uint32 maxCount )
+    {
+        if ( pDevice == nullptr || maxCount == 0 )
+            return 0;
+        vector<Impl::StreamingUpgrade> listUpgrade;
+        {
+            std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+            const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
+            if ( takeCount == 0 )
+                return 0;
+            listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
+                                std::make_move_iterator( _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
+            _impl->_listStreamingUpgrade.erase( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) );
+        }
+        SW_PROFILE_SCOPE( "RT.TextureStreaming" );
+        uint32 upgradedCount = 0;
+        for ( Impl::StreamingUpgrade& upgrade : listUpgrade )
+        {
+            Texture2D* pTexture = nullptr;
+            {
+                std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+                const auto                          it = _impl->_mapEntry.find( upgrade._key );
+                // 놓였으면 버린다. 다시 읽는 중(`reload` · 디바이스 교체)이면 그쪽이 밉 전부를 올린다.
+                const bool bUpgradable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bPublished && it->second._texture != nullptr &&
+                                         it->second._texture->isFullyResident() == false;
+                if ( bUpgradable == false )
+                    continue;
+                it->second._bUpgrading = true;
+                pTexture               = it->second._texture.get();
+            }
+            // 업로드는 잠금 밖에서 — 게임 스레드의 find · acquire 를 붙잡지 않는다. 표시가 항목을 지키고(놓여도 지우지 않는다), 다시 읽기는 끝을 기다린다.
+            Texture2DRetiredResource retired{};
+            const bool               bUpgraded = pTexture->upgradeResidency( pDevice, *upgrade._pImage, retired );
+            {
+                std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+                const auto                          it = _impl->_mapEntry.find( upgrade._key );
+                SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bUpgrading );
+                it->second._bUpgrading = false;
+                if ( bUpgraded )
+                    _impl->_retired.add( pDevice, retired );
+                // 업로드하는 사이 마지막 참조가 놓였으면 여기서 내린다(`reload` 와 같다).
+                if ( it->second._refCount == 0 && it->second._bPinned == false )
+                {
+                    pTexture->releaseRHI( pDevice );
+                    _impl->_mapEntry.erase( it );
+                }
+            }
+            if ( bUpgraded )
+            {
+                ++upgradedCount;
+                // 새 SRV 번호가 생겼다 — 빌려 간 머티리얼이 다시 받게 한다(표시를 내린 뒤에 올린다: `reload` 와 같은 순서).
+                _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+            }
+            _impl->_cvLoaded.notify_all();
+        }
+        return upgradedCount;
+    }
+
+    void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )
+    {
+        if ( pDevice != nullptr )
+            _impl->_retired.releaseFor( pDevice );
+    }
+
     uint32 TextureCache::countLoadsInFlight() const
     {
+        uint32 count = 0;
+        {
+            std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+            count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
+        }
         std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
-        uint32                              count = 0;
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {
-            if ( entry._bLoading )
+            if ( entry._bLoading || entry._bUpgrading )
                 ++count;
         }
         return count;
@@ -402,7 +568,8 @@ namespace sw
             const auto it = _impl->_mapEntry.find( key );
             if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
                 return;
-            if ( it->second._bLoading )
+            // 스트리밍이 위쪽 밉을 바꿔 끼우는 중이면 그 끝을 기다린다(렌더 스레드가 같은 텍스처의 핸들을 바꾸고 있다).
+            if ( it->second._bLoading || it->second._bUpgrading )
             {
                 _impl->_cvLoaded.wait( lock );
                 continue;
@@ -587,6 +754,10 @@ namespace sw
             std::scoped_lock<mutex> awaitingLock{ _impl->_awaitingMutex };
             _impl->_listAwaitingUpload.clear(); // 올리지 않은 로드는 버린다 — 그 블록을 쥔 핸들은 `Loading` 으로 남는다(종료 때만 온다)
         }
+        {
+            std::scoped_lock<mutex> streamingLock{ _impl->_streamingMutex };
+            _impl->_listStreamingUpgrade.clear(); // 위쪽 밉을 기다리던 텍스처도 함께 사라진다
+        }
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
     }
@@ -604,6 +775,7 @@ namespace sw
         , _renderTargetWidth{ TextureCache::kDefaultRenderTargetSize }
         , _renderTargetHeight{ TextureCache::kDefaultRenderTargetSize }
         , _source{ source }
+        , _residency{ TextureResidency::Full }
         , _bHoldsReference{ false }
     {
     }
@@ -681,7 +853,10 @@ namespace sw
             {
                 case Source::File:
                 {
-                    bReady = _pTexture->loadFromImage( pDevice, getPath(), *_pImage );
+                    bReady = _pTexture->loadFromImage( pDevice, getPath(), *_pImage, _residency );
+                    // 위쪽 밉이 남았으면 읽은 이미지를 스트리밍 줄로 넘긴다 — 다시 읽지 않고 렌더 스레드가 프레임 예산 안에서 업로드한다.
+                    if ( bReady && _pTexture->isFullyResident() == false )
+                        pCache->queueStreamingUpgrade( getPath(), std::move( _pImage ) );
                     break;
                 }
                 case Source::RenderTarget:

@@ -33,6 +33,84 @@ namespace sw
             static constexpr uint32 kMorphDeltaSize = 4 + 6 * 4;
             /** @brief 구간 덩어리의 이름입니다. */
             static constexpr uint8 kArrSectionChunk[4] = { 'S', 'E', 'C', 'T' };
+            /** @brief 낮은 상세 단계 덩어리의 이름입니다. */
+            static constexpr uint8 kArrLODChunk[4] = { 'L', 'O', 'D', 'S' };
+
+            /**
+             * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 정본(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
+             * @details LOD 단계는 단계마다 따로 부른다 — 탄젠트를 묶는 이웃은 같은 단계의 삼각형뿐이다.
+             */
+            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource )
+            {
+                vector<RHIVertex> listVertex = listSource;
+                Mesh::computeTangents( listVertex );
+                for ( const RHIVertex& vertex : listVertex )
+                {
+                    for ( const float32 value : vertex._arrPosition )
+                    {
+                        appendFloat32( outBytes, value );
+                    }
+                    for ( const float32 value : vertex._arrNormal )
+                    {
+                        appendFloat32( outBytes, value );
+                    }
+                    for ( const float32 value : vertex._arrUv )
+                    {
+                        appendFloat32( outBytes, value );
+                    }
+                    for ( const float32 value : vertex._arrColor )
+                    {
+                        appendFloat32( outBytes, value );
+                    }
+                    for ( const float32 value : vertex._arrTangent )
+                    {
+                        appendFloat32( outBytes, value );
+                    }
+                }
+            }
+
+            /** @brief 낮은 상세 단계 덩어리(`LODS`)를 씁니다 — 단계 수, 단계마다 임계값 · 정점 수 · 정점. 단계가 없으면 쓰지 않습니다. */
+            static void appendLODChunk( vector<uint8>& outBytes, const vector<MeshLODLevel>& listLevel )
+            {
+                if ( listLevel.empty() )
+                    return;
+                const size_t lengthOffset = beginChunk( outBytes, kArrLODChunk );
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( listLevel.size() ) );
+                for ( const MeshLODLevel& level : listLevel )
+                {
+                    appendFloat32( outBytes, level._screenSize );
+                    LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listVertex.size() ) );
+                    appendVertices( outBytes, level._listVertex );
+                }
+                finishChunk( outBytes, lengthOffset );
+            }
+
+            /**
+             * @brief 낮은 상세 단계 덩어리 내용을 읽습니다. 길이 · 탄젠트가 맞지 않으면 false 입니다.
+             * @details 정점 수와 임계값의 뜻(삼각형 · 내려가는 임계값 · 스킨 없는 메시)은 메시가 다시 본다(`Mesh::setLODs`) — 규칙은 한 곳에 둔다.
+             */
+            [[nodiscard]] static bool readLODChunk( const uint8* pChunk, const uint8* pChunkEnd, vector<MeshLODLevel>& outListLevel )
+            {
+                if ( pChunkEnd - pChunk < 4 )
+                    return false;
+                const uint32 levelCount = LittleEndianUtil::readUint32( pChunk );
+                pChunk += 4;
+                for ( uint32 levelIndex = 0; levelIndex < levelCount; ++levelIndex )
+                {
+                    if ( pChunkEnd - pChunk < 8 )
+                        return false;
+                    MeshLODLevel level{};
+                    level._screenSize        = readFloat32( pChunk );
+                    const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk + 4 );
+                    pChunk += 8;
+                    if ( static_cast<uint64>( pChunkEnd - pChunk ) < static_cast<uint64>( vertexCount ) * MeshAssetFormat::kVertexSize )
+                        return false;
+                    if ( readVertices( pChunk, vertexCount, level._listVertex ) == false )
+                        return false;
+                    outListLevel.push_back( std::move( level ) );
+                }
+                return pChunk == pChunkEnd;
+            }
 
             /** @brief 덩어리 이름 넷과 길이 자리를 쓰고, 길이 자리의 위치를 돌려줍니다(내용을 쓴 뒤 `finishChunk` 가 채운다). */
             static size_t beginChunk( vector<uint8>& outBytes, const uint8 ( &arrName )[4] )
@@ -248,15 +326,26 @@ namespace sw
                     }
                     const bool   bMorph      = Memory::compare( pCursor, kArrMorphChunk, 4 ) == 0;
                     const bool   bSection    = Memory::compare( pCursor, kArrSectionChunk, 4 ) == 0;
+                    const bool   bLOD        = Memory::compare( pCursor, kArrLODChunk, 4 ) == 0;
                     const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
                     const uint8* pChunk      = pCursor + 8;
-                    const bool   bKnownChunk = bMorph || bSection;
+                    const bool   bKnownChunk = bMorph || bSection || bLOD;
                     if ( bKnownChunk == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
                     {
                         SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
                         return false;
                     }
                     const uint8* pChunkEnd = pChunk + chunkLength;
+                    if ( bLOD )
+                    {
+                        if ( readLODChunk( pChunk, pChunkEnd, ioData._listLOD ) == false )
+                        {
+                            SW_LOG_WARNING( "Mesh asset has a malformed LOD chunk" );
+                            return false;
+                        }
+                        pCursor = pChunkEnd;
+                        continue;
+                    }
                     if ( bSection )
                     {
                         if ( readSectionChunk( pChunk, pChunkEnd, vertexCount, ioData._listSection ) == false )
@@ -304,32 +393,7 @@ namespace sw
         MeshAssetFormatInternal::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
         LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
 
-        // 탄젠트는 받은 값이 아니라 정본(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
-        vector<RHIVertex> listVertex = data._listVertex;
-        Mesh::computeTangents( listVertex );
-        for ( const RHIVertex& vertex : listVertex )
-        {
-            for ( const float32 value : vertex._arrPosition )
-            {
-                MeshAssetFormatInternal::appendFloat32( outBytes, value );
-            }
-            for ( const float32 value : vertex._arrNormal )
-            {
-                MeshAssetFormatInternal::appendFloat32( outBytes, value );
-            }
-            for ( const float32 value : vertex._arrUv )
-            {
-                MeshAssetFormatInternal::appendFloat32( outBytes, value );
-            }
-            for ( const float32 value : vertex._arrColor )
-            {
-                MeshAssetFormatInternal::appendFloat32( outBytes, value );
-            }
-            for ( const float32 value : vertex._arrTangent )
-            {
-                MeshAssetFormatInternal::appendFloat32( outBytes, value );
-            }
-        }
+        MeshAssetFormatInternal::appendVertices( outBytes, data._listVertex );
         if ( bSkin )
         {
             for ( const MeshSkinVertex& skin : data._listSkinVertex )
@@ -377,8 +441,9 @@ namespace sw
                 outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
             }
         }
-        // 선택 덩어리 — 구간(있을 때).
+        // 선택 덩어리 — 구간(있을 때), 낮은 상세 단계(있을 때).
         MeshAssetFormatInternal::appendSectionChunk( outBytes, data._listSection );
+        MeshAssetFormatInternal::appendLODChunk( outBytes, data._listLOD );
     }
 
     void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )

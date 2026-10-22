@@ -760,6 +760,8 @@ namespace sw
             if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
                 _pRenderThread->waitIdle();
             materials.initializePending( &_pRHI->getDevice() );
+            // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
+            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );
         }
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.

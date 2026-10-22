@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -10,8 +12,11 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetHandle.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -57,6 +62,27 @@ namespace
         (void)sw::MeshCache::acquire( path ); // 결과는 컴포넌트가 받는다 — 여기서는 로드가 끝나기만 기다린다
         manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
     }
+
+    struct TestMeshLODInternal
+    {
+        /** @brief LOD 0 은 삼각형 넷, LOD 1 은 둘(문턱 0.5), LOD 2 는 하나(문턱 0.1)인 메시입니다. */
+        static sw::MeshAssetData makeLODData()
+        {
+            sw::MeshAssetData data{};
+            data._listVertex = makeTestTriangles( 4, 0.1f );
+            data._listLOD.push_back( sw::MeshLODLevel{ makeTestTriangles( 2, 0.1f ), 0.5f } );
+            data._listLOD.push_back( sw::MeshLODLevel{ makeTestTriangles( 1, 0.1f ), 0.1f } );
+            return data;
+        }
+
+        /** @brief 눈 @p eye 에서 @p target 을 보는 90 도 시야 뷰입니다 — 화면 크기 = 반지름 / 거리. */
+        static sw::AnimationLODView makeViewToward( const sw::float3& eye, const sw::float3& target )
+        {
+            const sw::float4x4 view       = sw::float4x4::makeLookAt( eye, target, sw::float3{ 0.0f, 1.0f, 0.0f } );
+            const sw::float4x4 projection = sw::float4x4::makePerspectiveFieldOfView( sw::MathUtil::kPi * 0.5f, 1.0f, 0.1f, 1000.0f );
+            return sw::AnimationLODView::make( view * projection, eye );
+        }
+    };
 } // namespace
 
 /**
@@ -504,4 +530,109 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentDrawsNamedSectionAndHonorsPerson )
     SW_EXPECT_FALSE( component.isVisibleInCurrentPerson() );
     component.setSectionName( sw::hashed_string( "Missing" ) );
     SW_EXPECT_FALSE( component.findDrawSection( first, count ) );
+}
+
+/**
+ * @brief [MeshAssetTest] LOD 단계는 `.mesh` 를 오가고(`LODS` 덩어리), 메시는 LOD 0 을 CPU 정점으로 두고 낮은 단계를 그릴 정점 흐름 뒤에 잇는다.
+ *        문턱이 내려가지 않거나 삼각형이 아닌 단계, 구간이 있는 메시의 LOD 는 거절한다(계획 PreloadAndLod P5)
+ */
+SW_TEST_CASE( MeshAssetTest, LODLevelsRoundTripAndFollowLODZero )
+{
+    const sw::string path = test::makeTempPath( "lod.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, TestMeshLODInternal::makeLODData() ) );
+    const sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    SW_EXPECT_EQUAL( 3u, mesh->getLODCount() );
+    SW_EXPECT_EQUAL( 12u, mesh->getVertexCount() );     // CPU 정점(물리 · 피킹)은 LOD 0 이다
+    SW_EXPECT_EQUAL( 21u, mesh->getDrawVertexCount() ); // 그릴 흐름은 LOD 0 + 6 + 3
+    SW_EXPECT_EQUAL( 12u, mesh->getLODs()[0]._firstVertex );
+    SW_EXPECT_EQUAL( 6u, mesh->getLODs()[0]._vertexCount );
+    SW_EXPECT_EQUAL( 18u, mesh->getLODs()[1]._firstVertex );
+    SW_EXPECT_EQUAL( 0u, mesh->selectLOD( 0.9f ) );
+    SW_EXPECT_EQUAL( 1u, mesh->selectLOD( 0.3f ) );
+    SW_EXPECT_EQUAL( 2u, mesh->selectLOD( 0.05f ) );
+    // 물리 셰이프가 읽는 정점만 읽기는 LOD 0 이다.
+    sw::vector<sw::RHIVertex> listPhysicsVertex;
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::loadFromResource( ::test::makeTempResourceID( path ), listPhysicsVertex ) );
+    SW_EXPECT_EQUAL( size_t( 12 ), listPhysicsVertex.size() );
+
+    // 정점을 바꾸면 옛 LOD 0 에서 만든 단계는 맞지 않아 떨어진다.
+    const sw::shared_ptr<sw::Mesh> rebuilt = sw::Mesh::create();
+    rebuilt->setVertices( makeTestTriangles( 4, 0.1f ) );
+    SW_EXPECT_TRUE( rebuilt->setLODs( TestMeshLODInternal::makeLODData()._listLOD ) );
+    rebuilt->setVertices( makeTestTriangles( 3, 0.1f ) );
+    SW_EXPECT_EQUAL( 1u, rebuilt->getLODCount() );
+
+    test::ScopedDefensiveTestLog expected( "malformed LOD levels are rejected and the mesh keeps LOD 0" );
+    sw::vector<sw::MeshLODLevel> listRising = TestMeshLODInternal::makeLODData()._listLOD;
+    listRising[1]._screenSize               = 0.7f;
+    SW_EXPECT_FALSE( rebuilt->setLODs( listRising ) );
+    SW_EXPECT_EQUAL( 1u, rebuilt->getLODCount() );
+    sw::vector<sw::MeshLODLevel> listBroken = TestMeshLODInternal::makeLODData()._listLOD;
+    listBroken[0]._listVertex.pop_back();
+    SW_EXPECT_FALSE( rebuilt->setLODs( listBroken ) );
+    SW_ASSERT_TRUE( rebuilt->setSections( {
+        sw::MeshSection{ sw::hashed_string( "Body" ), 0, 9, sw::MeshPersonVisibility::Both }
+    } ) );
+    SW_EXPECT_FALSE( rebuilt->setLODs( TestMeshLODInternal::makeLODData()._listLOD ) );
+}
+
+/**
+ * @brief [MeshAssetTest] 메시 LOD 고르기는 뷰에서 본 화면 크기로 단계를 정하고(거친 쪽은 바로, 고운 쪽은 여유를 넘어야), 대기 뷰가 가까우면 그 시점의 단계를 쓴다.
+ *        컴포넌트는 고른 단계의 정점 범위를 그리고, LOD 없는 메시로 바꾸면 LOD 목록에서 빠진다
+ */
+SW_TEST_CASE( MeshAssetTest, MeshLODSystemPicksLevelsByScreenSize )
+{
+    const sw::shared_ptr<sw::Mesh> mesh = sw::Mesh::create();
+    mesh->setVertices( makeTestTriangles( 4, 0.1f ) );
+    SW_ASSERT_TRUE( mesh->setLODs( TestMeshLODInternal::makeLODData()._listLOD ) );
+
+    sw::GameObjectManager  manager;
+    sw::GameObject*        pProp    = manager.createGameObject( sw::hashed_string( "LODProp" ) );
+    sw::MeshComponent*     pMesh    = pProp->addComponent<sw::MeshComponent>();
+    sw::MeshLODSystem&     meshLOD  = manager.getSubsystem<sw::MeshLODSystem>();
+    sw::PrimitiveRegistry& registry = manager.getPrimitiveRegistry();
+    SW_ASSERT_NOT_NULL( pMesh );
+    pMesh->setMesh( mesh );
+    SW_EXPECT_EQUAL( size_t( 1 ), registry.getLODPrimitives().size() );
+
+    // 뷰를 받기 전(렌더 없는 실행)에는 원본이다.
+    meshLOD.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, pMesh->getLODIndex() );
+
+    sw::float3 center{};
+    float32    radius = 0.0f;
+    SW_ASSERT_TRUE( pMesh->getWorldBounds( center, radius ) );
+    const auto lodAtScreenSize = [&]( float32 screenSize )
+    {
+        const sw::float3 eye{ center._x, center._y, center._z - radius / screenSize };
+        meshLOD.setViews( { TestMeshLODInternal::makeViewToward( eye, center ) } );
+        meshLOD.update( 0.0f );
+        return pMesh->getLODIndex();
+    };
+    SW_EXPECT_EQUAL( 0u, lodAtScreenSize( 0.8f ) );
+    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.3f ) );
+    uint32 first{ 0 };
+    uint32 count{ 0 };
+    SW_EXPECT_TRUE( pMesh->findDrawSection( first, count ) );
+    SW_EXPECT_EQUAL( 12u, first );
+    SW_EXPECT_EQUAL( 6u, count );
+    SW_EXPECT_EQUAL( 2u, lodAtScreenSize( 0.05f ) );
+    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.2f ) );  // 거친 쪽에서 고운 쪽으로 — 문턱 0.1 의 여유를 넘었다
+    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.52f ) ); // 문턱 0.5 를 넘었지만 여유(10 %) 안이다 — 그대로
+    SW_EXPECT_EQUAL( 0u, lodAtScreenSize( 0.6f ) );
+    SW_EXPECT_TRUE( pMesh->findDrawSection( first, count ) );
+    SW_EXPECT_EQUAL( 0u, count ); // 원본은 메시 전체(LOD 0)
+
+    // 뷰가 멀어도 대기 뷰(컷 프리롤)가 가까우면 그 시점의 단계다.
+    SW_EXPECT_EQUAL( 2u, lodAtScreenSize( 0.05f ) );
+    meshLOD.setPendingView( TestMeshLODInternal::makeViewToward( sw::float3{ center._x, center._y, center._z - radius / 0.8f }, center ) );
+    meshLOD.update( 0.0f );
+    SW_EXPECT_EQUAL( 0u, pMesh->getLODIndex() );
+    meshLOD.clearPendingView();
+
+    // LOD 없는 메시로 바꾸면 목록에서 빠지고 원본으로 돌아간다.
+    pMesh->setMeshID( "Cube" );
+    SW_EXPECT_EQUAL( size_t( 0 ), registry.getLODPrimitives().size() );
+    SW_EXPECT_EQUAL( 0u, pMesh->getLODIndex() );
 }

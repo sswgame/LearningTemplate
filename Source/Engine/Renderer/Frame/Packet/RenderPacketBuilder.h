@@ -79,8 +79,8 @@ namespace sw
          */
         void populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,
                             float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer );
-        /** @brief 애니메이션 LOD 가 다음 프레임에 볼 뷰(주 시점과 이번 프레임에 그리는 추가 뷰)를 씬의 애니메이션 시스템에 넘깁니다. */
-        void updateAnimationLODViews( const RenderFramePacket& packet, Scene& activeScene );
+        /** @brief 애니메이션 LOD · 메시 LOD 가 다음 프레임에 볼 뷰(주 시점과 이번 프레임에 그리는 추가 뷰)를 씬의 애니메이션 시스템과 메시 LOD 고르기에 넘깁니다. */
+        void updateLODViews( const RenderFramePacket& packet, Scene& activeScene );
         /** @brief GPUScene 을 씬에서 채우고 추가 뷰의 투명 순서 · GPU 업로드 요청을 만든 뒤 CPU 스냅샷을 패킷에 내보냅니다. */
         void populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene );
         /**
@@ -121,13 +121,13 @@ namespace sw
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초)입니다. 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
-        /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
-        vector<AnimationLODView> _listAnimationLODView;
+        /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
+        vector<AnimationLODView> _listLODView;
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
         /** @brief 미리보기 씬마다의 스냅샷 빌더입니다(`populateScenePreviews`). 요청이 끊긴 씬의 것은 해제합니다. */
         vector<ScenePreviewBuilder> _listScenePreviewBuilder;
-        /** @brief 미리보기 씬 하나의 애니메이션 LOD 뷰입니다. 프레임마다 재사용합니다. */
+        /** @brief 미리보기 씬 하나의 애니메이션 LOD · 메시 LOD 뷰입니다. 프레임마다 재사용합니다. */
         vector<AnimationLODView> _listPreviewLODView;
         /** @brief 디바이스가 텍스처를 인덱스로 고를 수 있어 머티리얼이 달라도 배치를 합치는지입니다(`initialize` 가 정한다). 미리보기 빌더에도 같은 값을 준다. */
         bool _bMergeBatchesAcrossMaterials;

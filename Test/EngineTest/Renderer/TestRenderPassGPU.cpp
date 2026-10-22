@@ -4936,6 +4936,54 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 비동기로 읽은 텍스처는 아래쪽 밉(짧은 변 64)만 먼저 업로드하고, 스트리밍이 위쪽 밉까지 새 SRV 로 바꿔 끼운다 — 4 백엔드
+ * @details 밉 스트리밍(계획 PreloadAndLod P6). 바꿔 끼우면 리로드 세대가 올라 머티리얼이 새 번호를 받고, 기다리는 수(`countLoadsInFlight`)에 위쪽 밉도 든다
+ *          — 시나리오 스크린샷이 작은 밉을 찍지 않는다. 동기 요청(`acquire`)은 처음부터 밉 전부다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kStreamedTexture = "engine/textures/particles/kenney_particle/trace_07.dds"; // 512 × 512, 밉 10
+    constexpr const utf8* kSyncTexture     = "engine/textures/particles/kenney_particle/trace_04.dds";
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label    = sw::string( device->getBackendName() ) + ": ";
+        sw::TextureCache& textures = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
+        if ( textures.find( kStreamedTexture ) != nullptr || textures.find( kSyncTexture ) != nullptr )
+            continue; // 다른 쪽이 이미 밉 전부로 가지고 있다 — 이 백엔드에서는 볼 수 없다
+        {
+            const sw::TextureHandle             handle   = textures.request( kStreamedTexture, device.get(), sw::AssetLoadStart::Async );
+            const sw::shared_ptr<sw::Texture2D> pTexture = handle.wait(); // 이 스레드가 디바이스 스레드다 — 업로드(완료 단계)까지 여기서 한다
+            SW_ASSERT_TRUE_MSG( pTexture != nullptr, ( label + "비동기 텍스처를 읽지 못했습니다" ).c_str() );
+            SW_EXPECT_FALSE_MSG( pTexture->isFullyResident(), ( label + "비동기 로드가 처음부터 밉 전부를 업로드했습니다" ).c_str() );
+            SW_EXPECT_EQUAL( 64u, pTexture->getWidth() );
+            SW_EXPECT_TRUE( textures.countLoadsInFlight() >= 1u );
+            const uint32 generationBefore = textures.getReloadGeneration();
+
+            for ( uint32 frame = 0; frame < 64 && pTexture->isFullyResident() == false; ++frame )
+            {
+                (void)textures.updateStreaming( device.get(), sw::TextureCache::kMaxStreamingUpgradesPerFrame ); // 다른 테스트가 남긴 것이 앞에 있을 수 있다
+            }
+            SW_EXPECT_TRUE_MSG( pTexture->isFullyResident(), ( label + "스트리밍이 위쪽 밉을 업로드하지 않았습니다" ).c_str() );
+            SW_EXPECT_EQUAL( 512u, pTexture->getWidth() );
+            SW_EXPECT_TRUE( pTexture->isRHIValid() );
+            SW_EXPECT_TRUE_MSG( textures.getReloadGeneration() != generationBefore, ( label + "바꿔 끼운 뒤 리로드 세대가 그대로입니다 — 머티리얼이 옛 SRV 를 읽는다" ).c_str() );
+            textures.releaseRetiredTextures( device.get() );
+        }
+
+        sw::Texture2D* pSync = textures.acquire( kSyncTexture, device.get() );
+        SW_ASSERT_NOT_NULL( pSync );
+        SW_EXPECT_TRUE_MSG( pSync->isFullyResident(), ( label + "동기 acquire 가 아래쪽 밉만 업로드했습니다" ).c_str() );
+        SW_EXPECT_EQUAL( 512u, pSync->getWidth() );
+        textures.release( kSyncTexture, device.get() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the texture streaming test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 깊이 프리패스를 넣어도 같은 그림이 나온다 — 깊이 첨부 이름을 바꿔도
  * @details 깊이 프리패스가 깨지는 방식: (1) 프리패스가 그림자와 같은 셰이더 변형으로 그리면 장면 깊이에 **광원 공간**의 깊이를 쓰고,
  *          (2) 깊이 비교가 Less 면 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다(LessEqual 이어야 한다). 언리얼 EarlyZ · 유니티

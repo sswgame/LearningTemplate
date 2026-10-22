@@ -31,7 +31,24 @@ namespace sw::editor
         Xz,           ///< 경계 상자의 XZ 중심을 원점으로 옮긴다. Y 는 그대로 둔다
         BottomCenter, ///< XZ 중심을 원점으로, 가장 낮은 Y 를 0 으로 옮긴다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
+    /**
+     * @struct ModelImportLODRule
+     * @brief 규칙의 `lods` 한 칸 — 메시 LOD 단계 하나를 만드는 단순화 설정입니다(`meshopt_simplify`). 단계는 원본에서 따로 단순화합니다.
+     */
+    struct ModelImportLODRule
+    {
+        float32 _triangleRatio{ 0.5f }; ///< 원본 삼각형 수에 대한 목표 비율(0..1)
+        float32 _screenSize{ 0.3f };    ///< 이 단계로 넘어가는 화면 크기 임계값(`MeshLODLevel::_screenSize`, 0..1, 단계마다 작아진다)
+        float32 _maxError{ 0.01f };     ///< 허용 오차(메시 크기에 대한 비율). 목표 비율보다 먼저 닿으면 거기서 멈춘다
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct ModelImportRule
      * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음, 애니메이션 모두, ACL)을 씁니다.
@@ -43,6 +60,8 @@ namespace sw::editor
         string                _name;
         AssetImportPathFilter _filter;
         FractureSettings      _fracture;
+        /** @brief 메시 LOD 1 이상(`lods`, 순서대로 단계). 비면 LOD 0 하나입니다. 스킨 · 모프 · 머티리얼 구간이 없는 메시만 받는다(`Mesh::setLODs`). */
+        vector<ModelImportLODRule> _listLOD;
         /** @brief 모든 노드의 월드 위치에 더하는 이동입니다. glTF 원본 공간이며 축 변환 전입니다. 원본이 배치 오프셋을 포함하고 있을 때 씁니다. */
         float32        _arrTranslation[3];
         vector<string> _listClipName;
@@ -60,6 +79,7 @@ namespace sw::editor
             : _name{}
             , _filter{}
             , _fracture{}
+            , _listLOD{}
             , _arrTranslation{ 0.0f, 0.0f, 0.0f }
             , _listClipName{}
             , _animationCodec{ "acl" }
@@ -78,6 +98,8 @@ namespace sw::editor
         string makeAnimationHashText() const;
         /** @brief 원본 해시에 섞을 파쇄 규칙의 문자열입니다. 파쇄가 없으면 빈 문자열입니다. */
         string makeFractureHashText() const;
+        /** @brief 원본 해시에 섞을 LOD 규칙의 문자열입니다. LOD 가 없으면 빈 문자열입니다. */
+        string makeLODHashText() const;
     };
 } // namespace sw::editor
 
@@ -108,6 +130,10 @@ namespace sw::editor
         [[nodiscard]] static bool parseAnimationKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule );
         /** @brief 규칙의 `fracture` 객체를 읽습니다. 모르는 키나 패턴, 양수가 아닌 수, 길이가 틀린 배열이 있으면 false 입니다. */
         [[nodiscard]] static bool parseFractureKeys( const JSONValue& fractureValue, ModelImportRule& inoutRule );
+        /**
+         * @brief 규칙의 `lods` 배열을 읽습니다. 모르는 키, (0, 1) 밖의 비율 · 임계값, 음수 오차, 앞 단계보다 크거나 같은 비율 · 임계값이 있으면 false 입니다.
+         */
+        [[nodiscard]] static bool parseLODKeys( const JSONValue& lodsValue, ModelImportRule& inoutRule );
 
         /** @brief `recenter` 값 이름을 읽습니다. "none", "xz", "bottom-center" 중 하나이며, 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool parseRecenter( string_view text, ModelRecenter& outRecenter );

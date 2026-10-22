@@ -819,6 +819,13 @@ namespace sw
          */
         void ensureMaterialPSOs();
         /**
+         * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLod P6). 주 렌더러만 합니다.
+         * @details 씬에 든 머티리얼은 `ensureMaterialPSOs` 가 배치마다(보이든 아니든) 만들므로 대기 뷰에 보일 것은 이미 준비돼 있다. 아직 씬에 없는 머티리얼(다음 레벨 · 컷에
+         *          나올 것)만 이 길로 데운다 — 그 머티리얼이 씬에 들어오는 프레임에 DX12 PSO 생성 히치가 없게. 이번 프레임 보기 모드의 불투명 또는 투명 패스마다, 등장 디더
+         *          변형까지 만든다.
+         */
+        void warmPinnedMaterialPSOs();
+        /**
          * @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(머티리얼 변형 캐시에 둔다 — 해제 순서가 같다).
          * @details 투명 패스 PSO 의 렌더 상태(블렌드 · 깊이 테스트 · RT 포맷)를 물려받고 셰이더만 `EngineDefaultAssets::_shaderParticle` 로 바꾼다. 컬링은 끄고
          *          깊이 쓰기도 끄며, 블렌드는 프리멀티플라이로 고정한다(더하기는 셰이더가 알파 0 으로 낸다). define 은 비운다 — 쿠커가 VSMain · PSMain 을 define 없이 굽는다.
@@ -913,6 +920,8 @@ namespace sw
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
+        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
+        vector<shared_ptr<Material>> _listPSOWarmMaterialScratch;
         /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
         uint32 collectFrameViewModeMask() const;
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */

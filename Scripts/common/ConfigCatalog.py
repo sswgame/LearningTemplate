@@ -213,7 +213,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`ModelImportConfig::loadFromFile` (손으로 읽음)", readWhen="모델 임포트(에디터 · `App --import-models`)",
         shipping="없음(임포트는 Dev 만)", bCommitted=True, keyStyle=kKeyStyleKeyTable,
         keyTableSource="Source/Editor/Common/Asset/ModelImportConfig.cpp",
-        listKeyTable=("kArrModelImportRootKeyDoc", "kArrModelImportRuleKeyDoc", "kArrModelImportFractureKeyDoc")),
+        listKeyTable=("kArrModelImportRootKeyDoc", "kArrModelImportRuleKeyDoc", "kArrModelImportFractureKeyDoc", "kArrModelImportLODKeyDoc")),
     ConfigFileEntry(
         page="", pathPattern=kAssetRuleConfigRelative, layer=kLayerEditor, fileFormat="json",
         reader="`Scripts/common/AssetValidation.py` (에디터 `EditorAssetValidation` 도 이것을 돌린다)",

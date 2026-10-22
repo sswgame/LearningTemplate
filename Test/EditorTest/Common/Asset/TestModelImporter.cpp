@@ -1,7 +1,9 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
@@ -189,6 +191,63 @@ namespace
             json += R"( } ],
   "buffers": [ { "byteLength": )";
             json += std::to_string( byteCount ).c_str();
+            json += R"(, "uri": "data:application/octet-stream;base64,)";
+            json += base64;
+            json += R"(" } ] })";
+            return json;
+        }
+
+        /** @brief 칸 @p cellCount × @p cellCount 의 인덱스 격자(XZ 평면, Y 는 완만한 물결) glTF 입니다 — 단순화가 삼각형을 줄일 수 있는 메시다. */
+        static sw::string makeGridGltf( uint32 cellCount )
+        {
+            const uint32        side = cellCount + 1;
+            sw::vector<float32> listPosition;
+            sw::vector<uint32>  listIndex;
+            for ( uint32 row = 0; row < side; ++row )
+            {
+                for ( uint32 column = 0; column < side; ++column )
+                {
+                    const float32 x = static_cast<float32>( column ) / static_cast<float32>( cellCount );
+                    const float32 z = static_cast<float32>( row ) / static_cast<float32>( cellCount );
+                    listPosition.push_back( x );
+                    listPosition.push_back( 0.02f * sw::MathUtil::sin( x * 6.0f ) );
+                    listPosition.push_back( z );
+                }
+            }
+            for ( uint32 row = 0; row < cellCount; ++row )
+            {
+                for ( uint32 column = 0; column < cellCount; ++column )
+                {
+                    const uint32 corner = row * side + column;
+                    for ( const uint32 index : { corner, corner + side, corner + 1, corner + 1, corner + side, corner + side + 1 } )
+                    {
+                        listIndex.push_back( index );
+                    }
+                }
+            }
+            const size_t      positionBytes = listPosition.size() * sizeof( float32 );
+            const size_t      indexBytes    = listIndex.size() * sizeof( uint32 );
+            sw::vector<uint8> bytes( positionBytes + indexBytes );
+            sw::Memory::copy( bytes.data(), listPosition.data(), positionBytes );
+            sw::Memory::copy( bytes.data() + positionBytes, listIndex.data(), indexBytes );
+            const sw::string base64 = encodeBase64( bytes.data(), bytes.size() );
+            sw::string       json   = R"({ "asset": { "version": "2.0" }, "scene": 0, "scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ],
+  "meshes": [ { "primitives": [ { "attributes": { "POSITION": 0 }, "indices": 1 } ] } ],
+  "accessors": [ { "bufferView": 0, "componentType": 5126, "count": )";
+            json += std::to_string( side * side ).c_str();
+            json += R"(, "type": "VEC3", "min": [ 0, -0.02, 0 ], "max": [ 1, 0.02, 1 ] },
+    { "bufferView": 1, "componentType": 5125, "count": )";
+            json += std::to_string( listIndex.size() ).c_str();
+            json += R"(, "type": "SCALAR" } ],
+  "bufferViews": [ { "buffer": 0, "byteLength": )";
+            json += std::to_string( positionBytes ).c_str();
+            json += R"( }, { "buffer": 0, "byteOffset": )";
+            json += std::to_string( positionBytes ).c_str();
+            json += R"(, "byteLength": )";
+            json += std::to_string( indexBytes ).c_str();
+            json += R"( } ],
+  "buffers": [ { "byteLength": )";
+            json += std::to_string( bytes.size() ).c_str();
             json += R"(, "uri": "data:application/octet-stream;base64,)";
             json += base64;
             json += R"(" } ] })";
@@ -631,4 +690,56 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     const sw::editor::ModelImportConfig noRuleConfig;
     SW_EXPECT_EQUAL( 1u, sw::editor::ModelImporter::importAllModels( resourceRoot, noRuleConfig, sw::editor::AssetImportMode::ImportStale )._importedCount );
     SW_EXPECT_FALSE( sw::FileUtil::exists( fracturePath ) );
+}
+
+/**
+ * @brief [ModelImporterTest] 규칙의 `lods` 는 단계마다 원본을 단순화한 LOD 를 `.mesh` 에 싣고(단계가 내려갈수록 삼각형이 줄고 문턱이 작다), 다시 읽으면 메시가 그 단계를 가진다.
+ *        비율 · 문턱이 내려가지 않거나 모르는 키는 설정을 거부하고, 스킨 · 구간 메시에 걸린 LOD 규칙은 임포트를 멈춘다(계획 PreloadAndLod P5)
+ */
+SW_TEST_CASE( ModelImporterTest, LODRuleSimplifiesStaticMeshIntoLevels )
+{
+    sw::editor::ModelImportConfig lodConfig;
+    SW_ASSERT_TRUE( lodConfig.loadFromJSONString( R"({ "rules": [ { "name": "Grid", "include_patterns": [ "*" ],
+        "lods": [ { "triangle_ratio": 0.5, "screen_size": 0.4, "max_error": 0.05 }, { "triangle_ratio": 0.1, "screen_size": 0.1, "max_error": 0.2 } ] } ] })" ) );
+    const sw::editor::ModelImportRule rule = lodConfig.findMatchingRule( "game/probe/models_raw/grid.gltf" );
+    SW_ASSERT_EQUAL( size_t( 2 ), rule._listLOD.size() );
+    SW_EXPECT_FALSE( rule.makeLODHashText().empty() );
+    SW_EXPECT_TRUE( sw::editor::ModelImportRule{}.makeLODHashText().empty() ); // LOD 없는 규칙은 해시에 섞지 않는다(옛 모델이 다시 임포트되지 않는다)
+    {
+        test::ScopedDefensiveTestLog  expected( "LOD levels must shrink and use known keys" );
+        sw::editor::ModelImportConfig brokenConfig;
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "lods": [ { "triangle_ratio": 0.5, "screen_size": 0.2 }, { "triangle_ratio": 0.6, "screen_size": 0.1 } ] } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "lods": [ { "triangle_ratio": 0.5, "screen_size": 0.2 }, { "triangle_ratio": 0.2, "screen_size": 0.3 } ] } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "lods": [ { "ratio": 0.5 } ] } ] })" ) );
+    }
+
+    const sw::string sourcePath = test::makeTempPath( "lod_grid.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeGridGltf( 16 ) ) );
+    sw::editor::ModelImportResult result{};
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::readModelAsset( sourcePath, rule, result ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), result._mesh._listLOD.size() );
+    const size_t baseVertexCount = result._mesh._listVertex.size();
+    SW_EXPECT_EQUAL( size_t( 16 * 16 * 2 * 3 ), baseVertexCount );
+    SW_EXPECT_TRUE( result._mesh._listLOD[0]._listVertex.size() < baseVertexCount );
+    SW_EXPECT_TRUE( result._mesh._listLOD[1]._listVertex.size() < result._mesh._listLOD[0]._listVertex.size() );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, result._mesh._listLOD[0]._screenSize, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, result._mesh._listLOD[1]._screenSize, 0.0f );
+
+    // `.mesh` 로 쓰고 읽으면 단계가 그대로다(탄젠트는 단계마다 구한 값이라 읽기 검사를 지난다).
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( result._mesh, bytes );
+    sw::MeshAssetData read{};
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), read._listLOD.size() );
+    SW_EXPECT_EQUAL( result._mesh._listLOD[1]._listVertex.size(), read._listLOD[1]._listVertex.size() );
+    SW_EXPECT_EQUAL( baseVertexCount, read._listVertex.size() );
+
+    // 삼각형 하나짜리 모델은 줄일 수 없다 — 그 단계를 빼고 쓰지 않고(문턱이 어긋난다) 임포트를 멈춘다.
+    const sw::string trianglePath = test::makeTempPath( "lod_triangle.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( trianglePath, TestModelImporterInternal::makeSceneGltf( R"("scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ])" ) ) );
+    {
+        test::ScopedDefensiveTestLog  expected( "a single triangle cannot be simplified into the requested LOD" );
+        sw::editor::ModelImportResult tooSmall{};
+        SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( trianglePath, rule, tooSmall ) );
+    }
 }

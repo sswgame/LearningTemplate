@@ -214,6 +214,18 @@ namespace sw
         return _registeredAssetCache.findByName( assetKindName );
     }
 
+    shared_ptr<const void> AssetManager::pinAsset( string_view relativePath )
+    {
+        // 종류는 접미사로 갈리므로 한 캐시만 답한다 — 첫 답을 받는다.
+        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
+        {
+            shared_ptr<const void> pin = pCache->pinAsset( relativePath );
+            if ( pin != nullptr )
+                return pin;
+        }
+        return {};
+    }
+
     void AssetManager::clearAssetCaches()
     {
         for ( IAssetCache* pCache : _registeredAssetCache.getItems() )

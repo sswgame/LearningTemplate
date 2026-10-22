@@ -499,6 +499,11 @@ namespace sw::editor
                 SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
                 bRead = false;
             }
+            else if ( rule._listLOD.empty() == false )
+            {
+                SW_LOG_ERROR( "glTF '%#' is skinned - import rule '%#' asks for mesh LODs, which only static meshes take", sourcePath, rule._name.c_str() );
+                bRead = false;
+            }
             else
             {
                 bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
@@ -533,6 +538,15 @@ namespace sw::editor
             SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
 
         ModelImporterInternal::applyRule( rule, merged );
+        // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
+        const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
+        if ( bLODUnsupported )
+        {
+            SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
+                          rule._name.c_str() );
+            cgltf_free( pData );
+            return false;
+        }
         if ( listToon.empty() == false )
         {
             ModelImporterInternal::populateMaterialSections( merged, *pData, listToon, outResult );
@@ -548,7 +562,7 @@ namespace sw::editor
         }
         cgltf_free( pData );
         ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
-        return true;
+        return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
     }
 
     bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
@@ -730,6 +744,10 @@ namespace sw::editor
             const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
             hash                         = HashUtil::computeStringHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
+        // LOD 규칙이 없으면 섞지 않는다 — LOD 를 쓰지 않는 모델의 해시가 그대로다(다시 임포트하지 않는다).
+        const string lodText = rule.makeLODHashText();
+        if ( lodText.empty() == false )
+            hash = HashUtil::computeStringHash64( lodText.c_str(), lodText.size(), false, hash );
         // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );

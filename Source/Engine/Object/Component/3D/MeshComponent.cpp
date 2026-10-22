@@ -46,6 +46,7 @@ namespace sw
         , _appearance{ 1.0f }
         , _appearanceRate{ 0.0f }
         , _bTeleportAppearPending{ false }
+        , _lodIndex{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
         , _bFirstPersonView{ SW_FALSE }
@@ -123,8 +124,7 @@ namespace sw
         {
             _meshLoad.reset();
             _mesh = MeshUtil::acquirePrimitive( meshID );
-            validateSectionName();
-            markRenderStateDirty();
+            onMeshAssigned();
             notifyMeshFollowers();
             return;
         }
@@ -137,7 +137,7 @@ namespace sw
             return;
         }
         _mesh = nullptr;
-        markRenderStateDirty();
+        onMeshAssigned();
         notifyMeshFollowers();
         if ( _pPrimitiveRegistry != nullptr )
             _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
@@ -240,9 +240,33 @@ namespace sw
     {
         _mesh = _meshLoad.get();
         _meshLoad.reset();
-        validateSectionName();
-        markRenderStateDirty();
+        onMeshAssigned();
         notifyMeshFollowers();
+    }
+
+    void MeshComponent::onMeshAssigned()
+    {
+        validateSectionName();
+        _lodIndex           = 0;
+        const bool bHasLODs = _mesh != nullptr && _mesh->getLODCount() > 1;
+        if ( _pPrimitiveRegistry != nullptr )
+        {
+            if ( bHasLODs )
+                _pPrimitiveRegistry->addLODPrimitive( this );
+            else
+                _pPrimitiveRegistry->removeLODPrimitive( this );
+        }
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setLODIndex( uint32 lodIndex )
+    {
+        const uint32 lastIndex = _mesh != nullptr ? _mesh->getLODCount() - 1 : 0u;
+        const uint8  clamped   = static_cast<uint8>( MathUtil::min( lodIndex, lastIndex ) );
+        if ( _lodIndex == clamped )
+            return;
+        _lodIndex = clamped;
+        markRenderStateDirty();
     }
 
     void MeshComponent::setSectionName( hashed_string sectionName )
@@ -257,7 +281,19 @@ namespace sw
         outFirstVertex = 0;
         outVertexCount = 0;
         if ( _sectionName.empty() )
+        {
+            // LOD 는 구간 없는 메시에만 있다(`Mesh::setLODs`). 메시가 제자리에서 다시 읽혀 단계가 줄었으면 가장 낮은 단계를 그린다.
+            // GPU 변형 메시(모프 풀)는 LOD 0 정점만 변형하므로 원본을 그린다 — 낮은 단계 범위는 변형 결과에 없다.
+            const size_t lodCount       = _mesh != nullptr ? _mesh->getLODs().size() : 0u;
+            const bool   bDrawsLowerLOD = _lodIndex > 0 && lodCount > 0 && _mesh->isGPUMorphEnabled() == false;
+            if ( bDrawsLowerLOD )
+            {
+                const MeshLOD& lod = _mesh->getLODs()[MathUtil::min( static_cast<size_t>( _lodIndex ), lodCount ) - 1];
+                outFirstVertex     = lod._firstVertex;
+                outVertexCount     = lod._vertexCount;
+            }
             return true;
+        }
         const int32 sectionIndex = ( _mesh != nullptr ) ? _mesh->findSectionIndex( _sectionName ) : -1;
         if ( sectionIndex < 0 )
             return false;
@@ -321,6 +357,9 @@ namespace sw
         ScenePrimitive::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
+        // 등록 전에 받은 메시가 LOD 를 가졌으면 이제부터 LOD 고르기가 본다.
+        if ( _mesh != nullptr && _mesh->getLODCount() > 1 )
+            _pPrimitiveRegistry->addLODPrimitive( this );
         // 등록 전에 요청한 메시 로드가 아직 끝나지 않았으면 이제부터 씬 프레임이 기다린다.
         if ( _meshLoad.isLoading() )
             _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
@@ -379,7 +418,7 @@ namespace sw
         _meshLoad.reset(); // 런타임 지정이 이긴다 — 읽던 에셋이 도착해도 덮지 않는다
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
         _resolvedMeshID = hashed_string( string{ _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID } }.c_str() );
-        markRenderStateDirty();
+        onMeshAssigned();
         notifyMeshFollowers();
     }
 
@@ -388,8 +427,7 @@ namespace sw
         if ( _mesh == mesh )
             return;
         _mesh = std::move( mesh );
-        validateSectionName();
-        markRenderStateDirty();
+        onMeshAssigned();
     }
 
     void MeshComponent::setMeshID( string_view meshID )

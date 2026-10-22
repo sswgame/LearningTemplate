@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -60,6 +61,19 @@ namespace sw
 
         /** @brief 지금 들고 있는 항목 수입니다. */
         virtual size_t getCachedCount() const = 0;
+
+        /**
+         * @brief @p relativePath 가 이 캐시가 다루는 종류의 경로면 로드를 걸고(워커), 그 에셋을 붙드는 토큰을 돌려줍니다. 이 캐시의 종류가 아니면 nullptr 입니다.
+         * @details 캐시가 약한 참조인 종류(메시 · 프리팹)는 미리 읽은 에셋이 쓰기 전에 사라질 수 있다 — 토큰이 사는 동안 남는다(`AssetPinSet`, 언리얼
+         *          `FStreamableHandle` 의 유지). 로드가 실패해도 토큰은 나온다(실패는 그 종류의 로드가 알린다). 기본은 고정하지 않는 캐시다 —
+         *          스스로 수명을 쥐는 표(오디오 · 현지화 다시 읽기)와 디바이스가 있어야 요청하는 텍스처가 그렇다(텍스처는 그것을 쓰는 머티리얼의 고정이 붙든다).
+         * @warning 토큰은 캐시(곧 `AssetManager`)보다 먼저 놓습니다.
+         */
+        virtual shared_ptr<const void> pinAsset( string_view relativePath )
+        {
+            (void)relativePath;
+            return {};
+        }
 
         /** @brief 캐시를 통째로 비웁니다(종료 · 재초기화). */
         virtual void clear() = 0;

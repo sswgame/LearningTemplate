@@ -49,6 +49,7 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 | `root_motion_bone` | `string` | — |  |  | 루트 모션 트랙이 될 본(비면 없음) |
 | `attachments` | `bool` | `true` |  |  | 본 아래 스킨 없는 메시를 따로 임포트한다 |
 | `fracture` | `object` | — |  |  | 있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키) |
+| `lods` | `object[]` | — |  |  | 메시 LOD 1 이상(아래 키, 순서대로 단계). 스킨 · 모프 · 머티리얼 구간이 없는 메시만 |
 
 ## `kArrModelImportFractureKeyDoc`
 
@@ -71,3 +72,15 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 | `interior_color` | `number[4]` | `0.62, 0.58, 0.52, 1` |  |  | 안쪽 면 정점 색 |
 | `interior_uv_scale` | `number` | `1` |  |  | 안쪽 면 UV 의 미터당 배율 |
 | `max_hull_points` | `number` | `48` |  |  | 조각 껍질 점의 상한 |
+
+## `kArrModelImportLODKeyDoc`
+
+`lods` 의 한 칸입니다(`ModelImportLODRule`). 단계는 원본에서 따로 단순화한다(`meshopt_simplify`).
+
+원본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
+
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+|---|---|---|---|---|---|
+| `triangle_ratio` | `number` | `0.5` |  |  | 원본 삼각형 수에 대한 목표 비율(0..1, 앞 단계보다 작게) |
+| `screen_size` | `number` | `0.3` |  |  | 이 단계로 넘어가는 화면 크기(경계 구의 화면 높이 비율, 0..1, 앞 단계보다 작게) |
+| `max_error` | `number` | `0.01` |  |  | 허용 오차(메시 크기에 대한 비율, 0 이상). 비율보다 먼저 닿으면 거기서 멈춘다 |
