@@ -1,6 +1,6 @@
 # 오디오 엔진 확장 계획 (2026-10-21)
 
-> 상태: 구현중 · 선행: AudioChannelLayout · 영역: audio-ai-localization · 옛번호: D5-1 · 진행: 7/8
+> 상태: 측정대기 · 선행: AudioChannelLayout · 영역: audio-ai-localization · 옛번호: D5-1 · 진행: 8/8
 
 후보 `AudioEngineExtensions`(`Candidates-audio-ai-localization.md`)를 착수하며 옮긴 문서입니다. 5.1/7.1 출력은 계획 [AudioChannelLayout](AudioChannelLayout.md) 이 먼저 했고, 이 문서는 그 위에 얹는 출력 · 공간 · 이펙트 확장입니다.
 
@@ -28,11 +28,9 @@
 
 ## 3. 구현 단위
 
-| 단위 | 내용 | 파일 소유 | 상태 |
-|---|---|---|---|
-| E6 | 에디터 비용 측정: 이벤트 창(`AudioEventBrowserPanel`)의 게시 상태가 블록마다 인스턴스 × 보이스를 훑는 비용. 엔진이 블록마다 게시 시간을 재 `AudioEngineStats::_publishNanoseconds` · 최댓값으로 싣고, 이벤트 창 보이스 탭이 보이며, `AudioBenchTest.PublishCostPerInstance` 가 인스턴스 32 / 64 / 128 로 로그를 남긴다. | 측정 | 측정대기(병합 뒤 Release 벤치. 두 배에 네 배 가까이 늘면 보이스를 한 번만 훑어 인스턴스에 모은다) |
+구현 단위는 모두 끝났다. 남은 것은 아래 4 절의 확인이다.
 
-끝난 단위: E1 바이노럴(HRTF), E2 리눅스 ALSA 백엔드, E3 회절, E4 컨볼루션 리버브, E5 소리 그래프(형식 · 실행기 · 노드 · 이벤트 길, 빌드 미확인), E7 그래프 창(Window > Audio Graph: 속성 그리드 편집 · 처리 순서 · 저장 · 미리 듣기)과 핫 리로드(`AudioClipCache::reloadClip`, 재생 중 보이스는 옛 그래프로 끝, 빌드 미확인), E8 그래프 캔버스(`EditorNodeGraph` 위 노드 · 연결 편집, 오른쪽 클릭 넣기 · Delete 지우기, 위치는 `_editorPosition`, 판단은 `AudioGraphEditUtil` — EditorTest, 빌드 미확인), 버스별 레이아웃(빌드 미확인). 서버 호스트는 그래프 파일을 오디오로 빼고 읽지 않는다(`CookContract.json` Audio 종류).
+끝난 단위: E6 게시 비용 측정(`AudioBenchTest.PublishCostPerInstance`, Release 세 번 — 인스턴스 32 / 64 / 128 에 블록당 평균 18 ~ 20 / 36 ~ 39 / 74 ~ 80 us. 두 배에 두 배라 선형이고 훑기 최적화는 하지 않는다. 같은 실행의 렌더는 128 보이스 블록당 274 ~ 290 us. 다른 작업자의 빌드가 돌던 때라 절대값은 높게 잡혔을 수 있다), E1 바이노럴(HRTF), E2 리눅스 ALSA 백엔드, E3 회절, E4 컨볼루션 리버브, E5 소리 그래프(형식 · 실행기 · 노드 · 이벤트 길, 빌드 미확인), E7 그래프 창(Window > Audio Graph: 속성 그리드 편집 · 처리 순서 · 저장 · 미리 듣기)과 핫 리로드(`AudioClipCache::reloadClip`, 재생 중 보이스는 옛 그래프로 끝, 빌드 미확인), E8 그래프 캔버스(`EditorNodeGraph` 위 노드 · 연결 편집, 오른쪽 클릭 넣기 · Delete 지우기, 위치는 `_editorPosition`, 판단은 `AudioGraphEditUtil` — EditorTest, 빌드 미확인), 버스별 레이아웃(빌드 미확인). 서버 호스트는 그래프 파일을 오디오로 빼고 읽지 않는다(`CookContract.json` Audio 종류).
 
 ## 4. 나중에 하는 확인 (빌드 · 사람 귀 · 다른 플랫폼)
 
