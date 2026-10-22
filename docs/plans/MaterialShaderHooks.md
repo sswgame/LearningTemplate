@@ -37,8 +37,8 @@
 | 단계 | 내용 | 읽을 문서 | 고칠 문서 | 검증 | 상태 |
 |---|---|---|---|---|---|
 | D2 | 머티리얼 XML 과 셰이더 구조체의 불일치를 오류로 만든다 — 셰이더에만 있는 필드 · XML 에만 있는 필드 · 리플렉션 실패 폴백 셋 모두. `Material.cpp` 의 `matchPropertiesToSchema` · `packPropertiesIntoBytes` · `ensureShaderLayout` 이 대상이다. 훅과 독립이라 **가장 먼저** | 이 문서 2절, `Source/Engine/Resource/Material/` README | 이 문서 D2 행, 머티리얼 모듈 README | Debug nogpu 테스트(불일치 XML 이 오류), 네 백엔드 기존 머티리얼 전부 로드 | 끝남(2026-10-23, main `71889fb71` — 저장소의 모든 `.material` 이 불일치 없음, 오류로 막는 단위 테스트 추가) |
-| H1 | 뼈대(`materialshader.hlsli` · `materialshadermain.hlsli`) + forwardlit. 림은 현재 식 그대로 둔다. **먼저 확인**: 사용자 보간 필드 구조체가 FXC(DX12 경로) · GL(SPIR-V 경유) 에서 되는지 | `Source/Engine/RHI` 셰이더 README, 이 문서 1절 | 이 문서 H1 행 | 셰이더 쿠킹 네 백엔드, forwardlit 화면이 바뀌기 전과 같다 | 남음 |
-| H2 | toon — VAT 통일, 시선 계산 통일 | 이 문서 2절 | 이 문서 | toon 화면(VAT 가 있는 메시), 그림자 | 남음 |
+| H1 | 뼈대(`materialshader.hlsli` · `materialshadermain.hlsli`) + forwardlit. 림은 현재 식 그대로 둔다. **먼저 확인**: 사용자 보간 필드 구조체가 FXC(DX12 경로) · GL(SPIR-V 경유) 에서 되는지 | `Source/Engine/RHI` 셰이더 README, 이 문서 1절 | 이 문서 H1 행 | 셰이더 쿠킹 네 백엔드, forwardlit 화면이 바뀌기 전과 같다 | 끝남(2026-10-23, main `b9969fc07` — 쿠킹 · 테스트 통과, 화면 픽셀 동일 비교는 미확인) |
+| H2 | toon — VAT 통일, 시선 계산 통일 | 이 문서 2절 | 이 문서 | toon 화면(VAT 가 있는 메시), 그림자 | 끝남(2026-10-23, main `b9969fc07` — 쿠킹 · 테스트 통과, 화면 픽셀 동일 비교는 미확인) |
 | H3 | terrain · foliage | 이 문서 | 이 문서 | 화면 | 남음 |
 | H4 | water(+ `MATERIAL_VERTEX_DEFORM`) | 이 문서 3절 | 이 문서 | 화면, 쿠킹 바이너리 수 변화가 `water.material` 한 개뿐 | 남음 |
 | H5 | sprite2d · sprite2dlit | 이 문서 | 이 문서 | 2D 화면 | 남음 |
