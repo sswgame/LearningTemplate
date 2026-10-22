@@ -264,6 +264,57 @@ SW_TEST_CASE( PoseModifierTest, SocketTargetsResolveOnOwnAndOtherUnits )
 }
 
 /**
+ * @brief [PoseModifierTest] 강체 유닛(본 없는 무기 부품) — `bindRigidUnit` 의 소켓 대상이 "오브젝트 월드 × 소켓 로컬" 로 풀리고, 연결을 풀면 값이 없어 노드가 쉰다
+ * @details 외형이 지금 든 무기를 칸 이름(`MainHand`)으로 이어 왼손 IK 가 무기의 `SupportHand` 를 따르게 하는 길이다. 연결 전에는 대상이 없을 뿐 오류가 아니다.
+ */
+SW_TEST_CASE( PoseModifierTest, RigidUnitSocketFollowsObjectAndUnbinds )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Body", float3{} );
+    SW_ASSERT_NOT_NULL( pBody );
+    GameObject* pWeapon = TestPoseModifierInternal::createMarker( manager, "Rifle", float3{ 2.0f, 1.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pWeapon );
+    pWeapon->getPrimarySceneComponent()->setLocalRotation( float3{ 0.0f, 90.0f * MathUtil::kDegreeToRadian, 0.0f } );
+    SocketKindTable kinds;
+    kinds.addKind( "Attach" );
+    shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
+    SW_ASSERT_TRUE( weaponSockets->loadFromXMLText( R"(<SocketSet><Socket name="SupportHand" kind="Attach" translation="0 0 -0.5"/></SocketSet>)", "rifle", kinds ) );
+
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"(<RigAsset><targets><item name="Grip" unit="MainHand" socket="SupportHand" /></targets>
+        <nodes><item type="Position" name="ToGrip" bone="bone2" target="Grip" /></nodes></RigAsset>)" );
+    SW_ASSERT_NOT_NULL( pModifier );
+    pModifier->dispatchBeginPlay();
+    SW_ASSERT_TRUE( pModifier->isRigReady() );
+    SW_EXPECT_FALSE( pModifier->isTargetBound( "Grip" ) );
+
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    pModifier->bindRigidUnit( "MainHand", pWeapon, weaponSockets );
+    SW_EXPECT_TRUE( pModifier->isTargetBound( "Grip" ) );
+    SW_EXPECT_TRUE( pBody->getAnimationDependencies().empty() ); // 강체 부품에는 평가할 포즈가 없다
+    system.evaluate( 1.0f / 60.0f );
+    // 무기는 Y 로 90 도 돌았다 — 소켓 로컬 (0, 0, -0.5) 가 무기 회전을 따라 옆으로 간다(몸은 원점이라 몸 모델 = 월드).
+    const float3 expected = float3::transform( float3{ 0.0f, 0.0f, -0.5f }, pWeapon->getPrimarySceneComponent()->getWorldMatrix() );
+    SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( expected, TestPoseModifierInternal::getBoneModel( *pBody, 2 ), 1e-4f ) );
+
+    // 무기를 내려놓으면(연결 풀기) 지난 값이 남지 않는다 — 본이 레퍼런스 자리로 돌아온다.
+    pModifier->bindRigidUnit( "MainHand", nullptr, nullptr );
+    SW_EXPECT_FALSE( pModifier->isTargetBound( "Grip" ) );
+    pBody->markPoseDirty();
+    system.evaluate( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 2.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pBody, 2 ), 1e-4f ) );
+
+    // 강체 유닛에는 본이 없다 — 본 대상은 오류로 꺼진다.
+    test::ScopedDefensiveTestLog expectedError( "a bone target on a rigid unit is rejected" );
+    PoseModifierComponent*       pBoneRig = TestPoseModifierInternal::addRig( *TestPoseModifierInternal::createUnit( manager, "Other", float3{} ),
+                                                                              R"(<RigAsset><targets><item name="Root" unit="MainHand" bone="root" /></targets>
+        <nodes><item type="Position" name="ToRoot" bone="bone2" target="Root" /></nodes></RigAsset>)" );
+    SW_ASSERT_NOT_NULL( pBoneRig );
+    pBoneRig->bindRigidUnit( "MainHand", pWeapon, weaponSockets );
+    pBoneRig->dispatchBeginPlay();
+    SW_EXPECT_FALSE( pBoneRig->isTargetBound( "Root" ) );
+}
+
+/**
  * @brief [PoseModifierTest] 발 디딤은 씬 물리(정적 기울기 상자)로 땅을 찾는다 — 낮은 쪽으로 골반이 내려가고 두 발이 서로 다른 높이에 선다
  */
 SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )

@@ -18,6 +18,18 @@
 
 namespace sw
 {
+    /** @brief 비즘이 받는 자음 단서입니다. 모음 비즘과 단서 없는 비즘은 `None` 입니다. */
+    ENUM()
+    enum class LipSyncConsonant : uint8
+    {
+        None = 0,  ///< 대역 형태(모음이면 포먼트까지)만 본다.
+        Plosive,   ///< 파열음 — 무음 프레임 뒤 10 ms 창 에너지가 `_plosiveOnsetRatio` 배 넘게 오르고 그 창이 잡음(영교차 `_fricativeZeroCrossingHz` 이상)인 터짐(입술을 닫는 PP).
+        Fricative, ///< 마찰음 — 영교차가 `_fricativeZeroCrossingHz` 이상인 잡음(SS · FF).
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct LipSyncViseme
      * @brief 분석이 고르는 비즘 하나와 그 대역 형태(저, 중, 고 에너지 비율)입니다.
@@ -33,6 +45,8 @@ namespace sw
         float3 _bandShape{ 0.0f, 0.0f, 0.0f };
         PROPERTY( Units = Hz, Tooltip = "First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides)" )
         float2 _formantHz{ 0.0f, 0.0f };
+        PROPERTY( Tooltip = "Consonant cue that adds _consonantWeight to this viseme's score (None for vowels and silence)" )
+        LipSyncConsonant _consonant{ LipSyncConsonant::None };
 
         bool isVowel() const { return _formantHz._x > 0.0f && _formantHz._y > 0.0f; }
     };
@@ -74,6 +88,12 @@ namespace sw
         float32 _formantWeight{ 6.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared" )
         float32 _unvoicedHighBandRatio{ 0.5f };
+        PROPERTY( Min = 0.0, Tooltip = "Score a consonant viseme gains when its cue (plosive burst or fricative noise) is found in the frame" )
+        float32 _consonantWeight{ 6.0f };
+        PROPERTY( Min = 1.0, Tooltip = "Energy rise between consecutive 10 ms windows after a silent frame that marks a plosive burst when that window is noise (greater than 1)" )
+        float32 _plosiveOnsetRatio{ 4.0f };
+        PROPERTY( Min = 0.0, Units = Hz, Tooltip = "Zero crossings per second at or above which a frame is fricative noise (voiced speech stays below)" )
+        float32 _fricativeZeroCrossingHz{ 3000.0f };
         PROPERTY( Tooltip = "Viseme the amplitude drives when there is no track" )
         hashed_string _fallbackViseme;
 

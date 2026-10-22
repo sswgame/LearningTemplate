@@ -19,6 +19,22 @@ namespace sw
         {
             /** @brief `RetargetTranslationMode` 순서의 표기입니다. */
             static constexpr const utf8* kArrTranslationMode[] = { "ScaleByPelvisHeight", "Copy", "None" };
+
+            /** @brief 이름 목록을 `<item>이름</item>` 목록으로 씁니다(`RigXMLReader::readNameList` 의 꼴). */
+            static void writeNames( const XMLNode& list, const vector<hashed_string>& listName )
+            {
+                for ( const hashed_string& name : listName )
+                {
+                    list.appendChild( "item" ).setValue( string_view( name.c_str() ) );
+                }
+            }
+
+            /** @brief `source` · `target` 속성 쌍 하나를 씁니다. */
+            static void writePair( const XMLNode& element, const hashed_string& source, const hashed_string& target )
+            {
+                element.appendAttribute( "source", string_view( source.c_str() ) );
+                element.appendAttribute( "target", string_view( target.c_str() ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -91,6 +107,49 @@ namespace sw
             return false;
         }
         return parseXML( text, path );
+    }
+
+    string RetargetProfile::toXML() const
+    {
+        using Internal = RetargetProfileInternal;
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "RetargetProfile" );
+        if ( _sourceSkeletonPath.empty() == false )
+            root.appendAttribute( "source_skeleton", string_view( _sourceSkeletonPath ) );
+        if ( _targetSkeletonPath.empty() == false )
+            root.appendAttribute( "target_skeleton", string_view( _targetSkeletonPath ) );
+        root.appendAttribute( "translation", Internal::kArrTranslationMode[static_cast<uint32>( _translationMode )] );
+        if ( _bMapSameNames == SW_TRUE )
+            root.appendAttribute( "map_same_names", true );
+        if ( _heightRatioOverride > 0.0f )
+            root.appendAttribute( "height_ratio", _heightRatioOverride );
+        Internal::writePair( root.appendChild( "root" ), _sourceRoot, _targetRoot );
+        Internal::writePair( root.appendChild( "pelvis" ), _sourcePelvis, _targetPelvis );
+        const XMLNode chains = root.appendChild( "chains" );
+        for ( const RetargetChain& chain : _listChain )
+        {
+            const XMLNode entry = chains.appendChild( "item" );
+            entry.appendAttribute( "name", string_view( chain._name.c_str() ) );
+            if ( chain._bIKGoal == SW_TRUE )
+                entry.appendAttribute( "ik_goal", true );
+            Internal::writeNames( entry.appendChild( "source" ), chain._listSourceBone );
+            Internal::writeNames( entry.appendChild( "target" ), chain._listTargetBone );
+        }
+        if ( _listBonePair.empty() == false )
+        {
+            const XMLNode boneMap = root.appendChild( "bone_map" );
+            for ( const RetargetBonePair& pair : _listBonePair )
+            {
+                Internal::writePair( boneMap.appendChild( "item" ), pair._source, pair._target );
+            }
+        }
+        return document.saveToString();
+    }
+
+    void RetargetProfile::setSkeletonPaths( string_view sourcePath, string_view targetPath )
+    {
+        _sourceSkeletonPath = string{ sourcePath };
+        _targetSkeletonPath = string{ targetPath };
     }
 
     bool RetargetProfile::parseRoot( const XMLNode& root, string_view sourceLabel )

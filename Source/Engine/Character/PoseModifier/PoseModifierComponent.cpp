@@ -271,6 +271,25 @@ namespace sw
         bindExternalTargets();
     }
 
+    void PoseModifierComponent::bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets )
+    {
+        UnitBinding binding{};
+        binding._name        = unitName;
+        binding._sockets     = std::move( sockets );
+        binding._rigidObject = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
+        for ( UnitBinding& existing : _listUnitBinding )
+        {
+            if ( existing._name == unitName )
+            {
+                existing = binding;
+                bindExternalTargets();
+                return;
+            }
+        }
+        _listUnitBinding.push_back( binding );
+        bindExternalTargets();
+    }
+
     void PoseModifierComponent::bindObject( const hashed_string& objectName, GameObject* pObject )
     {
         const GameObjectHandle handle = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
@@ -373,20 +392,28 @@ namespace sw
         _pUnit->markPoseDirty();
     }
 
+    const PoseModifierComponent::UnitBinding* PoseModifierComponent::findUnitBinding( const hashed_string& unitName ) const
+    {
+        for ( const UnitBinding& binding : _listUnitBinding )
+        {
+            if ( binding._name == unitName )
+                return &binding;
+        }
+        return nullptr;
+    }
+
     SkeletalMeshComponent* PoseModifierComponent::findUnitByName( const hashed_string& unitName, shared_ptr<const SocketSet>* pOutSockets ) const
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return nullptr;
-        for ( const UnitBinding& binding : _listUnitBinding )
+        const UnitBinding* pBinding = findUnitBinding( unitName );
+        if ( pBinding != nullptr )
         {
-            if ( binding._name == unitName )
-            {
-                if ( pOutSockets != nullptr )
-                    *pOutSockets = binding._sockets;
-                return pManager->resolveComponent( binding._unit );
-            }
+            if ( pOutSockets != nullptr )
+                *pOutSockets = pBinding->_sockets;
+            return pManager->resolveComponent( pBinding->_unit ); // 강체 연결이면 비어 있다
         }
         // 이름으로 찾는다. 자식(장비 부품)부터 찾고, 없으면 매니저 전체에서 찾는다.
         vector<GameObject*> listChild;
@@ -447,7 +474,24 @@ namespace sw
         shared_ptr<const SocketSet> sockets;
         hashed_string               boneName = def._bone;
         BoneTransform               socketLocal{};
-        bool                        bSocketRoot = false;
+        bool                        bSocketRoot  = false;
+        const UnitBinding*          pBinding     = ( def._unit.empty() == false ) ? findUnitBinding( def._unit ) : nullptr;
+        GameObjectManager*          pManager     = getOwner()->getManager();
+        GameObject*                 pRigidObject = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pBinding->_rigidObject ) : nullptr;
+        if ( pRigidObject != nullptr )
+        {
+            // 강체 유닛(본 없는 장비 부품)이다. 소켓만 대상이 될 수 있고 소켓 로컬은 오브젝트 원점 기준이다.
+            const SocketDef* pDef = ( def._kind == RigTargetKind::Socket && pBinding->_sockets != nullptr ) ? pBinding->_sockets->findSocket( def._socket ) : nullptr;
+            if ( pDef == nullptr )
+            {
+                SW_LOG_ERROR( "Rig '%#': target '%#' on rigid unit '%#' must name one of its sockets (it has no bones) - '%#' not found", label, def._name.c_str(),
+                              def._unit.c_str(), def._socket.c_str() );
+                return false;
+            }
+            outResolved._pRigidObject = pRigidObject;
+            outResolved._socketLocal  = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+            return true;
+        }
         if ( def._unit.empty() == false )
         {
             pTargetUnit = findUnitByName( def._unit, &sockets );
@@ -501,6 +545,8 @@ namespace sw
         {
             if ( _instance.isTargetExternal( targetIndex ) == false )
                 continue;
+            // 지난 연결의 값을 비운다 — 연결이 풀린 대상(무기를 내려놓음)은 프레임 준비가 값을 넣지 않으므로 옛 값이 남는다.
+            _instance.setExternalTarget( targetIndex, RigTargetValue{} );
             const RigTargetDef& def      = _instance.getTargetDef( targetIndex );
             ExternalTarget&     external = _listExternal[targetIndex];
             external._socketLocal        = def._offset;
@@ -528,6 +574,14 @@ namespace sw
             SocketTargetResolution resolved;
             if ( resolveSocketTarget( def, label, resolved ) == false )
                 continue;
+            if ( resolved._pRigidObject != nullptr )
+            {
+                // 오브젝트 대상과 같은 길로 프레임 시작에 기록한다(오프셋 × 소켓 로컬 × 오브젝트 월드).
+                external._object      = resolved._pRigidObject->getHandle();
+                external._socketLocal = BoneTransform::makeFromMatrix( def._offset.toMatrix() * resolved._socketLocal.toMatrix() );
+                external._bBound      = SW_TRUE;
+                continue;
+            }
             SkeletalMeshComponent* pTargetUnit = resolved._pTargetUnit;
             const hashed_string&   boneName    = resolved._boneName;
             const BoneTransform&   socketLocal = resolved._socketLocal;

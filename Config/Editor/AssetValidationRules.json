@@ -36,7 +36,7 @@
       "check": "naming",
       "severity": "error",
       "include_patterns": ["*/models/*"],
-      "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.xml", ".animclip", ".fracture", ".facial.xml", ".avatar.xml", ".bonelod.xml", ".vertexanimation.xml", ".modifiers.json", ".mfpc", ".material", ".material.meta", ".rig.xml", ".prefab.xml", ".prefab.xml.meta"]
+      "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.xml", ".animclip", ".fracture", ".facial.xml", ".livelinkface.xml", ".avatar.xml", ".bonelod.xml", ".vertexanimation.xml", ".modifiers.json", ".mfpc", ".material", ".material.meta", ".rig.xml", ".prefab.xml", ".prefab.xml.meta"]
     },
     {
       "name": "model-source-folder",

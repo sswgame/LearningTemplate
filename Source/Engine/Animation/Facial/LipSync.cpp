@@ -29,6 +29,32 @@ namespace sw
             static constexpr float32 kFormantStepHz = 20.0f;
             /// 프리엠퍼시스 계수입니다(고역을 올려 둘째 포먼트가 묻히지 않게).
             static constexpr float32 kPreEmphasis = 0.97f;
+            /// 파열음 터짐을 재는 창(초)입니다 — 터짐은 수 ms 안에 오르고 모음의 시작은 수십 ms 에 걸쳐 오른다. 성대 한 주기(남성 약 8 ms)보다 길어야
+            /// 유성음의 주기마다 출렁이는 에너지를 터짐으로 보지 않는다(2 ms 창은 합성 모음의 첫 프레임을 파열음으로 봤다).
+            static constexpr float32 kOnsetWindowSeconds = 0.01f;
+
+            /** @brief 표본 [begin, end) 의 RMS 입니다. */
+            static float32 computeRangeRms( const vector<float32>& listSample, size_t begin, size_t end )
+            {
+                float64 energy = 0.0;
+                for ( size_t index = begin; index < end; ++index )
+                {
+                    energy += static_cast<float64>( listSample[index] ) * static_cast<float64>( listSample[index] );
+                }
+                return static_cast<float32>( MathUtil::sqrt( energy / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
+            }
+
+            /** @brief 표본 [begin, end) 의 초당 영교차 수입니다(부호가 바뀐 이웃 쌍의 수). */
+            static float32 computeZeroCrossingHz( const vector<float32>& listSample, size_t begin, size_t end, uint32 sampleRate )
+            {
+                uint32 crossingCount = 0;
+                for ( size_t index = begin + 1; index < end; ++index )
+                {
+                    if ( ( listSample[index - 1] < 0.0f ) != ( listSample[index] < 0.0f ) )
+                        ++crossingCount;
+                }
+                return end > begin ? static_cast<float32>( crossingCount ) * static_cast<float32>( sampleRate ) / static_cast<float32>( end - begin ) : 0.0f;
+            }
 
             /** @brief Levinson-Durbin 으로 자기상관 @p pAutocorrelation(0..order)에서 예측 계수 @p pOutCoefficient(1..order, [0] = 1)를 구합니다. 풀 수 없으면 false 입니다. */
             static bool solveLpc( const float64* pAutocorrelation, uint32 order, float64* pOutCoefficient )
@@ -187,6 +213,18 @@ namespace sw
                 SW_LOG_ERROR( "Lip sync settings '%#': viseme '%#' _formantHz must be \"0,0\" or \"F1,F2\" with 0 < F1 < F2", sourceLabel, viseme._name.c_str() );
                 return false;
             }
+            // 자음 단서는 자음 비즘의 것이다 — 모음(포먼트)이나 무음(첫 비즘)에 달면 두 길이 한 비즘을 두고 다툰다.
+            const bool bConsonantOnVowelOrSilence = viseme._consonant != LipSyncConsonant::None && ( viseme.isVowel() || visemeIndex == 0 );
+            if ( bConsonantOnVowelOrSilence )
+            {
+                SW_LOG_ERROR( "Lip sync settings '%#': viseme '%#' has a _consonant cue but is a vowel or the silence viseme", sourceLabel, viseme._name.c_str() );
+                return false;
+            }
+        }
+        if ( _plosiveOnsetRatio <= 1.0f )
+        {
+            SW_LOG_ERROR( "Lip sync settings '%#': _plosiveOnsetRatio must be greater than 1 (an energy rise)", sourceLabel );
+            return false;
         }
         if ( findVisemeIndex( _fallbackViseme ) < 0 )
         {
@@ -439,26 +477,50 @@ namespace sw
         }
         const size_t    frameSamples = MathUtil::max<size_t>( static_cast<size_t>( static_cast<float32>( sampleRate ) / settings._frameRate ), 1u );
         const size_t    frameCount   = ( listSample.size() + frameSamples - 1 ) / frameSamples;
+        const size_t    onsetSamples = MathUtil::max<size_t>( static_cast<size_t>( LipSyncInternal::kOnsetWindowSeconds * static_cast<float32>( sampleRate ) ), 1u );
         vector<float32> listScore( visemeCount );
         outTrack._listWeight.assign( frameCount * visemeCount, 0.0f );
+        float32 previousFrameRms = 0.0f; // 클립 앞은 무음이다
+        float32 previousOnsetRms = 0.0f; // 앞 프레임의 마지막 짧은 창(터짐이 프레임 경계에 걸쳐도 잰다)
         for ( size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             const size_t begin = frameIndex * frameSamples;
             const size_t end   = MathUtil::min( begin + frameSamples, listSample.size() );
-            float64      energy{ 0.0 };
-            float64      arrBandEnergy[3]{ 0.0, 0.0, 0.0 };
+            // 창 사이 에너지 오름이 가장 큰 창을 찾는다 — 바닥은 무음 RMS 다(무음끼리의 잡음 비율이 터짐으로 보이지 않게).
+            float32 maxOnsetRise = 0.0f;
+            size_t  riseBegin    = begin;
+            for ( size_t onsetBegin = begin; onsetBegin < end; onsetBegin += onsetSamples )
+            {
+                const float32 onsetRms = LipSyncInternal::computeRangeRms( listSample, onsetBegin, MathUtil::min( onsetBegin + onsetSamples, end ) );
+                const float32 rise     = onsetRms / MathUtil::max( previousOnsetRms, settings._silenceRms );
+                if ( rise > maxOnsetRise )
+                {
+                    maxOnsetRise = rise;
+                    riseBegin    = onsetBegin;
+                }
+                previousOnsetRms = onsetRms;
+            }
+            // 파열음 = 무음 뒤 갑자기 오른 창이 잡음(영교차가 잦음)인 터짐이다. 모음의 시작도 크게 오를 수 있지만 유성음이라 영교차가 드물다.
+            const bool bAfterSilence = previousFrameRms < settings._silenceRms;
+            const bool bSuddenRise   = bAfterSilence && maxOnsetRise >= settings._plosiveOnsetRatio;
+            const bool bPlosive =
+                bSuddenRise &&
+                LipSyncInternal::computeZeroCrossingHz( listSample, riseBegin, MathUtil::min( riseBegin + onsetSamples, end ), sampleRate ) >= settings._fricativeZeroCrossingHz;
+            // 터짐 자체도 잡음이라 영교차가 잦다 — 터짐 프레임은 파열음 단서만 갖는다.
+            const bool    bFricative = bPlosive == false && LipSyncInternal::computeZeroCrossingHz( listSample, begin, end, sampleRate ) >= settings._fricativeZeroCrossingHz;
+            const float32 frameRms   = LipSyncInternal::computeRangeRms( listSample, begin, end );
+            previousFrameRms         = frameRms;
+            float64 arrBandEnergy[3]{ 0.0, 0.0, 0.0 };
             for ( size_t index = begin; index < end; ++index )
             {
                 const float32 sample = listSample[index];
-                energy += static_cast<float64>( sample ) * static_cast<float64>( sample );
                 for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
                 {
                     const float32 filtered = arrFilter[bandIndex].process( sample );
                     arrBandEnergy[bandIndex] += static_cast<float64>( filtered ) * static_cast<float64>( filtered );
                 }
             }
-            const float32 rms      = static_cast<float32>( MathUtil::sqrt( energy / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
-            const float32 openness = computeOpenness( rms, settings );
+            const float32 openness = computeOpenness( frameRms, settings );
             float32*      pWeight  = &outTrack._listWeight[frameIndex * visemeCount];
             // 첫 비즘이 무음이다. 열린 만큼 나머지 비즘이 나눠 갖는다.
             pWeight[0] = 1.0f - openness;
@@ -473,8 +535,9 @@ namespace sw
             }
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
             // 유성 프레임(높은 대역이 주가 아닌)은 포먼트를 재 모음 비즘과 견준다 — 대역 셋으로는 가까운 모음(EE · OO 의 낮은 첫 포먼트)을 가르기 어렵다.
+            // 터짐 · 잡음 프레임의 포락선 봉우리는 성도의 공명이 아니다 — 자음 단서가 있으면 포먼트를 보지 않는다.
             float2     formantHz{ 0.0f, 0.0f };
-            const bool bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio;
+            const bool bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio && bPlosive == false && bFricative == false;
             const bool bHasFormants = bVoiced && tryComputeFormants( &listSample[begin], end - begin, sampleRate, formantHz );
             float32    maxScore     = -MathUtil::kMaxFloat;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
@@ -494,6 +557,9 @@ namespace sw
                     const float32 distance     = MathUtil::sqrt( firstOffset * firstOffset + secondOffset * secondOffset );
                     listScore[visemeIndex] += settings._formantWeight * ( 1.0f - MathUtil::min( distance, 1.0f ) );
                 }
+                const bool bConsonantCue = ( viseme._consonant == LipSyncConsonant::Plosive && bPlosive ) || ( viseme._consonant == LipSyncConsonant::Fricative && bFricative );
+                if ( bConsonantCue )
+                    listScore[visemeIndex] += settings._consonantWeight;
                 maxScore = MathUtil::max( maxScore, listScore[visemeIndex] );
             }
             float32 sum = 0.0f;

@@ -1355,6 +1355,33 @@
        "description": "High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared"
       },
       {
+       "name": "_consonantWeight",
+       "type": "float32",
+       "default": "6.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Score a consonant viseme gains when its cue (plosive burst or fricative noise) is found in the frame"
+      },
+      {
+       "name": "_plosiveOnsetRatio",
+       "type": "float32",
+       "default": "4.0",
+       "min": "1.0",
+       "max": "",
+       "units": "",
+       "description": "Energy rise between consecutive 10 ms windows after a silent frame that marks a plosive burst when that window is noise (greater than 1)"
+      },
+      {
+       "name": "_fricativeZeroCrossingHz",
+       "type": "float32",
+       "default": "3000.0",
+       "min": "0.0",
+       "max": "",
+       "units": "Hz",
+       "description": "Zero crossings per second at or above which a frame is fricative noise (voiced speech stays below)"
+      },
+      {
        "name": "_fallbackViseme",
        "type": "hashed_string",
        "default": "",
@@ -1395,6 +1422,57 @@
        "max": "",
        "units": "Hz",
        "description": "First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides)"
+      },
+      {
+       "name": "_consonant",
+       "type": "LipSyncConsonant",
+       "default": "None",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Consonant cue that adds _consonantWeight to this viseme's score (None for vowels and silence)"
+      }
+     ]
+    }
+   ],
+   "enums": [
+    {
+     "name": "LipSyncConsonant",
+     "values": [
+      "None",
+      "Plosive",
+      "Fricative"
+     ]
+    }
+   ]
+  },
+  {
+   "page": "LiveLinkFaceLayout",
+   "path": "Resource/engine/animation/livelinkface.xml",
+   "layer": "엔진 기본값",
+   "type": "LiveLinkFaceLayout",
+   "types": [
+    {
+     "name": "LiveLinkFaceLayout",
+     "source": "Source/Engine/Animation/Facial/LiveLinkFace.h",
+     "fields": [
+      {
+       "name": "_packetVersion",
+       "type": "int32",
+       "default": "0",
+       "min": "0",
+       "max": "255",
+       "units": "",
+       "description": "Packet version byte this layout reads (other versions are rejected)"
+      },
+      {
+       "name": "_listChannel",
+       "type": "vector<hashed_string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Channel names in packet order (ARKit blend shapes, then head and eye rotations)"
       }
      ]
     }
@@ -1830,6 +1908,87 @@
        "max": "",
        "units": "",
        "description": "Target weight at pose weight 1"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "LiveLinkFaceMapping",
+   "path": "Resource/game/*/models/*.livelinkface.xml",
+   "layer": "팩 데이터",
+   "type": "LiveLinkFaceMapping",
+   "types": [
+    {
+     "name": "LiveLinkFaceMapping",
+     "source": "Source/Engine/Animation/Facial/LiveLinkFace.h",
+     "fields": [
+      {
+       "name": "_layoutPath",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Packet layout this mapping reads (LiveLinkFaceLayout, e.g. engine/animation/livelinkface.xml) - required"
+      },
+      {
+       "name": "_listExpression",
+       "type": "vector<LiveLinkFaceExpression>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Expressions and the packet channels that drive them"
+      }
+     ]
+    },
+    {
+     "name": "LiveLinkFaceExpression",
+     "source": "Source/Engine/Animation/Facial/LiveLinkFace.h",
+     "fields": [
+      {
+       "name": "_expression",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Facial rig expression name the channels drive"
+      },
+      {
+       "name": "_listChannel",
+       "type": "vector<LiveLinkFaceChannelWeight>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Channels summed (value x scale) into the expression"
+      }
+     ]
+    },
+    {
+     "name": "LiveLinkFaceChannelWeight",
+     "source": "Source/Engine/Animation/Facial/LiveLinkFace.h",
+     "fields": [
+      {
+       "name": "_channel",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Packet channel name (LiveLinkFaceLayout::_listChannel)"
+      },
+      {
+       "name": "_scale",
+       "type": "float32",
+       "default": "1.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Scale of the channel value added to the expression"
       }
      ]
     }

@@ -651,7 +651,11 @@ namespace sw
                 const bool bShouldNotifyDespawn = pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnID != 0 && record._bCounted == SW_FALSE;
                 if ( bShouldNotifyDespawn )
                     (void)_director.notifyDespawned( record._spawnID );
-                if ( pObject != nullptr )
+                // 외형이 있으면 투구 · 망토를 씬의 부품 풀에 쉬게 한 뒤 지운다(다음 적이 꺼내 쓴다). 떨어진 무기는 풀이 받지 않아 지워진다.
+                CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
+                if ( pAppearance != nullptr )
+                    pAppearance->destroyOwnerStowingParts();
+                else if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
                 _listEnemy[enemyIndex] = _listEnemy.back();
                 _listEnemy.pop_back();

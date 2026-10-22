@@ -417,6 +417,7 @@ namespace sw
                 resolved._material    = part._material;
                 resolved._skeleton    = part._skeleton;
                 resolved._socketSet   = part._socketSet;
+                resolved._rig         = part._rig;
                 resolved._layer       = part._layer;
                 resolved._bDeforms    = part._bDeforms;
                 resolved._state       = entry._state;
@@ -878,6 +879,7 @@ namespace sw
             builder.addName( part._material );
             builder.addName( part._skeleton );
             builder.addName( part._socketSet );
+            builder.addName( part._rig );
             builder.addName( part._state );
             builder.addName( part._damageStage );
             builder.addInt( part._layer );

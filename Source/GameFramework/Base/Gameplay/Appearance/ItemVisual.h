@@ -76,6 +76,7 @@ namespace sw
         hashed_string                      _material{};   ///< 비어 있으면 메시의 것
         hashed_string                      _skeleton{};   ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         hashed_string                      _socketSet{};  ///< 부품의 소켓 에셋(`*.sockets.xml`)
+        hashed_string                      _rig{};        ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
         hashed_string                      _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         int32                              _layer{ 0 };   ///< 스프라이트 그리기 순서
         AppearancePartKind                 _kind{ AppearancePartKind::Skinned };

@@ -14,7 +14,7 @@
 | 커밋 | 한다 |
 | 참고 | 비즘 이름은 얼굴 리그(`*.facial.xml`)의 `_listViseme` 와 맞춘다 |
 
-JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다.
+XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
 
 ## 필드
 
@@ -34,6 +34,9 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `_sharpness` | `float32` | `8.0` | 0.0 ~ - |  | Sharpness of the band shape comparison (inverse softmax temperature) |
 | `_formantWeight` | `float32` | `6.0` | 0.0 ~ - |  | Score a vowel viseme gains when the frame's measured formants match its _formantHz (voiced frames only) |
 | `_unvoicedHighBandRatio` | `float32` | `0.5` | 0.0 ~ 1.0 |  | High band energy ratio above which a frame is unvoiced (hiss) and formants are not compared |
+| `_consonantWeight` | `float32` | `6.0` | 0.0 ~ - |  | Score a consonant viseme gains when its cue (plosive burst or fricative noise) is found in the frame |
+| `_plosiveOnsetRatio` | `float32` | `4.0` | 1.0 ~ - |  | Energy rise between consecutive 10 ms windows after a silent frame that marks a plosive burst when that window is noise (greater than 1) |
+| `_fricativeZeroCrossingHz` | `float32` | `3000.0` | 0.0 ~ - | Hz | Zero crossings per second at or above which a frame is fricative noise (voiced speech stays below) |
 | `_fallbackViseme` | `hashed_string` | — |  |  | Viseme the amplitude drives when there is no track |
 
 ## `LipSyncViseme`
@@ -47,3 +50,12 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `_name` | `hashed_string` | — |  |  | Viseme name - the facial rig maps it to morph targets |
 | `_bandShape` | `float3` | `0.0, 0.0, 0.0` |  |  | Energy ratio of the low, mid and high band (x, y, z) this viseme looks like |
 | `_formantHz` | `float2` | `0.0, 0.0` |  | Hz | First and second formant of a vowel viseme (0,0: not a vowel - the band shape alone decides) |
+| `_consonant` | `LipSyncConsonant` | `None` |  |  | Consonant cue that adds _consonantWeight to this viseme's score (None for vowels and silence) |
+
+## 열거 `LipSyncConsonant`
+
+| 값 | 설명 |
+|---|---|
+| `None` | 대역 형태(모음이면 포먼트까지)만 본다. |
+| `Plosive` | 파열음 — 무음 프레임 뒤 10 ms 창 에너지가 `_plosiveOnsetRatio` 배 넘게 오르고 그 창이 잡음(영교차 `_fricativeZeroCrossingHz` 이상)인 터짐(입술을 닫는 PP). |
+| `Fricative` | 마찰음 — 영교차가 `_fricativeZeroCrossingHz` 이상인 잡음(SS · FF). |

@@ -8,10 +8,9 @@
 -->
 <Scenario name="shooter3d.bowshoot" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
-	<At frame="5">
-		<Expect probe="Appearance.SlotItem" target="Archer" key="MainHand" is="bow_long"/>
-		<WaitUntil probe="PairedAnimation.SessionState" target="Archer" equals="1" timeoutFrames="60"/>
-	</At>
+	<At frame="5"><Expect probe="Appearance.SlotItem" target="Archer" key="MainHand" is="bow_long"/></At>
+	<!-- WaitUntil 은 그 프레임의 유일한 단계여야 한다. -->
+	<At frame="6"><WaitUntil probe="PairedAnimation.SessionState" target="Archer" equals="1" timeoutFrames="60"/></At>
 	<!-- 놓는 시각(0.6 초) 앞 — 시위를 당긴 자세. -->
 	<At afterSeconds="0.4"><Screenshot file="shooter3d/bowshoot_draw.ppm"/></At>
 	<!-- 놓은 뒤 — 투사체가 스폰됐다. -->
@@ -19,9 +18,9 @@
 		<Expect probe="Object.Exists" target="ArrowProjectile" equals="1"/>
 		<Screenshot file="shooter3d/bowshoot_release.ppm"/>
 	</At>
-	<!-- 앵커 클립(1.07 초)이 끝나면 세션이 끝난다. -->
+	<!-- 앵커 클립(1.07 초)이 끝나면 세션이 끝나고 시스템이 거둔다 — 탐침은 세션이 없을 때의 Idle(0)이다(시작은 위의 WaitUntil 이 봤다). -->
 	<At afterSeconds="0.5">
-		<Expect probe="PairedAnimation.SessionState" target="Archer" equals="2"/>
+		<Expect probe="PairedAnimation.SessionState" target="Archer" equals="0"/>
 		<Pass/>
 	</At>
 </Scenario>

@@ -2,11 +2,13 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/LipSyncImport.h"
@@ -14,6 +16,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/FacialAnimationComponent.h"
+#include "Engine/Object/Component/3D/LiveLinkFaceComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -48,11 +51,12 @@ namespace
 
     struct TestFacialAnimationInternal
     {
-        static constexpr string_view kMeshPath     = "game/empty/models/testhead.mesh";
-        static constexpr string_view kSkeletonPath = "game/empty/models/testhead/testhead.skeleton.xml";
-        static constexpr string_view kRigPath      = "game/empty/models/testhead.facial.xml";
-        static constexpr string_view kClipFolder   = "game/empty/models/testhead/clips";
-        static constexpr uint32      kSampleRate   = 16000;
+        static constexpr string_view kMeshPath           = "game/empty/models/testhead.mesh";
+        static constexpr string_view kSkeletonPath       = "game/empty/models/testhead/testhead.skeleton.xml";
+        static constexpr string_view kRigPath            = "game/empty/models/testhead.facial.xml";
+        static constexpr string_view kClipFolder         = "game/empty/models/testhead/clips";
+        static constexpr uint32      kSampleRate         = 16000;
+        static constexpr string_view kLiveLinkLayoutPath = "engine/animation/livelinkface.xml";
 
         /** @brief 테스트 머리(유닛) + 얼굴 컴포넌트를 만들고 시작합니다. 애니메이터는 @p pAnimatorState 가 있을 때만 붙입니다. */
         static FacialAnimationComponent* createHead( GameObjectManager& manager, SkeletalMeshComponent*& outUnit, const utf8* pAnimatorState = nullptr,
@@ -152,6 +156,49 @@ namespace
                 inoutListSample.push_back( 0.5f * ( noise - 2.0f * arrHistory[0] + arrHistory[1] ) );
                 arrHistory[1] = arrHistory[0];
                 arrHistory[0] = noise;
+            }
+        }
+
+        /** @brief 한 극 낮은 통과(@p cutoffHz)를 거친 백색 잡음입니다 — 높은 대역이 주가 아닌 마찰음(f · th)을 흉내 냅니다. 영교차는 유성음보다 잦다. */
+        static void appendLowpassNoise( vector<float32>& inoutListSample, float32 cutoffHz, float32 seconds )
+        {
+            uint32        state  = 67890u;
+            float32       output = 0.0f;
+            const float32 alpha  = 1.0f - MathUtil::exp( -2.0f * MathUtil::kPi * cutoffHz / static_cast<float32>( kSampleRate ) );
+            const uint32  count  = static_cast<uint32>( seconds * static_cast<float32>( kSampleRate ) );
+            for ( uint32 sampleIndex = 0; sampleIndex < count; ++sampleIndex )
+            {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                const float32 noise = static_cast<float32>( state & 0xFFFFu ) / 32767.5f - 1.0f;
+                output += alpha * ( noise - output );
+                inoutListSample.push_back( 1.5f * output );
+            }
+        }
+
+        /**
+         * @brief 파열음 음절(pa) — 8 ms 터짐 뒤 모음 AA 가 서서히(25 ms) 열린다. @p bBurst 가 false 면 터짐 없이 같은 모음만입니다(a).
+         * @details 입술 터짐은 넓은 대역 잡음이되 스펙트럼이 주파수를 따라 떨어진다 — 900 Hz 한 극 낮은 통과 잡음으로 흉내 낸다(영교차는 모음보다 잦다).
+         */
+        static void appendPlosiveSyllable( vector<float32>& inoutListSample, bool bBurst, float32 seconds )
+        {
+            const size_t start = inoutListSample.size();
+            if ( bBurst )
+            {
+                vector<float32> listBurst;
+                appendLowpassNoise( listBurst, 900.0f, 0.008f );
+                for ( const float32 sample : listBurst )
+                {
+                    inoutListSample.push_back( 1.5f * sample ); // 낮은 통과가 줄인 크기를 되돌린다
+                }
+            }
+            const size_t vowelStart = inoutListSample.size();
+            appendVowel( inoutListSample, 750.0f, 1150.0f, seconds - static_cast<float32>( vowelStart - start ) / static_cast<float32>( kSampleRate ) );
+            const size_t rampSamples = static_cast<size_t>( 0.025f * static_cast<float32>( kSampleRate ) );
+            for ( size_t index = 0; index < rampSamples && vowelStart + index < inoutListSample.size(); ++index )
+            {
+                inoutListSample[vowelStart + index] *= static_cast<float32>( index ) / static_cast<float32>( rampSamples );
             }
         }
 
@@ -341,6 +388,43 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
                                       "reversed band" ) );
     SW_EXPECT_TRUE( broken._listViseme.empty() );
     SW_EXPECT_FALSE( copy.parseXML( R"(<VisemeTrack _frameRate="30"><_listViseme><item>sil</item></_listViseme><_listFrame><Frame>0</Frame></_listFrame><phonemes /></VisemeTrack>)", "broken" ) );
+}
+
+/**
+ * @brief [FacialAnimationTest] 자음 단서 — 무음 뒤 짧은 터짐은 파열음(PP), 영교차가 잦은 낮은 대역 잡음은 마찰음(FF)이다. 터짐 없이 서서히 열리는 같은 모음은 PP 가 아니다
+ * @details 낮은 통과 잡음은 높은 대역이 주가 아니라 대역 형태만으로는 유성으로 보여 잡음 포락선의 봉우리를 포먼트로 잴 뻔한다 — 마찰음 단서가 포먼트 비교를 끈다.
+ */
+SW_TEST_CASE( FacialAnimationTest, LipSyncConsonantCuesMarkPlosivesAndFricatives )
+{
+    using Internal = TestFacialAnimationInternal;
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    LipSyncSettings settings;
+    SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
+
+    // 0.3 초에 "pa", 1.0 초에 "a", 1.7 초부터 "f" — 각 구간 앞은 무음이다(프레임 9 · 30 의 첫 표본에서 시작).
+    vector<float32> listSample;
+    Internal::appendSilence( listSample, 0.3f );
+    Internal::appendPlosiveSyllable( listSample, true, 0.4f );
+    Internal::appendSilence( listSample, 0.3f );
+    Internal::appendPlosiveSyllable( listSample, false, 0.4f );
+    Internal::appendSilence( listSample, 0.3f );
+    Internal::appendLowpassNoise( listSample, 1200.0f, 0.4f );
+    VisemeTrack track;
+    LipSyncAnalyzer::analyze( listSample, Internal::kSampleRate, settings, track );
+
+    SW_EXPECT_TRUE( Internal::findLoudestViseme( track, 0.3f ) == hashed_string( "PP" ) );
+    SW_EXPECT_TRUE( Internal::findLoudestViseme( track, 0.5f ) == hashed_string( "AA" ) ); // 터짐 뒤 모음은 그대로 모음이다
+    SW_EXPECT_TRUE( Internal::findLoudestViseme( track, 1.0f ) != hashed_string( "PP" ) );
+    SW_EXPECT_TRUE( Internal::findLoudestViseme( track, 1.2f ) == hashed_string( "AA" ) );
+    SW_EXPECT_TRUE( Internal::findLoudestViseme( track, 1.9f ) == hashed_string( "FF" ) );
+
+    test::ScopedDefensiveTestLog expected( "a consonant cue on a vowel viseme is rejected" );
+    LipSyncSettings              broken;
+    SW_EXPECT_FALSE( broken.parseXML(
+        R"(<LipSyncSettings _fallbackViseme="AA"><_listViseme><LipSyncViseme _name="sil" /><LipSyncViseme _name="AA" _formantHz="730,1090" _consonant="Plosive" /></_listViseme></LipSyncSettings>)",
+        "vowel cue" ) );
+    SW_EXPECT_FALSE( broken.parseXML( R"(<LipSyncSettings _fallbackViseme="PP"><_listViseme><LipSyncViseme _name="sil" /><LipSyncViseme _name="PP" _consonant="Pop" /></_listViseme></LipSyncSettings>)",
+                                      "unknown cue" ) );
 }
 
 /**
@@ -556,6 +640,105 @@ SW_TEST_CASE( FacialAnimationTest, UnskinnedMorphMeshGetsARigidSkin )
     SW_EXPECT_EQUAL( 1u, pUnit->getMesh()->getSkinBoneCount() );
     SW_EXPECT_EQUAL( cube->getVertices().size(), pUnit->getMesh()->getVertices().size() );
     SW_EXPECT_EQUAL( 0, pUnit->findMorphTargetIndex( hashed_string( "bulge" ) ) );
+}
+
+/**
+ * @brief [FacialAnimationTest] Live Link Face 패킷 — 쓰고 푼 값이 같고, 다른 판 · 모자란 · 남는 패킷은 까닭과 함께 거절한다. 연결 표는 배치 표에 없는 채널을 오류로 본다
+ */
+SW_TEST_CASE( FacialAnimationTest, LiveLinkFacePacketsParseAgainstTheDataLayout )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    LiveLinkFaceLayout layout;
+    SW_ASSERT_TRUE( layout.loadFromResource( TestFacialAnimationInternal::kLiveLinkLayoutPath ) );
+    SW_ASSERT_EQUAL( size_t( 61 ), layout._listChannel.size() );
+    const int32 jawOpen = layout.findChannelIndex( hashed_string( "JawOpen" ) );
+    SW_ASSERT_TRUE( jawOpen >= 0 );
+
+    LiveLinkFaceFrame frame;
+    frame._deviceID    = "A1B2C3D4";
+    frame._subjectName = "iPhone";
+    frame._frameNumber = 1234;
+    frame._listValue.assign( layout._listChannel.size(), 0.0f );
+    frame._listValue[static_cast<size_t>( jawOpen )] = 0.75f;
+    vector<uint8> listByte;
+    LiveLinkFacePacket::write( frame, static_cast<uint8>( layout._packetVersion ), listByte );
+    LiveLinkFaceFrame parsed;
+    string            error;
+    SW_ASSERT_TRUE( LiveLinkFacePacket::parse( listByte.data(), listByte.size(), layout, parsed, error ) );
+    SW_EXPECT_TRUE( parsed._subjectName == "iPhone" );
+    SW_EXPECT_TRUE( parsed._deviceID == "A1B2C3D4" );
+    SW_EXPECT_EQUAL( 1234, parsed._frameNumber );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, parsed._listValue[static_cast<size_t>( jawOpen )], 0.0f );
+
+    // 다른 판 · 잘린 패킷 · 꼬리가 남는 패킷은 거절한다.
+    vector<uint8> listOther;
+    LiveLinkFacePacket::write( frame, static_cast<uint8>( layout._packetVersion + 1 ), listOther );
+    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listOther.data(), listOther.size(), layout, parsed, error ) );
+    SW_EXPECT_TRUE( error.find( "version" ) != string::npos );
+    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listByte.data(), listByte.size() - 2, layout, parsed, error ) );
+    SW_EXPECT_TRUE( parsed._listValue.empty() );
+    listOther = listByte;
+    listOther.push_back( 0 );
+    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listOther.data(), listOther.size(), layout, parsed, error ) );
+    frame._listValue.pop_back();
+    LiveLinkFacePacket::write( frame, static_cast<uint8>( layout._packetVersion ), listOther );
+    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listOther.data(), listOther.size(), layout, parsed, error ) );
+    SW_EXPECT_TRUE( error.find( "channels" ) != string::npos );
+
+    test::ScopedDefensiveTestLog expected( "a mapping naming a channel the layout lacks is rejected" );
+    LiveLinkFaceMapping          mapping;
+    LiveLinkFaceLayout           mappedLayout;
+    SW_EXPECT_FALSE( mapping.parseXML( R"(<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml"><_listExpression><LiveLinkFaceExpression _expression="Happy"><_listChannel><LiveLinkFaceChannelWeight _channel="Grin" /></_listChannel></LiveLinkFaceExpression></_listExpression></LiveLinkFaceMapping>)",
+                                       "unknown channel", mappedLayout ) );
+    SW_EXPECT_FALSE( mapping.parseXML( R"(<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml"><_listExpression><LiveLinkFaceExpression _expression="Happy"><_listChannel /></LiveLinkFaceExpression></_listExpression></LiveLinkFaceMapping>)",
+                                       "empty expression", mappedLayout ) );
+    SW_EXPECT_TRUE( mapping._listExpression.empty() );
+}
+
+/**
+ * @brief [FacialAnimationTest] Live Link Face 컴포넌트가 이 기계의 UDP 포트로 받은 패킷을 머리의 연결 표대로 표정에 건다 — 웃음 좌우 채널 0.8 → Happy 0.8 → smile 0.8
+ * @details 포트는 운영체제가 고르고(0) 이 기계의 송신만 받는다. 실제 Live Link Face 앱 대신 같은 형식으로 쓴 패킷을 보낸다.
+ */
+SW_TEST_CASE( FacialAnimationTest, LiveLinkFaceComponentDrivesExpressionsFromUDP )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    GameObjectManager         manager;
+    SkeletalMeshComponent*    pUnit = nullptr;
+    FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
+    SW_ASSERT_NOT_NULL( pFace );
+    LiveLinkFaceComponent* pLink = pFace->getOwner()->addComponent<LiveLinkFaceComponent>();
+    SW_ASSERT_NOT_NULL( pLink );
+    pLink->setMappingPath( "game/empty/models/testhead.livelinkface.xml" );
+    pLink->setPort( 0 );
+    pLink->setLoopbackOnly( true );
+    pLink->dispatchBeginPlay();
+    SW_ASSERT_TRUE( pLink->getBoundPort() != 0 );
+
+    LiveLinkFaceLayout layout;
+    SW_ASSERT_TRUE( layout.loadFromResource( TestFacialAnimationInternal::kLiveLinkLayoutPath ) );
+    LiveLinkFaceFrame frame;
+    frame._subjectName = "iPhone";
+    frame._listValue.assign( layout._listChannel.size(), 0.0f );
+    frame._listValue[static_cast<size_t>( layout.findChannelIndex( hashed_string( "MouthSmileLeft" ) ) )]  = 0.8f;
+    frame._listValue[static_cast<size_t>( layout.findChannelIndex( hashed_string( "MouthSmileRight" ) ) )] = 0.8f;
+    vector<uint8> listByte;
+    LiveLinkFacePacket::write( frame, static_cast<uint8>( layout._packetVersion ), listByte );
+    UDPNetTransport sender;
+    SW_ASSERT_TRUE( sender.open( 0, true ) );
+    SW_ASSERT_TRUE( sender.send( NetAddress::makeLoopback( pLink->getBoundPort() ), listByte.data(), static_cast<int32>( listByte.size() ) ) );
+
+    // 데이터그램이 도착할 때까지 틱한다(같은 기계라 곧 온다).
+    for ( uint32 attempt = 0; attempt < 200 && pLink->getAppliedPacketCount() == 0; ++attempt )
+    {
+        pLink->onTick( 0.0f );
+        if ( pLink->getAppliedPacketCount() == 0 )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    }
+    SW_ASSERT_EQUAL( 1u, pLink->getAppliedPacketCount() );
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 30.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, TestFacialAnimationInternal::getWeight( *pUnit, "smile" ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, TestFacialAnimationInternal::getWeight( *pUnit, "jawOpen" ), 0.0001f );
+    sender.close();
 }
 
 /**

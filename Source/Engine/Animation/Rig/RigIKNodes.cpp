@@ -698,8 +698,165 @@ namespace sw
             uint32        _pelvis{ 0 };
         };
 
+        /**
+         * @brief 전신 IK 입니다. 골반을 효과기(손 · 발 사슬의 목표)들이 끄는 쪽으로 옮긴 뒤 사슬마다 FABRIK 으로 끝을 목표에 붙입니다.
+         * @details 키는 `pelvis`, `chains`(`<item target="" weight="" match_rotation=""><bones><item>뿌리</item> … 끝</bones></item>` — weight 는 골반을 끄는 몫, 기본 1, 뿌리는 골반의 자손),
+         *          `pelvis_iterations`(기본 4), `max_pelvis_offset`(애니메이션 골반에서 옮길 수 있는 거리, 미터, 필수), `iterations` · `tolerance`(사슬 FABRIK)입니다.
+         *          골반 풀이: 반복마다 사슬 뿌리에서 목표까지가 사슬 길이를 넘는 만큼(닿지 않는 거리)을 목표 쪽 벡터로 모아 가중 평균만큼 골반을 옮긴다.
+         *          발 가중치를 크게 두면 발이 골반을 붙잡고, 손이 멀리 닿으려 하면 그만큼 몸이 기운다(언리얼 Full Body IK 의 골반 효과기 · 사슬 강성 자리).
+         *          회전 제한 · 척추 굽힘은 하지 않는다(필요하면 사슬에 척추 본을 넣는다).
+         */
+        class RigFullBodyIKNode final : public RigNode
+        {
+        public:
+            unique_ptr<RigNode> clone() const override { return make_unique<RigFullBodyIKNode>( *this ); }
+            const utf8*         getTypeName() const override { return "FullBodyIK"; }
+
+            [[nodiscard]] bool parse( RigXMLReader& reader ) override
+            {
+                bool bOk = reader.readName( "pelvis", _pelvisName, true ) && reader.readFloat( "max_pelvis_offset", _maxPelvisOffset, true ) &&
+                           reader.readUint( "pelvis_iterations", _pelvisIterationCount, false ) && reader.readUint( "iterations", _settings._iterationCount, false ) &&
+                           reader.readFloat( "tolerance", _settings._tolerance, false );
+                const RigXMLList chains = reader.readArray( "chains", true );
+                for ( size_t index = 0; bOk && chains.isValid() && index < chains.size(); ++index )
+                {
+                    RigXMLReader chainReader( chains.at( index ), reader.getContext() );
+                    Chain        chain{};
+                    bool         bMatch = false;
+                    bOk                 = chainReader.readNameList( "bones", chain._listBoneName, true ) && chainReader.readName( "target", chain._targetName, true ) &&
+                          chainReader.readFloat( "weight", chain._pelvisWeight, false ) && chainReader.readBool( "match_rotation", bMatch, false );
+                    bOk                    = chainReader.finish() && bOk;
+                    chain._bMatchRotation  = bMatch ? SW_TRUE : SW_FALSE;
+                    const bool bChainValid = chain._listBoneName.size() >= 2 && chain._pelvisWeight >= 0.0f;
+                    if ( bOk && bChainValid == false )
+                    {
+                        reader.fail( "each chain needs at least two 'bones' and a non-negative 'weight'" );
+                        return false;
+                    }
+                    _listChain.push_back( std::move( chain ) );
+                }
+                if ( bOk && _listChain.empty() )
+                {
+                    reader.fail( "'chains' must not be empty" );
+                    return false;
+                }
+                if ( bOk && _maxPelvisOffset < 0.0f )
+                {
+                    reader.fail( "'max_pelvis_offset' must not be negative" );
+                    return false;
+                }
+                return bOk && reader.isOk();
+            }
+
+            bool bind( const RigBindContext& context ) override
+            {
+                if ( context.findBone( _pelvisName, _pelvis ) == false )
+                    return false;
+                for ( Chain& chain : _listChain )
+                {
+                    if ( context.findBones( chain._listBoneName, chain._listBone, true ) == false || context.findTarget( chain._targetName, chain._target ) == false )
+                        return false;
+                    // 골반을 옮겨 사슬 뿌리가 따라와야 한다 — 뿌리가 골반의 자손이 아니면 골반 풀이가 그 사슬에 닿지 않는다.
+                    int32 ancestor = static_cast<int32>( chain._listBone[0] );
+                    while ( ancestor >= 0 && ancestor != static_cast<int32>( _pelvis ) )
+                    {
+                        ancestor = context._pSkeleton->getBone( static_cast<uint32>( ancestor ) )._parentIndex;
+                    }
+                    if ( ancestor < 0 || chain._listBone[0] == _pelvis )
+                    {
+                        SW_LOG_ERROR( "Rig '%#': FullBodyIK chain '%#' must start below pelvis '%#'", context._label, chain._listBoneName[0].c_str(), _pelvisName.c_str() );
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            void evaluate( RigEvaluateContext& context ) override
+            {
+                RigPoseBuffer& pose = *context._pPose;
+                // 사슬 길이는 지금 포즈의 마디 길이 합이다(애니메이션 스케일을 따른다).
+                for ( Chain& chain : _listChain )
+                {
+                    chain._length = 0.0f;
+                    for ( size_t index = 1; index < chain._listBone.size(); ++index )
+                    {
+                        chain._length += ( pose.getModelPosition( chain._listBone[index] ) - pose.getModelPosition( chain._listBone[index - 1] ) ).getLength();
+                    }
+                }
+                const float3 animatedPelvis = pose.getModelPosition( _pelvis );
+                for ( uint32 iteration = 0; iteration < _pelvisIterationCount; ++iteration )
+                {
+                    float3  pull{};
+                    float32 weightSum = 0.0f;
+                    for ( Chain& chain : _listChain )
+                    {
+                        quaternion unusedRotation{};
+                        chain._bHasTarget = context._pInstance->resolveTarget( chain._target, pose, chain._targetPosition, unusedRotation ) ? SW_TRUE : SW_FALSE;
+                        if ( chain._bHasTarget == SW_FALSE )
+                            continue;
+                        const float3  toTarget = context._pSpace->projectVector( chain._targetPosition - pose.getModelPosition( chain._listBone[0] ) );
+                        const float32 distance = toTarget.getLength();
+                        const float32 shortBy  = distance - chain._length;
+                        if ( shortBy > 0.0f && distance > MathUtil::kEpsilon )
+                            pull += toTarget * ( shortBy / distance * chain._pelvisWeight );
+                        weightSum += chain._pelvisWeight;
+                    }
+                    if ( weightSum <= 0.0f )
+                        break;
+                    const float3 step = pull / weightSum;
+                    if ( step.getLength() <= _settings._tolerance )
+                        break;
+                    float3        offset       = pose.getModelPosition( _pelvis ) + step - animatedPelvis;
+                    const float32 offsetLength = offset.getLength();
+                    if ( offsetLength > _maxPelvisOffset )
+                        offset = offset * ( _maxPelvisOffset / offsetLength );
+                    pose.setModelPosition( _pelvis, animatedPelvis + offset );
+                }
+                for ( Chain& chain : _listChain )
+                {
+                    quaternion targetRotation{};
+                    if ( context._pInstance->resolveTarget( chain._target, pose, chain._targetPosition, targetRotation ) == false )
+                        continue;
+                    (void)RigIKSolver::solveFabrik( pose, chain._listBone, chain._targetPosition, span<const RigJointLimit>{}, _settings, *context._pSpace );
+                    if ( chain._bMatchRotation == SW_TRUE )
+                        pose.setModelRotation( chain._listBone.back(), targetRotation );
+                }
+            }
+
+            void collectWrittenBones( vector<uint32>& inoutListBone ) const override
+            {
+                inoutListBone.push_back( _pelvis );
+                for ( const Chain& chain : _listChain )
+                {
+                    inoutListBone.insert( inoutListBone.end(), chain._listBone.begin(), chain._listBone.end() );
+                }
+            }
+
+        private:
+            struct Chain
+            {
+                vector<hashed_string> _listBoneName{};
+                vector<uint32>        _listBone{};
+                hashed_string         _targetName{};
+                float3                _targetPosition{};
+                float32               _pelvisWeight{ 1.0f };
+                float32               _length{ 0.0f };
+                uint32                _target{ 0 };
+                uint8                 _bMatchRotation{ SW_FALSE };
+                uint8                 _bHasTarget{ SW_FALSE };
+            };
+
+            vector<Chain>    _listChain{};
+            hashed_string    _pelvisName{};
+            RigChainSettings _settings{};
+            float32          _maxPelvisOffset{ 0.0f };
+            uint32           _pelvisIterationCount{ 4 };
+            uint32           _pelvis{ 0 };
+        };
+
         struct RigIKNodesFactory
         {
+            static unique_ptr<RigNode> createFullBody() { return make_unique<RigFullBodyIKNode>(); }
             static unique_ptr<RigNode> createTwoBone() { return make_unique<RigTwoBoneIKNode>(); }
             static unique_ptr<RigNode> createFabrik() { return createChain( true ); }
             static unique_ptr<RigNode> createCcd() { return createChain( false ); }
@@ -726,5 +883,6 @@ namespace sw
         registry.registerNode( "Aim", &RigIKNodesFactory::createAim );
         registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement );
         registry.registerNode( "StrideWarping", &RigIKNodesFactory::createStrideWarping );
+        registry.registerNode( "FullBodyIK", &RigIKNodesFactory::createFullBody );
     }
 } // namespace sw

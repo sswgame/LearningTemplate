@@ -70,9 +70,9 @@
           offset="0 0.18 0.18"/>
   </ItemVisual>
 
-  <!-- 활 쇼케이스(maps/bowshowcase.scene.xml) — 활과 메긴 화살이 같은 손 소켓에 붙고, 둘 다 페어드 애니메이션 역할(Bow · Arrow)을 프리팹 데이터로 든다. -->
+  <!-- 활 쇼케이스(maps/bowshowcase.scene.xml) — 활과 메긴 화살이 앞으로 뻗은 왼손 소켓(BowGrip)에 붙고, 둘 다 페어드 애니메이션 역할(Bow · Arrow)을 프리팹 데이터로 든다. -->
   <ItemVisual id="bow_long" tags="Weapon.Bow">
-    <Part name="Bow" kind="SocketPrefab" prefab="game/shooter3d/prefabs/props/bow.prefab.xml" socket="Gun"/>
-    <Part name="Arrow" kind="SocketPrefab" prefab="game/shooter3d/prefabs/props/arrow.prefab.xml" socket="Gun"/>
+    <Part name="Bow" kind="SocketPrefab" prefab="game/shooter3d/prefabs/props/bow.prefab.xml" socket="BowGrip"/>
+    <Part name="Arrow" kind="SocketPrefab" prefab="game/shooter3d/prefabs/props/arrow.prefab.xml" socket="BowGrip"/>
   </ItemVisual>
 </ItemVisualCatalog>

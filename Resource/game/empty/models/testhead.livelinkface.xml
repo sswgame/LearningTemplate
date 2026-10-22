@@ -1,0 +1,15 @@
+<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml">
+	<_listExpression>
+		<LiveLinkFaceExpression _expression="Happy">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthSmileLeft" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="MouthSmileRight" _scale="0.5" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="Surprised">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="JawOpen" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+	</_listExpression>
+</LiveLinkFaceMapping>
