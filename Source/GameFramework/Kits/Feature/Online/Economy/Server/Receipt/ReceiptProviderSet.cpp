@@ -4,12 +4,14 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 
@@ -23,9 +25,11 @@ namespace sw
         {
             static constexpr const utf8* kKindSteam  = "steam";
             static constexpr const utf8* kKindGoogle = "google";
+            static constexpr const utf8* kKindApple  = "apple";
 
             static constexpr const utf8* kKnownKeys[] = { "kind", "appId", "keySecretEnvironment", "packageName", "serviceAccountEnvironment",
-                                                          "baseUrl", "tokenUrl", "sandbox", "reportPollSeconds", "voidedPollSeconds" };
+                                                          "baseUrl", "tokenUrl", "sandbox", "reportPollSeconds", "voidedPollSeconds", "issuerId",
+                                                          "keyId", "bundleId", "signingKeySecretEnvironment", "rootCertificateFile", "historyPollSeconds" };
 
             static constexpr int64 kMillisecondsPerSecond = 1000;
             static constexpr int64 kMinPollSeconds        = 60;
@@ -57,6 +61,35 @@ namespace sw
                 if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
                 return make_unique<SteamReceiptValidator>( std::move( settings ), &httpClient.get() );
+            }
+
+            [[nodiscard]] static unique_ptr<IReceiptValidator> createApple( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
+            {
+                AppleReceiptSettings settings;
+                const bool           bNamed      = config._signingKeySecretEnvironment.empty() == false;
+                const bool           bSecretRead = bNamed && ServerSecret::read( config._signingKeySecretEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
+                if ( bSecretRead == false )
+                {
+                    outError = "the apple signing key environment variable '" + config._signingKeySecretEnvironment + "' is not set";
+                    return nullptr;
+                }
+                const string rootPath = NetSecurity::makeProjectPath( config._rootCertificateFile );
+                if ( FileUtil::readTextFile( rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
+                {
+                    outError = "cannot read the apple root certificate file " + rootPath;
+                    return nullptr;
+                }
+                settings._issuerID = config._issuerID;
+                settings._keyID    = config._keyID;
+                settings._bundleID = config._bundleID;
+                settings._baseURL  = config._bSandbox == SW_TRUE ? AppleReceiptSettings::kSandboxBaseURL : AppleReceiptSettings::kProductionBaseURL;
+                if ( config._baseURL.empty() == false )
+                    settings._baseURL = config._baseURL;
+                settings._bSandboxServer        = config._bSandbox;
+                settings._historyPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
+                if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
+                    return nullptr;
+                return make_unique<AppleReceiptValidator>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
             }
 
             [[nodiscard]] static unique_ptr<IReceiptValidator> createGoogle( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
@@ -136,12 +169,14 @@ namespace sw
             config._baseURL               = Internal::readText( entry, "baseUrl" );
             const bool bSteam             = config._kind == Internal::kKindSteam;
             const bool bGoogle            = config._kind == Internal::kKindGoogle;
-            if ( bSteam == false && bGoogle == false )
+            const bool bApple             = config._kind == Internal::kKindApple;
+            const bool bKnownKind         = bSteam || bGoogle || bApple;
+            if ( bKnownKind == false )
             {
-                outError = "receipt provider kind '" + config._kind + "' is unknown (steam, google)";
+                outError = "receipt provider kind '" + config._kind + "' is unknown (steam, google, apple)";
                 return false;
             }
-            const utf8* pPollKey = bSteam ? "reportPollSeconds" : "voidedPollSeconds";
+            const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
             if ( entry.readOptionalInto( pPollKey, config._pollSeconds ) == false || config._pollSeconds < Internal::kMinPollSeconds )
             {
                 outError = "receipt provider '" + config._kind + "' needs " + pPollKey + " of at least " + to_string( Internal::kMinPollSeconds );
@@ -161,6 +196,28 @@ namespace sw
                 if ( SteamReceiptValidator::isOrderID( config._appID ) == false || config._keySecretEnvironment.empty() )
                 {
                     outError = "receipt provider 'steam' needs a numeric appId and keySecretEnvironment";
+                    return false;
+                }
+            }
+            else if ( bApple )
+            {
+                config._issuerID                    = Internal::readText( entry, "issuerId" );
+                config._keyID                       = Internal::readText( entry, "keyId" );
+                config._bundleID                    = Internal::readText( entry, "bundleId" );
+                config._signingKeySecretEnvironment = Internal::readText( entry, "signingKeySecretEnvironment" );
+                config._rootCertificateFile         = Internal::readText( entry, "rootCertificateFile" );
+                bool bSandbox                       = false;
+                if ( entry.readOptionalInto( "sandbox", bSandbox ) == false )
+                {
+                    outError = "receipt provider 'apple' has a sandbox that is not true or false";
+                    return false;
+                }
+                config._bSandbox          = bSandbox ? SW_TRUE : SW_FALSE;
+                const bool bIdentityGiven = config._issuerID.empty() == false && config._keyID.empty() == false && config._bundleID.empty() == false;
+                const bool bFilesGiven    = config._signingKeySecretEnvironment.empty() == false && config._rootCertificateFile.empty() == false;
+                if ( bIdentityGiven == false || bFilesGiven == false )
+                {
+                    outError = "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
                     return false;
                 }
             }
@@ -193,8 +250,12 @@ namespace sw
                 shutdown();
                 return false;
             }
-            entry._provider = config._kind == Internal::kKindSteam ? Internal::createSteam( config, trustFile, *entry._httpClient, outError )
-                                                                   : Internal::createGoogle( config, trustFile, *entry._httpClient, outError );
+            if ( config._kind == Internal::kKindSteam )
+                entry._provider = Internal::createSteam( config, trustFile, *entry._httpClient, outError );
+            else if ( config._kind == Internal::kKindApple )
+                entry._provider = Internal::createApple( config, trustFile, *entry._httpClient, outError );
+            else
+                entry._provider = Internal::createGoogle( config, trustFile, *entry._httpClient, outError );
             if ( entry._provider == nullptr )
             {
                 outError = "receipt provider '" + config._kind + "': " + outError;

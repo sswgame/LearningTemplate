@@ -29,5 +29,9 @@ namespace sw
         [[nodiscard]] bool      verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override;
         [[nodiscard]] bool      createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override;
         [[nodiscard]] bool      signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) override;
+        [[nodiscard]] bool      verifyCertificateChain( const vector<vector<uint8>>& listChainDer, const string& trustedRootsPem, int64 unixSeconds, string_view leafRequiredOid,
+                                                        string_view issuerRequiredOid, NetPublicKey& outLeafPublicKey ) override;
+        [[nodiscard]] bool      createTestCertificateChain( int32 validDays, string_view leafOid, string_view issuerOid, vector<string>& outListChainPem,
+                                                            string& outLeafPrivateKeyPem ) override;
     };
 } // namespace sw

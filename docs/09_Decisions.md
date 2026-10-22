@@ -895,13 +895,15 @@
 - **매칭 권한은 모드마다 캐시 임대(10 초) 하나입니다**(2026-10-06). 순위표 점수는 서버만 제출하고, 표마다 허용한 경우(`_bClientSubmit`)에만 클라이언트가 제출합니다. 길드는 소셜 키트(`GF_Server_Social`) 안에 있습니다.
 - **외부 계정이나 비용이 드는 연동은 계약과 가짜 제공자까지만 둡니다**(2026-10-06). APNs, FCM 푸시와 Apple, Google, Steam 영수증 검증이 여기에 해당합니다. 금칙어 목록은 테스트용 낱말만 저장소에 둡니다.
   **2026-10-22 바꿈**: 실제 제공자 코드를 넣되 자격(키 · 인증서 · 서비스 계정)은 운영 비밀(환경 변수)에서만 읽고, 설정이 없으면 그 제공자를 만들지 않으며 만들다 실패하면 서버 기동이 실패합니다(가짜로 대신 뜨지 않는다).
-  확인은 가짜 HTTPS 서버로 합니다. 푸시는 FCM(`Provider/Fcm`), 영수증은 스팀 · 구글(`Provider/Steam` · `Provider/Google`), 로그인은 애플(`Provider/Apple`)이 들어갔고 APNs 와 애플 영수증은 남았습니다([온라인 키트 마감 계획](plans/OnlineKits.md) 4 절).
+  확인은 가짜 HTTPS 서버로 합니다. 푸시는 FCM(`Provider/Fcm`), 영수증은 스팀 · 구글 · 애플(`Provider/Steam` · `Provider/Google` · `Provider/Apple`), 로그인은 애플(`Provider/Apple`)이 들어갔고 APNs(HTTP/2 필요)만 남았습니다([온라인 키트 마감 계획](plans/OnlineKits.md) 4 절).
 - **서비스 계정 토큰과 JWT 는 기반 계층 하나입니다**(2026-10-22, OnlineKits G4 · H3). FCM 과 구글 영수증이 같은 서비스 계정 OAuth(JWT 베어러 교환)를 쓰므로 토큰 받기 · 캐시 · 만료 전 갱신은 `ServiceAccountTokenSource`(Base `Online/HTTP`)가,
   제공자마다 쓰는 HTTP 클라이언트와 TLS 컨텍스트 묶음은 `OwnedHTTPClient` 가, JWT 서명 · 확인(`JSONWebToken`)은 Base `Online/Security` 가 갖습니다. 키트끼리 include 하지 않으므로 제품 폴더가 서로를 베끼는 대신 기반에서 나눕니다.
 - **푸시 문구는 현지화 키이고 토픽은 지역마다입니다**(2026-10-22, G5). 라이브 이벤트 시작 알림은 `liveops.<지역>`(지역 제한이 없으면 `liveops.all`) 토픽으로 한 번 보냅니다. 문구가 현지화 키(`title_loc_key` · `loc-key`)라 기기가 자기 언어로 풀어서 언어 토픽은 두지 않습니다
   (결정 4 절의 "지역 · 언어 토픽"을 이것으로 바꿨습니다). 서버 여럿이 같은 창을 알리지 않도록 `liveops_push` 표를 "없어야 한다" 조건으로 써 쓴 서버만 보냅니다. 표는 창마다 하나뿐이라 지우지 않습니다.
 - **구글 환불은 RTDN 대신 무효 구매 목록(`voidedpurchases`) 조회입니다**(2026-10-22, H3). RTDN 은 Pub/Sub 구독 시설이 따로 있어야 하는데 같은 정보(환불 · 취소된 주문)를 목록 조회로 받을 수 있습니다. 스팀 환불은 `GetReport` 조회입니다.
   두 조회는 지난 성공 시각보다 이틀 앞에서 읽고 겹친 주문은 한 번만 알립니다(재시작 뒤 겹친 알림은 환불 회수가 거래 id 로 한 번만 처리합니다).
+- **애플 영수증은 서명된 거래(JWS)의 `x5c` 사슬을 애플 루트까지 확인합니다**(2026-10-22, H3). 보안 제공자(`INetSecurityProvider`)에 `verifyCertificateChain`(시각 · 신뢰 루트 · 리프와 발급 인증서의 확장 표지 OID)을 더했고, 사슬을 만드는 테스트가 쓰도록 `createTestCertificateChain` 도 뒀습니다.
+  애플 서버 알림(웹훅)은 바깥에서 받는 시설이 필요해 쓰지 않고 알림 기록 조회로 환불을 받습니다.
 - **애플 로그인의 연동 비밀은 암호화해서만 저장하고, 탈퇴한 계정의 토큰은 철회 대기열로 옮긴 뒤 철회합니다**(2026-10-22, A4). 철회에는 인가 코드를 교환해 받은 refresh token 이 필요합니다. 비밀은 `LoginSecretVault`(AES-256-GCM, 제공자 이름이 추가 인증 데이터)로 봉인해
   `login_account_secret` 에 쓰고, 탈퇴 정리 · 연동 해제가 `login_revoke_queue` 로 옮기며, 서비스가 주기마다 읽어 철회합니다. 철회에 실패하면(제공자에 닿지 못함) 항목이 남아 다시 합니다. 키가 없는 서버는 비밀을 버립니다(평문 저장 없음).
 - **접속 티켓을 내미는 클라이언트는 실행 인자가 아니라 로그인 뒤 코드가 엽니다**(2026-10-22, F5). `-gv_netConnectAddress` 는 자격 없이 붙는 길로 남고(티켓 서버는 거절), 티켓이 있는 클라이언트는 `GameNetSession::makeTicketClientParams` 의 인자로 `initialize` 합니다.

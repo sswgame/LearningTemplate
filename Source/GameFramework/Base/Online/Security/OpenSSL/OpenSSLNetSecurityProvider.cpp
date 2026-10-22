@@ -204,6 +204,20 @@ namespace sw
                 return bDone;
             }
 
+            static constexpr size_t kMaxChainLength = 8;
+
+            /** @brief 키에서 공개 구성 요소(RSA 의 n · e, EC P-256 의 x · y)를 꺼냅니다. 지원하지 않는 키면 false 입니다. */
+
+            /** @brief 인증서가 OID @p oid 의 확장을 가지면 true 입니다. */
+            static bool hasExtension( X509* pCertificate, string_view oid )
+            {
+                const string name( oid );
+                ASN1_OBJECT* pObject = OBJ_txt2obj( name.c_str(), 1 );
+                const bool   bHas    = pObject != nullptr && X509_get_ext_by_OBJ( pCertificate, pObject, -1 ) >= 0;
+                ASN1_OBJECT_free( pObject );
+                return bHas;
+            }
+
             [[nodiscard]] static bool readBignumParam( EVP_PKEY* pKey, const utf8* pName, vector<uint8>& outBytes )
             {
                 BIGNUM* pNumber = nullptr;
@@ -213,6 +227,81 @@ namespace sw
                 const bool bDone = BN_bn2bin( pNumber, outBytes.data() ) == static_cast<int32>( outBytes.size() );
                 BN_free( pNumber );
                 return bDone;
+            }
+
+            [[nodiscard]] static bool readPublicKey( EVP_PKEY* pKey, NetPublicKey& outPublicKey )
+            {
+                outPublicKey = NetPublicKey{};
+                if ( pKey == nullptr )
+                    return false;
+                if ( EVP_PKEY_is_a( pKey, "RSA" ) == 1 )
+                {
+                    outPublicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1Sha256;
+                    return readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_N, outPublicKey._modulus ) && readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_E, outPublicKey._exponent );
+                }
+                if ( EVP_PKEY_is_a( pKey, "EC" ) != 1 )
+                    return false;
+                outPublicKey._algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
+                uint8      arrPoint[1 + kEcCoordinateSize * 2];
+                size_t     pointSize = 0;
+                const bool bRead     = EVP_PKEY_get_octet_string_param( pKey, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, arrPoint, sizeof( arrPoint ), &pointSize ) == 1 &&
+                                   pointSize == sizeof( arrPoint ) && arrPoint[0] == 0x04;
+                if ( bRead == false )
+                    return false;
+                outPublicKey._x.assign( arrPoint + 1, arrPoint + 1 + kEcCoordinateSize );
+                outPublicKey._y.assign( arrPoint + 1 + kEcCoordinateSize, arrPoint + sizeof( arrPoint ) );
+                return true;
+            }
+
+            /**
+             * @brief 테스트 사슬의 인증서 하나를 만들어 서명합니다. @p pIssuer 가 없으면 자체 서명한 루트입니다. @p oid 가 비어 있지 않으면 그 OID 의 확장(값 ASN.1 NULL)을 넣습니다.
+             */
+            static X509* makeTestCertificate( EVP_PKEY* pSubjectKey, const utf8* pCommonName, X509* pIssuer, EVP_PKEY* pIssuerKey, bool bCertificateAuthority, string_view oid, int32 validDays,
+                                              int32 serial )
+            {
+                X509* pCertificate = X509_new();
+                bool  bMade        = pCertificate != nullptr && X509_set_version( pCertificate, X509_VERSION_3 ) == 1 && ASN1_INTEGER_set( X509_get_serialNumber( pCertificate ), serial ) == 1 &&
+                             X509_gmtime_adj( X509_getm_notBefore( pCertificate ), -60 ) != nullptr &&
+                             X509_gmtime_adj( X509_getm_notAfter( pCertificate ), validDays * 24 * 60 * 60 ) != nullptr && X509_set_pubkey( pCertificate, pSubjectKey ) == 1;
+                X509_NAME* pName = bMade ? X509_get_subject_name( pCertificate ) : nullptr;
+                bMade            = bMade && X509_NAME_add_entry_by_txt( pName, "CN", MBSTRING_UTF8, reinterpret_cast<const uint8*>( pCommonName ), -1, -1, 0 ) == 1 &&
+                        X509_set_issuer_name( pCertificate, pIssuer == nullptr ? pName : X509_get_subject_name( pIssuer ) ) == 1;
+                if ( bMade )
+                {
+                    X509V3_CTX extensionContext{};
+                    X509V3_set_ctx( &extensionContext, pIssuer == nullptr ? pCertificate : pIssuer, pCertificate, nullptr, nullptr, 0 );
+                    const ExtensionRow arrExtension[] = {
+                        {NID_basic_constraints,                     bCertificateAuthority ? "critical,CA:TRUE" : "critical,CA:FALSE"},
+                        {        NID_key_usage, bCertificateAuthority ? "critical,keyCertSign,cRLSign" : "critical,digitalSignature"}
+                    };
+                    for ( const ExtensionRow& row : arrExtension )
+                    {
+                        X509_EXTENSION* pExtension = X509V3_EXT_conf_nid( nullptr, &extensionContext, row._nid, row._pValue );
+                        bMade                      = bMade && pExtension != nullptr && X509_add_ext( pCertificate, pExtension, -1 ) == 1;
+                        X509_EXTENSION_free( pExtension );
+                    }
+                }
+                if ( bMade && oid.empty() == false )
+                {
+                    const string       oidText( oid );
+                    ASN1_OBJECT*       pObject = OBJ_txt2obj( oidText.c_str(), 1 );
+                    ASN1_OCTET_STRING* pValue  = ASN1_OCTET_STRING_new();
+                    const uint8        arrNull[2]{ 0x05, 0x00 };
+                    X509_EXTENSION*    pExtension = pObject != nullptr && pValue != nullptr && ASN1_OCTET_STRING_set( pValue, arrNull, sizeof( arrNull ) ) == 1
+                                                      ? X509_EXTENSION_create_by_OBJ( nullptr, pObject, 0, pValue )
+                                                      : nullptr;
+                    bMade                         = pExtension != nullptr && X509_add_ext( pCertificate, pExtension, -1 ) == 1;
+                    X509_EXTENSION_free( pExtension );
+                    ASN1_OCTET_STRING_free( pValue );
+                    ASN1_OBJECT_free( pObject );
+                }
+                bMade = bMade && X509_sign( pCertificate, pIssuer == nullptr ? pSubjectKey : pIssuerKey, EVP_sha256() ) > 0;
+                if ( bMade == false )
+                {
+                    X509_free( pCertificate );
+                    return nullptr;
+                }
+                return pCertificate;
             }
         };
 
@@ -838,5 +927,117 @@ namespace sw
         EVP_PKEY_free( pKey );
         BIO_free( pKeyBio );
         return bSigned;
+    }
+    bool OpenSSLNetSecurityProvider::verifyCertificateChain( const vector<vector<uint8>>& listChainDer, const string& trustedRootsPem, int64 unixSeconds, string_view leafRequiredOid,
+                                                             string_view issuerRequiredOid, NetPublicKey& outLeafPublicKey )
+    {
+        using Internal       = OpenSSLNetSecurityInternal;
+        outLeafPublicKey     = NetPublicKey{};
+        const bool bLengthOk = listChainDer.empty() == false && listChainDer.size() <= Internal::kMaxChainLength;
+        if ( bLengthOk == false )
+            return false;
+        vector<X509*> listCertificate;
+        bool          bParsed = true;
+        for ( const vector<uint8>& der : listChainDer )
+        {
+            const uint8* pCursor      = der.data();
+            X509*        pCertificate = der.empty() ? nullptr : d2i_X509( nullptr, &pCursor, static_cast<int32>( der.size() ) );
+            if ( pCertificate == nullptr )
+            {
+                bParsed = false;
+                break;
+            }
+            listCertificate.push_back( pCertificate );
+        }
+        vector<X509*>   listRoot     = Internal::readCertificates( trustedRootsPem );
+        X509_STORE*     pStore       = X509_STORE_new();
+        X509_STORE_CTX* pContext     = X509_STORE_CTX_new();
+        STACK_OF( X509 )* pUntrusted = sk_X509_new_null();
+        bool bVerified               = bParsed && listRoot.empty() == false && pStore != nullptr && pContext != nullptr && pUntrusted != nullptr;
+        for ( X509* pRoot : listRoot )
+        {
+            bVerified = bVerified && X509_STORE_add_cert( pStore, pRoot ) == 1;
+        }
+        for ( size_t index = 1; bVerified && index < listCertificate.size(); ++index )
+        {
+            bVerified = sk_X509_push( pUntrusted, listCertificate[index] ) > 0; // 스택은 소유하지 않는다
+        }
+        bVerified = bVerified && X509_STORE_CTX_init( pContext, pStore, listCertificate[0], pUntrusted ) == 1;
+        if ( bVerified )
+        {
+            X509_STORE_CTX_set_time( pContext, 0, static_cast<time_t>( unixSeconds ) );
+            bVerified = X509_verify_cert( pContext ) == 1;
+        }
+        if ( bVerified )
+        {
+            // 확인된 사슬의 둘째(리프를 발급한 인증서)가 표지를 가져야 한다 — 같은 루트가 발급한 다른 인증서로 서명을 꾸미지 못하게 한다.
+            STACK_OF( X509 )* pChain = X509_STORE_CTX_get0_chain( pContext );
+            X509*      pIssuer       = pChain != nullptr && sk_X509_num( pChain ) >= 2 ? sk_X509_value( pChain, 1 ) : nullptr;
+            const bool bLeafOk       = leafRequiredOid.empty() || Internal::hasExtension( listCertificate[0], leafRequiredOid );
+            const bool bIssuerOk     = issuerRequiredOid.empty() || ( pIssuer != nullptr && Internal::hasExtension( pIssuer, issuerRequiredOid ) );
+            bVerified                = bLeafOk && bIssuerOk && Internal::readPublicKey( X509_get0_pubkey( listCertificate[0] ), outLeafPublicKey );
+        }
+        ERR_clear_error(); // 틀린 사슬은 정상 흐름이다 — 오류 큐를 남기지 않는다
+        sk_X509_free( pUntrusted );
+        X509_STORE_CTX_free( pContext );
+        X509_STORE_free( pStore );
+        for ( X509* pCertificate : listCertificate )
+        {
+            X509_free( pCertificate );
+        }
+        for ( X509* pRoot : listRoot )
+        {
+            X509_free( pRoot );
+        }
+        return bVerified;
+    }
+
+    bool OpenSSLNetSecurityProvider::createTestCertificateChain( int32 validDays, string_view leafOid, string_view issuerOid, vector<string>& outListChainPem, string& outLeafPrivateKeyPem )
+    {
+        using Internal = OpenSSLNetSecurityInternal;
+        outListChainPem.clear();
+        outLeafPrivateKeyPem.clear();
+        utf8      arrCurve[] = "P-256";
+        EVP_PKEY* pRootKey   = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
+        EVP_PKEY* pIssuerKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
+        EVP_PKEY* pLeafKey   = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
+        X509*     pRoot      = pRootKey != nullptr ? Internal::makeTestCertificate( pRootKey, "Test Root CA", nullptr, nullptr, true, {}, validDays, 1 ) : nullptr;
+        X509*     pIssuer    = pRoot != nullptr && pIssuerKey != nullptr ? Internal::makeTestCertificate( pIssuerKey, "Test Intermediate CA", pRoot, pRootKey, true, issuerOid, validDays, 2 ) : nullptr;
+        X509*     pLeaf      = pIssuer != nullptr && pLeafKey != nullptr ? Internal::makeTestCertificate( pLeafKey, "Test Leaf", pIssuer, pIssuerKey, false, leafOid, validDays, 3 ) : nullptr;
+        bool      bMade      = pLeaf != nullptr;
+        BIO*      pKeyBio    = bMade ? BIO_new( BIO_s_mem() ) : nullptr;
+        bMade                = bMade && pKeyBio != nullptr && PEM_write_bio_PrivateKey( pKeyBio, pLeafKey, nullptr, nullptr, 0, nullptr, nullptr ) == 1;
+        if ( bMade )
+        {
+            BUF_MEM* pKeyBuffer = nullptr;
+            BIO_get_mem_ptr( pKeyBio, &pKeyBuffer );
+            outLeafPrivateKeyPem.assign( pKeyBuffer->data, pKeyBuffer->length );
+            for ( X509* pCertificate : { pLeaf, pIssuer, pRoot } )
+            {
+                BIO* pCertificateBio = BIO_new( BIO_s_mem() );
+                bMade                = bMade && pCertificateBio != nullptr && PEM_write_bio_X509( pCertificateBio, pCertificate ) == 1;
+                if ( bMade )
+                {
+                    BUF_MEM* pCertificateBuffer = nullptr;
+                    BIO_get_mem_ptr( pCertificateBio, &pCertificateBuffer );
+                    outListChainPem.emplace_back( pCertificateBuffer->data, pCertificateBuffer->length );
+                }
+                BIO_free( pCertificateBio );
+            }
+        }
+        if ( bMade == false )
+        {
+            outListChainPem.clear();
+            outLeafPrivateKeyPem.clear();
+            SW_LOG_ERROR( "Could not create a test certificate chain: %#", Internal::takeErrorText().c_str() );
+        }
+        BIO_free( pKeyBio );
+        X509_free( pLeaf );
+        X509_free( pIssuer );
+        X509_free( pRoot );
+        EVP_PKEY_free( pLeafKey );
+        EVP_PKEY_free( pIssuerKey );
+        EVP_PKEY_free( pRootKey );
+        return bMade;
     }
 } // namespace sw

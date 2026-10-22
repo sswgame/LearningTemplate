@@ -41,6 +41,10 @@ namespace sw
         const string&         getKeyID() const { return _keyID; }
         /** @brief 본문의 문자열 클레임을 읽습니다. 없거나 문자열이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool findText( string_view claim, string& outValue ) const;
+        /** @brief 본문의 중첩된 문자열 클레임을 점 경로(`data.signedTransactionInfo`)로 읽습니다. 없거나 문자열이 아니면 false 를 반환합니다. */
+        [[nodiscard]] bool findTextPath( string_view path, string& outValue ) const;
+        /** @brief 머리의 `x5c`(표준 base64 DER 인증서 배열 — 리프가 먼저)를 풀어 둔 것입니다. 머리에 없으면 비어 있습니다. 사슬을 믿을지는 부르는 쪽이 정한다(`INetSecurityProvider::verifyCertificateChain`). */
+        const vector<vector<uint8>>& getCertificateChain() const { return _listCertificateDer; }
         /** @brief 본문의 정수 클레임(초 단위인 exp, iat)을 읽습니다. 없거나 숫자가 아니면 false 를 반환합니다. */
         [[nodiscard]] bool findInteger( string_view claim, int64& outValue ) const;
         /** @brief `aud` 가 @p audience 와 같거나 그것을 담은 배열이면 true 입니다. */
@@ -50,6 +54,7 @@ namespace sw
 
     private:
         unique_ptr<JSONDocument> _payload;
+        vector<vector<uint8>>    _listCertificateDer;
         vector<uint8>            _signatureBytes;
         string                   _signingInput;
         string                   _keyID;

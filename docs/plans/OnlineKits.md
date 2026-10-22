@@ -39,7 +39,7 @@
 | G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 공통 HTTP 클라이언트에 HTTP/2 가 들어온 뒤) |
 | H1 | 환불과 결제 취소 알림을 받아 `refund.revoke` 로 회수 | 없음 | 끝남(빌드 미확인) |
 | H2 | 유상 재화 청약철회 규칙 | H1 | 끝남(빌드 미확인) |
-| H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 일부(스팀 · 구글 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. 애플은 응답 JWS 의 `x5c` 사슬 확인이 보안 제공자에 생긴 뒤) |
+| H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 끝남(2026-10-22 Debug 빌드 · 테스트 통과. 애플은 가짜 앱 스토어 서버와 테스트용 인증서 사슬로만 확인했다 — 실제 앱 스토어 응답 확인은 iOS 빌드가 생길 때) |
 | I1 | 인스턴스 아이템(내구도, 강화) | 없음 | 끝남(빌드 미확인) |
 | I2 | 새 우편 알림(`mail_notice` 를 우편함 키트가 가져가 알림, 중계, 오프라인 푸시로 보냄) | 없음 | 끝남(빌드 미확인) |
 | I7 | 잔액 변경 알림(GM 지급과 환불 회수처럼 클라이언트 요청 없이 움직인 잔액) | I2 | 끝남(빌드 미확인) |
@@ -100,17 +100,21 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작의 토
 
 ### H3
 
-스팀 · 구글 영수증 제공자. 자격은 환경 변수에서만 읽고(`ReceiptProviderSet`, 키트 옵션 `receiptProvidersFile` · `receiptTrustFile`), 없으면 서버 기동이 실패한다.
-설정 파일은 `{"providers":[{"kind":"steam","appId":"480","keySecretEnvironment":"<변수>","sandbox":false,"reportPollSeconds":3600},{"kind":"google","packageName":"<패키지>","serviceAccountEnvironment":"<변수>","voidedPollSeconds":3600}]}` 이다.
+스팀 · 구글 · 애플 영수증 제공자. 자격은 환경 변수에서만 읽고(`ReceiptProviderSet`, 키트 옵션 `receiptProvidersFile` · `receiptTrustFile`), 없으면 서버 기동이 실패한다.
+설정 파일은 `{"providers":[{"kind":"steam","appId":"480","keySecretEnvironment":"<변수>","sandbox":false,"reportPollSeconds":3600},{"kind":"google","packageName":"<패키지>","serviceAccountEnvironment":"<변수>","voidedPollSeconds":3600},{"kind":"apple","issuerId":"<발급자 id>","keyId":"<키 id>","bundleId":"<번들>","signingKeySecretEnvironment":"<변수>","rootCertificateFile":"<Apple Root CA - G3 PEM>","historyPollSeconds":3600}]}` 이다.
 
 - **스팀**(`Provider/Steam`): 영수증은 주문 번호(십진 숫자)다. `ISteamMicroTxn/QueryTxn` 의 `Succeeded` 는 지급, 환불류 상태(`Refunded` · `PartialRefund` · `Chargedback` · 의심 둘 · `RefundedFraudulent`)는 환불, `Init` · `Approved` 는 다시 시도, 그 밖은 거절.
   키 오류(401 · 403)는 플레이어 탓이 아니라 다시 시도로 끝내고 오류를 남긴다. 상품 id 는 첫 항목의 `itemid` 라 상점 카탈로그의 상품 id 를 그 숫자로 적는다. 환불은 `GetReport` 를 주기 조회해 한 번씩 알린다.
   `sandbox` 면 `ISteamMicroTxnSandbox` 를 쓰고 결과가 샌드박스 결제로 표시된다(서비스가 스테이징 서버가 아니면 거절한다).
 - **구글**(`Provider/Google`): 영수증은 `<상품 id>|<구매 토큰>` 이다. 서비스 계정 OAuth 토큰으로 `purchases.products.get` 을 확인한다(`purchaseState` 0 지급 · 1 환불 · 2 다시 시도, `purchaseType` 0 은 테스트 구매).
   유효한 구매는 확인 상태가 0 이면 `:acknowledge` 를 한 번 보낸다(3 일 안에 확인하지 않으면 구글이 환불한다). 환불은 RTDN 대신 `voidedpurchases` 를 조회한다(4절의 "RTDN 구독"을 이것으로 바꿨다 — Pub/Sub 구독 시설이 따로 필요하다).
-- **애플**: 남음. 응답 JWS 의 `x5c` 사슬을 애플 루트까지 확인해야 하는데 보안 제공자(`INetSecurityProvider`)에 인증서 사슬 확인이 없다. 사슬 확인 API + 사슬을 만드는 테스트 도구가 먼저이고,
-  iOS 빌드가 없어 App Store Server API(`/inApps/v1/transactions/{id}`, 알림 기록 조회)의 실제 응답으로 확인할 수 없다.
-- **함정**: 두 제공자의 환불 조회는 지난 성공 시각보다 이틀 앞에서 읽고(겹친 주문은 한 번만 알림) 한 번에 1000 건까지 읽는다 — 한 주기에 1000 건을 넘는 환불은 경고를 남기고 겹친 다음 조회에서만 닿을 수 있다. 환불 알림을 재시작 뒤 다시 받아도 환불 회수가 거래 id 로 한 번만 처리한다.
+- **애플**(`Provider/Apple`): 영수증은 StoreKit 2 거래 id(십진 숫자)다. App Store Server API 에 서버가 만든 ES256 JWT(`iss` 발급자 id, `aud` `appstoreconnect-v1`, `bid` 번들, 수명 20 분)로 `GET /inApps/v1/transactions/{id}` 를 불러
+  `signedTransactionInfo`(JWS)를 받고, 머리의 `x5c` 사슬을 설정의 애플 루트(`rootCertificateFile`)까지 이어 확인한다(`INetSecurityProvider::verifyCertificateChain` — 리프와 그 발급 인증서의 애플 확장 표지 OID 포함)한 뒤 리프 키로 서명을 확인한다.
+  번들 id · 거래 id 가 요청과 같아야 하고, `revocationDate` 가 있으면 환불, `environment` 가 Sandbox 면 샌드박스 결제다. 환불은 서버 알림(웹훅) 대신 `POST /inApps/v1/notification/history`(종류 `REFUND`)를 주기 조회해 쪽(`hasMore` · `paginationToken`)을 열 쪽까지 읽는다.
+  보안 제공자에 사슬 확인(`verifyCertificateChain`)과 테스트용 사슬 만들기(`createTestCertificateChain`)를 더했다(기본 구현은 false — 지원하지 않음). `JSONWebToken` 은 머리의 `x5c` 와 중첩 문자열 클레임을 읽는다.
+- **애플 함정**: 응답의 모양(`signedTransactionInfo`, `notificationHistory`, `data.signedTransactionInfo`)과 애플 확장 표지 OID(`1.2.840.113635.100.6.11.1` 리프, `1.2.840.113635.100.6.2.1` 발급 인증서)는 애플 문서를 보고 쓴 것이고 실제 앱 스토어로 확인하지 못했다 —
+  iOS 빌드가 생기면 샌드박스 서버(`sandbox: true`)로 한 번 돌려 본다. 샌드박스 결제를 운영 서버에 물으면 404 라 `sandbox` 설정으로 서버를 가른다(운영에서 404 이면 샌드박스로 다시 묻는 길은 두지 않았다). 알림 기록 조회 기간은 애플 상한(180 일)보다 짧은 이틀이다.
+- **함정**: 스팀 · 구글의 환불 조회는 지난 성공 시각보다 이틀 앞에서 읽고(겹친 주문은 한 번만 알림) 한 번에 1000 건까지 읽는다 — 한 주기에 1000 건을 넘는 환불은 경고를 남기고 겹친 다음 조회에서만 닿을 수 있다. 환불 알림을 재시작 뒤 다시 받아도 환불 회수가 거래 id 로 한 번만 처리한다.
   스팀은 주문 번호만으로 영수증이 되므로 주문을 연 계정과 올린 계정이 같은지 이 제공자는 모른다(주문 번호는 게임 서버가 `InitTxn` 때 만든 비밀에 가까운 값이고, 지급은 거래 id 로 한 번뿐이다).
 
 ### B2
