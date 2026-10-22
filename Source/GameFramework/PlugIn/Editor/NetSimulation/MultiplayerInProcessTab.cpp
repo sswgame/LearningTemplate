@@ -4,6 +4,7 @@
 
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 #include "GameFramework/PlugIn/Editor/NetSimulation/EditorNetSimSession.h"
@@ -39,7 +40,9 @@ namespace sw::editor
                 drawStartControls( listGame );
                 return;
             }
-            if ( ImGui::Button( "Stop" ) )
+            const bool bStopClicked = ImGui::Button( "Stop" );
+            EditorSelfTestMarks::note( "multiplayer.inprocess.stop" );
+            if ( bStopClicked )
             {
                 _session.stop();
                 return;
@@ -69,7 +72,9 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             ImGui::SliderInt( "Clients", &_clientCount, 1, EditorNetSimSession::kMaxClients );
-            if ( ImGui::Button( "Start in process" ) )
+            const bool bStartClicked = ImGui::Button( "Start in process" );
+            EditorSelfTestMarks::note( "multiplayer.inprocess.start" );
+            if ( bStartClicked )
             {
                 EditorNetSimSettings settings;
                 settings._gameName    = listGame[static_cast<size_t>( _gameIndex )]._name;
@@ -105,6 +110,8 @@ namespace sw::editor
                 {
                     // 카메라 끌기는 초점 월드에서만 받는다 — 다른 칸을 클릭하면 먼저 초점이 옮겨 간다.
                     pViewport->draw( float2{ width, height }, bFocused );
+                    if ( EditorSelfTestMarks::isEnabled() )
+                        EditorSelfTestMarks::note( ( "multiplayer.inprocess.world" + to_string( worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
                     if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) && bFocused == false )
                         (void)_session.setInputFocus( worldIndex );
                 }

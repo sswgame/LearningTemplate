@@ -87,12 +87,31 @@ namespace sw
             outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
         if ( pawn.getUpAction().empty() == false && ( pUI == nullptr || pUI->getInputRouter().isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
             outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
+        // 서브틱 입력: 프레임 시작의 조종 회전과 프레임 전체의 시선 값을 보관한다. 발동 버튼이 눌린 순간의 회전은 이 둘로 만든다.
+        const float32 startYaw   = getControlYaw();
+        const float32 startPitch = getControlPitch();
+        float2        look{};
         if ( bLook && pawn.getLookAction().empty() == false )
         {
-            const float2  look  = inputMap.getVector2D( pawn.getLookAction() );
-            const float32 yaw   = getControlYaw() + look._x * _lookSensitivity;
-            const float32 pitch = MathUtil::clamp( getControlPitch() - look._y * _lookSensitivity, -pawn.getMaxPitch(), pawn.getMaxPitch() );
+            look                = inputMap.getVector2D( pawn.getLookAction() );
+            const float32 yaw   = startYaw + look._x * _lookSensitivity;
+            const float32 pitch = MathUtil::clamp( startPitch - look._y * _lookSensitivity, -pawn.getMaxPitch(), pawn.getMaxPitch() );
             setControlRotation( yaw, pitch );
+        }
+        const hashed_string& triggerLookButton = pawn.getTriggerLookButton();
+        if ( triggerLookButton.empty() == false && wasActionTriggeredForGame( inputMap, pUI, triggerLookButton ) )
+        {
+            // 누름이 이벤트로 온 바인딩만 순간을 안다(축 임계 · 길게 누름은 없다) — 없으면 프레임 끝의 조종 회전이다.
+            float32           triggerYaw   = getControlYaw();
+            float32           triggerPitch = getControlPitch();
+            InputPressInstant instant{};
+            if ( inputMap.tryGetActionPressInstant( inputMap.getActionHandle( triggerLookButton ), instant ) )
+            {
+                const float2 fraction = instant.computeLookFraction( input.getFrameLookDelta() );
+                triggerYaw            = startYaw + look._x * _lookSensitivity * fraction._x;
+                triggerPitch          = MathUtil::clamp( startPitch - look._y * _lookSensitivity * fraction._y, -pawn.getMaxPitch(), pawn.getMaxPitch() );
+            }
+            outIntent.setTriggerLook( triggerYaw, triggerPitch );
         }
         const vector<hashed_string>& listButton  = pawn.getButtonNames();
         const size_t                 buttonCount = MathUtil::min( listButton.size(), static_cast<size_t>( ControlIntent::kButtonCount ) );

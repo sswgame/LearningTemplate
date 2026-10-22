@@ -40,7 +40,7 @@ namespace sw
      */
     struct NetKitWireVersion
     {
-        static constexpr uint32 kClientServer    = 5; ///< 버전 5부터 입력 메시지의 보던 틱이 메시지마다가 아니라 입력 항목마다의 스탬프다(4: 소유자 상태 칸)
+        static constexpr uint32 kClientServer    = 6; ///< 버전 6부터 의도(`ControlIntent::write`) 끝에 발동 순간 시선 필드(선택)가 붙는다(5: 입력 메시지의 보던 틱이 메시지마다가 아니라 입력 항목마다의 스탬프, 4: 소유자 상태 필드)
         static constexpr uint32 kLockstep        = 3;
         static constexpr uint32 kTurnRelay       = 3; ///< 버전 3부터 행동 상한이 8 KB이다
         static constexpr uint32 kMMO             = 4; ///< 버전 4부터 갱신 확인 메시지(옛 `kUpdateAck`)가 없고 연결 계층의 전달 통지로 판정한다

@@ -42,6 +42,7 @@ namespace sw
         , _lookAction{ "Look" }
         , _upAction{}
         , _inputLayer{}
+        , _triggerLookButton{}
         , _aiControllerPrefab{}
         , _maxPitch{ 1.4f }
         , _autoPossess{ PawnAutoPossess::None }

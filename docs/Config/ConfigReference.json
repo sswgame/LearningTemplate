@@ -4458,6 +4458,38 @@
    "description": "`-cook-packs` · `-cook-all` 이 팩을 쓸 폴더"
   },
   {
+   "name": "PACK_BUILD",
+   "spellings": [
+    "pack-build"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "`-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 목록을 남기지 않는다(패치를 적용할 수 없는 빌드). `-make-patch` 에서는 새 빌드 번호다"
+  },
+  {
+   "name": "MAKE_PATCH",
+   "spellings": [
+    "make-patch"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base=<파일>.packbuild.xml`)의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `-patch-dir` 에 만들고 끝낸다. 새 빌드 번호는 `-pack-build` 다"
+  },
+  {
+   "name": "PATCH_BASE",
+   "spellings": [
+    "patch-base"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "`-make-patch` 의 이전 빌드 내용 목록 파일"
+  },
+  {
+   "name": "PATCH_DIR",
+   "spellings": [
+    "patch-dir"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "`-make-patch` 가 패치를 쓸 폴더"
+  },
+  {
    "name": "VERIFY_SHADERS",
    "spellings": [
     "verify-shaders"

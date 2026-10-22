@@ -50,6 +50,19 @@ namespace sw
         float2  _lookDeltaBefore{};     ///< 프레임 시작부터 누름 직전까지의 마우스 원시 이동량(`RawInputEvent` 의 원시 델타 합)
         float32 _frameFraction{ 0.0f }; ///< 0 = 프레임 창의 시작, 1 = 이번 `beginFrame`
         int64   _timeMicroseconds{ 0 }; ///< 누름이 큐에 들어온 시각(단조 시계). 가상 입력이면 0 이다
+
+        /**
+         * @brief 프레임 전체의 시선 입력(`getFrameLookDelta`) 중 누름 직전까지의 비율을 축마다 줍니다.
+         * @details 시선 액션의 값(감도 · 반전을 거친 것)에 곱하면 그 순간까지의 시선 이동이 된다. 원시 이동량 자체에 감도를 다시 곱하지 않으므로 액션의 가공이 그대로 남는다.
+         *          프레임 안에서 이동 방향이 오갔으면 비율이 0..1 밖일 수 있다(앞에서 크게 돌렸다가 되돌린 경우) — 가공이 선형이라 그대로 곱해도 맞다.
+         *          프레임 전체 이동량이 그 축에서 0 이면(스틱처럼 이벤트가 아닌 시선) 비율은 1 이다 — 폴링한 값은 프레임 끝의 것이다.
+         */
+        float2 computeLookFraction( const float2& frameLookDelta ) const
+        {
+            const float32 fractionX = frameLookDelta._x != 0.0f ? _lookDeltaBefore._x / frameLookDelta._x : 1.0f;
+            const float32 fractionY = frameLookDelta._y != 0.0f ? _lookDeltaBefore._y / frameLookDelta._y : 1.0f;
+            return float2{ fractionX, fractionY };
+        }
     };
 } // namespace sw
 

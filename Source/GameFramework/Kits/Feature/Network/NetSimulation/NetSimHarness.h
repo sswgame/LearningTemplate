@@ -28,6 +28,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetMessage.h"
@@ -201,6 +202,22 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 월드 뷰포트가 처음 잡을 오빗 카메라와 바닥 크기입니다(`INetSimGame::describePreviewFraming`).
+     * @details 각은 라디안이고 피치는 카메라가 대상 위로 올라가는 쪽이 +입니다(뷰포트의 오빗과 같다).
+     */
+    struct NetSimPreviewFraming
+    {
+        float3  _target{ 0.0f, 0.0f, 0.0f }; ///< 바라보는 점
+        float32 _distance{ 10.0f };          ///< 대상에서 카메라까지의 거리
+        float32 _yaw{ 0.0f };
+        float32 _pitch{ 0.6f };
+        float32 _floorSize{ 10.0f }; ///< 뷰포트가 깔아 주는 바닥 한 변(미터). 월드 내용이 바닥을 가지면 0 으로 두어 깔지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class INetSimGame
      * @brief 하니스가 월드를 만들 때마다 호출하는 게임입니다. 월드의 내용(오브젝트와 씬 문서)을 만들고 그 월드의 세션을 반환합니다.
      */
@@ -218,6 +235,16 @@ namespace sw
          * @details 서버 월드를 먼저 만들고, 클라이언트 월드는 `addClient` 때 만든다. 늦은 참가도 같은 경로를 쓴다. nullptr 을 반환하면 세션 없이 돈다.
          */
         virtual unique_ptr<INetSimSession> createSession( NetSimWorld& world ) = 0;
+
+        /**
+         * @brief 에디터의 월드 뷰포트가 처음 잡을 카메라와 바닥을 게임이 알립니다. 월드 내용을 아는 쪽이 정하므로 뷰포트는 게임 크기를 짐작하지 않는다.
+         * @return 알리면 true. 알리면 뷰포트가 이 카메라로 잡고 조명 환경(방향광 · 하늘 · `_floorSize` 바닥)을 월드 씬에 더한다. 기본(false)은 뷰포트의 기본 카메라 그대로이고 환경을 더하지 않는다(게임이 자기 조명을 가진다). 화면 없는 하니스(테스트 · 자동화)는 부르지 않는다.
+         */
+        virtual bool describePreviewFraming( NetSimPreviewFraming& outFraming ) const
+        {
+            (void)outFraming;
+            return false;
+        }
     };
 } // namespace sw
 

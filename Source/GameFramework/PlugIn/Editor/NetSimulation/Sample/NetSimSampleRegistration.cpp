@@ -1,0 +1,23 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
+#include "GameFramework/PlugIn/Editor/NetSimulation/Sample/NetSimSampleGame.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        /**
+         * @brief 이 확장 모듈이 로드된 동안 본보기 게임(`NetSimSampleGame`)을 한 프로세스 재생의 게임 목록에 등록합니다.
+         * @details 목록의 항목은 모듈이 언로드되기 전에 해제해야 한다(`NetSimGameRegistry` 머리말). 등록과 해제를 한 객체의 생성자 · 소멸자에 두어 한쪽만 하는 경로가 없다.
+         *          실제 게임은 자기 모듈에서 같은 구조로 등록한다.
+         */
+        struct NetSimSampleRegistrar
+        {
+            NetSimSampleRegistrar() { (void)NetSimGameRegistry::registerGame( NetSimSampleGame::kName, &NetSimSampleGame::create ); }
+            ~NetSimSampleRegistrar() { (void)NetSimGameRegistry::unregisterGame( NetSimSampleGame::kName ); }
+        };
+
+        const NetSimSampleRegistrar s_netSimSampleRegistrar;
+    } // namespace
+} // namespace sw::editor

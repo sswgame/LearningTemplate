@@ -1,6 +1,6 @@
 # 패치 · 델타 업데이트 배포 구조
 
-> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 3/6
+> 상태: 구현중 · 선행: 없음 · 영역: network · 옛번호: G-16 · 진행: 5/6
 
 출시 뒤 바뀐 리소스만 내려받게 하는 팩 단위 차분 배포와 빌드 버전 관리가 없었다. 크래시 컨텍스트와 텔레메트리 코드는 있다. 스토어 제공자 연동(`StoreProviderIntegration`, 후보)은 이 일에 들지 않는다 — 내려받기는 런처나 스토어가 하고, 엔진은 받은 패치를 올바른 순서로 얹는다.
 
@@ -10,6 +10,7 @@
 - **차이 셈**: 두 빌드의 내용 목록(경로 + 압축 전 내용 해시, `PackContentEntry`)에서 `PackPatchUtil::computeDelta` 가 바뀐 경로 · 지운 경로를 사전순으로 낸다. 같은 입력이면 같은 패치다. 한 목록에 같은 경로가 둘이면 거절한다.
 - **얹기**: 런타임은 패치 팩을 기본 팩보다 높은 우선순위로 `ResourcePakManager::mountPatchPack( 팩, 우선순위, 지움 목록 )` 한다. 바뀐 파일은 우선순위 스택이 덮고, 지운 경로는 그 패치보다 아래 팩에서 찾지 않는다(`hasFile` · `readFile` · 폴더 나열 모두). 패치를 내리면 그대로 되돌아간다. 낱개 파일은 가리지 않는다 — 패치는 팩만 읽는 배포 구성의 일이다.
 - **버전 관리**: 빌드 번호는 글 그대로 비교한다(대소 비교 없음). 설치된 빌드에서 시작하는 패치가 정확히 하나씩 이어져 목표 빌드에 닿아야 한다(`PackPatchUtil::orderPatchChain`) — 끊김 · 갈림 · 고리는 오류로 멈춘다(폴백 없음). 사슬 순서대로 우선순위를 올려 마운트하면 뒤 패치가 앞 패치를 덮는다.
+  시작 마운트는 목표 빌드를 따로 받지 않고 폴더의 패치가 이어지는 끝까지 얹는다(`orderPatchChainToLatest`). 설치된 빌드는 같은 폴더의 `base.packbuild.xml` 이 밝히고, 사슬 밖에 남은 패치가 있으면 조용히 버리지 않고 실패한다.
 - **무결성**: 팩 항목 CRC32(`PackFlag::HasCrc32`)가 이미 있다. 목록 파일의 서명과 팩 전체 해시는 배포 경로(런처 · CDN)가 정해질 때 정한다(P6).
 
 ## 2. 단위
@@ -19,11 +20,13 @@
 | P1 | 설계(이 문서) | 끝남 |
 | P2 | `Engine/Resource/Pack/PackPatch.h` — `computeDelta` · `parseManifest` · `makeManifestText` · `orderPatchChain`. 테스트 `PackPatchTest.*` 셋 | 끝남(빌드 미확인) |
 | P3 | `ResourcePakManager::mountPatchPack` — `MountedPack::_listRemovedPathHash` 로 아래 팩 가리기(찾기 두 단계와 폴더 나열). 테스트 `PackPatchTest.PatchPackOverridesAndHidesRemovedPaths` | 끝남(빌드 미확인) |
-| P4 | 시작 마운트가 팩 폴더의 `*.packpatch.xml` 을 읽어 `orderPatchChain` 순서로 `mountPatchPack` 한다. 설치된 빌드 번호의 출처(프로젝트 설정의 칸 하나)를 정한다 | 남음 |
-| P5 | 쿠커가 두 빌드의 내용 목록을 남기고(팩마다 경로 + 내용 해시), 그 둘에서 패치 팩과 목록을 만든다(`Scripts` 쿠커 또는 C++ 팩 쿠킹 — [StructureSimplification](StructureSimplification.md) PK 와 함께) | 남음 |
-| P6 | 배포 경로(런처 · CDN · 스토어)와 목록 서명 · 팩 해시 확인 | 남음 |
+| P4 | 시작 마운트가 팩 폴더의 `*.packpatch.xml` 을 읽어 설치된 빌드부터 이어지는 패치를 사슬 순서로 `mountPatchPack` 한다. **설치된 빌드의 출처는 프로젝트 설정이 아니라 팩 폴더의 `base.packbuild.xml`**(쿠커가 팩과 함께 남기는 빌드 내용 목록)이다 — 설정 칸을 두면 팩과 빌드 번호가 따로 어긋나고, 팩을 마운트하는 시점에는 팩 안의 설정을 아직 읽을 수 없다. `ResourcePakManager::scanAndMountPacks` 가 패치 목록이 가리키는 팩을 기본 팩에서 빼고, 빌드 기록 없음 · 사슬 끊김 · 갈림 · 고리 · 닿지 않는 패치 · 패치 팩 없음이면 이 호출이 올린 팩을 모두 내리고 실패한다(`PackPatchUtil::orderPatchChainToLatest`). 테스트 `PackPatchTest.StartupMountAppliesThePatchChainOnTopOfTheBasePacks` · `StartupMountMountsNothingWhenAPatchCannotBeApplied` · `ChainToLatestFollowsEveryPatchAndRefusesOrphans` | 끝남(Debug 테스트 확인) |
+| P5 | 팩 폴더에서 두 빌드의 내용 목록(`PackBuildRecord` — 전체 가상 경로 + 내용 해시)을 세고 그 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 만든다(`PackPatchBuilder`). 소스 트리가 아니라 **구운 팩**에서 센다 — 쿠킹 증분 기록과 상관없이 배포되는 바이트의 해시다. 명령줄: `-cook-packs`/`-cook-all` 에 `-pack-build=<빌드>` 를 주면 `base.packbuild.xml` 을 남기고, `-make-patch -pack-dir=<새 팩 폴더> -patch-base=<이전 빌드 목록> -pack-build=<새 빌드> -patch-dir=<출력>` 이 패치를 만든다. 테스트 `PackPatchTest.MadePatchOnTheOldBuildShowsTheNewBuildContent` · `MakePatchRefusesNothingToPatchAndUnusableInputs` · `BuildRecordRoundTripsAndRefusesBrokenOnes` | 끝남(Debug 테스트 · 명령줄 실행 확인) |
+| P6 | 배포 경로(런처 · CDN · 스토어)와 목록 서명 · 팩 해시 확인 — 서명 키 관리와 배포 경로는 계정 · 비용이 드는 연동이라 사용자 결정이 먼저다. 팩 항목의 CRC32(`PackFlag::HasCrc32`)와 헤더 기하 검사는 이미 있어 잘린 · 깨진 팩은 읽을 때 거절된다 | 남음 |
 
 ## 남은 것
 
-- P4 ~ P6. P4 의 시작 마운트는 `AssetManager::mountStartupPacks` 다 — 같은 파일을 다른 작업이 고치고 있지 않은지 먼저 본다.
+- P6. 결정이 나면: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`), 시작 마운트가 마운트 전에 확인한다(실패하면 지금처럼 이 호출이 올린 팩을 모두 내린다).
+- 낱개 파일로 배포하는 구성(`setAllowLooseFiles`)은 패치가 가리지 못한다 — 패치는 팩만 읽는 배포 구성의 일이다(1절).
+- 확인함(2026-10-22, Debug): `App -game=Empty -cook-all -pack-build=1.0` 이 `base.packbuild.xml`(5220 파일)을 남기고, `Resource/game/empty/data` 에 파일 하나를 더해 `-pack-build=1.1` 로 다시 구운 뒤 `-make-patch` 가 `1 changed, 0 removed` 패치(팩 12 KB)를 만들었다(같은 입력의 나머지는 해시가 같아 빠짐). 확인 못 한 것: 그 패치를 실제 `Packs/` 폴더에 두고 App 이 시작할 때 적용하는 실행(테스트는 `scanAndMountPacks` 를 직접 부른다).
 - 빌드 · `EngineTest --test_filter=PackPatchTest.*:ResourcePakTest.*` 실행.

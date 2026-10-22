@@ -79,6 +79,13 @@ namespace sw
         _move = move;
     }
 
+    void ControlIntent::setTriggerLook( float32 yaw, float32 pitch )
+    {
+        _bTriggerLook = true;
+        _triggerYaw   = MathUtil::wrapAngle( yaw );
+        _triggerPitch = pitch;
+    }
+
     bool ControlIntent::write( BitWriter& writer ) const
     {
         using Internal = ControlIntentInternal;
@@ -96,7 +103,11 @@ namespace sw
             return false;
         writer.writeVarUint( _buttonDown );
         writer.writeVarUint( _buttonTriggered );
-        return true;
+        writer.writeBool( _bTriggerLook );
+        if ( _bTriggerLook == false )
+            return true;
+        return Internal::writeValue( writer, MathUtil::wrapAngle( _triggerYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) &&
+               Internal::writeValue( writer, _triggerPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
     }
 
     bool ControlIntent::read( BitReader& reader )
@@ -113,6 +124,14 @@ namespace sw
         }
         _buttonDown      = static_cast<uint32>( reader.readVarUint() );
         _buttonTriggered = static_cast<uint32>( reader.readVarUint() );
+        _bTriggerLook    = reader.readBool();
+        _triggerYaw      = 0.0f;
+        _triggerPitch    = 0.0f;
+        if ( _bTriggerLook )
+        {
+            bRead = bRead && Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep, _triggerYaw ) &&
+                    Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep, _triggerPitch );
+        }
         if ( bRead == false || reader.hasOverflowed() )
         {
             *this = ControlIntent{};
@@ -133,6 +152,8 @@ namespace sw
         {
             analog = Internal::quantizeValue( analog, kAxisSteps, Internal::kAxisMaxStep );
         }
+        _triggerYaw   = _bTriggerLook ? Internal::quantizeValue( MathUtil::wrapAngle( _triggerYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) : 0.0f;
+        _triggerPitch = _bTriggerLook ? Internal::quantizeValue( _triggerPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep ) : 0.0f;
     }
 
     bool ControlIntent::operator==( const ControlIntent& other ) const
@@ -143,6 +164,7 @@ namespace sw
                 return false;
         }
         return _move._x == other._move._x && _move._y == other._move._y && _moveUp == other._moveUp && _controlYaw == other._controlYaw &&
-               _controlPitch == other._controlPitch && _buttonDown == other._buttonDown && _buttonTriggered == other._buttonTriggered;
+               _controlPitch == other._controlPitch && _buttonDown == other._buttonDown && _buttonTriggered == other._buttonTriggered &&
+               _bTriggerLook == other._bTriggerLook && _triggerYaw == other._triggerYaw && _triggerPitch == other._triggerPitch;
     }
 } // namespace sw

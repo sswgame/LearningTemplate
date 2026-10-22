@@ -155,7 +155,7 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 - **`backend="other"` 로 건넌 뒤에는 그림을 견주지 않습니다.** 백엔드마다 그림이 조금씩 다르므로, 스크린샷 비교는 `backend="start"` 로 돌아온 뒤에 합니다.
   그림이 "같다" 는 단언은 편집 크기보다 훨씬 작은 문턱(예: 편집이 0.015 면 0.002)으로 둡니다. 문턱이 편집 크기에 가까우면 편집이 사라져도 통과합니다.
 - **글 값 탐침을 수로 비교하면 실패로 적힙니다.** `AI.State` 같은 글 탐침은 `is` 로만 비교합니다. 수 탐침은 `is` 로도 비교할 수 있으며, 끝의 0 을 정리한 글(`1`, `0.5`)과 비교합니다.
-- **리소스에 쓰는 시나리오는 원본 폴더에 쓰지 않습니다.** 루트 아래 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/editor.assetmanage"/>` 로 쓰는 폴더를 선언하면 실행기가 시작할 때 `Resource/scratch/…`(저장소에 넣지 않음)를 지우고 원본을 복사합니다(글 파일의 원본 id 는 사본 id 로, `.meta` 의 guid 는 새로). 단계는 사본 id 를 씁니다. 중단된 실행이 남긴 파일도 다음 시작이 지웁니다(`AutomationScratch`).
+- **리소스에 쓰는 시나리오는 원본 폴더에 쓰지 않습니다.** 루트 아래 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 쓰는 폴더를 선언하면 실행기가 시작할 때 `Resource/scratch/…`(저장소에 넣지 않음)를 지우고 원본을 복사합니다(글 파일의 원본 id 는 사본 id 로, `.meta` 의 guid 는 새로). 단계는 사본 id 를 씁니다. 중단된 실행이 남긴 파일도 다음 시작이 지웁니다(`AutomationScratch`). 사본의 에셋을 여는 길은 Quick Open(이름으로 찾아 원본이 걸릴 수 있다)이 아니라 `asset.openScratch <사본 id>` 다. 쿠커의 도메인 목록(`engine` · `common` · `game/*`)에 `scratch` 가 없어 사본은 팩에 들지 않는다.
 - **한 틱에 끝나는 작업만 있는 행동 트리는 도는 잎이 없습니다.** `AI.BehaviorTask` 와 `Skirmish.AITask` 는 그때 그 틱에 마지막으로 성공한 작업을 보이므로, 늘 성공하는 작업(노는 일꾼 보내기)이 대부분의 프레임을 차지합니다.
 
 ## 더 볼 곳

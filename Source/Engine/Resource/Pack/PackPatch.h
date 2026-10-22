@@ -34,6 +34,19 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 빌드 하나의 내용 목록 파일(`<PackBuild build="…"><Entry path="…" hash="…"/></PackBuild>`)입니다.
+     * @details 기본 팩을 구울 때 팩 폴더에 `PackPatchUtil::kBuildRecordFileName` 으로 남기고(설치된 빌드의 출처), 다음 빌드의 패치를 만들 때 이전 빌드의 목록으로 읽는다.
+     */
+    struct PackBuildRecord
+    {
+        string                   _build{};     ///< 빌드 번호(글 그대로 비교한다)
+        vector<PackContentEntry> _listEntry{}; ///< 전체 가상 경로 + 내용 해시(경로 사전순)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…"><Removed path="…"/></PackPatch>`)입니다. */
     struct PackPatchManifest
     {
@@ -49,6 +62,21 @@ namespace sw
     /** @brief 패치 형식의 셈 · 읽기 · 쓰기입니다. 상태가 없습니다. */
     struct SW_API PackPatchUtil
     {
+        static constexpr string_view kManifestExtension    = ".packpatch.xml";     ///< 패치 목록 파일의 이름 끝
+        static constexpr string_view kBuildRecordFileName  = "base.packbuild.xml"; ///< 팩 폴더에서 설치된(기본) 빌드를 밝히는 파일
+        static constexpr string_view kBuildRecordExtension = ".packbuild.xml";     ///< 빌드 내용 목록 파일의 이름 끝(이전 빌드의 목록을 보관할 때)
+
+        /** @brief 내용 해시 하나를 팩 항목의 바이트에서 셉니다(크기 · 경로 순서와 무관, 바이트 그대로 — CR 도 센다). */
+        static uint64 computeEntryHash( const vector<uint8>& bytes );
+        /** @brief 빌드 내용 목록 XML 을 읽습니다. `build` · `Entry` 의 `path` · `hash`(16 자리 16 진수)는 필수이고 같은 경로가 두 번이면 거절합니다. */
+        [[nodiscard]] static bool parseBuildRecord( string_view xmlText, string_view sourceName, PackBuildRecord& outRecord );
+        /** @brief 빌드 내용 목록을 XML 글로 만듭니다(경로 사전순, `parseBuildRecord` 가 다시 읽는 형식). */
+        static string makeBuildRecordText( const PackBuildRecord& record );
+        /**
+         * @brief 설치된 빌드 @p installedBuild 에서 시작해 이어지는 모든 패치의 순서와 마지막 빌드를 정합니다. 목록이 비어 있으면 빈 순서이고 마지막 빌드는 설치된 빌드입니다.
+         * @details 갈림(한 빌드에서 시작하는 패치가 둘 이상) · 고리 · 설치된 빌드에서 닿지 않는 패치(사슬 밖에 남음)는 오류를 남기고 false 다 — 닿지 않는 패치를 조용히 버리지 않는다.
+         */
+        [[nodiscard]] static bool orderPatchChainToLatest( string_view installedBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder, string& outLatestBuild );
         /**
          * @brief 기본 빌드 @p listBase 에서 목표 빌드 @p listTarget 로 가는 차이를 셉니다.
          * @details 한 목록 안에 같은 경로가 두 번 있으면 오류를 남기고 false 다(어느 쪽이 맞는지 정할 수 없다). 결과는 경로 사전순이다(같은 입력이면 같은 패치).
