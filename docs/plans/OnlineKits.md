@@ -46,7 +46,7 @@
 | I3 | 원장 보존 검사와 만료 쓸기를 예약 작업으로, 발행과 소각 총량 지표 | 없음 | 끝남(빌드 미확인) |
 | I4 | 분개, 감사, 우편, 멱등, 구매 기록의 보존 기간 정리 | I3 | 끝남(빌드 미확인) |
 | I5 | 접속하지 않은 계정의 이름 찾기 | 없음 | 끝남(빌드 미확인) |
-| I6 | GM 전용 호스트 포트를 서버 설정에(`_adminServicePort` · `_adminListenAddress`, 서비스의 노출 `getExposure` 로 리슨을 가른다 — 아래 3절 I6) | 없음 | 끝남(2026-10-23 Debug 빌드 경고 0 · 테스트 통과. 실제 IOCP 두 리슨 · 전용 서버 기동과 GM 도구의 GM 포트 접속 설정은 남음) |
+| I6 | GM 전용 호스트 포트를 서버 설정에(`_adminServicePort` · `_adminListenAddress`, 서비스의 노출 `getExposure` 로 리슨을 가른다 — 아래 3절 I6) | 없음 | 끝남(2026-10-23 Debug 빌드 경고 0 · 테스트 통과. GM 도구의 GM 포트 접속은 2026-10-24 코드로 들어감 — 빌드 전. 확인 대기: 매니페스트 id `admin-gm-port-real`) |
 | U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 남음(UI 문서 · 화면 확인이 필요해 온라인 키트 작업자의 범위 밖 — 아래 3절 U1) |
 | M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 들어감 — 돌려 숫자를 남기는 일만 남았다) |
 
@@ -145,7 +145,8 @@ GM 전용 호스트 포트를 서버 설정에 — 2026-10-23 들어감. 계약�
 서버 설정은 `_adminServicePort`(0 = 나누지 않음 — GM 서비스도 서비스 포트에서, 지금까지와 같고 "서버 하나 더" 운영도 그대로 된다)와 `_adminListenAddress`(기본 `127.0.0.1`, 운영 엔드포인트와 같은 모양 — 사설 주소를 준다)다. TLS 는 같은 엔드포인트라 두 리슨에 같이 걸린다. 연결 상한(`_maxConnections`)은 리슨마다 따로 센다.
 
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure` · `WithoutAnAdminListenerOneListenerServesEveryService`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동(`_adminServicePort` 를 준 설정 파일)은 확인하지 않았다.
-- 남은 것: GM 도구(`AdminToolSession` 을 쓰는 에디터 플러그인)가 GM 포트로 붙는 접속 설정. 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
+- GM 도구 접속(2026-10-24, `wt/plannet`, 빌드 전): `AdminToolConnection`(에디터 확장 Admin)이 전송 · `OnlineServiceClient` · `AdminClient` 를 들고 `host:port` 하나로 건다. `AdminToolSession::connectLive` · `disconnectLive` · `updateConnection` 이 감싸고 패널의 제공자 줄에 주소 칸과 Connect 단추를 더했다. 주소에 포트가 없으면 거절한다(기본 포트로 대신 걸지 않는다).
+  로그인은 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 부르는 쪽이 `getConnection().setLoginHook` 으로 끼운다 — 훅이 없으면 `Ready` 에서 멈추고 서버가 `NotLoggedIn` 으로 거절한다. 그 훅을 끼우는 계정 키트 쪽 도우미(GM 계정 로그인)는 아직 없다. 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
 
 ### U1
 

@@ -454,6 +454,12 @@
       "id": "shooter-net-jump-lte", "title": "Shooter3D 전용 서버 + 클라이언트 lte 에서 짧은 점프 입력이 매번 나가는지와 보정 횟수", "kind": "measure", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
       "need_command": "서버 + 클라이언트 두 프로세스에 -gv_netEmuPreset=lte 를 걸고 사람이 점프를 짧게 눌러 보는 일이라 한 명령 시나리오가 아직 없다(netplay.scenario.xml 에 점프 입력 단계를 더하면 된다)",
       "source": "docs/plans/RollbackPrediction.md 남은 것", "result_doc": "docs/plans/RollbackPrediction.md 남은 것"
+    },
+    {
+      "id": "admin-gm-port-real", "title": "GM 포트 실제 확인 — 전용 서버(_adminServicePort 설정)와 에디터 GM 도구 연결, 실제 IOCP 두 리슨", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AdminToolSessionTest.*,OnlineServiceHostTest.*",
+      "need_command": "전용 서버를 _adminServicePort 를 준 설정 파일로 띄워 에디터 GM 도구가 붙는 실행은 한 명령이 아직 없다(로그인 훅을 끼우는 계정 키트 쪽 도우미도 없다). 위 필터는 단위 확인까지다",
+      "source": "docs/plans/OnlineKits.md I6", "result_doc": "docs/plans/OnlineKits.md I6"
     }
   ]
 }

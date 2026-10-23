@@ -145,3 +145,19 @@ SW_TEST_CASE( AdminToolSessionTest, LiveProviderWithoutAClientIsUnavailable )
     session.useFake();
     SW_EXPECT_FALSE( session.getProvider().isLive() );
 }
+
+SW_TEST_CASE( AdminToolSessionTest, ConnectLiveRefusesAnAddressWithoutAPortAndStaysOnTheFakeProvider )
+{
+    AdminToolSession session;
+    string           error;
+    SW_EXPECT_FALSE( session.connectLive( "gm.example.invalid", "test", error ) ); // 포트가 없다 — 기본 포트로 대신 걸지 않는다
+    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( session.getProvider().isLive() );
+    SW_EXPECT_TRUE( session.getConnection().getState() == AdminToolConnectionState::Failed );
+    SW_EXPECT_TRUE( session.getConnection().getAdminClient() == nullptr );
+
+    // 연결이 없는 채 돌려도 아무 일이 없고, 닫으면 처음 상태이다.
+    session.updateConnection();
+    session.disconnectLive();
+    SW_EXPECT_TRUE( session.getConnection().getState() == AdminToolConnectionState::Disconnected );
+}
