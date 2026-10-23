@@ -1,6 +1,6 @@
 # 알림 · 힌트 · 목표 마커의 남은 것
 
-> 상태: 구현중 · 선행: 없음 · 영역: ui · 옛번호: D6-5 · 진행: 1/2
+> 상태: 측정대기 · 선행: 없음 · 영역: ui · 옛번호: D6-5 · 진행: 2/2
 
 알림 · 힌트 · 목표 마커 중 둘이 남아 있었다. 착수 조건(퀘스트 키트의 월드 목표 오브젝트)은 사용자 지시(2026-10-22 "조건부도 구현")로 갈음했고, 목표 오브젝트가 없어 만들었다.
 단위가 끝나면 그 절을 지운다.
@@ -9,13 +9,14 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| N2 | 게임 하나에 붙여 보기(GPU 확인 대기) | 없음 |
+| N2 | 게임 하나에 붙여 보기 — meadowvillage 에 목표 자리 오브젝트 `OrchardSite`(`QuestObjectiveMarkerComponent`, 부탁 `meadow_request` 의 `Habitat`/`orchard`)를 두고, 탐침 `UI.MarkerVisible`(`Engine/UI/World/WidgetProbes.cpp`)과 시나리오 `game/meadowvillage/automation/questmarker.scenario.xml` 이 받으면 마커가 뜨고(이력 0 → 1) 다 하면 사라지는지(→ 0) 단언한다. 캡처 대신 가시성 이력으로 본다 | 없음 |
 
 ### N2 게임 하나에 붙여 보기
 
-빌드 · 테스트는 끝났다(2026-10-23, `wt/uibuild`): `full-build`(Debug, `all AllTests`) 경고 0 · 오류 0, `EngineTest --test_filter=QuestTest.*` 3/3 통과(새 `ObjectiveTargetIsOpenOnlyWhileItsObjectiveRemains` 포함). 남은 것은 캡처다.
+빌드 · 테스트는 끝났다(2026-10-23, `wt/uibuild`): `full-build`(Debug, `all AllTests`) 경고 0 · 오류 0, `EngineTest --test_filter=QuestTest.*` 3/3 통과(새 `ObjectiveTargetIsOpenOnlyWhileItsObjectiveRemains` 포함).
 
-- 퀘스트 카탈로그를 쓰는 게임(meadowvillage 의 `quests.xml`)에서 목표 NPC 오브젝트에 `QuestObjectiveMarkerComponent` 를 붙여, 받으면 마커가 뜨고 다 하면 사라지는지 캡처로 본다.
+- 만들어 둠: 장면 `meadow.scene.xml` 의 `OrchardSite`(9, 0, 1.5), 탐침, 시나리오. 실행은 통합이 한다: `AppScenarioTest` 의 `meadowvillage.questmarker`(`day.scenario` 와 같은 흐름이라 부탁이 `Active` 인 구간이 있다).
+  마커 가시성은 UI 갱신이 놓은 뒤의 마커 내용 위젯 가시성이고, `ExpectVisited` 가 프레임마다 읽어 이력으로 본다. 부탁이 `Active` 인 구간이 한두 프레임뿐이면 이력이 놓칠 수 있다 — 그때는 구간 앞뒤에 `AdvanceGameTime` 을 더 잘게 나눈다.
 
 ## 2. 끝난 단위의 확인 목록
 
