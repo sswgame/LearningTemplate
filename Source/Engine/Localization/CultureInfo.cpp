@@ -445,6 +445,112 @@ namespace sw
                 applyStringField( entry, "currencyPattern", inoutInfo._currencyPattern );
                 return applyPatternAndListFields( entry, inoutInfo, outError );
             }
+
+            /** @brief 문화권 요소 하나를 풀어 본 결과입니다. */
+            enum class ResolveResult : uint8
+            {
+                Resolved, ///< @p inoutMapResolved 에 더했다.
+                Deferred, ///< 부모가 아직 풀리지 않았다. 다음 바퀴에서 다시 본다.
+                Failed,   ///< 오류를 @p outError 에 적었다.
+            };
+
+            /** @brief `<cultures>` 의 자식을 모읍니다. 요소 이름이나 코드가 틀렸거나 코드가 겹치면 @p outError 에 적고 false 입니다. */
+            [[nodiscard]] static bool collectEntries( const XMLNode& cultures, vector<XMLNode>& outListPending, vector<string>& outListFileCode, string& outError )
+            {
+                for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
+                {
+                    const string rawCode{ entry.getAttributeText( "code", false ) };
+                    if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
+                    {
+                        outError = "<cultures> holds only <culture code=\"…\"> elements";
+                        return false;
+                    }
+                    if ( VectorUtil::contains( outListFileCode, rawCode ) )
+                    {
+                        outError = "culture '" + rawCode + "' is written twice";
+                        return false;
+                    }
+                    outListFileCode.push_back( rawCode );
+                    outListPending.push_back( entry );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 문화권 요소 하나를 부모의 값 위에 얹어 풀고 @p inoutMapResolved 에 더합니다.
+             * @param mapExisting 이미 테이블에 있는 문화권입니다. 부모가 이 파일 안에 없을 때만 부모로 씁니다.
+             */
+            [[nodiscard]] static ResolveResult resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
+                                                             map<string, CultureInfo>& inoutMapResolved, string& outError )
+            {
+                const string rawCode{ entry.getAttributeText( "code", false ) };
+                const string code = CultureTable::normalizeCode( rawCode );
+                if ( code != rawCode )
+                {
+                    outError = "culture code '" + rawCode + "' must be written as '" + code + "'";
+                    return ResolveResult::Failed;
+                }
+                const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent", false ) );
+                CultureInfo  info;
+                if ( parentCode.empty() == false )
+                {
+                    const auto resolvedIt = inoutMapResolved.find( parentCode );
+                    const auto existingIt = mapExisting.find( parentCode );
+                    const bool bInFile    = VectorUtil::contains( listFileCode, parentCode );
+                    if ( resolvedIt != inoutMapResolved.end() )
+                        info = resolvedIt->second;
+                    else if ( bInFile == false && existingIt != mapExisting.end() )
+                        info = existingIt->second;
+                    else
+                        return ResolveResult::Deferred;
+                }
+                else if ( entry.findAttribute( "pluralRule", false ) == nullptr )
+                {
+                    outError = "culture '" + rawCode + "' has no parent and no pluralRule";
+                    return ResolveResult::Failed;
+                }
+                info._code       = code;
+                info._parentCode = parentCode;
+                info._nativeName.clear();
+                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo", false ) == nullptr )
+                    info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
+                string fieldError;
+                if ( applyFields( entry, info, fieldError ) == false )
+                {
+                    outError = "culture '" + rawCode + "': " + fieldError;
+                    return ResolveResult::Failed;
+                }
+                inoutMapResolved[code] = std::move( info );
+                return ResolveResult::Resolved;
+            }
+
+            /** @brief @p cultures 의 문화권을 모두 풉니다. 부모가 먼저 해석되도록 몇 바퀴 돕니다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환입니다. */
+            [[nodiscard]] static bool resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, map<string, CultureInfo>& outMapResolved, string& outError )
+            {
+                vector<XMLNode> listPending;
+                vector<string>  listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
+                if ( collectEntries( cultures, listPending, listFileCode, outError ) == false )
+                    return false;
+                while ( listPending.empty() == false )
+                {
+                    vector<XMLNode> listNext;
+                    for ( const XMLNode& entry : listPending )
+                    {
+                        const ResolveResult result = resolveEntry( entry, listFileCode, mapExisting, outMapResolved, outError );
+                        if ( result == ResolveResult::Failed )
+                            return false;
+                        if ( result == ResolveResult::Deferred )
+                            listNext.push_back( entry );
+                    }
+                    if ( listNext.size() == listPending.size() )
+                    {
+                        outError = "culture '" + string{ listNext.front().getAttributeText( "code", false ) } + "' has an unknown parent or a parent cycle";
+                        return false;
+                    }
+                    listPending = std::move( listNext );
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -821,85 +927,8 @@ namespace sw
             return false;
         }
 
-        // 부모가 먼저 해석되도록 몇 바퀴 돈다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환이다.
         map<string, CultureInfo> mapResolved;
-        vector<XMLNode>          listPending;
-        vector<string>           listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
-        for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
-        {
-            const string rawCode{ entry.getAttributeText( "code", false ) };
-            if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
-            {
-                error = "<cultures> holds only <culture code=\"…\"> elements";
-                break;
-            }
-            if ( VectorUtil::contains( listFileCode, rawCode ) )
-            {
-                error = "culture '" + rawCode + "' is written twice";
-                break;
-            }
-            listFileCode.push_back( rawCode );
-            listPending.push_back( entry );
-        }
-
-        while ( error.empty() && listPending.empty() == false )
-        {
-            vector<XMLNode> listNext;
-            for ( const XMLNode& entry : listPending )
-            {
-                const string rawCode{ entry.getAttributeText( "code", false ) };
-                const string code = normalizeCode( rawCode );
-                if ( code != rawCode )
-                {
-                    error = "culture code '" + rawCode + "' must be written as '" + code + "'";
-                    break;
-                }
-                const string parentCode = normalizeCode( entry.getAttributeText( "parent", false ) );
-                CultureInfo  info;
-                if ( parentCode.empty() == false )
-                {
-                    const auto resolvedIt = mapResolved.find( parentCode );
-                    const auto existingIt = _mapCulture.find( parentCode );
-                    const bool bInFile    = VectorUtil::contains( listFileCode, parentCode );
-                    if ( resolvedIt != mapResolved.end() )
-                        info = resolvedIt->second;
-                    else if ( bInFile == false && existingIt != _mapCulture.end() )
-                        info = existingIt->second;
-                    else
-                    {
-                        listNext.push_back( entry );
-                        continue;
-                    }
-                }
-                else if ( entry.findAttribute( "pluralRule", false ) == nullptr )
-                {
-                    error = "culture '" + rawCode + "' has no parent and no pluralRule";
-                    break;
-                }
-                info._code       = code;
-                info._parentCode = parentCode;
-                info._nativeName.clear();
-                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo", false ) == nullptr )
-                    info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
-                string fieldError;
-                if ( CultureInfoInternal::applyFields( entry, info, fieldError ) == false )
-                {
-                    error = "culture '" + rawCode + "': " + fieldError;
-                    break;
-                }
-                mapResolved[code] = std::move( info );
-            }
-            if ( error.empty() == false )
-                break;
-            if ( listNext.size() == listPending.size() )
-            {
-                error = "culture '" + string{ listNext.front().getAttributeText( "code", false ) } + "' has an unknown parent or a parent cycle";
-                break;
-            }
-            listPending = std::move( listNext );
-        }
-
-        if ( error.empty() == false )
+        if ( CultureInfoInternal::resolveAll( cultures, _mapCulture, mapResolved, error ) == false )
         {
             if ( pOutError != nullptr )
                 *pOutError = string( sourceName ) + ": " + error;
