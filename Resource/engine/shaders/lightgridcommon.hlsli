@@ -13,7 +13,7 @@
 /** @brief NDC 한 축의 값을 칸 번호로 바꿉니다(양 끝은 자른다). */
 uint swComputeLightGridTile( float ndc, uint dimension )
 {
-	return min( (uint)( saturate( ndc * 0.5f + 0.5f ) * (float)dimension ), dimension - 1u );
+    return min( (uint)( saturate( ndc * 0.5f + 0.5f ) * (float)dimension ), dimension - 1u );
 }
 
 /**
@@ -22,7 +22,7 @@ uint swComputeLightGridTile( float ndc, uint dimension )
  */
 float swComputeLightGridSlicePosition( float depth, bool bPerspective, float nearDepth, float sliceScale )
 {
-	return bPerspective ? log2( max( depth, nearDepth ) / nearDepth ) * sliceScale : saturate( depth ) * sliceScale;
+    return bPerspective ? log2( max( depth, nearDepth ) / nearDepth ) * sliceScale : saturate( depth ) * sliceScale;
 }
 
 #endif // SW_ENGINE_LIGHTGRIDCOMMON_HLSLI

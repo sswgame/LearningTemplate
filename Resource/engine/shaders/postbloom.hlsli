@@ -15,9 +15,9 @@
  */
 float3 swComputeBloomBrightFromBlur( float3 blur )
 {
-	float peakChannel = max( max( blur.r, blur.g ), blur.b );
-	float soft        = saturate( ( peakChannel - g_BloomParams.x + g_BloomParams.z ) / max( g_BloomParams.z, 1e-4 ) );
-	return blur * soft * soft * g_BloomParams.y;
+    float peakChannel = max( max( blur.r, blur.g ), blur.b );
+    float soft        = saturate( ( peakChannel - g_BloomParams.x + g_BloomParams.z ) / max( g_BloomParams.z, 1e-4 ) );
+    return blur * soft * soft * g_BloomParams.y;
 }
 
 /**
@@ -25,14 +25,14 @@ float3 swComputeBloomBrightFromBlur( float3 blur )
  */
 float3 swComputeBloomBright( float2 uv, float2 texel )
 {
-	// 블러는 **바이리니어 두 번**으로 끝낸다. 텍셀 중심에서 반 칸 비낀 곳을 찍으면 샘플러가 이웃 네
-	// 텍셀을 공짜로 평균해 준다 — 두 번이면 여덟 텍셀이다. 여기만은 `swSampleSource`(선형)여야 한다:
-	// 점 샘플러로 바꾸면 섞이지 않아 블러가 아니게 된다.
-	float2 halfTexel = texel * 0.5f;
-	float3 blur      = swSampleSource( uv - halfTexel ).rgb;
-	blur += swSampleSource( uv + halfTexel ).rgb;
-	blur *= 0.5f;
-	return swComputeBloomBrightFromBlur( blur );
+    // 블러는 **바이리니어 두 번**으로 끝낸다. 텍셀 중심에서 반 칸 비낀 곳을 찍으면 샘플러가 이웃 네
+    // 텍셀을 공짜로 평균해 준다 — 두 번이면 여덟 텍셀이다. 여기만은 `swSampleSource`(선형)여야 한다:
+    // 점 샘플러로 바꾸면 섞이지 않아 블러가 아니게 된다.
+    float2 halfTexel = texel * 0.5f;
+    float3 blur      = swSampleSource( uv - halfTexel ).rgb;
+    blur += swSampleSource( uv + halfTexel ).rgb;
+    blur *= 0.5f;
+    return swComputeBloomBrightFromBlur( blur );
 }
 
 /**
@@ -43,12 +43,12 @@ float3 swComputeBloomBright( float2 uv, float2 texel )
  */
 float3 swComputeBloomBrightDownsampled( float2 uv, float2 sourceTexel )
 {
-	float3 blur = swSampleSource( uv + float2( -sourceTexel.x, -sourceTexel.y ) ).rgb;
-	blur += swSampleSource( uv + float2( sourceTexel.x, -sourceTexel.y ) ).rgb;
-	blur += swSampleSource( uv + float2( -sourceTexel.x, sourceTexel.y ) ).rgb;
-	blur += swSampleSource( uv + float2( sourceTexel.x, sourceTexel.y ) ).rgb;
-	blur *= 0.25f;
-	return swComputeBloomBrightFromBlur( blur );
+    float3 blur = swSampleSource( uv + float2( -sourceTexel.x, -sourceTexel.y ) ).rgb;
+    blur += swSampleSource( uv + float2( sourceTexel.x, -sourceTexel.y ) ).rgb;
+    blur += swSampleSource( uv + float2( -sourceTexel.x, sourceTexel.y ) ).rgb;
+    blur += swSampleSource( uv + float2( sourceTexel.x, sourceTexel.y ) ).rgb;
+    blur *= 0.25f;
+    return swComputeBloomBrightFromBlur( blur );
 }
 
 /**
@@ -57,9 +57,9 @@ float3 swComputeBloomBrightDownsampled( float2 uv, float2 sourceTexel )
  */
 float3 swApplyBloom( float2 uv, float2 texel, float3 color )
 {
-	// SSAO 가 있으면 조명 결과를 가린다(파이프라인 XML 이 AOColor 를 입력으로 선언한다). 없으면 1.
-	float ambientOcclusion = swSampleAmbientOcclusion( uv );
-	return color * ambientOcclusion + swComputeBloomBright( uv, texel );
+    // SSAO 가 있으면 조명 결과를 가린다(파이프라인 XML 이 AOColor 를 입력으로 선언한다). 없으면 1.
+    float ambientOcclusion = swSampleAmbientOcclusion( uv );
+    return color * ambientOcclusion + swComputeBloomBright( uv, texel );
 }
 
 /**
@@ -67,8 +67,8 @@ float3 swApplyBloom( float2 uv, float2 texel, float3 color )
  */
 float3 swApplyBloomBright( float2 uv, float3 color )
 {
-	float ambientOcclusion = swSampleAmbientOcclusion( uv );
-	return color * ambientOcclusion + swSampleIndex( g_BloomBrightIndex, uv ).rgb;
+    float ambientOcclusion = swSampleAmbientOcclusion( uv );
+    return color * ambientOcclusion + swSampleIndex( g_BloomBrightIndex, uv ).rgb;
 }
 
 #endif // SW_ENGINE_POSTBLOOM_HLSLI

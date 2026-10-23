@@ -86,63 +86,63 @@ static const uint kInvalidIndex = 0xFFFFFFFFu;
 // ------------------------------------------------------------------------------
 SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 {
-	float4x4 g_LightViewProj;
-	float4x4 g_ViewProj;
-	// 뷰-투영의 역행렬 — 디퍼드 조명이 **깊이에서 월드 위치를 복원**하는 데 쓴다(G버퍼에 위치를
-	// 따로 저장하지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
-	// 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
-	float4x4 g_InvViewProj;
-	// 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motionblur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
-	float4x4 g_PrevViewProj;
-	float4x4 g_World;
-	float4   g_KeyLightDirIntensity;
-	float4   g_KeyLightColor;
-	float4   g_ShadowParams;
-	// 방향광 캐스케이드 — x 수, y 칸 배율(1 = 아틀라스 전체, 0.5 = 사분면), z 경계 섞기 폭(캐스케이드 깊이 구간의 비율). 칸 c 의 원점은 사분면 c 다(lighting.hlsli).
-	float4   g_ShadowCascadeLayout;
-	// 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝) — 기준 NDC(g_LightViewProj) xy 를 그 캐스케이드 NDC 로 옮긴다. 배열이 아닌 까닭은 C++ 가 이름으로 채우기 때문이다(GL 리플렉션은 배열 이름에 [0] 을 붙인다).
-	float4   g_ShadowCascade0;
-	float4   g_ShadowCascade1;
-	float4   g_ShadowCascade2;
-	float4   g_ShadowCascade3;
-	float4   g_BloomParams;
-	float4   g_CameraGrade;   // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, postgrade.hlsli)
-	float4   g_CameraFrame;   // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(colorvision.hlsli, 렌더 텍스처 뷰는 0)
-	float4   g_CameraLens;    // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depthoffield.hlsl)
-	float4   g_OutlineColor;
-	float4   g_OutlineParams;
-	float4   g_SourceTexel;   // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
-	// 하늘 그러데이션(스카이 패스 sky.hlsl, C++ SkyGradient) — 천정(rgb, w 지평선 지수) · 지평선(rgb) · 땅(rgb, w 세기). 씬에 하늘이 없으면 스카이 패스가 돌지 않는다
-	float4   g_SkyZenith;
-	float4   g_SkyHorizon;
-	float4   g_SkyGround;
-	uint     g_ShadowMapIndex;
-	uint     g_GBufferAlbedoIndex;
-	uint     g_GBufferNormalIndex;
-	uint     g_GBufferMaterialIndex;  // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(swLoadGbufferMaterial)
-	uint     g_SceneDepthIndex;
-	uint     g_SourceColorIndex;
-	uint     g_AmbientOcclusionIndex; // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
-	uint     g_BloomBrightIndex;      // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
-	uint     g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
-	uint     g_AutoExposureIndex;     // 자동 노출의 이번 EV(1x1 R32, autoexposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(postgrade.hlsli)
-	uint     g_Flags;
-	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
-	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
-	uint     g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
-	uint     g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
-	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
-	uint     g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
-	uint     g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
-	uint     g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
-	uint     g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
-	uint     g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
-	uint     g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
-	uint     g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
-	uint     g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
-	uint     g_SwVertexAnimationCount;    // 그 표의 원소 수 — 범위 밖 번호를 막는다
-	float    g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
-	float    g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
+    float4x4 g_LightViewProj;
+    float4x4 g_ViewProj;
+    // 뷰-투영의 역행렬 — 디퍼드 조명이 **깊이에서 월드 위치를 복원**하는 데 쓴다(G버퍼에 위치를
+    // 따로 저장하지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
+    // 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
+    float4x4 g_InvViewProj;
+    // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motionblur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
+    float4x4 g_PrevViewProj;
+    float4x4 g_World;
+    float4   g_KeyLightDirIntensity;
+    float4   g_KeyLightColor;
+    float4   g_ShadowParams;
+    // 방향광 캐스케이드 — x 수, y 칸 배율(1 = 아틀라스 전체, 0.5 = 사분면), z 경계 섞기 폭(캐스케이드 깊이 구간의 비율). 칸 c 의 원점은 사분면 c 다(lighting.hlsli).
+    float4 g_ShadowCascadeLayout;
+    // 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝) — 기준 NDC(g_LightViewProj) xy 를 그 캐스케이드 NDC 로 옮긴다. 배열이 아닌 까닭은 C++ 가 이름으로 채우기 때문이다(GL 리플렉션은 배열 이름에 [0] 을 붙인다).
+    float4 g_ShadowCascade0;
+    float4 g_ShadowCascade1;
+    float4 g_ShadowCascade2;
+    float4 g_ShadowCascade3;
+    float4 g_BloomParams;
+    float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, postgrade.hlsli)
+    float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(colorvision.hlsli, 렌더 텍스처 뷰는 0)
+    float4 g_CameraLens;  // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depthoffield.hlsl)
+    float4 g_OutlineColor;
+    float4 g_OutlineParams;
+    float4 g_SourceTexel; // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
+    // 하늘 그러데이션(스카이 패스 sky.hlsl, C++ SkyGradient) — 천정(rgb, w 지평선 지수) · 지평선(rgb) · 땅(rgb, w 세기). 씬에 하늘이 없으면 스카이 패스가 돌지 않는다
+    float4 g_SkyZenith;
+    float4 g_SkyHorizon;
+    float4 g_SkyGround;
+    uint   g_ShadowMapIndex;
+    uint   g_GBufferAlbedoIndex;
+    uint   g_GBufferNormalIndex;
+    uint   g_GBufferMaterialIndex; // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(swLoadGbufferMaterial)
+    uint   g_SceneDepthIndex;
+    uint   g_SourceColorIndex;
+    uint   g_AmbientOcclusionIndex;   // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
+    uint   g_BloomBrightIndex;        // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
+    uint   g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
+    uint   g_AutoExposureIndex;       // 자동 노출의 이번 EV(1x1 R32, autoexposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(postgrade.hlsli)
+    uint   g_Flags;
+    uint   g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
+    uint   g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
+    uint   g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
+    uint   g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
+    uint   g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
+    uint   g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
+    uint   g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
+    uint   g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
+    uint   g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint   g_SwVertexAnimationCount;    // 그 표의 원소 수 — 범위 밖 번호를 막는다
+    float  g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
+    float  g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
 };
 
 // ------------------------------------------------------------------------------
@@ -155,16 +155,16 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 // ------------------------------------------------------------------------------
 #if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
 SW_ROOT_CONSTANTS_BEGIN
-	// 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
-	// 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
-	// 인스턴스 슬롯 스트림(SwVertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
-	// 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
-	uint g_SwMaterialCount;
+    // 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
+    // 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
+    // 인스턴스 슬롯 스트림(SwVertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
+    // 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
+    uint g_SwMaterialCount;
 SW_ROOT_CONSTANTS_END
-#define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
+    #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
 #else
-// 컴퓨트 · 자기 블록을 쓰는 셰이더에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
-#define SW_DRAW_MATERIAL_COUNT 0u
+    // 컴퓨트 · 자기 블록을 쓰는 셰이더에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
+    #define SW_DRAW_MATERIAL_COUNT 0u
 #endif
 
 // ------------------------------------------------------------------------------
@@ -188,19 +188,19 @@ SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
  */
 SwBatchData swLoadBatch( uint batchIndex )
 {
-	SwBatchData batch;
-	batch.instanceBase    = 0u;
-	batch.instanceCount   = 0u;
-	batch.sortMode        = 0u;
-	batch.morphVertexBase = kInvalidIndex;
-	batch.firstVertex     = 0u;
-	batch.vertexAnimationBase = kInvalidIndex;
-	batch.sectionVertexOffset = 0u;
-	batch.pad2            = 0u;
-	const bool bValid = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
-	if ( bValid )
-		batch = g_SwBatches[batchIndex];
-	return batch;
+    SwBatchData batch;
+    batch.instanceBase        = 0u;
+    batch.instanceCount       = 0u;
+    batch.sortMode            = 0u;
+    batch.morphVertexBase     = kInvalidIndex;
+    batch.firstVertex         = 0u;
+    batch.vertexAnimationBase = kInvalidIndex;
+    batch.sectionVertexOffset = 0u;
+    batch.pad2                = 0u;
+    const bool bValid         = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
+    if ( bValid )
+        batch = g_SwBatches[batchIndex];
+    return batch;
 }
 
 // ------------------------------------------------------------------------------
@@ -227,22 +227,22 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 // 같은 소스로 멀쩡하다). 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
 uint swComputeMorphElement( uint batchIndex, uint vertexId )
 {
-	const SwBatchData batch = swLoadBatch( batchIndex );
-	// **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
-	// Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
-	// RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
-	// 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
-	// 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
+    const SwBatchData batch = swLoadBatch( batchIndex );
+    // **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
+    // Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
+    // RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
+    // 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
+    // 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
 #if defined( DX11 ) || defined( DX12 )
-	const uint local = vertexId;
+    const uint local = vertexId;
 #else
-	const uint local = vertexId - batch.firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
+    const uint local = vertexId - batch.firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
 #endif
-	const uint base    = batch.morphVertexBase;
-	const uint element = base + local;
-	// 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
-	const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
-	return bValid ? element : kInvalidIndex;
+    const uint base    = batch.morphVertexBase;
+    const uint element = base + local;
+    // 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
+    const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
+    return bValid ? element : kInvalidIndex;
 }
 
 /**
@@ -252,13 +252,13 @@ uint swComputeMorphElement( uint batchIndex, uint vertexId )
  */
 void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
-	outPosition        = restPosition;
-	outNormal          = restNormal;
-	const uint element = swComputeMorphElement( batchIndex, vertexId );
-	if ( element == kInvalidIndex )
-		return;
-	outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-	outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+    outPosition        = restPosition;
+    outNormal          = restNormal;
+    const uint element = swComputeMorphElement( batchIndex, vertexId );
+    if ( element == kInvalidIndex )
+        return;
+    outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+    outNormal   = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
 }
 
 /**
@@ -268,8 +268,8 @@ void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, f
  */
 float4 swLoadMorphedTangent( uint batchIndex, uint vertexId, float4 restTangent )
 {
-	const uint element = swComputeMorphElement( batchIndex, vertexId );
-	return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
+    const uint element = swComputeMorphElement( batchIndex, vertexId );
+    return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
 }
 
 // ------------------------------------------------------------------------------
@@ -284,14 +284,14 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMAT
 /** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
 float3 swUnpackVertexAnimationNormal( float packed )
 {
-	const uint   integer = (uint)packed;
-	const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
-	const float2 octant  = float2( (float)( integer / SW_VERTEX_ANIMATION_NORMAL_STEPS ), (float)( integer % SW_VERTEX_ANIMATION_NORMAL_STEPS ) ) / maxStep * 2.0f - 1.0f;
-	float3       normal  = float3( octant, 1.0f - abs( octant.x ) - abs( octant.y ) );
-	const float2 signs   = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
-	const float2 folded  = ( 1.0f - abs( normal.yx ) ) * signs;
-	normal.xy            = ( normal.z < 0.0f ) ? folded : normal.xy;
-	return normalize( normal );
+    const uint   integer = (uint)packed;
+    const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
+    const float2 octant  = float2( (float)( integer / SW_VERTEX_ANIMATION_NORMAL_STEPS ), (float)( integer % SW_VERTEX_ANIMATION_NORMAL_STEPS ) ) / maxStep * 2.0f - 1.0f;
+    float3       normal  = float3( octant, 1.0f - abs( octant.x ) - abs( octant.y ) );
+    const float2 signs   = float2( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f );
+    const float2 folded  = ( 1.0f - abs( normal.yx ) ) * signs;
+    normal.xy            = ( normal.z < 0.0f ) ? folded : normal.xy;
+    return normalize( normal );
 }
 
 /**
@@ -301,37 +301,37 @@ float3 swUnpackVertexAnimationNormal( float packed )
  */
 void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
 {
-	const SwBatchData batch = swLoadBatch( instance.meshBatchIndex );
+    const SwBatchData batch = swLoadBatch( instance.meshBatchIndex );
 #if defined( DX11 ) || defined( DX12 )
-	const uint local = vertexId;
+    const uint local = vertexId;
 #else
-	const uint local = vertexId - batch.firstVertex;
+    const uint local = vertexId - batch.firstVertex;
 #endif
-	// VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
-	const uint   meshLocal   = local + batch.sectionVertexOffset;
-	const uint   base        = batch.vertexAnimationBase;
-	const bool   bTable      = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
-	const float4 header      = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	const uint   frameCount  = max( (uint)header.x, 1u );
-	const uint   vertexCount = (uint)header.z;
-	const bool   bLoop       = header.w > 0.5f;
-	const float  frameTotal  = (float)frameCount;
-	const float  framePosition = max( g_SwVertexAnimationTime + instance.vertexAnimationPhase, 0.0f ) * header.y;
-	const float  wrapped     = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
-	const uint   frame       = min( (uint)wrapped, frameCount - 1u );
-	const uint   nextFrame   = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
-	outFirstElement          = base + 1u + frame * vertexCount + meshLocal;
-	outSecondElement         = base + 1u + nextFrame * vertexCount + meshLocal;
-	outAlpha                 = wrapped - (float)frame;
-	outValid                 = bTable && ( header.x > 0.5f ) && ( meshLocal < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
-	                           ( outSecondElement < g_SwVertexAnimationCount );
+    // VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
+    const uint   meshLocal     = local + batch.sectionVertexOffset;
+    const uint   base          = batch.vertexAnimationBase;
+    const bool   bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
+    const float4 header        = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    const uint   frameCount    = max( (uint)header.x, 1u );
+    const uint   vertexCount   = (uint)header.z;
+    const bool   bLoop         = header.w > 0.5f;
+    const float  frameTotal    = (float)frameCount;
+    const float  framePosition = max( g_SwVertexAnimationTime + instance.vertexAnimationPhase, 0.0f ) * header.y;
+    const float  wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
+    const uint   frame         = min( (uint)wrapped, frameCount - 1u );
+    const uint   nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
+    outFirstElement            = base + 1u + frame * vertexCount + meshLocal;
+    outSecondElement           = base + 1u + nextFrame * vertexCount + meshLocal;
+    outAlpha                   = wrapped - (float)frame;
+    outValid                   = bTable && ( header.x > 0.5f ) && ( meshLocal < vertexCount ) && ( outFirstElement < g_SwVertexAnimationCount ) &&
+               ( outSecondElement < g_SwVertexAnimationCount );
 }
 
 /** @brief VAT 위치 — 깊이 프리패스와 기본 패스가 비트까지 같아야 해 이 함수 하나로 만든다(precise). */
 float3 swComputeVertexAnimationPosition( uint firstElement, uint secondElement, float alpha )
 {
-	precise float3 position = lerp( g_SwVertexAnimation[firstElement].xyz, g_SwVertexAnimation[secondElement].xyz, alpha );
-	return position;
+    precise float3 position = lerp( g_SwVertexAnimation[firstElement].xyz, g_SwVertexAnimation[secondElement].xyz, alpha );
+    return position;
 }
 
 /**
@@ -341,19 +341,19 @@ float3 swComputeVertexAnimationPosition( uint firstElement, uint secondElement, 
  */
 void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
-	swLoadMorphedVertex( instance.meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
-	bool  bAnimated;
-	uint  firstElement;
-	uint  secondElement;
-	float alpha;
-	swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
-	if ( bAnimated )
-	{
-		const float3 firstNormal  = swUnpackVertexAnimationNormal( g_SwVertexAnimation[firstElement].w );
-		const float3 secondNormal = swUnpackVertexAnimationNormal( g_SwVertexAnimation[secondElement].w );
-		outPosition               = swComputeVertexAnimationPosition( firstElement, secondElement, alpha );
-		outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
-	}
+    swLoadMorphedVertex( instance.meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
+    bool  bAnimated;
+    uint  firstElement;
+    uint  secondElement;
+    float alpha;
+    swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
+    if ( bAnimated )
+    {
+        const float3 firstNormal  = swUnpackVertexAnimationNormal( g_SwVertexAnimation[firstElement].w );
+        const float3 secondNormal = swUnpackVertexAnimationNormal( g_SwVertexAnimation[secondElement].w );
+        outPosition               = swComputeVertexAnimationPosition( firstElement, secondElement, alpha );
+        outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
+    }
 }
 
 // ------------------------------------------------------------------------------
@@ -367,15 +367,15 @@ void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPo
  */
 float4 swComputeWorldPosition( float3 localPosition, float4x4 world )
 {
-	precise float4 worldPosition = mul( float4( localPosition, 1.0f ), world );
-	return worldPosition;
+    precise float4 worldPosition = mul( float4( localPosition, 1.0f ), world );
+    return worldPosition;
 }
 
 /** @brief 월드 위치를 클립 공간으로 옮긴다(카메라는 g_ViewProj, 그림자는 g_LightViewProj). swComputeWorldPosition 와 같은 이유로 precise 다. */
 float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
 {
-	precise float4 clipPosition = mul( worldPosition, viewProj );
-	return clipPosition;
+    precise float4 clipPosition = mul( worldPosition, viewProj );
+    return clipPosition;
 }
 
 /**
@@ -390,15 +390,15 @@ float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
  */
 float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
 {
-	const float3 row0        = world[0].xyz;
-	const float3 row1        = world[1].xyz;
-	const float3 row2        = world[2].xyz;
-	const float3 cofactor0   = cross( row1, row2 );
-	const float3 cofactor1   = cross( row2, row0 );
-	const float3 cofactor2   = cross( row0, row1 );
-	const float  handedness  = ( dot( row0, cofactor0 ) < 0.0f ) ? -1.0f : 1.0f;
-	const float3 worldNormal = localNormal.x * cofactor0 + localNormal.y * cofactor1 + localNormal.z * cofactor2;
-	return normalize( worldNormal * handedness );
+    const float3 row0        = world[0].xyz;
+    const float3 row1        = world[1].xyz;
+    const float3 row2        = world[2].xyz;
+    const float3 cofactor0   = cross( row1, row2 );
+    const float3 cofactor1   = cross( row2, row0 );
+    const float3 cofactor2   = cross( row0, row1 );
+    const float  handedness  = ( dot( row0, cofactor0 ) < 0.0f ) ? -1.0f : 1.0f;
+    const float3 worldNormal = localNormal.x * cofactor0 + localNormal.y * cofactor1 + localNormal.z * cofactor2;
+    return normalize( worldNormal * handedness );
 }
 
 // ------------------------------------------------------------------------------
@@ -415,11 +415,11 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIDs, SW_SLOT_VISIBLE_INST
  */
 uint swResolveInstanceId( uint instanceSlot )
 {
-	// 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
-	const uint slot = instanceSlot;
-	if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwInstanceCount )
-		return g_SwVisibleInstanceIDs[slot];
-	return slot;
+    // 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
+    const uint slot = instanceSlot;
+    if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwInstanceCount )
+        return g_SwVisibleInstanceIDs[slot];
+    return slot;
 }
 
 /**
@@ -430,31 +430,31 @@ uint swResolveInstanceId( uint instanceSlot )
  */
 SwInstanceData swLoadInstance( uint instanceSlot )
 {
-	const uint element = swResolveInstanceId( instanceSlot );
-	if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
-		return g_SwInstances[element];
-	SwInstanceData instance;
-	instance.world          = g_World;
-	instance.boundsCenter   = float3( 0, 0, 0 );
-	instance.boundsRadius   = 0;
-	instance.meshBatchIndex = 0;
-	instance.materialIndex  = 0;
-	instance.blendMode      = 0;
-	instance.spinSeed       = 0;
-	instance.uvStart        = 0u;          // (0, 0)
-	instance.uvEnd          = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
-	instance.tint           = 0xFFFFFFFFu; // 흰색 불투명
-	instance.pixelSnap      = 0.0f;        // 스냅 없음
-	instance.vertexAnimationPhase = 0.0f;
-	instance.highlight      = 0u;          // 강조 없음
-	instance.appearance     = 1.0f;        // 다 보인다
-	instance.reserved1      = 0u;
-	return instance;
+    const uint element = swResolveInstanceId( instanceSlot );
+    if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
+        return g_SwInstances[element];
+    SwInstanceData instance;
+    instance.world                = g_World;
+    instance.boundsCenter         = float3( 0, 0, 0 );
+    instance.boundsRadius         = 0;
+    instance.meshBatchIndex       = 0;
+    instance.materialIndex        = 0;
+    instance.blendMode            = 0;
+    instance.spinSeed             = 0;
+    instance.uvStart              = 0u;          // (0, 0)
+    instance.uvEnd                = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
+    instance.tint                 = 0xFFFFFFFFu; // 흰색 불투명
+    instance.pixelSnap            = 0.0f;        // 스냅 없음
+    instance.vertexAnimationPhase = 0.0f;
+    instance.highlight            = 0u;   // 강조 없음
+    instance.appearance           = 1.0f; // 다 보인다
+    instance.reserved1            = 0u;
+    return instance;
 }
 
 float4x4 swLoadInstanceWorld( uint instanceSlot )
 {
-	return swLoadInstance( instanceSlot ).world;
+    return swLoadInstance( instanceSlot ).world;
 }
 
 // ------------------------------------------------------------------------------
@@ -472,25 +472,25 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 /** @brief 화면 픽셀 @p pixelPosition(SV_POSITION.xy)의 디더 문턱(0 ~ 1)입니다. 4x4 Bayer 행렬 — 16 단계가 화면에 고르게 흩어진다. */
 float swAppearanceDitherThreshold( float2 pixelPosition )
 {
-	static const float arrBayer4x4[16] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
-	const uint2        cell          = uint2( pixelPosition ) & 3u;
-	return ( arrBayer4x4[cell.y * 4u + cell.x] + 0.5f ) / 16.0f;
+    static const float arrBayer4x4[16] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
+    const uint2        cell            = uint2( pixelPosition ) & 3u;
+    return ( arrBayer4x4[cell.y * 4u + cell.x] + 0.5f ) / 16.0f;
 }
 
 /** @brief 등장 비율 @p appearance 보다 문턱이 높은 픽셀을 버린다(0 이면 모두, 1 이면 하나도 버리지 않는다). */
 void swClipAppearanceDither( float appearance, float2 pixelPosition )
 {
-	clip( appearance - swAppearanceDitherThreshold( pixelPosition ) );
+    clip( appearance - swAppearanceDitherThreshold( pixelPosition ) );
 }
 
 #if defined( SW_APPEARANCE_DITHER )
-#define SW_APPEARANCE_VARYING nointerpolation float appearance : TEXCOORD15;
-#define SW_APPEARANCE_WRITE( output, instance ) ( output ).appearance = ( instance ).appearance;
-#define SW_APPEARANCE_CLIP( input ) swClipAppearanceDither( ( input ).appearance, ( input ).position.xy );
+    #define SW_APPEARANCE_VARYING                   nointerpolation float appearance : TEXCOORD15;
+    #define SW_APPEARANCE_WRITE( output, instance ) ( output ).appearance = ( instance ).appearance;
+    #define SW_APPEARANCE_CLIP( input )             swClipAppearanceDither( ( input ).appearance, ( input ).position.xy );
 #else
-#define SW_APPEARANCE_VARYING
-#define SW_APPEARANCE_WRITE( output, instance )
-#define SW_APPEARANCE_CLIP( input )
+    #define SW_APPEARANCE_VARYING
+    #define SW_APPEARANCE_WRITE( output, instance )
+    #define SW_APPEARANCE_CLIP( input )
 #endif
 
 // ------------------------------------------------------------------------------
@@ -511,11 +511,13 @@ void swClipAppearanceDither( float appearance, float2 pixelPosition )
 // ------------------------------------------------------------------------------
 uint swClampMaterialIndex( uint index )
 {
-	const uint materialCount = SW_DRAW_MATERIAL_COUNT;
-	return ( materialCount == 0 ) ? 0 : min( index, materialCount - 1 );
+    const uint materialCount = SW_DRAW_MATERIAL_COUNT;
+    return ( materialCount == 0 ) ? 0 : min( index, materialCount - 1 );
 }
 #define SW_MATERIAL_BEGIN struct SwMaterialData
-#define SW_MATERIAL_END   ; SW_DECLARE_STRUCTURED_BUFFER( SwMaterialData, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
+#define SW_MATERIAL_END \
+    ;                   \
+    SW_DECLARE_STRUCTURED_BUFFER( SwMaterialData, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
 #define SW_MATERIAL( index ) g_SwMaterials[swClampMaterialIndex( index )]
 
 // ------------------------------------------------------------------------------
@@ -525,23 +527,23 @@ uint swClampMaterialIndex( uint index )
 //     번호는 bindingslots.hlsli 4 절의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트에 해당한다.
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
-#if defined( __spirv__ )
+    #if defined( __spirv__ )
 // Vulkan: set 1 binding 1 의 immutable sampler 배열 — 배열 그대로 인덱싱한다.
-[[vk::binding( SW_VK_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerState g_SwSamplers[SW_STATIC_SAMPLER_ARRAY_COUNT] : register( s0 );
+[[vk::binding( SW_VK_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerState                  g_SwSamplers[SW_STATIC_SAMPLER_ARRAY_COUNT] : register( s0 );
 [[vk::binding( SW_VK_SHADOW_SAMPLER_BINDING, SW_VK_TEXTURE_SET )]] SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SHADOW_CMP ) );
-#define SW_SAMPLER_STATE( samplerId ) g_SwSamplers[samplerId]
-#else
+        #define SW_SAMPLER_STATE( samplerId ) g_SwSamplers[samplerId]
+    #else
 // DX12: 정적 샘플러는 배열 선언(s0..s6 범위)을 못 채운다 — 루트 시그니처가 범위를 디스크립터 테이블로 요구해 PSO 생성이
 // "sampler descriptor range not fully bound" 로 실패한다. 하나씩 선언하고 리터럴 분기로 고른다(언리얼도 정적 샘플러를 개별 선언).
-SamplerState g_SwSampler0 : register( s0 );
-SamplerState g_SwSampler1 : register( s1 );
-SamplerState g_SwSampler2 : register( s2 );
-SamplerState g_SwSampler3 : register( s3 );
-SamplerState g_SwSampler4 : register( s4 );
-SamplerState g_SwSampler5 : register( s5 );
-SamplerState g_SwSampler6 : register( s6 );
+SamplerState           g_SwSampler0 : register( s0 );
+SamplerState           g_SwSampler1 : register( s1 );
+SamplerState           g_SwSampler2 : register( s2 );
+SamplerState           g_SwSampler3 : register( s3 );
+SamplerState           g_SwSampler4 : register( s4 );
+SamplerState           g_SwSampler5 : register( s5 );
+SamplerState           g_SwSampler6 : register( s6 );
 SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SHADOW_CMP ) );
-#endif
+    #endif
 #endif
 
 // ------------------------------------------------------------------------------
@@ -553,14 +555,14 @@ SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SH
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
 
-// ---- 11-1) 네이티브 bindless (DX12 · Vulkan) ----------------------------------
+    // ---- 11-1) 네이티브 bindless (DX12 · Vulkan) ----------------------------------
 
-// 무제한 텍스처 배열 — DX12 t0 space1 (루트 시그니처 테이블), Vulkan set 1 binding 0. SM5.1 무제한 배열이지 6.6 힙 인덱싱이 아니다.
-#if defined( __spirv__ )
+    // 무제한 텍스처 배열 — DX12 t0 space1 (루트 시그니처 테이블), Vulkan set 1 binding 0. SM5.1 무제한 배열이지 6.6 힙 인덱싱이 아니다.
+    #if defined( __spirv__ )
 [[vk::binding( SW_VK_TEXTURE_BINDING, SW_VK_TEXTURE_SET )]] Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
-#else
+    #else
 Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
-#endif
+    #endif
 /**
  * @brief bindless 배열 첨자 — 인덱스를 배열 칸 수로 마스크해 무효 인덱스(kInvalidIndex)도 배열 안을 가리키게 합니다. 유효한 인덱스는 그대로입니다.
  * @details 주의: `if ( index == kInvalidIndex )` 분기만으로는 모자라다. 드라이버 컴파일러가 서술자 읽기를 분기 앞으로 끌어올리면(서술자 로드는
@@ -569,37 +571,44 @@ Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_T
  */
 uint swBindlessTextureSlot( uint index )
 {
-#if defined( __spirv__ )
-	return index & ( SW_VK_BINDLESS_TEXTURE_COUNT - 1u );
-#else
-	return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
-#endif
+    #if defined( __spirv__ )
+    return index & ( SW_VK_BINDLESS_TEXTURE_COUNT - 1u );
+    #else
+    return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
+    #endif
 }
 /** @brief 인덱스의 텍스처를 샘플러 세트의 samplerId(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. */
 float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 {
-	if ( index == kInvalidIndex )
-		return float4( 0, 0, 0, 1 );
-	const uint slot = swBindlessTextureSlot( index );
-#if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
-#else
-	switch ( samplerId )
-	{
-		case 1: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler1, uv );
-		case 2: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler2, uv );
-		case 3: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler3, uv );
-		case 4: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler4, uv );
-		case 5: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler5, uv );
-		case 6: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler6, uv );
-		default: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler0, uv );
-	}
-#endif
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    const uint slot = swBindlessTextureSlot( index );
+    #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
+    #else
+    switch ( samplerId )
+    {
+        case 1:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler1, uv );
+        case 2:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler2, uv );
+        case 3:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler3, uv );
+        case 4:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler4, uv );
+        case 5:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler5, uv );
+        case 6:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler6, uv );
+        default:
+            return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler0, uv );
+    }
+    #endif
 }
 /** @brief 엔진 텍스처(풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)를 엔진 텍스처 샘플러(선형 · 클램프)로 읽습니다 — 에뮬 백엔드가 t0..t3 에 거는 것과 같다. */
 float4 swSampleIndex( uint index, float2 uv )
 {
-	return swSampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
+    return swSampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
@@ -610,59 +619,59 @@ float4 swSampleIndex( uint index, float2 uv )
  */
 float4 swGatherDepthRed( float2 uv )
 {
-	if ( g_SceneDepthIndex == kInvalidIndex )
-		return float4( 1, 1, 1, 1 );
-	const uint slot = swBindlessTextureSlot( g_SceneDepthIndex );
-#if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
-#else
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
-#endif
+    if ( g_SceneDepthIndex == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    const uint slot = swBindlessTextureSlot( g_SceneDepthIndex );
+    #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+    #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
+    #endif
 }
 /** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
 float swSampleShadowComparison( uint index, float2 uv, float depth )
 {
-	if ( index == kInvalidIndex )
-		return 1.0f;
-	return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
+    if ( index == kInvalidIndex )
+        return 1.0f;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
 }
 
-#if defined( SW_STAGE_COMPUTE )
-// 컴퓨트 RW 텍스처 배열 — DX12 u0 space1 (텍스처 테이블의 두 번째 범위), Vulkan set 1 binding 3 (STORAGE_IMAGE[]).
-// 인덱스는 registerBindlessTextureUav 가 준다. 컴퓨트에서만 선언한다 — 그래픽스 스테이지에 UAV 배열을 두면
-// DX12 가 PS UAV 슬롯을, Vulkan 이 vertexPipelineStores 기능을 요구한다.
-#if defined( __spirv__ )
+    #if defined( SW_STAGE_COMPUTE )
+        // 컴퓨트 RW 텍스처 배열 — DX12 u0 space1 (텍스처 테이블의 두 번째 범위), Vulkan set 1 binding 3 (STORAGE_IMAGE[]).
+        // 인덱스는 registerBindlessTextureUav 가 준다. 컴퓨트에서만 선언한다 — 그래픽스 스테이지에 UAV 배열을 두면
+        // DX12 가 PS UAV 슬롯을, Vulkan 이 vertexPipelineStores 기능을 요구한다.
+        #if defined( __spirv__ )
 [[vk::binding( SW_VK_RWTEXTURE_BINDING, SW_VK_TEXTURE_SET )]] RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
-#else
+        #else
 RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
-#endif
+        #endif
 /** @brief RW 텍스처 배열 첨자 — `swBindlessTextureSlot` 과 같은 이유로 배열 칸 수로 마스크합니다. */
 uint swBindlessRwTextureSlot( uint index )
 {
-#if defined( __spirv__ )
-	return index & ( SW_VK_BINDLESS_STORAGE_IMAGE_COUNT - 1u );
-#else
-	return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
-#endif
+        #if defined( __spirv__ )
+    return index & ( SW_VK_BINDLESS_STORAGE_IMAGE_COUNT - 1u );
+        #else
+    return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
+        #endif
 }
 void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
-	if ( index == kInvalidIndex )
-		return;
-	g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition] = value;
+    if ( index == kInvalidIndex )
+        return;
+    g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition] = value;
 }
 float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 {
-	if ( index == kInvalidIndex )
-		return float4( 0, 0, 0, 0 );
-	return g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition];
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 0 );
+    return g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition];
 }
-#endif // SW_STAGE_COMPUTE
+    #endif // SW_STAGE_COMPUTE
 
 #else // !SW_NATIVE_BINDLESS
 
-// ---- 11-2) 슬롯 에뮬 (DX11 · OpenGL) ------------------------------------------
-#if !defined( SW_STAGE_COMPUTE )
+    // ---- 11-2) 슬롯 에뮬 (DX11 · OpenGL) ------------------------------------------
+    #if !defined( SW_STAGE_COMPUTE )
 // 에뮬 백엔드의 샘플 슬롯은 그래픽스 스테이지 전용이다 — GL 은 텍스처 유닛과 이미지 유닛이 SPIR-V 에서 같은 binding 번호를
 // 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 t0..t3 을 걸지 않는다).
 // DX11 / OpenGL : 엔진이 t0..t3 에 SRV 바인딩. 값 비교로 어느 논리 텍스처인지 판별.
@@ -670,17 +679,17 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0 )
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
-// G버퍼 머티리얼 칸 t15 — 조명 패스의 다섯째 엔진 텍스처라 t0..t3 밖이다(bindingslots.hlsli SW_SLOT_ENGINE_GBUFFER_MATERIAL). DX11 은 s15 가 정적 세트라 짝 샘플러가 없다.
-#if defined( DX11 )
+        // G버퍼 머티리얼 칸 t15 — 조명 패스의 다섯째 엔진 텍스처라 t0..t3 밖이다(bindingslots.hlsli SW_SLOT_ENGINE_GBUFFER_MATERIAL). DX11 은 s15 가 정적 세트라 짝 샘플러가 없다.
+        #if defined( DX11 )
 SW_DECLARE_TEXTURE2D( g_SwSlotGBufferMaterial, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
-#else
+        #else
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlotGBufferMaterial, g_SwSlotGBufferMaterialSampler, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
-#endif
+        #endif
 
-// 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
-// DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
-// GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
-#if defined( DX11 )
+        // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+        // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
+        // GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
+        #if defined( DX11 )
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex0, SW_SLOT_MATERIAL_TEX0 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex1, SW_SLOT_MATERIAL_TEX1 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex2, SW_SLOT_MATERIAL_TEX2 );
@@ -697,7 +706,7 @@ SW_DECLARE_TEXTURE2D( g_SwMaterialTex12, SW_SLOT_MATERIAL_TEX12 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex13, SW_SLOT_MATERIAL_TEX13 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex14, SW_SLOT_MATERIAL_TEX14 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex15, SW_SLOT_MATERIAL_TEX15 );
-#else
+        #else
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex0, g_SwMaterialTex0Sampler, SW_SLOT_MATERIAL_TEX0 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex1, g_SwMaterialTex1Sampler, SW_SLOT_MATERIAL_TEX1 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex2, g_SwMaterialTex2Sampler, SW_SLOT_MATERIAL_TEX2 );
@@ -714,9 +723,9 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex12, g_SwMaterialTex12Sampler, SW_SL
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex13, g_SwMaterialTex13Sampler, SW_SLOT_MATERIAL_TEX13 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex14, g_SwMaterialTex14Sampler, SW_SLOT_MATERIAL_TEX14 );
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex15, g_SwMaterialTex15Sampler, SW_SLOT_MATERIAL_TEX15 );
-#endif
+        #endif
 
-#if defined( DX11 )
+        #if defined( DX11 )
 // DX11 정적 샘플러 세트 s9..s15 (bindingslots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
 // DX12 와 같은 표(SW_SAMPLER_*)라 셰이더가 고른 samplerId 가 DX11 에서도 존중된다.
 SamplerState g_SwSampler0 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER0 ) );
@@ -729,45 +738,52 @@ SamplerState g_SwSampler6 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER6 ) );
 /** @brief 슬롯 텍스처를 정적 샘플러 세트의 samplerId 로 샘플링합니다 — SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기. */
 float4 swSampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv )
 {
-	switch ( samplerId )
-	{
-		case 1: return slotTexture.Sample( g_SwSampler1, uv );
-		case 2: return slotTexture.Sample( g_SwSampler2, uv );
-		case 3: return slotTexture.Sample( g_SwSampler3, uv );
-		case 4: return slotTexture.Sample( g_SwSampler4, uv );
-		case 5: return slotTexture.Sample( g_SwSampler5, uv );
-		case 6: return slotTexture.Sample( g_SwSampler6, uv );
-		default: return slotTexture.Sample( g_SwSampler0, uv );
-	}
+    switch ( samplerId )
+    {
+        case 1:
+            return slotTexture.Sample( g_SwSampler1, uv );
+        case 2:
+            return slotTexture.Sample( g_SwSampler2, uv );
+        case 3:
+            return slotTexture.Sample( g_SwSampler3, uv );
+        case 4:
+            return slotTexture.Sample( g_SwSampler4, uv );
+        case 5:
+            return slotTexture.Sample( g_SwSampler5, uv );
+        case 6:
+            return slotTexture.Sample( g_SwSampler6, uv );
+        default:
+            return slotTexture.Sample( g_SwSampler0, uv );
+    }
 }
-#endif
+        #endif
 
 /** @brief G버퍼 머티리얼 칸의 슬롯(t15)을 엔진 텍스처 샘플러로 읽습니다 — DX11 은 짝 샘플러가 없어 정적 세트에서 고른다. */
 float4 swSampleGbufferMaterialSlot( float2 uv )
 {
-#if defined( DX11 )
-	return swSampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
-#else
-	return g_SwSlotGBufferMaterial.Sample( g_SwSlotGBufferMaterialSampler, uv );
-#endif
+        #if defined( DX11 )
+    return swSampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
+        #else
+    return g_SwSlotGBufferMaterial.Sample( g_SwSlotGBufferMaterialSampler, uv );
+        #endif
 }
 
 float4 swSampleIndex( uint index, float2 uv )
 {
-	if ( index == kInvalidIndex )
-		return float4( 0, 0, 0, 1 );
-	// FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright/autoExposure, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
-	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
-		return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
-		return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
-		return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
-	if ( index == g_SceneDepthIndex )
-		return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
-	if ( index == g_GBufferMaterialIndex )
-		return swSampleGbufferMaterialSlot( uv );
-	return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    // FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright/autoExposure, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
+    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
+        return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+        return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+        return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
+    if ( index == g_SceneDepthIndex )
+        return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
+    if ( index == g_GBufferMaterialIndex )
+        return swSampleGbufferMaterialSlot( uv );
+    return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
@@ -776,36 +792,36 @@ float4 swSampleIndex( uint index, float2 uv )
  */
 float4 swGatherDepthRed( float2 uv )
 {
-	if ( g_SceneDepthIndex == kInvalidIndex )
-		return float4( 1, 1, 1, 1 );
-	return g_SwSlot3.GatherRed( g_SwSlot3Sampler, uv );
+    if ( g_SceneDepthIndex == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    return g_SwSlot3.GatherRed( g_SwSlot3Sampler, uv );
 }
-#if defined( DX11 )
+        #if defined( DX11 )
 /** @brief DX11: 텍스처는 슬롯 멀티플렉싱(swSampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerId 로 고른다. */
 float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 {
-	if ( index == kInvalidIndex )
-		return float4( 0, 0, 0, 1 );
-	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
-		return swSampleSlotWith( g_SwSlot0, samplerId, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
-		return swSampleSlotWith( g_SwSlot1, samplerId, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
-		return swSampleSlotWith( g_SwSlot2, samplerId, uv );
-	if ( index == g_SceneDepthIndex )
-		return swSampleSlotWith( g_SwSlot3, samplerId, uv );
-	if ( index == g_GBufferMaterialIndex )
-		return swSampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
-	return swSampleSlotWith( g_SwSlot0, samplerId, uv );
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
+        return swSampleSlotWith( g_SwSlot0, samplerId, uv );
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+        return swSampleSlotWith( g_SwSlot1, samplerId, uv );
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+        return swSampleSlotWith( g_SwSlot2, samplerId, uv );
+    if ( index == g_SceneDepthIndex )
+        return swSampleSlotWith( g_SwSlot3, samplerId, uv );
+    if ( index == g_GBufferMaterialIndex )
+        return swSampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
+    return swSampleSlotWith( g_SwSlot0, samplerId, uv );
 }
-#else
+        #else
 /** @brief 슬롯 텍스처를 샘플러 없이 가장 가까운 텍셀 하나로 읽습니다(점 샘플 · 클램프) — 결합 샘플러가 선형으로 묶인 OpenGL 에서 점 샘플을 얻는 길이다. */
 float4 swSampleSlotPoint( Texture2D slotTexture, float2 uv )
 {
-	float2 size;
-	slotTexture.GetDimensions( size.x, size.y );
-	const int2 texel = clamp( int2( floor( uv * size ) ), int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
-	return slotTexture.Load( int3( texel, 0 ) );
+    float2 size;
+    slotTexture.GetDimensions( size.x, size.y );
+    const int2 texel = clamp( int2( floor( uv * size ) ), int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
+    return slotTexture.Load( int3( texel, 0 ) );
 }
 /**
  * @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 슬롯의 샘플러 상태는 엔진이 정한다(t0..t3 는 선형 · 클램프).
@@ -814,46 +830,46 @@ float4 swSampleSlotPoint( Texture2D slotTexture, float2 uv )
  */
 float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 {
-	if ( samplerId != SW_SAMPLER_POINT_CLAMP )
-		return swSampleIndex( index, uv );
-	if ( index == kInvalidIndex )
-		return float4( 0, 0, 0, 1 );
-	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
-		return swSampleSlotPoint( g_SwSlot0, uv );
-	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
-		return swSampleSlotPoint( g_SwSlot1, uv );
-	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
-		return swSampleSlotPoint( g_SwSlot2, uv );
-	if ( index == g_SceneDepthIndex )
-		return swSampleSlotPoint( g_SwSlot3, uv );
-	if ( index == g_GBufferMaterialIndex )
-		return swSampleSlotPoint( g_SwSlotGBufferMaterial, uv );
-	return swSampleSlotPoint( g_SwSlot0, uv );
+    if ( samplerId != SW_SAMPLER_POINT_CLAMP )
+        return swSampleIndex( index, uv );
+    if ( index == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
+        return swSampleSlotPoint( g_SwSlot0, uv );
+    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
+        return swSampleSlotPoint( g_SwSlot1, uv );
+    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
+        return swSampleSlotPoint( g_SwSlot2, uv );
+    if ( index == g_SceneDepthIndex )
+        return swSampleSlotPoint( g_SwSlot3, uv );
+    if ( index == g_GBufferMaterialIndex )
+        return swSampleSlotPoint( g_SwSlotGBufferMaterial, uv );
+    return swSampleSlotPoint( g_SwSlot0, uv );
 }
-#endif
+        #endif
 /**
  * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
  * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(swSampleIndex 의 표).
  */
 float swSampleShadowComparison( uint index, float2 uv, float depth )
 {
-	if ( index == kInvalidIndex )
-		return 1.0f;
-	if ( index != g_ShadowMapIndex )
-		return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
-	float2 size;
-	g_SwSlot0.GetDimensions( size.x, size.y );
-	const float2 texelPosition = uv * size - 0.5f;
-	const float2 weight        = frac( texelPosition );
-	// 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
-	const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
-	const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
-	return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
+    if ( index == kInvalidIndex )
+        return 1.0f;
+    if ( index != g_ShadowMapIndex )
+        return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+    float2 size;
+    g_SwSlot0.GetDimensions( size.x, size.y );
+    const float2 texelPosition = uv * size - 0.5f;
+    const float2 weight        = frac( texelPosition );
+    // 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
+    const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
+    const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
+    return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
 }
 
-#endif // !SW_STAGE_COMPUTE
+    #endif // !SW_STAGE_COMPUTE
 
-#if defined( SW_STAGE_COMPUTE )
+    #if defined( SW_STAGE_COMPUTE )
 // 컴퓨트 RW 텍스처 고정 슬롯 u4..u7 — 엔진이 bindComputeUav( index, SW_SLOT_COMPUTE_TEXUAV0 + 서수 ) 로 건다. index = 서수.
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot0, SW_SLOT_COMPUTE_TEXUAV0, SW_GL_IMAGE_UNIT0 );
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot1, SW_SLOT_COMPUTE_TEXUAV1, SW_GL_IMAGE_UNIT1 );
@@ -861,56 +877,64 @@ SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot2, SW_SLOT_COMPUTE_TEXUAV2, SW_GL_IMAGE_UNIT2
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot3, SW_SLOT_COMPUTE_TEXUAV3, SW_GL_IMAGE_UNIT3 );
 void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
-	if ( index == 0 ) g_SwRWSlot0[texelPosition] = value;
-	else if ( index == 1 ) g_SwRWSlot1[texelPosition] = value;
-	else if ( index == 2 ) g_SwRWSlot2[texelPosition] = value;
-	else if ( index == 3 ) g_SwRWSlot3[texelPosition] = value;
+    if ( index == 0 )
+        g_SwRWSlot0[texelPosition] = value;
+    else if ( index == 1 )
+        g_SwRWSlot1[texelPosition] = value;
+    else if ( index == 2 )
+        g_SwRWSlot2[texelPosition] = value;
+    else if ( index == 3 )
+        g_SwRWSlot3[texelPosition] = value;
 }
 float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 {
-	if ( index == 0 ) return g_SwRWSlot0[texelPosition];
-	if ( index == 1 ) return g_SwRWSlot1[texelPosition];
-	if ( index == 2 ) return g_SwRWSlot2[texelPosition];
-	if ( index == 3 ) return g_SwRWSlot3[texelPosition];
-	return float4( 0, 0, 0, 0 );
+    if ( index == 0 )
+        return g_SwRWSlot0[texelPosition];
+    if ( index == 1 )
+        return g_SwRWSlot1[texelPosition];
+    if ( index == 2 )
+        return g_SwRWSlot2[texelPosition];
+    if ( index == 3 )
+        return g_SwRWSlot3[texelPosition];
+    return float4( 0, 0, 0, 0 );
 }
-#endif // SW_STAGE_COMPUTE
+    #endif // SW_STAGE_COMPUTE
 
 #endif // SW_NATIVE_BINDLESS
 
 // ---- 11-3) 공통 진입 함수 (네 백엔드) -----------------------------------------
 #if defined( SW_NATIVE_BINDLESS ) || !defined( SW_STAGE_COMPUTE )
-/**
- * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
- * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
- *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`swSampleIndex` 의 표). 아틀라스가 없으면 `swSampleIndex` 와 같이 검정이다.
- */
-#if SW_ENGINE_TEXTURE_SAMPLER != 1
-#error swSampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
-#endif
+    /**
+     * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
+     * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
+     *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`swSampleIndex` 의 표). 아틀라스가 없으면 `swSampleIndex` 와 같이 검정이다.
+     */
+    #if SW_ENGINE_TEXTURE_SAMPLER != 1
+        #error swSampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
+    #endif
 float4 swSampleLight2dCookieAtlas( float2 uv )
 {
-	if ( g_Light2DCookieAtlasIndex == kInvalidIndex )
-		return float4( 0, 0, 0, 1 );
-#if defined( SW_NATIVE_BINDLESS )
-	const uint slot = swBindlessTextureSlot( g_Light2DCookieAtlasIndex );
-#if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_ENGINE_TEXTURE_SAMPLER ), uv, 0.0f );
-#else
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler1, uv, 0.0f );
-#endif
-#else
-	return g_SwSlot1.SampleLevel( g_SwSlot1Sampler, uv, 0.0f );
-#endif
+    if ( g_Light2DCookieAtlasIndex == kInvalidIndex )
+        return float4( 0, 0, 0, 1 );
+    #if defined( SW_NATIVE_BINDLESS )
+    const uint slot = swBindlessTextureSlot( g_Light2DCookieAtlasIndex );
+        #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_ENGINE_TEXTURE_SAMPLER ), uv, 0.0f );
+        #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler1, uv, 0.0f );
+        #endif
+    #else
+    return g_SwSlot1.SampleLevel( g_SwSlot1Sampler, uv, 0.0f );
+    #endif
 }
-/**
- * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
- * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
- *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
- *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
- *          t16..t31 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
- */
-#if defined( SW_VIEWMODE_MIPMAPS )
+    /**
+     * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
+     * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
+     *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
+     *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
+     *          t16..t31 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
+     */
+    #if defined( SW_VIEWMODE_MIPMAPS )
 /**
  * @brief 보기 모드 Mipmaps — 머티리얼 텍스처를 읽는 밉 단계를 색으로 바꾼다(유니티 Scene 뷰 Mipmaps 와 같은 목적).
  * @details 확대(밉 0 보다 작다 — 텍스처 해상도가 모자란다)는 파랑, 밉 0 은 초록, 1 노랑, 2 주황, 3 이상 빨강(해상도가 남는다)이다. 텍스처가 없으면 흰색.
@@ -918,217 +942,332 @@ float4 swSampleLight2dCookieAtlas( float2 uv )
  */
 float4 swComputeViewModeMipColor( float lod )
 {
-	if ( lod < -0.5f )
-		return float4( 0.2f, 0.4f, 1.0f, 1.0f );
-	const float4 arrColor[4] = { float4( 0.2f, 0.9f, 0.2f, 1.0f ), float4( 1.0f, 0.95f, 0.2f, 1.0f ), float4( 1.0f, 0.55f, 0.1f, 1.0f ), float4( 1.0f, 0.15f, 0.1f, 1.0f ) };
-	return arrColor[min( uint( lod + 0.5f ), 3u )];
+    if ( lod < -0.5f )
+        return float4( 0.2f, 0.4f, 1.0f, 1.0f );
+    const float4 arrColor[4] = { float4( 0.2f, 0.9f, 0.2f, 1.0f ), float4( 1.0f, 0.95f, 0.2f, 1.0f ), float4( 1.0f, 0.55f, 0.1f, 1.0f ), float4( 1.0f, 0.15f, 0.1f, 1.0f ) };
+    return arrColor[min( uint( lod + 0.5f ), 3u )];
 }
 float4 swSampleMaterialTextureMipColor( uint index, float2 uv )
 {
-#if defined( SW_NATIVE_BINDLESS )
-	if ( index == kInvalidIndex )
-		return float4( 1, 1, 1, 1 );
-	const uint slot = swBindlessTextureSlot( index );
-#if defined( __spirv__ )
-	return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
-#else
-	return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
-#endif
-#else
-	switch ( index )
-	{
-#if defined( DX11 )
-		case 0u: return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 1u: return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 2u: return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 3u: return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 4u: return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 5u: return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 6u: return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 7u: return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 8u: return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 9u: return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 10u: return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 11u: return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 12u: return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 13u: return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 14u: return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-		case 15u: return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
-#else
-		case 0u: return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
-		case 1u: return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
-		case 2u: return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
-		case 3u: return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
-		case 4u: return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
-		case 5u: return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
-		case 6u: return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
-		case 7u: return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
-		case 8u: return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
-		case 9u: return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
-		case 10u: return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
-		case 11u: return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
-		case 12u: return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
-		case 13u: return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
-		case 14u: return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
-		case 15u: return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
-#endif
-		default: return float4( 1, 1, 1, 1 );
-	}
-#endif
+        #if defined( SW_NATIVE_BINDLESS )
+    if ( index == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    const uint slot = swBindlessTextureSlot( index );
+            #if defined( __spirv__ )
+    return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
+            #else
+    return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            #endif
+        #else
+    switch ( index )
+    {
+            #if defined( DX11 )
+        case 0u:
+            return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 1u:
+            return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 2u:
+            return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 3u:
+            return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 4u:
+            return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 5u:
+            return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 6u:
+            return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 7u:
+            return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 8u:
+            return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 9u:
+            return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 10u:
+            return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 11u:
+            return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 12u:
+            return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 13u:
+            return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 14u:
+            return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+        case 15u:
+            return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            #else
+        case 0u:
+            return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
+        case 1u:
+            return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
+        case 2u:
+            return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
+        case 3u:
+            return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
+        case 4u:
+            return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
+        case 5u:
+            return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
+        case 6u:
+            return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
+        case 7u:
+            return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
+        case 8u:
+            return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
+        case 9u:
+            return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
+        case 10u:
+            return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
+        case 11u:
+            return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
+        case 12u:
+            return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
+        case 13u:
+            return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
+        case 14u:
+            return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
+        case 15u:
+            return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
+            #endif
+        default:
+            return float4( 1, 1, 1, 1 );
+    }
+        #endif
 }
-#endif
+    #endif
 
-#if defined( SW_NATIVE_BINDLESS )
+    #if defined( SW_NATIVE_BINDLESS )
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
-#if defined( SW_VIEWMODE_MIPMAPS )
-	return swSampleMaterialTextureMipColor( index, uv );
-#endif
-	// 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
-	if ( index == kInvalidIndex )
-		return float4( 1, 1, 1, 1 );
-	return swSampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        #if defined( SW_VIEWMODE_MIPMAPS )
+    return swSampleMaterialTextureMipColor( index, uv );
+        #endif
+    // 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
+    if ( index == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    return swSampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
 }
-#else
+    #else
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
-#if defined( SW_VIEWMODE_MIPMAPS )
-	return swSampleMaterialTextureMipColor( index, uv );
-#endif
-	// 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
-	// 엔진이 그 서수 순서대로 t16..t31 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
-	// (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
-	// DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
-	switch ( index )
-	{
-#if defined( DX11 )
-		case 0u: return swSampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 1u: return swSampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 2u: return swSampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 3u: return swSampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 4u: return swSampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 5u: return swSampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 6u: return swSampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 7u: return swSampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 8u: return swSampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 9u: return swSampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 10u: return swSampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 11u: return swSampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 12u: return swSampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 13u: return swSampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 14u: return swSampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-		case 15u: return swSampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
-#else
-		case 0u: return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
-		case 1u: return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
-		case 2u: return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
-		case 3u: return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
-		case 4u: return g_SwMaterialTex4.Sample( g_SwMaterialTex4Sampler, uv );
-		case 5u: return g_SwMaterialTex5.Sample( g_SwMaterialTex5Sampler, uv );
-		case 6u: return g_SwMaterialTex6.Sample( g_SwMaterialTex6Sampler, uv );
-		case 7u: return g_SwMaterialTex7.Sample( g_SwMaterialTex7Sampler, uv );
-		case 8u: return g_SwMaterialTex8.Sample( g_SwMaterialTex8Sampler, uv );
-		case 9u: return g_SwMaterialTex9.Sample( g_SwMaterialTex9Sampler, uv );
-		case 10u: return g_SwMaterialTex10.Sample( g_SwMaterialTex10Sampler, uv );
-		case 11u: return g_SwMaterialTex11.Sample( g_SwMaterialTex11Sampler, uv );
-		case 12u: return g_SwMaterialTex12.Sample( g_SwMaterialTex12Sampler, uv );
-		case 13u: return g_SwMaterialTex13.Sample( g_SwMaterialTex13Sampler, uv );
-		case 14u: return g_SwMaterialTex14.Sample( g_SwMaterialTex14Sampler, uv );
-		case 15u: return g_SwMaterialTex15.Sample( g_SwMaterialTex15Sampler, uv );
-#endif
-		default: return float4( 1, 1, 1, 1 );
-	}
+        #if defined( SW_VIEWMODE_MIPMAPS )
+    return swSampleMaterialTextureMipColor( index, uv );
+        #endif
+    // 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
+    // 엔진이 그 서수 순서대로 t16..t31 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
+    // (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
+    // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
+    switch ( index )
+    {
+        #if defined( DX11 )
+        case 0u:
+            return swSampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 1u:
+            return swSampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 2u:
+            return swSampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 3u:
+            return swSampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 4u:
+            return swSampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 5u:
+            return swSampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 6u:
+            return swSampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 7u:
+            return swSampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 8u:
+            return swSampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 9u:
+            return swSampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 10u:
+            return swSampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 11u:
+            return swSampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 12u:
+            return swSampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 13u:
+            return swSampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 14u:
+            return swSampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        case 15u:
+            return swSampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+        #else
+        case 0u:
+            return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
+        case 1u:
+            return g_SwMaterialTex1.Sample( g_SwMaterialTex1Sampler, uv );
+        case 2u:
+            return g_SwMaterialTex2.Sample( g_SwMaterialTex2Sampler, uv );
+        case 3u:
+            return g_SwMaterialTex3.Sample( g_SwMaterialTex3Sampler, uv );
+        case 4u:
+            return g_SwMaterialTex4.Sample( g_SwMaterialTex4Sampler, uv );
+        case 5u:
+            return g_SwMaterialTex5.Sample( g_SwMaterialTex5Sampler, uv );
+        case 6u:
+            return g_SwMaterialTex6.Sample( g_SwMaterialTex6Sampler, uv );
+        case 7u:
+            return g_SwMaterialTex7.Sample( g_SwMaterialTex7Sampler, uv );
+        case 8u:
+            return g_SwMaterialTex8.Sample( g_SwMaterialTex8Sampler, uv );
+        case 9u:
+            return g_SwMaterialTex9.Sample( g_SwMaterialTex9Sampler, uv );
+        case 10u:
+            return g_SwMaterialTex10.Sample( g_SwMaterialTex10Sampler, uv );
+        case 11u:
+            return g_SwMaterialTex11.Sample( g_SwMaterialTex11Sampler, uv );
+        case 12u:
+            return g_SwMaterialTex12.Sample( g_SwMaterialTex12Sampler, uv );
+        case 13u:
+            return g_SwMaterialTex13.Sample( g_SwMaterialTex13Sampler, uv );
+        case 14u:
+            return g_SwMaterialTex14.Sample( g_SwMaterialTex14Sampler, uv );
+        case 15u:
+            return g_SwMaterialTex15.Sample( g_SwMaterialTex15Sampler, uv );
+        #endif
+        default:
+            return float4( 1, 1, 1, 1 );
+    }
 }
-#endif
+    #endif
 
-/**
- * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `swSampleMaterialTexture` 와 같고 텍스처가 없으면 흰색입니다.
- * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 정점을 밀 때 쓴다. DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
- */
-#if SW_MATERIAL_TEXTURE_SAMPLER != 0
-#error swSampleMaterialTextureLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
-#endif
+    /**
+     * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `swSampleMaterialTexture` 와 같고 텍스처가 없으면 흰색입니다.
+     * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 정점을 밀 때 쓴다. DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
+     */
+    #if SW_MATERIAL_TEXTURE_SAMPLER != 0
+        #error swSampleMaterialTextureLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
+    #endif
 float4 swSampleMaterialTextureLevelZero( uint index, float2 uv )
 {
-#if defined( SW_NATIVE_BINDLESS )
-	if ( index == kInvalidIndex )
-		return float4( 1, 1, 1, 1 );
-	const uint slot = swBindlessTextureSlot( index );
-#if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, 0.0f );
-#else
-	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, 0.0f );
-#endif
-#else
-	switch ( index )
-	{
-#if defined( DX11 )
-		case 0u: return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 1u: return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 2u: return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 3u: return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 4u: return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 5u: return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 6u: return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 7u: return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 8u: return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 9u: return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 10u: return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 11u: return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 12u: return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 13u: return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 14u: return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, 0.0f );
-		case 15u: return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, 0.0f );
-#else
-		case 0u: return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, 0.0f );
-		case 1u: return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, 0.0f );
-		case 2u: return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, 0.0f );
-		case 3u: return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, 0.0f );
-		case 4u: return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, 0.0f );
-		case 5u: return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, 0.0f );
-		case 6u: return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, 0.0f );
-		case 7u: return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, 0.0f );
-		case 8u: return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, 0.0f );
-		case 9u: return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, 0.0f );
-		case 10u: return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, 0.0f );
-		case 11u: return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, 0.0f );
-		case 12u: return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, 0.0f );
-		case 13u: return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, 0.0f );
-		case 14u: return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, 0.0f );
-		case 15u: return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, 0.0f );
-#endif
-		default: return float4( 1, 1, 1, 1 );
-	}
-#endif
+    #if defined( SW_NATIVE_BINDLESS )
+    if ( index == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    const uint slot = swBindlessTextureSlot( index );
+        #if defined( __spirv__ )
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, 0.0f );
+        #else
+    return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler0, uv, 0.0f );
+        #endif
+    #else
+    switch ( index )
+    {
+        #if defined( DX11 )
+        case 0u:
+            return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 1u:
+            return g_SwMaterialTex1.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 2u:
+            return g_SwMaterialTex2.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 3u:
+            return g_SwMaterialTex3.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 4u:
+            return g_SwMaterialTex4.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 5u:
+            return g_SwMaterialTex5.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 6u:
+            return g_SwMaterialTex6.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 7u:
+            return g_SwMaterialTex7.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 8u:
+            return g_SwMaterialTex8.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 9u:
+            return g_SwMaterialTex9.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 10u:
+            return g_SwMaterialTex10.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 11u:
+            return g_SwMaterialTex11.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 12u:
+            return g_SwMaterialTex12.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 13u:
+            return g_SwMaterialTex13.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 14u:
+            return g_SwMaterialTex14.SampleLevel( g_SwSampler0, uv, 0.0f );
+        case 15u:
+            return g_SwMaterialTex15.SampleLevel( g_SwSampler0, uv, 0.0f );
+        #else
+        case 0u:
+            return g_SwMaterialTex0.SampleLevel( g_SwMaterialTex0Sampler, uv, 0.0f );
+        case 1u:
+            return g_SwMaterialTex1.SampleLevel( g_SwMaterialTex1Sampler, uv, 0.0f );
+        case 2u:
+            return g_SwMaterialTex2.SampleLevel( g_SwMaterialTex2Sampler, uv, 0.0f );
+        case 3u:
+            return g_SwMaterialTex3.SampleLevel( g_SwMaterialTex3Sampler, uv, 0.0f );
+        case 4u:
+            return g_SwMaterialTex4.SampleLevel( g_SwMaterialTex4Sampler, uv, 0.0f );
+        case 5u:
+            return g_SwMaterialTex5.SampleLevel( g_SwMaterialTex5Sampler, uv, 0.0f );
+        case 6u:
+            return g_SwMaterialTex6.SampleLevel( g_SwMaterialTex6Sampler, uv, 0.0f );
+        case 7u:
+            return g_SwMaterialTex7.SampleLevel( g_SwMaterialTex7Sampler, uv, 0.0f );
+        case 8u:
+            return g_SwMaterialTex8.SampleLevel( g_SwMaterialTex8Sampler, uv, 0.0f );
+        case 9u:
+            return g_SwMaterialTex9.SampleLevel( g_SwMaterialTex9Sampler, uv, 0.0f );
+        case 10u:
+            return g_SwMaterialTex10.SampleLevel( g_SwMaterialTex10Sampler, uv, 0.0f );
+        case 11u:
+            return g_SwMaterialTex11.SampleLevel( g_SwMaterialTex11Sampler, uv, 0.0f );
+        case 12u:
+            return g_SwMaterialTex12.SampleLevel( g_SwMaterialTex12Sampler, uv, 0.0f );
+        case 13u:
+            return g_SwMaterialTex13.SampleLevel( g_SwMaterialTex13Sampler, uv, 0.0f );
+        case 14u:
+            return g_SwMaterialTex14.SampleLevel( g_SwMaterialTex14Sampler, uv, 0.0f );
+        case 15u:
+            return g_SwMaterialTex15.SampleLevel( g_SwMaterialTex15Sampler, uv, 0.0f );
+        #endif
+        default:
+            return float4( 1, 1, 1, 1 );
+    }
+    #endif
 }
 
 /** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `swSampleMaterialTexture` 와 같습니다. */
 float2 swComputeMaterialTextureSize( uint index )
 {
-	uint width  = 1u;
-	uint height = 1u;
-#if defined( SW_NATIVE_BINDLESS )
-	if ( index != kInvalidIndex )
-		g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].GetDimensions( width, height );
-#else
-	if ( index == 0u ) g_SwMaterialTex0.GetDimensions( width, height );
-	if ( index == 1u ) g_SwMaterialTex1.GetDimensions( width, height );
-	if ( index == 2u ) g_SwMaterialTex2.GetDimensions( width, height );
-	if ( index == 3u ) g_SwMaterialTex3.GetDimensions( width, height );
-	if ( index == 4u ) g_SwMaterialTex4.GetDimensions( width, height );
-	if ( index == 5u ) g_SwMaterialTex5.GetDimensions( width, height );
-	if ( index == 6u ) g_SwMaterialTex6.GetDimensions( width, height );
-	if ( index == 7u ) g_SwMaterialTex7.GetDimensions( width, height );
-	if ( index == 8u ) g_SwMaterialTex8.GetDimensions( width, height );
-	if ( index == 9u ) g_SwMaterialTex9.GetDimensions( width, height );
-	if ( index == 10u ) g_SwMaterialTex10.GetDimensions( width, height );
-	if ( index == 11u ) g_SwMaterialTex11.GetDimensions( width, height );
-	if ( index == 12u ) g_SwMaterialTex12.GetDimensions( width, height );
-	if ( index == 13u ) g_SwMaterialTex13.GetDimensions( width, height );
-	if ( index == 14u ) g_SwMaterialTex14.GetDimensions( width, height );
-	if ( index == 15u ) g_SwMaterialTex15.GetDimensions( width, height );
-#endif
-	return float2( max( width, 1u ), max( height, 1u ) );
+    uint width  = 1u;
+    uint height = 1u;
+    #if defined( SW_NATIVE_BINDLESS )
+    if ( index != kInvalidIndex )
+        g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].GetDimensions( width, height );
+    #else
+    if ( index == 0u )
+        g_SwMaterialTex0.GetDimensions( width, height );
+    if ( index == 1u )
+        g_SwMaterialTex1.GetDimensions( width, height );
+    if ( index == 2u )
+        g_SwMaterialTex2.GetDimensions( width, height );
+    if ( index == 3u )
+        g_SwMaterialTex3.GetDimensions( width, height );
+    if ( index == 4u )
+        g_SwMaterialTex4.GetDimensions( width, height );
+    if ( index == 5u )
+        g_SwMaterialTex5.GetDimensions( width, height );
+    if ( index == 6u )
+        g_SwMaterialTex6.GetDimensions( width, height );
+    if ( index == 7u )
+        g_SwMaterialTex7.GetDimensions( width, height );
+    if ( index == 8u )
+        g_SwMaterialTex8.GetDimensions( width, height );
+    if ( index == 9u )
+        g_SwMaterialTex9.GetDimensions( width, height );
+    if ( index == 10u )
+        g_SwMaterialTex10.GetDimensions( width, height );
+    if ( index == 11u )
+        g_SwMaterialTex11.GetDimensions( width, height );
+    if ( index == 12u )
+        g_SwMaterialTex12.GetDimensions( width, height );
+    if ( index == 13u )
+        g_SwMaterialTex13.GetDimensions( width, height );
+    if ( index == 14u )
+        g_SwMaterialTex14.GetDimensions( width, height );
+    if ( index == 15u )
+        g_SwMaterialTex15.GetDimensions( width, height );
+    #endif
+    return float2( max( width, 1u ), max( height, 1u ) );
 }
 
 /**
@@ -1138,23 +1277,41 @@ float2 swComputeMaterialTextureSize( uint index )
  */
 float4 swSampleMaterialTexturePoint( uint index, float2 uv )
 {
-	const float2 size = swComputeMaterialTextureSize( index );
-	return swSampleMaterialTexture( index, ( floor( uv * size ) + 0.5f ) / size );
+    const float2 size = swComputeMaterialTextureSize( index );
+    return swSampleMaterialTexture( index, ( floor( uv * size ) + 0.5f ) / size );
 }
 
-float4 swSampleShadow( float2 uv )      { return swSampleIndex( g_ShadowMapIndex, uv ); }
-float4 swSampleAlbedo( float2 uv )      { return swSampleIndex( g_GBufferAlbedoIndex, uv ); }
-float4 swSampleNormal( float2 uv )      { return swSampleIndex( g_GBufferNormalIndex, uv ); }
-float4 swSampleGbufferMaterial( float2 uv ) { return swSampleIndex( g_GBufferMaterialIndex, uv ); }
+float4 swSampleShadow( float2 uv )
+{
+    return swSampleIndex( g_ShadowMapIndex, uv );
+}
+float4 swSampleAlbedo( float2 uv )
+{
+    return swSampleIndex( g_GBufferAlbedoIndex, uv );
+}
+float4 swSampleNormal( float2 uv )
+{
+    return swSampleIndex( g_GBufferNormalIndex, uv );
+}
+float4 swSampleGbufferMaterial( float2 uv )
+{
+    return swSampleIndex( g_GBufferMaterialIndex, uv );
+}
 /** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 swEncodeGbufferMaterial 하나다(r 금속도, g 거칠기). */
 void swLoadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic )
 {
-	const float4 encoded = swSampleGbufferMaterial( uv );
-	outMetallic          = encoded.r;
-	outRoughness         = encoded.g;
+    const float4 encoded = swSampleGbufferMaterial( uv );
+    outMetallic          = encoded.r;
+    outRoughness         = encoded.g;
 }
-float4 swSampleDepth( float2 uv )       { return swSampleIndex( g_SceneDepthIndex, uv ); }
-float4 swSampleSource( float2 uv )      { return swSampleIndex( g_SourceColorIndex, uv ); }
+float4 swSampleDepth( float2 uv )
+{
+    return swSampleIndex( g_SceneDepthIndex, uv );
+}
+float4 swSampleSource( float2 uv )
+{
+    return swSampleIndex( g_SourceColorIndex, uv );
+}
 /**
  * @brief 화면과 1:1 인 전체화면 패스 전용 — 텍셀 중심에 정확히 떨어지므로 선형 필터가 **할 일이 없다**.
  * @details 그런데도 값은 공짜가 아니다: 선형 샘플은 텍셀 넷을 읽어 섞고, 깊이 같은 포맷은 그 경로가
@@ -1162,8 +1319,14 @@ float4 swSampleSource( float2 uv )      { return swSampleIndex( g_SourceColorInd
  *          거기서는 섞는 것이 목적이다.
  * @note CLAMP 인 것도 의미가 있다. 화면 가장자리에서 한 텍셀 비낀 샘플이 WRAP 이면 반대편을 읽는다.
  */
-float4 swSampleDepthPoint( float2 uv )  { return swSampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv ); }
-float4 swSampleSourcePoint( float2 uv ) { return swSampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv ); }
+float4 swSampleDepthPoint( float2 uv )
+{
+    return swSampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv );
+}
+float4 swSampleSourcePoint( float2 uv )
+{
+    return swSampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv );
+}
 /**
  * @brief 깊이의 십자 다섯 칸(중심 + 상하좌우 한 텍셀)을 읽습니다 — 게더가 있으면 **두 번**에 끝낸다.
  * @details 반 텍셀 비낀 두 게더의 2x2 가 십자 다섯 칸을 정확히 덮는다(중심은 둘 다에 들어 있다).
@@ -1174,19 +1337,19 @@ float4 swSampleSourcePoint( float2 uv ) { return swSampleIndexWith( g_SourceColo
  */
 void swSampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth )
 {
-	// **반 텍셀이 아니라 1/4 텍셀이다.** 정확히 텍셀 모서리에 찍으면 어느 2x2 를 잡을지가 반올림에
-	// 달려 버려 백엔드·드라이버마다 갈릴 수 있다. 1/4 은 의도한 2x2 안쪽이라 어디서든 같은 넷이다.
-	float4 gatherHi = swGatherDepthRed( uv + texel * 0.25f );
-	float4 gatherLo = swGatherDepthRed( uv - texel * 0.25f );
-	outCenterDepth   = gatherHi.w;
-	outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
+    // **반 텍셀이 아니라 1/4 텍셀이다.** 정확히 텍셀 모서리에 찍으면 어느 2x2 를 잡을지가 반올림에
+    // 달려 버려 백엔드·드라이버마다 갈릴 수 있다. 1/4 은 의도한 2x2 안쪽이라 어디서든 같은 넷이다.
+    float4 gatherHi  = swGatherDepthRed( uv + texel * 0.25f );
+    float4 gatherLo  = swGatherDepthRed( uv - texel * 0.25f );
+    outCenterDepth   = gatherHi.w;
+    outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 float swSampleAmbientOcclusion( float2 uv )
 {
-	if ( g_AmbientOcclusionIndex == kInvalidIndex )
-		return 1.0f;
-	return swSampleIndex( g_AmbientOcclusionIndex, uv ).r;
+    if ( g_AmbientOcclusionIndex == kInvalidIndex )
+        return 1.0f;
+    return swSampleIndex( g_AmbientOcclusionIndex, uv ).r;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
@@ -1205,14 +1368,14 @@ float swSampleAmbientOcclusion( float2 uv )
 #if defined( SW_PASS_GBUFFER )
 struct SwSurfaceOutput
 {
-	float4 albedo   : SV_TARGET0;
-	float4 normal   : SV_TARGET1;
-	float4 material : SV_TARGET2; // swEncodeGbufferMaterial
+    float4 albedo : SV_TARGET0;
+    float4 normal : SV_TARGET1;
+    float4 material : SV_TARGET2; // swEncodeGbufferMaterial
 };
 #else
 struct SwSurfaceOutput
 {
-	float4 color : SV_TARGET0;
+    float4 color : SV_TARGET0;
 };
 #endif
 #define SW_SURFACE_OUTPUT SwSurfaceOutput
@@ -1227,7 +1390,7 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwLightGrid, SW_SLOT_LIGHT_GRID_SRV );
 /** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
 uint swComputeLightCount()
 {
-	return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
+    return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
 }
 
 /**
@@ -1236,13 +1399,13 @@ uint swComputeLightCount()
  */
 uint swLoadLightGridWord( uint wordIndex )
 {
-	return g_SwLightGrid[g_SwLightGridBase + wordIndex];
+    return g_SwLightGrid[g_SwLightGridBase + wordIndex];
 }
 
 /** @brief 지금 뷰에 라이트 그리드가 있는지 — 버퍼가 걸려 있고 이 뷰의 그리드 첫 단어가 있어야 한다. 없으면 커서는 목록 전체를 돈다. */
 bool swHasLightGrid()
 {
-	return g_SwLightGridIndex != kInvalidIndex && g_SwLightGridBase != kInvalidIndex;
+    return g_SwLightGridIndex != kInvalidIndex && g_SwLightGridBase != kInvalidIndex;
 }
 
 /**
@@ -1252,19 +1415,19 @@ bool swHasLightGrid()
  */
 uint swComputeLightGridCluster( float3 worldPosition )
 {
-	const uint   dimX          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
-	const uint   dimY          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
-	const uint   dimZ          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
-	const bool   bPerspective  = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
-	const float  nearDepth     = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
-	const float  sliceScale    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
-	const float4 clip          = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-	const float3 ndc           = clip.xyz / clip.w;
-	const uint   tileX         = swComputeLightGridTile( ndc.x, dimX );
-	const uint   tileY         = swComputeLightGridTile( ndc.y, dimY );
-	const float  slicePosition = swComputeLightGridSlicePosition( bPerspective ? clip.w : ndc.z, bPerspective, nearDepth, sliceScale );
-	const uint   slice         = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
-	return ( slice * dimY + tileY ) * dimX + tileX;
+    const uint   dimX          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
+    const uint   dimY          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
+    const uint   dimZ          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
+    const bool   bPerspective  = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
+    const float  nearDepth     = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
+    const float  sliceScale    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
+    const float4 clip          = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+    const float3 ndc           = clip.xyz / clip.w;
+    const uint   tileX         = swComputeLightGridTile( ndc.x, dimX );
+    const uint   tileY         = swComputeLightGridTile( ndc.y, dimY );
+    const float  slicePosition = swComputeLightGridSlicePosition( bPerspective ? clip.w : ndc.z, bPerspective, nearDepth, sliceScale );
+    const uint   slice         = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
+    return ( slice * dimY + tileY ) * dimX + tileX;
 }
 
 /**
@@ -1273,43 +1436,43 @@ uint swComputeLightGridCluster( float3 worldPosition )
  */
 uint swComputeLightVisitCount( float3 worldPosition )
 {
-	uint visitCount = swComputeLightCount();
-	if ( visitCount > 0u && swHasLightGrid() )
-	{
-		const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + swComputeLightGridCluster( worldPosition ) * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
-		visitCount             = swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT ) + swLoadLightGridWord( clusterWord + 1u );
-	}
-	return visitCount;
+    uint visitCount = swComputeLightCount();
+    if ( visitCount > 0u && swHasLightGrid() )
+    {
+        const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + swComputeLightGridCluster( worldPosition ) * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+        visitCount             = swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT ) + swLoadLightGridWord( clusterWord + 1u );
+    }
+    return visitCount;
 }
 
 // 보기 모드 Unlit · Normals · Depth · Overdraw — 조명 · 그림자 · 림 · 반사를 컴파일 아웃한다. 조명을 하는 셰이더는 **모두** 이 매크로로 가르고,
 // 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
-#if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) || \
-	defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
-	defined( SW_VIEWMODE_WIREOVERLAY )
-#define SW_VIEWMODE_SKIPS_LIGHTING 1
+#if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) ||               \
+    defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
+    defined( SW_VIEWMODE_WIREOVERLAY )
+    #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
-#define SW_VIEWMODE_SKIPS_LIGHTING 0
+    #define SW_VIEWMODE_SKIPS_LIGHTING 0
 #endif
 
 // 보기 모드 LightingOnly — 조명은 그대로 계산하고 표면 색만 이 회색으로 바꾼다(언리얼 Lighting Only). 포워드는 swShadeLights 가,
 // 디퍼드는 G버퍼 알베도 칸(swStoreSurface)이 바꾼다 — 디퍼드 조명 패스는 보기 모드 변형이 없으므로 G버퍼에서 바꿔야 한다.
 #define SW_VIEWMODE_LIGHTINGONLY_ALBEDO float3( 0.5f, 0.5f, 0.5f )
 
-static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
-static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
-static const float kViewModeLightComplexityMax = 16.0f; // Light Complexity 보기: 이 라이트 수부터 빨강
-static const float3 kViewModeWireOverlayColor = float3( 0.02f, 0.02f, 0.02f ); // ShadedWireframe 의 선 색(셰이딩한 면 위에 겹친다)
+static const float  kViewModeDepthRange         = 100.0f;                        // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
+static const float  kViewModeOverdrawStep       = 0.08f;                         // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
+static const float  kViewModeLightComplexityMax = 16.0f;                         // Light Complexity 보기: 이 라이트 수부터 빨강
+static const float3 kViewModeWireOverlayColor   = float3( 0.02f, 0.02f, 0.02f ); // ShadedWireframe 의 선 색(셰이딩한 면 위에 겹친다)
 
 /** @brief 라이트 수를 색 띠로 바꿉니다 — 0 은 검정, 1 부터 파랑 · 초록 · 노랑 · 빨강(kViewModeLightComplexityMax 이상)이다. */
 float3 swComputeLightComplexityColor( uint visitCount )
 {
-	const float  ratio  = saturate( (float)visitCount / kViewModeLightComplexityMax );
-	const float3 cold   = lerp( float3( 0.0f, 0.1f, 0.8f ), float3( 0.0f, 0.9f, 0.2f ), saturate( ratio * 3.0f ) );
-	const float3 warm   = lerp( float3( 1.0f, 0.9f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), saturate( ratio * 3.0f - 2.0f ) );
-	const float3 middle = lerp( cold, float3( 1.0f, 0.9f, 0.0f ), saturate( ratio * 3.0f - 1.0f ) );
-	return ( visitCount == 0u ) ? float3( 0.0f, 0.0f, 0.0f ) : ( ratio > 2.0f / 3.0f ? warm : middle );
+    const float  ratio  = saturate( (float)visitCount / kViewModeLightComplexityMax );
+    const float3 cold   = lerp( float3( 0.0f, 0.1f, 0.8f ), float3( 0.0f, 0.9f, 0.2f ), saturate( ratio * 3.0f ) );
+    const float3 warm   = lerp( float3( 1.0f, 0.9f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), saturate( ratio * 3.0f - 2.0f ) );
+    const float3 middle = lerp( cold, float3( 1.0f, 0.9f, 0.0f ), saturate( ratio * 3.0f - 1.0f ) );
+    return ( visitCount == 0u ) ? float3( 0.0f, 0.0f, 0.0f ) : ( ratio > 2.0f / 3.0f ? warm : middle );
 }
 
 /**
@@ -1320,25 +1483,25 @@ float3 swComputeLightComplexityColor( uint visitCount )
 float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
 #if defined( SW_VIEWMODE_ROUGHNESS )
-	return float4( saturate( roughness ).xxx, 1.0f );
+    return float4( saturate( roughness ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_METALLIC )
-	return float4( saturate( metallic ).xxx, 1.0f );
+    return float4( saturate( metallic ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_NORMALS )
-	return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
+    return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
 #elif defined( SW_VIEWMODE_DEPTH )
-	const float viewDepth = swComputeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
-	return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
+    const float viewDepth = swComputeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
+    return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_OVERDRAW )
-	return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+    return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
 #elif defined( SW_VIEWMODE_WIREOVERLAY )
-	// ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
-	return float4( kViewModeWireOverlayColor, 1.0f );
+    // ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
+    return float4( kViewModeWireOverlayColor, 1.0f );
 #elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
-	// 조명 식이 이 위치에서 도는 라이트 수 — 커서(swBeginLights)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
-	return float4( swComputeLightComplexityColor( swComputeLightVisitCount( worldPosition ) ), 1.0f );
+    // 조명 식이 이 위치에서 도는 라이트 수 — 커서(swBeginLights)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
+    return float4( swComputeLightComplexityColor( swComputeLightVisitCount( worldPosition ) ), 1.0f );
 #else
-	// Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
-	return float4( albedo.rgb, shadedColor.a );
+    // Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
+    return float4( albedo.rgb, shadedColor.a );
 #endif
 }
 
@@ -1347,9 +1510,9 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 #define SW_GBUFFER_SHADING_LIT   1.0f
 #define SW_GBUFFER_SHADING_UNLIT 0.0f
 #if SW_VIEWMODE_SKIPS_LIGHTING
-#define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_UNLIT
+    #define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_UNLIT
 #else
-#define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_LIT
+    #define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_LIT
 #endif
 
 /**
@@ -1358,7 +1521,7 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
  */
 float4 swEncodeGbufferMaterial( float roughness, float metallic )
 {
-	return float4( saturate( metallic ), saturate( roughness ), 0.0f, 0.0f );
+    return float4( saturate( metallic ), saturate( roughness ), 0.0f, 0.0f );
 }
 
 /**
@@ -1372,21 +1535,21 @@ float4 swEncodeGbufferMaterial( float roughness, float metallic )
 SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
 #if SW_VIEWMODE_SKIPS_LIGHTING
-	litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
-	albedo   = float4( litColor.rgb, albedo.a );
+    litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
+    albedo   = float4( litColor.rgb, albedo.a );
 #elif defined( SW_VIEWMODE_LIGHTINGONLY )
-	albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );
+    albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );
 #endif
 #if defined( SW_PASS_GBUFFER )
-	SwSurfaceOutput output;
-	output.albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
-	output.normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
-	output.material = swEncodeGbufferMaterial( roughness, metallic );
-	return output;
+    SwSurfaceOutput output;
+    output.albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
+    output.normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+    output.material = swEncodeGbufferMaterial( roughness, metallic );
+    return output;
 #else
-	SwSurfaceOutput output;
-	output.color = litColor;
-	return output;
+    SwSurfaceOutput output;
+    output.color = litColor;
+    return output;
 #endif
 }
 

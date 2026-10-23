@@ -65,6 +65,8 @@ kTargetEditorModule = "EditorModule"
 kCppHeaderExtensions: set[str] = {".h", ".hpp", ".inl"}
 kCppSourceExtensions: set[str] = {".c", ".cpp", ".cc", ".cxx"}
 kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"}
+#: 셰이더 소스 확장자. clang-format 은 C++ 와 함께 이것도 건다(셰이더만의 설정은 `Resource/.clang-format`).
+kShaderSourceExtensions: set[str] = {".hlsl", ".hlsli"}
 
 # =============================================================================
 # --- 3. Tool Directories & Defaults (내부 도구 디렉터리 및 캐시 경로) ----------

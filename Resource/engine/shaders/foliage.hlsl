@@ -20,21 +20,21 @@ static const float kSurfaceMetallic  = 0.0f;
 // foliage.material · grass.material 의 프로퍼티와 같은 이름 · 타입이다.
 SW_MATERIAL_BEGIN
 {
-	float4 tint;
-	float4 windParams;  // xy = 바람 방향(xz), z = 세기(m), w = 시간(초)
-	float4 windWave;    // x = 흔들림 주파수(Hz), y = 돌풍 세기, z = 돌풍 주파수(Hz), w = 흔들림이 다 차는 높이(m)
-	float4 viewParams;  // xyz = 카메라 위치, w = 휘게 하는 세기
-	float4 fadeParams;  // x = 줄어들기 시작하는 거리, y = 다 사라지는 거리
-	float4 influencer0; // xyz = 중심, w = 반지름(0 이면 빈 칸)
-	float4 influencer1;
-	float4 influencer2;
-	float4 influencer3;
-	uint   albedoMap;
+    float4 tint;
+    float4 windParams;  // xy = 바람 방향(xz), z = 세기(m), w = 시간(초)
+    float4 windWave;    // x = 흔들림 주파수(Hz), y = 돌풍 세기, z = 돌풍 주파수(Hz), w = 흔들림이 다 차는 높이(m)
+    float4 viewParams;  // xyz = 카메라 위치, w = 휘게 하는 세기
+    float4 fadeParams;  // x = 줄어들기 시작하는 거리, y = 다 사라지는 거리
+    float4 influencer0; // xyz = 중심, w = 반지름(0 이면 빈 칸)
+    float4 influencer1;
+    float4 influencer2;
+    float4 influencer3;
+    uint   albedoMap;
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-#error "foliage.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "foliage.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
@@ -43,8 +43,8 @@ SW_MATERIAL_END
 #define SW_MATERIAL_CUSTOM_VARYINGS
 struct MaterialVaryings
 {
-	float4 tintedColor                   : TEXCOORD8;  // 정점 색 × 머티리얼 색 × 인스턴스 밝기 × 뿌리 그늘
-	nointerpolation uint albedoMap       : TEXCOORD9;  // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
+    float4               tintedColor : TEXCOORD8; // 정점 색 × 머티리얼 색 × 인스턴스 밝기 × 뿌리 그늘
+    nointerpolation uint albedoMap : TEXCOORD9;   // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
 };
 #include "materialshader.hlsli"
 
@@ -54,31 +54,31 @@ struct MaterialVaryings
  */
 float hashPosition( float2 position )
 {
-	const int2 cell = (int2)floor( position * 8.0f );
-	uint       seed = (uint)cell.x * 73856093u ^ (uint)cell.y * 19349663u;
-	seed            = ( seed ^ 61u ) ^ ( seed >> 16 );
-	seed *= 9u;
-	seed = seed ^ ( seed >> 4 );
-	seed *= 0x27d4eb2du;
-	seed = seed ^ ( seed >> 15 );
-	return (float)( seed >> 8 ) * ( 1.0f / 16777216.0f );
+    const int2 cell = (int2)floor( position * 8.0f );
+    uint       seed = (uint)cell.x * 73856093u ^ (uint)cell.y * 19349663u;
+    seed            = ( seed ^ 61u ) ^ ( seed >> 16 );
+    seed *= 9u;
+    seed = seed ^ ( seed >> 4 );
+    seed *= 0x27d4eb2du;
+    seed = seed ^ ( seed >> 15 );
+    return (float)( seed >> 8 ) * ( 1.0f / 16777216.0f );
 }
 
 /** @brief 휘게 하는 구 하나가 이 점을 밀어내는 양(xz)이다. 구 안쪽일수록 세다. */
 float2 computeBend( float4 influencer, float3 worldPosition )
 {
-	if ( influencer.w <= 0.0f )
-		return float2( 0.0f, 0.0f );
-	const float2 away     = worldPosition.xz - influencer.xz;
-	const float  distance = length( away );
-	const float  strength = saturate( 1.0f - distance / influencer.w );
-	return ( distance > 1e-4f ) ? away / distance * strength : float2( 0.0f, 0.0f );
+    if ( influencer.w <= 0.0f )
+        return float2( 0.0f, 0.0f );
+    const float2 away     = worldPosition.xz - influencer.xz;
+    const float  distance = length( away );
+    const float  strength = saturate( 1.0f - distance / influencer.w );
+    return ( distance > 1e-4f ) ? away / distance * strength : float2( 0.0f, 0.0f );
 }
 
 /** @brief 흔들림 무게 — 로컬 높이 / swayHeight(뿌리 0, swayHeight 에서 1). 월드 위치 오프셋과 뿌리 그늘이 같은 값을 쓴다. */
 float computeSwayWeight( SwVertexContext context )
 {
-	return saturate( context.localPosition.y / max( context.material.windWave.w, 1e-3f ) );
+    return saturate( context.localPosition.y / max( context.material.windWave.w, 1e-3f ) );
 }
 
 /**
@@ -87,56 +87,56 @@ float computeSwayWeight( SwVertexContext context )
  */
 float3 computeWorldPositionOffset( SwVertexContext context )
 {
-	const SwMaterialData material = context.material;
+    const SwMaterialData material = context.material;
 
-	const float3 instancePosition = context.instance.world[3].xyz;
-	const float3 toView           = material.viewParams.xyz - instancePosition;
-	const float  viewDistance     = length( toView );
+    const float3 instancePosition = context.instance.world[3].xyz;
+    const float3 toView           = material.viewParams.xyz - instancePosition;
+    const float  viewDistance     = length( toView );
 
-	// 거리 페이드 — 페이드 구간에서 인스턴스를 뿌리(로컬 원점) 쪽으로 줄인다. 끝을 넘으면 점 하나가 되어 그려지지 않는다.
-	const float fadeRange = max( material.fadeParams.y - material.fadeParams.x, 1e-3f );
-	const float fade      = saturate( ( material.fadeParams.y - viewDistance ) / fadeRange );
-	float4 worldPosition  = swComputeWorldPosition( context.localPosition * fade, context.instance.world );
+    // 거리 페이드 — 페이드 구간에서 인스턴스를 뿌리(로컬 원점) 쪽으로 줄인다. 끝을 넘으면 점 하나가 되어 그려지지 않는다.
+    const float fadeRange     = max( material.fadeParams.y - material.fadeParams.x, 1e-3f );
+    const float fade          = saturate( ( material.fadeParams.y - viewDistance ) / fadeRange );
+    float4      worldPosition = swComputeWorldPosition( context.localPosition * fade, context.instance.world );
 
-	// 바람 — 높이 무게(뿌리 0, swayHeight 에서 1) × (흔들림 + 돌풍). 위상은 인스턴스 위치 해시와 바람 방향 거리.
-	const float  swayWeight = computeSwayWeight( context );
-	const float  weight     = swayWeight * swayWeight;
-	const float2 windDirection = material.windParams.xy;
-	const float  time          = material.windParams.w;
-	const float  phase         = hashPosition( instancePosition.xz ) * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.15f;
-	const float  sway          = sin( time * material.windWave.x * kTwoPi + phase ) * 0.5f + 0.5f;
-	const float  gust          = sin( time * material.windWave.z * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.05f ) * 0.5f + 0.5f;
-	const float  push          = ( material.windParams.z * sway + material.windWave.y * gust ) * weight;
-	worldPosition.xz += windDirection * push;
+    // 바람 — 높이 무게(뿌리 0, swayHeight 에서 1) × (흔들림 + 돌풍). 위상은 인스턴스 위치 해시와 바람 방향 거리.
+    const float  swayWeight    = computeSwayWeight( context );
+    const float  weight        = swayWeight * swayWeight;
+    const float2 windDirection = material.windParams.xy;
+    const float  time          = material.windParams.w;
+    const float  phase         = hashPosition( instancePosition.xz ) * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.15f;
+    const float  sway          = sin( time * material.windWave.x * kTwoPi + phase ) * 0.5f + 0.5f;
+    const float  gust          = sin( time * material.windWave.z * kTwoPi + dot( instancePosition.xz, windDirection ) * 0.05f ) * 0.5f + 0.5f;
+    const float  push          = ( material.windParams.z * sway + material.windWave.y * gust ) * weight;
+    worldPosition.xz += windDirection * push;
 
-	// 휘게 하는 구(캐릭터 · 탈것) — 바깥으로 밀고 그만큼 눕힌다.
-	float2 bend = computeBend( material.influencer0, worldPosition.xyz ) + computeBend( material.influencer1, worldPosition.xyz ) +
-	              computeBend( material.influencer2, worldPosition.xyz ) + computeBend( material.influencer3, worldPosition.xyz );
-	bend *= material.viewParams.w * weight;
-	worldPosition.xz += bend;
-	worldPosition.y -= length( bend ) * 0.5f;
+    // 휘게 하는 구(캐릭터 · 탈것) — 바깥으로 밀고 그만큼 눕힌다.
+    float2 bend = computeBend( material.influencer0, worldPosition.xyz ) + computeBend( material.influencer1, worldPosition.xyz ) +
+                  computeBend( material.influencer2, worldPosition.xyz ) + computeBend( material.influencer3, worldPosition.xyz );
+    bend *= material.viewParams.w * weight;
+    worldPosition.xz += bend;
+    worldPosition.y -= length( bend ) * 0.5f;
 
-	return worldPosition.xyz - context.worldPosition;
+    return worldPosition.xyz - context.worldPosition;
 }
 
 MaterialVaryings computeMaterialVaryings( SwVertexContext context )
 {
-	// 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.
-	const float rootShade = lerp( 0.55f, 1.0f, computeSwayWeight( context ) );
-	MaterialVaryings varyings;
-	varyings.tintedColor = context.input.color * context.material.tint * swComputeInstanceTint( context.instance ) * float4( rootShade, rootShade, rootShade, 1.0f );
-	varyings.albedoMap   = context.material.albedoMap;
-	return varyings;
+    // 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.
+    const float      rootShade = lerp( 0.55f, 1.0f, computeSwayWeight( context ) );
+    MaterialVaryings varyings;
+    varyings.tintedColor = context.input.color * context.material.tint * swComputeInstanceTint( context.instance ) * float4( rootShade, rootShade, rootShade, 1.0f );
+    varyings.albedoMap   = context.material.albedoMap;
+    return varyings;
 }
 
 SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	SwMaterialSurface surface;
-	surface.albedo    = context.user.tintedColor * swSampleMaterialTexture( context.user.albedoMap, context.uv );
-	surface.normal    = context.normal;
-	surface.roughness = kSurfaceRoughness;
-	surface.metallic  = kSurfaceMetallic;
-	return surface;
+    SwMaterialSurface surface;
+    surface.albedo    = context.user.tintedColor * swSampleMaterialTexture( context.user.albedoMap, context.uv );
+    surface.normal    = context.normal;
+    surface.roughness = kSurfaceRoughness;
+    surface.metallic  = kSurfaceMetallic;
+    return surface;
 }
 
 #include "materialshadermain.hlsli"

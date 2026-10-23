@@ -48,6 +48,7 @@ from lint.StagedScope import selectFileScopedStaged
 from lint.fixer import FormatBranchBraces
 from lint.fixer import FormatForwardDeclarations
 from common.AppBinary import findAppExecutable, findShaderCompileFailures, runShaderCook, runShaderVerify
+from common.Constants import kShaderSourceExtensions
 from common.Host import getAllStagedFiles, getStagedCppFiles, runClangFormatBatch, runGit
 from common.Parallel import getCpuCount
 from common.Paths import getProjectRoot
@@ -330,7 +331,7 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path], bVerb
     셰이더를 고치는 사람은 그 셰이더를 App 으로 굽으므로 App 이 이미 있다.
     """
     listShaderFile = [f for f in stagedFiles if isShaderCommitFileInternal(projectRoot, f)]
-    stagedShaders = [f for f in listShaderFile if f.suffix.lower() in (".hlsl", ".hlsli")]
+    stagedShaders = [f for f in listShaderFile if f.suffix.lower() in kShaderSourceExtensions]
     if not listShaderFile:
         if bVerbose:
             print("  - Staged 셰이더 파일 없음 (셰이더 검증 생략)")
@@ -455,9 +456,15 @@ def main(argv: list[str] | None = None) -> int:
                     for violation in listViolation:
                         print(f"    - {violation}")
 
+    elif bVerbose:
+        print("\n  - 검사 대상 C++ 파일 없음 (Resource/데이터 파일만 변경됨)")
+
+    # 셰이더는 clang-format 만 건다(설정은 Resource/.clang-format) — 위 두 픽서는 C++ 규칙이다.
+    stagedShaderFiles = [path for path in getStagedCppFiles(projectRoot, extensions=kShaderSourceExtensions) if path in setFileScoped]
+    if stagedCppFiles or stagedShaderFiles:
         if bVerbose:
             print("\n[포맷] clang-format 포맷팅 검사...")
-        if runClangFormatBatch(stagedCppFiles, checkOnly=True, cwd=projectRoot) != 0:
+        if runClangFormatBatch(stagedCppFiles + stagedShaderFiles, checkOnly=True, cwd=projectRoot) != 0:
             hasErrors = True
             print(
                 "  [Error] 포맷팅 규칙에 어긋나는 파일이 있습니다. "
@@ -466,9 +473,7 @@ def main(argv: list[str] | None = None) -> int:
         elif bVerbose:
             print("  - 포맷팅 OK")
         else:
-            print(f"[픽서·포맷] C++ 파일 {len(stagedCppFiles)}개 통과")
-    elif bVerbose:
-        print("\n  - 검사 대상 C++ 파일 없음 (Resource/데이터 파일만 변경됨)")
+            print(f"[픽서·포맷] C++ 파일 {len(stagedCppFiles)}개 · 셰이더 {len(stagedShaderFiles)}개 통과")
 
     if hasErrors:
         print("\n[PreCommitLint] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")

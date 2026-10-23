@@ -7,79 +7,79 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
-	uint  g_AutoExposureSource;   // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
-	uint  g_AutoExposureHistory;  // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
-	float g_AutoExposureMinEv;    // 목표 EV 의 하한
-	float g_AutoExposureMaxEv;    // 목표 EV 의 상한
-	float g_AutoExposureRateUp;   // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
-	float g_AutoExposureRateDown; // 장면이 어두워질 때 다가가는 비율(0..1)
+    uint  g_AutoExposureSource;   // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    uint  g_AutoExposureHistory;  // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    float g_AutoExposureMinEv;    // 목표 EV 의 하한
+    float g_AutoExposureMaxEv;    // 목표 EV 의 상한
+    float g_AutoExposureRateUp;   // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
+    float g_AutoExposureRateDown; // 장면이 어두워질 때 다가가는 비율(0..1)
 SW_ROOT_CONSTANTS_END
 
-static const uint  kAutoExposureGrid  = 32u;     // 화면을 32 x 32 칸으로 나눠 칸 가운데 텍셀 하나씩 읽는다(1024 번 — 한 픽셀이 다 읽는다)
-static const float kMiddleGrey        = 0.18f;   // EV 0 의 평균 휘도
-static const float kMinLuminance      = 1.0e-4f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자르는 휘도
+static const uint  kAutoExposureGrid = 32u;     // 화면을 32 x 32 칸으로 나눠 칸 가운데 텍셀 하나씩 읽는다(1024 번 — 한 픽셀이 다 읽는다)
+static const float kMiddleGrey       = 0.18f;   // EV 0 의 평균 휘도
+static const float kMinLuminance     = 1.0e-4f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자르는 휘도
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
+    float4 position : SV_POSITION;
 };
 
 PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
-	output.position           = float4( clipPosition, 0.0f, 1.0f );
-	return output;
+    PSInput output;
+    input.position            = input.position;
+    const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
+    output.position           = float4( clipPosition, 0.0f, 1.0f );
+    return output;
 }
 
 float3 loadSource( int2 texel )
 {
 #if defined( SW_NATIVE_BINDLESS )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
 #else
-	return g_SwSlot0.Load( int3( texel, 0 ) ).rgb;
+    return g_SwSlot0.Load( int3( texel, 0 ) ).rgb;
 #endif
 }
 
 float2 getSourceSize()
 {
-	float2 size;
+    float2 size;
 #if defined( SW_NATIVE_BINDLESS )
-	g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
+    g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
 #else
-	g_SwSlot0.GetDimensions( size.x, size.y );
+    g_SwSlot0.GetDimensions( size.x, size.y );
 #endif
-	return size;
+    return size;
 }
 
 float loadHistory()
 {
 #if defined( SW_NATIVE_BINDLESS )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
 #else
-	return g_SwSlot1.Load( int3( 0, 0, 0 ) ).r;
+    return g_SwSlot1.Load( int3( 0, 0, 0 ) ).r;
 #endif
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-	const float2 size   = getSourceSize();
-	float        sumLog = 0.0f;
-	for ( uint gridY = 0u; gridY < kAutoExposureGrid; ++gridY )
-	{
-		for ( uint gridX = 0u; gridX < kAutoExposureGrid; ++gridX )
-		{
-			const int2   texel     = int2( ( float2( gridX, gridY ) + 0.5f ) * size / kAutoExposureGrid );
-			const float3 color     = loadSource( texel );
-			const float  luminance = dot( color, float3( 0.2126f, 0.7152f, 0.0722f ) );
-			sumLog += log2( max( luminance, kMinLuminance ) );
-		}
-	}
-	const float measuredEv = sumLog / float( kAutoExposureGrid * kAutoExposureGrid ) - log2( kMiddleGrey );
-	const float targetEv   = clamp( measuredEv, SW_ROOT( g_AutoExposureMinEv ), SW_ROOT( g_AutoExposureMaxEv ) );
-	const float previousEv = loadHistory();
-	const float rate       = ( targetEv > previousEv ) ? SW_ROOT( g_AutoExposureRateUp ) : SW_ROOT( g_AutoExposureRateDown );
-	const float adaptedEv  = ( rate >= 1.0f ) ? targetEv : lerp( previousEv, targetEv, rate );
-	return float4( adaptedEv, 0.0f, 0.0f, 1.0f );
+    const float2 size   = getSourceSize();
+    float        sumLog = 0.0f;
+    for ( uint gridY = 0u; gridY < kAutoExposureGrid; ++gridY )
+    {
+        for ( uint gridX = 0u; gridX < kAutoExposureGrid; ++gridX )
+        {
+            const int2   texel     = int2( ( float2( gridX, gridY ) + 0.5f ) * size / kAutoExposureGrid );
+            const float3 color     = loadSource( texel );
+            const float  luminance = dot( color, float3( 0.2126f, 0.7152f, 0.0722f ) );
+            sumLog += log2( max( luminance, kMinLuminance ) );
+        }
+    }
+    const float measuredEv = sumLog / float( kAutoExposureGrid * kAutoExposureGrid ) - log2( kMiddleGrey );
+    const float targetEv   = clamp( measuredEv, SW_ROOT( g_AutoExposureMinEv ), SW_ROOT( g_AutoExposureMaxEv ) );
+    const float previousEv = loadHistory();
+    const float rate       = ( targetEv > previousEv ) ? SW_ROOT( g_AutoExposureRateUp ) : SW_ROOT( g_AutoExposureRateDown );
+    const float adaptedEv  = ( rate >= 1.0f ) ? targetEv : lerp( previousEv, targetEv, rate );
+    return float4( adaptedEv, 0.0f, 0.0f, 1.0f );
 }

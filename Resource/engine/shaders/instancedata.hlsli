@@ -16,21 +16,21 @@
 
 struct SwInstanceData
 {
-	float4x4 world;
-	float3   boundsCenter;
-	float    boundsRadius;
-	uint     meshBatchIndex;
-	uint     materialIndex;
-	uint     blendMode;
-	uint     spinSeed;  // GPU 회전 시드 — 0 이면 instanceanimation.hlsl 이 건드리지 않는다
-	uint     uvStart;   // 사각형의 왼쪽 위 꼭짓점이 읽는 UV (u, v) — unorm16 둘(u 가 하위 16비트)
-	uint     uvEnd;     // 오른쪽 아래 꼭짓점이 읽는 UV — unorm16 둘. uvEnd.u < uvStart.u 면 좌우가 뒤집힌다
-	uint     tint;      // 인스턴스 색 RGBA8 unorm(r 이 하위 바이트). 머티리얼 색 · 텍스처에 곱한다
-	float    pixelSnap; // 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU). 0 이면 끈다 — sprite2d.hlsl 이 인스턴스 원점을 이 격자에 붙인다
-	float    vertexAnimationPhase; // 정점 애니메이션(VAT) 시각 오프셋(초) — VAT 시계에 더해 인스턴스마다 다른 프레임을 고른다(binding.hlsli)
-	uint     highlight;  // 강조 — 하위 3 바이트 RGB8 색, 상위 바이트 방식(0 없음 · 1 외곽선 · 2 감각). C++ `GPUInstanceHighlight` — highlightoutline.hlsl 이 읽는다
-	float    appearance; // 등장 비율(0 ~ 1) — 1 보다 작으면 디더 변형(SW_APPEARANCE_DITHER)이 그 비율만큼의 픽셀만 남긴다(binding.hlsli swClipAppearanceDither)
-	uint     reserved1;  // 원소를 128 바이트(16 의 배수)로 맞춘다 — 스칼라라 std430 에서도 오프셋이 C++ 과 같다
+    float4x4 world;
+    float3   boundsCenter;
+    float    boundsRadius;
+    uint     meshBatchIndex;
+    uint     materialIndex;
+    uint     blendMode;
+    uint     spinSeed;             // GPU 회전 시드 — 0 이면 instanceanimation.hlsl 이 건드리지 않는다
+    uint     uvStart;              // 사각형의 왼쪽 위 꼭짓점이 읽는 UV (u, v) — unorm16 둘(u 가 하위 16비트)
+    uint     uvEnd;                // 오른쪽 아래 꼭짓점이 읽는 UV — unorm16 둘. uvEnd.u < uvStart.u 면 좌우가 뒤집힌다
+    uint     tint;                 // 인스턴스 색 RGBA8 unorm(r 이 하위 바이트). 머티리얼 색 · 텍스처에 곱한다
+    float    pixelSnap;            // 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU). 0 이면 끈다 — sprite2d.hlsl 이 인스턴스 원점을 이 격자에 붙인다
+    float    vertexAnimationPhase; // 정점 애니메이션(VAT) 시각 오프셋(초) — VAT 시계에 더해 인스턴스마다 다른 프레임을 고른다(binding.hlsli)
+    uint     highlight;            // 강조 — 하위 3 바이트 RGB8 색, 상위 바이트 방식(0 없음 · 1 외곽선 · 2 감각). C++ `GPUInstanceHighlight` — highlightoutline.hlsl 이 읽는다
+    float    appearance;           // 등장 비율(0 ~ 1) — 1 보다 작으면 디더 변형(SW_APPEARANCE_DITHER)이 그 비율만큼의 픽셀만 남긴다(binding.hlsli swClipAppearanceDither)
+    uint     reserved1;            // 원소를 128 바이트(16 의 배수)로 맞춘다 — 스칼라라 std430 에서도 오프셋이 C++ 과 같다
 };
 
 static const uint kHighlightStyleNone    = 0u;
@@ -40,19 +40,19 @@ static const uint kHighlightStyleSense   = 2u;
 /** @brief 인스턴스 강조의 방식입니다(`kHighlightStyle*`). */
 uint swGetInstanceHighlightStyle( SwInstanceData instance )
 {
-	return instance.highlight >> 24;
+    return instance.highlight >> 24;
 }
 
 /** @brief 인스턴스 강조의 색(RGB, 0..1)입니다. */
 float3 swGetInstanceHighlightColor( SwInstanceData instance )
 {
-	return float3( instance.highlight & 0xFFu, ( instance.highlight >> 8 ) & 0xFFu, ( instance.highlight >> 16 ) & 0xFFu ) * ( 1.0f / 255.0f );
+    return float3( instance.highlight & 0xFFu, ( instance.highlight >> 8 ) & 0xFFu, ( instance.highlight >> 16 ) & 0xFFu ) * ( 1.0f / 255.0f );
 }
 
 /** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GPUSpriteInstanceData::makeUnorm16x2` 의 역이다. */
 float2 swUnpackUnorm16x2( uint packed )
 {
-	return float2( packed & 0xFFFFu, packed >> 16 ) * ( 1.0f / 65535.0f );
+    return float2( packed & 0xFFFFu, packed >> 16 ) * ( 1.0f / 65535.0f );
 }
 
 /**
@@ -61,16 +61,16 @@ float2 swUnpackUnorm16x2( uint packed )
  */
 float4 swComputeInstanceUvRect( SwInstanceData instance )
 {
-	const float2 uvStart = swUnpackUnorm16x2( instance.uvStart );
-	const float2 uvEnd   = swUnpackUnorm16x2( instance.uvEnd );
-	return float4( uvStart, uvEnd - uvStart );
+    const float2 uvStart = swUnpackUnorm16x2( instance.uvStart );
+    const float2 uvEnd   = swUnpackUnorm16x2( instance.uvEnd );
+    return float4( uvStart, uvEnd - uvStart );
 }
 
 /** @brief 인스턴스 색 (r, g, b, a) — RGBA8 을 [0, 1] 로 푼다. 기본값은 흰색 불투명이다. */
 float4 swComputeInstanceTint( SwInstanceData instance )
 {
-	const uint packed = instance.tint;
-	return float4( packed & 0xFFu, ( packed >> 8 ) & 0xFFu, ( packed >> 16 ) & 0xFFu, packed >> 24 ) * ( 1.0f / 255.0f );
+    const uint packed = instance.tint;
+    return float4( packed & 0xFFu, ( packed >> 8 ) & 0xFFu, ( packed >> 16 ) & 0xFFu, packed >> 24 ) * ( 1.0f / 255.0f );
 }
 
 #endif // SW_ENGINE_INSTANCEDATA_HLSLI

@@ -14,16 +14,16 @@ static const float kSurfaceMetallic  = 0.0f;
 
 SW_MATERIAL_BEGIN
 {
-	float4 color;
-	float4 uvRect;
-	uint albedoMap;
-	uint normalMap;
-	uint pointFilter;
+    float4 color;
+    float4 uvRect;
+    uint   albedoMap;
+    uint   normalMap;
+    uint   pointFilter;
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-#error "sprite2dlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "sprite2dlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 조명은 2D 빛이라 직접 정의한다. 정점이 만든 UV · 색 · 스프라이트 축(노멀 맵 방향)을 사용자 보간 칸으로 넘긴다.
@@ -31,80 +31,80 @@ SW_MATERIAL_END
 #define SW_MATERIAL_CUSTOM_VARYINGS
 struct MaterialVaryings
 {
-	float2 frameUv   : TEXCOORD8;  // 인스턴스의 UV 사각형(아틀라스 프레임)이 들어간 UV
-	float4 tinted    : TEXCOORD9;  // 정점 색 × 인스턴스 색
-	float2 tangent   : TEXCOORD10; // 스프라이트 +X 의 월드 방향(XY) — 노멀 맵 빨강
-	float2 bitangent : TEXCOORD11; // 스프라이트 +Y 의 월드 방향(XY) — 노멀 맵 초록
+    float2 frameUv : TEXCOORD8;    // 인스턴스의 UV 사각형(아틀라스 프레임)이 들어간 UV
+    float4 tinted : TEXCOORD9;     // 정점 색 × 인스턴스 색
+    float2 tangent : TEXCOORD10;   // 스프라이트 +X 의 월드 방향(XY) — 노멀 맵 빨강
+    float2 bitangent : TEXCOORD11; // 스프라이트 +Y 의 월드 방향(XY) — 노멀 맵 초록
 };
 #include "materialshader.hlsli"
 
 /** @brief 픽셀 스냅 — sprite2d.hlsl 과 같다(인스턴스 원점을 자산 픽셀 격자에). */
 float3 computeWorldPositionOffset( SwVertexContext context )
 {
-	float3 offset = float3( 0.0f, 0.0f, 0.0f );
-	if ( context.instance.pixelSnap > 0.0f )
-	{
-		const float2 origin  = mul( float4( 0.0f, 0.0f, 0.0f, 1.0f ), context.instance.world ).xy;
-		const float2 snapped = floor( origin / context.instance.pixelSnap + 0.5f ) * context.instance.pixelSnap;
-		offset.xy            = snapped - origin;
-	}
-	return offset;
+    float3 offset = float3( 0.0f, 0.0f, 0.0f );
+    if ( context.instance.pixelSnap > 0.0f )
+    {
+        const float2 origin  = mul( float4( 0.0f, 0.0f, 0.0f, 1.0f ), context.instance.world ).xy;
+        const float2 snapped = floor( origin / context.instance.pixelSnap + 0.5f ) * context.instance.pixelSnap;
+        offset.xy            = snapped - origin;
+    }
+    return offset;
 }
 
 MaterialVaryings computeMaterialVaryings( SwVertexContext context )
 {
-	const float4 frame = swComputeInstanceUvRect( context.instance );
-	MaterialVaryings varyings;
-	varyings.frameUv   = context.input.uv * frame.zw + frame.xy;
-	varyings.tinted    = context.input.color * swComputeInstanceTint( context.instance );
-	const float2 axisX = mul( float4( 1.0f, 0.0f, 0.0f, 0.0f ), context.instance.world ).xy;
-	const float2 axisY = mul( float4( 0.0f, 1.0f, 0.0f, 0.0f ), context.instance.world ).xy;
-	varyings.tangent   = axisX / max( length( axisX ), 1e-6f );
-	varyings.bitangent = axisY / max( length( axisY ), 1e-6f );
-	return varyings;
+    const float4     frame = swComputeInstanceUvRect( context.instance );
+    MaterialVaryings varyings;
+    varyings.frameUv   = context.input.uv * frame.zw + frame.xy;
+    varyings.tinted    = context.input.color * swComputeInstanceTint( context.instance );
+    const float2 axisX = mul( float4( 1.0f, 0.0f, 0.0f, 0.0f ), context.instance.world ).xy;
+    const float2 axisY = mul( float4( 0.0f, 1.0f, 0.0f, 0.0f ), context.instance.world ).xy;
+    varyings.tangent   = axisX / max( length( axisX ), 1e-6f );
+    varyings.bitangent = axisY / max( length( axisY ), 1e-6f );
+    return varyings;
 }
 
 SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	const SwMaterialData material = context.material;
-	const float2 uv = context.user.frameUv * material.uvRect.zw + material.uvRect.xy;
-	float4 textureColor = float4( 1.0f, 1.0f, 1.0f, 1.0f );
-	if ( material.albedoMap != kInvalidIndex )
-		textureColor = ( material.pointFilter != 0u ) ? swSampleMaterialTexturePoint( material.albedoMap, uv ) : swSampleMaterialTexture( material.albedoMap, uv );
+    const SwMaterialData material     = context.material;
+    const float2         uv           = context.user.frameUv * material.uvRect.zw + material.uvRect.xy;
+    float4               textureColor = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+    if ( material.albedoMap != kInvalidIndex )
+        textureColor = ( material.pointFilter != 0u ) ? swSampleMaterialTexturePoint( material.albedoMap, uv ) : swSampleMaterialTexture( material.albedoMap, uv );
 
-	float3 normal = float3( 0.0f, 0.0f, -1.0f );
-	if ( material.normalMap != kInvalidIndex )
-	{
-		const float3 encoded       = ( material.pointFilter != 0u ) ? swSampleMaterialTexturePoint( material.normalMap, uv ).xyz : swSampleMaterialTexture( material.normalMap, uv ).xyz;
-		const float3 tangentNormal = encoded * 2.0f - 1.0f;
-		normal = normalize( float3( context.user.tangent * tangentNormal.x + context.user.bitangent * tangentNormal.y, -tangentNormal.z ) );
-	}
+    float3 normal = float3( 0.0f, 0.0f, -1.0f );
+    if ( material.normalMap != kInvalidIndex )
+    {
+        const float3 encoded       = ( material.pointFilter != 0u ) ? swSampleMaterialTexturePoint( material.normalMap, uv ).xyz : swSampleMaterialTexture( material.normalMap, uv ).xyz;
+        const float3 tangentNormal = encoded * 2.0f - 1.0f;
+        normal                     = normalize( float3( context.user.tangent * tangentNormal.x + context.user.bitangent * tangentNormal.y, -tangentNormal.z ) );
+    }
 
-	SwMaterialSurface surface;
-	surface.albedo    = textureColor * material.color * context.user.tinted;
-	surface.normal    = normal;
-	surface.roughness = kSurfaceRoughness;
-	surface.metallic  = kSurfaceMetallic;
-	return surface;
+    SwMaterialSurface surface;
+    surface.albedo    = textureColor * material.color * context.user.tinted;
+    surface.normal    = normal;
+    surface.roughness = kSurfaceRoughness;
+    surface.metallic  = kSurfaceMetallic;
+    return surface;
 }
 
 float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
 {
-	float4 result;
+    float4 result;
 #if SW_VIEWMODE_SKIPS_LIGHTING
-	// 보기 모드(Unlit · Normals · Depth · Overdraw) — 2D 빛 없이 보기 모드의 색(뼈대의 swStoreSurface 가 바꾼다).
-	result = surface.albedo;
+    // 보기 모드(Unlit · Normals · Depth · Overdraw) — 2D 빛 없이 보기 모드의 색(뼈대의 swStoreSurface 가 바꾼다).
+    result = surface.albedo;
 #else
-	const bool bHasNormal = context.material.normalMap != kInvalidIndex;
-#if defined( SW_VIEWMODE_LIGHTINGONLY )
-	// 보기 모드 LightingOnly — 2D 빛은 그대로, 표면 색만 회색(swShadeLights2d 는 swShadeLights 를 거치지 않는다). 알파는 텍스처 것 그대로.
-	const float3 lit = swShadeLights2d( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, context.worldPosition.xy, surface.normal, bHasNormal );
-#else
-	const float3 lit = swShadeLights2d( surface.albedo.rgb, context.worldPosition.xy, surface.normal, bHasNormal );
+    const bool bHasNormal = context.material.normalMap != kInvalidIndex;
+    #if defined( SW_VIEWMODE_LIGHTINGONLY )
+    // 보기 모드 LightingOnly — 2D 빛은 그대로, 표면 색만 회색(swShadeLights2d 는 swShadeLights 를 거치지 않는다). 알파는 텍스처 것 그대로.
+    const float3 lit = swShadeLights2d( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, context.worldPosition.xy, surface.normal, bHasNormal );
+    #else
+    const float3 lit = swShadeLights2d( surface.albedo.rgb, context.worldPosition.xy, surface.normal, bHasNormal );
+    #endif
+    result = float4( lit, surface.albedo.a );
 #endif
-	result = float4( lit, surface.albedo.a );
-#endif
-	return result;
+    return result;
 }
 
 #include "materialshadermain.hlsli"

@@ -51,43 +51,43 @@
 // 1) 패스 종류와 훅 선택 검사
 // ------------------------------------------------------------------------------
 #if defined( SW_PASS_SHADOW ) || defined( SW_PASS_DEPTH_PREPASS )
-#define SW_MATERIAL_DEPTH_PASS 1
+    #define SW_MATERIAL_DEPTH_PASS 1
 #endif
 
 #if defined( SW_PASS_SHADOW ) && defined( SW_PASS_DEPTH_PREPASS )
-#error "SW_PASS_SHADOW and SW_PASS_DEPTH_PREPASS are exclusive pass kinds"
+    #error "SW_PASS_SHADOW and SW_PASS_DEPTH_PREPASS are exclusive pass kinds"
 #endif
 
 #if defined( SW_MATERIAL_DEPTH_PASS ) && !defined( MATERIAL_ALPHA_CUTOFF )
-#define SW_MATERIAL_DEPTH_ONLY 1 // 깊이만 쓰고 픽셀이 읽을 것이 없다 — 보간 칸이 위치뿐이다
+    #define SW_MATERIAL_DEPTH_ONLY 1 // 깊이만 쓰고 픽셀이 읽을 것이 없다 — 보간 칸이 위치뿐이다
 #endif
 
 #if defined( SW_MATERIAL_NONE )
-#if defined( SW_MATERIAL_READ_IN_VERTEX )
-#error "SW_MATERIAL_NONE has no material to read: SW_MATERIAL_READ_IN_VERTEX is invalid"
-#endif
-#if defined( MATERIAL_ALPHA_CUTOFF )
-#error "SW_MATERIAL_NONE has no material alpha: MATERIAL_ALPHA_CUTOFF must be drawn by the material shader (FrameRendererUtil::drawsDepthWithMaterialShader)"
-#endif
-#if !defined( SW_PASS_GBUFFER ) && !defined( SW_MATERIAL_DEPTH_PASS )
-#error "a material-less shader draws only the G-buffer or a depth pass (SW_PASS_GBUFFER, SW_PASS_SHADOW, SW_PASS_DEPTH_PREPASS)"
-#endif
+    #if defined( SW_MATERIAL_READ_IN_VERTEX )
+        #error "SW_MATERIAL_NONE has no material to read: SW_MATERIAL_READ_IN_VERTEX is invalid"
+    #endif
+    #if defined( MATERIAL_ALPHA_CUTOFF )
+        #error "SW_MATERIAL_NONE has no material alpha: MATERIAL_ALPHA_CUTOFF must be drawn by the material shader (FrameRendererUtil::drawsDepthWithMaterialShader)"
+    #endif
+    #if !defined( SW_PASS_GBUFFER ) && !defined( SW_MATERIAL_DEPTH_PASS )
+        #error "a material-less shader draws only the G-buffer or a depth pass (SW_PASS_GBUFFER, SW_PASS_SHADOW, SW_PASS_DEPTH_PREPASS)"
+    #endif
 #endif
 
 // 조건식 안의 `defined` 산술은 컴파일러마다 다르므로(FXC) 조합을 풀어 쓴다.
 #if !defined( SW_MATERIAL_DEFAULT_LIGHTING ) && !defined( SW_MATERIAL_UNLIT ) && !defined( SW_MATERIAL_CUSTOM_LIGHTING )
-#error "pick one lighting hook: SW_MATERIAL_CUSTOM_LIGHTING (define computeMaterialLighting), SW_MATERIAL_DEFAULT_LIGHTING or SW_MATERIAL_UNLIT"
+    #error "pick one lighting hook: SW_MATERIAL_CUSTOM_LIGHTING (define computeMaterialLighting), SW_MATERIAL_DEFAULT_LIGHTING or SW_MATERIAL_UNLIT"
 #endif
 #if ( defined( SW_MATERIAL_DEFAULT_LIGHTING ) && defined( SW_MATERIAL_UNLIT ) ) || ( defined( SW_MATERIAL_DEFAULT_LIGHTING ) && defined( SW_MATERIAL_CUSTOM_LIGHTING ) ) || \
-	( defined( SW_MATERIAL_UNLIT ) && defined( SW_MATERIAL_CUSTOM_LIGHTING ) )
-#error "pick exactly one lighting hook: SW_MATERIAL_CUSTOM_LIGHTING, SW_MATERIAL_DEFAULT_LIGHTING and SW_MATERIAL_UNLIT are exclusive"
+    ( defined( SW_MATERIAL_UNLIT ) && defined( SW_MATERIAL_CUSTOM_LIGHTING ) )
+    #error "pick exactly one lighting hook: SW_MATERIAL_CUSTOM_LIGHTING, SW_MATERIAL_DEFAULT_LIGHTING and SW_MATERIAL_UNLIT are exclusive"
 #endif
 
 #if !defined( SW_MATERIAL_DEFAULT_VARYINGS ) && !defined( SW_MATERIAL_CUSTOM_VARYINGS )
-#error "pick one varyings hook: SW_MATERIAL_CUSTOM_VARYINGS (define MaterialVaryings and computeMaterialVaryings) or SW_MATERIAL_DEFAULT_VARYINGS"
+    #error "pick one varyings hook: SW_MATERIAL_CUSTOM_VARYINGS (define MaterialVaryings and computeMaterialVaryings) or SW_MATERIAL_DEFAULT_VARYINGS"
 #endif
 #if defined( SW_MATERIAL_DEFAULT_VARYINGS ) && defined( SW_MATERIAL_CUSTOM_VARYINGS )
-#error "pick exactly one varyings hook: SW_MATERIAL_CUSTOM_VARYINGS and SW_MATERIAL_DEFAULT_VARYINGS are exclusive"
+    #error "pick exactly one varyings hook: SW_MATERIAL_CUSTOM_VARYINGS and SW_MATERIAL_DEFAULT_VARYINGS are exclusive"
 #endif
 
 // ------------------------------------------------------------------------------
@@ -97,9 +97,9 @@
 struct SwNoMaterialVaryings
 {
 };
-#define SW_MATERIAL_VARYINGS_TYPE SwNoMaterialVaryings
+    #define SW_MATERIAL_VARYINGS_TYPE SwNoMaterialVaryings
 #else
-#define SW_MATERIAL_VARYINGS_TYPE MaterialVaryings
+    #define SW_MATERIAL_VARYINGS_TYPE MaterialVaryings
 #endif
 
 // ------------------------------------------------------------------------------
@@ -107,16 +107,16 @@ struct SwNoMaterialVaryings
 // ------------------------------------------------------------------------------
 struct SwVertexContext
 {
-	SwVertexInput  input;         ///< 입력 스트림 그대로(색 · UV · 탄젠트)
-	SwInstanceData instance;
-	uint           vertexId;
-	float3         localPosition; ///< 모프 · 스킨 · VAT 가 적용된 로컬 위치
-	float3         localNormal;
-	float3         worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
-	float3         worldNormal;
-	float4         clipPosition;  ///< 월드 위치 오프셋 · 외곽선이 반영된 최종 클립 위치. **사용자 보간 칸 훅에서만 채워진다**(다른 훅에서는 0). 읽기만 한다 — 위치는 뼈대가 만든다
+    SwVertexInput  input; ///< 입력 스트림 그대로(색 · UV · 탄젠트)
+    SwInstanceData instance;
+    uint           vertexId;
+    float3         localPosition; ///< 모프 · 스킨 · VAT 가 적용된 로컬 위치
+    float3         localNormal;
+    float3         worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
+    float3         worldNormal;
+    float4         clipPosition; ///< 월드 위치 오프셋 · 외곽선이 반영된 최종 클립 위치. **사용자 보간 칸 훅에서만 채워진다**(다른 훅에서는 0). 읽기만 한다 — 위치는 뼈대가 만든다
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
-	SwMaterialData material;      ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
+    SwMaterialData material; ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
 #endif
 };
 
@@ -124,45 +124,45 @@ struct SwVertexContext
 /** @brief 외곽선 훅의 결과 — 월드 위치에 더할 오프셋과, 클립 위치를 만든 뒤 xy 에 더할 오프셋(화면 두께). 훅은 위치를 직접 만들지 못하고 오프셋만 준다. */
 struct SwOutlineOffset
 {
-	float3 worldOffset;
-	float2 clipOffset;
+    float3 worldOffset;
+    float2 clipOffset;
 };
 #endif
 
 /** @brief 정점 → 픽셀 보간 칸. 모든 패스가 같은 칸을 쓴다(훅이 패스마다 다른 문맥을 받지 않게). 위치는 뼈대 한 곳이 만든다. */
 struct SwMaterialInterpolants
 {
-	float4 position      : SV_POSITION;
+    float4 position : SV_POSITION;
 #if !defined( SW_MATERIAL_DEPTH_ONLY )
-	float4 color         : COLOR;
-	float2 uv            : TEXCOORD0;
-	float3 normal        : TEXCOORD1;
-	float3 worldPosition : TEXCOORD2;
-#if defined( SW_MATERIAL_USES_TANGENT )
-	float4 tangent       : TEXCOORD3; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
+    float4 color : COLOR;
+    float2 uv : TEXCOORD0;
+    float3 normal : TEXCOORD1;
+    float3 worldPosition : TEXCOORD2;
+    #if defined( SW_MATERIAL_USES_TANGENT )
+    float4 tangent : TEXCOORD3; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
+    #endif
+    #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
+    nointerpolation uint materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
+    #endif
+    SW_MATERIAL_VARYINGS_TYPE user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
 #endif
-#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-	nointerpolation uint materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
-#endif
-	SW_MATERIAL_VARYINGS_TYPE user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
-#endif
-	SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
+    SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
 };
 
 /** @brief 픽셀 문맥 — 보간된 값과 머티리얼. 양면 머티리얼(MATERIAL_TWO_SIDED)의 뒷면은 `normal` 이 이미 뒤집혀 있다. */
 struct SwPixelContext
 {
-	float4 position;      ///< SV_POSITION(화면 픽셀 좌표 · 깊이)
-	float4 color;         ///< 정점 색
-	float2 uv;
-	float3 normal;        ///< 정규화한 월드 노멀
-	float3 worldPosition;
+    float4 position; ///< SV_POSITION(화면 픽셀 좌표 · 깊이)
+    float4 color;    ///< 정점 색
+    float2 uv;
+    float3 normal; ///< 정규화한 월드 노멀
+    float3 worldPosition;
 #if defined( SW_MATERIAL_USES_TANGENT )
-	float4 tangent;
+    float4 tangent;
 #endif
-	SW_MATERIAL_VARYINGS_TYPE user;
+    SW_MATERIAL_VARYINGS_TYPE user;
 #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-	SwMaterialData material;      ///< 머티리얼을 픽셀에서 읽는 셰이더에만 있다
+    SwMaterialData material; ///< 머티리얼을 픽셀에서 읽는 셰이더에만 있다
 #endif
 };
 
@@ -172,12 +172,12 @@ struct SwPixelContext
  */
 struct SwMaterialSurface
 {
-	float4 albedo;
-	float3 normal;
-	float  roughness;
-	float  metallic;
+    float4 albedo;
+    float3 normal;
+    float  roughness;
+    float  metallic;
 #if defined( MATERIAL_ALPHA_CUTOFF )
-	float  alphaCutoff;
+    float alphaCutoff;
 #endif
 };
 

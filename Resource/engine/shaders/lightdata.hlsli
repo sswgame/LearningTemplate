@@ -10,11 +10,11 @@
 
 struct SwLightData
 {
-	float4 positionRadius; // xyz 월드 위치(점광·스폿), w 반경 — 방향광은 0
-	float4 colorIntensity; // rgb 빛 색, a 세기
-	float4 directionType;  // xyz 빛이 나아가는 방향(방향광·스폿), w 타입 (SW_LIGHT_TYPE_*)
-	float4 params;         // x 그림자를 받는가(0/1), y cos(바깥 원뿔각), z cos(안쪽 원뿔각), w 점광 · 스폿 그림자의 첫 타일 원소(g_SwLightCount 기준 상대 번호)
-	float4 extra;          // 종류마다의 덧칸(C++ GPULight::_extra) — 2D 빛은 x 그림자 원천 반경, y 섞는 방식, z 뒤 원소 수, w 쿠키 아틀라스 칸. 3D 빛은 0
+    float4 positionRadius; // xyz 월드 위치(점광·스폿), w 반경 — 방향광은 0
+    float4 colorIntensity; // rgb 빛 색, a 세기
+    float4 directionType;  // xyz 빛이 나아가는 방향(방향광·스폿), w 타입 (SW_LIGHT_TYPE_*)
+    float4 params;         // x 그림자를 받는가(0/1), y cos(바깥 원뿔각), z cos(안쪽 원뿔각), w 점광 · 스폿 그림자의 첫 타일 원소(g_SwLightCount 기준 상대 번호)
+    float4 extra;          // 종류마다의 덧칸(C++ GPULight::_extra) — 2D 빛은 x 그림자 원천 반경, y 섞는 방식, z 뒤 원소 수, w 쿠키 아틀라스 칸. 3D 빛은 0
 };
 
 #endif // SW_ENGINE_LIGHTDATA_HLSLI

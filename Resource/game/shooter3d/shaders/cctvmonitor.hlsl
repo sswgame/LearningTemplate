@@ -15,15 +15,15 @@ static const float kSurfaceMetallic  = 0.0f;
 // cctvmonitor.material 의 프로퍼티와 이름 · 순서 · 타입이 1:1 이다(어긋나면 머티리얼 로드가 오류로 멈춘다).
 SW_MATERIAL_BEGIN
 {
-	float4 color;
-	uint   albedoMap;
-	float  scanlineCount;    ///< 화면 높이(UV 0 ~ 1) 안의 주사선 줄 수
-	float  scanlineStrength; ///< 0 이면 주사선 없음, 1 이면 줄 사이가 검다
+    float4 color;
+    uint   albedoMap;
+    float  scanlineCount;    ///< 화면 높이(UV 0 ~ 1) 안의 주사선 줄 수
+    float  scanlineStrength; ///< 0 이면 주사선 없음, 1 이면 줄 사이가 검다
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-#error "cctvmonitor.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff)"
+    #error "cctvmonitor.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff)"
 #endif
 
 #define SW_MATERIAL_UNLIT
@@ -32,17 +32,17 @@ SW_MATERIAL_END
 
 SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	const float4 screenTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
-	// 주사선 — UV 세로를 따라 cos 한 주기가 한 줄이다. 밝은 줄 가운데는 1, 줄 사이는 1 - 세기.
-	const float scanlineWave = 0.5f + 0.5f * cos( context.uv.y * context.material.scanlineCount * 2.0f * kPi );
-	const float scanline     = lerp( 1.0f, scanlineWave, saturate( context.material.scanlineStrength ) );
+    const float4 screenTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
+    // 주사선 — UV 세로를 따라 cos 한 주기가 한 줄이다. 밝은 줄 가운데는 1, 줄 사이는 1 - 세기.
+    const float scanlineWave = 0.5f + 0.5f * cos( context.uv.y * context.material.scanlineCount * 2.0f * kPi );
+    const float scanline     = lerp( 1.0f, scanlineWave, saturate( context.material.scanlineStrength ) );
 
-	SwMaterialSurface surface;
-	surface.albedo    = float4( context.color.rgb * context.material.color.rgb * screenTexture.rgb * scanline, 1.0f );
-	surface.normal    = context.normal;
-	surface.roughness = kSurfaceRoughness;
-	surface.metallic  = kSurfaceMetallic;
-	return surface;
+    SwMaterialSurface surface;
+    surface.albedo    = float4( context.color.rgb * context.material.color.rgb * screenTexture.rgb * scanline, 1.0f );
+    surface.normal    = context.normal;
+    surface.roughness = kSurfaceRoughness;
+    surface.metallic  = kSurfaceMetallic;
+    return surface;
 }
 
 #include "materialshadermain.hlsli"

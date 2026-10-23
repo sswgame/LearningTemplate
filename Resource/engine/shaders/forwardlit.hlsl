@@ -14,15 +14,15 @@
 // 금속도 · 거칠기는 PBR 조명 식(lighting.hlsli swShadeLights)과 G버퍼 머티리얼 칸(swStoreSurface)이 읽는다.
 SW_MATERIAL_BEGIN
 {
-	float4 color;
-	float  roughness;
-	float  metallic;
-	uint   albedoMap;
+    float4 color;
+    float  roughness;
+    float  metallic;
+    uint   albedoMap;
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-#error "forwardlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "forwardlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
@@ -36,47 +36,47 @@ static const float kWorldUvTilesPerMeter = 1.0f;
 static const float kTriplanarSharpness   = 4.0f; // 노멀 성분의 거듭제곱 — 클수록 축 사이 섞이는 띠가 좁다
 float4 sampleWorldTriplanar( uint textureIndex, float3 worldPosition, float3 worldNormal )
 {
-	float3 weight = pow( abs( worldNormal ), kTriplanarSharpness );
-	weight /= max( weight.x + weight.y + weight.z, 1e-4f );
-	const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
-	// 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
-	const float4 alongX = swSampleMaterialTexture( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
-	const float4 alongY = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
-	const float4 alongZ = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
-	return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
+    float3 weight = pow( abs( worldNormal ), kTriplanarSharpness );
+    weight /= max( weight.x + weight.y + weight.z, 1e-4f );
+    const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
+    // 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
+    const float4 alongX = swSampleMaterialTexture( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
+    const float4 alongY = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
+    const float4 alongZ = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
+    return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
 }
 #endif
 
 SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	// 정점 색 x 머티리얼 색 x 알베도 텍스처. 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
-	// 자세한 이유는 binding.hlsli 의 swSampleMaterialTexture 주석 참고.
+    // 정점 색 x 머티리얼 색 x 알베도 텍스처. 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
+    // 자세한 이유는 binding.hlsli 의 swSampleMaterialTexture 주석 참고.
 #if defined( MATERIAL_WORLD_UV )
-	const float4 surfaceTexture = sampleWorldTriplanar( context.material.albedoMap, context.worldPosition, context.normal );
+    const float4 surfaceTexture = sampleWorldTriplanar( context.material.albedoMap, context.worldPosition, context.normal );
 #else
-	const float4 surfaceTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
+    const float4 surfaceTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
 #endif
-	SwMaterialSurface surface;
-	surface.albedo    = context.color * context.material.color * surfaceTexture;
-	surface.normal    = context.normal;
-	surface.roughness = context.material.roughness;
-	surface.metallic  = context.material.metallic;
-	return surface;
+    SwMaterialSurface surface;
+    surface.albedo    = context.color * context.material.color * surfaceTexture;
+    surface.normal    = context.normal;
+    surface.roughness = context.material.roughness;
+    surface.metallic  = context.material.metallic;
+    return surface;
 }
 
 float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
 {
-	float3 lit;
+    float3 lit;
 #if SW_VIEWMODE_SKIPS_LIGHTING
-	// 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
-	lit = surface.albedo.rgb;
+    // 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
+    lit = surface.albedo.rgb;
 #else
-	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-	const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
-	lit                = swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
-	lit += swComputeRimLight( surface.normal );
+    // 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
+    const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
+    lit                = swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
+    lit += swComputeRimLight( surface.normal );
 #endif
-	return float4( lit, surface.albedo.a );
+    return float4( lit, surface.albedo.a );
 }
 
 #include "materialshadermain.hlsli"
