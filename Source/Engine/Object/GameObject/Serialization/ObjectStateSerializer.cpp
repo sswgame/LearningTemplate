@@ -226,6 +226,35 @@ namespace sw
                 return s_typeName;
             }
 
+            /**
+             * @brief 오브젝트의 컴포넌트 속성마다 @p walk 를 돌려, 옮기지 못한 속성이 있으면 false 를 반환합니다.
+             * @details 같은 실행의 상태(`Live`)면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
+             *          비우지 않는다 — 값이 조용히 사라지는 폴백이다.
+             */
+            template <typename TWalk>
+            static bool walkAllProperties( TWalk& walk, GameObject* pObject, ObjectIDSpace idSpace, const utf8* pLeafKind )
+            {
+                bool bAllWalked = true;
+                for ( Component* pComp : pObject->getComponents() )
+                {
+                    const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
+                    if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
+                        continue;
+                    for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+                    {
+                        if ( walk.walkProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
+                            continue;
+                        if ( idSpace != ObjectIDSpace::Saved )
+                            continue;
+                        SW_LOG_ERROR( "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
+                                      "container, or a copy failed) - the load fails",
+                                      pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
+                        bAllWalked = false;
+                    }
+                }
+                return bAllWalked;
+            }
+
             /** @brief 파일 형태의 컴포넌트 자리(키 해시)에 세우는 표지 비트입니다. 런타임 컴포넌트 id 는 작은 카운터라 이 비트를 쓰지 않는다. */
             static constexpr uint64 kComponentKeyHashMarker = 1ull << 63;
 
@@ -775,32 +804,8 @@ namespace sw
         ReflectedValueWalk<ComponentHandle, decltype( filter ), decltype( remapComponent )> componentWalk( registry, ObjectStateSerializerInternal::getComponentHandleTypeName(), filter,
                                                                                                            remapComponent );
 
-        const auto walkAllProperties = [this, pObject]( auto& walk, const utf8* pLeafKind )
-        {
-            bool bAllWalked = true;
-            for ( Component* pComp : pObject->getComponents() )
-            {
-                const TypeInfo* pTypeInfo = ( pComp != nullptr && pComp->isPendingDestroy() == false ) ? pComp->getTypeInfo() : nullptr;
-                if ( pTypeInfo == nullptr || walk.holdsLeaf( *pTypeInfo ) == false )
-                    continue;
-                for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
-                {
-                    if ( walk.walkProperty( MutableObjectAddress{ pComp }, *pTypeInfo, prop ) )
-                        continue;
-                    // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못한 것은 로드 오류다.
-                    // 비우지 않는다 — 값이 조용히 사라지는 폴백이다.
-                    if ( _idSpace != ObjectIDSpace::Saved )
-                        continue;
-                    SW_LOG_ERROR( "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
-                                  "container, or a copy failed) - the load fails",
-                                  pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
-                    bAllWalked = false;
-                }
-            }
-            return bAllWalked;
-        };
-        bool bAllRemapped = walkAllProperties( objectWalk, "object handles" );
-        bAllRemapped      = walkAllProperties( componentWalk, "component handles" ) && bAllRemapped;
+        bool bAllRemapped = ObjectStateSerializerInternal::walkAllProperties( objectWalk, pObject, _idSpace, "object handles" );
+        bAllRemapped      = ObjectStateSerializerInternal::walkAllProperties( componentWalk, pObject, _idSpace, "component handles" ) && bAllRemapped;
         // 대상이 있는데 대상 타입이 아닌 핸들(`resolveComponentReference` 가 이유를 로그에 남겼다)은 어느 id 공간이든 로드 오류다.
         return bAllRemapped && bInvalid == false;
     }

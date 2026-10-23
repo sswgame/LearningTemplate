@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    struct SweptOverlap2D;
+
     class GameObjectManager;
     class ScenePhysics;
 
@@ -120,6 +122,8 @@ namespace sw
          *          겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다. 모든 콜라이더의 `beginPhysicsFrame` 뒤에 부른다.
          */
         void sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved );
+        /** @brief 이 콜라이더와 상대 바디가 지나치며 겹친 기록 하나를 만듭니다(`sweepPassedBodies`). */
+        SweptOverlap2D makeSweptOverlap( PhysicsBodyHandle otherBody, uint64 otherUserData, float32 hitFraction, bool bOtherTrigger ) const;
 
         /**
          * @brief 콜라이더 오프셋 · 크기입니다.

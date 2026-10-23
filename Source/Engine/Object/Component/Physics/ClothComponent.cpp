@@ -341,26 +341,21 @@ namespace sw
                 const uint32 bottomLeft  = topLeft + _columnCount;
                 const uint32 topRight    = topLeft + 1;
                 const uint32 bottomRight = bottomLeft + 1;
-                const auto   pushVertex  = [&]( uint32 index, float32 normalSign )
-                {
-                    const float32 u = static_cast<float32>( index % _columnCount ) * uStep;
-                    const float32 v = static_cast<float32>( index / _columnCount ) * vStep;
-                    outListVertex.push_back( makeClothRenderVertex( listPosition[index], listNormal[index] * normalSign, u, v ) );
+                // 앞면 — 격자 삼각형 그대로(정면에서 바깥을 향한 감김). 뒷면 — 감김과 노멀을 뒤집는다.
+                const uint32 arrFaceIndex[2][6] = {
+                    {topLeft, bottomLeft,   topRight, topRight,  bottomLeft, bottomRight},
+                    {topLeft,   topRight, bottomLeft, topRight, bottomRight,  bottomLeft}
                 };
-                // 앞면 — 격자 삼각형 그대로(정면에서 바깥을 향한 감김).
-                pushVertex( topLeft, 1.0f );
-                pushVertex( bottomLeft, 1.0f );
-                pushVertex( topRight, 1.0f );
-                pushVertex( topRight, 1.0f );
-                pushVertex( bottomLeft, 1.0f );
-                pushVertex( bottomRight, 1.0f );
-                // 뒷면 — 감김과 노멀을 뒤집는다.
-                pushVertex( topLeft, -1.0f );
-                pushVertex( topRight, -1.0f );
-                pushVertex( bottomLeft, -1.0f );
-                pushVertex( topRight, -1.0f );
-                pushVertex( bottomRight, -1.0f );
-                pushVertex( bottomLeft, -1.0f );
+                const float32 arrFaceSign[2] = { 1.0f, -1.0f };
+                for ( uint32 face = 0; face < 2; ++face )
+                {
+                    for ( const uint32 index : arrFaceIndex[face] )
+                    {
+                        const float32 u = static_cast<float32>( index % _columnCount ) * uStep;
+                        const float32 v = static_cast<float32>( index / _columnCount ) * vStep;
+                        outListVertex.push_back( makeClothRenderVertex( listPosition[index], listNormal[index] * arrFaceSign[face], u, v ) );
+                    }
+                }
             }
         }
         return true;

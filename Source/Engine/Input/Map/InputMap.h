@@ -794,8 +794,6 @@ namespace sw
         const ActionEntry*     findAction( const hashed_string& action ) const;
 
     private:
-        /** @brief `loadFromResource` 가 `<Action>` 원소 하나를 읽습니다. 깨진 값은 오류를 남기고 @p inoutbValid 를 내립니다. */
-        void loadActionNode( XMLNode actionNode, string_view inheritedLayer, bool& inoutbValid );
         /**
          * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
          * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromResource`)가 0 이 아니면 실패로 돌린다.
@@ -806,6 +804,9 @@ namespace sw
          * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`loadUserBindings`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
          */
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
+
+    private:
+        friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMapSerialization.cpp)
 
     private:
         InputManager*                        _pInput;

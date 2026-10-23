@@ -3,6 +3,7 @@
 #include "Engine/Reflection/ReflectionDocWriter.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -67,41 +68,43 @@ namespace sw
                 }
             }
 
+            /** @brief 쉼표로 이은 목록에 항목 하나를 붙입니다. */
+            static void appendFlag( string& text, const string_view item )
+            {
+                if ( text.empty() == false )
+                    text += ", ";
+                text += item;
+            }
+
             /** @brief 프로퍼티의 플래그 · 역할 · 표시 메타를 한 칸에 씁니다. */
             static string makePropertyFlags( const PropertyInfo& prop )
             {
                 const PropertyMetadata& meta = *prop._metadata;
                 string                  text;
-                const auto              add = [&text]( const string_view item )
-                {
-                    if ( text.empty() == false )
-                        text += ", ";
-                    text += item;
-                };
                 if ( meta._bReadOnly == SW_TRUE )
-                    add( "ReadOnly" );
+                    appendFlag( text, "ReadOnly" );
                 if ( meta._bTransient == SW_TRUE )
-                    add( "Transient" );
+                    appendFlag( text, "Transient" );
                 if ( meta._bReplicated == SW_TRUE )
-                    add( meta._repNotify.empty() ? string( "Replicated" ) : string( "RepNotify=" ) + meta._repNotify.c_str() );
+                    appendFlag( text, meta._repNotify.empty() ? string( "Replicated" ) : string( "RepNotify=" ) + meta._repNotify.c_str() );
                 if ( meta._bSaveGame == SW_TRUE )
-                    add( "SaveGame" );
+                    appendFlag( text, "SaveGame" );
                 if ( meta._bRuntimeState == SW_TRUE )
-                    add( "RuntimeState" );
+                    appendFlag( text, "RuntimeState" );
                 if ( meta._bInterp == SW_TRUE )
-                    add( "Interp" );
+                    appendFlag( text, "Interp" );
                 if ( meta._validate.empty() == false )
-                    add( string( "Validate=" ) + meta._validate.c_str() );
+                    appendFlag( text, string( "Validate=" ) + meta._validate.c_str() );
                 if ( meta._bAssetPath == SW_TRUE )
-                    add( meta._assetType.empty() ? string( "Asset" ) : "Asset=" + meta._assetType );
+                    appendFlag( text, meta._assetType.empty() ? string( "Asset" ) : "Asset=" + meta._assetType );
                 if ( prop._bIsContainer == SW_TRUE )
-                    add( toString( prop._containerKind ) );
+                    appendFlag( text, toString( prop._containerKind ) );
 #if !defined( SW_SHIPPING )
                 if ( meta._editCondition.empty() == false )
-                    add( "EditCondition=`" + meta._editCondition + "`" );
+                    appendFlag( text, "EditCondition=`" + meta._editCondition + "`" );
                 const string* pUnits = meta.findCustomMeta( hashed_string( "Units" ) );
                 if ( pUnits != nullptr )
-                    add( "Units=" + *pUnits );
+                    appendFlag( text, "Units=" + *pUnits );
 #endif
                 return text;
             }
@@ -233,22 +236,15 @@ namespace sw
         { return pLhs->_fullyQualifiedName.lexicalLess( pRhs->_fullyQualifiedName ); } );
 
         vector<hashed_string> listModule;
-        const auto            addModule = [&listModule]( const hashed_string& moduleName )
-        {
-            for ( const hashed_string& known : listModule )
-            {
-                if ( known == moduleName )
-                    return;
-            }
-            listModule.push_back( moduleName );
-        };
         for ( const TypeInfo* pType : listType )
         {
-            addModule( pType->_moduleName );
+            if ( VectorUtil::contains( listModule, pType->_moduleName ) == false )
+                listModule.push_back( pType->_moduleName );
         }
         for ( const EnumInfo* pEnum : listEnum )
         {
-            addModule( pEnum->_moduleName );
+            if ( VectorUtil::contains( listModule, pEnum->_moduleName ) == false )
+                listModule.push_back( pEnum->_moduleName );
         }
         std::sort( listModule.begin(), listModule.end(), HashedStringLexicalLess{} );
 
