@@ -227,8 +227,6 @@ namespace sw
          *          요소의 이름은 보지 않는다 — 한 파일 안의 요소 하나를 소유하는 설정(`PackEngineSettings`)과 프로젝트 설정 창이 같은 규칙으로 읽는다.
          */
         [[nodiscard]] static bool readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, string_view elementXML, const utf8* pSourceLabel );
-        /** @brief 숫자 칸이 모두 `Min`/`Max` 안이면 true 이고, 밖이면 칸마다 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel );
 
         /** @brief `readConfigJSON` 의 타입 지정 버전입니다. */
         template <typename T>
