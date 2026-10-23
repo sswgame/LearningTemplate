@@ -4,6 +4,7 @@
  * @details 쿠커는 의존 목록을 따로 적지 않는다 — 씬이 프리팹을 읽고 프리팹이 머티리얼을 읽으면 그 읽기가 모두 씬 작업의 입력이 된다(`ResourceIO` 가 기록).
  *          빠뜨릴 수 있는 손 목록이 없으므로 "의존을 잊은 낡은 결과" 가 형식으로 생기지 않는다(유니티 Asset Database v2 의 동적 의존과 같은 방식).
  *          - 범위는 스레드 지역 값이다. 병렬 쿠킹에서도 읽기가 다른 작업에 섞이지 않는다. 안쪽 범위의 입력은 바깥 범위에도 기록된다.
+ *            그래서 쿠킹 중의 에셋 로드는 워커로 넘기지 않고 요청한 스레드에서 읽는다(`requiresCallingThreadRead` — `AssetLoadBlock::startLoad` 가 본다).
  *          - 쿠킹 세션(`CookSession`)이 열려 있는 동안 범위 밖에서 일어난 읽기는 오류다(읽기가 실패한다). 전역 캐시가 미리 읽어 둔 것을 쓰면 기록이 빠지기 때문이다.
  *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
  *          - 입력은 둘이다. 파일(읽은 내용의 해시 — 없는 파일을 찾은 것도 해시 0 으로 남는다)과 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
@@ -98,7 +99,13 @@ namespace sw
          */
         [[nodiscard]] static bool admitRead( string_view resourceID, const uint8* pData, size_t size );
         /**
-         * @brief 이 스레드에 작업이 있으면 비동기 읽기를 거절합니다(완료가 다른 스레드에서 와서 기록이 빠진다). 쿠커는 동기로 읽는다.
+         * @brief 리소스를 요청한 스레드에서 읽어야 하면 true 입니다. 이 스레드에 작업이 있거나 쿠킹 세션이 열려 있을 때입니다.
+         * @details 작업 범위는 스레드 지역 값이라 워커에서 읽으면 그 읽기가 입력에서 빠진다. 에셋 로드(`AssetLoadBlock::startLoad`)는 이때 `Async` 요청도
+         *          요청한 자리에서 읽는다 — 쿠킹 중 씬을 세우면 컴포넌트가 비동기로 요청하는 메시 · 텍스처 · 프리팹이 모두 그 작업의 입력이 된다.
+         */
+        static bool requiresCallingThreadRead();
+        /**
+         * @brief 요청한 스레드에서 읽어야 하면(`requiresCallingThreadRead`) 비동기 읽기를 거절합니다(완료가 다른 스레드에서 와서 기록이 빠진다). 쿠커는 동기로 읽는다.
          * @return 거절했으면 false 입니다(오류를 남긴다).
          */
         [[nodiscard]] static bool admitAsyncRead( string_view resourceID );

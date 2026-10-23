@@ -6,6 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Resource/Cook/CookJob.h"
 
 namespace sw
 {
@@ -73,12 +74,18 @@ namespace sw
         return true;
     }
 
+    bool AssetLoadBlock::canLoadOnWorker()
+    {
+        // 쿠킹 중에는 요청한 스레드(그 작업 범위 안)에서 읽는다 — 워커에서 읽으면 작업의 입력에서 빠지고 쿠킹 세션이 그 읽기를 실패시킨다.
+        return engine::areEngineServicesBound() && CookJob::requiresCallingThreadRead() == false;
+    }
+
     void AssetLoadBlock::startLoad( const shared_ptr<AssetLoadBlock>& pBlock, AssetLoadStart start )
     {
         SW_ASSERT( pBlock != nullptr );
         if ( pBlock->_phase.load( std::memory_order_acquire ) != kPhaseQueued )
             return; // 캐시 적중 · 틀린 요청으로 이미 끝난 블록이다
-        if ( start == AssetLoadStart::OnCallingThread || engine::areEngineServicesBound() == false )
+        if ( start == AssetLoadStart::OnCallingThread || canLoadOnWorker() == false )
         {
             pBlock->runLoadIfUnclaimed();
             return;

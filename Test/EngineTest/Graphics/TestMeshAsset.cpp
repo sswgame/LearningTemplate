@@ -19,6 +19,7 @@
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetHandle.h"
+#include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -277,6 +278,29 @@ SW_TEST_CASE( MeshAssetTest, AcquireWaitsOnTheSameLoadAsRequest )
     SW_EXPECT_FALSE( none.isValid() );
     SW_EXPECT_FALSE( none.isReady() );
     SW_EXPECT_FALSE( none.hasFailed() );
+}
+
+/**
+ * @brief [MeshAssetTest] 쿠킹 작업 안의 비동기 요청은 요청한 자리에서 읽혀 그 작업의 입력이 된다
+ * @details 작업 범위는 스레드 지역 값이다. 워커에서 읽으면 범위 밖이라 쿠킹 세션이 그 읽기를 실패시킨다 — 쿠커가 씬을 세우면 `MeshComponent` 가
+ *          메시를 비동기로 요청하므로 Shipping 의 `--cook-all` 이 메시마다 오류를 냈다.
+ */
+SW_TEST_CASE( MeshAssetTest, AsyncRequestInsideACookJobIsReadAsAnInput )
+{
+    const sw::string path = test::makeTempPath( "cook_job_request.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 1, 1.0f ) ) );
+
+    sw::CookSession session;
+    sw::CookJobDesc desc;
+    desc._cookerName    = "TestCooker";
+    desc._cookerVersion = 1;
+    desc._target        = "Windows";
+    desc._settingsHash  = 0;
+    sw::CookJob job( desc );                                  // 작업에 입력을 기록하므로 const 가 아니다
+    SW_EXPECT_FALSE( sw::AssetLoadBlock::canLoadOnWorker() ); // 오디오 디코드 · 스트리밍 큐도 이 값으로 정한다
+    const sw::MeshHandle handle = sw::MeshCache::request( ::test::makeTempResourceID( path ) );
+    SW_EXPECT_TRUE( handle.isReady() ); // 돌아오기 전에 이 스레드에서 읽었다
+    SW_EXPECT_EQUAL( size_t( 1 ), job.getInputs().size() );
 }
 
 /**

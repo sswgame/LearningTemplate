@@ -14,6 +14,7 @@
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -221,7 +222,7 @@ namespace sw
             storeResult( path, nullptr );
             return;
         }
-        if ( engine::areEngineServicesBound() == false )
+        if ( AssetLoadBlock::canLoadOnWorker() == false )
         {
             storeResult( path, decodeClip( path ) );
             return;
