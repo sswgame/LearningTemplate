@@ -17,16 +17,22 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
     /**
      * @class ModuleRenderPassRegistry
-     * @brief 모듈 패스 이름 → 패스 상수 목록입니다. 프로세스에 하나이며 모든 함수가 스레드 안전합니다(락 하나).
+     * @brief 모듈 패스 이름 → 패스 상수 목록입니다. 엔진 서비스 범위의 서브시스템이며 모든 함수가 스레드 안전합니다(락 하나).
+     * @details 엔진이 소유하므로 게임 · 키트 모듈이 내려가도 사라지지 않습니다. 렌더러는 `engine::getSubsystem<ModuleRenderPassRegistry>()`,
+     *          모듈은 `game::findSubsystem<ModuleRenderPassRegistry>()` 로 찾습니다(`EngineServiceList.xxx` 의 GameVisible 행).
      */
-    class SW_API ModuleRenderPassRegistry
+    class SW_API ModuleRenderPassRegistry : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. */
+        static constexpr const utf8* kSubsystemName = "ModuleRenderPass";
+
         /** @brief 패스 상수 하나입니다. 이름은 모듈 셰이더의 패스 상수 칸 이름입니다(바인더가 리플렉션 이름으로 맞춘다). */
         struct Constant
         {
@@ -37,7 +43,10 @@ namespace sw
         /** @brief 패스 하나가 가질 수 있는 상수 수입니다. 넘기면 `setConstant` 가 거절합니다(패스 상수 버퍼는 크기가 정해져 있다). */
         static constexpr size_t kMaxConstantCount = 16;
 
-        static ModuleRenderPassRegistry& get();
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
 
         /** @brief 패스 이름을 등록합니다. 이름이 비었거나 이미 있으면 false 입니다(두 모듈이 한 이름을 나눠 쓰지 않는다). */
         [[nodiscard]] bool registerPass( const hashed_string& modulePass );
@@ -56,8 +65,6 @@ namespace sw
         bool noteMissingOnce( const hashed_string& modulePass );
 
     private:
-        ModuleRenderPassRegistry() = default;
-
         mutable mutex                                  _mutex;
         unordered_map<hashed_string, vector<Constant>> _mapPass;
         unordered_set<hashed_string>                   _uniqueMissingLogged;
@@ -70,11 +77,12 @@ namespace sw
      * @class ModuleRenderPassRegistration
      * @brief 모듈 패스 등록 하나의 수명입니다. 만들 때 등록하고 소멸할 때 풉니다 — 모듈이 내려갈 때 등록이 남지 않게 하는 형식입니다.
      * @details 모듈의 게임 인스턴스 · 서브시스템 멤버로 둡니다. 이름이 겹쳐 등록하지 못했으면 `isRegistered` 가 false 이고 오류가 남았습니다.
+     *          레지스트리는 엔진 서비스 범위에 있어 이 객체보다 오래 삽니다.
      */
     class SW_API ModuleRenderPassRegistration
     {
     public:
-        explicit ModuleRenderPassRegistration( string_view modulePass );
+        ModuleRenderPassRegistration( ModuleRenderPassRegistry& registry, string_view modulePass );
         ~ModuleRenderPassRegistration();
 
         ModuleRenderPassRegistration( const ModuleRenderPassRegistration& )            = delete;
@@ -85,7 +93,8 @@ namespace sw
         [[nodiscard]] bool setConstant( string_view name, const float4& value );
 
     private:
-        hashed_string _modulePass;
-        uint8         _bRegistered;
+        ModuleRenderPassRegistry& _registry;
+        hashed_string             _modulePass;
+        uint8                     _bRegistered;
     };
 } // namespace sw

@@ -840,13 +840,16 @@ namespace sw
     {
         // 렌더 스레드(병렬 기록 워커)에서 모듈 코드를 부르지 않는다. 레지스트리는 락 안에서 상수를 **값으로** 복사해 줄 뿐이다 — 모듈이 언로드되어도(핫 리로드)
         // 이 위치에서 그 모듈의 함수 · vtable 을 밟을 일이 없다. 상수 이름은 모듈 셰이더의 패스 상수 필드 이름이다(바인더가 리플렉션 이름으로 맞춘다).
-        RHIPipelineStateHandle                     pso{ 0 };
-        const bool                                 bHasPSO = _pPSOCache->findModulePassPSO( passDesc._resolvedModulePass, pso ) && pso != 0;
+        RHIPipelineStateHandle pso{ 0 };
+        const bool             bHasPSO = _pPSOCache->findModulePassPSO( passDesc._resolvedModulePass, pso ) && pso != 0;
+        // 클라이언트 엔진은 늘 서비스 범위에 넣는다 — 목록의 선택 행인 것은 렌더러가 없는 Server 타깃 때문이다.
+        ModuleRenderPassRegistry* const pRegistry = engine::findSubsystem<ModuleRenderPassRegistry>();
+        SW_ASSERT( pRegistry != nullptr );
         vector<ModuleRenderPassRegistry::Constant> listConstant;
-        const bool                                 bRegistered = ModuleRenderPassRegistry::get().copyConstants( passDesc._resolvedModulePass, listConstant );
+        const bool                                 bRegistered = pRegistry->copyConstants( passDesc._resolvedModulePass, listConstant );
         if ( bHasPSO == false || bRegistered == false )
         {
-            if ( ModuleRenderPassRegistry::get().noteMissingOnce( passDesc._resolvedModulePass ) )
+            if ( pRegistry->noteMissingOnce( passDesc._resolvedModulePass ) )
                 SW_LOG_ERROR( "Module pass '%#' (pipeline pass '%#') is not drawn: %#", passDesc._resolvedModulePass.c_str(), passDesc._name,
                               bRegistered == false ? "no module registered it (ModuleRenderPassRegistry)" : "its PSO could not be created (see the shader error above)" );
             return;

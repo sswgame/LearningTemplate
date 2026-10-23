@@ -8,13 +8,6 @@ namespace sw
 {
     SW_LOG_CALLER( "ModuleRenderPass" );
 
-    ModuleRenderPassRegistry& ModuleRenderPassRegistry::get()
-    {
-        // Engine 모듈 안의 하나다. 게임 · 키트 모듈이 내려가도 사라지지 않는다(모듈 쪽 정적이 아니다).
-        static ModuleRenderPassRegistry s_registry;
-        return s_registry;
-    }
-
     bool ModuleRenderPassRegistry::registerPass( const hashed_string& modulePass )
     {
         if ( modulePass.empty() )
@@ -85,23 +78,24 @@ namespace sw
         return _uniqueMissingLogged.insert( modulePass ).second;
     }
 
-    ModuleRenderPassRegistration::ModuleRenderPassRegistration( string_view modulePass )
-        : _modulePass{ modulePass }
+    ModuleRenderPassRegistration::ModuleRenderPassRegistration( ModuleRenderPassRegistry& registry, string_view modulePass )
+        : _registry{ registry }
+        , _modulePass{ modulePass }
         , _bRegistered{ SW_FALSE }
     {
-        _bRegistered = ModuleRenderPassRegistry::get().registerPass( _modulePass ) ? SW_TRUE : SW_FALSE;
+        _bRegistered = _registry.registerPass( _modulePass ) ? SW_TRUE : SW_FALSE;
     }
 
     ModuleRenderPassRegistration::~ModuleRenderPassRegistration()
     {
         if ( _bRegistered != SW_FALSE )
-            ModuleRenderPassRegistry::get().unregisterPass( _modulePass );
+            _registry.unregisterPass( _modulePass );
     }
 
     bool ModuleRenderPassRegistration::setConstant( string_view name, const float4& value )
     {
         if ( _bRegistered == SW_FALSE )
             return false;
-        return ModuleRenderPassRegistry::get().setConstant( _modulePass, hashed_string{ name }, value );
+        return _registry.setConstant( _modulePass, hashed_string{ name }, value );
     }
 } // namespace sw

@@ -93,6 +93,7 @@
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
     #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
     #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThread.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -270,6 +271,9 @@ namespace sw
                 _services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
                 _services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
                 _services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
+#if defined( SW_WITH_CLIENT_CODE )
+                _services.addSubsystem( sw::make_unique<ModuleRenderPassRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다
+#endif
             }
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {

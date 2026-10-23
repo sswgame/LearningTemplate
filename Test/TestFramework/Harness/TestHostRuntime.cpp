@@ -49,6 +49,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
@@ -249,6 +250,7 @@ namespace test
                 services.addSubsystem( sw::make_unique<sw::DebugDrawQueue>() );
                 services.addSubsystem( sw::make_unique<sw::RenderTargetRegistry>() );
                 services.addSubsystem( sw::make_unique<sw::RHIBackendRegistry>() );
+                services.addSubsystem( sw::make_unique<sw::ModuleRenderPassRegistry>() );
             }
             if ( services.getCollection().initializeAll( sw::EngineSubsystemHost::kClient ) == false )
             {
