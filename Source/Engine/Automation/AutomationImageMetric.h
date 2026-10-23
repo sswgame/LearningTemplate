@@ -16,7 +16,7 @@ namespace sw
         MeanLuma = 0,     ///< 영역 평균 휘도(0..1, Rec.709)
         DarkFraction,     ///< 영역에서 휘도가 영역 중앙값 × ratio 보다 어두운 픽셀 비율입니다. 그림자와 실루엣을 보며, 조명과 톤맵이 바뀌어도 상대값이라 버팁니다.
         MeanRedMinusBlue, ///< 평균 (R − B)(−1..1)입니다. 배경 대비 색을 봅니다.
-        DifferentFrom,    ///< 기준 이미지와의 평균 절대 차(0..1, RGB)입니다. 화면 전체가 함께 바뀌는 변화(노출 · 보기 모드)를 봅니다.
+        DifferentFrom,    ///< 기준 이미지와의 평균 절대 차(0..1, RGB)입니다. 섞임 정도 같은 "양" 을 `near` 로만 단언한다 — "다르다 · 같다" 는 `DifferingFraction` 이며, 러너 검사가 `atLeast` · `atMost` 를 거절한다.
         /**
          * 기준 이미지와 색 거리(R · G · B 차의 합, 0..765)가 `AutomationImageMetric::kDifferingMinDistance` 이상인 화소의 비율(0..1)입니다.
          * "같은 그림" 과 일부 화소만 바뀌는 변화(브러시 한 점 · 그림자 · 잘못 그린 위젯)는 이것으로 봅니다 — 평균 차는 좁은 자리의 큰 변화를 넓이로 나눠 묻습니다.

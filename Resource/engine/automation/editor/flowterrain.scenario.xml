@@ -38,7 +38,7 @@
 		<Remember probe="Editor.UndoState" as="editedUndo"/>
 		<Screenshot file="flowterrain_edited.ppm"/>
 	</At>
-	<At frame="221"><ExpectImage file="flowterrain_edited.ppm" metric="differentFrom" reference="flowterrain_before.ppm" atLeast="0.005"/></At>
+	<At frame="221"><ExpectImage file="flowterrain_edited.ppm" metric="differingFraction" reference="flowterrain_before.ppm" atLeast="0.05"/></At>
 
 	<!-- ① 플레이 인 → 플레이 아웃 -->
 	<At frame="230"><DevCommand line="play"/></At>

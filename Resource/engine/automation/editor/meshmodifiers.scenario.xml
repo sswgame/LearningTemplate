@@ -42,7 +42,7 @@
 	</At>
 	<At frame="270"><DevCommand line="panel.focus scene_view"/></At>
 	<At frame="290"><Screenshot file="gpubend.ppm"/></At>
-	<At frame="292"><ExpectImage file="gpubend.ppm" metric="differentFrom" reference="rest.ppm" atLeast="0.002"/></At>
+	<At frame="292"><ExpectImage file="gpubend.ppm" metric="differingFraction" reference="rest.ppm" atLeast="0.015"/></At>
 
 	<!-- ② 이동 화살표 끌기 - 기즈모가 움직이고 선택(상자)은 그대로다 -->
 	<!-- 패널이 씬 뷰 위에 떠 있으면 손잡이를 가린다 - 닫아도 세션(대상 · 스택)과 시각화는 그대로다 -->
@@ -82,7 +82,7 @@
 	<!-- CPU 로 내려가도 셰이딩 미리보기는 남는다: 빈 곡선 층은 항등이라 그림이 GPU 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
 	<At frame="508"><Screenshot file="cpubend.ppm"/></At>
 	<At frame="510">
-		<ExpectImage file="cpubend.ppm" metric="differentFrom" reference="rest.ppm" atLeast="0.002"/>
+		<ExpectImage file="cpubend.ppm" metric="differingFraction" reference="rest.ppm" atLeast="0.015"/>
 		<ExpectImage file="cpubend.ppm" metric="differingFraction" reference="gpubendmoved.ppm" atMost="0.001"/>
 	</At>
 

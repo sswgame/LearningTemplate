@@ -217,6 +217,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differentFrom" reference="b.ppm" atLeast="0.1"/>)",
         R"(<ExpectImage file="a.ppm" metric="differingFraction" atMost="0.1"/>)",
         R"(<ExpectImage file="a.ppm" metric="meanLuma" reference="b.ppm" atMost="0.1"/>)",
         R"(<MousePosition x="1.5" y="0.5"/>)",

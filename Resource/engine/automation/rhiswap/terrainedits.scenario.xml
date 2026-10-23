@@ -39,7 +39,7 @@
 		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
 		<Screenshot file="terrainedits_edited.ppm"/>
 	</At>
-	<At frame="281"><ExpectImage file="terrainedits_edited.ppm" metric="differentFrom" reference="terrainedits_before.ppm" atLeast="0.003"/></At>
+	<At frame="281"><ExpectImage file="terrainedits_edited.ppm" metric="differingFraction" reference="terrainedits_before.ppm" atLeast="0.01"/></At>
 
 	<!-- 백엔드를 건넌다 -->
 	<At frame="290"><SwapBackend backend="dx11"/></At>
@@ -54,8 +54,8 @@
 		<Screenshot file="terrainedits_swapped.ppm"/>
 	</At>
 	<At frame="381">
-		<ExpectImage file="terrainedits_swapped.ppm" metric="differentFrom" reference="terrainedits_before.ppm" atLeast="0.003"/>
-		<ExpectImage file="terrainedits_swapped.ppm" metric="differentFrom" reference="terrainedits_edited.ppm" atMost="0.02"/>
+		<ExpectImage file="terrainedits_swapped.ppm" metric="differingFraction" reference="terrainedits_before.ppm" atLeast="0.01"/>
+		<ExpectImage file="terrainedits_swapped.ppm" metric="differingFraction" reference="terrainedits_edited.ppm" atMost="0.001"/>
 	</At>
 	<At frame="390"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>
