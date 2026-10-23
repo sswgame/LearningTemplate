@@ -149,10 +149,12 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ResourceGaugeReplaysAfterRestore )
 {
     ResourceGaugeSettings settings;
     settings._exhaustThreshold = 30.0f;
-    ResourceGauge gauge( settings );
+    ResourceGauge gauge;
+    SW_EXPECT_TRUE( gauge.initialize( settings ) );
     (void)gauge.drain( 400.0f, 0.5f ); // 탈진
     gauge.update( 0.4f );
-    ResourceGauge restored( settings );
+    ResourceGauge restored;
+    SW_EXPECT_TRUE( restored.initialize( settings ) );
     SW_EXPECT_TRUE( replaysAfterRestore( gauge, restored, []( ResourceGauge& state )
     {
         for ( int32 stepIndex = 0; stepIndex < 120; ++stepIndex )
@@ -161,7 +163,8 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ResourceGaugeReplaysAfterRestore )
         }
     } ) );
     SW_EXPECT_TRUE( restored.isExhausted() == gauge.isExhausted() );
-    ResourceGauge untouched( settings );
+    ResourceGauge untouched;
+    SW_EXPECT_TRUE( untouched.initialize( settings ) );
     SW_EXPECT_TRUE( rejectsTruncated( gauge, untouched ) );
 }
 
@@ -172,12 +175,14 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
 {
     VitalitySettings settings;
     settings._maxShield = 50.0f;
-    Vitality vitality( settings );
+    Vitality vitality;
+    SW_EXPECT_TRUE( vitality.initialize( settings ) );
     (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 테스트 준비 — 피해 결과값은 보지 않고 복원한 상태를 비교한다
     (void)vitality.addShield( 12.0f );
     vitality.setInvulnerable( 0.25f );
     vitality.update( 0.1f );
-    Vitality restored( settings );
+    Vitality restored;
+    SW_EXPECT_TRUE( restored.initialize( settings ) );
     SW_EXPECT_TRUE( replaysAfterRestore( vitality, restored, []( Vitality& state )
     {
         for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex )
@@ -471,7 +476,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
     ElementRuleTable table;
     SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
     ElementGrid grid;
-    grid.initialize( 8, 3, &table );
+    SW_EXPECT_TRUE( grid.initialize( 8, 3, &table ) );
     for ( int32 y = 0; y < 3; ++y )
     {
         for ( int32 x = 0; x < 8; ++x )
@@ -485,14 +490,14 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 
     // 크기가 다른 격자는 거절하고 그대로다.
     ElementGrid smaller;
-    smaller.initialize( 2, 2, &table );
+    SW_EXPECT_TRUE( smaller.initialize( 2, 2, &table ) );
     const vector<uint8> bytes = captureValueBytes( grid );
     Archive             smallerReader( bytes.data(), bytes.size() );
     SW_EXPECT_FALSE( smaller.readState( smallerReader ) );
     SW_EXPECT_EQUAL( 2, smaller.getWidth() );
 
     ElementGrid restored;
-    restored.initialize( 8, 3, &table );
+    SW_EXPECT_TRUE( restored.initialize( 8, 3, &table ) );
     SW_EXPECT_TRUE( replaysAfterRestore( grid, restored, []( ElementGrid& state )
     { (void)state.update( 0.9f ); } ) );
     SW_EXPECT_EQUAL( grid.computeStateHash(), restored.computeStateHash() );
@@ -592,14 +597,14 @@ SW_TEST_CASE( BaseValueStateArchiveTest, InteractionProgressReplaysAfterRestore 
     config._regressionRate     = 0.05f;
     config._skillCheckInterval = 1.5f;
     InteractionProgress progress;
-    progress.initialize( config, &judge, 77u );
+    SW_EXPECT_TRUE( progress.initialize( config, &judge, 77u ) );
     SW_ASSERT_TRUE( progress.join( 3u ) );
     SW_ASSERT_TRUE( progress.join( 5u ) );
     progress.update( 2.0f );
     SW_ASSERT_TRUE( progress.leave( 3u ) );
 
     InteractionProgress restored;
-    restored.initialize( config, &judge, 1u );
+    SW_EXPECT_TRUE( restored.initialize( config, &judge, 1u ) );
     SW_EXPECT_TRUE( replaysAfterRestore( progress, restored, []( InteractionProgress& state )
     {
         for ( int32 tick = 0; tick < 24; ++tick )
@@ -612,7 +617,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, InteractionProgressReplaysAfterRestore 
     SW_EXPECT_NEAR_EQUAL( progress.getProgress(), restored.getProgress(), 1.0e-6f );
 
     InteractionProgress truncated;
-    truncated.initialize( config, &judge, 1u );
+    SW_EXPECT_TRUE( truncated.initialize( config, &judge, 1u ) );
     SW_EXPECT_TRUE( rejectsTruncated( progress, truncated ) );
     SW_EXPECT_EQUAL( 0, truncated.getParticipantCount() );
 }

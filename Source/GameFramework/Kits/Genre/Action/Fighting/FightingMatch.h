@@ -27,38 +27,72 @@ namespace sw
     class Archive;
     class ValidationContext;
 
-    /** @brief 대전 규칙 수치입니다. 시간 단위는 모두 프레임이며 60프레임이 1초입니다. */
-    struct FightingSettings
+    /**
+     * @brief 대전 규칙 수치입니다. 시간 단위는 모두 프레임이며 60프레임이 1초입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `FightingMatch::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API FightingSettings
     {
-        int32   _roundFrames{ 60 * 60 };     ///< 라운드 시간(1 보다 작으면 1)
-        int32   _roundsToWin{ 2 };           ///< 이만큼 이기면 대전 끝(1 이상, 아니면 `initialize` 가 거절한다. 둘이 함께 닿으면 무승부)
-        int32   _roundOverFrames{ 90 };      ///< 라운드가 끝나고 다음 라운드까지(1 보다 작으면 1)
-        int32   _downFrames{ 30 };           ///< 다운 상태로 바닥에 누워 있는 시간
-        int32   _wakeupFrames{ 20 };         ///< 기상 중 무적으로 일어나는 시간
-        int32   _wallSplatFrames{ 40 };      ///< 벽꽝 상태로 벽에 붙어 있는 시간
-        int32   _throwBreakFrames{ 20 };     ///< 잡기 풀기 입력을 받는 시간
-        int32   _throwBreakRecovery{ 16 };   ///< 잡기를 푼 뒤 둘 다 움직일 수 없는 시간
-        int32   _inputBufferFrames{ 8 };     ///< 움직일 수 없는 동안 입력한 커맨드를 기억하는 시간(선입력)
-        int32   _stanceFrames{ 30 };         ///< 고유 자세를 유지하는 시간
-        int32   _heatFrames{ 300 };          ///< 히트 상태가 지속되는 시간
-        float32 _stageHalfSize{ 5.0f };      ///< 정사각 무대의 반 너비(중심에서 벽까지)
-        float32 _startDistance{ 1.2f };      ///< 라운드 시작 거리
-        float32 _wallNearDistance{ 0.6f };   ///< 몸이 벽에서 이 거리 안에 있으면 "벽 근처"로 본다
-        float32 _gravity{ 0.008f };          ///< 저글 중력(프레임² 당)
-        float32 _launchVelocity{ 0.14f };    ///< 띄우기의 위 속도
+        REFLECT_BODY();
+        PROPERTY( Min = 1 )
+        int32 _roundFrames{ 60 * 60 }; ///< 라운드 시간
+        PROPERTY( Min = 1 )
+        int32 _roundsToWin{ 2 }; ///< 이만큼 이기면 대전 끝(둘이 함께 닿으면 무승부)
+        PROPERTY( Min = 1 )
+        int32 _roundOverFrames{ 90 }; ///< 라운드가 끝나고 다음 라운드까지
+        PROPERTY( Min = 0 )
+        int32 _downFrames{ 30 }; ///< 다운 상태로 바닥에 누워 있는 시간
+        PROPERTY( Min = 0 )
+        int32 _wakeupFrames{ 20 }; ///< 기상 중 무적으로 일어나는 시간
+        PROPERTY( Min = 0 )
+        int32 _wallSplatFrames{ 40 }; ///< 벽꽝 상태로 벽에 붙어 있는 시간
+        PROPERTY( Min = 0 )
+        int32 _throwBreakFrames{ 20 }; ///< 잡기 풀기 입력을 받는 시간
+        PROPERTY( Min = 0 )
+        int32 _throwBreakRecovery{ 16 }; ///< 잡기를 푼 뒤 둘 다 움직일 수 없는 시간
+        PROPERTY( Min = 0 )
+        int32 _inputBufferFrames{ 8 }; ///< 움직일 수 없는 동안 입력한 커맨드를 기억하는 시간(선입력)
+        PROPERTY( Min = 0 )
+        int32 _stanceFrames{ 30 }; ///< 고유 자세를 유지하는 시간
+        PROPERTY( Min = 0 )
+        int32 _heatFrames{ 300 }; ///< 히트 상태가 지속되는 시간
+        PROPERTY( Min = 0.1 )
+        float32 _stageHalfSize{ 5.0f }; ///< 정사각 무대의 반 너비(중심에서 벽까지)
+        PROPERTY( Min = 0.0 )
+        float32 _startDistance{ 1.2f }; ///< 라운드 시작 거리
+        PROPERTY( Min = 0.0 )
+        float32 _wallNearDistance{ 0.6f }; ///< 몸이 벽에서 이 거리 안에 있으면 "벽 근처"로 본다
+        PROPERTY( Min = 0.0 )
+        float32 _gravity{ 0.008f }; ///< 저글 중력(프레임² 당)
+        PROPERTY( Min = 0.0 )
+        float32 _launchVelocity{ 0.14f }; ///< 띄우기의 위 속도
+        PROPERTY( Min = 0.0 )
         float32 _juggleHitVelocity{ 0.08f }; ///< 공중 추가타의 위쪽 속도(감쇠 비율을 곱한다)
-        float32 _screwVelocity{ 0.11f };     ///< 스크류의 위 속도
-        float32 _boundVelocity{ 0.1f };      ///< 바운드의 위 속도
+        PROPERTY( Min = 0.0 )
+        float32 _screwVelocity{ 0.11f }; ///< 스크류의 위 속도
+        PROPERTY( Min = 0.0 )
+        float32 _boundVelocity{ 0.1f }; ///< 바운드의 위 속도
+        PROPERTY( Min = 0.0 )
         float32 _juggleCarrySpeed{ 0.004f }; ///< 저글 상태에서 밀려가는 속도(프레임당)
-        float32 _screwCarrySpeed{ 0.03f };   ///< 스크류 상태에서 밀려가는 속도
+        PROPERTY( Min = 0.0 )
+        float32 _screwCarrySpeed{ 0.03f }; ///< 스크류 상태에서 밀려가는 속도
+        PROPERTY( Min = 0.0, Max = 1.0 )
         float32 _juggleDecayPerHit{ 0.15f }; ///< 공중 히트마다 피해 비율이 이만큼 줄어든다
-        float32 _juggleMinScale{ 0.3f };     ///< 피해 비율의 하한
-        float32 _juggleBodyHeight{ 0.9f };   ///< 떠 있는 몸의 허트 높이
-        float32 _downBodyHeight{ 0.4f };     ///< 누운 몸의 허트 높이
-        float32 _rageThreshold{ 0.25f };     ///< 체력 비율이 이 이하면 레이지
-        float32 _rageDamageScale{ 1.1f };    ///< 레이지 중 주는 피해 배율
-        float32 _heatDamageScale{ 1.1f };    ///< 히트 중 주는 피해 배율
-        uint8   _bHeatEnabled{ SW_FALSE };   ///< 히트 시스템을 쓰는가(켜면 히트 발동 기술이 나간다)
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _juggleMinScale{ 0.3f }; ///< 피해 비율의 하한
+        PROPERTY( Min = 0.0 )
+        float32 _juggleBodyHeight{ 0.9f }; ///< 떠 있는 몸의 허트 높이
+        PROPERTY( Min = 0.0 )
+        float32 _downBodyHeight{ 0.4f }; ///< 누운 몸의 허트 높이
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _rageThreshold{ 0.25f }; ///< 체력 비율이 이 이하면 레이지
+        PROPERTY( Min = 0.0 )
+        float32 _rageDamageScale{ 1.1f }; ///< 레이지 중 주는 피해 배율
+        PROPERTY( Min = 0.0 )
+        float32 _heatDamageScale{ 1.1f }; ///< 히트 중 주는 피해 배율
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bHeatEnabled{ SW_FALSE }; ///< 히트 시스템을 쓰는가(켜면 히트 발동 기술이 나간다)
     };
 } // namespace sw
 
@@ -239,7 +273,7 @@ namespace sw
 
         FightingMatch();
 
-        /** @brief 두 캐릭터로 대전을 새로 시작합니다(1라운드부터). 라운드 규칙이 `RoundSeriesSettings` 의 범위 밖이면(이길 라운드 수 0 등) 오류를 남기고 false 입니다. */
+        /** @brief 두 캐릭터로 대전을 새로 시작합니다(1라운드부터). 설정이 `FightingSettings` 의 범위 밖이면(이길 라운드 수 0, 라운드 시간 0 등) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings = FightingSettings{} );
         /** @brief 한 프레임 진행합니다. 입력 방향은 화면 기준입니다. */
         void advanceFrame( const InputFrame& input0, const InputFrame& input1 );

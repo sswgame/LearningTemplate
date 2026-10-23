@@ -22,18 +22,26 @@ namespace sw
     {
     }
 
-    void WitcherCombat::initialize( const WitcherCatalog* pCatalog, uint32 seed )
+    bool WitcherCombat::initialize( const WitcherCatalog* pCatalog, uint32 seed )
     {
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR( "WitcherCombat: refused - no catalog (the combat numbers come from the catalog, there is no default set)" );
+            return false;
+        }
+        const WitcherCombatDef& combat = pCatalog->getCombat();
+        ResourceGaugeSettings   staminaSettings;
+        staminaSettings._max        = combat._stamina;
+        staminaSettings._regenRate  = combat._staminaRegen;
+        staminaSettings._regenDelay = combat._staminaDelay;
+        ResourceGauge stamina;
+        if ( stamina.initialize( staminaSettings ) == false )
+            return false;
         _pCatalog = pCatalog;
-        const WitcherCombatDef  fallback{};
-        const WitcherCombatDef& combat = pCatalog != nullptr ? pCatalog->getCombat() : fallback;
-        ResourceGaugeSettings   stamina;
-        stamina._max        = combat._stamina;
-        stamina._regenRate  = combat._staminaRegen;
-        stamina._regenDelay = combat._staminaDelay;
-        _stamina.initialize( stamina );
+        _stamina  = stamina;
         _random.setSeed( seed );
         _adrenaline = 0.0f;
+        return true;
     }
 
     WitcherCombatResult WitcherCombat::performAction( WitcherAction action )

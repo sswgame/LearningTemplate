@@ -64,14 +64,21 @@ namespace sw
     {
     }
 
-    void RhythmPlaySession::initialize( const RhythmChart* pChart, const TimingJudge* pJudge, const RhythmPlaySettings& settings )
+    bool RhythmPlaySession::initialize( const RhythmChart* pChart, const TimingJudge* pJudge, const RhythmPlaySettings& settings )
     {
         SW_ASSERT( pChart != nullptr && pJudge != nullptr );
+        // 목록 필드가 있어 리플렉션 범위(`PROPERTY`)로 선언하지 못한 수치만 손으로 본다. 맞추지 않고 거절한다.
+        const bool bLifeValid = settings._maxLife >= 1.0f && 0.0f <= settings._initialLife && settings._initialLife <= settings._maxLife && 0 <= settings._comboBonusCap;
+        if ( bLifeValid == false )
+        {
+            SW_LOG_ERROR( "RhythmPlaySession: refused settings - maxLife %# (1 or more), initialLife %# (0..maxLife), comboBonusCap %# (0 or more)", settings._maxLife,
+                          settings._initialLife, settings._comboBonusCap );
+            return false;
+        }
         _pChart            = pChart;
         _pJudge            = pJudge;
         _settings          = settings;
-        _settings._maxLife = MathUtil::max( 1.0f, _settings._maxLife );
-        _life              = MathUtil::clamp( _settings._initialLife, 0.0f, _settings._maxLife );
+        _life              = _settings._initialLife;
         _score             = 0;
         _accuracyWeightSum = 0.0;
         _now               = -1.0e30f;
@@ -93,6 +100,7 @@ namespace sw
             _listLane[static_cast<size_t>( listNote[noteIndex]._lane )]._listNoteIndex.push_back( static_cast<int32>( noteIndex ) );
         }
         finishIfDone();
+        return true;
     }
 
     void RhythmPlaySession::update( float32 now )

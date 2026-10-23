@@ -19,6 +19,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
@@ -32,39 +34,74 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 아레나 수치입니다. 거리 단위는 m, 시간 단위는 초입니다. */
-    struct TrampolineSettings
+    /**
+     * @brief 아레나 수치입니다. 거리 단위는 m, 시간 단위는 초입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `TrampolineArena::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API TrampolineSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001, Max = 1.0 )
         float32 _step{ 1.0f / 60.0f };
+        PROPERTY( Min = 1.0 )
         float32 _arenaRadius{ 8.0f };
+        PROPERTY( Min = 0.1 )
         float32 _gravity{ 30.0f };
+        PROPERTY( Min = 0.0 )
         float32 _baseBounceHeight{ 2.0f };
+        PROPERTY( Min = 0.0 )
         float32 _comboHeightStep{ 0.75f };
+        PROPERTY( Min = 0.0 )
         float32 _contactTime{ 0.12f }; ///< 면에 눌려 있는 시간이다. 늦은 판정 창은 이보다 길 수 없다
+        PROPERTY( Min = 0.0 )
         float32 _spawnHeight{ 3.0f };
+        PROPERTY( Min = 0.0 )
         float32 _airMoveSpeed{ 6.0f };
+        PROPERTY( Min = 0.0 )
         float32 _airAcceleration{ 20.0f };
+        PROPERTY( Min = 0.0 )
         float32 _knockbackDrag{ 3.0f }; ///< 밀려난 속도가 줄어드는 정도(/초)
+        PROPERTY( Min = 0.0 )
         float32 _bodyRadius{ 0.5f };
+        PROPERTY( Min = 0.0 )
         float32 _attackDashSpeed{ 12.0f };
+        PROPERTY( Min = 0.0 )
         float32 _attackDuration{ 0.25f };
+        PROPERTY( Min = 0.0 )
         float32 _attackCooldown{ 0.6f };
+        PROPERTY( Min = 0.0 )
         float32 _attackRadius{ 0.8f }; ///< 몸 반지름에 더한다
+        PROPERTY( Min = 0.0 )
         float32 _attackKnockback{ 9.0f };
+        PROPERTY( Min = 0.0 )
         float32 _stunTime{ 0.4f }; ///< 맞은 뒤 조작이 먹히지 않는 시간
+        PROPERTY( Min = 0.0 )
         float32 _poundSpeed{ 25.0f };
+        PROPERTY( Min = 0.0 )
         float32 _poundMinHeight{ 1.0f };
+        PROPERTY( Min = 0.0 )
         float32 _poundRadius{ 3.0f };
+        PROPERTY( Min = 0.0 )
         float32 _poundKnockback{ 7.0f };
+        PROPERTY( Min = 0.0 )
         float32 _poundHitHeight{ 1.0f }; ///< 이보다 낮은 상대만 내려찍기에 밀린다
+        PROPERTY( Min = 0.0 )
         float32 _creditWindow{ 3.0f };
+        PROPERTY()
         float32 _fallDepth{ -4.0f }; ///< 밖으로 떨어져 이 높이 아래가 되면 탈락한다
+        PROPERTY( Min = 0.0 )
         float32 _respawnDelay{ 2.0f };
+        PROPERTY( Min = 0.0 )
         float32 _spawnInvulnerable{ 1.0f };
+        PROPERTY( Min = 0.0 )
         float32 _pickupRadius{ 1.0f };
-        int32   _maxCombo{ 4 };
-        int32   _ringOutScore{ 1 };
-        int32   _selfOutPenalty{ 0 }; ///< 아무도 밀지 않았는데 떨어지면 깎는 점수
+        PROPERTY( Min = 0 )
+        int32 _maxCombo{ 4 };
+        PROPERTY()
+        int32 _ringOutScore{ 1 };
+        PROPERTY()
+        int32 _selfOutPenalty{ 0 }; ///< 아무도 밀지 않았는데 떨어지면 깎는 점수
     };
 } // namespace sw
 
@@ -161,7 +198,10 @@ namespace sw
 
         TrampolineArena();
 
-        /** @brief 2~4명으로 라운드를 준비합니다. @p roundTime 이 0 이면 시간 제한이 없고, @p scoreLimit 이 0 이면 점수 제한이 없습니다. */
+        /**
+         * @brief 2~4명으로 라운드를 준비합니다. @p roundTime 이 0 이면 시간 제한이 없고, @p scoreLimit 이 0 이면 점수 제한이 없습니다.
+         * @details 사람 수가 범위 밖이거나, 설정이 범위 밖이거나, @p roundTime · @p scoreLimit 가 음수이면 오류를 남기고 false 를 반환합니다(0 으로 올려 받지 않는다).
+         */
         [[nodiscard]] bool initialize( const TrampolineSettings& settings, int32 playerCount, float32 roundTime, int32 scoreLimit, uint32 seed );
         /** @brief 튕김 판정 창을 정합니다(기본은 Perfect ±0.05, Good ±0.1). 콤보를 깨는 창(`_bBreaksCombo`)은 실패로 칩니다. */
         void              setTimingWindows( const vector<TimingWindow>& listWindow ) { _judge.setWindows( listWindow ); }

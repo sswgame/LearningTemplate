@@ -40,14 +40,18 @@ namespace sw
     {
     }
 
-    void InteractionProgress::initialize( const InteractionConfig& config, const TimingJudge* pJudge, uint32 seed )
+    bool InteractionProgress::initialize( const InteractionConfig& config, const TimingJudge* pJudge, uint32 seed )
     {
-        _config                  = config;
-        _config._duration        = MathUtil::max( 1.0e-3f, _config._duration );
-        _config._maxParticipants = MathUtil::max( 1, _config._maxParticipants );
-        _pJudge                  = pJudge;
-        _seed                    = seed;
+        if ( config._duration < 1.0e-3f || config._maxParticipants < 1 )
+        {
+            SW_LOG_ERROR( "InteractionProgress: refused config - duration %# (0.001 or more), maxParticipants %# (1 or more)", config._duration, config._maxParticipants );
+            return false;
+        }
+        _config = config;
+        _pJudge = pJudge;
+        _seed   = seed;
         reset();
+        return true;
     }
 
     void InteractionProgress::reset()

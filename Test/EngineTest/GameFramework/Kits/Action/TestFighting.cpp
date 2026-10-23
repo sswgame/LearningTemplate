@@ -843,8 +843,16 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
     runFrames( match, 5, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( 490, match.getFrame() );
 
-    // 대기 0 은 1 프레임 — 무승부 라운드(같은 체력) 뒤 다음 프레임에 2 라운드.
-    settings._roundOverFrames = 0;
+    // 라운드 사이 대기와 라운드 시간 0 은 1 프레임으로 올려 받지 않고 거절한다(범위는 `FightingSettings` 의 선언).
+    FightingSettings zeroOver = settings;
+    zeroOver._roundOverFrames = 0;
+    SW_EXPECT_FALSE( match.initialize( tester, tester, zeroOver ) );
+    FightingSettings zeroRound = settings;
+    zeroRound._roundFrames     = 0;
+    SW_EXPECT_FALSE( match.initialize( tester, tester, zeroRound ) );
+
+    // 대기 1 프레임 — 무승부 라운드(같은 체력) 뒤 다음 프레임에 2 라운드.
+    settings._roundOverFrames = 1;
     SW_EXPECT_TRUE( match.initialize( tester, tester, settings ) );
     runFrames( match, 240, neutral0, neutral1, listEvent );
     SW_EXPECT_EQUAL( FightingMatch::kDraw, match.getLastRoundWinner() );

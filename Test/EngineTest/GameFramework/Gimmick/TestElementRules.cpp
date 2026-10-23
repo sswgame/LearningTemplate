@@ -22,7 +22,7 @@ namespace
         /** @brief 풀 들판에 나무 · 얼음 · 물을 섞은 같은 판을 두 격자에 깝니다(재질 이름 = 키트 열거 이름). */
         static void fillField( ElementGrid& grid, const ElementRuleTable& table )
         {
-            grid.initialize( 8, 3, &table );
+            SW_EXPECT_TRUE( grid.initialize( 8, 3, &table ) );
             for ( int32 y = 0; y < 3; ++y )
             {
                 for ( int32 x = 0; x < 8; ++x )
@@ -37,7 +37,7 @@ namespace
 
         static void fillField( AdventureElementGrid& grid )
         {
-            grid.initialize( 8, 3, AdventureElementSettings{} );
+            SW_EXPECT_TRUE( grid.initialize( 8, 3, AdventureElementSettings{} ) );
             for ( int32 y = 0; y < 3; ++y )
             {
                 for ( int32 x = 0; x < 8; ++x )
@@ -66,7 +66,7 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
     SW_ASSERT_TRUE( grass >= 0 && burning >= 0 && fire >= 0 && water >= 0 );
 
     ElementGrid row;
-    row.initialize( 6, 1, &table );
+    SW_EXPECT_TRUE( row.initialize( 6, 1, &table ) );
     for ( int32 x = 0; x < 6; ++x )
     {
         row.setMaterial( int2{ x, 0 }, grass );
@@ -89,7 +89,7 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
 
     // 바람이 불을 민다 — 바람 쪽 이웃만 붙고 거슬러서는 붙지 않는다.
     ElementGrid windy;
-    windy.initialize( 5, 1, &table );
+    SW_EXPECT_TRUE( windy.initialize( 5, 1, &table ) );
     for ( int32 x = 0; x < 5; ++x )
     {
         windy.setMaterial( int2{ x, 0 }, grass );

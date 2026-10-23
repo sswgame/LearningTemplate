@@ -69,8 +69,9 @@ namespace sw
 
         WitcherCombat();
 
-        void initialize( const WitcherCatalog* pCatalog, uint32 seed );
-        void update( float32 deltaTime ) { _stamina.update( deltaTime ); }
+        /** @brief 카탈로그의 전투 수치로 시작합니다. 카탈로그가 없거나(대신 쓸 기본 수치는 없다) 스태미나 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다. */
+        [[nodiscard]] bool initialize( const WitcherCatalog* pCatalog, uint32 seed );
+        void               update( float32 deltaTime ) { _stamina.update( deltaTime ); }
         /** @brief 몸 동작을 합니다. 스태미나가 모자라면 하지 않습니다(빠른 공격은 보통 공짜입니다). */
         WitcherCombatResult performAction( WitcherAction action );
         /**

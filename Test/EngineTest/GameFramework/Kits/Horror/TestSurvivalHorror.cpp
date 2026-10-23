@@ -191,7 +191,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
     GridInventory& grid = session.getInventory();
     SW_EXPECT_EQUAL( 2, grid.addItem( "herbGreen", 2 ) ); // (0,0) (1,0)
     SW_EXPECT_EQUAL( 1, grid.addItem( "herbRed", 1 ) );   // (2,0)
@@ -234,7 +234,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::NoSaveItem );
     SW_EXPECT_EQUAL( 2, session.getInventory().addItem( "ribbon", 2 ) );
     SW_EXPECT_TRUE( session.trySave() == HorrorSaveResult::Ok );
@@ -249,7 +249,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     limitedCatalog.setRules( rules );
     HorrorSession        limited;
     HorrorTestContainers limitedContainers;
-    limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers.makeRefs(), limitedContainers._grid, limitedContainers._box );
+    SW_EXPECT_TRUE( limited.initialize( &limitedCatalog, nullptr, hashed_string(), limitedContainers.makeRefs(), limitedContainers._grid, limitedContainers._box ) );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::Ok );
     SW_EXPECT_TRUE( limited.trySave() == HorrorSaveResult::NoSavesLeft );
 
@@ -273,7 +273,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
     vector<SurvivalHorrorEvent> listEvent;
 
     // 괴물 목격: 처음은 전부, 다시 보면 배율(0.25)만큼.
@@ -329,7 +329,7 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
     SW_ASSERT_TRUE( areaGraph.loadFromXMLText( kHorrorAreaXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, &areaGraph, "hall", sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, &areaGraph, "hall", sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
     SW_EXPECT_TRUE( areaGraph.isVisited( "hall" ) );
 
     SW_EXPECT_TRUE( session.tryMoveTo( "dining" ) );
@@ -371,7 +371,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
 
     SW_EXPECT_TRUE( session.readDocument( "diary" ) );
     SW_EXPECT_FALSE( session.readDocument( "diary" ) ); // 두 번째는 새 단서가 없다
@@ -474,7 +474,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
-    session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
+    SW_EXPECT_TRUE( session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box ) );
     (void)session.witnessMonster( "zombie" );
     (void)session.witnessMonster( "elder" );
     SW_EXPECT_TRUE( session.readDocument( "diary" ) );
@@ -490,7 +490,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
     session.writeState( written );
     HorrorSession        restored;
     HorrorTestContainers restoredContainers;
-    restored.initialize( &catalog, nullptr, hashed_string(), restoredContainers.makeRefs(), restoredContainers._grid, restoredContainers._box );
+    SW_EXPECT_TRUE( restored.initialize( &catalog, nullptr, hashed_string(), restoredContainers.makeRefs(), restoredContainers._grid, restoredContainers._box ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -529,7 +529,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
 
     HorrorSession        truncated;
     HorrorTestContainers truncatedContainers;
-    truncated.initialize( &catalog, nullptr, hashed_string(), truncatedContainers.makeRefs(), truncatedContainers._grid, truncatedContainers._box );
+    SW_EXPECT_TRUE( truncated.initialize( &catalog, nullptr, hashed_string(), truncatedContainers.makeRefs(), truncatedContainers._grid, truncatedContainers._box ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_FALSE( truncated.hasClue( "knife" ) );
@@ -564,7 +564,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     Archive written;
     encounter.writeState( written );
     HorrorEncounter restored;
-    restored.initialize( *pZombie, listInvestigator, 1u );
+    SW_EXPECT_TRUE( restored.initialize( *pZombie, listInvestigator, 1u ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -601,7 +601,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     Archive otherReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( otherReader ) );
     HorrorEncounter truncated;
-    truncated.initialize( *pZombie, listInvestigator, 1u );
+    SW_EXPECT_TRUE( truncated.initialize( *pZombie, listInvestigator, 1u ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getTurnCount() );

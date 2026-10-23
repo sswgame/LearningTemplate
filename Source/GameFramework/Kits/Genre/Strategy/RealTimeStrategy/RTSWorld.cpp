@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Match/TeamAttitude.h"
@@ -52,12 +53,22 @@ namespace sw
     {
     }
 
-    void RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings )
+    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings )
     {
-        _pCatalog             = pCatalog;
-        _settings             = settings;
-        _settings._bucketSize = MathUtil::max( 1, _settings._bucketSize );
-        _grid.initialize( MathUtil::max( 1, width ), MathUtil::max( 1, height ), 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "RTSWorld: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "RTSWorld: refused size %#x%# (both need 1 or more)", width, height );
+            return false;
+        }
+        _pCatalog = pCatalog;
+        _settings = settings;
+        _grid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
         _airGrid.initialize( _grid.getWidth(), _grid.getHeight(), 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
         _listUnit.clear();
         _listGeneration.clear();
@@ -76,6 +87,7 @@ namespace sw
         _visionTimer.clear();
         _teamCount   = 0;
         _winningTeam = -1;
+        return true;
     }
 
     void RTSWorld::setTerrainBlocked( int32 x, int32 y, bool bBlocked )

@@ -609,7 +609,14 @@ namespace sw
         }
         // 처음에는 아레나 가운데를 본다.
         const float32 yaw = MathUtil::atan2( -position._x, -position._z );
-        pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed );
+        if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
+        {
+            // 체력 설정이 거절됐다(이유는 Vitality 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
+            manager.destroyObject( pObject );
+            if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
+                (void)_director.notifyDespawned( request._spawnID );
+            return;
+        }
         EnemyRecord record;
         record._object  = pObject->getHandle();
         record._spawnID = request._spawnID;
