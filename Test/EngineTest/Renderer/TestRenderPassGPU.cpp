@@ -98,28 +98,11 @@ SW_TEST_REQUIRES_HOST( RenderPassGPUTest, "runs FrameRenderer on a real GPU devi
 
 namespace
 {
-    /**
-     * @brief 첨부 하나의 R 채널 평균(0~255)을 되읽습니다. 실패하면 0.
-     * @details 반정밀도(R16G16B16A16_FLOAT) 첨부는 [0,1] 로 클램프해 환산한다 — 두 판을 비교하는 데만
-     *          쓰므로 정확한 휘도가 아니라 **같은 규칙으로 측정한 같은 수**이면 된다.
-     */
-    float64 readMeanChannel( sw::FrameRenderer& renderer, const utf8* pAttachment )
-    {
-        test::RHITestImage image;
-        if ( image.readTransient( renderer, pAttachment ) == false )
-            return 0.0;
-        uint64 sum{ 0 };
-        uint64 count{ 0 };
-        for ( uint32 row = 0; row < image.getHeight(); ++row )
-        {
-            for ( uint32 col = 0; col < image.getWidth(); ++col )
-            {
-                sum += image.getPixel( col, row )._r;
-                ++count;
-            }
-        }
-        return count > 0 ? static_cast<float64>( sum ) / static_cast<float64>( count ) : 0.0;
-    }
+    /// @brief 같은 경로로 그린 두 판을 견줄 때 "다른 화소" 로 치는 색 거리(R · G · B 차의 합)의 하한 — 반올림 흔들림(1~2)을 넘는다.
+    constexpr uint32 kSamePathMinDistance = 6;
+    /// @brief 두 그림(백엔드끼리, 드로우 경로끼리)을 같다고 칠 때 허용하는 다른 화소의 비율(%) — 래스터 규칙 차이로 가장자리 몇 화소가 갈릴 여지다.
+    ///        평균 색 차이 대신 이것으로 본다. 2026-10 이 기계(네 백엔드)에서 쓰는 케이스는 모두 다른 화소 0 이다.
+    constexpr uint32 kSameImageDifferingPercent = 1;
 
     /**
      * @brief 씬을 한 프레임 그리고(Present 없이) GPU 가 끝날 때까지 기다립니다. `execute` 의 결과를 돌려줍니다.
@@ -494,18 +477,10 @@ namespace
             test::RHITestImage imageB;
             if ( readTextureImage( pDevice, pPathA, imageA ) == false || readTextureImage( pDevice, pPathB, imageB ) == false )
                 return false;
-            if ( imageA.getWidth() != imageB.getWidth() || imageA.getHeight() != imageB.getHeight() )
-                return false;
-            for ( uint32 y = 0; y < imageA.getHeight(); ++y )
-            {
-                for ( uint32 x = 0; x < imageA.getWidth(); ++x )
-                {
-                    if ( test::RHITestImage::getColorDistance( imageA.getPixel( x, y ), imageB.getPixel( x, y ) ) >= minDistance )
-                        ++outDiffering;
-                    ++outTotal;
-                }
-            }
-            return true;
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( imageA, imageB, minDistance );
+            outDiffering                                  = difference._differingCount;
+            outTotal                                      = difference._pixelCount;
+            return difference.isCompared();
         }
 
         /** @brief 렌더 텍스처를 되읽어 그려진(모서리와 다른) 픽셀의 평균 (R − B)와 그 수를 냅니다. 실패면 false 입니다. */
@@ -899,13 +874,12 @@ namespace
     }
 
     /**
-     * @brief 다중 뷰 무대의 붉은 큐브(주 카메라 화면 밖) 아래에 바닥을 깔고, 그 큐브만 보는 캡처 뷰를 그려 뷰 텍스처의 평균 밝기를 냅니다.
+     * @brief 다중 뷰 무대의 붉은 큐브(주 카메라 화면 밖) 아래에 바닥을 깔고, 그 큐브만 보는 캡처 뷰를 그려 뷰 텍스처를 되읽습니다.
      * @details 주광의 볼륨은 카메라에 맞춘다(`_shadowViewDistance`) — 주 시점 볼륨은 원점 둘레라 붉은 큐브를 덮지 않는다. 캡처 뷰가 자기 볼륨을 쓰면 바닥에
      *          그림자가 지고, 주 시점 볼륨을 쓰면 지지 않는다.
      */
-    bool renderCaptureViewMeanLuma( sw::IRHIDevice* pDevice, bool bCastShadow, float64& outMeanLuma )
+    [[nodiscard]] bool renderCaptureViewImage( sw::IRHIDevice* pDevice, bool bCastShadow, test::RHITestImage& outImage )
     {
-        outMeanLuma = 0.0;
         sw::FrameRenderer        renderer;
         MultiViewScene           stage;
         sw::shared_ptr<sw::Mesh> floor = sw::MeshUtil::createPlane();
@@ -928,26 +902,7 @@ namespace
         {
             bOk = renderSceneFrame( renderer, pDevice, stage._scene );
         }
-        const sw::Texture2D*  pTexture = bOk ? sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().find( "rendertarget/test_shadow_view" ) : nullptr;
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        bOk = bOk && pTexture != nullptr && pTexture->isRHIValid() && pDevice->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
-        if ( bOk )
-        {
-            test::RHITestImage image;
-            image.assign( std::move( bytes ), layout, pTexture->getFormat() );
-            uint64 sum = 0;
-            for ( uint32 y = 0; y < image.getHeight(); ++y )
-            {
-                for ( uint32 x = 0; x < image.getWidth(); ++x )
-                {
-                    const test::Rgba8 pixel = image.getPixel( x, y );
-                    sum += static_cast<uint64>( pixel._r ) + pixel._g + pixel._b;
-                }
-            }
-            const float64 channelCount = static_cast<float64>( image.getPixelCount() ) * 3.0;
-            outMeanLuma                = channelCount > 0.0 ? static_cast<float64>( sum ) / channelCount : 0.0;
-        }
+        bOk = bOk && MultiViewScene::readTextureImage( pDevice, "rendertarget/test_shadow_view", outImage );
         renderer.shutdown();
         return bOk;
     }
@@ -986,7 +941,11 @@ namespace
         return maxValue > minValue ? maxValue - minValue : 0u;
     }
 
-    /** @brief 바이트 배열의 평균(0~255)입니다. 비어 있으면 음수입니다. */
+    /**
+     * @brief 바이트 배열의 평균(0~255)입니다. 비어 있으면 음수입니다.
+     * @details 노출 · 밝기 보존처럼 화면 전체가 함께 움직이는 성질에만 쓴다. 일부 화소만 바뀌는 성질(그림자 · AO · 입자 · 순서)은 평균에서 묻히므로
+     *          `test::RHITestImage::compare` 로 바뀐 화소를 센다.
+     */
     float64 computeMeanByte( const sw::vector<uint8>& bytes )
     {
         uint64 sum = 0;
@@ -1359,7 +1318,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
         // 부족하다: 기록 레이스는 예외도 실패 코드도 내지 않고 **픽셀만** 바꾼다. "돌았다" 만 보면
         // DX11 의 기록 레이스를 그대로 통과시킨다.
         // 직렬 경로가 기준이고, 병렬이 같은 값을 내야 한다는 것이 이 기능의 유일한 계약이다.
-        auto renderAndMeasureLit = [&]( sw::TaskManager* pTaskManager ) -> float64
+        auto renderAndReadLit = [&]( sw::TaskManager* pTaskManager, test::RHITestImage& outImage ) -> bool
         {
             renderer.bindServices( pTaskManager );
             for ( uint32 frameIndex = 0; frameIndex < 8; ++frameIndex )
@@ -1369,31 +1328,28 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
                 device->endFrame( false, false );
             }
             device->waitIdle();
-            return readMeanChannel( renderer, "LitColor" );
+            return outImage.readTransient( renderer, "LitColor" );
         };
 
-        const float64 serialMean = renderAndMeasureLit( nullptr );
+        test::RHITestImage serialImage;
+        const bool         bSerialRead = renderAndReadLit( nullptr, serialImage );
 
         // 드로우 경로까지 실제로 들어갔는지 — GPUScene 이 비어 있으면 이 테스트는 클리어만 검증한 셈이다.
         SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getInstances().empty() == false, ( label + ": GPUScene 이 비었다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( serialMean > 0.0, ( label + ": 직렬 판의 LitColor 를 되읽지 못했다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bSerialRead, ( label + ": 직렬 판의 LitColor 를 되읽지 못했다" ).c_str() );
 
-        // **병렬 판은 세 번 측정해서 각각 기준과 대조한다.** 레이스는 **프로세스마다 굳는** 경향이 있어
+        // **병렬 판은 세 번 측정해서 각각 기준과 화소마다 대조한다.** 레이스는 **프로세스마다 굳는** 경향이 있어
         // (한 번 어긋나면 그 프로세스의 판이 모두 어긋난다) 반복은 굳지 않는 경우를 위한 보험이다.
-        // **코드가 옳으면 언제나 통과한다**(직렬 == 병렬은 결정적이다).
+        // **코드가 옳으면 언제나 통과한다**(직렬 == 병렬은 결정적이다). 평균으로 보면 레이스가 일부 화소만 바꿀 때 묻힌다.
         constexpr uint32 kParallelRunCount = 3;
-        for ( uint32 runIndex = 0; runIndex < kParallelRunCount; ++runIndex )
+        for ( uint32 runIndex = 0; runIndex < kParallelRunCount && bSerialRead; ++runIndex )
         {
-            const float64 parallelMean = renderAndMeasureLit( &taskManager );
-            // 허용 오차는 1% 다. 기록 레이스는 LitColor 를 수십 % 흔들므로 한참 아래고,
-            // 백엔드의 사소한 비결정성은 이 안에 들어온다.
-            const float64 drift    = ( parallelMean - serialMean ) / serialMean;
-            const float64 absDrift = drift < 0.0 ? -drift : drift;
-            SW_EXPECT_TRUE_MSG( absDrift < 0.01,
-                                ( label + ": 병렬 기록이 그림을 바꿨다 (직렬 " + sw::to_string( static_cast<float32>( serialMean ) ) +
-                                  " vs 병렬 " + sw::to_string( static_cast<float32>( parallelMean ) ) + ", " +
-                                  sw::to_string( runIndex ) + "번째 판)" )
-                                    .c_str() );
+            test::RHITestImage parallelImage;
+            SW_EXPECT_TRUE_MSG( renderAndReadLit( &taskManager, parallelImage ), ( label + ": 병렬 판의 LitColor 를 되읽지 못했다" ).c_str() );
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( serialImage, parallelImage, kSamePathMinDistance );
+            SW_LOG_INFO( "%#: LitColor serial vs parallel run %#: %#", label, runIndex, difference.describe() );
+            SW_EXPECT_TRUE_MSG( difference.isCompared() && difference._differingCount == 0,
+                                ( label + ": 병렬 기록이 그림을 바꿨다 (" + difference.describe() + ", " + sw::to_string( runIndex ) + "번째 판)" ).c_str() );
         }
 
         if ( cube != nullptr )
@@ -1616,6 +1572,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
  */
 SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
 {
+    constexpr uint32 kMinParticlePixelCount = 50; ///< 재생 판에서 밝아진 화소의 하한
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1647,23 +1604,24 @@ SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
             bOk = pVfx->getSpawnedParticleCount() > 0;
             SW_EXPECT_TRUE_MSG( bOk, ( label + ": 효과가 입자를 내지 않았다" ).c_str() );
         }
-        float64 playingRed{ 0.0 };
-        float64 stoppedRed{ 0.0 };
+        test::RHITestImage playingImage;
+        test::RHITestImage stoppedImage;
         if ( bOk )
         {
-            bOk        = renderSceneFrame( renderer, device.get(), scene );
-            playingRed = readMeanChannel( renderer, "SceneColor" );
-            SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
+            bOk = renderSceneFrame( renderer, device.get(), scene ) && playingImage.readTransient( renderer, "SceneColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 · 되읽기 실패" ).c_str() );
             SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().size() == 2, ( label + ": 방출기 둘인데 입자 그리기가 둘이 아니다" ).c_str() );
         }
         if ( bOk )
         {
             pVfx->stop();
-            bOk        = renderSceneFrame( renderer, device.get(), scene );
-            stoppedRed = readMeanChannel( renderer, "SceneColor" );
+            bOk = renderSceneFrame( renderer, device.get(), scene ) && stoppedImage.readTransient( renderer, "SceneColor" );
             SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getParticleBatches().empty(), ( label + ": 멈춘 효과의 입자 그리기가 남았다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( playingRed > stoppedRed + 0.05,
-                                ( label + ": 입자가 화면을 밝히지 않았다 — 재생 " + sw::to_string( playingRed ) + ", 멈춤 " + sw::to_string( stoppedRed ) ).c_str() );
+            // 입자가 덮은 화소는 멈춘 판보다 밝다(연기 알파 · 불꽃 더하기). 평균은 화면 전체로 나눠 입자 몇십 화소의 변화가 묻힌다 — 화소를 센다.
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( stoppedImage, playingImage, kSamePathMinDistance );
+            SW_LOG_INFO( "%#: SceneColor playing vs stopped: %#", label, difference.describe() );
+            SW_EXPECT_TRUE_MSG( bOk && difference._brighterCount >= kMinParticlePixelCount,
+                                ( label + ": 입자가 화면을 밝히지 않았다 (" + difference.describe() + ")" ).c_str() );
         }
         renderer.shutdown();
     }
@@ -1774,9 +1732,9 @@ SW_TEST_CASE( RenderPassGPUTest, MainPassCullsWithCameraFrustumNotLight )
  */
 SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
 {
-    bool    bHasReference{ false };
-    float32 referenceMean[3]{};
-    uint32  referenceDrawn{ 0 };
+    bool               bHasReference{ false };
+    uint32             referenceDrawn{ 0 };
+    test::RHITestImage referenceImage;
 
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1838,19 +1796,13 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
         {
             const test::Rgba8 corner = image.getPixel( 0, 0 );
 
-            uint64 arrSum[3]{};
             uint32 drawn{ 0 };
             for ( uint32 y = 0; y < image.getHeight(); ++y )
             {
                 for ( uint32 x = 0; x < image.getWidth(); ++x )
                 {
-                    const test::Rgba8 pixel = image.getPixel( x, y );
-                    if ( test::RHITestImage::getColorDistance( pixel, corner ) < 24 )
-                        continue;
-                    arrSum[0] += static_cast<uint64>( pixel._r );
-                    arrSum[1] += static_cast<uint64>( pixel._g );
-                    arrSum[2] += static_cast<uint64>( pixel._b );
-                    ++drawn;
+                    if ( test::RHITestImage::getColorDistance( image.getPixel( x, y ), corner ) >= 24 )
+                        ++drawn;
                 }
             }
 
@@ -1859,30 +1811,20 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
                                 ( label + ": 투명 큐브가 그려지지 않았다 (" + sw::to_string( drawn ) + " px)" ).c_str() );
             if ( drawn > 0 )
             {
-                const float32 mean[3] = { static_cast<float32>( arrSum[0] ) / static_cast<float32>( drawn ),
-                                          static_cast<float32>( arrSum[1] ) / static_cast<float32>( drawn ),
-                                          static_cast<float32>( arrSum[2] ) / static_cast<float32>( drawn ) };
                 if ( bHasReference == false )
                 {
-                    bHasReference    = true;
-                    referenceMean[0] = mean[0];
-                    referenceMean[1] = mean[1];
-                    referenceMean[2] = mean[2];
-                    referenceDrawn   = drawn;
+                    bHasReference  = true;
+                    referenceDrawn = drawn;
+                    referenceImage = image;
                 }
                 else
                 {
-                    // 정적 씬이라 백엔드끼리 그림이 같아야 한다. 블렌딩 순서가 어긋나면 겹친 자리의
-                    // 색이 달라져 평균이 움직인다.
-                    for ( uint32 channel = 0; channel < 3; ++channel )
-                    {
-                        const float32 diff = sw::MathUtil::abs( mean[channel] - referenceMean[channel] );
-                        SW_EXPECT_TRUE_MSG( diff < 6.0f,
-                                            ( label + ": 투명 블렌딩 결과가 기준 백엔드와 다르다 (채널 " +
-                                              sw::to_string( channel ) + ", " + sw::to_string( mean[channel] ) + " vs " +
-                                              sw::to_string( referenceMean[channel] ) + ") — 배치 안 정렬 순서가 어긋난다" )
-                                                .c_str() );
-                    }
+                    // 정적 씬이라 백엔드끼리 그림이 같아야 한다. 블렌딩 순서가 어긋나면 겹친 자리의 색이 달라진다 — 평균이 아니라
+                    // 화소마다 견준다(겹친 자리 몇백 화소의 변화는 그려진 화소 전체의 평균에서 묻힌다).
+                    const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, image, kSamePathMinDistance );
+                    SW_LOG_INFO( "%#: transparent vs reference backend: %#", label, difference.describe() );
+                    SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                                        ( label + ": 투명 블렌딩 결과가 기준 백엔드와 다르다 (" + difference.describe() + ") — 배치 안 정렬 순서가 어긋난다" ).c_str() );
                     const int32 drawnDiff = static_cast<int32>( drawn ) - static_cast<int32>( referenceDrawn );
                     SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( drawnDiff ) < static_cast<int32>( referenceDrawn / 8 + 64 ),
                                         ( label + ": 그려진 픽셀 수가 기준과 크게 다르다 (" + sw::to_string( drawn ) + " vs " +
@@ -2128,6 +2070,7 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
             {
                 const int64 leftDiff  = arrSumDiff[0] / static_cast<int64>( arrDrawn[0] );
                 const int64 rightDiff = arrSumDiff[1] / static_cast<int64>( arrDrawn[1] );
+                SW_LOG_INFO( "%#: per-batch material R-B left %# · right %#", label, leftDiff, rightDiff );
                 SW_EXPECT_TRUE_MSG( rightDiff > leftDiff + 16,
                                     ( label + ": 좌우가 같은 색으로 그려졌다 (좌 R-B " + sw::to_string( leftDiff ) +
                                       ", 우 R-B " + sw::to_string( rightDiff ) +
@@ -2337,10 +2280,10 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
     /// @brief 큐브를 원점(카메라가 보는 지점)보다 이만큼 위에 둔다 — 그림을 세로로 비대칭하게 만들어 방향을 검사할 수 있게.
     constexpr float32 kParityCubeHeight = 1.0f;
 
-    uint32  okCount{ 0 };
-    bool    bHasReferenceMean{ false };
-    float32 referenceMean[3]{};
-    uint32  referenceDrawnCount{ 0 };
+    uint32             okCount{ 0 };
+    bool               bHasReference{ false };
+    uint32             referenceDrawnCount{ 0 };
+    test::RHITestImage referenceImage;
 
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -2396,7 +2339,6 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
             if ( bRead )
             {
                 const uint32 pixelCount = image.getPixelCount();
-                uint64       arrSum[3]{};
                 uint32       drawnCount{ 0 };
                 uint64       drawnSumY{ 0 };
                 for ( uint32 y = 0; y < image.getHeight(); ++y )
@@ -2404,9 +2346,6 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
                     for ( uint32 x = 0; x < image.getWidth(); ++x )
                     {
                         const test::Rgba8 pixel = image.getPixel( x, y );
-                        arrSum[0] += pixel._r;
-                        arrSum[1] += pixel._g;
-                        arrSum[2] += pixel._b;
                         // 파이프라인 클리어 색(0.12, 0.15, 0.18 → 31, 38, 46) 이 아니면 무언가 그려진 픽셀이다.
                         if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
                         {
@@ -2418,7 +2357,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
                 const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
                 SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
                                     ( label + ": SceneColor 에 큐브가 없다 (drawn " + sw::to_string( drawnCount ) + "/" + sw::to_string( pixelCount ) + ")" ).c_str() );
-                // **방향 검사** — 평균과 픽셀 수는 상하 반전에 무관하다. 큐브를 원점 위에 두었으므로 올바른 방향이면
+                // **방향 검사** — 픽셀 수는 상하 반전에 무관하고, 모든 백엔드가 같이 뒤집히면 백엔드끼리의 비교도 통과한다. 큐브를 원점 위에 두었으므로 올바른 방향이면
                 // 그려진 픽셀의 무게중심이 이미지 위쪽(행 번호가 작은 쪽)에 있어야 한다. 뒤집히면 아래쪽으로 간다.
                 // OpenGL 이 glClipControl 없이 좌하단 원점으로 그리면 이 단언이 잡는다.
                 if ( drawnCount > 0 )
@@ -2431,31 +2370,22 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
                                             .c_str() );
                 }
 
-                float32 arrMean[3]{};
-                for ( uint32 channel = 0; channel < 3; ++channel )
+                if ( bHasReference == false )
                 {
-                    arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
-                }
-                if ( bHasReferenceMean == false )
-                {
-                    bHasReferenceMean   = true;
+                    bHasReference       = true;
                     referenceDrawnCount = drawnCount;
-                    for ( uint32 channel = 0; channel < 3; ++channel )
-                    {
-                        referenceMean[channel] = arrMean[channel];
-                    }
+                    referenceImage      = image;
                 }
                 else
                 {
-                    for ( uint32 channel = 0; channel < 3; ++channel )
-                    {
-                        const float32 diff = arrMean[channel] > referenceMean[channel] ? arrMean[channel] - referenceMean[channel] : referenceMean[channel] - arrMean[channel];
-                        SW_EXPECT_TRUE_MSG( diff <= 3.0f, ( label + ": SceneColor 평균이 첫 백엔드와 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
-                    }
+                    // 백엔드끼리 같은 그림인지 화소마다 견준다 — 화면 평균은 큐브 하나가 다른 자리에 그려져도 거의 움직이지 않는다.
+                    const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, image, kSamePathMinDistance );
+                    SW_LOG_INFO( "%#: SceneColor vs reference backend: %#", label, difference.describe() );
+                    SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                                        ( label + ": SceneColor 가 첫 백엔드와 다르다 (" + difference.describe() + ")" ).c_str() );
 
-                    // **그려진 픽셀 수**도 맞춘다. 평균은 화면 전체로 나눈 값이라 큐브 몇 개가 겹쳐 사라져도
-                    // 거의 안 움직인다 — 인다이렉트 드로우의 인스턴스 오프셋이 백엔드마다 다르게 먹어도
-                    // 평균만으로는 통과한다. 배치가 여럿일 때 한 백엔드만 큐브를 잃으면 여기서 걸린다.
+                    // **그려진 픽셀 수**도 맞춘다. 배치가 여럿일 때 한 백엔드만 큐브를 잃으면(인다이렉트 드로우의 인스턴스 오프셋이
+                    // 백엔드마다 다르게 먹으면) 여기서 원인이 드러난다.
                     const uint32 lowerBound = referenceDrawnCount - referenceDrawnCount / 8;
                     const uint32 upperBound = referenceDrawnCount + referenceDrawnCount / 8;
                     SW_EXPECT_TRUE_MSG( lowerBound <= drawnCount && drawnCount <= upperBound,
@@ -2963,10 +2893,10 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
 {
     struct Snapshot
     {
-        uint32  _drawnCount{ 0 };
-        float32 _arrMean[3]{};
-        uint32  _drawCallCount{ 0 };
-        bool    _bOk{ false };
+        test::RHITestImage _image;
+        uint32             _drawnCount{ 0 };
+        uint32             _drawCallCount{ 0 };
+        bool               _bOk{ false };
     };
     auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
     {
@@ -2982,28 +2912,17 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
         }
         result._drawCallCount = renderer.getLastIndirectDrawCallCount();
 
-        test::RHITestImage image;
-        if ( image.readTransient( renderer, "SceneColor" ) == false )
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
             return result;
-        uint64 arrSum[3]{};
-        for ( uint32 y = 0; y < image.getHeight(); ++y )
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
         {
-            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
             {
-                const test::Rgba8 pixel = image.getPixel( x, y );
-                arrSum[0] += pixel._r;
-                arrSum[1] += pixel._g;
-                arrSum[2] += pixel._b;
-                if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
                     ++result._drawnCount;
             }
         }
-        const uint32 pixelCount = image.getPixelCount();
-        for ( uint32 channel = 0; channel < 3; ++channel )
-        {
-            result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
-        }
-        result._bOk = pixelCount > 0;
+        result._bOk = result._image.getPixelCount() > 0;
         return result;
     };
 
@@ -3071,12 +2990,10 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
                                     ( label + ": 정점 풀로 그린 그림의 픽셀 수가 다르다 (pool " + sw::to_string( perBatch._drawnCount ) + " vs no-pool " +
                                       sw::to_string( noPool._drawnCount ) + ") — startVertex 가 엉뚱한 도형을 가리킨다" )
                                         .c_str() );
-                for ( uint32 channel = 0; channel < 3; ++channel )
-                {
-                    const float32 diff = perBatch._arrMean[channel] > noPool._arrMean[channel] ? perBatch._arrMean[channel] - noPool._arrMean[channel]
-                                                                                               : noPool._arrMean[channel] - perBatch._arrMean[channel];
-                    SW_EXPECT_TRUE_MSG( diff <= 1.5f, ( label + ": 정점 풀로 그린 그림의 평균이 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
-                }
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( noPool._image, perBatch._image, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: vertex pool vs no pool: %#", label, difference.describe() );
+                SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                                    ( label + ": 정점 풀로 그린 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
             }
             if ( perBatch._bOk && merged._bOk )
             {
@@ -3086,12 +3003,10 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
                                     ( label + ": 묶은 그림의 픽셀 수가 다르다 (merged " + sw::to_string( merged._drawnCount ) + " vs per-batch " +
                                       sw::to_string( perBatch._drawnCount ) + ") — 배치 번호가 엉뚱한 배치를 가리킨다" )
                                         .c_str() );
-                for ( uint32 channel = 0; channel < 3; ++channel )
-                {
-                    const float32 diff = merged._arrMean[channel] > perBatch._arrMean[channel] ? merged._arrMean[channel] - perBatch._arrMean[channel]
-                                                                                               : perBatch._arrMean[channel] - merged._arrMean[channel];
-                    SW_EXPECT_TRUE_MSG( diff <= 1.5f, ( label + ": 묶은 그림의 평균이 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
-                }
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( perBatch._image, merged._image, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: merged vs per batch: %#", label, difference.describe() );
+                SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                                    ( label + ": 묶은 그림이 배치마다 그린 그림과 다르다 (" + difference.describe() + ")" ).c_str() );
                 // 멀티 드로우가 되는 백엔드는 호출 수가 줄어야 한다 — 같으면 묶지 않은 것이다. DX11 은 늘 배치마다 하나다.
                 if ( device->getCapabilities()._bMultiDrawIndirect != SW_FALSE )
                 {
@@ -3122,34 +3037,30 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
  */
 SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
 {
-    /// @brief 첨부 하나의 평균 밝기와 "가림이 있는(255 미만)" 픽셀 수.
+    /// @brief AO 를 껐을 때 밝아져야 하는 Bloom 화소 수의 하한 — 이 무대에서 650 화소가 밝아진다.
+    constexpr uint32 kMinOccludedPixelCount = 100;
+
+    /// @brief 첨부 하나와 "가림이 있는(250 미만)" 픽셀 수.
     struct Stat
     {
-        float64 _mean{ 0.0 };
-        uint32  _darkCount{ 0 };
-        bool    _bOk{ false };
+        test::RHITestImage _image;
+        uint32             _darkCount{ 0 };
+        bool               _bOk{ false };
     };
     auto readStat = []( sw::FrameRenderer& renderer, const utf8* pAttachment ) -> Stat
     {
-        Stat               stat{};
-        test::RHITestImage image;
-        if ( image.readTransient( renderer, pAttachment ) == false )
+        Stat stat{};
+        if ( stat._image.readTransient( renderer, pAttachment ) == false )
             return stat;
-        uint64 sum{ 0 };
-        uint32 count{ 0 };
-        for ( uint32 row = 0; row < image.getHeight(); ++row )
+        for ( uint32 row = 0; row < stat._image.getHeight(); ++row )
         {
-            for ( uint32 col = 0; col < image.getWidth(); ++col )
+            for ( uint32 col = 0; col < stat._image.getWidth(); ++col )
             {
-                const uint32 r = image.getPixel( col, row )._r;
-                sum += r;
-                ++count;
-                if ( r < 250 )
+                if ( stat._image.getPixel( col, row )._r < 250 )
                     ++stat._darkCount;
             }
         }
-        stat._mean = count > 0 ? static_cast<float64>( sum ) / static_cast<float64>( count ) : 0.0;
-        stat._bOk  = count > 0;
+        stat._bOk = stat._image.getPixelCount() > 0;
         return stat;
     };
 
@@ -3217,13 +3128,11 @@ SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
             renderer.setInputRoleEnabled( sw::RenderPassInputRole::AmbientOcclusion, true );
 
             SW_EXPECT_TRUE_MSG( bloomOn._bOk && bloomOff._bOk, ( label + ": BloomColor 를 되읽지 못했다" ).c_str() );
-            if ( bloomOn._bOk && bloomOff._bOk )
-            {
-                SW_EXPECT_TRUE_MSG( bloomOn._mean < bloomOff._mean,
-                                    ( label + ": AO 를 꺼도 Bloom 출력이 같다 (켬 " + sw::to_string( static_cast<float32>( bloomOn._mean ) ) + " vs 끔 " +
-                                      sw::to_string( static_cast<float32>( bloomOff._mean ) ) + ") — SSAO 결과를 아무도 읽지 않는다" )
-                                        .c_str() );
-            }
+            // 가림은 큐브 둘레 몇백 화소에만 진다 — 화면 평균으로 보면 켬 · 끔 차이가 0.035(0~255)라 여유가 없다. 끔 판에서 밝아진 화소를 센다.
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( bloomOn._image, bloomOff._image, kSamePathMinDistance );
+            SW_LOG_INFO( "%#: BloomColor AO on vs off: %#", label, difference.describe() );
+            SW_EXPECT_TRUE_MSG( difference._brighterCount >= kMinOccludedPixelCount && difference._brighterCount * 2 > difference._differingCount,
+                                ( label + ": AO 를 꺼도 Bloom 출력이 밝아지지 않는다 (" + difference.describe() + ") — SSAO 결과를 아무도 읽지 않는다" ).c_str() );
         }
     }
 
@@ -3307,34 +3216,12 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
  */
 SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
 {
-    /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 채널 평균, 그리고 픽셀 비교용 원본.
+    /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 픽셀 비교용 원본.
     struct Snapshot
     {
-        uint32             _drawnCount{ 0 };
-        float32            _arrMean[3]{};
-        bool               _bOk{ false };
         test::RHITestImage _image;
-    };
-    /// @brief 두 그림에서 어느 채널이든 8 이상 다른 픽셀 수 — 실루엣 수보다 튼튼한 지표(변형은 음영도 바꾼다).
-    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
-    {
-        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
-            return 0;
-        uint32 count{ 0 };
-        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
-        {
-            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
-            {
-                const test::Rgba8 pixelA = a._image.getPixel( x, y );
-                const test::Rgba8 pixelB = b._image.getPixel( x, y );
-                const auto        isFar  = []( uint8 lhs, uint8 rhs )
-                { return lhs > rhs + 8 || rhs > lhs + 8; };
-                const bool bPixelDiffers = isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b );
-                if ( bPixelDiffers )
-                    ++count;
-            }
-        }
-        return count;
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
     };
 
     auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
@@ -3351,31 +3238,18 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
             device.waitIdle();
         }
 
-        test::RHITestImage image;
-        if ( image.readTransient( renderer, "SceneColor" ) == false )
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
             return result;
-
-        uint64 arrSum[3]{};
-        for ( uint32 y = 0; y < image.getHeight(); ++y )
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
         {
-            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
             {
-                const test::Rgba8 pixel = image.getPixel( x, y );
-                arrSum[0] += pixel._r;
-                arrSum[1] += pixel._g;
-                arrSum[2] += pixel._b;
                 // 파이프라인 클리어 색(31, 38, 46) 이 아니면 그려진 픽셀이다 — FrameRendererParityAllBackends 와 같은 기준.
-                if ( test::RHITestImage::isDefaultClearBackground( pixel ) == false )
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
                     ++result._drawnCount;
             }
         }
-        const uint32 pixelCount = image.getPixelCount();
-        for ( uint32 channel = 0; channel < 3; ++channel )
-        {
-            result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
-        }
-        result._bOk   = pixelCount > 0;
-        result._image = std::move( image );
+        result._bOk = result._image.getPixelCount() > 0;
         return result;
     };
 
@@ -3445,12 +3319,10 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
                                     ( label + ": 풀에서 읽은 레스트가 입력 스트림의 레스트와 다르다 (drawn " + sw::to_string( identity._drawnCount ) +
                                       " vs " + sw::to_string( rest._drawnCount ) + ") — 정점 셰이더가 다른 원소를 읽고 있다" )
                                         .c_str() );
-                for ( uint32 channel = 0; channel < 3; ++channel )
-                {
-                    const float32 diff = identity._arrMean[channel] > rest._arrMean[channel] ? identity._arrMean[channel] - rest._arrMean[channel]
-                                                                                             : rest._arrMean[channel] - identity._arrMean[channel];
-                    SW_EXPECT_TRUE_MSG( diff <= 2.0f, ( label + ": 풀 항등 그림의 평균이 레스트와 다르다 (채널 " + sw::to_string( channel ) + ")" ).c_str() );
-                }
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( rest._image, identity._image, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: morph pool identity vs rest: %#", label, difference.describe() );
+                SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                                    ( label + ": 풀 항등 그림이 레스트와 다르다 (" + difference.describe() + ")" ).c_str() );
             }
 
             // (C) 진짜 모프 — 컴퓨트가 정점을 밀었으니 레스트와 **달라야** 한다. 같으면 모프가 아예 안 걸린 것이다.
@@ -3462,10 +3334,11 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
             {
                 // 지표는 **달라진 픽셀 수**다 — 변형은 위치와 노멀을 같이 바꾸므로 음영이 바뀐 픽셀까지 센다. 고정한 시각(3π/4)에서
                 // 네 백엔드 모두 그려진 픽셀의 약 18 % 가 다르다(임계값 5 %).
-                const uint32 diffCount = countDifferentPixels( rest, morphed );
-                SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 20,
-                                    ( label + ": 모프를 켰는데 그림이 레스트와 같다 (달라진 픽셀 " + sw::to_string( diffCount ) + " / 그려진 " +
-                                      sw::to_string( rest._drawnCount ) + ") — 컴퓨트 결과가 정점 셰이더에 닿지 않는다" )
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( rest._image, morphed._image, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: morphed vs rest: %# (drawn %#)", label, difference.describe(), rest._drawnCount );
+                SW_EXPECT_TRUE_MSG( difference._differingCount > rest._drawnCount / 20,
+                                    ( label + ": 모프를 켰는데 그림이 레스트와 같다 (" + difference.describe() + ", 그려진 " + sw::to_string( rest._drawnCount ) +
+                                      ") — 컴퓨트 결과가 정점 셰이더에 닿지 않는다" )
                                         .c_str() );
             }
             overrides._meshMorphDiag = -1;
@@ -5546,22 +5419,25 @@ SW_TEST_CASE( RenderPassGPUTest, SpotLightShadowCastsOnEveryBackend )
  */
 SW_TEST_CASE( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume )
 {
+    constexpr uint32      kMinShadowedPixelCount = 40; ///< 그림자를 껐을 때 밝아져야 하는 화소 수의 하한 — 이 무대에서 181 화소가 밝아진다
     uint32                comparedCount{ 0 };
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const sw::string label = sw::string( device->getBackendName() ) + ": ";
-        float64          shadowLuma{ 0.0 };
-        float64          litLuma{ 0.0 };
-        const bool       bOk = renderCaptureViewMeanLuma( device.get(), true, shadowLuma ) && renderCaptureViewMeanLuma( device.get(), false, litLuma );
+        const sw::string   label = sw::string( device->getBackendName() ) + ": ";
+        test::RHITestImage shadowImage;
+        test::RHITestImage litImage;
+        const bool         bOk = renderCaptureViewImage( device.get(), true, shadowImage ) && renderCaptureViewImage( device.get(), false, litImage );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "캡처 뷰를 그리거나 읽지 못했다" ).c_str() );
         if ( bOk == false )
             continue;
         ++comparedCount;
-        SW_LOG_INFO( "%#capture view mean luma: shadow %# · no shadow %#", label, shadowLuma, litLuma );
-        SW_EXPECT_TRUE_MSG( litLuma > 1.0, ( label + "캡처 뷰가 비어 있다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( shadowLuma + 0.5 < litLuma,
-                            ( label + "그림자를 켜도 캡처 뷰가 어두워지지 않는다 — 주 시점 볼륨을 쓰고 있다 (" + sw::to_string( shadowLuma ) + " vs " + sw::to_string( litLuma ) + ")" ).c_str() );
+        // 그림자는 바닥의 일부(64 × 48 뷰에서 약 180 화소)에만 진다 — 뷰 평균 밝기로는 차이가 1.2(0~255)라 임계값 0.5 와 여유가 얇았다.
+        // 그림자를 끈 판에서 밝아진 화소를 센다.
+        const test::RHITestImageDifference difference = test::RHITestImage::compare( shadowImage, litImage, kSamePathMinDistance );
+        SW_LOG_INFO( "%#capture view shadow vs no shadow: %#", label, difference.describe() );
+        SW_EXPECT_TRUE_MSG( difference._brighterCount >= kMinShadowedPixelCount && difference._brighterCount * 2 > difference._differingCount,
+                            ( label + "그림자를 켜도 캡처 뷰가 어두워지지 않는다 — 주 시점 볼륨을 쓰고 있다 (" + difference.describe() + ")" ).c_str() );
     }
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the extra-view shadow test" );
@@ -6932,26 +6808,22 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
         const uint32 right  = before.getWidth() * 7 / 10;
         const uint32 top    = before.getHeight() * 7 / 10;
         const uint32 bottom = before.getHeight() * 9 / 10;
-        uint64       differenceSum{ 0 };
         uint32       darkest{ 255 };
         uint32       brightest{ 0 };
-        uint32       sampleCount{ 0 };
         for ( uint32 y = top; y < bottom; ++y )
         {
             for ( uint32 x = left; x < right; ++x )
             {
-                const test::Rgba8 pixelBefore = before.getPixel( x, y );
-                const test::Rgba8 pixelAfter  = after.getPixel( x, y );
-                differenceSum += static_cast<uint64>( test::RHITestImage::getColorDistance( pixelBefore, pixelAfter ) );
-                darkest   = sw::MathUtil::min( darkest, static_cast<uint32>( pixelBefore._g ) );
-                brightest = sw::MathUtil::max( brightest, static_cast<uint32>( pixelBefore._g ) );
-                ++sampleCount;
+                const uint32 green = before.getPixel( x, y )._g;
+                darkest            = sw::MathUtil::min( darkest, green );
+                brightest          = sw::MathUtil::max( brightest, green );
             }
         }
-        const float64 meanDifference = sampleCount > 0 ? static_cast<float64>( differenceSum ) / static_cast<float64>( sampleCount ) : 0.0;
-        SW_LOG_INFO( "%#prototype grid: mean difference after a 1 m shift %#, window green %#..%#", label, meanDifference, darkest, brightest );
+        const test::RHITestImageDifference difference = test::RHITestImage::compareRegion( before, after, kSamePathMinDistance, left, top, right, bottom );
+        SW_LOG_INFO( "%#prototype grid after a 1 m shift: %#, window green %#..%#", label, difference.describe(), darkest, brightest );
         SW_EXPECT_TRUE_MSG( brightest >= darkest + 16u, ( label + "창 안에 격자 무늬가 없다 — 비교가 뜻이 없다 (" + sw::to_string( darkest ) + ".." + sw::to_string( brightest ) + ")" ).c_str() );
-        SW_EXPECT_TRUE_MSG( meanDifference < 2.0, ( label + "바닥을 1 m 옮기자 격자가 따라 움직였다(월드 좌표가 아니다) — 평균 차이 " + sw::to_string( meanDifference ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
+                            ( label + "바닥을 1 m 옮기자 격자가 따라 움직였다(월드 좌표가 아니다) — " + difference.describe() ).c_str() );
         ++comparedCount;
     }
     if ( comparedCount == 0 )
