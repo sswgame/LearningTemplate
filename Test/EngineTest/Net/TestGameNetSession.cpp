@@ -154,15 +154,16 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0;
+    GameNetSession       session;
     GameNetSessionParams params;
-    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_ASSERT_TRUE( session.makeServerParams( config, params ) );
     SW_EXPECT_TRUE( params._role == GameNetRole::Server );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( params._listenPort ) );
     SW_EXPECT_TRUE( params._bLoopbackOnly );
 
     config._listenAddress = "0.0.0.0";
     config._gamePort      = 7777;
-    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_ASSERT_TRUE( session.makeServerParams( config, params ) );
     SW_EXPECT_EQUAL( 7777u, static_cast<uint32>( params._listenPort ) );
     SW_EXPECT_FALSE( params._bLoopbackOnly );
 }
@@ -172,23 +173,24 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsComeFromTheServerConfig )
  */
 SW_TEST_CASE( GameNetSessionTest, ServerParamsRefuseAConfigTheyCannotOpen )
 {
+    GameNetSession       session;
     GameNetSessionParams params;
     ServerConfig         config;
     config._listenAddress = "10.0.0.5";
-    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
     config._listenAddress = "not-an-address";
-    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
     config._listenAddress      = "127.0.0.1";
     config._gamePort           = 0;
     config._gamePortShardCount = 2; // 운영체제가 고른 포트로는 "첫 포트 + 샤드" 배정을 지킬 수 없다
-    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
     SW_EXPECT_TRUE( params._role == GameNetRole::None );
     config._gamePort = 65535; // 둘째 샤드가 65536 이 된다
-    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
 #if !defined( SW_PLATFORM_LINUX )
     config._gamePort       = 7777;
     config._bGamePortReuse = true; // SO_REUSEPORT 는 리눅스만 — 연이은 포트로 바꿔 열지 않는다
-    SW_EXPECT_FALSE( GameNetSession::makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
 #endif
 }
 
@@ -201,8 +203,9 @@ SW_TEST_CASE( GameNetSessionTest, ServerParamsCarryTheShardLayout )
     config._listenAddress      = "127.0.0.1";
     config._gamePort           = 7777;
     config._gamePortShardCount = 4;
+    GameNetSession       session;
     GameNetSessionParams params;
-    SW_ASSERT_TRUE( GameNetSession::makeServerParams( config, params ) );
+    SW_ASSERT_TRUE( session.makeServerParams( config, params ) );
     SW_EXPECT_EQUAL( 4, params._shardCount );
     SW_EXPECT_EQUAL( 7777u, static_cast<uint32>( params._listenPort ) );
     SW_EXPECT_FALSE( params._bShardsSharePort );
@@ -353,15 +356,16 @@ SW_TEST_CASE( GameNetSessionTest, OpenFromLaunchKeepsAnOpenSessionAcrossInstance
  */
 SW_TEST_CASE( GameNetSessionTest, LaunchParamsOpenTheGamePortOnlyOnADedicatedServer )
 {
+    GameNetSession       session;
     GameNetSessionParams params;
-    SW_EXPECT_TRUE( GameNetSession::makeLaunchParams( params ) == GameNetLaunch::None ); // 문맥이 없다(App · 테스트)
+    SW_EXPECT_TRUE( session.makeLaunchParams( params ) == GameNetLaunch::None ); // 문맥이 없다(App · 테스트)
     ServerConfig config;
     config._listenAddress = "127.0.0.1";
     config._gamePort      = 0;
     ServerServiceContext context;
     context._pServerConfig = &config;
     ServerServiceRegistry::bindHostContext( &context );
-    const GameNetLaunch launch = GameNetSession::makeLaunchParams( params );
+    const GameNetLaunch launch = session.makeLaunchParams( params );
     ServerServiceRegistry::bindHostContext( nullptr );
     SW_ASSERT_TRUE( launch == GameNetLaunch::Open );
     SW_EXPECT_TRUE( params._role == GameNetRole::Server );
@@ -379,9 +383,9 @@ SW_TEST_CASE( GameNetSessionTest, AnInvalidServerConfigStopsTheLaunchInsteadOfSt
     ServerServiceContext context;
     context._pServerConfig = &config;
     ServerServiceRegistry::bindHostContext( &context );
-    GameNetSessionParams params;
-    const GameNetLaunch  launch = GameNetSession::makeLaunchParams( params );
     GameNetSession       session;
+    GameNetSessionParams params;
+    const GameNetLaunch  launch  = session.makeLaunchParams( params );
     const bool           bOpened = session.openFromLaunch();
     ServerServiceRegistry::bindHostContext( nullptr );
     SW_EXPECT_TRUE( launch == GameNetLaunch::Invalid );

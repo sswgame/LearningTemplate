@@ -4,7 +4,7 @@
  * @details 게임 포트는 게임 인스턴스가 설 때 열린다(`GameNetSession::openFromLaunch`). 그런데 티켓을 확인하는 인증기(계정 키트의 `AccountConnectAuthenticator`)는
  *          그 뒤에 서는 서버 서비스(온라인 키트)가 만든다. 그래서 세션은 이 객체를 인증기로 끼워 두고, 키트가 설 때 진짜 인증기를 묶는다(`bindAuthenticator`).
  *          - 묶이기 전에 온 접속은 거절한다(모르는 토큰과 같다 — 열린 채로 받지 않는다). `ServerApp` 은 서비스 시작 뒤 묶이지 않았으면 기동을 멈춘다.
- *          - 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — GameFramework 가 모듈이 설 때 `setProvider` 로 넣는다.
+ *          - 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — GameFramework 의 게임 인스턴스가 설 때 `setProvider` 로 넣는다.
  *          - 서버 설정 `ServerConfig::_bGameConnectTicket` 이 켜졌을 때만 세션이 이 자리를 쓴다(그때 게임 포트는 암호화 · 토큰 결속이다).
  * @warning `findSessionSecret` 은 네트워크 스레드에서 `NetHost` 잠금을 쥔 채 불린다. 묶기 · 풀기와는 이 객체의 잠금 하나로 맞물린다
  *          (푼 뒤에는 옛 인증기를 부르지 않으므로, 푼 쪽이 바로 인증기를 내려도 된다).
@@ -21,17 +21,16 @@ namespace sw
 
     /**
      * @class GameConnectSecurity
-     * @brief 프로세스에 하나입니다(`get`). 세션의 인증기 자리에 끼워지고 묶인 인증기에 넘깁니다.
+     * @brief 세션마다 하나입니다(`GameNetSession::getConnectSecurity`). 세션의 인증기 자리에 끼워지고 묶인 인증기에 넘깁니다.
      */
     class SW_API GameConnectSecurity final : public INetConnectAuthenticator
     {
     public:
-        static GameConnectSecurity& get();
+        GameConnectSecurity();
 
-        /** @brief 암호 제공자를 꺼내는 함수입니다. 모듈이 설 때 넣고 내려갈 때 nullptr 로 뺍니다. 함수로 받는 까닭: 제공자(OpenSSL)를 정적 초기화 때 만들지 않는다. */
-        using ProviderAccessor = INetSecurityProvider& (*)();
-        void setProviderAccessor( ProviderAccessor pfnAccessor );
-        /** @brief 암호 제공자입니다. 넣은 함수가 없으면 nullptr 입니다. */
+        /** @brief 암호 제공자를 넣습니다(GameFramework 의 게임 인스턴스가 서며 넣고, 내려갈 때 nullptr 로 뺍니다). 소유하지 않으며 사용하는 동안 살아 있어야 합니다. */
+        void setProvider( INetSecurityProvider* pProvider );
+        /** @brief 암호 제공자입니다. 넣지 않았으면 nullptr 입니다. */
         INetSecurityProvider* findProvider() const;
 
         /** @brief 접속 인증기를 묶습니다. 이미 다른 것이 묶였으면 오류를 남기고 false 입니다(조립이 둘이면 어느 쪽 티켓인지 모른다). */
@@ -45,10 +44,8 @@ namespace sw
         [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override;
 
     private:
-        GameConnectSecurity();
-
         mutable mutex             _mutex;
-        ProviderAccessor          _pfnProvider;
+        INetSecurityProvider*     _pProvider;
         INetConnectAuthenticator* _pAuthenticator;
         atomic<uint64>            _refusedWhileUnbound;
     };

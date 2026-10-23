@@ -11,6 +11,7 @@
     #include "Core/Log/Logger.h"
     #include "Core/Time/MonotonicClock.h"
 
+    #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Debug/DebugDrawQueue.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
@@ -64,7 +65,13 @@ namespace sw
                     outReply = "authority ghost is off - start with -gv_authorityGhostPort=<server debug channel port> -gv_authorityGhostToken=<token>";
                     return false;
                 }
-                if ( AuthorityGhost::get().describe( outReply ) == false )
+                const AuthorityGhost* pGhost = engine::findSubsystem<AuthorityGhost>();
+                if ( pGhost == nullptr )
+                {
+                    outReply = "authority ghost service is not running in this host";
+                    return false;
+                }
+                if ( pGhost->describe( outReply ) == false )
                     outReply = "no server poses received yet";
                 return true;
             }
@@ -73,12 +80,6 @@ namespace sw
 
     SW_DEV_COMMAND( NetGhost, "net.ghost", "net.ghost", "Report the position difference between this client and the server poses (-gv_authorityGhostPort)",
                     &AuthorityGhostInternal::runGhostReport );
-
-    AuthorityGhost& AuthorityGhost::get()
-    {
-        static AuthorityGhost s_ghost;
-        return s_ghost;
-    }
 
     AuthorityGhost::AuthorityGhost()
         : _mutex{}

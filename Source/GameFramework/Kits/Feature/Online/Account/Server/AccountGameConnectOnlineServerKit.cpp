@@ -3,7 +3,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Net/GameNetSession.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
@@ -37,7 +39,7 @@ namespace sw
                 , _admitEveryAccount{}
                 , _pAuthenticator{}
                 , _serverName{}
-                , _bBound{ false }
+                , _pSecurity{ nullptr }
             {
             }
 
@@ -71,13 +73,22 @@ namespace sw
                                                                                            : static_cast<const IConnectAdmission&>( _admitEveryAccount );
                 _pAuthenticator                    = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
                 _pAuthenticator->setNowMs( context._nowMs );
-                if ( GameConnectSecurity::get().bindAuthenticator( _pAuthenticator.get() ) == false )
+                // 접속 보안 자리는 엔진의 네트워크 세션이 들고 있다(서비스).
+                GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+                if ( pNetSession == nullptr )
+                {
+                    outError = "gameConnect needs the engine net session service to bind the game connect authenticator";
+                    _pAuthenticator.reset();
+                    return false;
+                }
+                GameConnectSecurity& security = pNetSession->getConnectSecurity();
+                if ( security.bindAuthenticator( _pAuthenticator.get() ) == false )
                 {
                     outError = "gameConnect could not bind the game connect authenticator (another assembly already did)";
                     _pAuthenticator.reset();
                     return false;
                 }
-                _bBound = true;
+                _pSecurity = &security;
                 return true;
             }
 
@@ -90,9 +101,9 @@ namespace sw
             void stop() override
             {
                 // 풀고 나면 엔진 자리가 이 인증기를 부르지 않는다(자리의 잠금) — 그다음에 내린다.
-                if ( _bBound )
-                    GameConnectSecurity::get().unbindAuthenticator( _pAuthenticator.get() );
-                _bBound = false;
+                if ( _pSecurity != nullptr )
+                    _pSecurity->unbindAuthenticator( _pAuthenticator.get() );
+                _pSecurity = nullptr;
                 _pAuthenticator.reset();
             }
 
@@ -102,7 +113,7 @@ namespace sw
             AdmitEveryAccount                       _admitEveryAccount;
             unique_ptr<AccountConnectAuthenticator> _pAuthenticator;
             string                                  _serverName;
-            bool                                    _bBound;
+            GameConnectSecurity*                    _pSecurity; ///< 인증기를 묶은 세션의 접속 보안 자리(묶지 않았으면 nullptr)
         };
     } // namespace
 } // namespace sw

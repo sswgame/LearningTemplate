@@ -50,12 +50,14 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -245,6 +247,8 @@ namespace test
             services.addSubsystem( sw::make_unique<sw::ComponentDefaults>() );
             services.addSubsystem( sw::make_unique<sw::FrameProfiler>() );
             services.addSubsystem( sw::make_unique<sw::CrashReportService>() );
+            services.addSubsystem( sw::make_unique<sw::AssetLoadProfiler>() );
+            services.addSubsystem( sw::make_unique<sw::StateHashHistory>() );
             {
                 SW_MEMORY_SCOPE( RenderCPU );
                 services.addSubsystem( sw::make_unique<sw::DebugDrawQueue>() );

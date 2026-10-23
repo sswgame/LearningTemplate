@@ -116,6 +116,7 @@
 #endif
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
@@ -266,6 +267,11 @@ namespace sw
             // 외부 프로파일러(`-gv_tracy`) — 엔진 범위보다 먼저 켜져 기동 단계부터 타임라인에 남는다.
             _services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
             _services.addSubsystem( sw::make_unique<CrashReportService>() );
+            _services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
+            _services.addSubsystem( sw::make_unique<StateHashHistory>() );
+#if SW_DEV_COMMANDS_ENABLED
+            _services.addSubsystem( sw::make_unique<AuthorityGhost>() ); // 서버 포즈 고스트(개발 도구) — Shipping 에는 없다
+#endif
             {
                 SW_MEMORY_SCOPE( RenderCPU );
                 _services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
@@ -468,9 +474,11 @@ namespace sw
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
 #if SW_DEV_COMMANDS_ENABLED
-        AuthorityGhost::get().shutdown(); // 작업 스레드는 이 이미지의 코드다 - 이미지가 내려가기 전에 합류한다
+        if ( AuthorityGhost* pGhost = engine::findSubsystem<AuthorityGhost>() )
+            pGhost->shutdown(); // 작업 스레드는 이 이미지의 코드다 - 이미지가 내려가기 전에 합류한다
 #endif
-        AssetLoadProfiler::get().reportIfRequested( "session" );
+        if ( const AssetLoadProfiler* pLoadProfiler = engine::findSubsystem<AssetLoadProfiler>() )
+            pLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.getCollection().shutdownAll();
         // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
@@ -721,7 +729,11 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
         // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         if ( _pSceneManager != nullptr )
-            AuthorityGhost::get().update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+        {
+            AuthorityGhost* pGhost = engine::findSubsystem<AuthorityGhost>(); // 서비스 범위가 소유한다
+            if ( pGhost != nullptr )
+                pGhost->update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+        }
 #endif
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).

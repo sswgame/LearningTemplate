@@ -7,6 +7,8 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
+
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
@@ -45,6 +47,12 @@ namespace
         return credentials;
     }
 
+    /** @brief 게임 인스턴스가 하듯 GameFramework 의 암호 제공자를 세션의 접속 보안 자리에 넣습니다. */
+    void giveProvider( GameNetSession& session )
+    {
+        session.getConnectSecurity().setProvider( &NetSecurity::getProvider() );
+    }
+
     /** @brief 티켓 서버 — 서버 설정의 티켓 켜기가 만든 인자와 묶인 인증기. 소멸에서 인증기를 푼다. */
     struct TicketServer
     {
@@ -59,15 +67,16 @@ namespace
             config._gamePort           = 0;
             config._bGameConnectTicket = true;
             GameNetSessionParams params;
-            if ( GameNetSession::makeServerParams( config, params ) == false )
+            giveProvider( _session );
+            if ( _session.makeServerParams( config, params ) == false )
                 return;
-            _bOpened = GameConnectSecurity::get().bindAuthenticator( &_authenticator ) && _session.initialize( params );
+            _bOpened = _session.getConnectSecurity().bindAuthenticator( &_authenticator ) && _session.initialize( params );
         }
 
         ~TicketServer()
         {
             _session.shutdown();
-            GameConnectSecurity::get().unbindAuthenticator( &_authenticator );
+            _session.getConnectSecurity().unbindAuthenticator( &_authenticator );
         }
     };
 
@@ -100,9 +109,10 @@ SW_TEST_CASE( GameNetSessionTicketTest, ClientWithTheRightTicketConnects )
 {
     TicketServer server;
     SW_ASSERT_TRUE( server._bOpened );
-    GameNetSessionParams params;
-    SW_ASSERT_TRUE( GameNetSession::makeTicketClientParams( NetAddress::makeLoopback( server._session.getListenPort() ), makeTicket( 0x5A ), params ) );
     GameNetSession client;
+    giveProvider( client );
+    GameNetSessionParams params;
+    SW_ASSERT_TRUE( client.makeTicketClientParams( NetAddress::makeLoopback( server._session.getListenPort() ), makeTicket( 0x5A ), params ) );
     SW_ASSERT_TRUE( client.initialize( params ) );
     pump( server._session, client, kWaitMilliseconds, &areConnected );
     SW_EXPECT_EQUAL( 1, server._session.getConnectedCount() );
@@ -117,9 +127,10 @@ SW_TEST_CASE( GameNetSessionTicketTest, ARefusedTicketIsDroppedAndNeedsANewOne )
 {
     TicketServer server;
     SW_ASSERT_TRUE( server._bOpened );
-    GameNetSessionParams params;
-    SW_ASSERT_TRUE( GameNetSession::makeTicketClientParams( NetAddress::makeLoopback( server._session.getListenPort() ), makeTicket( 0x11 ), params ) );
     GameNetSession client;
+    giveProvider( client );
+    GameNetSessionParams params;
+    SW_ASSERT_TRUE( client.makeTicketClientParams( NetAddress::makeLoopback( server._session.getListenPort() ), makeTicket( 0x11 ), params ) );
     SW_ASSERT_TRUE( client.initialize( params ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the server and the client log the refused connection" );
@@ -157,18 +168,35 @@ SW_TEST_CASE( GameNetSessionTicketTest, AClientWithoutCredentialsIsRefusedByATic
  */
 SW_TEST_CASE( GameNetSessionTicketTest, TicketParamsRefuseWhatCannotBindACredential )
 {
+    GameNetSession session;
+    giveProvider( session );
     GameNetSessionParams params;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the refused params are logged" );
-        SW_EXPECT_FALSE( GameNetSession::makeTicketClientParams( NetAddress::makeLoopback( 7777 ), NetConnectCredentials{}, params ) );
-        SW_EXPECT_FALSE( GameNetSession::makeTicketClientParams( NetAddress{}, makeTicket( 0x5A ), params ) );
+        SW_EXPECT_FALSE( session.makeTicketClientParams( NetAddress::makeLoopback( 7777 ), NetConnectCredentials{}, params ) );
+        SW_EXPECT_FALSE( session.makeTicketClientParams( NetAddress{}, makeTicket( 0x5A ), params ) );
     }
-    SW_ASSERT_TRUE( GameNetSession::makeTicketClientParams( NetAddress::makeLoopback( 7777 ), makeTicket( 0x5A ), params ) );
+    SW_ASSERT_TRUE( session.makeTicketClientParams( NetAddress::makeLoopback( 7777 ), makeTicket( 0x5A ), params ) );
     params._hostSettings._security._mode = NetSecurityMode::Off; // 평문으로 바꾸면 비밀을 싣지 못한다
-    GameNetSession session;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the plaintext ticket client is logged" );
         SW_EXPECT_FALSE( session.initialize( params ) );
     }
     SW_EXPECT_FALSE( session.isActive() );
+}
+
+/**
+ * @brief [GameNetSessionTicketTest] 암호 제공자를 넣지 않은 세션은 티켓 서버 · 티켓 클라이언트 인자를 만들지 않는다 — 평문 포트나 자격 없는 연결로 대신 열지 않는다
+ */
+SW_TEST_CASE( GameNetSessionTicketTest, ParamsRefuseASessionWithoutAProvider )
+{
+    GameNetSession       session; // 제공자를 넣지 않았다
+    GameNetSessionParams params;
+    ServerConfig         config;
+    config._listenAddress      = "127.0.0.1";
+    config._gamePort           = 0;
+    config._bGameConnectTicket = true;
+    SW_TEST_DEFENSIVE_SCOPE( "the refused params are logged" );
+    SW_EXPECT_FALSE( session.makeServerParams( config, params ) );
+    SW_EXPECT_FALSE( session.makeTicketClientParams( NetAddress::makeLoopback( 7777 ), makeTicket( 0x5A ), params ) );
 }

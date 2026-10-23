@@ -325,6 +325,7 @@ namespace sw
         : _listShard{}
         , _peers{}
         , _router{}
+        , _connectSecurity{}
         , _tickWriter{}
         , _connectFuture{}
         , _listEventScratch{}
@@ -423,9 +424,8 @@ namespace sw
         if ( config._bGameConnectTicket )
         {
             // 접속 티켓(OnlineKits F5): 게임 포트를 암호화하고 연결을 계정 키트가 낸 티켓의 세션 비밀에 묶는다. 인증기는 서버 서비스가 선 뒤에 묶이므로
-            // 자리(`GameConnectSecurity`)를 끼워 두고, 묶이기 전에 온 접속은 거절한다. 암호 제공자가 없으면(GameFramework 가 안 섰다) 열지 않는다.
-            GameConnectSecurity&  security  = GameConnectSecurity::get();
-            INetSecurityProvider* pProvider = security.findProvider();
+            // 자리(`GameConnectSecurity`)를 끼워 두고, 묶이기 전에 온 접속은 거절한다. 암호 제공자가 없으면(게임 인스턴스가 안 넣었다) 열지 않는다.
+            INetSecurityProvider* pProvider = _connectSecurity.findProvider();
             if ( pProvider == nullptr )
             {
                 SW_LOG_ERROR( "Server config _bGameConnectTicket needs the network security provider (GameFramework) - the game port stays closed" );
@@ -434,12 +434,12 @@ namespace sw
             }
             outParams._hostSettings._security._mode           = NetSecurityMode::Encrypted;
             outParams._hostSettings._security._pProvider      = pProvider;
-            outParams._hostSettings._security._pAuthenticator = &security;
+            outParams._hostSettings._security._pAuthenticator = &_connectSecurity;
         }
         return true;
     }
 
-    bool GameNetSession::makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams )
+    bool GameNetSession::makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams ) const
     {
         outParams = GameNetSessionParams{};
         if ( serverAddress.isValid() == false || credentials._tokenSize <= 0 )
@@ -447,7 +447,7 @@ namespace sw
             SW_LOG_ERROR( "A ticket client needs a server address and a game connect ticket" );
             return false;
         }
-        INetSecurityProvider* pProvider = GameConnectSecurity::get().findProvider();
+        INetSecurityProvider* pProvider = _connectSecurity.findProvider();
         if ( pProvider == nullptr )
         {
             SW_LOG_ERROR( "A ticket client needs the network security provider (GameFramework) - it does not connect without credentials instead" );

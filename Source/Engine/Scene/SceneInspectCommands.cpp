@@ -16,6 +16,7 @@
 
     #include "Core/Container/StringUtil.h"
 
+    #include "Engine/Common/EngineServices.h"
     #include "Engine/Object/Component/Component.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
@@ -49,6 +50,19 @@ namespace sw
                 utf8                       arrBuffer[constant::kMaxBuffer32];
                 const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
                 outText.append( arrBuffer, result.ptr );
+            }
+
+            /** @brief 이력을 남기고 있는 상태 해시 이력입니다. 서비스가 없거나 꺼져 있으면 nullptr 이고 @p outReply 에 까닭을 씁니다. */
+            static const StateHashHistory* findRecordingHistory( string& outReply )
+            {
+                const StateHashHistory* pHistory = engine::findSubsystem<StateHashHistory>();
+                if ( pHistory == nullptr )
+                    outReply = "state hash history service is not running in this host";
+                else if ( pHistory->isRecording() == false )
+                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
+                else
+                    return pHistory;
+                return nullptr;
             }
 
             static bool runTree( const vector<string>& listArgument, string& outReply )
@@ -189,13 +203,11 @@ namespace sw
                 const bool bHasCount = bHasFrom && StringUtil::parseUint64( listArgument[1], count );
                 if ( bHasCount == false )
                     return false;
-                if ( StateHashHistory::get().isRecording() == false )
-                {
-                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
                     return false;
-                }
                 vector<StateHashSample> listSample;
-                StateHashHistory::get().collect( fromTick, static_cast<uint32>( count ), listSample );
+                pHistory->collect( fromTick, static_cast<uint32>( count ), listSample );
                 outReply.clear();
                 StateHashHistory::writeReport( listSample, outReply );
                 return true;
@@ -208,17 +220,15 @@ namespace sw
                 const bool bHasCount = listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], count );
                 if ( bHasCount == false || count == 0 )
                     return false;
-                if ( StateHashHistory::get().isRecording() == false )
-                {
-                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
                     return false;
-                }
                 vector<StateHashSample> listSample;
                 StateHashSample         latest;
-                if ( StateHashHistory::get().tryGetLatest( latest ) )
+                if ( pHistory->tryGetLatest( latest ) )
                 {
                     const uint64 fromTick = latest._tick + 1 > count ? latest._tick + 1 - count : 0;
-                    StateHashHistory::get().collect( fromTick, static_cast<uint32>( count ), listSample );
+                    pHistory->collect( fromTick, static_cast<uint32>( count ), listSample );
                 }
                 StateHashHistory::writeReportLine( listSample, outReply );
                 return true;
