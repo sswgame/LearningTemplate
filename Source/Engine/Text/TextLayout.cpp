@@ -191,6 +191,306 @@ namespace sw
                 uint32     _count{ 0 };
                 float32    _width{ 0.0f }; ///< 글리프 하나의 폭(UI 단위)
             };
+
+            /** @brief 배치 한 번이 읽는 셰이핑 결과입니다(엔진의 스크래치 목록을 읽기 전용으로 묶는다). 글리프마다 한 칸씩이다. */
+            struct ShapedView
+            {
+                const vector<ShapedGlyph>& _listShaped;     ///< 셰이핑 결과(논리 순서)
+                const vector<float32>&     _listWidth;      ///< 폭(UI 단위, 자간 포함)
+                const vector<float32>&     _listSize;       ///< 폰트 크기
+                const vector<uint32>&      _listColor;      ///< 색(0xFFFFFFFF = 위젯 색)
+                const vector<uint8>&       _listFaux;       ///< 가짜 굵게 · 기울임 비트
+                const vector<uint8>&       _listBreak;      ///< 뒤의 줄 바꿈 기회(`BreakKind`)
+                const vector<uint8>&       _listGlyphLevel; ///< 양방향 수준
+            };
+
+            /** @brief 1) 욕심쟁이 줄 채우기: 폭이 넘치면 마지막 끊을 기회에서(없으면 금칙을 지키며 그 자리에서) 줄을 나눈다. 강제 줄 바꿈은 늘 나눈다. */
+            static void breakIntoLines( const ShapedView& view, float32 maxWidth, bool bWrap, vector<LineRange>& outListLine )
+            {
+                const uint32 glyphCount = static_cast<uint32>( view._listShaped.size() );
+                uint32       lineStart  = 0;
+                float32      penX       = 0.0f;
+                bool         bHasBreak  = false;
+                uint32       lastBreak  = 0;
+                uint32       glyphIndex = 0;
+                while ( glyphIndex < glyphCount )
+                {
+                    const uint32  codepoint = view._listShaped[glyphIndex]._codepoint;
+                    const float32 width     = view._listWidth[glyphIndex];
+                    const bool    bOverflow = bWrap && glyphIndex > lineStart && isTrailingBlank( codepoint ) == false && penX + width > maxWidth + kWidthTolerance;
+                    if ( bOverflow )
+                    {
+                        uint32 lineEnd = glyphIndex;
+                        if ( bHasBreak )
+                        {
+                            lineEnd = lastBreak + 1;
+                        }
+                        else
+                        {
+                            // 기회가 없다(한 단어가 줄보다 길다). 그 위치에서 끊되, 닫는 부호를 줄 머리로, 여는 부호를 줄 끝으로 보내지 않게 한 글자 물린다.
+                            while ( lineEnd > lineStart + 1 && ( forbidsBreakBefore( view._listShaped[lineEnd]._codepoint ) || forbidsBreakAfter( view._listShaped[lineEnd - 1]._codepoint ) ) )
+                            {
+                                --lineEnd;
+                            }
+                        }
+                        outListLine.push_back( LineRange{ lineStart, lineEnd, false } );
+                        lineStart = lineEnd;
+                        penX      = 0.0f;
+                        bHasBreak = false;
+                        for ( uint32 carried = lineStart; carried < glyphIndex; ++carried )
+                        {
+                            penX += view._listWidth[carried];
+                            if ( static_cast<BreakKind>( view._listBreak[carried] ) == BreakKind::Allowed )
+                            {
+                                bHasBreak = true;
+                                lastBreak = carried;
+                            }
+                        }
+                        continue; // 이 글리프를 새 줄에서 다시 본다
+                    }
+                    penX += width;
+                    const BreakKind kind = static_cast<BreakKind>( view._listBreak[glyphIndex] );
+                    if ( kind == BreakKind::Allowed )
+                    {
+                        bHasBreak = true;
+                        lastBreak = glyphIndex;
+                    }
+                    else if ( kind == BreakKind::Mandatory )
+                    {
+                        outListLine.push_back( LineRange{ lineStart, glyphIndex + 1, false } );
+                        lineStart = glyphIndex + 1;
+                        penX      = 0.0f;
+                        bHasBreak = false;
+                    }
+                    ++glyphIndex;
+                }
+                if ( lineStart < glyphCount )
+                    outListLine.push_back( LineRange{ lineStart, glyphCount, false } );
+            }
+
+            /** @brief 2) 줄 수와 너비 제한: 넘치면 자르고, 줄임표면 마지막(넘친) 줄에 붙인다. 잘렸으면 @p outResult 에 표시한다. */
+            static void limitLines( const ShapedView& view, const TextLayoutStyle& style, float32 maxWidth, bool bWrap, vector<LineRange>& inoutListLine, TextLayoutResult& outResult )
+            {
+                const bool bEllipsis = style._overflow == TextOverflow::Ellipsis;
+                if ( style._maxLines > 0 && inoutListLine.size() > style._maxLines )
+                {
+                    inoutListLine.resize( style._maxLines );
+                    outResult._bTruncated           = SW_TRUE;
+                    inoutListLine.back()._bEllipsis = bEllipsis;
+                }
+                if ( bWrap == false && maxWidth > 0.0f )
+                {
+                    for ( LineRange& line : inoutListLine )
+                    {
+                        float32 lineWidth = 0.0f;
+                        for ( uint32 index = line._begin; index < line._end; ++index )
+                        {
+                            lineWidth += view._listWidth[index];
+                        }
+                        if ( lineWidth > maxWidth + kWidthTolerance )
+                        {
+                            outResult._bTruncated = SW_TRUE;
+                            line._bEllipsis       = line._bEllipsis || bEllipsis;
+                        }
+                    }
+                }
+            }
+
+            /** @brief 줄임표 글리프를 찾습니다. 줄임표 문자(…)가 연쇄에 없으면 마침표 셋을 씁니다. */
+            static EllipsisGlyph findEllipsis( FontService& fontService, const FontFaceChain& chain, const TextLayoutStyle& style )
+            {
+                EllipsisGlyph ellipsis{};
+                ellipsis._face  = fontService.findFaceForCodepoint( chain, kEllipsisCodepoint, ellipsis._glyphIndex );
+                ellipsis._count = 1;
+                if ( ellipsis._glyphIndex == 0 )
+                {
+                    ellipsis._face  = fontService.findFaceForCodepoint( chain, '.', ellipsis._glyphIndex );
+                    ellipsis._count = kEllipsisFallbackCount;
+                }
+                GlyphMetrics metrics{};
+                if ( fontService.getRasterizer().findGlyphMetrics( ellipsis._face, ellipsis._glyphIndex, metrics ) )
+                    ellipsis._width = ( metrics._advance + style._letterSpacing ) * style._fontSize;
+                return ellipsis;
+            }
+
+            /** @brief 한 줄에서 보이는 끝과 너비입니다. */
+            struct LineFit
+            {
+                uint32  _end{ 0 };        ///< 줄에 남기는 글리프의 끝(줄임표를 붙이면 보이는 끝과 같다)
+                uint32  _visibleEnd{ 0 }; ///< 끝 공백과 줄 바꿈을 뺀 끝
+                float32 _trimmed{ 0.0f }; ///< [첫, 보이는 끝) 글리프 폭의 합(줄임표 폭 제외)
+            };
+
+            /** @brief 3-1) 줄의 보이는 끝과 너비를 정합니다. 끝 공백과 줄 바꿈은 너비에서 뺀다(글리프는 남기며, 커서와 선택이 쓴다). 줄임표를 붙이면 줄임표가 들어갈 때까지 뒤에서 글리프를 뺀다. */
+            static LineFit fitLine( const ShapedView& view, const LineRange& range, float32 maxWidth, float32 ellipsisWidth )
+            {
+                LineFit fit{};
+                fit._end        = range._end;
+                fit._visibleEnd = fit._end;
+                while ( fit._visibleEnd > range._begin && isTrailingBlank( view._listShaped[fit._visibleEnd - 1]._codepoint ) )
+                {
+                    --fit._visibleEnd;
+                }
+                for ( uint32 index = range._begin; index < fit._visibleEnd; ++index )
+                {
+                    fit._trimmed += view._listWidth[index];
+                }
+                if ( range._bEllipsis )
+                {
+                    // 줄임표가 들어갈 때까지 뒤에서 글리프를 뺀다(빼고 남은 끝 공백도 뺀다).
+                    while ( true )
+                    {
+                        const bool bEllipsisOverflows = fit._visibleEnd > range._begin && maxWidth > 0.0f && fit._trimmed + ellipsisWidth > maxWidth + kWidthTolerance;
+                        if ( bEllipsisOverflows == false )
+                            break;
+                        --fit._visibleEnd;
+                        fit._trimmed -= view._listWidth[fit._visibleEnd];
+                    }
+                    while ( fit._visibleEnd > range._begin && isTrailingBlank( view._listShaped[fit._visibleEnd - 1]._codepoint ) )
+                    {
+                        --fit._visibleEnd;
+                        fit._trimmed -= view._listWidth[fit._visibleEnd];
+                    }
+                    fit._end = fit._visibleEnd;
+                }
+                return fit;
+            }
+
+            /** @brief 3-2) 줄의 가장 큰 면 메트릭을 구합니다. 대체 면이 섞인 줄이 겹치지 않게 한다. */
+            static LineFaceMetrics measureLineFaces( const IFontRasterizer& rasterizer, const ShapedView& view, const FontFaceChain& chain, const TextLayoutStyle& style, const LineRange& range, uint32 end,
+                                                     const EllipsisGlyph& ellipsis )
+            {
+                LineFaceMetrics faceMetrics{};
+                faceMetrics.accumulate( rasterizer, chain._arrFace[0], style._fontSize );
+                for ( uint32 index = range._begin; index < end; ++index )
+                {
+                    faceMetrics.accumulate( rasterizer, view._listShaped[index]._face, view._listSize[index] );
+                }
+                if ( range._bEllipsis )
+                    faceMetrics.accumulate( rasterizer, ellipsis._face, style._fontSize );
+                return faceMetrics;
+            }
+
+            /**
+             * @brief 3-3) 눈에 보이는 순서를 정합니다. 줄 안 글리프 [첫, end) 뒤에 줄임표(문단 수준)를 논리로 붙이고, 줄 끝 공백은 문단 수준(L1)으로 되돌린 뒤 뒤집는다(L2).
+             * @param inoutLineLevel 한 줄의 수준 스크래치입니다. @param outVisual 눈에 보이는 순서(줄 안 논리 번호)입니다.
+             */
+            static void orderLineVisually( const ShapedView& view, const LineRange& range, uint32 lineGlyphCount, uint32 itemCount, bool bReorder, uint8 paragraphLevel,
+                                           vector<uint8>& inoutLineLevel, vector<uint32>& outVisual )
+            {
+                outVisual.resize( itemCount );
+                if ( bReorder == false )
+                {
+                    for ( uint32 index = 0; index < itemCount; ++index )
+                    {
+                        outVisual[index] = index;
+                    }
+                    return;
+                }
+                inoutLineLevel.assign( itemCount, paragraphLevel );
+                for ( uint32 index = 0; index < lineGlyphCount; ++index )
+                {
+                    inoutLineLevel[index] = view._listGlyphLevel[range._begin + index];
+                }
+                for ( uint32 index = lineGlyphCount; index > 0 && isTrailingBlank( view._listShaped[range._begin + index - 1]._codepoint ); --index )
+                {
+                    inoutLineLevel[index - 1] = paragraphLevel;
+                }
+                TextBidi::reorderVisually( inoutLineLevel, outVisual );
+            }
+
+            /** @brief 한 줄을 내는 데 필요한 값입니다(`appendLineGlyphs`). */
+            struct LineEmit
+            {
+                const LineRange* _pRange{ nullptr };
+                LineFit          _fit{};
+                uint32           _lineGlyphCount{ 0 };
+                float32          _baseline{ 0.0f };
+                bool             _bReorder{ false };
+                uint8            _paragraphLevel{ 0 };
+            };
+
+            /** @brief 3-4) 줄의 글리프를 눈에 보이는 순서대로 @p outResult 에 냅니다. RTL 문단의 끝 공백은 왼쪽 끝으로 가므로 너비에서 뺀 만큼 왼쪽 밖에서 시작해 보이는 글리프가 [0, 너비] 에 놓이게 한다. */
+            static void appendLineGlyphs( const ShapedView& view, const IFontRasterizer& rasterizer, const FontFaceChain& chain, const TextLayoutStyle& style, const EllipsisGlyph& ellipsis,
+                                          const LineEmit& emit, uint32 textByteCount, const vector<uint32>& listVisual, TextLayoutResult& outResult )
+            {
+                const LineRange& range      = *emit._pRange;
+                const uint32     end        = emit._fit._end;
+                const uint32     glyphCount = static_cast<uint32>( view._listShaped.size() );
+                float32          pen        = 0.0f;
+                if ( TextBidi::isRightToLeftLevel( emit._paragraphLevel ) )
+                {
+                    for ( uint32 index = emit._fit._visibleEnd; index < end; ++index )
+                    {
+                        pen -= view._listWidth[index];
+                    }
+                }
+                for ( const uint32 item : listVisual )
+                {
+                    if ( item >= emit._lineGlyphCount )
+                    {
+                        LaidOutGlyph glyph{};
+                        glyph._origin      = float2{ pen, emit._baseline };
+                        glyph._fontSize    = style._fontSize;
+                        glyph._glyphIndex  = ellipsis._glyphIndex;
+                        glyph._cluster     = end < glyphCount ? view._listShaped[end]._cluster : textByteCount;
+                        glyph._face        = ellipsis._face;
+                        glyph._bFauxBold   = chain._bFauxBold;
+                        glyph._bFauxItalic = chain._bFauxItalic;
+                        outResult._listGlyph.push_back( glyph );
+                        pen += ellipsis._width;
+                        continue;
+                    }
+                    const uint32       index  = range._begin + item;
+                    const ShapedGlyph& shaped = view._listShaped[index];
+                    if ( isLineBreakCharacter( shaped._codepoint ) == false )
+                    {
+                        LaidOutGlyph  glyph{};
+                        const float32 glyphSize = view._listSize[index];
+                        const uint8   fauxBits  = view._listFaux[index];
+                        glyph._origin           = float2{ pen + shaped._offset._x * glyphSize, emit._baseline - shaped._offset._y * glyphSize };
+                        glyph._fontSize         = glyphSize;
+                        glyph._glyphIndex       = shaped._glyphIndex;
+                        glyph._cluster          = shaped._cluster;
+                        glyph._colorRgba        = view._listColor[index];
+                        glyph._face             = shaped._face;
+                        glyph._bFauxBold        = ( fauxBits & kFauxBoldBit ) != 0 ? SW_TRUE : SW_FALSE;
+                        glyph._bFauxItalic      = ( fauxBits & kFauxItalicBit ) != 0 ? SW_TRUE : SW_FALSE;
+                        // RTL 수준의 괄호는 짝 글리프로 그린다(L4). 면에 짝이 없으면 그대로.
+                        const bool   bRightToLeftGlyph = emit._bReorder && TextBidi::isRightToLeftLevel( view._listGlyphLevel[index] );
+                        const uint32 mirrored          = bRightToLeftGlyph ? TextBidi::getMirroredCodepoint( shaped._codepoint ) : shaped._codepoint;
+                        if ( mirrored != shaped._codepoint )
+                        {
+                            const uint32 mirroredGlyph = rasterizer.findGlyphIndex( shaped._face, mirrored );
+                            if ( mirroredGlyph != 0 )
+                                glyph._glyphIndex = mirroredGlyph;
+                        }
+                        outResult._listGlyph.push_back( glyph );
+                    }
+                    pen += view._listWidth[index];
+                }
+            }
+
+            /** @brief 4) 정렬: 상자 너비는 maxWidth 이다(무한이면 가장 넓은 줄). Start 와 End 는 문단 방향을 따른다(RTL 이면 Start 가 오른쪽). */
+            static void alignLines( const TextLayoutStyle& style, float32 maxWidth, float32 maxLineWidth, uint8 paragraphLevel, TextLayoutResult& inoutResult )
+            {
+                const float32 boxWidth   = maxWidth > 0.0f ? maxWidth : maxLineWidth;
+                const bool    bRightPara = TextBidi::isRightToLeftLevel( paragraphLevel );
+                const bool    bCenter    = style._alignment == TextAlignment::Center;
+                const bool    bEnd       = style._alignment == TextAlignment::Right || ( style._alignment == TextAlignment::End && bRightPara == false ) ||
+                                  ( style._alignment == TextAlignment::Start && bRightPara );
+                const float32 alignFactor = bCenter ? 0.5f : ( bEnd ? 1.0f : 0.0f );
+                if ( alignFactor == 0.0f )
+                    return;
+                for ( const LaidOutLine& line : inoutResult._listLine )
+                {
+                    const float32 shift = MathUtil::max( 0.0f, boxWidth - line._width ) * alignFactor;
+                    for ( uint32 index = line._firstGlyph; index < line._firstGlyph + line._glyphCount; ++index )
+                    {
+                        inoutResult._listGlyph[index]._origin._x += shift;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -336,170 +636,40 @@ namespace sw
         if ( chain._faceCount == 0 )
             return;
         shapeText( text, style, chain, pListSpan );
-        const uint32 glyphCount     = static_cast<uint32>( _listShapedScratch.size() );
-        const bool   bReorder       = resolveGlyphLevels( text, style._paragraphDirection );
-        const uint8  paragraphLevel = TextBidi::getParagraphLevel( style._paragraphDirection );
-        const bool   bWrap          = style._bWrap && maxWidth > 0.0f;
+        const uint32               glyphCount     = static_cast<uint32>( _listShapedScratch.size() );
+        const bool                 bReorder       = resolveGlyphLevels( text, style._paragraphDirection );
+        const uint8                paragraphLevel = TextBidi::getParagraphLevel( style._paragraphDirection );
+        const bool                 bWrap          = style._bWrap && maxWidth > 0.0f;
+        const Internal::ShapedView view{ _listShapedScratch, _listWidthScratch, _listSizeScratch, _listColorScratch, _listFauxScratch, _listBreakScratch, _listGlyphLevelScratch };
 
-        // 1) 욕심쟁이 줄 채우기.
+        // 1) 줄 채우기, 2) 줄 수와 너비 제한.
         vector<Internal::LineRange> listLine;
-        uint32                      lineStart  = 0;
-        float32                     penX       = 0.0f;
-        bool                        bHasBreak  = false;
-        uint32                      lastBreak  = 0;
-        uint32                      glyphIndex = 0;
-        while ( glyphIndex < glyphCount )
-        {
-            const uint32  codepoint = _listShapedScratch[glyphIndex]._codepoint;
-            const float32 width     = _listWidthScratch[glyphIndex];
-            const bool    bOverflow = bWrap && glyphIndex > lineStart && Internal::isTrailingBlank( codepoint ) == false &&
-                                   penX + width > maxWidth + Internal::kWidthTolerance;
-            if ( bOverflow )
-            {
-                uint32 lineEnd = glyphIndex;
-                if ( bHasBreak )
-                {
-                    lineEnd = lastBreak + 1;
-                }
-                else
-                {
-                    // 기회가 없다(한 단어가 줄보다 길다). 그 위치에서 끊되, 닫는 부호를 줄 머리로, 여는 부호를 줄 끝으로 보내지 않게 한 글자 물린다.
-                    while ( lineEnd > lineStart + 1 && ( Internal::forbidsBreakBefore( _listShapedScratch[lineEnd]._codepoint ) ||
-                                                         Internal::forbidsBreakAfter( _listShapedScratch[lineEnd - 1]._codepoint ) ) )
-                    {
-                        --lineEnd;
-                    }
-                }
-                listLine.push_back( Internal::LineRange{ lineStart, lineEnd, false } );
-                lineStart = lineEnd;
-                penX      = 0.0f;
-                bHasBreak = false;
-                for ( uint32 carried = lineStart; carried < glyphIndex; ++carried )
-                {
-                    penX += _listWidthScratch[carried];
-                    if ( static_cast<Internal::BreakKind>( _listBreakScratch[carried] ) == Internal::BreakKind::Allowed )
-                    {
-                        bHasBreak = true;
-                        lastBreak = carried;
-                    }
-                }
-                continue; // 이 글리프를 새 줄에서 다시 본다
-            }
-            penX += width;
-            const Internal::BreakKind kind = static_cast<Internal::BreakKind>( _listBreakScratch[glyphIndex] );
-            if ( kind == Internal::BreakKind::Allowed )
-            {
-                bHasBreak = true;
-                lastBreak = glyphIndex;
-            }
-            else if ( kind == Internal::BreakKind::Mandatory )
-            {
-                listLine.push_back( Internal::LineRange{ lineStart, glyphIndex + 1, false } );
-                lineStart = glyphIndex + 1;
-                penX      = 0.0f;
-                bHasBreak = false;
-            }
-            ++glyphIndex;
-        }
-        if ( lineStart < glyphCount )
-            listLine.push_back( Internal::LineRange{ lineStart, glyphCount, false } );
+        Internal::breakIntoLines( view, maxWidth, bWrap, listLine );
+        Internal::limitLines( view, style, maxWidth, bWrap, listLine, outResult );
 
-        // 2) 줄 수와 너비 제한: 넘치면 자르고, 줄임표면 마지막(넘친) 줄에 붙인다.
-        const bool bEllipsis = style._overflow == TextOverflow::Ellipsis;
-        if ( style._maxLines > 0 && listLine.size() > style._maxLines )
-        {
-            listLine.resize( style._maxLines );
-            outResult._bTruncated      = SW_TRUE;
-            listLine.back()._bEllipsis = bEllipsis;
-        }
-        if ( bWrap == false && maxWidth > 0.0f )
-        {
-            for ( Internal::LineRange& line : listLine )
-            {
-                float32 lineWidth = 0.0f;
-                for ( uint32 index = line._begin; index < line._end; ++index )
-                {
-                    lineWidth += _listWidthScratch[index];
-                }
-                if ( lineWidth > maxWidth + Internal::kWidthTolerance )
-                {
-                    outResult._bTruncated = SW_TRUE;
-                    line._bEllipsis       = line._bEllipsis || bEllipsis;
-                }
-            }
-        }
-
-        IFontRasterizer&        rasterizer = _fontService.getRasterizer();
         Internal::EllipsisGlyph ellipsis{};
-        const bool              bAnyEllipsis = outResult._bTruncated == SW_TRUE && bEllipsis;
+        const bool              bAnyEllipsis = outResult._bTruncated == SW_TRUE && style._overflow == TextOverflow::Ellipsis;
         if ( bAnyEllipsis )
-        {
-            ellipsis._face  = _fontService.findFaceForCodepoint( chain, Internal::kEllipsisCodepoint, ellipsis._glyphIndex );
-            ellipsis._count = 1;
-            if ( ellipsis._glyphIndex == 0 )
-            {
-                ellipsis._face  = _fontService.findFaceForCodepoint( chain, '.', ellipsis._glyphIndex );
-                ellipsis._count = Internal::kEllipsisFallbackCount;
-            }
-            GlyphMetrics metrics{};
-            if ( rasterizer.findGlyphMetrics( ellipsis._face, ellipsis._glyphIndex, metrics ) )
-                ellipsis._width = ( metrics._advance + style._letterSpacing ) * style._fontSize;
-        }
+            ellipsis = Internal::findEllipsis( _fontService, chain, style );
 
         // 3) 줄마다 글리프, 메트릭, 기준선(정렬 전이며 x 는 줄 왼쪽 기준)을 정한다.
-        float32 lineTop      = 0.0f;
-        float32 maxLineWidth = 0.0f;
+        const IFontRasterizer& rasterizer   = _fontService.getRasterizer();
+        float32                lineTop      = 0.0f;
+        float32                maxLineWidth = 0.0f;
         for ( size_t lineIndex = 0; lineIndex < listLine.size(); ++lineIndex )
         {
-            const Internal::LineRange& range      = listLine[lineIndex];
-            uint32                     end        = range._end;
-            float32                    trimmed    = 0.0f;
-            uint32                     visibleEnd = end;
-            // 끝 공백과 줄 바꿈은 너비에서 뺀다(글리프는 남기며, 커서와 선택이 쓴다).
-            while ( visibleEnd > range._begin && Internal::isTrailingBlank( _listShapedScratch[visibleEnd - 1]._codepoint ) )
-            {
-                --visibleEnd;
-            }
-            for ( uint32 index = range._begin; index < visibleEnd; ++index )
-            {
-                trimmed += _listWidthScratch[index];
-            }
-            const float32 ellipsisWidth = range._bEllipsis ? ellipsis._width * static_cast<float32>( ellipsis._count ) : 0.0f;
-            if ( range._bEllipsis )
-            {
-                // 줄임표가 들어갈 때까지 뒤에서 글리프를 뺀다(빼고 남은 끝 공백도 뺀다).
-                while ( true )
-                {
-                    const bool bEllipsisOverflows = visibleEnd > range._begin && maxWidth > 0.0f && trimmed + ellipsisWidth > maxWidth + Internal::kWidthTolerance;
-                    if ( bEllipsisOverflows == false )
-                        break;
-                    --visibleEnd;
-                    trimmed -= _listWidthScratch[visibleEnd];
-                }
-                while ( visibleEnd > range._begin && Internal::isTrailingBlank( _listShapedScratch[visibleEnd - 1]._codepoint ) )
-                {
-                    --visibleEnd;
-                    trimmed -= _listWidthScratch[visibleEnd];
-                }
-                end = visibleEnd;
-            }
+            const Internal::LineRange& range         = listLine[lineIndex];
+            const float32              ellipsisWidth = range._bEllipsis ? ellipsis._width * static_cast<float32>( ellipsis._count ) : 0.0f;
+            const Internal::LineFit    fit           = Internal::fitLine( view, range, maxWidth, ellipsisWidth );
 
-            // 줄의 가장 큰 면 메트릭을 구한다. 대체 면이 섞인 줄이 겹치지 않게 한다.
-            Internal::LineFaceMetrics faceMetrics{};
-            faceMetrics.accumulate( rasterizer, chain._arrFace[0], style._fontSize );
-            for ( uint32 index = range._begin; index < end; ++index )
-            {
-                faceMetrics.accumulate( rasterizer, _listShapedScratch[index]._face, _listSizeScratch[index] );
-            }
-            if ( range._bEllipsis )
-                faceMetrics.accumulate( rasterizer, ellipsis._face, style._fontSize );
-            const float32 maxAscender   = faceMetrics._maxAscender;
-            const float32 naturalHeight = maxAscender - faceMetrics._minDescender;
-            const float32 lineHeight    = ( naturalHeight + faceMetrics._maxLineGap ) * style._lineHeight;
+            const Internal::LineFaceMetrics faceMetrics   = Internal::measureLineFaces( rasterizer, view, chain, style, range, fit._end, ellipsis );
+            const float32                   maxAscender   = faceMetrics._maxAscender;
+            const float32                   naturalHeight = maxAscender - faceMetrics._minDescender;
+            const float32                   lineHeight    = ( naturalHeight + faceMetrics._maxLineGap ) * style._lineHeight;
 
             LaidOutLine line{};
             line._firstGlyph = static_cast<uint32>( outResult._listGlyph.size() );
-            line._width      = trimmed + ellipsisWidth;
+            line._width      = fit._trimmed + ellipsisWidth;
             line._height     = lineHeight;
             line._baseline   = lineTop + ( lineHeight - naturalHeight ) * 0.5f + maxAscender;
             line._firstByte  = range._begin < glyphCount ? _listShapedScratch[range._begin]._cluster : static_cast<uint32>( text.size() );
@@ -507,84 +677,17 @@ namespace sw
                 lineIndex + 1 < listLine.size() && listLine[lineIndex + 1]._begin < glyphCount ? _listShapedScratch[listLine[lineIndex + 1]._begin]._cluster : static_cast<uint32>( text.size() );
             line._byteCount = nextByte - line._firstByte;
 
-            // 눈에 보이는 순서: 줄 안 글리프 [첫, end) 뒤에 줄임표(문단 수준)를 논리로 붙이고, 줄 끝 공백은 문단 수준(L1)으로 되돌린 뒤 뒤집는다(L2).
-            const uint32 lineGlyphCount = end - range._begin;
-            const uint32 itemCount      = lineGlyphCount + ( range._bEllipsis ? ellipsis._count : 0u );
-            _listVisualScratch.resize( itemCount );
-            if ( bReorder )
-            {
-                _listLineLevelScratch.assign( itemCount, paragraphLevel );
-                for ( uint32 index = 0; index < lineGlyphCount; ++index )
-                {
-                    _listLineLevelScratch[index] = _listGlyphLevelScratch[range._begin + index];
-                }
-                for ( uint32 index = lineGlyphCount; index > 0 && Internal::isTrailingBlank( _listShapedScratch[range._begin + index - 1]._codepoint ); --index )
-                {
-                    _listLineLevelScratch[index - 1] = paragraphLevel;
-                }
-                TextBidi::reorderVisually( _listLineLevelScratch, _listVisualScratch );
-            }
-            else
-            {
-                for ( uint32 index = 0; index < itemCount; ++index )
-                {
-                    _listVisualScratch[index] = index;
-                }
-            }
+            Internal::LineEmit emit{};
+            emit._pRange           = &range;
+            emit._fit              = fit;
+            emit._lineGlyphCount   = fit._end - range._begin;
+            emit._baseline         = line._baseline;
+            emit._bReorder         = bReorder;
+            emit._paragraphLevel   = paragraphLevel;
+            const uint32 itemCount = emit._lineGlyphCount + ( range._bEllipsis ? ellipsis._count : 0u );
+            Internal::orderLineVisually( view, range, emit._lineGlyphCount, itemCount, bReorder, paragraphLevel, _listLineLevelScratch, _listVisualScratch );
+            Internal::appendLineGlyphs( view, rasterizer, chain, style, ellipsis, emit, static_cast<uint32>( text.size() ), _listVisualScratch, outResult );
 
-            // RTL 문단의 끝 공백은 왼쪽 끝으로 간다. 너비에서 뺀 만큼 왼쪽 밖에서 시작해 보이는 글리프가 [0, 너비] 에 놓이게 한다.
-            float32 pen = 0.0f;
-            if ( TextBidi::isRightToLeftLevel( paragraphLevel ) )
-            {
-                for ( uint32 index = visibleEnd; index < end; ++index )
-                {
-                    pen -= _listWidthScratch[index];
-                }
-            }
-            for ( const uint32 item : _listVisualScratch )
-            {
-                if ( item >= lineGlyphCount )
-                {
-                    LaidOutGlyph glyph{};
-                    glyph._origin      = float2{ pen, line._baseline };
-                    glyph._fontSize    = style._fontSize;
-                    glyph._glyphIndex  = ellipsis._glyphIndex;
-                    glyph._cluster     = end < glyphCount ? _listShapedScratch[end]._cluster : static_cast<uint32>( text.size() );
-                    glyph._face        = ellipsis._face;
-                    glyph._bFauxBold   = chain._bFauxBold;
-                    glyph._bFauxItalic = chain._bFauxItalic;
-                    outResult._listGlyph.push_back( glyph );
-                    pen += ellipsis._width;
-                    continue;
-                }
-                const uint32       index  = range._begin + item;
-                const ShapedGlyph& shaped = _listShapedScratch[index];
-                if ( Internal::isLineBreakCharacter( shaped._codepoint ) == false )
-                {
-                    LaidOutGlyph  glyph{};
-                    const float32 glyphSize = _listSizeScratch[index];
-                    const uint8   fauxBits  = _listFauxScratch[index];
-                    glyph._origin           = float2{ pen + shaped._offset._x * glyphSize, line._baseline - shaped._offset._y * glyphSize };
-                    glyph._fontSize         = glyphSize;
-                    glyph._glyphIndex       = shaped._glyphIndex;
-                    glyph._cluster          = shaped._cluster;
-                    glyph._colorRgba        = _listColorScratch[index];
-                    glyph._face             = shaped._face;
-                    glyph._bFauxBold        = ( fauxBits & Internal::kFauxBoldBit ) != 0 ? SW_TRUE : SW_FALSE;
-                    glyph._bFauxItalic      = ( fauxBits & Internal::kFauxItalicBit ) != 0 ? SW_TRUE : SW_FALSE;
-                    // RTL 수준의 괄호는 짝 글리프로 그린다(L4). 면에 짝이 없으면 그대로.
-                    const bool   bRightToLeftGlyph = bReorder && TextBidi::isRightToLeftLevel( _listGlyphLevelScratch[index] );
-                    const uint32 mirrored          = bRightToLeftGlyph ? TextBidi::getMirroredCodepoint( shaped._codepoint ) : shaped._codepoint;
-                    if ( mirrored != shaped._codepoint )
-                    {
-                        const uint32 mirroredGlyph = rasterizer.findGlyphIndex( shaped._face, mirrored );
-                        if ( mirroredGlyph != 0 )
-                            glyph._glyphIndex = mirroredGlyph;
-                    }
-                    outResult._listGlyph.push_back( glyph );
-                }
-                pen += _listWidthScratch[index];
-            }
             line._glyphCount = static_cast<uint32>( outResult._listGlyph.size() ) - line._firstGlyph;
             outResult._listLine.push_back( line );
             lineTop += lineHeight;
@@ -592,23 +695,8 @@ namespace sw
         }
         outResult._size = float2{ maxLineWidth, lineTop };
 
-        // 4) 정렬: 상자 너비는 maxWidth 이다(무한이면 가장 넓은 줄). Start 와 End 는 문단 방향을 따른다(RTL 이면 Start 가 오른쪽).
-        const float32 boxWidth   = maxWidth > 0.0f ? maxWidth : maxLineWidth;
-        const bool    bRightPara = TextBidi::isRightToLeftLevel( paragraphLevel );
-        const bool    bCenter    = style._alignment == TextAlignment::Center;
-        const bool    bEnd       = style._alignment == TextAlignment::Right || ( style._alignment == TextAlignment::End && bRightPara == false ) ||
-                          ( style._alignment == TextAlignment::Start && bRightPara );
-        const float32 alignFactor = bCenter ? 0.5f : ( bEnd ? 1.0f : 0.0f );
-        if ( alignFactor == 0.0f )
-            return;
-        for ( const LaidOutLine& line : outResult._listLine )
-        {
-            const float32 shift = MathUtil::max( 0.0f, boxWidth - line._width ) * alignFactor;
-            for ( uint32 index = line._firstGlyph; index < line._firstGlyph + line._glyphCount; ++index )
-            {
-                outResult._listGlyph[index]._origin._x += shift;
-            }
-        }
+        // 4) 정렬.
+        Internal::alignLines( style, maxWidth, maxLineWidth, paragraphLevel, outResult );
     }
 
     float2 TextLayoutEngine::measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan )
