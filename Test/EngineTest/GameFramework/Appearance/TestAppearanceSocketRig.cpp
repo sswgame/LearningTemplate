@@ -268,6 +268,26 @@ SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
 }
 
 /**
+ * @brief [AppearancePreloadTest] 몸 부품의 `bodyShapes`(체형 축 데이터)가 읽히고 미리 올릴 경로에 들며, 스킨드가 아닌 부품에 적으면 오류다
+ */
+SW_TEST_CASE( AppearancePreloadTest, BodyShapesAreReadFromTheBodyPartAndNamedForPreload )
+{
+    AppearanceDatabase database;
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText(
+        "<ItemVisualCatalog><ItemVisual id='body'><Part name='Body' kind='Skinned' mesh='m/body.mesh' bodyShapes='s/body.bodyshape.xml'/></ItemVisual></ItemVisualCatalog>", "body visuals" ) );
+    const ItemVisualDef* pVisual = database.getVisuals().findVisual( hashed_string( "body" ) );
+    SW_ASSERT_NOT_NULL( pVisual );
+    SW_ASSERT_EQUAL( size_t( 1 ), pVisual->_listPart.size() );
+    SW_EXPECT_TRUE( pVisual->_listPart[0]._bodyShapes == hashed_string( "s/body.bodyshape.xml" ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a rigid part cannot have body shape axes" );
+    AppearanceDatabase rigid;
+    (void)rigid.loadSectionFromXMLText( "<ItemVisualCatalog><ItemVisual id='hat'><Part name='Hat' kind='SocketPrefab' prefab='p/hat.prefab.xml' socket='Head' bodyShapes='s/body.bodyshape.xml'/></ItemVisual></ItemVisualCatalog>",
+                                        "rigid visuals" ); // 오류는 보고에 남는다
+    SW_EXPECT_TRUE( rigid.getReport().joined().find( "bodyShapes" ) != string::npos );
+}
+
+/**
  * @brief [AppearanceSocketRigTest] 외형의 소켓 캐시는 엔진 공유 캐시의 객체를 쥔다 — 파일을 고쳐 다시 읽으면 낡았다고 알리고, 비운 뒤에는 새 내용을 준다
  */
 SW_TEST_CASE( AppearanceSocketRigTest, SocketCacheSeesAHotReloadedSocketAsset )

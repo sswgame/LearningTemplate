@@ -92,6 +92,9 @@ namespace sw
             _targetReference = *pTargetReference;
         else
             _targetReference.setToReference( targetSkeleton );
+        // 리타깃 포즈는 넘겨받은 덮어쓰기(본 비율) 위에 얹는다 — 회전 차이의 기준이 되는 대상 레퍼런스가 이 포즈다.
+        if ( RetargetPoseUtil::applyTargetPose( profile, targetSkeleton, _targetReference ) == false )
+            return false;
         _translationMode = profile.getTranslationMode();
 
         bool bOk = PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourceRoot(), "source", _sourceRoot ) &&
@@ -205,6 +208,31 @@ namespace sw
         if ( profile.getHeightRatioOverride() > 0.0f )
             _heightRatio = profile.getHeightRatioOverride();
         _bInitialized = SW_TRUE;
+        return true;
+    }
+
+    bool RetargetPoseUtil::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )
+    {
+        if ( inoutPose.getBoneCount() != targetSkeleton.getBoneCount() )
+        {
+            SW_LOG_ERROR( "Retarget: the target pose has %# bones but the target skeleton has %#", inoutPose.getBoneCount(), targetSkeleton.getBoneCount() );
+            return false;
+        }
+        // 한 본이라도 없으면 아무것도 바꾸지 않는다(일부만 얹은 포즈로 몰래 이어 가지 않는다).
+        vector<uint32> listBone;
+        for ( const RetargetPoseBone& poseBone : profile.getTargetPose() )
+        {
+            uint32 bone = 0;
+            if ( PoseRetargeterInternal::findBone( targetSkeleton, poseBone._bone, "target", bone ) == false )
+                return false;
+            listBone.push_back( bone );
+        }
+        for ( size_t index = 0; index < listBone.size(); ++index )
+        {
+            BoneTransform local = inoutPose.getBoneTransform( listBone[index] );
+            local._rotation     = ( quaternion::makeFromYawPitchRoll( profile.getTargetPose()[index]._rotationDegrees * MathUtil::kDegreeToRadian ) * local._rotation ).normalize();
+            inoutPose.setBoneTransform( listBone[index], local );
+        }
         return true;
     }
 

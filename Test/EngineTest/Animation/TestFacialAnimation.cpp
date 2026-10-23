@@ -696,6 +696,34 @@ SW_TEST_CASE( FacialAnimationTest, LiveLinkFacePacketsParseAgainstTheDataLayout 
 }
 
 /**
+ * @brief [FacialAnimationTest] 실제 머리(VRoid AvatarSample_D, CC0)의 연결 표 — 표가 가리키는 표정이 모두 그 머리의 얼굴 리그에 있고, 입 모양 · 눈 깜빡임 · 감정 채널이 하나 이상 걸린다
+ */
+SW_TEST_CASE( FacialAnimationTest, AvatarSampleLiveLinkMappingNamesOnlyExpressionsOfItsRig )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    FacialRig rig;
+    SW_ASSERT_TRUE( rig.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.facial.xml" ) );
+    LiveLinkFaceMapping mapping;
+    LiveLinkFaceLayout  layout;
+    SW_ASSERT_TRUE( mapping.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.livelinkface.xml", layout ) );
+    SW_EXPECT_FALSE( mapping._listExpression.empty() );
+    for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
+    {
+        SW_EXPECT_TRUE_MSG( rig.findExpressionIndex( expression._expression ) >= 0, expression._expression.c_str() );
+    }
+    // 눈 깜빡임 둘 · 턱 · 입술 · 감정 하나 이상이 걸려 있다.
+    for ( const utf8* pName : { "blinkLeft", "blinkRight", "aa", "ou", "happy" } )
+    {
+        bool bMapped = false;
+        for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
+        {
+            bMapped = bMapped || expression._expression == hashed_string( pName );
+        }
+        SW_EXPECT_TRUE_MSG( bMapped, pName );
+    }
+}
+
+/**
  * @brief [FacialAnimationTest] Live Link Face 컴포넌트가 이 기계의 UDP 포트로 받은 패킷을 머리의 연결 표대로 표정에 건다 — 웃음 좌우 채널 0.8 → Happy 0.8 → smile 0.8
  * @details 포트는 운영체제가 고르고(0) 이 기계의 송신만 받는다. 실제 Live Link Face 앱 대신 같은 형식으로 쓴 패킷을 보낸다.
  */

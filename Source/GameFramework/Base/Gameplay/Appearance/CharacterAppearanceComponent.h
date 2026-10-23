@@ -11,8 +11,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
@@ -29,6 +31,7 @@
 namespace sw
 {
     struct CharacterAppearanceSpec;
+    struct FitResult;
 
     class AppearanceDatabase;
     class CharacterAppearanceComponent;
@@ -64,6 +67,29 @@ namespace sw
 namespace sw
 {
     /**
+     * @class CharacterAppearanceProportionTask
+     * @brief 외형 컴포넌트가 몸 유닛에 등록하는 두 번째 단계 작업입니다 — 체형 축이 정한 본 비율(`BoneProportion`)을 몸의 애니메이션 포즈 위에 겹칩니다(가산 층).
+     * @details `Attachment` 단계에 한다 — 애니메이터(`BasePose`)가 포즈를 만든 뒤, 후처리 리그(`PostProcess`)가 돌기 전이라 리그가 비율이 반영된 포즈를 본다.
+     *          포즈를 쓰는 작업이라(`Writes`) 몸의 군중 포즈 공유가 꺼진다(유닛마다 비율이 달라 같은 포즈를 나눌 수 없다). 비율이 없으면(`BoneProportion` 비었음) 아무것도 하지 않는다.
+     */
+    class SW_GF_API CharacterAppearanceProportionTask final : public IAnimationPhaseTask
+    {
+    public:
+        explicit CharacterAppearanceProportionTask( CharacterAppearanceComponent& owner );
+
+        bool                isAnimationActive() const override { return false; }
+        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+
+    private:
+        CharacterAppearanceComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class CharacterAppearanceComponent
      * @brief 몸 유닛(같은 오브젝트의 `SkeletalMeshComponent`)에 외형 프리셋을 입힙니다. 외형 데이터는 게임 서비스 `AppearanceDatabase` 에서 가져옵니다.
      * @details - **조립**: 프리셋을 시드로 펼치고(`CharacterAppearanceCatalog::expand`), 슬롯 덮어쓰기(`setSlotItem`, 무기 바꾸기에 씀)를 적용해 해석한다.
@@ -88,6 +114,7 @@ namespace sw
     class SW_GF_API CharacterAppearanceComponent : public Component
     {
         friend class CharacterAppearanceSocketTask;
+        friend class CharacterAppearanceProportionTask;
 
     public:
         REFLECT_BODY();
@@ -154,6 +181,15 @@ namespace sw
         const AppearanceSocketRig& getSocketRig() const { return _rig; }
         /** @brief 조립한 횟수입니다. 진단과 테스트에 씁니다. */
         uint32 getAssembleCount() const { return _assembleCount; }
+        /**
+         * @brief 지난 조립이 푼 피팅 결과입니다(캐릭터 편집 창의 피팅 확인 표시). 미리보기 입히기(`previewSelection`)만 남깁니다 — 게임의 조립은 같은 차림이 구운 메시를 나누므로
+         *        (`AppearanceBakedMeshCache`) 풀지 않을 때가 있어 결과를 두지 않는다. 풀어 본 적이 없으면 nullptr 입니다.
+         */
+        const FitResult* getLastFitResult() const { return _lastFitResult.get(); }
+        /** @brief `getLastFitResult` 가 바뀔 때마다 오르는 번호입니다(창이 요약을 다시 만들지 가릅니다). */
+        uint32 getFitResultRevision() const { return _fitResultRevision; }
+        /** @brief 체형 축(`bodyShapes` 의 축 값 = 꾸미기 `BoneProportion` 드라이브)이 정한 본 비율입니다. 단계 작업이 몸 포즈 위에 겹칩니다. 비어 있으면 비율이 없습니다. */
+        const BoneProportion& getBodyProportion() const { return _bodyProportion; }
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;
 
@@ -194,6 +230,11 @@ namespace sw
         void assemble();
         /** @brief 몸 부품을 이 오브젝트의 유닛에 입힙니다. 몸 부품 번호를 반환하고, 없으면 -1 입니다. */
         int32 applyBodyPart( SkeletalMeshComponent& body );
+        /**
+         * @brief 해석의 체형 축 값(`ResolvedBoneProportion`, 주인이 빈 것)을 몸 부품의 체형 축 데이터(`bodyShapes`)로 풀어 본 비율(`_bodyProportion`)과 모프 가중치(`_listShapeMorph`)를 정합니다.
+         * @details 축 값이 있는데 몸 부품에 `bodyShapes` 가 없거나 읽지 못하면, 또는 모르는 축 이름이 있으면 오류를 남깁니다(슬라이더가 조용히 아무것도 안 하지 않게). 몸의 포즈를 다시 만들게 표시합니다.
+         */
+        void applyBodyShapes( SkeletalMeshComponent& body );
         /**
          * @brief 부품 오브젝트를 해석 결과와 맞춥니다. 같은 것은 그대로 두고, 없어진 것은 지우고, 새로 생긴 것은 스폰합니다.
          * @param listDetachEvent 이번 해석에서 떨어져 나간 부품입니다. 없어진 것 가운데 여기 있는 소켓 부품은 지우지 않고 물리로 뗍니다.
@@ -256,6 +297,11 @@ namespace sw
         int32 _seed;
 
         CharacterAppearanceSocketTask           _socketTask;
+        CharacterAppearanceProportionTask       _proportionTask;
+        BoneProportion                          _bodyProportion;       ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
+        vector<BodyMorphWeight>                 _listShapeMorph;       ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
+        shared_ptr<const BodyShapeSet>          _bodyShapeSet;         ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
+        uint32                                  _seenShapeReloadCount; ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
         AppearanceSocketRig                     _rig;
         AppearanceSocketSetCache                _socketCache;
         CharacterAppearanceState                _state;      ///< 펼친 프리셋과 해석 결과. 장비 · 데이터 · 입력의 버전으로 다시 해석할지 정한다
@@ -273,6 +319,8 @@ namespace sw
         DelegateHandle                          _reloadSubscription;   ///< `_pReloadDatabase` 의 구독
         vector<MeshAssemblyLoad>                _listMeshAssemblyLoad; ///< 구운 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>            _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
+        shared_ptr<FitResult>                   _lastFitResult;        ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)
+        uint32                                  _fitResultRevision;
         uint32                                  _assembleCount;
         uint32                                  _seenFitReloadStamp; ///< 마지막으로 구울 때의 `computeFitReloadStamp`
         int32                                   _bodyPart;
@@ -281,6 +329,7 @@ namespace sw
         uint8                                   _bStarted             : 1;
         uint8                                   _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(틱이 기다린다)
         uint8                                   _bMeshAssembled       : 1; ///< 유닛이 구운 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
-        [[maybe_unused]] uint8                  _reserved             : 4;
+        uint8                                   _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
+        [[maybe_unused]] uint8                  _reserved             : 3;
     };
 } // namespace sw

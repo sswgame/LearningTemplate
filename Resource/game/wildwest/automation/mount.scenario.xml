@@ -20,6 +20,8 @@
 		<Expect probe="Pawn.Controller" target="Bessie" is="PlayerController"/>
 		<Expect probe="Object.Z" target="Bessie" near="0" tolerance="0.05"/>
 	</At>
+	<!-- 눈 확인용(GPU 검증): 안장 자리에 앉은 기수 — 말은 스킨드 자리 표시 말(horse_placeholder, 안장 뼈 높이에 좌석 오프셋)이고 다리가 걸음새 클립으로 흔들린다 -->
+	<At frame="13"><Screenshot file="wildwest/mount_seated.ppm"/></At>
 	<!-- W + Shift 2 초 — 앞으로 질주하며 스태미나를 쓴다. 기수는 좌석에 붙어 함께 간다. -->
 	<At frame="15"><Press slot="Key.W"/><Press slot="Key.LeftShift"/></At>
 	<At frame="135">

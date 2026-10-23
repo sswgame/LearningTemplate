@@ -89,6 +89,12 @@
 |---|---|---|---|---|---|
 | `gv_audioDumpPath` | `string` | — | 테스트 | 오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기) | [IAudioService.cpp](../../Source/Engine/Audio/IAudioService.cpp) |
 
+## `Source/Engine/Character`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_socketPartPool` | `int32` | `1` | 테스트 | Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison) | [SocketPartPool.cpp](../../Source/Engine/Character/Socket/SocketPartPool.cpp) |
+
 ## `Source/Engine/Config`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

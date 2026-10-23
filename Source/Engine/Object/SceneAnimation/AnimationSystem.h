@@ -263,6 +263,8 @@ namespace sw
         const AnimationCrowd& getCrowd() const { return _crowd; }
         /** @brief 군중 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 쓸 때 `AnimationCrowdSettings::kResourcePath` 를 읽습니다. */
         void setCrowdSettings( const AnimationCrowdSettings& settings );
+        /** @brief 지난 프레임에 일한 유닛 가운데 군중 방식이 @p mode 인 유닛 수입니다(프로파일 카운터 `GT.Animation.crowd*Units` 와 같은 값, 자동화 탐침 `Animation.Crowd*Units`). */
+        uint32 getCrowdModeCount( AnimationCrowdMode mode ) const { return _arrCrowdModeCount[static_cast<uint32>( mode )]; }
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
@@ -334,6 +336,7 @@ namespace sw
         float32            _expectedEvaluationMicroseconds;
         uint32             _activeUnitCount;
         uint32             _poseEvaluatedUnitCount;
+        uint32             _arrCrowdModeCount[4]; ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
         uint8              _bOrderDirty;
         uint8              _bCycle;
         uint8              _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)

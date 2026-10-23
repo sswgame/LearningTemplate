@@ -4312,6 +4312,14 @@
    "source": "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp"
   },
   {
+   "name": "gv_socketPartPool",
+   "type": "int32",
+   "default": "1",
+   "kind": "테스트",
+   "description": "Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison)",
+   "source": "Source/Engine/Character/Socket/SocketPartPool.cpp"
+  },
+  {
    "name": "gv_standardInputCommands",
    "type": "int32",
    "default": "0",

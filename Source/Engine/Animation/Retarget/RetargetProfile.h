@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
@@ -49,6 +50,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 리타깃 포즈(대상 레퍼런스를 원본 레퍼런스 자세에 맞추는 포즈, 언리얼 IK Retargeter 의 Retarget Pose)의 한 줄입니다.
+     * @details 대상 본 하나를 **부모 공간에서** 도(`[피치, 요, 롤]`, `quaternion::makeFromYawPitchRoll` 배치) 만큼 더 돌립니다 — 새 로컬 회전 = 돌림 × 레퍼런스 로컬 회전.
+     *          A 자세 대상을 T 자세 원본에 맞출 때 팔을 내리는 식으로 쓴다. 이동 · 스케일은 건드리지 않는다(체형은 본 비율 `BoneProportion` 의 몫).
+     */
+    struct RetargetPoseBone
+    {
+        hashed_string _bone{};
+        float3        _rotationDegrees{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class RetargetProfile
      * @brief 프로필 하나입니다. 형식은 XML 이며, 모르는 속성 · 자식이나 겹친 사슬 이름은 오류입니다(읽기는 후처리 리그와 같은 `RigXMLReader` 다 — 값은 속성, 목록은 `<item>`).
      * @code
@@ -63,8 +78,11 @@ namespace sw
      *     </item>
      *   </chains>
      *   <bone_map><item source="head" target="Head" /></bone_map>
+     *   <target_pose><item bone="upperarm.l" rotation="0,0,-40" /></target_pose>
      * </RetargetProfile>
      * @endcode
+     *          - `target_pose`(선택): 리타깃 포즈다. 대상 본을 부모 공간에서 도(`[피치, 요, 롤]`)만큼 더 돌려, 대상 레퍼런스(A 자세)를 원본 레퍼런스(T 자세)에 맞춘다.
+     *            회전 차이는 이 포즈를 기준으로 옮긴다(`PoseRetargeter::initialize`가 대상 레퍼런스에 얹는다). 같은 본을 두 번 적으면 오류다.
      *          - `bone_map`(선택): 본 이름 테이블이다. 사슬로 묶지 않은 본을 한 줄에 하나씩 짝짓는다.
      *          - `map_same_names`(선택): 사슬, 테이블 어디에도 없는 대상 본 중 원본에 같은 이름이 있으면 짝짓는다(언리얼 IK Retargeter 의 이름 자동 매핑).
      *          - `height_ratio`(선택, 0 보다 큼): 뿌리와 골반 이동, IK 목표 사슬의 끝 위치에 곱하는 비율이다. 적지 않으면 골반 높이 비(대상 / 원본)를 쓴다.
@@ -113,6 +131,10 @@ namespace sw
         vector<RetargetChain>& getChainsForEdit() { return _listChain; }
         /** @brief 본 이름 테이블입니다(에디터 리타깃 창이 고친다). */
         vector<RetargetBonePair>& getBonePairsForEdit() { return _listBonePair; }
+        /** @brief 리타깃 포즈 줄입니다(대상 본 순서 무관). */
+        const vector<RetargetPoseBone>& getTargetPose() const { return _listTargetPose; }
+        /** @brief 리타깃 포즈 줄입니다(에디터 리타깃 창이 고친다). 같은 본이 겹치면 다시 읽을 때 오류이므로 고치는 쪽이 지킨다. */
+        vector<RetargetPoseBone>& getTargetPoseForEdit() { return _listTargetPose; }
         /** @brief 두 스켈레톤 경로를 정합니다. */
         void setSkeletonPaths( string_view sourcePath, string_view targetPath );
         /** @brief 본 이름 테이블에 한 줄을 추가합니다(코드로 만드는 프로필과 테스트용). */
@@ -130,6 +152,7 @@ namespace sw
 
         vector<RetargetChain>    _listChain;
         vector<RetargetBonePair> _listBonePair;
+        vector<RetargetPoseBone> _listTargetPose;
         string                   _sourceSkeletonPath;
         string                   _targetSkeletonPath;
         hashed_string            _sourceRoot;

@@ -57,6 +57,11 @@ namespace sw
          */
         void setFirstPerson( bool bFirstPerson );
 
+        /** @brief 보폭 워핑 노드에 마지막으로 넣은 배율입니다(1 = 클립 그대로). 시나리오 프로브 `Shooter3D.StrideScale` 이 읽습니다. */
+        float32 getLastStrideScale() const { return _lastStrideScale; }
+        /** @brief 리그가 준비돼 보폭 워핑 값을 실제로 넣은 프레임 수입니다. 0 이면 리그가 메시에 아직 묶이지 않았다(`isRigReady` 전 프레임은 넣지 않는다). */
+        uint32 getStrideAppliedCount() const { return _strideAppliedCount; }
+
     private:
         /** @brief 지금 상태 클립의 발 속도(m/s)입니다. 서 있거나 공중이거나 이동 클립이 아니면 0 입니다(재생 속도 · 보폭을 바꾸지 않는다). */
         float32 computeLocomotionFootSpeed( const SkeletalAnimatorComponent& animator, LocomotionDirection direction );
@@ -100,6 +105,8 @@ namespace sw
         float32 _shootWeight;
         float32 _hitTimer;
         float32 _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
+        float32 _lastStrideScale;
+        uint32  _strideAppliedCount;
         uint32  _lastHitReaction;
         uint8   _bYawReady         : 1;
         uint8   _bStrideErrorShown : 1; ///< 노드가 없다는 오류를 한 번만 남긴다
