@@ -1,0 +1,470 @@
+{
+  "_comment": "통합 검증 · 측정 항목의 정본(코드는 Scripts/common/VerifyManifest.py 의 형식과 Scripts/dev/RunVerifyBatch.py 의 실행기만 가진다). 돌리는 법: py -3 -m Scripts verify-batch --owner <이름> (--list · --check · --dry-run · --config · --only). 계획 문서의 대기 줄은 글 대신 `매니페스트 id` 와 항목 id 만 적는다 — plans --check 와 린트(CheckVerifyPending)가 없는 id 를 막고, pending 항목을 가리키는 줄이 없으면 항목을 지우게 한다. need_command 는 아직 한 명령으로 안 도는 확인이다(없는 명령을 지어내지 않고 이유를 적는다). kind: build · ctest · test · covered(덮개 항목이 도는 동안 같이 도는 시나리오 · 케이스) · cook · golden · measure. gpu: none · shared(GPU 공유 칸) · exclusive(GPU 와 빌드 칸을 혼자 — 측정). platform wsl 은 사용자가 요청할 때만 한다. args 의 {app} {bin} {preset} {work} 는 실행기가 풀어 준다.",
+  "configs": [
+    { "name": "Debug", "preset": "Ninja-Debug" },
+    { "name": "Shipping", "preset": "Ninja-Shipping" },
+    { "name": "Release", "preset": "Ninja-Release" }
+  ],
+  "items": [
+    {
+      "id": "debug-full-build", "title": "Debug 전체 빌드(경고 0 · 오류 0)", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 240,
+      "source": "docs/plans/NEXT.md 0000절 표 A 단계", "result_doc": "docs/plans/NEXT.md 0000절",
+      "note": "configure(cmake --preset Ninja-Debug, vcpkg 잠금)는 미리 해 둔다. 실패하면 Debug 의 나머지는 막힌다."
+    },
+    {
+      "id": "ctest-lint", "title": "ctest -L lint", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "lint",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "ctest-nogpu", "title": "ctest -L nogpu", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 120, "label": "nogpu",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절",
+      "note": "서버 프로세스가 몰리면 샤드가 시간 초과로 지는 일이 있었다(NEXT 0000절). 지면 환경 영향인지 단독으로 다시 돌려 본다."
+    },
+    {
+      "id": "ctest-race", "title": "ctest -L race", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60, "label": "race",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "ctest-python", "title": "ctest -L python(파이썬 단위 테스트)", "kind": "ctest", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 30, "label": "python",
+      "source": "docs/plans/ScriptsStructure.md 6절", "result_doc": "docs/plans/ScriptsStructure.md 6절"
+    },
+    {
+      "id": "resource-data-schema-test", "title": "ResourceDataSchemaTest 필터(오디오 셋 타입 .cpp 이전)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "ResourceDataSchemaTest.*",
+      "source": "docs/plans/DataKindRegistry.md DK1", "result_doc": "docs/plans/DataKindRegistry.md DK1"
+    },
+    {
+      "id": "localization-check-text", "title": "일본어 · RTL 화면 눈 확인과 App --check-text", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "눈 확인은 사람이 화면을 봐야 하고 --check-text 의 호출 모양이 매니페스트에 없다",
+      "source": "docs/plans/Candidates-audio-ai-localization.md", "result_doc": "docs/plans/Candidates-audio-ai-localization.md"
+    },
+    {
+      "id": "skin-vat-pool-range-allocator", "title": "스킨 원본 · VAT 풀 구간 할당기 이득(RT.Deform.rebuild* 구간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "스트리밍 셀 진입 · 군중 합류 장면을 만드는 perf-compare 케이스가 없다",
+      "source": "docs/plans/GraphicsMeasurements.md M2", "result_doc": "docs/plans/GraphicsMeasurements.md M2"
+    },
+    {
+      "id": "perf-compare-shadow-pass-share", "title": "방향광 그림자 캐스케이드별 컬링 — shadowPassShare", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "shadowPassShare", "--runs", "3"], "limit": "보고만 — GPU.Shadow 와 GPU.Frame 비율", "judge": "exit",
+      "source": "docs/plans/GraphicsMeasurements.md M3", "result_doc": "docs/plans/GraphicsMeasurements.md M3"
+    },
+    {
+      "id": "ability-system-test", "title": "AbilitySystemTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AbilitySystemTest.*",
+      "source": "docs/plans/AbilitySystemExtensions.md 남은 것", "result_doc": "docs/plans/AbilitySystemExtensions.md 상태를 끝으로"
+    },
+    {
+      "id": "ability-arena-hit-sound", "title": "AbilityArena 피격음(무적으로 막힌 피격은 소리가 없어야 한다)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "소리는 귀로 듣는 확인이고 탐침 · 시나리오가 없다(시나리오는 이 일의 범위 밖에서 만든다)",
+      "source": "docs/plans/AbilitySystemExtensions.md 남은 것", "result_doc": "docs/plans/AbilitySystemExtensions.md 상태를 끝으로"
+    },
+    {
+      "id": "rig-asset-test", "title": "RigAssetTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "RigAssetTest.*",
+      "source": "docs/plans/RigEditing.md 남은 것", "result_doc": "docs/plans/RigEditing.md 상태를 끝으로"
+    },
+    {
+      "id": "rig-debug-window-gizmo", "title": "리그 디버그 창(가중치 · 켜짐 저장)과 대상 기즈모 화면", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "에디터 창 화면 확인(-EnableEditor, Shooter3D arena 플레이)이고 이 흐름의 에디터 시나리오가 없다",
+      "source": "docs/plans/RigEditing.md 남은 것", "result_doc": "docs/plans/RigEditing.md 상태를 끝으로"
+    },
+    {
+      "id": "moving-ground-tests", "title": "움직이는 바닥 M1 ~ M3 테스트 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "PhysicsScene3DTest.CharacterIsCarriedByRotatingKinematicPlatform,PhysicsWiringTest.ControllerFollowsMovingGroundYawAndKeepsItsMomentum,GimmickGenreTest.TickedPathMoverIsAPureFunctionOfTheTick,NetClientServerTest.ReplicationInterpolatesOverLossyLatencyAndCarriesRedundantInputs",
+      "source": "docs/plans/MovingGroundFollowUps.md 2절", "result_doc": "docs/plans/MovingGroundFollowUps.md 상태를 끝으로"
+    },
+    {
+      "id": "moving-ground-net-scene", "title": "움직이는 바닥 M4 — 바닥이 있는 넷 씬(서버 세계 + 클라이언트 세계)에서 예측이 보정 없이 맞는가", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NetMovingGroundTest.*",
+      "source": "docs/plans/MovingGroundFollowUps.md 남은 것", "result_doc": "docs/plans/MovingGroundFollowUps.md 상태를 끝으로"
+    },
+    {
+      "id": "paired-animation-tests", "title": "짝 애니메이션 편집 모델 · 복제 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "PairedAnimationEditModelTest.*,PairedAnimationReplicationTest.*",
+      "source": "docs/plans/PairedAnimation.md 남은 것", "result_doc": "docs/plans/PairedAnimation.md 상태를 끝으로"
+    },
+    {
+      "id": "paired-animation-editor-window", "title": "짝 애니메이션 M3 에디터 미리보기 창 화면(스크럽 · 기즈모 오프셋)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "에디터 시나리오(-EnableEditor, CaptureEditorUI)가 아직 없다",
+      "source": "docs/plans/PairedAnimation.md 남은 것", "result_doc": "docs/plans/PairedAnimation.md 상태를 끝으로"
+    },
+    {
+      "id": "paired-animation-two-process", "title": "짝 애니메이션 P3b 두 프로세스(Server + App) 세션 시작 · 늦은 참가 · 끝 복제", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "서버와 클라이언트 두 프로세스를 띄우는 확인을 한 명령으로 묶은 것이 없다",
+      "source": "docs/plans/PairedAnimation.md 남은 것", "result_doc": "docs/plans/PairedAnimation.md 상태를 끝으로"
+    },
+    {
+      "id": "bowshoot-projectile-checks", "title": "bowshoot 투사체 방향 · 당김 내내 가는 줄 · 화살 머리 방향", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "앞에서 보는 쇼케이스 카메라가 씬에 없어 투사체 방향을 화면으로 못 본다(시나리오는 자동 수집 밖)",
+      "source": "docs/plans/PairedAnimation.md 남은 것", "result_doc": "docs/plans/PairedAnimation.md 상태를 끝으로"
+    },
+    {
+      "id": "pack-patch-tests", "title": "팩 패치 · 팩 읽기 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "PackPatchTest.*,ResourcePakTest.*",
+      "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"
+    },
+    {
+      "id": "pack-patch-app-start", "title": "만든 패치를 실제 Packs/ 폴더에 두고 App 이 시작해 적용하는 실행", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "패치를 만들어 Packs/ 에 두고 App 을 띄워 적용을 보는 흐름을 한 명령으로 묶은 것이 없다(테스트는 scanAndMountPacks 를 직접 부른다)",
+      "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"
+    },
+    {
+      "id": "rollback-prediction-lte-run", "title": "Shooter3D 전용 서버 + 클라이언트에 -gv_netEmuPreset=lte — 보정 횟수와 화면 튐", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "서버와 클라이언트 두 프로세스를 띄워 보정 횟수(getCorrectionCount)를 읽는 명령이 없다",
+      "source": "docs/plans/RollbackPrediction.md 남은 것", "result_doc": "docs/plans/RollbackPrediction.md 상태를 끝으로"
+    },
+    {
+      "id": "all-presets-compile", "title": "전 프리셋 컴파일(구조 단순화)", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "프리셋 여럿을 차례로 짓는 명령이 없다(full-build 는 프리셋 하나) — 프리셋마다 구성을 늘리거나 명령을 만들어야 한다",
+      "source": "docs/plans/StructureSimplification.md 5행", "result_doc": "docs/plans/StructureSimplification.md 상태를 끝으로"
+    },
+    {
+      "id": "cook-pack-timing-release", "title": "쿠킹 · 패키징 시간 Release 3회 + 파이썬이 쓴 팩과의 내용 비교(PK)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "tool": "scripts", "args": ["cook"], "limit": "표에 적힌 이전 값(StructureSimplification PK)과 견준다", "judge": "exit",
+      "need_command": "cook 하위 명령이 Scripts 목록에 없고(08_Verification 의 py -3 -m Scripts cook 은 낡은 이름이다) 파이썬 팩과의 비교 명령도 없다",
+      "source": "docs/plans/StructureSimplification.md 단위 표 PK", "result_doc": "docs/plans/StructureSimplification.md PK"
+    },
+    {
+      "id": "dedicated-server-pack-exclusion", "title": "전용 서버 팩의 제외 확인(AT)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "전용 서버 팩에서 제외되는 파일을 확인하는 명령이 없다",
+      "source": "docs/plans/StructureSimplification.md 단위 표 AT", "result_doc": "docs/plans/StructureSimplification.md AT"
+    },
+    {
+      "id": "dev-meta-scan-time", "title": "Dev 기동 .meta 스캔 시간(TX)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": ".meta 스캔 시간을 재는 명령이 없다(기동 로그의 구간을 읽어야 한다)",
+      "source": "docs/plans/StructureSimplification.md 단위 표 TX", "result_doc": "docs/plans/StructureSimplification.md TX"
+    },
+    {
+      "id": "cook-scenes-shipping", "title": "Shipping 쿠킹 --cook-scenes(디스크 경로 대신 리소스 ID)", "kind": "cook", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
+      "tool": "app", "args": ["--cook-scenes", "--cooked-dir={work}/cooked"],
+      "source": "docs/plans/DiskPathVsResourceId.md 5절", "result_doc": "docs/plans/DiskPathVsResourceId.md 상태를 끝으로",
+      "note": "쿠킹 폴더는 이번 실행의 작업 폴더에 만든다(저장소의 Resource 를 건드리지 않는다)."
+    },
+    {
+      "id": "editor-document-open-save", "title": "에디터 도구 문서 열기 · 저장 왕복(DiskPathVsResourceId)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "도구 문서를 열고 저장하는 에디터 시나리오가 없다",
+      "source": "docs/plans/DiskPathVsResourceId.md 5절", "result_doc": "docs/plans/DiskPathVsResourceId.md 상태를 끝으로"
+    },
+    {
+      "id": "async-dither-pso-screenshots", "title": "셰이더 패치 · 재쿠킹 뒤 네 백엔드의 디더 변형 PSO · 등장 중간 프레임 스크린샷(TAA 켬 · 끔)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "등장 중간 프레임을 찍는 시나리오가 없다(디더 변형 PSO 는 render-pass-gpu-tests 와 쿠킹 뒤 ShaderCookRequestTest 가 일부 본다)",
+      "source": "docs/plans/AsyncResourceLoading.md 3절", "result_doc": "docs/plans/AsyncResourceLoading.md 상태를 끝으로"
+    },
+    {
+      "id": "material-cache-gpu-test", "title": "MaterialCache GPU 테스트", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "문서가 케이스 이름을 적지 않았다 — 이름을 정하면 test 항목이 된다",
+      "source": "docs/plans/AsyncResourceLoading.md 3절", "result_doc": "docs/plans/AsyncResourceLoading.md 상태를 끝으로"
+    },
+    {
+      "id": "async-read-frame-time", "title": "시작 뒤 읽기가 프레임 시간을 늘리지 않는지(Release)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "perf-compare 에 이 비교 케이스가 없다(읽기를 켜고 끄는 스위치 A/B 케이스를 더해야 한다)",
+      "source": "docs/plans/AsyncResourceLoading.md 5절", "result_doc": "docs/plans/AsyncResourceLoading.md 상태를 끝으로"
+    },
+    {
+      "id": "panel-id-literals-p3", "title": "에디터 자체 테스트(sceneView.* · toolbar.* · 플러그인 패널 테스트) 실행", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "에디터 자체 테스트를 실행하는 명령이 하나로 정해져 있지 않다(에디터 시나리오 app-scenarios-release 가 일부를 덮는다)",
+      "source": "docs/plans/PanelIDLiterals.md 단계 표 P3", "result_doc": "docs/plans/PanelIDLiterals.md P3"
+    },
+    {
+      "id": "module-render-pass-m2", "title": "게임 모듈이 등록하는 시연 패스(executeModulePass · createModulePassPSOs)의 네 백엔드 캡처", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "시연 패스(파이프라인 XML + 셰이더 + 등록)가 아직 없다 — M2 가 그것을 만드는 일이다",
+      "source": "docs/plans/ModuleRenderPass.md 단계 표 M2", "result_doc": "docs/plans/ModuleRenderPass.md M2"
+    },
+    {
+      "id": "tilemap-layers-editor-roundtrip", "title": "타일맵 레이어 추가 · 칠하기 · 저장 왕복(에디터)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/tilemapdatalayers.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/TilemapCellDataLayers.md 단계 표 T3", "result_doc": "docs/plans/TilemapCellDataLayers.md T3"
+    },
+    {
+      "id": "ui-notification-in-game", "title": "알림 UI 를 게임 하나에 붙여 보기", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "붙일 게임이 정해지지 않았고 시나리오가 없다",
+      "source": "docs/plans/UiNotificationRemaining.md 단계 표 N2", "result_doc": "docs/plans/UiNotificationRemaining.md N2"
+    },
+    {
+      "id": "ui-input-real-device", "title": "UI 입력의 리눅스 빌드와 실기 확인", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "리눅스 빌드는 CI 몫이고 실기 입력 기기 확인은 자동화할 수 없다",
+      "source": "docs/plans/UiInputRemaining.md 단계 표 I3", "result_doc": "docs/plans/UiInputRemaining.md I3"
+    },
+    {
+      "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "맞는 원본(*_mask.*)이 아직 없다 — 생기면 그 게임의 시나리오가 본다",
+      "source": "docs/plans/SingleChannelDdsImport.md 단위 설명", "result_doc": "docs/plans/SingleChannelDdsImport.md 상태를 끝으로"
+    },
+    {
+      "id": "shipping-build", "title": "Shipping 빌드", "kind": "build", "config": "Shipping", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 240,
+      "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "ctest-nogpu-shipping", "title": "Shipping ctest -L nogpu", "kind": "ctest", "config": "Shipping", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 120, "label": "nogpu",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "ctest-hostgpu-shipping", "title": "Shipping ctest -L hostgpu 전체(기능 시나리오 · 스모크)", "kind": "ctest", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 180, "label": "hostgpu",
+      "source": "docs/11_Workflow.md 3절", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "release-build", "title": "Release 빌드(-DSW_GAMES=ALL)", "kind": "build", "config": "Release", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 240,
+      "source": "docs/plans/NEXT.md 0000절 표 C 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "app-scenarios-release", "title": "AppScenarioTest 전부(네 백엔드 × 게임 · 에디터 시나리오, 녹화 재생)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 240,
+      "filter": "AppScenarioTest.*", "extra_args": ["--host_suites=all"],
+      "source": "docs/08_Verification.md 3절 실기동 확인은 시나리오로", "result_doc": "docs/plans/NEXT.md 0000절",
+      "note": "에디터 시나리오 사례는 한 체크아웃에서 하나씩 돈다(같은 프로세스 안에서 차례로 돈다). 진 뒤에는 git status 로 리소스 트리를 되돌린다."
+    },
+    {
+      "id": "render-pass-gpu-tests", "title": "렌더 패스 GPU 테스트(파티클 · 후처리 융합 · 모프 풀 · 2D 조명)와 셰이더 · 그래픽스 형식 테스트", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 120,
+      "filter": "RenderPassGPUTest.ParticlesDrawInTheTransparentPass,RenderPassGPUTest.CPUAndGPUParticleSimulationsDrawTheSameImage,RenderPassGPUTest.FusedPostChainMatchesStaged,RenderPassGPUTest.MorphPoolIdentityMatchesRest,RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend,ShaderBindingValidatorTest.*,VrmMaterialImporterTest.*,VrmRuntimeAssetsTest.*,RenderViewModeTest.*,Light2DTest.*,MeshAssetTest.*,ModelImporterTest.*,ShaderCookRequestTest.*",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/Vfx.md V4 남은 확인", "result_doc": "docs/plans/Vfx.md 상태를 끝으로",
+      "note": "Vfx(깊이 충돌 · 메시 입자 · GL R32 읽기 · DX11 RAW SRV)와 GraphicsFormatBundle 통합 목록이 같이 쓴다. 쿠킹 뒤에 돌아야 한다 — 같은 구성에서는 쿠킹 항목이 먼저 돈다."
+    },
+    {
+      "id": "vfx-preview-scenario", "title": "editor/vfxpreview 시나리오(네 백엔드, gv_vfxSimulation=CPU 와 같은 그림)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/vfxpreview.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/Vfx.md V4 남은 확인", "result_doc": "docs/plans/Vfx.md 상태를 끝으로"
+    },
+    {
+      "id": "light2d-cookie-scenario", "title": "light2dcookie 시나리오(창문 쿠키 점광)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/light2dcookie.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/GraphicsFormatBundle.md 남은 것 G7", "result_doc": "docs/plans/GraphicsFormatBundle.md 상태를 끝으로"
+    },
+    {
+      "id": "graphics-format-visual-checks", "title": "그래픽스 형식 묶음의 화면 확인(G2 VRM UV 방향 · G5 선 z-fighting · G6 2D 조명 쇼케이스)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "VRM 스펙 샘플의 UV 방향 · 와이어 선 · 2D 쇼케이스 캡처를 찍는 시나리오가 없다",
+      "source": "docs/plans/GraphicsFormatBundle.md 남은 것", "result_doc": "docs/plans/GraphicsFormatBundle.md 상태를 끝으로"
+    },
+    {
+      "id": "graphics-format-release-cost", "title": "Release 비용 측정(G1 대역폭 · G3 모프 풀 48 B 업로드 · 스키닝 · G6 부드러운 그림자)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "perf-compare 에 G1 · G3 · G6 비교 케이스가 없다(morphPool 은 바이너리 A/B 라 전 바이너리가 필요하다)",
+      "source": "docs/plans/GraphicsFormatBundle.md 남은 것", "result_doc": "docs/plans/GraphicsFormatBundle.md 상태를 끝으로"
+    },
+    {
+      "id": "indirect-lighting-visual-checks", "title": "간접 조명 P4(반사 프로브) · P5(금속도 PBR) · D2-6.4 의 셰이더 패치 적용 뒤 화면 확인", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "반사 프로브 · PBR 화면을 찍어 견주는 시나리오가 없다(2절 각 단위 칸의 확인 전 · 확인 필요 표시가 목록이다)",
+      "source": "docs/plans/IndirectLighting.md 2절", "result_doc": "docs/plans/IndirectLighting.md 상태를 끝으로"
+    },
+    {
+      "id": "cloth-four-backend-captures", "title": "천 C1 네 백엔드 캡처(앞면 · 뒷면, 접힌 곳 음영, 구에 걸침)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "천 쇼케이스를 찍어 견주는 시나리오가 없다",
+      "source": "docs/plans/ClothFollowups.md 남은 것", "result_doc": "docs/plans/ClothFollowups.md 상태를 끝으로"
+    },
+    {
+      "id": "cloth-vertex-pool-time", "title": "천 C2 RT.GPUScene.vertexPool 시간과 풀 다시 채우기 수", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "천 쇼케이스를 프로파일 표로 재는 perf-compare 케이스가 없다",
+      "source": "docs/plans/ClothFollowups.md 남은 것", "result_doc": "docs/plans/ClothFollowups.md 상태를 끝으로"
+    },
+    {
+      "id": "cloth-skinned-cape-scene", "title": "천 C3 스킨 망토 캐릭터 씬(Jolt 행렬 방향 · 질량 중심 뼈 행렬)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "스킨 망토 캐릭터 씬의 윗변이 뼈를 따르는지 보는 시나리오가 없다",
+      "source": "docs/plans/ClothFollowups.md 남은 것", "result_doc": "docs/plans/ClothFollowups.md 상태를 끝으로"
+    },
+    {
+      "id": "serializer-scene-load", "title": "씬 로드 GPU 확인(바이너리 씬 · XML 씬 · 프리팹 · 설정 읽기를 지나는 기존 시나리오)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/abilityarena/automation/control.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/SerializerSilentSkips.md 3절", "result_doc": "docs/plans/SerializerSilentSkips.md 상태를 끝으로",
+      "note": "씬을 여는 기존 시나리오 아무거나 하나로 갈음한다(문서의 결정). AbilityArena control 을 골랐다."
+    },
+    {
+      "id": "ability-arena-ai-control-scenarios", "title": "AbilityArena ai · control 시나리오가 내비메시 이동으로도 통과", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/abilityarena/automation/ai.scenario.xml", "game/abilityarena/automation/control.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
+    },
+    {
+      "id": "game-pack-scenarios", "title": "게임 팩 시나리오를 네 백엔드로(EveryGamePackScenarioPassesOnEveryBackend)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/Candidates-engine.md MultiGamePackVerification", "result_doc": "docs/plans/Candidates-engine.md MultiGamePackVerification 절을 지운다",
+      "note": "게임 팩은 Bin/Games 에 있어야 한다(Release -DSW_GAMES=ALL). 팩이 없으면 케이스가 건너뛰므로 로그의 건너뜀 줄을 본다."
+    },
+    {
+      "id": "assertdialog-scenario", "title": "assertdialog 시나리오(단언 대화상자)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/assertdialog.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/Candidates-engine.md StructureMoveTests", "result_doc": "docs/plans/Candidates-engine.md StructureMoveTests 절을 지운다"
+    },
+    {
+      "id": "standard-input-commands", "title": "-gv_standardInputCommands 시나리오", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "표준 입력 명령 시나리오가 저장소에 없다",
+      "source": "docs/plans/Candidates-engine.md StructureMoveTests", "result_doc": "docs/plans/Candidates-engine.md StructureMoveTests 절을 지운다"
+    },
+    {
+      "id": "foliage-navmesh-tests", "title": "막는 식생 · 장애물 캐시 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "FoliageTest.BlockingLayerAddsNavObstaclePerInstance,NavMeshTileCacheTest.*",
+      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
+    },
+    {
+      "id": "navmesh-obstacle-yaw-and-time", "title": "장애물 캐시의 상자 요 부호와 GT.Navigation.* 시간 견주기(직사각 장애물 장면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "직사각 장애물 장면 · 측정이 필요하고 시나리오 · 케이스가 없다(없으면 테스트부터 만든다)",
+      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
+    },
+    {
+      "id": "terrainedits-scenario", "title": "terrainedits 시나리오(differingFraction 문턱)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
+      "covered": ["engine/automation/rhiswap/terrainedits.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절",
+      "note": "scnpixel 이 바꾼 문턱 중 근거가 약한 것의 하나. 문턱을 다른 시나리오에도 바꿨는지는 git log 로 본다."
+    },
+    {
+      "id": "screenrectview-scenario", "title": "screenrectview 시나리오(PiP 없는 기준 캡처와 견주기)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
+      "covered": ["engine/automation/editor/screenrectview.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "contentthumbnails-scenario", "title": "contentthumbnails 시나리오(헤드리스 썸네일)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
+      "covered": ["engine/automation/editor/contentthumbnails.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "destruction-net-tests", "title": "파괴 복제 넷 시뮬 행렬 · 쇼케이스 세션 컴포넌트 테스트(사건 지연 전/후)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "NetSimDestructionMatrixTest.*,DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase",
+      "source": "docs/plans/Candidates-network.md DestructionNetSessionScene", "result_doc": "docs/plans/Candidates-network.md DestructionNetSessionScene 절의 사건 지연 줄"
+    },
+    {
+      "id": "cook-shaders-release", "title": "Release App 으로 셰이더 쿠킹 한 번(물 그림자 · 셰이더 2단계)", "kind": "cook", "config": "Release", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 60,
+      "tool": "app", "args": ["--cook-shaders"],
+      "source": "docs/plans/NEXT.md 0000절 표 C 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "golden-record", "title": "골든 다시 뜨기(--record --runs 3, 기준 파일을 고친다)", "kind": "golden", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 120,
+      "tool": "scripts", "args": ["golden", "--app", "{app}", "--record", "--runs", "3"],
+      "source": "docs/plans/NEXT.md 0000절 표 C 단계", "result_doc": "docs/plans/GraphicsFormatBundle.md G1",
+      "note": "Test/QA/Golden 의 기준 파일이 바뀐다 — 돌린 뒤 git diff 로 의도한 변경인지 본다."
+    },
+    {
+      "id": "perf-frame", "title": "프레임 p50 · p99 를 이 기계의 기준과 견주기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["perf", "--app", "{app}"], "limit": "Test/QA/Perf 기준 — p50 · 평균 +15 %, p99 +35 %, 모두 +150 us", "judge": "exit",
+      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+    },
+    {
+      "id": "load-baseline-suite", "title": "부하 검증 baseline 묶음(렌더 · AI · 접속 · 복제 × 하드웨어 프로필)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 240,
+      "tool": "scripts", "args": ["load", "suite", "baseline", "--runs", "3"], "limit": "Test/Load/Budgets.json 예산(p50 · p99 · max)과 Baselines.json 기준선", "judge": "exit",
+      "source": "docs/08_Verification.md 2-1절 부하 검증", "result_doc": "docs/08_Verification.md 2-1절"
+    },
+    {
+      "id": "soak-autoplay", "title": "자동 플레이 10 분 soak(메모리 · 핸들 증가)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 40,
+      "tool": "scripts", "args": ["soak", "--app", "{app}", "--minutes", "10"], "limit": "사유 메모리 증가 ≤ 2 MB/분, 핸들 증가 ≤ 10 개/분", "judge": "exit",
+      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+    },
+    {
+      "id": "scene-load-bench", "title": "씬 로드(XML 대 쿠킹본, 8000 엔티티, 5 회)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["scene-load-bench", "--app", "{app}", "--count", "8000", "--runs", "5"], "limit": "보고만 — 기준값은 08_Verification 2절 씬 로드(XML 파싱 25.6 · 인스턴스화 86.8 ms, 쿠킹본 6.2 · 26.7 ms)", "judge": "exit",
+      "source": "docs/08_Verification.md 2절 씬 로드 측정", "result_doc": "docs/08_Verification.md 2절 씬 로드 측정"
+    },
+    {
+      "id": "perf-compare-ui", "title": "UI 대량(이름표 2000 · 한글 새 글리프 400)의 스위치 A/B", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "uiNameplates", "hangulGlyphs", "--runs", "3"], "limit": "GT.UI.* 합 0.5 ms 안(이름표), 최악 프레임 max 4 ms 안(한글 첫 프레임)", "judge": "exit",
+      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/08_Verification.md 2절 런타임 UI 벤치"
+    },
+    {
+      "id": "perf-compare-clustered-lighting", "title": "클러스터드 라이팅 S3 — 라이트 16 · 128 · 1024 × 그리드 없음 대 CPU · GPU 생산자", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 120,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "lightCullingCpu16", "lightCullingGpu16", "lightCullingCpu128", "lightCullingGpu128", "lightCullingCpu1024", "lightCullingGpu1024", "--runs", "3"],
+      "limit": "보고만 — 그리드가 이득인 라이트 수를 ClusteredLighting S3 에 적는다", "judge": "exit",
+      "source": "docs/plans/ClusteredLighting.md 측정", "result_doc": "docs/plans/ClusteredLighting.md S3"
+    },
+    {
+      "id": "interaction-bench", "title": "상호작용 벤치(하는 쪽 하나 × 대상 16, 하는 쪽 여럿 × 대상 수천)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
+      "tool": "scripts",
+      "args": ["test", "InteractionBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "limit": "보고만 — 하는 쪽 1 · 8 · 64 × 대상 2,000 · 5,000(SharedGridTickWithManyInteractors)의 틱 표본을 견준다",
+      "judge": "exit",
+      "source": "docs/plans/InteractionSpatialGrid.md 단위 표 I3", "result_doc": "docs/plans/InteractionSpatialGrid.md I3"
+    },
+    {
+      "id": "net-udp-bench", "title": "UDP 소켓 계층 벤치(Windows Release, 패킷당 시간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "limit": "보고만 — 패킷당 약 6.5 us(08_Verification 2절 UDP 소켓 계층)와 나란히 둔다. 일괄 받기는 시스템 호출이 지배적일 때만 착수", "judge": "exit",
+      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/08_Verification.md 2절 UDP 소켓 계층"
+    },
+    {
+      "id": "net-udp-bench-wsl", "title": "UDP 소켓 계층 벤치(WSL Release, ulimit -n 8192)", "kind": "measure", "config": "Release", "platform": "wsl", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "WSL-Release", "--no-build", "--load_suites=only", "--host_suites=all"], "limit": "보고만 — Windows 값과 나란히", "judge": "exit",
+      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/08_Verification.md 2절 UDP 소켓 계층",
+      "note": "WSL 은 사용자가 요청할 때만 한다. 위 명령은 WSL 셸에서 ulimit -n 8192 를 건 뒤 같은 이름으로 부르는 모양이고 이 실행기는 돌리지 않는다."
+    },
+    {
+      "id": "net-replication-bench", "title": "복제 벤치 — 클라이언트 16 × 엔티티 1000 × 60 Hz, 평문 대 암호화(세 번)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["test", "NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertz*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all", "--repeat", "3"],
+      "limit": "보고만 — 평문 판과 암호화 판의 [Bench] 줄 차를 결정 기록 3절에 숫자 한 줄로", "judge": "exit",
+      "source": "docs/plans/Candidates-network.md EncryptedTickCost", "result_doc": "docs/09_Decisions.md 3절 암호화 비용"
+    },
+    {
+      "id": "net-compression-bench", "title": "패킷 압축 벤치(Windows Release)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "tool": "scripts", "args": ["test", "NetCompressionBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"], "limit": "보고만 — 결정 기록 5-9 표 옆에 적는다", "judge": "exit",
+      "source": "docs/plans/Candidates-network.md PacketCompressionRecheck", "result_doc": "docs/09_Decisions.md 5-9"
+    },
+    {
+      "id": "net-compression-bench-wsl", "title": "패킷 압축 벤치(WSL Release)", "kind": "measure", "config": "Release", "platform": "wsl", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["test", "NetCompressionBenchTest.*", "--preset", "WSL-Release", "--no-build", "--load_suites=only", "--host_suites=all"], "limit": "보고만 — Windows 값과 나란히", "judge": "exit",
+      "source": "docs/plans/Candidates-network.md PacketCompressionRecheck", "result_doc": "docs/09_Decisions.md 5-9",
+      "note": "WSL 은 사용자가 요청할 때만 한다."
+    },
+    {
+      "id": "structural-optimization-benches", "title": "구조 최적화 표의 CoreTest 벤치(작업 훔치기 · 태그 통계 · 로그 생산자 · 네트 코어 · 메모리 복사)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["test", "TaskManagerBenchTest.*,MemoryTagBenchTest.*,LogSinkBenchTest.*,NetCoreBenchTest.*,MemoryCopyBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "limit": "보고만 — StructuralOptimization 표의 후 값과 견준다(차이가 판 사이 흔들림보다 작으면 차이 없음)", "judge": "exit",
+      "source": "docs/plans/StructuralOptimization.md 재는 법", "result_doc": "docs/plans/StructuralOptimization.md 표"
+    },
+    {
+      "id": "terrain-height-write-release", "title": "지형 높이 쓰기 · 콜라이더 다시 짓기(Debug 값을 Release 로)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
+      "tool": "scripts", "args": ["test", "TerrainBenchTest.ColliderRebuildAfterBrushWrite,TerrainBenchTest.LODSweepWorstFrame", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "limit": "보고만 — Debug 값(전체 바디 1416 ms · 청크 바디 17.0 ms)을 Release 로 다시 적는다", "judge": "exit",
+      "source": "docs/plans/Candidates-project.md InvalidMeasurementCleanup", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+    },
+    {
+      "id": "half-resolution-bloom", "title": "반해상도 블룸 — GPU.PostBloom(전) 대 GPU.BloomDownsample + GPU.PostBloom(후)의 p50 · p99", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "perf-compare 의 deferredBloom 은 전 바이너리(ee6fff232 이전 커밋을 전체 빌드한 App)를 --app-before 로 받아야 도는 바이너리 A/B 라 한 명령으로 안 된다. 지면 되돌린다",
+      "source": "docs/plans/Candidates-graphics.md HalfResolutionBloomMeasurement", "result_doc": "docs/plans/Candidates-graphics.md HalfResolutionBloomMeasurement 절을 지운다"
+    },
+    {
+      "id": "leak-window-overhead", "title": "누수 탐지 창의 오버헤드(leakwin)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "leakwin 브랜치가 아직 병합되지 않았고 perf-compare 에 이 비교 케이스가 없다",
+      "source": "docs/plans/NEXT.md 0000절 표 C 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "ownership-form-perf", "title": "소유 형식(sw_new · Memory::allocate) 도입 전 · 후", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "ownership 브랜치가 아직 병합되지 않았고 perf-compare 에 이 비교 케이스가 없다",
+      "source": "docs/plans/NEXT.md 0000절 표 C 단계", "result_doc": "docs/plans/NEXT.md 0000절"
+    },
+    {
+      "id": "spin-and-hot-pool-heavy-frame", "title": "스핀 늘리기(2 → 50 us) · hot pool 을 무거운 프레임(8 ms 이상)에서 다시 재기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "무거운 프레임을 만드는 비교 케이스가 perf-compare 에 없다(09-20 측정은 조건 변수 시절 0.7 ms 프레임이었다)",
+      "source": "docs/plans/Candidates-project.md DecisionMeasurementColumn", "result_doc": "docs/09_Decisions.md 3절 해당 줄"
+    },
+    {
+      "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "Tracy 로 그 프레임을 보는 일이라 표로 판정할 값이 없다(gv_profileTracePath 트레이스를 사람이 연다)",
+      "source": "docs/plans/Candidates-quality.md", "result_doc": "docs/plans/Candidates-quality.md 부하 검증 후보"
+    },
+    {
+      "id": "melee-hit-ledger-test", "title": "근접 맞음 주장의 서버 확인(MeleeHitLedger)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AnimationNotify2DTest.MeleeHitLedgerConfirmsClaimsAgainstServerSweeps",
+      "source": "docs/plans/MeleeHitUnify.md 3절", "result_doc": "docs/plans/MeleeHitUnify.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-rewind-tests", "title": "의도 되감기 세션 · 리플레이 막대 · 서버 루프 · 키 틱 재생 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "IntentRewindTest.*,ControlTest.PlaybackStartsFromAGivenTickOfTheTrack,ControlTest.ServerLoopDrivesRemotePawnFromReplicationIntents",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-killcam-scenario", "title": "Shooter3D 킬캠 프리셋 시나리오(네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/shooter3d/automation/killcam.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-replay-bar-screen", "title": "리플레이 막대를 연 게임에서 슬라이더 되감기(장면이 키 틱으로 돌아가 나눠 돌고 멈춘 그림)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "막대를 여는 게임 흐름(리플레이 씬을 띄우는 연결)이 아직 없다 — 막대 · 세션 로직은 intent-rewind-tests 가 본다",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "interaction-montage-tests", "title": "상호작용 몽타주 실행 · 강조 요청 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "InteractionTest.StepMontagePlaysOnTheInteractorsAnimatorAndCancelRestores,InteractionTest.HighlightRequestReachesTheOwnersMeshes",
+      "source": "docs/plans/InteractionHighlightAndMontage.md 확인", "result_doc": "docs/plans/InteractionHighlightAndMontage.md 상태를 끝으로"
+    },
+    {
+      "id": "interaction-highlight-scenario", "title": "상호작용 강조 패스 시나리오(외곽선 · 감각 모드, 네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/interactionhighlight.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/InteractionHighlightAndMontage.md H3", "result_doc": "docs/plans/InteractionHighlightAndMontage.md 상태를 끝으로"
+    }
+  ]
+}

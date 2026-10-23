@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 4/4
 
-**남은 확인(통합에서 확인):** M1 ~ M4 테스트 필터(아래 "남은 것"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `moving-ground-tests`, `moving-ground-net-scene`(아래 "남은 것"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 `moveCharacter` 가 딛은 바닥의 속도(선속도 + 회전)를 실어 주게 된 뒤(2026-10-20, 결정은 `IPhysicsCharacterScene.h` 머리말과 `JoltPhysicsSceneQuery.cpp`) 남은 일입니다.
 

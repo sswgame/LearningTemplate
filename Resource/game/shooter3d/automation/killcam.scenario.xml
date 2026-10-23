@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 킬캠 프리셋 — shooter.cameras.xml 의 killcam(대상 정면 3인칭 · 얕은 초점 · 채도 0.8 · 비네트)이 읽히고 그려지는지 본다(IntentNetworkWiring 3절).
+  시작 프리셋을 -gv_cameraPreset=killcam 으로 골라, 없는 id 이면 카메라 디렉터가 오류를 남겨 로그 검사로 진다. 그림은 비어 있지 않아야 한다(평균 휘도 문턱 0.02 는 측정 전 추정 — 첫 캡처로 맞춘다).
+  실행: App.exe -game=Shooter3D -dx12 -gv_cameraPreset=killcam -scenario=game/shooter3d/automation/killcam.scenario.xml
+-->
+<Scenario name="shooter3d.killcam" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="killcam"/>
+	<At frame="90"><Screenshot file="killcam.ppm"/></At>
+	<At frame="100">
+		<ExpectImage file="killcam.ppm" region="0,0,1,1" metric="meanLuma" atLeast="0.02"/>
+		<Pass/>
+	</At>
+</Scenario>

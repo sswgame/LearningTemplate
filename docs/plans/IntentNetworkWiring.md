@@ -32,6 +32,6 @@
 
 ## 남은 것
 
-- 통합에서 확인: `EngineTest --test_filter=IntentRewindTest.*:ControlTest.*Playback*:ControlTest.ServerLoopDrivesRemotePawnFromReplicationIntents`. 막대 문서의 이름 · 명령이 코드와 맞는지도 `IntentRewindTest.ReplayBarSeeksPausesAndSteps` 가 잡는다.
-- 화면 확인(GPU): 막대를 띄운 게임에서 슬라이더를 끌 때 장면이 키 틱으로 돌아가 나눠 돌고 멈춘 그림이 나오는지, `-gv_cameraPreset=killcam` 이 보이는지. 게임이 막대를 여는 연결(리플레이 씬을 띄우는 흐름)은 그 게임이 생길 때 잇는다.
+- 통합에서 확인: 매니페스트 id `intent-rewind-tests`. 막대 문서의 이름 · 명령이 코드와 맞는지도 `IntentRewindTest.ReplayBarSeeksPausesAndSteps` 가 잡는다.
+- 화면 확인 대기: 킬캠 프리셋은 매니페스트 id `intent-killcam-scenario`(시나리오 `game/shooter3d/automation/killcam.scenario.xml`), 막대는 매니페스트 id `intent-replay-bar-screen`(막대를 여는 게임 흐름이 생긴 뒤 — 리플레이 씬을 띄우는 연결은 그 게임이 생길 때 잇는다).
 - 폰을 쓰는 넷 서버 루프(I2)는 `ControlTest.ServerLoopDrivesRemotePawnFromReplicationIntents` 가 같은 모양으로 돌려 본다. 실제 게임의 서버 루프에 잇는 일은 그 게임이 생길 때 한다.

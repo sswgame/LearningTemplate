@@ -27,5 +27,5 @@
 
 ## 확인 (통합)
 
-- `EngineTest --test_filter=InteractionTest.StepMontage*:InteractionTest.HighlightRequestReachesTheOwnersMeshes`.
-- 네 백엔드: `App.exe -game=Empty -<백엔드> -gv_firstScene=game/empty/maps/interactionhighlight.scene.xml -scenario=game/empty/automation/interactionhighlight.scenario.xml`(`AppScenarioTest` 의 팩 시나리오 열거에도 든다). 문턱 0.005 는 측정 전 추정이다 — 첫 캡처로 `base.ppm` · `outline.ppm` · `sense.ppm` 을 눈으로 본 뒤 맞춘다.
+- 확인 대기: 매니페스트 id `interaction-montage-tests`.
+- 네 백엔드 화면 확인 대기: 매니페스트 id `interaction-highlight-scenario`(`AppScenarioTest` 의 팩 시나리오 열거에 든다). 시나리오 문턱 0.005 는 측정 전 추정이다 — 첫 캡처로 `base.ppm` · `outline.ppm` · `sense.ppm` 을 눈으로 본 뒤 맞춘다.

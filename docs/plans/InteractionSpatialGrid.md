@@ -20,4 +20,4 @@
 | I2 | Debug 빌드(`all EngineTest`, 경고 0) · `InteractionTest.*` 16 개 통과(2026-10-23) | 끝 |
 | I3 | `TestInteractionBench` 에 하는 쪽 여럿 × 대상 수천 케이스(`InteractionBenchTest.SharedGridTickWithManyInteractors` — 하는 쪽 1 · 8 · 64 × 대상 2,000 · 5,000)를 더했다 | 코드 끝, Release 측정은 통합(빌드 미확인) |
 
-측정(통합): `EngineTest --test_filter=InteractionBenchTest.*` 를 Release 로 돌려 하는 쪽 1(목록 순회)과 8 · 64(격자)의 틱 표본을 견준다. 하는 쪽 수로 나눈 비용이 격자에서 더 낮으면 이 문서를 닫고, 아니면 `kMinInteractorCountForGrid` 를 올린다.
+확인 대기: 매니페스트 id `interaction-bench`. 그 항목이 `InteractionBenchTest.*` 를 Release 로 돌려 하는 쪽 1(목록 순회)과 8 · 64(격자)의 틱 표본을 견준다. 하는 쪽 수로 나눈 비용이 격자에서 더 낮으면 이 문서를 닫고, 아니면 `kMinInteractorCountForGrid` 를 올린다.
