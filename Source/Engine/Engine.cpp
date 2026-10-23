@@ -181,11 +181,15 @@ namespace sw
         constexpr bool kDiagnostics = false;
 #endif
         // 서브시스템 목록은 `EngineSubsystemSet.cpp` 의 한 곳이다 — 테스트 하네스 · 기동 순서 테스트도 같은 함수로 채운다.
-        const engine::BootstrapParts bootstrapParts =
-            engine::addBootstrapSubsystems( _bootstrap, { ._argc = argc, ._ppArgv = pArgv, ._bDiagnostics = kDiagnostics, ._bMemoryBudget = true } );
-        CrashHandlerSubsystem* pCrashHandler = bootstrapParts._pCrashHandler;
-        _pCommandLineSubsystem               = bootstrapParts._pCommandLine;
-        _pMemoryBudget                       = bootstrapParts._pMemoryBudget;
+        engine::BootstrapSetup bootstrapSetup;
+        bootstrapSetup._argc                        = argc;
+        bootstrapSetup._ppArgv                      = pArgv;
+        bootstrapSetup._bDiagnostics                = kDiagnostics;
+        bootstrapSetup._bMemoryBudget               = true;
+        const engine::BootstrapParts bootstrapParts = engine::addBootstrapSubsystems( _bootstrap, bootstrapSetup );
+        CrashHandlerSubsystem*       pCrashHandler  = bootstrapParts._pCrashHandler;
+        _pCommandLineSubsystem                      = bootstrapParts._pCommandLine;
+        _pMemoryBudget                              = bootstrapParts._pMemoryBudget;
         if ( _bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로도 낸다.
@@ -228,7 +232,9 @@ namespace sw
 #else
             constexpr bool kEditorServices = true;
 #endif
-            _pEventDispatcher = engine::addServiceSubsystems( _services, { ._bEditorServices = kEditorServices } )._pEventDispatcher;
+            engine::ServiceSetup serviceSetup;
+            serviceSetup._bEditorServices = kEditorServices;
+            _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {
                 SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
@@ -244,7 +250,10 @@ namespace sw
         {
             _startup.setParentScope( &_services );
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
-            startupParts = engine::addStartupSubsystems( _startup, { ._headlessState = _headlessState, ._bDedicatedServer = bDedicatedServer, ._bRenderer = true } );
+            engine::StartupSetup startupSetup{ _headlessState };
+            startupSetup._bDedicatedServer = bDedicatedServer;
+            startupSetup._bRenderer        = true;
+            startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
             EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
             _pConfigManager = startupParts._pConfigManager;

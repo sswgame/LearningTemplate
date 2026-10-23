@@ -98,19 +98,26 @@ namespace
     void addEngineSubsystems( SubsystemScope& engineScope )
     {
         static HeadlessTaskState s_headlessState; // 선언만 본다 — 본문은 돌지 않는다
-        (void)engine::addStartupSubsystems( engineScope, { ._headlessState = s_headlessState, ._bDedicatedServer = false, ._bRenderer = true, ._audio = IAudioService::createNull() } );
+        engine::StartupSetup     setup{ s_headlessState };
+        setup._bRenderer = true;
+        setup._audio     = IAudioService::createNull();
+        (void)engine::addStartupSubsystems( engineScope, std::move( setup ) );
     }
 
     /** @brief 부트스트랩 범위를 엔진 루프와 같은 함수로 채웁니다(초기화하지 않는다 — 선언과 소유만 본다). 메모리 프로파일러는 초기화 뒤에 생겨 걸지 않는다(선택 행이다). */
     void addBootstrapSubsystems( SubsystemScope& bootstrap )
     {
-        (void)engine::addBootstrapSubsystems( bootstrap, { ._argc = 0, ._ppArgv = nullptr, ._bDiagnostics = false, ._bMemoryBudget = true } );
+        engine::BootstrapSetup setup;
+        setup._bMemoryBudget = true;
+        (void)engine::addBootstrapSubsystems( bootstrap, setup );
     }
 
     /** @brief 서비스 범위를 엔진 루프와 같은 함수로 채웁니다(초기화하지 않는다). */
     void addServiceSubsystems( SubsystemScope& services )
     {
-        (void)engine::addServiceSubsystems( services, { ._bEditorServices = true } );
+        engine::ServiceSetup setup;
+        setup._bEditorServices = true;
+        (void)engine::addServiceSubsystems( services, setup );
     }
 
     /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */

@@ -180,10 +180,13 @@ namespace test
         }
         state._bBootstrapped = true;
         {
-            sw::SubsystemScope&              bootstrap = state._bootstrap;
-            const sw::engine::BootstrapParts parts     = sw::engine::addBootstrapSubsystems(
-                bootstrap, { ._argc = static_cast<int32>( listApplicationArg.size() ), ._ppArgv = listApplicationArg.data(), ._bDiagnostics = true, ._bMemoryBudget = false } );
-            const sw::DiagnosticsSubsystem& diagnostics = *parts._pDiagnostics;
+            sw::SubsystemScope&        bootstrap = state._bootstrap;
+            sw::engine::BootstrapSetup bootstrapSetup;
+            bootstrapSetup._argc                         = static_cast<int32>( listApplicationArg.size() );
+            bootstrapSetup._ppArgv                       = listApplicationArg.data();
+            bootstrapSetup._bDiagnostics                 = true; // 늘 진단 구성이다 — 메모리 예산은 두지 않고 진단 구성의 추적을 그대로 둔다
+            const sw::engine::BootstrapParts parts       = sw::engine::addBootstrapSubsystems( bootstrap, bootstrapSetup );
+            const sw::DiagnosticsSubsystem&  diagnostics = *parts._pDiagnostics;
             if ( bootstrap.getCollection().initializeAll( sw::SubsystemHostMask::All ) == false )
             {
                 std::fprintf( stderr, "[TestHost] bootstrap failed: %s\n", bootstrap.getCollection().getError().c_str() );
@@ -198,7 +201,9 @@ namespace test
         {
             sw::SubsystemScope& services = state._services;
             services.setParentScope( &state._bootstrap );
-            (void)sw::engine::addServiceSubsystems( services, { ._bEditorServices = true } ); // 하네스는 배포본 테스트에도 커맨드 스택을 둔다
+            sw::engine::ServiceSetup serviceSetup;
+            serviceSetup._bEditorServices = true; // 하네스는 배포본 테스트에도 커맨드 스택을 둔다
+            (void)sw::engine::addServiceSubsystems( services, serviceSetup );
             if ( services.getCollection().initializeAll( sw::EngineSubsystemHost::kClient ) == false )
             {
                 std::fprintf( stderr, "[TestHost] services failed: %s\n", services.getCollection().getError().c_str() );
@@ -220,13 +225,11 @@ namespace test
             SW_MEMORY_SCOPE( Reflection );
             reflection = sw::make_unique<TestReflectionSubsystem>( sw::make_unique<sw::TypeRegistry>() );
         }
-        (void)sw::engine::addStartupSubsystems( startup,
-                                                { ._headlessState    = state._headlessState,
-                                                  ._bDedicatedServer = false,
-                                                  ._bRenderer        = false,
-                                                  ._reflection       = std::move( reflection ),
-                                                  ._defaultAssets    = sw::make_unique<TestEngineDefaultAssetsSubsystem>(),
-                                                  ._audio            = sw::make_unique<TestAudioService>() } );
+        sw::engine::StartupSetup startupSetup{ state._headlessState };
+        startupSetup._reflection    = std::move( reflection );
+        startupSetup._defaultAssets = sw::make_unique<TestEngineDefaultAssetsSubsystem>();
+        startupSetup._audio         = sw::make_unique<TestAudioService>();
+        (void)sw::engine::addStartupSubsystems( startup, std::move( startupSetup ) ); // 렌더러 단계는 두지 않는다(`_bRenderer` 기본 false)
         if ( const utf8* pMissing = sw::engine::bindEngineServices( startup ) )
         {
             std::fprintf( stderr, "[TestHost] required engine service '%s' is not in any subsystem scope\n", pMissing );
