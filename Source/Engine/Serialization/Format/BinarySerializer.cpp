@@ -88,6 +88,68 @@ namespace sw
             }
 
             /**
+             * @brief 태그 스트림의 머리(버전 + 프로퍼티 수)를 읽습니다. 머리가 버전을 말한다 — 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
+             * @return 머리를 읽지 못하거나 읽을 수 없는 버전이면 false 입니다.
+             */
+            [[nodiscard]] static bool readTaggedHeader( BinaryStreamReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount )
+            {
+                uint32 header{ 0 };
+                if ( reader.read( header ) == false )
+                    return false;
+                const uint32 wireVersionNumber = header >> kTaggedVersionShift;
+                if ( isReadableWireVersion( wireVersionNumber ) == false )
+                {
+                    SW_LOG_WARNING( "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
+                                    static_cast<uint32>( kCurrentBinaryWireVersion ) );
+                    return false;
+                }
+                outWireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
+                outPropCount   = header & kTaggedCountMask;
+                return true;
+            }
+
+            /**
+             * @brief 필드 하나의 페이로드를 프로퍼티에 읽어 넣습니다. **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
+             *        타입을 짐작한다(정수와 실수를 가르지 못한다).
+             */
+            [[nodiscard]] static FieldReadResult readTaggedPayload( const PropertyInfo& prop, void* pInstance, const uint8* pPayload, uint32 payloadSize, uint32 wireTypeHash,
+                                                                    const SerializeContext& context, BinaryWireVersion wireVersion )
+            {
+                const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
+                if ( bWireMismatch == false )
+                {
+                    // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
+                    return SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pPayload, payloadSize, context, wireVersion );
+                }
+                const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
+                // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
+                // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
+                // 프로퍼티 단위로 넘긴다 — 값 주소를 여기서 꺼내면 비트필드는 그 바이트 주소라 bool 이 같은 바이트의 다른 플래그까지 덮는다.
+                if ( wireTypeName.empty() )
+                    return FieldReadResult::FieldFailed;
+                return tryCoercePropertyBinary( prop, MutableObjectAddress{ pInstance }, pPayload, payloadSize, context, wireTypeName, wireVersion );
+            }
+
+            /** @brief 스트림에 없던 프로퍼티는 기본값으로 채웁니다. 두 경로(엄격 · 소프트)가 같은 규칙이다. 이 목적이 다루지 않는 필드(Transient, 저작의 RuntimeState, 옵트인 세이브의 나머지)는 현재 값 그대로다. */
+            static void applyDefaultsToUnmatched( const TypeInfo& typeInfo, void* pInstance, const SerializeContext& context, uint64 matchedBitmask,
+                                                  const unordered_set<uint32>& uniqueMatchedPropHashes )
+            {
+                const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
+                const size_t                numProps = listProp.size();
+                for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
+                {
+                    bool bMatched = false;
+                    if ( numProps <= kFastPropBitmaskThreshold )
+                        bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
+                    else
+                        bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
+                    const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
+                    if ( bMatched == false && bOutsidePurpose == false )
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
+                }
+            }
+
+            /**
              * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
              *          (1) 모르는 프로퍼티: 엄격은 `skipsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
@@ -107,19 +169,10 @@ namespace sw
                                                                     const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
                 BinaryStreamReader reader( pData, dataSize );
-                uint32             header{ 0 };
-                if ( reader.read( header ) == false )
+                BinaryWireVersion  wireVersion{};
+                uint32             propCount{ 0 };
+                if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount ) == false )
                     return FieldReadResult::FieldFailed;
-                // 머리가 버전을 말한다. 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
-                const uint32 wireVersionNumber = header >> kTaggedVersionShift;
-                if ( isReadableWireVersion( wireVersionNumber ) == false )
-                {
-                    SW_LOG_WARNING( "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
-                                    static_cast<uint32>( kCurrentBinaryWireVersion ) );
-                    return FieldReadResult::FieldFailed;
-                }
-                const BinaryWireVersion wireVersion = static_cast<BinaryWireVersion>( wireVersionNumber );
-                const uint32            propCount   = header & kTaggedCountMask;
 
                 const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
                 const size_t                numProps = listProp.size();
@@ -185,24 +238,7 @@ namespace sw
                     if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
                         return FieldReadResult::ObjectRejected;
 
-                    // **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
-                    // 타입을 짐작한다(정수와 실수를 가르지 못한다).
-                    const bool      bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
-                    FieldReadResult fieldResult   = FieldReadResult::FieldFailed;
-                    if ( bWireMismatch )
-                    {
-                        const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                        // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
-                        // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
-                        // 프로퍼티 단위로 넘긴다 — 값 주소를 여기서 꺼내면 비트필드는 그 바이트 주소라 bool 이 같은 바이트의 다른 플래그까지 덮는다.
-                        if ( wireTypeName.empty() == false )
-                            fieldResult = tryCoercePropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
-                    }
-                    else
-                    {
-                        // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
-                        fieldResult = SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pData + payloadStart, payloadSize, context, wireVersion );
-                    }
+                    const FieldReadResult fieldResult = readTaggedPayload( prop, pInstance, pData + payloadStart, payloadSize, wireTypeHash, context, wireVersion );
 
                     switch ( fieldResult )
                     {
@@ -235,19 +271,8 @@ namespace sw
                     reader.skip( payloadSize );
                 }
 
-                // 스트림에 없던 프로퍼티는 기본값으로 채운다. 두 경로가 같은 규칙이다.
-                for ( size_t propIdx = 0; propIdx < numProps; ++propIdx )
-                {
-                    bool bMatched = false;
-                    if ( numProps <= kFastPropBitmaskThreshold )
-                        bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
-                    else
-                        bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
-                    // 이 목적이 다루지 않는 필드(Transient, 저작의 RuntimeState, 옵트인 세이브의 나머지)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
-                    const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
-                    if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance }, context );
-                }
+                // 스트림에 없던 프로퍼티는 기본값으로 채운다.
+                applyDefaultsToUnmatched( typeInfo, pInstance, context, matchedBitmask, uniqueMatchedPropHashes );
                 // 선언된 범위는 부르는 쪽(`deserializeNested` · `deserializeSoft`)이 읽기 공통 끝으로 본다 — 소프트 읽기가 "스트림이 깨짐"과 "범위 밖 값"을 가르게.
                 return FieldReadResult::Read;
             }
