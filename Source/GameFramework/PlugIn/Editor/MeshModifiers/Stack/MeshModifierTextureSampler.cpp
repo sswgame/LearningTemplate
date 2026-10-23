@@ -214,18 +214,19 @@ namespace sw::editor
                 return float4{ a._x + ( b._x - a._x ) * t, a._y + ( b._y - a._y ) * t, a._z + ( b._z - a._z ) * t, a._w + ( b._w - a._w ) * t };
             }
 
+            static const float4& texelAt( const DecodedTexture& texture, int32 x, int32 y )
+            {
+                return texture._listTexel[static_cast<size_t>( y ) * static_cast<size_t>( texture._width ) + static_cast<size_t>( x )];
+            }
+
             static float4 sampleBilinear( const DecodedTexture& texture, const float2& uv )
             {
                 int32   x0 = 0, x1 = 0, y0 = 0, y1 = 0;
                 float32 fx = 0.0f, fy = 0.0f;
                 splitCoordinate( uv._x, texture._width, x0, x1, fx );
                 splitCoordinate( uv._y, texture._height, y0, y1, fy );
-                const auto texelAt = [&texture]( int32 x, int32 y ) -> const float4&
-                {
-                    return texture._listTexel[static_cast<size_t>( y ) * static_cast<size_t>( texture._width ) + static_cast<size_t>( x )];
-                };
-                const float4 top    = lerp4( texelAt( x0, y0 ), texelAt( x1, y0 ), fx );
-                const float4 bottom = lerp4( texelAt( x0, y1 ), texelAt( x1, y1 ), fx );
+                const float4 top    = lerp4( texelAt( texture, x0, y0 ), texelAt( texture, x1, y0 ), fx );
+                const float4 bottom = lerp4( texelAt( texture, x0, y1 ), texelAt( texture, x1, y1 ), fx );
                 return lerp4( top, bottom, fy );
             }
         };

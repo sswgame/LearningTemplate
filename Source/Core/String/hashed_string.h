@@ -276,6 +276,9 @@ namespace sw
         /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
         static const Entry* findEntry( uint32 entryIndex ) noexcept;
 
+        /** @brief 표시 엔트리 번호로 `InternedIndex` 를 만듭니다. 비교 엔트리는 엔트리가 가리키는 값이고, 엔트리가 없으면 표시 번호를 씁니다. */
+        static InternedIndex makeInterned( uint32 displayIndex ) noexcept;
+
         uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 비교, 해시, 미리 정의된 이름에 쓴다).
         uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` 과 `size()` 에 쓴다).
     };
@@ -551,6 +554,14 @@ namespace sw
         }
     };
 
+    /** @brief 표시 엔트리 번호로 `InternedIndex` 를 만듭니다. */
+    template <typename T, typename N>
+    typename basic_hashed_string<T, N>::InternedIndex basic_hashed_string<T, N>::makeInterned( uint32 displayIndex ) noexcept
+    {
+        const auto* pEntry = findEntry( displayIndex );
+        return InternedIndex{ ( pEntry != nullptr ) ? pEntry->_comparisonIndex : displayIndex, displayIndex };
+    }
+
     /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
     template <typename T, typename N>
     const typename basic_hashed_string<T, N>::Entry* basic_hashed_string<T, N>::findEntry( uint32 entryIndex ) noexcept
@@ -651,18 +662,12 @@ namespace sw
         auto&        shard      = info._arrShard[shardIndex];
         StringKey    lookupKey{ hash, str, length };
 
-        const auto makeResult = []( uint32 displayIndex ) -> InternedIndex
-        {
-            const auto* pEntry = findEntry( displayIndex );
-            return InternedIndex{ ( pEntry != nullptr ) ? pEntry->_comparisonIndex : displayIndex, displayIndex };
-        };
-
         // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다).
         {
             std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
             const auto                          iter = shard._mapExactKeyToIndex.find( lookupKey );
             if ( iter != shard._mapExactKeyToIndex.end() )
-                return makeResult( iter->second );
+                return makeInterned( iter->second );
         }
 
         // 2단계: 새 철자를 등록한다. 샤드 배타 락과 전역 할당 락을 잡는다.
@@ -672,7 +677,7 @@ namespace sw
         // 다시 확인한다(double-check).
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
         if ( exactIter != shard._mapExactKeyToIndex.end() )
-            return makeResult( exactIter->second );
+            return makeInterned( exactIter->second );
 
         // 같은 이름(대소문자 무시)이 이미 있으면 이 철자는 그 이름의 표시 엔트리다.
         const auto   nameIter       = shard._mapKeyToIndex.find( lookupKey );

@@ -30,6 +30,7 @@ namespace sw
     struct InputPressInstant;
 
     class InputManager;
+    class XMLNode;
 
     // ------------------------------------------------------------------------------
     // 1) 스키마: 액션 값 타입, 바인딩 종류, 트리거, 페이즈, 데드존 모드
@@ -753,6 +754,12 @@ namespace sw
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
         bool isSlotDown( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         bool wasSlotPressed( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
+        /**
+         * @brief 슬롯이 이 프레임에 눌려 있었는지입니다(`isSlotDown` 이거나 `wasSlotPressed`).
+         * @details `isSlotDown` 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 탭(매크로 주입, 초고속 입력, 가상 입력 hold=0)을 놓친다.
+         *          그 프레임에는 "눌렸었다" 로 취급한다. 단일 키와 합성(axis1d, vector2d) 모두 같은 규칙이다.
+         */
+        bool isSlotHeldThisFrame( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         /** @brief 개발 콘솔이 입력을 쥐어 이 맵이 슬롯을 "안 눌림" 으로 봐야 하면 true 입니다(키보드와 패드 슬롯). 키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 늘 false 입니다. */
         bool isSlotHiddenByConsole( const InputSlot& slot ) const;
         /**
@@ -787,6 +794,8 @@ namespace sw
         const ActionEntry*     findAction( const hashed_string& action ) const;
 
     private:
+        /** @brief `loadFromResource` 가 `<Action>` 원소 하나를 읽습니다. 깨진 값은 오류를 남기고 @p inoutbValid 를 내립니다. */
+        void loadActionNode( XMLNode actionNode, string_view inheritedLayer, bool& inoutbValid );
         /**
          * @brief 가상 커서(`_virtualCursorStick`)가 마우스로 바꾸는 스틱 · 패드 버튼(기본 설정의 A · B, 0 번 패드)을 따로 묶은 바인딩마다 알리고 그 수를 반환합니다.
          * @details 가상 커서가 꺼져 있으면 0 이다. 읽기(`loadFromResource`)가 0 이 아니면 실패로 돌린다.

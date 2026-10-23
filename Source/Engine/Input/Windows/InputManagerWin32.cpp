@@ -411,15 +411,23 @@ namespace sw
         if ( _pMouse != nullptr )
         {
             // 잠금을 다시 잡느라 삼킨 버튼은 떼어질 때까지 눌리지 않은 것으로 둔다(메시지 경로와 같은 규칙).
-            const auto isPolledButtonDown = [this]( MouseButton button, int32 virtualKey ) -> bool
+            struct PolledButton
             {
-                return isMouseButtonConsumed( button ) == false && ( GetAsyncKeyState( virtualKey ) & 0x8000 ) != 0;
+                MouseButton _button;
+                int32       _virtualKey;
             };
-            _pMouse->setButtonDown( MouseButton::Left, isPolledButtonDown( MouseButton::Left, VK_LBUTTON ) );
-            _pMouse->setButtonDown( MouseButton::Right, isPolledButtonDown( MouseButton::Right, VK_RBUTTON ) );
-            _pMouse->setButtonDown( MouseButton::Middle, isPolledButtonDown( MouseButton::Middle, VK_MBUTTON ) );
-            _pMouse->setButtonDown( MouseButton::X1, isPolledButtonDown( MouseButton::X1, VK_XBUTTON1 ) );
-            _pMouse->setButtonDown( MouseButton::X2, isPolledButtonDown( MouseButton::X2, VK_XBUTTON2 ) );
+            static constexpr PolledButton kArrPolledButton[]{
+                {  MouseButton::Left,  VK_LBUTTON},
+                { MouseButton::Right,  VK_RBUTTON},
+                {MouseButton::Middle,  VK_MBUTTON},
+                {    MouseButton::X1, VK_XBUTTON1},
+                {    MouseButton::X2, VK_XBUTTON2}
+            };
+            for ( const PolledButton& polled : kArrPolledButton )
+            {
+                const bool bDown = isMouseButtonConsumed( polled._button ) == false && ( GetAsyncKeyState( polled._virtualKey ) & 0x8000 ) != 0;
+                _pMouse->setButtonDown( polled._button, bDown );
+            }
 
             POINT cursorPoint{};
             if ( GetCursorPos( &cursorPoint ) )

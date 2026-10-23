@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridOpenEntry.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -50,11 +51,7 @@ namespace sw
         int32 getHeight() const { return _topology._height; }
 
     private:
-        struct OpenEntry
-        {
-            float32 _distance;
-            int32   _index;
-        };
+        using OpenEntry = GridOpenEntry<float32>;
 
         vector<float32>   _listDistance;
         vector<int8>      _listDirection;

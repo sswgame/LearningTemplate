@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridOpenEntry.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -53,7 +54,7 @@ namespace sw
             const int32 directionCount = bDiagonal ? GridTopology::kNeighborCount : GridTopology::kOrthogonalCount;
             while ( _listOpen.empty() == false )
             {
-                std::pop_heap( _listOpen.begin(), _listOpen.end(), &GridReachability::isWorse );
+                std::pop_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
                 const OpenEntry entry = _listOpen.back();
                 _listOpen.pop_back();
                 if ( entry._cost != _listCost[static_cast<size_t>( entry._index )] )
@@ -94,20 +95,14 @@ namespace sw
         static void collectRangeCells( const int2& center, int32 minRange, int32 maxRange, int32 width, int32 height, vector<int2>& outListCell );
 
     private:
-        struct OpenEntry
-        {
-            int32 _cost;
-            int32 _index;
-        };
-
-        static bool isWorse( const OpenEntry& lhs, const OpenEntry& rhs ) { return lhs._cost > rhs._cost; }
+        using OpenEntry = GridOpenEntry<int32>;
 
         bool  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         int32 computeIndex( const int2& cell ) const { return _topology.toIndex( cell ); }
         void  pushOpen( int32 cost, int32 index )
         {
             _listOpen.push_back( OpenEntry{ cost, index } );
-            std::push_heap( _listOpen.begin(), _listOpen.end(), &GridReachability::isWorse );
+            std::push_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
         }
 
         vector<int32>             _listCost{};

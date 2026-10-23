@@ -90,8 +90,6 @@ namespace sw
         const int32 startIndex  = grid.computeIndex( query._start );
         const bool  bGoalInside = grid.isInside( query._goal );
         const int32 goalIndex   = bGoalInside ? grid.computeIndex( query._goal ) : -1;
-        const auto  compareOpen = []( const OpenEntry& lhs, const OpenEntry& rhs )
-        { return lhs._score > rhs._score; };
 
         _listCostSoFar[static_cast<size_t>( startIndex )] = 0.0f;
         _listParent[static_cast<size_t>( startIndex )]    = -1;
@@ -104,7 +102,7 @@ namespace sw
         const int32 directionCount = query._bAllowDiagonal != SW_FALSE ? 8 : 4;
         while ( _listOpen.empty() == false )
         {
-            std::pop_heap( _listOpen.begin(), _listOpen.end(), compareOpen );
+            std::pop_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
             const OpenEntry current = _listOpen.back();
             _listOpen.pop_back();
             uint32& currentStamp = _listStamp[static_cast<size_t>( current._index )];
@@ -151,7 +149,7 @@ namespace sw
                 _listCostSoFar[static_cast<size_t>( nextIndex )] = newCost;
                 _listParent[static_cast<size_t>( nextIndex )]    = current._index;
                 _listOpen.push_back( OpenEntry{ newCost + computeHeuristic( next, query._goal ), nextIndex } );
-                std::push_heap( _listOpen.begin(), _listOpen.end(), compareOpen );
+                std::push_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
             }
         }
 
