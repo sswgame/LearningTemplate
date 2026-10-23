@@ -10,7 +10,7 @@
   - `ServiceAccess/RetiredWindow`: 지워진 이름 — `getService<` · `getSceneService<` · `isServiceBound<` · `getBoundEngineServices(`,
     `locateSubsystem<…>( engine::getEngineSubsystems() )`, 그리고 `engine::` 아래의 이름 붙은 접근자(`engine::getTypeRegistry()` 따위).
     `engine::` 아래에 남는 `get*` 은 규칙 데이터의 `allowed_engine_function` 뿐이다. 주석 · 문자열 안의 언급은 보지 않는다.
-  - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()`. 전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
+  - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()` 와 `static T& get()`(참조를 돌려주는 인자 없는 `get`). 전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
   - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
@@ -58,7 +58,8 @@ _kRetiredWindowRe = (
 )
 _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 
-_kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?\bgetInstance\s*\(")
+# `static T& getInstance()` 와 `static T& get()` — 둘 다 전역 단일체 창구다. `get` 은 참조를 돌려주는 인자 없는 것만 본다(`&` 필수).
+_kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?(?:\bgetInstance\s*\(|&\s*get\s*\(\s*\))")
 _kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
 _kClassHeadRe = re.compile(r"\b(?:class|struct)\s+(?:(?:\w*API|alignas\s*\([^)]*\))\s+)*(\w+)")
 
@@ -125,7 +126,7 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
             gate.useExemption(typeName)
             continue
         owner = typeName or "(클래스 밖)"
-        listViolation.append(f"{relative}:{lineNumber}: [{_kSingletonCategory}] {owner}::getInstance() — 전역 단일체입니다. "
+        listViolation.append(f"{relative}:{lineNumber}: [{_kSingletonCategory}] {owner}::{'get' if match.group(0).rstrip().endswith(')') else 'getInstance'}() — 전역 단일체입니다. "
                              f"새 서비스는 서브시스템으로 만들어 범위에 넣으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
     for match in _kStaticActiveWindowRe.finditer(code):
         typeName = classNameAtInternal(code, match.start())

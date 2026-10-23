@@ -4,7 +4,6 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -36,9 +35,6 @@ namespace sw
             }
         };
         static_assert( std::size( AssetLoadProfilerInternal::kArrPhaseName ) == static_cast<size_t>( AssetLoadPhase::Count ) );
-
-        /** @brief 프로세스에 하나인 기록부입니다. 엔진 수명 범위가 닫히면(엔진 종료) 종류 표 · 느린 로드 목록과 함께 소멸합니다. */
-        ScopeOwned<AssetLoadProfiler> s_assetLoadProfiler;
     } // namespace
 
     /** @brief `-gv_assetLoadProfile=0` — 에셋 로드 기록을 끕니다(기본 켬, 로드마다 시계 몇 번이라 싸다). */
@@ -57,16 +53,6 @@ namespace sw
             total += nanos;
         }
         return total;
-    }
-
-    AssetLoadProfiler& AssetLoadProfiler::get()
-    {
-        AssetLoadProfiler* const pProfiler = s_assetLoadProfiler.getOrCreate();
-        if ( pProfiler != nullptr )
-            return *pProfiler;
-        // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 아무것도 받지 않은 기록부로 답한다.
-        static AssetLoadProfiler s_closedFallback;
-        return s_closedFallback;
     }
 
     AssetLoadProfiler::AssetLoadProfiler()
@@ -240,12 +226,13 @@ namespace sw
     // 로드 한 번
     // ------------------------------------------------------------------------------
     AssetLoadScope::AssetLoadScope( const utf8* pKind, string_view path, bool bAsync )
-        : _record{}
+        : _pProfiler{ engine::findSubsystem<AssetLoadProfiler>() }
+        , _record{}
         , _phaseStartNanos{ 0 }
         , _phase{ AssetLoadPhase::IO }
         , _bActive{ SW_FALSE }
     {
-        if ( AssetLoadProfiler::get().isEnabled() == false )
+        if ( _pProfiler == nullptr || _pProfiler->isEnabled() == false )
             return;
         _record._kind       = hashed_string( pKind );
         _record._path       = string( path );
@@ -261,7 +248,7 @@ namespace sw
         if ( _bActive == SW_FALSE )
             return;
         beginPhase( AssetLoadPhase::Count );
-        AssetLoadProfiler::get().submit( _record );
+        _pProfiler->submit( _record ); // 켜져 있을 때만 `_bActive` 가 선다 — 그때 `_pProfiler` 는 비어 있지 않다
     }
 
     void AssetLoadScope::beginPhase( AssetLoadPhase phase )

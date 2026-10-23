@@ -232,6 +232,7 @@ namespace sw
 #endif
             engine::ServiceSetup serviceSetup;
             serviceSetup._bEditorServices = kEditorServices;
+            serviceSetup._bAuthorityGhost = true;
             _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {

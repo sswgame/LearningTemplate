@@ -8,34 +8,24 @@ namespace sw
 {
     SW_LOG_CALLER( "GameConnectSecurity" );
 
-    GameConnectSecurity& GameConnectSecurity::get()
-    {
-        static GameConnectSecurity s_instance;
-        return s_instance;
-    }
-
     GameConnectSecurity::GameConnectSecurity()
         : _mutex{}
-        , _pfnProvider{ nullptr }
+        , _pProvider{ nullptr }
         , _pAuthenticator{ nullptr }
         , _refusedWhileUnbound{ 0 }
     {
     }
 
-    void GameConnectSecurity::setProviderAccessor( ProviderAccessor pfnAccessor )
+    void GameConnectSecurity::setProvider( INetSecurityProvider* pProvider )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _pfnProvider = pfnAccessor;
+        _pProvider = pProvider;
     }
 
     INetSecurityProvider* GameConnectSecurity::findProvider() const
     {
-        ProviderAccessor pfnAccessor = nullptr;
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            pfnAccessor = _pfnProvider;
-        }
-        return pfnAccessor != nullptr ? &pfnAccessor() : nullptr;
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _pProvider;
     }
 
     bool GameConnectSecurity::bindAuthenticator( INetConnectAuthenticator* pAuthenticator )

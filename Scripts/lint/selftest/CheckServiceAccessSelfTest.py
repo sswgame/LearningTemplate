@@ -47,7 +47,14 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
      {"Source/Probe/Q.h": ("class Foo\n{\npublic:\n    static Foo* findActive();\n    static const Foo* getActiveInstance();\n"
                            "    static Foo*  findActiveFoo( );\n};\n")},
      (0, 0, 3)),
+    ("헤더의 정적 T& get() — 선언과 인라인 정의",
+     {"Source/Probe/T.h": "class Foo\n{\npublic:\n    static Foo& get();\n};\nstruct Bar\n{\n    static Bar& get()\n    {\n        static Bar s;\n        return s;\n    }\n};\n"},
+     (0, 2)),
     # --- 어기지 않은 조각 ---
+    ("T& get() 이어도 예외 표의 타입 · 인자 있는 get · 포인터 get · cpp 는 보지 않는다",
+     {"Source/Probe/U.h": "class DevCommandRegistry\n{\npublic:\n    static DevCommandRegistry& get();\n};\nstruct Cfg\n{\n    static Cfg& get( int id );\n    static Cfg* get();\n};\n",
+      "Source/Probe/U.cpp": "namespace\n{\n    struct Table\n    {\n        static Table& get()\n        {\n            static Table s;\n            return s;\n        }\n    };\n}\n"},
+     (0, 0)),
     ("주석 · 문자열 안의 언급",
      {"Source/Probe/J.cpp": '// getService<Foo>() 는 지워졌다. engine::getTypeRegistry() 도\n/* getSceneService<Bar>() */\nconst char* kText = "getService<Foo>()";\n'},
      (0, 0)),

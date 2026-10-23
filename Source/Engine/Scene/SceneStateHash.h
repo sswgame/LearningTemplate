@@ -4,7 +4,7 @@
  * @details 해시는 이름이 있는 오브젝트를 이름 순으로 돌며 (이름, 활성, 월드 위치 비트)를 접습니다. 같은 씬을 같은 입력으로 돌린 두 프로세스는 같은 틱에 같은 값을 냅니다.
  *          오브젝트 ID 는 넣지 않습니다(프로세스마다 다를 수 있다). 값의 범위는 씬 트랜스폼까지입니다 — 키트별 상태(파괴 해시 · 롤백 상태 바이트)는 같은 이력에
  *          다른 이름의 해시로 더하는 자리가 이 이력의 확장입니다.
- *          이력은 프로세스에 하나이고 게임 스레드만 씁니다. 용량 0(기본)이면 꺼져 있어 해시를 계산하지 않습니다(`-gv_stateHashHistory=N`, `startFromLaunch`).
+ *          이력은 엔진 서비스(`StateHashHistory`) 하나이고 게임 스레드만 씁니다. 용량 0(기본)이면 꺼져 있어 해시를 계산하지 않습니다(`-gv_stateHashHistory=N`).
  *          전용 서버는 자기 틱 번호로, 클라이언트(App)는 서버가 알린 틱 번호(`GameNetSession::tryGetServerTick`)로 남겨 두 이력의 틱이 같은 뜻이다.
  *          개발 명령 `state.hash`(지금 값)와 `state.hashes <from> <count>`(이력)가 같은 줄 형식으로 답하고, `parseReport` 가 그 글을 되읽습니다.
  */
@@ -13,6 +13,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -41,15 +42,18 @@ namespace sw
     /**
      * @class StateHashHistory
      * @brief 최근 N 틱의 해시 이력(링 버퍼)입니다. 서버가 틱마다 `record` 하고 개발 명령이 읽습니다.
+     * @details 엔진 서비스입니다(`engine::findSubsystem<StateHashHistory>()`) — 서비스 범위가 소유한다. 용량은 서비스가 설 때 실행 인자
+     *          `-gv_stateHashHistory=N` 으로 정한다(0 이면 끈 채로 둔다. Shipping 에는 인자가 없어 늘 꺼져 있다).
      */
-    class SW_API StateHashHistory
+    class SW_API StateHashHistory final : public ISubsystem
     {
     public:
-        /** @brief 프로세스에 하나인 이력입니다. */
-        static StateHashHistory& get();
+        static constexpr const utf8* kSubsystemName = "StateHashHistory";
 
-        /** @brief 실행 인자 `-gv_stateHashHistory=N` 으로 용량을 정합니다(0 이면 끈 채로 둡니다). 전용 서버와 App 이 기동 때 부릅니다. Shipping 에는 인자가 없어 늘 꺼져 있습니다. */
-        void startFromLaunch();
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief 담을 틱 수를 정합니다(0 이면 끄고 비웁니다). */
         void   setCapacity( uint32 capacity );
         uint32 getCapacity() const { return _capacity; }

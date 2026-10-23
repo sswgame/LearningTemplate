@@ -31,6 +31,7 @@
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 namespace sw
 {
@@ -176,7 +177,10 @@ namespace sw
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
         // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
-        const bool bNetSessionOpened = game::getSubsystem<GameNetSession>().openFromLaunch(); // `bindEngineServices` 가 있음을 확인했다
+        // 티켓 게임 포트가 쓸 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 세션을 열기 전에 넣는다.
+        GameNetSession& netSession = game::getSubsystem<GameNetSession>(); // `bindEngineServices` 가 있음을 확인했다
+        netSession.getConnectSecurity().setProvider( &NetSecurity::getProvider() );
+        const bool bNetSessionOpened = netSession.openFromLaunch();
         if ( bNetSessionOpened == false )
             SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
         // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
@@ -201,6 +205,9 @@ namespace sw
         }
         // 인스턴스 서브시스템(로딩 화면 · 전환)을 onShutdown 뒤에 내린다. 네트워크 세션은 엔진 수명이라 닫지 않는다(리로드를 넘어 연결을 지킨다).
         _gameScope.getCollection().shutdownAll();
+        // 제공자는 GameFramework 의 것이라 이 인스턴스가 내려가면 거둔다(다시 서는 인스턴스가 다시 넣는다). 열린 세션은 이미 받은 포인터로 계속 돈다.
+        if ( GameNetSession* pNetSession = game::findSubsystem<GameNetSession>() )
+            pNetSession->getConnectSecurity().setProvider( nullptr );
         detachGameScope();
         _listPendingSceneLoad.clear();
         _pWindow       = nullptr;

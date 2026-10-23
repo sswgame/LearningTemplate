@@ -9,12 +9,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
-    template <class T>
-    class ScopeOwned;
-
     /** @brief 로드 한 번의 단계입니다. 단계를 나눌 수 없는 로더(파일을 읽으며 해석한다)는 `IO` 하나에 모두 적습니다. */
     enum class AssetLoadPhase : uint8
     {
@@ -57,20 +55,26 @@ namespace sw
 {
     /**
      * @class AssetLoadProfiler
-     * @brief 프로세스에 하나인 에셋 로드 기록부입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). 스레드 안전합니다.
-     * @details 로더가 `AssetLoadScope` 를 열면 단계마다 시간이 측정되고, 닫힐 때 여기 넘어온다. 여기서:
+     * @brief 에셋 로드 기록부입니다 — 엔진 서비스(`engine::findSubsystem<AssetLoadProfiler>()`)로, 서비스 범위가 소유합니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). 스레드 안전합니다.
+     * @details 엔진 범위를 세우지 않는 호스트(도구)에는 이 서비스가 없고, 그때 `AssetLoadScope` 는 아무것도 재지 않는다.
+     *          로더가 `AssetLoadScope` 를 열면 단계마다 시간이 측정되고, 닫힐 때 여기 넘어온다. 여기서:
      *          - 종류별 누적(수 · 바이트 · 단계별 시간 · 가장 긴 로드 · 비동기 수 · 실패 수)
      *          - 가장 느린 로드 `kSlowestCount` 개(경로 · 단계별 시간)
      *          - 엔진 프레임 프로파일러가 있으면 `Asset.<종류>.<단계>` 구간 · `Asset.Bytes` 카운터에도 더한다(`frame breakdown` 표에 로딩이 보인다).
      *          `-gv_assetLoadProfile=0` 이면 아무것도 모으지 않는다. 보고는 `report`(`-gv_assetLoadReport=1` 이면 엔진 종료 · 프레임 측정 보고 때 남는다).
      *          언리얼 Insights 의 LoadTimeProfiler(패키지마다 IO · 직렬화 시간) · 유니티 프로파일러의 Loading 마커와 같은 자리입니다.
      */
-    class SW_API AssetLoadProfiler
+    class SW_API AssetLoadProfiler final : public ISubsystem
     {
     public:
-        static constexpr uint32 kSlowestCount = 16;
+        static constexpr uint32      kSlowestCount  = 16;
+        static constexpr const utf8* kSubsystemName = "AssetLoadProfiler";
 
-        static AssetLoadProfiler& get();
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        AssetLoadProfiler();
 
         bool isEnabled() const;
         /** @brief 기록을 켜거나 끕니다(`gv_assetLoadProfile` 을 바꾼다). */
@@ -90,16 +94,12 @@ namespace sw
         void reset();
 
     private:
-        friend class ScopeOwned<AssetLoadProfiler>; ///< 엔진 수명 범위가 만들고 소멸시킨다(AssetLoadProfiler.cpp)
-
         /** @brief 종류 하나의 누적과 프레임 프로파일러 구간 번호(단계마다)입니다. */
         struct KindEntry
         {
             AssetLoadKindSummary _summary{};
             uint32               _arrProfilerSlot[static_cast<uint32>( AssetLoadPhase::Count )]{};
         };
-
-        AssetLoadProfiler();
 
         mutable mutex           _mutex;
         vector<KindEntry>       _listKind;
@@ -138,9 +138,10 @@ namespace sw
         void setSucceeded() { _record._bSucceeded = SW_TRUE; }
 
     private:
-        AssetLoadRecord _record;
-        int64           _phaseStartNanos;
-        AssetLoadPhase  _phase;
-        uint8           _bActive;
+        AssetLoadProfiler* _pProfiler; ///< 서비스가 없으면(엔진 범위를 세우지 않는 호스트) nullptr — 이 범위는 아무것도 재지 않는다
+        AssetLoadRecord    _record;
+        int64              _phaseStartNanos;
+        AssetLoadPhase     _phase;
+        uint8              _bActive;
     };
 } // namespace sw

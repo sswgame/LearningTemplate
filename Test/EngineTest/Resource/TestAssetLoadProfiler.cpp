@@ -2,6 +2,7 @@
 
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -26,6 +27,14 @@ namespace
         }
     }
 
+    /** @brief 하네스의 서비스 범위가 들고 있는 기록부입니다. 하네스가 넣지 않았으면 테스트 환경의 오류라 멈춘다. */
+    AssetLoadProfiler& getProfiler()
+    {
+        AssetLoadProfiler* pProfiler = engine::findSubsystem<AssetLoadProfiler>();
+        SW_ASSERT( pProfiler != nullptr );
+        return *pProfiler;
+    }
+
     const AssetLoadKindSummary* findAssetLoadKind( const vector<AssetLoadKindSummary>& listSummary, const utf8* pKind )
     {
         for ( const AssetLoadKindSummary& summary : listSummary )
@@ -42,7 +51,7 @@ namespace
  */
 SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
 {
-    AssetLoadProfiler& profiler = AssetLoadProfiler::get();
+    AssetLoadProfiler& profiler = getProfiler();
     profiler.reset();
 
     {
@@ -112,7 +121,7 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
 SW_TEST_CASE( AssetLoadProfilerTest, MeshCacheLoadsLeaveRecords )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    AssetLoadProfiler& profiler = AssetLoadProfiler::get();
+    AssetLoadProfiler& profiler = getProfiler();
     profiler.reset();
 
     shared_ptr<Mesh> mesh = MeshCache::acquire( "game/abilityarena/models/banner.mesh" );

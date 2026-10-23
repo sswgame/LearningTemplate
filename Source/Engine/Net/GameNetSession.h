@@ -53,6 +53,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -163,20 +164,25 @@ namespace sw
          *        서버 설정(`makeServerParams`)입니다. 어느 것도 없으면 `None` 이며 세션을 열지 않습니다.
          * @details 실행 인자가 둘 다 있거나, 포트가 범위 밖이거나, 주소를 풀지 못하거나, 서버 설정이 틀리면 오류 로그와 `Invalid` 다 — 한쪽을 골라 대신 열지 않는다.
          */
-        [[nodiscard]] static GameNetLaunch makeLaunchParams( GameNetSessionParams& outParams );
+        [[nodiscard]] GameNetLaunch makeLaunchParams( GameNetSessionParams& outParams );
         /**
          * @brief 전용 서버 설정에서 서버 세션 인자를 만듭니다. `_listenAddress` 가 `127.0.0.1` 이면 루프백만, `0.0.0.0` 이면 모든 인터페이스입니다.
          * @details 다른 주소, 포트 범위 밖, 샤드 여럿에 포트 0, 샤드 여럿의 마지막 포트가 범위 밖, 리눅스가 아닌데 `_bGamePortReuse` 는 오류 로그와 false 입니다 —
          *          다른 값으로 대신 열지 않는다.
          */
-        [[nodiscard]] static bool makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams );
+        [[nodiscard]] bool makeServerParams( const ServerConfig& config, GameNetSessionParams& outParams );
         /**
          * @brief 접속 티켓을 내밀어 @p serverAddress 에 붙는 클라이언트 세션 인자를 만듭니다(OnlineKits F5 의 클라이언트 쪽).
          * @details 연결을 암호화하고 티켓의 세션 비밀에 묶는다. 주소는 서버 배정(`ServerDescriptor::pickPort`)이 정하고 티켓은 계정 키트의 `AccountClient::makeConnectCredentials` 가 만든다.
          *          그래서 실행 인자(`-gv_netConnectAddress`, 자격 없이 붙는 길)가 아니라 로그인 뒤 게임 코드가 이 인자로 `initialize` 한다.
-         *          티켓이 비었거나 암호 제공자가 없으면(GameFramework 가 안 섰다) 오류 로그와 false 다 — 자격 없이 붙는 클라이언트로 대신 만들지 않는다.
+         *          티켓이 비었거나 암호 제공자가 없으면(`getConnectSecurity().setProvider` 로 넣지 않았다) 오류 로그와 false 다 — 자격 없이 붙는 클라이언트로 대신 만들지 않는다.
          */
-        [[nodiscard]] static bool makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams );
+        [[nodiscard]] bool makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams ) const;
+        /**
+         * @brief 이 세션의 접속 보안 자리입니다 — 암호 제공자(게임 인스턴스가 넣는다)와 접속 인증기(서버 조립의 계정 키트가 묶는다).
+         * @details 서버 설정 `_bGameConnectTicket` 이 켜졌을 때 `makeServerParams` 가 이 자리를 세션의 인증기로 끼운다.
+         */
+        GameConnectSecurity& getConnectSecurity() { return _connectSecurity; }
 
         /** @brief 소켓을 열고 역할을 시작합니다(서버는 샤드마다 listen, 클라이언트는 connectAsync). 하나라도 실패하면 연 것을 모두 닫고 로그를 남긴 뒤 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const GameNetSessionParams& params );
@@ -249,6 +255,7 @@ namespace sw
         vector<unique_ptr<Shard>>    _listShard; ///< 포트 샤드마다 소켓 · 회선 흉내 · 호스트 · 네트워크 스레드(클라이언트는 하나)
         NetHostShardSet              _peers;     ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
         NetMessageRouter             _router;
+        GameConnectSecurity          _connectSecurity;  ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
         NetMessageWriter             _tickWriter;       ///< 서버 — `sendServerTick` 이 다시 쓴다
         TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
         vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다

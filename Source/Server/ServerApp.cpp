@@ -196,7 +196,7 @@ namespace sw
         if ( startServerServices() == false )
             return false;
         // 게임 포트가 접속 티켓을 요구하는데 확인할 조립이 서지 않았으면 모든 접속을 거절하는 서버가 된다 — 그런 서버로 뜨지 않는다.
-        if ( _pServerConfig->_bGameConnectTicket && GameConnectSecurity::get().isAuthenticatorBound() == false )
+        if ( _pServerConfig->_bGameConnectTicket && engine::getSubsystem<GameNetSession>().getConnectSecurity().isAuthenticatorBound() == false )
         {
             SW_LOG_ERROR( "Server config _bGameConnectTicket is on but no online kit bound a game connect authenticator (add the account kit 'gameConnect')" );
             return false;
@@ -430,9 +430,10 @@ namespace sw
             ++_tickCount;
             Logger::setClockNumber( LogClock::Tick, _tickCount );
 #if !defined( SW_SHIPPING )
-            if ( StateHashHistory::get().isRecording() && engine::areEngineServicesBound() )
+            StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
+            if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
             {
-                StateHashHistory::get().recordActiveScene( _tickCount );
+                pStateHashHistory->recordActiveScene( _tickCount );
                 // 클라이언트가 같은 틱 번호로 자기 해시를 남긴다(S7) — 이력을 남기는 서버만 보낸다.
                 GameNetSession* pNetSession = engine::findSubsystem<GameNetSession>();
                 if ( pNetSession != nullptr )
@@ -579,7 +580,6 @@ namespace sw
 #if !defined( SW_SHIPPING )
     bool ServerApp::startDebugTools()
     {
-        StateHashHistory::get().startFromLaunch();
         if ( gv_debugChannelPort <= 0 )
             return true;
         const uint16 port = static_cast<uint16>( gv_debugChannelPort );
@@ -631,7 +631,6 @@ namespace sw
             _debugChannel->shutdown();
         _debugChannel.reset();
         _debugTransport.reset();
-        StateHashHistory::get().setCapacity( 0 );
 #endif
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();

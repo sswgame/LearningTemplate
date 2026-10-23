@@ -21,6 +21,7 @@
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
     #include "Core/Math/VectorMath.h"
+    #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -50,17 +51,22 @@ namespace sw
 
 namespace sw
 {
-    /** @class AuthorityGhost @brief 서버 포즈를 읽어 고스트를 겹치는 프로세스 하나짜리 도구입니다(`get()`). 게임 스레드가 `update` 를 부릅니다. */
-    class SW_API AuthorityGhost
+    /**
+     * @class AuthorityGhost
+     * @brief 서버 포즈를 읽어 고스트를 겹치는 엔진 서비스입니다(`engine::findSubsystem<AuthorityGhost>()`). 서비스 범위가 소유하고, 게임 스레드가 `update` 를 부릅니다.
+     * @details 작업 스레드가 엔진 이미지의 코드라서 엔진은 이미지가 내려가기 전에 `shutdown` 으로 합류시킨다(범위가 사라질 때 소멸자도 한 번 더 부른다).
+     */
+    class SW_API AuthorityGhost final : public ISubsystem
     {
     public:
-        static AuthorityGhost& get();
+        static constexpr const utf8* kSubsystemName = "AuthorityGhost";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         AuthorityGhost();
-        ~AuthorityGhost();
-
-        AuthorityGhost( const AuthorityGhost& )            = delete;
-        AuthorityGhost& operator=( const AuthorityGhost& ) = delete;
+        ~AuthorityGhost() override;
 
         /** @brief `scene.poses` 의 글을 되읽습니다. 읽지 못한 줄은 건너뜁니다. */
         static void parsePoses( string_view text, vector<AuthorityPose>& outListPose );

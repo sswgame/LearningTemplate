@@ -69,6 +69,7 @@ namespace sw
         struct ServiceSetup
         {
             bool _bEditorServices{ false }; ///< 되돌리기 기록 · 에디터 세션 상태를 둔다(엔진 루프는 배포본에 두지 않는다, 하네스는 늘 둔다)
+            bool _bAuthorityGhost{ false }; ///< 서버 포즈 고스트(개발 명령이 켜진 구성에서만 선다 — 하네스에는 두지 않는다)
         };
     } // namespace engine
 

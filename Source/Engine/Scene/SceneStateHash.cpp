@@ -87,16 +87,11 @@ namespace sw
         return hash;
     }
 
-    StateHashHistory& StateHashHistory::get()
-    {
-        static StateHashHistory s_history;
-        return s_history;
-    }
-
-    void StateHashHistory::startFromLaunch()
+    SubsystemInitResult StateHashHistory::initializeSubsystem()
     {
         if ( gv_stateHashHistory > 0 )
             setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
+        return SubsystemInitResult::Succeeded;
     }
 
     void StateHashHistory::recordActiveScene( uint64 tick )

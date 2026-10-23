@@ -46,11 +46,16 @@
     #include "Engine/Renderer/RenderThreadSubsystem.h"
     #include "Engine/Renderer/SceneRHISubsystem.h"
 #endif
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
+#if SW_DEV_COMMANDS_ENABLED
+    #include "Engine/Scene/AuthorityGhost.h"
+#endif
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
@@ -98,6 +103,12 @@ namespace sw::engine
         // 외부 프로파일러(`-gv_tracy`) — 엔진 범위보다 먼저 켜져 기동 단계부터 타임라인에 남는다.
         services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
         services.addSubsystem( sw::make_unique<CrashReportService>() );
+        services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
+        services.addSubsystem( sw::make_unique<StateHashHistory>() );
+#if SW_DEV_COMMANDS_ENABLED
+        if ( setup._bAuthorityGhost )
+            services.addSubsystem( sw::make_unique<AuthorityGhost>() ); // 서버 포즈 고스트(개발 도구) — Shipping 에는 없다
+#endif
         {
             SW_MEMORY_SCOPE( RenderCPU );
             services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
