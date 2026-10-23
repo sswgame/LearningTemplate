@@ -2,11 +2,13 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/Hit/MeleeHitLedger.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -266,4 +268,92 @@ SW_TEST_CASE( AnimationNotify2DTest, RestartedFrameClosesOpenStates )
     restarted._bRestarted         = SW_TRUE;
     pNotify->processFrame( restarted );
     SW_EXPECT_EQUAL( 0u, pNotify->getActiveStateCount() );
+}
+
+/**
+ * @brief [AnimationNotify2DTest] 서버 장부는 권위 스윕만 적고, 클라이언트가 예측으로 본 맞음의 주장을 그 기록으로 확인한다 — 서버 시점에 비켜선 표적도 인정하고 지어낸 주장은 거절한다
+ * @details 칼날 (0, 0) ~ (3, 0). `Near` 는 서버 스윕이 직접 맞힌다. `Dodger` 는 서버 시점에는 칼날 밖(y = 5)이지만 클라이언트가 보던 틱에는 (2.5, 0) 에 있었다 —
+ *          지연 보상이 되감은 자리 (2.5, 0) 를 넘기면 인정하고 한 번만 전달한다. 그 밖: 되감은 자리가 칼날 밖이면 `OutOfBlade`, 휘두른 적 없는 프레임 · 때린 쪽이면 `NoSweep`.
+ */
+SW_TEST_CASE( AnimationNotify2DTest, MeleeHitLedgerConfirmsClaimsAgainstServerSweeps )
+{
+    GameObjectManager     manager;
+    RigidBody2DComponent* pNear    = TestAnimationNotify2DInternal::spawnBox( manager, "Near", float2{ 1.0f, 0.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    RigidBody2DComponent* pDodger  = TestAnimationNotify2DInternal::spawnBox( manager, "Dodger", float2{ 2.5f, 5.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    RigidBody2DComponent* pSelf    = TestAnimationNotify2DInternal::spawnBox( manager, "Fighter", float2{ 0.0f, 0.0f }, float2{ 0.5f, 0.5f }, PhysicsBodyType::Kinematic, "Flesh" );
+    RigidBody2DComponent* pBystand = TestAnimationNotify2DInternal::spawnBox( manager, "Bystander", float2{ 8.0f, 8.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    SW_ASSERT_TRUE( pNear != nullptr && pDodger != nullptr && pSelf != nullptr && pBystand != nullptr );
+    MockHitRecorder2DComponent* pNearHits   = pNear->getOwner()->addComponent<MockHitRecorder2DComponent>();
+    MockHitRecorder2DComponent* pDodgerHits = pDodger->getOwner()->addComponent<MockHitRecorder2DComponent>();
+    SW_ASSERT_TRUE( pNearHits != nullptr && pDodgerHits != nullptr );
+    MeleeHitLedger::ensureFor( manager );
+    manager.beginPlay();
+    manager.update( TestAnimationNotify2DInternal::kFrame ); // 바디를 만든다
+    MeleeHitLedger* pLedger = MeleeHitLedger::find( manager );
+    SW_ASSERT_TRUE( pLedger != nullptr );
+
+    vector<float3> listBlade;
+    MeleeHitWindowUtil::makeBlade( float3{ 0.0f, 0.0f, 0.0f }, float3{ 3.0f, 0.0f, 0.0f }, 3, listBlade );
+    MeleeHitParams params;
+    params._kind         = hashed_string( "Slash" );
+    params._radius       = 0.1f;
+    params._damage       = 7.0f;
+    params._bIs2D        = true;
+    GameObject& attacker = *pSelf->getOwner();
+
+    // 예측(클라이언트) 스윕은 적지 않는다.
+    vector<GameObjectHandle> listPredicted;
+    vector<MeleeHit>         listPredictedHit;
+    SW_EXPECT_EQUAL( 1u, MeleeHitWindowUtil::sweep( attacker, {}, listBlade, params, MeleeHitAuthority::Predicted, listPredicted, listPredictedHit ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), pLedger->getRecordCount() );
+
+    // 권위 스윕은 맞지 않은 것도 적는다.
+    vector<GameObjectHandle> listHitTarget;
+    vector<MeleeHit>         listHit;
+    SW_EXPECT_EQUAL( 1u, MeleeHitWindowUtil::sweep( attacker, {}, listBlade, params, MeleeHitAuthority::Authority, listHitTarget, listHit ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), pLedger->getRecordCount() );
+    SW_EXPECT_EQUAL( size_t( 1 ), pNearHits->_listHit.size() );
+    SW_EXPECT_EQUAL( size_t( 0 ), pDodgerHits->_listHit.size() );
+
+    MeleeHitClaim claim;
+    claim._frame    = pLedger->getFrame();
+    claim._targetID = 77;
+    const float3 rewoundCenter{ 2.5f, 0.0f, 0.0f };
+    const float3 serverCenter{ 2.5f, 5.0f, 0.0f };
+    SW_EXPECT_TRUE( MeleeClaimVerdict::Confirmed == pLedger->verify( attacker.getObjectID(), claim, rewoundCenter, 0.3f, nullptr ) );
+    SW_EXPECT_TRUE( MeleeClaimVerdict::OutOfBlade == pLedger->verify( attacker.getObjectID(), claim, serverCenter, 0.3f, nullptr ) );   // 서버 시점의 자리는 칼날 밖
+    SW_EXPECT_TRUE( MeleeClaimVerdict::NoSweep == pLedger->verify( attacker.getObjectID() + 1, claim, rewoundCenter, 0.3f, nullptr ) ); // 휘두르지 않은 쪽
+    MeleeHitClaim stale = claim;
+    stale._frame += MeleeHitLedger::kClaimSlackFrames + 1;
+    SW_EXPECT_TRUE( MeleeClaimVerdict::NoSweep == pLedger->verify( attacker.getObjectID(), stale, rewoundCenter, 0.3f, nullptr ) ); // 그 프레임 안팎에 휘두름이 없다
+
+    // 인정된 주장은 기록된 피해로 한 번만 전달한다.
+    GameObject& dodger = *pDodger->getOwner();
+    SW_EXPECT_TRUE( MeleeClaimVerdict::Confirmed == pLedger->claimHit( attacker, dodger, claim, rewoundCenter, 0.3f, listHitTarget ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), pDodgerHits->_listHit.size() );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, pDodgerHits->_listHit[0]._damage, 1e-6f );
+    SW_EXPECT_TRUE( pDodgerHits->_listHit[0]._kind == hashed_string( "Slash" ) );
+    SW_EXPECT_TRUE( pDodgerHits->_listHit[0]._pInstigator == &attacker );
+    SW_EXPECT_TRUE( MeleeClaimVerdict::Confirmed == pLedger->claimHit( attacker, dodger, claim, rewoundCenter, 0.3f, listHitTarget ) ); // 같은 창에서 두 번째는 전달하지 않는다
+    SW_EXPECT_EQUAL( size_t( 1 ), pDodgerHits->_listHit.size() );
+    // 칼날 밖의 표적을 대는 주장은 전달하지 않는다.
+    GameObject& bystander = *pBystand->getOwner();
+    SW_EXPECT_TRUE( MeleeClaimVerdict::OutOfBlade == pLedger->claimHit( attacker, bystander, claim, float3{ 8.0f, 8.0f, 0.0f }, 0.3f, listHitTarget ) );
+
+    // 기록은 보관 프레임이 지나면 버려진다.
+    for ( uint32 frameIndex = 0; frameIndex <= MeleeHitLedger::kKeepFrameCount; ++frameIndex )
+    {
+        manager.update( TestAnimationNotify2DInternal::kFrame );
+    }
+    SW_EXPECT_EQUAL( size_t( 0 ), pLedger->getRecordCount() );
+
+    // 주장은 전송 형식을 왕복한다.
+    BitWriter writer;
+    claim.write( writer );
+    BitReader     reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
+    MeleeHitClaim decoded;
+    SW_ASSERT_TRUE( MeleeHitClaim::read( reader, decoded ) );
+    SW_EXPECT_EQUAL( claim._frame, decoded._frame );
+    SW_EXPECT_EQUAL( claim._targetID, decoded._targetID );
+    manager.endPlay();
 }
