@@ -103,6 +103,12 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 `Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 끝난 곳: `Source/Editor/Panels/Inspector` 의 손으로 쓴 erase-remove 2건(`EditorPropertyGrid`)을 `VectorUtil::removeIf` 로 바꿨다(2026-10-21).
 
+### SingletonGetToServices
+제목: `static T& get()` 전역 단일체 5 곳을 서비스로 옮기기
+옛번호: 없음
+왜 필요한가: `CheckServiceAccess` 게이트가 `get` 도 잡게 되면서(`wt/singletonget`) 헤더 14 곳을 예외 표에 올렸고, 그중 5 곳(`GameConnectSecurity` · `AuthorityGhost` · `StateHashHistory` · `AssetLoadProfiler` · `ResourceDataKindRegistry`)은 정당한 예외라는 근거가 약해 "이전 대기" 로 두었습니다.
+남은 것: 호출처 수십 곳을 서비스 접근으로 바꾸고 예외 표에서 지웁니다. 게이트는 여전히 이름(`getInstance` · `get`)으로 판단해 `instance()` · `shared()` 는 못 봅니다 — 이름과 무관하게 막으려면 타입 · API 를 바꿔야 합니다.
+
 ## 기능
 
 
