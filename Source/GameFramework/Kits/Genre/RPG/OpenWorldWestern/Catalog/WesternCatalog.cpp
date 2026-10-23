@@ -18,6 +18,13 @@ namespace sw
     {
         struct WesternCatalogInternal
         {
+            /** @brief `_level` 이 낮은 쪽이 앞인지 반환합니다(추격 · 유대 · 데드아이 단계표 정렬용). */
+            template <typename TDef>
+            [[nodiscard]] static bool isLowerLevel( const TDef& lhs, const TDef& rhs )
+            {
+                return lhs._level < rhs._level;
+            }
+
             /** @brief `<PeltGrade scales="0,0.3,0.6,1">` — 0..3 성 네 값이 모두 있어야 합니다. 모자라면 오류이고 표를 바꾸지 않습니다. */
             [[nodiscard]] static bool readGradeScales( const XMLNode& node, string_view sourceName, vector<float32>& outListScale )
             {
@@ -191,15 +198,9 @@ namespace sw
                 ++loadedCount;
         }
 
-        const auto byPursuitLevel = []( const WesternPursuitDef& lhs, const WesternPursuitDef& rhs )
-        { return lhs._level < rhs._level; };
-        const auto byBondLevel = []( const WesternBondLevelDef& lhs, const WesternBondLevelDef& rhs )
-        { return lhs._level < rhs._level; };
-        const auto byDeadEyeLevel = []( const WesternDeadEyeLevelDef& lhs, const WesternDeadEyeLevelDef& rhs )
-        { return lhs._level < rhs._level; };
-        std::stable_sort( _listPursuit.begin(), _listPursuit.end(), byPursuitLevel );
-        std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), byBondLevel );
-        std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), byDeadEyeLevel );
+        std::stable_sort( _listPursuit.begin(), _listPursuit.end(), WesternCatalogInternal::isLowerLevel<WesternPursuitDef> );
+        std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), WesternCatalogInternal::isLowerLevel<WesternBondLevelDef> );
+        std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), WesternCatalogInternal::isLowerLevel<WesternDeadEyeLevelDef> );
         // 유대 단계는 기반 레벨 진행으로 센다. 단계 사이의 임계값 차이가 경험치 테이블이 된다(첫 단계가 시작점이다).
         vector<int64> listXpToNext;
         for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )

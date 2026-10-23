@@ -25,6 +25,32 @@ namespace sw
                        unit._position._z - radius <= maxCorner._z;
             }
 
+            /** @brief 유닛 id 목록 하나(개수 + 묶은 id)를 씁니다. `readList` 가 읽습니다. */
+            static void writeList( Archive& outArchive, const vector<RTSUnitID>& listUnit )
+            {
+                outArchive << static_cast<uint32>( listUnit.size() );
+                for ( const RTSUnitID unitID : listUnit )
+                {
+                    outArchive << unitID.packed();
+                }
+            }
+
+            /** @brief `writeList` 가 쓴 유닛 id 목록 하나를 읽습니다. */
+            [[nodiscard]] static bool readList( Archive& archive, vector<RTSUnitID>& outListUnit )
+            {
+                uint32 count = 0;
+                if ( StateArchiveUtil::readCount( archive, sizeof( uint64 ), count ) == false )
+                    return false;
+                outListUnit.resize( count );
+                for ( RTSUnitID& unitID : outListUnit )
+                {
+                    uint64 packed = 0;
+                    archive >> packed;
+                    unitID = RTSUnitID::fromPacked( packed );
+                }
+                return archive.isOk();
+            }
+
             static void sortCorners( const float3& cornerA, const float3& cornerB, float3& outMin, float3& outMax )
             {
                 outMin = float3{ MathUtil::min( cornerA._x, cornerB._x ), 0.0f, MathUtil::min( cornerA._z, cornerB._z ) };
@@ -38,44 +64,22 @@ namespace sw
 {
     void RTSSelection::writeState( Archive& outArchive ) const
     {
-        const auto writeList = [&outArchive]( const vector<RTSUnitID>& listUnit )
-        {
-            outArchive << static_cast<uint32>( listUnit.size() );
-            for ( const RTSUnitID unitID : listUnit )
-            {
-                outArchive << unitID.packed();
-            }
-        };
-        writeList( _listSelected );
+        RTSSelectionInternal::writeList( outArchive, _listSelected );
         for ( const vector<RTSUnitID>& listGroup : _arrGroup )
         {
-            writeList( listGroup );
+            RTSSelectionInternal::writeList( outArchive, listGroup );
         }
     }
 
     bool RTSSelection::readState( Archive& archive )
     {
-        const auto readList = [&archive]( vector<RTSUnitID>& outListUnit )
-        {
-            uint32 count = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( uint64 ), count ) == false )
-                return false;
-            outListUnit.resize( count );
-            for ( RTSUnitID& unitID : outListUnit )
-            {
-                uint64 packed = 0;
-                archive >> packed;
-                unitID = RTSUnitID::fromPacked( packed );
-            }
-            return archive.isOk();
-        };
         vector<RTSUnitID> listSelected;
         vector<RTSUnitID> arrGroup[kGroupCount];
-        if ( readList( listSelected ) == false )
+        if ( RTSSelectionInternal::readList( archive, listSelected ) == false )
             return false;
         for ( vector<RTSUnitID>& listGroup : arrGroup )
         {
-            if ( readList( listGroup ) == false )
+            if ( RTSSelectionInternal::readList( archive, listGroup ) == false )
                 return false;
         }
         _listSelected = std::move( listSelected );

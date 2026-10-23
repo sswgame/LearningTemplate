@@ -59,6 +59,32 @@ namespace sw
                 std::copy( arrValue, arrValue + kMonsterStatCount, outArrValue );
                 return true;
             }
+
+            /**
+             * @brief 지역 · 시간대에 맞는 조우표의 가중치 있는 슬롯을 차례로 @p visit 에 넘깁니다. @p visit 이 true 를 반환하면 멈춥니다.
+             * @details 후보를 목록에 모으지 않으므로 조우마다 할당이 생기지 않는다. 호출자가 같은 순서로 두 번 훑는다(합을 구하고, 고른다).
+             */
+            template <typename TVisit>
+            static void forEachCandidate( const vector<MonsterEncounterDef>& listTable, const hashed_string& area, const hashed_string& timeOfDay, TVisit&& visit )
+            {
+                for ( const MonsterEncounterDef& table : listTable )
+                {
+                    if ( table._area != area )
+                        continue;
+                    bool bTimeMatches = table._listTime.empty();
+                    for ( const hashed_string& time : table._listTime )
+                    {
+                        bTimeMatches = bTimeMatches || time == timeOfDay;
+                    }
+                    if ( bTimeMatches == false )
+                        continue;
+                    for ( const MonsterEncounterSlot& slot : table._listSlot )
+                    {
+                        if ( slot._weight > 0 && visit( slot ) )
+                            return;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -158,29 +184,9 @@ namespace sw
     bool MonsterCollectorCatalog::rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesID,
                                                  int32& outLevel ) const
     {
-        // 후보를 목록에 모으지 않고 같은 순서로 두 번 훑는다(합을 구하고, 고른다). 그러면 조우마다 할당이 생기지 않는다.
-        const auto forEachCandidate = [&]( auto&& visit )
-        {
-            for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
-            {
-                if ( table._area != area )
-                    continue;
-                bool bTimeMatches = table._listTime.empty();
-                for ( const hashed_string& time : table._listTime )
-                {
-                    bTimeMatches = bTimeMatches || time == timeOfDay;
-                }
-                if ( bTimeMatches == false )
-                    continue;
-                for ( const MonsterEncounterSlot& slot : table._listSlot )
-                {
-                    if ( slot._weight > 0 && visit( slot ) )
-                        return;
-                }
-            }
-        };
+        using Internal    = MonsterCollectorCatalogInternal;
         int32 totalWeight = 0;
-        forEachCandidate( [&totalWeight]( const MonsterEncounterSlot& slot )
+        Internal::forEachCandidate( _encounterCatalog.getAll(), area, timeOfDay, [&totalWeight]( const MonsterEncounterSlot& slot )
         {
             totalWeight += slot._weight;
             return false;
@@ -190,7 +196,7 @@ namespace sw
 
         int32                       pick    = random.nextInt( 0, totalWeight - 1 );
         const MonsterEncounterSlot* pPicked = nullptr;
-        forEachCandidate( [&pick, &pPicked]( const MonsterEncounterSlot& slot )
+        Internal::forEachCandidate( _encounterCatalog.getAll(), area, timeOfDay, [&pick, &pPicked]( const MonsterEncounterSlot& slot )
         {
             if ( pick < slot._weight )
             {
