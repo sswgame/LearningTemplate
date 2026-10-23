@@ -145,6 +145,65 @@ namespace sw
                     return output;
                 }
             };
+
+            /**
+             * @brief 프레임 [begin, end) 안에서 창 사이 에너지 오름이 가장 큰 창을 찾습니다. 오름은 앞 창 대비 비율이고, 바닥은 무음 RMS 다(무음끼리의 잡음 비율이 터짐으로 보이지 않게).
+             * @param inoutPreviousOnsetRms 앞 프레임의 마지막 짧은 창의 RMS 입니다(터짐이 프레임 경계에 걸쳐도 측정한다). 이 프레임의 마지막 창으로 갱신합니다.
+             * @param outRiseBegin 가장 많이 오른 창의 시작입니다.
+             * @return 가장 큰 오름 비율입니다.
+             */
+            static float32 findMaxOnsetRise( const vector<float32>& listSample, size_t begin, size_t end, size_t onsetSamples, float32 silenceRms, float32& inoutPreviousOnsetRms, size_t& outRiseBegin )
+            {
+                float32 maxOnsetRise = 0.0f;
+                outRiseBegin         = begin;
+                for ( size_t onsetBegin = begin; onsetBegin < end; onsetBegin += onsetSamples )
+                {
+                    const float32 onsetRms = computeRangeRms( listSample, onsetBegin, MathUtil::min( onsetBegin + onsetSamples, end ) );
+                    const float32 rise     = onsetRms / MathUtil::max( inoutPreviousOnsetRms, silenceRms );
+                    if ( rise > maxOnsetRise )
+                    {
+                        maxOnsetRise = rise;
+                        outRiseBegin = onsetBegin;
+                    }
+                    inoutPreviousOnsetRms = onsetRms;
+                }
+                return maxOnsetRise;
+            }
+
+            /**
+             * @brief 대역 형태(합 1)를 비즘 테이블과 코사인으로 비교해 첫 비즘(무음)을 뺀 비즘마다의 점수를 @p inoutListScore 에 채웁니다(날카로움으로 곱한다).
+             *        포먼트가 있으면 모음 비즘에 포먼트 일치 점수를, 자음 단서가 맞으면 자음 점수를 더합니다.
+             * @return 점수의 최댓값입니다(softmax 의 기준).
+             */
+            static float32 computeVisemeScores( const LipSyncSettings& settings, const float32 ( &arrShape )[3], float32 shapeLength, bool bHasFormants, const float2& formantHz, bool bPlosive,
+                                                bool bFricative, vector<float32>& inoutListScore )
+            {
+                const uint32 visemeCount = static_cast<uint32>( settings._listViseme.size() );
+                float32      maxScore    = -MathUtil::kMaxFloat;
+                for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
+                {
+                    const float3& band          = settings._listViseme[visemeIndex]._bandShape;
+                    const float32 profileLength = MathUtil::sqrt( band._x * band._x + band._y * band._y + band._z * band._z );
+                    const float32 cosine        = ( shapeLength > 0.0f && profileLength > 0.0f )
+                                                    ? ( arrShape[0] * band._x + arrShape[1] * band._y + arrShape[2] * band._z ) / ( shapeLength * profileLength )
+                                                    : 0.0f;
+                    inoutListScore[visemeIndex] = cosine * settings._sharpness;
+                    const LipSyncViseme& viseme = settings._listViseme[visemeIndex];
+                    if ( bHasFormants && viseme.isVowel() )
+                    {
+                        // 포먼트마다 상대 거리 — 1 이면 두 배 · 절반만큼 어긋남. 맞을수록 1 에 가까운 점수를 더한다.
+                        const float32 firstOffset  = ( formantHz._x - viseme._formantHz._x ) / viseme._formantHz._x;
+                        const float32 secondOffset = ( formantHz._y - viseme._formantHz._y ) / viseme._formantHz._y;
+                        const float32 distance     = MathUtil::sqrt( firstOffset * firstOffset + secondOffset * secondOffset );
+                        inoutListScore[visemeIndex] += settings._formantWeight * ( 1.0f - MathUtil::min( distance, 1.0f ) );
+                    }
+                    const bool bConsonantCue = ( viseme._consonant == LipSyncConsonant::Plosive && bPlosive ) || ( viseme._consonant == LipSyncConsonant::Fricative && bFricative );
+                    if ( bConsonantCue )
+                        inoutListScore[visemeIndex] += settings._consonantWeight;
+                    maxScore = MathUtil::max( maxScore, inoutListScore[visemeIndex] );
+                }
+                return maxScore;
+            }
         };
     } // namespace
 } // namespace sw
@@ -487,19 +546,8 @@ namespace sw
             const size_t begin = frameIndex * frameSamples;
             const size_t end   = MathUtil::min( begin + frameSamples, listSample.size() );
             // 창 사이 에너지 오름이 가장 큰 창을 찾는다 — 바닥은 무음 RMS 다(무음끼리의 잡음 비율이 터짐으로 보이지 않게).
-            float32 maxOnsetRise = 0.0f;
-            size_t  riseBegin    = begin;
-            for ( size_t onsetBegin = begin; onsetBegin < end; onsetBegin += onsetSamples )
-            {
-                const float32 onsetRms = LipSyncInternal::computeRangeRms( listSample, onsetBegin, MathUtil::min( onsetBegin + onsetSamples, end ) );
-                const float32 rise     = onsetRms / MathUtil::max( previousOnsetRms, settings._silenceRms );
-                if ( rise > maxOnsetRise )
-                {
-                    maxOnsetRise = rise;
-                    riseBegin    = onsetBegin;
-                }
-                previousOnsetRms = onsetRms;
-            }
+            size_t        riseBegin    = begin;
+            const float32 maxOnsetRise = LipSyncInternal::findMaxOnsetRise( listSample, begin, end, onsetSamples, settings._silenceRms, previousOnsetRms, riseBegin );
             // 파열음 = 무음 뒤 갑자기 오른 창이 잡음(영교차가 잦음)인 터짐이다. 모음의 시작도 크게 오를 수 있지만 유성음이라 영교차가 드물다.
             const bool bAfterSilence = previousFrameRms < settings._silenceRms;
             const bool bSuddenRise   = bAfterSilence && maxOnsetRise >= settings._plosiveOnsetRatio;
@@ -536,33 +584,11 @@ namespace sw
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
             // 유성 프레임(높은 대역이 주가 아닌)은 포먼트를 재 모음 비즘과 비교한다 — 대역 셋으로는 가까운 모음(EE · OO 의 낮은 첫 포먼트)을 가르기 어렵다.
             // 터짐 · 잡음 프레임의 포락선 봉우리는 성도의 공명이 아니다 — 자음 단서가 있으면 포먼트를 보지 않는다.
-            float2     formantHz{ 0.0f, 0.0f };
-            const bool bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio && bPlosive == false && bFricative == false;
-            const bool bHasFormants = bVoiced && tryComputeFormants( &listSample[begin], end - begin, sampleRate, formantHz );
-            float32    maxScore     = -MathUtil::kMaxFloat;
-            for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
-            {
-                const float3& band          = settings._listViseme[visemeIndex]._bandShape;
-                const float32 profileLength = MathUtil::sqrt( band._x * band._x + band._y * band._y + band._z * band._z );
-                const float32 cosine        = ( shapeLength > 0.0f && profileLength > 0.0f )
-                                                ? ( arrShape[0] * band._x + arrShape[1] * band._y + arrShape[2] * band._z ) / ( shapeLength * profileLength )
-                                                : 0.0f;
-                listScore[visemeIndex]      = cosine * settings._sharpness;
-                const LipSyncViseme& viseme = settings._listViseme[visemeIndex];
-                if ( bHasFormants && viseme.isVowel() )
-                {
-                    // 포먼트마다 상대 거리 — 1 이면 두 배 · 절반만큼 어긋남. 맞을수록 1 에 가까운 점수를 더한다.
-                    const float32 firstOffset  = ( formantHz._x - viseme._formantHz._x ) / viseme._formantHz._x;
-                    const float32 secondOffset = ( formantHz._y - viseme._formantHz._y ) / viseme._formantHz._y;
-                    const float32 distance     = MathUtil::sqrt( firstOffset * firstOffset + secondOffset * secondOffset );
-                    listScore[visemeIndex] += settings._formantWeight * ( 1.0f - MathUtil::min( distance, 1.0f ) );
-                }
-                const bool bConsonantCue = ( viseme._consonant == LipSyncConsonant::Plosive && bPlosive ) || ( viseme._consonant == LipSyncConsonant::Fricative && bFricative );
-                if ( bConsonantCue )
-                    listScore[visemeIndex] += settings._consonantWeight;
-                maxScore = MathUtil::max( maxScore, listScore[visemeIndex] );
-            }
-            float32 sum = 0.0f;
+            float2        formantHz{ 0.0f, 0.0f };
+            const bool    bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio && bPlosive == false && bFricative == false;
+            const bool    bHasFormants = bVoiced && tryComputeFormants( &listSample[begin], end - begin, sampleRate, formantHz );
+            const float32 maxScore     = LipSyncInternal::computeVisemeScores( settings, arrShape, shapeLength, bHasFormants, formantHz, bPlosive, bFricative, listScore );
+            float32       sum          = 0.0f;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
             {
                 listScore[visemeIndex] = MathUtil::exp( listScore[visemeIndex] - maxScore );
