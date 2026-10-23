@@ -49,6 +49,16 @@
       "source": "docs/plans/GraphicsMeasurements.md M3", "result_doc": "docs/plans/GraphicsMeasurements.md M3"
     },
     {
+      "id": "net-message-channel-test", "title": "NetMessageChannel 스키마 해시 핸드셰이크와 키트 스냅샷 왕복", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NetMessageChannelTest.*,MechArenaTest.SnapshotRoundTripsAndRefusesOutOfRangeValues,AsymmetricHorrorTest.SnapshotRoundTripsAndRefusesOutOfRangeValues",
+      "source": "docs/plans/NetChannelSchemaHashHandshake.md 남은 확인", "result_doc": "docs/plans/NetChannelSchemaHashHandshake.md 상태를 끝으로"
+    },
+    {
+      "id": "service-record-unknown-fields-test", "title": "ServiceRecord 모르는 필드 보존", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "ServiceRecordUnknownFieldsTest.*",
+      "source": "docs/plans/PersistentRecordUnknownFields.md 남은 확인", "result_doc": "docs/plans/PersistentRecordUnknownFields.md 상태를 끝으로"
+    },
+    {
       "id": "ability-system-test", "title": "AbilitySystemTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "AbilitySystemTest.*",
       "source": "docs/plans/AbilitySystemExtensions.md 남은 것", "result_doc": "docs/plans/AbilitySystemExtensions.md 상태를 끝으로"

@@ -1204,7 +1204,8 @@
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.
     단계는 [DataKindRegistry](plans/DataKindRegistry.md) 에 있고 오디오 셋(DK1)을 옮겼습니다(2026-10-24).
 - **에디터 보강 묶음에서 하지 않기로 한 것**(2026-10-24, 다시 제안하지 말 것): 인스펙터 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖), 모듈 창에서 모듈 설치 · 제거(파일 복사 · 삭제)와 외부 패키지 받기(위험이 크다),
-  포토 모드가 게임 HUD 를 가리는 것(카메라 컴포넌트는 UI 를 모른다 — 가릴지는 게임이 정한다), 뷰포트 옵션 팝업이 메인 창 밖으로 나가는 것(다중 뷰포트 ImGui 의 동작이고 클라이언트 캡처만 못 잡는다).
+  뷰포트 옵션 팝업이 메인 창 밖으로 나가는 것(다중 뷰포트 ImGui 의 동작이고 클라이언트 캡처만 못 잡는다 — 캡처 영역 확장은 [Candidates-editor](plans/Candidates-editor.md) `PopupWindowCapture`).
+- **포토 모드는 UI 층을 숨긴다**(2026-10-24, 설계 검토: 카메라 컴포넌트는 이미 `UISystem` 을 쓰므로 "UI 를 모른다"는 전제가 틀렸다). `UISystem::addLayerHideRequest` 는 정지 요청처럼 층마다 세는 요청이라 포토 · 시네마틱 · 캡처가 겹쳐도 다투지 않는다. 숨길 층은 `CameraDirectorComponent` 의 `Hidden UI Layers` 데이터가 정한다(엔진은 층 가시성만 주고 정책은 게임). 상용 엔진: Godot `CanvasLayer.visible`, 언리얼 `AHUD::bShowHUD`, 유니티 `Canvas.enabled`.
   즐겨찾기 키를 선언 타입으로 바꾸기 전에 파생 타입 이름으로 저장한 기반 프로퍼티 키는 더 맞지 않는다(사용자 파일, 다시 즐겨찾기한다).
 - **에디터 플러그인만 읽는 데이터는 `editor/` 팩에 두고, 종류는 플러그인 .cpp 의 `SW_RESOURCE_DATA_KIND` 로 등록합니다**(2026-10-15, 좌우 이름 표 `editor/character/default.mirrornames.xml`). 언리얼이 에디터 전용 콘텐츠를 `Engine/Content/Editor` 에 따로 두어 쿠킹에서 빼는 것과 같은 자리입니다.
 - **무인(배타) 자동화 동안 ImGui 입력 거르개는 포커스 사건도 지웁니다**(2026-10-15, `907f4d467`). 포커스를 남기면 ImGui 가 눌린 키 · 단추를 모두 놓아 누르고 있는 자동화 입력(뷰포트 비행)이 끊깁니다. 다른 창이 전경을 가져가는 것은 사람의 장치 입력과 같은 바깥 간섭으로 봅니다(`editor.focusloss` 시나리오).
