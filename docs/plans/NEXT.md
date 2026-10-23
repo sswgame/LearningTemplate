@@ -20,13 +20,11 @@
 
 ### 상태
 
-- **작업자(코드만 짜고 린트 후 커밋하고 멈춤, 워크트리 `D:/w/<이름>`, 브랜치 `wt/<이름>`)**: 앞 파동 shaderfmt3 · leakwin · ownership · candproject · candquality1 · candgraphics · measurebatch(검증 · 측정 매니페스트와 id 없는 확인 대기 줄 차단)는 대부분 병합됐고, 새 파동 planengine · plangfxq · plananim · plangameplay · planui · plannet · leftovers · planproject · plangfx2 · docsweep 가 돈다. 보고가 오면 `integD` 에 병합한다.
-  `Roadmap.md` · `README.md` 충돌은 새 쪽 줄을 남기고 옛 줄을 지운 뒤 `plans --check` 를 돌리고, 표는 `status-board --write README.md` 로 다시 만든다.
-- **통합 워크트리 `D:/w/integD`**(브랜치 `wt/integD`, main `4c7b2085b` 위): 한 번도 빌드하지 않았다. 병합 끝: parseintlist · lambdaeditor · lambdakits · servicelist · lambdagfx · lambdacore · lambdaeng · kitshelpers · verifyleak · scnpixel · singletonget · thumbheadless · plansweep · lambdaser.
-  손으로 푼 충돌: `Candidates-engine.md` 의 `FunctorLambdaCommonization` 줄(전부 남김), `Engine.cpp` · `TestHostRuntime.cpp`(servicelist 쪽을 택하고 서브시스템 세 줄을 `EngineSubsystemSet.cpp` 로 옮김, `ServiceSetup::_bAuthorityGhost` 추가), `InputMapSerialization.cpp`(lambdaser 판을 택하고 lambdacore 의 `loadActionNode` 선언을 지움).
-- **아직 병합 못 한 브랜치**: shaderfmt3 · leakwin(`wt/verifyleak` 위) · ownership(`sw_new` · `Memory::allocate` 소유 형식) · candengine · candproject · candquality1 · candquality2 · candeditor · candgraphics · candmisc. candnetwork 는 병합했고, 그 "통합에서 실행 대기" 중 WSL 항목은 리눅스 검증을 사용자가 요청할 때만 하므로 건너뛴다.
-- **main**: 로컬 main 이 `origin/main` 보다 7 커밋 앞서 있다(훅 주석 · parseintlist 병합 · 규칙 문서 등). 병합이 끝난 `wt/*` 브랜치와 워크트리(49 개)는 통합이 끝난 뒤 `worktree-remove` 로 지운다.
-- **판정 중**: 포토모드 HUD · 팝업 잘림 · 단일체 예외 12곳 · plansweep 이 닫은 두 문서 · 소유 형식 게이트 · 훅 점검은 design-reviewer(a066094)가 상용 엔진과 비교해 정하는 중이다. 결과는 `docs/09_Decisions.md` 에 옮긴다.
+- **병합 끝(`integD`)**: parseintlist · lambda* 여섯 · kitshelpers · servicelist · verifyleak · scnpixel · singletonget · thumbheadless · plansweep · leakwin · ownership · cand* 전부 · measurebatch · judgeapply · planproject · plannet(앞 두 묶음) · leftovers · docsweep. 한 번도 빌드하지 않았다.
+- **아직 병합 못 한 것**: ① shaderfmt3 는 커밋되지 않았다(145 파일이 `D:/w/shaderfmt3` 에 staged). 셰이더 커밋 훅이 빌드된 App 의 `--cook-shaders` · `--verify-shaders` 를 요구하므로, A 단계에서 App 을 지은 뒤 그 워크트리에서 한국어 메시지로 커밋하고 병합한다. FXC 확인 곳: `ViewMode::applyToSurface` 의 `inout` 인자, `MaterialSurface::setAlphaCutoff`, 정의 앞 호출 `SurfaceOutput::pack` · `MaterialTexture::sampleIndexTexture`. ② 돌고 있는 작업자 planengine · plangfxq · plananim · plangameplay · planui · plangfx2 · plannet(나머지 단위): 커밋하고 보고하면 `integD` 에 병합한다. 확인 대기 줄은 `매니페스트 id` 로 적어야 한다(`plans --check` 가 막음).
+- **병합 충돌 요령**: `README.md` 는 `git checkout --ours README.md` 후 `status-board --write README.md`, `Roadmap.md` 는 새 쪽 줄을 남기고 옛 줄을 지운 뒤 `plans --check`.
+- **main**: 로컬 main 이 `origin/main` 보다 7 커밋 앞서 있다(미푸시). 병합이 끝난 `wt/*` 브랜치와 워크트리(약 50 개)는 통합이 끝난 뒤 `worktree-remove` 로 지운다.
+- **판정 결과**(design-reviewer, 2026-10-24, `09_Decisions.md` 에 반영 끝): 포토 모드는 UI 층을 숨긴다(구현은 judgeapply) · 팝업 잘림은 유지 · 단일체 예외는 종류 키 5개 · 두 계획 문서는 측정대기로 되돌림 · `sw_new` 삭제 · n/n 점검을 커밋 훅에 걸었다. 컴파일 확인: `Memory.h`(`make_unique`, `FixedCountArray`), `UILayer.h`(`ENUM(Flags)` 를 `PROPERTY` 로 쓴 선례 없음, 리플렉션 파서 확인).
 
 ### 통합 검증 · 측정 (한 묶음, 단계마다 한 번)
 
