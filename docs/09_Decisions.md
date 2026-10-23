@@ -1195,7 +1195,7 @@
     GameFramework 에 있어 아래 층인 Engine 이 쓸 수 없었습니다(2026-10-18 `Source/Core/String/EnumNameTable.h` 로 옮겼다). 손으로 둔 Engine 이름 배열은 14 개 파일(grep 근사치)입니다.
     대안은 영역 하나씩 단계로 옮기는 것입니다: 먼저 `EnumNameTable` 을 Core 로 옮기고 include 만 바꾼 뒤(동작 불변), 로더가 `ResourceDataKindUtil::loadCatalog` 인 줄(예: Audio)부터 `SW_RESOURCE_DATA_KIND` 로 옮기면서
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.
-    단계는 [DataKindRegistry](plans/DataKindRegistry.md) 에 있고 오디오 셋(DK1)을 옮겼습니다(2026-10-24).
+    단계는 [DataKindRegistry](plans/DataKindRegistry.md) 에 있고 오디오 셋(DK1)과 애니메이션 · UI · 나머지 카탈로그(DK2 ~ DK4) 열여덟 종류를 옮겼습니다(2026-10-24). 표에 남긴 줄은 테스트 전용 판단 · 전용 편집기가 쥠(카탈로그 편집기의 목록이기도 하므로) · 표 편집 대상이 아님 · 다른 표가 먼저 필요함, 넷 중 하나가 까닭입니다(DK5).
 - **에디터 보강 묶음에서 하지 않기로 한 것**(2026-10-24, 다시 제안하지 말 것): 인스펙터 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖), 모듈 창에서 모듈 설치 · 제거(파일 복사 · 삭제)와 외부 패키지 받기(위험이 크다),
   포토 모드가 게임 HUD 를 가리는 것(카메라 컴포넌트는 UI 를 모른다 — 가릴지는 게임이 정한다), 뷰포트 옵션 팝업이 메인 창 밖으로 나가는 것(다중 뷰포트 ImGui 의 동작이고 클라이언트 캡처만 못 잡는다).
   즐겨찾기 키를 선언 타입으로 바꾸기 전에 파생 타입 이름으로 저장한 기반 프로퍼티 키는 더 맞지 않는다(사용자 파일, 다시 즐겨찾기한다).

@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -146,4 +147,7 @@ namespace sw
         }
         return layers;
     }
+
+    /** @brief 물리 설정 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_RESOURCE_DATA_KIND( PhysicsSettings, "physicssettings", nullptr, nullptr, "physicssettings.xml", &ResourceDataKindUtil::loadCatalog<PhysicsSettings> );
 } // namespace sw
