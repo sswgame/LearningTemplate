@@ -75,6 +75,14 @@ namespace sw
         return _owner.findBoneLOD();
     }
 
+    int32 SkeletalMeshLODClient::findMeshLODIndex() const
+    {
+        const shared_ptr<Mesh>& mesh = _owner.getMesh();
+        if ( mesh == nullptr || mesh->getLODCount() <= 1 )
+            return -1;
+        return static_cast<int32>( _owner.getLODIndex() );
+    }
+
     void SkeletalMeshLODClient::applyAnimationLOD( const AnimationLODState& state )
     {
         _owner.applyAnimationLOD( state );

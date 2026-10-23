@@ -35,6 +35,8 @@ namespace sw
             static constexpr uint8 kArrSectionChunk[4] = { 'S', 'E', 'C', 'T' };
             /** @brief 낮은 상세 단계 덩어리의 이름입니다. */
             static constexpr uint8 kArrLODChunk[4] = { 'L', 'O', 'D', 'S' };
+            /** @brief 스킨드 메시의 낮은 상세 단계 스킨 덩어리의 이름입니다(`LODS` 덩어리 뒤에 온다). */
+            static constexpr uint8 kArrLODSkinChunk[4] = { 'L', 'S', 'K', 'N' };
 
             /**
              * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 기준(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
@@ -108,6 +110,67 @@ namespace sw
                     if ( readVertices( pChunk, vertexCount, level._listVertex ) == false )
                         return false;
                     outListLevel.push_back( std::move( level ) );
+                }
+                return pChunk == pChunkEnd;
+            }
+
+            /** @brief 스킨 정점을 씁니다(뼈 번호 uint16 넷 + 가중치 float32 넷 — `MeshAssetFormat::kSkinVertexSize`). */
+            static void appendSkinVertices( vector<uint8>& outBytes, const vector<MeshSkinVertex>& listSkin )
+            {
+                for ( const MeshSkinVertex& skin : listSkin )
+                {
+                    for ( const uint16 joint : skin._arrJoint )
+                    {
+                        LittleEndianUtil::appendUint16( outBytes, joint );
+                    }
+                    for ( const float32 weight : skin._arrWeight )
+                    {
+                        appendFloat32( outBytes, weight );
+                    }
+                }
+            }
+
+            /** @brief 낮은 상세 단계의 스킨 덩어리(`LSKN`)를 씁니다 — 단계 수, 단계마다 정점 수 · 스킨 정점. 스킨 있는 단계가 없으면 쓰지 않습니다(스킨 없는 메시는 이전 파일과 바이트까지 같다). */
+            static void appendLODSkinChunk( vector<uint8>& outBytes, const vector<MeshLODLevel>& listLevel )
+            {
+                bool bAnySkin = false;
+                for ( const MeshLODLevel& level : listLevel )
+                {
+                    bAnySkin = bAnySkin || level._listSkinVertex.empty() == false;
+                }
+                if ( bAnySkin == false )
+                    return;
+                const size_t lengthOffset = beginChunk( outBytes, kArrLODSkinChunk );
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( listLevel.size() ) );
+                for ( const MeshLODLevel& level : listLevel )
+                {
+                    LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listSkinVertex.size() ) );
+                    appendSkinVertices( outBytes, level._listSkinVertex );
+                }
+                finishChunk( outBytes, lengthOffset );
+            }
+
+            /**
+             * @brief 낮은 상세 단계의 스킨 덩어리 내용을 읽어 이미 읽은 단계(`LODS`)에 붙입니다. 단계 수 · 정점 수가 맞지 않거나 뼈 번호가 @p skinBoneCount 를 넘으면 false 입니다.
+             */
+            [[nodiscard]] static bool readLODSkinChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 skinBoneCount, vector<MeshLODLevel>& ioListLevel )
+            {
+                if ( pChunkEnd - pChunk < 4 || skinBoneCount == 0 )
+                    return false;
+                const uint32 levelCount = LittleEndianUtil::readUint32( pChunk );
+                pChunk += 4;
+                if ( levelCount != ioListLevel.size() )
+                    return false;
+                for ( MeshLODLevel& level : ioListLevel )
+                {
+                    if ( pChunkEnd - pChunk < 4 )
+                        return false;
+                    const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk );
+                    pChunk += 4;
+                    if ( vertexCount != level._listVertex.size() || static_cast<uint64>( pChunkEnd - pChunk ) < static_cast<uint64>( vertexCount ) * MeshAssetFormat::kSkinVertexSize )
+                        return false;
+                    if ( readSkinVertices( pChunk, vertexCount, skinBoneCount, level._listSkinVertex ) == false )
+                        return false;
                 }
                 return pChunk == pChunkEnd;
             }
@@ -327,9 +390,10 @@ namespace sw
                     const bool   bMorph      = Memory::compare( pCursor, kArrMorphChunk, 4 ) == 0;
                     const bool   bSection    = Memory::compare( pCursor, kArrSectionChunk, 4 ) == 0;
                     const bool   bLOD        = Memory::compare( pCursor, kArrLODChunk, 4 ) == 0;
+                    const bool   bLODSkin    = Memory::compare( pCursor, kArrLODSkinChunk, 4 ) == 0;
                     const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
                     const uint8* pChunk      = pCursor + 8;
-                    const bool   bKnownChunk = bMorph || bSection || bLOD;
+                    const bool   bKnownChunk = bMorph || bSection || bLOD || bLODSkin;
                     if ( bKnownChunk == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
                     {
                         SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
@@ -341,6 +405,16 @@ namespace sw
                         if ( readLODChunk( pChunk, pChunkEnd, ioData._listLOD ) == false )
                         {
                             SW_LOG_WARNING( "Mesh asset has a malformed LOD chunk" );
+                            return false;
+                        }
+                        pCursor = pChunkEnd;
+                        continue;
+                    }
+                    if ( bLODSkin )
+                    {
+                        if ( readLODSkinChunk( pChunk, pChunkEnd, ioData._skinBoneCount, ioData._listLOD ) == false )
+                        {
+                            SW_LOG_WARNING( "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
                             return false;
                         }
                         pCursor = pChunkEnd;
@@ -444,6 +518,7 @@ namespace sw
         // 선택 덩어리 — 구간(있을 때), 낮은 상세 단계(있을 때).
         MeshAssetFormatInternal::appendSectionChunk( outBytes, data._listSection );
         MeshAssetFormatInternal::appendLODChunk( outBytes, data._listLOD );
+        MeshAssetFormatInternal::appendLODSkinChunk( outBytes, data._listLOD );
     }
 
     void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )

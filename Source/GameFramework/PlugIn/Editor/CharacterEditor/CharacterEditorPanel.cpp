@@ -18,6 +18,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
@@ -53,10 +54,12 @@ namespace sw::editor
             static constexpr float32     kBoneTreeHeight           = 200.0f;
             static constexpr float32     kPresetListHeight         = 90.0f;
             static constexpr float32     kExplanationListHeight    = 130.0f;
-            static constexpr float32     kPreviewHeight            = 260.0f; ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
-            static constexpr float32     kPreviewFrameRadius       = 1.4f;   ///< 미리보기 카메라가 담는 반지름(m) — 사람 키 하나
-            static constexpr float32     kSocketAxisLength         = 0.08f;  ///< 미리보기 소켓 축 길이(m)
-            static constexpr float32     kSelectedSocketAxisLength = 0.18f;  ///< 고른 소켓의 축 길이(m)
+            static constexpr float32     kPreviewHeight            = 260.0f;  ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
+            static constexpr float32     kPreviewFrameRadius       = 1.4f;    ///< 미리보기 카메라가 담는 반지름(m) — 사람 키 하나
+            static constexpr float32     kSocketAxisLength         = 0.08f;   ///< 미리보기 소켓 축 길이(m)
+            static constexpr float32     kSelectedSocketAxisLength = 0.18f;   ///< 고른 소켓의 축 길이(m)
+            static constexpr float32     kPenetrationMarkLength    = 0.01f;   ///< 관통 점 십자의 한 팔 길이(m)
+            static constexpr float32     kBoneGizmoTolerance       = 1.0e-4f; ///< 놓은 월드 변환과 이만큼 다르면 기즈모가 옮긴 것이다(행렬 성분)
 
             /** @brief 입력칸의 글을 이름으로 바꿉니다. 비어 있으면 빈 이름입니다. */
             static hashed_string makeName( const utf8* pText )
@@ -105,7 +108,14 @@ namespace sw::editor
                 uint32 _exportCount{ 0 };          ///< 이 실행에서 데이터 프리셋으로 내보낸 수
                 uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
                 uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
+                uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
             };
+
+            [[nodiscard]] static bool readPenetrationMarkCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._penetrationMarkCount );
+                return true;
+            }
             static Published& getPublished()
             {
                 static Published s_published;
@@ -168,6 +178,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorPreviewAssembleCount, "Editor.CharacterEditorPreviewAssembleCount",
                          "Times the Character Editor preview body was assembled (published while the Preview tab draws)", &CharacterEditorPanelInternal::readPreviewAssembleCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorPenetrationMarks, "Editor.CharacterEditorPenetrationMarks", "Penetration points the Character Editor preview drew last frame (red crosses on the body)",
+                         &CharacterEditorPanelInternal::readPenetrationMarkCount );
     SW_AUTOMATION_PROBE( editorCharacterEditorPreviewClipPlaying, "Editor.CharacterEditorPreviewClipPlaying", "1 while the Character Editor preview body plays the selected clip (published while the Preview tab draws)",
                          &CharacterEditorPanelInternal::readClipPlaying );
 } // namespace sw::editor
@@ -222,6 +234,10 @@ namespace sw::editor
         , _bModelsWereDirty{ false }
         , _bCustomizationActive{ false }
         , _seenFitRevision{ 0 }
+        , _gizmo{}
+        , _boneGizmoTarget{}
+        , _placedBoneWorld{}
+        , _bBoneGizmoPlaced{ false }
         , _packDataState{ PackDataState::Unread }
     {
         _presetStore.setDatabase( &_database );
@@ -425,10 +441,14 @@ namespace sw::editor
         CharacterEditorPanelInternal::getPublished()._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
         const float2  available                                            = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         const float32 minHeight                                            = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
-        drawPreviewViewport( float2{ available._x, available._y > minHeight ? available._y : minHeight }, false );
+        syncBoneGizmo();
+        drawPreviewViewport( float2{ available._x, available._y > minHeight ? available._y : minHeight }, _gizmo.hasMouse() );
+        _gizmo.draw( *this );
         EditorSelfTestMarks::note( "charactereditor.previewScene" );
         if ( pAppearance != nullptr )
             drawSocketAxes( *pAppearance );
+        if ( pBody != nullptr )
+            drawPenetrationPoints( *pBody );
         // 미리보기 조립이 푼 피팅 결과를 확인 표시에 올린다(세대가 바뀔 때만).
         const bool bNewFit = pAppearance != nullptr && pAppearance->getLastFitResult() != nullptr && pAppearance->getFitResultRevision() != _seenFitRevision;
         if ( bNewFit )
@@ -441,6 +461,123 @@ namespace sw::editor
             drawCustomizationSliders( selection );
         else
             _bCustomizationActive = false;
+    }
+
+    void CharacterEditorPanel::syncBoneGizmo()
+    {
+        GameObjectManager* pManager   = findPreviewManager();
+        GameObject*        pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
+        GameObject*        pTarget    = pManager != nullptr ? pManager->resolveGameObject( _boneGizmoTarget ) : nullptr;
+        const Skeleton&    skeleton   = _pose.getSkeleton();
+        const int32        boneIndex  = _selectedBone.empty() ? -1 : skeleton.findBoneIndex( _selectedBone );
+        SceneComponent*    pBodyScene = pBody != nullptr ? pBody->getPrimarySceneComponent() : nullptr;
+        if ( boneIndex < 0 || pBodyScene == nullptr )
+        {
+            if ( pTarget != nullptr )
+                pManager->destroyObject( pTarget );
+            _boneGizmoTarget  = GameObjectHandle{};
+            _bBoneGizmoPlaced = false;
+            return;
+        }
+        // 덮어쓴 값을 얹은 모델 변환 — 부모까지 줄을 올라가 루트부터 곱한다(행벡터: 자식 × 부모).
+        vector<int32> listChain;
+        for ( int32 index = boneIndex; index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
+        {
+            listChain.push_back( index );
+        }
+        float4x4 parentModel = float4x4::Identity;
+        float4x4 boneModel   = float4x4::Identity;
+        for ( size_t chainIndex = listChain.size(); chainIndex > 0; --chainIndex )
+        {
+            BoneTransform local{};
+            if ( _pose.getEffectiveTransform( skeleton.getBone( static_cast<uint32>( listChain[chainIndex - 1] ) )._name, local ) == false )
+                return;
+            parentModel = boneModel;
+            boneModel   = local.toMatrix() * boneModel;
+        }
+        const float4x4 bodyWorld    = pBodyScene->getWorldMatrix();
+        const float4x4 desiredWorld = boneModel * bodyWorld;
+        if ( pTarget == nullptr )
+        {
+            pTarget = pManager->createGameObject( hashed_string( "BoneGizmoTarget" ) );
+            if ( pTarget == nullptr || pTarget->addComponent<SceneComponent>() == nullptr )
+            {
+                _status = "The bone gizmo target could not be created";
+                return;
+            }
+            _boneGizmoTarget  = pTarget->getHandle();
+            _bBoneGizmoPlaced = false;
+        }
+        SceneComponent* pScene = pTarget->getPrimarySceneComponent();
+        if ( pScene == nullptr )
+            return;
+        if ( getPreviewSelection().getPrimaryObject() != pTarget )
+            getPreviewSelection().selectObject( pTarget );
+        // 지난 그리기에 놓은 자리와 달라졌으면 기즈모가 옮긴 것이다 — 부모 월드의 역으로 본의 로컬을 구해 모델에 넣는다.
+        bool           bMoved       = false;
+        const float4x4 currentWorld = pScene->getWorldMatrix();
+        if ( _bBoneGizmoPlaced )
+        {
+            for ( uint32 element = 0; element < 16 && bMoved == false; ++element )
+            {
+                bMoved = MathUtil::abs( currentWorld.data()[element] - _placedBoneWorld.data()[element] ) > CharacterEditorPanelInternal::kBoneGizmoTolerance;
+            }
+        }
+        if ( bMoved )
+        {
+            const BoneTransform local = BoneTransform::makeFromMatrix( currentWorld * ( parentModel * bodyWorld ).invert() );
+            const hashed_string bone  = skeleton.getBone( static_cast<uint32>( boneIndex ) )._name;
+            string              error;
+            const float3        degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+            (void)_pose.setTranslation( bone, local._translation, true, error ); // 같은 값이면 false 이고 오류는 비어 있다
+            (void)_pose.setRotationDegrees( bone, degrees, true, error );        // 같은 값이면 false 이고 오류는 비어 있다
+            _status = error;
+        }
+        else if ( _bBoneGizmoPlaced && _gizmo.hasMouse() == false )
+        {
+            _pose.endContinuousEdit(); // 끌기가 끝났다 — 다음 편집은 새 되돌리기 단계
+        }
+        if ( bMoved == false )
+        {
+            pScene->setWorldTransform( desiredWorld );
+            _placedBoneWorld = pScene->getWorldMatrix();
+        }
+        else
+        {
+            _placedBoneWorld = currentWorld; // 다음 그리기는 모델 값으로 다시 놓는다(위 `bMoved == false` 경로가 desired 로 맞춘다)
+        }
+        _bBoneGizmoPlaced = true;
+    }
+
+    void CharacterEditorPanel::drawPenetrationPoints( const GameObject& body )
+    {
+        const EditorPreviewViewport& viewport = getPreviewViewport();
+        const float2                 position = viewport.getImagePosition();
+        const float2                 size     = viewport.getImageSize();
+        const SceneComponent*        pScene   = body.getPrimarySceneComponent();
+        const bool                   bNothing = _bHasFit == false || _fit.hasPenetration() == false || pScene == nullptr;
+        const bool                   bNoImage = size._x <= 0.0f || size._y <= 0.0f;
+        if ( bNothing || bNoImage )
+            return;
+        float4x4 viewProjection{};
+        float3   eye{};
+        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
+        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
+        // 피팅은 바인드 공간에서 풀므로 몸 오브젝트의 월드 변환으로 옮긴다. 십자 표시 하나가 정점 하나다(앞쪽 일부만 들고 있다).
+        const float4x4 world = pScene->getWorldMatrix();
+        const float4   color{ 1.0f, 0.2f, 0.2f, 1.0f };
+        const float32  arm = CharacterEditorPanelInternal::kPenetrationMarkLength;
+        for ( const FitPenetrationSummary& penetration : _fit._listPenetration )
+        {
+            for ( const float3& point : penetration._listPoint )
+            {
+                const float3 center = float3::transform( point, world );
+                renderer.drawLine( center - float3{ arm, 0.0f, 0.0f }, center + float3{ arm, 0.0f, 0.0f }, color );
+                renderer.drawLine( center - float3{ 0.0f, arm, 0.0f }, center + float3{ 0.0f, arm, 0.0f }, color );
+                renderer.drawLine( center - float3{ 0.0f, 0.0f, arm }, center + float3{ 0.0f, 0.0f, arm }, color );
+            }
+        }
+        CharacterEditorPanelInternal::getPublished()._penetrationMarkCount = renderer.getDrawnSegmentCount() / 3;
     }
 
     void CharacterEditorPanel::drawSocketAxes( const CharacterAppearanceComponent& appearance )

@@ -274,7 +274,22 @@ namespace sw::editor
                     outResult._mesh._listSection = makeMeshSections( outResult._listSection );
                 }
                 else
+                {
+                    // LOD 는 구간 · 모프 없는 스킨드 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
+                    if ( rule._listLOD.empty() == false && body._listMorphName.empty() == false )
+                    {
+                        SW_LOG_ERROR( "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath, rule._name.c_str() );
+                        return false;
+                    }
                     expandTriangles( body, boneCount, outResult._mesh );
+                    if ( makeLODLevels( body, rule, sourcePath, boneCount, outResult._mesh._listLOD ) == false )
+                        return false;
+                }
+                if ( rule._listLOD.empty() == false && listToon.empty() == false )
+                {
+                    SW_LOG_ERROR( "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
+                    return false;
+                }
                 outResult._bSkinned = SW_TRUE;
                 return readClips( data, mapJointBone, listRootParent, rule, sourcePath, outResult );
             }
@@ -502,11 +517,6 @@ namespace sw::editor
                 SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
                 bRead = false;
             }
-            else if ( rule._listLOD.empty() == false )
-            {
-                SW_LOG_ERROR( "glTF '%#' is skinned - import rule '%#' asks for mesh LODs, which only static meshes take", sourcePath, rule._name.c_str() );
-                bRead = false;
-            }
             else
             {
                 bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
@@ -565,7 +575,7 @@ namespace sw::editor
         }
         cgltf_free( pData );
         ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
-        return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
+        return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, 0, outResult._mesh._listLOD );
     }
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )

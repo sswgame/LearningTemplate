@@ -84,6 +84,10 @@ namespace sw
         uint32  _partB{ 0 };
         uint32  _vertexCount{ 0 };
         float32 _maxDepth{ 0.0f };
+        /** @brief 파고든 정점의 바인드 공간 위치입니다(앞의 `kMaxPointCount` 개만). 편집 창이 뷰포트에 점으로 찍습니다. `_vertexCount` 는 전부 센 수입니다. */
+        vector<float3> _listPoint{};
+
+        static constexpr uint32 kMaxPointCount = 512;
     };
 } // namespace sw
 

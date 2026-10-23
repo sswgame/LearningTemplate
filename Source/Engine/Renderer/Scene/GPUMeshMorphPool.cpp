@@ -131,6 +131,11 @@ namespace sw
             {
                 listRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
             }
+            // 낮은 상세 단계 정점이 LOD 0 뒤에 이어진다(그릴 정점 흐름과 같은 순서 — 단계의 범위가 그대로 변형 결과의 범위다).
+            for ( const RHIVertex& vertex : pSource->getLODVertices() )
+            {
+                listRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
+            }
             // 모프 차이를 정점별로 모은다 — 컴퓨트는 정점 하나의 차이 구간(시작 · 수)을 돌며 (위치 · 노멀 차이, 타깃 번호)를 가중치만큼 더한다.
             const uint32                   vertexCount = pSource->getVertexCount();
             vector<vector<uint32>>         listVertexTarget( vertexCount );
@@ -171,7 +176,15 @@ namespace sw
                                               static_cast<float32>( skin._arrJoint[3] ) } );
                 listWeight.push_back( float4{ static_cast<float32>( listVertexDeltaStart[vertexIndex] ), static_cast<float32>( listVertexDeltaCount[vertexIndex] ), 0.0f, 0.0f } );
             }
-            _skinSourceVertexCount += vertexCount;
+            // 낮은 단계의 스킨 — 모프와 LOD 는 같이 둘 수 없어(`Mesh::setLODs`) 차이 구간이 없다(시작 0 · 수 0).
+            for ( const MeshSkinVertex& skin : pSource->getLODSkinVertices() )
+            {
+                listWeight.push_back( float4{ skin._arrWeight[0], skin._arrWeight[1], skin._arrWeight[2], skin._arrWeight[3] } );
+                listWeight.push_back( float4{ static_cast<float32>( skin._arrJoint[0] ), static_cast<float32>( skin._arrJoint[1] ), static_cast<float32>( skin._arrJoint[2] ),
+                                              static_cast<float32>( skin._arrJoint[3] ) } );
+                listWeight.push_back( float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+            }
+            _skinSourceVertexCount += pSource->getDrawVertexCount();
         }
         // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 GPUMorphVertex(float4 셋)라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다). 차이의 탄젠트 칸은 비어 있다(탄젠트 차이는 없다).
         _skinDeltaBase = static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex;
@@ -226,7 +239,7 @@ namespace sw
             const std::optional<size_t> sourceIndex = VectorUtil::findIndex( _listSourceDataID, pMesh->getSkinDataID() );
             if ( sourceIndex.has_value() == false )
                 continue;
-            const uint32 count = pMesh->getVertexCount();
+            const uint32 count = pMesh->getDrawVertexCount(); // LOD 0 뒤의 낮은 단계 정점까지 변형한다
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
             {
                 SW_LOG_WARNING( "The morph pool is full (%# vertices) - the remaining skinned meshes are drawn in the bind pose.", kMaxPoolVertices );

@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -36,10 +37,11 @@ namespace sw::editor
     /** @brief 단단함끼리의 관통 하나입니다. 부품 이름으로 풀어 둔다. */
     struct FitPenetrationSummary
     {
-        hashed_string _partA{};
-        hashed_string _partB{};
-        uint32        _vertexCount{ 0 };
-        float32       _maxDepth{ 0.0f };
+        hashed_string  _partA{};
+        hashed_string  _partB{};
+        uint32         _vertexCount{ 0 };
+        float32        _maxDepth{ 0.0f };
+        vector<float3> _listPoint{}; ///< 파고든 정점의 바인드 공간 위치(앞쪽 일부) — 뷰포트에 점으로 찍는다
     };
 } // namespace sw::editor
 

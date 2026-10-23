@@ -112,6 +112,10 @@ namespace sw
         instance->setMorphTargets( source._listMorphTarget );
         // 구간은 원본에서 이미 검사했다 — 같은 정점이라 그대로 맞는다.
         (void)instance->setSections( source._listSection );
+        // 낮은 단계도 원본과 같은 정점 · 스킨이다(스킨 데이터 번호를 나누는 사본이 같은 구간을 그린다). `setSkin` 이 뗀 단계를 그대로 다시 건다.
+        instance->_listLOD           = source._listLOD;
+        instance->_listLODVertex     = source._listLODVertex;
+        instance->_listLODSkinVertex = source._listLODSkinVertex;
         // 정점과 스킨이 원본과 같다. 모프 풀이 원본 데이터를 한 번만 업로드하도록 번호를 공유한다(setVertices 와 setSkin 이 지운 뒤에 적는다).
         instance->_sharedSkinDataID = source.getSkinDataID();
         return instance;
@@ -147,6 +151,7 @@ namespace sw
         // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
         _listLOD.clear();
         _listLODVertex.clear();
+        _listLODSkinVertex.clear();
         _contentID        = allocateContentID();
         _sharedSkinDataID = 0;
         refreshBoundingRadius();
@@ -157,33 +162,47 @@ namespace sw
         releaseVertexBuffer();
         _listLOD.clear();
         _listLODVertex.clear();
+        _listLODSkinVertex.clear();
         _contentID = allocateContentID();
         if ( listLevel.empty() )
             return true;
-        const bool bPlainMesh = hasSkin() == false && _listMorphTarget.empty() && _listSection.empty() && _vertexAnimation == nullptr;
+        const bool bPlainMesh = _listMorphTarget.empty() && _listSection.empty() && _vertexAnimation == nullptr;
         if ( bPlainMesh == false )
         {
-            SW_LOG_ERROR( "Mesh LODs need a mesh without skin, morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
+            SW_LOG_ERROR( "Mesh LODs need a mesh without morph targets, sections or vertex animation - the mesh keeps LOD 0 only" );
             return false;
         }
-        float32 previousScreenSize = 1.0f;
-        uint32  firstVertex        = getVertexCount();
+        const bool bSkinned           = hasSkin();
+        float32    previousScreenSize = 1.0f;
+        uint32     firstVertex        = getVertexCount();
         for ( size_t levelIndex = 0; levelIndex < listLevel.size(); ++levelIndex )
         {
             const MeshLODLevel& level       = listLevel[levelIndex];
             const uint32        vertexCount = static_cast<uint32>( level._listVertex.size() );
             const bool          bTriangles  = vertexCount > 0 && vertexCount % 3 == 0;
             const bool          bThreshold  = MathUtil::isFinite( level._screenSize ) && 0.0f < level._screenSize && level._screenSize < previousScreenSize;
-            if ( bTriangles == false || bThreshold == false )
+            // 스킨드 메시의 단계는 정점마다 스킨이 있고 뼈 번호가 스켈레톤 안이어야 하며, 스킨 없는 메시의 단계는 스킨이 없어야 한다.
+            bool bSkinMatches = bSkinned ? level._listSkinVertex.size() == level._listVertex.size() : level._listSkinVertex.empty();
+            for ( size_t skinIndex = 0; bSkinMatches && skinIndex < level._listSkinVertex.size(); ++skinIndex )
             {
-                SW_LOG_ERROR( "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles and a threshold below %# - the mesh keeps LOD 0 only",
+                for ( const uint16 joint : level._listSkinVertex[skinIndex]._arrJoint )
+                {
+                    bSkinMatches = bSkinMatches && joint < _skinBoneCount;
+                }
+            }
+            const bool bShapeOk = bTriangles && bThreshold;
+            if ( bShapeOk == false || bSkinMatches == false )
+            {
+                SW_LOG_ERROR( "Mesh LOD %# has %# vertices and screen size %# - it needs whole triangles, a threshold below %# and (skinned meshes) one in-range skin per vertex - the mesh keeps LOD 0 only",
                               levelIndex + 1, vertexCount, level._screenSize, previousScreenSize );
                 _listLOD.clear();
                 _listLODVertex.clear();
+                _listLODSkinVertex.clear();
                 return false;
             }
             _listLOD.push_back( MeshLOD{ firstVertex, vertexCount, level._screenSize } );
             _listLODVertex.insert( _listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
+            _listLODSkinVertex.insert( _listLODSkinVertex.end(), level._listSkinVertex.begin(), level._listSkinVertex.end() );
             firstVertex += vertexCount;
             previousScreenSize = level._screenSize;
         }
@@ -288,8 +307,12 @@ namespace sw
         const bool bMatches = boneCount > 0 && listSkinVertex.size() == _listVertex.size();
         _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
         _skinBoneCount      = bMatches ? boneCount : 0u;
-        _contentID          = allocateContentID();
-        _sharedSkinDataID   = 0;
+        // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
+        _listLOD.clear();
+        _listLODVertex.clear();
+        _listLODSkinVertex.clear();
+        _contentID        = allocateContentID();
+        _sharedSkinDataID = 0;
     }
 
     bool Mesh::setSections( vector<MeshSection> listSection )

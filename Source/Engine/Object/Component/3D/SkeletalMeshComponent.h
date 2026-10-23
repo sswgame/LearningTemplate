@@ -35,6 +35,7 @@ namespace sw
         bool                   findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
         bool                   isRendered() const override;
         const SkeletonBoneLOD* findBoneLOD() const override;
+        int32                  findMeshLODIndex() const override;
         void                   applyAnimationLOD( const AnimationLODState& state ) override;
 
     private:

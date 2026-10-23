@@ -263,9 +263,10 @@ namespace sw::editor
          * @brief 규칙의 `lods` 마다 @p mesh 를 원본에서 단순화해(`meshopt_simplify`) 정점 캐시 순서로 펼친 LOD 단계를 @p outListLevel 에 채웁니다(규칙이 없으면 비운다).
          * @details 단계마다 원본에서 따로 줄인다 — 앞 단계를 다시 줄이면 오차가 쌓인다. 삼각형이 하나도 남지 않거나 원본보다 줄지 않은 단계는 규칙이 이 모델에
          *          맞지 않는 것이라 오류로 멈춘다(그 단계를 빼고 쓰면 화면 크기 임계값이 어긋난다).
+         *          @p skinBoneCount 가 0 이 아니면 단계마다 스킨 정점도 싣는다(단순화는 정점을 고르기만 하므로 정점의 본 영향이 그대로 따라온다).
          * @return 모든 단계를 만들었으면 true 입니다.
          */
-        [[nodiscard]] static bool makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, vector<MeshLODLevel>& outListLevel );
+        [[nodiscard]] static bool makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, uint32 skinBoneCount, vector<MeshLODLevel>& outListLevel );
 
         // ModelImportAnimation.cpp: 스켈레톤, 애니메이션 채널, 리샘플, 모프 곡선, 클립 부가 데이터
 

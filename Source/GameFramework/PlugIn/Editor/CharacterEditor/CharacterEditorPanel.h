@@ -14,11 +14,13 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Viewport/EditorPreviewGizmo.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
@@ -35,6 +37,7 @@ namespace sw
     struct FitResult;
 
     class CharacterAppearanceComponent;
+    class GameObject;
     class GameObjectManager;
     class SkeletalAnimatorComponent;
 } // namespace sw
@@ -97,6 +100,14 @@ namespace sw::editor
         void syncPreviewBody();
         /** @brief 뷰포트 위에 소켓 파일의 소켓 축(몸이 조립한 자리)을 긋습니다. 고른 소켓은 길고 밝다. */
         void drawSocketAxes( const CharacterAppearanceComponent& appearance );
+        /**
+         * @brief 스켈레톤 탭에서 고른 본(`_selectedBone`)의 기즈모를 미리보기 씬에 놓고, 기즈모로 옮긴 만큼을 레퍼런스 포즈 덮어쓰기(`BonePoseEditModel::setTranslation` · `setRotationDegrees`)로 바꿉니다.
+         * @details 표시 오브젝트(SceneComponent 하나)를 본의 월드 자리(몸 월드 × 덮어쓴 모델 변환)에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면
+         *          기즈모가 옮긴 것이다 — 부모 월드의 역으로 로컬을 구해 모델에 넣는다(끄는 동안은 한 되돌리기 단계). 본을 고르지 않았으면 표시 오브젝트를 지운다.
+         */
+        void syncBoneGizmo();
+        /** @brief 피팅이 찾은 관통 점(`FitPenetration::_listPoint`, 바인드 공간)을 몸의 월드 변환으로 옮겨 빨간 십자로 긋습니다. 관통이 없으면 아무것도 긋지 않습니다. */
+        void drawPenetrationPoints( const GameObject& body );
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
         /** @brief 소켓 파일을 경로 칸(`_path`)에서 읽습니다. 성공하면 true 이고 선택 · 외부 변경 표시를 비웁니다. */
@@ -197,6 +208,10 @@ namespace sw::editor
         bool                                  _bModelsWereDirty;        ///< 지난 그리기에 소켓 · 포즈 모델이 미저장이었다(되돌리기로 저장 상태에 돌아오면 dirty 를 내린다)
         bool                                  _bCustomizationActive;    ///< 꾸미기 슬라이더를 끄는 중이다(`drawCustomizationSliders`) — 미리보기 몸 다시 입히기를 놓을 때까지 미룬다
         uint32                                _seenFitRevision;         ///< 확인 표시에 올린 피팅 결과의 세대(`CharacterAppearanceComponent::getFitResultRevision`)
+        EditorPreviewGizmo                    _gizmo;                   ///< 고른 본의 기즈모(`syncBoneGizmo`)
+        GameObjectHandle                      _boneGizmoTarget;         ///< 기즈모가 잡는 미리보기 씬의 표시 오브젝트 — 고른 본의 월드 자리에 놓는다
+        float4x4                              _placedBoneWorld;         ///< 지난 그리기에 표시 오브젝트를 놓은 월드 변환 — 달라졌으면 기즈모가 옮긴 것이다
+        bool                                  _bBoneGizmoPlaced;        ///< `_placedBoneWorld` 가 유효하다
         PackDataState                         _packDataState;
     };
 } // namespace sw::editor

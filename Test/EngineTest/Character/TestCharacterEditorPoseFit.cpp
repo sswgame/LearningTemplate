@@ -278,6 +278,7 @@ SW_TEST_CASE( FitCheckSummaryTest, SummarizesCutsDeltasAndPenetrations )
     penetration._partB       = 1;
     penetration._vertexCount = 6;
     penetration._maxDepth    = 0.02f;
+    penetration._listPoint.push_back( float3( 0.1f, 1.2f, 0.3f ) );
     result._report._listPenetration.push_back( penetration );
     result._report._listMessage.push_back( "shirt: pushed out 2 vertices" );
 
@@ -295,6 +296,8 @@ SW_TEST_CASE( FitCheckSummaryTest, SummarizesCutsDeltasAndPenetrations )
     SW_EXPECT_STREQ( "Body", summary._listPenetration[0]._partA.c_str() );
     SW_EXPECT_STREQ( "Shirt", summary._listPenetration[0]._partB.c_str() );
     SW_EXPECT_EQUAL( 6u, summary._penetrationVertexCount );
+    SW_ASSERT_EQUAL( size_t( 1 ), summary._listPenetration[0]._listPoint.size() ); // 뷰포트에 찍을 위치가 요약까지 온다
+    SW_EXPECT_NEAR_EQUAL( 1.2f, summary._listPenetration[0]._listPoint[0]._y, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.02f, summary._maxPenetrationDepth, 1.0e-6f );
     SW_EXPECT_EQUAL( size_t( 1 ), summary._listMessage.size() );
 
