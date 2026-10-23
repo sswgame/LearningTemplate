@@ -114,6 +114,7 @@ namespace sw
         , _listOpacity{}
         , _uiScale{ uiScale }
         , _anchor{ invalid_index::kUint32 }
+        , _deferredGlyphCount{ 0 }
     {
     }
 
@@ -188,7 +189,10 @@ namespace sw
 
     bool CanvasPainter::drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex )
     {
-        const CachedGlyph* pGlyph            = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
+        const GlyphLookup lookup = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
+        if ( lookup._status == GlyphLookupStatus::Deferred )
+            ++_deferredGlyphCount;
+        const CachedGlyph* pGlyph            = lookup._pGlyph;
         const bool         bGlyphNotDrawable = pGlyph == nullptr || pGlyph->_rect._width == 0 || pGlyph->_rect._height == 0;
         if ( bGlyphNotDrawable )
             return false;

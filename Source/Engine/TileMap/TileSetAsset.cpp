@@ -170,78 +170,87 @@ namespace sw
 
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
-            const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile", true );
-            if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile", true ) == false )
-            {
-                SW_LOG_ERROR( "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
+            TileBrush brush{};
+            if ( loaded.parseBrush( node, sourceName, brush ) == false )
                 return false;
-            }
-            static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
-            if ( XMLNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
-                return false;
-
-            TileBrush         brush{};
-            const string_view name = node.getAttributeText( "name" );
-            if ( name.empty() )
-            {
-                SW_LOG_ERROR( "%#: a <%#> has no name", sourceName, node.getName() );
-                return false;
-            }
-            brush._name = hashed_string( name );
-            if ( loaded.findBrush( brush._name ) >= 0 )
-            {
-                SW_LOG_ERROR( "%#: brush '%#' is listed twice", sourceName, name );
-                return false;
-            }
-            if ( loaded.parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
-                return false;
-            // 적지 않은 칸은 TileBrush 의 초기값이다. 범위 밖 이동 비용은 자르지 않고 오류다.
-            std::optional<bool> bSolid;
-            int32               navCost = brush._navCost;
-            const bool          bBrushFieldsValid =
-                node.readOptionalAttribute( "solid", bSolid ) && node.readOptionalAttributeInRange( "navCost", 1, Internal::kBlockedNavCost, navCost );
-            if ( bBrushFieldsValid == false )
-                return false;
-            if ( bSolid.has_value() )
-                brush._bSolid = *bSolid ? SW_TRUE : SW_FALSE;
-            brush._navCost                        = static_cast<uint8>( navCost );
-            const string_view outside             = node.getAttributeText( "outside" );
-            const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false;
-            if ( bInvalidOutsideMode )
-            {
-                SW_LOG_ERROR( "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
-                return false;
-            }
-            brush._bOutsideIsSame = StringUtil::equals( outside, "same", true ) ? SW_TRUE : SW_FALSE;
-
-            for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
-            {
-                if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
-                {
-                    SW_LOG_ERROR( "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
-                    return false;
-                }
-                static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
-                if ( XMLNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
-                    return false;
-                TileRule rule{};
-                if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )
-                {
-                    SW_LOG_ERROR( "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleNode.getAttributeText( "pattern" ), name );
-                    return false;
-                }
-                if ( loaded.parseVisual( ruleNode, sourceName, true, rule._visual ) == false )
-                    return false;
-                brush._listRule.push_back( rule );
-            }
-            if ( bRuleTile && brush._listRule.empty() )
-            {
-                SW_LOG_ERROR( "%#: rule tile '%#' has no <Rule>", sourceName, name );
-                return false;
-            }
             loaded._listBrush.push_back( brush );
         }
         *this = loaded;
+        return true;
+    }
+
+    bool TileSetAsset::parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush ) const
+    {
+        using Internal       = TileSetAssetInternal;
+        const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile", true );
+        if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile", true ) == false )
+        {
+            SW_LOG_ERROR( "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
+            return false;
+        }
+        static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
+        if ( XMLNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
+            return false;
+
+        TileBrush&        brush = outBrush;
+        const string_view name  = node.getAttributeText( "name" );
+        if ( name.empty() )
+        {
+            SW_LOG_ERROR( "%#: a <%#> has no name", sourceName, node.getName() );
+            return false;
+        }
+        brush._name = hashed_string( name );
+        if ( findBrush( brush._name ) >= 0 )
+        {
+            SW_LOG_ERROR( "%#: brush '%#' is listed twice", sourceName, name );
+            return false;
+        }
+        if ( parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
+            return false;
+        // 적지 않은 칸은 TileBrush 의 초기값이다. 범위 밖 이동 비용은 자르지 않고 오류다.
+        std::optional<bool> bSolid;
+        int32               navCost = brush._navCost;
+        const bool          bBrushFieldsValid =
+            node.readOptionalAttribute( "solid", bSolid ) && node.readOptionalAttributeInRange( "navCost", 1, Internal::kBlockedNavCost, navCost );
+        if ( bBrushFieldsValid == false )
+            return false;
+        if ( bSolid.has_value() )
+            brush._bSolid = *bSolid ? SW_TRUE : SW_FALSE;
+        brush._navCost                        = static_cast<uint8>( navCost );
+        const string_view outside             = node.getAttributeText( "outside" );
+        const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false;
+        if ( bInvalidOutsideMode )
+        {
+            SW_LOG_ERROR( "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
+            return false;
+        }
+        brush._bOutsideIsSame = StringUtil::equals( outside, "same", true ) ? SW_TRUE : SW_FALSE;
+
+        for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
+        {
+            if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
+                return false;
+            }
+            static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
+            if ( XMLNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
+                return false;
+            TileRule rule{};
+            if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )
+            {
+                SW_LOG_ERROR( "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleNode.getAttributeText( "pattern" ), name );
+                return false;
+            }
+            if ( parseVisual( ruleNode, sourceName, true, rule._visual ) == false )
+                return false;
+            brush._listRule.push_back( rule );
+        }
+        if ( bRuleTile && brush._listRule.empty() )
+        {
+            SW_LOG_ERROR( "%#: rule tile '%#' has no <Rule>", sourceName, name );
+            return false;
+        }
         return true;
     }
 

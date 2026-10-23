@@ -4464,6 +4464,14 @@
    "source": "Source/Engine/UI/Debug/UIDemoScreen.cpp"
   },
   {
+   "name": "gv_uiGlyphRasterBudgetMicros",
+   "type": "int32",
+   "default": "4000",
+   "kind": "일반",
+   "description": "프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다",
+   "source": "Source/Engine/UI/UISystem.cpp"
+  },
+  {
    "name": "gv_uiOptionsMenu",
    "type": "bool",
    "default": "false",
@@ -5277,6 +5285,22 @@
     "WSL-Debug-Server",
     "WSL-Shipping-Server"
    ]
+  },
+  {
+   "name": "SW_UNITY_BATCH_CORE",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "Core_objects 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
+  },
+  {
+   "name": "SW_UNITY_BATCH_KIT",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "GameFramework 키트 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
   },
   {
    "name": "SW_USE_VCPKG",

@@ -259,6 +259,35 @@ SW_TEST_CASE( UIPaintTest, AtlasEvictionRepaintsText )
 }
 
 /**
+ * @brief [UIPaintTest] 글리프 래스터화 예산이 차서 글리프를 미룬 글 위젯은 다음 프레임에 다시 칠한다 — 글리프가 프레임마다 하나씩 나타나고, 다 나타나면 더 칠하지 않는다
+ * @details 예산 1 ns 는 프레임마다 새 글리프 하나만 만든다. 변이: `UIPaintPass::paint` 가 미룬 위젯을 다시 무효화하지 않으면 사각형이 하나로 굳어 진다.
+ */
+SW_TEST_CASE( UIPaintTest, DeferredGlyphsRepaintTheTextWidgetNextFrame )
+{
+    UIPaintFontFixture fonts;
+    SW_ASSERT_TRUE( fonts._bInitialized );
+    UIPaintFixture fixture( 400.0f, 100.0f );
+    fonts.bind( fixture );
+    fonts._fonts._fontService->getGlyphCache().setRasterBudgetNanoseconds( 1 );
+    sw::BoxPanel*   pRow  = fixture.setRoot<sw::BoxPanel>();
+    sw::TextWidget* pText = static_cast<sw::TextWidget*>( pRow->addChild( sw::make_unique<sw::TextWidget>() ) );
+    pText->setText( "abc" );
+
+    fixture._paintContext._frameIndex = 1;
+    SW_EXPECT_EQUAL( 2u, fixture.runFrame() ); // 패널과 글 위젯
+    SW_EXPECT_EQUAL( size_t{ 1 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 2;
+    SW_EXPECT_EQUAL( 1u, fixture.runFrame() ); // 글 위젯만
+    SW_EXPECT_EQUAL( size_t{ 2 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 3;
+    SW_EXPECT_EQUAL( 1u, fixture.runFrame() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 4;
+    SW_EXPECT_EQUAL( 0u, fixture.runFrame() ); // 다 나타났다
+    SW_EXPECT_EQUAL( size_t{ 3 }, fixture._canvas._listQuad.size() );
+}
+
+/**
  * @brief [UIPaintTest] 글 위젯: 글을 바꾸면 레이아웃 더러움(kLayout), 색만 바꾸면 그리기 더러움(kPaint)뿐이다 — 원하는 크기는 글자 배율을 따른다
  * @details 변이: `TextWidget::setColor` 가 kLayout 을 함께 걸면 진다.
  */

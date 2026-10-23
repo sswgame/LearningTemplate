@@ -25,8 +25,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 8 | [ModuleRenderPass](docs/plans/ModuleRenderPass.md) — 모듈이 렌더 패스를 등록하는 창구 | 구현중 | 1/3 | 없음 | engine | G-1 |
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | 10 | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 구현중 | 0/4 | 없음 | engine | 없음 |
-| - | [GlyphRasterizationHitch](docs/plans/GlyphRasterizationHitch.md) — 새 글리프 래스터화 히치 | 설계 | 0/3 | 없음 | ui | C-9 |
-| - | [UiDrawPerformance](docs/plans/UiDrawPerformance.md) — 런타임 UI 그리기 성능의 남은 것 | 설계 | 0/2 | 없음 | ui | D6-6 |
 | - | [ContentBrowserWatchAndScan](docs/plans/ContentBrowserWatchAndScan.md) — 콘텐츠 브라우저 감시 지연과 스캔 비용 | 구현대기 | 0/2 | 없음 | editor | 없음 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
 | - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현대기 | 0/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
@@ -84,6 +82,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
 | - | [DiskPathVsResourceId](docs/plans/DiskPathVsResourceId.md) — 디스크 경로와 리소스 id 의 입구 나누기 (2026-10-21) | 측정대기 | 3/3 | 없음 | engine | C-70 |
 | - | [FacialAnimation](docs/plans/FacialAnimation.md) — 얼굴 애니메이션의 남은 것 | 측정대기 | 5/5 | 없음 | gameplay | D4-6 |
+| - | [GlyphRasterizationHitch](docs/plans/GlyphRasterizationHitch.md) — 새 글리프 래스터화 히치 | 측정대기 | 3/3 | 없음 | ui | C-9 |
 | - | [GraphicsFormatBundle](docs/plans/GraphicsFormatBundle.md) — 그래픽스 형식 묶음 — HDR 장면 색 · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간 | 측정대기 | 12/12 | 없음 | graphics | D2-1, D2-6, D2-7, D2-10 |
 | - | [GraphicsMeasurements](docs/plans/GraphicsMeasurements.md) — 그래픽스 측정 · 확인 묶음 (2026-10-24) | 측정대기 | 4/4 | 없음 | graphics | D2-9, D2-2, D2-10, C-55 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 측정대기 | 8/8 | ClusteredLighting | graphics | D2-12 |
@@ -99,6 +98,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [RollbackPrediction](docs/plans/RollbackPrediction.md) — 클라이언트 예측 · 롤백과 관심 영역 복제 | 측정대기 | 4/4 | 없음 | network | D7-8 |
 | - | [ShooterStrideWarping](docs/plans/ShooterStrideWarping.md) — Shooter3D 발 미끄러짐 연결 | 측정대기 | 2/2 | 없음 | gameplay | D4-6 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
+| - | [UiDrawPerformance](docs/plans/UiDrawPerformance.md) — 런타임 UI 그리기 성능의 남은 것 | 측정대기 | 0/2 | 없음 | ui | D6-6 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
 후보 문서 9개 · 후보 절 47개

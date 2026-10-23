@@ -22,6 +22,8 @@
 
 ### T3 Release 측정과 예산
 
+매니페스트 id `terrain-bench-release`.
+
 - `TerrainBenchTest.LODSweepWorstFrame`(Release, 3 회): T1 뒤 updateLODs 최악이 GT 2 ms 안인지. 워커 수에 달려 있으므로 PC 를 함께 적는다.
 - `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고 `TerrainComponentInternal::kMaxChunkMeshRebuildsPerFrame`(넷)을 GT 2 ms 에 맞춘다.
 - 식생 부분 계산: 쇼케이스에서 브러시 한 번 뒤 `Foliage: refreshed N of M cell batches` 로그의 시간(Debug 0.86 s 와 견준다). 최소 거리 풀이가 전부 다시 도는 몫이 크면 그 비용을 따로 잰다.
