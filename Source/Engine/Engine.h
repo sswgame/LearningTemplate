@@ -165,7 +165,7 @@ namespace sw
         CommandLineManager* getCommandLineManager() const;
         RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
-        bool                isHeadless() const { return _headlessState._bHeadless; }
+        bool                isHeadless() const { return _headlessState.isHeadless(); }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
         EngineHostRole getHostRole() const { return _hostRole; }
         /**

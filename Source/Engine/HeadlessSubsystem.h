@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -15,8 +16,23 @@ namespace sw
     /** @brief 헤드리스 작업의 결과입니다(호스트 소유). */
     struct HeadlessTaskState
     {
+        /**
+         * @brief 헤드리스 작업으로 들어갑니다 — 누수 기준선을 잡고 헤드리스로 표시합니다. 헤드리스로 표시하는 길은 이것뿐입니다.
+         * @details 헤드리스 작업은 보통 실행이 기준선을 잡는 자리(`Engine::initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는
+         *          부트스트랩 블록을 모두 누수로 찍으므로, 표시와 기준선을 한 호출로 묶어 분기마다 따로 기억하지 않게 한다.
+         */
+        void enterHeadless()
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+        }
+
+        bool isHeadless() const { return _bHeadless; }
+
+        bool _bFailed{ false }; ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
+
+    private:
         bool _bHeadless{ false }; ///< 헤드리스 작업을 했다(뒤 단계를 세우지 않았다)
-        bool _bFailed{ false };   ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
     };
 } // namespace sw
 

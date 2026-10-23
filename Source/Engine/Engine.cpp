@@ -227,10 +227,8 @@ namespace sw
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( pCrashHandler->isCrashReporterRun() )
         {
-            // 다른 헤드리스 작업처럼 작업 직전에 누수 기준선을 잡는다 — 없으면 종료 때 살아 있는 부트스트랩 블록을 모두 누수로 찍는다.
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _hostRole                 = role;
-            _headlessState._bHeadless = true;
+            _hostRole = role;
+            _headlessState.enterHeadless();
             return true;
         }
         // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
@@ -421,7 +419,7 @@ namespace sw
             return false;
         }
         // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
-        if ( bDedicatedServer == false && _headlessState._bHeadless == false )
+        if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
             _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
@@ -444,7 +442,7 @@ namespace sw
             SW_LOG_INFO( "Dedicated server: startup steps not run - %#", skipped.c_str() );
         }
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
-        if ( _headlessState._bHeadless )
+        if ( _headlessState.isHeadless() )
             return true;
 
         _profileSession.begin();
@@ -461,7 +459,7 @@ namespace sw
     {
 #if SW_PROFILER_TRACE_ENABLED
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
-        if ( engine::areEngineServicesBound() && _headlessState._bHeadless == false )
+        if ( engine::areEngineServicesBound() && _headlessState.isHeadless() == false )
             ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
@@ -656,7 +654,7 @@ namespace sw
         const uint32         vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds               = deltaTime;
 
-        if ( _headlessState._bHeadless )
+        if ( _headlessState.isHeadless() )
             return;
 
         FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
