@@ -252,7 +252,7 @@ namespace sw
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    AnimationNotifyHandlerRegistry& AnimationNotifyHandlerRegistry::getDefault()
+    const AnimationNotifyHandlerRegistry& AnimationNotifyHandlerRegistry::getDefault()
     {
         static AnimationNotifyHandlerRegistry s_registry;
         static const bool                     s_bRegistered = AnimationNotifyHandlerUtil::registerBuiltInHandlers( s_registry );
