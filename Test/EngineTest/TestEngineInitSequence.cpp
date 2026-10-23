@@ -1,63 +1,16 @@
 #include "pch.h"
 
-#include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Event/EventDispatcher.h"
-#include "Core/File/AsyncFileIO.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Bootstrap/CommandLineSubsystem.h"
-#include "Engine/Bootstrap/ContentRootSubsystem.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
-#include "Engine/Bootstrap/LoggerSubsystem.h"
-#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
-#include "Engine/Bootstrap/NamePoolSubsystem.h"
-#include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
-#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
-#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
-#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/EngineSubsystemSet.h"
 #include "Engine/HeadlessSubsystem.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
-#include "Engine/Module/ModuleTypesSubsystem.h"
-#include "Engine/Module/ReflectionSubsystem.h"
-#include "Engine/Net/GameNetSession.h"
-#include "Engine/Object/Component/ComponentDefaults.h"
-#include "Engine/Physics/PhysicsSystem.h"
-#include "Engine/Profiling/DebugOverlayState.h"
-#include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Profiling/ProfilerBackendSubsystem.h"
-#include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-#include "Engine/Renderer/LiveShaderSubsystem.h"
-#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
-#include "Engine/Renderer/RHISubsystem.h"
-#include "Engine/Renderer/RenderThreadSubsystem.h"
-#include "Engine/Renderer/SceneRHISubsystem.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/PackEngineSettingsSubsystem.h"
-#include "Engine/Scene/CommandStack.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Telemetry/CrashReportService.h"
-#include "Engine/Telemetry/TelemetryService.h"
-#include "Engine/Text/FontService.h"
-#include "Engine/UI/UISystem.h"
-#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -137,78 +90,27 @@ namespace
     };
 
     /**
-     * @brief 엔진 범위를 `Engine::initialize` 와 같은 실제 객체 · 같은 거는 타입으로 채웁니다(초기화하지 않는다). 엔진 루프에 서브시스템을 더하면 여기도 더한다.
+     * @brief 엔진 범위를 `Engine::initialize` 와 같은 함수(`engine::addStartupSubsystems`)로 채웁니다(초기화하지 않는다). 목록은 그 함수 하나뿐이라 여기서 따로 갱신할 것이 없다.
      * @details 서브시스템마다 그 클래스가 이름 · 의존 · 호스트를 말한다. 객체는 넘긴 타입으로 지우는 범위가 소유한다 — 기반 포인터(`unique_ptr<ISubsystem>`)로
      *          들면 정렬 할당 타입(태스크 매니저 · 입력)을 일반 해제로 놓아 배포본 힙을 깨뜨린다(`default_delete` 의 변환이 컴파일 오류로 막는다).
+     *          오디오는 장치를 열지 않는 대역을 넘긴다(선언만 본다).
      */
     void addEngineSubsystems( SubsystemScope& engineScope )
     {
-        engineScope.addSubsystem( make_unique<CompressionCodecRegistry>() );
-        const ReflectionSubsystem& reflection = engineScope.addSubsystem( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
-        (void)engineScope.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
-        engineScope.addSubsystem( make_unique<TaskManager>() );
-        engineScope.addSubsystem( make_unique<AsyncFileIO>() );
-        engineScope.addSubsystem( make_unique<ConfigManager>() );
-        engineScope.addSubsystem( make_unique<AssetManager>() );
-        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>() );
-        (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
-        const PackEngineSettingsSubsystem& packSettings = engineScope.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
-        (void)engineScope.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
-        engineScope.addSubsystem( sw::make_unique<ModuleImagesSubsystem>() );
-        engineScope.addSubsystem( sw::make_unique<ModuleTypesSubsystem>() );
-        engineScope.addSubsystem( IAudioService::createNull() );
-        engineScope.addSubsystem( make_unique<InputManager>() );
-        engineScope.addSubsystem( make_unique<AssetStreamingQueue>() );
-        engineScope.addSubsystem( make_unique<SceneManager>() );
-        engineScope.addSubsystem( make_unique<UserSettingsManager>() );
         static HeadlessTaskState s_headlessState; // 선언만 본다 — 본문은 돌지 않는다
-        engineScope.addSubsystem( sw::make_unique<HeadlessSubsystem>( false, s_headlessState ) );
-        engineScope.addSubsystem( make_unique<ShaderCache>() );
-        // 렌더 쪽은 서로를 참조로 받는다 — 범위가 살아 있는 동안만 쓴다(대역은 선언만 베낀다).
-        RHISubsystem&           rhiSubsystem           = engineScope.addSubsystem( sw::make_unique<RHISubsystem>() );
-        FrameRendererSubsystem& frameRendererSubsystem = engineScope.addSubsystem( sw::make_unique<FrameRendererSubsystem>( sw::make_unique<FrameRenderer>(), rhiSubsystem ) );
-        (void)engineScope.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
-        RenderThreadSubsystem& renderThreadSubsystem = engineScope.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
-        engineScope.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, renderThreadSubsystem ) );
-        engineScope.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
-        engineScope.addSubsystem( make_unique<PhysicsSystem>() );
-        engineScope.addSubsystem( make_unique<GameNetSession>() );
-        engineScope.addSubsystem( make_unique<FontService>() );
-        engineScope.addSubsystem( make_unique<TelemetryService>() );
-        engineScope.addSubsystem( make_unique<UISystem>() );
+        (void)engine::addStartupSubsystems( engineScope, { ._headlessState = s_headlessState, ._bDedicatedServer = false, ._bRenderer = true, ._audio = IAudioService::createNull() } );
     }
 
-    /** @brief 부트스트랩 범위를 엔진 루프 · 하네스와 같은 클래스로 채웁니다(초기화하지 않는다 — 선언과 소유만 본다). */
+    /** @brief 부트스트랩 범위를 엔진 루프와 같은 함수로 채웁니다(초기화하지 않는다 — 선언과 소유만 본다). 메모리 프로파일러는 초기화 뒤에 생겨 걸지 않는다(선택 행이다). */
     void addBootstrapSubsystems( SubsystemScope& bootstrap )
     {
-        bootstrap.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( false ) );
-        bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
-        bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
-        const CommandLineSubsystem&  commandLine  = bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( 0, nullptr ) );
-        const CrashHandlerSubsystem& crashHandler = bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( &commandLine ) );
-        bootstrap.addSubsystem( sw::make_unique<ContentRootSubsystem>( commandLine, crashHandler ) );
-        bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
-        bootstrap.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( crashHandler ) ); // 엔진 루프만 든다(하네스는 진단 구성의 추적을 그대로 둔다)
-        // 엔진 루프와 같이 서브시스템 안의 객체를 건다(메모리 프로파일러는 초기화 뒤에 생겨 여기서는 걸지 않는다 — 선택 행이다).
-        (void)bootstrap.bind( commandLine.findCommandLine() );     // 새 범위 — 겹치지 않는다
-        (void)bootstrap.bind( commandLine.findGlobalVariables() ); // 새 범위 — 겹치지 않는다
+        (void)engine::addBootstrapSubsystems( bootstrap, { ._argc = 0, ._ppArgv = nullptr, ._bDiagnostics = false, ._bMemoryBudget = true } );
     }
 
-    /** @brief 서비스 범위를 엔진 루프와 같은 클래스로 채웁니다(초기화하지 않는다). */
+    /** @brief 서비스 범위를 엔진 루프와 같은 함수로 채웁니다(초기화하지 않는다). */
     void addServiceSubsystems( SubsystemScope& services )
     {
-        services.addSubsystem( sw::make_unique<EventDispatcher>() );
-        services.addSubsystem( sw::make_unique<LocalizationManager>() );
-        services.addSubsystem( sw::make_unique<CommandStack>() );
-        services.addSubsystem( sw::make_unique<DebugOverlayState>() );
-        services.addSubsystem( sw::make_unique<ComponentDefaults>() );
-        FrameProfiler& frameProfiler = services.addSubsystem( sw::make_unique<FrameProfiler>() );
-        services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
-        services.addSubsystem( sw::make_unique<CrashReportService>() );
-        services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
-        services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
-        services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
-        services.addSubsystem( sw::make_unique<ModuleRenderPassRegistry>() );
+        (void)engine::addServiceSubsystems( services, { ._bEditorServices = true } );
     }
 
     /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */
