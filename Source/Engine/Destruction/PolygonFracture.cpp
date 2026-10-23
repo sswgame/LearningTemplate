@@ -7,6 +7,7 @@
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/FractureSiteUtil.h"
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Destruction/PolygonTriangulation.h"
 
@@ -16,9 +17,8 @@ namespace sw
     {
         struct PolygonFractureInternal
         {
-            static constexpr int32   kOuterTag          = -1;
-            static constexpr float32 kLineEpsilon       = 1.0e-6f;
-            static constexpr uint32  kSiteAttemptFactor = 200;
+            static constexpr int32   kOuterTag    = -1;
+            static constexpr float32 kLineEpsilon = 1.0e-6f;
 
             /** @brief 다각형 꼭짓점 하나와, 그 꼭짓점에서 다음 꼭짓점으로 가는 변을 만든 이웃 시드(바깥 변은 -1)입니다. */
             struct Corner
@@ -95,16 +95,8 @@ namespace sw
                 }
                 const float2      extent = boundsMax - boundsMin;
                 DestructionRandom random{ settings._seed };
-                const auto        addIfInside = [&listBorder, &outListSite]( const float2& point )
-                {
-                    for ( const float2& existing : outListSite )
-                    {
-                        if ( float2::getDistanceSquared( existing, point ) < 1.0e-10f )
-                            return;
-                    }
-                    if ( isInside( listBorder, point ) )
-                        outListSite.push_back( point );
-                };
+                const auto        isInsideBorder = [&listBorder]( const float2& point )
+                { return isInside( listBorder, point ); };
                 if ( settings._pattern == FracturePattern::Slices )
                 {
                     const uint32  countX = MathUtil::max( settings._arrSliceCount[0], 1u );
@@ -116,8 +108,9 @@ namespace sw
                         {
                             const float32 offsetX = 0.5f + ( countX > 1 ? random.nextRange( -jitter, jitter ) : 0.0f );
                             const float32 offsetY = 0.5f + ( countY > 1 ? random.nextRange( -jitter, jitter ) : 0.0f );
-                            addIfInside( float2{ boundsMin._x + extent._x * ( static_cast<float32>( cellX ) + offsetX ) / static_cast<float32>( countX ),
-                                                 boundsMin._y + extent._y * ( static_cast<float32>( cellY ) + offsetY ) / static_cast<float32>( countY ) } );
+                            const float2  point{ boundsMin._x + extent._x * ( static_cast<float32>( cellX ) + offsetX ) / static_cast<float32>( countX ),
+                                                boundsMin._y + extent._y * ( static_cast<float32>( cellY ) + offsetY ) / static_cast<float32>( countY ) };
+                            FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                         }
                     }
                     return;
@@ -127,15 +120,17 @@ namespace sw
                 if ( settings._pattern == FracturePattern::Clustered )
                     nearTarget = static_cast<uint32>( MathUtil::round( static_cast<float32>( target ) * MathUtil::saturate( settings._clusterFraction ) ) );
                 const float2 impact{ settings._impactPoint._x, settings._impactPoint._y };
-                for ( uint32 attempt = 0; outListSite.size() < nearTarget && attempt < nearTarget * kSiteAttemptFactor; ++attempt )
+                for ( uint32 attempt = 0; outListSite.size() < nearTarget && attempt < nearTarget * FractureSiteUtil::kAttemptFactor; ++attempt )
                 {
                     const float32 angle  = random.nextRange( 0.0f, MathUtil::kPi * 2.0f );
                     const float32 radius = MathUtil::sqrt( random.nextFloat01() ) * settings._clusterRadius;
-                    addIfInside( impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius } );
+                    const float2  point  = impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius };
+                    FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                 }
-                for ( uint32 attempt = 0; outListSite.size() < target && attempt < target * kSiteAttemptFactor; ++attempt )
+                for ( uint32 attempt = 0; outListSite.size() < target && attempt < target * FractureSiteUtil::kAttemptFactor; ++attempt )
                 {
-                    addIfInside( float2{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01() } );
+                    const float2 point{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01() };
+                    FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                 }
             }
 

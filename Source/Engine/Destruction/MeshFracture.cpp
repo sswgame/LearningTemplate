@@ -13,6 +13,7 @@
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Destruction/FractureSiteUtil.h"
 #include "Engine/Destruction/PolygonTriangulation.h"
 
 namespace sw
@@ -23,10 +24,9 @@ namespace sw
     {
         struct MeshFractureInternal
         {
-            static constexpr int32   kOuterTag          = -1;
-            static constexpr int32   kSurfaceTag        = -2; ///< 대리 부피를 쪼갤 때의 원래 겉면 태그다(막지 않고 자른다).
-            static constexpr uint32  kSiteAttemptFactor = 200;
-            static constexpr float32 kPlaneEpsilon      = 1.0e-5f; ///< 이 거리(미터) 안의 정점은 자르는 평면 위에 있는 것으로 본다.
+            static constexpr int32   kOuterTag     = -1;
+            static constexpr int32   kSurfaceTag   = -2;      ///< 대리 부피를 쪼갤 때의 원래 겉면 태그다(막지 않고 자른다).
+            static constexpr float32 kPlaneEpsilon = 1.0e-5f; ///< 이 거리(미터) 안의 정점은 자르는 평면 위에 있는 것으로 본다.
 
             /** @brief 삼각형 하나와, 안쪽 면이면 그 면을 만든 이웃 시드입니다. */
             struct Triangle
@@ -391,18 +391,8 @@ namespace sw
                 collectBounds( listVertex, boundsMin, boundsMax );
                 const float3      extent = boundsMax - boundsMin;
                 DestructionRandom random{ settings._seed };
-                const auto        addIfInside = [&listVertex, &outListSite]( const float3& point )
-                {
-                    for ( const float3& existing : outListSite )
-                    {
-                        if ( float3::getDistanceSquared( existing, point ) < 1.0e-10f )
-                            return false;
-                    }
-                    if ( MeshFractureUtil::isPointInside( listVertex, point ) == false )
-                        return false;
-                    outListSite.push_back( point );
-                    return true;
-                };
+                const auto        isInsideMesh = [&listVertex]( const float3& point )
+                { return MeshFractureUtil::isPointInside( listVertex, point ); };
 
                 if ( settings._pattern == FracturePattern::Slices )
                 {
@@ -428,7 +418,7 @@ namespace sw
                                         offset += random.nextRange( -jitter, jitter );
                                     arrCoord[axis] = ( &boundsMin._x )[axis] + cellSize * ( static_cast<float32>( arrCell[axis] ) + offset );
                                 }
-                                (void)addIfInside( float3{ arrCoord[0], arrCoord[1], arrCoord[2] } );
+                                FractureSiteUtil::addIfInside( outListSite, float3{ arrCoord[0], arrCoord[1], arrCoord[2] }, isInsideMesh );
                             }
                         }
                     }
@@ -440,18 +430,19 @@ namespace sw
                 if ( settings._pattern == FracturePattern::Clustered )
                     nearTarget = static_cast<uint32>( MathUtil::round( static_cast<float32>( target ) * MathUtil::saturate( settings._clusterFraction ) ) );
                 uint32 attempt = 0;
-                while ( static_cast<uint32>( outListSite.size() ) < nearTarget && attempt < nearTarget * kSiteAttemptFactor )
+                while ( static_cast<uint32>( outListSite.size() ) < nearTarget && attempt < nearTarget * FractureSiteUtil::kAttemptFactor )
                 {
                     ++attempt;
-                    (void)addIfInside( settings._impactPoint + random.nextPointInUnitSphere() * settings._clusterRadius );
+                    const float3 point = settings._impactPoint + random.nextPointInUnitSphere() * settings._clusterRadius;
+                    FractureSiteUtil::addIfInside( outListSite, point, isInsideMesh );
                 }
                 attempt = 0;
-                while ( static_cast<uint32>( outListSite.size() ) < target && attempt < target * kSiteAttemptFactor )
+                while ( static_cast<uint32>( outListSite.size() ) < target && attempt < target * FractureSiteUtil::kAttemptFactor )
                 {
                     ++attempt;
                     const float3 point{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01(),
                                         boundsMin._z + extent._z * random.nextFloat01() };
-                    (void)addIfInside( point );
+                    FractureSiteUtil::addIfInside( outListSite, point, isInsideMesh );
                 }
             }
 
