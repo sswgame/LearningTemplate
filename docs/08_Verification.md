@@ -437,6 +437,9 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **결과를 로그로 늦게 내는 백그라운드 작업은 시나리오 시계를 잡는다** — 저장 검증(`EditorAssetValidation`, 파이썬 몇 초)은 저장 뒤 파일을 늦게 읽는다. 시계가 앞서 가면 시나리오의 뒤 단계(임시 폴더 지우기)가 바뀐 트리를 읽히고,
   그 결과(`[prefab-guids] … neither is known`)가 다음 시나리오 창에 떨어져 로그 게이트로 진다(2026-10-20 GL 체인 flowimport → chainreloadeditor). 그런 작업은 `SW_AUTOMATION_CLOCK_HOLDER` 로 등록한다 —
   참인 동안 실행기가 시계를 멈추고 다음 시나리오를 시작하지 않는다(`[Scenario] <이름> held the clock for N frame(s)` 줄).
+  답을 내는 백그라운드 색인도 같다 — 콘텐츠 브라우저의 참조 역색인은 보이는 패널의 색인이 마지막 `Resource/` 변경을 따라오기 전이면 `ContentBrowserReferenceIndex` 가 시계를 잡고,
+  탐침 `Editor.ReferenceIndexReady` · `Editor.ReferenceCount` 와 이름 바꾸기는 따라온 색인만 쓴다. "한 번 만들었다" 를 준비로 보던 때는 `<Scratch>` 복사 전에 시작한 스캔이 답해
+  `assetmanage` 가 `Editor.ReferenceCount` 0 · "fixed 0 referencing file(s)" 로 졌다(2026-10-23 Debug GL 체인 앞부분, 사본 폴더가 없던 실행 4/4 실패 · 남아 있던 실행 0/4 — 고친 뒤 0/5 · 0/3).
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
   `NetworkThreadTest`). 잠금 · 스레드를 바꾼 뒤 그 테스트만 이렇게 돌린다.

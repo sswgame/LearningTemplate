@@ -32,6 +32,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
@@ -119,7 +120,28 @@ namespace sw::editor
                 const ContentBrowserPanel* pPanel = findPanel();
                 if ( pPanel == nullptr )
                     return false;
-                outValue = pPanel->isReferenceIndexReady() ? 1.0 : 0.0;
+                outValue = pPanel->isReferenceIndexCurrent() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /**
+             * @brief 시계 잡기 조건 — 콘텐츠 브라우저의 내용이 보이는데 참조 역색인이 마지막 `Resource/` 변경을 아직 반영하지 않았으면 참입니다.
+             * @details 스캔은 수 초(Debug 는 수십 초)가 걸린다. 시계가 그동안 가면 고정 프레임의 단언과 이름 바꾸기가 스캔 전의 색인(시나리오의 `<Scratch>` 복사 전 트리)을 쓴다.
+             *          언리얼 자동화가 에셋 레지스트리의 스캔이 끝나기를 기다리는 것과 같다.
+             */
+            static bool isWaitingForReferenceIndex()
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                return pPanel != nullptr && pPanel->isWaitingForReferenceIndex();
+            }
+
+            /** @brief 에디터가 본 `Resource/` 변경 번호를 꺼냅니다. 에디터 컨텍스트가 없으면 false 입니다. */
+            [[nodiscard]] static bool tryGetContentChangeSerial( uint64& outSerial )
+            {
+                const EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outSerial = pContext->getSubsystem<AssetHotReload>().getContentChangeSerial();
                 return true;
             }
 
@@ -158,11 +180,11 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeAsset` 을 참조하는 텍스트 에셋 파일 수입니다. 역색인이 아직 없으면 값을 내지 않습니다. */
+            /** @brief `-gv_editorProbeAsset` 을 참조하는 텍스트 에셋 파일 수입니다. 역색인이 마지막 변경을 반영하지 않았으면(스캔 중 · 아직 없음 · 패널이 가려짐) 낡은 값 대신 값을 내지 않습니다. */
             [[nodiscard]] static bool readReferenceCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
-                if ( pPanel == nullptr || pPanel->isReferenceIndexReady() == false )
+                if ( pPanel == nullptr || pPanel->isReferenceIndexCurrent() == false )
                     return false;
                 outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorProbeAsset ) );
                 return true;
@@ -186,8 +208,10 @@ namespace sw::editor
     SW_EDITOR_PANEL( ContentBrowserPanel, ContentBrowserPanel::kPanelID, EditorPanelCategory::Core, 600 );
     SW_AUTOMATION_PROBE( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
-    SW_AUTOMATION_PROBE( editorReferenceIndexReady, "Editor.ReferenceIndexReady", "1 once the Content Browser reference index has been built",
+    SW_AUTOMATION_PROBE( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
+                         "1 when the Content Browser reference index reflects the last Resource/ change the editor saw (built, no scan in flight)",
                          &ContentBrowserPanelInternal::readReferenceIndexReady );
+    SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
     SW_AUTOMATION_PROBE( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );
     SW_AUTOMATION_PROBE( editorThumbnailCacheCount, "Editor.ThumbnailCacheCount", "Texture thumbnails the Content Browser holds as ImGui textures",
@@ -429,6 +453,8 @@ namespace sw::editor
         , _bOpenReferenceResults{ SW_FALSE }
         , _bFocusRenameInput{ SW_FALSE }
         , _bListingRecursive{ SW_FALSE }
+        , _bContentVisible{ SW_FALSE }
+        , _reservedFlags{ 0 }
     {
     }
 
@@ -512,10 +538,31 @@ namespace sw::editor
 
     void ContentBrowserPanel::syncReferenceIndex()
     {
-        const EditorTaskPoll poll     = _referenceSearch.takeFinishedScan();
-        EditorContext*       pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            _referenceSearch.requestScanIfStale( pContext->getSubsystem<AssetHotReload>().getContentChangeSerial(), poll );
+        uint64 serial{ 0 };
+        if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
+            _referenceSearch.update( serial );
+    }
+
+    bool ContentBrowserPanel::isReferenceIndexCurrent() const
+    {
+        uint64 serial{ 0 };
+        return ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) && _referenceSearch.isCurrent( serial );
+    }
+
+    bool ContentBrowserPanel::isWaitingForReferenceIndex() const
+    {
+        const bool bShowingContent = isOpen() && _bContentVisible == SW_TRUE;
+        return bShowingContent && isReferenceIndexCurrent() == false;
+    }
+
+    void ContentBrowserPanel::onPanelCollapsed()
+    {
+        _bContentVisible = SW_FALSE;
+    }
+
+    void ContentBrowserPanel::onPanelClosed()
+    {
+        _bContentVisible = SW_FALSE;
     }
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
@@ -524,8 +571,10 @@ namespace sw::editor
         _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
         _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
-        // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 다시 요청해서 그 세대의 결과를 버린다.
-        _referenceSearch.discardPendingScan();
+        // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
+        uint64 serial{ 0 };
+        if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
+            _referenceSearch.restartPendingScan( serial );
     }
 
     bool ContentBrowserPanel::createNewFolder()
@@ -564,10 +613,23 @@ namespace sw::editor
         _bFocusRenameInput = SW_TRUE;
     }
 
+    EditorReferenceIndex* ContentBrowserPanel::findCurrentReferenceIndex()
+    {
+        uint64                serial{ 0 };
+        EditorReferenceIndex* pIndex = ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) ? _referenceSearch.findCurrentIndex( serial ) : nullptr;
+        if ( pIndex == nullptr )
+            SW_LOG_WARNING( "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
+        return pIndex;
+    }
+
     bool ContentBrowserPanel::commitRename( string_view newName )
     {
+        // 색인이 따라오기 전이면 입력란을 열어 둔 채 돌아온다 — Enter 를 다시 누르면 된다.
+        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        if ( pIndex == nullptr )
+            return false;
         string destinationAbs;
-        if ( _fileActions.commitRename( newName, _referenceSearch.getIndex(), destinationAbs ) == false )
+        if ( _fileActions.commitRename( newName, *pIndex, destinationAbs ) == false )
             return false;
         selectAfterFileChange( destinationAbs );
         return true;
@@ -575,8 +637,11 @@ namespace sw::editor
 
     bool ContentBrowserPanel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
     {
+        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
+        if ( pIndex == nullptr )
+            return false;
         string destinationAbs;
-        if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, _referenceSearch.getIndex(), destinationAbs ) == false )
+        if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, *pIndex, destinationAbs ) == false )
             return false;
         selectAfterFileChange( destinationAbs );
         return true;
@@ -768,6 +833,7 @@ namespace sw::editor
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();
         processPendingImports();
+        _bContentVisible = SW_TRUE;
         syncWithContentChanges();
         syncReferenceIndex();
         if ( _bFolderDirty == SW_TRUE )
