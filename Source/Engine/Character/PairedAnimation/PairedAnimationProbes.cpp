@@ -1,12 +1,12 @@
 /**
- * @file AutomationCharacterProbes.cpp
- * @brief 캐릭터 기능(Engine/Character)의 자동화 탐침입니다. 탐침은 자동화 층(Automation)이 캐릭터 층을 읽는 방향이라 여기에 둡니다.
+ * @file PairedAnimationProbes.cpp
+ * @brief 짝 애니메이션의 자동화 탐침입니다. 탐침 레지스트리(`Engine/Probe`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다.
  */
 #include "pch.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

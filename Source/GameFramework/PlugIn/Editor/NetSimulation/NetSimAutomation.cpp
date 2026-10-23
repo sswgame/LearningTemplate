@@ -2,10 +2,10 @@
 
 #include "Core/Common/StdHeaders.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/PlugIn/Editor/NetSimulation/EditorNetSimSession.h"

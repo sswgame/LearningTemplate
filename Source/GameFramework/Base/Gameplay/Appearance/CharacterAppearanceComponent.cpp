@@ -5,7 +5,6 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/formatString.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitTables.h"
@@ -21,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"

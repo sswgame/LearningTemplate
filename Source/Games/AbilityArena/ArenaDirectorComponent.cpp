@@ -7,13 +7,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"

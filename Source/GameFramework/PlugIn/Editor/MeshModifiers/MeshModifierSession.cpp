@@ -14,12 +14,12 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/World/Spline/SplineComponent.h"

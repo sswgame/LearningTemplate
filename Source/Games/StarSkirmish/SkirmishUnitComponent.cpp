@@ -5,12 +5,12 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 

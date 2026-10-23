@@ -10,8 +10,8 @@
 #include "Editor/Common/Workspace/EditorNetProfilerHistory.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

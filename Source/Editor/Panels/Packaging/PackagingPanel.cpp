@@ -16,9 +16,9 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "sw/config/CookContract.gen.h"
 

@@ -32,10 +32,10 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>

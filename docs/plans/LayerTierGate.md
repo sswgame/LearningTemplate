@@ -1,6 +1,6 @@
 # 층 게이트
 
-> 상태: 구현중 · 선행: 없음 · 영역: project · 옛번호: 없음 · 진행: 4/5
+> 상태: 끝 · 선행: 없음 · 영역: project · 옛번호: 없음 · 진행: 5/5
 
 2026-10-23 사용자와 정한 결정: **"티어 테이블 = 계산값" 일치를 게이트 하나로 강제하고, 같은 티어 간선 · 순환(SCC) 검사를 더한다.** 근거는 2절의 측정이다. 추정 · 확인하지 못한 것은 5절에 구분해 적는다.
 
@@ -26,7 +26,7 @@
 | T2 | 같은 티어 간선 · 순환(SCC) 검사 — Engine 게이트의 `>` 를 같은 티어 역방향까지 막는다(Vfx → Environment 같은 간선이 대상) | 위와 같음 | 이 문서 | 순환을 만드는 include 가 실패한다 | 완료 |
 | T3 | RuntimeAPI → Editor 1건(`EditorModuleExports.h:11`)을 테이블에 한 줄로 명시한다(지금은 주석 예외뿐) | `CheckEngineLayers.toml` | 규칙 TOML | 게이트 OK | 완료 |
 | T4 | `CheckCoreNetworkLayers` 의 `_kNetworkTier` 를 TOML 로 옮긴다(작은 기계적 단위) | `CheckCoreNetworkLayers.py` | 규칙 TOML, Scripts README | 게이트 결과 동일 | 완료 |
-| T5 | 접두 없는 include 가 교차 해석되는지 검사를 더한다(우선순위 낮음) | `CheckEngineLayers.py` | 이 문서 | 실측 교차 0건 유지 | 남음(낮음) |
+| T5 | 접두 없는 include 가 교차 해석되는지 검사를 더한다(우선순위 낮음) | `CheckEngineLayers.py` | 이 문서 | 실측 교차 0건 유지 | 완료 |
 
 ## 4. 순서
 
@@ -41,6 +41,7 @@ T1 · T2 · T3 · T4 는 같은 규칙 파일을 만지므로 한 작업자가 �
 - **T3 RuntimeAPI → Editor.** RuntimeAPI 는 `Editor/` · `GameFramework/` include 를 금지하고, 계약 예외는 `[exemption]` 의 `contract:<파일>|<include>` 줄(이유 필수 · 낡으면 실패)로만 넘긴다. 지금 한 줄(`EditorModuleExports.h`).
 - **T4 Network 층 표.** `_kNetworkTier` 를 `rules/CheckCoreNetworkLayers.toml` 의 `[tier]` 로 옮겼다(`"<root>"` 가 뿌리, `[tier]` 가 없으면 오류로 멈춘다). 게이트 결과 동일.
 - **표 쪽에서 맞춘 것.** Vfx 10 → 11(Vfx → Environment 같은 티어 간선, 계산값), Core Spatial 6 → 4(계산값 — 의존이 Common · Container · Math 뿐이고 로그 매크로를 안 쓴다, Network 만 쓴다). Bootstrap 13 은 계산값 9 와 달라 `[tierReason]` 에 기존 주석의 의도(정적 저장소 정리가 위쪽을 내려다본다)를 이유로 옮겼다 — 코드 소유자가 의도인지 확인한다. 코드는 건드리지 않았고 새로 드러난 include 위반은 없다.
+- **T5 접두 없는 include.** Engine 게이트가 include 를 컴파일러처럼 그 파일의 폴더 → `Source/` → `Source/Engine/` 순으로 풀어, 마지막에서만 풀리면 실패시킨다(`Engine/<경로>` 로 쓰라고 알린다). 이름으로 쓰는 계약 헤더는 `[exemption]` 의 `unprefixed:<경로>` 줄로만 넘긴다 — 지금 한 줄(`pch.h`, 공유 PCH 진입 헤더). 실측(2026-10-23): `Source` · `Test` 전체에서 `pch.h` 말고 0건. 게이트를 둔 이유: 구조로 막으려면 Engine 의 PUBLIC include 경로에서 `Source/Engine` 을 빼고 `pch.h` 만 따로 내보내야 하는데, App · ModuleHost · Server · 에디터 · 테스트의 `sw_configurePch` 와 모든 .cpp 첫 줄이 그 경로에 기대므로 CMake 개편이 든다(6절).
 - **테스트.** 게이트 `selfTestCases`(같은 티어 역방향 · 사유 없는 상향 · 표 < 계산값 · 순환 · RuntimeAPI → Editor · Core 두 모양 · Network 같은 층)와 `Test/PythonTest/TestLayerTierGate.py`(판정 함수 · `--apply` 올리기 거부).
 - GameFramework `base_folder_order` · `base_layer` 는 같은 재계산 구조가 **아니다** — 손으로 쓴 표이고 계산 · `--apply` 가 없다(게이트는 `>=` 로 같은 순서도 막는다). 다만 그래프 계산값과 맞춰 보는 검사는 없다(여유가 조용히 남는 점은 Engine · Core 와 같은 모양이라, 필요하면 `LayerGraph` 를 재사용해 붙일 수 있다).
 
@@ -49,3 +50,4 @@ T1 · T2 · T3 · T4 는 같은 규칙 파일을 만지므로 한 작업자가 �
 - GameFramework 표에 "표 = 계산값" 검사를 붙일지(재계산 구조는 아니라 급하지 않다).
 - Bootstrap 13 이 의도인지는 코드 소유자가 확인한다(이유 줄의 문구는 기존 주석을 옮긴 것이다). Vfx · Spatial 은 계산값으로 맞췄다 — 의도였다면 `[tierReason]` 으로 되돌린다.
 - Engine 게이트는 `.xxx` 목록 파일도 보게 됐다(보고서가 원래 보던 파일과 맞춤) — 위반은 새로 나오지 않았다.
+- T5 를 구조로 바꾸는 길 — `pch.h` 를 전용 폴더(예: `Source/Engine/Pch/`)로 옮겨 그 폴더만 PUBLIC 으로 내보내고 `Source/Engine` 을 include 경로에서 빼면 접두 없는 include 가 컴파일 오류가 되어 게이트가 필요 없다. CMake(`sw_configurePch` 호출 아홉 곳 · `CheckEngineRootFiles`)를 바꾸는 일이라 이 단위에서 하지 않았다. 모듈(`ModuleTargets.cmake` 의 PUBLIC `CMAKE_CURRENT_SOURCE_DIR`)도 같은 모양(키트 폴더를 소비자가 접두 없이 풀 수 있다)이며 검사하지 않는다.

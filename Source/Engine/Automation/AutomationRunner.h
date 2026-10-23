@@ -10,10 +10,10 @@
 
 #include "Engine/Automation/AutomationLogCapture.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

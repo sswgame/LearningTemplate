@@ -15,7 +15,7 @@
     #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/StringUtil.h"
 
-    #include "Engine/Automation/AutomationProbe.h"
+    #include "Engine/Probe/AutomationProbe.h"
     #include "Engine/Automation/AutomationRunner.h"
     #include "Engine/Automation/AutomationStepRegistry.h"
     #include "Engine/Common/EngineServices.h"

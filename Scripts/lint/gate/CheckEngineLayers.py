@@ -22,6 +22,9 @@ Engine 레이어 금지 include 검사.
      Physics · Navigation · Audio · Animation · TileMap, 그리고 기능 컴포넌트 폴더 Object/Component/2D · 3D · Audio · Navigation · Physics 와
      Object/SceneAnimation)를 include 하지 않는다. 티어로는 Object 가 그 폴더들 위이거나 같은 Object 안이라 티어 검사가 못 잡는 방향이다.
      금지 항목은 폴더 접두로 본다(그 폴더와 하위 전부). 예외 키는 `core:<파일>|<include 경로>` 다.
+  8) 접두 없는 include 가 include 경로 `Source/Engine` 으로 풀리면 실패다(`Scene/SceneManager.h` 는 `Engine/Scene/SceneManager.h` 로 쓴다) — 위 검사들이
+     `Engine/` 접두만 보므로 이 모양은 모두를 비껴간다. 공유 PCH 진입 헤더(`pch.h`)처럼 이름으로 쓰는 계약은 `[exemption]` 의 `unprefixed:<include 경로>` 줄로만 넘긴다.
+     구조로 막는 길(Engine 의 PUBLIC include 경로에서 `Source/Engine` 을 빼고 `pch.h` 만 따로 내보내기)은 CMake 를 바꿔야 해서 아직 이 검사가 막는다.
 
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
@@ -87,6 +90,11 @@ _kEngineHostOnly: tuple[str, ...] = ("Engine/Engine.h", "Engine/HeadlessSubsyste
 #: RuntimeAPI 가 include 하면 안 되는 모듈 쪽 경로 앞부분(계약 예외 키 `contract:<파일>|<include 경로>`로만 넘긴다).
 _kRuntimeApiContractBanned: tuple[str, ...] = ("Editor/", "GameFramework/")
 _kContractPrefix = "contract:"
+
+#: 접두 없는 include 예외 키 접두 — `unprefixed:<include 경로>`. `Source/Engine` 이 PUBLIC include 경로라 접두 없이 풀리는 헤더를 줄마다 이유를 적어 넘긴다.
+_kUnprefixedPrefix = "unprefixed:"
+#: 접두가 이미 있는 include 의 첫 조각 — `Source/` 로 풀리므로 파일 시스템을 묻지 않고 넘긴다.
+_kSetSourceRootName = frozenset(root.split("/")[1] for root in _kListScanRoot)
 
 _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     (
@@ -226,6 +234,36 @@ def findCoreViolationsInternal(relativeFilePath: str, engineRelativePath: str, l
             gate.useExemption(coreKey)
             continue
         listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (컴포넌트 모델 코어 {folderPath} -> 기능 폴더 {bannedFolder})')
+    return listViolation
+
+
+def findUnprefixedEngineIncludesInternal(source: SourceFile) -> list[str]:
+    """
+    접두 없는 include 가 include 경로 `Source/Engine` 으로 풀리는 줄.
+
+    `Source/Engine` 은 Engine 의 PUBLIC include 경로라(`Source/Engine/CMakeLists.txt`) `#include "Scene/SceneManager.h"` 가 어느 타깃에서나 풀린다.
+    위 검사들은 `Engine/` 접두만 보므로 이 모양은 층 · 티어 검사를 모두 비껴간다. 컴파일러처럼 그 파일의 폴더 → `Source/` → `Source/Engine/` 순으로 풀어
+    마지막에서만 풀리면 위반이다. 확장자 없는 이름(표준 헤더)과 접두가 있는 이름은 파일 시스템을 묻지 않는다.
+    """
+    repositoryRoot = source.path
+    for _ in source.relative.split("/"):
+        repositoryRoot = repositoryRoot.parent
+    listViolation: list[str] = []
+    for _, includePath in iterIncludes(source.text):
+        normalizedInclude = normalizePath(includePath)
+        bSkipped = "." not in normalizedInclude or normalizedInclude.split("/")[0] in _kSetSourceRootName
+        if bSkipped:
+            continue
+        bResolvedElsewhere = (source.path.parent / includePath).is_file() or (repositoryRoot / "Source" / normalizedInclude).is_file()
+        if bResolvedElsewhere or (repositoryRoot / kDirSourceEngine / normalizedInclude).is_file() is False:
+            continue
+        exemptionKey = _kUnprefixedPrefix + normalizedInclude
+        if exemptionKey in CheckEngineLayersGate.mapExemption:
+            CheckEngineLayersGate.useExemption(exemptionKey)
+            continue
+        listViolation.append(
+            f'{source.relative}: #include "{includePath}"  (접두 없는 include 가 include 경로 {kDirSourceEngine} 로 풀린다 — "Engine/{normalizedInclude}" 로 쓴다)'
+        )
     return listViolation
 
 
@@ -464,6 +502,15 @@ class CheckEngineLayersGate(LintGate):
             },
         },
         {
+            # `Source/Engine` 이 PUBLIC include 경로라 접두 없이도 풀린다 — 층 · 티어 검사가 `Engine/` 접두만 봐서 못 잡던 모양이다.
+            "name": "접두 없는 include 가 Source/Engine 으로 풀린다",
+            "expectedViolation": "Source/Games/Alpha/AlphaProbe.cpp: #include \"Common/Probe.h\"  (접두 없는 include 가 include 경로 Source/Engine 로 풀린다",
+            "files": {
+                "Source/Engine/Common/Probe.h": "#pragma once\n",
+                "Source/Games/Alpha/AlphaProbe.cpp": '#include "pch.h"\n\n#include "Common/Probe.h"\n',
+            },
+        },
+        {
             "name": "게임이 다른 게임을 include",
             "expectedViolation": "Source/Games/Alpha/AlphaProbe.cpp: #include \"Games/Beta/BetaProbe.h\"  (게임 Alpha -> 다른 게임 Beta)",
             "files": {
@@ -487,7 +534,8 @@ class CheckEngineLayersGate(LintGate):
         listEdge: list[tuple[str, str]] = []
         if startsWithPathComponent(source.relative, kDirSourceEngine):
             listEdge = engineFileEdges(source.relative, [rawInclude for _, rawInclude in iterIncludes(source.text)], self.mapExemption)
-        return FileFindings(listViolation=processFile(source.relative, source.text), value=listEdge)
+        listViolation = processFile(source.relative, source.text) + findUnprefixedEngineIncludesInternal(source)
+        return FileFindings(listViolation=listViolation, value=listEdge)
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         violations, _ = joinFindings(result.listFindings)
