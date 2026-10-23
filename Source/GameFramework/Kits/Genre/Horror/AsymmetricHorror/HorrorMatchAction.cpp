@@ -75,8 +75,8 @@ namespace sw
         if ( target._activity == SurvivorActivity::Repairing && target._activityTarget == generator )
             return true;
         leaveActivity( survivor );
-        if ( gen._bKicked == SW_TRUE )
-            configureGenerator( generator, false ); // 누가 다시 붙으면 퇴행이 멈춘다
+        if ( gen._bKicked == SW_TRUE && configureGenerator( generator, false ) == false ) // 누가 다시 붙으면 퇴행이 멈춘다
+            return false;
         if ( gen._progress.join( static_cast<uint32>( survivor ) ) == false )
             return false;
         target._activity       = SurvivorActivity::Repairing;
@@ -424,7 +424,8 @@ namespace sw
         if ( bKickable == false || isNear( _killer._position, gen._position, rules._interactRange ) == false )
             return false;
         const float32 progress = MathUtil::max( 0.0f, gen._progress.getProgress() - rules._generator._kickPenalty );
-        configureGenerator( generator, true );
+        if ( configureGenerator( generator, true ) == false )
+            return false;
         gen._progress.setProgress( progress );
         gen._bKicked = SW_TRUE;
         awardScore( _killer._score, "Kick", 1.0f );

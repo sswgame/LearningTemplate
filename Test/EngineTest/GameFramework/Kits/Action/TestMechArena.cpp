@@ -65,7 +65,7 @@ namespace
 
         void initialize( MechArenaWorld& outWorld, const MechArenaSettings& settings = MechArenaSettings{} ) const
         {
-            outWorld.initialize( settings, &_mechCatalog, &_weaponCatalog, &_moveCatalog );
+            SW_EXPECT_TRUE( outWorld.initialize( settings, &_mechCatalog, &_weaponCatalog, &_moveCatalog ) );
             (void)outWorld.addTeam( hashed_string( "Federation" ) );
             (void)outWorld.addTeam( hashed_string( "Zeon" ) );
         }
@@ -570,6 +570,31 @@ SW_TEST_CASE( MechArenaTest, SnapshotRoundTripsAndRefusesOutOfRangeValues )
     BitWriter  badTeamWriter;
     const bool bBadTeamWritten = FixedLayout::write( badTeam, badTeamWriter );
     SW_EXPECT_FALSE( bBadTeamWritten );
+}
+
+/**
+ * @brief [MechArenaTest] 판 설정은 범위 밖 값을 올리거나 자르지 않고 거절하며, 거절하면 판이 그대로다
+ */
+SW_TEST_CASE( MechArenaTest, InitializeRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    MechFixture fixture;
+    SW_ASSERT_TRUE( fixture.load() );
+    MechArenaWorld world;
+    fixture.initialize( world );
+    SW_EXPECT_TRUE( world.addPilot( makePilot( { "striker" }, 0, float3{} ) ) >= 0 );
+
+    MechArenaSettings tinyArena;
+    tinyArena._arenaHalfSize = 0.5f;
+    SW_EXPECT_FALSE( world.initialize( tinyArena, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+    MechArenaSettings zeroStep;
+    zeroStep._fixedStep = 0.0f;
+    SW_EXPECT_FALSE( world.initialize( zeroStep, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+    MechArenaSettings negativeDelay;
+    negativeDelay._respawnDelay = -1.0f;
+    SW_EXPECT_FALSE( world.initialize( negativeDelay, &fixture._mechCatalog, &fixture._weaponCatalog, &fixture._moveCatalog ) );
+
+    // 거절된 호출은 판을 비우지 않는다 — 앞서 넣은 조종사가 남아 있다.
+    SW_EXPECT_EQUAL( 1, world.getPilotCount() );
 }
 
 SW_TEST_CASE( MechArenaTest, ShotsLockOnAndProjectilesSkipTeammates )

@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -14,6 +15,18 @@ namespace sw
     {
         struct KlondikeGameInternal
         {
+            /** @brief 설정이 선언된 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다). */
+            [[nodiscard]] static bool acceptSettings( const KlondikeSettings& settings )
+            {
+                const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+                if ( rangeError.empty() == false )
+                {
+                    SW_LOG_ERROR( "KlondikeGame: refused settings - %#", rangeError.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
             static void writeBoard( Archive& outArchive, const KlondikeState& state )
             {
                 for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
@@ -63,17 +76,21 @@ namespace sw
     {
     }
 
-    void KlondikeGame::initialize( const KlondikeSettings& settings, uint32 seed )
+    bool KlondikeGame::initialize( const KlondikeSettings& settings, uint32 seed )
     {
+        if ( KlondikeGameInternal::acceptSettings( settings ) == false )
+            return false;
         GameRandom random( seed );
         CardPile   deck;
         CardDeckUtil::makeStandardDeck( deck );
         deck.shuffle( random );
-        initializeWithDeck( settings, deck );
+        return initializeWithDeck( settings, deck );
     }
 
-    void KlondikeGame::initializeWithDeck( const KlondikeSettings& settings, const CardPile& deck )
+    bool KlondikeGame::initializeWithDeck( const KlondikeSettings& settings, const CardPile& deck )
     {
+        if ( KlondikeGameInternal::acceptSettings( settings ) == false )
+            return false;
         KlondikeState state;
         CardPile      remaining = deck;
         for ( int32 row = 0; row < KlondikeState::kColumnCount; ++row )
@@ -88,15 +105,17 @@ namespace sw
             state._arrFaceDownCount[column] = MathUtil::max( 0, state._arrTableau[column].getCount() - 1 );
         }
         state._stock = remaining;
-        initializeFromState( settings, state );
+        return initializeFromState( settings, state );
     }
 
-    void KlondikeGame::initializeFromState( const KlondikeSettings& settings, const KlondikeState& state )
+    bool KlondikeGame::initializeFromState( const KlondikeSettings& settings, const KlondikeState& state )
     {
-        _settings            = settings;
-        _settings._drawCount = MathUtil::max( 1, settings._drawCount );
-        _state               = state;
+        if ( KlondikeGameInternal::acceptSettings( settings ) == false )
+            return false;
+        _settings = settings;
+        _state    = state;
         _listHistory.clear();
+        return true;
     }
 
     bool KlondikeGame::isColumnValid( int32 column ) const

@@ -621,7 +621,7 @@ namespace sw
     private:
         static void initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
         {
-            outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} );
+            SW_EXPECT_TRUE( outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} ) );
             outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
             (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } );
         }

@@ -6,6 +6,7 @@
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
@@ -66,7 +67,8 @@ SW_TEST_CASE( CombatStateTest, ShieldTakesDamageFirstAndPoiseBreaksThenRecovers 
     settings._poiseRegenDelay    = 1.0f;
     settings._poiseRegenRate     = 10.0f;
     settings._poiseBreakDuration = 0.5f;
-    Vitality vitality( settings );
+    Vitality vitality;
+    SW_EXPECT_TRUE( vitality.initialize( settings ) );
 
     // 실드가 먼저 — 30 은 모두 실드, 다음 40 은 실드 20 + 체력 20.
     VitalityDamageResult result = vitality.applyDamage( 30.0f, 10.0f, 7 );
@@ -128,7 +130,7 @@ SW_TEST_CASE( CombatStateTest, ShieldTakesDamageFirstAndPoiseBreaksThenRecovers 
  */
 SW_TEST_CASE( CombatStateTest, DamageImmuneOutlivesTimeRestoreAndRespawn )
 {
-    Vitality vitality( VitalitySettings{} );
+    Vitality vitality;
     vitality.setDamageImmune( true );
     vitality.update( 100.0f );
     SW_EXPECT_TRUE( vitality.applyDamage( 50.0f )._bIgnored == SW_TRUE );
@@ -161,7 +163,8 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     settings._reviveHealthRatio       = 0.25f;
     settings._invulnerableAfterRevive = 1.0f;
     settings._maxDownCount            = 2;
-    Vitality vitality( settings );
+    Vitality vitality;
+    SW_EXPECT_TRUE( vitality.initialize( settings ) );
 
     // 치명타 → 기절(넘친 피해는 출혈 체력으로 넘어가지 않는다) → 2 초 출혈사.
     VitalityDamageResult result = vitality.applyDamage( 500.0f, 0.0f, 3 );
@@ -214,7 +217,7 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     settings._bDamageInterruptsRevive = SW_FALSE;
     settings._bKeepReviveProgress     = SW_TRUE;
     settings._maxDownCount            = 0;
-    vitality.initialize( settings );
+    SW_EXPECT_TRUE( vitality.initialize( settings ) );
     (void)vitality.applyDamage( 100.0f ); // 테스트 준비 — 결과는 아래 단언이 상태로 본다
     SW_EXPECT_TRUE( vitality.startRevive( 2 ) );
     vitality.update( 1.0f );
@@ -232,7 +235,8 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
     stamina._regenRate        = 20.0f;
     stamina._regenDelay       = 1.0f;
     stamina._exhaustThreshold = 30.0f;
-    ResourceGauge gauge( stamina );
+    ResourceGauge gauge;
+    SW_EXPECT_TRUE( gauge.initialize( stamina ) );
     SW_EXPECT_TRUE( gauge.trySpend( 40.0f ) );
     SW_EXPECT_TRUE( gauge.trySpend( 70.0f ) == false ); // 모자라면 쓰지 않는다
     SW_EXPECT_NEAR_EQUAL( 60.0f, gauge.getValue(), 1.0e-4f );
@@ -259,7 +263,7 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
 
     // 탈진 임계값이 없으면 바닥나도 잠기지 않는다(조금 차면 바로 쓸 수 있다).
     stamina._exhaustThreshold = 0.0f;
-    gauge.initialize( stamina );
+    SW_EXPECT_TRUE( gauge.initialize( stamina ) );
     SW_EXPECT_TRUE( gauge.trySpend( 100.0f ) );
     SW_EXPECT_TRUE( gauge.isExhausted() == false );
     gauge.update( 1.25f );
@@ -273,7 +277,8 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
     heat._bOverheatMode        = SW_TRUE;
     heat._overheatCooldown     = 0.5f;
     heat._overheatRecoverLevel = 20.0f;
-    ResourceGauge boost( heat );
+    ResourceGauge boost;
+    SW_EXPECT_TRUE( boost.initialize( heat ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, boost.getValue(), 1.0e-4f );
     SW_EXPECT_TRUE( boost.trySpend( 60.0f ) );
     SW_EXPECT_TRUE( boost.trySpend( 50.0f ) == false ); // 최대를 넘는 한 번 쓰기는 실패(과열시키지도 않는다)
@@ -439,7 +444,8 @@ SW_TEST_CASE( CombatStateTest, GaugeRegenScaleReduceAndDrainAtEmptyKeepDelay )
     settings._regenRate      = 10.0f;
     settings._regenDelay     = 1.0f;
     settings._drainPerSecond = 50.0f;
-    ResourceGauge gauge( settings );
+    ResourceGauge gauge;
+    SW_EXPECT_TRUE( gauge.initialize( settings ) );
 
     // 0 에 붙은 채 계속 깎는 중이면 회복 지연이 끝나지 않는다.
     SW_EXPECT_NEAR_EQUAL( gauge.reduce( 100.0f ), 100.0f, 0.001f );
@@ -455,20 +461,22 @@ SW_TEST_CASE( CombatStateTest, GaugeRegenScaleReduceAndDrainAtEmptyKeepDelay )
     SW_EXPECT_NEAR_EQUAL( gauge.getValue(), 11.0f, 0.01f );
 
     // 회복 배율은 회복량에만 — 지연은 그대로.
-    ResourceGauge scaled( settings );
+    ResourceGauge scaled;
+    SW_EXPECT_TRUE( scaled.initialize( settings ) );
     (void)scaled.reduce( 50.0f );
     scaled.setRegenScale( 0.5f );
     scaled.update( 0.9f );
     SW_EXPECT_NEAR_EQUAL( scaled.getValue(), 50.0f, 0.001f );
     scaled.update( 1.1f );
     SW_EXPECT_NEAR_EQUAL( scaled.getValue(), 55.0f, 0.01f );
-    scaled.initialize( settings );
+    SW_EXPECT_TRUE( scaled.initialize( settings ) );
     SW_EXPECT_NEAR_EQUAL( scaled.getRegenScale(), 1.0f, 0.001f );
 
     // 과열형의 reduce 는 열을 올리고 최대면 과열.
     ResourceGaugeSettings heat = settings;
     heat._bOverheatMode        = SW_TRUE;
-    ResourceGauge boost( heat );
+    ResourceGauge boost;
+    SW_EXPECT_TRUE( boost.initialize( heat ) );
     SW_EXPECT_NEAR_EQUAL( boost.reduce( 60.0f ), 60.0f, 0.001f );
     SW_EXPECT_NEAR_EQUAL( boost.reduce( 60.0f ), 40.0f, 0.001f );
     SW_EXPECT_TRUE( boost.isOverheated() );
@@ -478,7 +486,8 @@ SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
 {
     VitalitySettings settings;
     settings._maxHealth = 12.0f;
-    Vitality vitality( settings );
+    Vitality vitality;
+    SW_EXPECT_TRUE( vitality.initialize( settings ) );
     (void)vitality.applyDamage( 5.0f ); // 테스트 준비 — 결과는 아래 단언이 상태로 본다
     vector<VitalityEvent> listEvent;
     vitality.drainEvents( listEvent );
@@ -522,4 +531,68 @@ SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
     walked.applyHitstop( 3 );
     SW_EXPECT_EQUAL( walked.getFrame(), timeline.getFrame() );
     SW_EXPECT_EQUAL( walked.getHitstopRemaining(), timeline.getHitstopRemaining() );
+}
+
+/**
+ * @brief [CombatStateTest] 체력 설정은 범위 밖 값을 맞추지 않고 거절하며, 거절하면 상태가 그대로이고 기본 설정은 범위 안이다
+ */
+SW_TEST_CASE( CombatStateTest, VitalityRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    SW_EXPECT_TRUE( ConfigRangeUtil::describeRangeErrors( VitalitySettings{} ).empty() );
+
+    Vitality         vitality;
+    VitalitySettings valid;
+    valid._maxHealth = 40.0f;
+    SW_ASSERT_TRUE( vitality.initialize( valid ) );
+    (void)vitality.applyDamage( 10.0f ); // 테스트 준비 — 결과는 아래 단언이 체력으로 본다
+
+    VitalitySettings zeroHealth;
+    zeroHealth._maxHealth = 0.0f;
+    SW_EXPECT_FALSE( vitality.initialize( zeroHealth ) );
+    VitalitySettings negativeRegen;
+    negativeRegen._healthRegenRate = -1.0f;
+    SW_EXPECT_FALSE( vitality.initialize( negativeRegen ) );
+    VitalitySettings badRatio;
+    badRatio._reviveHealthRatio = 1.5f;
+    SW_EXPECT_FALSE( vitality.initialize( badRatio ) );
+
+    // 거절된 호출은 이미 쌓인 상태를 건드리지 않는다.
+    SW_EXPECT_NEAR_EQUAL( 40.0f, vitality.getSettings()._maxHealth, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, vitality.getHealth(), 1.0e-4f );
+
+    // reset 은 설정을 새로 받지 않고 같은 설정으로 가득 찬 처음 상태가 된다.
+    vitality.reset();
+    SW_EXPECT_NEAR_EQUAL( 40.0f, vitality.getHealth(), 1.0e-4f );
+}
+
+/**
+ * @brief [CombatStateTest] 게이지 설정도 범위 밖 값과 최대를 넘는 탈진 문턱을 맞추지 않고 거절하며, 거절하면 상태가 그대로이다
+ */
+SW_TEST_CASE( CombatStateTest, ResourceGaugeRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    SW_EXPECT_TRUE( ConfigRangeUtil::describeRangeErrors( ResourceGaugeSettings{} ).empty() );
+
+    ResourceGauge         gauge;
+    ResourceGaugeSettings valid;
+    valid._max = 50.0f;
+    SW_ASSERT_TRUE( gauge.initialize( valid ) );
+    SW_EXPECT_TRUE( gauge.trySpend( 20.0f ) );
+
+    ResourceGaugeSettings zeroMax;
+    zeroMax._max = 0.0f;
+    SW_EXPECT_FALSE( gauge.initialize( zeroMax ) );
+    ResourceGaugeSettings negativeRegen;
+    negativeRegen._regenRate = -5.0f;
+    SW_EXPECT_FALSE( gauge.initialize( negativeRegen ) );
+    ResourceGaugeSettings thresholdAboveMax;
+    thresholdAboveMax._max              = 30.0f;
+    thresholdAboveMax._exhaustThreshold = 31.0f;
+    SW_EXPECT_FALSE( gauge.initialize( thresholdAboveMax ) );
+    ResourceGaugeSettings recoverAboveMax;
+    recoverAboveMax._max                  = 30.0f;
+    recoverAboveMax._overheatRecoverLevel = 40.0f;
+    SW_EXPECT_FALSE( gauge.initialize( recoverAboveMax ) );
+
+    SW_EXPECT_NEAR_EQUAL( 50.0f, gauge.getSettings()._max, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, gauge.getValue(), 1.0e-4f );
 }

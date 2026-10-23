@@ -81,7 +81,7 @@ namespace sw
                 const utf8* pInteractableRole = node.findAttribute( "interactableRole" );
                 if ( pInteractableRole != nullptr )
                     inoutStep._interactableRole = hashed_string( pInteractableRole );
-                bValid = GameDataXML::readOptionalNumber( node, "duration", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
+                bValid = GameDataXML::readOptionalNumber( node, "duration", sourceName, 0.001f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
                 bValid = GameDataXML::readOptionalNumber( node, "presses", sourceName, 1, MathUtil::kMaxInt32, inoutStep._presses ) && bValid;
                 bValid = GameDataXML::readOptionalNumber( node, "decay", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._decay ) && bValid;
                 bValid = GameDataXML::readOptionalNumber( node, "maxParticipants", sourceName, 1, MathUtil::kMaxInt32, inoutStep._maxParticipants ) && bValid;

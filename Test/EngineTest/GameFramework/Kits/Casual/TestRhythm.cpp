@@ -104,7 +104,7 @@ SW_TEST_CASE( RhythmTest, JudgesByWindowIgnoresTooEarlyPressAndMissesPassedNotes
     SW_ASSERT_TRUE( chart.loadFromXMLText( makeSimpleChartXML( R"(<Note lane="0" beat="2"/><Note lane="0" beat="4"/><Note lane="1" beat="4"/><Note lane="2" beat="6"/>)" ),
                                            "RhythmTest" ) );
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, RhythmPlaySettings{} ) );
 
     session.press( 0, 0.5f ); // 1.0 초 노트보다 0.5 초 이르다 — 가장 넓은 이른 폭(0.12) 밖이라 무시
     session.press( 3, 0.6f ); // 노트 없는 레인
@@ -147,7 +147,7 @@ SW_TEST_CASE( RhythmTest, LongNoteNeedsHoldingToTheEndAndEarlyReleaseIsJudged )
         "RhythmTest" ) );
     SW_EXPECT_EQUAL( 8, chart.getJudgmentCount() ); // 머리 + 끝
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, RhythmPlaySettings{} ) );
 
     session.press( 0, 1.0f );
     session.press( 1, 1.0f );
@@ -185,7 +185,7 @@ SW_TEST_CASE( RhythmTest, ComboBreaksOnBadAndScoreAccuracyRankAndReplayAreDeterm
     RhythmPlaySettings settings;
     settings._comboBonusPerCombo = 0.01f;
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, settings );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, settings ) );
     for ( int32 beat = 1; beat <= 10; ++beat )
     {
         const float32 target = static_cast<float32>( beat ) * 0.5f;
@@ -210,7 +210,7 @@ SW_TEST_CASE( RhythmTest, ComboBreaksOnBadAndScoreAccuracyRankAndReplayAreDeterm
 
     // 기록한 입력을 다시 넣으면 같은 판이다(리플레이).
     RhythmPlaySession replay;
-    replay.initialize( &chart, &judge, strictSettings );
+    SW_EXPECT_TRUE( replay.initialize( &chart, &judge, strictSettings ) );
     for ( const RhythmInputRecord& record : session.getInputRecords() )
     {
         if ( record._bPress == SW_TRUE )
@@ -238,7 +238,7 @@ SW_TEST_CASE( RhythmTest, LifeReachingZeroFailsAndStopsJudging )
         { hashed_string( "Cool" ), 10.0f, 1.0f }
     };
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, settings );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, settings ) );
 
     session.press( 0, 1.0f );
     SW_EXPECT_NEAR_EQUAL( 60.0f, session.getLife(), 1.0e-4f );
@@ -275,7 +275,7 @@ SW_TEST_CASE( RhythmTest, AutoPlayHitsEveryNoteWithTheBestGrade )
     settings._bAutoPlay    = SW_TRUE;
     settings._globalOffset = 0.07f;
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, settings );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, settings ) );
     session.press( 3, 0.2f ); // 오토플레이는 사람의 입력을 받지 않는다
     for ( int32 frame = 0; frame < 60 * 8; ++frame )
     {
@@ -330,7 +330,7 @@ SW_TEST_CASE( RhythmTest, ScrollPositionIsTimeBasedOrFollowsBpmAndStops )
     settings._globalOffset = 0.2f;
     settings._scrollMode   = RhythmScrollMode::FollowBpm;
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, settings );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, settings ) );
     SW_EXPECT_NEAR_EQUAL( 100.0f, session.computeNoteY( 10.0f, 4.2f, kHiSpeed ), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, session.computeNoteY( 14.0f, chart.convertBeatToSeconds( 14.0f ) + 0.2f, kHiSpeed ), 1.0e-3f );
 }
@@ -348,7 +348,7 @@ SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
         <Note lane="0" beat="5"/><Note lane="0" beat="6"/><Note lane="1" beat="2" endBeat="6"/>)" ),
                                            "RhythmTest" ) );
     RhythmPlaySession session;
-    session.initialize( &chart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( session.initialize( &chart, &judge, RhythmPlaySettings{} ) );
     session.press( 0, 0.5f );
     session.release( 0, 0.6f );
     session.press( 0, 1.0f );
@@ -361,7 +361,7 @@ SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
     vector<uint8> originalBytes;
     written.writeData( originalBytes );
     RhythmPlaySession restored;
-    restored.initialize( &chart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( restored.initialize( &chart, &judge, RhythmPlaySettings{} ) );
     Archive reader( originalBytes.data(), originalBytes.size() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -400,11 +400,11 @@ SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
     RhythmChart otherChart;
     SW_ASSERT_TRUE( otherChart.loadFromXMLText( makeSimpleChartXML( R"(<Note lane="0" beat="1"/>)" ), "RhythmTest" ) );
     RhythmPlaySession other;
-    other.initialize( &otherChart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( other.initialize( &otherChart, &judge, RhythmPlaySettings{} ) );
     Archive otherReader( originalBytes.data(), originalBytes.size() );
     SW_EXPECT_FALSE( other.readState( otherReader ) );
     RhythmPlaySession truncated;
-    truncated.initialize( &chart, &judge, RhythmPlaySettings{} );
+    SW_EXPECT_TRUE( truncated.initialize( &chart, &judge, RhythmPlaySettings{} ) );
     Archive cut( originalBytes.data(), originalBytes.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getJudgedCount() );

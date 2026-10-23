@@ -47,10 +47,14 @@ namespace sw
             case InteractionInputMode::Hold:
             {
                 InteractionConfig config;
-                config._duration          = MathUtil::max( 1.0e-3f, step._duration );
+                config._duration          = step._duration;
                 config._maxParticipants   = step._maxParticipants;
                 config._bResetOnInterrupt = SW_TRUE;
-                _holdProgress.initialize( config, nullptr, 1u );
+                if ( _holdProgress.initialize( config, nullptr, 1u ) == false )
+                {
+                    cancel(); // 카탈로그가 단계의 시간과 인원을 범위 안으로만 읽으므로 닿지 않는다. 닿으면 이 상호작용을 취소한다(이유는 initialize 가 남겼다)
+                    break;
+                }
                 (void)_holdProgress.join( _actorID );
                 break;
             }

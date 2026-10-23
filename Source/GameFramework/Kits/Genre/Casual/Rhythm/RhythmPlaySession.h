@@ -120,8 +120,11 @@ namespace sw
 
         RhythmPlaySession();
 
-        /** @brief 판을 처음부터 시작합니다. 채보의 레인 수만큼 대기열을 만듭니다. */
-        void initialize( const RhythmChart* pChart, const TimingJudge* pJudge, const RhythmPlaySettings& settings );
+        /**
+         * @brief 판을 처음부터 시작합니다. 채보의 레인 수만큼 대기열을 만듭니다.
+         * @return 최대 라이프가 1 보다 작거나, 처음 라이프가 0..최대 밖이거나, 콤보 보너스 상한이 음수이면 오류를 남기고 false 입니다(맞춰 받지 않는다). 그러면 판은 그대로입니다.
+         */
+        [[nodiscard]] bool initialize( const RhythmChart* pChart, const TimingJudge* pJudge, const RhythmPlaySettings& settings );
 
         /** @brief @p now 까지 지난 일(놓침, 롱노트를 끝까지 누름, 오토플레이 누름)을 시각 순으로 처리합니다. */
         void update( float32 now );

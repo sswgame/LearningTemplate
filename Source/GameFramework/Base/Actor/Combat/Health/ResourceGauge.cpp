@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -19,26 +20,32 @@ namespace sw
         , _overheatPenalty{}
         , _bLocked{ SW_FALSE }
     {
-        initialize( _settings );
+        // 기본 설정은 선언된 범위 안이다(테스트 `ResourceGaugeRefusesOutOfRangeSettingsInsteadOfClamping` 이 지킨다) — 검사하지 않고 바로 쓴다.
+        applySettings( ResourceGaugeSettings{} );
     }
 
-    ResourceGauge::ResourceGauge( const ResourceGaugeSettings& settings )
-        : ResourceGauge()
+    bool ResourceGauge::initialize( const ResourceGaugeSettings& settings )
     {
-        initialize( settings );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "ResourceGauge: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        applySettings( settings );
+        return true;
     }
 
-    void ResourceGauge::initialize( const ResourceGaugeSettings& settings )
+    void ResourceGauge::reset()
     {
-        _settings                       = settings;
-        _settings._max                  = MathUtil::max( 1.0e-3f, _settings._max );
-        _settings._regenRate            = MathUtil::max( 0.0f, _settings._regenRate );
-        _settings._regenDelay           = MathUtil::max( 0.0f, _settings._regenDelay );
-        _settings._exhaustThreshold     = MathUtil::clamp( _settings._exhaustThreshold, 0.0f, _settings._max );
-        _settings._overheatCooldown     = MathUtil::max( 0.0f, _settings._overheatCooldown );
-        _settings._overheatRecoverLevel = MathUtil::clamp( _settings._overheatRecoverLevel, 0.0f, _settings._max );
-        _maxBonus                       = 0.0f;
-        _regenScale                     = 1.0f;
+        applySettings( ResourceGaugeSettings( _settings ) );
+    }
+
+    void ResourceGauge::applySettings( const ResourceGaugeSettings& settings )
+    {
+        _settings   = settings;
+        _maxBonus   = 0.0f;
+        _regenScale = 1.0f;
         refill();
     }
 

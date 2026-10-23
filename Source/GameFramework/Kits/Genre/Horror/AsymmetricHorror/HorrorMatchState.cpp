@@ -347,7 +347,8 @@ namespace sw
             if ( bInvalidGeneratorFlags )
                 return false;
             const int32 generator = addGenerator( position );
-            configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙을 쓴다
+            if ( generator < 0 || configureGenerator( generator, bKicked == SW_TRUE ) == false ) // 걷어차인 발전기는 퇴행 규칙을 쓴다
+                return false;
             HorrorGenerator& target = _listGenerator[static_cast<size_t>( generator )];
             target._bBlocked        = bBlocked;
             if ( target._progress.readState( archive ) == false )

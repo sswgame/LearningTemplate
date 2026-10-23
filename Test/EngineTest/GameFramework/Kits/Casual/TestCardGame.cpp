@@ -592,7 +592,7 @@ SW_TEST_CASE( CardGameTest, KlondikeRejectsIllegalMovesUndoesAndAutoCompletes )
     settings._drawCount  = 3;
     settings._maxRecycle = 0;
     KlondikeGame game;
-    game.initializeFromState( settings, state );
+    SW_EXPECT_TRUE( game.initializeFromState( settings, state ) );
 
     SW_EXPECT_FALSE( game.moveTableauToTableau( 2, 1, 0 ) ); // 검정 위에 검정
     SW_EXPECT_FALSE( game.moveWasteToTableau( 3 ) );         // 빈 열엔 킹만
@@ -640,7 +640,7 @@ SW_TEST_CASE( CardGameTest, KlondikeRejectsIllegalMovesUndoesAndAutoCompletes )
     endState._arrTableau[0] = makePlayingPile( { "Ks", "Qs" } );
     endState._arrTableau[2] = makePlayingPile( { "Kh" } );
     KlondikeGame endGame;
-    endGame.initializeFromState( KlondikeSettings{}, endState );
+    SW_EXPECT_TRUE( endGame.initializeFromState( KlondikeSettings{}, endState ) );
     SW_EXPECT_TRUE( endGame.canAutoComplete() );
     SW_EXPECT_EQUAL( endGame.autoComplete(), 3 );
     SW_EXPECT_TRUE( endGame.isWon() );
@@ -650,7 +650,7 @@ SW_TEST_CASE( CardGameTest, KlondikeRejectsIllegalMovesUndoesAndAutoCompletes )
 
     // 씨앗 판 — 열 c 에 c + 1 장, 스톡 24 장.
     KlondikeGame seeded;
-    seeded.initialize( KlondikeSettings{}, 5 );
+    SW_EXPECT_TRUE( seeded.initialize( KlondikeSettings{}, 5 ) );
     SW_EXPECT_EQUAL( seeded.getState()._arrTableau[6].getCount(), 7 );
     SW_EXPECT_EQUAL( seeded.getState()._arrFaceDownCount[6], 6 );
     SW_EXPECT_EQUAL( seeded.getState()._stock.getCount(), 24 );
@@ -905,14 +905,14 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
 
     // 솔리테어 — 스톡을 세 번 뒤집었다. 되돌리기 기록도 이어진다.
     KlondikeGame klondike;
-    klondike.initialize( KlondikeSettings{}, 5 );
+    SW_EXPECT_TRUE( klondike.initialize( KlondikeSettings{}, 5 ) );
     for ( int32 draw = 0; draw < 3; ++draw )
     {
         SW_EXPECT_TRUE( klondike.drawStock() );
     }
     const vector<uint8> klondikeBytes = captureCardBytes( klondike );
     KlondikeGame        restoredKlondike;
-    restoredKlondike.initialize( KlondikeSettings{}, 9 );
+    SW_EXPECT_TRUE( restoredKlondike.initialize( KlondikeSettings{}, 9 ) );
     SW_ASSERT_TRUE( restoreCardBytes( klondikeBytes, restoredKlondike ) );
     SW_EXPECT_EQUAL( 3, restoredKlondike.getUndoCount() );
     SW_EXPECT_TRUE( klondike.getState()._waste.getTop() == restoredKlondike.getState()._waste.getTop() );
@@ -923,7 +923,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     SW_EXPECT_TRUE( restoredKlondike.undo() );
     SW_EXPECT_TRUE( captureCardBytes( klondike ) == captureCardBytes( restoredKlondike ) );
     KlondikeGame truncatedKlondike;
-    truncatedKlondike.initialize( KlondikeSettings{}, 9 );
+    SW_EXPECT_TRUE( truncatedKlondike.initialize( KlondikeSettings{}, 9 ) );
     SW_EXPECT_FALSE( restoreTruncatedCardBytes( klondikeBytes, truncatedKlondike ) );
     SW_EXPECT_EQUAL( 0, truncatedKlondike.getUndoCount() );
 

@@ -11,6 +11,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -18,17 +20,31 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 게이지 설정입니다. 시간은 초입니다. */
-    struct ResourceGaugeSettings
+    /**
+     * @brief 게이지 설정입니다. 시간은 초입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ResourceGauge::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     *          탈진 문턱과 과열 복귀 수준이 `_max` 이하여야 한다는 관계도 `Max = "_max"` 로 선언한다.
+     */
+    REFLECT()
+    struct SW_GF_API ResourceGaugeSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001 )
         float32 _max{ 100.0f };
-        float32 _regenRate{ 20.0f };           ///< 초당 회복(과열형이면 초당 식는 양)
-        float32 _regenDelay{ 1.0f };           ///< 마지막으로 쓴 뒤 이만큼 지나야 차기(식기) 시작한다
-        float32 _drainPerSecond{ 10.0f };      ///< 계속 쓰기(`drain( deltaTime )`)의 기본 초당 소비
-        float32 _exhaustThreshold{ 0.0f };     ///< 0 보다 크면 0 까지 쓴 순간 탈진하고, 이 값까지 다시 차야 다시 쓸 수 있다
-        float32 _overheatCooldown{ 0.0f };     ///< 과열형에서 과열되면 이만큼 더 기다린 뒤 식기 시작한다(벌칙)
+        PROPERTY( Min = 0.0 )
+        float32 _regenRate{ 20.0f }; ///< 초당 회복(과열형이면 초당 식는 양)
+        PROPERTY( Min = 0.0 )
+        float32 _regenDelay{ 1.0f }; ///< 마지막으로 쓴 뒤 이만큼 지나야 차기(식기) 시작한다
+        PROPERTY( Min = 0.0 )
+        float32 _drainPerSecond{ 10.0f }; ///< 계속 쓰기(`drain( deltaTime )`)의 기본 초당 소비
+        PROPERTY( Min = 0.0, Max = "_max" )
+        float32 _exhaustThreshold{ 0.0f }; ///< 0 보다 크면 0 까지 쓴 순간 탈진하고, 이 값까지 다시 차야 다시 쓸 수 있다
+        PROPERTY( Min = 0.0 )
+        float32 _overheatCooldown{ 0.0f }; ///< 과열형에서 과열되면 이만큼 더 기다린 뒤 식기 시작한다(벌칙)
+        PROPERTY( Min = 0.0, Max = "_max" )
         float32 _overheatRecoverLevel{ 0.0f }; ///< 과열형에서 열이 이 값까지 내려가야 잠금이 풀린다
-        uint8   _bOverheatMode{ SW_FALSE };    ///< 쓰면 오르고 최대에 닿으면 과열(캡슐파이터 부스트 · 총 과열)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bOverheatMode{ SW_FALSE }; ///< 쓰면 오르고 최대에 닿으면 과열(캡슐파이터 부스트 · 총 과열)
     };
 } // namespace sw
 
@@ -47,11 +63,16 @@ namespace sw
     class SW_GF_API ResourceGauge
     {
     public:
+        /** @brief 기본 설정(`ResourceGaugeSettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
         ResourceGauge();
-        explicit ResourceGauge( const ResourceGaugeSettings& settings );
 
-        /** @brief 설정을 두고 가득 찬(과열형은 식은) 상태로 시작합니다. 최대치 보너스는 0, 회복 배율은 1 로 둡니다. */
-        void initialize( const ResourceGaugeSettings& settings );
+        /**
+         * @brief 설정을 두고 가득 찬(과열형은 식은) 상태로 시작합니다. 최대치 보너스는 0, 회복 배율은 1 로 둡니다.
+         * @details 범위 밖 값(`_max` 를 넘는 탈진 문턱 · 과열 복귀 수준 포함)은 오류를 남기고 거절하며 false 를 반환한다. 거절하면 상태는 그대로이다. 값을 조용히 맞추지 않는다.
+         */
+        [[nodiscard]] bool initialize( const ResourceGaugeSettings& settings );
+        /** @brief 지금 설정 그대로 처음 상태(가득 찬, 과열형은 식은)로 되돌립니다. 설정을 새로 받지 않으므로 실패하지 않습니다. */
+        void reset();
 
         /** @brief 한 번에 @p amount 를 씁니다. 구르기, 강공격, 부스트 대시, 한 발에 씁니다. 잠겼거나 모자라면 쓰지 않고 false 를 반환합니다. */
         [[nodiscard]] bool trySpend( float32 amount );
@@ -101,6 +122,8 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
+        /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */
+        void applySettings( const ResourceGaugeSettings& settings );
         void markUsed();
         void releaseLockIfRecovered();
 

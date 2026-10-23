@@ -61,13 +61,18 @@ namespace sw
     {
         if ( _pCatalog == nullptr || _matchState.findTeam( team ) == nullptr )
             return -1;
-        const int32 participant = _matchState.addParticipant( team, hashed_string{} );
-        _listPlayer.emplace_back();
-        initializePlayer( _listPlayer.back(), team, participant );
-        return participant;
+        // 사람을 먼저 만들어 보고, 설정이 거절되면 판에 참가자를 더하지 않는다.
+        BrPlayer    player;
+        const int32 participant = _matchState.getParticipantCount();
+        if ( initializePlayer( player, team, participant ) == false )
+            return -1;
+        const int32 added = _matchState.addParticipant( team, hashed_string{} );
+        SW_ASSERT( added == participant );
+        _listPlayer.push_back( std::move( player ) );
+        return added;
     }
 
-    void BrMatch::initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const
+    bool BrMatch::initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const
     {
         const BrPlayerDef& playerSettings = _pCatalog->getPlayerSettings();
         BrPlayer&          player         = outPlayer;
@@ -82,16 +87,19 @@ namespace sw
         vitality._invulnerableAfterRevive = 0.0f;
         vitality._bDownedEnabled          = SW_TRUE;
         vitality._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
-        player._vitality.initialize( vitality );
+        if ( player._vitality.initialize( vitality ) == false )
+            return false;
 
         InteractionConfig revive;
         revive._duration          = playerSettings._reviveTime;
         revive._maxParticipants   = playerSettings._maxRevivers;
         revive._bResetOnInterrupt = SW_TRUE;
-        player._revive.initialize( revive, nullptr, static_cast<uint32>( participant + 1 ) );
+        if ( player._revive.initialize( revive, nullptr, static_cast<uint32>( participant + 1 ) ) == false )
+            return false;
 
         player._loadout.initialize( _pCatalog );
         player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
+        return true;
     }
 
     void BrMatch::start()
@@ -467,7 +475,8 @@ namespace sw
             archive >> team;
             if ( archive.isError() || matchState.findTeam( team ) == nullptr )
                 return false;
-            initializePlayer( player, team, static_cast<int32>( index ) );
+            if ( initializePlayer( player, team, static_cast<int32>( index ) ) == false )
+                return false;
             if ( player._vitality.readState( archive ) == false || player._revive.readState( archive ) == false )
                 return false;
             // 붙은 팀원은 모두 이 판의 사람 번호여야 한다.

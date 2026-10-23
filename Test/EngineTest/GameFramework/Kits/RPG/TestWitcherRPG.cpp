@@ -315,7 +315,7 @@ SW_TEST_CASE( WitcherRPGTest, SignsSpendStaminaScaleWithIntensityAndAlternateCas
     stats.setValue( hashed_string( "signIntensity" ), 50.0f );
 
     WitcherCombat combat;
-    combat.initialize( &data._catalog, 11u );
+    SW_EXPECT_TRUE( combat.initialize( &data._catalog, 11u ) );
     WitcherSignCast cast = combat.castSign( hashed_string( "igni" ), true, &skills, stats, &data._chart );
     SW_EXPECT_TRUE( cast._result == WitcherCombatResult::AlternateLocked );
     SW_EXPECT_NEAR_EQUAL( 100.0f, combat.getStamina().getValue(), 1.0e-4f ); // 잠겨 있으면 쓰지 않는다
@@ -341,7 +341,7 @@ SW_TEST_CASE( WitcherRPGTest, SignsSpendStaminaScaleWithIntensityAndAlternateCas
     for ( int32 trial = 0; trial < 2; ++trial )
     {
         WitcherCombat caster;
-        caster.initialize( &data._catalog, 1234u );
+        SW_EXPECT_TRUE( caster.initialize( &data._catalog, 1234u ) );
         for ( int32 index = 0; index < 20; ++index )
         {
             caster.getStamina().refill();
@@ -364,7 +364,7 @@ SW_TEST_CASE( WitcherRPGTest, ActionsCostStaminaAndAdrenalineBuildsOnHitsAndDrop
     WitcherTestData data;
     SW_ASSERT_TRUE( data.initialize() );
     WitcherCombat combat;
-    combat.initialize( &data._catalog, 1u );
+    SW_EXPECT_TRUE( combat.initialize( &data._catalog, 1u ) );
     SW_EXPECT_TRUE( combat.performAction( WitcherAction::FastAttack ) == WitcherCombatResult::Ok );
     SW_EXPECT_NEAR_EQUAL( 100.0f, combat.getStamina().getValue(), 1.0e-4f ); // 빠른 공격은 공짜
     for ( int32 index = 0; index < 6; ++index )
@@ -590,7 +590,7 @@ SW_TEST_CASE( WitcherRPGTest, StateRoundTripContinuesTheSameHunt )
 
     // 전투 — 강공 한 번 · 적중 셋으로 아드레날린이 쌓였다.
     WitcherCombat combat;
-    combat.initialize( &data._catalog, 11u );
+    SW_EXPECT_TRUE( combat.initialize( &data._catalog, 11u ) );
     SW_ASSERT_TRUE( combat.performAction( WitcherAction::StrongAttack ) == WitcherCombatResult::Ok );
     for ( int32 hit = 0; hit < 3; ++hit )
     {
@@ -600,7 +600,7 @@ SW_TEST_CASE( WitcherRPGTest, StateRoundTripContinuesTheSameHunt )
 
     const vector<uint8> combatBytes = captureWitcherBytes( combat );
     WitcherCombat       restoredCombat;
-    restoredCombat.initialize( &data._catalog, 99u );
+    SW_EXPECT_TRUE( restoredCombat.initialize( &data._catalog, 99u ) );
     Archive combatReader( combatBytes.data(), combatBytes.size() );
     SW_ASSERT_TRUE( restoredCombat.readState( combatReader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, combatReader.getRemainingBytes() );
@@ -619,7 +619,7 @@ SW_TEST_CASE( WitcherRPGTest, StateRoundTripContinuesTheSameHunt )
     SW_EXPECT_TRUE( captureWitcherBytes( combat ) == captureWitcherBytes( restoredCombat ) );
 
     WitcherCombat truncatedCombat;
-    truncatedCombat.initialize( &data._catalog, 99u );
+    SW_EXPECT_TRUE( truncatedCombat.initialize( &data._catalog, 99u ) );
     Archive combatCut( combatBytes.data(), combatBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedCombat.readState( combatCut ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, truncatedCombat.getAdrenaline(), 1.0e-5f );
