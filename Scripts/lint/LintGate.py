@@ -74,7 +74,7 @@ from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResul
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
-kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "files", "args", "repoFiles", "git"})
+kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "unexpectedViolation", "files", "args", "repoFiles", "git"})
 
 
 def checkSelfTestCase(className: str, case: dict) -> None:
@@ -134,6 +134,8 @@ class LintGate:
                            죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다). 모르는 키도 오류다.
                            `expectedViolation` 이 없으면 클래스를 만들 때 `TypeError` 로 멈춘다 — 종료 코드만 보면 노린 위반이 빠져도
                            같은 조각의 다른 위반(입력 부족 · 낡은 예외)으로 통과한다.
+                           `unexpectedViolation`(선택) — 출력에 **없어야 하는** 문구. 오탐 방지: 진짜 위반 하나와 잡히면 안 되는 모양을 한 조각에
+                           함께 넣고, 잡히면 안 되는 쪽의 위반 문구를 여기 적는다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
     - `mapExemption`     : 규칙에서 빼 주는 자리 → 이유. 이유 · 낡음 · 크기를 기반이 본다(아래 "예외 표").
 
