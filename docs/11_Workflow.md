@@ -110,7 +110,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 - 일의 식별자는 이름입니다(`ClusteredLighting`, 단위는 `ClusteredLighting.S2`). 코드 주석 · 결정 기록에 남은 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 새 이름을 찾습니다. 새 일에 번호를 매기지 않습니다.
 - 목록은 `py -3 -m Scripts plans`, 링크 점검은 `plans --check` 입니다. 최상단 `README.md` 의 진행 표는 `py -3 -m Scripts status-board --write README.md` 가 만든 생성물이라 손으로 고치지 않습니다.
-- **일을 끝낸 사람이 직접 고칩니다.** 단위를 끝내면 그 계획 문서의 단위 절을 지우고 머리 줄 `진행` 을 올립니다. 후보를 착수하면 절을 계획 문서로 옮기고 후보 문서에서 지웁니다. 끝난 일은 `Roadmap.md` 에서 지웁니다. 교훈은 코드 헤더 주석 · 결정 기록 · 검증 문서로 옮깁니다. `NEXT.md` 는 통합 담당만 고칩니다.
+- **일을 끝낸 사람이 직접 고칩니다.** 단위를 끝내면 그 계획 문서의 단위 절을 지우고 머리 줄 `진행` 을 올립니다. 후보를 착수하면 절을 계획 문서로 옮기고 후보 문서에서 지웁니다. 마지막 단위를 끝내 진행이 `n/n` 이 되면 머리 줄 상태도 올립니다 — 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`(`plans --check` 가 `n/n` 인데 `구현중` 인 문서를 위반으로 잡습니다). 끝난 일은 `Roadmap.md` 에서 지웁니다. 교훈은 코드 헤더 주석 · 결정 기록 · 검증 문서로 옮깁니다. `NEXT.md` 는 통합 담당만 고칩니다.
 - 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 이 점검은 `plans --check` 와 `status-board --check` 가 맡습니다.
 - 여러 PC 에서 고치는 파일이라 작업 중에 pull 과 충돌이 날 수 있습니다. 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다.
   커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로, `.clang-format` 과 `Tools/LLVM` 버전이 같은지 확인한 뒤 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.

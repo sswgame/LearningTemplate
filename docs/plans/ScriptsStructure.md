@@ -2,6 +2,8 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: project · 옛번호: 없음 · 진행: 표
 
+**남은 확인(통합에서 확인):** 병합 뒤 `cmake --preset Ninja-Debug` configure 와 `ctest -L lint -j 2` · `-L python -j 2` 한 번(6절). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+
 `Scripts/` 의 파이썬 도구는 폴더가 곧 역할이고 이름 · 진입점 · 공용 도우미 · 파이썬 모양을 게이트가 지킨다. C++ 쪽과 비교해 빠진 것은 **import 경로의 형식**과 **의존 방향의 형식** 두 가지다.
 설계 검토(2026-10-21, 기준 main `dd2661d34`)의 권고안 B 를 따른다. 폴더를 크게 옮기지 않고 "단일 import 루트 + 3층 + 층 게이트"로 고친다. 명령 파일 경로는 그대로라 CMake · CI · 훅이 부르는 경로는 바뀌지 않는다(`docs/09_Decisions.md` 5-2 "스크립트 이름과 도움말 규칙").
 
@@ -79,8 +81,6 @@ Scripts/
 
 - `cmake --preset Ninja-Debug` configure 를 이 브랜치에서 돌리지 않았다. 대신 `GenerateConfigureFiles.py` 를 임시 폴더로 돌려 main 빌드 폴더의 생성물과 바이트가
   같음을 봤다(LintTargets.cmake 는 새 게이트 `CheckScriptLayers` 두 블록만 다름). 병합 뒤 configure 와 `ctest -L lint -j 2` · `-L python -j 2` 를 한 번 돈다.
-- `.claude/hooks/SessionGuard.py` 33행의 주석이 지운 이름 `ListCiJobs.kExitCiFailing` 을 가리킨다. 값(4)은 `common.ExitCode.CiFailing` 과 같고
-  `TestDevWorktreeTools` 가 둘을 견준다. 세션 설정이라 사용자가 주석을 `common/ExitCode.py` 의 `CiFailing` 으로 고친다.
-- 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). 위 `SessionGuard.py` 주석만 남았다.
+- 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). `SessionGuard.py` 주석은 `57f166aae` 가 `ExitCode.CiFailing` 을 가리키게 고쳤다.
 - 층 게이트의 CookAssets 간선 예외는 PK4 가 쿠커를 지울 때 함께 사라졌다(`CheckScriptLayers.toml` 에 `CookAssets` 가 없음을 2026-10-23 확인).
   게이트와 짝 명령의 간선은 [ScriptsPairedLintRules](Candidates-project.md#scriptspairedlintrules) 후보다.
