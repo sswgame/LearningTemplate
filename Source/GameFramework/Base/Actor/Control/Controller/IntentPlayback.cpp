@@ -16,7 +16,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 IntentPlayback::start( GameObjectManager& manager, const ControlIntentHistory& history, bool bReturnWhenDone, uint32* pOutSkippedCount )
+    uint32 IntentPlayback::start( GameObjectManager& manager, const ControlIntentHistory& history, bool bReturnWhenDone, uint32 firstIndex, uint32* pOutSkippedCount )
     {
         uint32 started = 0;
         uint32 skipped = 0;
@@ -31,6 +31,12 @@ namespace sw
                 SW_LOG_WARNING( "Intent playback skipped the track of '%#' (no pawn in the scene or the track has empty ticks)", pawnName.c_str() );
                 ++skipped;
                 continue;
+            }
+            if ( firstIndex > 0 )
+            {
+                if ( firstIndex >= listIntent.size() )
+                    continue; // 이 트랙은 firstIndex 틱 전에 이미 끝났다 — 폰은 지금 상태 그대로다
+                listIntent.erase( listIntent.begin(), listIntent.begin() + static_cast<std::ptrdiff_t>( firstIndex ) );
             }
             const string controllerName = string( kControllerPrefix ) + pawnName.c_str();
             GameObject*  pTrackObject   = manager.findGameObjectByName( hashed_string( controllerName ) );
@@ -61,7 +67,7 @@ namespace sw
                 *pOutStartedCount = 0;
             return false;
         }
-        const uint32 started = start( manager, history, bReturnWhenDone );
+        const uint32 started = start( manager, history, bReturnWhenDone, 0 );
         if ( pOutStartedCount != nullptr )
             *pOutStartedCount = started;
         return true;

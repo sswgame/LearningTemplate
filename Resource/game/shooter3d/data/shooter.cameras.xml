@@ -54,6 +54,19 @@
 		</Dolly>
 		<PostProcess letterboxAspectRatio="2.39" vignetteIntensity="0.25" />
 	</Preset>
+	<!--
+		킬캠 — 맞은 쪽(대상)을 정면에서 보는 3인칭이다. 리플레이 씬(IntentNetworkWiring 3절)이 대상을 맞은 쪽으로 바꾸고 이 프리셋을 켠다.
+		가까이 낮게 서서 시선을 대상에 두고, 초점을 대상 거리에 맞춰 배경을 흐리며, 채도를 조금 빼고 비네트로 조인다. 벽에 가려지면 스프링 암이 당긴다.
+	-->
+	<Preset id="killcam">
+		<View mode="Orbit" offset="0,0.2,0" distance="3.2" pitch="0.2618" yaw="3.14159" />
+		<Lens focalLength="50" sensorSize="36,24" focusDistance="3.2" aperture="2" nearPlane="0.05" farPlane="150" />
+		<Damping positionTime="0.25" orientationTime="0.1" />
+		<Collision radius="0.25" minDistance="0.8" recoverTime="0.3" />
+		<PostProcess saturation="0.8" contrast="1.1" vignetteIntensity="0.35" />
+	</Preset>
+	<!-- 킬캠으로 들어갈 때는 짧게 이어 바꾼다. 나올 때는 기본 블렌드다. -->
+	<Blend from="*" to="killcam" curve="EaseInOut" duration="0.25" exponent="2" />
 	<!-- CCTV 로 들어가고 나올 때는 끊어 바꾼다 — 감시 화면은 이어지지 않는다(렌더러가 TAA 기록을 버린다). -->
 	<Blend from="*" to="cctv" curve="Cut" />
 	<Blend from="cctv" to="*" curve="Cut" />

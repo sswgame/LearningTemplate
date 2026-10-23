@@ -73,6 +73,11 @@ namespace sw
         return pFound;
     }
 
+    const IntentRewindBuffer::KeySnapshot* IntentRewindBuffer::findOldest() const
+    {
+        return _listSnapshot.empty() ? nullptr : &_listSnapshot.front();
+    }
+
     void IntentRewindBuffer::discardAfter( uint32 tick )
     {
         while ( _listSnapshot.empty() == false && _listSnapshot.back()._tick > tick )

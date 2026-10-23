@@ -1,0 +1,39 @@
+<UIDocument _schemaVersion="1">
+	<!--
+		리플레이 막대 — IntentReplayBar 가 연다(IntentNetworkWiring 3절). 이름 Scrub(슬라이더, 값 = 재생 틱) · TimeText(현재 / 가장 먼 시각) · PlayPauseLabel 은 코드가 맞추고,
+		버튼 명령 Replay.StepBack(1 초 되감기) · Replay.TogglePause · Replay.Close 를 코드가 받는다. 게임은 이 문서를 복사해 모습만 바꾼다.
+	-->
+	<UIScreenDesc _layer="GameMenu" _bPausesGame="false" _defaultFocus="PlayPause" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Bar" _contentPadding="16,8,16,8">
+				<_slot _anchorMin="0.5,1"
+				       _anchorMax="0.5,1"
+				       _offsetMin="0,-48"
+				       _offsetMax="0,-48"
+				       _maxSize="1000,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Begin" />
+				<_background _color="0,0,0,0.6" _cornerRadius="8,8,8,8" />
+				<BoxPanel _spacing="12">
+					<ButtonWidget _name="StepBack" _command="Replay.StepBack">
+						<TextWidget _text="-1s" />
+					</ButtonWidget>
+					<ButtonWidget _name="PlayPause" _command="Replay.TogglePause">
+						<TextWidget _name="PlayPauseLabel" _text="Pause" />
+					</ButtonWidget>
+					<SliderWidget _name="Scrub">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</SliderWidget>
+					<TextWidget _name="TimeText">
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<ButtonWidget _name="Close" _command="Replay.Close">
+						<TextWidget _text="Close" />
+					</ButtonWidget>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

@@ -28,13 +28,14 @@ namespace
 {
     struct NetMovingGroundInternal
     {
-        static constexpr uint16  kEndpointServerPort = 4300;
-        static constexpr uint16  kEndpointClientPort = 5300;
-        static constexpr int32   kFrameCount         = 60 * 8;
-        static constexpr uint32  kWalkStartTick      = 200; ///< 이 입력 틱부터 걷는다 — 그 전에는 서 있는 채 바닥에 실려 간다
-        static constexpr uint32  kCompareStartTick   = 120; ///< 이 입력 틱부터 비교한다(접속 직후 서버 틱 차이를 알기 전의 어긋남을 버린다)
-        static constexpr float32 kWalkSpeed          = 1.5f;
-        static constexpr float32 kPositionTolerance  = 0.05f;
+        static constexpr uint16  kEndpointServerPort    = 4300;
+        static constexpr uint16  kEndpointClientPort    = 5300;
+        static constexpr int32   kFrameCount            = 60 * 8;
+        static constexpr uint32  kWalkStartTick         = 200; ///< 이 입력 틱부터 걷는다 — 그 전에는 서 있는 채 바닥에 실려 간다
+        static constexpr uint32  kCompareStartTick      = 120; ///< 이 입력 틱부터 비교한다(접속 직후 서버 틱 차이를 알기 전의 어긋남을 버린다)
+        static constexpr uint32  kServerInputDelayTicks = 12;  ///< 서버는 접속 뒤 이만큼 기다렸다가 입력을 꺼낸다 — 지연 50 ms(3 틱)에 여유를 더해, 꺼낼 틱이 늘 도착해 있게 한다
+        static constexpr float32 kWalkSpeed             = 1.5f;
+        static constexpr float32 kPositionTolerance     = 0.05f;
 
         /** @brief 입력 틱 @p tick 의 입력 바이트입니다. 0 = 뒤로, 1 = 섬, 2 = 앞으로(45 틱마다 바뀐다). */
         static uint8 makeInputByte( uint32 tick )
@@ -178,10 +179,12 @@ SW_TEST_CASE( NetMovingGroundTest, PredictedPawnOnTickedPlatformMatchesServer )
 
         // 서버 틱 — 그 연결의 다음 입력을 꺼내 캐릭터를 몰고(없으면 선다), 바닥은 넷 틱의 자리에 둔다.
         ++serverTick;
-        bool   bExact       = false;
-        uint32 handledInput = 0;
-        float3 serverMove{};
-        if ( server.popInput( 0, nextInputTick, inputBytes, bExact ) && inputBytes.size() == 1 )
+        bool       bExact       = false;
+        uint32     handledInput = 0;
+        float3     serverMove{};
+        const bool bInputDue = serverTick > Scene::kServerInputDelayTicks;
+        const bool bGotInput = bInputDue && server.popInput( 0, nextInputTick, inputBytes, bExact ) && inputBytes.size() == 1;
+        if ( bGotInput )
         {
             handledInput = nextInputTick;
             ++nextInputTick;

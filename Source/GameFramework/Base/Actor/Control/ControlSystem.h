@@ -64,6 +64,8 @@ namespace sw
         const UISystem* findUISystem() const;
         /** @brief 지금까지 돈 틱 수입니다. 기록과 네트워크 창의 틱 번호로 씁니다. */
         uint32 getTick() const { return _tick; }
+        /** @brief 틱 번호를 정합니다. 되감기(`ControlSceneRewindWorld`)가 키 스냅샷으로 되돌린 뒤 키를 찍은 틱으로 맞출 때만 씁니다. */
+        void setTick( uint32 tick ) { _tick = tick; }
 
         /**
          * @brief 의도 기록을 켜거나 끕니다. 켤 때 기록을 비우고 폰마다 @p capacityTicks 틱 크기의 고리를 잡습니다.
