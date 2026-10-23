@@ -315,6 +315,17 @@ namespace sw
          */
         void setOnScreenSuppressed( bool bSuppressed ) { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
+        /**
+         * @brief 레이어 집합 @p layers 의 화면을 숨기는 요청을 하나 겁니다(포토 모드의 "UI 없이 보기" 같은 곳). 요청은 레이어마다 세어 쌓이므로 둘이 같은 레이어를 숨겨도 하나를 풀 때 다시 보이지 않습니다.
+         * @details `GameTimeScale::addPauseRequest` 와 같은 모양입니다. 숨긴 레이어의 화면은 그리지 않고 포인터를 받지 않으며(`UIScreen::isHiddenByLayer`), 화면 상태 · 포커스 · 틱 · 애니메이션은 그대로이고
+         *          요청 뒤에 열린 화면도 숨깁니다. 엔진은 레이어 가시성 기능만 주고 어느 레이어를 숨길지는 거는 쪽의 데이터가 정합니다(Godot `CanvasLayer.visible`, 언리얼 `AHUD::bShowHUD`, 유니티 `Canvas.enabled`).
+         *          건 쪽이 같은 집합으로 `removeLayerHideRequest` 를 꼭 부릅니다.
+         */
+        void addLayerHideRequest( UILayerMask layers );
+        /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. 건 적 없는 레이어를 풀면 단언으로 멈춥니다. */
+        void removeLayerHideRequest( UILayerMask layers );
+        /** @brief 레이어 @p layer 에 숨김 요청이 하나라도 걸려 있으면 true 입니다. */
+        bool isLayerHidden( UILayer layer ) const { return _arrLayerHideCount[static_cast<uint32>( layer )] > 0; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
         /**
@@ -398,6 +409,8 @@ namespace sw
         void refreshInputGlyphs();
         /** @brief 지금 문화권 출처입니다. `setLocalization` 으로 받은 것(기동이 엔진 서비스를 넘긴다)이고, 받지 않았으면 nullptr 입니다. */
         const LocalizationManager* findLocalization() const;
+        /** @brief 레이어마다의 숨김 요청 수에서 `_hiddenLayers` 를 다시 만들고 화면마다 `_bHiddenByLayer` 를 맞춥니다. */
+        void refreshHiddenLayers();
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
         /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */
@@ -454,12 +467,15 @@ namespace sw
         UISubtitleService         _subtitles;
         UITooltipService          _tooltips;
         UIViewport                _viewport;
-        CanvasDrawList            _canvas;              ///< 이번 프레임의 그리기 목록입니다.
-        CanvasDrawList            _canvasScratch;       ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
-        mutable UIPaintScratch    _paintScratch;        ///< 그리기 순회 스크래치입니다. 칠하기 문맥(`makePaintContext`)으로 넘기고, 이 시스템과 함께 사라집니다.
-        uint64                    _canvasRevision;      ///< `_canvas` 내용의 번호입니다.
-        vector<const WidgetTree*> _listPaintedTree;     ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
-        uint8                     _bLastCanvasReusable; ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
+        CanvasDrawList            _canvas;                           ///< 이번 프레임의 그리기 목록입니다.
+        CanvasDrawList            _canvasScratch;                    ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        mutable UIPaintScratch    _paintScratch;                     ///< 그리기 순회 스크래치입니다. 칠하기 문맥(`makePaintContext`)으로 넘기고, 이 시스템과 함께 사라집니다.
+        uint64                    _canvasRevision;                   ///< `_canvas` 내용의 번호입니다.
+        vector<const WidgetTree*> _listPaintedTree;                  ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
+        uint8                     _bLastCanvasReusable;              ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
+        uint16                    _arrLayerHideCount[kUILayerCount]; ///< 레이어마다 건 숨김 요청 수입니다(`addLayerHideRequest`).
+        UILayerMask               _hiddenLayers;                     ///< 숨김 요청이 하나라도 걸린 레이어입니다(`_arrLayerHideCount` 에서 만든 값).
+        UILayerMask               _paintedHiddenLayers;              ///< 지난 그리기가 따른 `_hiddenLayers` 입니다(달라지면 목록을 다시 만든다).
         UIScreenHandle            _activeScreen;
         UIScreenHandle            _markerScreen;          ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
         UIScreenHandle            _accessibleFocusScreen; ///< 브리지에 마지막으로 알린 포커스 위젯의 화면입니다.

@@ -21,7 +21,7 @@ namespace sw::editor
          */
         void drawNavMesh( const EditorViewportVisualizerArgs& args )
         {
-            EditorShapeVisualizerStats& stats = EditorShapeVisualizerStats::get();
+            EditorShapeVisualizerStats& stats = args._pStats->_shape;
             stats._navMeshSegmentCount        = 0;
             if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
                 return;

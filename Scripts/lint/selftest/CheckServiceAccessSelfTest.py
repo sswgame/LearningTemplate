@@ -108,6 +108,13 @@ class CheckServiceAccessSelfTestGate(LintGate):
                     listError.append(f"{name}: (RetiredWindow, Singleton, ActiveWindow) 기대 {expectedFull}, 실제 {found}")
         finally:
             shutil.rmtree(tempRoot, ignore_errors=True)
+        # 예외의 이유는 종류 표의 키여야 한다 — 자유 글은 걸리고, 저장소의 예외 표는 모두 통과한다.
+        mapKind = CheckServiceAccess.getExemptionKinds()
+        if CheckServiceAccess.findUnknownExemptionKinds({"Foo": "서비스가 아니라 공용 인스턴스다"}, mapKind) != ["Foo = '서비스가 아니라 공용 인스턴스다'"]:
+            listError.append("예외 종류 검사: 종류 표 밖의 자유 글 이유를 잡지 못합니다")
+        listRepositoryUnknown = CheckServiceAccess.findUnknownExemptionKinds(CheckServiceAccess.CheckServiceAccessGate.mapExemption, mapKind)
+        if listRepositoryUnknown:
+            listError.append(f"예외 종류 검사: 저장소의 예외 표에 종류 표 밖의 값이 있습니다 — {', '.join(listRepositoryUnknown)}")
         return GateResult(listViolation=listError, summary=f"{len(_kListCase)} cases")
 
 

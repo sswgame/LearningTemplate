@@ -16,6 +16,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
@@ -699,13 +700,13 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
         }
         {
-            sw::GameObjectManager* pManager = sw_new sw::GameObjectManager();
+            sw::unique_ptr<sw::GameObjectManager> pManager = sw::make_unique<sw::GameObjectManager>();
             sw::RegisterMockComponents();
             sw::GameObject* pLeaf = nullptr;
             buildDeepChain( *pManager, kChainDepth, pLeaf );
             pManager->update( 0.016f );
             const sw::Stopwatch teardownStopwatch;
-            sw_delete( pManager );
+            pManager.reset();
             listTeardown.push_back( teardownStopwatch.getElapsedMicroseconds() );
         }
     }

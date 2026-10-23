@@ -11,12 +11,6 @@
 
 namespace sw::editor
 {
-    EditorDebugDrawStats& EditorDebugDrawStats::get()
-    {
-        static EditorDebugDrawStats s_stats;
-        return s_stats;
-    }
-
     void EditorVisualizerGeometryUtil::computeColliderCorners( const BoxCollider2DComponent& collider, float3 ( &outArrCorner )[4] )
     {
         AABB box{};
