@@ -505,6 +505,11 @@
       "id": "real-store-contract", "title": "PostgreSQL · RESP 계약 테스트를 실제 서버로(SW_TEST_POSTGRES_URL · SW_TEST_RESP_URL)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
       "need_command": "이 PC 에 PostgreSQL · Valkey(WSL) · Garnet(Windows) 서버가 없다. 서버를 띄우고 환경 변수 두 개를 준 뒤 ServiceStoreContract 를 쓰는 테스트 필터를 돌린다",
       "source": "docs/plans/Candidates-network.md EpollAndRealStoreVerification", "result_doc": "docs/plans/Candidates-network.md EpollAndRealStoreVerification"
+    },
+    {
+      "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 허프만 없는 복호기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "HTTP2Test.*",
+      "source": "docs/plans/OnlineKits.md G4", "result_doc": "docs/plans/OnlineKits.md G4"
     }
   ]
 }
