@@ -195,17 +195,6 @@ namespace sw
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
 
-    bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )
-    {
-        vector<string> listRangeError;
-        SerializerUtil::collectRangeErrors( typeInfo, ObjectAddress{ pInstance }, string(), listRangeError );
-        for ( const string& rangeError : listRangeError )
-        {
-            SW_LOG_ERROR( "Config %# (%#): %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
-        }
-        return listRangeError.empty();
-    }
-
     bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )
     {
         JSONDocument fileDoc;
