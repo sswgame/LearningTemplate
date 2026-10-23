@@ -118,8 +118,9 @@ SW_TEST_CASE( AssetStreamingTest, PreloadSetWalksEveryPathWithinTheBudget )
     sw::vector<sw::string> listPath;
     for ( const utf8* pName : { "sw_preload_missing_a.dat", "sw_preload_missing_b.dat", "sw_preload_missing_c.dat" } )
     {
-        listPath.push_back( test::makeTempPath( pName ) );
-        (void)sw::FileUtil::removeFile( listPath.back() ); // 없는 파일이어야 한다 — 이미 없으면 지우지 못해도 된다
+        const sw::string diskPath = test::makeTempPath( pName );
+        (void)sw::FileUtil::removeFile( diskPath ); // 없는 파일이어야 한다 — 이미 없으면 지우지 못해도 된다
+        listPath.push_back( test::makeTempResourceID( diskPath ) );
     }
     sw::PreloadSet set( listPath, sw::StreamingPriority::Normal, 1u );
     SW_EXPECT_EQUAL( 3u, set.getTotalCount() );

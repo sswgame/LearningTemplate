@@ -950,6 +950,6 @@ SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
     pTerrain->setLayerWeightsPath( ::test::makeTempResourceID( ddsPath ) );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
     SW_EXPECT_FALSE( pTerrain->getHeightfield().isValid() );
-    pTerrain->setLayerWeightsPath( test::makeTempPath( "missing.layerweights" ) );
+    pTerrain->setLayerWeightsPath( ::test::makeTempResourceID( test::makeTempPath( "missing.layerweights" ) ) );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
 }
