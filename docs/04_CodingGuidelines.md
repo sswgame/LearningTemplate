@@ -143,9 +143,9 @@ const Deadline deadline = Deadline::afterMilliseconds( 500 );
 while ( deadline.isExpired() == false ) { … }
 const int64 nowMs = WallClock::nowUnixMilliseconds();       // 만료 · 기록 시각(서비스에는 nowMs 매개변수로)
 
-Foo* pFoo = sw_new Foo( arg );                              // 맨 new Foo 대신
+unique_ptr<Foo> pFoo = make_unique<Foo>( arg );            // 맨 new Foo · sw_new Foo 대신(소유가 형식에 드러난다)
+MemoryBlock block = MemoryBlock::allocate( size );          // 거친 바이트 블록. void* + Memory::free 대신
 sw_placement_new( pMemory ) Foo( arg );                     // 맨 new ( pMemory ) Foo 대신
-uint8* pBuffer = sw_new_array<uint8>( size );
 
 GameObjectHandle _targetHandle;                             // 프레임을 넘겨 보관하는 참조는 핸들
 GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때마다 풀고, 사라졌으면 nullptr

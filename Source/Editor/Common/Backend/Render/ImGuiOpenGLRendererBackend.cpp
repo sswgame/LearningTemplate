@@ -69,7 +69,7 @@ namespace
 
     void Hook_Renderer_CreateWindow( ImGuiViewport* pViewport )
     {
-        WGL_WindowData* pData = sw_new WGL_WindowData();
+        WGL_WindowData* pData = sw::make_unique<WGL_WindowData>().release(); // ImGui 뷰포트가 쥔다. `Hook_Renderer_DestroyWindow` 가 푼다
         CreateDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
         pViewport->RendererUserData = pData;
     }
@@ -110,7 +110,7 @@ namespace
         const bool bCannotCreateViewportWindow = s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr;
         if ( bCannotCreateViewportWindow )
             return;
-        GLX_WindowData* pData = sw_new GLX_WindowData();
+        GLX_WindowData* pData = sw::make_unique<GLX_WindowData>().release(); // ImGui 뷰포트가 쥔다. 파괴 훅이 푼다
         pData->_pDisplay      = s_MainDisplay;
         pData->_win           = static_cast<Window>( reinterpret_cast<uintptr_t>( pViewport->PlatformHandleRaw ) );
 

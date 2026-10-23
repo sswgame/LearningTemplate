@@ -13,6 +13,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionContainers.h"
@@ -191,9 +192,10 @@ namespace sw
             const size_t     entryCount  = map.getSize( pContainer );
             if ( entryCount == 0 )
                 return true;
-            uint8* pValueBlock = static_cast<uint8*>( Memory::allocateAligned( valueStride * entryCount, kAlignment ) );
-            if ( pValueBlock == nullptr )
+            const MemoryBlock valueBlock = MemoryBlock::allocateAligned( valueStride * entryCount, kAlignment );
+            if ( valueBlock.isValid() == false )
                 return false;
+            uint8* const  pValueBlock = valueBlock.getAs<uint8>();
             vector<TLeaf> listKey;
             listKey.reserve( entryCount );
             bool bCopied = true;
@@ -216,7 +218,6 @@ namespace sw
             {
                 map.destroyValue( pValueBlock + valueStride * entryIndex );
             }
-            Memory::freeAligned( pValueBlock );
             return bCopied;
         }
 

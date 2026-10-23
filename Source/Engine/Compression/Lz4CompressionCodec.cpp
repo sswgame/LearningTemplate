@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 
 #include <lz4.h>
 #include <lz4hc.h>
@@ -68,11 +69,10 @@ namespace sw
         if ( compressionLevel > 0 )
         {
             // HC 는 상태(~256 KB)를 힙에 둔다. LZ4_compress_HC 는 그것을 CRT malloc 으로 잡으므로 상태를 sw 할당자로 잡아 넘긴다.
-            void* pState = Memory::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
-            if ( pState == nullptr )
+            const MemoryBlock state = MemoryBlock::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
+            if ( state.isValid() == false )
                 return false;
-            written = LZ4_compress_HC_extStateHC( pState, pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
-            Memory::free( pState );
+            written = LZ4_compress_HC_extStateHC( state.get(), pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
         }
         else
             written = LZ4_compress_default( pSrcBytes, pDstBytes, srcBytes, dstBytes );

@@ -76,6 +76,12 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 남은 것: `ResourceDataKindRegistry` 는 `SW_RESOURCE_DATA_KIND` 의 정적 등록자가 엔진 범위가 서기 전(Engine · GameFramework · 키트 이미지의 정적 초기화)에 올리고 모듈을 내릴 때 빼서, 지금은 함수 정적으로 둡니다(예외 표에 이유를 적었습니다). 서비스로 옮기려면 등록자가 링크 때 연결 목록(`TypeRegistrar::getHead` 방식)에만 달리고, 서비스가 기동과 모듈 올림 · 내림에서 그 목록을 거두도록 등록 경로를 바꿔야 합니다 — 핫 리로드의 모듈 내림 처리와 함께 설계합니다. 게이트는 여전히 이름(`getInstance` · `get`)으로 판단해 `instance()` · `shared()` 는 못 봅니다 — 이름과 무관하게 막으려면 타입 · API 를 바꿔야 합니다.
 이름 붙은 지역 람다 Serialization·Reflection·Object 끝(2026-10-24, wt/lambdaser): 쌍 처리기와 도우미는 함수로 뺐고, 캡처가 본질인 짧은 것만 남겼다.
 
+### ReflectedInstanceOwner
+제목: 리플렉션이 만든 형식 소거 인스턴스의 소유 형식
+옛번호: 없음
+왜 필요한가: `wt/ownership`(2026-10-24)이 맨 `sw_new` 를 `make_unique` 로, 거친 `Memory::allocate` 블록을 `MemoryBlock` 으로 바꾸고 `Style/RawNew` · `CheckRawAllocation` 이 새 맨 할당을 막게 했습니다. 남은 틈은 외부 라이브러리 할당 콜백과, 리플렉션이 생성자를 불러 만든 인스턴스(블록 + `TypeInfo::_destroyInstance` 짝)입니다. 후자는 `void*` 를 맨 손으로 들고 `destroyInstance` 를 손으로 짝지어 부르는 모양이라 누수 · 이중 해제가 형식에 안 보입니다.
+남은 것: 블록과 `const TypeInfo*` 를 함께 쥐고 소멸자가 `_destroyInstance` 후 블록을 푸는 이동 전용 소유 형식을 `Engine/Reflection` 에 두고 `CheckRawAllocation.toml` 의 `ProjectSettingsDocument.cpp`(`_pCurrent` · `_pDefault` · `createInstance` 호출 8곳) · `UIDocumentLoader.cpp`(`createWidget`)를 그 형식으로 옮긴 뒤 두 줄을 지웁니다. `GameObject.cpp` 의 컴포넌트 저장소는 풀 항목이 짝이라 따로 봅니다. `hashed_string.h` 의 청크 표(`atomic<Entry*>`)는 락 없이 읽는 표라 소유 형식을 담지 못하니, 표가 소유하는 `atomic` 소유 칸 형식이 필요한지 함께 따집니다.
+
 ## 기능
 
 

@@ -4,7 +4,7 @@
  *
  * [구조와 최적화]
  * 1. 스택 · 힙 혼합 저장: 템플릿 인자 `Capacity` 크기의 스택 배열(`_arrStaticBuffer`)에서 할당 없이 시작합니다.
- * 2. 용량 증가(`ensureCapacity`): 스택 용량을 넘을 때만 힙 버퍼(`_pDynamicBuffer`)를 두 배씩 늘려 할당하고 포인터를 바꿉니다.
+ * 2. 용량 증가(`ensureCapacity`): 스택 용량을 넘을 때만 힙 버퍼(`_dynamicBuffer`)를 두 배씩 늘려 할당하고 포인터를 바꿉니다.
  * 3. 제자리 포맷(`appendFormat`): 타입 안전 포맷터로 스택 · 힙 버퍼에 바로 포맷해 임시 std::string 을 만들지 않습니다.
  * 4. 이동: 힙 버퍼를 가지고 있으면 복사 없이 포인터만 넘깁니다.
  */
@@ -15,6 +15,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 
 namespace sw
 {
@@ -33,7 +34,7 @@ namespace sw
          *       스칼라 값 하나마다 StringBuilder<8192> 를 만들기 때문에, 0 으로 채우면 값 하나를 쓸 때마다 8KB memset 이 됩니다.
          */
         StringBuilder() noexcept
-            : _pDynamicBuffer{ nullptr }
+            : _dynamicBuffer{}
             , _pBuffer{ _arrStaticBuffer }
             , _capacity{ Capacity }
             , _length{ 0 }
@@ -42,16 +43,9 @@ namespace sw
         }
 
         /**
-         * @brief 힙 버퍼를 할당했으면 해제합니다.
+         * @brief 힙 버퍼(`_dynamicBuffer`)는 소유 형식이 해제합니다.
          */
-        ~StringBuilder()
-        {
-            if ( _pDynamicBuffer != nullptr )
-            {
-                Memory::free( _pDynamicBuffer );
-                _pDynamicBuffer = nullptr;
-            }
-        }
+        ~StringBuilder() = default;
 
         /** @brief 복사를 금지합니다. */
         StringBuilder( const StringBuilder& ) = delete;
@@ -62,7 +56,7 @@ namespace sw
          * @brief 힙 버퍼를 가지고 있으면 포인터를 넘겨받고, 스택 버퍼면 내용을 복사합니다.
          */
         StringBuilder( StringBuilder&& other ) noexcept
-            : _pDynamicBuffer{ nullptr }
+            : _dynamicBuffer{}
             , _pBuffer{ _arrStaticBuffer }
             , _capacity{ Capacity }
             , _length{ 0 }
@@ -76,11 +70,7 @@ namespace sw
         StringBuilder& operator=( StringBuilder&& other ) noexcept
         {
             if ( this != &other )
-            {
-                if ( _pDynamicBuffer != nullptr )
-                    Memory::free( _pDynamicBuffer );
                 takeBufferFrom( other );
-            }
             return *this;
         }
 
@@ -106,18 +96,15 @@ namespace sw
                 newCapacity *= 2;
             }
 
-            utf8* pNewBuffer = static_cast<utf8*>( Memory::allocate( newCapacity * sizeof( utf8 ) ) );
-            if ( pNewBuffer == nullptr )
+            MemoryBlock newBuffer = MemoryBlock::allocate( newCapacity * sizeof( utf8 ) );
+            if ( newBuffer.isValid() == false )
                 return false;
 
-            Memory::copy( pNewBuffer, _pBuffer, _length + 1 );
+            Memory::copy( newBuffer.get(), _pBuffer, _length + 1 );
 
-            if ( _pDynamicBuffer != nullptr )
-                Memory::free( _pDynamicBuffer );
-
-            _pDynamicBuffer = pNewBuffer;
-            _pBuffer        = _pDynamicBuffer;
-            _capacity       = newCapacity;
+            _dynamicBuffer = std::move( newBuffer ); // 옛 힙 버퍼는 여기서 풀린다
+            _pBuffer       = _dynamicBuffer.getAs<utf8>();
+            _capacity      = newCapacity;
             return true;
         }
 
@@ -317,19 +304,19 @@ namespace sw
     private:
         /**
          * @brief 상대의 내용을 넘겨받고 상대를 빈 스택 버퍼 상태로 되돌립니다. 힙 버퍼는 포인터째 가져오고, 스택 버퍼는 복사합니다.
-         * @note 지금 가진 힙 버퍼는 해제하지 않습니다 — 부르기 전에 비어 있거나 해제돼 있어야 합니다.
+         * @note 지금 가진 힙 버퍼는 넘겨받는 대입에서 소유 형식이 풉니다.
          */
         void takeBufferFrom( StringBuilder& other ) noexcept
         {
-            _pDynamicBuffer = other._pDynamicBuffer;
-            _capacity       = other._capacity;
-            _length         = other._length;
-            if ( other._pDynamicBuffer != nullptr )
+            const bool bOtherHeap = other._dynamicBuffer.isValid();
+            _dynamicBuffer        = std::move( other._dynamicBuffer );
+            _capacity             = other._capacity;
+            _length               = other._length;
+            if ( bOtherHeap )
             {
-                _pBuffer              = other._pDynamicBuffer;
-                other._pDynamicBuffer = nullptr;
-                other._pBuffer        = other._arrStaticBuffer;
-                other._capacity       = Capacity;
+                _pBuffer        = _dynamicBuffer.getAs<utf8>();
+                other._pBuffer  = other._arrStaticBuffer;
+                other._capacity = Capacity;
             }
             else
             {
@@ -341,10 +328,10 @@ namespace sw
         }
 
     private:
-        utf8   _arrStaticBuffer[Capacity];
-        utf8*  _pDynamicBuffer;
-        utf8*  _pBuffer;
-        uint32 _capacity;
-        uint32 _length;
+        utf8        _arrStaticBuffer[Capacity];
+        MemoryBlock _dynamicBuffer;
+        utf8*       _pBuffer;
+        uint32      _capacity;
+        uint32      _length;
     };
 } // namespace sw

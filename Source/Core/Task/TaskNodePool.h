@@ -9,6 +9,7 @@
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskNode.h"
 
 namespace sw
@@ -26,8 +27,8 @@ namespace sw
         explicit TaskNodePool( TaskManager* pOwner );
         /**
          * @brief 태스크 슬랩을 돌려줍니다. 스테이지는 `_listStageAll` 이 소유하므로 여기서 할 일이 없습니다.
-         * @details 슬랩만 직접 해제하는 이유는 `Memory::allocate` 로 원소 64개를 한 번에 잡고 placement new 로 만들기 때문입니다.
-         *          그렇게 만든 것은 짝이 되는 해제도 직접 해야 합니다.
+         * @details 슬랩은 `MemoryBlock` 하나에 원소 64개를 한 번에 잡고 placement new 로 만듭니다. 블록은 형식이 풀지만 원소의 소멸자는
+         *          블록이 모르므로 여기서 먼저 부릅니다.
          */
         ~TaskNodePool();
 
@@ -69,7 +70,7 @@ namespace sw
         TaskManager*                     _pOwner; ///< 노드를 낸 매니저. `detachOwner` 뒤 nullptr
         ConcurrentQueue<TaskNode*, 4096> _freeQueue;
         vector<TaskNode*>                _listOverflowFree;
-        vector<TaskNode*>                _listSlab;
+        vector<MemoryBlock>              _listSlab; ///< 64개 슬랩의 바이트 블록. **소유한다**(노드의 소멸은 `~TaskNodePool`)
         mutex                            _slabMutex;
         vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
         /**

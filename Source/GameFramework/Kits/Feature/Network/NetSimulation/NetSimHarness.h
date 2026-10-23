@@ -395,11 +395,12 @@ namespace sw
             int32                             _worldIndex{ -1 };
         };
 
-        Link*        createLink( int32 worldIndex );
-        Link*        findLink( int32 worldIndex );
-        NetSimWorld* createWorld( NetSimRole role, int32 worldIndex, Link& link );
-        void         applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions );
-        void         updateNetwork();
+        Link* createLink( int32 worldIndex );
+        Link* findLink( int32 worldIndex );
+        /** @brief 월드를 만들어 소유째 돌려줍니다. 씬을 빌리지 못하면 빈 포인터입니다. */
+        unique_ptr<NetSimWorld> createWorld( NetSimRole role, int32 worldIndex, Link& link );
+        void                    applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions );
+        void                    updateNetwork();
 
         NetSimConfig                    _settings;
         SceneEngineServices             _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다

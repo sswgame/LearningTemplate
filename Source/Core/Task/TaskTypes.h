@@ -80,8 +80,8 @@ namespace sw
             },
                 []( const void* pSrc, void* pDst )
             {
-                const T*                                pSource = *reinterpret_cast<const T* const*>( pSrc );
-                *reinterpret_cast<T**>( pDst )                  = sw_new T( *pSource );
+                const T* pSource               = *reinterpret_cast<const T* const*>( pSrc );
+                *reinterpret_cast<T**>( pDst ) = make_unique<T>( *pSource ).release();
             },
                 []( void* pSrc, void* pDst )
             {
@@ -163,7 +163,7 @@ namespace sw
             else
             {
                 _pVtable                                    = getHeapVtable<Decayed>();
-                *reinterpret_cast<Decayed**>( _arrStorage ) = sw_new Decayed( std::forward<T>( value ) );
+                *reinterpret_cast<Decayed**>( _arrStorage ) = make_unique<Decayed>( std::forward<T>( value ) ).release(); // 소유를 저장소의 포인터 칸에 놓는다. 해제는 함수 표(`sw_delete`)
             }
         }
 

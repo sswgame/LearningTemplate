@@ -41,6 +41,7 @@ from .Patterns import (
     _kRawNewRe,
     _kRawPlacementNewRe,
     _kStringLiteralRe,
+    _kSwNewRe,
     _kTriplePointerRe,
     extractParenthesizedInternal,
     getExactPathMapInternal,
@@ -435,13 +436,29 @@ class RawNewRule( ConventionRule ):
                     line_number=ctx.lineNum,
                     rule_category="Style/RawNew",
                     message=(
-                        "맨 `new` 대신 sw 할당자를 쓰세요 — 객체는 `sw_new T( ... )` · `make_unique<T>`, 배열은 `sw_new_array<T>( n )` · "
-                        "`make_unique<T[]>( n )` · `vector<T>`(Core/Memory/Memory.h). CRT new 는 메모리 태그 · 누수 검사에 보이지 않습니다."
+                        "맨 `new` 대신 소유 형식을 쓰세요 — 객체는 `make_unique<T>( ... )`, 배열은 `sw_new_array<T>( n )` · "
+                        "`make_unique<T[]>( n )` · `vector<T>`, 거친 바이트 블록은 `MemoryBlock`(Core/Memory). CRT new 는 메모리 태그 · 누수 검사에 보이지 않습니다."
                     ),
                     snippet=ctx.trimmed,
                 )
             )
             break
+        # `sw_new` 도 소유자 없는 맨 포인터를 돌려준다. `Source/` 는 소유 형식으로만 만들고, 소유를 락 없는 표 · 외부 API 에 놓는 자리는
+        # `make_unique<T>( ... ).release()` 로 쓴다(형식이 못 막는 틈은 그 줄의 `release()` 가 드러낸다). 매크로를 정의하는 Memory.h 는 뺀다.
+        isOwnedBySource = ctx.relPath.startswith("Source/") and ctx.relPath != "Source/Core/Memory/Memory.h"
+        if isOwnedBySource and _kSwNewRe.search(ctx.codeWithoutStrings) is not None:
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/RawNew",
+                    message=(
+                        "`sw_new` 로 맨 포인터를 만들지 마세요 — 소유 형식으로 만듭니다: 객체는 `make_unique<T>( ... )`, 배열은 `make_unique<T[]>( n )` · `vector<T>`, "
+                        "거친 바이트 블록은 `MemoryBlock`. 소유를 락 없는 표나 외부 API 에 놓는 자리만 `make_unique<T>( ... ).release()` 로 씁니다."
+                    ),
+                    snippet=ctx.trimmed,
+                )
+            )
         return violations
 
 
