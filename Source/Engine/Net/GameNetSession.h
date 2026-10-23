@@ -225,6 +225,14 @@ namespace sw
          * @details 이미 세고 있는 값을 읽기만 한다(연결마다 `getConnectionStats` 사본 하나). 세션을 열지 않았으면 빈 보고입니다.
          */
         NetStatsReport makeStatsReport() const;
+        /**
+         * @brief 복제 키트가 이름 붙인 누적 셈(갱신 수 · 바이트)을 올립니다 — 스냅숏 크기 · 오브젝트별 복제 빈도처럼 공통 원천이 없는 값의 창구입니다.
+         *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 바이트가 큰 `NetStatsReport::kMaxReplicaEntry` 개를 `replicas=` 칸에 싣는다.
+         * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
+         */
+        [[nodiscard]] bool setReplicaStats( string_view name, uint64 updateCount, uint64 byteCount );
+        /** @brief 올릴 수 있는 이름의 수입니다(키트 수보다 넉넉하게 — 이름이 계속 늘면 결함이다). */
+        static constexpr size_t kMaxReplicaSources = 32;
 
     private:
         struct Shard;
@@ -259,6 +267,7 @@ namespace sw
         NetMessageWriter             _tickWriter;       ///< 서버 — `sendServerTick` 이 다시 쓴다
         TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
         vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다
+        vector<NetStatsReplicaEntry> _listReplicaStat;  ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                   _serverAddress;
         NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                       _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)

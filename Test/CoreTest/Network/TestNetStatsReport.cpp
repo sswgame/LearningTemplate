@@ -57,5 +57,35 @@ SW_TEST_CASE( NetStatsReportTest, RejectsOtherLinesAndBrokenFields )
     SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " resent=many", untouched ) );
     SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " kinds=15:3", untouched ) );
     SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " kinds=300:1:1", untouched ) );
+    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " replicas=Bad Name:1:2", untouched ) );
+    SW_EXPECT_FALSE( NetStatsReport::tryParseLine( string( NetStatsReport::kLinePrefix ) + " replicas=entities:1", untouched ) );
     SW_EXPECT_EQUAL( untouched._resentMessageCount, uint64{ 7 } );
+}
+
+/**
+ * @brief [NetStatsReportTest] 복제 키트가 올린 셈(`replicas=`)은 줄에 실려 되읽히고, 형식에 맞지 않는 이름은 싣지 않으며, 이름이 없는 보고도 읽힌다
+ */
+SW_TEST_CASE( NetStatsReportTest, ReplicaStatsRoundTripAndBadNamesAreNotWritten )
+{
+    SW_EXPECT_TRUE( NetStatsReport::isValidReplicaName( "net-replication.entities_01" ) );
+    SW_EXPECT_FALSE( NetStatsReport::isValidReplicaName( "" ) );
+    SW_EXPECT_FALSE( NetStatsReport::isValidReplicaName( "Upper" ) );
+    SW_EXPECT_FALSE( NetStatsReport::isValidReplicaName( "a,b" ) );
+    SW_EXPECT_FALSE( NetStatsReport::isValidReplicaName( "a:b" ) );
+
+    NetStatsReport report;
+    report._listReplicaEntry.push_back( NetStatsReplicaEntry{ "entities", 600, 480000 } );
+    report._listReplicaEntry.push_back( NetStatsReplicaEntry{ "bad name", 1, 1 } ); // 형식이 맞지 않아 싣지 않는다
+    report._listReplicaEntry.push_back( NetStatsReplicaEntry{ "voxel.chunks", 12, 9000 } );
+
+    NetStatsReport parsed;
+    SW_ASSERT_TRUE( NetStatsReport::tryParseLine( report.makeLine(), parsed ) );
+    SW_ASSERT_EQUAL( 2, static_cast<int32>( parsed._listReplicaEntry.size() ) );
+    SW_EXPECT_TRUE( parsed._listReplicaEntry[0]._name == "entities" );
+    SW_EXPECT_EQUAL( parsed._listReplicaEntry[0]._updateCount, uint64{ 600 } );
+    SW_EXPECT_EQUAL( parsed._listReplicaEntry[1]._byteCount, uint64{ 9000 } );
+
+    NetStatsReport emptyReplicas;
+    SW_ASSERT_TRUE( NetStatsReport::tryParseLine( NetStatsReport{}.makeLine(), emptyReplicas ) );
+    SW_EXPECT_TRUE( emptyReplicas._listReplicaEntry.empty() );
 }

@@ -515,6 +515,11 @@
       "id": "server-picker-tests", "title": "서버 목록 모델 테스트(화면 ServerPickerScreen 은 컴파일 확인과 시나리오 시설 뒤 화면 확인)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "ServerListModelTest.*",
       "source": "docs/plans/OnlineKits.md U1", "result_doc": "docs/plans/OnlineKits.md U1"
+    },
+    {
+      "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "NetStatsReportTest.*",
+      "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
     }
   ]
 }
