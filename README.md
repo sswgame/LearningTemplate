@@ -24,6 +24,8 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 8 | [ModuleRenderPass](docs/plans/ModuleRenderPass.md) — 모듈이 렌더 패스를 등록하는 창구 | 구현중 | 1/3 | 없음 | engine | G-1 |
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | 10 | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 구현중 | 0/4 | 없음 | engine | 없음 |
+| - | [GlyphRasterizationHitch](docs/plans/GlyphRasterizationHitch.md) — 새 글리프 래스터화 히치 | 설계 | 0/3 | 없음 | ui | C-9 |
+| - | [UiDrawPerformance](docs/plans/UiDrawPerformance.md) — 런타임 UI 그리기 성능의 남은 것 | 설계 | 0/2 | 없음 | ui | D6-6 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 구현중 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 구현중 | 1/4 | 없음 | gameplay | D4-16 |
@@ -86,7 +88,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 82개
+후보 문서 9개 · 후보 절 79개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.
