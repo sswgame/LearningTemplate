@@ -11,8 +11,8 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Graphics/RHI/IRenderSurface.h"
-#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {

@@ -5279,6 +5279,22 @@
    ]
   },
   {
+   "name": "SW_UNITY_BATCH_CORE",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "Core_objects 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
+  },
+  {
+   "name": "SW_UNITY_BATCH_KIT",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "GameFramework 키트 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
+  },
+  {
    "name": "SW_USE_VCPKG",
    "type": "BOOL",
    "default": "ON",
