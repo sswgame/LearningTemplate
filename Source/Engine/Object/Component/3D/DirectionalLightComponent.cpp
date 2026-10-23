@@ -151,6 +151,100 @@ namespace sw
 
             /** @brief 빛이 나아가는 방향을 내려다보는 빛 공간의 위 방향입니다. 빛과 거의 나란하면 다른 축으로 갈아탄다. */
             static float3 computeLightUp( const float3& lightDir ) { return MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up; }
+
+            /** @brief 카메라 절두체의 꼭짓점 여덟 — NDC 상자(x · y ∈ [-1, 1], z ∈ [0, 1])를 역행렬로 되돌린다. 직교 · 원근이 같은 식이다. */
+            static void computeFrustumCorners( const float4x4& cameraViewProj, float3 ( &outArrCorner )[8] )
+            {
+                const float4x4 invViewProj = cameraViewProj.invert();
+                for ( uint32 cornerIndex = 0; cornerIndex < 8; ++cornerIndex )
+                {
+                    const float4  ndc{ ( cornerIndex & 1u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 2u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 4u ) != 0 ? 1.0f : 0.0f, 1.0f };
+                    const float4  world       = float4::transform( ndc, invViewProj );
+                    const float32 inverseW    = MathUtil::abs( world._w ) > MathUtil::kEpsilon ? 1.0f / world._w : 1.0f;
+                    outArrCorner[cornerIndex] = float3{ world._x * inverseW, world._y * inverseW, world._z * inverseW };
+                }
+            }
+
+            /** @brief 그림자 거리로 자른 절두체의 깊이 구간입니다. */
+            struct ShadowDepthRange
+            {
+                float32 _nearDepth{ 0.0f };
+                float32 _maxDepth{ 0.0f };
+                bool    _bPerspective{ false };
+            };
+
+            /**
+             * @brief 먼 면을 그림자 거리(@p shadowViewDistance)까지 당깁니다. 원근 카메라는 클립 w 가 곧 뷰 깊이라 가까운 · 먼 꼭짓점의 w 로 깊이를 재고 먼 면을 그림자 거리까지 당긴다(유니티 Shadow Distance).
+             *        직교 카메라는 w 가 늘 1 이다 — 먼 꼭짓점을 모서리 광선을 따라 가까운 꼭짓점에서 @p shadowViewDistance 까지로 당긴다.
+             */
+            static ShadowDepthRange limitFrustumToShadowDistance( const float4x4& cameraViewProj, float32 shadowViewDistance, float3 ( &inoutArrCorner )[8] )
+            {
+                ShadowDepthRange range{};
+                range._nearDepth       = float4::transform( float4{ inoutArrCorner[0]._x, inoutArrCorner[0]._y, inoutArrCorner[0]._z, 1.0f }, cameraViewProj )._w;
+                const float32 farDepth = float4::transform( float4{ inoutArrCorner[4]._x, inoutArrCorner[4]._y, inoutArrCorner[4]._z, 1.0f }, cameraViewProj )._w;
+                range._bPerspective    = MathUtil::abs( farDepth - range._nearDepth ) > MathUtil::kEpsilon;
+                range._maxDepth        = farDepth;
+                if ( range._bPerspective )
+                {
+                    range._maxDepth           = MathUtil::clamp( shadowViewDistance, range._nearDepth, farDepth );
+                    const float32 farFraction = ( range._maxDepth - range._nearDepth ) / ( farDepth - range._nearDepth );
+                    for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
+                    {
+                        inoutArrCorner[cornerIndex + 4] = inoutArrCorner[cornerIndex] + ( inoutArrCorner[cornerIndex + 4] - inoutArrCorner[cornerIndex] ) * farFraction;
+                    }
+                }
+                else
+                {
+                    for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
+                    {
+                        const float3  ray    = inoutArrCorner[cornerIndex + 4] - inoutArrCorner[cornerIndex];
+                        const float32 length = ray.getLength();
+                        if ( length > shadowViewDistance )
+                            inoutArrCorner[cornerIndex + 4] = inoutArrCorner[cornerIndex] + ray * ( shadowViewDistance / length );
+                    }
+                }
+                return range;
+            }
+
+            /** @brief 캐스케이드 정사각형들을 덮는 기준 볼륨(빛 공간 정사각형과 깊이 구간)입니다. */
+            struct BaseVolume
+            {
+                float32 _left{ 0.0f };
+                float32 _bottom{ 0.0f };
+                float32 _side{ 0.0f };
+                float32 _nearPlane{ 0.0f };
+                float32 _farPlane{ 0.0f };
+            };
+
+            /**
+             * @brief 캐스케이드 정사각형들을 덮는 정사각형(하나면 그 캐스케이드 그대로)을 만듭니다. 깊이는 모든 캐스케이드가 같은 구간을 쓴다:
+             *        빛 쪽으로 @p shadowDistance 만큼 당겨 받는 상자보다 빛에 가까운 가리는 물체(띠 위 · 화면 밖의 나무 · 레일)가 가까운 면에 잘리지 않게 한다.
+             */
+            static BaseVolume coverBoxes( const FittedBox* pBox, uint32 boxCount, float32 shadowDistance )
+            {
+                float32 left     = pBox[0]._left;
+                float32 bottom   = pBox[0]._bottom;
+                float32 right    = pBox[0]._left + pBox[0]._size;
+                float32 top      = pBox[0]._bottom + pBox[0]._size;
+                float32 minDepth = pBox[0]._minDepth;
+                float32 maxBoxZ  = pBox[0]._maxDepth;
+                for ( uint32 boxIndex = 1; boxIndex < boxCount; ++boxIndex )
+                {
+                    left     = MathUtil::min( left, pBox[boxIndex]._left );
+                    bottom   = MathUtil::min( bottom, pBox[boxIndex]._bottom );
+                    right    = MathUtil::max( right, pBox[boxIndex]._left + pBox[boxIndex]._size );
+                    top      = MathUtil::max( top, pBox[boxIndex]._bottom + pBox[boxIndex]._size );
+                    minDepth = MathUtil::min( minDepth, pBox[boxIndex]._minDepth );
+                    maxBoxZ  = MathUtil::max( maxBoxZ, pBox[boxIndex]._maxDepth );
+                }
+                BaseVolume volume{};
+                volume._side      = MathUtil::max( right - left, top - bottom );
+                volume._left      = ( boxCount == 1 ) ? left : ( left + right - volume._side ) * 0.5f;
+                volume._bottom    = ( boxCount == 1 ) ? bottom : ( bottom + top - volume._side ) * 0.5f;
+                volume._nearPlane = minDepth - shadowDistance;
+                volume._farPlane  = maxBoxZ + kShadowFitDepthMargin;
+                return volume;
+            }
         };
     } // namespace
 
@@ -287,42 +381,13 @@ namespace sw
         if ( _shadowViewDistance <= 0.0f )
             return computeShadowProjection( shadowMapResolution );
 
-        // (1) 카메라 절두체의 꼭짓점 여덟 — NDC 상자(x · y ∈ [-1, 1], z ∈ [0, 1])를 역행렬로 되돌린다. 직교 · 원근이 같은 식이다.
-        const float4x4 invViewProj = cameraViewProj.invert();
-        float3         arrCorner[8];
-        for ( uint32 cornerIndex = 0; cornerIndex < 8; ++cornerIndex )
-        {
-            const float4  ndc{ ( cornerIndex & 1u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 2u ) != 0 ? 1.0f : -1.0f, ( cornerIndex & 4u ) != 0 ? 1.0f : 0.0f, 1.0f };
-            const float4  world    = float4::transform( ndc, invViewProj );
-            const float32 inverseW = MathUtil::abs( world._w ) > MathUtil::kEpsilon ? 1.0f / world._w : 1.0f;
-            arrCorner[cornerIndex] = float3{ world._x * inverseW, world._y * inverseW, world._z * inverseW };
-        }
-
-        // (2) 그림자 거리. 원근 카메라는 클립 w 가 곧 뷰 깊이라 가까운 · 먼 꼭짓점의 w 로 깊이를 재고 먼 면을 그림자 거리까지 당긴다(유니티 Shadow Distance).
-        //     직교 카메라는 w 가 늘 1 이다 — 먼 꼭짓점을 모서리 광선을 따라 가까운 꼭짓점에서 `_shadowViewDistance` 까지로 당긴다.
-        const float32 nearDepth    = float4::transform( float4{ arrCorner[0]._x, arrCorner[0]._y, arrCorner[0]._z, 1.0f }, cameraViewProj )._w;
-        const float32 farDepth     = float4::transform( float4{ arrCorner[4]._x, arrCorner[4]._y, arrCorner[4]._z, 1.0f }, cameraViewProj )._w;
-        const bool    bPerspective = MathUtil::abs( farDepth - nearDepth ) > MathUtil::kEpsilon;
-        float32       maxDepth     = farDepth;
-        if ( bPerspective )
-        {
-            maxDepth                  = MathUtil::clamp( _shadowViewDistance, nearDepth, farDepth );
-            const float32 farFraction = ( maxDepth - nearDepth ) / ( farDepth - nearDepth );
-            for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
-            {
-                arrCorner[cornerIndex + 4] = arrCorner[cornerIndex] + ( arrCorner[cornerIndex + 4] - arrCorner[cornerIndex] ) * farFraction;
-            }
-        }
-        else
-        {
-            for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
-            {
-                const float3  ray    = arrCorner[cornerIndex + 4] - arrCorner[cornerIndex];
-                const float32 length = ray.getLength();
-                if ( length > _shadowViewDistance )
-                    arrCorner[cornerIndex + 4] = arrCorner[cornerIndex] + ray * ( _shadowViewDistance / length );
-            }
-        }
+        // (1) 카메라 절두체의 꼭짓점 여덟, (2) 그림자 거리까지 자른 깊이 구간.
+        float3 arrCorner[8];
+        Internal::computeFrustumCorners( cameraViewProj, arrCorner );
+        const Internal::ShadowDepthRange depthRange   = Internal::limitFrustumToShadowDistance( cameraViewProj, _shadowViewDistance, arrCorner );
+        const float32                    nearDepth    = depthRange._nearDepth;
+        const float32                    maxDepth     = depthRange._maxDepth;
+        const bool                       bPerspective = depthRange._bPerspective;
 
         // (3) 캐스케이드마다 — 절두체 조각 ∩ 받는 높이 띠를 경계 구로 감싸 빛 공간 정사각형을 맞춘다. 직교 카메라는 깊이가 텍셀 크기를 바꾸지 않으므로 하나다.
         const uint32   requestedCount = bPerspective ? MathUtil::min( maxCascadeCount, _shadowCascadeCount ) : 1u;
@@ -362,28 +427,13 @@ namespace sw
         if ( fittedCount == 0 )
             return computeShadowProjection( shadowMapResolution );
 
-        // (4) 기준 볼륨 — 캐스케이드 정사각형들을 덮는 정사각형(하나면 그 캐스케이드 그대로). 깊이는 모든 캐스케이드가 같은 구간을 쓴다:
-        //     빛 쪽으로 `_shadowDistance` 만큼 당겨 받는 상자보다 빛에 가까운 가리는 물체(띠 위 · 화면 밖의 나무 · 레일)가 가까운 면에 잘리지 않게 한다.
-        float32 left     = arrBox[0]._left;
-        float32 bottom   = arrBox[0]._bottom;
-        float32 right    = arrBox[0]._left + arrBox[0]._size;
-        float32 top      = arrBox[0]._bottom + arrBox[0]._size;
-        float32 minDepth = arrBox[0]._minDepth;
-        float32 maxBoxZ  = arrBox[0]._maxDepth;
-        for ( uint32 boxIndex = 1; boxIndex < fittedCount; ++boxIndex )
-        {
-            left     = MathUtil::min( left, arrBox[boxIndex]._left );
-            bottom   = MathUtil::min( bottom, arrBox[boxIndex]._bottom );
-            right    = MathUtil::max( right, arrBox[boxIndex]._left + arrBox[boxIndex]._size );
-            top      = MathUtil::max( top, arrBox[boxIndex]._bottom + arrBox[boxIndex]._size );
-            minDepth = MathUtil::min( minDepth, arrBox[boxIndex]._minDepth );
-            maxBoxZ  = MathUtil::max( maxBoxZ, arrBox[boxIndex]._maxDepth );
-        }
-        const float32 side       = MathUtil::max( right - left, top - bottom );
-        const float32 baseLeft   = ( fittedCount == 1 ) ? left : ( left + right - side ) * 0.5f;
-        const float32 baseBottom = ( fittedCount == 1 ) ? bottom : ( bottom + top - side ) * 0.5f;
-        const float32 nearPlane  = minDepth - _shadowDistance;
-        const float32 farPlane   = maxBoxZ + Internal::kShadowFitDepthMargin;
+        // (4) 기준 볼륨 — 캐스케이드 정사각형들을 덮는 정사각형.
+        const Internal::BaseVolume base       = Internal::coverBoxes( arrBox, fittedCount, _shadowDistance );
+        const float32              side       = base._side;
+        const float32              baseLeft   = base._left;
+        const float32              baseBottom = base._bottom;
+        const float32              nearPlane  = base._nearPlane;
+        const float32              farPlane   = base._farPlane;
 
         projection._viewProj       = lightView * float4x4::makeOrthographicOffCenter( baseLeft, baseLeft + side, baseBottom, baseBottom + side, nearPlane, farPlane );
         projection._lightView      = lightView;
