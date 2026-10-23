@@ -25,7 +25,7 @@ PCH 에서 핵심 헤더를 뺀 뒤에도 `ReflectionTypes.h`(1,280 줄, 3 개�
   전선언만 쓴 파일(`class X;` 를 직접 선언하고 인라인 본문에서 완전 타입이 필요한 경우)은 이 방법으로 못 잡는다 — 빌드에서 나오면 그 파일에 직접 include 를 더한다.
   `GameObjectManager.h` 의 값 멤버 레지스트리를 `unique_ptr` 로 바꾸는 안은 같은 잣대(바뀐 횟수 × TU 수)로 하지 않기로 했다(2026-10-21). `AnimationSystem` 은 이미 씬 서비스로 나갔고,
   남은 레지스트리 셋은 Core 만 include 하며 3 개월 동안 1 ~ 3 번 바뀌어 줄일 것이 없다. 이유는 그 멤버 주석에 있다.
-- 확인(통합에서): 전체 빌드가 서는지(위 전수가 놓친 파일), 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 `ReflectionTypes.h` · `ReflectionMetadata.h` · `TypeRegistry.h` 의 의존 TU 수를 전후로 견주고(예상은 위 숫자),
+- 확인(통합에서, 매니페스트 id `build-speed-reflection-fanout`): 전체 빌드가 서는지(위 전수가 놓친 파일), 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 `ReflectionTypes.h` · `ReflectionMetadata.h` · `TypeRegistry.h` 의 의존 TU 수를 전후로 견주고(예상은 위 숫자),
   `ReflectionMetadata.h` · `TypeRegistry.h` 를 건드린 증분 시간을 잰다.
   상자가 더한 간접 참조 한 번이 직렬화 벤치 · 씬 로드 시간에 보이는지도 본다.
 
@@ -37,7 +37,7 @@ PCH 에서 핵심 헤더를 뺀 뒤에도 `ReflectionTypes.h`(1,280 줄, 3 개�
 
 - 들어간 것(2026-10-24): 측정에 코드를 고치지 않도록 묶음 크기를 캐시 변수로 뺐다 — `SW_UNITY_BATCH_CORE`(`Core_objects`) · `SW_UNITY_BATCH_KIT`(`sw_addGameFrameworkKit`), 기본 0 은 묶지 않음(지금 동작 그대로),
   `SW_ENABLE_UNITY_BUILD` 가 켜졌을 때만 듣는다. 숫자를 정하면 변수를 지우고 호출부에 숫자를 쓴다.
-- 남은 일(측정, 혼자): 공유 설치가 조용할 때 `cmake --preset CI-Debug -DSW_UNITY_BATCH_CORE=<4|8|12|16> -DSW_UNITY_BATCH_KIT=<4|8|16>` 로 교차 3 쌍(0 대 값, PCH 끔 + 캐시 없음 풀 빌드)을 잰다.
+- 남은 일(측정, 혼자, 매니페스트 id `build-speed-unity-batch`): 공유 설치가 조용할 때 `cmake --preset CI-Debug -DSW_UNITY_BATCH_CORE=<4|8|12|16> -DSW_UNITY_BATCH_KIT=<4|8|16>` 로 교차 3 쌍(0 대 값, PCH 끔 + 캐시 없음 풀 빌드)을 잰다.
   리눅스 유니티(CI)에서 킷과 Core 의 이름 충돌 확인은 `Linux` CI 프리셋에 같은 `-D` 를 줘 한 번 짓는 것으로 한다. 이긴 값을 넣는다.
 
 ## 6. 무거운 단일 TU — `Engine.cpp`(하지 않는다, 2026-10-24 정함)

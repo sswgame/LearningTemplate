@@ -19,6 +19,8 @@
 
 ## 2. 확인 (남음)
 
+매니페스트 id `glyph-raster-budget-tests`, `glyph-hangul-hitch-measure`.
+
 `App -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -lang=ko` Release 탐침 프레임의 `GT.Frame` max 를 견준다(옛 784 ms). 글리프가 몇 프레임에 걸쳐 나타나는 것은 허용한다.
 한글 400 개는 프레임당 두 개 안팎이라 200 프레임쯤 걸린다 — 길면 `-gv_uiGlyphRasterBudgetMicros` 를 올려 `GT.Frame` max 와 나타나는 속도의 균형을 정한다(값은 측정으로 확정).
 `-gv_uiGlyphRasterBudgetMicros=0`(제한 없음)으로 옛 동작과 같은지도 본다. 자동화 시나리오의 스크린샷은 한글 같은 무거운 글리프가 몇 프레임에 걸쳐 나타나므로 글이 모두 나온 뒤에 찍히는지 본다.

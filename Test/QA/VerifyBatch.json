@@ -434,6 +434,52 @@
       "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "Tracy 로 그 프레임을 보는 일이라 표로 판정할 값이 없다(gv_profileTracePath 트레이스를 사람이 연다)",
       "source": "docs/plans/Candidates-quality.md", "result_doc": "docs/plans/Candidates-quality.md 부하 검증 후보"
+    },
+    {
+      "id": "glyph-raster-budget-tests", "title": "글리프 래스터화 예산 테스트(GlyphAtlasTest · CanvasDrawListTest · UIPaintTest)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "GlyphAtlasTest.*,CanvasDrawListTest.*,UIPaintTest.*",
+      "source": "docs/plans/GlyphRasterizationHitch.md 2절", "result_doc": "docs/plans/GlyphRasterizationHitch.md 2절"
+    },
+    {
+      "id": "glyph-hangul-hitch-measure", "title": "한글 400 글리프 첫 프레임 GT.Frame max(예산 4000 us 대 제한 없음 0)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "App -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -lang=ko 에 -gv_uiGlyphRasterBudgetMicros 를 0 과 4000 으로 준 탐침 프레임의 GT.Frame max 를 읽는 perf-compare 케이스가 없다",
+      "source": "docs/plans/GlyphRasterizationHitch.md 2절", "result_doc": "docs/plans/GlyphRasterizationHitch.md 2절"
+    },
+    {
+      "id": "ui-draw-performance-measures", "title": "런타임 UI 그리기 성능 세 측정(멈춘 화면 · 일부만 바뀜 · 조상 변환)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "-gv_benchUiWidgets=10000 에 -gv_benchUiChurn=10 · -gv_benchUiOpacityPulse=true 를 준 세 실행의 GT.UI.Paint + GT.UI.Layout p50 합을 읽는 perf-compare 케이스가 없다",
+      "source": "docs/plans/UiDrawPerformance.md 2절", "result_doc": "docs/plans/UiDrawPerformance.md 2절"
+    },
+    {
+      "id": "light-culling-perf-compare", "title": "클러스터드 라이팅 S3 — 라이트 16 · 128 · 1024 개 CPU · GPU 생산자 대 그리드 없음", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 90,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "lightCullingCpu16", "lightCullingGpu16", "lightCullingCpu128", "lightCullingGpu128", "lightCullingCpu1024", "lightCullingGpu1024", "--runs", "5"], "limit": "보고만 — GPU.Frame · GPU.Shading · GPU.Compute · RT.Frame, 클러스터 크기는 결과를 보고 정한다", "judge": "exit",
+      "source": "docs/plans/ClusteredLighting.md S3", "result_doc": "docs/plans/ClusteredLighting.md S3"
+    },
+    {
+      "id": "terrain-bench-release", "title": "지형 LOD 교체 · 쓰기 벤치 Release 3회(LODSweepWorstFrame · ColliderRebuildAfterBrushWrite · WriteHeightsRectSizes)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "TerrainBenchTest.*", "extra_args": ["--load_suites=only", "--host_suites=all"],
+      "note": "3회 돌려 PC(코어 수)와 커밋을 적는다. 결과로 kMaxChunkMeshRebuildsPerFrame 을 GT 2 ms 에 맞춘다. 식생 부분 계산(쇼케이스 브러시 한 번 뒤 `Foliage: refreshed` 로그의 시간)과 RT.GPUScene.vertexPool 교체 프레임 최대값은 App 프로파일 표에서 따로 본다.",
+      "source": "docs/plans/TerrainEditCost.md T3", "result_doc": "docs/plans/TerrainEditCost.md T3"
+    },
+    {
+      "id": "complex-text-install", "title": "복합 문자 빌드(harfbuzz 오버레이 포트 · sheenbidi) 설치와 ComplexShapingTest 연결형 기대", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "-DVCPKG_MANIFEST_FEATURES=complex-text -DSW_ENABLE_COMPLEX_TEXT=ON 으로 따로 구성한 빌드 트리가 필요하다(기본 구성과 설치 폴더를 나눠야 한다)",
+      "source": "docs/plans/ThirdPartyGaps.md T2", "result_doc": "docs/plans/ThirdPartyGaps.md T2"
+    },
+    {
+      "id": "build-speed-unity-batch", "title": "유니티 범위 확대 — 교차 3 쌍 × 배치 4 · 8 · 16(SW_UNITY_BATCH_CORE · SW_UNITY_BATCH_KIT)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "PCH 끔 + 캐시 없음 풀 빌드를 구성마다 새 빌드 트리에서 재야 해서 한 명령으로 도는 케이스가 없다(다른 빌드가 없을 때만)",
+      "source": "docs/plans/BuildSpeed.md 5절", "result_doc": "docs/plans/BuildSpeed.md 5절"
+    },
+    {
+      "id": "build-speed-reflection-fanout", "title": "리플렉션 헤더 팬아웃 — 의존 TU 수와 증분 시간(TypeRegistry.h · ReflectionMetadata.h)", "kind": "measure", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "후보 pch.h 를 -I 맨 앞에 둔 /clang:-M 전처리로 의존 TU 를 세고 헤더를 건드린 증분 시간을 재는 명령이 없다. 전체 빌드 통과는 debug-full-build 가 본다",
+      "source": "docs/plans/BuildSpeed.md 12절", "result_doc": "docs/plans/BuildSpeed.md 12절"
+    },
+    {
+      "id": "container-hash-tag-bench", "title": "구조 최적화 B ③ — 해시 태그 전 · 후(ContainerBenchTest.*) 번갈아 3 ~ 5회", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "벤치 커밋과 해시 태그 커밋을 번갈아 지은 CoreTest 두 벌이 필요하다. CoreTest.exe --test_filter=ContainerBenchTest.* --load_suites=only",
+      "source": "docs/plans/StructuralOptimization.md B 표", "result_doc": "docs/plans/StructuralOptimization.md B 표"
     }
   ]
 }
