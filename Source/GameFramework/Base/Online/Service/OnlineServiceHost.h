@@ -11,6 +11,9 @@
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
  *          - 메서드 영역이 겹치는 서비스는 `registerHostService` 가 거절한다.
+ *          - **GM 리슨**(`_pAdminTransport`)을 주면 리슨이 둘이 된다. 호스트 안의 묶음 전송(`ListenerTransport`)이 연결 핸들에 리슨 번호를 섞어 두 전송을 전송 하나로 보이므로
+ *            엔드포인트 · 요청 서버 · 계정 표는 하나다(GM 이 GM 포트에서 로그인해도 같은 계정 표). 서비스의 노출(`getExposure`)과 연결이 들어온 리슨이 맞지 않는 요청은
+ *            없는 메서드와 같은 `kInvalidRequest` 로 답한다(영역이 있는지 드러내지 않는다). Hello · Ping 은 두 리슨 모두 받는다(OnlineKits I6).
  *          - **Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다.** 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
  *            해시는 `initialize` 때 한 번 정한다. 이 비교는 B 형식이 아니라 고정된 작은 형식이라 스키마가 바뀌어도 늘 읽힌다.
  *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
@@ -61,6 +64,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 서비스가 어느 리슨의 연결에서 요청을 받는지입니다(노출 면). 호스트에 GM 리슨(`OnlineServiceHostConfig::_pAdminTransport`)이 있을 때만 갈린다.
+     * @details GM 리슨이 없으면 리슨 하나가 모든 서비스를 받는다 — GM 키트만 적은 온라인 설정으로 서버를 하나 더 띄우는 운영도 그대로 된다.
+     */
+    enum class OnlineServiceExposure : uint8
+    {
+        Player,         ///< 플레이어 리슨만
+        Admin,          ///< GM 리슨만(GM 도구)
+        PlayerAndAdmin, ///< 두 리슨 모두(계정 — GM 도 로그인한다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IOnlineHostService
      * @brief 메서드 영역 하나를 맡은 서비스입니다. 모든 콜백은 호스트 `tick` 스레드에서 불립니다.
      */
@@ -76,6 +93,8 @@ namespace sw
         /** @brief 이 서비스의 키트 프로토콜 항목입니다. 영역은 여기서 나오고, 항목은 온라인 스키마 해시에 섞입니다. */
         virtual const OnlineProtocolEntry& getProtocol() const = 0;
         uint16                             getMethodRange() const { return getProtocol().getMethodRange(); }
+        /** @brief 이 서비스를 받는 리슨입니다. 기본값은 플레이어 리슨이며, GM 도구가 부르는 서비스는 `Admin` 으로 답해 플레이어 포트에서 닫습니다. */
+        virtual OnlineServiceExposure getExposure() const { return OnlineServiceExposure::Player; }
         /** @brief 로그인 없이 부를 수 있는 메서드면 true 입니다. 기본값은 false 입니다. */
         virtual bool isAnonymousMethod( uint16 method ) const
         {
@@ -125,6 +144,8 @@ namespace sw
         StreamTransportConfig _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 테스트)
         StreamEndpointConfig  _endpointSettings{};
         NetAddress            _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
+        NetAddress            _adminListenAddress{ NetAddress::makeLoopback( 0 ) };   ///< `_pAdminTransport` 가 받을 주소. 포트 0 = 아무 포트(`getAdminListenPort`)
+        IStreamTransport*     _pAdminTransport{ nullptr };                            ///< 빌려 쓴다. 있으면 GM 리슨을 따로 열고 서비스의 노출(`getExposure`)대로 리슨을 가른다
         IServiceStore*        _pServiceStore{ nullptr };
         IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
         IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다
@@ -151,7 +172,7 @@ namespace sw
         OnlineServiceHost( const OnlineServiceHost& )            = delete;
         OnlineServiceHost& operator=( const OnlineServiceHost& ) = delete;
 
-        /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. 서비스는 그 전에 등록해야 합니다. */
+        /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. `_pAdminTransport` 가 있으면 GM 리슨도 엽니다. 서비스는 그 전에 등록해야 합니다. */
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError );
         void               shutdown();
 
@@ -204,7 +225,9 @@ namespace sw
         IServiceStore*   getServiceStore() const { return _settings._pServiceStore; }
         IEphemeralStore* getEphemeralStore() const { return _settings._pEphemeralStore; }
         uint16           getListenPort() const;
-        int32            getConnectionCount() const { return static_cast<int32>( _mapConnection.size() ); }
+        /** @brief GM 리슨의 포트입니다. GM 리슨이 없으면 0 입니다. */
+        uint16 getAdminListenPort() const;
+        int32  getConnectionCount() const { return static_cast<int32>( _mapConnection.size() ); }
 
         // IStreamEndpointListener 와 INetRequestHandler 구현이다. 호스트 `tick` 안에서 불린다.
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
@@ -213,6 +236,8 @@ namespace sw
         void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override;
 
     private:
+        class ListenerTransport;
+
         /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 해제하고 연결 테이블을 비웁니다. 아직 시작하지 않은 것을 해제해도 안전합니다. */
         void releaseTransportSide();
 
@@ -221,6 +246,7 @@ namespace sw
             uint64    _remoteKey{ 0 };
             AccountID _accountID{ kInvalidAccountID };
             uint8     _bHelloDone{ SW_FALSE };
+            uint8     _bAdminListener{ SW_FALSE }; ///< GM 리슨으로 들어온 연결
         };
 
         struct BusSubscription
@@ -252,8 +278,8 @@ namespace sw
         vector<uint8>                                    _responseBytes;
         unordered_map<uint64, ConnectionState>           _mapConnection; ///< 연결(packed) → 상태
         unordered_map<AccountID, StreamConnectionHandle> _mapAccountToConnection;
-        unique_ptr<ServerBus>                            _pServerBus; ///< `_settings._pServerBusTransport` 의 앞이다
-        IStreamTransport*                                _pTransport;
+        unique_ptr<ServerBus>                            _pServerBus;        ///< `_settings._pServerBusTransport` 의 앞이다
+        unique_ptr<ListenerTransport>                    _listenerTransport; ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
         int64                                            _nowMs;
         uint64                                           _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;

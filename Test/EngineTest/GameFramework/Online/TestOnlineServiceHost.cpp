@@ -21,7 +21,7 @@
 
 // 서비스 틀 — 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 스키마 해시 불일치 · 로그인 확인(익명 메서드는 통과) · 몸 상한 · 주소 도배 제한 ·
 // 늦은 답(토큰) · 닫힌 뒤 답은 버림 · 계정 떼기 → 모든 서비스에 떠남 · 알림은 그 계정에만 · 모두에게 알림 · 멱등 재시도 · 캐시 답과 버스 메시지는 맡긴 · 구독한 서비스로만 ·
-// 공유 엔드포인트 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지.
+// 공유 엔드포인트 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지 · GM 리슨이 서비스의 노출대로 리슨을 가른다.
 
 using namespace sw;
 
@@ -60,6 +60,7 @@ namespace
             , _lastTraceID{}
             , _pProtocol{ &protocol }
             , _range{ protocol.getMethodRange() }
+            , _exposure{ OnlineServiceExposure::Player }
             , _handledCount{ 0 }
             , _hostShutdownCount{ 0 }
             , _cacheReplyCountAtHostShutdown{ -1 }
@@ -69,6 +70,7 @@ namespace
         }
 
         const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
+        OnlineServiceExposure      getExposure() const override { return _exposure; }
         bool                       isAnonymousMethod( uint16 method ) const override
         {
             const uint16 offset = static_cast<uint16>( method - _range );
@@ -169,6 +171,7 @@ namespace
         LogTraceID                 _lastTraceID;    ///< 마지막 요청의 추적 id
         const OnlineProtocolEntry* _pProtocol;
         uint16                     _range;
+        OnlineServiceExposure      _exposure; ///< 테스트가 바꾼다(GM 리슨 테스트)
         int32                      _handledCount;
         int32                      _hostShutdownCount;
         int32                      _cacheReplyCountAtHostShutdown; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
@@ -251,15 +254,17 @@ namespace
     {
         LoopbackStreamNetwork        _network;
         unique_ptr<IStreamTransport> _hostTransport;
+        unique_ptr<IStreamTransport> _adminTransport; ///< `bAdminListener` 일 때 GM 리슨의 전송
         FakeOnlineService            _serviceA;
         FakeOnlineService            _serviceB;
         OnlineServiceHost            _host;
         vector<ClientSide*>          _listClient;
         int64                        _nowMs;
 
-        explicit HostRig( OnlineServiceHostConfig settings = makeSettings() )
+        explicit HostRig( OnlineServiceHostConfig settings = makeSettings(), bool bAdminListener = false )
             : _network{ 13u }
             , _hostTransport{ _network.createTransport() }
+            , _adminTransport{ bAdminListener ? _network.createTransport() : nullptr }
             , _serviceA{ kProtocolA }
             , _serviceB{ kProtocolB }
             , _host{}
@@ -268,6 +273,7 @@ namespace
         {
             SW_EXPECT_TRUE( _host.registerHostService( &_serviceA ) );
             SW_EXPECT_TRUE( _host.registerHostService( &_serviceB ) );
+            settings._pAdminTransport = _adminTransport.get();
             string error;
             SW_EXPECT_TRUE_MSG( _host.initialize( _hostTransport.get(), settings, error ), error.c_str() );
         }
@@ -657,6 +663,57 @@ SW_TEST_CASE( OnlineServiceHostTest, AnonymousMethodsPassAndOthersNeedALogin )
     BitReader secureBody( secure._bodyBytes.data(), static_cast<int32>( secure._bodyBytes.size() ) );
     SW_EXPECT_EQUAL( uint64( 77 ), secureBody.readVarUint() ); // 호출자 문맥의 계정
     SW_EXPECT_EQUAL( 1, rig._serviceB._handledCount );
+}
+
+/**
+ * @brief [OnlineServiceHostTest] GM 리슨이 있으면 GM 서비스는 GM 포트에서만, 플레이어 서비스는 플레이어 포트에서만 받고, 두 리슨 모두인 서비스는 둘 다에서 받는다(OnlineKits I6)
+ * @details 맞지 않는 리슨의 요청은 없는 메서드와 같은 `kInvalidRequest` 이고 서비스는 부르지 않는다. GM 포트에서 로그인한 연결도 같은 계정 표에 붙는다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, AdminListenerSplitsServicesByExposure )
+{
+    using Internal = OnlineServiceHostTestInternal;
+    HostRig rig( HostRig::makeSettings(), true );
+    rig._serviceB._exposure = OnlineServiceExposure::Admin;
+    SW_ASSERT_TRUE( rig._host.getAdminListenPort() != 0 );
+    SW_EXPECT_TRUE( rig._host.getAdminListenPort() != rig.getPort() );
+    ClientSide player( rig._network, rig.getPort() );
+    ClientSide admin( rig._network, rig._host.getAdminListenPort() );
+    rig._listClient.push_back( &player );
+    rig._listClient.push_back( &admin );
+    rig.step( 10 );
+    SW_ASSERT_TRUE( player._client.isReady() ); // Hello 는 두 리슨 모두
+    SW_ASSERT_TRUE( admin._client.isReady() );
+
+    SW_EXPECT_TRUE( rig.call( player, Internal::kRangeA + Internal::kEcho, 1 )._status == NetRequestStatus::Ok );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.call( player, Internal::kRangeB + Internal::kEcho, 1 )._errorCode );
+    SW_EXPECT_EQUAL( 0, rig._serviceB._handledCount );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.call( admin, Internal::kRangeA + Internal::kEcho, 1 )._errorCode );
+    SW_EXPECT_EQUAL( 1, rig._serviceA._handledCount );
+
+    SW_EXPECT_TRUE( rig.call( admin, Internal::kRangeB + Internal::kLogin, 42 )._status == NetRequestStatus::Ok );
+    const ResponseRecord secure = rig.call( admin, Internal::kRangeB + Internal::kSecure, 0 );
+    SW_ASSERT_TRUE( secure._status == NetRequestStatus::Ok );
+    BitReader secureBody( secure._bodyBytes.data(), static_cast<int32>( secure._bodyBytes.size() ) );
+    SW_EXPECT_EQUAL( uint64( 42 ), secureBody.readVarUint() ); // GM 포트의 연결이 계정 표에 붙었다
+    StreamConnectionHandle adminConnection;
+    SW_EXPECT_TRUE( rig._host.findConnection( 42, adminConnection ) );
+
+    rig._serviceA._exposure = OnlineServiceExposure::PlayerAndAdmin;
+    SW_EXPECT_TRUE( rig.call( admin, Internal::kRangeA + Internal::kEcho, 1 )._status == NetRequestStatus::Ok );
+    SW_EXPECT_TRUE( rig.call( player, Internal::kRangeA + Internal::kEcho, 1 )._status == NetRequestStatus::Ok );
+}
+
+/** @brief [OnlineServiceHostTest] GM 리슨이 없으면 리슨 하나가 GM 서비스도 받는다(서버를 하나 더 띄우는 운영) */
+SW_TEST_CASE( OnlineServiceHostTest, WithoutAnAdminListenerOneListenerServesEveryService )
+{
+    HostRig rig;
+    rig._serviceB._exposure = OnlineServiceExposure::Admin;
+    SW_EXPECT_EQUAL( uint16( 0 ), rig._host.getAdminListenPort() );
+    ClientSide client( rig._network, rig.getPort() );
+    rig._listClient.push_back( &client );
+    rig.step( 10 );
+    SW_ASSERT_TRUE( client._client.isReady() );
+    SW_EXPECT_TRUE( rig.call( client, OnlineServiceHostTestInternal::kRangeB + OnlineServiceHostTestInternal::kEcho, 1 )._status == NetRequestStatus::Ok );
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )

@@ -67,12 +67,14 @@ namespace sw
 
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override;
-        bool                       isAnonymousMethod( uint16 method ) const override;
-        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void                       onHostShutdown( OnlineServiceHost& host ) override;
-        void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
-        void                       onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
+        /** @brief 두 리슨 모두에서 받습니다 — GM 도구도 GM 포트에서 로그인합니다. */
+        OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::PlayerAndAdmin; }
+        bool                  isAnonymousMethod( uint16 method ) const override;
+        void                  onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                  onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                  onHostShutdown( OnlineServiceHost& host ) override;
+        void                  onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
+        void                  onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
         // IAccountSessionControl
         void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override;

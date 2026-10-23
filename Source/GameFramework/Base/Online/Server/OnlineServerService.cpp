@@ -94,6 +94,17 @@ namespace sw
             return false;
         }
         settings._listenAddress._port = static_cast<uint16>( serverConfig._servicePort ); // 포트는 `_servicePort` 가 기준이다
+        if ( serverConfig._adminServicePort > 0 )
+        {
+            const uint16 adminPort = static_cast<uint16>( serverConfig._adminServicePort );
+            if ( NetAddress::parse( serverConfig._adminListenAddress, adminPort, settings._adminListenAddress ) == false )
+            {
+                outError = "server config _adminListenAddress '" + serverConfig._adminListenAddress + "' is not an IPv4 address";
+                return false;
+            }
+            settings._adminListenAddress._port = adminPort;
+            settings._bAdminListener           = SW_TRUE;
+        }
         if ( fillStoreSettings( serverConfig, *pOnlineConfig, settings, outError ) == false )
             return false;
         // 서비스 스트림은 TLS 1.3 이다. 인증서와 키 경로는 서버 설정에 있고, 키 암호는 환경 변수에서 읽는다(결정 기록 5-9).
