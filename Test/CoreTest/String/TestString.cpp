@@ -1583,7 +1583,7 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
  */
 SW_TEST_CASE( StringTest, ParseIntListSplitsBySeparators )
 {
-    vector<int32> list{ 9 };
+    sw::vector<int32> list{ 9 };
     SW_EXPECT_TRUE( sw::StringUtil::parseIntList( " 1, -2\t3 ,,4 ", " ,\t", list ) );
     SW_EXPECT_EQ( list.size(), size_t{ 4 } );
     SW_EXPECT_TRUE( list[0] == 1 && list[1] == -2 && list[2] == 3 && list[3] == 4 );
