@@ -393,6 +393,77 @@ namespace sw
                     splitByObject( listRemaining, listCandidate, true, kCycleLevel, scratch._listSlot, outListStage );
                 }
             }
+
+            /**
+             * @brief 그룹 @p group 의 레벨 0 에서 @p slot 번째 스테이지의 자리를 찾고, 없으면 레벨 0 의 끝(같은 그룹의 더 높은 레벨이나 다음 그룹이 시작하는 자리)에 만듭니다.
+             * @return 그 스테이지의 `listStage` 안 자리입니다.
+             */
+            static size_t findOrCreateLevelZeroStage( vector<TickStage>& inoutListStage, uint8 group, uint32 slot )
+            {
+                size_t stageIndex = inoutListStage.size();
+                size_t insertAt   = inoutListStage.size();
+                uint32 seen       = 0;
+                for ( size_t index = 0; index < inoutListStage.size(); ++index )
+                {
+                    const TickStage& stage       = inoutListStage[index];
+                    const bool       bLevelZero  = stage._group == group && stage._level == 0;
+                    const bool       bPastLevel0 = stage._group > group || ( stage._group == group && stage._level != 0 );
+                    if ( bLevelZero )
+                    {
+                        if ( seen++ == slot )
+                        {
+                            stageIndex = index;
+                            break;
+                        }
+                    }
+                    else if ( bPastLevel0 )
+                    {
+                        insertAt = index;
+                        break;
+                    }
+                }
+                if ( stageIndex == inoutListStage.size() )
+                {
+                    TickStage created{};
+                    created._group = group;
+                    created._level = 0;
+                    stageIndex     = insertAt;
+                    inoutListStage.insert( inoutListStage.begin() + static_cast<ptrdiff_t>( insertAt ), std::move( created ) );
+                }
+                return stageIndex;
+            }
+
+            /** @brief 항목을 스테이지에 끼웁니다. 전체 재구축과 같은 순서 규칙(`isOrderedBefore`)을 쓰고, 같은 키면 뒤에 붙는다. */
+            static void insertIntoStage( TickStage& inoutStage, const TickItem& item, uint64 objectID )
+            {
+                const StageOrder entryOrder{ item._orderKey, objectID };
+                size_t           low  = 0;
+                size_t           high = inoutStage._listItem.size();
+                while ( low < high )
+                {
+                    const size_t     middle = low + ( high - low ) / 2;
+                    const StageOrder otherOrder{ inoutStage._listItem[middle]._orderKey, inoutStage._listItemObjectID[middle] };
+                    if ( isOrderedBefore( entryOrder, otherOrder ) )
+                        high = middle;
+                    else
+                        low = middle + 1;
+                }
+                inoutStage._listItem.insert( inoutStage._listItem.begin() + static_cast<ptrdiff_t>( low ), item );
+                inoutStage._listItemObjectID.insert( inoutStage._listItemObjectID.begin() + static_cast<ptrdiff_t>( low ), objectID );
+            }
+
+            /** @brief 그룹 @p group 레벨 0 의 0 번 스테이지가 바깥 선행 조건을 기다리게 표시합니다(적용을 먼저 한다). */
+            static void markApplyBefore( vector<TickStage>& inoutListStage, uint8 group )
+            {
+                for ( TickStage& stage : inoutListStage )
+                {
+                    if ( stage._group == group && stage._level == 0 )
+                    {
+                        stage._bApplyBefore = SW_TRUE; // 이 그룹 레벨 0 의 0 번 스테이지다
+                        break;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -658,71 +729,15 @@ namespace sw
             bool        bWaits = false;
             for ( uint32 slot = 0; cursor < listNew.size() && listNew[cursor]._item._group == group; ++cursor, ++slot )
             {
-                const NewItem& entry = listNew[cursor];
-                bWaits               = bWaits || ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup &&
+                const NewItem& entry    = listNew[cursor];
+                bWaits                  = bWaits || ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup &&
                                      entry._externalGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
-
-                // 이 그룹 레벨 0 의 slot 번째 스테이지를 찾고, 없으면 레벨 0 의 끝(같은 그룹의 더 높은 레벨이나 다음 그룹이 시작하는 자리)에 만든다.
-                size_t stageIndex = _listStage.size();
-                size_t insertAt   = _listStage.size();
-                uint32 seen       = 0;
-                for ( size_t index = 0; index < _listStage.size(); ++index )
-                {
-                    const TickStage& stage       = _listStage[index];
-                    const bool       bLevelZero  = stage._group == group && stage._level == 0;
-                    const bool       bPastLevel0 = stage._group > group || ( stage._group == group && stage._level != 0 );
-                    if ( bLevelZero )
-                    {
-                        if ( seen++ == slot )
-                        {
-                            stageIndex = index;
-                            break;
-                        }
-                    }
-                    else if ( bPastLevel0 )
-                    {
-                        insertAt = index;
-                        break;
-                    }
-                }
-                if ( stageIndex == _listStage.size() )
-                {
-                    TickStage created{};
-                    created._group = group;
-                    created._level = 0;
-                    stageIndex     = insertAt;
-                    _listStage.insert( _listStage.begin() + static_cast<ptrdiff_t>( insertAt ), std::move( created ) );
-                }
-                TickStage& stage = _listStage[stageIndex];
-                // 전체 재구축과 같은 순서 규칙(`isOrderedBefore`)으로 끼운다. 같은 키면 뒤에 붙는다.
-                const TickRegistryInternal::StageOrder entryOrder{ entry._item._orderKey, objectID };
-                size_t                                 low  = 0;
-                size_t                                 high = stage._listItem.size();
-                while ( low < high )
-                {
-                    const size_t                           middle = low + ( high - low ) / 2;
-                    const TickRegistryInternal::StageOrder otherOrder{ stage._listItem[middle]._orderKey, stage._listItemObjectID[middle] };
-                    if ( TickRegistryInternal::isOrderedBefore( entryOrder, otherOrder ) )
-                        high = middle;
-                    else
-                        low = middle + 1;
-                }
-                const size_t position = low;
-                stage._listItem.insert( stage._listItem.begin() + static_cast<ptrdiff_t>( position ), entry._item );
-                stage._listItemObjectID.insert( stage._listItemObjectID.begin() + static_cast<ptrdiff_t>( position ), objectID );
+                const size_t stageIndex = TickRegistryInternal::findOrCreateLevelZeroStage( _listStage, group, slot );
+                TickRegistryInternal::insertIntoStage( _listStage[stageIndex], entry._item, objectID );
                 ++_stageItemCount;
             }
             if ( bWaits )
-            {
-                for ( TickStage& stage : _listStage )
-                {
-                    if ( stage._group == group && stage._level == 0 )
-                    {
-                        stage._bApplyBefore = SW_TRUE; // 이 그룹 레벨 0 의 0 번 스테이지다
-                        break;
-                    }
-                }
-            }
+                TickRegistryInternal::markApplyBefore( _listStage, group );
         }
         return true;
     }
