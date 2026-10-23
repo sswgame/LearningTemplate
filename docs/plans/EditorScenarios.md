@@ -15,7 +15,7 @@
 | 콘텐츠 브라우저 · 에셋 관리 | `contentbrowser` · `contentthumbnails` · `assetmanage` · `openasset` | `flowedit`(메시를 씬 뷰로 끌어 놓기) |
 | 에셋 임포트 | `flowimport`(임포트 · 스폰 — 단독을 겸한다) | `flowimport`(임포트 → 씬에서 쓰기 → 저장 → 다시 열기) |
 | 씬 · 계층 | `hierarchyedit` · `hierarchydrag` · `hierarchyfilter` · `hierarchyorder` · `addcomponent` · `hidelock` · `multiedit` | `flowselection` · `flowboundaries` |
-| 인스펙터 | `inspectorhandle`(타입 핸들 선택기) · `inspectoredit` · `inspectorrename` · `inspectorcombo` · `propertyreset` · `colliderhandle` | `flowedit` · `flowprefab` · `flowselection` |
+| 인스펙터 | `inspectorhandle`(타입 핸들 선택기) · `scenereference`(씬 오브젝트 참조 선택기) · `inspectoredit` · `inspectorrename` · `inspectorcombo` · `propertyreset` · `colliderhandle` | `flowedit` · `flowprefab` · `flowselection` |
 | 뷰포트 · 선택 | `viewportpick` · `billboardpick` · `viewportbasics` · `viewporthover` · `viewmodes` | `flowselection`(계층 선택 → 씬 뷰 외곽선) |
 | 프리팹 | `prefabwindow`(프리팹 창 열기 · X 미저장 확인) · `flowprefab`(만들기 · 스폰 · 적용 — 단독을 겸한다) | `flowprefab`(적용 → 다른 인스턴스 갱신 · 덮어쓴 값 유지 · 되돌리기 · 저장 · 다시 열기) · `flowprefabnested`(자식 인스턴스 → 중첩 부품, 적용 → 다른 프리팹이 스폰한 부품 갱신 · 다시 열기) |
 | 지형 브러시 | `terrainbrush` · `rhiswap/terrainedits` | `flowterrain`(편집 → 플레이 → 백엔드 교체 → 되돌리기) |

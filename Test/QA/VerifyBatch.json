@@ -459,6 +459,11 @@
       "id": "stl-container-ci-build", "title": "CI-Debug-STL 구성 빌드(컨테이너 형식이 두 구성에서 같고 기본 할당자만 std::allocator)", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
       "need_command": "SW_ENABLE_STL_CONTAINER=ON 프리셋 빌드 칸이 매니페스트 구성에 없다 — push 뒤 CI 의 Windows STL containers 잡이 돈다(py -3 -m Scripts ci-jobs)",
       "source": "docs/plans/EngineCleanups.md StlContainerConfig", "result_doc": "docs/plans/EngineCleanups.md StlContainerConfig"
+    },
+    {
+      "id": "scene-reference-scenario", "title": "editor/scenereference 시나리오(씬 오브젝트 참조 선택기)와 EditorTest 빌드", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/scenereference.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/CrossFileObjectReference.md C2", "result_doc": "docs/plans/CrossFileObjectReference.md C2"
     }
   ]
 }

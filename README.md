@@ -42,7 +42,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CommentRewrite](docs/plans/CommentRewrite.md) — 주석을 새 문체로 다시 쓰기 (6 차 이후 남은 구역) | 구현중 | 0/6 | 없음 | project | C-16 |
-| - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 1/3 | 없음 | engine | G-5 |
+| - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 2/3 | 없음 | engine | G-5 |
 | - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 구현중 | 1/5 | 없음 | editor | D3-1.2 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
 | - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현중 | 3/6 | 없음 | gameplay | D4-8 |

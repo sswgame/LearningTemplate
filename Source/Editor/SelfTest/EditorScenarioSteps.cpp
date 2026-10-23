@@ -9,6 +9,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
@@ -59,6 +60,8 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneObjectReference.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/FloatCurve.h"
@@ -1569,6 +1572,70 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 주 선택 오브젝트의 `-gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 씬 오브젝트 참조가 가리키는 오브젝트를 `<씬 파일> / <오브젝트 이름>` 으로 읽습니다.
+             * @details 비어 있으면 `(none)`, 대상 씬이 올라와 있지 않으면 `(scene not loaded)`, 씬은 있는데 오브젝트가 없으면 `(missing)` 입니다.
+             *          선택 · 컴포넌트 · 프로퍼티가 없거나 참조 프로퍼티가 아니면 값을 내지 않는다.
+             */
+            [[nodiscard]] static bool readSelectedSceneReference( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                GameObject*  pObject = editor::getMainSceneSelection().getPrimaryObject();
+                const size_t dot     = gv_editorProbeProperty.find( '.' );
+                if ( pObject == nullptr || dot == string::npos )
+                    return false;
+                Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                    return false;
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
+                if ( pProperty == nullptr || pProperty->_typeName != hashed_string( "SceneObjectReference" ) )
+                    return false;
+                const SceneObjectReference* pReference    = pProperty->getValuePtr<SceneObjectReference>( pComponent );
+                const SceneManager*         pSceneManager = editor::findSubsystem<SceneManager>();
+                if ( pReference == nullptr || pSceneManager == nullptr )
+                    return false;
+                uint64                         objectID{ 0 };
+                const SceneObjectResolveResult state = SceneObjectReferenceUtil::resolve( *pSceneManager, *pReference, objectID );
+                switch ( state )
+                {
+                    case SceneObjectResolveResult::Unset:
+                    {
+                        outValue.setText( "(none)" );
+                        return true;
+                    }
+                    case SceneObjectResolveResult::SceneNotLoaded:
+                    {
+                        outValue.setText( "(scene not loaded)" );
+                        return true;
+                    }
+                    case SceneObjectResolveResult::ObjectMissing:
+                    {
+                        outValue.setText( "(missing)" );
+                        return true;
+                    }
+                    case SceneObjectResolveResult::Resolved:
+                    {
+                        break;
+                    }
+                }
+                for ( const unique_ptr<Scene>& scene : pSceneManager->getLoadedScenes() )
+                {
+                    if ( scene == nullptr || scene->getObjectManager() == nullptr )
+                        continue;
+                    if ( SceneObjectReferenceUtil::isSameScenePath( scene->getSourcePath(), pReference->_scenePath ) == false )
+                        continue;
+                    const GameObject* pTarget = scene->getObjectManager()->findGameObjectByID( objectID );
+                    if ( pTarget == nullptr )
+                        break;
+                    string text = FileUtil::getFileNamePart( pReference->_scenePath );
+                    text += " / ";
+                    text += pTarget->getName().c_str();
+                    outValue.setText( text );
+                    return true;
+                }
+                outValue.setText( "(missing)" );
+                return true;
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널 문서에 저장하지 않은 편집이 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProbedPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1872,6 +1939,9 @@ namespace sw::editor
     SW_AUTOMATION_QUERY_PROBE( editorSelectedHandle, "Editor.SelectedHandle",
                                "Component the typed handle property named by gv_editorProbeProperty points at, as '<object> / <key>' ('(none)' when empty)",
                                &EditorScenarioStepsInternal::readSelectedHandle, false, false );
+    SW_AUTOMATION_QUERY_PROBE( editorSelectedSceneReference, "Editor.SelectedSceneReference",
+                               "Object the scene object reference property named by gv_editorProbeProperty points at, as '<scene file> / <object>' ('(none)' when empty)",
+                               &EditorScenarioStepsInternal::readSelectedSceneReference, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorUndoState, "Editor.UndoState", "Undo stack as '<index>/<count>:<label>|<label>...' from the oldest command",
                                &EditorScenarioStepsInternal::readUndoState, false, false );
     SW_AUTOMATION_QUERY_PROBE( editorStateHash, "Editor.StateHash", "Hash of the edited scene content, the selection, the undo stack and the unsaved flag",
