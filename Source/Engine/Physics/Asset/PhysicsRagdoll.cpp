@@ -3,6 +3,7 @@
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 namespace sw
