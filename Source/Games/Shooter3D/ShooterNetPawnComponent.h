@@ -103,5 +103,6 @@ namespace sw
         uint32                                               _reconciledTick; ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         int32                                                _controllerID;   ///< 서버 — 이 몸을 조종하는 연결(-1 이면 없다)
         Role                                                 _role;
+        uint8                                                _bJumpPending; ///< 클라이언트 — 틱이 없던 프레임에 눌린 점프를 다음 입력 틱까지 쌓아 둔다(눌림은 한 프레임만 참이라 놓치기 쉽다)
     };
 } // namespace sw
