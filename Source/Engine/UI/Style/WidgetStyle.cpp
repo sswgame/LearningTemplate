@@ -92,6 +92,14 @@ namespace sw
         return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrFlags[index] : 0u;
     }
 
+    void UIStyleFieldTable::storeFloat4( const float4& value, float32 ( &outArr )[4] )
+    {
+        outArr[0] = value._x;
+        outArr[1] = value._y;
+        outArr[2] = value._z;
+        outArr[3] = value._w;
+    }
+
     bool UIStyleFieldTable::tryFindField( string_view name, UIStyleField& outField )
     {
         const vector<PropertyInfo>& listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();

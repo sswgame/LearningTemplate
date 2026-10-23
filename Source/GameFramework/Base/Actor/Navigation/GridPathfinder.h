@@ -11,6 +11,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridOpenEntry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -63,12 +64,8 @@ namespace sw
         uint32 getLastExpansionCount() const { return _lastExpansionCount; }
 
     private:
-        /** @brief 열린 목록 항목입니다. f 가 작은 것이 위에 옵니다(최소 힙). */
-        struct OpenEntry
-        {
-            float32 _score;
-            int32   _index;
-        };
+        /** @brief 열린 목록 항목입니다. f(`_cost`)가 작은 것이 위에 옵니다(최소 힙). */
+        using OpenEntry = GridOpenEntry<float32>;
 
         void    prepare( const NavGrid& grid );
         void    smoothPath( const NavGrid& grid, vector<int2>& inoutListCell ) const;

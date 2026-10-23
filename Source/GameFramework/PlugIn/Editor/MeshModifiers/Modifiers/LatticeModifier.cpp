@@ -22,6 +22,19 @@ namespace sw::editor
         {
             static constexpr uint32 kMaxCount = static_cast<uint32>( LatticeModifier::kMaxResolution );
 
+            /** @brief 숫자 셋을 @p offset 부터 읽습니다. 숫자가 아닌 칸이 있으면 false 입니다(0 으로 두지 않는다). */
+            [[nodiscard]] static bool readPoint( const JSONValue& array, size_t offset, float3& outPoint )
+            {
+                const std::optional<float32> x        = array.at( offset ).read<float32>();
+                const std::optional<float32> y        = array.at( offset + 1 ).read<float32>();
+                const std::optional<float32> z        = array.at( offset + 2 ).read<float32>();
+                const bool                   bAllRead = x.has_value() && y.has_value() && z.has_value();
+                if ( bAllRead == false )
+                    return false;
+                outPoint = float3{ *x, *y, *z };
+                return true;
+            }
+
             /** @brief 차수 @p degree 의 베른슈타인 기저 값 @p degree + 1 개를 채웁니다. */
             static void computeBernstein( int32 degree, float32 t, float32* pOutWeight )
             {
@@ -167,19 +180,6 @@ namespace sw::editor
 
     bool LatticeModifier::readExtraJSON( const JSONValue& object )
     {
-        // 숫자 셋을 @p offset 부터 읽는다. 숫자가 아닌 칸이 있으면 false 다(0 으로 두지 않는다).
-        const auto readPoint = []( const JSONValue& array, size_t offset, float3& outPoint ) -> bool
-        {
-            const std::optional<float32> x        = array.at( offset ).read<float32>();
-            const std::optional<float32> y        = array.at( offset + 1 ).read<float32>();
-            const std::optional<float32> z        = array.at( offset + 2 ).read<float32>();
-            const bool                   bAllRead = x.has_value() && y.has_value() && z.has_value();
-            if ( bAllRead == false )
-                return false;
-            outPoint = float3{ *x, *y, *z };
-            return true;
-        };
-
         const JSONValue box = object.get( "box" );
         _box                = MeshModifierBounds{};
         bool bBoxValid      = false;
@@ -189,8 +189,8 @@ namespace sw::editor
         {
             const JSONValue boxMin    = box.get( "min" );
             const JSONValue boxMax    = box.get( "max" );
-            const bool      bValidBox = boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3 && readPoint( boxMin, 0, _box._min ) &&
-                                   readPoint( boxMax, 0, _box._max );
+            const bool      bValidBox = boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3 && LatticeModifierInternal::readPoint( boxMin, 0, _box._min ) &&
+                                   LatticeModifierInternal::readPoint( boxMax, 0, _box._max );
             if ( bValidBox == false )
             {
                 _box = MeshModifierBounds{};
@@ -220,7 +220,7 @@ namespace sw::editor
         _listControlPoint.assign( static_cast<size_t>( _countX * _countY * _countZ ), float3{ 0.0f, 0.0f, 0.0f } );
         for ( size_t index = 0; index < _listControlPoint.size(); ++index )
         {
-            if ( readPoint( points, index * 3, _listControlPoint[index] ) == false )
+            if ( LatticeModifierInternal::readPoint( points, index * 3, _listControlPoint[index] ) == false )
             {
                 resetToIdentity();
                 return false;

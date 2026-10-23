@@ -38,6 +38,30 @@ namespace sw
             static constexpr const utf8* kEventBreak = "BlockBreak";
             static constexpr const utf8* kEventPlace = "BlockPlace";
 
+            /** @brief 폰에서 버튼 @p name 의 칸을 찾습니다. 없으면 오류를 적고 @p outResolved 를 false 로 둡니다(true 로 되돌리지는 않는다). */
+            static int32 resolveButton( const PawnComponent& pawn, const hashed_string& name, const utf8* pRole, bool& outResolved )
+            {
+                const int32 slot = pawn.findButton( name );
+                if ( slot < 0 )
+                {
+                    SW_LOG_ERROR( "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
+                    outResolved = false;
+                }
+                return slot;
+            }
+
+            /** @brief 카탈로그에서 블록 @p blockID 의 번호를 찾습니다. 없으면 오류를 적고 @p outKnown 을 false 로 둡니다(true 로 되돌리지는 않는다). */
+            static VoxelBlockIndex findBlockOrReport( const VoxelBlockCatalog& catalog, const hashed_string& blockID, bool& outKnown )
+            {
+                const VoxelBlockIndex index = catalog.findBlockIndex( blockID );
+                if ( index == kVoxelAirBlock )
+                {
+                    SW_LOG_ERROR( "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
+                    outKnown = false;
+                }
+                return index;
+            }
+
             /** @brief 블록을 부수면 얻는 블록입니다. 블록 데이터의 `drop` 값이고(풀은 흙, 돌은 조약돌), 없으면 자기 자신입니다. 부수지 못하는 블록이면 공기 블록을 반환합니다. */
             static VoxelBlockIndex findDrop( const VoxelBlockCatalog& catalog, VoxelBlockIndex block )
             {
@@ -327,21 +351,11 @@ namespace sw
 
     bool VoxelPlayerComponent::resolveIntentSlots( const PawnComponent& pawn )
     {
-        bool bResolved     = true;
-        auto resolveButton = [&pawn, &bResolved]( const hashed_string& name, const utf8* pRole ) -> int32
-        {
-            const int32 slot = pawn.findButton( name );
-            if ( slot < 0 )
-            {
-                SW_LOG_ERROR( "[Voxel] %# button '%#' is not in the pawn's button list", pRole, name.c_str() );
-                bResolved = false;
-            }
-            return slot;
-        };
-        _intentSlots._jump         = resolveButton( _jumpButton, "jump" );
-        _intentSlots._sprint       = resolveButton( _sprintButton, "sprint" );
-        _intentSlots._break        = resolveButton( _breakButton, "break" );
-        _intentSlots._place        = resolveButton( _placeButton, "place" );
+        bool bResolved             = true;
+        _intentSlots._jump         = VoxelPlayerComponentInternal::resolveButton( pawn, _jumpButton, "jump", bResolved );
+        _intentSlots._sprint       = VoxelPlayerComponentInternal::resolveButton( pawn, _sprintButton, "sprint", bResolved );
+        _intentSlots._break        = VoxelPlayerComponentInternal::resolveButton( pawn, _breakButton, "break", bResolved );
+        _intentSlots._place        = VoxelPlayerComponentInternal::resolveButton( pawn, _placeButton, "place", bResolved );
         _intentSlots._hotbarScroll = pawn.findAnalog( _hotbarScrollAnalog );
         if ( _intentSlots._hotbarScroll < 0 )
         {
@@ -355,7 +369,7 @@ namespace sw
         }
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
         {
-            _intentSlots._arrSlot[slotIndex] = resolveButton( _listSlotButton[static_cast<size_t>( slotIndex )], "hotbar slot" );
+            _intentSlots._arrSlot[slotIndex] = VoxelPlayerComponentInternal::resolveButton( pawn, _listSlotButton[static_cast<size_t>( slotIndex )], "hotbar slot", bResolved );
         }
         return bResolved;
     }
@@ -363,20 +377,10 @@ namespace sw
     bool VoxelPlayerComponent::applyBlockNames( const VoxelBlockCatalog& catalog )
     {
         bool bKnown = true;
-        auto find   = [&catalog, &bKnown]( const hashed_string& blockID ) -> VoxelBlockIndex
-        {
-            const VoxelBlockIndex index = catalog.findBlockIndex( blockID );
-            if ( index == kVoxelAirBlock )
-            {
-                SW_LOG_ERROR( "[Voxel] block '%#' is not in the block catalog", blockID.c_str() );
-                bKnown = false;
-            }
-            return index;
-        };
-        _body.setWaterBlock( find( _waterBlock ) );
+        _body.setWaterBlock( VoxelPlayerComponentInternal::findBlockOrReport( catalog, _waterBlock, bKnown ) );
         for ( const hashed_string& blockID : _listStartBlock )
         {
-            const VoxelBlockIndex index = find( blockID );
+            const VoxelBlockIndex index = VoxelPlayerComponentInternal::findBlockOrReport( catalog, blockID, bKnown );
             if ( index != kVoxelAirBlock )
                 (void)_hotbar.addBlock( index, 64 ); // 핫바 슬롯보다 많으면 넘친 블록은 버립니다. 슬롯 수는 핫바가 정합니다.
         }

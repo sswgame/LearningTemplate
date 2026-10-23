@@ -53,27 +53,22 @@ namespace sw
     {
         // 칠하는 쪽(`computeEffectiveBrush`)과 같은 상태 브러시를 읽는다 — 기본 브러시를 읽으면 버튼의 호버 · 누름 · 꺼짐 색으로 옮겨 가지 않고 끝에 튄다.
         const UIBrush& background = selectBackgroundBrush( styleStates );
-        const auto     readFloat4 = [&outArr]( const float4& value )
-        {
-            outArr[0] = value._x;
-            outArr[1] = value._y;
-            outArr[2] = value._z;
-            outArr[3] = value._w;
-            return true;
-        };
         switch ( field )
         {
             case UIStyleField::BackgroundColor:
             {
-                return readFloat4( background._color );
+                UIStyleFieldTable::storeFloat4( background._color, outArr );
+                return true;
             }
             case UIStyleField::CornerRadius:
             {
-                return readFloat4( background._cornerRadius );
+                UIStyleFieldTable::storeFloat4( background._cornerRadius, outArr );
+                return true;
             }
             case UIStyleField::BorderColor:
             {
-                return readFloat4( background._borderColor );
+                UIStyleFieldTable::storeFloat4( background._borderColor, outArr );
+                return true;
             }
             case UIStyleField::BorderWidth:
             {
@@ -82,11 +77,13 @@ namespace sw
             }
             case UIStyleField::Padding:
             {
-                return readFloat4( _contentPadding );
+                UIStyleFieldTable::storeFloat4( _contentPadding, outArr );
+                return true;
             }
             case UIStyleField::ShadowColor:
             {
-                return readFloat4( _shadowColor );
+                UIStyleFieldTable::storeFloat4( _shadowColor, outArr );
+                return true;
             }
             case UIStyleField::ShadowOffset:
             {

@@ -336,6 +336,11 @@ namespace sw
         return pDevice->wasControlPressed( slot._controlIndex );
     }
 
+    bool InputMap::isSlotHeldThisFrame( const InputSlot& slot, SlotRead read ) const
+    {
+        return isSlotDown( slot, read ) || wasSlotPressed( slot, read );
+    }
+
     bool InputMap::isSlotHiddenByConsole( const InputSlot& slot ) const
     {
         if ( _bKeyboardFocusIgnored == SW_TRUE )
@@ -489,18 +494,11 @@ namespace sw
         if ( read == SlotRead::Device && ( binding._kind == BindingKind::MouseDelta2D || binding._kind == BindingKind::MouseWheel1D || binding._kind == BindingKind::AnyKey ) )
             return false;
 
-        // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 탭(예: 매크로 주입, 초고속 입력, 가상 입력 hold=0)을
-        // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다. 단일 키와 합성(axis1d, vector2d) 모두 같은 규칙이다.
-        const auto isSlotHeldThisFrame = [this, read]( const InputSlot& slot ) -> bool
-        {
-            return isSlotDown( slot, read ) || wasSlotPressed( slot, read );
-        };
-
         switch ( binding._kind )
         {
             case BindingKind::SingleSlot:
             {
-                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) && isBaseKeySuppressedByModifier( binding, read ) == false )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) && isBaseKeySuppressedByModifier( binding, read ) == false )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;
@@ -510,9 +508,9 @@ namespace sw
             case BindingKind::Axis1DComposite:
             {
                 float32 axisValue = 0.0f;
-                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) )
                     axisValue -= 1.0f;
-                if ( isSlotHeldThisFrame( binding._arrSlot[1] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[1], read ) )
                     axisValue += 1.0f;
                 outValue = float2{ axisValue, 0.0f };
                 return axisValue != 0.0f;
@@ -520,13 +518,13 @@ namespace sw
             case BindingKind::Vector2DComposite:
             {
                 float2 kbdVec{ 0.0f, 0.0f };
-                if ( isSlotHeldThisFrame( binding._arrSlot[0] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) )
                     kbdVec._y += 1.0f;
-                if ( isSlotHeldThisFrame( binding._arrSlot[1] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[1], read ) )
                     kbdVec._y -= 1.0f;
-                if ( isSlotHeldThisFrame( binding._arrSlot[2] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[2], read ) )
                     kbdVec._x -= 1.0f;
-                if ( isSlotHeldThisFrame( binding._arrSlot[3] ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[3], read ) )
                     kbdVec._x += 1.0f;
 
                 const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;

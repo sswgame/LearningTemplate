@@ -48,9 +48,6 @@ namespace sw
         _listDistance.assign( cellCount, FlowFieldInternal::kUnreached );
         _listDirection.assign( cellCount, kNoDirection );
         _listOpen.clear();
-        const auto compareOpen = []( const OpenEntry& lhs, const OpenEntry& rhs )
-        { return lhs._distance > rhs._distance; };
-
         for ( const int2& goal : listGoal )
         {
             if ( grid.isWalkable( goal ) == false )
@@ -58,16 +55,16 @@ namespace sw
             _listDistance[static_cast<size_t>( grid.computeIndex( goal ) )] = 0.0f;
             _listOpen.push_back( OpenEntry{ 0.0f, grid.computeIndex( goal ) } );
         }
-        std::make_heap( _listOpen.begin(), _listOpen.end(), compareOpen );
+        std::make_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
 
         // 거꾸로 퍼진다 — 이웃 n 에서 이 칸 c 로 오는 비용은 c 에 들어가는 값이다(경로 찾기와 같은 비용).
         int32 reachedCount = 0;
         while ( _listOpen.empty() == false )
         {
-            std::pop_heap( _listOpen.begin(), _listOpen.end(), compareOpen );
+            std::pop_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
             const OpenEntry current = _listOpen.back();
             _listOpen.pop_back();
-            if ( current._distance > _listDistance[static_cast<size_t>( current._index )] )
+            if ( current._cost > _listDistance[static_cast<size_t>( current._index )] )
                 continue;
             ++reachedCount;
             const int2    cell      = _topology.toCell( current._index );
@@ -78,13 +75,13 @@ namespace sw
                     continue;
                 const int2    next      = GridTopology::getNeighbor( cell, direction );
                 const int32   nextIndex = grid.computeIndex( next );
-                const float32 distance  = current._distance + enterCost * ( direction >= 4 ? MathUtil::kSqrt2 : 1.0f );
+                const float32 distance  = current._cost + enterCost * ( direction >= 4 ? MathUtil::kSqrt2 : 1.0f );
                 float32&      slot      = _listDistance[static_cast<size_t>( nextIndex )];
                 if ( slot >= 0.0f && slot <= distance )
                     continue;
                 slot = distance;
                 _listOpen.push_back( OpenEntry{ distance, nextIndex } );
-                std::push_heap( _listOpen.begin(), _listOpen.end(), compareOpen );
+                std::push_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
             }
         }
 
