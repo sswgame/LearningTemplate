@@ -21,7 +21,9 @@ namespace sw
         if ( _memoryProfiler == nullptr )
             return;
 #if defined( SW_DEBUG )
-        (void)_memoryProfiler->reportTagGrowthSinceBaseline( "shutdown" ); // 보고만 한다 — 종료 경로는 늘린 태그 수로 멈추지 않는다
+        // 기준선(열린 창)이 없으면 닫지 않고 빈 보고서를 찍어 "창이 없다" 는 오류 줄을 남긴다(CRT 보고와 같다). 보고만 한다 — 종료 경로는 늘린 태그 수로 멈추지 않는다.
+        const LeakWindowReport leakReport = _memoryProfiler->isLeakWindowOpen() ? _memoryProfiler->endLeakWindow() : LeakWindowReport{};
+        (void)MemoryProfiler::printLeakWindowReport( leakReport, "shutdown" );
 #endif
         _memoryProfiler->shutdown();
         _memoryProfiler.reset();

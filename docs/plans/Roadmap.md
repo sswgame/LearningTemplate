@@ -12,6 +12,7 @@
    - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
 2. **새 시스템**:
    - Vfx V5 실행(V0 ~ V4 · V6 · V7 들어감 — 셰이더 쿠킹 뒤 네 백엔드로 CPU · GPU 그림 비교) — [Vfx](Vfx.md). [병렬 가능]
+   - 누수 탐지 L1 측정 창(`wt/leakwin`, 빌드 · 테스트 미확인) → L2 측정(전수 캡처 오버헤드 · 씬 로드당 할당 수 · 워밍업 1 + 측정 8 곡선) → L3 반복 로드 곡선 검사 → L4 보고 연결 — [LeakDetection](LeakDetection.md). [단독: L1 은 `Memory.h` 를 바꿔 여러 모듈이 다시 빌드됨, L2 의 측정은 Release 에서 혼자]
    - 클러스터드 라이팅 S3 측정(실행 코드 `perf-compare lightCulling*` 들어감) — [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
    - 간접 조명 P4 · P5 · D2-6.4 의 빌드 · 셰이더 쿠킹 · 화면 확인(코드는 `wt/planleftB`, 셰이더는 패치), P2 하늘 항 — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W7 측정 — [WorldStreaming](WorldStreaming.md) (W2 → W6 와 W7 데이터는 빌드 미확인으로 들어갔다 — 빌드 · 쿠킹 · World Cells 창 캡처 확인이 먼저). [단독: W7 의 히치 측정은 Release 에서 혼자]

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Memory/Memory.h"
@@ -10,6 +11,20 @@
 #include <thread>
 
 using namespace sw;
+
+namespace
+{
+    /** @brief 보고서에서 태그와 태어난 회차가 맞는 줄을 찾습니다. 없으면 nullptr 입니다. */
+    const LeakWindowEntry* findLeakEntry( const LeakWindowReport& report, MemoryTag tag, uint32 round )
+    {
+        for ( const LeakWindowEntry& entry : report._listEntry )
+        {
+            if ( entry._tag == tag && entry._bornRound == round )
+                return &entry;
+        }
+        return nullptr;
+    }
+} // namespace
 
 // ------------------------------------------------------------------------------
 // 1) MemoryProfilerTest — 할당·해제 바이트
@@ -27,8 +42,8 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
     const auto& beforeStats  = profiler.getStats( MemoryTag::Game );
     uint64      initialBytes = beforeStats._currentAllocatedBytes;
 
-    void*  dummyPtr = reinterpret_cast<void*>( 0x12345678 );
-    uint64 hash     = profiler.recordAllocation( dummyPtr, 1024, MemoryTag::Game )._callStackHash;
+    void*                  dummyPtr = reinterpret_cast<void*>( 0x12345678 );
+    const AllocationRecord born     = profiler.recordAllocation( dummyPtr, 1024, MemoryTag::Game );
 
     const auto& afterStats = profiler.getStats( MemoryTag::Game );
     uint64      afterBytes = afterStats._currentAllocatedBytes;
@@ -38,7 +53,7 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
     auto topStacks = profiler.getTopCallStacks();
     SW_EXPECT_TRUE( !topStacks.empty() );
 
-    profiler.recordFree( dummyPtr, 1024, MemoryTag::Game, hash );
+    profiler.recordFree( dummyPtr, 1024, MemoryTag::Game, born );
 
     const auto& finalStats = profiler.getStats( MemoryTag::Game );
     SW_EXPECT_EQUAL( initialBytes, finalStats._currentAllocatedBytes );
@@ -62,8 +77,8 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
     void*        pDummy      = reinterpret_cast<void*>( 0x2468'ACE0 );
     for ( uint32 round = 0; round < 3; ++round )
     {
-        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::EngineMisc )._callStackHash;
-        profiler.recordFree( pDummy, 256, MemoryTag::EngineMisc, hash );
+        const AllocationRecord born = profiler.recordAllocation( pDummy, 256, MemoryTag::EngineMisc );
+        profiler.recordFree( pDummy, 256, MemoryTag::EngineMisc, born );
     }
 
     SW_EXPECT_EQUAL( uint64( 3 ), profiler.getTotalAllocationCount() - totalBefore );
@@ -380,37 +395,211 @@ SW_TEST_CASE( MemoryProfilerTest, TrackerIDsAreUniquePerInstance )
 }
 
 /**
- * @brief [MemoryProfilerTest] 기준선 뒤로 늘어난 태그만 큰 순서로 나온다(종료 누수 보고의 재료)
+ * @brief [MemoryProfilerTest] 태그 합계 창 — 창 안에서 태어나 닫힐 때 살아 있는 블록만 큰 순서로 나오고, 창 밖 오래된 블록의 해제는 새 누수를 상쇄하지 않는다
+ * @details 예전 기준선 방식(살아 있는 양의 차이)은 `Scene` 에서 오래된 100 바이트를 풀고 새 50 바이트를 흘리면 차이가 음수라 누수를 가렸다.
  */
-SW_TEST_CASE( MemoryProfilerTest, TagGrowthSinceBaselineNamesTheGrownTags )
+SW_TEST_CASE( MemoryProfilerTest, LeakWindowTagTotalsIgnoreFreesOfOlderBlocks )
 {
     MemoryProfiler profiler;
     profiler.initialize();
     profiler.setTrackingEnabled( true );
-    SW_EXPECT_TRUE( profiler.collectTagGrowthSinceBaseline().empty() ); // 기준선 전
 
-    void* const pKept = reinterpret_cast<void*>( 0x6000 );
-    (void)profiler.recordAllocation( pKept, 100, MemoryTag::Scene );
-    profiler.captureTagBaseline();
-    SW_EXPECT_TRUE( profiler.hasTagBaseline() );
+    void* const            pOld     = reinterpret_cast<void*>( 0x6000 );
+    const AllocationRecord oldBlock = profiler.recordAllocation( pOld, 100, MemoryTag::Scene ); // 창 밖에서 태어난 블록
+    SW_EXPECT_EQUAL( 0u, oldBlock._windowStamp );
 
-    void* const pSmall = reinterpret_cast<void*>( 0x7000 );
-    void* const pLarge = reinterpret_cast<void*>( 0x8000 );
-    (void)profiler.recordAllocation( pSmall, 64, MemoryTag::UI );
-    (void)profiler.recordAllocation( pLarge, 640, MemoryTag::Script );
-    profiler.recordFree( pKept, 100, MemoryTag::Scene ); // 줄어든 태그는 나오지 않는다
+    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
+    SW_EXPECT_TRUE( profiler.isLeakWindowOpen() );
 
-    const vector<MemoryTagGrowth> listGrowth = profiler.collectTagGrowthSinceBaseline();
-    SW_ASSERT_EQUAL( size_t{ 2 }, listGrowth.size() );
-    SW_EXPECT_TRUE( listGrowth[0]._tag == MemoryTag::Script );
-    SW_EXPECT_EQUAL( int64{ 640 }, listGrowth[0]._byteDelta );
-    SW_EXPECT_TRUE( listGrowth[1]._tag == MemoryTag::UI );
-    SW_EXPECT_EQUAL( int64{ 1 }, listGrowth[1]._blockCountDelta );
+    void* const            pSmall     = reinterpret_cast<void*>( 0x7000 );
+    void* const            pLarge     = reinterpret_cast<void*>( 0x8000 );
+    void* const            pNewScene  = reinterpret_cast<void*>( 0x9000 );
+    void* const            pTemporary = reinterpret_cast<void*>( 0xA000 );
+    const AllocationRecord smallBlock = profiler.recordAllocation( pSmall, 64, MemoryTag::UI );
+    const AllocationRecord largeBlock = profiler.recordAllocation( pLarge, 640, MemoryTag::Script );
+    const AllocationRecord sceneBlock = profiler.recordAllocation( pNewScene, 50, MemoryTag::Scene );
+    const AllocationRecord tempBlock  = profiler.recordAllocation( pTemporary, 32, MemoryTag::UI );
+    SW_EXPECT_TRUE( smallBlock._windowStamp != 0 );
+    profiler.recordFree( pTemporary, 32, MemoryTag::UI, tempBlock ); // 창 안에서 태어나 창 안에서 풀린 블록은 남지 않는다
+    profiler.recordFree( pOld, 100, MemoryTag::Scene, oldBlock );    // 창 밖에서 태어난 블록의 해제는 창의 값을 줄이지 않는다
 
-    profiler.recordFree( pSmall, 64, MemoryTag::UI );
-    profiler.recordFree( pLarge, 640, MemoryTag::Script );
-    SW_EXPECT_TRUE( profiler.collectTagGrowthSinceBaseline().empty() );
+    const LeakWindowReport report = profiler.endLeakWindow();
+    SW_EXPECT_FALSE( profiler.isLeakWindowOpen() );
+    SW_ASSERT_TRUE( report._bValid );
+    SW_EXPECT_TRUE( report._detail == LeakWindowDetail::TagTotals );
+    SW_EXPECT_EQUAL( 1u, report._roundCount );
+
+    const LeakWindowEntry* pScript = findLeakEntry( report, MemoryTag::Script, 1 );
+    const LeakWindowEntry* pUI     = findLeakEntry( report, MemoryTag::UI, 1 );
+    const LeakWindowEntry* pScene  = findLeakEntry( report, MemoryTag::Scene, 1 );
+    SW_ASSERT_TRUE( pScript != nullptr && pUI != nullptr && pScene != nullptr );
+    SW_EXPECT_EQUAL( uint64{ 640 }, pScript->_bytes );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pScript->_blockCount );
+    SW_EXPECT_EQUAL( uint64{ 64 }, pUI->_bytes );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pUI->_blockCount );
+    SW_EXPECT_EQUAL( uint64{ 50 }, pScene->_bytes ); // 오래된 100 바이트를 풀어도 새 50 바이트가 가려지지 않는다
+    SW_EXPECT_TRUE( pScript->_firstFrame.empty() );  // 태그 합계 창은 스택을 잡지 않는다
+    SW_EXPECT_TRUE( report._listEntry.front()._bytes >= report._listEntry.back()._bytes );
+
+    // 닫은 뒤의 해제는 창과 무관하다 — 센 양만 되돌아온다.
+    profiler.recordFree( pSmall, 64, MemoryTag::UI, smallBlock );
+    profiler.recordFree( pLarge, 640, MemoryTag::Script, largeBlock );
+    profiler.recordFree( pNewScene, 50, MemoryTag::Scene, sceneBlock );
+    SW_EXPECT_EQUAL( uint64{ 0 }, profiler.getStats( MemoryTag::Script )._currentAllocatedBytes );
+
+    // 다음 창은 빈 합계에서 시작한다.
+    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
+    const LeakWindowReport empty = profiler.endLeakWindow();
+    SW_EXPECT_TRUE( findLeakEntry( empty, MemoryTag::Script, 1 ) == nullptr );
     profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 스택 전수 창 — 남은 블록을 태그 · 스택 · 태어난 회차로 묶고 첫 프레임을 적으며, 회차 안에서 풀린 블록은 빠진다
+ */
+SW_TEST_CASE( MemoryProfilerTest, LeakWindowFullStacksGroupByStackAndRound )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+
+    void* const            pOld     = reinterpret_cast<void*>( 0xB000 );
+    const AllocationRecord oldBlock = profiler.recordAllocation( pOld, 100, MemoryTag::Scene );
+
+    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+    void* const            pFirstRound = reinterpret_cast<void*>( 0xC000 );
+    const AllocationRecord firstBlock  = profiler.recordAllocation( pFirstRound, 128, MemoryTag::Scene );
+    profiler.beginLeakRound();
+    void* const            pSecondRound = reinterpret_cast<void*>( 0xD000 );
+    void* const            pTemporary   = reinterpret_cast<void*>( 0xE000 );
+    const AllocationRecord secondBlock  = profiler.recordAllocation( pSecondRound, 256, MemoryTag::Scene );
+    const AllocationRecord tempBlock    = profiler.recordAllocation( pTemporary, 64, MemoryTag::Scene );
+    SW_EXPECT_TRUE( secondBlock._windowStamp != firstBlock._windowStamp ); // 회차마다 스탬프가 다르다
+    profiler.recordFree( pTemporary, 64, MemoryTag::Scene, tempBlock );
+    profiler.recordFree( pOld, 100, MemoryTag::Scene, oldBlock ); // 창 밖 블록의 해제는 상쇄하지 않는다
+
+    const LeakWindowReport report = profiler.endLeakWindow();
+    SW_ASSERT_TRUE( report._bValid );
+    SW_EXPECT_TRUE( report._detail == LeakWindowDetail::FullStacks );
+    SW_EXPECT_EQUAL( 2u, report._roundCount );
+
+    const LeakWindowEntry* pRoundOne = findLeakEntry( report, MemoryTag::Scene, 1 );
+    const LeakWindowEntry* pRoundTwo = findLeakEntry( report, MemoryTag::Scene, 2 );
+    SW_ASSERT_TRUE( pRoundOne != nullptr && pRoundTwo != nullptr );
+    SW_EXPECT_EQUAL( uint64{ 128 }, pRoundOne->_bytes );
+    SW_EXPECT_EQUAL( uint64{ 1 }, pRoundOne->_blockCount );
+    SW_EXPECT_EQUAL( uint64{ 256 }, pRoundTwo->_bytes ); // 같은 회차에서 풀린 64 바이트는 빠졌다
+    SW_EXPECT_EQUAL( uint64{ 1 }, pRoundTwo->_blockCount );
+    SW_EXPECT_TRUE( pRoundTwo->_stackHash != 0 );
+    SW_EXPECT_FALSE( pRoundTwo->_firstFrame.empty() ); // 호출한 쪽(이 테스트)이 첫 프레임이다
+    SW_EXPECT_EQUAL( uint64{ 384 }, report._totalBytes );
+    SW_EXPECT_EQUAL( uint64{ 0 }, report._foreignThreadBlockCount );
+
+    profiler.recordFree( pFirstRound, 128, MemoryTag::Scene, firstBlock );
+    profiler.recordFree( pSecondRound, 256, MemoryTag::Scene, secondBlock );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 창을 연 스레드가 아닌 스레드의 할당도 섞여 들고, 보고서가 그 개수를 따로 알린다
+ * @details 창은 프로세스 전체의 할당을 센다(스레드를 가르지 않는다). 그 한계를 숨기지 않고 `_foreignThreadBlockCount` 로 드러낸다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, LeakWindowReportsAllocationsFromOtherThreads )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+    profiler.beginLeakWindow( LeakWindowDetail::FullStacks );
+
+    void* const            pOwn     = reinterpret_cast<void*>( 0xF000 );
+    const AllocationRecord ownBlock = profiler.recordAllocation( pOwn, 128, MemoryTag::Physics );
+
+    void* const      pForeign = reinterpret_cast<void*>( 0x10000 );
+    AllocationRecord foreignBlock;
+    std::thread      worker( [&profiler, pForeign, &foreignBlock]()
+    {
+        foreignBlock = profiler.recordAllocation( pForeign, 512, MemoryTag::Physics );
+    } );
+    worker.join();
+
+    const LeakWindowReport report = profiler.endLeakWindow();
+    SW_ASSERT_TRUE( report._bValid );
+    SW_EXPECT_EQUAL( uint64{ 640 }, report._totalBytes ); // 두 스레드의 블록이 한 창에 섞여 있다
+    SW_EXPECT_EQUAL( uint64{ 1 }, report._foreignThreadBlockCount );
+    SW_EXPECT_EQUAL( uint64{ 512 }, report._foreignThreadBytes );
+
+    profiler.recordFree( pOwn, 128, MemoryTag::Physics, ownBlock );
+    profiler.recordFree( pForeign, 512, MemoryTag::Physics, foreignBlock );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 열린 창 없이 닫으면 오류다 — 단언하고 무효 보고서를 돌려주며, 이미 열린 창을 다시 열면 단언하고 기존 창을 둔다
+ */
+SW_TEST_CASE( MemoryProfilerTest, LeakWindowMisuseIsAnError )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+
+    {
+        test::ScopedAssertCapture assertCapture;
+        const LeakWindowReport    withoutWindow = profiler.endLeakWindow();
+        SW_EXPECT_FALSE( withoutWindow._bValid );
+        SW_EXPECT_TRUE( withoutWindow._listEntry.empty() );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+
+    SW_EXPECT_EQUAL( 0u, MemoryProfiler::printLeakWindowReport( LeakWindowReport{}, "test" ) ); // 무효 보고서는 오류 줄만 남긴다
+
+    profiler.beginLeakWindow( LeakWindowDetail::TagTotals );
+    {
+        test::ScopedAssertCapture assertCapture;
+        profiler.beginLeakWindow( LeakWindowDetail::FullStacks ); // 이미 열려 있다
+        SW_EXPECT_TRUE( profiler.isLeakWindowOpen() );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+    const LeakWindowReport report = profiler.endLeakWindow();
+    SW_EXPECT_TRUE( report._detail == LeakWindowDetail::TagTotals ); // 기존 창이 그대로다
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 실제 할당기 경로 — 스탬프가 블록 헤더를 거쳐 해제 때 돌아오고, 첫 프레임이 할당기 · 컨테이너 안쪽이 아니다
+ * @details 다른 스레드의 할당이 섞여 들 수 있어 정확히 같지 않고 이상(>=)으로 견준다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, LeakWindowStampTravelsThroughTheAllocatorHeader )
+{
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+    if ( pProfiler->isLeakWindowOpen() )
+        SW_TEST_SKIP( "the host already holds an open leak window" );
+    const bool bWasTracking = pProfiler->isTrackingEnabled();
+    pProfiler->setTrackingEnabled( true );
+
+    constexpr MemoryTag kTag = MemoryTag::Navigation;
+    void*               pOld = Memory::allocate( 2048, kTag ); // 창 밖에서 태어난다
+
+    pProfiler->beginLeakWindow( LeakWindowDetail::FullStacks );
+    void* pKept      = Memory::allocate( 4096, kTag );
+    void* pTemporary = Memory::allocate( 1024, kTag );
+    Memory::free( pTemporary ); // 창 안에서 풀린다
+    Memory::free( pOld );       // 창 밖 블록의 해제라 상쇄하지 않는다
+    const LeakWindowReport report = pProfiler->endLeakWindow();
+
+    SW_ASSERT_TRUE( report._bValid );
+    const LeakWindowEntry* pEntry = findLeakEntry( report, kTag, 1 );
+    SW_ASSERT_TRUE( pEntry != nullptr );
+    SW_EXPECT_TRUE( pEntry->_bytes >= 4096 );
+    SW_EXPECT_FALSE( pEntry->_firstFrame.empty() );
+    SW_EXPECT_FALSE( StringUtil::contains( pEntry->_firstFrame.c_str(), "Memory.cpp" ) );
+
+    Memory::free( pKept );
+    pProfiler->setTrackingEnabled( bWasTracking );
 }
 
 /**
