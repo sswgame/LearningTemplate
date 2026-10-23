@@ -465,6 +465,22 @@
       "covered": ["game/empty/automation/interactionhighlight.scenario.xml"],
       "covered_by": "app-scenarios-release",
       "source": "docs/plans/InteractionHighlightAndMontage.md H3", "result_doc": "docs/plans/InteractionHighlightAndMontage.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-tests", "title": "패드 가상 커서 테스트(프레임률 무관 · 버튼 · 스틱 입력 맵)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "VirtualCursorTest.*,InputMapTest.GamepadStickAxisFeedsOneDimensionalAction,InputMapTest.GamepadStickScalesByAxisAndFrameTime",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-scenario", "title": "NileCity 패드 가상 커서 시나리오(스크립트 스틱으로 커서 이동)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/nilecity/automation/gamepadcursor.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-real-pad", "title": "실제 패드로 커서 감각 · D 패드 단계 확대", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "실제 게임패드를 쥔 사람의 감각 판정이라 스크립트로 판정할 값이 없다",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
     }
   ]
 }
