@@ -490,6 +490,7 @@
   `OnlineServerRuntime` 의 `_bHostStarted` · `_bSchedulerStarted` 는 지웠다 — 호스트(`OnlineServiceHost::shutdown`)는 자기 초기화 비트를 보고 스케줄러는 목록을 비울 뿐이라 시작 여부를 밖에서 적을 필요가 없었다.
   테스트 하네스(`TestHostRuntime`)는 호스트 범위를 두지 않는다 — 모듈 DLL 을 올리고 내리지 않고 타입은 리플렉션 단계가 이미 모았다(`EngineInitSequenceTest.ModuleImageStepsReachTheHostScopeThroughTheParentChain` 이
   범위 사슬 찾기를, 호스트 범위가 없을 때의 무동작을 지킨다).
+  서브시스템 목록은 한 곳이다(`Engine/EngineSubsystemSet.cpp`, 2026-10-23) — 엔진 루프 · 하네스 · 기동 순서 테스트가 같은 세 함수로 범위를 채우고, 호스트마다 다른 것(인자 · 에디터 서비스 · 렌더러 단계 · 본문만 다른 대역)은 `*Setup` 의 이름 붙은 값으로만 준다. 목록이 셋일 때 테스트 쪽에서 `EditSessionState` 가 이미 빠져 있었다.
 - **압축 해제의 원본 크기 상한은 코덱이 낸다 — `ICompressionCodec::decompressBound` 는 순수 가상이다**(2026-10-17, B-5). 야간 퍼저 `Compression` 대상이 81 바이트 입력(RLE · 원본 620 MB · 압축 0 바이트)으로
   10 초 타임아웃을 냈다. 헤더 검사는 절대 상한(`kMaxUncompressedSize`, 1 GiB)만 봐서 통과했고, 620 MB 를 resize(0 채우기)한 뒤에야 빈 페이로드로 실패해 clear 가 원소마다 소멸 루프를 돌았다.
   근본 원인은 헤더 값을 압축 크기와 견주지 않고 할당한 것이다. 최대 팽창률은 포맷마다 다르므로(RLE 65 · LZ4 255 · Deflate 1032 · Zstd 32768배) 코덱이 답하고, `CompressionStream` 은 두 해제 경로 모두
