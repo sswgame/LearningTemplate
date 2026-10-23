@@ -40,10 +40,9 @@ KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵
 - S5 왼손 IK 화면 확인: 2026-10-22 Release 에서 쇼케이스 씬을 베낀 임시 씬(플레이어 프리셋 · 몸 리그, `1H_Ranged_Aiming`)으로 리그를 켜고 끈 두 캡처를 견줘, 켜면 늘어져 있던 왼팔(방패를 든 팔)이
   소총 쪽으로 끌려 오는 것을 봤다. 남은 것: 실제 게임 3인칭 시점에서 왼손이 총열 아래(`SupportHand`)에 자연스럽게 붙는지(기사 세트의 방패가 왼손에 함께 있어 가린다 — 총을 든 프리셋에서
   방패 칸을 비울지 정한다), 팔꿈치 방향(어색하면 `pole`), 무기를 바꾸면 새 무기의 손잡이를 따르는지. 몸 리그의 `HideHead` 는 슬롯 가중치를 정하지 않으면 1(숨김)이라 아바타 없이 쓰면 머리가 사라진다.
-- S6 부품 풀 측정: 적 하나의 부품 셋 스폰 비용(풀 전 · 후)을 재어 효과를 적는다. 쉬는 부품은 꺼진 오브젝트로 씬에 남으므로 상태 저장 경로가 생기면 그 앞에서 풀을 비우는 길이 필요하다.
-- 확인(S1 · S2 · S3 · S4, 빌드 뒤):
-  - 병합 뒤 `App --import-models` 로 Shooter3D 모델을 다시 가져와 `skeleton_minion/clips/1h_melee_attack_chop.animclip` 에 `Impact` 알림이 들어갔는지, 임포트 결과와 곁 데이터를 한 커밋으로 남긴다. 그 전에는 적의 휘두름이 맞지 않는다.
-  - Shooter3D autoplay 시나리오(네 백엔드)가 통과하는지 — `EnemyHitCount` 가 오르는지(히트박스 레이어 `Ragdoll` 질의), 적이 쓰러질 때 래그돌로 넘어져 바닥에 눕는지, 떨어진 무기 · 방패가 바닥(정적 강체)에 눕는지, 시체가 걷힐 때 같이 사라지는지(스크린샷).
-  - 머리를 맞히면 피해가 두 배인지(로그), 엄폐물 뒤의 적은 맞지 않는지, 자동 조준이 엄폐물 뒤 적에게 쏘지 않는지.
-  - 1인칭(`-gv_cameraPreset=firstperson`)에서 내려다보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없는지, 3인칭에서 다시 보이는지. 근평면 0.05 에 목 단면이 걸리면 `HideHead` 를 `neck` 까지 넓힌다.
-  - 뒷걸음 · 옆걸음에서 발 미끄러짐이 줄었는지(`-gv_shooterMotionTrace` · 연속 스크린샷).
+- S6 부품 풀 측정: 풀 효과를 재는 도구를 만들었다 — 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다), 풀 끄기 `-gv_socketPartPool=0`, 탐침 `SocketPartPool.TakeHits` · `TakeMisses` · `Stored`.
+  적이 같은 부품 셋으로 스폰 · 퇴장을 되풀이하는 장면에서 풀 켬 · 끔의 구간 시간을 견준다(매니페스트 id `socket-part-pool-measure`). 쉬는 부품은 꺼진 오브젝트로 씬에 남으므로 상태 저장 경로가 생기면 그 앞에서 풀을 비우는 길이 필요하다.
+- 화면 확인 시나리오(만들어 둠, 통합에서 확인): 매니페스트 id `shooter-body-views-scenario`(S3 1인칭 몸 · 3인칭 · S5 무기마다 왼손 · 걷기 — 근평면에 목 단면이 걸리면 `HideHead` 를 `neck` 까지 넓힌다, 방패 칸을 비울지 정한다, 팔꿈치는 `pole`),
+  `shooter-enemy-death-scenario`(S1 · S2 · S4 쓰러짐 · 떨어진 무기 · 시체 걷힘 · `EnemyHitCount`), `shooter-stride-warping-scenario`([ShooterStrideWarping](ShooterStrideWarping.md)),
+  `shooter-cape-scenario`(S7 뒤). 머리 ×2 · 엄폐물 뒤의 적 · 자동 조준 시야는 autoplay 로그([Shooter] hit …)와 기존 `autoaim` 시나리오로 본다.
+- S7 의 ① ~ ③(임포트와 데이터 전환)은 `App --import-models` 실행이 필요해 통합이 한다 — 매니페스트 id `shooter-cape-import`(위 순서 그대로, 한 커밋). 휘두름 `Impact` 알림이 들어간 재임포트(`skeleton_minion/clips/1h_melee_attack_chop.animclip`)도 같은 실행이다.

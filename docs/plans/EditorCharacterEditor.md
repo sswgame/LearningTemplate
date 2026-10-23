@@ -1,6 +1,6 @@
 # 캐릭터 편집 창 구현 계획 (D4-8 ⑥)
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 3/6
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 5/6
 
 캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md)). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
@@ -103,8 +103,15 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
 - **애니메이션 재생은 들어갔다(2026-10-22, Debug 빌드 · 시나리오 `charactereditor` 로 확인 — 클립을 고르고 Play 하면 T 자세의 몸이 그 클립의 자세로 움직이는 것을 화면으로 봤다)**: 미리보기 탭 위의 줄에서 팩 데이터의 클립 폴더(필수 칸 `clipFolder`, 비면 읽기 오류)에 있는 `.animclip` 을 콤보로 고르고 반복 · Play · Stop 한다. 미리보기 몸에 `SkeletalAnimatorComponent` 를 더했다.
   함정 둘이 드러났다 — (1) 애니메이터는 `onBeginPlay` 에서 같은 오브젝트의 유닛(`SkeletalMeshComponent`)에 붙는데 미리보기 씬은 기본 정책에서 플레이를 돌리지 않는다. 그래서 이 창은 정책 `_bPlay` 를 켠다(`getPreviewPolicy`). (2) 컴포넌트는 유닛을 먼저 더하고 애니메이터를 나중에 더한다(순서가 거꾸로면 붙지 못한다). 탐침 `Editor.CharacterEditorPreviewClipPlaying`.
 - dirty 는 들어갔다(2026-10-21): 모델의 미저장 상태를 패널 dirty 로 옮기고(`syncDocumentDirty`, 이제 미리보기 창 스택의 편집도 더한다) "Don't Save" 는 두 모델을 저장된 상태로 돌린다(`revertDocument` → `revertToSaved`).
-- 남은 것(선행이 다른 계획에 있다):
-  - 단계 3 체형 · 얼굴 슬라이더 — `CharacterAppearanceIntegration` 의 GPU 모프 풀 연결이 먼저다(꾸미기 값 모델 · 직렬화는 있다).
-  - 단계 5 피팅 확인 — 몸 메시 → `AppearanceGeometry` 변환(외형 통합 항목)이 먼저다. 그 뒤 슬라이더를 놓을 때 한 번 풀어 `CharacterEditorPanel::setFitResult` 로 넘긴다(표시는 있다).
-  - 단계 6 의 나머지 — 썸네일 렌더(미리보기 렌더 타깃을 읽어 `UserAppearancePresetStore::setThumbnailPath`). 렌더 타깃을 되읽는 길(`RenderTargetRegistry::requestReadback`)과 `PortraitRenderer` 는 있으나 프리팹 썸네일 전용이고, 미리보기 씬의 뷰를 읽어 파일로 쓰는 길이 없다 — 렌더 쪽(미리보기 뷰 되읽기)이 먼저다. 좌우 대칭 · 프리셋 저장 · 애니메이션 재생은 있다.
+- **단계 3 · 5 · 6 의 막힌 선행이 풀렸다(2026-10-24, 빌드 미확인)**:
+  - 단계 3 슬라이더: 미리보기 탭의 "Customize" 칸이 꾸미기 스키마(`CustomizationSchema`, 선택의 `_schema` 또는 기준 프리셋의 것)의 매개변수마다 슬라이더 · 색 · 고르기를 카테고리로 가르고 조건이 맞지 않는 것은 숨겨 그린다
+    (`CharacterEditorPanel::drawCustomizationSliders`). 몸은 CPU 에서 모프를 굽는 길(`AppearanceMeshAssembly`)로 바뀌므로 GPU 모프 풀을 기다릴 이유가 없었다. 끄는 동안(`_bCustomizationActive`)은 다시 입히지 않고 놓을 때 한 번 입힌다.
+  - 단계 5 피팅 확인: 미리보기 입히기(`previewSelection`)는 구운 메시 캐시를 건너뛰고 조립이 푼 `FitResult` 를 컴포넌트에 남긴다(`getLastFitResult` · `getFitResultRevision`, `AppearanceMeshAssembly::assemble` 의 출력 인자).
+    창은 세대가 바뀔 때 `setFitResult` 로 올려 요약(잘린 면 · 조임 강도 · 관통 수 · 깊이)을 보인다.
+  - 단계 6 썸네일: `EditorPreviewViewport::requestImageFile`(렌더 타깃 한 장을 파일로, `RenderThread::requestScreenshot`)을 더했다. "Save thumbnail" 이 같은 이름의 프리셋 옆에 `<프리셋 파일>.<이름>.png` 를 쓰고
+    `UserAppearancePresetStore::setThumbnailPath` 로 잇는다(프리셋을 먼저 저장해야 하고, 현재 선택으로 다시 저장한다).
+- 남은 것:
+  - 단계 5 의 관통 점 표시: `FitPenetration` 은 부품 짝 · 점 수 · 깊이만 들고 위치가 없어 뷰포트에 점을 찍을 수 없다 — 풀이기(`FitSolver`)가 관통 점 위치를 내게 넓히는 일이 먼저다(요약 표는 있다).
+  - 슬라이더의 대칭 그룹(`_symmetry`) 동시 편집: 편집 모델(`AppearanceEditModel`)이 스키마를 몰라 지금은 매개변수 하나씩 바뀐다.
   - 뷰포트 기즈모 포즈 편집 · 제약 리그 미리보기 · 편집 중(저장 전) 소켓을 미리보기에 바로 보이기(지금은 조립한 소켓 파일의 자리) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).
+  - 확인(통합에서 확인): 매니페스트 id `editor-charactereditor-scenario`(슬라이더 사진 포함).

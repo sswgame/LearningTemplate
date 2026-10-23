@@ -20,10 +20,13 @@
 | C1 | 작업의 포즈 접근 형식(`AnimationPoseAccess`)과 읽기 작업이 붙은 유닛의 공유 | 코드와 `AnimationCrowdTest.ReaderTasksAndLeaderFollowersShareBuckets` 작성(빌드 미확인) |
 | C2 | 리더를 따르는 부품의 묶음(`joinFollowerBucket`), Shooter3D 적 군중 켜기 | 코드 · 데이터 작성(빌드 · 화면 미확인) |
 | C3 | 섞기 묶음(`joinBlendBucket`, `SkeletalAnimatorComponent::describeSharedPose` 의 페이드 요청) | 코드와 `AnimationCrowdTest.CrossfadeSharesABlendBucketThenRejoins` 작성(빌드 미확인) |
-| C4 | 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 | 착수 조건: 메시 LOD([PreloadAndLod](PreloadAndLod.md) P5) |
+| C4 | 본 LOD 를 메시 LOD 와 묶기 | 메시 LOD(P5)는 들어갔으나 스킨 메시는 LOD 를 받지 않아(`Mesh::setLODs` 가 스킨 · 모프 · 구간 있는 메시를 거절한다) 착수 전 — 아래 "남은 것" |
 
 ## 남은 것
 
-- C1 · C2 확인: Shooter3D autoplay 에서 프로파일 카운터 `GT.Animation.crowdSharedUnits` 가 적 수만큼 오르고 `crowdSoloUnits` 가 쫓는 동안 0 근처인지, 적 무기 · 방패(소켓 부품)가 손을 따라가는지 스크린샷으로 본다. 휘두름 · 움찔 클립(반복하지 않음)으로 갈 때 혼자로 내려가는 것은 맞다.
-- C3 확인: 섞기 묶음이 끝나 들어간 클립의 묶음으로 갈 때 반 칸 안쪽의 시각 차이가 튀어 보이는지(혼자 → 묶음과 같은 크기). 튀면 섞기 묶음의 들어가는 클립 시각을 다음 묶음의 칸 시각에 맞추는 길을 본다.
-- 측정: 적 30 마리에서 `GT.Animation` 전후(Release, 혼자 돌 때).
+- C4(착수 전): 묶을 메시 LOD 가 캐릭터(스킨드 메시)에는 아직 없다. 순서: ① 임포트 — `ModelImportUtil::makeLODLevels` 가 단계를 펼칠 때 스킨 정점도 싣는다(`expandTrianglesInOrder( simplified, skinBoneCount, … )`, `MeshLODLevel` 에 스킨 목록).
+  ② `Mesh::setLODs` 가 스킨 있는 메시(모프 · 구간 없음)를 받고 LOD 정점마다 스킨을 둔다 + `.mesh` 의 `LODS` 덩어리에 싣는다. ③ 스키닝 컴퓨트가 LOD 정점 범위까지 처리한다. ④ `MeshLODSystem` 이 `SkeletalMeshComponent` 도 고른다.
+  ⑤ 고른 메시 단계가 본 LOD 단계(`SkeletonBoneLOD`, `AnimationLODState::_boneLODLevel`)를 정한다 — 화면 크기 임계값의 정본이 메시 단계 하나가 되게. 스키닝 컴퓨트 · 쿠킹된 메시 형식이 걸려 한 번에 빌드 · GPU 확인이 필요한 묶음이다.
+- C1 · C2 · C3 · 측정 확인(통합에서 확인): 매니페스트 id `shooter-crowd-scenario`(자동 플레이로 `Animation.CrowdSharedUnits` · `CrowdSoloUnits` 탐침을 기록하고 사진 — 적 무기 · 방패가 손을 따라가는지, 섞기 묶음이 끝날 때 위상이
+  튀는지 눈으로 본다. 튀면 섞기 묶음의 들어가는 클립 시각을 다음 묶음의 칸 시각에 맞추는 길을 본다), `shooter-crowd-measure`(적 30 마리에서 `GT.Animation` 전후, Release, 혼자 돌 때).
+  휘두름 · 움찔 클립(반복하지 않음)으로 갈 때 혼자로 내려가는 것은 맞다.
