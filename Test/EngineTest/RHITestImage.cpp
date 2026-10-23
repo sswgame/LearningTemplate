@@ -25,6 +25,14 @@ namespace test
         }
     } // namespace
 
+    sw::string RHITestImageDifference::describe() const
+    {
+        utf8 arrText[sw::constant::kMaxBuffer256]{};
+        sw::formatstring( arrText, sw::constant::kMaxBuffer256, "differing %# / %# px (brighter %#), max distance %#", _differingCount, _pixelCount, _brighterCount,
+                          _maxDistance );
+        return sw::string( arrText );
+    }
+
     bool RHITestImage::readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName )
     {
         _bytes.clear();
@@ -79,6 +87,40 @@ namespace test
             return a > b ? static_cast<uint32>( a - b ) : static_cast<uint32>( b - a );
         };
         return distance( lhs._r, rhs._r ) + distance( lhs._g, rhs._g ) + distance( lhs._b, rhs._b );
+    }
+
+    RHITestImageDifference RHITestImage::compare( const RHITestImage& lhs, const RHITestImage& rhs, uint32 minDistance )
+    {
+        return compareRegion( lhs, rhs, minDistance, 0, 0, lhs.getWidth(), lhs.getHeight() );
+    }
+
+    RHITestImageDifference RHITestImage::compareRegion( const RHITestImage& lhs, const RHITestImage& rhs, uint32 minDistance, uint32 left, uint32 top, uint32 right,
+                                                        uint32 bottom )
+    {
+        RHITestImageDifference difference{};
+        const bool             bSameSize    = lhs.getWidth() == rhs.getWidth() && lhs.getHeight() == rhs.getHeight();
+        const bool             bInsideImage = left < right && top < bottom && right <= lhs.getWidth() && bottom <= lhs.getHeight();
+        if ( bSameSize == false || bInsideImage == false )
+            return difference;
+        for ( uint32 y = top; y < bottom; ++y )
+        {
+            for ( uint32 x = left; x < right; ++x )
+            {
+                const Rgba8  pixelLhs = lhs.getPixel( x, y );
+                const Rgba8  pixelRhs = rhs.getPixel( x, y );
+                const uint32 distance = getColorDistance( pixelLhs, pixelRhs );
+                ++difference._pixelCount;
+                difference._maxDistance = sw::MathUtil::max( difference._maxDistance, distance );
+                if ( distance < minDistance )
+                    continue;
+                ++difference._differingCount;
+                const uint32 sumLhs = static_cast<uint32>( pixelLhs._r ) + pixelLhs._g + pixelLhs._b;
+                const uint32 sumRhs = static_cast<uint32>( pixelRhs._r ) + pixelRhs._g + pixelRhs._b;
+                if ( sumRhs > sumLhs )
+                    ++difference._brighterCount;
+            }
+        }
+        return difference;
     }
 
     bool RHITestImage::isDefaultClearBackground( const Rgba8& pixel )

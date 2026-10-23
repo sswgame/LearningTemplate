@@ -5,7 +5,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
-#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

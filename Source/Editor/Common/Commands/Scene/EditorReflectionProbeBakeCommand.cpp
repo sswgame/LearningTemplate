@@ -17,12 +17,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Lighting/ReflectionProbeData.h"
 #include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Renderer/Capture/ReflectionProbeBaker.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Resource/ResourcePaths.h"

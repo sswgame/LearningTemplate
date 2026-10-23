@@ -19,6 +19,6 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| M1 | `RenderPassType::Module` · 검증 · 패스별 PSO · 실행 · `ModuleRenderPassRegistry` · 테스트 `RenderPassTest.ModulePassRegistrationIsScopedAndCopiesConstants` | 끝(빌드 없이 작성) |
-| M2 | 빌드 · 테스트, 게임 모듈 하나가 실제로 등록하는 시연 패스(파이프라인 XML + 셰이더 + 등록)와 네 백엔드 캡처 | 남음 |
+| M1 | `RenderPassType::Module` · 검증 · 패스별 PSO · 실행 · `ModuleRenderPassRegistry` · 테스트 `RenderPassTest.ModulePassRegistrationIsScopedAndCopiesConstants` | 끝(2026-10-23 Debug 빌드 경고 0, `RenderPassTest` · `SceneTest` 81/81, GPU 를 뺀 렌더 관련 스위트 145/145) |
+| M2 | 게임 모듈 하나가 실제로 등록하는 시연 패스(파이프라인 XML + 셰이더 + 등록)와 네 백엔드 캡처. 실행 경로(`executeModulePass` · `createModulePassPSOs`)는 아직 GPU 에서 돈 적이 없다 | 남음(GPU 확인 대기) |
 | M3 | 모듈이 드로우를 직접 기록해야 하는 요구가 생기면 기록 계약 설계(지금은 하지 않음) | 남음 |

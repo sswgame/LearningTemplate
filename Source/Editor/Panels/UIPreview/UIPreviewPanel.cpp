@@ -24,7 +24,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -32,6 +31,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"

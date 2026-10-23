@@ -19,7 +19,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

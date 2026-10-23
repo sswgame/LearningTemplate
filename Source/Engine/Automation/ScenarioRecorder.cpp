@@ -6,12 +6,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw

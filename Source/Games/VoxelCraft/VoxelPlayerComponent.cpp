@@ -5,9 +5,9 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"

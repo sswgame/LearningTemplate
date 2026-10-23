@@ -1,6 +1,6 @@
 # 상호작용 대상의 공유 공간 격자
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: G-4 · 진행: 1/2
+> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: G-4 · 진행: 2/3
 
 하는 쪽(`InteractorComponent`)은 등록된 대상 목록을 한 번 돌았습니다(대상 16 · 10k 오브젝트에서 +2~6 us). 2026-10-22 사용자 결정으로 착수 조건(하는 쪽 · 대상이 모두 수천)을 갈음했습니다.
 
@@ -16,5 +16,6 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| I1 | 색인 · 하는 쪽 연결 · 테스트 `InteractionTest.SharedSpatialGridServesSeveralInteractors` | 끝(빌드 없이 작성) |
-| I2 | 빌드 · 테스트, `TestInteractionBench` 로 하는 쪽 여럿 × 대상 수천의 이득 측정(Release) | 남음 |
+| I1 | 색인 · 하는 쪽 연결 · 테스트 `InteractionTest.SharedSpatialGridServesSeveralInteractors` | 끝 |
+| I2 | Debug 빌드(`all EngineTest`, 경고 0) · `InteractionTest.*` 16 개 통과(2026-10-23) | 끝 |
+| I3 | `TestInteractionBench` 에 하는 쪽 여럿 × 대상 수천 케이스를 더해 이득 측정(Release). 지금 벤치는 하는 쪽 하나 × 대상 16 만 잰다 | 남음 |

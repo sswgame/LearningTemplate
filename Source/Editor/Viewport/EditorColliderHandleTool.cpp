@@ -19,9 +19,9 @@
 #include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

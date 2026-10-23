@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"

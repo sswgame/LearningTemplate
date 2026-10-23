@@ -13,9 +13,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Vfx/VfxComponent.h"
 #include "Engine/Vfx/VfxEffectDef.h"

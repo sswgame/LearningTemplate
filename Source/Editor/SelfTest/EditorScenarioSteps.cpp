@@ -45,7 +45,6 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -53,6 +52,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"

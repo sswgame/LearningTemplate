@@ -9,11 +9,12 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| N2 | 빌드 · 테스트와 게임 하나에 붙여 보기 | 없음 |
+| N2 | 게임 하나에 붙여 보기(GPU 확인 대기) | 없음 |
 
-### N2 빌드 · 테스트와 게임 하나에 붙여 보기
+### N2 게임 하나에 붙여 보기
 
-- `EngineTest --test_filter=QuestTest.*`. 새 테스트는 `QuestTest.ObjectiveTargetIsOpenOnlyWhileItsObjectiveRemains` 다.
+빌드 · 테스트는 끝났다(2026-10-23, `wt/uibuild`): `full-build`(Debug, `all AllTests`) 경고 0 · 오류 0, `EngineTest --test_filter=QuestTest.*` 3/3 통과(새 `ObjectiveTargetIsOpenOnlyWhileItsObjectiveRemains` 포함). 남은 것은 캡처다.
+
 - 퀘스트 카탈로그를 쓰는 게임(meadowvillage 의 `quests.xml`)에서 목표 NPC 오브젝트에 `QuestObjectiveMarkerComponent` 를 붙여, 받으면 마커가 뜨고 다 하면 사라지는지 캡처로 본다.
 
 ## 2. 끝난 단위의 확인 목록

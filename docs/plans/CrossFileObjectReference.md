@@ -15,6 +15,6 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| C1 | 참조 형식 · 해석 · `Scene::getOrAssignFileID` · `findObjectIDByFileID` · 테스트 `SceneTest.CrossSceneReferenceResolvesThroughFileID` | 끝(빌드 없이 작성) |
-| C2 | 빌드 · 테스트, 에디터 인스펙터에서 다른 씬의 오브젝트를 고르는 위젯(`SceneObjectReference` 칸) | 남음 |
+| C1 | 참조 형식 · 해석 · `Scene::getOrAssignFileID` · `findObjectIDByFileID` · 테스트 `SceneTest.CrossSceneReferenceResolvesThroughFileID` | 끝(2026-10-23 Debug 빌드 경고 0, `SceneTest` 전체 통과) |
+| C2 | 에디터 인스펙터에서 다른 씬의 오브젝트를 고르는 위젯(`SceneObjectReference` 칸)과 그 에디터 시나리오 | 남음 |
 | C3 | 오브젝트를 파일 사이로 옮겨도 이어지는 영속 GUID — 그 요구가 생기면 | 남음 |
