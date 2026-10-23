@@ -275,7 +275,7 @@ namespace sw
         unique_ptr<D3D11RHICommandList> list = make_unique<D3D11RHICommandList>( this );
         if ( list->isValid() == false )
         {
-            SW_LOG_ERROR( "D3D11RHIDevice::createCommandList: 네이티브 Deferred Context 생성 실패." );
+            SW_LOG_ERROR( "D3D11RHIDevice::createCommandList: failed to create the native Deferred Context." );
             return nullptr;
         }
         return list;

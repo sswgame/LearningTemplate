@@ -1140,7 +1140,7 @@ namespace sw
                     {
                         // 종류를 추가하고 이 switch 를 빠뜨린 경우다. 이름은 테이블에서 왔으므로 `kind` 는
                         // 제대로 적히지만 딸린 특성이 하나도 없어서 다시 읽을 수 없는 줄이 된다.
-                        SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
+                        SW_LOG_ERROR( "Unsaved binding kind (kind=%#) - BindingKind was extended but saveUserBindings was not updated.",
                                       BindingKinds::toName( b._kind ) );
                         break;
                     }
@@ -1180,7 +1180,7 @@ namespace sw
             const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
             if ( parsedKind == BindingKind::Count )
             {
-                SW_LOG_ERROR( "바인딩 종류가 없거나 모르는 이름입니다 (action=%#, kind=%#) — 이 바인딩은 건너뜁니다.", pAction,
+                SW_LOG_ERROR( "The binding kind is missing or unknown (action=%#, kind=%#) - skipping this binding.", pAction,
                               ( pKindStr != nullptr ) ? pKindStr : "" );
                 continue;
             }
@@ -1327,7 +1327,7 @@ namespace sw
                     }
                     else
                     {
-                        SW_LOG_ERROR( "단일 슬롯 바인딩의 source 가 없거나 모르는 값입니다 (action=%#, source=%#) — 이 바인딩은 건너뜁니다.", pAction,
+                        SW_LOG_ERROR( "The source of a single-slot binding is missing or unknown (action=%#, source=%#) - skipping this binding.", pAction,
                                       ( pSourceStr != nullptr ) ? pSourceStr : "" );
                     }
                     break;
@@ -1335,7 +1335,7 @@ namespace sw
                 case BindingKind::Count:
                 {
                     // 테이블은 이 이름을 아는데 여기서는 모른다. 종류를 추가하고 이 switch 를 빠뜨린 경우다.
-                    SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );
+                    SW_LOG_ERROR( "Unread binding kind (kind=%#) - BindingKind was extended but loadUserBindings was not updated.", pKindStr );
                     break;
                 }
             }

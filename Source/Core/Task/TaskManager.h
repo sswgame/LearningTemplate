@@ -141,7 +141,7 @@ namespace sw
         void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
 
         /**
-         * @brief 포크-조인 병렬 for 입니다. 일의 수가 아니라 **잰 비용**으로 나눌지 정합니다(`runParallel` 은 호출처가 고른 수 `serialThreshold` 를 따른다).
+         * @brief 포크-조인 병렬 for 입니다. 일의 수가 아니라 **측정한 비용**으로 나눌지 정합니다(`runParallel` 은 호출처가 고른 수 `serialThreshold` 를 따른다).
          * @details 항목당 비용은 호출처가 알기 어렵다(무버 틱 ~25 ns, 애니메이션 평가는 수 us). 그래서 호출 스레드가 앞 항목을 1, 2, 4, … 개씩 늘려 가며
          *          직접 돌고(이 일은 버려지지 않는 실제 일이다), 경과가 `kCostProbeNanos` 를 넘으면 남은 일의 예상 직렬 시간으로 고른다 — `kSerialBudgetNanos`
          *          (디스패치 손익분기) 보다 짧으면 이어서 직렬로, 아니면 나머지 구간만 나눈다. 무거운 항목은 첫 항목에서 바로 나뉘고, 가벼운 일은 깨우는 비용을
@@ -154,7 +154,7 @@ namespace sw
         using NanosecondClock = int64 ( * )() noexcept;
 
         /**
-         * @brief `runParallelByCost` 의 비용 재는 시계를 바꿀 수 있는 형태입니다. 제품은 `MonotonicClock::nowNanoseconds` 로 부르고(`runParallelByCost`),
+         * @brief `runParallelByCost` 의 비용 측정하는 시계를 바꿀 수 있는 형태입니다. 제품은 `MonotonicClock::nowNanoseconds` 로 부르고(`runParallelByCost`),
          *        테스트는 가짜 시계를 넣어 호출 스레드 선점 잡음 없이 판단을 결정적으로 만듭니다. 시계는 청크마다 한 번(1, 2, 4, … 개씩이라 로그 번)만 불리므로 함수 포인터로 충분합니다.
          */
         void runParallelByCostWithClock( uint32 count, const ParallelBlockDelegate& body, NanosecondClock pClock );

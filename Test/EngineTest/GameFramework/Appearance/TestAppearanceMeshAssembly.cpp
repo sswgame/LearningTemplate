@@ -16,7 +16,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 외형 메시 조립 — 메시 ↔ 형상 다리(위치로 잇기 · 굽기), 피팅이 덮은 몸 삼각형 · 해석의 숨김 영역을 빼고 체형 모프를 레스트에 굽는다.
+// 외형 메시 조립 — 메시 ↔ 형상 다리(위치로 잇기 · 베이크), 피팅이 덮은 몸 삼각형 · 해석의 숨김 영역을 빼고 체형 모프를 레스트에 베이크한다.
 
 using namespace sw;
 
@@ -150,7 +150,7 @@ SW_TEST_CASE( CharacterMeshUtilTest, WeldedGeometryJoinsCornersAndKeepsMorphs )
 }
 
 /**
- * @brief [CharacterMeshUtilTest] 굽기 — 모프를 레스트에 더하고 그 타깃을 빼며, 숨긴 삼각형을 빼고 남은 구간 · 모프를 새 번호로 옮긴다(빈 구간은 이름만 남는다)
+ * @brief [CharacterMeshUtilTest] 베이크 — 모프를 레스트에 더하고 그 타깃을 빼며, 숨긴 삼각형을 빼고 남은 구간 · 모프를 새 번호로 옮긴다(빈 구간은 이름만 남는다)
  */
 SW_TEST_CASE( CharacterMeshUtilTest, BakedMeshFoldsMorphsAndDropsHiddenTriangles )
 {
@@ -169,10 +169,10 @@ SW_TEST_CASE( CharacterMeshUtilTest, BakedMeshFoldsMorphsAndDropsHiddenTriangles
     const shared_ptr<Mesh> baked = CharacterMeshUtil::createBakedMesh( *source, arrWeight, &welded, &fit );
     SW_ASSERT_NOT_NULL( baked.get() );
     SW_ASSERT_EQUAL( 3u, baked->getVertexCount() );
-    SW_EXPECT_NEAR_EQUAL( 1.5f, baked->getVertices()[1]._arrPosition[0], 1.0e-6f ); // 구운 모프
+    SW_EXPECT_NEAR_EQUAL( 1.5f, baked->getVertices()[1]._arrPosition[0], 1.0e-6f ); // 베이크한 모프
     SW_EXPECT_NEAR_EQUAL( 0.1f, baked->getVertices()[0]._arrPosition[2], 1.0e-6f ); // 피팅 델타
     SW_EXPECT_TRUE( baked->hasSkin() == false );
-    SW_EXPECT_EQUAL( -1, baked->findMorphTargetIndex( "Wide" ) ); // 구운 타깃은 빠진다
+    SW_EXPECT_EQUAL( -1, baked->findMorphTargetIndex( "Wide" ) ); // 베이크한 타깃은 빠진다
     const int32 smileIndex = baked->findMorphTargetIndex( "Smile" );
     SW_ASSERT_TRUE( smileIndex >= 0 );
     SW_EXPECT_TRUE( baked->getMorphTargets()[static_cast<size_t>( smileIndex )]._listDelta.empty() ); // 그 정점의 삼각형이 빠졌다
@@ -289,7 +289,7 @@ SW_TEST_CASE( AppearanceMeshAssemblyTest, FittedPartsAndHiddenRegionsCutTheBody 
 }
 
 /**
- * @brief [AppearanceMeshAssemblyTest] 피팅 없이 체형 모프만 — 몸 모프는 몸과 그 이름을 가진 부품에 굽고, 걸 것이 없는 부품은 원본(nullptr) 그대로다
+ * @brief [AppearanceMeshAssemblyTest] 피팅 없이 체형 모프만 — 몸 모프는 몸과 그 이름을 가진 부품에 베이크하고, 걸 것이 없는 부품은 원본(nullptr) 그대로다
  */
 SW_TEST_CASE( AppearanceMeshAssemblyTest, BodyMorphsAreBakedWithoutFitting )
 {
@@ -312,7 +312,7 @@ SW_TEST_CASE( AppearanceMeshAssemblyTest, BodyMorphsAreBakedWithoutFitting )
 }
 
 /**
- * @brief [AppearanceMeshAssemblyTest] 구운 메시 캐시 — 같은 키는 같은 객체를 나누고(원본 부품은 nullptr 그대로), 그리는 쪽이 모두 놓으면 사라진다
+ * @brief [AppearanceMeshAssemblyTest] 베이크한 메시 캐시 — 같은 키는 같은 객체를 나누고(원본 부품은 nullptr 그대로), 그리는 쪽이 모두 놓으면 사라진다
  */
 SW_TEST_CASE( AppearanceMeshAssemblyTest, BakedMeshCacheSharesWhileSomeoneDraws )
 {

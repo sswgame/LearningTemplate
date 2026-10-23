@@ -298,7 +298,7 @@ namespace sw
             boundsRadius += wave._amplitude * 2.0f;
         }
 
-        // 칸이 비면 엔진 기본 물 머티리얼이다(값의 정본은 엔진 기본 에셋 표).
+        // 칸이 비면 엔진 기본 물 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath;
         if ( _material.getInstance() == nullptr )
             (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)

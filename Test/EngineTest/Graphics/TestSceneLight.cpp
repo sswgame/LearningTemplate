@@ -438,7 +438,7 @@ SW_TEST_CASE( SceneLightTest, FindActiveDirectionalLightSkipsInactiveOnes )
 /**
  * @brief [SceneLightTest] 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨은 3D 라이트 뒤에 볼륨 원소 하나와 프로브마다 SH9 원소 일곱 개로 모인다
  * @details 원소의 배치(bindingslots.hlsli 8 절)를 셰이더 `LightData::sampleProbeVolume` 이 그대로 읽는다 — 첫 프로브 위치 · 간격 · 수 · 첫 프로브 번호.
- *          굽지 않은 볼륨과 프로브 목록을 받지 않는 수집(nullptr)은 볼륨을 넣지 않는다.
+ *          베이크하지 않은 볼륨과 프로브 목록을 받지 않는 수집(nullptr)은 볼륨을 넣지 않는다.
  */
 SW_TEST_CASE( SceneLightTest, CollectsBakedProbeVolumesAfterLights )
 {
@@ -478,7 +478,7 @@ SW_TEST_CASE( SceneLightTest, CollectsBakedProbeVolumesAfterLights )
 /**
  * @brief [SceneLightTest] 쓸 수 있는 베이크를 가진 반사 프로브는 볼륨 뒤에 원소 하나로 모이고, 텍셀은 프로브 버퍼의 SH9 원소 뒤에 붙는다(IndirectLighting.md P4)
  * @details 원소의 배치(bindingslots.hlsli 8 절)를 셰이더 `LightData::sampleReflectionProbe` 가 그대로 읽는다 — 상자 중심 · 반 크기 · 섞는 폭 · 한 변 텍셀 수 · 단계 수 · 첫 텍셀 번호.
- *          옮긴 뒤 다시 굽지 않은 프로브(찍은 위치가 다르다)는 넣지 않는다.
+ *          옮긴 뒤 다시 베이크하지 않은 프로브(찍은 위치가 다르다)는 넣지 않는다.
  */
 SW_TEST_CASE( SceneLightTest, CollectsBakedReflectionProbesAfterVolumes )
 {
@@ -519,7 +519,7 @@ SW_TEST_CASE( SceneLightTest, CollectsBakedReflectionProbesAfterVolumes )
     SW_ASSERT_EQUAL( shCount + size_t( 32 ), listProbe.size() );
     SW_EXPECT_NEAR_EQUAL( 0.25f, listProbe[shCount]._z, 0.0f );
 
-    // 옮기고 다시 굽지 않은 프로브는 옛 자리의 반사라 넣지 않는다.
+    // 옮기고 다시 베이크하지 않은 프로브는 옛 자리의 반사라 넣지 않는다.
     pProbe->setLocalPosition( sw::float3{ 5.0f, 0.0f, 0.0f } );
     pObjects->flushSceneTransforms();
     collectSceneLights( &scene, listLight, nullptr, &listProbe );

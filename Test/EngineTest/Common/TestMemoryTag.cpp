@@ -211,7 +211,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    // 캐시 표 객체는 처음 넣을 때 만들어져 엔진 수명 범위가 끝까지 소유한다 — 기준을 재기 전에 한 번 만들어 둔다(재는 것은 비우기가 놓는 저장소다).
+    // 캐시 표 객체는 처음 넣을 때 만들어져 엔진 수명 범위가 끝까지 소유한다 — 기준을 재기 전에 한 번 만들어 둔다(측정하는 것은 비우기가 놓는 저장소다).
     const sw::string warmup = sw::ResourcePaths::findLooseFile( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str() ).getDiskPath();
     SW_ASSERT_FALSE( warmup.empty() );
     sw::ResourcePaths::clearPathCache();

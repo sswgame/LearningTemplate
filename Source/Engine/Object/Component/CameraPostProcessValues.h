@@ -50,7 +50,7 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Adaptation speed when the scene gets darker (1/s, exponential)" )
         float32 _autoExposureSpeedDown{ 1.0f };
 
-        /** @brief 자동 노출이 장면을 재는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
+        /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
     };
 } // namespace sw

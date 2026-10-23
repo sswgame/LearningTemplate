@@ -325,7 +325,7 @@ namespace sw
         _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
         _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
         if ( _instanceSlotStream == 0 )
-            SW_LOG_ERROR( "인스턴스 슬롯 스트림을 만들지 못했습니다(%# 인스턴스) — 씬 드로우가 인스턴스를 찾지 못합니다.", capacity );
+            SW_LOG_ERROR( "Failed to create the instance slot stream (%# instances) - scene draws cannot find their instances.", capacity );
     }
 
     void GPUScene::uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount )
@@ -526,7 +526,7 @@ namespace sw
             if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
                                            RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
             {
-                SW_LOG_ERROR( "머티리얼 데이터 버퍼 생성 실패 (%#, stride %#, %# 원소).", group._shaderPath.c_str(), stride, elementCount );
+                SW_LOG_ERROR( "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
                 continue;
             }
             // 값이 지난 업로드와 같으면 올리지 않는다. 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만큼으로 준다.

@@ -243,7 +243,7 @@ namespace sw
         const bool bInsideGrid = 0 <= tileX && tileX < _grid._tileCountX && 0 <= tileZ && tileZ < _grid._tileCountZ;
         if ( _pNavMesh == nullptr || bInsideGrid == false )
             return false;
-        // 장애물 캐시는 장애물을 층에 굽지 않는다(층이 정적 몫이라 장애물이 움직이면 낡는다) — 장애물은 `addCacheObstacle` 로 넣는다.
+        // 장애물 캐시는 장애물을 층에 베이크하지 않는다(층이 정적 몫이라 장애물이 움직이면 낡는다) — 장애물은 `addCacheObstacle` 로 넣는다.
         const bool bCacheWithObstacleVolumes = _pTileCache != nullptr && pExtraVolume != nullptr && pExtraVolume->empty() == false;
         if ( bCacheWithObstacleVolumes )
         {
@@ -530,7 +530,7 @@ namespace sw
 
     void RecastNavMesh::applyLinkFlags( int32 tileX, int32 tileZ )
     {
-        // 자리 하나에 층 여럿이 있을 수 있다(장애물 캐시). 다시 굽기는 층 0 하나뿐이다.
+        // 자리 하나에 층 여럿이 있을 수 있다(장애물 캐시). 다시 베이크는 층 0 하나뿐이다.
         const dtNavMesh* const pConst = _pNavMesh;
         const dtMeshTile*      arrTile[RecastTileCache::kMaxLayerCount * 2];
         const int32            tileCount = pConst->getTilesAt( tileX, tileZ, arrTile, static_cast<int32>( RecastTileCache::kMaxLayerCount * 2 ) );

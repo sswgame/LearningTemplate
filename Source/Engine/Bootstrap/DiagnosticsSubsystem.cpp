@@ -16,7 +16,7 @@ namespace sw
 
     DiagnosticsSubsystem::~DiagnosticsSubsystem()
     {
-        // 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 견준다(어느 용도가 남았나, Debug). 플랫폼 누수 검사(CRT)는 바이트만 말하고,
+        // 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 비교한다(어느 용도가 남았나, Debug). 플랫폼 누수 검사(CRT)는 바이트만 말하고,
         // 이 보고는 그 바이트가 어느 하위 시스템의 것인지 말한다.
         if ( _memoryProfiler == nullptr )
             return;

@@ -119,7 +119,7 @@ namespace sw
                           [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
         { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
 
-        // 3) 입자 자리 — 배치 순서마다 가장 먼저 그리는 인스턴스의 키(정렬된 꼬리 키의 그 순번)와 견준다. 꼬리 밖 배치는 키가 없어 모든 입자 뒤다.
+        // 3) 입자 자리 — 배치 순서마다 가장 먼저 그리는 인스턴스의 키(정렬된 꼬리 키의 그 순번)와 비교한다. 꼬리 밖 배치는 키가 없어 모든 입자 뒤다.
         if ( listParticleKey.empty() == false )
         {
             _listViewBatchHeadKey.resize( order._listBatchOrder.size() );

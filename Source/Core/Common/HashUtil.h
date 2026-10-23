@@ -17,7 +17,7 @@ namespace sw
      * @class DefaultHash
      * @brief 해시 컨테이너의 기본 해시입니다. 키에 `computeHash() const` 가 있으면 그것을, 없으면 `std::hash<Key>` 를 씁니다.
      * @details `std::hash<Key>` 를 상속하므로 그 특수화가 가진 이종 키 오버로드가 그대로 남습니다.
-     *          문자열 키(`sw::string` · `sw::wstring`)는 `Core/Container/string.h` 의 `DefaultHash` 특수화가 정본입니다. STL 구성에서는
+     *          문자열 키(`sw::string` · `sw::wstring`)는 `Core/Container/string.h` 의 `DefaultHash` 특수화가 기준입니다. STL 구성에서는
      *          sw::string 이 std::string 이라 `std::hash` 로는 두 구성의 해시 · 이종 조회를 같게 할 수 없습니다.
      *          `computeHash` 쪽은 같은 키 타입만 받습니다. 이종 조회가 필요하면 그 키의 `DefaultHash` 특수화를 둡니다.
      */

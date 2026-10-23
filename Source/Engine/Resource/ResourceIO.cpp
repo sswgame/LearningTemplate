@@ -120,7 +120,7 @@ namespace sw
             [&outText]( const ResourcePakManager& packManager, string_view key, string& outPackPath )
         { return packManager.readTextFile( key, outText, &outPackPath ); } );
         // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
-        // 찾지 못한 것도 입력이다(해시 0) — 그 파일이 생기면 다시 굽는다.
+        // 찾지 못한 것도 입력이다(해시 0) — 그 파일이 생기면 다시 베이크한다.
         if ( bRead == false )
         {
             CookJob::admitMissingRead( relativePath );

@@ -1,8 +1,8 @@
 /**
  * @file MeshModifierSession.h
- * @brief 메시 모디파이어 편집 세션 — 대상 메시 오브젝트, 스택, 되돌리기, 미리보기 정점, 사이드카 저장, 굽기를 한 곳에 둡니다(ImGui 를 모릅니다).
+ * @brief 메시 모디파이어 편집 세션 — 대상 메시 오브젝트, 스택, 되돌리기, 미리보기 정점, 사이드카 저장, 베이크를 한 곳에 둡니다(ImGui 를 모릅니다).
  * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`). 패널과 시각화가 `editor::findSubsystem<MeshModifierSession>()` 로 같이 본다.
- *          씬에는 아무것도 붙이지 않는다 — 스택은 메시 옆 사이드카 문서(`<메시>.modifiers.json`)에, 결과는 굽기로 새 `.mesh` 에셋이 된다.
+ *          씬에는 아무것도 붙이지 않는다 — 스택은 메시 옆 사이드카 문서(`<메시>.modifiers.json`)에, 결과는 베이크로 새 `.mesh` 에셋이 된다.
  *          그래서 확장 모듈이 없는 런타임(게임 · Shipping)에서도 씬과 에셋이 그대로 읽힌다.
  */
 #pragma once
@@ -71,7 +71,7 @@ namespace sw::editor
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
         void markDirty() { _bPreviewDirty = true; }
         /**
-         * @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 정본 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다.
+         * @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 기준 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다.
          * @details 고른 모디파이어 앞까지 건 결과(앞부분 캐시)를 들고, 앞부분 모디파이어의 저장 글 · 시간 · 메시 변환이 그대로면 고른 것부터만 다시 건다.
          *          앞부분이 읽는 씬 입력(참조 오브젝트 변환 · 곡선 · 텍스처 파일)은 캐시를 만들 때의 값이다 — 앞부분이나 고른 번호가 바뀌면 다시 읽는다.
          */
@@ -102,7 +102,7 @@ namespace sw::editor
         [[nodiscard]] bool loadSidecar();
         /**
          * @brief 스택이 마지막으로 읽거나 쓴 사이드카(없었으면 빈 스택)와 다르면 true 입니다. 패널의 미저장 표시 · 닫기 확인이 이 값을 본다.
-         * @details 저장 글(`MeshModifierStack::makeJSONText`)끼리 견준다 — 되돌리기로 저장한 상태에 돌아오면 다시 false 다. 대상이 없으면 false 입니다.
+         * @details 저장 글(`MeshModifierStack::makeJSONText`)끼리 비교한다 — 되돌리기로 저장한 상태에 돌아오면 다시 false 다. 대상이 없으면 false 입니다.
          */
         bool isStackUnsaved() const;
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 상태로 돌립니다(되돌리기 기록에 남긴다). 대상이 없으면 아무것도 하지 않습니다. */
@@ -164,7 +164,7 @@ namespace sw::editor
         MeshModifierEvaluation makeEvaluation() const;
         /**
          * @brief 앞부분 캐시(`_prefixMesh` = 고른 모디파이어 앞까지 건 결과)를 맞춥니다.
-         * @param bStackChanged 스택 · 시간이 바뀌었을 수 있으면 true(앞부분 저장 글을 견준다). false 면 고른 번호가 바뀌었을 때만 견준다.
+         * @param bStackChanged 스택 · 시간이 바뀌었을 수 있으면 true(앞부분 저장 글을 비교한다). false 면 고른 번호가 바뀌었을 때만 비교한다.
          */
         void updatePrefixCache( const MeshModifierEvaluation& evaluation, bool bStackChanged );
         void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;

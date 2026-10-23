@@ -787,7 +787,7 @@ SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
     SW_LOG_INFO( "Knight rig (4 nodes, 41 bones): %# us per prepare + evaluate", microseconds );
     SW_EXPECT_TRUE( microseconds < kLimit );
 
-    // 망토 리그(뿌리 고정 + 스프링 사슬 4 본 · 캡슐 하나) — 프레임 시간 1/60 이라 스텝 하나씩.
+    // 망토 리그(루트 고정 + 스프링 사슬 4 본 · 캡슐 하나) — 프레임 시간 1/60 이라 스텝 하나씩.
     Skeleton cape;
     SW_ASSERT_TRUE( cape.loadFromResource( "game/shooter3d/rigs/knight_cape.skeleton.xml" ) );
     shared_ptr<RigAsset> capeAsset = make_shared<RigAsset>();

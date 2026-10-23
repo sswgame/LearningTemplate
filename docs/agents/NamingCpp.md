@@ -118,6 +118,11 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   game settings someone changes at run time (project-wide engine settings tables such as `PhysicsSettings` · `UIScaleSettings` keep
   the Unreal `U*Settings` name, and so do match rules a game picks per match); `Params` — call arguments bundled into one value.
   A sub-struct of a catalog file is a `Def` (`BrZoneDef` inside `BrCatalog`).
+  `Context` — the environment a caller hands to a callee for one call, pass, frame or operation (`RenderGraphPassContext`,
+  `UIPaintContext`, `SerializeContext`); a graphics API object keeps the API's own term (`RHICommandContext`). A record the owner
+  keeps for each thing it manages is a `Record` (`LiveReloadManager::ModuleRecord`), not a `Context`.
+  `Unit` is a game-play unit (`RTSUnit`, `SRPGUnit`), an animated skeletal mesh in `AnimationSystem`, or a measurement unit
+  (`ReflectUnit`); the three live in separate namespaces and each header says which one it means.
 - **`RT` means render thread** (profile tags `RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
 
 - **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts

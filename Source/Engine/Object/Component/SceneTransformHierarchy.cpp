@@ -526,7 +526,7 @@ namespace sw
         mergeQueuedDirtyRoots();
         uint32 changedCount = 0;
         {
-            // 대기 칸 적용만 따로 잰다 — 나머지(`queuedTransforms` − 이것)가 다른 오브젝트에 쓴 건의 정렬 · 적용이다.
+            // 대기 칸 적용만 따로 측정한다 — 나머지(`queuedTransforms` − 이것)가 다른 오브젝트에 쓴 건의 정렬 · 적용이다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.pendingSlotApply" );
             changedCount += applyPendingSlots( registry );
         }

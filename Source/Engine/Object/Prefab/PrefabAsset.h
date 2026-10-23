@@ -246,7 +246,7 @@ namespace sw
          * @details 유니티의 Apply 뒤 다른 인스턴스 갱신 · 언리얼의 블루프린트 컴파일 뒤 레벨 인스턴스 갱신과 같은 규칙이다 — 덮어쓰지 않은 칸만 새 값을 받는다.
          *          씬을 다시 읽을 때(`Scene::instantiate`)와 같은 식(새 원형 + 덮어쓴 것)을 살아 있는 오브젝트에 쓴다. 오브젝트 · 컴포넌트 id 는 이어진다.
          *          캐시는 이미 새 내용이어야 한다(`reload` 뒤).
-         * @param oldBaseStateXML 고치기 전 원형(`PrefabOverrides::makeBaseState`)입니다. 덮어쓴 것을 이것과 견줘 뽑습니다.
+         * @param oldBaseStateXML 고치기 전 원형(`PrefabOverrides::makeBaseState`)입니다. 덮어쓴 것을 이것과 비교해 뽑습니다.
          */
         [[nodiscard]] bool updateInstance( GameObject* pInstance, string_view oldBaseStateXML, string_view assetRelativePath );
         /**
@@ -314,12 +314,12 @@ namespace sw
          * @details 씬처럼 엔진이 쿠킹한다(`App --cook-scenes` 가 리소스 루트로 함께 부른다. 언리얼의 쿡 커맨드렛에 해당한다). 형식을 쓰는 곳은
          *          `PrefabAsset::saveToBinaryFile` 하나다. 중첩 인스턴스는 펼쳐서 싣는다(`flattenNestedInstances`). 펼치지 못한 프리팹(원본 없음 · 순환)은
          *          쓰지 않고 실패로 센다 — 배포본이 부품 없이 스폰하는 것을 쿠킹에서 막는다.
-         *          프리팹마다 작업(`CookJob`) 하나로 굽고 @p store 의 기록이 새것이면 DDC 의 출력을 다시 쓴다(`CookStore::cookFile`). 중첩 원본도 그 작업의 입력이다.
+         *          프리팹마다 작업(`CookJob`) 하나로 베이크하고 @p store 의 기록이 새것이면 DDC 의 출력을 다시 쓴다(`CookStore::cookFile`). 중첩 원본도 그 작업의 입력이다.
          */
         static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
         /** @brief 프리팹 쿠킹 작업의 키 값입니다. */
         static CookJobDesc makeCookJobDesc();
-        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 구워집니다. */
+        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 베이크됩니다. */
         static constexpr uint32 kCookVersion = 1;
 
     private:
@@ -346,12 +346,12 @@ namespace sw
         /**
          * @brief `flattenNestedInstances` 의 재귀 단계입니다 — @p asset 의 노드를 펼쳐 @p inoutListNode 끝에 더합니다. 루트 노드의 부모는 @p parentIndex 입니다.
          * @param parentPath 부모 노드의 부품 경로입니다(맨 바깥은 빈 글). 펼친 노드의 `_partPath` 가 이 아래에 붙습니다.
-         * @param listPartOverride 바깥 노드들의 `<Part>` 입니다(바깥 프리팹 루트에서의 경로). 펼친 상태에 구워 넣습니다.
+         * @param listPartOverride 바깥 노드들의 `<Part>` 입니다(바깥 프리팹 루트에서의 경로). 펼친 상태에 베이크해 넣습니다.
          */
         [[nodiscard]] bool appendFlattenedNodes( const PrefabAsset& asset, int32 parentIndex, string_view parentPath, const vector<PrefabPartOverride>& listPartOverride,
                                                  vector<PrefabInstanceNode>& inoutListNode );
         /**
-         * @brief `spawnNestedInstances` 의 재귀 단계입니다. @p listPartOverride 의 경로는 맨 바깥 인스턴스 루트에서 잰 것이고, @p pRoot 는 그 경로 @p rootPath 의 부품입니다.
+         * @brief `spawnNestedInstances` 의 재귀 단계입니다. @p listPartOverride 의 경로는 맨 바깥 인스턴스 루트에서 측정한 것이고, @p pRoot 는 그 경로 @p rootPath 의 부품입니다.
          * @param inoutListSpawnedPath 스폰한 부품의 경로를 끝에 더합니다(닿지 않은 `<Part>` 를 알리는 데 씁니다).
          */
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,

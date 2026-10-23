@@ -500,7 +500,7 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
 
 /**
  * @brief [EditorAssetTypeTest] 엔진이 읽는 포맷의 확장자(`kExtension`)는 에디터 종류 표에서 그 포맷의 종류로 판정된다
- * @details 종류 표의 순서가 판정 우선순위라, 앞 줄(`.json` 의 Data 등)이 뒤 포맷을 가로채면 열기 · 리로드 · 아이콘이 모두 틀린다. 정본은 종류 표 하나이고
+ * @details 종류 표의 순서가 판정 우선순위라, 앞 줄(`.json` 의 Data 등)이 뒤 포맷을 가로채면 열기 · 리로드 · 아이콘이 모두 틀린다. 기준은 종류 표 하나이고
  *          이 표는 그것을 확인만 한다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, EveryEngineFormatMapsToItsKind )

@@ -1,6 +1,6 @@
 /**
  * @file RetargetProfile.h
- * @brief 리타깃 프로필(`*.retarget.xml`)입니다. 원본과 대상 스켈레톤 사이의 사슬 쌍(이름, 본 목록), 골반과 뿌리 처리, IK 목표 사슬을 담습니다.
+ * @brief 리타깃 프로필(`*.retarget.xml`)입니다. 원본과 대상 스켈레톤 사이의 사슬 쌍(이름, 본 목록), 골반과 루트 처리, IK 목표 사슬을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 뿌리와 골반 이동을 옮기는 방법입니다. */
+    /** @brief 루트와 골반 이동을 옮기는 방법입니다. */
     enum class RetargetTranslationMode : uint8
     {
         ScaleByPelvisHeight = 0, ///< 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다. 다리 길이가 다른 캐릭터가 같은 보폭 비로 걷는다.
@@ -67,7 +67,7 @@ namespace sw
      * @endcode
      *          - `bone_map`(선택): 본 이름 테이블이다. 사슬로 묶지 않은 본을 한 줄에 하나씩 짝짓는다.
      *          - `map_same_names`(선택): 사슬, 테이블 어디에도 없는 대상 본 중 원본에 같은 이름이 있으면 짝짓는다(언리얼 IK Retargeter 의 이름 자동 매핑).
-     *          - `height_ratio`(선택, 0 보다 큼): 뿌리와 골반 이동, IK 목표 사슬의 끝 위치에 곱하는 비율이다. 적지 않으면 골반 높이 비(대상 / 원본)를 쓴다.
+     *          - `height_ratio`(선택, 0 보다 큼): 루트와 골반 이동, IK 목표 사슬의 끝 위치에 곱하는 비율이다. 적지 않으면 골반 높이 비(대상 / 원본)를 쓴다.
      *            골반 높이가 체형을 대표하지 못하는 스켈레톤(네 발, 웅크린 레퍼런스)에 쓴다.
      *          짝이 없는 대상 본은 대상 레퍼런스 포즈 그대로입니다(IK 보조 본, 손가락). 짝은 사슬, 테이블, 같은 이름 순으로 먼저 정한 것이 이깁니다.
      */
@@ -105,7 +105,7 @@ namespace sw
         const vector<RetargetBonePair>& getBonePairs() const { return _listBonePair; }
         /** @brief 같은 이름의 본을 자동으로 짝지을지입니다. */
         bool isMappingSameNames() const { return _bMapSameNames == SW_TRUE; }
-        /** @brief 뿌리와 골반 이동 비율의 덮어쓰기입니다. 0 이면 골반 높이 비를 계산합니다. */
+        /** @brief 루트와 골반 이동 비율의 덮어쓰기입니다. 0 이면 골반 높이 비를 계산합니다. */
         float32 getHeightRatioOverride() const { return _heightRatioOverride; }
         /** @brief 사슬을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
@@ -121,7 +121,7 @@ namespace sw
         void setMapSameNames( bool bMap ) { _bMapSameNames = bMap ? SW_TRUE : SW_FALSE; }
         /** @brief 이동 비율 덮어쓰기를 정합니다. 0 이하이면 계산한 골반 높이 비를 씁니다. */
         void setHeightRatioOverride( float32 ratio ) { _heightRatioOverride = ratio > 0.0f ? ratio : 0.0f; }
-        /** @brief 뿌리와 골반 쌍, 이동 방법을 정합니다(코드로 만드는 프로필과 테스트용). */
+        /** @brief 루트와 골반 쌍, 이동 방법을 정합니다(코드로 만드는 프로필과 테스트용). */
         void setRootAndPelvis( const hashed_string& sourceRoot, const hashed_string& targetRoot, const hashed_string& sourcePelvis, const hashed_string& targetPelvis,
                                RetargetTranslationMode mode );
 

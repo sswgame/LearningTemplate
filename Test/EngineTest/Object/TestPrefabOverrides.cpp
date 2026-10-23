@@ -273,7 +273,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 
 /**
  * @brief [PrefabOverridesTest] 지금 판이 아닌 쿠킹 씬(SCN1 v2)은 읽지 않고 다시 구우라고 알린다 — 바이트를 v2 의 배치대로 손으로 쓴다
- * @details 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이다. 옛 배치를 읽어 주는 갈래를 두지 않는다 — 판이 다르면 배치를 짐작하지 않고 거절한다.
+ * @details 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이다. 옛 배치를 읽어 주는 분기를 두지 않는다 — 판이 다르면 배치를 짐작하지 않고 거절한다.
  */
 SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
 {
@@ -559,7 +559,7 @@ SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstan
     SW_EXPECT_NEAR_EQUAL( 4.0f, pReopenedRight->getPrimarySceneComponent()->getLocalPosition()._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pReopenedLeft->getPrimarySceneComponent()->getLocalPosition()._x, 0.0001f );
 
-    // 다시 저장해도 같은 항목 하나다(덮어쓴 것을 얹어 만든 부품이 새 기준과 견줘 같은 차이를 낸다).
+    // 다시 저장해도 같은 항목 하나다(덮어쓴 것을 얹어 만든 부품이 새 기준과 비교해 같은 차이를 낸다).
     sw::SceneDocument resaved;
     SW_ASSERT_TRUE( pReopened->serializeToDocument( resaved ) );
     const sw::SceneDocument::SceneObjectNode* pResavedCart = sw::PrefabOverridesTestInternal::findEntity( resaved, "Cart" );

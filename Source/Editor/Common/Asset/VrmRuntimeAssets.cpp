@@ -63,7 +63,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 사슬 본 @p bone 의 관절입니다. 없으면(가지 사슬 뿌리가 이 스프링 밖일 때) 끝 본 @p tail 의 관절입니다 — 사슬은 관절 본으로만 만들어져 둘 중 하나는 있다. */
+            /** @brief 사슬 본 @p bone 의 관절입니다. 없으면(가지 사슬 루트가 이 스프링 밖일 때) 끝 본 @p tail 의 관절입니다 — 사슬은 관절 본으로만 만들어져 둘 중 하나는 있다. */
             static const VrmSpringJoint* findJoint( const VrmSpring& spring, const string& bone, const string& tail )
             {
                 const VrmSpringJoint* pTail = nullptr;
@@ -104,7 +104,7 @@ namespace sw::editor
                     const int32 parent = skeleton.getBone( static_cast<uint32>( bone ) )._parentIndex;
                     if ( current._listBone.empty() == false && parent != lastBone )
                     {
-                        // 가지 — 앞 사슬을 끝내고 이 관절의 부모(고정된 뿌리)에서 새 사슬을 시작한다.
+                        // 가지 — 앞 사슬을 끝내고 이 관절의 부모(고정된 루트)에서 새 사슬을 시작한다.
                         flush();
                         if ( parent >= 0 )
                             current._listBone.push_back( string( skeleton.getBone( static_cast<uint32>( parent ) )._name.c_str() ) );
@@ -227,7 +227,7 @@ namespace sw::editor
             // VRM(three-vrm VRMSpringBoneJoint.update) 의 한 프레임: 다음 끝 = 끝 + (끝 − 이전 끝) × (1 − dragForce) + 뼈 방향 × stiffness × dt + gravityDir × gravityPower × dt,
             // 그 뒤 길이를 맞추고 충돌체(hitRadius + 반지름)에서 밀어낸다. 리그 사슬의 고정 스텝과 항마다 같다 — 감쇠 = dragForce, axis_pull = stiffness(m/s),
             // 중력 가속도 = gravityDir × gravityPower ÷ 스텝(스텝마다 가속도 × 스텝² = gravityPower × 스텝), 비율 당김(stiffness) 은 0, 반지름 = hitRadius.
-            // 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 이다 — 사슬 본 k 의 관절 값이 joints[k] 다. 가지에서 새로 시작한 사슬의 뿌리(부모 본)는 이 스프링의 관절이다.
+            // 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 이다 — 사슬 본 k 의 관절 값이 joints[k] 다. 가지에서 새로 시작한 사슬의 루트(부모 본)는 이 스프링의 관절이다.
             const VrmSpringJoint& first = *Internal::findJoint( spring, chain._listBone[0], chain._listBone[1] );
             node.appendAttribute( "stiffness", 0.0f );
             node.appendAttribute( "axis_pull", first._stiffness );

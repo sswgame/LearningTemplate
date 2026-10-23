@@ -129,7 +129,7 @@ namespace sw
         {
             bPresetsRead = readPresetFile( presetFile ) && bPresetsRead; // 검사는 아래 finishLoad 가 한 번 한다
         }
-        // 몸 부품이 피팅 표를 가리키면 그 표들의 영역이 숨김 영역 이름의 정본이다 — 표가 하나도 없으면 영역을 대조할 근거가 없다(숨김 영역은 피팅 표 없이는 쓰이지 않는다).
+        // 몸 부품이 피팅 표를 가리키면 그 표들의 영역이 숨김 영역 이름의 기준이다 — 표가 하나도 없으면 영역을 대조할 근거가 없다(숨김 영역은 피팅 표 없이는 쓰이지 않는다).
         vector<hashed_string> listBodyRegion;
         const bool            bHasFitTables = collectBodyRegions( listBodyRegion );
         return finishLoad( pItemCatalog, bHasFitTables ? &listBodyRegion : nullptr ) && bPresetsRead;

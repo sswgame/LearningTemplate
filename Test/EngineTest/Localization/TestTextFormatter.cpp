@@ -173,7 +173,7 @@ SW_TEST_CASE( TextFormatterTest, PluralCategoriesPerLanguage )
 }
 
 /**
- * @brief [TextFormatterTest] `=N` 이 범주보다 앞서고, offset 은 범주와 `#` 에만 쓰이며, 갈래 안의 인자 · 중첩도 풀린다
+ * @brief [TextFormatterTest] `=N` 이 범주보다 앞서고, offset 은 범주와 `#` 에만 쓰이며, 분기 안의 인자 · 중첩도 풀린다
  */
 SW_TEST_CASE( TextFormatterTest, ExactMatchOffsetAndNesting )
 {
@@ -183,12 +183,12 @@ SW_TEST_CASE( TextFormatterTest, ExactMatchOffsetAndNesting )
     SW_EXPECT_STREQ( "Bob and 1 guest came", TextFormatterTestInternal::format( "en", kGuests, sw::TextArgumentList().addInteger( "n", 2 ).addText( "host", "Bob" ) ).c_str() );
     SW_EXPECT_STREQ( "Bob and 4 guests came", TextFormatterTestInternal::format( "en", kGuests, sw::TextArgumentList().addInteger( "n", 5 ).addText( "host", "Bob" ) ).c_str() );
 
-    // 갈래 순서와 무관하게 `=1` 이 one 보다 앞선다.
+    // 분기 순서와 무관하게 `=1` 이 one 보다 앞선다.
     SW_EXPECT_STREQ( "exactly one", TextFormatterTestInternal::plural( "en", "{n, plural, one {category} =1 {exactly one} other {many}}", 1 ).c_str() );
 }
 
 /**
- * @brief [TextFormatterTest] select(성별 등) — 맞는 갈래, 없으면 other / 복수형 안의 select
+ * @brief [TextFormatterTest] select(성별 등) — 맞는 분기, 없으면 other / 복수형 안의 select
  */
 SW_TEST_CASE( TextFormatterTest, SelectBranches )
 {

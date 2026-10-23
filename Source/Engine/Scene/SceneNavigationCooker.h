@@ -30,13 +30,13 @@ namespace sw
         /**
          * @brief @p resourceRoot 아래의 모든 씬(`*.scene.xml`) 가운데 표면이 있는 것을 `<cookedDir>/<씬 경로의 .navmesh>` 로 씁니다. 활성 게임이 아닌
          *        게임 팩의 씬은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
-         * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 굽고 — 씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
+         * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 베이크하고 — 씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 파일 수입니다. 실패는 @p outFailedCount 에 셉니다.
          */
         static uint32 cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount );
         /** @brief 내비메시 쿠킹 작업의 키 값입니다. */
         static CookJobDesc makeCookJobDesc();
-        /** @brief 내비메시 쿠커 버전입니다. `.navmesh` 형식이나 베이크(`NavMeshBakeUtil`)를 바꾸면 올립니다 — 모든 내비메시가 다시 구워집니다. */
+        /** @brief 내비메시 쿠커 버전입니다. `.navmesh` 형식이나 베이크(`NavMeshBakeUtil`)를 바꾸면 올립니다 — 모든 내비메시가 다시 베이크됩니다. */
         static constexpr uint32 kCookVersion = 1;
     };
 } // namespace sw

@@ -94,7 +94,7 @@ namespace sw
     /**
      * @class FacialRig
      * @brief 얼굴 리그 파일(`<얼굴>.facial.xml`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.xml`)의 것과 맞춥니다.
-     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
      *          `_blink` · `_gaze` 를 적지 않으면 기본값이고, 타깃 · 눈 본이 비면 그 기능을 쓰지 않는다. 읽은 뒤 `validateFile` 이 이름 중복 · 간격 순서를 본다.
      */
     REFLECT()

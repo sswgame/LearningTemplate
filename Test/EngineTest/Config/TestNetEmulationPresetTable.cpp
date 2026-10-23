@@ -13,7 +13,7 @@ using namespace sw;
 
 /**
  * @brief [NetEmulationPresetTableTest] 엔진 팩의 회선 프리셋 표를 읽고 이름(대소문자 무시)으로 조건을 만든다 — 꺼짐은 조건이 꺼져 있고, 끊김은 전부 잃는다
- * @details 값의 정본은 데이터(`netemulation.presets.xml`)다. 여기서는 단위 변환(ms → 초, % → 비율, KB/s → B/s)과 조회만 본다.
+ * @details 값의 기준은 데이터(`netemulation.presets.xml`)다. 여기서는 단위 변환(ms → 초, % → 비율, KB/s → B/s)과 조회만 본다.
  */
 SW_TEST_CASE( NetEmulationPresetTableTest, ShippedTableMakesConditionsByName )
 {

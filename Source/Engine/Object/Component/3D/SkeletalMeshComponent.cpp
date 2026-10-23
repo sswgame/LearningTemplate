@@ -458,10 +458,10 @@ namespace sw
 
     void SkeletalMeshComponent::setShareCrowdPose( bool bShare )
     {
-        const uint8 value = bShare ? SW_TRUE : SW_FALSE;
-        if ( _bShareCrowdPose == value && ( bShare || _crowdMode == AnimationCrowdMode::Own ) )
+        const uint8 shareFlag = bShare ? SW_TRUE : SW_FALSE;
+        if ( _bShareCrowdPose == shareFlag && ( bShare || _crowdMode == AnimationCrowdMode::Own ) )
             return;
-        _bShareCrowdPose = value;
+        _bShareCrowdPose = shareFlag;
         if ( bShare )
         {
             // 자기 사본을 원본으로 되돌린다 — 다음 평가가 묶음 · 사본 · VAT 를 정한다.

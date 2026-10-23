@@ -208,14 +208,14 @@ namespace sw
                 inoutListGroup = std::move( listSplit );
             }
 
-            /** @brief 깊이 우선 순서로 매긴 최종 노드 번호입니다. 잎은 잎 순서, 묶음은 자식이 먼저고 뿌리가 마지막입니다. */
+            /** @brief 깊이 우선 순서로 매긴 최종 노드 번호입니다. 잎은 잎 순서, 묶음은 자식이 먼저고 루트가 마지막입니다. */
             struct DepthFirstOrder
             {
                 vector<uint32> _listFinalOf;      ///< 만드는 노드 번호에서 최종 노드 번호
                 vector<uint32> _listClusterOrder; ///< 묶음의 뒤 순서(만드는 노드 번호)
             };
 
-            /** @brief 아래 단계부터 노드를 묶어 올립니다. 연결로 이어진 덩어리끼리만 묶고, 뿌리 노드의 번호를 반환합니다. */
+            /** @brief 아래 단계부터 노드를 묶어 올립니다. 연결로 이어진 덩어리끼리만 묶고, 루트 노드의 번호를 반환합니다. */
             static uint32 clusterLevels( vector<BuildNode>& inoutListBuild, const vector<FractureLink>& listLink, uint32 leafCount, vector_reference<const uint32> listLevelCount )
             {
                 vector<uint32> listCurrent( leafCount );
@@ -245,7 +245,7 @@ namespace sw
                 return listCurrent.size() == 1 ? listCurrent[0] : makeCluster( inoutListBuild, listCurrent );
             }
 
-            /** @brief 깊이 우선으로 잎 순서와 묶음의 뒤 순서(자식이 먼저, 뿌리가 마지막)를 함께 매깁니다. */
+            /** @brief 깊이 우선으로 잎 순서와 묶음의 뒤 순서(자식이 먼저, 루트가 마지막)를 함께 매깁니다. */
             static void orderDepthFirst( const vector<BuildNode>& listBuild, uint32 buildRoot, uint32 leafCount, vector<uint32>& outListLeafOrder, DepthFirstOrder& outOrder )
             {
                 struct Frame

@@ -31,9 +31,9 @@ namespace sw
      * @details 한 번 옮길 때 다음 순서로 처리한다.
      *          1. 원본 포즈의 모델 공간을 구한다.
      *          2. 대상은 레퍼런스(또는 넘겨받은 덮어쓰기, 즉 본 비율 `BoneProportion` 을 적용한 포즈)에서 시작한다.
-     *          3. 짝지은 본(뿌리, 골반, 사슬)은 **모델 공간 회전 차이**를 옮긴다. 대상 = (원본 × 원본 레퍼런스⁻¹) × 대상 레퍼런스다. 두 스켈레톤의
+     *          3. 짝지은 본(루트, 골반, 사슬)은 **모델 공간 회전 차이**를 옮긴다. 대상 = (원본 × 원본 레퍼런스⁻¹) × 대상 레퍼런스다. 두 스켈레톤의
      *             로컬 축 약속이 달라도 맞다. 본 수가 다른 사슬은 사슬 길이 비율로 원본 본을 고른다.
-     *          4. 뿌리와 골반 이동은 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다(`ScaleByPelvisHeight`).
+     *          4. 루트와 골반 이동은 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다(`ScaleByPelvisHeight`).
      *          5. IK 목표 사슬(다리)은 끝을 "원본 끝 위치 × 높이 비"에 두도록 2 본 IK(본 셋) 또는 FABRIK 으로 푼다. 다리 길이가 달라도 발이
      *             보폭과 맞게 디뎌 미끄러지지 않는다. 다 펴도 닿지 않는 목표(보폭 끝)면 골반을 그만큼 내린다. 끝 본의 모델 회전은 3 의 값을 유지한다.
      */
@@ -52,9 +52,9 @@ namespace sw
         float32 getHeightRatio() const { return _heightRatio; }
         /** @brief 대상 레퍼런스 포즈입니다(덮어쓰기 포함). */
         const Pose& getTargetReference() const { return _targetReference; }
-        /** @brief 짝지은 대상 본 수입니다(뿌리 · 골반 · 사슬 · 이름 테이블 · 같은 이름, 겹침 제외). 나머지 대상 본은 레퍼런스 그대로입니다. */
+        /** @brief 짝지은 대상 본 수입니다(루트 · 골반 · 사슬 · 이름 테이블 · 같은 이름, 겹침 제외). 나머지 대상 본은 레퍼런스 그대로입니다. */
         uint32 getMappedBoneCount() const { return static_cast<uint32>( _listPair.size() ); }
-        /** @brief 원본과 대상의 뿌리 본 번호입니다(루트 모션 트랙 쌍). */
+        /** @brief 원본과 대상의 루트 본 번호입니다(루트 모션 트랙 쌍). */
         uint32 getSourceRootBone() const { return _sourceRoot; }
         uint32 getTargetRootBone() const { return _targetRoot; }
 

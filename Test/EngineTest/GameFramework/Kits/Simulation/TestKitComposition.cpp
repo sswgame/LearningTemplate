@@ -710,7 +710,7 @@ namespace
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
-    /** @brief 판을 견줄 숫자들입니다. */
+    /** @brief 판을 비교할 숫자들입니다. */
     struct KitCompositionDigest
     {
         int64       _gold{ 0 };
@@ -794,7 +794,7 @@ namespace
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
-    /** @brief 둘째 조립의 판을 견줄 숫자들입니다. */
+    /** @brief 둘째 조립의 판을 비교할 숫자들입니다. */
     struct LandCompositionDigest
     {
         int64         _deben{ 0 };

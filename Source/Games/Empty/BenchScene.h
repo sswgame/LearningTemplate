@@ -99,7 +99,7 @@ namespace sw
         void spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets );
         /** @brief 기사에게 붙는 무기 유닛을 만들고 그 유닛 컴포넌트를 반환합니다(만들지 못하면 nullptr). 리그가 오른손 소켓 위치를 따라갑니다. */
         SkeletalMeshComponent* spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
-        /** @brief 기사에게 붙는 망토 유닛을 만듭니다. 뿌리 뼈는 가슴 위치를 따라가고, 나머지 사슬 뼈는 스프링으로 움직입니다. */
+        /** @brief 기사에게 붙는 망토 유닛을 만듭니다. 루트 뼈는 가슴 위치를 따라가고, 나머지 사슬 뼈는 스프링으로 움직입니다. */
         void spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
         /** @brief `-gv_benchCharacters=N`: 스킨드 캐릭터 N 명을 한 줄로 스폰하고 Idle 과 Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
@@ -148,7 +148,7 @@ namespace sw
         /** @brief `-gv_benchSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다. */
         void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
         /**
-         * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름표(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(BenchSceneProbes.cpp).
+         * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(BenchSceneProbes.cpp).
          */
         [[nodiscard]] bool attachNameplate( GameObject& object, uint32 index ) const;
         /**

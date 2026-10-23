@@ -42,7 +42,7 @@ namespace
         static constexpr uint32 kRoundCount   = 2;
         static constexpr uint32 kBitsPerRound = 1u << 16;
 #else
-        /** @brief 한 줄을 몇 판 재는가 — p50 · p99 를 낼 표본 수. */
+        /** @brief 한 줄을 몇 판 측정하는가 — p50 · p99 를 낼 표본 수. */
         static constexpr uint32 kRoundCount = 15;
         /** @brief 한 판에 지나는 비트 수 — 비트셋이 작으면 그만큼 여러 번 되풀이해 판 길이를 맞춘다. */
         static constexpr uint32 kBitsPerRound = 1u << 20;
@@ -116,7 +116,7 @@ namespace
             return value;
         }
 
-        /** @brief 한 크기의 모든 연산을 `DynamicBitset` · 비교 기준 순으로 번갈아 잰다. */
+        /** @brief 한 크기의 모든 연산을 `DynamicBitset` · 비교 기준 순으로 번갈아 측정한다. */
         template <uint32 TBitCount>
         static void benchSize()
         {

@@ -240,7 +240,7 @@ namespace sw::editor
         [[nodiscard]] virtual bool trySampleCurve( string_view reference, float32 fraction, float3& outPosition, float3& outTangent ) const = 0;
         /** @brief 참조가 가리키는 메시 오브젝트의 월드 삼각형 목록입니다(Conform 대상). */
         [[nodiscard]] virtual bool tryGetMeshTriangles( string_view reference, vector<float3>& outListPosition ) const = 0;
-        /** @brief 텍스처 에셋을 UV 에서 표본합니다(RGBA, [0,1]). 굽기에서는 정적 텍스처 파일만 됩니다. */
+        /** @brief 텍스처 에셋을 UV 에서 표본합니다(RGBA, [0,1]). 베이크에서는 정적 텍스처 파일만 됩니다. */
         [[nodiscard]] virtual bool trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const = 0;
     };
 } // namespace sw::editor
@@ -257,7 +257,7 @@ namespace sw::editor
         const vector<float3>* _pListStackInputPosition{ nullptr };
         /**
          * @brief 넣으면 `MeshModifier::apply` 가 켜진 모디파이어마다 입력 상자(모디파이어 공간, 앞 모디파이어까지 건 결과)를 차례로 붙입니다.
-         * @details GPU 프로그램(`MeshModifierGPUProgram`)이 CPU 정본과 같은 상자를 싣는 데 쓴다 — 미리보기가 이미 도는 CPU 적용에서 공짜로 얻는다. 게임 스레드에서만 채운다.
+         * @details GPU 프로그램(`MeshModifierGPUProgram`)이 CPU 기준과 같은 상자를 싣는 데 쓴다 — 미리보기가 이미 도는 CPU 적용에서 공짜로 얻는다. 게임 스레드에서만 채운다.
          */
         vector<MeshModifierBounds>* _pListInputBounds{ nullptr };
     };
@@ -281,7 +281,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 모디파이어 하나를 거는 동안의 문맥입니다. 경계 상자는 모디파이어 공간에서 잰 입력 정점의 상자입니다. */
+    /** @brief 모디파이어 하나를 거는 동안의 문맥입니다. 경계 상자는 모디파이어 공간에서 측정한 입력 정점의 상자입니다. */
     struct MeshModifierContext
     {
         MeshModifierBounds            _bounds;
@@ -336,7 +336,7 @@ namespace sw::editor
         /**
          * @brief GPU 컴퓨트 미리보기로 옮길 수 있는 모디파이어면 true 입니다. 기본은 false(CPU 만)입니다.
          * @details 외부 입력(스플라인 · 다른 메시 · 포인트 캐시 · 텍스처)을 읽거나 `applyToMesh` 를 재정의한 모디파이어는 false 로 둔다.
-         *          CPU 구현이 정본이다 — 굽기 · 테스트는 늘 CPU 로 돈다.
+         *          CPU 구현이 기준이다 — 베이크 · 테스트는 늘 CPU 로 돈다.
          */
         virtual bool supportsGPU() const { return false; }
         /** @brief `MeshModifierPoint::_originalPosition` 이 필요하면 true 입니다. 기본은 false(복사 비용을 내지 않는다)입니다. */

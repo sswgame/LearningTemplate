@@ -449,7 +449,7 @@ namespace sw
             const float32 exposureInput = inputMap.getAxis1D( exposureAction );
             input._exposureSteps        = exposureInput > 0.0f ? 1.0f : ( exposureInput < 0.0f ? -1.0f : 0.0f );
         }
-        // 조절 값은 PROPERTY 가 정본이다 — 에디터에서 바꾼 값이 다음 프레임부터 바로 듣도록 매 프레임 옮긴다.
+        // 조절 값은 PROPERTY 가 기준이다 — 에디터에서 바꾼 값이 다음 프레임부터 바로 듣도록 매 프레임 옮긴다.
         PhotoModeSettings settings  = _photoMode.getSettings();
         settings._moveSpeed         = _photoMoveSpeed;
         settings._lookSensitivity   = _photoLookSensitivity;

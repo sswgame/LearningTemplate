@@ -5,7 +5,7 @@
  *          옛 세이브의 나머지 노드는 이어지고, 새 노드는 처음 상태로 시작한다. 같은 id 인데 종류나 종류의 상태 버전(`GimmickNodeKind::_stateVersion`), 슬롯 수가 다르면
  *          그 상태는 읽지 않는다(`GimmickStateMatch::Mismatch`). 슬롯의 뜻을 기본값으로 메울 수 없기 때문이다.
  *
- *          개수 상한은 B 가 요구하는 정적 상한이다. 정본은 C++ 상수(`kMaxNodeCount` · `kMaxSlotCount`) 하나이고, `PROPERTY( MaxCount = kMaxSlotCount )` 처럼
+ *          개수 상한은 B 가 요구하는 정적 상한이다. 기준은 C++ 상수(`kMaxNodeCount` · `kMaxSlotCount`) 하나이고, `PROPERTY( MaxCount = kMaxSlotCount )` 처럼
  *          그 이름을 적으면 생성기가 상수의 값을 코덱과 `PropertyMetadata::_maxCount` 에 넣는다(`ReflectionFormats.md` 3.5). 숫자를 두 곳에 적지 않는다.
  *          회로를 만들 때(`GimmickCircuit::populate`)와 종류를 등록할 때(`GimmickNodeRegistry::registerKind`) 이 상수로 막으므로, 만들어진 회로의 상태는 늘 B 로 쓸 수 있다.
  *

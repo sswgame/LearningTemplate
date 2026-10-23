@@ -120,7 +120,7 @@ SW_TEST_CASE( VrmAvatarImporterTest, Vrm0AvatarMapsToEngineNamesAndSpace )
     SW_EXPECT_TRUE( def._listExpression[1]._bBinary == SW_TRUE );
     SW_EXPECT_EQUAL( size_t( 2 ), def._listExpression[1]._listBind.size() );
 
-    // 충돌체 offset (0.1, 0.2, 0.3)(유니티) → (-0.1, 0.2, -0.3)(엔진). 사슬은 뿌리 Hair1 과 자손 Hair2 이다.
+    // 충돌체 offset (0.1, 0.2, 0.3)(유니티) → (-0.1, 0.2, -0.3)(엔진). 사슬은 루트 Hair1 과 자손 Hair2 이다.
     SW_ASSERT_EQUAL( size_t( 1 ), def._listCollider.size() );
     SW_EXPECT_STREQ( "Spine", def._listCollider[0]._bone.c_str() );
     Internal::expectVector( sw::float3{ -0.1f, 0.2f, -0.3f }, def._listCollider[0]._offset );

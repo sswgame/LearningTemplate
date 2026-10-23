@@ -33,7 +33,7 @@ namespace sw
      *
      *          **연속 판정**(`_bContinuous`, 투사체): Box2D 센서는 연속 충돌이 없으므로, 지난 자리에서 지금 자리까지 상자를 쓸어 지나친 것을
      *          닿은 시점 순서로 알립니다(`ScenePhysics::queueSweptOverlap2D`, 시작과 끝을 함께). 지금 자리에서도 겹친 것은 센서가 시작을 냅니다.
-     *          가만히 있던 상대는 Box2D 쓸기(`shapeCastAll`)로, 같은 프레임에 움직인 상대는 두 이동의 차이(상대 운동, Box2D 총알 TOI)로 잽니다.
+     *          가만히 있던 상대는 Box2D 쓸기(`shapeCastAll`)로, 같은 프레임에 움직인 상대는 두 이동의 차이(상대 운동, Box2D 총알 TOI)로 측정합니다.
      *          첫 프레임의 출발점은 시작할 때(`onBeginPlay`)의 자리입니다 — 바디가 첫 물리 프레임에 생겨도 시작 뒤 첫 틱의 이동이 쓸립니다.
      *          순간이동(`SceneComponent::teleportTo`)한 프레임은 쓸지 않습니다.
      */
@@ -101,7 +101,7 @@ namespace sw
         bool containsPoint( const float2& point ) const;
         /**
          * @brief 두 콜라이더가 물리 규칙으로 겹치는지입니다 — 상자가 겹치고 레이어 행렬이 그 쌍을 허용해야 합니다(유니티 `Collider2D.IsTouching`).
-         * @details 지금 상자로 잽니다 — 바디가 아직 없어도(시작 전 · 에디터) 같은 답을 냅니다. 레이어 행렬은 등록된 씬의 2D 물리 씬의 것이고(`getLayerCollision`),
+         * @details 지금 상자로 측정합니다 — 바디가 아직 없어도(시작 전 · 에디터) 같은 답을 냅니다. 레이어 행렬은 등록된 씬의 2D 물리 씬의 것이고(`getLayerCollision`),
          *          어느 쪽도 2D 씬이 없으면 기본 행렬(모든 쌍 허용)입니다.
          */
         bool isTouching( const BoxCollider2DComponent* pOther ) const;
@@ -117,8 +117,8 @@ namespace sw
         bool hasMovedThisFrame() const { return _body.isValid() && _frameFromCenter != _bodyCenter; }
         /**
          * @brief 연속 판정 — 이번 프레임의 출발점에서 바디 중심까지 상자를 쓸어 지나친 것을 씬 물리에 알립니다(`ScenePhysics::queueSweptOverlap2D`).
-         * @details 가만히 있던 바디는 Box2D 쓸기로, @p listMoved (이번 프레임에 움직인 콜라이더, 자기 포함)는 두 이동의 차이로 잰다. 움직인 바디를 Box2D
-         *          쓸기로 재면 상대가 이번 자리에 선 채로 측정돼 길을 가로질러 건너간 상대를 놓친다. 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도
+         * @details 가만히 있던 바디는 Box2D 쓸기로, @p listMoved (이번 프레임에 움직인 콜라이더, 자기 포함)는 두 이동의 차이로 측정한다. 움직인 바디를 Box2D
+         *          쓸기로 측정하면 상대가 이번 자리에 선 채로 측정돼 길을 가로질러 건너간 상대를 놓친다. 출발점에서 이미 겹친 것(닿은 시점 0)과 도착점에서도
          *          겹친 것은 뺀다 — 앞은 지난 프레임의 센서가, 뒤는 이번 프레임의 센서가 시작을 낸다. 모든 콜라이더의 `beginPhysicsFrame` 뒤에 부른다.
          */
         void sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved );

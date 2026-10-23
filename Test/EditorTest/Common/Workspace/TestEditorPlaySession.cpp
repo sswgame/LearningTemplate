@@ -157,7 +157,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
 /**
  * @brief [EditorPlaySessionTest] Play · Stop 은 활성 씬만 찍고 되돌린다 — 툴 창의 미리보기 씬(그 오브젝트 · 플레이 중의 편집)은 건드리지 않는다
  * @details 미리보기 씬은 활성 씬과 따로 사는 월드다(`SceneManager::createPreviewScene`). 스냅샷 복원이 미리보기 씬의 오브젝트를 지우거나
- *          되살리면 창의 미리보기 대상(머티리얼 구 · 프리팹)이 Stop 마다 사라진다.
+ *          복원하면 창의 미리보기 대상(머티리얼 구 · 프리팹)이 Stop 마다 사라진다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopLeavesPreviewScenesAlone )
 {
@@ -348,7 +348,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterThe
 
     runEditorFramesUntil( sceneManager, data, []( const SceneManager&, const PlaySessionData& state )
     { return state._state != PlaySessionState::Stopped; } );
-    SW_ASSERT_TRUE_MSG( data._state == PlaySessionState::Playing, "로드가 끝났는데 미룬 플레이가 시작하지 않았습니다" );
+    SW_ASSERT_TRUE_MSG( data._state == PlaySessionState::Playing, "Loading finished but the deferred play did not start" );
     SW_EXPECT_TRUE( data._bStartQueued == SW_FALSE );
     SW_EXPECT_TRUE_MSG( data._sceneName == "LoadedLevel", data._sceneName.c_str() ); // 스냅샷은 로드한 씬의 것이다
     SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );

@@ -229,7 +229,7 @@ namespace sw
 
         /**
          * @brief 필수 데이터 하나를 이 게임 팩에서 읽습니다. 경로는 데이터 종류 등록 줄(@p kindLabel)과 팩 루트로 만든다(`GamePackDataUtil::tryMakeKindPath`).
-         * @details 게임 코드는 경로를 적지 않는다 — 카탈로그 경로의 정본은 등록 줄 하나다.
+         * @details 게임 코드는 경로를 적지 않는다 — 카탈로그 경로의 기준은 등록 줄 하나다.
          *          경로를 만들 수 없거나 @p load( path ) 가 false 면 종류 · 파일 · 이유를 오류로 남기고 false 를 돌려준다.
          *          `onInitialize` 는 그 false 를 그대로 돌려준다. 필수 데이터 없이 게임을 띄우지 않는다(모듈 초기화 실패로 기동이 멈춘다).
          */

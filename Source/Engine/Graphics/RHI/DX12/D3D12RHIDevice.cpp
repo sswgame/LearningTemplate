@@ -212,7 +212,7 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
-                SW_LOG_ERROR( "온라인 디스크립터 블록이 바닥났습니다 (%#×%#) — 이후 드로우는 직전 슬롯 테이블로 그립니다.",
+                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - later draws use the previous slot table.",
                               kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
             return UINT32_MAX;

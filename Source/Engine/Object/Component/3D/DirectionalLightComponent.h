@@ -46,7 +46,7 @@ namespace sw
         static constexpr uint32 kMaxCascade = shaderslot::kShadowCascadeMax;
 
         float4x4                 _viewProj{};
-        float4x4                 _lightView{};     ///< 빛 공간(볼륨 상자를 재는 축) — 컬링 합집합이 같은 축에서 상자를 넓힌다
+        float4x4                 _lightView{};     ///< 빛 공간(볼륨 상자를 측정하는 축) — 컬링 합집합이 같은 축에서 상자를 넓힌다
         float3                   _lightSpaceMin{}; ///< 기준 볼륨의 빛 공간 상자(x · y · 깊이)
         float3                   _lightSpaceMax{};
         float32                  _texelWorldSize{ 0.0f }; ///< 기준 볼륨을 `_resolution` 으로 그렸을 때 텍셀 하나의 월드 길이(m) — 가로 · 세로 중 큰 쪽

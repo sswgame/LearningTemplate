@@ -115,7 +115,7 @@ namespace sw
         const float3 previousRoot = _lastRootPosition;
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            // 뿌리는 애니메이션을 따른다. 스텝마다 지난 프레임 위치에서 이번 위치까지 나눠 옮겨서, 빠른 움직임에도 끝이 튀지 않게 한다.
+            // 루트는 애니메이션을 따른다. 스텝마다 지난 프레임 위치에서 이번 위치까지 나눠 옮겨서, 빠른 움직임에도 끝이 튀지 않게 한다.
             const float32 ratio      = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount );
             _listPosition[0]         = float3::lerp( previousRoot, root, ratio );
             _listPreviousPosition[0] = _listPosition[0];
@@ -156,7 +156,7 @@ namespace sw
         _lastRootPosition = root;
         _lastStepCount    = stepCount;
 
-        // 본을 뿌리부터 입자 쪽으로 돌린다(부모를 돌리면 자식 위치가 바뀌므로 차례로 돌린다).
+        // 본을 루트부터 입자 쪽으로 돌린다(부모를 돌리면 자식 위치가 바뀌므로 차례로 돌린다).
         const float4x4 modelFromWorld = worldFromModel.invert();
         for ( uint32 index = 0; index + 1 < count; ++index )
         {

@@ -88,7 +88,7 @@ namespace sw
             // 경고는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
             if ( _bExhaustedLogged.exchange( SW_TRUE ) == SW_FALSE )
             {
-                SW_LOG_WARNING( "상수버퍼 슬롯이 부족합니다 (%#개) — 이 프레임의 남은 드로우는 마지막 슬롯을 공유해 배치 상수가 섞입니다.",
+                SW_LOG_WARNING( "Out of constant buffer slots (%#) - the remaining draws of this frame share the last slot and their per-batch constants get mixed.",
                                 static_cast<uint32>( _listSlot.size() ) );
             }
             ticket = static_cast<uint32>( _listSlot.size() ) - 1;

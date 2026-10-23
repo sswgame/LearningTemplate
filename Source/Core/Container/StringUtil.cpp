@@ -537,7 +537,7 @@ namespace sw
             ++pos;
         }
 
-        SW_LOG_ASSERT( isValidUtf8( result.c_str() ), "UTF8 문자열이 아닙니다" );
+        SW_LOG_ASSERT( isValidUtf8( result.c_str() ), "Not a UTF-8 string" );
         return result;
     }
 

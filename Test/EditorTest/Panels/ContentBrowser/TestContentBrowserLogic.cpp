@@ -117,7 +117,7 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderCacheReadsEachFolderOnce )
 }
 
 /**
- * @brief [ContentBrowserLogicTest] 탐색 이력은 뒤로 · 앞으로 가며 그때의 브레드크럼을 되살리고, 같은 폴더는 다시 적지 않으며, 중간에서 새 폴더로 가면 앞쪽을 버린다
+ * @brief [ContentBrowserLogicTest] 탐색 이력은 뒤로 · 앞으로 가며 그때의 브레드크럼을 복원하고, 같은 폴더는 다시 적지 않으며, 중간에서 새 폴더로 가면 앞쪽을 버린다
  */
 SW_TEST_CASE( ContentBrowserLogicTest, HistoryStepsBackAndForwardLikeABrowser )
 {

@@ -132,12 +132,12 @@ SW_TEST_CASE( RigSolverTest, TwoBoneReachesTargetAndBendsTowardPole )
     SW_EXPECT_NEAR_EQUAL( 1.0f, ( buffer.getModelPosition( 1 ) - buffer.getModelPosition( 0 ) ).getLength(), 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, ( buffer.getModelPosition( 2 ) - buffer.getModelPosition( 1 ) ).getLength(), 1e-4f );
 
-    // 극점을 반대로 두면 반대쪽으로 굽는다.
+    // 극점을 반대로 두면 반대쪽으로 베이크한다.
     const float3 poleBack{ 0.0f, 0.5f, -1.0f };
     (void)RigIKSolver::solveTwoBone( buffer, 0, 1, 2, target, &poleBack, space );
     SW_EXPECT_TRUE( buffer.getModelPosition( 1 )._z < -0.1f );
 
-    // 닿지 않는다 — 목표 쪽으로 곧게, 끝은 뿌리에서 길이만큼.
+    // 닿지 않는다 — 목표 쪽으로 곧게, 끝은 루트에서 길이만큼.
     const float3 distant{ 5.0f, 0.0f, 0.0f };
     SW_EXPECT_FALSE( RigIKSolver::solveTwoBone( buffer, 0, 1, 2, distant, nullptr, space ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, buffer.getModelPosition( 2 )._x, 1e-2f );
@@ -314,7 +314,7 @@ SW_TEST_CASE( RigSolverTest, SpringChainHangsDeterministicallyAndCollides )
     const float3 at60   = TestRigSolverInternal::simulateHanging( 2.0f, 1.0f / 60.0f, settings, {} );
     const float3 at120  = TestRigSolverInternal::simulateHanging( 2.0f, 1.0f / 120.0f, settings, {} );
     SW_EXPECT_TRUE( at60._y < -0.8f );                  // 수평 1.5 m 사슬이 아래로 늘어졌다
-    SW_EXPECT_TRUE( at60.getLength() <= 1.5f + 1e-3f ); // 뿌리(원점)에서 사슬 길이를 넘지 않는다
+    SW_EXPECT_TRUE( at60.getLength() <= 1.5f + 1e-3f ); // 루트(원점)에서 사슬 길이를 넘지 않는다
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( at60, at30, 1e-4f ) );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( at60, at120, 1e-4f ) );
 

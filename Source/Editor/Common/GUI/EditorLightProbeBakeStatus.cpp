@@ -1,7 +1,7 @@
 /**
  * @file EditorLightProbeBakeStatus.cpp
- * @brief 상태줄 항목 — 라이트 프로브를 굽는 동안 "Baking probes 2/3 (41 / 100)" 와 Cancel 단추를 보입니다(`EditorLightProbeBakeSession`).
- * @details 굽지 않을 때는 아무것도 그리지 않는다. 세션은 명령 층(3)이고 그리기는 GUI 층(4)이라 항목을 여기 둔다.
+ * @brief 상태줄 항목 — 라이트 프로브를 베이크하는 동안 "Baking probes 2/3 (41 / 100)" 와 Cancel 단추를 보입니다(`EditorLightProbeBakeSession`).
+ * @details 베이크하지 않을 때는 아무것도 그리지 않는다. 세션은 명령 층(3)이고 그리기는 GUI 층(4)이라 항목을 여기 둔다.
  */
 #include "pch.h"
 

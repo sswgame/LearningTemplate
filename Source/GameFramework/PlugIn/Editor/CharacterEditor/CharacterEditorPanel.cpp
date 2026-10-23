@@ -1307,7 +1307,7 @@ namespace sw::editor
         _bClipNamesLoaded = false; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
         _selectedClip     = hashed_string{};
         _previewPresetID  = hashed_string( string_view( data._previewPresetID ) );
-        // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(정본은 팩 데이터의 외형 폴더 하나).
+        // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(기준은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
         std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );
         _packDataState = PackDataState::Ready;

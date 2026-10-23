@@ -33,7 +33,7 @@ namespace sw
     int32 BehaviorTree::addNode( int32 parent, BehaviorNodeType type, const utf8* pName )
     {
         if ( parent < 0 && _listNode.empty() == false )
-            return -1; // 뿌리는 하나
+            return -1; // 루트는 하나
         if ( parent >= static_cast<int32>( _listNode.size() ) )
             return -1;
         const int32  index = static_cast<int32>( _listNode.size() );

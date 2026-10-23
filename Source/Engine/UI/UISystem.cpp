@@ -230,7 +230,7 @@ namespace sw
         if ( themes.loadFromResource( PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) ) == false )
             return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
-        // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 정본이다.
+        // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 기준이다.
         // 엔진 기본 메뉴(옵션 · 일시정지) — 팩 설정이 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
         setEngineDocuments( UIEngineDocuments::makeFromDefaultAssets( defaultAssets ) );
         setOptionsMenuDocument( PackEngineSettings::resolve( packSettings._uiOptionsMenu, defaultAssets._uiOptionsMenu ) );

@@ -16,7 +16,7 @@ namespace sw
         if ( pTypeInfo == nullptr )
         {
             // 리플렉션 생성물이 빠졌다는 뜻이다. 파일 탓이 아니므로 문장을 따로 둔다.
-            SW_LOG_ERROR( "TypeInfo 를 찾을 수 없습니다 (%#) — 리플렉션 생성이 빠졌습니다", assetRelativePath );
+            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", assetRelativePath );
             return false;
         }
 
@@ -29,14 +29,14 @@ namespace sw
                                                           : ResourceIO::readTextResource( assetRelativePath, text );
         if ( bRead == false )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — 파일을 찾지 못했습니다", assetRelativePath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
         const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
         if ( result == SoftReadResult::NotParsed )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아닙니다", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML load failed: %# (%#) - not a <%#> document", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
             return false;
         }
         // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
@@ -53,7 +53,7 @@ namespace sw
     {
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "TypeInfo 를 찾을 수 없습니다 (%#) — 리플렉션 생성이 빠졌습니다", assetRelativePath );
+            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", assetRelativePath );
             return false;
         }
 
@@ -62,7 +62,7 @@ namespace sw
 
         if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
         {
-            SW_LOG_ERROR( "XML 쓰기 실패: %# (%#)", absPath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML write failed: %# (%#)", absPath, pTypeInfo->_name.c_str() );
             return false;
         }
         return true;

@@ -160,7 +160,7 @@ SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
 
 /**
  * @brief [DialogueGraphTest] 모든 노드 타입이 파일 왕복에서 그대로이고, 모르는 종류 이름은 읽기 오류인지 검증
- * @details 종류 이름은 리플렉션 열거자 이름 하나가 정본이다. 모르는 이름을 Dialogue 로 떨어뜨리면 파일은 멀쩡해 보이는데 대화만 달라진다.
+ * @details 종류 이름은 리플렉션 열거자 이름 하나가 기준이다. 모르는 이름을 Dialogue 로 떨어뜨리면 파일은 멀쩡해 보이는데 대화만 달라진다.
  */
 SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
 {
@@ -359,7 +359,7 @@ SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
 
 /**
  * @brief [DialogueGraphTest] 표에 없는 노드 타입을 만나면 러너가 대화를 끝내는지 검증
- * @details 모르는 타입에서 아무 갈래도 타지 않으면 상태가 그대로 남고 끝 알림도 없이 대화가 멈춰 있다.
+ * @details 모르는 타입에서 아무 분기도 타지 않으면 상태가 그대로 남고 끝 알림도 없이 대화가 멈춰 있다.
  */
 SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
 {

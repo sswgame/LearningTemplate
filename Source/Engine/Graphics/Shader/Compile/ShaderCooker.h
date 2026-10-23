@@ -171,7 +171,7 @@ namespace sw
 
         /**
          * @brief 셰이더를 가질 수 있는 도메인(`engine` · `common` · `game/<팩>` · 그 밖에 우선순위에 적힌 것)을 @p listPriority 에서 발견합니다.
-         * @param listPriority `EngineConfig._listResourcePriority`(`ResourcePaths::getSearchPriority()`) — 도메인 목록의 정본은 이 설정 데이터다.
+         * @param listPriority `EngineConfig._listResourcePriority`(`ResourcePaths::getSearchPriority()`) — 도메인 목록의 기준은 이 설정 데이터다.
          *                     `game` 토큰은 @p resourceRoot 의 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 나머지 토큰은 그대로 도메인이다.
          * @return 목록이 비었거나 include 루트 종류(`engine` · `common`)가 빠졌으면 오류를 남기고 false 입니다(기본 목록으로 넘어가지 않는다).
          */
@@ -207,11 +207,11 @@ namespace sw
          * @brief 도메인(`engine` · `common` · `game/<팩>`)마다 커밋된 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
          * @details 판정은 스탬프를 쓰는 쪽(`writeCookStamp`)과 같은 수집 규칙 · 같은 해시다 — 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인가" 를 볼 게이트가 없다.
          *          보는 것: 바이너리 폴더 · 스탬프 · 스탬프 판 · 도구 지문(스탬프의 `kToolchainKey` 줄), 스탬프에 빠진 · 바뀐 · 남은 소스, 바이너리가 하나라도 있는지,
-         *          리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 굽지 않은 것). 소스가 없는 도메인은 건너뛴다.
+         *          리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 베이크하지 않은 것). 소스가 없는 도메인은 건너뛴다.
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
         static void verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem );
-        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 정본인 우선순위 설정을 직접 받습니다(위 판은 `ResourcePaths::getSearchPriority()` 를 넘긴다). */
+        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 기준인 우선순위 설정을 직접 받습니다(위 판은 `ResourcePaths::getSearchPriority()` 를 넘긴다). */
         static void verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view shaderFolder, vector<string>& outListProblem );
 
         /**

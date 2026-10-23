@@ -214,7 +214,7 @@ namespace sw
                 const int64 result = _impl->_pfnWritei( _impl->_pPcm, pWrite + static_cast<size_t>( written ) * channelCount, Internal::kWriteFrameCount - written );
                 if ( result < 0 )
                 {
-                    // 언더런 · 일시정지 복귀는 되살리고 이어 쓴다. 되살리지 못하면 이 블록을 버린다.
+                    // 언더런 · 일시정지 복귀는 복원하고 이어 쓴다. 복원하지 못하면 이 블록을 버린다.
                     if ( _impl->_pfnRecover( _impl->_pPcm, static_cast<int32>( result ), 1 ) < 0 )
                         break;
                     continue;

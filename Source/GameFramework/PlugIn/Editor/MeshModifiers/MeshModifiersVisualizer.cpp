@@ -518,7 +518,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 자동화가 켜졌으면 이동 화살표마다 화면 사각형 이름표(`meshmodifiers.handle.move.<축>`)를 남깁니다 — 시나리오가 손잡이를 끌어 양보를 검증한다.
+             * @brief 자동화가 켜졌으면 이동 화살표마다 화면 사각형 이름(`meshmodifiers.handle.move.<축>`)를 남깁니다 — 시나리오가 손잡이를 끌어 양보를 검증한다.
              * @details 화살표 끝 쪽(길이의 90 %)을 고른다. 가운데 쪽은 다른 축 회전 고리(반경 80 %)와 겹친다.
              */
             static void noteHandleMarks( const EditorViewportVisualizerArgs& args, const vector<Handle>& listHandle )

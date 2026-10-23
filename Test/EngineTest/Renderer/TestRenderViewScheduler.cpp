@@ -203,7 +203,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, PixelBudgetDoesNotStarveLargeViews )
             arrRenderCount[index] += arrRender[index] == SW_TRUE ? 1u : 0u;
         }
     }
-    // 두 갈래(큰 뷰 / 작은 뷰 둘)가 번갈아 — 셋 다 20 번(±1) 근처다. 건너뛰어 채우면 큰 뷰가 0 번이다.
+    // 두 분기(큰 뷰 / 작은 뷰 둘)가 번갈아 — 셋 다 20 번(±1) 근처다. 건너뛰어 채우면 큰 뷰가 0 번이다.
     for ( uint32 index = 0; index < 3; ++index )
     {
         SW_EXPECT_TRUE_MSG( 19u <= arrRenderCount[index] && arrRenderCount[index] <= 21u, ( "뷰가 굶었다: " + to_string( arrRenderCount[index] ) ).c_str() );
@@ -235,7 +235,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, UnbudgetedViewsIgnoreTheBudget )
 
 /**
  * @brief [RenderViewCollectorTest] 모니터가 주 시점에 `_minScreenSize` 이상으로 보일 때만 캡처 뷰를 그린다 — 멀어 작거나, 뒤에 있으면 쉰다
- * @details 반지름 1 의 모니터를 시야각 0.7 rad 카메라 앞 10 m 에 두면 화면 크기는 약 0.27, 50 m 면 약 0.055 다. 문턱은 0.1 이다.
+ * @details 반지름 1 의 모니터를 시야각 0.7 rad 카메라 앞 10 m 에 두면 화면 크기는 약 0.27, 50 m 면 약 0.055 다. 임계값은 0.1 이다.
  */
 SW_TEST_CASE( RenderViewCollectorTest, VisibilityNeedsOnScreenSize )
 {
@@ -349,7 +349,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, FullRectIsDetected )
 /**
  * @brief [RenderViewModeTest] 보기 모드 표의 이름이 겹치지 않고, LightingOnly 는 셰이더 define 을 갖되 톤맵 · 후처리를 그대로 쓴다
  * @details 툴바와 셀프 테스트 표식(`viewport.viewMode.<이름>`)이 이름으로 모드를 찾으므로 이름이 겹치면 다른 모드를 고른다.
- *          쿠커는 define 이 있는 모드만 변형을 굽는다 — define 이 비면 Shipping 에서 PSO 가 없다.
+ *          쿠커는 define 이 있는 모드만 변형을 베이크한다 — define 이 비면 Shipping 에서 PSO 가 없다.
  */
 SW_TEST_CASE( RenderViewModeTest, NamesAreUniqueAndLightingOnlyIsShaded )
 {

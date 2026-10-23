@@ -123,7 +123,7 @@ namespace sw
             layoutInfo.pBindings    = arrBinding;
             if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_slotSetLayout ) != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "슬롯 세트 레이아웃 생성 실패 (descriptor indexing / partially-bound 미지원?)." );
+                SW_LOG_ERROR( "Failed to create the slot set layout (descriptor indexing / partially-bound unsupported?)." );
                 return false;
             }
         }
@@ -168,7 +168,7 @@ namespace sw
             layoutInfo.pBindings    = arrBinding;
             if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_textureSetLayout ) != VK_SUCCESS )
             {
-                SW_LOG_ERROR( "텍스처 배열 세트 레이아웃 생성 실패 (update-after-bind 미지원?)." );
+                SW_LOG_ERROR( "Failed to create the texture array set layout (update-after-bind unsupported?)." );
                 return false;
             }
         }
@@ -309,7 +309,7 @@ namespace sw
         allocInfo.pSetLayouts        = &_textureSetLayout;
         if ( vkAllocateDescriptorSets( _device, &allocInfo, &_textureSet ) != VK_SUCCESS )
         {
-            SW_LOG_ERROR( "텍스처 배열 세트 할당 실패." );
+            SW_LOG_ERROR( "Failed to allocate the texture array set." );
             return false;
         }
 
@@ -416,7 +416,7 @@ namespace sw
                     if ( poolSet._bExhaustedLogged == SW_FALSE )
                     {
                         poolSet._bExhaustedLogged = SW_TRUE;
-                        SW_LOG_ERROR( "슬롯 세트 풀 묶음이 상한(%#×%#)에 닿았습니다 — 이 버퍼의 나머지 드로우는 이전 세트로 그립니다.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
+                        SW_LOG_ERROR( "The slot set pool group hit its limit (%#x%#) - the remaining draws of this buffer use the previous set.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
                     }
                     return VK_NULL_HANDLE;
                 }

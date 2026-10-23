@@ -58,7 +58,7 @@ namespace sw
     {
         if ( _probeData._listTexel.empty() )
             return nullptr;
-        // 프로브를 옮기고 다시 굽지 않았으면 옛 자리의 반사다 — 쓰지 않는다.
+        // 프로브를 옮기고 다시 베이크하지 않았으면 옛 자리의 반사다 — 쓰지 않는다.
         if ( matchesCapturePosition( _probeData ) == false )
             return nullptr;
         return &_probeData;

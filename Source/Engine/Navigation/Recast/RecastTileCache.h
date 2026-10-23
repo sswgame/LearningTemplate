@@ -1,8 +1,8 @@
 /**
  * @file RecastTileCache.h
  * @brief Detour TileCache 로 움직이는 장애물을 처리하는 `RecastNavMesh` 의 부품입니다(`NavObstacleMode::TileCache`). 라이브러리 헤더는 .cpp 에서만 include 합니다.
- * @details 정적 기하는 타일마다 높이 층(`rcHeightfieldLayer`)으로 한 번만 굽고 층을 압축해 둔다. 장애물(원기둥 · 요 회전 상자)이 생기거나 움직이면 그 층 위에서만
- *          폴리곤을 다시 짓는다 — 복셀화 · 깎기 · 영역 나누기를 다시 하지 않아 다시 굽기보다 훨씬 싸다(Recast 샘플 `Sample_TempObstacles`, 언리얼 동적 장애물).
+ * @details 정적 기하는 타일마다 높이 층(`rcHeightfieldLayer`)으로 한 번만 베이크하고 층을 압축해 둔다. 장애물(원기둥 · 요 회전 상자)이 생기거나 움직이면 그 층 위에서만
+ *          폴리곤을 다시 짓는다 — 복셀화 · 깎기 · 영역 나누기를 다시 하지 않아 다시 베이크보다 훨씬 싸다(Recast 샘플 `Sample_TempObstacles`, 언리얼 동적 장애물).
  *          타일 바이트(`NavTileData::_bytes`)는 이 모드에서 "층 묶음" 이다 — 층 수만큼의 압축 층과 그 타일에서 시작하는 오프 메시 링크를 싣는다.
  *          그래서 베이크 · 쿠킹 · 끼우기 길(`INavMesh::bakeTile` · `replaceTile` · `collectTiles`)은 그대로이고, 바이트의 뜻만 모드가 정한다.
  *          층은 압축하지 않고 그대로 싣는다(저장 압축기) — 층 하나는 타일 크기² 바이트 셋이라 작고, 압축 코덱을 하나 더 들이지 않는다.

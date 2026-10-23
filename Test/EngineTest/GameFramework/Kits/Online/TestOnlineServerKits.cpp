@@ -157,7 +157,7 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
     SW_EXPECT_TRUE( compact._modeID == "squad" && compact._teamCount == 2 && compact._teamSize == 4 );
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2", compact ) );
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( ":2x2", compact ) );
-    // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 가 정본이다 — 0 과 상한 + 1 은 읽을 때 거절한다.
+    // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 가 기준이다 — 0 과 상한 + 1 은 읽을 때 거절한다.
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:0x4", compact ) );
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:17x4", compact ) );
     SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2x17", compact ) );

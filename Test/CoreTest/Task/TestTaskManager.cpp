@@ -62,7 +62,7 @@ namespace
 
     /**
      * @brief `runParallelByCost` 가 본문을 부른 구간 [start, end) 를 부른 차례대로 적습니다.
-     * @details 가벼운 일의 비용을 재는 시계(3 us 문턱)를 기록이 늘리지 않게 잠금 없이 고정 칸에 쓴다(`fetch_add` 한 번 + 저장 한 번). 나뉜 부분은 여러 스레드가 부른다.
+     * @details 가벼운 일의 비용을 측정하는 시계(3 us 임계값)를 기록이 늘리지 않게 잠금 없이 고정 칸에 쓴다(`fetch_add` 한 번 + 저장 한 번). 나뉜 부분은 여러 스레드가 부른다.
      */
     struct CostCallRecorder
     {
@@ -1130,7 +1130,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostCoversEveryIndexOnLightAndHeavyB
 
 /**
  * @brief [TaskManagerTest] `runParallelByCost`: 무거운 항목은 첫 항목에서 바로 나뉜다
- * @details 항목 하나가 100 us 의 바쁜 대기라 첫 호출만으로 경과가 비용 문턱(3 us)을 넘고, 남은 63 개의 예상 시간(6 ms 이상)이 직렬 예산을 넘는다. 이 판단은 시계가 단조라는 것에만 기대므로
+ * @details 항목 하나가 100 us 의 바쁜 대기라 첫 호출만으로 경과가 비용 임계값(3 us)을 넘고, 남은 63 개의 예상 시간(6 ms 이상)이 직렬 예산을 넘는다. 이 판단은 시계가 단조라는 것에만 기대므로
  *          스레드가 실제로 깨어나는지(스케줄러)와 무관하게 결정적이다. 나뉘었다는 것은 호출 기록으로 본다: 첫 호출은 (0, 1) 이고, 남은 구간이 한 덩이 (1, 64) 로 직렬로 끝나지 않고
  *          여러 청크로 쪼개져 불린다. 고정 개수만큼 먼저 직렬로 돌았다면(앞 16 개) 첫 호출이 (0, 1) 이 아니거나 나머지가 한 덩이가 된다.
  */
@@ -1170,7 +1170,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsHeavyItemsAtTheFirstItem )
 
 /**
  * @brief [TaskManagerTest] `runParallelByCost`: 아주 가벼운 일은 깨우지 않고 호출 스레드가 직렬로 끝낸다
- * @details 가짜 시계가 부를 때마다 1 ns 만 가므로 경과는 비용 문턱(3 us)에 닿지 않는다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다.
+ * @details 가짜 시계가 부를 때마다 1 ns 만 가므로 경과는 비용 임계값(3 us)에 닿지 않는다. 직렬 길은 구간을 1, 2, 4, … 개씩 차례로 부르므로 호출 기록이 정확히 그 열이면 나뉘지 않은 것이다.
  *          실제 시계를 쓰지 않아 호출 스레드 선점 잡음에 흔들리지 않는다.
  */
 SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
@@ -1201,7 +1201,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostKeepsVeryLightWorkSerial )
 }
 
 /**
- * @brief [TaskManagerTest] `runParallelByCost`: 시계가 첫 항목에서 문턱을 넘겼다고 하면 나머지를 나눈다
+ * @brief [TaskManagerTest] `runParallelByCost`: 시계가 첫 항목에서 임계값을 넘겼다고 하면 나머지를 나눈다
  * @details 가짜 시계가 부를 때마다 5 us 가므로 첫 호출 (0, 1) 뒤 경과 5 us, 남은 예상이 직렬 예산을 넘어 나머지가 한 덩이 (1, 4000) 으로 끝나지 않는다.
  */
 SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsWhenClockSaysCostly )

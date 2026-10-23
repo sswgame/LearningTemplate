@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// GamePackDataTest — 팩 안 데이터 경로는 데이터 종류 등록 줄 하나가 정본이다(게임 코드 · 에디터 확장은 경로를 적지 않는다). 디바이스 없음(nogpu).
+// GamePackDataTest — 팩 안 데이터 경로는 데이터 종류 등록 줄 하나가 기준이다(게임 코드 · 에디터 확장은 경로를 적지 않는다). 디바이스 없음(nogpu).
 
 /**
  * @brief [GamePackDataTest] 파일 종류는 팩 루트 + 등록 줄의 접미, 폴더 종류는 팩 루트 + 포함 규칙이다

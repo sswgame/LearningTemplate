@@ -216,7 +216,7 @@ namespace sw
             return;
         }
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
-        // 구운 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
+        // 베이크한 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
         const bool bSocketsStale = _socketCache.isStale();
         if ( bSocketsStale == false && isMeshAssemblyStale() == false )
             return;
@@ -618,7 +618,7 @@ namespace sw
                     pSkinned->setMaterialPath( part._material.c_str() );
                 if ( part._rig.empty() )
                 {
-                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 정본은 몸 프리팹이다.
+                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.
                     pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
                     pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
                 }
@@ -780,7 +780,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 구운 메시(체형 · 피팅)
+    // 베이크한 메시(체형 · 피팅)
     // ------------------------------------------------------------------------------
     void CharacterAppearanceComponent::requestMeshAssembly( GameObjectManager& manager )
     {
@@ -791,7 +791,7 @@ namespace sw
         const ResolvedPart*       pBodyPart      = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
         const bool                bHasTables     = pBodyPart != nullptr && pBodyPart->_fitTables.empty() == false;
         const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false;
-        const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 굽지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
+        const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 베이크하지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
         if ( pBodyPart == nullptr || bNothingToBake )
             return;
 
@@ -818,7 +818,7 @@ namespace sw
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;
-        // 새로 입은 피팅 부품은 구운 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 구운 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
+        // 새로 입은 피팅 부품은 베이크한 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 베이크한 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             GameObject* pObject    = manager.resolveGameObject( spawned._object );
@@ -868,7 +868,7 @@ namespace sw
         vector<AppearanceMeshPart> listPart;
         vector<shared_ptr<Mesh>>   listSource;
         string                     report;
-        // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(구운 것과 원본이 섞인 차림을 만들지 않는다).
+        // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(베이크한 것과 원본이 섞인 차림을 만들지 않는다).
         if ( _fitTablesLoad.hasFailed() )
             CharacterAppearanceComponentInternal::appendReport( report, "fit tables: %#", _fitTablesLoad.getError().c_str() );
         for ( MeshAssemblyLoad& load : _listMeshAssemblyLoad )
@@ -882,7 +882,7 @@ namespace sw
             listSource.push_back( std::move( mesh ) );
         }
         _seenFitReloadStamp = computeFitReloadStamp();
-        // 같은 차림이면 이미 구운 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
+        // 같은 차림이면 이미 베이크한 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
         uint64 bakeKey = HashUtil::combine( resolved._meshHash, _seenFitReloadStamp );
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {

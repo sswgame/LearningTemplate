@@ -22,7 +22,7 @@ namespace sw::editor
         {
             /** @brief `RetargetTranslationMode` 순서의 표기입니다(파일 표기와 같다). */
             static constexpr const utf8* kArrTranslationMode[] = { "ScaleByPelvisHeight", "Copy", "None" };
-            /** @brief 글 칸 오른쪽에 붙는 이름표의 너비(96 DPI 픽셀)입니다 — 원본 · 대상 두 칸을 가른다. */
+            /** @brief 글 칸 오른쪽에 붙는 이름의 너비(96 DPI 픽셀)입니다 — 원본 · 대상 두 칸을 가른다. */
             static constexpr float32 kLabelWidth = 150.0f;
 
             /** @brief 쉼표 · 빈칸으로 나눈 본 이름 목록입니다. */

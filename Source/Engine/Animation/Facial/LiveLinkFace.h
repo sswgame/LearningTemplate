@@ -3,7 +3,7 @@
  * @brief Live Link Face(iOS · ARKit 얼굴 추적) UDP 패킷을 읽어 얼굴 리그의 표정 채널로 내는 쪽입니다 — 패킷 배치 표 · 리그별 채널 연결 표 · 패킷 해석 · 실시간 입력.
  * @details 패킷은 언리얼 `FArchive` 직렬화를 빅 엔디언으로 쓴 것이다: 판 번호(uint8) · 장치 id(FString) · 주체 이름(FString) · 프레임 시각(int32 프레임,
  *          float 서브프레임, int32 분자, int32 분모) · 채널 수(uint8) · 채널 값(float × 수). FString 은 int32 길이(끝 널 포함) 뒤 ANSI 바이트다.
- *          채널의 순서와 판 번호는 데이터(배치 표, 엔진 기본 `engine/animation/livelinkface.xml` — 연결 표가 고른다)가 정본이다 — 앱 판이 바뀌면 데이터를 고친다.
+ *          채널의 순서와 판 번호는 데이터(배치 표, 엔진 기본 `engine/animation/livelinkface.xml` — 연결 표가 고른다)가 기준이다 — 앱 판이 바뀌면 데이터를 고친다.
  *          다른 판의 패킷은 오류다.
  *          실제 장치로는 확인하지 않았다(합성 패킷 테스트만). 언리얼 Live Link Face · ARKit `ARFaceAnchor.blendShapes` 에 해당한다.
  */

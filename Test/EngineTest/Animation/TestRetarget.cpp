@@ -24,7 +24,7 @@
 
 using namespace sw;
 
-// RetargetTest — 리타깃 프로필(데이터) · 모델 공간 회전 차이 옮기기 · 골반 높이 비 · 다리 IK 목표(발이 미끄러지지 않게) · 오프라인 굽기 · 런타임 컴포넌트,
+// RetargetTest — 리타깃 프로필(데이터) · 모델 공간 회전 차이 옮기기 · 골반 높이 비 · 다리 IK 목표(발이 미끄러지지 않게) · 오프라인 베이크 · 런타임 컴포넌트,
 // 그리고 KayKit 기사 클립을 본 비율을 건 해골 스켈레톤으로.
 
 namespace
@@ -355,7 +355,7 @@ SW_TEST_CASE( RetargetTest, LongerLegsKeepFeetOnScaledStride )
 }
 
 /**
- * @brief [RetargetTest] 오프라인 굽기 — 구운 클립을 샘플한 포즈가 런타임 리타깃과 같고, 알림 · 커브 · 반복 · 루트 모션 트랙이 대상으로 옮겨진다
+ * @brief [RetargetTest] 오프라인 베이크 — 베이크한 클립을 샘플한 포즈가 런타임 리타깃과 같고, 알림 · 커브 · 반복 · 루트 모션 트랙이 대상으로 옮겨진다
  */
 SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
 {
@@ -533,7 +533,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
 }
 
 /**
- * @brief [RetargetTest] 파일 굽기(`App --bake-retarget` 의 몸) — 기사 걷기를 프로필의 해골 하수인 스켈레톤 트랙으로 구워 쓰고, 다시 읽은 클립이 같은 길이 · 하수인 본 이름 트랙이다
+ * @brief [RetargetTest] 파일 베이크(`App --bake-retarget` 의 몸) — 기사 걷기를 프로필의 해골 하수인 스켈레톤 트랙으로 베이크해 쓰고, 다시 읽은 클립이 같은 길이 · 하수인 본 이름 트랙이다
  */
 SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
 {

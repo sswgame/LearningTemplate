@@ -94,7 +94,7 @@ namespace sw
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
                  options.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_2 )
             {
-                SW_LOG_ERROR( "Resource Binding Tier %# — 무제한 텍스처 배열에는 Tier 2 이상이 필요합니다.",
+                SW_LOG_ERROR( "Resource Binding Tier %# - unbounded texture arrays need Tier 2 or higher.",
                               static_cast<uint32>( options.ResourceBindingTier ) );
             }
         }

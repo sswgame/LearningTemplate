@@ -54,9 +54,9 @@ namespace sw
     {
 #if defined( SW_DEBUG )
         SW_LOG_ASSERT( isBusThread(),
-                       "EventDispatcher 의 버스(subscribe/unsubscribe/publish/processEvents/clear)는 "
-                       "processEvents 를 부르는 스레드에서만 쓸 수 있습니다. "
-                       "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
+                       "The EventDispatcher bus (subscribe/unsubscribe/publish/processEvents/clear) "
+                       "may only be used on the thread that calls processEvents. "
+                       "To send an event from another thread, use push." );
 #endif
     }
 

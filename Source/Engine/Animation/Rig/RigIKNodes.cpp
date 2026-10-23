@@ -195,7 +195,7 @@ namespace sw
         };
 
         /**
-         * @brief 사슬 IK(FABRIK 또는 CCD)입니다. 키는 `bones`(뿌리에서 끝으로), `target`, `iterations`, `tolerance`, `max_step_degrees`(CCD), `limits`, `match_rotation` 입니다.
+         * @brief 사슬 IK(FABRIK 또는 CCD)입니다. 키는 `bones`(루트에서 끝으로), `target`, `iterations`, `tolerance`, `max_step_degrees`(CCD), `limits`, `match_rotation` 입니다.
          */
         class RigChainIKNode final : public RigNode
         {
@@ -263,7 +263,7 @@ namespace sw
 
         /**
          * @brief 조준과 시선(Aim, LookAt)입니다. 키는 `bone`, `target`, `aim_axis`(본 로컬, 기본 +Z), `max_degrees`(애니메이션 방향에서 벗어날 수 있는 상한),
-         *        `chain`(`[{ "bone", "weight" }]`, 조준 본의 조상들이 뿌리 쪽부터 회전을 나눠 받음)입니다.
+         *        `chain`(`[{ "bone", "weight" }]`, 조준 본의 조상들이 루트 쪽부터 회전을 나눠 받음)입니다.
          */
         class RigAimNode final : public RigNode
         {
@@ -700,9 +700,9 @@ namespace sw
 
         /**
          * @brief 전신 IK 입니다. 골반을 효과기(손 · 발 사슬의 목표)들이 끄는 쪽으로 옮긴 뒤 사슬마다 FABRIK 으로 끝을 목표에 붙입니다.
-         * @details 키는 `pelvis`, `chains`(`<item target="" weight="" match_rotation=""><bones><item>뿌리</item> … 끝</bones></item>` — weight 는 골반을 끄는 몫, 기본 1, 뿌리는 골반의 자손),
+         * @details 키는 `pelvis`, `chains`(`<item target="" weight="" match_rotation=""><bones><item>루트</item> … 끝</bones></item>` — weight 는 골반을 끄는 몫, 기본 1, 루트는 골반의 자손),
          *          `pelvis_iterations`(기본 4), `max_pelvis_offset`(애니메이션 골반에서 옮길 수 있는 거리, 미터, 필수), `iterations` · `tolerance`(사슬 FABRIK)입니다.
-         *          골반 풀이: 반복마다 사슬 뿌리에서 목표까지가 사슬 길이를 넘는 만큼(닿지 않는 거리)을 목표 쪽 벡터로 모아 가중 평균만큼 골반을 옮긴다.
+         *          골반 풀이: 반복마다 사슬 루트에서 목표까지가 사슬 길이를 넘는 만큼(닿지 않는 거리)을 목표 쪽 벡터로 모아 가중 평균만큼 골반을 옮긴다.
          *          발 가중치를 크게 두면 발이 골반을 붙잡고, 손이 멀리 닿으려 하면 그만큼 몸이 기운다(언리얼 Full Body IK 의 골반 효과기 · 사슬 강성 자리).
          *          회전 제한 · 척추 굽힘은 하지 않는다(필요하면 사슬에 척추 본을 넣는다).
          */
@@ -756,7 +756,7 @@ namespace sw
                 {
                     if ( context.findBones( chain._listBoneName, chain._listBone, true ) == false || context.findTarget( chain._targetName, chain._target ) == false )
                         return false;
-                    // 골반을 옮겨 사슬 뿌리가 따라와야 한다 — 뿌리가 골반의 자손이 아니면 골반 풀이가 그 사슬에 닿지 않는다.
+                    // 골반을 옮겨 사슬 루트가 따라와야 한다 — 루트가 골반의 자손이 아니면 골반 풀이가 그 사슬에 닿지 않는다.
                     int32 ancestor = static_cast<int32>( chain._listBone[0] );
                     while ( ancestor >= 0 && ancestor != static_cast<int32>( _pelvis ) )
                     {

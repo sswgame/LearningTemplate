@@ -1,7 +1,7 @@
 /**
  * @file TestNetCoreBench.cpp
  * @brief 넷 공통 계층 마이크로벤치 — 시퀀스 버퍼 칸 다시 쓰기(신뢰 메시지 페이로드), 비트 스트림 섞인 폭 쓰기 · 읽기.
- * @details 숫자를 **찍기만** 한다. Release 로 읽는다. 구조 최적화 B ①(칸 용량 유지) · ④(64 비트 워드)의 전/후를 잰다(표는 `docs/plans/StructuralOptimization.md`).
+ * @details 숫자를 **찍기만** 한다. Release 로 읽는다. 구조 최적화 B ①(칸 용량 유지) · ④(64 비트 워드)의 전/후를 측정한다(표는 `docs/plans/StructuralOptimization.md`).
  */
 #include "pch.h"
 

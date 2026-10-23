@@ -54,7 +54,7 @@ namespace
         /** @brief 캐릭터 수가 많으면 프레임 수를 줄인다 — p99 는 표본 수가 적으면 최댓값에 가깝다(보고에 표본 수가 찍힌다). */
         static uint32 getFrameCount( uint32 characterCount ) { return characterCount >= 1000 ? 60u : 120u; }
 
-        /** @brief 캐릭터 @p characterCount 명을 스폰해 프레임마다 `evaluate` 를 잽니다. 평가가 실제로 돌았는지 확인합니다. */
+        /** @brief 캐릭터 @p characterCount 명을 스폰해 프레임마다 `evaluate` 를 측정합니다. 평가가 실제로 돌았는지 확인합니다. */
         static bool measure( const test::SyntheticRig& rig, uint32 characterCount, Mode mode, sw::vector<int64>& outListMicro )
         {
             sw::GameObjectManager manager;
@@ -93,7 +93,7 @@ namespace
             {
                 system.evaluate( kFrame );
             }
-            // 군중은 유닛이 포즈를 만들지 않고 버킷이 만든다. 나머지는 유닛마다 만든다 — 아니면 재는 것이 없다.
+            // 군중은 유닛이 포즈를 만들지 않고 버킷이 만든다. 나머지는 유닛마다 만든다 — 아니면 측정하는 것이 없다.
             const bool bWorked = mode == Mode::Crowd ? ( system.getPoseEvaluatedUnitCount() == 0 && system.getCrowd().getEvaluatedBucketCount() > 0 )
                                                      : system.getPoseEvaluatedUnitCount() == characterCount;
             if ( bWorked == false )
@@ -114,7 +114,7 @@ namespace
 /**
  * @brief [SyntheticRigBenchTest] 대표 합성 리그 네 개 × 캐릭터 1 · 100 · 1000 × (자기 포즈 · 자기 포즈 + 리그 · 군중 공유)의 `AnimationSystem::evaluate` 한 프레임
  * @details 캐릭터는 짝수가 clip_00, 홀수가 clip_01 을 엇갈린 시각에서 돈다(합성 클립은 관절마다 위상이 다른 사인 — 모든 값이 움직인다).
- *          워밍업 5 프레임 뒤 1/60 초 프레임을 120 번(캐릭터 1000 은 60 번) 잰다. 엔진 서비스가 묶여 있으면 캐릭터 평가는 워커로 나뉜다(`runParallelByCost`).
+ *          워밍업 5 프레임 뒤 1/60 초 프레임을 120 번(캐릭터 1000 은 60 번) 측정한다. 엔진 서비스가 묶여 있으면 캐릭터 평가는 워커로 나뉜다(`runParallelByCost`).
  */
 SW_TEST_CASE( SyntheticRigBenchTest, EvaluateByBonesCharactersAndMode )
 {

@@ -75,8 +75,8 @@ namespace sw
         ~LockFreeObjectPool()
         {
             SW_ASSERT( getActiveCount() == 0 &&
-                       "[LockFreeObjectPool] 아직 acquire된 객체가 있습니다. "
-                       "풀 소멸 전에 모든 객체를 release 하세요." );
+                       "[LockFreeObjectPool] Objects are still acquired. "
+                       "Release all objects before destroying the pool." );
         }
 
         /** @brief 복사를 금지합니다. */

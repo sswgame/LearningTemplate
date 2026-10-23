@@ -94,7 +94,7 @@ namespace
             }
         };
 
-        /** @brief 뿌리(원점) · 오른손(1, 1, 0) · 왼손(-1, 1, 0) 세 본입니다. */
+        /** @brief 루트(원점) · 오른손(1, 1, 0) · 왼손(-1, 1, 0) 세 본입니다. */
         static CharacterBoneArray makeBodyBones()
         {
             CharacterBoneArray bones;
@@ -236,7 +236,7 @@ SW_TEST_CASE( AppearancePreloadTest, PresetAssetsFollowItsReferences )
 }
 
 /**
- * @brief [AppearancePreloadTest] 몸 부품이 가리키는 피팅 표의 영역이 숨김 영역 이름의 정본이다 — 표에 없는 영역을 숨기는 몸 수정은 폴더를 읽을 때 오류다
+ * @brief [AppearancePreloadTest] 몸 부품이 가리키는 피팅 표의 영역이 숨김 영역 이름의 기준이다 — 표에 없는 영역을 숨기는 몸 수정은 폴더를 읽을 때 오류다
  */
 SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
 {

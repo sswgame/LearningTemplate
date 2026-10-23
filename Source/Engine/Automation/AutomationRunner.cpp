@@ -230,7 +230,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief @p comparison 대로 @p value 를 견줍니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
+            /** @brief @p comparison 대로 @p value 를 비교합니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
             static bool matchesNumber( const NumberComparison& comparison, float64 value, string& outRule )
             {
                 const float64 expected = static_cast<float64>( comparison._expected );
@@ -414,7 +414,7 @@ namespace sw
             }
 
             /**
-             * @brief `ExpectVariable` 의 `value` · `tolerance` 를 @p info 의 타입으로 읽어 지금 값과 견줍니다(검사와 실행이 함께 씁니다).
+             * @brief `ExpectVariable` 의 `value` · `tolerance` 를 @p info 의 타입으로 읽어 지금 값과 비교합니다(검사와 실행이 함께 씁니다).
              * @return `value` 가 그 타입으로 읽히지 않거나 `tolerance` 가 음수이거나 실수 변수가 아닌데 붙었으면 false 와 이유입니다.
              */
             [[nodiscard]] static bool evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info, bool& outMatched, string& outError )
@@ -528,7 +528,7 @@ namespace sw
                 return step.hasOnlyAttributes( { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
             }
 
-            /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 견준다). */
+            /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
             static bool validateRemember( const AutomationStep& step, string& outError )
             {
                 return step.hasOnlyAttributes( { "probe", "target", "key", "as" }, outError ) && step.requireAttribute( "as", outError ) != nullptr &&
@@ -729,7 +729,7 @@ namespace sw
 
             /**
              * @brief 탐침 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
-             * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 견줄 수 있다
+             * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 비교할 수 있다
              *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
              */
             [[nodiscard]] static bool readObjectProperty( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
@@ -1361,7 +1361,7 @@ namespace sw
         const AutomationLoad& load = _scenario.getLoad();
         if ( load._bDeclared == false )
             return;
-        // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 잰다). 끝은 측정 보고가 낸 종료 요청이다(`FrameProfileSession` 이 늦게 건 목표를 읽는다).
+        // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 측정한다). 끝은 측정 보고가 낸 종료 요청이다(`FrameProfileSession` 이 늦게 건 목표를 읽는다).
         const int32 seconds = static_cast<int32>( MathUtil::ceil( load._durationSeconds ) );
         if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_profileSeconds", to_string( seconds ) ) == false )
         {
@@ -1602,7 +1602,7 @@ namespace sw
         const string* pDiffersFrom = step.findAttribute( "differsFrom" );
         if ( pSameAs != nullptr || pDiffersFrom != nullptr )
         {
-            // 기억한 값과는 글 그대로 견준다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
+            // 기억한 값과는 글 그대로 비교한다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
             const string& name        = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
             const string* pRemembered = nullptr;
             for ( const RememberedValue& remembered : _listRemembered )

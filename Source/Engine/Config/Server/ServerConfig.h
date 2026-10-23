@@ -1,7 +1,7 @@
 /**
  * @file ServerConfig.h
  * @brief 전용 서버의 운영 설정(`Config/Server/<SW_ACTIVE_GAME>.json`, `-server-config=<경로>` 로 바꿈)입니다.
- * @details 실행 파일에 굽지 않습니다 — Shipping 서버도 디스크에서 읽고, 없으면 기동하지 않습니다(Dev 는 기본값 + 경고). 운영자가 포트 ·
+ * @details 실행 파일에 베이크하지 않습니다 — Shipping 서버도 디스크에서 읽고, 없으면 기동하지 않습니다(Dev 는 기본값 + 경고). 운영자가 포트 ·
  *          접속 문자열을 고치는 파일이라서입니다. **비밀번호 · 토큰은 이 파일에 쓰지 않습니다** — 항목의 `_secretEnvironment` 가 가리키는 환경 변수에서
  *          드라이버가 읽습니다(`ServerSecret::read`). 저장소 · 캐시 항목의 드라이버 이름(`postgres` · `sqlite` · `memory` · `resp`)을 해석하는 것은
  *          서버 전용 모듈입니다 — 엔진은 항목을 운반만 합니다.

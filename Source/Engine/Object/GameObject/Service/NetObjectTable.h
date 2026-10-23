@@ -1,7 +1,7 @@
 /**
  * @file NetObjectTable.h
  * @brief 서버와 클라이언트가 같은 오브젝트를 같은 번호로 부르는 번호표입니다(씬마다 하나, `manager.getSubsystem<NetObjectTable>()`).
- * @details 파괴 복제(`DestructionNetSession`)와 페어드 애니메이션 복제(`PairedAnimationReplication`)가 이 표 하나를 쓴다. 번호는 두 갈래다.
+ * @details 파괴 복제(`DestructionNetSession`)와 페어드 애니메이션 복제(`PairedAnimationReplication`)가 이 표 하나를 쓴다. 번호는 두 분기다.
  *
  *          - **씬 번호**: 씬 문서에서 온 오브젝트는 이름의 해시(`hashed_string::getHash`, 대소문자 무시)에서 맨 위 비트를 끈 값이다. 서버와 클라이언트가 같은 씬
  *            문서를 읽으므로 같은 번호다. 예전처럼 "이름순 몇 번째" 가 아니어서 한쪽에만 있는 오브젝트가 다른 번호를 밀지 않는다(언리얼의 정적 액터 경로 이름과 같다).

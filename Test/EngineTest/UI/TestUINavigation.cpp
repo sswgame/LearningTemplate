@@ -83,7 +83,7 @@ SW_TEST_CASE( UINavigationTest, GridMovesToDirectNeighbors )
     SW_EXPECT_TRUE( fixture.navigateAndExpect( sw::UINavigationDirection::Up, "b11" ) );
 }
 
-/** @brief [UINavigationTest] 오른쪽 끝에서 Right 는 그대로 선다(기본 규칙 Escape → 화면 뿌리에서 후보 없음) */
+/** @brief [UINavigationTest] 오른쪽 끝에서 Right 는 그대로 선다(기본 규칙 Escape → 화면 루트에서 후보 없음) */
 SW_TEST_CASE( UINavigationTest, EdgeStopsByDefault )
 {
     UINavigationFixture fixture( 3, 3, 100.0f, 50.0f, 10.0f );

@@ -110,7 +110,7 @@ namespace sw
         float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
         /** @brief CPU 높이장을 반환합니다(물리 충돌 `TerrainColliderComponent` 와 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
-        /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 견줍니다. */
+        /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 비교합니다. */
         uint32 getHeightfieldGeneration() const { return _heightfieldGeneration; }
         /**
          * @brief 청크마다(`getChunkLayout` 순서, z 가 바깥) 그 청크의 높이를 마지막으로 바꾼 세대(`getHeightfieldGeneration` 의 그때 값)입니다.
@@ -145,7 +145,7 @@ namespace sw
         /**
          * @brief 높이장을 해상도 @p resolution 의 값으로 통째로 바꿉니다(높이 @p resolution², 구멍 (@p resolution − 1)² 또는 빈 것). 넓이 · 스플랫 · 머티리얼은 그대로다.
          * @details 청크 배치를 새로 세우고(청크 칸 `_chunkCells` 가 해상도 − 1 을 나눠야 한다) 모든 청크의 세대를 올린다(물리 바디는 청크 수가 바뀌어 모두 다시 만든다).
-         *          높이 · 구멍은 쓴 편집으로 쳐서 `writeState` 가 새 해상도째 싣는다. 크기 바꾸기 · 그 되돌리기 · 다른 해상도 상태 되살리기가 이 한 길을 쓴다. 틱 밖에서만 부른다.
+         *          높이 · 구멍은 쓴 편집으로 쳐서 `writeState` 가 새 해상도째 싣는다. 크기 바꾸기 · 그 되돌리기 · 다른 해상도 상태 복원하기가 이 한 길을 쓴다. 틱 밖에서만 부른다.
          * @return 바꿨으면 true 입니다. 지형이 없거나 크기가 맞지 않거나 청크 칸이 나누지 못하면 알리고 false 이며 아무것도 바꾸지 않습니다.
          */
         [[nodiscard]] bool replaceHeightfield( uint32 resolution, const vector<float32>& listHeight, const vector<uint8>& listHole );
@@ -156,7 +156,7 @@ namespace sw
         [[nodiscard]] bool resampleHeightfield( uint32 resolution );
         /** @brief 해상도 @p resolution 이 이 지형의 청크 칸(`_chunkCells`)으로 나뉘는지 봅니다(`replaceHeightfield` 가 받는 해상도). */
         bool isResolutionUsable( uint32 resolution ) const;
-        /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
+        /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 비교합니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
         /**
          * @brief 높이장 세대 @p sinceGeneration 뒤에 높이를 썼거나 스플랫 세대 @p sinceSplatRevision 뒤에 가중치를 쓴 청크를 모두 덮는 월드 평면 사각형(x, z)입니다.
@@ -174,7 +174,7 @@ namespace sw
 
         /**
          * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 스플랫을 씁니다. 쓴 것이 없으면 버전과 빈 표시만 씁니다.
-         * @details 모듈 리로드와 백엔드 교체는 씬을 속성으로 되살리고 `onPostLoad` 가 디스크 에셋을 다시 읽으므로, 저장하지 않은 편집은 여기로만 넘어간다.
+         * @details 모듈 리로드와 백엔드 교체는 씬을 속성으로 복원하고 `onPostLoad` 가 디스크 에셋을 다시 읽으므로, 저장하지 않은 편집은 여기로만 넘어간다.
          */
         void writeState( Archive& outArchive ) const;
         /** @brief 마지막 `reloadTerrain` 뒤에 높이나 스플랫을 썼으면 true 입니다(`writeState` 가 싣는 것이 있다). 저장해도 다시 읽기 전까지는 true 로 남는다. */
@@ -299,7 +299,7 @@ namespace sw
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
         bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
         bool                _bHolesWritten;         ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
-        bool                _bResolutionReplaced;   ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 되살린다
+        bool                _bResolutionReplaced;   ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 복원한다
         string              _loadedHeightfieldPath; ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

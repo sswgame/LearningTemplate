@@ -47,7 +47,7 @@ namespace sw
         ComponentDefaults( const ComponentDefaults& )            = delete;
         ComponentDefaults& operator=( const ComponentDefaults& ) = delete;
 
-        /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다(뿌리 타입부터 파생 순). 여러 스레드가 함께 불러도 됩니다. */
+        /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다(루트 타입부터 파생 순). 여러 스레드가 함께 불러도 됩니다. */
         void apply( void* pInstance, const TypeInfo& typeInfo );
 
         /** @brief 게임 gamesettings.xml 리소스 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
@@ -104,14 +104,14 @@ namespace sw
         void ensureDefaultsLoaded();
 
         /**
-         * @brief 한 타입에 적용할 `<Defaults>` 단계들입니다. **뿌리 → 파생** 순서입니다.
+         * @brief 한 타입에 적용할 `<Defaults>` 단계들입니다. **루트 → 파생** 순서입니다.
          * @details 이 목록은 `TypeInfo` 와 기본값 문서만으로 정해지고 문서는 로드 중 바뀌지
          *          않으므로 타입당 한 번 구합니다. 컴포넌트를 만들 때마다 구하면 상속 체인 조회 · 이름 문자열 ·
          *          XML 트리 훑기가 컴포넌트 수만큼 돈다(4000 개 씬에서 198 ms).
          */
         struct ResolvedDefaults
         {
-            vector<DefaultPatch> _listPatch;      ///< 뿌리 → 파생 순서. 같은 프로퍼티를 파생이 다시 적으면 뒤가 이긴다
+            vector<DefaultPatch> _listPatch;      ///< 루트 → 파생 순서. 같은 프로퍼티를 파생이 다시 적으면 뒤가 이긴다
             uint32               _generation = 0; ///< 풀 때의 타입 표 세대. 재등록으로 프로퍼티 목록이 갈리면 다시 풉니다
         };
 

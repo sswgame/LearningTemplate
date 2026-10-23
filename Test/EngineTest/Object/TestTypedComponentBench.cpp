@@ -2,7 +2,7 @@
  * @file TestTypedComponentBench.cpp
  * @brief 타입별 컴포넌트 버킷 순회(`GameObjectManager::forEachComponentOfType`)의 합성 장면 벤치 — 계획 문서 TypedComponents 8.4절(④).
  * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 방문 수가 맞는지만 본다. Release 로 읽는다.
- *          GPU 를 쓰지 않으므로 셰이더를 다시 굽지 않아도 된다(측정 경로에 셰이더가 없다).
+ *          GPU 를 쓰지 않으므로 셰이더를 다시 베이크하지 않아도 된다(측정 경로에 셰이더가 없다).
  *
  *          측정하는 것:
  *          - 오브젝트 1만 · 10만 × 정확한 타입 수 K = 50 · 200 · 500 장면에서 말단 타입과 기반 타입의 질의 한 번 비용(ns).
@@ -10,9 +10,9 @@
  *            등록형 목록에 삭제 대기 검사를 더한 두 가지(컴포넌트 표시 하나 · 컴포넌트와 소유 오브젝트 둘)로 검사의 몫을 가른다.
  *          - 오브젝트 하나를 만들고 지우는 비용(버킷 넣기 · 빼기의 배타 잠금 두 번이 든다)과, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍의 비용.
  *          - `sizeof( Component )`.
- *          - `resolveComponent<T>` 의 타입 확인 비용(`ResolveTypedCheckCost`): 같은 핸들을 확인하는 찾기와 타입 없는 찾기 + `static_cast` 로 푼 값을 견준다.
+ *          - `resolveComponent<T>` 의 타입 확인 비용(`ResolveTypedCheckCost`): 같은 핸들을 확인하는 찾기와 타입 없는 찾기 + `static_cast` 로 푼 값을 비교한다.
  *            확인은 Shipping 이 아닌 구성에만 있으므로 Release 로 돌린 이 케이스가 "개발 빌드의 확인 비용" 이다(계획 문서 TypedComponents "남은 확인").
- *          - 비동기 씬 로드 중의 조회(`QueryWhileAsyncSceneLoad`): 다른 매니저가 비동기로 큰 씬을 지을 때 조회 한 번의 지연을 쉴 때와 견준다.
+ *          - 비동기 씬 로드 중의 조회(`QueryWhileAsyncSceneLoad`): 다른 매니저가 비동기로 큰 씬을 지을 때 조회 한 번의 지연을 쉴 때와 비교한다.
  *
  *          타입 500 개를 만드는 법: 말단 타입은 `BenchBucketComponent<N>` 템플릿 인스턴스다. 코드젠이 아니라 손으로 `TypeInfo` 를 만들어
  *          `TypeRegistry::registerClass` 로 올리고, 표가 가진 사본의 주소를 `StaticType()` 의 함수 안 정적 변수에 담는다(FQN `sw::BenchBucketComponent<N>`,
@@ -291,7 +291,7 @@ namespace
 } // namespace
 
 /**
- * @brief [TypedComponentBenchTest] 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 — 말단 · 기반 타입 질의를 버킷 · 등록형 목록 · 오브젝트 훑기로 견준다
+ * @brief [TypedComponentBenchTest] 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 — 말단 · 기반 타입 질의를 버킷 · 등록형 목록 · 오브젝트 훑기로 비교한다
  * @details 판마다 새 매니저다(앞 판의 풀 · 버킷이 뒤 판을 측정하지 않게). 등록형 기반 목록은 오브젝트 1만에서만 측정한다(파일 머리 주석).
  */
 SW_TEST_CASE( TypedComponentBenchTest, BucketQueryByObjectAndTypeCount )
@@ -363,7 +363,7 @@ SW_TEST_CASE( TypedComponentBenchTest, BucketQueryByObjectAndTypeCount )
             } );
             SW_EXPECT_EQUAL( leafCount, registryLeafComponentChecked._visitCount );
 
-            // 7-c 의 첫 버킷 순회가 하던 검사(컴포넌트 · 소유 오브젝트)다. 위와 견주어 소유 오브젝트 읽기의 몫을 같은 바이너리에서 가른다(TypedComponents 8.4절).
+            // 7-c 의 첫 버킷 순회가 하던 검사(컴포넌트 · 소유 오브젝트)다. 위와 비교해 소유 오브젝트 읽기의 몫을 같은 바이너리에서 가른다(TypedComponents 8.4절).
             const QueryResult registryLeafChecked = measureQuery( makeQueryLabel( objectCount, typeCount, "registry leaf + pending checks" ).c_str(), leafCount,
                                                                   [&constManager]()
             {
@@ -485,8 +485,8 @@ SW_TEST_CASE( TypedComponentBenchTest, SpawnDestroyChurnAndLockCost )
 }
 
 /**
- * @brief [TypedComponentBenchTest] 개발 빌드(Shipping 이 아닌 구성)의 `resolveComponent<T>` 타입 확인 비용 — 같은 핸들을 타입 없는 찾기 + `static_cast` 와 견준다
- * @details 오브젝트 1만 · K = 200. 말단 타입 핸들(정확히 같은 타입이라 `isDerivedFrom` 이 바로 끝난다)과 기반 타입 핸들(말단 200 가지를 한 핸들 형식으로 푼다)을 따로 잰다.
+ * @brief [TypedComponentBenchTest] 개발 빌드(Shipping 이 아닌 구성)의 `resolveComponent<T>` 타입 확인 비용 — 같은 핸들을 타입 없는 찾기 + `static_cast` 와 비교한다
+ * @details 오브젝트 1만 · K = 200. 말단 타입 핸들(정확히 같은 타입이라 `isDerivedFrom` 이 바로 끝난다)과 기반 타입 핸들(말단 200 가지를 한 핸들 형식으로 푼다)을 따로 측정한다.
  *          확인은 `SW_SHIPPING` 이 아니면 켜지므로 Release 로 돌린 이 케이스의 두 줄 차(`typed` 대 `untyped`)가 개발 빌드의 확인 비용이다. 값은 핸들 하나를 푸는 ns 다.
  *          앱에서 프레임당 비용은 (프레임당 `resolveComponent<T>` 횟수) × (그 차)로 어림한다.
  */
@@ -544,10 +544,10 @@ SW_TEST_CASE( TypedComponentBenchTest, ResolveTypedCheckCost )
 }
 
 /**
- * @brief [TypedComponentBenchTest] 다른 매니저가 비동기로 큰 씬을 짓는 동안 버킷 조회 한 번의 지연 — 쉴 때와 견준다
+ * @brief [TypedComponentBenchTest] 다른 매니저가 비동기로 큰 씬을 짓는 동안 버킷 조회 한 번의 지연 — 쉴 때와 비교한다
  * @details 조회하는 매니저(1만 · K = 200)는 `SceneManager` 밖의 독립 매니저다. 로드 워커는 자기 전용 새 씬의 저장소에만 넣으므로(`SceneManager.cpp` 의 로드 작업)
  *          조회와 겹치지 않아야 하고, 이 케이스는 그 말을 지연으로 확인한다. 조회 한 번(말단 타입, 50 개 방문)을 시계 사이에 직접 끼워 재므로 값에 시계 읽기 비용
- *          (수십 ns)이 들어 있다 — 쉴 때와 로드 중을 같은 방식으로 재서 견주는 값이다. 게임 프레임 하나는 조회 64 번마다 전환을 한 번 갱신하는 것으로 흉내 낸다.
+ *          (수십 ns)이 들어 있다 — 쉴 때와 로드 중을 같은 방식으로 측정해서 비교하는 값이다. 게임 프레임 하나는 조회 64 번마다 전환을 한 번 갱신하는 것으로 흉내 낸다.
  *          로드 중 표본이 너무 적으면(`samples` 가 수십 개 아래) `kLoadedObjectCount` 를 키운다.
  */
 SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )

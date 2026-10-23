@@ -20,8 +20,8 @@ namespace sw
      * @class LightProbeVolumeComponent
      * @brief 축 정렬 상자(크기 `_extent`, 중심은 이 컴포넌트의 월드 위치) 안의 균일 프로브 격자입니다. 유니티 Adaptive Probe Volume, 언리얼 Volumetric Lightmap 의 자리입니다.
      * @details 격자의 모양은 트랜스폼과 두 칸(`_extent`, `_spacing`)에서 나옵니다(`computeLayout`). 회전과 크기 배율은 쓰지 않습니다 — 격자는 월드 축 정렬입니다.
-     *          베이크(P2)가 `.probes` 를 쓰고 `_probeDataPath` 에 그 경로를 둡니다. 읽은 격자의 모양이 지금 볼륨과 다르면(옮기거나 크기를 바꾸고 다시 굽지 않았다)
-     *          그 데이터를 쓰지 않고 오류를 남깁니다 — 옛 위치의 빛을 새 위치에 비추지 않습니다(폴백 없음). 굽지 않은 볼륨(경로가 빔)은 맵 검사가 경고합니다.
+     *          베이크(P2)가 `.probes` 를 쓰고 `_probeDataPath` 에 그 경로를 둡니다. 읽은 격자의 모양이 지금 볼륨과 다르면(옮기거나 크기를 바꾸고 다시 베이크하지 않았다)
+     *          그 데이터를 쓰지 않고 오류를 남깁니다 — 옛 위치의 빛을 새 위치에 비추지 않습니다(폴백 없음). 베이크하지 않은 볼륨(경로가 빔)은 맵 검사가 경고합니다.
      *          셰이더 소비(P3)는 레지스트리로 볼륨을 모아 라이트 그리드의 항목으로 넣습니다(ClusteredLighting.md S5).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Light Probe Volume", Tooltip = "Grid of baked spherical-harmonics light probes for indirect lighting", Meta = "Icon=LightPoint, IconColor=Light" )
@@ -43,7 +43,7 @@ namespace sw
         float32 getSpacing() const { return _spacing; }
         /** @brief 목표 간격을 설정합니다. */
         void setSpacing( float32 spacing );
-        /** @brief 베이크 결과(`.probes`) 경로입니다. 비었으면 굽지 않은 볼륨입니다. */
+        /** @brief 베이크 결과(`.probes`) 경로입니다. 비었으면 베이크하지 않은 볼륨입니다. */
         const string& getProbeDataPath() const { return _probeDataPath; }
         /** @brief 베이크가 프로브마다 쏘는 균일 구 방향 수입니다(`LightProbeBaker`). */
         uint32 getBakeSampleCount() const { return _bakeSampleCount; }
@@ -54,11 +54,11 @@ namespace sw
 
         /**
          * @brief 지금 트랜스폼과 칸으로 격자의 모양을 구합니다. 축마다 프로브 수는 floor(크기 / 간격) + 1 이고, 상자의 양 끝에 프로브가 놓입니다.
-         * @details 베이크가 이 모양으로 굽고, 읽은 데이터가 이 모양과 같아야 씁니다.
+         * @details 베이크가 이 모양으로 베이크하고, 읽은 데이터가 이 모양과 같아야 씁니다.
          */
         LightProbeGridLayout computeLayout() const;
         /**
-         * @brief 쓸 수 있는 베이크 데이터입니다. 굽지 않았거나, 읽지 못했거나, 모양이 지금 볼륨과 다르면 nullptr 입니다(그 이유는 읽을 때 로그에 남는다).
+         * @brief 쓸 수 있는 베이크 데이터입니다. 베이크하지 않았거나, 읽지 못했거나, 모양이 지금 볼륨과 다르면 nullptr 입니다(그 이유는 읽을 때 로그에 남는다).
          */
         const LightProbeGrid* findProbeData() const;
         /**
@@ -79,7 +79,7 @@ namespace sw
     private:
         /** @brief `_probeDataPath` 의 데이터를 읽습니다. 경로가 비면 데이터를 비웁니다. 읽지 못하면 오류를 남기고 비웁니다. */
         void reloadProbeData();
-        /** @brief 굽지 않은 볼륨(경로가 빔)을 경고하고, 크기 · 간격이 0 인 볼륨을 오류로 적습니다(맵 검사). */
+        /** @brief 베이크하지 않은 볼륨(경로가 빔)을 경고하고, 크기 · 간격이 0 인 볼륨을 오류로 적습니다(맵 검사). */
         void validateProbeData( ValidationContext& context ) const;
 
         PROPERTY( Category = "Light Probe", DisplayName = "Extent", Min = 0.0, Tooltip = "Full size of the axis-aligned probe box", Units = m )
@@ -93,6 +93,6 @@ namespace sw
         PROPERTY( Category = "Light Probe Bake", DisplayName = "Bounce Albedo", Min = 0.0, Max = 1.0, Tooltip = "Reflectance assumed for every surface a bake ray hits" )
         float32 _bounceAlbedo;
 
-        LightProbeGrid _probeData; ///< 읽은 베이크 데이터(비었으면 굽지 않았거나 읽지 못했다)
+        LightProbeGrid _probeData; ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
     };
 } // namespace sw

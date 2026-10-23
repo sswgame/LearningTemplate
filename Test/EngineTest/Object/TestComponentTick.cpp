@@ -913,7 +913,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDepen
 
 /**
  * @brief [ComponentDefaultsTest] gamesettings 의 기본값은 **기반 타입 노드부터** 적용된다
- * @details 적용은 한 곳(`applyTypeDefaults`)에서 뿌리 → 파생 순서로 체인 전체를 한다. 기반 생성자에서 적용하면
+ * @details 적용은 한 곳(`applyTypeDefaults`)에서 루트 → 파생 순서로 체인 전체를 한다. 기반 생성자에서 적용하면
  *          그 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나오고,
  *          중간 기반(`SceneComponent`)의 기본값이 적용되지 않는다.
  *          이 테스트는 그 순서를 고정한다: 기반 노드의 값이 들어가고, 같은 프로퍼티를 파생이
