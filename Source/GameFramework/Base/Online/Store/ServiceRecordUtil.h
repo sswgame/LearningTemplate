@@ -1,7 +1,7 @@
 /**
  * @file ServiceRecordUtil.h
  * @brief 저장소 레코드 값(`ServiceRecord::_bytes`)을 `REFLECT` 타입 하나에서 읽고 씁니다. 형식은 버전 헤더가 붙은 자기 기술형(A, `BinarySerializer`)입니다.
- * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 고정 배치형(B)을 쓰지 않습니다(`docs/plans/ReflectionFormats.md` 2절).
+ * @details 저장소 레코드는 쓴 빌드와 다른 빌드가 읽으므로 고정 배치형(B)을 쓰지 않습니다(`Source/Engine/Serialization/Fixed/README.md` 2절).
  *          A 는 필드를 이름으로 짝짓습니다. 필드를 더하면 옛 레코드의 그 필드는 타입의 기본값으로 채워집니다. 필드를 빼면 옛 레코드에 남은 그 필드가
  *          모르는 필드(orphan)가 되고, 이 읽기는 orphan 을 거절하므로 옛 레코드 전부가 읽기 실패입니다. 필드를 빼거나 뜻을 바꿀 때는 버전을 올리고
  *          데이터를 다시 씁니다(이관 함수는 없습니다, 결정 기록 5-4).
@@ -11,7 +11,7 @@
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
  *          **레코드가 모르는 칸을 든다**: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownFields{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
  *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다
- *          (계획 `PersistentRecordUnknownFields`). 버전이 다른 레코드는 `deserializeVersioned` 가 이관 없이 거절하고 모르는 칸도 그대로 거절한다.
+ *          (docs/09_Decisions.md 5-9 영속 레코드의 모르는 필드). 버전이 다른 레코드는 `deserializeVersioned` 가 이관 없이 거절하고 모르는 칸도 그대로 거절한다.
  *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 고정 배치형 코덱이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */

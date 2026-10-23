@@ -1,45 +1,49 @@
 # 로드맵 — 앞으로 할 일의 순서
 
-이 문서는 앞으로 할 일의 **순서의 정본**입니다. 일의 식별자는 이름입니다 — 계획 문서의 파일 이름, 또는 `Candidates-<영역>.md` 의 `### 이름 — 제목` 절입니다. 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 가 새 이름을 찾아 줍니다. 이 문서는 순서만 가지고, 항목 설명을 복사하지 않으며 링크로만 가리킵니다.
-끝난 단위는 이 목록에서 지웁니다. 작업 전에 항목의 현재 완성도를 코드로 확인합니다. 같은 파일을 건드리는 단위는 같은 작업자에게 묶고, 동시 빌드는 둘까지입니다([작업 방식](../11_Workflow.md)). GPU 확인이 필요한 단위는 구현만 하고 `gpu-verifier` 로 캡처합니다.
-항목 끝의 `[병렬 가능]` 은 다른 작업자와 같은 시간대에 병합해도 건드리는 파일이 겹치지 않는다는 뜻이고, `[단독: 이유]` 는 혼자 하는 시간대가 필요하다는 뜻입니다. 근거는 그 일이 건드리는 파일 영역입니다.
+> 질문: 남은 일을 어떤 순서로 하는가?
+> 독자: 다음 일을 고르는 통합 담당과 작업자.
+> 결론: 이 문서는 순서와 병렬 여부만 가진다. 일의 설계 · 진행 · 상태는 링크한 계획 문서의 머리 줄이 원본이다. 끝난 일은 이 목록에서 지운다.
+
+일의 식별자는 이름입니다. 계획 문서의 파일 이름이거나 `Candidates-<영역>.md` 의 `### 이름` 절입니다. 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 풉니다.
+작업 전에 항목의 현재 완성도를 코드로 확인합니다. 같은 파일을 건드리는 단위는 같은 작업자에게 묶습니다([작업 방식](../11_Workflow.md)). GPU 확인이 필요한 단위는 구현만 하고 통합에서 `gpu-verifier` 로 캡처합니다.
+`[병렬 가능]` 은 다른 작업자와 같은 시간대에 병합해도 건드리는 파일이 겹치지 않는다는 뜻이고, `[단독: 이유]` 는 혼자 하는 시간대가 필요하다는 뜻입니다.
 
 ## 지금 순서
 
-1. **`integrator` 설계의 미구현 단위**(설계는 끝났고 코드가 없음).
-   - 데이터화: D6 ~ D9 · P1 · P4 · G1 코드가 들어갔다(`wt/datadriven`, 빌드 미확인). 남은 것: 묶음 빌드와 검증(P2 의 클리어 색 · 원본 이름 폴백은 지웠다 — 네 백엔드 골든 확인), G2 의 Shipping 골든 그림 뜨기(시나리오 · 케이스는 들어감) — [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
-   - E3 · E4 의 남은 확인(빌드 · 테스트 · 큐브 20,000 개 벤치) — [EnginePartition](EnginePartition.md) 6.4. 구현은 `wt/enginepart` 에 있다. [단독: 모든 모듈 재빌드]
-   - V2 — [GpuVerification](GpuVerification.md) 2절. 지는 케이스 수정은 들어갔고(로컬 확인, CI 미확인) 리눅스 `gl` 원인 확인 뒤 해제. [병렬 가능]
-2. **새 시스템**:
-   - Vfx V5 실행(V0 ~ V4 · V6 · V7 들어감 — 셰이더 쿠킹 뒤 네 백엔드로 CPU · GPU 그림 비교) — [Vfx](Vfx.md). [병렬 가능]
-   - 누수 탐지 L1 측정 창(`wt/leakwin`, 빌드 · 테스트 미확인) → L2 측정(전수 캡처 오버헤드 · 씬 로드당 할당 수 · 워밍업 1 + 측정 8 곡선) → L3 반복 로드 곡선 검사 → L4 보고 연결 — [LeakDetection](LeakDetection.md). [단독: L1 은 `Memory.h` 를 바꿔 여러 모듈이 다시 빌드됨, L2 의 측정은 Release 에서 혼자]
-   - 클러스터드 라이팅 S3 측정(실행 코드 `perf-compare lightCulling*` 들어감) — [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
-   - 그래픽스 측정 · 확인 묶음 [GraphicsMeasurements](GraphicsMeasurements.md)(반해상도 블룸 · 그림자 패스 몫 · 스킨/VAT 풀 · Shipping 보기 모드 — 실행 코드 들어감). 새 계획: 파티클 GPU 라이트 [VfxGpuLights](VfxGpuLights.md) · 실시간 GI와 볼륨 표현 [RealtimeGlobalIllumination](RealtimeGlobalIllumination.md)(R0 사용자 결정 먼저) · 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
-   - 간접 조명 P4 · P5 · D2-6.4 의 빌드 · 셰이더 쿠킹 · 화면 확인(코드는 `wt/planleftB`, 셰이더는 패치), P2 하늘 항 — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
-   - 월드 스트리밍 W7 측정 — [WorldStreaming](WorldStreaming.md) (W2 → W6 와 W7 데이터는 빌드 미확인으로 들어갔다 — 빌드 · 쿠킹 · World Cells 창 캡처 확인이 먼저). [단독: W7 의 히치 측정은 Release 에서 혼자]
-3. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
-   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md)(S2 피사계 심도 · 렌즈 시프트는 빌드 · 셰이더 쿠킹 확인, S3 · S4 는 렌더러 기능 선행) → [GamepadVirtualCursor](GamepadVirtualCursor.md)(G3 실기 — G2 는 D 패드로 정함), 에디터 시나리오 GraphSaveScenarioRun(통합 실행 대기: `dialoguegraphsave` · `animgraphsave`) · [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps) (옛 `D4-5` → `D4-3` → `D3-5` · `D3-8` 에 대응). [병렬 가능]
-   2. 미리보기 창 — [EditorMultiWorld](EditorMultiWorld.md) 6절 (4) 창을 다시 여는 시간 · 메모리 측정(Release), (3)의 디퍼드 DX12 · 미리보기 여럿인 DX12 에디터(`netsim` 시나리오 세 번 중 한 번)의 `온라인 디스크립터 블록이 바닥났습니다` 오류(렌더러). [병렬 가능]
-   3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md)(T3 Release 측정 — T4 교체 프레임의 메시 교체는 빌드 미확인으로 들어갔다), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 지형 · 식생이 셰이더 재베이크를 부르고 측정은 Release 에서 혼자]
-   4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md)(E6 측정 끝 — 사람 귀 · 리눅스 확인이 남음), 온라인 키트 마감 [OnlineKits](OnlineKits.md)(아홉 후보 절을 단위로 옮겼다). [병렬 가능]
-   5. 애니메이션 — [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](AnimationLodAndCrowd.md)(L3 테스트 · Shooter3D 확인), 천 동적 메시 [ClothFollowups](ClothFollowups.md), 물리 확장 [PhysicsExtensions](PhysicsExtensions.md)(P1 ~ P4 빌드 · 테스트 통과, 천 · 컴포넌트 단 파워드 래그돌 화면 확인이 남았다), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · [ShooterStrideWarping](ShooterStrideWarping.md)(S2 화면 확인) · [KayKitMaterials](KayKitMaterials.md)(K2 벤치 캡처) · [FacialAnimation](FacialAnimation.md)(F4 실기 입력 · 얼굴 에셋, F5 확인 · 자음) · [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md)(A1 합성 리그 벤치 비용 곡선이 순서를 정한다), 서버 디버깅 [ServerDebug](ServerDebug.md)(S5 흐름 이벤트 · S8 한 프로세스 재생 들어감 — 빌드 미확인), 네트워크 [RollbackPrediction](RollbackPrediction.md)(R2 클라이언트-서버 관심 영역) · [PersistentRecordUnknownFields](PersistentRecordUnknownFields.md)(개별 테스트 실행) · [NetChannelSchemaHashHandshake](NetChannelSchemaHashHandshake.md)(개별 테스트 실행). 게임플레이 키트(`wt/gpB`): [MovingGroundFollowUps](MovingGroundFollowUps.md)(M1 ~ M4 확인 — 바닥이 있는 넷 씬) · [AbilitySystemExtensions](AbilitySystemExtensions.md)(확인만) · [IntentNetworkWiring](IntentNetworkWiring.md)(I4 되감기 실행 · 재생 UI · 킬캠) · [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md)(E2 병합 · 표면 상태 · 화면 확인, E3 아틀라스, E5 시퀀서 · 편집 창) · [InteractionHighlightAndMontage](InteractionHighlightAndMontage.md)(H3 · H4) · [WildWestHorseMount](WildWestHorseMount.md)(W2 임포트 · 씬, W3 에셋) · [GameSceneCc0Meshes](GameSceneCc0Meshes.md)(C2 화면). [병렬 가능]
-   6. 그래픽스 형식 묶음(한 작업자, 순서대로, 셰이더 재베이크 · 에셋 재작성): [GraphicsFormatBundle](GraphicsFormatBundle.md)(HDR 장면 색 · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · 쿠키 — 셰이더 단위는 패치 적용 · 쿠킹 · 골든 다시 뜨기가 남음, 메시 구간 · VRM 프리팹 · 스프링 식 · 폴백 정리 · RHI 바이어스는 들어감). 디퍼드의 툰은 포워드 전용 패스로 들어갔다(결정 기록 5-5). 머티리얼 텍스처 칸 16개는 들어갔다(`TerrainWaterVegetationRemainders` 의 함정). [단독: 셰이더 재베이크 · 에셋 재작성]
-   7. 런타임 UI — [UiInputRemaining](UiInputRemaining.md)(I3 리눅스 빌드 · 실기 확인 — Windows 빌드 · 테스트는 끝) · [UiNotificationRemaining](UiNotificationRemaining.md)(N2 게임에 붙여 캡처 — 빌드 · 테스트는 끝) · [WorldWidgetInput](WorldWidgetInput.md)(W4 실기 · 가림 테스트) · [ScreenReaderSupport](ScreenReaderSupport.md)(A6 내레이터 실기 · A7 문서에 이름 주기) · [MsdfGlyphs](MsdfGlyphs.md)(M4 셰이더 패치 적용 · 쿠킹, M5 그리기 확인) · [GlyphRasterizationHitch](GlyphRasterizationHitch.md)(G1 bsdf 비용 측정 → G2 프레임 예산) · [UiDrawPerformance](UiDrawPerformance.md)(U1 · U2 는 측정이 이득을 보일 때만). [병렬 가능]
-   7-1. 조건부에서 착수한 것(2026-10-22 사용자 결정, `wt/condB` 에 빌드 미확인으로 들어감 — 빌드 · 테스트가 먼저): 에디터 [PanelIDLiterals](PanelIDLiterals.md)(P3 빌드 · EditorTest 통과, `-EnableEditor` 자체 테스트는 GPU 확인 대기) · [DesignerDataToolsAudit](DesignerDataToolsAudit.md)(D1 행동 트리 데이터 → D2 편집기, D3 머티리얼 그래프 결정), 네트워크 [PatchDeltaDelivery](PatchDeltaDelivery.md)(P6 은 스팀 전용이면 취소 — 2026-10-23 결정, 아래 10번), UI [UiTooltipAndCursor](UiTooltipAndCursor.md)(T4 실기), 서버 버스 형식의 "남은 확인"(`ServerBusFormat` 문서 — 테스트 실행 · Release 측정, 해지 알림 서버 둘 테스트는 썼다). [병렬 가능]
-   8. 사용자 설정 소비자 [UserSettingsConsumers](UserSettingsConsumers.md)(U3 셰이더 쿠킹 · 네 백엔드 화면 확인 — PassCB 가 바뀌어 전체 재쿠킹). [단독: 셰이더 재베이크]
-   9. 키트 조립 둘째 게임 [KitCompositionGames](KitCompositionGames.md)(K2 `FrontierTown` 빌드 · 시나리오 · 캡처 확인). [병렬 가능]
-   10. 프리로딩 · LOD [PreloadAndLod](PreloadAndLod.md)(P4 고정 · 자동 수집 → P5 메시 LOD → P6 밉 스트리밍 · PSO 미리 만들기). [단독: P5 는 `.mesh` 판 올림 · 셰이더 재베이크]
-   11. 뒤 순서: Wayland 창 계층 [WaylandWindowLayer](WaylandWindowLayer.md)(CI 리눅스 Wayland 잡을 넣었고 첫 실행 확인이 남았다), 서버 렌더러 제거 [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md)(Debug-Server 빌드 · 테스트 통과, Shipping-Server · 리눅스 X11 검사는 CI 첫 실행, 전후 크기가 남았다), 워프 분리 [MeshModifierPreviewCost](MeshModifierPreviewCost.md)(워프 내보내기(`4174d9b8c` · `c82a29a77`) · 앞부분 캐시 · 시간 재생 · 표본기 상한은 들어갔고 절에는 큰 메시 비용 측정 · 셰이딩 미리보기 비용과 캡처 확인이 남았다). [병렬 가능]
-4. **파일이 겹쳐 미룬 정리**: [PreludeAndFwdCleanup](Candidates-engine.md#preludeandfwdcleanup) · [LongFunctions](LongFunctions.md) — 위 1~2 뒤에. HeaderIncludeSlimming · EngineServiceInjection 은 끝났다(2026-10-21, `wt/cleanup347` — 레지스트리를 값 멤버로 두는 판정, 쿠커 · 초상화 · 글꼴 서비스가 엔진 묶음을 받음, 빌드 미확인). 앞서 병합된 [EngineCleanups](EngineCleanups.md) 는 린트로 더 풀 것이 없어 `SW_DEV_COMMAND` 같은 선언 등록 형식의 결정이 먼저다. [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
-5. **새로 쓴 정리**: [SerializerSilentSkips](SerializerSilentSkips.md)(S1 바이너리 · S2 텍스트 형식 · S3 원소 안 객체째 실패 · S4 바이너리 객체째 실패와 비트필드 이관 들어감, Debug 테스트 통과 — 씬 로드는 GPU 확인 대기) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [DiskPathVsResourceId](DiskPathVsResourceId.md)(안 B 들어감 — 리소스 입구는 리소스 id 만, 루트 밖은 `mountDiskDomain`. 빌드 · 테스트로 남은 OS 경로 호출부 확인) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md)(머티리얼 · 추가 뷰 그림자 · 텍스처 형식 들어감, RT 포맷 · 에뮬 슬롯 표는 GPU 확인과 함께) — 순서는 정리 → 기능. [병렬 가능]
-6. **구조 단순화 네 정책**: 필수 설정(HC) → 팩 쿠킹을 C++ 로(PK) → 에셋 종류 등록 줄 하나(AT) → 텍스트 형식 역할별 하나(TX) — [StructureSimplification](StructureSimplification.md). DataDriven D8 · D9 와 겹치는 지점은 그 문서 2절. [단독: AT1 은 `AssetFormat.h`, HC3 은 `GameConfig.h` 를 바꿔 여러 모듈이 다시 빌드됨]
-7. **Scripts 구조**(import 루트 하나 · 3층 · 층 게이트) — [ScriptsStructure](ScriptsStructure.md). 구현과 import · lint-suite 측정, 파이썬 테스트 확인은 끝났다(2026-10-23). 병합 뒤 configure 시간과 `ctest -L lint -j 2` · `-L python -j 2` 한 번이 남았다. [병렬 가능]
-8. **조건부에서 착수한 일**(2026-10-22 사용자 결정, 빌드 없이 작성 — 빌드 · 테스트 확인부터): [ModuleRenderPass](ModuleRenderPass.md)(빌드 · 테스트 끝, 시연 패스 · GPU 확인 대기) · [CrossFileObjectReference](CrossFileObjectReference.md)(빌드 · 테스트 끝, 인스펙터 위젯 남음) · [ThirdPartyGaps](ThirdPartyGaps.md)(T2 는 main 에서 vcpkg 기능 설치가 먼저, F1 · F2 업스케일은 설계만) · [InteractionSpatialGrid](InteractionSpatialGrid.md)(I3 Release 측정만) · [TilemapCellDataLayers](TilemapCellDataLayers.md)(T3 에디터 눈 확인만, GPU 확인 대기). [병렬 가능]
-9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). [단독: 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자]
-10. **2026-10-23 사용자와 정한 일**(코드는 아직 없고 계획 문서만 있다):
-   - [AutomationSplit](AutomationSplit.md) — ② 단계 → ③ 시나리오, ④ 는 실제 배포 때(① 탐침 끝). [병렬 가능: 셰이더 훅 · 층 게이트와 파일이 다르다]
-   - [PatchDeltaDelivery](PatchDeltaDelivery.md) 우선순위 변경 — 출시는 스팀 기준이라 P6 은 스팀 전용이면 취소, P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 내린다. 새 단위 P7(팩 레이아웃 안정성 점검 — 읽기 + 측정)이 남은 일이다. [단독: P7 측정은 Release 에서 혼자]
-11. **품질 후보에서 계획으로 올린 일**(2026-10-24, 코드는 아직 없다): [ImportRuleOverlap](ImportRuleOverlap.md)(I1 모델 임포트 규칙 → I2 텍스처 → I3 산출물 결정성) · [SourceScanGates](SourceScanGates.md)(S1 `SourceFile` 의 줄 끝 · BOM → S2 파일 집합 → S3 픽서 → S4 키트 이름공간) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md)(Q1 배포 기동 열기 · Q2 한 프레임 구간 · Q3 자동 조정은 예산을 깰 때 · Q4 실기). WARP 픽셀 테스트는 [GpuVerification](GpuVerification.md) V3. [병렬 가능]
+1. **설계는 끝났고 코드가 없거나 검증이 남은 단위**
+   - 데이터화 [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
+   - 엔진 분할 [EnginePartition](EnginePartition.md) 6.4. [단독: 모든 모듈 재빌드]
+   - Linux 와 GPU 검증 [GpuVerification](GpuVerification.md) 2절. [병렬 가능]
+2. **새 시스템**
+   - [Vfx](Vfx.md) 실행 확인. [병렬 가능]
+   - 누수 탐지 [LeakDetection](LeakDetection.md). [단독: `Memory.h` 를 바꿔 여러 모듈이 다시 빌드됨, 측정은 Release 에서 혼자]
+   - 클러스터드 라이팅 [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
+   - 그래픽스 측정 · 확인 [GraphicsMeasurements](GraphicsMeasurements.md), 파티클 GPU 라이트 [VfxGpuLights](VfxGpuLights.md), 실시간 GI 와 볼륨 표현 [RealtimeGlobalIllumination](RealtimeGlobalIllumination.md), 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
+   - 간접 조명 [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
+   - 월드 스트리밍 [WorldStreaming](WorldStreaming.md). [단독: 히치 측정은 Release 에서 혼자]
+3. **기능 묶음**(분류는 결정 기록 5-12)
+   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md) → [GamepadVirtualCursor](GamepadVirtualCursor.md), 에디터 시나리오 GraphSaveScenarioRun, [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps). [병렬 가능]
+   2. 미리보기 창 [EditorMultiWorld](EditorMultiWorld.md) 6절. [병렬 가능]
+   3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 셰이더 재베이크, 측정은 Release 에서 혼자]
+   4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md), 온라인 키트 마감 [OnlineKits](OnlineKits.md). [병렬 가능]
+   5. 애니메이션 · 게임플레이: [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](AnimationLodAndCrowd.md), 천 [ClothFollowups](ClothFollowups.md), 물리 [PhysicsExtensions](PhysicsExtensions.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · [ShooterStrideWarping](ShooterStrideWarping.md) · [KayKitMaterials](KayKitMaterials.md), [FacialAnimation](FacialAnimation.md), [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 네트워크 [RollbackPrediction](RollbackPrediction.md), 게임플레이 키트 [MovingGroundFollowUps](MovingGroundFollowUps.md) · [AbilitySystemExtensions](AbilitySystemExtensions.md) · [IntentNetworkWiring](IntentNetworkWiring.md) · [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md) · [InteractionHighlightAndMontage](InteractionHighlightAndMontage.md) · [WildWestHorseMount](WildWestHorseMount.md) · [GameSceneCc0Meshes](GameSceneCc0Meshes.md). [병렬 가능]
+   6. 그래픽스 형식 묶음 [GraphicsFormatBundle](GraphicsFormatBundle.md). [단독: 셰이더 재베이크 · 에셋 재작성]
+   7. 런타임 UI: [UiInputRemaining](UiInputRemaining.md) · [UiNotificationRemaining](UiNotificationRemaining.md) · [WorldWidgetInput](WorldWidgetInput.md) · [ScreenReaderSupport](ScreenReaderSupport.md) · [MsdfGlyphs](MsdfGlyphs.md) · [GlyphRasterizationHitch](GlyphRasterizationHitch.md) · [UiDrawPerformance](UiDrawPerformance.md)(측정이 이득을 보일 때만). [병렬 가능]
+   8. 조건부에서 착수한 것: [PanelIDLiterals](PanelIDLiterals.md) · [DesignerDataToolsAudit](DesignerDataToolsAudit.md) · [UiTooltipAndCursor](UiTooltipAndCursor.md). [병렬 가능]
+   9. 사용자 설정 소비자 [UserSettingsConsumers](UserSettingsConsumers.md). [단독: 셰이더 재베이크]
+   10. 키트 조립 둘째 게임 [KitCompositionGames](KitCompositionGames.md). [병렬 가능]
+   11. 프리로딩 · LOD [PreloadAndLod](PreloadAndLod.md). [단독: `.mesh` 판 올림 · 셰이더 재베이크]
+   12. 뒤 순서: [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) · [MeshModifierPreviewCost](MeshModifierPreviewCost.md). [병렬 가능]
+4. **파일이 겹쳐 미룬 정리**(위 1 ~ 2 뒤에): [PreludeAndFwdCleanup](Candidates-engine.md#preludeandfwdcleanup) · [LongFunctions](LongFunctions.md) · [EngineCleanups](EngineCleanups.md). [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
+5. **새로 쓴 정리**(정리 → 기능 순서): [SerializerSilentSkips](SerializerSilentSkips.md) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [DiskPathVsResourceId](DiskPathVsResourceId.md) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md). [병렬 가능]
+6. **구조 단순화 네 정책**(필수 설정 → 팩 쿠킹을 C++ 로 → 에셋 종류 등록 줄 하나 → 텍스트 형식 역할별 하나): [StructureSimplification](StructureSimplification.md). DataDriven D8 · D9 와 겹치는 지점은 그 문서 2절. [단독: `AssetFormat.h` · `GameConfig.h` 를 바꿔 여러 모듈이 다시 빌드됨]
+7. **Scripts 구조**(import 루트 하나 · 3층 · 층 게이트) [ScriptsStructure](ScriptsStructure.md). [병렬 가능]
+8. **조건부에서 착수한 일**: [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md) · [InteractionSpatialGrid](InteractionSpatialGrid.md) · [TilemapCellDataLayers](TilemapCellDataLayers.md). [병렬 가능]
+9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) [BuildSpeed](BuildSpeed.md). [단독: 다른 작업이 모두 끝난 뒤 혼자, 빌드가 도는 동안은 측정이 무효]
+10. **2026-10-23 사용자와 정한 일**
+    - Automation 분리 [AutomationSplit](AutomationSplit.md). [병렬 가능: 셰이더 · 층 게이트와 파일이 다르다]
+    - 패치 · 델타 배포 [PatchDeltaDelivery](PatchDeltaDelivery.md): 출시는 스팀 기준이라 P6 은 스팀 전용이면 취소하고 P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 내린다. P7(팩 레이아웃 안정성 점검)이 남은 일이다. [단독: P7 측정은 Release 에서 혼자]
+
 ## 지금 하지 않는 것
 
-조건부 · 보류 · 관찰 항목과 조건이 붙은 기능은 영역별 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있고 순서에 올리지 않는다. 조건이 오면 해당 후보 문서에서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md). 끝난 단위는 이 목록에서 지운다.
+조건부 · 보류 · 관찰 항목은 영역별 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있고 순서에 올리지 않는다. 조건이 오면 해당 후보 문서에서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md).

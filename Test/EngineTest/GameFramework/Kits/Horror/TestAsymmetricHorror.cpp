@@ -501,7 +501,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
     SW_ASSERT_TRUE( loadRules( catalog ) );
 
     // 발전기 두 대 → 탈출구 → 한 명 탈출 → 남은 한 명에게 해치.
-    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(NetChannelSchemaHashHandshake).
+    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(docs/09_Decisions.md 5-9 넷 채널 스키마 해시).
     constexpr uint8   kSnapshotKind = 0x80;
     NetMessageChannel channel;
     SW_ASSERT_TRUE( HorrorMatch::registerSnapshotMessage( channel, kSnapshotKind ) );

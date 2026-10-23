@@ -1,12 +1,12 @@
 /**
  * @file MixedBuildCodec.h
  * @brief 배포 중에 빌드가 다른 서버가 읽는 값(서버 버스 본문, 캐시 레코드)의 자기 기술형(A) 코덱입니다.
- * @details 읽기 정책은 docs/plans/ServerBusFormat.md 3.3 입니다.
+ * @details 읽기 정책은 docs/09_Decisions.md 5-9 서버 버스 읽기 정책 입니다.
  *          - 버전 머리가 기대한 버전과 다르면 거절합니다. 이관 레지스트리를 보지 않습니다(`BinarySerializer::deserializeExactVersion`).
  *          - 타입에 없는 이름의 필드는 건너뛰고(한 번 경고), 타입에 있는데 읽지 못한 필드(모르는 열거자)는 거절합니다. 중첩 구조체까지 같은 정책입니다.
  *          - 읽은 값과 쓸 값이 선언된 범위(`Min`, `Max`, `MaxCount`)를 지키는지 고정 배치형 쓰기 검사로 봅니다. A 는 `MaxCount` 를 보지 않기 때문입니다.
  *            타입에 고정 배치형 코덱이 없으면 `FixedLayout::write` 가 이유와 함께 프로세스를 멈춥니다(대신 쓸 검사가 없습니다).
- *          영속 레코드는 이 코덱을 쓰지 않습니다. 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지기 때문입니다(`ServiceRecordUtil::readDurable`, 후보 `PersistentRecordUnknownFields`).
+ *          영속 레코드는 이 코덱을 쓰지 않습니다. 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지기 때문입니다(`ServiceRecordUtil::readDurable`, docs/09_Decisions.md 5-9 영속 레코드의 모르는 필드).
  */
 #pragma once
 #include "Core/Common/Types.h"

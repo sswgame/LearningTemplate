@@ -68,7 +68,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 고정 배치형(B) 코덱에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다(`docs/plans/ReflectionFormats.md` 3.4 표). */
+    /** @brief 고정 배치형(B) 코덱에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다(`Source/Engine/Serialization/Fixed/README.md` 3.4 표). */
     enum class FixedValueKind : uint8
     {
         Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 코덱이 없습니다(`ParsedFixedType::_reason`)

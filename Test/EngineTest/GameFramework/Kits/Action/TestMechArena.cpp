@@ -429,7 +429,7 @@ SW_TEST_CASE( MechArenaTest, StateBytesRoundTripAndReplayDeterministically )
     MechFixture fixture;
     SW_ASSERT_TRUE( fixture.load() );
 
-    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(NetChannelSchemaHashHandshake).
+    // 스냅샷은 넷 채널에 등록한 종류로 본문만 싣는다(docs/09_Decisions.md 5-9 넷 채널 스키마 해시).
     constexpr uint8   kSnapshotKind = 0x80;
     NetMessageChannel channel;
     SW_ASSERT_TRUE( MechArenaWorld::registerSnapshotMessage( channel, kSnapshotKind ) );

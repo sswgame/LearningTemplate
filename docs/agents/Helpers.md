@@ -1,3 +1,7 @@
+> 질문: 헬퍼 함수와 번역 단위 전용 타입은 어디에 두고 어떻게 이름 붙이는가?
+> 독자: 헬퍼를 더하거나 `.cpp` 안의 타입을 정리하는 사람.
+> 결론: 여러 번역 단위가 쓰면 헤더의 `XxxUtil` 정적 구조체에, 한 `.cpp` 전용이면 그 파일의 하나뿐인 익명 네임스페이스 안 `XxxInternal`(번역 단위 이름을 따른다)에 둔다.
+
 ## Helpers: Util vs Internal
 
 - Shared helpers used by more than one translation unit belong on a `XxxUtil`
@@ -61,7 +65,7 @@ namespace sw
   linkage, so drop the `static` keyword when you move one in.
 - **Hoisting can break the build.** The block may only sit above things it does not use.
   Moving it past a type definition, a constant or an `s_*` variable that it references is a
-  compile error, so build after you move one. If the dependency is itself translation-unit-local
+  compile error, so check the references before you move one (workers do not build; report it as "compile check needed"). If the dependency is itself translation-unit-local
   (a file-scope `static`), move it **into** the block instead.
 - Legitimate exceptions, all of which are load-bearing:
   - Blocks in mutually exclusive preprocessor branches (`#if SW_PLATFORM_WINDOWS` /

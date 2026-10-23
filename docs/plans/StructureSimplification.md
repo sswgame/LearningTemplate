@@ -27,7 +27,7 @@
 | 7.5 절 P4 테스트가 원본을 거치게 함 | HC1 · HC4 의 테스트 정리가 같은 파일(`Test/EngineTest/Config/`)을 만진다. 같은 작업자에게 맡긴다. |
 | W5 도구(`Scripts/common/Config.py` 가 `{}` 를 돌려주는 곳) | PK4 가 `CookAssets.py` 를 지우면 `readOptionalConfig` 의 쿠커 쪽 소비자가 사라진다. W5 는 남은 호출부만 본다. |
 
-[IncrementalCook](IncrementalCook.md)(끝)의 `CookStore` · `CookJob` 이 PK2 의 증분 판정을 맡는다. 새 판정 코드를 만들지 않는다.
+증분 쿠킹([결정 기록](../09_Decisions.md) 5-2)의 `CookStore` · `CookJob` 이 PK2 의 증분 판정을 맡는다. 새 판정 코드를 만들지 않는다.
 동시 빌드는 둘까지다. AT1 은 `AssetFormat.h` 를, HC3 은 `GameConfig.h` 를 바꿔 여러 모듈을 다시 빌드하므로 단독으로 돌린다.
 
 ## 3. 필수 설정 — 폴백을 지운다 (HC)
@@ -84,7 +84,7 @@
 | 압축(zlib `Z_FIXED`, LZ4/Zstd 는 pip 모듈) | 120-180 행 | `ZlibCompressionCodec` · `Lz4CompressionCodec` · `ZstdCompressionCodec`(압축 가능) |
 | 셰이더 스탬프 판정(`verifyShaderCookInternal`, 수집 규칙 247-251 행) | 223-352 행 | `ShaderCookStamp.cpp` 의 `collectStampedSources`(76 행). 규칙이 두 언어에 있고 `CheckShaderStamps.py` 가 파이썬 쪽을 따로 검사함 |
 | 팩에 넣을 파일 고르기(`shouldIncludeFile` — 전역 제외 폴더 · 패턴, 규칙별 제외, 빌드 타깃 제외) | 360-413 행 | 타깃 제외는 `CookContract` X-macro 로 런타임(`ResourcePaths::setHostTarget`)이 이미 같은 테이블을 읽음 |
-| 증분 기록(`PackRecord` · `.packrec`, 키 = 해시) | 431-470 행 | `CookStore` · `CookJob` · `Saved/CookRecord/*.cookrec`([IncrementalCook](IncrementalCook.md)) |
+| 증분 기록(`PackRecord` · `.packrec`, 키 = 해시) | 431-470 행 | `CookStore` · `CookJob` · `Saved/CookRecord/*.cookrec`([결정 기록](../09_Decisions.md) 5-2 증분 쿠킹) |
 | 팩 이름과 게임 목록(`listPackNameOfGame`, 프리셋의 `_packRoot` 를 파이썬이 읽음) | 701-790 행 | `GameSelection` |
 
 소비자는 `Scripts/dev/MakePackage.py`(`CookAssets.py --all` 호출), CMake 의 `CookAssets` 타깃(`CMake/Engine/AssetAndToolTargets.cmake` 73 행), 린트 게이트 `CheckShaderStamps.py`(커밋 훅 패턴 포함)다. `PackConfig.json` 의 설명은 "LZ4 는 pip 의 lz4, Zstd 는 pip 의 zstandard 가 있어야 쿠킹된다"고 적는다. 압축 코덱 선택이 도구 설치 상태에 매인다.

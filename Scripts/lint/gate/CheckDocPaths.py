@@ -18,6 +18,15 @@ Scripts/lint/gate/CheckDocPaths.py
 3. 코드 블록 안의 `#include "Engine/…"` 와 `py -3 Scripts/….py`.
 4. 모든 `README.md`(최상위 제외)와 `docs/*.md` 가 문서 지도(`docs/02_DocumentMap.md`)에서 링크되는가 — 지도에 없는 문서는
    아무도 찾지 못한다.
+5. 규칙 문서(`CLAUDE.md` · `AGENTS.md` · `docs/NN_*.md` · `docs/agents/*.md` · `docs/plans/` 의 `NEXT.md` · `Roadmap.md` ·
+   `WorkerRules.md`)는 맨 위 15 줄 안에 `> 질문:` · `> 독자:` · `> 결론:` 세 줄이 있는가 — 문서 하나가 어떤 질문에 답하는지
+   첫 화면에서 보이게 한다(`docs/10_WritingDocs.md` 0절).
+6. 규칙 문서(`docs/09_Decisions.md` 는 기록이라 뺀다) 둘이 한글 문장을 그대로 복사해 겹치는가 — 한글이 70 % 넘는 24 글자
+   조각(공백 · 부호를 뺀 글)이 12 개 넘게 겹치면 같은 규칙이 두 문서에 문장으로 있는 것이다. 한 사실은 한 문서에만 쓰고
+   다른 문서는 링크한다. 말만 바꾼 중복은 기계가 못 잡는다.
+
+규칙 5 · 6 은 문서 구조를 형식으로 막을 방법이 없어(문서는 자유 글이다) 게이트로 둔다. 규칙 6 은 커밋 훅에서도 규칙 문서 전체를
+디스크에서 읽어 견준다.
 
 `.gitignore` 가 무시하는 자리(내려받은 도구 · 생성 파일 — `Config/Environment/toolchain_config.json`)와 설정 목록
 (`Scripts/common/ConfigCatalog.py`)이 `bOptional` 로 적은 설정 파일은 없어도 맞다.
@@ -65,12 +74,39 @@ _kOptionalConfigPath: frozenset[str] = frozenset(
 #: 모든 README 와 `docs/*.md` 를 링크하는 문서 지도(규칙 4). 없으면 규칙 4 를 건너뛴다(자가 검사 조각의 작은 저장소).
 _kDocumentMapPath = "docs/02_DocumentMap.md"
 
+#: 규칙 5 · 6 의 대상 — 규칙 문서. 정규식은 저장소 기준 상대 경로에 맞춘다.
+_kRuleDocRe = re.compile(
+    r"^(CLAUDE\.md|AGENTS\.md|docs/\d\d_[^/]+\.md|docs/agents/[^/]+\.md|docs/plans/(NEXT|Roadmap|WorkerRules)\.md)$"
+)
+#: 규칙 6 에서 뺄 기록 문서(같은 문장을 되풀이해도 기록이다).
+_kDuplicateExempt: frozenset[str] = frozenset({"docs/09_Decisions.md"})
+_kHeaderRequired: tuple[str, ...] = ("> 질문:", "> 독자:", "> 결론:")
+_kHeaderScanLines = 15
+_kShingleLength = 24
+_kShingleHangulRatio = 0.7
+_kDuplicateLimit = 12   # 겹치는 조각이 이 수를 넘으면 위반(24 글자 조각 12 개 = 이어진 약 35 글자)
+
+_kFenceBlockRe = re.compile(r"```.*?```", re.S)
+_kNormalizeRe = re.compile(r"[\s`*|\-\[\]()·,.:;]+")
+_kHangulRe = re.compile(r"[가-힣]")
+
 _kLinkRe = re.compile(r"\]\(([^)\s]+)\)")
 _kSpanRe = re.compile(r"`([^`\n]+)`")
 _kPathTokenRe = re.compile(r"[A-Za-z0-9_.\-/]+")
 _kShapeCharRe = re.compile(r"[<>*{}…$%|]|\.\.\.")
 _kIncludeRe = re.compile(r'#include\s+"([^"]+)"')
 _kPythonScriptRe = re.compile(r"py -3 (?:-m )?(Scripts/[A-Za-z0-9_./\-]+\.py)")
+
+
+def collectHangulShingles(text: str) -> set[str]:
+    """코드 블록과 공백 · 부호를 뺀 글에서 한글이 70 % 넘는 24 글자 조각을 모은다(명령 · 식별자 목록의 우연한 겹침을 거른다)."""
+    plain = _kNormalizeRe.sub("", _kFenceBlockRe.sub("", text))
+    setShingle: set[str] = set()
+    for index in range(0, len(plain) - _kShingleLength + 1):
+        shingle = plain[index:index + _kShingleLength]
+        if len(_kHangulRe.findall(shingle)) >= _kShingleLength * _kShingleHangulRatio:
+            setShingle.add(shingle)
+    return setShingle
 
 
 class CheckDocPathsGate(LintGate):
@@ -122,6 +158,21 @@ class CheckDocPathsGate(LintGate):
             "files": {"docs/02_DocumentMap.md": "# 문서 지도\n\n- [엔진](../Source/Engine/README.md)\n",
                       "Source/Engine/README.md": "# 엔진\n",
                       "Source/Core/README.md": "# 코어\n"},
+        },
+        {
+            "name": "규칙 문서 맨 위에 질문 · 독자 · 결론이 없음",
+            "expectedViolation": "CLAUDE.md 맨 위 15 줄에 > 질문: · > 독자: · > 결론: 줄이 없습니다",
+            "git": True,
+            "files": {"CLAUDE.md": "# 안내\n\n본문만 있다.\n"},
+        },
+        {
+            "name": "두 규칙 문서에 같은 한글 문장 복사",
+            "expectedViolation": "docs/11_One.md 와 docs/12_Two.md 에 같은 한글 문장이 겹칩니다",
+            "git": True,
+            "files": {
+                "docs/11_One.md": "# 하나\n\n> 질문: a\n> 독자: b\n> 결론: c\n\n작업자는 자기 워크트리 안에서만 일하고 빌드와 테스트와 병합과 푸시를 하지 않으며 코드를 짜고 린트한 뒤 커밋하고 멈춘다.\n",
+                "docs/12_Two.md": "# 둘\n\n> 질문: a\n> 독자: b\n> 결론: c\n\n작업자는 자기 워크트리 안에서만 일하고 빌드와 테스트와 병합과 푸시를 하지 않으며 코드를 짜고 린트한 뒤 커밋하고 멈춘다.\n",
+            },
         },
         {
             "name": "코드 블록 안의 없는 include",
@@ -233,6 +284,40 @@ class CheckDocPathsGate(LintGate):
                     continue
                 if Path(os.path.normpath(documentPath)) not in setLinked:
                     listViolation.append(f"{relDocument} 가 문서 지도({_kDocumentMapPath})에 없습니다 — 목록에 한 줄을 더하세요")
+
+        # 규칙 5 — 규칙 문서 맨 위의 질문 · 독자 · 결론.
+        listRuleDoc = [documentPath for documentPath in listDocument
+                       if _kRuleDocRe.match(documentPath.relative_to(repositoryRoot).as_posix())]
+        for documentPath in listRuleDoc:
+            relDocument = documentPath.relative_to(repositoryRoot).as_posix()
+            head = "\n".join(documentPath.read_text(encoding="utf-8", errors="replace").splitlines()[:_kHeaderScanLines])
+            listMissing = [marker for marker in _kHeaderRequired if marker not in head]
+            if listMissing:
+                listViolation.append(f"{relDocument} 맨 위 {_kHeaderScanLines} 줄에 {' · '.join(listMissing)} 줄이 없습니다 — 문서가 답하는 질문 · 독자 · 결론을 세 줄로 적으세요")
+
+        # 규칙 6 — 규칙 문서끼리 한글 문장 복사. 커밋 훅(--files)에서도 비교 상대를 디스크에서 모두 읽는다.
+        if listRuleDoc:
+            mapShingle: dict[str, set[str]] = {}
+            for candidate in sorted(repositoryRoot.glob("*.md")) + sorted((repositoryRoot / "docs").rglob("*.md")):
+                relCandidate = candidate.relative_to(repositoryRoot).as_posix()
+                if _kRuleDocRe.match(relCandidate) is None or relCandidate in _kDuplicateExempt:
+                    continue
+                mapShingle[relCandidate] = collectHangulShingles(candidate.read_text(encoding="utf-8", errors="replace"))
+            mapPairCount: dict[tuple[str, str], int] = {}
+            mapOwner: dict[str, str] = {}
+            for rel, setShingle in mapShingle.items():
+                mapCount: dict[str, int] = {}
+                for shingle in setShingle:
+                    other = mapOwner.get(shingle)
+                    if other is not None:
+                        mapCount[other] = mapCount.get(other, 0) + 1
+                    mapOwner[shingle] = rel
+                for other, count in mapCount.items():
+                    mapPairCount[(other, rel)] = count
+            setChecked = {documentPath.relative_to(repositoryRoot).as_posix() for documentPath in listRuleDoc}
+            for (first, second), count in sorted(mapPairCount.items()):
+                if count > _kDuplicateLimit and (first in setChecked or second in setChecked):
+                    listViolation.append(f"{first} 와 {second} 에 같은 한글 문장이 겹칩니다(조각 {count} 개) — 한 문서에만 쓰고 다른 쪽은 링크 한 줄로 줄이세요")
 
         # 없는 것 가운데 `.gitignore` 가 무시하는 자리(내려받은 도구 · 생성 파일)는 맞다.
         setIgnored: set[str] = set()

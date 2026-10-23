@@ -1,6 +1,6 @@
 /**
  * @file TestTypedComponentBench.cpp
- * @brief 타입별 컴포넌트 버킷 순회(`GameObjectManager::forEachComponentOfType`)의 합성 장면 벤치 — 계획 문서 TypedComponents 8.4절(④).
+ * @brief 타입별 컴포넌트 버킷 순회(`GameObjectManager::forEachComponentOfType`)의 합성 장면 벤치 — docs/08_Verification.md 타입별 컴포넌트 질의 벤치.
  * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 방문 수가 맞는지만 본다. Release 로 읽는다.
  *          GPU 를 쓰지 않으므로 셰이더를 다시 베이크하지 않아도 된다(측정 경로에 셰이더가 없다).
  *
@@ -11,7 +11,7 @@
  *          - 오브젝트 하나를 만들고 지우는 비용(버킷 넣기 · 빼기의 배타 잠금 두 번이 든다)과, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍의 비용.
  *          - `sizeof( Component )`.
  *          - `resolveComponent<T>` 의 타입 확인 비용(`ResolveTypedCheckCost`): 같은 핸들을 확인하는 찾기와 타입 없는 찾기 + `static_cast` 로 푼 값을 비교한다.
- *            확인은 Shipping 이 아닌 구성에만 있으므로 Release 로 돌린 이 케이스가 "개발 빌드의 확인 비용" 이다(계획 문서 TypedComponents "남은 확인").
+ *            확인은 Shipping 이 아닌 구성에만 있으므로 Release 로 돌린 이 케이스가 "개발 빌드의 확인 비용" 이다(docs/08_Verification.md 타입별 컴포넌트 질의 벤치).
  *          - 비동기 씬 로드 중의 조회(`QueryWhileAsyncSceneLoad`): 다른 매니저가 비동기로 큰 씬을 지을 때 조회 한 번의 지연을 쉴 때와 비교한다.
  *
  *          타입 500 개를 만드는 법: 말단 타입은 `BenchBucketComponent<N>` 템플릿 인스턴스다. 코드젠이 아니라 손으로 `TypeInfo` 를 만들어
@@ -363,7 +363,7 @@ SW_TEST_CASE( TypedComponentBenchTest, BucketQueryByObjectAndTypeCount )
             } );
             SW_EXPECT_EQUAL( leafCount, registryLeafComponentChecked._visitCount );
 
-            // 7-c 의 첫 버킷 순회가 하던 검사(컴포넌트 · 소유 오브젝트)다. 위와 비교해 소유 오브젝트 읽기의 몫을 같은 바이너리에서 가른다(TypedComponents 8.4절).
+            // 7-c 의 첫 버킷 순회가 하던 검사(컴포넌트 · 소유 오브젝트)다. 위와 비교해 소유 오브젝트 읽기의 몫을 같은 바이너리에서 가른다(docs/08_Verification.md 타입별 컴포넌트 질의 벤치).
             const QueryResult registryLeafChecked = measureQuery( makeQueryLabel( objectCount, typeCount, "registry leaf + pending checks" ).c_str(), leafCount,
                                                                   [&constManager]()
             {

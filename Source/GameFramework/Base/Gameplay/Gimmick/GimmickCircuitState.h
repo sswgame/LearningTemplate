@@ -1,12 +1,12 @@
 /**
  * @file GimmickCircuitState.h
  * @brief 기믹 회로 하나의 실행 상태입니다. 같은 `REFLECT` 선언 하나가 두 형식을 냅니다. 씬, 프리팹, 레벨 세이브는 자기 기술형(A)으로, 롤백과 넷 스냅샷은 고정 배치형(B, `FixedLayout`)으로 씁니다.
- * @details 계획은 `docs/plans/GimmickCircuitState.md` 에 있다. 노드 상태는 **노드 id 로 짝짓는다**(`GimmickCircuit::loadState`). 그래서 디자이너가 노드를 더하거나 지워도
+ * @details 계획은 `docs/09_Decisions.md 5-4 기믹 회로 상태` 에 있다. 노드 상태는 **노드 id 로 짝짓는다**(`GimmickCircuit::loadState`). 그래서 디자이너가 노드를 더하거나 지워도
  *          옛 세이브의 나머지 노드는 이어지고, 새 노드는 처음 상태로 시작한다. 같은 id 인데 종류나 종류의 상태 버전(`GimmickNodeKind::_stateVersion`), 슬롯 수가 다르면
  *          그 상태는 읽지 않는다(`GimmickStateMatch::Mismatch`). 슬롯의 뜻을 기본값으로 메울 수 없기 때문이다.
  *
  *          개수 상한은 B 가 요구하는 정적 상한이다. 기준은 C++ 상수(`kMaxNodeCount` · `kMaxSlotCount`) 하나이고, `PROPERTY( MaxCount = kMaxSlotCount )` 처럼
- *          그 이름을 적으면 생성기가 상수의 값을 코덱과 `PropertyMetadata::_maxCount` 에 넣는다(`ReflectionFormats.md` 3.5). 숫자를 두 곳에 적지 않는다.
+ *          그 이름을 적으면 생성기가 상수의 값을 코덱과 `PropertyMetadata::_maxCount` 에 넣는다(`Source/Engine/Serialization/Fixed/README.md` 3.5). 숫자를 두 곳에 적지 않는다.
  *          회로를 만들 때(`GimmickCircuit::populate`)와 종류를 등록할 때(`GimmickNodeRegistry::registerKind`) 이 상수로 막으므로, 만들어진 회로의 상태는 늘 B 로 쓸 수 있다.
  *
  *          구조가 바뀔 때의 규칙은 계획 문서 2.6 이다. 필드 추가는 선언한 기본값, 이름 변경은 `PROPERTY( Alias = "old" )`, 값 계산이 필요한 변환은

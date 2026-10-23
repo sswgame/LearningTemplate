@@ -1,3 +1,7 @@
+> 질문: 새 파일과 헤더, include 를 어떻게 두는가?
+> 독자: C++ 파일 · 헤더 · include 를 더하거나 옮기는 사람.
+> 결론: 헤더는 전방 선언을 우선하고 include 는 짝 헤더, 범위별 그룹, 플랫폼 분기 순으로 쓴다. 클래스 멤버는 정해진 순서로 선언하고, 아래 층이 위 층을 include 하지 않는다.
+
 ## C++ structure and includes
 
 - In headers, prefer forward declarations. Include only when a forward

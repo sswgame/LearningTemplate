@@ -1,6 +1,6 @@
 /**
  * @file ServiceRecordUnknownFields.h
- * @brief 영속 레코드가 드는 "이 빌드가 모르는 칸" 입니다(계획 `PersistentRecordUnknownFields`).
+ * @brief 영속 레코드가 드는 "이 빌드가 모르는 칸" 입니다(docs/09_Decisions.md 5-9 영속 레코드의 모르는 필드).
  * @details 레코드 타입 헤더가 이 가벼운 헤더만 include 한다 — 읽고 쓰는 코덱(`ServiceRecordUtil`)은 서비스 코드가 include 한다.
  */
 #pragma once

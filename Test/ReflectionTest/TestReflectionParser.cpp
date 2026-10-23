@@ -898,7 +898,7 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRenamedByAMacroStopsTheBuild )
 
 /**
  * @brief [ReflectionParserTest] 컴포넌트 핸들 PROPERTY 는 타입 핸들 한 값과 그 시퀀스만 받고 내장 `ComponentHandle` 로 기록하며, 나머지 모양은 생성이 멈춥니다
- * @details 타입 핸들의 대상 타입은 코드에 `_handleTargetTypeName` 으로 실려 묶음이 끝날 때 타입을 확인한다. 타입 없는 핸들 · 맵 · 중첩은 확인할 자리가 없다(TypedComponents.md 3.7).
+ * @details 타입 핸들의 대상 타입은 코드에 `_handleTargetTypeName` 으로 실려 묶음이 끝날 때 타입을 확인한다. 타입 없는 핸들 · 맵 · 중첩은 확인할 자리가 없다(docs/09_Decisions.md 5-6 타입 핸들 직렬화).
  */
 SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyShapes )
 {
@@ -1253,7 +1253,7 @@ SW_TEST_CASE( ReflectionParserTest, BusBodyWithoutExportStopsTheBuild )
 
 /**
  * @brief [ReflectionParserTest] PROPERTY() 의 컴포넌트 핸들(타입 없는 것과 타입 핸들, 단일 값 · 원소 · 맵 키 · 중첩)은 빌드를 세운다
- * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 없다. 로드가 경고와 함께 비우던 폴백을 생성 오류로 바꿨다(TypedComponents.md 3.7).
+ * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 없다. 로드가 경고와 함께 비우던 폴백을 생성 오류로 바꿨다(docs/09_Decisions.md 5-6 타입 핸들 직렬화).
  *          PROPERTY 가 아닌 핸들 필드는 그대로 받는다(런타임 참조로 쓰는 정상 자리).
  */
 SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyStopsTheBuild )

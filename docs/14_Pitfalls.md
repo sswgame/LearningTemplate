@@ -1,6 +1,8 @@
 # 함정
 
-작업 중 부딪히기 쉬운 환경 · 도구 함정입니다. 해당하는 일을 할 때만 읽습니다. 지금 상태는 [NEXT.md](plans/NEXT.md) 입니다.
+> 질문: 작업 중 자주 밟는 환경 · 도구 함정은 무엇인가?
+> 독자: 빌드 · 워크트리 · 실행을 하는 사람.
+> 결론: 해당하는 일을 할 때만 읽는다. 아래 세 절(빌드 · 환경, 워크트리 · 편집, 실행 · 코드)에서 증상으로 찾는다.
 
 ## 빌드 · 환경
 
@@ -28,4 +30,4 @@
 - `castTo<Component>( Component*, 타입 )` 은 항상 성공한다. 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
 - `ImGui::BeginPopupModal` 은 창 이름마다 처음 한 번만(`FirstUseEver`) 가운데에 놓고, 다시 열면 옛 자리를 쓴다. 시나리오가 창 크기를 바꾼 뒤 모달이 작아진 창의 오른쪽 아래 가장자리에 붙어 글자가 잘렸다. 에디터의 모달은 `EditorWidgets::beginCenteredModal`(열릴 때마다 호스트 뷰포트 가운데)로 연다.
 - ImGui 렌더러 백엔드(Vulkan · DX12)는 `RenderDrawData` 를 부를 때마다 뷰포트의 정점 · 인덱스 버퍼 링을 한 칸 넘기고, 모자란 칸은 GPU 를 기다리지 않고 바로 지운다. 한 프레임에 같은 뷰포트를 한 번 더 그리면(에디터 UI 캡처처럼) `kImGuiDrawsPerViewportPerFrame` 을 올린다 — 안 올리면 Vulkan 검증 레이어가 `vkDestroyBuffer ... in use by VkCommandBuffer`(VUID-vkDestroyBuffer-buffer-00922)를 낸다.
-- OpenGL 은 프레임버퍼 묶임이 컨텍스트 상태라, 오프스크린 패스(`beginRenderPass`)를 연 채로 두면 이어서 패스 없이 직접 그리는 코드가 그 텍스처에 그린다. 에디터 UI 캡처가 그랬다 — 렌더 스레드가 이어 그리는 플로팅 창이 제 창이 아니라 캡처 텍스처의 원점에 한 번 더 그려져 캡처에 두 번 나왔다(2026-10-20 수정). 패스를 연 쪽이 `endRenderPass` 로 닫고 돌아온다.
+- OpenGL 은 프레임버퍼 묶임이 컨텍스트 상태라, 오프스크린 패스(`beginRenderPass`)를 연 채로 두면 이어서 패스 없이 직접 그리는 코드가 그 텍스처에 그린다. 에디터 UI 캡처가 그랬다 — 렌더 스레드가 이어 그리는 플로팅 창이 제 창이 아니라 캡처 텍스처의 원점에 한 번 더 그려져 캡처에 두 번 나왔다. 패스를 연 쪽이 `endRenderPass` 로 닫고 돌아온다.
