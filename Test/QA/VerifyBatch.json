@@ -487,6 +487,11 @@
       "covered": ["game/frontiertown/automation/month.scenario.xml"],
       "covered_by": "app-scenarios-release",
       "source": "docs/plans/KitCompositionGames.md K2", "result_doc": "docs/plans/KitCompositionGames.md 상태를 끝으로"
+    },
+    {
+      "id": "cc0-props-visual-review", "title": "CC0 모델 배치 눈 확인(크기 · 머티리얼 색 · WildWest 울타리 방향 · 전시 줄)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "모델의 크기 · 색 · 방향이 맞는지는 사람이 그림을 보고 판단한다(골든 다시 뜨기 golden-record 가 볼 그림을 만든다)",
+      "source": "docs/plans/GameSceneCc0Meshes.md C2", "result_doc": "docs/plans/GameSceneCc0Meshes.md 상태를 끝으로"
     }
   ]
 }

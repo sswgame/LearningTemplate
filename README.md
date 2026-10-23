@@ -40,7 +40,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 구현중 | 5/6 | 없음 | editor | D3-7 |
 | - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 구현중 | 4/6 | 없음 | engine | C-1 |
 | - | [FacialAnimation](docs/plans/FacialAnimation.md) — 얼굴 애니메이션의 남은 것 | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
-| - | [GameSceneCc0Meshes](docs/plans/GameSceneCc0Meshes.md) — 게임별 씬이 새로 들인 CC0 메시를 부르게 한다 | 구현중 | 1/2 | 없음 | gameplay | D4-17 |
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/2 | 없음 | quality | C-41 |
 | - | [KayKitMaterials](docs/plans/KayKitMaterials.md) — KayKit 캐릭터 텍스처를 머티리얼로 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
@@ -70,6 +69,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 측정대기 | 8/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
 | - | [DiskPathVsResourceId](docs/plans/DiskPathVsResourceId.md) — 디스크 경로와 리소스 id 의 입구 나누기 (2026-10-21) | 측정대기 | 3/3 | 없음 | engine | C-70 |
+| - | [GameSceneCc0Meshes](docs/plans/GameSceneCc0Meshes.md) — 게임별 씬이 새로 들인 CC0 메시를 부르게 한다 | 측정대기 | 2/2 | 없음 | gameplay | D4-17 |
 | - | [GamepadVirtualCursor](docs/plans/GamepadVirtualCursor.md) — 패드 가상 커서의 남은 것 | 측정대기 | 3/3 | 없음 | gameplay | D4-3 |
 | - | [GraphicsFormatBundle](docs/plans/GraphicsFormatBundle.md) — 그래픽스 형식 묶음 — HDR 장면 색 · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간 | 측정대기 | 12/12 | 없음 | graphics | D2-1, D2-6, D2-7, D2-10 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 측정대기 | 8/8 | ClusteredLighting | graphics | D2-12 |
