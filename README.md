@@ -66,7 +66,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 6/7 | 없음 | gameplay | D4-10 |
 | - | [ShooterStrideWarping](docs/plans/ShooterStrideWarping.md) — Shooter3D 발 미끄러짐 연결 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [SilentFallbackAudit](docs/plans/SilentFallbackAudit.md) — 조용한 폴백과 남은 같은 결함 감사 (2026-10-22) | 구현중 | 7/14 | 없음 | engine | 없음 |
-| - | [SingleChannelDdsImport](docs/plans/SingleChannelDdsImport.md) — 1 채널(R8) DDS 를 내는 임포트 규칙 | 구현중 | 1/2 | 없음 | graphics | G-12 |
 | - | [StepEncounterRules](docs/plans/StepEncounterRules.md) — 걸음 조우 판정 하나로 | 구현중 | 1/2 | 없음 | gameplay | G-7 |
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 3/4 | 없음 | graphics | D2-5.6, D2-5.7 |
 | - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 5/7 | 없음 | project | G-11 |

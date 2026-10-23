@@ -1,6 +1,6 @@
 # 1 채널(R8) DDS 를 내는 임포트 규칙
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: G-12 · 진행: 1/2
+> 상태: 끝 · 선행: 없음 · 영역: graphics · 옛번호: G-12 · 진행: 2/2
 
 RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는데 `App --import-textures` 의 규칙 표(`TextureImportConfig.json`)에 R8 출력이 없었습니다(2026-10-22 사용자 결정으로 착수 조건 갈음).
 
@@ -15,5 +15,7 @@ RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는데 `App --import-tex
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| R1 | 형식 표 · R8 출력 · DX10 머리 · 규칙 표 · 테스트 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` | 끝(빌드 없이 작성) |
-| R2 | 빌드와 `EditorTest` 실행, 생성 문서 `docs/Config/TextureImportConfig.md` 갱신 확인 | 남음 |
+| R1 | 형식 표 · R8 출력 · DX10 머리 · 규칙 표 · 테스트 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` | 끝 |
+| R2 | 빌드와 `EditorTest` 실행, 생성 문서 `docs/Config/TextureImportConfig.md` 갱신 확인 | 끝(2026-10-23 Debug 빌드 경고 0, `EditorTexturePipelineTest` 18/18, `CheckConfigReference` 통과) |
+
+R8 텍스처를 네 백엔드에서 실제로 샘플링하는 확인은 이 일의 단위가 아닙니다. 맞는 원본(`*_mask.*`)이 생기면 그 게임의 시나리오가 봅니다(GPU 확인 대기).
