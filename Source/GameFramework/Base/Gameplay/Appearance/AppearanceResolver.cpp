@@ -420,6 +420,7 @@ namespace sw
                 resolved._rig         = part._rig;
                 resolved._fit         = part._fit;
                 resolved._fitTables   = part._fitTables;
+                resolved._bodyShapes  = part._bodyShapes;
                 resolved._layer       = part._layer;
                 resolved._bDeforms    = part._bDeforms;
                 resolved._state       = entry._state;
@@ -836,6 +837,7 @@ namespace sw
             builder.addName( part._skeleton );
             builder.addName( part._fit );
             builder.addName( part._fitTables );
+            builder.addName( part._bodyShapes );
             builder.addInt( part._bDeforms );
         }
         for ( const ResolvedMorph& morph : resolved._listMorph )

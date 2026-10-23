@@ -113,10 +113,18 @@ namespace sw::editor
         void               drawSelectionHeader( const AppearanceSelection& selection );
         void               drawSlotRows( const AppearanceSelection& selection );
         void               drawCustomizationRows( const AppearanceSelection& selection );
-        void               drawExplanation();
-        void               drawFitCheck();
-        void               drawPresetRow();
-        void               drawDataPresetRow();
+        /**
+         * @brief 꾸미기 스키마(`CustomizationSchema`)의 매개변수마다 슬라이더 · 색 · 고르기를 그립니다 — 카테고리(체형 · 얼굴 · 염색 …)로 가르고, 조건이 맞지 않는 매개변수는 숨깁니다.
+         * @details 끄는 동안(`_bCustomizationActive`)은 미리보기 몸을 다시 입히지 않는다 — 피팅은 무거워서 놓을 때 한 번 푼다(설계 문서 단계 5). 스키마는 선택의 것(`_schema`)이고,
+         *          비었으면 기준 프리셋의 것이다. 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
+         */
+        void drawCustomizationSliders( const AppearanceSelection& selection );
+        /** @brief 미리보기 몸의 지금 모습을 이미지 파일로 쓰고 같은 이름의 프리셋 저장소 항목에 경로를 겁니다. 프리셋을 먼저 저장해야 합니다. */
+        void saveThumbnail();
+        void drawExplanation();
+        void drawFitCheck();
+        void drawPresetRow();
+        void drawDataPresetRow();
         /**
          * @brief 지금 선택을 데이터 프리셋 에셋(`<폴더>/<id>.appearance.xml`)으로 쓰고, 이 창과 실행 중인 게임의 외형 데이터에 올립니다.
          * @details 씬의 `CharacterAppearanceComponent` 가 그 id 를 가리키면 조립한다(언리얼 · 유니티의 프리셋 에셋). 세이브 형식(`Save as preset`)과 다른 길이다.
@@ -187,6 +195,8 @@ namespace sw::editor
         uint32                                _previewDatabaseRevision; ///< 몸에 마지막으로 입힌 외형 데이터의 세대(`AppearanceDatabase::getRevision`)
         bool                                  _bPreviewBodyDressed;     ///< 몸에 한 번이라도 입혔다 — 세대가 같아도 첫 입히기는 한다
         bool                                  _bModelsWereDirty;        ///< 지난 그리기에 소켓 · 포즈 모델이 미저장이었다(되돌리기로 저장 상태에 돌아오면 dirty 를 내린다)
+        bool                                  _bCustomizationActive;    ///< 꾸미기 슬라이더를 끄는 중이다(`drawCustomizationSliders`) — 미리보기 몸 다시 입히기를 놓을 때까지 미룬다
+        uint32                                _seenFitRevision;         ///< 확인 표시에 올린 피팅 결과의 세대(`CharacterAppearanceComponent::getFitResultRevision`)
         PackDataState                         _packDataState;
     };
 } // namespace sw::editor

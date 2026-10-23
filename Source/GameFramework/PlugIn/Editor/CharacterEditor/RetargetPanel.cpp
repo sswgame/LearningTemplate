@@ -4,12 +4,18 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
@@ -24,6 +30,48 @@ namespace sw::editor
             static constexpr const utf8* kArrTranslationMode[] = { "ScaleByPelvisHeight", "Copy", "None" };
             /** @brief 글 칸 오른쪽에 붙는 이름의 너비(96 DPI 픽셀)입니다 — 원본 · 대상 두 칸을 가른다. */
             static constexpr float32 kLabelWidth = 150.0f;
+            /** @brief 미리보기 뷰포트 높이(96 DPI 픽셀)입니다. */
+            static constexpr float32 kPreviewHeight = 300.0f;
+            /** @brief 미리보기 카메라가 담는 구의 여유 배율입니다. */
+            static constexpr float32 kFramePadding = 1.15f;
+            /** @brief 리타깃 포즈 돌림을 끄는 속도(도 / 픽셀)입니다. */
+            static constexpr float32 kPoseDragSpeed = 0.5f;
+            /** @brief 리타깃 포즈 돌림의 범위(도)입니다. */
+            static constexpr float32 kPoseDegreeLimit = 180.0f;
+
+            /** @brief 미리보기 선 색입니다 — 원본(파랑) · 대상 레퍼런스(회색, 리타깃 포즈가 있을 때만 긋는다) · 리타깃 포즈를 얹은 대상(주황). */
+            static constexpr float4 kSourceColor{ 0.3f, 0.6f, 1.0f, 1.0f };
+            static constexpr float4 kTargetReferenceColor{ 0.6f, 0.6f, 0.6f, 0.6f };
+            static constexpr float4 kTargetPoseColor{ 1.0f, 0.55f, 0.2f, 1.0f };
+
+            /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). */
+            struct Published
+            {
+                uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
+                uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
+                uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
+            };
+            static Published& getPublished()
+            {
+                static Published s_published;
+                return s_published;
+            }
+
+            [[nodiscard]] static bool readTargetPoseCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._targetPoseCount );
+                return true;
+            }
+            [[nodiscard]] static bool readPreviewSegmentCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._previewSegmentCount );
+                return true;
+            }
+            [[nodiscard]] static bool readChainCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._chainCount );
+                return true;
+            }
 
             /** @brief 쉼표 · 빈칸으로 나눈 본 이름 목록입니다. */
             static vector<hashed_string> parseNames( string_view text )
@@ -49,6 +97,30 @@ namespace sw::editor
                 }
                 return text;
             }
+
+            /** @brief 자세의 모델 공간 본 위치를 스켈레톤 순서로 모읍니다. */
+            static void computeBonePositions( const Skeleton& skeleton, const Pose& pose, vector<float3>& outListPosition )
+            {
+                vector<float4x4> listModel;
+                pose.computeModelSpace( skeleton.getParentIndices(), listModel );
+                outListPosition.clear();
+                for ( const float4x4& model : listModel )
+                {
+                    outListPosition.push_back( model.getTranslation() );
+                }
+            }
+
+            /** @brief 본마다 부모까지 선을 긋습니다(위치는 스켈레톤 순서). */
+            static void drawBones( EditorProjectedLineRenderer& renderer, const Skeleton& skeleton, const vector<float3>& listPosition, const float4& color )
+            {
+                const vector<int32>& listParent = skeleton.getParentIndices();
+                for ( size_t boneIndex = 0; boneIndex < listPosition.size() && boneIndex < listParent.size(); ++boneIndex )
+                {
+                    const int32 parent = listParent[boneIndex];
+                    if ( parent >= 0 && static_cast<size_t>( parent ) < listPosition.size() )
+                        renderer.drawLine( listPosition[static_cast<size_t>( parent )], listPosition[boneIndex], color );
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -58,41 +130,67 @@ namespace sw::editor
     SW_LOG_CALLER( "RetargetPanel" );
     SW_EDITOR_PANEL( RetargetPanel, RetargetPanel::kPanelID, EditorPanelCategory::Custom, 9040 );
 
+    SW_AUTOMATION_PROBE( editorRetargetPoseCount, "Editor.RetargetPoseCount", "Retarget pose rows (target bone turns) in the profile the Retarget Profile window has open",
+                         &RetargetPanelInternal::readTargetPoseCount );
+    SW_AUTOMATION_PROBE( editorRetargetPreviewSegments, "Editor.RetargetPreviewSegments", "Skeleton line segments the Retarget Profile window's 3D preview drew last frame",
+                         &RetargetPanelInternal::readPreviewSegmentCount );
+    SW_AUTOMATION_PROBE( editorRetargetChainCount, "Editor.RetargetChainCount", "Chains in the profile the Retarget Profile window has open", &RetargetPanelInternal::readChainCount );
+
     RetargetPanel::RetargetPanel()
-        : EditorDocumentPanel{ EditorAssetType::Data, false }
+        : EditorPreviewPanel{ EditorAssetType::Data, false }
         , _profile{}
         , _inspection{}
+        , _previewSource{}
+        , _previewTarget{}
+        , _listSourcePosition{}
+        , _listTargetReferencePosition{}
+        , _listTargetPosePosition{}
         , _listChainText{}
         , _inspectionError{}
         , _status{}
         , _sourceSkeleton{}
         , _targetSkeleton{}
+        , _newDocumentPath{}
         , _arrPairName{}
         , _newChainName{ "Chain" }
         , _newPairSource{}
         , _newPairTarget{}
+        , _newPoseBone{}
+        , _bPreviewSourceReady{ SW_FALSE }
+        , _bPreviewTargetReady{ SW_FALSE }
+        , _bFramePending{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
     void RetargetPanel::drawDocumentContent()
     {
+        beginPreviewFrame();
         updateFocusedDocument();
         ensureDocumentLoaded();
+        drawNewDocumentRow();
         drawDocumentOpenBar( "retarget" );
+        RetargetPanelInternal::Published& published = RetargetPanelInternal::getPublished();
+        published._targetPoseCount                  = static_cast<uint32>( _profile.getTargetPose().size() );
+        published._chainCount                       = static_cast<uint32>( _profile.getChains().size() );
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a .retarget.xml to pair the chains of two skeletons and check how they bind." );
+            EditorWidgets::drawEmptyHint( "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind." );
             return;
         }
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         if ( ImGui::CollapsingHeader( "Skeletons", ImGuiTreeNodeFlags_DefaultOpen ) )
             drawSkeletonRows();
+        if ( ImGui::CollapsingHeader( "Preview", ImGuiTreeNodeFlags_DefaultOpen ) )
+            drawPreviewSection();
         if ( ImGui::CollapsingHeader( "Root and pelvis", ImGuiTreeNodeFlags_DefaultOpen ) )
             drawRootAndPelvisRows();
         if ( ImGui::CollapsingHeader( "Options", ImGuiTreeNodeFlags_DefaultOpen ) )
             drawOptionRows();
         if ( ImGui::CollapsingHeader( "Chains", ImGuiTreeNodeFlags_DefaultOpen ) )
             drawChainRows();
+        if ( ImGui::CollapsingHeader( "Retarget pose", ImGuiTreeNodeFlags_DefaultOpen ) )
+            drawTargetPoseRows();
         if ( ImGui::CollapsingHeader( "Bone map", ImGuiTreeNodeFlags_DefaultOpen ) )
             drawBonePairRows();
         if ( ImGui::CollapsingHeader( "Check", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -133,6 +231,14 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
+        if ( ResourceIO::hasResource( path ) == false )
+        {
+            // 없는 경로는 새 프로필이다 — 빈 문서로 시작하고 저장하면 파일을 만든다(스켈레톤 · 뿌리와 골반이 묶이기 전에는 저장되지 않는다).
+            _profile.clear();
+            syncFromProfile();
+            _status = "New profile - set both skeletons and the root and pelvis pairs, then save";
+            return ToolAssetLoadResult::Missing;
+        }
         if ( _profile.loadFromResource( path ) == false )
         {
             _status = "The retarget profile could not be read - see the log";
@@ -165,12 +271,58 @@ namespace sw::editor
             _listChainText[chainIndex]._target = string_view( RetargetPanelInternal::joinNames( chain._listTargetBone ) );
         }
         (void)RetargetProfileInspector::inspect( _profile, _inspection, _inspectionError ); // 실패는 점검 칸이 보인다
+        reloadPreviewSkeletons();
+    }
+
+    void RetargetPanel::reloadPreviewSkeletons()
+    {
+        _bPreviewSourceReady = _profile.getSourceSkeletonPath().empty() == false && _previewSource.loadFromResource( _profile.getSourceSkeletonPath() ) ? SW_TRUE : SW_FALSE;
+        _bPreviewTargetReady = _profile.getTargetSkeletonPath().empty() == false && _previewTarget.loadFromResource( _profile.getTargetSkeletonPath() ) ? SW_TRUE : SW_FALSE;
+        _bFramePending       = SW_TRUE;
+        rebuildPreviewPoses();
+    }
+
+    void RetargetPanel::rebuildPreviewPoses()
+    {
+        _listSourcePosition.clear();
+        _listTargetReferencePosition.clear();
+        _listTargetPosePosition.clear();
+        if ( _bPreviewSourceReady == SW_TRUE )
+        {
+            Pose sourcePose;
+            sourcePose.setToReference( _previewSource );
+            RetargetPanelInternal::computeBonePositions( _previewSource, sourcePose, _listSourcePosition );
+        }
+        if ( _bPreviewTargetReady == SW_FALSE )
+            return;
+        Pose targetPose;
+        targetPose.setToReference( _previewTarget );
+        RetargetPanelInternal::computeBonePositions( _previewTarget, targetPose, _listTargetReferencePosition );
+        // 리타기터와 같은 길로 리타깃 포즈를 얹는다. 없는 본을 적었으면 얹지 못하고(오류는 로그) 레퍼런스 그대로 보인다.
+        if ( RetargetPoseUtil::applyTargetPose( _profile, _previewTarget, targetPose ) == false )
+            targetPose.setToReference( _previewTarget );
+        RetargetPanelInternal::computeBonePositions( _previewTarget, targetPose, _listTargetPosePosition );
     }
 
     void RetargetPanel::markEdited( const utf8* pLabel )
     {
         notifyDocumentEdited( pLabel );
         syncFromProfile();
+    }
+
+    void RetargetPanel::drawNewDocumentRow()
+    {
+        ImGui::SetNextItemWidth( 360.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputTextWithHint( "##NewRetargetPath", "<resource id>.retarget.xml", _newDocumentPath.data(), _newDocumentPath.max_size() );
+        EditorSelfTestMarks::note( "retarget.newPath" );
+        ImGui::SameLine();
+        const bool bPathValid = acceptsDocumentPath( string_view( _newDocumentPath.c_str() ) );
+        ImGui::BeginDisabled( bPathValid == false );
+        if ( ImGui::Button( "New" ) )
+            requestOpenDocument( string_view( _newDocumentPath.c_str() ) ); // 없는 파일이면 `loadDocument` 가 빈 문서로 연다
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "retarget.new" );
+        EditorWidgets::drawTooltip( "Start an empty profile at this resource id (an existing file is opened instead)" );
     }
 
     void RetargetPanel::drawSkeletonRows()
@@ -189,6 +341,68 @@ namespace sw::editor
             _profile.setSkeletonPaths( _sourceSkeleton.c_str(), _targetSkeleton.c_str() );
             markEdited( "Retarget skeletons" );
         }
+    }
+
+    void RetargetPanel::drawPreviewSection()
+    {
+        if ( _bPreviewSourceReady == SW_FALSE && _bPreviewTargetReady == SW_FALSE )
+        {
+            EditorWidgets::drawEmptyHint( "Set the source and target skeletons to see them overlaid here." );
+            return;
+        }
+        if ( _bFramePending == SW_TRUE )
+        {
+            // 두 스켈레톤이 담기는 구로 카메라를 맞춘다.
+            float3 minimum{ 1.0e9f };
+            float3 maximum{ -1.0e9f };
+            bool   bAny = false;
+            for ( const vector<float3>* pList : { &_listSourcePosition, &_listTargetReferencePosition, &_listTargetPosePosition } )
+            {
+                for ( const float3& position : *pList )
+                {
+                    minimum = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
+                    maximum = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };
+                    bAny    = true;
+                }
+            }
+            if ( bAny )
+                getPreviewViewport().frameSphere( ( minimum + maximum ) * 0.5f, MathUtil::max( ( maximum - minimum ).getLength() * 0.5f * RetargetPanelInternal::kFramePadding, 0.5f ) );
+            _bFramePending = SW_FALSE;
+        }
+        ImGui::TextColored( ImVec4( RetargetPanelInternal::kSourceColor._x, RetargetPanelInternal::kSourceColor._y, RetargetPanelInternal::kSourceColor._z, 1.0f ), "source" );
+        ImGui::SameLine();
+        ImGui::TextColored( ImVec4( RetargetPanelInternal::kTargetPoseColor._x, RetargetPanelInternal::kTargetPoseColor._y, RetargetPanelInternal::kTargetPoseColor._z, 1.0f ),
+                            "target (with retarget pose)" );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "target reference" );
+        const float2 available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
+        drawPreviewViewport( float2{ available._x, RetargetPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale() }, false );
+        EditorSelfTestMarks::note( "retarget.preview" );
+        drawSkeletonLines();
+    }
+
+    void RetargetPanel::drawSkeletonLines()
+    {
+        using Internal                        = RetargetPanelInternal;
+        const EditorPreviewViewport& viewport = getPreviewViewport();
+        const float2                 position = viewport.getImagePosition();
+        const float2                 size     = viewport.getImageSize();
+        if ( size._x <= 0.0f || size._y <= 0.0f )
+            return;
+        float4x4 viewProjection{};
+        float3   eye{};
+        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
+        EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
+        if ( _bPreviewSourceReady == SW_TRUE )
+            Internal::drawBones( renderer, _previewSource, _listSourcePosition, Internal::kSourceColor );
+        if ( _bPreviewTargetReady == SW_TRUE )
+        {
+            // 리타깃 포즈가 있을 때만 레퍼런스를 따로 긋는다 — 없으면 둘이 같아 선이 겹친다.
+            if ( _profile.getTargetPose().empty() == false )
+                Internal::drawBones( renderer, _previewTarget, _listTargetReferencePosition, Internal::kTargetReferenceColor );
+            Internal::drawBones( renderer, _previewTarget, _listTargetPosePosition, Internal::kTargetPoseColor );
+        }
+        Internal::getPublished()._previewSegmentCount = renderer.getDrawnSegmentCount();
     }
 
     void RetargetPanel::drawRootAndPelvisRows()
@@ -305,6 +519,65 @@ namespace sw::editor
         EditorSelfTestMarks::note( "retarget.addChain" );
         if ( bChanged )
             markEdited( "Retarget chains" );
+    }
+
+    void RetargetPanel::drawTargetPoseRows()
+    {
+        using Internal                        = RetargetPanelInternal;
+        vector<RetargetPoseBone>& listPose    = _profile.getTargetPoseForEdit();
+        uint32                    removeIndex = invalid_index::kUint32;
+        bool                      bChanged    = false;
+        bool                      bDragged    = false;
+        const float32             fieldWidth  = 220.0f * EditorThemeUtil::getDpiScale();
+        for ( uint32 poseIndex = 0; poseIndex < static_cast<uint32>( listPose.size() ); ++poseIndex )
+        {
+            RetargetPoseBone& poseBone = listPose[poseIndex];
+            ImGui::PushID( static_cast<int32>( poseIndex ) );
+            ImGui::Text( "%s", poseBone._bone.c_str() );
+            ImGui::SameLine( 200.0f * EditorThemeUtil::getDpiScale() );
+            float32 arrDegree[3] = { poseBone._rotationDegrees._x, poseBone._rotationDegrees._y, poseBone._rotationDegrees._z };
+            ImGui::SetNextItemWidth( fieldWidth );
+            if ( ImGui::DragFloat3( "##Rotation", arrDegree, Internal::kPoseDragSpeed, -Internal::kPoseDegreeLimit, Internal::kPoseDegreeLimit, "%.1f" ) )
+            {
+                poseBone._rotationDegrees = float3{ arrDegree[0], arrDegree[1], arrDegree[2] };
+                bDragged                  = true; // 끄는 동안 미리보기가 바로 바뀐다 — 되돌리기 단계는 놓을 때 한 번
+            }
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                bChanged = true;
+            EditorSelfTestMarks::note( "retarget.targetPose.rotation" );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Remove" ) )
+                removeIndex = poseIndex;
+            ImGui::PopID();
+        }
+        if ( removeIndex != invalid_index::kUint32 )
+        {
+            listPose.erase( listPose.begin() + removeIndex );
+            bChanged = true;
+        }
+        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputTextWithHint( "##NewPoseBone", "target bone", _newPoseBone.data(), _newPoseBone.max_size() );
+        EditorSelfTestMarks::note( "retarget.targetPose.newBone" );
+        ImGui::SameLine();
+        const hashed_string newBone( _newPoseBone.c_str() );
+        bool                bBoneUsable = _bPreviewTargetReady == SW_TRUE && _previewTarget.findBoneIndex( newBone ) >= 0; // 대상 스켈레톤에 있는 본만 받는다
+        for ( const RetargetPoseBone& poseBone : listPose )
+        {
+            bBoneUsable = bBoneUsable && poseBone._bone != newBone; // 같은 본을 두 번 적으면 다시 읽을 때 오류다
+        }
+        ImGui::BeginDisabled( bBoneUsable == false );
+        if ( ImGui::Button( "Add bone turn" ) )
+        {
+            listPose.push_back( RetargetPoseBone{ newBone, float3{} } );
+            bChanged = true;
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "retarget.targetPose.add" );
+        EditorWidgets::drawTooltip( "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target" );
+        if ( bChanged )
+            markEdited( "Retarget pose" );
+        else if ( bDragged )
+            rebuildPreviewPoses();
     }
 
     void RetargetPanel::drawBonePairRows()

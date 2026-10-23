@@ -220,6 +220,8 @@ namespace sw::editor
         , _previewDatabaseRevision{ 0 }
         , _bPreviewBodyDressed{ false }
         , _bModelsWereDirty{ false }
+        , _bCustomizationActive{ false }
+        , _seenFitRevision{ 0 }
         , _packDataState{ PackDataState::Unread }
     {
         _presetStore.setDatabase( &_database );
@@ -427,6 +429,18 @@ namespace sw::editor
         EditorSelfTestMarks::note( "charactereditor.previewScene" );
         if ( pAppearance != nullptr )
             drawSocketAxes( *pAppearance );
+        // 미리보기 조립이 푼 피팅 결과를 확인 표시에 올린다(세대가 바뀔 때만).
+        const bool bNewFit = pAppearance != nullptr && pAppearance->getLastFitResult() != nullptr && pAppearance->getFitResultRevision() != _seenFitRevision;
+        if ( bNewFit )
+        {
+            setFitResult( *pAppearance->getLastFitResult() );
+            _seenFitRevision = pAppearance->getFitResultRevision();
+        }
+        // 슬라이더는 뷰포트 아래에 둔다 — 모습이 바뀌는 것을 보며 끈다.
+        if ( ImGui::CollapsingHeader( "Customize (release a slider to refit)", ImGuiTreeNodeFlags_DefaultOpen ) )
+            drawCustomizationSliders( selection );
+        else
+            _bCustomizationActive = false;
     }
 
     void CharacterEditorPanel::drawSocketAxes( const CharacterAppearanceComponent& appearance )
@@ -501,7 +515,10 @@ namespace sw::editor
         }
         CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
         const bool                    bChanged    = _bPreviewBodyDressed == false || _previewBodyRevision != _appearance.getRevision() || _previewDatabaseRevision != _database.getRevision();
-        if ( pAppearance == nullptr || bChanged == false )
+        // 슬라이더를 끄는 동안은 다시 입히지 않는다 — 피팅이 무거워 놓을 때 한 번 푼다(첫 입히기는 기다리지 않는다).
+        const bool bDeferred = _bCustomizationActive && _bPreviewBodyDressed;
+        const bool bSkip     = pAppearance == nullptr || bChanged == false;
+        if ( bSkip || bDeferred )
             return;
         // 기준 프리셋이 없는 선택은 팩 데이터의 미리보기 몸 위에 입힌다(데이터가 정한 몸 — 코드에 몸을 두지 않는다).
         AppearanceSelection selection = _appearance.getSelection();
@@ -1044,7 +1061,121 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _appearance.endContinuousEdit();
         }
-        ImGui::TextDisabled( "Body and face sliders need the GPU morph pool (D4-8 integration)." );
+        ImGui::TextDisabled( "Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)." );
+    }
+
+    void CharacterEditorPanel::drawCustomizationSliders( const AppearanceSelection& selection )
+    {
+        // 스키마는 선택의 것, 없으면 기준 프리셋(없으면 미리보기 몸 프리셋)의 것이다.
+        hashed_string schemaID = selection._schema;
+        if ( schemaID.empty() && _bDatabaseLoaded )
+        {
+            const CharacterAppearanceDef* pPreset = _database.getPresets().findPreset( selection._basePresetID.empty() ? _previewPresetID : selection._basePresetID );
+            if ( pPreset != nullptr )
+                schemaID = pPreset->_schema;
+        }
+        const CustomizationSchemaDef* pSchema = _bDatabaseLoaded && schemaID.empty() == false ? _database.getSchemas().findSchema( schemaID ) : nullptr;
+        if ( pSchema == nullptr )
+        {
+            _bCustomizationActive = false;
+            ImGui::TextDisabled( "No customization schema for this selection (load the appearance data and pick a base preset with a schema)." );
+            return;
+        }
+        CustomizationValueSet normalized;
+        CustomizationUtil::normalize( *pSchema, selection._customization, normalized, nullptr );
+        bool          bAnyActive = false;
+        hashed_string category{};
+        bool          bFirst = true;
+        for ( const CustomizationParamDef& param : pSchema->_listParameter )
+        {
+            if ( CustomizationUtil::isActive( param, *pSchema, normalized ) == false )
+                continue;
+            if ( bFirst || param._category != category )
+            {
+                category = param._category;
+                bFirst   = false;
+                ImGui::SeparatorText( category.empty() ? "General" : category.c_str() );
+            }
+            const CustomizationValue* pValue = normalized.findValue( param._name );
+            ImGui::PushID( param._name.c_str() );
+            switch ( param._kind )
+            {
+                case CustomizationKind::Slider:
+                {
+                    float32 number = pValue != nullptr ? pValue->_number._x : param._default;
+                    if ( ImGui::SliderFloat( param._name.c_str(), &number, param._min, param._max ) )
+                        (void)_appearance.setNumber( param._name, number, true ); // 같은 값이면 false 이고 그대로 둔다
+                    bAnyActive = bAnyActive || ImGui::IsItemActive();
+                    if ( ImGui::IsItemDeactivatedAfterEdit() )
+                        _appearance.endContinuousEdit();
+                    EditorSelfTestMarks::note( "charactereditor.slider.last" ); // 마지막으로 그린 슬라이더 — 자동화가 누를 자리
+                    break;
+                }
+                case CustomizationKind::Color:
+                {
+                    const float4 current     = pValue != nullptr ? pValue->_number : param._defaultColor;
+                    float32      arrColor[4] = { current._x, current._y, current._z, current._w };
+                    if ( ImGui::ColorEdit4( param._name.c_str(), arrColor ) )
+                        (void)_appearance.setColor( param._name, float4{ arrColor[0], arrColor[1], arrColor[2], arrColor[3] }, true ); // 같은 값이면 false 이고 그대로 둔다
+                    bAnyActive = bAnyActive || ImGui::IsItemActive();
+                    if ( ImGui::IsItemDeactivatedAfterEdit() )
+                        _appearance.endContinuousEdit();
+                    break;
+                }
+                case CustomizationKind::Choice:
+                case CustomizationKind::Attachment:
+                {
+                    const hashed_string current = pValue != nullptr ? pValue->_option : param._defaultOption;
+                    if ( ImGui::BeginCombo( param._name.c_str(), current.empty() ? "(none)" : current.c_str() ) )
+                    {
+                        for ( const CustomizationOptionDef& option : param._listOption )
+                        {
+                            if ( ImGui::Selectable( option._name.empty() ? "(none)" : option._name.c_str(), option._name == current ) )
+                                (void)_appearance.setOption( param._name, option._name ); // 같은 값이면 false 이고 그대로 둔다
+                        }
+                        ImGui::EndCombo();
+                    }
+                    break;
+                }
+            }
+            ImGui::PopID();
+        }
+        _bCustomizationActive = bAnyActive;
+    }
+
+    void CharacterEditorPanel::saveThumbnail()
+    {
+        const string name{ _presetName.c_str() };
+        if ( _presetStore.findPresetByName( name ) == nullptr )
+        {
+            _status = "Save the preset first - a thumbnail belongs to a saved preset";
+            return;
+        }
+        // 파일 이름에 쓸 수 없는 글자는 밑줄로 바꾼다(프리셋 이름은 저장소가 정리한 그대로 둔다).
+        string safeName = name;
+        for ( size_t index = 0; index < safeName.size(); ++index )
+        {
+            const utf8 character = safeName[index];
+            const bool bAllowed  = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) || character == '_' || character == '-';
+            if ( bAllowed == false )
+                safeName[index] = '_';
+        }
+        const string thumbnailID = FileUtil::removeExtension( string_view( _presetPath.c_str() ) ) + "." + safeName + ".png";
+        const string imagePath   = ResourcePaths::getWritePath( thumbnailID );
+        if ( imagePath.empty() || getPreviewViewport().requestImageFile( imagePath ) == false )
+        {
+            _status = "The thumbnail needs a write path and the Preview tab drawn at least once";
+            return;
+        }
+        const string presetFile = ResourcePaths::getWritePath( string_view( _presetPath.c_str() ) );
+        const bool   bAttached  = presetFile.empty() == false && _presetStore.setThumbnailPath( name, thumbnailID );
+        if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, presetFile ) == false )
+        {
+            _status = "The thumbnail was requested but the preset file could not be updated";
+            return;
+        }
+        _status.clear();
+        SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' requested -> %#", name.c_str(), imagePath.c_str() );
     }
 
     void CharacterEditorPanel::drawExplanation()
@@ -1162,7 +1293,12 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextDisabled( "(unsaved)" );
         }
-        ImGui::TextDisabled( "Thumbnail render needs the preview scene." );
+        ImGui::BeginDisabled( _bDatabaseLoaded == false );
+        if ( ImGui::Button( "Save thumbnail" ) )
+            saveThumbnail();
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
+        EditorWidgets::drawTooltip( "Writes the Preview tab's picture next to the preset file and attaches it to the preset of this name (save the preset first; it is saved again with the current selection)" );
 
         if ( ImGui::BeginChild( "##PresetList", ImVec2( 0.0f, CharacterEditorPanelInternal::kPresetListHeight ), ImGuiChildFlags_Borders ) )
         {

@@ -19,6 +19,7 @@
 namespace sw
 {
     struct CharacterBoneArray;
+    struct FitResult;
     struct ResolvedAppearance;
 
     class FitPartData;
@@ -47,10 +48,11 @@ namespace sw
          * @brief 부품마다 베이크한 메시를 @p outListMesh(부품 순서)에 냅니다. 바꿀 것이 없는 부품(걸 모프 · 피팅 없음)은 nullptr — 원본을 그대로 그린다.
          * @param pTables 피팅 표입니다. nullptr 이면 피팅하지 않습니다(피팅 데이터를 가진 부품이 있으면 오류).
          * @param bindBones 몸 스켈레톤의 바인드 본입니다. 조임 고리 · 영역이 본 이름으로 찾습니다.
+         * @param pOutFitResult 있으면 푼 피팅 결과(부품 순서는 피팅 데이터를 가진 부품만, 보고 포함)를 담습니다 — 캐릭터 편집 창의 피팅 확인이 읽는다. 풀 것이 없으면 빈 결과입니다.
          * @return 이름이 표에 없거나 피팅을 풀 수 없으면 까닭을 @p outReport 에 담고 false 입니다(그때 @p outListMesh 는 비어 있다).
          */
         [[nodiscard]] static bool assemble( const ResolvedAppearance& resolved, vector_reference<const AppearanceMeshPart> listPart, const FitTables* pTables,
-                                            const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport );
+                                            const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport, FitResult* pOutFitResult = nullptr );
     };
 } // namespace sw
 

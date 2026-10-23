@@ -105,6 +105,19 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 프로필의 리타깃 포즈(`target_pose`)를 대상 포즈에 얹는 길 하나입니다 — 리타기터 묶기(`initialize`)와 에디터 리타깃 창의 미리보기가 같이 씁니다. */
+    struct SW_API RetargetPoseUtil
+    {
+        /**
+         * @brief @p inoutPose(본 수 = 대상 스켈레톤 본 수)의 대상 본마다 프로필의 돌림을 부모 공간에서 더 돌립니다(새 로컬 회전 = 돌림 × 로컬 회전).
+         * @return 대상 스켈레톤에 없는 본을 적었거나 본 수가 다르면 오류를 남기고 false 입니다(포즈는 그대로입니다).
+         */
+        [[nodiscard]] static bool applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose );
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 오프라인 리타깃 베이크입니다(쿠킹과 도구에서 씁니다). */
     struct SW_API RetargetBakeUtil
     {

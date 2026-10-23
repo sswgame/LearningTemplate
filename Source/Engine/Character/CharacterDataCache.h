@@ -17,6 +17,7 @@ namespace sw
     struct PhysicsAsset;
 
     class AnimationNotifyTable;
+    class BodyShapeSet;
     class FitPartData;
     class FitTables;
     class PairedAnimationDef;
@@ -41,4 +42,6 @@ namespace sw
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitTables>;
     /** @brief 부품 피팅 데이터(`*.partfit.xml`)를 나눠 줍니다("FitPartData"). 표와 따로 읽고 이름은 조립이 대조합니다(`FitPartData::validateNames`). */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FitPartData>;
+    /** @brief 체형 축 데이터(`*.bodyshape.xml`)를 나눠 줍니다("BodyShapeSet"). 제자리에서 다시 읽고, 외형 컴포넌트는 다시 읽은 횟수가 바뀌면 다시 조립합니다. */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<BodyShapeSet>;
 } // namespace sw

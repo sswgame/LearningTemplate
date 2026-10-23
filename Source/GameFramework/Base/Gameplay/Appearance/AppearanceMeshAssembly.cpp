@@ -145,7 +145,7 @@ namespace sw
 namespace sw
 {
     bool AppearanceMeshAssembly::assemble( const ResolvedAppearance& resolved, vector_reference<const AppearanceMeshPart> listPart, const FitTables* pTables,
-                                           const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport )
+                                           const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport, FitResult* pOutFitResult )
     {
         using Internal = AppearanceMeshAssemblyInternal;
         outListMesh.clear();
@@ -234,6 +234,8 @@ namespace sw
                 return false;
             }
         }
+        if ( pOutFitResult != nullptr )
+            *pOutFitResult = std::move( result );
         return true;
     }
 } // namespace sw

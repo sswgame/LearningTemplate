@@ -57,6 +57,11 @@ namespace sw::editor
         }
         /** @brief 포커스 경로를 로드 경로로 확정하고 로드가 필요함을 표시합니다. */
         void acceptFocusedDocument();
+        /**
+         * @brief 문서를 엽니다. 워크스페이스 포커스로 넘기며, 문서 교체와 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 한다.
+         * @details 없는 경로를 넘기면 `loadDocument` 가 `ToolAssetLoadResult::Missing` 으로 빈 문서를 열 수 있다 — "새 문서" 단추가 이 길을 쓴다.
+         */
+        void requestOpenDocument( string_view assetPath );
         /** @brief dirty 이면 확인 팝업을 띄우고, 아니면 포커스 경로를 받아들입니다. */
         void updateFocusedDocument();
         /**
@@ -125,8 +130,6 @@ namespace sw::editor
 
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
-        /** @brief 문서를 엽니다. 워크스페이스 포커스로 넘깁니다. */
-        void requestOpenDocument( string_view assetPath );
         /** @brief 최근 문서 목록 맨 앞에 @p assetPath 를 둡니다. 중복은 뺍니다. */
         void rememberRecentDocument( string_view assetPath );
         void drawUnsavedDocumentPopup();

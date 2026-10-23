@@ -80,6 +80,7 @@ namespace sw
         , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeUnitCount{ 0 }
         , _poseEvaluatedUnitCount{ 0 }
+        , _arrCrowdModeCount{}
         , _bOrderDirty{ SW_FALSE }
         , _bCycle{ SW_FALSE }
         , _bLODViewsSet{ SW_FALSE }
@@ -115,6 +116,10 @@ namespace sw
 
     void AnimationSystem::updateCrowd()
     {
+        for ( uint32& count : _arrCrowdModeCount )
+        {
+            count = 0;
+        }
         bool bAnyShared = false;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
         {
@@ -136,17 +141,16 @@ namespace sw
         if ( _bCrowdSettingsFailed == SW_TRUE )
             return;
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
-        uint32 arrModeCount[4] = { 0, 0, 0, 0 };
         for ( SkeletalMeshComponent* pUnit : _listActive )
         {
             if ( pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own )
                 pUnit->updateCrowdMembership( _crowd );
-            ++arrModeCount[static_cast<uint32>( pUnit->getCrowdMode() )];
+            ++_arrCrowdModeCount[static_cast<uint32>( pUnit->getCrowdMode() )];
         }
         _crowd.evaluateBuckets();
-        SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Shared )] );
-        SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Solo )] );
-        SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::VertexAnimation )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", getCrowdModeCount( AnimationCrowdMode::Shared ) );
+        SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", getCrowdModeCount( AnimationCrowdMode::Solo ) );
+        SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", getCrowdModeCount( AnimationCrowdMode::VertexAnimation ) );
         SW_PROFILE_COUNT( "GT.Animation.crowdBucketCount", static_cast<uint32>( _crowd.getBuckets().size() ) );
         SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }
@@ -432,7 +436,11 @@ namespace sw
             return;
         }
 
-        runPhase( AnimationPhase::Time );
+        // 단계마다 프로파일 구간을 둔다 — 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseTime" );
+            runPhase( AnimationPhase::Time );
+        }
         synchronizeGroups();
         updateCrowd();
 
@@ -443,10 +451,22 @@ namespace sw
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
         }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
-        runPhase( AnimationPhase::BasePose );
-        runPhase( AnimationPhase::Attachment );
-        runPhase( AnimationPhase::PostProcess );
-        runPhase( AnimationPhase::SkinPalette );
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseBasePose" );
+            runPhase( AnimationPhase::BasePose );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseAttachment" );
+            runPhase( AnimationPhase::Attachment );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phasePostProcess" );
+            runPhase( AnimationPhase::PostProcess );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseSkinPalette" );
+            runPhase( AnimationPhase::SkinPalette );
+        }
         _poseEvaluatedUnitCount = poseUnitCount;
         SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
         SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 보이는 몸 — 1인칭에서 머리 · 몸의 무기를 숨기고 몸은 보이는지(S3), 3인칭에서 다시 보이는지, 왼손 IK 가 총열 아래에 붙고 무기를 바꾸면 새 무기의 손잡이를 따르는지(S5),
+  걷는 동안 몸이 어색하지 않은지 사진으로 본다. 프로브 StrideAppliedCount 는 몸 리그(player_body.rig.xml)가 묶여 일하는지 가른다.
+  눈으로 볼 것: ① 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없다(근평면에 목 단면이 걸리면 HideHead 를 neck 까지 넓힌다). ② 3인칭에서 머리가 돌아온다.
+  ③ 소총 · 산탄총 · 권총마다 왼손이 총열 아래 SupportHand 에 붙는다(기사 세트의 방패가 왼손에 함께 있어 가리면 총을 든 프리셋에서 방패 칸을 비울지 정한다). 팔꿈치가 어색하면 pole.
+  MouseDelta 의 부호(아래를 보는 쪽)는 입력 맵의 Look 배율에 달렸으니 두 방향을 다 찍는다.
+  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/bodyviews.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.bodyviews" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="firstperson"/>
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
+	<At frame="40"><Expect probe="Shooter3D.StrideAppliedCount" atLeast="10"/><Screenshot file="shooter3d/body_firstperson_level.ppm"/></At>
+	<At frame="50"><MouseDelta x="0" y="300"/></At>
+	<At frame="70"><Screenshot file="shooter3d/body_firstperson_down_a.ppm"/></At>
+	<At frame="75"><MouseDelta x="0" y="-600"/></At>
+	<At frame="95"><Screenshot file="shooter3d/body_firstperson_down_b.ppm"/></At>
+	<At frame="100"><MouseDelta x="0" y="300"/></At>
+	<!-- 3인칭으로 돌린다(C = CycleCamera: 프리셋 순서대로) — 머리와 투구가 돌아온다 -->
+	<At frame="110"><Tap slot="Key.C" hold="1"/></At>
+	<At frame="140"><Screenshot file="shooter3d/body_cycled_a.ppm"/></At>
+	<At frame="145"><Tap slot="Key.C" hold="1"/></At>
+	<At frame="175"><Screenshot file="shooter3d/body_cycled_b.ppm"/></At>
+	<!-- 무기마다 왼손: 1 소총 · 2 산탄총 · 3 권총 -->
+	<At frame="180"><Tap slot="Key.Digit1" hold="1"/></At>
+	<At frame="205"><Screenshot file="shooter3d/body_hand_rifle.ppm"/></At>
+	<At frame="210"><Tap slot="Key.Digit2" hold="1"/></At>
+	<At frame="235"><Screenshot file="shooter3d/body_hand_shotgun.ppm"/></At>
+	<At frame="240"><Tap slot="Key.Digit3" hold="1"/></At>
+	<At frame="265"><Expect probe="Shooter3D.WeaponIndex" equals="2"/><Screenshot file="shooter3d/body_hand_pistol.ppm"/></At>
+	<!-- 걷는 동안 -->
+	<At frame="270"><Press slot="Key.W"/></At>
+	<At frame="330"><Screenshot file="shooter3d/body_walk.ppm"/></At>
+	<At frame="335"><Release slot="Key.W"/></At>
+	<At frame="340"><Pass/></At>
+</Scenario>

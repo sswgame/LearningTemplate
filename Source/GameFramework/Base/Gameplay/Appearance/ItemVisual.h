@@ -79,6 +79,7 @@ namespace sw
         hashed_string                      _rig{};        ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
         hashed_string                      _fit{};        ///< 스킨드 부품의 피팅 데이터(`*.partfit.xml` — 겹 · 프로필 · 숨김 영역). 있으면 몸과 함께 피팅해 베이크한 메시를 그린다
         hashed_string                      _fitTables{};  ///< 몸 부품의 피팅 표(`*.fit.xml` — 겹 · 영역 · 프로필 · 상호작용). 몸에만 적는다
+        hashed_string                      _bodyShapes{}; ///< 몸 부품의 체형 축 데이터(`*.bodyshape.xml`). 꾸미기의 `BoneProportion` 대상 이름이 이 축 이름이다. 몸에만 적는다
         hashed_string                      _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         int32                              _layer{ 0 };   ///< 스프라이트 그리기 순서
         AppearancePartKind                 _kind{ AppearancePartKind::Skinned };
