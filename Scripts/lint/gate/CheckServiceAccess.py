@@ -15,7 +15,11 @@
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
     **형식으로 막지 못하는 틈이라 게이트를 둔다** — 정적 멤버 함수와 정적 변수는 언어가 늘 허락하고, 범위 창구는 쓰는 쪽이 고르는 길이라 타입이 강제할 수 없다.
-  예외는 둘 다 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 이유)이고, 더는 그 모양이 없는 타입은 낡은 예외로 실패한다.
+  예외는 둘 다 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 예외 종류)이고, 더는 그 모양이 없는 타입은 낡은 예외로 실패한다.
+  이유를 자유 글로 적으면 "단일체가 아닌 까닭" 이 줄마다 달라 판단이 쌓이지 않는다(널 객체 · 에디터 계측이 "서비스가 아니다" 로 남아 있었다). 그래서 값은
+  종류 표 `[exemption_kind]` 의 키 넷 — `LinkTimeRegistry`(링크 때 등록 표) · `CrashPath`(크래시 · 할당 훅 경로) · `ScopeOwnedHotPath`(범위가 소유한 저장소의
+  핫 패스 창구) · `Stateless`(상태 없는 함수 묶음) — 중 하나여야 하고, 표 밖 키는 검사가 서지 않는다(종료 2). 어느 종류에도 안 맞으면 단일체가 아니라
+  값(소유자가 든다)이나 서브시스템으로 만든다.
 
 대상은 `Source/` · `Test/` · `Tools/ReflectionParser/` · `Tools/OnlineLoadBot/` 의 `.h` · `.cpp` · `.inl` 이다(생성 `.gen.cpp` 와 ThirdParty 제외).
 
@@ -33,7 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import findFast  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.RuleData import kKindTextList  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.RuleData import kKindReason, kKindTextList  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
 
@@ -41,9 +46,10 @@ _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".cpp", ".inl")
 _kHeaderSuffixes = (".h", ".inl")
 
-_kRuleSchema = {"allowed_engine_function": kKindTextList}
-_kRuleData = LintGate.readRules("CheckServiceAccess", _kRuleSchema, requiredKeys=("allowed_engine_function",))
+_kRuleSchema = {"allowed_engine_function": kKindTextList, "exemption_kind": kKindReason}
+_kRuleData = LintGate.readRules("CheckServiceAccess", _kRuleSchema, requiredKeys=("allowed_engine_function", "exemption_kind"))
 _kSetRemainingEngineFunction = frozenset(_kRuleData["allowed_engine_function"])
+_kMapReasonKind: dict[str, str] = _kRuleData["exemption_kind"]   # 예외의 종류 → 뜻 (`[exemption]` 의 값은 이 표의 키여야 한다)
 
 _kRetiredWindowCategory = "ServiceAccess/RetiredWindow"
 _kSingletonCategory = "ServiceAccess/Singleton"
@@ -62,6 +68,16 @@ _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 _kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?(?:\bgetInstance\s*\(|&\s*get\s*\(\s*\))")
 _kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
 _kClassHeadRe = re.compile(r"\b(?:class|struct)\s+(?:(?:\w*API|alignas\s*\([^)]*\))\s+)*(\w+)")
+
+
+def getExemptionKinds() -> dict[str, str]:
+    """예외 종류 표(`[exemption_kind]`)의 사본입니다."""
+    return dict(_kMapReasonKind)
+
+
+def findUnknownExemptionKinds(mapExemption: dict[str, str], mapKind: dict[str, str]) -> list[str]:
+    """예외 표에서 값이 종류 표(`[exemption_kind]`)에 없는 줄을 돌려줍니다. 자유 글 이유를 쓰면 여기서 걸립니다."""
+    return [f"{typeName} = {kind!r}" for typeName, kind in mapExemption.items() if kind not in mapKind]
 
 
 def lineOfInternal(text: str, offset: int) -> int:
@@ -175,7 +191,7 @@ class CheckServiceAccessGate(LintGate):
         "      engine::getSubsystem<TaskManager>()      game::findSubsystem<T>()      editor::findSubsystem<T>()      GameObjectManager::getSubsystem<T>()\n"
         "  새 서비스는 전역 단일체(static getInstance())가 아니라 서브시스템으로 만들어 범위에 넣습니다.\n"
         "  \"지금 도는 것\" 을 정적 포인터로 내주는 창구(static T* findActive())도 두지 않습니다 — 소유자가 범위에 빌려 겁니다(SubsystemScope::bind).\n"
-        "  정말 단일체가 필요하면 Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption] 에 타입 이름과 이유를 적습니다."
+        "  정말 단일체가 필요하면 Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption] 에 타입 이름과 예외 종류([exemption_kind] 의 키)를 적습니다."
     )
     selfTestCases = [
         {
@@ -214,6 +230,18 @@ class CheckServiceAccessGate(LintGate):
             },
         },
     ]
+
+    def beginRun(self) -> int:
+        """기반의 확인에 더해, 예외의 이유가 종류 표 안의 키인지 봅니다(표 밖 키는 검사가 서지 않는다 — 종료 2)."""
+        returnCode = super().beginRun()
+        if returnCode != ExitCode.Passed:
+            return returnCode
+        listUnknown = findUnknownExemptionKinds(self.mapExemption, _kMapReasonKind)
+        if listUnknown:
+            print(f"[{self.name}] 예외 종류가 표 밖입니다: {', '.join(listUnknown)} — 아는 종류: {', '.join(_kMapReasonKind)} "
+                  f"(Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption_kind])", file=sys.stderr)
+            return ExitCode.CheckInvalid
+        return ExitCode.Passed
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools 전체)")

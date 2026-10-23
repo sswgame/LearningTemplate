@@ -17,7 +17,7 @@ namespace sw
      *          돌려주는 표가 그 위에 있으면, 한 스레드가 원소를 더하는 순간 다른 스레드가 들고 있던 주소가 해제된
      *          메모리를 가리킵니다. 이 배열은 청크를 따로 할당하고 청크 테이블 자체는 고정 크기라서 그런 무효화가 없습니다.
      *
-     *          원소는 인덱스로 바로 씁니다(`ensure`). 청크는 처음 닿을 때 sw 할당자로(`sw_new_array`, 그때의 메모리 태그로 세입니다) 만들어지며, 모든 원소를 값 초기화한 뒤에
+     *          원소는 인덱스로 바로 씁니다(`ensure`). 청크는 처음 닿을 때 sw 할당자로(`makeFixedCountArray`, 그때의 메모리 태그로 세입니다) 만들어지며, 모든 원소를 값 초기화한 뒤에
      *          청크 포인터를 release 로 발행합니다. 그래서 읽는 쪽(`find`)은 청크 포인터 하나만 acquire 로 읽으면 되고,
      *          아직 없는 청크면 nullptr 을 받습니다.
      *
@@ -46,6 +46,7 @@ namespace sw
         /** @brief 청크 없이 시작합니다. */
         PagedArray()
             : _arrChunk{}
+            , _arrOwner{}
         {
         }
 
@@ -87,7 +88,9 @@ namespace sw
             T*          pChunk    = chunkSlot.load( std::memory_order_relaxed );
             if ( pChunk == nullptr )
             {
-                pChunk = sw_new_array<T>( kElementPerChunk );
+                ChunkOwner& owner = _arrOwner[index / kElementPerChunk];
+                owner             = makeFixedCountArray<T, kElementPerChunk>();
+                pChunk            = owner.get();
                 chunkSlot.store( pChunk, std::memory_order_release );
             }
             return std::addressof( pChunk[index % kElementPerChunk] );
@@ -112,16 +115,20 @@ namespace sw
         /** @brief 모든 청크를 해제하고 청크 테이블을 비웁니다. 읽는 스레드가 없을 때만 부릅니다. */
         void releaseChunks()
         {
-            for ( atomic<T*>& chunkSlot : _arrChunk )
+            for ( uint32 chunkIndex = 0; chunkIndex < kMaxChunk; ++chunkIndex )
             {
-                T* pChunk = chunkSlot.load( std::memory_order_relaxed );
-                chunkSlot.store( nullptr, std::memory_order_relaxed );
-                sw_delete_array( pChunk, kElementPerChunk );
+                _arrChunk[chunkIndex].store( nullptr, std::memory_order_relaxed );
+                _arrOwner[chunkIndex].reset();
             }
         }
 
     private:
+        /** @brief 청크의 소유자입니다. 청크를 만들고 푸는 쪽(쓰는 스레드 하나)만 만지고, 읽는 쪽은 `_arrChunk` 만 봅니다. */
+        using ChunkOwner = FixedCountArray<T, kElementPerChunk>;
+
         /** @brief 청크 포인터 테이블입니다. 한 번 발행한 청크는 `releaseChunks` 전까지 그 위치에 있습니다. */
         atomic<T*> _arrChunk[kMaxChunk];
+        /** @brief `_arrChunk` 와 같은 자리의 청크 소유자입니다. 청크를 맨 포인터로 들지 않고 이 소유자가 풉니다. */
+        ChunkOwner _arrOwner[kMaxChunk];
     };
 } // namespace sw

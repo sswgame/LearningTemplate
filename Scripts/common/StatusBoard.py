@@ -146,7 +146,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
         if entry.stem is not None and entry.stem not in setStem:
             listViolation.append(f"{kRoadmapRelPath}:{entry.lineNumber}: 항목의 문서 `{entry.stem}.md` 가 {kPlansRelDir} 에 계획 문서로 없습니다")
     listViolation += checkFinishedPlanLinksInternal(text, readPlans(repositoryRoot))
-    listViolation += checkAllUnitsDoneStatusInternal(readPlans(repositoryRoot))
+    listViolation += checkAllUnitsDoneStatus(readPlans(repositoryRoot))
     mapAnchorCache: dict[Path, set[str]] = {}
     bFence = False
     for lineNumber, line in enumerate(text.splitlines(), start=1):
@@ -191,7 +191,7 @@ _kBuildingStatus: tuple[str, ...] = ("설계", "구현대기", "구현중")
 _kAllDoneProgressRe = re.compile(r"^(\d+)/\1$")
 
 
-def checkAllUnitsDoneStatusInternal(listPlan: list[PlanDoc]) -> list[str]:
+def checkAllUnitsDoneStatus(listPlan: list[PlanDoc]) -> list[str]:
     """진행이 `n/n` 인데 상태가 `설계` · `구현대기` · `구현중` 인 계획 문서를 위반으로 모은다.
     마지막 단위를 끝낸 사람이 상태를 올리지 않으면 끝난 일이 README 진행 표에 구현 중으로 쌓인다. 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`."""
     return [f"{kPlansRelDir}/{plan.fileName}: 진행이 {plan.progress} 로 모든 단위가 끝났는데 상태가 `{plan.status}` 입니다 — 확인이 남았으면 `측정대기`, 끝났으면 `끝`"

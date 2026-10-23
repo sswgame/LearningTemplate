@@ -1044,8 +1044,31 @@ namespace sw::editor
             /** @brief 뷰포트 격자가 이번 프레임이나 지난 프레임에 그려졌는지 확인합니다. 그려지지 않았으면 격자 프로브는 값을 내지 않습니다. 격자를 끈 뷰나 다른 탭이 해당합니다. */
             [[nodiscard]] static const EditorGridStats* findRecentGridStats()
             {
-                const EditorGridStats& stats = EditorGridStats::get();
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return nullptr;
+                const EditorGridStats& stats = pClient->getGridStats();
                 return stats._frame >= 0 && ImGui::GetFrameCount() - stats._frame <= 1 ? &stats : nullptr;
+            }
+
+            /** @brief 물리 셰이프 시각화가 지난 프레임에 그린 선분 수입니다. 씬 뷰 패널이 없으면 값을 내지 않습니다. */
+            [[nodiscard]] static bool readPhysicsShapeSegments( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pClient->getVisualizerStats()._shape._physicsSegmentCount );
+                return true;
+            }
+
+            /** @brief 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 씬 뷰 패널이 없으면 값을 내지 않습니다. */
+            [[nodiscard]] static bool readNavMeshSegments( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pClient->getVisualizerStats()._shape._navMeshSegmentCount );
+                return true;
             }
 
             [[nodiscard]] static bool readGridStep( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -1885,6 +1908,10 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorGridMisplacedMajorLines, "Editor.GridMisplacedMajorLines",
                          "Major grid lines drawn off a world multiple of 5 x spacing (0 unless major lines slide with the camera)",
                          &EditorScenarioStepsInternal::readGridMisplacedMajorLines );
+    SW_AUTOMATION_PROBE( editorPhysicsShapeSegments, "Editor.PhysicsShapeSegments", "Line segments the physics_shapes visualizer drew in the last frame",
+                         &EditorScenarioStepsInternal::readPhysicsShapeSegments );
+    SW_AUTOMATION_PROBE( editorNavMeshSegments, "Editor.NavMeshSegments", "Line segments the navmesh visualizer drew in the last frame",
+                         &EditorScenarioStepsInternal::readNavMeshSegments );
     SW_AUTOMATION_PROBE( editorSceneViewCameraX, "Editor.SceneViewCameraX", "Scene view (editor) camera world X", &EditorScenarioStepsInternal::readSceneViewCameraX );
     SW_AUTOMATION_PROBE( editorSceneViewCameraY, "Editor.SceneViewCameraY", "Scene view (editor) camera world Y", &EditorScenarioStepsInternal::readSceneViewCameraY );
     SW_AUTOMATION_PROBE( editorGameViewCameraX, "Editor.GameViewCameraX", "Game view camera (the active scene's game camera) world X",

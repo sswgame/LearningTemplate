@@ -378,33 +378,24 @@ _kBasicTypesRe = re.compile(
 
 # [placement new 표기 검사]
 # 정규식 패턴: r'(?<!\w)new\s*\('
-#   - (?<!\w)  : 앞이 식별자 글자가 아니어야 한다 — `sw_new` · `sw_placement_new(` 는 여기서 빠진다
+#   - (?<!\w)  : 앞이 식별자 글자가 아니어야 한다 — `sw_placement_new(` 는 여기서 빠진다
 #   - new\s*\( : `new` 바로 뒤에 괄호가 오는 형태, 즉 placement 구문
 # `operator new(` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
 # 매칭 예시 (위반): new ( pMemory ) T();, ::new ( &storage ) T( value );
-# 올바른 예시: sw_placement_new( pMemory ) T();, sw_new T();
+# 올바른 예시: sw_placement_new( pMemory ) T();, make_unique<T>();
 # 컨벤션 규칙: 이미 잡아 둔 메모리에 객체를 만들 때는 Memory.h 의 sw_placement_new 를 씁니다.
 _kRawPlacementNewRe = re.compile(r'(?<!\w)new\s*\(')
 
 # [맨 new 검사]
 # 정규식 패턴: r'(?<!\w)new\s+(?=[A-Za-z_:])'
-#   - (?<!\w)               : 앞이 식별자 글자가 아니어야 한다 — `sw_new T` 는 여기서 빠진다(`::new T` 는 잡힌다)
+#   - (?<!\w)               : 앞이 식별자 글자가 아니어야 한다(`::new T` 는 잡힌다)
 #   - new\s+(?=[A-Za-z_:])  : `new` 뒤에 타입 이름이 오는 형태(`new T` · `new T[n]` · `new T( ... )` · `new ::ns::T`)
 # placement 구문(`new (`)은 Style/PlacementNew 가 본다. `operator new` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
 # 매칭 예시 (위반): pChunk = new T[count]{};, pPage = new Page;
-# 올바른 예시: make_unique<Page>(), sw_new_array<T>( count ), make_unique<T>( ... )
+# 올바른 예시: make_unique<Page>(), makeFixedCountArray<T, N>(), make_unique<T>( ... )
 # 컨벤션 규칙: 힙 객체는 sw 할당자(Memory.h)로 만든다. CRT new 는 메모리 태그 · 누수 검사에 보이지 않는다.
 _kRawNewRe = re.compile(r'(?<!\w)new\s+(?=[A-Za-z_:])')
 
-# [sw_new 검사]
-# 정규식 패턴: r'(?<!\w)sw_new\b'
-#   - (?<!\w) : 앞이 식별자 글자가 아니어야 한다 — `my_sw_new` 같은 이름은 빠진다
-#   - sw_new\b: 매크로 이름 그대로(`sw_new_array` 는 `_` 가 단어 글자라 빠진다)
-# `#define` 줄은 규칙 쪽에서 거르고, 매크로를 정의하고 `make_unique` 가 쓰는 Memory.h 는 규칙 쪽에서 뺀다.
-# 매칭 예시 (위반): return sw_new Page();, pBuf = sw_new T[8];
-# 올바른 예시: make_unique<Page>() (소유), make_unique<Page>().release() (소유를 락 없는 표 · 외부 API 에 놓는 자리)
-# 컨벤션 규칙: `sw_new` 는 소유자 없는 맨 포인터를 돌려준다. 새는 모양을 형식으로 못 쓰게 `Source/` 는 소유 형식(`make_unique` · `MemoryBlock` · 컨테이너)으로만 만든다.
-_kSwNewRe = re.compile(r'(?<!\w)sw_new\b')
 _kOperatorKeywordTailRe = re.compile(r'\boperator\s*$')
 
 # [생성자 멤버 초기화 리스트 괄호 검사]

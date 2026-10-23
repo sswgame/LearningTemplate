@@ -107,6 +107,7 @@ namespace sw
         , _photoLookSensitivity{ PhotoModeSettings{}._lookSensitivity }
         , _photoZoomStep{ PhotoModeSettings{}._zoomStep }
         , _photoMaxExposureOffset{ PhotoModeSettings{}._maxExposureOffset }
+        , _photoHiddenUILayers{ EnumUtil::setFlag( EnumUtil::setFlag( UILayerMask::HUD, UILayerMask::GameMenu ), UILayerMask::Overlay ) }
         , _bReadInput{ true }
         , _overrideBlend{}
         , _fieldOfViewOverride{ 0.0f }
@@ -118,6 +119,7 @@ namespace sw
         , _photoMode{}
         , _photoInputMap{}
         , _bPhotoModeCut{ false }
+        , _photoAppliedHiddenLayers{ UILayerMask::None }
         , _catalog{}
         , _director{}
         , _pendingStateBytes{}
@@ -144,6 +146,7 @@ namespace sw
             _photoMode.end();
             _photoInputMap.reset();
             GameTimeScale::removePauseRequest();
+            releasePhotoModeUILayers();
         }
         manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
         Component::onUnregister( manager );
@@ -226,6 +229,13 @@ namespace sw
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
         GameTimeScale::addPauseRequest();
+        // UI 는 이 컴포넌트가 모른다 — 숨길 레이어는 속성(데이터)이 정하고, 숨기는 일은 UI 시스템의 레이어 숨김 요청이 한다. UI 시스템이 없으면 가릴 화면도 없다.
+        UISystem* pUISystem = game::findSubsystem<UISystem>();
+        if ( pUISystem != nullptr && _photoHiddenUILayers != UILayerMask::None )
+        {
+            pUISystem->addLayerHideRequest( _photoHiddenUILayers );
+            _photoAppliedHiddenLayers = _photoHiddenUILayers;
+        }
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
         return true;
@@ -238,8 +248,19 @@ namespace sw
         _photoMode.end();
         _photoInputMap.reset();
         GameTimeScale::removePauseRequest();
+        releasePhotoModeUILayers();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
+    }
+
+    void CameraDirectorComponent::releasePhotoModeUILayers()
+    {
+        if ( _photoAppliedHiddenLayers == UILayerMask::None )
+            return;
+        UISystem* pUISystem = game::findSubsystem<UISystem>();
+        if ( pUISystem != nullptr )
+            pUISystem->removeLayerHideRequest( _photoAppliedHiddenLayers );
+        _photoAppliedHiddenLayers = UILayerMask::None;
     }
 
     void CameraDirectorComponent::setFocusPoint( const float3& point )

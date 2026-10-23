@@ -18,12 +18,6 @@ namespace sw
         return TelemetryUploadResult::Kept;
     }
 
-    NullTelemetryUploader& NullTelemetryUploader::get()
-    {
-        static NullTelemetryUploader s_uploader;
-        return s_uploader;
-    }
-
     HTTPTelemetryUploader::HTTPTelemetryUploader( IHTTPClient& client, string_view endpoint, string_view apiKey )
         : _endpoint{ endpoint }
         , _apiKey{ apiKey }

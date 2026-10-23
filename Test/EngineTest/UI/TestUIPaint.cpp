@@ -405,6 +405,62 @@ SW_TEST_CASE( UIPaintTest, OnScreenSuppressionHidesScreensButKeepsTheirState )
 }
 
 /**
+ * @brief [UIPaintTest] 레이어 숨김 요청은 그 레이어의 화면만 그리기 목록에서 빼고(포인터도 받지 않는다), 요청이 레이어마다 세어져 하나를 풀어도 남은 요청이 있으면 계속 숨긴다
+ * @details 포토 모드가 HUD 를 가리는 길이다. 요청 뒤에 열린 화면도 숨고, 요청을 모두 풀면 다시 그려진다. 건 적 없는 레이어를 푸는 것은 단언이라 여기서 하지 않는다.
+ */
+SW_TEST_CASE( UIPaintTest, LayerHideRequestsHideOnlyThatLayerAndCountPerLayer )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+
+    sw::unique_ptr<sw::OverlayPanel> hudRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *hudRoot, "hud", sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } );
+    sw::UIScreenDesc hudDesc{};
+    hudDesc._layer               = sw::UILayer::HUD;
+    const sw::UIScreenHandle hud = ui.pushScreen( sw::make_unique<sw::UIScreen>( hudDesc, std::move( hudRoot ) ) );
+
+    sw::unique_ptr<sw::OverlayPanel> menuRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *menuRoot, "menu", sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f } );
+    sw::UIScreenDesc menuDesc{};
+    menuDesc._layer = sw::UILayer::Menu;
+    (void)ui.pushScreen( sw::make_unique<sw::UIScreen>( menuDesc, std::move( menuRoot ) ) );
+
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 2 }, ui.getCanvas()._listQuad.size() );
+
+    const sw::UILayerMask hudOnly = sw::UILayerUtil::toMask( sw::UILayer::HUD );
+    ui.addLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() ); // 메뉴만 남는다
+    SW_EXPECT_TRUE( ui.isLayerHidden( sw::UILayer::HUD ) );
+    SW_EXPECT_FALSE( ui.isLayerHidden( sw::UILayer::Menu ) );
+    SW_ASSERT_TRUE( ui.findScreen( hud ) != nullptr );
+    SW_EXPECT_TRUE( ui.findScreen( hud )->isHiddenByLayer() );
+    SW_EXPECT_FALSE( ui.findScreen( hud )->receivesPointer() );
+
+    // 요청 뒤에 열린 HUD 화면도 숨는다. 같은 레이어를 한 번 더 숨겨도 하나를 풀 때는 계속 숨는다(요청은 센다).
+    sw::unique_ptr<sw::OverlayPanel> lateRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *lateRoot, "late", sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } );
+    (void)ui.pushScreen( sw::make_unique<sw::UIScreen>( hudDesc, std::move( lateRoot ) ) );
+    ui.addLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+
+    ui.removeLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+    SW_EXPECT_TRUE( ui.isLayerHidden( sw::UILayer::HUD ) );
+
+    ui.removeLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 3 }, ui.getCanvas()._listQuad.size() );
+    SW_EXPECT_FALSE( ui.isLayerHidden( sw::UILayer::HUD ) );
+    SW_EXPECT_FALSE( ui.findScreen( hud )->isHiddenByLayer() );
+}
+
+/**
  * @brief [UIPaintTest] UISystem 의 그리기 목록 내용 번호는 내용이 바뀔 때만 오르고, 탐색 입력 방식이면 포커스 위젯 둘레에 테두리 사각형이 하나 더 든다
  * @details 변이: `UISystem::paintScreens` 의 같은 내용 확인을 빼면 바뀐 것이 없는 프레임에도 번호가 올라 진다.
  */

@@ -35,7 +35,7 @@ namespace sw::editor
              */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                EditorDebugDrawStats& stats = EditorDebugDrawStats::get();
+                EditorDebugDrawStats& stats = args._pStats->_debugDraw;
                 stats._segmentCount         = 0;
                 stats._textCount            = 0;
                 stats._frame                = ImGui::GetFrameCount();

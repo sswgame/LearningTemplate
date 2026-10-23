@@ -76,6 +76,12 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 남은 것: `ResourceDataKindRegistry` 는 `SW_RESOURCE_DATA_KIND` 의 정적 등록자가 엔진 범위가 서기 전(Engine · GameFramework · 키트 이미지의 정적 초기화)에 올리고 모듈을 내릴 때 빼서, 지금은 함수 정적으로 둡니다(예외 표에 이유를 적었습니다). 서비스로 옮기려면 등록자가 링크 때 연결 목록(`TypeRegistrar::getHead` 방식)에만 달리고, 서비스가 기동과 모듈 올림 · 내림에서 그 목록을 거두도록 등록 경로를 바꿔야 합니다 — 핫 리로드의 모듈 내림 처리와 함께 설계합니다. 게이트는 여전히 이름(`getInstance` · `get`)으로 판단해 `instance()` · `shared()` 는 못 봅니다 — 이름과 무관하게 막으려면 타입 · API 를 바꿔야 합니다.
 이름 붙은 지역 람다 Serialization·Reflection·Object 끝(2026-10-24, wt/lambdaser): 쌍 처리기와 도우미는 함수로 뺐고, 캡처가 본질인 짧은 것만 남겼다.
 
+### ValidationIssueLogWorldOwned
+제목: `ValidationIssueLog` 를 엔진 수명 범위의 창구에서 월드(게임 오브젝트 매니저) 소유로 옮기기
+옛번호: 없음
+왜 필요한가: `ValidationIssueLog::get()` 은 `ScopeOwned` 로 엔진 수명 범위가 소유하는 표의 편의 창구라서 단일체 예외 표에 `ScopeOwnedHotPath` 로 남았습니다(2026-10-24 판정 — 유지). 그러나 이 표의 내용은 "출처(오브젝트)마다의 검증 결과" 라 월드가 둘이면(에디터 미리보기 창 · 씬 둘) 결과가 한 표에 섞입니다. 언리얼 Map Check 는 월드별 메시지 로그입니다.
+남은 것: 표를 `GameObjectManager` 의 서브시스템(또는 `Scene` 이 든 값)으로 옮기고, 파괴 경로(`GameObject` 소멸자)는 자기 매니저의 표를 직접 부릅니다. 맵 검사 패널은 활성 씬의 표를 읽습니다. `find()` 의 "엔진 범위가 닫혔으면 nullptr" 는 사라지고 `get()` 호출 9 곳(`MapCheckPanel` · `ObjectValidation` · `EditorSelfTestPanelCases`)이 소유자를 받는 모양이 됩니다. 옮긴 뒤 `CheckServiceAccess.toml` 의 `ValidationIssueLog` 줄을 지웁니다.
+
 ### ReflectedInstanceOwner
 제목: 리플렉션이 만든 형식 소거 인스턴스의 소유 형식
 옛번호: 없음

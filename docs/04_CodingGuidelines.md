@@ -143,7 +143,7 @@ const Deadline deadline = Deadline::afterMilliseconds( 500 );
 while ( deadline.isExpired() == false ) { … }
 const int64 nowMs = WallClock::nowUnixMilliseconds();       // 만료 · 기록 시각(서비스에는 nowMs 매개변수로)
 
-unique_ptr<Foo> pFoo = make_unique<Foo>( arg );            // 맨 new Foo · sw_new Foo 대신(소유가 형식에 드러난다)
+unique_ptr<Foo> pFoo = make_unique<Foo>( arg );            // 맨 new Foo 대신(소유가 형식에 드러난다)
 MemoryBlock block = MemoryBlock::allocate( size );          // 거친 바이트 블록. void* + Memory::free 대신
 sw_placement_new( pMemory ) Foo( arg );                     // 맨 new ( pMemory ) Foo 대신
 
