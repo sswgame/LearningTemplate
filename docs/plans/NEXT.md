@@ -9,7 +9,7 @@
 
 | 단계 | 구성 | 묶어서 돌릴 것 | 잠금 |
 |---|---|---|---|
-| A | Debug | `full-build --owner integD` 경고 0 → 실패한 테스트의 원인 조사도 이 단계의 같은 묶음(별도 항목으로 쌓지 않는다: AppTest_NoGPU · EditorTest_Shard2 · EngineTest_NoGPU 샤드 · ServerTest_Shard1 · CoreTest · PythonTest_TestAssetValidation · MeshModifiers 7개) → `-L lint` · `-L nogpu` · `-L race` → 후보 작업자들이 적은 "통합에서 실행 대기" 중 CPU 만 쓰는 테스트(`StreamTransportTest`류는 WSL 이라 건너뜀) | 빌드 칸 |
+| A | Debug | `full-build --owner integD` 경고 0 → 실패한 테스트의 원인 조사도 이 단계의 같은 묶음(별도 항목으로 쌓지 않는다: AppTest_NoGPU · EditorTest_Shard2 · EngineTest_NoGPU 샤드 · ServerTest_Shard1 · CoreTest · PythonTest_TestAssetValidation · MeshModifiers 7개) → 실패한 테스트의 원인 조사도 이 단계의 같은 묶음(별도 항목으로 쌓지 않는다: AppTest_NoGPU · EditorTest_Shard2 · EngineTest_NoGPU 샤드 · ServerTest_Shard1 · CoreTest · PythonTest_TestAssetValidation · MeshModifiers 7개) → `-L lint` · `-L nogpu` · `-L race` → 후보 작업자들이 적은 "통합에서 실행 대기" 중 CPU 만 쓰는 테스트(`StreamTransportTest`류는 WSL 이라 건너뜀) | 빌드 칸 |
 | B | Shipping | 빌드 → `-L hostgpu` 전체 → 확인 대기 전부(ModuleRenderPass M2 · 텍스처 R8 · TilemapCellDataLayers T3 · SerializerSilentSkips · DiskPathVsResourceId · PanelIDLiterals P3 · UiNotificationRemaining N2 · contentthumbnails · scnpixel 의 `differingFraction` 문턱 · 후보 작업자의 시나리오) → 네 백엔드 × 대표 셋 | GPU 공유 |
 | C | Release | 빌드 → **쿠킹 한 번**(물 그림자 · 셰이더 2단계) → 골든 다시 뜨기 → 그 다음 측정을 전부 혼자 이어서: `perf` · `load` · `perf-compare`(InteractionSpatialGrid I3, 누수 창 오버헤드, 소유 형식) · 네트 벤치(`NetUDPBenchTest` · `NetReplicationBenchTest` · `NetCompressionBench`의 Windows 쪽) · `scene-load-bench` · `soak` · 후보의 측정 질문(HalfResolutionBloomMeasurement 등) | GPU 독점 |
 | D | CI | push 뒤 `ci-jobs --summary`(리눅스 · TSAN 포함). 로컬 WSL 은 사용자가 요청할 때만 | — |
