@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/World/Spline/SplineComponent.h"
@@ -354,16 +355,21 @@ namespace sw::editor
     {
         if ( _bPreviewDirty == false || hasTarget() == false )
             return;
-        _bPreviewDirty                    = false;
-        _bStagePreviewDirty               = true; // 단계 미리보기도 같은 스택 상태를 따라간다
+        _bPreviewDirty      = false;
+        _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
+        // 구간 이름이 미리보기 비용의 측정 질문(MeshModifierPreviewCost MM2)이 읽는 자리다: 스택 적용(CPU) → 셰이딩 미리보기 갱신(GPU 프로그램 또는 CPU 결과 메시).
+        SW_PROFILE_SCOPE( "Editor.MeshModifiers.Refresh" );
         MeshModifierEvaluation evaluation = makeEvaluation();
         updatePrefixCache( evaluation, true );
         // 고른 모디파이어 앞까지는 캐시를 이어 쓰고 그 뒤만 다시 건다 - 끌기 · 입력 중에는 보통 고른 것만 바뀐다
         _previewMesh                               = _prefixMesh;
         vector<MeshModifierBounds> listInputBounds = _listPrefixInputBounds;
         evaluation._pListInputBounds               = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
-        _stack.applyRange( _previewMesh, evaluation, _prefixEnd, _stack.getModifierCount() );
-        _stack.finishApply( _previewMesh );
+        {
+            SW_PROFILE_SCOPE( "Editor.MeshModifiers.Apply" );
+            _stack.applyRange( _previewMesh, evaluation, _prefixEnd, _stack.getModifierCount() );
+            _stack.finishApply( _previewMesh );
+        }
         updateShadedPreview( evaluation, listInputBounds );
     }
 
@@ -436,6 +442,9 @@ namespace sw::editor
             return;
         }
         // GPU 표에 없는 모디파이어가 있다 - 방금 건 CPU 결과를 정점으로 올린다. 그리는 중인 메시를 고치지 않고 새 메시로 바꿔 끼운다
+        // (렌더 스냅샷이 옛 메시를 쥐고 있어 제자리 갱신은 안전하지 않다 - 그래서 비용은 새 메시 만들기 + 탄젠트 + 정점 풀 재업로드다: MeshModifierPreviewCost MM3 결정)
+        SW_PROFILE_SCOPE( "Editor.MeshModifiers.CpuMesh" );
+        SW_PROFILE_COUNT( "Editor.MeshModifiers.CpuMeshVertices", static_cast<uint32>( _previewMesh._listPosition.size() ) );
         shared_ptr<Mesh> cpuMesh = Mesh::create();
         cpuMesh->setVertices( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ) );
         mountPreviewMesh( *pMeshComp, cpuMesh );

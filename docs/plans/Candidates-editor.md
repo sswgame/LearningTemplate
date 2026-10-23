@@ -51,3 +51,11 @@ Tracy 0.14.1 뷰어 연결(주소 `localhost:8086` 을 직접 입력해 연결�
 착수 조건: 그 창의 편집 대상(예: `.mesh` 의 LOD 단계 확인, `meadow.cameras.xml` 프리셋 보기)이 디자이너의 일이 되어 지금 길(인스펙터 · 콘텐츠 브라우저 썸네일)로 모자랄 때.
 남은 것: 창마다 `EditorPreviewPanel` 파생 + 자산 종류 등록(`EditorAssetType` 표의 제목) + 미리보기 씬 스폰 + 시나리오 하나. `VfxPreviewPanel`(보기 전용, 약 230 줄)이 가장 작은 본보기다.
 함정: 같은 파일을 두 편집기가 쥐지 않는다(카탈로그 편집기가 쥔 종류는 보기 전용). 닫기 확인 · 창 Undo 는 틀이 맡으므로 파생이 따로 만들지 않는다.
+
+### MeshModifierCpuPreviewCost
+제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
+옛번호: D3-10
+왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 줄이지 못해 더하지 않았다([MeshModifierPreviewCost](MeshModifierPreviewCost.md) 2절).
+착수 조건: 매니페스트 `mesh-modifier-preview-cost` 의 값에서 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때.
+남은 것: `Editor.MeshModifiers.Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표에 올린다(`MeshModifierGPUProgram`). `Editor.MeshModifiers.CpuMesh` 가 크면 미리보기 메시의 탄젠트 재계산을 건너뛰는 옵션을 본다(`Mesh::setVerticesWithTangents` 에 위치만 바뀐 탄젠트를 넘기는 길 포함).
+함정: 메시를 제자리에서 바꾸지 않는다 - 렌더 스냅샷이 옛 메시를 쥔다.

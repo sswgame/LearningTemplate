@@ -485,6 +485,17 @@
       "covered": ["engine/automation/editor/assetmanage.scenario.xml", "engine/automation/editor/contentthumbnails.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/ContentBrowserWatchAndScan.md CW1 · CW2", "result_doc": "docs/plans/ContentBrowserWatchAndScan.md 상태를 끝으로",
       "note": "체인 시간이 줄었는지(전 · 후 assetmanage 의 시계 잡은 프레임 수)도 이 실행의 로그로 비교한다."
+    },
+    {
+      "id": "mesh-modifiers-captures", "title": "meshmodifiers 시나리오의 캡처 세 장(panel · gizmo · nested)을 눈으로 본다", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/meshmodifiers.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/MeshModifierPreviewCost.md MM1", "result_doc": "docs/plans/MeshModifierPreviewCost.md 상태를 끝으로",
+      "note": "시나리오 통과는 자동이다. 캡처(Bin/Saved/Automation/meshmodifiers/*.png)를 눈으로 보는 일만 사람이다."
+    },
+    {
+      "id": "mesh-modifier-preview-cost", "title": "큰 메시(10 만 정점 이상)에서 매개변수 끌기 · 시간 재생 중 프레임 시간과 Editor.MeshModifiers.* 구간", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "큰 메시를 열어 매개변수를 끄는 입력 흐름을 한 명령으로 도는 perf-compare 케이스가 없다(프로파일러의 Editor.MeshModifiers.Refresh · Apply · CpuMesh 구간이 값을 낸다)",
+      "source": "docs/plans/MeshModifierPreviewCost.md MM2", "result_doc": "docs/plans/MeshModifierPreviewCost.md 2절"
     }
   ]
 }
