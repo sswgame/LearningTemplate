@@ -65,7 +65,7 @@ uint findInstance( uint skinIndex )
 {
     uint low   = 0u;
     uint count = g_SkinInstanceCount;
-    [unroll] for ( uint step = 0u; step < SW_SKIN_SEARCH_STEPS; ++step )
+    SW_UNROLL for ( uint step = 0u; step < SW_SKIN_SEARCH_STEPS; ++step )
     {
         const uint halfCount = count / 2u;
         const uint middle    = low + halfCount;
@@ -114,7 +114,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     float3 skinnedPosition = float3( 0.0f, 0.0f, 0.0f );
     float3 skinnedNormal   = float3( 0.0f, 0.0f, 0.0f );
     float3 skinnedTangent  = float3( 0.0f, 0.0f, 0.0f );
-    [unroll] for ( uint influence = 0u; influence < 4u; ++influence )
+    SW_UNROLL for ( uint influence = 0u; influence < 4u; ++influence )
     {
         const uint  bone   = min( paletteBase + (uint)joints[influence], g_SkinBoneCount - 1u );
         const float weight = weights[influence];

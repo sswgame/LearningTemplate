@@ -32,9 +32,9 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV )
 float swFilterShadowAtlas( float2 uv, float depth, float texelUv, bool bClamp, float2 clampMin, float2 clampMax )
 {
     float lit = 0.0f;
-    [unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+    SW_UNROLL for ( int offsetY = -1; offsetY <= 1; ++offsetY )
     {
-        [unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+        SW_UNROLL for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
             const float2 tapUv = uv + float2( offsetX, offsetY ) * texelUv;
             lit += swSampleShadowComparison( g_ShadowMapIndex, bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
@@ -100,7 +100,7 @@ float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
         const uint  cascadeCount = (uint)( g_ShadowCascadeLayout.x + 0.5f );
         const float viewDepth    = mul( float4( worldPosition, 1.0f ), g_ViewProj ).w;
         uint        cascadeIndex = cascadeCount;
-        [unroll] for ( uint index = 0u; index < SW_SHADOW_CASCADE_MAX; ++index )
+        SW_UNROLL for ( uint index = 0u; index < SW_SHADOW_CASCADE_MAX; ++index )
         {
             if ( cascadeIndex == cascadeCount && index < cascadeCount && viewDepth <= swLoadShadowCascade( index ).w )
                 cascadeIndex = index;
@@ -291,7 +291,7 @@ float4 swSampleProbeVolume( SwLightData volume, float3 worldPosition, float3 nor
     float3       result     = float3( 0.0f, 0.0f, 0.0f );
     if ( bInside )
     {
-        [unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+        SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
         {
             const uint3  pick       = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
             const uint3  probeCell  = cell + pick * nextOffset;

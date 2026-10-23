@@ -687,7 +687,7 @@ float3 swModDisplaceLimits( float3 location, SwModifierContext context )
 float3 swModDeformPoint( uint kind, float3 location, float3 surfaceNormal, SwModifierContext context )
 {
     float3 result = location;
-    [branch] switch ( kind )
+    SW_BRANCH switch ( kind )
     {
         case SW_MODIFIER_BEND:
             result = swModBend( location, context );
@@ -838,7 +838,7 @@ void swApplyDeformProgram( uint programBase, inout float3 inoutPosition, inout f
         float3       moved    = location;
         float3       shifted1 = location;
         float3       shifted2 = location;
-        [loop] for ( uint sampleIndex = 0u; sampleIndex < 3u; ++sampleIndex )
+        SW_LOOP for ( uint sampleIndex = 0u; sampleIndex < 3u; ++sampleIndex )
         {
             const float3 offset   = sampleIndex == 1u ? tangent1 * step : ( sampleIndex == 2u ? tangent2 * step : float3( 0.0f, 0.0f, 0.0f ) );
             const float3 deformed = swModDeformPoint( kind, location + offset, surfaceNormal, context );

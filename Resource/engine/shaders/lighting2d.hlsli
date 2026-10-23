@@ -132,7 +132,7 @@ float swComputeShadow2D( float2 pixel, float2 lightPosition, float softness, uin
     const float  len     = length( toLight );
     const float2 across  = ( len > 1e-6f ) ? float2( -toLight.y, toLight.x ) / len : float2( 1.0f, 0.0f );
     float        lit     = 0.0f;
-    [unroll] for ( uint sampleIndex = 0u; sampleIndex < SW_LIGHT2D_SOFT_SHADOW_SAMPLES; ++sampleIndex )
+    SW_UNROLL for ( uint sampleIndex = 0u; sampleIndex < SW_LIGHT2D_SOFT_SHADOW_SAMPLES; ++sampleIndex )
     {
         const float offset = ( (float)sampleIndex / (float)( SW_LIGHT2D_SOFT_SHADOW_SAMPLES - 1u ) ) * 2.0f - 1.0f;
         lit += swIsShadowed2D( pixel, lightPosition + across * ( offset * softness ), lightCount ) ? 0.0f : 1.0f;

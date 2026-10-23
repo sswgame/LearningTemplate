@@ -70,7 +70,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
 
     float3 colorSum  = source;
     float  weightSum = 1.0f;
-    [unroll] for ( uint tapIndex = 0u; tapIndex < kTapCount; ++tapIndex )
+    SW_UNROLL for ( uint tapIndex = 0u; tapIndex < kTapCount; ++tapIndex )
     {
         const float2 offsetPixels = computeTapOffset( tapIndex ) * centerBlur;
         const float2 tapUv        = input.uv + offsetPixels * g_SourceTexel.xy;

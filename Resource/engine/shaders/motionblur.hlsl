@@ -40,7 +40,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
 
     // 선분은 이 픽셀을 가운데에 두고 앞뒤로 반씩 편다(지난 위치 쪽 · 앞으로 갈 쪽).
     float3 accumulated = 0.0f;
-    [unroll] for ( uint sampleIndex = 0u; sampleIndex < kMotionBlurSampleCount; ++sampleIndex )
+    SW_UNROLL for ( uint sampleIndex = 0u; sampleIndex < kMotionBlurSampleCount; ++sampleIndex )
     {
         const float ratio = ( float( sampleIndex ) + 0.5f ) / float( kMotionBlurSampleCount ) - 0.5f;
         accumulated += swSampleSource( input.uv + velocity * ratio ).rgb;

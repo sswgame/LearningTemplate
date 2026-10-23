@@ -68,7 +68,7 @@ static const float kMinOcclusionClipW = 1.0e-4f;
 
 bool isVisible( float3 center, float radius )
 {
-    [unroll] for ( uint planeIndex = 0; planeIndex < 6; ++planeIndex )
+    SW_UNROLL for ( uint planeIndex = 0; planeIndex < 6; ++planeIndex )
     {
         float planeDistance = dot( g_FrustumPlanes[planeIndex].xyz, center ) + g_FrustumPlanes[planeIndex].w;
         if ( planeDistance < -radius )
@@ -84,7 +84,7 @@ bool isOccluded( float3 center, float radius )
     float2 minUv    = float2( 1.0f, 1.0f );
     float2 maxUv    = float2( 0.0f, 0.0f );
     float  minDepth = 1.0f;
-    [unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+    SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
     {
         const float3 offset = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
         const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );

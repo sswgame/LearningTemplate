@@ -24,8 +24,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 플래그는 패스 상수라 분기가 고르다 — 한 번만 읽는다. early-return 이 아니라 값을 채우는 분기다(postchain 과 같은 이유).
     const bool bPointUpscale = ( g_Flags & SW_PASS_FLAG_POINT_UPSCALE ) != 0u;
     float3     color;
-    // 중괄호를 둔다 — clang-format 은 `[branch]` 를 속성으로 읽지 못해 중괄호 없는 else 를 앞줄에 붙인다.
-    [branch] if ( bPointUpscale )
+    SW_BRANCH if ( bPointUpscale )
     {
         color = swSampleSourcePoint( input.uv ).rgb;
     }

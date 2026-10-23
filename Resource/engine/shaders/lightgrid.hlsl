@@ -97,7 +97,7 @@ bool computeLightRange( GridView view, SwLightData light, out uint3 outMinimum, 
     bool        bFullScreen = false;
     float2      minNdc      = float2( maxFloat, maxFloat );
     float2      maxNdc      = float2( -maxFloat, -maxFloat );
-    [unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+    SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
     {
         const float3 offset        = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
         const float4 clip          = mul( float4( center + offset, 1.0f ), view.viewProj );

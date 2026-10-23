@@ -30,9 +30,9 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 이웃 범위 — 기록이 이번 그림에 없는 색(앞 그림 · 움직인 물체)이면 이 안으로 잘린다.
     float3 neighborMin = current;
     float3 neighborMax = current;
-    [unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+    SW_UNROLL for ( int offsetY = -1; offsetY <= 1; ++offsetY )
     {
-        [unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+        SW_UNROLL for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
             const float3 neighbor = swSampleSourcePoint( input.uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
             neighborMin           = min( neighborMin, neighbor );

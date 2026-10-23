@@ -25,7 +25,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const int kSampleCount = 4;
     float2    arrOffset[4] = {
         float2( -texel.x, 0 ), float2( texel.x, 0 ), float2( 0, -texel.y ), float2( 0, texel.y ) };
-    [unroll] for ( int sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
+    SW_UNROLL for ( int sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
     {
         float  sampleDepth     = swSampleDepth( input.uv + arrOffset[sampleIndex] * 2.0f ).r;
         float3 sampleNormal    = normalize( swSampleNormal( input.uv + arrOffset[sampleIndex] * 2.0f ).xyz * 2.0f - 1.0f );

@@ -117,6 +117,11 @@
 // ------------------------------------------------------------------------------
 #define SW_NUMTHREADS( x, y, z ) [numthreads( x, y, z )]
 
+// 반복 · 분기 힌트 — 맨 `[unroll]` 은 clang-format 이 다음 문장과 붙이므로 속성 매크로로 쓴다(Resource/.clang-format 의 AttributeMacros).
+#define SW_UNROLL [unroll]
+#define SW_LOOP   [loop]
+#define SW_BRANCH [branch]
+
 // ------------------------------------------------------------------------------
 // 4) 텍스처 / 샘플러 — 에뮬 백엔드(DX11/GL)의 고정 슬롯 (binding.hlsli 가 쓴다). 네이티브 bindless 텍스처 배열은
 //    binding.hlsli 가 SW_SPACE_BINDLESS_TEX / SW_VK_TEXTURE_SET 으로 직접 선언한다.
