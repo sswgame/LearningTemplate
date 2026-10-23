@@ -51,7 +51,9 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VfxArgsRW, 2 );
 #endif
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_VfxParamBase; // 이 방출기 매개변수 구간의 첫 행
+};
 SW_ROOT_CONSTANTS_END
 
 groupshared uint s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT];

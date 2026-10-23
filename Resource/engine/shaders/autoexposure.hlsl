@@ -7,12 +7,14 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_AutoExposureSource;   // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     uint  g_AutoExposureHistory;  // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     float g_AutoExposureMinEv;    // 목표 EV 의 하한
     float g_AutoExposureMaxEv;    // 목표 EV 의 상한
     float g_AutoExposureRateUp;   // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
     float g_AutoExposureRateDown; // 장면이 어두워질 때 다가가는 비율(0..1)
+};
 SW_ROOT_CONSTANTS_END
 
 static const uint  kAutoExposureGrid = 32u;     // 화면을 32 x 32 칸으로 나눠 칸 가운데 텍셀 하나씩 읽는다(1024 번 — 한 픽셀이 다 읽는다)

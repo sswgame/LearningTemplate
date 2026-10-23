@@ -6,12 +6,14 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_OcclusionDepthIndex; // 깊이 히스토리의 RW 텍스처 번호(네이티브) · RW 슬롯 서수(에뮬 — 0)
     uint g_OcclusionDepthWidth; // 깊이 히스토리 크기(px)
     uint g_OcclusionDepthHeight;
     uint g_OcclusionColumnCount; // 타일 격자
     uint g_OcclusionRowCount;
     uint g_OcclusionTileSize; // 타일 한 변(px)
+};
 SW_ROOT_CONSTANTS_END
 
 SW_DECLARE_RW_STRUCTURED_BUFFER( float, g_OcclusionTilesRW, 0 );

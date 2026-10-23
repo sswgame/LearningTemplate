@@ -7,7 +7,9 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_DepthHistorySource; // 원본 깊이의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+};
 SW_ROOT_CONSTANTS_END
 
 struct PSInput

@@ -73,41 +73,31 @@
 // ------------------------------------------------------------------------------
 // 3-1) 루트/푸시 상수 — setComputeRootConstants 가 채우는 16 dword. 블록 이름은 SwRootConstants 로 고정(계약 검증 키).
 //      DX12 b0 space2 (32비트 루트 상수), Vulkan 푸시 상수, DX11/GL 은 b SW_SLOT_ROOT_CB_EMUL 상수버퍼 에뮬.
-//      용법: SW_ROOT_CONSTANTS_BEGIN  uint g_Target; uint g_Width;  SW_ROOT_CONSTANTS_END  ...  SW_ROOT( g_Target )
-//      Vulkan 은 [[vk::push_constant]] 가 구조체 전역에만 붙어 필드가 전역 이름이 아니다 — 그래서 SW_ROOT() 로 읽는다.
+//      용법(중괄호는 셰이더가 쓴다 — 매크로는 블록의 머리와 꼬리만 낸다):
+//          SW_ROOT_CONSTANTS_BEGIN
+//          {
+//              uint g_Target;
+//          };
+//          SW_ROOT_CONSTANTS_END
+//          ...  SW_ROOT( g_Target )
+//      Vulkan 은 [[vk::push_constant]] 가 구조체 전역에만 붙어 필드가 전역 이름이 아니다 — 그래서 SW_ROOT() 로 읽고, 꼬리가 그 전역을 선언한다.
+//      매크로 본문에 짝 없는 중괄호를 두지 않는다 — clang-format 이 `#define` 을 여러 줄로 가르고 쓰는 쪽도 블록으로 읽지 못한다.
 // ------------------------------------------------------------------------------
 #if defined( OPENGL )
-    #define SW_ROOT_CONSTANTS_BEGIN                                                                                        \
-        [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
-    #define SW_ROOT_CONSTANTS_BEGIN \
-        struct SwRootConstantsData  \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;                         \
-        [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
-    #define SW_ROOT( field ) SwRootConstants.field
+    #define SW_ROOT_CONSTANTS_BEGIN struct SwRootConstantsData
+    #define SW_ROOT_CONSTANTS_END   [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
+    #define SW_ROOT( field )        SwRootConstants.field
 #elif defined( DX12 )
-    #define SW_ROOT_CONSTANTS_BEGIN                                                                           \
-        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #else
-    #define SW_ROOT_CONSTANTS_BEGIN                                             \
-        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #endif
 

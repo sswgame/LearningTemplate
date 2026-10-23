@@ -32,7 +32,9 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_VfxArgs, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_VfxInstancesRW, 0 );
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_VfxMeshParamBase; // 이 방출기 메시 구간의 첫 행
+};
 SW_ROOT_CONSTANTS_END
 
 uint loadArgsWord( uint word )

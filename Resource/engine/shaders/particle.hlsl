@@ -19,6 +19,7 @@ SW_DECLARE_STRUCTURED_BUFFER( GPUParticle, g_SwParticles, SW_SLOT_PASS_SRV );
 
 // 칸 순서는 C++ VfxParticleRenderer 의 kRoot* 와 같다. 스칼라만 둔다 — float4 를 두면 DX12 루트 상수 · Vulkan 푸시 상수 · UBO 에뮬의 채움 규칙이 갈린다.
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_SwParticleBase;      // 이 방출기의 첫 입자 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
     uint  g_SwParticleTexture;   // DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수 0(머티리얼 텍스처 슬롯 t16)
     uint  g_SwParticleFlags;     // kParticleFlag* 비트(C++ VfxParticleRenderer 의 kFlag* 와 같다)
@@ -35,6 +36,7 @@ SW_ROOT_CONSTANTS_BEGIN
     float g_SwParticleColumn2Y;
     float g_SwParticleColumn2Z;
     float g_SwParticleColumn2W;
+};
 SW_ROOT_CONSTANTS_END
 
 static const uint kParticleFlagAdditive = 1u; // 더하기 — 알파를 0 으로 낸다

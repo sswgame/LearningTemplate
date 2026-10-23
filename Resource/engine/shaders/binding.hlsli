@@ -155,11 +155,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 // ------------------------------------------------------------------------------
 #if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
 SW_ROOT_CONSTANTS_BEGIN
+{
     // 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
     // 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
     // 인스턴스 슬롯 스트림(SwVertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
     // 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
     uint g_SwMaterialCount;
+};
 SW_ROOT_CONSTANTS_END
     #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
 #else

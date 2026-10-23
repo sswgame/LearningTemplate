@@ -35,6 +35,7 @@ struct CanvasQuad
 SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_PASS_SRV );
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_SwCanvasQuadBase; // 이 일괄의 첫 사각형 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않아 시작을 여기로 받는다
     uint  g_SwCanvasTexture0; // 일괄 텍스처 넷 — DX12/Vulkan 은 bindless 전역 번호, DX11/GL 은 서수(t16..t19)
     uint  g_SwCanvasTexture1;
@@ -43,6 +44,7 @@ SW_ROOT_CONSTANTS_BEGIN
     float g_SwCanvasTargetWidth; // 대상 픽셀 크기
     float g_SwCanvasTargetHeight;
     uint  g_SwCanvasColorVision; // 색각 보정 방식(0 끔 · 1 적색약 · 2 녹색약 · 3 청색약) — 주 출력만, 렌더 텍스처 대상은 0
+};
 SW_ROOT_CONSTANTS_END
 
 struct PSInput

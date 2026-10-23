@@ -19,8 +19,8 @@ Scripts/lint/gate/CheckShaderConventions.py
 - 전역 리소스 · cbuffer 멤버는 `g_` + `PascalCase` — C++ 가 문자열로 묶는 이름이라 **고치지 않고**, 컨테이너 · 단수 · 줄임말 규칙에서도 뺀다.
 
 **정규식으로 본다.** HLSL 파서를 두지 않는다 — 셰이더 문법은 작고, 이 게이트가 보는 것은 선언의 이름뿐이다. 먼저 주석 · 문자열을
-지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 짝 없는 `{`
-(`SW_ROOT_CONSTANTS_BEGIN`)가 파일 나머지를 "구조체 안" 으로 만들어 함수 지역 변수를 필드로 읽기 때문이다.
+지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 중괄호가
+깊이를 흔들지 않게 한다. 루트 상수 블록(`SW_ROOT_CONSTANTS_BEGIN { … };`)은 중괄호를 셰이더가 쓰므로 cbuffer 본문으로 읽는다.
 
 규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckShaderConventions.toml` 에 있다.
 """
@@ -107,7 +107,7 @@ kDirectiveRe = re.compile(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*", re.MULTILINE)
 kDeclareMacroRe = re.compile(r"\b(?P<macro>SW_DECLARE_\w+)\s*\((?P<args>[^()]*(?:\([^()]*\)[^()]*)*)\)")
 kGuardRe = re.compile(r"^[ \t]*#[ \t]*ifndef[ \t]+(?P<name>\w+)[ \t]*\n[ \t]*#[ \t]*define[ \t]+(?P=name)\b", re.MULTILINE)
 kStructBodyRe = re.compile(r"\bstruct\s+\w+\s*\{|\bSW_MATERIAL_BEGIN\s*\{")
-kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([^()]*\)\s*\{")
+kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([^()]*\)\s*\{|\bSW_ROOT_CONSTANTS_BEGIN\s*\{")
 
 
 def computeDepthMapInternal(code: str) -> list[int]:
@@ -406,6 +406,7 @@ class CheckShaderConventionsGate(LintGate):
         {"name": "g_ 아닌 전역", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 전역 · 루트 상수 'instanceIds' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "StructuredBuffer<uint> instanceIds : register( t0 );\n"}},
         {"name": "g_ 아닌 매크로 선언 리소스", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 전역 리소스 'instanceIds' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_DECLARE_STRUCTURED_BUFFER( uint, instanceIds, 0 );\n"}},
         {"name": "g_ 아닌 cbuffer 멤버", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 cbuffer 멤버 'tintColor' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_DECLARE_CBUFFER( ProbeParams, 0 )\n{\n    float4 tintColor;\n};\n"}},
+        {"name": "g_ 아닌 루트 상수 멤버", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 cbuffer 멤버 'targetIndex' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_ROOT_CONSTANTS_BEGIN\n{\n    uint targetIndex;\n};\nSW_ROOT_CONSTANTS_END\n"}},
         {"name": "모르는 선언 매크로", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 모르는 선언 매크로 'SW_DECLARE_APPEND_BUFFER'", "files": {kProbeSource: "SW_DECLARE_APPEND_BUFFER( uint, g_ProbeList, 0 );\n"}},
         {"name": "include 가드 이름", "expectedViolation": "Resource/engine/shaders/probe.hlsli:1 include 가드 'SW_PROBE_HLSLI' 는 'SW_ENGINE_PROBE_HLSLI' 여야 합니다(SW_<도메인>_<파일>_HLSLI)", "files": {kProbeHeader: "#ifndef SW_PROBE_HLSLI\n#define SW_PROBE_HLSLI\n#endif\n"}},
     ]

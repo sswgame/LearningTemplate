@@ -5,10 +5,12 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_TargetIndex;
     uint g_Width;
     uint g_Height;
     uint g_Pad0;
+};
 SW_ROOT_CONSTANTS_END
 
 SW_NUMTHREADS( 8, 8, 1 )

@@ -22,6 +22,7 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_FsrSource;     // 원본(EASU: 배율 크기 장면, RCAS: 중간 RT)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     float g_FsrInputWidth; // EASU: 원본 픽셀 크기
     float g_FsrInputHeight;
@@ -30,6 +31,7 @@ SW_ROOT_CONSTANTS_BEGIN
     float g_FsrViewportX; // RCAS: Present 대상에서 뷰포트 왼쪽 위(px) — 대상 픽셀 위치를 중간 RT 픽셀로 옮긴다
     float g_FsrViewportY;
     float g_FsrSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness)
+};
 SW_ROOT_CONSTANTS_END
 
 /// RCAS 의 엽(lobe) 상한이다(AMD FSR_RCAS_LIMIT — 0.25 - 1/16).

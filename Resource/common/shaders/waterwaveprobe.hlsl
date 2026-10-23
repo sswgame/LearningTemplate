@@ -7,6 +7,7 @@
 #include "gerstner.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint   g_TargetIndex;
     uint   g_SampleCount;
     float  g_Time;
@@ -14,6 +15,7 @@ SW_ROOT_CONSTANTS_BEGIN
     float4 g_Wave0;
     float4 g_Wave1;
     float4 g_Wave2;
+};
 SW_ROOT_CONSTANTS_END
 
 /** @brief 16 비트 하나를 G(위 바이트) · A(아래 바이트)에 싣는다. */
