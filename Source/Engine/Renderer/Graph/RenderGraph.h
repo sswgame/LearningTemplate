@@ -331,6 +331,10 @@ namespace sw
          *          택한다(더 강한 상태다). 이미 그 상태인 자원은 아예 넣지 않는다.
          */
         void appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node );
+        /** @brief 자원 하나를 @p desired 상태로 요구합니다. 같은 자원을 여러 패스가 요구해도 레벨의 배리어는 한 번만 냅니다(읽기와 쓰기가 겹치면 쓰기를 남깁니다). */
+        void requestBarrier( RenderGraphExecutionContext& context, hashed_string resource, RenderGraphResourceState desired );
+        /** @brief 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
+        void touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten );
         /** @brief 추려 낸 배리어를 레벨 콜백에 넘깁니다. 콜백이 없거나 낼 것이 없으면 아무 일도 하지 않습니다. */
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 자원과 쓰인 적 없는 자원을 로그로 알립니다. */

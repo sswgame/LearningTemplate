@@ -87,5 +87,7 @@ namespace sw
         static void populateHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder );
         /** @brief 연결 목록을 A < B, A 와 B 순으로 정렬하고 같은 쌍을 합칩니다(넓이를 더합니다). */
         static void normalizeLinks( vector<FractureLink>& inoutListLink );
+        /** @brief 검사 실패를 알립니다. @p pOutError 가 있으면 이유를 담고, 언제나 false 를 돌려줍니다(`return reportInvalid(...)` 꼴로 씁니다). */
+        static bool reportInvalid( string* pOutError, const utf8* pReason );
     };
 } // namespace sw

@@ -14,6 +14,38 @@
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 팔레트 한 벌(과 모프 가중치)을 행 · 가중치 버퍼 끝에 싣고 스냅샷에 항목을 더합니다.
+         * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
+         */
+        void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const Mesh* pMesh, const vector<float4x4>& listPalette,
+                            const vector<float32>* pListMorphWeight )
+        {
+            GPUSkinPalette entry{};
+            entry._pMesh     = pMesh;
+            entry._firstRow  = static_cast<uint32>( inoutListRow.size() );
+            entry._boneCount = static_cast<uint32>( listPalette.size() );
+            if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
+            {
+                entry._firstMorphWeight = static_cast<uint32>( inoutListWeight.size() );
+                entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
+                for ( const float32 weight : *pListMorphWeight )
+                {
+                    inoutListWeight.push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
+                }
+            }
+            for ( const float4x4& matrix : listPalette )
+            {
+                inoutListRow.push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
+                inoutListRow.push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
+                inoutListRow.push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
+            }
+            inoutSnapshot._listSkinPalette.push_back( entry );
+        }
+    } // namespace
+
     void GPUSkinPaletteCollector::collect( const AnimationSystem& animation, GPUSceneSnapshot& inoutSnapshot )
     {
         if ( animation.getUnitCount() == 0 && inoutSnapshot._listSkinPalette.empty() )
@@ -23,30 +55,6 @@ namespace sw
         inoutSnapshot._listSkinPalette.clear();
         shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
         shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
-        // 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
-        auto appendPalette = [&inoutSnapshot, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
-        {
-            GPUSkinPalette entry{};
-            entry._pMesh     = pMesh;
-            entry._firstRow  = static_cast<uint32>( listRow->size() );
-            entry._boneCount = static_cast<uint32>( listPalette.size() );
-            if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
-            {
-                entry._firstMorphWeight = static_cast<uint32>( listWeight->size() );
-                entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
-                for ( const float32 weight : *pListMorphWeight )
-                {
-                    listWeight->push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
-                }
-            }
-            for ( const float4x4& matrix : listPalette )
-            {
-                listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
-                listRow->push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
-                listRow->push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
-            }
-            inoutSnapshot._listSkinPalette.push_back( entry );
-        };
         listRow->reserve( _paletteRowCountHint );
         // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다. 유닛 하나가 빠지면(시체를 정리함) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
         // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬이며 바인드 포즈) 한 번 그려진다.
@@ -59,13 +67,13 @@ namespace sw
             const Mesh* pMesh = pUnit->getRawMesh();
             if ( pMesh == nullptr || pMesh->hasSkin() == false )
                 continue;
-            appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
+            appendPalette( inoutSnapshot, *listRow, *listWeight, pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
         }
         // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
+                appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
         }
         _paletteRowCountHint               = listRow->size();
         inoutSnapshot._pListSkinPaletteRow = std::move( listRow );

@@ -268,6 +268,36 @@ namespace sw
                 return fraction < 0.0f ? 0.0f : ( fraction > 1.0f ? 1.0f : fraction );
             }
 
+            /** @brief 슬롯 하나의 누름 · 뗌 단계를 씁니다. 액션의 단추면 액션 단계로, 글로 못 쓰는 슬롯이면 건너뛴 이벤트로 셉니다. */
+            static void appendSlotStep( string& outBody, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult, const utf8* pKind, const InputSlot& slot )
+            {
+                string slotText;
+                // 액션의 단추면 액션 단계로 쓴다 — 키 배치를 바꿔도 녹화가 산다.
+                const hashed_string* pAction     = settings._pInputMap != nullptr ? findActionOfSlot( *settings._pInputMap, slot ) : nullptr;
+                const utf8*          pDeviceName = toDeviceName( slot._deviceKind );
+                if ( pAction != nullptr && pDeviceName != nullptr )
+                {
+                    outBody += string_view{ pKind } == "Press" ? "<ActionPress name=\"" : "<ActionRelease name=\"";
+                    appendEscaped( outBody, pAction->view() );
+                    outBody += "\" device=\"";
+                    outBody += pDeviceName;
+                    outBody += "\"/>";
+                    ++outResult._writtenStepCount;
+                    return;
+                }
+                if ( tryMakeSlotText( slot, slotText ) == false )
+                {
+                    ++outResult._skippedEventCount;
+                    return;
+                }
+                outBody += "<";
+                outBody += pKind;
+                outBody += " slot=\"";
+                appendEscaped( outBody, slotText );
+                outBody += "\"/>";
+                ++outResult._writtenStepCount;
+            }
+
             /** @brief 한 프레임의 이벤트를 단계 글로 씁니다. 쓴 단계 수를 더하고, 못 쓴 이벤트를 셉니다. */
             static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
                                           ScenarioRecordOutput& outResult )
@@ -281,35 +311,6 @@ namespace sw
                 bool    bHasWheel    = false;
                 float32 wheelX       = 0.0f;
                 float32 wheelY       = 0.0f;
-                string  slotText;
-
-                const auto appendSlot = [&]( const utf8* pKind, const InputSlot& slot )
-                {
-                    // 액션의 단추면 액션 단계로 쓴다 — 키 배치를 바꿔도 녹화가 산다.
-                    const hashed_string* pAction     = settings._pInputMap != nullptr ? findActionOfSlot( *settings._pInputMap, slot ) : nullptr;
-                    const utf8*          pDeviceName = toDeviceName( slot._deviceKind );
-                    if ( pAction != nullptr && pDeviceName != nullptr )
-                    {
-                        outBody += string_view{ pKind } == "Press" ? "<ActionPress name=\"" : "<ActionRelease name=\"";
-                        appendEscaped( outBody, pAction->view() );
-                        outBody += "\" device=\"";
-                        outBody += pDeviceName;
-                        outBody += "\"/>";
-                        ++outResult._writtenStepCount;
-                        return;
-                    }
-                    if ( tryMakeSlotText( slot, slotText ) == false )
-                    {
-                        ++outResult._skippedEventCount;
-                        return;
-                    }
-                    outBody += "<";
-                    outBody += pKind;
-                    outBody += " slot=\"";
-                    appendEscaped( outBody, slotText );
-                    outBody += "\"/>";
-                    ++outResult._writtenStepCount;
-                };
 
                 for ( const RawInputEvent& event : frame._listRawEvent )
                 {
@@ -320,12 +321,12 @@ namespace sw
                         case RawInputEventType::KeyDown:
                         {
                             if ( event._bRepeat == SW_FALSE )
-                                appendSlot( "Press", InputSlot::fromKey( event._payload._keyData._key ) );
+                                appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
                         case RawInputEventType::KeyUp:
                         {
-                            appendSlot( "Release", InputSlot::fromKey( event._payload._keyData._key ) );
+                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
                         case RawInputEventType::MouseButtonDown:
@@ -335,22 +336,22 @@ namespace sw
                             // 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다. 건너뛰면 두 번째 누름이 사라진다.
                             // 재생은 원시 Down 둘을 낸다. DoubleClick 이벤트 자체를 읽는 쪽은 없다 — 입력 관리자는 Down 으로 다루고, 입력 맵(DoubleClicked)과
                             // ImGui 는 누름 간격으로 스스로 판정한다. 그 이벤트를 읽는 코드가 생기면 VirtualInputScript 에 DoubleClick 단계를 더한다.
-                            appendSlot( "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
+                            appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
                         case RawInputEventType::MouseButtonUp:
                         {
-                            appendSlot( "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
+                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
                         case RawInputEventType::GamepadButtonDown:
                         {
-                            appendSlot( "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
+                            appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
                         case RawInputEventType::GamepadButtonUp:
                         {
-                            appendSlot( "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
+                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
                         case RawInputEventType::MouseMove:

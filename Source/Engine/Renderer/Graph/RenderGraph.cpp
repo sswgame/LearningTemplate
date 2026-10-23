@@ -692,40 +692,40 @@ namespace sw
 
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
-        // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
-        // 여러 번 받지 않게 한다).
-        auto request = [this, &context]( hashed_string resource, RenderGraphResourceState desired )
-        {
-            const RenderGraphResourceState before = context.transitionTo( resource, desired );
-            if ( before == desired )
-                return; // 이미 그 상태다. 낼 배리어가 없다.
-
-            const auto it = _mapLevelBarrierIndex.find( resource );
-            if ( it != _mapLevelBarrierIndex.end() )
-            {
-                // 같은 레벨에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
-                // 그래도 들어오면 더 강한 쪽(쓰기)을 남긴다.
-                if ( desired == RenderGraphResourceState::Write )
-                    _listLevelBarrier[it->second]._after = desired;
-                return;
-            }
-
-            RenderGraphBarrier barrier{};
-            barrier._resource = resource;
-            barrier._before   = before;
-            barrier._after    = desired;
-            _mapLevelBarrierIndex.emplace( resource, _listLevelBarrier.size() );
-            _listLevelBarrier.push_back( barrier );
-        };
-
         for ( const hashed_string& input : node._listInput )
         {
-            request( input, RenderGraphResourceState::Read );
+            requestBarrier( context, input, RenderGraphResourceState::Read );
         }
         for ( const hashed_string& output : node._listOutput )
         {
-            request( output, RenderGraphResourceState::Write );
+            requestBarrier( context, output, RenderGraphResourceState::Write );
         }
+    }
+
+    void RenderGraph::requestBarrier( RenderGraphExecutionContext& context, hashed_string resource, RenderGraphResourceState desired )
+    {
+        // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
+        // 여러 번 받지 않게 한다).
+        const RenderGraphResourceState before = context.transitionTo( resource, desired );
+        if ( before == desired )
+            return; // 이미 그 상태다. 낼 배리어가 없다.
+
+        const auto it = _mapLevelBarrierIndex.find( resource );
+        if ( it != _mapLevelBarrierIndex.end() )
+        {
+            // 같은 레벨에서 읽기와 쓰기를 함께 요구하는 일은 compile() 이 갈라 놓아 생기지 않는다.
+            // 그래도 들어오면 더 강한 쪽(쓰기)을 남긴다.
+            if ( desired == RenderGraphResourceState::Write )
+                _listLevelBarrier[it->second]._after = desired;
+            return;
+        }
+
+        RenderGraphBarrier barrier{};
+        barrier._resource = resource;
+        barrier._before   = before;
+        barrier._after    = desired;
+        _mapLevelBarrierIndex.emplace( resource, _listLevelBarrier.size() );
+        _listLevelBarrier.push_back( barrier );
     }
 
     void RenderGraph::issueBarriers( IRHICommandList* pCmdList )
@@ -741,34 +741,34 @@ namespace sw
         _levelPrologue( levelContext );
     }
 
+    void RenderGraph::touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten )
+    {
+        const auto it = _mapResourceLifetimeIndex.find( resource );
+        if ( it != _mapResourceLifetimeIndex.end() )
+        {
+            RenderGraphResourceLifetime& life = _listResourceLifetime[it->second];
+            life._lastPassIndex               = passIndex;
+            if ( bWritten )
+                life._bWritten = true;
+            else
+                life._bRead = true;
+            return;
+        }
+
+        RenderGraphResourceLifetime life{};
+        life._name           = resource;
+        life._firstPassIndex = passIndex;
+        life._lastPassIndex  = passIndex;
+        life._bWritten       = bWritten;
+        life._bRead          = bWritten == false;
+        _mapResourceLifetimeIndex.emplace( resource, _listResourceLifetime.size() );
+        _listResourceLifetime.push_back( life );
+    }
+
     void RenderGraph::computeResourceLifetimes()
     {
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();
-
-        auto touch = [this]( hashed_string resource, size_t passIndex, bool bWritten )
-        {
-            const auto it = _mapResourceLifetimeIndex.find( resource );
-            if ( it != _mapResourceLifetimeIndex.end() )
-            {
-                RenderGraphResourceLifetime& life = _listResourceLifetime[it->second];
-                life._lastPassIndex               = passIndex;
-                if ( bWritten )
-                    life._bWritten = true;
-                else
-                    life._bRead = true;
-                return;
-            }
-
-            RenderGraphResourceLifetime life{};
-            life._name           = resource;
-            life._firstPassIndex = passIndex;
-            life._lastPassIndex  = passIndex;
-            life._bWritten       = bWritten;
-            life._bRead          = bWritten == false;
-            _mapResourceLifetimeIndex.emplace( resource, _listResourceLifetime.size() );
-            _listResourceLifetime.push_back( life );
-        };
 
         for ( size_t passIndex = 0; passIndex < _listCompiledExecutionOrder.size(); ++passIndex )
         {
@@ -778,11 +778,11 @@ namespace sw
             const RenderGraphNode& node = _listNode[it->second];
             for ( const hashed_string& input : node._listInput )
             {
-                touch( input, passIndex, false );
+                touchResourceLifetime( input, passIndex, false );
             }
             for ( const hashed_string& output : node._listOutput )
             {
-                touch( output, passIndex, true );
+                touchResourceLifetime( output, passIndex, true );
             }
         }
 
