@@ -423,6 +423,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
   손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
+  "다르다 · 같다" 는 기준 캡처를 같은 시나리오에서 찍어 `differingFraction`(화소 비율)으로 쓴다 — `differentFrom`(평균 차)은 `near` 만 받는다.
   문서를 여는 시나리오는 `WaitUntil` 이 기본 문서와 **구별되는** 값을 기다려야 한다 — 기본 문서와 같은 값을 기다리면 파일이 뒤늦게 열려 클릭이 어긋난다.
   키 `Tap` 은 사람의 누름처럼 여러 프레임(`hold="6"`)을 누른다 — 한 프레임짜리 누름은 UI 층이 켜지기 전에 떼어져, 누른 키를 같은 프레임 뒤에 읽는 결함(일시정지를 연 Esc 가 Back 으로 읽혀 메뉴가 바로 닫힘, 2026-10-20)을 가린다.
 - **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,

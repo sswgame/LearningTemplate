@@ -11,7 +11,7 @@
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
 	<At frame="5"><DevCommand line="layout.reset"/></At>
 	<!-- 두 뷰 RT 를 같은 배치에서 새로 짓게 창 크기를 크게 두 번 바꾼다 — RT 는 1 픽셀 떨림을 무시하므로(EditorViewTargetUtil::needsResize) 앞 배치의 RT 가
-	     1 픽셀 다른 채 남으면 두 스크린샷 크기가 달라 differentFrom 이 비교하지 못한다 -->
+	     1 픽셀 다른 채 남으면 두 스크린샷 크기가 달라 화소 비교(differingFraction)를 하지 못한다 -->
 	<At frame="10"><ResizeWindow width="1440" height="810"/></At>
 	<At frame="20"><ResizeWindow width="1600" height="900"/></At>
 
@@ -45,7 +45,7 @@
 	</At>
 	<At frame="145">
 		<ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02"/>
-		<ExpectImage file="gameview.ppm" metric="differentFrom" reference="sceneview.ppm" atLeast="0.01"/>
+		<ExpectImage file="gameview.ppm" metric="differingFraction" reference="sceneview.ppm" atLeast="0.1"/>
 	</At>
 
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->

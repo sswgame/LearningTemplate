@@ -279,7 +279,7 @@ namespace sw
                     return false;
                 if ( AutomationImageMetric::tryParseKind( *pMetric, outArgs._metric ) == false )
                 {
-                    outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom)";
+                    outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom · differingFraction)";
                     return false;
                 }
                 const string* pRegion = step.findAttribute( "region" );
@@ -607,6 +607,12 @@ namespace sw
                 if ( AutomationImageMetric::usesReference( args._metric ) != ( step.findAttribute( "reference" ) != nullptr ) )
                 {
                     outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" or \"differingFraction\" (and only with them)";
+                    return false;
+                }
+                // 평균 차의 하한 · 상한은 서로 다른 화면이 같은 평균을 내면 통과한다 — "다르다 · 같다" 는 화소를 세는 differingFraction 으로만 쓴다.
+                if ( args._metric == AutomationImageMetricKind::DifferentFrom && step.findAttribute( "near" ) == nullptr )
+                {
+                    outError = step.describe() + ": differentFrom is an amount (near only); use differingFraction with atLeast / atMost to say \"differs\" or \"same\"";
                     return false;
                 }
                 return true;

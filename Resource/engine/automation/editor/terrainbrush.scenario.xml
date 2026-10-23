@@ -44,7 +44,7 @@
 		<Expect probe="Editor.UndoCount" atLeast="1"/>
 		<Screenshot file="terrain_painted.ppm"/>
 	</At>
-	<At frame="171"><ExpectImage file="terrain_painted.ppm" metric="differentFrom" reference="terrain_before.ppm" atLeast="0.001"/></At>
+	<At frame="171"><ExpectImage file="terrain_painted.ppm" metric="differingFraction" reference="terrain_before.ppm" atLeast="0.01"/></At>
 
 	<!-- ③ 되돌리기 -->
 	<At frame="180"><EditorKey key="Ctrl+Z"/></At>
@@ -58,7 +58,7 @@
 		<Expect probe="Editor.TerrainBrushStrokeCount" equals="2"/>
 		<Screenshot file="terrain_raised.ppm"/>
 	</At>
-	<At frame="281"><ExpectImage file="terrain_raised.ppm" metric="differentFrom" reference="terrain_undone.ppm" atLeast="0.003"/></At>
+	<At frame="281"><ExpectImage file="terrain_raised.ppm" metric="differingFraction" reference="terrain_undone.ppm" atLeast="0.05"/></At>
 
 	<!-- ⑤ 스무드 -->
 	<At frame="290"><DevCommand line="terrain.brush smooth 25 60"/></At>
@@ -67,7 +67,7 @@
 		<Expect probe="Editor.TerrainBrushStrokeCount" equals="3"/>
 		<Screenshot file="terrain_smoothed.ppm"/>
 	</At>
-	<At frame="351"><ExpectImage file="terrain_smoothed.ppm" metric="differentFrom" reference="terrain_raised.ppm" atLeast="0.0002"/></At>
+	<At frame="351"><ExpectImage file="terrain_smoothed.ppm" metric="differingFraction" reference="terrain_raised.ppm" atLeast="0.005"/></At>
 
 	<!-- ⑥ 구멍 내기 -->
 	<At frame="360"><DevCommand line="terrain.brush hole 18 1"/></At>
@@ -76,7 +76,7 @@
 		<Expect probe="Editor.TerrainBrushStrokeCount" equals="4"/>
 		<Screenshot file="terrain_holes.ppm"/>
 	</At>
-	<At frame="421"><ExpectImage file="terrain_holes.ppm" metric="differentFrom" reference="terrain_smoothed.ppm" atLeast="0.002"/></At>
+	<At frame="421"><ExpectImage file="terrain_holes.ppm" metric="differingFraction" reference="terrain_smoothed.ppm" atLeast="0.01"/></At>
 
 	<!-- ⑦ 크기 바꾸기 -->
 	<At frame="430"><Expect probe="Editor.TerrainResolution" equals="257"/><DevCommand line="terrain.resize 129"/></At>
