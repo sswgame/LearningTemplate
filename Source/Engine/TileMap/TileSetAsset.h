@@ -136,6 +136,8 @@ namespace sw
     private:
         /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 @p bRequired 일 때 오류입니다. */
         [[nodiscard]] bool parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
+        /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(이름이 겹치는지 이 타일셋의 지금 브러시와 견준다). 잘못되었으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush ) const;
 
         string            _atlasPath;
         string            _normalAtlasPath;
