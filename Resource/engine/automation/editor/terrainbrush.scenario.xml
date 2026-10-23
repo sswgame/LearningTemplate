@@ -49,7 +49,7 @@
 	<!-- ③ 되돌리기 -->
 	<At frame="180"><EditorKey key="Ctrl+Z"/></At>
 	<At frame="210"><Screenshot file="terrain_undone.ppm"/></At>
-	<At frame="211"><ExpectImage file="terrain_undone.ppm" metric="differentFrom" reference="terrain_before.ppm" atMost="0.02"/></At>
+	<At frame="211"><ExpectImage file="terrain_undone.ppm" metric="differingFraction" reference="terrain_before.ppm" atMost="0.001"/></At>
 
 	<!-- ④ 높이 올리기 -->
 	<At frame="220"><DevCommand line="terrain.brush raise 15 120"/></At>

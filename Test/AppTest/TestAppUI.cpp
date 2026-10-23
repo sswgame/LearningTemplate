@@ -25,7 +25,7 @@ SW_TEST_REQUIRES_HOST( AppUITest, "launches App.exe on every RHI backend and rea
 // 엔진 시나리오 `engine/automation/uidemo.scenario.xml`(가상 입력 exclusive — 사람 마우스가 호버를 바꾸지 않는다)을 백엔드마다 돌려
 // 스크린샷(PPM)과 레이아웃 덤프(`UILayoutDump` 단계 — 위젯 이름 → 물리 픽셀 사각형)를 받는다. 덤프로 견본의 사각형을 찾아
 // (1) 알려진 영역을 단언하고 — 주 단추 가운데는 강조색(파랑), 둥근 상자 모서리 바깥은 패널 바탕, 자르기 상자 밖은 잘린 빨강이 아니다 —
-// (2) 영역마다 평균 색 · 가장자리 수를 첫 백엔드와 견준다(평균 차 ≤ 0.02, 가장자리 수 차 ≤ 2 %). 픽셀 단언은 색 차 · 대소로 본다(톤맵 · 클리어 색에 버틴다).
+// (2) 영역마다 첫 백엔드와 화소 단위로 견준다(다른 화소 비율 ≤ kMaxDifferingFraction, 가장자리 수 차 ≤ 2 %). 알려진 영역의 단언은 색 차 · 대소로 본다(톤맵 · 클리어 색에 버틴다).
 // 종료 코드 13 · 77 은 건너뛴다(AppScenarioTest 와 같은 규칙).
 // ------------------------------------------------------------------------------
 
@@ -56,12 +56,14 @@ namespace
 
     struct AppUITestInternal
     {
-        static constexpr const utf8* kScenarioPath    = "engine/automation/uidemo.scenario.xml";
-        static constexpr const utf8* kOutputFolder    = "Saved/Automation/engine.uidemo";
-        static constexpr float32     kMeanTolerance   = 0.02f; ///< 백엔드 사이 영역 평균 차(채널마다, 0..1)
-        static constexpr float32     kEdgeTolerance   = 0.02f; ///< 백엔드 사이 가장자리 수 차(비율)
-        static constexpr float32     kEdgeThreshold   = 0.12f; ///< 이웃 휘도 차가 이보다 크면 가장자리 픽셀
-        static constexpr const utf8* kArrRegionName[] = { "DemoPanel", "Start", "RoundBox", "ClipBox", "NineSlice", "RtlSample" };
+        static constexpr const utf8* kScenarioPath = "engine/automation/uidemo.scenario.xml";
+        static constexpr const utf8* kOutputFolder = "Saved/Automation/engine.uidemo";
+        /// 백엔드 사이 영역에서 다른 화소(`AutomationImageMetric::kDifferingMinDistance` 이상)의 비율 상한 — 영역 평균 색 차이는 글자 몇 개 ·
+        /// 모서리 하나가 틀린 것을 영역 넓이로 나눠 묻으므로 화소를 센다. 2026-10 Release 네 백엔드 실측은 여섯 영역 모두 0 이다.
+        static constexpr float64     kMaxDifferingFraction = 0.001;
+        static constexpr float32     kEdgeTolerance        = 0.02f; ///< 백엔드 사이 가장자리 수 차(비율)
+        static constexpr float32     kEdgeThreshold        = 0.12f; ///< 이웃 휘도 차가 이보다 크면 가장자리 픽셀
+        static constexpr const utf8* kArrRegionName[]      = { "DemoPanel", "Start", "RoundBox", "ClipBox", "NineSlice", "RtlSample" };
 
         /**
          * @brief 레이아웃 덤프에서 코드 화면(`## (code)` — 견본 화면) 절의 위젯 이름 → 사각형을 읽어 그림 픽셀로 맞춥니다(루트 = 그림 크기).
@@ -181,6 +183,16 @@ namespace
             return count;
         }
 
+        /** @brief 픽셀 사각형을 이미지 크기에 대한 비율(0..1) 영역으로 바꿉니다. */
+        static sw::AutomationImageRegion toRegion( const sw::AutomationImage& image, const AppUITestRect& rect )
+        {
+            const float32 width  = static_cast<float32>( image._width );
+            const float32 height = static_cast<float32>( image._height );
+            return sw::AutomationImageRegion{ sw::MathUtil::clamp( rect._x / width, 0.0f, 1.0f ), sw::MathUtil::clamp( rect._y / height, 0.0f, 1.0f ),
+                                              sw::MathUtil::clamp( ( rect._x + rect._width ) / width, 0.0f, 1.0f ),
+                                              sw::MathUtil::clamp( ( rect._y + rect._height ) / height, 0.0f, 1.0f ) };
+        }
+
         static sw::string describe( const AppUITestColor& color )
         {
             return "(" + sw::to_string( color._r ) + ", " + sw::to_string( color._g ) + ", " + sw::to_string( color._b ) + ")";
@@ -239,13 +251,14 @@ namespace
                 SW_ASSERT_TRUE_MSG( pRect != nullptr && pCaptureRect != nullptr, ( label + pName + " missing" ).c_str() );
                 SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( pRect->_x - pCaptureRect->_x ) < 0.5f && sw::MathUtil::abs( pRect->_width - pCaptureRect->_width ) < 0.5f,
                                     ( label + pName + " layout differs" ).c_str() );
-                const AppUITestColor expected = computeMean( reference._image, *pRect );
-                const AppUITestColor actual   = computeMean( capture._image, *pRect );
-                const float32        meanDifference =
-                    sw::MathUtil::max( sw::MathUtil::abs( expected._r - actual._r ),
-                                       sw::MathUtil::max( sw::MathUtil::abs( expected._g - actual._g ), sw::MathUtil::abs( expected._b - actual._b ) ) );
-                SW_EXPECT_TRUE_MSG( meanDifference <= kMeanTolerance,
-                                    ( label + pName + " mean " + describe( actual ) + " vs " + describe( expected ) ).c_str() );
+                const sw::AutomationImageRegion region = toRegion( reference._image, *pRect );
+                float64                         differingFraction{ 0.0 };
+                sw::string                      error;
+                SW_EXPECT_TRUE_MSG( sw::AutomationImageMetric::measure( capture._image, region, sw::AutomationImageMetricKind::DifferingFraction, 0.0f, &reference._image,
+                                                                        differingFraction, error ),
+                                    ( label + pName + ": " + error ).c_str() );
+                SW_LOG_INFO( "AppUITest: %#%# differing fraction %#", label, pName, differingFraction );
+                SW_EXPECT_TRUE_MSG( differingFraction <= kMaxDifferingFraction, ( label + pName + " differing fraction " + sw::to_string( differingFraction ) ).c_str() );
                 const uint32  expectedEdges = countEdges( reference._image, *pRect );
                 const uint32  actualEdges   = countEdges( capture._image, *pRect );
                 const float32 edgeDifference =
@@ -259,7 +272,7 @@ namespace
 } // namespace
 
 /**
- * @brief [AppUITest] UI 견본 화면이 모든 백엔드에서 같은 모양이다 — 알려진 영역(강조색 단추 · 둥근 모서리 바깥 · 자르기 밖)과 백엔드 사이 영역 평균 · 가장자리 수
+ * @brief [AppUITest] UI 견본 화면이 모든 백엔드에서 같은 모양이다 — 알려진 영역(강조색 단추 · 둥근 모서리 바깥 · 자르기 밖)과 백엔드 사이 영역의 다른 화소 비율 · 가장자리 수
  * @details 산출물은 백엔드마다 `Bin/Saved/Automation/engine.uidemo/uidemo_<백엔드>.ppm` · `.layout.txt` 로 옮겨 둔다(실패를 눈으로 볼 때).
  */
 SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )

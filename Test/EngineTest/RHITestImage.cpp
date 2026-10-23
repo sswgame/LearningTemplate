@@ -46,6 +46,34 @@ namespace test
         return false;
     }
 
+    bool RHITestImage::readPresent( sw::FrameRenderer& renderer )
+    {
+        _bytes.clear();
+        _layout = {};
+        _format = sw::constant::kBackBufferFormat;
+        if ( renderer.getCapture().readbackPresent( _bytes, _layout ) )
+            return true;
+
+        _bytes.clear();
+        _layout = {};
+        return false;
+    }
+
+    uint32 RHITestImage::countForegroundPixels() const
+    {
+        const Rgba8 background = getPixel( 0, 0 );
+        uint32      count{ 0 };
+        for ( uint32 y = 0; y < getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < getWidth(); ++x )
+            {
+                if ( getColorDistance( getPixel( x, y ), background ) != 0 )
+                    ++count;
+            }
+        }
+        return count;
+    }
+
     void RHITestImage::assign( sw::vector<uint8> bytes, const sw::RHITextureMipSpan& layout, sw::RHIFormat format )
     {
         _bytes  = std::move( bytes );

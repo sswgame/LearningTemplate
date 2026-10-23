@@ -80,7 +80,7 @@
 		<Screenshot file="viewmodes_game_after.ppm"/>
 	</At>
 	<At frame="405">
-		<ExpectImage file="viewmodes_game_after.ppm" metric="differentFrom" reference="viewmodes_game_lit.ppm" atMost="0.002"/>
+		<ExpectImage file="viewmodes_game_after.ppm" metric="differingFraction" reference="viewmodes_game_lit.ppm" atMost="0.001"/>
 		<ExpectImage file="viewmodes_game_after.ppm" metric="differentFrom" reference="viewmodes_scene_normals.ppm" atLeast="0.003"/>
 	</At>
 	<At frame="410"><DevCommand line="panel.focus scene_view"/></At>

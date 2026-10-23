@@ -604,9 +604,9 @@ namespace sw
                 ExpectImageArgs args;
                 if ( parseExpectImage( step, args, outError ) == false )
                     return false;
-                if ( ( args._metric == AutomationImageMetricKind::DifferentFrom ) != ( step.findAttribute( "reference" ) != nullptr ) )
+                if ( AutomationImageMetric::usesReference( args._metric ) != ( step.findAttribute( "reference" ) != nullptr ) )
                 {
-                    outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" (and only with it)";
+                    outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" or \"differingFraction\" (and only with them)";
                     return false;
                 }
                 return true;
