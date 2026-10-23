@@ -78,25 +78,23 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
         using Internal = AsymmetricHorrorRulesInternal;
-        const auto is  = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Generator" ) )
+        if ( GameDataXML::isElement( name, "Generator" ) )
             return Internal::readScaledSetting( node, sourceName, _rules._generator );
-        if ( is( "Heal" ) )
+        if ( GameDataXML::isElement( name, "Heal" ) )
             return Internal::readScaledSetting( node, sourceName, _rules._heal );
-        if ( is( "SkillCheck" ) )
+        if ( GameDataXML::isElement( name, "SkillCheck" ) )
             return loadSkillCheck( node, sourceName );
-        if ( is( "Hook" ) )
+        if ( GameDataXML::isElement( name, "Hook" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._hook );
-        if ( is( "Pallet" ) )
+        if ( GameDataXML::isElement( name, "Pallet" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._pallet );
-        if ( is( "Window" ) )
+        if ( GameDataXML::isElement( name, "Window" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._window );
-        if ( is( "Locker" ) )
+        if ( GameDataXML::isElement( name, "Locker" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._locker );
-        if ( is( "Endgame" ) )
+        if ( GameDataXML::isElement( name, "Endgame" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._endgame );
-        if ( is( "Killer" ) )
+        if ( GameDataXML::isElement( name, "Killer" ) )
         {
             HorrorKillerDef killer;
             if ( GameDataXML::readFields( node, killer, sourceName ) == false )
@@ -104,7 +102,7 @@ namespace sw
             (void)_catalogKiller.add( killer ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( is( "Category" ) )
+        if ( GameDataXML::isElement( name, "Category" ) )
         {
             HorrorScoreCategoryDef category;
             if ( GameDataXML::readFields( node, category, sourceName ) == false )
@@ -112,7 +110,7 @@ namespace sw
             _categoryCap.setValue( category._id, category._cap );
             return true;
         }
-        if ( is( "Score" ) )
+        if ( GameDataXML::isElement( name, "Score" ) )
         {
             HorrorScoreRule rule;
             if ( GameDataXML::readFields( node, rule, sourceName ) == false )

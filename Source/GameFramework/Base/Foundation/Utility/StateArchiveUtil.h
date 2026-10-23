@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -51,6 +52,15 @@ namespace sw
          * @details 깨진 개수 하나가 `reserve` 로 수십 기가를 요구하지 않게 막는다.
          */
         [[nodiscard]] static bool readCount( Archive& archive, uint32 minBytesPerElement, uint32& outCount );
+
+        /** @brief id 목록 하나(개수 + id 들)를 씁니다. `readIDList` 가 읽습니다. 64비트 id(묶은 id)는 `uint64` 목록 버전을 씁니다. */
+        static void writeIDList( Archive& outArchive, const vector<uint32>& listID );
+        /** @brief `writeIDList` 가 쓴 id 목록 하나를 읽습니다. 개수가 남은 바이트를 넘으면 false 입니다. */
+        [[nodiscard]] static bool readIDList( Archive& archive, vector<uint32>& outListID );
+        /** @brief `writeIDList` 의 `uint64` 버전입니다. */
+        static void writeIDList( Archive& outArchive, const vector<uint64>& listID );
+        /** @brief `readIDList` 의 `uint64` 버전입니다. */
+        [[nodiscard]] static bool readIDList( Archive& archive, vector<uint64>& outListID );
 
         static void writeInt2( Archive& outArchive, const int2& value );
         static void readInt2( Archive& archive, int2& outValue );

@@ -65,19 +65,17 @@ namespace sw
 
     bool ActionPlatformerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Stage" ) )
+        if ( GameDataXML::isElement( name, "Stage" ) )
             return loadStage( node, sourceName );
-        if ( is( "Combo" ) )
+        if ( GameDataXML::isElement( name, "Combo" ) )
             return loadCombo( node, sourceName );
-        if ( is( "Pattern" ) )
+        if ( GameDataXML::isElement( name, "Pattern" ) )
             return loadPattern( node, sourceName );
-        if ( is( "Grading" ) )
+        if ( GameDataXML::isElement( name, "Grading" ) )
             return loadGrading( node, sourceName );
-        if ( is( "Body" ) )
+        if ( GameDataXML::isElement( name, "Body" ) )
             return GameDataXML::readSetting( node, sourceName, _bodySettings );
-        if ( is( "Parry" ) )
+        if ( GameDataXML::isElement( name, "Parry" ) )
             return GameDataXML::readSetting( node, sourceName, _parryRules );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

@@ -96,11 +96,9 @@ namespace sw
 
     bool ScavengerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Quota" ) )
+        if ( GameDataXML::isElement( name, "Quota" ) )
             return GameDataXML::readSetting( node, sourceName, _quota );
-        if ( is( "BuyRate" ) )
+        if ( GameDataXML::isElement( name, "BuyRate" ) )
         {
             ScavengerBuyRatePoint point;
             if ( GameDataXML::readFields( node, point, sourceName ) == false )
@@ -108,15 +106,15 @@ namespace sw
             _listBuyRate.push_back( point );
             return true;
         }
-        if ( is( "Day" ) )
+        if ( GameDataXML::isElement( name, "Day" ) )
             return GameDataXML::readSetting( node, sourceName, _day );
-        if ( is( "Carry" ) )
+        if ( GameDataXML::isElement( name, "Carry" ) )
             return GameDataXML::readSetting( node, sourceName, _carry );
-        if ( is( "Penalty" ) )
+        if ( GameDataXML::isElement( name, "Penalty" ) )
             return GameDataXML::readSetting( node, sourceName, _penalty );
-        if ( is( "Facility" ) )
+        if ( GameDataXML::isElement( name, "Facility" ) )
             return GameDataXML::readSetting( node, sourceName, _facility );
-        if ( is( "Scrap" ) )
+        if ( GameDataXML::isElement( name, "Scrap" ) )
         {
             ScavengerScrapDef def;
             if ( GameDataXML::readFields( node, def, sourceName ) == false )
@@ -124,7 +122,7 @@ namespace sw
             (void)_scrapCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( is( "Moon" ) )
+        if ( GameDataXML::isElement( name, "Moon" ) )
             return loadMoon( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

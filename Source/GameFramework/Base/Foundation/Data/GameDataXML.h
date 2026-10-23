@@ -135,6 +135,9 @@ namespace sw
             return true;
         }
 
+        /** @brief 원소 이름 @p name 이 @p pElement 와 대소문자를 무시하고 같은지 답합니다. 카탈로그의 `loadElement` 가 원소 이름으로 갈라질 때 씁니다. */
+        [[nodiscard]] static bool isElement( string_view name, const utf8* pElement ) { return StringUtil::equals( name, string_view( pElement ), true ); }
+
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
         /** @brief 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름이고, 글 `none` 은 오류입니다(`XMLReadUtil::readName`). */

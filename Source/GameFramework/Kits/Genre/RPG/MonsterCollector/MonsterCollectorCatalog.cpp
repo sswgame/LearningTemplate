@@ -269,9 +269,7 @@ namespace sw
 
     bool MonsterCollectorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "StatusImmunity" ) )
+        if ( GameDataXML::isElement( name, "StatusImmunity" ) )
         {
             StatusImmunity    immunity;
             const string_view status = node.getAttributeText( "status" );
@@ -284,13 +282,13 @@ namespace sw
             _listStatusImmunity.push_back( immunity );
             return true;
         }
-        if ( is( "Move" ) )
+        if ( GameDataXML::isElement( name, "Move" ) )
             return loadMove( node, sourceName );
-        if ( is( "Species" ) )
+        if ( GameDataXML::isElement( name, "Species" ) )
             return loadSpecies( node, sourceName );
-        if ( is( "Nature" ) )
+        if ( GameDataXML::isElement( name, "Nature" ) )
             return GameDataXML::readInto( node, sourceName, _natureCatalog ); // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
-        if ( is( "Weather" ) )
+        if ( GameDataXML::isElement( name, "Weather" ) )
         {
             MonsterWeatherDef def;
             if ( GameDataXML::readFields( node, def, sourceName, { "immune" } ) == false )
@@ -299,7 +297,7 @@ namespace sw
             (void)_weatherCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( is( "Encounter" ) )
+        if ( GameDataXML::isElement( name, "Encounter" ) )
             return loadEncounter( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
