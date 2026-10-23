@@ -235,8 +235,10 @@ namespace sw
             return 0;
         }
 
-        MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", pPhase );
-        return _CrtDumpMemoryLeaks();
+        // 기준선 없이는 살아 있는 블록 전부(부트스트랩 몫 포함)가 누수로 보여 진짜 누수를 가린다 — 덤프하지 않고 오류로 알린다.
+        // 기준선은 기동 끝(`Engine::initialize`) 또는 헤드리스 진입(`HeadlessTaskState::enterHeadless`)에서 잡는다. 거기에 닿기 전에 기동이 멈췄어도 이 줄이 남는다.
+        MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — ERROR: no CRT baseline was captured, so leaks cannot be told from live startup blocks (nothing dumped)", pPhase );
+        return 1;
 
 #elif defined( SW_HAS_LSAN_LEAK_CHECK )
         MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", pPhase );
@@ -344,9 +346,7 @@ namespace sw
             MemoryProfilerInternal::t_bIsInsideProfiler = true;
             {
                 std::scoped_lock<mutex> lock{ _stackMapMutex };
-                if ( pPtr != nullptr )
-                    _mapPtrToCallStackHash[pPtr] = outHash;
-                auto& info = _mapCallStackAllocInfo[outHash];
+                auto&                   info = _mapCallStackAllocInfo[outHash];
                 if ( info._stack._frameCount == 0 )
                     info._stack = stack;
                 info._currentBytes += size;
@@ -362,6 +362,7 @@ namespace sw
 
     void MemoryProfiler::recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash )
     {
+        (void)pPtr; // 해시는 할당 때 블록 헤더에 적혀 온다 — 주소로 다시 찾지 않는다
         // 추적 스위치는 보지 않는다 — 이 블록은 셀 때 켜져 있었다(할당기가 센 블록만 넘긴다). 꺼진 동안의 해제를 건너뛰면 살아 있는 양이 위로 어긋난다.
         uint32 tagIdx = static_cast<uint32>( tag );
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
@@ -377,39 +378,22 @@ namespace sw
         if ( MemoryProfilerInternal::t_bIsInsideProfiler )
             return;
 
-        if ( _bDetailedTrackingEnabled.load( std::memory_order_relaxed ) )
+        // 세부 추적을 지금 껐어도, 할당 때 스택을 적은 블록(`callStackHash != 0`)은 표에서 뺀다. 스위치로 가르면 껐다 켠 사이의 해제가 빠져 표의 살아 있는 양이 위로 어긋난다.
+        if ( callStackHash != 0 )
         {
             MemoryProfilerInternal::t_bIsInsideProfiler = true;
             {
                 std::scoped_lock<mutex> lock{ _stackMapMutex };
-                uint64                  hash = callStackHash;
-                if ( hash == 0 && pPtr != nullptr )
+                auto                    it = _mapCallStackAllocInfo.find( callStackHash );
+                if ( it != _mapCallStackAllocInfo.end() )
                 {
-                    auto itPtr = _mapPtrToCallStackHash.find( pPtr );
-                    if ( itPtr != _mapPtrToCallStackHash.end() )
-                    {
-                        hash = itPtr->second;
-                        _mapPtrToCallStackHash.erase( itPtr );
-                    }
-                }
-                else if ( pPtr != nullptr )
-                {
-                    _mapPtrToCallStackHash.erase( pPtr );
-                }
+                    if ( it->second._currentBytes >= size )
+                        it->second._currentBytes -= size;
+                    else
+                        it->second._currentBytes = 0;
 
-                if ( hash != 0 )
-                {
-                    auto it = _mapCallStackAllocInfo.find( hash );
-                    if ( it != _mapCallStackAllocInfo.end() )
-                    {
-                        if ( it->second._currentBytes >= size )
-                            it->second._currentBytes -= size;
-                        else
-                            it->second._currentBytes = 0;
-
-                        if ( it->second._currentCount > 0 )
-                            it->second._currentCount--;
-                    }
+                    if ( it->second._currentCount > 0 )
+                        it->second._currentCount--;
                 }
             }
             MemoryProfilerInternal::t_bIsInsideProfiler = false;
