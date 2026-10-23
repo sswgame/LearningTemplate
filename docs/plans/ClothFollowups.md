@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: D1-4 · 진행: 3/3
 
-**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** C1 네 백엔드 캡처, C2 `RT.GPUScene.vertexPool` 시간과 다시 채우기 수, C3 스킨 망토 캐릭터 씬 — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** 매니페스트 id `cloth-four-backend-captures`, `cloth-vertex-pool-time`, `cloth-skinned-cape-scene` — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 같은 오브젝트의 `MeshComponent` 에 물리 프레임마다 양면 동적 메시(`Mesh::setDynamic`)를 거는 길은 들어갔다. 동적 메시는 씬 정점 풀이 그 구간만 올린다(C2). 단계는 모두 코드로 들어갔고 실행 확인이 남았다.
 

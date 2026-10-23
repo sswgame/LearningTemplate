@@ -11,7 +11,7 @@
 옛번호: B-9
 왜 필요한가: UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9 에 있다. 압축 시간은 컴파일러 · libc 에 따라 다르다.
 남은 것: WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다. 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
-실행 대기: 벤치는 `Test/EngineTest/GameFramework/Kits/Network/TestNetCompressionBench.cpp` 에 있다. 통합에서 WSL-Release 로 `NetCompressionBenchTest` 필터 하나만 돌려 결정 기록 5-9 표 옆에 적는다.
+실행 대기: 매니페스트 id `net-compression-bench`, `net-compression-bench-wsl`(WSL 은 사용자가 요청할 때만). 결정 기록 5-9 표 옆에 적는다.
 
 ### UdpSocketLayerScaling
 제목: MMO 규모 서버의 UDP 소켓 계층
@@ -22,7 +22,7 @@
 - 일괄 받기 · 보내기: 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`).
 - 포트 샤딩은 들어갔다(`GameNetSession` 샤드마다 `NetHost` · 스레드, 키트는 `NetHostShardSet`, 배정이 `ServerDescriptor::pickPort` 로 샤드 포트를 준다, 리눅스는 `SO_REUSEPORT` 한 포트도). 전후 측정은 아래 함정대로 남았다.
 함정: 일괄 받기와 샤딩 모두 `NetUDPBenchTest` 숫자로 전후를 측정한다.
-실행 대기: 벤치는 `Test/EngineTest/Network/TestNetUDPBench.cpp` 에 있다. 통합에서 다른 빌드가 없을 때 Windows Release 와 WSL Release(`ulimit -n 8192`)를 `NetUDPBenchTest` 필터로 차례로 돌려 08_Verification 2절 표에 나란히 둔다. 일괄 받기는 그 숫자에서 시스템 호출이 지배적일 때만 착수한다.
+실행 대기: 매니페스트 id `net-udp-bench`, `net-udp-bench-wsl`(WSL 은 사용자가 요청할 때만). 다른 빌드가 없을 때 돌려 08_Verification 2절 표에 나란히 둔다. 일괄 받기는 그 숫자에서 시스템 호출이 지배적일 때만 착수한다.
 
 ### EpollAndRealStoreVerification
 제목: 리눅스 epoll · 실제 DB 서버 확인
@@ -37,7 +37,7 @@
 옛번호: D7-6
 왜 필요한가: Core 창구(`Network/Security/`) · OpenSSL 3.6 구현 · 스트림 TLS 1.3 · UDP 보안 · 서버 설정의 TLS 인증서 배선은 있다. 방향은 [결정 기록](../09_Decisions.md) 5-9. 암호화의 비용 숫자가 없다.
 남은 것: 벤치 판 `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertzEncrypted` 가 있다(평문 판과 `[Bench]` 줄을 나란히 남긴다). Release 로 세 번 돌려 두 줄의 차를 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄로 적는다.
-실행 대기: 벤치는 `Test/EngineTest/GameFramework/Kits/Network/TestNetReplicationBench.cpp` 에 있다. 통합에서 혼자 돌 때 Release 로 `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertz*` 를 세 번 돌린다.
+실행 대기: 매니페스트 id `net-replication-bench`(혼자 돌 때 Release, 세 번).
 
 ## 정리
 
@@ -59,7 +59,7 @@
 남은 것:
 - 사건 지연 측정: 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b)이다. 250 ms · 손실 15 % 의 사건 지연 평균 · 최대 전/후를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잰다(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도 받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서.
 - 컴포넌트를 둘 씬: 들어갔다(2026-10-22) — `game/empty/maps/destructionnet.scene.xml` 은 쇼케이스 글을 그대로 옮기고 `DestructionNetSessionComponent` 오브젝트 하나를 에디터 저장과 같은 형식으로 더했다(테스트 `DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase`, 실행 전).
-- 실행 대기: 통합에서 `NetSimDestructionMatrixTest` · `DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase` 를 돌려 빌드 확인과 사건 지연 전/후를 한 번에 얻는다.
+- 실행 대기: 매니페스트 id `destruction-net-tests` — 빌드 확인과 사건 지연 전/후를 한 번에 얻는다.
 - 두 로그 견주기: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777`. 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12).
 함정: 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가 지킨다. Windows Debug · Release · Shipping 같은 값을 확인했고, 리눅스 clang 에서 다르면 CI 잡이 진다.
 

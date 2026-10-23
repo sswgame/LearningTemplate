@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import platform
-import re
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -27,10 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable, runApp  # noqa: E402
-
-#: `[Bench] <이름>  min N us  p50 N us  p90 N us  p99 N us  max N us  (N samples)`(`test::logBenchSamples`)
-_kBenchRowRe = re.compile(r"\[Bench\] (.+?)\s+min (-?\d+) us\s+p50 (-?\d+) us\s+p90 (-?\d+) us\s+p99 (-?\d+) us\s+max (-?\d+) us")
+from common.AppRun import addAppRunArguments, kBackendSwitch, kBenchRowRe, parseProfileTable, runApp  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -125,7 +121,7 @@ def findTestExecutableInternal(appPath: Path) -> Path:
 def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> None:
     if case.kind == "test":
         for line in listLine:
-            match = _kBenchRowRe.search(line)
+            match = kBenchRowRe.search(line)
             if match is None:
                 continue
             label = match.group(1).strip()
