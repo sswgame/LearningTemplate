@@ -4,29 +4,34 @@
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
-	float2 uv       : TEXCOORD0;
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
+PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	float2 clipPosition = float2((vertexId == 1) ? 3.0f : -1.0f, (vertexId == 2) ? 3.0f : -1.0f);
-	output.position = float4(clipPosition, 0.0f, 1.0f);
-	output.uv       = clipPosition * float2(0.5f, -0.5f) + 0.5f;
-	return output;
+    PSInput output;
+    input.position      = input.position;
+    float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    output.position     = float4( clipPosition, 0.0f, 1.0f );
+    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    return output;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain( PSInput input ) : SV_TARGET
 {
-	// 정수 업스케일(픽셀 퍼펙트) 뷰는 점 샘플이다 — 선형이면 원본 픽셀 경계가 섞여 번진다. 그 밖은 해상도 배율로 키울 때 부드럽게 선형이다.
-	// 플래그는 패스 상수라 분기가 고르다 — 한 번만 읽는다. early-return 이 아니라 값을 채우는 분기다(postchain 과 같은 이유).
-	const bool bPointUpscale = (g_Flags & SW_PASS_FLAG_POINT_UPSCALE) != 0u;
-	float3     color;
-	[branch] if (bPointUpscale)
-		color = swSampleSourcePoint(input.uv).rgb;
-	else
-		color = swSampleSource(input.uv).rgb;
-	return float4(color, 1.0f);
+    // 정수 업스케일(픽셀 퍼펙트) 뷰는 점 샘플이다 — 선형이면 원본 픽셀 경계가 섞여 번진다. 그 밖은 해상도 배율로 키울 때 부드럽게 선형이다.
+    // 플래그는 패스 상수라 분기가 고르다 — 한 번만 읽는다. early-return 이 아니라 값을 채우는 분기다(postchain 과 같은 이유).
+    const bool bPointUpscale = ( g_Flags & SW_PASS_FLAG_POINT_UPSCALE ) != 0u;
+    float3     color;
+    // 중괄호를 둔다 — clang-format 은 `[branch]` 를 속성으로 읽지 못해 중괄호 없는 else 를 앞줄에 붙인다.
+    [branch] if ( bPointUpscale )
+    {
+        color = swSampleSourcePoint( input.uv ).rgb;
+    }
+    else
+    {
+        color = swSampleSource( input.uv ).rgb;
+    }
+    return float4( color, 1.0f );
 }

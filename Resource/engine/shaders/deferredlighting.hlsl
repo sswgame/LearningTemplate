@@ -12,51 +12,51 @@
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
-	float2 uv       : TEXCOORD0;
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
+PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	float2 clipPosition = float2((vertexId == 1) ? 3.0f : -1.0f, (vertexId == 2) ? 3.0f : -1.0f);
-	output.position = float4(clipPosition, 0.0f, 1.0f);
-	output.uv       = clipPosition * float2(0.5f, -0.5f) + 0.5f;
-	return output;
+    PSInput output;
+    input.position      = input.position;
+    float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    output.position     = float4( clipPosition, 0.0f, 1.0f );
+    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    return output;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain( PSInput input ) : SV_TARGET
 {
-	const float4 albedoSample = swSampleAlbedo(input.uv);
-	const float4 normalSample = swSampleNormal(input.uv);
-	float3 albedo = albedoSample.rgb;
-	float3 normal = normalize(normalSample.xyz * 2.0f - 1.0f);
-	if (length(normal) < 0.1f)
-		normal = float3(0.0f, 0.85f, 0.5f);
+    const float4 albedoSample = swSampleAlbedo( input.uv );
+    const float4 normalSample = swSampleNormal( input.uv );
+    float3       albedo       = albedoSample.rgb;
+    float3       normal       = normalize( normalSample.xyz * 2.0f - 1.0f );
+    if ( length( normal ) < 0.1f )
+        normal = float3( 0.0f, 0.85f, 0.5f );
 
-	float  depth         = swSampleDepth(input.uv).r;
-	float3 worldPosition = swComputeWorldPositionFromDepth(input.uv, depth);
+    float  depth         = swSampleDepth( input.uv ).r;
+    float3 worldPosition = swComputeWorldPositionFromDepth( input.uv, depth );
 
-	// 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).
-	// 금속도 · 거칠기는 G버퍼 머티리얼 칸이다(binding.hlsli swEncodeGbufferMaterial 이 적는다).
-	float roughness;
-	float metallic;
-	swLoadGbufferMaterial(input.uv, roughness, metallic);
+    // 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).
+    // 금속도 · 거칠기는 G버퍼 머티리얼 칸이다(binding.hlsli swEncodeGbufferMaterial 이 적는다).
+    float roughness;
+    float metallic;
+    swLoadGbufferMaterial( input.uv, roughness, metallic );
 
-	float  shadow = swSampleShadowAtWorld(worldPosition, normal);
-	float3 lit    = swShadeLights(albedo, worldPosition, normal, shadow, roughness, metallic);
+    float  shadow = swSampleShadowAtWorld( worldPosition, normal );
+    float3 lit    = swShadeLights( albedo, worldPosition, normal, shadow, roughness, metallic );
 
-	// 아무것도 안 그린 곳(깊이 원경이고 노멀 칸의 알파가 클리어 값 0)은 **쓰지 않고 버린다**. G버퍼가 비어 있어 셰이딩할 표면이
-	// 없고, 그대로 계산하면 검은 알베도에 림 라이트만 남아 배경이 이상한 색이 된다.
-	// discard 하면 LitColor 는 자기 클리어 색 그대로 남는다 — 포워드의 SceneColor 와 같은 배경이다.
-	// 노멀 알파도 보는 이유: 보기 모드 Overdraw 는 깊이를 쓰지 않는다 — 깊이만 보면 겹친 면이 모두 버려진다.
-	if (depth >= 1.0f && normalSample.a < 0.5f)
-		discard;
-	// 알베도 알파는 G버퍼 패스가 적은 셰이딩 모델이다(binding.hlsli SW_GBUFFER_SHADING) — 보기 모드 Unlit 의 표면은 알베도 그대로.
-	if (albedoSample.a < 0.5f * (SW_GBUFFER_SHADING_LIT + SW_GBUFFER_SHADING_UNLIT))
-		return float4(albedo, 1.0f);
+    // 아무것도 안 그린 곳(깊이 원경이고 노멀 칸의 알파가 클리어 값 0)은 **쓰지 않고 버린다**. G버퍼가 비어 있어 셰이딩할 표면이
+    // 없고, 그대로 계산하면 검은 알베도에 림 라이트만 남아 배경이 이상한 색이 된다.
+    // discard 하면 LitColor 는 자기 클리어 색 그대로 남는다 — 포워드의 SceneColor 와 같은 배경이다.
+    // 노멀 알파도 보는 이유: 보기 모드 Overdraw 는 깊이를 쓰지 않는다 — 깊이만 보면 겹친 면이 모두 버려진다.
+    if ( depth >= 1.0f && normalSample.a < 0.5f )
+        discard;
+    // 알베도 알파는 G버퍼 패스가 적은 셰이딩 모델이다(binding.hlsli SW_GBUFFER_SHADING) — 보기 모드 Unlit 의 표면은 알베도 그대로.
+    if ( albedoSample.a < 0.5f * ( SW_GBUFFER_SHADING_LIT + SW_GBUFFER_SHADING_UNLIT ) )
+        return float4( albedo, 1.0f );
 
-	lit += swComputeRimLight(normal);
-	return float4(lit, 1.0f);
+    lit += swComputeRimLight( normal );
+    return float4( lit, 1.0f );
 }

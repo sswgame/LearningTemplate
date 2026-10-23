@@ -7,30 +7,30 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
-	uint g_DepthHistorySource; // 원본 깊이의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+    uint g_DepthHistorySource; // 원본 깊이의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
 SW_ROOT_CONSTANTS_END
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
+    float4 position : SV_POSITION;
 };
 
 PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
-	output.position           = float4( clipPosition, 0.0f, 1.0f );
-	return output;
+    PSInput output;
+    input.position            = input.position;
+    const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
+    output.position           = float4( clipPosition, 0.0f, 1.0f );
+    return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-	const int3 texel = int3( int2( input.position.xy ), 0 );
+    const int3 texel = int3( int2( input.position.xy ), 0 );
 #if defined( SW_NATIVE_BINDLESS )
-	const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
+    const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
 #else
-	const float depth = g_SwSlot0.Load( texel ).r;
+    const float depth = g_SwSlot0.Load( texel ).r;
 #endif
-	return float4( depth, 0.0f, 0.0f, 1.0f );
+    return float4( depth, 0.0f, 0.0f, 1.0f );
 }

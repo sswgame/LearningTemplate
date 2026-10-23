@@ -20,73 +20,73 @@
 // 1) 정점 단계
 // ------------------------------------------------------------------------------
 #if defined( SW_PASS_SHADOW )
-#define SW_MATERIAL_VIEW_PROJECTION g_LightViewProj
+    #define SW_MATERIAL_VIEW_PROJECTION g_LightViewProj
 #else
-#define SW_MATERIAL_VIEW_PROJECTION g_ViewProj
+    #define SW_MATERIAL_VIEW_PROJECTION g_ViewProj
 #endif
 
 SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	SwMaterialInterpolants output;
-	SwVertexContext        context;
-	context.input    = input;
-	context.vertexId = vertexId;
-	// 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
-	context.instance = swLoadInstance( input.instanceSlot );
-	// GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-	swLoadAnimatedVertex( context.instance, vertexId, input.position, input.normal, context.localPosition, context.localNormal );
-	// 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
-	float4 worldPosition  = swComputeWorldPosition( context.localPosition, context.instance.world );
-	context.worldPosition = worldPosition.xyz;
-	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
-	context.worldNormal        = swComputeWorldNormal( context.localNormal, context.instance.world );
-	context.clipPosition       = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    SwMaterialInterpolants output;
+    SwVertexContext        context;
+    context.input    = input;
+    context.vertexId = vertexId;
+    // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
+    context.instance = swLoadInstance( input.instanceSlot );
+    // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
+    swLoadAnimatedVertex( context.instance, vertexId, input.position, input.normal, context.localPosition, context.localNormal );
+    // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
+    float4 worldPosition  = swComputeWorldPosition( context.localPosition, context.instance.world );
+    context.worldPosition = worldPosition.xyz;
+    // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
+    context.worldNormal  = swComputeWorldNormal( context.localNormal, context.instance.world );
+    context.clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
-	context.material = SW_MATERIAL( context.instance.materialIndex );
+    context.material = SW_MATERIAL( context.instance.materialIndex );
 #endif
 
 #if defined( MATERIAL_VERTEX_DEFORM ) && !defined( SW_MATERIAL_NONE )
-	// 정점 셰이더가 정점을 옮기는 머티리얼(바람 · 파도) — 오프셋만 받고 위치는 여기서 만든다.
-	worldPosition.xyz += computeWorldPositionOffset( context );
+    // 정점 셰이더가 정점을 옮기는 머티리얼(바람 · 파도) — 오프셋만 받고 위치는 여기서 만든다.
+    worldPosition.xyz += computeWorldPositionOffset( context );
 #endif
 #if defined( SW_PASS_MESH_OUTLINE )
-	const SwOutlineOffset outline = computeMaterialOutline( context );
-	worldPosition.xyz += outline.worldOffset;
+    const SwOutlineOffset outline = computeMaterialOutline( context );
+    worldPosition.xyz += outline.worldOffset;
 #endif
-	float4 clipPosition = swComputeClipPosition( worldPosition, SW_MATERIAL_VIEW_PROJECTION );
+    float4 clipPosition = swComputeClipPosition( worldPosition, SW_MATERIAL_VIEW_PROJECTION );
 #if defined( SW_PASS_MESH_OUTLINE )
-	clipPosition.xy += outline.clipOffset;
+    clipPosition.xy += outline.clipOffset;
 #endif
 #if defined( SW_MATERIAL_NONE ) && defined( SW_PASS_DEPTH_PREPASS ) && defined( MATERIAL_VERTEX_DEFORM )
-	// 정점을 옮기는 머티리얼(바람 · 파도)의 깊이 프리패스 — 이 셰이더는 옮긴 자리를 못 만든다. 남기면 기본 패스의 옮긴 정점이 프리패스 깊이에 가려 구멍이 난다.
-	// 클립 공간 밖 한 점으로 모아 아무것도 그리지 않는다(드로우는 그대로 나가지만 래스터가 없다). 그 머티리얼의 그림자는 머티리얼 셰이더가 그린다.
-	clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+    // 정점을 옮기는 머티리얼(바람 · 파도)의 깊이 프리패스 — 이 셰이더는 옮긴 자리를 못 만든다. 남기면 기본 패스의 옮긴 정점이 프리패스 깊이에 가려 구멍이 난다.
+    // 클립 공간 밖 한 점으로 모아 아무것도 그리지 않는다(드로우는 그대로 나가지만 래스터가 없다). 그 머티리얼의 그림자는 머티리얼 셰이더가 그린다.
+    clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
 #elif defined( SW_MATERIAL_NONE ) && defined( SW_PASS_SHADOW ) && defined( MATERIAL_SHADOW_CAST_OFF )
-	// 그림자를 드리우지 않는 머티리얼(풀) — 같은 방식으로 뺀다.
-	clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+    // 그림자를 드리우지 않는 머티리얼(풀) — 같은 방식으로 뺀다.
+    clipPosition = float4( 0.0f, 0.0f, -1.0f, 1.0f );
 #endif
-	output.position      = clipPosition;
+    output.position = clipPosition;
 #if !defined( SW_MATERIAL_DEPTH_ONLY )
-	output.worldPosition = worldPosition.xyz;
-	output.color         = input.color;
-	// UV 는 정점 속성이다. 위치로 지어내면(`position.xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙는다.
-	output.uv            = input.uv;
-	output.normal        = context.worldNormal;
-#if defined( SW_MATERIAL_USES_TANGENT )
-	// 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다. 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다.
-	const float4 localTangent = swLoadMorphedTangent( context.instance.meshBatchIndex, vertexId, input.tangent );
-	output.tangent            = float4( mul( float4( localTangent.xyz, 0.0f ), context.instance.world ).xyz, localTangent.w );
-#endif
-#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-	output.materialIndex = context.instance.materialIndex;
-#endif
-#if defined( SW_MATERIAL_CUSTOM_VARYINGS )
-	context.clipPosition = clipPosition;
-	output.user          = computeMaterialVaryings( context );
-#endif
+    output.worldPosition = worldPosition.xyz;
+    output.color         = input.color;
+    // UV 는 정점 속성이다. 위치로 지어내면(`position.xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙는다.
+    output.uv     = input.uv;
+    output.normal = context.worldNormal;
+    #if defined( SW_MATERIAL_USES_TANGENT )
+    // 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다. 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다.
+    const float4 localTangent = swLoadMorphedTangent( context.instance.meshBatchIndex, vertexId, input.tangent );
+    output.tangent            = float4( mul( float4( localTangent.xyz, 0.0f ), context.instance.world ).xyz, localTangent.w );
+    #endif
+    #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
+    output.materialIndex = context.instance.materialIndex;
+    #endif
+    #if defined( SW_MATERIAL_CUSTOM_VARYINGS )
+    context.clipPosition = clipPosition;
+    output.user          = computeMaterialVaryings( context );
+    #endif
 #endif // !SW_MATERIAL_DEPTH_ONLY
-	SW_APPEARANCE_WRITE( output, context.instance )
-	return output;
+    SW_APPEARANCE_WRITE( output, context.instance )
+    return output;
 }
 
 // ------------------------------------------------------------------------------
@@ -96,46 +96,46 @@ SwMaterialInterpolants VSMain( SwVertexInput input, uint vertexId : SV_VertexID 
 /** @brief 보간된 값(과 픽셀에서 읽는 셰이더의 머티리얼)으로 픽셀 문맥을 만든다. 양면 머티리얼의 뒷면은 노멀을 뒤집는다. */
 SwPixelContext swMakePixelContext( SwMaterialInterpolants input, bool bFrontFace )
 {
-	SwPixelContext context;
-	context.position      = input.position;
-	context.color         = input.color;
-	context.uv            = input.uv;
-	context.normal        = normalize( input.normal );
-#if defined( MATERIAL_TWO_SIDED )
-	// 양면 머티리얼의 뒷면은 노멀이 반대다 — 뒤집지 않으면 안쪽이 바깥 빛으로 칠해진다.
-	context.normal        = bFrontFace ? context.normal : -context.normal;
-#endif
-	context.worldPosition = input.worldPosition;
-#if defined( SW_MATERIAL_USES_TANGENT )
-	context.tangent       = input.tangent;
-#endif
-	context.user          = input.user;
-#if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-	// 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음. 픽셀 단계에서만 읽는다(binding.hlsli 9 절).
-	context.material      = SW_MATERIAL( input.materialIndex );
-#endif
-	return context;
+    SwPixelContext context;
+    context.position = input.position;
+    context.color    = input.color;
+    context.uv       = input.uv;
+    context.normal   = normalize( input.normal );
+    #if defined( MATERIAL_TWO_SIDED )
+    // 양면 머티리얼의 뒷면은 노멀이 반대다 — 뒤집지 않으면 안쪽이 바깥 빛으로 칠해진다.
+    context.normal = bFrontFace ? context.normal : -context.normal;
+    #endif
+    context.worldPosition = input.worldPosition;
+    #if defined( SW_MATERIAL_USES_TANGENT )
+    context.tangent = input.tangent;
+    #endif
+    context.user = input.user;
+    #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
+    // 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음. 픽셀 단계에서만 읽는다(binding.hlsli 9 절).
+    context.material = SW_MATERIAL( input.materialIndex );
+    #endif
+    return context;
 }
 
 /** @brief 조명 훅의 선택을 풀어 색을 낸다 — 훅 정의 · 기본 PBR · 조명 없음 중 셰이더가 고른 하나다. */
 float4 swComputeSelectedLighting( SwPixelContext context, SwMaterialSurface surface )
 {
-	float4 lit;
-#if defined( SW_MATERIAL_CUSTOM_LIGHTING )
-	lit = computeMaterialLighting( context, surface );
-#elif defined( SW_MATERIAL_UNLIT )
-	lit = surface.albedo;
-#else
-#if SW_VIEWMODE_SKIPS_LIGHTING
-	// 보기 모드 Unlit 등 — 조명 · 그림자를 컴파일 아웃하고 알베도 그대로.
-	lit = surface.albedo;
-#else
-	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-	const float  shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
-	lit                 = float4( swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic ), surface.albedo.a );
-#endif
-#endif
-	return lit;
+    float4 lit;
+    #if defined( SW_MATERIAL_CUSTOM_LIGHTING )
+    lit = computeMaterialLighting( context, surface );
+    #elif defined( SW_MATERIAL_UNLIT )
+    lit = surface.albedo;
+    #else
+        #if SW_VIEWMODE_SKIPS_LIGHTING
+    // 보기 모드 Unlit 등 — 조명 · 그림자를 컴파일 아웃하고 알베도 그대로.
+    lit = surface.albedo;
+        #else
+    // 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
+    const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
+    lit                = float4( swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic ), surface.albedo.a );
+        #endif
+    #endif
+    return lit;
 }
 #endif // !SW_MATERIAL_DEPTH_ONLY
 
@@ -144,17 +144,17 @@ float4 swComputeSelectedLighting( SwPixelContext context, SwMaterialSurface surf
 /** @brief 깊이 패스의 픽셀 — 등장 디더와 알파 컷오프만 오린다(본 패스와 같은 표면 훅의 같은 알파 · 컷오프라 같은 자리를 버린다). */
 void swShadeDepthPixel( SwMaterialInterpolants input, bool bFrontFace )
 {
-	SW_APPEARANCE_CLIP( input )
-#if defined( MATERIAL_ALPHA_CUTOFF )
-	const SwPixelContext    context = swMakePixelContext( input, bFrontFace );
-	const SwMaterialSurface surface = computeMaterialSurface( context );
-	clip( surface.albedo.a - surface.alphaCutoff );
-#endif
+    SW_APPEARANCE_CLIP( input )
+    #if defined( MATERIAL_ALPHA_CUTOFF )
+    const SwPixelContext    context = swMakePixelContext( input, bFrontFace );
+    const SwMaterialSurface surface = computeMaterialSurface( context );
+    clip( surface.albedo.a - surface.alphaCutoff );
+    #endif
 }
 
 void PSMain( SwMaterialInterpolants input )
 {
-	swShadeDepthPixel( input, true );
+    swShadeDepthPixel( input, true );
 }
 
 #else
@@ -167,36 +167,36 @@ void PSMain( SwMaterialInterpolants input )
  */
 SW_SURFACE_OUTPUT swShadePixel( SwMaterialInterpolants input, bool bFrontFace )
 {
-	SW_APPEARANCE_CLIP( input )
-	const SwPixelContext    context = swMakePixelContext( input, bFrontFace );
-	const SwMaterialSurface surface = computeMaterialSurface( context );
-#if defined( MATERIAL_ALPHA_CUTOFF )
-	clip( surface.albedo.a - surface.alphaCutoff );
-#endif
-	SW_SURFACE_OUTPUT result;
-#if defined( SW_PASS_GBUFFER )
-	result = swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface.albedo, surface.normal, context.worldPosition, surface.roughness, surface.metallic );
-#else
-	float4 lit = swComputeSelectedLighting( context, surface );
-#if !defined( MATERIAL_BLEND_TRANSLUCENT )
-	lit.a = 1.0f;
-#endif
-	result = swStoreSurface( lit, surface.albedo, surface.normal, context.worldPosition, surface.roughness, surface.metallic );
-#endif
-	return result;
+    SW_APPEARANCE_CLIP( input )
+    const SwPixelContext    context = swMakePixelContext( input, bFrontFace );
+    const SwMaterialSurface surface = computeMaterialSurface( context );
+    #if defined( MATERIAL_ALPHA_CUTOFF )
+    clip( surface.albedo.a - surface.alphaCutoff );
+    #endif
+    SW_SURFACE_OUTPUT result;
+    #if defined( SW_PASS_GBUFFER )
+    result = swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface.albedo, surface.normal, context.worldPosition, surface.roughness, surface.metallic );
+    #else
+    float4 lit = swComputeSelectedLighting( context, surface );
+        #if !defined( MATERIAL_BLEND_TRANSLUCENT )
+    lit.a = 1.0f;
+        #endif
+    result = swStoreSurface( lit, surface.albedo, surface.normal, context.worldPosition, surface.roughness, surface.metallic );
+    #endif
+    return result;
 }
 
-#if defined( MATERIAL_TWO_SIDED )
+    #if defined( MATERIAL_TWO_SIDED )
 SW_SURFACE_OUTPUT PSMain( SwMaterialInterpolants input, bool bFrontFace : SV_IsFrontFace )
 {
-	return swShadePixel( input, bFrontFace );
+    return swShadePixel( input, bFrontFace );
 }
-#else
+    #else
 SW_SURFACE_OUTPUT PSMain( SwMaterialInterpolants input )
 {
-	return swShadePixel( input, true );
+    return swShadePixel( input, true );
 }
-#endif
+    #endif
 
 #endif // SW_MATERIAL_DEPTH_PASS
 

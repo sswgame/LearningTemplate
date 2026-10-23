@@ -31,22 +31,24 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV )
  */
 float swFilterShadowAtlas( float2 uv, float depth, float texelUv, bool bClamp, float2 clampMin, float2 clampMax )
 {
-	float lit = 0.0f;
-	[unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
-	{
-		[unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
-		{
-			const float2 tapUv = uv + float2( offsetX, offsetY ) * texelUv;
-			lit += swSampleShadowComparison( g_ShadowMapIndex, bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
-		}
-	}
-	return lit * ( 1.0f / 9.0f );
+    float lit = 0.0f;
+    [unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+    {
+        [unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+        {
+            const float2 tapUv = uv + float2( offsetX, offsetY ) * texelUv;
+            lit += swSampleShadowComparison( g_ShadowMapIndex, bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
+        }
+    }
+    return lit * ( 1.0f / 9.0f );
 }
 
 /** @brief 캐스케이드 c 의 상수(배율, 이동 x, 이동 y, 깊이 끝)입니다. */
 float4 swLoadShadowCascade( uint cascadeIndex )
 {
-	return ( cascadeIndex == 0u ) ? g_ShadowCascade0 : ( cascadeIndex == 1u ) ? g_ShadowCascade1 : ( cascadeIndex == 2u ) ? g_ShadowCascade2 : g_ShadowCascade3;
+    return ( cascadeIndex == 0u ) ? g_ShadowCascade0 : ( cascadeIndex == 1u ) ? g_ShadowCascade1
+                                                 : ( cascadeIndex == 2u )     ? g_ShadowCascade2
+                                                                              : g_ShadowCascade3;
 }
 
 /**
@@ -56,26 +58,26 @@ float4 swLoadShadowCascade( uint cascadeIndex )
  */
 float swSampleShadowCascade( uint cascadeIndex, float3 worldPosition, float3 worldNormal, out bool outInside )
 {
-	const float4 cascade        = swLoadShadowCascade( cascadeIndex );
-	const float  scale          = cascade.x;
-	const float3 samplePosition = worldPosition + worldNormal * ( g_ShadowParams.z / scale );
-	const float4 lightClip      = mul( float4( samplePosition, 1.0f ), g_LightViewProj );
-	const float3 ndc            = lightClip.xyz / lightClip.w;
-	const float2 tileUv         = ( ndc.xy * scale + cascade.yz ) * float2( 0.5f, -0.5f ) + 0.5f;
-	const float  tileScale      = g_ShadowCascadeLayout.y;
-	const float2 tileOrigin     = float2( cascadeIndex & 1u, cascadeIndex >> 1u ) * tileScale;
-	const float2 uv             = tileOrigin + tileUv * tileScale;
-	outInside = lightClip.w > 0.0f && tileUv.x >= 0.0f && tileUv.x <= 1.0f && tileUv.y >= 0.0f && tileUv.y <= 1.0f && ndc.z >= 0.0f && ndc.z <= 1.0f;
+    const float4 cascade        = swLoadShadowCascade( cascadeIndex );
+    const float  scale          = cascade.x;
+    const float3 samplePosition = worldPosition + worldNormal * ( g_ShadowParams.z / scale );
+    const float4 lightClip      = mul( float4( samplePosition, 1.0f ), g_LightViewProj );
+    const float3 ndc            = lightClip.xyz / lightClip.w;
+    const float2 tileUv         = ( ndc.xy * scale + cascade.yz ) * float2( 0.5f, -0.5f ) + 0.5f;
+    const float  tileScale      = g_ShadowCascadeLayout.y;
+    const float2 tileOrigin     = float2( cascadeIndex & 1u, cascadeIndex >> 1u ) * tileScale;
+    const float2 uv             = tileOrigin + tileUv * tileScale;
+    outInside                   = lightClip.w > 0.0f && tileUv.x >= 0.0f && tileUv.x <= 1.0f && tileUv.y >= 0.0f && tileUv.y <= 1.0f && ndc.z >= 0.0f && ndc.z <= 1.0f;
 
-	// 바이어스(g_ShadowParams.x · z)가 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne). 간격은 아틀라스 텍셀 하나의 UV 폭이다.
-	// 칸이 아틀라스 전체가 아니면 탭을 칸 안(반 텍셀 안쪽)으로 자른다 — 옆 사분면은 다른 캐스케이드 · 점광의 깊이다.
-	const float  texelUv   = g_ShadowParams.w * tileScale;
-	const bool   bClamp    = tileScale < 1.0f;
-	const float2 clampMin  = tileOrigin + 0.5f * texelUv;
-	const float2 clampMax  = tileOrigin + tileScale - 0.5f * texelUv;
-	const float  lit       = outInside ? swFilterShadowAtlas( uv, ndc.z - g_ShadowParams.x / scale, texelUv, bClamp, clampMin, clampMax ) : 1.0f;
-	// 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
-	return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
+    // 바이어스(g_ShadowParams.x · z)가 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne). 간격은 아틀라스 텍셀 하나의 UV 폭이다.
+    // 칸이 아틀라스 전체가 아니면 탭을 칸 안(반 텍셀 안쪽)으로 자른다 — 옆 사분면은 다른 캐스케이드 · 점광의 깊이다.
+    const float  texelUv  = g_ShadowParams.w * tileScale;
+    const bool   bClamp   = tileScale < 1.0f;
+    const float2 clampMin = tileOrigin + 0.5f * texelUv;
+    const float2 clampMax = tileOrigin + tileScale - 0.5f * texelUv;
+    const float  lit      = outInside ? swFilterShadowAtlas( uv, ndc.z - g_ShadowParams.x / scale, texelUv, bClamp, clampMin, clampMax ) : 1.0f;
+    // 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
+    return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
 }
 
 /**
@@ -92,37 +94,37 @@ float swSampleShadowCascade( uint cascadeIndex, float3 worldPosition, float3 wor
  */
 float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
 {
-	float result = 1.0f;
-	if ( g_ShadowMapIndex != kInvalidIndex )
-	{
-		const uint  cascadeCount = (uint)( g_ShadowCascadeLayout.x + 0.5f );
-		const float viewDepth    = mul( float4( worldPosition, 1.0f ), g_ViewProj ).w;
-		uint        cascadeIndex = cascadeCount;
-		[unroll] for ( uint index = 0u; index < SW_SHADOW_CASCADE_MAX; ++index )
-		{
-			if ( cascadeIndex == cascadeCount && index < cascadeCount && viewDepth <= swLoadShadowCascade( index ).w )
-				cascadeIndex = index;
-		}
-		if ( cascadeIndex < cascadeCount )
-		{
-			bool        bInside = false;
-			const float first   = swSampleShadowCascade( cascadeIndex, worldPosition, worldNormal, bInside );
-			result              = first;
-			const uint  nextIndex  = cascadeIndex + 1u;
-			const float splitEnd   = swLoadShadowCascade( cascadeIndex ).w;
-			const float splitStart = ( cascadeIndex == 0u ) ? 0.0f : swLoadShadowCascade( cascadeIndex - 1u ).w;
-			const float blendWidth = max( ( splitEnd - splitStart ) * g_ShadowCascadeLayout.z, 1e-4f );
-			const float blend      = saturate( ( viewDepth - ( splitEnd - blendWidth ) ) / blendWidth );
-			const bool  bUseNext   = nextIndex < cascadeCount && ( bInside == false || blend > 0.0f );
-			if ( bUseNext )
-			{
-				bool        bNextInside = false;
-				const float second      = swSampleShadowCascade( nextIndex, worldPosition, worldNormal, bNextInside );
-				result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
-			}
-		}
-	}
-	return result;
+    float result = 1.0f;
+    if ( g_ShadowMapIndex != kInvalidIndex )
+    {
+        const uint  cascadeCount = (uint)( g_ShadowCascadeLayout.x + 0.5f );
+        const float viewDepth    = mul( float4( worldPosition, 1.0f ), g_ViewProj ).w;
+        uint        cascadeIndex = cascadeCount;
+        [unroll] for ( uint index = 0u; index < SW_SHADOW_CASCADE_MAX; ++index )
+        {
+            if ( cascadeIndex == cascadeCount && index < cascadeCount && viewDepth <= swLoadShadowCascade( index ).w )
+                cascadeIndex = index;
+        }
+        if ( cascadeIndex < cascadeCount )
+        {
+            bool        bInside    = false;
+            const float first      = swSampleShadowCascade( cascadeIndex, worldPosition, worldNormal, bInside );
+            result                 = first;
+            const uint  nextIndex  = cascadeIndex + 1u;
+            const float splitEnd   = swLoadShadowCascade( cascadeIndex ).w;
+            const float splitStart = ( cascadeIndex == 0u ) ? 0.0f : swLoadShadowCascade( cascadeIndex - 1u ).w;
+            const float blendWidth = max( ( splitEnd - splitStart ) * g_ShadowCascadeLayout.z, 1e-4f );
+            const float blend      = saturate( ( viewDepth - ( splitEnd - blendWidth ) ) / blendWidth );
+            const bool  bUseNext   = nextIndex < cascadeCount && ( bInside == false || blend > 0.0f );
+            if ( bUseNext )
+            {
+                bool        bNextInside = false;
+                const float second      = swSampleShadowCascade( nextIndex, worldPosition, worldNormal, bNextInside );
+                result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
+            }
+        }
+    }
+    return result;
 }
 
 /**
@@ -133,34 +135,34 @@ float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
  */
 float swSampleLocalShadow( SwLightData light, float3 worldPosition, float3 worldNormal )
 {
-	const uint   lightType = (uint)( light.directionType.w + 0.5f );
-	const float3 fromLight = worldPosition - light.positionRadius.xyz;
-	const float3 axis      = abs( fromLight );
-	uint         faceIndex = 0u;
-	if ( lightType == SW_LIGHT_TYPE_POINT )
-	{
-		if ( axis.x >= axis.y && axis.x >= axis.z )
-			faceIndex = ( fromLight.x >= 0.0f ) ? 0u : 1u;
-		else if ( axis.y >= axis.z )
-			faceIndex = ( fromLight.y >= 0.0f ) ? 2u : 3u;
-		else
-			faceIndex = ( fromLight.z >= 0.0f ) ? 4u : 5u;
-	}
-	const uint        element    = g_SwLightCount + (uint)( light.params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
-	const SwLightData matrixRows = g_SwLights[element];
-	const SwLightData info       = g_SwLights[element + 1u];
-	const float4x4    viewProj   = float4x4( matrixRows.positionRadius, matrixRows.colorIntensity, matrixRows.directionType, matrixRows.params );
+    const uint   lightType = (uint)( light.directionType.w + 0.5f );
+    const float3 fromLight = worldPosition - light.positionRadius.xyz;
+    const float3 axis      = abs( fromLight );
+    uint         faceIndex = 0u;
+    if ( lightType == SW_LIGHT_TYPE_POINT )
+    {
+        if ( axis.x >= axis.y && axis.x >= axis.z )
+            faceIndex = ( fromLight.x >= 0.0f ) ? 0u : 1u;
+        else if ( axis.y >= axis.z )
+            faceIndex = ( fromLight.y >= 0.0f ) ? 2u : 3u;
+        else
+            faceIndex = ( fromLight.z >= 0.0f ) ? 4u : 5u;
+    }
+    const uint        element    = g_SwLightCount + (uint)( light.params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
+    const SwLightData matrixRows = g_SwLights[element];
+    const SwLightData info       = g_SwLights[element + 1u];
+    const float4x4    viewProj   = float4x4( matrixRows.positionRadius, matrixRows.colorIntensity, matrixRows.directionType, matrixRows.params );
 
-	const float  distance       = length( fromLight );
-	const float3 toLight        = -fromLight / max( distance, 1e-4f );
-	const float3 samplePosition = worldPosition + worldNormal * ( info.colorIntensity.x * distance ) + toLight * ( info.colorIntensity.y * distance );
-	const float4 lightClip      = mul( float4( samplePosition, 1.0f ), viewProj );
-	const float3 ndc            = lightClip.xyz / lightClip.w;
-	const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
-	const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info.positionRadius.x && uv.x <= info.positionRadius.z &&
-	                     uv.y >= info.positionRadius.y && uv.y <= info.positionRadius.w;
-	const float lit = bInside ? swFilterShadowAtlas( uv, ndc.z, info.colorIntensity.z, true, info.positionRadius.xy, info.positionRadius.zw ) : 1.0f;
-	return lerp( 1.0f - info.colorIntensity.w, 1.0f, saturate( lit ) );
+    const float  distance       = length( fromLight );
+    const float3 toLight        = -fromLight / max( distance, 1e-4f );
+    const float3 samplePosition = worldPosition + worldNormal * ( info.colorIntensity.x * distance ) + toLight * ( info.colorIntensity.y * distance );
+    const float4 lightClip      = mul( float4( samplePosition, 1.0f ), viewProj );
+    const float3 ndc            = lightClip.xyz / lightClip.w;
+    const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
+    const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info.positionRadius.x && uv.x <= info.positionRadius.z &&
+                         uv.y >= info.positionRadius.y && uv.y <= info.positionRadius.w;
+    const float lit = bInside ? swFilterShadowAtlas( uv, ndc.z, info.colorIntensity.z, true, info.positionRadius.xy, info.positionRadius.zw ) : 1.0f;
+    return lerp( 1.0f - info.colorIntensity.w, 1.0f, saturate( lit ) );
 }
 
 /**
@@ -169,11 +171,11 @@ float swSampleLocalShadow( SwLightData light, float3 worldPosition, float3 world
  */
 float swComputeLightShadow( SwLightData light, float3 worldPosition, float3 worldNormal, float directionalShadow )
 {
-	const uint lightType = (uint)( light.directionType.w + 0.5f );
-	float      shadow    = 1.0f;
-	if ( light.params.x > 0.5f )
-		shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : swSampleLocalShadow( light, worldPosition, worldNormal );
-	return shadow;
+    const uint lightType = (uint)( light.directionType.w + 0.5f );
+    float      shadow    = 1.0f;
+    if ( light.params.x > 0.5f )
+        shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : swSampleLocalShadow( light, worldPosition, worldNormal );
+    return shadow;
 }
 
 /**
@@ -183,9 +185,9 @@ float swComputeLightShadow( SwLightData light, float3 worldPosition, float3 worl
  */
 float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )
 {
-	const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
-	const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
-	return world.xyz / world.w;
+    const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
+    return world.xyz / world.w;
 }
 
 /**
@@ -198,45 +200,45 @@ float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )
  */
 bool swComputeLightIncidence( SwLightData light, float3 worldPosition, out float3 outToLight, out float outAttenuation )
 {
-	const uint lightType = (uint)( light.directionType.w + 0.5f );
-	// 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
-	const bool bLight3d    = ( lightType <= SW_LIGHT_TYPE_SPOT );
-	float3     toLight     = -light.directionType.xyz;
-	float      attenuation = 1.0f;
-	if ( bLight3d && lightType != SW_LIGHT_TYPE_DIRECTIONAL )
-	{
-		// 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
-		const float3 delta    = light.positionRadius.xyz - worldPosition;
-		const float  distance = length( delta );
-		// 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
-		const float radius = max( light.positionRadius.w, 1e-4f );
-		toLight            = delta / max( distance, 1e-4f );
-		// 역제곱을 반경에서 자른 형태 — 언리얼의 `InverseSquaredFalloff` 와 같은 모양이다.
-		// 물리적으로 정확한 역제곱만 쓰면 빛이 영원히 닿아 타일 컬링이 의미를 잃는다.
-		const float normalized = saturate( 1.0f - ( distance / radius ) );
-		attenuation            = normalized * normalized;
+    const uint lightType = (uint)( light.directionType.w + 0.5f );
+    // 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
+    const bool bLight3d    = ( lightType <= SW_LIGHT_TYPE_SPOT );
+    float3     toLight     = -light.directionType.xyz;
+    float      attenuation = 1.0f;
+    if ( bLight3d && lightType != SW_LIGHT_TYPE_DIRECTIONAL )
+    {
+        // 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
+        const float3 delta    = light.positionRadius.xyz - worldPosition;
+        const float  distance = length( delta );
+        // 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
+        const float radius = max( light.positionRadius.w, 1e-4f );
+        toLight            = delta / max( distance, 1e-4f );
+        // 역제곱을 반경에서 자른 형태 — 언리얼의 `InverseSquaredFalloff` 와 같은 모양이다.
+        // 물리적으로 정확한 역제곱만 쓰면 빛이 영원히 닿아 타일 컬링이 의미를 잃는다.
+        const float normalized = saturate( 1.0f - ( distance / radius ) );
+        attenuation            = normalized * normalized;
 
-		if ( lightType == SW_LIGHT_TYPE_SPOT )
-		{
-			// 원뿔 감쇠. `dot(빛이 나아가는 방향, 빛에서 표면으로 가는 방향)` 이 1 에 가까울수록
-			// 원뿔 중심이다. 안쪽 각 안은 1, 바깥 각 밖은 0, 사이는 부드럽게 떨어진다.
-			const float cosAngle = dot( light.directionType.xyz, -toLight );
-			const float cosOuter = light.params.y;
-			const float cosInner = light.params.z;
-			// 안쪽과 바깥쪽이 같으면 0 으로 나눈다 — 그 경우 경계가 칼같이 끊긴다.
-			const float cone = saturate( ( cosAngle - cosOuter ) / max( cosInner - cosOuter, 1e-4f ) );
-			attenuation *= cone * cone;
-		}
-	}
-	outToLight     = toLight;
-	outAttenuation = attenuation;
-	return bLight3d;
+        if ( lightType == SW_LIGHT_TYPE_SPOT )
+        {
+            // 원뿔 감쇠. `dot(빛이 나아가는 방향, 빛에서 표면으로 가는 방향)` 이 1 에 가까울수록
+            // 원뿔 중심이다. 안쪽 각 안은 1, 바깥 각 밖은 0, 사이는 부드럽게 떨어진다.
+            const float cosAngle = dot( light.directionType.xyz, -toLight );
+            const float cosOuter = light.params.y;
+            const float cosInner = light.params.z;
+            // 안쪽과 바깥쪽이 같으면 0 으로 나눈다 — 그 경우 경계가 칼같이 끊긴다.
+            const float cone = saturate( ( cosAngle - cosOuter ) / max( cosInner - cosOuter, 1e-4f ) );
+            attenuation *= cone * cone;
+        }
+    }
+    outToLight     = toLight;
+    outAttenuation = attenuation;
+    return bLight3d;
 }
 
 /** @brief 라이트 프로브 버퍼(g_SwLightProbes, t13)의 원소 하나입니다 — 이 함수만 그 버퍼를 읽는다(SH9 · 반사 프로브 텍셀이 같은 버퍼다). */
 float4 swLoadProbeElement( uint elementIndex )
 {
-	return g_SwLightProbes[elementIndex];
+    return g_SwLightProbes[elementIndex];
 }
 
 /**
@@ -244,7 +246,7 @@ float4 swLoadProbeElement( uint elementIndex )
  */
 float4 swLoadProbe( uint probeIndex, uint element )
 {
-	return swLoadProbeElement( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element );
+    return swLoadProbeElement( probeIndex * SW_LIGHT_PROBE_FLOAT4_COUNT + element );
 }
 
 /**
@@ -254,14 +256,14 @@ float4 swLoadProbe( uint probeIndex, uint element )
  */
 float3 swEvaluateSphericalHarmonics( uint probeIndex, float3 normal )
 {
-	const float4 linearInput    = float4( normal, 1.0f );
-	const float4 quadraticInput = normal.xyzz * normal.yzzx;
-	const float  squareInput    = normal.x * normal.x - normal.y * normal.y;
-	const float3 linearTerm     = float3( dot( swLoadProbe( probeIndex, 0u ), linearInput ), dot( swLoadProbe( probeIndex, 1u ), linearInput ),
-	                                      dot( swLoadProbe( probeIndex, 2u ), linearInput ) );
-	const float3 quadraticTerm  = float3( dot( swLoadProbe( probeIndex, 3u ), quadraticInput ), dot( swLoadProbe( probeIndex, 4u ), quadraticInput ),
-	                                      dot( swLoadProbe( probeIndex, 5u ), quadraticInput ) );
-	return max( linearTerm + quadraticTerm + swLoadProbe( probeIndex, 6u ).rgb * squareInput, 0.0f );
+    const float4 linearInput    = float4( normal, 1.0f );
+    const float4 quadraticInput = normal.xyzz * normal.yzzx;
+    const float  squareInput    = normal.x * normal.x - normal.y * normal.y;
+    const float3 linearTerm     = float3( dot( swLoadProbe( probeIndex, 0u ), linearInput ), dot( swLoadProbe( probeIndex, 1u ), linearInput ),
+                                          dot( swLoadProbe( probeIndex, 2u ), linearInput ) );
+    const float3 quadraticTerm  = float3( dot( swLoadProbe( probeIndex, 3u ), quadraticInput ), dot( swLoadProbe( probeIndex, 4u ), quadraticInput ),
+                                          dot( swLoadProbe( probeIndex, 5u ), quadraticInput ) );
+    return max( linearTerm + quadraticTerm + swLoadProbe( probeIndex, 6u ).rgb * squareInput, 0.0f );
 }
 
 /**
@@ -271,34 +273,34 @@ float3 swEvaluateSphericalHarmonics( uint probeIndex, float3 normal )
  */
 float4 swSampleProbeVolume( SwLightData volume, float3 worldPosition, float3 normal )
 {
-	const float3 origin     = volume.colorIntensity.xyz;
-	const float3 spacing    = max( volume.directionType.xyz, 1e-4f );
-	const uint3  count      = uint3( volume.params.xyz + 0.5f );
-	const uint   probeBase  = (uint)( volume.params.w + 0.5f );
-	const float3 lastCell   = float3( max( count, 1u ) - 1u );
-	const float3 local      = ( worldPosition - origin ) / spacing;
-	// 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
-	const float3 multiAxis  = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
-	const float3 lowBound   = multiAxis * 0.5f - 0.5f;
-	const float3 highBound  = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
-	const bool   bInside    = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
-	const float3 clamped    = clamp( local, 0.0f, lastCell );
-	const uint3  cell       = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
-	const float3 blend      = saturate( clamped - float3( cell ) ) * multiAxis;
-	const uint3  nextOffset = uint3( count > 1u );
-	float3       result     = float3( 0.0f, 0.0f, 0.0f );
-	if ( bInside )
-	{
-		[unroll] for ( uint corner = 0u; corner < 8u; ++corner )
-		{
-			const uint3  pick        = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
-			const uint3  probeCell   = cell + pick * nextOffset;
-			const float3 axisWeight  = lerp( 1.0f - blend, blend, float3( pick ) );
-			const uint   probeIndex  = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
-			result += swEvaluateSphericalHarmonics( probeIndex, normal ) * ( axisWeight.x * axisWeight.y * axisWeight.z );
-		}
-	}
-	return float4( result, bInside ? 1.0f : 0.0f );
+    const float3 origin    = volume.colorIntensity.xyz;
+    const float3 spacing   = max( volume.directionType.xyz, 1e-4f );
+    const uint3  count     = uint3( volume.params.xyz + 0.5f );
+    const uint   probeBase = (uint)( volume.params.w + 0.5f );
+    const float3 lastCell  = float3( max( count, 1u ) - 1u );
+    const float3 local     = ( worldPosition - origin ) / spacing;
+    // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
+    const float3 multiAxis  = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
+    const float3 lowBound   = multiAxis * 0.5f - 0.5f;
+    const float3 highBound  = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
+    const bool   bInside    = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
+    const float3 clamped    = clamp( local, 0.0f, lastCell );
+    const uint3  cell       = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
+    const float3 blend      = saturate( clamped - float3( cell ) ) * multiAxis;
+    const uint3  nextOffset = uint3( count > 1u );
+    float3       result     = float3( 0.0f, 0.0f, 0.0f );
+    if ( bInside )
+    {
+        [unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+        {
+            const uint3  pick       = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
+            const uint3  probeCell  = cell + pick * nextOffset;
+            const float3 axisWeight = lerp( 1.0f - blend, blend, float3( pick ) );
+            const uint   probeIndex = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
+            result += swEvaluateSphericalHarmonics( probeIndex, normal ) * ( axisWeight.x * axisWeight.y * axisWeight.z );
+        }
+    }
+    return float4( result, bInside ? 1.0f : 0.0f );
 }
 
 /**
@@ -307,27 +309,27 @@ float4 swSampleProbeVolume( SwLightData volume, float3 worldPosition, float3 nor
  */
 float2 swEncodeOctahedral( float3 direction )
 {
-	const float3 folded   = direction / max( abs( direction.x ) + abs( direction.y ) + abs( direction.z ), 1e-8f );
-	const float2 signXz   = float2( folded.x >= 0.0f ? 1.0f : -1.0f, folded.z >= 0.0f ? 1.0f : -1.0f );
-	const float2 lower    = ( 1.0f - abs( folded.zx ) ) * signXz;
-	const float2 octahedral = ( folded.y >= 0.0f ) ? folded.xz : lower;
-	return octahedral * 0.5f + 0.5f;
+    const float3 folded     = direction / max( abs( direction.x ) + abs( direction.y ) + abs( direction.z ), 1e-8f );
+    const float2 signXz     = float2( folded.x >= 0.0f ? 1.0f : -1.0f, folded.z >= 0.0f ? 1.0f : -1.0f );
+    const float2 lower      = ( 1.0f - abs( folded.zx ) ) * signXz;
+    const float2 octahedral = ( folded.y >= 0.0f ) ? folded.xz : lower;
+    return octahedral * 0.5f + 0.5f;
 }
 
 /** @brief 반사 프로브의 한 거칠기 단계를 방향 @p direction 으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(C++ `ReflectionProbeData::sampleLevel` 과 같다). */
 float3 swSampleReflectionProbeLevel( uint firstTexel, uint resolution, uint level, float2 uv )
 {
-	const float  lastTexel = (float)( resolution - 1u );
-	const float2 texel     = clamp( uv * (float)resolution - 0.5f, 0.0f, lastTexel );
-	const uint2  low       = uint2( floor( texel ) );
-	const uint2  high      = min( low + 1u, uint2( resolution - 1u, resolution - 1u ) );
-	const float2 blend     = texel - float2( low );
-	const uint   levelBase = firstTexel + level * resolution * resolution;
-	const float3 topLeft   = swLoadProbeElement( levelBase + low.y * resolution + low.x ).rgb;
-	const float3 topRight  = swLoadProbeElement( levelBase + low.y * resolution + high.x ).rgb;
-	const float3 lowLeft   = swLoadProbeElement( levelBase + high.y * resolution + low.x ).rgb;
-	const float3 lowRight  = swLoadProbeElement( levelBase + high.y * resolution + high.x ).rgb;
-	return lerp( lerp( topLeft, topRight, blend.x ), lerp( lowLeft, lowRight, blend.x ), blend.y );
+    const float  lastTexel = (float)( resolution - 1u );
+    const float2 texel     = clamp( uv * (float)resolution - 0.5f, 0.0f, lastTexel );
+    const uint2  low       = uint2( floor( texel ) );
+    const uint2  high      = min( low + 1u, uint2( resolution - 1u, resolution - 1u ) );
+    const float2 blend     = texel - float2( low );
+    const uint   levelBase = firstTexel + level * resolution * resolution;
+    const float3 topLeft   = swLoadProbeElement( levelBase + low.y * resolution + low.x ).rgb;
+    const float3 topRight  = swLoadProbeElement( levelBase + low.y * resolution + high.x ).rgb;
+    const float3 lowLeft   = swLoadProbeElement( levelBase + high.y * resolution + low.x ).rgb;
+    const float3 lowRight  = swLoadProbeElement( levelBase + high.y * resolution + high.x ).rgb;
+    return lerp( lerp( topLeft, topRight, blend.x ), lerp( lowLeft, lowRight, blend.x ), blend.y );
 }
 
 /**
@@ -337,25 +339,25 @@ float3 swSampleReflectionProbeLevel( uint firstTexel, uint resolution, uint leve
  */
 float4 swSampleReflectionProbe( SwLightData probe, float3 worldPosition, float3 reflectDirection, float roughness )
 {
-	const float3 halfExtent  = probe.colorIntensity.xyz;
-	const float  blendWidth  = max( probe.colorIntensity.w, 1e-3f );
-	const float3 inside      = halfExtent - abs( worldPosition - probe.positionRadius.xyz ); // 축마다 경계까지 남은 거리(음수면 밖)
-	const float  weight      = saturate( min( inside.x, min( inside.y, inside.z ) ) / blendWidth );
-	const uint   resolution  = (uint)( probe.params.x + 0.5f );
-	const uint   levelCount  = (uint)( probe.params.y + 0.5f );
-	const uint   firstTexel  = (uint)( probe.params.z + 0.5f );
-	const bool   bUsable     = weight > 0.0f && resolution > 0u && levelCount > 1u && g_SwLightProbesIndex != kInvalidIndex;
-	float3       radiance    = float3( 0.0f, 0.0f, 0.0f );
-	if ( bUsable )
-	{
-		const float2 uv        = swEncodeOctahedral( reflectDirection );
-		const float  levelPick = saturate( roughness ) * (float)( levelCount - 1u );
-		const uint   lowLevel  = min( (uint)levelPick, levelCount - 1u );
-		const uint   highLevel = min( lowLevel + 1u, levelCount - 1u );
-		radiance = lerp( swSampleReflectionProbeLevel( firstTexel, resolution, lowLevel, uv ), swSampleReflectionProbeLevel( firstTexel, resolution, highLevel, uv ),
-		                 levelPick - (float)lowLevel );
-	}
-	return float4( radiance, bUsable ? weight : 0.0f );
+    const float3 halfExtent = probe.colorIntensity.xyz;
+    const float  blendWidth = max( probe.colorIntensity.w, 1e-3f );
+    const float3 inside     = halfExtent - abs( worldPosition - probe.positionRadius.xyz ); // 축마다 경계까지 남은 거리(음수면 밖)
+    const float  weight     = saturate( min( inside.x, min( inside.y, inside.z ) ) / blendWidth );
+    const uint   resolution = (uint)( probe.params.x + 0.5f );
+    const uint   levelCount = (uint)( probe.params.y + 0.5f );
+    const uint   firstTexel = (uint)( probe.params.z + 0.5f );
+    const bool   bUsable    = weight > 0.0f && resolution > 0u && levelCount > 1u && g_SwLightProbesIndex != kInvalidIndex;
+    float3       radiance   = float3( 0.0f, 0.0f, 0.0f );
+    if ( bUsable )
+    {
+        const float2 uv        = swEncodeOctahedral( reflectDirection );
+        const float  levelPick = saturate( roughness ) * (float)( levelCount - 1u );
+        const uint   lowLevel  = min( (uint)levelPick, levelCount - 1u );
+        const uint   highLevel = min( lowLevel + 1u, levelCount - 1u );
+        radiance               = lerp( swSampleReflectionProbeLevel( firstTexel, resolution, lowLevel, uv ), swSampleReflectionProbeLevel( firstTexel, resolution, highLevel, uv ),
+                                       levelPick - (float)lowLevel );
+    }
+    return float4( radiance, bUsable ? weight : 0.0f );
 }
 
 /**
@@ -370,11 +372,11 @@ float4 swSampleReflectionProbe( SwLightData probe, float3 worldPosition, float3 
  */
 struct SwLightCursor
 {
-	uint position;        // 첫 구간의 다음 항목. 그리드가 없으면 라이트 번호, 있으면 전역 구간(방향광)의 그리드 단어 번호다
-	uint end;             // 첫 구간의 끝
-	uint clusterPosition; // 둘째 구간(이 위치의 클러스터 목록)의 다음 그리드 단어 번호. 그리드가 없으면 빈 구간이다
-	uint clusterEnd;      // 둘째 구간의 끝
-	uint bGrid;           // 1 이면 두 구간의 항목이 그리드 단어이고 라이트 번호는 그 단어에 있다
+    uint position;        // 첫 구간의 다음 항목. 그리드가 없으면 라이트 번호, 있으면 전역 구간(방향광)의 그리드 단어 번호다
+    uint end;             // 첫 구간의 끝
+    uint clusterPosition; // 둘째 구간(이 위치의 클러스터 목록)의 다음 그리드 단어 번호. 그리드가 없으면 빈 구간이다
+    uint clusterEnd;      // 둘째 구간의 끝
+    uint bGrid;           // 1 이면 두 구간의 항목이 그리드 단어이고 라이트 번호는 그 단어에 있다
 };
 
 /**
@@ -383,24 +385,24 @@ struct SwLightCursor
  */
 SwLightCursor swBeginLights( float3 worldPosition )
 {
-	SwLightCursor cursor;
-	cursor.position        = 0u;
-	cursor.end             = swComputeLightCount();
-	cursor.clusterPosition = 0u;
-	cursor.clusterEnd      = 0u;
-	cursor.bGrid           = 0u;
-	if ( cursor.end > 0u && swHasLightGrid() )
-	{
-		const uint cluster     = swComputeLightGridCluster( worldPosition );
-		const uint indexBase   = swLoadLightGridWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
-		const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + cluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
-		cursor.position        = indexBase;
-		cursor.end             = indexBase + swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT );
-		cursor.clusterPosition = indexBase + swLoadLightGridWord( clusterWord );
-		cursor.clusterEnd      = cursor.clusterPosition + swLoadLightGridWord( clusterWord + 1u );
-		cursor.bGrid           = 1u;
-	}
-	return cursor;
+    SwLightCursor cursor;
+    cursor.position        = 0u;
+    cursor.end             = swComputeLightCount();
+    cursor.clusterPosition = 0u;
+    cursor.clusterEnd      = 0u;
+    cursor.bGrid           = 0u;
+    if ( cursor.end > 0u && swHasLightGrid() )
+    {
+        const uint cluster     = swComputeLightGridCluster( worldPosition );
+        const uint indexBase   = swLoadLightGridWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
+        const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + cluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+        cursor.position        = indexBase;
+        cursor.end             = indexBase + swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT );
+        cursor.clusterPosition = indexBase + swLoadLightGridWord( clusterWord );
+        cursor.clusterEnd      = cursor.clusterPosition + swLoadLightGridWord( clusterWord + 1u );
+        cursor.bGrid           = 1u;
+    }
+    return cursor;
 }
 
 /**
@@ -411,23 +413,23 @@ SwLightCursor swBeginLights( float3 worldPosition )
  */
 bool swNextLight( inout SwLightCursor inoutCursor, out SwLightData outLight )
 {
-	const bool bFirst    = inoutCursor.position < inoutCursor.end;
-	const bool bSecond   = ( bFirst == false ) && ( inoutCursor.clusterPosition < inoutCursor.clusterEnd );
-	const bool bHasLight = bFirst || bSecond;
-	const uint entry     = bFirst ? inoutCursor.position : inoutCursor.clusterPosition;
-	uint       lightIndex = entry;
-	if ( bHasLight && inoutCursor.bGrid != 0u )
-		lightIndex = swLoadLightGridWord( entry );
-	outLight.positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
-	outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	outLight.extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-	if ( bHasLight && lightIndex < g_SwLightCount )
-		outLight = g_SwLights[lightIndex];
-	inoutCursor.position += bFirst ? 1u : 0u;
-	inoutCursor.clusterPosition += bSecond ? 1u : 0u;
-	return bHasLight;
+    const bool bFirst     = inoutCursor.position < inoutCursor.end;
+    const bool bSecond    = ( bFirst == false ) && ( inoutCursor.clusterPosition < inoutCursor.clusterEnd );
+    const bool bHasLight  = bFirst || bSecond;
+    const uint entry      = bFirst ? inoutCursor.position : inoutCursor.clusterPosition;
+    uint       lightIndex = entry;
+    if ( bHasLight && inoutCursor.bGrid != 0u )
+        lightIndex = swLoadLightGridWord( entry );
+    outLight.positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
+    outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight.extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    if ( bHasLight && lightIndex < g_SwLightCount )
+        outLight = g_SwLights[lightIndex];
+    inoutCursor.position += bFirst ? 1u : 0u;
+    inoutCursor.clusterPosition += bSecond ? 1u : 0u;
+    return bHasLight;
 }
 
 // ------------------------------------------------------------------------------
@@ -441,21 +443,21 @@ static const float kMinRoughness       = 0.045f; // 거칠기 0 의 GGX 는 점 
 /** @brief PBR 표면 — 금속도가 기본 색을 확산색과 F0 로 나눈다(언리얼 DiffuseColor · SpecularColor). */
 struct SwSurfacePBR
 {
-	float3 diffuseColor;
-	float3 specularColor; // F0
-	float  roughness;     // 지각 거칠기(하한을 건 값)
-	float  alpha;         // GGX α = 거칠기²
+    float3 diffuseColor;
+    float3 specularColor; // F0
+    float  roughness;     // 지각 거칠기(하한을 건 값)
+    float  alpha;         // GGX α = 거칠기²
 };
 
 SwSurfacePBR swMakeSurfacePbr( float3 baseColor, float roughness, float metallic )
 {
-	const float  clampedMetallic = saturate( metallic );
-	SwSurfacePBR surface;
-	surface.diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
-	surface.specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
-	surface.roughness     = max( saturate( roughness ), kMinRoughness );
-	surface.alpha         = surface.roughness * surface.roughness;
-	return surface;
+    const float  clampedMetallic = saturate( metallic );
+    SwSurfacePBR surface;
+    surface.diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
+    surface.specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
+    surface.roughness     = max( saturate( roughness ), kMinRoughness );
+    surface.alpha         = surface.roughness * surface.roughness;
+    return surface;
 }
 
 /**
@@ -464,30 +466,30 @@ SwSurfacePBR swMakeSurfacePbr( float3 baseColor, float roughness, float metallic
  */
 float3 swComputeToView( float3 worldPosition )
 {
-	const float4 clip      = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-	const float2 ndcXy     = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
-	const float4 nearPoint = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
-	const float4 farPoint  = mul( float4( ndcXy, 1.0f, 1.0f ), g_InvViewProj );
-	return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
+    const float4 clip      = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+    const float2 ndcXy     = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
+    const float4 nearPoint = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
+    const float4 farPoint  = mul( float4( ndcXy, 1.0f, 1.0f ), g_InvViewProj );
+    return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
 }
 
 /** @brief 빛 하나의 반사 BRDF × π(엔진 단위) × N·L 입니다. 언리얼 `SpecularGGX` 의 D_GGX · Vis_SmithJointApprox · F_Schlick 과 같다. */
 float3 swEvaluateSpecular( SwSurfacePBR surface, float3 normal, float3 toView, float3 toLight, float normalDotLight )
 {
-	const float3 halfway       = normalize( toView + toLight );
-	const float  normalDotHalf = saturate( dot( normal, halfway ) );
-	const float  normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
-	const float  viewDotHalf   = saturate( dot( toView, halfway ) );
-	const float  alphaSquared  = surface.alpha * surface.alpha;
-	const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
-	// D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
-	const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
-	const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - surface.alpha ) + surface.alpha ) +
-	                                                   normalDotView * ( normalDotLight * ( 1.0f - surface.alpha ) + surface.alpha ),
-	                                               1e-5f );
-	const float  fresnelWeight       = pow( 1.0f - viewDotHalf, 5.0f );
-	const float3 fresnel             = surface.specularColor + ( 1.0f - surface.specularColor ) * fresnelWeight;
-	return distributionTimesPi * visibility * fresnel * normalDotLight;
+    const float3 halfway       = normalize( toView + toLight );
+    const float  normalDotHalf = saturate( dot( normal, halfway ) );
+    const float  normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
+    const float  viewDotHalf   = saturate( dot( toView, halfway ) );
+    const float  alphaSquared  = surface.alpha * surface.alpha;
+    const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
+    // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
+    const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
+    const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - surface.alpha ) + surface.alpha ) +
+                                                       normalDotView * ( normalDotLight * ( 1.0f - surface.alpha ) + surface.alpha ),
+                                                   1e-5f );
+    const float  fresnelWeight       = pow( 1.0f - viewDotHalf, 5.0f );
+    const float3 fresnel             = surface.specularColor + ( 1.0f - surface.specularColor ) * fresnelWeight;
+    return distributionTimesPi * visibility * fresnel * normalDotLight;
 }
 
 /**
@@ -496,12 +498,12 @@ float3 swEvaluateSpecular( SwSurfacePBR surface, float3 normal, float3 toView, f
  */
 float3 swComputeEnvironmentSpecular( SwSurfacePBR surface, float normalDotView )
 {
-	const float4 c0     = float4( -1.0f, -0.0275f, -0.572f, 0.022f );
-	const float4 c1     = float4( 1.0f, 0.0425f, 1.04f, -0.04f );
-	const float4 fitted = surface.roughness * c0 + c1;
-	const float  a004   = min( fitted.x * fitted.x, exp2( -9.28f * normalDotView ) ) * fitted.x + fitted.y;
-	const float2 scaleBias = float2( -1.04f, 1.04f ) * a004 + fitted.zw;
-	return surface.specularColor * scaleBias.x + scaleBias.y;
+    const float4 c0        = float4( -1.0f, -0.0275f, -0.572f, 0.022f );
+    const float4 c1        = float4( 1.0f, 0.0425f, 1.04f, -0.04f );
+    const float4 fitted    = surface.roughness * c0 + c1;
+    const float  a004      = min( fitted.x * fitted.x, exp2( -9.28f * normalDotView ) ) * fitted.x + fitted.y;
+    const float2 scaleBias = float2( -1.04f, 1.04f ) * a004 + fitted.zw;
+    return surface.specularColor * scaleBias.x + scaleBias.y;
 }
 
 /**
@@ -511,8 +513,8 @@ float3 swComputeEnvironmentSpecular( SwSurfacePBR surface, float normalDotView )
  */
 float3 swComputeRimLight( float3 normal )
 {
-	const float rim = pow( 1.0f - saturate( dot( normal, float3( 0.0f, 0.0f, 1.0f ) ) ), 3.0f ) * 0.12f;
-	return rim * g_KeyLightColor.rgb;
+    const float rim = pow( 1.0f - saturate( dot( normal, float3( 0.0f, 0.0f, 1.0f ) ) ), 3.0f ) * 0.12f;
+    return rim * g_KeyLightColor.rgb;
 }
 
 /**
@@ -530,65 +532,65 @@ float3 swComputeRimLight( float3 normal )
 float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
 {
 #if defined( SW_VIEWMODE_LIGHTINGONLY )
-	// 보기 모드 LightingOnly — 포워드 셰이더의 표면 색을 회색으로 바꾼다(binding.hlsli 의 SW_VIEWMODE_LIGHTINGONLY_ALBEDO).
-	albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
+    // 보기 모드 LightingOnly — 포워드 셰이더의 표면 색을 회색으로 바꾼다(binding.hlsli 의 SW_VIEWMODE_LIGHTINGONLY_ALBEDO).
+    albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
 #endif
-	const SwSurfacePBR surface       = swMakeSurfacePbr( albedo, roughness, metallic );
-	const float3       toView        = swComputeToView( worldPosition );
-	const float        normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
-	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
-	const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
-	const float3 environmentSpecular = swComputeEnvironmentSpecular( surface, normalDotView );
-	const float3 reflectDirection    = reflect( -toView, normal );
-	float3       lit                 = ( surface.diffuseColor + environmentSpecular ) * ambient;
-	float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
-	float        probeWeight         = 0.0f;
-	float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
-	float        reflectionWeight    = 0.0f;
+    const SwSurfacePBR surface       = swMakeSurfacePbr( albedo, roughness, metallic );
+    const float3       toView        = swComputeToView( worldPosition );
+    const float        normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
+    // 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
+    const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
+    const float3 environmentSpecular = swComputeEnvironmentSpecular( surface, normalDotView );
+    const float3 reflectDirection    = reflect( -toView, normal );
+    float3       lit                 = ( surface.diffuseColor + environmentSpecular ) * ambient;
+    float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
+    float        probeWeight         = 0.0f;
+    float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
+    float        reflectionWeight    = 0.0f;
 
-	SwLightCursor cursor = swBeginLights( worldPosition );
-	SwLightData   light;
-	while ( swNextLight( cursor, light ) )
-	{
-		const uint lightType = (uint)( light.directionType.w + 0.5f );
-		if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
-		{
-			const float4 probe = swSampleProbeVolume( light, worldPosition, normal );
-			probeSum += probe.rgb * probe.a;
-			probeWeight += probe.a;
-			continue;
-		}
-		if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
-		{
-			const float4 reflection = swSampleReflectionProbe( light, worldPosition, reflectDirection, surface.roughness );
-			reflectionSum += reflection.rgb * reflection.a;
-			reflectionWeight += reflection.a;
-			continue;
-		}
-		float3 toLight;
-		float  attenuation;
-		if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
-			continue;
+    SwLightCursor cursor = swBeginLights( worldPosition );
+    SwLightData   light;
+    while ( swNextLight( cursor, light ) )
+    {
+        const uint lightType = (uint)( light.directionType.w + 0.5f );
+        if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
+        {
+            const float4 probe = swSampleProbeVolume( light, worldPosition, normal );
+            probeSum += probe.rgb * probe.a;
+            probeWeight += probe.a;
+            continue;
+        }
+        if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
+        {
+            const float4 reflection = swSampleReflectionProbe( light, worldPosition, reflectDirection, surface.roughness );
+            reflectionSum += reflection.rgb * reflection.a;
+            reflectionWeight += reflection.a;
+            continue;
+        }
+        float3 toLight;
+        float  attenuation;
+        if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
+            continue;
 
-		const float normalDotLight = saturate( dot( normal, toLight ) );
-		if ( normalDotLight * attenuation <= 0.0f )
-			continue;
+        const float normalDotLight = saturate( dot( normal, toLight ) );
+        if ( normalDotLight * attenuation <= 0.0f )
+            continue;
 
-		const float  shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
-		const float3 response   = surface.diffuseColor * normalDotLight + swEvaluateSpecular( surface, normal, toView, toLight, normalDotLight );
-		lit += response * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
-	}
-	// 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
-	if ( probeWeight > 0.0f )
-		lit += surface.diffuseColor * ( probeSum / probeWeight - ambient );
-	// 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
-	// 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
-	if ( reflectionWeight > 0.0f )
-	{
-		const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
-		lit += environmentSpecular * ( environment - ambient );
-	}
-	return lit;
+        const float  shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
+        const float3 response   = surface.diffuseColor * normalDotLight + swEvaluateSpecular( surface, normal, toView, toLight, normalDotLight );
+        lit += response * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
+    }
+    // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+    if ( probeWeight > 0.0f )
+        lit += surface.diffuseColor * ( probeSum / probeWeight - ambient );
+    // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
+    // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
+    if ( reflectionWeight > 0.0f )
+    {
+        const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
+        lit += environmentSpecular * ( environment - ambient );
+    }
+    return lit;
 }
 
 #endif // SW_ENGINE_LIGHTING_HLSLI

@@ -18,12 +18,12 @@ static const float kSurfaceMetallic  = 0.0f;
 
 SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 {
-	SwMaterialSurface surface;
-	surface.albedo    = context.color;
-	surface.normal    = context.normal;
-	surface.roughness = kSurfaceRoughness;
-	surface.metallic  = kSurfaceMetallic;
-	return surface;
+    SwMaterialSurface surface;
+    surface.albedo    = context.color;
+    surface.normal    = context.normal;
+    surface.roughness = kSurfaceRoughness;
+    surface.metallic  = kSurfaceMetallic;
+    return surface;
 }
 
 #include "materialshadermain.hlsli"

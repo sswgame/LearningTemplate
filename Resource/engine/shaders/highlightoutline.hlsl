@@ -11,7 +11,7 @@
 #include "binding.hlsli"
 
 #if !defined( SW_HIGHLIGHT_WIDTH )
-#error "highlightoutline.hlsl needs SW_HIGHLIGHT_WIDTH=<screen height fraction> from the render pipeline pass permutation"
+    #error "highlightoutline.hlsl needs SW_HIGHLIGHT_WIDTH=<screen height fraction> from the render pipeline pass permutation"
 #endif
 
 #if defined( SW_PASS_HIGHLIGHT_SENSE )
@@ -22,39 +22,39 @@ static const uint kHighlightPassStyle = kHighlightStyleOutline;
 
 struct PSInput
 {
-	float4 position              : SV_POSITION;
-	nointerpolation float3 color : COLOR;
+    float4                 position : SV_POSITION;
+    nointerpolation float3 color : COLOR;
 };
 
 PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	SwInstanceData instance = swLoadInstance( input.instanceSlot );
-	output.color = swGetInstanceHighlightColor( instance );
-	// 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.
-	if ( swGetInstanceHighlightStyle( instance ) != kHighlightPassStyle )
-	{
-		output.position = float4( 0.0f, 0.0f, -1.0f, 1.0f );
-		return output;
-	}
-	float3 localPosition;
-	float3 localNormal;
-	swLoadMorphedVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
-	const float4 worldPosition = swComputeWorldPosition( localPosition, instance.world );
-	const float3 worldNormal   = swComputeWorldNormal( localNormal, instance.world );
-	float4       clipPosition  = swComputeClipPosition( worldPosition, g_ViewProj );
-	// 화면 공간 두께: 노멀을 클립 공간에 투영해 그 방향으로 민다. xy 에 w 를 곱해 더하므로 나눗셈 뒤 두께가 거리와 무관하다.
-	// 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다(g_OutlineParams.y = 1/W, .z = 1/H — FrameRendererConstants).
-	const float2 clipNormal = mul( float4( worldNormal, 0.0f ), g_ViewProj ).xy;
-	const float  normalLen  = length( clipNormal );
-	const float2 direction  = ( normalLen > 1e-6f ) ? clipNormal / normalLen : float2( 0.0f, 0.0f );
-	const float  aspect     = g_OutlineParams.y / max( g_OutlineParams.z, 1e-6f );
-	clipPosition.xy += direction * float2( aspect, 1.0f ) * ( SW_HIGHLIGHT_WIDTH * 2.0f * clipPosition.w );
-	output.position = clipPosition;
-	return output;
+    PSInput        output;
+    SwInstanceData instance = swLoadInstance( input.instanceSlot );
+    output.color            = swGetInstanceHighlightColor( instance );
+    // 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.
+    if ( swGetInstanceHighlightStyle( instance ) != kHighlightPassStyle )
+    {
+        output.position = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+        return output;
+    }
+    float3 localPosition;
+    float3 localNormal;
+    swLoadMorphedVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
+    const float4 worldPosition = swComputeWorldPosition( localPosition, instance.world );
+    const float3 worldNormal   = swComputeWorldNormal( localNormal, instance.world );
+    float4       clipPosition  = swComputeClipPosition( worldPosition, g_ViewProj );
+    // 화면 공간 두께: 노멀을 클립 공간에 투영해 그 방향으로 민다. xy 에 w 를 곱해 더하므로 나눗셈 뒤 두께가 거리와 무관하다.
+    // 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다(g_OutlineParams.y = 1/W, .z = 1/H — FrameRendererConstants).
+    const float2 clipNormal = mul( float4( worldNormal, 0.0f ), g_ViewProj ).xy;
+    const float  normalLen  = length( clipNormal );
+    const float2 direction  = ( normalLen > 1e-6f ) ? clipNormal / normalLen : float2( 0.0f, 0.0f );
+    const float  aspect     = g_OutlineParams.y / max( g_OutlineParams.z, 1e-6f );
+    clipPosition.xy += direction * float2( aspect, 1.0f ) * ( SW_HIGHLIGHT_WIDTH * 2.0f * clipPosition.w );
+    output.position = clipPosition;
+    return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-	return float4( input.color, 1.0f );
+    return float4( input.color, 1.0f );
 }

@@ -21,10 +21,10 @@
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 {
-	float g_Time;         // 씬 시작부터의 절대 시간 (초)
-	float g_Amplitude;    // 변형 크기 (로컬 단위) — 도형이 단위 크기라 0.5 를 넘으면 뭉개진다
-	float g_Frequency;    // 공간 주파수 — 클수록 물결이 촘촘하다
-	uint  g_MorphVertexCount;
+    float g_Time;      // 씬 시작부터의 절대 시간 (초)
+    float g_Amplitude; // 변형 크기 (로컬 단위) — 도형이 단위 크기라 0.5 를 넘으면 뭉개진다
+    float g_Frequency; // 공간 주파수 — 클수록 물결이 촘촘하다
+    uint  g_MorphVertexCount;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
@@ -35,54 +35,54 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
 
 #include "meshmodifier.hlsli"
 
-[numthreads(64, 1, 1)]
-void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
+SW_NUMTHREADS( 64, 1, 1 )
+void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-	const uint vertexIndex = dispatchThreadId.x;
-	if (vertexIndex >= g_MorphVertexCount)
-		return;
+    const uint vertexIndex = dispatchThreadId.x;
+    if ( vertexIndex >= g_MorphVertexCount )
+        return;
 
-	const uint   element             = vertexIndex * SW_MORPH_FLOAT4_PER_VERTEX;
-	const float4 restPositionElement = g_RestVertices[element];
-	const float4 restNormalElement   = g_RestVertices[element + 1u];
+    const uint   element             = vertexIndex * SW_MORPH_FLOAT4_PER_VERTEX;
+    const float4 restPositionElement = g_RestVertices[element];
+    const float4 restNormalElement   = g_RestVertices[element + 1u];
 
-	// 변형은 **정점 노멀 방향**으로 민다(원점 기준 방향은 원점 중심 도형에만 맞아 바닥 평면 같은 건 엉뚱하게 밀린다).
-	const float3 restPosition = restPositionElement.xyz;
-	const float3 restNormal   = normalize(restNormalElement.xyz);
+    // 변형은 **정점 노멀 방향**으로 민다(원점 기준 방향은 원점 중심 도형에만 맞아 바닥 평면 같은 건 엉뚱하게 밀린다).
+    const float3 restPosition = restPositionElement.xyz;
+    const float3 restNormal   = normalize( restNormalElement.xyz );
 
-	// 위상을 위치에서 뽑아 정점마다 어긋나게 한다 — 전부 같은 위상이면 도형이 통째로 커졌다 작아질 뿐
-	// 모양이 변하지 않아, 변형이 실제로 걸렸는지 그림으로 구분할 수 없다.
-	const float phase = (restPosition.x + restPosition.y + restPosition.z) * g_Frequency;
-	const float wave  = sin(g_Time * 2.0f + phase);
+    // 위상을 위치에서 뽑아 정점마다 어긋나게 한다 — 전부 같은 위상이면 도형이 통째로 커졌다 작아질 뿐
+    // 모양이 변하지 않아, 변형이 실제로 걸렸는지 그림으로 구분할 수 없다.
+    const float phase = ( restPosition.x + restPosition.y + restPosition.z ) * g_Frequency;
+    const float wave  = sin( g_Time * 2.0f + phase );
 
-	// **노멀도 같이 만든다.** 위치만 바꾸면 변형된 표면이 원래 모양의 빛을 받는다 — 물결이 이는데
-	// 음영은 가만히 있어서 "변형이 안 걸렸나" 로 보인다.
-	//
-	// 높이장 변위의 표준 근사다: 표면을 노멀 방향으로 h 만큼 밀면 새 노멀은 normalize(n - ∇_t h) 다
-	// (∇_t 는 h 의 기울기에서 노멀 성분을 뺀 접선 성분). 여기서 h = A*sin(2t + F*(x+y+z)) 이므로
-	// ∇h = A*F*cos(2t + F*(x+y+z)) * (1,1,1) 이다. 진폭이 작을 때의 근사이고, 이 용도에는 충분하다.
-	const float  gradientScale = g_Amplitude * g_Frequency * cos(g_Time * 2.0f + phase);
-	const float3 gradient      = float3(gradientScale, gradientScale, gradientScale);
-	const float3 tangentialGradient = gradient - restNormal * dot(gradient, restNormal);
+    // **노멀도 같이 만든다.** 위치만 바꾸면 변형된 표면이 원래 모양의 빛을 받는다 — 물결이 이는데
+    // 음영은 가만히 있어서 "변형이 안 걸렸나" 로 보인다.
+    //
+    // 높이장 변위의 표준 근사다: 표면을 노멀 방향으로 h 만큼 밀면 새 노멀은 normalize(n - ∇_t h) 다
+    // (∇_t 는 h 의 기울기에서 노멀 성분을 뺀 접선 성분). 여기서 h = A*sin(2t + F*(x+y+z)) 이므로
+    // ∇h = A*F*cos(2t + F*(x+y+z)) * (1,1,1) 이다. 진폭이 작을 때의 근사이고, 이 용도에는 충분하다.
+    const float  gradientScale      = g_Amplitude * g_Frequency * cos( g_Time * 2.0f + phase );
+    const float3 gradient           = float3( gradientScale, gradientScale, gradientScale );
+    const float3 tangentialGradient = gradient - restNormal * dot( gradient, restNormal );
 
-	float3 position = restPosition + restNormal * (wave * g_Amplitude);
-	float3 normal   = normalize(restNormal - tangentialGradient);
+    float3 position = restPosition + restNormal * ( wave * g_Amplitude );
+    float3 normal   = normalize( restNormal - tangentialGradient );
 
-	// 변형 프로그램이 있는 메시 — 물결 대신 프로그램 결과를 쓴다(한 출구, early return 없음)
-	const uint  slot         = (uint)max(restNormalElement.w - 1.0f, 0.0f);
-	const float programStart = restNormalElement.w > 0.5f ? g_DeformPrograms[slot].x : -1.0f;
-	if (programStart >= 0.0f)
-	{
-		position = restPosition;
-		normal   = restNormalElement.xyz;
-		swApplyDeformProgram((uint)programStart, position, normal);
-	}
+    // 변형 프로그램이 있는 메시 — 물결 대신 프로그램 결과를 쓴다(한 출구, early return 없음)
+    const uint  slot         = (uint)max( restNormalElement.w - 1.0f, 0.0f );
+    const float programStart = restNormalElement.w > 0.5f ? g_DeformPrograms[slot].x : -1.0f;
+    if ( programStart >= 0.0f )
+    {
+        position = restPosition;
+        normal   = restNormalElement.xyz;
+        swApplyDeformProgram( (uint)programStart, position, normal );
+    }
 
-	g_MorphVerticesRW[element]      = float4(position, 1.0f);
-	g_MorphVerticesRW[element + 1u] = float4(normal, 0.0f);
-	// 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로다.
-	const float4 restTangent   = g_RestVertices[element + 2u];
-	const float3 orthogonal    = restTangent.xyz - normal * dot(normal, restTangent.xyz);
-	const float  tangentLength = length(orthogonal);
-	g_MorphVerticesRW[element + 2u] = float4(tangentLength > 1e-6f ? orthogonal / tangentLength : restTangent.xyz, restTangent.w);
+    g_MorphVerticesRW[element]      = float4( position, 1.0f );
+    g_MorphVerticesRW[element + 1u] = float4( normal, 0.0f );
+    // 탄젠트 — 변형은 노멀만 바꾸므로 레스트 탄젠트를 새 노멀에 다시 직교화한다. w(바이탄젠트 부호)는 레스트 그대로다.
+    const float4 restTangent        = g_RestVertices[element + 2u];
+    const float3 orthogonal         = restTangent.xyz - normal * dot( normal, restTangent.xyz );
+    const float  tangentLength      = length( orthogonal );
+    g_MorphVerticesRW[element + 2u] = float4( tangentLength > 1e-6f ? orthogonal / tangentLength : restTangent.xyz, restTangent.w );
 }

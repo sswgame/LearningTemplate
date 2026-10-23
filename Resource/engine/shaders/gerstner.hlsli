@@ -15,10 +15,10 @@
 /** @brief 진폭 · 파장이 0 보다 큰 파도 수 — Q 를 나누는 수다. */
 uint swCountGerstnerWaves( float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
 {
-	uint count = 0u;
-	for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-		count += ( arrWave[waveIndex].z > 0.0f && arrWave[waveIndex].y > 0.0f ) ? 1u : 0u;
-	return count;
+    uint count = 0u;
+    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
+        count += ( arrWave[waveIndex].z > 0.0f && arrWave[waveIndex].y > 0.0f ) ? 1u : 0u;
+    return count;
 }
 
 /**
@@ -27,64 +27,64 @@ uint swCountGerstnerWaves( float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
 bool swComputeGerstnerTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity, out float2 outDirection, out float outWaveNumber, out float outSharpness,
                             out float outPhase )
 {
-	outDirection  = float2( 0.0f, 0.0f );
-	outWaveNumber = 0.0f;
-	outSharpness  = 0.0f;
-	outPhase      = 0.0f;
-	if ( wave.z <= 0.0f || wave.y <= 0.0f || activeCount == 0u )
-		return false;
-	outDirection        = float2( cos( wave.x ), sin( wave.x ) );
-	outWaveNumber       = kTwoPi / wave.y;
-	outSharpness        = wave.w / ( outWaveNumber * wave.z * (float)activeCount );
-	const float speed   = sqrt( gravity * outWaveNumber );
-	outPhase            = outWaveNumber * ( outDirection.x * origin.x + outDirection.y * origin.y ) - speed * time;
-	return true;
+    outDirection  = float2( 0.0f, 0.0f );
+    outWaveNumber = 0.0f;
+    outSharpness  = 0.0f;
+    outPhase      = 0.0f;
+    if ( wave.z <= 0.0f || wave.y <= 0.0f || activeCount == 0u )
+        return false;
+    outDirection      = float2( cos( wave.x ), sin( wave.x ) );
+    outWaveNumber     = kTwoPi / wave.y;
+    outSharpness      = wave.w / ( outWaveNumber * wave.z * (float)activeCount );
+    const float speed = sqrt( gravity * outWaveNumber );
+    outPhase          = outWaveNumber * ( outDirection.x * origin.x + outDirection.y * origin.y ) - speed * time;
+    return true;
 }
 
 /** @brief 수평 원점 (x, z) 의 점이 시간 @p time 에 옮겨 가는 변위(x, y, z). */
 float3 swComputeGerstnerDisplacement( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
 {
-	const uint activeCount  = swCountGerstnerWaves( arrWave );
-	float3     displacement = float3( 0.0f, 0.0f, 0.0f );
-	for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-	{
-		float2 direction;
-		float  waveNumber;
-		float  sharpness;
-		float  phase;
-		if ( swComputeGerstnerTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
-			continue;
-		const float amplitude = arrWave[waveIndex].z;
-		const float cosine    = cos( phase );
-		const float sine      = sin( phase );
-		displacement.x += sharpness * amplitude * direction.x * cosine;
-		displacement.y += amplitude * sine;
-		displacement.z += sharpness * amplitude * direction.y * cosine;
-	}
-	return displacement;
+    const uint activeCount  = swCountGerstnerWaves( arrWave );
+    float3     displacement = float3( 0.0f, 0.0f, 0.0f );
+    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
+    {
+        float2 direction;
+        float  waveNumber;
+        float  sharpness;
+        float  phase;
+        if ( swComputeGerstnerTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
+            continue;
+        const float amplitude = arrWave[waveIndex].z;
+        const float cosine    = cos( phase );
+        const float sine      = sin( phase );
+        displacement.x += sharpness * amplitude * direction.x * cosine;
+        displacement.y += amplitude * sine;
+        displacement.z += sharpness * amplitude * direction.y * cosine;
+    }
+    return displacement;
 }
 
 /** @brief 수평 원점 (x, z) 의 옮겨 간 점의 수면 노멀(정규화) — 옮겨 간 면의 두 접선(원점 x · z 편미분)의 외적이다. */
 float3 swComputeGerstnerNormal( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
 {
-	const uint activeCount = swCountGerstnerWaves( arrWave );
-	float3     tangentX    = float3( 1.0f, 0.0f, 0.0f );
-	float3     tangentZ    = float3( 0.0f, 0.0f, 1.0f );
-	for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-	{
-		float2 direction;
-		float  waveNumber;
-		float  sharpness;
-		float  phase;
-		if ( swComputeGerstnerTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
-			continue;
-		const float slope = waveNumber * arrWave[waveIndex].z;
-		const float crest = sharpness * slope * sin( phase );
-		const float cosine = cos( phase );
-		tangentX += float3( -crest * direction.x * direction.x, slope * direction.x * cosine, -crest * direction.x * direction.y );
-		tangentZ += float3( -crest * direction.x * direction.y, slope * direction.y * cosine, -crest * direction.y * direction.y );
-	}
-	return normalize( cross( tangentZ, tangentX ) );
+    const uint activeCount = swCountGerstnerWaves( arrWave );
+    float3     tangentX    = float3( 1.0f, 0.0f, 0.0f );
+    float3     tangentZ    = float3( 0.0f, 0.0f, 1.0f );
+    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
+    {
+        float2 direction;
+        float  waveNumber;
+        float  sharpness;
+        float  phase;
+        if ( swComputeGerstnerTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
+            continue;
+        const float slope  = waveNumber * arrWave[waveIndex].z;
+        const float crest  = sharpness * slope * sin( phase );
+        const float cosine = cos( phase );
+        tangentX += float3( -crest * direction.x * direction.x, slope * direction.x * cosine, -crest * direction.x * direction.y );
+        tangentZ += float3( -crest * direction.x * direction.y, slope * direction.y * cosine, -crest * direction.y * direction.y );
+    }
+    return normalize( cross( tangentZ, tangentX ) );
 }
 
 #endif // SW_ENGINE_GERSTNER_HLSLI

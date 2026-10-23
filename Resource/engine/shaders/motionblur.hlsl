@@ -5,51 +5,50 @@
 #include "binding.hlsli"
 
 static const uint  kMotionBlurSampleCount = 8u;
-static const float kMaxBlurUV             = 0.05f; // 한 프레임 흐림 길이의 상한(화면 폭 비율) — 순간 이동 · 큰 회전이 화면을 통째로 문대지 않게
+static const float kMaxBlurUV             = 0.05f;   // 한 프레임 흐림 길이의 상한(화면 폭 비율) — 순간 이동 · 큰 회전이 화면을 통째로 문대지 않게
 static const float kMinBlurUV             = 0.0005f; // 이보다 짧으면 섞지 않는다(정지 화면의 미세 떨림)
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
-	float2 uv       : TEXCOORD0;
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
+PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	float2 clipPosition = float2((vertexId == 1) ? 3.0f : -1.0f, (vertexId == 2) ? 3.0f : -1.0f);
-	output.position = float4(clipPosition, 0.0f, 1.0f);
-	output.uv       = clipPosition * float2(0.5f, -0.5f) + 0.5f;
-	return output;
+    PSInput output;
+    input.position      = input.position;
+    float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    output.position     = float4( clipPosition, 0.0f, 1.0f );
+    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    return output;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain( PSInput input ) : SV_TARGET
 {
-	const float3 source = swSampleSource(input.uv).rgb;
-	const float  depth  = swSampleDepth(input.uv).r;
+    const float3 source = swSampleSource( input.uv ).rgb;
+    const float  depth  = swSampleDepth( input.uv ).r;
 
-	const float2 ndcXy     = input.uv * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f);
-	const float4 world     = mul(float4(ndcXy, depth, 1.0f), g_InvViewProj);
-	const float4 prevClip  = mul(float4(world.xyz / world.w, 1.0f), g_PrevViewProj);
-	const float2 prevNdc   = prevClip.xy / max(abs(prevClip.w), 1e-5f) * sign(prevClip.w);
-	const float2 prevUv    = prevNdc * float2(0.5f, -0.5f) + 0.5f;
-	float2       velocity  = input.uv - prevUv;
-	const float  speed     = length(velocity);
-	velocity              *= (speed > kMaxBlurUV) ? (kMaxBlurUV / speed) : 1.0f;
+    const float2 ndcXy    = input.uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float4 world    = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
+    const float4 prevClip = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
+    const float2 prevNdc  = prevClip.xy / max( abs( prevClip.w ), 1e-5f ) * sign( prevClip.w );
+    const float2 prevUv   = prevNdc * float2( 0.5f, -0.5f ) + 0.5f;
+    float2       velocity = input.uv - prevUv;
+    const float  speed    = length( velocity );
+    velocity *= ( speed > kMaxBlurUV ) ? ( kMaxBlurUV / speed ) : 1.0f;
 
-	// 선분은 이 픽셀을 가운데에 두고 앞뒤로 반씩 편다(지난 위치 쪽 · 앞으로 갈 쪽).
-	float3 accumulated = 0.0f;
-	[unroll]
-	for (uint sampleIndex = 0u; sampleIndex < kMotionBlurSampleCount; ++sampleIndex)
-	{
-		const float ratio = (float(sampleIndex) + 0.5f) / float(kMotionBlurSampleCount) - 0.5f;
-		accumulated += swSampleSource(input.uv + velocity * ratio).rgb;
-	}
-	const float3 blurred = accumulated / float(kMotionBlurSampleCount);
+    // 선분은 이 픽셀을 가운데에 두고 앞뒤로 반씩 편다(지난 위치 쪽 · 앞으로 갈 쪽).
+    float3 accumulated = 0.0f;
+    [unroll] for ( uint sampleIndex = 0u; sampleIndex < kMotionBlurSampleCount; ++sampleIndex )
+    {
+        const float ratio = ( float( sampleIndex ) + 0.5f ) / float( kMotionBlurSampleCount ) - 0.5f;
+        accumulated += swSampleSource( input.uv + velocity * ratio ).rgb;
+    }
+    const float3 blurred = accumulated / float( kMotionBlurSampleCount );
 
-	// 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).
-	const bool bSkipPost = (g_Flags & SW_PASS_FLAG_SKIP_POST) != 0u;
-	const bool bStill    = speed < kMinBlurUV;
-	return float4((bSkipPost || bStill) ? source : blurred, 1.0f);
+    // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).
+    const bool bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
+    const bool bStill    = speed < kMinBlurUV;
+    return float4( ( bSkipPost || bStill ) ? source : blurred, 1.0f );
 }

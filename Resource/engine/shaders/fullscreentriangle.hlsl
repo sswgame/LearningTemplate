@@ -2,26 +2,26 @@
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
-	float4 color    : COLOR;
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
 };
 
 // b1(MaterialCB)을 네 백엔드에서 모두 실제 상수 버퍼로 쓸 수 있는지 지키는 픽스처다 (GPUScene 을 거치지 않는 드로우).
 // 한 백엔드가 이 슬롯을 푸시 상수 등으로 우회하면 파이프라인 레이아웃에 없는 디스크립터를 참조해 RHIDeviceTest 가 죽는다.
 SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
 {
-	float4 g_MaterialColor;
+    float4 g_MaterialColor;
 };
 
-PSInput VSMain(SwVertexInput input)
+PSInput VSMain( SwVertexInput input )
 {
-	PSInput output;
-	output.position = float4(input.position, 1.0f);
-	output.color = input.color;
-	return output;
+    PSInput output;
+    output.position = float4( input.position, 1.0f );
+    output.color    = input.color;
+    return output;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain( PSInput input ) : SV_TARGET
 {
-	return input.color * g_MaterialColor;
+    return input.color * g_MaterialColor;
 }

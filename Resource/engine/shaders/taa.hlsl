@@ -9,50 +9,48 @@ static const float kHistoryWeight = 0.9f; // 기록 비율 — 화면이 그대�
 
 struct PSInput
 {
-	float4 position : SV_POSITION;
-	float2 uv       : TEXCOORD0;
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
+PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 {
-	PSInput output;
-	input.position = input.position;
-	float2 clipPosition = float2((vertexId == 1) ? 3.0f : -1.0f, (vertexId == 2) ? 3.0f : -1.0f);
-	output.position = float4(clipPosition, 0.0f, 1.0f);
-	output.uv       = clipPosition * float2(0.5f, -0.5f) + 0.5f;
-	return output;
+    PSInput output;
+    input.position      = input.position;
+    float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
+    output.position     = float4( clipPosition, 0.0f, 1.0f );
+    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    return output;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain( PSInput input ) : SV_TARGET
 {
-	const float3 current = swSampleSourcePoint(input.uv).rgb;
+    const float3 current = swSampleSourcePoint( input.uv ).rgb;
 
-	// 이웃 범위 — 기록이 이번 그림에 없는 색(앞 그림 · 움직인 물체)이면 이 안으로 잘린다.
-	float3 neighborMin = current;
-	float3 neighborMax = current;
-	[unroll]
-	for (int offsetY = -1; offsetY <= 1; ++offsetY)
-	{
-		[unroll]
-		for (int offsetX = -1; offsetX <= 1; ++offsetX)
-		{
-			const float3 neighbor = swSampleSourcePoint(input.uv + float2(offsetX, offsetY) * g_SourceTexel.xy).rgb;
-			neighborMin           = min(neighborMin, neighbor);
-			neighborMax           = max(neighborMax, neighbor);
-		}
-	}
+    // 이웃 범위 — 기록이 이번 그림에 없는 색(앞 그림 · 움직인 물체)이면 이 안으로 잘린다.
+    float3 neighborMin = current;
+    float3 neighborMax = current;
+    [unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+    {
+        [unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+        {
+            const float3 neighbor = swSampleSourcePoint( input.uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
+            neighborMin           = min( neighborMin, neighbor );
+            neighborMax           = max( neighborMax, neighbor );
+        }
+    }
 
-	// 재투영 — 이 픽셀이 지난 프레임에 있던 화면 자리.
-	const float  depth     = swSampleDepthPoint(input.uv).r;
-	const float2 ndcXy     = input.uv * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f);
-	const float4 world     = mul(float4(ndcXy, depth, 1.0f), g_InvViewProj);
-	const float4 prevClip  = mul(float4(world.xyz / world.w, 1.0f), g_PrevViewProj);
-	const float2 prevNdc   = prevClip.xy / max(abs(prevClip.w), 1e-5f) * sign(prevClip.w);
-	const float2 prevUv    = prevNdc * float2(0.5f, -0.5f) + 0.5f;
-	const bool   bOnScreen = prevClip.w > 0.0f && all(prevUv >= 0.0f) && all(prevUv <= 1.0f);
+    // 재투영 — 이 픽셀이 지난 프레임에 있던 화면 자리.
+    const float  depth     = swSampleDepthPoint( input.uv ).r;
+    const float2 ndcXy     = input.uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float4 world     = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
+    const float4 prevClip  = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
+    const float2 prevNdc   = prevClip.xy / max( abs( prevClip.w ), 1e-5f ) * sign( prevClip.w );
+    const float2 prevUv    = prevNdc * float2( 0.5f, -0.5f ) + 0.5f;
+    const bool   bOnScreen = prevClip.w > 0.0f && all( prevUv >= 0.0f ) && all( prevUv <= 1.0f );
 
-	const float3 history = clamp(swSampleAlbedo(prevUv).rgb, neighborMin, neighborMax);
-	// 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motionblur.hlsl).
-	const float  weight  = bOnScreen ? kHistoryWeight : 0.0f;
-	return float4(lerp(current, history, weight), 1.0f);
+    const float3 history = clamp( swSampleAlbedo( prevUv ).rgb, neighborMin, neighborMax );
+    // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motionblur.hlsl).
+    const float weight = bOnScreen ? kHistoryWeight : 0.0f;
+    return float4( lerp( current, history, weight ), 1.0f );
 }

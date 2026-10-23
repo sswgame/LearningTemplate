@@ -11,15 +11,15 @@
  */
 float3 swApplyOutline( float2 uv, float2 texel, float3 color )
 {
-	float  centerDepth;
-	float4 neighborDepth;
-	swSampleDepthCross( uv, texel, centerDepth, neighborDepth );
+    float  centerDepth;
+    float4 neighborDepth;
+    swSampleDepthCross( uv, texel, centerDepth, neighborDepth );
 
-	// 네 이웃과의 차이 합. **합이라 이웃 순서는 상관없다** — 게더 성분 순서가 백엔드마다 달라도 같은 값이다.
-	float4 depthDifference = abs( neighborDepth - centerDepth.xxxx );
-	float  edge            = saturate( ( depthDifference.x + depthDifference.y + depthDifference.z + depthDifference.w ) * 4.0f - g_OutlineParams.x );
-	edge *= g_OutlineColor.a;
-	return lerp( color, g_OutlineColor.rgb, edge );
+    // 네 이웃과의 차이 합. **합이라 이웃 순서는 상관없다** — 게더 성분 순서가 백엔드마다 달라도 같은 값이다.
+    float4 depthDifference = abs( neighborDepth - centerDepth.xxxx );
+    float  edge            = saturate( ( depthDifference.x + depthDifference.y + depthDifference.z + depthDifference.w ) * 4.0f - g_OutlineParams.x );
+    edge *= g_OutlineColor.a;
+    return lerp( color, g_OutlineColor.rgb, edge );
 }
 
 #endif // SW_ENGINE_POSTOUTLINE_HLSLI

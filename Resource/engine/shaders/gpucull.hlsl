@@ -31,10 +31,10 @@
 // startInstanceLocation 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
 struct RHIDrawIndirectCommand
 {
-	uint vertexCount;
-	uint instanceCount;
-	uint startVertexLocation;
-	uint startInstanceLocation;
+    uint vertexCount;
+    uint instanceCount;
+    uint startVertexLocation;
+    uint startInstanceLocation;
 };
 
 /**
@@ -46,13 +46,13 @@ struct RHIDrawIndirectCommand
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
-	float4   g_FrustumPlanes[6];
-	uint     g_InstanceCount;
-	uint     g_BatchCount;
-	uint2    g_Pad;
-	float4x4 g_OcclusionViewProj;   // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — swComputeClipPosition 과 같다)
-	uint4    g_OcclusionGrid;       // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
-	float4   g_OcclusionDepthSize;  // xy 깊이 히스토리 크기(px)
+    float4   g_FrustumPlanes[6];
+    uint     g_InstanceCount;
+    uint     g_BatchCount;
+    uint2    g_Pad;
+    float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — swComputeClipPosition 과 같다)
+    uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
+    float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
@@ -66,122 +66,120 @@ static const uint kMaxOcclusionTestTiles = 8u;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
 static const float kMinOcclusionClipW = 1.0e-4f;
 
-bool isVisible(float3 center, float radius)
+bool isVisible( float3 center, float radius )
 {
-	[unroll]
-	for (uint planeIndex = 0; planeIndex < 6; ++planeIndex)
-	{
-		float planeDistance = dot(g_FrustumPlanes[planeIndex].xyz, center) + g_FrustumPlanes[planeIndex].w;
-		if (planeDistance < -radius)
-			return false;
-	}
-	return true;
+    [unroll] for ( uint planeIndex = 0; planeIndex < 6; ++planeIndex )
+    {
+        float planeDistance = dot( g_FrustumPlanes[planeIndex].xyz, center ) + g_FrustumPlanes[planeIndex].w;
+        if ( planeDistance < -radius )
+            return false;
+    }
+    return true;
 }
 
 bool isOccluded( float3 center, float radius )
 {
-	if ( g_OcclusionGrid.w == 0u )
-		return false;
-	float2 minUv    = float2( 1.0f, 1.0f );
-	float2 maxUv    = float2( 0.0f, 0.0f );
-	float  minDepth = 1.0f;
-	[unroll]
-	for ( uint corner = 0u; corner < 8u; ++corner )
-	{
-		const float3 offset = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
-		const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );
-		if ( clip.w <= kMinOcclusionClipW )
-			return false;
-		const float3 ndc = clip.xyz / clip.w;
-		const float2 uv  = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
-		minUv            = min( minUv, uv );
-		maxUv            = max( maxUv, uv );
-		minDepth         = min( minDepth, ndc.z );
-	}
-	// 가까운 평면을 걸치거나 지난 화면 밖이면 지난 깊이가 그 자리를 모른다.
-	const bool bOutsideHistory = minDepth <= 0.0f || maxUv.x <= 0.0f || maxUv.y <= 0.0f || minUv.x >= 1.0f || minUv.y >= 1.0f;
-	if ( bOutsideHistory )
-		return false;
-	const float2 depthSize = g_OcclusionDepthSize.xy;
-	const uint2  lastTile  = g_OcclusionGrid.xy - 1u;
-	const uint2  firstTile = min( uint2( saturate( minUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
-	const uint2  endTile   = min( uint2( saturate( maxUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
-	if ( endTile.x - firstTile.x >= kMaxOcclusionTestTiles || endTile.y - firstTile.y >= kMaxOcclusionTestTiles )
-		return false;
-	float maxTileDepth = 0.0f;
-	for ( uint tileY = firstTile.y; tileY <= endTile.y; ++tileY )
-	{
-		for ( uint tileX = firstTile.x; tileX <= endTile.x; ++tileX )
-		{
-			maxTileDepth = max( maxTileDepth, g_OcclusionTiles[tileY * g_OcclusionGrid.x + tileX] );
-		}
-	}
-	return minDepth > maxTileDepth;
+    if ( g_OcclusionGrid.w == 0u )
+        return false;
+    float2 minUv    = float2( 1.0f, 1.0f );
+    float2 maxUv    = float2( 0.0f, 0.0f );
+    float  minDepth = 1.0f;
+    [unroll] for ( uint corner = 0u; corner < 8u; ++corner )
+    {
+        const float3 offset = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
+        const float4 clip   = mul( float4( center + offset, 1.0f ), g_OcclusionViewProj );
+        if ( clip.w <= kMinOcclusionClipW )
+            return false;
+        const float3 ndc = clip.xyz / clip.w;
+        const float2 uv  = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
+        minUv            = min( minUv, uv );
+        maxUv            = max( maxUv, uv );
+        minDepth         = min( minDepth, ndc.z );
+    }
+    // 가까운 평면을 걸치거나 지난 화면 밖이면 지난 깊이가 그 자리를 모른다.
+    const bool bOutsideHistory = minDepth <= 0.0f || maxUv.x <= 0.0f || maxUv.y <= 0.0f || minUv.x >= 1.0f || minUv.y >= 1.0f;
+    if ( bOutsideHistory )
+        return false;
+    const float2 depthSize = g_OcclusionDepthSize.xy;
+    const uint2  lastTile  = g_OcclusionGrid.xy - 1u;
+    const uint2  firstTile = min( uint2( saturate( minUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
+    const uint2  endTile   = min( uint2( saturate( maxUv ) * depthSize ) / g_OcclusionGrid.z, lastTile );
+    if ( endTile.x - firstTile.x >= kMaxOcclusionTestTiles || endTile.y - firstTile.y >= kMaxOcclusionTestTiles )
+        return false;
+    float maxTileDepth = 0.0f;
+    for ( uint tileY = firstTile.y; tileY <= endTile.y; ++tileY )
+    {
+        for ( uint tileX = firstTile.x; tileX <= endTile.x; ++tileX )
+        {
+            maxTileDepth = max( maxTileDepth, g_OcclusionTiles[tileY * g_OcclusionGrid.x + tileX] );
+        }
+    }
+    return minDepth > maxTileDepth;
 }
 
-[numthreads(64, 1, 1)]
-void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
+SW_NUMTHREADS( 64, 1, 1 )
+void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-	const uint instanceId = dispatchThreadId.x;
-	if (instanceId >= g_InstanceCount)
-		return;
+    const uint instanceId = dispatchThreadId.x;
+    if ( instanceId >= g_InstanceCount )
+        return;
 
-	const SwInstanceData instance = g_Instances[instanceId];
-	const uint batchIndex = instance.meshBatchIndex;
-	if (batchIndex >= g_BatchCount)
-		return;
+    const SwInstanceData instance   = g_Instances[instanceId];
+    const uint           batchIndex = instance.meshBatchIndex;
+    if ( batchIndex >= g_BatchCount )
+        return;
 
-	// 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanimation 도
-	// 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
-	if (isVisible(instance.boundsCenter, instance.boundsRadius) == false)
-		return;
+    // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanimation 도
+    // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
+    if ( isVisible( instance.boundsCenter, instance.boundsRadius ) == false )
+        return;
 
-	// sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instanceId 가 곧 자기 자리다 —
-	// 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
-	// 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
-	if (g_BatchInfo[batchIndex].sortMode == 1u)
-	{
-		g_VisibleInstanceIDs[instanceId] = instanceId;
-		return;
-	}
+    // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instanceId 가 곧 자기 자리다 —
+    // 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
+    // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
+    if ( g_BatchInfo[batchIndex].sortMode == 1u )
+    {
+        g_VisibleInstanceIDs[instanceId] = instanceId;
+        return;
+    }
 
-	// 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
-	if (isOccluded(instance.boundsCenter, instance.boundsRadius))
-		return;
+    // 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
+    if ( isOccluded( instance.boundsCenter, instance.boundsRadius ) )
+        return;
 
-	// 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
-	// 오프셋을 더해야 전역 자리가 된다.
-	uint slot = 0;
+    // 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
+    // 오프셋을 더해야 전역 자리가 된다.
+    uint slot = 0;
 #if defined( DX11 )
-	// SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
-	// (DX11 은 간접 인자 제약으로 컬링 자체를 돌리지 않으므로 이 경로는 실제로 쓰이지 않는다.)
-	InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, 1u, slot);
+    // SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
+    // (DX11 은 간접 인자 제약으로 컬링 자체를 돌리지 않으므로 이 경로는 실제로 쓰이지 않는다.)
+    InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, 1u, slot );
 #else
-	// 웨이브 안에서 먼저 모으고 **웨이브당 한 번만** 원자 연산을 한다. 같은 배치에 인스턴스가 많을수록
-	// (인스턴스드 렌더링에서는 그게 정상이다) 같은 주소에 대한 경합이 스레드 수만큼 쌓이기 때문이다.
-	// 언리얼의 인스턴스 컬링도 같은 이유로 웨이브 단위로 접는다.
-	//
-	// 한 웨이브 안에 **여러 배치**가 섞일 수 있으므로 batchIndex 가 같은 레인끼리만 묶는다.
-	// WaveMatch 는 SM6.5+ 라 쓰지 않고, 같은 값끼리 모으는 표준 관용구를 쓴다.
-	const uint firstBatch = WaveReadLaneFirst(batchIndex);
-	if (firstBatch == batchIndex)
-	{
-		// 이 웨이브에서 batchIndex 가 첫 레인과 같은 레인들만 여기 들어온다.
-		const uint laneCount = WaveActiveCountBits(true);
-		const uint laneRank  = WavePrefixCountBits(true);
-		uint       waveBase  = 0;
-		if (WaveIsFirstLane())
-			InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, laneCount, waveBase);
-		slot = WaveReadLaneFirst(waveBase) + laneRank;
-	}
-	else
-	{
-		// 첫 레인과 배치가 다른 레인들 — 드문 경우라 그냥 각자 원자 연산을 한다.
-		InterlockedAdd(g_IndirectArgs[batchIndex].instanceCount, 1u, slot);
-	}
+    // 웨이브 안에서 먼저 모으고 **웨이브당 한 번만** 원자 연산을 한다. 같은 배치에 인스턴스가 많을수록
+    // (인스턴스드 렌더링에서는 그게 정상이다) 같은 주소에 대한 경합이 스레드 수만큼 쌓이기 때문이다.
+    // 언리얼의 인스턴스 컬링도 같은 이유로 웨이브 단위로 접는다.
+    //
+    // 한 웨이브 안에 **여러 배치**가 섞일 수 있으므로 batchIndex 가 같은 레인끼리만 묶는다.
+    // WaveMatch 는 SM6.5+ 라 쓰지 않고, 같은 값끼리 모으는 표준 관용구를 쓴다.
+    const uint firstBatch = WaveReadLaneFirst( batchIndex );
+    if ( firstBatch == batchIndex )
+    {
+        // 이 웨이브에서 batchIndex 가 첫 레인과 같은 레인들만 여기 들어온다.
+        const uint laneCount = WaveActiveCountBits( true );
+        const uint laneRank  = WavePrefixCountBits( true );
+        uint       waveBase  = 0;
+        if ( WaveIsFirstLane() )
+            InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, laneCount, waveBase );
+        slot = WaveReadLaneFirst( waveBase ) + laneRank;
+    }
+    else
+    {
+        // 첫 레인과 배치가 다른 레인들 — 드문 경우라 그냥 각자 원자 연산을 한다.
+        InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, 1u, slot );
+    }
 #endif
 
-	const uint writeAt = g_BatchInfo[batchIndex].instanceBase + slot;
-	if (writeAt < g_InstanceCount)
-		g_VisibleInstanceIDs[writeAt] = instanceId;
+    const uint writeAt = g_BatchInfo[batchIndex].instanceBase + slot;
+    if ( writeAt < g_InstanceCount )
+        g_VisibleInstanceIDs[writeAt] = instanceId;
 }

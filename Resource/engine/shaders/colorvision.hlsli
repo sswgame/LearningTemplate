@@ -17,13 +17,13 @@ static const uint kColorVisionTritanopia   = 3u;
 /** @brief 결핍 눈이 보는 색으로 옮기는 행렬입니다(행 우선 — mul( 행렬, 색 )). 모르는 방식은 단위 행렬입니다. */
 float3x3 swGetColorVisionSimulation( uint mode )
 {
-	if ( mode == kColorVisionProtanopia )
-		return float3x3( 0.152286f, 1.052583f, -0.204868f, 0.114503f, 0.786281f, 0.099216f, -0.003882f, -0.048116f, 1.051998f );
-	if ( mode == kColorVisionDeuteranopia )
-		return float3x3( 0.367322f, 0.860646f, -0.227968f, 0.280085f, 0.672501f, 0.047413f, -0.011820f, 0.042940f, 0.968881f );
-	if ( mode == kColorVisionTritanopia )
-		return float3x3( 1.255528f, -0.076749f, -0.178779f, -0.078411f, 0.930809f, 0.147602f, 0.004733f, 0.691367f, 0.303900f );
-	return float3x3( 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f );
+    if ( mode == kColorVisionProtanopia )
+        return float3x3( 0.152286f, 1.052583f, -0.204868f, 0.114503f, 0.786281f, 0.099216f, -0.003882f, -0.048116f, 1.051998f );
+    if ( mode == kColorVisionDeuteranopia )
+        return float3x3( 0.367322f, 0.860646f, -0.227968f, 0.280085f, 0.672501f, 0.047413f, -0.011820f, 0.042940f, 0.968881f );
+    if ( mode == kColorVisionTritanopia )
+        return float3x3( 1.255528f, -0.076749f, -0.178779f, -0.078411f, 0.930809f, 0.147602f, 0.004733f, 0.691367f, 0.303900f );
+    return float3x3( 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f );
 }
 
 /**
@@ -32,13 +32,13 @@ float3x3 swGetColorVisionSimulation( uint mode )
  */
 float3 swApplyColorVisionCorrection( float3 color, uint mode )
 {
-	const float3 simulated = mul( swGetColorVisionSimulation( mode ), color );
-	const float3 error     = color - simulated;
-	const float3 redShift  = float3( 0.0f, 0.7f * error.r + error.g, 0.7f * error.r + error.b );
-	const float3 blueShift = float3( error.r + 0.7f * error.b, error.g + 0.7f * error.b, 0.0f );
-	const float3 corrected = saturate( color + ( ( mode == kColorVisionTritanopia ) ? blueShift : redShift ) );
-	const bool   bActive   = mode >= kColorVisionProtanopia && mode <= kColorVisionTritanopia;
-	return bActive ? corrected : color;
+    const float3 simulated = mul( swGetColorVisionSimulation( mode ), color );
+    const float3 error     = color - simulated;
+    const float3 redShift  = float3( 0.0f, 0.7f * error.r + error.g, 0.7f * error.r + error.b );
+    const float3 blueShift = float3( error.r + 0.7f * error.b, error.g + 0.7f * error.b, 0.0f );
+    const float3 corrected = saturate( color + ( ( mode == kColorVisionTritanopia ) ? blueShift : redShift ) );
+    const bool   bActive   = mode >= kColorVisionProtanopia && mode <= kColorVisionTritanopia;
+    return bActive ? corrected : color;
 }
 
 #endif // SW_ENGINE_COLORVISION_HLSLI

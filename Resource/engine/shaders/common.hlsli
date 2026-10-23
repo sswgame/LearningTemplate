@@ -27,7 +27,7 @@
 
 // 네이티브 bindless 텍스처 백엔드 — 컴파일러(ShaderCompiler.cpp)가 DX12/Vulkan 에 SW_BINDLESS=1 을 정의한다.
 #if defined( SW_BINDLESS ) && ( defined( DX12 ) || defined( VULKAN ) )
-#define SW_NATIVE_BINDLESS 1
+    #define SW_NATIVE_BINDLESS 1
 #endif
 
 // ------------------------------------------------------------------------------
@@ -35,17 +35,16 @@
 //    Vulkan 은 DXC 시프트에 맡긴다: b# → SW_VK_B_SHIFT+#, t# → SW_VK_T_SHIFT+#, u# → SW_VK_U_SHIFT+# (모두 set 0).
 // ------------------------------------------------------------------------------
 #if defined( OPENGL )
-#define SW_GL_BINDING( slot ) [[vk::binding( slot, 0 )]]
+    #define SW_GL_BINDING( slot ) [[vk::binding( slot, 0 )]]
 #else
-#define SW_GL_BINDING( slot )
+    #define SW_GL_BINDING( slot )
 #endif
-
 
 // ------------------------------------------------------------------------------
 // 2) 상수버퍼 — 네 백엔드 공통 `cbuffer name : register(b#)`. 필드는 맨이름으로 쓴다.
 // ------------------------------------------------------------------------------
 #define SW_DECLARE_CBUFFER( name, slot ) \
-	SW_GL_BINDING( slot ) cbuffer name : register( SW_CAT( b, slot ) )
+    SW_GL_BINDING( slot ) cbuffer name : register( SW_CAT( b, slot ) )
 
 // ------------------------------------------------------------------------------
 // 3) 구조버퍼 / 바이트주소버퍼 — 읽기 t#, 쓰기 u#.
@@ -53,22 +52,22 @@
 //    t0 과 u0 이 같은 SSBO 자리를 다툰다(검증 에러 없음, 컬링 결과가 조용히 깨짐).
 // ------------------------------------------------------------------------------
 #define SW_DECLARE_STRUCTURED_BUFFER( elemType, bufName, slot ) \
-	SW_GL_BINDING( slot ) StructuredBuffer<elemType> bufName : register( SW_CAT( t, slot ) )
+    SW_GL_BINDING( slot ) StructuredBuffer<elemType> bufName : register( SW_CAT( t, slot ) )
 #define SW_DECLARE_RW_STRUCTURED_BUFFER( elemType, bufName, slot ) \
-	RWStructuredBuffer<elemType> bufName : register( SW_CAT( u, slot ) )
+    RWStructuredBuffer<elemType> bufName : register( SW_CAT( u, slot ) )
 #define SW_DECLARE_BYTE_ADDRESS_BUFFER( bufName, slot ) \
-	SW_GL_BINDING( slot ) ByteAddressBuffer bufName : register( SW_CAT( t, slot ) )
+    SW_GL_BINDING( slot ) ByteAddressBuffer bufName : register( SW_CAT( t, slot ) )
 #define SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( bufName, slot ) \
-	RWByteAddressBuffer bufName : register( SW_CAT( u, slot ) )
+    RWByteAddressBuffer bufName : register( SW_CAT( u, slot ) )
 
 // 컴퓨트 RW 텍스처 슬롯(DX11/GL 에뮬 전용 — binding.hlsli 가 쓴다). GL 은 이미지 유닛이 SSBO 와 다른 이름공간이라
 // 명시 binding(SW_GL_IMAGE_UNIT0 + 서수)을 적는다 — -fvk-u-shift 가 붙으면 유닛 20 같은 값이 나와 GL 한계(8)를 넘는다.
 #if defined( OPENGL )
-#define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
-	[[vk::binding( glUnit, 0 )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
+    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
+        [[vk::binding( glUnit, 0 )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
 #else
-#define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
-	RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
+    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
+        RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
 #endif
 
 // ------------------------------------------------------------------------------
@@ -78,49 +77,72 @@
 //      Vulkan 은 [[vk::push_constant]] 가 구조체 전역에만 붙어 필드가 전역 이름이 아니다 — 그래서 SW_ROOT() 로 읽는다.
 // ------------------------------------------------------------------------------
 #if defined( OPENGL )
-#define SW_ROOT_CONSTANTS_BEGIN [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) {
-#define SW_ROOT_CONSTANTS_END   };
-#define SW_ROOT( field ) field
+    #define SW_ROOT_CONSTANTS_BEGIN                                                                                        \
+        [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
+        {
+    #define SW_ROOT_CONSTANTS_END \
+        }                         \
+        ;
+    #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
-#define SW_ROOT_CONSTANTS_BEGIN struct SwRootConstantsData {
-#define SW_ROOT_CONSTANTS_END   }; [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
-#define SW_ROOT( field ) SwRootConstants.field
+    #define SW_ROOT_CONSTANTS_BEGIN \
+        struct SwRootConstantsData  \
+        {
+    #define SW_ROOT_CONSTANTS_END \
+        }                         \
+        ;                         \
+        [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
+    #define SW_ROOT( field ) SwRootConstants.field
 #elif defined( DX12 )
-#define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) ) {
-#define SW_ROOT_CONSTANTS_END   };
-#define SW_ROOT( field ) field
+    #define SW_ROOT_CONSTANTS_BEGIN                                                                           \
+        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) ) \
+        {
+    #define SW_ROOT_CONSTANTS_END \
+        }                         \
+        ;
+    #define SW_ROOT( field ) field
 #else
-#define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) {
-#define SW_ROOT_CONSTANTS_END   };
-#define SW_ROOT( field ) field
+    #define SW_ROOT_CONSTANTS_BEGIN                                             \
+        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
+        {
+    #define SW_ROOT_CONSTANTS_END \
+        }                         \
+        ;
+    #define SW_ROOT( field ) field
 #endif
+
+// ------------------------------------------------------------------------------
+// 3-2) 컴퓨트 진입점 스레드 그룹 — `[numthreads( x, y, z )]` 대신 쓴다. 맨 속성은 clang-format 이 다음 줄의 진입점 함수와
+//      한 줄로 붙이고, 매크로는 Resource/.clang-format 의 StatementMacros 가 한 문장으로 읽어 제 줄에 둔다.
+// ------------------------------------------------------------------------------
+#define SW_NUMTHREADS( x, y, z ) [numthreads( x, y, z )]
 
 // ------------------------------------------------------------------------------
 // 4) 텍스처 / 샘플러 — 에뮬 백엔드(DX11/GL)의 고정 슬롯 (binding.hlsli 가 쓴다). 네이티브 bindless 텍스처 배열은
 //    binding.hlsli 가 SW_SPACE_BINDLESS_TEX / SW_VK_TEXTURE_SET 으로 직접 선언한다.
 // ------------------------------------------------------------------------------
 #if defined( __spirv__ )
-#define SW_DECLARE_TEXTURE2D_SAMPLER( texName, samplerName, slot ) \
-	[[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] Texture2D texName : register( SW_CAT( t, slot ) ); \
-	[[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] SamplerState samplerName : register( SW_CAT( s, slot ) )
-#define SW_DECLARE_TEXTURE2D( texName, slot ) \
-	[[vk::binding( slot, 0 )]] Texture2D texName : register( SW_CAT( t, slot ) )
-#define SW_DECLARE_SAMPLER( samplerName, slot ) \
-	[[vk::binding( slot, 0 )]] SamplerState samplerName : register( SW_CAT( s, slot ) )
+    #define SW_DECLARE_TEXTURE2D_SAMPLER( texName, samplerName, slot )                                                \
+        [[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] Texture2D    texName : register( SW_CAT( t, slot ) ); \
+        [[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] SamplerState samplerName : register( SW_CAT( s, slot ) )
+    #define SW_DECLARE_TEXTURE2D( texName, slot ) \
+        [[vk::binding( slot, 0 )]] Texture2D texName : register( SW_CAT( t, slot ) )
+    #define SW_DECLARE_SAMPLER( samplerName, slot ) \
+        [[vk::binding( slot, 0 )]] SamplerState samplerName : register( SW_CAT( s, slot ) )
 #else
-#define SW_DECLARE_TEXTURE2D_SAMPLER( texName, samplerName, slot ) \
-	Texture2D texName : register( SW_CAT( t, slot ) ); \
-	SamplerState samplerName : register( SW_CAT( s, slot ) )
-#define SW_DECLARE_TEXTURE2D( texName, slot ) \
-	Texture2D texName : register( SW_CAT( t, slot ) )
-#define SW_DECLARE_SAMPLER( samplerName, slot ) \
-	SamplerState samplerName : register( SW_CAT( s, slot ) )
+    #define SW_DECLARE_TEXTURE2D_SAMPLER( texName, samplerName, slot ) \
+        Texture2D    texName : register( SW_CAT( t, slot ) );          \
+        SamplerState samplerName : register( SW_CAT( s, slot ) )
+    #define SW_DECLARE_TEXTURE2D( texName, slot ) \
+        Texture2D texName : register( SW_CAT( t, slot ) )
+    #define SW_DECLARE_SAMPLER( samplerName, slot ) \
+        SamplerState samplerName : register( SW_CAT( s, slot ) )
 #endif
 
 // ------------------------------------------------------------------------------
 // 5) Common Math Constants
 // ------------------------------------------------------------------------------
-static const float kPi	   = 3.14159265358979323846f;
+static const float kPi     = 3.14159265358979323846f;
 static const float kTwoPi  = 6.28318530717958647692f;
 static const float kHalfPi = 1.57079632679489661923f;
 static const float kInvPi  = 0.31830988618379067154f;
@@ -135,16 +157,16 @@ static const float kInvPi  = 0.31830988618379067154f;
 // 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
 struct SwVertexInput
 {
-	float3 position : POSITION;
-	float3 normal   : NORMAL;
-	float2 uv       : TEXCOORD0;
-	float4 color    : COLOR;
-	// xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
-	float4 tangent  : TANGENT;
-	// 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯). 씬 드로우만 건다.
-	// SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로
-	// 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
-	uint instanceSlot : SW_INSTANCESLOT;
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR;
+    // xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
+    float4 tangent : TANGENT;
+    // 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯). 씬 드로우만 건다.
+    // SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로
+    // 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
+    uint instanceSlot : SW_INSTANCESLOT;
 };
 // 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
 // col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약

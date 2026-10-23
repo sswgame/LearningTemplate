@@ -1,0 +1,16 @@
+# 셰이더(.hlsl · .hlsli) 포맷 — 루트 .clang-format(C++)을 물려받고 셰이더에만 필요한 것을 더한다.
+# 루트에 두지 않는 까닭: AlignFunctionDeclarations: false 가 C++ 정렬을 바꾼다.
+BasedOnStyle: InheritParentConfig
+# 루트 상수 블록 매크로(common.hlsli)를 중괄호처럼 들여쓴다.
+MacroBlockBegin: "^SW_ROOT_CONSTANTS_BEGIN$"
+MacroBlockEnd: "^SW_ROOT_CONSTANTS_END$"
+# cbuffer · 구조체 필드는 정렬하고, 함수 선언은 정렬하지 않는다.
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AlignFunctionDeclarations: false
+# [numthreads(…)] 를 SW_NUMTHREADS(…) 로 써야 진입점 함수와 한 줄로 붙지 않는다.
+StatementMacros: [SW_NUMTHREADS]
+# SW_GL_BINDING( slot ) 을 속성으로 읽어야 SW_DECLARE_* 매크로 본문이 선언 앞에서 줄바꿈되지 않는다.
+AttributeMacros: [SW_GL_BINDING]
+# 반환값 시맨틱(`float4 PSMain( … ) : SV_TARGET`)을 생성자 초기화 목록으로 읽는다 — BeforeColon 이어야 제 줄에 남는다(HLSL 에는 생성자가 없다).
+BreakConstructorInitializers: BeforeColon

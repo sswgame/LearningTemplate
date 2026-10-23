@@ -6,32 +6,32 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
-	uint g_OcclusionDepthIndex;  // 깊이 히스토리의 RW 텍스처 번호(네이티브) · RW 슬롯 서수(에뮬 — 0)
-	uint g_OcclusionDepthWidth;  // 깊이 히스토리 크기(px)
-	uint g_OcclusionDepthHeight;
-	uint g_OcclusionColumnCount; // 타일 격자
-	uint g_OcclusionRowCount;
-	uint g_OcclusionTileSize;    // 타일 한 변(px)
+    uint g_OcclusionDepthIndex; // 깊이 히스토리의 RW 텍스처 번호(네이티브) · RW 슬롯 서수(에뮬 — 0)
+    uint g_OcclusionDepthWidth; // 깊이 히스토리 크기(px)
+    uint g_OcclusionDepthHeight;
+    uint g_OcclusionColumnCount; // 타일 격자
+    uint g_OcclusionRowCount;
+    uint g_OcclusionTileSize; // 타일 한 변(px)
 SW_ROOT_CONSTANTS_END
 
 SW_DECLARE_RW_STRUCTURED_BUFFER( float, g_OcclusionTilesRW, 0 );
 
-[numthreads( 8, 8, 1 )]
+SW_NUMTHREADS( 8, 8, 1 )
 void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-	const uint column = dispatchThreadId.x;
-	const uint row    = dispatchThreadId.y;
-	if ( column >= SW_ROOT( g_OcclusionColumnCount ) || row >= SW_ROOT( g_OcclusionRowCount ) )
-		return;
-	const uint2 first    = uint2( column, row ) * SW_ROOT( g_OcclusionTileSize );
-	const uint2 last     = min( first + SW_ROOT( g_OcclusionTileSize ), uint2( SW_ROOT( g_OcclusionDepthWidth ), SW_ROOT( g_OcclusionDepthHeight ) ) );
-	float       maxDepth = 0.0f;
-	for ( uint texelY = first.y; texelY < last.y; ++texelY )
-	{
-		for ( uint texelX = first.x; texelX < last.x; ++texelX )
-		{
-			maxDepth = max( maxDepth, swLoadRwTexture2D( SW_ROOT( g_OcclusionDepthIndex ), uint2( texelX, texelY ) ).x );
-		}
-	}
-	g_OcclusionTilesRW[row * SW_ROOT( g_OcclusionColumnCount ) + column] = maxDepth;
+    const uint column = dispatchThreadId.x;
+    const uint row    = dispatchThreadId.y;
+    if ( column >= SW_ROOT( g_OcclusionColumnCount ) || row >= SW_ROOT( g_OcclusionRowCount ) )
+        return;
+    const uint2 first    = uint2( column, row ) * SW_ROOT( g_OcclusionTileSize );
+    const uint2 last     = min( first + SW_ROOT( g_OcclusionTileSize ), uint2( SW_ROOT( g_OcclusionDepthWidth ), SW_ROOT( g_OcclusionDepthHeight ) ) );
+    float       maxDepth = 0.0f;
+    for ( uint texelY = first.y; texelY < last.y; ++texelY )
+    {
+        for ( uint texelX = first.x; texelX < last.x; ++texelX )
+        {
+            maxDepth = max( maxDepth, swLoadRwTexture2D( SW_ROOT( g_OcclusionDepthIndex ), uint2( texelX, texelY ) ).x );
+        }
+    }
+    g_OcclusionTilesRW[row * SW_ROOT( g_OcclusionColumnCount ) + column] = maxDepth;
 }
