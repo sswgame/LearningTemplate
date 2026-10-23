@@ -102,6 +102,7 @@
 Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합, `Inventory` 카탈로그 조회, `ScheduleCatalog` 인덱스 간접 정렬), `hashed_string` 키 정렬(`GameFlags`, `Crafting` 은 대소문자를 구분하는 저장 순서라 그대로), 반복자를 쓰는 `std::find`(`OnlineServiceClient` 지우기), 조건이 둘인 찾기 루프(`TimerQueue::findTimer`). `CompareUtil` 에 비교 함수를 받는 키 비교자(`hashed_string` 키용)가 생기면 `GameFlags` 를 옮깁니다.
 `Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 끝난 곳: `Source/Editor/Panels/Inspector` 의 손으로 쓴 erase-remove 2건(`EditorPropertyGrid`)을 `VectorUtil::removeIf` 로 바꿨다(2026-10-21).
+이름 붙은 지역 람다 Engine/Graphics 끝(2026-10-24, `wt/lambdagfx`): 해제 큐 장부 해제 `RHIReleaseQueue::enqueueLedgerRelease` 계열, 메시 정점 생성기, 바인딩 계약 표, Vulkan 로드 · 저장 동작 변환을 함수로 뺐다. 캡처가 본질인 5줄 안쪽 람다(`recycleCb`, `waitForQuery`, `setRootDescriptor`, `nextUnit`, `uploadOne`)는 남겼다.
 
 ## 기능
 

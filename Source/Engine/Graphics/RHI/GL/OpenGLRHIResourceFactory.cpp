@@ -87,6 +87,28 @@ namespace sw
             const OpenGLFormatRow* pRow = findFormatRow( format );
             return pRow != nullptr ? pRow->_pixelType : 0;
         }
+
+        /** @brief 텍스처 GL 이름과 면 FBO 이름들을 지웁니다. 0 인 이름은 건너뜁니다. 해제 큐에서 GL 컨텍스트가 있는 쪽에서 부릅니다. */
+        void deleteTextureNames( GLuint fboName, GLuint texName, const vector<uint32>& listSliceFbo )
+        {
+            // 면 FBO 의 0 번은 `_fbo` 와 같다 — 1 번부터 지운다.
+            for ( size_t slice = 1; slice < listSliceFbo.size(); ++slice )
+            {
+                GLuint name = listSliceFbo[slice];
+                if ( name != 0 )
+                    glDeleteFramebuffers( 1, &name );
+            }
+            if ( fboName != 0 )
+            {
+                GLuint name = fboName;
+                glDeleteFramebuffers( 1, &name );
+            }
+            if ( texName != 0 )
+            {
+                GLuint name = texName;
+                glDeleteTextures( 1, &name );
+            }
+        }
     } // namespace
 
     uint32 OpenGLRHIDevice::getGlTextureName( RHITextureHandle texture ) const
@@ -636,23 +658,7 @@ namespace sw
         RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
         auto             releaseCb = [fboName, texName, listSliceFbo, pLedger, texture]()
         {
-            // 면 FBO 의 0 번은 `_fbo` 와 같다 — 1 번부터 지운다.
-            for ( size_t slice = 1; slice < listSliceFbo.size(); ++slice )
-            {
-                GLuint name = listSliceFbo[slice];
-                if ( name != 0 )
-                    glDeleteFramebuffers( 1, &name );
-            }
-            if ( fboName != 0 )
-            {
-                GLuint name = fboName;
-                glDeleteFramebuffers( 1, &name );
-            }
-            if ( texName != 0 )
-            {
-                GLuint name = texName;
-                glDeleteTextures( 1, &name );
-            }
+            deleteTextureNames( fboName, texName, listSliceFbo );
             // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
             pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };

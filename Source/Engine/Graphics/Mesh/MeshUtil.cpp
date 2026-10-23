@@ -159,6 +159,97 @@ namespace sw
             pushTriangle( outList, sideLower1, sideUpper0, sideUpper1 );
         }
 
+        /** @brief 위치 · 노멀 · UV · 색을 RHI 정점으로 묶습니다. 탄젠트는 0 으로 둡니다 — `Mesh::setVertices` 가 위치 · 노멀 · UV 로 구합니다. */
+        RHIVertex makeRHIVertex( const float3& position, const float3& normal, const float2& uv, const float4& color )
+        {
+            return RHIVertex{
+                { position._x, position._y, position._z },
+                { normal._x, normal._y, normal._z },
+                { uv._x, uv._y },
+                { color._x, color._y, color._z, color._w },
+                { 0.0f, 0.0f, 0.0f, 0.0f }
+            };
+        }
+
+        /** @brief 구의 (stack, slice) 꼭짓점입니다. UV 는 위도 · 경도 그대로 편다. 구에 평면 투영을 쓰면 극 근처가 뭉개진다. */
+        BuildVertex makeSphereVertex( uint32 stack, uint32 slice, uint32 stackCount, uint32 sliceCount, float32 radius )
+        {
+            const float32 phi      = MathUtil::kPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
+            const float32 theta    = sliceAngle( slice, sliceCount );
+            const float3  position = float3{ radius * MathUtil::sin( phi ) * MathUtil::cos( theta ),
+                                            radius * MathUtil::cos( phi ),
+                                            radius * MathUtil::sin( phi ) * MathUtil::sin( theta ) };
+            const float32 v        = static_cast<float32>( stack ) / static_cast<float32>( stackCount );
+            return BuildVertex{ position, radialNormal( position ), revolvedUv( slice, sliceCount, v ) };
+        }
+
+        /** @brief 캡슐 반구를 짓는 데 필요한 모양입니다. */
+        struct CapsuleShape
+        {
+            uint32  _stackCount;
+            uint32  _sliceCount;
+            float32 _radius;
+            float32 _halfY;
+        };
+
+        /**
+         * @brief 캡슐 반구의 (stack, slice) 꼭짓점입니다. 반구는 중심을 ±halfY 로 옮긴 구면이다.
+         * @details 노멀은 **그 반구의 중심**(0, ±halfY, 0) 기준 방향이다. 원점 기준으로 잡으면 캡슐이 길수록 어긋난다.
+         *          반구의 v 는 위 [0, 0.25] · 아래 [0.75, 1] 이다. 원통부(0.25~0.75)와 이어진다.
+         */
+        BuildVertex makeCapVertex( const CapsuleShape& shape, uint32 stack, uint32 slice, bool bTop )
+        {
+            const float32 phi    = MathUtil::kHalfPi * static_cast<float32>( stack ) / static_cast<float32>( shape._stackCount );
+            const float32 theta  = sliceAngle( slice, shape._sliceCount );
+            const float32 ringY  = shape._radius * MathUtil::sin( phi );
+            const float32 ringR  = shape._radius * MathUtil::cos( phi );
+            const float32 offset = bTop ? shape._halfY : -shape._halfY;
+            const float3  position{ ringR * MathUtil::cos( theta ), offset + ( bTop ? ringY : -ringY ), ringR * MathUtil::sin( theta ) };
+            const float3  center{ 0.0f, offset, 0.0f };
+            const float3  delta  = position - center;
+            const float3  normal = ( delta.getLengthSquared() > MathUtil::kEpsilon ) ? delta.normalize() : float3{ 0.0f, bTop ? 1.0f : -1.0f, 0.0f };
+            const float32 ratio  = static_cast<float32>( stack ) / static_cast<float32>( shape._stackCount );
+            const float32 v      = bTop ? ( 0.25f - ratio * 0.25f ) : ( 0.75f + ratio * 0.25f );
+            return BuildVertex{ position, normal, revolvedUv( slice, shape._sliceCount, v ) };
+        }
+
+        /**
+         * @brief 원뿔 옆면 노멀입니다. **기울기를 반영한다.** 높이 h, 밑반지름 r 인 원뿔의 옆면 노멀은 normalize( h*cosθ, r, h*sinθ ) 다.
+         *        방사 방향(수평)으로 두면 원뿔이 원통처럼 칠해진다.
+         */
+        float3 coneSideNormal( const float3& basePoint, float32 height, float32 radius )
+        {
+            return float3{ height * basePoint._x / radius, radius, height * basePoint._z / radius }.normalize();
+        }
+
+        /** @brief 사각형 메시(XY 평면)의 꼭짓점입니다. 노멀은 +Z(이 감김의 면 노멀), UV 는 좌하단 (0,0) → 우상단 (1,1) 입니다. */
+        RHIVertex makeRectVertex( float32 x, float32 y )
+        {
+            return makeRHIVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, float2{ x + 0.5f, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+        }
+
+        /**
+         * @brief 스프라이트 사각형의 꼭짓점입니다. 앞면(-Z 를 향함)은 +Z 를 보는 카메라의 화면 오른쪽이 +X 라 u 는 +X 로 는다.
+         *        뒷면(+Z 를 향함)은 그 카메라의 화면 오른쪽이 -X 라 u 는 -X 로 는다. v 는 두 면 모두 위가 0 이다.
+         */
+        RHIVertex makeSpriteVertex( float32 x, float32 y, float32 normalZ )
+        {
+            const float32 u = ( normalZ < 0.0f ) ? ( x + 0.5f ) : ( 0.5f - x );
+            return makeRHIVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, normalZ }, float2{ u, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+        }
+
+        /** @brief 잔디 잎의 정점 하나를 넣습니다. 색은 흰색입니다. */
+        void pushGrassVertex( vector<RHIVertex>& outList, const float3& normal, const float3& position, float32 u, float32 v )
+        {
+            outList.push_back( makeRHIVertex( position, normal, float2{ u, v }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ) );
+        }
+
+        /** @brief 평면 격자의 (ix, iz) 모서리입니다. 면은 로컬 y = 0, 범위는 [-0.5, 0.5] 입니다. */
+        float3 makePlaneCorner( uint32 ix, uint32 iz, float32 step )
+        {
+            return float3{ -0.5f + static_cast<float32>( ix ) * step, 0.0f, -0.5f + static_cast<float32>( iz ) * step };
+        }
+
         struct MeshUtilInternal
         {
             using PrimitiveCache = WeakInternCache<hashed_string, Mesh>;
@@ -324,30 +415,14 @@ namespace sw
         listVert.reserve( static_cast<size_t>( stackCount ) * sliceCount * 6 );
 
         constexpr float32 kRadius = 0.5f;
-        auto              pointAt = [&]( uint32 stack, uint32 slice ) -> float3
-        {
-            const float32 phi   = MathUtil::kPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
-            const float32 theta = sliceAngle( slice, sliceCount );
-            return float3{ kRadius * MathUtil::sin( phi ) * MathUtil::cos( theta ),
-                           kRadius * MathUtil::cos( phi ),
-                           kRadius * MathUtil::sin( phi ) * MathUtil::sin( theta ) };
-        };
-        // UV 는 위도 · 경도 그대로 편다. 구에 평면 투영을 쓰면 극 근처가 뭉개진다.
-        auto vertexAt = [&]( uint32 stack, uint32 slice ) -> BuildVertex
-        {
-            const float3  position = pointAt( stack, slice );
-            const float32 v        = static_cast<float32>( stack ) / static_cast<float32>( stackCount );
-            return BuildVertex{ position, radialNormal( position ), revolvedUv( slice, sliceCount, v ) };
-        };
-
         for ( uint32 stack = 0; stack < stackCount; ++stack )
         {
             for ( uint32 slice = 0; slice < sliceCount; ++slice )
             {
-                const BuildVertex topLeft     = vertexAt( stack, slice );
-                const BuildVertex topRight    = vertexAt( stack, slice + 1 );
-                const BuildVertex bottomLeft  = vertexAt( stack + 1, slice );
-                const BuildVertex bottomRight = vertexAt( stack + 1, slice + 1 );
+                const BuildVertex topLeft     = makeSphereVertex( stack, slice, stackCount, sliceCount, kRadius );
+                const BuildVertex topRight    = makeSphereVertex( stack, slice + 1, stackCount, sliceCount, kRadius );
+                const BuildVertex bottomLeft  = makeSphereVertex( stack + 1, slice, stackCount, sliceCount, kRadius );
+                const BuildVertex bottomRight = makeSphereVertex( stack + 1, slice + 1, stackCount, sliceCount, kRadius );
                 // 구의 노멀은 원점 기준 방향 그대로다. 면 노멀을 쓰면 각져 보인다.
                 // 극에서는 한 쪽이 한 점으로 모여 퇴화 삼각형이 된다. 그건 넣지 않는다.
                 if ( stack != 0 )
@@ -397,48 +472,23 @@ namespace sw
         constexpr float32 kRadius = 0.5f;
         constexpr float32 kHalfY  = 0.5f;
         // 반구는 중심을 ±kHalfY 로 옮긴 구면이다. 원통부와 이어 붙이면 캡슐이 된다.
-        auto capPoint = [&]( uint32 stack, uint32 slice, bool bTop ) -> float3
-        {
-            const float32 phi    = MathUtil::kHalfPi * static_cast<float32>( stack ) / static_cast<float32>( stackCount );
-            const float32 theta  = sliceAngle( slice, sliceCount );
-            const float32 ringY  = kRadius * MathUtil::sin( phi );
-            const float32 ringR  = kRadius * MathUtil::cos( phi );
-            const float32 offset = bTop ? kHalfY : -kHalfY;
-            return float3{ ringR * MathUtil::cos( theta ), offset + ( bTop ? ringY : -ringY ), ringR * MathUtil::sin( theta ) };
-        };
+        const CapsuleShape shape{ stackCount, sliceCount, kRadius, kHalfY };
 
         for ( uint32 slice = 0; slice < sliceCount; ++slice )
         {
             // 원통부의 v 는 [0.25, 0.75] 를 쓴다. 위아래 반구가 나머지 절반을 나눠 갖는다.
             pushRevolvedSide( listVert, makeRevolvedQuad( slice, sliceCount, kRadius, kHalfY ), slice, sliceCount, 0.25f, 0.75f );
 
-            // 반구의 노멀은 **그 반구의 중심**(0, ±kHalfY, 0) 기준 방향이다. 원점 기준으로 잡으면
-            // 캡슐이 길수록 어긋난다(구가 아니라 원통부만큼 밀려 있다).
-            auto capNormal = [&]( const float3& position, bool bTop ) -> float3
-            {
-                const float3 center{ 0.0f, bTop ? kHalfY : -kHalfY, 0.0f };
-                const float3 delta = position - center;
-                return ( delta.getLengthSquared() > MathUtil::kEpsilon ) ? delta.normalize() : float3{ 0.0f, bTop ? 1.0f : -1.0f, 0.0f };
-            };
-
             for ( uint32 stack = 0; stack < stackCount; ++stack )
             {
                 for ( uint32 capIndex = 0; capIndex < 2; ++capIndex )
                 {
                     const bool bTop = ( capIndex == 0 );
-                    // 반구의 v 는 위 [0, 0.25] · 아래 [0.75, 1] 이다. 원통부(0.25~0.75)와 이어진다.
-                    auto capVertex = [&]( uint32 capStack, uint32 capSlice ) -> BuildVertex
-                    {
-                        const float3  position = capPoint( capStack, capSlice, bTop );
-                        const float32 ratio    = static_cast<float32>( capStack ) / static_cast<float32>( stackCount );
-                        const float32 v        = bTop ? ( 0.25f - ratio * 0.25f ) : ( 0.75f + ratio * 0.25f );
-                        return BuildVertex{ position, capNormal( position, bTop ), revolvedUv( capSlice, sliceCount, v ) };
-                    };
 
-                    const BuildVertex nearLeft  = capVertex( stack, slice );
-                    const BuildVertex nearRight = capVertex( stack, slice + 1 );
-                    const BuildVertex farLeft   = capVertex( stack + 1, slice );
-                    const BuildVertex farRight  = capVertex( stack + 1, slice + 1 );
+                    const BuildVertex nearLeft  = makeCapVertex( shape, stack, slice, bTop );
+                    const BuildVertex nearRight = makeCapVertex( shape, stack, slice + 1, bTop );
+                    const BuildVertex farLeft   = makeCapVertex( shape, stack + 1, slice, bTop );
+                    const BuildVertex farRight  = makeCapVertex( shape, stack + 1, slice + 1, bTop );
                     if ( bTop )
                     {
                         pushTriangle( listVert, nearLeft, farLeft, nearRight );
@@ -477,15 +527,10 @@ namespace sw
             const float3  base0{ kRadius * MathUtil::cos( angleStart ), -kHalfY, kRadius * MathUtil::sin( angleStart ) };
             const float3  base1{ kRadius * MathUtil::cos( angleEnd ), -kHalfY, kRadius * MathUtil::sin( angleEnd ) };
 
-            // 옆면 노멀은 **기울기를 반영한다.** 높이 h, 밑반지름 r 인 원뿔의 옆면 노멀은
-            // normalize( h*cosθ, r, h*sinθ ) 다. 방사 방향(수평)으로 두면 원뿔이 원통처럼 칠해진다.
-            constexpr float32 kHeight    = kHalfY * 2.0f;
-            auto              sideNormal = [&]( const float3& basePoint ) -> float3
-            {
-                return float3{ kHeight * basePoint._x / kRadius, kRadius, kHeight * basePoint._z / kRadius }.normalize();
-            };
-            const float3 sideNormal0 = sideNormal( base0 );
-            const float3 sideNormal1 = sideNormal( base1 );
+            // 옆면 노멀은 기울기를 반영한다(`coneSideNormal`).
+            constexpr float32 kHeight     = kHalfY * 2.0f;
+            const float3      sideNormal0 = coneSideNormal( base0, kHeight, kRadius );
+            const float3      sideNormal1 = coneSideNormal( base1, kHeight, kRadius );
             // 꼭짓점의 노멀은 정의되지 않는다. 양옆 노멀의 평균을 쓴다(관례). UV 도 같은 이유로 중간이다.
             const float3  apexNormal = ( sideNormal0 + sideNormal1 ).normalize();
             const float32 apexU      = ( static_cast<float32>( slice ) + 0.5f ) / static_cast<float32>( sliceCount );
@@ -503,25 +548,14 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createRectMesh()
     {
-        auto mesh = Mesh::create();
-        // XY 평면이라 노멀은 +Z 다(이 감김의 면 노멀). UV 는 좌하단 (0,0) → 우상단 (1,1).
-        auto quadVertex = []( float32 x, float32 y ) -> RHIVertex
-        {
-            return RHIVertex{
-                { x, y, 0.0f },
-                { 0.0f, 0.0f, 1.0f },
-                { x + 0.5f, 0.5f - y },
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
-            };
-        };
+        auto              mesh     = Mesh::create();
         vector<RHIVertex> listVert = {
-            quadVertex( -0.5f, -0.5f ),
-            quadVertex( 0.5f, -0.5f ),
-            quadVertex( 0.5f, 0.5f ),
-            quadVertex( -0.5f, -0.5f ),
-            quadVertex( 0.5f, 0.5f ),
-            quadVertex( -0.5f, 0.5f ),
+            makeRectVertex( -0.5f, -0.5f ),
+            makeRectVertex( 0.5f, -0.5f ),
+            makeRectVertex( 0.5f, 0.5f ),
+            makeRectVertex( -0.5f, -0.5f ),
+            makeRectVertex( 0.5f, 0.5f ),
+            makeRectVertex( -0.5f, 0.5f ),
         };
         mesh->setVertices( std::move( listVert ) );
         return mesh;
@@ -530,32 +564,20 @@ namespace sw
     shared_ptr<Mesh> MeshUtil::createSpriteQuad()
     {
         auto mesh = Mesh::create();
-        // 앞면(-Z 를 향함): +Z 를 보는 카메라의 화면 오른쪽이 +X 라 u 는 +X 로 는다. 뒷면(+Z 를 향함): 그 카메라의 화면 오른쪽은 -X 라 u 는 -X 로 는다.
-        // 감김은 이 엔진의 앞면 규약((b - a) x (c - a) 가 그 면의 노멀)을 따른다. v 는 두 면 모두 위가 0 이다.
-        auto spriteVertex = []( float32 x, float32 y, float32 normalZ ) -> RHIVertex
-        {
-            const float32 u = ( normalZ < 0.0f ) ? ( x + 0.5f ) : ( 0.5f - x );
-            return RHIVertex{
-                { x, y, 0.0f },
-                { 0.0f, 0.0f, normalZ },
-                { u, 0.5f - y },
-                { 1.0f, 1.0f, 1.0f, 1.0f },
-                { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
-            };
-        };
+        // 감김은 이 엔진의 앞면 규약((b - a) x (c - a) 가 그 면의 노멀)을 따른다. 앞 · 뒷면의 u 방향은 `makeSpriteVertex` 주석.
         vector<RHIVertex> listVert = {
-            spriteVertex( -0.5f, -0.5f, -1.0f ),
-            spriteVertex( 0.5f, 0.5f, -1.0f ),
-            spriteVertex( 0.5f, -0.5f, -1.0f ),
-            spriteVertex( -0.5f, -0.5f, -1.0f ),
-            spriteVertex( -0.5f, 0.5f, -1.0f ),
-            spriteVertex( 0.5f, 0.5f, -1.0f ),
-            spriteVertex( -0.5f, -0.5f, 1.0f ),
-            spriteVertex( 0.5f, -0.5f, 1.0f ),
-            spriteVertex( 0.5f, 0.5f, 1.0f ),
-            spriteVertex( -0.5f, -0.5f, 1.0f ),
-            spriteVertex( 0.5f, 0.5f, 1.0f ),
-            spriteVertex( -0.5f, 0.5f, 1.0f ),
+            makeSpriteVertex( -0.5f, -0.5f, -1.0f ),
+            makeSpriteVertex( 0.5f, 0.5f, -1.0f ),
+            makeSpriteVertex( 0.5f, -0.5f, -1.0f ),
+            makeSpriteVertex( -0.5f, -0.5f, -1.0f ),
+            makeSpriteVertex( -0.5f, 0.5f, -1.0f ),
+            makeSpriteVertex( 0.5f, 0.5f, -1.0f ),
+            makeSpriteVertex( -0.5f, -0.5f, 1.0f ),
+            makeSpriteVertex( 0.5f, -0.5f, 1.0f ),
+            makeSpriteVertex( 0.5f, 0.5f, 1.0f ),
+            makeSpriteVertex( -0.5f, -0.5f, 1.0f ),
+            makeSpriteVertex( 0.5f, 0.5f, 1.0f ),
+            makeSpriteVertex( -0.5f, 0.5f, 1.0f ),
         };
         mesh->setVertices( std::move( listVert ) );
         return mesh;
@@ -569,25 +591,18 @@ namespace sw
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( segmentCount ) * segmentCount * 6 );
 
-        // 면은 로컬 y = 0 이다. 노멀은 정점이 들고 다닌다(+Y).
-        constexpr float32 kSurfaceY = 0.0f;
-        constexpr float3  kUp{ 0.0f, 1.0f, 0.0f };
-        const float32     step = 1.0f / static_cast<float32>( segmentCount );
-
-        auto cornerAt = [&]( uint32 ix, uint32 iz ) -> float3
-        {
-            return float3{ -0.5f + static_cast<float32>( ix ) * step, kSurfaceY,
-                           -0.5f + static_cast<float32>( iz ) * step };
-        };
+        // 면은 로컬 y = 0 이다(`makePlaneCorner`). 노멀은 정점이 들고 다닌다(+Y).
+        constexpr float3 kUp{ 0.0f, 1.0f, 0.0f };
+        const float32    step = 1.0f / static_cast<float32>( segmentCount );
 
         for ( uint32 iz = 0; iz < segmentCount; ++iz )
         {
             for ( uint32 ix = 0; ix < segmentCount; ++ix )
             {
-                const float3 p00 = cornerAt( ix, iz );
-                const float3 p10 = cornerAt( ix + 1, iz );
-                const float3 p11 = cornerAt( ix + 1, iz + 1 );
-                const float3 p01 = cornerAt( ix, iz + 1 );
+                const float3 p00 = makePlaneCorner( ix, iz, step );
+                const float3 p10 = makePlaneCorner( ix + 1, iz, step );
+                const float3 p11 = makePlaneCorner( ix + 1, iz + 1, step );
+                const float3 p01 = makePlaneCorner( ix, iz + 1, step );
 
                 // 체크무늬로 칠한다. 단색이면 그림자 경계는 보여도 **면이 어디까지인지**가 안 보여서,
                 // 그림자가 맞는 자리에 졌는지 판단할 기준이 사라진다.
@@ -598,22 +613,10 @@ namespace sw
                 // 위에서 내려다볼 때 앞면이 되도록 감는다(이 엔진의 앞면 규약). 노멀은 모두 +Y 다.
                 // UV 는 격자 칸이 아니라 **평면 전체**에 0..1 로 편다. 칸마다 0..1 을 주면
                 // 텍스처가 칸마다 반복돼 "바닥 한 장" 이 아니라 타일이 된다.
-                auto pushPlaneVertex = [&]( const float3& position )
+                for ( const float3& position : { p00, p01, p11, p00, p11, p10 } )
                 {
-                    listVert.push_back( RHIVertex{
-                        { position._x, position._y, position._z },
-                        { kUp._x, kUp._y, kUp._z },
-                        { position._x + 0.5f, position._z + 0.5f },
-                        { color._x, color._y, color._z, color._w },
-                        { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
-                    } );
-                };
-                pushPlaneVertex( p00 );
-                pushPlaneVertex( p01 );
-                pushPlaneVertex( p11 );
-                pushPlaneVertex( p00 );
-                pushPlaneVertex( p11 );
-                pushPlaneVertex( p10 );
+                    listVert.push_back( makeRHIVertex( position, kUp, float2{ position._x + 0.5f, position._z + 0.5f }, color ) );
+                }
             }
         }
 
@@ -658,33 +661,23 @@ namespace sw
                 arrLeft[node]           = center - across * halfWidth;
                 arrRight[node]          = center + across * halfWidth;
             }
-            auto pushVertex = [&listVertex, &normal]( const float3& position, float32 u, float32 v )
-            {
-                listVertex.push_back( RHIVertex{
-                    { position._x, position._y, position._z },
-                    { normal._x, normal._y, normal._z },
-                    { u, v },
-                    { 1.0f, 1.0f, 1.0f, 1.0f },
-                    { 0.0f, 0.0f, 0.0f, 0.0f }  // 탄젠트 — Mesh::setVertices 가 위치 · 노멀 · UV 로 구한다
-                } );
-            };
             for ( uint32 node = 0; node < kSegmentCount; ++node )
             {
                 const float32 v0 = 1.0f - static_cast<float32>( node ) / static_cast<float32>( kSegmentCount );
                 const float32 v1 = 1.0f - static_cast<float32>( node + 1 ) / static_cast<float32>( kSegmentCount );
                 // 앞면과 뒷면(감김을 뒤집은 같은 삼각형) — 끝 마디는 폭이 0 이라 삼각형 하나가 납작해지지만 그대로 둔다(넓이 0 은 그려지지 않는다).
-                pushVertex( arrLeft[node], 0.0f, v0 );
-                pushVertex( arrLeft[node + 1], 0.0f, v1 );
-                pushVertex( arrRight[node + 1], 1.0f, v1 );
-                pushVertex( arrLeft[node], 0.0f, v0 );
-                pushVertex( arrRight[node + 1], 1.0f, v1 );
-                pushVertex( arrRight[node], 1.0f, v0 );
-                pushVertex( arrLeft[node], 0.0f, v0 );
-                pushVertex( arrRight[node + 1], 1.0f, v1 );
-                pushVertex( arrLeft[node + 1], 0.0f, v1 );
-                pushVertex( arrLeft[node], 0.0f, v0 );
-                pushVertex( arrRight[node], 1.0f, v0 );
-                pushVertex( arrRight[node + 1], 1.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrLeft[node], 0.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrLeft[node + 1], 0.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrRight[node + 1], 1.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrLeft[node], 0.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrRight[node + 1], 1.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrRight[node], 1.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrLeft[node], 0.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrRight[node + 1], 1.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrLeft[node + 1], 0.0f, v1 );
+                pushGrassVertex( listVertex, normal, arrLeft[node], 0.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrRight[node], 1.0f, v0 );
+                pushGrassVertex( listVertex, normal, arrRight[node + 1], 1.0f, v1 );
             }
         }
         shared_ptr<Mesh> mesh = Mesh::create();

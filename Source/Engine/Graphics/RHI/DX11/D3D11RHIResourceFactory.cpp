@@ -275,13 +275,7 @@ namespace sw
         }
 
         // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
-        auto             releaseCb = [owned, pLedger, buffer]()
-        {
-            (void)owned._buffer.Get();
-            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
-        };
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+        _pDevice->_releaseQueue.enqueueLedgerRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryLedger(), buffer );
     }
 
     bool D3D11RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
@@ -577,13 +571,7 @@ namespace sw
             return;
 
         // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
-        auto             releaseCb = [owned, pLedger, texture]()
-        {
-            (void)owned._texture.Get();
-            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
-        };
-        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+        _pDevice->_releaseQueue.enqueueLedgerRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryLedger(), texture );
     }
 } // namespace sw
 #endif

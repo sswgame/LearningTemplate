@@ -23,16 +23,8 @@ namespace sw
 
     RHIPipelineStateHandle D3D11RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
     {
-        auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
-        {
-            for ( const string& define : desc._listShaderDefine )
-            {
-                compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
-            }
-        };
-
         // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        // (컴퓨트 경로는 아래에서 fillDefines 를 그대로 쓴다. 그래픽스 요청에는 컴퓨트 스테이지가 없다.)
+        // (그래픽스 요청에는 컴퓨트 스테이지가 없다. 컴퓨트 경로는 아래에서 define 을 직접 푼다.)
         const RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
 
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
@@ -74,7 +66,10 @@ namespace sw
             csDesc._entryPoint   = string( resolveEntryPoint( desc._computeEntryPoint, ShaderStage::Compute ) );
             csDesc._stage        = ShaderStage::Compute;
             csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
-            fillDefines( csDesc );
+            for ( const string& define : desc._listShaderDefine )
+            {
+                csDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
+            }
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess )
                 _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() );
