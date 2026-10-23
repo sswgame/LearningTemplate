@@ -475,6 +475,17 @@
       "id": "state-object-hash-tests", "title": "오브젝트별 상태 해시 글 되읽기와 다른 오브젝트 짚기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "StateHashReportLineTest.*",
       "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
+    },
+    {
+      "id": "epoll-stream-transport-wsl", "title": "리눅스 epoll 스트림 전송 — StreamTransportTest 를 반복 20 회(WSL Debug · Shipping)", "kind": "test", "config": "Debug", "platform": "wsl", "gpu": "none", "pending": true, "timeout_minutes": 40,
+      "filter": "StreamTransportTest.*",
+      "need_command": "--test_repeat=20 과 변이(setReceivePaused( false ) 의 할 일을 빼면 백프레셔 테스트가 진다) 확인은 한 명령이 아니다. WSL 은 사용자가 요청할 때만 돌린다",
+      "source": "docs/plans/Candidates-network.md EpollAndRealStoreVerification", "result_doc": "docs/plans/Candidates-network.md EpollAndRealStoreVerification"
+    },
+    {
+      "id": "real-store-contract", "title": "PostgreSQL · RESP 계약 테스트를 실제 서버로(SW_TEST_POSTGRES_URL · SW_TEST_RESP_URL)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "need_command": "이 PC 에 PostgreSQL · Valkey(WSL) · Garnet(Windows) 서버가 없다. 서버를 띄우고 환경 변수 두 개를 준 뒤 ServiceStoreContract 를 쓰는 테스트 필터를 돌린다",
+      "source": "docs/plans/Candidates-network.md EpollAndRealStoreVerification", "result_doc": "docs/plans/Candidates-network.md EpollAndRealStoreVerification"
     }
   ]
 }

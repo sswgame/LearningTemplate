@@ -29,6 +29,8 @@
 옛번호: D7-5
 왜 필요한가: 온라인 서비스 계층 확인 방법 중 이 PC 에서 아직 못 한 것이다.
 남은 것:
+- 확인 대기: 매니페스트 id `epoll-stream-transport-wsl`(WSL 은 사용자가 요청할 때만).
+- 확인 대기: 매니페스트 id `real-store-contract`(실제 서버가 있는 기계에서).
 - 리눅스 epoll(`EpollStreamTransport`): `WSL-Debug` · `WSL-Shipping` 에서 `StreamTransportTest` 를 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 테스트가 진다)로. io_uring 은 측정 뒤.
 - PostgreSQL · RESP 계약 테스트를 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각, 이 PC 에는 서버가 없다). 계약 테스트(`ServiceStoreContract.h`)를 SQL 구현에도 같이 돌린다.
 
