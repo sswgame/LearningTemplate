@@ -28,6 +28,10 @@ namespace sw
         TypedHandleProbeComponent()                   = default;
         virtual ~TypedHandleProbeComponent() override = default;
 
+        /** @brief CallInEditor 인자 선택기(프로퍼티와 같은 콤보) 확인용입니다 — 고른 메시 컴포넌트를 `_target` 에 넣어, 탐침 `Editor.SelectedHandle` 이 같은 값을 읽는다. */
+        FUNCTION( Category = "Probe", DisplayName = "Assign Target", CallInEditor )
+        void assignTarget( const TComponentHandle<MeshComponent>& mesh ) { _target = mesh; }
+
     private:
         PROPERTY( Category = "Probe", DisplayName = "Target Mesh", Tooltip = "Mesh component picked in the inspector" )
         TComponentHandle<MeshComponent> _target;

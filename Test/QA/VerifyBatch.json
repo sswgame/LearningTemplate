@@ -453,6 +453,16 @@
       "filter": "UiaClientTest.*", "extra_args": ["--host_suites=all"],
       "source": "docs/plans/ScreenReaderSupport.md A6", "result_doc": "docs/plans/ScreenReaderSupport.md 상태를 끝으로",
       "note": "진짜 창과 UIA 서비스가 필요하다. 지면 클라이언트 스레드가 제공자 호출에서 멈췄는지(30 초 시한) 먼저 본다."
+    },
+    {
+      "id": "ui-preview-logic-test", "title": "UIPreviewLogicTest 필터(앵커 프리셋의 슬롯 여백 계산 포함)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "UIPreviewLogicTest.*",
+      "source": "docs/plans/EditorFeatureGaps.md UIPreview.U2", "result_doc": "docs/plans/EditorFeatureGaps.md 상태를 끝으로"
+    },
+    {
+      "id": "inspector-handle-scenario", "title": "editor.inspectorhandle 시나리오(CallInEditor 인자 선택기 ⑥ 포함)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/inspectorhandle.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/EditorFeatureGaps.md TypedHandle.H3", "result_doc": "docs/plans/EditorFeatureGaps.md 상태를 끝으로"
     }
   ]
 }

@@ -382,15 +382,22 @@ namespace sw::editor
 
     bool UIPreviewLogic::applyAnchorPreset( WidgetLayoutSlot& inoutSlot, UIPreviewAnchorPreset preset, const UIRect& localRect, const float2& parentSize )
     {
-        // 사각형 = 앵커 × 부모 크기 + 오프셋(CanvasPanel::arrangeChildren) 이므로, 새 앵커에서 같은 사각형이 나오도록 오프셋을 거꾸로 구한다.
+        // 슬롯 사각형 = 앵커 × 부모 크기 + 오프셋(CanvasPanel::arrangeChildren)이고, 위젯은 그 안쪽 여백(`_padding`)만큼 들어간 곳에 놓인다(`UILayoutPass::applySlot`).
+        // 그래서 위젯의 지금 사각형(@p localRect)에 여백을 도로 더한 것이 슬롯 사각형이다 — 여백을 빼먹으면 프리셋을 고른 직후 위젯이 여백만큼 밀리고 줄어든다.
+        // 새 앵커에서 같은 슬롯 사각형이 나오도록 오프셋을 거꾸로 구한다.
         const UIPreviewAnchorValues values = getAnchorPreset( preset );
+        const float4&               pad    = inoutSlot._padding; // 왼쪽, 위, 오른쪽, 아래
+        const float32               left   = localRect._left - pad._x;
+        const float32               top    = localRect._top - pad._y;
+        const float32               right  = localRect._right + pad._z;
+        const float32               bottom = localRect._bottom + pad._w;
         WidgetLayoutSlot            next   = inoutSlot;
         next._anchorMin                    = values._anchorMin;
         next._anchorMax                    = values._anchorMax;
-        next._offsetMin._x                 = localRect._left - values._anchorMin._x * parentSize._x;
-        next._offsetMin._y                 = localRect._top - values._anchorMin._y * parentSize._y;
-        next._offsetMax._x                 = localRect._right - values._anchorMax._x * parentSize._x;
-        next._offsetMax._y                 = localRect._bottom - values._anchorMax._y * parentSize._y;
+        next._offsetMin._x                 = left - values._anchorMin._x * parentSize._x;
+        next._offsetMin._y                 = top - values._anchorMin._y * parentSize._y;
+        next._offsetMax._x                 = right - values._anchorMax._x * parentSize._x;
+        next._offsetMax._y                 = bottom - values._anchorMax._y * parentSize._y;
         const bool bChanged                = next._anchorMin._x != inoutSlot._anchorMin._x || next._anchorMin._y != inoutSlot._anchorMin._y || next._anchorMax._x != inoutSlot._anchorMax._x || next._anchorMax._y != inoutSlot._anchorMax._y || next._offsetMin._x != inoutSlot._offsetMin._x || next._offsetMin._y != inoutSlot._offsetMin._y || next._offsetMax._x != inoutSlot._offsetMax._x || next._offsetMax._y != inoutSlot._offsetMax._y;
         inoutSlot                          = next;
         return bChanged;

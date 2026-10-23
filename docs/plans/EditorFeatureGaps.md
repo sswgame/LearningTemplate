@@ -1,29 +1,23 @@
 # 에디터 기능 후보의 남은 것
 
-> 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: D3-1, D3-3, D3-4 · 진행: 7/10
+> 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-1, D3-3, D3-4 · 진행: 10/10
+
+**남은 확인(통합에서 확인):** 매니페스트 id `ui-preview-logic-test`, `inspector-handle-scenario`(`Test/QA/VerifyBatch.json`). 리눅스 쪽 두 테스트는 CI 의 xvfb swrender 묶음이 돈다(푸시 뒤 `ci-jobs --summary`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 에디터 후보 문서의 기능 절 넷(지형 칠하기 · UI 미리보기 디자이너 · 콘솔 치트 · 타입 핸들 인스펙터)을 착수하며 옮겼다(2026-10-21). 단위가 끝나면 그 절을 지운다.
 끝난 단위는 빌드 없이 구현했다 — 확인 목록은 2절이다.
 
 ## 1. 단위
 
-| 단위 | 내용 | 선행 |
+| 단위 | 내용 | 상태 |
 |---|---|---|
-| UIPreview.U2 | 앵커 프리셋 직후 부모 여백에서 위젯이 밀리는지 확인 | 없음 |
-| Cheat.C2 | 리눅스 오버레이 실기 확인과 한글 | 없음 |
-| TypedHandle.H3 | 핸들 선택기 화면 확인(프로퍼티 · CallInEditor 인자) | 없음 |
+| UIPreview.U2 | 앵커 프리셋 직후 부모 여백에서 위젯이 밀리는지 확인 — 계산이 정말 밀었다: 위젯 사각형은 슬롯 안쪽 여백(`_padding`)만큼 들어간 곳이라 프리셋이 위젯 사각형을 그대로 슬롯 사각형으로 삼으면 여백만큼 밀리고 줄었다. `applyAnchorPreset` 이 여백을 도로 더해 슬롯 사각형을 구한다. 테스트 `UIPreviewLogicTest.AnchorPresetKeepsTheWidgetInPlaceWithSlotPadding` | 끝남(빌드 미확인) |
+| Cheat.C2 | 리눅스 오버레이: `XDrawString`(Latin-1)을 `XDrawString16` + iso10646-1 코어 글꼴로 바꿔 UTF-8 글이 깨지지 않는다(글꼴이 없으면 콘솔을 세우지 않는다 — Latin-1 로 되돌아가지 않는다). 모양은 X 서버의 글꼴이 그 글자를 가진 만큼만 나온다 — 한글 글리프 전체는 Xft 가 있어야 해서 [Candidates-ui](Candidates-ui.md) `X11ConsoleXft` 로 옮겼다. 실기 확인은 xvfb 위 `X11DevConsoleTest.OverlayDrawsLatinLineAndSurvivesUtf8Lines`(픽셀을 읽어 줄이 그려졌는지) | 끝남(빌드 미확인) |
+| TypedHandle.H3 | 핸들 선택기 화면 확인을 시나리오로: 콤보 · `(none)` · 되돌리기 · Paste 비활성은 기존 `editor.inspectorhandle`, CallInEditor 인자 선택기(`InspectorPropertyManager::drawMethodArg`)가 프로퍼티와 같은 콤보인지는 같은 시나리오의 ⑥(메서드 `Assign Target` 의 인자 콤보로 고르고 Invoke → `_target` 에 같은 값). 맵 값이 원소 프로퍼티로 그려지는지는 `InspectorPropertyLayoutTest` 가 본다(H1) | 끝남(빌드 미확인) |
 
-### UIPreview.U2 앵커 프리셋과 부모 여백
-- `UIPreviewLogic::applyAnchorPreset` 은 사각형을 앵커 × 부모 크기 + 오프셋으로 되돌려 구한다. 부모에 여백(padding)이 있을 때 고른 직후 위젯이 약간 밀리는지 화면으로 본다(`gpu-verifier`).
-
-### Cheat.C2 리눅스 오버레이
-- 리눅스 오버레이(`X11DevConsoleWindow`)를 실기로 띄워 보지 않았다. X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다 — Xft 나 UTF-8 글꼴 집합으로 바꾼다.
-- `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다. 생기면 `Vitality::setDamageImmune` 을 그대로 쓴다.
+- Cheat.C2 의 `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다. 생기면 `Vitality::setDamageImmune` 을 그대로 쓴다.
 - 함정: 무적(`cheat.god`)은 어빌리티 시스템의 태그(`State.Invulnerable`, 치트는 하위 `.Cheat`)로 플레이어 조종 폰에만 건다. `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다(플레이어만 가리는 길이 필요하면 태그나 팀을 본다).
-
-### TypedHandle.H3 화면 확인
 - Reset to Default 는 코드로 확인했다: 기본 인스턴스(CDO)는 씬에 없어 핸들이 비어 있고, `resetPropertyToDefault` 가 그 글(빈 핸들)을 `applyPropertyTextAsEdit` 로 써서 "(none)" 으로 돌아간다 — 타입 확인을 건너는 값이 들어갈 자리가 없다.
-- 화면 확인이 남았다: 콤보 · `(none)` · 되돌리기 · Paste 비활성, 맵 값이 원소 프로퍼티(`InspectorPropertyLayout::makeElementProperty`)로 그려지는지, CallInEditor 인자 선택기(`InspectorPropertyManager::drawMethodArg`)가 프로퍼티와 같은 콤보인지(`gpu-verifier`).
 
 ## 2. 끝난 단위의 확인 목록
 
