@@ -3,7 +3,6 @@
 #include "Engine/HeadlessSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/string_splitter.h"
 
@@ -227,22 +226,20 @@ namespace sw
                 if ( commandLine.getArgument( argument, bGiven ) && bGiven )
                 {
                     SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
-                    _state._bHeadless = true;
-                    _state._bFailed   = true;
+                    _state.enterHeadless();
+                    _state._bFailed = true;
                     return SubsystemInitResult::SkipDependents;
                 }
             }
         }
 
-        // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
-        // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
-        // 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 위에서 전용 서버가 거절했다.
+        // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 —
+        // Server 타깃은 그 폴더를 짓지 않고, 위에서 전용 서버가 거절했다.
 #if defined( SW_WITH_CLIENT_CODE )
         bool bCookShaders = false;
         if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             SW_LOG_INFO( "Starting Headless (CookShaders)..." );
             const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
             _state._bFailed                 = summary.isClean() == false;
@@ -254,8 +251,8 @@ namespace sw
         string reflectionDocsDir;
         if ( commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
         {
-            _state._bHeadless = true;
-            _state._bFailed   = ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) == 0;
+            _state.enterHeadless();
+            _state._bFailed = ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) == 0;
             return SubsystemInitResult::SkipDependents;
         }
 
@@ -263,8 +260,7 @@ namespace sw
         string bakeRetarget;
         if ( commandLine.getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             const string_splitter      parts( bakeRetarget, { "," } );
             const vector<string_view>& listArgument = parts.getSplitList();
             const bool                 bWellFormed  = listArgument.size() == 3;
@@ -287,8 +283,8 @@ namespace sw
         const bool bAnyCook = bCookScenes || bCookPacks || bCookAll;
         if ( bVerifyShaders && bAnyCook == false )
         {
-            _state._bHeadless = true;
-            bool bAllCurrent  = true;
+            _state.enterHeadless();
+            bool bAllCurrent = true;
             for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
             {
                 bAllCurrent = HeadlessSubsystemInternal::verifyShaderFolder( ShaderCooker::getSubfolderForFormat( info._shaderTarget ) ) && bAllCurrent;
@@ -303,8 +299,7 @@ namespace sw
         bool bMakePatch = false;
         if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) && bMakePatch )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             SW_LOG_INFO( "Starting Headless (MakePatch)..." );
             _state._bFailed = HeadlessSubsystemInternal::makePatchStage( commandLine ) == false;
             return SubsystemInitResult::SkipDependents;
@@ -313,8 +308,7 @@ namespace sw
         // 씬 · 팩 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고 그것은 엔진 안에만 있다. 팩은 그 산출물을 함께 담는다.
         if ( bAnyCook )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             string cookedDir;
             commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
             if ( cookedDir.empty() )
@@ -343,8 +337,7 @@ namespace sw
         bool bImportLipSync = false;
         if ( commandLine.getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
             LipSyncSettings         lipSyncSettings{};
             uint32                  lipSyncFailedCount = 0;
@@ -386,8 +379,7 @@ namespace sw
         const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
         if ( bAnyLocalization || bAnyImport )
         {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _state._bHeadless = true;
+            _state.enterHeadless();
             SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
             return SubsystemInitResult::SkipDependents;
         }

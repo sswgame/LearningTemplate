@@ -11,4 +11,6 @@ root_file = [
     "Engine.cpp",
     "HeadlessSubsystem.h",
     "HeadlessSubsystem.cpp",
+    "EngineSubsystemSet.h",
+    "EngineSubsystemSet.cpp",
 ]
