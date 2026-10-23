@@ -276,9 +276,8 @@ namespace sw
         array<uint64, kMemoryTagCount> _arrBaselineCount; ///< 같은 시점의 태그별 살아 있는 블록 수
         bool                           _bHasTagBaseline;
 
-        // 콜 스택 세부 추적용(_bDetailedTrackingEnabled 가 true 일 때만 쓴다)
+        // 콜 스택 세부 추적용 — 할당 때 `_bDetailedTrackingEnabled` 가 true 였던 블록만 올라간다(해제는 블록 헤더의 해시로 내린다)
         mutable mutex                             _stackMapMutex;
         unordered_map<uint64, CallStackAllocInfo> _mapCallStackAllocInfo;
-        unordered_map<void*, uint64>              _mapPtrToCallStackHash;
     };
 } // namespace sw
