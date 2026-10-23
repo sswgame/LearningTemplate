@@ -185,7 +185,7 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
     // 읽을 수 없는 클립: 알리고 UV 사각형으로 그린다.
     {
         test::ScopedDefensiveTestLog expected( "a sprite clip that cannot be read" );
-        pSprite->setClipPath( test::makeTempPath( "missing.sprite.xml" ) );
+        pSprite->setClipPath( test::makeTempResourceID( test::makeTempPath( "missing.sprite.xml" ) ) );
     }
     SW_EXPECT_TRUE( pSprite->getClip() == nullptr );
     SW_EXPECT_NEAR_EQUAL( 0.25f, pSprite->getSpriteInstanceData().getUvRect()._z, 1e-4f );
