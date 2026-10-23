@@ -235,8 +235,10 @@ namespace sw
             return 0;
         }
 
-        MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — CRT _CrtDumpMemoryLeaks() (no baseline)", pPhase );
-        return _CrtDumpMemoryLeaks();
+        // 기준선 없이는 살아 있는 블록 전부(부트스트랩 몫 포함)가 누수로 보여 진짜 누수를 가린다 — 덤프하지 않고 오류로 알린다.
+        // 기준선은 기동 끝(`Engine::initialize`) 또는 헤드리스 진입(`HeadlessTaskState::enterHeadless`)에서 잡는다. 거기에 닿기 전에 기동이 멈췄어도 이 줄이 남는다.
+        MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — ERROR: no CRT baseline was captured, so leaks cannot be told from live startup blocks (nothing dumped)", pPhase );
+        return 1;
 
 #elif defined( SW_HAS_LSAN_LEAK_CHECK )
         MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — __lsan_do_recoverable_leak_check()", pPhase );

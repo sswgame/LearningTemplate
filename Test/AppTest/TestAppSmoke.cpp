@@ -930,26 +930,33 @@ SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
 
 #if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 /**
- * @brief [AppSmokeTest] 헤드리스 작업도 종료 때 누수를 기준선과 견준다(기준선 없는 통째 덤프가 아니다)
- * @details 보통 실행은 기동 끝에서 CRT 누수 기준선을 잡는다. 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트 · 대조)은 그 자리에 닿지 않고 끝나,
- *          기준선이 없으면 종료 때 살아 있는 블록 전부(수백 개)를 누수로 찍는다 — 진짜 누수가 그 소음에 묻힌다. 작업 직전에 기준선을 잡는다.
+ * @brief [AppSmokeTest] 헤드리스 작업은 어느 것이든 종료 때 누수를 기준선과 견준다(기준선 없는 통째 덤프가 아니다)
+ * @details 보통 실행은 기동 끝에서 CRT 누수 기준선을 잡는다. 헤드리스 작업은 그 자리에 닿지 않고 끝나, 기준선이 없으면 종료 때 살아 있는 블록 전부(수천 개)를
+ *          누수로 찍는다 — 진짜 누수가 그 소음에 묻힌다. 기준선은 `HeadlessTaskState::enterHeadless` 가 잡으므로 헤드리스 분기마다 같은 모양이어야 하고,
+ *          이 표가 그것을 인자마다 지킨다. 파일을 쓰거나 바꾸지 않는 작업만 둔다(쿠킹 · 임포트 · 패치 만들기는 산출물이 남는다).
  */
 SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
 {
-    const HeadlessRunResult result = runHeadless( "--check-textures", "[MemoryLeak]" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
+    const string reflectionDocsDir = test::makeTempDirectory( "headless_reflection_docs" );
+    const string arrArgument[]     = { "--check-textures", "--check-models", "--check-heightfields", "--verify-shaders", "--write-reflection-docs=" + reflectionDocsDir };
 
-    bool bBaselineCaptured = false;
-    bool bComparedClean    = false;
-    for ( const string& line : result._listMarkedLine )
+    for ( const string& argument : arrArgument )
     {
-        SW_EXPECT_TRUE_MSG( line.find( "no baseline" ) == string::npos, line.c_str() );
-        bBaselineCaptured = bBaselineCaptured || line.find( "baseline captured" ) != string::npos;
-        bComparedClean    = bComparedClean || line.find( "no CRT leaks" ) != string::npos;
+        const HeadlessRunResult result = runHeadless( argument, "[MemoryLeak]" );
+        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+        SW_EXPECT_TRUE_MSG( result._exitCode == 0, ( argument + " : " + result._firstErrorLine ).c_str() );
+
+        bool bBaselineCaptured = false;
+        bool bComparedClean    = false;
+        for ( const string& line : result._listMarkedLine )
+        {
+            SW_EXPECT_TRUE_MSG( line.find( "no CRT baseline" ) == string::npos, ( argument + " : " + line ).c_str() );
+            bBaselineCaptured = bBaselineCaptured || line.find( "baseline captured" ) != string::npos;
+            bComparedClean    = bComparedClean || line.find( "no CRT leaks" ) != string::npos;
+        }
+        SW_EXPECT_TRUE_MSG( bBaselineCaptured, ( argument + " : 헤드리스 실행이 누수 기준선을 잡지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bComparedClean, ( argument + " : 헤드리스 실행의 종료 누수 보고가 기준선 대비 깨끗하지 않다" ).c_str() );
     }
-    SW_EXPECT_TRUE_MSG( bBaselineCaptured, "헤드리스 실행이 누수 기준선을 잡지 않았다" );
-    SW_EXPECT_TRUE_MSG( bComparedClean, "헤드리스 실행의 종료 누수 보고가 기준선 대비 깨끗하지 않다" );
 }
 
 /**
