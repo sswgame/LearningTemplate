@@ -82,6 +82,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [MovingGroundFollowUps](docs/plans/MovingGroundFollowUps.md) — 움직이는 바닥 위 캐릭터의 남은 일 | 측정대기 | 4/4 | 없음 | gameplay | 없음 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 측정대기 | 6/6 | 없음 | gameplay | D4-6 |
 | - | [PatchDeltaDelivery](docs/plans/PatchDeltaDelivery.md) — 패치 · 델타 업데이트 배포 구조 | 측정대기 | 7/7 | 없음 | network | G-16 |
+| - | [ReflectionFormats](docs/plans/ReflectionFormats.md) — 리플렉션 직렬화 형식 계획 (2026-10-17) | 측정대기 | 12/13 | 없음 | engine | 없음 |
 | - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 측정대기 | 3/3 | 없음 | gameplay | D4-6 |
 | - | [RollbackPrediction](docs/plans/RollbackPrediction.md) — 클라이언트 예측 · 롤백과 관심 영역 복제 | 측정대기 | 4/4 | 없음 | network | D7-8 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
