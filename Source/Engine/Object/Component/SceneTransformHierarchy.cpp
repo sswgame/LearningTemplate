@@ -538,6 +538,101 @@ namespace sw
         return changedCount;
     }
 
+    uint32 SceneTransformHierarchy::applyBatchThroughSetters( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
+    {
+        uint32 deferredCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            SceneComponent* pScene = SceneTransformHierarchyInternal::resolveSceneComponent( manager, pWrite[index]._handle );
+            if ( pScene == nullptr || pScene->isPendingDestroy() )
+                continue;
+            const uint8 valueMask = pWrite[index].getValueMask();
+            for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
+            {
+                if ( ( valueMask & bit ) != 0 )
+                    SceneTransformHierarchyInternal::setLocalValue( *pScene, bit, pWrite[index].getValue( bit ) );
+            }
+            ++deferredCount;
+        }
+        return deferredCount;
+    }
+
+    uint32 SceneTransformHierarchy::applyBatchByRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
+    {
+        // 빠른 길: 대상이 엄격히 늘어나면(만든 순서대로 모은 배열 — 벤치 씬 · 인스턴스 갱신의 모양) 같은 핸들이 둘일 수 없다. 연속 구간으로
+        // 나눠도 한 대상은 한 구간에만 있으므로 버킷 목록을 채우지 않는다(잎 루트 8000 건에서 그 패스가 ~35 us 다).
+        struct RangeWriteJob
+        {
+            GameObjectManager*         _pManager{ nullptr };
+            const SceneTransformWrite* _pWrite{ nullptr };
+            atomic<uint32>             _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                const uint32 rangeChanged = applyWriteRange( *_pManager, _pWrite, start, end, false );
+                if ( rangeChanged > 0 )
+                    _changedCount.fetch_add( rangeChanged, std::memory_order_relaxed );
+            }
+        };
+        RangeWriteJob job{};
+        job._pManager = &manager;
+        job._pWrite   = pWrite;
+        engine::runParallel( count, kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RangeWriteJob::applyRange, &job ) );
+        return job._changedCount.load( std::memory_order_relaxed );
+    }
+
+    uint32 SceneTransformHierarchy::applyBatchByBucket( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
+    {
+        // **대상 버킷으로 나눈다**(`batchBucketOf`). 같은 핸들은 늘 같은 버킷이라 한 워커가 배열 순서대로 쓴다 — 뒤의 건이 이긴다.
+        // 배열을 연속 구간으로 자르면 같은 핸들이 두 구간에 있을 때 두 워커가 한 칸을 동시에 쓴다. 나누기는 한 번 훑으며 건 번호를
+        // 버킷 목록에 넣는 것뿐이다(버킷 목록은 프레임마다 재사용한다).
+        const uint32 bucketCount = MathUtil::min( SceneTransformHierarchyInternal::kMaxBatchBucketCount, count / ( kParallelWriteCount / 4 ) );
+        if ( _listBatchBucket.size() < bucketCount )
+            _listBatchBucket.resize( bucketCount );
+        for ( uint32 bucket = 0; bucket < bucketCount; ++bucket )
+        {
+            _listBatchBucket[bucket].clear();
+        }
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            _listBatchBucket[SceneTransformHierarchyInternal::batchBucketOf( pWrite[index], bucketCount )].push_back( index );
+        }
+
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 버킷의 칸(과 부모 · 자식의
+        // 더티 바이트)뿐이다.
+        struct BucketWriteJob
+        {
+            GameObjectManager*         _pManager{ nullptr };
+            const SceneTransformWrite* _pWrite{ nullptr };
+            const vector<uint32>*      _pBucket{ nullptr };
+            atomic<uint32>             _changedCount{ 0 };
+
+            void applyRange( uint32 start, uint32 end )
+            {
+                uint32 bucketChanged = 0;
+                for ( uint32 bucket = start; bucket < end; ++bucket )
+                {
+                    for ( const uint32 writeIndex : std::as_const( _pBucket[bucket] ) )
+                    {
+                        const SceneTransformWrite& write         = _pWrite[writeIndex];
+                        SceneComponent*            pScene        = SceneTransformHierarchyInternal::resolveSceneComponent( *_pManager, write._handle );
+                        const bool                 bWriteApplied = pScene != nullptr && pScene->isPendingDestroy() == false && applyWrite( *pScene, write );
+                        if ( bWriteApplied )
+                            ++bucketChanged;
+                    }
+                }
+                if ( bucketChanged > 0 )
+                    _changedCount.fetch_add( bucketChanged, std::memory_order_relaxed );
+            }
+        };
+        BucketWriteJob job{};
+        job._pManager = &manager;
+        job._pWrite   = pWrite;
+        job._pBucket  = _listBatchBucket.data();
+        engine::runParallel( bucketCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &BucketWriteJob::applyRange, &job ) );
+        return job._changedCount.load( std::memory_order_relaxed );
+    }
+
     uint32 SceneTransformHierarchy::applyBatch( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count )
     {
         if ( pWrite == nullptr || count == 0 )
@@ -545,23 +640,7 @@ namespace sw
 
         // 틱 중이면 세터로 돌린다. 세터가 틱 중 쓰기 길을 탄다. 배치의 병렬 적용은 틱 밖에서만 안전하다.
         if ( manager.isStructuralMutationFrozen() )
-        {
-            uint32 deferredCount = 0;
-            for ( uint32 index = 0; index < count; ++index )
-            {
-                SceneComponent* pScene = SceneTransformHierarchyInternal::resolveSceneComponent( manager, pWrite[index]._handle );
-                if ( pScene == nullptr || pScene->isPendingDestroy() )
-                    continue;
-                const uint8 valueMask = pWrite[index].getValueMask();
-                for ( uint8 bit = SceneTransformPage::kLocalPosition; bit <= SceneTransformPage::kLocalScale; bit = static_cast<uint8>( bit << 1u ) )
-                {
-                    if ( ( valueMask & bit ) != 0 )
-                        SceneTransformHierarchyInternal::setLocalValue( *pScene, bit, pWrite[index].getValue( bit ) );
-                }
-                ++deferredCount;
-            }
-            return deferredCount;
-        }
+            return applyBatchThroughSetters( manager, pWrite, count );
 
         // 워커가 올리는 더티 루트는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
         mergeQueuedDirtyRoots();
@@ -569,79 +648,9 @@ namespace sw
         if ( count < kParallelWriteCount )
             changedCount = applyWriteRange( manager, pWrite, 0, count, false );
         else if ( SceneTransformHierarchyInternal::hasStrictlyIncreasingTargets( pWrite, count ) )
-        {
-            // 빠른 길: 대상이 엄격히 늘어나면(만든 순서대로 모은 배열 — 벤치 씬 · 인스턴스 갱신의 모양) 같은 핸들이 둘일 수 없다. 연속 구간으로
-            // 나눠도 한 대상은 한 구간에만 있으므로 버킷 목록을 채우지 않는다(잎 루트 8000 건에서 그 패스가 ~35 us 다).
-            struct RangeWriteJob
-            {
-                GameObjectManager*         _pManager{ nullptr };
-                const SceneTransformWrite* _pWrite{ nullptr };
-                atomic<uint32>             _changedCount{ 0 };
-
-                void applyRange( uint32 start, uint32 end )
-                {
-                    const uint32 rangeChanged = applyWriteRange( *_pManager, _pWrite, start, end, false );
-                    if ( rangeChanged > 0 )
-                        _changedCount.fetch_add( rangeChanged, std::memory_order_relaxed );
-                }
-            };
-            RangeWriteJob job{};
-            job._pManager = &manager;
-            job._pWrite   = pWrite;
-            engine::runParallel( count, kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RangeWriteJob::applyRange, &job ) );
-            changedCount = job._changedCount.load( std::memory_order_relaxed );
-        }
+            changedCount = applyBatchByRange( manager, pWrite, count );
         else
-        {
-            // **대상 버킷으로 나눈다**(`batchBucketOf`). 같은 핸들은 늘 같은 버킷이라 한 워커가 배열 순서대로 쓴다 — 뒤의 건이 이긴다.
-            // 배열을 연속 구간으로 자르면 같은 핸들이 두 구간에 있을 때 두 워커가 한 칸을 동시에 쓴다. 나누기는 한 번 훑으며 건 번호를
-            // 버킷 목록에 넣는 것뿐이다(버킷 목록은 프레임마다 재사용한다).
-            const uint32 bucketCount = MathUtil::min( SceneTransformHierarchyInternal::kMaxBatchBucketCount, count / ( kParallelWriteCount / 4 ) );
-            if ( _listBatchBucket.size() < bucketCount )
-                _listBatchBucket.resize( bucketCount );
-            for ( uint32 bucket = 0; bucket < bucketCount; ++bucket )
-            {
-                _listBatchBucket[bucket].clear();
-            }
-            for ( uint32 index = 0; index < count; ++index )
-            {
-                _listBatchBucket[SceneTransformHierarchyInternal::batchBucketOf( pWrite[index], bucketCount )].push_back( index );
-            }
-
-            // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 버킷의 칸(과 부모 · 자식의
-            // 더티 바이트)뿐이다.
-            struct BucketWriteJob
-            {
-                GameObjectManager*         _pManager{ nullptr };
-                const SceneTransformWrite* _pWrite{ nullptr };
-                const vector<uint32>*      _pBucket{ nullptr };
-                atomic<uint32>             _changedCount{ 0 };
-
-                void applyRange( uint32 start, uint32 end )
-                {
-                    uint32 bucketChanged = 0;
-                    for ( uint32 bucket = start; bucket < end; ++bucket )
-                    {
-                        for ( const uint32 writeIndex : std::as_const( _pBucket[bucket] ) )
-                        {
-                            const SceneTransformWrite& write         = _pWrite[writeIndex];
-                            SceneComponent*            pScene        = SceneTransformHierarchyInternal::resolveSceneComponent( *_pManager, write._handle );
-                            const bool                 bWriteApplied = pScene != nullptr && pScene->isPendingDestroy() == false && applyWrite( *pScene, write );
-                            if ( bWriteApplied )
-                                ++bucketChanged;
-                        }
-                    }
-                    if ( bucketChanged > 0 )
-                        _changedCount.fetch_add( bucketChanged, std::memory_order_relaxed );
-                }
-            };
-            BucketWriteJob job{};
-            job._pManager = &manager;
-            job._pWrite   = pWrite;
-            job._pBucket  = _listBatchBucket.data();
-            engine::runParallel( bucketCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &BucketWriteJob::applyRange, &job ) );
-            changedCount = job._changedCount.load( std::memory_order_relaxed );
-        }
+            changedCount = applyBatchByBucket( manager, pWrite, count );
         mergeQueuedDirtyRoots();
 
         if ( changedCount > 0 )
