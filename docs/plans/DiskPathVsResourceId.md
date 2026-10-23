@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: C-70 · 진행: 3/3
 
-**남은 확인(통합에서 확인):** Shipping 쿠킹 `--cook-scenes` 와 에디터 도구 문서 열기 · 저장(5절 "GPU 확인 대기"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `cook-scenes-shipping`, `editor-document-open-save`(5절). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 후보 `DiskPathVsResourceId`(`Candidates-engine.md`)를 계획으로 올린 문서입니다. 사용자가 안 B 를 골랐고(2026-10-22) D1 ~ D3 이 들어갔습니다(`wt/cleanup347`, 빌드 · 테스트 미확인). 남은 것은 5절의 확인입니다.
 
@@ -50,6 +50,6 @@ C 는 B 뒤에도 같은 결함이 다시 나올 때 합니다. 디스크 입구
 - 녹화 시나리오는 `saved` 도메인으로 붙여 id 로 다시 돌린다(결정 기록 5-4, `ScenarioRecorder::makeReplayID`). id 의 도메인 뒤는 표기를 그대로 두므로 리눅스도 원래 표기로 찾는다.
 - 2026-10-23 Debug `full-build` · Shipping 빌드 뒤 `EngineTest` · `EditorTest` · `SmokeTest` 전체(GPU 호스트 스위트 제외)를 돌렸다. Debug 3958 · 474 · 71, Shipping 3554 · 443 · 6 개가 통과했고 `is an OS path, not a resource id` 줄은 의도한 거절(`ResourceTest.ResourceEntryRefusesOSPathsInEveryMode`) 6 줄만 남았다. Shipping 의 실패 하나(`MaterialTest.GameDomainShaderMaterialMatchesItsStruct`, 리플렉션 매니페스트에 셰이더 없음 — 쿠킹하지 않은 Shipping 빌드 폴더)는 이 일과 무관하다.
   같이 고친 것 — "없는 파일" 을 디스크 경로로 리소스 입구에 넘기던 테스트 셋(`AssetStreamingTest.PreloadSetWalksEveryPathWithinTheBudget` · `SpriteComponentTest.ClipSelectsTheFrameAndLendsItsAtlas` · `TerrainTest.DedicatedServerAnswersLayerQueries`). OS 경로 거절도 같은 실패라 통과하면서 다른 것을 보고 있었다. 파일을 쓰지 않는 경로라 D1 의 정적 조사(쓰기와 읽기에 같은 변수)가 놓쳤다.
-- GPU 확인 대기: Shipping 쿠킹(`--cook-scenes`)과 에디터 도구 문서 열기 · 저장.
+- 확인 대기: 매니페스트 id `cook-scenes-shipping`, `editor-document-open-save`.
 - 2026-10-22 Release hostgpu: 시나리오의 `Saved/` 경로가 OS 경로로 리소스 입구에 닿던 곳을 고쳤다 — `ResourcePaths::toResourceID` 가 붙인 디스크 도메인 폴더 아래의 절대 경로를 `<도메인>/…` id 로 바꾸고, `EditorSceneFileCommands::loadScene` 은 id 로 못 바꾸면 OS 경로로 읽던 폴백 대신 오류다. `prefab.create` · `prefab.spawn` 은 그 id 로 캐시 · 놓인 프리팹 표를 쓰고, 캐릭터 창의 프리셋 내보내기는 쓰기 = 디스크 경로, 다시 읽기 = id 다. 저장 뒤 자산 검증(`EditorAssetValidation`)은 붙인 도메인의 파일을 저장소 규칙으로 보지 않는다.
 - 리눅스: 붙인 도메인의 새 파일 쓰기 경로(`ResourcePaths::makeAbsolutePath`)는 키를 소문자로 붙인다 — 대소문자가 섞인 케이스 폴더에 id 로 **쓰는** 테스트가 있으면 디스크 경로로 쓴다.

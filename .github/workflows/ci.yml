@@ -226,10 +226,12 @@ jobs:
     # Shipping 도 Debug 와 같은 집합을 돈다 — Debug 가 숨기는 결함(최적화 · 정적 링크 · 로그 매크로 제거로만 드러나는 것)은 배포 구성에서
     # 드러나므로 Shipping 을 일부 실행 파일로 좁히지 않는다. GPU · 디스플레이가 필요한 스위트는 `-L nogpu` 가 걸러낸다.
     # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
+    # `-FS SWTestBinaries`: 위 Build 단계가 빌드 프리셋(`with-tests`)으로 `all` 과 `AllTests` 를 이미 지었다. 셋업 항목 `BuildTestBinaries` 를 돌리면 ninja 를
+    # 한 번 더 불러 CMake 를 다시 돌리고 테스트 실행 파일을 다시 링크하다 Windows 에서 파일 잠금(`OnlineLoadBot.exe` · z-applocal)으로 졌다. 건너뛰면 두 번째 링크가 없다.
     - name: Test
       id: test
       run: |
-        ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
+        ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure -FS SWTestBinaries
 
     # 소프트웨어 렌더러 묶음(`swrender`, C-41 4단계 · 결정 기록 5-12) — GPU 가 없는 러너에서 호스트 케이스 일부(Test/TestPolicy.json 의
     # softwareRenderCases)를 소프트웨어 래스터라이저로 돈다: Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb.
@@ -249,9 +251,9 @@ jobs:
       shell: bash
       run: |
         if [ "$RUNNER_OS" = "Linux" ]; then
-          xvfb-run -a ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure
+          xvfb-run -a ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure -FS SWTestBinaries
         else
-          ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure
+          ctest --test-dir build/${{ matrix.preset }} -L swrender --output-on-failure -FS SWTestBinaries
         fi
 
     - name: Report software renderer failures as annotations

@@ -24,15 +24,26 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 8 | [ModuleRenderPass](docs/plans/ModuleRenderPass.md) — 모듈이 렌더 패스를 등록하는 창구 | 구현중 | 1/3 | 없음 | engine | G-1 |
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | 10 | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 구현중 | 0/4 | 없음 | engine | 없음 |
+| 11 | [ImportRuleOverlap](docs/plans/ImportRuleOverlap.md) — 임포트 규칙의 겹침 막기 | 구현대기 | 0/3 | 없음 | editor | C-44 |
 | - | [GlyphRasterizationHitch](docs/plans/GlyphRasterizationHitch.md) — 새 글리프 래스터화 히치 | 설계 | 0/3 | 없음 | ui | C-9 |
 | - | [UiDrawPerformance](docs/plans/UiDrawPerformance.md) — 런타임 UI 그리기 성능의 남은 것 | 설계 | 0/2 | 없음 | ui | D6-6 |
+| - | [ContentBrowserWatchAndScan](docs/plans/ContentBrowserWatchAndScan.md) — 콘텐츠 브라우저 감시 지연과 스캔 비용 | 구현대기 | 0/2 | 없음 | editor | 없음 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
+| - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현대기 | 0/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
+| - | [NamingAudit](docs/plans/NamingAudit.md) — 다음 이름 점검 | 구현대기 | 0/4 | 없음 | project | C-17 |
+| - | [RealtimeGlobalIllumination](docs/plans/RealtimeGlobalIllumination.md) — 실시간 전역 조명과 볼륨 표현 (2026-10-24) | 구현대기 | 0/7 | ClusteredLighting | graphics | D2-14, D2-5.2 |
+| - | [RuleExceptionAudit](docs/plans/RuleExceptionAudit.md) — 규칙 예외 감사에서 정한 일의 적용 | 구현대기 | 2/4 | 없음 | project | C-11 |
+| - | [RuntimeQualityAdjust](docs/plans/RuntimeQualityAdjust.md) — 부하 검증의 남은 것과 자동 품질 조정 | 구현대기 | 0/4 | 없음 | quality | C-29 |
+| - | [SourceScanGates](docs/plans/SourceScanGates.md) — 공유 훑기로 못 옮긴 소스 게이트와 픽서 | 구현대기 | 0/4 | 없음 | quality | C-48 |
+| - | [VfxGpuLights](docs/plans/VfxGpuLights.md) — GPU 로 시뮬레이션하는 방출기의 파티클 라이트 (2026-10-24) | 구현대기 | 0/5 | ClusteredLighting | graphics | 없음 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 구현중 | 1/4 | 없음 | gameplay | D4-16 |
 | - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 구현중 | 3/4 | 없음 | gameplay | D4-6 |
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 구현중 | 6/7 | 없음 | engine | 없음 |
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
+| - | [CommentRewrite](docs/plans/CommentRewrite.md) — 주석을 새 문체로 다시 쓰기 (6 차 이후 남은 구역) | 구현중 | 0/6 | 없음 | project | C-16 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 1/3 | 없음 | engine | G-5 |
+| - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 구현중 | 1/5 | 없음 | editor | D3-1.2 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
 | - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
 | - | [EditorFeatureGaps](docs/plans/EditorFeatureGaps.md) — 에디터 기능 후보의 남은 것 | 구현중 | 7/10 | 없음 | editor | D3-1, D3-3, D3-4 |
@@ -41,12 +52,14 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [FacialAnimation](docs/plans/FacialAnimation.md) — 얼굴 애니메이션의 남은 것 | 구현중 | 3/5 | 없음 | gameplay | D4-6 |
 | - | [GameSceneCc0Meshes](docs/plans/GameSceneCc0Meshes.md) — 게임별 씬이 새로 들인 CC0 메시를 부르게 한다 | 구현중 | 1/2 | 없음 | gameplay | D4-17 |
 | - | [GamepadVirtualCursor](docs/plans/GamepadVirtualCursor.md) — 패드 가상 커서의 남은 것 | 구현중 | 2/3 | 없음 | gameplay | D4-3 |
-| - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/2 | 없음 | quality | C-41 |
+| - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/3 | 없음 | quality | C-41, E-8 |
 | - | [IntentNetworkWiring](docs/plans/IntentNetworkWiring.md) — 의도 기록 · 원격 조종자의 남은 연결 | 구현중 | 3/4 | 없음 | gameplay | D4-13 |
 | - | [InteractionHighlightAndMontage](docs/plans/InteractionHighlightAndMontage.md) — 상호작용 강조 패스와 몽타주 실행 확인 | 구현중 | 2/4 | 없음 | gameplay | D4-12 |
 | - | [InteractionSpatialGrid](docs/plans/InteractionSpatialGrid.md) — 상호작용 대상의 공유 공간 격자 | 구현중 | 2/3 | 없음 | gameplay | G-4 |
 | - | [KayKitMaterials](docs/plans/KayKitMaterials.md) — KayKit 캐릭터 텍스처를 머티리얼로 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [KitCompositionGames](docs/plans/KitCompositionGames.md) — 키트 조립의 두 번째 테스트 게임과 땅 쓰기 | 구현중 | 1/2 | 없음 | gameplay | D4-4 |
+| - | [KoreanLogStrings](docs/plans/KoreanLogStrings.md) — 로그 · assert 문자열의 한글 줄을 영어로 | 구현중 | 1/8 | 없음 | project | 없음 |
+| - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [MeleeHitUnify](docs/plans/MeleeHitUnify.md) — 근접 판정 한 길로 | 구현중 | 2/3 | 없음 | gameplay | 없음 |
 | - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 3/5 | 없음 | ui | G-10 |
@@ -78,7 +91,9 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [DiskPathVsResourceId](docs/plans/DiskPathVsResourceId.md) — 디스크 경로와 리소스 id 의 입구 나누기 (2026-10-21) | 측정대기 | 3/3 | 없음 | engine | C-70 |
 | - | [EngineCleanups](docs/plans/EngineCleanups.md) — 엔진 정리 묶음 (2026-10-24) | 측정대기 | 7/7 | 없음 | engine | C-49, C-63, C-64, C-47, C-34 |
 | - | [GraphicsFormatBundle](docs/plans/GraphicsFormatBundle.md) — 그래픽스 형식 묶음 — HDR 장면 색 · 툰 · 변형 탄젠트 · Shaded Wireframe · 2D 조명 · VRM 런타임 · 메시 구간 | 측정대기 | 12/12 | 없음 | graphics | D2-1, D2-6, D2-7, D2-10 |
+| - | [GraphicsMeasurements](docs/plans/GraphicsMeasurements.md) — 그래픽스 측정 · 확인 묶음 (2026-10-24) | 측정대기 | 4/4 | 없음 | graphics | D2-9, D2-2, D2-10, C-55 |
 | - | [IndirectLighting](docs/plans/IndirectLighting.md) — 간접 조명 구현 단위 (`D2-12`) | 측정대기 | 8/8 | ClusteredLighting | graphics | D2-12 |
+| - | [MeshModifierPreviewCost](docs/plans/MeshModifierPreviewCost.md) — 메시 모디파이어 미리보기 비용 | 측정대기 | 0/3 | 없음 | editor | D3-10 |
 | - | [MovingGroundFollowUps](docs/plans/MovingGroundFollowUps.md) — 움직이는 바닥 위 캐릭터의 남은 일 | 측정대기 | 4/4 | 없음 | gameplay | 없음 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 측정대기 | 6/6 | 없음 | gameplay | D4-6 |
 | - | [PatchDeltaDelivery](docs/plans/PatchDeltaDelivery.md) — 패치 · 델타 업데이트 배포 구조 | 측정대기 | 7/7 | 없음 | network | G-16 |
@@ -87,7 +102,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 73개
+후보 문서 9개 · 후보 절 47개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

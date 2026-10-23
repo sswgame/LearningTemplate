@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: C-49, C-63, C-64, C-47, C-34 · 진행: 7/7
 
-**남은 확인(통합에서 확인):** 전체 빌드(기본 구성 + `CI-Debug-STL`), `CoreTest`(`StableUnorderedMapTest` · `VectorTest` · `DataStructureTest` · `MemoryTest`), `EngineTest`(`GameFrameworkUtilTest` · `XMLDocumentTest` · 어빌리티 · 퀘스트 · 외형 카탈로그),
+**남은 확인(통합에서 확인):** 매니페스트 id `stable-unordered-map-test`, `game-framework-util-test`, `vector-bulk-fill-bench`, `synthetic-rig-bench-phases`, `stl-container-ci-build`(위 1절 각 항목). 전체 빌드 · `CoreTest` · `EngineTest` 는 묶음의 `debug-full-build` · `ctest-nogpu` 가 돈다. 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 Release 측정 둘(`ContainerBenchTest.VectorBulkFillAndCompare` 전후, `SyntheticRigBenchTest` 단계별 구간). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 `Candidates-engine.md` 의 정리 후보 중 설계 판단이나 측정이 먼저인 것을 단위로 나눠 옮긴 묶음입니다. 이름은 옛 후보 절의 이름입니다.

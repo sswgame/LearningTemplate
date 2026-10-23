@@ -293,9 +293,12 @@
 - **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다(Godot 도 빌드 정의로 준다).
   헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
-- **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [후보 문서](plans/Candidates-project.md) `C-11`): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
+- **규칙 예외 감사에서 정한 넷**(2026-10-07, 적용 상태는 [RuleExceptionAudit](plans/RuleExceptionAudit.md)): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
+- **게이트와 짝 픽서 · 보고서가 나눠 쓰는 판정은 린트 틀 층(`Scripts/lint/*Rules.py`)에 둡니다**(2026-10-24). 게이트의 변환 · 판정을 픽서가 부르면 층 2 끼리 import 하지 못하는 규칙(`CheckScriptLayers`)에 예외 줄이 늘었습니다.
+  `LoopBraceRules` · `IncludeOrderRules` · `NamespaceBlockRules` · `DiscardReasonRules` 로 옮겨 네 줄을 지웠고, 셀프테스트가 자기 게이트를 부르는 둘은 게이트 내부를 검사하는 일이라 남깁니다.
+- **로그 · assert 문자열의 한글은 게이트 `CheckLogLanguage` 가 막고, 기존 줄은 폴더 단위 예외로 받아 줄여 갑니다**(2026-10-24). 규칙(AGENTS.md)만 있고 게이트가 없어 약 270 곳으로 늘었습니다. 폴더를 영어로 옮기면 그 예외가 낡은 줄로 실패해 지우게 해, 예외는 늘지 못하고 줄기만 합니다([KoreanLogStrings](plans/KoreanLogStrings.md)).
 - **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 의 `.clang-tidy`, 언리얼의 `.ini` 처럼 코드 밖에 두는 것입니다.
   형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고 YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어,
   쓰는 문법만 아는 부분 집합 읽기를 같이 두고 `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).
@@ -544,6 +547,10 @@
 - **메모리 태그 통계의 해제는 센 블록만 뺍니다**(2026-10-18, A-24). `IAllocationTracker::recordAllocation` 이 `AllocationRecord{ 해시, _bCounted }` 를 돌려주고, 할당기는 센 블록의 헤더에
   기록기 번호(`getTrackerID`, 인스턴스마다 다름)를 적어 그 기록기에만 해제를 넘깁니다. 추적을 켜기 전에 잡은 블록을 켠 뒤에 풀면 태그 바이트가 음수 쪽으로, 켠 동안 잡은 블록을 끈 뒤에 풀면 양수 쪽으로 어긋났습니다.
   헤더 크기(48 B)는 그대로이고(쓰지 않던 칸을 씀) 해제마다 비교 하나가 늡니다. 언리얼 LLM 도 할당 때 추적한 포인터만 해제 때 뺍니다(기억에 의존).
+- **누수는 "창 안에서 태어나 닫힐 때 살아 있는 블록" 으로 잽니다**(2026-10-24, [LeakDetection](plans/LeakDetection.md)). 기준선 뒤의 살아 있는 양 차이로 재면 창 밖의 오래된 블록을 풀 때 새 누수가 상쇄됩니다
+  (`Scene` 에서 오래된 100 B 를 풀고 새 50 B 를 흘리면 차이가 음수). `AllocationRecord` 에 `_windowStamp`(uint32)를 두고 블록 헤더의 패딩 6 B 를 `uint8[2] + uint32` 로 나눠 헤더는 48 B 로 둡니다.
+  `Memory` 는 스탬프의 뜻을 모르고 해제 때 돌려주기만 하며(`recordFree` 가 `AllocationRecord` 를 받는다), 창은 `MemoryProfiler::beginLeakWindow` · `endLeakWindow` 가 맡습니다.
+  기존 태그별 기준선 배열은 이 창의 한 인스턴스(`TagTotals`, 스택 없음)로 합쳤고, 짧은 창은 모든 할당의 스택을 잡는 `FullStacks` 입니다. 전수 캡처의 비용과 한 씬 로드의 할당 수는 측정으로 정합니다(계획 문서 L2).
   자기 기술형은 '0' · '1' 글(텍스트 처리기), 고정 배치형은 `MaxCount` 가 필요한 `bits`(개수 + 비트마다 1 비트)이고, 원소 주소를 쓰는 컨테이너 래퍼를 거치지 않습니다.
   설정 JSON · 데이터 XML · 세이브가 같은 `Min` · `Max` 를 다르게 지키던 것을 한 계약으로 합쳤고, 프리셋 표가 원소마다 따로 부르던 검사도 지웠습니다.
 - **범위는 인스펙터와 읽기가 한 함수로 풀고, 소프트 읽기는 실패를 둘로 가릅니다**(2026-10-18, C-56 · C-60 · C-62).
@@ -1202,6 +1209,10 @@
     GameFramework 에 있어 아래 층인 Engine 이 쓸 수 없었습니다(2026-10-18 `Source/Core/String/EnumNameTable.h` 로 옮겼다). 손으로 둔 Engine 이름 배열은 14 개 파일(grep 근사치)입니다.
     대안은 영역 하나씩 단계로 옮기는 것입니다: 먼저 `EnumNameTable` 을 Core 로 옮기고 include 만 바꾼 뒤(동작 불변), 로더가 `ResourceDataKindUtil::loadCatalog` 인 줄(예: Audio)부터 `SW_RESOURCE_DATA_KIND` 로 옮기면서
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.
+    단계는 [DataKindRegistry](plans/DataKindRegistry.md) 에 있고 오디오 셋(DK1)을 옮겼습니다(2026-10-24).
+- **에디터 보강 묶음에서 하지 않기로 한 것**(2026-10-24, 다시 제안하지 말 것): 인스펙터 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖), 모듈 창에서 모듈 설치 · 제거(파일 복사 · 삭제)와 외부 패키지 받기(위험이 크다),
+  포토 모드가 게임 HUD 를 가리는 것(카메라 컴포넌트는 UI 를 모른다 — 가릴지는 게임이 정한다), 뷰포트 옵션 팝업이 메인 창 밖으로 나가는 것(다중 뷰포트 ImGui 의 동작이고 클라이언트 캡처만 못 잡는다).
+  즐겨찾기 키를 선언 타입으로 바꾸기 전에 파생 타입 이름으로 저장한 기반 프로퍼티 키는 더 맞지 않는다(사용자 파일, 다시 즐겨찾기한다).
 - **에디터 플러그인만 읽는 데이터는 `editor/` 팩에 두고, 종류는 플러그인 .cpp 의 `SW_RESOURCE_DATA_KIND` 로 등록합니다**(2026-10-15, 좌우 이름 표 `editor/character/default.mirrornames.xml`). 언리얼이 에디터 전용 콘텐츠를 `Engine/Content/Editor` 에 따로 두어 쿠킹에서 빼는 것과 같은 자리입니다.
 - **무인(배타) 자동화 동안 ImGui 입력 거르개는 포커스 사건도 지웁니다**(2026-10-15, `907f4d467`). 포커스를 남기면 ImGui 가 눌린 키 · 단추를 모두 놓아 누르고 있는 자동화 입력(뷰포트 비행)이 끊깁니다. 다른 창이 전경을 가져가는 것은 사람의 장치 입력과 같은 바깥 간섭으로 봅니다(`editor.focusloss` 시나리오).
 - **UI 미리보기 인스펙터는 검색창이 맨 위이고 슬롯 구역도 그 검색어로 거릅니다**(2026-10-15, `b7359358e`). 자동화 표식은 잘렸는지(`_bClipped`)를 함께 기록하고 `EditorClick` · `EditorDrag` 는 잘린 표식을 누르지 않고 실패로 알립니다 — 잘린 자리를 누르면 다른 위젯이 받아 원인이 엉뚱한 기대 실패로 나타납니다.

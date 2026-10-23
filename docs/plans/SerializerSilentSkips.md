@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: C-66 · 진행: 4/4
 
-**남은 확인(통합에서 확인):** 씬 로드 GPU 확인(3절 "GPU 확인 대기"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `serializer-scene-load`(3절). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 읽기 · 쓰기가 조용히 넘기면 데이터 결함이 숨습니다. 페이로드를 끝까지 읽었는지는 태그 스트림 두 경로 · diff · 값 복사가 `SerializerUtil::applyPropertyBinary` 하나로 보고, B 코덱 열거형 폭은 이미 열거자 범위입니다(2026-10-20).
 남은 결함은 **읽기가 실패한 필드에 앞부분이 써진 채 남는 것**입니다. 컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝 검사에서 실패합니다. 엄격 읽기는 객체째 실패라 드러나지 않고, 읽지 못한 필드를 넘기고 이어 읽는 읽기에서만 그 필드가 반쯤 읽힌 값이 됩니다.
@@ -43,7 +43,7 @@
 
 - S1 ~ S4 를 main 에서 Debug 로 빌드해 `ReflectionTest` 267 개와 `ObjectStateRoundTripTest.*` 17 개가 통과했습니다(2026-10-22, S4 의 점 경로 변경 포함). `getRawPtr` 변경 뒤 다시 빌드해 `ReflectionTest` 267 개, `EngineTest` 의 `ObjectStateRoundTripTest` · `ComponentDefaultsTest` · `UIBindingTest` · `UIStyleTest` 56 개가 통과했습니다(에디터 대상은 빌드하지 않음).
 - 2026-10-23 main(`9c4179738`) 위 `full-build`(Debug, 에디터 포함, 경고 0): `ReflectionTest` 의 `ReflectionSerializationTest.*` · `ReflectionPurposeTest.*` 84 개, `Reflection*` 필터 245 개, `EngineTest` 의 `ObjectStateRoundTripTest.*` · `ComponentDefaultsTest.*` 포함 31 개, `EditorTest` 의 `InspectorPropertyLayoutTest.*` 11 개가 통과했습니다. `EngineTest` 전체 3958 개 · `EditorTest` 전체 474 개 · `SmokeTest` 71 개도 통과했습니다(GPU 호스트 스위트 제외).
-- GPU 확인 대기: 씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 봅니다. 설정 읽기(`ConfigManager::readConfigJSON`, JSON 소프트)도 지납니다.
+- 확인 대기: 매니페스트 id `serializer-scene-load`(씬을 여는 기존 시나리오 하나로 바이너리 씬 로드와 XML 씬 · 프리팹 로드를 보고, 설정 읽기 `ConfigManager::readConfigJSON` JSON 소프트도 지난다).
 - S2 로 바뀌는 동작(텍스트 형식 소프트 읽기):
   - 읽지 못한 원소가 있는 컨테이너는 읽힌 원소만 남던 것이 이제 읽기 전 값입니다. XML 은 그 칸의 orphan 이 실패한 원소 글들에서 칸 원문 하나로 바뀝니다.
   - 읽다 만 소유 포인터 목록(컴포넌트 목록에서 원소가 금지된 필드 · 범위 밖 값으로 실패)은 반쯤 찬 목록으로 이어 읽던 것이 이제 객체째 실패(`Rejected`)입니다.

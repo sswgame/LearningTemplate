@@ -48,6 +48,8 @@ kAppRhiUnusableExitCode = 77
 _kProfileRowRe = re.compile(r"\[Profile\]\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\.(\d)\s*$")
 #: `[Profile] wall  N frames in M ms  = U us/frame`
 _kProfileWallRe = re.compile(r"\[Profile\] wall\s+(\d+) frames in (\d+) ms\s+=\s+(\d+) us/frame")
+#: `[Bench] <이름>  min N us  p50 N us  p90 N us  p99 N us  max N us  (N samples)`(`test::logBenchSamples`) — 테스트 벤치의 표본 한 줄.
+kBenchRowRe = re.compile(r"\[Bench\] (.+?)\s+min (-?\d+) us\s+p50 (-?\d+) us\s+p90 (-?\d+) us\s+p99 (-?\d+) us\s+max (-?\d+) us")
 
 
 @dataclass

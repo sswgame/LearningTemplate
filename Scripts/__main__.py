@@ -58,6 +58,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("format", "lint.fixer.FormatClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
     Subcommand("docs", "generate.GenerateDocs", "Doxygen API 레퍼런스 문서 생성"),
     Subcommand("test", "dev.RunTests", "스위트 · 케이스 이름으로 테스트 실행 (실행 파일 · 작업 폴더를 대신 찾는다)"),
+    Subcommand("verify-batch", "dev.RunVerifyBatch", "통합 검증 · 측정 항목(Test/QA/VerifyBatch.json)을 구성별로 모아 한 번에 돌리고 결과 표 하나를 남긴다(--list · --check · --dry-run)"),
     Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
     Subcommand("asset-merge", "asset.AssetMerge", "XML 에셋 의미 비교 · 3-way 병합 (git 드라이버로도 쓴다)"),
     Subcommand("golden", "qa.GoldenImages", "테스트 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),

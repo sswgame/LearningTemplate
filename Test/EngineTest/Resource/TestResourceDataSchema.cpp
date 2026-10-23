@@ -15,9 +15,6 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioMixerDesc.h"
-#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
@@ -129,9 +126,6 @@ namespace
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceID ) { return endsWith( resourceID, "/data/render2d.xml" ); }
-        static bool isAudioMixer( sw::string_view resourceID ) { return endsWith( resourceID, ".audiomixer.xml" ); }
-        static bool isAudioEvents( sw::string_view resourceID ) { return endsWith( resourceID, ".audioevents.xml" ); }
-        static bool isAudioMusic( sw::string_view resourceID ) { return endsWith( resourceID, ".music.xml" ); }
         static bool isFontCatalog( sw::string_view resourceID ) { return endsWith( resourceID, "fontcatalog.xml" ); }
         static bool isUIScale( sw::string_view resourceID ) { return endsWith( resourceID, "uiscale.xml" ); }
         static bool isUIDocument( sw::string_view resourceID ) { return endsWith( resourceID, sw::UIDocumentAsset::kExtension ); }
@@ -574,9 +568,6 @@ namespace
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
             {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
             {           "bonemask",            &isBoneMask,                                      &loadBoneMask},
-            {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
-            {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
-            {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
             {        "fontcatalog",         &isFontCatalog,                  &loadCatalog<sw::FontCatalogDesc>},
             {            "uiscale",             &isUIScale,                  &loadCatalog<sw::UIScaleSettings>},
             {         "uidocument",          &isUIDocument,                                    &loadUIDocument},

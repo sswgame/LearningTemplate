@@ -58,7 +58,7 @@ namespace sw
     public:
         /** @brief 기본값 메타데이터를 만듭니다. `T` 의 정의가 보여야 합니다. */
         ReflectMetadataBox()
-            : _pValue{ sw_new T{} }
+            : _pValue{ make_unique<T>().release() }
             , _pOps{ &getOps() }
         {
         }
@@ -112,7 +112,7 @@ namespace sw
 
         static T* cloneValue( const T& value )
         {
-            return sw_new T{ value };
+            return make_unique<T>( value ).release();
         }
         static void destroyValue( T* pValue )
         {

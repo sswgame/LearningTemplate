@@ -19,7 +19,7 @@
 |---|---|---|
 | S1 | 위 설계대로 렌더러 폴더를 Server 타깃에서 뺀다 | 완료(Debug-Server 빌드) |
 | S2 | `Ninja-Debug-Server` · `Ninja-Shipping-Server` 빌드로 링크 오류를 잡고, `ServerTest` · `EngineTest_NoGPU` 를 돌리고, 실행 파일 크기 · 링크 시간을 전후로 잰다 | Debug-Server 끝(2026-10-22): `all AllTests` 경고 0, ServerTest 16 / 16, EngineTest_NoGPU 다섯 샤드. 크기(뒤): Engine.dll 22.6 MB · GameFramework.dll 8.5 MB · Server.exe 1.2 MB. 남음: Shipping-Server 빌드(CI `CI-Shipping-Server` 두 잡이 맡는다)와 "전" 크기 · 링크 시간 |
-| S3 | 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 · `ServerTest` — CI 리눅스 잡 몫(로컬 WSL 빌드는 하지 않는다, 사용자 결정) | CI 단계 넣음 — `Dedicated server has no X11 dependency (Linux)`(처음이라 continue-on-error), 첫 실행 대기 |
+| S3 | 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로 libX11 없음 · `ServerTest` — CI 리눅스 잡 몫(로컬 WSL 빌드는 하지 않는다, 사용자 결정) | CI 단계 넣음 — `Dedicated server has no X11 dependency (Linux)`(처음이라 continue-on-error), 첫 실행을 기다림 |
 
 ## 남은 것
 

@@ -17,14 +17,15 @@ namespace sw
      */
     struct alignas( 16 ) AllocHeader
     {
-        size_t    _size;      ///< 요청한 사용자 데이터 크기(바이트)
-        MemoryTag _tag;       ///< 할당 시점 스레드의 용도 태그(`MemoryTag`). 해제는 이 값으로 뺀다
-        uint8     _bObserved; ///< 할당 관찰자(`registerAllocationObserver`)에 알린 블록이면 SW_TRUE — 해제도 그때만 알린다
-        uint8     _arrPad[6]; ///< 16바이트 경계 정렬용 패딩
-        uint64    _hash;      ///< 할당 시점 콜 스택의 해시
-        uint64    _magic;     ///< 유효성 검증용 매직 넘버
-        void*     _pRawPtr;   ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
-        uint64    _trackerID; ///< 이 블록을 센 기록기의 번호(`IAllocationTracker::getTrackerID`). 0 이면 아무도 세지 않았고 해제도 알리지 않는다
+        size_t    _size;        ///< 요청한 사용자 데이터 크기(바이트)
+        MemoryTag _tag;         ///< 할당 시점 스레드의 용도 태그(`MemoryTag`). 해제는 이 값으로 뺀다
+        uint8     _bObserved;   ///< 할당 관찰자(`registerAllocationObserver`)에 알린 블록이면 SW_TRUE — 해제도 그때만 알린다
+        uint8     _arrPad[2];   ///< 16바이트 경계 정렬용 패딩
+        uint32    _windowStamp; ///< 기록기가 붙인 스탬프(`AllocationRecord::_windowStamp`). 할당기는 뜻을 모르고 해제 때 돌려준다
+        uint64    _hash;        ///< 할당 시점 콜 스택의 해시
+        uint64    _magic;       ///< 유효성 검증용 매직 넘버
+        void*     _pRawPtr;     ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
+        uint64    _trackerID;   ///< 이 블록을 센 기록기의 번호(`IAllocationTracker::getTrackerID`). 0 이면 아무도 세지 않았고 해제도 알리지 않는다
     };
 
     static_assert( sizeof( AllocHeader ) == 48, "AllocHeader must stay 48 bytes (a multiple of 16)" );
@@ -65,14 +66,15 @@ namespace sw
              */
             static void* writeAllocHeader( void* pUserPtr, void* pRawPtr, size_t size, MemoryTag tag )
             {
-                AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
-                pHeader->_size       = size;
-                pHeader->_tag        = tag;
-                pHeader->_magic      = kAllocMagic;
-                pHeader->_hash       = 0;
-                pHeader->_pRawPtr    = pRawPtr;
-                pHeader->_trackerID  = 0;
-                pHeader->_bObserved  = SW_FALSE;
+                AllocHeader* pHeader  = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
+                pHeader->_size        = size;
+                pHeader->_tag         = tag;
+                pHeader->_magic       = kAllocMagic;
+                pHeader->_hash        = 0;
+                pHeader->_windowStamp = 0;
+                pHeader->_pRawPtr     = pRawPtr;
+                pHeader->_trackerID   = 0;
+                pHeader->_bObserved   = SW_FALSE;
 
                 IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
                 if ( pTracker != nullptr )
@@ -80,8 +82,9 @@ namespace sw
                     const AllocationRecord record = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
                     if ( record._bCounted )
                     {
-                        pHeader->_hash      = record._callStackHash;
-                        pHeader->_trackerID = pTracker->getTrackerID();
+                        pHeader->_hash        = record._callStackHash;
+                        pHeader->_windowStamp = record._windowStamp;
+                        pHeader->_trackerID   = pTracker->getTrackerID();
                     }
                 }
 
@@ -119,7 +122,7 @@ namespace sw
                 {
                     IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
                     if ( pTracker != nullptr && pTracker->getTrackerID() == pHeader->_trackerID )
-                        pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+                        pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, AllocationRecord{ pHeader->_hash, true, pHeader->_windowStamp } );
                 }
 
                 // 관찰 중에 할당된 블록만 알린다. 관찰자가 그 사이 떨어졌으면 알릴 곳이 없다.
