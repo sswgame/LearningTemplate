@@ -25,6 +25,9 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | 10 | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
+| - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현대기 | 0/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
+| - | [RealtimeGlobalIllumination](docs/plans/RealtimeGlobalIllumination.md) — 실시간 전역 조명과 볼륨 표현 (2026-10-24) | 구현대기 | 0/7 | ClusteredLighting | graphics | D2-14, D2-5.2 |
+| - | [VfxGpuLights](docs/plans/VfxGpuLights.md) — GPU 로 시뮬레이션하는 방출기의 파티클 라이트 (2026-10-24) | 구현대기 | 0/5 | ClusteredLighting | graphics | 없음 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 구현중 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 구현중 | 1/4 | 없음 | gameplay | D4-16 |
 | - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 구현중 | 3/4 | 없음 | gameplay | D4-6 |
@@ -80,13 +83,14 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
 | - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 측정대기 | 8/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
+| - | [GraphicsMeasurements](docs/plans/GraphicsMeasurements.md) — 그래픽스 측정 · 확인 묶음 (2026-10-24) | 측정대기 | 4/4 | 없음 | graphics | D2-9, D2-2, D2-10, C-55 |
 | - | [NetChannelSchemaHashHandshake](docs/plans/NetChannelSchemaHashHandshake.md) — 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기 | 측정대기 | 2/2 | 없음 | network | D7-7 |
 | - | [PersistentRecordUnknownFields](docs/plans/PersistentRecordUnknownFields.md) — 영속 레코드의 모르는 필드 보관 | 측정대기 | 2/2 | 없음 | network | F-3 |
 | - | [RollbackPrediction](docs/plans/RollbackPrediction.md) — 클라이언트 예측 · 롤백과 관심 영역 복제 | 측정대기 | 4/4 | 없음 | network | D7-8 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 82개
+후보 문서 9개 · 후보 절 74개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

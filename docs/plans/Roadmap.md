@@ -13,6 +13,7 @@
 2. **새 시스템**:
    - Vfx V5 실행(V0 ~ V4 · V6 · V7 들어감 — 셰이더 쿠킹 뒤 네 백엔드로 CPU · GPU 그림 비교) — [Vfx](Vfx.md). [병렬 가능]
    - 클러스터드 라이팅 S3 측정(실행 코드 `perf-compare lightCulling*` 들어감) — [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
+   - 그래픽스 측정 · 확인 묶음 [GraphicsMeasurements](GraphicsMeasurements.md)(반해상도 블룸 · 그림자 패스 몫 · 스킨/VAT 풀 · Shipping 보기 모드 — 실행 코드 들어감). 새 계획: 파티클 GPU 라이트 [VfxGpuLights](VfxGpuLights.md) · 실시간 GI와 볼륨 표현 [RealtimeGlobalIllumination](RealtimeGlobalIllumination.md)(R0 사용자 결정 먼저) · 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
    - 간접 조명 P4 · P5 · D2-6.4 의 빌드 · 셰이더 쿠킹 · 화면 확인(코드는 `wt/planleftB`, 셰이더는 패치), P2 하늘 항 — [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 W7 측정 — [WorldStreaming](WorldStreaming.md) (W2 → W6 와 W7 데이터는 빌드 미확인으로 들어갔다 — 빌드 · 쿠킹 · World Cells 창 캡처 확인이 먼저). [단독: W7 의 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12, 한 묶음에 단위가 여럿):
