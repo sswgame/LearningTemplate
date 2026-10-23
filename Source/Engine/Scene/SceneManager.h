@@ -18,6 +18,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class IRHIDevice;
+    class PreloadSet;
     class Scene;
 
     /**
@@ -117,6 +118,12 @@ namespace sw
         TaskFuture<Scene*> requestLoadFuture( string_view path );
         /** @brief 씬 파일의 비동기 로드를 요청합니다(TaskManager 워커). */
         bool requestLoadAsync( string_view path );
+        /**
+         * @brief 지금 로드하는 씬의 프리로드 진행(0~1)을 @p outProgress 에 채웁니다. 프리로드 세트가 없으면(쿠킹 전 Dev 실행 · 목록이 빈 씬 · 끈 경우) false 입니다.
+         * @details 요청이 들어가면 쿠킹이 옆에 구운 프리로드 목록(`ScenePreloadList`, `<씬>.preload.json`)을 `PreloadSet` 으로 연다 — 씬을 읽고 짓는 동안 그 씬이 쓸 파일을
+         *          스트리밍 큐가 미리 읽는다. 로드가 끝난 뒤에도 잠시(`gv_scenePreloadHoldFrames`) 붙들어 씬이 에셋을 잡을 때까지 캐시가 비지 않게 한다. 로딩 화면 진행률이 이것을 읽는다.
+         */
+        [[nodiscard]] bool tryGetLoadProgress( float32& outProgress ) const;
         /**
          * @brief 활성 씬의 루트를 씬 XML 로 저장합니다.
          * @param path 리소스 상대 또는 절대 경로. 비어 있으면 씬 소스 경로를 씁니다.
@@ -289,6 +296,14 @@ namespace sw
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         DelegateHandle                  _commandStackClearHandle;   ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
         bool                            _bInitialized;
+
+        /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
+        void beginScenePreload( string_view path );
+        /** @brief 프리로드 세트를 한 프레임 진행하고, 로드가 끝난 뒤 붙든 프레임이 차면 놓습니다(`updateTransitions` 가 부른다). */
+        void updateScenePreload();
+
+        unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
+        uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
     };
 } // namespace sw
 

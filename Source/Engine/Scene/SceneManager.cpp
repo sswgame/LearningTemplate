@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/GameTimer.h"
@@ -26,13 +27,21 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/PreloadSet.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/ScenePreloadList.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "SceneManager" );
+
+    SW_GLOBAL_VARIABLE( bool, gv_scenePreload, true, "씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다)" );
+    SW_GLOBAL_VARIABLE( int32, gv_scenePreloadInFlight, 8, "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)" );
+    SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );
+    SW_GLOBAL_VARIABLE( int32, gv_scenePreloadHoldFrames, 120, "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)" );
 
     SceneManager::SceneManager()
         : _listLoadedScene{}
@@ -53,6 +62,8 @@ namespace sw
         , _onSceneObjectsInvalidated{}
         , _commandStackClearHandle{}
         , _bInitialized{ false }
+        , _pScenePreload{}
+        , _preloadHeldFrames{ 0 }
     {
         _asyncLoad->_services = _services;
     }
@@ -99,6 +110,7 @@ namespace sw
             return;
 
         _bInitialized = false;
+        _pScenePreload.reset(); // 붙든 에셋을 에셋 매니저가 살아 있는 동안 놓는다
         if ( _queuedPath.empty() == false )
         {
             _queuedPath.clear();
@@ -265,6 +277,47 @@ namespace sw
             _asyncLoad->_promise.setValue( nullptr );
             return false;
         }
+        beginScenePreload( path );
+        return true;
+    }
+
+    void SceneManager::beginScenePreload( string_view path )
+    {
+        _pScenePreload.reset();
+        _preloadHeldFrames = 0;
+        if ( gv_scenePreload == false )
+            return;
+        // 목록은 쿠킹이 굽는다 — 쿠킹 전 Dev 실행은 목록이 없고, 그 씬은 예전처럼 에셋을 잡을 때 읽는다.
+        const string listPath = ScenePreloadList::makeListPath( path );
+        if ( listPath.empty() || ResourceIO::hasResource( listPath ) == false )
+            return;
+        vector<string> listAsset;
+        if ( ScenePreloadList::read( listPath, listAsset ) == false || listAsset.empty() )
+            return; // 읽지 못한 이유는 읽기가 남겼다. 로드는 그대로 간다
+        _pScenePreload = make_unique<PreloadSet>( std::move( listAsset ), StreamingPriority::Normal, static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadInFlight ), 1 ) ) );
+        if ( _services._pAssetManager != nullptr )
+            _pScenePreload->enablePinning( *_services._pAssetManager, static_cast<uint64>( MathUtil::max( static_cast<int32>( gv_scenePreloadPinMegabytes ), 0 ) ) * constant::kBytesPerMegabyte );
+    }
+
+    void SceneManager::updateScenePreload()
+    {
+        if ( _pScenePreload == nullptr )
+            return;
+        AssetStreamingQueue* pQueue = engine::findSubsystem<AssetStreamingQueue>();
+        if ( pQueue != nullptr )
+            _pScenePreload->update( *pQueue );
+        if ( _bLoadInFlight.load( std::memory_order_acquire ) )
+            return;
+        ++_preloadHeldFrames;
+        if ( _preloadHeldFrames >= static_cast<uint32>( MathUtil::max( static_cast<int32>( gv_scenePreloadHoldFrames ), 0 ) ) )
+            _pScenePreload.reset();
+    }
+
+    bool SceneManager::tryGetLoadProgress( float32& outProgress ) const
+    {
+        if ( _pScenePreload == nullptr )
+            return false;
+        outProgress = _pScenePreload->getProgress();
         return true;
     }
 
@@ -433,6 +486,7 @@ namespace sw
     void SceneManager::updateTransitions()
     {
         SW_MEMORY_SCOPE( Scene );
+        updateScenePreload();
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
             return;
 

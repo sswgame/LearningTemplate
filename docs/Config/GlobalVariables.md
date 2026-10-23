@@ -204,6 +204,10 @@
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 | `gv_physicsDebugDraw` | `bool` | `false` | 일반 | 강체 물리 바디 · 캐릭터를 디버그 선으로 그린다 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
+| `gv_scenePreload` | `bool` | `true` | 일반 | 씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadHoldFrames` | `int32` | `120` | 일반 | 로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadInFlight` | `int32` | `8` | 일반 | 씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadPinMegabytes` | `int32` | `256` | 일반 | 씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
 | `gv_stateHashHistory` | `int32` | `0` | 테스트 | 틱별 씬 상태 해시 이력 길이 (0=끄기) | [SceneStateHash.cpp](../../Source/Engine/Scene/SceneStateHash.cpp) |
 | `gv_worldCellDebugDraw` | `bool` | `false` | 일반 | 월드 스트리밍 격자를 카메라 둘레에 그린다 — 올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 

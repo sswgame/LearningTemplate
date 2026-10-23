@@ -1622,6 +1622,15 @@
        "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 정본은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음"
       },
       {
+       "name": "_loadingTips",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "로딩 화면 팁 목록(`*.loadingtips.xml` — `<LoadingTips><Tip text=\"원문\"/>…`). 글은 지역화 원문이고 현지화 프로젝트의 `assetRules` 로 수집한다. 적지 않으면 팁 없음(팁 위젯을 접는다)"
+      },
+      {
        "name": "_audioEvents",
        "type": "DataPath",
        "default": "",
@@ -4190,6 +4199,38 @@
    "kind": "테스트",
    "description": "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
+  },
+  {
+   "name": "gv_scenePreload",
+   "type": "bool",
+   "default": "true",
+   "kind": "일반",
+   "description": "씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다)",
+   "source": "Source/Engine/Scene/SceneManager.cpp"
+  },
+  {
+   "name": "gv_scenePreloadHoldFrames",
+   "type": "int32",
+   "default": "120",
+   "kind": "일반",
+   "description": "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)",
+   "source": "Source/Engine/Scene/SceneManager.cpp"
+  },
+  {
+   "name": "gv_scenePreloadInFlight",
+   "type": "int32",
+   "default": "8",
+   "kind": "일반",
+   "description": "씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산)",
+   "source": "Source/Engine/Scene/SceneManager.cpp"
+  },
+  {
+   "name": "gv_scenePreloadPinMegabytes",
+   "type": "int32",
+   "default": "256",
+   "kind": "일반",
+   "description": "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)",
+   "source": "Source/Engine/Scene/SceneManager.cpp"
   },
   {
    "name": "gv_scheduleTrace",

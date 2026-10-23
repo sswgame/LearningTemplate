@@ -12,6 +12,10 @@
 					<_style _alignment="End" />
 					<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-400,-110" _offsetMax="-136,-74" />
 				</TextWidget>
+				<!-- 진행 막대 — LoadingScreenController 가 로드 진행(프리로드 세트)이 있을 때만 보이고 값을 넣는다. 입력은 받지 않는다. -->
+				<SliderWidget _name="Progress" _visibility="Collapsed">
+					<_slot _anchorMin="0,1" _anchorMax="1,1" _offsetMin="72,-60" _offsetMax="-72,-36" />
+				</SliderWidget>
 				<TextWidget _name="Tip" _styleClass="tip">
 					<_slot _anchorMin="0,1" _anchorMax="0.6,1" _offsetMin="72,-110" _offsetMax="0,-74" />
 				</TextWidget>
