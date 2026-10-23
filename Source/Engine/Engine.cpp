@@ -40,6 +40,7 @@
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -742,6 +743,7 @@ namespace sw
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
         engine::getSubsystem<DebugDrawQueue>().endFrame( _sceneDeltaSeconds );
+        engine::getSubsystem<VisualLogger>().endFrame();
     }
 
     bool Engine::applyPendingBackendChange()

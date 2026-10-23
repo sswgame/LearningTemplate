@@ -525,6 +525,11 @@
       "id": "preload-lod-visual-review", "title": "시퀀서 컷 프리롤 첫 프레임 포즈 · LOD 단계 캡처(-gv_meshLodForce)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "need_command": "LOD 가 든 실제 모델과 스폰 항목을 쓴 시퀀스 시나리오가 아직 없어 스크립트로 판정할 그림이 없다(사람이 캡처를 본다)",
       "source": "docs/plans/PreloadAndLod.md P11", "result_doc": "docs/plans/PreloadAndLod.md 상태를 끝으로"
+    },
+    {
+      "id": "visual-logger-tests", "title": "비주얼 로거 테스트(질의 · 용량 · 다시 보기 · 파일 왕복)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "VisualLoggerTest.*",
+      "source": "docs/plans/FeatureQueue.md 1절", "result_doc": "docs/plans/FeatureQueue.md 비주얼 로거 줄"
     }
   ]
 }
