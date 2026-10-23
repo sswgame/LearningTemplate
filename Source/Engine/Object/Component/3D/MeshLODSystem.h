@@ -54,16 +54,16 @@ namespace sw
         void setPendingView( const AnimationLODView& view );
         void clearPendingView();
         bool hasPendingView() const { return _bHasPendingView == SW_TRUE; }
+        /** @brief 렌더가 뷰를 한 번이라도 넣었으면 true 입니다(넣기 전에는 화면 크기를 모른다). */
+        bool areViewsSet() const { return _bViewsSet == SW_TRUE; }
+        /** @brief 컴포넌트의 경계 구를 모든 뷰(대기 뷰 포함)에서 본 가장 큰 화면 크기입니다. 어느 뷰에도 없으면 0 입니다(텍스처 밉 요청 우선순위도 이것을 쓴다). */
+        float32 computeScreenSize( const MeshComponent& component ) const;
 
         /**
          * @brief 화면 크기 @p screenSize 에서 지금 단계 @p currentLOD 다음에 그릴 단계입니다. 거친 쪽은 바로, 고운 쪽은 `kRefineHysteresis` 만큼 여유를 두고 바꾼다.
          * @details 메시 하나의 판정이라 테스트가 뷰 없이 직접 부른다.
          */
         static uint32 selectNextLOD( const Mesh& mesh, float32 screenSize, uint32 currentLOD );
-
-    private:
-        /** @brief 컴포넌트의 경계 구를 모든 뷰(대기 뷰 포함)에서 본 가장 큰 화면 크기입니다. 어느 뷰에도 없으면 0 입니다. */
-        float32 computeScreenSize( const MeshComponent& component ) const;
 
     private:
         GameObjectManager&       _manager;

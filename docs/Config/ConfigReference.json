@@ -4409,6 +4409,14 @@
    "source": "Source/Engine/Graphics/Texture/Texture2D.cpp"
   },
   {
+   "name": "gv_textureStreamByScreenSize",
+   "type": "bool",
+   "default": "true",
+   "kind": "테스트",
+   "description": "Upload the top mips of textures used by large on-screen meshes first (false = in load order)",
+   "source": "Source/Engine/Object/Component/3D/TextureStreamingSystem.cpp"
+  },
+  {
    "name": "gv_textureStreaming",
    "type": "int32",
    "default": "1",

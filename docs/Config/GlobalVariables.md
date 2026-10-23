@@ -139,6 +139,7 @@
 | `gv_animationRewind` | `int32` | `0` | 테스트 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 테스트 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_meshLodForce` | `int32` | `-1` | 테스트 | Draw every LOD mesh at this LOD level regardless of screen size (-1 = pick by screen size) | [MeshLODSystem.cpp](../../Source/Engine/Object/Component/3D/MeshLODSystem.cpp) |
+| `gv_textureStreamByScreenSize` | `bool` | `true` | 테스트 | Upload the top mips of textures used by large on-screen meshes first (false = in load order) | [TextureStreamingSystem.cpp](../../Source/Engine/Object/Component/3D/TextureStreamingSystem.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 테스트 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/Tick/TickRegistry.cpp) |
 | `gv_tickCostDispatch` | `bool` | `false` | 테스트 | 씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본) | [SceneTickScheduler.cpp](../../Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance) | [CameraComponent.cpp](../../Source/Engine/Object/Component/CameraComponent.cpp) |

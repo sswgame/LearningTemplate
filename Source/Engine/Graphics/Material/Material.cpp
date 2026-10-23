@@ -287,6 +287,15 @@ namespace sw
         return kInvalidTextureSlot;
     }
 
+    void Material::collectTexturePaths( vector<string>& outListPath ) const
+    {
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            if ( MaterialUtil::isTextureType( prop._type ) && prop._assetPath.empty() == false )
+                outListPath.push_back( prop._assetPath );
+        }
+    }
+
     void Material::releaseTextureAssets( IRHIDevice* pRHI )
     {
         if ( _listAcquiredTexturePath.empty() )

@@ -169,6 +169,8 @@ namespace sw
          *          에디터 미리보기)은 그 자리에서 읽어 첫 그림부터 진짜 텍스처다.
          */
         void setTextureLoadStart( AssetLoadStart start ) { _textureLoadStart = start; }
+        /** @brief 이 머티리얼이 쓰는 텍스처의 에셋 경로(경로가 있는 텍스처 프로퍼티)를 @p outListPath 끝에 덧붙입니다. 빌렸는지와 상관없이 데이터가 가리키는 경로다(텍스처 밉 요청 우선순위가 쓴다). */
+        void collectTexturePaths( vector<string>& outListPath ) const;
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 반환합니다. */
         void releaseTextureAssets( IRHIDevice* pRHI );
         /**

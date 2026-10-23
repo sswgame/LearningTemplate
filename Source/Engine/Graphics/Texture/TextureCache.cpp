@@ -154,6 +154,7 @@ namespace sw
         mutex                                   _streamingMutex;
         vector<StreamingUpgrade>                _listStreamingUpgrade; ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
         TextureStreamingRetireList              _retired;              ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+        unordered_map<string, float32>          _mapScreenSize;        ///< 이번 프레임에 알린 화면 크기(`noteScreenSize`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
         /** @brief 위쪽 밉을 기다리는 줄에 넣습니다(로드 블록의 완료 단계). */
         void queueStreamingUpgrade( const string& key, unique_ptr<DDSImageData> pImage )
@@ -360,7 +361,24 @@ namespace sw
             std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
             const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
             if ( takeCount == 0 )
+            {
+                _impl->_mapScreenSize.clear();
                 return 0;
+            }
+            // 화면에서 큰 텍스처부터 올린다. 알리지 않은 것은 0 이고, 같은 값끼리는 먼저 읽힌 순서를 지킨다(안정 정렬).
+            if ( _impl->_mapScreenSize.empty() == false )
+            {
+                const unordered_map<string, float32>& mapScreenSize = _impl->_mapScreenSize;
+                const auto                            sizeOf        = [&mapScreenSize]( const Impl::StreamingUpgrade& upgrade )
+                {
+                    const auto it = mapScreenSize.find( upgrade._key );
+                    return it != mapScreenSize.end() ? it->second : 0.0f;
+                };
+                std::stable_sort( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.end(),
+                                  [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                { return sizeOf( lhs ) > sizeOf( rhs ); } );
+                _impl->_mapScreenSize.clear();
+            }
             listUpgrade.assign( std::make_move_iterator( _impl->_listStreamingUpgrade.begin() ),
                                 std::make_move_iterator( _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
             _impl->_listStreamingUpgrade.erase( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.begin() + static_cast<ptrdiff_t>( takeCount ) );
@@ -407,6 +425,22 @@ namespace sw
             _impl->_cvLoaded.notify_all();
         }
         return upgradedCount;
+    }
+
+    void TextureCache::noteScreenSize( string_view relativePath, float32 screenSize )
+    {
+        if ( screenSize <= 0.0f )
+            return;
+        const string            key = FileUtil::normalizePath( relativePath );
+        std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+        float32&                noted = _impl->_mapScreenSize[key];
+        noted                         = MathUtil::max( noted, screenSize );
+    }
+
+    bool TextureCache::hasPendingStreamingUpgrades() const
+    {
+        std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+        return _impl->_listStreamingUpgrade.empty() == false;
     }
 
     void TextureCache::releaseRetiredTextures( IRHIDevice* pDevice )

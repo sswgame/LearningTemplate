@@ -89,6 +89,14 @@ namespace sw
          *          그 사이 놓인 텍스처 · 다른 디바이스의 텍스처는 건너뛴다(다시 업로드할 때 밉 전부가 올라간다).
          */
         uint32 updateStreaming( IRHIDevice* pDevice, uint32 maxCount );
+        /**
+         * @brief 이번 프레임 화면에서 텍스처 @p relativePath 가 차지하는 크기를 알립니다(게임 스레드). 값은 가장 큰 뷰의 화면 크기(화면 높이에 대한 비율)이고 클수록 위쪽 밉을 먼저 올린다.
+         * @details 텍스처 밉 요청 우선순위다(계획 PreloadAndLod P10 — 언리얼 텍스처 스트리머의 wanted mip · 보이는 것부터). 같은 프레임에 여러 번 부르면 큰 값을 쓴다.
+         *          `updateStreaming` 이 위쪽 밉을 기다리는 줄을 이 값의 내림차순(알리지 않은 것은 0, 같으면 먼저 읽힌 순)으로 정렬해 쓰고 알림을 비운다 — 한 프레임 안의 값이다.
+         */
+        void noteScreenSize( string_view relativePath, float32 screenSize );
+        /** @brief 위쪽 밉을 기다리는 텍스처가 있으면 true 입니다(게임 스레드가 화면 크기를 알릴 필요가 있는지 싸게 묻는다). */
+        bool hasPendingStreamingUpgrades() const;
         /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
         static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
         /**

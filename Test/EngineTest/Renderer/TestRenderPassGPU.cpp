@@ -4889,6 +4889,57 @@ SW_TEST_CASE( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 화면 크기를 알린 텍스처의 위쪽 밉이 읽힌 차례보다 먼저 올라온다 — 4 백엔드
+ * @details 밉 요청 우선순위(계획 PreloadAndLod P10). 먼저 읽힌 A 와 나중에 읽힌 B 가 둘 다 아래쪽 밉만 올린 채 줄에 있을 때, B 의 화면 크기를 알리면 한 번의 `updateStreaming`
+ *          (한 장)이 B 를 올리고 A 는 아직 아래쪽 밉이다. 알리지 않으면 읽힌 순서(A 먼저)가 옛 동작이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScreenFirst )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kFirstLoaded  = "engine/textures/particles/kenney_particle/trace_07.dds";
+    constexpr const utf8* kSecondLoaded = "engine/textures/particles/kenney_particle/trace_01.dds";
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label    = sw::string( device->getBackendName() ) + ": ";
+        sw::TextureCache& textures = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>();
+        if ( textures.find( kFirstLoaded ) != nullptr || textures.find( kSecondLoaded ) != nullptr )
+            continue; // 다른 쪽이 이미 밉 전부로 가지고 있다 — 이 백엔드에서는 볼 수 없다
+        // 다른 테스트가 남긴 줄을 먼저 비운다.
+        for ( uint32 frame = 0; frame < 64 && textures.hasPendingStreamingUpgrades(); ++frame )
+        {
+            (void)textures.updateStreaming( device.get(), sw::TextureCache::kMaxStreamingUpgradesPerFrame );
+        }
+        const sw::TextureHandle             firstHandle  = textures.request( kFirstLoaded, device.get(), sw::AssetLoadStart::Async );
+        const sw::shared_ptr<sw::Texture2D> pFirst       = firstHandle.wait();
+        const sw::TextureHandle             secondHandle = textures.request( kSecondLoaded, device.get(), sw::AssetLoadStart::Async );
+        const sw::shared_ptr<sw::Texture2D> pSecond      = secondHandle.wait();
+        SW_ASSERT_TRUE_MSG( pFirst != nullptr && pSecond != nullptr, ( label + "비동기 텍스처를 읽지 못했습니다" ).c_str() );
+        const bool bBothStreaming = pFirst->isFullyResident() == false && pSecond->isFullyResident() == false;
+        if ( bBothStreaming == false )
+        {
+            textures.releaseRetiredTextures( device.get() );
+            continue; // 밉이 하나뿐인 작은 텍스처는 스트리밍하지 않는다 — 순서를 볼 수 없다
+        }
+
+        textures.noteScreenSize( kSecondLoaded, 0.6f );
+        textures.noteScreenSize( kFirstLoaded, 0.05f );
+        SW_EXPECT_EQUAL( 1u, textures.updateStreaming( device.get(), 1 ) );
+        SW_EXPECT_TRUE_MSG( pSecond->isFullyResident(), ( label + "화면에서 큰 텍스처의 위쪽 밉이 먼저 올라오지 않았습니다" ).c_str() );
+        SW_EXPECT_FALSE_MSG( pFirst->isFullyResident(), ( label + "화면에서 작은 텍스처가 큰 것보다 먼저 올라왔습니다" ).c_str() );
+        for ( uint32 frame = 0; frame < 16 && pFirst->isFullyResident() == false; ++frame )
+        {
+            (void)textures.updateStreaming( device.get(), sw::TextureCache::kMaxStreamingUpgradesPerFrame );
+        }
+        SW_EXPECT_TRUE( pFirst->isFullyResident() ); // 알림은 한 프레임의 값이다 — 이어서 나머지도 올라온다
+        textures.releaseRetiredTextures( device.get() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the texture streaming priority test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 깊이 프리패스를 넣어도 같은 그림이 나온다 — 깊이 첨부 이름을 바꿔도
  * @details 깊이 프리패스가 깨지는 방식: (1) 프리패스가 그림자와 같은 셰이더 변형으로 그리면 장면 깊이에 **광원 공간**의 깊이를 쓰고,
  *          (2) 깊이 비교가 Less 면 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다(LessEqual 이어야 한다). 언리얼 EarlyZ · 유니티
