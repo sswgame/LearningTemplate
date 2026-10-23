@@ -10,7 +10,7 @@
     py -3 -m Scripts plans --file Vfx           # 그 문서의 머리 줄과 절 제목 목록(`Vfx.md` 도 된다)
     py -3 -m Scripts plans --file Vfx --section V2   # 제목에 `V2` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
     py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
-    py -3 -m Scripts plans --check              # 로드맵의 문서 링크 · 파일 · #앵커가 맞는지(틀리면 종료 1)
+    py -3 -m Scripts plans --check              # 로드맵의 링크가 맞는지, 진행 n/n 인데 구현 중인 문서가 없는지(틀리면 종료 1)
 
 머리 줄 모양은 `common/Plans.py` 가 원본이다. 머리 줄이 없거나 틀린 문서가 있으면 건너뛰지 않고 파일 이름과 함께 멈춘다.
 """
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--file", dest="fileName", help="이 문서(이름 줄기, 예: Vfx)의 머리 줄과 절 제목 목록")
     parser.add_argument("--section", metavar="TITLE", help="--file 과 함께: 제목에 TITLE 이 든 절의 본문만(없거나 여럿에 맞으면 오류와 후보)")
     parser.add_argument("--find", metavar="QUERY", help="옛 번호(C-30) 또는 이름(Vfx · Vfx.V2 · 후보 이름)이 있는 곳")
-    parser.add_argument("--check", action="store_true", help="로드맵의 문서 링크 · 파일 · #앵커가 맞는지 본다(틀리면 종료 1)")
+    parser.add_argument("--check", action="store_true", help="로드맵의 문서 링크 · 파일 · #앵커가 맞는지, 진행 n/n 인데 상태가 구현 중인 문서가 없는지 본다(틀리면 종료 1)")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     args = parser.parse_args(argv)
 

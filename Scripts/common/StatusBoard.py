@@ -146,6 +146,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
         if entry.stem is not None and entry.stem not in setStem:
             listViolation.append(f"{kRoadmapRelPath}:{entry.lineNumber}: 항목의 문서 `{entry.stem}.md` 가 {kPlansRelDir} 에 계획 문서로 없습니다")
     listViolation += checkFinishedPlanLinksInternal(text, readPlans(repositoryRoot))
+    listViolation += checkAllUnitsDoneStatusInternal(readPlans(repositoryRoot))
     mapAnchorCache: dict[Path, set[str]] = {}
     bFence = False
     for lineNumber, line in enumerate(text.splitlines(), start=1):
@@ -183,6 +184,18 @@ def checkFinishedPlanLinksInternal(text: str, listPlan: list[PlanDoc]) -> list[s
                 if stem in setFinished:
                     listViolation.append(f"{kRoadmapRelPath}:{lineNumber}: 문서 `{stem}.md` 의 상태가 `끝` 입니다 — 끝난 단위는 로드맵에서 지웁니다")
     return listViolation
+
+
+#: 단위를 아직 만드는 중이라는 뜻의 상태. 진행이 `n/n`(모든 단위가 끝)인데 이 상태면 문서가 낡은 것이다.
+_kBuildingStatus: tuple[str, ...] = ("설계", "구현대기", "구현중")
+_kAllDoneProgressRe = re.compile(r"^(\d+)/\1$")
+
+
+def checkAllUnitsDoneStatusInternal(listPlan: list[PlanDoc]) -> list[str]:
+    """진행이 `n/n` 인데 상태가 `설계` · `구현대기` · `구현중` 인 계획 문서를 위반으로 모은다.
+    마지막 단위를 끝낸 사람이 상태를 올리지 않으면 끝난 일이 README 진행 표에 구현 중으로 쌓인다. 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`."""
+    return [f"{kPlansRelDir}/{plan.fileName}: 진행이 {plan.progress} 로 모든 단위가 끝났는데 상태가 `{plan.status}` 입니다 — 확인이 남았으면 `측정대기`, 끝났으면 `끝`"
+            for plan in listPlan if plan.status in _kBuildingStatus and _kAllDoneProgressRe.match(plan.progress)]
 
 
 def splitAtMarkers(text: str, fileName: str) -> tuple[str, str, str]:

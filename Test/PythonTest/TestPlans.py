@@ -260,6 +260,18 @@ class PlansCheckAndFindTest(unittest.TestCase):
             self.assertIn("Roadmap.md:7: 링크 `../Nope.md` 의 파일이 없습니다", out)
             self.assertIn("로드맵 위반 4 건", out)
 
+    def testCheckReportsAllUnitsDoneButStillBuilding(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            makeRepositoryInternal(Path(temp))
+            plans = Path(temp) / "docs" / "plans"
+            (plans / "Roadmap.md").write_text("# 로드맵\n\n## 지금 순서\n\n1. [이펙트](Vfx.md)\n", encoding="utf-8")
+            (plans / "Vfx.md").write_text(kGoodText.replace("진행: 2/5", "진행: 5/5"), encoding="utf-8")
+            code, out, _ = runPlansInternal(temp, ["--check"])
+            self.assertEqual(1, code)
+            self.assertIn("Vfx.md: 진행이 5/5 로 모든 단위가 끝났는데 상태가 `구현중` 입니다", out)
+            (plans / "Vfx.md").write_text(kGoodText.replace("진행: 2/5", "진행: 5/5").replace("상태: 구현중", "상태: 측정대기"), encoding="utf-8")
+            self.assertEqual(0, runPlansInternal(temp, ["--check"])[0])
+
     def testFindOldNumberNameUnitAndUnknown(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             makeRepositoryInternal(Path(temp))
