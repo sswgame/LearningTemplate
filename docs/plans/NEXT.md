@@ -4,6 +4,17 @@
 
 **작업 방식(사용자 지시, 되풀이 — `docs/11_Workflow.md` 1 · 3절, 메모리 `integrate-early-verify-once`)**: 작업자는 코드만 짜고 린트 후 커밋(빌드 · 테스트 · 실행 · 병합 · push 금지). 모두 끝나면 한 통합 워크트리에 전부 병합하고 **빌드 · 검증 · 측정을 각각 한 번씩만** 한다. 예열 빌드 금지, 잘게 나누기 금지, 남는 프로세스는 바로 죽인다. 확인 대기는 통합에서 `gpu-verifier` 로 한 번에, 리눅스는 CI.
 
+
+**통합 검증 · 측정은 한 묶음의 단위로 돌린다(사용자 지시, 2026-10-24).** 확인 · 측정 후보마다 따로 돌리지 않고, 빌드 구성별로 모아 아래 순서로 한 번에 끝낸다. 빌드 구성은 Debug → Shipping → Release 를 각각 한 번만 짓고, 같은 구성이 필요한 일을 전부 그 구성에서 이어서 돌린다. 한 단계가 실패하면 그 자리에서 고치거나 해당 커밋을 되돌린 뒤 같은 단계부터 다시 한다(앞 단계를 반복하지 않는다).
+
+| 단계 | 구성 | 묶어서 돌릴 것 | 잠금 |
+|---|---|---|---|
+| A | Debug | `full-build --owner integD` 경고 0 → `-L lint` · `-L nogpu` · `-L race` → 후보 작업자들이 적은 "통합에서 실행 대기" 중 CPU 만 쓰는 테스트(`StreamTransportTest`류는 WSL 이라 건너뜀) | 빌드 칸 |
+| B | Shipping | 빌드 → `-L hostgpu` 전체 → 확인 대기 전부(ModuleRenderPass M2 · 텍스처 R8 · TilemapCellDataLayers T3 · SerializerSilentSkips · DiskPathVsResourceId · PanelIDLiterals P3 · UiNotificationRemaining N2 · contentthumbnails · scnpixel 의 `differingFraction` 문턱 · 후보 작업자의 시나리오) → 네 백엔드 × 대표 셋 | GPU 공유 |
+| C | Release | 빌드 → **쿠킹 한 번**(물 그림자 · 셰이더 2단계) → 골든 다시 뜨기 → 그 다음 측정을 전부 혼자 이어서: `perf` · `load` · `perf-compare`(InteractionSpatialGrid I3, 누수 창 오버헤드, 소유 형식) · 네트 벤치(`NetUDPBenchTest` · `NetReplicationBenchTest` · `NetCompressionBench`의 Windows 쪽) · `scene-load-bench` · `soak` · 후보의 측정 질문(HalfResolutionBloomMeasurement 등) | GPU 독점 |
+| D | CI | push 뒤 `ci-jobs --summary`(리눅스 · TSAN 포함). 로컬 WSL 은 사용자가 요청할 때만 | — |
+
+측정 결과는 한 번에 해당 문서(계획 문서 · `docs/08_Verification.md` · Decisions 측정 열)에 옮기고 후보 절을 지운다. 측정을 마친 뒤에 남는 "어쩌다 생기는 측정"이 없도록, 새로 생긴 측정 질문은 이 표의 C 단계에 한 줄로 더한다.
 **통합 워크트리 `D:/w/integD`(브랜치 `wt/integD`, main `4c7b2085b` 위)** — 아직 빌드하지 않았다. 병합 끝: parseintlist(main 에 이미) · lambdaeditor · lambdakits · servicelist · lambdagfx · lambdacore · lambdaeng · kitshelpers · verifyleak · scnpixel · singletonget · thumbheadless · plansweep · lambdaser. 충돌은 `Candidates-engine.md` 의 `FunctorLambdaCommonization` 줄 모음(전부 남김), `Engine.cpp` · `TestHostRuntime.cpp`(servicelist 쪽을 택하고 단일체 이전의 서브시스템 세 줄을 `EngineSubsystemSet.cpp` 로 옮김, `ServiceSetup::_bAuthorityGhost` 추가), `InputMapSerialization.cpp`(lambdaser 판을 택하고 lambdacore 의 `loadActionNode` 선언을 지움)에서 손으로 풀었다.
 
 **아직 병합 못 한 브랜치(작업자가 커밋하면 `integD` 에 병합; candnetwork 는 병합함 — 그 "통합에서 실행 대기" 중 WSL 항목은 리눅스 검증을 사용자가 요청할 때만 하므로 건너뛴다)**: shaderfmt3(셰이더 2단계 나머지) · leakwin(누수 탐지 1단계, `wt/verifyleak` 위) · ownership(`sw_new` · `Memory::allocate` 소유 형식) · candengine · candproject · candquality1 · candquality2 · candnetwork · candeditor · candgraphics · candmisc(후보 처리, 영역별). 병합 뒤 `README.md` 표는 `status-board --write README.md` 로 다시 만든다.
