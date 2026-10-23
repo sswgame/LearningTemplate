@@ -297,27 +297,11 @@ namespace sw
 
     void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key )
     {
-        // 람다가 델리게이트의 인라인 칸(24 바이트)에 들도록 키를 id 하나로 담고 공간은 갈래로 가른다 — 자원 · 장부 · id 로 꽉 찬다.
-        RHIMemoryLedger* pLedger = &getMemoryLedger();
-        const uint64     id      = key._id;
+        // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
         if ( key._space == RHIMemoryKeySpace::Texture )
-        {
-            auto releaseCb = [owned, pLedger, id]()
-            {
-                (void)owned.Get();
-                pLedger->recordFree( RHIMemoryKey::makeTexture( id ) );
-            };
-            _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
-        }
+            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, _fenceValue );
         else
-        {
-            auto releaseCb = [owned, pLedger, id]()
-            {
-                (void)owned.Get();
-                pLedger->recordFree( RHIMemoryKey::makeBuffer( id ) );
-            };
-            _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
-        }
+            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryLedger(), key._id, _fenceValue );
     }
 
     bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )

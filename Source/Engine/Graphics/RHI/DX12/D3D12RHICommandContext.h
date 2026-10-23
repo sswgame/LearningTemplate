@@ -80,6 +80,13 @@ namespace sw
 
     private:
         /**
+         * @brief `blitTexture` 의 복사 대상을 한 상태에서 다른 상태로 전이합니다.
+         * @details 스왑체인 백버퍼(`dst == 0`)의 상태는 스왑체인 객체만 바꾼다. 여기서 배리어를 따로 쏘고 상태를 직접 대입하면
+         *          그 두 벌이 어긋날 수 있다. 오프스크린만 자기 레코드를 갱신한다.
+         */
+        void transitionBlitDst( RHITextureHandle dst, ID3D12Resource* pDstResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter );
+
+        /**
          * @brief 등록된 bindless 인덱스의 버퍼 GPU 주소입니다. 루트 CBV 에 그대로 바인딩합니다(t 와 u 는 슬롯 테이블이라 이 경로를 쓰지 않습니다).
          * @details 레지스트리는 기록 중 불변이라 락 없이 읽습니다(IRHIDevice::setParallelRecording 참고).
          * @param bUav true 면 UAV 레지스트리, false 면 SRV/CBV 레지스트리입니다.

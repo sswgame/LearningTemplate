@@ -70,6 +70,34 @@ namespace sw
             return VK_FORMAT_UNDEFINED;
         }
 
+        /** @brief 렌더 패스 로드 동작을 Vulkan 값으로 바꿉니다. */
+        static inline VkAttachmentLoadOp toVulkanLoadOp( RHIRenderPassLoadOp loadOp )
+        {
+            switch ( loadOp )
+            {
+                case RHIRenderPassLoadOp::Clear:
+                    return VK_ATTACHMENT_LOAD_OP_CLEAR;
+                case RHIRenderPassLoadOp::Load:
+                    return VK_ATTACHMENT_LOAD_OP_LOAD;
+                case RHIRenderPassLoadOp::DontCare:
+                    return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            }
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        }
+
+        /** @brief 렌더 패스 저장 동작을 Vulkan 값으로 바꿉니다. */
+        static inline VkAttachmentStoreOp toVulkanStoreOp( RHIRenderPassStoreOp storeOp )
+        {
+            switch ( storeOp )
+            {
+                case RHIRenderPassStoreOp::Store:
+                    return VK_ATTACHMENT_STORE_OP_STORE;
+                case RHIRenderPassStoreOp::DontCare:
+                    return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            }
+            return VK_ATTACHMENT_STORE_OP_STORE;
+        }
+
         static bool hasExtension( const vector<VkExtensionProperties>& listAvailableExt, const utf8* pName )
         {
             return VectorUtil::containsIf( listAvailableExt, [&]( const VkExtensionProperties& ext )

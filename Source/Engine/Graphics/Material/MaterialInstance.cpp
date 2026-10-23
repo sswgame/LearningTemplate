@@ -27,6 +27,33 @@ namespace sw
     {
         struct MaterialInstanceInternal
         {
+            /// @brief 리플렉션의 상수버퍼 변수 · 구조화 요소 변수 · 리소스 바인딩 중에 이름이 같은 것이 있는지 봅니다.
+            static bool reflectionHasParam( const ShaderReflectionData& reflectionData, hashed_string paramName )
+            {
+                for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
+                {
+                    for ( const ShaderVariableInfo& var : cb._listVariable )
+                    {
+                        if ( hashed_string( var._name.c_str() ) == paramName )
+                            return true;
+                    }
+                }
+                for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
+                {
+                    for ( const ShaderVariableInfo& var : element._listVariable )
+                    {
+                        if ( hashed_string( var._name.c_str() ) == paramName )
+                            return true;
+                    }
+                }
+                for ( const ShaderReflectedBinding& resourceBinding : reflectionData._listResource )
+                {
+                    if ( hashed_string( resourceBinding._name.c_str() ) == paramName )
+                        return true;
+                }
+                return false;
+            }
+
             template <typename T>
             static void insertOrAssign( vector<pair<hashed_string, T>>& listPair, hashed_string key, const T& val )
             {
@@ -643,36 +670,10 @@ namespace sw
 
     bool MaterialInstance::validateParametersWithReflection( const ShaderReflectionData& reflectionData ) const
     {
-        auto checkParam = [&]( hashed_string paramName ) -> bool
-        {
-            for ( const ShaderBufferInfo& cb : reflectionData._listConstantBuffer )
-            {
-                for ( const ShaderVariableInfo& var : cb._listVariable )
-                {
-                    if ( hashed_string( var._name.c_str() ) == paramName )
-                        return true;
-                }
-            }
-            for ( const ShaderBufferInfo& element : reflectionData._listStructuredElement )
-            {
-                for ( const ShaderVariableInfo& var : element._listVariable )
-                {
-                    if ( hashed_string( var._name.c_str() ) == paramName )
-                        return true;
-                }
-            }
-            for ( const ShaderReflectedBinding& resourceBinding : reflectionData._listResource )
-            {
-                if ( hashed_string( resourceBinding._name.c_str() ) == paramName )
-                    return true;
-            }
-            return false;
-        };
-
         for ( const auto& [name, val] : _listValueOverride )
         {
             (void)val;
-            if ( checkParam( name ) == false )
+            if ( MaterialInstanceInternal::reflectionHasParam( reflectionData, name ) == false )
                 return false;
         }
         return true;
