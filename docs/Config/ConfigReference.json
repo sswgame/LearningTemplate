@@ -4456,6 +4456,14 @@
    "source": "Source/Engine/UI/Debug/UIDemoScreen.cpp"
   },
   {
+   "name": "gv_uiGlyphRasterBudgetMicros",
+   "type": "int32",
+   "default": "4000",
+   "kind": "일반",
+   "description": "프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다",
+   "source": "Source/Engine/UI/UISystem.cpp"
+  },
+  {
    "name": "gv_uiOptionsMenu",
    "type": "bool",
    "default": "false",

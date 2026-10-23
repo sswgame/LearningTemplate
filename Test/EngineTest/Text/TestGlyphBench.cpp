@@ -78,7 +78,7 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
             const uint32         codepoint  = GlyphBenchInternal::kHangulFirst + ( codepointCursor * GlyphBenchInternal::kHangulStride ) % GlyphBenchInternal::kHangulCount;
             uint32               glyphIndex = 0;
             const sw::FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
-            if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u ) != nullptr )
+            if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u )._pGlyph != nullptr )
                 ++rasterizedCount;
         }
         const int64 micros = stopwatch.getElapsedNanoseconds() / 1000;

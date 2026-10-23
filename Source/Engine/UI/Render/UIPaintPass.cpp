@@ -142,6 +142,15 @@ namespace sw
         // 그리기와 스타일 목록은 이번 순회가 다 봤다(안 보이는 위젯 아래는 비트가 남아 다시 보일 때 칠한다).
         tree._listPaintDirty.clear();
         tree._listStyleDirty.clear();
+        // 글리프 래스터화 예산이 차서 글리프를 미룬 위젯은 다음 프레임에 다시 칠한다. 위 비움 뒤에 무효화해야 목록과 트리의 "바뀜" 표시가 남는다.
+        vector<WidgetID>& listRetry = context._pScratch->_listGlyphRetryWidget;
+        for ( const WidgetID retryID : listRetry )
+        {
+            Widget* pRetry = tree.findWidgetByID( retryID );
+            if ( pRetry != nullptr )
+                pRetry->invalidate( WidgetDirty::kPaint );
+        }
+        listRetry.clear();
         return paintedCount;
     }
 
@@ -185,8 +194,9 @@ namespace sw
         const bool   bChildForce = bForce || ( flags & Internal::kSubtreePaintBits ) != 0;
         if ( bNoCache )
             widget._paintCache = make_unique<WidgetPaintCache>();
-        WidgetPaintCache& cache        = *widget._paintCache;
-        uint32            paintedCount = 0;
+        WidgetPaintCache& cache          = *widget._paintCache;
+        uint32            paintedCount   = 0;
+        bool              bGlyphDeferred = false; // 이 위젯이 자기 캐시를 칠하다 글리프를 미뤘는지(자손이 미룬 것은 자손이 적는다)
 
         // 화면 앵커 — 이 아래 사각형은 앵커 점 기준이다. 대상 픽셀의 가위는 앵커를 따라가지 않으므로 앵커 위와 아래에 자르기가 없어야 한다.
         const uint32 previousAnchor = painter.getAnchor();
@@ -198,7 +208,9 @@ namespace sw
         painter.pushOpacity( widget.computeEffectiveOpacity() );
         if ( bSelfDirty )
         {
+            const uint32 deferredBefore = painter.getDeferredGlyphCount();
             repaintCache( widget, context, painter, outCanvas, cache._under, false );
+            bGlyphDeferred = painter.getDeferredGlyphCount() != deferredBefore;
             ++paintedCount;
         }
         if ( cache._under.isEmpty() == false )
@@ -258,12 +270,18 @@ namespace sw
         }
 
         if ( bSelfDirty )
+        {
+            const uint32 deferredBefore = painter.getDeferredGlyphCount();
             repaintCache( widget, context, painter, outCanvas, cache._over, true );
+            bGlyphDeferred = bGlyphDeferred || painter.getDeferredGlyphCount() != deferredBefore;
+        }
         if ( cache._over.isEmpty() == false )
             outCanvas.appendDrawList( cache._over );
         painter.popOpacity();
         painter.setAnchor( previousAnchor );
         widget._dirtyFlags &= ~Internal::kClearBits;
+        if ( bGlyphDeferred )
+            context._pScratch->_listGlyphRetryWidget.push_back( widget.getID() );
         return paintedCount;
     }
 
