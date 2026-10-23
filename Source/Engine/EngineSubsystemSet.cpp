@@ -83,6 +83,14 @@ namespace sw::engine
         return parts;
     }
 
+    bool initializeBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapParts& parts )
+    {
+        if ( bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+            return false;
+        (void)bootstrap.bind( parts._pDiagnostics->findMemoryProfiler() ); // 진단 도구를 껐으면(배포본) 없어(nullptr) 걸지 않는다 — 선택 행이다
+        return true;
+    }
+
     ServiceParts addServiceSubsystems( SubsystemScope& services, const ServiceSetup& setup )
     {
         // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).

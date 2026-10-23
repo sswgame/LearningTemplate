@@ -123,6 +123,12 @@ namespace sw
         /** @brief @p bootstrap 에 부트스트랩 서브시스템을 넣고 명령줄 · 전역 변수 표를 겁니다. 초기화는 호출한 쪽이 한다. */
         SW_API BootstrapParts addBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapSetup& setup );
 
+        /**
+         * @brief 부트스트랩 범위를 초기화하고 메모리 프로파일러를 서비스 표에 겁니다. 실패하면 false 이고 이유는 `bootstrap.getCollection().getError()` 입니다.
+         * @details 초기화와 프로파일러 걸기를 한 호출로 묶어 호스트마다 따로 기억하지 않게 한다. 실패 로그는 호스트가 제 방식으로 낸다.
+         */
+        SW_API bool initializeBootstrapSubsystems( SubsystemScope& bootstrap, const BootstrapParts& parts );
+
         /** @brief @p services 에 엔진 범위보다 오래 사는 공용 서비스를 넣습니다. 초기화는 호출한 쪽이 한다. */
         SW_API ServiceParts addServiceSubsystems( SubsystemScope& services, const ServiceSetup& setup );
 
