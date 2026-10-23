@@ -38,7 +38,7 @@ namespace sw
      */
     enum class AssetLoadStart : uint8
     {
-        Async,          ///< 낮은 우선순위 워커 태스크로 시작한다(엔진 태스크가 없으면 이 자리에서)
+        Async,          ///< 낮은 우선순위 워커 태스크로 시작한다(엔진 태스크가 없거나 쿠킹 중이면 이 자리에서)
         OnCallingThread ///< 이 자리에서 읽는다(동기 API)
     };
 } // namespace sw
@@ -84,10 +84,16 @@ namespace sw
 
         /**
          * @brief 로드 단계를 시작합니다. `Async` 는 엔진 태스크가 있으면 낮은 우선순위 워커 태스크로, 없으면(테스트 · 도구) 이 자리에서 실행합니다.
-         *        `OnCallingThread` 는 늘 이 자리에서 실행합니다.
+         *        `OnCallingThread` 는 늘 이 자리에서 실행합니다. 쿠킹 중에도 `Async` 를 이 자리에서 실행합니다(`canLoadOnWorker`).
          * @details 태스크는 이 블록을 `shared_ptr` 로 쥐므로 핸들이 먼저 사라져도 해제된 블록에 쓰지 않습니다.
          */
         static void startLoad( const shared_ptr<AssetLoadBlock>& pBlock, AssetLoadStart start );
+        /**
+         * @brief 에셋 읽기를 워커 태스크로 넘길 수 있으면 true 입니다. 엔진 태스크가 없거나(테스트 · 도구) 쿠킹 중(`CookJob::requiresCallingThreadRead`)이면 false 입니다.
+         * @details 쿠킹 작업 범위는 스레드 지역 값이라 워커의 읽기는 작업의 입력에서 빠진다. 읽기를 워커로 보낼지 정하는 곳(`startLoad`, 오디오 디코드,
+         *          스트리밍 큐)은 모두 이 값 하나로 정한다 — 엔진 서비스만 보고 정하면 쿠킹 중에 씬을 세울 때 그 읽기가 실패한다.
+         */
+        static bool canLoadOnWorker();
 
     protected:
         /**

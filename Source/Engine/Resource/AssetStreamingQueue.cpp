@@ -9,6 +9,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Resource/AssetHandle.h"
 #include "Engine/Resource/ResourceIO.h"
 
 namespace sw
@@ -154,7 +155,7 @@ namespace sw
             if ( onComplete.isBound() )
                 _mapInFlightDataCallback[pathStr].push_back( onComplete );
 
-            if ( engine::areEngineServicesBound() )
+            if ( AssetLoadBlock::canLoadOnWorker() )
                 bIssueRead = true;
             else
                 startRequestLocked( pathStr, generation, true, priority );
@@ -226,7 +227,7 @@ namespace sw
 
     void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority )
     {
-        if ( engine::areEngineServicesBound() )
+        if ( AssetLoadBlock::canLoadOnWorker() )
         {
             TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
                 "AssetStreamingTask",
@@ -238,7 +239,7 @@ namespace sw
             return;
         }
 
-        // 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
+        // 엔진 서비스가 없거나(테스트 · 툴) 쿠킹 중이면 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
         vector<uint8> bytes;
         const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( pathStr, bytes ) : ResourceIO::hasResource( pathStr );
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );

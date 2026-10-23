@@ -92,9 +92,14 @@ namespace sw
         return false;
     }
 
+    bool CookJob::requiresCallingThreadRead()
+    {
+        return CookJobInternal::_t_pCurrent != nullptr || CookSession::isActive();
+    }
+
     bool CookJob::admitAsyncRead( string_view resourceID )
     {
-        if ( CookJobInternal::_t_pCurrent == nullptr && CookSession::isActive() == false )
+        if ( requiresCallingThreadRead() == false )
             return true;
         SW_LOG_ERROR( "'%#' was read asynchronously during cooking - its completion is not recorded as an input; cookers read synchronously", resourceID );
         return false;
