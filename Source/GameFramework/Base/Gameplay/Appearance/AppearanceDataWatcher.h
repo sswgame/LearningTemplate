@@ -34,19 +34,17 @@ namespace sw
         AppearanceDataWatcher& operator=( const AppearanceDataWatcher& ) = delete;
 
         /**
-         * @brief 리소스 폴더 @p folder(로드에 쓴 것과 같은 리소스 경로)를 감시합니다. 두 포인터는 소유하지 않고, 이 객체보다 오래 살아야 합니다.
+         * @brief 리소스 폴더 @p folder(로드에 쓴 것과 같은 리소스 경로)를 감시합니다. 데이터베이스와 아이템 카탈로그는 **기억하지 않는다** — 다시 읽을 때마다 `update` 가 부르는 쪽이 넘긴다(소유자보다 오래 사는 포인터가 남지 않는다).
          * @return 감시를 시작했으면 true. 폴더가 디스크에 없거나(팩) 이 플랫폼에 감시자가 없으면 false 입니다.
          */
-        [[nodiscard]] bool initialize( AppearanceDatabase& database, string_view folder, const ItemCatalog* pItemCatalog );
+        [[nodiscard]] bool initialize( string_view folder );
         void               shutdown();
-        /** @brief 쌓인 변경을 꺼내 외형 데이터를 다시 읽습니다. 게임 스레드에서 부릅니다. */
-        void update();
+        /** @brief 쌓인 변경을 꺼내 @p database 를 다시 읽습니다(@p pItemCatalog 는 아이템 외형 확인용). 게임 스레드에서 부릅니다. */
+        void update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog );
         bool isWatching() const { return _pWatcher != nullptr; }
 
     private:
         unique_ptr<IFileWatcher> _pWatcher;
-        AppearanceDatabase*      _pDatabase;
-        const ItemCatalog*       _pItemCatalog;
         string                   _folder; ///< 다시 읽을 리소스 경로
     };
 } // namespace sw

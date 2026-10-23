@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -27,10 +28,13 @@ namespace sw
             EnumRegistrar* _pEnumHead{ nullptr };
         };
 
+        /** @brief 모듈 이름 → 마지막으로 걷은 정적 등록기 머리(핫 리로드가 같은 모듈을 다시 올릴 때 쓴다). 엔진 수명 범위가 소유한다 — 함수 정적이면 종료 보고 뒤까지 남는다. */
+        ScopeOwned<unordered_map<string, ModuleHeadRecord>> s_mapModuleHead;
+
         unordered_map<string, ModuleHeadRecord>& getModuleHeadCache()
         {
-            static unordered_map<string, ModuleHeadRecord> s_mapModuleHead;
-            return s_mapModuleHead;
+            // 모듈 등록 · 해제는 엔진 서비스가 선 동안에만 일어난다(아래가 서비스를 부른다) — 범위는 열려 있다.
+            return *s_mapModuleHead.getOrCreate();
         }
 
         /**

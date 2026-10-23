@@ -1,6 +1,6 @@
 # 조용한 폴백과 남은 같은 결함 감사 (2026-10-22)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 7/14
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 10/14
 
 병합 뒤 감사에서 나온 조용한 폴백과 같은 모양의 결함을 모았습니다. 원칙은 [CLAUDE.md](../../CLAUDE.md) "해결 원칙"입니다 — 필수 값이 없으면 오류로 멈추고, 같은 결함을 쓸 수 없게 형식 · API 를 바꿉니다.
 
@@ -17,6 +17,15 @@
 - **텍스처 임포트 형식**: `TextureImportRule::_format` 은 이름이 아니라 `TextureImportFormat` 이다. 이름은 설정을 읽을 때 한 번 풀고, 임포터의 `resolveFormatInternal` 은 실패가 없다.
 - **빌린 DLL**: `HardwareProbe` 는 dxgi.dll 을 `LoadLibraryExW` 로 참조를 가지고, `RenderDocCapture` 는 주입된 renderdoc.dll 을 고정(`GET_MODULE_HANDLE_EX_FLAG_PIN`)한다.
 
+- **함수 안 정적 컨테이너**: 엔진 `DebugDrawCanvas` · `ModuleTypeRegistry` · `SystemFontLocator`, 에디터 여덟, 게임 프레임워크 `ServerBus` · `OnlinePushRelay` · `MeshModifiersVisualizer` 가 `ScopeOwned<T>` 로 옮겼다. 엔진 수명 범위가 소유하니 종료 누수 보고 전에 비고, 범위가 닫힌 뒤 부르면 `getOrCreate()` 가 nullptr 라 그 호출은 일을 건너뛴다.
+  등록 표(`NavGeometryContributor` · `ISceneService` · `BuiltInAssetCache` · `NetSimGameRegistry` · `EditorExtensionRegistry`)는 옮기지 않았다 — 정적 초기화에서 채워 프로세스 끝까지 살아야 하고, 범위는 그 뒤에야 열린다.
+- **에디터 리소스 id → 디스크 경로**: `CatalogPanel` · `ContentBrowserPanel` · `InspectorPropertyManager` · `EditorDevCommands` · `EditorSceneFileCommands` · `LocalizationTools` 가 루트에 id 를 직접 붙이지 않고 `ResourcePaths::makeAbsolutePath` 를 쓴다(못 정하면 빈 문자열이라 각 자리에서 건너뛴다).
+  루트를 그대로 쓰는 자리(임포터 · 폴더 목록 · 리소스 색인 · 감시자 · 글꼴)는 디스크 루트 자체가 필요해서 남겼다.
+- **외형 데이터베이스 수명**: `CharacterAppearanceState` · `CharacterAppearanceComponent` · `AppearanceDataWatcher` 가 `AppearanceDatabase` 를 날 포인터로 쥐지 않는다. 데이터베이스가 `getInstanceID()`(1부터 세는 원자 번호, 복사 금지)를 갖고, 상태는 번호만 기억하며 갱신 때마다 지금 데이터베이스를 인자로 받는다.
+  번호가 달라지면 상태가 스스로 다시 만든다 — 서비스가 내려갔다 올라와도 허공을 가리키지 않는다. 모양: 빌려 쥐던 것을 쓸 때 건네는 값으로 바꿨다.
+
+**확인 대기(통합에서 확인):** 매니페스트 id `appearance-database-lifetime-tests`(`AppearanceTest.StateRecognizesItsDatabaseByInstanceID` 포함). 컴파일 확인이 필요한 파일은 위 세 항목의 파일 전부다 — 빌드는 통합의 `debug-full-build` 가 돈다.
+
 ## 2. 남은 단위
 
 ### SilentFallbackAudit.RenderTargetFormat
@@ -27,18 +36,8 @@
 ### SilentFallbackAudit.EmulatedSlotTable
 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `Bindless::sampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 담당과 함께 하고 DX11 · GL 화면으로 확인한다.
 
-### SilentFallbackAudit.FunctionStaticCaches
-함수 안 `static` 컨테이너가 남았다(엔진 수명 범위 `ScopeOwned` 로 옮기지 않음). 엔진: `SystemFontLocator`(리눅스 글꼴 색인), `ModuleTypeRegistry` 의 모듈 머리 표, `DebugDrawCanvas` 의 선 버퍼. 에디터: `InspectorPropertyUndo` · `InspectorPropertyManager` · `EditorColliderHandleTool` · `EditorVisualizerGeometry` · `DebugDrawVisualizer` · `EditorViewportBillboard` · `EditorCaptureSteps` · `EditorSettingsRegistry`. GameFramework: `ServerBus` · `OnlinePushRelay` 의 로그 키 집합, `MeshModifiersVisualizer`.
-등록 표(`NavGeometryContributor` · `ISceneService` · `BuiltInAssetCache` · `NetSimGameRegistry` · `EditorExtensionRegistry`)는 정적 초기화에 쓰여 범위가 열리기 전에 불리는지 하나씩 본다. 기준은 [StorageOwnershipLeftovers](Candidates-engine.md#storageownershipleftovers).
-
-### SilentFallbackAudit.EditorResourceRootJoin
-에디터가 리소스 루트(`ResourcePaths::getRootFolderPath`)에 리소스 id 를 직접 붙여 디스크 경로를 만든다(`CatalogPanel` · `ContentBrowserPanel` · `InspectorPropertyManager` · `EditorDevCommands` · `EditorSceneFileCommands` · `LocalizationTools` 등). 붙인 도메인(`mountDiskDomain`)과 게임 폴더를 지나치므로 `ResourcePaths::makeAbsolutePath` 하나로 옮긴다. [DiskPathVsResourceId](DiskPathVsResourceId.md) 의 입구 규칙을 따른다.
-
 ### SilentFallbackAudit.ClientCodeGuard
-렌더러 밖에서 `SW_WITH_CLIENT_CODE` 없이 클라이언트 전용 코드를 부르는 곳. 구조로 막는 길은 서버 타깃이 렌더러 폴더를 짓지 않게 하는 것이고([DedicatedServerNoRenderer](DedicatedServerNoRenderer.md)), 그러면 남은 호출을 컴파일러가 찾는다. 그 계획의 단위로 한다.
-
-### SilentFallbackAudit.AppearanceDatabaseLifetime
-`CharacterAppearanceState` · `CharacterAppearanceComponent` · `AppearanceDataWatcher` 가 외형 데이터베이스를 날 포인터로 빌린다(`_pDatabase` · `_pPreviewDatabase` · `_pReloadDatabase`). 서비스가 먼저 내려가면 허공을 가리킨다. 소유자 수명에 묶인 핸들(서비스 해제 통지 또는 약한 참조)로 바꾼다.
+렌더러 밖에서 `SW_WITH_CLIENT_CODE` 없이 클라이언트 전용 코드를 부르는 곳. 구조로 막는 길은 서버 타깃이 렌더러 폴더를 짓지 않게 하는 것이고([DedicatedServerNoRenderer](DedicatedServerNoRenderer.md)), 그러면 남은 호출을 컴파일러가 찾는다. 그 계획의 단위로 한다(이 계획에서는 코드를 고치지 않는다).
 
 ## 3. 맡기지 않은 것
 

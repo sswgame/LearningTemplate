@@ -5,12 +5,19 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 디버그 큐 선분을 펼치는 재사용 버퍼의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+        ScopeOwned<vector<DebugLine>> s_debugLineOwner;
+    } // namespace
+
     EditorDebugDrawStats& EditorDebugDrawStats::get()
     {
         static EditorDebugDrawStats s_stats;
@@ -36,10 +43,12 @@ namespace sw::editor
     void EditorVisualizerGeometryUtil::appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<EditorWorldSegment>& outListSegment )
     {
         // 펼치는 규칙(구는 축마다 대원 하나)은 큐 한 곳에 있다 — 게임 뷰 겹치기(DebugDrawCanvasUtil)와 같은 선분을 그린다.
-        static vector<DebugLine> s_listLine;
-        s_listLine.clear();
-        queue.appendVisibleSegments( bFlat2D, s_listLine );
-        for ( const DebugLine& line : s_listLine )
+        vector<DebugLine>* const pListLine = s_debugLineOwner.getOrCreate();
+        if ( pListLine == nullptr )
+            return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+        pListLine->clear();
+        queue.appendVisibleSegments( bFlat2D, *pListLine );
+        for ( const DebugLine& line : *pListLine )
         {
             outListSegment.push_back( EditorWorldSegment{ line._from, line._to, line._color } );
         }

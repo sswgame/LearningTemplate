@@ -38,12 +38,11 @@ namespace sw
             {
                 if ( FileUtil::exists( path ) || FileUtil::isDirectory( path ) )
                     return FileUtil::normalizeSeparators( path );
-                // 리소스 루트 아래의 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다.
-                const string underRoot = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
-                if ( FileUtil::exists( underRoot ) || FileUtil::isDirectory( underRoot ) )
-                    return FileUtil::normalizeSeparators( underRoot );
-                const string resolved = ResourcePaths::findLooseFile( path ).getDiskPath();
-                return resolved.empty() ? string( path ) : FileUtil::normalizeSeparators( resolved );
+                // 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
+                const string resolved = ResourcePaths::makeAbsolutePath( path );
+                if ( resolved.empty() == false && ( FileUtil::exists( resolved ) || FileUtil::isDirectory( resolved ) ) )
+                    return FileUtil::normalizeSeparators( resolved );
+                return string( path );
             }
 
             /** @brief 글자 수를 UTF-8 코드 포인트 단위로 셉니다. */

@@ -491,6 +491,11 @@
       "id": "backend-swap-scenarios", "title": "rhiswap/swapbackends · swapother · editor/previewswap 시나리오(창이 교체를 견딘다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["engine/automation/rhiswap/swapbackends.scenario.xml", "engine/automation/rhiswap/swapother.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/AppStructure.md A4 · A7", "result_doc": "docs/plans/AppStructure.md"
+    },
+    {
+      "id": "appearance-database-lifetime-tests", "title": "AppearanceTest 필터(상태가 데이터베이스를 인스턴스 번호로 알아본다) — 날 포인터를 지운 외형 상태 · 컴포넌트 · 감시자", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AppearanceTest.*",
+      "source": "docs/plans/SilentFallbackAudit.md", "result_doc": "docs/plans/SilentFallbackAudit.md"
     }
   ]
 }

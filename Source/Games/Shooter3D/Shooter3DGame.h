@@ -30,6 +30,6 @@ namespace sw
         WeaponCatalog         _weaponCatalog;
         ItemCatalog           _itemCatalog;
         AppearanceDatabase    _appearanceDatabase;
-        AppearanceDataWatcher _appearanceWatcher; ///< 외형 데이터 핫 리로드(데이터보다 먼저 사라진다 — 뒤에 둔다)
+        AppearanceDataWatcher _appearanceWatcher; ///< 외형 데이터 핫 리로드(데이터를 기억하지 않는다 — 부를 때마다 넘긴다)
     };
 } // namespace sw

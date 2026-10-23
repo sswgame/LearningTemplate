@@ -169,7 +169,7 @@ namespace sw
         , _taskUnit{}
         , _previewSelection{}
         , _pPreviewDatabase{ nullptr }
-        , _pReloadDatabase{ nullptr }
+        , _reloadDatabaseID{ 0 }
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
         , _fitTablesLoad{}
@@ -192,9 +192,12 @@ namespace sw
         Component::onBeginPlay();
         _bStarted = SW_TRUE;
         // 핫 리로드: 외형 데이터를 다시 읽으면(`AppearanceDatabase::reloadFromFolder`) 다시 조립한다 — 상태가 데이터 버전으로 다시 해석한다.
-        _pReloadDatabase = game::findSubsystem<AppearanceDatabase>();
-        if ( _pReloadDatabase != nullptr )
-            _reloadSubscription = _pReloadDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
+        AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
+        if ( pDatabase != nullptr )
+        {
+            _reloadDatabaseID   = pDatabase->getInstanceID();
+            _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
+        }
         if ( _presetID.empty() == false )
             requestAssemble();
     }
@@ -236,9 +239,9 @@ namespace sw
         // 데이터베이스는 게임 서비스다 — 모듈을 내릴 때 서비스가 컴포넌트보다 먼저 사라진다. 쥔 포인터로 부르지 않고 지금 서비스를 다시 찾아
         // 같은 것이 살아 있을 때만 뗀다(사라졌으면 구독도 함께 사라졌다).
         AppearanceDatabase* pLiveDatabase = game::findSubsystem<AppearanceDatabase>();
-        if ( pLiveDatabase != nullptr && pLiveDatabase == _pReloadDatabase )
+        if ( pLiveDatabase != nullptr && pLiveDatabase->getInstanceID() == _reloadDatabaseID )
             pLiveDatabase->unregisterReloaded( _reloadSubscription );
-        _pReloadDatabase    = nullptr;
+        _reloadDatabaseID   = 0;
         _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
         // 끝날 때 붙은 부품은 이미 이 오브젝트의 자식으로 함께 지울 예정이다 — 풀에 넣을 수 없다(넣으려면 부르는 쪽이 지우기 전에 `stowParts`).
@@ -459,11 +462,11 @@ namespace sw
             pSlot->_state         = hashed_string{};
         }
         // 해석은 외형 상태 하나가 한다 — 장비 덮어쓰기와 떨어져 나감 판정이 같은 길을 지난다. 데이터 서비스가 바뀌었으면(다시 띄움) 처음부터 다시 잡는다.
-        if ( _state.getDatabase() != pDatabase )
-            _state.initialize( pDatabase, spec );
+        if ( _state.usesDatabase( *pDatabase ) == false )
+            _state.initialize( *pDatabase, spec );
         else
             _state.setSpec( spec );
-        (void)_state.update( _pEquipment ); // 바뀐 것이 없으면 지난 해석을 그대로 쓴다
+        (void)_state.update( *pDatabase, _pEquipment ); // 바뀐 것이 없으면 지난 해석을 그대로 쓴다
         vector<AppearanceDetachEvent> listDetachEvent;
         _state.takeDetachEvents( listDetachEvent );
 

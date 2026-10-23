@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -36,6 +37,11 @@ namespace sw
             };
 
             static bool isNotFound( const string& lastError ) { return string_view( lastError.c_str(), lastError.size() ).find( "not found" ) != string_view::npos; }
+
+            /** @brief 데이터베이스 객체마다 새 번호를 줍니다(0 은 쓰지 않는다 — 외형 상태의 "아직 받지 않음"). */
+            static uint64 takeNextInstanceID() { return s_nextInstanceID.fetch_add( 1 ); }
+
+            inline static atomic<uint64> s_nextInstanceID{ 1 };
         };
     } // namespace
 } // namespace sw
@@ -53,6 +59,7 @@ namespace sw
         , _pItemCatalog{ nullptr }
         , _reloadedMulticast{}
         , _revision{ 0 }
+        , _instanceID{ AppearanceDatabaseInternal::takeNextInstanceID() }
     {
     }
 

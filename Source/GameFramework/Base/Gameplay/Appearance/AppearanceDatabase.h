@@ -45,6 +45,9 @@ namespace sw
         static constexpr const utf8* kDataKind = "appearance";
 
         AppearanceDatabase();
+        /** @brief 복사하지 않는다 — `getInstanceID` 가 이 객체 하나를 가리켜야 한다(외형 상태가 데이터가 바뀌었는지 알아보는 표). */
+        AppearanceDatabase( const AppearanceDatabase& )            = delete;
+        AppearanceDatabase& operator=( const AppearanceDatabase& ) = delete;
 
         /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 소유하지 않고 참조만 하므로 데이터보다 오래 살아 있어야 합니다. */
         [[nodiscard]] bool loadFromFolder( string_view folder, const ItemCatalog* pItemCatalog );
@@ -80,6 +83,11 @@ namespace sw
         const ItemCatalog*                getItemCatalog() const { return _pItemCatalog; }
         const AppearanceLoadReport&       getReport() const { return _report; }
         uint32                            getRevision() const { return _revision; }
+        /**
+         * @brief 이 객체의 번호입니다(만들 때마다 새 번호 — 주소가 재사용돼도 겹치지 않는다).
+         * @details 외형 상태(`CharacterAppearanceState`)는 데이터베이스를 포인터로 들지 않고 이 번호만 기억해 "같은 데이터인가" 를 알아본다. 서비스가 먼저 내려가도 허공을 가리키는 포인터가 남지 않는다.
+         */
+        uint64 getInstanceID() const { return _instanceID; }
 
         /** @brief 아이템의 외형입니다. 형상 변경이 없을 때의 외형이며, 없으면 nullptr 입니다. */
         const ItemVisualDef* findItemVisual( const hashed_string& itemID ) const;
@@ -115,5 +123,6 @@ namespace sw
         const ItemCatalog*         _pItemCatalog;
         MulticastDelegate<void()>  _reloadedMulticast;
         uint32                     _revision;
+        uint64                     _instanceID;
     };
 } // namespace sw

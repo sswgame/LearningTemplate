@@ -40,7 +40,7 @@ namespace sw
             if ( _appearanceDatabase.loadFromFolder( folder, &_itemCatalog ) )
             {
                 // 고친 외형 파일을 실행 중에 다시 읽는다. 팩 데이터면 디스크 폴더가 없어 감시하지 않는다(그 까닭은 감시자가 알린다).
-                (void)_appearanceWatcher.initialize( _appearanceDatabase, folder, &_itemCatalog );
+                (void)_appearanceWatcher.initialize( folder );
                 return true;
             }
             SW_LOG_ERROR( "[Shooter] appearance data report - %#", _appearanceDatabase.getReport().joined().c_str() );
@@ -57,7 +57,7 @@ namespace sw
     void Shooter3DGame::onUpdate( float32 deltaTime )
     {
         GameInstanceBase::onUpdate( deltaTime );
-        _appearanceWatcher.update();
+        _appearanceWatcher.update( _appearanceDatabase, &_itemCatalog );
     }
 } // namespace sw
 
