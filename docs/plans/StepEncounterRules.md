@@ -1,6 +1,6 @@
 # 걸음 조우 판정 하나로
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: G-7 · 진행: 1/2
+> 상태: 끝 · 선행: 없음 · 영역: gameplay · 옛번호: G-7 · 진행: 2/2
 
 Overworld `shouldEncounterOnStep` 의 결정적 주기와 ClassicJRPG `JRPGEncounterWalker` 의 확률 + 유예가 따로 걸음을 세고 판정했습니다. 2026-10-22 사용자 결정으로 착수 조건(오버월드 위에 JRPG · 몬스터 수집 게임)을 갈음했습니다.
 
@@ -14,5 +14,5 @@ Overworld `shouldEncounterOnStep` 의 결정적 주기와 ClassicJRPG `JRPGEncou
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| E1 | 기반 규칙 · 셈, 두 키트 옮기기, 테스트 이름 바꾸기(`StepEncounterCounter::isPeriodicEncounter`) | 끝(빌드 없이 작성) |
-| E2 | 빌드 · `TestClassicJRPG` · `TestGameFramework` 실행(시드 결정성 · 세이브 왕복 케이스가 같은 걸음에 조우하는지) | 남음 |
+| E1 | 기반 규칙 · 셈, 두 키트 옮기기, 테스트 이름 바꾸기(`StepEncounterCounter::isPeriodicEncounter`) | 끝 |
+| E2 | Debug 빌드(경고 0) · `ClassicJRPGTest.*` 8 개, `GameFrameworkTest.Overworld*` · `StateRoundTripContinuesTheSameTileMover` 4 개 통과(시드 결정성 · 세이브 왕복, 2026-10-23) | 끝 |
