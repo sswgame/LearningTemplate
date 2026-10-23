@@ -17,7 +17,7 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | W1 | 위 설계의 코드 — 빌드 옵션 · 프로토콜 생성 · `WaylandWindow` · 입력 갈래 · 표면 종류 · Vulkan WSI · GL 거절 | 코드 완료(빌드 안 함 — Windows 빌드에서는 빈 몸체만 컴파일된다) |
-| W2 | CI 리눅스 잡에서 확인 — 아래 목록. CI 쪽은 넣었다(2026-10-22): 매트릭스 잡 `Build Linux Debug Wayland (Clang)`(`configureArgs: -DSW_ENABLE_WAYLAND=ON`, `reportOnly`) · 단계 `Wayland window layer smoke (Linux)`(weston headless 위 Vulkan 기동 · GL 거절 · 모르는 값 거절) · `setup-build-env` 의 패키지 · vcpkg `vulkan-loader[wayland]` | CI 첫 실행 대기 |
+| W2 | CI 리눅스 잡에서 확인 — 아래 목록. CI 쪽은 넣었다(2026-10-22): 매트릭스 잡 `Build Linux Debug Wayland (Clang)`(`configureArgs: -DSW_ENABLE_WAYLAND=ON`, `reportOnly`) · 단계 `Wayland window layer smoke (Linux)`(weston headless 위 Vulkan 기동 · GL 거절 · 모르는 값 거절) · `setup-build-env` 의 패키지 · vcpkg `vulkan-loader[wayland]` | CI 첫 실행을 기다림 |
 | W3 | 남은 기능 — 포인터 잠금(zwp_pointer_constraints_v1 · zwp_relative_pointer_v1), 화면 배율(wp_fractional_scale_v1 · wl_output.scale), 클립보드(wl_data_device — `UiInputRemaining`), 에디터 ImGui 플랫폼 백엔드(지금 `ImGuiX11PlatformBackend` 뿐), 스플래시 · 개발 콘솔 창(X11 뿐), EGL 로 GL. 착수 조건: W2 의 CI 잡이 W1 코드를 처음 컴파일해 초록이 된 뒤(컴파일 확인 없는 코드를 그 위에 더 쌓지 않는다) | 남음 |
 
 ## 3. CI 에서 확인할 목록(W2)

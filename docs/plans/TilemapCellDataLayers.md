@@ -17,4 +17,4 @@
 |---|---|---|
 | T1 | 형식 · 런타임 조회 · 에디터 페인트 · 테스트 `TileMapXMLTest.DataLayersRoundTripAndRejectBrokenLayers` | 끝 |
 | T2 | Debug 빌드(`all EngineTest`, 에디터 모듈 포함, 경고 0) · `TileMapXMLTest.*` 12 개 통과(2026-10-23) | 끝 |
-| T3 | 에디터에서 레이어 추가 · 칠하기 · 저장 왕복을 눈으로 확인(에디터 시나리오 · `CaptureEditorUI`) | GPU 확인 대기 |
+| T3 | 에디터에서 레이어 추가 · 칠하기 · 저장 왕복을 눈으로 확인(에디터 시나리오 · `CaptureEditorUI`) | 확인 대기: 매니페스트 id `tilemap-layers-editor-roundtrip` |

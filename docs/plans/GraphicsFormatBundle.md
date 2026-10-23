@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: graphics · 옛번호: D2-1, D2-6, D2-7, D2-10 · 진행: 12/12
 
-**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** 셰이더 패치 · 재쿠킹 뒤 네 백엔드 화면(G2 UV 방향 · G5 선 · G6 2D 조명), 골든 다시 뜨기(G1), Release 측정(G3 · G6) — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** 매니페스트 id `render-pass-gpu-tests`, `light2d-cookie-scenario`, `graphics-format-visual-checks`, `golden-record`, `graphics-format-release-cost` — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 후보 `ForwardHdrSceneColor` · `ToonShadingCompletion` · `ViewModeCompletion`(Shaded Wireframe) · `TwoDLightingExtras` · `VrmRuntimeConsumption` 을 옮겨 왔다.
 셰이더 소스를 바꾸는 단위는 워크트리에서 커밋하지 못해 패치로 넘겼고, 통합(2026-10-22, `f33a7f91f`)에서 적용해 쿠킹했다. 다른 패치와 겹친 자리:

@@ -18,7 +18,7 @@
 옛번호: B-13
 왜 필요한가: 측정은 2026-10-13 에 끝나 회귀가 없었지만([검증과 측정](../08_Verification.md) 2절), 테스트가 남았습니다.
 남은 것: S21 · S22 는 Debug 빌드 · 링크까지만 확인했습니다. `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트), Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했음), 에디터 실기동(Present 훅), `assertdialog.scenario.xml`, `-gv_standardInputCommands`.
-실행 대기(통합): `ctest -L nogpu`(Debug) 와 `assertdialog.scenario.xml` · `-gv_standardInputCommands` 시나리오. Linux · `OpenGLRHICommandList.cpp` 는 CI, Shipping 은 Shipping 빌드 한 번, 에디터 실기동(Present 훅)은 창 실행이라 GPU 확인 때 같이 봅니다.
+실행 대기(통합): 매니페스트 id `ctest-nogpu`, `assertdialog-scenario`, `standard-input-commands`. Linux · `OpenGLRHICommandList.cpp` 는 CI, Shipping 은 Shipping 빌드 한 번, 에디터 실기동(Present 훅)은 창 실행이라 GPU 확인 때 같이 봅니다.
 함정: S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없습니다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 봅니다.
 
 ### MultiGamePackVerification
@@ -26,14 +26,14 @@
 옛번호: C-25
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
 남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
-실행 대기(통합): `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드(DX12 · DX11 · Vulkan · GL)로. 통과하면 이 절을 지웁니다.
+실행 대기(통합): 매니페스트 id `game-pack-scenarios`(네 백엔드 DX12 · DX11 · Vulkan · GL). 통과하면 이 절을 지웁니다.
 
 ### NavMeshExtensions
 제목: 3D 내비메시 확장(막는 식생 · AbilityArena 적 · 장애물 캐시)의 실행 확인
 옛번호: D1-3
 왜 필요한가: 셋 다 코드는 들어갔고(2026-10-22) 빌드 · 실행 확인이 남았습니다. 막는 식생은 `FoliageLayer::_navBlockRadius`(`FoliageNavGeometry.cpp`), AbilityArena 적은 프리팹의 `NavMeshAgentComponent`, 장애물 캐시는 에이전트 종류의 `_obstacleMode = TileCache`(`Recast/RecastTileCache.*` — 타일 바이트가 높이 층 묶음이 되고 장애물은 `INavMesh::addCacheObstacle`)입니다.
 남은 것: 테스트 `FoliageTest.BlockingLayerAddsNavObstaclePerInstance` · `NavMeshTileCacheTest.*` 를 돌린다. AbilityArena `ai.scenario.xml` · `control.scenario.xml` 이 내비메시 이동으로도 통과하는지 본다. 장애물 캐시의 상자 요 부호(`NavMeshObstacleComponent::makeCacheObstacle` 의 atan2 와 Detour `addBoxObstacle` 의 `yRadians`)가 맞는지 돌린 직사각 장애물로 본다. 장애물이 많은 장면에서 다시 굽기와 캐시의 `GT.Navigation.*` 시간을 견준다 — 층은 압축하지 않는다(저장 압축기, 메모리는 타일마다 층 크기 × 3 바이트).
-실행 대기(통합): `FoliageTest.BlockingLayerAddsNavObstaclePerInstance` · `NavMeshTileCacheTest.*` 와 AbilityArena `ai.scenario.xml` · `control.scenario.xml`. 상자 요 부호 확인과 `GT.Navigation.*` 시간 견주기는 직사각 장애물 장면 · 측정이 필요해 시나리오가 없으면 테스트부터 만듭니다.
+실행 대기(통합): 매니페스트 id `foliage-navmesh-tests`, `ability-arena-ai-control-scenarios`, `navmesh-obstacle-yaw-and-time`. 상자 요 부호 확인과 `GT.Navigation.*` 시간 견주기는 직사각 장애물 장면 · 측정이 필요해 시나리오가 없으면 테스트부터 만듭니다.
 
 ### StorageOwnershipLeftovers
 제목: 저장소 소유 정리의 잰 뒤에 정할 것

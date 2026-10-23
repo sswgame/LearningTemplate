@@ -111,6 +111,7 @@ cd build/Ninja-Debug/Bin
 - **성능은 Release 로 측정한다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 측정한다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 비교하면 기계 상태가 결과로 읽힌다.
 - **측정 명령**(Release · VSync 꺼짐, 측정하는 동안 다른 빌드를 막는다):
+  - 묶어서 한 번에 — `py -3 -m Scripts verify-batch --owner <이름> [--config Release] [--only <id>…]`(`--list` · `--check` · `--dry-run`). 아래 명령과 ctest · 테스트 필터를 `Test/QA/VerifyBatch.json` 의 항목(종류 · 구성 · GPU 잠금 · 한계 · 결과를 옮길 문서)으로 구성별로 이어 돌려 `build/verify-batch/<시각>/result.md` 에 표 하나(항목 · 값 · 한계 · 통과/실패 · 측정 환경 · 날짜)를 남긴다. 새 측정은 그 파일에 항목을 더한다(한 명령으로 안 도는 것은 `need_command`).
   - 전 · 후 비교 — `py -3 -m Scripts perf-compare --app <후>/App.exe [--app-before <전>/App.exe] [--cases <이름…>] [--runs N]`. 케이스마다 A · B 를 번갈아 재고
     구간 · `[Bench]` 값의 중앙값 표를 낸다. `--app-before` 가 없으면 같은 바이너리의 `-gv_` 스위치 A/B 케이스만 돈다.
   - 이 기계의 기준과 견주기 — `py -3 -m Scripts perf`(프레임 p50 · p99).
