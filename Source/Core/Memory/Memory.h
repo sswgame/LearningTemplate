@@ -33,6 +33,12 @@ namespace sw
     {
         uint64 _callStackHash{ 0 }; ///< 해제 때 그대로 돌려받는 콜 스택 해시(세부 추적이 꺼져 있으면 0)
         bool   _bCounted{ false };  ///< 기록기가 이 블록을 세었으면 true. 그때만 해제를 기록기에 알린다
+        /**
+         * @brief 기록기가 이 블록에 붙인 스탬프입니다(0 이면 없음). 할당기는 뜻을 모르고 블록 헤더에 적어 두었다가 해제 때 그대로 돌려줍니다.
+         * @details 기록기는 이것으로 "측정 창 안에서 태어난 블록인가" 를 가립니다(`MemoryProfiler::beginLeakWindow`). 창 밖에서 태어난 오래된 블록의
+         *          해제가 창 안의 증가를 상쇄하지 않게 하는 근거입니다.
+         */
+        uint32 _windowStamp{ 0 };
     };
 } // namespace sw
 
@@ -62,8 +68,8 @@ namespace sw
          * @return 센 여부와 할당 헤더에 적어 둘 콜 스택 해시(해제 때 그대로 돌려받는다)
          */
         [[nodiscard]] virtual AllocationRecord recordAllocation( void* pPtr, size_t size, MemoryTag tag ) = 0;
-        /** @brief 해제 하나를 기록합니다. 이 기록기가 센(`_bCounted`) 블록만 옵니다. @p callStackHash 는 할당 때 돌려준 값입니다. */
-        virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash ) = 0;
+        /** @brief 해제 하나를 기록합니다. 이 기록기가 센(`_bCounted`) 블록만 옵니다. @p born 은 할당 때 돌려준 값 그대로입니다(콜 스택 해시 · 스탬프). */
+        virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, const AllocationRecord& born ) = 0;
 
         /** @brief 이 기록기의 번호입니다. 같은 주소에 새로 만든 기록기도 번호가 다릅니다. */
         uint64 getTrackerID() const { return _trackerID; }
