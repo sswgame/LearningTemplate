@@ -131,10 +131,11 @@
         "RHIDeviceTest.BackendSweepVisitsEveryBackendThatStandsUp",
         "RHIDeviceTest.CommandListCreationAndExecution",
         "RHIDeviceTest.BindlessResourceLifecycle",
-        "RHIDeviceTest.UploadTexture2DAllBackends"
+        "RHIDeviceTest.UploadTexture2DAllBackends",
+        "WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr"
       ],
       "softwareRenderSeconds": 120,
-      "_softwareRenderCasesReason": "GPU 없는 CI 러너가 소프트웨어 렌더러(WARP · lavapipe/llvmpipe)로 도는 첫 묶음 — 백엔드마다 디바이스를 세우고 명령 목록 · bindless 등록 · 업로드를 지난다. 픽셀을 읽어 비교하는 케이스는 넣지 않았다(TestRHIDevice.cpp 머리말: WARP 에서 픽셀 검증이 진다). 초는 추정이다 — CI 의 첫 실행에서 재고 고친다.",
+      "_softwareRenderCasesReason": "GPU 없는 CI 러너가 소프트웨어 렌더러(WARP · lavapipe/llvmpipe)로 도는 첫 묶음 — 백엔드마다 디바이스를 세우고 명령 목록 · bindless 등록 · 업로드를 지난다. 픽셀을 읽어 비교하는 케이스는 넣지 않았다(TestRHIDevice.cpp 머리말: WARP 에서 픽셀 검증이 진다). WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr 는 창만 있으면 되는 케이스라 xvfb 가 있는 리눅스 러너가 도는 X11 클립보드 왕복(INCR 포함)이다(Windows 에서는 건너뛴다). 초는 추정이다 — CI 의 첫 실행에서 재고 고친다.",
       "caseCosts": {
         "NetSimDestructionMatrixTest.MediumLossLinkConverges": 16,
         "NetSimDestructionMatrixTest.HeavyLossDuplicateReorderLinkConverges": 15,

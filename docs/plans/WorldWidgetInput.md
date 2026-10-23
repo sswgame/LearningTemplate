@@ -2,6 +2,8 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: ui · 옛번호: G-3 · 진행: 4/4
 
+**남은 확인(통합에서 확인):** 매니페스트 id `ui-input-real-device`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+
 World 위젯(`WidgetComponent` 의 `Space = World`)은 그리기만 했다. 마우스로 월드의 단추를 누르거나, 화면 마커가 벽에 가려지면 숨는 길이 없었다. 언리얼의 `WidgetInteractionComponent` 에 해당하는 광선 → 위젯 좌표 길과 물리 씬 가림 판정을 넣었다.
 
 ## 1. 단위

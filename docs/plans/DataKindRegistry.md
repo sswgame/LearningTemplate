@@ -2,6 +2,8 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-1.2 · 진행: 5/5
 
+**남은 확인(통합에서 확인):** 매니페스트 id `resource-data-schema-test`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+
 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표(`kArrDataKind`, `Test/EngineTest/Resource/TestResourceDataSchema.cpp`)에 있습니다.
 로더가 `ResourceDataKindUtil::loadCatalog<T>` 인 줄은 판정 함수가 접미 하나뿐이라 기계적으로 `SW_RESOURCE_DATA_KIND` 로 옮길 수 있습니다.
 옮기기로 한 까닭과 걸림돌 셋은 [결정 기록](../09_Decisions.md) 5-11 "엔진 데이터 종류의 레지스트리 이전과 Engine 열거자 이름 표 통합은 미룹니다" 에 있습니다.
@@ -18,10 +20,10 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| DK1 | 오디오 셋(`audiomixer` · `audioevents` · `audiomusic`)을 각 타입 .cpp 로 옮김(빌드 · `ResourceDataSchemaTest` 확인 대기) | 없음 |
-| DK2 | 애니메이션 셋(`referencepose` · `bodyshape` · `animationlod` · `animationcrowd` · `vertexanimation` · `lipsync` · `visemes` · `facial` · `socketkinds`) — 옮김(빌드 · `ResourceDataSchemaTest` 확인 대기) | DK1 |
-| DK3 | UI 셋(`fontcatalog` · `uiscale` · `uithemes`) — 옮김(같은 확인 대기) | DK1 |
-| DK4 | 나머지 카탈로그(`navmeshsettings` · `telemetryschema` · `surfacechannels` · `destruction`) — 옮김(같은 확인 대기) | DK1 |
+| DK1 | 오디오 셋(`audiomixer` · `audioevents` · `audiomusic`)을 각 타입 .cpp 로 옮김(확인은 머리의 매니페스트 id) | 없음 |
+| DK2 | 애니메이션 셋(`referencepose` · `bodyshape` · `animationlod` · `animationcrowd` · `vertexanimation` · `lipsync` · `visemes` · `facial` · `socketkinds`) — 옮김(확인은 머리의 매니페스트 id) | DK1 |
+| DK3 | UI 셋(`fontcatalog` · `uiscale` · `uithemes`) — 옮김(같은 확인) | DK1 |
+| DK4 | 나머지 카탈로그(`navmeshsettings` · `telemetryschema` · `surfacechannels` · `destruction`) — 옮김(같은 확인) | DK1 |
 | DK5 | 카탈로그가 아닌 로더 줄(함수 판정 · 테스트 전용 판단이 든 줄)을 줄마다 옮길지 표에 남길지 정함 — 정함(4절). 순수 `loadFromResource` 이고 전용 편집기가 없는 `physicssettings` · `render2d` 둘만 더 옮김 | DK2 ~ DK4 |
 
 ## 3. DK5 결정 — 표에 남기는 줄과 까닭
