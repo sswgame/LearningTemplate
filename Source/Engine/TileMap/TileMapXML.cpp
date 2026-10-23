@@ -45,21 +45,25 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
+            /** @brief 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)인지 봅니다. */
+            [[nodiscard]] static bool isListSpace( const utf8 character )
+            {
+                return character == ' ' || character == '\n' || character == '\r' || character == '\t';
+            }
+
             /** @brief 공백으로 나눈 정수들(부호 허용)을 읽습니다. 숫자가 아닌 조각이 있으면 false 입니다. */
             [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
             {
                 outListValue.clear();
-                auto isSpaceAt = [&text]( size_t index )
-                { return text[index] == ' ' || text[index] == '\n' || text[index] == '\r' || text[index] == '\t'; };
                 size_t cursor = 0;
                 while ( cursor < text.size() )
                 {
-                    while ( cursor < text.size() && isSpaceAt( cursor ) )
+                    while ( cursor < text.size() && isListSpace( text[cursor] ) )
                     {
                         ++cursor;
                     }
                     const size_t start = cursor;
-                    while ( cursor < text.size() && isSpaceAt( cursor ) == false )
+                    while ( cursor < text.size() && isListSpace( text[cursor] ) == false )
                     {
                         ++cursor;
                     }
