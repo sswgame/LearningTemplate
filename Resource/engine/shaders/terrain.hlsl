@@ -32,7 +32,7 @@ SW_MATERIAL_BEGIN
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "terrain.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "terrain.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 기본 PBR 조명, 사용자 보간 칸 없음.
@@ -47,15 +47,15 @@ float4 normalizeWeights( float4 weight )
     return ( total <= 1e-5f ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : weight / total;
 }
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    const float3   normal   = context.normal;
-    SwMaterialData material = context.material;
+    const float3 normal   = context.normal;
+    MaterialData material = context.material;
 
     // 스플랫 — 텍셀 중심을 지형 가장자리에 맞춘다.
     const float  splatWidth = material.terrainParams.x;
     const float2 splatUv    = ( splatWidth > 1.0f ) ? context.uv * ( ( splatWidth - 1.0f ) / splatWidth ) + 0.5f / splatWidth : context.uv;
-    float4       weight     = ( material.splatMap == kInvalidIndex ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : swSampleMaterialTexture( material.splatMap, splatUv );
+    float4       weight     = ( material.splatMap == kInvalidIndex ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : MaterialTexture::sampleIndex( material.splatMap, splatUv );
     weight                  = normalizeWeights( weight );
 
     // 절벽 — 노멀 y 가 문턱 아래로 내려갈수록 절벽 레이어가 덮는다.
@@ -70,9 +70,9 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
 
     // 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
     const float  tiling      = material.terrainParams.y;
-    const float4 detailTop   = swSampleMaterialTexture( material.detailMap, context.worldPosition.xz * tiling );
-    const float4 detailFront = swSampleMaterialTexture( material.detailMap, context.worldPosition.xy * tiling );
-    const float4 detailSide  = swSampleMaterialTexture( material.detailMap, context.worldPosition.zy * tiling );
+    const float4 detailTop   = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xz * tiling );
+    const float4 detailFront = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xy * tiling );
+    const float4 detailSide  = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.zy * tiling );
     float3       axisWeight  = pow( abs( normal ), 4.0f );
     axisWeight /= max( axisWeight.x + axisWeight.y + axisWeight.z, 1e-5f );
     const float4 detailTriplanar = detailSide * axisWeight.x + detailTop * axisWeight.y + detailFront * axisWeight.z;
@@ -83,10 +83,10 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
     float3 albedo = material.layer0Color.rgb * shade.x * weight.x + material.layer1Color.rgb * shade.y * weight.y + material.layer2Color.rgb * shade.z * weight.z +
                     material.layer3Color.rgb * shade.w * weight.w;
     // 큰 무늬 — 같은 디테일 맵을 훨씬 넓게 찍어 타일 반복을 깬다.
-    const float macro = swSampleMaterialTexture( material.detailMap, context.worldPosition.xz * tiling * 0.071f ).x;
+    const float macro = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xz * tiling * 0.071f ).x;
     albedo *= lerp( 0.85f, 1.12f, macro );
 
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = float4( albedo, 1.0f );
     surface.normal    = normal;
     surface.roughness = kSurfaceRoughness;

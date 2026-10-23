@@ -19,7 +19,7 @@ namespace sw
             /** @brief 행벡터 규약으로 점을 클립 공간으로 옮깁니다(셰이더 `mul( float4( p, 1 ), m )`). */
             static float4 computeClip( const float3& position, const float4x4& matrix ) { return float4::transform( float4{ position._x, position._y, position._z, 1.0f }, matrix ); }
 
-            /** @brief NDC 한 축의 값을 칸 번호로 바꿉니다(셰이더 `swComputeLightGridTile` 과 같은 식, 양 끝은 자른다). */
+            /** @brief NDC 한 축의 값을 칸 번호로 바꿉니다(셰이더 `LightGrid::computeTile` 과 같은 식, 양 끝은 자른다). */
             static uint32 computeTile( float32 ndc, uint32 dimension )
             {
                 const float32 position = MathUtil::saturate( ndc * 0.5f + 0.5f ) * static_cast<float32>( dimension );

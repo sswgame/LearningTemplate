@@ -31,7 +31,7 @@ namespace sw
                 return result;
             }
 
-            /** @brief 셰이더 `swEvaluateSphericalHarmonics` 와 같은 식으로 GPU 원소를 평가합니다(채널 하나). */
+            /** @brief 셰이더 `LightProbe::evaluateSphericalHarmonics` 와 같은 식으로 GPU 원소를 평가합니다(채널 하나). */
             static float32 evaluateGPUChannel( const float4 ( &arrElement )[SH9Color::kGPUFloat4Count], uint32 channel, const float3& normal )
             {
                 const float4& linear    = arrElement[channel];
@@ -124,7 +124,7 @@ SW_TEST_CASE( SphericalHarmonicsTest, ProjectionIsDeterministicAndAdditive )
 
 /**
  * @brief [SphericalHarmonicsTest] GPU 원소를 셰이더 식으로 평가하면 조도 / π 와 같다
- * @details 셰이더 `swEvaluateSphericalHarmonics`(lighting.hlsli)와 C++ `makeGPUElement` 의 상수 접기가 어긋나면 프로브가 엉뚱한 밝기로 비춘다.
+ * @details 셰이더 `LightProbe::evaluateSphericalHarmonics`(lighting.hlsli)와 C++ `makeGPUElement` 의 상수 접기가 어긋나면 프로브가 엉뚱한 밝기로 비춘다.
  */
 SW_TEST_CASE( SphericalHarmonicsTest, GPUElementEvaluatesToIrradianceOverPi )
 {

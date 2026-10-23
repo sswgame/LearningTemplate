@@ -13,7 +13,7 @@
 // 보기 모드 Roughness · Metallic 이 보이는 값 — 물은 매끈한 유전체다.
 static const float kSurfaceRoughness = 0.0f;
 static const float kSurfaceMetallic  = 0.0f;
-// 물 몸통(swShadeLights)의 거칠기 — 몸통은 확산만 받고 반사는 프레넬 · 주광 반사가 따로 한다(같은 빛이 두 번 반짝이지 않게 가장 거친 값).
+// 물 몸통(Lighting::shadeLights)의 거칠기 — 몸통은 확산만 받고 반사는 프레넬 · 주광 반사가 따로 한다(같은 빛이 두 번 반짝이지 않게 가장 거친 값).
 static const float kBodyRoughness = 1.0f;
 #include "gerstner.hlsli"
 
@@ -33,7 +33,7 @@ SW_MATERIAL_BEGIN
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "water.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "water.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값은 사용자 보간 칸으로 넘긴다. 조명(몸통 + 프레넬 + 주광 반사 + 거품)은 직접 정의한다.
@@ -52,7 +52,7 @@ struct MaterialVaryings
 #include "materialshader.hlsli"
 
 /** @brief 거스트너 파도 넷(머티리얼 프로퍼티)입니다. */
-void loadWaves( SwMaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_COUNT] )
+void loadWaves( MaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_COUNT] )
 {
     outArrWave[0] = material.wave0;
     outArrWave[1] = material.wave1;
@@ -61,23 +61,23 @@ void loadWaves( SwMaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_
 }
 
 /** @brief 월드 위치 오프셋 — 파도 변위. 파도는 월드 (x, z) 의 함수다(CPU 질의 WaterWaveMath 가 같은 원점으로 같은 값을 낸다). */
-float3 computeWorldPositionOffset( SwVertexContext context )
+float3 computeWorldPositionOffset( VertexContext context )
 {
     float4 arrWave[SW_GERSTNER_WAVE_COUNT];
     loadWaves( context.material, arrWave );
-    return swComputeGerstnerDisplacement( context.worldPosition.xz, context.material.waterParams.x, context.material.waveParams.x, arrWave );
+    return Gerstner::computeDisplacement( context.worldPosition.xz, context.material.waterParams.x, context.material.waveParams.x, arrWave );
 }
 
-MaterialVaryings computeMaterialVaryings( SwVertexContext context )
+MaterialVaryings computeMaterialVaryings( VertexContext context )
 {
-    const SwMaterialData material = context.material;
-    float4               arrWave[SW_GERSTNER_WAVE_COUNT];
+    const MaterialData material = context.material;
+    float4             arrWave[SW_GERSTNER_WAVE_COUNT];
     loadWaves( material, arrWave );
     const float time = material.waterParams.x;
 
     MaterialVaryings varyings;
     // 파도는 월드 (x, z) 의 함수다 — 변위를 더하기 전의 원점으로 노멀을 구한다.
-    varyings.waveNormal = swComputeGerstnerNormal( context.worldPosition.xz, time, material.waveParams.x, arrWave );
+    varyings.waveNormal = Gerstner::computeNormal( context.worldPosition.xz, time, material.waveParams.x, arrWave );
 
     const float depth       = max( context.input.color.a, 0.0f );
     const float depthFactor = saturate( depth / max( material.waterParams.y, 1e-3f ) );
@@ -106,11 +106,11 @@ float3 computeRippleNormal( float2 position, float time, float2 flow )
     return normalize( float3( -slope.x, 1.0f, -slope.y ) );
 }
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
     const float3 rippleNormal = computeRippleNormal( context.worldPosition.xz, context.user.shading.y, context.user.flow );
 
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = float4( context.user.waterColor.rgb, 1.0f );
     surface.normal    = normalize( lerp( context.user.waveNormal, normalize( context.user.waveNormal + rippleNormal - float3( 0.0f, 1.0f, 0.0f ) ), context.user.shading.z ) );
     surface.roughness = kSurfaceRoughness;
@@ -118,7 +118,7 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
     return surface;
 }
 
-float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     const float3 normal = surface.normal;
     const float3 toView = normalize( context.user.toView );
@@ -131,8 +131,8 @@ float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surfac
     const float3 body     = context.user.waterColor.rgb;
     const float  specular = 0.0f;
 #else
-    const float  shadow = swSampleShadowAtWorld( context.worldPosition, normal );
-    const float3 body   = swShadeLights( context.user.waterColor.rgb, context.worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
+    const float  shadow = Shadow::sampleAtWorld( context.worldPosition, normal );
+    const float3 body   = Lighting::shadeLights( context.user.waterColor.rgb, context.worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
 
     // 주광의 반사(블린-퐁) — 물은 매끈하다.
     const float3 toLight  = normalize( -g_KeyLightDirIntensity.xyz );

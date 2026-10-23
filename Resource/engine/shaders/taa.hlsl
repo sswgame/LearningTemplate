@@ -13,7 +13,7 @@ struct PSInput
     float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -25,7 +25,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float3 current = swSampleSourcePoint( input.uv ).rgb;
+    const float3 current = PassTexture::sampleSourcePoint( input.uv ).rgb;
 
     // 이웃 범위 — 기록이 이번 그림에 없는 색(앞 그림 · 움직인 물체)이면 이 안으로 잘린다.
     float3 neighborMin = current;
@@ -34,14 +34,14 @@ float4 PSMain( PSInput input ) : SV_TARGET
     {
         SW_UNROLL for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
-            const float3 neighbor = swSampleSourcePoint( input.uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
+            const float3 neighbor = PassTexture::sampleSourcePoint( input.uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
             neighborMin           = min( neighborMin, neighbor );
             neighborMax           = max( neighborMax, neighbor );
         }
     }
 
     // 재투영 — 이 픽셀이 지난 프레임에 있던 화면 자리.
-    const float  depth     = swSampleDepthPoint( input.uv ).r;
+    const float  depth     = PassTexture::sampleDepthPoint( input.uv ).r;
     const float2 ndcXy     = input.uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
     const float4 world     = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
     const float4 prevClip  = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
@@ -49,7 +49,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float2 prevUv    = prevNdc * float2( 0.5f, -0.5f ) + 0.5f;
     const bool   bOnScreen = prevClip.w > 0.0f && all( prevUv >= 0.0f ) && all( prevUv <= 1.0f );
 
-    const float3 history = clamp( swSampleAlbedo( prevUv ).rgb, neighborMin, neighborMax );
+    const float3 history = clamp( PassTexture::sampleAlbedo( prevUv ).rgb, neighborMin, neighborMax );
     // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motionblur.hlsl).
     const float weight = bOnScreen ? kHistoryWeight : 0.0f;
     return float4( lerp( current, history, weight ), 1.0f );

@@ -8,14 +8,14 @@
  *
  *          **외곽선은 같은 파일의 다른 퍼뮤테이션이다**(`SW_PASS_MESH_OUTLINE` — 메시 외곽선 패스가 얹는다). 뒤집은 껍질(inverted hull):
  *          정점을 노멀 방향으로 밀어 앞면을 컬링해 그린다(컬 모드는 패스가 정한다). 두께는 월드(미터) 또는 화면(화면 높이 비율, 거리와 무관)이다.
- *          정점은 모프 · 스키닝 결과를 읽으므로(swLoadMorphedVertex) 움직이는 메시에서도 껍질이 따라간다. 외곽선 패스는 퍼뮤테이션에
+ *          정점은 모프 · 스키닝 결과를 읽으므로(MorphPool::loadVertex) 움직이는 메시에서도 껍질이 따라간다. 외곽선 패스는 퍼뮤테이션에
  *          `MATERIAL_OUTLINE` 이 있는 배치만 그린다(RenderPassTypeInfo 의 `_pRequiredMaterialDefine`).
  *
  *          **머티리얼은 한 스테이지에서만 읽는다**(GL 은 구조버퍼를 두 단계가 읽으면 링크를 거절한다). 기본 퍼뮤테이션은 픽셀이,
  *          외곽선 퍼뮤테이션은 정점이 읽어(두께가 정점에 필요하다) 픽셀이 쓸 값을 보간 칸으로 넘긴다.
  *
  *          **알파 컷오프 머티리얼은 깊이 패스도 이 파일로 그린다**(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS` — `FrameRendererUtil::drawsDepthWithMaterialShader`).
- *          shadowdepth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(swLoadMorphedVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
+ *          shadowdepth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(MorphPool::loadVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
  *          컬러 출력이 없어 픽셀 셰이더는 `clip` 만 한다.
  *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
@@ -102,7 +102,7 @@ float3 applyNormalMap( uint normalMap, float normalScale, float2 uv, float3 norm
 {
     if ( normalMap == kInvalidIndex )
         return normal;
-    float3 tangentNormal = swSampleMaterialTexture( normalMap, uv ).xyz * 2.0f - 1.0f;
+    float3 tangentNormal = MaterialTexture::sampleIndex( normalMap, uv ).xyz * 2.0f - 1.0f;
     tangentNormal.xy *= normalScale;
     const float3 orthogonalTangent = tangent.xyz - normal * dot( normal, tangent.xyz );
     const float  tangentLength     = length( orthogonalTangent );
@@ -119,7 +119,7 @@ float linearStep( float lower, float upper, float value )
     return saturate( ( value - lower ) / max( upper - lower, 1e-4f ) );
 }
 
-/** @brief 환경광(PassCB 키라이트의 앰비언트 — swShadeLights 와 같은 값)입니다. */
+/** @brief 환경광(PassCB 키라이트의 앰비언트 — Lighting::shadeLights 와 같은 값)입니다. */
 float3 computeAmbient()
 {
     return g_KeyLightColor.rgb * g_KeyLightColor.a;
@@ -128,26 +128,26 @@ float3 computeAmbient()
 /**
  * @brief 빛 목록 전부의 툰 셰이딩 합과 직접광의 합을 구합니다.
  * @param outDirectLighting 빛마다의 색 × 세기 × 감쇠 합(그림자 · 노멀과 무관) — 림 · 외곽선이 빛을 섞을 때 쓴다
- * @details 빛은 커서(lighting.hlsli swBeginLights)로 돈다. 3D 빛이 없으면 0 이다(swShadeLights 와 같은 규칙 — 키라이트로 대신하지 않는다).
+ * @details 빛은 커서(lighting.hlsli LightCursor::begin)로 돈다. 3D 빛이 없으면 0 이다(Lighting::shadeLights 와 같은 규칙 — 키라이트로 대신하지 않는다).
  */
 float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition, float3 normal, float shadow, float shadingShift, float shadingToony,
                         float shadowReceive, out float3 outDirectLighting )
 {
-    float3        color          = float3( 0.0f, 0.0f, 0.0f );
-    float3        directLighting = float3( 0.0f, 0.0f, 0.0f );
-    const float   lower          = -1.0f + shadingToony;
-    const float   upper          = 1.0f - shadingToony;
-    SwLightCursor cursor         = swBeginLights( worldPosition );
-    SwLightData   light;
-    while ( swNextLight( cursor, light ) )
+    float3      color          = float3( 0.0f, 0.0f, 0.0f );
+    float3      directLighting = float3( 0.0f, 0.0f, 0.0f );
+    const float lower          = -1.0f + shadingToony;
+    const float upper          = 1.0f - shadingToony;
+    LightCursor cursor         = LightCursor::begin( worldPosition );
+    LightData   light;
+    while ( cursor.next( light ) )
     {
         float3 toLight;
         float  attenuation;
-        if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
+        if ( light.computeIncidence( worldPosition, toLight, attenuation ) == false )
             continue;
 
-        // 그림자는 그것을 받는 빛(params.x)마다다 — 방향광은 캐스케이드, 점광 · 스폿은 자기 타일(swComputeLightShadow). 계단을 지난 뒤에 곱한다(MToon 1.0) — 그림자 경계도 그림자색으로 떨어진다.
-        const float  shadowTerm = lerp( 1.0f, swComputeLightShadow( light, worldPosition, normal, shadow ), shadowReceive );
+        // 그림자는 그것을 받는 빛(params.x)마다다 — 방향광은 캐스케이드, 점광 · 스폿은 자기 타일(LightData::computeShadow). 계단을 지난 뒤에 곱한다(MToon 1.0) — 그림자 경계도 그림자색으로 떨어진다.
+        const float  shadowTerm = lerp( 1.0f, light.computeShadow( worldPosition, normal, shadow ), shadowReceive );
         const float  shading    = linearStep( lower, upper, dot( normal, toLight ) + shadingShift ) * shadowTerm;
         const float3 radiance   = light.colorIntensity.rgb * light.colorIntensity.a * attenuation;
         color += lerp( shadeColor, litColor, shading ) * radiance;
@@ -162,14 +162,14 @@ float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition
  */
 float3 computeDirectLighting( float3 worldPosition )
 {
-    float3        directLighting = float3( 0.0f, 0.0f, 0.0f );
-    SwLightCursor cursor         = swBeginLights( worldPosition );
-    SwLightData   light;
-    while ( swNextLight( cursor, light ) )
+    float3      directLighting = float3( 0.0f, 0.0f, 0.0f );
+    LightCursor cursor         = LightCursor::begin( worldPosition );
+    LightData   light;
+    while ( cursor.next( light ) )
     {
         float3 toLight;
         float  attenuation;
-        if ( swComputeLightIncidence( light, worldPosition, toLight, attenuation ) == false )
+        if ( light.computeIncidence( worldPosition, toLight, attenuation ) == false )
             continue;
         directLighting += light.colorIntensity.rgb * light.colorIntensity.a * attenuation;
     }
@@ -192,11 +192,11 @@ float2 computeMatcapUv( float3 normal, float3 viewDirection )
  * @brief MToon UV 애니메이션을 적용한 UV 입니다 — (0.5, 0.5) 를 중심으로 돌린 뒤 스크롤한다. 마스크(b)가 0 인 텍셀은 움직이지 않습니다.
  * @details 시계는 PassCB g_SwMaterialTime(장면 애니메이션 시계)이다. 맷캡 UV 와 외곽선(정점이 머티리얼을 읽는 퍼뮤테이션)에는 적용하지 않는다.
  */
-float2 computeAnimatedUv( SwMaterialData material, float2 uv )
+float2 computeAnimatedUv( MaterialData material, float2 uv )
 {
     // VRMC_materials_mtoon-1.0 "Transform Order" 의 식 그대로다(three-vrm mtoon.frag 와 같다): 먼저 (0.5, 0.5) 중심으로 돌리고 그 뒤에 스크롤한다.
     // 회전 행렬은 [ cos sin ; -sin cos ] — U 오른쪽 · V 아래 공간에서 반시계(KHR_texture_transform 과 같은 방향)다. 마스크는 각과 스크롤 양 모두에 곱한다.
-    const float  mask     = swSampleMaterialTexture( material.uvAnimationMaskMap, uv ).b;
+    const float  mask     = MaterialTexture::sampleIndex( material.uvAnimationMaskMap, uv ).b;
     const float  angle    = material.uvAnimationRotationSpeed * g_SwMaterialTime * mask;
     const float  cosAngle = cos( angle );
     const float  sinAngle = sin( angle );
@@ -216,29 +216,29 @@ float2 computeAnimatedUv( SwMaterialData material, float2 uv )
  *          (outlineMaxDistance 를 넘으면 멀수록 가늘어진다). 화면 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다. 시선을 바로 보는 면(노멀이 카메라 쪽)은
  *          밀어도 실루엣이 안 생기고 안쪽에 얼룩만 남으니 줄인다(MToon 과 같다).
  */
-SwOutlineOffset computeMaterialOutline( SwVertexContext context )
+OutlineOffset computeMaterialOutline( VertexContext context )
 {
     // 두께 곱 텍스처(MToon outlineWidthMultiplyTexture)는 g 를 쓴다. 정점이라 밉 0 으로 읽는다. 없으면 흰색이라 1 이다.
-    const float     outlineWidth = context.material.outlineWidth * swSampleMaterialTextureLevelZero( context.material.outlineWidthMap, context.input.uv ).g;
-    const bool      bScreenWidth = context.material.outlineWidthMode > 0.5f;
-    SwOutlineOffset offset;
+    const float   outlineWidth = context.material.outlineWidth * MaterialTexture::sampleLevelZero( context.material.outlineWidthMap, context.input.uv ).g;
+    const bool    bScreenWidth = context.material.outlineWidthMode > 0.5f;
+    OutlineOffset offset;
     offset.worldOffset = bScreenWidth ? float3( 0.0f, 0.0f, 0.0f ) : context.worldNormal * outlineWidth;
     offset.clipOffset  = float2( 0.0f, 0.0f );
     if ( bScreenWidth )
     {
-        const float4 clipPosition = swComputeClipPosition( float4( context.worldPosition, 1.0f ), g_ViewProj );
+        const float4 clipPosition = Transform::computeClipPosition( float4( context.worldPosition, 1.0f ), g_ViewProj );
         const float2 clipNormal   = mul( float4( context.worldNormal, 0.0f ), g_ViewProj ).xy;
         const float  normalLength = length( clipNormal );
         const float2 direction    = ( normalLength > 1e-6f ) ? clipNormal / normalLength : float2( 0.0f, 0.0f );
         const float  aspect       = g_OutlineParams.y / max( g_OutlineParams.z, 1e-6f ); // (1/W) / (1/H) = H / W
-        const float  facing       = saturate( 1.0f - abs( dot( context.worldNormal, swComputeToView( context.worldPosition ) ) ) );
+        const float  facing       = saturate( 1.0f - abs( dot( context.worldNormal, View::computeToView( context.worldPosition ) ) ) );
         const float  scale        = outlineWidth * 2.0f * min( clipPosition.w, context.material.outlineMaxDistance ) * facing;
         offset.clipOffset         = direction * float2( aspect, 1.0f ) * scale;
     }
     return offset;
 }
 
-MaterialVaryings computeMaterialVaryings( SwVertexContext context )
+MaterialVaryings computeMaterialVaryings( VertexContext context )
 {
     MaterialVaryings varyings;
     varyings.outlineColor = float4( context.material.outlineColor.rgb, context.material.outlineLightingMix );
@@ -247,14 +247,14 @@ MaterialVaryings computeMaterialVaryings( SwVertexContext context )
     return varyings;
 }
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
     // 머리카락 카드처럼 알파로 오린 면은 외곽선도 같은 모양으로 오린다. 알파를 쓰지 않는 변형은 텍스처를 읽지 않는다.
     float alpha = context.color.a * context.user.alphaParams.x;
     #if defined( MATERIAL_ALPHA_CUTOFF )
-    alpha *= swSampleMaterialTexture( context.user.baseColorMap, context.uv ).a;
+    alpha *= MaterialTexture::sampleIndex( context.user.baseColorMap, context.uv ).a;
     #endif
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = float4( context.user.outlineColor.rgb, alpha );
     surface.normal    = context.normal;
     surface.roughness = kSurfaceRoughness;
@@ -265,7 +265,7 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
     return surface;
 }
 
-float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     // 빛 섞기 0 이면 색 그대로, 1 이면 직접광 + 환경광을 곱한다(MToon outlineLightingMixFactor). 1 을 넘는 빛은 잘라 외곽선이 밝아지지 않게 한다.
     const float3 lighting = saturate( computeDirectLighting( context.worldPosition ) + computeAmbient() );
@@ -274,13 +274,13 @@ float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surfac
 
 #else
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
     // UV 애니메이션(MToon uvAnimation*)은 모든 머티리얼 텍스처에 같은 UV 로 적용한다 — 맷캡만 시선 UV 다.
-    const float2      uv = computeAnimatedUv( context.material, context.uv );
-    SwMaterialSurface surface;
+    const float2    uv = computeAnimatedUv( context.material, context.uv );
+    MaterialSurface surface;
     // 알파 컷오프의 알파는 깊이 패스와 같은 값(정점 색 × 기본색 × 기본 텍스처)이다 — 뼈대가 같은 값으로 오린다.
-    surface.albedo = context.color * context.material.baseColor * swSampleMaterialTexture( context.material.baseColorMap, uv );
+    surface.albedo = context.color * context.material.baseColor * MaterialTexture::sampleIndex( context.material.baseColorMap, uv );
     surface.normal = context.normal;
     #if defined( SW_MATERIAL_USES_TANGENT )
     surface.normal = applyNormalMap( context.material.normalMap, context.material.normalScale, uv, context.normal, context.tangent );
@@ -293,25 +293,25 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
     return surface;
 }
 
-float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     float4 result;
     #if SW_VIEWMODE_SKIPS_LIGHTING
     result = surface.albedo;
     #else
-    const SwMaterialData material = context.material;
-    const float2         uv       = computeAnimatedUv( material, context.uv );
-    float4               litColor = surface.albedo;
+    const MaterialData material = context.material;
+    const float2       uv       = computeAnimatedUv( material, context.uv );
+    float4             litColor = surface.albedo;
     // 셰이딩 시프트 텍스처(MToon shadingShiftTexture) — 없으면 더하지 않는다(흰색을 더하면 배율만큼 밀린다).
-    const float shadingShift = material.shadingShift + ( ( material.shadingShiftMap == kInvalidIndex ) ? 0.0f : swSampleMaterialTexture( material.shadingShiftMap, uv ).r * material.shadingShiftTextureScale );
+    const float shadingShift = material.shadingShift + ( ( material.shadingShiftMap == kInvalidIndex ) ? 0.0f : MaterialTexture::sampleIndex( material.shadingShiftMap, uv ).r * material.shadingShiftTextureScale );
         #if defined( SW_VIEWMODE_LIGHTINGONLY )
-    // 보기 모드 LightingOnly — 계단 셰이딩은 그대로 두고 기본색 · 그늘색만 회색으로 바꾼다(swShadeLights 를 쓰지 않으므로 여기서).
+    // 보기 모드 LightingOnly — 계단 셰이딩은 그대로 두고 기본색 · 그늘색만 회색으로 바꾼다(Lighting::shadeLights 를 쓰지 않으므로 여기서).
     litColor.rgb            = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
     const float3 shadeColor = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
         #else
-    const float3 shadeColor = context.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, uv ).rgb;
+    const float3 shadeColor = context.color.rgb * material.shadeColor.rgb * MaterialTexture::sampleIndex( material.shadeMap, uv ).rgb;
         #endif
-    const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
+    const float shadow = Shadow::sampleAtWorld( context.worldPosition, surface.normal );
 
     float3       directLighting;
     float3       color   = shadeToonLights( litColor.rgb, shadeColor, context.worldPosition, surface.normal, shadow, shadingShift, material.shadingToony,
@@ -320,15 +320,15 @@ float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surfac
     color += litColor.rgb * ambient;
 
     // 림 = (프레넬 + 맷캡) × lerp( 1, 빛, rimLightingMix ) — MToon 1.0 과 같다. 맷캡은 텍스처가 있을 때만 더한다(없으면 흰색이 되어 화면이 바랜다).
-    const float3 viewDirection = swComputeToView( context.worldPosition );
+    const float3 viewDirection = View::computeToView( context.worldPosition );
     const float  fresnelBase   = saturate( 1.0f - dot( surface.normal, viewDirection ) + material.rimLift );
     float3       rim           = pow( fresnelBase, max( material.rimFresnelPower, 1e-4f ) ) * material.rimColor.rgb;
     if ( material.matcapMap != kInvalidIndex )
-        rim += material.matcapColor.rgb * swSampleMaterialTexture( material.matcapMap, computeMatcapUv( surface.normal, viewDirection ) ).rgb;
-    rim *= swSampleMaterialTexture( material.rimMultiplyMap, uv ).rgb; // 림 곱 텍스처(rimMultiplyTexture) — 없으면 흰색이라 그대로
+        rim += material.matcapColor.rgb * MaterialTexture::sampleIndex( material.matcapMap, computeMatcapUv( surface.normal, viewDirection ) ).rgb;
+    rim *= MaterialTexture::sampleIndex( material.rimMultiplyMap, uv ).rgb; // 림 곱 텍스처(rimMultiplyTexture) — 없으면 흰색이라 그대로
     color += rim * lerp( float3( 1.0f, 1.0f, 1.0f ), directLighting + ambient, material.rimLightingMix );
 
-    color += material.emissiveColor.rgb * material.emissiveStrength * swSampleMaterialTexture( material.emissiveMap, uv ).rgb;
+    color += material.emissiveColor.rgb * material.emissiveStrength * MaterialTexture::sampleIndex( material.emissiveMap, uv ).rgb;
     result = float4( color, litColor.a );
     #endif
     return result;

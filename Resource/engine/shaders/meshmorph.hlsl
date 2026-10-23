@@ -75,7 +75,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     {
         position = restPosition;
         normal   = restNormalElement.xyz;
-        swApplyDeformProgram( (uint)programStart, position, normal );
+        MeshDeform::applyProgram( (uint)programStart, position, normal );
     }
 
     g_MorphVerticesRW[element]      = float4( position, 1.0f );

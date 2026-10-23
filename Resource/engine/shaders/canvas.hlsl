@@ -80,7 +80,7 @@ uint selectTexture( uint slot )
     return kInvalidIndex;
 }
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
 {
     PSInput output;
     input.position             = input.position;
@@ -127,14 +127,14 @@ float4 PSMain( PSInput input ) : SV_TARGET
     }
     else if ( quad.kind == kCanvasQuadImage )
     {
-        color *= swSampleMaterialTexture( selectTexture( quad.textureSlot ), input.uv );
+        color *= MaterialTexture::sampleIndex( selectTexture( quad.textureSlot ), input.uv );
         if ( any( quad.cornerRadius > 0.0f ) )
             coverage = saturate( 0.5f - computeRoundedBoxDistance( input.local - halfSize, halfSize, quad.cornerRadius ) );
     }
     else if ( quad.kind == kCanvasQuadGlyph )
     {
         // 아틀라스 값 0..1 → 윤곽까지의 화면 픽셀 거리(안쪽 +). params.x = 2 × spread × (화면 px / 래스터 px).
-        const float4 atlasSample = swSampleMaterialTexture( selectTexture( quad.textureSlot ), input.uv );
+        const float4 atlasSample = MaterialTexture::sampleIndex( selectTexture( quad.textureSlot ), input.uv );
         // MSDF 는 세 채널의 중앙값이 안팎을 정한다 — 쌍선형 보간해도 모서리가 둥글어지지 않는다. SDF 는 R 채널 하나다.
         const float sdfValue = ( ( quad.flags & kCanvasFlagMultiChannelGlyph ) != 0u )
                                  ? max( min( atlasSample.r, atlasSample.g ), min( max( atlasSample.r, atlasSample.g ), atlasSample.b ) )
@@ -160,6 +160,6 @@ float4 PSMain( PSInput input ) : SV_TARGET
         coverage *= saturate( 0.5f - computeRoundedBoxDistance( input.screen - clipCenter, clipHalf, quad.params.wwww ) );
     }
     const float  alpha     = color.a * coverage;
-    const float3 corrected = swApplyColorVisionCorrection( color.rgb, SW_ROOT( g_SwCanvasColorVision ) );
+    const float3 corrected = ColorVision::applyCorrection( color.rgb, SW_ROOT( g_SwCanvasColorVision ) );
     return float4( corrected * alpha, alpha );
 }

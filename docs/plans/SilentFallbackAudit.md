@@ -25,7 +25,7 @@
 `FrameRendererUtil::collectColorOutputFormats` 도 출력은 있는데 첨부를 못 찾으면 넘긴 수로 물러나고, `GPUScene::uploadMaterialGroups` 는 stride 가 0 이면 버퍼 크기를 stride 로 쓴다. 네 백엔드 GPU 확인이 필요하다.
 
 ### SilentFallbackAudit.EmulatedSlotTable
-에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `swSampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 담당과 함께 하고 DX11 · GL 화면으로 확인한다.
+에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `Bindless::sampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 담당과 함께 하고 DX11 · GL 화면으로 확인한다.
 
 ### SilentFallbackAudit.FunctionStaticCaches
 함수 안 `static` 컨테이너가 남았다(엔진 수명 범위 `ScopeOwned` 로 옮기지 않음). 엔진: `SystemFontLocator`(리눅스 글꼴 색인), `ModuleTypeRegistry` 의 모듈 머리 표, `DebugDrawCanvas` 의 선 버퍼. 에디터: `InspectorPropertyUndo` · `InspectorPropertyManager` · `EditorColliderHandleTool` · `EditorVisualizerGeometry` · `DebugDrawVisualizer` · `EditorViewportBillboard` · `EditorCaptureSteps` · `EditorSettingsRegistry`. GameFramework: `ServerBus` · `OnlinePushRelay` 의 로그 키 집합, `MeshModifiersVisualizer`.

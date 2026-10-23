@@ -42,7 +42,7 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position            = input.position;
@@ -82,8 +82,8 @@ float min3( float first, float second, float third )
 float4 gatherSourceChannel( float2 uv, uint channel )
 {
 #if defined( SW_NATIVE_BINDLESS )
-    const uint slot = swBindlessTextureSlot( SW_ROOT( g_FsrSource ) );
-    // 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, swGatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다.
+    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
+    // 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다.
     #if defined( __spirv__ )
     if ( channel == 0u )
         return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
@@ -110,7 +110,7 @@ float3 loadSourceClamped( int2 texel )
 {
     float2 size;
 #if defined( SW_NATIVE_BINDLESS )
-    const uint slot = swBindlessTextureSlot( SW_ROOT( g_FsrSource ) );
+    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
     g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GetDimensions( size.x, size.y );
     const int2 clamped = clamp( texel, int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Load( int3( clamped, 0 ) ).rgb;

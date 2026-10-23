@@ -22,7 +22,7 @@
  * C++: bindComputeShaderResource( lights, 0 ) / ( views, 1 ) / bindComputeUav( grid, 0 ) / dispatchCompute( 뷰 수, 1, 1 ) — FrameRendererCompute.cpp dispatchLightGrid.
  */
 
-// 씬 라이트 한 개는 lighting.hlsli 와 같은 SwLightData(lightdata.hlsli) 다 — 원소 간격이 같아야 번호가 맞는다.
+// 씬 라이트 한 개는 lighting.hlsli 와 같은 LightData(lightdata.hlsli) 다 — 원소 간격이 같아야 번호가 맞는다.
 
 /** @brief 뷰 하나의 생산 입력입니다(g_LightGridViews 의 float4 여섯 개, 배치는 bindingslots.hlsli 10 절). */
 struct GridView
@@ -35,7 +35,7 @@ struct GridView
     uint     gridBase;
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_LightGridLights, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( LightData, g_LightGridLights, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_LightGridViews, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LightGridRW, 0 );
 
@@ -76,9 +76,9 @@ uint clampSlice( float slicePosition )
  * @brief 점광 · 스폿의 경계 구가 덮는 클러스터 범위(양 끝 포함)입니다. 화면 밖이거나 깊이 범위 밖이면 false 입니다.
  * @details C++ `LightGrid::computeLightRange` 와 같은 식이다 — 깊이 범위는 중심 깊이 ± 반경 × 깊이 기울기(깊이는 월드 위치의 일차 함수라 정확하다),
  *          XY 범위는 월드 AABB 모서리 여덟 개의 NDC 범위다. 원근에서 모서리 하나라도 카메라 면을 넘으면 화면 전체다.
- * @note early-return 이 없다 — GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(binding.hlsli swComputeMorphElement).
+ * @note early-return 이 없다 — GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(binding.hlsli MorphPool::computeElement).
  */
-bool computeLightRange( GridView view, SwLightData light, out uint3 outMinimum, out uint3 outMaximum )
+bool computeLightRange( GridView view, LightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
     const float3 center        = light.positionRadius.xyz;
     const float  radius        = light.positionRadius.w;
@@ -111,17 +111,17 @@ bool computeLightRange( GridView view, SwLightData light, out uint3 outMinimum, 
     maxNdc                = bFullScreen ? float2( 1.0f, 1.0f ) : maxNdc;
     const bool bOffScreen = maxNdc.x < -1.0f || 1.0f < minNdc.x || maxNdc.y < -1.0f || 1.0f < minNdc.y;
 
-    const float minSlice = swComputeLightGridSlicePosition( minDepth, view.bPerspective, view.nearDepth, view.sliceScale ) - SW_LIGHT_GRID_SLICE_PAD;
-    const float maxSlice = swComputeLightGridSlicePosition( maxDepth, view.bPerspective, view.nearDepth, view.sliceScale ) + SW_LIGHT_GRID_SLICE_PAD;
-    outMinimum           = uint3( swComputeLightGridTile( minNdc.x - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), swComputeLightGridTile( minNdc.y - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
+    const float minSlice = LightGrid::computeSlicePosition( minDepth, view.bPerspective, view.nearDepth, view.sliceScale ) - SW_LIGHT_GRID_SLICE_PAD;
+    const float maxSlice = LightGrid::computeSlicePosition( maxDepth, view.bPerspective, view.nearDepth, view.sliceScale ) + SW_LIGHT_GRID_SLICE_PAD;
+    outMinimum           = uint3( LightGrid::computeTile( minNdc.x - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), LightGrid::computeTile( minNdc.y - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
                                   clampSlice( minSlice ) );
-    outMaximum           = uint3( swComputeLightGridTile( maxNdc.x + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), swComputeLightGridTile( maxNdc.y + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
+    outMaximum           = uint3( LightGrid::computeTile( maxNdc.x + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), LightGrid::computeTile( maxNdc.y + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
                                   clampSlice( maxSlice ) );
     return radius > 0.0f && bBehind == false && bBeyond == false && bOffScreen == false;
 }
 
 /** @brief 라이트 하나의 생산 방식입니다 — 0 은 그리드에 넣지 않음(2D 라이트 · 2D 그림자 세그먼트 · 화면 밖), 1 은 전역 구간(방향광), 2 는 클러스터 범위(SW_LIGHT_GRID_LOCAL_TYPE_MASK 의 타입 — 점광 · 스폿 · 반사 프로브 · 라이트 프로브 볼륨)입니다. */
-uint classifyLight( GridView view, SwLightData light, out uint3 outMinimum, out uint3 outMaximum )
+uint classifyLight( GridView view, LightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
     const uint lightType = (uint)( light.directionType.w + 0.5f );
     const bool bLocal    = lightType < 32u && ( ( SW_LIGHT_GRID_LOCAL_TYPE_MASK >> lightType ) & 1u ) != 0u;
@@ -129,7 +129,7 @@ uint classifyLight( GridView view, SwLightData light, out uint3 outMinimum, out 
     return ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? 1u : ( ( bLocal && bInRange ) ? 2u : 0u );
 }
 
-/** @brief 클러스터 번호입니다. 셰이더 swComputeLightGridCluster · C++ 와 같은 순서((조각 × Y + y) × X + x)다. */
+/** @brief 클러스터 번호입니다. 셰이더 LightGrid::computeCluster · C++ 와 같은 순서((조각 × Y + y) × X + x)다. */
 uint computeClusterIndex( uint3 cell )
 {
     return ( cell.z * SW_LIGHT_GRID_DIM_Y + cell.y ) * SW_LIGHT_GRID_DIM_X + cell.x;

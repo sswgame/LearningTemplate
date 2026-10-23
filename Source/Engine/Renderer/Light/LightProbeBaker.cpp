@@ -25,7 +25,7 @@ namespace sw
             static constexpr float32 kMaxRayDistance = 1000.0f;
             /// @brief 닿은 면에서 그림자 레이를 띄우는 거리(m) — 그 면 자신에 닿지 않게 한다.
             static constexpr float32 kSurfaceOffset = 0.01f;
-            /// @brief 반경 · 거리의 하한 — 셰이더 `swComputeLightIncidence` 의 1e-4 와 같은 자리다.
+            /// @brief 반경 · 거리의 하한 — 셰이더 `LightData::computeIncidence` 의 1e-4 와 같은 자리다.
             static constexpr float32 kMinDistance = 1e-4f;
 
             /** @brief 라이트 원소의 종류입니다. */

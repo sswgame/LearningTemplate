@@ -23,7 +23,7 @@ namespace sw
         static constexpr uint32 kBasisCount       = 9;
         static constexpr uint32 kChannelCount     = 3;
         static constexpr uint32 kCoefficientCount = kBasisCount * kChannelCount;
-        /// @brief GPU 원소의 float4 수입니다(셰이더 `swEvaluateSphericalHarmonics` 와 같은 배치).
+        /// @brief GPU 원소의 float4 수입니다(셰이더 `LightProbe::evaluateSphericalHarmonics` 와 같은 배치).
         static constexpr uint32 kGPUFloat4Count = 7;
 
         float32 _arrCoefficient[kCoefficientCount]{};
@@ -56,7 +56,7 @@ namespace sw
         float3 evaluateIrradiance( const float3& normal ) const;
 
         /**
-         * @brief 셰이더 원소(float4 일곱 개)를 만듭니다. 셰이더 `swEvaluateSphericalHarmonics( n )` 의 결과가 `evaluateIrradiance( n ) / π` 입니다.
+         * @brief 셰이더 원소(float4 일곱 개)를 만듭니다. 셰이더 `LightProbe::evaluateSphericalHarmonics( n )` 의 결과가 `evaluateIrradiance( n ) / π` 입니다.
          * @details [0..2] 채널 r g b 의 (L1 x, L1 y, L1 z, L0) · [3..5] 채널마다 L2 의 xy · yz · zz · xz 항 · [6] L2 의 x² − y² 항 rgb, w 0.
          */
         void makeGPUElement( float4 ( &outArrElement )[kGPUFloat4Count] ) const;

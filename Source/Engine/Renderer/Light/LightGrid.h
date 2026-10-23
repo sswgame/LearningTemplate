@@ -2,7 +2,7 @@
  * @file LightGrid.h
  * @brief 뷰 하나의 클러스터 라이트 목록(라이트 그리드)을 CPU 에서 만듭니다. 언리얼 클러스터드 디퍼드의 라이트 그리드, 유니티 Forward+ 의 빛 목록에 해당합니다.
  * @details 클러스터는 뷰의 NDC 를 X `kDimX` 칸, Y `kDimY` 칸, 깊이 `kDimZ` 조각으로 나눈 것입니다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각입니다.
- *          결과는 32 비트 단어 배열이고 배치와 칸 수의 원본은 bindingslots.hlsli 10절(`SW_LIGHT_GRID_*`)입니다. 셰이더는 `lighting.hlsli` 의 커서(`swBeginLights`)로 읽습니다.
+ *          결과는 32 비트 단어 배열이고 배치와 칸 수의 원본은 bindingslots.hlsli 10절(`SW_LIGHT_GRID_*`)입니다. 셰이더는 `lighting.hlsli` 의 커서(`LightCursor::begin`)로 읽습니다.
  *          방향광은 모든 클러스터에 닿으므로 목록 앞의 전역 구간에 한 번만 둡니다. 2D 라이트와 2D 그림자 세그먼트는 넣지 않습니다. 라이트 프로브 볼륨 · 반사 프로브는 점광처럼 경계 구(상자의 외접구)로 넣습니다 — 어느 타입을 경계 구로 넣는지는 `shaderslot::kLightGridLocalTypeMask` 하나가 정합니다.
  *          클러스터 범위는 보수적입니다. 라이트 경계 구에 닿는 클러스터는 빠지지 않고, 닿지 않는 클러스터가 조금 들어갈 수 있습니다.
  *          GPU 생산자(lightgrid.hlsl)가 같은 형식을 같은 범위 식으로 만듭니다 — 식을 고치면 두 곳(이 파일과 그 셰이더, 칸 식은 lightgridcommon.hlsli)을 함께 고칩니다.
@@ -64,7 +64,7 @@ namespace sw
         /** @brief 그리드 단어입니다. 비었으면 그리드가 없습니다. */
         const vector<uint32>& getWords() const { return _listWord; }
 
-        /** @brief 이 월드 위치가 든 클러스터 번호입니다. 셰이더 `swComputeLightGridCluster` 와 같은 식입니다. 그리드가 비었으면 0 입니다. */
+        /** @brief 이 월드 위치가 든 클러스터 번호입니다. 셰이더 `LightGrid::computeCluster` 와 같은 식입니다. 그리드가 비었으면 0 입니다. */
         uint32 computeClusterIndex( const float3& worldPosition ) const;
         /** @brief 셰이더 커서와 같은 순서(전역 구간, 클러스터 목록)로 이 위치를 비추는 라이트 번호를 모읍니다. 테스트와 디버그 보기용입니다. */
         void collectLights( const float3& worldPosition, vector<uint32>& outListLightIndex ) const;
@@ -86,7 +86,7 @@ namespace sw
             uint32 _maxZ{ 0 };
         };
 
-        /** @brief 깊이 값(원근은 클립 w, 직교는 NDC z)을 조각 위치(실수)로 바꿉니다. 셰이더 `swComputeLightGridSlicePosition` 과 같은 식입니다. */
+        /** @brief 깊이 값(원근은 클립 w, 직교는 NDC z)을 조각 위치(실수)로 바꿉니다. 셰이더 `LightGrid::computeSlicePosition` 과 같은 식입니다. */
         float32 computeSlicePosition( float32 depth ) const;
         /** @brief 점광 · 스폿의 경계 구가 덮는 클러스터 범위를 구합니다. 화면 밖이거나 깊이 범위 밖이면 거짓입니다. 컴퓨트 lightgrid.hlsl `computeLightRange` 와 같은 식입니다. */
         bool computeLightRange( const float4x4& viewProj, const GPULight& light, ClusterRange& outRange ) const;

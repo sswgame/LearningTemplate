@@ -12,7 +12,7 @@ namespace sw
     {
         struct WaterWaveMathInternal
         {
-            /** @brief 파도 하나의 항입니다. 방향, 파수, 진폭, Q, 위상을 담습니다. 부동소수 결과를 맞추려고 셰이더 `swComputeGerstnerTerm` 과 같은 순서로 계산합니다. */
+            /** @brief 파도 하나의 항입니다. 방향, 파수, 진폭, Q, 위상을 담습니다. 부동소수 결과를 맞추려고 셰이더 `Gerstner::computeTerm` 과 같은 순서로 계산합니다. */
             struct WaveTerm
             {
                 float2  _direction{};

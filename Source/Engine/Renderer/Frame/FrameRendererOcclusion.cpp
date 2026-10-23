@@ -90,7 +90,7 @@ namespace sw
         _pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( pso );
         Internal::RootConstants constants{};
-        // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(swLoadRwTexture2D — GPU 입자와 같다).
+        // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
         constants._depthIndex  = _pDevice->supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUav ) : 0u;
         constants._depthWidth  = depth._width;
         constants._depthHeight = depth._height;

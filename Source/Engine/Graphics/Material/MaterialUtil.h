@@ -50,7 +50,7 @@ namespace sw
         /**
          * @brief 머티리얼 없는 배치에 쓰는 폴백 원소 하나의 바이트를 만듭니다. 텍스처 인덱스 필드는 `kInvalidDescriptorIndex`, 나머지는 0 입니다.
          * @details 0 은 Vulkan bindless 의 첫 실제 텍스처이고 DX11 과 GL 에서는 머티리얼 텍스처 서수 0 이므로 **유효한** 인덱스입니다.
-         *          `kInvalidDescriptorIndex` 는 셰이더의 `swSampleMaterialTexture` 가 "텍스처 없음"(흰색)으로 읽습니다. 네 백엔드가 같은 값을 냅니다.
+         *          `kInvalidDescriptorIndex` 는 셰이더의 `MaterialTexture::sampleIndex` 가 "텍스처 없음"(흰색)으로 읽습니다. 네 백엔드가 같은 값을 냅니다.
          */
         static vector<uint8> makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride );
 

@@ -7,7 +7,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ReflectionProbeDataTest — 반사 프로브 데이터(`.reflprobe`)의 형식 · 옥타헤드럴 사상 · 면 접기와 거르기. 디바이스 없음(nogpu).
-// 셰이더(lighting.hlsli swEncodeOctahedral · swSampleReflectionProbeLevel)가 같은 식을 쓰므로 C++ 쪽이 맞으면 GPU 쪽은 식이 같은지만 보면 된다.
+// 셰이더(lighting.hlsli ReflectionProbe::encodeOctahedral · ReflectionProbe::sampleLevel)가 같은 식을 쓰므로 C++ 쪽이 맞으면 GPU 쪽은 식이 같은지만 보면 된다.
 
 namespace sw
 {

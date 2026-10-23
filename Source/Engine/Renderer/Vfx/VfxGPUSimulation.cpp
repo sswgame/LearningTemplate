@@ -307,7 +307,7 @@ namespace sw
         const uint32                flags          = ( state._bNeedsReset ? SW_VFX_FLAG_RESET : 0u ) | ( bRibbon ? SW_VFX_FLAG_RIBBON : 0u ) | collisionFlags |
                              ( bDepthReady ? SW_VFX_FLAG_DEPTH_READY : 0u );
         const float32 stepTime = VfxEmitterClock::kFixedStepSeconds;
-        // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 슬롯 0 의 서수로 고른다(swLoadRwTexture2D).
+        // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D).
         const uint32 historyIndex = _frameInput._bNativeBindless ? static_cast<uint32>( depth._uav ) : 0u;
 
         Internal::appendRow( _listParamWord, def._maxParticles, steps, flags, GPUParticle::kVertexCount );

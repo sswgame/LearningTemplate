@@ -14,7 +14,7 @@
  *
  * 깊이 충돌(VfxCollisionMethod::SceneDepth): 입자의 월드 점을 히스토리 시점의 뷰-투영으로 투영해 그 텍셀의 깊이보다 뒤이고 깊이 면에서 두께 안쪽이면
  * 닿은 것이다. 법선은 이웃 텍셀 둘의 깊이 점이 이루는 면이다(눈 쪽으로 돌린다). 화면 밖 · 카메라 뒤는 보지 않는다(VfxCollisionDef 설명의 한계).
- * 히스토리는 R32 실수 RW 텍스처다 — 컴퓨트가 에뮬 백엔드(DX11 · GL)에서 샘플 텍스처를 읽지 못해 UAV 로 읽는다(swLoadRwTexture2D).
+ * 히스토리는 R32 실수 RW 텍스처다 — 컴퓨트가 에뮬 백엔드(DX11 · GL)에서 샘플 텍스처를 읽지 못해 UAV 로 읽는다(Bindless::loadRwTexture2D).
  *
  * DX11: 간접 인자 버퍼는 구조 버퍼가 될 수 없어(DRAWINDIRECT_ARGS 와 BUFFER_STRUCTURED 를 함께 못 건다) RAW UAV 다 — 그래서 인자를 바이트 주소로 쓴다.
  * 나머지 백엔드는 uint 구조 버퍼다. 입자 상태와 렌더 입력은 따로 둔 구조 버퍼라 복사 단계가 필요 없다.
@@ -228,7 +228,7 @@ VfxParticleState makeParticle( uint2 particleIndex )
 /** @brief 히스토리 텍셀 @p texel 의 깊이를 월드 점으로 되돌립니다(텍셀 가운데). */
 float3 computeDepthWorldPoint( int2 texel, float2 size, uint historyIndex )
 {
-    const float  depth = swLoadRwTexture2D( historyIndex, uint2( texel ) ).x;
+    const float  depth = Bindless::loadRwTexture2D( historyIndex, uint2( texel ) ).x;
     const float2 uv    = ( float2( texel ) + 0.5f ) / size;
     const float2 ndc   = float2( uv.x * 2.0f - 1.0f, 1.0f - uv.y * 2.0f );
     const float4 world = transformPoint4( SW_VFX_PARAM_ROW_DEPTH_INVERSE_VIEW_PROJ, float3( ndc, depth ) );
@@ -254,7 +254,7 @@ void resolveDepthCollision( inout VfxParticleState inoutParticle, uint flags, ou
     const float2 size  = float2( info.xy );
     const float2 uv    = float2( ndc.x * 0.5f + 0.5f, 0.5f - ndc.y * 0.5f );
     const int2   texel = clamp( int2( uv * size ), int2( 0, 0 ), int2( info.xy ) - 1 );
-    const float  depth = swLoadRwTexture2D( info.z, uint2( texel ) ).x;
+    const float  depth = Bindless::loadRwTexture2D( info.z, uint2( texel ) ).x;
     if ( ndc.z <= depth )
         return; // 깊이 면 앞이다
 

@@ -6,7 +6,7 @@
  *          - `SW_PASS_HIGHLIGHT_SENSE` 가 없으면 외곽선(Outline) 인스턴스만 깊이 테스트로 그린다 — 보이는 곳에만.
  *          - 있으면 감각(Sense) 인스턴스만 깊이 테스트 없이 그린다 — 벽 너머에서도 보인다(패스가 깊이 테스트를 끈다).
  *          두께는 화면 높이 비율이고 파이프라인 XML 의 패스 퍼뮤테이션 `SW_HIGHLIGHT_WIDTH=<값>` 이 정한다(데이터가 정본 — 없으면 컴파일 오류).
- *          정점은 모프 · 스키닝 결과를 읽으므로(swLoadMorphedVertex) 움직이는 캐릭터에서도 껍질이 따라간다.
+ *          정점은 모프 · 스키닝 결과를 읽으므로(MorphPool::loadVertex) 움직이는 캐릭터에서도 껍질이 따라간다.
  */
 #include "binding.hlsli"
 
@@ -26,23 +26,23 @@ struct PSInput
     nointerpolation float3 color : COLOR;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
-    PSInput        output;
-    SwInstanceData instance = swLoadInstance( input.instanceSlot );
-    output.color            = swGetInstanceHighlightColor( instance );
+    PSInput      output;
+    InstanceData instance = InstanceData::load( input.instanceSlot );
+    output.color          = instance.getHighlightColor();
     // 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.
-    if ( swGetInstanceHighlightStyle( instance ) != kHighlightPassStyle )
+    if ( instance.getHighlightStyle() != kHighlightPassStyle )
     {
         output.position = float4( 0.0f, 0.0f, -1.0f, 1.0f );
         return output;
     }
     float3 localPosition;
     float3 localNormal;
-    swLoadMorphedVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
-    const float4 worldPosition = swComputeWorldPosition( localPosition, instance.world );
-    const float3 worldNormal   = swComputeWorldNormal( localNormal, instance.world );
-    float4       clipPosition  = swComputeClipPosition( worldPosition, g_ViewProj );
+    MorphPool::loadVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
+    const float4 worldPosition = Transform::computeWorldPosition( localPosition, instance.world );
+    const float3 worldNormal   = Transform::computeWorldNormal( localNormal, instance.world );
+    float4       clipPosition  = Transform::computeClipPosition( worldPosition, g_ViewProj );
     // 화면 공간 두께: 노멀을 클립 공간에 투영해 그 방향으로 민다. xy 에 w 를 곱해 더하므로 나눗셈 뒤 두께가 거리와 무관하다.
     // 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다(g_OutlineParams.y = 1/W, .z = 1/H — FrameRendererConstants).
     const float2 clipNormal = mul( float4( worldNormal, 0.0f ), g_ViewProj ).xy;

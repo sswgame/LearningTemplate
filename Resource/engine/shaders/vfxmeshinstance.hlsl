@@ -29,7 +29,7 @@ SW_DECLARE_BYTE_ADDRESS_BUFFER( g_VfxArgs, 2 );
 #else
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_VfxArgs, 2 );
 #endif
-SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_VfxInstancesRW, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( InstanceData, g_VfxInstancesRW, 0 );
 
 SW_ROOT_CONSTANTS_BEGIN
 {
@@ -69,11 +69,11 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( slot == SW_VFX_INVALID_SLOT )
         return; // 이번 프레임 배치에 실리지 않은 자리
 
-    const float4   world0   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD ) );
-    const float4   world1   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 1u ) );
-    const float4   world2   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 2u ) );
-    const float4   world3   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 3u ) );
-    SwInstanceData instance = g_VfxInstancesRW[slot];
+    const float4 world0   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD ) );
+    const float4 world1   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 1u ) );
+    const float4 world2   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 2u ) );
+    const float4 world3   = asfloat( loadMeshRow( SW_VFX_MESH_ROW_WORLD + 3u ) );
+    InstanceData instance = g_VfxInstancesRW[slot];
     if ( poolIndex < loadArgsWord( SW_VFX_ARGS_WORD_ALIVE ) )
     {
         const GPUParticle particle = g_VfxParticles[poolIndex];

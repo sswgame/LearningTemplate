@@ -261,8 +261,8 @@ Foo::Foo()
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
-| `SW_LoadRWTex2D` · `SwWorldNormalOf` | `swLoadRwTexture2D` · `swComputeWorldNormal`(공유 헤더 함수는 `sw` 접두) |
-| `struct SwInstance_t` | `struct SwInstanceData`(공유 헤더 타입은 `Sw` 접두, `_t` 없음) |
+| `SW_LoadRWTex2D` · `SwWorldNormalOf` | `Bindless::loadRwTexture2D` · `Transform::computeWorldNormal`(공유 헤더 함수는 `sw` 접두) |
+| `struct SwInstance_t` | `struct InstanceData`(공유 헤더 타입은 `Sw` 접두, `_t` 없음) |
 | `float3 pos, nrm; uint vid, idx;` | `float3 position, normal; uint vertexId, index;` |
 | `groupshared uint keys[256];` | `groupshared uint s_arrKey[256];` |
 | `g_ViewProj` 를 스타일 때문에 `g_viewProjection` 으로 | 그대로 — C++ 가 이름으로 묶는다(바꾸려면 같은 커밋에서 C++ 도) |

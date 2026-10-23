@@ -7,7 +7,7 @@
  *          파일(리틀 엔디언): 매직 `SWRP`, 버전, 찍은 위치 float3, 한 변 텍셀 수 uint32, 단계 수 uint32, 텍셀마다 float32 RGB(단계 → 행 → 열).
  *          단계 l 의 거칠기는 l / (단계 수 − 1) 이다(단계 0 은 거르지 않은 빛).
  *
- *          옥타헤드럴 사상은 +Y 를 가운데로 접는다 — `encodeOctahedral` · `decodeOctahedral` 이 셰이더 lighting.hlsli 의 `swEncodeOctahedral` 과 같은 식이다
+ *          옥타헤드럴 사상은 +Y 를 가운데로 접는다 — `encodeOctahedral` · `decodeOctahedral` 이 셰이더 lighting.hlsli 의 `ReflectionProbe::encodeOctahedral` 과 같은 식이다
  *          (식을 고치면 두 곳을 함께 고친다. ReflectionProbeDataTest 가 C++ 쪽 왕복을 본다).
  */
 #pragma once

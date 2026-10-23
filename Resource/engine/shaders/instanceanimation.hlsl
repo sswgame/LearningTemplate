@@ -13,7 +13,7 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUav( instanceUav, 0 ).
  */
 
-// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 128 바이트를 통째로 옮긴다.
+// 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 128 바이트를 통째로 옮긴다.
 // spinSeed 가 0 인 인스턴스는 건드리지 않는다.
 #include "instancedata.hlsli"
 
@@ -25,7 +25,7 @@ SW_DECLARE_CBUFFER( AnimationParams, SW_SLOT_COMPUTE_CB )
     uint  g_AnimationInstanceCount;
 };
 
-SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_InstancesRW, 0 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( InstanceData, g_InstancesRW, 0 );
 
 /**
  * @brief 시드를 32비트 정수 해시로 섞는다 (Wang hash).
@@ -55,7 +55,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( instanceIndex >= g_AnimationInstanceCount )
         return;
 
-    SwInstanceData instance = g_InstancesRW[instanceIndex];
+    InstanceData instance = g_InstancesRW[instanceIndex];
     if ( instance.spinSeed == 0 )
         return; // GPU 회전을 요청하지 않은 인스턴스는 CPU 가 올린 트랜스폼 그대로 둔다
 

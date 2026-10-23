@@ -2,7 +2,7 @@
  * @file GPUSpriteInstanceData.h
  * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형, 색, 픽셀 스냅)을 셰이더 레이아웃 그대로 묶은 16바이트입니다.
  * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
- *          `swComputeInstanceUvRect` 와 `swComputeInstanceTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
+ *          `InstanceData::computeUvRect` 와 `InstanceData::computeTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
  *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트와
  *          인스턴스 배치 항목이 보관하고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
  *          이 구조체만 렌더러 아래의 계약 폴더에 둡니다.
@@ -52,7 +52,7 @@ namespace sw
             return data;
         }
 
-        /** @brief 실수 둘을 [0, 1] 로 제한해 unorm16 둘로 담습니다(x 가 하위 16비트). HLSL `swUnpackUnorm16x2` 의 역입니다. */
+        /** @brief 실수 둘을 [0, 1] 로 제한해 unorm16 둘로 담습니다(x 가 하위 16비트). HLSL `InstanceData::unpackUnorm16x2` 의 역입니다. */
         static uint32 makeUnorm16x2( float32 x, float32 y )
         {
             const uint32 low  = static_cast<uint32>( MathUtil::saturate( x ) * 65535.0f + 0.5f );
@@ -70,7 +70,7 @@ namespace sw
             return red | ( green << 8 ) | ( blue << 16 ) | ( alpha << 24 );
         }
 
-        /** @brief 담긴 UV 사각형 (u, v, 폭, 높이) 입니다. 셰이더 `swComputeInstanceUvRect` 와 같은 값입니다(양자화 뒤). */
+        /** @brief 담긴 UV 사각형 (u, v, 폭, 높이) 입니다. 셰이더 `InstanceData::computeUvRect` 와 같은 값입니다(양자화 뒤). */
         float4 getUvRect() const
         {
             const float32 startU = static_cast<float32>( _uvStart & 0xFFFFu ) / 65535.0f;
@@ -80,7 +80,7 @@ namespace sw
             return float4{ startU, startV, endU - startU, endV - startV };
         }
 
-        /** @brief 담긴 색입니다. 셰이더 `swComputeInstanceTint` 와 같은 값입니다(양자화 뒤). */
+        /** @brief 담긴 색입니다. 셰이더 `InstanceData::computeTint` 와 같은 값입니다(양자화 뒤). */
         float4 getTint() const
         {
             return float4{ static_cast<float32>( _tint & 0xFFu ) / 255.0f, static_cast<float32>( ( _tint >> 8 ) & 0xFFu ) / 255.0f,

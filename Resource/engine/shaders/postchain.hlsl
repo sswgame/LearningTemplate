@@ -29,7 +29,7 @@ struct PSInput
     float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -44,25 +44,25 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float2 sourceTexel = g_SourceTexel.xy;   // 원본을 비켜 읽는 블룸 — 원본(반해상도일 수 있다)의 텍셀
     const float2 depthTexel  = g_OutlineParams.yz; // 깊이를 비켜 읽는 외곽선 — 깊이는 나누지 않으므로 프레임 텍셀
     // 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 섞을 것이 없으니 점 샘플러로 읽는다.
-    float3 source = swSampleSourcePoint( input.uv ).rgb;
+    float3 source = PassTexture::sampleSourcePoint( input.uv ).rgb;
     float3 color  = source;
 
 #if defined( SW_POST_BLOOM )
     // 자르지 않는다 — 장면 색 · 단계 파이프라인의 중간 타깃이 모두 `R16G16B16A16_FLOAT` 라 1.0 을 넘는 값이 톤맵까지 간다.
     // 여기서 [0,1] 로 자르면 톤맵 `x / (x + 1)` 의 최대가 0.5 가 되어 밝은 바닥 위의 더하기 블렌드(입자)가 보이지 않는다.
-    color = swApplyBloom( input.uv, sourceTexel, color );
+    color = Bloom::apply( input.uv, sourceTexel, color );
 #endif
 #if defined( SW_POST_OUTLINE )
-    color = swApplyOutline( input.uv, depthTexel, color );
+    color = Outline::apply( input.uv, depthTexel, color );
 #endif
 #if defined( SW_POST_TONEMAP )
     // 카메라별 후처리 값은 톤맵과 함께 간다 — 노출은 톤맵 앞, 색 보정 · 비네트 · 레터박스는 뒤(postgrade.hlsli). 후처리를 끈 뷰는 아래에서 원본을 고른다.
-    color = swApplyCameraExposure( color );
+    color = CameraGrade::applyExposure( color );
     color = color / ( color + 1.0f );
-    color = swApplyCameraGrade( input.uv, color );
+    color = CameraGrade::apply( input.uv, color );
 #endif
     // 후처리를 끈 뷰(CCTV · 미니맵)는 원본을 낸다 — 뷰마다 달라서 퍼뮤테이션이 아니라 패스 플래그다. 고르기는 early-return 이 아니라
-    // 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).
+    // 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli MorphPool::computeElement).
     const bool bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
     return float4( bSkipPost ? source : color, 1.0f );
 }

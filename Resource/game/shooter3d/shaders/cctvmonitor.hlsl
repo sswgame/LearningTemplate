@@ -23,21 +23,21 @@ SW_MATERIAL_BEGIN
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "cctvmonitor.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff)"
+    #error "cctvmonitor.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff)"
 #endif
 
 #define SW_MATERIAL_UNLIT
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "materialshader.hlsli"
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    const float4 screenTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
+    const float4 screenTexture = MaterialTexture::sampleIndex( context.material.albedoMap, context.uv );
     // 주사선 — UV 세로를 따라 cos 한 주기가 한 줄이다. 밝은 줄 가운데는 1, 줄 사이는 1 - 세기.
     const float scanlineWave = 0.5f + 0.5f * cos( context.uv.y * context.material.scanlineCount * 2.0f * kPi );
     const float scanline     = lerp( 1.0f, scanlineWave, saturate( context.material.scanlineStrength ) );
 
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = float4( context.color.rgb * context.material.color.rgb * screenTexture.rgb * scanline, 1.0f );
     surface.normal    = context.normal;
     surface.roughness = kSurfaceRoughness;

@@ -16,9 +16,9 @@ static const float kSurfaceMetallic  = 0.0f;
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "materialshader.hlsli"
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = context.color;
     surface.normal    = context.normal;
     surface.roughness = kSurfaceRoughness;

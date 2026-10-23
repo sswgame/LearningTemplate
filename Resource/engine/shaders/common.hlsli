@@ -9,7 +9,7 @@
  * Vulkan 은 DXC 시프트(-fvk-*-shift)가, OpenGL 은 아래 매크로의 [[vk::binding]] 이 정한다.
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
- *   SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
+ *   SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
  *   SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
  * 씬 메시 머티리얼은 binding.hlsli 의 SW_MATERIAL_BEGIN/END + SW_MATERIAL( index ) 를 쓴다 (GPUScene 버퍼).
  */
@@ -88,8 +88,8 @@
     #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
-    #define SW_ROOT_CONSTANTS_BEGIN struct SwRootConstantsData
-    #define SW_ROOT_CONSTANTS_END   [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
+    #define SW_ROOT_CONSTANTS_BEGIN struct RootConstantsData
+    #define SW_ROOT_CONSTANTS_END   [[vk::push_constant]] ConstantBuffer<RootConstantsData> SwRootConstants;
     #define SW_ROOT( field )        SwRootConstants.field
 #elif defined( DX12 )
     #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) )
@@ -150,7 +150,7 @@ static const float kInvPi  = 0.31830988618379067154f;
 // location 을 매긴다** — 중간 속성을 빼면 그 뒤가 통째로 한 칸씩 당겨져, 색을 읽으려던 셰이더가
 // 노멀을 읽는다. DX 에서는 멀쩡하고 그 둘에서만 조용히 틀리는, 이 저장소에서 가장 비싼 종류의 버그다.
 // 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
-struct SwVertexInput
+struct VertexInput
 {
     float3 position : POSITION;
     float3 normal : NORMAL;

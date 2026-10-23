@@ -57,7 +57,7 @@ namespace sw
 
         /**
          * @brief 정점 셰이더가 실제로 읽는 정점 속성을 `constant::arrVertexAttribute` 의 인덱스 비트로 반환합니다(리플렉션의 location 으로 대조합니다).
-         * @details 셰이더는 모두 `SwVertexInput` 을 선언하지만 컴파일러가 쓰지 않는 입력을 제거하므로(풀스크린 셰이더의 노멀, UV), PSO 가 테이블 전체를
+         * @details 셰이더는 모두 `VertexInput` 을 선언하지만 컴파일러가 쓰지 않는 입력을 제거하므로(풀스크린 셰이더의 노멀, UV), PSO 가 테이블 전체를
          *          바인딩하면 Vulkan 검증 레이어가 "Vertex attribute at location N not consumed" 를 낸다. 셰이더가 읽는데 PSO 가 빼면 미정의라
          *          빼는 쪽만 이 마스크로 한다. 리플렉션은 SPIR-V, DXIL, DXBC 모두 된다.
          */

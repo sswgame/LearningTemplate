@@ -439,7 +439,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // 그래픽스 VS/PS 가 읽는 구조버퍼(SwInstanceData 등). createStructuredBuffer 에서 만든 SRV 를
+        // 그래픽스 VS/PS 가 읽는 구조버퍼(InstanceData 등). createStructuredBuffer 에서 만든 SRV 를
         // 리플렉션 t 슬롯에 바인딩한다.
         if ( _pContext == nullptr )
             return;

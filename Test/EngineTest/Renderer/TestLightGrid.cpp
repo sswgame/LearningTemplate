@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 라이트 그리드(클러스터드 라이팅 CPU 생산자)를 GPU 없이 본다. 조회(`LightGrid::collectLights`)는 셰이더 커서(lighting.hlsli swBeginLights)와 같은 식이다.
+// 라이트 그리드(클러스터드 라이팅 CPU 생산자)를 GPU 없이 본다. 조회(`LightGrid::collectLights`)는 셰이더 커서(lighting.hlsli LightCursor::begin)와 같은 식이다.
 
 namespace sw
 {

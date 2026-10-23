@@ -110,7 +110,7 @@ namespace sw
             caps._bOffscreenRT    = SW_TRUE;
             caps._bIndirectDraw   = SW_TRUE;
             caps._bGPUCulling     = SW_TRUE;
-            // 주의: GL 드라이버는 early-return 형태의 `swComputeMorphElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
+            // 주의: GL 드라이버는 early-return 형태의 `MorphPool::computeElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
             // 잘못 컴파일해 풀에서 **한 슬롯 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
             // 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 잡는다.
             caps._bGPUMeshMorph             = SW_TRUE;

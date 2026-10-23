@@ -368,7 +368,7 @@ namespace
                 const test::Rgba8 pixel = image.getPixel( col, row );
                 if ( pixel._a < 128 )
                     continue;
-                // 셰이더가 n * 0.5 + 0.5 로 적는다(swStoreSurface · gbuffer.hlsl).
+                // 셰이더가 n * 0.5 + 0.5 로 적는다(SurfaceOutput::store · gbuffer.hlsl).
                 sum._x += static_cast<float32>( pixel._r ) / 255.0f * 2.0f - 1.0f;
                 sum._y += static_cast<float32>( pixel._g ) / 255.0f * 2.0f - 1.0f;
                 sum._z += static_cast<float32>( pixel._b ) / 255.0f * 2.0f - 1.0f;
@@ -867,7 +867,7 @@ namespace
 
     /**
      * @brief 점광 · 스폿의 그림자가 그림을 바꾸는지 — 그 빛의 그림자를 켠 판과 끈 판이 **달라야** 한다(네 백엔드 모두).
-     * @details 아틀라스 칸에 그리는 그림자 패스(면 여섯 · 칸 하나)와 셰이더의 `swSampleLocalShadow` 가 함께 맞아야 다르다. 칸 위치가 어긋나면 그림자가 엉뚱한 데 지거나
+     * @details 아틀라스 칸에 그리는 그림자 패스(면 여섯 · 칸 하나)와 셰이더의 `LightData::sampleLocalShadow` 가 함께 맞아야 다르다. 칸 위치가 어긋나면 그림자가 엉뚱한 데 지거나
      *          옆 칸을 읽어 그림이 같거나 얼룩진다 — 그 판정은 ShadowSetupTest 가 행렬로 한다.
      */
     void expectLocalShadowOnEveryBackend( const utf8* pTestName, bool bSpot )
@@ -3298,7 +3298,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
  * @details 세 장을 찍는다 — (A) 모프 안 켬(레스트), (B) 모프 켜되 컴퓨트 없이 **레스트 버퍼를 그대로 풀에
  *          물림**(`FrameDebugOverrides::_meshMorphDiag = 2`), (C) 진짜 모프. B 의 정답은 A 와 **같은 그림**이다: 풀 원소 i 가
  *          정점 i 의 레스트 값이므로 정점 셰이더가 제 원소를 읽으면 레스트와 픽셀이 같아야 한다.
- *          OpenGL 드라이버가 early-return 모양의 `swComputeMorphElement` 를 잘못 컴파일하면 정점마다 **한 칸 앞
+ *          OpenGL 드라이버가 early-return 모양의 `MorphPool::computeElement` 를 잘못 컴파일하면 정점마다 **한 칸 앞
  *          원소**를 읽고, 그것이 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
  *          만 본다 — A 와 **달라야** 한다.
  *          **모프 시각을 고정한다**(`FrameDebugOverrides::_animationTime`). 변위는 sin(2t + F·(x+y+z)) 인데 단위 큐브 정점의 위상(F = 6)은 2π 로 접으면
@@ -4261,7 +4261,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
  * @details 셋이 함께 지켜져야 한다. (1) 다시 로드(XML 순서로 다시 쌓는다)하면 "이 백엔드는 맞췄다" 는 비트를 지워 다시 맞춘다.
  *          (2) GPUScene 은 인스턴스 CB 를 부모 레이아웃을 맞춘 **뒤에** 올린다 — 앞이면 첫 프레임 인스턴스가 XML 순서 바이트를 든다.
  *          (3) 인스턴스는 부모의 값 변경에도 부모 바이트를 다시 복사한다. 하나라도 어긋나면 화면에서는 "엉뚱한 색" 이다.
- *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 SwMaterialData: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
+ *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 MaterialData: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 {
@@ -5279,7 +5279,7 @@ SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
 /**
  * @brief [RenderPassGPUTest] 큐브를 덮는 라이트 프로브 볼륨은 앰비언트를 프로브의 간접광으로 바꾼다 — 네 백엔드 모두
  * @details 볼륨에 밝은 한 색 SH 를 넣으면(굽기 없이 `adoptProbeData`) 그림자 쪽 면이 밝아져 볼륨 없는 그림과 달라야 한다. 같으면 볼륨 원소가 라이트 목록 ·
- *          그리드 · 프로브 버퍼(t13) · `swSampleProbeVolume` 중 어딘가에서 빠졌다.
+ *          그리드 · 프로브 버퍼(t13) · `LightData::sampleProbeVolume` 중 어딘가에서 빠졌다.
  */
 SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
 {
@@ -5333,7 +5333,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
 /**
  * @brief [RenderPassGPUTest] 머티리얼 금속도가 포워드와 디퍼드 모두에서 그림을 바꾼다 — 네 백엔드 모두(IndirectLighting.md P5)
  * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
- *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 swStoreSurface · 실행의 셋째 MRT · 바인딩 · swLoadGbufferMaterial 중 하나다.
+ *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 SurfaceOutput::store · 실행의 셋째 MRT · 바인딩 · PassTexture::loadGbufferMaterial 중 하나다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 {
@@ -5571,7 +5571,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume )
  * @brief [RenderPassGPUTest] 비균등 스케일 · 거울 스케일 아래에서도 G버퍼 노멀이 표면에 수직이다 — 네 백엔드, 머티리얼 셰이더(forwardlit)와 엔진 G버퍼 셰이더(gbuffer) 둘 다
  * @details 노멀을 월드 행렬로 옮기면(`mul( float4( n, 0 ), world )`) 균등 스케일 · 회전뿐일 때는 방향이 같아 드러나지 않지만, X 로 세 배
  *          늘린 부모 아래에서 Y 로 돈 쿼드는 노멀이 늘어난 축 쪽으로 50° 넘게 기운다 — 늘린 메시의 조명이 통째로 틀린다. 셰이더는 3x3 의
- *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `swComputeWorldNormal`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
+ *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `Transform::computeWorldNormal`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
  *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 월드 행렬로 옮긴 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 테스트는
  *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. 거울 배치는 컬 모드를 뒤집어 그리므로(`GPUMeshBatch::_bReverseCulling`)
  *          파이프라인의 후면 컬링을 그대로 두어도 카메라 쪽 면이 G버퍼에 남는다.
@@ -5811,7 +5811,7 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
 
 /**
  * @brief [RenderPassGPUTest] 머티리얼 텍스처는 네 백엔드 모두 선형 필터 · 랩 주소로 읽힌다 — 체커 칸 경계의 섞인 픽셀 수가 같다
- * @details 계약은 네이티브 bindless(DX12 · Vulkan)의 `swSampleMaterialTexture` → `swSampleIndex` = SW_SAMPLER_LINEAR_WRAP 이다. 슬롯 결합
+ * @details 계약은 네이티브 bindless(DX12 · Vulkan)의 `MaterialTexture::sampleIndex` → `Bindless::sampleIndex` = SW_SAMPLER_LINEAR_WRAP 이다. 슬롯 결합
  *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t16..t31)에 샘플러를 직접 건다 — 걸지 않으면 GL 은 기본 샘플러(NEAREST · CLAMP)로 칸 경계가
  *          계단이 되고, CLAMP 면 텍스처 가장자리에서 반대편 텍셀과 섞이지 않는다. 64x64 체커(8 텍셀 칸, 양 끝 열 색이 다르다)를
  *          화면에 크게 깔고 조명을 컴파일 아웃(Unlit)한 뒤, 쿼드 픽셀 가운데 두 색 사이(25~75%)인 픽셀을 센다 — 최근접은 0 이고, CLAMP 는
@@ -5952,8 +5952,8 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
 
 /**
  * @brief [RenderPassGPUTest] 엔진 텍스처 슬롯(풀스크린 입력)은 네 백엔드 모두 같은 샘플러(선형 · 클램프)로 읽힌다 — 블룸 결과가 기준 백엔드와 같다
- * @details 계약은 `shaderslot::kEngineTextureSampler`(SW_ENGINE_TEXTURE_SAMPLER) 하나다. 네이티브 bindless(DX12 · Vulkan)는 `swSampleIndex` 가 그
- *          샘플러를 고르고, 슬롯 결합 샘플러를 쓰는 DX11 · GL 은 엔진이 t0..t3 에 같은 샘플러를 건다. 블룸은 `swSampleSource` 를 반 텍셀 비낀 두
+ * @details 계약은 `shaderslot::kEngineTextureSampler`(SW_ENGINE_TEXTURE_SAMPLER) 하나다. 네이티브 bindless(DX12 · Vulkan)는 `Bindless::sampleIndex` 가 그
+ *          샘플러를 고르고, 슬롯 결합 샘플러를 쓰는 DX11 · GL 은 엔진이 t0..t3 에 같은 샘플러를 건다. 블룸은 `PassTexture::sampleSource` 를 반 텍셀 비낀 두
  *          탭으로 읽어 텍셀 넷을 평균하므로 필터(최근접이면 한 텍셀) · 주소 모드(화면 가장자리에서 랩이면 반대편 텍셀)가 그대로 픽셀에 드러난다.
  *          밝은 큐브 셋 + 화면 왼쪽 가장자리를 넘는 긴 막대(왼쪽 끝만 밝다 — 랩과 클램프가 갈린다)를 나눈 후처리 파이프라인으로 그려,
  *          `SceneColor` 가 기준과 같은 백엔드에서 `BloomColor` 도 같은지 픽셀로 본다.
@@ -6470,7 +6470,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
             outRgb[channel]      = ( top * ( 1.0f - fracY ) + bottom * fracY ) / 255.0f;
         }
     };
-    // 블룸 출력 하나(postbloom.hlsli swApplyBloom, AO 없음)를 원본 텍셀 @p shiftInTexels 칸 비킴으로 흉내 내 GPU 값과의 채널 절대차 합을 냅니다.
+    // 블룸 출력 하나(postbloom.hlsli Bloom::apply, AO 없음)를 원본 텍셀 @p shiftInTexels 칸 비킴으로 흉내 내 GPU 값과의 채널 절대차 합을 냅니다.
     auto computeBloomError = [&sampleBilinear]( const test::RHITestImage& source, const test::RHITestImage& bloom, float32 shiftInTexels ) -> float64
     {
         float64       errorSum = 0.0;
@@ -8212,7 +8212,7 @@ SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSource
 
 /**
  * @brief [RenderPassGPUTest] 물 정점 셰이더의 파도 함수(gerstner.hlsli)가 CPU 질의(WaterWaveMath)와 같은 변위를 낸다 — 네 백엔드
- * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `swComputeGerstnerDisplacement` 를 표본 32 자리에서 불러 float 비트를
+ * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `Gerstner::computeDisplacement` 를 표본 32 자리에서 불러 float 비트를
  *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
  *          식 하나(항의 순서 · Q 나누기 · 분산)라도 갈리면 cm 단위로 벌어진다.
  */
@@ -8328,7 +8328,7 @@ SW_TEST_CASE( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed )
         const sw::shared_ptr<sw::Material> water = sw::Material::create();
         SW_ASSERT_TRUE( water->initialize( device.get(), test::getEngineDefaultAssets()._waterMaterial.get() ) );
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
-        // water.hlsl 의 SwMaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
+        // water.hlsl 의 MaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
         SW_EXPECT_EQUAL( 144u, water->getElementStride() );
         const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "wave1" ) );
         SW_ASSERT_NOT_NULL( pWave );
@@ -9310,7 +9310,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )
 {
     struct ColorVisionOracle
     {
-        /** @brief 녹색약 보정 — colorvision.hlsli 의 swApplyColorVisionCorrection( color, 2 ) 과 같은 식. */
+        /** @brief 녹색약 보정 — colorvision.hlsli 의 ColorVision::applyCorrection( color, 2 ) 과 같은 식. */
         static sw::float3 correctDeuteranopia( const sw::float3& color )
         {
             const float32 simulatedR = 0.367322f * color._x + 0.860646f * color._y - 0.227968f * color._z;

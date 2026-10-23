@@ -26,7 +26,7 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position            = input.position;
@@ -38,7 +38,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 float3 loadSource( int2 texel )
 {
 #if defined( SW_NATIVE_BINDLESS )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
 #else
     return g_SwSlot0.Load( int3( texel, 0 ) ).rgb;
 #endif
@@ -48,7 +48,7 @@ float2 getSourceSize()
 {
     float2 size;
 #if defined( SW_NATIVE_BINDLESS )
-    g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
+    g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
 #else
     g_SwSlot0.GetDimensions( size.x, size.y );
 #endif
@@ -58,7 +58,7 @@ float2 getSourceSize()
 float loadHistory()
 {
 #if defined( SW_NATIVE_BINDLESS )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
 #else
     return g_SwSlot1.Load( int3( 0, 0, 0 ) ).r;
 #endif

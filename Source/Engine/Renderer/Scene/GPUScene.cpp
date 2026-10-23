@@ -80,7 +80,7 @@ namespace sw
     {
         for ( GPUMeshBatch& batch : _snapshot.getMutableBatches() )
         {
-            // 구간 배치는 메시 시작에 구간 첫 정점을 더한다 — 셰이더는 배치 안 번호(로컬)를 더해 원소를 찾는다(binding.hlsli swComputeMorphElement).
+            // 구간 배치는 메시 시작에 구간 첫 정점을 더한다 — 셰이더는 배치 안 번호(로컬)를 더해 원소를 찾는다(binding.hlsli MorphPool::computeElement).
             const uint32 meshBase = pool.baseOf( batch._mesh.get() );
             const uint32 base     = ( meshBase != GPUMeshMorphPool::kInvalidBase ) ? meshBase + batch._sectionFirstVertex : meshBase;
             if ( batch._morphVertexBase != base )

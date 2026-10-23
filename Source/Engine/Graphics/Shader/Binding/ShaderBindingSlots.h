@@ -40,7 +40,7 @@ namespace sw
         inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_SLOT_COUNT;
         /**
          * @brief 엔진 텍스처 슬롯 t0..t3(풀스크린 입력, G버퍼, 깊이, 그림자 맵)을 읽는 샘플러(SW_SAMPLER_*)입니다. 선형 필터와 클램프 주소를 씁니다.
-         * @details 네이티브 bindless(DX12, Vulkan)는 `swSampleIndex` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는 DX11 과 GL 은 엔진이 t0..t3 에
+         * @details 네이티브 bindless(DX12, Vulkan)는 `Bindless::sampleIndex` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는 DX11 과 GL 은 엔진이 t0..t3 에
          *          같은 샘플러를 바인딩한다(언리얼 후처리 입력의 Bilinear, Clamp 정적 샘플러). 랩이면 화면 가장자리의 탭이 반대편을 읽는다.
          */
         inline constexpr uint32 kEngineTextureSampler = SW_ENGINE_TEXTURE_SAMPLER;
@@ -60,7 +60,7 @@ namespace sw
         inline constexpr uint32 kCanvasTextureCount = SW_CANVAS_TEXTURE_COUNT;
         /**
          * @brief 머티리얼 텍스처를 읽는 샘플러(bindingslots.hlsli 4 의 SW_SAMPLER_*)입니다. 선형 필터와 랩 주소를 씁니다.
-         * @details 네이티브 bindless(DX12, Vulkan)는 `swSampleMaterialTexture` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는
+         * @details 네이티브 bindless(DX12, Vulkan)는 `MaterialTexture::sampleIndex` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는
          *          GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 유닛 16..31 에 같은 샘플러를 바인딩하고, DX11 은 셰이더가 정적 세트의 이 번호로 읽는다
          *          (샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯마다 짝을 둘 수 없다). 언리얼 머티리얼 텍스처의 기본 Wrap 샘플러다.
          */
@@ -89,7 +89,7 @@ namespace sw
         inline constexpr uint32 kBatchBuffer = SW_SLOT_BATCH_SRV;
         /**
          * @brief 정점 애니메이션(VAT) 테이블(g_SwVertexAnimation)입니다. 먼 군중의 메시마다 첫 원소와 프레임 × 정점 데이터를 담습니다.
-         * @details 정점 셰이더가 배치 테이블의 VAT 시작과 인스턴스의 시간 오프셋으로 읽는다(binding.hlsli `swLoadAnimatedVertex`).
+         * @details 정점 셰이더가 배치 테이블의 VAT 시작과 인스턴스의 시간 오프셋으로 읽는다(binding.hlsli `InstanceData::loadAnimatedVertex`).
          */
         inline constexpr uint32 kVertexAnimationBuffer = SW_SLOT_VERTEX_ANIMATION_SRV;
         /**
@@ -183,7 +183,7 @@ namespace sw
         inline constexpr uint32 kPointShadowFaceCount = SW_POINT_SHADOW_FACE_COUNT;
 
         /**
-         * @brief 라이트 그리드(클러스터드 라이팅)의 단어 배치입니다. 원본은 bindingslots.hlsli 10절이고, C++ `LightGrid`, 셰이더 `swBeginLights`, 컴퓨트 lightgrid.hlsl 이 같은 값을 읽습니다.
+         * @brief 라이트 그리드(클러스터드 라이팅)의 단어 배치입니다. 원본은 bindingslots.hlsli 10절이고, C++ `LightGrid`, 셰이더 `LightCursor::begin`, 컴퓨트 lightgrid.hlsl 이 같은 값을 읽습니다.
          * @details 그리드는 32 비트 단어 배열(g_SwLightGrid)입니다. 헤더, 클러스터마다 단어 두 개, 라이트 번호 목록 순서로 놓입니다.
          */
         namespace lightgrid
@@ -243,7 +243,7 @@ namespace sw
             inline constexpr uint32 kVkSamplerBinding       = SW_VK_SAMPLER_BINDING;        ///< set 1 binding 1은 immutable sampler 배열이다.
             inline constexpr uint32 kVkShadowSamplerBinding = SW_VK_SHADOW_SAMPLER_BINDING; ///< set 1 binding 2는 비교 샘플러다.
             inline constexpr uint32 kVkRwTextureBinding     = SW_VK_RWTEXTURE_BINDING;      ///< set 1 binding 3은 STORAGE_IMAGE 배열이다.
-            /// @brief 배열 칸 수입니다. 셰이더가 첨자를 (칸 수 - 1) 로 마스크하므로(binding.hlsli swBindlessTextureSlot) 2 의 거듭제곱이고, 백엔드는 이 크기로 만든다.
+            /// @brief 배열 칸 수입니다. 셰이더가 첨자를 (칸 수 - 1) 로 마스크하므로(binding.hlsli Bindless::textureSlot) 2 의 거듭제곱이고, 백엔드는 이 크기로 만든다.
             inline constexpr uint32 kDx12DescriptorHeapSize = SW_DX12_DESCRIPTOR_HEAP_SIZE;       ///< DX12 셰이더 가시 힙(텍스처 · RW 텍스처 공용)
             inline constexpr uint32 kVkTextureCount         = SW_VK_BINDLESS_TEXTURE_COUNT;       ///< Vulkan set 1 binding 0
             inline constexpr uint32 kVkStorageImageCount    = SW_VK_BINDLESS_STORAGE_IMAGE_COUNT; ///< Vulkan set 1 binding 3

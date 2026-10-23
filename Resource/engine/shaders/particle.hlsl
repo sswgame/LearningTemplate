@@ -131,7 +131,7 @@ PSInput billboardVertex( uint vertexId, uint instanceId )
     return output;
 }
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
 {
     input.position = input.position;
     if ( ( SW_ROOT( g_SwParticleFlags ) & kParticleFlagRibbon ) != 0u )
@@ -141,7 +141,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID, uint instanceI
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float4 color = input.color * swSampleMaterialTexture( SW_ROOT( g_SwParticleTexture ), input.uv );
+    const float4 color = input.color * MaterialTexture::sampleIndex( SW_ROOT( g_SwParticleTexture ), input.uv );
     const float  alpha = ( ( SW_ROOT( g_SwParticleFlags ) & kParticleFlagAdditive ) != 0u ) ? 0.0f : color.a;
     return float4( color.rgb * color.a, alpha );
 }

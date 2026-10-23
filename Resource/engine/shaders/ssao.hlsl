@@ -6,7 +6,7 @@ struct PSInput
     float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -18,8 +18,8 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    float     depth        = swSampleDepth( input.uv ).r;
-    float3    normal       = normalize( swSampleNormal( input.uv ).xyz * 2.0f - 1.0f );
+    float     depth        = PassTexture::sampleDepth( input.uv ).r;
+    float3    normal       = normalize( PassTexture::sampleNormal( input.uv ).xyz * 2.0f - 1.0f );
     float2    texel        = g_OutlineParams.yz;
     float     occlusion    = 0.0f;
     const int kSampleCount = 4;
@@ -27,8 +27,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
         float2( -texel.x, 0 ), float2( texel.x, 0 ), float2( 0, -texel.y ), float2( 0, texel.y ) };
     SW_UNROLL for ( int sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
     {
-        float  sampleDepth     = swSampleDepth( input.uv + arrOffset[sampleIndex] * 2.0f ).r;
-        float3 sampleNormal    = normalize( swSampleNormal( input.uv + arrOffset[sampleIndex] * 2.0f ).xyz * 2.0f - 1.0f );
+        float  sampleDepth     = PassTexture::sampleDepth( input.uv + arrOffset[sampleIndex] * 2.0f ).r;
+        float3 sampleNormal    = normalize( PassTexture::sampleNormal( input.uv + arrOffset[sampleIndex] * 2.0f ).xyz * 2.0f - 1.0f );
         float  depthDifference = saturate( ( sampleDepth - depth ) * 40.0f );
         float  normalAgreement = saturate( dot( normal, sampleNormal ) );
         occlusion += ( 1.0f - depthDifference ) * ( 0.5f + 0.5f * normalAgreement );

@@ -32,7 +32,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     {
         for ( uint texelX = first.x; texelX < last.x; ++texelX )
         {
-            maxDepth = max( maxDepth, swLoadRwTexture2D( SW_ROOT( g_OcclusionDepthIndex ), uint2( texelX, texelY ) ).x );
+            maxDepth = max( maxDepth, Bindless::loadRwTexture2D( SW_ROOT( g_OcclusionDepthIndex ), uint2( texelX, texelY ) ).x );
         }
     }
     g_OcclusionTilesRW[row * SW_ROOT( g_OcclusionColumnCount ) + column] = maxDepth;

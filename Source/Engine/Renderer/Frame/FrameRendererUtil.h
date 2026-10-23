@@ -526,7 +526,7 @@ namespace sw
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };
         hashed_string _flags{ "g_Flags" };
-        /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 swLoadInstance 가 범위를 제한합니다.
+        /// @brief 인스턴스 버퍼 원소 수입니다. 셰이더 InstanceData::load 가 범위를 제한합니다.
         hashed_string _swInstanceCount{ "g_SwInstanceCount" };
         /// @brief 배치의 머티리얼 데이터 버퍼 원소 수입니다. 셰이더 SW_MATERIAL 이 클램프합니다.
         hashed_string _swMaterialCount{ "g_SwMaterialCount" };

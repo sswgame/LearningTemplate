@@ -13,7 +13,7 @@ SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
     float4 g_MaterialColor;
 };
 
-PSInput VSMain( SwVertexInput input )
+PSInput VSMain( VertexInput input )
 {
     PSInput output;
     output.position = float4( input.position, 1.0f );
