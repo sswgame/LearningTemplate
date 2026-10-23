@@ -283,7 +283,7 @@ SW_TEST_CASE( PrefabTest, SpawnCreatesGameObject )
 SW_TEST_CASE( PrefabTest, InMemoryJSONPrefabCreationAndSpawn )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "InMemory JSON prefab spawn is Dev-only (Shipping requires cooked .bin)" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // InMemory JSON prefab spawn is Dev-only (Shipping requires cooked .bin)
 #else
     const utf8* prefabJSON = R"({
 		"_name": "DynamicPrefabActor"

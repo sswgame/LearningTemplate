@@ -295,7 +295,7 @@ SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
 SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "pause and step are development-build console commands" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // pause and step are development-build console commands
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ServerBootTest, ServerConfigGamePortAcceptsAClientFromAnotherProce
 SW_TEST_CASE( ServerBootTest, NetListenPortOverridesTheServerConfigGamePort )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "-gv_netListenPort is a development global variable - covered in Shipping by ServerConfigGamePortAcceptsAClientFromAnotherProcess" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // -gv_netListenPort is a development global variable - covered in Shipping by ServerConfigGamePortAcceptsAClientFromAnotherProcess
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -413,7 +413,7 @@ SW_TEST_CASE( ServerBootTest, NetListenPortOverridesTheServerConfigGamePort )
 SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheServerConfig )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping server needs real TLS certificate and key paths for the service port" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping server needs real TLS certificate and key paths for the service port
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -524,7 +524,7 @@ namespace
 SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -589,7 +589,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
 SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -705,7 +705,7 @@ namespace
 SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -721,7 +721,7 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 SW_TEST_CASE( ServerBootTest, StateHashHistoryToleratesServersPausingAtDistantTicks )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -760,7 +760,7 @@ SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
 SW_TEST_CASE( ServerBootTest, AuthorityGhostDeltaMatchesHowFarTheServerMovedAnObject )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );

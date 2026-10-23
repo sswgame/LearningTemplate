@@ -173,7 +173,7 @@ SW_TEST_CASE( EconomyServiceTest, MissingSignInOrKeyIsRefusedAndCounted )
 SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the fake receipt validator is development-only and refused by a shipping economy service" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the fake receipt validator is development-only and refused by a shipping economy service
 #else
     EconomyServiceFixture fixture;
     EconomyCall           call = fixture.makeCall( EconomyMethod::kRedeemReceipt );

@@ -170,7 +170,7 @@ SW_TEST_CASE( UIScaleTest, TextScaleGrowsTextOnly )
 SW_TEST_CASE( UIScaleTest, SafeZoneInsetsChild )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_uiDebugSafeZone is a test variable - shipping bakes it to a constant and does not register it" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_uiDebugSafeZone is a test variable - shipping bakes it to a constant and does not register it
 #endif
     sw::UIViewport viewport{};
     {

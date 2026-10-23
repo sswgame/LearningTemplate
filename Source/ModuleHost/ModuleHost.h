@@ -279,5 +279,7 @@ namespace sw
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
+        /** @brief `shutdown` 안이면 true 입니다. 비우기(`drainRenderWorkers`)가 리로드 앞인지 종료 앞인지 가려 오류 글과 그래프 깨짐 표시를 달리 합니다. */
+        bool _bShuttingDown;
     };
 } // namespace sw

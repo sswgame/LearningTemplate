@@ -51,7 +51,7 @@ namespace
 SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDown )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping account kit refuses development options and needs a real ticket key secret" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
 #endif
     using Internal = OnlineServerKitsTestInternal;
     LoopbackStreamNetwork        network;

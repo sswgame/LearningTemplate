@@ -9,7 +9,7 @@
 통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다.
 
 개발 기본 빌드(`cmake --build --preset Ninja-Debug`)는 테스트 실행 파일을 짓지 않는다. 테스트까지 지으려면 `--target all AllTests` 를 붙인다.
-`ctest` 는 실행 파일 테스트 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS BuildTestBinaries`).
+`ctest` 는 실행 파일 테스트 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS SWTestBinaries` — 픽스처 이름이다. CI 의 Test 단계가 그렇게 돌려 Build 단계 뒤 두 번째 링크가 없다).
 `py -3 -m Scripts test` 도 먼저 짓는다(`--no-build` 로 건너뛴다). CI · 검증 프리셋(`CI-*`, `*-Shipping*`, `Ninja-Debug-ASAN`)의 `cmake --build --preset` 은 테스트까지 짓는다.
 
 ```powershell

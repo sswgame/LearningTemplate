@@ -5222,7 +5222,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch
 #else
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GlobalVariableManager& variables                    = sw::engine::getSubsystem<sw::GlobalVariableManager>();
@@ -5296,7 +5296,7 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
 SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_lightCulling is a development-build switch" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_lightCulling is a development-build switch
 #else
     sw::GlobalVariableInfo* pSwitch = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_lightCulling" );
     SW_ASSERT_TRUE( pSwitch != nullptr );
@@ -7416,7 +7416,7 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
 SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "global variable switches (gv_rhiSoftwareAdapter) are a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // global variable switches (gv_rhiSoftwareAdapter) are a development-build feature
 #elif defined( SW_PLATFORM_WINDOWS )
     sw::GlobalVariableInfo* pSwitch = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_rhiSoftwareAdapter" );
     SW_ASSERT_TRUE( pSwitch != nullptr );

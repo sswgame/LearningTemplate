@@ -530,9 +530,9 @@ namespace sw
         ShaderCookStampInternal::writeCookStamp( ResourcePaths::getRootFolderPath(), ResourcePaths::getSearchPriority(), binDirectory, pFailedSource );
     }
 
-    void ShaderCooker::writeCookStamp( string_view resourceRoot, string_view binDirectory, const unordered_set<string>* pFailedSource )
+    void ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource )
     {
-        ShaderCookStampInternal::writeCookStamp( resourceRoot, ResourcePaths::getSearchPriority(), binDirectory, pFailedSource );
+        ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, binDirectory, pFailedSource );
     }
 
     void ShaderCooker::invalidateSharedHeaderCache()
@@ -604,10 +604,10 @@ namespace sw
 
     bool ShaderCooker::isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath )
     {
-        return isCookedOutputCurrent( ResourcePaths::getRootFolderPath(), binDirectory, absShaderPath );
+        return isCookedOutputCurrent( ResourcePaths::getRootFolderPath(), ResourcePaths::getSearchPriority(), binDirectory, absShaderPath );
     }
 
-    bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, string_view binDirectory, string_view absShaderPath )
+    bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath )
     {
         // <domain>/shaders/bin/<rhi> → <domain>/shaders (writeCookStamp 와 같은 되짚기)
         const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
@@ -622,7 +622,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ ShaderCookStampInternal::_s_sharedHeaderMutex };
 
-        const ShaderCookStampInternal::StampInfo& stamp = ShaderCookStampInternal::readCookStamp( resourceRoot, ResourcePaths::getSearchPriority(), rhiDir, shadersDir );
+        const ShaderCookStampInternal::StampInfo& stamp = ShaderCookStampInternal::readCookStamp( resourceRoot, listPriority, rhiDir, shadersDir );
         if ( stamp._bHeadersCurrent == false )
             return false;
 

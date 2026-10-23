@@ -107,11 +107,11 @@ namespace sw
          */
         static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
         /**
-         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`collectIncludeRootDomains`)을 @p resourceRoot 아래에서 찾습니다.
-         * @details 루트를 받지 않는 판은 `ResourcePaths` 의 루트를 넘긴다. 테스트는 임시 트리의 루트를 넘겨 실제 `Resource/` 를 보지 않는다
-         *          (병렬로 도는 다른 프로세스가 그 트리를 건드려도 판정이 흔들리지 않는다).
+         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`collectIncludeRootDomains`)을 @p resourceRoot 아래에서 @p listPriority 로 찾습니다.
+         * @details 루트와 우선순위를 받지 않는 판은 `ResourcePaths` 의 전역 값을 넘긴다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
+         *          실제 `Resource/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
          */
-        static void writeCookStamp( string_view resourceRoot, string_view binDirectory, const unordered_set<string>* pFailedSource );
+        static void writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource );
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 쿠킹된 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );
@@ -200,8 +200,8 @@ namespace sw
          * @param absShaderPath 원본 `.hlsl` 의 절대 경로입니다.
          */
         static bool isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath );
-        /** @brief `isCookedOutputCurrent` 의 본체 — 다른 include 루트 도메인의 헤더를 @p resourceRoot 아래에서 봅니다. */
-        static bool isCookedOutputCurrent( string_view resourceRoot, string_view binDirectory, string_view absShaderPath );
+        /** @brief `isCookedOutputCurrent` 의 본체 — 다른 include 루트 도메인의 헤더를 @p resourceRoot 아래에서 @p listPriority 로 찾아 봅니다(`writeCookStamp` 와 같은 짝). */
+        static bool isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath );
 
         /**
          * @brief 도메인(`engine` · `common` · `game/<팩>`)마다 커밋된 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.

@@ -1,6 +1,6 @@
 # Linux 와 GPU 검증 구조의 남은 일 (2026-10-18)
 
-> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: C-41 · 진행: 1/2
+> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: C-41, E-8 · 진행: 1/3
 
 C-41 의 순서는 결정 기록 5-12 `C-41` 행입니다. 네 단계 가운데 CI 상태 알림, 셰이더 전 백엔드 확인, 요구 백엔드 정책, 소프트웨어 렌더러 묶음은 들어갔습니다.
 이 문서는 남은 한 가지를 구현 단위로 나눕니다. 앱 러너의 건너뜀(V1)은 `AppTestUtil::runAppOnBackend` 로 들어갔습니다. GPU 러너와 자체 호스트 러너는 하지 않는다는 결정은 그대로입니다.
@@ -30,7 +30,9 @@ C-41 의 순서는 결정 기록 5-12 `C-41` 행입니다. 네 단계 가운데 
 |---|---|---|---|---|---|
 | V2 | 지는 케이스 수정(들어감, 로컬 확인) → 리눅스 `gl` 원인 확인(llvmpipe 에 GL_ARB_gl_spirv 없음, 정책에서 뺌, CI 미확인) → 수정이 든 CI 가 연속 세 번 통과한 뒤 CI 주석과 단계 시간 확인 뒤 보고 전용 해제, 초 수정 | `.github/workflows/ci.yml`, `Test/TestPolicy.json` | 없음(빌드 없음) | 다음 main CI 실행 | 필요합니다. CI 단계 시간을 세 번 이상 읽습니다 |
 
-V2 는 판단이 거의 없어 `mech-worker` 에 맡길 수 있습니다.
+| V3 | WARP 픽셀 테스트의 CI 실패 가르기(옛 `E-8`) — V2 로 `continue-on-error` 를 지운 뒤 `RenderPassGPUTest.*` 를 `softwareRenderCases` 에 더해 러너의 WARP 판 · 창 없는 세션 탓인지 주석으로 가른다. 이 PC 의 WARP(`SW_RHI_SOFTWARE_ADAPTER=1`, DX12 · DX11)에서는 2026-10-06 에 `RenderPassGPUTest.*` 71 개가 모두 통과했다 | `Test/TestPolicy.json`, `.github/workflows/ci.yml` | V2 | CI 의 `swrender` 주석 | 필요합니다. CI 단계 시간으로 `softwareRenderSeconds` 를 다시 잡는다 |
+
+V2 는 판단이 거의 없어 `mech-worker` 에 맡길 수 있습니다. V3 은 V2 가 초록인 뒤라야 의미가 있다 — 보고 전용 단계에 지는 케이스를 더하면 V2 의 "연속 세 번 초록" 이 늦어진다.
 
 ## 3. 사용자 결정
 
