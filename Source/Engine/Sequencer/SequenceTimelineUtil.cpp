@@ -12,7 +12,9 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 
@@ -157,6 +159,91 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "SequenceTimeline" );
+
+    void SequenceTimelineUtil::applySpawns( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, vector<SequenceSpawnedObject>& inoutListSpawned )
+    {
+        if ( pManager == nullptr )
+            return;
+        for ( uint32 itemIndex = 0; itemIndex < static_cast<uint32>( asset._listItem.size() ); ++itemIndex )
+        {
+            const SequenceTrackItem&    item  = asset._listItem[itemIndex];
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+            if ( pInfo == nullptr || pInfo->_bSpawns == false )
+                continue;
+            const int32 windowStart = item._start - asset.getPrerollFrames( item );
+            const bool  bInWindow   = windowStart <= frame && frame <= item._end;
+            const bool  bShown      = item._start <= frame && frame <= item._end;
+
+            size_t spawnedIndex = inoutListSpawned.size();
+            for ( size_t index = 0; index < inoutListSpawned.size(); ++index )
+            {
+                if ( inoutListSpawned[index]._itemIndex == itemIndex )
+                {
+                    spawnedIndex = index;
+                    break;
+                }
+            }
+            const bool bSpawned = spawnedIndex < inoutListSpawned.size();
+
+            if ( bInWindow == false )
+            {
+                if ( bSpawned )
+                {
+                    GameObject* pObject = pManager->resolveGameObject( inoutListSpawned[spawnedIndex]._object );
+                    if ( pObject != nullptr )
+                        pManager->destroyObject( pObject );
+                    inoutListSpawned.erase( inoutListSpawned.begin() + static_cast<std::ptrdiff_t>( spawnedIndex ) );
+                }
+                continue;
+            }
+
+            if ( bSpawned == false )
+            {
+                AssetManager*         pAssets = pManager->findAssetManager();
+                GameObject*           pObject = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, item._prefab, item._targetObject.c_str() ) : nullptr;
+                SequenceSpawnedObject spawned;
+                spawned._itemIndex = itemIndex;
+                if ( pObject == nullptr )
+                {
+                    SW_LOG_ERROR( "Sequence spawn '%#' could not spawn prefab '%#' - the item spawns nothing until its span is left", item._name, item._prefab );
+                    inoutListSpawned.push_back( spawned ); // 실패도 기억해 구간이 끝날 때까지 다시 시도하지 않는다
+                    continue;
+                }
+                spawned._object = pObject->getHandle();
+                inoutListSpawned.push_back( spawned );
+                // 프리팹 상태는 틱 뒤에 채워지고 루트가 켜진 채 오므로, 프리롤 동안이면 그 뒤에 끈다(구조 변경 큐는 먼저 넣은 순서대로 돈다).
+                if ( bShown == false )
+                {
+                    const GameObjectHandle handle = spawned._object;
+                    pManager->executeOrDeferPostTick( [pManager, handle]()
+                    {
+                        GameObject* pSpawnedObject = pManager->resolveGameObject( handle );
+                        if ( pSpawnedObject != nullptr )
+                            pSpawnedObject->setActive( false );
+                    } );
+                }
+                continue;
+            }
+
+            GameObject* pObject = pManager->resolveGameObject( inoutListSpawned[spawnedIndex]._object );
+            if ( pObject != nullptr && pObject->isActive() != bShown )
+                pObject->setActive( bShown );
+        }
+    }
+
+    void SequenceTimelineUtil::releaseSpawns( GameObjectManager* pManager, vector<SequenceSpawnedObject>& inoutListSpawned )
+    {
+        if ( pManager != nullptr )
+        {
+            for ( const SequenceSpawnedObject& spawned : inoutListSpawned )
+            {
+                GameObject* pObject = pManager->resolveGameObject( spawned._object );
+                if ( pObject != nullptr )
+                    pManager->destroyObject( pObject );
+            }
+        }
+        inoutListSpawned.clear();
+    }
 
     void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, int32 previousFrame,
                                            vector<const SequenceTrackItem*>* pOutListCrossedEvent )

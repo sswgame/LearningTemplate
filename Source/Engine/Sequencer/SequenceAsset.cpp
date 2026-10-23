@@ -147,9 +147,18 @@ namespace sw
                 SW_LOG_ERROR( "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
                 bValid = false;
             }
-            if ( findItemKindInfo( item._kind ) == nullptr )
+            const SequenceItemKindInfo* pKindInfo = findItemKindInfo( item._kind );
+            if ( pKindInfo == nullptr )
             {
                 SW_LOG_ERROR( "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
+                bValid = false;
+                continue;
+            }
+            // 스폰은 무엇을 어떤 이름으로 만들지가 필수다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않는다.
+            const bool bSpawnNeedsFields = pKindInfo->_bSpawns && ( item._prefab.empty() || item._targetObject.empty() );
+            if ( bSpawnNeedsFields )
+            {
+                SW_LOG_ERROR( "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
                 bValid = false;
             }
         }

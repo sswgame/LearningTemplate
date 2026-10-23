@@ -20,6 +20,7 @@ namespace sw
         , _bAutoPlay{ SW_TRUE }
         , _reserved{ 0 }
         , _player{}
+        , _listSpawned{}
         , _sequenceEventMulticast{}
         , _cameraSignalMulticast{}
     {
@@ -103,6 +104,8 @@ namespace sw
             listSignal.push_back( signal );
         }
         _player.stop();
+        GameObject* pSpawnOwner = getOwner();
+        SequenceTimelineUtil::releaseSpawns( pSpawnOwner != nullptr ? pSpawnOwner->getManager() : nullptr, _listSpawned );
         // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 멈추면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
@@ -173,6 +176,7 @@ namespace sw
         // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
         vector<const SequenceTrackItem*> listCrossed;
         SequenceTimelineUtil::applyPlayback( pManager, _player, &listCrossed );
+        SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _listSpawned );
 
         // 카메라 신호는 듣는 쪽이 있을 때만 모은다(신호도 사본이라 핸들러가 시퀀스를 바꿔도 안전하다).
         if ( _cameraSignalMulticast.isBound() )

@@ -38,6 +38,7 @@ namespace sw
         Event       = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
         CameraCut   = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). `_preset` 이 있으면 대상의 카메라 디렉터가 그 프리셋을 켭니다. */
         CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
+        Spawn       = 4, /**< 프리팹 `_prefab` 을 구간 시작 `_prerollFrames` 프레임 앞에 **꺼 둔 채** 스폰해 첫 포즈 · 머티리얼 · PSO 를 준비하고, 구간 동안 켜고, 끝나면 지웁니다(언리얼 Spawnable). 이름은 `_targetObject`. */
         Count            /**< 표식입니다. 종류가 아닙니다. */
     };
 
@@ -50,6 +51,7 @@ namespace sw
         bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
         bool             _bCutsCamera;   /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
         bool             _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
+        bool             _bSpawns;       /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 대상은 시퀀스가 만든 오브젝트입니다. */
     };
 
     /**
@@ -75,10 +77,11 @@ namespace sw
 {
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
     inline constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
-        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false},
-        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false},
-        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false},
-        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true},
+        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false, false},
+        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false, false},
+        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false, false},
+        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true, false},
+        {      SequenceItemKind::Spawn, 0xFF80C0A0u, false, false, false, false,  true},
     };
 
     /** @brief 트랜스폼 트랙 채널의 이름입니다(에디터 표시). 순서는 채널 순서입니다. */
@@ -99,7 +102,7 @@ namespace sw
     static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ),
                    "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
-    /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷, 카메라 흔들림). 구간 하나를 나타냅니다. */
+    /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷, 카메라 흔들림, 스폰). 구간 하나를 나타냅니다. */
     REFLECT()
     struct SW_API SequenceTrackItem
     {
@@ -110,8 +113,11 @@ namespace sw
 
         PROPERTY( Tooltip = "Item name (event name for Event items)" )
         string _name;
-        PROPERTY( Tooltip = "Name of the object the item drives" )
+        PROPERTY( Tooltip = "Name of the object the item drives (Spawn: the name the spawned instance gets)" )
         string _targetObject;
+        /** @brief 스폰: 구간 시작 몇 프레임 전(`_prerollFrames`)부터 꺼 둔 채 만들어 구간 동안 켤 프리팹입니다. 다른 종류는 비운다. */
+        PROPERTY( AssetPath, AssetType = "Prefab", SkipIfEmpty, Tooltip = "Spawn: prefab spawned inactive before the span and shown during it" )
+        string _prefab;
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. */
         PROPERTY( Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is)" )
         string _preset;
@@ -119,8 +125,8 @@ namespace sw
         int32 _start{ 0 };
         PROPERTY( Tooltip = "Last frame of the span" )
         int32 _end{ 10 };
-        /** @brief 카메라 컷: 시작 몇 프레임 전에 대기 뷰 신호를 낼지입니다. `kUseSequencePreroll` 이면 시퀀스의 값입니다. */
-        PROPERTY( Tooltip = "Camera cut: frames before the start to signal the standby view (-1: the sequence value)" )
+        /** @brief 카메라 컷: 시작 몇 프레임 전에 대기 뷰 신호를 낼지입니다. 스폰: 시작 몇 프레임 전에 꺼 둔 채 만들지입니다. `kUseSequencePreroll` 이면 시퀀스의 값입니다. */
+        PROPERTY( Tooltip = "Camera cut: frames before the start to signal the standby view; Spawn: frames before the start to spawn it inactive (-1: the sequence value)" )
         int32 _prerollFrames{ kUseSequencePreroll };
         /** @brief 카메라 흔들림: 최대 흔들림(m) 입니다. */
         PROPERTY( Units = m, Tooltip = "Camera shake: largest shake offset" )
@@ -238,7 +244,7 @@ namespace sw
         bool hasCameraCut() const;
         /** @brief @p frame 을 덮는 카메라 컷 가운데 가장 늦게 시작한 것입니다(같으면 뒤에 적힌 것). 없으면 nullptr 입니다. */
         const SequenceTrackItem* findCameraCut( int32 frame ) const;
-        /** @brief 카메라 컷 항목의 프리롤 프레임입니다. 항목이 정하지 않았으면 시퀀스의 값입니다. */
+        /** @brief 카메라 컷(대기 뷰) · 스폰 항목의 프리롤 프레임입니다. 항목이 정하지 않았으면 시퀀스의 값입니다. */
         int32 getPrerollFrames( const SequenceTrackItem& item ) const;
 
         PROPERTY( Tooltip = "First frame of the sequence" )
@@ -247,7 +253,7 @@ namespace sw
         int32 _frameMax{ 100 };
         PROPERTY( Tooltip = "Free note" )
         string _note;
-        PROPERTY( Tooltip = "Span items (clip, event, camera cut, camera shake)" )
+        PROPERTY( Tooltip = "Span items (clip, event, camera cut, camera shake, spawn)" )
         vector<SequenceTrackItem> _listItem;
         /** @brief 키 트랙(트랜스폼, 프로퍼티)입니다. 클립이나 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
         PROPERTY( Tooltip = "Key tracks (transform, property, rig slot)" )

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -11,8 +12,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
@@ -1008,4 +1011,86 @@ SW_TEST_CASE( SequencerTest, RigSlotTrackSamplesClampedWeight )
     SW_EXPECT_NEAR_EQUAL( 0.25f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 0.0f ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 10.0f ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 20.0f ), 0.0001f );
+}
+
+/**
+ * @brief [SequencerTest] 스폰 항목은 구간 시작 프리롤 프레임 앞에 프리팹을 꺼 둔 채 만들고, 구간 동안 켜고, 구간이 지나거나 멈추면 지운다
+ * @details 프리롤 동안 꺼 둔 채 두는 것이 컷의 첫 프레임 준비(에셋 읽기 · PSO)를 앞당긴다. 실패한 스폰(없는 프리팹)은 구간이 끝날 때까지 다시 시도하지 않는다.
+ */
+SW_TEST_CASE( SequencerTest, SpawnItemSpawnsInactiveBeforeTheSpanThenShowsAndRemovesIt )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string prefabDisk = test::makeTempPath( "seqspawn/crate.prefab.xml" );
+    {
+        sw::GameObjectManager authoring;
+        sw::GameObject*       pSource = authoring.createGameObject( sw::hashed_string{ "Crate" } );
+        SW_ASSERT_NOT_NULL( pSource->addComponent<sw::SceneComponent>() );
+        sw::PrefabAsset prefab;
+        prefab.setFromGameObject( pSource );
+        SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( prefabDisk ) );
+        SW_ASSERT_TRUE( prefab.saveToXMLFile( prefabDisk ) );
+    }
+
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 100;
+    sw::SequenceTrackItem spawn{};
+    spawn._name          = "SpawnProp";
+    spawn._targetObject  = "SeqProp";
+    spawn._prefab        = ::test::makeTempResourceID( prefabDisk );
+    spawn._start         = 40;
+    spawn._end           = 60;
+    spawn._prerollFrames = 10;
+    spawn._kind          = sw::SequenceItemKind::Spawn;
+    asset._listItem.push_back( spawn );
+
+    sw::GameObjectManager                 manager;
+    sw::vector<sw::SequenceSpawnedObject> listSpawned;
+    sw::SequenceTimelineUtil::applySpawns( &manager, asset, 20, listSpawned ); // 프리롤 앞 — 아직 없다
+    SW_EXPECT_TRUE( listSpawned.empty() );
+    SW_EXPECT_NULL( manager.findGameObjectByName( sw::hashed_string{ "SeqProp" } ) );
+
+    sw::SequenceTimelineUtil::applySpawns( &manager, asset, 30, listSpawned ); // 프리롤 안 — 꺼 둔 채 만든다
+    SW_ASSERT_EQUAL( size_t( 1 ), listSpawned.size() );
+    manager.update( 1.0f / 60.0f );
+    sw::GameObject* pProp = manager.findGameObjectByName( sw::hashed_string{ "SeqProp" } );
+    SW_ASSERT_NOT_NULL( pProp );
+    SW_EXPECT_FALSE( pProp->isActive() );
+
+    sw::SequenceTimelineUtil::applySpawns( &manager, asset, 45, listSpawned ); // 구간 안 — 켠다
+    SW_EXPECT_TRUE( pProp->isActive() );
+    SW_EXPECT_EQUAL( size_t( 1 ), listSpawned.size() ); // 다시 만들지 않는다
+
+    sw::SequenceTimelineUtil::applySpawns( &manager, asset, 61, listSpawned ); // 구간 뒤 — 지운다
+    SW_EXPECT_TRUE( listSpawned.empty() );
+    manager.update( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_NULL( manager.findGameObjectByName( sw::hashed_string{ "SeqProp" } ) );
+
+    // 재생을 멈추면(`releaseSpawns`) 구간 안이어도 지운다.
+    sw::SequenceTimelineUtil::applySpawns( &manager, asset, 50, listSpawned );
+    SW_EXPECT_EQUAL( size_t( 1 ), listSpawned.size() );
+    sw::SequenceTimelineUtil::releaseSpawns( &manager, listSpawned );
+    SW_EXPECT_TRUE( listSpawned.empty() );
+    manager.update( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_NULL( manager.findGameObjectByName( sw::hashed_string{ "SeqProp" } ) );
+}
+
+/**
+ * @brief [SequencerTest] 스폰 항목은 프리팹과 이름이 모두 있어야 읽힌다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않으므로 읽기 오류다
+ */
+SW_TEST_CASE( SequencerTest, SpawnItemWithoutPrefabOrNameIsRefused )
+{
+    sw::SequenceAsset     asset;
+    sw::SequenceTrackItem spawn{};
+    spawn._name         = "SpawnProp";
+    spawn._targetObject = "SeqProp";
+    spawn._kind         = sw::SequenceItemKind::Spawn;
+    asset._listItem.push_back( spawn );
+    const sw::string xml = asset.toXML();
+
+    SW_TEST_DEFENSIVE_SCOPE( "a spawn item without a prefab is refused" );
+    sw::SequenceAsset loaded;
+    SW_EXPECT_FALSE( loaded.parseXML( xml ) );
 }
