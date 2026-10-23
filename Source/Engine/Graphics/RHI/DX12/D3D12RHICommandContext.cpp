@@ -325,8 +325,6 @@ namespace sw
         ID3D12Resource*       pDstResource   = nullptr;
         D3D12_RESOURCE_STATES dstStateBefore = D3D12_RESOURCE_STATE_COMMON;
         D3D12_RESOURCE_STATES dstStateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        RHITextureHandle      dstHandle      = dst;
-        bool                  bSwapchainDst  = false;
 
         if ( dst == 0 )
         {
@@ -335,7 +333,6 @@ namespace sw
                 return;
             dstStateBefore = _pDevice->_swapChain.getState();
             dstStateAfter  = D3D12_RESOURCE_STATE_PRESENT;
-            bSwapchainDst  = true;
         }
         else
         {
@@ -370,37 +367,36 @@ namespace sw
             }
         }
 
-        // 스왑체인 백버퍼의 상태는 스왑체인 객체만 바꾼다. 여기서 배리어를 따로 쏘고 상태를 직접
-        // 대입하면 그 두 벌이 어긋날 수 있다. 오프스크린만 자기 레코드를 갱신한다.
-        auto transitionDst = [&]( D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter )
-        {
-            if ( bSwapchainDst )
-            {
-                _pDevice->_swapChain.transitionTo( commandListForRecord(), stateAfter );
-                return;
-            }
-
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-
-            D3D12_RESOURCE_BARRIER barrier{};
-            barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Transition.pResource   = pDstResource;
-            barrier.Transition.StateBefore = stateBefore;
-            barrier.Transition.StateAfter  = stateAfter;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            commandListForRecord()->ResourceBarrier( 1, &barrier );
-
-            auto dstIt = _pDevice->_mapOffscreenTexture.find( dstHandle );
-            if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
-                dstIt->second._state = stateAfter;
-        };
-
         if ( dstStateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
-            transitionDst( dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
+            transitionBlitDst( dst, pDstResource, dstStateBefore, D3D12_RESOURCE_STATE_COPY_DEST );
 
         commandListForRecord()->CopyResource( pDstResource, pSrcResource );
 
-        transitionDst( D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
+        transitionBlitDst( dst, pDstResource, D3D12_RESOURCE_STATE_COPY_DEST, dstStateAfter );
+    }
+
+    void D3D12RHICommandContext::transitionBlitDst( RHITextureHandle dst, ID3D12Resource* pDstResource, D3D12_RESOURCE_STATES stateBefore,
+                                                    D3D12_RESOURCE_STATES stateAfter )
+    {
+        if ( dst == 0 )
+        {
+            _pDevice->_swapChain.transitionTo( commandListForRecord(), stateAfter );
+            return;
+        }
+
+        std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource   = pDstResource;
+        barrier.Transition.StateBefore = stateBefore;
+        barrier.Transition.StateAfter  = stateAfter;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandListForRecord()->ResourceBarrier( 1, &barrier );
+
+        auto dstIt = _pDevice->_mapOffscreenTexture.find( dst );
+        if ( dstIt != _pDevice->_mapOffscreenTexture.end() )
+            dstIt->second._state = stateAfter;
     }
 
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )

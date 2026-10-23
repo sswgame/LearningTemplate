@@ -11,22 +11,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        VkAttachmentLoadOp toVkLoadOp( RHIRenderPassLoadOp loadOp )
-        {
-            switch ( loadOp )
-            {
-                case RHIRenderPassLoadOp::Load:
-                    return VK_ATTACHMENT_LOAD_OP_LOAD;
-                case RHIRenderPassLoadOp::DontCare:
-                    return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                case RHIRenderPassLoadOp::Clear:
-                    return VK_ATTACHMENT_LOAD_OP_CLEAR;
-            }
-        }
-    } // namespace
-
     void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
                                                    uint32 targetLayout, uint32 aspect )
     {
@@ -315,7 +299,7 @@ namespace sw
             arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
             width                       = pTex->_width;
             height                      = pTex->_height;
-            spec.addColor( pTex->_format, toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
+            spec.addColor( pTex->_format, VulkanRHIDeviceInternal::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         }
 
@@ -333,7 +317,7 @@ namespace sw
                 width  = pTex->_width;
                 height = pTex->_height;
             }
-            spec.setDepth( pTex->_format, toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
+            spec.setDepth( pTex->_format, VulkanRHIDeviceInternal::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
         }
         if ( attachCount == 0 )

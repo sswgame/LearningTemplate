@@ -309,31 +309,6 @@ namespace sw
             return 0;
         }
 
-        auto toLoadOp = []( RHIRenderPassLoadOp loadOp ) -> VkAttachmentLoadOp
-        {
-            switch ( loadOp )
-            {
-                case RHIRenderPassLoadOp::Clear:
-                    return VK_ATTACHMENT_LOAD_OP_CLEAR;
-                case RHIRenderPassLoadOp::Load:
-                    return VK_ATTACHMENT_LOAD_OP_LOAD;
-                case RHIRenderPassLoadOp::DontCare:
-                    return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            }
-            return VK_ATTACHMENT_LOAD_OP_CLEAR;
-        };
-        auto toStoreOp = []( RHIRenderPassStoreOp storeOp ) -> VkAttachmentStoreOp
-        {
-            switch ( storeOp )
-            {
-                case RHIRenderPassStoreOp::Store:
-                    return VK_ATTACHMENT_STORE_OP_STORE;
-                case RHIRenderPassStoreOp::DontCare:
-                    return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            }
-            return VK_ATTACHMENT_STORE_OP_STORE;
-        };
-
         VulkanRHIRenderPassCache::RenderPassSpec spec{};
         const uint32                             colorCount =
             desc._listColorAttachment.size() > kMaxColorAttachments
@@ -342,10 +317,10 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
             const RHIRenderPassAttachment& attachment = desc._listColorAttachment[colorIndex];
-            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( attachment._format ) ), toLoadOp( attachment._loadOp ),
+            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( attachment._format ) ), VulkanRHIDeviceInternal::toVulkanLoadOp( attachment._loadOp ),
                            ( attachment._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-            spec._arrColorStoreOp[colorIndex] = toStoreOp( attachment._storeOp );
+            spec._arrColorStoreOp[colorIndex] = VulkanRHIDeviceInternal::toVulkanStoreOp( attachment._storeOp );
         }
         if ( desc._bHasDepthStencil != SW_FALSE )
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );

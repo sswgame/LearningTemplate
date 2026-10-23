@@ -213,32 +213,34 @@ namespace sw
             /// @brief CB 목록과 리소스 목록을 (이름, 종류)로 중복 없이 합칩니다. DX 리플렉션은 cbuffer 를 양쪽에 다 넣습니다.
             static void collect( const ShaderReflectionData& reflection, vector<ReflectedBinding>& outList )
             {
-                auto push = [&]( const string& name, ShaderBindingKind kind, uint32 space, uint32 bindPoint, uint32 bindCount )
-                {
-                    for ( const ReflectedBinding& reflected : outList )
-                    {
-                        if ( reflected._name == name && reflected._kind == kind )
-                            return;
-                    }
-                    ReflectedBinding reflected{};
-                    reflected._name      = name;
-                    reflected._kind      = kind;
-                    reflected._space     = space;
-                    reflected._bindPoint = bindPoint;
-                    reflected._bindCount = bindCount;
-                    outList.push_back( std::move( reflected ) );
-                };
                 // 리소스 목록이 바인딩 위치의 1차 출처다(cbuffer 도 여기 들어 있다). CB 목록은 그 다음이다. 리플렉터가
                 // CB 쪽 bindPoint 를 못 채우는 경우가 있다(DXIL, move 뒤 이름 비교).
                 for ( const ShaderReflectedBinding& res : reflection._listResource )
                 {
                     const ShaderBindingKind kind = ShaderBindingLayout::kindFromTypeLabel( static_cast<string_view>( res._type ) );
-                    push( res._name, kind, res._registerSpace, res._bindPoint, res._bindCount );
+                    pushUnique( outList, res._name, kind, res._registerSpace, res._bindPoint, res._bindCount );
                 }
                 for ( const ShaderBufferInfo& cb : reflection._listConstantBuffer )
                 {
-                    push( cb._name, ShaderBindingKind::ConstantBuffer, cb._registerSpace, cb._bindPoint, ReflectedBinding::kUnknownCount );
+                    pushUnique( outList, cb._name, ShaderBindingKind::ConstantBuffer, cb._registerSpace, cb._bindPoint, ReflectedBinding::kUnknownCount );
                 }
+            }
+
+            /// @brief 같은 (이름, 종류)가 이미 있으면 넣지 않습니다.
+            static void pushUnique( vector<ReflectedBinding>& outList, const string& name, ShaderBindingKind kind, uint32 space, uint32 bindPoint, uint32 bindCount )
+            {
+                for ( const ReflectedBinding& reflected : outList )
+                {
+                    if ( reflected._name == name && reflected._kind == kind )
+                        return;
+                }
+                ReflectedBinding reflected{};
+                reflected._name      = name;
+                reflected._kind      = kind;
+                reflected._space     = space;
+                reflected._bindPoint = bindPoint;
+                reflected._bindCount = bindCount;
+                outList.push_back( std::move( reflected ) );
             }
 
             static void report( vector<ShaderBindingValidatorIssue>* pOutIssue, string_view shaderLabel, const string& resource, string&& message, uint32& ioCount )
@@ -275,144 +277,146 @@ namespace sw
             return ShaderReservedLocation{};
         }
 
-        /// @brief 계약 표입니다. 값은 모두 shaderslot 에서 옵니다. 백엔드가 선언하지 않는 자리는 none() 입니다. 줄마다 리소스 하나인 등록 목록이라 나누지 않는다.
+        /// @brief 계약 표에 항목 하나를 더합니다.
+        void addReserved( vector<ShaderReservedBinding>& list, const utf8* pName, ShaderBindingKind kind, ShaderReservedLocation dx11,
+                          ShaderReservedLocation dx12, ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
+        {
+            ShaderReservedBinding entry{};
+            entry._name   = pName;
+            entry._kind   = kind;
+            entry._dx11   = dx11;
+            entry._dx12   = dx12;
+            entry._vulkan = vulkan;
+            entry._opengl = opengl;
+            list.push_back( entry );
+        }
+
+        /// @brief 세트 0 의 (shift + reg) 자리입니다. 슬롯 리소스는 DX11 · DX12 · GL 이 (space 0, register) 로 같아 shift 가 0 이고,
+        ///        Vulkan 은 b / t / u 범위마다 시프트(`shaderslot::vk::kBShift` 등)를 더합니다.
+        ShaderReservedLocation slotAt( uint32 shift, uint32 reg )
+        {
+            return at( 0, shift + reg );
+        }
+
+        /// @brief 계약 표를 짓습니다. 값은 모두 shaderslot 에서 옵니다. 백엔드가 선언하지 않는 자리는 none() 입니다. 줄마다 리소스 하나인 등록 목록이라 나누지 않는다.
+        vector<ShaderReservedBinding> buildReservedBindings()
+        {
+            namespace vk = shaderslot::vk;
+            vector<ShaderReservedBinding> list;
+            // 슬롯 리소스는 DX11 · DX12 · GL 이 (space 0, register) 로 같고, Vulkan 만 세트 0 의 시프트된 binding 이다.
+
+            // 상수버퍼: b0 / b1
+            addReserved( list, shaderslot::cbname::kPass, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kPassConstantBuffer ), slotAt( 0, shaderslot::kPassConstantBuffer ), slotAt( vk::kBShift, shaderslot::kPassConstantBuffer ), slotAt( 0, shaderslot::kPassConstantBuffer ) );
+            addReserved( list, shaderslot::cbname::kMaterial, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kMaterialConstantBuffer ), slotAt( 0, shaderslot::kMaterialConstantBuffer ), slotAt( vk::kBShift, shaderslot::kMaterialConstantBuffer ), slotAt( 0, shaderslot::kMaterialConstantBuffer ) );
+            addReserved( list, shaderslot::cbname::kCull, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( vk::kBShift, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ) );
+            addReserved( list, shaderslot::cbname::kSort, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( vk::kBShift, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ) );
+            addReserved( list, shaderslot::cbname::kAnimation, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ), slotAt( vk::kBShift, shaderslot::kComputeConstantBuffer ), slotAt( 0, shaderslot::kComputeConstantBuffer ) );
+            // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
+            addReserved( list, shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
+                         slotAt( 0, shaderslot::kRootConstantEmulationSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotAt( 0, shaderslot::kRootConstantEmulationSlot ) );
+            // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t5 (네 백엔드 공통)
+            addReserved( list, shaderslot::resname::kInstances, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kInstanceBuffer ), slotAt( 0, shaderslot::kInstanceBuffer ), slotAt( vk::kTShift, shaderslot::kInstanceBuffer ), slotAt( 0, shaderslot::kInstanceBuffer ) );
+            addReserved( list, shaderslot::resname::kMaterials, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kMaterialBuffer ), slotAt( 0, shaderslot::kMaterialBuffer ), slotAt( vk::kTShift, shaderslot::kMaterialBuffer ), slotAt( 0, shaderslot::kMaterialBuffer ) );
+            // 컬링이 만든 가시 인스턴스 ID 목록: 그래픽스 t6 (네 백엔드 공통).
+            addReserved( list, shaderslot::resname::kVisibleInstances, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kVisibleInstanceBuffer ), slotAt( 0, shaderslot::kVisibleInstanceBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kVisibleInstanceBuffer ), slotAt( 0, shaderslot::kVisibleInstanceBuffer ) );
+            // GPU 가 변형한 정점 풀 t7 · 씬 라이트 목록 t8 (네 백엔드 공통).
+            addReserved( list, shaderslot::resname::kMorphVertices, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kMorphVertexBuffer ), slotAt( 0, shaderslot::kMorphVertexBuffer ), slotAt( vk::kTShift, shaderslot::kMorphVertexBuffer ), slotAt( 0, shaderslot::kMorphVertexBuffer ) );
+            addReserved( list, shaderslot::resname::kLights, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kLightBuffer ), slotAt( 0, shaderslot::kLightBuffer ), slotAt( vk::kTShift, shaderslot::kLightBuffer ), slotAt( 0, shaderslot::kLightBuffer ) );
+            // 씬 배치 표: 그래픽스 t9 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
+            addReserved( list, shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
+                         slotAt( 0, shaderslot::kBatchBuffer ), slotAt( 0, shaderslot::kBatchBuffer ), slotAt( vk::kTShift, shaderslot::kBatchBuffer ), slotAt( 0, shaderslot::kBatchBuffer ) );
+            // 정점 애니메이션(VAT) 표: 그래픽스 t10 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
+            addReserved( list, shaderslot::resname::kVertexAnimation, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kVertexAnimationBuffer ),
+                         slotAt( 0, shaderslot::kVertexAnimationBuffer ), slotAt( vk::kTShift, shaderslot::kVertexAnimationBuffer ), slotAt( 0, shaderslot::kVertexAnimationBuffer ) );
+            // 패스 전용 버퍼 t11 (네 백엔드 공통): 캔버스 사각형(canvas.hlsl) · 입자(particle.hlsl). 정점 · 픽셀 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째를 읽는다.
+            addReserved( list, shaderslot::resname::kCanvasQuads, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ) );
+            addReserved( list, shaderslot::resname::kParticles, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kPassBuffer ), slotAt( 0, shaderslot::kPassBuffer ) );
+            // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli LightGrid::loadWord)가 읽는다.
+            addReserved( list, shaderslot::resname::kLightGrid, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kLightGridBuffer ), slotAt( 0, shaderslot::kLightGridBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kLightGridBuffer ), slotAt( 0, shaderslot::kLightGridBuffer ) );
+            // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli LightProbe::load).
+            addReserved( list, shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ),
+                         slotAt( vk::kTShift, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ) );
+            // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
+            addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
+            addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
+            addReserved( list, shaderslot::resname::kLightGridRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
+            // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
+            addReserved( list, shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
+            addReserved( list, shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
+            addReserved( list, shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
+            addReserved( list, shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kUShift, 1 ), slotAt( 0, shaderslot::gl::kUavBinding0 + 1 ) );
+            // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
+            addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUavBinding0 ) );
+            // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
+            static string s_arrEngineName[shaderslot::kEngineTextureCount];
+            static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
+            static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
+            for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
+            {
+                s_arrEngineName[slotIndex]        = string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex );
+                s_arrEngineSamplerName[slotIndex] = s_arrEngineName[slotIndex] + "Sampler";
+                const uint32 reg                  = shaderslot::kEngineTexture0 + slotIndex;
+                addReserved( list, s_arrEngineName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
+                addReserved( list, s_arrEngineSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
+            }
+            // G버퍼 머티리얼 칸 t15: 에뮬 백엔드만. 짝 샘플러는 계약에 없다 — DX11 은 정적 세트로 읽고(s15), GL 은 결합 샘플러라 리플렉션에
+            // 샘플러 이름이 따로 나오지 않는다(binding.hlsli). 어느 매니페스트에도 없는 이름을 계약에 두면 검사할 수 없다.
+            addReserved( list, shaderslot::resname::kEngineGBufferMaterialTexture, ShaderBindingKind::Texture, slotAt( 0, shaderslot::kEngineGBufferMaterialTexture ), none(), none(),
+                         slotAt( 0, shaderslot::kEngineGBufferMaterialTexture ) );
+            for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
+            {
+                s_arrMaterialName[slotIndex] = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );
+                const uint32 reg             = shaderslot::kMaterialTexture0 + slotIndex;
+                // 짝 샘플러 이름은 계약에 없다 — 셰이더가 머티리얼 칸을 짝 샘플러 없이 선언하고(binding.hlsli `SW_DECLARE_TEXTURE2D`),
+                // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
+                addReserved( list, s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(), slotAt( 0, reg ) );
+            }
+            // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
+            static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
+            for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUavSlotCount; ++slotIndex )
+            {
+                s_arrRwTextureName[slotIndex] = string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex );
+                addReserved( list, s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotAt( 0, shaderslot::kComputeTextureUav0 + slotIndex ), none(), none(),
+                             slotAt( 0, shaderslot::gl::kImageUnit0 + slotIndex ) );
+            }
+            // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
+            addReserved( list, shaderslot::resname::kBindlessTextures, ShaderBindingKind::Texture, none(),
+                         at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkTextureBinding ), none() );
+            addReserved( list, shaderslot::resname::kBindlessRwTextures, ShaderBindingKind::RwTexture, none(),
+                         at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkRwTextureBinding ), none() );
+            // 정적 샘플러 세트: DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable).
+            // DX11 은 같은 세트를 s9..s15 샘플러 상태로 건다(bindStaticSamplers). GL 은 결합 샘플러뿐이라 없다.
+            addReserved( list, shaderslot::resname::kSamplers, ShaderBindingKind::Sampler, none(),
+                         none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
+            static string s_arrSamplerName[shaderslot::kStaticSamplerArrayCount];
+            for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
+            {
+                s_arrSamplerName[samplerIndex] = string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex );
+                addReserved( list, s_arrSamplerName[samplerIndex].c_str(), ShaderBindingKind::Sampler, slotAt( 0, shaderslot::dx11::kStaticSampler0 + samplerIndex ),
+                             at( 0, samplerIndex ), none(), none() );
+            }
+            addReserved( list, shaderslot::resname::kShadowSampler, ShaderBindingKind::Sampler, none(),
+                         at( 0, shaderslot::kSamplerShadowCmp ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkShadowSamplerBinding ), none() );
+            return list;
+        }
+
         const vector<ShaderReservedBinding>& reservedBindings()
         {
-            static const vector<ShaderReservedBinding> s_list = []()
-            {
-                using R      = ShaderReservedBinding;
-                namespace vk = shaderslot::vk;
-                vector<R> list;
-                auto      add = [&]( const utf8* pName, ShaderBindingKind kind, ShaderReservedLocation dx11, ShaderReservedLocation dx12,
-                                ShaderReservedLocation vulkan, ShaderReservedLocation opengl )
-                {
-                    R r{};
-                    r._name   = pName;
-                    r._kind   = kind;
-                    r._dx11   = dx11;
-                    r._dx12   = dx12;
-                    r._vulkan = vulkan;
-                    r._opengl = opengl;
-                    list.push_back( r );
-                };
-                // 슬롯 리소스는 DX11 · DX12 · GL 이 (space 0, register) 로 같고, Vulkan 만 세트 0 의 시프트된 binding 이다.
-                auto slotB = [&]( uint32 reg )
-                { return at( 0, reg ); };
-                auto vkB = [&]( uint32 reg )
-                { return at( 0, vk::kBShift + reg ); };
-                auto vkT = [&]( uint32 reg )
-                { return at( 0, vk::kTShift + reg ); };
-                auto vkU = [&]( uint32 reg )
-                { return at( 0, vk::kUShift + reg ); };
-
-                // 상수버퍼: b0 / b1
-                add( shaderslot::cbname::kPass, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kPassConstantBuffer ), slotB( shaderslot::kPassConstantBuffer ), vkB( shaderslot::kPassConstantBuffer ), slotB( shaderslot::kPassConstantBuffer ) );
-                add( shaderslot::cbname::kMaterial, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kMaterialConstantBuffer ), slotB( shaderslot::kMaterialConstantBuffer ), vkB( shaderslot::kMaterialConstantBuffer ), slotB( shaderslot::kMaterialConstantBuffer ) );
-                add( shaderslot::cbname::kCull, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
-                add( shaderslot::cbname::kSort, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
-                add( shaderslot::cbname::kAnimation, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
-                // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
-                add( shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
-                     slotB( shaderslot::kRootConstantEmulationSlot ), at( shaderslot::kRootConstantSpace, shaderslot::kRootConstantRegister ), none(), slotB( shaderslot::kRootConstantEmulationSlot ) );
-                // GPUScene 버퍼: 인스턴스 t4, 머티리얼 데이터 t5 (네 백엔드 공통)
-                add( shaderslot::resname::kInstances, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ), vkT( shaderslot::kInstanceBuffer ), slotB( shaderslot::kInstanceBuffer ) );
-                add( shaderslot::resname::kMaterials, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ), vkT( shaderslot::kMaterialBuffer ), slotB( shaderslot::kMaterialBuffer ) );
-                // 컬링이 만든 가시 인스턴스 ID 목록: 그래픽스 t6 (네 백엔드 공통).
-                add( shaderslot::resname::kVisibleInstances, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ),
-                     vkT( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ) );
-                // GPU 가 변형한 정점 풀 t7 · 씬 라이트 목록 t8 (네 백엔드 공통).
-                add( shaderslot::resname::kMorphVertices, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ), vkT( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ) );
-                add( shaderslot::resname::kLights, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ), vkT( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ) );
-                // 씬 배치 표: 그래픽스 t9 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
-                add( shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
-                     slotB( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ), vkT( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ) );
-                // 정점 애니메이션(VAT) 표: 그래픽스 t10 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
-                add( shaderslot::resname::kVertexAnimation, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kVertexAnimationBuffer ),
-                     slotB( shaderslot::kVertexAnimationBuffer ), vkT( shaderslot::kVertexAnimationBuffer ), slotB( shaderslot::kVertexAnimationBuffer ) );
-                // 패스 전용 버퍼 t11 (네 백엔드 공통): 캔버스 사각형(canvas.hlsl) · 입자(particle.hlsl). 정점 · 픽셀 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째를 읽는다.
-                add( shaderslot::resname::kCanvasQuads, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ),
-                     vkT( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ) );
-                add( shaderslot::resname::kParticles, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ),
-                     vkT( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ) );
-                // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli LightGrid::loadWord)가 읽는다.
-                add( shaderslot::resname::kLightGrid, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ),
-                     vkT( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ) );
-                // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli LightProbe::load).
-                add( shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ),
-                     vkT( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ) );
-                // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
-                add( shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
-                add( shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );
-                add( shaderslot::resname::kLightGridRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
-                // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
-                add( shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
-                add( shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );
-                add( shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
-                add( shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotB( 1 ), slotB( 1 ), vkU( 1 ), slotB( shaderslot::gl::kUavBinding0 + 1 ) );
-                // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
-                add( shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
-                // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
-                static string s_arrEngineName[shaderslot::kEngineTextureCount];
-                static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];
-                static string s_arrMaterialName[shaderslot::kMaterialTextureCount];
-                for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
-                {
-                    s_arrEngineName[slotIndex]        = string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex );
-                    s_arrEngineSamplerName[slotIndex] = s_arrEngineName[slotIndex] + "Sampler";
-                    const uint32 reg                  = shaderslot::kEngineTexture0 + slotIndex;
-                    add( s_arrEngineName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
-                    add( s_arrEngineSamplerName[slotIndex].c_str(), ShaderBindingKind::Sampler, slotB( reg ), none(), none(), slotB( reg ) );
-                }
-                // G버퍼 머티리얼 칸 t15: 에뮬 백엔드만. 짝 샘플러는 계약에 없다 — DX11 은 정적 세트로 읽고(s15), GL 은 결합 샘플러라 리플렉션에
-                // 샘플러 이름이 따로 나오지 않는다(binding.hlsli). 어느 매니페스트에도 없는 이름을 계약에 두면 검사할 수 없다.
-                add( shaderslot::resname::kEngineGBufferMaterialTexture, ShaderBindingKind::Texture, slotB( shaderslot::kEngineGBufferMaterialTexture ), none(), none(),
-                     slotB( shaderslot::kEngineGBufferMaterialTexture ) );
-                for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
-                {
-                    s_arrMaterialName[slotIndex] = string( shaderslot::resname::kMaterialTexture ) + to_string( slotIndex );
-                    const uint32 reg             = shaderslot::kMaterialTexture0 + slotIndex;
-                    // 짝 샘플러 이름은 계약에 없다 — 셰이더가 머티리얼 칸을 짝 샘플러 없이 선언하고(binding.hlsli `SW_DECLARE_TEXTURE2D`),
-                    // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 유닛에 건 머티리얼 샘플러 객체로 읽는다(OpenGLRHIDeviceInit).
-                    add( s_arrMaterialName[slotIndex].c_str(), ShaderBindingKind::Texture, slotB( reg ), none(), none(), slotB( reg ) );
-                }
-                // 컴퓨트 RW 텍스처 슬롯 u4..u7: 에뮬 백엔드만. GL 은 이미지 유닛(SSBO 와 다른 이름공간).
-                static string s_arrRwTextureName[shaderslot::kComputeTextureUavSlotCount];
-                for ( uint32 slotIndex = 0; slotIndex < shaderslot::kComputeTextureUavSlotCount; ++slotIndex )
-                {
-                    s_arrRwTextureName[slotIndex] = string( shaderslot::resname::kRwTextureSlot ) + to_string( slotIndex );
-                    add( s_arrRwTextureName[slotIndex].c_str(), ShaderBindingKind::RwTexture, slotB( shaderslot::kComputeTextureUav0 + slotIndex ), none(), none(),
-                         slotB( shaderslot::gl::kImageUnit0 + slotIndex ) );
-                }
-                // 네이티브 bindless 텍스처 배열: DX12 t0 space1 / Vulkan set 1 binding 0. RW 배열은 DX12 u0 space1 / Vulkan set 1 binding 3. 에뮬에는 없다.
-                add( shaderslot::resname::kBindlessTextures, ShaderBindingKind::Texture, none(),
-                     at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkTextureBinding ), none() );
-                add( shaderslot::resname::kBindlessRwTextures, ShaderBindingKind::RwTexture, none(),
-                     at( shaderslot::bindless::kTextureSpace, 0 ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkRwTextureBinding ), none() );
-                // 정적 샘플러 세트: DX12 s0..s6 배열 + s7 비교(루트 시그니처 정적 샘플러), Vulkan set 1 binding 1 배열 + binding 2 비교(immutable).
-                // DX11 은 같은 세트를 s9..s15 샘플러 상태로 건다(bindStaticSamplers). GL 은 결합 샘플러뿐이라 없다.
-                add( shaderslot::resname::kSamplers, ShaderBindingKind::Sampler, none(),
-                     none(), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkSamplerBinding ), none() );
-                static string s_arrSamplerName[shaderslot::kStaticSamplerArrayCount];
-                for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
-                {
-                    s_arrSamplerName[samplerIndex] = string( shaderslot::resname::kSamplerSlot ) + to_string( samplerIndex );
-                    add( s_arrSamplerName[samplerIndex].c_str(), ShaderBindingKind::Sampler, slotB( shaderslot::dx11::kStaticSampler0 + samplerIndex ),
-                         at( 0, samplerIndex ), none(), none() );
-                }
-                add( shaderslot::resname::kShadowSampler, ShaderBindingKind::Sampler, none(),
-                     at( 0, shaderslot::kSamplerShadowCmp ), at( shaderslot::bindless::kVkTextureSet, shaderslot::bindless::kVkShadowSamplerBinding ), none() );
-                return list;
-            }();
+            static const vector<ShaderReservedBinding> s_list = buildReservedBindings();
             return s_list;
         }
         /**

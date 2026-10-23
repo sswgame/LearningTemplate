@@ -12,6 +12,7 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 
 // 프레임 상수(kGPUReleaseFrameLatency)는 EngineDefines 가 아니라 RHITypes 의 constant 블록에 있다.
 // 백엔드 간 계약 상수와 같은 위치에 모아 두기 때문이다(EngineDefines.h 의 주석 참고).
@@ -41,6 +42,44 @@ namespace sw
 
         /** @brief GPU 펜스 값이 완료된 뒤에 해제합니다. */
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue );
+
+        /**
+         * @brief 자원을 해제 큐에 쥐여 두었다가 CPU 프레임 지연 뒤 놓고, 그때 장부에서 줄입니다.
+         * @details 키 공간은 템플릿 인자로 받아 람다가 델리게이트의 인라인 칸(24 바이트)에 들게 한다 — 자원 · 장부 · id.
+         *          장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+         */
+        template <RHIMemoryKeySpace kSpace, class Owned>
+        void enqueueLedgerRelease( Owned owned, RHIMemoryLedger& ledger, uint64 id )
+        {
+            RHIMemoryLedger* pLedger = &ledger;
+            enqueueRelease( RHIResourceReleaseDelegate::create( [owned, pLedger, id]()
+            {
+                (void)owned;
+                pLedger->recordFree( RHIMemoryKey{ id, kSpace } );
+            } ) );
+        }
+
+        /** @brief `enqueueLedgerRelease` 의 GPU 펜스 판입니다. 펜스가 지난 뒤 자원을 놓고 장부에서 줄입니다. */
+        template <RHIMemoryKeySpace kSpace, class Owned>
+        void enqueueGPULedgerRelease( Owned owned, RHIMemoryLedger& ledger, uint64 id, uint64 fenceValue )
+        {
+            RHIMemoryLedger* pLedger = &ledger;
+            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned, pLedger, id]()
+            {
+                (void)owned;
+                pLedger->recordFree( RHIMemoryKey{ id, kSpace } );
+            } ),
+                               fenceValue );
+        }
+
+        /** @brief 펜스가 지날 때까지 자원을 쥐고 있다가 놓습니다(장부에 오르지 않는 자원). */
+        template <class Owned>
+        void enqueueGPUKeepAlive( Owned owned, uint64 fenceValue )
+        {
+            enqueueGPURelease( RHIResourceReleaseDelegate::create( [owned]()
+            { (void)owned; } ),
+                               fenceValue );
+        }
 
         /** @brief 프레임을 진행하고 만기된 해제 콜백을 실행합니다. */
         void tickFrame();
