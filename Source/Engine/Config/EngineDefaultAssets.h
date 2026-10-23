@@ -172,7 +172,10 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSky; ///< 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형
         PROPERTY( Required )
-        DataPath _shaderToon; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
+        DataPath _shaderFog; ///< 높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다
+        PROPERTY( Required )
+        DataPath _shaderVolumetricFog; ///< 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다        PROPERTY( Required )
+        DataPath _shaderToon;          ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
         PROPERTY( Required )
         DataPath _shaderHighlightOutline; ///< 인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더
         PROPERTY( Required )

@@ -509,6 +509,11 @@ namespace sw
         hashed_string _skyZenith{ "g_SkyZenith" };
         hashed_string _skyHorizon{ "g_SkyHorizon" };
         hashed_string _skyGround{ "g_SkyGround" };
+        /// @brief 높이 · 거리 지수 안개입니다(안개 패스). 배치는 `FogSettings` 머리 주석 — 색 · 밀도 / 높이 감쇠 · 기준 높이 · 시작 거리 · 최대 불투명도 / 방향광 산란 / 볼륨 안개.
+        hashed_string _fogColorDensity{ "g_FogColorDensity" };
+        hashed_string _fogHeightParams{ "g_FogHeightParams" };
+        hashed_string _fogInscatter{ "g_FogInscatter" };
+        hashed_string _fogVolumeParams{ "g_FogVolumeParams" };
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

@@ -106,7 +106,7 @@ namespace sw
 
         /**
          * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
-         * @details 하늘, 시간, 높이 안개를 맡을 다음 작업이 이 값을 읽어 안개 패스에 적용한다(현재 렌더러에는 안개 패스가 없다).
+         * @details `FogComponent::findFog` 가 이 값을 읽어 안개 패스(`RenderPassType::Fog`)의 값을 덮는다 — 균일 안개, 볼륨 없음.
          */
         [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog );
         /** @brief @p manager 의 물 가운데 월드 (x, z) 를 덮는 첫 물입니다. 빌린 포인터입니다. */

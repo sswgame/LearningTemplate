@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -122,6 +123,7 @@ namespace sw
         , _graphContext{}
         , _frameLight{}
         , _frameSky{}
+        , _frameFog{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
@@ -135,7 +137,8 @@ namespace sw
         , _bScenePreview{ SW_FALSE }
         , _bHasFrameSky{ SW_FALSE }
         , _bLightGridPSOMissingLogged{ SW_FALSE }
-        , _reservedFlags{ 0 }
+        , _bHasFrameFog{ SW_FALSE }
+        , _bFogVolumeActive{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bOutputPSOMissingLogged{ 0 }
@@ -454,6 +457,8 @@ namespace sw
         dispatchCullAndSort( animationInstanceCount );
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
+        // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
+        dispatchVolumetricFog();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -581,6 +586,10 @@ namespace sw
         SkyGradient sceneSky;
         const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
         applyFrameSky( bSceneSky, sceneSky );
+        // 안개도 같다 — 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
+        FogSettings sceneFog;
+        const bool  bSceneFog = scene.getObjectManager() != nullptr && FogComponent::findFog( *scene.getObjectManager(), pMainCamera->getCameraPosition(), sceneFog );
+        applyFrameFog( bSceneFog, sceneFog );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -681,6 +690,7 @@ namespace sw
         }
         // 하늘도 패킷으로만 온다.
         applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
+        applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _frameShadow, packet._shadow );
         applyFrameShadow();
@@ -777,6 +787,8 @@ namespace sw
         _gpuScene.upload( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
+        // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
+        prepareVolumetricFog( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {

@@ -377,6 +377,11 @@ namespace sw
                     executeSkyPass( input );
                     break;
                 }
+                case RenderPassType::Fog:
+                {
+                    executeFogPass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTaaPass( input );
@@ -417,6 +422,7 @@ namespace sw
                 case RenderPassType::UpscaleEasu:
                 case RenderPassType::UpscaleRcas:
                 case RenderPassType::OcclusionTiles:
+                case RenderPassType::VolumetricFog:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

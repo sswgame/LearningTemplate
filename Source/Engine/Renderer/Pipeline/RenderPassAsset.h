@@ -89,6 +89,13 @@ namespace sw
         HighlightOutline,
         /** @brief 감각 모드 외곽선입니다. 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보입니다(반투명 뒤, 톤맵 앞에 둡니다). */
         HighlightSense,
+        /**
+         * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 **위에 블렌드**(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
+         *        그래서 입력은 장면 깊이뿐이고 출력은 앞 패스가 칠한 색 첨부입니다(복사 첨부를 따로 두지 않는다). 불투명 · 하늘 · 반투명 뒤, 후처리 앞에 둡니다.
+         *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FrameRenderer::executeFogPass`).
+         *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassType::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
+         */
+        Fog,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -123,6 +130,11 @@ namespace sw
          *        컬링(gpucull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FrameRenderer::recordOcclusionTiles`).
          */
         OcclusionTiles,
+        /**
+         * @brief 볼륨 안개 컴퓨트(volumetricfog.hlsl)입니다. 뷰의 froxel 격자(화면 칸 × 깊이 조각)마다 안개 밀도와 라이트 산란(방향광 + 라이트 그리드의 점광 · 스폿)을 구하고
+         *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FrameRenderer::dispatchVolumetricFog`).
+         */
+        VolumetricFog,
     };
 
     /**
@@ -134,7 +146,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::HighlightSense );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Fog );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.

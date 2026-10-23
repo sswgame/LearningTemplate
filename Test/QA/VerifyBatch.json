@@ -446,6 +446,16 @@
       "source": "docs/plans/EnvironmentRemainders.md E1", "result_doc": "docs/plans/EnvironmentRemainders.md E1"
     },
     {
+      "id": "fog-tests", "title": "안개 테스트(광학 두께 식 · 컴포넌트 찾기 · 물속 덮어쓰기 · 패스 종류 표)와 렌더 패스 형식 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "FogTest.*,RenderPassTest.*",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R1 R2", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R1 R2"
+    },
+    {
+      "id": "fog-scenario", "title": "fog 시나리오(네 백엔드 — 먼 바닥이 안개색으로 올라가고 가까운 바닥은 어둡다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/fog.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R1", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R1"
+    },
+    {
       "id": "vfx-gpu-lights-tests", "title": "GPU 파티클 라이트 테스트(생산자 규칙 · 슬롯 나누기 · 깊이 충돌 + 라이트 로드 · CPU 라이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "GPULightBufferTest.*,VfxGPUSimulationTest.*,VfxEffectDefTest.*,VfxComponentTest.*",
       "source": "docs/plans/VfxGpuLights.md 3절 L4", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"

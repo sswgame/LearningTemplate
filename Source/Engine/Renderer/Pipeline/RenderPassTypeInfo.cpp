@@ -234,6 +234,15 @@ namespace sw
                         info._flags          = Flag::kDrawsSceneMeshes | Flag::kCullFront | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
                         break;
                     }
+                    case RenderPassType::Fog:
+                    {
+                        // 안개 — 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력(앞 패스가 칠한 색) 위에 프리멀티플라이 블렌드한다(색 = 안개색 × 불투명도, 알파 = 불투명도).
+                        // 색 첨부를 읽지 않으므로 입력은 장면 깊이뿐이다 — 읽으면서 쓰는 첨부가 없다. 전용 실행(안개가 없거나 후처리를 끈 뷰는 그리지 않는다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderFog;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
+                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
                     case RenderPassType::MotionBlur:
                     {
                         // 원본 색과 장면 깊이를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · gv_motionBlur) 원본을 넘긴다 — 그 길은 kSkipsWithoutPostProcess 다.
@@ -340,6 +349,13 @@ namespace sw
                         // 컬링이 읽는 타일이라 컬링과 같은 조건이다(간접 인자 능력 — DX11 은 컬링이 없다). 깊이 히스토리는 RW 텍스처로 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderOcclusionTiles;
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
+                    case RenderPassType::VolumetricFog:
+                    {
+                        // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderVolumetricFog;
+                        info._flags          = Flag::kCompute;
                         break;
                     }
                 }

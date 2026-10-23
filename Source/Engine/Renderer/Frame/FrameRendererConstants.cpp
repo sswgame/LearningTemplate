@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -35,6 +36,27 @@ namespace sw
         _frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
         _frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
         _frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
+    }
+
+    void FrameRenderer::applyFrameFog( bool bHasFog, const FogSettings& fog )
+    {
+        // 셰이더 상수 배치는 FogSettings 머리 주석이 정본이다(fog.hlsl 이 같은 순서로 읽는다).
+        _bHasFrameFog = bHasFog ? SW_TRUE : SW_FALSE;
+        if ( bHasFog == false )
+        {
+            _frameFog = FrameFogState{};
+            return;
+        }
+        // 방향광 산란 세기가 0 이면 색도 0 으로 보내 셰이더가 분기 없이 더하게 한다.
+        const float32 inscatterScale = MathUtil::max( fog._inscatterIntensity, 0.0f );
+        _frameFog._colorDensity      = float4{ fog._color._x, fog._color._y, fog._color._z, MathUtil::max( fog._density, 0.0f ) };
+        _frameFog._heightParams      = float4{ MathUtil::max( fog._heightFalloff, 0.0f ), fog._baseHeight, MathUtil::max( fog._startDistance, 0.0f ), MathUtil::saturate( fog._maxOpacity ) };
+        _frameFog._inscatter         = float4{ fog._inscatterColor._x * inscatterScale, fog._inscatterColor._y * inscatterScale, fog._inscatterColor._z * inscatterScale,
+                                       MathUtil::max( fog._inscatterExponent, 1.0f ) };
+        // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 켠다(executeFogPass 가 x 를 정한다). 물속 안개는 볼륨이 없다.
+        const bool bVolumetric  = fog._bVolumetric == SW_TRUE && fog._bUnderwater == SW_FALSE;
+        _frameFog._volumeParams = float4{ 0.0f, MathUtil::max( fog._volumeDistance, 1.0f ), MathUtil::max( fog._scattering, 0.0f ), MathUtil::clamp( fog._anisotropy, -0.95f, 0.95f ) };
+        _frameFog._bVolumetric  = bVolumetric ? SW_TRUE : SW_FALSE;
     }
 
     void FrameRenderer::applyFrameShadow()
@@ -80,6 +102,10 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyZenith, _frameSky._zenithExponent );
         context._passValues.setFloat4( passConstantNames()._skyHorizon, _frameSky._horizon );
         context._passValues.setFloat4( passConstantNames()._skyGround, _frameSky._groundIntensity );
+        context._passValues.setFloat4( passConstantNames()._fogColorDensity, _frameFog._colorDensity );
+        context._passValues.setFloat4( passConstantNames()._fogHeightParams, _frameFog._heightParams );
+        context._passValues.setFloat4( passConstantNames()._fogInscatter, _frameFog._inscatter );
+        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _frameFog._volumeParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( context );
     }

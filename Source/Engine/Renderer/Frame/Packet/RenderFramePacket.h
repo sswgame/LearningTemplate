@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
@@ -44,6 +45,8 @@ namespace sw
         vector<GPULightCookie> _listLightCookie;
         /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
         SkyGradient _sky;
+        /** @brief 씬의 안개(`FogComponent`, 카메라가 물속이면 물속 안개로 덮은 값)입니다. `_bHasFog` 가 0 이면 값이 없고 안개 패스가 그리지 않는다. */
+        FogSettings _fog;
         /** @brief 이번 프레임의 추가 뷰(CCTV, 백미러, 분할 화면, PiP)입니다. 쉬는 뷰도 실립니다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**
@@ -75,12 +78,14 @@ namespace sw
         uint8 _bHasLight : 1;
         /** @brief 씬에 활성 `SkyComponent` 가 있어 `_sky` 가 유효하면 1 입니다. */
         uint8 _bHasSky : 1;
+        /** @brief 씬에 안개(`FogComponent` 또는 물속)가 있어 `_fog` 가 유효하면 1 입니다. */
+        uint8 _bHasFog : 1;
         /**
          * @brief 게임 스레드가 이 패킷을 채울 때 화면이 자리 잡았으면 1 입니다 — 활성 씬이 플레이를 시작했고 로딩 화면 · 페이드 · 에셋 읽기가 끝났다(`AutomationCaptureUtil::isReadyForCapture`).
          * @details 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 이 패킷부터 프레임을 센다. 그 캡처를 기다리는 동안만 채우고(`RenderThread::needsCaptureReadiness`), 아니면 0 이다.
          */
         uint8                  _bReadyForCapture : 1;
-        [[maybe_unused]] uint8 _reserved         : 3;
+        [[maybe_unused]] uint8 _reserved         : 2;
 
         RenderFramePacket()
             : _gpuScene{}
@@ -94,6 +99,7 @@ namespace sw
             , _listLightProbe{}
             , _listLightCookie{}
             , _sky{}
+            , _fog{}
             , _listView{}
             , _canvas{}
             , _mainView{}
@@ -109,6 +115,7 @@ namespace sw
             , _bValid{ SW_FALSE }
             , _bHasLight{ SW_FALSE }
             , _bHasSky{ SW_FALSE }
+            , _bHasFog{ SW_FALSE }
             , _bReadyForCapture{ SW_FALSE }
             , _reserved{ 0 }
         {
@@ -143,6 +150,7 @@ namespace sw
             _listLightProbe.clear();
             _listLightCookie.clear();
             _sky = SkyGradient{};
+            _fog = FogSettings{};
             _listView.clear();
             _canvas.clear();
             _mainView = RenderViewSettings{};
@@ -157,6 +165,7 @@ namespace sw
             _bValid             = SW_FALSE;
             _bHasLight          = SW_FALSE;
             _bHasSky            = SW_FALSE;
+            _bHasFog            = SW_FALSE;
             _bReadyForCapture   = SW_FALSE;
         }
     };
