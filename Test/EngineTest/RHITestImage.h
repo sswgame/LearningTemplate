@@ -25,6 +25,30 @@ namespace test
 namespace test
 {
     /**
+     * @brief 두 이미지를 화소마다 견준 결과입니다(`RHITestImage::compare`).
+     * @details GPU 테스트가 두 판(켬 · 끔, 직렬 · 병렬, 백엔드 · 기준)을 견줄 때의 형식이다. 평균 색 · 평균 밝기의 차이는 조명 식 · 톤맵이 바뀔
+     *          때마다 여유가 흔들리고(평균 (R − B) 차이 16 → 15 로 진 `PostProcessOffViewSkipsThePostChain`), 넓은 영역의 변화와 좁은 영역의 큰
+     *          변화를 구분하지 못한다. "몇 화소가 얼마나 달라졌나" 는 바뀐 자리의 넓이를 직접 센다.
+     */
+    struct RHITestImageDifference
+    {
+        uint32 _pixelCount{ 0 };     ///< 견준 화소 수 — 0 이면 크기가 달랐거나 빈 이미지라 견주지 못했다
+        uint32 _differingCount{ 0 }; ///< 색 거리(`RHITestImage::getColorDistance`)가 기준 이상인 화소 수
+        uint32 _brighterCount{ 0 };  ///< 그 가운데 둘째 이미지가 더 밝은(R + G + B 가 큰) 화소 수
+        uint32 _maxDistance{ 0 };    ///< 가장 큰 색 거리
+
+        /** @brief 크기가 같은 두 이미지를 견줬는가. */
+        bool isCompared() const { return _pixelCount > 0; }
+        /** @brief 견줬고, 다른 화소가 전체의 @p percent % 이하인가. */
+        bool isDifferingAtMost( uint32 percent ) const { return isCompared() && _differingCount * 100u <= _pixelCount * percent; }
+        /** @brief 실패 메시지에 붙일 요약입니다. */
+        sw::string describe() const;
+    };
+} // namespace test
+
+namespace test
+{
+    /**
      * @brief 되읽은 이미지 한 장(`RenderPassGPUTest`).
      * @details `getPixel` 이 RGBA 로 준다 — 되읽기 · 행 포인터 계산 · BGRA 뒤집기를 케이스마다 손으로 들면, 백엔드마다 스왑체인 형식이
      *          달라 뒤집기를 한 곳이라도 빠뜨릴 때 그 백엔드에서만 빨강과 파랑이 바뀐다.
@@ -56,6 +80,15 @@ namespace test
 
         /** @brief 두 색의 거리(R · G · B 차이의 절댓값 합). */
         static uint32 getColorDistance( const Rgba8& lhs, const Rgba8& rhs );
+
+        /**
+         * @brief 두 이미지를 화소마다 견줍니다 — 색 거리가 @p minDistance 이상인 화소를 다르다고 셉니다. 크기가 다르면 `_pixelCount` 가 0 입니다.
+         * @details @p minDistance 는 같은 경로의 반올림 흔들림(1~2)을 넘을 만큼만 둔다. 두 판을 견주는 판정은 평균이 아니라 이 결과로 한다.
+         */
+        static RHITestImageDifference compare( const RHITestImage& lhs, const RHITestImage& rhs, uint32 minDistance );
+        /** @brief `compare` 를 사각형 [@p left, @p right) × [@p top, @p bottom) 안에서만 합니다. 사각형이 이미지 밖으로 나가면 `_pixelCount` 가 0 입니다. */
+        static RHITestImageDifference compareRegion( const RHITestImage& lhs, const RHITestImage& rhs, uint32 minDistance, uint32 left, uint32 top, uint32 right,
+                                                     uint32 bottom );
 
         /**
          * @brief 기본 클리어 색(0.02, 0.02, 0.05)이 톤매핑을 지나 놓이는 자리인가 — 아무것도 그려지지 않은 배경.
