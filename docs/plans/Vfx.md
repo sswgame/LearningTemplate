@@ -46,9 +46,9 @@
 - DX11 의 오류 두 줄(깊이 히스토리 RT 가 컴퓨트 UAV 로 걸림)은 고쳤다(`D3D11RHICommandContext::bindComputeUav`).
 - GL 의 R32 실수 RW 텍스처 읽기(형식 없는 이미지 읽기)와 DX11 RAW 인자 버퍼의 SRV(메시 인스턴스 쓰기가 살아 있는 수를 읽는다)를 확인한다.
 
-### GPU 본체 + 라이트 CPU 방출기 (VfxGPULights 전의 패턴)
+### GPU 본체 + 라이트 CPU 방출기 (VfxGpuLights 전의 패턴)
 
-라이트는 CPU 라이트 목록에 붙으므로 CPU 전용이고(`VfxLightDef::getSupportedTargets`), 깊이 충돌 같은 GPU 전용 모듈과 한 방출기에 둘 수 없다(로드 오류). 빛이 필요한 GPU 효과는 방출기를 둘로 나눈다 — 본체(GPU: 많은 입자, 깊이 충돌)와 빛만 맡는 작은 CPU 방출기(빌보드 몇 개, `_light._maxLights` 몇 개, 본체와 같은 생성 일정 · 속도 범위). 같은 씨앗 규칙(`_seed` 와 방출기 번호)이라 두 방출기의 입자는 같지 않다 — 빛은 본체의 대표 몇 개를 흉내 낼 뿐이다. GPU 가 쓴 입자에서 바로 빛을 내는 일은 후보 `VfxGPULights`(Candidates-graphics).
+라이트는 CPU 라이트 목록에 붙으므로 CPU 전용이고(`VfxLightDef::getSupportedTargets`), 깊이 충돌 같은 GPU 전용 모듈과 한 방출기에 둘 수 없다(로드 오류). 빛이 필요한 GPU 효과는 방출기를 둘로 나눈다 — 본체(GPU: 많은 입자, 깊이 충돌)와 빛만 맡는 작은 CPU 방출기(빌보드 몇 개, `_light._maxLights` 몇 개, 본체와 같은 생성 일정 · 속도 범위). 같은 씨앗 규칙(`_seed` 와 방출기 번호)이라 두 방출기의 입자는 같지 않다 — 빛은 본체의 대표 몇 개를 흉내 낼 뿐이다. GPU 가 쓴 입자에서 바로 빛을 내는 일은 계획 [VfxGpuLights](VfxGpuLights.md).
 
 ### 다중 그룹 압축 (측정 뒤 정한다)
 

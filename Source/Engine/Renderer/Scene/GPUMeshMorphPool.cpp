@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
@@ -113,6 +114,8 @@ namespace sw
         if ( listDataID == _listSourceDataID && _skinRest.isValid() == ( listDataID.empty() == false ) )
             return;
 
+        // 스킨 원본 전체를 다시 올리는 구간이다. 이 시간이 SpanAllocator 구간 갱신으로 바꿀 이득의 측정값이다(집합이 바뀐 프레임에만 찍힌다).
+        SW_PROFILE_SCOPE( "RT.Deform.rebuildSkinSources" );
         _listSourceDataID = listDataID;
         _listSourceBase.clear();
         _skinSourceVertexCount = 0;

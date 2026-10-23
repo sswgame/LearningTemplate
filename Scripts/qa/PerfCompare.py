@@ -84,8 +84,10 @@ kListCase: tuple[PerfCase, ...] = (
     PerfCase("hangulGlyphs", "app", "switch", "한글 장문 첫 프레임 — 새 음절 400 개(없음이 A). 최악 프레임(max) 4 ms 가 기준",
              ("-lang=ko", "-gv_benchMeshes=100", "-gv_benchProbeFrame=180"), (), ("-gv_benchUiHangulGlyphs=400",),
              ("GT.Frame", "GT.UI.Paint", "RT.Canvas.Upload", "RT.Frame")),
-    PerfCase("deferredBloom", "app", "binary", "디퍼드 블룸의 밝은 부분을 반해상도 패스로(ee6fff232) — 큐브 2000. 전 GPU.PostBloom 대 후 GPU.BloomDownsample + GPU.PostBloom",
+    PerfCase("deferredBloom", "app", "binary", "디퍼드 블룸의 밝은 부분을 반해상도 패스로(ee6fff232) — 큐브 2000. 전 GPU.PostBloom 대 후 GPU.BloomDownsample + GPU.PostBloom. 전 바이너리는 ee6fff232^ 의 Release 빌드",
              ("-gv_deferred=1", "-gv_benchMeshes=2000"), listScope=("GPU.Frame", "GPU.PostBloom", "GPU.BloomDownsample")),
+    PerfCase("shadowPassShare", "app", "single", "그림자 패스의 몫(기준값, GraphicsMeasurements M3) — 큐브 4000. GPU.Shadow 가 GPU.Frame 의 한 자리 퍼센트면 캐스케이드별 컬링은 이득이 없다",
+             ("-gv_deferred=1", "-gv_benchMeshes=4000"), listScope=("GPU.Frame", "GPU.Shadow")),
     PerfCase("hangulGlyphsCPU", "test", "single", "한글 새 글리프 400 개의 CPU 래스터화 · SDF(기준값, 시스템 한글 글꼴이 없으면 건너뜀)",
              ("--test_filter=GlyphBenchTest.*",)),
 ) + tuple(

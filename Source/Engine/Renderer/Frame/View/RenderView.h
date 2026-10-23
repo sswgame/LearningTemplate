@@ -62,7 +62,7 @@ namespace sw
         Overdraw,     ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
         LightingOnly, ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
         Roughness,    ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
-        Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). 금속도 칸이 아직 없어 모든 표면이 0 이다.
+        Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceMetallic)을 보인다.
         Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
         /**
          * @brief 픽셀마다 조명 식이 도는 라이트 수(라이트 그리드의 전역 구간 + 그 클러스터 목록)를 색 띠로 보인다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).

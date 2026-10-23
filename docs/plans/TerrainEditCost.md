@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: D2-5.6, D2-5.7 · 진행: 3/4
 
-후보 [TerrainWaterVegetationRemainders](Candidates-graphics.md#terrainwatervegetationremainders)의 "지형 LOD 교체 프레임 시간"과 "지형 쓰기의 남은 것" 조각을 계획으로 올린 문서입니다. 강 경로 · 안개 · 물 굴절 · 지오모프는 후보에 남깁니다.
+후보 `TerrainWaterVegetationRemainders`(지금은 [EnvironmentRemainders](EnvironmentRemainders.md))의 "지형 LOD 교체 프레임 시간"과 "지형 쓰기의 남은 것" 조각을 계획으로 올린 문서입니다. 강 경로 · 안개 · 물 굴절 · 지오모프는 EnvironmentRemainders 에 있습니다.
 지형 쓰기의 결정은 [결정 기록](../09_Decisions.md) 5-5, 측정값은 [검증과 측정](../08_Verification.md) 2절 "지형 LOD 교체" · "지형 높이 쓰기" 입니다.
 
 ## 1. 왜 하는가
