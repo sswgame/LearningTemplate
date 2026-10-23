@@ -29,6 +29,26 @@
       "source": "docs/plans/ScriptsStructure.md 6절", "result_doc": "docs/plans/ScriptsStructure.md 6절"
     },
     {
+      "id": "resource-data-schema-test", "title": "ResourceDataSchemaTest 필터(오디오 셋 타입 .cpp 이전)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "ResourceDataSchemaTest.*",
+      "source": "docs/plans/DataKindRegistry.md DK1", "result_doc": "docs/plans/DataKindRegistry.md DK1"
+    },
+    {
+      "id": "localization-check-text", "title": "일본어 · RTL 화면 눈 확인과 App --check-text", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "눈 확인은 사람이 화면을 봐야 하고 --check-text 의 호출 모양이 매니페스트에 없다",
+      "source": "docs/plans/Candidates-audio-ai-localization.md", "result_doc": "docs/plans/Candidates-audio-ai-localization.md"
+    },
+    {
+      "id": "skin-vat-pool-range-allocator", "title": "스킨 원본 · VAT 풀 구간 할당기 이득(RT.Deform.rebuild* 구간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "스트리밍 셀 진입 · 군중 합류 장면을 만드는 perf-compare 케이스가 없다",
+      "source": "docs/plans/GraphicsMeasurements.md M2", "result_doc": "docs/plans/GraphicsMeasurements.md M2"
+    },
+    {
+      "id": "perf-compare-shadow-pass-share", "title": "방향광 그림자 캐스케이드별 컬링 — shadowPassShare", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "shadowPassShare", "--runs", "3"], "limit": "보고만 — GPU.Shadow 와 GPU.Frame 비율", "judge": "exit",
+      "source": "docs/plans/GraphicsMeasurements.md M3", "result_doc": "docs/plans/GraphicsMeasurements.md M3"
+    },
+    {
       "id": "ability-system-test", "title": "AbilitySystemTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "AbilitySystemTest.*",
       "source": "docs/plans/AbilitySystemExtensions.md 남은 것", "result_doc": "docs/plans/AbilitySystemExtensions.md 상태를 끝으로"

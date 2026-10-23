@@ -9,10 +9,10 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| M1 | 반해상도 블룸(`BloomDownsample`)이 이득인가 — `perf-compare --cases deferredBloom`(바이너리 A/B: 전은 `ee6fff232^` 의 Release 빌드, 후는 지금). p50 · p99 를 전 `GPU.PostBloom` 대 후 `GPU.BloomDownsample` + `GPU.PostBloom` 으로 견준다 | 케이스 있음 · 실행 대기 |
-| M2 | 스킨 원본 · VAT 풀을 구간 할당기로 바꿀 이득이 있는가 — 구간 `RT.Deform.rebuildSkinSources`(스킨 원본 전체 다시 올리기, 집합이 바뀐 프레임에만 찍힘)와 `RT.Deform.rebuildVertexAnimationPool`(VAT 테이블 풀)을 스트리밍 셀 진입 · 군중 합류 장면에서 본다 | 구간 추가 · 실행 대기 |
-| M3 | 방향광 그림자의 캐스케이드별 컬링이 이득인가 — `perf-compare --cases shadowPassShare`(기준값: 큐브 4000, `GPU.Shadow` 와 `GPU.Frame`). 여드름 눈 확인은 게임별 `SW_ACTIVE_GAME` 빌드로 전후 스크린샷 | 케이스 있음 · 실행 대기 |
-| M4 | 쿠킹한 보기 모드 변형을 Shipping 으로 — Shipping 전체 빌드 뒤 `RenderPassGPUTest.ViewModesProduceDistinctPictures`(hostgpu)가 LightingOnly 를 포함해 돈다 | 실행 대기 |
+| M1 | 반해상도 블룸(`BloomDownsample`)이 이득인가 — `perf-compare --cases deferredBloom`(바이너리 A/B: 전은 `ee6fff232^` 의 Release 빌드, 후는 지금). p50 · p99 를 전 `GPU.PostBloom` 대 후 `GPU.BloomDownsample` + `GPU.PostBloom` 으로 견준다 | 케이스 있음 · 실행 대기, 매니페스트 id `half-resolution-bloom` |
+| M2 | 스킨 원본 · VAT 풀을 구간 할당기로 바꿀 이득이 있는가 — 구간 `RT.Deform.rebuildSkinSources`(스킨 원본 전체 다시 올리기, 집합이 바뀐 프레임에만 찍힘)와 `RT.Deform.rebuildVertexAnimationPool`(VAT 테이블 풀)을 스트리밍 셀 진입 · 군중 합류 장면에서 본다 | 구간 추가 · 실행 대기, 매니페스트 id `skin-vat-pool-range-allocator` |
+| M3 | 방향광 그림자의 캐스케이드별 컬링이 이득인가 — `perf-compare --cases shadowPassShare`(기준값: 큐브 4000, `GPU.Shadow` 와 `GPU.Frame`). 여드름 눈 확인은 게임별 `SW_ACTIVE_GAME` 빌드로 전후 스크린샷 | 케이스 있음 · 실행 대기, 매니페스트 id `perf-compare-shadow-pass-share` |
+| M4 | 쿠킹한 보기 모드 변형을 Shipping 으로 — Shipping 전체 빌드 뒤 `RenderPassGPUTest.ViewModesProduceDistinctPictures`(hostgpu)가 LightingOnly 를 포함해 돈다 | 실행 대기, 매니페스트 id `render-pass-gpu-tests` |
 
 ## 2. 판정 규칙
 

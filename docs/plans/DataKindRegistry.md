@@ -18,7 +18,7 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| DK1 | 오디오 셋(`audiomixer` · `audioevents` · `audiomusic`)을 각 타입 .cpp 로 옮김(빌드 · `ResourceDataSchemaTest` 확인 대기) | 없음 |
+| DK1 | 오디오 셋(`audiomixer` · `audioevents` · `audiomusic`)을 각 타입 .cpp 로 옮김(빌드 · `ResourceDataSchemaTest` 확인 대기, 매니페스트 id `resource-data-schema-test`) | 없음 |
 | DK2 | 애니메이션 셋(`referencepose` · `bodyshape` · `animationlod` · `animationcrowd` · `vertexanimation` · `lipsync` · `visemes` · `facial` · `socketkinds`) | DK1 |
 | DK3 | UI 셋(`fontcatalog` · `uiscale` · `uithemes`) | DK1 |
 | DK4 | 나머지 카탈로그(`navmeshsettings` · `telemetryschema` · `surfacechannels` · `destruction`) | DK1 |
