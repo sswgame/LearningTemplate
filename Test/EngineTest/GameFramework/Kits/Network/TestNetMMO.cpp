@@ -605,8 +605,8 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheLossNotice )
         ++ticksToSee;
     }
     SW_LOG_INFO( "[NetMMO] far entity changed during a 30-tick downstream blackout: seen %# ticks after the link came back", ticksToSee );
-    // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 키트 확인 메시지로 판정하던 때 4 틱. 그 값 + 3(전달 통지로 바꾼 뒤 값은 빌드 후 다시 잰다).
-    SW_EXPECT_TRUE( ticksToSee <= 7u );
+    // 판정 없이(보낸 순간 "안 바뀜") 13 틱, 키트 확인 메시지로 판정하던 때 4 틱, 전달 통지로 3 틱(2026-10-23 Debug, 10 회 같음). 그 값 + 3.
+    SW_EXPECT_TRUE( ticksToSee <= 6u );
 }
 
 /**
