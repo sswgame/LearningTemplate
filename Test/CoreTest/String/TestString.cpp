@@ -1585,11 +1585,11 @@ SW_TEST_CASE( StringTest, ParseIntListSplitsBySeparators )
 {
     sw::vector<int32> list{ 9 };
     SW_EXPECT_TRUE( sw::StringUtil::parseIntList( " 1, -2\t3 ,,4 ", " ,\t", list ) );
-    SW_EXPECT_EQ( list.size(), size_t{ 4 } );
+    SW_EXPECT_TRUE( list.size() == 4 );
     SW_EXPECT_TRUE( list[0] == 1 && list[1] == -2 && list[2] == 3 && list[3] == 4 );
 
     SW_EXPECT_TRUE( sw::StringUtil::parseIntList( "5\n6\r\n7", " \n\r\t", list ) );
-    SW_EXPECT_EQ( list.size(), size_t{ 3 } );
+    SW_EXPECT_TRUE( list.size() == 3 );
 
     SW_EXPECT_TRUE( sw::StringUtil::parseIntList( "", " ", list ) ); // 빈 글은 빈 목록
     SW_EXPECT_TRUE( list.empty() );
