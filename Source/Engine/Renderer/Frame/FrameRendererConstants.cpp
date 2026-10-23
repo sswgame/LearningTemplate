@@ -36,6 +36,19 @@ namespace sw
         _frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
         _frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
         _frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
+
+        // 대기 산란 — 셰이더가 해 방향 · 색을 키 라이트 상수에서 읽으므로 여기에는 대기의 값만 싣는다. 그러데이션 모드는 w = 0 이라 셰이더가 그 길을 고른다.
+        const SkyAtmosphere& atmosphere = sky._atmosphere;
+        const float3         rayleigh   = atmosphere.computeRayleighBeta();
+        _frameSky._atmosphereRayleigh   = float4{ rayleigh._x, rayleigh._y, rayleigh._z, sky._mode == SkyMode::Atmosphere ? 1.0f : 0.0f };
+        _frameSky._atmosphereMie        = float4{ atmosphere.computeMieBeta(), SkyAtmosphere::kMieScaleHeightKm, atmosphere._mieAnisotropy, atmosphere._sunIntensity };
+        _frameSky._atmosphereGeometry   = float4{ atmosphere._planetRadiusKm, atmosphere._atmosphereHeightKm, atmosphere._observerAltitudeKm, atmosphere._sunDiscAngle };
+
+        // 구름 층 — 바람 방향은 라디안을 단위 벡터로 바꿔 싣는다.
+        const SkyClouds& clouds = sky._clouds;
+        _frameSky._cloudShape   = float4{ MathUtil::saturate( clouds._coverage ), clouds._altitudeKm, clouds._scale, MathUtil::saturate( clouds._opacity ) };
+        _frameSky._cloudWind    = float4{ MathUtil::cos( clouds._windDirection ), MathUtil::sin( clouds._windDirection ), clouds._windSpeedKmPerSecond, clouds._softness };
+        _frameSky._cloudColor   = float4{ clouds._color._x, clouds._color._y, clouds._color._z, clouds._bEnabled == SW_TRUE ? 1.0f : 0.0f };
     }
 
     void FrameRenderer::applyFrameFog( bool bHasFog, const FogSettings& fog )
@@ -102,6 +115,12 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyZenith, _frameSky._zenithExponent );
         context._passValues.setFloat4( passConstantNames()._skyHorizon, _frameSky._horizon );
         context._passValues.setFloat4( passConstantNames()._skyGround, _frameSky._groundIntensity );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereRayleigh, _frameSky._atmosphereRayleigh );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereMie, _frameSky._atmosphereMie );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereGeometry, _frameSky._atmosphereGeometry );
+        context._passValues.setFloat4( passConstantNames()._skyCloudShape, _frameSky._cloudShape );
+        context._passValues.setFloat4( passConstantNames()._skyCloudWind, _frameSky._cloudWind );
+        context._passValues.setFloat4( passConstantNames()._skyCloudColor, _frameSky._cloudColor );
         context._passValues.setFloat4( passConstantNames()._fogColorDensity, _frameFog._colorDensity );
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _frameFog._heightParams );
         context._passValues.setFloat4( passConstantNames()._fogInscatter, _frameFog._inscatter );

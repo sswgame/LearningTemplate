@@ -704,6 +704,13 @@ namespace sw
             float4 _zenithExponent{};  ///< rgb 천정 색, w 지평선 지수
             float4 _horizon{};         ///< rgb 지평선 색
             float4 _groundIntensity{}; ///< rgb 땅 색, w 세기
+            // 대기 산란 모드(`SkyMode::Atmosphere`)와 구름 층의 상수다. 배치는 `SkyAtmosphere` · `SkyClouds` 머리 주석과 sky.hlsl 머리 주석.
+            float4 _atmosphereRayleigh{}; ///< rgb 레일리 산란 계수(1/km), w 대기 모드면 1 · 그러데이션이면 0
+            float4 _atmosphereMie{};      ///< x 미 산란 계수(1/km), y 미 규모 높이(km), z 미 이방성, w 해 복사휘도 배율(해 색에 곱한다)
+            float4 _atmosphereGeometry{}; ///< x 행성 반지름(km), y 대기 두께(km), z 눈 고도(km), w 해 원반 각 반지름(라디안)
+            float4 _cloudShape{};         ///< x 덮는 비율, y 층 고도(km), z 노이즈 배율(1/km), w 최대 불투명도
+            float4 _cloudWind{};          ///< xy 바람 방향 단위 벡터(xz 평면), z 바람 속도(km/s), w 경계 부드러움
+            float4 _cloudColor{};         ///< rgb 구름 색, w 구름을 그리면 1
         };
         /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );

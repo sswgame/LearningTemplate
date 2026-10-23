@@ -456,6 +456,16 @@
       "source": "docs/plans/RealtimeGlobalIllumination.md R1", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R1"
     },
     {
+      "id": "sky-tests", "title": "하늘 테스트(그러데이션 식 · 대기 산란의 낮 파랑 · 노을 빨강 · 행성 그림자 · 땅 반사 · 방향광에서 해 찾기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "SkyTest.*",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R3 R4", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R3 R4"
+    },
+    {
+      "id": "sky-scenario", "title": "sky 시나리오(네 백엔드 — 대기 산란 낮 하늘이 파랗다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/sky.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R3 R4", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R3 R4"
+    },
+    {
       "id": "vfx-gpu-lights-tests", "title": "GPU 파티클 라이트 테스트(생산자 규칙 · 슬롯 나누기 · 깊이 충돌 + 라이트 로드 · CPU 라이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "GPULightBufferTest.*,VfxGPUSimulationTest.*,VfxEffectDefTest.*,VfxComponentTest.*",
       "source": "docs/plans/VfxGpuLights.md 3절 L4", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"
