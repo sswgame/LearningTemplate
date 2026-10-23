@@ -133,7 +133,7 @@ namespace sw
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling 0, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
-        // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(swHasLightGrid 가 둘 다 본다).
+        // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
         const RHIStructuredBufferSlot* pGridBuffer = _lightBuffer.isBindable() ? _lightBuffer.findGridBuffer() : nullptr;
         const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
         const uint32                   gridBase    = bGridReady ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;

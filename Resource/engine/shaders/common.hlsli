@@ -9,7 +9,7 @@
  * Vulkan 은 DXC 시프트(-fvk-*-shift)가, OpenGL 은 아래 매크로의 [[vk::binding]] 이 정한다.
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
- *   SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
+ *   SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );              // 컴퓨트 읽기 t0
  *   SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 ); // 컴퓨트 쓰기 u0
  * 씬 메시 머티리얼은 binding.hlsli 의 SW_MATERIAL_BEGIN/END + SW_MATERIAL( index ) 를 쓴다 (GPUScene 버퍼).
  */
@@ -73,41 +73,31 @@
 // ------------------------------------------------------------------------------
 // 3-1) 루트/푸시 상수 — setComputeRootConstants 가 채우는 16 dword. 블록 이름은 SwRootConstants 로 고정(계약 검증 키).
 //      DX12 b0 space2 (32비트 루트 상수), Vulkan 푸시 상수, DX11/GL 은 b SW_SLOT_ROOT_CB_EMUL 상수버퍼 에뮬.
-//      용법: SW_ROOT_CONSTANTS_BEGIN  uint g_Target; uint g_Width;  SW_ROOT_CONSTANTS_END  ...  SW_ROOT( g_Target )
-//      Vulkan 은 [[vk::push_constant]] 가 구조체 전역에만 붙어 필드가 전역 이름이 아니다 — 그래서 SW_ROOT() 로 읽는다.
+//      용법(중괄호는 셰이더가 쓴다 — 매크로는 블록의 머리와 꼬리만 낸다):
+//          SW_ROOT_CONSTANTS_BEGIN
+//          {
+//              uint g_Target;
+//          };
+//          SW_ROOT_CONSTANTS_END
+//          ...  SW_ROOT( g_Target )
+//      Vulkan 은 [[vk::push_constant]] 가 구조체 전역에만 붙어 필드가 전역 이름이 아니다 — 그래서 SW_ROOT() 로 읽고, 꼬리가 그 전역을 선언한다.
+//      매크로 본문에 짝 없는 중괄호를 두지 않는다 — clang-format 이 `#define` 을 여러 줄로 가르고 쓰는 쪽도 블록으로 읽지 못한다.
 // ------------------------------------------------------------------------------
 #if defined( OPENGL )
-    #define SW_ROOT_CONSTANTS_BEGIN                                                                                        \
-        [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
-    #define SW_ROOT_CONSTANTS_BEGIN \
-        struct SwRootConstantsData  \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;                         \
-        [[vk::push_constant]] ConstantBuffer<SwRootConstantsData> SwRootConstants;
-    #define SW_ROOT( field ) SwRootConstants.field
+    #define SW_ROOT_CONSTANTS_BEGIN struct RootConstantsData
+    #define SW_ROOT_CONSTANTS_END   [[vk::push_constant]] ConstantBuffer<RootConstantsData> SwRootConstants;
+    #define SW_ROOT( field )        SwRootConstants.field
 #elif defined( DX12 )
-    #define SW_ROOT_CONSTANTS_BEGIN                                                                           \
-        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB ), SW_CAT( space, SW_SPACE_ROOT_CB ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #else
-    #define SW_ROOT_CONSTANTS_BEGIN                                             \
-        cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) ) \
-        {
-    #define SW_ROOT_CONSTANTS_END \
-        }                         \
-        ;
+    #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
+    #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #endif
 
@@ -160,7 +150,7 @@ static const float kInvPi  = 0.31830988618379067154f;
 // location 을 매긴다** — 중간 속성을 빼면 그 뒤가 통째로 한 칸씩 당겨져, 색을 읽으려던 셰이더가
 // 노멀을 읽는다. DX 에서는 멀쩡하고 그 둘에서만 조용히 틀리는, 이 저장소에서 가장 비싼 종류의 버그다.
 // 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
-struct SwVertexInput
+struct VertexInput
 {
     float3 position : POSITION;
     float3 normal : NORMAL;

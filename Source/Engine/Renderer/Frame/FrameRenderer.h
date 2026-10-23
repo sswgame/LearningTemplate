@@ -75,7 +75,7 @@ namespace sw
          * @brief GPU 메시 모프 진단 모드입니다. 값 체계는 `-gv_morphDiag` 와 같습니다(0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표).
          * @details 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다. 그래서 이 모드 하나로
          *          "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다. OpenGL 드라이버가 early-return 형태의
-         *          `swComputeMorphElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
+         *          `MorphPool::computeElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
          */
         int32 _meshMorphDiag{ -1 };
         /// @brief 1 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, 0 이면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
@@ -1129,7 +1129,7 @@ namespace sw
          *          나가지 않도록 항상 유효한 버퍼를 바인딩한다. 언리얼의 기본 머티리얼에 해당한다.
          *
          *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같은 방식이다.
-         *          주의: 고정 크기 원소 하나를 모든 셰이더에 공용으로 바인딩하면 셰이더의 `SwMaterialData` stride 와 어긋나
+         *          주의: 고정 크기 원소 하나를 모든 셰이더에 공용으로 바인딩하면 셰이더의 `MaterialData` stride 와 어긋나
          *          DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 같은 경고를 낸다.
          *          원소는 0 이지만 텍스처 인덱스 필드만 `kInvalidDescriptorIndex` 다(`MaterialUtil::makeFallbackElement`). 0 은 Vulkan 의 첫 실제
          *          텍스처 · DX11 · GL 의 머티리얼 텍스처 서수 0 이라, 0 으로 두면 백엔드마다 다른 텍스처를 읽는다.

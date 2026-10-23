@@ -21,7 +21,7 @@ namespace sw
      * @struct MeshVertexAnimation
      * @brief 베이크한 테이블입니다. 원소 하나는 정점 하나의 한 프레임이며 float4(위치 xyz, 노멀을 정수로 담은 w, `packNormal`)입니다.
      * @details 프레임 우선 순서입니다(`[frame * vertexCount + vertex]`). 반복 클립은 마지막 프레임 뒤에 첫 프레임이 이어지고(테이블에는 한 번만 저장),
-     *          반복하지 않는 클립은 마지막 프레임에 멈춥니다. 셰이더(binding.hlsli `swLoadAnimatedVertex`)가 두 프레임 사이를 선형 보간합니다.
+     *          반복하지 않는 클립은 마지막 프레임에 멈춥니다. 셰이더(binding.hlsli `InstanceData::loadAnimatedVertex`)가 두 프레임 사이를 선형 보간합니다.
      *          쿠킹본(`.vat`, 리틀 엔디언)은 매직 `SWVA`, 버전, 프레임 수, 정점 수, 프레임율, 길이, 플래그(비트 0 반복, 비트 1 루트 고정), float4 테이블 순서입니다.
      *          지금 버전만 읽습니다(버전이 다르면 다시 쿠킹합니다).
      */
@@ -50,7 +50,7 @@ namespace sw
         bool isEmpty() const { return _frameCount == 0 || _vertexCount == 0; }
         /** @brief 단위 노멀을 정수 하나(팔면체 12 + 12비트)로 담은 실수입니다. 2^24 아래 정수라 float32 에 정확히 들어갑니다. */
         static float32 packNormal( const float3& normal );
-        /** @brief `packNormal` 의 역변환입니다(셰이더 `swUnpackVertexAnimationNormal` 과 같은 식). */
+        /** @brief `packNormal` 의 역변환입니다(셰이더 `VertexAnimation::unpackNormal` 과 같은 식). */
         static float3 unpackNormal( float32 packed );
         /** @brief 시각 @p time(초)의 정점 위치입니다. 셰이더와 같은 프레임 보간이며 테스트와 디버그에 씁니다. */
         float3 samplePosition( float32 time, uint32 vertexIndex ) const;

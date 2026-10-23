@@ -22,7 +22,7 @@ static const uint  kTapCount      = 16u;
 static const uint  kInnerTapCount = 6u;
 static const float kInnerRadius   = 0.5f;
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -49,7 +49,7 @@ float2 computeTapOffset( uint tapIndex )
  */
 float computeViewDepth( float2 uv )
 {
-    const float  deviceDepth = swSampleDepthPoint( uv ).r;
+    const float  deviceDepth = PassTexture::sampleDepthPoint( uv ).r;
     const float2 ndcXy       = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
     const float4 world       = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
     return 1.0f / max( abs( world.w ), 1e-6f );
@@ -64,7 +64,7 @@ float computeBlurRadius( float viewDepth )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float3 source      = swSampleSourcePoint( input.uv ).rgb;
+    const float3 source      = PassTexture::sampleSourcePoint( input.uv ).rgb;
     const float  centerDepth = computeViewDepth( input.uv );
     const float  centerBlur  = computeBlurRadius( centerDepth );
 
@@ -79,7 +79,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
         // 앞의 탭은 자기 착란원이 이 픽셀까지 닿는 만큼만 센다(1 px 에 걸쳐 부드럽게). 뒤의 탭은 이 픽셀의 착란원 안이므로 다 센다.
         const bool  bNearer = tapDepth < centerDepth;
         const float weight  = bNearer ? saturate( tapBlur - length( offsetPixels ) + 1.0f ) : 1.0f;
-        colorSum += swSampleSource( tapUv ).rgb * weight;
+        colorSum += PassTexture::sampleSource( tapUv ).rgb * weight;
         weightSum += weight;
     }
     const float3 blurred = colorSum / weightSum;

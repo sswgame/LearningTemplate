@@ -42,7 +42,7 @@ namespace sw
         virtual ~PointLight2DComponent() override = default;
 
         /**
-         * @brief 빛에서 @p distance 떨어진 곳의 감쇠(원뿔 제외)입니다. 셰이더 `swComputeLight2dAttenuation` 과 같은 식입니다.
+         * @brief 빛에서 @p distance 떨어진 곳의 감쇠(원뿔 제외)입니다. 셰이더 `LightData::computeLight2dAttenuation` 과 같은 식입니다.
          * @param exponent 1 이면 선형, 2 면 제곱으로 빨리 어두워집니다
          */
         static float32 computeAttenuation( float32 distance, float32 innerRadius, float32 outerRadius, float32 exponent );
@@ -113,7 +113,7 @@ namespace sw
         virtual ~FreeformLight2DComponent() override = default;
 
         /**
-         * @brief 점 @p point 에서 다각형 @p listPolygon(월드, 감김 무관)의 감쇠입니다. 셰이더 `swComputeFreeformLight2dAttenuation` 과 같은 식입니다.
+         * @brief 점 @p point 에서 다각형 @p listPolygon(월드, 감김 무관)의 감쇠입니다. 셰이더 `LightData::computeFreeformLight2dAttenuation` 과 같은 식입니다.
          * @return 다각형 안은 1, 밖은 (1 − 거리 / @p falloffDistance)^@p exponent 를 [0, 1] 로 자른 값입니다. 꼭짓점이 셋 미만이면 0 입니다.
          */
         static float32 computeAttenuation( const float2& point, const vector<float2>& listPolygon, float32 falloffDistance, float32 exponent );

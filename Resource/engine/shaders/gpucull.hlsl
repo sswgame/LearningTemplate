@@ -9,7 +9,7 @@
  *   2) 그 자리에 자기 인스턴스 번호를 적는다 (`g_VisibleInstanceIDs`).
  * 그래서 간접 인자의 개수와 인스턴스 목록이 **함께** 만들어진다. 정점 셰이더는 입력 어셈블러가 주는 인스턴스 슬롯
  * (`SW_INSTANCESLOT` — 간접 인자의 startInstanceLocation + 서수)으로 `g_SwVisibleInstanceIDs[slot]` 을 읽어 자기 인스턴스를 찾는다
- * (`swResolveInstanceId`).
+ * (`InstanceData::resolveId`).
  *
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
@@ -24,7 +24,7 @@
  * 멀면 그리지 않는다. 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면, 타일 kMaxOcclusionTestTiles 줄을 넘게 덮으면(큰 물체) 판정하지 않는다(보인다).
  */
 
-// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
+// 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
 #include "instancedata.hlsli"
 
 // C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertexLocation 는 정점 풀 시작,
@@ -42,7 +42,7 @@ struct RHIDrawIndirectCommand
  * firstInstance 를 포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 배치 시작점으로 쓸 수 없다.
  * 그래서 시작점은 이 버퍼가 따로 알려준다 — 언리얼이 드로우 커맨드마다 인스턴스 구간을 들고 있는 것과 같다.
  */
-// 배치 표 원소는 binding.hlsli 와 같은 SwBatchData(batchdata.hlsli) 다.
+// 배치 표 원소는 binding.hlsli 와 같은 BatchData(batchdata.hlsli) 다.
 
 SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 {
@@ -50,13 +50,13 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
     uint     g_InstanceCount;
     uint     g_BatchCount;
     uint2    g_Pad;
-    float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — swComputeClipPosition 과 같다)
+    float4x4 g_OcclusionViewProj;  // 가림 타일의 깊이를 그린 프레임의 뷰-투영(행 벡터 규약 — Transform::computeClipPosition 과 같다)
     uint4    g_OcclusionGrid;      // x 열, y 행, z 타일 한 변(px), w 가림 판정 켬 1 · 끔 0
     float4   g_OcclusionDepthSize; // xy 깊이 히스토리 크기(px)
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( float, g_OcclusionTiles, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
@@ -124,8 +124,8 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( instanceId >= g_InstanceCount )
         return;
 
-    const SwInstanceData instance   = g_Instances[instanceId];
-    const uint           batchIndex = instance.meshBatchIndex;
+    const InstanceData instance   = g_Instances[instanceId];
+    const uint         batchIndex = instance.meshBatchIndex;
     if ( batchIndex >= g_BatchCount )
         return;
 

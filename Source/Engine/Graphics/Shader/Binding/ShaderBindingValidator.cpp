@@ -344,10 +344,10 @@ namespace sw
                      vkT( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ) );
                 add( shaderslot::resname::kParticles, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ),
                      vkT( shaderslot::kPassBuffer ), slotB( shaderslot::kPassBuffer ) );
-                // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli swLoadLightGridWord)가 읽는다.
+                // 라이트 그리드 t12 (네 백엔드 공통): 조명 식의 커서(lighting.hlsli LightGrid::loadWord)가 읽는다.
                 add( shaderslot::resname::kLightGrid, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ),
                      vkT( shaderslot::kLightGridBuffer ), slotB( shaderslot::kLightGridBuffer ) );
-                // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli swLoadProbe).
+                // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli LightProbe::load).
                 add( shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ),
                      vkT( shaderslot::kLightProbeBuffer ), slotB( shaderslot::kLightProbeBuffer ) );
                 // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
@@ -640,13 +640,13 @@ namespace sw
                     const string label = input._semantic + to_string( input._semanticIndex );
                     if ( pAttribute == nullptr || input._semanticIndex != 0 )
                     {
-                        report( label, "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 SwVertexInput 을 쓸 것" );
+                        report( label, "정점 레이아웃 표(constant::arrVertexAttribute)에 없는 정점 입력입니다 — 정점을 받는 셰이더는 VertexInput 을 쓸 것" );
                         continue;
                     }
                     if ( ( _bVulkan || _bOpenGl ) && input._location != pAttribute->_location )
                     {
                         report( label, string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
-                                           to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — SwVertexInput 을 쓸 것)" );
+                                           to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — VertexInput 을 쓸 것)" );
                     }
                 }
             }

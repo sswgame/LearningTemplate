@@ -8,7 +8,7 @@ struct PSInput
     float2 uv : TEXCOORD0;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -26,11 +26,11 @@ float4 PSMain( PSInput input ) : SV_TARGET
     float3     color;
     SW_BRANCH if ( bPointUpscale )
     {
-        color = swSampleSourcePoint( input.uv ).rgb;
+        color = PassTexture::sampleSourcePoint( input.uv ).rgb;
     }
     else
     {
-        color = swSampleSource( input.uv ).rgb;
+        color = PassTexture::sampleSource( input.uv ).rgb;
     }
     return float4( color, 1.0f );
 }

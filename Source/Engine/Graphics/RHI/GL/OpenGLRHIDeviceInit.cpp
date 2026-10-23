@@ -243,7 +243,7 @@ namespace sw
             glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glSamplerParameteri( materialSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
             // 엔진 텍스처 유닛(t0..t3 — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)은 엔진 텍스처 샘플러(선형 · 클램프, shaderslot::kEngineTextureSampler)다.
-            // 네이티브 bindless 의 swSampleIndex 가 고르는 샘플러와 같아야 블룸의 반 텍셀 탭이 같은 텍셀 넷을 섞는다. 렌더 타깃은 밉이 하나라
+            // 네이티브 bindless 의 Bindless::sampleIndex 가 고르는 샘플러와 같아야 블룸의 반 텍셀 탭이 같은 텍셀 넷을 섞는다. 렌더 타깃은 밉이 하나라
             // 축소 필터에 밉 모드를 두지 않는다.
             static_assert( shaderslot::kEngineTextureSampler == SW_SAMPLER_LINEAR_CLAMP, "GL 엔진 텍스처 샘플러의 필터 · 주소가 계약과 다르다" );
             static_assert( shaderslot::kEngineTexture0 == 0, "엔진 텍스처 유닛 판정은 t0 부터라고 가정한다" );

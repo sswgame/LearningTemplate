@@ -82,7 +82,7 @@
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음. 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
 
-// GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<SwMaterialData> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
+// GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<MaterialData> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
 #define SW_SLOT_MATERIAL_BUFFER 5
 
@@ -100,13 +100,13 @@
 // 안 걸려 있으면(kInvalidIndex) 입력 스트림을 그대로 쓴다.
 #define SW_SLOT_MORPH_VERTEX_SRV 7
 
-// 씬의 라이트 목록 (StructuredBuffer<SwLightData> g_SwLights). 방향광·점광이 한 버퍼에 섞여 들어가고,
+// 씬의 라이트 목록 (StructuredBuffer<LightData> g_SwLights). 방향광·점광이 한 버퍼에 섞여 들어가고,
 // 포워드와 디퍼드가 **같은 버퍼를 같은 루프로** 읽는다 — 조명 식이 두 벌이면 둘은 반드시 갈라진다.
 // 인스턴스·머티리얼과 같은 이유로 상수버퍼가 아니라 구조버퍼다: 개수가 씬마다 다르고, 패스당 한 번
 // 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약). 언리얼의 라이트 데이터 버퍼와 같은 자리.
 #define SW_SLOT_LIGHT_SRV 8
 
-// 씬 배치 표 (StructuredBuffer<SwBatchData> g_SwBatches). 배치마다 인스턴스 시작·모프 풀 시작·정점 풀 시작.
+// 씬 배치 표 (StructuredBuffer<BatchData> g_SwBatches). 배치마다 인스턴스 시작·모프 풀 시작·정점 풀 시작.
 // 정점 셰이더가 **자기 배치 번호**로 읽는다 — DX12 는 커맨드 시그니처가 루트 상수로 주입, Vulkan·GL 은 DrawIndex 내장
 // 변수 + 그룹 첫 번호, DX11 은 배치마다 루트 상수. 배치마다 바뀌는 값이 전부 이 표에 있으므로 같은 PSO·머티리얼의
 // 배치들을 멀티 드로우 하나로 낼 수 있다(언리얼 GPUScene 의 프리미티브/인스턴스 데이터 버퍼와 같은 자리).
@@ -114,7 +114,7 @@
 #define SW_SLOT_BATCH_SRV 9
 
 // 정점 애니메이션(VAT) 표 (StructuredBuffer<float4> g_SwVertexAnimation). 먼 군중의 메시마다 머리 원소 + 프레임 × 정점.
-// 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli swLoadAnimatedVertex).
+// 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli InstanceData::loadAnimatedVertex).
 #define SW_SLOT_VERTEX_ANIMATION_SRV 10
 
 // 패스 전용 구조버퍼 — 한 그리기가 자기 원소를 (루트 상수의 시작 + SV_InstanceID) 번째로 읽고 SV_VertexID 로 모서리를 만든다(동적 정점 버퍼 없음).
@@ -124,11 +124,11 @@
 
 // 지금 뷰의 라이트 그리드 (StructuredBuffer<uint> g_SwLightGrid) — 클러스터드 라이팅의 빛 목록(배치는 10 절 SW_LIGHT_GRID_*).
 // 뷰마다 그리드 하나가 이 버퍼에 이어 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 단어다. 만드는 쪽은 둘이다 — CPU(LightGrid, 동적 버퍼)와
-// GPU 컴퓨트(lightgrid.hlsl, 기본 힙 UAV). 셰이더는 어느 쪽이 만들었는지 모른다(lighting.hlsli swLoadLightGridWord 하나만 읽는다).
+// GPU 컴퓨트(lightgrid.hlsl, 기본 힙 UAV). 셰이더는 어느 쪽이 만들었는지 모른다(lighting.hlsli LightGrid::loadWord 하나만 읽는다).
 #define SW_SLOT_LIGHT_GRID_SRV 12
 
 // 라이트 프로브의 SH9 (StructuredBuffer<float4> g_SwLightProbes) — 프로브 하나가 float4 SW_LIGHT_PROBE_FLOAT4_COUNT 개(C++ SH9Color::makeGPUElement 배치).
-// 볼륨은 라이트 목록(g_SwLights)의 SW_LIGHT_TYPE_PROBE_VOLUME 원소이고 그 원소가 이 버퍼의 첫 프로브를 가리킨다. 읽는 함수는 lighting.hlsli swLoadProbe 하나다.
+// 볼륨은 라이트 목록(g_SwLights)의 SW_LIGHT_TYPE_PROBE_VOLUME 원소이고 그 원소가 이 버퍼의 첫 프로브를 가리킨다. 읽는 함수는 lighting.hlsli LightProbe::load 하나다.
 #define SW_SLOT_LIGHT_PROBE_SRV 13
 
 #define SW_SRV_SLOT_COUNT 14 // t0..t13 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
@@ -172,7 +172,7 @@
 #define SW_COMPUTE_UAV_SLOT_COUNT 4
 
 // 컴퓨트 RW 텍스처 — DX11/GL 은 고정 슬롯 u4..u7(g_SwRWSlot#), DX12/Vulkan 은 무제한 배열(g_SwBindlessRWTex2D, 아래 5)을
-// 인덱스로 고른다. 셰이더는 swStoreRwTexture2D( index, texelPosition, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..3).
+// 인덱스로 고른다. 셰이더는 Bindless::storeRwTexture2D( index, texelPosition, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..3).
 #define SW_SLOT_COMPUTE_TEXUAV0      4
 #define SW_SLOT_COMPUTE_TEXUAV1      5
 #define SW_SLOT_COMPUTE_TEXUAV2      6
@@ -205,7 +205,7 @@
 #define SW_MATERIAL_TEXTURE_SAMPLER 0
 
 // DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 엔진 슬롯 결합 샘플러(s0..s3, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
-// 초기화 때 한 번 걸어 두고 셰이더는 swSampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
+// 초기화 때 한 번 걸어 두고 셰이더는 Bindless::sampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
 // 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은
 // SW_SAMPLER_* 를 DX11 도 존중하게 한 것이다. GL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 세트가 없다.
 #define SW_DX11_STATIC_SAMPLER0        9
@@ -230,7 +230,7 @@
 #define SW_VK_SAMPLER_BINDING        1
 #define SW_VK_SHADOW_SAMPLER_BINDING 2
 #define SW_VK_RWTEXTURE_BINDING      3
-// 배열의 칸 수 — 모두 2 의 거듭제곱이다. 셰이더는 첨자를 (칸 수 - 1) 로 마스크해 늘 배열 안을 가리킨다(binding.hlsli swBindlessTextureSlot).
+// 배열의 칸 수 — 모두 2 의 거듭제곱이다. 셰이더는 첨자를 (칸 수 - 1) 로 마스크해 늘 배열 안을 가리킨다(binding.hlsli Bindless::textureSlot).
 // DX12 는 셰이더 가시 힙 하나(CBV · SRV · UAV 공용)라 텍스처 · RW 텍스처가 같은 칸 수를 쓴다.
 #define SW_DX12_DESCRIPTOR_HEAP_SIZE       524288
 #define SW_VK_BINDLESS_TEXTURE_COUNT       4096
@@ -266,7 +266,7 @@
 #define SW_LIGHT_TYPE_DIRECTIONAL 0
 #define SW_LIGHT_TYPE_POINT       1
 #define SW_LIGHT_TYPE_SPOT        2
-// 2D 빛 — 빛 받는 스프라이트(sprite2dlit.hlsl)만 읽는다. 3D 조명 식(swShadeLights)은 건너뛴다.
+// 2D 빛 — 빛 받는 스프라이트(sprite2dlit.hlsl)만 읽는다. 3D 조명 식(Lighting::shadeLights)은 건너뛴다.
 #define SW_LIGHT_TYPE_POINT2D    3 // 점 · 스폿(원뿔) 2D 빛 — 안 · 바깥 반경, 감쇠 지수, 노멀 맵 높이
 #define SW_LIGHT_TYPE_GLOBAL2D   4 // 전역 2D 빛 — 빛 받는 스프라이트의 바탕 밝기
 #define SW_LIGHT_TYPE_FREEFORM2D 5 // 자유 모양 2D 빛 — 다각형 안은 1, 밖은 감쇠 거리까지 줄어든다. 변은 바로 뒤의 FREEFORM2D_EDGE 원소들이다
@@ -295,7 +295,7 @@
 // 프로브 하나의 g_SwLightProbes 원소 수(SH9 RGB 를 조도 / π 로 접은 float4 일곱 개).
 #define SW_LIGHT_PROBE_FLOAT4_COUNT 7u
 // 빛이 아니라 반사 프로브 하나(IndirectLighting.md P4). 프로브 볼륨처럼 경계 구로 그리드에 들고, 옥타헤드럴 텍셀(선형 RGB, 텍셀 하나가 float4 하나)은
-// g_SwLightProbes(t13)에 SH9 원소와 함께 이어 붙는다 — 텍스처 슬롯을 쓰지 않아 네 백엔드가 같은 길로 읽는다. 읽는 함수는 lighting.hlsli swSampleReflectionProbe 하나다.
+// g_SwLightProbes(t13)에 SH9 원소와 함께 이어 붙는다 — 텍스처 슬롯을 쓰지 않아 네 백엔드가 같은 길로 읽는다. 읽는 함수는 lighting.hlsli LightData::sampleReflectionProbe 하나다.
 // 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (상자 반 크기 xyz, 경계에서 섞는 폭 m) · directionType = (찍은 위치 xyz, 이 타입) ·
 //       params = (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, g_SwLightProbes 의 첫 원소 번호, 0) — 수와 번호는 정확한 정수 실수(2^24 안)다.
 //       텍셀 순서는 단계 → 행 → 열(단계 l 의 (x, y) 는 첫 원소 + (l × 변 + y) × 변 + x). 단계 l 의 거칠기는 l / (단계 수 − 1) 이다.
@@ -340,7 +340,7 @@
 // 타일 원소는 g_SwLights 의 빛 뒤(g_SwLightCount 부터)에 붙고, 빛 원소의 `params.w` 가 첫 타일의 상대 번호다. 점광은 면 여섯(+X −X +Y −Y +Z −Z 순)이다.
 #define SW_SHADOW_TILE_ELEMENT_COUNT 2u
 #define SW_POINT_SHADOW_FACE_COUNT   6u
-// 라이트 그리드(클러스터드 라이팅, lighting.hlsli swBeginLights · C++ LightGrid · 컴퓨트 lightgrid.hlsl) — 32 비트 단어의 배열이다(g_SwLightGrid, t12).
+// 라이트 그리드(클러스터드 라이팅, lighting.hlsli LightCursor::begin · C++ LightGrid · 컴퓨트 lightgrid.hlsl) — 32 비트 단어의 배열이다(g_SwLightGrid, t12).
 // 그리드는 뷰마다 하나씩 그 버퍼에 이어 붙고, PassCB g_SwLightGridBase 가 지금 뷰의 첫 단어다.
 // 배치: 헤더 단어 16 개 → 클러스터마다 단어 두 개(목록 안의 시작, 개수) → 라이트 번호 목록(전역 구간이 맨 앞). 클러스터 번호는 (조각 × Y + y) × X + x 다.
 #define SW_LIGHT_GRID_HEADER_WORD_COUNT 16u

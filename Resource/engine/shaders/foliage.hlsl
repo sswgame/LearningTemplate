@@ -6,7 +6,7 @@
  *
  * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 사용자 보간 칸으로 넘긴다.
  * 흔들림 무게는 로컬 높이 / swayHeight 의 제곱이라 뿌리는 땅에 붙어 있다. 인스턴스마다 위상은 인스턴스 위치의 해시라 CPU 가 따로 싣지 않는다.
- * 밝기 흔들기는 인스턴스 색 칸(swComputeInstanceTint)이다.
+ * 밝기 흔들기는 인스턴스 색 칸(InstanceData::computeTint)이다.
  * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM — 두 머티리얼이 늘 가진다)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 —
  * 정점 스테이지뿐이다(FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
  * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadowdepth.hlsl 이 뺀다).
@@ -34,7 +34,7 @@ SW_MATERIAL_BEGIN
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "foliage.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "foliage.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
@@ -76,18 +76,18 @@ float2 computeBend( float4 influencer, float3 worldPosition )
 }
 
 /** @brief 흔들림 무게 — 로컬 높이 / swayHeight(뿌리 0, swayHeight 에서 1). 월드 위치 오프셋과 뿌리 그늘이 같은 값을 쓴다. */
-float computeSwayWeight( SwVertexContext context )
+float computeSwayWeight( VertexContext context )
 {
     return saturate( context.localPosition.y / max( context.material.windWave.w, 1e-3f ) );
 }
 
 /**
  * @brief 월드 위치 오프셋 — 거리 페이드(뿌리 쪽으로 줄이기) + 바람 + 휘게 하는 구. 뼈대가 이 오프셋을 더해 위치를 만든다.
- * @details 줄인 위치 = 줄인 로컬 위치의 월드 변환(swComputeWorldPosition)이다. 바람 · 휘기는 그 위에 쌓인다.
+ * @details 줄인 위치 = 줄인 로컬 위치의 월드 변환(Transform::computeWorldPosition)이다. 바람 · 휘기는 그 위에 쌓인다.
  */
-float3 computeWorldPositionOffset( SwVertexContext context )
+float3 computeWorldPositionOffset( VertexContext context )
 {
-    const SwMaterialData material = context.material;
+    const MaterialData material = context.material;
 
     const float3 instancePosition = context.instance.world[3].xyz;
     const float3 toView           = material.viewParams.xyz - instancePosition;
@@ -96,7 +96,7 @@ float3 computeWorldPositionOffset( SwVertexContext context )
     // 거리 페이드 — 페이드 구간에서 인스턴스를 뿌리(로컬 원점) 쪽으로 줄인다. 끝을 넘으면 점 하나가 되어 그려지지 않는다.
     const float fadeRange     = max( material.fadeParams.y - material.fadeParams.x, 1e-3f );
     const float fade          = saturate( ( material.fadeParams.y - viewDistance ) / fadeRange );
-    float4      worldPosition = swComputeWorldPosition( context.localPosition * fade, context.instance.world );
+    float4      worldPosition = Transform::computeWorldPosition( context.localPosition * fade, context.instance.world );
 
     // 바람 — 높이 무게(뿌리 0, swayHeight 에서 1) × (흔들림 + 돌풍). 위상은 인스턴스 위치 해시와 바람 방향 거리.
     const float  swayWeight    = computeSwayWeight( context );
@@ -119,20 +119,20 @@ float3 computeWorldPositionOffset( SwVertexContext context )
     return worldPosition.xyz - context.worldPosition;
 }
 
-MaterialVaryings computeMaterialVaryings( SwVertexContext context )
+MaterialVaryings computeMaterialVaryings( VertexContext context )
 {
     // 뿌리는 어둡고 끝은 밝게 — 정점 색 × 머티리얼 색 × 인스턴스 밝기.
     const float      rootShade = lerp( 0.55f, 1.0f, computeSwayWeight( context ) );
     MaterialVaryings varyings;
-    varyings.tintedColor = context.input.color * context.material.tint * swComputeInstanceTint( context.instance ) * float4( rootShade, rootShade, rootShade, 1.0f );
+    varyings.tintedColor = context.input.color * context.material.tint * context.instance.computeTint() * float4( rootShade, rootShade, rootShade, 1.0f );
     varyings.albedoMap   = context.material.albedoMap;
     return varyings;
 }
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    SwMaterialSurface surface;
-    surface.albedo    = context.user.tintedColor * swSampleMaterialTexture( context.user.albedoMap, context.uv );
+    MaterialSurface surface;
+    surface.albedo    = context.user.tintedColor * MaterialTexture::sampleIndex( context.user.albedoMap, context.uv );
     surface.normal    = context.normal;
     surface.roughness = kSurfaceRoughness;
     surface.metallic  = kSurfaceMetallic;

@@ -369,7 +369,7 @@ namespace sw
 
     bool Material::ensureShaderLayout( IRHIDevice* pDevice )
     {
-        // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData 원소 레이아웃**이다(언리얼도
+        // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 MaterialData 원소 레이아웃**이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
         // 그러면 GPUScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //

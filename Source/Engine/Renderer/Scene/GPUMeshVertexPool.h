@@ -11,7 +11,7 @@
  * [어떻게]
  * 메시마다 풀 안의 구간을 내주고(`SpanAllocator`) 그 시작을 기억합니다. 배치의 간접 인자는 `startVertex = 시작 오프셋` 이고,
  * 입력 어셈블러가 그 구간을 읽습니다. 정점 셰이더의 SV_VertexID 가 그 오프셋을 포함하는지는 API 마다 다릅니다(Vulkan, GL 은 포함,
- * D3D 는 0 기반. binding.hlsli swComputeMorphElement). 정점 데이터는 CPU 사본(`Mesh::getVertices`)에서 옵니다.
+ * D3D 는 0 기반. binding.hlsli MorphPool::computeElement). 정점 데이터는 CPU 사본(`Mesh::getVertices`)에서 옵니다.
  *
  * [부분 갱신 — C-43]
  * 메시 집합이 바뀌면 **바뀐 메시의 구간만** 씁니다(`IRHIResourceFactory::updateVertexBufferRegions`). 들어온 메시는 빈 구간을 받아 그

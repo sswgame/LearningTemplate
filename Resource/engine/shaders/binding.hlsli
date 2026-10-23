@@ -20,15 +20,16 @@
  *   머티리얼 텍스처는 머티리얼 구조체의 `uint …Map` 필드다(9 절). 이 이름들은 C++ 가 읽으므로 바꾸면 C++ 도 함께 바꿔야 한다.
  *
  * 최소 예 — 텍스처 하나 샘플
- *   float4 color  = swSampleIndex( g_SourceColorIndex, uv );                                // 엔진 텍스처(패스 입력)
- *   float4 albedo = swSampleMaterialTexture( SW_MATERIAL( materialIndex ).albedoMap, uv );  // 머티리얼 텍스처
+ *   float4 color  = Bindless::sampleIndex( g_SourceColorIndex, uv );                                // 엔진 텍스처(패스 입력)
+ *   float4 albedo = MaterialTexture::sampleIndex( SW_MATERIAL( materialIndex ).albedoMap, uv );  // 머티리얼 텍스처
  *
  * 셰이더 작성자는 이 함수만 쓴다 — 네 백엔드에서 뜻이 같고, 무효 인덱스를 스스로 거른다
- *   엔진 텍스처  swSampleIndex · swSampleIndexWith(샘플러 고르기) · swSampleShadow · swSampleAlbedo · swSampleNormal · swSampleDepth ·
- *                swSampleSource · swSampleDepthPoint · swSampleSourcePoint · swSampleDepthCross · swGatherDepthRed ·
- *                swSampleAmbientOcclusion · swSampleShadowComparison
- *   머티리얼     swSampleMaterialTexture · swSampleMaterialTexturePoint · swComputeMaterialTextureSize
- *   컴퓨트 RW    swStoreRwTexture2D · swLoadRwTexture2D
+ *   엔진 텍스처  Bindless::sampleIndex · sampleIndexWith(샘플러 고르기) · sampleShadowComparison
+ *   패스 입력    PassTexture::sampleShadow · sampleAlbedo · sampleNormal · sampleDepth · sampleSource · sampleDepthPoint · sampleSourcePoint ·
+ *                sampleDepthCross · gatherDepthRed · sampleAmbientOcclusion
+ *   머티리얼     MaterialTexture::sampleIndex · samplePoint · computeSize
+ *   컴퓨트 RW    Bindless::storeRwTexture2D · loadRwTexture2D
+ *   함수는 구조체의 static 멤버로 묶는다 — FXC(DX11)에 네임스페이스가 없어 구조체가 그 자리를 맡는다. 묶음의 선언은 아래 0-1 절이다.
  *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwSlot#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
  *   셰이더 파일(.hlsl)에 이 분기를 들이지 않는다 — 새 읽기 방식이 필요하면 여기에 진입 함수를 더한다.
  *
@@ -48,10 +49,10 @@
  *   - 무효 인덱스로 배열을 읽는다. `kInvalidIndex` 로 원소를 읽으면 DX12 는 페이지 폴트(DEVICE_HUNG), Vulkan 은 DEVICE_LOST 다.
  *     진입 함수는 무효 인덱스를 먼저 걸러 정해진 값(색 (0,0,0,1) · 그림자 1 · AO 1 · 머티리얼 흰색)을 돌려준다.
  *   - `if ( index != kInvalidIndex )` 분기만 믿는다. 드라이버 컴파일러는 서술자 읽기를 분기 앞으로 끌어올릴 수 있어(부작용이 없다고 본다)
- *     분기 안의 읽기도 무효 인덱스로 실행될 수 있다. 그래서 첨자를 배열 크기로 **마스크**한다(swBindlessTextureSlot, 11 절).
+ *     분기 안의 읽기도 무효 인덱스로 실행될 수 있다. 그래서 첨자를 배열 크기로 **마스크**한다(Bindless::textureSlot, 11 절).
  *     배열을 직접 인덱싱하는 함수를 새로 쓰면 반드시 이 마스크를 거친다.
  *   - 픽셀마다 다를 수 있는 인덱스(머티리얼 텍스처)에 `NonUniformResourceIndex` 를 빼먹는다 — 결과가 정의되지 않는다.
- *   - 에뮬 백엔드에 엔진 텍스처를 더하면서 슬롯 대응(11-2 절의 swSampleIndex · C++ commitBindlessTextureBindings)을 함께 고치지 않는다.
+ *   - 에뮬 백엔드에 엔진 텍스처를 더하면서 슬롯 대응(11-2 절의 Bindless::sampleIndex · C++ commitBindlessTextureBindings)을 함께 고치지 않는다.
  *
  * ==============================================================================
  * 절 목차
@@ -66,7 +67,7 @@
  * - 엔진(C++ ShaderParameterBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
- *     VS: `SwInstanceData instance = swLoadInstance( input.instanceSlot )` → instance.world / instance.materialIndex
+ *     VS: `InstanceData instance = InstanceData::load( input.instanceSlot )` → instance.world / instance.materialIndex
  *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
  *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
  *   StructuredBuffer(g_SwMaterials, t5)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
@@ -80,6 +81,106 @@
 #include "lightgridcommon.hlsli"
 
 static const uint kInvalidIndex = 0xFFFFFFFFu;
+
+// ------------------------------------------------------------------------------
+// 0-1) 이 헤더가 내놓는 함수의 묶음 — 선언만 둔다. 정의는 각 절에 있다(리소스 선언과 백엔드 분기 사이에 두어야 해서 밖에 정의한다).
+//      정의도 `static` 을 붙인다(FXC 가 선언과 정의의 static 이 다르면 거절한다). 인스턴스 · 배치 원소의 함수는 그 구조체(instancedata · batchdata)에 있다.
+// ------------------------------------------------------------------------------
+/** @brief 정점 위치 · 노멀을 공간 사이로 옮긴다(7 절). 깊이에서 월드 위치를 되짚는 식은 lighting.hlsli 다. */
+struct Transform
+{
+    static float4 computeWorldPosition( float3 localPosition, float4x4 world );
+    static float4 computeClipPosition( float4 worldPosition, float4x4 viewProj );
+    static float3 computeWorldNormal( float3 localNormal, float4x4 world );
+    static float3 computeWorldPositionFromDepth( float2 uv, float deviceDepth );
+};
+
+/** @brief 지금 뷰(PassCB)에서 구하는 값. */
+struct View
+{
+    static float4x4 getViewProjection(); // 그림자 패스(SW_PASS_SHADOW)는 빛의 뷰-투영
+    static float3 computeToView( float3 worldPosition );
+};
+
+/** @brief 모프 · 스킨 정점 풀(5 절). */
+struct MorphPool
+{
+    static uint computeElement( uint batchIndex, uint vertexId );
+    static void loadVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
+    static float4 loadTangent( uint batchIndex, uint vertexId, float4 restTangent );
+};
+
+/** @brief 정점 애니메이션(VAT) 표(6 절). 인스턴스마다의 원소 번호는 InstanceData::computeVertexAnimationElements 다. */
+struct VertexAnimation
+{
+    static float3 unpackNormal( float packed );
+    static float3 computePosition( uint firstElement, uint secondElement, float alpha );
+};
+
+/** @brief 등장 디더(8-1 절). */
+struct Appearance
+{
+    static float computeDitherThreshold( float2 pixelPosition );
+    static void clipDither( float appearance, float2 pixelPosition );
+};
+
+/** @brief 머티리얼 데이터 버퍼(9 절). */
+struct MaterialBuffer
+{
+    static uint getDrawCount(); // 이 드로우 그룹의 원소 수(루트 상수). 루트 상수 블록이 없는 셰이더는 0
+    static uint clampIndex( uint index );
+};
+
+/** @brief bindless 배열과 에뮬 슬롯을 번호로 읽고 쓴다(11-1 · 11-2 절). 슬롯 함수는 DX11 · GL 에만 정의가 있다. */
+struct Bindless
+{
+    static uint textureSlot( uint index );
+    static uint rwTextureSlot( uint index );
+    static float4 sampleIndex( uint index, float2 uv );
+    static float4 sampleIndexWith( uint index, uint samplerId, float2 uv );
+    static float sampleShadowComparison( uint index, float2 uv, float depth );
+    static void storeRwTexture2D( uint index, uint2 texelPosition, float4 value );
+    static float4 loadRwTexture2D( uint index, uint2 texelPosition );
+    static float4 sampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv );
+    static float4 sampleSlotPoint( Texture2D slotTexture, float2 uv );
+};
+
+/** @brief 패스가 이름으로 건 엔진 텍스처(PassCB 의 g_*Index)를 읽는다(11-3 절). */
+struct PassTexture
+{
+    static float4 sampleShadow( float2 uv );
+    static float4 sampleAlbedo( float2 uv );
+    static float4 sampleNormal( float2 uv );
+    static float4 sampleGbufferMaterial( float2 uv );
+    static float4 sampleGbufferMaterialSlot( float2 uv );
+    static void loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic );
+    static float4 sampleDepth( float2 uv );
+    static float4 sampleSource( float2 uv );
+    static float4 sampleDepthPoint( float2 uv );
+    static float4 sampleSourcePoint( float2 uv );
+    static void sampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth );
+    static float4 gatherDepthRed( float2 uv );
+    static float sampleAmbientOcclusion( float2 uv );
+    static float4 sampleLight2dCookieAtlas( float2 uv );
+};
+
+/** @brief 머티리얼이 준 텍스처 번호를 읽는다(11-3 절). 에뮬 백엔드의 번호는 머티리얼 슬롯 서수다. */
+struct MaterialTexture
+{
+    static float4 sampleIndex( uint index, float2 uv );
+    static float4 samplePoint( uint index, float2 uv );
+    static float4 sampleLevelZero( uint index, float2 uv );
+    static float2 computeSize( uint index );
+    static float4 sampleMipColor( uint index, float2 uv );
+};
+
+/** @brief 보기 모드가 바꾸는 색(12 절 앞). */
+struct ViewMode
+{
+    static float4 computeMipColor( float lod );
+    static float3 computeLightComplexityColor( uint visitCount );
+    static float4 computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
+};
 
 // ------------------------------------------------------------------------------
 // 1) PassCB — b0. 셰이더가 실제 쓰는 필드만. 엔진이 이름으로 채운다. 패스(배치)마다 한 번 걸리는 진짜 상수버퍼.
@@ -119,7 +220,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_ShadowMapIndex;
     uint   g_GBufferAlbedoIndex;
     uint   g_GBufferNormalIndex;
-    uint   g_GBufferMaterialIndex; // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(swLoadGbufferMaterial)
+    uint   g_GBufferMaterialIndex; // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(PassTexture::loadGbufferMaterial)
     uint   g_SceneDepthIndex;
     uint   g_SourceColorIndex;
     uint   g_AmbientOcclusionIndex;   // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
@@ -155,40 +256,61 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 // ------------------------------------------------------------------------------
 #if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
 SW_ROOT_CONSTANTS_BEGIN
+{
     // 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
     // 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
-    // 인스턴스 슬롯 스트림(SwVertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
+    // 인스턴스 슬롯 스트림(VertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
     // 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
     uint g_SwMaterialCount;
+};
 SW_ROOT_CONSTANTS_END
-    #define SW_DRAW_MATERIAL_COUNT SW_ROOT( g_SwMaterialCount )
+static uint MaterialBuffer::getDrawCount()
+{
+    return SW_ROOT( g_SwMaterialCount );
+}
 #else
-    // 컴퓨트 · 자기 블록을 쓰는 셰이더에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
-    #define SW_DRAW_MATERIAL_COUNT 0u
+// 컴퓨트 · 자기 블록을 쓰는 셰이더에는 이 블록이 없다 — 그래픽스 전용 헬퍼(SW_MATERIAL)가 컴파일만 되게 0 으로 둔다.
+static uint MaterialBuffer::getDrawCount()
+{
+    return 0u;
+}
+#endif
+
+// 뷰-투영 — 그림자 패스는 빛의 뷰-투영, 나머지는 카메라다. 클립 위치를 만드는 쪽은 패스를 가르지 않고 이것을 부른다.
+#if defined( SW_PASS_SHADOW )
+static float4x4 View::getViewProjection()
+{
+    return g_LightViewProj;
+}
+#else
+static float4x4 View::getViewProjection()
+{
+    return g_ViewProj;
+}
 #endif
 
 // ------------------------------------------------------------------------------
 // 3) GPUScene 인스턴스 버퍼 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instancedata.hlsli 하나다(컴퓨트도 그것을 쓴다).
 //    네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 바인딩한다 (레지스트리 이름 "SwInstances"). 읽는 함수는 8 절.
 // ------------------------------------------------------------------------------
-SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
 // 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트, batchdata.hlsli).
-//    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(swLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
+//    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(InstanceData::load)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
 // 원소 정의는 batchdata.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
 #include "batchdata.hlsli"
 
-SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
 
 /**
  * @brief 배치 표의 원소. 표가 안 걸렸거나(풀스크린·픽스처) 범위 밖이면 "인스턴스 0 부터 · 모프 없음 · 정점 풀 없음" 이다.
- * @note 분기는 있지만 early-return 은 없다 — GL 드라이버가 early-return 을 잘못 컴파일한 사연은 swComputeMorphElement 참고.
+ * @note 분기는 있지만 early-return 은 없다 — GL 드라이버가 early-return 을 잘못 컴파일한 사연은 MorphPool::computeElement 참고.
  */
-SwBatchData swLoadBatch( uint batchIndex )
+static BatchData BatchData::load( uint batchIndex )
 {
-    SwBatchData batch;
+    BatchData batch;
     batch.instanceBase        = 0u;
     batch.instanceCount       = 0u;
     batch.sortMode            = 0u;
@@ -225,9 +347,9 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 // SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가 그 모양을 잘못 컴파일해 **같은 인보케이션에서
 // 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 낸다 — 결과는 정점마다 한 칸 앞 원소를 읽는 것(DX12·DX11·Vulkan 은
 // 같은 소스로 멀쩡하다). 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
-uint swComputeMorphElement( uint batchIndex, uint vertexId )
+static uint MorphPool::computeElement( uint batchIndex, uint vertexId )
 {
-    const SwBatchData batch = swLoadBatch( batchIndex );
+    const BatchData batch = BatchData::load( batchIndex );
     // **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
     // Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
     // RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
@@ -250,11 +372,11 @@ uint swComputeMorphElement( uint batchIndex, uint vertexId )
  * @details 위치와 노멀을 **함께** 돌려주는 이유는 둘이 같이 변하기 때문이다. 노멀은 정점 속성이므로 위치만 바꾸면
  *          **레스트 포즈의 노멀**이 남아 변형된 표면이 원래 모양대로 칠해진다.
  */
-void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+static void MorphPool::loadVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
     outPosition        = restPosition;
     outNormal          = restNormal;
-    const uint element = swComputeMorphElement( batchIndex, vertexId );
+    const uint element = MorphPool::computeElement( batchIndex, vertexId );
     if ( element == kInvalidIndex )
         return;
     outPosition = g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
@@ -264,11 +386,11 @@ void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, f
 /**
  * @brief 이 정점의 탄젠트(xyz 로컬 방향, w 바이탄젠트 부호) — 모프 · 스킨 대상이면 컴퓨트가 돌린 값을, 아니면 입력 스트림 값을 돌려준다.
  * @details 부호는 변형으로 바뀌지 않아 입력 스트림 값을 쓴다. 노멀 맵을 읽는 셰이더만 부른다 — 부르지 않는 패스는 이 로드가 빠진다.
- *          early-return 이 없다 — GL 드라이버 사연은 swComputeMorphElement 참고.
+ *          early-return 이 없다 — GL 드라이버 사연은 MorphPool::computeElement 참고.
  */
-float4 swLoadMorphedTangent( uint batchIndex, uint vertexId, float4 restTangent )
+static float4 MorphPool::loadTangent( uint batchIndex, uint vertexId, float4 restTangent )
 {
-    const uint element = swComputeMorphElement( batchIndex, vertexId );
+    const uint element = MorphPool::computeElement( batchIndex, vertexId );
     return ( element == kInvalidIndex ) ? restTangent : float4( g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX + 2u].xyz, restTangent.w );
 }
 
@@ -282,7 +404,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMAT
 // 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
 
 /** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
-float3 swUnpackVertexAnimationNormal( float packed )
+static float3 VertexAnimation::unpackNormal( float packed )
 {
     const uint   integer = (uint)packed;
     const float  maxStep = (float)( SW_VERTEX_ANIMATION_NORMAL_STEPS - 1u );
@@ -297,11 +419,11 @@ float3 swUnpackVertexAnimationNormal( float packed )
 /**
  * @brief 이 정점의 VAT 두 프레임 원소 번호와 사이 비율. VAT 가 없으면 `outValid` 가 거짓이다.
  * @details 반복이면 프레임 수로 감고(끝 → 처음 보간), 아니면 마지막 프레임에 멈춘다(C++ `MeshVertexAnimation::samplePosition` 과 같은 식).
- *          early-return 이 없다 — GL 드라이버 사연은 swComputeMorphElement 참고.
+ *          early-return 이 없다 — GL 드라이버 사연은 MorphPool::computeElement 참고.
  */
-void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
+void InstanceData::computeVertexAnimationElements( uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
 {
-    const SwBatchData batch = swLoadBatch( instance.meshBatchIndex );
+    const BatchData batch = BatchData::load( meshBatchIndex );
 #if defined( DX11 ) || defined( DX12 )
     const uint local = vertexId;
 #else
@@ -316,7 +438,7 @@ void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, o
     const uint   vertexCount   = (uint)header.z;
     const bool   bLoop         = header.w > 0.5f;
     const float  frameTotal    = (float)frameCount;
-    const float  framePosition = max( g_SwVertexAnimationTime + instance.vertexAnimationPhase, 0.0f ) * header.y;
+    const float  framePosition = max( g_SwVertexAnimationTime + vertexAnimationPhase, 0.0f ) * header.y;
     const float  wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
     const uint   frame         = min( (uint)wrapped, frameCount - 1u );
     const uint   nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
@@ -328,30 +450,30 @@ void swComputeVertexAnimationElements( SwInstanceData instance, uint vertexId, o
 }
 
 /** @brief VAT 위치 — 깊이 프리패스와 기본 패스가 비트까지 같아야 해 이 함수 하나로 만든다(precise). */
-float3 swComputeVertexAnimationPosition( uint firstElement, uint secondElement, float alpha )
+static float3 VertexAnimation::computePosition( uint firstElement, uint secondElement, float alpha )
 {
     precise float3 position = lerp( g_SwVertexAnimation[firstElement].xyz, g_SwVertexAnimation[secondElement].xyz, alpha );
     return position;
 }
 
 /**
- * @brief 이 정점의 위치 · 노멀 — VAT 가 걸린 배치면 표에서, 아니면 모프 · 스킨 결과(swLoadMorphedVertex)에서, 그것도 아니면 입력 스트림에서.
+ * @brief 이 정점의 위치 · 노멀 — VAT 가 걸린 배치면 표에서, 아니면 모프 · 스킨 결과(MorphPool::loadVertex)에서, 그것도 아니면 입력 스트림에서.
  * @details 정점을 읽는 **모든** 패스(본 · G버퍼 · 그림자 · 깊이 프리패스)가 머티리얼 셰이더 뼈대(materialshadermain.hlsli)를 거쳐 이것 하나로 읽는다 —
  *          위치만 읽는 짧은 형태를 따로 두면 패스마다 위치가 비트 단위로 갈라질 수 있어 없앴다.
  */
-void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
+void InstanceData::loadAnimatedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
-    swLoadMorphedVertex( instance.meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
+    MorphPool::loadVertex( meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
     bool  bAnimated;
     uint  firstElement;
     uint  secondElement;
     float alpha;
-    swComputeVertexAnimationElements( instance, vertexId, bAnimated, firstElement, secondElement, alpha );
+    computeVertexAnimationElements( vertexId, bAnimated, firstElement, secondElement, alpha );
     if ( bAnimated )
     {
-        const float3 firstNormal  = swUnpackVertexAnimationNormal( g_SwVertexAnimation[firstElement].w );
-        const float3 secondNormal = swUnpackVertexAnimationNormal( g_SwVertexAnimation[secondElement].w );
-        outPosition               = swComputeVertexAnimationPosition( firstElement, secondElement, alpha );
+        const float3 firstNormal  = VertexAnimation::unpackNormal( g_SwVertexAnimation[firstElement].w );
+        const float3 secondNormal = VertexAnimation::unpackNormal( g_SwVertexAnimation[secondElement].w );
+        outPosition               = VertexAnimation::computePosition( firstElement, secondElement, alpha );
         outNormal                 = normalize( lerp( firstNormal, secondNormal, alpha ) );
     }
 }
@@ -360,19 +482,19 @@ void swLoadAnimatedVertex( SwInstanceData instance, uint vertexId, float3 restPo
 // 7) 위치 · 노멀 변환 — 정점 위치를 만드는 모든 지오메트리 패스가 같은 식을 쓰게 한곳에 둔다.
 // ------------------------------------------------------------------------------
 /**
- * @brief 로컬 위치를 월드로 옮긴다. 정점 위치를 만드는 **모든** 지오메트리 패스가 이것과 swComputeClipPosition 를 쓴다.
+ * @brief 로컬 위치를 월드로 옮긴다. 정점 위치를 만드는 **모든** 지오메트리 패스가 이것과 Transform::computeClipPosition 를 쓴다.
  * @details 깊이 프리패스와 기본 패스가 같은 정점에서 **비트까지 같은 깊이**를 내야 기본 패스의 LessEqual 이 통과한다(언리얼은 depth-only 패스와
  *          base pass 가 같은 정점 팩토리 코드를 쓴다). 셰이더마다 같은 식을 따로 적으면 컴파일러가 곱셈 · 덧셈을 다르게 묶을 수 있어(FMA)
  *          `precise` 로 묶음을 고정하고 한 함수로 모은다.
  */
-float4 swComputeWorldPosition( float3 localPosition, float4x4 world )
+static float4 Transform::computeWorldPosition( float3 localPosition, float4x4 world )
 {
     precise float4 worldPosition = mul( float4( localPosition, 1.0f ), world );
     return worldPosition;
 }
 
-/** @brief 월드 위치를 클립 공간으로 옮긴다(카메라는 g_ViewProj, 그림자는 g_LightViewProj). swComputeWorldPosition 와 같은 이유로 precise 다. */
-float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
+/** @brief 월드 위치를 클립 공간으로 옮긴다(카메라는 g_ViewProj, 그림자는 g_LightViewProj). Transform::computeWorldPosition 와 같은 이유로 precise 다. */
+static float4 Transform::computeClipPosition( float4 worldPosition, float4x4 viewProj )
 {
     precise float4 clipPosition = mul( worldPosition, viewProj );
     return clipPosition;
@@ -388,7 +510,7 @@ float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
  *          보이는 면의 노멀이 남는다(월드 행렬을 곱하면 그 면의 노멀이 0 이 되어 NaN 이다). 언리얼의 로컬 정점 팩토리도 노멀을
  *          역스케일 · 행렬식 부호로 옮긴다. 회귀는 RenderPassGPUTest.NormalsStayPerpendicularUnderNonUniformScale 가 G버퍼 노멀로 잡는다.
  */
-float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
+static float3 Transform::computeWorldNormal( float3 localNormal, float4x4 world )
 {
     const float3 row0        = world[0].xyz;
     const float3 row1        = world[1].xyz;
@@ -413,7 +535,7 @@ SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIDs, SW_SLOT_VISIBLE_INST
  *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIDs 에 들어 있다.
  *          목록이 없으면(컬링 없음) 슬롯이 곧 인스턴스 번호다.
  */
-uint swResolveInstanceId( uint instanceSlot )
+static uint InstanceData::resolveId( uint instanceSlot )
 {
     // 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
     const uint slot = instanceSlot;
@@ -428,12 +550,12 @@ uint swResolveInstanceId( uint instanceSlot )
  *          범위 검사는 백엔드마다 다른 OOB 결과(DX11/GL 0, Vulkan robustBufferAccess 0, DX12 루트 SRV 는 정의되지 않음)를
  *          하나로 맞추기 위한 것이다.
  */
-SwInstanceData swLoadInstance( uint instanceSlot )
+static InstanceData InstanceData::load( uint instanceSlot )
 {
-    const uint element = swResolveInstanceId( instanceSlot );
+    const uint element = InstanceData::resolveId( instanceSlot );
     if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
         return g_SwInstances[element];
-    SwInstanceData instance;
+    InstanceData instance;
     instance.world                = g_World;
     instance.boundsCenter         = float3( 0, 0, 0 );
     instance.boundsRadius         = 0;
@@ -452,9 +574,9 @@ SwInstanceData swLoadInstance( uint instanceSlot )
     return instance;
 }
 
-float4x4 swLoadInstanceWorld( uint instanceSlot )
+static float4x4 InstanceData::loadWorld( uint instanceSlot )
 {
-    return swLoadInstance( instanceSlot ).world;
+    return InstanceData::load( instanceSlot ).world;
 }
 
 // ------------------------------------------------------------------------------
@@ -470,7 +592,7 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 // ------------------------------------------------------------------------------
 
 /** @brief 화면 픽셀 @p pixelPosition(SV_POSITION.xy)의 디더 문턱(0 ~ 1)입니다. 4x4 Bayer 행렬 — 16 단계가 화면에 고르게 흩어진다. */
-float swAppearanceDitherThreshold( float2 pixelPosition )
+static float Appearance::computeDitherThreshold( float2 pixelPosition )
 {
     static const float arrBayer4x4[16] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
     const uint2        cell            = uint2( pixelPosition ) & 3u;
@@ -478,15 +600,15 @@ float swAppearanceDitherThreshold( float2 pixelPosition )
 }
 
 /** @brief 등장 비율 @p appearance 보다 문턱이 높은 픽셀을 버린다(0 이면 모두, 1 이면 하나도 버리지 않는다). */
-void swClipAppearanceDither( float appearance, float2 pixelPosition )
+static void Appearance::clipDither( float appearance, float2 pixelPosition )
 {
-    clip( appearance - swAppearanceDitherThreshold( pixelPosition ) );
+    clip( appearance - Appearance::computeDitherThreshold( pixelPosition ) );
 }
 
 #if defined( SW_APPEARANCE_DITHER )
     #define SW_APPEARANCE_VARYING                   nointerpolation float appearance : TEXCOORD15;
     #define SW_APPEARANCE_WRITE( output, instance ) ( output ).appearance = ( instance ).appearance;
-    #define SW_APPEARANCE_CLIP( input )             swClipAppearanceDither( ( input ).appearance, ( input ).position.xy );
+    #define SW_APPEARANCE_CLIP( input )             Appearance::clipDither( ( input ).appearance, ( input ).position.xy );
 #else
     #define SW_APPEARANCE_VARYING
     #define SW_APPEARANCE_WRITE( output, instance )
@@ -509,16 +631,16 @@ void swClipAppearanceDither( float appearance, float2 pixelPosition )
 //      셰이더로 물러나 그려진다. 정점에서 필요한 값(sprite2d 의 uvRect)은 픽셀에서 적용한다(아핀이면 결과가 같다).
 //      RenderPassGPUTest.SpriteDrawsWithTheSpriteShader 가 GL 에서 확인한다.
 // ------------------------------------------------------------------------------
-uint swClampMaterialIndex( uint index )
+static uint MaterialBuffer::clampIndex( uint index )
 {
-    const uint materialCount = SW_DRAW_MATERIAL_COUNT;
+    const uint materialCount = MaterialBuffer::getDrawCount();
     return ( materialCount == 0 ) ? 0 : min( index, materialCount - 1 );
 }
-#define SW_MATERIAL_BEGIN struct SwMaterialData
+#define SW_MATERIAL_BEGIN struct MaterialData
 #define SW_MATERIAL_END \
     ;                   \
-    SW_DECLARE_STRUCTURED_BUFFER( SwMaterialData, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
-#define SW_MATERIAL( index ) g_SwMaterials[swClampMaterialIndex( index )]
+    SW_DECLARE_STRUCTURED_BUFFER( MaterialData, g_SwMaterials, SW_SLOT_MATERIAL_BUFFER );
+#define SW_MATERIAL( index ) g_SwMaterials[MaterialBuffer::clampIndex( index )]
 
 // ------------------------------------------------------------------------------
 // 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 슬롯 결합 샘플러(g_SwSlot#Sampler, s#)라
@@ -550,8 +672,8 @@ SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SH
 // 11) 텍스처 읽기 — 백엔드 분기는 이 절 안에서 끝난다. 셰이더는 0 절의 진입 함수만 부른다.
 //     11-1 네이티브 bindless(DX12 · Vulkan): 무제한 배열 + 인덱스 마스크.
 //     11-2 슬롯 에뮬(DX11 · OpenGL): 고정 슬롯 + PassCB 인덱스 값 비교.
-//     11-3 공통 진입 함수: 머티리얼 텍스처와 이름 붙은 엔진 텍스처(swSampleShadow 등) — 두 경로 위에 하나로 선다.
-//     컴퓨트 RW 텍스처(swStoreRwTexture2D / swLoadRwTexture2D)는 컴퓨트 스테이지에서만 선언된다.
+//     11-3 공통 진입 함수: 머티리얼 텍스처와 이름 붙은 엔진 텍스처(PassTexture::sampleShadow 등) — 두 경로 위에 하나로 선다.
+//     컴퓨트 RW 텍스처(Bindless::storeRwTexture2D / Bindless::loadRwTexture2D)는 컴퓨트 스테이지에서만 선언된다.
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
 
@@ -569,7 +691,7 @@ Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_T
  *          부작용이 없다고 본다) 0xFFFFFFFF × 서술자 크기를 32 비트로 계산한 힙 시작 + 0xFFFFFFE0 을 읽어 페이지 폴트(DEVICE_HUNG)가 난다.
  *          값을 고르는 분기는 그대로 두고 첨자만 마스크한다 — DXC 는 분기 안에서 index != kInvalidIndex 를 알아도 마스크를 지우지 못한다.
  */
-uint swBindlessTextureSlot( uint index )
+static uint Bindless::textureSlot( uint index )
 {
     #if defined( __spirv__ )
     return index & ( SW_VK_BINDLESS_TEXTURE_COUNT - 1u );
@@ -578,11 +700,11 @@ uint swBindlessTextureSlot( uint index )
     #endif
 }
 /** @brief 인덱스의 텍스처를 샘플러 세트의 samplerId(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. */
-float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
+static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
-    const uint slot = swBindlessTextureSlot( index );
+    const uint slot = Bindless::textureSlot( index );
     #if defined( __spirv__ )
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
     #else
@@ -606,9 +728,9 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
     #endif
 }
 /** @brief 엔진 텍스처(풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)를 엔진 텍스처 샘플러(선형 · 클램프)로 읽습니다 — 에뮬 백엔드가 t0..t3 에 거는 것과 같다. */
-float4 swSampleIndex( uint index, float2 uv )
+static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
-    return swSampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
+    return Bindless::sampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
@@ -617,11 +739,11 @@ float4 swSampleIndex( uint index, float2 uv )
  * @note 샘플러 3 번은 `SW_SAMPLER_POINT_CLAMP` 다 (bindingslots.hlsli 4 의 표).
  *       게더는 필터 모드를 안 보지만 **주소 모드는 본다** — 화면 가장자리에서 WRAP 이면 반대편을 읽는다.
  */
-float4 swGatherDepthRed( float2 uv )
+static float4 PassTexture::gatherDepthRed( float2 uv )
 {
     if ( g_SceneDepthIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    const uint slot = swBindlessTextureSlot( g_SceneDepthIndex );
+    const uint slot = Bindless::textureSlot( g_SceneDepthIndex );
     #if defined( __spirv__ )
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
     #else
@@ -629,11 +751,11 @@ float4 swGatherDepthRed( float2 uv )
     #endif
 }
 /** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
-float swSampleShadowComparison( uint index, float2 uv, float depth )
+static float Bindless::sampleShadowComparison( uint index, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
-    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
 }
 
     #if defined( SW_STAGE_COMPUTE )
@@ -645,8 +767,8 @@ float swSampleShadowComparison( uint index, float2 uv, float depth )
         #else
 RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
         #endif
-/** @brief RW 텍스처 배열 첨자 — `swBindlessTextureSlot` 과 같은 이유로 배열 칸 수로 마스크합니다. */
-uint swBindlessRwTextureSlot( uint index )
+/** @brief RW 텍스처 배열 첨자 — `Bindless::textureSlot` 과 같은 이유로 배열 칸 수로 마스크합니다. */
+static uint Bindless::rwTextureSlot( uint index )
 {
         #if defined( __spirv__ )
     return index & ( SW_VK_BINDLESS_STORAGE_IMAGE_COUNT - 1u );
@@ -654,17 +776,17 @@ uint swBindlessRwTextureSlot( uint index )
     return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
         #endif
 }
-void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
+static void Bindless::storeRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
     if ( index == kInvalidIndex )
         return;
-    g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition] = value;
+    g_SwBindlessRWTex2D[NonUniformResourceIndex( Bindless::rwTextureSlot( index ) )][texelPosition] = value;
 }
-float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
+static float4 Bindless::loadRwTexture2D( uint index, uint2 texelPosition )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 0 );
-    return g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition];
+    return g_SwBindlessRWTex2D[NonUniformResourceIndex( Bindless::rwTextureSlot( index ) )][texelPosition];
 }
     #endif // SW_STAGE_COMPUTE
 
@@ -736,7 +858,7 @@ SamplerState g_SwSampler4 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER4 ) );
 SamplerState g_SwSampler5 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER5 ) );
 SamplerState g_SwSampler6 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER6 ) );
 /** @brief 슬롯 텍스처를 정적 샘플러 세트의 samplerId 로 샘플링합니다 — SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기. */
-float4 swSampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv )
+static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv )
 {
     switch ( samplerId )
     {
@@ -759,16 +881,16 @@ float4 swSampleSlotWith( Texture2D slotTexture, uint samplerId, float2 uv )
         #endif
 
 /** @brief G버퍼 머티리얼 칸의 슬롯(t15)을 엔진 텍스처 샘플러로 읽습니다 — DX11 은 짝 샘플러가 없어 정적 세트에서 고른다. */
-float4 swSampleGbufferMaterialSlot( float2 uv )
+static float4 PassTexture::sampleGbufferMaterialSlot( float2 uv )
 {
         #if defined( DX11 )
-    return swSampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
+    return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
         #else
     return g_SwSlotGBufferMaterial.Sample( g_SwSlotGBufferMaterialSampler, uv );
         #endif
 }
 
-float4 swSampleIndex( uint index, float2 uv )
+static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
@@ -782,7 +904,7 @@ float4 swSampleIndex( uint index, float2 uv )
     if ( index == g_SceneDepthIndex )
         return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
     if ( index == g_GBufferMaterialIndex )
-        return swSampleGbufferMaterialSlot( uv );
+        return PassTexture::sampleGbufferMaterialSlot( uv );
     return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
 }
 /**
@@ -790,33 +912,33 @@ float4 swSampleIndex( uint index, float2 uv )
  * @details 에뮬 백엔드는 깊이가 늘 슬롯 3 이다(위 표와 같은 순서) — 인덱스로 되짚을 필요가 없다.
  *          샘플러는 슬롯에 걸린 것을 그대로 쓴다. 게더는 필터 모드를 보지 않는다.
  */
-float4 swGatherDepthRed( float2 uv )
+static float4 PassTexture::gatherDepthRed( float2 uv )
 {
     if ( g_SceneDepthIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     return g_SwSlot3.GatherRed( g_SwSlot3Sampler, uv );
 }
         #if defined( DX11 )
-/** @brief DX11: 텍스처는 슬롯 멀티플렉싱(swSampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerId 로 고른다. */
-float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
+/** @brief DX11: 텍스처는 슬롯 멀티플렉싱(Bindless::sampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerId 로 고른다. */
+static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
     if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
-        return swSampleSlotWith( g_SwSlot0, samplerId, uv );
+        return Bindless::sampleSlotWith( g_SwSlot0, samplerId, uv );
     if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
-        return swSampleSlotWith( g_SwSlot1, samplerId, uv );
+        return Bindless::sampleSlotWith( g_SwSlot1, samplerId, uv );
     if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
-        return swSampleSlotWith( g_SwSlot2, samplerId, uv );
+        return Bindless::sampleSlotWith( g_SwSlot2, samplerId, uv );
     if ( index == g_SceneDepthIndex )
-        return swSampleSlotWith( g_SwSlot3, samplerId, uv );
+        return Bindless::sampleSlotWith( g_SwSlot3, samplerId, uv );
     if ( index == g_GBufferMaterialIndex )
-        return swSampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
-    return swSampleSlotWith( g_SwSlot0, samplerId, uv );
+        return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
+    return Bindless::sampleSlotWith( g_SwSlot0, samplerId, uv );
 }
         #else
 /** @brief 슬롯 텍스처를 샘플러 없이 가장 가까운 텍셀 하나로 읽습니다(점 샘플 · 클램프) — 결합 샘플러가 선형으로 묶인 OpenGL 에서 점 샘플을 얻는 길이다. */
-float4 swSampleSlotPoint( Texture2D slotTexture, float2 uv )
+static float4 Bindless::sampleSlotPoint( Texture2D slotTexture, float2 uv )
 {
     float2 size;
     slotTexture.GetDimensions( size.x, size.y );
@@ -828,35 +950,35 @@ float4 swSampleSlotPoint( Texture2D slotTexture, float2 uv )
  * @details 점 샘플(`SW_SAMPLER_POINT_CLAMP`)을 달라는 호출은 샘플러를 거치지 않고 텍셀을 직접 읽는다 — 안 그러면 정수 업스케일 뷰(`SW_PASS_FLAG_POINT_UPSCALE`)의
  *          Present 가 GL 에서만 선형으로 섞는다. 나머지 samplerId 는 슬롯의 샘플러를 그대로 쓴다.
  */
-float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
+static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
 {
     if ( samplerId != SW_SAMPLER_POINT_CLAMP )
-        return swSampleIndex( index, uv );
+        return Bindless::sampleIndex( index, uv );
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
     if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
-        return swSampleSlotPoint( g_SwSlot0, uv );
+        return Bindless::sampleSlotPoint( g_SwSlot0, uv );
     if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
-        return swSampleSlotPoint( g_SwSlot1, uv );
+        return Bindless::sampleSlotPoint( g_SwSlot1, uv );
     if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
-        return swSampleSlotPoint( g_SwSlot2, uv );
+        return Bindless::sampleSlotPoint( g_SwSlot2, uv );
     if ( index == g_SceneDepthIndex )
-        return swSampleSlotPoint( g_SwSlot3, uv );
+        return Bindless::sampleSlotPoint( g_SwSlot3, uv );
     if ( index == g_GBufferMaterialIndex )
-        return swSampleSlotPoint( g_SwSlotGBufferMaterial, uv );
-    return swSampleSlotPoint( g_SwSlot0, uv );
+        return Bindless::sampleSlotPoint( g_SwSlotGBufferMaterial, uv );
+    return Bindless::sampleSlotPoint( g_SwSlot0, uv );
 }
         #endif
 /**
  * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
- * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(swSampleIndex 의 표).
+ * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(Bindless::sampleIndex 의 표).
  */
-float swSampleShadowComparison( uint index, float2 uv, float depth )
+static float Bindless::sampleShadowComparison( uint index, float2 uv, float depth )
 {
     if ( index == kInvalidIndex )
         return 1.0f;
     if ( index != g_ShadowMapIndex )
-        return ( depth <= swSampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
+        return ( depth <= Bindless::sampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
     float2 size;
     g_SwSlot0.GetDimensions( size.x, size.y );
     const float2 texelPosition = uv * size - 0.5f;
@@ -875,7 +997,7 @@ SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot0, SW_SLOT_COMPUTE_TEXUAV0, SW_GL_IMAGE_UNIT0
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot1, SW_SLOT_COMPUTE_TEXUAV1, SW_GL_IMAGE_UNIT1 );
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot2, SW_SLOT_COMPUTE_TEXUAV2, SW_GL_IMAGE_UNIT2 );
 SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot3, SW_SLOT_COMPUTE_TEXUAV3, SW_GL_IMAGE_UNIT3 );
-void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
+static void Bindless::storeRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
     if ( index == 0 )
         g_SwRWSlot0[texelPosition] = value;
@@ -886,7 +1008,7 @@ void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
     else if ( index == 3 )
         g_SwRWSlot3[texelPosition] = value;
 }
-float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
+static float4 Bindless::loadRwTexture2D( uint index, uint2 texelPosition )
 {
     if ( index == 0 )
         return g_SwRWSlot0[texelPosition];
@@ -907,17 +1029,17 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
     /**
      * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
      * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
-     *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`swSampleIndex` 의 표). 아틀라스가 없으면 `swSampleIndex` 와 같이 검정이다.
+     *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`Bindless::sampleIndex` 의 표). 아틀라스가 없으면 `Bindless::sampleIndex` 와 같이 검정이다.
      */
     #if SW_ENGINE_TEXTURE_SAMPLER != 1
-        #error swSampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
+        #error PassTexture::sampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
     #endif
-float4 swSampleLight2dCookieAtlas( float2 uv )
+static float4 PassTexture::sampleLight2dCookieAtlas( float2 uv )
 {
     if ( g_Light2DCookieAtlasIndex == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
     #if defined( SW_NATIVE_BINDLESS )
-    const uint slot = swBindlessTextureSlot( g_Light2DCookieAtlasIndex );
+    const uint slot = Bindless::textureSlot( g_Light2DCookieAtlasIndex );
         #if defined( __spirv__ )
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_ENGINE_TEXTURE_SAMPLER ), uv, 0.0f );
         #else
@@ -929,7 +1051,7 @@ float4 swSampleLight2dCookieAtlas( float2 uv )
 }
     /**
      * @brief 머티리얼이 준 텍스처 인덱스를 샘플링합니다 (머티리얼 데이터의 uint 슬롯).
-     * @details swSampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
+     * @details Bindless::sampleIndex 와 나누는 이유: 그쪽은 **엔진이 아는 인덱스**(그림자·G버퍼 등) 전용이다.
      *          DX11/OpenGL 은 bindless 가 없어 t0..t3 에 걸린 엔진 텍스처를 인덱스 값 비교로 되짚는
      *          에뮬 경로라, 머티리얼이 준 임의 인덱스는 풀 수 없다 — 그래서 엔진이 머티리얼 텍스처를
      *          t16..t31 에 서수 순서로 걸고 머티리얼 데이터에는 서수를 넣는다. DX12/Vulkan 은 전역 인덱스 그대로다.
@@ -940,93 +1062,93 @@ float4 swSampleLight2dCookieAtlas( float2 uv )
  * @details 확대(밉 0 보다 작다 — 텍스처 해상도가 모자란다)는 파랑, 밉 0 은 초록, 1 노랑, 2 주황, 3 이상 빨강(해상도가 남는다)이다. 텍스처가 없으면 흰색.
  *          픽셀 셰이더에서만 부른다(CalculateLevelOfDetail 은 미분이 필요하다).
  */
-float4 swComputeViewModeMipColor( float lod )
+static float4 ViewMode::computeMipColor( float lod )
 {
     if ( lod < -0.5f )
         return float4( 0.2f, 0.4f, 1.0f, 1.0f );
     const float4 arrColor[4] = { float4( 0.2f, 0.9f, 0.2f, 1.0f ), float4( 1.0f, 0.95f, 0.2f, 1.0f ), float4( 1.0f, 0.55f, 0.1f, 1.0f ), float4( 1.0f, 0.15f, 0.1f, 1.0f ) };
     return arrColor[min( uint( lod + 0.5f ), 3u )];
 }
-float4 swSampleMaterialTextureMipColor( uint index, float2 uv )
+static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
 {
         #if defined( SW_NATIVE_BINDLESS )
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    const uint slot = swBindlessTextureSlot( index );
+    const uint slot = Bindless::textureSlot( index );
             #if defined( __spirv__ )
-    return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
+    return ViewMode::computeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv ) );
             #else
-    return swComputeViewModeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
+    return ViewMode::computeMipColor( g_SwBindlessTex2D[NonUniformResourceIndex( slot )].CalculateLevelOfDetail( g_SwSampler0, uv ) );
             #endif
         #else
     switch ( index )
     {
             #if defined( DX11 )
         case 0u:
-            return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 1u:
-            return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 2u:
-            return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 3u:
-            return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 4u:
-            return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 5u:
-            return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 6u:
-            return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 7u:
-            return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 8u:
-            return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 9u:
-            return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 10u:
-            return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 11u:
-            return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 12u:
-            return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 13u:
-            return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 14u:
-            return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 15u:
-            return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwSampler0, uv ) );
             #else
         case 0u:
-            return swComputeViewModeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwMaterialTex0Sampler, uv ) );
         case 1u:
-            return swComputeViewModeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex1.CalculateLevelOfDetail( g_SwMaterialTex1Sampler, uv ) );
         case 2u:
-            return swComputeViewModeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex2.CalculateLevelOfDetail( g_SwMaterialTex2Sampler, uv ) );
         case 3u:
-            return swComputeViewModeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex3.CalculateLevelOfDetail( g_SwMaterialTex3Sampler, uv ) );
         case 4u:
-            return swComputeViewModeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex4.CalculateLevelOfDetail( g_SwMaterialTex4Sampler, uv ) );
         case 5u:
-            return swComputeViewModeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex5.CalculateLevelOfDetail( g_SwMaterialTex5Sampler, uv ) );
         case 6u:
-            return swComputeViewModeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex6.CalculateLevelOfDetail( g_SwMaterialTex6Sampler, uv ) );
         case 7u:
-            return swComputeViewModeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex7.CalculateLevelOfDetail( g_SwMaterialTex7Sampler, uv ) );
         case 8u:
-            return swComputeViewModeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex8.CalculateLevelOfDetail( g_SwMaterialTex8Sampler, uv ) );
         case 9u:
-            return swComputeViewModeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex9.CalculateLevelOfDetail( g_SwMaterialTex9Sampler, uv ) );
         case 10u:
-            return swComputeViewModeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex10.CalculateLevelOfDetail( g_SwMaterialTex10Sampler, uv ) );
         case 11u:
-            return swComputeViewModeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex11.CalculateLevelOfDetail( g_SwMaterialTex11Sampler, uv ) );
         case 12u:
-            return swComputeViewModeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex12.CalculateLevelOfDetail( g_SwMaterialTex12Sampler, uv ) );
         case 13u:
-            return swComputeViewModeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex13.CalculateLevelOfDetail( g_SwMaterialTex13Sampler, uv ) );
         case 14u:
-            return swComputeViewModeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex14.CalculateLevelOfDetail( g_SwMaterialTex14Sampler, uv ) );
         case 15u:
-            return swComputeViewModeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
+            return ViewMode::computeMipColor( g_SwMaterialTex15.CalculateLevelOfDetail( g_SwMaterialTex15Sampler, uv ) );
             #endif
         default:
             return float4( 1, 1, 1, 1 );
@@ -1036,21 +1158,21 @@ float4 swSampleMaterialTextureMipColor( uint index, float2 uv )
     #endif
 
     #if defined( SW_NATIVE_BINDLESS )
-float4 swSampleMaterialTexture( uint index, float2 uv )
+static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
 {
         #if defined( SW_VIEWMODE_MIPMAPS )
-    return swSampleMaterialTextureMipColor( index, uv );
+    return MaterialTexture::sampleMipColor( index, uv );
         #endif
     // 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return swSampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+    return Bindless::sampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
 }
     #else
-float4 swSampleMaterialTexture( uint index, float2 uv )
+static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
 {
         #if defined( SW_VIEWMODE_MIPMAPS )
-    return swSampleMaterialTextureMipColor( index, uv );
+    return MaterialTexture::sampleMipColor( index, uv );
         #endif
     // 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
     // 엔진이 그 서수 순서대로 t16..t31 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
@@ -1060,37 +1182,37 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
     {
         #if defined( DX11 )
         case 0u:
-            return swSampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 1u:
-            return swSampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex1, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 2u:
-            return swSampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex2, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 3u:
-            return swSampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex3, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 4u:
-            return swSampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex4, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 5u:
-            return swSampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex5, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 6u:
-            return swSampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex6, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 7u:
-            return swSampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex7, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 8u:
-            return swSampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex8, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 9u:
-            return swSampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex9, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 10u:
-            return swSampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex10, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 11u:
-            return swSampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex11, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 12u:
-            return swSampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex12, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 13u:
-            return swSampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex13, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 14u:
-            return swSampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex14, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 15u:
-            return swSampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
+            return Bindless::sampleSlotWith( g_SwMaterialTex15, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         #else
         case 0u:
             return g_SwMaterialTex0.Sample( g_SwMaterialTex0Sampler, uv );
@@ -1132,18 +1254,18 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
     #endif
 
     /**
-     * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `swSampleMaterialTexture` 와 같고 텍스처가 없으면 흰색입니다.
+     * @brief 머티리얼 텍스처를 밉 0 으로 읽습니다 — 정점 셰이더용이다(암시 미분이 없다). 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같고 텍스처가 없으면 흰색입니다.
      * @details 툰 외곽선 두께 텍스처(MToon outlineWidthMultiplyTexture)가 정점을 밀 때 쓴다. DX11 은 엔진이 머티리얼 슬롯과 정적 샘플러를 정점 셰이더에도 건다.
      */
     #if SW_MATERIAL_TEXTURE_SAMPLER != 0
-        #error swSampleMaterialTextureLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
+        #error MaterialTexture::sampleLevelZero 는 머티리얼 샘플러가 정적 샘플러 0 번(g_SwSampler0)이라고 가정한다
     #endif
-float4 swSampleMaterialTextureLevelZero( uint index, float2 uv )
+static float4 MaterialTexture::sampleLevelZero( uint index, float2 uv )
 {
     #if defined( SW_NATIVE_BINDLESS )
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    const uint slot = swBindlessTextureSlot( index );
+    const uint slot = Bindless::textureSlot( index );
         #if defined( __spirv__ )
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( SW_SAMPLER_STATE( SW_MATERIAL_TEXTURE_SAMPLER ), uv, 0.0f );
         #else
@@ -1225,14 +1347,14 @@ float4 swSampleMaterialTextureLevelZero( uint index, float2 uv )
     #endif
 }
 
-/** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `swSampleMaterialTexture` 와 같습니다. */
-float2 swComputeMaterialTextureSize( uint index )
+/** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `MaterialTexture::sampleIndex` 와 같습니다. */
+static float2 MaterialTexture::computeSize( uint index )
 {
     uint width  = 1u;
     uint height = 1u;
     #if defined( SW_NATIVE_BINDLESS )
     if ( index != kInvalidIndex )
-        g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].GetDimensions( width, height );
+        g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( index ) )].GetDimensions( width, height );
     #else
     if ( index == 0u )
         g_SwMaterialTex0.GetDimensions( width, height );
@@ -1275,42 +1397,42 @@ float2 swComputeMaterialTextureSize( uint index )
  * @details 샘플러를 바꾸지 않는 이유: GL 은 결합 샘플러라 슬롯의 샘플러를 셰이더가 고를 수 없다 — 네 백엔드가 같은 식으로 같은 그림을 내게
  *          UV 를 붙인다. 확대(텍셀 하나가 화면 픽셀 하나 이상)에서는 붙인 UV 의 미분이 텍셀 하나를 넘지 않아 밉 0 을 읽는다.
  */
-float4 swSampleMaterialTexturePoint( uint index, float2 uv )
+static float4 MaterialTexture::samplePoint( uint index, float2 uv )
 {
-    const float2 size = swComputeMaterialTextureSize( index );
-    return swSampleMaterialTexture( index, ( floor( uv * size ) + 0.5f ) / size );
+    const float2 size = MaterialTexture::computeSize( index );
+    return MaterialTexture::sampleIndex( index, ( floor( uv * size ) + 0.5f ) / size );
 }
 
-float4 swSampleShadow( float2 uv )
+static float4 PassTexture::sampleShadow( float2 uv )
 {
-    return swSampleIndex( g_ShadowMapIndex, uv );
+    return Bindless::sampleIndex( g_ShadowMapIndex, uv );
 }
-float4 swSampleAlbedo( float2 uv )
+static float4 PassTexture::sampleAlbedo( float2 uv )
 {
-    return swSampleIndex( g_GBufferAlbedoIndex, uv );
+    return Bindless::sampleIndex( g_GBufferAlbedoIndex, uv );
 }
-float4 swSampleNormal( float2 uv )
+static float4 PassTexture::sampleNormal( float2 uv )
 {
-    return swSampleIndex( g_GBufferNormalIndex, uv );
+    return Bindless::sampleIndex( g_GBufferNormalIndex, uv );
 }
-float4 swSampleGbufferMaterial( float2 uv )
+static float4 PassTexture::sampleGbufferMaterial( float2 uv )
 {
-    return swSampleIndex( g_GBufferMaterialIndex, uv );
+    return Bindless::sampleIndex( g_GBufferMaterialIndex, uv );
 }
-/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 swEncodeGbufferMaterial 하나다(r 금속도, g 거칠기). */
-void swLoadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic )
+/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기). */
+static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic )
 {
-    const float4 encoded = swSampleGbufferMaterial( uv );
+    const float4 encoded = PassTexture::sampleGbufferMaterial( uv );
     outMetallic          = encoded.r;
     outRoughness         = encoded.g;
 }
-float4 swSampleDepth( float2 uv )
+static float4 PassTexture::sampleDepth( float2 uv )
 {
-    return swSampleIndex( g_SceneDepthIndex, uv );
+    return Bindless::sampleIndex( g_SceneDepthIndex, uv );
 }
-float4 swSampleSource( float2 uv )
+static float4 PassTexture::sampleSource( float2 uv )
 {
-    return swSampleIndex( g_SourceColorIndex, uv );
+    return Bindless::sampleIndex( g_SourceColorIndex, uv );
 }
 /**
  * @brief 화면과 1:1 인 전체화면 패스 전용 — 텍셀 중심에 정확히 떨어지므로 선형 필터가 **할 일이 없다**.
@@ -1319,13 +1441,13 @@ float4 swSampleSource( float2 uv )
  *          거기서는 섞는 것이 목적이다.
  * @note CLAMP 인 것도 의미가 있다. 화면 가장자리에서 한 텍셀 비낀 샘플이 WRAP 이면 반대편을 읽는다.
  */
-float4 swSampleDepthPoint( float2 uv )
+static float4 PassTexture::sampleDepthPoint( float2 uv )
 {
-    return swSampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv );
+    return Bindless::sampleIndexWith( g_SceneDepthIndex, SW_SAMPLER_POINT_CLAMP, uv );
 }
-float4 swSampleSourcePoint( float2 uv )
+static float4 PassTexture::sampleSourcePoint( float2 uv )
 {
-    return swSampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv );
+    return Bindless::sampleIndexWith( g_SourceColorIndex, SW_SAMPLER_POINT_CLAMP, uv );
 }
 /**
  * @brief 깊이의 십자 다섯 칸(중심 + 상하좌우 한 텍셀)을 읽습니다 — 게더가 있으면 **두 번**에 끝낸다.
@@ -1335,21 +1457,21 @@ float4 swSampleSourcePoint( float2 uv )
  *       쓰는 쪽(외곽선)이 네 이웃의 **합**만 보므로 순서가 결과를 바꾸지 않는다. 방향이 필요한
  *       계산에는 쓰지 말 것.
  */
-void swSampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth )
+static void PassTexture::sampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth )
 {
     // **반 텍셀이 아니라 1/4 텍셀이다.** 정확히 텍셀 모서리에 찍으면 어느 2x2 를 잡을지가 반올림에
     // 달려 버려 백엔드·드라이버마다 갈릴 수 있다. 1/4 은 의도한 2x2 안쪽이라 어디서든 같은 넷이다.
-    float4 gatherHi  = swGatherDepthRed( uv + texel * 0.25f );
-    float4 gatherLo  = swGatherDepthRed( uv - texel * 0.25f );
+    float4 gatherHi  = PassTexture::gatherDepthRed( uv + texel * 0.25f );
+    float4 gatherLo  = PassTexture::gatherDepthRed( uv - texel * 0.25f );
     outCenterDepth   = gatherHi.w;
     outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
 }
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
-float swSampleAmbientOcclusion( float2 uv )
+static float PassTexture::sampleAmbientOcclusion( float2 uv )
 {
     if ( g_AmbientOcclusionIndex == kInvalidIndex )
         return 1.0f;
-    return swSampleIndex( g_AmbientOcclusionIndex, uv ).r;
+    return Bindless::sampleIndex( g_AmbientOcclusionIndex, uv ).r;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE
@@ -1362,33 +1484,32 @@ float swSampleAmbientOcclusion( float2 uv )
 //     언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 것에 해당한다. 여기서는 패스가 define 을
 //     추가하고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------
-// 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SW_SURFACE_OUTPUT PSMain(...)` 에 반환
+// 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SurfaceOutput PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
 // 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
-#if defined( SW_PASS_GBUFFER )
-struct SwSurfaceOutput
+struct SurfaceOutput
 {
+#if defined( SW_PASS_GBUFFER )
     float4 albedo : SV_TARGET0;
     float4 normal : SV_TARGET1;
-    float4 material : SV_TARGET2; // swEncodeGbufferMaterial
-};
+    float4 material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
 #else
-struct SwSurfaceOutput
-{
     float4 color : SV_TARGET0;
-};
 #endif
-#define SW_SURFACE_OUTPUT SwSurfaceOutput
+
+    static SurfaceOutput store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
+    static float4 encodeGbufferMaterial( float roughness, float metallic );
+};
 
 // ------------------------------------------------------------------------------
 // 라이트 목록과 라이트 그리드 읽기 — 조명 식(lighting.hlsli 의 커서)과 보기 모드 Light Complexity(G버퍼 · 포워드 표면)가 같은 함수를 쓴다.
 // 라이트 원소 구조체와 버퍼(g_SwLights)는 lighting.hlsli 다. 여기는 개수와 그리드(g_SwLightGrid, t12)만 안다.
 // ------------------------------------------------------------------------------
-// 뷰마다의 라이트 그리드(32 비트 단어, 배치는 bindingslots.hlsli 10 절). CPU 생산자와 GPU 생산자가 같은 슬롯에 건다 — 읽는 함수는 swLoadLightGridWord 하나다.
+// 뷰마다의 라이트 그리드(32 비트 단어, 배치는 bindingslots.hlsli 10 절). CPU 생산자와 GPU 생산자가 같은 슬롯에 건다 — 읽는 함수는 LightGrid::loadWord 하나다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwLightGrid, SW_SLOT_LIGHT_GRID_SRV );
 
 /** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
-uint swComputeLightCount()
+static uint LightGrid::computeLightCount()
 {
     return ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
 }
@@ -1397,13 +1518,13 @@ uint swComputeLightCount()
  * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(bindingslots.hlsli 10절의 배치).
  * @details 이 함수만 그리드의 위치를 안다(g_SwLightGrid, t12 — CPU · GPU 생산자가 같은 슬롯에 건다).
  */
-uint swLoadLightGridWord( uint wordIndex )
+static uint LightGrid::loadWord( uint wordIndex )
 {
     return g_SwLightGrid[g_SwLightGridBase + wordIndex];
 }
 
 /** @brief 지금 뷰에 라이트 그리드가 있는지 — 버퍼가 걸려 있고 이 뷰의 그리드 첫 단어가 있어야 한다. 없으면 커서는 목록 전체를 돈다. */
-bool swHasLightGrid()
+static bool LightGrid::hasGrid()
 {
     return g_SwLightGridIndex != kInvalidIndex && g_SwLightGridBase != kInvalidIndex;
 }
@@ -1413,19 +1534,19 @@ bool swHasLightGrid()
  * @details 클러스터는 지금 뷰의 NDC 를 X · Y 칸으로, 깊이를 조각으로 나눈 것이다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각이다.
  *          NDC 로 정의하므로 화면 크기 · 해상도 배율과 무관하다. 화면 밖 위치는 가장자리 칸으로 자른다.
  */
-uint swComputeLightGridCluster( float3 worldPosition )
+static uint LightGrid::computeCluster( float3 worldPosition )
 {
-    const uint   dimX          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_X );
-    const uint   dimY          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Y );
-    const uint   dimZ          = swLoadLightGridWord( SW_LIGHT_GRID_WORD_DIM_Z );
-    const bool   bPerspective  = swLoadLightGridWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
-    const float  nearDepth     = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
-    const float  sliceScale    = asfloat( swLoadLightGridWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
+    const uint   dimX          = LightGrid::loadWord( SW_LIGHT_GRID_WORD_DIM_X );
+    const uint   dimY          = LightGrid::loadWord( SW_LIGHT_GRID_WORD_DIM_Y );
+    const uint   dimZ          = LightGrid::loadWord( SW_LIGHT_GRID_WORD_DIM_Z );
+    const bool   bPerspective  = LightGrid::loadWord( SW_LIGHT_GRID_WORD_PERSPECTIVE ) != 0u;
+    const float  nearDepth     = asfloat( LightGrid::loadWord( SW_LIGHT_GRID_WORD_NEAR_DEPTH ) );
+    const float  sliceScale    = asfloat( LightGrid::loadWord( SW_LIGHT_GRID_WORD_SLICE_SCALE ) );
     const float4 clip          = mul( float4( worldPosition, 1.0f ), g_ViewProj );
     const float3 ndc           = clip.xyz / clip.w;
-    const uint   tileX         = swComputeLightGridTile( ndc.x, dimX );
-    const uint   tileY         = swComputeLightGridTile( ndc.y, dimY );
-    const float  slicePosition = swComputeLightGridSlicePosition( bPerspective ? clip.w : ndc.z, bPerspective, nearDepth, sliceScale );
+    const uint   tileX         = LightGrid::computeTile( ndc.x, dimX );
+    const uint   tileY         = LightGrid::computeTile( ndc.y, dimY );
+    const float  slicePosition = LightGrid::computeSlicePosition( bPerspective ? clip.w : ndc.z, bPerspective, nearDepth, sliceScale );
     const uint   slice         = min( (uint)max( slicePosition, 0.0f ), dimZ - 1u );
     return ( slice * dimY + tileY ) * dimX + tileX;
 }
@@ -1434,19 +1555,19 @@ uint swComputeLightGridCluster( float3 worldPosition )
  * @brief 이 월드 위치를 비추는 라이트 수입니다(전역 구간 포함). 그리드가 없으면 목록 전체의 수입니다. 보기 모드 Light Complexity 가 색으로 보입니다.
  * @details 커서가 도는 항목 수와 같다 — 조명 식이 실제로 도는 비용이다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
  */
-uint swComputeLightVisitCount( float3 worldPosition )
+static uint LightGrid::computeVisitCount( float3 worldPosition )
 {
-    uint visitCount = swComputeLightCount();
-    if ( visitCount > 0u && swHasLightGrid() )
+    uint visitCount = LightGrid::computeLightCount();
+    if ( visitCount > 0u && LightGrid::hasGrid() )
     {
-        const uint clusterWord = swLoadLightGridWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + swComputeLightGridCluster( worldPosition ) * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
-        visitCount             = swLoadLightGridWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT ) + swLoadLightGridWord( clusterWord + 1u );
+        const uint clusterWord = LightGrid::loadWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + LightGrid::computeCluster( worldPosition ) * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+        visitCount             = LightGrid::loadWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT ) + LightGrid::loadWord( clusterWord + 1u );
     }
     return visitCount;
 }
 
 // 보기 모드 Unlit · Normals · Depth · Overdraw — 조명 · 그림자 · 림 · 반사를 컴파일 아웃한다. 조명을 하는 셰이더는 **모두** 이 매크로로 가르고,
-// 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
+// 내보낼 색은 SurfaceOutput::store 가 보기 모드대로 바꾼다(ViewMode::computeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
 #if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) ||               \
     defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
@@ -1456,8 +1577,8 @@ uint swComputeLightVisitCount( float3 worldPosition )
     #define SW_VIEWMODE_SKIPS_LIGHTING 0
 #endif
 
-// 보기 모드 LightingOnly — 조명은 그대로 계산하고 표면 색만 이 회색으로 바꾼다(언리얼 Lighting Only). 포워드는 swShadeLights 가,
-// 디퍼드는 G버퍼 알베도 칸(swStoreSurface)이 바꾼다 — 디퍼드 조명 패스는 보기 모드 변형이 없으므로 G버퍼에서 바꿔야 한다.
+// 보기 모드 LightingOnly — 조명은 그대로 계산하고 표면 색만 이 회색으로 바꾼다(언리얼 Lighting Only). 포워드는 Lighting::shadeLights 가,
+// 디퍼드는 G버퍼 알베도 칸(SurfaceOutput::store)이 바꾼다 — 디퍼드 조명 패스는 보기 모드 변형이 없으므로 G버퍼에서 바꿔야 한다.
 #define SW_VIEWMODE_LIGHTINGONLY_ALBEDO float3( 0.5f, 0.5f, 0.5f )
 
 static const float  kViewModeDepthRange         = 100.0f;                        // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
@@ -1466,7 +1587,7 @@ static const float  kViewModeLightComplexityMax = 16.0f;                        
 static const float3 kViewModeWireOverlayColor   = float3( 0.02f, 0.02f, 0.02f ); // ShadedWireframe 의 선 색(셰이딩한 면 위에 겹친다)
 
 /** @brief 라이트 수를 색 띠로 바꿉니다 — 0 은 검정, 1 부터 파랑 · 초록 · 노랑 · 빨강(kViewModeLightComplexityMax 이상)이다. */
-float3 swComputeLightComplexityColor( uint visitCount )
+static float3 ViewMode::computeLightComplexityColor( uint visitCount )
 {
     const float  ratio  = saturate( (float)visitCount / kViewModeLightComplexityMax );
     const float3 cold   = lerp( float3( 0.0f, 0.1f, 0.8f ), float3( 0.0f, 0.9f, 0.2f ), saturate( ratio * 3.0f ) );
@@ -1480,7 +1601,7 @@ float3 swComputeLightComplexityColor( uint visitCount )
  * @details Overdraw 는 알파 0 을 낸다 — PSO 가 프리멀티플라이 블렌드(색 One / InvSrcAlpha)라 알파 0 이 더하기가 된다.
  *          Depth 는 클립 w(원근 카메라의 뷰 공간 깊이)다. 직교 카메라는 w 가 1 이라 한 색이다.
  */
-float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
 #if defined( SW_VIEWMODE_ROUGHNESS )
     return float4( saturate( roughness ).xxx, 1.0f );
@@ -1489,7 +1610,7 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 #elif defined( SW_VIEWMODE_NORMALS )
     return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
 #elif defined( SW_VIEWMODE_DEPTH )
-    const float viewDepth = swComputeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
+    const float viewDepth = Transform::computeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
     return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
 #elif defined( SW_VIEWMODE_OVERDRAW )
     return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
@@ -1497,8 +1618,8 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
     // ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
     return float4( kViewModeWireOverlayColor, 1.0f );
 #elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
-    // 조명 식이 이 위치에서 도는 라이트 수 — 커서(swBeginLights)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
-    return float4( swComputeLightComplexityColor( swComputeLightVisitCount( worldPosition ) ), 1.0f );
+    // 조명 식이 이 위치에서 도는 라이트 수 — 커서(LightCursor::begin)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
+    return float4( ViewMode::computeLightComplexityColor( LightGrid::computeVisitCount( worldPosition ) ), 1.0f );
 #else
     // Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
     return float4( albedo.rgb, shadedColor.a );
@@ -1517,9 +1638,9 @@ float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNo
 
 /**
  * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b · a 는 쓰지 않는다(0).
- * @details 읽는 쪽은 11-3 절 swLoadGbufferMaterial 하나다. 셰이딩 모델은 알베도 칸의 알파(SW_GBUFFER_SHADING)에 그대로 둔다.
+ * @details 읽는 쪽은 11-3 절 PassTexture::loadGbufferMaterial 하나다. 셰이딩 모델은 알베도 칸의 알파(SW_GBUFFER_SHADING)에 그대로 둔다.
  */
-float4 swEncodeGbufferMaterial( float roughness, float metallic )
+static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metallic )
 {
     return float4( saturate( metallic ), saturate( roughness ), 0.0f, 0.0f );
 }
@@ -1532,22 +1653,22 @@ float4 swEncodeGbufferMaterial( float roughness, float metallic )
  *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
  *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
  */
-SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+static SurfaceOutput SurfaceOutput::store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
 #if SW_VIEWMODE_SKIPS_LIGHTING
-    litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
+    litColor = ViewMode::computeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
     albedo   = float4( litColor.rgb, albedo.a );
 #elif defined( SW_VIEWMODE_LIGHTINGONLY )
     albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );
 #endif
 #if defined( SW_PASS_GBUFFER )
-    SwSurfaceOutput output;
+    SurfaceOutput output;
     output.albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
     output.normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
-    output.material = swEncodeGbufferMaterial( roughness, metallic );
+    output.material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
     return output;
 #else
-    SwSurfaceOutput output;
+    SurfaceOutput output;
     output.color = litColor;
     return output;
 #endif

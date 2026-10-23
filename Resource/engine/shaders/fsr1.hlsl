@@ -22,6 +22,7 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_FsrSource;     // 원본(EASU: 배율 크기 장면, RCAS: 중간 RT)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     float g_FsrInputWidth; // EASU: 원본 픽셀 크기
     float g_FsrInputHeight;
@@ -30,6 +31,7 @@ SW_ROOT_CONSTANTS_BEGIN
     float g_FsrViewportX; // RCAS: Present 대상에서 뷰포트 왼쪽 위(px) — 대상 픽셀 위치를 중간 RT 픽셀로 옮긴다
     float g_FsrViewportY;
     float g_FsrSharpness; // RCAS: 선명도를 줄이는 단계(0 = 가장 선명, 1 단계마다 절반 — AMD FsrRcasCon 의 sharpness)
+};
 SW_ROOT_CONSTANTS_END
 
 /// RCAS 의 엽(lobe) 상한이다(AMD FSR_RCAS_LIMIT — 0.25 - 1/16).
@@ -40,7 +42,7 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position            = input.position;
@@ -80,8 +82,8 @@ float min3( float first, float second, float third )
 float4 gatherSourceChannel( float2 uv, uint channel )
 {
 #if defined( SW_NATIVE_BINDLESS )
-    const uint slot = swBindlessTextureSlot( SW_ROOT( g_FsrSource ) );
-    // 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, swGatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다.
+    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
+    // 게더는 필터를 보지 않고 주소 모드만 본다 — 점 · 클램프 샘플러(3 번, PassTexture::gatherDepthRed 와 같다)로 가장자리 밖을 반대편에서 읽지 않는다.
     #if defined( __spirv__ )
     if ( channel == 0u )
         return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
@@ -108,7 +110,7 @@ float3 loadSourceClamped( int2 texel )
 {
     float2 size;
 #if defined( SW_NATIVE_BINDLESS )
-    const uint slot = swBindlessTextureSlot( SW_ROOT( g_FsrSource ) );
+    const uint slot = Bindless::textureSlot( SW_ROOT( g_FsrSource ) );
     g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GetDimensions( size.x, size.y );
     const int2 clamped = clamp( texel, int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Load( int3( clamped, 0 ) ).rgb;

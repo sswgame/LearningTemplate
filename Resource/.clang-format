@@ -1,9 +1,6 @@
 # 셰이더(.hlsl · .hlsli) 포맷 — 루트 .clang-format(C++)을 물려받고 셰이더에만 필요한 것을 더한다.
 # 루트에 두지 않는 까닭: AlignFunctionDeclarations: false 가 C++ 정렬을 바꾼다.
 BasedOnStyle: InheritParentConfig
-# 루트 상수 블록 매크로(common.hlsli)를 중괄호처럼 들여쓴다.
-MacroBlockBegin: "^SW_ROOT_CONSTANTS_BEGIN$"
-MacroBlockEnd: "^SW_ROOT_CONSTANTS_END$"
 # cbuffer · 구조체 필드는 정렬하고, 함수 선언은 정렬하지 않는다.
 AlignConsecutiveDeclarations:
   Enabled: true

@@ -20,7 +20,7 @@
 - `RenderPassType::MotionBlur`(파이프라인 타입, `isPipelinePassType` 상한) · 타입 표 줄(원본 · 깊이 입력, `kSkipsWithoutPostProcess`) · `EngineDefaultAssets::_shaderMotionBlur` + `enginedefaultassets.xml` · 새 `motionblur.hlsl`(깊이 → 월드 → 지난 뷰-투영, 8 표본, 길이 상한).
 - PassCB `g_PrevViewProj`(`binding.hlsli`, `PassConstantNames::_prevViewProj`) — `ViewTarget::_prevViewProj` · `_prevViewID` · `_bHasPrevViewProj` 를 `applyViewProjection` 이 뷰마다 갱신한다(처음 · 다른 카메라 · 컷은 이번 것). PassCB 는 약 700 바이트로 `PassConstantRing::kSlotBytes` 768 안이다.
 - `gv_motionBlur` 를 끄면 `executePass` 가 후처리 품질로 건너뛸 때와 같은 길로 보낸다. 디퍼드 파이프라인에 `MotionBlur` 패스(TaaColor + SceneDepth → MotionBlurColor, `_minPostQuality` 1)를 Tonemap 앞에 둔다.
-- `postgrade.hlsli` 가 `colorvision.hlsli` 를 include 해 `swApplyCameraGrade` 안에서 `g_CameraFrame.z` 로 보정한다(tonemap.hlsl · postchain.hlsl 공통).
+- `postgrade.hlsli` 가 `colorvision.hlsli` 를 include 해 `CameraGrade::apply` 안에서 `g_CameraFrame.z` 로 보정한다(tonemap.hlsl · postchain.hlsl 공통).
 
 적용 순서: 패치를 적용하고 빌드한 뒤 `App.exe --cook-shaders` 로 네 백엔드를 다시 쿠킹하고(PassCB 가 바뀌어 모든 셰이더가 낡는다) `ShaderCookRequestTest` 가 0 이 될 때까지 지운 다음 바이너리 · `cook.stamp` · `reflection.manifest` 와 함께 커밋한다.
 

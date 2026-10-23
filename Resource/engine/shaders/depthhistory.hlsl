@@ -7,7 +7,9 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_DepthHistorySource; // 원본 깊이의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
+};
 SW_ROOT_CONSTANTS_END
 
 struct PSInput
@@ -15,7 +17,7 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position            = input.position;
@@ -28,7 +30,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
 {
     const int3 texel = int3( int2( input.position.xy ), 0 );
 #if defined( SW_NATIVE_BINDLESS )
-    const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
+    const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
 #else
     const float depth = g_SwSlot0.Load( texel ).r;
 #endif

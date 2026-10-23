@@ -277,7 +277,7 @@ namespace sw
 #endif
 
         /**
-         * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(SwInstanceData)를 읽을 수 있으면 true 를 반환합니다.
+         * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(InstanceData)를 읽을 수 있으면 true 를 반환합니다.
          * @details true 면 FrameRenderer 가 인스턴스 버퍼를 바인딩하고 배치를 drawIndirect(멀티 드로우)로 그리며, 인스턴스마다의
          *          월드 행렬과 materialIndex 는 구조 버퍼에서 읽는다. false 면 씬 메시를 그릴 수 없다. 드로우마다 g_World 를 쓰는 폴백 경로는 없다.
          */

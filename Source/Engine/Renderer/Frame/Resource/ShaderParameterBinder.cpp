@@ -127,7 +127,7 @@ namespace sw
              * @brief 1) 엔진 CB 를 채워 올립니다.
              * @details 크기 · 멤버 키 · 자동 인덱스 키는 모두 레이아웃 빌드 때 미리 계산해 뒀다(ShaderBindingLayout::computeBindPlan). 명시 값이 없고
              *          `g_<Name>Index` 패턴이면 레지스트리에서 텍스처 · 버퍼 bindless 인덱스를 채운다. 해결에 실패해도 그 멤버는 반드시 INVALID(0xFFFFFFFF)로
-             *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(swLoadInstanceWorld / swSampleIndex 는 kInvalidIndex 비교로 폴백).
+             *          채운다 — 0 으로 두면 셰이더가 힙 0번을 잘못 읽는다(InstanceData::loadWorld / Bindless::sampleIndex 는 kInvalidIndex 비교로 폴백).
              */
             static void uploadEngineConstantBuffer( IRHICommandList& cmd, const ShaderBindingLayout& layout, const FrameResourceRegistry& registry,
                                                     const PassConstantValues& values, const EngineConstantBufferSlot& engineCb,

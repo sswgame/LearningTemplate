@@ -655,7 +655,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
         const utf8* _pName;
         uint32      _offset;
     };
-    // HLSL `SwInstanceData`(binding.hlsli) ↔ C++ `GPUInstance`(GPUScene.h). 이름은 셰이더 쪽 표기다.
+    // HLSL `InstanceData`(binding.hlsli) ↔ C++ `GPUInstance`(GPUScene.h). 이름은 셰이더 쪽 표기다.
     const ExpectedField arrExpected[] = {
         { "world", static_cast<uint32>( offsetof( sw::GPUInstance, _world ) ) },
         { "boundsCenter", static_cast<uint32>( offsetof( sw::GPUInstance, _boundsCenter ) ) },
@@ -749,7 +749,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
 
 /**
  * @brief [ShaderBindingValidatorTest] 라이트 원소 레이아웃이 C++ `GPULight` 와 같다 (쿠킹된 바이너리, 4 백엔드, 그래픽스 g_SwLights · 컴퓨트 g_LightGridLights).
- * @details 둘 다 lightdata.hlsli 의 SwLightData 하나를 쓴다. 구조체를 셰이더마다 베끼면 칸을 더할 때 한 곳만 고쳐 원소 1 부터 어긋나므로, stride 와 칸 오프셋을
+ * @details 둘 다 lightdata.hlsli 의 LightData 하나를 쓴다. 구조체를 셰이더마다 베끼면 칸을 더할 때 한 곳만 고쳐 원소 1 부터 어긋나므로, stride 와 칸 오프셋을
  *          리플렉션에서 읽어 C++ 구조체와 대조한다. 이름마다 적어도 한 바이너리가 있어야 한다(없으면 이름이 바뀌어 검사가 눈을 감은 것이다).
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, LightElementLayoutMatchesCPUStruct )
@@ -1029,7 +1029,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableIsConsistent )
 
 /**
  * @brief [ShaderBindingValidatorTest] PSO 가 거는 정점 속성은 정점 셰이더가 읽는 것뿐이다 — 쿠킹된 Vulkan 정점 셰이더마다 마스크 = 리플렉션 입력
- * @details 셰이더는 모두 `SwVertexInput` 을 선언하지만 컴파일러가 안 쓰는 입력을 뗀다. Vulkan PSO 가 표 전체를 걸면 검증 레이어가
+ * @details 셰이더는 모두 `VertexInput` 을 선언하지만 컴파일러가 안 쓰는 입력을 뗀다. Vulkan PSO 가 표 전체를 걸면 검증 레이어가
  *          "Vertex attribute at location N not consumed by vertex shader" 를 PSO 마다 낸다. 풀스크린 삼각형은 위치만 읽고, 씬 셰이더는
  *          위치 · 노멀 · 인스턴스 슬롯을 읽는다. 셰이더가 읽는 속성을 마스크가 빠뜨리면(반대 방향) 미정의라, 비트 수가 입력 수와 같은지도 본다.
  */

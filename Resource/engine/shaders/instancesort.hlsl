@@ -28,7 +28,7 @@
 #define SW_SORT_MAX_ELEMENTS 512
 #define SW_SORT_THREADS      256 // = SW_SORT_MAX_ELEMENTS / 2 (스레드마다 비교·교환 한 쌍)
 
-// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
+// 인스턴스 원소(InstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
 #include "instancedata.hlsli"
 
 // C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertexLocation 는 정점 풀 시작,
@@ -41,7 +41,7 @@ struct RHIDrawIndirectCommand
     uint startInstanceLocation;
 };
 
-// 배치 표 원소는 binding.hlsli 와 같은 SwBatchData(batchdata.hlsli) 다.
+// 배치 표 원소는 binding.hlsli 와 같은 BatchData(batchdata.hlsli) 다.
 
 SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 {
@@ -52,8 +52,8 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
     uint   g_TransparentTailBase; // 순번 표 0 번의 인스턴스 번호
 };
 
-SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( SwBatchData, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_Instances, 0 );
+SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_ViewRank, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
@@ -68,7 +68,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
     if ( batchIndex >= g_BatchCount )
         return;
 
-    const SwBatchData info = g_BatchInfo[batchIndex];
+    const BatchData info = g_BatchInfo[batchIndex];
     if ( info.sortMode != 2u ) // 이 배치는 여기서 정렬하지 않는다
         return;
 

@@ -18,7 +18,7 @@
 
 /**
  * @brief [Light2DTest] 감쇠는 안 반경 안에서 1, 바깥 반경에서 0, 사이는 ((바깥 − 거리) / (바깥 − 안))^지수다
- * @details 셰이더 `swComputeLight2dAttenuation` 과 같은 식이다 — RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 견준다.
+ * @details 셰이더 `LightData::computeLight2dAttenuation` 과 같은 식이다 — RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 견준다.
  */
 SW_TEST_CASE( Light2DTest, AttenuationFollowsInnerOuterAndExponent )
 {
@@ -99,7 +99,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
 
 /**
  * @brief [Light2DTest] 자유 모양 빛은 다각형 안에서 1, 밖은 (1 − 변까지 거리 / 감쇠 거리)^지수다 — 꼭짓점이 셋 미만이거나 상한을 넘으면 받지 않는다
- * @details 셰이더 `swComputeFreeformLight2dAttenuation` 과 같은 식이다(안 · 밖은 짝홀 규칙).
+ * @details 셰이더 `LightData::computeFreeformLight2dAttenuation` 과 같은 식이다(안 · 밖은 짝홀 규칙).
  */
 SW_TEST_CASE( Light2DTest, FreeformAttenuationInsideAndFalloff )
 {

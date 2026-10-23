@@ -10,20 +10,26 @@
 
 #include "colorvision.hlsli"
 
+struct CameraGrade
+{
+    static float3 applyExposure( float3 hdrColor );
+    static float3 apply( float2 uv, float3 color );
+};
+
 /**
  * @brief 톤맵 앞의 HDR 색에 카메라 노출 배율과 자동 노출을 곱합니다.
  * @details 자동 노출은 이번 EV(autoexposure.hlsl 이 쓴 1x1)의 2^-EV 다. 재지 않는 뷰는 g_AutoExposureIndex 가 무효라 EV 0(배율 1)이다 —
- *          swSampleIndexWith 가 무효 번호에 0 을 돌려준다. 고정 노출(카메라 범위가 한 점)은 C++ 가 g_CameraGrade.x 에 이미 곱했다.
+ *          Bindless::sampleIndexWith 가 무효 번호에 0 을 돌려준다. 고정 노출(카메라 범위가 한 점)은 C++ 가 g_CameraGrade.x 에 이미 곱했다.
  *          점 샘플로 읽는다 — R32 실수의 선형 필터는 Vulkan 에서 선택 기능이다(텍셀 하나라 값은 같다).
  */
-float3 swApplyCameraExposure( float3 hdrColor )
+static float3 CameraGrade::applyExposure( float3 hdrColor )
 {
-    const float autoExposureEv = swSampleIndexWith( g_AutoExposureIndex, SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
+    const float autoExposureEv = Bindless::sampleIndexWith( g_AutoExposureIndex, SW_SAMPLER_POINT_CLAMP, float2( 0.5f, 0.5f ) ).r;
     return hdrColor * ( g_CameraGrade.x * exp2( -autoExposureEv ) );
 }
 
 /** @brief 톤맵 뒤의 [0,1] 색에 채도 · 대비 · 비네트 · 색각 보정 · 레터박스를 적용합니다. */
-float3 swApplyCameraGrade( float2 uv, float3 color )
+static float3 CameraGrade::apply( float2 uv, float3 color )
 {
     // 채도: 휘도(Rec.709)에서 멀어지는 정도를 곱한다. 대비: 화면 중간 회색(0.5)을 축으로 늘린다.
     const float luminance = dot( color, float3( 0.2126f, 0.7152f, 0.0722f ) );
@@ -37,7 +43,7 @@ float3 swApplyCameraGrade( float2 uv, float3 color )
     color *= 1.0f - g_CameraGrade.w * falloff;
 
     // 색각 보정(gv_colorVisionMode) — 화면 · 호스트 출력 뷰만 z 에 방식이 실리고 렌더 텍스처 뷰는 0 이다(주 화면에서 그 텍스처가 다시 보정되므로).
-    color = swApplyColorVisionCorrection( color, (uint)g_CameraFrame.z );
+    color = ColorVision::applyCorrection( color, (uint)g_CameraFrame.z );
 
     // 레터박스: 남길 비율이 화면보다 넓으면 위아래, 좁으면 좌우를 검게 지운다. 0 이면 끈다. 고르기는 early-return 이 아니라 값 선택이다.
     const float targetAspect = g_CameraFrame.x;

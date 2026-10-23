@@ -5,10 +5,12 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint g_TargetIndex;
     uint g_Width;
     uint g_Height;
     uint g_Pad0;
+};
 SW_ROOT_CONSTANTS_END
 
 SW_NUMTHREADS( 8, 8, 1 )
@@ -17,7 +19,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( dispatchThreadId.x >= SW_ROOT( g_Width ) || dispatchThreadId.y >= SW_ROOT( g_Height ) )
         return;
     // r = x, g = y (8비트 UNORM 에서 정확히 복원), b = 0, a = 1
-    swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.x / 255.0f, dispatchThreadId.y / 255.0f, 0.0f, 1.0f ) );
+    Bindless::storeRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.x / 255.0f, dispatchThreadId.y / 255.0f, 0.0f, 1.0f ) );
 }
 
 // 기본이 아닌 진입점 — r = y, g = x(CSMain 과 뒤바뀜). 이 진입점으로 만든 PSO 가 CSMain 을 부르면 픽셀이 CSMain 의 것이 되거나 PSO 가 실패한다.
@@ -26,5 +28,5 @@ void csWriteSwapped( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
     if ( dispatchThreadId.x >= SW_ROOT( g_Width ) || dispatchThreadId.y >= SW_ROOT( g_Height ) )
         return;
-    swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.y / 255.0f, dispatchThreadId.x / 255.0f, 0.0f, 1.0f ) );
+    Bindless::storeRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.y / 255.0f, dispatchThreadId.x / 255.0f, 0.0f, 1.0f ) );
 }

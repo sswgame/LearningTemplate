@@ -11,7 +11,7 @@
 
 // defaultmaterial.material 의 프로퍼티 순서·타입과 1:1 (color/roughness/metallic/albedoMap). 머티리얼 패커는
 // 리플렉션 오프셋(StructuredBuffer 원소 레이아웃)으로 채우므로 여기 순서를 바꾸면 에셋도 같이 바꿔야 한다.
-// 금속도 · 거칠기는 PBR 조명 식(lighting.hlsli swShadeLights)과 G버퍼 머티리얼 칸(swStoreSurface)이 읽는다.
+// 금속도 · 거칠기는 PBR 조명 식(lighting.hlsli Lighting::shadeLights)과 G버퍼 머티리얼 칸(SurfaceOutput::store)이 읽는다.
 SW_MATERIAL_BEGIN
 {
     float4 color;
@@ -22,7 +22,7 @@ SW_MATERIAL_BEGIN
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "forwardlit.hlsl has no alpha cutoff property (SwMaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "forwardlit.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
@@ -40,23 +40,23 @@ float4 sampleWorldTriplanar( uint textureIndex, float3 worldPosition, float3 wor
     weight /= max( weight.x + weight.y + weight.z, 1e-4f );
     const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
     // 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
-    const float4 alongX = swSampleMaterialTexture( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
-    const float4 alongY = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
-    const float4 alongZ = swSampleMaterialTexture( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
+    const float4 alongX = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.z, -scaledPosition.y ) );
+    const float4 alongY = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.x, scaledPosition.z ) );
+    const float4 alongZ = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
     return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
 }
 #endif
 
-SwMaterialSurface computeMaterialSurface( SwPixelContext context )
+MaterialSurface computeMaterialSurface( PixelContext context )
 {
     // 정점 색 x 머티리얼 색 x 알베도 텍스처. 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
-    // 자세한 이유는 binding.hlsli 의 swSampleMaterialTexture 주석 참고.
+    // 자세한 이유는 binding.hlsli 의 MaterialTexture::sampleIndex 주석 참고.
 #if defined( MATERIAL_WORLD_UV )
     const float4 surfaceTexture = sampleWorldTriplanar( context.material.albedoMap, context.worldPosition, context.normal );
 #else
-    const float4 surfaceTexture = swSampleMaterialTexture( context.material.albedoMap, context.uv );
+    const float4 surfaceTexture = MaterialTexture::sampleIndex( context.material.albedoMap, context.uv );
 #endif
-    SwMaterialSurface surface;
+    MaterialSurface surface;
     surface.albedo    = context.color * context.material.color * surfaceTexture;
     surface.normal    = context.normal;
     surface.roughness = context.material.roughness;
@@ -64,7 +64,7 @@ SwMaterialSurface computeMaterialSurface( SwPixelContext context )
     return surface;
 }
 
-float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surface )
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     float3 lit;
 #if SW_VIEWMODE_SKIPS_LIGHTING
@@ -72,9 +72,9 @@ float4 computeMaterialLighting( SwPixelContext context, SwMaterialSurface surfac
     lit = surface.albedo.rgb;
 #else
     // 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-    const float shadow = swSampleShadowAtWorld( context.worldPosition, surface.normal );
-    lit                = swShadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
-    lit += swComputeRimLight( surface.normal );
+    const float shadow = Shadow::sampleAtWorld( context.worldPosition, surface.normal );
+    lit                = Lighting::shadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
+    lit += Lighting::computeRimLight( surface.normal );
 #endif
     return float4( lit, surface.albedo.a );
 }

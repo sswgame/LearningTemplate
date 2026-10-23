@@ -38,17 +38,29 @@ The single source is `kMinimumPythonVersion` in `Scripts/common/Constants.py`; i
 Shaders follow the C++ rules wherever HLSL can express them. `CheckShaderConventions.py` enforces this
 section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 
-- **Functions** are `camelCase`. A helper in a shared header (`.hlsli`) starts with `sw` — FXC has no
-  namespaces, so the prefix stands in for `sw::` (`swLoadInstance`, `swComputeWorldNormal`). A helper that
-  lives in one `.hlsl` has no prefix (`isVisible`, `hashSeed`), so the name says where to look.
-  The C++ function-name rules apply: an acronym is one word (`swLoadRwTexture2D`, never `SW_LoadRWTex2D`),
+- **Functions** are `camelCase`. A function in a shared header (`.hlsli`) belongs to a struct — FXC (DX11) has
+  no namespaces, so a struct stands in for one, and there is no `sw` prefix anywhere. A function whose first
+  argument was a struct is that struct's member function (`instance.computeTint()`,
+  `light.computeIncidence( … )`, `cursor.next( outLight )` — a member function may change the fields). A
+  function that makes a struct or needs no instance is a `static` member function (`InstanceData::load( slot )`,
+  `PixelContext::make( … )`, `Bindless::sampleIndex( index, uv )`, `View::getViewProjection()`).
+  A shared header declares the struct with its member functions and defines them outside it
+  (`static float4 Bindless::sampleIndex( … ) { … }` — the definition repeats `static`, FXC rejects a mismatch),
+  so resource declarations and backend `#if` variants can sit between the definitions. `public` / `private` are
+  reserved words and `const` member functions do not compile. A helper that lives in one `.hlsl` is a free
+  function (`isVisible`, `hashSeed`), so the name says where to look.
+  The C++ function-name rules apply: an acronym is one word (`Bindless::loadRwTexture2D`, never `LoadRWTex2D`),
   words are spelled out (`Tex` → `Texture`, `Cmp` → `Comparison`), and the verb table applies — a value
-  worked out from inputs is `compute…`, not an `…Of` suffix (`swComputeWorldPosition`, not `SwWorldPositionOf`).
+  worked out from inputs is `compute…`, not an `…Of` suffix (`Transform::computeWorldPosition`).
   GPU access verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
   Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
-- **Types** are `PascalCase` with no `_t` suffix. A shared-header type starts with `Sw` (`SwInstanceData`,
-  `SwMaterialData`); a type local to one `.hlsl` does not (`PSInput`, `GPUBatchInfo`). A struct that mirrors
-  a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
+- **A pass or feature switch picks a definition, not a branch inside a body.** A step that a switch changes is a
+  member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty
+  definition), so the calling body reads the same in every permutation — the material skeleton's entry points
+  have no `#if` (`surface.applyAlphaCutoff()`, `context.storeSurface( surface )` in `materialshadermain.hlsli`).
+  Write new switches this way; the backend branches inside `binding.hlsli` texture functions predate the rule.
+- **Types** are `PascalCase` with no `_t` suffix and no `Sw` prefix (`InstanceData`, `PixelContext`, `PSInput`).
+  A struct that mirrors a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
 - **Fields** are `camelCase`. A field that mirrors a C++ member is that member without the leading `_`
   (`_startVertexLocation` → `startVertexLocation`). No opaque abbreviations: `position`, `normal`, `color`,
   `worldPosition`, `vertexId` — not `pos`, `nrm`, `col`, `wpos`, `vid`.
@@ -58,7 +70,8 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   (`s_arrKey[]` for an array). Never use an HLSL keyword as a name (`sample`, `point`, `line`, `linear`,
   `texture`, `sampler`, `vector`, `matrix`, …). A local `const` may be `kPascalCase`, as in C++.
 - **Constants and macros**: a file-scope `static const` is `kPascalCase` (`kInvalidIndex`, `kPi`). A `#define`
-  is `SW_` + `SCREAMING_CASE`, and a macro never aliases a resource or a function. Include guards are
+  is `SW_` + `SCREAMING_CASE`, and a macro never aliases a resource, a function or a type (a per-pass value is a
+  function with per-pass definitions, as `View::getViewProjection()`). Include guards are
   `SW_<DOMAIN>_<FILE>_HLSLI` (`SW_ENGINE_POSTBLOOM_HLSLI`).
 - **Globals and cbuffer members** are `g_` + `PascalCase` (`g_ViewProj`, `g_SwInstances`). C++ binds them
   **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention),

@@ -14,8 +14,14 @@ static const uint kColorVisionProtanopia   = 1u;
 static const uint kColorVisionDeuteranopia = 2u;
 static const uint kColorVisionTritanopia   = 3u;
 
+struct ColorVision
+{
+    static float3x3 getSimulation( uint mode );
+    static float3 applyCorrection( float3 color, uint mode );
+};
+
 /** @brief 결핍 눈이 보는 색으로 옮기는 행렬입니다(행 우선 — mul( 행렬, 색 )). 모르는 방식은 단위 행렬입니다. */
-float3x3 swGetColorVisionSimulation( uint mode )
+static float3x3 ColorVision::getSimulation( uint mode )
 {
     if ( mode == kColorVisionProtanopia )
         return float3x3( 0.152286f, 1.052583f, -0.204868f, 0.114503f, 0.786281f, 0.099216f, -0.003882f, -0.048116f, 1.051998f );
@@ -28,11 +34,11 @@ float3x3 swGetColorVisionSimulation( uint mode )
 
 /**
  * @brief 색 @p color 를 방식 @p mode 로 보정해 돌려줍니다(0..1 로 자른다). 끔 · 모르는 방식이면 그대로입니다.
- * @details 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli swComputeMorphElement).
+ * @details 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli MorphPool::computeElement).
  */
-float3 swApplyColorVisionCorrection( float3 color, uint mode )
+static float3 ColorVision::applyCorrection( float3 color, uint mode )
 {
-    const float3 simulated = mul( swGetColorVisionSimulation( mode ), color );
+    const float3 simulated = mul( ColorVision::getSimulation( mode ), color );
     const float3 error     = color - simulated;
     const float3 redShift  = float3( 0.0f, 0.7f * error.r + error.g, 0.7f * error.r + error.b );
     const float3 blueShift = float3( error.r + 0.7f * error.b, error.g + 0.7f * error.b, 0.0f );

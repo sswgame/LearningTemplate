@@ -10,7 +10,7 @@ struct PSInput
     float2 clipXy : TEXCOORD0;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position      = input.position;
@@ -31,7 +31,7 @@ float3 evaluateSky( float3 direction )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    // 이 픽셀을 지나는 시선 — 가까운 면과 먼 면의 월드 점을 잇는다(행벡터 규약, lighting.hlsli swComputeWorldPositionFromDepth 와 같은 순서). 직교 카메라도 같다.
+    // 이 픽셀을 지나는 시선 — 가까운 면과 먼 면의 월드 점을 잇는다(행벡터 규약, lighting.hlsli Transform::computeWorldPositionFromDepth 와 같은 순서). 직교 카메라도 같다.
     const float4 nearPoint = mul( float4( input.clipXy, 0.0f, 1.0f ), g_InvViewProj );
     const float4 farPoint  = mul( float4( input.clipXy, 1.0f, 1.0f ), g_InvViewProj );
     const float3 direction = normalize( farPoint.xyz / farPoint.w - nearPoint.xyz / nearPoint.w );

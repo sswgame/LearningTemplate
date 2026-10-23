@@ -10,8 +10,23 @@
 
 #include "common.hlsli"
 
+/**
+ * @brief 라이트 그리드 — 칸 식(이 파일)과 지금 뷰의 그리드 읽기(binding.hlsli — 버퍼 g_SwLightGrid 를 아는 곳)를 한 이름 아래 둔다.
+ * @details 그리드를 만드는 컴퓨트(lightgrid.hlsl)는 칸 식만 쓴다. 읽기 함수는 binding.hlsli 를 include 한 셰이더에만 정의가 있다.
+ */
+struct LightGrid
+{
+    static uint computeTile( float ndc, uint dimension );
+    static float computeSlicePosition( float depth, bool bPerspective, float nearDepth, float sliceScale );
+    static uint computeLightCount();
+    static uint loadWord( uint wordIndex );
+    static bool hasGrid();
+    static uint computeCluster( float3 worldPosition );
+    static uint computeVisitCount( float3 worldPosition );
+};
+
 /** @brief NDC 한 축의 값을 칸 번호로 바꿉니다(양 끝은 자른다). */
-uint swComputeLightGridTile( float ndc, uint dimension )
+static uint LightGrid::computeTile( float ndc, uint dimension )
 {
     return min( (uint)( saturate( ndc * 0.5f + 0.5f ) * (float)dimension ), dimension - 1u );
 }
@@ -20,7 +35,7 @@ uint swComputeLightGridTile( float ndc, uint dimension )
  * @brief 깊이 값을 조각 위치(실수)로 바꿉니다. 원근은 클립 w 의 로그 조각, 직교는 NDC z 의 선형 조각이다.
  * @param depth 원근이면 클립 w, 직교면 NDC z
  */
-float swComputeLightGridSlicePosition( float depth, bool bPerspective, float nearDepth, float sliceScale )
+static float LightGrid::computeSlicePosition( float depth, bool bPerspective, float nearDepth, float sliceScale )
 {
     return bPerspective ? log2( max( depth, nearDepth ) / nearDepth ) * sliceScale : saturate( depth ) * sliceScale;
 }

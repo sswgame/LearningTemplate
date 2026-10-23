@@ -1,6 +1,6 @@
 /**
  * @file GPULight.h
- * @brief 라이트 하나를 셰이더 레이아웃 그대로 묶은 80바이트입니다(`lighting.hlsli` 의 `SwLightData`).
+ * @brief 라이트 하나를 셰이더 레이아웃 그대로 묶은 80바이트입니다(`lighting.hlsli` 의 `LightData`).
  * @details 라이트 컴포넌트(Object 층)가 자기 슬롯을 직접 채우고(`LightComponent::writeGPULight`), 렌더러가 모아 구조 버퍼로 업로드합니다
  *          (`GPULightBuffer`). 컴포넌트 층이 렌더러를 include 할 수 없어 이 구조체만 렌더러 아래의 계약 폴더에 둡니다.
  */
@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @struct GPULight
-     * @brief 라이트 하나입니다. 셰이더의 `SwLightData`(lighting.hlsli)와 레이아웃이 같아야 합니다.
+     * @brief 라이트 하나입니다. 셰이더의 `LightData`(lighting.hlsli)와 레이아웃이 같아야 합니다.
      * @details **`float4` 다섯입니다.** 원소를 `float3` 과 섞으면 std430 은 vec4 를 16 바이트 경계에
      *          맞추는 반면 DX · Vulkan 은 DXC 가 명시 오프셋을 적어 넘어가, **OpenGL 에서만** 값이
      *          어긋납니다. 증상이 "빛 하나가 조용히 엉뚱한 위치에 있다"라 찾기 어렵습니다.
@@ -33,5 +33,5 @@ namespace sw
         float4 _extra{};
     };
 
-    static_assert( sizeof( GPULight ) == 80, "GPULight 는 float4 다섯(80바이트)이어야 한다 — 셰이더 SwLightData(lightdata.hlsli) 와 같은 크기 — 쿠킹한 stride 는 ShaderBindingValidatorTest.LightElementLayoutMatchesCPUStruct 가 본다" );
+    static_assert( sizeof( GPULight ) == 80, "GPULight 는 float4 다섯(80바이트)이어야 한다 — 셰이더 LightData(lightdata.hlsli) 와 같은 크기 — 쿠킹한 stride 는 ShaderBindingValidatorTest.LightElementLayoutMatchesCPUStruct 가 본다" );
 } // namespace sw

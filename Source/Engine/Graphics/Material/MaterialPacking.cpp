@@ -319,7 +319,7 @@ namespace sw
             /**
              * @brief 텍스처 — 붙은 텍스처의 bindless 인덱스입니다(_value 에 숫자를 적어 덮어쓰는 것도 허용한다).
              * @details 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 Vulkan 에서 첫 번째 텍스처라는 **유효한** 인덱스다(DX12 는 0 을
-             *          null 텍스처로 비워 둔다 — D3D12RHIDevice::kNullTextureBindlessIndex). 셰이더의 swSampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 처리한다.
+             *          null 텍스처로 비워 둔다 — D3D12RHIDevice::kNullTextureBindlessIndex). 셰이더의 Bindless::sampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 처리한다.
              */
             [[nodiscard]] static bool packTextureIndex( const MaterialProperty& prop, uint8* pDst, uint32 packSize )
             {

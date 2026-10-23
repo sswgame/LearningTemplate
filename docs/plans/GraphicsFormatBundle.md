@@ -4,7 +4,7 @@
 
 후보 `ForwardHdrSceneColor` · `ToonShadingCompletion` · `ViewModeCompletion`(Shaded Wireframe) · `TwoDLightingExtras` · `VrmRuntimeConsumption` 을 옮겨 왔다.
 셰이더 소스를 바꾸는 단위는 워크트리에서 커밋하지 못해 패치로 넘겼고, 통합(2026-10-22, `f33a7f91f`)에서 적용해 쿠킹했다. 다른 패치와 겹친 자리:
-2D 자유 모양 빛의 변 타입은 12(반사 프로브가 13), 드로우 루프의 보기 모드 두 번 그리기는 `isSameDrawGroup` · `drawBatchGroup` 이 받는다, 2D 쿠키는 밉 0 으로 읽는다(`swSampleLight2dCookieAtlas` — DX11 X3511).
+2D 자유 모양 빛의 변 타입은 12(반사 프로브가 13), 드로우 루프의 보기 모드 두 번 그리기는 `isSameDrawGroup` · `drawBatchGroup` 이 받는다, 2D 쿠키는 밉 0 으로 읽는다(`PassTexture::sampleLight2dCookieAtlas` — DX11 X3511).
 
 ## 1. 단계
 
@@ -12,7 +12,7 @@
 |---|---|---|
 | G1 | 포워드 파이프라인 넷의 `SceneColor`(단계 파이프라인은 `BloomColor` · `OutlineColor` 도)를 `R16G16B16A16_FLOAT` 로, `postchain.hlsl` 블룸 뒤 `saturate` 제거 | 들어감(XML 커밋, 셰이더는 통합) |
 | G2 | 툰 포워드 전용 지킴(`SW_PASS_GBUFFER` 는 `#error`) · MToon UV 애니메이션(VRMC_materials_mtoon-1.0 "Transform Order" 의 식 — 회전 뒤 스크롤, PassCB `g_SwMaterialTime`) · VRM 머티리얼 임포터 매핑(0.x 는 UniVRM 이관과 같이 v 스크롤 부호 반전 · 회전 × 2π) · 툰 머티리얼 열아홉에 프로퍼티 넷 | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
-| G3 | 모프 풀 정점에 탄젠트 칸(`GPUMorphVertex::_tangent`, `SW_MORPH_FLOAT4_PER_VERTEX` 3) — 스키닝 · 모프 컴퓨트가 탄젠트를 돌리고 툰이 `swLoadMorphedTangent` 로 읽는다 | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
+| G3 | 모프 풀 정점에 탄젠트 칸(`GPUMorphVertex::_tangent`, `SW_MORPH_FLOAT4_PER_VERTEX` 3) — 스키닝 · 모프 컴퓨트가 탄젠트를 돌리고 툰이 `MorphPool::loadTangent` 로 읽는다 | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
 | G4 | RHI 깊이 바이어스(`RHIPipelineStateDesc::_depthBias` · `_slopeScaledDepthBias`, 네 백엔드) | 커밋됨 |
 | G5 | 보기 모드 `ShadedWireframe`(11) — 표의 `_bOverlay`, 지오메트리 패스가 Lit 과 선(`SW_VIEWMODE_WIREOVERLAY`, 와이어프레임 · 바이어스 · 깊이 쓰기 끔)으로 두 번 그린다 | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |
 | G6 | 2D 조명: 자유 모양 빛(`FreeformLight2DComponent`) · 부드러운 그림자 · 섞는 방식(`Light2DBlendStyle`). `GPULight` 에 덧칸 `_extra`(80 바이트) | 들어감(통합 — 빌드 · nogpu 테스트, 화면 확인 전) |

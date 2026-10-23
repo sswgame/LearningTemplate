@@ -7,12 +7,14 @@
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
+{
     uint  g_AutoExposureSource;   // HDR 원본의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     uint  g_AutoExposureHistory;  // 지난 EV(1x1)의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
     float g_AutoExposureMinEv;    // 목표 EV 의 하한
     float g_AutoExposureMaxEv;    // 목표 EV 의 상한
     float g_AutoExposureRateUp;   // 장면이 밝아질 때(목표 EV > 지난 EV) 이번 프레임에 다가가는 비율(0..1)
     float g_AutoExposureRateDown; // 장면이 어두워질 때 다가가는 비율(0..1)
+};
 SW_ROOT_CONSTANTS_END
 
 static const uint  kAutoExposureGrid = 32u;     // 화면을 32 x 32 칸으로 나눠 칸 가운데 텍셀 하나씩 읽는다(1024 번 — 한 픽셀이 다 읽는다)
@@ -24,7 +26,7 @@ struct PSInput
     float4 position : SV_POSITION;
 };
 
-PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
+PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     input.position            = input.position;
@@ -36,7 +38,7 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID )
 float3 loadSource( int2 texel )
 {
 #if defined( SW_NATIVE_BINDLESS )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureSource ) ) )].Load( int3( texel, 0 ) ).rgb;
 #else
     return g_SwSlot0.Load( int3( texel, 0 ) ).rgb;
 #endif
@@ -46,7 +48,7 @@ float2 getSourceSize()
 {
     float2 size;
 #if defined( SW_NATIVE_BINDLESS )
-    g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
+    g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureSource ) ) )].GetDimensions( size.x, size.y );
 #else
     g_SwSlot0.GetDimensions( size.x, size.y );
 #endif
@@ -56,7 +58,7 @@ float2 getSourceSize()
 float loadHistory()
 {
 #if defined( SW_NATIVE_BINDLESS )
-    return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
+    return g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_AutoExposureHistory ) ) )].Load( int3( 0, 0, 0 ) ).r;
 #else
     return g_SwSlot1.Load( int3( 0, 0, 0 ) ).r;
 #endif

@@ -53,7 +53,7 @@ namespace sw
                 continue;
             }
             const uint32 base = static_cast<uint32>( listElement.size() );
-            // 헤더 원소: 셰이더(swComputeVertexAnimationElements)가 프레임 수, 프레임율, 정점 수, 반복을 여기서 읽는다.
+            // 헤더 원소: 셰이더(InstanceData::computeVertexAnimationElements)가 프레임 수, 프레임율, 정점 수, 반복을 여기서 읽는다.
             listElement.push_back( float4{ static_cast<float32>( pAnimation->_frameCount ), pAnimation->_framesPerSecond, static_cast<float32>( pAnimation->_vertexCount ),
                                            pAnimation->_bLoop == SW_TRUE ? 1.0f : 0.0f } );
             listElement.insert( listElement.end(), pAnimation->_listFrameVertex.begin(), pAnimation->_listFrameVertex.end() );

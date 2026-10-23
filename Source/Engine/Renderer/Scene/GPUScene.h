@@ -58,7 +58,7 @@ namespace sw
     /**
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
-     *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 SwBatchData, gpucull.hlsl 의 GPUBatchInfo 와
+     *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpucull.hlsl 의 GPUBatchInfo 와
      *          레이아웃이 같아야 한다(uint 8개, 32바이트).
      */
     struct GPUBatchInfo
@@ -87,7 +87,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 8 * sizeof( uint32 ), "GPUBatchInfo 는 uint 여덟(32바이트) — batchdata.hlsli SwBatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 8 * sizeof( uint32 ), "GPUBatchInfo 는 uint 여덟(32바이트) — batchdata.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer
@@ -213,7 +213,7 @@ namespace sw
         /**
          * @brief 정점 풀을 쓸지 정합니다(기본 켬). 끄면 배치가 자기 정점 버퍼로 그립니다(startVertex 0). 진단과 A/B 비교용입니다.
          * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 백엔드가 간접 인자의 startVertex 나 SV_VertexID 를 다르게
-         *          처리하는 것이다(binding.hlsli swComputeMorphElement 의 API 차이 참고).
+         *          처리하는 것이다(binding.hlsli MorphPool::computeElement 의 API 차이 참고).
          */
         void setVertexPoolEnabled( bool bEnabled );
         /**
@@ -291,7 +291,7 @@ namespace sw
          * @brief 뷰별 컬링 산출물입니다. 언리얼의 FInstanceCullingContext 가 뷰마다 있는 것과 같은 구조입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
-         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽는다(binding.hlsli swResolveInstanceId). 이것이 없으면 컬링이
+         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽는다(binding.hlsli InstanceData::resolveId). 이것이 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수 없기 때문이다).
          *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
          */

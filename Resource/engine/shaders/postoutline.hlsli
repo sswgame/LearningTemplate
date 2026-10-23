@@ -5,15 +5,20 @@
 #ifndef SW_ENGINE_POSTOUTLINE_HLSLI
 #define SW_ENGINE_POSTOUTLINE_HLSLI
 
+struct Outline
+{
+    static float3 apply( float2 uv, float2 texel, float3 color );
+};
+
 /**
  * @brief 깊이 불연속에 외곽선 색을 섞어 돌려줍니다.
  * @param color 이미 읽어 둔 이 픽셀의 색(블룸을 거쳤으면 그 결과) — 부르는 쪽이 한 번만 읽는다.
  */
-float3 swApplyOutline( float2 uv, float2 texel, float3 color )
+static float3 Outline::apply( float2 uv, float2 texel, float3 color )
 {
     float  centerDepth;
     float4 neighborDepth;
-    swSampleDepthCross( uv, texel, centerDepth, neighborDepth );
+    PassTexture::sampleDepthCross( uv, texel, centerDepth, neighborDepth );
 
     // 네 이웃과의 차이 합. **합이라 이웃 순서는 상관없다** — 게더 성분 순서가 백엔드마다 달라도 같은 값이다.
     float4 depthDifference = abs( neighborDepth - centerDepth.xxxx );

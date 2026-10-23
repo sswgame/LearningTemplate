@@ -34,7 +34,7 @@ namespace sw
 
     /**
      * @brief GPU 인스턴스 하나를 나타냅니다. 월드 행렬, 바운드, 배치 인덱스, 머티리얼 원소 인덱스, 블렌드, 회전 시드, 스프라이트 프레임과 색을 가집니다.
-     * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `SwInstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
+     * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `InstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
      *          필드를 고치면 그 파일과 ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 의 테이블을 함께 고친다(쿠킹된 바이너리로 대조한다).
      */
     struct GPUInstance
@@ -58,7 +58,7 @@ namespace sw
          */
         GPUSpriteInstanceData _sprite{};
         /**
-         * @brief 정점 애니메이션(VAT) 시간 오프셋(초)입니다. VAT 가 걸린 메시만 읽습니다(binding.hlsli `swLoadAnimatedVertex`).
+         * @brief 정점 애니메이션(VAT) 시간 오프셋(초)입니다. VAT 가 걸린 메시만 읽습니다(binding.hlsli `InstanceData::loadAnimatedVertex`).
          * @details 셰이더는 VAT 시계(`GPUSceneSnapshot::_vertexAnimationTime`)에 이 값을 더한 시각의 프레임을 그린다. 군중 시스템이 VAT 로 넘길 때
          *          그 캐릭터의 클립 시각에 맞춰 한 번 기록하고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않는다. 셰이더의 `vertexAnimationPhase` 에 해당한다.
          */
@@ -68,7 +68,7 @@ namespace sw
         /**
          * @brief 등장 비율(0 ~ 1)입니다. 1 이면 다 보인다. 1 보다 작은 인스턴스는 디더 변형(`kAppearanceDitherDefine`)으로 그려져 그 비율만큼의 픽셀만 남는다.
          * @details 로드가 끝난 메시 · 텔레포트 · 사라지기가 이 값을 올리고 내린다(`MeshComponent::beginAppearance`). 디더 문턱은 화면 픽셀의 4x4 Bayer 행렬이라
-         *          깊이 프리패스 · 그림자 · 기본 패스가 같은 픽셀을 버린다(binding.hlsli `swClipAppearanceDither`). 셰이더의 `appearance` 에 해당한다.
+         *          깊이 프리패스 · 그림자 · 기본 패스가 같은 픽셀을 버린다(binding.hlsli `Appearance::clipDither`). 셰이더의 `appearance` 에 해당한다.
          */
         float32 _appearance{ 1.0f };
         uint32  _arrReserved[1]{}; ///< 원소를 128바이트(16의 배수)로 맞춘다. 셰이더의 `reserved1` 에 해당한다.
@@ -77,7 +77,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
+    static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시, 머티리얼, 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GPUMeshBatch
@@ -101,7 +101,7 @@ namespace sw
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
          * @details RT 가 `GPUScene::assignMorphBases` 로 채운다. GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). upload 가 이 값을
-         *          배치 테이블(`GPUBatchInfo`, g_SwBatches t9)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽는다(binding.hlsli swComputeMorphElement).
+         *          배치 테이블(`GPUBatchInfo`, g_SwBatches t9)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽는다(binding.hlsli MorphPool::computeElement).
          */
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
         /**

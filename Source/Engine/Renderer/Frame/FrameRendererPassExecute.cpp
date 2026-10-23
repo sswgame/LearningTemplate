@@ -1033,7 +1033,7 @@ namespace sw
         if ( material != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
-        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom|autoExposure, depth|shadow].
+        // 슬롯 테이블은 binding.hlsli 의 Bindless::sampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom|autoExposure, depth|shadow].
         // 한 슬롯을 나눠 쓰는 것들은 같은 패스에서 함께 읽히지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom, 쿠키는 빛 받는 스프라이트 — 2D 패스엔 알베도 · AO 가 없다,
         // 자동 노출은 톤맵하는 패스 — Tonemap · 후처리 체인 Present 는 노멀 · 반해상도 블룸을 읽지 않는다).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
