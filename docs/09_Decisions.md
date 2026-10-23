@@ -293,9 +293,12 @@
 - **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다(Godot 도 빌드 정의로 준다).
   헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
-- **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [후보 문서](plans/Candidates-project.md) `C-11`): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
+- **규칙 예외 감사에서 정한 넷**(2026-10-07, 적용 상태는 [RuleExceptionAudit](plans/RuleExceptionAudit.md)): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
+- **게이트와 짝 픽서 · 보고서가 나눠 쓰는 판정은 린트 틀 층(`Scripts/lint/*Rules.py`)에 둡니다**(2026-10-24). 게이트의 변환 · 판정을 픽서가 부르면 층 2 끼리 import 하지 못하는 규칙(`CheckScriptLayers`)에 예외 줄이 늘었습니다.
+  `LoopBraceRules` · `IncludeOrderRules` · `NamespaceBlockRules` · `DiscardReasonRules` 로 옮겨 네 줄을 지웠고, 셀프테스트가 자기 게이트를 부르는 둘은 게이트 내부를 검사하는 일이라 남깁니다.
+- **로그 · assert 문자열의 한글은 게이트 `CheckLogLanguage` 가 막고, 기존 줄은 폴더 단위 예외로 받아 줄여 갑니다**(2026-10-24). 규칙(AGENTS.md)만 있고 게이트가 없어 약 270 곳으로 늘었습니다. 폴더를 영어로 옮기면 그 예외가 낡은 줄로 실패해 지우게 해, 예외는 늘지 못하고 줄기만 합니다([KoreanLogStrings](plans/KoreanLogStrings.md)).
 - **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 의 `.clang-tidy`, 언리얼의 `.ini` 처럼 코드 밖에 두는 것입니다.
   형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고 YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어,
   쓰는 문법만 아는 부분 집합 읽기를 같이 두고 `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).

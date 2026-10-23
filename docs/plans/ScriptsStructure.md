@@ -83,4 +83,4 @@ Scripts/
   `TestDevWorktreeTools` 가 둘을 견준다. 세션 설정이라 사용자가 주석을 `common/ExitCode.py` 의 `CiFailing` 으로 고친다.
 - 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). 위 `SessionGuard.py` 주석만 남았다.
 - 층 게이트의 CookAssets 간선 예외는 PK4 가 쿠커를 지울 때 함께 사라졌다(`CheckScriptLayers.toml` 에 `CookAssets` 가 없음을 2026-10-23 확인).
-  게이트와 짝 명령의 간선은 [ScriptsPairedLintRules](Candidates-project.md#scriptspairedlintrules) 후보다.
+  게이트와 짝 명령의 간선(픽서 셋 · 보고서 하나)은 판정을 `lint/LoopBraceRules` · `IncludeOrderRules` · `NamespaceBlockRules` · `DiscardReasonRules`(층 1)로 옮겨 예외 네 줄을 지웠다(2026-10-24). 셀프테스트 둘이 자기 게이트를 부르는 예외는 게이트 내부를 검사하는 일이라 남긴다.
