@@ -2,24 +2,24 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: ui · 옛번호: D6-2 · 진행: 2/3
 
-런타임 UI 입력 중 둘이 남아 있었다. 에디터 게임 뷰(Game 패널) 안의 포인터 좌표와 리눅스의 운영체제 클립보드다. 둘 다 코드가 들어갔고(I1 · I2, 빌드 미확인) 빌드 · 실기 확인이 남았다.
+런타임 UI 입력 중 둘이 남아 있었다. 에디터 게임 뷰(Game 패널) 안의 포인터 좌표와 리눅스의 운영체제 클립보드다. 둘 다 코드가 들어갔고(I1 · I2) Windows 빌드 · 단위 테스트는 끝났다. 실기 확인과 리눅스 빌드가 남았다.
 단위가 끝나면 그 절을 지운다.
 
 ## 1. 단위
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| I3 | 빌드 · 테스트와 실기 확인 | 없음 |
+| I3 | 리눅스 빌드와 실기 확인(GPU/실기 확인 대기) | 없음 |
 
-### I3 빌드 · 테스트와 실기 확인
+### I3 리눅스 빌드와 실기 확인
 
-코드로 할 수 있는 몫(테스트 · 떼어 낸 패널 · INCR)은 들어갔다. 남은 것은 짓고 돌려 보는 일이다.
+Windows 빌드 · 단위 테스트는 끝났다(2026-10-23, `wt/uibuild`). `EditorAPI` 표의 모양이 바뀌어 `kModuleAbiVersion` 이 8 이므로 `full-build`(Debug, `all AllTests` — App · EditorModule · 모든 게임 모듈)로 함께 지었고 경고 0 · 오류 0 이다.
+`EngineTest --test_filter=UIInputTest.PointerPositionSubtractsViewportOrigin:UIInputTest.PointerPositionIsInUIUnits` 2/2, `EditorUITest --test_filter=ImGuiKeyForwardTest.*` 3/3 통과. 남은 것은 아래다.
 
-- 빌드: `EditorAPI` 표의 모양이 바뀌어 `kModuleAbiVersion` 이 8 이다 — App · EditorModule · 게임 모듈을 함께 다시 짓는다. 리눅스 클라이언트 빌드(`X11Window.cpp` · `X11Clipboard.cpp`)는 이 PC 에서 짓지 못했다.
-- 테스트: `EngineTest --test_filter=UIInputTest.PointerPositionSubtractsViewportOrigin:UIInputTest.PointerPositionIsInUIUnits`.
+- 리눅스 클라이언트 빌드(`X11Window.cpp` · `X11Clipboard.cpp`): WSL 클론에서 짓는다. 아직 짓지 못했다.
 - 게임 뷰 포인터(Windows 에디터): `-EnableEditor` 로 메뉴가 있는 게임(Shooter3D 일시정지 메뉴)을 Play 하고 게임 뷰 단추를 눌러 반응하는지 본다. 도크 가운데 · 레터박스(종횡비 고정) · 패널을 떼어 다른 OS 창에 둔 경우 셋을 본다.
 - 리눅스 클립보드: 글 입력 칸에서 복사한 글을 다른 프로그램(터미널 · 편집기)에 붙여넣고, 반대로도 한다. 한글이 깨지지 않는지, 수 MB 글(INCR)을 받는 쪽 · 보내는 쪽 모두 되는지 본다(보내는 쪽 INCR 은 상대가 조각을 지울 때마다 다음 조각을 적는 `X11Window::handleIncrPropertyEvent`).
-- 떼어 낸 게임 뷰 창의 키보드(Windows 에디터): 패널을 다른 OS 창으로 떼어 포커스를 준 채 이동 키 · 글자를 눌러 게임이 받는지, 키를 누른 채 창을 바꿔도 키가 눌린 채 남지 않는지 본다. 테스트: `EditorUITest --test_filter=ImGuiKeyForwardTest.*`.
+- 떼어 낸 게임 뷰 창의 키보드(Windows 에디터): 패널을 다른 OS 창으로 떼어 포커스를 준 채 이동 키 · 글자를 눌러 게임이 받는지, 키를 누른 채 창을 바꿔도 키가 눌린 채 남지 않는지 본다.
 
 ## 2. 끝난 단위의 확인 목록
 
