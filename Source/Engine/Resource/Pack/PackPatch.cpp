@@ -17,11 +17,13 @@ namespace sw
     {
         struct PackPatchInternal
         {
-            static constexpr const utf8* kRootName    = "PackPatch";
-            static constexpr const utf8* kRemovedName = "Removed";
-            static constexpr const utf8* kRecordRoot  = "PackBuild";
-            static constexpr const utf8* kEntryName   = "Entry";
-            static constexpr int32       kHashDigits  = 16; ///< 내용 해시의 16 진수 자리 수(64 비트)
+            static constexpr const utf8* kRootName      = "PackPatch";
+            static constexpr const utf8* kRemovedName   = "Removed";
+            static constexpr const utf8* kRecordRoot    = "PackBuild";
+            static constexpr const utf8* kEntryName     = "Entry";
+            static constexpr const utf8* kPatchingChain = "chain";
+            static constexpr const utf8* kPatchingNone  = "none";
+            static constexpr int32       kHashDigits    = 16; ///< 내용 해시의 16 진수 자리 수(64 비트)
 
             /** @brief 16 자리 16 진수 글을 64 비트 값으로 읽습니다. 자리 수나 글자가 틀리면 false 입니다. */
             [[nodiscard]] static bool parseHash( string_view text, uint64& outHash )
@@ -162,6 +164,27 @@ namespace sw
             SW_LOG_ERROR( "Pack build record %# has no <%#> root", sourceName, PackPatchInternal::kRecordRoot );
             return false;
         }
+        const std::optional<string> patching = root.readRequiredAttribute<string>( "patching" );
+        if ( patching.has_value() == false )
+            return false; // 옛 기록(patching 이 없는 것)은 다시 굽는다 — 없는 값을 chain 으로 보지 않는다
+        if ( *patching == PackPatchInternal::kPatchingChain )
+            outRecord._patching = PackPatching::Chain;
+        else if ( *patching == PackPatchInternal::kPatchingNone )
+            outRecord._patching = PackPatching::None;
+        else
+        {
+            SW_LOG_ERROR( "Pack build record %#: patching '%#' is neither '%#' nor '%#'", sourceName, *patching, PackPatchInternal::kPatchingChain, PackPatchInternal::kPatchingNone );
+            return false;
+        }
+        if ( outRecord._patching == PackPatching::None )
+        {
+            if ( root.findChild( PackPatchInternal::kEntryName ).isValid() || root.findAttribute( "build" ) != nullptr )
+            {
+                SW_LOG_ERROR( "Pack build record %#: patching '%#' carries no build number or entries", sourceName, PackPatchInternal::kPatchingNone );
+                return false;
+            }
+            return true;
+        }
         const std::optional<string> build = root.readRequiredAttribute<string>( "build" );
         if ( build.has_value() == false )
             return false;
@@ -202,6 +225,9 @@ namespace sw
         { return pLeft->_path < pRight->_path; } );
         XMLDocument   document;
         const XMLNode root = document.appendRoot( PackPatchInternal::kRecordRoot );
+        root.appendAttribute( "patching", string_view{ record._patching == PackPatching::None ? PackPatchInternal::kPatchingNone : PackPatchInternal::kPatchingChain } );
+        if ( record._patching == PackPatching::None )
+            return document.saveToString(); // 패치를 쓰지 않는 빌드는 번호도 내용 목록도 갖지 않는다
         root.appendAttribute( "build", string_view{ record._build } );
         for ( const PackContentEntry* pEntry : listSorted )
         {

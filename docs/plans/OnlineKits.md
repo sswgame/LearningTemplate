@@ -36,7 +36,7 @@
 | G2 | 우편의 오프라인 푸시 연결(`IOfflinePushSender`) | 없음 | 끝남(빌드 미확인) |
 | G5 | 라이브 이벤트 시작의 오프라인 푸시(전체 대상이라 제공자의 토픽 발송이 필요하다) | G4 | 끝남(2026-10-22 Debug 빌드 · 테스트 통과) |
 | G3 | 이벤트 운영 화면(GF_Admin 패널) | C1 | 끝남(빌드 미확인) |
-| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 공통 HTTP 클라이언트에 HTTP/2 가 들어온 뒤) |
+| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 HTTP/2 클라이언트 단계 H2-1(프레임 · HPACK 부호기와 허프만 없는 복호기) 코드가 들어감 — 아래 3절 G4 단계표. 확인 대기: 매니페스트 id `http2-codec-tests`) |
 | H1 | 환불과 결제 취소 알림을 받아 `refund.revoke` 로 회수 | 없음 | 끝남(빌드 미확인) |
 | H2 | 유상 재화 청약철회 규칙 | H1 | 끝남(빌드 미확인) |
 | H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 끝남(2026-10-22 Debug 빌드 · 테스트 통과. 애플은 가짜 앱 스토어 서버와 테스트용 인증서 사슬로만 확인했다 — 실제 앱 스토어 응답 확인은 iOS 빌드가 생길 때) |
@@ -47,7 +47,7 @@
 | I4 | 분개, 감사, 우편, 멱등, 구매 기록의 보존 기간 정리 | I3 | 끝남(빌드 미확인) |
 | I5 | 접속하지 않은 계정의 이름 찾기 | 없음 | 끝남(빌드 미확인) |
 | I6 | GM 전용 호스트 포트를 서버 설정에(`_adminServicePort` · `_adminListenAddress`, 서비스의 노출 `getExposure` 로 리슨을 가른다 — 아래 3절 I6) | 없음 | 끝남(2026-10-23 Debug 빌드 경고 0 · 테스트 통과. GM 도구의 GM 포트 접속은 2026-10-24 코드로 들어감 — 빌드 전. 확인 대기: 매니페스트 id `admin-gm-port-real`) |
-| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 남음(UI 문서 · 화면 확인이 필요해 온라인 키트 작업자의 범위 밖 — 아래 3절 U1) |
+| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 일부(서버 고르기 화면 — `ServerListModel` · `ServerPickerScreen` · `Resource/common/ui/online/serverpicker.ui.xml`, 2026-10-24 빌드 전. 채팅 · 친구 목록은 남음 — 아래 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
 | M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 들어감 — 돌려 숫자를 남기는 일만 남았다) |
 
 ## 4. 결정 (2026-10-22, 권고안 — 사용자 지시로 되묻지 않고 정했다)
@@ -96,7 +96,12 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작의 토
   언어 토픽은 두지 않는다(문구가 현지화 키라 기기가 푼다 — 4절의 "지역 · 언어 토픽"을 이것으로 바꿨다). 같은 창을 서버 여럿이 보내지 않도록 `liveops_push` 표를 "없어야 한다" 조건으로 써서(`notifyTopicOnce`) 쓴 서버만 보낸다.
   앱은 자기 지역의 토픽을 구독한다(`LiveOpsPush::makeRegionTopic`). 서버가 다시 떠서 이미 열려 있던 이벤트를 새로 알리지 않는다(열린 지 10 분이 지난 창은 알리지 않는다).
 - **함정**: `liveops_push` 표는 창마다 한 줄이고 지우지 않는다(보존 기간 정리 규칙이 없다 — 하루 한 번 반복하는 이벤트는 한 해에 365 줄). 서버 하나의 `Retry` 가 없다 — 표를 쓴 서버가 제공자 호출 전에 죽으면 그 알림은 나가지 않는다(중복보다 놓침을 택했다).
-  APNs 는 HTTP/2 가 필수라 공통 HTTP 클라이언트(HTTP/1.1)에 HTTP/2 가 들어온 뒤 `Provider/` 에 더한다.
+  APNs 는 HTTP/2 가 필수라 공통 HTTP 클라이언트(HTTP/1.1)와 따로 HTTP/2 클라이언트를 단계로 쌓은 뒤 `Provider/Apns/` 에 더한다. 오픈 소스 라이브러리를 들이지 않는 이유: 이 저장소의 HTTP 는 자체 TLS 계층 위에 있어 라이브러리의 소켓 · TLS 와 맞지 않는다.
+  - **H2-1(2026-10-24, 빌드 전)**: `Base/Online/HTTP/HTTP2Frame`(연결 서문 · 프레임 머리 · SETTINGS · WINDOW_UPDATE · PING · HEADERS · DATA · RST_STREAM · GOAWAY 바이트)와 `Hpack`(정적 표 · 동적 표 · 정수 · 글자 그대로의 부호기와 복호기). 복호기는 허프만 문자열을 만나면 오류로 멈춘다. 테스트 `HTTP2Test.*`.
+  - **H2-2(남음)**: 허프만 표(RFC 7541 부록 B 의 257 부호)를 넣어 복호기가 서버 응답 머리를 읽게 한다. 표를 외워 옮기지 말고 RFC 본문에서 기계적으로 옮겨 RFC C.4 · C.6 의 허프만 예 바이트로 테스트한다.
+  - **H2-3(남음)**: TLS 계층의 ALPN(`h2`) 협상(`ITLSContext`/`ITLSSession`, OpenSSL 구현). 지금 TLS 계층에 ALPN 이 없다.
+  - **H2-4(남음)**: `HTTP2Connection`(스트림 상태 · 연결/스트림 흐름 제어 창 · SETTINGS 교환 · GOAWAY 처리)과 `IHTTPClient` 어댑터. 가짜 HTTP/2 서버(`FakeIssuerHandler` 모양)로 테스트.
+  - **H2-5(남음)**: `Provider/Apns/ApnsPushProvider`(제공자 서명 JWT ES256 — `JSONWebToken::makeSigned`, `apns-topic` · `apns-push-type`, 상태 대응 200/410/429/5xx/403).
 
 ### H3
 
@@ -146,12 +151,14 @@ GM 전용 호스트 포트를 서버 설정에 — 2026-10-23 들어감. 계약�
 
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure` · `WithoutAnAdminListenerOneListenerServesEveryService`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동(`_adminServicePort` 를 준 설정 파일)은 확인하지 않았다.
 - GM 도구 접속(2026-10-24, `wt/plannet`, 빌드 전): `AdminToolConnection`(에디터 확장 Admin)이 전송 · `OnlineServiceClient` · `AdminClient` 를 들고 `host:port` 하나로 건다. `AdminToolSession::connectLive` · `disconnectLive` · `updateConnection` 이 감싸고 패널의 제공자 줄에 주소 칸과 Connect 단추를 더했다. 주소에 포트가 없으면 거절한다(기본 포트로 대신 걸지 않는다).
-  로그인은 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 부르는 쪽이 `getConnection().setLoginHook` 으로 끼운다 — 훅이 없으면 `Ready` 에서 멈추고 서버가 `NotLoggedIn` 으로 거절한다. 그 훅을 끼우는 계정 키트 쪽 도우미(GM 계정 로그인)는 아직 없다. 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
+  로그인은 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 부르는 쪽이 `getConnection().setLoginHook` 으로 끼운다 — 훅이 없으면 `Ready` 에서 멈추고 서버가 `NotLoggedIn` 으로 거절한다. 훅을 끼우는 쪽 도우미 `AccountGmLogin`(계정 키트 `Account/Shared/API`, 2026-10-24, 빌드 전)이 계정 클라이언트 등록(`attach` — 연결을 열기 전에 `getConnection().getServiceClient()` 로) · 이름과 비밀번호 로그인(`onReady` — 토큰이 있으면 재접속을 계정 클라이언트가 하므로 보내지 않는다) · 응답 읽기(`update`)를 맡고, 비밀번호는 응답을 받으면 지운다. 두 키트를 함께 아는 조립 쪽(도구 실행 파일 · 게임)이 `setLoginHook` 에 `onReady` 를 건다. 이 조립을 하는 도구 실행 파일은 아직 없다 — 에디터 안에서는 설정 화면이 이름 · 비밀번호를 받는 UI 가 필요하다(U1 과 같은 UI 일). 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
 
 ### U1
 
-클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) — 남음. UI 문서(`.ui.xml`) · 바인딩 · 화면 확인(자동화 시나리오 캡처)이 필요한 일이라 UI 영역 작업자의 범위이고, 온라인 키트 작업자(`wt/onlinekits`)는 UI 쪽을 건드리지 않는 범위로 일했다.
-위젯이 읽을 클라이언트 쪽 시설은 이미 있다(`ChatClient` 의 채널 · 메시지 꺼내기, `ServerDirectoryClient` 의 목록, `SocialClient` 의 친구 목록 응답). 남은 조건: UI 영역 작업자가 위 세 클라이언트의 `poll*` 결과를 `ListViewWidget` 에 묶는 문서와 시나리오 캡처를 만든다.
+클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록). 모양은 "모델 + 화면"이다 — 모델(`ServerListModel`)이 클라이언트 응답을 받아 목록 · 상태 · 판(revision)을 들고, 화면(`UIScreen` 파생)이 모델을 읽어 줄을 만든다. 화면이 요청을 직접 보내지 않으므로 응답 델리게이트가 화면 수명에 묶이지 않는다.
+- **서버 고르기(2026-10-24, 빌드 전)**: `Kits/Feature/Online/ServerDirectory/Shared/ServerListModel` · `ServerPickerScreen`. 문서 경로는 게임이 `ServerPickerScreen::open( ui, 경로, 모델, 종류, 고른 뒤 델리게이트 )` 에 준다(코드에 기본 경로가 없다). 견본 문서는 `Resource/common/ui/online/serverpicker.ui.xml`(패널 `Servers`, 글 `Status`, 명령 `Refresh` · `Close`). `Open` 이 아닌 서버의 단추는 꺼진다. 목록을 못 받으면 낡은 목록을 비우고 이유를 `Status` 에 적는다. 테스트 `ServerListModelTest`.
+- **시나리오는 아직 없다**: 화면을 띄울 게임 장면과 서버 목록을 채우는 가짜 클라이언트(응답 주입)가 필요하다 — 서버 디렉터리 서버 키트를 한 프로세스에 띄우는 시나리오 시설이 먼저다(F5 의 두 프로세스 시나리오와 같은 시설).
+- **남음**: 채팅(`ChatClient` 의 채널 · 메시지 꺼내기 → 모델 + 입력 줄 화면), 친구 목록(`SocialClient` 의 친구 응답 → 모델 + 화면). 같은 모양으로 쓴다. 계정 이름 · 비밀번호를 받는 GM 도구 설정 화면도 이 일이다.
 
 ### F2
 
