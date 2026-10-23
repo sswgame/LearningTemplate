@@ -14,6 +14,7 @@ namespace sw
         , _bClosed{ false }
         , _localPath{}
         , _worldPath{}
+        , _pathRevision{ 0 }
     {
     }
 
@@ -55,6 +56,7 @@ namespace sw
 
     void SplineComponent::freezeWorldPath()
     {
+        ++_pathRevision;
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )

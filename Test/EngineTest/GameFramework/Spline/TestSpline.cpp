@@ -3,8 +3,15 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/World/Spline/SplinePath.h"
+#include "Engine/Environment/Water/WaterBodyComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Base/World/Spline/SplineComponent.h"
+#include "GameFramework/Base/World/Spline/SplinePath.h"
+#include "GameFramework/Base/World/Spline/SplineRiverPathComponent.h"
+
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -124,4 +131,97 @@ SW_TEST_CASE( SplineTest, ClosestPointReturnsArcDistance )
     const SplineSample onCurve = curve.sampleAtDistance( curve.getLength() * 0.3f );
     const SplineSample found   = curve.findClosest( onCurve._position + float3{ 0.0f, 1.0f, 0.0f } ); // 곡선 바로 위
     SW_EXPECT_NEAR_EQUAL( onCurve._distance, found._distance, 0.02f );
+}
+
+/**
+ * @brief [SplineRiverPathTest] 샘플은 월드 곡선을 물 위치 기준 점으로 바꾼다 — 끝점을 포함하고 간격이 일정하며 곡선이 비면 비운다
+ */
+SW_TEST_CASE( SplineRiverPathTest, SamplesAreRelativeToTheWaterPosition )
+{
+    SplinePath worldPath;
+    SW_ASSERT_TRUE( worldPath.initialize( {
+                                              float3{10.0f, 3.0f, -5.0f},
+                                              float3{20.0f, 3.0f, -5.0f},
+                                              float3{20.0f, 1.0f,  5.0f}
+    },
+                                          SplineType::Linear, false, 8 ) );
+    const float3   waterPosition{ 10.0f, 3.0f, -5.0f };
+    vector<float3> listPoint;
+    SplineRiverPathComponent::sampleRiverPoints( worldPath, waterPosition, 5.0f, listPoint );
+    SW_ASSERT_TRUE( listPoint.size() >= 5 );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listPoint.front()._x, 1.0e-4f ); // 첫 점은 물 위치
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listPoint.front()._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, listPoint.back()._x, 1.0e-4f ); // 끝점은 월드 (20, 1, 5) − 물 위치
+    SW_EXPECT_NEAR_EQUAL( -2.0f, listPoint.back()._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, listPoint.back()._z, 1.0e-4f );
+
+    SplinePath emptyPath;
+    SplineRiverPathComponent::sampleRiverPoints( emptyPath, waterPosition, 5.0f, listPoint );
+    SW_EXPECT_TRUE( listPoint.empty() );
+    SplineRiverPathComponent::sampleRiverPoints( worldPath, waterPosition, 0.0f, listPoint );
+    SW_EXPECT_TRUE( listPoint.empty() ); // 간격 0 은 샘플할 수 없다
+}
+
+/**
+ * @brief [SplineRiverPathTest] 어댑터가 스플라인으로 강 경로를 덮는다 — 물이 어댑터 구동으로 바뀌고, 스플라인을 고치면 다음 틱에 경로가 따라오며, 어댑터를 지우면 구동이 풀린다
+ */
+SW_TEST_CASE( SplineRiverPathTest, AdapterDrivesTheRiverPathFromTheSpline )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "River" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    WaterBodyComponent* pWater = pObject->addComponent<WaterBodyComponent>();
+    SW_ASSERT_NOT_NULL( pWater );
+    pWater->setShape( WaterBodyShape::River );
+    pWater->setLocalPosition( float3{ 10.0f, 3.0f, -5.0f } );
+    pWater->setMaterialPath( "" );
+    SplineComponent* pSpline = pObject->addComponent<SplineComponent>();
+    SW_ASSERT_NOT_NULL( pSpline );
+    manager.flushSceneTransforms();
+    pSpline->setControlPoints( {
+                                   float3{ 0.0f, 0.0f,  0.0f},
+                                   float3{10.0f, 0.0f,  0.0f},
+                                   float3{10.0f, 0.0f, 10.0f}
+    },
+                               SplineType::Linear, false );
+    SW_EXPECT_FALSE( pWater->isRiverPathDriven() );
+
+    SplineRiverPathComponent* pAdapter = pObject->addComponent<SplineRiverPathComponent>();
+    SW_ASSERT_NOT_NULL( pAdapter );
+    pAdapter->setSampleSpacing( 2.0f );
+    SW_ASSERT_TRUE( pAdapter->refreshRiverPath( true ) );
+    SW_EXPECT_TRUE( pWater->isRiverPathDriven() );
+    SW_ASSERT_TRUE( pWater->getRiverPoints().size() >= 10 );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pWater->getRiverPoints().front()._x, 1.0e-3f ); // 스플라인 조절점은 오너 로컬이고 물 위치가 오너 위치다
+    SW_EXPECT_NEAR_EQUAL( 10.0f, pWater->getRiverPoints().back()._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, pWater->getRiverPoints().back()._z, 1.0e-3f );
+    // 같은 곡선 · 같은 위치면 다시 넘기지 않는다.
+    SW_EXPECT_FALSE( pAdapter->refreshRiverPath( false ) );
+
+    // 스플라인을 고치면 곡선 번호가 올라 다음 틱에 경로가 따라온다.
+    pSpline->setControlPoints( {
+                                   float3{0.0f, 0.0f, 0.0f},
+                                   float3{4.0f, 0.0f, 0.0f}
+    },
+                               SplineType::Linear, false );
+    test::updateFrames( manager, 2 );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pWater->getRiverPoints().back()._x, 1.0e-3f );
+
+    pObject->removeComponent( pAdapter );
+    test::updateFrames( manager, 1 );
+    SW_EXPECT_FALSE( pWater->isRiverPathDriven() );
+}
+
+/**
+ * @brief [SplineRiverPathTest] 물이나 스플라인이 없으면 넘기지 않고 실패한다 — 다른 경로로 대신하지 않는다
+ */
+SW_TEST_CASE( SplineRiverPathTest, MissingSourceFailsWithoutFallback )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Lonely" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SplineRiverPathComponent* pAdapter = pObject->addComponent<SplineRiverPathComponent>();
+    SW_ASSERT_NOT_NULL( pAdapter );
+    test::ScopedLogSuppressor suppressor;
+    SW_EXPECT_FALSE( pAdapter->refreshRiverPath( true ) );
 }

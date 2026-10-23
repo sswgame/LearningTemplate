@@ -125,6 +125,7 @@ namespace sw
         , _cellSize{ 1.0f }
         , _listRiverPoint{}
         , _riverWidth{ 6.0f }
+        , _bRiverPathDriven{ false }
         , _listWave{}
         , _shallowColor{ 0.10f, 0.45f, 0.45f, 0.35f }
         , _deepColor{ 0.01f, 0.08f, 0.16f, 0.92f }
@@ -238,6 +239,27 @@ namespace sw
     {
         _listRiverPoint = listPoint;
         _riverWidth     = width;
+    }
+
+    void WaterBodyComponent::setRiverPathFromSource( const vector<float3>& listLocalPoint )
+    {
+        _listRiverPoint   = listLocalPoint;
+        _bRiverPathDriven = true;
+        // 수면 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 중이면 틱 뒤로 미룬다(onTick 의 원점 갱신과 같은 길).
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+        {
+            rebuildSurface();
+            return;
+        }
+        pManager->executeOrDeferPostTickOnComponent( *this, []( WaterBodyComponent& water )
+        { water.rebuildSurface(); } );
+    }
+
+    void WaterBodyComponent::clearRiverPathSource()
+    {
+        _bRiverPathDriven = false;
     }
 
     void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const

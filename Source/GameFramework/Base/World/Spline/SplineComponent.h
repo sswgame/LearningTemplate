@@ -44,6 +44,10 @@ namespace sw
         const SplinePath& getLocalPath() const { return _localPath; }
         /** @brief 고정한 월드 곡선입니다. 플레이 전이면 마지막으로 고정한 것입니다(`freezeWorldPath`). */
         const SplinePath& getWorldPath() const { return _worldPath; }
+        /**
+         * @brief 월드 곡선을 다시 굳힐 때마다 오르는 번호입니다. 곡선을 읽어 가는 쪽(`SplineRiverPathComponent`)이 마지막으로 읽은 번호와 견주어 편집을 안다 — 이벤트를 두지 않는다.
+         */
+        uint32 getPathRevision() const { return _pathRevision; }
 
     private:
         void rebuildLocalPath();
@@ -60,5 +64,6 @@ namespace sw
 
         SplinePath _localPath;
         SplinePath _worldPath;
+        uint32     _pathRevision;
     };
 } // namespace sw

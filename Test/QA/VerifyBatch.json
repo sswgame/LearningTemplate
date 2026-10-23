@@ -434,6 +434,31 @@
       "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "Tracy 로 그 프레임을 보는 일이라 표로 판정할 값이 없다(gv_profileTracePath 트레이스를 사람이 연다)",
       "source": "docs/plans/Candidates-quality.md", "result_doc": "docs/plans/Candidates-quality.md 부하 검증 후보"
+    },
+    {
+      "id": "shader-patches-cook", "title": "docs/plans/ShaderPatches 의 패치를 번호 순으로 적용하고 네 백엔드로 셰이더 쿠킹(소스와 바이너리를 함께 커밋)", "kind": "cook", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "git apply 로 패치를 쌓는 일과 충돌 해결이 먼저고, 적용한 뒤 빌드 → App --cook-shaders 를 한 명령으로 묶은 것이 없다",
+      "source": "docs/plans/ShaderPatches/README.md", "result_doc": "docs/plans/ShaderPatches/README.md 의 패치 파일을 지운다"
+    },
+    {
+      "id": "spline-river-path-tests", "title": "스플라인 강 경로 어댑터 테스트(SplineRiverPathTest · WaterTest)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "SplineRiverPathTest.*,WaterTest.*,SplineTest.*",
+      "source": "docs/plans/EnvironmentRemainders.md E1", "result_doc": "docs/plans/EnvironmentRemainders.md E1"
+    },
+    {
+      "id": "vfx-gpu-lights-tests", "title": "GPU 파티클 라이트 테스트(생산자 규칙 · 슬롯 나누기 · 깊이 충돌 + 라이트 로드 · CPU 라이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "GPULightBufferTest.*,VfxGPUSimulationTest.*,VfxEffectDefTest.*,VfxComponentTest.*",
+      "source": "docs/plans/VfxGpuLights.md 3절 L4", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"
+    },
+    {
+      "id": "vfx-gpu-lights-scenario", "title": "vfxgpulights 시나리오(네 백엔드 — 바닥 밝기가 효과를 멀리 보내면 달라진다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/vfxgpulights.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/VfxGpuLights.md 3절 L5", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"
+    },
+    {
+      "id": "vfx-gpu-lights-measure", "title": "GPU 파티클 라이트 슬롯 32 · 128 · 256 에서 컴퓨트 프리패스 GPU 시간(RT.Vfx.Simulate)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "슬롯 수를 바꾸는 perf-compare 케이스가 없다(vfxgpulights 씬을 슬롯별 효과 파일로 돌리는 케이스를 더하는 일)",
+      "source": "docs/plans/VfxGpuLights.md 4절", "result_doc": "docs/plans/VfxGpuLights.md 4절"
     }
   ]
 }

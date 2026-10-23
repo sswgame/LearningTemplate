@@ -34,7 +34,7 @@
 | L2 | 그리드 생산자가 GPU 구간을 보게 한다 | **들어감** — 2절 2번: 구간이 라이트 수에 들어 코드 변경이 필요 없다 |
 | L3 | `vfxsimulate` 컴퓨트가 살아 있는 입자에서 `LightData` 를 GPU 구간에 쓴다(셰이더, u3 와 라이트 행) | **들어감** — 셰이더 소스는 패치 `ShaderPatches/01-VfxGpuLights-L3.patch` (통합이 적용 · 쿠킹) |
 | L4 | `VfxLightDef::getSupportedTargets` 가 GPU 를 허용하고, 깊이 충돌 + 라이트 방출기 로드 테스트 · 생산자 규칙 테스트 · 슬롯 나누기 테스트 | **들어감** |
-| L5 | 시나리오(깊이 충돌 + 빛나는 입자)로 네 백엔드 화면 확인과 Release 측정(라이트 그리드 GPU 시간) | 시나리오 `game/empty/automation/vfxgpulights` 있음 · 실행 대기 — 문턱은 첫 측정 뒤 정한다 |
+| L5 | 시나리오(깊이 충돌 + 빛나는 입자)로 네 백엔드 화면 확인과 Release 측정(라이트 그리드 GPU 시간) | 시나리오 `game/empty/automation/vfxgpulights` 있음 · 실행 대기(매니페스트 id `vfx-gpu-lights-scenario`) |
 
 셰이더 소스를 바꾸는 단위(L3)는 워크트리에서 커밋하지 못한다(커밋 훅이 쿠킹 바이너리와 함께 커밋하라고 막는다). 패치 파일 [ShaderPatches](ShaderPatches/README.md) 로 남겼고 통합이 적용하고 `App --cook-shaders` 로 굽는다.
 C++(`VfxGPUSimulation` 의 라이트 행 · `SW_VFX_PARAM_ROW_LIGHT`)는 패치의 `vfxsimulate.hlsli` 를 읽으므로 **C++ 와 패치를 함께** 적용해야 빌드된다.
@@ -42,6 +42,4 @@ C++(`VfxGPUSimulation` 의 라이트 행 · `SW_VFX_PARAM_ROW_LIGHT`)는 패치�
 
 ## 4. 통합에서 돌릴 확인
 
-- `ShaderPatches/01-VfxGpuLights-L3.patch` 적용 → 빌드 → `App --cook-shaders`(네 백엔드).
-- `App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/vfxgpulights.scene.xml -scenario=game/empty/automation/vfxgpulights.scenario.xml`(네 백엔드) — 문턱 `atLeast` 를 실측으로 정한다.
-- Release 측정: 구간 슬롯 32 / 128 / 256 에서 컴퓨트 프리패스의 GPU 시간(`RT.Vfx.Simulate` 구간과 프레임 컴퓨트 구간).
+**남은 확인(통합에서 확인):** 매니페스트 id `shader-patches-cook`, `vfx-gpu-lights-tests`, `vfx-gpu-lights-scenario`, `vfx-gpu-lights-measure` — 패치 `01-VfxGpuLights-L3.patch` 적용 → 빌드 → 쿠킹, 시나리오는 네 백엔드이고 문턱 `atLeast` 를 실측으로 정한다, 측정은 슬롯 32 / 128 / 256 의 컴퓨트 프리패스 GPU 시간. 확인이 끝나면 통합 담당이 이 문서를 닫는다.
