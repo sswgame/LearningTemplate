@@ -110,7 +110,7 @@
     },
     {
       "id": "pack-patch-tests", "title": "팩 패치 · 팩 읽기 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "PackPatchTest.*,ResourcePakTest.*",
+      "filter": "PackPatchTest.*,ResourcePakTest.*,PackLayoutTest.*",
       "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"
     },
     {
@@ -460,6 +460,16 @@
       "filter": "AdminToolSessionTest.*,OnlineServiceHostTest.*",
       "need_command": "전용 서버를 _adminServicePort 를 준 설정 파일로 띄워 에디터 GM 도구가 붙는 실행은 한 명령이 아직 없다(로그인 훅을 끼우는 계정 키트 쪽 도우미도 없다). 위 필터는 단위 확인까지다",
       "source": "docs/plans/OnlineKits.md I6", "result_doc": "docs/plans/OnlineKits.md I6"
+    },
+    {
+      "id": "audio-bench-release", "title": "AudioBenchTest Release — Stereo · 5.1 · 7.1 렌더 비용 비율과 평면 대 인터리브 전후", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "filter": "AudioBenchTest.*",
+      "source": "docs/plans/AudioChannelLayout.md 5절", "result_doc": "docs/plans/AudioChannelLayout.md 상태를 끝으로"
+    },
+    {
+      "id": "audio-engine-ext-tests", "title": "오디오 서라운드 · 가림 · 컨볼루션 · 소리 그래프 · 믹서 · 스트림 단위 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "AudioSurroundTest.*,AudioOcclusionTest.*,AudioConvolutionTest.*,AudioSceneTest.*,AudioGraphTest.*,AudioMixerTest.*,AudioStreamTest.*,AudioSpatialTest.*,AudioDSPTest.*",
+      "source": "docs/plans/AudioEngineExtensions.md 4절", "result_doc": "docs/plans/AudioEngineExtensions.md 상태를 끝으로"
     }
   ]
 }

@@ -39,7 +39,8 @@
 - P6. 스팀 전용이면 취소다. 스팀 밖 채널이 생겨 다시 열면: 패치 목록에 팩 해시와 서명을 더하고(`PackPatchManifest`), 시작 마운트가 마운트 전에 확인한다(실패하면 지금처럼 이 호출이 올린 팩을 모두 내린다).
 - 낱개 파일로 배포하는 구성(`setAllowLooseFiles`)은 패치가 가리지 못한다 — 패치는 팩만 읽는 배포 구성의 일이다(1절).
 - 확인함(2026-10-22, Debug): `App -game=Empty -cook-all -pack-build=1.0` 이 `base.packbuild.xml`(5220 파일)을 남기고, `Resource/game/empty/data` 에 파일 하나를 더해 `-pack-build=1.1` 로 다시 구운 뒤 `-make-patch` 가 `1 changed, 0 removed` 패치(팩 12 KB)를 만들었다(같은 입력의 나머지는 해시가 같아 빠짐). 확인 못 한 것: 그 패치를 실제 `Packs/` 폴더에 두고 App 이 시작할 때 적용하는 실행(테스트는 `scanAndMountPacks` 를 직접 부른다).
-- 빌드 · `EngineTest --test_filter=PackPatchTest.*:ResourcePakTest.*` 실행.
+- 매니페스트 id `pack-patch-tests`(`PackPatchTest.*` · `ResourcePakTest.*` · `PackLayoutTest.*`). 실제 `Packs/` 폴더에 패치를 두고 App 이 시작해 적용하는 실행은 `pack-patch-app-start`(한 명령이 아직 없다).
+- 설계만 있고 코드가 없는 것: 패치를 쓰지 않는 빌드의 명시 표시(`patching="none"`)와 설치 빌드 번호를 프로젝트 설정 필드로 옮기는 일. 둘 다 팩을 마운트하는 시점에 팩 안 설정을 읽을 수 없다는 P4 의 근거와 부딪혀, 부딪힘을 풀 방법(마운트 전에 읽는 바깥 설정 파일)을 정한 뒤 한다 — 스팀 전용 출시면 취소다(P6 과 같은 조건).
 
 ## P7 측정 (2026-10-23)
 
