@@ -49,7 +49,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [InteractionSpatialGrid](docs/plans/InteractionSpatialGrid.md) — 상호작용 대상의 공유 공간 격자 | 구현중 | 1/2 | 없음 | gameplay | G-4 |
 | - | [KayKitMaterials](docs/plans/KayKitMaterials.md) — KayKit 캐릭터 텍스처를 머티리얼로 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [KitCompositionGames](docs/plans/KitCompositionGames.md) — 키트 조립의 두 번째 테스트 게임과 땅 쓰기 | 구현중 | 1/2 | 없음 | gameplay | D4-4 |
-| - | [LayerTierGate](docs/plans/LayerTierGate.md) — 층 게이트 | 구현중 | 4/5 | 없음 | project | 없음 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [MeleeHitUnify](docs/plans/MeleeHitUnify.md) — 근접 판정 한 길로 | 구현중 | 2/3 | 없음 | gameplay | 없음 |
 | - | [MmoUpdateAckViaDelivery](docs/plans/MmoUpdateAckViaDelivery.md) — MMO 갱신 확인을 NetConnection 전달 통지로 | 구현중 | 3/4 | 없음 | network | G-8 |

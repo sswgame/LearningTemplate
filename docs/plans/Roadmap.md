@@ -36,7 +36,6 @@
 9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) — [BuildSpeed](BuildSpeed.md). [단독: 빌드가 도는 동안은 측정이 무효라 다른 작업이 모두 끝난 뒤 혼자]
 10. **2026-10-23 사용자와 정한 일**(코드는 아직 없고 계획 문서만 있다):
    - [AutomationSplit](AutomationSplit.md) — ② 단계 → ③ 시나리오, ④ 는 실제 배포 때(① 탐침 끝). [병렬 가능: 셰이더 훅 · 층 게이트와 파일이 다르다]
-   - [LayerTierGate](LayerTierGate.md) — 규칙 파일(`CheckEngineLayers.toml` 등)을 만진다. AutomationSplit ① 이 끝난 뒤 한다(같은 티어 테이블). [병렬 가능: 규칙 파일 외에는 겹치지 않는다]
    - [PatchDeltaDelivery](PatchDeltaDelivery.md) 우선순위 변경 — 출시는 스팀 기준이라 P6 은 스팀 전용이면 취소, P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 내린다. 새 단위 P7(팩 레이아웃 안정성 점검 — 읽기 + 측정)이 남은 일이다. [단독: P7 측정은 Release 에서 혼자]
    - [OnlineKits](OnlineKits.md) I6 — 결정 일이 아니라 구현 일(설계 한 단락부터). 위 3번 4항의 온라인 키트 마감과 같은 작업자.
 

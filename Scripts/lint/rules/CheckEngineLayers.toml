@@ -157,7 +157,9 @@ Bootstrap = "정적 저장소 정리가 씬 컴포넌트 · RHI 자원 · 자동
 # 티어 예외 → 이유. prelude 는 위 티어 헤더를 include 할 때, 배선은 그 파일이 위 티어를 include 할 때 쓰인다.
 # contract 는 RuntimeAPI 파일이 Editor · GameFramework 헤더를 include 할 때(키 `contract:<파일>|<include 경로>`)다.
 # subprelude 는 같은 최상위 폴더 안에서 위 하위 티어 헤더를 include 할 때만 쓰인다(최상위 [tier] 검사에는 쓰이지 않는다).
+# unprefixed 는 접두 없는 include 가 include 경로 Source/Engine 으로 풀리는 것을 넘긴다(키 `unprefixed:<include 경로>`) — 이름으로 쓰는 계약 헤더만.
 [exemption]
+"unprefixed:pch.h" = "공유 PCH 진입 헤더 — Engine · App · ModuleHost · Server · 에디터 · 테스트가 Source/Engine/pch.h 를 PCH 로 쓰고(sw_configurePch) .cpp 첫 줄이 이 이름으로 include 한다"
 "prelude:Engine/EngineMinimal.h" = "타입 별칭과 전방 선언만 모은 우산 헤더 — 어느 티어에서 include 해도 된다"
 "prelude:Engine/Resource/ResourcePaths.h" = "리소스 경로 해석 static 헬퍼(Core 만 include) — loadFromResource 진입점이 쓴다"
 "prelude:Engine/Resource/ResourceIO.h" = "리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
