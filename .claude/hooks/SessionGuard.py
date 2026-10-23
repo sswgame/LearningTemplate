@@ -30,7 +30,7 @@ kHandoffPath = os.path.join( "docs", "plans", "NEXT.md" )
 kRoadmapPath = os.path.join( "docs", "plans", "Roadmap.md" )
 kPonytailPath =os.path.join( ".claude", "skills", "ponytail", "SKILL.md" )
 kCiSummaryTimeoutSeconds = 10             # 훅 한도(15 s, settings.json) 안에서 끝낸다
-kCiFailingExitCode = 4                    # Scripts/dev/ListCiJobs.py 의 kExitCiFailing — CI 가 죽어도 보이지 않던 것(C-41 1단계)을 세션 시작에 알린다
+kCiFailingExitCode = 4                    # Scripts/common/ExitCode.py 의 CiFailing —CI 가 죽어도 보이지 않던 것(C-41 1단계)을 세션 시작에 알린다
 
 # 사용자 요청 중 정해 둔 규칙과 부딪히는 표현 → 알릴 말. 정확한 판단은 모델이 하고, 여기서는 단서만 준다.
 kRuleConflictList = [
