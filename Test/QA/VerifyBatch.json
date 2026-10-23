@@ -470,6 +470,11 @@
       "id": "audio-engine-ext-tests", "title": "오디오 서라운드 · 가림 · 컨볼루션 · 소리 그래프 · 믹서 · 스트림 단위 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
       "filter": "AudioSurroundTest.*,AudioOcclusionTest.*,AudioConvolutionTest.*,AudioSceneTest.*,AudioGraphTest.*,AudioMixerTest.*,AudioStreamTest.*,AudioSpatialTest.*,AudioDSPTest.*",
       "source": "docs/plans/AudioEngineExtensions.md 4절", "result_doc": "docs/plans/AudioEngineExtensions.md 상태를 끝으로"
+    },
+    {
+      "id": "state-object-hash-tests", "title": "오브젝트별 상태 해시 글 되읽기와 다른 오브젝트 짚기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "StateHashReportLineTest.*",
+      "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
     }
   ]
 }
