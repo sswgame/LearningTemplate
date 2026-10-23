@@ -70,6 +70,38 @@ namespace sw::editor
                 pData->Buf = pText->data();
                 return 0;
             }
+
+            /** @brief 벡터 컨트롤의 축 버튼이 호버에서 밝아지는 정도(채널마다 더한다)입니다. */
+            static constexpr float32 kAxisHoverBrighten = 0.1f;
+
+            /**
+             * @brief 벡터 컨트롤의 축 하나(색 버튼 + 드래그 입력)를 그립니다. 버튼을 누르면 값이 `resetValue` 로 돌아갑니다.
+             * @return 값이 바뀌었으면 true
+             */
+            static bool drawAxis( const utf8* pAxisLabel, float32& axisValue, const Color& color, const ImVec2& buttonSize, float32 resetValue, float32 speed )
+            {
+                bool bChanged{ false };
+                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
+                const Color hovered{ color._r + kAxisHoverBrighten, color._g + kAxisHoverBrighten, color._b + kAxisHoverBrighten, 1.0f };
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( hovered ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( color ) );
+                if ( ImGui::Button( pAxisLabel, buttonSize ) )
+                {
+                    axisValue = resetValue;
+                    bChanged  = true;
+                }
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "Vec3AxisReset" ) );
+                ImGui::PopStyleColor( 3 );
+                ImGui::SameLine();
+                ImGui::PushID( pAxisLabel );
+                if ( ImGui::DragFloat( "##v", &axisValue, speed, 0.0f, 0.0f, "%.2f" ) )
+                    bChanged = true;
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "Vec3AxisDrag" ) );
+                ImGui::PopID();
+                ImGui::PopItemWidth();
+                ImGui::SameLine();
+                return bChanged;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -93,31 +125,10 @@ namespace sw::editor
         const ImVec2  buttonSize{ lineHeight + 3.0f, lineHeight };
         bool          bChanged{ false };
 
-        auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color& color )
-        {
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( Color{ color._r + 0.1f, color._g + 0.1f, color._b + 0.1f, 1.0f } ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( color ) );
-            if ( ImGui::Button( pAxisLabel, buttonSize ) )
-            {
-                axisValue = resetValue;
-                bChanged  = true;
-            }
-            drawTooltip( SW_LOCKEY( "EdCommon", "Vec3AxisReset" ) );
-            ImGui::PopStyleColor( 3 );
-            ImGui::SameLine();
-            ImGui::PushID( pAxisLabel );
-            if ( ImGui::DragFloat( "##v", &axisValue, speed, 0.0f, 0.0f, "%.2f" ) )
-                bChanged = true;
-            drawTooltip( SW_LOCKEY( "EdCommon", "Vec3AxisDrag" ) );
-            ImGui::PopID();
-            ImGui::PopItemWidth();
-            ImGui::SameLine();
-        };
-
-        axis( "X", values._x, EditorThemeUtil::getAxisXColor() );
-        axis( "Y", values._y, EditorThemeUtil::getAxisYColor() );
-        axis( "Z", values._z, EditorThemeUtil::getAxisZColor() );
+        // 비단락(|=)으로 세 축을 모두 그린다.
+        bChanged |= EditorWidgetsInternal::drawAxis( "X", values._x, EditorThemeUtil::getAxisXColor(), buttonSize, resetValue, speed );
+        bChanged |= EditorWidgetsInternal::drawAxis( "Y", values._y, EditorThemeUtil::getAxisYColor(), buttonSize, resetValue, speed );
+        bChanged |= EditorWidgetsInternal::drawAxis( "Z", values._z, EditorThemeUtil::getAxisZColor(), buttonSize, resetValue, speed );
 
         ImGui::PopStyleVar();
         ImGui::Columns( 1 );

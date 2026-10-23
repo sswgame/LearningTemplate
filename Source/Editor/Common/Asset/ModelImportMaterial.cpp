@@ -78,23 +78,38 @@ namespace sw::editor
         return true;
     }
 
+    VrmFirstPersonMode ModelImportUtil::findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh )
+    {
+        if ( pMesh == nullptr )
+            return VrmFirstPersonMode::Auto;
+        const size_t meshIndex = static_cast<size_t>( pMesh - data.meshes );
+        const string name      = ( pMesh->name != nullptr && pMesh->name[0] != '\0' ) ? string( pMesh->name ) : "mesh" + to_string( static_cast<uint64>( meshIndex ) );
+        for ( const VrmFirstPersonMesh& annotated : avatar._listFirstPersonMesh )
+        {
+            if ( annotated._mesh == name )
+                return annotated._mode;
+        }
+        return VrmFirstPersonMode::Auto;
+    }
+
+    bool ModelImportUtil::triangleTouchesHead( const MergedMesh& body, const vector<uint8>& listHeadBone, size_t triangle )
+    {
+        for ( uint32 corner = 0; corner < 3; ++corner )
+        {
+            const ImportVertex& vertex = body._listVertex[body._listIndex[triangle * 3 + corner]];
+            for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
+            {
+                const uint32 joint          = vertex._arrJoint[influence];
+                const bool   bHeadInfluence = vertex._arrWeight[influence] > 0.0f && joint < listHeadBone.size() && listHeadBone[joint] == SW_TRUE;
+                if ( bHeadInfluence )
+                    return true;
+            }
+        }
+        return false;
+    }
+
     void ModelImportUtil::populateMaterialSections( MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult )
     {
-        // glTF 메시마다 1인칭 가시성 — 적지 않은 메시는 Auto 다(VRM 1.0 · 0.x 의 기본). 이름은 아바타 임포터가 쓴 규칙(makeMeshName)과 같다.
-        auto findMode = [&]( const cgltf_mesh* pMesh ) -> VrmFirstPersonMode
-        {
-            if ( pMesh == nullptr )
-                return VrmFirstPersonMode::Auto;
-            const size_t meshIndex = static_cast<size_t>( pMesh - data.meshes );
-            const string name      = ( pMesh->name != nullptr && pMesh->name[0] != '\0' ) ? string( pMesh->name ) : "mesh" + to_string( static_cast<uint64>( meshIndex ) );
-            for ( const VrmFirstPersonMesh& annotated : inoutResult._avatar._listFirstPersonMesh )
-            {
-                if ( annotated._mesh == name )
-                    return annotated._mode;
-            }
-            return VrmFirstPersonMode::Auto;
-        };
-
         // 1인칭 본(머리) 아래 본 — Auto 메시는 이 본에 가중치가 있는 꼭짓점을 가진 삼각형을 3인칭 전용으로 나눈다(UniVRM 과 같다).
         const Skeleton& skeleton = inoutResult._skeleton;
         vector<uint8>   listHeadBone( skeleton.getBoneCount(), SW_FALSE );
@@ -104,21 +119,6 @@ namespace sw::editor
             const int32 parent = skeleton.getBone( bone )._parentIndex;
             listHeadBone[bone] = ( static_cast<int32>( bone ) == headBone || ( parent >= 0 && listHeadBone[static_cast<uint32>( parent )] == SW_TRUE ) ) ? SW_TRUE : SW_FALSE;
         }
-        auto touchesHead = [&]( size_t triangle ) -> bool
-        {
-            for ( uint32 corner = 0; corner < 3; ++corner )
-            {
-                const ImportVertex& vertex = inoutBody._listVertex[inoutBody._listIndex[triangle * 3 + corner]];
-                for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
-                {
-                    const uint32 joint          = vertex._arrJoint[influence];
-                    const bool   bHeadInfluence = vertex._arrWeight[influence] > 0.0f && joint < listHeadBone.size() && listHeadBone[joint] == SW_TRUE;
-                    if ( bHeadInfluence )
-                        return true;
-                }
-            }
-            return false;
-        };
 
         // 삼각형마다 묶음 열쇠 — (머티리얼 번호, 가시성). 머티리얼이 없는 삼각형은 어느 구간에도 들지 않고 뒤에 남는다(그리는 컴포넌트가 없다).
         const size_t     triangleCount    = inoutBody._listTriangleMaterial.size();
@@ -134,13 +134,13 @@ namespace sw::editor
                 ++noMaterialCount;
                 continue;
             }
-            const VrmFirstPersonMode mode       = findMode( triangle < inoutBody._listTriangleSourceMesh.size() ? inoutBody._listTriangleSourceMesh[triangle] : nullptr );
+            const VrmFirstPersonMode mode       = findFirstPersonMode( data, inoutResult._avatar, triangle < inoutBody._listTriangleSourceMesh.size() ? inoutBody._listTriangleSourceMesh[triangle] : nullptr );
             MeshPersonVisibility     visibility = MeshPersonVisibility::Both;
             if ( mode == VrmFirstPersonMode::ThirdPersonOnly )
                 visibility = MeshPersonVisibility::ThirdPersonOnly;
             else if ( mode == VrmFirstPersonMode::FirstPersonOnly )
                 visibility = MeshPersonVisibility::FirstPersonOnly;
-            else if ( mode == VrmFirstPersonMode::Auto && touchesHead( triangle ) )
+            else if ( mode == VrmFirstPersonMode::Auto && triangleTouchesHead( inoutBody, listHeadBone, triangle ) )
                 visibility = MeshPersonVisibility::ThirdPersonOnly;
             listKey[triangle] = static_cast<uint32>( pMaterial - data.materials ) * kVisibilityCount + static_cast<uint32>( visibility );
         }

@@ -38,6 +38,110 @@ namespace sw::editor
             static constexpr Color kAxisX{ Color::fromBytes( 235, 65, 65 ) };
             static constexpr Color kAxisY{ Color::fromBytes( 65, 220, 95 ) };
             static constexpr Color kAxisZ{ Color::fromBytes( 65, 130, 245 ) };
+
+            // 선 하나를 이 개수의 조각으로 나눠 그려서 가장자리가 흐려 보이게 한다. ImGui 의 선은 한 가지 색이다.
+            static constexpr uint32  kSegmentCount    = 8;
+            static constexpr float32 kMinVisibleAlpha = 0.01f;
+            static constexpr float32 kMinorWidth      = 1.0f;
+            static constexpr float32 kMajorWidth      = 1.5f;
+            static constexpr float32 kByteMax         = 255.0f;
+            static constexpr float32 kMinorColor[4]   = { 60.0f, 65.0f, 80.0f, 55.0f };
+            static constexpr float32 kMajorColor[4]   = { 90.0f, 100.0f, 120.0f, 100.0f };
+
+            /** @brief 격자 선 한 방향 묶음을 그리는 데 필요한 값입니다. u · v 는 격자 평면의 두 축입니다. */
+            struct GridDrawContext
+            {
+                ImDrawList*            _pDrawList;
+                const float4x4&        _viewProj;
+                const float2&          _canvasPos;
+                const float2&          _canvasSize;
+                const EditorGridLevel& _level;
+                EditorGridStats&       _stats;
+                float32                _centerU;
+                float32                _centerV;
+                bool                   _b2D;
+            };
+
+            static float3 toWorld( bool b2D, float32 u, float32 v )
+            {
+                return b2D ? float3{ u, v, 0.0f } : float3{ u, 0.0f, v };
+            }
+
+            // bAlongV 는 선이 v 방향으로 뻗는다는 뜻이다(좌표는 u). 원점 선의 색은 3D 에서 x == 0 선이 Z 축, z == 0 선이 X 축이고, 2D 에서 x == 0 선이 Y 축이다.
+            // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브와 기즈모의 색과 달라진다.
+            static void drawGridFamily( const GridDrawContext& ctx, bool bAlongV )
+            {
+                const EditorGridLevel& level     = ctx._level;
+                const float32          radius    = level._radius;
+                const float32          center    = bAlongV ? ctx._centerU : ctx._centerV;
+                const float32          across    = bAlongV ? ctx._centerV : ctx._centerU;
+                const int64            firstIdx  = static_cast<int64>( MathUtil::ceil( ( center - radius ) / level._step ) );
+                const int64            lastIdx   = static_cast<int64>( MathUtil::floor( ( center + radius ) / level._step ) );
+                const Color            axisColor = bAlongV ? ( ctx._b2D ? kAxisY : kAxisZ ) : kAxisX;
+
+                for ( int64 worldIndex = firstIdx; worldIndex <= lastIdx; ++worldIndex )
+                {
+                    const float32 coordinate = static_cast<float32>( worldIndex ) * level._step;
+                    const float32 offset     = coordinate - center;
+                    const float32 halfChord  = MathUtil::sqrt( MathUtil::max( radius * radius - offset * offset, 0.0f ) );
+                    if ( halfChord <= 0.0f )
+                        continue;
+
+                    const bool                bOrigin = ( worldIndex == 0 );
+                    const EditorGridLineStyle style   = EditorGridUtil::evaluateLine( worldIndex, level );
+                    if ( bOrigin == false && style._visibility < kMinVisibleAlpha )
+                        continue;
+
+                    float32 arrColor[4];
+                    for ( uint32 channel = 0; channel < 4; ++channel )
+                    {
+                        arrColor[channel] = MathUtil::lerp( kMinorColor[channel], kMajorColor[channel], style._majorWeight );
+                    }
+                    const float32 lineAlpha = bOrigin ? 1.0f : style._visibility;
+                    const float32 width     = bOrigin ? kMajorWidth : MathUtil::lerp( kMinorWidth, kMajorWidth, style._majorWeight );
+
+                    if ( bOrigin == false && style._majorWeight >= 0.5f )
+                    {
+                        ++ctx._stats._majorLineCount;
+                        const float32 majorPeriod = level._step * static_cast<float32>( EditorGridUtil::kMajorEvery );
+                        const float32 phase       = MathUtil::abs( coordinate - MathUtil::round( coordinate / majorPeriod ) * majorPeriod );
+                        if ( phase > 0.001f * level._step )
+                            ++ctx._stats._misplacedMajorCount;
+                    }
+
+                    for ( uint32 segment = 0; segment < kSegmentCount; ++segment )
+                    {
+                        const float32 from     = -halfChord + 2.0f * halfChord * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
+                        const float32 to       = -halfChord + 2.0f * halfChord * static_cast<float32>( segment + 1 ) / static_cast<float32>( kSegmentCount );
+                        const float32 middle   = 0.5f * ( from + to );
+                        const float32 edgeFade = EditorGridUtil::computeEdgeFade( MathUtil::sqrt( offset * offset + middle * middle ), radius );
+                        const float32 alpha    = lineAlpha * edgeFade;
+                        if ( alpha < kMinVisibleAlpha )
+                            continue;
+
+                        ImU32 color = 0;
+                        if ( bOrigin )
+                        {
+                            color = EditorColorUtil::toImU32( axisColor.scaleAlpha( alpha ) );
+                        }
+                        else
+                        {
+                            // 바이트 단위(0~255)로 자른 값을 0~1 로 되돌려 같은 ImU32 가 되게 한다.
+                            const float32 red       = static_cast<float32>( static_cast<uint8>( arrColor[0] ) ) / kByteMax;
+                            const float32 green     = static_cast<float32>( static_cast<uint8>( arrColor[1] ) ) / kByteMax;
+                            const float32 blue      = static_cast<float32>( static_cast<uint8>( arrColor[2] ) ) / kByteMax;
+                            const float32 alphaUnit = static_cast<float32>( static_cast<uint8>( arrColor[3] * alpha + 0.5f ) ) / kByteMax;
+                            color                   = EditorColorUtil::toImU32( Color{ red, green, blue, alphaUnit } );
+                        }
+
+                        const float3 worldA = bAlongV ? toWorld( ctx._b2D, coordinate, across + from ) : toWorld( ctx._b2D, across + from, coordinate );
+                        const float3 worldB = bAlongV ? toWorld( ctx._b2D, coordinate, across + to ) : toWorld( ctx._b2D, across + to, coordinate );
+                        ImVec2       screenA, screenB;
+                        if ( EditorViewportProjectionUtil::projectSegment( ctx._viewProj, worldA, worldB, ctx._canvasPos, ctx._canvasSize, screenA, screenB ) )
+                            ctx._pDrawList->AddLine( screenA, screenB, color, width );
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -154,14 +258,6 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportProjectionUtil::loadViewProjection( pView, pProj, viewProj );
 
-        // 선 하나를 이 개수의 조각으로 나눠 그려서 가장자리가 흐려 보이게 한다. ImGui 의 선은 한 가지 색이다.
-        constexpr uint32  kSegmentCount    = 8;
-        constexpr float32 kMinVisibleAlpha = 0.01f;
-        constexpr float32 kMinorWidth      = 1.0f;
-        constexpr float32 kMajorWidth      = 1.5f;
-        constexpr float32 kMinorColor[4]   = { 60.0f, 65.0f, 80.0f, 55.0f };
-        constexpr float32 kMajorColor[4]   = { 90.0f, 100.0f, 120.0f, 100.0f };
-
         // 격자 평면의 두 축(u, v)과 평면까지의 거리다. 2D 는 XY 평면(직교 뷰이며 보이는 반 높이로 단계를 고른다), 3D 는 XZ 바닥이다.
         const bool    b2D        = b2DMode;
         const bool    bOrtho     = MathUtil::abs( pProj[15] - 1.0f ) < 0.001f;
@@ -169,10 +265,7 @@ namespace sw::editor
         const float32 centerV    = b2D ? cameraPosition._y : cameraPosition._z;
         const float32 viewHeight = bOrtho && MathUtil::abs( pProj[5] ) > 1e-6f ? 2.0f / MathUtil::abs( pProj[5] ) : ( b2D ? cameraPosition._z : cameraPosition._y );
 
-        const EditorGridLevel level   = EditorGridUtil::selectLevel( viewHeight );
-        const float32         radius  = level._radius;
-        const auto            toWorld = [b2D]( float32 u, float32 v )
-        { return b2D ? float3{ u, v, 0.0f } : float3{ u, 0.0f, v }; };
+        const EditorGridLevel level = EditorGridUtil::selectLevel( viewHeight );
 
         EditorGridStats& stats     = EditorGridStats::get();
         stats._step                = level._step;
@@ -181,79 +274,9 @@ namespace sw::editor
         stats._misplacedMajorCount = 0;
         stats._frame               = ImGui::GetFrameCount();
 
-        // bAlongV 는 선이 v 방향으로 뻗는다는 뜻이다(좌표는 u). 원점 선의 색은 3D 에서 x == 0 선이 Z 축, z == 0 선이 X 축이고, 2D 에서 x == 0 선이 Y 축이다.
-        // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브와 기즈모의 색과 달라진다.
-        const auto drawFamily = [&]( bool bAlongV )
-        {
-            const float32 center    = bAlongV ? centerU : centerV;
-            const float32 across    = bAlongV ? centerV : centerU;
-            const int64   firstIdx  = static_cast<int64>( MathUtil::ceil( ( center - radius ) / level._step ) );
-            const int64   lastIdx   = static_cast<int64>( MathUtil::floor( ( center + radius ) / level._step ) );
-            const Color   axisColor = bAlongV ? ( b2D ? EditorViewportCanvasOverlayInternal::kAxisY : EditorViewportCanvasOverlayInternal::kAxisZ )
-                                              : EditorViewportCanvasOverlayInternal::kAxisX;
-
-            for ( int64 worldIndex = firstIdx; worldIndex <= lastIdx; ++worldIndex )
-            {
-                const float32 coordinate = static_cast<float32>( worldIndex ) * level._step;
-                const float32 offset     = coordinate - center;
-                const float32 halfChord  = MathUtil::sqrt( MathUtil::max( radius * radius - offset * offset, 0.0f ) );
-                if ( halfChord <= 0.0f )
-                    continue;
-
-                const bool                bOrigin = ( worldIndex == 0 );
-                const EditorGridLineStyle style   = EditorGridUtil::evaluateLine( worldIndex, level );
-                if ( bOrigin == false && style._visibility < kMinVisibleAlpha )
-                    continue;
-
-                float32 arrColor[4];
-                for ( uint32 channel = 0; channel < 4; ++channel )
-                {
-                    arrColor[channel] = MathUtil::lerp( kMinorColor[channel], kMajorColor[channel], style._majorWeight );
-                }
-                const float32 lineAlpha = bOrigin ? 1.0f : style._visibility;
-                const float32 width     = bOrigin ? kMajorWidth : MathUtil::lerp( kMinorWidth, kMajorWidth, style._majorWeight );
-
-                if ( bOrigin == false && style._majorWeight >= 0.5f )
-                {
-                    ++stats._majorLineCount;
-                    const float32 majorPeriod = level._step * static_cast<float32>( EditorGridUtil::kMajorEvery );
-                    const float32 phase       = MathUtil::abs( coordinate - MathUtil::round( coordinate / majorPeriod ) * majorPeriod );
-                    if ( phase > 0.001f * level._step )
-                        ++stats._misplacedMajorCount;
-                }
-
-                for ( uint32 segment = 0; segment < kSegmentCount; ++segment )
-                {
-                    const float32 from     = -halfChord + 2.0f * halfChord * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
-                    const float32 to       = -halfChord + 2.0f * halfChord * static_cast<float32>( segment + 1 ) / static_cast<float32>( kSegmentCount );
-                    const float32 middle   = 0.5f * ( from + to );
-                    const float32 edgeFade = EditorGridUtil::computeEdgeFade( MathUtil::sqrt( offset * offset + middle * middle ), radius );
-                    const float32 alpha    = lineAlpha * edgeFade;
-                    if ( alpha < kMinVisibleAlpha )
-                        continue;
-
-                    ImU32 color = 0;
-                    if ( bOrigin )
-                    {
-                        color = EditorColorUtil::toImU32( axisColor.scaleAlpha( alpha ) );
-                    }
-                    else
-                    {
-                        color = IM_COL32( static_cast<int32>( arrColor[0] ), static_cast<int32>( arrColor[1] ), static_cast<int32>( arrColor[2] ),
-                                          static_cast<int32>( arrColor[3] * alpha + 0.5f ) );
-                    }
-
-                    const float3 worldA = bAlongV ? toWorld( coordinate, across + from ) : toWorld( across + from, coordinate );
-                    const float3 worldB = bAlongV ? toWorld( coordinate, across + to ) : toWorld( across + to, coordinate );
-                    ImVec2       screenA, screenB;
-                    if ( EditorViewportProjectionUtil::projectSegment( viewProj, worldA, worldB, canvasPos, canvasSize, screenA, screenB ) )
-                        pDrawList->AddLine( screenA, screenB, color, width );
-                }
-            }
-        };
-
-        drawFamily( true );
-        drawFamily( false );
+        const EditorViewportCanvasOverlayInternal::GridDrawContext context{ pDrawList, viewProj, canvasPos, canvasSize, level, stats, centerU, centerV, b2D };
+        EditorViewportCanvasOverlayInternal::drawGridFamily( context, true );
+        EditorViewportCanvasOverlayInternal::drawGridFamily( context, false );
     }
 
     void EditorViewportCanvasOverlay::processRulerTool( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView,

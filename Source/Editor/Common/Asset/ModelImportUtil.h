@@ -339,6 +339,12 @@ namespace sw::editor
          */
         static void populateMaterialSections( MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult );
 
+        /** @brief glTF 메시의 VRM 1인칭 가시성을 찾습니다. 적지 않은 메시(와 nullptr)는 Auto 입니다. 이름은 아바타 임포터가 쓴 규칙(makeMeshName)과 같습니다. */
+        [[nodiscard]] static VrmFirstPersonMode findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh );
+
+        /** @brief 삼각형의 꼭짓점 중 머리 아래 본(`listHeadBone[본] == SW_TRUE`)에 가중치가 있는 것이 하나라도 있는지 알려 줍니다. */
+        [[nodiscard]] static bool triangleTouchesHead( const MergedMesh& body, const vector<uint8>& listHeadBone, size_t triangle );
+
         /**
          * @brief 구간 머티리얼이 쓰는 텍스처의 원본 이미지 바이트를 모읍니다. glTF 텍스처 번호로 찾으며, 파일 이름은 이미지 이름입니다(겹치면 번호를 붙인다).
          * @details 내장 이미지(bufferView)는 바이트 그대로 가져오고, 바깥 파일(uri)은 원본 옆에서 읽는다. data URI 이미지는 지원하지 않는다(경고를 남긴다).

@@ -48,6 +48,47 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 수집이 컴포넌트마다 되풀이해 쓰는 값입니다. */
+            struct CollectContext
+            {
+                const float4x4&        _viewProj;
+                const float2&          _canvasPos;
+                const float2&          _canvasSize;
+                const CameraComponent* _pSkipCamera;
+            };
+
+            /** @brief 컴포넌트가 배지를 가질 수 있고 캔버스 안에 보이면 `outListItem` 에 더합니다. 오브젝트마다 하나만 둡니다. */
+            static void addComponent( const CollectContext& context, Component* pComponent, vector<EditorViewportBillboardItem>& outListItem )
+            {
+                if ( pComponent == nullptr || pComponent == context._pSkipCamera )
+                    return;
+                GameObject* pObject           = pComponent->getOwner();
+                const bool  bObjectNotVisible = pObject == nullptr || pObject->isPendingDestroy() || pObject->isActiveInHierarchy() == false;
+                if ( bObjectNotVisible )
+                    return;
+                for ( const EditorViewportBillboardItem& item : outListItem )
+                {
+                    if ( item._pObject == pObject )
+                        return; // 오브젝트마다 하나 — 빛과 카메라가 같이 있어도 배지가 겹치지 않게
+                }
+                const EditorComponentIconRow row = EditorComponentIcon::findRow( pComponent->getTypeInfo() );
+                float3                       position{};
+                ImVec2                       screen{};
+                const bool                   bBillboardNotProjectable =
+                    row._bBillboard == false || findWorldPosition( *pObject, *pComponent, position ) == false ||
+                    EditorViewportProjectionUtil::projectPoint( context._viewProj, position, context._canvasPos, context._canvasSize, screen ) == false;
+                if ( bBillboardNotProjectable )
+                    return;
+                const float2& canvasPos  = context._canvasPos;
+                const float2& canvasSize = context._canvasSize;
+                const bool    bInside =
+                    screen.x >= canvasPos._x && screen.y >= canvasPos._y && screen.x <= canvasPos._x + canvasSize._x && screen.y <= canvasPos._y + canvasSize._y;
+                if ( bInside )
+                    outListItem.push_back( EditorViewportBillboardItem{
+                        pObject, pComponent, row, float2{ screen.x, screen.y }
+                    } );
+            }
+
             /** @brief 지난 그리기에서 오브젝트마다 넘긴 글리프입니다(탐침이 그린 값을 본다 — 수집 결과가 아니라). */
             struct DrawnGlyph
             {
@@ -115,49 +156,23 @@ namespace sw::editor
                                            const CameraComponent* pSkipCamera, vector<EditorViewportBillboardItem>& outListItem )
     {
         outListItem.clear();
-        auto addComponent = [&]( Component* pComponent )
-        {
-            if ( pComponent == nullptr || pComponent == pSkipCamera )
-                return;
-            GameObject* pObject           = pComponent->getOwner();
-            const bool  bObjectNotVisible = pObject == nullptr || pObject->isPendingDestroy() || pObject->isActiveInHierarchy() == false;
-            if ( bObjectNotVisible )
-                return;
-            for ( const EditorViewportBillboardItem& item : outListItem )
-            {
-                if ( item._pObject == pObject )
-                    return; // 오브젝트마다 하나 — 빛과 카메라가 같이 있어도 배지가 겹치지 않게
-            }
-            const EditorComponentIconRow row = EditorComponentIcon::findRow( pComponent->getTypeInfo() );
-            float3                       position{};
-            ImVec2                       screen{};
-            const bool                   bBillboardNotProjectable = row._bBillboard == false || EditorViewportBillboardInternal::findWorldPosition( *pObject, *pComponent, position ) == false ||
-                                                  EditorViewportProjectionUtil::projectPoint( viewProj, position, canvasPos, canvasSize, screen ) == false;
-            if ( bBillboardNotProjectable )
-                return;
-            const bool bInside =
-                screen.x >= canvasPos._x && screen.y >= canvasPos._y && screen.x <= canvasPos._x + canvasSize._x && screen.y <= canvasPos._y + canvasSize._y;
-            if ( bInside )
-                outListItem.push_back( EditorViewportBillboardItem{
-                    pObject, pComponent, row, float2{ screen.x, screen.y }
-                } );
-        };
+        const EditorViewportBillboardInternal::CollectContext context{ viewProj, canvasPos, canvasSize, pSkipCamera };
         // 씬 전체를 훑지 않고 레지스트리만 본다(오브젝트 수가 아니라 그 종류의 수만큼 든다).
         for ( CameraComponent* pCamera : manager.getCameraRegistry().getAll() )
         {
-            addComponent( pCamera );
+            EditorViewportBillboardInternal::addComponent( context, pCamera, outListItem );
         }
         const ComponentRegistry& registry = manager.getComponentRegistry();
         for ( uint32 lightType = 0; lightType < shaderslot::kLightTypeCount; ++lightType )
         {
             for ( LightComponent* pLight : registry.getAll<LightComponent>( lightType ) )
             {
-                addComponent( pLight );
+                EditorViewportBillboardInternal::addComponent( context, pLight, outListItem );
             }
         }
         for ( WindComponent* pWind : registry.getAll<WindComponent>() )
         {
-            addComponent( pWind );
+            EditorViewportBillboardInternal::addComponent( context, pWind, outListItem );
         }
     }
 
