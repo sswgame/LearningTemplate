@@ -39,8 +39,9 @@
 제목: 저장소 소유 정리의 잰 뒤에 정할 것
 옛번호: 없음
 왜 필요한가: 종료 전용 해제 함수는 모두 없앴습니다(규칙은 `Core/Memory/LifetimeScope.h` 머리 주석). 아래는 재 봐야 고칠지 정해지는 것입니다.
-못 하는 이유: (1) · (2) 는 기준선 측정(종료 보고 · 버퍼 성장)이 먼저라 지금 정할 수 없습니다. (3) 은 `getDefault` 호출 순서를 읽어 봐야 합니다.
-남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다. (3) `GimmickNodeRegistry::getDefault` 의 기동 단계 등록(`ded0a6fd6`)을 `ScopeOwned` 로 바꿀 수 있는지 본다.
+못 하는 이유: (1) · (2) 는 기준선 측정(종료 보고 · 버퍼 성장)이 먼저라 지금 정할 수 없습니다 — 자라지 않으면 아무것도 바꾸지 않는 것이 답입니다.
+끝낸 것: (3) `GimmickNodeRegistry::getDefault` 는 `ScopeOwned<DefaultRegistryHolder>` 로 바꿨습니다. 처음 쓰는 쪽이 기준선 뒤에 세워도 엔진 종료가 범위를 닫을 때 종료 보고 전에 사라지므로, 기동 단계(`ModuleTypes`)에서 미리 세우던 `TypeRegistrar`(`ded0a6fd6`)는 지웠습니다. 확인은 종료 누수 테스트(`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`, 보통 · 에디터 실행) 통과입니다.
+남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다.
 함정: `SceneTransformStorage::get` · `ResourcePaths` 경로 캐시는 엔진 수명 범위가 닫힌 뒤 쓰면 멈추거나(트랜스폼) 캐시하지 않는다(Debug 단언). 한 프로세스에서 엔진을 두 번 세우는 테스트 호스트가 생기면 이 계약이 먼저 걸린다.
 
 ## 정리
