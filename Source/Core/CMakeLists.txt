@@ -22,10 +22,8 @@ set_target_properties(Core_objects PROPERTIES
 	FOLDER "Source"
 )
 
-target_include_directories(Core_objects
-	PRIVATE
-	"${CMAKE_CURRENT_SOURCE_DIR}"
-)
+# `Source/Core` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 Core 진입 헤더로 푼다.
+sw_addPchEntryDirectory(Core_objects PRIVATE core "Core/pch.h")
 target_link_libraries(Core_objects PUBLIC sw_public_source_includes)
 target_link_libraries(Core_objects PUBLIC sw_third_party_includes)
 
@@ -50,10 +48,6 @@ sw_markDeterministicSources(Core_objects Math/VectorMath.cpp)
 add_library(Core STATIC $<TARGET_OBJECTS:Core_objects>)
 set_target_properties(Core PROPERTIES
 	FOLDER "Source"
-)
-target_include_directories(Core
-	PRIVATE
-	"${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)

@@ -22,7 +22,6 @@ if(WIN32)
 endif()
 set_target_properties(App PROPERTIES FOLDER "Source/App")
 
-target_include_directories(App PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(App
 	PRIVATE
 		ModuleHost

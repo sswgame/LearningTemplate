@@ -131,3 +131,6 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	# 린트 테스트 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
 	sw_registerGeneratedLintTests()
 endif()
+
+# 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
+sw_verifySourceIncludeRoots()

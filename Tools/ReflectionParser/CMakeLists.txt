@@ -24,8 +24,8 @@ target_include_directories(ReflectionParser PUBLIC
 	"${CMAKE_CURRENT_SOURCE_DIR}"
 	"${CMAKE_SOURCE_DIR}/Tools"
 	"${CMAKE_SOURCE_DIR}/Source"
-	"${CMAKE_SOURCE_DIR}/Source/Core"
 )
+sw_addPchEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
