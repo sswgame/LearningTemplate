@@ -1,8 +1,7 @@
 /**
  * @file map.h
- * @brief 정렬 맵입니다. 기본은 정렬된 벡터와 이진 검색이고, SW_ENABLE_STL_CONTAINER 이면 std::map 래퍼입니다.
- * @details 두 구성 모두 키 순서로 돕니다. 원소 주소 · 반복자는 기본 구성(정렬된 벡터)이 더 약해 삽입 · 삭제마다 무효가 될 수 있습니다.
- *          기본 구성에서 맞는 코드는 std::map 에서도 맞으므로 구현을 나눠 둡니다(`vector<bool>` · 해시 컨테이너와 달리 약한 쪽이 기본 구성이다).
+ * @brief 정렬 맵입니다. 정렬된 벡터와 이진 검색입니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
+ * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다(주소를 오래 쥐어야 하면 `stable_unordered_map`).
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -10,33 +9,10 @@
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
 
-// 이 매크로를 정의하면 표준 std::map 구현으로 되돌린다.
-// #define SW_ENABLE_STL_CONTAINER
-
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    /**
-     * @brief std::map 에 커스텀 구현과 같은 `contains` 를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
-     * @details 기본 비교자는 `std::less<>`(transparent)라 이종 키 `find` 가 그대로 된다. C++17 에는 `contains` 가 없어 여기서 더한다.
-     */
-    template <typename Key, typename T, typename Compare = std::less<>, typename Allocator = std::allocator<pair<const Key, T>>>
-    class map : public std::map<Key, T, Compare, Allocator>
-    {
-        using Base = std::map<Key, T, Compare, Allocator>;
-
-    public:
-        using Base::Base;
-
-        template <typename K>
-        bool contains( const K& key ) const
-        {
-            return Base::find( key ) != Base::end();
-        }
-    };
-#else
     /** @brief 정렬된 벡터로 구현한 맵입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다. */
-    template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = Allocator<pair<Key, T>>>
+    template <typename Key, typename T, typename Compare = std::less<void>, typename Allocator = ContainerAllocator<pair<Key, T>>>
     class map
     {
     public:
@@ -510,5 +486,4 @@ namespace sw
         Compare   _comp;
         SW_RACE_CTX_MEMBER
     };
-#endif
 } // namespace sw

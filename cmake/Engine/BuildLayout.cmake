@@ -114,7 +114,7 @@ endif()
 
 if(SW_ENABLE_STL_CONTAINER)
 	target_compile_definitions(sw_global_options INTERFACE SW_ENABLE_STL_CONTAINER)
-	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Using std::allocator for containers")
+	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Using std::allocator as the container allocator")
 endif()
 
 

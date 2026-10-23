@@ -13,29 +13,29 @@
 namespace sw
 {
     /**
-     * @brief `vector` 의 원소 타입을 컴파일 시점에 거릅니다. `vector<bool>` 은 두 구성에서 같은 오류로 멈춥니다.
-     * @details 기본 구성의 `sw::vector<bool>` 은 원소마다 바이트 하나이고, `SW_ENABLE_STL_CONTAINER` 구성에서는 비트로 묶는
-     *          `std::vector<bool>` 이라 원소가 프록시 값으로 나와 주소를 잡을 수 없다. 같은 이름이 구성마다 다른 의미가 되므로 형식으로 막는다.
-     *          비트 목록은 `DynamicBitset`, 주소가 필요한 불 원소(리플렉션 컨테이너)는 `vector<uint8>` 을 쓴다.
+     * @brief `vector` 의 원소 타입을 컴파일 시점에 거릅니다. `vector<bool>` 은 오류로 멈춥니다.
+     * @details 불 목록은 한 가지 길로 모은다 — 비트 목록은 `DynamicBitset`(리플렉션이 값 하나로 다룬다), 주소가 필요한 불 원소(리플렉션 컨테이너)는 `vector<uint8>` 이다.
+     *          예전에는 `SW_ENABLE_STL_CONTAINER` 구성의 `vector<bool>` 이 비트로 묶는 `std::vector<bool>` 이라 같은 이름이 구성마다 다른 의미였다.
+     *          지금은 `vector` 가 두 구성에서 같은 구현이지만, 불 원소를 바이트로 두는 쪽이 `DynamicBitset` 과 섞여 읽히므로 막은 채 둔다.
      */
     template <typename T>
     struct VectorElementCheck
     {
-        static_assert( std::is_same_v<std::remove_cv_t<T>, bool> == false,
-                       "sw::vector<bool> is not allowed: its meaning differs per configuration (std::vector<bool> packs bits). Use DynamicBitset or vector<uint8>." );
+        static_assert( std::is_same_v<std::remove_cv_t<T>, bool> == false, "sw::vector<bool> is not allowed. Use DynamicBitset (bits) or vector<uint8> (addressable flags)." );
         using type = void;
     };
+} // namespace sw
 
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T, typename Allocator = std::allocator<T>, typename = typename VectorElementCheck<T>::type>
-    using vector = std::vector<T, Allocator>;
-#else
-
+namespace sw
+{
     template <typename Alloc, typename = void>
     struct has_inline_allocator : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename Alloc>
     struct has_inline_allocator<Alloc, std::void_t<decltype( std::declval<Alloc&>().get_inline_buffer() )>> : std::true_type
     {
@@ -51,8 +51,8 @@ namespace sw
     template <typename T>
     inline constexpr bool is_bitwise_copyable_v = std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 
-    template <typename T, typename Allocator = sw::Allocator<T>>
-    /** @brief 커스텀 vector 입니다. API 는 STL 과 같고, SBO 와 레이스 탐지를 지원합니다. */
+    template <typename T, typename Allocator = ContainerAllocator<T>>
+    /** @brief 커스텀 vector 입니다. API 는 STL 과 같고, SBO 와 레이스 탐지를 지원합니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자만 다릅니다. */
     class vector : private Allocator
     {
         using ElementCheck = typename VectorElementCheck<T>::type;
@@ -1216,7 +1216,6 @@ namespace sw
         return _size < other._size;
     }
 
-#endif
     template <typename T, size_t N = 32>
     using small_vector = vector<T, InlineAllocator<T, N>>;
 } // namespace sw

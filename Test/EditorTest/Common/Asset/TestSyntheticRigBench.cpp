@@ -136,6 +136,14 @@ SW_TEST_CASE( SyntheticRigBenchTest, EvaluateByBonesCharactersAndMode )
                 const sw::string  label = "synthetic rig  " + rig._stem + "  x" + sw::to_string( characterCount ) + "  " + Internal::getModeName( mode ) + ": evaluate";
                 SW_EXPECT_TRUE_MSG( Internal::measure( rig, characterCount, mode, listMicro ), label.c_str() );
                 test::logBenchSamples( label.c_str(), listMicro );
+                // 가장 느린 프레임의 번호 — 처음 몇 프레임에 몰리면 첫 접근(페이지 · 캐시) 비용이고, 흩어져 있으면 스케줄러 · 판 사이 흔들림이다(AnimationUpdateAnomalies 의 p99 꼬리).
+                size_t slowestIndex = 0;
+                for ( size_t index = 1; index < listMicro.size(); ++index )
+                {
+                    if ( listMicro[index] > listMicro[slowestIndex] )
+                        slowestIndex = index;
+                }
+                SW_LOG_INFO( "[Bench] %#  slowest frame #%# of %#", label, static_cast<uint32>( slowestIndex ), static_cast<uint32>( listMicro.size() ) );
             }
         }
     }

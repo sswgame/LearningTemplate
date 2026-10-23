@@ -20,7 +20,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_ENABLE_LTO` | BOOL | `ON` |  | Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_PCH` | BOOL | `ON` |  | 빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_SANITIZER` | BOOL | `OFF` |  | Address/UB Sanitizer 컴파일러 플래그 모듈 활성화 | CI-Debug-ASAN, CI-Debug-TSAN, Ninja-Debug-ASAN | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
-| `SW_ENABLE_STL_CONTAINER` | BOOL | `OFF` |  | 엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정 | CI-Debug-STL | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_ENABLE_STL_CONTAINER` | BOOL | `OFF` |  | 컨테이너의 기본 할당자를 엔진 할당자 대신 std::allocator 로 바꾼다(컨테이너 형식은 두 구성에서 같다) | CI-Debug-STL | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TESTING` | BOOL | `ON` |  | 단위/통합 테스트 프로젝트 빌드 및 CTest 등록 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TIME_TRACE` | BOOL | `OFF` |  | Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TRACY` | BOOL | `${swTracyDefault}` |  | Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |

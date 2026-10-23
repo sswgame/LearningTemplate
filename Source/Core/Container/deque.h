@@ -9,12 +9,8 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T, typename Allocator = std::allocator<T>>
-    using deque = std::deque<T, Allocator>;
-#else
     /** @brief std::deque 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
-    template <typename T, typename Allocator = Allocator<T>>
+    template <typename T, typename Allocator = ContainerAllocator<T>>
     class deque : public std::deque<T, Allocator>
     {
         using Base = std::deque<T, Allocator>;
@@ -422,5 +418,4 @@ namespace sw
             Base::swap( static_cast<Base&>( other ) );
         }
     };
-#endif
 } // namespace sw

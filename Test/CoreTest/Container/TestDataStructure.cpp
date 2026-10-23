@@ -49,7 +49,6 @@ namespace
         }
     };
 
-#if !defined( SW_ENABLE_STL_CONTAINER ) // sw::pair 의 EBO 테스트에만 쓴다
     struct EmptyTestHasher
     {
         size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
@@ -59,7 +58,6 @@ namespace
     {
         bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
     };
-#endif
 
     /**
      * @brief 모든 키를 같은 버킷으로 보내는 해시입니다.
@@ -990,9 +988,6 @@ SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
  */
 SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "sw::pair is std::pair in the STL container build (no EBO accessors)" );
-#else
     // 1) 일반 타입 쌍: 8 바이트
     static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
     // 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
@@ -1011,7 +1006,6 @@ SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 
     sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
     SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
-#endif
 }
 
 /**
@@ -1338,10 +1332,7 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
  * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
  * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
  *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
- *
- *          그리고 이 계약은 **빌드 옵션과 무관해야 한다.** `SW_ENABLE_STL_CONTAINER` 를 켠 경로도
- *          `map`/`set` 이 `std::less<>` 여야 한다 — `std::less<Key>`(비-transparent)면 같은 코드가 기본 빌드에서는
- *          컴파일되고 그 옵션에서는 안 된다.
+ *          두 구성(`SW_ENABLE_STL_CONTAINER`)이 같은 컨테이너 구현이라 이 계약도 구성과 무관하다.
  *
  * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
  */
@@ -1635,9 +1626,6 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
  */
 SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "the growth policy under test is the custom vector; the standard library picks its own factor" );
-#else
     sw::vector<uint32> listValue;
     size_t             lastCapacity   = listValue.capacity();
     uint32             capacityChange = 0;
@@ -1665,7 +1653,6 @@ SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
     sw::vector<uint32> listOnce;
     listOnce.resize( 1000 );
     SW_EXPECT_EQUAL( size_t( 1000 ), listOnce.capacity() );
-#endif
 }
 
 /**

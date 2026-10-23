@@ -5128,7 +5128,7 @@
    "type": "BOOL",
    "default": "OFF",
    "choices": [],
-   "description": "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정",
+   "description": "컨테이너의 기본 할당자를 엔진 할당자 대신 std::allocator 로 바꾼다(컨테이너 형식은 두 구성에서 같다)",
    "presets": [
     "CI-Debug-STL"
    ]

@@ -11,12 +11,8 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename CharT, typename Traits = std::char_traits<CharT>, typename Allocator = std::allocator<CharT>>
-    using basic_string = std::basic_string<CharT, Traits, Allocator>;
-#else
     /** @brief std::basic_string 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
-    template <typename CharT, typename Traits = std::char_traits<CharT>, typename Allocator = Allocator<CharT>>
+    template <typename CharT, typename Traits = std::char_traits<CharT>, typename Allocator = ContainerAllocator<CharT>>
     class basic_string : public std::basic_string<CharT, Traits, Allocator>
     {
         using Base = std::basic_string<CharT, Traits, Allocator>;
@@ -624,8 +620,10 @@ namespace sw
             return Base::find( ch, pos );
         }
     };
-#endif
+} // namespace sw
 
+namespace sw
+{
     using string  = basic_string<utf8>;
     using wstring = basic_string<utf16>;
 #if defined( __cpp_char8_t )
@@ -682,8 +680,7 @@ namespace sw
 
     /**
      * @brief sw::string 을 해시 컨테이너 키로 쓸 때의 기본 해시(`sw::RuntimeStringHash`)입니다. 세 오버로드가 같은 바이트에 같은 값을 내므로 이종 조회가 됩니다.
-     * @details 원본은 `std::hash` 특수화가 아니라 이 `DefaultHash` 특수화입니다. `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라
-     *          `std::hash` 를 특수화할 수 없고, 표준 해시에는 `string_view` 오버로드가 없습니다. 여기 두면 두 구성이 같은 해시 · 같은 이종 조회를 갖습니다.
+     * @details 원본은 `std::hash` 특수화가 아니라 이 `DefaultHash` 특수화입니다. 표준 해시에는 `string_view` 오버로드가 없어 이종 조회가 안 되므로 여기 둡니다.
      */
     template <>
     struct DefaultHash<string>
@@ -716,8 +713,7 @@ namespace sw
     };
 } // namespace sw
 
-// `std::hash` 로 직접 부르는 쪽(std 컨테이너 등)도 같은 값을 받게 합니다. STL 구성에서는 sw::string 이 std::string 이라 표준 특수화와 겹쳐 두지 않습니다.
-#if !defined( SW_ENABLE_STL_CONTAINER )
+// `std::hash` 로 직접 부르는 쪽(std 컨테이너 등)도 같은 값을 받게 합니다.
 namespace std
 {
     /** @brief sw::string 의 `std::hash` 입니다. 본문은 `sw::DefaultHash<sw::string>` 입니다. */
@@ -732,4 +728,3 @@ namespace std
     {
     };
 } // namespace std
-#endif // !SW_ENABLE_STL_CONTAINER

@@ -71,9 +71,6 @@ namespace
  */
 SW_TEST_CASE( VectorTest, SmallVectorStorageTransition )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "small_vector has no inline storage in the STL container build (InlineAllocator is std::allocator)" );
-#else
     sw::small_vector<int32, 2> listValues{};
     const int32* const         pInlineData = listValues.data();
 
@@ -91,7 +88,6 @@ SW_TEST_CASE( VectorTest, SmallVectorStorageTransition )
     listValues.shrink_to_fit();
     SW_EXPECT_TRUE( listValues.data() == pInlineData );
     SW_EXPECT_EQUAL( 2u, listValues.size() );
-#endif
 }
 
 /**
@@ -121,9 +117,6 @@ SW_TEST_CASE( VectorTest, ValueLifetimeAndMutation )
  */
 SW_TEST_CASE( VectorTest, SmallVectorOperations )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "small_vector has no inline storage in the STL container build (InlineAllocator is std::allocator)" );
-#else
     sw::small_vector<int32, 4> listSmall;
     SW_EXPECT_TRUE( listSmall.empty() );
     SW_EXPECT_EQUAL( 0u, listSmall.size() );
@@ -147,7 +140,6 @@ SW_TEST_CASE( VectorTest, SmallVectorOperations )
     listSmall.clear();
     SW_EXPECT_TRUE( listSmall.empty() );
     SW_EXPECT_EQUAL( 0u, listSmall.size() );
-#endif
 }
 
 /**
@@ -191,10 +183,8 @@ SW_TEST_CASE( VectorTest, VectorConstructorsAndRangeOperations )
  */
 SW_TEST_CASE( VectorTest, BitwiseCopyKeepsValues )
 {
-#if !defined( SW_ENABLE_STL_CONTAINER ) // 바이트 복사 경로는 커스텀 vector 의 것이다
     static_assert( sw::is_bitwise_copyable_v<PaddedPod>, "PaddedPod 는 바이트 복사 대상이어야 한다" );
     static_assert( sw::is_bitwise_copyable_v<TrackedValue> == false, "TrackedValue 는 루프 경로여야 한다" );
-#endif
 
     sw::vector<PaddedPod> listSource{};
     for ( uint32 index = 0; index < 64; ++index )
@@ -407,9 +397,6 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
  */
 SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "the empty pop_back guard belongs to the custom vector; std::vector treats it as undefined behaviour" );
-#else
     // Debug 에서는 `SW_ASSERT( _size > 0 )` 가 먼저 울린다 — 단언 가로채기 안에서 불러 그 뒤의 가드까지 지나가게 한다.
     test::ScopedAssertCapture assertCapture;
     sw::vector<sw::string>    list;
@@ -422,7 +409,6 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
     SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
     if ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
-#endif
 }
 
 /**
@@ -435,10 +421,6 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
  */
 SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    // 표준 vector 에는 이 가드가 없다 — 뒤집힌 범위는 정의되지 않은 동작이고 디버그 STL 은 단언 창으로 멈춘다.
-    SW_TEST_SKIP( "the reversed-range guards belong to the custom vector; std::vector treats it as undefined behaviour" );
-#else
     BLOCK( "erase — last 가 first 보다 앞이면 아무것도 하지 않는다" )
     {
         sw::vector<sw::string> list;
@@ -482,7 +464,6 @@ SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
         SW_EXPECT_EQUAL( 1, list[0] );
         SW_EXPECT_EQUAL( 2, list[1] );
     }
-#endif
 }
 
 /**

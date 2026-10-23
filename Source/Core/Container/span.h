@@ -13,8 +13,7 @@
  *          - 원소를 더하거나 지우지는 못합니다(길이는 고정입니다). 그런 일은 컨테이너를 받거나 `VectorUtil` 을 씁니다.
  *          - **소유하지 않습니다.** 가리키는 컨테이너가 커지거나(재할당) 사라지면 뷰는 무효입니다. 멤버로 오래 들고 있지 말고 인자로만 씁니다.
  *
- * @note C++ 최소 표준이 17 이라 `std::span` 을 쓸 수 없어 직접 둡니다. `SW_ENABLE_STL_CONTAINER` 로 표준 컨테이너를 쓰면서 C++20 이면
- *       `std::span` 의 별칭이 되므로, 여기 없는 기능(정적 길이 · `as_bytes`)을 더할 때는 `std::span` 과 같은 이름 · 의미로 더합니다.
+ * @note C++ 최소 표준이 17 이라 `std::span` 을 쓸 수 없어 직접 둡니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이며, 여기 없는 기능(정적 길이 · `as_bytes`)을 더할 때는 `std::span` 과 같은 이름 · 의미로 더합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,23 +22,8 @@
 #include <iterator>
 #include <type_traits>
 
-// `__cpp_lib_span` 을 정하는 곳은 표준 라이브러리마다 다르다(MSVC STL 은 아무 표준 헤더나, libstdc++ 는 `<version>` · `<span>` 만). 먼저 본다.
-
-#if __has_include( <version> )
-    #include <version>
-#endif
-#if defined( SW_ENABLE_STL_CONTAINER ) && defined( __cpp_lib_span )
-    #include <span>
-#endif
-
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER ) && defined( __cpp_lib_span )
-    inline constexpr size_t dynamic_extent = std::dynamic_extent;
-
-    template <typename T>
-    using span = std::span<T>;
-#else
     /** @brief `subspan` 의 "끝까지" 입니다(`std::dynamic_extent` 와 같습니다). */
     inline constexpr size_t dynamic_extent = static_cast<size_t>( -1 );
 
@@ -247,7 +231,6 @@ namespace sw
 
     template <typename TContainer>
     span( const TContainer& ) -> span<SpanInternal::DataElement<const TContainer>>;
-#endif
 
     /**
      * @brief 함수 인자로 vector 류(`vector` · `small_vector` · `array` · C 배열 · 포인터 + 개수)를 받을 때 쓰는 이름입니다. `span<T>` 와 같은 타입입니다.

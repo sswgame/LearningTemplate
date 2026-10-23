@@ -443,10 +443,23 @@ namespace sw
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
         }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
-        runPhase( AnimationPhase::BasePose );
-        runPhase( AnimationPhase::Attachment );
-        runPhase( AnimationPhase::PostProcess );
-        runPhase( AnimationPhase::SkinPalette );
+        // 단계마다 구간을 따로 둔다 — 합성 리그 벤치가 보인 이상(본 150 → 300 의 2.5 배, 후처리 리그 p99 3 배)이 어느 단계의 몫인지 프로파일이 가른다.
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.basePose" );
+            runPhase( AnimationPhase::BasePose );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.attachment" );
+            runPhase( AnimationPhase::Attachment );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.postProcess" );
+            runPhase( AnimationPhase::PostProcess );
+        }
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.skinPalette" );
+            runPhase( AnimationPhase::SkinPalette );
+        }
         _poseEvaluatedUnitCount = poseUnitCount;
         SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
         SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );
