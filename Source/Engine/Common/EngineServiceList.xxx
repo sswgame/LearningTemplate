@@ -36,6 +36,8 @@ SW_ENGINE_SERVICE( class, EventDispatcher, Required, GameVisible )
 // 비동기 파일 읽기(IOCP · io_uring · 스레드 풀). 에셋 스트리밍 큐 · 팩 리더가 쓴다. 시작 · 종료는 서브시스템 FileIO(`AsyncFileIO` 가 직접 상속)다.
 SW_ENGINE_SERVICE( class, AsyncFileIO, Required, HostOnly )
 SW_ENGINE_SERVICE( class, AssetManager, Required, GameVisible )
+// 데이터 파일 종류(카탈로그 계약) 레지스트리. 서비스 범위가 소유하고, 모듈을 올리고 내리는 길(`engine::registerModuleTypes`)이 정적 등록자를 걷어 올리고 뺀다.
+SW_ENGINE_SERVICE( class, ResourceDataKindRegistry, Required, GameVisible )
 SW_ENGINE_SERVICE( class, AssetStreamingQueue, Required, HostOnly )
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
 // (엔진 루프의 서비스 범위 `#if !defined(SW_SHIPPING)` 참고). 그런데 Required 면

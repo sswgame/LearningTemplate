@@ -803,7 +803,7 @@ namespace
             outKind = ResolvedKind{};
             outConflict.clear();
             sw::vector<const sw::ResourceDataKind*> listRegistered;
-            sw::ResourceDataKindRegistry::get().collectMatches( resourceID, listRegistered );
+            sw::engine::getSubsystem<sw::ResourceDataKindRegistry>().collectMatches( resourceID, listRegistered );
             for ( const DataKind& kind : kArrDataKind )
             {
                 if ( kind._pIsKind( resourceID ) == false )
