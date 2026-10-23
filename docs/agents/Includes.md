@@ -10,6 +10,12 @@
   matching header. Group project headers by relative source scope, separated by
   blank lines. System, OS-specific, project-global, and ThirdParty headers use
   angle brackets and are separately grouped.
+- **Every project include is a full path from a root** — `Source/` (`Engine/Scene/SceneManager.h`), `Resource/`, the
+  generated folder, `Test/` · `Tools/` for those trees — or a bare name in the same folder (`Foo.h`). No folder under
+  `Source/` is on an include path, so `Scene/SceneManager.h` does not compile; `"pch.h"` resolves through a generated entry
+  header (`sw_addPchEntryDirectory`). The configure step fails when a target adds a `Source/` sub-folder
+  (`sw_verifySourceIncludeRoots`), and `CheckEngineLayers.py` rejects a path relative to the file's own folder
+  (`RHI/RHIDevice.h`, `../Scene/X.h`) — the layer gates read the path's leading folders.
 - Sort includes within a group where doing so does not undermine a required
   ordering. Prefer `Core/Common/StdHeaders.h` and
   `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes — except the heavy standard

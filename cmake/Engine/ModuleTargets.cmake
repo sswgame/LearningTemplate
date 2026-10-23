@@ -93,7 +93,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 	if(NOT ARG_MODULE_NAME STREQUAL TARGET_NAME)
 		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${ARG_MODULE_NAME}")
 	endif()
-	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_verifySourceIncludeRoots`).
 	if(ARG_LINK_PUBLIC)
 		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
 	endif()

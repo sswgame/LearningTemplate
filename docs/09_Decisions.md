@@ -240,6 +240,11 @@
   Dev 는 실행할 때 `-game=<이름>`(`GameSelection`)으로 고르고 기본은 `Bin/Modules/ActiveGame.txt` 라 게임 이름이 엔진 TU 에 구워지지 않습니다.
   Shipping 은 활성 게임 하나를 정적으로 링크하고 게임 정체성을 빌드 시점에 굽습니다. Debug 깨끗한 빌드 게임 1개 148초 → 8개 152초, 활성 게임을 바꾼 뒤 다시 짓기 5.5초(게임 모듈 22 TU 만).
 
+- **include 경로에는 뿌리(`Source/` · `Resource/` · 생성 폴더)만 두고, `Source/` 아래 폴더(엔진 · Core · 모듈 · RuntimeAPI · App)는 include 경로가 아닙니다**(2026-10-23, [층 게이트](plans/LayerTierGate.md) T6).
+  `#include "pch.h"` 는 생성한 진입 헤더 하나(`generated/sw/pchentry/<engine|core>/pch.h` → `Engine/pch.h` · `Core/pch.h`)로 풀고(`sw_addPchEntryDirectory`), 구성 끝에 `sw_verifySourceIncludeRoots` 가 소스 폴더 경로를 거부합니다.
+  소스 폴더를 경로로 주면 접두 없는 include 가 다른 층으로 풀려 층 게이트(경로 앞부분으로 층을 안다)를 비껴갔습니다. Godot 이 저장소 뿌리 기준 경로만 쓰는 것과 같은 자리입니다 [기억].
+  `pch.h` 를 `Source/Engine/Pch/` 로 옮기는 안은 새 폴더가 티어 표 · 루트 모음 헤더 규칙에 걸려 버렸습니다(언리얼 UBT 도 공유 PCH 를 Intermediate 의 생성 헤더로 엽니다 [기억]).
+
 - **Windows 지연 로드(`/DELAYLOAD`)를 쓰지 않습니다 — 모듈끼리는 일반 import 이고 핫 리로드가 섀도 복사본의 import 이름을 세대 이름으로 바꿉니다**(2026-10-12).
   lld 20.1.8 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)가 xmm0~3 을 `__delayLoadHelper2` 호출의 홈 공간에 저장해, 처음 묶는 호출의 float 인자가 망가졌습니다
   (LLVM 이슈 51941 · bz52599, 고침은 #149521 로 LLVM 21.x). 모든 지연 import 를 코드가 돌기 전에 미리 묶는 우회는 이미지 목록을 놓치면(DbgHelp 열거 실패) 조용히 다시 망가졌습니다. 후보와 결론:

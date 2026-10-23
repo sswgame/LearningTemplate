@@ -75,7 +75,8 @@ set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineAbiStamp.c
 	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
 )
 
-target_include_directories(Engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+# `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
+sw_addPchEntryDirectory(Engine PUBLIC engine "Engine/pch.h")
 # 셰이더 바인딩 계약(bindingslots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
 target_include_directories(Engine PUBLIC "${CMAKE_SOURCE_DIR}/Resource/engine/shaders")
 target_link_libraries(Engine
