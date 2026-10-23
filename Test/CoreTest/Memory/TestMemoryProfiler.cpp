@@ -94,6 +94,38 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
 }
 
 /**
+ * @brief [MemoryProfilerTest] 세부 추적을 켜고 할당한 블록은 추적을 끈 뒤에 해제해도 스택 표에서 빠진다
+ * @details 해제가 지금 스위치를 보면 껐다 켠 사이의 해제가 표에서 빠져 살아 있는 양이 위로 어긋난다. 판정은 할당 때 정해진 해시다.
+ *          반대로 꺼 둔 채 할당한 블록(해시 0)은 표에 오른 적이 없으므로, 켠 뒤 해제해도 표를 건드리지 않는다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, FreeAfterDetailedTrackingTurnedOffClearsTheStackTable )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+    profiler.setDetailedTrackingEnabled( true );
+
+    void*                  pTracked = reinterpret_cast<void*>( 0x3579'BDF0 );
+    const AllocationRecord tracked  = profiler.recordAllocation( pTracked, 512, MemoryTag::EngineMisc );
+    SW_ASSERT_TRUE( tracked._callStackHash != 0 );
+    SW_ASSERT_FALSE( profiler.getTopCallStacks( TopCallStackOrder::LiveBytes ).empty() );
+
+    profiler.setDetailedTrackingEnabled( false );
+    profiler.recordFree( pTracked, 512, MemoryTag::EngineMisc, tracked );
+    SW_EXPECT_TRUE( profiler.getTopCallStacks( TopCallStackOrder::LiveBytes ).empty() );
+
+    void*                  pUntracked = reinterpret_cast<void*>( 0x4680'CE10 );
+    const AllocationRecord untracked  = profiler.recordAllocation( pUntracked, 128, MemoryTag::EngineMisc );
+    SW_EXPECT_EQUAL( uint64( 0 ), untracked._callStackHash );
+    profiler.setDetailedTrackingEnabled( true );
+    profiler.recordFree( pUntracked, 128, MemoryTag::EngineMisc, untracked );
+    SW_EXPECT_TRUE( profiler.getTopCallStacks( TopCallStackOrder::LiveBytes ).empty() );
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::EngineMisc )._currentAllocationCount );
+
+    profiler.shutdown();
+}
+
+/**
  * @brief [MemoryProfilerTest] `getTopCallStacks` 를 되풀이해 불러도 현재 사용량이 줄지 않는다.
  * @details 결과 버퍼를 추적 가드 안에서 잡으면 할당은 세지 않고 호출한 쪽이 풀 때만 세어 현재 사용량이 줄기만 한다. 프로파일러
  *          패널이 매 프레임 부르므로 태그 카운터가 0 에 붙는다.
