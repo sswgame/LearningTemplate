@@ -43,6 +43,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterator
 
+from .Constants import kShaderSourceExtensions
+
 #: 심각도 — 앞일수록 무겁다. 게이트는 `error` 만 막는다.
 kSeverityOrder: tuple[str, ...] = ("error", "warning", "info")
 
@@ -252,7 +254,7 @@ class ValidationContext:
         if self._shaderText is None:
             listText = []
             for relPath in self.listAllPath:
-                if relPath.endswith((".hlsl", ".hlsli")):
+                if Path(relPath).suffix in kShaderSourceExtensions:
                     listText.append((self.resourceRoot / relPath).read_text(encoding="utf-8", errors="replace"))
             self._shaderText = "\n".join(listText)
         return self._shaderText

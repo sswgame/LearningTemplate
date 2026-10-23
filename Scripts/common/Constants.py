@@ -65,7 +65,8 @@ kTargetEditorModule = "EditorModule"
 kCppHeaderExtensions: set[str] = {".h", ".hpp", ".inl"}
 kCppSourceExtensions: set[str] = {".c", ".cpp", ".cc", ".cxx"}
 kCppAllExtensions: set[str] = {".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx"}
-#: 셰이더 소스 확장자. clang-format 은 C++ 와 함께 이것도 건다(셰이더만의 설정은 `Resource/.clang-format`).
+#: 셰이더 소스 확장자 — 셰이더를 고르는 스크립트는 모두 이것을 쓴다(파일마다 튜플을 따로 두면 갈라진다).
+#: clang-format 은 C++ 와 함께 이것도 건다(셰이더만의 설정은 `Resource/.clang-format`).
 kShaderSourceExtensions: set[str] = {".hlsl", ".hlsli"}
 
 # =============================================================================

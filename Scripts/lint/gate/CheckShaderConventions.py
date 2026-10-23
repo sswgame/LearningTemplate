@@ -35,11 +35,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
+from common.Constants import kShaderSourceExtensions  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
-
-#: 셰이더 확장자.
-kShaderSuffix = (".hlsl", ".hlsli")
 
 #: **문자열로 묶인 이름** — C++ · 파이프라인 XML 이 이 철자로 부르므로 셰이더 쪽에서만 바꿀 수 없다. 규칙 검사에서 뺀다.
 #: 이유 없는 예외는 두지 않는다. 전역 · cbuffer 멤버(`g_*`)는 여기 적지 않는다 — 그 철자 규칙(`g_` + PascalCase)만 본다.
@@ -416,7 +414,7 @@ class CheckShaderConventionsGate(LintGate):
         self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=kShaderSuffix)
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=kShaderSourceExtensions)
         listViolation: list[str] = []
         for path in listPath:
             relPath = path.relative_to(repositoryRoot).as_posix()

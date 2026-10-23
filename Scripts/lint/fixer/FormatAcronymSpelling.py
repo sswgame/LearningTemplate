@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
 from common.CodeText import blankComments  # noqa: E402
-from common.Constants import kLintTargetRelDirs, kNotOurCodeDirNames, kNotOurDirNames  # noqa: E402
+from common.Constants import kLintTargetRelDirs, kNotOurCodeDirNames, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.Parallel import mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
@@ -54,9 +54,6 @@ from common.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
 _kState: dict[str, tuple[str, ...]] = {"acronyms": registry.kSelectable}
-
-#: 셰이더 — 고치지 않지만, C++ 과 같은 이름이 셰이더에도 있으면 사전 실행이 알린다(`bindingslots.hlsli` 는 양쪽이 include 한다).
-_kShaderSuffix: tuple[str, ...] = (".hlsl", ".hlsli")
 
 #: 파일 이름을 글로 적는 파일 — `--apply-files` 가 옛 파일 이름을 새 이름으로 바꾼다.
 _kPathTextSuffix: tuple[str, ...] = (*registry.kCodeSuffix, ".cmake", ".md", ".json", ".py", ".txt", ".natvis", ".xml", ".yml", ".in")
@@ -236,9 +233,9 @@ def buildReport(repositoryRoot: Path, acronyms: tuple[str, ...], externalNames: 
     listExternalSuspect = sorted(name for name in mapRename if name in externalNames)
     listFileRename = collectFileRenames(repositoryRoot, acronyms)
 
-    # 셰이더 · 데이터
+    # 셰이더 · 데이터 — 셰이더는 고치지 않지만, C++ 과 같은 이름이 셰이더에도 있으면 알린다(`bindingslots.hlsli` 는 양쪽이 include 한다).
     counterShader: Counter = Counter()
-    for path in collectRepositoryFiles(repositoryRoot, ("Source", "Resource", "Test"), suffixes=_kShaderSuffix, excludedDirNames=kNotOurCodeDirNames):
+    for path in collectRepositoryFiles(repositoryRoot, ("Source", "Resource", "Test"), suffixes=kShaderSourceExtensions, excludedDirNames=kNotOurCodeDirNames):
         text = path.read_text(encoding="utf-8", errors="replace")
         for site in registry.iterateNameSites(text, acronyms):
             if registry.respellName(site.name, acronyms) != site.name:
