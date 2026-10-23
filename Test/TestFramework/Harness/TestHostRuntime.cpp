@@ -182,17 +182,15 @@ namespace test
         {
             sw::SubsystemScope&        bootstrap = state._bootstrap;
             sw::engine::BootstrapSetup bootstrapSetup;
-            bootstrapSetup._argc                         = static_cast<int32>( listApplicationArg.size() );
-            bootstrapSetup._ppArgv                       = listApplicationArg.data();
-            bootstrapSetup._bDiagnostics                 = true; // 늘 진단 구성이다 — 메모리 예산은 두지 않고 진단 구성의 추적을 그대로 둔다
-            const sw::engine::BootstrapParts parts       = sw::engine::addBootstrapSubsystems( bootstrap, bootstrapSetup );
-            const sw::DiagnosticsSubsystem&  diagnostics = *parts._pDiagnostics;
-            if ( bootstrap.getCollection().initializeAll( sw::SubsystemHostMask::All ) == false )
+            bootstrapSetup._argc                   = static_cast<int32>( listApplicationArg.size() );
+            bootstrapSetup._ppArgv                 = listApplicationArg.data();
+            bootstrapSetup._bDiagnostics           = true; // 늘 진단 구성이다 — 메모리 예산은 두지 않고 진단 구성의 추적을 그대로 둔다
+            const sw::engine::BootstrapParts parts = sw::engine::addBootstrapSubsystems( bootstrap, bootstrapSetup );
+            if ( sw::engine::initializeBootstrapSubsystems( bootstrap, parts ) == false )
             {
                 std::fprintf( stderr, "[TestHost] bootstrap failed: %s\n", bootstrap.getCollection().getError().c_str() );
                 return false;
             }
-            (void)bootstrap.bind( diagnostics.findMemoryProfiler() ); // 하네스는 늘 진단 구성이라 있다 — 새 범위라 겹치지 않는다
         }
 
         // ------------------------------------------------------------------------------

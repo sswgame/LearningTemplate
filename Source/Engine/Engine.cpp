@@ -190,14 +190,13 @@ namespace sw
         CrashHandlerSubsystem*       pCrashHandler  = bootstrapParts._pCrashHandler;
         _pCommandLineSubsystem                      = bootstrapParts._pCommandLine;
         _pMemoryBudget                              = bootstrapParts._pMemoryBudget;
-        if ( _bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        if ( engine::initializeBootstrapSubsystems( _bootstrap, bootstrapParts ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로도 낸다.
             std::fprintf( stderr, "[Engine] bootstrap failed: %s\n", _bootstrap.getCollection().getError().c_str() );
             SW_LOG_ERROR( "Engine bootstrap failed: %#", _bootstrap.getCollection().getError().c_str() );
             return false;
         }
-        (void)_bootstrap.bind( bootstrapParts._pDiagnostics->findMemoryProfiler() ); // 배포본에는 없어(nullptr) 걸지 않는다 — 선택 행이다
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( pCrashHandler->isCrashReporterRun() )
