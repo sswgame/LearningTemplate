@@ -103,6 +103,10 @@ namespace
     /// @brief 두 그림(백엔드끼리, 드로우 경로끼리)을 같다고 칠 때 허용하는 다른 화소의 비율(%) — 래스터 규칙 차이로 가장자리 몇 화소가 갈릴 여지다.
     ///        평균 색 차이 대신 이것으로 본다. 2026-10 이 기계(네 백엔드)에서 쓰는 케이스는 모두 다른 화소 0 이다.
     constexpr uint32 kSameImageDifferingPercent = 1;
+    /// @brief 두 판이 **달라야** 하는 Present 비교(그림자 켬 · 끔, 프로브 볼륨, 금속도, FSR, 보기 모드)에서 바뀐 화소(`kSamePathMinDistance` 이상) 수의 하한.
+    ///        채널 하나가 2 만 달라도 "다르다" 로 치던 옛 판정은 반올림 흔들림과 결함을 가르지 못했다. 실측 최소의 4 분의 1 안쪽으로 둔다
+    ///        (2026-10 Release 네 백엔드, 320 × 240: FSR 3912 · 빈 그림자 맵 4736 · 점광 · 스폿 그림자 8284 · 프로브 64677 · 금속도 64545 · 보기 모드 64348).
+    constexpr uint32 kMinChangedPixelCount = 500;
 
     /**
      * @brief 씬을 한 프레임 그리고(Present 없이) GPU 가 끝날 때까지 기다립니다. `execute` 의 결과를 돌려줍니다.
@@ -269,8 +273,8 @@ namespace
      * @brief 파이프라인 하나로 몇 프레임 돌리고 **화면에 나간 그림**(Present 캡처)을 읽어 옵니다.
      * @details 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다. 백버퍼는 핸들이 없어 읽을 수 없으므로 캡처를 켠다.
      */
-    bool renderPresentCaptureOf( sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pPipelinePath, sw::vector<uint8>& outByte,
-                                 sw::RHITextureMipSpan& outLayout, sw::RenderViewMode viewMode = sw::RenderViewMode::Lit )
+    bool renderPresentCaptureOf( sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pPipelinePath, test::RHITestImage& outImage,
+                                 sw::RenderViewMode viewMode = sw::RenderViewMode::Lit )
     {
         sw::FrameRenderer renderer;
         if ( renderer.initialize( pDevice, pPipelinePath ) == false || renderer.isReady() == false )
@@ -290,47 +294,9 @@ namespace
             pDevice->endFrame( false, false );
             pDevice->waitIdle();
         }
-        const bool bRead = renderer.getCapture().readbackPresent( outByte, outLayout );
+        const bool bRead = outImage.readPresent( renderer );
         renderer.shutdown();
         return bRead;
-    }
-
-    /** @brief 두 Present 캡처의 차이입니다(채널 단위). */
-    struct CaptureDifference
-    {
-        uint32 _maxDelta{ 0 };
-        uint32 _differCount{ 0 };
-        uint32 _notBackgroundCount{ 0 }; ///< 기준 그림에서 첫 픽셀과 다른 채널 수 — 0 이면 배경뿐이라 비교가 뜻이 없다
-        size_t _compareCount{ 0 };
-
-        /** @brief 반올림 차이(1)를 넘는 칸이 없고 다른 칸이 1% 이하면 같은 그림입니다. */
-        bool isSameImage() const { return _maxDelta <= 1 && _differCount * 100u <= _compareCount; }
-        /** @brief 실패 메시지에 붙일 요약입니다. */
-        sw::string describe() const
-        {
-            return sw::string( "최대 차이 " ) + sw::to_string( _maxDelta ) + ", 다른 칸 " + sw::to_string( _differCount ) + " / " +
-                   sw::to_string( static_cast<uint64>( _compareCount ) );
-        }
-    };
-
-    /** @brief 기준 캡처와 다른 캡처를 칸마다 맞춥니다. */
-    CaptureDifference compareCaptures( const sw::vector<uint8>& listReference, const sw::vector<uint8>& listOther )
-    {
-        CaptureDifference difference{};
-        difference._compareCount = ( listReference.size() < listOther.size() ) ? listReference.size() : listOther.size();
-        for ( size_t index = 0; index < difference._compareCount; ++index )
-        {
-            if ( listReference[index] != listReference[index % 4] )
-                ++difference._notBackgroundCount;
-            const uint32 delta = ( listReference[index] > listOther[index] ) ? static_cast<uint32>( listReference[index] - listOther[index] )
-                                                                             : static_cast<uint32>( listOther[index] - listReference[index] );
-            if ( delta == 0 )
-                continue;
-            ++difference._differCount;
-            if ( delta > difference._maxDelta )
-                difference._maxDelta = delta;
-        }
-        return difference;
     }
 
     /**
@@ -755,13 +721,11 @@ namespace
         test::RHIBackendSweep sweep;
         for ( test::RHITestDevice& device : sweep )
         {
-            LitCubeScene          cube;
-            sw::vector<uint8>     listShadow;
-            sw::vector<uint8>     listEmptyShadow;
-            sw::RHITextureMipSpan layoutShadow{};
-            sw::RHITextureMipSpan layoutEmptyShadow{};
-            const utf8*           pName = device->getBackendName();
-            bool                  bOk   = cube.populate();
+            LitCubeScene       cube;
+            test::RHITestImage shadowImage;
+            test::RHITestImage emptyShadowImage;
+            const utf8*        pName = device->getBackendName();
+            bool               bOk   = cube.populate();
             if ( bOk && ( shadowExtent > 0.0f || shadowViewDistance > 0.0f ) )
             {
                 sw::DirectionalLightComponent* pLight = cube._scene.findActiveDirectionalLight();
@@ -778,17 +742,18 @@ namespace
                 }
             }
             if ( bOk )
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listShadow, layoutShadow );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), shadowImage );
             if ( bOk )
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( emptyShadowPath ).c_str(), listEmptyShadow, layoutEmptyShadow );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( emptyShadowPath ).c_str(), emptyShadowImage );
 
-            if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
+            if ( bOk )
             {
                 ++comparedCount;
-                const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
-                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-                SW_EXPECT_FALSE_MSG( difference.isSameImage(),
-                                     ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자가 하나도 지지 않는다 (" + difference.describe() + ")" ).c_str() );
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( shadowImage, emptyShadowImage, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: %# empty shadow map vs shadow: %#", pTestName, pName, difference.describe() );
+                SW_EXPECT_TRUE_MSG( shadowImage.countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( difference._brighterCount >= kMinChangedPixelCount && difference._brighterCount * 2 > difference._differingCount,
+                                    ( sw::string( pName ) + ": 그림자 맵을 비워도 밝아진 화소가 적다 — 그림자가 지지 않는다 (" + difference.describe() + ")" ).c_str() );
             }
             else if ( bOk == false )
                 SW_LOG_WARNING( "%#: %# 에서 파이프라인을 돌리지 못했습니다.", pTestName, pName );
@@ -803,7 +768,7 @@ namespace
      * @param bSpot       true 면 스폿, false 면 점광
      * @param bCastShadow 그 빛의 그림자를 켤지
      */
-    bool renderLocalLightCapture( sw::IRHIDevice* pDevice, bool bSpot, bool bCastShadow, sw::vector<uint8>& outByte, sw::RHITextureMipSpan& outLayout )
+    bool renderLocalLightCapture( sw::IRHIDevice* pDevice, bool bSpot, bool bCastShadow, test::RHITestImage& outImage )
     {
         LitCubeScene cube;
         if ( cube.populate() == false )
@@ -837,7 +802,7 @@ namespace
             pPoint->setCastShadow( bCastShadow );
         }
         cube._scene.getObjectManager()->flushSceneTransforms();
-        return renderPresentCaptureOf( pDevice, cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), outByte, outLayout );
+        return renderPresentCaptureOf( pDevice, cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), outImage );
     }
 
     /**
@@ -851,20 +816,19 @@ namespace
         test::RHIBackendSweep sweep;
         for ( test::RHITestDevice& device : sweep )
         {
-            const utf8*           pName = device->getBackendName();
-            sw::vector<uint8>     listShadow;
-            sw::vector<uint8>     listNoShadow;
-            sw::RHITextureMipSpan layoutShadow{};
-            sw::RHITextureMipSpan layoutNoShadow{};
-            const bool            bOk = renderLocalLightCapture( device.get(), bSpot, true, listShadow, layoutShadow ) &&
-                             renderLocalLightCapture( device.get(), bSpot, false, listNoShadow, layoutNoShadow );
-            if ( bOk && layoutShadow._width == layoutNoShadow._width )
+            const utf8*        pName = device->getBackendName();
+            test::RHITestImage shadowImage;
+            test::RHITestImage noShadowImage;
+            const bool         bOk = renderLocalLightCapture( device.get(), bSpot, true, shadowImage ) && renderLocalLightCapture( device.get(), bSpot, false, noShadowImage );
+            if ( bOk )
             {
                 ++comparedCount;
-                const CaptureDifference difference = compareCaptures( listNoShadow, listShadow );
-                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-                SW_EXPECT_FALSE_MSG( difference.isSameImage(),
-                                     ( sw::string( pName ) + ": " + ( bSpot ? "스폿" : "점광" ) + " 그림자를 켜도 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+                // 그림자를 끈 판을 둘째로 둔다 — 그림자 자리가 밝아진다.
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( shadowImage, noShadowImage, kSamePathMinDistance );
+                SW_LOG_INFO( "%#: %# shadow vs no shadow: %#", pTestName, pName, difference.describe() );
+                SW_EXPECT_TRUE_MSG( noShadowImage.countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( difference._brighterCount >= kMinChangedPixelCount && difference._brighterCount * 2 > difference._differingCount,
+                                    ( sw::string( pName ) + ": " + ( bSpot ? "스폿" : "점광" ) + " 그림자를 꺼도 밝아진 화소가 적다 (" + difference.describe() + ")" ).c_str() );
             }
             else if ( bOk == false )
                 SW_LOG_WARNING( "%#: %# 에서 그리지 못했습니다.", pTestName, pName );
@@ -907,53 +871,62 @@ namespace
         return bOk;
     }
 
-    /** @brief 위를 보는 면의 노멀 색(0.5 + 0.5 · +Y = 초록이 가장 밝다)인 픽셀 수입니다. RGBA8 · BGRA8 모두 G 는 둘째 칸입니다. */
-    uint32 countUpFacingNormalPixels( const sw::vector<uint8>& bytes )
+    /** @brief 위를 보는 면의 노멀 색(0.5 + 0.5 · +Y = 초록이 가장 밝다)인 픽셀 수입니다. */
+    uint32 countUpFacingNormalPixels( const test::RHITestImage& image )
     {
         uint32 count{ 0 };
-        for ( size_t index = 0; index + 3 < bytes.size(); index += 4 )
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            const int32 first  = bytes[index];
-            const int32 green  = bytes[index + 1];
-            const int32 third  = bytes[index + 2];
-            const bool  bUpish = green > 200 && green > first + 50 && green > third + 50;
-            if ( bUpish )
-                ++count;
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel  = image.getPixel( x, y );
+                const int32       green  = pixel._g;
+                const bool        bUpish = green > 200 && green > pixel._r + 50 && green > pixel._b + 50;
+                if ( bUpish )
+                    ++count;
+            }
         }
         return count;
     }
 
-    /** @brief 첫 픽셀(배경)과 다른 픽셀 가운데 첫 칸 값의 최대 · 최소 차입니다. 겹쳐 그린 자리가 하나뿐인 자리보다 밝으면 큽니다. */
-    uint32 computeForegroundFirstChannelSpread( const sw::vector<uint8>& bytes )
+    /** @brief 첫 픽셀(배경)과 다른 픽셀 가운데 R 값의 최대 · 최소 차입니다. 겹쳐 그린 자리가 하나뿐인 자리보다 밝으면 큽니다. */
+    uint32 computeForegroundRedSpread( const test::RHITestImage& image )
     {
-        if ( bytes.size() < 4 )
-            return 0;
-        uint32 minValue{ 255 };
-        uint32 maxValue{ 0 };
-        for ( size_t index = 0; index + 3 < bytes.size(); index += 4 )
+        const test::Rgba8 background = image.getPixel( 0, 0 );
+        uint32            minValue{ 255 };
+        uint32            maxValue{ 0 };
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            const bool bBackground = bytes[index] == bytes[0] && bytes[index + 1] == bytes[1] && bytes[index + 2] == bytes[2];
-            if ( bBackground )
-                continue;
-            minValue = sw::MathUtil::min( minValue, static_cast<uint32>( bytes[index] ) );
-            maxValue = sw::MathUtil::max( maxValue, static_cast<uint32>( bytes[index] ) );
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                if ( test::RHITestImage::getColorDistance( pixel, background ) == 0 )
+                    continue;
+                minValue = sw::MathUtil::min( minValue, static_cast<uint32>( pixel._r ) );
+                maxValue = sw::MathUtil::max( maxValue, static_cast<uint32>( pixel._r ) );
+            }
         }
         return maxValue > minValue ? maxValue - minValue : 0u;
     }
 
     /**
-     * @brief 바이트 배열의 평균(0~255)입니다. 비어 있으면 음수입니다.
+     * @brief 이미지의 R · G · B 평균(0~255)입니다. 비어 있으면 음수입니다.
      * @details 노출 · 밝기 보존처럼 화면 전체가 함께 움직이는 성질에만 쓴다. 일부 화소만 바뀌는 성질(그림자 · AO · 입자 · 순서)은 평균에서 묻히므로
      *          `test::RHITestImage::compare` 로 바뀐 화소를 센다.
      */
-    float64 computeMeanByte( const sw::vector<uint8>& bytes )
+    float64 computeMeanColorChannel( const test::RHITestImage& image )
     {
         uint64 sum = 0;
-        for ( const uint8 value : bytes )
+        for ( uint32 y = 0; y < image.getHeight(); ++y )
         {
-            sum += value;
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = image.getPixel( x, y );
+                sum += static_cast<uint64>( pixel._r ) + pixel._g + pixel._b;
+            }
         }
-        return bytes.empty() ? -1.0 : static_cast<float64>( sum ) / static_cast<float64>( bytes.size() );
+        const uint64 channelCount = static_cast<uint64>( image.getPixelCount() ) * 3u;
+        return channelCount == 0 ? -1.0 : static_cast<float64>( sum ) / static_cast<float64>( channelCount );
     }
 
     /** @brief G버퍼 알베도에서 붉은 픽셀(가림 판정 테스트의 큐브 색) 수입니다. 읽지 못하면 -1 입니다. */
@@ -4542,26 +4515,24 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
     for ( test::RHITestDevice& device : sweep )
     {
         // 씬은 한 번만 만든다 — 두 파이프라인이 같은 입력을 받아야 비교가 성립한다.
-        LitCubeScene          cube;
-        sw::vector<uint8>     listReference;
-        sw::vector<uint8>     listRenamed;
-        sw::RHITextureMipSpan layoutReference{};
-        sw::RHITextureMipSpan layoutRenamed{};
-        const utf8*           pName = device->getBackendName();
-        bool                  bOk   = cube.populate();
+        LitCubeScene       cube;
+        test::RHITestImage referenceImage;
+        test::RHITestImage renamedImage;
+        const utf8*        pName = device->getBackendName();
+        bool               bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), referenceImage );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), renamedImage );
 
-        const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
-        if ( bComparable )
+        if ( bOk )
         {
             ++comparedCount;
-            const CaptureDifference difference = compareCaptures( listReference, listRenamed );
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, renamedImage, kSamePathMinDistance );
             // 기준 그림에 큐브가 있어야 비교가 뜻이 있다 — 둘 다 배경뿐이면 이름을 무시해도 같게 나온다.
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+            SW_EXPECT_TRUE_MSG( referenceImage.countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference.isCompared() && difference._differingCount == 0,
+                                ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "RenamedAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
@@ -4571,9 +4542,8 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
         {
             SW_TEST_DEFENSIVE_SCOPE( "ForwardOpaque without a colour output" );
             test::ScopedLogCollector collector;
-            sw::vector<uint8>        listBroken;
-            sw::RHITextureMipSpan    layoutBroken{};
-            (void)renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( brokenPath ).c_str(), listBroken, layoutBroken );
+            test::RHITestImage       brokenImage;
+            (void)renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( brokenPath ).c_str(), brokenImage );
             SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 출력이 없습니다" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
     }
@@ -4639,25 +4609,23 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        LitCubeScene          cube;
-        sw::vector<uint8>     listReference;
-        sw::vector<uint8>     listRenamed;
-        sw::RHITextureMipSpan layoutReference{};
-        sw::RHITextureMipSpan layoutRenamed{};
-        const utf8*           pName = device->getBackendName();
-        bool                  bOk   = cube.populate();
+        LitCubeScene       cube;
+        test::RHITestImage referenceImage;
+        test::RHITestImage renamedImage;
+        const utf8*        pName = device->getBackendName();
+        bool               bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), referenceImage );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), renamedImage );
 
-        const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
-        if ( bComparable )
+        if ( bOk )
         {
             ++comparedCount;
-            const CaptureDifference difference = compareCaptures( listReference, listRenamed );
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": G버퍼 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, renamedImage, kSamePathMinDistance );
+            SW_EXPECT_TRUE_MSG( referenceImage.countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다 — 큐브가 그려지지 않았습니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference.isCompared() && difference._differingCount == 0,
+                                ( sw::string( pName ) + ": G버퍼 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "RenamedGBufferAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
@@ -4939,32 +4907,28 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        LitCubeScene          cube;
-        sw::vector<uint8>     listReference;
-        sw::vector<uint8>     listPrepass;
-        sw::vector<uint8>     listRenamed;
-        sw::RHITextureMipSpan layoutReference{};
-        sw::RHITextureMipSpan layoutPrepass{};
-        sw::RHITextureMipSpan layoutRenamed{};
-        const utf8*           pName = device->getBackendName();
-        bool                  bOk   = cube.populate();
+        LitCubeScene       cube;
+        test::RHITestImage referenceImage;
+        test::RHITestImage prepassImage;
+        test::RHITestImage renamedImage;
+        const utf8*        pName = device->getBackendName();
+        bool               bOk   = cube.populate();
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), listReference, layoutReference );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), referenceImage );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardprepasspipeline.xml", listPrepass, layoutPrepass );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardprepasspipeline.xml", prepassImage );
         if ( bOk )
-            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), listRenamed, layoutRenamed );
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( renamedPath ).c_str(), renamedImage );
 
-        const bool bComparable = bOk && layoutReference._width == layoutPrepass._width && layoutReference._width == layoutRenamed._width;
-        if ( bComparable )
+        if ( bOk )
         {
             ++comparedCount;
-            const CaptureDifference prepassDifference = compareCaptures( listReference, listPrepass );
-            const CaptureDifference renamedDifference = compareCaptures( listReference, listRenamed );
-            SW_EXPECT_TRUE_MSG( prepassDifference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( prepassDifference.isSameImage(),
+            const test::RHITestImageDifference prepassDifference = test::RHITestImage::compare( referenceImage, prepassImage, kSamePathMinDistance );
+            const test::RHITestImageDifference renamedDifference = test::RHITestImage::compare( referenceImage, renamedImage, kSamePathMinDistance );
+            SW_EXPECT_TRUE_MSG( referenceImage.countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( prepassDifference.isCompared() && prepassDifference._differingCount == 0,
                                 ( sw::string( pName ) + ": 깊이 프리패스를 넣었더니 그림이 다르다 (" + prepassDifference.describe() + ")" ).c_str() );
-            SW_EXPECT_TRUE_MSG( renamedDifference.isSameImage(),
+            SW_EXPECT_TRUE_MSG( renamedDifference.isCompared() && renamedDifference._differingCount == 0,
                                 ( sw::string( pName ) + ": 프리패스의 깊이 첨부 이름만 바꿨는데 그림이 다르다 (" + renamedDifference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
@@ -5160,10 +5124,9 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const utf8*           pName = device->getBackendName();
-        sw::vector<uint8>     arrCapture[2];
-        sw::RHITextureMipSpan arrLayout[2]{};
-        bool                  bOk = true;
+        const utf8*        pName = device->getBackendName();
+        test::RHITestImage arrImage[2];
+        bool               bOk = true;
         for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
         {
             LitCubeScene cube;
@@ -5186,7 +5149,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
             if ( bOk )
             {
                 cube._scene.getObjectManager()->flushSceneTransforms();
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrCapture[caseIndex], arrLayout[caseIndex] );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrImage[caseIndex] );
             }
         }
         if ( bOk == false )
@@ -5195,9 +5158,11 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
             continue;
         }
         ++comparedCount;
-        const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
-        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-        SW_EXPECT_FALSE_MSG( difference.isSameImage(), ( sw::string( pName ) + ": 프로브 볼륨을 넣어도 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+        const test::RHITestImageDifference difference = test::RHITestImage::compare( arrImage[0], arrImage[1], kSamePathMinDistance );
+        SW_LOG_INFO( "LightProbeVolumeReplacesAmbient: %# no volume vs volume: %#", pName, difference.describe() );
+        SW_EXPECT_TRUE_MSG( arrImage[0].countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( difference._differingCount >= kMinChangedPixelCount,
+                            ( sw::string( pName ) + ": 프로브 볼륨을 넣어도 바뀐 화소가 적다 (" + difference.describe() + ")" ).c_str() );
     }
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the light probe volume test" );
@@ -5218,9 +5183,8 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
         const utf8* pName = device->getBackendName();
         for ( const utf8* pPipeline : arrPipeline )
         {
-            sw::vector<uint8>     arrCapture[2];
-            sw::RHITextureMipSpan arrLayout[2]{};
-            bool                  bOk = true;
+            test::RHITestImage arrImage[2];
+            bool               bOk = true;
             for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
             {
                 LitCubeScene cube;
@@ -5228,7 +5192,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
                 if ( bOk )
                 {
                     cube._scene.getObjectManager()->flushSceneTransforms();
-                    bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, arrCapture[caseIndex], arrLayout[caseIndex] );
+                    bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, arrImage[caseIndex] );
                 }
             }
             if ( bOk == false )
@@ -5237,10 +5201,11 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
                 continue;
             }
             ++comparedCount;
-            const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + " " + pPipeline + ": 기준 그림이 배경뿐입니다" ).c_str() );
-            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
-                                 ( sw::string( pName ) + " " + pPipeline + ": 금속도 0 과 1 의 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+            const test::RHITestImageDifference difference = test::RHITestImage::compare( arrImage[0], arrImage[1], kSamePathMinDistance );
+            SW_LOG_INFO( "MetallicChangesForwardAndDeferredPictures: %# %# metallic 0 vs 1: %#", pName, pPipeline, difference.describe() );
+            SW_EXPECT_TRUE_MSG( arrImage[0].countForegroundPixels() > 0, ( sw::string( pName ) + " " + pPipeline + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference._differingCount >= kMinChangedPixelCount,
+                                ( sw::string( pName ) + " " + pPipeline + ": 금속도 0 과 1 의 그림에서 바뀐 화소가 적다 (" + difference.describe() + ")" ).c_str() );
         }
     }
     if ( comparedCount == 0 )
@@ -5251,7 +5216,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
  * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(Vfx.md V5)
  * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 견준다.
  *          두 시뮬레이션은 같은 시계(`VfxEmitterClock`)와 같은 난수 수열(splitmix64)을 쓰므로 입자 수와 위치가 같아야 한다. 입자 하나가 빠지거나 위치가 틀리면
- *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 칸이 1% 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있어 차이의 크기는 보지 않는다.
+ *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 화소가 입자 화소의 `kMaxParticleDifferingPercent` % 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있다.
  *          GPU 의 살아 있는 수는 RHI 에 버퍼 되읽기가 없어 직접 세지 않는다(그림이 수를 대신한다).
  */
 SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
@@ -5260,18 +5225,18 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
     SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch" );
 #else
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::GlobalVariableManager& variables     = sw::engine::getSubsystem<sw::GlobalVariableManager>();
-    constexpr uint32           kTargetCount  = 2;
-    constexpr uint32           kTickCount    = 45;
-    const utf8*                arrTarget[]   = { "CPU", "GPU" };
-    uint32                     comparedCount = 0;
+    sw::GlobalVariableManager& variables                    = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    constexpr uint32           kTargetCount                 = 2;
+    constexpr uint32           kTickCount                   = 45;
+    constexpr uint32           kMaxParticleDifferingPercent = 1; ///< 입자 화소 가운데 다른 화소의 상한(%) — 2026-10 네 백엔드 실측 0 / 9650
+    const utf8*                arrTarget[]                  = { "CPU", "GPU" };
+    uint32                     comparedCount                = 0;
     test::RHIBackendSweep      sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const utf8*           pName = device->getBackendName();
-        sw::vector<uint8>     arrCapture[kTargetCount];
-        sw::RHITextureMipSpan arrLayout[kTargetCount]{};
-        bool                  bOk = true;
+        const utf8*        pName = device->getBackendName();
+        test::RHITestImage arrImage[kTargetCount];
+        bool               bOk = true;
         for ( uint32 targetIndex = 0; targetIndex < kTargetCount && bOk; ++targetIndex )
         {
             // 대상은 효과를 읽을 때 정해진다(VfxComponent) — 읽기 전에 바꾼다.
@@ -5296,8 +5261,7 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
             if ( bOk )
             {
                 scene.getObjectManager()->flushSceneTransforms();
-                bOk = renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrCapture[targetIndex],
-                                              arrLayout[targetIndex] );
+                bOk = renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrImage[targetIndex] );
             }
         }
         if ( bOk == false )
@@ -5306,10 +5270,15 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
             continue;
         }
         ++comparedCount;
-        const CaptureDifference difference = compareCaptures( arrCapture[0], arrCapture[1] );
-        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": CPU 그림이 배경뿐입니다 — 입자가 그려지지 않았다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( difference._differCount * 100u <= difference._compareCount,
-                            ( sw::string( pName ) + ": CPU 와 GPU 시뮬레이션의 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
+        // 허용은 화면이 아니라 입자가 덮은 넓이에 비례한다 — 입자는 화면의 1 % 도 안 덮어 화면 1 % 의 허용이면 입자가 모두 달라도 통과한다.
+        const uint32                       particlePixelCount = arrImage[0].countForegroundPixels();
+        const test::RHITestImageDifference difference         = test::RHITestImage::compare( arrImage[0], arrImage[1], kSamePathMinDistance );
+        SW_LOG_INFO( "CPUAndGPUParticleSimulationsDrawTheSameImage: %# CPU vs GPU: %#, particle pixels %#", pName, difference.describe(), particlePixelCount );
+        SW_EXPECT_TRUE_MSG( particlePixelCount > 0, ( sw::string( pName ) + ": CPU 그림이 배경뿐입니다 — 입자가 그려지지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( difference.isCompared() && difference._differingCount * 100u <= particlePixelCount * kMaxParticleDifferingPercent,
+                            ( sw::string( pName ) + ": CPU 와 GPU 시뮬레이션의 그림이 다르다 (" + difference.describe() + ", 입자 화소 " +
+                              sw::to_string( particlePixelCount ) + ")" )
+                                .c_str() );
     }
     SW_EXPECT_TRUE( variables.setValueFromString( "gv_vfxSimulation", "GPU" ) );
     if ( comparedCount == 0 )
@@ -5321,7 +5290,8 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
  * @brief [RenderPassGPUTest] 라이트 컬링 세 방식(그리드 없음 · CPU 그리드 · GPU 그리드)이 같은 그림을 그린다 — 네 백엔드 모두
  * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` 0 · 1 · 2 의
  *          Present 캡처를 견준다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
- *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — `isSameImage` 의 허용(채널 1, 화소 1%) 안이다.
+ *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — 색 거리 `kSamePathMinDistance` 아래라 다른 화소로 세지 않는다.
+ *          판정은 다른 화소 0 이다(라이트 하나가 빠지면 그 클러스터의 화소가 모두 어두워진다).
  */
 SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
 {
@@ -5337,10 +5307,9 @@ SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const utf8*           pName = device->getBackendName();
-        sw::vector<uint8>     arrCapture[kModeCount];
-        sw::RHITextureMipSpan arrLayout[kModeCount]{};
-        bool                  bOk = true;
+        const utf8*        pName = device->getBackendName();
+        test::RHITestImage arrImage[kModeCount];
+        bool               bOk = true;
         for ( uint32 modeIndex = 0; modeIndex < kModeCount && bOk; ++modeIndex )
         {
             bOk = pSwitch->setValueAsInt( arrMode[modeIndex] );
@@ -5383,7 +5352,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
             if ( bOk )
             {
                 cube._scene.getObjectManager()->flushSceneTransforms();
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrCapture[modeIndex], arrLayout[modeIndex] );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", arrImage[modeIndex] );
             }
         }
         if ( bOk == false )
@@ -5392,11 +5361,14 @@ SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
             continue;
         }
         ++comparedCount;
-        const CaptureDifference cpuDifference = compareCaptures( arrCapture[0], arrCapture[1] );
-        const CaptureDifference gpuDifference = compareCaptures( arrCapture[0], arrCapture[2] );
-        SW_EXPECT_TRUE_MSG( cpuDifference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( cpuDifference.isSameImage(), ( sw::string( pName ) + ": CPU 그리드가 목록 전체와 다르게 그린다 (" + cpuDifference.describe() + ")" ).c_str() );
-        SW_EXPECT_TRUE_MSG( gpuDifference.isSameImage(), ( sw::string( pName ) + ": GPU 그리드가 목록 전체와 다르게 그린다 (" + gpuDifference.describe() + ")" ).c_str() );
+        const test::RHITestImageDifference cpuDifference = test::RHITestImage::compare( arrImage[0], arrImage[1], kSamePathMinDistance );
+        const test::RHITestImageDifference gpuDifference = test::RHITestImage::compare( arrImage[0], arrImage[2], kSamePathMinDistance );
+        SW_LOG_INFO( "LightCullingProducersDrawTheSameImage: %# CPU grid %#, GPU grid %#", pName, cpuDifference.describe(), gpuDifference.describe() );
+        SW_EXPECT_TRUE_MSG( arrImage[0].countForegroundPixels() > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( cpuDifference.isCompared() && cpuDifference._differingCount == 0,
+                            ( sw::string( pName ) + ": CPU 그리드가 목록 전체와 다르게 그린다 (" + cpuDifference.describe() + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( gpuDifference.isCompared() && gpuDifference._differingCount == 0,
+                            ( sw::string( pName ) + ": GPU 그리드가 목록 전체와 다르게 그린다 (" + gpuDifference.describe() + ")" ).c_str() );
     }
     SW_EXPECT_TRUE( pSwitch->setValueAsInt( 2 ) );
     if ( comparedCount == 0 )
@@ -5634,12 +5606,12 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
  *          인스턴스를 따로 배치하고 컬 모드를 뒤집은 PSO 로 그린다(언리얼 `bReverseCulling`) — 그림자 패스도 같다.
  *          큐브는 원점 대칭이고 카메라는 x = 0 에 있어 X 거울로 바뀌는 ±X 면은 보이지 않는다. 그래서 바르게 그리면 두 그림이 같고, 컬링이
  *          뒤집히지 않으면 카메라 쪽 빨간 면(+Z) 대신 파란 면(-Z)의 안쪽이 보여 그림이 크게 다르다. 래스터 규칙 차이로 가장자리 몇 픽셀은
- *          다를 수 있어 "다른 칸 1% 이하" 로 본다.
+ *          다를 수 있어 "다른 화소가 그려진 화소의 1 % 이하" 로 본다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
 {
     const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
-    // 다른 칸 비율의 상한(%). 바르게 그리면 0 이고, 컬링이 뒤집히지 않은 그림은 큐브 면적만큼(수 %) 다르다.
+    // 그려진 화소(배경이 아닌 화소) 가운데 다른 화소 비율의 상한(%). 바르게 그리면 0 이고, 컬링이 뒤집히지 않은 그림은 큐브 면적만큼 다르다.
     constexpr uint32 kMaxDifferPercent = 1;
 
     uint32                comparedCount{ 0 };
@@ -5655,27 +5627,26 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
             SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "씬을 만들지 못했다" ).c_str() );
             SW_ASSERT_NOT_NULL( cube._pCube );
 
-            sw::vector<uint8>     listPlain;
-            sw::vector<uint8>     listMirrored;
-            sw::RHITextureMipSpan layoutPlain{};
-            sw::RHITextureMipSpan layoutMirrored{};
-            bool                  bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, listPlain, layoutPlain );
+            test::RHITestImage plainImage;
+            test::RHITestImage mirroredImage;
+            bool               bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, plainImage );
             cube._pCube->setLocalScale( sw::float3{ -1.0f, 1.0f, 1.0f } );
             cube._scene.getObjectManager()->flushSceneTransforms();
             SW_EXPECT_TRUE_MSG( cube._pCube->getWorldMatrix().determinant() < 0.0f, ( label + "큐브가 거울 변환이 아니다" ).c_str() );
             if ( bOk )
-                bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, listMirrored, layoutMirrored );
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, mirroredImage );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리지 못했다" ).c_str() );
 
-            const bool bComparable = bOk && layoutPlain._width == layoutMirrored._width && layoutPlain._height == layoutMirrored._height;
-            if ( bComparable )
+            if ( bOk )
             {
                 ++comparedCount;
-                const CaptureDifference difference = compareCaptures( listPlain, listMirrored );
-                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "기준 그림이 배경뿐입니다" ).c_str() );
-                SW_EXPECT_TRUE_MSG( difference._differCount * 100u <= difference._compareCount * kMaxDifferPercent,
+                const uint32                       drawnCount = plainImage.countForegroundPixels();
+                const test::RHITestImageDifference difference = test::RHITestImage::compare( plainImage, mirroredImage, kSamePathMinDistance );
+                SW_LOG_INFO( "%#plain vs mirrored: %#, drawn %#", label, difference.describe(), drawnCount );
+                SW_EXPECT_TRUE_MSG( drawnCount > 0, ( label + "기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( difference.isCompared() && difference._differingCount * 100u <= drawnCount * kMaxDifferPercent,
                                     ( label + "거울 큐브의 그림이 거울이 아닌 큐브와 다르다 — 컬 모드가 뒤집히지 않아 안쪽 면이 보인다 (" +
-                                      difference.describe() + ")" )
+                                      difference.describe() + ", 그려진 화소 " + sw::to_string( drawnCount ) + ")" )
                                         .c_str() );
             }
         }
@@ -6775,8 +6746,7 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
         bOk                                          = checker != nullptr;
         if ( bOk )
             checker->setTextureParameter( sw::hashed_string( "albedoMap" ), "engine/textures/test/checker.dds" );
-        sw::vector<uint8>     arrBytes[2];
-        sw::RHITextureMipSpan arrLayout[2]{};
+        test::RHITestImage arrImage[2];
         for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
         {
             sw::Scene scene{ "PrototypeGridScene" };
@@ -6793,16 +6763,14 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
                 pMesh->setLocalPosition( sw::float3{ static_cast<float32>( shiftIndex ), 0.0f, 0.0f } ); // 0 m · 1 m
                 scene.getObjectManager()->flushSceneTransforms();
             }
-            bOk = bOk && renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrBytes[shiftIndex], arrLayout[shiftIndex],
+            bOk = bOk && renderPresentCaptureOf( device.get(), scene, ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), arrImage[shiftIndex],
                                                  sw::RenderViewMode::Unlit );
         }
         SW_EXPECT_TRUE_MSG( bOk, ( label + "격자 바닥 그리기 · 캡처" ).c_str() );
         if ( bOk == false )
             continue;
-        test::RHITestImage before;
-        test::RHITestImage after;
-        before.assign( std::move( arrBytes[0] ), arrLayout[0], sw::constant::kBackBufferFormat );
-        after.assign( std::move( arrBytes[1] ), arrLayout[1], sw::constant::kBackBufferFormat );
+        const test::RHITestImage& before = arrImage[0];
+        const test::RHITestImage& after  = arrImage[1];
         // 화면 가운데 아래(가로 30..70 %, 세로 70..90 %) — 바닥이 덮는 곳이다.
         const uint32 left   = before.getWidth() * 3 / 10;
         const uint32 right  = before.getWidth() * 7 / 10;
@@ -6853,14 +6821,11 @@ SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
             output._upscaleZoom           = kZoom;
             pCamera->setRenderOutput( output );
         }
-        sw::vector<uint8>     bytes;
-        sw::RHITextureMipSpan layout{};
-        bOk = bOk && renderPresentCaptureOf( device.get(), stage._scene, "engine/pipeline/forward2dpipeline.xml", bytes, layout );
+        test::RHITestImage image;
+        bOk = bOk && renderPresentCaptureOf( device.get(), stage._scene, "engine/pipeline/forward2dpipeline.xml", image );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "업스케일 그리기 · 캡처" ).c_str() );
         if ( bOk == false )
             continue;
-        test::RHITestImage image;
-        image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
         const uint32 poolWidth  = image.getWidth() / kZoom;
         const uint32 poolHeight = image.getHeight() / kZoom;
         const uint32 restX      = image.getWidth() - poolWidth * kZoom;
@@ -6941,14 +6906,11 @@ SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
         }
         test::RHITestImage window;
         bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
-        sw::vector<uint8>     captureBytes;
-        sw::RHITextureMipSpan captureLayout{};
-        bOk = bOk && renderer.getCapture().readbackPresent( captureBytes, captureLayout );
+        test::RHITestImage capture;
+        bOk = bOk && capture.readPresent( renderer );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 · 캡처 읽기" ).c_str() );
         if ( bOk )
         {
-            test::RHITestImage capture;
-            capture.assign( std::move( captureBytes ), captureLayout, sw::constant::kBackBufferFormat );
             SW_EXPECT_EQUAL( capture.getWidth(), window.getWidth() );
             SW_EXPECT_EQUAL( capture.getHeight(), window.getHeight() );
             uint32 differCount = 0;
@@ -6996,38 +6958,37 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
             }
             constexpr sw::RenderViewMode arrMode[] = { sw::RenderViewMode::Lit, sw::RenderViewMode::Unlit, sw::RenderViewMode::Normals,
                                                        sw::RenderViewMode::Depth, sw::RenderViewMode::Overdraw, sw::RenderViewMode::LightingOnly };
-            sw::vector<uint8>            arrCapture[std::size( arrMode )];
+            test::RHITestImage           arrImage[std::size( arrMode )];
             bool                         bOk = true;
             for ( size_t modeIndex = 0; modeIndex < std::size( arrMode ) && bOk; ++modeIndex )
             {
-                sw::RHITextureMipSpan layout{};
-                bOk = renderPresentCaptureOf( device.get(), stage._scene, pPipeline, arrCapture[modeIndex], layout, arrMode[modeIndex] );
+                bOk = renderPresentCaptureOf( device.get(), stage._scene, pPipeline, arrImage[modeIndex], arrMode[modeIndex] );
             }
             SW_EXPECT_TRUE_MSG( bOk, ( label + "보기 모드 여섯 장 캡처" ).c_str() );
             if ( bOk == false )
                 continue;
 
+            SW_EXPECT_TRUE_MSG( arrImage[0].countForegroundPixels() > 0, ( label + "Lit 그림이 배경뿐이다 — 비교가 뜻이 없다" ).c_str() );
             for ( size_t first = 0; first < std::size( arrMode ); ++first )
             {
                 for ( size_t second = first + 1; second < std::size( arrMode ); ++second )
                 {
-                    const CaptureDifference difference = compareCaptures( arrCapture[first], arrCapture[second] );
-                    const sw::string        pairName   = sw::string( sw::getRenderViewModeInfo( arrMode[first] )._pName ) + " vs " +
+                    const test::RHITestImageDifference difference = test::RHITestImage::compare( arrImage[first], arrImage[second], kSamePathMinDistance );
+                    const sw::string                   pairName   = sw::string( sw::getRenderViewModeInfo( arrMode[first] )._pName ) + " vs " +
                                                 sw::getRenderViewModeInfo( arrMode[second] )._pName;
                     SW_LOG_INFO( "%#%#: %#", label, pairName, difference.describe() );
-                    if ( first == 0 && second == 1 )
-                        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "Lit 그림이 배경뿐이다 — 비교가 뜻이 없다" ).c_str() );
-                    SW_EXPECT_TRUE_MSG( difference._differCount > 100u, ( label + pairName + " 가 같은 그림이다 (" + difference.describe() + ")" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( difference._differingCount >= kMinChangedPixelCount,
+                                        ( label + pairName + " 가 같은 그림이다 (" + difference.describe() + ")" ).c_str() );
                 }
             }
 
-            const uint32 pixelCount    = static_cast<uint32>( arrCapture[2].size() / 4 );
-            const uint32 upFacingCount = countUpFacingNormalPixels( arrCapture[2] );
+            const uint32 pixelCount    = arrImage[2].getPixelCount();
+            const uint32 upFacingCount = countUpFacingNormalPixels( arrImage[2] );
             SW_LOG_INFO( "%#Normals up-facing pixels %# / %#", label, upFacingCount, pixelCount );
             SW_EXPECT_TRUE_MSG( upFacingCount * 100u > pixelCount, ( label + "Normals 에서 바닥(+Y)이 초록으로 보이지 않는다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( countUpFacingNormalPixels( arrCapture[0] ) * 100u <= pixelCount, ( label + "Lit 그림이 이미 노멀 색이다 — 비교가 뜻이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( countUpFacingNormalPixels( arrImage[0] ) * 100u <= pixelCount, ( label + "Lit 그림이 이미 노멀 색이다 — 비교가 뜻이 없다" ).c_str() );
 
-            const uint32 overdrawSpread = computeForegroundFirstChannelSpread( arrCapture[4] );
+            const uint32 overdrawSpread = computeForegroundRedSpread( arrImage[4] );
             SW_LOG_INFO( "%#Overdraw spread %#", label, overdrawSpread );
             SW_EXPECT_TRUE_MSG( overdrawSpread >= 30u, ( label + "Overdraw 에서 겹친 자리가 하나뿐인 자리보다 밝지 않다 (차 " + sw::to_string( overdrawSpread ) + ")" ).c_str() );
         }
@@ -7654,10 +7615,9 @@ SW_TEST_CASE( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut )
                     pCamera->markCut();
                 bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
             }
-            sw::vector<uint8>     bytes;
-            sw::RHITextureMipSpan layout{};
-            bOk                = bOk && renderer.getCapture().readbackPresent( bytes, layout );
-            arrMean[caseIndex] = bOk ? computeMeanByte( bytes ) : -1.0;
+            test::RHITestImage image;
+            bOk                = bOk && image.readPresent( renderer );
+            arrMean[caseIndex] = bOk ? computeMeanColorChannel( image ) : -1.0;
             bOk                = bOk && arrMean[caseIndex] >= 0.0;
             renderer.shutdown();
         }
@@ -7689,26 +7649,26 @@ SW_TEST_CASE( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent )
     {
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
         // [0] 0.5 선형, [1] 0.5 FSR, [2] 1 선형, [3] 1 FSR
-        sw::vector<uint8>     arrCapture[4];
-        sw::RHITextureMipSpan layout{};
-        bool                  bOk = true;
+        test::RHITestImage arrImage[4];
+        bool               bOk = true;
         for ( uint32 caseIndex = 0; caseIndex < 4 && bOk; ++caseIndex )
         {
             bOk = pScale->setValueAsFloat( caseIndex < 2 ? 0.5f : 1.0f ) && pUpscaler->setValueAsInt( static_cast<int32>( caseIndex % 2 ) );
             LitCubeScene stage;
-            bOk = bOk && stage.populate() &&
-                  renderPresentCaptureOf( device.get(), stage._scene, test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), arrCapture[caseIndex], layout );
+            bOk = bOk && stage.populate() && renderPresentCaptureOf( device.get(), stage._scene, test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), arrImage[caseIndex] );
         }
         SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 Present 캡처" ).c_str() );
         if ( bOk == false )
             continue;
-        const CaptureDifference halfScale = compareCaptures( arrCapture[0], arrCapture[1] );
-        const CaptureDifference fullScale = compareCaptures( arrCapture[2], arrCapture[3] );
-        SW_EXPECT_TRUE_MSG( halfScale._notBackgroundCount > 0, ( label + "배율 0.5 그림이 배경뿐이다" ).c_str() );
-        SW_EXPECT_FALSE_MSG( halfScale.isSameImage(), ( label + "FSR 로 키운 그림이 선형과 같다 — FSR 이 돌지 않았다 (" + halfScale.describe() + ")" ).c_str() );
-        SW_EXPECT_TRUE_MSG( fullScale.isSameImage(), ( label + "배율 1 인데 업스케일러가 그림을 바꿨다 (" + fullScale.describe() + ")" ).c_str() );
+        const test::RHITestImageDifference halfScale = test::RHITestImage::compare( arrImage[0], arrImage[1], kSamePathMinDistance );
+        const test::RHITestImageDifference fullScale = test::RHITestImage::compare( arrImage[2], arrImage[3], kSamePathMinDistance );
+        SW_EXPECT_TRUE_MSG( arrImage[0].countForegroundPixels() > 0, ( label + "배율 0.5 그림이 배경뿐이다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( halfScale._differingCount >= kMinChangedPixelCount,
+                            ( label + "FSR 로 키운 그림이 선형과 같다 — FSR 이 돌지 않았다 (" + halfScale.describe() + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( fullScale.isCompared() && fullScale._differingCount == 0,
+                            ( label + "배율 1 인데 업스케일러가 그림을 바꿨다 (" + fullScale.describe() + ")" ).c_str() );
         // 선명화 · 가장자리 적응은 밝기를 옮기지 않는다 — 평균이 거의 같다.
-        const float64 arrMean[2] = { computeMeanByte( arrCapture[0] ), computeMeanByte( arrCapture[1] ) };
+        const float64 arrMean[2] = { computeMeanColorChannel( arrImage[0] ), computeMeanColorChannel( arrImage[1] ) };
         SW_LOG_INFO( "%#FSR vs linear at 0.5 - %#, mean %# vs %#", label, halfScale.describe(), arrMean[1], arrMean[0] );
         SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( arrMean[1] - arrMean[0] ) < 2.0, ( label + "FSR 그림의 평균 밝기가 선형과 다르다" ).c_str() );
     }

@@ -217,6 +217,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differingFraction" atMost="0.1"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" reference="b.ppm" atMost="0.1"/>)",
         R"(<MousePosition x="1.5" y="0.5"/>)",
         R"(<MousePosition x="0.5"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1" timeoutFrames="-1"/>)",
@@ -851,6 +853,16 @@ SW_TEST_CASE( AutomationScenarioTest, ImageMetricsReadAPpm )
     SW_EXPECT_NEAR_EQUAL( 20.0 / 255.0, measure( "0,0,0.5,1", sw::AutomationImageMetricKind::MeanLuma ), 1e-6 );
     SW_EXPECT_NEAR_EQUAL( 150.0 / 255.0, measure( "0.5,0,1,1", sw::AutomationImageMetricKind::MeanRedMinusBlue ), 1e-6 );
     SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0,0,1,1", sw::AutomationImageMetricKind::DifferentFrom, &image ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0,0,1,1", sw::AutomationImageMetricKind::DifferingFraction, &image ), 1e-9 );
+
+    // 화소 하나만 크게 바꾼 판 — 평균 차는 넓이로 나뉘어 작지만 다른 화소의 비율은 그 하나를 센다. 반올림 흔들림(거리 5)은 세지 않는다.
+    sw::AutomationImage oneChanged = image;
+    oneChanged._listRgb[0]         = 255;
+    sw::AutomationImage noisy      = image;
+    noisy._listRgb[3]              = static_cast<uint8>( noisy._listRgb[3] + 5 );
+    SW_EXPECT_NEAR_EQUAL( 1.0 / 16.0, measure( "0,0,1,1", sw::AutomationImageMetricKind::DifferingFraction, &oneChanged ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 1.0 / 4.0, measure( "0,0,0.5,0.5", sw::AutomationImageMetricKind::DifferingFraction, &oneChanged ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0,0,1,1", sw::AutomationImageMetricKind::DifferingFraction, &noisy ), 1e-9 );
 
     // 깨진 PPM · 틀린 영역은 거절한다.
     sw::AutomationImage       broken;

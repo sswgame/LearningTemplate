@@ -117,9 +117,26 @@ namespace sw
             outKind = AutomationImageMetricKind::MeanRedMinusBlue;
         else if ( text == "differentFrom" )
             outKind = AutomationImageMetricKind::DifferentFrom;
+        else if ( text == "differingFraction" )
+            outKind = AutomationImageMetricKind::DifferingFraction;
         else
             return false;
         return true;
+    }
+
+    bool AutomationImageMetric::usesReference( AutomationImageMetricKind kind )
+    {
+        switch ( kind )
+        {
+            case AutomationImageMetricKind::DifferentFrom:
+            case AutomationImageMetricKind::DifferingFraction:
+                return true;
+            case AutomationImageMetricKind::MeanLuma:
+            case AutomationImageMetricKind::DarkFraction:
+            case AutomationImageMetricKind::MeanRedMinusBlue:
+                return false;
+        }
+        return false;
     }
 
     bool AutomationImageMetric::tryParseRegion( string_view text, AutomationImageRegion& outRegion )
@@ -153,10 +170,11 @@ namespace sw
             outError = "the region covers no pixel";
             return false;
         }
-        if ( kind == AutomationImageMetricKind::DifferentFrom &&
-             ( pReference == nullptr || pReference->_width != image._width || pReference->_height != image._height ) )
+        const bool bMissingReference =
+            usesReference( kind ) && ( pReference == nullptr || pReference->_width != image._width || pReference->_height != image._height );
+        if ( bMissingReference )
         {
-            outError = "differentFrom needs a reference image of the same size";
+            outError = "differentFrom and differingFraction need a reference image of the same size";
             return false;
         }
 
@@ -195,6 +213,18 @@ namespace sw
                         {
                             sum += MathUtil::abs( static_cast<float64>( pPixel[channel] ) - static_cast<float64>( pOther[channel] ) ) / ( 255.0 * 3.0 );
                         }
+                        break;
+                    }
+                    case AutomationImageMetricKind::DifferingFraction:
+                    {
+                        const uint8* pOther   = pReference->_listRgb.data() + offset;
+                        uint32       distance = 0;
+                        for ( uint32 channel = 0; channel < 3; ++channel )
+                        {
+                            distance += pPixel[channel] > pOther[channel] ? static_cast<uint32>( pPixel[channel] - pOther[channel] )
+                                                                          : static_cast<uint32>( pOther[channel] - pPixel[channel] );
+                        }
+                        sum += distance >= kDifferingMinDistance ? 1.0 : 0.0;
                         break;
                     }
                 }

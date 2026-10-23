@@ -83,7 +83,7 @@
 	<At frame="508"><Screenshot file="cpubend.ppm"/></At>
 	<At frame="510">
 		<ExpectImage file="cpubend.ppm" metric="differentFrom" reference="rest.ppm" atLeast="0.002"/>
-		<ExpectImage file="cpubend.ppm" metric="differentFrom" reference="gpubendmoved.ppm" atMost="0.0005"/>
+		<ExpectImage file="cpubend.ppm" metric="differingFraction" reference="gpubendmoved.ppm" atMost="0.001"/>
 	</At>
 
 	<!-- ④ 참조 목록: 항목 하나 → 선택 사용(상자 자신) -->

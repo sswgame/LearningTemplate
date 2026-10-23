@@ -26,7 +26,7 @@
 	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값, 상자 영역): 움직인 켬 · 끔 0.0067, 멈춘 켬 · 끔 0.00003. 문턱은 움직인 차이의 절반과 그 1/10 아래. -->
 	<At frame="190">
 		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differentFrom" reference="moving_off.ppm" atLeast="0.003"/>
-		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differentFrom" reference="still_off.ppm" atMost="0.0003"/>
+		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="still_off.ppm" atMost="0.001"/>
 		<Variable name="gv_motionBlur" value="1"/>
 		<Pass/>
 	</At>

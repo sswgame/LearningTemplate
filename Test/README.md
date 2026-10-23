@@ -218,7 +218,8 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 그 밖의 도우미는 다음과 같습니다.
 
 - `test::makeTempPath` · `makeTempDirectory`(아래 "테스트가 남긴 상태 정리"), `test::RHITestDevice`(`kArrAllRHIBackend`) · `test::RHIBackendSweep` · `test::RHITestImage`, 병렬 기록을 nogpu 로 보는 `test::FakeRHIDevice`.
-- GPU 렌더 테스트 도우미: `makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`, `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(`TestRenderPassGPU.cpp`). 새 GPU 케이스는 이것부터 봅니다.
+- GPU 렌더 테스트 도우미: `makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`, `LitCubeScene` · `renderPresentCaptureOf`(`TestRenderPassGPU.cpp`). 새 GPU 케이스는 이것부터 봅니다.
+  두 판(켬 · 끔, 경로 A · B)은 `test::RHITestImage` 로 읽어 `RHITestImage::compare` 로 견줍니다 — 바뀐 화소 수를 세고, 평균 색 · 평균 밝기로 판정하지 않습니다.
 - 에디터 지역 서비스는 `Test/EditorTest/EditorTestServices.h` 에 있습니다.
 - 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/Harness/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
 - 할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트합니다. 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr 를 돌려줍니다.

@@ -60,6 +60,12 @@ namespace test
         /** @brief 프레임 렌더러의 transient 첨부(예: `"SceneColor"`)를 되읽습니다. 실패하면 false 이고 이미지는 빈다. */
         [[nodiscard]] bool readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName );
         /**
+         * @brief 프레임 렌더러의 Present 캡처(화면에 나간 그림, `constant::kBackBufferFormat`)를 되읽습니다. 캡처가 꺼져 있거나 실패하면 false 이고 이미지는 빈다.
+         * @details Present 캡처를 바이트 배열로 들고 채널마다 견주면 알파 · 행 끝 여백까지 세고 형식을 케이스가 알아야 한다. 두 판은 이 이미지로 읽어
+         *          `compare` 로 견준다.
+         */
+        [[nodiscard]] bool readPresent( sw::FrameRenderer& renderer );
+        /**
          * @brief 이미 가진 바이트를 이미지로 삼습니다 — 되읽기 없이 해석 규칙(BGRA 뒤집기 · 반정밀도)을 테스트할 때.
          * @details 네 백엔드가 `SceneColor` 를 전부 RGBA8 로 되읽는 기계에서는 BGRA 뒤집기를 틀려도 GPU 케이스가 하나도 지지
          *          않는다. 그 규칙은 `RHITestImageTest` 가 GPU 없이 지킨다.
@@ -77,6 +83,13 @@ namespace test
         uint32        getHeight() const { return _layout._height; }
         uint32        getPixelCount() const { return _layout._width * _layout._height; }
         sw::RHIFormat getFormat() const { return _format; }
+
+        /**
+         * @brief 첫 화소(배경)와 색(R · G · B)이 다른 화소 수입니다. 0 이면 배경뿐이라 두 판을 견줘도 뜻이 없다.
+         * @details "같은 그림" 의 허용을 화면 전체가 아니라 이 수에 비례해 둔다 — 그려진 것이 화면의 1 % 도 안 되는 그림(입자)에 화면 1 % 의
+         *          허용을 주면 그려진 것이 모두 달라도 통과한다.
+         */
+        uint32 countForegroundPixels() const;
 
         /** @brief 두 색의 거리(R · G · B 차이의 절댓값 합). */
         static uint32 getColorDistance( const Rgba8& lhs, const Rgba8& rhs );
