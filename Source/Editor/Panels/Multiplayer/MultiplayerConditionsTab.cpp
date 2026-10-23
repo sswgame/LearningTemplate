@@ -12,10 +12,10 @@
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

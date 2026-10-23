@@ -20,9 +20,9 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

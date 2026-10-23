@@ -15,12 +15,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

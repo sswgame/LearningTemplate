@@ -16,7 +16,6 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -24,6 +23,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
