@@ -562,6 +562,12 @@ namespace sw
         PackBuildRecord record;
         if ( PackPatchUtil::parseBuildRecord( recordText, recordPath, record ) == false )
             return false;
+        if ( record._patching == PackPatching::None )
+        {
+            SW_LOG_ERROR( "Pack patches exist in %# but %# says patching=\"none\" - a build that takes no patches must not ship patch lists", packsDirectory,
+                          PackPatchUtil::kBuildRecordFileName );
+            return false;
+        }
         vector<size_t> listOrder;
         string         latestBuild;
         if ( PackPatchUtil::orderPatchChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )

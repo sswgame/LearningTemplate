@@ -202,6 +202,38 @@ SW_TEST_CASE( PackPatchTest, BuildRecordRoundTripsAndRefusesBrokenOnes )
 }
 
 /**
+ * @brief [PackPatchTest] 패치를 쓰지 않는 빌드는 기록에 `patching="none"` 을 명시하고, 값이 없는 옛 기록은 chain 으로 보지 않고 거절하며, none 폴더의 패치 목록은 시작 마운트가 거절한다
+ */
+SW_TEST_CASE( PackPatchTest, NoPatchingIsAnExplicitValueOfTheBuildRecord )
+{
+    sw::PackBuildRecord none;
+    none._patching               = sw::PackPatching::None;
+    const sw::string    noneText = sw::PackPatchUtil::makeBuildRecordText( none );
+    sw::PackBuildRecord readBack;
+    SW_ASSERT_TRUE( sw::PackPatchUtil::parseBuildRecord( noneText, "none", readBack ) );
+    SW_EXPECT_TRUE( readBack._patching == sw::PackPatching::None );
+    SW_EXPECT_TRUE( readBack._build.empty() && readBack._listEntry.empty() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a record without patching, with an unknown value, or none carrying a build is refused" );
+    SW_EXPECT_FALSE( sw::PackPatchUtil::parseBuildRecord( "<PackBuild build=\"1\"/>", "noPatching", readBack ) );
+    SW_EXPECT_FALSE( sw::PackPatchUtil::parseBuildRecord( "<PackBuild patching=\"maybe\" build=\"1\"/>", "unknown", readBack ) );
+    SW_EXPECT_FALSE( sw::PackPatchUtil::parseBuildRecord( "<PackBuild patching=\"none\" build=\"1\"/>", "noneWithBuild", readBack ) );
+
+    sw::ResourcePakManager packManager;
+    const sw::string       folder = test::makeTempDirectory( "packpatchnone" );
+    SW_ASSERT_TRUE( writeTestPack( folder, "engine.pack", {
+                                                              { "ui/a.xml", "A0" }
+    } ) );
+    SW_ASSERT_TRUE( writeTestText( folder, "base.packbuild.xml", noneText ) );
+    SW_ASSERT_TRUE( writeTestPack( folder, "patch_1.1.pack", {
+                                                                 { "engine/ui/a.xml", "A1" }
+    } ) );
+    SW_ASSERT_TRUE( writeTestText( folder, "patch_1.1.packpatch.xml", makeManifest( "1.0", "1.1", "patch_1.1.pack", {} ) ) );
+    SW_EXPECT_FALSE( packManager.scanAndMountPacks( folder, { "engine" } ) ); // 패치를 쓰지 않는다고 밝힌 빌드에 패치 목록이 있다
+    SW_EXPECT_EQUAL( size_t{ 0 }, packManager.getMountedPackCount() );
+}
+
+/**
  * @brief [PackPatchTest] 패치 사슬 끝까지 셈은 설치된 빌드부터 이어지는 패치를 모두 순서대로 내고, 갈림 · 고리 · 닿지 않는 패치는 거절한다
  */
 SW_TEST_CASE( PackPatchTest, ChainToLatestFollowsEveryPatchAndRefusesOrphans )

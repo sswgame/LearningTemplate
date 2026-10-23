@@ -163,11 +163,12 @@ namespace sw
                 uint32 packCount = 0;
                 if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
                     return false;
-                // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 적용할 수 없는 빌드다.
+                // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 쓰지 않는 빌드이며, 기록을 남기지 않는 대신
+                // `patching="none"` 을 명시한 기록을 남긴다(기록이 없는 폴더와 구별되고, 그 폴더에 패치 목록이 있으면 시작 마운트가 오류로 멈춘다).
                 string build;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
                 if ( build.empty() )
-                    return true;
+                    return PackPatchBuilder::writeNoPatchingRecord( FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
                 return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
             }
 
