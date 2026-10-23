@@ -5,7 +5,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-SW_LOG_CALLER( "VectorMath" );
 namespace sw
 {
 
@@ -395,8 +394,8 @@ namespace sw
         const float32 lengthSquaredA = getLengthSquared();
         const float32 lengthSquaredB = other.getLengthSquared();
 
-        SW_LOG_ASSERT( MathUtil::nearEqual( lengthSquaredA, 0.f ) == false, "Length is 0" );
-        SW_LOG_ASSERT( MathUtil::nearEqual( lengthSquaredB, 0.f ) == false, "Length is 0" );
+        SW_LOW_LEVEL_ASSERT( MathUtil::nearEqual( lengthSquaredA, 0.f ) == false, "VectorMath", "Length is 0" );
+        SW_LOW_LEVEL_ASSERT( MathUtil::nearEqual( lengthSquaredB, 0.f ) == false, "VectorMath", "Length is 0" );
 
         const float32 dotProduct   = dot( other );
         const bool    isUnitLength = MathUtil::nearEqual( lengthSquaredA, 1.f ) && MathUtil::nearEqual( lengthSquaredB, 1.f );

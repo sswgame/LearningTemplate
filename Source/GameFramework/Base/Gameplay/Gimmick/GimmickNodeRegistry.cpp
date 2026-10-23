@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -11,6 +12,8 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitState.h"
+
+#include <cstdlib>
 
 namespace sw
 {
@@ -70,19 +73,6 @@ namespace sw
                 if ( context._pError != nullptr )
                     *context._pError = pMessage;
                 return false;
-            }
-
-            static GimmickNodeRegistry createDefaultRegistry()
-            {
-                GimmickNodeRegistry registry;
-                GimmickNodeRegistry::registerBuiltinKinds( registry );
-                return registry;
-            }
-
-            /** @brief GameFramework 타입을 등록할 때(기동의 ModuleTypes 단계) 기본 레지스트리를 세웁니다. */
-            static void buildDefaultRegistryWithTypes( TypeRegistry& )
-            {
-                (void)GimmickNodeRegistry::getDefault();
             }
 
             static uint32 countBits( uint32 value )
@@ -651,10 +641,22 @@ namespace sw
             }
         };
 
-        // 기본 레지스트리는 프로세스 끝까지 사는 정적이다. 처음 부르는 쪽(기믹 그래프 창 · 기믹 회로 컴포넌트)이 메모리 태그 기준선 뒤에 세우면
-        // 그 쪽 태그(Editor · Scene)의 증가로 종료 보고에 남는다. 그래서 타입 등록 단계(기준선 전)에 세운다. 정적 초기화에서 세우면 안 된다 —
-        // 종류 이름이 hashed_string 이라 이름 풀이 서기 전(정적 링크 · 테스트 실행 파일의 main 앞)에는 만들 수 없다.
-        TypeRegistrar s_defaultRegistryRegistrar{ &GimmickNodeRegistryInternal::buildDefaultRegistryWithTypes };
+        /** @brief 내장 종류를 모두 가진 기본 레지스트리 하나입니다. 만들 때(`ScopeOwned` 의 생성 락 안) 내장 종류를 채웁니다. */
+        struct DefaultRegistryHolder
+        {
+            DefaultRegistryHolder()
+                : _registry{}
+            {
+                GimmickNodeRegistry::registerBuiltinKinds( _registry );
+            }
+
+            GimmickNodeRegistry _registry;
+        };
+
+        // 기본 레지스트리는 엔진 수명 범위가 소유한다. 처음 부르는 쪽(기믹 그래프 창 · 기믹 회로 컴포넌트)이 메모리 태그 기준선 뒤에 세워도
+        // 엔진 종료가 범위를 닫을 때 종료 누수 보고 전에 사라진다 — 예전에는 이를 피하려고 타입 등록 단계(기준선 전)에 미리 세웠다.
+        // 종류 이름이 hashed_string 이라 이름 풀이 서기 전(정적 초기화)에는 만들 수 없는데, `ScopeOwned` 는 처음 쓸 때 만들어 그 걱정도 없다.
+        ScopeOwned<DefaultRegistryHolder> s_defaultRegistry;
     } // namespace
 } // namespace sw
 
@@ -707,8 +709,11 @@ namespace sw
 
     const GimmickNodeRegistry& GimmickNodeRegistry::getDefault()
     {
-        static const GimmickNodeRegistry s_registry = GimmickNodeRegistryInternal::createDefaultRegistry();
-        return s_registry;
+        DefaultRegistryHolder* const pHolder = s_defaultRegistry.getOrCreate();
+        // 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 먼저 단언한다) — 기본 레지스트리를 줄 곳이 없으므로 멈춘다.
+        if ( pHolder == nullptr )
+            std::abort();
+        return pHolder->_registry;
     }
 
     bool GimmickNodeRegistry::registerKind( const GimmickNodeKind& kind )

@@ -17,6 +17,7 @@
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -584,7 +585,7 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryResourceDataKindIsData )
     using namespace sw;
     using namespace sw::editor;
     vector<const ResourceDataKind*> listKind;
-    ResourceDataKindRegistry::get().collectKinds( listKind );
+    engine::getSubsystem<ResourceDataKindRegistry>().collectKinds( listKind );
     for ( const ResourceDataKind* pKind : listKind )
     {
         if ( pKind->_pSuffix == nullptr )

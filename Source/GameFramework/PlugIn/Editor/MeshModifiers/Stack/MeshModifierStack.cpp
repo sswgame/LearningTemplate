@@ -34,16 +34,7 @@ namespace sw::editor
             /** @brief 숫자 셋의 배열 @p array 를 읽습니다. 모양이 다르거나 숫자가 아닌 칸이 있으면 false 입니다(0 으로 두지 않는다). */
             [[nodiscard]] static bool readFloat3( const JSONValue& array, float3& outValue )
             {
-                if ( array.isArray() == false || array.size() != 3 )
-                    return false;
-                const std::optional<float32> x        = array.at( 0 ).read<float32>();
-                const std::optional<float32> y        = array.at( 1 ).read<float32>();
-                const std::optional<float32> z        = array.at( 2 ).read<float32>();
-                const bool                   bAllRead = x.has_value() && y.has_value() && z.has_value();
-                if ( bAllRead == false )
-                    return false;
-                outValue = float3{ *x, *y, *z };
-                return true;
+                return array.size() == 3 && array.readFloat3( 0, outValue );
             }
 
             /** @brief 없어도 되는 벡터 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(기즈모의 초기값), 숫자 셋이 아니면 false 입니다. */

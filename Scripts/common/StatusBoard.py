@@ -134,7 +134,8 @@ def buildBoard(repositoryRoot: Path) -> str:
 
 
 def checkRoadmap(repositoryRoot: Path) -> list[str]:
-    """로드맵을 점검한다: (a) `## 지금 순서` 의 문서 링크가 계획 문서를 가리키는가 (b) 모든 마크다운 링크의 파일 · `#앵커` 가 있는가.
+    """로드맵을 점검한다: (a) `## 지금 순서` 의 문서 링크가 계획 문서를 가리키는가 (b) 모든 마크다운 링크의 파일 · `#앵커` 가 있는가
+    (c) 진행 `n/n` 인데 구현 중인 문서 · 상태 `끝` 인데 진행 `n/m` 인 문서가 없는가.
     위반 줄(`파일:줄: 내용`)들. 계획 문서 머리 줄이 틀리면 `PlanFormatError`."""
     roadmapPath = repositoryRoot / kRoadmapRelPath
     if not roadmapPath.is_file():
@@ -147,6 +148,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
             listViolation.append(f"{kRoadmapRelPath}:{entry.lineNumber}: 항목의 문서 `{entry.stem}.md` 가 {kPlansRelDir} 에 계획 문서로 없습니다")
     listViolation += checkFinishedPlanLinksInternal(text, readPlans(repositoryRoot))
     listViolation += checkAllUnitsDoneStatus(readPlans(repositoryRoot))
+    listViolation += checkFinishedStatusProgressInternal(readPlans(repositoryRoot))
     mapAnchorCache: dict[Path, set[str]] = {}
     bFence = False
     for lineNumber, line in enumerate(text.splitlines(), start=1):
@@ -196,6 +198,20 @@ def checkAllUnitsDoneStatus(listPlan: list[PlanDoc]) -> list[str]:
     마지막 단위를 끝낸 사람이 상태를 올리지 않으면 끝난 일이 README 진행 표에 구현 중으로 쌓인다. 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`."""
     return [f"{kPlansRelDir}/{plan.fileName}: 진행이 {plan.progress} 로 모든 단위가 끝났는데 상태가 `{plan.status}` 입니다 — 확인이 남았으면 `측정대기`, 끝났으면 `끝`"
             for plan in listPlan if plan.status in _kBuildingStatus and _kAllDoneProgressRe.match(plan.progress)]
+
+
+_kProgressRe = re.compile(r"^(\d+)/(\d+)$")
+
+
+def checkFinishedStatusProgressInternal(listPlan: list[PlanDoc]) -> list[str]:
+    """상태가 `끝` 인데 진행이 `n/m`(n < m)인 계획 문서를 위반으로 모은다. 남은 단위가 있는 문서를 `끝` 으로 두면 로드맵에서 빠져 남은 단위를 아무도 집지 않는다.
+    단위는 있는데 실행 확인만 남았으면 그 단위를 끝으로 세지 않고 상태를 `측정대기` 로 둔다."""
+    listViolation: list[str] = []
+    for plan in listPlan:
+        match = _kProgressRe.match(plan.progress)
+        if plan.status == "끝" and match is not None and match.group(1) != match.group(2):
+            listViolation.append(f"{kPlansRelDir}/{plan.fileName}: 상태가 `끝` 인데 진행이 {plan.progress} 입니다 — 남은 단위를 끝내거나(실행 확인만 남았으면 상태를 `측정대기`)")
+    return listViolation
 
 
 def splitAtMarkers(text: str, fileName: str) -> tuple[str, str, str]:

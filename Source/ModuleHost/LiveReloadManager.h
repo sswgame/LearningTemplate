@@ -24,17 +24,11 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleHost/DeferredImageUnloadQueue.h"
 #include "ModuleHost/ModuleDependencyGraph.h"
 #include "ModuleHost/ModuleShadowCopy.h"
-
-namespace sw
-{
-    struct EnumRegistrar;
-    struct GlobalVariableRegistrar;
-    struct TypeRegistrar;
-} // namespace sw
 
 namespace sw
 {
@@ -216,15 +210,11 @@ namespace sw
 
         struct PreparedShadow
         {
-            void*                    _pHandle{ nullptr };
-            string                   _tempPath;
-            uint64                   _sourceMtime{ 0 };
-            TypeRegistrar*           _pTypeHead{ nullptr };
-            EnumRegistrar*           _pEnumHead{ nullptr };
-            GlobalVariableRegistrar* _pVariableHead{ nullptr };
-            TypeRegistrar*           _pPreviousTypeHead{ nullptr };
-            EnumRegistrar*           _pPreviousEnumHead{ nullptr };
-            GlobalVariableRegistrar* _pPreviousVariableHead{ nullptr };
+            void*                        _pHandle{ nullptr };
+            string                       _tempPath;
+            uint64                       _sourceMtime{ 0 };
+            engine::ModuleRegistrarHeads _heads;         ///< 로드한 이미지의 정적 등록자 머리(커밋 때 올린다)
+            engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
         };
 
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */

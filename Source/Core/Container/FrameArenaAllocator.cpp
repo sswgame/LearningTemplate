@@ -4,7 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameArenaAllocator" );
     FrameArenaAllocator::FrameArenaAllocator( size_t defaultCapacity )
         : _defaultCapacity{ defaultCapacity }
         , _totalAllocatedBytes{ 0 }
@@ -92,7 +91,7 @@ namespace sw
         MemoryBlock buffer    = MemoryBlock::allocate( chunkSize );
         if ( buffer.isValid() == false )
         {
-            SW_LOG_ERROR( "Failed to allocate a %# byte frame arena chunk.", static_cast<uint64>( chunkSize ) );
+            SW_LOW_LEVEL_REPORT( Error, "FrameArenaAllocator", "Failed to allocate a %zu byte frame arena chunk.", chunkSize );
             return false;
         }
 

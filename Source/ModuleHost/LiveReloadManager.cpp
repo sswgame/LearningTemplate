@@ -610,9 +610,7 @@ namespace sw
             // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 세 헤드는
             // 항상 nullptr 이다(연쇄 교체의 두 번째 모듈 이후도 마찬가지다). abort 는 이 스냅샷을 되돌리므로, 정상 상태에서는
             // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
-            outShadow._pPreviousTypeHead     = TypeRegistrar::getHead();
-            outShadow._pPreviousEnumHead     = EnumRegistrar::getHead();
-            outShadow._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
+            outShadow._previousHeads = engine::peekGlobalRegistrarHeads();
 
             // 교체 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 탐침 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
@@ -634,13 +632,8 @@ namespace sw
                 return false;
             }
 
-            outShadow._pTypeHead     = TypeRegistrar::getHead();
-            outShadow._pEnumHead     = EnumRegistrar::getHead();
-            outShadow._pVariableHead = GlobalVariableRegistrar::getHead();
-
-            TypeRegistrar::getHead()           = nullptr;
-            EnumRegistrar::getHead()           = nullptr;
-            GlobalVariableRegistrar::getHead() = nullptr;
+            outShadow._heads = engine::peekGlobalRegistrarHeads();
+            engine::setGlobalRegistrarHeads( engine::ModuleRegistrarHeads{} );
         }
 
         BLOCK( "Validate New Image" )
@@ -709,14 +702,8 @@ namespace sw
             prepared._pHandle          = nullptr;
             prepared._tempPath.clear();
 
-            engine::registerModuleTypes(
-                context._moduleName,
-                prepared._pTypeHead,
-                prepared._pEnumHead,
-                prepared._pVariableHead );
-            prepared._pTypeHead     = nullptr;
-            prepared._pEnumHead     = nullptr;
-            prepared._pVariableHead = nullptr;
+            engine::registerModuleTypes( context._moduleName, prepared._heads );
+            prepared._heads = engine::ModuleRegistrarHeads{};
 
             invokeAfterReload( context );
 
@@ -775,20 +762,14 @@ namespace sw
         context._imageName._current = context._imageName._loaded;
         if ( prepared._pHandle != nullptr )
         {
-            TypeRegistrar::getHead()           = prepared._pPreviousTypeHead;
-            EnumRegistrar::getHead()           = prepared._pPreviousEnumHead;
-            GlobalVariableRegistrar::getHead() = prepared._pPreviousVariableHead;
+            engine::setGlobalRegistrarHeads( prepared._previousHeads );
             if ( ModuleImageUtil::releaseImageCode( context._moduleName, prepared._pHandle ) )
                 ModuleImageUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
-        prepared._pTypeHead             = nullptr;
-        prepared._pEnumHead             = nullptr;
-        prepared._pVariableHead         = nullptr;
-        prepared._pPreviousTypeHead     = nullptr;
-        prepared._pPreviousEnumHead     = nullptr;
-        prepared._pPreviousVariableHead = nullptr;
+        prepared._heads         = engine::ModuleRegistrarHeads{};
+        prepared._previousHeads = engine::ModuleRegistrarHeads{};
         ModuleShadowCopy::removeArtifacts( prepared._tempPath );
         prepared._tempPath.clear();
         prepared._sourceMtime = 0;

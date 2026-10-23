@@ -18,7 +18,7 @@ namespace sw
          */
         [[nodiscard]] bool loadParkLayout( const string& resourceID )
         {
-            const ResourceDataKind* pLayoutKind = ResourceDataKindRegistry::get().findByLabel( ParkLayout::kDataKind );
+            const ResourceDataKind* pLayoutKind = ResourceDataKindUtil::findByLabel( ParkLayout::kDataKind );
             if ( pLayoutKind == nullptr || pLayoutKind->_pSuffix == nullptr )
                 return false;
             const string_view suffix{ pLayoutKind->_pSuffix };

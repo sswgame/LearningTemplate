@@ -50,6 +50,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #if SW_DEV_COMMANDS_ENABLED
     #include "Engine/Scene/AuthorityGhost.h"
 #endif
@@ -112,6 +113,8 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
         services.addSubsystem( sw::make_unique<CrashReportService>() );
         services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
+        // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
+        services.addSubsystem( sw::make_unique<ResourceDataKindRegistry>() );
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
 #if SW_DEV_COMMANDS_ENABLED
         if ( setup._bAuthorityGhost )

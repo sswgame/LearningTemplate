@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    struct float3;
+
     /**
      * @enum JSONType
      * @brief JSON 값의 종류입니다.
@@ -92,6 +94,16 @@ namespace sw
         bool has( string_view key, bool bIgnoreCaseKeys = true ) const;
         /** @brief 배열 원소를 반환합니다. 범위 밖이면 무효 핸들을 반환합니다. */
         JSONValue at( size_t index ) const;
+        /**
+         * @brief 이 배열의 @p offset 번째부터 숫자 @p count 개를 @p pOutValue 에 읽습니다(벡터 · 점처럼 숫자 N 개를 펼쳐 둔 배열용).
+         * @return 배열이 아니거나 범위를 넘거나 숫자가 아닌 칸이 있으면 false 입니다(0 으로 두지 않는다). 숫자가 아닌 칸은 `read` 처럼 값을 적어 오류를 남기며,
+         *         false 일 때 @p pOutValue 의 내용은 정해지지 않습니다.
+         */
+        [[nodiscard]] bool readFloats( size_t offset, float32* pOutValue, size_t count ) const;
+        /**
+         * @brief 이 배열의 @p offset 번째부터 숫자 셋을 `float3` 로 읽습니다(`readFloats` 와 같은 규칙). 실패하면 @p outValue 는 그대로입니다.
+         */
+        [[nodiscard]] bool readFloat3( size_t offset, float3& outValue ) const;
 
         /**
          * @brief 반드시 있어야 하는 객체 멤버 @p key 를 타입 T 로 읽습니다. 없거나 타입이 다르면(정수 칸의 실수 · 범위 밖 포함) 키와 함께 오류를 남기고 nullopt 입니다.

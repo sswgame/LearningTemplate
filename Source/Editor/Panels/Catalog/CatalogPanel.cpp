@@ -155,7 +155,7 @@ namespace sw::editor
         vector<const ResourceDataKind*> listKind;
         for ( const EditorResourceIndexEntry& entry : listEntry )
         {
-            ResourceDataKindRegistry::get().collectMatches( entry._path, listKind );
+            ResourceDataKindUtil::collectMatches( entry._path, listKind );
             if ( listKind.size() != 1 )
                 continue; // 카탈로그가 아니거나(0) 종류가 겹치는(스키마 테스트가 잡는다) 파일은 이 창이 다루지 않는다
             FileRow row;
@@ -342,7 +342,7 @@ namespace sw::editor
         _selectedID.clear();
         _selectedKindLabel.clear();
         vector<const ResourceDataKind*> listKind;
-        ResourceDataKindRegistry::get().collectMatches( resourceID, listKind );
+        ResourceDataKindUtil::collectMatches( resourceID, listKind );
         if ( listKind.size() == 1 )
             _selectedKindLabel = listKind[0]->_pLabel;
         _selectedID = resourceID;
@@ -400,7 +400,7 @@ namespace sw::editor
     {
         _listWarning.clear();
         _validationState              = ValidationState::None;
-        const ResourceDataKind* pKind = _selectedKindLabel.empty() ? nullptr : ResourceDataKindRegistry::get().findByLabel( _selectedKindLabel );
+        const ResourceDataKind* pKind = _selectedKindLabel.empty() ? nullptr : ResourceDataKindUtil::findByLabel( _selectedKindLabel );
         if ( pKind == nullptr )
         {
             _statusText = "No registered kind - nothing to validate with";

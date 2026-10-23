@@ -24,7 +24,7 @@
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
-#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/IPhysicsSceneFwd.h"
 
 namespace sw
 {

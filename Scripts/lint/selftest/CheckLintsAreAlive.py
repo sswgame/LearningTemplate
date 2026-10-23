@@ -183,6 +183,9 @@ class CheckLintsAreAliveGate(LintGate):
                 # 종료 1 이어도 노린 위반이 아닐 수 있다 — 같은 조각이 낸 다른 위반(입력 부족 · 낡은 예외)이 노린 규칙의 죽음을 가린다.
                 errors.append(f"{script.name}/{caseName}: 종료 1 이지만 노린 위반 '{case['expectedViolation']}' 이 출력에 없습니다"
                               f" — 이 규칙은 죽었습니다\n      출력: {lastLine}")
+            elif case.get("unexpectedViolation") and case["unexpectedViolation"] in output:
+                # 잡히면 안 되는 모양(오탐)이 잡혔다.
+                errors.append(f"{script.name}/{caseName}: 잡히면 안 되는 '{case['unexpectedViolation']}' 이 출력에 있습니다 — 이 규칙은 오탐합니다\n      출력: {lastLine}")
         checkedCases = len(listJob)
 
         return GateResult(listViolation=errors, summary=f"{checkedCases} cases across {len(listGateScript)} gates")
