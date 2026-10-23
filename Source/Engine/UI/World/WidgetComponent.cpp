@@ -77,6 +77,7 @@ namespace sw
         , _worldCanvas{}
         , _worldScratch{}
         , _worldRevision{ 1 }
+        , _worldCleanSkipCount{ 0 }
         , _worldQuad{}
         , _bHidden{ SW_FALSE }
         , _documentPath{}
@@ -354,15 +355,21 @@ namespace sw
         if ( _space != WidgetSpace::World || _worldTree == nullptr )
             return;
         // 텍스처 픽셀은 UI 단위다(배율 1). 안전 영역은 없다. 글자 배율과 방향은 화면 UI 와 같다.
-        const float2    size   = getWorldTextureSize();
-        UILayoutContext layout = baseLayout;
-        layout._viewportSize   = size;
-        layout._safeInsets     = float4{};
-        layout._uiScale        = 1.0f;
-        (void)UILayoutPass::update( *_worldTree, layout );
+        const float2    size       = getWorldTextureSize();
+        UILayoutContext layout     = baseLayout;
+        layout._viewportSize       = size;
+        layout._safeInsets         = float4{};
+        layout._uiScale            = 1.0f;
+        const uint32 measuredCount = UILayoutPass::update( *_worldTree, layout );
 
         UIPaintContext paint = basePaint;
         paint._uiScale       = 1.0f;
+        // 다시 잴 위젯도 무효화도 없으면 지난 목록이 그대로다 — 스크래치에 이어 붙이고 견주는 일을 건너뛴다(화면 UI 의 `paintScreens` 와 같은 조건).
+        if ( measuredCount == 0 && UIPaintPass::canReuseOutput( *_worldTree, paint, size ) )
+        {
+            ++_worldCleanSkipCount;
+            return;
+        }
         _worldScratch.clear();
         _worldScratch._targetSize = size;
         CanvasPainter painter( _worldScratch, 1.0f );

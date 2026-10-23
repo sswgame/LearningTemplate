@@ -5,6 +5,10 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Input/UIInputMapView.h"
@@ -12,6 +16,8 @@
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/Widgets/ButtonWidget.h"
+#include "Engine/UI/World/WidgetComponent.h"
 
 #include "EngineTest/UI/UILayoutTestUtil.h"
 #include "EngineTest/UI/UITestWidgets.h"
@@ -368,6 +374,79 @@ SW_TEST_CASE( UIInputTest, PointerPositionSubtractsViewportOrigin )
     SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
     SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getInputRouter().getPointerState().getHoveredWidget() );
     fixture.endFrame();
+}
+
+/**
+ * @brief [UIInputTest] 마우스로 월드 공간 단추를 누른다 — 카메라 광선이 화면 가운데의 단추를 맞혀 호버 · 클릭이 되고 게임의 Fire 는 먹힌다. 화면이 창 안 (600, 400) 에 놓인
+ *        에디터 게임 뷰(배율 2)에서도 창 (1560, 940) 이 같은 가운데다 — 화면 위젯 밖의 누름은 그대로 게임에 간다
+ * @details WorldWidgetInput W4 의 "마우스로 월드 단추 누르기" 를 디바이스 없이 확인한다(`UISystem::processWorldPointer` → `WorldWidgetPick::makeRay` → `WidgetComponent`).
+ *          변이: `processWorldPointer` 가 광선 위치에 `_pointerOrigin` 이 빠진 값을 쓰면 원점이 있는 판에서 단추를 놓쳐 진다. 단추를 처리한 누름을 소비하지 않으면 Fire 가 새어 진다.
+ */
+SW_TEST_CASE( UIInputTest, MouseClickOnWorldWidgetThroughCameraRay )
+{
+    for ( const bool bEditorGameView : { false, true } )
+    {
+        UIInputFixture fixture;
+        if ( bEditorGameView )
+        {
+            fixture._viewport._size          = sw::float2{ 960.0f, 540.0f };
+            fixture._viewport._physicalSize  = sw::float2{ 1920.0f, 1080.0f };
+            fixture._viewport._uiScale       = 2.0f;
+            fixture._viewport._pointerOrigin = sw::int2{ 600, 400 };
+        }
+        const int32 centerX = bEditorGameView ? 1560 : 960; // 화면 가운데의 창 픽셀
+        const int32 centerY = bEditorGameView ? 940 : 540;
+        fixture.openMenu( 1 ); // 화면 위젯이 가운데에 없다 — 누름이 World 위젯까지 온다
+
+        sw::GameObjectManager manager;
+        sw::GameObject*       pCameraObject = manager.createGameObject( sw::hashed_string( "Camera" ) );
+        SW_ASSERT_NOT_NULL( pCameraObject );
+        SW_ASSERT_NOT_NULL( pCameraObject->addComponent<sw::CameraComponent>() ); // 원점에서 +z 를 본다
+        sw::GameObject* pPanel = manager.createGameObject( sw::hashed_string( "Panel" ) );
+        SW_ASSERT_NOT_NULL( pPanel );
+        sw::SceneComponent* pRoot = pPanel->addComponent<sw::SceneComponent>();
+        SW_ASSERT_NOT_NULL( pRoot );
+        pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 5.0f } );
+        sw::WidgetComponent* pWidget = pPanel->addComponent<sw::WidgetComponent>();
+        SW_ASSERT_NOT_NULL( pWidget );
+        pWidget->setSpace( sw::WidgetSpace::World );
+        pWidget->setDrawSize( sw::float2{ 100.0f, 50.0f } );
+        pWidget->setWorldSize( sw::float2{ 2.0f, 1.0f } );
+        pWidget->setAcceptsInput( true );
+        sw::unique_ptr<sw::ButtonWidget> button     = sw::make_unique<sw::ButtonWidget>();
+        sw::ButtonWidget*                pButton    = button.get();
+        int32                            clickCount = 0;
+        (void)pButton->getOnClicked().add( [&clickCount]( sw::WidgetID )
+        { ++clickCount; } );
+        pWidget->setContent( std::move( button ) );
+        manager.flushSceneTransforms();
+        manager.beginPlay();
+        pWidget->bindUISystem( &fixture._ui );
+        fixture.runFrame(); // 뷰포트를 넘기고 World 트리를 배치한다
+
+        SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( centerX, centerY ) ) );
+        SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, centerX, centerY ) ) );
+        fixture.beginFrame();
+        SW_EXPECT_TRUE( pButton->isHovered() );
+        SW_EXPECT_TRUE( fixture._input.getInputMap().wasActionTriggered( "Fire" ) );
+        SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) ); // 월드 단추가 처리한 누름은 게임이 받지 않는다
+        fixture.endFrame();
+        SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left, centerX, centerY ) ) );
+        fixture.runFrame();
+        SW_EXPECT_EQUAL( 1, clickCount );
+
+        // 단추 밖(화면 위쪽 모서리 근처)의 누름: 호버가 풀리고 게임이 Fire 를 본다.
+        const int32 cornerX = bEditorGameView ? 1100 : 20;
+        const int32 cornerY = bEditorGameView ? 760 : 700;
+        SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( cornerX, cornerY ) ) );
+        SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, cornerX, cornerY ) ) );
+        fixture.beginFrame();
+        SW_EXPECT_TRUE( pButton->isHovered() == false );
+        SW_EXPECT_TRUE( fixture.wasTriggeredForGame( "Fire" ) );
+        fixture.endFrame();
+        pWidget->bindUISystem( nullptr );
+        manager.endPlay();
+    }
 }
 
 /**
