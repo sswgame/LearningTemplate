@@ -35,7 +35,7 @@ namespace sw::editor
                 }
                 if ( context.getStepIndex() < 3 )
                     return EditorSelfTestStep::Continue;
-                const ImGuiWindow* pWindow = ImGui::FindWindowByName( "Park Layout" );
+                const ImGuiWindow* pWindow = ImGui::FindWindowByName( ParkLayoutPanel::kPanelTitle );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "extension panel drew nothing in the editor's ImGui context" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( false ); // 닫기 실패는 위의 expect 가 이미 알렸다
                 return EditorSelfTestStep::Done;

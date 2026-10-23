@@ -312,7 +312,7 @@ namespace sw::editor
 
                 const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
-                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
+                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( HierarchyPanel::kPanelTitle );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
@@ -505,7 +505,7 @@ namespace sw::editor
             /** @brief 이번 프레임 "Game" 창의 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 찾지 못하면 false 입니다. */
             static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
-                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( "Game" );
+                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( GameViewPanel::kPanelTitle );
                 const bool         bGameWindowNotDrawn = pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount();
                 if ( bGameWindowNotDrawn )
                     return false;
