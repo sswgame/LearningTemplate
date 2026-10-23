@@ -40,6 +40,7 @@ namespace sw::editor
         void drawDirectorySection();
         void drawLiveEventSection();
 
+        string              _gmAddressText;
         string              _accountText;
         string              _assetText;
         string              _memoText;

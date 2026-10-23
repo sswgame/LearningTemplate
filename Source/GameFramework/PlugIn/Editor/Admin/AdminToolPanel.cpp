@@ -85,6 +85,7 @@ namespace sw::editor
 {
     AdminToolPanel::AdminToolPanel()
         : IEditorPanel( false )
+        , _gmAddressText{}
         , _accountText{}
         , _assetText{ "cur.gold" }
         , _memoText{}
@@ -109,6 +110,8 @@ namespace sw::editor
 
     void AdminToolPanel::drawContent()
     {
+        if ( AdminToolSession* pConnectionSession = findSubsystem<AdminToolSession>() )
+            pConnectionSession->updateConnection();
         drawProviderBar();
         ImGui::Separator();
         drawAccountSection();
@@ -153,6 +156,20 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "admin.role" );
         }
+
+        // 서버의 GM 포트(서버 설정 `_adminServicePort`)에 연결한다. 로그인은 `getConnection().setLoginHook` 으로 끼운 쪽이 한다.
+        EditorWidgets::drawTextField( "GM port (host:port)", _gmAddressText, 200.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SameLine();
+        const bool bConnected = session.getConnection().getState() != AdminToolConnectionState::Disconnected;
+        if ( bConnected == false && ImGui::Button( "Connect" ) )
+        {
+            string error;
+            if ( session.connectLive( _gmAddressText, "editor", error ) == false )
+                SW_LOG_WARNING( "Admin tool: GM connection failed - %#", error.c_str() );
+        }
+        if ( bConnected && ImGui::Button( "Disconnect" ) )
+            session.disconnectLive();
+        ImGui::TextDisabled( "GM connection: %s", session.getConnection().getStateText() );
     }
 
     void AdminToolPanel::drawAccountSection()
