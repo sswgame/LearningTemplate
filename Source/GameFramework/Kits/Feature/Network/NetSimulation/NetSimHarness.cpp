@@ -209,7 +209,7 @@ namespace sw
         Link* pLink     = createLink( 0 );
         if ( pLink == nullptr )
             return false;
-        _pServer = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Server, 0, *pLink ) );
+        _pServer = createWorld( NetSimRole::Server, 0, *pLink );
         if ( _pServer == nullptr )
         {
             shutdown();
@@ -263,7 +263,7 @@ namespace sw
         return nullptr;
     }
 
-    NetSimWorld* NetSimHarness::createWorld( NetSimRole role, int32 worldIndex, Link& link )
+    unique_ptr<NetSimWorld> NetSimHarness::createWorld( NetSimRole role, int32 worldIndex, Link& link )
     {
         NetHostConfig hostSettings = _settings._hostSettings;
         hostSettings._saltSeed     = mixNetSimSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
@@ -276,10 +276,10 @@ namespace sw
             if ( pBorrowedScene == nullptr )
             {
                 SW_LOG_ERROR( "NetSimHarness: the scene source gave no scene for world %#", worldIndex );
-                return nullptr;
+                return {};
             }
         }
-        return sw_new NetSimWorld( _services, role, worldIndex, link._pEmulation.get(), hostSettings, _settings._pSceneSource, pBorrowedScene );
+        return make_unique<NetSimWorld>( _services, role, worldIndex, link._pEmulation.get(), hostSettings, _settings._pSceneSource, pBorrowedScene );
     }
 
     int32 NetSimHarness::addClient( const NetSimLinkConditions& conditions )
@@ -293,7 +293,7 @@ namespace sw
             return -1;
         ++_nextWorldIndex;
         applyLinkConditions( worldIndex, conditions );
-        unique_ptr<NetSimWorld> pWorld = unique_ptr<NetSimWorld>( createWorld( NetSimRole::Client, worldIndex, *pLink ) );
+        unique_ptr<NetSimWorld> pWorld = createWorld( NetSimRole::Client, worldIndex, *pLink );
         if ( pWorld == nullptr )
             return -1; // 씬을 빌리지 못했다 — createWorld 가 알렸다
         if ( pWorld->_host.connect( _pServer->getAddress() ) == false )

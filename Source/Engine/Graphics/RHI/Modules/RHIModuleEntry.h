@@ -30,5 +30,5 @@
     }                                                                 \
     extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice()        \
     {                                                                 \
-        return sw_new DeviceClass();                                  \
+        return sw::make_unique<DeviceClass>().release();              \
     }

@@ -67,9 +67,10 @@ namespace sw
             size_t oldOffset = pCurrentBlock->_offset.load( std::memory_order_acquire );
             while ( true )
             {
-                const uintptr_t basePtr       = reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) + oldOffset;
+                const uintptr_t dataPtr       = reinterpret_cast<uintptr_t>( pCurrentBlock->_data.get() );
+                const uintptr_t basePtr       = dataPtr + oldOffset;
                 const uintptr_t alignedPtr    = MathUtil::align( basePtr, static_cast<uintptr_t>( alignment ) );
-                const size_t    alignedOffset = static_cast<size_t>( alignedPtr - reinterpret_cast<uintptr_t>( pCurrentBlock->_pData ) );
+                const size_t    alignedOffset = static_cast<size_t>( alignedPtr - dataPtr );
                 // **뺄셈으로 비교한다.** `alignedOffset + size` 로 쓰면 큰 size 에서 합이 오버플로해 검사를 통과하고, 블록 밖을
                 // 가리키는 주소가 정상 할당인 것처럼 반환된다. 정렬 때문에 alignedOffset 이 capacity 를 넘을 수도 있어서 그것도 함께 본다.
                 if ( alignedOffset > pCurrentBlock->_capacity || size > pCurrentBlock->_capacity - alignedOffset )
@@ -118,10 +119,7 @@ namespace sw
             if ( pBlock == nullptr )
                 continue;
 
-            if ( pBlock->_pData != nullptr )
-                Memory::freeAligned( pBlock->_pData );
-
-            sw_delete( pBlock );
+            sw_delete( pBlock ); // 블록 버퍼는 `Block::_data` 가 함께 푼다
             _arrBlock[blockIndex].store( nullptr, std::memory_order_relaxed );
         }
 
@@ -166,18 +164,20 @@ namespace sw
             capacity               = MathUtil::max( capacity, pPrevious->_capacity * 2 );
         }
 
-        Block* pBlock     = sw_new Block();
-        pBlock->_capacity = capacity;
-        pBlock->_offset.store( 0, std::memory_order_relaxed );
-        pBlock->_pData = static_cast<uint8*>( Memory::allocateAligned( capacity, alignof( std::max_align_t ) ) );
-        if ( pBlock->_pData == nullptr )
+        MemoryBlock data = MemoryBlock::allocateAligned( capacity, alignof( std::max_align_t ) );
+        if ( data.isValid() == false )
         {
-            sw_delete( pBlock );
             SW_LOG_ERROR( "Failed to allocate a %# byte block.", static_cast<uint32>( capacity ) );
             return false;
         }
 
-        _arrBlock[blockCount].store( pBlock, std::memory_order_release );
+        // 락 없이 읽는 표(`_arrBlock`)에 올릴 때만 소유를 놓는다. 표의 블록은 `clear()` 가 `sw_delete` 로 푼다.
+        unique_ptr<Block> block = make_unique<Block>();
+        block->_capacity        = capacity;
+        block->_offset.store( 0, std::memory_order_relaxed );
+        block->_data = std::move( data );
+
+        _arrBlock[blockCount].store( block.release(), std::memory_order_release );
         _blockCount.store( blockCount + 1, std::memory_order_release );
         _currentBlockIndex.store( blockCount, std::memory_order_release );
         return true;

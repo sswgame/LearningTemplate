@@ -74,7 +74,7 @@ namespace sw
             pPage                                  = pageEntry.load( std::memory_order_relaxed );
             if ( pPage == nullptr )
             {
-                pPage = sw_new SceneTransformPage;
+                pPage = make_unique<SceneTransformPage>().release(); // 락 없이 읽는 표에 올리는 자리에서만 소유를 놓는다
                 pageEntry.store( pPage, std::memory_order_release );
             }
             ++_liveSlotCount;

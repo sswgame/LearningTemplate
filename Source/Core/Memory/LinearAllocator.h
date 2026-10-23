@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Memory/MemoryBlock.h"
 
 namespace sw
 {
@@ -79,7 +80,7 @@ namespace sw
         /** @brief 블록 하나의 버퍼 · 용량 · 원자 오프셋입니다. */
         struct Block
         {
-            uint8*         _pData{ nullptr };
+            MemoryBlock    _data; ///< 블록 버퍼. 블록이 풀릴 때 함께 풀린다
             size_t         _capacity{ 0 };
             atomic<size_t> _offset{ 0 };
         };

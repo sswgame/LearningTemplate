@@ -103,6 +103,12 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 `Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 끝난 곳: `Source/Editor/Panels/Inspector` 의 손으로 쓴 erase-remove 2건(`EditorPropertyGrid`)을 `VectorUtil::removeIf` 로 바꿨다(2026-10-21).
 
+### ReflectedInstanceOwner
+제목: 리플렉션이 만든 형식 소거 인스턴스의 소유 형식
+옛번호: 없음
+왜 필요한가: `wt/ownership`(2026-10-24)이 맨 `sw_new` 를 `make_unique` 로, 거친 `Memory::allocate` 블록을 `MemoryBlock` 으로 바꾸고 `Style/RawNew` · `CheckRawAllocation` 이 새 맨 할당을 막게 했습니다. 남은 틈은 외부 라이브러리 할당 콜백과, 리플렉션이 생성자를 불러 만든 인스턴스(블록 + `TypeInfo::_destroyInstance` 짝)입니다. 후자는 `void*` 를 맨 손으로 들고 `destroyInstance` 를 손으로 짝지어 부르는 모양이라 누수 · 이중 해제가 형식에 안 보입니다.
+남은 것: 블록과 `const TypeInfo*` 를 함께 쥐고 소멸자가 `_destroyInstance` 후 블록을 푸는 이동 전용 소유 형식을 `Engine/Reflection` 에 두고 `CheckRawAllocation.toml` 의 `ProjectSettingsDocument.cpp`(`_pCurrent` · `_pDefault` · `createInstance` 호출 8곳) · `UIDocumentLoader.cpp`(`createWidget`)를 그 형식으로 옮긴 뒤 두 줄을 지웁니다. `GameObject.cpp` 의 컴포넌트 저장소는 풀 항목이 짝이라 따로 봅니다. `hashed_string.h` 의 청크 표(`atomic<Entry*>`)는 락 없이 읽는 표라 소유 형식을 담지 못하니, 표가 소유하는 `atomic` 소유 칸 형식이 필요한지 함께 따집니다.
+
 ## 기능
 
 

@@ -571,7 +571,7 @@ namespace sw
             {
             public:
                 Bridge( UISystem& ui, IWindow& window )
-                    : _pCore{ sw_new Core{} }
+                    : _pCore{ make_unique<Core>().release() } // 참조 수로 사는 객체다 — 마지막 `release()` 가 `sw_delete` 로 푼다
                     , _pWindow{ &window }
                 {
                     _pCore->_pUI     = &ui;
@@ -642,7 +642,7 @@ namespace sw
 
         UiaAccessibilityBridgeInternal::Element* UiaAccessibilityBridgeInternal::createElement( Core& core, uint32 screen, WidgetID widget, bool bRoot )
         {
-            return sw_new Element( core, screen, widget, bRoot );
+            return make_unique<Element>( core, screen, widget, bRoot ).release(); // COM 참조 수로 사는 객체다 — 마지막 `Release()` 가 푼다
         }
     } // namespace
 } // namespace sw

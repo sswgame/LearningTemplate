@@ -100,12 +100,7 @@ namespace sw
 
         if ( activeChannels.empty() )
         {
-            for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
-            {
-                if ( pOverflowMem != nullptr )
-                    Memory::free( pOverflowMem );
-            }
-            _arrListOverflowAllocation[currentAllocIdx].clear();
+            _arrListOverflowAllocation[currentAllocIdx].clear(); // 블록은 목록이 소유한다
             _arrFrameAllocator[currentAllocIdx].reset();
             return;
         }
@@ -148,11 +143,6 @@ namespace sw
 
         BLOCK( "Cleanup Frame Allocator" )
         {
-            for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
-            {
-                if ( pOverflowMem != nullptr )
-                    Memory::free( pOverflowMem );
-            }
             _arrListOverflowAllocation[currentAllocIdx].clear();
             _arrFrameAllocator[currentAllocIdx].reset();
         }
@@ -266,11 +256,6 @@ namespace sw
             _mapChannelQueue.clear();
             for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )
             {
-                for ( void* pOverflowMem : _arrListOverflowAllocation[allocIndex] )
-                {
-                    if ( pOverflowMem != nullptr )
-                        Memory::free( pOverflowMem );
-                }
                 _arrListOverflowAllocation[allocIndex].clear();
             }
             _arrFrameAllocator[0].clear();

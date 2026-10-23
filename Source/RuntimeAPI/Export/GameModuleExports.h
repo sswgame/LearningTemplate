@@ -27,7 +27,7 @@ namespace sw
  * @details 핸들 캐스팅과 널 검사는 `ModuleForwardUtil` 이 합니다. 테이블에 항목을 하나 더
  *          붙일 때 건드릴 곳은 `GameAPI` 구조체 한 줄과 여기 한 줄이어야 합니다.
  */
-// 이 매크로 인자는 **타입 이름**이다. 괄호로 감싸면 `sw_new (GameClass)()` 처럼 되어
+// 이 매크로 인자는 **타입 이름**이다. 괄호로 감싸면 `sw::make_unique<(GameClass)>()` 처럼 되어
 // 문법이 깨진다. 검사기는 인자를 식으로 가정한다. 매크로 본문은 줄 연결이라 중간에
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
@@ -44,7 +44,7 @@ namespace sw
     {                                                                                                                                                                                                        \
         if ( pOutAPI == nullptr )                                                                                                                                                                            \
             return false;                                                                                                                                                                                    \
-        pOutAPI->create     = []() -> sw::GameHandle { return sw_new GameClass(); };                                                                                                                         \
+        pOutAPI->create     = []() -> sw::GameHandle { return sw::make_unique<GameClass>().release(); };                                                                                                     \
         pOutAPI->destroy    = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                                                                                       \
         pOutAPI->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                    \
         { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); }; \
