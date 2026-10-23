@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 편집 중인 씬을 빈 씬으로 바꾼 뒤(scene.new) 씬 없는 프레임도 네 백엔드가 UI 를 그린다. 활성 씬이 없는 프레임을 그리지 않게 한 변경이
+  Vulkan 에서 UNDEFINED 백버퍼를 Load 로 열었던 결함(RenderThread::executeFrameBody)을 드러낸 적이 있어, 씬이 비는 상태를 AppScenarioTest 가 백엔드마다 지킨다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/emptyscene.scenario.xml -dx12
+-->
+<Scenario name="editor.emptyscene" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="10"><DevCommand line="scene.new"/></At>
+	<At frame="60">
+		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
+		<Screenshot file="emptyscene.ppm"/>
+	</At>
+	<At frame="61">
+		<ExpectImage file="emptyscene.ppm" metric="meanLuma" atLeast="0.05"/>
+		<ExpectLog contains="[Error]" count="0"/>
+	</At>
+	<At frame="65"><Pass/></At>
+</Scenario>

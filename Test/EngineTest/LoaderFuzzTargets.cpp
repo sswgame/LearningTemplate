@@ -269,6 +269,15 @@ namespace test
                     outListSeed.push_back( bytes );
                 if ( CompressionStream::compressBuffer( text.data(), text.size(), bytes, CompressionCodecType::RLE, 0 ) )
                     outListSeed.push_back( bytes );
+
+                // 야간 퍼저가 10 초 타임아웃을 낸 모양(실행 38806424034): 원본 620 MB · 압축 0 바이트를 말하는 헤더만 있는 스트림.
+                // 해제 상한(decompressBound)이 할당 전에 끊는지를 퍼저가 늘 출발점으로 삼게 한다.
+                CompressionHeader header{};
+                header._codecType          = CompressionCodecType::RLE;
+                header._uncompressedSize   = 620757059;
+                header._compressedSize     = 0;
+                const uint8* const pHeader = reinterpret_cast<const uint8*>( &header );
+                outListSeed.emplace_back( pHeader, pHeader + sizeof( header ) );
             }
             static void seedPack( vector<vector<uint8>>& outListSeed )
             {
