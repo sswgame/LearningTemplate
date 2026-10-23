@@ -14,7 +14,17 @@
 
 한 일은 `git log` 가 정본입니다.
 
-## 00. 2026-10-23 통합 파동 C 끝 (이것부터 읽는다) — 파동 B 뒤 검증 기록은 그 아래
+## 000. 2026-10-23 셰이더 묶음 끝 (이것부터 읽는다) — 아래 00절의 셰이더 H3~H7 · G1 문장보다 이 절이 최신
+
+main = origin/main `8e361a919`, 진행 중 에이전트 · 워크트리 없음.
+- **끝**: MaterialShaderHooks H7(림 `swComputeRimLight` 한 함수, 벤치 골든 8장 다시 뜸) · G1(Shooter3D `cctvmonitor` 게임 도메인 셰이더 · 머티리얼 · 시나리오 · 테스트) → 계획은 `끝`, 로드맵에서 지움. ShaderPrefixAndFormat 1단계(셰이더에 `Resource/.clang-format`, `SW_NUMTHREADS` 13곳, 포맷 도구가 셰이더 포함; 쿠킹 바이너리 9003개 바이트 동일, 멱등).
+- **고친 hostgpu 테스트**: `PostProcessOffViewSkipsThePostChain`(평균 색 차이 → 화소 단위 비교), `InstanceConstantBufferIsRecreatedWhenLayoutGrows`(D2 뒤 손으로 지은 반사 → 실제 스키마). 근본 원인: 셰이더 · 머티리얼 작업자의 검증에 hostgpu 엔진 테스트가 없었다 — 이 갈래 작업자 지시에 hostgpu `-j1` 을 넣는다. 얇은 여유의 평균 지표를 쓰는 다른 GPU 테스트는 감사하지 않았다.
+- **2단계(다음 첫 일)**: ShaderPrefixAndFormat 2단계 — `sw` 접두 제거(구조체 멤버 / `static` 멤버 함수), 구조체 필드 `_camelCase`(`.material` 에셋 · C++ 바인딩 같은 커밋), 함수 안 `#if` 를 정의로 몰기, 별칭 매크로 `SW_MATERIAL_VIEW_PROJECTION` → 함수, `CheckShaderConventions.py` · `NamingScripts.md` HLSL 절 같은 커밋, 재쿠킹 · 골든 불변 확인 · push. 1단계가 남긴 것: `[unroll]` · `[loop]` · `[branch]` 18곳이 다음 문장과 붙음(문장 매크로로 풀기; `fullscreenblit.hlsl` 만 중괄호), `SW_ROOT_CONSTANTS_BEGIN/END` 여러 줄 정의, 셰이더 확장자 튜플이 `CheckShaderConventions` · `FormatAcronymSpelling` · `AssetValidation` 에 따로 있음(`kShaderSourceExtensions` 로 합치기). 구조 개편이니 작업자 요청에 "구조는 장기 이득이면 과감히 바꾼다"를 적는다. 사용자가 이 일 전체에 "푸시까지" 를 정했다.
+- **사용자 결정 대기**: 물이 그림자를 드리울지(`MATERIAL_SHADOW_CAST_OFF`), 작업자가 명세 없이 정한 넷은 [MaterialShaderHooks](MaterialShaderHooks.md) 6절.
+- **못 본 것**: Shipping 빌드 CookAssets 가 "mesh 를 쿠킹 잡 밖에서 읽음" 으로 실패(H7 과 무관해 보이나 조사 안 함). `AppScenarioTest.EditorScenariosPassOnOpenGL` 의 `editor.assetmanage`(`Editor.ReferenceCount` 0)가 4번 중 1번 간헐 실패. NileCity · 에디터 대표 집합 네 백엔드 비교, `cctvmonitor` 디퍼드 모습, 툰 림 통합, 색 > 1 로 발광을 흉내 내는 다른 머티리얼. `graphify update Source` 미실행. 환경: 골든은 Release 가 낡으면 `EngineDefaultAssets` 오류로 진다 — 먼저 `cmake --build --preset Ninja-Release` 후 `App.exe --cook-shaders`.
+- 지난 절의 남은 정리(`D:/w/integC` 등 워크트리 · 브랜치)는 아직 확인하지 않았다 — `git worktree list` · `git branch -r --list 'origin/wt/*'` 로 본다.
+
+## 00. 2026-10-23 통합 파동 C 끝 — 파동 B 뒤 검증 기록은 그 아래
 
 **파동 C**: 작업자 브랜치 11개(`wt/engwave` · `onlinekits` · `inputdata` · `edwave` · `meleeunify` · `animwave` · `audit` · `streaming` · `uiwave` · `gfxshader` · `gfxrender`)와 셰이더 패치 넷(TAA 재투영 · 자동 노출 · FSR1 · HZB 가림 타일 · 캔버스 MSDF · `evaluateCurve`)이 main 에 들어갔다(`git log 4eab98300..` — 커밋 메시지가 정본). 쿠킹(네 백엔드)과 모델 재임포트(`--check-models` 통과)를 함께 넣었다.
 **검증(Windows, 2026-10-23)**: 빌드 경고 0(Debug · Release(`SW_GAMES=ALL`) · Shipping · Shipping-Server). ctest — Debug nogpu 67/67 · race 5/5 · lint 46/46(`CheckTextureFolders` 는 병렬 부하에서 15 초 시한을 한 번 넘겼고 혼자 돌리면 2.6 초 통과), Release nogpu 67/67 · hostgpu 9/9(에디터 시나리오 체인 네 백엔드 포함), Shipping nogpu 61/61 · hostgpu 9/9, Server nogpu 63/63. QA 골든 Empty · Shooter3D · NileCity · StarSkirmish 네 백엔드 통과, Shooter3D dx12 · vk 캡처를 눈으로 봤다(같다).
