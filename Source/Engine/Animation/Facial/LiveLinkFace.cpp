@@ -92,6 +92,22 @@ namespace sw
                 size_t       _offset;
                 bool         _bFailed;
             };
+            /** @brief 32비트 값을 빅 엔디안으로 덧붙입니다. */
+            static void appendUint32( vector<uint8>& outBytes, uint32 value )
+            {
+                outBytes.push_back( static_cast<uint8>( value >> 24 ) );
+                outBytes.push_back( static_cast<uint8>( value >> 16 ) );
+                outBytes.push_back( static_cast<uint8>( value >> 8 ) );
+                outBytes.push_back( static_cast<uint8>( value ) );
+            }
+
+            /** @brief 길이(끝 0 포함) 앞붙임 문자열을 덧붙입니다. */
+            static void appendString( vector<uint8>& outBytes, const string& text )
+            {
+                appendUint32( outBytes, static_cast<uint32>( text.size() + 1 ) );
+                outBytes.insert( outBytes.end(), text.begin(), text.end() );
+                outBytes.push_back( 0 );
+            }
         };
     } // namespace
 } // namespace sw
@@ -262,30 +278,18 @@ namespace sw
     void LiveLinkFacePacket::write( const LiveLinkFaceFrame& frame, uint8 version, vector<uint8>& outBytes )
     {
         outBytes.clear();
-        auto pushUint32 = [&outBytes]( uint32 value )
-        {
-            outBytes.push_back( static_cast<uint8>( value >> 24 ) );
-            outBytes.push_back( static_cast<uint8>( value >> 16 ) );
-            outBytes.push_back( static_cast<uint8>( value >> 8 ) );
-            outBytes.push_back( static_cast<uint8>( value ) );
-        };
-        auto pushString = [&outBytes, &pushUint32]( const string& text )
-        {
-            pushUint32( static_cast<uint32>( text.size() + 1 ) );
-            outBytes.insert( outBytes.end(), text.begin(), text.end() );
-            outBytes.push_back( 0 );
-        };
+        using Internal = LiveLinkFaceInternal;
         outBytes.push_back( version );
-        pushString( frame._deviceID );
-        pushString( frame._subjectName );
-        pushUint32( static_cast<uint32>( frame._frameNumber ) );
-        pushUint32( BitUtil::floatToBits( 0.0f ) );
-        pushUint32( 60u );
-        pushUint32( 1u );
+        Internal::appendString( outBytes, frame._deviceID );
+        Internal::appendString( outBytes, frame._subjectName );
+        Internal::appendUint32( outBytes, static_cast<uint32>( frame._frameNumber ) );
+        Internal::appendUint32( outBytes, BitUtil::floatToBits( 0.0f ) );
+        Internal::appendUint32( outBytes, 60u );
+        Internal::appendUint32( outBytes, 1u );
         outBytes.push_back( static_cast<uint8>( frame._listValue.size() ) );
         for ( const float32 value : frame._listValue )
         {
-            pushUint32( BitUtil::floatToBits( value ) );
+            Internal::appendUint32( outBytes, BitUtil::floatToBits( value ) );
         }
     }
 
