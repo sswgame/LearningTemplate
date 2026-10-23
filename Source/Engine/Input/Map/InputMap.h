@@ -799,6 +799,9 @@ namespace sw
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
 
     private:
+        friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMapSerialization.cpp)
+
+    private:
         InputManager*                        _pInput;
         unordered_map<hashed_string, uint32> _mapAction;       /**< 액션 이름에서 `_listActionEntry` 인덱스를 찾는 맵입니다. */
         unordered_map<hashed_string, uint32> _mapLayer;        /**< 레이어 이름에서 `_listLayerEntry` 인덱스를 찾는 맵입니다. */

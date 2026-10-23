@@ -292,22 +292,23 @@ namespace sw
         (void)finishClipLoadsIfComplete(); // 모두 이미 읽혀 있었으면(같은 클립을 쓰는 캐릭터가 먼저 읽었다) 바로 끝난다
     }
 
+    void SkeletalAnimatorComponent::requestClipLoad( const hashed_string& clipName )
+    {
+        if ( clipName.empty() || _mapClip.find( clipName ) != _mapClip.end() )
+            return;
+        for ( const ClipLoad& existing : _listClipLoad )
+        {
+            if ( existing._clipName == clipName )
+                return;
+        }
+        ClipLoad& added = _listClipLoad.emplace_back();
+        added._clipName = clipName;
+        added._load     = SharedAssetCache<AnimationClip>::request( makeClipPath( clipName ) );
+    }
+
     void SkeletalAnimatorComponent::requestClipLoads()
     {
         _listClipLoad.clear();
-        auto request = [this]( const hashed_string& clipName )
-        {
-            if ( clipName.empty() || _mapClip.find( clipName ) != _mapClip.end() )
-                return;
-            for ( const ClipLoad& existing : _listClipLoad )
-            {
-                if ( existing._clipName == clipName )
-                    return;
-            }
-            ClipLoad& added = _listClipLoad.emplace_back();
-            added._clipName = clipName;
-            added._load     = SharedAssetCache<AnimationClip>::request( makeClipPath( clipName ) );
-        };
         // 그래프를 짓는 것(`rebuildGraphPlayables`)과 같은 이름을 모은다 — 노드(블렌드 스페이스면 표본), 레이어. 그래프가 없으면 시작 상태가 곧 클립이다.
         for ( const AnimationGraphNode& node : _graph._listNode )
         {
@@ -315,22 +316,22 @@ namespace sw
                 continue;
             if ( node.hasBlendSpace() == false )
             {
-                request( hashed_string( node._name ) );
+                requestClipLoad( hashed_string( node._name ) );
                 continue;
             }
             for ( const BlendSpaceSample& sample : node._blendSpace._space.getSamples() )
             {
-                request( sample._clipName );
+                requestClipLoad( sample._clipName );
             }
         }
         for ( const AnimationGraphLayerDef& def : _graph._listLayer )
         {
-            request( def._clipName );
+            requestClipLoad( def._clipName );
         }
         if ( _graph._listNode.empty() )
         {
-            request( hashed_string( _currentState ) );
-            request( hashed_string( _initialState ) );
+            requestClipLoad( hashed_string( _currentState ) );
+            requestClipLoad( hashed_string( _initialState ) );
         }
     }
 

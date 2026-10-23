@@ -75,6 +75,18 @@ namespace sw
                 return string{ sb.c_str(), sb.size() };
             }
 
+            /** @brief 16 진 글자 하나의 값입니다. 16 진 글자가 아니면 -1 입니다. */
+            static int32 parseHexNibble( utf8 character )
+            {
+                if ( '0' <= character && character <= '9' )
+                    return character - '0';
+                if ( 'a' <= character && character <= 'f' )
+                    return character - 'a' + 10;
+                if ( 'A' <= character && character <= 'F' )
+                    return character - 'A' + 10;
+                return -1;
+            }
+
             [[nodiscard]] static bool readReflectAnyText( void* pPtr, string_view str )
             {
                 ReflectAny& any  = *static_cast<ReflectAny*>( pPtr );
@@ -88,20 +100,10 @@ namespace sw
                 if ( ( hex.size() % 2 ) != 0 )
                     return false;
                 any._bytes.resize( hex.size() / 2 );
-                const auto nibble = []( utf8 character ) -> int32
-                {
-                    if ( '0' <= character && character <= '9' )
-                        return character - '0';
-                    if ( 'a' <= character && character <= 'f' )
-                        return character - 'a' + 10;
-                    if ( 'A' <= character && character <= 'F' )
-                        return character - 'A' + 10;
-                    return -1;
-                };
                 for ( size_t byteIndex = 0; byteIndex < any._bytes.size(); ++byteIndex )
                 {
-                    const int32 hiNibble = nibble( hex[byteIndex * 2] );
-                    const int32 loNibble = nibble( hex[byteIndex * 2 + 1] );
+                    const int32 hiNibble = parseHexNibble( hex[byteIndex * 2] );
+                    const int32 loNibble = parseHexNibble( hex[byteIndex * 2 + 1] );
                     if ( hiNibble < 0 || loNibble < 0 )
                         return false;
                     any._bytes[byteIndex] = static_cast<uint8>( ( hiNibble << 4 ) | loNibble );

@@ -300,6 +300,25 @@ namespace sw
                 vector<uint32> _listSlot;     ///< 오브젝트 순번마다 이미 든 스테이지 수(`splitByObject`)
             };
 
+            /** @brief 한 레벨의 후보를 순서 키 순으로 정렬합니다. */
+            static void sortLevel( const vector<StageCandidate>& listCandidate, vector<uint32>& listLevel )
+            {
+                std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( uint32 left, uint32 right )
+                { return isBefore( listCandidate[left], listCandidate[right] ); } );
+            }
+
+            /** @brief 보통 길의 선행 조건이 이 단계(같은 단계의 이 그룹 또는 앞 그룹)에서 돌았으면 그 쓰기를 먼저 적용해야 한다. */
+            static bool waitsOnObjectPath( const vector<StageCandidate>& listCandidate, const vector<uint32>& listLevel )
+            {
+                for ( const uint32 index : listLevel )
+                {
+                    const StageCandidate& candidate = listCandidate[index];
+                    if ( candidate._externalGroup != kNoExternalGroup && candidate._externalGroup >= getPhaseFirstGroup( candidate._item._group ) )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 한 그룹의 후보(@p listGroupMember — 후보 번호)를 선행 조건 순서로 갈라 스테이지를 붙입니다(Kahn 레벨 + 오브젝트별 스테이지).
              * @details 레벨 0 은 후보 사이의 선행 조건이 없지만, 보통 길의 선행 조건이 같은 단계에서 돌았으면(그 쓰기가 아직 대기 중이다) 그 레벨도
@@ -327,23 +346,6 @@ namespace sw
                     }
                 }
 
-                auto sortLevel = [&listCandidate]( vector<uint32>& listLevel )
-                {
-                    std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( uint32 left, uint32 right )
-                    { return isBefore( listCandidate[left], listCandidate[right] ); } );
-                };
-                // 보통 길의 선행 조건이 이 단계(같은 단계의 이 그룹 또는 앞 그룹)에서 돌았으면 그 쓰기를 먼저 적용해야 한다.
-                auto waitsOnObjectPath = [&listCandidate]( const vector<uint32>& listLevel )
-                {
-                    for ( const uint32 index : listLevel )
-                    {
-                        const StageCandidate& candidate = listCandidate[index];
-                        if ( candidate._externalGroup != kNoExternalGroup && candidate._externalGroup >= getPhaseFirstGroup( candidate._item._group ) )
-                            return true;
-                    }
-                    return false;
-                };
-
                 vector<uint32> listCurrentLevel;
                 for ( const uint32 member : listGroupMember )
                 {
@@ -356,7 +358,7 @@ namespace sw
                 bool   bWaits         = false; // 레벨 1 부터는 모두 앞 레벨의 선행 조건을 기다린다
                 while ( listCurrentLevel.empty() == false )
                 {
-                    sortLevel( listCurrentLevel );
+                    sortLevel( listCandidate, listCurrentLevel );
                     vector<uint32> listNextLevel;
                     for ( const uint32 current : listCurrentLevel )
                     {
@@ -369,7 +371,7 @@ namespace sw
                                 listNextLevel.push_back( next );
                         }
                     }
-                    splitByObject( listCurrentLevel, listCandidate, bWaits || waitsOnObjectPath( listCurrentLevel ), levelNumber, scratch._listSlot, outListStage );
+                    splitByObject( listCurrentLevel, listCandidate, bWaits || waitsOnObjectPath( listCandidate, listCurrentLevel ), levelNumber, scratch._listSlot, outListStage );
                     ++levelNumber;
                     bWaits           = true;
                     listCurrentLevel = std::move( listNextLevel );
@@ -387,7 +389,7 @@ namespace sw
                         if ( scratch._listVisited[member] == 0 )
                             listRemaining.push_back( member );
                     }
-                    sortLevel( listRemaining );
+                    sortLevel( listCandidate, listRemaining );
                     splitByObject( listRemaining, listCandidate, true, kCycleLevel, scratch._listSlot, outListStage );
                 }
             }

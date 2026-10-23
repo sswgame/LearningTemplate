@@ -252,6 +252,19 @@ namespace sw
         _bSweepOriginValid = true;
     }
 
+    SweptOverlap2D BoxCollider2DComponent::makeSweptOverlap( PhysicsBodyHandle otherBody, uint64 otherUserData, float32 hitFraction, bool bOtherTrigger ) const
+    {
+        SweptOverlap2D overlap;
+        overlap._selfBody      = _body;
+        overlap._otherBody     = otherBody;
+        overlap._selfUserData  = getOwner()->getObjectID();
+        overlap._otherUserData = otherUserData;
+        overlap._hitFraction   = hitFraction;
+        overlap._bSelfTrigger  = _bBodyTrigger;
+        overlap._bOtherTrigger = bOtherTrigger;
+        return overlap;
+    }
+
     void BoxCollider2DComponent::sweepPassedBodies( ScenePhysics& physics, const vector<BoxCollider2DComponent*>& listMoved )
     {
         using Internal                = BoxCollider2DComponentInternal;
@@ -268,20 +281,7 @@ namespace sw
         filter._layerMask        = layers.getLayerMask( static_cast<uint8>( _bodyLayer ) );
         filter._bIncludeTriggers = true;
 
-        const uint64           selfUserData = getOwner()->getObjectID();
         vector<SweptOverlap2D> listSwept;
-        const auto             addSwept = [&]( PhysicsBodyHandle otherBody, uint64 otherUserData, float32 hitFraction, bool bOtherTrigger )
-        {
-            SweptOverlap2D overlap;
-            overlap._selfBody      = _body;
-            overlap._otherBody     = otherBody;
-            overlap._selfUserData  = selfUserData;
-            overlap._otherUserData = otherUserData;
-            overlap._hitFraction   = hitFraction;
-            overlap._bSelfTrigger  = _bBodyTrigger;
-            overlap._bOtherTrigger = bOtherTrigger;
-            listSwept.push_back( overlap );
-        };
 
         // 1) 가만히 있던 바디 — 이번 자리 그대로 Box2D 로 쓴다. 움직인 콜라이더의 바디는 2) 가 잰다(이번 자리에 선 채로 재면 틀린다).
         const PhysicsShapeDesc2D box = Internal::makeBox( _bodyHalfExtent );
@@ -300,7 +300,7 @@ namespace sw
             const bool bSensorReports = bStartedInside || bStillInside;
             if ( bMovedBody || bSensorReports )
                 continue;
-            addSwept( hit._body, hit._userData, hit._fraction, pScene->isBodyTrigger( hit._body ) );
+            listSwept.push_back( makeSweptOverlap( hit._body, hit._userData, hit._fraction, pScene->isBodyTrigger( hit._body ) ) );
         }
 
         // 2) 이번 프레임에 움직인 콜라이더 — 둘 다 출발점에서, 이 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic).
@@ -321,7 +321,7 @@ namespace sw
             const bool bStillInside = bEntered && toBox.intersects( Internal::makeSweepBox( pOther->_bodyCenter, pOther->_bodyHalfExtent ) );
             if ( bEntered == false || bStillInside )
                 continue;
-            addSwept( pOther->_body, pOther->getOwner()->getObjectID(), hit._hitFraction, pOther->_bBodyTrigger );
+            listSwept.push_back( makeSweptOverlap( pOther->_body, pOther->getOwner()->getObjectID(), hit._hitFraction, pOther->_bBodyTrigger ) );
         }
 
         // 먼저 닿은 것이 먼저 받는다(총알이 뒤의 적부터 맞지 않는다). 같은 시점끼리는 모은 순서 그대로다.

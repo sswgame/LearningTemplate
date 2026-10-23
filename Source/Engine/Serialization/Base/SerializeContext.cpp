@@ -45,31 +45,179 @@ namespace sw
             }
 
             template <typename T>
+            static void writeBuiltinBinary( const void* pPtr, vector<uint8>& listBuf )
+            {
+                const uint8* pByte = reinterpret_cast<const uint8*>( pPtr );
+                listBuf.insert( listBuf.end(), pByte, pByte + sizeof( T ) );
+            }
+
+            template <typename T>
+            [[nodiscard]] static bool readBuiltinBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            {
+                if ( offset + sizeof( T ) > size )
+                    return false;
+                // bool 은 바이트를 그대로 옮기지 않는다. 0 · 1 이 아닌 바이트(망가진 파일)를 memcpy 하면 값이 정의되지 않는 bool 이 되고,
+                // 컴파일러는 그것을 2 로 쓰거나 `b` 와 `b == true` 를 다르게 본다.
+                if constexpr ( std::is_same_v<T, bool> )
+                    *static_cast<bool*>( pPtr ) = pData[offset] != 0;
+                else
+                    Memory::copy( pPtr, pData + offset, sizeof( T ) );
+                offset += sizeof( T );
+                return true;
+            }
+
+            static void writeStringBinary( const void* pPtr, vector<uint8>& listBuf )
+            {
+                BinaryStreamWriter writer{ listBuf };
+                writer.writeString( *static_cast<const string*>( pPtr ) );
+            }
+
+            [[nodiscard]] static bool readStringBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            {
+                BinaryStreamReader reader{ pData, size };
+                if ( reader.skip( offset ) == false )
+                    return false;
+                if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
+                    return false;
+                offset = reader.getOffset();
+                return true;
+            }
+
+            static void writeHashedStringBinary( const void* pPtr, vector<uint8>& listBuf )
+            {
+                BinaryStreamWriter writer{ listBuf };
+                writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
+            }
+
+            [[nodiscard]] static bool readHashedStringBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            {
+                BinaryStreamReader reader{ pData, size };
+                if ( reader.skip( offset ) == false )
+                    return false;
+                string_view text;
+                if ( reader.readStringView( text ) == false )
+                    return false;
+                *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
+                offset                               = reader.getOffset();
+                return true;
+            }
+
+            static void writeAtomicBoolBinary( const void* pPtr, vector<uint8>& listBuf )
+            {
+                const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
+                listBuf.push_back( flag );
+            }
+
+            [[nodiscard]] static bool readAtomicBoolBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            {
+                if ( offset + sizeof( uint8 ) > size )
+                    return false;
+                static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
+                offset += sizeof( uint8 );
+                return true;
+            }
+
+            static void writeTagIDBinary( const void* pPtr, vector<uint8>& listBuf )
+            {
+                const TagID&       tag  = *static_cast<const TagID*>( pPtr );
+                const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
+                BinaryStreamWriter writer{ listBuf };
+                writer.writeString( pStr );
+            }
+
+            [[nodiscard]] static bool readTagIDBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            {
+                BinaryStreamReader reader{ pData, size };
+                if ( reader.skip( offset ) == false )
+                    return false;
+                string_view text;
+                if ( reader.readStringView( text ) == false )
+                    return false;
+                if ( text.empty() )
+                    *static_cast<TagID*>( pPtr ) = TagID{};
+                else
+                    *static_cast<TagID*>( pPtr ) = TagID::request( text );
+                offset = reader.getOffset();
+                return true;
+            }
+
+            static string writeBoolText( const void* pPtr ) { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; }
+
+            // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
+            [[nodiscard]] static bool readBoolText( void* pPtr, string_view strView ) { return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) ); }
+
+            static string writeAtomicBoolText( const void* pPtr ) { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; }
+
+            [[nodiscard]] static bool readAtomicBoolText( void* pPtr, string_view strView )
+            {
+                bool bValue = false;
+                if ( StringUtil::tryParseBool( strView, bValue ) == false )
+                    return false;
+                static_cast<atomic<bool>*>( pPtr )->store( bValue );
+                return true;
+            }
+
+            static string writeTagIDText( const void* pPtr )
+            {
+                const TagID& tag = *static_cast<const TagID*>( pPtr );
+                return tag._pString != nullptr ? string( tag._pString ) : string{};
+            }
+
+            [[nodiscard]] static bool readTagIDText( void* pPtr, string_view strView )
+            {
+                string_view text = StringUtil::trim( strView );
+                if ( StringUtil::startsWith( text, "str:" ) )
+                    text.remove_prefix( 4 );
+                if ( text.empty() )
+                {
+                    *static_cast<TagID*>( pPtr ) = TagID{};
+                    return true;
+                }
+                *static_cast<TagID*>( pPtr ) = TagID::request( text );
+                return true;
+            }
+
+            static string writeStringText( const void* pPtr ) { return string( static_cast<const string*>( pPtr )->c_str() ); }
+
+            [[nodiscard]] static bool readStringText( void* pPtr, string_view strView )
+            {
+                *static_cast<string*>( pPtr ) = string( stripQuotes( strView ) );
+                return true;
+            }
+
+            static string writeHashedStringText( const void* pPtr ) { return string( static_cast<const hashed_string*>( pPtr )->c_str() ); }
+
+            [[nodiscard]] static bool readHashedStringText( void* pPtr, string_view strView )
+            {
+                const string_view sv                 = unquote( strView );
+                *static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
+                return true;
+            }
+
+            static string writeSlotHandleText( const void* pPtr )
+            {
+                const uint64 packed = static_cast<const SlotHandle*>( pPtr )->packed();
+                return sw::to_string( packed );
+            }
+
+            [[nodiscard]] static bool readSlotHandleText( void* pPtr, string_view strView )
+            {
+                uint64 packed{ 0 };
+                if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
+                    return false;
+                *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
+                return true;
+            }
+
+            template <typename T>
             static void regBuiltinBin( SerializeContext& context, const utf8* pName )
             {
                 constexpr bool bSkippedBuiltInType = std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
                                                      std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID>;
                 if constexpr ( bSkippedBuiltInType )
                     return;
-                auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
-                {
-                    const uint8* pByte = reinterpret_cast<const uint8*>( pPtr );
-                    listBuf.insert( listBuf.end(), pByte, pByte + sizeof( T ) );
-                };
-                auto readFn = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-                {
-                    if ( offset + sizeof( T ) > size )
-                        return false;
-                    // bool 은 바이트를 그대로 옮기지 않는다. 0 · 1 이 아닌 바이트(망가진 파일)를 memcpy 하면 값이 정의되지 않는 bool 이 되고,
-                    // 컴파일러는 그것을 2 로 쓰거나 `b` 와 `b == true` 를 다르게 본다.
-                    if constexpr ( std::is_same_v<T, bool> )
-                        *static_cast<bool*>( pPtr ) = pData[offset] != 0;
-                    else
-                        Memory::copy( pPtr, pData + offset, sizeof( T ) );
-                    offset += sizeof( T );
-                    return true;
-                };
-                context.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
+                context.registerBinaryHandler( hashed_string( pName ), SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, &writeBuiltinBinary<T> ),
+                                               SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, &readBuiltinBinary<T> ) );
             }
 
             /**
@@ -271,84 +419,15 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
 
-        BinaryWriteFn strWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-        {
-            BinaryStreamWriter writer{ listBuf };
-            writer.writeString( *static_cast<const string*>( pPtr ) );
-        };
-
-        BinaryReadFn strReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-        {
-            BinaryStreamReader reader{ pData, size };
-            if ( reader.skip( offset ) == false )
-                return false;
-            if ( reader.readString( *static_cast<string*>( pPtr ) ) == false )
-                return false;
-            offset = reader.getOffset();
-            return true;
-        };
-
-        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
-
-        BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-        {
-            BinaryStreamWriter writer{ listBuf };
-            writer.writeString( static_cast<const hashed_string*>( pPtr )->c_str() );
-        };
-
-        BinaryReadFn hashedStrReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-        {
-            BinaryStreamReader reader{ pData, size };
-            if ( reader.skip( offset ) == false )
-                return false;
-            string_view text;
-            if ( reader.readStringView( text ) == false )
-                return false;
-            *static_cast<hashed_string*>( pPtr ) = hashed_string( text.data(), static_cast<uint32>( text.size() ) );
-            offset                               = reader.getOffset();
-            return true;
-        };
-
-        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
-
-        BinaryWriteFn atomicBoolWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-        {
-            const uint8 flag = static_cast<const atomic<bool>*>( pPtr )->load() ? 1 : 0;
-            listBuf.push_back( flag );
-        };
-        BinaryReadFn atomicBoolReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-        {
-            if ( offset + sizeof( uint8 ) > size )
-                return false;
-            static_cast<atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
-            offset += sizeof( uint8 );
-            return true;
-        };
-        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
-
-        BinaryWriteFn tagIDWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
-        {
-            const TagID&       tag  = *static_cast<const TagID*>( pPtr );
-            const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
-            BinaryStreamWriter writer{ listBuf };
-            writer.writeString( pStr );
-        };
-        BinaryReadFn tagIDReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
-        {
-            BinaryStreamReader reader{ pData, size };
-            if ( reader.skip( offset ) == false )
-                return false;
-            string_view text;
-            if ( reader.readStringView( text ) == false )
-                return false;
-            if ( text.empty() )
-                *static_cast<TagID*>( pPtr ) = TagID{};
-            else
-                *static_cast<TagID*>( pPtr ) = TagID::request( text );
-            offset = reader.getOffset();
-            return true;
-        };
-        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
+        using Internal = SerializeContextInternal;
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), SW_DELEGATE_FUNCTION( BinaryWriteFn, &Internal::writeStringBinary ),
+                                       SW_DELEGATE_FUNCTION( BinaryReadFn, &Internal::readStringBinary ) );
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), SW_DELEGATE_FUNCTION( BinaryWriteFn, &Internal::writeHashedStringBinary ),
+                                       SW_DELEGATE_FUNCTION( BinaryReadFn, &Internal::readHashedStringBinary ) );
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), SW_DELEGATE_FUNCTION( BinaryWriteFn, &Internal::writeAtomicBoolBinary ),
+                                       SW_DELEGATE_FUNCTION( BinaryReadFn, &Internal::readAtomicBoolBinary ) );
+        context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), SW_DELEGATE_FUNCTION( BinaryWriteFn, &Internal::writeTagIDBinary ),
+                                       SW_DELEGATE_FUNCTION( BinaryReadFn, &Internal::readTagIDBinary ) );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
 #define SW_BUILTIN_TEXT_stoi( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
@@ -372,82 +451,18 @@ namespace sw
 #undef SW_BUILTIN_TEXT_stof
 #undef SW_BUILTIN_TEXT_stod
 
-        auto boolWrite = []( const void* pPtr )
-        { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
-        // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
-        auto boolRead = []( void* pPtr, string_view strView )
-        {
-            return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );
-        };
-        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
-
-        auto atomicBoolWrite = []( const void* pPtr )
-        { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
-        auto atomicBoolRead = []( void* pPtr, string_view strView )
-        {
-            bool bValue = false;
-            if ( StringUtil::tryParseBool( strView, bValue ) == false )
-                return false;
-            static_cast<atomic<bool>*>( pPtr )->store( bValue );
-            return true;
-        };
-        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
-
-        auto tagIDWrite = []( const void* pPtr ) -> string
-        {
-            const TagID& tag = *static_cast<const TagID*>( pPtr );
-            return tag._pString != nullptr ? string( tag._pString ) : string{};
-        };
-        auto tagIDRead = []( void* pPtr, string_view strView ) -> bool
-        {
-            string_view text = StringUtil::trim( strView );
-            if ( StringUtil::startsWith( text, "str:" ) )
-                text.remove_prefix( 4 );
-            if ( text.empty() )
-            {
-                *static_cast<TagID*>( pPtr ) = TagID{};
-                return true;
-            }
-            *static_cast<TagID*>( pPtr ) = TagID::request( text );
-            return true;
-        };
-        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
-
-        TextWriteFn strWriteTxt = []( const void* pPtr )
-        { return string( static_cast<const string*>( pPtr )->c_str() ); };
-        TextReadFn strReadTxt = []( void* pPtr, string_view strView )
-        {
-            *static_cast<string*>( pPtr ) = string( SerializeContextInternal::stripQuotes( strView ) );
-            return true;
-        };
-
-        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
-
-        TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
-        { return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
-        TextReadFn hashedStrReadTxt = []( void* pPtr, string_view strView )
-        {
-            const string_view sv                 = SerializeContextInternal::unquote( strView );
-            *static_cast<hashed_string*>( pPtr ) = hashed_string( sv.data(), static_cast<uint32>( sv.size() ) );
-            return true;
-        };
-
-        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
-
-        auto packedWrite = []( const void* pPtr ) -> string
-        {
-            const uint64 packed = static_cast<const SlotHandle*>( pPtr )->packed();
-            return sw::to_string( packed );
-        };
-        auto packedRead = []( void* pPtr, string_view strView ) -> bool
-        {
-            uint64 packed{ 0 };
-            if ( StringUtil::parseUint64( StringUtil::trim( strView ), packed, 10 ) == false )
-                return false;
-            *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
-            return true;
-        };
-        context.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeBoolText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readBoolText ) );
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeAtomicBoolText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readAtomicBoolText ) );
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeTagIDText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readTagIDText ) );
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeStringText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readStringText ) );
+        context.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeHashedStringText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readHashedStringText ) );
+        context.registerTextHandler( hashed_string( "SlotHandle" ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeSlotHandleText ),
+                                     SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readSlotHandleText ) );
 
         DataPath::registerSerializeHandler( context );
 

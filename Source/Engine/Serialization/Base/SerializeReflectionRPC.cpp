@@ -45,6 +45,31 @@ namespace sw
                 return typeHash;
             }
 
+            /** @brief 값 하나를 인자 바이트로 씁니다. 등록된 쓰기 처리기가 있으면 그것을, 없으면 타입 정보로 직렬화합니다. */
+            [[nodiscard]] static bool writePayload( const void* pPtr, const hashed_string& typeHash, const hashed_string& handlerKey, vector<uint8>& listPayload,
+                                                    const SerializeContext& serializeContext )
+            {
+                const SerializeContext::BinaryWriteFn* pWriter = serializeContext.findBinaryWriter( handlerKey );
+                if ( pWriter != nullptr )
+                {
+                    ( *pWriter )( pPtr, listPayload );
+                    return true;
+                }
+                const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeHash );
+                if ( pInfo != nullptr )
+                    return BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
+                return false;
+            }
+
+            /** @brief 등록된 읽기 처리기로 인자 바이트 하나를 읽습니다. 처리기가 없으면 false 입니다. */
+            [[nodiscard]] static bool readInto( void* pDestination, const hashed_string& handlerKey, const uint8* pData, size_t size, size_t& local, const SerializeContext& serializeContext )
+            {
+                const SerializeContext::BinaryReadFn* pReader = serializeContext.findBinaryReader( handlerKey );
+                if ( pReader != nullptr )
+                    return ( *pReader )( pDestination, pData, size, local );
+                return false;
+            }
+
             static bool packOneArg( vector<uint8>& outBytes, string_view typeName, const TaskValue& value,
                                     const SerializeContext& serializeContext )
             {
@@ -52,29 +77,15 @@ namespace sw
                 const hashed_string handlerKey = resolveBuiltinHandlerKey( typeHash, serializeContext );
                 vector<uint8>       listPayload;
 
-                auto writePayload = [&]( const void* pPtr )
-                {
-                    const SerializeContext::BinaryWriteFn* pWriter = serializeContext.findBinaryWriter( handlerKey );
-                    if ( pWriter != nullptr )
-                    {
-                        ( *pWriter )( pPtr, listPayload );
-                        return true;
-                    }
-                    const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeHash );
-                    if ( pInfo != nullptr )
-                        return BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
-                    return false;
-                };
-
                 bool bOk{ false };
                 bool bMatched{ false };
 
-#define TRY_PACK( NameStr, CppType )                                                             \
-    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) ) \
-    {                                                                                            \
-        bMatched                 = true;                                                         \
-        const CppType typedValue = value.getValue<CppType>();                                    \
-        bOk                      = writePayload( &typedValue );                                  \
+#define TRY_PACK( NameStr, CppType )                                                                                 \
+    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) )                     \
+    {                                                                                                                \
+        bMatched                 = true;                                                                             \
+        const CppType typedValue = value.getValue<CppType>();                                                        \
+        bOk                      = writePayload( &typedValue, typeHash, handlerKey, listPayload, serializeContext ); \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_PACK( #Canon, CppType )
@@ -136,22 +147,14 @@ namespace sw
                 size_t              local{ 0 };
                 bool                bMatched{ false };
 
-                auto readInto = [&]( void* pDestination ) -> bool
-                {
-                    const SerializeContext::BinaryReadFn* pReader = serializeContext.findBinaryReader( handlerKey );
-                    if ( pReader != nullptr )
-                        return ( *pReader )( pDestination, pData + offset, size, local );
-                    return false;
-                };
-
-#define TRY_UNPACK( NameStr, CppType )                                                           \
-    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) ) \
-    {                                                                                            \
-        bMatched = true;                                                                         \
-        CppType typedValue{};                                                                    \
-        if ( readInto( &typedValue ) == false )                                                  \
-            return false;                                                                        \
-        args.add( typedValue );                                                                  \
+#define TRY_UNPACK( NameStr, CppType )                                                                     \
+    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) )           \
+    {                                                                                                      \
+        bMatched = true;                                                                                   \
+        CppType typedValue{};                                                                              \
+        if ( readInto( &typedValue, handlerKey, pData + offset, size, local, serializeContext ) == false ) \
+            return false;                                                                                  \
+        args.add( typedValue );                                                                            \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_UNPACK( #Canon, CppType )
