@@ -6,6 +6,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Text/FontCatalog.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/SystemFontLocator.h"
@@ -37,6 +38,52 @@ namespace
                    sw::SystemFontLocator::findSystemFontFile( "NotoSansCJK-Regular.ttc" ).empty() == false;
         }
     };
+
+    /** @brief 거리장 종류 하나로 새 한글 글리프 판을 재고 표본 이름을 붙여 기록한다. 시스템 한글 글꼴이 없으면 호출한 쪽이 건너뛴다. */
+    void runHangulRounds( sw::GlyphFieldKind kind, const utf8* pSampleName )
+    {
+        using sw::test::LocalizationTestUtil;
+        const sw::string folder      = test::makeTempDirectory( "glyph_bench_hangul" );
+        const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
+        LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Title" })" );
+        LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "제목" })" );
+        sw::LocalizationManager localization;
+        SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
+        SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
+        SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
+
+        sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );
+        SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
+        sw::FontCatalogDesc catalog;
+        SW_ASSERT_TRUE( catalog.loadFromResource( test::getEngineDefaultAssets()._fontCatalog.get() ) );
+        catalog._glyphField = kind;
+        SW_ASSERT_TRUE( fontService.initializeFromCatalog( std::move( catalog ) ) );
+        const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
+        // 대체 면을 미리 연다 — 판이 재는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
+        uint32 warmGlyphIndex = 0;
+        (void)fontService.findFaceForCodepoint( chain, GlyphBenchInternal::kHangulFirst, warmGlyphIndex );
+
+        sw::vector<int64> listMicro;
+        uint32            codepointCursor = 1;
+        for ( uint32 round = 0; round < GlyphBenchInternal::kRoundCount; ++round )
+        {
+            uint32              rasterizedCount = 0;
+            const sw::Stopwatch stopwatch;
+            for ( uint32 index = 0; index < GlyphBenchInternal::kGlyphPerRound; ++index, ++codepointCursor )
+            {
+                const uint32         codepoint  = GlyphBenchInternal::kHangulFirst + ( codepointCursor * GlyphBenchInternal::kHangulStride ) % GlyphBenchInternal::kHangulCount;
+                uint32               glyphIndex = 0;
+                const sw::FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
+                if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u ) != nullptr )
+                    ++rasterizedCount;
+            }
+            const int64 micros = stopwatch.getElapsedNanoseconds() / 1000;
+            listMicro.push_back( micros );
+            // 아틀라스가 한 프레임에 다 못 받으면 일부가 nullptr 이다(그 자체가 측정할 사실이라 판정하지 않고 하나 이상만 본다).
+            SW_EXPECT_TRUE( rasterizedCount > 0 );
+        }
+        test::logBenchSamples( pSampleName, listMicro );
+    }
 } // namespace
 
 /**
@@ -48,43 +95,16 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
 {
     if ( GlyphBenchInternal::hasKoreanSystemFont() == false )
         SW_TEST_SKIP( "no Korean system font on this machine" );
+    runHangulRounds( sw::GlyphFieldKind::Sdf, "Hangul 400 new glyphs, CPU rasterize + SDF + atlas (us)" );
+}
 
-    using sw::test::LocalizationTestUtil;
-    const sw::string folder      = test::makeTempDirectory( "glyph_bench_hangul" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
-    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Title" })" );
-    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "제목" })" );
-    sw::LocalizationManager localization;
-    SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( localization ) );
-    SW_ASSERT_TRUE( localization.mountProject( ::test::makeTempResourceID( projectPath ), sw::LocalizationScope::Game ) );
-    SW_ASSERT_TRUE( localization.setCurrentLanguage( "ko" ) );
-
-    sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );
-    SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
-    SW_ASSERT_TRUE( fontService.initialize( test::getEngineDefaultAssets()._fontCatalog.get() ) );
-    const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
-    // 대체 면을 미리 연다 — 판이 재는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
-    uint32 warmGlyphIndex = 0;
-    (void)fontService.findFaceForCodepoint( chain, GlyphBenchInternal::kHangulFirst, warmGlyphIndex );
-
-    sw::vector<int64> listMicros;
-    uint32            codepointCursor = 1;
-    for ( uint32 round = 0; round < GlyphBenchInternal::kRoundCount; ++round )
-    {
-        uint32              rasterizedCount = 0;
-        const sw::Stopwatch stopwatch;
-        for ( uint32 index = 0; index < GlyphBenchInternal::kGlyphPerRound; ++index, ++codepointCursor )
-        {
-            const uint32         codepoint  = GlyphBenchInternal::kHangulFirst + ( codepointCursor * GlyphBenchInternal::kHangulStride ) % GlyphBenchInternal::kHangulCount;
-            uint32               glyphIndex = 0;
-            const sw::FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
-            if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u ) != nullptr )
-                ++rasterizedCount;
-        }
-        const int64 micros = stopwatch.getElapsedNanoseconds() / 1000;
-        listMicros.push_back( micros );
-        // 아틀라스가 한 프레임에 다 못 받으면 일부가 nullptr 이다(그 자체가 측정할 사실이라 판정하지 않고 하나 이상만 본다).
-        SW_EXPECT_TRUE( rasterizedCount > 0 );
-    }
-    test::logBenchSamples( "Hangul 400 new glyphs, CPU rasterize + SDF + atlas (us)", listMicros );
+/**
+ * @brief [GlyphBenchTest] 같은 글리프 400 개를 MSDF(윤곽 칠하기 + 채널별 거리)로 만들 때의 CPU 시간 — `HangulFirstFrameRasterize` 의 SDF 값과 견주는 측정값(판정하지 않는다)
+ * @details MsdfGlyphs 계획 M5 의 "글리프당 CPU 비용". 값은 Release 로 읽는다.
+ */
+SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterizeMsdf )
+{
+    if ( GlyphBenchInternal::hasKoreanSystemFont() == false )
+        SW_TEST_SKIP( "no Korean system font on this machine" );
+    runHangulRounds( sw::GlyphFieldKind::Msdf, "Hangul 400 new glyphs, CPU rasterize + MSDF + atlas (us)" );
 }

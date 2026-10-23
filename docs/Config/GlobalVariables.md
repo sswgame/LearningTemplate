@@ -213,6 +213,12 @@
 |---|---|---|---|---|---|
 | `gv_telemetryFolder` | `string` | — | 테스트 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [TelemetryService.cpp](../../Source/Engine/Telemetry/TelemetryService.cpp) |
 
+## `Source/Engine/Text`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_fontMsdfGlyphs` | `bool` | `false` | 테스트 | 글리프 아틀라스를 MSDF 로 만든다(카탈로그의 _glyphField 를 덮는다 — SDF 와 큰 글자 모서리를 견주는 측정용) | [FontService.cpp](../../Source/Engine/Text/FontService.cpp) |
+
 ## `Source/Engine/UI`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -13,6 +14,9 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/SystemFontLocator.h"
+
+// 카탈로그의 `_glyphField` 가 값의 정본이다. 이 변수는 카탈로그를 고치지 않고 MSDF 로 켜 SDF 와 견주는 측정 스위치다(engine/automation/msdfglyphs.scenario.xml).
+SW_TEST_GLOBAL_VARIABLE( bool, gv_fontMsdfGlyphs, false, "글리프 아틀라스를 MSDF 로 만든다(카탈로그의 _glyphField 를 덮는다 — SDF 와 큰 글자 모서리를 견주는 측정용)" );
 
 namespace sw
 {
@@ -98,6 +102,8 @@ namespace sw
         FontCatalogDesc catalog;
         if ( catalog.loadFromResource( catalogPath ) == false )
             return false;
+        if ( gv_fontMsdfGlyphs )
+            catalog._glyphField = GlyphFieldKind::Msdf;
         return initializeFromCatalog( std::move( catalog ) );
     }
 
