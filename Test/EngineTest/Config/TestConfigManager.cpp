@@ -74,7 +74,7 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
 SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "Shipping 은 디스크의 Config/ 를 보지 않는다 — 생성된 JSON 만 쓴다" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // Shipping 은 디스크의 Config/ 를 보지 않는다 — 생성된 JSON 만 쓴다
 #else
     test::ScopedLogSuppressor suppressor;
 
@@ -210,7 +210,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "Shipping 은 디스크의 Config/ 를 보지 않는다" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // Shipping 은 디스크의 Config/ 를 보지 않는다
 #else
     const string rootDir = test::makeTempPath( "sw_config_invalid_test" );
     const string path    = FileUtil::joinPath( rootDir, "InvalidEngineConfig.json" );

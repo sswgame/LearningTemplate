@@ -406,7 +406,7 @@ SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-dx12" );
 #endif
@@ -418,7 +418,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-dx11" );
 #endif
@@ -430,7 +430,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-vk" );
 #endif
@@ -442,7 +442,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnOpenGL )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-gl" );
 #endif

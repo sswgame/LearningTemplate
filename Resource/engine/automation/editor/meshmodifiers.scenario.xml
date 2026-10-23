@@ -96,7 +96,11 @@
 	</At>
 	<At frame="555"><EditorClick mark="meshmodifiers.referenceList.add"/></At>
 	<At frame="570"><EditorClick mark="meshmodifiers.referenceList.0.useSelection"/></At>
-	<At frame="585"><Expect probe="MeshModifiers.ReferenceListCount" equals="1"/></At>
+	<!-- 클릭의 반영은 ImGui 입력 → 다음 프레임 그리기를 지나 도착한다 — 고정 프레임 수에 단언하지 않고 도착을 기다린다(MeshModifiersChainFailure: 부하 아래 한 번 0) -->
+	<At frame="585">
+		<WaitUntil probe="MeshModifiers.ReferenceListCount" equals="1" timeoutFrames="120"/>
+		<Expect probe="MeshModifiers.ReferenceListCount" equals="1"/>
+	</At>
 
 	<!-- ⑤ 묶음 하위 스택에 비틀기 더하기 -->
 	<At frame="595"><EditorClick mark="meshmodifiers.add"/></At>

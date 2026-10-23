@@ -1472,7 +1472,7 @@ SW_TEST_CASE( ArchitectureTest, FailureBeforeTheNewImageTakesOverKeepsTheOldModu
 SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 {
     #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // ModuleCompiler is only supported in Dev / non-shipping builds
     #else
     if ( sw::isModuleBuilt( "EditorModule" ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );

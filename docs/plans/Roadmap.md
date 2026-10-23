@@ -37,6 +37,7 @@
 10. **2026-10-23 사용자와 정한 일**(코드는 아직 없고 계획 문서만 있다):
    - [AutomationSplit](AutomationSplit.md) — ② 단계 → ③ 시나리오, ④ 는 실제 배포 때(① 탐침 끝). [병렬 가능: 셰이더 훅 · 층 게이트와 파일이 다르다]
    - [PatchDeltaDelivery](PatchDeltaDelivery.md) 우선순위 변경 — 출시는 스팀 기준이라 P6 은 스팀 전용이면 취소, P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 내린다. 새 단위 P7(팩 레이아웃 안정성 점검 — 읽기 + 측정)이 남은 일이다. [단독: P7 측정은 Release 에서 혼자]
+11. **품질 후보에서 계획으로 올린 일**(2026-10-24, 코드는 아직 없다): [ImportRuleOverlap](ImportRuleOverlap.md)(I1 모델 임포트 규칙 → I2 텍스처 → I3 산출물 결정성) · [SourceScanGates](SourceScanGates.md)(S1 `SourceFile` 의 줄 끝 · BOM → S2 파일 집합 → S3 픽서 → S4 키트 이름공간) · [RuntimeQualityAdjust](RuntimeQualityAdjust.md)(Q1 배포 기동 열기 · Q2 한 프레임 구간 · Q3 자동 조정은 예산을 깰 때 · Q4 실기). WARP 픽셀 테스트는 [GpuVerification](GpuVerification.md) V3. [병렬 가능]
 ## 지금 하지 않는 것
 
 조건부 · 보류 · 관찰 항목과 조건이 붙은 기능은 영역별 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있고 순서에 올리지 않는다. 조건이 오면 해당 후보 문서에서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md). 끝난 단위는 이 목록에서 지운다.
