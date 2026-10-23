@@ -19,34 +19,7 @@ namespace sw
         {
             static constexpr int32 kBlockedNavCost = 255; ///< `NavGrid` 의 막힘 값 — 이동 비용의 상한
 
-            /** @brief 공백으로 나뉜 정수 목록을 읽습니다. 숫자가 아닌 것이 있으면 false 를 반환합니다. */
-            [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
-            {
-                outListValue.clear();
-                size_t cursor = 0;
-                while ( cursor < text.size() )
-                {
-                    while ( cursor < text.size() && ( text[cursor] == ' ' || text[cursor] == ',' || text[cursor] == '\t' ) )
-                    {
-                        ++cursor;
-                    }
-                    const size_t start = cursor;
-                    while ( true )
-                    {
-                        const bool bInsideToken = cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t';
-                        if ( bInsideToken == false )
-                            break;
-                        ++cursor;
-                    }
-                    if ( cursor == start )
-                        break;
-                    int32 value = 0;
-                    if ( StringUtil::parseInt( text.substr( start, cursor - start ), value ) == false )
-                        return false;
-                    outListValue.push_back( value );
-                }
-                return true;
-            }
+            static constexpr string_view kFrameListSeparators = " ,\t"; ///< `frames` 정수 목록의 구분 글자
 
             /** @brief 아홉 글자 패턴(공백은 건너뜀)을 이웃 여덟 셀의 조건으로 읽습니다. 가운데(다섯째) 글자는 보지 않습니다. */
             [[nodiscard]] static bool parsePattern( string_view text, TileNeighborRule ( &outArrNeighbor )[8] )
@@ -123,7 +96,7 @@ namespace sw
         outVisual = TileVisual{};
         if ( node.findAttribute( "frames" ) != nullptr )
         {
-            if ( TileSetAssetInternal::parseIntList( node.getAttributeText( "frames" ), outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
+            if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), TileSetAssetInternal::kFrameListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
             {
                 SW_LOG_ERROR( "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
                 return false;
