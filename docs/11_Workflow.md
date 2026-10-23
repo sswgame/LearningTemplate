@@ -71,7 +71,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 |---|---|---|---|
 | 도우미 | 고친 파일의 린트(포맷 포함)와 컴파일 확인용 단일 타깃 빌드만. `full-build` · 전체 테스트 · `test --changed` · 병합 · push 는 하지 않는다(검증은 적용 담당이 한 번에) | — | — |
 | 적용 담당(배치마다) | 병합 결과의 `full-build` 경고 0, `-L lint`, `-L nogpu`, `-L race` | 빌드, `-L nogpu`, `-L hostgpu` | 건드린 게임 × 네 백엔드. 배치 끝에 네 백엔드 × 대표 셋(Empty, 에디터, Shooter3D, NileCity) |
-| 큰 단계 끝 | 위 + `-L hostgpu` 전체 한 번 | 위와 같음 | 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체, WSL 리눅스 빌드 |
+| 큰 단계 끝 | 위 + `-L hostgpu` 전체 한 번 | 위와 같음 | 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체 (리눅스 빌드는 CI) |
 
 - **기능 시나리오(`hostgpu`)는 Shipping 이 기본입니다.** Debug 한 바퀴는 같은 검증의 수십 배가 걸립니다. 레이스 검사(`DataRaceDetector`)는 `SW_DEBUG` 에서만 켜지므로 Debug 는 스레드 경로를 지나는 묶음 `race` 만 돕니다(묶음은 `Test/TestPolicy.json` 의 `raceCases`).
 - 적용 담당 · 큰 단계의 ctest 는 `-j`(값 없이 — 스레드 수)로 돌립니다(도우미가 스위트 하나를 필터로 돌릴 때만 `-j 2`). hostgpu 를 뺀 항목은 병렬로 돌 수 있습니다. 테스트가 끝나면 남은 `Server` · `ServerTest` · `EngineTest` 프로세스가 없는지 확인합니다.
@@ -131,7 +131,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 리눅스는 WSL 안의 별도 클론에서 빌드합니다. Windows 체크아웃에서 `WSL-*` 프리셋을 돌리면 공유 vcpkg 설치 트리를 망가뜨립니다.
 클론 위치, gdb 없는 환경의 진단법, 뒤처진 클론을 맞추는 법은 [Scripts/setup README](../Scripts/setup/README.md) "함정 · 계약" 절에 있습니다.
-리눅스 분기 코드를 고쳤으면 WSL 에서 빌드하거나, 못 했으면 보고에 적습니다.
+**리눅스 확인은 CI 가 합니다**(사용자 지시): 리눅스 분기 코드를 고쳤어도 로컬 WSL 빌드를 돌리지 않고 main 을 push 한 뒤 `py -3 -m Scripts ci-jobs --summary` 로 리눅스 잡 결과를 봅니다. 실패하면 그때 원인을 찾습니다. "리눅스 미확인" 으로 보고하며 대기 항목으로 남기지 않습니다.
 
 ## 9. 에이전트와 토큰
 
