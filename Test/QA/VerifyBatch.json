@@ -463,6 +463,17 @@
       "id": "inspector-handle-scenario", "title": "editor.inspectorhandle 시나리오(CallInEditor 인자 선택기 ⑥ 포함)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["engine/automation/editor/inspectorhandle.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/EditorFeatureGaps.md TypedHandle.H3", "result_doc": "docs/plans/EditorFeatureGaps.md 상태를 끝으로"
+    },
+    {
+      "id": "preview-windows-scenarios", "title": "미리보기 창 시나리오(panelclose · prefabwindow · previewsky · previewreopen · previewswap)를 네 백엔드로", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/panelclose.scenario.xml", "engine/automation/editor/prefabwindow.scenario.xml", "engine/automation/editor/previewsky.scenario.xml", "engine/automation/editor/previewreopen.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/EditorMultiWorld.md 6절 1 · 3 · 5 · 6", "result_doc": "docs/plans/EditorMultiWorld.md 상태를 끝으로",
+      "note": "panelclose 는 DX12 만 눈으로 봤다 — 나머지 세 백엔드는 이 체인이 처음이다. 디퍼드 DX12 의 온라인 디스크립터 블록 고갈은 렌더러 몫이다(6절 3)."
+    },
+    {
+      "id": "preview-window-reopen-cost", "title": "미리보기 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간(정점 풀까지 나눌 값이 있는지)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "창 여럿을 띄우고 닫으며 GPU 메모리와 첫 프레임 시간을 재는 perf-compare 케이스가 없다(previewreopen 시나리오는 렌더러 수만 센다)",
+      "source": "docs/plans/EditorMultiWorld.md 6절 4", "result_doc": "docs/plans/EditorMultiWorld.md 6절 4"
     }
   ]
 }

@@ -1,6 +1,8 @@
 # 다중 월드 · 에디터 툴 창 구현 계획 (D3-7)
 
-> 상태: 구현중 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 5/6
+> 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 6/6
+
+**남은 확인(통합에서 확인):** 매니페스트 id `preview-windows-scenarios`, `preview-window-reopen-cost`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 옛 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창 · 프리팹 창이 코드로 들어갔습니다(각 단계의 "구현됨" 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
@@ -156,8 +158,9 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
   - 테스트 `EditorPrefabIsolationTest.*` · `EditorWorkspaceTest.PrefabPathOfAPreviewSceneObjectLivesInThePreviewScene`(Debug 전체 빌드 경고 0, `Editor*` 스위트 EditorTest 300 · EditorUITest 6 통과). **확인 못 함**: 창을 실제로 연 화면(GPU)과 에디터 시나리오 — 아래 6절.
   - 알려진 한계: 없음(콘텐츠 브라우저 열기와 X 닫기 확인은 6절 1번에서 해소했다). 화면 확인(GPU)만 남았다.
 
-### 단계 6 이후 — 나머지 창
-메시/모델(LOD 비교) · 애니메이션 · 카메라 프리셋 · 래그돌 · 이펙트 · 장르 도구 · 캐릭터 편집 창([EditorCharacterEditor.md](EditorCharacterEditor.md)). 창마다 단위 하나.
+### 단계 6 — 틀 위에 올라간 창과 나머지 창의 자리
+틀(단계 1 ~ 5)이 정한 계약 위에 이펙트(`VfxPreviewPanel`) · 캐릭터 편집([EditorCharacterEditor.md](EditorCharacterEditor.md)) · 페어드 애니메이션 창이 올랐다. 이 단계의 단위는 "틀이 여러 창을 받는다는 것"이었고 그것을 그 세 창이 보였다.
+메시/모델(LOD 비교) · 애니메이션 클립 · 카메라 프리셋 · 래그돌 · 장르 도구 창은 창마다 독립이라 틀의 단위가 아니다 — [Candidates-editor](Candidates-editor.md) `PreviewWindowsRemaining` 후보로 옮겼다.
 
 ## 5. 되돌리기 어려운 결정
 
@@ -199,7 +202,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 4. **풀 공유** — PSO 캐시는 주 렌더러의 것을 함께 쓴다(`FrameRenderer::_pPSOCache`, 2026-10-21). 미리보기 렌더러는 엔진 PSO 를 만들지 않고 캐시에 없는 것만 만들며, 해제는 소유자만 한다.
    창을 닫으면 렌더러를 내리므로 예전에는 다시 열 때마다 엔진 PSO 를 모두 다시 만들었다(첫 프레임 히치, 창 수만큼 중복). 셰이더 핫 리로드는 주 렌더러가 캐시를 다시 채운 뒤 미리보기 렌더러가 자기 몫을 다시 만든다.
    정점 풀(`GPUMeshVertexPool`) · 머티리얼 그룹 버퍼는 씬마다 그대로다 — 배치 표가 씬마다라 인덱스 공간이 씬을 건너지 않고(셰이더 계약이 같다), 텍스처의 bindless 인덱스는 이미 디바이스 전역이다.
-   남은 것: 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간을 재서(공유 전 커밋과 비교) 정점 풀까지 나눌 값이 있는지 정한다.
+   남은 것(매니페스트 id `preview-window-reopen-cost`): 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간을 재서(공유 전 커밋과 비교) 정점 풀까지 나눌 값이 있는지 정한다.
 5. **미리보기 렌더러 내리기의 GPU 안전** — 구조는 `FrameRendererScenePreview.cpp` 머리 주석(해제 큐가 GPU 완료 뒤로 미룬다, PSO 는 주 렌더러 캐시에 남는다).
    **확인함(2026-10-22, `wt/inputdata`, Debug — DX12 디버그 레이어 · Vulkan 검증 레이어 켜짐)**: 시나리오 `editor/previewreopen` 이 네 백엔드(`-dx12` · `-vk` · `-dx11` · `-gl`)에서 통과했다(경고 · 오류 줄 없음). 시나리오 `editor/previewreopen` 이
    머티리얼 창과 프리팹 창을 각각 연 채 8 번 닫고 다시 연다. 렌더러 수는 탐침 `Editor.ScenePreviewRenderers`(렌더 스레드가 공개하는 `FrameRenderer::getScenePreviewRendererCount`)로 본다 —
