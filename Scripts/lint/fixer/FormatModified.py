@@ -42,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"[FormatModified] {len(modifiedFiles)}개의 수정된 C++ 파일, {len(modifiedShaders)}개의 수정된 셰이더 발견.")
 
-    # 1. include 순서 · 중복 정리(규칙은 gate/CheckIncludeOrder.py)
+    # 1. include 순서 · 중복 정리(규칙은 lint/IncludeOrderRules.py)
     print("\n[1/4] Include 순서 및 중복 정리 중...")
     includeResults = FormatIncludeOrder.FormatIncludeOrderFixer().processFiles(modifiedFiles, checkOnly=False)
     for msg in includeResults:
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     if not includeResults:
         print("  - Include 검사 OK")
 
-    # 1b. 한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다(규칙은 gate/CheckNamespaceBlocks.py)
+    # 1b. 한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다(규칙은 lint/NamespaceBlockRules.py)
     for msg in FormatNamespaceBlocks.FormatNamespaceBlocksFixer().processFiles(modifiedFiles, checkOnly=False):
         print(f"  - {msg}")
 
