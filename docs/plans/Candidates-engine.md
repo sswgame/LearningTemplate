@@ -103,6 +103,7 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 `Editor/Common` 에 남은 손 루프는 조건이 둘 이상이거나(`_id == id && _pInstance != nullptr`) C 배열(`kArrKindInfo`)이라 `findBy` 로 옮기지 않았습니다.
 끝난 곳: `Source/Editor/Panels/Inspector` 의 손으로 쓴 erase-remove 2건(`EditorPropertyGrid`)을 `VectorUtil::removeIf` 로 바꿨다(2026-10-21).
 이름 붙은 지역 람다 Editor 끝(2026-10-23, wt/lambdaeditor): 20줄 넘는 것 5개를 정적 함수로 뺐다. 나머지(캡처가 본질이고 13줄 안쪽)는 그대로 둔다.
+이름 붙은 지역 람다 Kits 끝(2026-10-23, wt/lambdakits): 유닛 · 손님 id 목록 읽기 · 쓰기, 조우 후보 순회, 0 채우기, 단계 비교자 5 군을 파일 익명 namespace 정적 함수로 옮겼다. 카탈로그 `is`(이름 비교) 11 곳은 공용 위치가 `GameDataXML`(Base)이라 남겼다.
 
 ## 기능
 

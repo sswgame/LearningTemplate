@@ -38,6 +38,17 @@ namespace sw
                 return era * 146097 + dayOfEra - 719468;
             }
 
+            /** @brief 숫자를 앞에 0 을 채워 @p width 자리로 만듭니다. */
+            static string padZero( int64 value, int32 width )
+            {
+                string text = to_string( value );
+                while ( static_cast<int32>( text.size() ) < width )
+                {
+                    text = "0" + text;
+                }
+                return text;
+            }
+
             static void civilFromDays( int64 days, int64& outYear, int64& outMonth, int64& outDay )
             {
                 days += 719468;
@@ -162,16 +173,8 @@ namespace sw
         int64       month    = 0;
         int64       day      = 0;
         Internal::civilFromDays( days, year, month, day );
-        const auto pad = []( int64 value, int32 width )
-        {
-            string text = to_string( value );
-            while ( static_cast<int32>( text.size() ) < width )
-            {
-                text = "0" + text;
-            }
-            return text;
-        };
-        return pad( year, 4 ) + "-" + pad( month, 2 ) + "-" + pad( day, 2 ) + "T" + pad( secOfDay / 3600, 2 ) + ":" + pad( secOfDay / 60 % 60, 2 ) + ":" + pad( secOfDay % 60, 2 );
+        return Internal::padZero( year, 4 ) + "-" + Internal::padZero( month, 2 ) + "-" + Internal::padZero( day, 2 ) + "T" + Internal::padZero( secOfDay / 3600, 2 ) + ":" +
+               Internal::padZero( secOfDay / 60 % 60, 2 ) + ":" + Internal::padZero( secOfDay % 60, 2 );
     }
 
     string SteamReceiptValidator::makeQueryURL( string_view orderID ) const

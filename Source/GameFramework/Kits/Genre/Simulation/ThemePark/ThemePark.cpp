@@ -26,6 +26,16 @@ namespace sw
                 return from + ( to - from ) * MathUtil::clamp( alpha, 0.0f, 1.0f );
             }
 
+            /** @brief 손님 id 목록 하나(개수 + id)를 씁니다. `readIDList` 가 읽습니다. */
+            static void writeIDList( Archive& outArchive, const vector<uint32>& listID )
+            {
+                outArchive << static_cast<uint32>( listID.size() );
+                for ( const uint32 id : listID )
+                {
+                    outArchive << id;
+                }
+            }
+
             /** @brief 손님 id 목록 하나(개수 + id)를 읽습니다. */
             [[nodiscard]] static bool readIDList( Archive& archive, vector<uint32>& outListID )
             {
@@ -644,14 +654,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ThemeParkSimulation::writeState( Archive& outArchive ) const
     {
-        const auto writeIDList = [&outArchive]( const vector<uint32>& listID )
-        {
-            outArchive << static_cast<uint32>( listID.size() );
-            for ( const uint32 id : listID )
-            {
-                outArchive << id;
-            }
-        };
         outArchive << _settings._entryFee;
         outArchive << static_cast<uint32>( _listRide.size() );
         for ( const ParkRide& ride : _listRide )
@@ -667,8 +669,8 @@ namespace sw
             outArchive << ride._price;
             outArchive << ride._runningCostPerMinute;
             outArchive << ride._bOpen;
-            writeIDList( ride._listQueue );
-            writeIDList( ride._listRider );
+            ThemeParkInternal::writeIDList( outArchive, ride._listQueue );
+            ThemeParkInternal::writeIDList( outArchive, ride._listRider );
             outArchive << ride._cycleTimer._remaining;
             outArchive << ride._totalRiders;
             outArchive << ride._totalIncome;
