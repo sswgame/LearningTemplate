@@ -248,9 +248,18 @@ namespace sw
         return pID;
     }
 
-    hashed_string GameDataXML::readName( const XMLNode& node, const utf8* pAttribute )
+    hashed_string GameDataXML::readOptionalName( const XMLNode& node, const utf8* pAttribute )
     {
-        return XMLReadUtil::readName( node, pAttribute );
+        return XMLReadUtil::readOptionalName( node, pAttribute );
+    }
+
+    bool GameDataXML::readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName )
+    {
+        outName = XMLReadUtil::readOptionalName( node, pAttribute );
+        if ( outName.empty() == false )
+            return true;
+        SW_LOG_ERROR( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
+        return false;
     }
 
     void GameDataXML::parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
@@ -262,7 +271,16 @@ namespace sw
     void GameDataXML::appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
     {
         StringUtil::forEachToken( text, separators, [&]( string_view token )
-        { outListName.push_back( hashed_string( token ) ); } );
+        {
+            const hashed_string name( token );
+            // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 알리고 넣지 않는다.
+            if ( name.empty() )
+            {
+                SW_LOG_ERROR( "A name list holds '%#', which spells the empty name - skipped", token );
+                return;
+            }
+            outListName.push_back( name );
+        } );
     }
 
     bool GameDataXML::parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue )

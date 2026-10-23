@@ -14,6 +14,8 @@
  *    따로 두지 않습니다.
  *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
  *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
+ * 5-1. 원소 주소: 삽입이 밀집 배열을 키우면 모든 원소가, `erase` 가 마지막 원소를 옮기면 그 원소가 다른 주소로 갑니다. `&it->second` 를 다른 삽입 · 삭제를 거쳐
+ *    쥐어야 하면 이 맵이 아니라 `stable_unordered_map`(`Core/Container/stable_unordered_map.h`, 값 주소 고정)을 씁니다.
  * 6. 구성: 두 구성이 같은 구현입니다.
  *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
  *          빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.

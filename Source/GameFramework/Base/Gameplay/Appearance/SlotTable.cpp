@@ -41,8 +41,8 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
                 AppearanceSlotDef slot;
-                slot._name   = AppearanceXMLUtil::readName( child, "name" );
-                slot._accept = AppearanceXMLUtil::readName( child, "accept" );
+                slot._name   = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
+                slot._accept = AppearanceXMLUtil::readOptionalName( child, "accept" ); // 적지 않으면 슬롯 이름
                 if ( slot._accept.empty() )
                     slot._accept = slot._name;
                 if ( slot._name.empty() )
@@ -56,7 +56,7 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrOccupancyAttribute, report, sourceName );
                 SlotOccupancyDef occupancy;
-                occupancy._id = AppearanceXMLUtil::readName( child, "id" );
+                occupancy._id = AppearanceXMLUtil::readRequiredName( child, "id", report, sourceName );
                 AppearanceXMLUtil::readNameList( child, "slots", occupancy._listSlot );
                 if ( occupancy._id.empty() || occupancy._listSlot.size() < 2 )
                     report.addError( "%#: <Occupancy> needs an id and at least two slots", sourceName );

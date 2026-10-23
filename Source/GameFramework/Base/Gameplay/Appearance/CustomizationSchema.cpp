@@ -93,7 +93,7 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
                 CustomizationDriveDef drive;
-                drive._target = AppearanceXMLUtil::readName( node, "target" );
+                drive._target = AppearanceXMLUtil::readRequiredName( node, "target", report, sourceName );
                 // 구간을 적지 않으면 매개변수의 범위다(이 데이터의 값). 깨진 값은 오류이고 칸은 그대로다.
                 drive._from = inoutParam._min;
                 drive._to   = inoutParam._max;
@@ -124,12 +124,12 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
                 CustomizationOptionDef option;
-                option._name               = AppearanceXMLUtil::readName( node, "name" );
-                option._visual             = AppearanceXMLUtil::readName( node, "visual" );
-                option._variant            = AppearanceXMLUtil::readName( node, "variant" );
-                option._materialVariant    = AppearanceXMLUtil::readName( node, "materialVariant" );
-                const hashed_string prefab = AppearanceXMLUtil::readName( node, "prefab" );
-                const hashed_string sprite = AppearanceXMLUtil::readName( node, "sprite" );
+                option._name               = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
+                option._visual             = AppearanceXMLUtil::readOptionalName( node, "visual" );
+                option._variant            = AppearanceXMLUtil::readOptionalName( node, "variant" );
+                option._materialVariant    = AppearanceXMLUtil::readOptionalName( node, "materialVariant" );
+                const hashed_string prefab = AppearanceXMLUtil::readOptionalName( node, "prefab" );
+                const hashed_string sprite = AppearanceXMLUtil::readOptionalName( node, "sprite" );
                 option._asset              = prefab.empty() ? sprite : prefab;
                 AppearanceXMLUtil::readOptionalFloat3( node, "offset", option._offset, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat3( node, "rotation", option._rotation, report, sourceName );
@@ -150,7 +150,7 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrConditionAttribute, report, sourceName );
                 CustomizationConditionDef condition;
-                condition._parameter = AppearanceXMLUtil::readName( node, "parameter" );
+                condition._parameter = AppearanceXMLUtil::readRequiredName( node, "parameter", report, sourceName );
                 AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
                 // 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 아직 목록에 들어가지 않은 자기 자신도 가리킬 수 없으므로 순환이 생길 수 없다.
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
@@ -187,10 +187,10 @@ namespace sw
                 reportUnknownParamAttributes( node, kind, report, sourceName );
                 CustomizationParamDef param;
                 param._kind     = kind;
-                param._name     = AppearanceXMLUtil::readName( node, "name" );
-                param._category = AppearanceXMLUtil::readName( node, "category" );
-                param._symmetry = AppearanceXMLUtil::readName( node, "symmetry" );
-                param._socket   = AppearanceXMLUtil::readName( node, "socket" );
+                param._name     = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
+                param._category = AppearanceXMLUtil::readOptionalName( node, "category" );
+                param._symmetry = AppearanceXMLUtil::readOptionalName( node, "symmetry" );
+                param._socket   = AppearanceXMLUtil::readOptionalName( node, "socket" ); // 부착 매개변수만 필수 — 아래에서 확인한다
                 AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._min, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._max, report, sourceName );
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
@@ -223,7 +223,7 @@ namespace sw
                 }
                 if ( kind == CustomizationKind::Choice || kind == CustomizationKind::Attachment )
                 {
-                    param._defaultOption = AppearanceXMLUtil::readName( node, "default" );
+                    param._defaultOption = AppearanceXMLUtil::readOptionalName( node, "default" ); // 적지 않으면 첫 선택지
                     if ( param._listOption.empty() )
                         report.addError( "%#: schema '%#' parameter '%#' has no <Option>", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                     else if ( param._defaultOption.empty() )
@@ -290,10 +290,12 @@ namespace sw
             }
             (void)AppearanceXMLUtil::reportUnknownAttributes( schemaNode, CustomizationSchemaInternal::kArrSchemaAttribute, report, sourceName );
             CustomizationSchemaDef schema;
-            schema._id = AppearanceXMLUtil::readName( schemaNode, "id" );
-            if ( schema._id.empty() || findSchema( schema._id ) != nullptr )
+            schema._id = AppearanceXMLUtil::readRequiredName( schemaNode, "id", report, sourceName );
+            if ( schema._id.empty() )
+                continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
+            if ( findSchema( schema._id ) != nullptr )
             {
-                report.addError( "%#: <Schema> without an id or with a duplicate id '%#'", sourceName, schema._id.c_str() );
+                report.addError( "%#: <Schema> has a duplicate id '%#'", sourceName, schema._id.c_str() );
                 continue;
             }
             for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )

@@ -187,6 +187,12 @@ namespace sw
          *          구조체도 넣지 않았다(안에 멤버 포인터가 있는지 형식으로 알 수 없다).
          */
         void valueInitializeRangeInternal( size_t first, size_t last );
+        /**
+         * @brief [first, last) 를 @p value 의 복사로 만듭니다(`assign( count, value )` · `resize( count, value )` 가 함께 씁니다).
+         * @details 버퍼 포인터를 지역으로 한 번 떠서 씁니다. `_pData[i]` 로 바로 쓰면 1 바이트 타입(`uint8` · `utf8`)의 저장이 멤버 `_pData` 와
+         *          겹칠 수 있다고 보여(`char` 는 무엇과도 별칭) 컴파일러가 반복마다 `_pData` 를 다시 읽고 루프를 벡터화 · memset 으로 바꾸지 못한다.
+         */
+        void fillConstructRangeInternal( size_t first, size_t last, const T& value );
 
     private:
         SW_RACE_CTX_MEMBER
@@ -335,9 +341,20 @@ namespace sw
                 return;
             }
         }
+        T* const pData = _pData;
         for ( size_t index = first; index < last; ++index )
         {
-            sw_placement_new( ( _pData + ( index ) ) ) T();
+            sw_placement_new( ( pData + ( index ) ) ) T();
+        }
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::fillConstructRangeInternal( size_t first, size_t last, const T& value )
+    {
+        T* const pData = _pData;
+        for ( size_t index = first; index < last; ++index )
+        {
+            sw_placement_new( ( pData + ( index ) ) ) T( value );
         }
     }
 
@@ -572,10 +589,7 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         clearInternal();
         reserveInternal( count );
-        for ( size_t index = 0; index < count; ++index )
-        {
-            sw_placement_new( ( _pData + ( index ) ) ) T( value );
-        }
+        fillConstructRangeInternal( 0, count, value );
         _size = count;
     }
 
@@ -1131,17 +1145,11 @@ namespace sw
                 // insert 도 지키는 규칙이고, std::vector 도 이 호출을 허용한다(떠 두지 않으면 해제된 메모리에서 복사한다).
                 const T valueCopy( value );
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
-                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-                {
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( valueCopy );
-                }
+                fillConstructRangeInternal( _size, count, valueCopy );
             }
             else
             {
-                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-                {
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
-                }
+                fillConstructRangeInternal( _size, count, value );
             }
         }
         _size = count;
@@ -1174,9 +1182,13 @@ namespace sw
         SW_SCOPED_RACE_READ_OTHER( other );
         if ( _size != other._size )
             return false;
-        for ( size_t index = 0; index < _size; ++index )
+        // 두 버퍼 포인터를 지역으로 뜬다 — 원소 비교가 부르는 코드가 멤버를 바꿀 수 있다고 보면 반복마다 다시 읽는다.
+        const T* const pLeft  = _pData;
+        const T* const pRight = other._pData;
+        const size_t   count  = _size;
+        for ( size_t index = 0; index < count; ++index )
         {
-            if ( ( _pData[index] == other._pData[index] ) == false )
+            if ( ( pLeft[index] == pRight[index] ) == false )
                 return false;
         }
         return true;

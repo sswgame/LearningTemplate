@@ -639,6 +639,30 @@ SW_TEST_CASE( GameFrameworkUtilTest, TimingJudgeGradesNarrowestWindowFirstWithLa
     SW_EXPECT_TRUE( judge.judge( 10.0f, 10.07f )._pWindow->_grade == hashed_string( "Cool" ) );
 }
 
+/**
+ * @brief [GameFrameworkUtilTest] 필수 이름은 빠졌거나 비었거나 `none` 의 철자이면 오류이고, 선택 이름은 빈 이름으로 읽힌다(ReadNameAudit)
+ * @details 타이밍 창의 `grade` 가 필수 이름의 보기다 — 예전에는 빠진 `grade` 가 빈 이름의 창으로 조용히 로드됐다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, DataXMLRequiredNameFailsWhenMissingBlankOrNone )
+{
+    sw::XMLDocument doc;
+    XMLNode         root;
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Row id="sword" blank=" " tag="None"/>)", "GameFrameworkUtilTest", "Row", root ) );
+    hashed_string name;
+    SW_EXPECT_TRUE( GameDataXML::readRequiredName( root, "id", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_TRUE( name == hashed_string( "sword" ) );
+    SW_EXPECT_TRUE( GameDataXML::readOptionalName( root, "missing" ).empty() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a missing, blank or none-spelled required name is a data error" );
+    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "missing", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_TRUE( name.empty() );
+    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "blank", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "tag", "GameFrameworkUtilTest", name ) );
+
+    TimingJudge judge;
+    SW_EXPECT_FALSE( judge.loadFromXMLText( R"(<TimingWindows><Window early="0.1" late="0.1"/></TimingWindows>)", "GameFrameworkUtilTest" ) );
+}
+
 SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
 {
     sw::XMLDocument doc;

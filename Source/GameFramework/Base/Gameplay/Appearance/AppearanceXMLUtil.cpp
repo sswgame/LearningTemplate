@@ -112,9 +112,17 @@ namespace sw
         report.addError( "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
     }
 
-    hashed_string AppearanceXMLUtil::readName( const XMLNode& node, const utf8* pAttribute )
+    hashed_string AppearanceXMLUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
     {
-        return XMLReadUtil::readName( node, pAttribute );
+        return XMLReadUtil::readOptionalName( node, pAttribute );
+    }
+
+    hashed_string AppearanceXMLUtil::readRequiredName( const XMLNode& node, const utf8* pAttribute, AppearanceLoadReport& report, string_view sourceName )
+    {
+        const hashed_string name = XMLReadUtil::readOptionalName( node, pAttribute );
+        if ( name.empty() )
+            report.addError( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
+        return name;
     }
 
     void AppearanceXMLUtil::readNameList( const XMLNode& node, const utf8* pAttribute, vector<hashed_string>& outListName )

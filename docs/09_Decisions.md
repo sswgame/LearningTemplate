@@ -544,7 +544,7 @@
   게임 데이터 XML(`GameDataXML::readFields`)의 자체 범위 검사는 지우고 공통 끝에 맡겼습니다. `deserializeSoft` 는 `bool` 대신 `SoftReadResult`(`NotParsed` · `Rejected` · `Read`)를 돌려줍니다.
   `bool` 하나일 때는 범위 밖 값에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸습니다. 이제 `NotParsed` 만 바로 돌아가고 `Rejected` 는 orphan 을 모두 알린 뒤 실패합니다.
   float32 로 보관하는 숫자 경계를 float64 칸과 견주는 어긋남(`Min = 0.1`)은 조사 시점에 그런 칸이 없어(float64 칸의 경계는 `MemoryBudgetMonitor::_megabytes` 의 `Min = 0.0` 하나) 형식을 바꾸지 않았습니다.
-- **이름 읽기(`XMLReadUtil::readName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
+- **이름 읽기(`XMLReadUtil::readOptionalName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
   이름으로 받은 열거형 글(`align="none"`)이 "적지 않음"이 되고 적지 않은 경로가 "None" 이 됐습니다. 이름 형식을 바꾸면 리플렉션이 빈 이름을 "None" 으로 쓴 씬 · 프리팹(100 곳 넘음)과 열거자 `None` 이 함께 바뀌므로,
   이름 읽기의 한 창구가 그 글을 오류로 막고 그런 속성은 글로 읽습니다. 경로로 쓰는 이름은 비었는지 먼저 봅니다(`CharacterAppearanceComponent::applyBodyPart`).
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고

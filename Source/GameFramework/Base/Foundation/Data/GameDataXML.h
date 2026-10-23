@@ -140,8 +140,16 @@ namespace sw
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
-        /** @brief 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름이고, 글 `none` 은 오류입니다(`XMLReadUtil::readName`). */
-        static hashed_string readName( const XMLNode& node, const utf8* pAttribute );
+        /**
+         * @brief **선택** 이름 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름이고, 글 `none` 은 오류입니다(`XMLReadUtil::readOptionalName`).
+         * @details 적지 않아도 되는 이름만 이 함수로 읽는다. 없으면 로드가 실패해야 하는 이름은 `readRequiredName` 이다.
+         */
+        static hashed_string readOptionalName( const XMLNode& node, const utf8* pAttribute );
+        /**
+         * @brief **필수** 이름 속성 @p pAttribute 를 읽어 @p outName 에 넣습니다. 속성이 없거나 비었거나 글 `none` 이면 원소 · 속성 이름과 함께 오류를 알리고 false 입니다.
+         * @details 반환값을 버릴 수 없다(`[[nodiscard]]`) — 호출부가 "이 원소를 넣을지"를 정한다. @p outName 은 실패하면 빈 이름이다.
+         */
+        [[nodiscard]] static bool readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName );
 
         /**
          * @brief @p separators 의 아무 글자로 나뉜 이름 목록을 @p outListName 에 채웁니다. 먼저 목록을 비웁니다.

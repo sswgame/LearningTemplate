@@ -246,6 +246,56 @@ SW_TEST_CASE( ContainerBenchTest, VectorGrowByResize )
 }
 
 /**
+ * @brief [ContainerBenchTest] 벡터 채우기 · 비교 — 1 바이트 타입의 저장이 벡터 멤버와 겹쳐 보여 루프가 벡터화되지 않던 곳(`fillConstructRangeInternal` · `operator==`)
+ */
+SW_TEST_CASE( ContainerBenchTest, VectorBulkFillAndCompare )
+{
+    constexpr uint32 kByteCount = 1u << 20;
+    constexpr uint32 kWordCount = 1u << 18;
+    uint32           wrongCount = 0;
+
+    const int64 fillByteDeci = test::measureBestDeciNanosPerOp( kByteCount, kRoundCount, [&]()
+    {
+        sw::vector<uint8> byte;
+        byte.assign( kByteCount, uint8{ 7 } );
+        if ( byte.size() != kByteCount || byte.back() != 7 )
+            ++wrongCount;
+        s_benchSink = byte.capacity();
+    } );
+    test::logBenchDeciNanos( "vector<uint8>::assign( 1 Mi, 7 ) per element", fillByteDeci );
+
+    const int64 fillWordDeci = test::measureBestDeciNanosPerOp( kWordCount, kRoundCount, [&]()
+    {
+        sw::vector<uint32> listWord;
+        listWord.resize( kWordCount, 7u );
+        if ( listWord.size() != kWordCount || listWord.back() != 7u )
+            ++wrongCount;
+        s_benchSink = listWord.capacity();
+    } );
+    test::logBenchDeciNanos( "vector<uint32>::resize( 256 Ki, 7 ) per element", fillWordDeci );
+
+    sw::vector<uint8> listLeft( kByteCount, uint8{ 3 } );
+    sw::vector<uint8> listRight( kByteCount, uint8{ 3 } );
+    const int64       compareByteDeci = test::measureBestDeciNanosPerOp( kByteCount, kRoundCount, [&]()
+          {
+        if ( ( listLeft == listRight ) == false )
+            ++wrongCount;
+    } );
+    test::logBenchDeciNanos( "vector<uint8>::operator== ( 1 Mi equal ) per element", compareByteDeci );
+
+    sw::vector<uint32> listLeftWord( kWordCount, 5u );
+    sw::vector<uint32> listRightWord( kWordCount, 5u );
+    const int64        compareWordDeci = test::measureBestDeciNanosPerOp( kWordCount, kRoundCount, [&]()
+           {
+        if ( ( listLeftWord == listRightWord ) == false )
+            ++wrongCount;
+    } );
+    test::logBenchDeciNanos( "vector<uint32>::operator== ( 256 Ki equal ) per element", compareWordDeci );
+
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
  * @brief [ContainerBenchTest] `SlotHandleTable::get` — 락 없는 조회. RHI 백엔드가 드로우마다 버퍼 · 텍스처 · 파이프라인을 찾는 길입니다.
  */
 SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
