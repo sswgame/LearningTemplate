@@ -111,8 +111,8 @@ SW_TEST_CASE( EditorNetConditionsTest, TargetTextSelectsProcessRanges )
 }
 
 /**
- * @brief [MultiplayerTabTest] `SW_EDITOR_MULTIPLAYER_TAB` 한 줄이 탭 등록부에 오르고, 등록 순서가 아니라 순서 키로 줄 서고, 등록이 탭을 만든다
- * @details Multiplayer 창은 이 등록부만 읽어 탭 막대를 그린다(Session · Conditions 와 확장 모듈의 탭). 실제 에디터의 탭 목록은 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 본다.
+ * @brief [MultiplayerTabTest] `SW_EDITOR_MULTIPLAYER_TAB` 한 줄이 탭 레지스트리에 오르고, 등록 순서가 아니라 순서 키로 줄 서고, 등록이 탭을 만든다
+ * @details Multiplayer 창은 이 레지스트리만 읽어 탭 막대를 그린다(Session · Conditions 와 확장 모듈의 탭). 실제 에디터의 탭 목록은 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 본다.
  */
 SW_TEST_CASE( MultiplayerTabTest, RegisteredTabsSortByOrderAndCreateTheirTab )
 {

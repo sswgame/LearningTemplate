@@ -227,7 +227,7 @@ namespace sw
             const int32 parentBody = ragdoll._listParentBody[bodyIndex];
             const bool  bDriven    = parentBody >= 0 && ragdoll._listJoint[bodyIndex].isValid() && asset._listBody[bodyIndex]._joint._type == PhysicsJointType::Cone;
             if ( bDriven == false )
-                continue; // 뿌리 · Cone 이 아닌 관절은 모터가 없다(파일 머리말)
+                continue; // 루트 · Cone 이 아닌 관절은 모터가 없다(파일 머리말)
             const size_t boneIndex       = static_cast<size_t>( ragdoll._listBoneIndex[bodyIndex] );
             const size_t parentBoneIndex = static_cast<size_t>( ragdoll._listBoneIndex[static_cast<size_t>( parentBody )] );
             if ( boneIndex >= skeleton._listModelSpaceBone.size() || parentBoneIndex >= skeleton._listModelSpaceBone.size() )

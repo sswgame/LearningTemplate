@@ -86,7 +86,7 @@ namespace sw
         void setExternalTarget( uint32 targetIndex, const RigTargetValue& value );
         /**
          * @brief 자기 유닛 대상(본 · 소켓)이 붙은 본과 그 본 기준의 합친 오프셋(데이터 오프셋 × 소켓 로컬)입니다. 에디터의 대상 오프셋 기즈모가 부모 공간을 되짚는 데 씁니다.
-         * @param outBone 대상의 본 번호입니다. 부모가 빈 소켓(유닛 뿌리 기준)이면 -1 입니다.
+         * @param outBone 대상의 본 번호입니다. 부모가 빈 소켓(유닛 루트 기준)이면 -1 입니다.
          * @return 바깥 대상(다른 유닛 · 오브젝트)이거나 번호가 범위 밖이면 false 입니다.
          */
         [[nodiscard]] bool tryGetOwnTargetBinding( uint32 targetIndex, int32& outBone, BoneTransform& outCombinedOffset ) const;

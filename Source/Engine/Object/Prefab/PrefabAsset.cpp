@@ -215,7 +215,7 @@ namespace sw
                 }
             }
 
-            /** @brief @p path 가 목록에 없으면 끝에 더합니다(대소문자 · 구분자를 무시한 캐시 키로 견준다). */
+            /** @brief @p path 가 목록에 없으면 끝에 더합니다(대소문자 · 구분자를 무시한 캐시 키로 비교한다). */
             static void appendUniquePath( const string& path, vector<string>& inoutListPath )
             {
                 if ( path.empty() )
@@ -473,7 +473,7 @@ namespace sw
             }
 
             /**
-             * @brief 노드가 자기 부품 아래에 덮어쓴 것 @p inoutListInner(부품 @p partPath 에서 잰 경로)를 바깥 루트에서 잰 경로로 바꾸고, 그 뒤에 바깥 것 @p listEnclosingPart 를 잇습니다.
+             * @brief 노드가 자기 부품 아래에 덮어쓴 것 @p inoutListInner(부품 @p partPath 에서 측정한 경로)를 바깥 루트에서 측정한 경로로 바꾸고, 그 뒤에 바깥 것 @p listEnclosingPart 를 잇습니다.
              * @details 안쪽이 앞이라 같은 부품이면 바깥 것이 나중에 얹혀 이긴다(유니티: 씬 인스턴스의 오버라이드가 바깥 프리팹의 오버라이드를 이긴다).
              */
             static void prependInnerParts( string_view partPath, vector<PrefabPartOverride>& inoutListInner, const vector<PrefabPartOverride>& listEnclosingPart )
@@ -1209,7 +1209,7 @@ namespace sw
 
         // 배포 구성은 쿠킹본만 읽는다. 쿠킹은 소스를 읽는다 — 쿠킹의 입력은 소스다. 쿠킹인지는 둘 중 하나로 안다: 소스 트리를 올린 쿠킹 프로세스
         // (`ContentSource::SourceTree`), 또는 이 스레드의 쿠킹 작업(`CookJob` — 쿠커가 작업 안에서 씬을 지으며 프리팹을 부른다. 프로세스의 콘텐츠
-        // 출처와 상관없이 그 작업의 입력은 소스이고, 쿠킹본을 읽으면 아직 굽지 않은 프리팹이 없다고 지거나 낡은 것을 읽는다).
+        // 출처와 상관없이 그 작업의 입력은 소스이고, 쿠킹본을 읽으면 아직 베이크하지 않은 프리팹이 없다고 지거나 낡은 것을 읽는다).
 #if defined( SW_SHIPPING )
         const bool bSourceTreeProcess = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getContentSource() == ContentSource::SourceTree;
         const bool bReadsSource       = bSourceTreeProcess || CookJob::findCurrent() != nullptr;
@@ -1345,7 +1345,7 @@ namespace sw
         const bool                          bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
         if ( bNoNewBase )
             return false;
-        // 덮어쓴 것은 옛 원형과 견줘 뽑는다. 새 원형과 견주면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
+        // 덮어쓴 것은 옛 원형과 비교해 뽑는다. 새 원형과 비교하면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
         const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
         string       overrideXML;
         string       newInstanceState;
@@ -1689,7 +1689,7 @@ namespace sw
             listFlatIndex[index]  = flatIndex;
             inoutListNode.push_back( std::move( flat ) );
 
-            // 노드가 부품 아래에 덮어쓴 것(`<Part>`)은 스폰과 같은 순서(안쪽 먼저, 바깥 것이 이김)로 아래 노드의 펼친 상태에 굽는다.
+            // 노드가 부품 아래에 덮어쓴 것(`<Part>`)은 스폰과 같은 순서(안쪽 먼저, 바깥 것이 이김)로 아래 노드의 펼친 상태에 베이크한다.
             PrefabAssetInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
             const PrefabAssetInternal::PathStackScope scope{ spawnStack, sourceKey };
             if ( appendFlattenedNodes( *pSource, flatIndex, partPath, listInnerPart, inoutListNode ) == false )

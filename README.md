@@ -30,9 +30,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ContentBrowserWatchAndScan](docs/plans/ContentBrowserWatchAndScan.md) — 콘텐츠 브라우저 감시 지연과 스캔 비용 | 구현대기 | 0/2 | 없음 | editor | 없음 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
 | - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현대기 | 0/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
-| - | [NamingAudit](docs/plans/NamingAudit.md) — 다음 이름 점검 | 구현대기 | 0/4 | 없음 | project | C-17 |
 | - | [RealtimeGlobalIllumination](docs/plans/RealtimeGlobalIllumination.md) — 실시간 전역 조명과 볼륨 표현 (2026-10-24) | 구현대기 | 0/7 | ClusteredLighting | graphics | D2-14, D2-5.2 |
-| - | [RuleExceptionAudit](docs/plans/RuleExceptionAudit.md) — 규칙 예외 감사에서 정한 일의 적용 | 구현대기 | 2/4 | 없음 | project | C-11 |
 | - | [RuntimeQualityAdjust](docs/plans/RuntimeQualityAdjust.md) — 부하 검증의 남은 것과 자동 품질 조정 | 구현대기 | 0/4 | 없음 | quality | C-29 |
 | - | [SourceScanGates](docs/plans/SourceScanGates.md) — 공유 훑기로 못 옮긴 소스 게이트와 픽서 | 구현대기 | 0/4 | 없음 | quality | C-48 |
 | - | [VfxGpuLights](docs/plans/VfxGpuLights.md) — GPU 로 시뮬레이션하는 방출기의 파티클 라이트 (2026-10-24) | 구현대기 | 0/5 | ClusteredLighting | graphics | 없음 |
@@ -41,7 +39,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 구현중 | 6/7 | 없음 | engine | 없음 |
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
-| - | [CommentRewrite](docs/plans/CommentRewrite.md) — 주석을 새 문체로 다시 쓰기 (6 차 이후 남은 구역) | 구현중 | 0/6 | 없음 | project | C-16 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 1/3 | 없음 | engine | G-5 |
 | - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 구현중 | 1/5 | 없음 | editor | D3-1.2 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
@@ -59,7 +56,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [InteractionSpatialGrid](docs/plans/InteractionSpatialGrid.md) — 상호작용 대상의 공유 공간 격자 | 구현중 | 2/3 | 없음 | gameplay | G-4 |
 | - | [KayKitMaterials](docs/plans/KayKitMaterials.md) — KayKit 캐릭터 텍스처를 머티리얼로 | 구현중 | 1/2 | 없음 | gameplay | D4-6 |
 | - | [KitCompositionGames](docs/plans/KitCompositionGames.md) — 키트 조립의 두 번째 테스트 게임과 땅 쓰기 | 구현중 | 1/2 | 없음 | gameplay | D4-4 |
-| - | [KoreanLogStrings](docs/plans/KoreanLogStrings.md) — 로그 · assert 문자열의 한글 줄을 영어로 | 구현중 | 1/8 | 없음 | project | 없음 |
 | - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [LongFunctions](docs/plans/LongFunctions.md) — 긴 함수 정리 기준 (2026-10-18) | 구현중 | 해당없음 | 없음 | project | C-18 |
 | - | [MeleeHitUnify](docs/plans/MeleeHitUnify.md) — 근접 판정 한 길로 | 구현중 | 2/3 | 없음 | gameplay | 없음 |

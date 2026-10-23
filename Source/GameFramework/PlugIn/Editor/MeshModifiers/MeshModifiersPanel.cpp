@@ -256,7 +256,7 @@ namespace sw::editor
 
     void MeshModifiersPanel::syncDocumentDirty()
     {
-        // 편집 기록은 세션 안에 있어 패널이 편집마다 알리지 않는다 — 그리기마다 세션의 스택을 정본으로 다시 맞춘다(`CharacterEditorPanel` 과 같은 모양).
+        // 편집 기록은 세션 안에 있어 패널이 편집마다 알리지 않는다 — 그리기마다 세션의 스택을 기준으로 다시 맞춘다(`CharacterEditorPanel` 과 같은 모양).
         if ( canSaveDocument() )
             markDocumentDirty();
         else

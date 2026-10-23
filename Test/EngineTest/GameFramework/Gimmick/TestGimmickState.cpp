@@ -218,7 +218,7 @@ SW_TEST_CASE( GimmickStateTest, ReplicaFollowsAuthorityByObjectName )
 }
 
 /**
- * @brief [GimmickStateTest] 스냅샷 엔티티 — 상태가 255 바이트를 넘는 회로는 조각으로 나뉘어 싣고, 되살리면 같은 상태이며, 조각이 빠졌거나 다른 빌드의 바이트인 회로만 건너뛴다
+ * @brief [GimmickStateTest] 스냅샷 엔티티 — 상태가 255 바이트를 넘는 회로는 조각으로 나뉘어 싣고, 복원하면 같은 상태이며, 조각이 빠졌거나 다른 빌드의 바이트인 회로만 건너뛴다
  */
 SW_TEST_CASE( GimmickStateTest, SnapshotChunksLargeCircuitsAndSkipsBrokenOnes )
 {

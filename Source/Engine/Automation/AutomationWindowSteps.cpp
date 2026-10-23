@@ -83,7 +83,7 @@ namespace sw
              */
             static bool bringToForeground( HWND hwnd )
             {
-                // 최소화된 창도 전경(활성)일 수 있다 — 그때는 클라이언트가 없어 커서를 가둘 수 없으므로 먼저 되살린다.
+                // 최소화된 창도 전경(활성)일 수 있다 — 그때는 클라이언트가 없어 커서를 가둘 수 없으므로 먼저 복원한다.
                 if ( IsIconic( hwnd ) != FALSE )
                     ShowWindow( hwnd, SW_RESTORE );
                 if ( GetForegroundWindow() == hwnd )

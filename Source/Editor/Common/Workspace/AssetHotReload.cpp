@@ -82,7 +82,7 @@ namespace sw::editor
                         listExtension.push_back( extension );
                         continue;
                     }
-                    SW_LOG_WARNING( "핫리로드 확장자 '%#' 는 처리기가 없어 무시합니다 (editortooldefaults.json)", extension.c_str() );
+                    SW_LOG_WARNING( "Ignoring hot-reload extension '%#' because it has no handler (editortooldefaults.json)", extension.c_str() );
                 }
                 return listExtension;
             }
@@ -111,7 +111,7 @@ namespace sw::editor
         const vector<string> listExtension = AssetHotReloadInternal::resolveWatchExtensions();
         if ( listExtension.empty() )
         {
-            SW_LOG_INFO( "에셋 핫리로드: 감시할 확장자가 없어 켜지 않습니다." );
+            SW_LOG_INFO( "Asset hot reload: no extensions to watch, not enabling it." );
             return false;
         }
 

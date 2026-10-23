@@ -185,7 +185,7 @@ SW_TEST_CASE( SparseSetTest, DenseKeysAndClear )
  * @brief [SparseSetTest] 같은 키를 자기 값으로 다시 emplace 해도 지워진 것을 읽지 않는다
  * @details `emplace` 가 이미 있는 키를 만나 그 칸을 **제자리에서 지우고 다시 지으면**, 인자가 그 칸 자신을
  *          가리킬 때(`set.emplace( k, set[k] )`) 지워진 객체에서 만들게 된다 — 힙을 든 타입이면 해제된
- *          메모리를 읽는다(ASAN). 생성자가 던질 때 지워진 칸이 남아 두 번 지워지는 문제도 같은 뿌리다.
+ *          메모리를 읽는다(ASAN). 생성자가 던질 때 지워진 칸이 남아 두 번 지워지는 문제도 같은 근본 원인다.
  *          그래서 임시를 먼저 짓고 옮겨 넣는다.
  */
 SW_TEST_CASE( SparseSetTest, EmplaceFromItsOwnValueDoesNotReadDestroyedMemory )

@@ -288,7 +288,7 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 
 /**
  * @brief [FacialAnimationTest] 선형 예측 포락선의 두 봉우리가 합성 모음의 포먼트에 닿는다 — 첫째 · 둘째 포먼트가 실제 값의 20 % 안이다
- * @details 모음 셋(AA 750/1150, EE 300/2300, OO 320/800 Hz)을 한 프레임(1/30 초) 창으로 잰다. 무음 · 너무 짧은 창은 잴 수 없다.
+ * @details 모음 셋(AA 750/1150, EE 300/2300, OO 320/800 Hz)을 한 프레임(1/30 초) 창으로 측정한다. 무음 · 너무 짧은 창은 측정할 수 없다.
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncFormantsTrackSyntheticVowels )
 {
@@ -392,7 +392,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 
 /**
  * @brief [FacialAnimationTest] 자음 단서 — 무음 뒤 짧은 터짐은 파열음(PP), 영교차가 잦은 낮은 대역 잡음은 마찰음(FF)이다. 터짐 없이 서서히 열리는 같은 모음은 PP 가 아니다
- * @details 낮은 통과 잡음은 높은 대역이 주가 아니라 대역 형태만으로는 유성으로 보여 잡음 포락선의 봉우리를 포먼트로 잴 뻔한다 — 마찰음 단서가 포먼트 비교를 끈다.
+ * @details 낮은 통과 잡음은 높은 대역이 주가 아니라 대역 형태만으로는 유성으로 보여 잡음 포락선의 봉우리를 포먼트로 측정할 뻔한다 — 마찰음 단서가 포먼트 비교를 끈다.
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncConsonantCuesMarkPlosivesAndFricatives )
 {

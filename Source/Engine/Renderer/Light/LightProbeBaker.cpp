@@ -49,7 +49,7 @@ namespace sw
     {
         outInput                          = LightProbeBakeInput{};
         const GameObjectManager* pObjects = scene.getObjectManager();
-        // 플레이 씬이 아니라 정적 콜라이더만의 새 씬에 쏜다 — 편집 중에는 바디가 없고, 플레이 중이어도 움직이는 바디는 굽기에 들지 않는다.
+        // 플레이 씬이 아니라 정적 콜라이더만의 새 씬에 쏜다 — 편집 중에는 바디가 없고, 플레이 중이어도 움직이는 바디는 베이크에 들지 않는다.
         outOccluders = ( pObjects != nullptr ) ? pObjects->getSubsystem<ScenePhysics>().createStaticScene3D() : nullptr;
         if ( outOccluders == nullptr )
         {
@@ -68,7 +68,7 @@ namespace sw
 
     bool LightProbeBaker::bakeGrid( const LightProbeGridLayout& layout, const LightProbeBakeInput& input, LightProbeGrid& outGrid, string* pOutError )
     {
-        // 한 번에 굽기도 나눠 굽기와 같은 길이다 — 결과가 같다(`LightProbeBakeJob`).
+        // 한 번에 베이크도 나눠 베이크와 같은 길이다 — 결과가 같다(`LightProbeBakeJob`).
         outGrid.clear();
         LightProbeBakeJob job;
         if ( job.begin( layout, input, pOutError ) == false )

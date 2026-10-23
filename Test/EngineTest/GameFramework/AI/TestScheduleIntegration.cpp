@@ -177,7 +177,7 @@ SW_TEST_CASE( ScheduleIntegrationTest, ClaimReservedOccupiesTheSmartObjectSlot )
 }
 
 /**
- * @brief [ScheduleIntegrationTest] 예약은 저장했다 되살려도 같은 슬롯이고, 사라진 오브젝트의 예약은 버린다
+ * @brief [ScheduleIntegrationTest] 예약은 저장했다 복원해도 같은 슬롯이고, 사라진 오브젝트의 예약은 버린다
  */
 SW_TEST_CASE( ScheduleIntegrationTest, LocatorStateRoundTripsAndDropsGoneObjects )
 {

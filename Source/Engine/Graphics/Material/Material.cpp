@@ -169,7 +169,7 @@ namespace sw
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );
             if ( bNativeBindless == false && ordinal >= shaderslot::kMaterialTextureCount )
             {
-                SW_LOG_WARNING( "Material '%#': 이 백엔드는 머티리얼 텍스처를 %#개까지만 바인딩합니다 — '%#' 는 흰색으로 남습니다.",
+                SW_LOG_WARNING( "Material '%#': this backend binds at most %# material textures - '%#' stays white.",
                                 _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
                 continue;
             }
@@ -387,7 +387,7 @@ namespace sw
         ShaderReflectionData reflection{};
         if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( pDevice->getBackendType() ), reflection ) == false )
         {
-            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더 리플렉션을 찾지 못했습니다 ('%#') — 바이트를 비우고 올리지 않습니다.", _desc._name.c_str(), _desc._shaderPath.c_str() );
+            SW_LOG_ERROR( "Shader reflection for material '%#' not found ('%#') - clearing the bytes and not uploading.", _desc._name.c_str(), _desc._shaderPath.c_str() );
             discardBytesAfterLayoutError();
             return false;
         }
@@ -472,7 +472,7 @@ namespace sw
         // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
         {
-            SW_LOG_ERROR( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 ('%#') — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
+            SW_LOG_ERROR( "The shader of material '%#' has no material schema ('%#') - declare SW_MATERIAL_BEGIN/END or MaterialCB.",
                           _desc._name.c_str(), _desc._shaderPath.c_str() );
             discardBytesAfterLayoutError();
             return false;

@@ -1,6 +1,6 @@
 /**
  * @file MeshModifiersPanel.h
- * @brief Mesh Modifiers 패널 — 대상 메시 고르기, 모디파이어 스택(추가 · 켜짐 · 위/아래 · 삭제), 매개변수 편집, 미리보기, 사이드카 저장, 굽기.
+ * @brief Mesh Modifiers 패널 — 대상 메시 고르기, 모디파이어 스택(추가 · 켜짐 · 위/아래 · 삭제), 매개변수 편집, 미리보기, 사이드카 저장, 베이크.
  * @details 매개변수 입력칸은 모디파이어의 선언(`MeshModifierParamDef`)만 보고 그린다 — 새 모디파이어는 이 패널을 고치지 않는다.
  *          선언의 선택 칸이 모양을 정한다 — 구역(`_pGroup`) · 툴팁 · 단위, NumberList 열 선언(행 × 열 표), 참조의 컴포넌트 걸러 보기, 경로의 확장자.
  *          곡선은 엔진 공용 곡선 편집기(`EditorCurveEditor`)를 `MeshModifierParamEdit` 의 선형 키 어댑터로 쓴다.
@@ -49,7 +49,7 @@ namespace sw::editor
         bool asksBeforeClose() const override { return false; }
 
     private:
-        /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 정본이다. */
+        /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 기준이다. */
         void syncDocumentDirty() override;
         /** @brief "Don't Save" — 스택을 마지막으로 읽거나 쓴 사이드카 상태로 돌립니다. */
         void revertDocument() override;
@@ -57,12 +57,12 @@ namespace sw::editor
         void drawStackList( MeshModifierSession& session );
         /**
          * @brief 추가 단추와 종류 메뉴를 그리고, 고르면 @p stack 맨 아래에 더합니다. 더한 번호를, 아니면 -1 을 반환합니다.
-         * @param pMarkPrefix 자동화 이름표 접두(`<접두>.add` · `<접두>.category.<카테고리>` · `<접두>.item.<id>`)
+         * @param pMarkPrefix 자동화 이름 접두(`<접두>.add` · `<접두>.category.<카테고리>` · `<접두>.item.<id>`)
          */
         int32 drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix );
         /**
          * @brief 스택의 줄(켜짐 · 이름 · 위/아래 · 삭제)을 그리고 바뀐 고른 번호를 반환합니다. 목록은 다 그린 뒤 고친다.
-         * @param pMarkPrefix    줄 이름 칸의 자동화 이름표 접두(`<접두>.<번호>`)
+         * @param pMarkPrefix    줄 이름 칸의 자동화 이름 접두(`<접두>.<번호>`)
          * @param pOutEnterIndex 주면 묶음(Deformable) 줄에 ">" 단추를 두고, 누른 줄 번호를 받습니다.
          */
         int32 drawStackRows( MeshModifierSession& session, MeshModifierStack& stack, int32 selectedIndex, const utf8* pMarkPrefix, int32* pOutEnterIndex );

@@ -726,7 +726,7 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
 
 /**
  * @brief [ReflectionParserTest] `MaxCount` 는 C++ 정수 상수 이름을 받아 그 값을 코덱 · 정규 문자열 · `PropertyMetadata::_maxCount` 에 넣습니다
- * @details 상한의 정본을 상수 하나로 두려는 것입니다. 이름은 필드가 든 타입에서 먼저 찾고, 없으면 바깥 네임스페이스에서 한정 이름(`Limit::kMax`)으로 찾습니다.
+ * @details 상한의 기준을 상수 하나로 두려는 것입니다. 이름은 필드가 든 타입에서 먼저 찾고, 없으면 바깥 네임스페이스에서 한정 이름(`Limit::kMax`)으로 찾습니다.
  *          찾지 못한 이름, 정수가 아닌 상수, 1 보다 작은 값은 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
  */
 SW_TEST_CASE( ReflectionParserTest, MaxCountReadsANamedIntegerConstant )
@@ -1043,7 +1043,7 @@ SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
 /**
  * @brief [ReflectionParserTest] 파서는 헤더를 이 빌드와 같은 타깃 매크로(플랫폼 · 아키텍처 · `SW_COMPILER_CLANG`)로 읽는다
  * @details libclang 은 CMake 를 거치지 않으므로 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 를 파서가 직접 넘긴다
- *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 갈래가 파서와 컴파일러에서 달라진다. 이 테스트 바이너리가 받은
+ *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 분기가 파서와 컴파일러에서 달라진다. 이 테스트 바이너리가 받은
  *          매크로를 헤더 안에서 `#error` 로 대조한다.
  */
 SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )

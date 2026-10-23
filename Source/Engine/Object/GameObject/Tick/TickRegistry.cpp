@@ -400,7 +400,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `-gv_tickBatch=0`: 타입별 일괄 틱(`TickBatchRegistry`)을 끄고 모든 오브젝트를 칸 목록으로 돌립니다 — 같은 바이너리로 전/후를 견줍니다.
+     * @brief `-gv_tickBatch=0`: 타입별 일괄 틱(`TickBatchRegistry`)을 끄고 모든 오브젝트를 칸 목록으로 돌립니다 — 같은 바이너리로 전/후를 비교합니다.
      * @details 기동 때 정합니다. 실행 중에 바꾸면 다음 전체 훑기(모듈 적재 · 씬 초기화)부터 따릅니다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_tickBatch, true, "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)" );

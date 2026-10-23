@@ -172,7 +172,7 @@ namespace sw
         /**
          * @brief `MaxCount` 에 적은 C++ 정수 상수 이름입니다(`MaxCount = kMaxSlotCount`, `MaxCount = LedgerConstant::kMaxMemoSize`). 숫자로 적었으면 비어 있습니다.
          * @details 애노테이션 단계는 이름만 받아 두고, 선언을 아는 `AstVisitor` 가 그 상수를 찾아 값을 `_maxCount` 에 넣습니다(`resolveMaxCountName`).
-         *          상한의 정본을 C++ 상수 하나로 두려는 것입니다 — 숫자를 두 곳에 적으면 둘이 어긋나도 아무도 모릅니다.
+         *          상한의 기준을 C++ 상수 하나로 두려는 것입니다 — 숫자를 두 곳에 적으면 둘이 어긋나도 아무도 모릅니다.
          */
         string        _maxCountName;
         float32       _minRange;

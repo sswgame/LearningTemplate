@@ -23,7 +23,7 @@ namespace sw
     enum class NavObstacleMode : uint8
     {
         RebakeTiles = 0, ///< 닿은 타일을 정적 기하부터 다시 베이크한다(장애물이 적고 드물게 움직일 때)
-        TileCache,       ///< 정적 기하는 타일마다 높이 층으로 한 번 굽고, 장애물은 층 위에서만 다시 짓는다(Detour TileCache — 장애물이 많고 자주 움직일 때)
+        TileCache,       ///< 정적 기하는 타일마다 높이 층으로 한 번 베이크하고, 장애물은 층 위에서만 다시 짓는다(Detour TileCache — 장애물이 많고 자주 움직일 때)
     };
 
     /**

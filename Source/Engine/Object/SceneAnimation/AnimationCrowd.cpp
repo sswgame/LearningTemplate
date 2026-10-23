@@ -406,8 +406,8 @@ namespace sw
             if ( bCachedVertexAnimation )
                 return entry._mesh;
         }
-        // 쿠킹본이 있으면(배포본의 팩) 읽고, 없으면 처음 쓸 때 굽는다 — 같은 원본 · 클립의 먼 캐릭터는 이 메시 하나를 나눈다.
-        // 굽지 못한 조합도 적어 두어 매 프레임 다시 굽지 않는다.
+        // 쿠킹본이 있으면(배포본의 팩) 읽고, 없으면 처음 쓸 때 베이크한다 — 같은 원본 · 클립의 먼 캐릭터는 이 메시 하나를 나눈다.
+        // 베이크하지 못한 조합도 적어 두어 매 프레임 다시 베이크하지 않는다.
         SW_PROFILE_SCOPE( "GT.Animation.bakeVertexAnimation" );
         shared_ptr<MeshVertexAnimation> animation = make_shared<MeshVertexAnimation>();
         VertexAnimationEntry            entry{};
@@ -420,7 +420,7 @@ namespace sw
         const bool   bCookedBinaryFound = cookedPath.empty() == false && ResourceIO::hasResource( cookedPath ) && animation->loadFromResource( cookedPath );
         if ( bCookedBinaryFound )
         {
-            // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 굽는다.
+            // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 베이크한다.
             bReady = animation->_vertexCount == sourceMesh->getVertexCount() && animation->_bAnchorRootMotion == anchor;
             if ( bReady )
                 ++_cookedVertexAnimationCount;

@@ -75,7 +75,7 @@ namespace sw
         DestructionState();
 
         /**
-         * @brief 그래프, 테이블, 앵커로 시작합니다(뿌리 하나가 활성이고 그룹은 하나). 그래프는 참조만 하므로 이 상태보다 오래 살아야 합니다.
+         * @brief 그래프, 테이블, 앵커로 시작합니다(루트 하나가 활성이고 그룹은 하나). 그래프는 참조만 하므로 이 상태보다 오래 살아야 합니다.
          * @param listAnchoredLeaf 잎마다 0 이 아니면 앵커입니다. 비어 있으면 앵커가 없고 통째로 동적입니다.
          */
         void initialize( const FractureGraph& graph, const DestructionProfile& profile, vector_reference<const uint8> listAnchoredLeaf );

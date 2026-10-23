@@ -137,7 +137,7 @@ namespace sw
 
     bool SkeletalBlendSpaceState::isNotifySample( uint32 sampleIndex ) const
     {
-        // 가중치 0 인 표본은 포즈에 없으므로 알림도 내지 않는다(언리얼의 알림 가중치 문턱과 같다).
+        // 가중치 0 인 표본은 포즈에 없으므로 알림도 내지 않는다(언리얼의 알림 가중치 임계값과 같다).
         const float32 weight = _listWeight[sampleIndex];
         switch ( _pDef->_notifyMode )
         {

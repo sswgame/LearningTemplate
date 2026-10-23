@@ -33,7 +33,7 @@ namespace sw
         float32 _riverHalfWidth{};    ///< 강 반폭(칸)
         float32 _eastFloodWidth{};    ///< 동쪽 범람원 폭 — 농장 · 도시가 이쪽에 선다
         float32 _westFloodWidth{};    ///< 서쪽 범람원 폭
-        float32 _desertDuneHeight{};  ///< 사막 경계가 모래 언덕처럼 굽는 폭(칸)
+        float32 _desertDuneHeight{};  ///< 사막 경계가 모래 언덕처럼 베이크하는 폭(칸)
         float32 _desertDuneRate{};    ///< y 한 칸마다 언덕 위상(라디안)
         int32   _desertStartX{};      ///< 동쪽 사막이 시작하는 x
         int32   _rockRidgeX{};        ///< 이 x 부터 동쪽 끝 바위 능선
@@ -99,7 +99,7 @@ namespace sw
 
         /**
          * @brief 순서표를 데이터 @p planPath(자동 계획 XML)와 @p layout 으로 처음부터 다시 짓습니다. 만든 직후에는 순서표가 비어 있습니다.
-         * @details 계획의 칸 · 건물 · 인구 임계값은 데이터가 정본이다(코드에 좌표가 없다). 칸의 x 는 배치의 이름(road · farm)일 수 있고,
+         * @details 계획의 칸 · 건물 · 인구 임계값은 데이터가 기준이다(코드에 좌표가 없다). 칸의 x 는 배치의 이름(road · farm)일 수 있고,
          *          임계값은 구역(1 · 2 · 3 — 배치의 구역 인구) + extra 다.
          * @return 파일을 읽지 못했거나 단계 하나라도 모양이 틀리면 오류를 남기고 false 이며 순서표는 빈다.
          */

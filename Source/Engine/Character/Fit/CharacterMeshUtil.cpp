@@ -55,7 +55,7 @@ namespace sw
                 return influence;
             }
 
-            /** @brief 굽는 가중치(0 이 아닌 것)를 받은 타깃이면 true 입니다. */
+            /** @brief 베이크하는 가중치(0 이 아닌 것)를 받은 타깃이면 true 입니다. */
             static bool isBaked( const hashed_string& name, vector_reference<const BodyMorphWeight> listMorphWeight )
             {
                 for ( const BodyMorphWeight& weight : listMorphWeight )
@@ -221,7 +221,7 @@ namespace sw
             listSection.push_back( baked );
         }
 
-        // 굽지 않은 모프 타깃 — 남은 정점 번호로 옮긴다.
+        // 베이크하지 않은 모프 타깃 — 남은 정점 번호로 옮긴다.
         vector<MeshMorphTarget> listMorphTarget;
         for ( const MeshMorphTarget& target : source.getMorphTargets() )
         {

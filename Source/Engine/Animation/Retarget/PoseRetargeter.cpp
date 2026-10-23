@@ -223,7 +223,7 @@ namespace sw
             _targetBuffer.setModelRotation( pair._target, delta * pair._targetReferenceRotation );
         }
 
-        // 2) 뿌리와 골반 이동: 레퍼런스에서 움직인 만큼을 높이 비로 옮긴다.
+        // 2) 루트와 골반 이동: 레퍼런스에서 움직인 만큼을 높이 비로 옮긴다.
         if ( _translationMode != RetargetTranslationMode::None )
         {
             const float32 scale = ( _translationMode == RetargetTranslationMode::ScaleByPelvisHeight ) ? _heightRatio : 1.0f;
@@ -327,7 +327,7 @@ namespace sw
         {
             outClip.addCurve( curve );
         }
-        // 루트 모션 트랙은 원본 뿌리를 가리켰으면 대상 뿌리로 옮긴다.
+        // 루트 모션 트랙은 원본 루트를 가리켰으면 대상 루트로 옮긴다.
         const int32 sourceRootMotion        = sourceClip.getRootMotionTrack();
         const bool  bRootMotionOnSourceRoot = 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&
                                              listTrackToBone[static_cast<size_t>( sourceRootMotion )] == static_cast<int32>( retargeter.getSourceRootBone() );

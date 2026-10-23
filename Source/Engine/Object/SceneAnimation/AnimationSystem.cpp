@@ -524,7 +524,7 @@ namespace sw
             AnimationSystemInternal::PhaseJob job{};
             job._ppUnit = _listActive.data() + start;
             job._phase  = phase;
-            // 유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다(캐릭터 20 개는 직렬이, 100 개 이상은 병렬이 이긴다) — 잰 비용으로 고른다.
+            // 유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다(캐릭터 20 개는 직렬이, 100 개 이상은 병렬이 이긴다) — 측정한 비용으로 고른다.
             engine::runParallelByCost( end - start, SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::PhaseJob::runRange, &job ) );
         }
     }

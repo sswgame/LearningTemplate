@@ -3536,7 +3536,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, sw::ObjectAddress{ &target }, context ).c_str() );
     SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, sw::ObjectAddress{ &target }, context ).c_str() );
 
-    // 컨테이너는 원소째 옮기고 견준다.
+    // 컨테이너는 원소째 옮기고 비교한다.
     const sw::TypeInfo* pNested = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_NOT_NULL( pNested );
     const sw::PropertyInfo* pGrid = pNested->findPropertyInHierarchy( sw::hashed_string( "_grid" ) );
@@ -4106,7 +4106,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeThe
     ColorListHolder lenient;
     lenient._listColor = { WireShiftColor::Blue };
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenient, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, true ) ) );
-    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "A half-read list remains (the leading element was written)" );
     SW_EXPECT_TRUE( lenient._listColor[0] == WireShiftColor::Blue );
     SW_EXPECT_EQUAL( 9, lenient._after );
 
@@ -4143,7 +4143,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONSoftReadKeepsUnreadableFieldValue
     soft._listValue = { 7 };
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
-    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "A half-read list remains (the leading element was written)" );
     SW_EXPECT_EQUAL( 7, soft._listValue[0] );
     SW_EXPECT_EQUAL( 9, soft._after );
 
@@ -4166,7 +4166,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
     // 둘째 원소를 int32 로 읽지 못하게 고친다
     const sw::string_view readableItem = "<item>2</item>";
     const size_t          itemPosition = text.find( readableItem.data(), 0, readableItem.size() );
-    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "XML 글의 모양이 짐작과 다릅니다" );
+    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "The XML text is not shaped as expected" );
     text.replace( itemPosition, readableItem.size(), "<item>x</item>" );
 
     test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
@@ -4178,7 +4178,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
     SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
     SW_EXPECT_TRUE( listOrphan[0]._name == sw::hashed_string( "_listValue" ) );
     SW_EXPECT_TRUE( listOrphan[0]._text.find( "<item>1</item>" ) != sw::string::npos );
-    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(읽힌 원소만 남은 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "A half-read list remains (only the read elements are kept)" );
     SW_EXPECT_EQUAL( 7, soft._listValue[0] );
     SW_EXPECT_EQUAL( 9, soft._after );
 

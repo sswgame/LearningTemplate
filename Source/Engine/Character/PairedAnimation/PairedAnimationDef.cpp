@@ -52,7 +52,7 @@ namespace sw
 
             /**
              * @brief `align` 글을 풉니다. 없거나 모르는 값이면 오류를 남기고 `None` 입니다(읽기는 `finish` 에서 실패한다).
-             * @details 글 그대로 견준다 — `hashed_string( "none" )` 은 빈 이름(None)과 같아 "적지 않음"과 가를 수 없다.
+             * @details 글 그대로 비교한다 — `hashed_string( "none" )` 은 빈 이름(None)과 같아 "적지 않음"과 가를 수 없다.
              */
             static PairedAnimationAlign parseAlign( CharacterDataReader& reader, const XMLNode& node )
             {

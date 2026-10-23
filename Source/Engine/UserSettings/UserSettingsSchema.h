@@ -3,7 +3,7 @@
  * @brief 사용자 설정(옵션 메뉴)의 스키마와 그 XML 로더를 정의합니다. 스키마는 카테고리, 설정 정의, 그래픽 품질 프리셋, 사용자 파일 버전 올리기 단계로 이루어집니다.
  *
  * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(팩 설정의
- * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 핸들러 등록부(`UserSettingsHandlerRegistry`)뿐입니다.
+ * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 핸들러 레지스트리(`UserSettingsHandlerRegistry`)뿐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

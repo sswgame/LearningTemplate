@@ -29,10 +29,17 @@ endif()
 # "clang-cl 디버그 최적화 끄기"), 어느 쪽이 실제로 걸리는지 읽어서는 알 수 없다.
 # if(MSVC) 로 가르면 각 블록이 그냥 플래그 목록이 된다.
 # ------------------------------------------------------------------------------
+# clang-cl 은 GNU 철자 `-Wall` 을 `-Weverything` 으로 받는다(`clang-cl -### -Wall` 의 출력, LLVM 20.1.8 에서 확인). 두 플랫폼이 같은
+# 경고 집합(`-Wall -Wextra`, GCC.cmake 와 같다)을 쓰도록 clang-cl 에는 `-clang:` 으로 clang 드라이버의 철자를 그대로 넘긴다.
+if(MSVC)
+	set(swWarningBase -clang:-Wall -clang:-Wextra)
+else()
+	set(swWarningBase -Wall -Wextra)
+endif()
+
 target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 활성화
-	-Wall
-	-Wextra
+	${swWarningBase}
 	# 실패를 알리는 결과([[nodiscard]])를 버리면 빌드가 선다. 실패할 수 있는 동사(load · save · parse · apply …)는 선언에 [[nodiscard]] 를
 	# 붙이고(`CheckFallibleNodiscard` 게이트), 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
 	-Werror=unused-result

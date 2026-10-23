@@ -25,7 +25,7 @@ namespace sw::editor
     public:
         EditorViewportCanvasOverlay();
 
-        /** @brief 자 도구입니다. M 키를 누르고 있거나 툴바의 자가 켜져 있으면 바닥(Y = 0)을 끌어 거리를 잽니다. */
+        /** @brief 자 도구입니다. M 키를 누르고 있거나 툴바의 자가 켜져 있으면 바닥(Y = 0)을 끌어 거리를 측정합니다. */
         void processRulerTool( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj, bool bShowRuler );
 
         /**

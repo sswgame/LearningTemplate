@@ -420,10 +420,10 @@ namespace sw
         const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
         if ( cellIndex >= _listTileCell.size() )
             return {};
-        const uint16 value = _listTileCell[cellIndex];
-        if ( value == 0 || value > _listPaletteName.size() )
+        const uint16 paletteNumber = _listTileCell[cellIndex];
+        if ( paletteNumber == 0 || paletteNumber > _listPaletteName.size() )
             return {};
-        return _listPaletteName[value - 1u];
+        return _listPaletteName[paletteNumber - 1u];
     }
 
     bool TileMapXMLData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
@@ -517,7 +517,7 @@ namespace sw
         }
         if ( tileCount < count )
         {
-            SW_LOG_WARNING( "타일 배열이 %#×%# 보다 짧습니다(%# 칸) — 모자란 칸은 기본값으로 적습니다.",
+            SW_LOG_WARNING( "The tile array is shorter than %#x%# (%# cells) - missing cells are written as defaults.",
                             _width, _height, static_cast<uint32>( tileCount ) );
         }
 
@@ -575,9 +575,9 @@ namespace sw
             {
                 for ( int32 x = 0; x < _width; ++x )
                 {
-                    const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
-                    const uint16 value     = ( cellIndex < _listTileCell.size() ) ? _listTileCell[cellIndex] : 0;
-                    cells += to_string( static_cast<uint32>( value ) );
+                    const size_t cellIndex     = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+                    const uint16 paletteNumber = ( cellIndex < _listTileCell.size() ) ? _listTileCell[cellIndex] : 0;
+                    cells += to_string( static_cast<uint32>( paletteNumber ) );
                     cells += ( x + 1 < _width ) ? " " : "\n";
                 }
             }

@@ -8,7 +8,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 셰이더 도메인 발견 — 도메인 목록의 정본은 설정(`EngineConfig._listResourcePriority`)이고 코드는 종류(engine · common)만 안다.
+// 셰이더 도메인 발견 — 도메인 목록의 기준은 설정(`EngineConfig._listResourcePriority`)이고 코드는 종류(engine · common)만 안다.
 // 전부 임시 리소스 트리와 순수 계산만 본다. 실제 컴파일은 TestShaderDomainCompile.cpp(DXC 가 필요해 호스트 전용).
 
 /**

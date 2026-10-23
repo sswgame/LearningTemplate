@@ -374,7 +374,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 정본인지 모르므로 오류다.
+            // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 기준인지 모르므로 오류다.
             if ( XMLReadUtil::hasOnlyKnownNames( maskXML, { "name", "file" }, { "roots", "bones" }, mask._name.c_str() ) == false )
             {
                 bValid = false;

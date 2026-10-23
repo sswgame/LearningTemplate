@@ -76,7 +76,7 @@ namespace sw
         /** @brief 이 트리에서 포커스를 가진 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */
         WidgetID getFocusedWidget() const { return _focusedWidget; }
 
-        /** @brief 뿌리부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
+        /** @brief 루트부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
         void collectWidgetsInDocumentOrder( vector<Widget*>& outListWidget ) const;
 
     private:

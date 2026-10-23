@@ -77,7 +77,7 @@ namespace sw
      *          핫 리로드: 언로드되는 모듈 이미지에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      *
      *          **나눈 책임**(값 멤버, 비가상 직접 호출): 입력 라우팅은 `UIInputRouter`, 테마 고르기와 스타일 세트 짓기는 `UIThemeController`,
-     *          화면 스택 밖 미리보기는 `UIOffscreenScreens` 가 한다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 정본이다).
+     *          화면 스택 밖 미리보기는 `UIOffscreenScreens` 가 한다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
      */
     class SW_API UISystem final : public ISubsystem, public IModuleUnloadListener
     {

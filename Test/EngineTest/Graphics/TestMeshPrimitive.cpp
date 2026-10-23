@@ -211,7 +211,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
         SW_EXPECT_TRUE_MSG( inwardCount == 0, testCase._pID );
         if ( inwardCount != 0 || degenerateCount != 0 )
         {
-            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 정점 %#, 안쪽 향함 %#, 면적 0 %#",
+            SW_LOG_ERROR( "[MeshPrimitiveTest] %# - vertices %#, inward-facing %#, zero-area %#",
                           testCase._pID, static_cast<uint32>( listVertex.size() ), inwardCount, degenerateCount );
         }
     }
@@ -262,7 +262,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
         const bool bAnyDefect = badLengthCount != 0 || inwardCount != 0 || badUvCount != 0;
         if ( bAnyDefect )
         {
-            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 노멀 길이 %#, 안쪽 %#, UV 범위 %#", pID, badLengthCount,
+            SW_LOG_ERROR( "[MeshPrimitiveTest] %# - normal length %#, inward %#, UV range %#", pID, badLengthCount,
                           inwardCount, badUvCount );
         }
 

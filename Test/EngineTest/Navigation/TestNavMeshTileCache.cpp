@@ -1,4 +1,4 @@
-// 장애물 캐시(NavObstacleMode::TileCache) — 정적 기하를 높이 층으로 굽고, 장애물을 넣고 빼면 그 자리만 층에서 다시 짓는다.
+// 장애물 캐시(NavObstacleMode::TileCache) — 정적 기하를 높이 층으로 베이크하고, 장애물을 넣고 빼면 그 자리만 층에서 다시 짓는다.
 #include "pch.h"
 
 #include "Engine/Navigation/INavMesh.h"
@@ -36,7 +36,7 @@ namespace
 } // namespace
 
 /**
- * @brief [NavMeshTileCacheTest] 장애물 캐시로 구운 바닥(20 m)도 걸을 수 있고, 가운데 상자 장애물을 넣으면 그 자리가 막히며, 빼면 다시 열린다
+ * @brief [NavMeshTileCacheTest] 장애물 캐시로 베이크한 바닥(20 m)도 걸을 수 있고, 가운데 상자 장애물을 넣으면 그 자리가 막히며, 빼면 다시 열린다
  */
 SW_TEST_CASE( NavMeshTileCacheTest, ObstacleCarvesAndClearsWithoutRebaking )
 {
@@ -92,7 +92,7 @@ SW_TEST_CASE( NavMeshTileCacheTest, LayerPacksRoundTripThroughInstall )
 }
 
 /**
- * @brief [NavMeshTileCacheTest] 다시 굽기 종류에 캐시 장애물을 넣으면 오류이고 0 이다 — 방식이 섞이지 않는다
+ * @brief [NavMeshTileCacheTest] 다시 베이크 종류에 캐시 장애물을 넣으면 오류이고 0 이다 — 방식이 섞이지 않는다
  */
 SW_TEST_CASE( NavMeshTileCacheTest, RebakeModeRejectsCacheObstacles )
 {

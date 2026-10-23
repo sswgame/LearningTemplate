@@ -65,7 +65,7 @@ SW_TEST_CASE( PackEngineSettingsTest, RejectsIncompleteOrUnknownSettings )
  */
 SW_TEST_CASE( PackEngineSettingsTest, EveryGamePackHasReadableEngineSettings )
 {
-    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // 느슨한 Resource/ 의 모든 팩을 본다 — 배포본은 구운 게임의 팩만 싣는다
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // 느슨한 Resource/ 의 모든 팩을 본다 — 배포본은 베이크한 게임의 팩만 싣는다
     const sw::string       presetFolder = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Config/Game" );
     sw::vector<sw::string> listPreset;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( presetFolder, ".json", listPreset, false ) );

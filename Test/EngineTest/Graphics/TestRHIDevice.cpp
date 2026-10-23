@@ -881,7 +881,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
                 SW_EXPECT_TRUE_MSG( redCount > 0, "오프스크린 드로우가 readback 에 보이지 않습니다" );
                 if ( redCount == 0 )
                 {
-                    SW_LOG_WARNING( "%#: 첫 픽셀 %# %# %# (클리어는 13 13 20, 드로우는 빨강).",
+                    SW_LOG_WARNING( "%#: first pixel %# %# %# (clear is 13 13 20, draw is red).",
                                     device->getBackendName(), pixels.size() > 2 ? pixels[0] : 0,
                                     pixels.size() > 2 ? pixels[1] : 0, pixels.size() > 2 ? pixels[2] : 0 );
                 }
@@ -1929,7 +1929,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                 viewport._width  = static_cast<float32>( kSize );
                 viewport._height = static_cast<float32>( kSize );
                 cmd->beginCommandList();
-                // 먼저 면마다 컬러만 · 깊이만 지운다. 그리기는 둘 다 Load 로 열어, 깊이 면을 잘못 고르면 다른 면의 깊이와 견준다.
+                // 먼저 면마다 컬러만 · 깊이만 지운다. 그리기는 둘 다 Load 로 열어, 깊이 면을 잘못 고르면 다른 면의 깊이와 비교한다.
                 for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
                 {
                     sw::RHIRenderPassBeginInfo clearInfo{};

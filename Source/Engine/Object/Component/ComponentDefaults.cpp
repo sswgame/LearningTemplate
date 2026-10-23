@@ -46,10 +46,10 @@ namespace sw
             }
 
             /**
-             * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 **뿌리 → 파생** 순서로 모읍니다.
+             * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 **루트 → 파생** 순서로 모읍니다.
              * @details 기본값은 `<Component>` 처럼 기반 이름으로도 적을 수 있어야 합니다(모든 컴포넌트에
              *          공통으로 거는 값). 기반 생성자 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지
-             *          않으므로 체인 적용은 생성자가 아니라 여기서 합니다. 뿌리부터 적용해 파생이 마지막에
+             *          않으므로 체인 적용은 생성자가 아니라 여기서 합니다. 루트부터 적용해 파생이 마지막에
              *          덮어씁니다.
              */
             static void collectTypeChain( const TypeInfo& typeInfo, vector<const TypeInfo*>& outListType )
@@ -85,7 +85,7 @@ namespace sw
                     pCursor = pParent;
                 }
 
-                // 뿌리 → 파생 순서로 뒤집는다.
+                // 루트 → 파생 순서로 뒤집는다.
                 for ( size_t head = 0, tail = outListType.size(); head + 1 < tail; ++head, --tail )
                 {
                     const TypeInfo* pTemp = outListType[head];
@@ -217,7 +217,7 @@ namespace sw
                 return *it->second;
         }
 
-        // 뿌리 기반 타입부터 풀어 파생이 마지막에 덮어쓴다.
+        // 루트 기반 타입부터 풀어 파생이 마지막에 덮어쓴다.
         unique_ptr<ResolvedDefaults> pResolved = make_unique<ResolvedDefaults>();
         pResolved->_generation                 = generation;
         vector<const TypeInfo*> listType;
@@ -308,7 +308,7 @@ namespace sw
     {
         if ( patch._bMemcpy == SW_TRUE )
         {
-            // 비트필드는 바이트로 담지 않는다(`isMemcpyProperty`). 값 주소가 없으면 패치를 만들 때 고른 갈래와 맞지 않는 것이라 쓰지 않는다.
+            // 비트필드는 바이트로 담지 않는다(`isMemcpyProperty`). 값 주소가 없으면 패치를 만들 때 고른 분기와 맞지 않는 것이라 쓰지 않는다.
             void* const pPropPtr = patch._pProperty->getRawPtr( pInstance );
             if ( pPropPtr == nullptr )
             {

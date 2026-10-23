@@ -225,7 +225,7 @@ namespace sw
             }
             case ShooterEnemyPhase::Attacking:
             {
-                // 클립의 맞는 알림이 왔고 손이 닿는 거리면 한 번 맞힌다 — 시각의 정본은 클립 데이터다.
+                // 클립의 맞는 알림이 왔고 손이 닿는 거리면 한 번 맞힌다 — 시각의 기준은 클립 데이터다.
                 if ( _bAttackLanded == SW_FALSE && _bAttackHitEvent == SW_TRUE )
                 {
                     _bAttackLanded = SW_TRUE;

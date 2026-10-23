@@ -14,7 +14,7 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [EditorDefaultObjectsTest] 기본 인스턴스(CDO)와 같은 값은 기본이고, 바꾸면 기본이 아니다. 메타 글은 숫자를 값으로 견준다("1" 과 "1.0")
+ * @brief [EditorDefaultObjectsTest] 기본 인스턴스(CDO)와 같은 값은 기본이고, 바꾸면 기본이 아니다. 메타 글은 숫자를 값으로 비교한다("1" 과 "1.0")
  */
 SW_TEST_CASE( EditorDefaultObjectsTest, DefaultInstanceAndMetadataComparison )
 {

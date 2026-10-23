@@ -152,7 +152,7 @@ namespace sw::editor
             // 남아, 쓰는 사람은 왜 비었는지 알 수 없다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
             if ( bSuccess == false )
             {
-                SW_LOG_WARNING( "Paste Component as New: %# 의 값을 읽지 못했습니다. 빈 컴포넌트가 추가됩니다.",
+                SW_LOG_WARNING( "Paste Component as New: failed to read the value of %#. An empty component is added.",
                                 string{ typeName }.c_str() );
             }
 

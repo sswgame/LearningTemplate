@@ -723,7 +723,7 @@ SW_TEST_CASE( ShaderCookStampTest, VerifyCatchesEveryStaleShape )
     const sw::string binDir = resourceRoot.makePath( "engine/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    // 1) 한 번도 굽지 않은 백엔드는 문제다.
+    // 1) 한 번도 베이크하지 않은 백엔드는 문제다.
     sw::vector<sw::string> listProblem;
     sw::ShaderCooker::verifyCookedShaders( root, test::makeShaderConfigPriority(), "vulkan", listProblem );
     SW_EXPECT_EQUAL( size_t( 1 ), listProblem.size() );

@@ -844,7 +844,7 @@ namespace sw
         // b# → 슬롯 세트의 b 범위. 링 상수버퍼는 이번 프레임 슬롯 구간을 건다. 세트는 드로우 직전 flushSlotSet 이 굳힌다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
         {
-            SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 슬롯 세트의 b 자리 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
+            SW_LOG_TRACE( "bindConstantBuffer: slot b%# exceeds the b-slot count of the slot set (%#).", slot, shaderslot::kConstantBufferSlotCount );
             return;
         }
         setSlot( false, shaderslot::vk::kBShift + slot, constantBufferIndex, false, true );

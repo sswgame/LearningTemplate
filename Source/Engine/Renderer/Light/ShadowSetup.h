@@ -71,7 +71,7 @@ namespace sw
         uint32 getCascadeCount() const { return _cascadeCount; }
         /** @brief 캐스케이드 슬롯 한 변이 아틀라스에서 차지하는 비율입니다(1 = 아틀라스 전체, 0.5 = 사분면). 셰이더의 `g_ShadowCascadeLayout.y` 입니다. */
         float32 getCascadeTileScale() const { return _bQuadrant == SW_TRUE ? 0.5f : 1.0f; }
-        /** @brief 캐스케이드 슬롯 한 변의 텍셀 수입니다. 방향광 볼륨의 텍셀 스냅과 바이어스가 이 크기로 잽니다. */
+        /** @brief 캐스케이드 슬롯 한 변의 텍셀 수입니다. 방향광 볼륨의 텍셀 스냅과 바이어스가 이 크기로 측정합니다. */
         uint32 getCascadeTileResolution() const { return _bQuadrant == SW_TRUE ? _atlasResolution / 2u : _atlasResolution; }
         /** @brief 캐스케이드 c 의 슬롯입니다(사분면 0 왼쪽 위, 1 오른쪽 위, 2 왼쪽 아래, 3 오른쪽 아래. 셰이더가 같은 순서로 원점을 구합니다). */
         ShadowAtlasCell getCascadeCell( uint32 cascadeIndex ) const;

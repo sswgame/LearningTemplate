@@ -771,8 +771,8 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
     SW_EXPECT_TRUE_MSG( text.find( "TransientPool  3.0 MB  100.0%  1 resources" ) != sw::string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "Descriptor  0.0 MB  0.0%  0 resources  + 1 of unknown size" ) != sw::string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "Buffer" ) == sw::string_view::npos, joined.c_str() );
-    SW_EXPECT_TRUE_MSG( text.find( "사용량 모름  예산 모름  남은 양 8.0 MB" ) != sw::string_view::npos, joined.c_str() );
-    SW_EXPECT_TRUE_MSG( text.find( "모름 — 이 프로세스의 드라이버 사용량이 없다" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "usage unknown  budget unknown  available 8.0 MB" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "unknown - no driver usage for this process" ) != sw::string_view::npos, joined.c_str() );
 #else
     SW_TEST_SKIP( "Info logs are compiled out in this configuration" );
 #endif
@@ -780,7 +780,7 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
 
 /**
  * @brief [RHITextureRegionUploadTest] 영역 업로드 검사 하나가 네 백엔드의 규칙이다 — 행 바이트 · 밉 크기 · 범위 · 포맷 · 데이터 크기
- * @details 64×32 R8 텍스처(밉 2 — 밉 1 은 32×16) · 면 2 로 갈래마다 하나씩. 더하기가 넘치는 x + width 도 밖으로 본다.
+ * @details 64×32 R8 텍스처(밉 2 — 밉 1 은 32×16) · 면 2 로 분기마다 하나씩. 더하기가 넘치는 x + width 도 밖으로 본다.
  */
 SW_TEST_CASE( RHITextureRegionUploadTest, ValidationAcceptsInsideAndRejectsTheRest )
 {

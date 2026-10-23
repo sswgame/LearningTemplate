@@ -135,7 +135,7 @@ namespace sw
                 pVfx->appendGPULights( outList );
         }
 
-        // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다(IndirectLighting.md P3). 쓸 수 있는 베이크가 없는 볼륨(굽지 않음 · 모양이 다름)은 넣지 않는다 —
+        // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다(IndirectLighting.md P3). 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
         if ( pOutListProbeElement != nullptr )
         {
@@ -145,7 +145,7 @@ namespace sw
                 if ( pGrid != nullptr )
                     outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pGrid, *pOutListProbeElement ) );
             }
-            // 반사 프로브는 볼륨 뒤에 붙는다(IndirectLighting.md P4). 쓸 수 있는 베이크가 없는 프로브(굽지 않음 · 옮긴 뒤 다시 굽지 않음)는 넣지 않는다.
+            // 반사 프로브는 볼륨 뒤에 붙는다(IndirectLighting.md P4). 쓸 수 있는 베이크가 없는 프로브(베이크하지 않음 · 옮긴 뒤 다시 베이크하지 않음)는 넣지 않는다.
             for ( const ReflectionProbeComponent* pProbe : registry.getAll<ReflectionProbeComponent>() )
             {
                 const ReflectionProbeData* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;
@@ -170,7 +170,7 @@ namespace sw
             if ( _bWarnedOverflow == SW_FALSE )
             {
                 _bWarnedOverflow = SW_TRUE;
-                SW_LOG_WARNING( "라이트가 상한(%#)을 넘었습니다 — 앞에서부터 잘라 보냅니다.", shaderslot::kMaxFrameLight );
+                SW_LOG_WARNING( "The light count exceeds the limit (%#) - truncating from the front.", shaderslot::kMaxFrameLight );
             }
             count = shaderslot::kMaxFrameLight;
         }

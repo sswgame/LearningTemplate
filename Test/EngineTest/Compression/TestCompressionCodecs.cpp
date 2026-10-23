@@ -254,7 +254,7 @@ SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
     };
     const utf8* arrLabel[] = { "RLE", "LZ4", "LZ4-HC(9)", "Zstd(기본)", "Zstd(15)" };
 
-    SW_LOG_INFO( "압축 코덱 실측 — 원본 %# KB", static_cast<uint32>( listOriginal.size() / 1024 ) );
+    SW_LOG_INFO( "Compression codec measurement - original %# KB", static_cast<uint32>( listOriginal.size() / 1024 ) );
     for ( uint32 index = 0; index < SW_COUNT_OF( arrMeasure ); ++index )
     {
         const CodecMeasure& measure = arrMeasure[index];
@@ -265,7 +265,7 @@ SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
                                                  ? ( 100.0 * static_cast<float64>( measure._compressedSize ) / static_cast<float64>( listOriginal.size() ) )
                                                  : 0.0;
         // `%#` 는 옵션이 붙지 않는 순수 자리표다 — 폭·정밀도가 필요하면 printf 형을 쓴다(`%-12s`, `%.2f`).
-        SW_LOG_INFO( "  %-12s %6u KB (%5.1f%%)  압축 %7.2f ms  해제 %7.2f ms",
+        SW_LOG_INFO( "  %-12s %6u KB (%5.1f%%)  compress %7.2f ms  decompress %7.2f ms",
                      arrLabel[index], static_cast<uint32>( measure._compressedSize / 1024 ), ratio,
                      measure._compressMs, measure._decompressMs );
     }

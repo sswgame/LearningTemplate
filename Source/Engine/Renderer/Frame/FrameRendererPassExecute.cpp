@@ -737,7 +737,7 @@ namespace sw
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
-            // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 잰다(Tonemap 패스와 같은 자리).
+            // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             recordAutoExposure( context, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
             const bool             bUpscale = recordUpscaleEasu( context, srcName );
@@ -903,8 +903,8 @@ namespace sw
             if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
             {
                 if ( _bMissingColorTargetLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
-                    SW_LOG_ERROR( "컬러 타깃 '%#' 이 이번 프레임에 없습니다 — 패스를 건너뜁니다(없는 첨부의 핸들 0 은 백버퍼라 그대로 열면 화면에 그립니다). "
-                                  "파이프라인의 _listOutput · _listAttachment 를 보십시오.",
+                    SW_LOG_ERROR( "Color target '%#' does not exist this frame - skipping the pass (handle 0 of a missing attachment is the back buffer, so opening it as is would draw to the screen). "
+                                  "Check _listOutput and _listAttachment of the pipeline.",
                                   pColorNames[colorTargetIndex] );
                 return false;
             }

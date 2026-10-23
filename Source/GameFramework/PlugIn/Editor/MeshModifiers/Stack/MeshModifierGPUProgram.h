@@ -1,9 +1,9 @@
 /**
  * @file MeshModifierGPUProgram.h
  * @brief 모디파이어 스택을 GPU 모프 컴퓨트가 실행할 프로그램(float4 목록)으로 바꿉니다. ImGui · 씬 · RHI 를 모릅니다.
- * @details 실행기는 엔진 셰이더 `Resource/engine/shaders/meshmodifier.hlsli` 이고 프로그램 모양은 그 머리 주석이 정본이다.
+ * @details 실행기는 엔진 셰이더 `Resource/engine/shaders/meshmodifier.hlsli` 이고 프로그램 모양은 그 머리 주석이 기준이다.
  *          프로그램은 `Mesh::setGPUDeformProgram` 으로 미리보기 메시에 걸리고 모프 풀이 프레임마다 정점에 건다(`meshmorph.hlsl`).
- *          CPU 스택이 정본이다 — GPU 가 다시 계산하지 못하는 값(모디파이어마다의 입력 상자 · 공간 행렬 · 기준 오브젝트)은 CPU 가 구해 싣는다.
+ *          CPU 스택이 기준이다 — GPU 가 다시 계산하지 못하는 값(모디파이어마다의 입력 상자 · 공간 행렬 · 기준 오브젝트)은 CPU 가 구해 싣는다.
  *          입력 상자는 같은 평가로 CPU 스택을 한 번 건 결과(`MeshModifierEvaluation::_pListInputBounds`)를 받는다.
  *
  *          GPU 로 옮기는 조건: 켜진 모디파이어가 모두 `supportsGPU()` 이고 종류 표(`findKind`)에 있으며, 스택이 법선 재계산을 고르지 않았고,

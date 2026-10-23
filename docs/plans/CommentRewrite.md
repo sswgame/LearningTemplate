@@ -1,23 +1,29 @@
 # 주석을 새 문체로 다시 쓰기 (6 차 이후 남은 구역)
 
-> 상태: 구현중 · 선행: 없음 · 영역: project · 옛번호: C-16 · 진행: 0/6
+> 상태: 끝 · 선행: 없음 · 영역: project · 옛번호: C-16 · 진행: 6/6
 
-새 문체(문서 작성 규칙 `docs/10_WritingDocs.md` 의 용어 대조표, 이름 풀이 · 코드가 이미 말하는 말 지우기)로 주석을 다시 쓰는 작업이 아래 구역에서 끝나지 않았다. 구역마다 작업 워크트리(`py -3 -m Scripts worktree-make c6<이름>`)를 따로 만들어 이어서 한다. 같은 폴더를 다른 작업이 건드리는 중이면 미룬다(파일이 겹쳐 미뤄진 정리다).
-
-로그 문자열의 한글(KoreanLogStrings)은 같은 파일을 건드리므로 구역을 맡은 작업자가 그 구역의 [KoreanLogStrings](KoreanLogStrings.md) 단위를 함께 한다.
+새 문체(문서 작성 규칙 `docs/10_WritingDocs.md` 의 용어 대조표, 이름 풀이 · 코드가 이미 말하는 말 지우기)로 주석을 다시 쓰는 작업이다. 구역별 작업은 구역마다 문체 판단이 갈려 끝나지 않았다. 2026-10-24 에 구역을 가르지 않고 낱말 단위로 `Source` · `Test` 전체를 쓸었다.
 
 ## 1. 단위
 
 | 단위 | 내용 | 상태 |
 |---|---|---|
-| W1 | Engine: Graphics · Renderer 의 13KB 넘는 큰 파일 약 100 개(작은 파일은 끝났다) | 대기 |
-| W2 | Engine 나머지: Object · Scene · Resource · Serialization · Spatial · Common 대부분, UI 의 `Console`, Compression · Observability · Profiling · Telemetry 전부. `SceneNavigation.h` · `GameObjectManager.h` 는 충돌 때문에 다시 쓰지 못했다 | 대기 |
-| W3 | Editor: 2026-10-22 `wt/onlineclean` 에서 대조표 낱말(표 · 칸 · 자리 · 정본 · 창구 · 묶음 · 뿌리 · 든다 · 떼다 · 올리다 · 내리다 등) 239 개 파일을 뜻을 가려 다시 썼다. 남은 것: 생성 파일 `EditorIconGlyphs.h` 의 "뗀" 은 생성기 `GenerateEditorIcons.py` 에서 고친다. 이전 기록: 주석 25 줄 이상인 파일(`Common/GUI`, `Commands`, `Viewport` 등)과 그보다 짧은 파일, `Common` 은 옛 어휘가 가장 많던 22 개(2026-10-21), `Panels` 는 23 개 파일(2026-10-21). 나머지는 옛 어휘가 파일당 10 곳 미만 | 대기 |
-| W4 | GameFramework: Base 헤더는 끝났다(2026-10-21). 남은 것: 다른 작업이 고치던 헤더 열한 개(`GameInstanceBase.h` · `IGame.h` · `GameSettings.h` · `GameDataXML.h` · Online 의 `ServerDirectoryControl.h` · `BlockingHTTPClient.h` · `GroupChannelMembership.h` · `ServiceReport.h` · `NetSecurity.h` · `OnlineServerKit.h` · `OnlineServiceHost.h`), Base 의 .cpp · .inl, Kits/Feature/Online 의 Account 밖 폴더(Kits/Feature 전체는 2026-10-21 `wt/kitclean` 에서 끝). `NetPairedAnimation` 은 `wt/animation` 이 새로 만든 파일이라 뺐다 | 대기 |
-| W5 | Core: 열 폴더(Math · Process · Delegate · Memory · Diagnostics · CommandLine · Container · Task · LogSink · String)는 대조표 용어만 2026-10-21 정리했다(Network · File 도 같다). 문체 다듬기는 Container 의 표준 컨테이너 대응 헤더만 2026-10-22 에 끝났고, 나머지 아홉 폴더와 Container 의 다른 파일이 남았다. RuntimeAPI 는 손대지 않았다 | 대기 |
-| W6 | Games: Empty 벤치 씬 일부와 VoxelCraft 전체 | 대기 |
+| W1 | Engine: Graphics · Renderer 의 큰 파일 | 끝남(2026-10-24, 아래 낱말 쓸기) |
+| W2 | Engine 나머지(Object · Scene · Resource · Serialization · Spatial · Common, UI, Compression · Observability · Profiling · Telemetry) | 끝남(2026-10-24, 같음) |
+| W3 | Editor. `EditorIconGlyphs.h` 의 "뗀" 은 이미 없다(생성기에도 없음) | 끝남(2026-10-24, 같음) |
+| W4 | GameFramework | 끝남(2026-10-24, 같음) |
+| W5 | Core | 끝남(2026-10-24, 같음) |
+| W6 | Games(Empty 벤치 씬 · VoxelCraft) | 끝남(2026-10-24, 같음) |
 
-## 2. 하는 법
+## 2. 한 일
 
-- 구역마다 규칙: 동작을 바꾸지 않는다(주석만). 용어 대조표 낱말을 뜻을 가려 고친다(기계적 치환 금지).
-- 끝낸 단위는 `상태` 칸을 `끝남(날짜)` 로 고친다.
+주석 안의 낱말만 바꿨다(코드와 문자열 리터럴은 그대로, 동작 변경 없음). 대조표에서 한 낱말에 한 번역이 맞는 것만 골랐다.
+
+- 견주다 → 비교하다(어미 활용을 맞췄다), 등록부 → 레지스트리, 도장 → 스탬프, 이름표 → 이름, 정본 → 기준, 문턱(값) → 임계값, 갈래 → 분기, 일감 → 작업.
+- 뿌리 → 루트(본 · 위젯 · 노드의 루트), 결함의 뿌리 → 근본 원인. "흩뿌리다"와 식물의 뿌리(`Foliage` · `Placement` · `PropScatter` · `TreeBend` · `MeshUtil` 의 풀)는 그대로 뒀다.
+- 되살리다 → 복원하다(되살아나다는 부활이라 그대로), 굽다 → 베이크하다(굽은 = 휜 것은 그대로), 재다 → 측정하다, 갈아 끼우다 → 교체하다.
+- 낱말 뒤 조사는 새 낱말의 받침에 맞게 고쳤다. 끝점은 기하의 끝점(선분 · 베지어)이라 그대로 뒀다 — 대조표의 "끝점 → 엔드포인트"는 서버 엔드포인트 얘기다.
+
+## 3. 규칙 밖으로 둔 것
+
+`표` · `자리` · `칸` · `든다` · `묶음` · `창구` · `몫` · `꼴` · `얹다` · `세우다` · `올리다` · `내리다` · `떼다` 같은 낱말은 같은 글자가 일반 어휘로도 쓰여(예: 키를 뗌, 몫 = 담당, 세우다 = 서게 하다) 낱말만 보고는 번역이 정해지지 않는다. 이 낱말은 새 일로 두지 않고 `docs/10_WritingDocs.md` 7절대로 그 파일의 주석을 고칠 때 그 자리에서 함께 고친다.

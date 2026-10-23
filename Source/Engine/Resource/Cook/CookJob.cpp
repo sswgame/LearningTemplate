@@ -190,7 +190,7 @@ namespace sw
             return pLeft->_extension < pRight->_extension;
         } );
 
-        // 사람이 읽을 수 있는 정본 글을 만들어 해시한다 — 칸 사이 구분자가 있어 이름 둘이 붙어 다른 이름이 되지 않는다.
+        // 사람이 읽을 수 있는 기준 글을 만들어 해시한다 — 칸 사이 구분자가 있어 이름 둘이 붙어 다른 이름이 되지 않는다.
         string canonical;
         canonical.append( "cooker=" ).append( desc._cookerName ).append( "\nversion=" ).append( sw::to_string( desc._cookerVersion ) );
         canonical.append( "\ntarget=" ).append( desc._target ).append( "\nsettings=" ).append( sw::to_string( desc._settingsHash ) ).append( "\n" );

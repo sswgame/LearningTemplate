@@ -1100,7 +1100,7 @@ SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string materialDiskPath = sw::ResourcePaths::findLooseFile( "game/shooter3d/materials/cctvmonitor.material" ).getDiskPath();
-    SW_ASSERT_TRUE_MSG( materialDiskPath.empty() == false, "game/shooter3d/materials/cctvmonitor.material 를 찾지 못했다" );
+    SW_ASSERT_TRUE_MSG( materialDiskPath.empty() == false, "game/shooter3d/materials/cctvmonitor.material not found" );
     sw::string xml;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( materialDiskPath, xml ) );
 
@@ -1110,7 +1110,7 @@ SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )
 
     sw::ShaderReflectionData reflection{};
     SW_ASSERT_TRUE_MSG( sw::Material::reflectMaterialSchema( material->getDesc()._shaderPath, sw::ShaderTargetFormat::SPIRV_Vulkan, reflection ),
-                        "게임 셰이더의 리플렉션을 구하지 못했다(App.exe --cook-shaders 로 쿠킹했는가)" );
+                        "Could not get the reflection of the game shader (was it cooked with App.exe --cook-shaders?)" );
     SW_ASSERT_TRUE( sw::Material::hasMaterialSchema( reflection ) );
     SW_EXPECT_TRUE( material->syncPropertiesFromReflection( reflection ) );
     SW_EXPECT_FALSE( material->getBuffer().empty() );

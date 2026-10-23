@@ -23,7 +23,7 @@ namespace sw::editor
 
             /**
              * @brief 레퍼런스 포즈 경로를 스켈레톤 경로에서 만듭니다(`a.skeleton.xml` → `a.refpose.xml`).
-             * @details 레퍼런스 포즈는 창이 저장하는 스켈레톤의 짝 파일이라 아직 없을 수 있다 — 데이터에 따로 적으면 없는 파일을 가리키는 칸이 생기므로 스켈레톤 하나를 정본으로 둔다.
+             * @details 레퍼런스 포즈는 창이 저장하는 스켈레톤의 짝 파일이라 아직 없을 수 있다 — 데이터에 따로 적으면 없는 파일을 가리키는 칸이 생기므로 스켈레톤 하나를 기준으로 둔다.
              *          스켈레톤이 `.skeleton.xml` 으로 끝나지 않으면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] static bool makeRefPosePath( const string& skeletonPath, string& outValue, string_view sourceName )

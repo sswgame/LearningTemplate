@@ -5,7 +5,7 @@
  *          쿠킹 표의 `cook_suffixes`(JSON) 가 같은 종류를 따로 적었다(계획 `StructureSimplification` AT1). 지금은 파생하는 쪽(쿠킹 경로 `AssetCookPath`,
  *          판 검사, 팩 쿠커의 잔재 판정)이 모두 이 표를 읽는다.
  *          - **접미사 우선순위는 이 표가 정렬로 가진다**: 가장 긴 접미사가 먼저, 길이가 같으면 등록 순이다(`.scene.xml` 이 `.scene` 보다 먼저). 표의 적은 순서에 기대지 않는다.
- *          - 종류의 열쇠는 이름(`_name`)이다. 정의는 헤더의 `static constexpr` 라 DLL 마다 사본이 있을 수 있어 주소로 견주지 않는다.
+ *          - 종류의 열쇠는 이름(`_name`)이다. 정의는 헤더의 `static constexpr` 라 DLL 마다 사본이 있을 수 있어 주소로 비교하지 않는다.
  *          - 등록 줄은 정의를 가진 기능의 .cpp(캐시가 있으면 캐시 등록 옆)에 둔다. 모듈이 등록한 종류는 등록자가 사라질 때 표에서 빠진다.
  *          - 이름 · 접미사가 겹치는 등록은 표가 받지 않고 문제로 남긴다(`collectProblems` — `AssetTypeRegistryTest` 가 본다).
  *          - **에셋 파일 형식은 XML 이나 바이너리다**(계획 `StructureSimplification` TX7). JSON 접미사는 쿠킹 입력(`CookSource` — 쿠킹이 바이너리로 바꾼다)만 받고,
@@ -90,7 +90,7 @@ namespace sw
 
         /** @brief @p path 끝에 맞는 접미사입니다 — 가장 긴 것이 먼저, 길이가 같으면 등록 순이다. 대소문자는 가리지 않습니다. */
         static AssetSuffixMatch findSuffix( string_view path );
-        /** @brief @p path 의 접미사가 종류 @p def 의 것이면 true 입니다(이름으로 견준다 — 정의는 DLL 마다 사본일 수 있다). 캐시가 "내 종류의 경로인가" 를 볼 때 씁니다. */
+        /** @brief @p path 의 접미사가 종류 @p def 의 것이면 true 입니다(이름으로 비교한다 — 정의는 DLL 마다 사본일 수 있다). 캐시가 "내 종류의 경로인가" 를 볼 때 씁니다. */
         static bool isPathOfType( string_view path, const AssetTypeDef& def );
         /** @brief @p path 가 맞은 종류의 제외 묶음(`_excludeGroup`)입니다. 맞은 종류가 없거나 묶음이 없으면 빈 글입니다. */
         static string_view findExcludeGroup( string_view path );

@@ -231,7 +231,7 @@ SW_TEST_CASE( UIAnimationTest, EventsFireOnce )
 }
 
 /**
- * @brief [UIAnimationTest] 곡선 위 사건은 트랙 값이 문턱을 지날 때 한 번 — 0 → 1 → 0 에서 0.5 를 오를 때 Up, 내릴 때 Down. 거꾸로 재생은 재생 방향의 오르내림을 본다
+ * @brief [UIAnimationTest] 곡선 위 사건은 트랙 값이 임계값을 지날 때 한 번 — 0 → 1 → 0 에서 0.5 를 오를 때 Up, 내릴 때 Down. 거꾸로 재생은 재생 방향의 오르내림을 본다
  * @details 변이: `UIAnimationPlayer::fireEvents` 가 `fireCurveEvents` 를 부르지 않으면 둘 다 0, 오르내림을 바꿔 보면 거꾸로 재생 뒤 수가 어긋난다.
  *          성분이 없는 사건(불투명도의 성분 1)은 트랙째 빠져 값이 움직이지 않는다.
  */

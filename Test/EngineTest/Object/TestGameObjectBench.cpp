@@ -202,7 +202,7 @@ SW_TEST_CASE( GameObjectBenchTest, TickMoversWithPrerequisite )
 }
 
 /**
- * @brief [GameObjectBenchTest] "리더가 먼저 쓴 값을 팔로워가 같은 프레임에 읽는다" 를 세 가지로 표현해 비용을 견준다
+ * @brief [GameObjectBenchTest] "리더가 먼저 쓴 값을 팔로워가 같은 프레임에 읽는다" 를 세 가지로 표현해 비용을 비교한다
  * @details 4000 쌍(오브젝트 8000 개)이 서브틱으로 돈다. 리더는 (3, 0, 0) 을 쓰고 팔로워는 그것을 읽어 (3, 1, 0) 을 쓴다.
  *          - none: 순서를 걸지 않는다(기준선, 읽은 값은 보장되지 않는다).
  *          - group: 리더 `DuringPhysics`, 팔로워 `PostPhysics` — 그룹 사이 장벽으로 순서를 낸다.
@@ -271,7 +271,7 @@ SW_TEST_CASE( GameObjectBenchTest, FollowerOrderingGroupVersusPrerequisite )
 }
 
 /**
- * @brief [GameObjectBenchTest] 한 오브젝트의 서브틱 둘 — 같은 단계(`Normal`) 둘과 `Early` · `Late` 로 나눈 둘의 비용을 견준다
+ * @brief [GameObjectBenchTest] 한 오브젝트의 서브틱 둘 — 같은 단계(`Normal`) 둘과 `Early` · `Late` 로 나눈 둘의 비용을 비교한다
  * @details 단계는 오브젝트의 항목을 다시 만들 때 한 번 정렬하는 값이라 정상 상태 틱 비용은 같아야 한다.
  */
 SW_TEST_CASE( GameObjectBenchTest, IntraObjectPhaseOrdering )
@@ -402,7 +402,7 @@ SW_TEST_CASE( GameObjectBenchTest, PrerequisiteFanOut )
 /**
  * @brief [GameObjectBenchTest] 스폰 변동 — 선행 조건을 가진 팔로워 4000 개가 있는 씬에서 프레임마다 팔로워 하나를 만들고 하나를 지운다
  * @details 총알 · 이펙트 · 따라다니는 뷰가 이 모양이다. 스테이지가 선행 조건에 걸린 오브젝트가 바뀔 때마다 다시 지어지므로(`rebuildStages`)
- *          그 비용이 프레임마다 드는지 본다. 같은 변동을 선행 조건 없이 한 판과 견준다.
+ *          그 비용이 프레임마다 드는지 본다. 같은 변동을 선행 조건 없이 한 판과 비교한다.
  */
 SW_TEST_CASE( GameObjectBenchTest, PrerequisiteSpawnChurn )
 {

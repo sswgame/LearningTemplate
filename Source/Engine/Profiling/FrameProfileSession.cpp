@@ -61,7 +61,7 @@ namespace sw
         _secondsTarget = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
         _bActive       = SW_TRUE;
         engine::getSubsystem<FrameProfiler>().setEnabled( true );
-        SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임 / %# 초 (0 = 그 기준 없음)", kWarmupFrames, _frameTarget, _secondsTarget );
+        SW_LOG_INFO( "[Profile] Profiling enabled - warmup %# + measure %# frames / %# seconds (0 = no such criterion)", kWarmupFrames, _frameTarget, _secondsTarget );
     }
 
     void FrameProfileSession::onFrameEnd()
@@ -96,7 +96,7 @@ namespace sw
             _measureStartMicro = MonotonicClock::nowMicroseconds();
             _lastFrameEndMicro = _measureStartMicro;
             profiler.reset();
-            SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.", kWarmupFrames,
+            SW_LOG_INFO( "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
                          _frameTarget );
 #if SW_PROFILER_TRACE_ENABLED
             if ( gv_profileTracePath.empty() == false )
@@ -182,20 +182,20 @@ namespace sw
 
         const uint64 allocationCount = pMemory->getTotalAllocationCount() - _allocationCountAtStart;
         const uint64 perFrameX10     = ( allocationCount * 10 ) / frames;
-        SW_LOG_INFO( "[Profile] alloc/frame  %#.%#   (sw 할당 %# 회 / %# 프레임 — std 할당자·CRT 직접 호출은 제외)",
+        SW_LOG_INFO( "[Profile] alloc/frame  %#.%#   (%# sw allocations / %# frames - std allocator and direct CRT calls excluded)",
                      perFrameX10 / 10, perFrameX10 % 10, allocationCount, frames );
 
         if ( gv_profileAllocSites > 0 )
         {
             const vector<CallStackAllocInfo> listSite = pMemory->getTopCallStacks( TopCallStackOrder::TotalCount );
             const size_t                     shown    = MathUtil::min<size_t>( listSite.size(), static_cast<size_t>( gv_profileAllocSites ) );
-            SW_LOG_INFO( "[Profile] 할당 자리 상위 %# 곳 (측정 창 안 횟수 순, %# 곳 중):", shown, listSite.size() );
+            SW_LOG_INFO( "[Profile] Top %# allocation sites (by count in the measure window, of %# sites):", shown, listSite.size() );
             for ( size_t index = 0; index < shown; ++index )
             {
                 const CallStackAllocInfo& site       = listSite[index];
                 const uint64              countX10   = ( site._totalCount * 10 ) / frames;
                 const uint64              bytesFrame = site._totalBytes / frames;
-                SW_LOG_INFO( "[Profile]  #%#  %#.%# 회/프레임  %# B/프레임  (누적 %# 회)", index + 1, countX10 / 10, countX10 % 10,
+                SW_LOG_INFO( "[Profile]  #%#  %#.%# /frame  %# B/frame  (total %#)", index + 1, countX10 / 10, countX10 % 10,
                              bytesFrame, site._totalCount );
                 SW_LOG_INFO( "%#", CallStackCapture::symbolize( site._stack ).c_str() );
             }

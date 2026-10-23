@@ -111,7 +111,7 @@ namespace
 
 /**
  * @brief [TerrainBenchTest] 브러시 한 번(5 × 5 샘플)을 쓴 다음 물리 프레임 — 지형 전체 한 바디(청크 256 칸)와 청크마다 바디(32 칸)의 바디 재생성 비용
- * @details 쓰지 않은 틱과 쓴 뒤 틱을 9 번씩 잰다. 둘의 차가 충돌 메시 · 바디 재생성 비용이다. 청크 256 칸은 바디가 하나라 옛 동작(쓸 때마다 N² 점 메시 전체)과 같다.
+ * @details 쓰지 않은 틱과 쓴 뒤 틱을 9 번씩 측정한다. 둘의 차가 충돌 메시 · 바디 재생성 비용이다. 청크 256 칸은 바디가 하나라 옛 동작(쓸 때마다 N² 점 메시 전체)과 같다.
  */
 SW_TEST_CASE( TerrainBenchTest, ColliderRebuildAfterBrushWrite )
 {
@@ -156,7 +156,7 @@ SW_TEST_CASE( TerrainBenchTest, ColliderRebuildAfterBrushWrite )
 
 /**
  * @brief [TerrainBenchTest] 정사각형 높이 쓰기 한 번(writeHeights)의 비용 — 한 변 9 · 33 · 65 · 129 · 257 샘플(청크 32 칸이라 닿는 청크 1 ~ 64 개)
- * @details 쓰기 프레임은 청크 메시를 넷까지만 다시 만들고 나머지는 틱들이 넷씩 나눠 만든다. 쓰기 프레임과 미룬 청크 전체를 따로 잰다(예산 GT 2 ms).
+ * @details 쓰기 프레임은 청크 메시를 넷까지만 다시 만들고 나머지는 틱들이 넷씩 나눠 만든다. 쓰기 프레임과 미룬 청크 전체를 따로 측정한다(예산 GT 2 ms).
  */
 SW_TEST_CASE( TerrainBenchTest, WriteHeightsRectSizes )
 {

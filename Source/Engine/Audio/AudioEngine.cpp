@@ -1214,7 +1214,7 @@ namespace sw
 
     void AudioEngine::publishState( uint32 realCount, uint32 virtualCount )
     {
-        // 게시 자체의 비용을 잰다(E6: 이벤트 창 사본이 인스턴스 × 보이스를 훑는다). 이번 값은 다음 블록의 상태에 실린다.
+        // 게시 자체의 비용을 측정한다(E6: 이벤트 창 사본이 인스턴스 × 보이스를 훑는다). 이번 값은 다음 블록의 상태에 실린다.
         const Stopwatch  publishStopwatch;
         AudioEngineStats stats;
         stats._publishNanoseconds     = _lastPublishNanoseconds;

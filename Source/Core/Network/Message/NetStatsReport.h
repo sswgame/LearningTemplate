@@ -53,7 +53,7 @@ namespace sw
         float32                   _sentBytesPerSecond{ 0.0f }; ///< 연결들의 최근 1 초 보낸 바이트의 합
         float32                   _receivedBytesPerSecond{ 0.0f };
         float32                   _rttMilliseconds{ 0.0f }; ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
-        float32                   _lossPercent{ 0.0f };     ///< 연결들이 잰 손실 중 가장 큰 값(%)
+        float32                   _lossPercent{ 0.0f };     ///< 연결들이 측정한 손실 중 가장 큰 값(%)
         int32                     _connectionCount{ 0 };
 
         /**

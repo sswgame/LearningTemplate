@@ -168,7 +168,7 @@ namespace sw
         uint8            _bScreenshotWriteFailed;           ///< -gv_screenshot 의 장 중 쓰지 못한 것이 있다(`-gv_screenshotQuit` 의 종료 코드).
         uint32           _screenshotFrameCounter;           ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
         uint32           _screenshotShotCount;              ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
-        int64            _screenshotWaitStartMicroseconds;  ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 잰다.
+        int64            _screenshotWaitStartMicroseconds;  ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
         uint32           _budgetFrameCounter;               ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
         atomic<uint32>   _completedScenarioScreenshotCount; ///< 패킷이 요청한 스크린샷을 처리한 수(쓰지 못했어도 센다. 시나리오가 기다림을 끝낸다)
         atomic<bool>     _bScenarioCaptureEnabled;          ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).

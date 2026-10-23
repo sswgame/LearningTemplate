@@ -8,7 +8,7 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [EditorStateHashCompareTest] 두 이력이 겹치는 틱만 견주고, 처음 어긋난 틱과 겹친 틱 수를 낸다 — 한쪽에만 있는 틱은 어긋남이 아니다
+ * @brief [EditorStateHashCompareTest] 두 이력이 겹치는 틱만 비교하고, 처음 어긋난 틱과 겹친 틱 수를 낸다 — 한쪽에만 있는 틱은 어긋남이 아니다
  */
 SW_TEST_CASE( EditorStateHashCompareTest, FindsTheFirstDivergentTickOverCommonTicks )
 {
@@ -25,7 +25,7 @@ SW_TEST_CASE( EditorStateHashCompareTest, FindsTheFirstDivergentTickOverCommonTi
 }
 
 /**
- * @brief [EditorStateHashCompareTest] 이력이 아닌 글(서버 오류 답)과 빈 이력은 칸에 담지 않는다 — 빈 칸을 "어긋남 없음" 으로 견주지 않는다
+ * @brief [EditorStateHashCompareTest] 이력이 아닌 글(서버 오류 답)과 빈 이력은 칸에 담지 않는다 — 빈 칸을 "어긋남 없음" 으로 비교하지 않는다
  */
 SW_TEST_CASE( EditorStateHashCompareTest, RejectsTextThatIsNotAHistory )
 {

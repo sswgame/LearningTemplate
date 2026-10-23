@@ -23,7 +23,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) Diff: CDO 대비 변경분만. 레이아웃은 nameHash + size + payload
         // ------------------------------------------------------------------------------
-        /** @brief CDO 와 변경된 객체를 비교해 델타 바이너리를 뽑습니다. 견주는 필드는 @p context 의 저장 목적이 정합니다(`SerializerUtil::shouldSerializeProperty`). */
+        /** @brief CDO 와 변경된 객체를 비교해 델타 바이너리를 뽑습니다. 비교하는 필드는 @p context 의 저장 목적이 정합니다(`SerializerUtil::shouldSerializeProperty`). */
         [[nodiscard]] static bool serializeDiff( vector<uint8>& outDiffBytes, const void* pCdoInstance, const void* pModifiedInstance,
                                                  const TypeInfo& typeInfo, const SerializeContext& context );
 

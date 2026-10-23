@@ -20,7 +20,7 @@ namespace sw
      * @class ReflectionProbeComponent
      * @brief 축 정렬 상자(크기 `_extent`, 중심은 이 컴포넌트의 월드 위치) 안의 표면이 반사로 받는 빛입니다. 언리얼 Box Reflection Capture, 유니티 Reflection Probe 의 자리입니다.
      * @details 베이크(`ReflectionProbeBaker`, 에디터 `lighting.bakeReflectionProbes`)가 이 위치에서 면 여섯을 GPU 로 찍어 접고 거른 `.reflprobe` 를 쓰고 `_probeDataPath` 에 적는다.
-     *          읽은 데이터의 찍은 위치가 지금 위치와 다르면(옮기고 다시 굽지 않았다) 쓰지 않고 오류를 남긴다 — 옛 자리의 반사를 새 자리에 비추지 않는다(폴백 없음).
+     *          읽은 데이터의 찍은 위치가 지금 위치와 다르면(옮기고 다시 베이크하지 않았다) 쓰지 않고 오류를 남긴다 — 옛 자리의 반사를 새 자리에 비추지 않는다(폴백 없음).
      *          셰이더 소비는 라이트 목록의 `SW_LIGHT_TYPE_REFLECTION_PROBE` 원소(그리드 항목)다(`collectSceneLights`). 상자 밖은 받지 않고, 경계 안쪽 `_blendDistance` 동안
      *          앰비언트 반사로 섞여 사라진다. 시차 보정(상자에 닿는 점으로 반사 방향을 고치기)은 하지 않는다 — shortcut: 상자가 크면 가까운 벽의 반사가 어긋난다, 실내 씬을 굽게 되면 더한다.
      */
@@ -47,10 +47,10 @@ namespace sw
         uint32 getCaptureResolution() const { return _captureResolution; }
         /** @brief 베이크가 거칠기 단계마다 텍셀 하나에 쓰는 GGX 표본 수입니다. */
         uint32 getBakeSampleCount() const { return _bakeSampleCount; }
-        /** @brief 베이크 결과(`.reflprobe`) 경로입니다. 비었으면 굽지 않은 프로브입니다. */
+        /** @brief 베이크 결과(`.reflprobe`) 경로입니다. 비었으면 베이크하지 않은 프로브입니다. */
         const string& getProbeDataPath() const { return _probeDataPath; }
 
-        /** @brief 쓸 수 있는 베이크 데이터입니다. 굽지 않았거나, 읽지 못했거나, 찍은 위치가 지금 위치와 다르면 nullptr 입니다. */
+        /** @brief 쓸 수 있는 베이크 데이터입니다. 베이크하지 않았거나, 읽지 못했거나, 찍은 위치가 지금 위치와 다르면 nullptr 입니다. */
         const ReflectionProbeData* findProbeData() const;
         /**
          * @brief 베이크 결과를 받아 들고 경로를 적습니다(베이크 도구가 파일을 쓴 뒤 부른다). 데이터가 깨졌거나 찍은 위치가 지금 위치와 다르면 받지 않고 false 입니다.
@@ -72,7 +72,7 @@ namespace sw
         void reloadProbeData();
         /** @brief 데이터의 찍은 위치가 지금 위치와 같은지 봅니다. */
         bool matchesCapturePosition( const ReflectionProbeData& data ) const;
-        /** @brief 굽지 않은 프로브(경로가 빔)를 경고하고, 크기가 0 인 상자를 오류로 적습니다(맵 검사). */
+        /** @brief 베이크하지 않은 프로브(경로가 빔)를 경고하고, 크기가 0 인 상자를 오류로 적습니다(맵 검사). */
         void validateProbeData( ValidationContext& context ) const;
 
         PROPERTY( Category = "Reflection Probe", DisplayName = "Extent", Min = 0.0, Tooltip = "Full size of the axis-aligned box that receives this reflection", Units = m )
@@ -88,6 +88,6 @@ namespace sw
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Samples Per Texel", Min = 1, Max = 4096, Tooltip = "GGX samples each prefiltered texel takes" )
         uint32 _bakeSampleCount;
 
-        ReflectionProbeData _probeData; ///< 읽은 베이크 데이터(비었으면 굽지 않았거나 읽지 못했다)
+        ReflectionProbeData _probeData; ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
     };
 } // namespace sw

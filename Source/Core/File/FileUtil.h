@@ -201,7 +201,7 @@ namespace sw
         static uint64 getCurrentFileTimestamp();
         /** @brief `getFileWriteTime` · `setFileWriteTime` 의 눈금입니다(100 ns). 1 초가 이만큼입니다. */
         static constexpr int64 kFileTimeTicksPerSecond = 10'000'000;
-        /** @brief 마지막 쓰기 시각을 파일 시계의 100 ns 눈금으로 얻습니다. 없거나 읽지 못하면 false 입니다. 같은 기계 · 같은 플랫폼 안에서만 견줍니다. */
+        /** @brief 마지막 쓰기 시각을 파일 시계의 100 ns 눈금으로 얻습니다. 없거나 읽지 못하면 false 입니다. 같은 기계 · 같은 플랫폼 안에서만 비교합니다. */
         [[nodiscard]] static bool getFileWriteTime( string_view path, int64& outTicks );
         /** @brief 마지막 쓰기 시각을 바꿉니다(`getFileWriteTime` 과 같은 눈금). 바꾸지 못했으면 경로와 이유를 알리고 false 입니다. */
         [[nodiscard]] static bool setFileWriteTime( string_view path, int64 ticks );

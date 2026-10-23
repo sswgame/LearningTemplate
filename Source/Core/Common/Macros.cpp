@@ -41,7 +41,7 @@ namespace sw::internal
             return s_state;
         }
 
-        /** @brief 같은 자리인가 — 파일 리터럴 주소는 번역 단위마다 다를 수 있어 글로 견준다. */
+        /** @brief 같은 자리인가 — 파일 리터럴 주소는 번역 단위마다 다를 수 있어 글로 비교한다. */
         bool isSameSite( const IgnoredAssertSite& site, const utf8* pFile, int32 line )
         {
             return site._line == line && site._pFile != nullptr && pFile != nullptr && std::strcmp( site._pFile, pFile ) == 0;

@@ -328,7 +328,7 @@ namespace sw
 
                 const string stampPath = FileUtil::joinPath( rhiDir, "cook.stamp" );
                 if ( FileUtil::writeTextFile( stampPath, text ) == false )
-                    SW_LOG_WARNING( "쿠킹 스탬프 쓰기 실패: %#", stampPath.c_str() );
+                    SW_LOG_WARNING( "Failed to write the cook stamp: %#", stampPath.c_str() );
             }
 
             /** @brief 문제 한 줄을 서식으로 만들어 더합니다. */
@@ -340,7 +340,7 @@ namespace sw
                 outListProblem.emplace_back( sb.c_str(), sb.size() );
             }
 
-            /** @brief 도메인 발견의 정본인 우선순위 설정이 쓸 수 있으면 true 입니다. 비었거나 도메인 종류(engine · common)가 빠졌으면 오류 글을 남기고 false 입니다. */
+            /** @brief 도메인 발견의 기준인 우선순위 설정이 쓸 수 있으면 true 입니다. 비었거나 도메인 종류(engine · common)가 빠졌으면 오류 글을 남기고 false 입니다. */
             [[nodiscard]] static bool validatePriority( const vector<string>& listPriority )
             {
                 if ( listPriority.empty() )

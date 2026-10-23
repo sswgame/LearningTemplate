@@ -62,7 +62,7 @@ namespace sw
 {
     /**
      * @brief `WidgetStyle` 의 필드 번호입니다(PROPERTY 선언 순서와 같으며, 계산된 스타일의 "정한 필드" 비트 위치입니다).
-     * @details 필드 이름(`_backgroundColor`)은 리플렉션 PROPERTY 이름이 정본이다 — `_` + 열거자 이름(첫 글자 소문자)과 같아야 한다
+     * @details 필드 이름(`_backgroundColor`)은 리플렉션 PROPERTY 이름이 기준이다 — `_` + 열거자 이름(첫 글자 소문자)과 같아야 한다
      *          (`UIStyleTest.FieldTableMatchesReflection`).
      */
     ENUM( Count = Count )

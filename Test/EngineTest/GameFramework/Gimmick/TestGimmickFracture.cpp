@@ -46,7 +46,7 @@ namespace
             return asset.saveToFile( path ) ? test::makeTempResourceID( path ) : sw::string{};
         }
 
-        /** @brief 뿌리 정적 강체 · 메시 · 파괴 컴포넌트(바닥 앵커)를 가진 오브젝트입니다. */
+        /** @brief 루트 정적 강체 · 메시 · 파괴 컴포넌트(바닥 앵커)를 가진 오브젝트입니다. */
         static sw::GameObject* spawnFractured( sw::GameObjectManager& manager, const utf8* pName, const sw::float3& position, const sw::float3& half,
                                                const sw::string& fracturePath, sw::FractureAnchorMode anchorMode )
         {

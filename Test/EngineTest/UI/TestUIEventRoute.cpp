@@ -97,7 +97,7 @@ namespace
     };
 } // namespace
 
-/** @brief [UIEventRouteTest] 겹친 두 자식 — 뒤에 붙인 것이 위라 겹친 곳은 위 자식, 경로는 뿌리 → 잎 */
+/** @brief [UIEventRouteTest] 겹친 두 자식 — 뒤에 붙인 것이 위라 겹친 곳은 위 자식, 경로는 루트 → 잎 */
 SW_TEST_CASE( UIEventRouteTest, HitTestPicksTopmostDeepest )
 {
     UIRouteFixture               fixture;
@@ -170,7 +170,7 @@ SW_TEST_CASE( UIEventRouteTest, ClippingPanelBlocksOutsidePoints )
     SW_EXPECT_STREQ( "overflow", fixture.hitLeafName( 120.0f, 120.0f ).c_str() );
 }
 
-/** @brief [UIEventRouteTest] 루트 > 패널 > 버튼: 터널링(뿌리부터) 다음 버블링(잎부터) */
+/** @brief [UIEventRouteTest] 루트 > 패널 > 버튼: 터널링(루트부터) 다음 버블링(잎부터) */
 SW_TEST_CASE( UIEventRouteTest, TunnelThenBubbleOrder )
 {
     UIRouteFixture               fixture;
@@ -233,7 +233,7 @@ SW_TEST_CASE( UIEventRouteTest, CaptureRoutesToCapturerOutsideItsRect )
     SW_EXPECT_EQUAL( pOther->getID(), after._handler ); // 놓은 뒤에는 다시 히트 테스트
 }
 
-/** @brief [UIEventRouteTest] A 에서 B 로 옮기면 A 쪽은 잎부터 Leave, B 쪽은 뿌리부터 Enter — 공통 조상(루트)은 아무것도 받지 않는다 */
+/** @brief [UIEventRouteTest] A 에서 B 로 옮기면 A 쪽은 잎부터 Leave, B 쪽은 루트부터 Enter — 공통 조상(루트)은 아무것도 받지 않는다 */
 SW_TEST_CASE( UIEventRouteTest, HoverEnterLeaveDiff )
 {
     UIRouteFixture               fixture;

@@ -74,8 +74,8 @@ namespace sw
      *            소켓 부품(`SocketPrefab`)은 프리팹을 스폰해서 `SocketBindingComponent` 로 소켓에 붙인다. 다시 조립할 때 같은 부품(주인, 이름, 에셋)은 그대로 둔다.
      *          - **소켓**: 몸과 부품의 소켓 에셋이 하나의 이름 공간을 이룬다(`AppearanceSocketRig`, 예: `MainHand.Muzzle`). 몸의 포즈가 끝난 프레임마다(단계 작업) 부품의
      *            소켓 위치를 고친다. `findSocketWorldTransform` 은 지난 프레임의 포즈와 월드로 답하며, 틱 안에서는 읽기만 한다.
-     *          - **체형 · 피팅**: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 구운 메시 사본으로 그린다
-     *            (`AppearanceMeshAssembly` — 덮인 삼각형 · 숨김 영역을 빼고 델타와 모프를 레스트에 굽는다). 원본 메시 · 데이터는 비동기로 읽고, 다 읽힌 틱 뒤에 유닛의
+     *          - **체형 · 피팅**: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 베이크한 메시 사본으로 그린다
+     *            (`AppearanceMeshAssembly` — 덮인 삼각형 · 숨김 영역을 빼고 델타와 모프를 레스트에 베이크한다). 원본 메시 · 데이터는 비동기로 읽고, 다 읽힌 틱 뒤에 유닛의
      *            스킨 원본을 바꾼다(`SkeletalMeshComponent::setSkinSourceMesh`). 그동안 피팅하는 부품은 숨긴다. 원본 메시 · 표 · 피팅 데이터가 다시 읽히면 다시 조립한다.
      *          - **염색**: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
      *          - **장비**: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
@@ -102,7 +102,7 @@ namespace sw
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
         /**
-         * @brief 구운 메시의 재료가 다 읽혔으면 틱 뒤에 겁니다. 조립에 쓴 에셋(소켓 · 원본 메시 · 피팅 표 · 피팅 데이터)을 에셋 매니저가 다시 읽었으면 다시 조립을 예약합니다(에셋 핫 리로드).
+         * @brief 베이크한 메시의 재료가 다 읽혔으면 틱 뒤에 겁니다. 조립에 쓴 에셋(소켓 · 원본 메시 · 피팅 표 · 피팅 데이터)을 에셋 매니저가 다시 읽었으면 다시 조립을 예약합니다(에셋 핫 리로드).
          */
         void onTick( float32 deltaTime ) override;
 
@@ -168,7 +168,7 @@ namespace sw
             uint32           _partIndex{ 0 };
             uint32           _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
             uint8            _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
-            uint8            _bBaked{ SW_FALSE };                         ///< 구운 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
+            uint8            _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
         };
 
         /** @brief 슬롯 덮어쓰기 하나입니다. */
@@ -178,7 +178,7 @@ namespace sw
             hashed_string _itemID{};
         };
 
-        /** @brief 구운 메시를 짓는 스킨드 부품 하나의 로드입니다(원본 메시 · 피팅 데이터). 준비된 핸들이 원본을 쥔다. */
+        /** @brief 베이크한 메시를 짓는 스킨드 부품 하나의 로드입니다(원본 메시 · 피팅 데이터). 준비된 핸들이 원본을 쥔다. */
         struct MeshAssemblyLoad
         {
             MeshHandle                     _mesh{};
@@ -234,15 +234,15 @@ namespace sw
         /** @brief 외형 데이터가 다시 읽혔습니다(`AppearanceDatabase::registerReloaded`). 다시 조립을 예약합니다. */
         void onAppearanceDataReloaded();
         /**
-         * @brief 구운 메시에 필요한 원본 메시 · 피팅 표 · 피팅 데이터를 요청합니다(조립 끝). 구울 것이 없고 지난번에도 굽지 않았으면 아무것도 하지 않습니다.
+         * @brief 베이크한 메시에 필요한 원본 메시 · 피팅 표 · 피팅 데이터를 요청합니다(조립 끝). 구울 것이 없고 지난번에도 베이크하지 않았으면 아무것도 하지 않습니다.
          * @details 다 읽히면 `applyMeshAssembly` 가 유닛에 건다 — 플레이 중이면 틱이 기다렸다 틱 뒤에, 플레이하지 않는 미리보기 씬이면 이 자리에서 기다린다.
          */
         void requestMeshAssembly( GameObjectManager& manager );
         /** @brief 요청한 것 가운데 아직 읽는 것이 있으면 true 입니다. */
         bool isMeshAssemblyLoading() const;
-        /** @brief 읽은 것으로 구운 메시를 지어 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 틱 밖, 게임 스레드입니다. */
+        /** @brief 읽은 것으로 베이크한 메시를 지어 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 틱 밖, 게임 스레드입니다. */
         void applyMeshAssembly();
-        /** @brief 구운 메시의 재료(원본 메시 · 피팅 표 · 피팅 데이터)가 다시 읽혔으면 true 입니다. */
+        /** @brief 베이크한 메시의 재료(원본 메시 · 피팅 표 · 피팅 데이터)가 다시 읽혔으면 true 입니다. */
         bool isMeshAssemblyStale() const;
         /** @brief 부품 번호의 스킨드 유닛입니다(몸이면 이 오브젝트의 유닛). 없으면 nullptr 입니다. */
         SkeletalMeshComponent* findSkinnedUnit( GameObjectManager& manager, uint32 partIndex ) const;
@@ -271,7 +271,7 @@ namespace sw
         const AppearanceDatabase*               _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 프리셋 id · 게임 서비스를 보지 않는다
         AppearanceDatabase*                     _pReloadDatabase;      ///< 다시 읽기를 구독한 외형 데이터(플레이 중에만)
         DelegateHandle                          _reloadSubscription;   ///< `_pReloadDatabase` 의 구독
-        vector<MeshAssemblyLoad>                _listMeshAssemblyLoad; ///< 구운 메시의 부품 로드(몸이 먼저)
+        vector<MeshAssemblyLoad>                _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>            _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
         uint32                                  _assembleCount;
         uint32                                  _seenFitReloadStamp; ///< 마지막으로 구울 때의 `computeFitReloadStamp`
@@ -280,7 +280,7 @@ namespace sw
         uint8                                   _bAssembleScheduled   : 1;
         uint8                                   _bStarted             : 1;
         uint8                                   _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(틱이 기다린다)
-        uint8                                   _bMeshAssembled       : 1; ///< 유닛이 구운 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
+        uint8                                   _bMeshAssembled       : 1; ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
         [[maybe_unused]] uint8                  _reserved             : 4;
     };
 } // namespace sw

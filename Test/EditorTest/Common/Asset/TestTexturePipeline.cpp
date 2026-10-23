@@ -498,7 +498,7 @@ namespace sw::editor
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] 모르는 키 · 모르는 swizzle · 객체 아닌 규칙 · 뿌리의 모르는 키는 로드 오류다(기본값으로 조용히 가지 않는다)
+     * @brief [EditorTexturePipelineTest] 모르는 키 · 모르는 swizzle · 객체 아닌 규칙 · 루트의 모르는 키는 로드 오류다(기본값으로 조용히 가지 않는다)
      * @details 객체 아닌 원소를 규칙으로 받으면 조건 없는 규칙이 되어 뒤 규칙을 모두 가리고, 모르는 swizzle 을 RGBA 로 읽으면 채널이 뒤바뀐 채 임포트된다.
      */
     SW_TEST_CASE( EditorTexturePipelineTest, InvalidRuleIsALoadError )
@@ -806,7 +806,7 @@ namespace sw::editor
         SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[1], 0.1f );
         SW_EXPECT_NEAR_EQUAL( 4.0f, pPixel[2], 0.1f );
 
-        // 무압축 HDR(rgba16f)도 같은 갈래다.
+        // 무압축 HDR(rgba16f)도 같은 분기다.
         rule._format             = TextureImportFormat::R16G16B16A16Float;
         const string halfDDSPath = test::makeTempPath( "bright_rgba16f.dds" );
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );

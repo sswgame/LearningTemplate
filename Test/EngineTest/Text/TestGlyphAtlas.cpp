@@ -141,7 +141,7 @@ SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
     SW_EXPECT_FALSE( atlas.evictLeastRecentlyUsedPage( 20, evictedPage ) );
 }
 
-/** @brief [GlyphAtlasTest] 캐시가 페이지를 비우면 그 페이지에 있던 글리프는 다음 조회에서 다시 래스터화된다 — 공백은 사각형 없이 들고, 있는 글리프는 다시 굽지 않는다 */
+/** @brief [GlyphAtlasTest] 캐시가 페이지를 비우면 그 페이지에 있던 글리프는 다음 조회에서 다시 래스터화된다 — 공백은 사각형 없이 들고, 있는 글리프는 다시 베이크하지 않는다 */
 SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
 {
     sw::test::FakeFontRasterizer rasterizer;
@@ -156,7 +156,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
         SW_EXPECT_EQUAL( index, static_cast<uint32>( pGlyph->_rect._page ) );
     }
     SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
-    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A' + 1, 9 ) ); // 있는 글리프 — 다시 굽지 않고 페이지 1 을 프레임 9 에 썼다고 적는다
+    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A' + 1, 9 ) ); // 있는 글리프 — 다시 베이크하지 않고 페이지 1 을 프레임 9 에 썼다고 적는다
     SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
 
     // 아홉째 글리프 — 프레임 9 에 안 쓴 가장 오래된 페이지 0('A')을 비우고 그 자리에 들어간다.
@@ -206,7 +206,7 @@ SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( listUpload[0]._bytesPerTexel ) );
 }
 
-/** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 굽는다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
+/** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 베이크한다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
 SW_TEST_CASE( GlyphAtlasTest, MsdfCacheUsesTheMsdfRasterizer )
 {
     sw::test::FakeFontRasterizer rasterizer;

@@ -161,7 +161,7 @@ namespace sw
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {
-            SW_LOG_ERROR( "zlib 입력이 uLong 한계를 넘었습니다 (src %# / dst %# bytes > %#).",
+            SW_LOG_ERROR( "zlib input exceeds the uLong limit (src %# / dst %# bytes > %#).",
                           static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
                           static_cast<uint64>( kZlibMaxSize ) );
             return false;
@@ -176,7 +176,7 @@ namespace sw
                                                                           static_cast<const Bytef*>( pSrc ), srcSize, level );
         if ( result != Z_OK )
         {
-            SW_LOG_ERROR( "zlib deflate 실패 (code %#, src %# bytes)", result, static_cast<uint64>( srcSize ) );
+            SW_LOG_ERROR( "zlib deflate failed (code %#, src %# bytes)", result, static_cast<uint64>( srcSize ) );
             return false;
         }
 
@@ -196,7 +196,7 @@ namespace sw
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {
-            SW_LOG_ERROR( "zlib 해제 입력이 uLong 한계를 넘었습니다 (src %# / dst %# bytes > %#).",
+            SW_LOG_ERROR( "zlib decompression input exceeds the uLong limit (src %# / dst %# bytes > %#).",
                           static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ),
                           static_cast<uint64>( kZlibMaxSize ) );
             return false;
@@ -207,7 +207,7 @@ namespace sw
                                                                           static_cast<const Bytef*>( pSrc ), srcSize );
         if ( result != Z_OK )
         {
-            SW_LOG_ERROR( "zlib inflate 실패 (code %#, src %# → dst %# bytes)",
+            SW_LOG_ERROR( "zlib inflate failed (code %#, src %# -> dst %# bytes)",
                           result, static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
             return false;
         }

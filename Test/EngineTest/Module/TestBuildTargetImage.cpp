@@ -29,7 +29,7 @@ namespace
     [[maybe_unused]] constexpr const utf8* kModuleLibraryExtension = ".so";
 #endif
 
-    /** @brief @p bytes 안에 @p text 가 있는가(대소문자 무시 가능). 실행 파일 수십 MB 를 소문자로 복사하지 않고 그 자리에서 견준다. */
+    /** @brief @p bytes 안에 @p text 가 있는가(대소문자 무시 가능). 실행 파일 수십 MB 를 소문자로 복사하지 않고 그 자리에서 비교한다. */
     bool containsText( const vector<uint8>& bytes, string_view text, bool bIgnoreCase )
     {
         const string_view haystack( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
@@ -80,7 +80,7 @@ namespace
  */
 SW_TEST_CASE( BuildTargetImageTest, ClientImagesCarryNoServerOnlyModule )
 {
-    // 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수 이름을 비교하면 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
+    // 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수 이름을 비교하면 쓰지 않는 분기가 "닿지 않는 코드" 경고가 된다.
     if ( ModuleCatalog::getBuildTargetMask() != static_cast<uint8>( ModuleTarget::Client ) )
         SW_TEST_SKIP( "only the Client target promises to carry no server code" );
     const string appImage = findImageInBin( kAppImageName );

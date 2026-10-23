@@ -42,7 +42,7 @@ namespace sw
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
             static constexpr uint32 kEditedAreaMarginCells = 2;
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 2; ///< 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 되살린다(크기 바꾸기)
+            static constexpr uint32 kStateVersion = 2; ///< 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
 
             /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
             static string makeCPUSplatPath()
@@ -385,7 +385,7 @@ namespace sw
 
     void TerrainComponent::invalidateNavigation( const TerrainSampleRect& sampleRect )
     {
-        // 내비메시는 바뀐 자리의 타일만 워커가 다시 굽는다(타일은 XZ 로 고르므로 높이는 범위 전체로 둔다).
+        // 내비메시는 바뀐 자리의 타일만 워커가 다시 베이크한다(타일은 XZ 로 고르므로 높이는 범위 전체로 둔다).
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -610,7 +610,7 @@ namespace sw
             uint32 sampleCount{ 0 };
             bool   bResized{ false };
             archive >> resolution >> bResized >> sampleCount;
-            // 크기를 먼저 견준다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
+            // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
             // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
             const uint32    current    = _heightfield.getResolution();
             const bool      bSameSize  = resolution == current;
@@ -723,7 +723,7 @@ namespace sw
     void TerrainComponent::acquireMaterial()
     {
         using Internal = TerrainComponentInternal;
-        // 칸이 비면 엔진 기본 지형 머티리얼이다(값의 정본은 엔진 기본 에셋 표).
+        // 칸이 비면 엔진 기본 지형 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._terrainMaterial.get() : _materialPath;
         if ( _material.acquire( materialPath ) == false )
             return;
