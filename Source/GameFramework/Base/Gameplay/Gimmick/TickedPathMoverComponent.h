@@ -42,6 +42,8 @@ namespace sw
          *        @p bPingPong 이면 끝에서 되돌아갑니다. 경유점이 없거나 구간 시간이 0 이하이면 0 입니다.
          */
         static float3 computeOffset( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong, float64 seconds );
+        /** @brief 경로를 정합니다 — 코드로 바닥을 세우는 쪽(테스트 · 키트)이 플레이 시작 전에 부릅니다. 데이터로 세우는 씬은 속성을 씁니다. */
+        void setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong );
         /** @brief 틱 @p tick 의 자리로 옮깁니다. */
         void applyTick( uint32 tick );
         /** @brief 이 씬의 틱에 더할 차이입니다(클라이언트가 서버 틱에 맞출 때). */
