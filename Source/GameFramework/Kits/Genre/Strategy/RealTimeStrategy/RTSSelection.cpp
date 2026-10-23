@@ -25,30 +25,31 @@ namespace sw
                        unit._position._z - radius <= maxCorner._z;
             }
 
-            /** @brief 유닛 id 목록 하나(개수 + 묶은 id)를 씁니다. `readList` 가 읽습니다. */
+            /** @brief 유닛 id 목록 하나를 묶은 id(`packed`) 목록으로 씁니다. `readList` 가 읽습니다. */
             static void writeList( Archive& outArchive, const vector<RTSUnitID>& listUnit )
             {
-                outArchive << static_cast<uint32>( listUnit.size() );
+                vector<uint64> listPacked;
+                listPacked.reserve( listUnit.size() );
                 for ( const RTSUnitID unitID : listUnit )
                 {
-                    outArchive << unitID.packed();
+                    listPacked.push_back( unitID.packed() );
                 }
+                StateArchiveUtil::writeIDList( outArchive, listPacked );
             }
 
             /** @brief `writeList` 가 쓴 유닛 id 목록 하나를 읽습니다. */
             [[nodiscard]] static bool readList( Archive& archive, vector<RTSUnitID>& outListUnit )
             {
-                uint32 count = 0;
-                if ( StateArchiveUtil::readCount( archive, sizeof( uint64 ), count ) == false )
+                vector<uint64> listPacked;
+                if ( StateArchiveUtil::readIDList( archive, listPacked ) == false )
                     return false;
-                outListUnit.resize( count );
-                for ( RTSUnitID& unitID : outListUnit )
+                outListUnit.clear();
+                outListUnit.reserve( listPacked.size() );
+                for ( const uint64 packed : listPacked )
                 {
-                    uint64 packed = 0;
-                    archive >> packed;
-                    unitID = RTSUnitID::fromPacked( packed );
+                    outListUnit.push_back( RTSUnitID::fromPacked( packed ) );
                 }
-                return archive.isOk();
+                return true;
             }
 
             static void sortCorners( const float3& cornerA, const float3& cornerB, float3& outMin, float3& outMax )

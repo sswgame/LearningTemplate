@@ -107,6 +107,7 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 이름 붙은 지역 람다 Kits 끝(2026-10-23, wt/lambdakits): 유닛 · 손님 id 목록 읽기 · 쓰기, 조우 후보 순회, 0 채우기, 단계 비교자 5 군을 파일 익명 namespace 정적 함수로 옮겼다. 카탈로그 `is`(이름 비교) 11 곳은 공용 위치가 `GameDataXML`(Base)이라 남겼다.
 이름 붙은 지역 람다 Engine/Graphics 끝(2026-10-24, `wt/lambdagfx`): 해제 큐 장부 해제 `RHIReleaseQueue::enqueueLedgerRelease` 계열, 메시 정점 생성기, 바인딩 계약 표, Vulkan 로드 · 저장 동작 변환을 함수로 뺐다. 캡처가 본질인 5줄 안쪽 람다(`recycleCb`, `waitForQuery`, `setRootDescriptor`, `nextUnit`, `uploadOne`)는 남겼다.
 이름 붙은 지역 람다(Engine Renderer · Destruction · Animation · Automation 외, 2026-10-24 `wt/lambdaeng`): 검증 실패 보고 `fail` 2곳은 `FractureGraphUtil::reportInvalid`, 패킷 쓰기 `pushUint32` · `pushString`, 장면 팔레트 `appendPalette`, 시나리오 `appendSlot`, `RenderGraph` 의 `request` · `touch` 는 함수로 뺐습니다. 캡처가 본질인 짧은 것(Water `vertexAt`, Profiler `findThread` · `findSlot`, FacialRig, RenderPipelineAsset 등)과 형식이 다른 `addIfInside` 2곳은 남겼습니다.
+이름 붙은 지역 람다 Kits 끝(2026-10-23, wt/lambdakits): 유닛 · 손님 id 목록 읽기 · 쓰기, 조우 후보 순회, 0 채우기, 단계 비교자 5 군을 파일 익명 namespace 정적 함수로 옮겼다. 카탈로그 `is`(이름 비교) 11 곳은 공용 위치가 `GameDataXML`(Base)이라 남겼다. → 2026-10-24 `wt/kitshelpers`: 11 곳을 `GameDataXML::isElement` 로, ID 목록 읽기 · 쓰기를 `StateArchiveUtil::writeIDList` · `readIDList` 로 합쳤다(RTS 는 `uint64` 묶은 id 목록).
 
 ## 기능
 

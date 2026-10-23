@@ -131,14 +131,12 @@ namespace sw
     bool WesternCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
         using Internal = WesternCatalogInternal;
-        const auto is  = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        bool bAdd = false;
-        if ( is( "Pursuit" ) )
+        bool bAdd      = false;
+        if ( GameDataXML::isElement( name, "Pursuit" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _listPursuit );
-        else if ( is( "Honor" ) )
+        else if ( GameDataXML::isElement( name, "Honor" ) )
             bAdd = loadHonor( node, sourceName );
-        else if ( is( "Bond" ) )
+        else if ( GameDataXML::isElement( name, "Bond" ) )
         {
             WesternBondLevelDef bond;
             bAdd = GameDataXML::readFields( node, bond, sourceName, { "unlocks" } );
@@ -147,29 +145,29 @@ namespace sw
             if ( bAdd )
                 _listBondLevel.push_back( bond );
         }
-        else if ( is( "BondExperience" ) )
+        else if ( GameDataXML::isElement( name, "BondExperience" ) )
             bAdd = GameDataXML::readSetting( node, sourceName, _bondExperience );
-        else if ( is( "Survival" ) )
+        else if ( GameDataXML::isElement( name, "Survival" ) )
             bAdd = GameDataXML::readSetting( node, sourceName, _survival );
-        else if ( is( "DeadEye" ) )
+        else if ( GameDataXML::isElement( name, "DeadEye" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _listDeadEyeLevel );
-        else if ( is( "PeltGrade" ) )
+        else if ( GameDataXML::isElement( name, "PeltGrade" ) )
             bAdd = Internal::readGradeScales( node, sourceName, _listGradeScale );
-        else if ( is( "Crime" ) )
+        else if ( GameDataXML::isElement( name, "Crime" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _crimeCatalog );
-        else if ( is( "Region" ) )
+        else if ( GameDataXML::isElement( name, "Region" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _regionCatalog );
-        else if ( is( "Horse" ) )
+        else if ( GameDataXML::isElement( name, "Horse" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _horseCatalog );
-        else if ( is( "Food" ) )
+        else if ( GameDataXML::isElement( name, "Food" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _foodCatalog );
-        else if ( is( "Clothing" ) )
+        else if ( GameDataXML::isElement( name, "Clothing" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _clothingCatalog );
-        else if ( is( "Animal" ) )
+        else if ( GameDataXML::isElement( name, "Animal" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _animalCatalog );
-        else if ( is( "HitZone" ) )
+        else if ( GameDataXML::isElement( name, "HitZone" ) )
             bAdd = GameDataXML::readInto( node, sourceName, _hitZoneCatalog );
-        else if ( is( "HuntWeapon" ) )
+        else if ( GameDataXML::isElement( name, "HuntWeapon" ) )
         {
             WesternHuntWeaponDef weapon;
             bAdd = GameDataXML::readFields( node, weapon, sourceName, { "sizes" } ) && Internal::readSizeMask( node, sourceName, weapon._sizeMask );

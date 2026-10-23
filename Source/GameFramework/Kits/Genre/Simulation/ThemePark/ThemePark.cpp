@@ -26,30 +26,6 @@ namespace sw
                 return from + ( to - from ) * MathUtil::clamp( alpha, 0.0f, 1.0f );
             }
 
-            /** @brief 손님 id 목록 하나(개수 + id)를 씁니다. `readIDList` 가 읽습니다. */
-            static void writeIDList( Archive& outArchive, const vector<uint32>& listID )
-            {
-                outArchive << static_cast<uint32>( listID.size() );
-                for ( const uint32 id : listID )
-                {
-                    outArchive << id;
-                }
-            }
-
-            /** @brief 손님 id 목록 하나(개수 + id)를 읽습니다. */
-            [[nodiscard]] static bool readIDList( Archive& archive, vector<uint32>& outListID )
-            {
-                uint32 count = 0;
-                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), count ) == false )
-                    return false;
-                outListID.resize( count );
-                for ( uint32& id : outListID )
-                {
-                    archive >> id;
-                }
-                return archive.isOk();
-            }
-
             /** @brief `writeState` 가 쓴 놀이기구 하나를 읽습니다. */
             [[nodiscard]] static bool readRide( Archive& archive, ParkRide& outRide )
             {
@@ -65,7 +41,7 @@ namespace sw
                 archive >> outRide._price;
                 archive >> outRide._runningCostPerMinute;
                 archive >> outRide._bOpen;
-                if ( readIDList( archive, outRide._listQueue ) == false || readIDList( archive, outRide._listRider ) == false )
+                if ( StateArchiveUtil::readIDList( archive, outRide._listQueue ) == false || StateArchiveUtil::readIDList( archive, outRide._listRider ) == false )
                     return false;
                 archive >> outRide._cycleTimer._remaining;
                 archive >> outRide._totalRiders;
@@ -669,8 +645,8 @@ namespace sw
             outArchive << ride._price;
             outArchive << ride._runningCostPerMinute;
             outArchive << ride._bOpen;
-            ThemeParkInternal::writeIDList( outArchive, ride._listQueue );
-            ThemeParkInternal::writeIDList( outArchive, ride._listRider );
+            StateArchiveUtil::writeIDList( outArchive, ride._listQueue );
+            StateArchiveUtil::writeIDList( outArchive, ride._listRider );
             outArchive << ride._cycleTimer._remaining;
             outArchive << ride._totalRiders;
             outArchive << ride._totalIncome;

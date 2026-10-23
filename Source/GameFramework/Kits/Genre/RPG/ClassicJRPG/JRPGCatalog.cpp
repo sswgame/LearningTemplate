@@ -119,21 +119,19 @@ namespace sw
 
     bool JRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "ExperienceCurve" ) )
+        if ( GameDataXML::isElement( name, "ExperienceCurve" ) )
             return _curve.loadFromNode( node, sourceName );
-        if ( is( "Class" ) )
+        if ( GameDataXML::isElement( name, "Class" ) )
             return loadClass( node, sourceName );
-        if ( is( "Spell" ) )
+        if ( GameDataXML::isElement( name, "Spell" ) )
             return GameDataXML::readInto( node, sourceName, _spellCatalog );
-        if ( is( "Combo" ) )
+        if ( GameDataXML::isElement( name, "Combo" ) )
             return loadCombo( node, sourceName );
-        if ( is( "Manual" ) )
+        if ( GameDataXML::isElement( name, "Manual" ) )
             return loadManual( node, sourceName );
-        if ( is( "Enemy" ) )
+        if ( GameDataXML::isElement( name, "Enemy" ) )
             return loadEnemy( node, sourceName );
-        if ( is( "Area" ) )
+        if ( GameDataXML::isElement( name, "Area" ) )
             return loadArea( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

@@ -84,6 +84,50 @@ namespace sw
         return true;
     }
 
+    namespace
+    {
+        template <typename TID>
+        void writeIDListImpl( Archive& outArchive, const vector<TID>& listID )
+        {
+            outArchive << static_cast<uint32>( listID.size() );
+            for ( const TID id : listID )
+            {
+                outArchive << id;
+            }
+        }
+
+        template <typename TID>
+        [[nodiscard]] bool readIDListImpl( Archive& archive, vector<TID>& outListID )
+        {
+            uint32 count = 0;
+            if ( StateArchiveUtil::readCount( archive, sizeof( TID ), count ) == false )
+                return false;
+            outListID.resize( count );
+            for ( TID& id : outListID )
+            {
+                archive >> id;
+            }
+            return archive.isOk();
+        }
+    } // namespace
+
+    void StateArchiveUtil::writeIDList( Archive& outArchive, const vector<uint32>& listID )
+    {
+        writeIDListImpl( outArchive, listID );
+    }
+    bool StateArchiveUtil::readIDList( Archive& archive, vector<uint32>& outListID )
+    {
+        return readIDListImpl( archive, outListID );
+    }
+    void StateArchiveUtil::writeIDList( Archive& outArchive, const vector<uint64>& listID )
+    {
+        writeIDListImpl( outArchive, listID );
+    }
+    bool StateArchiveUtil::readIDList( Archive& archive, vector<uint64>& outListID )
+    {
+        return readIDListImpl( archive, outListID );
+    }
+
     void StateArchiveUtil::writeInt2( Archive& outArchive, const int2& value )
     {
         outArchive << value._x;

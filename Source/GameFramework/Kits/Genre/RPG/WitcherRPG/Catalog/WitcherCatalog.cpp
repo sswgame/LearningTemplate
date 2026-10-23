@@ -71,9 +71,7 @@ namespace sw
 
     bool WitcherCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Alchemy" ) )
+        if ( GameDataXML::isElement( name, "Alchemy" ) )
         {
             WitcherAlchemyRuleDef rule;
             if ( GameDataXML::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
@@ -82,9 +80,9 @@ namespace sw
             _alchemy = rule;
             return true;
         }
-        if ( is( "Combat" ) )
+        if ( GameDataXML::isElement( name, "Combat" ) )
             return GameDataXML::readSetting( node, sourceName, _combat );
-        if ( is( "SlotGroup" ) )
+        if ( GameDataXML::isElement( name, "SlotGroup" ) )
         {
             WitcherSlotGroupDef group;
             if ( GameDataXML::readFields( node, group, sourceName ) == false )
@@ -92,11 +90,11 @@ namespace sw
             _listSlotGroup.push_back( group );
             return true;
         }
-        if ( is( "SkillColor" ) )
+        if ( GameDataXML::isElement( name, "SkillColor" ) )
             return GameDataXML::readInto( node, sourceName, _skillColorCatalog );
-        if ( is( "Monster" ) )
+        if ( GameDataXML::isElement( name, "Monster" ) )
             return loadMonster( node, sourceName );
-        if ( is( "Item" ) )
+        if ( GameDataXML::isElement( name, "Item" ) )
         {
             WitcherAlchemyDef item;
             if ( readAlchemyItem( node, sourceName, item ) == false )
@@ -104,11 +102,11 @@ namespace sw
             (void)_alchemyCatalog.add( item ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( is( "Sign" ) )
+        if ( GameDataXML::isElement( name, "Sign" ) )
             return GameDataXML::readInto( node, sourceName, _signCatalog );
-        if ( is( "Mutagen" ) )
+        if ( GameDataXML::isElement( name, "Mutagen" ) )
             return GameDataXML::readInto( node, sourceName, _mutagenCatalog );
-        if ( is( "Contract" ) )
+        if ( GameDataXML::isElement( name, "Contract" ) )
             return loadContract( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

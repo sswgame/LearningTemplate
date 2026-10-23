@@ -123,9 +123,7 @@ namespace sw
 
     bool CityCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Good" ) )
+        if ( GameDataXML::isElement( name, "Good" ) )
         {
             CityGoodDef good;
             if ( GameDataXML::readFields( node, good, sourceName ) == false )
@@ -133,9 +131,9 @@ namespace sw
             (void)_goodCatalog.add( good ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( is( "Building" ) )
+        if ( GameDataXML::isElement( name, "Building" ) )
             return loadBuilding( node, sourceName );
-        if ( is( "HouseLevel" ) )
+        if ( GameDataXML::isElement( name, "HouseLevel" ) )
             return loadHouseLevel( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

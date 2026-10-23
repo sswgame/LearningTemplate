@@ -51,21 +51,19 @@ namespace sw
 
     bool GhostCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Flashlight" ) )
+        if ( GameDataXML::isElement( name, "Flashlight" ) )
             return GameDataXML::readSetting( node, sourceName, _flashlight );
-        if ( is( "Vacuum" ) )
+        if ( GameDataXML::isElement( name, "Vacuum" ) )
             return loadVacuum( node, sourceName );
-        if ( is( "Ghost" ) )
+        if ( GameDataXML::isElement( name, "Ghost" ) )
             return GameDataXML::readInto( node, sourceName, _ghostCatalog );
-        if ( is( "Room" ) )
+        if ( GameDataXML::isElement( name, "Room" ) )
             return loadRoom( node, sourceName );
-        if ( is( "Door" ) )
+        if ( GameDataXML::isElement( name, "Door" ) )
             return GameDataXML::readInto( node, sourceName, _doorCatalog );
-        if ( is( "Furniture" ) )
+        if ( GameDataXML::isElement( name, "Furniture" ) )
             return loadFurniture( node, sourceName );
-        if ( is( "Boo" ) )
+        if ( GameDataXML::isElement( name, "Boo" ) )
             return GameDataXML::readInto( node, sourceName, _booCatalog );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

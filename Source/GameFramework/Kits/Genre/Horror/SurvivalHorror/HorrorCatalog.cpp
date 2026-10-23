@@ -133,25 +133,23 @@ namespace sw
 
     bool HorrorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        const auto is = [name]( const utf8* pName )
-        { return StringUtil::equals( name, string_view( pName ), true ); };
-        if ( is( "Rules" ) )
+        if ( GameDataXML::isElement( name, "Rules" ) )
             return GameDataXML::readSetting( node, sourceName, _rules );
-        if ( is( "Item" ) )
+        if ( GameDataXML::isElement( name, "Item" ) )
             return GameDataXML::readInto( node, sourceName, _itemCatalog );
-        if ( is( "Combine" ) )
+        if ( GameDataXML::isElement( name, "Combine" ) )
             return loadCombine( node, sourceName );
-        if ( is( "Monster" ) )
+        if ( GameDataXML::isElement( name, "Monster" ) )
             return GameDataXML::readInto( node, sourceName, _monsterCatalog );
-        if ( is( "KeyLock" ) )
+        if ( GameDataXML::isElement( name, "KeyLock" ) )
             return GameDataXML::readInto( node, sourceName, _keyLockCatalog );
-        if ( is( "DialLock" ) )
+        if ( GameDataXML::isElement( name, "DialLock" ) )
             return loadDialLock( node, sourceName );
-        if ( is( "Sequence" ) )
+        if ( GameDataXML::isElement( name, "Sequence" ) )
             return loadSequence( node, sourceName );
-        if ( is( "Document" ) )
+        if ( GameDataXML::isElement( name, "Document" ) )
             return loadDocument( node, sourceName );
-        if ( is( "Deduction" ) )
+        if ( GameDataXML::isElement( name, "Deduction" ) )
             return loadDeduction( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
