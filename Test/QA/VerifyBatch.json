@@ -492,6 +492,22 @@
       "id": "cc0-props-visual-review", "title": "CC0 모델 배치 눈 확인(크기 · 머티리얼 색 · WildWest 울타리 방향 · 전시 줄)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "need_command": "모델의 크기 · 색 · 방향이 맞는지는 사람이 그림을 보고 판단한다(골든 다시 뜨기 golden-record 가 볼 그림을 만든다)",
       "source": "docs/plans/GameSceneCc0Meshes.md C2", "result_doc": "docs/plans/GameSceneCc0Meshes.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-scenario", "title": "사용자 설정 화면 시나리오(렌더 스케일 · 시야 거리 · 후처리 품질 · 색각 보정)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/useroptions.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-visual-review", "title": "사용자 설정 눈 확인(UI 는 그대로 · 텍스처 low · 이펙트 low · 색각 보정 한 번씩 · 포워드 모션 블러)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "장면 아닌 UI · 렌더 텍스처 모니터 · 입자까지 한 그림에서 사람이 판단하는 확인이라 지표로 정할 값이 없다",
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-render-tests", "title": "렌더 패스 GPU 테스트(TAA 이웃 클램프 · 모션 블러 · 가림 판정 등)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 40,
+      "filter": "RenderPassGPUTest.TaaLeavesNoGhostOfAMovedObject,ShaderCookRequestTest.*",
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
     }
   ]
 }

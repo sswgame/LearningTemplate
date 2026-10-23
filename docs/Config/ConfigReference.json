@@ -3508,7 +3508,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기)",
+   "description": "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스와 화면 출력 뷰의 톤맵 — postgrade.hlsli)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {

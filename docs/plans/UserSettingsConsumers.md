@@ -1,6 +1,6 @@
 # 사용자 설정 값을 읽는 쪽 잇기
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2 · 진행: 2/4
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-2 · 진행: 4/4
 
 옵션 메뉴 백엔드(`Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`)의 그래픽 · 접근성 값에 읽는 쪽을 이었다. 읽는 곳은 `UserSettingsVariables.h` 각 줄에 있다.
 
@@ -13,25 +13,21 @@
 - 색각 보정 톤맵 쪽(`gv_colorVisionMode`): C++ 는 화면 · 호스트 출력 뷰의 `g_CameraFrame.z` 에 방식을 싣는다(렌더 텍스처는 0). 셰이더는 U3.
 - 머리 흔들림: Shooter3D(`arena.scene.xml`) · VoxelCraft(`island.scene.xml`) 1인칭 카메라에 `_headBob` 진폭을 넣었다.
 
-## U3 셰이더 쿠킹 — 모션 블러와 톤맵 색각 보정
+## U3 모션 블러와 톤맵 색각 보정 셰이더 (들어감)
 
-셰이더를 바꾸는 몫은 커밋 훅(`CheckShaderStamps`)이 쿠킹 없이 막아 패치로 남겼다(작업자 보고에 경로가 있다). 패치 내용:
+셰이더(`motionblur.hlsl` · `colorvision.hlsli` · `postgrade.hlsli` · `taa.hlsl`)와 쿠킹 바이너리는 트리에 들어 있다(셰이더 병합 · 재쿠킹 끝).
 
-- `RenderPassType::MotionBlur`(파이프라인 타입, `isPipelinePassType` 상한) · 타입 표 줄(원본 · 깊이 입력, `kSkipsWithoutPostProcess`) · `EngineDefaultAssets::_shaderMotionBlur` + `enginedefaultassets.xml` · 새 `motionblur.hlsl`(깊이 → 월드 → 지난 뷰-투영, 8 표본, 길이 상한).
-- PassCB `g_PrevViewProj`(`binding.hlsli`, `PassConstantNames::_prevViewProj`) — `ViewTarget::_prevViewProj` · `_prevViewID` · `_bHasPrevViewProj` 를 `applyViewProjection` 이 뷰마다 갱신한다(처음 · 다른 카메라 · 컷은 이번 것). PassCB 는 약 700 바이트로 `PassConstantRing::kSlotBytes` 768 안이다.
-- `gv_motionBlur` 를 끄면 `executePass` 가 후처리 품질로 건너뛸 때와 같은 길로 보낸다. 디퍼드 파이프라인에 `MotionBlur` 패스(TaaColor + SceneDepth → MotionBlurColor, `_minPostQuality` 1)를 Tonemap 앞에 둔다.
-- `postgrade.hlsli` 가 `colorvision.hlsli` 를 include 해 `CameraGrade::apply` 안에서 `g_CameraFrame.z` 로 보정한다(tonemap.hlsl · postchain.hlsl 공통).
-
-적용 순서: 패치를 적용하고 빌드한 뒤 `App.exe --cook-shaders` 로 네 백엔드를 다시 쿠킹하고(PassCB 가 바뀌어 모든 셰이더가 낡는다) `ShaderCookRequestTest` 가 0 이 될 때까지 지운 다음 바이너리 · `cook.stamp` · `reflection.manifest` 와 함께 커밋한다.
+- `RenderPassType::MotionBlur`(파이프라인 타입, 원본 · 깊이 입력, `kSkipsWithoutPostProcess`) · `EngineDefaultAssets::_shaderMotionBlur` · PassCB `g_PrevViewProj`(`ViewTarget::_prevViewProj` · `_prevViewID` · `_bHasPrevViewProj` 를 `applyViewProjection` 이 뷰마다 갱신, 처음 · 다른 카메라 · 컷은 이번 것).
+- `gv_motionBlur` 를 끄면 `executePass` 가 후처리 품질로 건너뛸 때와 같은 길로 보낸다. 디퍼드에 `MotionBlur` 패스(TaaColor + SceneDepth → MotionBlurColor, `_minPostQuality` 1)를 Tonemap 앞에 둔다. 포워드 파이프라인 넷(forward · staged · prepass · toon)에도 있다 — 피사계 심도 뒤(toon 은 장면 색 뒤) · 후처리 체인 앞, `_minPostQuality` 1.
+- `postgrade.hlsli` 가 `colorvision.hlsli` 를 include 해 `CameraGrade::apply` 안에서 `g_CameraFrame.z` 로 보정한다(tonemap.hlsl · postchain.hlsl 공통). C++ 는 화면 · 호스트 출력 뷰의 `g_CameraFrame.z` 에 방식을 싣는다(렌더 텍스처는 0).
+- TAA 는 기록을 깊이로 재투영하고 이번 원본의 3x3 이웃으로 잘라 섞는다(계약에 `SceneDepth` 필수, `RenderPassGPUTest.TaaLeavesNoGhostOfAMovedObject`).
 
 ## U4 화면 확인과 남은 것
 
-- `gpu-verifier` 로 네 백엔드 캡처: 렌더 스케일 0.5 에서 장면이 흐려지되 UI 는 그대로, 시야 거리 0.25 에서 먼 물체가 잘림, 후처리 low 에서 SSAO · 블룸이 빠짐, 텍스처 low 에서 흐려짐(재시작),
-  이펙트 low 에서 입자 수 감소, 색각 보정이 장면과 UI 에 한 번씩만 걸림(렌더 텍스처 모니터가 두 번 보정되지 않음).
-- 모션 블러는 확인함(2026-10-22): `game/empty/automation/motionblur.scenario.xml`(디퍼드, 무대 `maps/rendertest3d`)이 카메라를 순간이동으로 옮겨 켬 · 끔 사진을 같은 카메라 · 지난 카메라로 견준다 — 움직인 프레임은 다르고(0.0067) 멈춘 카메라는 같다(0.00003). 네 백엔드가 같은 값이고 `AppScenarioTest`(hostgpu)가 돈다.
-  포워드 파이프라인(게임 기본)에는 MotionBlur 패스가 없어 `gv_motionBlur` 가 아무것도 바꾸지 않는다. 그 사진에서 본 것: TAA(`taa.hlsl`)가 기록을 재투영 · 이웃 클램프 없이 0.9 로 섞어 카메라가 움직인 프레임에 앞 그림이 겹친다(셰이더 담당에 넘길 일).
+- 확인 대기: 매니페스트 id `usersettings-scenario`, `usersettings-visual-review`, `usersettings-render-tests`.
+- `usersettings-scenario`(`game/empty/automation/useroptions.scenario.xml`, 무대 `maps/rendertest3d` 디퍼드)는 렌더 스케일 0.5 · 시야 거리 0.05 · 후처리 품질 0 · 색각 보정 1 을 하나씩 바꿔 사진을 기준과 견준다. 문턱은 측정 전 추정이라 첫 캡처로 맞춘다.
+- `usersettings-visual-review`(사람 눈): 렌더 스케일 0.5 에서 장면만 흐리고 UI 는 그대로인지, 텍스처 품질 low 에서 흐려지는지(재시작), 이펙트 품질 low 에서 입자 수가 주는지, 색각 보정이 장면과 UI 에 한 번씩만 걸리는지(렌더 텍스처 모니터가 두 번 보정되지 않음). 근거: 이 무대에는 UI · 렌더 텍스처 모니터 · 입자가 없다.
+- 모션 블러는 확인함(2026-10-22): `game/empty/automation/motionblur.scenario.xml`(디퍼드, 무대 `maps/rendertest3d`)이 카메라를 순간이동으로 옮겨 켬 · 끔 사진을 같은 카메라 · 지난 카메라로 견준다 — 움직인 프레임은 다르고(0.0067) 멈춘 카메라는 같다(0.00003). 네 백엔드가 같은 값이고 `AppScenarioTest`(hostgpu)가 돈다. 포워드 넷의 모션 블러와 TAA 이웃 클램프 화면 확인(카메라를 돌릴 때 앞 그림이 겹치지 않음)은 위 `usersettings-visual-review` 에 더한다.
 - 머리 흔들림 진폭은 데이터라 화면을 보고 고친다(Shooter3D 0.03 · 0.015, VoxelCraft 0.025 · 0.012).
-- 포워드 파이프라인(`forwardpipelinestaged.xml` 의 블룸)에는 `_minPostQuality` 를 아직 두지 않았다. 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다.
-- 모션 블러는 이제 포워드 파이프라인 넷(forward · staged · prepass · toon)에도 있다 — 피사계 심도 뒤(toon 은 장면 색 뒤) · 후처리 체인 앞, `_minPostQuality` 1. TAA 는 기록을 깊이로 재투영하고
-  이번 원본의 3x3 이웃으로 잘라 섞는다(계약에 `SceneDepth` 필수, `RenderPassGPUTest.TaaLeavesNoGhostOfAMovedObject`) — 셰이더(`taa.hlsl`)는 셰이더 쿠킹과 함께 병합 담당이 얹는다. 화면 확인(카메라를 돌릴 때 앞 그림이 겹치지 않음)은 위 캡처에 더한다.
-- X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+- 움직이는 물체의 속도 버퍼(오브젝트 모션 블러)는 없다 — 지난 프레임 월드 행렬을 GPUScene 이 가져야 한다.
+- X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인(리눅스 실기 환경이 없어 풀리지 않는다).

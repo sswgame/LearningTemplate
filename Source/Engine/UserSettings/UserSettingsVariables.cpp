@@ -17,7 +17,7 @@ SW_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView, 70.0f, "카메라 시야각(�
 SW_GLOBAL_VARIABLE( float32, gv_cameraShakeScale, 1.0f, "카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake)" );
 SW_GLOBAL_VARIABLE( bool, gv_cameraHeadBob, true, "걷기 머리 흔들림 (사용자 설정 gameplay.headBob)" );
 
-SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기)" );
+SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스와 화면 출력 뷰의 톤맵 — postgrade.hlsli)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiScale, 1.0f, "게임 UI 배율 (사용자 설정 accessibility.uiScale)" );
 SW_GLOBAL_VARIABLE( sw::string, gv_uiTheme, "default", "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiTextScale, 1.0f, "게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize)" );
