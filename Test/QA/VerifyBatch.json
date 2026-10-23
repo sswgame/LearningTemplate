@@ -444,6 +444,16 @@
       "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "Tracy 로 그 프레임을 보는 일이라 표로 판정할 값이 없다(gv_profileTracePath 트레이스를 사람이 연다)",
       "source": "docs/plans/Candidates-quality.md", "result_doc": "docs/plans/Candidates-quality.md 부하 검증 후보"
+    },
+    {
+      "id": "config-range-reject-tests", "title": "설정 범위 거절 리팩터의 테스트(Vitality · ResourceGauge · 장르 키트 설정)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 40,
+      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
+      "source": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining", "result_doc": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining"
+    },
+    {
+      "id": "shooter-net-jump-lte", "title": "Shooter3D 전용 서버 + 클라이언트 lte 에서 짧은 점프 입력이 매번 나가는지와 보정 횟수", "kind": "measure", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "서버 + 클라이언트 두 프로세스에 -gv_netEmuPreset=lte 를 걸고 사람이 점프를 짧게 눌러 보는 일이라 한 명령 시나리오가 아직 없다(netplay.scenario.xml 에 점프 입력 단계를 더하면 된다)",
+      "source": "docs/plans/RollbackPrediction.md 남은 것", "result_doc": "docs/plans/RollbackPrediction.md 남은 것"
     }
   ]
 }
