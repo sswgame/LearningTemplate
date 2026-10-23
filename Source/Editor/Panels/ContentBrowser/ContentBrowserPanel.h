@@ -75,8 +75,17 @@ namespace sw::editor
         uint32 getGameRootCount() const;
         /** @brief 루트 목록에 그 표시 이름(`game/empty`, `engine`)을 가진 루트가 있으면 true 입니다. */
         bool hasRoot( string_view displayName ) const;
-        /** @brief 참조 역색인이 한 번이라도 완성되었으면 true 입니다. */
-        bool isReferenceIndexReady() const { return _referenceSearch.getIndex().isReady(); }
+        /**
+         * @brief 참조 역색인이 에디터가 본 마지막 `Resource/` 변경까지 반영했으면 true 입니다(`ContentBrowserReferenceSearch::isCurrent`).
+         * @details 자동화 탐침(`Editor.ReferenceIndexReady` · `Editor.ReferenceCount`)과 이름 바꾸기 · 옮기기가 본다. 한 번 만든 색인이 있어도 스캔이 돌면 false 다.
+         */
+        bool isReferenceIndexCurrent() const;
+        /**
+         * @brief 내용이 화면에 보이는데 참조 역색인이 아직 마지막 변경을 반영하지 않았으면 true 입니다. 자동화 시계 잡기 조건(`ContentBrowserReferenceIndex`)입니다.
+         * @details 색인은 내용을 그리는 프레임에만 따라온다(`syncReferenceIndex`). 가려진 탭 · 접힌 창 · 닫힌 패널은 색인을 갱신하지 않으므로 기다리지 않는다 —
+         *          그때 탐침은 값을 내지 않고, 시나리오는 패널을 앞에 두고(`panel.focus content_browser`) 기다린다.
+         */
+        bool isWaitingForReferenceIndex() const;
         /** @brief 참조 역색인을 반환합니다. */
         const EditorReferenceIndex& getReferenceIndex() const { return _referenceSearch.getIndex(); }
         /**
@@ -169,6 +178,10 @@ namespace sw::editor
         void drawAssetContextMenu( const AssetEntry& entry );
         /** @brief 삭제 확인 모달을 그립니다. `requestDeleteAsset` 이 이 모달을 엽니다. */
         void drawDeleteConfirmModal();
+        /** @brief 탭이 가려지거나 창이 접혀 내용을 그리지 않는 프레임입니다. 색인을 기다리지 않게 표시합니다. */
+        void onPanelCollapsed() override;
+        /** @brief 패널을 닫았습니다. 색인을 기다리지 않게 표시합니다. */
+        void onPanelClosed() override;
         /** @brief `Resource/` 가 바뀌었으면 폴더 목록을 다시 읽게 합니다. 에디터 밖에서 바꾼 경우도 포함합니다. */
         void syncWithContentChanges();
         /** @brief 워커가 만든 역색인을 받습니다. 처음이거나 `Resource/` 가 바뀌었으면 다시 스캔하도록 요청합니다. */
@@ -187,6 +200,8 @@ namespace sw::editor
         void acceptAssetDrop( string_view folderAbs );
         /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 선택합니다. */
         void selectAfterFileChange( string_view absolutePath );
+        /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 경고를 남기고 nullptr 입니다(옮기지 않는다). */
+        EditorReferenceIndex* findCurrentReferenceIndex();
         /** @brief 애셋 항목의 썸네일이나 아이콘을 그립니다. */
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
@@ -254,5 +269,7 @@ namespace sw::editor
         uint8                                 _bOpenReferenceResults    : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
         uint8                                 _bFocusRenameInput        : 1; /**< 다음 그리기에서 이름 입력란에 포커스를 준다 */
         uint8                                 _bListingRecursive        : 1; /**< 현재 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
+        uint8                                 _bContentVisible          : 1; /**< 마지막 그리기에서 내용을 그렸다(가려진 탭 · 접힌 창 · 닫힌 패널이 아니다) */
+        [[maybe_unused]] uint8                _reservedFlags            : 7;
     };
 } // namespace sw::editor
