@@ -1069,6 +1069,24 @@ namespace sw
         return StringUtilInternal::parseSignedInteger<int32, uint32>( token, base, MathUtil::kMinInt32, MathUtil::kMaxInt32, outValue );
     }
 
+    bool StringUtil::parseIntList( string_view text, string_view separators, vector<int32>& outListValue )
+    {
+        outListValue.clear();
+        bool bValid = true;
+        forEachToken( text, separators, [&]( string_view token )
+        {
+            int32 value = 0;
+            if ( parseInt( token, value ) == false )
+            {
+                bValid = false;
+                return false;
+            }
+            outListValue.push_back( value );
+            return true;
+        } );
+        return bValid;
+    }
+
     bool StringUtil::parseInt64( string_view token, int64& outValue, int32 base )
     {
         return StringUtilInternal::parseSignedInteger<int64, uint64>( token, base, MathUtil::kMinInt64, MathUtil::kMaxInt64, outValue );

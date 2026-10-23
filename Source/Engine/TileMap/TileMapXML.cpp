@@ -45,37 +45,7 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
-            /** @brief 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)인지 봅니다. */
-            [[nodiscard]] static bool isListSpace( const utf8 character )
-            {
-                return character == ' ' || character == '\n' || character == '\r' || character == '\t';
-            }
-
-            /** @brief 공백으로 나눈 정수들(부호 허용)을 읽습니다. 숫자가 아닌 조각이 있으면 false 입니다. */
-            [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
-            {
-                outListValue.clear();
-                size_t cursor = 0;
-                while ( cursor < text.size() )
-                {
-                    while ( cursor < text.size() && isListSpace( text[cursor] ) )
-                    {
-                        ++cursor;
-                    }
-                    const size_t start = cursor;
-                    while ( cursor < text.size() && isListSpace( text[cursor] ) == false )
-                    {
-                        ++cursor;
-                    }
-                    if ( cursor == start )
-                        break;
-                    int32 value = 0;
-                    if ( StringUtil::parseInt( text.substr( start, cursor - start ), value ) == false )
-                        return false;
-                    outListValue.push_back( value );
-                }
-                return true;
-            }
+            static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
 
             /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 레이어 표의 기본값입니다. 깨진 숫자는 false 입니다. */
             [[nodiscard]] static bool readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info, uint8& outFlag )
@@ -350,7 +320,7 @@ namespace sw
             }
             layer._defaultValue      = *defaultValue;
             const utf8* pValues      = layerNode.getText();
-            const bool  bValuesValid = TileMapXMLInternal::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, layer._listValue ) &&
+            const bool  bValuesValid = StringUtil::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, TileMapXMLInternal::kValueListSeparators, layer._listValue ) &&
                                       layer._listValue.size() == count;
             if ( bValuesValid == false )
             {

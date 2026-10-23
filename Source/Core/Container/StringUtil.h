@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -322,6 +323,12 @@ namespace sw
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
         [[nodiscard]] static bool parseInt( string_view token, int32& outValue, int32 base = 10 );
+
+        /**
+         * @brief @p separators 로 나뉜 32비트 정수(부호 허용) 목록을 @p outListValue 에 읽습니다.
+         * @details 먼저 비웁니다. 빈 글은 빈 목록으로 성공이고, 숫자가 아닌 토큰이 있으면 false 입니다(그때 목록은 거기까지 읽은 값입니다).
+         */
+        [[nodiscard]] static bool parseIntList( string_view text, string_view separators, vector<int32>& outListValue );
 
         /**
          * @brief string_view 토큰을 64비트 정수로 파싱합니다(할당 없음).

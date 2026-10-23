@@ -1579,7 +1579,27 @@ SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
 }
 
 /**
- * @brief [StringTest] 대소문자 변환과 비교의 utf16 판 — utf8 판과 같은 뼈대(`mapEachChar` · `equalsView`)를 쓴다
+ * @brief [StringTest] 정수 목록 파서 — 구분자 · 부호 · 빈 글 · 깨진 토큰
+ */
+SW_TEST_CASE( StringTest, ParseIntListSplitsBySeparators )
+{
+    sw::vector<int32> list{ 9 };
+    SW_EXPECT_TRUE( sw::StringUtil::parseIntList( " 1, -2\t3 ,,4 ", " ,\t", list ) );
+    SW_EXPECT_TRUE( list.size() == 4 );
+    SW_EXPECT_TRUE( list[0] == 1 && list[1] == -2 && list[2] == 3 && list[3] == 4 );
+
+    SW_EXPECT_TRUE( sw::StringUtil::parseIntList( "5\n6\r\n7", " \n\r\t", list ) );
+    SW_EXPECT_TRUE( list.size() == 3 );
+
+    SW_EXPECT_TRUE( sw::StringUtil::parseIntList( "", " ", list ) ); // 빈 글은 빈 목록
+    SW_EXPECT_TRUE( list.empty() );
+
+    SW_EXPECT_FALSE( sw::StringUtil::parseIntList( "1 x 3", " ", list ) );
+    SW_EXPECT_FALSE( sw::StringUtil::parseIntList( "1,2", " ", list ) ); // 쉼표가 구분자가 아니면 "1,2" 는 한 토큰이라 숫자가 아니다
+}
+
+/**
+ * @brief [StringTest] 대소문자 변환과 비교의 utf16 판— utf8 판과 같은 뼈대(`mapEachChar` · `equalsView`)를 쓴다
  */
 SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
 {
