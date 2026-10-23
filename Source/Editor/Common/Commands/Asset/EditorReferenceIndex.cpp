@@ -220,6 +220,12 @@ namespace sw::editor
         sortByTarget( _data._listReference );
     }
 
+    bool EditorReferenceIndex::containsFile( string_view resourceID ) const
+    {
+        const string id = FileUtil::normalizePath( resourceID );
+        return std::binary_search( _data._listKnownID.begin(), _data._listKnownID.end(), id );
+    }
+
     void EditorReferenceIndex::findReferrers( string_view targetPath, vector<EditorAssetReference>& outListReference ) const
     {
         outListReference.clear();

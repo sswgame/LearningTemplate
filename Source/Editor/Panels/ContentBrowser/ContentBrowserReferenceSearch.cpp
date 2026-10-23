@@ -3,6 +3,9 @@
 #include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/File/FileUtil.h"
+
+#include "Editor/Common/Workspace/AssetHotReload.h"
 
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -13,6 +16,7 @@ namespace sw::editor
     ContentBrowserReferenceSearch::ContentBrowserReferenceSearch()
         : _index{}
         , _job{}
+        , _pChangeSource{ nullptr }
         , _queryID{}
         , _listResult{}
         , _scanSerial{ 0 }
@@ -23,8 +27,9 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserReferenceSearch::update( uint64 contentChangeSerial )
+    void ContentBrowserReferenceSearch::update( uint64 contentChangeSerial, AssetHotReload* pChangeSource )
     {
+        _pChangeSource = pChangeSource;
         EditorReferenceIndexData data{};
         const EditorTaskPoll     poll = _job.take( data );
         if ( poll == EditorTaskPoll::Ready )
@@ -38,7 +43,34 @@ namespace sw::editor
             return;
         if ( _bScanRequested == SW_TRUE && contentChangeSerial == _scanSerial )
             return;
+        // 색인이 있고 스캔이 돌지 않으면 바뀐 파일만 다시 읽어 본다. 목록은 여기서만 꺼낸다 — 스캔이 도는 동안은 쌓아 두었다가 끝난 뒤 쓴다.
+        const bool bCanRefreshIncrementally = _index.isReady() && _bScanInFlight == SW_FALSE;
+        if ( bCanRefreshIncrementally && _pChangeSource != nullptr )
+        {
+            vector<string> listChangedPath;
+            if ( _pChangeSource->takeChangedPaths( listChangedPath ) && tryRefreshChangedFiles( listChangedPath ) )
+            {
+                _scanSerial = contentChangeSerial;
+                return;
+            }
+        }
         requestScan( contentChangeSerial );
+    }
+
+    bool ContentBrowserReferenceSearch::tryRefreshChangedFiles( const vector<string>& listChangedPath )
+    {
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
+        for ( const string& resourceID : listChangedPath )
+        {
+            const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, resourceID ) );
+            if ( bExists != _index.containsFile( resourceID ) )
+                return false; // 생기거나 사라진 파일 — 다른 파일의 참조 판정이 바뀐다
+        }
+        for ( const string& resourceID : listChangedPath )
+        {
+            _index.refreshFile( resourceRoot, resourceID );
+        }
+        return true;
     }
 
     void ContentBrowserReferenceSearch::restartPendingScan( uint64 contentChangeSerial )
@@ -60,6 +92,9 @@ namespace sw::editor
         _scanSerial     = contentChangeSerial;
         _bScanRequested = SW_TRUE;
         _bScanInFlight  = SW_TRUE;
+        // 이 스캔이 지금까지의 변경을 모두 담는다 — 그 뒤에 오는 변경만 기억한다.
+        if ( _pChangeSource != nullptr )
+            _pChangeSource->discardChangedPaths();
         _job.request( ResourcePaths::getRootFolderPath() );
     }
 

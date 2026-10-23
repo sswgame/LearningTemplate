@@ -474,6 +474,17 @@
       "id": "preview-window-reopen-cost", "title": "미리보기 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간(정점 풀까지 나눌 값이 있는지)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
       "need_command": "창 여럿을 띄우고 닫으며 GPU 메모리와 첫 프레임 시간을 재는 perf-compare 케이스가 없다(previewreopen 시나리오는 렌더러 수만 센다)",
       "source": "docs/plans/EditorMultiWorld.md 6절 4", "result_doc": "docs/plans/EditorMultiWorld.md 6절 4"
+    },
+    {
+      "id": "asset-hot-reload-test", "title": "AssetHotReloadTest 필터(바뀐 파일 기억 · 폴더는 전체 스캔 · 울타리 표지)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AssetHotReloadTest.*",
+      "source": "docs/plans/ContentBrowserWatchAndScan.md CW1 · CW2", "result_doc": "docs/plans/ContentBrowserWatchAndScan.md 상태를 끝으로"
+    },
+    {
+      "id": "content-watch-fence-scenarios", "title": "사본 폴더를 쓰는 에디터 시나리오(assetmanage · contentthumbnails)가 울타리 · 증분 갱신 아래서 통과한다([ContentWatchFence] 오류 줄 없음)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/assetmanage.scenario.xml", "engine/automation/editor/contentthumbnails.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/ContentBrowserWatchAndScan.md CW1 · CW2", "result_doc": "docs/plans/ContentBrowserWatchAndScan.md 상태를 끝으로",
+      "note": "체인 시간이 줄었는지(전 · 후 assetmanage 의 시계 잡은 프레임 수)도 이 실행의 로그로 비교한다."
     }
   ]
 }
