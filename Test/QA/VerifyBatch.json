@@ -447,6 +447,12 @@
       "id": "glyph-bench-msdf", "title": "새 한글 글리프 400 개의 CPU 비용 — MSDF 대 SDF(GlyphBenchTest)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 20,
       "tool": "scripts", "args": ["test", "GlyphBenchTest.*", "--preset", "{preset}", "--no-build", "--host_suites=all"], "limit": "보고만 — SDF p50 2.3 ms 와 MSDF p50 을 나란히", "judge": "exit",
       "source": "docs/plans/MsdfGlyphs.md M5", "result_doc": "docs/plans/MsdfGlyphs.md M5"
+    },
+    {
+      "id": "uia-client-test", "title": "UIA 클라이언트가 진짜 창의 메뉴를 읽고 조작한다(UiaClientTest, 내레이터 실기 확인의 자동화 몫)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
+      "filter": "UiaClientTest.*", "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/ScreenReaderSupport.md A6", "result_doc": "docs/plans/ScreenReaderSupport.md 상태를 끝으로",
+      "note": "진짜 창과 UIA 서비스가 필요하다. 지면 클라이언트 스레드가 제공자 호출에서 멈췄는지(30 초 시한) 먼저 본다."
     }
   ]
 }

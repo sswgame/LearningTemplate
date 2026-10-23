@@ -22,6 +22,14 @@
 왜 필요한가: 에디터에서 게임 뷰 패널을 다른 OS 창(ImGui 보조 뷰포트)으로 떼면 키 · 글자는 `GameViewPanel::forwardDetachedKeyboard` 가 게임 입력으로 넣는다. 키 표(`ImGuiKeyForward`)는 `ImGuiKeyForwardTest` 가 보지만, 보조 OS 창이 포커스를 가진 채 이동 키가 게임에 닿는지와 키를 누른 채 창을 바꿔도 키가 눌린 채 남지 않는지는 실제 창이 있어야 한다.
 못 하는 이유(2026-10-24): 보조 뷰포트 OS 창을 만들고 그 창으로 OS 포커스를 옮기는 일은 무인 실행 안에서 할 수 없다(포커스는 사용자 세션의 전경 창 규칙을 따른다). 풀리는 조건: 사람이 있는 Windows 에디터에서 패널을 떼어 이동 키를 누르거나, 시나리오 실행기가 보조 창을 전경으로 가져오는 길(`requireForeground` 의 확장)이 생길 때.
 
+### AtSpiBridge
+제목: 리눅스 AT-SPI 스크린 리더 브리지
+옛번호: G-9
+왜 필요한가: Windows 는 UI Automation 브리지가 있고([ScreenReaderSupport](ScreenReaderSupport.md) A4), 리눅스 클라이언트에는 Orca 같은 스크린 리더에 닿는 길이 없다. 접근성 트리(`UIAccessibilityTree`) · 브리지 계약(`IUIAccessibilityBridge`)은 플랫폼과 무관해 AT-SPI 구현만 비어 있다.
+착수 조건: 리눅스 클라이언트가 제품 대상이 되고 Orca + at-spi2 를 올린 세션(CI 에 xvfb + dbus + orca 를 띄우거나 실기)을 확보할 때.
+남은 것: D-Bus 위의 `org.a11y.atspi` 객체(Accessible · Action · Value · Component 인터페이스)를 접근성 레지스트리에 등록하는 구현과 D-Bus 의존성(libdbus 또는 sd-bus)이다. 외부 계약(AT-SPI)과 새 의존성이 필요해 한 번에 검증할 환경 없이 쓰면 CI 의 리눅스 빌드를 깨는 위험만 커서 지금 만들지 않았다.
+함정: 스냅샷을 UIA 와 같은 방식으로 쓴다(브리지는 위젯을 쥐지 않고 (화면 핸들, 위젯 번호)로 찾는다). 붙은 스크린 리더가 없으면 일하지 않는 규칙(`isClientActive`)도 같다.
+
 ## 조건부
 
 ### MarkerComputeProjection
