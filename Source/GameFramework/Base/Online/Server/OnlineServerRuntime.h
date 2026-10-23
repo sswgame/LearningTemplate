@@ -46,17 +46,20 @@ namespace sw
         OnlineServerConfig      _config{};
         OnlineServerStoreConfig _store{};
         OnlineServerStoreConfig _cache{};
-        NetAddress              _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
-        string                  _tlsCertificateFile{};                           ///< `_bTLS` 일 때. 둘 다 비면 Dev 만 개발용 인증서
+        NetAddress              _listenAddress{ NetAddress::makeLoopback( 0 ) };      ///< 포트 0 = 아무 포트(`getListenPort`)
+        NetAddress              _adminListenAddress{ NetAddress::makeLoopback( 0 ) }; ///< `_bAdminListener` 일 때 GM 리슨이 받을 주소
+        string                  _tlsCertificateFile{};                                ///< `_bTLS` 일 때. 둘 다 비면 Dev 만 개발용 인증서
         string                  _tlsPrivateKeyFile{};
-        string                  _tlsPrivateKeyPassphrase{}; ///< 런타임이 쓰고 나면 비운다
-        IStreamTransport*       _pTransport{ nullptr };     ///< 빌려 쓴다. null 이면 플랫폼 전송을 만든다
+        string                  _tlsPrivateKeyPassphrase{};  ///< 런타임이 쓰고 나면 비운다
+        IStreamTransport*       _pTransport{ nullptr };      ///< 빌려 쓴다. null 이면 플랫폼 전송을 만든다
+        IStreamTransport*       _pAdminTransport{ nullptr }; ///< `_bAdminListener` 일 때 GM 리슨의 전송. 빌려 쓴다. null 이면 플랫폼 전송을 만든다
         MetricRegistry*         _pMetricRegistry{ nullptr };
         ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
         uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트(샤드 여럿이면 첫 포트)
         uint8                   _gamePortCount{ 1 };           ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
         uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
         uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
+        uint8                   _bAdminListener{ SW_FALSE };   ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 서비스 리슨 하나가 GM 서비스도 받는다
     };
 } // namespace sw
 

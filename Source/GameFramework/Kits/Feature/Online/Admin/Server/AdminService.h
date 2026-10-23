@@ -73,8 +73,10 @@ namespace sw
 
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return AdminProtocol::kOnlineEntry; }
-        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        /** @brief GM 리슨(서버 설정 `_adminServicePort`)이 있으면 그 연결만 받습니다 — 플레이어 포트에서는 없는 영역과 같은 답입니다. */
+        OnlineServiceExposure getExposure() const override { return OnlineServiceExposure::Admin; }
+        void                  onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
+        void                  onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );

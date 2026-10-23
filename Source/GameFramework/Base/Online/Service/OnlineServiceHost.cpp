@@ -22,8 +22,169 @@ namespace sw
 
             /** @brief 주소마다의 도배 제한 단위 — 포트는 빼고 IP 만(포트를 바꿔 새 연결로 우회하지 못하게). */
             static uint64 makeRemoteKey( const NetAddress& remote ) { return static_cast<uint64>( remote._ipv4 ) + 1; }
+
+            /** @brief 노출이 @p exposure 인 서비스가 이 연결의 요청을 받는지입니다. GM 리슨이 없으면 리슨 하나가 모든 서비스를 받습니다. */
+            static bool isServedOn( OnlineServiceExposure exposure, bool bHasAdminListener, bool bAdminConnection )
+            {
+                if ( bHasAdminListener == false )
+                    return true;
+                switch ( exposure )
+                {
+                    case OnlineServiceExposure::Player:
+                        return bAdminConnection == false;
+                    case OnlineServiceExposure::Admin:
+                        return bAdminConnection;
+                    case OnlineServiceExposure::PlayerAndAdmin:
+                        return true;
+                }
+                return false;
+            }
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class OnlineServiceHost::ListenerTransport
+     * @brief 리슨마다 빌린 전송 하나(플레이어 · GM)를 묶어 전송 하나로 보입니다.
+     * @details - 전송 계약(`IStreamTransport`)은 리슨이 하나라서 IOCP · epoll · 루프백 구현을 고치지 않고 전송 여럿을 묶는다.
+     *          - 바깥 핸들의 슬롯 번호는 `안쪽 슬롯 × 리슨 수 + 리슨` 이다. 두 전송의 핸들이 겹치지 않고, 연결이 들어온 리슨을 핸들만으로 안다(`isAdminConnection`).
+     *            세대는 그대로 두므로 무효 핸들(세대 0)은 무효로 남는다.
+     *          - 콜백은 각 전송의 I/O 스레드에서 온다. 리슨마다 둔 중계(`ChildHandler`)는 바뀌지 않는 값만 읽으므로 겹쳐 불려도 된다.
+     */
+    class OnlineServiceHost::ListenerTransport final : public IStreamTransport
+    {
+    public:
+        static constexpr uint32 kPlayerListener = 0;
+        static constexpr uint32 kAdminListener  = 1;
+        static constexpr uint32 kMaxListener    = 2;
+
+        ListenerTransport( IStreamTransport* pPlayerTransport, IStreamTransport* pAdminTransport )
+            : _arrHandler{}
+            , _arrTransport{ pPlayerTransport, pAdminTransport }
+            , _pHandler{ nullptr }
+            , _listenerCount{ pAdminTransport != nullptr ? kMaxListener : 1 }
+        {
+            SW_ASSERT( pPlayerTransport != nullptr );
+            for ( uint32 listener = 0; listener < kMaxListener; ++listener )
+            {
+                _arrHandler[listener]._pOwner   = this;
+                _arrHandler[listener]._listener = listener;
+            }
+        }
+
+        bool hasAdminListener() const { return _listenerCount == kMaxListener; }
+        bool isAdminConnection( StreamConnectionHandle handle ) const { return handle._index % _listenerCount == kAdminListener; }
+
+        /** @brief GM 리슨에서 받기 시작합니다. GM 전송이 없으면 false 입니다. */
+        [[nodiscard]] bool listenAdmin( const NetAddress& bindAddress ) { return hasAdminListener() && _arrTransport[kAdminListener]->listen( bindAddress ); }
+        uint16             getAdminListenPort() const { return hasAdminListener() ? _arrTransport[kAdminListener]->getListenPort() : 0; }
+
+        bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
+        {
+            _pHandler = pHandler;
+            for ( uint32 listener = 0; listener < _listenerCount; ++listener )
+            {
+                if ( _arrTransport[listener]->initialize( &_arrHandler[listener], settings ) == false )
+                    return false; // 이미 띄운 전송은 호스트의 정리(`shutdown`)가 내린다
+            }
+            return true;
+        }
+
+        void shutdown() override
+        {
+            for ( uint32 listener = _listenerCount; listener > 0; --listener )
+            {
+                _arrTransport[listener - 1]->shutdown();
+            }
+        }
+
+        /** @brief 플레이어 리슨에서 받기 시작합니다. GM 리슨은 `listenAdmin` 입니다. */
+        bool   listen( const NetAddress& bindAddress ) override { return _arrTransport[kPlayerListener]->listen( bindAddress ); }
+        uint16 getListenPort() const override { return _arrTransport[kPlayerListener]->getListenPort(); }
+
+        StreamConnectionHandle connect( const NetAddress& remote ) override { return makeOuterHandle( kPlayerListener, _arrTransport[kPlayerListener]->connect( remote ) ); }
+
+        StreamSendResult send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override
+        {
+            return getTransport( handle ).send( makeInnerHandle( handle ), pData, size );
+        }
+
+        void close( StreamConnectionHandle handle, StreamCloseMode mode ) override { getTransport( handle ).close( makeInnerHandle( handle ), mode ); }
+
+        void setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { getTransport( handle ).setReceivePaused( makeInnerHandle( handle ), bPaused ); }
+
+        int32 pollIO( int32 timeoutMilli ) override
+        {
+            int32 completionCount = 0;
+            for ( uint32 listener = 0; listener < _listenerCount; ++listener )
+            {
+                completionCount += _arrTransport[listener]->pollIO( timeoutMilli );
+            }
+            return completionCount;
+        }
+
+        NetAddress getRemoteAddress( StreamConnectionHandle handle ) const override
+        {
+            return getTransport( handle ).getRemoteAddress( makeInnerHandle( handle ) );
+        }
+
+        StreamTransportStats getStats() const override
+        {
+            StreamTransportStats total;
+            for ( uint32 listener = 0; listener < _listenerCount; ++listener )
+            {
+                const StreamTransportStats stats = _arrTransport[listener]->getStats();
+                total._acceptedCount += stats._acceptedCount;
+                total._connectedCount += stats._connectedCount;
+                total._closedCount += stats._closedCount;
+                total._receivedBytes += stats._receivedBytes;
+                total._sentBytes += stats._sentBytes;
+                total._receiveCallCount += stats._receiveCallCount;
+                total._sendCallCount += stats._sendCallCount;
+                total._openCount += stats._openCount;
+            }
+            return total;
+        }
+
+    private:
+        /** @brief 전송 하나의 콜백을 바깥 핸들로 바꿔 넘기는 중계입니다. */
+        struct ChildHandler final : public IStreamHandler
+        {
+            ListenerTransport* _pOwner{ nullptr };
+            uint32             _listener{ 0 };
+
+            void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
+            {
+                _pOwner->_pHandler->onStreamOpened( _pOwner->makeOuterHandle( _listener, handle ), remote, bAccepted );
+            }
+            void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override
+            {
+                _pOwner->_pHandler->onStreamReceived( _pOwner->makeOuterHandle( _listener, handle ), pData, size );
+            }
+            void onStreamWritable( StreamConnectionHandle handle ) override { _pOwner->_pHandler->onStreamWritable( _pOwner->makeOuterHandle( _listener, handle ) ); }
+            void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override
+            {
+                _pOwner->_pHandler->onStreamClosed( _pOwner->makeOuterHandle( _listener, handle ), reason );
+            }
+        };
+
+        StreamConnectionHandle makeOuterHandle( uint32 listener, StreamConnectionHandle inner ) const
+        {
+            SW_ASSERT( inner._index <= ( invalid_index::kUint32 - listener ) / _listenerCount );
+            return StreamConnectionHandle::make( inner._index * _listenerCount + listener, inner._generation );
+        }
+
+        StreamConnectionHandle makeInnerHandle( StreamConnectionHandle outer ) const { return StreamConnectionHandle::make( outer._index / _listenerCount, outer._generation ); }
+
+        IStreamTransport& getTransport( StreamConnectionHandle outer ) const { return *_arrTransport[outer._index % _listenerCount]; }
+
+        ChildHandler      _arrHandler[kMaxListener];
+        IStreamTransport* _arrTransport[kMaxListener];
+        IStreamHandler*   _pHandler;
+        uint32            _listenerCount;
+    };
 } // namespace sw
 
 namespace sw
@@ -42,7 +203,7 @@ namespace sw
         , _mapConnection{}
         , _mapAccountToConnection{}
         , _pServerBus{}
-        , _pTransport{ nullptr }
+        , _listenerTransport{}
         , _nowMs{ 0 }
         , _schemaHash{ 0 }
         , _bInitialized{ SW_FALSE }
@@ -62,13 +223,13 @@ namespace sw
             outError = "online service host needs a stream transport";
             return false;
         }
-        _settings   = settings;
-        _pTransport = pTransport;
-        _pServerBus = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;
-        _schemaHash = OnlineProtocolRegistry::computeSchemaHash(); // 서비스를 올린 뒤 기동 때 한 번. 같은 빌드의 클라이언트와 같은 값이다
+        _settings          = settings;
+        _listenerTransport = make_unique<ListenerTransport>( pTransport, settings._pAdminTransport );
+        _pServerBus        = settings._pServerBusTransport != nullptr ? make_unique<ServerBus>( *settings._pServerBusTransport ) : nullptr;
+        _schemaHash        = OnlineProtocolRegistry::computeSchemaHash(); // 서비스를 올린 뒤 기동 때 한 번. 같은 빌드의 클라이언트와 같은 값이다
         _accountBucket.initialize( settings._requestBurstPerAccount, settings._requestRefillMsPerAccount, OnlineServiceHostInternal::kMaxTrackedBucketCount );
         _remoteBucket.initialize( settings._requestBurstPerRemote, settings._requestRefillMsPerRemote, OnlineServiceHostInternal::kMaxTrackedBucketCount );
-        if ( _endpoint.initialize( pTransport, settings._endpointSettings ) == false )
+        if ( _endpoint.initialize( _listenerTransport.get(), settings._endpointSettings ) == false )
         {
             outError = "online service host could not set up its stream endpoint";
             releaseTransportSide();
@@ -89,10 +250,17 @@ namespace sw
                 (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerHostService 가 겹침을 이미 봤다
             }
         }
-        if ( pTransport->initialize( &_endpoint, settings._transportSettings ) == false || pTransport->listen( settings._listenAddress ) == false )
+        if ( _listenerTransport->initialize( &_endpoint, settings._transportSettings ) == false || _listenerTransport->listen( settings._listenAddress ) == false )
         {
             outError = "online service host could not listen on " + settings._listenAddress.toString();
             releaseTransportSide(); // 이미 선 엔드포인트 · 요청 서버 · 전송을 해제한다 — `_bInitialized` 가 거짓이라 `shutdown` 은 아무것도 하지 않는다
+            return false;
+        }
+        const bool bAdminListenFailed = _listenerTransport->hasAdminListener() && _listenerTransport->listenAdmin( settings._adminListenAddress ) == false;
+        if ( bAdminListenFailed )
+        {
+            outError = "online service host could not listen for the admin port on " + settings._adminListenAddress.toString();
+            releaseTransportSide();
             return false;
         }
         if ( settings._pEphemeralStore != nullptr )
@@ -122,13 +290,13 @@ namespace sw
 
     void OnlineServiceHost::releaseTransportSide()
     {
-        if ( _pTransport != nullptr )
-            _pTransport->shutdown();
+        if ( _listenerTransport != nullptr )
+            _listenerTransport->shutdown();
         _requestServer.shutdown();
         _endpoint.shutdown();
         _mapConnection.clear();
         _mapAccountToConnection.clear();
-        _pTransport = nullptr;
+        _listenerTransport.reset(); // 엔드포인트가 내려간 뒤 — 엔드포인트는 이 묶음을 전송으로 들고 있었다
     }
 
     bool OnlineServiceHost::registerHostService( IOnlineHostService* pService )
@@ -171,7 +339,7 @@ namespace sw
             return;
         _nowMs = nowMs;
         if ( _settings._transportSettings._ioThreadCount == 0 )
-            (void)_pTransport->pollIO( 0 );
+            (void)_listenerTransport->pollIO( 0 );
         (void)_endpoint.pump( *this );
         _requestServer.update();
         (void)_ephemeralRouter.pump();
@@ -316,7 +484,12 @@ namespace sw
 
     uint16 OnlineServiceHost::getListenPort() const
     {
-        return _pTransport != nullptr ? _pTransport->getListenPort() : 0;
+        return _listenerTransport != nullptr ? _listenerTransport->getListenPort() : 0;
+    }
+
+    uint16 OnlineServiceHost::getAdminListenPort() const
+    {
+        return _listenerTransport != nullptr ? _listenerTransport->getAdminListenPort() : 0;
     }
 
     void OnlineServiceHost::onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
@@ -325,6 +498,7 @@ namespace sw
         ConnectionState& connection = _mapConnection[handle.packed()];
         connection                  = ConnectionState{};
         connection._remoteKey       = OnlineServiceHostInternal::makeRemoteKey( remote );
+        connection._bAdminListener  = _listenerTransport->isAdminConnection( handle ) ? SW_TRUE : SW_FALSE;
     }
 
     void OnlineServiceHost::onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize )
@@ -390,7 +564,9 @@ namespace sw
             return;
         }
         IOnlineHostService* pService = findService( method );
-        if ( pService == nullptr )
+        const bool          bServed  = pService != nullptr && OnlineServiceHostInternal::isServedOn( pService->getExposure(), _listenerTransport->hasAdminListener(),
+                                                                                                     connection._bAdminListener == SW_TRUE );
+        if ( bServed == false )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
             return;

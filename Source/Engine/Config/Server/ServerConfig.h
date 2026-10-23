@@ -98,6 +98,16 @@ namespace sw
         PROPERTY( Min = 0, Max = 65535 )
         int32 _servicePort{ 7780 };
         /**
+         * @brief GM 도구 전용 서비스(TCP) 포트입니다. 0 이면 나누지 않고 서비스 포트 하나가 GM 서비스도 받습니다.
+         * @details 주면 GM 서비스(GM 키트)는 이 포트의 연결만, 플레이어 서비스는 `_servicePort` 의 연결만 받습니다. 계정 서비스는 둘 다 받습니다(GM 도 로그인한다).
+         *          TLS 는 서비스 포트와 같은 인증서입니다. 받는 주소는 `_adminListenAddress` 입니다(OnlineKits I6).
+         */
+        PROPERTY( Min = 0, Max = 65535 )
+        int32 _adminServicePort{ 0 };
+        /** @brief GM 포트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. GM 도구가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). */
+        PROPERTY()
+        string _adminListenAddress{ "127.0.0.1" };
+        /**
          * @brief 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`. 평문이고 인증 없음) 포트입니다. 0 이면 열지 않습니다.
          * @details 기본은 끔 — 한 기계에 서버 여럿(테스트 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대).
          */

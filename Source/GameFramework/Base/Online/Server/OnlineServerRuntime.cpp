@@ -107,6 +107,7 @@ namespace sw
         unique_ptr<IServiceStore>      _store{};
         unique_ptr<IEphemeralStore>    _cache{};
         unique_ptr<IStreamTransport>   _ownedTransport{};
+        unique_ptr<IStreamTransport>   _ownedAdminTransport{};
         unique_ptr<ITLSContext>        _tlsContext{};
         ServiceScheduler               _scheduler{};
         ServiceRetentionJob            _retention{};
@@ -176,8 +177,8 @@ namespace sw
                 kitText += ", ";
             kitText += name;
         }
-        SW_LOG_INFO( "Online services listening on port %# (server %#, kits: %#)", parts._host.getListenPort(), parts._context._serverID,
-                     kitText.empty() ? "none" : kitText.c_str() );
+        SW_LOG_INFO( "Online services listening on port %# (admin port %#, server %#, kits: %#)", parts._host.getListenPort(), parts._host.getAdminListenPort(),
+                     parts._context._serverID, kitText.empty() ? "none" : kitText.c_str() );
         return true;
     }
 
@@ -355,7 +356,19 @@ namespace sw
             parts._ownedTransport = StreamTransportFactory::createPlatformTransport();
             pTransport            = parts._ownedTransport.get();
         }
-        if ( pTransport == nullptr )
+        if ( settings._bAdminListener == SW_TRUE )
+        {
+            // GM 리슨 — 서비스의 노출(`OnlineServiceExposure`)대로 GM 서비스는 이 리슨만, 플레이어 서비스는 서비스 리슨만 받는다(OnlineKits I6).
+            hostSettings._adminListenAddress = settings._adminListenAddress;
+            hostSettings._pAdminTransport    = settings._pAdminTransport;
+            if ( hostSettings._pAdminTransport == nullptr )
+            {
+                parts._ownedAdminTransport    = StreamTransportFactory::createPlatformTransport();
+                hostSettings._pAdminTransport = parts._ownedAdminTransport.get();
+            }
+        }
+        const bool bAdminTransportMissing = settings._bAdminListener == SW_TRUE && hostSettings._pAdminTransport == nullptr;
+        if ( pTransport == nullptr || bAdminTransportMissing )
         {
             outError = "online services need a stream transport and this platform has none";
             return false;
