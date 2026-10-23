@@ -44,6 +44,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 #include "Engine/Renderer/LiveShaderSubsystem.h"
+#include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Renderer/SceneRHISubsystem.h"
@@ -207,6 +208,7 @@ namespace
         services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
         services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
         services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
+        services.addSubsystem( sw::make_unique<ModuleRenderPassRegistry>() );
     }
 
     /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */

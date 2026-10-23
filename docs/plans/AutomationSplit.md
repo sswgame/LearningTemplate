@@ -30,7 +30,8 @@
 
 - (① 에서 고침) 실행기가 `Terrain.WrittenEditCount` 와 캐릭터 탐침을 대신 정의했다. 탐침 레지스트리를 최상위 폴더 `Engine/Probe`(티어 10, Object 만 읽는다)로 옮기고, 기능이 자기 폴더에 등록한다(`Environment/Terrain/TerrainProbes.cpp`, `Character/PairedAnimation/PairedAnimationProbes.cpp`). 티어는 정수라 "9.5" 대신 Probe 를 10 에 두고 그 위 기능(Character · Environment 11, Vfx · Sequencer · Destruction 12)을 계산값대로 한 칸 올렸다.
 - `ModuleHost` 가 `AutomationSession::kSubsystemName` 을 안다(역방향 지식). → Session 이 이름을 등록하는 쪽으로 뒤집는다.
-- `Profiler.TraceRecording` 은 같은 구조가 **아니다** — Profiling(4)이 Probe(10) 아래라 기능 쪽에 둘 수 없고, 실행기가 읽는 방향이 맞다. `Input.*` 도 Input(10)이 Probe 와 같은 티어라 실행기에 남는다. `Scene.*`(Scene 11)은 Scene 폴더로 옮길 수 있으나 씬 공통 값이라 ① 에서 옮기지 않았다.
+- `Profiler.TraceRecording` 은 같은 구조가 **아니다** — Profiling(4)이 Probe(10) 아래라 기능 쪽에 둘 수 없고, 실행기가 읽는 방향이 맞다. `Input.*` 도 Input(10)이 Probe 와 같은 티어라 실행기에 남는다.
+- (① 뒤에 고침) `Scene.*`(ObjectCount · Transitioning · TransformHash, Scene 11)와 진단 스위치 `gv_automationHashDump` 를 `Scene/SceneProbes.cpp` 로 옮겼다. 실행기에 남은 탐침은 `Object.*`(질의) · `Input.*` · `Assets.Pending` · `Profiler.TraceRecording` 이다.
 
 ## 5. 단계
 

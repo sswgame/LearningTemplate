@@ -131,8 +131,8 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 2. 같은 .cpp 의 `namespace sw` 안에 `SW_AUTOMATION_PROBE( id, "<게임>.<값>", "설명", &함수 )` 또는 `SW_AUTOMATION_QUERY_PROBE( id, 이름, 설명, &함수, target 필요, key 필요 )` 한 줄을 둡니다.
 3. 값을 낼 수 없으면 false 를 돌려주고, 질의 탐침은 `outValue.setText( 이유 )` 로 이유를 적습니다. 그 이유가 실패 줄에 실립니다.
 
-탐침 레지스트리(`Engine/Probe/AutomationProbe.h`)는 티어가 컴포넌트 모델(Object) 바로 위라 그 위의 Engine 기능(Character · Environment · Vfx …)도 자기 폴더의 .cpp 에 탐침을 둡니다(`Environment/Terrain/TerrainProbes.cpp`).
-실행기(Automation)가 기능 헤더를 include 해 기능의 탐침을 대신 정의하지 않습니다. 실행기에 남은 탐침은 실행기 자신의 상태와 씬 공통 값(`Object.*` · `Scene.*` · `Input.*`)입니다.
+탐침 레지스트리(`Engine/Probe/AutomationProbe.h`)는 티어가 컴포넌트 모델(Object) 바로 위라 그 위의 Engine 기능(Scene · Character · Environment · Vfx …)도 자기 폴더의 .cpp 에 탐침을 둡니다(`Scene/SceneProbes.cpp`, `Environment/Terrain/TerrainProbes.cpp`).
+실행기(Automation)가 기능 헤더를 include 해 기능의 탐침을 대신 정의하지 않습니다. 실행기에 남은 탐침은 실행기 자신의 상태, 오브젝트 질의(`Object.*`), 그리고 Probe 와 티어가 같거나 낮아 기능 쪽에 둘 수 없는 것(`Input.*` · `Profiler.TraceRecording`)입니다.
 
 새 단계는 `SW_AUTOMATION_STEP( id, "이름", 실행, 검사, 입력 전 여부 )` 로 등록합니다. 입력으로 옮겨지는 단계는 `SW_AUTOMATION_STEP_WITH_HOOKS` 의 준비 함수에서 `runner.getInputScript()` 에 이벤트를 넣습니다.
 속성은 검사 함수에서 모두 확인합니다. 모르는 속성은 읽기 오류로 만들어 오타가 기본값으로 조용히 바뀌지 않게 합니다.
@@ -165,9 +165,9 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 
 | 파일 | 내용 |
 |------|------|
-| `AutomationRunner.cpp` | 엔진 단계와 엔진 탐침(`Object.*`, `Scene.*`, `Input.*`) |
+| `AutomationRunner.cpp` | 엔진 단계와 실행기 탐침(`Object.*`, `Input.*`, `Assets.Pending`) |
 | `Engine/Probe/AutomationProbe.cpp` | 탐침 레지스트리, 대상 고르기 규칙(`AutomationTarget`, `AutomationProbeQuery::make`) |
-| `Environment/Terrain/TerrainProbes.cpp` · `Character/PairedAnimation/PairedAnimationProbes.cpp` | 기능이 자기 폴더에 등록한 탐침(`Terrain.*` · `PairedAnimation.*`) |
+| `Scene/SceneProbes.cpp` · `Environment/Terrain/TerrainProbes.cpp` · `Character/PairedAnimation/PairedAnimationProbes.cpp` | 기능이 자기 폴더에 등록한 탐침(`Scene.*` · `Terrain.*` · `PairedAnimation.*`, `-gv_automationHashDump`) |
 | `AutomationActionSteps.cpp` | 입력 맵 액션 단계 |
 | `ScenarioRecorder.cpp` | 녹화를 시나리오로 바꾸기 |
 | `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` | 게임 시간, 일정, AI, 빙의, 탑승 |

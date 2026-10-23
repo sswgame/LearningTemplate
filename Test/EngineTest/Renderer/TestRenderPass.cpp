@@ -1293,11 +1293,11 @@ SW_TEST_CASE( RenderPassTest, ModulePassRegistrationIsScopedAndCopiesConstants )
     SW_EXPECT_TRUE( info.hasFlag( sw::RenderPassTraitFlag::kGenericFullscreen ) );
     SW_EXPECT_TRUE( info._pDefaultShader == nullptr ); // 셰이더는 패스의 `_shaderPath` 가 정한다
 
-    sw::ModuleRenderPassRegistry&                      registry = sw::ModuleRenderPassRegistry::get();
+    sw::ModuleRenderPassRegistry                       registry; // 엔진 범위의 것과 따로 — 테스트가 상태를 나눠 쓰지 않는다
     const sw::hashed_string                            key( "Test.ModulePass" );
     sw::vector<sw::ModuleRenderPassRegistry::Constant> listConstant;
     {
-        sw::ModuleRenderPassRegistration registration( "Test.ModulePass" );
+        sw::ModuleRenderPassRegistration registration( registry, "Test.ModulePass" );
         SW_ASSERT_TRUE( registration.isRegistered() );
         SW_EXPECT_FALSE( registry.registerPass( key ) ); // 두 모듈이 한 이름을 나눠 쓰지 않는다
         SW_EXPECT_TRUE( registration.setConstant( "g_TestTint", sw::float4{ 1.0f, 0.5f, 0.25f, 1.0f } ) );
