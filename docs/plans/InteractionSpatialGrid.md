@@ -1,6 +1,6 @@
 # 상호작용 대상의 공유 공간 격자
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: G-4 · 진행: 2/3
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: G-4 · 진행: 3/3
 
 하는 쪽(`InteractorComponent`)은 등록된 대상 목록을 한 번 돌았습니다(대상 16 · 10k 오브젝트에서 +2~6 us). 2026-10-22 사용자 결정으로 착수 조건(하는 쪽 · 대상이 모두 수천)을 갈음했습니다.
 
@@ -18,4 +18,6 @@
 |---|---|---|
 | I1 | 색인 · 하는 쪽 연결 · 테스트 `InteractionTest.SharedSpatialGridServesSeveralInteractors` | 끝 |
 | I2 | Debug 빌드(`all EngineTest`, 경고 0) · `InteractionTest.*` 16 개 통과(2026-10-23) | 끝 |
-| I3 | `TestInteractionBench` 에 하는 쪽 여럿 × 대상 수천 케이스를 더해 이득 측정(Release). 지금 벤치는 하는 쪽 하나 × 대상 16 만 잰다 | 남음 |
+| I3 | `TestInteractionBench` 에 하는 쪽 여럿 × 대상 수천 케이스(`InteractionBenchTest.SharedGridTickWithManyInteractors` — 하는 쪽 1 · 8 · 64 × 대상 2,000 · 5,000)를 더했다 | 코드 끝, Release 측정은 통합(빌드 미확인) |
+
+측정(통합): `EngineTest --test_filter=InteractionBenchTest.*` 를 Release 로 돌려 하는 쪽 1(목록 순회)과 8 · 64(격자)의 틱 표본을 견준다. 하는 쪽 수로 나눈 비용이 격자에서 더 낮으면 이 문서를 닫고, 아니면 `kMinInteractorCountForGrid` 를 올린다.
