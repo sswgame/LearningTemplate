@@ -1093,7 +1093,7 @@ SW_TEST_CASE( MaterialTest, EveryRepositoryMaterialMatchesItsShaderStruct )
 
 /**
  * @brief [MaterialTest] 게임 도메인 셰이더의 머티리얼이 그 셰이더 구조체와 맞아 로드되고, 게임 전용 필드를 하나라도 빼면 동기화 오류다
- * @details 첫 게임 셰이더(Shooter3D `cctvmonitor.hlsl`, 계획 MaterialShaderHooks G1)가 엔진 셰이더와 같은 계약을 쓴다는 증명이다.
+ * @details 첫 게임 셰이더(Shooter3D `cctvmonitor.hlsl`, docs/09_Decisions.md 5-5 머티리얼 셰이더 훅의 게임 셰이더)가 엔진 셰이더와 같은 계약을 쓴다는 증명이다.
  *          리플렉션은 커밋된 쿠킹 산출물(`game/shooter3d/shaders/bin`)에서 온다 — 없으면 쿠킹이 빠진 것이라 건너뛰지 않고 실패한다.
  */
 SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )

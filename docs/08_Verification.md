@@ -1,7 +1,10 @@
 # 검증과 측정
 
-변경이 맞는지 확인하는 방법과 성능을 측정하는 방법을 모은 문서입니다. 무엇을 돌려야 일을 끝낸 것으로 보는지, 측정값을 어떻게 읽는지,
-검증할 때 무엇을 조심하는지, CI 실패를 어떻게 읽는지를 다룹니다. 한 모듈에만 해당하는 함정은 그 모듈 코드의 헤더 주석에, 테스트를 쓰는 규칙은 [Test README](../Test/README.md) 에 있습니다.
+> 질문: 무엇을 돌려야 일을 끝낸 것이고, 측정값은 어떻게 읽는가?
+> 독자: 변경을 검증하거나 성능을 재는 사람.
+> 결론: 손대기 전에 1절의 검증 규칙을 따르고, 성능 주장은 2절의 방법으로 Release 에서 잰 값으로만 한다. 3절은 검증할 때의 함정, 4절은 CI 실패 읽는 법이다.
+
+한 모듈에만 해당하는 함정은 그 모듈 코드의 헤더 주석에, 테스트를 쓰는 규칙은 [Test README](../Test/README.md) 에 있습니다. 언제 어디까지 돌리는지는 [작업 방식](11_Workflow.md) 3절입니다.
 
 ## 1. 손대기 전에 — 검증 규칙
 
@@ -19,7 +22,7 @@ ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · �
 # 커밋 훅(py -3 -m Scripts lint) · full-build · Scripts test 의 출력은 요약이다 — 통과는 한 줄 · 끝 몇 줄, 실패만 상세. 전부는 --verbose (빌드 · 테스트는 로그 파일 경로도 알린다)
 py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반(코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과) 영역별 표 — 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다
 # -j 는 값 없이 준다(CMake 3.29+: 이 PC 의 스레드 수). 테스트 프리셋은 CTEST_PARALLEL_LEVEL="" 로 같은 뜻이다(CMakePresets.json 의 parallel).
-# 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 칸(gpuSlots)만큼. 도우미는 -j 2(11_Workflow.md 2절).
+# 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼.
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 
@@ -164,7 +167,7 @@ cd build/Ninja-Debug/Bin
 - **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/Harness/TestBench.h`.
 - **틱 디스패치 벤치**(`GameObjectBenchTest`, Release, `--load_suites=only` 로 `Bin` 에서 직접): `SmallGroupTickKnee`(무버 16 ~ 8000 개) · `PrerequisiteChainDepthSweep`(사슬 깊이 1 ~ 64) · `PrerequisiteFanOut`(리더 하나 + 팔로워 8000) · `PrerequisiteSpawnChurn`(팔로워 4000 에 프레임마다 하나 만들고 지움) · `FollowerOrderingGroupVersusPrerequisite` · `IntraObjectPhaseOrdering`. 작은 그룹은 직렬이 병렬보다 빨랐다(16 개 1 us 대 19 us, 512 개 13 대 47) — 손익분기는 약 1000 개(항목당 ~25 ns)라서 `TaskManager::runParallelByCost` 가 앞 항목을 직접 돌아 재고 고른다(`TaskManagerTest.RunParallelByCost*` 가 덮개 · 무거운 항목의 분할 · 가벼운 일의 직렬을 지킨다). 사슬 깊이 64 는 1375 → 267 us, 스폰 변동 + 선행 조건 4000 개는 프레임당 559 → 69 us(선행 조건 없는 변동은 42 ~ 46 us). 선행 조건 경로의 정확성은 `TickPrerequisiteTest` 의 `FollowerChurnKeepsOrderUnderIncrementalStageUpdates`(무작위 변동 300 프레임) · `FirstFollowerAddedIncrementallyAppliesTransformsBeforeItsStage` 가 지킨다.
-- **타입별 컴포넌트 질의 벤치**(`TypedComponentBenchTest`, Release, `Bin` 에서 `../TestBin/EngineTest.exe --test_filter=TypedComponentBenchTest.* --load_suites=only --host_suites=all`): 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 에서 `forEachComponentOfType`(버킷) · `ComponentRegistry::getAll` · 오브젝트 훑기를 말단 · 기반 타입으로 견주고(질의 한 번 ns), 만들고 지우기 비용 · 잠금 한 쌍 · `sizeof( Component )` 를 찍는다. 결과와 해석은 계획 문서 `TypedComponents` 8.4절.
+- **타입별 컴포넌트 질의 벤치**(`TypedComponentBenchTest`, Release, `Bin` 에서 `../TestBin/EngineTest.exe --test_filter=TypedComponentBenchTest.* --load_suites=only --host_suites=all`): 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 에서 `forEachComponentOfType`(버킷) · `ComponentRegistry::getAll` · 오브젝트 훑기를 말단 · 기반 타입으로 견주고(질의 한 번 ns), 만들고 지우기 비용 · 잠금 한 쌍 · `sizeof( Component )` 를 찍는다. 결과(2026-10-19, Release, 같은 PC, 5 판 p50): 버킷 순회는 옛 훑기보다 말단에서 70 ~ 2000 배, 기반에서 약 4 ~ 15 배 빠르다(10만 오브젝트 기반 2.7 ms → 0.18 ms). 검사 없는 등록형 목록보다는 말단이 느리다(10만 · K 50 에서 2.0 배): 컴포넌트마다 읽는 삭제 대기 표시와 K 에 비례하는 버킷 훑기 때문이고, 버킷 하나에 `isDerivedFrom` 약 2 ns, K 500 에서 약 1 µs 다. 오브젝트 하나 만들고 지우기는 p50 433 ns, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍은 약 4.3 ns 다. 게임별 버킷 수 K(600 프레임 시점)는 Empty 3 에서 Shooter3D 19 · WildWest 21 까지라 K 50 줄이 실제 게임에 해당한다. K 가 수백인 씬에서 자주 묻는 질의는 조회 타입마다 버킷 목록을 캐시하는 안(타입 레지스트리 세대로 무효화)이 먼저 필요하며, 측정으로 필요가 확인될 때만 넣는다. 앱 측정(2026-10-20, 독점 Release, 5 판 교대, 7-c 직전과 그 뒤 453 커밋을 함께 견준 값이라 7-c 만의 효과는 아니다): 큐브 20,000 개 `GT.Frame` p50 1310 → 1179 µs 로 퍼짐 안, `tickCostChurn` churn500 `GT.Game.update` p50 294 → 327 µs(+11 %, 원인이 7-c 인지 그 뒤 커밋인지 가르지 못함), 비동기 씬 로드 중 조회는 idle 과 같아(p50 400 ~ 500 ns) 로드 워커가 조회를 막지 않고, `resolveComponent<T>` 의 타입 확인은 핸들당 약 3.5 ~ 4.5 ns 다. 측정 때는 라운드마다 매니저 · 풀 · 레지스트리를 새로 만든다(best-of-N 반복은 자라는 컨테이너의 오염을 거르지 못한다).
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
 - **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거릅니다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖입니다.
   측정 창 안에서 전량 재생성을 일으키려면 시나리오 단계 `<SwapBackend backend="other"/>` 를 워밍업보다 뒤의 프레임에 둡니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.
@@ -177,9 +180,9 @@ cd build/Ninja-Debug/Bin
 
 계획 문서 · 후보 절이 근거로 삼는 측정값입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다.
 
-- **증분 쿠킹 단계별 시간**(IncrementalCook K0, 2026-10-20, Release App(`main` 33c8734fa), PC `SW` · Ryzen 7 6800H(워커 14) · 전원 연결, 다른 빌드 · 실행 없음, 세 번, 단위 초, 활성 게임 Empty):
+- **증분 쿠킹 단계별 시간**(증분 쿠킹 K0, 2026-10-20, Release App(`main` 33c8734fa), PC `SW` · Ryzen 7 6800H(워커 14) · 전원 연결, 다른 빌드 · 실행 없음, 세 번, 단위 초, 활성 게임 Empty):
   깨끗한 실행 = `Saved`(기록 · DDC), 쿠킹 폴더, 팩 폴더, 셰이더 `bin` 산출물을 지움. 바뀐 것 없는 실행 = 바로 이어 같은 명령 다시. 셰이더는 컴파일러 디스크 캐시(`Resource/cache/shaders`)까지 지운 것이 "차가운" 실행이다.
-  명령은 `App --cook-shaders`, `App --cook-scenes --cooked-dir=<폴더>`, `py -3 -m Scripts cook --packs-only --out <폴더> --cooked-dir <폴더>`(파이썬 시동 약 0.5 s 포함).
+  명령은 `App --cook-shaders`, `App --cook-scenes --cooked-dir=<폴더>`, 팩 쿠킹(당시 파이썬 `Scripts cook --packs-only`, 시동 약 0.5 s 포함. 이 명령은 지금 없다).
 
   | 단계 | 깨끗함(세 번) | 바뀐 것 없음(세 번) | 비고 |
   |---|---|---|---|
@@ -263,7 +266,7 @@ cd build/Ninja-Debug/Bin
 
 - **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(구성 + 빌드)를 각 3 회 측정해서
   중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
-  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 빌드 칸을 독점으로 잡아(`py -3 -m Scripts shared-lock acquire build --owner <이름>`, 공유 칸 보유자가 모두 놓을 때까지 기다린다) 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
+  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 빌드 슬롯을 독점으로 잡아(`py -3 -m Scripts shared-lock acquire build --owner <이름>`, 공유 슬롯 보유자가 모두 놓을 때까지 기다린다) 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
 - **CPU 시간 나눔**(빌드 속도 계획을 세울 때의 Debug `.ninja_log`, 명령 하나당 한 번 센 값이라 시점이 섞였을 수 있다): 일반 컴파일 2,435 s(2,413 TU, 약 85 %), PCH 생성 370 s(86 개, 13 %),
   링크 23 s(85 개, 1 % 미만), 리플렉션 코드젠 40 s(28 개, 1 %)였다. 모듈별 컴파일은 Engine 688 TU 805 s, GameFramework 833 TU 671 s, Editor 143 TU 123 s, Core 84 TU 72 s, 테스트 614 TU 732 s(26 %)였다.
   16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초였다. 가장 느린 TU 는 `Engine.cpp` 6.5 초이고, `Physics/Jolt/*` 래퍼가 5.3 ~ 6.7 초로 보인 것은 다른 빌드와 겹쳐 잰 값이었다(조용할 때 각 1.9 ~ 2.5 초).

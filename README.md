@@ -122,7 +122,7 @@ cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug
 ```
 
-필요한 도구, 프리셋 고르기, Linux와 WSL에서의 준비는 시작하기에 있습니다.
+Linux와 WSL에서의 준비는 [Scripts/setup README](Scripts/setup/README.md), 프리셋과 빌드 옵션은 [빌드 옵션](docs/Config/BuildOptions.md)에 있습니다.
 
 ## 실행
 
@@ -158,10 +158,8 @@ CI가 무엇을 빌드하고 어떤 테스트를 돌리는지는 `.github/workfl
 
 ## 문서
 
-처음이라면 시작하기부터 읽으세요. 빌드부터 첫 게임 오브젝트를 만들고 핫 리로드하는 데까지 안내합니다.
-
 - [문서 지도](docs/02_DocumentMap.md)는 문서마다 다루는 주제와 모든 모듈 README의 목록입니다.
-- [AGENTS.md](AGENTS.md)는 코드 규칙의 원본입니다. [코딩 규칙 예시](docs/04_CodingGuidelines.md)는 같은 규칙을 예시와 함께 한국어로 풀어 씁니다.
+- [AGENTS.md](AGENTS.md)의 목차가 코드 규칙 파일(`docs/agents/`)을 가리킵니다. [코딩 규칙 예시](docs/04_CodingGuidelines.md)는 같은 규칙을 예시와 함께 한국어로 풀어 씁니다.
 - [설정](docs/07_Configuration.md)은 설정 값을 어느 파일에 두는지 설명합니다. 필드별 표는 생성 문서 [docs/Config](docs/Config/README.md)에 있습니다.
 - [작업 방식](docs/11_Workflow.md) 6절은 할 일을 다루는 방식입니다. 남은 일은 `docs/plans/` 의 계획 문서와 `Candidates-<영역>.md` 에 있고, 목록은 `py -3 -m Scripts plans` 로 봅니다. 작업을 시작하기 전에 읽습니다.
 - [검증과 측정](docs/08_Verification.md)은 작업을 끝내기 전에 돌릴 것과 측정 방법입니다. [결정 기록](docs/09_Decisions.md)은 정한 방향과 기각한 안입니다.

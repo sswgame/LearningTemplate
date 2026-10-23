@@ -46,7 +46,7 @@ B ② · ③ 은 이 묶음에서 하지 않았고(빌드 없이 컨테이너를
 
 - **A 동시성.** 먼저 Core 에 "스레드 칸에 쓰고 읽는 쪽이 합치는" 샤드 카운터 형식을 설계(`integrator`)하고 ① ~ ⑤ 순서로 한다(위 A 표). 대기자 스핀은 워커 루프처럼 세대(`_workEpoch`)로 막는다.
 - **B 컨테이너 · 네트워크.** 보류: `NetConnection` 수신 아레나(출처가 틀렸던 "측정 기각 `C-4`" 가 아니라 측정 없이 `a108c1adf` 로 들어간 것), `NetPrioritizer` 힙, UDP `recvmmsg`(`B-10`). `sw::deque` 직접 구현은 주소 안정에 기대는 곳(`NetTransport.h:121`)을 먼저 본다.
-- **C 리플렉션.** 설계는 [리플렉션 직렬화 형식 계획](ReflectionFormats.md)이 단계 표를 가진다(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
+- **C 리플렉션.** 명세는 [고정 배치형 코덱 계약](../../Source/Engine/Serialization/Fixed/README.md)이 가진다(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
 - **D 셰이더 bindless 입문.** `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다(`C-76`).
 - **공통화 2단계**는 후보 `FunctorLambdaCommonization` 이다.
 

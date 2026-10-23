@@ -242,7 +242,7 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
  * @brief [ReflectionComponentTest] 파일 상태 묶음에서 묶음에 없는 오브젝트를 가리키던 핸들은 없음이 되고, 옮기지 못하는 모양의 핸들은 로드 오류다 — 같은 실행 상태는 그대로 둔다
  * @details 묶음은 `GameObjectHandle` 을 어디에 들었든(단일 · 시퀀스 · set · 맵 키 · 값 · 중첩) 저장된 id 에서 이 실행의 오브젝트로 옮긴다. 원소가 컨테이너인 set 은
  *          제자리에서 고칠 수 없어 옮기지 못한다. 예전에는 비우고 경고했지만(값이 조용히 사라지는 폴백) 이제 `finish` 가 false 다.
- *          같은 실행의 상태(`ObjectIDSpace::Live`)는 런타임 id 그대로가 맞다. `ComponentHandle` 은 PROPERTY 에 둘 수 없다(파서 오류, TypedComponents.md 3.7).
+ *          같은 실행의 상태(`ObjectIDSpace::Live`)는 런타임 id 그대로가 맞다. `ComponentHandle` 은 PROPERTY 에 둘 수 없다(파서 오류, docs/09_Decisions.md 5-6 타입 핸들 직렬화).
  */
 SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
 {

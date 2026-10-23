@@ -631,7 +631,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // C-2) 고정 배치형 코덱. 필드 타입을 인코딩 표(`docs/plans/ReflectionFormats.md` 3.4)에 맞춰 분류합니다
+            // C-2) 고정 배치형 코덱. 필드 타입을 인코딩 표(`Source/Engine/Serialization/Fixed/README.md` 3.4)에 맞춰 분류합니다
             //
             // 선언(clang 타입)에서 읽습니다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽습니다.
             // 표 밖의 타입은 오류가 아닙니다. 그 타입의 코덱이 없을 뿐이고, 코덱이 필요한 등록 API 가 이유와 함께 멈춥니다.
@@ -1212,7 +1212,7 @@ namespace sw
              * @details 저장할 수 있는 모양은 **타입 핸들 `TComponentHandle<T>` 한 값**, 또는 **그 시퀀스(한 겹, `vector` 등)** 입니다. 정규화하면 값 · 원소의 타입 이름은
              *          내장 `ComponentHandle` 이 되어 직렬화기 · 인스펙터가 기존 처리기를 그대로 쓰고, 대상 `T` 는 `_handleTargetTypeName` 에 실려
              *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다
-             *          (`docs/plans/TypedComponents.md` 3.7). 리플렉션 구조체의 필드도 이 검사를 지난다.
+             *          (`docs/09_Decisions.md` 5-6 타입 핸들 직렬화). 리플렉션 구조체의 필드도 이 검사를 지난다.
              */
             static bool resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
             {
@@ -1236,7 +1236,7 @@ namespace sw
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() '%#' holds a component handle (%#) in a shape that cannot be saved. Use one TComponentHandle<T>, or a vector of "
                                   "TComponentHandle<T>. An untyped ComponentHandle, a map, a set and nested containers have no place to check the target type "
-                                  "(see docs/plans/TypedComponents.md 3.7).",
+                                  "(see docs/09_Decisions.md 5-6 타입 핸들 직렬화).",
                                   owner, prop._typeName );
                     return false;
                 }

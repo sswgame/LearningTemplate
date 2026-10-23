@@ -1,7 +1,10 @@
 # 결정 기록
 
-이 저장소에서 정한 방향과, 하지 않기로 한 것과, 측정으로 기각한 것을 모은 문서입니다. 같은 제안이 다시 나왔을 때 그때의 근거와 측정값을 찾는 곳입니다.
-다시 볼 조건이 붙은 결정은 그 조건이 오면 다시 엽니다. 아직 남은 일은 [작업 방식 6절](11_Workflow.md) 에 있습니다.
+> 질문: 이 제안은 이미 정했거나 기각했는가?
+> 독자: 같은 제안을 다시 하려는 사람, 정한 이유를 찾는 사람.
+> 결론: 1 ~ 3절이 작업 방향, 안 하기로 한 것, 측정으로 기각한 것이고 5절이 영역별 결정이다. 새 결정은 상용 엔진과 비교한 근거 한 줄과 함께 영역 절에 더한다.
+
+다시 볼 조건이 붙은 결정은 그 조건이 오면 다시 엽니다. 아직 남은 일은 [작업 방식](11_Workflow.md) 6절의 네 곳에 있습니다.
 
 ## 1. 작업 방향
 
@@ -240,7 +243,7 @@
   Dev 는 실행할 때 `-game=<이름>`(`GameSelection`)으로 고르고 기본은 `Bin/Modules/ActiveGame.txt` 라 게임 이름이 엔진 TU 에 구워지지 않습니다.
   Shipping 은 활성 게임 하나를 정적으로 링크하고 게임 정체성을 빌드 시점에 굽습니다. Debug 깨끗한 빌드 게임 1개 148초 → 8개 152초, 활성 게임을 바꾼 뒤 다시 짓기 5.5초(게임 모듈 22 TU 만).
 
-- **include 경로에는 뿌리(`Source/` · `Resource/` · 생성 폴더)만 두고, `Source/` 아래 폴더(엔진 · Core · 모듈 · RuntimeAPI · App)는 include 경로가 아닙니다**(2026-10-23, [층 게이트](plans/LayerTierGate.md) T6).
+- **include 경로에는 뿌리(`Source/` · `Resource/` · 생성 폴더)만 두고, `Source/` 아래 폴더(엔진 · Core · 모듈 · RuntimeAPI · App)는 include 경로가 아닙니다**(2026-10-23, 층 게이트 T6).
   `#include "pch.h"` 는 생성한 진입 헤더 하나(`generated/sw/pchentry/<engine|core>/pch.h` → `Engine/pch.h` · `Core/pch.h`)로 풀고(`sw_addPchEntryDirectory`), 구성 끝에 `sw_verifySourceIncludeRoots` 가 소스 폴더 경로를 거부합니다.
   소스 폴더를 경로로 주면 접두 없는 include 가 다른 층으로 풀려 층 게이트(경로 앞부분으로 층을 안다)를 비껴갔습니다. Godot 이 저장소 뿌리 기준 경로만 쓰는 것과 같은 자리입니다 [기억].
   `pch.h` 를 `Source/Engine/Pch/` 로 옮기는 안은 새 폴더가 티어 표 · 루트 모음 헤더 규칙에 걸려 버렸습니다(언리얼 UBT 도 공유 PCH 를 Intermediate 의 생성 헤더로 엽니다 [기억]).
@@ -370,7 +373,7 @@
   처음에는 "번역 테이블 파일이 있는가" 로 대상을 정했는데, 파일 하나를 지우면 게이트가 조용히 꺼졌습니다. 지금은 언리얼 Cultures to Stage 처럼 출시 목록을 명시하고(`cultures` 의 부분 집합, 아니면 로드 오류), 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 집니다.
   목록 밖 문화권(엔진 `ja`, PO 만 낸 것)은 번역 중으로 보고 개수만 보고합니다. 게임 설정 하나에 두는 안은 엔진 · 에디터 프로젝트가 팩 설정이 없어 버렸습니다.
   CI 는 App 을 띄우지 않으므로 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, nogpu)가 합니다.
-- **증분 쿠킹은 쿠커가 의존을 적지 않고, 작업 범위 안의 리소스 읽기를 내용 해시와 함께 기록해 판정합니다**(2026-10-18 설계, 구현 전). 유니티 Asset Database v2 의 동적 의존 기록과 같은 계열이고, 파일 시각은 쓰지 않습니다([증분 쿠킹 계획](plans/IncrementalCook.md)).
+- **증분 쿠킹은 쿠커가 의존을 적지 않고, 작업 범위 안의 리소스 읽기를 내용 해시와 함께 기록해 판정합니다**(2026-10-18 설계, 구현 전). 유니티 Asset Database v2 의 동적 의존 기록과 같은 계열이고, 파일 시각은 쓰지 않습니다(증분 쿠킹 K1~K5).
 - **쿠킹 작업은 빈 에셋 캐시로 시작하고, 기록(`.cookrec`)은 쿠킹 폴더 밖(`Saved/CookRecord`)에 둡니다**(2026-10-18, C-42 K2). 앞 작업이 캐시에 둔 프리팹을 쓰면 그 읽기가 이 작업의 입력에서 빠지는데,
   캐시마다 조회 기록을 남기게 하면 캐시를 하나 빠뜨릴 때 낡은 결과가 조용히 쓰입니다. 유니티는 임포트 워커가 결과를 아티팩트 단위로 따로 만들어 같은 문제를 피합니다 [기억].
   씬 쿠킹 키의 설정 해시는 리플렉션 표(타입 · 프로퍼티 · 열거자)의 지문이고, 입력을 기록하지 않은 작업은 실패입니다(`CookStore::cookFile`).
@@ -380,6 +383,14 @@
   워커의 읽기는 범위 밖이 되어 쿠킹 세션이 실패시켰습니다(Shipping CookAssets 의 메시 오류, 내비메시가 빈 메시로 구워질 수 있는 경쟁). 범위를 워커 태스크로 옮기는 안은 요청한 작업이 먼저 끝날 수 있어 버렸습니다.
   워커로 보낼지는 에셋 로드 블록 · 오디오 디코드 · 스트리밍 큐가 모두 이 함수 하나로 정합니다. 언리얼 쿠커도 패키지를 동기로 읽고 비동기 로드를 비운 뒤 저장합니다 [기억].
 - **100 줄 넘는 함수는 보고 도구(`RunFunctionSize.py`)로만 보고 게이트를 두지 않습니다**(2026-10-18 설계). 줄 수 상한은 이유 없는 분할을 부릅니다. 나누는 기준은 중복, 다시 읽기, 단계 경계, 분기 사다리입니다([긴 함수 정리 기준](plans/LongFunctions.md)).
+
+- **층 게이트는 티어 표가 include 그래프의 계산값과 같아야 통과하고, 표를 올릴 때는 사유가 필요합니다**(2026-10-23, 층 게이트 T1~T5). 계산(SCC, Kahn 티어, 표 = 계산값 판정)은 `Scripts/lint/LayerGraph.py` 한 곳이고 게이트와 보고서가 같은 함수를 부릅니다. 근본 원인은 규칙 데이터가 `RunEngineLayerGraph.py --apply` 의 출력이라 위반이 표 재계산으로 말없이 흡수되는 것이었습니다.
+  표 < 계산값은 실패, 표 > 계산값은 `[tierReason]`(폴더 → 이유)에 이유가 있는 폴더만 통과하고, 계산값과 같아졌거나 표에 없는 폴더의 이유 줄은 낡은 줄로 실패합니다. `--apply` 는 내리기와 같은 값만 쓰고 올리기는 `--raise-reason "<사유>"` 가 있을 때만 씁니다(사유는 줄 위 주석으로 남음). 형식으로 막지 못한 틈(표를 손으로 고치기, 사유 글이 맞는지)은 리뷰가 맡습니다. `--files`(커밋 훅)는 그래프가 일부라 이 검사를 건너뛰고 전체 훑기(린트 묶음 · CI)가 합니다.
+  Engine 게이트의 티어 검사는 `>` 에서 `>=` 로 올렸고(같은 티어 역방향 include 도 실패하며 순환은 계산 단계에서 따로 실패), Core/Network 게이트도 같은 층의 다른 폴더를 막습니다. Network 표는 `rules/CheckCoreNetworkLayers.toml` 의 `[tier]` 로 옮겼습니다(없으면 오류로 멈춤). RuntimeAPI 는 `Editor/` · `GameFramework/` include 를 금지하고 계약 예외는 `[exemption]` 의 `contract:<파일>|<include>` 줄(이유 필수, 낡으면 실패)로만 넘깁니다. Bootstrap 13 은 계산값 9 와 달라 `[tierReason]` 에 기존 주석의 의도(정적 저장소 정리가 위쪽을 내려다봄)를 이유로 옮겼습니다.
+  GameFramework 의 `base_folder_order` · `base_layer` 는 계산과 `--apply` 가 없는 손 표라 같은 재계산 구조가 아닙니다. 표 = 계산값 검사를 붙일지는 급하지 않아 정하지 않았습니다.
+- **증분 쿠킹의 키와 저장소**(2026-10-18~20, 증분 쿠킹 K1~K5): 작업 키는 해시(쿠커 이름, 쿠커 버전 상수, 대상 플랫폼 · 백엔드, 쿠킹 설정 해시, 기록된 입력의 경로 · 내용 해시 목록)이고, 쿠커 버전은 쿠커 소스 옆의 상수로 형식을 바꿀 때 사람이 올립니다(셰이더 도구 지문과 같은 원칙). 기록은 `Saved/CookRecord/<출력 id>.cookrec`(쿠킹 폴더의 파일은 모두 팩에 들어가므로 그 옆에 두지 않음), 로컬 DDC 는 `Saved/DDC/<키 앞 두 글자>/<키>` 입니다.
+  공유 DDC 는 두지 않습니다(2026-10-18 사용자 결정). 쿠킹 결과는 바이트 단위로 결정적이어야 하고(정렬되지 않은 맵 순회 · 시각 기록 금지), 판정에 파일 시각만 쓰지 않습니다(`git pull` 이 시각을 임의로 바꿈). 작업 범위(`CookJob`)는 스레드 지역 값이라 병렬 쿠킹에서도 읽기가 섞이지 않고, 범위 밖 읽기가 쿠킹 중에 일어나면 오류입니다. 팩은 `<팩>.packrec` 에 키와 팩 바이트 해시를 남겨 같으면 다시 쓰지 않습니다. 셰이더 스탬프는 옮기지 않습니다(5-5).
+  기각: 쿠커마다 의존 목록을 코드로 적기(셰이더 스탬프가 이미 같은 규칙을 두 언어에 적어 하나를 빠뜨리면 낡은 결과가 조용히 쓰임), 파일 시각 판정(쿠킹 바이너리까지 커밋하는 저장소), 쿠킹 전체를 빌드 시스템 규칙으로 옮기기(씬의 의존은 구워 봐야 알 수 있음). 측정(K0, 2026-10-20)은 [검증과 측정](08_Verification.md) "증분 쿠킹 단계별 시간"입니다: 바뀐 것 없는 실행에서 셰이더 252 → 2.3 s(컴파일 캐시를 켠 깨끗한 실행 5.4 s), 팩 12.1 → 1.7 s 이고 씬 · 프리팹 · 레지스트리 · 내비메시는 합쳐 1.4 → 0.9 s 라 이득은 씬이 아니라 셰이더 컴파일 캐시와 팩에서 나옵니다.
 
 ### 5-3. Core 와 플랫폼
 
@@ -508,7 +519,7 @@
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
-  - 이 결정은 지금 이관할 데이터가 없다는 사실에 기댄 것이지 영구 금지가 아닙니다(사용자 확인, 2026-10-17). 출시한 데이터가 생겼을 때 바로 쓰도록 별칭(`Alias` · `ValueAlias` · `Removed`)은 미리 갖춥니다(이관 등록은 아래 2026-10-23 결정으로 지웠습니다 — [이름 변경 리다이렉트 계획](plans/RenameRedirects.md)).
+  - 이 결정은 지금 이관할 데이터가 없다는 사실에 기댄 것이지 영구 금지가 아닙니다(사용자 확인, 2026-10-17). 출시한 데이터가 생겼을 때 바로 쓰도록 별칭(`Alias` · `ValueAlias` · `Removed`)은 미리 갖춥니다(이관 등록은 아래 2026-10-23 결정으로 지웠습니다 — 이름 변경 리다이렉트 R5).
    - 기능은 갖추되 출시 데이터가 이관할 것이 생기기 전에는 사용하지 않습니다 — 제품 데이터 · 게임 코드에 별칭을 두지 않습니다(2026-10-18 사용자 결정).
 - **첫 출시 전에는 이관 없이 데이터를 다시 쓰고, 판은 정확히 같을 때만 읽습니다**(2026-10-23 사용자 결정). 출시된 빌드가 없어 지금 코드와 데이터 전부가 현재 판입니다. 형식이 바뀌면 저장소의 데이터를 다시 쓰고, 옛 판 리더 · 이관 함수 · 판 범위 읽기를 두지 않습니다. 판이 다르면 읽지 않고 오류로 멈춥니다.
   - 지운 것: `SW_SCHEMA_MIGRATION` · `SchemaMigrationRegistry`(2026-10-17 에 둔 정적 등록 — 프로덕션 등록이 0 이었다), 세 형식의 `deserializeVersioned` · `Archive` 의 옛 TypeInfo 인자(`legacyTypeInfo`), `AssetFormatRegistry` 의 XML 판 이관 등록부(대신 `AssetXMLFormat::isCurrentXMLVersion` 이 정확 일치만 본다), 판 범위로 읽는 `StateArchiveUtil::readHeaderInRange`와 FarmVillage 상태의 1 판 리더, 외형 공유 코드의 "높은 판도 받는" 범위 검사. 근본 원인은 판 번호를 범위로 받는 API 라서, 정확 일치 형식만 남겼다.
@@ -559,7 +570,7 @@
   손 표는 `static_assert` 가 개수만 지키고 순서 · 철자의 어긋남은 못 막았고, 쓰는 곳이 거의 로그였으므로 "배열 인덱스가 빠르다" 는 이득이 없습니다.
   남기는 것: 철자가 다른 와이어 · 데이터 · 지표 문자열(`AdminRole` 의 `"viewer"`, `HealthState` 의 소문자, 서비스 지표 라벨, `EnumNameTable` 로 읽는 데이터 이름)과 Core 의 열거형(Core 는 리플렉션 아래 티어)입니다.
   철자가 데이터에 박힌 이름 표를 리플렉션으로 옮기려면 데이터를 열거자 철자로 다시 씁니다(별칭 없음).
-- **같은 빌드끼리만 읽는 바이트는 고정 배치형(B) 코덱이고, 생성기가 모든 적격 `REFLECT` 타입에 만듭니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 1).
+- **같은 빌드끼리만 읽는 바이트는 고정 배치형(B) 코덱이고, 생성기가 모든 적격 `REFLECT` 타입에 만듭니다**(2026-10-17, [고정 배치형 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) 단계 1).
   사용자는 B 를 선언하지 않고, 등록 API 가 `FixedLayout::findCodec` 으로 확인합니다. 세이브와 에셋은 자기 기술형(A) 그대로입니다. 언리얼 `NetSerialize` · Iris 디스크립터처럼
   선언(`UPROPERTY`)에서 와이어 형식을 도출하고, 손 코덱의 손 버전 상수 대신 정규 문자열 해시가 형식 변경을 잡습니다. 단계 1 에서 정한 세부:
   - 버전 상수 이름은 docs/agents/Constants.md "Constants" 를 따라 `FixedLayout::kVersion` 입니다(계획 초안의 `kFixedFormatVersion`).
@@ -577,7 +588,7 @@
   적격이 아닌 것은 281 개였습니다(대부분 `MaxCount` 없는 가변 길이와 표 밖 타입). 기존 `.gen.cpp` · `.gen.h` 1069 개는 덧붙은 줄만 있고, 바뀐 줄은 ABI 스탬프 하나였습니다.
   대상 타입을 사용 자리에서 모으는 길(`.cpp` 를 생성기 입력에 넣기, 등록 목록 파일)은 `.cpp` 수정마다 생성기가 다시 돌고 키트 `.gen.cpp` 가 게임 소스에 의존해 계층이 거꾸로 되며 타입 목록의 원본이 둘이 되어 기각했습니다.
   필드 속성(`Replicated` 등)에서 도출하는 길도 기각했습니다. 그 속성은 "어느 필드를 보내는가"만 말하고 롤백은 모든 필드가 필요합니다. `.gen.cpp` 도우미는 이름 없는 네임스페이스에 타입 식별자를 붙여 두므로 유니티 제외가 풀려도 충돌하지 않습니다.
-- **이름 변경 리다이렉트는 선언 옆에 적고, 리다이렉트 표는 그 이름의 주인이 듭니다**(2026-10-17, [이름 변경 리다이렉트 계획](plans/RenameRedirects.md) R1~R4). 선언은 기존 키를 그대로 씁니다.
+- **이름 변경 리다이렉트는 선언 옆에 적고, 리다이렉트 표는 그 이름의 주인이 듭니다**(2026-10-17, 이름 변경 리다이렉트 R1~R4). 선언은 기존 키를 그대로 씁니다.
   타입 · 열거형의 옛 FQN 은 `REFLECT( Alias )` · `ENUM( Alias )`, 열거자의 옛 이름은 `ENUM( ValueAlias = "Old:New" )`, 지운 열거자의 대체는 새 키 `ENUM( Removed = "Old:Replacement" )`, 필드의 옛 이름은 `PROPERTY( Alias )` 입니다.
   유니티 `FormerlySerializedAs` 처럼 이력이 선언 옆에 있고, 언리얼 `CoreRedirects` 처럼 호출부는 모릅니다. 다만 표를 전역 하나로 모으지 않고 `EnumInfo::_mapRedirectNameToValue`, `PropertyInfo::_listAlias`,
   `TypeRegistry` 별칭 표에 둡니다. 언리얼이 전역 표인 것은 리다이렉트가 ini 에서 오기 때문이고, 여기서는 선언이 등록과 함께 오므로 주인에 붙여야 상속 필드 복사 · 핫 리로드 재등록 · 모듈 해제 묘비를 그대로 따릅니다.
@@ -585,10 +596,12 @@
   옛 이름은 `_mapNameToValue` 에서 빠져 인스펙터 목록과 쓰기에 나오지 않습니다. 대상이 없거나, 옛 이름이 지금 열거자 · 필드이거나, 같은 옛 이름을 두 번 적으면 생성 오류입니다(예전에는 경고만 하고 버렸습니다).
   선언 없이 지우거나 바꾼 이름은 엄격한 읽기가 실패합니다. 리다이렉트는 바이트 배치와 무관하므로 고정 배치형 정규 문자열에 넣지 않습니다(`FixedLayoutTest.RenameRedirectsDoNotChangeTheSchemaHash`).
   `.gen` 1108 개를 전후 생성기로 비교해 바뀐 파일은 `ValueAlias` 를 쓰는 `TestSampleActor.gen.cpp` 하나였습니다.
-- **`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 7-b). 둘째 베이스와 가상 베이스는 베이스가 `REFLECT()` 인지와 상관없이
+  삭제는 대체를 명시해야 하고(선언이 없으면 오류로 멈춤), 필드 삭제에는 `Removed` 같은 선언이 없습니다. 모르는 칸을 받는 문맥(오브젝트 상태)만 선언 없이 건너뜁니다. 지운 필드를 선언으로 받게 할지는 받아야 하는 출시 데이터가 생길 때 정합니다.
+  리다이렉트 검사는 같은 타입 안만 봅니다. 기반 클래스의 지금 필드 이름과 겹치는 옛 이름은 읽기가 지금 이름을 먼저 보는 순서로만 막습니다(`ReflectionSerializationTest.CurrentFieldNameWinsOverAnOldName`).
+- **`REFLECT` 타입은 비가상 베이스를 하나까지만 둡니다**(2026-10-17, [고정 배치형 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) 단계 7-b). 둘째 베이스와 가상 베이스는 베이스가 `REFLECT()` 인지와 상관없이
   헤더 · 줄 · 타입 · 베이스 이름과 함께 생성 오류입니다(`AstVisitor.cpp` `collectBase`). `castTo` 는 리플렉션 부모 사슬로 파생을 판단하고 C++ 상속이 보이지 않으면 `reinterpret_cast` 로 내려가므로,
   부모가 offset 0 에 있지 않으면 포인터 보정 없이 잘못된 주소가 됩니다. 제품 코드에는 `REFLECT()` 없는 둘째 베이스가 없었고, 그 모양을 지키던 테스트 픽스처만 지웠습니다.
-- **열거형 이름 조회는 값이 빈틈없으면 생성된 배열 인덱스이고, `getEnumName<E>` 는 `EnumInfo` 를 함수 지역 캐시에 둡니다**(2026-10-17, 같은 계획 3.13 · 단계 7-a). API 는 그대로입니다.
+- **열거형 이름 조회는 값이 빈틈없으면 생성된 배열 인덱스이고, `getEnumName<E>` 는 `EnumInfo` 를 함수 지역 캐시에 둡니다**(2026-10-17, 고정 배치형 코덱 계약 3.13 · 단계 7-a). API 는 그대로입니다.
   생성기가 표식(`Invalid`, `Count`)을 뺀 값이 `0..N-1` 인 열거형에 intern 된 이름 배열을 만들고 열거자마다 `static_assert` 로 libclang 의 값과 컴파일러의 값을 대조합니다(생성기는 `SW_DEBUG` 없이 헤더를 읽습니다).
   캐시는 타입 테이블 세대가 같을 때만 씁니다. 모듈 해제는 묘비에서 배열 포인터를 비우고, 레지스트리 파괴도 세대를 올립니다. 이름에서 값으로 가는 경로와 리다이렉트 표는 바꾸지 않았습니다.
   배열을 받은 열거형은 198 개이고, 기존 `.gen` 은 덧붙은 줄만 있었습니다(바뀐 다른 줄은 지운 7-b 픽스처뿐). 실행 파일 크기(Release, 7-a · 7-b 전후)는 `Engine.dll` +12,800 B(+0.08 %),
@@ -666,7 +679,14 @@
   로더는 리플렉션 구조체(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 필수 칸을 중첩까지 검사)이거나 `XMLNode` 로 손으로 읽는 것(`XMLReadUtil::hasOnlyKnownNames` · `readFloatList`)이고, 옛 JSON 리더는 두지 않았다. 임포터는 XML 을 쓰며 커밋된 결과를 `App --import-models` 로 다시 만들었다.
   형식은 `AssetTypeRegistry::isSuffixFormatAllowed` 로 굳혔다 — `.json` 접미사는 쿠킹 입력으로만 등록된다. **변환한 데이터는 엔진이 다시 쓴 결과와 바이트가 같아야 한다**: 속성값의 `>` 는 이스케이프하지 않고(본문 글은 한다), 120 바이트(글자 수가 아니다)를 넘는 여는 태그는 속성별로 접는다. 이 규칙을 놓치면 `--gather-text` · 재임포트가 파일을 다시 쓰고 `--check-text` 가 낡았다고 한다.
   재임포트는 `skeleton_minion` 의 메시 · 클립도 다시 만들었다(저장소의 옛 산출물이 지금 임포터와 부동소수 끝자리가 달랐다 — 사원수 두 값의 마지막 한 자리). 다른 모델은 스켈레톤 글만 바뀌었다.
-- **셰이더 도메인 목록은 설정 데이터에서 발견한다 — 코드는 include 루트 종류(engine · common)만 안다**(2026-10-23, 계획 `MaterialShaderHooks` D1). 정본은 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 이고, `game` 토큰은 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 게임 셰이더의 include 루트는 자기 도메인 + engine + common 이고 다른 게임은 넣지 않는다. 목록이 비었거나 종류가 빠지면 기본값 없이 오류로 멈추고, 게임 폴더의 같은 이름 헤더가 include 루트의 헤더를 가리면 컴파일 · 스탬프 쓰기 · 판정이 오류로 멈춘다(`ShaderCooker::collectShaderDomains` · `collectIncludeRootDomains` · `findShadowedHeaders`). 쿠킹 스탬프 값은 바뀌지 않는다.
+- **셰이더 도메인 목록은 설정 데이터에서 발견한다 — 코드는 include 루트 종류(engine · common)만 안다**(2026-10-23, 머티리얼 셰이더 훅 D1). 정본은 `Config/Engine/EngineConfig.json` 의 `_listResourcePriority` 이고, `game` 토큰은 `game/` 아래 폴더를 훑어 `game/<이름>` 으로 펼친다(엔진은 게임 이름을 모른다). 게임 셰이더의 include 루트는 자기 도메인 + engine + common 이고 다른 게임은 넣지 않는다. 목록이 비었거나 종류가 빠지면 기본값 없이 오류로 멈추고, 게임 폴더의 같은 이름 헤더가 include 루트의 헤더를 가리면 컴파일 · 스탬프 쓰기 · 판정이 오류로 멈춘다(`ShaderCooker::collectShaderDomains` · `collectIncludeRootDomains` · `findShadowedHeaders`). 쿠킹 스탬프 값은 바뀌지 않는다.
+
+- **기믹 회로 상태는 씬 · 프리팹 · 세이브에는 A, 체크포인트 · 롤백 · 넷 스냅샷에는 B 로 쓰고, 둘은 같은 `REFLECT` 선언 하나에서 나옵니다**(2026-10-17~20, 기믹 회로 상태 구조). 근본 원인은 상태 바이트의 크기를 쓰는 쪽과 읽는 쪽이 따로 손으로 계산했고 회로 해시 하나가 상태 전체의 수용 여부를 정한 것이었습니다.
+  `GimmickNodeState` 는 `_id`(id 해시) · `_kind`(종류 이름 해시) · `_stateVersion` · 노드별 실수 · 정수 슬롯 목록을 갖고, `GimmickCircuit::loadState` 는 `GimmickStateMatch`(`Exact` · `NodeSetChanged` · `Mismatch`)를 돌려줍니다. `Mismatch` 는 같은 id 인데 종류 · 종류 상태 버전(`GimmickNodeKind::_stateVersion`, 기본 1) · 슬롯 수가 다르거나 같은 id 가 둘일 때뿐이며, 새 노드는 처음 상태로 두고 저장에만 있는 노드는 버립니다.
+  저장 상태 적용은 `GimmickCircuitComponent::applySavedState` 한 함수입니다(`NodeSetChanged` 는 경고 뒤 이어 가고 `Mismatch` 는 오류를 남기고 회로를 비워 돌지 않음). 롤백 · 넷은 `restoreState` 로 `Exact` 만 받습니다. 상한은 노드 1,024 · 종류마다 슬롯 32(`registerKind` 가 거절)이고 정본은 C++ 상수 + `PROPERTY( MaxCount = kMaxSlotCount )` 입니다.
+  `GimmickNodeState` 의 뜻이 바뀌는 변경(비트 마스크를 두 필드로 나누는 것 등)은 기본값으로 메울 수 없어 종류의 상태 버전을 올리고 저장소의 데이터를 다시 씁니다. 모르는 XML 요소(옛 `_stateBytes`)는 오류가 아니라 건너뛰고 로드마다 경고합니다(`SchemaOrphanPolicy::Ignore`). 측정(Release)은 [검증과 측정](08_Verification.md) "기믹 회로 상태"이고, 저장 · 복원이 스텝 결과를 바꾸지 않음은 결정성 테스트(`SameInputsSameStateHash`)로 확인했습니다. 옛 코드 대비 바이트 동일성은 보증하지 않습니다.
+- **`isDerivedFrom` 은 조상 디스플레이 테이블을 그대로 두고 DFS 구간 번호는 채택하지 않습니다**(2026-10-17, 리플렉션 캐스트 비용 조사). 디스플레이도 O(1)(원자 로드 네 번과 비교 한 번, 깊이 8 `kAncestorDisplayDepth` 초과나 테이블이 없으면 `isDerivedFromSlow`)이라 구간 번호가 줄이는 것은 원자 로드 두어 번뿐입니다. 구간 번호는 전체 타입 트리를 깊이 우선으로 번호 매겨야 하는데 타입이 추가되면(DLL 로드 · 핫 리로드 · 플러그인) 다른 타입의 번호가 바뀌고, 코드 생성기는 모듈 하나만 보므로 전역 번호를 빌드 시간에 정할 수 없습니다. 디스플레이는 이름 인덱스 기반이라 타입 추가가 다른 타입의 테이블을 바꾸지 않습니다.
+  남은 캐스트 비용의 근본 원인은 캐스트가 아니라 타입 없는 핸들과 씬 전체 순회였고, 타입별 컴포넌트 목록과 `TComponentHandle<T>` 로 풀었습니다(5-6). `GameObject` 의 가상 `getTypeInfo()` 는 결과 캐시에 측정한 이득이 없고 엔진 재생성에서 낡아 캐시하지 않습니다.
 
 ### 5-5. 그래픽스와 RHI
 
@@ -766,6 +786,19 @@
   같은 텍스처의 밉 사이 UAV 배리어가 RHI 에 없어, 깊이 히스토리(이미 있는 RW 사본)에서 구조 버퍼 하나를 짓는다. 타일 8 x 8 을 넘게 덮는 물체는 판정하지 않는다. 드러난 물체가 한 프레임 늦게 나오는 한계가 있어 Release 측정으로 이득을 보인 뒤 켠다.
 - **셰이더 쿠커의 표 단계는 런타임과 같은 함수(`selectRenderPassShader`)로 define 을 붙입니다**(2026-10-22). 빈 목록으로 쿠킹하면 표의 패스 define 이 있는 종류(FSR 의 RCAS 등 서술 없이 만드는 엔진 PSO)는 런타임이 찾는 해시를 아무도 쿠킹하지 않는다.
 
+- **머티리얼 셰이더는 엔진이 가진 헤더 뼈대에 훅 다섯 개만 정의하는 구조입니다**(2026-10-23, 머티리얼 셰이더 훅 H1~H7). 뼈대는 두 단 헤더 — `materialshader.hlsli`(훅 선언 · 기본 선택) → `materialshadermain.hlsli`(정점 · 픽셀 진입점 뼈대) — 이고 셰이더 파일은 훅을 정의하고 뼈대를 include 합니다. 훅은 표면 · 조명 모델 · 월드 위치 오프셋 · 사용자 보간 필드 · 외곽선입니다("조명 뒤 색"과 "불투명 마스크"는 쓰는 곳이 없어 뺐습니다).
+  - "있으면 쓰고 없으면 기본" 폴백은 받지 않습니다. 훅마다 정의하거나 `SW_MATERIAL_DEFAULT_*` 로 기본을 쓴다고 명시하고, 둘 다 없으면 컴파일 오류, 둘 다 있으면 재정의 오류입니다(뼈대의 `#error`).
+  - 엔진 셰이더 7개(foliage · forwardlit · sprite2d · sprite2dlit · terrain · toon · water)가 공개 계약의 첫 사용자이고 게임 셰이더(Shooter3D `cctvmonitor`)도 같은 계약을 씁니다. 엔진 셰이더가 쓰지 못하는 계약은 만들지 않습니다.
+  - 훅 집합을 파이프라인 XML 로 옮기는 안은 채택하지 않았습니다. HLSL 뼈대의 `#if` 와 원본이 둘이 되고, 파이프라인 5개에 같은 내용을 반복해야 하며, 쿠커의 2단계 PSO 가 define 을 잃기 때문입니다. 패스 종류 → define 대응은 패스 종류 테이블 한 곳에 둡니다.
+  - 깊이가 패스마다 비트까지 같은 것(그림자 · 프리패스 · 본 패스)은 위치를 만드는 코드가 뼈대 한 곳뿐이라는 형식으로 지킵니다(훅이 위치를 직접 만들 수 없음). 뼈대는 출구가 하나여야 합니다. 훅 안의 중간 `return` 이 인라인되면 SPIR-V 최적화가 `evaluateCurve` 를 첫 키 값으로 만든 사례가 재발하므로 형식으로 막지 못하는 이 틈에만 `CheckShaderConventions` 검사를 둡니다.
+  - 머티리얼 XML 과 셰이더 구조체가 어긋나면(셰이더에만 있는 필드, XML 에만 있는 필드, 리플렉션 실패) 로드 오류이고 GPU 에 올리지 않습니다(`Material.cpp` 의 `matchPropertiesToSchema` 등).
+  - 구현에서 정한 것: `SW_MATERIAL_NONE`(머티리얼 없는 사용자 — gbuffer · shadowdepth)은 머티리얼 구조체 · 읽기 · 오프셋 훅이 없고 알파 컷오프는 `#error` 입니다. 깊이만 쓰는 변형(`SW_MATERIAL_DEPTH_ONLY`)의 정점 → 픽셀 칸은 위치와 등장 디더뿐입니다. 사용자 보간 칸 훅의 문맥에는 읽기 전용 `clipPosition`(오프셋 · 외곽선이 반영된 최종 클립 위치)을 두고 그 훅에서만 채웁니다. 스프라이트의 픽셀 스냅은 월드 위치 오프셋이라 세 스프라이트 머티리얼이 `MATERIAL_VERTEX_DEFORM` 을 가지고 그림자 퍼뮤테이션을 하나씩 더 쿠킹합니다. 쓰는 곳이 없던 `ALPHA_TEST` 분기는 없앴고, 머티리얼 없는 G버퍼 배치와 스프라이트는 이제 보기 모드(Normals · Depth 등)를 따릅니다(스프라이트의 Depth 보기는 스프라이트 평면의 z).
+  - 림은 `lighting.hlsli` 의 `Lighting::computeRimLight` 한 곳이 가지며 디퍼드 값(pow3 × 0.12)이 기준입니다(포워드의 pow2 × 0.15 에서 바뀌어 가장자리가 덜 번집니다).
+  - 물은 그림자를 드리우지 않습니다(2026-10-23 사용자 결정, 상용 엔진 기준). Unreal Water · Unity 물 모두 반투명 물의 기본이 그림자 끔이고, 알파 블렌드 면이 그림자 맵에 불투명하게 찍히면 물 밑이 어두워집니다. `water.material` 에 `MATERIAL_SHADOW_CAST_OFF` 를 더했습니다.
+  - 게임 셰이더 하나의 쿠킹 산출물은 백엔드마다 180 파일(네 백엔드 720)입니다. 머티리얼 셰이더는 패스 종류 × 머티리얼 퍼뮤테이션(포그 셋)을 모두 굽고, 조명 없는 셰이더도 G버퍼 변형이 구워집니다.
+- **텍스처 임포트의 형식 이름은 `TextureImportFormatUtil::parse` 한 곳이 풀고, 1 채널은 `R8_UNORM` 으로 냅니다**(2026-10-22, 1 채널 DDS 임포트). 설정 로드가 모르는 `format` 을 거절하고 임포터는 `TextureImportFormat` 을 DXGI 로 바꾸기만 합니다(예전에는 모르는 이름이 조용히 BC7 이 됐습니다). `r8` 은 원본의 R 채널만 남기고 sRGB 짝이 없어 `srgb` 와 무관하게 UNORM 이며 곡선 없이 바이트를 옮깁니다(BC4 · BC5 와 같음).
+  R8 DDS 는 DX10 머리(`DDS_FLAGS_FORCE_DX10_EXT`)로 씁니다. `DDSLoader` 의 옛 머리 경로가 L8 을 모르기 때문이고, 다른 형식은 옛 머리 그대로라 커밋된 DDS 바이트가 바뀌지 않습니다. 규칙 표에 `Base_Mask` 프리셋과 `Mask_Textures`(`*_mask.*`) 규칙을 더했고 맞는 원본은 아직 없습니다. 네 백엔드에서 R8 을 샘플링하는 확인은 맞는 원본이 생기는 게임의 시나리오가 봅니다.
+
 ### 5-6. 오브젝트, 조종, 입력
 
 - **병렬 분배는 항목 수가 아니라 잰 비용으로 고르는 공용 API 를 둔다**(2026-10-16): 고정 임계값 16 은 가벼운 항목(~25 ns)에서 너무 낮아 작은 그룹이 깨우는 비용(~20 us)을 일보다 크게 치렀다(무버 16 개 19 us 대 직렬 1 us). `TaskManager::runParallelByCost` (엔진은 `engine::runParallelByCost`)는 호출 스레드가 앞 항목을 1, 2, 4, … 개씩 직접 돌며 비용을 재고, 경과 3 us 에서 남은 일의 예상 직렬 시간이 16 us 보다 짧으면 이어서 직렬로, 아니면 나머지 구간만 나눈다(저장하는 추정 없음 — 낡을 일이 없다). 무거운 항목은 첫 항목에서 바로 나뉜다(처음 만든 "앞 16 개를 직렬로" 안은 무거운 항목에서 병렬을 막는 결함이라 버렸다). 씬 틱의 보통 길 · 선행 조건 스테이지가 쓴다. `runParallel(count, threshold)` 는 "임계값 이상이면 나눈다"는 계약을 그대로 둔다(`TaskManagerBench` 의 디스패치 바닥 측정 · 워커 청크 테스트가 기댄다). 상용 엔진(UE 틱 그룹 · Unity 의 작은 `Update` 목록)도 일이 작으면 깨우지 않는다.
@@ -817,17 +850,28 @@
   언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 고정 프레임 단계는 패널이 프레임을 건너뛰거나 팝업이 늦게 열리면 가끔 졌다.
   기다림은 `WaitUntil` 과 같은 창구(`AutomationRunner::holdUntilReady` — 붙잡은 프레임은 세지 않고 입력 이벤트를 민다)이고, 기다린 프레임은 로그에 남아 다음 실패의 증거가 된다.
 
-- **매니저의 타입별 컴포넌트 목록은 정확한 타입마다 버킷 하나이고, 버킷은 컴포넌트 풀 항목(FQN 키)에 합칩니다**(2026-10-17, 7-c, `docs/plans/TypedComponents.md`). 조회는 버킷마다 `isDerivedFrom` 을 한 번 묻습니다.
+- **매니저의 타입별 컴포넌트 목록은 정확한 타입마다 버킷 하나이고, 버킷은 컴포넌트 풀 항목(FQN 키)에 합칩니다**(2026-10-17, 7-c). 조회는 버킷마다 `isDerivedFrom` 을 한 번 묻습니다.
   언리얼 `GetObjectsOfClass` 의 "정확한 클래스 버킷과 파생 열거"와 같은 계열이고, 조상 목록(컴포넌트당 깊이만큼의 위치)보다 메모리가 약 여덟 분의 일입니다. 순서는 약속하지 않습니다.
   핸들은 `TComponentHandle<T>` 로 타입을 싣고(7-d), 타입 없는 핸들에서 만들 때만 확인합니다. 찾기의 타입 확인은 Shipping 이 아닌 모든 구성에서 합니다.
-- **삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기이고, 컴포넌트 목록을 도는 곳은 컴포넌트 표시 하나만 본다**(2026-10-19, TypedComponents 8.4절). 오브젝트 표시는 비공개 하나이며 컴포넌트를 먼저 표시하고, 삭제 대기 오브젝트에 붙는 컴포넌트는 삭제 대기로 시작하며(유니티 `Destroy` 뒤 같은 프레임의 `AddComponent`), 해체 중 오브젝트에는 붙이기를 거절한다(유니티 "being destroyed", 언리얼 `IsActorBeingDestroyed`). 버킷에서 빼는 안은 지연 파괴 전까지 버킷과 목록이 어긋나고 병렬 틱 안에서 배타 잠금이 필요해 버렸다. 버킷 순회 10만 · 말단 8.3 → 3.0 µs.
+- **삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기이고, 컴포넌트 목록을 도는 곳은 컴포넌트 표시 하나만 본다**(2026-10-19, 타입별 컴포넌트 7-c 측정). 오브젝트 표시는 비공개 하나이며 컴포넌트를 먼저 표시하고, 삭제 대기 오브젝트에 붙는 컴포넌트는 삭제 대기로 시작하며(유니티 `Destroy` 뒤 같은 프레임의 `AddComponent`), 해체 중 오브젝트에는 붙이기를 거절한다(유니티 "being destroyed", 언리얼 `IsActorBeingDestroyed`). 버킷에서 빼는 안은 지연 파괴 전까지 버킷과 목록이 어긋나고 병렬 틱 안에서 배타 잠금이 필요해 버렸다. 버킷 순회 10만 · 말단 8.3 → 3.0 µs.
 - **`runParallelByCost` 의 시계는 함수 포인터로 주입하고, 선행 조건 스테이지의 순서 키 비교는 한 곳에 둔다**(2026-10-16). 제품은 `MonotonicClock::nowNanoseconds` 를 넘기고(`runParallelByCostWithClock`), 테스트는 가짜 시계로 호출 스레드 선점 잡음 없이 직렬 · 분할 판단을 결정적으로 본다. 시계는 청크마다 한 번(로그 번)만 불려 핫 경로에 가상 호출이 없다. `TickRegistry` 의 재구축(`isBefore`)과 증분(`applyStageDelta`)은 `StageOrder` · `isOrderedBefore` 하나를 공유해 두 길의 순서가 어긋날 수 없다.
-- **서브틱 입력의 발사는 조종 의도의 선택 칸으로 싣고, 발동 순간의 시선은 폰이 지정한 버튼 하나에만 만든다. `GetMessageTime` 과 입력 스레드는 쓰지 않는다**(2026-10-22, 계획 `SubtickInput` B4 · B6).
+- **서브틱 입력의 발사는 조종 의도의 선택 칸으로 싣고, 발동 순간의 시선은 폰이 지정한 버튼 하나에만 만든다. `GetMessageTime` 과 입력 스레드는 쓰지 않는다**(2026-10-22, 서브틱 입력 B4 · B6).
   CS2 는 입력에 서브틱 시각을 붙여 서버가 그 순간으로 되감는다. 여기서는 클라이언트가 클릭한 순간의 시선을 의도에 싣는다 — `ControlIntent::_bTriggerLook` · `_triggerYaw` · `_triggerPitch`(없으면 비트 하나)이고 `PawnComponent::_triggerLookButton` 이 어느 버튼의 순간인지 정한다(Shooter3D 는 `Fire`).
   순간의 시선은 프레임 시작의 조종 회전에 시선 액션 값 × `InputPressInstant::computeLookFraction`(누름 직전까지의 원시 이동량 ÷ 프레임 전체)을 더해 만든다. 원시 이동량에 감도를 다시 곱하지 않으므로 액션의 배율 · 반전이 그대로 남는다. 누름이 이벤트로 오지 않는 바인딩(축 임계 · 길게 누름)은 순간을 지어내지 않고 프레임 끝의 조종 회전을 쓴다.
   형식이 바뀌어 `ControlIntentHistory::kVersion` 2 · `NetKitWireVersion::kClientServer` 6 으로 올렸다(옛 `.swintent` 는 거절). 롤백 · 락스텝 키트는 프레임 단위 결정성이 계약이라 이 칸을 쓰지 않는 조종자만 쓴다.
   B6 은 먼저 `GetMessageTime` 해상도를 측정했다 — 그 시계(`GetTickCount` 계열)의 변화 간격이 15 ~ 31 ms(평균 15.8 ms, 이 PC 에서 `GetTickCount64` 를 1.5 초 훑은 값)로 60 Hz 프레임 하나(16.7 ms)와 같아 프레임 안 자리를 가리지 못한다.
   지금 시각(창 스레드가 큐에 넣는 순간의 단조 시계)이 더 세밀하고, 입력 스레드로 옮기면 에디터 · 콘솔이 먼저 소비하는 판정을 우회할 위험만 는다. 그래서 하지 않는다.
+  사건 시각은 `RawInputEvent::_timeMicroseconds`(큐에 넣는 순간, `InputManager::postRawEvent`)와 `_frameFraction` 이다(입력 리플레이 판 5). `beginFrame` 이 창 [지금 − 델타, 지금] 으로 OS 이벤트의 프레임 안 자리를 채우고 누름마다 `InputPressInstant`(자리 · 그 앞까지의 마우스 원시 이동량 · 시각)를 적으며(시계 주입은 `InputManager::setClock`), `InputMap::tryGetActionPressInstant` 가 바인딩이 완성된 순간(조합 키는 늦은 슬롯, 바인딩 여럿이면 가장 이른 것)을 돌려준다.
+  넷 입력은 항목마다 보던 틱 스탬프를 싣고(`kInputFormat` 스탬프 켬, `NetKitWireVersion::kClientServer` 5) 서버가 [꺼내는 틱 − `_maxViewLagTicks`, 꺼내는 틱] 으로 자른다. 롤백 · 락스텝 키트에는 넣지 않는다(프레임 단위 결정성이 계약). 클릭한 순간의 방향으로 사격이 실제로 나가는지는 시나리오로 보지 못했다(`ShooterPlayerComponent::onTick` 은 게임 모듈이라 `EngineTest` 가 링크하지 않는다).
+
+- **타입 핸들 `TComponentHandle<T>` 의 찾기 · 직렬화 · 인스펙터 규칙과 버킷 갱신 규칙**(2026-10-17~19, 7-c · 7-d):
+  - 찾기 `resolveComponent<T>` 는 Shipping 이 아닌 모든 구성에서 타입을 확인합니다(맞지 않으면 오류 로그와 Debug 단언 뒤 nullptr). id 는 프로세스 전체에서 한 번만 발급되고 같은 id 를 다시 쓰는 곳은 `ComponentIDRestoreScope` 뿐인데, 그 복원이 짧은 이름으로 맞추면 짧은 이름이 같은 다른 네임스페이스의 타입이 원래 id 를 가져가 핸들이 다른 타입을 가리킵니다. 그래서 복원 키를 FQN 으로 바꿨습니다(`ObjectIdentity::ComponentEntry::_typeFqn`).
+  - `executeOrDeferPostTickOnComponent( self, func )` 는 `self` 에서 타입 핸들을 만들어 `getHandle()` 과 템플릿 인자가 어긋나는 일을 형식으로 막습니다. 결함이 숨는 곳은 API 경계를 넘는 핸들(인자 · 대기 항목 · 접근자 반환값)이라 거기를 타입 핸들로 바꿨고(예: `ControlSystem::queuePossess( controller, pawn )` 는 서로 다른 타입의 핸들 둘을 같은 형식으로 받아 인자를 바꿔 넘겨도 컴파일됐음), 여러 타입을 받는 곳(`AnimationNotifyComponent::_animator` 등)은 타입 없는 채로 둡니다. `castTo` 를 `resolveComponent` 로 바꾸면 타입이 다를 때 nullptr 이 아니라 Debug 단언에 걸립니다.
+  - 직렬화: `PROPERTY` 로 둘 수 있는 것은 `TComponentHandle<T>` 한 값과 한 겹 시퀀스뿐이고, 타입 없는 `ComponentHandle` · 맵 · 중첩 컨테이너는 대상 타입을 확인할 자리가 없어 파서 생성 오류입니다. 파일 형태는 `{대상 오브젝트의 저장 id, 컴포넌트 안정 키(이름#n)}` 이고(오브젝트 자리 0 은 자기 자신, 텍스트는 `0:TestProbeComponent#1`) 스냅샷 · 되돌리기 · 복제는 런타임 id 를 적으며 읽는 쪽이 키 해시의 최상위 비트 표지로 가립니다. 안정 키는 같은 이름의 컴포넌트 순서가 바뀌면 다른 컴포넌트를 가리킵니다(부착과 같은 한계).
+  - 확인은 배치가 끝날 때(`ObjectStateBatch::finish`, `[[nodiscard]] bool`)에 합니다. 대상을 못 찾으면 핸들을 비우고 경고(약한 참조), 대상이 있는데 타입이 다르거나 런타임 id 로 쓴 핸들을 파일 id 공간으로 읽으면 로드 오류입니다. 핸들 옮기기는 값 방문(`ReflectedValueWalk`)으로 구조체 · 컨테이너의 모든 깊이를 옮깁니다.
+  - 인스펙터: 타입 핸들 필드는 선택기(콤보)로만 그려 잘못된 타입을 넣을 수 없습니다. 판단은 ImGui 없는 `InspectorComponentPicker`, 목록은 편집 대상 씬의 비템플릿 매니저 순회로 채우고, 선택 값은 `applyPropertyTextAsEdit` 로 써서 되돌리기가 됩니다. 타입 핸들의 Paste Value 는 막았고 선택기는 삭제 대기 컴포넌트를 따로 거릅니다.
+  - 등록형 목록(`ComponentRegistry`)은 버킷으로 옮기지 않습니다(2026-10-19). 호출부 전수 조사에서 타입 대부분이 등록 순서(첫 일치 · 마지막 일치 · 동률 순서)에 기대는데 버킷 순회는 순서를 약속하지 않기 때문입니다. 개수만 세거나 존재만 보는 두 호출부는 옮겨도 얻는 것이 없습니다. 순서를 형식으로 드러내는 질의(우선순위를 받는 질의)는 아직 없습니다.
+  - 버킷 갱신: 추가는 `attachCreatedComponent` 가 오브젝트 목록에 넣는 줄 옆에서, 제거는 `destroyComponentInstance` 맨 앞(`dispatchEndPlay` 보다 먼저)에서 하고 마지막 원소를 빈 위치로 옮깁니다. 모두 저장소 `_mutex` 의 배타 잠금 안이고 조회는 공유 잠금입니다. 순회 콜백 안의 구조 변경은 Debug 단언(`WalkScope`)이 막습니다. 비운 버킷의 벡터 용량은 남겨 같은 이름으로 스폰과 파괴를 거듭하는 게임이 매번 할당하지 않게 합니다. 키는 `TypeInfo` 포인터가 아니라 FQN 입니다(같은 클래스의 `TypeInfo` 사본이 둘이어도 같은 버킷). 측정은 [검증과 측정](08_Verification.md) "타입별 컴포넌트 질의 벤치"입니다.
 
 ### 5-7. 런타임 UI 와 글자
 
@@ -873,6 +917,9 @@
   `RT.Canvas.Upload` p50 196 → 36 ~ 49 us, 벽시계 4.3 ~ 4.7 → 1.1 ~ 1.2 ms/프레임. 남은 게임 스레드 몫은 마커마다 월드 위치를 읽고 투영하는 일이고,
   `GT.UI.*` 합이 기준 0.5 ms 언저리다. 투영 · 컬링까지 컴퓨트로 옮기려면 GPU 가 마커의 월드 위치(GPUScene 변환)를 읽어야 해 [후보 문서](plans/Candidates-ui.md) `G-13` 으로 둔다.
   앵커 아래에서는 자르기를 쓸 수 없다(가위는 대상 픽셀이다 — `UIPaintPass` 가 단언한다). 앵커가 따로 바인딩을 늘리지 않으려고 사각형 버퍼 원소 하나(rect 만 읽음)를 쓴다(SRV 슬롯 16 이 Vulkan 밴드를 꽉 채운다).
+
+- **UI 전환의 곡선 위 사건은 트랙 값이 문턱을 지날 때 화면에 명령을 보냅니다**(2026-10-22, 전환의 곡선 위 사건). 시각에 붙는 `UIAnimationEvent` 는 곡선 · 키를 고치면 어긋나지만 문턱은 곡선을 따라갑니다(불투명도가 0.5 를 넘을 때 소리, 크기가 1 로 돌아올 때 다음 연출). `UIAnimationTrack::_listCurveEvent`(`UIAnimationCurveEvent` — 문턱 · 성분 · 방향 `UICurveCrossing` Rising · Falling · Either · 명령)를 `UIAnimationPlayer::fireCurveEvents` 가 처리합니다.
+  재생 구간을 키 시각마다 끊어(키 사이 곡선은 한 방향) 두 끝 값으로 지남을 보고, 지난 시각은 두 끝 사이를 선형으로 나눠 사건 순서에 씁니다. 거꾸로 재생은 재생 방향의 오르내림을 봅니다. 실수가 아닌 트랙이나 없는 성분에 사건을 달면 경고하고 트랙째 뺍니다(조용히 안 보내지 않음). 움직임 줄이기 · 길이 0 은 끝까지 한 번에 가며 사이의 지남을 모두 보냅니다. `UIDocumentWriter` 는 빈 `<_listCurveEvent />` 를 쓰지 않아 옛 문서를 다시 저장해도 바뀌지 않습니다.
 
 ### 5-8. 게임프레임워크와 키트
 
@@ -926,6 +973,8 @@
   피팅 데이터(`*.partfit.xml`)는 표와 따로 읽는 공유 에셋이고 이름은 조립이 표와 만날 때 대조한다(`FitPartData::validateNames`). 한 메시로 병합(그리기 줄이기)은 이 위의 다음 단계다.
 - **외형 부품 풀은 씬 서비스 하나(`SocketPartPool`)다 — 컴포넌트마다 두는 풀은 두지 않는다**(2026-10-22, 통합 파동 C). animwave(S6)와 gfxshader(E5)가 같은 일을 따로 만들었다. 씬 서비스는 캐릭터끼리(적을 걷어 다른 적이 입을 때) 인스턴스를 나누고
   `destroyOwnerStowingParts` 로 주인을 지울 때도 거두지만, 컴포넌트 풀(`_partPoolSize`)은 그 캐릭터 안에서만 돈다. 같은 캐릭터가 무기를 다른 칸으로 옮겨도 조립이 먼저 거두고 뒤에 꺼내므로 같은 인스턴스다. 언리얼은 이 자리에 엔진 기본이 없고 게임이 액터 풀을 둔다.
+
+- **걸음 조우 판정은 기반의 `StepEncounterRule` · `StepEncounterCounter` 하나입니다**(2026-10-22, 걸음 조우 판정 하나로). `GameFramework/Base/World/Encounter/StepEncounter.h` 에 규칙(방식 `Period` · `Chance`, rate, 유예 걸음)과 셈(총 걸음 · 조우 뒤 걸음, `advance` · `roll` · `markEncounter`)을 두고 Overworld(`Period`, 난수 없음, 유예 0, 조우 칸 걸음만 셈)와 ClassicJRPG(`Chance`, 자기 난수)가 같이 씁니다. 세이브 바이트는 바꾸지 않았고(Overworld 는 예전 `uint32` 칸에 조우 칸 걸음 수, JRPG 는 난수 · 조우 뒤 걸음 · 총 걸음) 범위 검사는 `StepEncounterCounter::restore` 한 곳입니다.
 
 ### 5-9. 온라인 서비스, 네트워크, 보안
 
@@ -989,13 +1038,13 @@
   표를 서브시스템으로 두는 안은 기각했습니다. Shipping 은 정적 링크라 등록이 `main` 전 정적 초기화에서 돌고, 그때는 범위가 없습니다. 남는 정적 변수를 막는 게이트는 두지 않았습니다 — 두 표는 등록 창구가 형식으로 하나라 남은 틈이 없습니다.
 - **호스트 이름은 Core 의 막는 해석(`PlatformSocketUtil::resolveAddress`, `getaddrinfo` IPv4)으로 기동 때 한 번 풉니다**(2026-10-17, D7-5). `localhost` 만 손으로 바꾸던 자리(캐시 엔드포인트)를 이 함수로 바꿨고, 풀리지 않으면 기동 오류입니다.
   틱 · 요청 경로는 DNS 왕복만큼 막히므로 그대로 부르지 않습니다 — HTTP 클라이언트는 전용 해석 스레드(처음 이름을 받을 때 띄움)에 맡기고 `update` 가 연결을 겁니다. TaskManager 워커는 막는 일을 받지 않아 쓰지 않습니다.
-- **온라인 접속은 Hello 첫 필드의 온라인 스키마 해시 하나로 거절합니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 5-a). 키트마다 (영역, 판) 목록을 대조하던 협상을 없앴습니다.
+- **온라인 접속은 Hello 첫 필드의 온라인 스키마 해시 하나로 거절합니다**(2026-10-17, [고정 배치형 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) 단계 5-a). 키트마다 (영역, 판) 목록을 대조하던 협상을 없앴습니다.
   해시는 빌드에 올라온 `OnlineProtocolEntry` 전부(영역 순)와 `kBaseVersion` 을 섞은 값이고, 키트 서비스가 `getProtocol` 로 그 항목을 돌려줘야 하므로 키트가 따로 목록을 적어 빠뜨릴 곳이 없습니다.
   클라이언트가 올린 키트만 섞으면 키트 일부만 쓰는 클라이언트가 서버와 어긋나므로 빌드 전체를 섞습니다(서버와 클라이언트는 같은 빌드로 배포). 다르면 `[kVersionMismatch][서버 해시 u64]` 로 답하고 연결을 닫으며, 클라이언트는 다시 접속하지 않고 계정 키트는 `LoginResult::UpdateRequired` 를 냅니다.
   다른 키트는 키트 표보다 먼저 `OnlineReplyUtil::markError` 가 결과를 `UpdateRequired` 로 바꿉니다(키트 표의 기본값 `Unavailable` 은 재시도를 부르므로). Hello 에 다른 답이 오면 클라이언트는 `HandshakeFailed` 로 멈춥니다.
   한쪽만 키트 모듈을 끄거나(`EditorModuleOverrides`) 핫 리로드로 키트 프로토콜을 바꾸면 그쪽 해시만 달라져 접속이 거절됩니다. 같은 빌드끼리만 잇는다는 규칙대로의 동작이라 따로 맞추지 않습니다.
   언리얼 `FNetworkVersion::GetLocalNetworkVersion`, Unity Netcode `ProtocolVersion` 과 같은 자리입니다(기억에 의존). 옛 클라이언트를 받는 탈출구는 열지 않았습니다.
-- **온라인 키트 메시지는 고정 배치형(B)이고, 키트의 메시지 타입 목록 하나가 쓰기 · 읽기와 스키마 해시를 함께 정합니다**(2026-10-17, [리플렉션 직렬화 형식 계획](plans/ReflectionFormats.md) 단계 5-b).
+- **온라인 키트 메시지는 고정 배치형(B)이고, 키트의 메시지 타입 목록 하나가 쓰기 · 읽기와 스키마 해시를 함께 정합니다**(2026-10-17, [고정 배치형 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) 단계 5-b).
   11 키트의 손 코덱과 손 `kVersion` 을 지웠습니다. 키트는 `XxxProtocol::MessageTypes = OnlineMessageTypes<...>` 하나를 두고, `write` · `read` 는 목록에 없는 타입이면 컴파일이 멈춥니다.
   같은 목록을 `OnlineProtocolEntry` 에 넘기므로 타입마다의 `FixedLayout::getSchemaHash` 가 온라인 스키마 해시에 섞이고, 해시용 목록을 따로 적어 빠뜨릴 곳이 없습니다(언리얼 Iris 와 같은 방향, 기억에 의존). 세부:
   - 메서드와 알림 번호는 키트의 메서드 표(`OnlineMethodTable`, `ENUM( Count = Count )` 열거형 둘)의 열거자 순서에서 나오고, 등록 항목이 그 이름 순서를 해시에 섞습니다.
@@ -1016,19 +1065,33 @@
     거절 응답은 `OnlineServiceClient::rejectRequest` 가 만들어 서버 응답과 같은 처리기를 지납니다. 약속: 0 이 아닌 요청 번호를 돌려주고, 콜백(또는 받은 응답 목록)의 번호가 그 번호와 같으며, 보내지 못한 요청의 콜백은 요청 함수 안에서 바로 옵니다.
     서버는 응답 메시지를 `OnlineServiceHost::respondMessage` 하나로 보내고, 쓰지 못하면 오류 로그와 `kInternal` 로 답합니다. 계정 키트만 계정을 연결에 묶은 뒤에 응답해야 하므로 몸을 먼저 써 두고 같은 약속으로 답합니다. 알림이 범위 밖이면 오류 로그를 남기고 보내지 않습니다.
   - 같은 상한을 상수로도 두는 곳(`LedgerConstant::kMaxAssetIDSize`, `ChatLimit`, `ServiceAuditEntry::kMaxStateSize` 등)은 `PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )` 처럼 상수 이름을 적습니다(2026-10-21).
-    생성기가 libclang 으로 그 상수의 값을 계산해 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 에 넣으므로 정본이 상수 하나입니다([리플렉션 형식](plans/ReflectionFormats.md) 3.5).
+    생성기가 libclang 으로 그 상수의 값을 계산해 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 에 넣으므로 정본이 상수 하나입니다([고정 배치형 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) 3.5).
     전에는 애노테이션이 정수 리터럴만 받아 키트 테스트 `DeclaredLimitsMatchTheConstants` 가 정규 문자열에서 `MaxCount` 를 읽어 상수와 대조했는데, 그 게이트를 지웠습니다.
-  - **서버 버스는 A 입니다**(2026-10-17, 사용자 결정 — 서버 사이에는 핸드셰이크가 없고 배포 중에는 빌드가 섞인다, [계획](plans/ServerBusFormat.md)).
+  - **서버 버스는 A 입니다**(2026-10-17, 사용자 결정 — 서버 사이에는 핸드셰이크가 없고 배포 중에는 빌드가 섞인다).
     주제 정의(`ServerBusTopic<T>` · `ServerBusTopicFamily<T>`)가 이름과 본문 타입을 묶고, 본문은 `T::kBusVersion`(의미 버전) 머리 + `BinarySerializer` 입니다.
     읽기는 엄격 태그 루프 하나로, 모르는 이름의 필드는 건너뛰고 읽지 못한 아는 필드(모르는 열거자)와 다른 의미 버전은 거절합니다(이관 없음, 로그 한 번 + 카운터). 중첩 구조체까지 같은 정책입니다(`SerializeContext` 플래그 둘).
     Avro 스키마 해석과 같은 방향이고, 숫자 필드 ID(protobuf)는 고르지 않았습니다 — 인코딩을 바꾸면 섞인 동안 모든 버스 · 캐시가 읽히지 않고 레코드와 버스의 정체성 체계가 둘이 됩니다.
     바이트 전송(`IServerBusTransport`)과 타입 있는 앞(`ServerBus`)을 나눠 키트는 바이트를 쓰지도 읽지도 못합니다. 버스 전용 타입은 키트 `MessageTypes` 에서 뺐습니다(클라이언트 해시에 섞이지 않음).
     push 중계는 알림 열거자 이름 · 본문 A 를 싣고 받는 서버가 등록 테이블(`OnlinePushRelayEntry`)로 자기 빌드의 번호와 B 를 만듭니다. 필수 필드 표시(`Required`)는 두지 않고(의미 버전을 높이는 것과 같다),
     `config.changed` 는 구독처가 없어 지웠고(서버는 주기로 다시 읽음), 캐시 레코드는 버스와 같은 읽기, 영속 레코드의 모르는 필드 보관은 백로그 `F-3` 입니다.
-    필드 변경의 호환 규칙(추가 · 삭제 · 이름 · 타입 · 열거자)과 "새 필드는 옛 빌드 홉을 지나면 기본값"이라는 중계 규칙은 [계획](plans/ServerBusFormat.md) 3.6 에 있습니다.
+    읽기 정책, 의미 버전, push 중계, 필드 변경의 호환 규칙은 아래 항목들에 있습니다.
+  - 읽기 정책(`MixedBuildCodec::decode`, 버스와 캐시 레코드가 같음): 의미 버전이 다르면 거절(이관 없음, (타입, 결과, 받은 버전)마다 오류 로그 한 번과 `ServerBusReadLog::getRejectedCount`), 타입에 없는 이름의 필드는 건너뛰고 (타입, 필드)마다 한 번 경고, 아는 필드를 읽지 못하면(모르는 열거자 · 변환 불가) 거절, 스트림에 없는 필드는 기본값, 읽은 값은 `Min` · `Max` · `MaxCount` 확인.
+    모든 깊이에 같은 정책이라 `SerializeContext` 플래그를 `setSkipUnknownProperties`(없는 이름 건너뜀)와 `setSkipUnreadableProperties`(읽지 못한 아는 필드 건너뜀)로 나눴고 버스는 앞의 것만 켠다(`deserializeExactVersion`). 소프트 경로의 숨은 폴백(기록 타입이 다르고 변환이 실패하면 읽힌 만큼 받음)은 지웠다.
+  - 의미 버전은 타입 안의 `static constexpr uint32 kBusVersion` 이고 `ServerBusTopic` 이 읽는다(없으면 `static_assert`). 레코드 버전 수열과 묶이지 않는다. 새 필드가 다른 필드의 뜻을 바꾸는 변경은 형식으로 막지 못하므로(B 의 `kBaseVersion` 과 같은 틈) 사람이 의미 버전을 올린다. `BinarySerializer` 의 인코딩 규칙을 바꾸면 섞인 동안 모든 버스 메시지와 캐시가 읽히지 않으니 인코딩 버전을 올릴 때는 한 배포 동안 옛 버전도 읽는다.
+  - 주제가 본문 타입을 가진다: `publish( ServerBus&, const T& )` 와 `read( msg, T& )` 가 모두 `[[nodiscard]]` 이고 신호 주제도 `PROPERTY` 없는 `REFLECT` 타입을 본문으로 쓴다. `IServerBusTransport` 는 호스트와 서버 조립만 갖고 키트에는 `ServerBus` 만 넘긴다. 봉투 `[버전 u8][서버 id u64][순번 u64]`(`EphemeralServerBus`)는 바꾸면 섞인 동안 모든 메시지가 버려지는 고정 형식이다.
+  - push 중계(`OnlinePushRelay`, 주제 `push.<서버 id>`): 봉투가 계정 id · 알림 열거형 FQN · 열거자 이름 · 본문 FQN · 본문 A 를 싣고, 받는 서버가 `OnlinePushRelayEntry`(등록 목록 `ServiceFactoryList`)로 (열거형, 열거자 이름)을 찾아 본문 A 를 읽어 자기 빌드의 B 로 다시 써 클라이언트에 보낸다. 항목이 없거나 본문 타입이 다르거나 읽지 못하면 (열거형, 열거자)마다 한 번 오류 로그와 카운터를 남기고 버린다. 알림 열거자 이름을 바꾸면 섞인 동안 옛 빌드의 중계가 거절된다.
+  - 필드 변경: 추가는 허용(옛 → 새는 기본값, 새 → 옛은 버림, 기본값이 "값 없음"이어야 하고 받는 쪽이 못 다루면 의미 버전을 올림). 삭제는 옛 빌드가 기본값을 받아도 되는 필드만 한 배포로, 아니면 먼저 읽지 않게 배포하고 다음 배포에서 지운다. 이름 변경은 새 이름 필드를 더해 둘 다 쓰고 다음 배포에서 옛 필드를 지우거나 의미 버전을 올린다. 타입 변경은 새 이름의 필드를 더한다. 열거자 추가 · 이름 변경과 `MaxCount` 변경은 옛 빌드가 거절하므로 버려도 되는 주제가 아니면 두 배포로 나눈다. 중첩 타입의 FQN 변경은 하지 않는다. 뜻만 바뀌면 의미 버전을 올린다.
+    메시지가 여러 서버를 거치면 새 필드는 옛 빌드 홉을 한 번이라도 지나면 기본값이 된다(예: `mm.queue` → 옛 매처 → `MatchFormed`). 필수 필드 표시(`PROPERTY( Required )`)는 두지 않는다.
+  - 테스트: 혼합 빌드는 필드 이름이 겹치는 두 타입(`BusTestNoticeOld` · `BusTestNoticeNew`)에 쓴 바이트를 다른 쪽으로 읽어 흉내 내고, 중첩 타입 변경은 같은 이름의 두 `TypeInfo` 를 서로 다른 `TypeRegistry` 에 등록해 `SerializeContext::setTypeRegistry` 로 나눈다. 크기 테스트는 `MatchFormed` 를 실제 상한(`MatchmakingLimit`)으로 채운 A 크기가 `kMaxMessageSize` 이하임을 단언한다(`MaxCount` 를 모두 곱한 값은 실제 상한이 아니다). 로그 폭주는 (타입, 필드) · (타입, 결과, 버전)마다 한 번으로 막았다.
   - 가변 길이가 두 겹인 칸(`vector<string>`, `vector<vector<T>>`)은 원소를 구조체로 감쌌습니다(`AccountLinkedProvider`, `MatchFormedTeam`). 클라이언트에 보내지 않는 값은 형식으로 막았습니다: 점검 허용 목록은 상태 응답의 타입(`MaintenanceView`)에 없고, 서버 안에서만 쓰는 칸(`AdminReply::_bRevokeSessions`, 레코드 판 `_version`)은 `PROPERTY` 가 아닙니다.
   - 의미만 바뀌고 배치는 그대로인 변경(단위 변경 같은 것)은 해시가 잡지 못하므로 `OnlineProtocolConstant::kBaseVersion` 하나를 올립니다.
   - 남은 손 코덱(기반 계층의 제재 버스, 접속 상태 전달 봉투와 캐시 값, 원장 · 우편 · 감사 · 원격 설정 레코드, 계정 · 길드 · 거래의 id 레코드)은 키트 프로토콜이 아니어서 옮기지 않았습니다.
+- **영속 레코드는 모르는 필드를 버리지 않고 보관했다가 다시 싣습니다**(2026-10-22, 영속 레코드의 모르는 필드 보관). 배포 중 옛 빌드가 새 빌드의 레코드를 읽을 때 모르는 필드를 거절하면 요청이 실패하고, 버리고 읽으면 옛 빌드가 고쳐 다시 쓸 때 새 빌드의 값이 지워지기 때문입니다. `BinarySerializer::serializeKeepingUnknown` · `serializeVersionedKeepingUnknown` 이 읽을 때 담은 모르는 칸(이름이 빈 orphan)을 (이름 해시, 기록 타입 해시, 값) 그대로 뒤에 싣습니다(언리얼 `FPropertyTag` 보관 · protobuf unknown fields 와 같은 계열). 아는 칸 · 읽지 못한 아는 칸 · 다른 와이어 버전은 고쳐 싣지 않고 거절합니다.
+  영속 레코드 타입(원장 `LedgerItemState` · 신고 `ServiceReport` · 채팅 · LiveOps 둘 · 점검 창 · 공지 · 거래)은 `ServiceRecordUnknownFields _unknownFields`(PROPERTY 아님)를 두고 `readDurable` 이 담고 `encode` 가 다시 싣습니다. 칸이 없는 타입은 `static_assert` 로 막혀 호출부 옮기기가 남을 수 없습니다. 맨 바깥 칸만 담으므로 안쪽 구조체에 칸을 더할 때는 레코드 버전을 올리고, 버전이 다르면 이관 없이 거절합니다. 캐시 레코드(`readCache`)는 서버 버스와 같은 혼합 빌드 읽기입니다.
+- **넷 채널은 등록한 B 메시지 타입의 스키마 해시를 핸드셰이크 버전에 섞습니다**(2026-10-22, 넷 채널 스키마 해시 핸드셰이크). `NetMessageChannel`(`Source/Engine/Net`)이 종류 바이트마다 B 타입을 등록하고(`registerMessage<T>`), 봉인(`seal`)이 (종류, 스키마 해시)를 종류 순으로 기반 와이어 버전에 섞은 호스트 설정을 내줍니다. 배치가 다른 빌드는 핸드셰이크에서 `VersionMismatch` 로 먼저 거절됩니다. 본문만 쓰고 읽는 길(`writeMessage` · `readMessage`)은 봉인한 채널에만 열려 있고 머리 없는 바이트를 만드는 `FixedLayout::writeBody` · `readBody` 는 이 클래스만 부르므로(friend) 섞는 일을 빼먹을 자리가 없습니다. 채널은 그 설정으로 연 호스트(연결) 하나에 하나이며, 봉인한 설정이 아닌 설정으로 연 상대와는 본문만 주고받으면 안 됩니다. Mech · Horror 스냅샷이 첫 사용처입니다(`registerSnapshotMessage` · `writeSnapshotMessage`).
+- **MMO 갱신 확인은 키트 메시지가 아니라 연결 계층의 전달 통지입니다**(2026-10-23, MMO 갱신 확인을 전달 통지로). 연결 계층은 이미 패킷마다 확인(ack + 32 비트)을 주고받으므로 키트가 같은 정보를 한 번 더 보내던 `kUpdateAck` 를 지웠습니다(언리얼 `PacketNotify` 와 같은 계열). `NetConnection::sendNotifiedMessage( pData, size, tag )` 가 비신뢰 메시지에 값 하나를 달면 보낸 패킷 기록(`SentPacket`)이 값과 종류(첫 바이트)를 패킷당 8 개(`kMaxNotifiedPerPacket`)까지 기억하고, 판정은 메시지마다 한 번입니다: 패킷이 확인되면 `Delivered`, 빠른 재전송이 잃은 것으로 보거나 확인 없이 패킷 창 밖으로 밀리거나 줄에서 나이 상한을 넘으면 `Lost` 이며 그 뒤 늦은 확인은 판정을 바꾸지 않습니다(`drainDeliveryNotices`).
+  호스트는 `INetPeers::sendNotifiedMessage( connectionID, … )` 와 `NetInbound::_listDeliveryNotice` 로 넘기고, 라우터 처리기는 `getNotifiedKindMask()` 로 통지를 달아 보내는 종류를 등록해(받는 종류 마스크와 겹침을 거절) `onDeliveryNotice` 로 받습니다. 등록하지 않은 통지는 세고(`getUnclaimedNoticeCount`) 첫 번째는 오류 로그를 남깁니다. MMO 서버는 갱신을 서버 틱을 값으로 단 통지 메시지로 보내고 판정을 관찰자의 테이블(`_updateOutcome`, 64 틱 링)에 적으며 `NetKitWireVersion::kMMO` 를 4 로 올렸습니다. 손실 뒤 다시 보기까지 3 틱으로 옛 방식(4 틱)보다 빠릅니다.
+  한계: 블랙아웃이 패킷 32 개를 넘으면 그 앞 패킷은 확인 비트 밖이라 잃음이 창 밖 밀림(256 패킷)이나 64 틱 상한으로 정해집니다. 더 긴 블랙아웃에서 늦으면 연결 쪽 "확인 비트 밖으로 밀린 미확인 패킷은 잃음" 규칙을 먼저 봅니다. 다른 키트가 "받았다" 메시지를 따로 보내는지는 보지 않았습니다(클라이언트-서버 키트의 처리한 입력 틱은 서버가 시뮬레이션한 틱이라 의미가 다릅니다).
 - **로그인 응답 쓰기 실패**(2026-10-17, 백로그 `A-16`): 계정 서버가 로그인 · 재접속 응답 몸을 쓰지 못하면 `kInternal` 로 답하고, 저장소 작업이 이미 만든 그 세션은 로그아웃 작업(`LoginService::logout`)으로 지웁니다.
   응답 몸을 저장소 작업 전에 쓰는 안은 기각했습니다. 몸이 싣는 세션 토큰 · 신원 · 시한은 그 작업이 만들기 때문입니다. 지금 실패를 부르는 값(원격 설정의 상점 주소)만 미리 확인하는 것은 같은 결함이 다른 필드로 다시 날 수 있어 고르지 않았습니다.
   지우는 작업의 완료는 짝이 되는 요청이 없어 버려지고, 지우기가 저장소 오류로 실패하면 세션은 시한까지 남습니다(클라이언트는 토큰을 받지 못했으므로 쓸 수 없습니다).
@@ -1234,6 +1297,10 @@
 - **에디터의 에셋 종류 판정은 엔진 레지스트리의 이름 · 접미사를 읽고, 열거 `EditorAssetType` 은 에디터 분류로 남긴다**(2026-10-22, 구조 단순화 AT6). 엔진 종류의 접미사 · 쿠킹 역할을 에디터 표에 다시 적던 사본을 지웠다(행은 엔진 타입의 `kAssetType._name` 을 들고 첫 사용 때 `AssetTypeRegistry::findType` 으로 푼다 — 에디터 DLL 에서 엔진 `kAssetType` 의 주소는 상수식이 아니다).
   레지스트리에 없는 종류는 목록(`kArrUnlistedType`)에 이유와 함께 적고, 엔진에 등록된 모든 종류가 에디터 행이거나 그 목록에 있는지는 `EditorAssetTypeTest.EveryEngineAssetTypeIsAccountedFor` 가 본다. 열거를 레이블 핸들로 바꾸는 일(35 파일 205 곳)은 사본 제거와 무관한 모양 변경이라 하지 않았다.
 
+- **에디터 시나리오는 원본 폴더가 아니라 실행마다 새로 만든 사본 폴더에 씁니다**(2026-10-20, 시나리오가 소스 트리에 쓰는 문제). 근본 원인은 시나리오가 `Resource/` 원본에 쓰는 것이었고 파일을 지우거나 되돌리는 것은 증상 처리입니다. `<Scenario>` 아래 `<Scratch from="<추적 중인 폴더 id>" as="scratch/<이름>"/>` 로 선언하면 실행기가 시작할 때 `Resource/scratch/<이름>` 을 지우고 원본을 복사합니다(`AutomationScratch::prepare` — 글 파일 안의 원본 id 는 사본 id 로 바꾸고 `.meta` 의 guid 는 새로 만듭니다. `Resource/scratch/` 는 `.gitignore`). 복사 실패는 LoadError 라 원본에 쓰며 돌지 않습니다.
+  사본을 리소스 루트 밖(`Saved/`)이 아니라 루트 안의 보통 도메인 폴더로 둔 이유는 에디터에 `ResourcePaths::getRootFolderPath()` 에 id 를 직접 붙이는 곳이 43 군데라 루트 밖으로 경로를 돌리는 덮개는 그 길을 모두 놓치기 때문입니다. 개발 명령 `asset.openScratch <사본 id>` 는 `scratch/` 밖의 id 를 받지 않아 원본을 열어 고치는 경로를 형식으로 막습니다. 역색인의 참조 도메인에 `scratch/` 를 더했고(빠져 있어 `Editor.ReferenceCount` 가 0 이었음), 쿠커의 도메인 목록에는 `scratch/` 가 없어 팩에 들지 않습니다.
+  작업 트리가 깨끗한지 보는 게이트와 `<Scratch>` 를 선언하지 않은 시나리오의 쓰기를 실패로 적는 검사는 두지 않았습니다. 에디터 시나리오 체인 192 단계를 돌린 뒤 `git status` 가 시작 전과 같았고, 검사는 쓰기 경로마다 실행기에 훅을 걸어야 해 비용이 큽니다. 새 시나리오가 원본에 쓰면 체인 뒤 `git status` 로 드러납니다. 게임 시나리오(`game/*/automation`)는 이 점검을 하지 않았습니다.
+
 ### 5-12. 기능 대기열 결정 (2026-10-17)
 
 백로그 `기능` 항목 50건을 작업 단위로 나누면서 정한 것입니다. 상용 엔진(언리얼 · 유니티 · Godot)의 같은 자리를 기준으로 사용자가 정했거나(사), 제가 유추하고 사용자가 승인했습니다(추). 뒤집을 때는 이 표를 고칩니다.
@@ -1291,7 +1358,7 @@
 | D1-7 | 월드는 Scene을 유지하고 셀을 활성 씬에 더해 올린다(`World` 타입은 필요가 확인되면). 편집은 한 씬으로 하고 쿠킹 때 위치와 격자 설정으로 셀 파일을 나눈다(셀은 계산, 항상 올라 있을 것만 "공간 로드 안 함" 표시). 셀을 넘는 참조는 같은 셀이나 항상 올라 있는 오브젝트만 허용하고 그 밖은 쿠킹 오류로 멈춘다(조용히 null로 바꾸지 않는다). 서버도 플레이어 주변 셀만 스트리밍한다. 첫 대상은 WildWest. HLOD는 메시 LOD 뒤. 선행으로 정점 풀 부분 갱신(C-43)을 먼저 한다. | 언리얼 World Partition의 런타임 격자와 같은 자리. 셀별 매니저는 셀 사이 물리가 끊긴다. | 추 |
 | C-43 | 정점 · 모프 풀은 메시마다 구간(SpanAllocator)을 받아 바뀐 메시만 쓴다. 정점 버퍼 부분 갱신은 새 RHI 함수(`updateVertexBufferRegions`)로 한다. | 언리얼 GPUScene 의 `FSpanAllocator` 와 같은 자리. 정점 버퍼를 기본 힙 + 복사로 바꾸는 것보다 백엔드 변경이 작다. | 추 |
 | C-41 | Linux · GPU 검증은 (1) CI 상태를 세션 시작에 보이게, (2) 셰이더 전 백엔드 확인, (3) 요구 백엔드를 정책 데이터로 받아 건너뛰는 대신 실패하는 형식, (4) 소프트웨어 렌더러 라벨(lavapipe+xvfb, WARP) 순서로 한다. GPU 러너(Team 조직 전환, 분당 요금)와 자체 호스트 러너는 하지 않는다. 소프트웨어 렌더러 전용 골든은 두지 않는다(5-2 유지). WSL 검증은 사용자가 요청할 때만 한다. | 이번 결함 넷은 모두 GPU 없이 잡히는 결함이었고 원인은 CI가 죽어도 보이지 않은 것이다. 자체 호스트 러너는 공개 저장소에서 포크 PR 위험이 있다. | 추 |
-| 리플렉션 | 기믹 회로 상태(`GimmickCircuitState`)는 노드 id 로 짝짓는다. 같은 id 인데 종류 · 종류 상태 버전 · 슬롯 수가 바뀐 노드만 읽기 실패이고, 그 컴포넌트는 오류를 남기고 돌지 않는다. 노드 추가 · 삭제는 경고 뒤 이어 간다(새 노드는 처음 상태). 롤백 · 넷은 정확히 맞는 상태만 받는다. 슬롯 상한은 종류 등록 때 검사한다. | 회로 해시 하나에 걸면 노드 하나만 고쳐도 그 프리팹을 쓰는 모든 세이브가 실패한다. 언리얼 `SaveGame` 의 이름 기반 프로퍼티 짝짓기 · Avro 스키마 해석과 같은 계열이다(`GimmickCircuitState.md` 8절). | 추 |
+| 리플렉션 | 기믹 회로 상태(`GimmickCircuitState`)는 노드 id 로 짝짓는다. 같은 id 인데 종류 · 종류 상태 버전 · 슬롯 수가 바뀐 노드만 읽기 실패이고, 그 컴포넌트는 오류를 남기고 돌지 않는다. 노드 추가 · 삭제는 경고 뒤 이어 간다(새 노드는 처음 상태). 롤백 · 넷은 정확히 맞는 상태만 받는다. 슬롯 상한은 종류 등록 때 검사한다. | 회로 해시 하나에 걸면 노드 하나만 고쳐도 그 프리팹을 쓰는 모든 세이브가 실패한다. 언리얼 `SaveGame` 의 이름 기반 프로퍼티 짝짓기 · Avro 스키마 해석과 같은 계열이다(기믹 회로 상태 구조 8절). | 추 |
 | D4-16 | 모션 매칭은 보류하고 선행 구조(포즈 단위 inertialization, 포즈를 내는 그래프 노드)만 넣는다. 감쇠는 Bollo 의 5 차 다항식 대신 임계 감쇠 스프링(반감기 하나)으로 한다. | 데이터(이어진 모캡)와 그것을 요구하는 게임이 없으면 탐색 · 굽기를 검증할 대상이 없다. 스프링은 도중에 다시 시작해도 속도가 이어지고 닫힌 식이라 오차가 쌓이지 않는다. 조건 · 초안은 [모션 매칭](plans/MotionMatching.md). | 추 |
 | D4-6 | 페어드 애니메이션(활 · 잡기 · 문)은 에셋 `*.pairedanim.xml` 과 씬 프레임 시스템의 세션으로 둔다. 시계는 앵커 역할 플레이어의 시각 하나이고(사본 없음, 예측과 다르면 오류로 중단), 역할은 각자 그래프 밖 클립을 `play` 한다. 정렬 warp 는 기존 `MotionWarpingComponent` 를 재사용한다. 동기 그룹 · 시퀀서 덮어쓰기 슬롯은 쓰지 않는다. | 언리얼 Contextual Animation · 유니티 Timeline 모양. 동기 그룹은 크로스페이드 중 리더의 현재 슬롯이 이전 클립이라 위상이 틀어지고, 덮어쓰기 슬롯은 포즈만 섞어 루트 모션 · 알림이 돌지 않는다. 설계 `docs/plans/PairedAnimation.md`(2026-10-18). | 추 |
 | D4-6 | 블렌드 스페이스 상태는 표본 클립의 알림을 데이터 "notify"(`all` · `highest_weight` · `none`, 키가 없으면 `all`)대로 내고, 출처는 표본 클립 · 시각은 그 클립의 시각 · 가중치는 표본 가중치를 곱한다. 재생할 것이 스스로 알림을 고른다(`IAnimationPlayable::collectFiredNotifies`). 그래프 에디터 패널은 노드 · 링크가 아니라 에셋을 통째로 든다. | 언리얼 Notify Trigger Mode(기본 All) · 유니티 블렌드 트리와 같다. 출처가 클립이라 구간 알림 닫기 규칙을 그대로 쓴다. 패널이 목록만 들던 때는 저장이 레이어 · 본 마스크를 버렸다. | 추 |
