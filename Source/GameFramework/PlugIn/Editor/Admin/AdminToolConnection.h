@@ -53,6 +53,8 @@ namespace sw::editor
         /** @brief 전송 · 요청 시한 · 다시 연결을 돌립니다. 닫혀 있으면 아무것도 하지 않습니다. */
         void update( int64 nowMs );
         void setLoginHook( const LoginHook& onReady ) { _onReady = onReady; }
+        /** @brief 이 연결의 서비스 클라이언트(조립 쪽이 계정 클라이언트 같은 다른 키트 클라이언트를 `registerClientService` 로 등록하는 데 쓴다 — 연결을 열기 전에). */
+        OnlineServiceClient& getServiceClient() { return _client; }
 
         AdminToolConnectionState getState() const { return _state; }
         /** @brief 상태를 글로 적습니다(패널 표시용). */

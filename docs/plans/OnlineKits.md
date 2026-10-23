@@ -146,7 +146,7 @@ GM 전용 호스트 포트를 서버 설정에 — 2026-10-23 들어감. 계약�
 
 - 확인: `OnlineServiceHostTest.AdminListenerSplitsServicesByExposure` · `WithoutAnAdminListenerOneListenerServesEveryService`(루프백). 실제 IOCP 두 리슨과 전용 서버 기동(`_adminServicePort` 를 준 설정 파일)은 확인하지 않았다.
 - GM 도구 접속(2026-10-24, `wt/plannet`, 빌드 전): `AdminToolConnection`(에디터 확장 Admin)이 전송 · `OnlineServiceClient` · `AdminClient` 를 들고 `host:port` 하나로 건다. `AdminToolSession::connectLive` · `disconnectLive` · `updateConnection` 이 감싸고 패널의 제공자 줄에 주소 칸과 Connect 단추를 더했다. 주소에 포트가 없으면 거절한다(기본 포트로 대신 걸지 않는다).
-  로그인은 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 부르는 쪽이 `getConnection().setLoginHook` 으로 끼운다 — 훅이 없으면 `Ready` 에서 멈추고 서버가 `NotLoggedIn` 으로 거절한다. 그 훅을 끼우는 계정 키트 쪽 도우미(GM 계정 로그인)는 아직 없다. 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
+  로그인은 에디터 확장이 계정 키트를 include 할 수 없어(층 검사) 부르는 쪽이 `getConnection().setLoginHook` 으로 끼운다 — 훅이 없으면 `Ready` 에서 멈추고 서버가 `NotLoggedIn` 으로 거절한다. 훅을 끼우는 쪽 도우미 `AccountGmLogin`(계정 키트 `Account/Shared/API`, 2026-10-24, 빌드 전)이 계정 클라이언트 등록(`attach` — 연결을 열기 전에 `getConnection().getServiceClient()` 로) · 이름과 비밀번호 로그인(`onReady` — 토큰이 있으면 재접속을 계정 클라이언트가 하므로 보내지 않는다) · 응답 읽기(`update`)를 맡고, 비밀번호는 응답을 받으면 지운다. 두 키트를 함께 아는 조립 쪽(도구 실행 파일 · 게임)이 `setLoginHook` 에 `onReady` 를 건다. 이 조립을 하는 도구 실행 파일은 아직 없다 — 에디터 안에서는 설정 화면이 이름 · 비밀번호를 받는 UI 가 필요하다(U1 과 같은 UI 일). 한 계정은 연결 하나에만 붙으므로 같은 계정으로 플레이어 포트와 GM 포트에 함께 로그인하지 못한다(GM 계정을 따로 쓴다).
 
 ### U1
 
