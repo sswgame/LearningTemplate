@@ -16,8 +16,10 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -72,7 +74,8 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             static HWND findWindowHandle()
             {
-                IWindow* pWindow = IWindow::getActiveWindow();
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
             }
 

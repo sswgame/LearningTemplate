@@ -2,7 +2,9 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
@@ -64,7 +66,8 @@ namespace sw
             /** @brief 활성 창에 대한 XIC 를 지연 생성해 반환합니다(실패하면 nullptr). */
             static XIC getOrCreateInputContext()
             {
-                IWindow* pWindow = IWindow::getActiveWindow();
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr )
                     return nullptr;
 
@@ -328,7 +331,8 @@ namespace sw
         // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없다
         // (Win32 의 GetAsyncKeyState 폴백은 메시지 유실을 메우기 위한 것이고, X11 에는 같은 문제가 없다).
         // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치와 버튼을 보조로 폴링한다.
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
         // Wayland 는 포인터를 물어볼 길이 없고(서버에 위치 질의가 없다) 들어옴 · 나감 · 버튼이 빠짐없이 온다 — 보조 폴링이 없다.
@@ -539,7 +543,8 @@ namespace sw
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
         if ( X11InputInternal::isWaylandWindow( pWindow ) )
@@ -562,7 +567,8 @@ namespace sw
 
     void InputManager::applyCursorShapePlatform()
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
 
@@ -580,7 +586,8 @@ namespace sw
         if ( _pMouse == nullptr )
             return;
 
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
         // Wayland 는 클라이언트가 포인터를 잡거나 옮길 수 없다(zwp_pointer_constraints · relative-pointer 확장이 필요하고 아직 없다). 잠그지 않은 채로 한 번 알린다.
@@ -624,7 +631,8 @@ namespace sw
         if ( bCannotRecenter )
             return;
 
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
             return; // Wayland 는 포인터를 옮길 수 없다(`applyMouseLockMode`)
         Display* pDisplay  = static_cast<Display*>( pWindow->getNativeDisplay() );
@@ -647,7 +655,8 @@ namespace sw
 
     void InputManager::releaseMouseLockMode()
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
             return; // Wayland 는 잡은 적이 없다
 
@@ -662,7 +671,9 @@ namespace sw
     bool InputManager::isWindowFocusedPlatform() const
     {
         // X11 포커스는 FocusIn/FocusOut 으로만 알 수 있다(서버에 묻는 XGetInputFocus 는 왕복 호출이다). 창이 뜬 직후 FocusIn 전이면 false 이므로 첫 클릭에 잡는다.
-        return _bWindowFocused == SW_TRUE && ( IWindow::getActiveWindow() == nullptr || X11InputInternal::s_bWindowFocused );
+        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const bool                 bHasWindow  = pWindowHost != nullptr && pWindowHost->getWindow() != nullptr;
+        return _bWindowFocused == SW_TRUE && ( bHasWindow == false || X11InputInternal::s_bWindowFocused );
     }
 
     void InputManager::disableWindowsAccessibilityShortcuts()
@@ -670,8 +681,9 @@ namespace sw
         // 이름은 Windows API 시절 이름을 그대로 쓰지만(공용 InputManager.h 의 공개 API), 여기서는 X11
         // AccessX(XKB StickyKeys/SlowKeys/BounceKeys)를 억제한다. 게임 도중 방향키를 연타하다
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
-        IWindow*   pWindow           = IWindow::getActiveWindow();
-        const bool bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled || X11InputInternal::isWaylandWindow( pWindow );
+        MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const bool           bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled || X11InputInternal::isWaylandWindow( pWindow );
         if ( bNothingToDisable )
             return; // Wayland 에는 클라이언트가 끌 AccessX 가 없다(컴포지터의 설정이다)
 
@@ -700,8 +712,9 @@ namespace sw
         // Display 가 닫히기 전에 해제해야 X 리소스가 남지 않는다.
         X11InputInternal::releaseAll();
 
-        IWindow*   pWindow           = IWindow::getActiveWindow();
-        const bool bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false || X11InputInternal::isWaylandWindow( pWindow );
+        MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const bool           bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false || X11InputInternal::isWaylandWindow( pWindow );
         if ( bNothingToRestore )
             return;
 

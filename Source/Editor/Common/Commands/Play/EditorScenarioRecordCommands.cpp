@@ -19,6 +19,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
 {
@@ -55,11 +56,12 @@ namespace sw::editor
                     return false;
                 }
                 ScenarioRecordSettings settings;
-                settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( s_outputPath ) ) ); // a.scenario.xml → a
-                const IWindow* pWindow            = IWindow::getActiveWindow();
-                settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
-                settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
-                const ScenarioRecordOutput output = s_recorder.stop( settings );
+                settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( s_outputPath ) ) ); // a.scenario.xml → a
+                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                settings._clientWidth                  = pWindow != nullptr ? pWindow->getWidth() : 0;
+                settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
+                const ScenarioRecordOutput output      = s_recorder.stop( settings );
                 if ( FileUtil::ensureParentDirectoryExists( s_outputPath ) == false || FileUtil::writeTextFile( s_outputPath, output._xmlText ) == false )
                 {
                     outReply = "could not write '" + s_outputPath + "'";

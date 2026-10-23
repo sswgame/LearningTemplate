@@ -14,6 +14,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
 {
@@ -70,16 +71,17 @@ namespace sw
         if ( _recorder.isRecording() == false )
             return;
         ScenarioRecordSettings settings;
-        settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
-        settings._fixedDelta              = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
-        settings._firstFrame              = 0;
-        settings._bIncludeSynthetic       = true;
-        settings._bStartWhenScenePlaying  = true;
-        const IWindow* pWindow            = IWindow::getActiveWindow();
-        settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
-        settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
-        Scene*                   pScene   = engine::getSubsystem<SceneManager>().getActiveScene();
-        const GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
+        settings._fixedDelta                   = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
+        settings._firstFrame                   = 0;
+        settings._bIncludeSynthetic            = true;
+        settings._bStartWhenScenePlaying       = true;
+        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        settings._clientWidth                  = pWindow != nullptr ? pWindow->getWidth() : 0;
+        settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
+        Scene*                   pScene        = engine::getSubsystem<SceneManager>().getActiveScene();
+        const GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         for ( const string& spec : _listRecordProbe )
         {
             ScenarioRecordCheckpoint checkpoint;

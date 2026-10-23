@@ -110,6 +110,7 @@
 #include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -527,12 +528,13 @@ namespace sw
         const bool            bSceneMain = views.isSceneViewMain();
         // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
         // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
-        const IWindow* const pMainWindow = IWindow::getActiveWindow();
-        const bool           bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
-        const bool           bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
-        const uint32         vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
-        const uint32         vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
-        _frameDeltaSeconds               = deltaTime;
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow* const             pMainWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const bool                       bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
+        const bool                       bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
+        const uint32                     vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
+        const uint32                     vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
+        _frameDeltaSeconds                           = deltaTime;
 
         if ( _headlessState.isHeadless() )
             return;

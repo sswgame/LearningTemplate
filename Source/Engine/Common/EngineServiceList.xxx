@@ -86,3 +86,5 @@ SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 // 클라이언트 엔진은 늘 서비스 범위에 넣는다(Engine.cpp).
 SW_ENGINE_SERVICE_OPT( class, ModuleRenderPassRegistry, GameVisible )
 
+// 주 창(소유자). 입력 · RHI · 자동화 · 에디터가 읽는다. **OPT 다** — 창이 없는 호스트(전용 서버 · 테스트 하네스)에는 서지 않는다. 정적 활성 창구(`IWindow::getActiveWindow`)를 대신한다.
+SW_ENGINE_SERVICE_OPT( class, MainWindowSubsystem, HostOnly )

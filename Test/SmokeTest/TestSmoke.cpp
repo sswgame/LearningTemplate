@@ -687,16 +687,13 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( undoProbe ) );
     SW_EXPECT_FALSE( pCommandStack->canUndo() );
 
-    // 활성 창의 닫기 처리기
-    sw::HandlerOnlyWindow window;
-    sw::IWindow* const    pPreviousWindow = sw::IWindow::getActiveWindow();
-    sw::IWindow::setActiveWindow( &window );
+    // 창의 닫기 처리기(살아 있는 모든 창이 훑긴다 — 주 창일 필요가 없다)
+    sw::HandlerOnlyWindow              window;
     const sw::WindowCloseQueryDelegate onClose = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
     window.setCloseQueryHandler( onClose );
     SW_EXPECT_FALSE( window.tryBeginClose() );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onClose ) );
     SW_EXPECT_TRUE( window.tryBeginClose() );
-    sw::IWindow::setActiveWindow( pPreviousWindow );
 
     // 뗀 뒤에 불린 것은 없다 — 닫기 처리기가 떼기 전에 한 번 불렸을 뿐이다.
     SW_EXPECT_EQUAL( 4000, sw::s_sweepProbeValue );

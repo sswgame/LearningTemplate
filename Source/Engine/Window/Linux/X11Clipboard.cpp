@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
@@ -14,7 +16,8 @@ namespace sw
         /** @brief CLIPBOARD 선택의 주인이 될 창(활성 창)입니다. 리눅스 클라이언트의 플랫폼 창은 `X11Window` 하나뿐이다(`IWindow::createPlatformWindow`). 없으면 nullptr 입니다. */
         X11Window* findOwnerWindow()
         {
-            return static_cast<X11Window*>( IWindow::getActiveWindow() );
+            const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+            return static_cast<X11Window*>( pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr );
         }
     } // namespace
 

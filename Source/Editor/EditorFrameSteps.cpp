@@ -25,6 +25,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #include <imgui.h>
 
@@ -85,7 +86,8 @@ namespace sw::editor
             static void runWindowTitle( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.windowTitle" );
-                IWindow*                  pWindow       = IWindow::getActiveWindow();
+                MainWindowSubsystem*      pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
+                IWindow*                  pWindow       = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 const PackEngineSettings* pPackSettings = editor::findSubsystem<const PackEngineSettings>();
                 if ( pWindow == nullptr || pPackSettings == nullptr )
                     return;

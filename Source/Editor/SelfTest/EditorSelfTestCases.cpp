@@ -31,6 +31,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -358,7 +359,8 @@ namespace sw::editor
                 constexpr uint32 kNarrowWidth      = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
                 constexpr uint32 kNarrowHeight     = 360;
 
-                IWindow* pWindow = IWindow::getActiveWindow();
+                MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( context.expect( pWindow != nullptr, "no active window" ) == false )
                     return EditorSelfTestStep::Done;
 

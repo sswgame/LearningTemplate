@@ -45,6 +45,7 @@
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
     #include "Engine/Renderer/SceneRHISubsystem.h"
+    #include "Engine/Window/MainWindowSubsystem.h"
 #endif
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -162,6 +163,8 @@ namespace sw::engine
         // Server 타깃은 렌더러 폴더(`Engine/Renderer/`)를 짓지 않는다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`) — 단계를 넣지도 않는다.
         if ( setup._bRenderer )
         {
+            // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다).
+            (void)startup.addSubsystem( sw::make_unique<MainWindowSubsystem>() );
             RHISubsystem& rhiSubsystem = startup.addSubsystem( sw::make_unique<RHISubsystem>() );
             parts._pRHI                = &rhiSubsystem;
             unique_ptr<FrameRenderer> frameRenderer;

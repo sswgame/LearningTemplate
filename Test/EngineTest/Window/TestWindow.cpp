@@ -2,10 +2,13 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
+#include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
 // 플랫폼 창 — 실제 OS 창을 띄우고 리사이즈 콜백과 메시지 훅을 본다.
@@ -78,35 +81,34 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
 }
 
 /**
- * @brief [WindowTest] 활성 창이 죽으면 전역 포인터도 같이 끊긴다
- * @details `IWindow::getActiveWindow()` 는 전역 하나를 돌려준다. 그 창이 파괴돼도 전역이
- *          그대로 남으면, 뒤에 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
- *          **죽은 포인터**를 받는다. 파괴 전에 손으로 끊는 것은 한 경로의 규율일 뿐이다 —
- *          `Engine` 은 App 이 없는 임베드 시나리오에서 창을 전역에 놓아둔 채 소유를
- *          호출자에게 넘기고, 테스트도 App 을 거치지 않는다. 소멸자에서 끊으면 어느 경로로 죽어도 참이 된다.
+ * @brief [WindowTest] 주 창은 엔진 범위의 서브시스템이 소유한다 — 넘긴 창을 범위에서 찾고, 두 번째 창은 거절하며, 내릴 때 파괴한다
+ * @details 예전에는 정적 활성 창 포인터가 소유권 전달 칸이자 관찰 포인터였다(창이 죽으면 소멸자가 전역을 끊어야 했다). 이제 소유자가 하나(`MainWindowSubsystem`)라
+ *          죽은 포인터를 읽을 길이 없다 — 읽는 쪽은 범위에서 찾고, 서브시스템이 내려가면 창은 없다.
  */
-SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
+SW_TEST_CASE( WindowTest, MainWindowSubsystemOwnsTheWindow )
 {
-    sw::IWindow* const pPrevious = sw::IWindow::getActiveWindow();
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pPrevious]()
-    {
-        sw::IWindow::setActiveWindow( pPrevious );
-    } ) );
+    test::ScopedEngineServiceOverride scope;
+    sw::MainWindowSubsystem&          windowHost = scope.add( sw::make_unique<sw::MainWindowSubsystem>() );
+    (void)scope.bind();
+    SW_EXPECT_TRUE( windowHost.getWindow() == nullptr );
 
-    {
-        sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
-        SW_ASSERT_TRUE( window != nullptr );
-        SW_ASSERT_TRUE( window->initializeWindow( "ActiveWindowGlobalTest", 320, 240 ) );
+    sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( window != nullptr );
+    SW_ASSERT_TRUE( window->initializeWindow( "MainWindowOwnerTest", 320, 240 ) );
+    sw::IWindow* const pRaw = window.get();
+    SW_ASSERT_TRUE( windowHost.adopt( window ) );
+    SW_EXPECT_TRUE( window == nullptr ); // 소유권이 넘어갔다
+    SW_EXPECT_EQUAL( pRaw, windowHost.getWindow() );
+    SW_EXPECT_TRUE( sw::engine::findSubsystem<sw::MainWindowSubsystem>() == &windowHost );
 
-        sw::IWindow::setActiveWindow( window.get() );
-        SW_ASSERT_EQUAL( window.get(), sw::IWindow::getActiveWindow() );
+    sw::unique_ptr<sw::IWindow> second = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( second != nullptr );
+    SW_EXPECT_FALSE( windowHost.adopt( second ) ); // 주 창을 조용히 바꿔 끼우지 않는다
+    SW_EXPECT_TRUE( second != nullptr );           // 거절하면 부르는 쪽에 그대로 남는다
+    SW_EXPECT_EQUAL( pRaw, windowHost.getWindow() );
 
-        window->destroy();
-        // 소멸까지 가야 끊긴다 — `destroy()` 는 네이티브 핸들만 반환한다.
-        SW_EXPECT_EQUAL( window.get(), sw::IWindow::getActiveWindow() );
-    }
-
-    SW_EXPECT_EQUAL( nullptr, sw::IWindow::getActiveWindow() );
+    windowHost.shutdownSubsystem();
+    SW_EXPECT_TRUE( windowHost.getWindow() == nullptr );
 }
 
 /**
@@ -246,12 +248,14 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
  */
 SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
 {
-    sw::IWindow* const pPrevious = sw::IWindow::getActiveWindow();
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pPrevious]()
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []()
     {
-        sw::IWindow::setActiveWindow( pPrevious );
         ClipCursor( nullptr );
     } ) );
+
+    test::ScopedEngineServiceOverride scope;
+    sw::MainWindowSubsystem&          windowHost = scope.add( sw::make_unique<sw::MainWindowSubsystem>() );
+    (void)scope.bind();
 
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
@@ -263,12 +267,13 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
         return false;
     } ) );
     SW_ASSERT_TRUE( window->initializeWindow( "MouseLockCloseButtonWindow", 640, 360 ) );
-    sw::IWindow::setActiveWindow( window.get() );
-    window->showWindow( true );
+    sw::IWindow* const pWindow = window.get();
+    SW_ASSERT_TRUE( windowHost.adopt( window ) ); // 입력 관리자가 범위에서 주 창을 찾는다
+    pWindow->showWindow( true );
 
-    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    const HWND hWnd = static_cast<sw::Win32Window*>( pWindow )->getHwnd();
     SetForegroundWindow( hWnd );
-    (void)window->processMessages();
+    (void)pWindow->processMessages();
 
     RECT windowRect{};
     GetWindowRect( hWnd, &windowRect );
@@ -291,8 +296,8 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
 
     input.setMouseLockMode( sw::MouseLockMode::None );
     input.shutdown();
-    window->setCustomMessageHandler( sw::WindowMessageHandlerDelegate{} );
-    window->destroy();
+    pWindow->setCustomMessageHandler( sw::WindowMessageHandlerDelegate{} );
+    pWindow->destroy();
 }
 
 /**

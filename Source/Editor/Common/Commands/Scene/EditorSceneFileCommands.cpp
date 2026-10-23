@@ -23,6 +23,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
 {
@@ -79,7 +80,8 @@ namespace sw::editor
                     (void)EditorSceneFileCommands::tryCreateNewScene(); // 실패는 tryCreateNewScene 이 알린다(플레이 중)
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
-                    IWindow* pWindow = IWindow::getActiveWindow();
+                    MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                    IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                     if ( pWindow != nullptr )
                         pWindow->requestClose();
                 }
@@ -254,7 +256,8 @@ namespace sw::editor
 
     void EditorSceneFileCommands::requestExit()
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow != nullptr )
             (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }

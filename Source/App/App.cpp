@@ -33,6 +33,7 @@
 #include "Engine/UI/Accessibility/UIAccessibilityBridgeFactory.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/PlatformClipboard.h"
 #include "Engine/Window/SplashWindow.h"
@@ -94,7 +95,7 @@ namespace sw
         , _moduleReload{}
         , _devConsole{}
         , _moduleHost{ nullptr }
-        , _window{ nullptr }
+        , _pWindow{ nullptr }
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
@@ -205,7 +206,7 @@ namespace sw
 
         // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
         splash.dismiss();
-        _window->showWindow( true );
+        _pWindow->showWindow( true );
 
         return true;
     }
@@ -228,22 +229,32 @@ namespace sw
         commandLineManager.getArgument( CommandLineArgument::WIDTH, width );
         commandLineManager.getArgument( CommandLineArgument::HEIGHT, height );
 
-        // Engine::initialize 가 플랫폼 창을 만들어 IWindow::setActiveWindow 로 넘겨 두었으면(그쪽은 release() 로 소유권을
-        // 놓는다) 여기서 App 의 unique_ptr 이 넘겨받는다. 전역 포인터는 그 뒤로 관찰용으로만 남는다.
-        _window.reset( IWindow::getActiveWindow() );
-        if ( _window == nullptr )
+        // 주 창은 엔진 범위의 서브시스템(MainWindow)이 소유한다. 엔진 기동(RHI)이 기본 창을 만들어 넘겨 두었으면 그것을 쓰고, 없으면(헤드리스 작업 등) 여기서 만들어 넘긴다.
+        // App 은 관찰 포인터만 든다 — 창은 엔진 종료 때 그 서브시스템이 파괴한다.
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        if ( pWindowHost == nullptr )
         {
-            _window             = IWindow::createPlatformWindow();
-            const bool bCreated = _window != nullptr && _window->applyCommandLinePosition( commandLineManager ) &&
-                                  _window->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height );
+            SW_LOG_ERROR( "The engine scope has no MainWindow subsystem!" );
+            return false;
+        }
+        if ( pWindowHost->getWindow() == nullptr )
+        {
+            unique_ptr<IWindow> window   = IWindow::createPlatformWindow();
+            const bool          bCreated = window != nullptr && window->applyCommandLinePosition( commandLineManager ) &&
+                                  window->initializeWindow( engine::getSubsystem<PackEngineSettings>()._windowTitle.c_str(), width, height );
             if ( bCreated == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );
                 return false;
             }
-            _window->showWindow( false );
-            IWindow::setActiveWindow( _window.get() );
+            window->showWindow( false );
+            if ( pWindowHost->adopt( window ) == false )
+            {
+                SW_LOG_ERROR( "The main window owner refused the platform window!" );
+                return false;
+            }
         }
+        _pWindow = pWindowHost->getWindow();
 
         bool bEnableEditor = false;
         commandLineManager.getArgument( CommandLineArgument::ENABLE_EDITOR, bEnableEditor );
@@ -280,7 +291,7 @@ namespace sw
             _moduleHost = make_unique<EditorModuleHost>();
         if ( _moduleHost->initialize( _moduleReload.getLiveReloadManager(),
                                       _engine.getRHI(),
-                                      _window.get(),
+                                      _pWindow,
                                       _engine.getRenderThread(),
                                       _bEnableEditor == SW_TRUE ) == false )
         {
@@ -333,8 +344,8 @@ namespace sw
 
     void App::bindHostCallbacks()
     {
-        _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
-        _window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
+        _pWindow->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
+        _pWindow->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를
@@ -343,7 +354,7 @@ namespace sw
         {
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
-            _window->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
+            _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
             const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
             if ( pCommandLine != nullptr )
@@ -355,7 +366,7 @@ namespace sw
         const bool bSwitcherBound = _host.bind( &_backendSwap );
         SW_ASSERT( bSwitcherBound );
         (void)bSwitcherBound;
-        _userSettingsHost.initialize( &_engine, _window.get() );
+        _userSettingsHost.initialize( &_engine, _pWindow );
         installRuntimeUIHooks();
 
         _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
@@ -385,7 +396,7 @@ namespace sw
 
         // 콘솔은 엔진(입력 관리자)과 게임 창보다 먼저 내린다(`DevConsoleHost::shutdown`).
         _devConsole.shutdown();
-        // 창은 엔진(RHI) 뒤에 파괴한다(제목은 창 안의 고정 버퍼라 엔진 종료의 누수 보고에 남지 않는다).
+        // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
         if ( _pAutomationSession != nullptr )
@@ -398,21 +409,15 @@ namespace sw
         _pModuleImageHost   = nullptr;
         _pAutomationSession = nullptr;
 
-        if ( _window != nullptr )
-        {
-            // App 이 소유한 활성 창을 파괴하기 전에 전역 포인터부터 끊는다(댕글링 방지).
-            if ( IWindow::getActiveWindow() == _window.get() )
-                IWindow::setActiveWindow( nullptr );
-            _window->destroy();
-            _window.reset();
-        }
+        // 주 창은 엔진 범위의 MainWindow 서브시스템이 소유한다 — 엔진 종료(RHI 가 내려간 뒤)가 파괴했다. 관찰 포인터만 비운다.
+        _pWindow = nullptr;
     }
 
     void App::run()
     {
         // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --cook-shaders)은 창을 만들지 않으므로 여기서 끝난다. 모드 플래그가 아니라
         // 실제 선행 조건으로 적는다.
-        if ( _window == nullptr || _bQuitAfterInitialize == SW_TRUE )
+        if ( _pWindow == nullptr || _bQuitAfterInitialize == SW_TRUE )
             return;
 
         // 시작 시간은 `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 측정할 수 없다.
@@ -422,11 +427,11 @@ namespace sw
                      PlatformFileUtil::getFileOpenCount() );
 
         _fixedTimestep.start();
-        _devConsole.initialize( _window.get(), _bEnableEditor == SW_TRUE );
+        _devConsole.initialize( _pWindow, _bEnableEditor == SW_TRUE );
 
         uint64 frameNumber      = 0;
         bool   bFrameClockShown = false;
-        while ( _window->processMessages() )
+        while ( _pWindow->processMessages() )
         {
             // 리슨 호스트(이 App 의 넷 세션이 서버)이면 줄마다 프레임 번호를 붙인다. 고정 틱이 없어 전용 서버의 `[tick=N]` 과 구분해
             // `[frame=N]` 으로 적는다(결정 기록 5-12 `D7-3.6`). 세션이 서버가 아니게 되면 꼬리표를 뗀다.
@@ -443,7 +448,7 @@ namespace sw
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
             if ( _engine.isQuitRequested() || _devConsole.pollStandardInputCommands() )
             {
-                _window->requestClose();
+                _pWindow->requestClose();
                 break;
             }
 
@@ -526,8 +531,8 @@ namespace sw
         if ( _bEnableEditor == SW_TRUE )
             return; // 에디터는 창을 ImGui 가 쓴다 — 게임 UI 만 스크린 리더에 내보이지 않는다
         // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
-        if ( _window != nullptr )
-            pUI->setAccessibilityBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_window ) );
+        if ( _pWindow != nullptr )
+            pUI->setAccessibilityBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_pWindow ) );
         pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
         _bQuitCommandRegistered = SW_TRUE;
     }

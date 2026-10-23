@@ -30,6 +30,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
 {
@@ -874,8 +875,9 @@ namespace sw
         static bool prepareMousePosition( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
-            const IWindow* pWindow             = IWindow::getActiveWindow();
-            const bool     bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const MainWindowSubsystem* pWindowHost         = engine::findSubsystem<MainWindowSubsystem>();
+            const IWindow*             pWindow             = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            const bool                 bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForPointer )
             {
                 outError = step.describe() + ": no window to place the pointer in";
@@ -1013,7 +1015,8 @@ namespace sw
             runner._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose == false )
                 return true;
-            IWindow* pWindow = IWindow::getActiveWindow();
+            MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+            IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )
                 runner.recordFailure( step, "there is no window to close" );
             else

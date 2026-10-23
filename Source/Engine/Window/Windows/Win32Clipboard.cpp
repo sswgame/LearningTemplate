@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -42,7 +44,8 @@ namespace sw
             /** @brief 클립보드 주인으로 둘 창입니다(활성 창). 없으면 nullptr 입니다. */
             static HWND findOwnerWindow()
             {
-                const IWindow* pWindow = IWindow::getActiveWindow();
+                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
             }
         };

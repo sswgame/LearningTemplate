@@ -264,7 +264,7 @@ namespace
     }
 
     /** @brief 클라이언트에서만 도는 엔진 단계입니다(창 · RHI · 렌더러 · 플레이어 설정 · 글꼴 · 텔레메트리 · UI). */
-    constexpr const utf8* kArrClientOnlyName[] = { "UserSettings", "RHI", "FrameRenderer", "RenderThread", "LiveShader", "SceneRHI", "Fonts", "Telemetry", "UI" };
+    constexpr const utf8* kArrClientOnlyName[] = { "UserSettings", "MainWindow", "RHI", "FrameRenderer", "RenderThread", "LiveShader", "SceneRHI", "Fonts", "Telemetry", "UI" };
     /** @brief 호스트 범위에 걸리는 모듈 이미지 창구의 대역입니다 — 불린 횟수만 센다. */
     class FakeModuleImageHost final : public ISubsystem, public IModuleImageHost
     {

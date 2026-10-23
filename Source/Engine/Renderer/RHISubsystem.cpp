@@ -17,6 +17,7 @@
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
 {
@@ -31,6 +32,8 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "RHI" );
+
     RHISubsystem::RHISubsystem()
         : _rhi{ nullptr }
         , _initResult{ RHIInitResult::NotStarted }
@@ -53,7 +56,14 @@ namespace sw
             gv_rhiBackend = engineConfig._window._defaultRHI;
 
         const DisplaySettingsRequest& display = engine::getSubsystem<UserSettingsManager>().getDisplayRequest();
-        if ( IWindow::getActiveWindow() == nullptr )
+        // 주 창의 소유자는 서브시스템 MainWindow 다(의존이라 먼저 서 있다). 창이 이미 있으면(임베드한 호스트가 넘겼다) 만들지 않는다.
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        if ( pWindowHost == nullptr )
+        {
+            SW_LOG_ERROR( "RHI needs the MainWindow subsystem (the main window owner) in the engine scope" );
+            return SubsystemInitResult::Failed;
+        }
+        if ( pWindowHost->getWindow() == nullptr )
         {
             uint32 windowWidth  = display._bHasResolution ? display._width : engineConfig._window._width;
             uint32 windowHeight = display._bHasResolution ? display._height : engineConfig._window._height;
@@ -70,14 +80,15 @@ namespace sw
                 // 전체 화면은 스왑체인을 만들기 전에 고른다. 스왑체인이 처음부터 모니터 크기다.
                 if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )
                     (void)defaultWindow->setDisplayMode( display._mode, windowWidth, windowHeight );
-                // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다(App 이 없는 임베드라면 부르는 쪽이 직접 소유한다).
-                IWindow::setActiveWindow( defaultWindow.release() );
+                // 소유권은 주 창 서브시스템이 갖는다(엔진 종료 때 RHI 가 내려간 뒤 파괴한다). 이미 주 창이 있어 실패하면 defaultWindow 가 여기서 파괴된다.
+                if ( pWindowHost->adopt( defaultWindow ) == false )
+                    SW_LOG_ERROR( "The main window owner refused the default window" );
             }
         }
 
         _rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : engineConfig._window._bVSync );
         // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 가지고 있다.
-        const bool bReady = _rhi->initialize( IWindow::getActiveWindow() );
+        const bool bReady = _rhi->initialize( pWindowHost->getWindow() );
         _initResult       = _rhi->getInitResult();
         if ( bReady == false )
             return SubsystemInitResult::Failed;
@@ -101,7 +112,8 @@ namespace sw
 
     span<const utf8* const> RHISubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName, UserSettingsManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName, UserSettingsManager::kSubsystemName,
+                                                          MainWindowSubsystem::kSubsystemName };
         return kArrDependency;
     }
 

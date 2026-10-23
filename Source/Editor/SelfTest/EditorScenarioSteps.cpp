@@ -66,6 +66,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/FloatCurve.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -704,7 +705,8 @@ namespace sw::editor
                 }
                 const float32 minSide = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
 
-                const IWindow* pWindow = IWindow::getActiveWindow();
+                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr || ImGui::GetCurrentContext() == nullptr )
                 {
                     runner.recordFailure( step, "no window or ImGui context" );
@@ -768,7 +770,8 @@ namespace sw::editor
             /** @brief 창 제목에 미저장 표시(`*`)가 있으면 1 입니다. 셸이 실제로 창에 설정한 제목을 읽습니다. */
             [[nodiscard]] static bool readWindowTitleDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const IWindow* pWindow = IWindow::getActiveWindow();
+                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr )
                     return false;
                 const string title{ pWindow->getTitle() };
