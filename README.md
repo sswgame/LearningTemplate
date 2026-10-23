@@ -100,6 +100,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 측정대기 | 3/3 | 없음 | gameplay | D4-6 |
 | - | [RollbackPrediction](docs/plans/RollbackPrediction.md) — 클라이언트 예측 · 롤백과 관심 영역 복제 | 측정대기 | 4/4 | 없음 | network | D7-8 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
+| - | [VfxGpuLights](docs/plans/VfxGpuLights.md) — GPU 로 시뮬레이션하는 방출기의 파티클 라이트 (2026-10-24) | 측정대기 | 5/5 | ClusteredLighting | graphics | 없음 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
 후보 문서 9개 · 후보 절 47개

@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
+#include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 
@@ -727,7 +728,10 @@ namespace sw
                 _listScratchGridViewProj.push_back( pView->_cullInput._viewProj );
             }
         }
-        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer );
+        // GPU 방출기의 파티클 라이트 — 방출기가 요청한 슬롯의 합이 라이트 버퍼의 GPU 구간 크기다(GPU 생산자가 아니면 버퍼가 거절하고 오류를 남긴다).
+        // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
+        const VfxGPULightAssignment lightAssignment = VfxGPUSimulation::assignLightRanges( _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), _listScratchGPULightRange );
+        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
     }
 
     LightGridProducer FrameRenderer::selectLightGridProducer()

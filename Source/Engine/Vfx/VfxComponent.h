@@ -31,7 +31,7 @@ namespace sw
      * @brief 효과의 방출기마다 시뮬레이션 하나를 돌립니다. CPU 방출기(`VfxCPUSimulation`)는 틱마다 살아 있는 입자(`GPUParticle`)를 새 배열로 내고,
      *        GPU 방출기(`VfxGPUEmitter`)는 누적 단계 수의 요청(`VfxGPUEmitterRequest`)을 내며 입자는 렌더 스레드의 컴퓨트가 만든다.
      * @details 방출기마다 시뮬레이션 대상(`VfxSimulationTarget`)을 효과를 읽을 때 정한다(언리얼 Niagara 의 방출기별 Sim Target). 대상은 모듈이 허락한
-     *          곳(`VfxEmitterDef::computeSupportedTargets` — 물리 충돌 · 라이트는 CPU, 깊이 충돌은 GPU)이고, 둘 다 되면 Shipping 에서 GPU,
+     *          곳(`VfxEmitterDef::computeSupportedTargets` — 물리 충돌은 CPU, 깊이 충돌은 GPU)이고, 둘 다 되면 Shipping 에서 GPU,
      *          개발 빌드에서 `gv_vfxSimulation`(기본 GPU — Shipping 과 같다)이 고른다. 결정 기록 5-12 `D2-11`.
      *          GPU 메시 방출기는 인스턴스 배치를 `MeshInstanceWriter::GPU` 로 만들고 항목을 쓰지 않는다 — 컴퓨트가 인스턴스 칸에 쓴다(불투명 머티리얼만).
      *          렌더러는 씬의 컴포넌트 목록(`ComponentRegistry`)에서 이 컴포넌트를 찾아 빌보드 · 띠 방출기마다 투명 그리기 하나를 만든다(`GPUSceneBuilder::populateParticleBatches`).

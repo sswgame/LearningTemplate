@@ -162,31 +162,45 @@ namespace sw
         }
     }
 
+    uint32 GPULightBuffer::selectGPULightSlotCount( LightGridProducer producer, uint32 requestedSlotCount )
+    {
+        if ( producer != LightGridProducer::GPU )
+            return 0;
+        return MathUtil::min( requestedSlotCount, kMaxGPULight );
+    }
+
     void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement )
     {
-        uint32 count = static_cast<uint32>( listLight.size() );
-        if ( count > shaderslot::kMaxFrameLight )
-        {
-            if ( _bWarnedOverflow == SW_FALSE )
-            {
-                _bWarnedOverflow = SW_TRUE;
-                SW_LOG_WARNING( "라이트가 상한(%#)을 넘었습니다 — 앞에서부터 잘라 보냅니다.", shaderslot::kMaxFrameLight );
-            }
-            count = shaderslot::kMaxFrameLight;
-        }
-        _count = count;
-        // 점광과 스폿 그림자 타일 원소는 (잘린) 라이트 뒤에 붙는다. 셰이더는 g_SwLightCount + 라이트의 params.w 로 찾는다. 그리드는 따로 버퍼(t12)다.
-        _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
-        _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
+        // 상한(GPU 구간을 뺀 몫)은 GPU 구간 수를 아는 update 가 맞춘다.
+        _listLightScratch.assign( listLight.begin(), listLight.end() );
+        _listTileScratch.assign( listShadowTileElement.begin(), listShadowTileElement.end() );
         _listProbeScratch.assign( listProbeElement.begin(), listProbeElement.end() );
     }
 
-    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer )
+    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer, uint32 requestedGPULightSlotCount )
     {
         _listGridBase.assign( listGridViewProj.size(), invalid_index::kUint32 );
         _gpuGridViewCount  = 0;
         _gridProducer      = LightGridProducer::None;
         _probeElementCount = 0;
+
+        // CPU 라이트와 GPU 구간이 프레임 상한을 나눠 쓴다. 넘치면 CPU 라이트를 뒤에서부터 자른다(GPU 구간은 방출기가 이미 상한 안에서 요청했다).
+        _gpuLightCount = selectGPULightSlotCount( producer, requestedGPULightSlotCount );
+        if ( requestedGPULightSlotCount > 0 && _gpuLightCount == 0 )
+            reportGPULightRefused( requestedGPULightSlotCount );
+        const uint32 cpuLimit = shaderslot::kMaxFrameLight - _gpuLightCount;
+        uint32       cpuCount = static_cast<uint32>( _listLightScratch.size() );
+        if ( cpuCount > cpuLimit )
+        {
+            if ( _bWarnedOverflow == SW_FALSE )
+            {
+                _bWarnedOverflow = SW_TRUE;
+                SW_LOG_WARNING( "라이트가 상한(%#, GPU 구간 %# 개 제외)을 넘었습니다 — 앞에서부터 잘라 보냅니다.", shaderslot::kMaxFrameLight, _gpuLightCount );
+            }
+            cpuCount = cpuLimit;
+        }
+        _cpuCount = cpuCount;
+        _count    = cpuCount + _gpuLightCount;
         if ( pDevice == nullptr || _count == 0 )
         {
             // 버퍼는 그대로 둔다. 라이트가 잠깐 0 이 되는 프레임마다 만들고 지우면 그것이 비용이다.
@@ -194,14 +208,39 @@ namespace sw
             return;
         }
 
-        const GPULight*          pUpload    = _listUploadScratch.data();
-        const uint32             totalCount = static_cast<uint32>( _listUploadScratch.size() );
-        constexpr RHIBufferUsage kUsage     = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             stride     = static_cast<uint32>( sizeof( GPULight ) );
-        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, kUsage, true, false, pUpload ) == false )
+        // 업로드 목록: [CPU 라이트][GPU 구간 — 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다 — 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
+        // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(lightgrid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
+        _listUploadScratch.assign( _listLightScratch.begin(), _listLightScratch.begin() + cpuCount );
+        GPULight deadLight{};
+        deadLight._directionType = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( shaderslot::kLightTypePoint ) };
+        for ( uint32 gpuSlot = 0; gpuSlot < _gpuLightCount; ++gpuSlot )
         {
-            _count = 0;
+            _listUploadScratch.push_back( deadLight );
+        }
+        _listUploadScratch.insert( _listUploadScratch.end(), _listTileScratch.begin(), _listTileScratch.end() );
+
+        const GPULight*          pUpload     = _listUploadScratch.data();
+        const uint32             totalCount  = static_cast<uint32>( _listUploadScratch.size() );
+        const bool               bNeedsUav   = _gpuLightCount > 0;
+        constexpr RHIBufferUsage kUsage      = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        constexpr RHIBufferUsage kLightUsage = kUsage | RHIBufferUsage::UnorderedAccess;
+        const uint32             stride      = static_cast<uint32>( sizeof( GPULight ) );
+        // UAV 없이 잡혀 있던 버퍼는 용량이 충분해도 다시 잡는다(ensureCapacity 는 용량만 본다). 백엔드가 UAV 를 거절한 버퍼는 다시 잡아도 같으니 한 번만 해 본다.
+        const bool bLacksUav = bNeedsUav && _buffer.isValid() && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bLacksUav && _bUavDenied == SW_FALSE )
+            _buffer.release( pDevice );
+        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, bNeedsUav ? kLightUsage : kUsage, true, bNeedsUav, pUpload ) == false )
+        {
+            _count         = 0;
+            _cpuCount      = 0;
+            _gpuLightCount = 0;
             return;
+        }
+        const bool bUavDeniedNow = bNeedsUav && _buffer._uav == kInvalidDescriptorIndex;
+        if ( bUavDeniedNow && _bUavDenied == SW_FALSE )
+        {
+            _bUavDenied = SW_TRUE;
+            SW_LOG_ERROR( "Light buffer has no UAV - GPU particle lights stay dead" );
         }
         _buffer.upload( pDevice, pUpload, totalCount * stride );
 
@@ -251,7 +290,7 @@ namespace sw
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( listGridViewProj.size() ); ++viewIndex )
         {
             LightGrid& grid = _listGrid[viewIndex];
-            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _count ) == false )
+            if ( grid.populate( listGridViewProj[viewIndex], _listUploadScratch.data(), _cpuCount ) == false )
             {
                 reportGridFailure( "has no usable projection (near/far plane)", viewIndex );
                 continue;
@@ -332,6 +371,15 @@ namespace sw
         SW_LOG_ERROR( "Light grid for view %# %# - that view walks every light", viewIndex, pReason );
     }
 
+    void GPULightBuffer::reportGPULightRefused( uint32 requestedSlotCount )
+    {
+        if ( _bWarnedGPULightRefused == SW_TRUE )
+            return;
+        _bWarnedGPULightRefused = SW_TRUE;
+        // 대신 생산자를 GPU 로 바꾸지 않는다 — 생산자는 데이터와 빌드(gv_lightCulling)가 정했다. 요청한 방출기의 빛만 그리지 않는다.
+        SW_LOG_ERROR( "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling 2) - the lights are not drawn", requestedSlotCount );
+    }
+
     const RHIStructuredBufferSlot* GPULightBuffer::findProbeBuffer() const
     {
         const bool bReady = _probeElementCount > 0 && _probeBuffer._buffer != 0 && _probeBuffer._srv != kInvalidDescriptorIndex;
@@ -361,6 +409,9 @@ namespace sw
         _probeBuffer.release( pDevice );
         _probeElementCount = 0;
         _count             = 0;
+        _cpuCount          = 0;
+        _gpuLightCount     = 0;
+        _bUavDenied        = SW_FALSE;
         _gpuGridViewCount  = 0;
         _gridProducer      = LightGridProducer::None;
         _listGridBase.clear();
