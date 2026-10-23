@@ -61,93 +61,66 @@ namespace sw
                 return 128 + static_cast<int32>( WTERMSIG( status ) );
             return -1;
         }
-    } // namespace
 
-    void Process::shutdown()
-    {
-        closeInput();
-        if ( _pStdOutRead != nullptr )
+        /** @brief 파이프 서술자 한 쌍에서 열린 것을 닫습니다(열리지 않은 쌍은 -1 이다). */
+        void closeLaunchPipePair( int32 ( &inoutArrFd )[2] )
         {
-            fclose( asOutputStream( _pStdOutRead ) );
-            _pStdOutRead = nullptr;
+            if ( inoutArrFd[0] >= 0 )
+                close( inoutArrFd[0] );
+            if ( inoutArrFd[1] >= 0 )
+                close( inoutArrFd[1] );
+            inoutArrFd[0] = -1;
+            inoutArrFd[1] = -1;
         }
 
-        // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
-        // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
-        // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
-        const pid_t childPid = static_cast<pid_t>( _processID.load() );
-        if ( childPid > 0 )
+        /**
+         * @brief 출력 파이프와 표준 입력 파이프(@p bPipeInput 일 때만)를 엽니다. 실패하면 연 것을 닫고 false 입니다.
+         * @details 파이프는 exec 를 넘지 않게 연다. 다른 스레드가 거의 동시에 띄운 자식이 이 파이프를 물려받으면, 이쪽의 읽기는 자기 자식이
+         *          끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. 자식 쪽에서 쓸 끝은 `runLaunchedChild` 의 `dup2` 가 표준 출력으로 옮기며
+         *          CLOEXEC 를 해제하므로 그대로 넘어간다. 표준 입력은 끄면 자식이 /dev/null 을 받는다 — 서버 같은 자식이 이 프로세스의 표준 입력을 가로채지 않게.
+         */
+        [[nodiscard]] bool openLaunchPipes( bool bPipeInput, const utf8* pCommand, int32 ( &outArrOutputFd )[2], int32 ( &outArrInputFd )[2] )
         {
-            int32 status = 0;
-            waitpid( childPid, &status, WNOHANG );
-        }
-
-        _bufferedOutput.clear();
-        _pNativeHandle = nullptr;
-        _processID.store( 0 );
-    }
-
-    bool Process::launch( string_view command, const ProcessOptions& options )
-    {
-        shutdown();
-
-        // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 아래 자식 블록에서는 할당을 하지 않는다.
-        const string cmd{ command };
-        const utf8*  pCommand          = cmd.c_str();
-        const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
-
-        // 파이프는 exec 를 넘지 않게 연다. 다른 스레드가 거의 동시에 띄운 자식이 이 파이프를 물려받으면, 이쪽의 읽기는 자기 자식이
-        // 끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. 자식 쪽에서 쓸 끝은 아래 `dup2` 가 표준 출력으로 옮기며
-        // CLOEXEC 를 해제하므로 그대로 넘어간다.
-        int32 arrPipeFd[2] = { -1, -1 };
+            outArrOutputFd[0] = -1;
+            outArrOutputFd[1] = -1;
+            outArrInputFd[0]  = -1;
+            outArrInputFd[1]  = -1;
     #if defined( SW_PLATFORM_LINUX )
-        const bool bPipeOpened = pipe2( arrPipeFd, O_CLOEXEC ) == 0;
+            const bool bPipeOpened = pipe2( outArrOutputFd, O_CLOEXEC ) == 0;
     #else
-        const bool bPipeOpened = pipe( arrPipeFd ) == 0;
-        if ( bPipeOpened )
-        {
-            fcntl( arrPipeFd[0], F_SETFD, FD_CLOEXEC );
-            fcntl( arrPipeFd[1], F_SETFD, FD_CLOEXEC );
-        }
-    #endif
-        if ( bPipeOpened == false )
-        {
-            SW_LOG_ERROR( "pipe() failed for command: %#", pCommand );
-            return false;
-        }
-
-        // 표준 입력 파이프(켰을 때만). 끄면 자식의 표준 입력은 /dev/null — 서버 같은 자식이 이 프로세스의 표준 입력을 가로채지 않게.
-        int32 arrInputFd[2] = { -1, -1 };
-        if ( options._bPipeStandardInput && pipe2( arrInputFd, O_CLOEXEC ) != 0 )
-        {
-            close( arrPipeFd[0] );
-            close( arrPipeFd[1] );
-            SW_LOG_ERROR( "pipe() (stdin) failed for command: %#", pCommand );
-            return false;
-        }
-
-        const int32 descriptorMax = getDescriptorLimit();
-
-        const pid_t childPid = fork();
-        if ( childPid < 0 )
-        {
-            close( arrPipeFd[0] );
-            close( arrPipeFd[1] );
-            if ( arrInputFd[0] >= 0 )
+            const bool bPipeOpened = pipe( outArrOutputFd ) == 0;
+            if ( bPipeOpened )
             {
-                close( arrInputFd[0] );
-                close( arrInputFd[1] );
+                fcntl( outArrOutputFd[0], F_SETFD, FD_CLOEXEC );
+                fcntl( outArrOutputFd[1], F_SETFD, FD_CLOEXEC );
             }
-            SW_LOG_ERROR( "fork() failed for command: %#", pCommand );
-            return false;
+    #endif
+            if ( bPipeOpened == false )
+            {
+                outArrOutputFd[0] = -1;
+                outArrOutputFd[1] = -1;
+                SW_LOG_ERROR( "pipe() failed for command: %#", pCommand );
+                return false;
+            }
+            if ( bPipeInput && pipe2( outArrInputFd, O_CLOEXEC ) != 0 )
+            {
+                closeLaunchPipePair( outArrOutputFd );
+                outArrInputFd[0] = -1;
+                outArrInputFd[1] = -1;
+                SW_LOG_ERROR( "pipe() (stdin) failed for command: %#", pCommand );
+                return false;
+            }
+            return true;
         }
 
-        if ( childPid == 0 )
+        /**
+         * @brief (자식에서) 파이프를 표준 입출력에 잇고 셸로 exec 합니다. 돌아오지 않습니다.
+         * @details 여기서부터 exec 까지는 **async-signal-safe 한 함수만** 부른다. fork 는 부모의 스레드를 하나만 데려오지만
+         *          뮤텍스는 통째로 복사되므로, 다른 스레드가 잡고 있던 락(로거의 락이 대표적이다)은 영원히 잠긴 채로 남는다.
+         *          여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
+         */
+        [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 descriptorMax, const utf8* pWorkingDirectory, const utf8* pCommand )
         {
-            // ---- 자식 ----
-            // 여기서부터 exec 까지는 **async-signal-safe 한 함수만** 부른다. fork 는 부모의 스레드를 하나만 데려오지만
-            // 뮤텍스는 통째로 복사되므로, 다른 스레드가 잡고 있던 락(로거의 락이 대표적이다)은 영원히 잠긴 채로 남는다.
-            // 여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
             // 섞여야 읽을 수 있다).
@@ -179,6 +152,59 @@ namespace sw
             execl( "/bin/sh", "sh", "-c", pCommand, static_cast<utf8*>( nullptr ) );
             _exit( 127 ); // exec 가 실패했을 때만 여기에 온다
         }
+    } // namespace
+
+    void Process::shutdown()
+    {
+        closeInput();
+        if ( _pStdOutRead != nullptr )
+        {
+            fclose( asOutputStream( _pStdOutRead ) );
+            _pStdOutRead = nullptr;
+        }
+
+        // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
+        // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
+        // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
+        if ( childPid > 0 )
+        {
+            int32 status = 0;
+            waitpid( childPid, &status, WNOHANG );
+        }
+
+        _bufferedOutput.clear();
+        _pNativeHandle = nullptr;
+        _processID.store( 0 );
+    }
+
+    bool Process::launch( string_view command, const ProcessOptions& options )
+    {
+        shutdown();
+
+        // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
+        const string cmd{ command };
+        const utf8*  pCommand          = cmd.c_str();
+        const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
+
+        int32 arrPipeFd[2];
+        int32 arrInputFd[2];
+        if ( openLaunchPipes( options._bPipeStandardInput, pCommand, arrPipeFd, arrInputFd ) == false )
+            return false;
+
+        const int32 descriptorMax = getDescriptorLimit();
+
+        const pid_t childPid = fork();
+        if ( childPid < 0 )
+        {
+            closeLaunchPipePair( arrPipeFd );
+            closeLaunchPipePair( arrInputFd );
+            SW_LOG_ERROR( "fork() failed for command: %#", pCommand );
+            return false;
+        }
+
+        if ( childPid == 0 )
+            runLaunchedChild( arrPipeFd, arrInputFd, descriptorMax, pWorkingDirectory, pCommand );
 
         // ---- 부모 ----
         close( arrPipeFd[1] );
