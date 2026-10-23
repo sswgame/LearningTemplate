@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/UI/Base/UIEventRouter.h"
@@ -33,6 +34,21 @@ namespace sw
         , _hoverSeconds{ 0.0f }
         , _bDocumentFailed{ false }
     {
+    }
+
+    float2 UITooltipService::computePlacement( const float2& pointer, const float2& tooltipSize, const float2& screenSize )
+    {
+        float32 x = pointer._x + kPointerOffsetX;
+        float32 y = pointer._y + kPointerOffsetY;
+        // 오른쪽을 넘으면 포인터 왼쪽에, 아래를 넘으면 포인터 위에 둔다(포인터를 가리지 않는다).
+        if ( x + tooltipSize._x > screenSize._x )
+            x = pointer._x - kPointerOffsetX - tooltipSize._x;
+        if ( y + tooltipSize._y > screenSize._y )
+            y = pointer._y - kPointerOffsetY - tooltipSize._y;
+        // 뒤집어도 화면 밖이면(툴팁이 화면보다 큼) 왼쪽 위 변에 붙인다.
+        x = MathUtil::clamp( x, 0.0f, MathUtil::max( 0.0f, screenSize._x - tooltipSize._x ) );
+        y = MathUtil::clamp( y, 0.0f, MathUtil::max( 0.0f, screenSize._y - tooltipSize._y ) );
+        return float2{ x, y };
     }
 
     UICursorShape UITooltipService::resolveCursorShape( const WidgetTree& tree, const UIWidgetPath& path )
@@ -153,9 +169,15 @@ namespace sw
         }
         if ( _shownOwner != owner.getID() )
             pText->setText( owner.getTooltip() );
-        const float2&         pointerPosition = _uiSystem.getInputRouter().getLastPointerPosition();
-        WidgetRenderTransform transform       = pBody->getRenderTransform();
-        transform._translation                = float2{ pointerPosition._x + kPointerOffsetX, pointerPosition._y + kPointerOffsetY };
+        // 크기는 지난 배치의 것이다. 처음 띄운 프레임은 아직 배치 전(0)이라 자리를 확정할 수 없으므로 한 프레임 보이지 않게 둔다(화면 변에서 한 프레임 번쩍이지 않는다).
+        const float2&          pointerPosition  = _uiSystem.getInputRouter().getLastPointerPosition();
+        const float2&          bodySize         = pBody->getGeometry()._size;
+        const bool             bLaidOut         = bodySize._x > 0.0f && bodySize._y > 0.0f;
+        const WidgetVisibility wantedVisibility = bLaidOut ? WidgetVisibility::Visible : WidgetVisibility::Hidden;
+        if ( pBody->getVisibility() != wantedVisibility )
+            pBody->setVisibility( wantedVisibility );
+        WidgetRenderTransform transform = pBody->getRenderTransform();
+        transform._translation          = computePlacement( pointerPosition, bodySize, _uiSystem.getViewport()._size );
         pBody->setRenderTransform( transform );
         _shownOwner = owner.getID();
     }

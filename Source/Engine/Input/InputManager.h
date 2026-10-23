@@ -258,7 +258,7 @@ namespace sw
         void setCursorVisible( bool bVisible );
         /**
          * @brief OS 커서 모양을 바꿉니다(런타임 UI 가 호버한 위젯의 `UICursorShape` 로 프레임마다 부른다). 같은 모양이면 아무것도 하지 않습니다.
-         * @details 숨긴 커서(잠금 · `setCursorVisible( false )`)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 커서를 쥐므로 게임 뷰 밖에서 덮인다.
+         * @details 숨긴 커서(잠금 · `setCursorVisible( false )`)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 OS 커서를 쥐므로 이 모양은 창에 보이지 않고, 게임 뷰 패널이 `getCursorShape` 를 읽어 ImGui 커서로 낸다.
          */
         void        setCursorShape( CursorShape shape );
         CursorShape getCursorShape() const { return _cursorShape; }

@@ -49,6 +49,27 @@ namespace sw::editor
             { ImGuiMouseButton_Right,  MouseButton::Right},
             {ImGuiMouseButton_Middle, MouseButton::Middle}
         };
+
+        /** @brief 런타임 UI 가 고른 OS 커서 모양을 ImGui 커서 모양으로 바꿉니다(에디터에서는 ImGui 가 OS 커서를 쥔다). */
+        ImGuiMouseCursor toImGuiCursor( CursorShape shape )
+        {
+            switch ( shape )
+            {
+                case CursorShape::Arrow:
+                    return ImGuiMouseCursor_Arrow;
+                case CursorShape::Hand:
+                    return ImGuiMouseCursor_Hand;
+                case CursorShape::TextBeam:
+                    return ImGuiMouseCursor_TextInput;
+                case CursorShape::ResizeHorizontal:
+                    return ImGuiMouseCursor_ResizeEW;
+                case CursorShape::ResizeVertical:
+                    return ImGuiMouseCursor_ResizeNS;
+                case CursorShape::NotAllowed:
+                    return ImGuiMouseCursor_NotAllowed;
+            }
+            return ImGuiMouseCursor_Arrow;
+        }
     } // namespace
 
     SW_EDITOR_PANEL( GameViewPanel, GameViewPanel::kPanelID, EditorPanelCategory::Core, 350 );
@@ -172,7 +193,13 @@ namespace sw::editor
         const void* pTextureID        = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
         if ( bCanDrawGameImage )
+        {
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
+            // 에디터에서는 ImGui 가 OS 커서를 쥐어 엔진이 창에 건 커서가 덮이므로, 게임 UI 가 호버한 위젯의 모양(손 · 글 상자 …)을 ImGui 커서로 낸다.
+            const InputManager* pCursorInput = findSubsystem<InputManager>();
+            if ( pCursorInput != nullptr && ImGui::IsItemHovered() )
+                ImGui::SetMouseCursor( toImGuiCursor( pCursorInput->getCursorShape() ) );
+        }
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
         EditorSelfTestMarks::note( "gameView.canvas" );

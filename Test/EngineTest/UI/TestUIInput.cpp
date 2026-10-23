@@ -15,6 +15,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
@@ -374,6 +375,56 @@ SW_TEST_CASE( UIInputTest, PointerPositionSubtractsViewportOrigin )
     SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
     SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getInputRouter().getPointerState().getHoveredWidget() );
     fixture.endFrame();
+}
+
+/**
+ * @brief [UIInputTest] 툴팁은 설명 글이 있는 위젯 위에 지연 시간(0.5 초) 머문 뒤 뜨고, 머무는 동안 화면이 다시 열리지 않으며(깜빡임 없음) 화면 안에 놓이고, 포인터가 떠나면 닫힌다 —
+ *        호버한 위젯의 커서 모양은 입력 관리자에 가고 떠나면 화살표로 돌아온다
+ * @details UiTooltipAndCursor T4 의 "툴팁 위치 · 깜빡임" 을 디바이스 없이 확인한다. 변이: 주인이 같은데 `hide` 를 부르면 화면 핸들이 바뀌어 진다. 위치를 화면 안으로 모으지 않으면 오른쪽 변의 단추에서 화면 밖으로 나가 진다.
+ */
+SW_TEST_CASE( UIInputTest, TooltipShowsAfterDelayStaysPutAndClosesOffTheWidget )
+{
+    UIInputFixture fixture;
+    fixture._ui.setEngineDocuments( sw::UIEngineDocuments::makeFromDefaultAssets( ::test::getEngineDefaultAssets() ) );
+    fixture.openMenu( 1 );
+    fixture._listButton[0]->setTooltip( "opens the store" );
+    fixture._listButton[0]->setCursorShape( sw::UICursorShape::Hand );
+    fixture.runFrame(); // 뷰포트를 넘긴다
+
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 150, 110 ) ) );
+    for ( uint32 frame = 0; frame < 20; ++frame )
+    {
+        fixture.runFrame();
+    }
+    SW_EXPECT_TRUE( fixture._input.getCursorShape() == sw::CursorShape::Hand );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getTooltips().getShownOwner() ); // 지연 안이다
+    for ( uint32 frame = 0; frame < 20; ++frame )
+    {
+        fixture.runFrame();
+    }
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getTooltips().getShownOwner() );
+    const sw::UIScreenHandle shownScreen = fixture._ui.getTooltips().getScreen();
+    SW_ASSERT_TRUE( shownScreen != sw::kInvalidUIScreenHandle );
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        fixture.runFrame();
+    }
+    SW_EXPECT_TRUE( fixture._ui.getTooltips().getScreen() == shownScreen ); // 화면을 다시 열지 않는다
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getTooltips().getShownOwner() );
+    const sw::UIScreen* pTooltipScreen = fixture._ui.findScreen( shownScreen );
+    SW_ASSERT_NOT_NULL( pTooltipScreen );
+    const sw::Widget* pBody = pTooltipScreen->getTree().findWidgetByName( sw::hashed_string( "Body" ) );
+    SW_ASSERT_NOT_NULL( pBody );
+    const sw::UIRect bounds = pBody->getGeometry().computeScreenBounds();
+    SW_EXPECT_TRUE( bounds.getLeft() >= 0.0f && bounds.getTop() >= 0.0f );
+    SW_EXPECT_TRUE( bounds.getRight() <= fixture._viewport._size._x && bounds.getBottom() <= fixture._viewport._size._y );
+    SW_EXPECT_TRUE( pBody->getVisibility() == sw::WidgetVisibility::Visible ); // 배치가 끝났으니 보인다
+
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 1200, 800 ) ) ); // 단추 밖
+    fixture.runFrame();
+    fixture.runFrame();
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getTooltips().getShownOwner() );
+    SW_EXPECT_TRUE( fixture._input.getCursorShape() == sw::CursorShape::Arrow );
 }
 
 /**
