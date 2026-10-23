@@ -4,6 +4,12 @@
 
 #include "Games/Empty/BenchScene.h"
 
+#if defined( SW_WITH_CLIENT_CODE )
+    #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
+
+    #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#endif
+
 #include "RuntimeAPI/Export/GameModuleExports.h"
 
 namespace sw
@@ -17,6 +23,18 @@ namespace sw
 
     bool EmptyGame::onInitialize()
     {
+#if defined( SW_WITH_CLIENT_CODE )
+        // 모듈 렌더 패스 시연(ModuleRenderPass M2): 파이프라인 `game/empty/pipeline/modulepasspipeline.xml` 의 `_type="Module"` 패스가 이 이름을 찾는다. 그 파이프라인을 고르지 않은
+        // 실행에서는 이름만 등록돼 있고 아무도 부르지 않는다. 넘기는 것은 이름과 상수(데이터)뿐이다 — 상수 이름 `g_OutlineColor` 는 셰이더가 틴트로 빌린 엔진 패스 상수 칸이다.
+        ModuleRenderPassRegistry* pPassRegistry = game::findSubsystem<ModuleRenderPassRegistry>();
+        if ( pPassRegistry != nullptr )
+        {
+            _modulePassDemo = make_unique<ModuleRenderPassRegistration>( *pPassRegistry, "Empty.ModulePassDemo" );
+            if ( _modulePassDemo->isRegistered() )
+                (void)_modulePassDemo->setConstant( "g_OutlineColor", float4{ 1.0f, 0.25f, 0.25f, 1.0f } ); // 붉은 틴트, 비율 1
+        }
+#endif
+
         // 이 템플릿이 하는 일은 벤치 하네스를 시작하는 것뿐입니다. 새 게임을 시작할 때는 아래 두 줄과
         // BenchScene.* 를 지우고 자기 씬을 만듭니다.
         _benchScene = make_unique<BenchScene>();

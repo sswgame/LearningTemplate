@@ -83,6 +83,18 @@ namespace sw
         return nullptr;
     }
 
+    void PassConstantValues::remove( hashed_string name )
+    {
+        for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
+        {
+            if ( _listEntry[entryIndex]._name != name )
+                continue;
+            _listEntry.erase( _listEntry.begin() + entryIndex );
+            ++_version;
+            return;
+        }
+    }
+
     // ------------------------------------------------------------------------------
     // ShaderParameterBinder
     // ------------------------------------------------------------------------------

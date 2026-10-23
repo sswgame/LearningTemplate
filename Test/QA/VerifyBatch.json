@@ -166,11 +166,6 @@
       "source": "docs/plans/PanelIDLiterals.md 단계 표 P3", "result_doc": "docs/plans/PanelIDLiterals.md P3"
     },
     {
-      "id": "module-render-pass-m2", "title": "게임 모듈이 등록하는 시연 패스(executeModulePass · createModulePassPSOs)의 네 백엔드 캡처", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "need_command": "시연 패스(파이프라인 XML + 셰이더 + 등록)가 아직 없다 — M2 가 그것을 만드는 일이다",
-      "source": "docs/plans/ModuleRenderPass.md 단계 표 M2", "result_doc": "docs/plans/ModuleRenderPass.md M2"
-    },
-    {
       "id": "tilemap-layers-editor-roundtrip", "title": "타일맵 레이어 추가 · 칠하기 · 저장 왕복(에디터)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "need_command": "에디터 시나리오(CaptureEditorUI)가 아직 없다",
       "source": "docs/plans/TilemapCellDataLayers.md 단계 표 T3", "result_doc": "docs/plans/TilemapCellDataLayers.md T3"
@@ -464,6 +459,18 @@
       "id": "scene-reference-scenario", "title": "editor/scenereference 시나리오(씬 오브젝트 참조 선택기)와 EditorTest 빌드", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["engine/automation/editor/scenereference.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/CrossFileObjectReference.md C2", "result_doc": "docs/plans/CrossFileObjectReference.md C2"
+    },
+    {
+      "id": "module-pass-shader-patch", "title": "ModuleRenderPass M2 셰이더 패치(ShaderPatches/02-ModuleRenderPass-M2.patch) 적용 뒤 셰이더 쿠킹 + RenderPassTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "RenderPassTest.*",
+      "need_command": "패치를 적용하고(git apply --ignore-whitespace) App --cook-shaders 로 구운 바이너리를 함께 커밋하는 일이 한 명령이 아니다 — 통합이 손으로 한다",
+      "source": "docs/plans/ModuleRenderPass.md M2", "result_doc": "docs/plans/ModuleRenderPass.md M2"
+    },
+    {
+      "id": "module-pass-scenario", "title": "game/empty/modulepass 시나리오(모듈 패스가 붉은 틴트를 낸다, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "패치 적용 뒤 game/empty/automation/modulepass.scenario.xml 을 네 백엔드로 돌린다 — AppScenarioTest 의 게임 팩 시나리오 순회(game-pack-scenarios)가 새 파일을 찾아 돌리므로 패치를 적용한 뒤 그 항목이 같이 덮는다",
+      "source": "docs/plans/ModuleRenderPass.md M2", "result_doc": "docs/plans/ModuleRenderPass.md M2",
+      "note": "meanRedMinusBlue 문턱 0.02 는 가늠한 값이다 — 첫 실행에서 측정값을 시나리오 주석에 적고 문턱을 정한다. 셰이더 패치가 먼저 적용돼 있어야 한다."
     }
   ]
 }

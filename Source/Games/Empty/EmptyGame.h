@@ -14,6 +14,9 @@
 namespace sw
 {
     class BenchScene;
+#if defined( SW_WITH_CLIENT_CODE )
+    class ModuleRenderPassRegistration;
+#endif
 
     /** @brief 부트스트랩만 지정하는 빈 게임 팩 */
     class EmptyGame : public GameInstanceBase
@@ -34,5 +37,10 @@ namespace sw
     private:
         /** @brief `-gv_benchMeshes=N` 이 주어졌을 때만 생긴다. 없으면 nullptr. */
         unique_ptr<BenchScene> _benchScene;
+
+        /** @brief 모듈 렌더 패스 시연(`ModuleRenderPass` M2)의 등록 수명입니다. 렌더러가 없는 구성(서버)에는 멤버가 없다. 이 객체가 사라지면 등록도 풀린다(핫 리로드 때 남지 않는다). */
+#if defined( SW_WITH_CLIENT_CODE )
+        unique_ptr<ModuleRenderPassRegistration> _modulePassDemo;
+#endif
     };
 } // namespace sw
