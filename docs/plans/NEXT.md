@@ -1,5 +1,17 @@
 # 다음 세션 인계
 
+## 0000. 2026-10-24 통합 중 (이것부터 읽는다) — 아래 000 · 00 · 0 절보다 이 절이 최신
+
+**작업 방식(사용자 지시, 되풀이 — `docs/11_Workflow.md` 1 · 3절, 메모리 `integrate-early-verify-once`)**: 작업자는 코드만 짜고 린트 후 커밋(빌드 · 테스트 · 실행 · 병합 · push 금지). 모두 끝나면 한 통합 워크트리에 전부 병합하고 **빌드 · 검증 · 측정을 각각 한 번씩만** 한다. 예열 빌드 금지, 잘게 나누기 금지, 남는 프로세스는 바로 죽인다. 확인 대기는 통합에서 `gpu-verifier` 로 한 번에, 리눅스는 CI.
+
+**통합 워크트리 `D:/w/integD`(브랜치 `wt/integD`, main `4c7b2085b` 위)** — 아직 빌드하지 않았다. 병합 끝: parseintlist(main 에 이미) · lambdaeditor · lambdakits · servicelist · lambdagfx · lambdacore · lambdaeng · kitshelpers · verifyleak · scnpixel · singletonget · thumbheadless · plansweep · lambdaser. 충돌은 `Candidates-engine.md` 의 `FunctorLambdaCommonization` 줄 모음(전부 남김), `Engine.cpp` · `TestHostRuntime.cpp`(servicelist 쪽을 택하고 단일체 이전의 서브시스템 세 줄을 `EngineSubsystemSet.cpp` 로 옮김, `ServiceSetup::_bAuthorityGhost` 추가), `InputMapSerialization.cpp`(lambdaser 판을 택하고 lambdacore 의 `loadActionNode` 선언을 지움)에서 손으로 풀었다.
+
+**아직 병합 못 한 브랜치(작업자가 커밋하면 `integD` 에 병합; candnetwork 는 병합함 — 그 "통합에서 실행 대기" 중 WSL 항목은 리눅스 검증을 사용자가 요청할 때만 하므로 건너뛴다)**: shaderfmt3(셰이더 2단계 나머지) · leakwin(누수 탐지 1단계, `wt/verifyleak` 위) · ownership(`sw_new` · `Memory::allocate` 소유 형식) · candengine · candproject · candquality1 · candquality2 · candnetwork · candeditor · candgraphics · candmisc(후보 처리, 영역별). 병합 뒤 `README.md` 표는 `status-board --write README.md` 로 다시 만든다.
+
+**통합 단계 순서(한 번씩)**: ① 남은 브랜치 병합 ② `cmake --preset Ninja-Debug`(vcpkg 잠금) → `full-build --owner integD` 경고 0 · 오류 0(컴파일 확인 필요 목록: Graphics `RHIReleaseQueue.h`↔`RHIMemoryLedger.h` include · `GPUSkinPaletteCollector` · `hashed_string.h` `makeInterned`(전체 재빌드) · `InputMap.h` friend `InputMapActionLoader` · `SW_DELEGATE_FUNCTION` 템플릿 · `GridOpenEntry` · `AutomationRunner.cpp` `validateExpectImage`) ③ `-L lint` `-L nogpu` `-L race`(작업자들이 본 실패: AppTest_NoGPU · EditorTest_Shard2 · EngineTest_NoGPU 샤드 1 · 2 · 4 · 5 시간 초과, ServerTest_Shard1, CoreTest, `PythonTest_TestAssetValidation` — 모두 서버 프로세스가 몰린 때라 환경 영향일 수 있다; MeshModifiers 오브젝트 7개 FAILED 는 원인 미확인) ④ Release App 으로 쿠킹 한 번(물 그림자 · 셰이더 2단계) 뒤 골든 다시 뜨기 ⑤ `gpu-verifier`(Shipping)로 확인 대기 한 번에: ModuleRenderPass M2 · 텍스처 R8 · TilemapCellDataLayers T3 · SerializerSilentSkips 씬 로드 · DiskPathVsResourceId `--cook-scenes` · PanelIDLiterals P3 · UiNotificationRemaining N2 · 시나리오 `differingFraction` 문턱(scnpixel: `screenrectview` 새 씬 · `terrainedits` 등 근거 약한 문턱 · 후보 작업자들이 만든 "통합에서 실행 대기" 명령) ⑥ `perf-compare` 로 `InteractionSpatialGrid` I3 Release 측정(조용한 상태에서) ⑦ main 병합 · push · `ci-jobs --summary`(리눅스 포함) ⑧ 워크트리 정리(`worktree-list` → 병합 끝난 것 `worktree-remove`) ⑨ 이 절과 아래 000 절의 끝난 결함 (1)(2)(3 일부)(5)(7)(8) 을 지운다.
+
+**닫은 것 · 남은 것**: 끝 — 싱글턴 `get()` 게이트와 4곳 서비스 이전 · 서비스 목록 한 정본(`EngineSubsystemSet`) · 정수 목록 파서 · 이름 붙은 지역 람다 정리(Graphics · Editor · Kits · Serialization · 나머지 Engine · Core) · `--verify-shaders` 누수(기준선 누락, `enterHeadless`) · `recordFree` 토글 · 평균 지표 시나리오 · 계획 문서 정리(plansweep: 11개를 측정대기로, `plans --check` 가 n/n 인데 구현중인 문서를 막음). 남음 — `ResourceDataKindRegistry` 단일체(정적 등록자, 후보 `SingletonGetToServices`) · 게이트가 `instance()` · `shared()` 이름을 못 봄 · 람다 정당 약 75곳(그대로) · 설계 검토의 누수 탐지 2 ~ 4단계(`LeakDetection.md` 는 leakwin 이 만든다).
+
 이 문서는 **지금 상태**만 둡니다. 새 세션은 이 문서를 먼저 읽고, 나머지는 아래에서 일에 맞는 것만 찾습니다. 한 사실은 한 곳에만 씁니다.
 
 | 알고 싶은 것 | 어디 |
