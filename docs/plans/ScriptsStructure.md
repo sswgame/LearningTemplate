@@ -62,12 +62,25 @@ Scripts/
 2. L2b 전후 `py -3 -m Scripts lint-suite` 총 시간(3회 중앙값). 달라질 구조적 이유는 없다. 구현 중 1회 값은 L2b 전 86~109 s, L4 뒤 38~42 s 였지만
    다른 작업자의 빌드와 겹친 1회 값이라 결론에 쓰지 않는다.
 
+측정 결과(2026-10-23 `wt/scriptsverify`, 다른 작업자 빌드와 겹친 PC라 방향만 믿는다):
+
+- 질문 1, import 비용. L4 전(`823571277^`)과 후(`823571277`)의 `Scripts` 만 내보내 각 10회 중앙값을 냈다. 두 번 돌린 값을 적는다.
+  `import common` 은 전 1391 · 386 ms, 후 191 · 75 ms. `import common.Constants` 는 전 1358 · 376 ms, 후 236 · 232 ms.
+  전의 `-X importtime` 에서 `import common` 한 번이 `common.AppBinary` · `BuildTree` · `Host` · `Parallel` · `subprocess` 까지 끌어와 2.2 s 로 찍혔다(콜드 캐시 포함).
+  후는 `import common` 이 패키지 표지만 읽어 값이 낮다. 방향은 후가 빠르고, 값이 요동쳐 배수는 믿지 않는다.
+- 질문 2, `lint-suite` 3회. L2b 전(`87b2254b2^`, 전체 체크아웃) 92 · 49 · 39 s(46개 중 1개 실패 — 그 시점 저장소 상태), 후(현재 브랜치, 45개 전부 통과) 58 · 32 · 34 s.
+  첫 회는 콜드 캐시라 빼면 전 39~49 s, 후 32~34 s 다. 두 체크아웃은 저장소 상태도 달라 구조의 영향만 가른 값은 아니다. 나빠졌다는 신호는 없다.
+- 질문 1 의 `ctest -L lint -j 2` 벽시계와 `cmake --preset` configure 시간은 파이썬만 돌리는 일감이라 재지 않았다(아래 6절).
+
 ## 6. 남은 확인
+
+2026-10-23 `wt/scriptsverify` 에서 파이썬만 돌려 본 것: `lint-suite` 45개 전부 통과(`CheckScriptLayers` 포함), `Test/PythonTest/Test*.py` 49개 전부 통과(`TestScriptsImportIdentity` 포함).
+결함은 나오지 않았다. 아래 첫 항목의 configure · ctest 만 남는다.
 
 - `cmake --preset Ninja-Debug` configure 를 이 브랜치에서 돌리지 않았다. 대신 `GenerateConfigureFiles.py` 를 임시 폴더로 돌려 main 빌드 폴더의 생성물과 바이트가
   같음을 봤다(LintTargets.cmake 는 새 게이트 `CheckScriptLayers` 두 블록만 다름). 병합 뒤 configure 와 `ctest -L lint -j 2` · `-L python -j 2` 를 한 번 돈다.
 - `.claude/hooks/SessionGuard.py` 33행의 주석이 지운 이름 `ListCiJobs.kExitCiFailing` 을 가리킨다. 값(4)은 `common.ExitCode.CiFailing` 과 같고
   `TestDevWorktreeTools` 가 둘을 견준다. 세션 설정이라 사용자가 주석을 `common/ExitCode.py` 의 `CiFailing` 으로 고친다.
 - 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). 위 `SessionGuard.py` 주석만 남았다.
-- 층 게이트 예외 중 CookAssets 간선 셋(`MakePackage` · `RemoveWorktree` · `CheckShaderStamps`)은 StructureSimplification PK4 가 쿠커를 지울 때 함께 지운다.
+- 층 게이트의 CookAssets 간선 예외는 PK4 가 쿠커를 지울 때 함께 사라졌다(`CheckScriptLayers.toml` 에 `CookAssets` 가 없음을 2026-10-23 확인).
   게이트와 짝 명령의 간선은 [ScriptsPairedLintRules](Candidates-project.md#scriptspairedlintrules) 후보다.
