@@ -36,7 +36,8 @@ namespace sw
 {
     /**
      * @class RTSCommanderAI
-     * @brief 플레이어 한 명을 맡는 AI 입니다. 트리는 아래와 같고, 반응형 셀렉터라서 위쪽 노드를 먼저 평가합니다.
+     * @brief 플레이어 한 명을 맡는 AI 입니다. 트리는 데이터(`*.bt.xml`, 게임 팩의 `commander.bt.xml`)이고 아래 모양이 기본 데이터다. 반응형 셀렉터라서 위쪽 노드를 먼저 평가합니다.
+     *        잎이 부르는 작업은 이 클래스가 `rts.defend` 같은 이름으로 `BehaviorTaskRegistry` 에 올린다(`SW_BEHAVIOR_TASK`) - 데이터가 순서 · 중단 규칙 · 가지를 정하고 코드는 작업만 가진다.
      * @code
      *     Root (reactive)
      *     ├─ [Threat IsSet, LowerPriority 중단] Defend: 병력을 위협 위치로 공격 이동
@@ -55,7 +56,11 @@ namespace sw
     public:
         RTSCommanderAI();
 
-        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings );
+        /**
+         * @brief 월드 · 플레이어 · 설정으로 AI 를 시작합니다. 행동 트리는 데이터에서 읽은 것(`BehaviorTreeAsset::getTree`)을 복사해 쥔다 - 트리가 올바르지 않으면 어설트합니다(데이터 읽기가 이미 걸렀어야 한다).
+         * @param tree 지휘관 트리입니다. 잎의 `task` 는 이 클래스가 등록한 `rts.*` 이름이어야 한다.
+         */
+        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const BehaviorTree& tree );
         /** @brief `_thinkInterval` 마다 행동 트리를 한 번 실행합니다. */
         void update( float32 deltaTime );
         /** @brief 월드의 알림(공격받음)을 받습니다. */
@@ -71,7 +76,7 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-    private:
+        // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_BEHAVIOR_TASK` 줄이 `rts.*` 이름을 붙인다).
         static BehaviorStatus taskDefend( BehaviorContext& context );
         static BehaviorStatus taskGatherIdle( BehaviorContext& context );
         static BehaviorStatus taskTrainWorkers( BehaviorContext& context );
@@ -80,7 +85,7 @@ namespace sw
         static BehaviorStatus taskTrainArmy( BehaviorContext& context );
         static BehaviorStatus taskAttack( BehaviorContext& context );
 
-        void makeTree();
+    private:
         /** @brief 놀거나 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */
         bool      orderConstruction( const hashed_string& buildingID );
         RTSUnitID findDepot() const;

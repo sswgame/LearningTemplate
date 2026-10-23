@@ -39,5 +39,6 @@ NullCrashReportUploader = "상태 없는 널 객체 — 서비스가 아니라 �
 SceneTransformStorage = "엔진 수명 범위가 소유하는 저장소의 편의 창구 — 변환 컴포넌트가 핫 패스에서 범위 조회 없이 읽는다"
 ValidationIssueLog = "ScopeOwned 로 범위가 소유하는 표의 편의 창구 — 파괴 경로도 부르므로 범위 조회를 거치지 않는다"
 ResourceDataKindRegistry = "링크 때 등록 표 — 엔진 · 키트 모듈 이미지의 정적 등록자(`SW_RESOURCE_DATA_KIND`)가 엔진 범위가 서기 전에 올리고 모듈을 내릴 때 뺀다(RigNodeRegistry 와 같은 까닭)"
+BehaviorTaskRegistry = "링크 때 등록 표 — 게임 · 키트 모듈 이미지의 정적 등록자(`SW_BEHAVIOR_TASK`)가 엔진 범위가 서기 전에 올리고 모듈을 내릴 때 뺀다(ResourceDataKindRegistry 와 같은 까닭)"
 GameInstanceBase ="활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다"
 GameAutoplay = "활성 창구 아님 — findActive 는 링크 때 등록 표(RegistrationList)의 마지막 줄을 읽고 정적 포인터를 들지 않는다"

@@ -20,6 +20,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Resource/AssetHandle.h"
 
+#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -118,6 +119,8 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Unit Data", AssetPath, Tooltip = "Unit catalog XML" )
         string _unitDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Commander Tree", AssetPath, Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
+        string _commanderTreePath;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _cliffPrefab;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
@@ -207,6 +210,7 @@ namespace sw
         float4 _gasColor;
 
         RTSCatalog                           _catalog;
+        BehaviorTreeAsset                    _commanderTree;
         SkirmishMatch                        _match;
         RTSSelection                         _selection;
         vector<RTSEvent>                     _listEvent;

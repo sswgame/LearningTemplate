@@ -151,6 +151,7 @@ namespace sw
 {
     SkirmishDirectorComponent::SkirmishDirectorComponent()
         : _unitDataPath{}
+        , _commanderTreePath{}
         , _cliffPrefab{}
         , _unitPrefab{}
         , _cameraRig{}
@@ -194,6 +195,7 @@ namespace sw
         , _mineralColor{ 0.35f, 0.85f, 1.0f, 1.0f }
         , _gasColor{ 0.3f, 0.8f, 0.4f, 1.0f }
         , _catalog{}
+        , _commanderTree{}
         , _match{}
         , _selection{}
         , _listEvent{}
@@ -353,6 +355,11 @@ namespace sw
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
+        if ( _commanderTree.loadFromResource( _commanderTreePath ) == false )
+        {
+            SW_LOG_ERROR( "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
+            return false;
+        }
         if ( hasValidNames() == false )
         {
             SW_LOG_ERROR( "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
@@ -378,6 +385,7 @@ namespace sw
         matchSettings._rushAI                = _rushAI;
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
+        matchSettings._pCommanderTree        = &_commanderTree.getTree();
         _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
         _selection.clear();
         _selection.setPlayer( 0 );

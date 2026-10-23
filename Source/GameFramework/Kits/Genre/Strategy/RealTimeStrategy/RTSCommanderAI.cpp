@@ -6,6 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Actor/AI/BehaviorTaskRegistry.h"
+
 namespace sw
 {
     namespace
@@ -32,31 +34,17 @@ namespace sw
     {
     }
 
-    void RTSCommanderAI::initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings )
+    void RTSCommanderAI::initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings, const BehaviorTree& tree )
     {
+        SW_ASSERT( tree.isValid() && "the commander behavior tree must be read from data (BehaviorTreeAsset) before the AI starts" );
         _pWorld   = pWorld;
         _player   = player;
         _settings = settings;
         _thinkTimer.clear();
         _attackWaveCount = 0;
         _blackboard.clear();
-        makeTree();
+        _tree = tree; // 러너는 이 객체의 트리를 가리킨다 - 데이터 객체가 먼저 사라져도 된다
         _runner.initialize( &_tree );
-    }
-
-    void RTSCommanderAI::makeTree()
-    {
-        _tree              = BehaviorTree{};
-        const int32 root   = _tree.addSelector( -1, "Root", true );
-        const int32 threat = _tree.addBlackboardCondition( root, getThreatKey(), BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
-        _tree.addAction( threat, "Defend", &RTSCommanderAI::taskDefend );
-        const int32 economy = _tree.addSequence( root, "Economy" );
-        _tree.addAction( _tree.addForceSuccess( economy ), "GatherIdle", &RTSCommanderAI::taskGatherIdle );
-        _tree.addAction( _tree.addForceSuccess( economy ), "TrainWorkers", &RTSCommanderAI::taskTrainWorkers );
-        _tree.addAction( _tree.addForceSuccess( economy ), "BuildSupply", &RTSCommanderAI::taskBuildSupply );
-        _tree.addAction( _tree.addForceSuccess( economy ), "BuildProduction", &RTSCommanderAI::taskBuildProduction );
-        _tree.addAction( _tree.addForceSuccess( economy ), "TrainArmy", &RTSCommanderAI::taskTrainArmy );
-        _tree.addAction( _tree.addForceSuccess( economy ), "Attack", &RTSCommanderAI::taskAttack );
     }
 
     void RTSCommanderAI::update( float32 deltaTime )
@@ -300,4 +288,13 @@ namespace sw
         ++self._attackWaveCount;
         return BehaviorStatus::Success;
     }
+
+    // 지휘관 트리 데이터(`commander.bt.xml`)가 `task` 속성으로 가리키는 이름이다.
+    SW_BEHAVIOR_TASK( RTSDefend, "rts.defend", &RTSCommanderAI::taskDefend );
+    SW_BEHAVIOR_TASK( RTSGatherIdle, "rts.gatherIdle", &RTSCommanderAI::taskGatherIdle );
+    SW_BEHAVIOR_TASK( RTSTrainWorkers, "rts.trainWorkers", &RTSCommanderAI::taskTrainWorkers );
+    SW_BEHAVIOR_TASK( RTSBuildSupply, "rts.buildSupply", &RTSCommanderAI::taskBuildSupply );
+    SW_BEHAVIOR_TASK( RTSBuildProduction, "rts.buildProduction", &RTSCommanderAI::taskBuildProduction );
+    SW_BEHAVIOR_TASK( RTSTrainArmy, "rts.trainArmy", &RTSCommanderAI::taskTrainArmy );
+    SW_BEHAVIOR_TASK( RTSAttack, "rts.attack", &RTSCommanderAI::taskAttack );
 } // namespace sw

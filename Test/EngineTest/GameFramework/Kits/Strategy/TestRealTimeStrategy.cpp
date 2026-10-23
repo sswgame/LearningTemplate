@@ -5,6 +5,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -529,8 +530,21 @@ SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuild
     aiSettings._workerTarget     = 8;
     aiSettings._productionTarget = 1;
     aiSettings._attackArmySize   = 3;
+    // 지휘관 트리는 데이터다 - 게임 팩의 commander.bt.xml 과 같은 모양을 글로 넣는다(그 파일 자체는 BehaviorTreeAssetTest 가 읽는다).
+    constexpr const utf8* kCommanderTreeXML = R"(<BehaviorTree><Selector name="Root" reactive="true">
+        <BlackboardCondition key="Threat" compare="IsSet" abort="LowerPriority"><Action name="Defend" task="rts.defend"/></BlackboardCondition>
+        <Sequence name="Economy">
+            <ForceSuccess><Action name="GatherIdle" task="rts.gatherIdle"/></ForceSuccess>
+            <ForceSuccess><Action name="TrainWorkers" task="rts.trainWorkers"/></ForceSuccess>
+            <ForceSuccess><Action name="BuildSupply" task="rts.buildSupply"/></ForceSuccess>
+            <ForceSuccess><Action name="BuildProduction" task="rts.buildProduction"/></ForceSuccess>
+            <ForceSuccess><Action name="TrainArmy" task="rts.trainArmy"/></ForceSuccess>
+            <ForceSuccess><Action name="Attack" task="rts.attack"/></ForceSuccess>
+        </Sequence></Selector></BehaviorTree>)";
+    BehaviorTreeAsset     commanderTree;
+    SW_ASSERT_TRUE( commanderTree.loadFromXMLText( kCommanderTreeXML, "RealTimeStrategyTest" ) );
     RTSCommanderAI ai;
-    ai.initialize( &scene._world, cpu, aiSettings );
+    ai.initialize( &scene._world, cpu, aiSettings, commanderTree.getTree() );
 
     bool bDefeatedSeen = false;
     for ( float32 time = 0.0f; time < 900.0f && scene._world.getWinningTeam() < 0; time += 0.1f )

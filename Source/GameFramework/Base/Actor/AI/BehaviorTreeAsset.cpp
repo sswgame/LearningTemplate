@@ -1,0 +1,353 @@
+#include "pch.h"
+
+#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
+
+#include "Core/Container/StringUtil.h"
+#include "Core/String/EnumNameTable.h"
+
+#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
+
+#include "GameFramework/Base/Actor/AI/BehaviorTaskRegistry.h"
+
+#include <optional>
+
+namespace sw
+{
+    SW_LOG_CALLER( "BehaviorTreeAsset" );
+
+    namespace
+    {
+        struct BehaviorTreeAssetInternal
+        {
+            /// @brief 중첩 깊이 상한입니다. 손으로 쓴 트리가 이보다 깊을 일이 없다 - 깨진 파일이 스택을 먹지 않게 한다.
+            static constexpr uint32 kMaxDepth = 32;
+
+            static constexpr const utf8* kArrNodeTypeName[] = { "Selector", "Sequence", "Inverter", "ForceSuccess", "Repeat", "Cooldown",
+                                                                "TimeLimit", "BlackboardCondition", "Action", "Condition", "Wait", "MoveTo" };
+            static constexpr const utf8* kArrCompareName[]  = { "IsSet", "IsNotSet", "Equal", "NotEqual", "Less", "LessOrEqual", "Greater", "GreaterOrEqual" };
+            static constexpr const utf8* kArrAbortName[]    = { "None", "Self", "LowerPriority", "Both" };
+
+            static constexpr EnumNameTable<BehaviorNodeType>  kNodeTypeTable{ kArrNodeTypeName };
+            static constexpr EnumNameTable<BlackboardCompare> kCompareTable{ kArrCompareName };
+            static constexpr EnumNameTable<BehaviorAbortMode> kAbortTable{ kArrAbortName };
+            static_assert( kNodeTypeTable.getCount() == static_cast<size_t>( BehaviorNodeType::MoveTo ) + 1, "node type names must cover every BehaviorNodeType" );
+            static_assert( kCompareTable.getCount() == static_cast<size_t>( BlackboardCompare::GreaterOrEqual ) + 1, "compare names must cover every BlackboardCompare" );
+            static_assert( kAbortTable.getCount() == static_cast<size_t>( BehaviorAbortMode::Both ) + 1, "abort names must cover every BehaviorAbortMode" );
+
+            /** @brief 잎 노드(자식을 가질 수 없는 종류)인지 판정합니다. */
+            static bool isLeaf( BehaviorNodeType type )
+            {
+                return type == BehaviorNodeType::Action || type == BehaviorNodeType::Condition || type == BehaviorNodeType::Wait || type == BehaviorNodeType::MoveTo;
+            }
+        };
+
+        /** @brief 노드 원소 하나와 그 아래를 읽어 트리에 더하는 읽기 상태입니다. */
+        class BehaviorTreeReader
+        {
+        public:
+            BehaviorTreeReader( BehaviorTree& tree, string_view sourceName )
+                : _tree{ tree }
+                , _sourceName{ sourceName }
+            {
+            }
+
+            /** @brief @p node 와 자손을 읽어 @p parent 아래에 더합니다. 하나라도 틀리면 false 이고, 읽을 수 있는 나머지는 계속 읽어 오류를 모두 알립니다. */
+            [[nodiscard]] bool readNode( const XMLNode& node, int32 parent, uint32 depth );
+
+        private:
+            /** @brief 표에 없는 속성마다 오류를 남깁니다. */
+            bool checkAttributes( const XMLNode& node, std::initializer_list<const utf8*> listKnown ) const
+            {
+                return XMLNameCheck::reportUnknownAttributes( node, listKnown.begin(), static_cast<uint32>( listKnown.size() ), _sourceName, LogLevel::Error );
+            }
+            /** @brief 선택 속성 `name` 입니다(없으면 노드 종류 이름). */
+            [[nodiscard]] bool readName( const XMLNode& node, string& outName ) const
+            {
+                std::optional<string> name;
+                const bool            bRead = node.readOptionalAttribute<string>( "name", name );
+                outName                     = name.has_value() ? *name : string( node.getName() );
+                return bRead;
+            }
+            /** @brief 필수 실수 속성입니다. 없거나 깨지거나 음수면 false 입니다(오류를 남긴다). */
+            [[nodiscard]] bool readSeconds( const XMLNode& node, const utf8* pAttribute, float32& outValue ) const
+            {
+                const std::optional<float32> value = node.readRequiredAttribute<float32>( pAttribute );
+                if ( value.has_value() == false )
+                    return false;
+                if ( *value < 0.0f )
+                {
+                    SW_LOG_ERROR( "%#: <%#> attribute '%#' must not be negative (%#)", _sourceName, node.getName(), pAttribute, *value );
+                    return false;
+                }
+                outValue = *value;
+                return true;
+            }
+            /** @brief 열거 속성 하나를 이름으로 읽습니다. 없으면 false 를 돌려 주지 않고 @p inoutValue 를 그대로 둡니다(기본값). 모르는 이름이면 오류이고 false 입니다. */
+            template <typename E>
+            [[nodiscard]] bool readEnumName( const XMLNode& node, const utf8* pAttribute, const EnumNameTable<E>& table, E& inoutValue ) const
+            {
+                std::optional<string> text;
+                if ( node.readOptionalAttribute<string>( pAttribute, text ) == false )
+                    return false;
+                if ( text.has_value() == false )
+                    return true;
+                if ( table.parse( *text, inoutValue ) )
+                    return true;
+                SW_LOG_ERROR( "%#: <%#> has an unknown %# '%#' (%#)", _sourceName, node.getName(), pAttribute, text->c_str(), table.joinNames().c_str() );
+                return false;
+            }
+            /** @brief 속성 `task` 의 이름을 레지스트리에서 찾습니다. 없거나 모르는 이름이면 오류이고 nullptr 입니다. */
+            BehaviorTaskFunction readTask( const XMLNode& node ) const
+            {
+                const std::optional<string> task = node.readRequiredAttribute<string>( "task" );
+                if ( task.has_value() == false )
+                    return nullptr;
+                const BehaviorTaskFunction function = BehaviorTaskRegistry::get().findTask( *task );
+                if ( function == nullptr )
+                    SW_LOG_ERROR( "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task->c_str(), BehaviorTaskRegistry::get().joinNames().c_str() );
+                return function;
+            }
+
+            BehaviorTree& _tree;
+            string_view   _sourceName;
+        };
+
+        bool BehaviorTreeReader::readNode( const XMLNode& node, int32 parent, uint32 depth )
+        {
+            using Internal = BehaviorTreeAssetInternal;
+            if ( depth > Internal::kMaxDepth )
+            {
+                SW_LOG_ERROR( "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), Internal::kMaxDepth );
+                return false;
+            }
+            BehaviorNodeType type{};
+            if ( Internal::kNodeTypeTable.parse( node.getName(), type ) == false )
+            {
+                SW_LOG_ERROR( "%#: unknown behavior tree node <%#> (%#)", _sourceName, node.getName(), Internal::kNodeTypeTable.joinNames().c_str() );
+                return false;
+            }
+
+            bool   bValid = true;
+            int32  index  = -1;
+            string name;
+            switch ( type )
+            {
+                case BehaviorNodeType::Selector:
+                {
+                    bValid = checkAttributes( node, { "name", "reactive" } );
+                    bValid = readName( node, name ) && bValid;
+                    std::optional<bool> bReactive;
+                    bValid = node.readOptionalAttribute<bool>( "reactive", bReactive ) && bValid;
+                    index  = _tree.addSelector( parent, name.c_str(), bReactive.value_or( false ) );
+                    break;
+                }
+                case BehaviorNodeType::Sequence:
+                {
+                    bValid = checkAttributes( node, { "name" } );
+                    bValid = readName( node, name ) && bValid;
+                    index  = _tree.addSequence( parent, name.c_str() );
+                    break;
+                }
+                case BehaviorNodeType::Inverter:
+                {
+                    bValid = checkAttributes( node, {} );
+                    index  = _tree.addInverter( parent );
+                    break;
+                }
+                case BehaviorNodeType::ForceSuccess:
+                {
+                    bValid = checkAttributes( node, {} );
+                    index  = _tree.addForceSuccess( parent );
+                    break;
+                }
+                case BehaviorNodeType::Repeat:
+                {
+                    bValid                                = checkAttributes( node, { "count" } );
+                    const std::optional<int32> countValue = node.readRequiredAttribute<int32>( "count" );
+                    bValid                                = countValue.has_value() && bValid;
+                    if ( countValue.has_value() && *countValue < 0 )
+                    {
+                        SW_LOG_ERROR( "%#: <Repeat> attribute 'count' must not be negative (%#)", _sourceName, *countValue );
+                        bValid = false;
+                    }
+                    index = _tree.addRepeat( parent, countValue.value_or( 0 ) );
+                    break;
+                }
+                case BehaviorNodeType::Cooldown:
+                {
+                    float32 seconds{ 0.0f };
+                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
+                    index  = _tree.addCooldown( parent, seconds );
+                    break;
+                }
+                case BehaviorNodeType::TimeLimit:
+                {
+                    float32 seconds{ 0.0f };
+                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
+                    index  = _tree.addTimeLimit( parent, seconds );
+                    break;
+                }
+                case BehaviorNodeType::BlackboardCondition:
+                {
+                    bValid                                = checkAttributes( node, { "key", "compare", "value", "abort" } );
+                    const std::optional<string> key       = node.readRequiredAttribute<string>( "key" );
+                    BlackboardCompare           compare   = BlackboardCompare::IsSet;
+                    BehaviorAbortMode           abortMode = BehaviorAbortMode::None;
+                    std::optional<float32>      compareValue;
+                    bValid = key.has_value() && bValid;
+                    bValid = readEnumName( node, "compare", Internal::kCompareTable, compare ) && bValid;
+                    bValid = readEnumName( node, "abort", Internal::kAbortTable, abortMode ) && bValid;
+                    bValid = node.readOptionalAttribute<float32>( "value", compareValue ) && bValid;
+                    index  = _tree.addBlackboardCondition( parent, hashed_string( key.value_or( string{} ) ), compare, compareValue.value_or( 0.0f ), abortMode );
+                    break;
+                }
+                case BehaviorNodeType::Action:
+                case BehaviorNodeType::Condition:
+                {
+                    bValid                              = checkAttributes( node, { "task", "name" } );
+                    const BehaviorTaskFunction function = readTask( node );
+                    bValid                              = function != nullptr && bValid;
+                    bValid                              = readName( node, name ) && bValid;
+                    // 함수가 없으면 노드를 더하지 않는다 - 함수 없는 잎이 트리에 남지 않게 한다.
+                    if ( function != nullptr )
+                        index = type == BehaviorNodeType::Action ? _tree.addAction( parent, name.c_str(), function ) : _tree.addCondition( parent, name.c_str(), function );
+                    break;
+                }
+                case BehaviorNodeType::Wait:
+                {
+                    float32 seconds{ 0.0f };
+                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
+                    index  = _tree.addWait( parent, seconds );
+                    break;
+                }
+                case BehaviorNodeType::MoveTo:
+                {
+                    bValid                          = checkAttributes( node, { "key", "repathDistance" } );
+                    const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
+                    std::optional<float32>      repathDistance;
+                    bValid = key.has_value() && bValid;
+                    bValid = node.readOptionalAttribute<float32>( "repathDistance", repathDistance ) && bValid;
+                    if ( repathDistance.has_value() && *repathDistance < 0.0f )
+                    {
+                        SW_LOG_ERROR( "%#: <MoveTo> attribute 'repathDistance' must not be negative (%#)", _sourceName, *repathDistance );
+                        bValid = false;
+                    }
+                    index = _tree.addMoveTo( parent, hashed_string( key.value_or( string{} ) ), repathDistance.value_or( 0.5f ) );
+                    break;
+                }
+            }
+
+            if ( Internal::isLeaf( type ) )
+            {
+                if ( node.findChild() )
+                {
+                    SW_LOG_ERROR( "%#: <%#> is a leaf and cannot have child nodes", _sourceName, node.getName() );
+                    bValid = false;
+                }
+                return bValid;
+            }
+            if ( index < 0 )
+                return false; // 노드를 더하지 못했다 - 아래를 읽을 부모가 없다
+            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+            {
+                bValid = readNode( child, index, depth + 1 ) && bValid;
+            }
+            return bValid;
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    const utf8* BehaviorTreeNames::toString( BehaviorNodeType type )
+    {
+        return BehaviorTreeAssetInternal::kNodeTypeTable.toString( type );
+    }
+
+    const utf8* BehaviorTreeNames::toString( BlackboardCompare compare )
+    {
+        return BehaviorTreeAssetInternal::kCompareTable.toString( compare );
+    }
+
+    const utf8* BehaviorTreeNames::toString( BehaviorAbortMode mode )
+    {
+        return BehaviorTreeAssetInternal::kAbortTable.toString( mode );
+    }
+
+    bool BehaviorTreeNames::parse( string_view text, BehaviorNodeType& outValue )
+    {
+        return BehaviorTreeAssetInternal::kNodeTypeTable.parse( text, outValue );
+    }
+
+    bool BehaviorTreeNames::parse( string_view text, BlackboardCompare& outValue )
+    {
+        return BehaviorTreeAssetInternal::kCompareTable.parse( text, outValue );
+    }
+
+    bool BehaviorTreeNames::parse( string_view text, BehaviorAbortMode& outValue )
+    {
+        return BehaviorTreeAssetInternal::kAbortTable.parse( text, outValue );
+    }
+
+    string BehaviorTreeNames::joinNodeTypeNames()
+    {
+        return BehaviorTreeAssetInternal::kNodeTypeTable.joinNames();
+    }
+
+    bool BehaviorTreeNames::isLeaf( BehaviorNodeType type )
+    {
+        return BehaviorTreeAssetInternal::isLeaf( type );
+    }
+
+    bool BehaviorTreeNames::isDecorator( BehaviorNodeType type )
+    {
+        const bool bComposite = type == BehaviorNodeType::Selector || type == BehaviorNodeType::Sequence;
+        return bComposite == false && BehaviorTreeAssetInternal::isLeaf( type ) == false;
+    }
+} // namespace sw
+
+namespace sw
+{
+    BehaviorTreeAsset::BehaviorTreeAsset()
+        : _tree{}
+    {
+    }
+
+    uint32 BehaviorTreeAsset::loadRoot( const XMLNode& root, string_view sourceName )
+    {
+        _tree                = BehaviorTree{};
+        bool          bValid = XMLNameCheck::reportUnknownAttributes( root, nullptr, 0, sourceName, LogLevel::Error );
+        const XMLNode first  = root.findChild();
+        if ( first.isValid() == false )
+        {
+            SW_LOG_ERROR( "%#: the behavior tree has no root node", sourceName );
+            return 0;
+        }
+        if ( first.findNextSibling().isValid() )
+        {
+            SW_LOG_ERROR( "%#: the behavior tree has more than one root node - wrap them in a <Selector> or <Sequence>", sourceName );
+            bValid = false;
+        }
+        BehaviorTreeReader reader( _tree, sourceName );
+        bValid = reader.readNode( first, -1, 0 ) && bValid;
+        if ( bValid && _tree.isValid() == false )
+        {
+            SW_LOG_ERROR( "%#: the behavior tree is not valid (decorators need exactly one child, composites at least one)", sourceName );
+            bValid = false;
+        }
+        if ( bValid == false )
+        {
+            _tree = BehaviorTree{};
+            return 0;
+        }
+        return static_cast<uint32>( _tree.getNodeCount() );
+    }
+
+    /** @brief 행동 트리 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_RESOURCE_DATA_KIND( BehaviorTree, BehaviorTreeAsset::kDataKind, nullptr, nullptr, BehaviorTreeAsset::kExtension.data(), &ResourceDataKindUtil::loadCatalog<BehaviorTreeAsset> );
+} // namespace sw
