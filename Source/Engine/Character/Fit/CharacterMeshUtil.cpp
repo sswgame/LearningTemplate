@@ -10,6 +10,7 @@
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Character/Fit/MeshMerger.h"
 #include "Engine/Character/Fit/SurfaceBvh.h"
 #include "Engine/Character/Fit/SurfaceTransfer.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -64,6 +65,30 @@ namespace sw
                         return true;
                 }
                 return false;
+            }
+
+            /** @brief 병합을 못 하는 까닭을 남기고 false 를 돌려줍니다. */
+            [[nodiscard]] static bool failMerge( string* pOutError, const string& reason )
+            {
+                if ( pOutError != nullptr )
+                    *pOutError = reason;
+                return false;
+            }
+
+            /** @brief 부품 하나가 병합에 들어갈 수 있는지 봅니다. 못 들어가면 까닭을 @p outReason 에 적고 false 입니다. */
+            [[nodiscard]] static bool checkMergePart( const MeshMergePart& part, string& outReason )
+            {
+                if ( part._pMesh == nullptr )
+                {
+                    outReason = string( "merge part '" ) + part._name.c_str() + "' has no mesh";
+                    return false;
+                }
+                if ( part._pMesh->getSections().empty() == false || part._pMesh->findVertexAnimation() != nullptr )
+                {
+                    outReason = string( "merge part '" ) + part._name.c_str() + "' already has sections or a vertex animation table - merge needs plain meshes";
+                    return false;
+                }
+                return true;
             }
 
             /** @brief 피팅 형상 · 결과가 원본 메시와 같은 크기인지 봅니다. 아니면 까닭을 남기고 false 입니다. */
@@ -319,5 +344,130 @@ namespace sw
         inoutGarment.setSkin( std::move( listSkin ), body.getSkinBoneCount() );
         inoutGarment.setMorphTargets( std::move( listTarget ) );
         return unboundCount;
+    }
+
+    bool CharacterMeshUtil::mergeMeshes( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, MeshMergeResult& outResult, string* pOutError )
+    {
+        using Internal = CharacterMeshUtilInternal;
+        outResult      = MeshMergeResult{};
+        if ( listPart.empty() )
+            return Internal::failMerge( pOutError, "nothing to merge" );
+
+        // 부품을 검사하고 스킨 유무 · 본 수가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
+        string reason;
+        for ( const MeshMergePart& part : listPart )
+        {
+            if ( Internal::checkMergePart( part, reason ) == false )
+                return Internal::failMerge( pOutError, reason );
+        }
+        const Mesh&  first         = *listPart[0]._pMesh;
+        const bool   bSkinned      = first.hasSkin();
+        const uint32 skinBoneCount = first.getSkinBoneCount();
+        for ( const MeshMergePart& part : listPart )
+        {
+            const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBoneCount() != skinBoneCount );
+            if ( bMixedSkin )
+                return Internal::failMerge( pOutError,
+                                            string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone count - parts merge within one skeleton only" );
+        }
+
+        // 그룹(구간)은 처음 나온 순서이고, 같은 그룹의 부품은 입력 순서로 이어 붙는다.
+        const size_t          partCount = listPart.size();
+        vector<hashed_string> listPartGroup( partCount );
+        vector<hashed_string> listGroup;
+        for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
+        {
+            MeshMergeSource source;
+            source._name              = listPart[partIndex]._name;
+            source._material          = listPart[partIndex]._material;
+            const hashed_string group = pHooks != nullptr ? pHooks->getMaterialGroup( source ) : listPart[partIndex]._name;
+            if ( group.empty() )
+                return Internal::failMerge( pOutError, string( "merge part '" ) + listPart[partIndex]._name.c_str() + "' got an empty material group" );
+            listPartGroup[partIndex] = group;
+            bool bKnown              = false;
+            for ( const hashed_string& known : listGroup )
+            {
+                bKnown = bKnown || known == group;
+            }
+            if ( bKnown == false )
+                listGroup.push_back( group );
+        }
+
+        vector<RHIVertex>       listVertex;
+        vector<MeshSkinVertex>  listSkin;
+        vector<MeshMorphTarget> listTarget;
+        vector<MeshSection>     listSection;
+        bool                    bAnyGPUMorph = false;
+        for ( const hashed_string& group : listGroup )
+        {
+            MeshSection section;
+            section._name        = group;
+            section._firstVertex = static_cast<uint32>( listVertex.size() );
+            for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
+            {
+                if ( listPartGroup[partIndex] != group )
+                    continue;
+                const Mesh&  mesh        = *listPart[partIndex]._pMesh;
+                const uint32 firstVertex = static_cast<uint32>( listVertex.size() );
+                bAnyGPUMorph             = bAnyGPUMorph || mesh.isGPUMorphEnabled();
+                MeshMergeSource source;
+                source._name     = listPart[partIndex]._name;
+                source._material = listPart[partIndex]._material;
+                for ( RHIVertex vertex : mesh.getVertices() )
+                {
+                    if ( pHooks != nullptr )
+                    {
+                        const float2 uv  = pHooks->remapUv( source, float2{ vertex._arrUv[0], vertex._arrUv[1] } );
+                        vertex._arrUv[0] = uv._x;
+                        vertex._arrUv[1] = uv._y;
+                    }
+                    listVertex.push_back( vertex );
+                }
+                if ( bSkinned )
+                    listSkin.insert( listSkin.end(), mesh.getSkinVertices().begin(), mesh.getSkinVertices().end() );
+                // 모프 타깃은 이름으로 합친다 — 없는 부품은 0 이라 그 부품의 차이만 옮겨 담는다.
+                for ( const MeshMorphTarget& target : mesh.getMorphTargets() )
+                {
+                    MeshMorphTarget* pMerged = nullptr;
+                    for ( MeshMorphTarget& existing : listTarget )
+                    {
+                        if ( existing._name == target._name )
+                            pMerged = &existing;
+                    }
+                    if ( pMerged == nullptr )
+                    {
+                        MeshMorphTarget created;
+                        created._name = target._name;
+                        listTarget.push_back( std::move( created ) );
+                        pMerged = &listTarget.back();
+                    }
+                    for ( MeshMorphDelta delta : target._listDelta )
+                    {
+                        delta._vertexIndex += firstVertex;
+                        pMerged->_listDelta.push_back( delta );
+                    }
+                }
+            }
+            section._vertexCount = static_cast<uint32>( listVertex.size() ) - section._firstVertex;
+            listSection.push_back( section );
+        }
+        if ( listVertex.empty() )
+            return Internal::failMerge( pOutError, "every merge part is empty - there is nothing to draw" );
+
+        shared_ptr<Mesh> merged = Mesh::create();
+        if ( pHooks != nullptr )
+            merged->setVertices( std::move( listVertex ) ); // UV 를 옮겼을 수 있으므로 탄젠트를 다시 구한다
+        else
+            merged->setVerticesWithTangents( std::move( listVertex ) );
+        if ( bSkinned )
+            merged->setSkin( std::move( listSkin ), skinBoneCount );
+        merged->setMorphTargets( std::move( listTarget ) );
+        if ( merged->setSections( std::move( listSection ) ) == false )
+            return Internal::failMerge( pOutError, "the merged sections were refused (see the log above)" );
+        merged->setGPUMorphEnabled( bAnyGPUMorph );
+
+        outResult._mesh = std::move( merged );
+        outResult._listPartSection.assign( listPartGroup.begin(), listPartGroup.end() );
+        return true;
     }
 } // namespace sw

@@ -147,9 +147,15 @@ namespace sw
                 SW_LOG_ERROR( "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
                 bValid = false;
             }
-            if ( findItemKindInfo( item._kind ) == nullptr )
+            const SequenceItemKindInfo* pKindInfo = findItemKindInfo( item._kind );
+            if ( pKindInfo == nullptr )
             {
                 SW_LOG_ERROR( "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
+                bValid = false;
+            }
+            else if ( pKindInfo->_bNeedsPreset && ( item._preset.empty() || item._targetObject.empty() ) )
+            {
+                SW_LOG_ERROR( "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
                 bValid = false;
             }
         }

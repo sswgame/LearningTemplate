@@ -38,6 +38,7 @@ namespace sw
         Event       = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
         CameraCut   = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). `_preset` 이 있으면 대상의 카메라 디렉터가 그 프리셋을 켭니다. */
         CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
+        Appearance  = 4, /**< 시작 프레임을 지날 때 대상 오브젝트의 외형 프리셋을 `_preset` 으로 바꿉니다. 엔진은 외형을 모르므로 이벤트(`registerSequenceEvent`)로 알리고, 듣는 쪽(게임 프레임워크의 `SequenceAppearanceComponent`)이 바꿉니다. */
         Count            /**< 표식입니다. 종류가 아닙니다. */
     };
 
@@ -50,6 +51,7 @@ namespace sw
         bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
         bool             _bCutsCamera;   /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
         bool             _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
+        bool             _bNeedsPreset;  /**< `_preset` 이 비어 있으면 안 되는 종류인지입니다(읽을 때 검사합니다). 카메라 컷은 비우면 카메라를 그대로 씁니다. */
     };
 
     /**
@@ -75,10 +77,11 @@ namespace sw
 {
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
     inline constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
-        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false},
-        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false},
-        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false},
-        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true},
+        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false, false},
+        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false, false},
+        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false, false},
+        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true, false},
+        { SequenceItemKind::Appearance, 0xFFC0A070u, false,  true, false, false,  true},
     };
 
     /** @brief 트랜스폼 트랙 채널의 이름입니다(에디터 표시). 순서는 채널 순서입니다. */
@@ -112,8 +115,8 @@ namespace sw
         string _name;
         PROPERTY( Tooltip = "Name of the object the item drives" )
         string _targetObject;
-        /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. */
-        PROPERTY( Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is)" )
+        /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(비우면 읽기 오류). */
+        PROPERTY( Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
         PROPERTY( Tooltip = "First frame of the span" )
         int32 _start{ 0 };

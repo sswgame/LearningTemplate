@@ -135,6 +135,10 @@ namespace sw
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );
+        /** @brief 지금 입히려는 프리셋 id 입니다(`setPreset` 이나 프로퍼티가 정한 값 — 조립이 끝났는지와 상관없다). */
+        const string& getPresetID() const { return _presetID; }
+        /** @brief 프리셋의 무작위 선택 시드입니다. */
+        int32 getSeed() const { return _seed; }
         /** @brief 슬롯의 아이템을 덮어쓰고 다시 조립합니다. 빈 아이템이면 슬롯을 비웁니다. 같은 값이면 아무것도 하지 않습니다. */
         void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
         /**
