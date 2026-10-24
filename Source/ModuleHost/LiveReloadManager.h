@@ -217,6 +217,13 @@ namespace sw
             engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
         };
 
+        /** @brief 연쇄 리로드에서 준비를 마친 모듈 하나(기록과 로드해 둔 새 이미지)입니다. */
+        struct PreparedEntry
+        {
+            ModuleRecord*  _pRecord{ nullptr };
+            PreparedShadow _shadow;
+        };
+
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */
         [[nodiscard]] bool loadShadowCopyModule( ModuleRecord& context );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
@@ -238,6 +245,15 @@ namespace sw
         bool drainTasksBeforeUnload();
         /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
+        /** @brief @p listOrder(의존 순서)의 모듈마다 섀도 복사본을 준비합니다. 하나라도 실패하면 오류를 남기고 false 입니다(준비한 것은 @p outListPrepared 에 남아 있어 부르는 쪽이 버린다). */
+        [[nodiscard]] bool prepareCascade( const vector<string>& listOrder, vector<PreparedEntry>& outListPrepared );
+        /** @brief @p inoutListPrepared 의 @p firstIndex 번째부터 끝까지 새 이미지를 버립니다. */
+        void abortPrepared( vector<PreparedEntry>& inoutListPrepared, size_t firstIndex );
+        /**
+         * @brief 준비한 모듈을 차례로 교체합니다. 그래프가 이미 깨졌거나 교체가 실패하면 남은 것을 버리고, 일부만 교체됐으면 그래프를 막습니다.
+         * @return 모두 교체했으면 true 입니다.
+         */
+        [[nodiscard]] bool commitCascade( vector<PreparedEntry>& inoutListPrepared );
         /** @brief @p moduleName 의 컨텍스트를 돌려줍니다. 없으면 만들고 의존 그래프에도 이름을 넣습니다(둘의 이름 집합을 같게 둡니다). */
         ModuleRecord& getOrCreateRecord( string_view moduleName );
         /** @brief 모든 모듈 기록과 의존 그래프를 비웁니다. */

@@ -823,6 +823,64 @@ namespace sw
         return _bReloadGraphBroken == SW_FALSE;
     }
 
+    bool LiveReloadManager::prepareCascade( const vector<string>& listOrder, vector<PreparedEntry>& outListPrepared )
+    {
+        outListPrepared.reserve( listOrder.size() );
+        for ( const string& name : listOrder )
+        {
+            auto found = _mapModule.find( name );
+            if ( found == _mapModule.end() )
+                continue;
+            PreparedEntry entry;
+            entry._pRecord = &found->second;
+            if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
+            {
+                SW_LOG_ERROR( "Cascade prepare failed for %# — aborting, previous modules kept", name );
+                return false;
+            }
+            outListPrepared.push_back( std::move( entry ) );
+        }
+        return true;
+    }
+
+    void LiveReloadManager::abortPrepared( vector<PreparedEntry>& inoutListPrepared, size_t firstIndex )
+    {
+        for ( size_t moduleIndex = firstIndex; moduleIndex < inoutListPrepared.size(); ++moduleIndex )
+        {
+            abortShadowCopy( *inoutListPrepared[moduleIndex]._pRecord, inoutListPrepared[moduleIndex]._shadow );
+        }
+    }
+
+    bool LiveReloadManager::commitCascade( vector<PreparedEntry>& inoutListPrepared )
+    {
+        size_t committed{ 0 };
+        for ( size_t moduleIndex = 0; moduleIndex < inoutListPrepared.size(); ++moduleIndex )
+        {
+            PreparedEntry& entry = inoutListPrepared[moduleIndex];
+            if ( _bReloadGraphBroken == SW_TRUE )
+            {
+                SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken", entry._pRecord->_moduleName );
+                abortPrepared( inoutListPrepared, moduleIndex );
+                if ( committed > 0 )
+                    markGraphBroken( "partial cascade commit" );
+                return false;
+            }
+
+            if ( commitShadowCopy( *entry._pRecord, entry._shadow ) )
+            {
+                ++committed;
+                continue;
+            }
+
+            SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits", entry._pRecord->_moduleName );
+            abortPrepared( inoutListPrepared, moduleIndex );
+            if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
+                markGraphBroken( "partial cascade commit" );
+            return false;
+        }
+        return true;
+    }
+
     void LiveReloadManager::reloadCascade( const vector<string>& listSubgraphName )
     {
         vector<string> listOrder;
@@ -836,38 +894,10 @@ namespace sw
 
         SW_LOG_TRACE( "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
 
-        struct PreparedEntry
-        {
-            ModuleRecord*  _pRecord{ nullptr };
-            PreparedShadow _shadow;
-        };
         vector<PreparedEntry> listPrepared;
-        listPrepared.reserve( listOrder.size() );
-
-        bool bPrepareOk{ true };
-        for ( const string& name : listOrder )
+        if ( prepareCascade( listOrder, listPrepared ) == false )
         {
-            auto found = _mapModule.find( name );
-            if ( found == _mapModule.end() )
-                continue;
-            PreparedEntry entry;
-            entry._pRecord = &found->second;
-            if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
-            {
-                SW_LOG_ERROR( "Cascade prepare failed for %# — aborting, previous modules kept",
-                              name );
-                bPrepareOk = false;
-                break;
-            }
-            listPrepared.push_back( std::move( entry ) );
-        }
-
-        if ( bPrepareOk == false )
-        {
-            for ( PreparedEntry& entry : listPrepared )
-            {
-                abortShadowCopy( *entry._pRecord, entry._shadow );
-            }
+            abortPrepared( listPrepared, 0 );
             return;
         }
 
@@ -875,51 +905,13 @@ namespace sw
         if ( _onBeforeCommitBatch.isBound() && _onBeforeCommitBatch( listOrder ) == false )
         {
             SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
-            for ( PreparedEntry& entry : listPrepared )
-            {
-                abortShadowCopy( *entry._pRecord, entry._shadow );
-            }
+            abortPrepared( listPrepared, 0 );
             return;
         }
 
         _deferredUnloadQueue.beginBatch();
-
-        size_t committed{ 0 };
-        for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )
-        {
-            PreparedEntry& entry = listPrepared[moduleIndex];
-            if ( _bReloadGraphBroken == SW_TRUE )
-            {
-                SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken",
-                              entry._pRecord->_moduleName );
-                abortShadowCopy( *entry._pRecord, entry._shadow );
-                for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
-                {
-                    abortShadowCopy( *listPrepared[otherModuleIndex]._pRecord, listPrepared[otherModuleIndex]._shadow );
-                }
-                if ( committed > 0 )
-                    markGraphBroken( "partial cascade commit" );
-                return;
-            }
-
-            if ( commitShadowCopy( *entry._pRecord, entry._shadow ) )
-            {
-                ++committed;
-                continue;
-            }
-
-            SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits",
-                          entry._pRecord->_moduleName );
-            abortShadowCopy( *entry._pRecord, entry._shadow );
-            for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
-            {
-                abortShadowCopy( *listPrepared[otherModuleIndex]._pRecord, listPrepared[otherModuleIndex]._shadow );
-            }
-
-            if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
-                markGraphBroken( "partial cascade commit" );
+        if ( commitCascade( listPrepared ) == false )
             return;
-        }
 
         // 새 이미지가 모두 로드됐다. 의존 모듈이 옛 이미지에 바인딩돼 있으면, 옛 이미지를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
         if ( verifyModuleBindings() == false )
