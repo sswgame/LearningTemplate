@@ -8,6 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorNetProfilerHistory.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Localization/LocText.h"
@@ -76,12 +77,8 @@ namespace sw::editor
                 return "";
             }
 
-            /** @brief 탭과 `netplay.profile` 이 같이 쓰는 시계열입니다(창을 닫았다 열어도 남는다 — 에디터 모듈을 다시 불러오면 사라진다). */
-            static EditorNetProfilerHistory& getHistory()
-            {
-                static EditorNetProfilerHistory s_history;
-                return s_history;
-            }
+            /** @brief 탭과 `netplay.profile` 이 같이 쓰는 시계열입니다(창을 닫았다 열어도 남는다 — 에디터 컨텍스트가 사라지면 사라진다). 에디터 범위의 상태 저장소가 소유한다. */
+            static EditorNetProfilerHistory& getHistory() { return getEditorState<EditorNetProfilerHistory>(); }
 
             static float64 nowSeconds()
             {

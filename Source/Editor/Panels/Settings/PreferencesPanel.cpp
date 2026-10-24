@@ -12,6 +12,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -28,12 +29,6 @@ namespace sw::editor
         {
             /** @brief 마지막 편집 뒤 저장까지 기다리는 시간입니다. 끌기 한 번에 파일을 수십 번 쓰지 않게 묶는다. */
             static constexpr int64 kSaveDelayNanoseconds = constant::kNanosecondsPerSecond / 2;
-
-            static uint32& getVisibleSectionCount()
-            {
-                static uint32 s_visibleSectionCount{ 0 };
-                return s_visibleSectionCount;
-            }
 
             /** @brief 검색어에 맞는 프로퍼티가 섹션에 하나라도 있으면 true 입니다. 검색어가 없으면 늘 true 입니다. */
             static bool matchesFilter( const EditorSettingsRegistration& registration, const utf8* pFilterText )
@@ -67,6 +62,7 @@ namespace sw::editor
         , _grid{}
         , _pSelected{ nullptr }
         , _pendingSaveNanoseconds{ 0 }
+        , _visibleSectionCount{ 0 }
         , _bModifiedOnly{ false }
     {
     }
@@ -99,7 +95,7 @@ namespace sw::editor
                 _pSelected = &registration;
         }
         ImGui::EndChild();
-        PreferencesPanelInternal::getVisibleSectionCount() = visibleCount;
+        _visibleSectionCount = visibleCount;
         if ( bSelectedVisible == false )
             _pSelected = nullptr;
 
@@ -154,7 +150,9 @@ namespace sw::editor
 
     uint32 PreferencesPanel::getVisibleSectionCount()
     {
-        return PreferencesPanelInternal::getVisibleSectionCount();
+        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+        const PreferencesPanel*   pPanel   = pManager != nullptr ? pManager->findPanel<PreferencesPanel>() : nullptr;
+        return pPanel != nullptr ? pPanel->_visibleSectionCount : 0u; // 패널이 없으면 보인 섹션도 없다
     }
 
     void PreferencesPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )

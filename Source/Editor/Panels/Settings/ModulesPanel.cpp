@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Config/GameSelection.h"
@@ -30,12 +31,6 @@ namespace sw::editor
     {
         struct ModulesPanelInternal
         {
-            static uint32& getPreviewNewlyInactiveCount()
-            {
-                static uint32 s_count{ 0 };
-                return s_count;
-            }
-
             static constexpr ModuleKind kArrKindOrder[] = { ModuleKind::GameFramework, ModuleKind::Kit, ModuleKind::EditorExtension, ModuleKind::RHI, ModuleKind::Editor,
                                                             ModuleKind::Game };
 
@@ -204,7 +199,6 @@ namespace sw::editor
             _bOpenPreview = false;
         }
         drawPreview();
-        ModulesPanelInternal::getPreviewNewlyInactiveCount() = _pendingModule.empty() ? 0u : static_cast<uint32>( _listNewlyInactive.size() );
     }
 
     void ModulesPanel::drawPreview()
@@ -390,7 +384,11 @@ namespace sw::editor
 
     uint32 ModulesPanel::getPreviewNewlyInactiveCount()
     {
-        return ModulesPanelInternal::getPreviewNewlyInactiveCount();
+        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+        const ModulesPanel*       pPanel   = pManager != nullptr ? pManager->findPanel<ModulesPanel>() : nullptr;
+        if ( pPanel == nullptr || pPanel->_pendingModule.empty() )
+            return 0u; // 패널이 없거나 미리보기를 묻고 있지 않다
+        return static_cast<uint32>( pPanel->_listNewlyInactive.size() );
     }
 
     SW_EDITOR_PANEL( ModulesPanel, ModulesPanel::kPanelID, EditorPanelCategory::Tool, 2020 );

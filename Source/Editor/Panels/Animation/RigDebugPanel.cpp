@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -99,7 +100,7 @@ namespace sw::editor
 
             /**
              * @brief 대상 오프셋 기즈모의 상태입니다. 창이 대상을 고르고(`_objectID` · `_targetIndex`), 뷰포트 시각화(`drawTargetGizmo`)가 그 대상에 기즈모를 그린다.
-             * @details 창과 시각화가 한 파일에 있어 함수 안 정적 값 하나를 함께 본다(에디터는 한 스레드). 끄는 동안의 값은 `_pending` 이고, 놓으면 리그 파일에 되써 넣는다 —
+             * @details 창과 시각화가 한 파일에 있어 에디터 범위의 상태 저장소가 소유한 값 하나를 함께 본다(에디터는 한 스레드). 끄는 동안의 값은 `_pending` 이고, 놓으면 리그 파일에 되써 넣는다 —
              *          파일 감시가 다시 읽어 인스턴스에 들어올 때까지 기즈모는 `_pending` 에 남는다.
              */
             struct TargetEdit
@@ -112,11 +113,7 @@ namespace sw::editor
                 uint8         _bDragging{ SW_FALSE };
             };
 
-            static TargetEdit& getTargetEdit()
-            {
-                static TargetEdit s_edit;
-                return s_edit;
-            }
+            static TargetEdit& getTargetEdit() { return getEditorState<TargetEdit>(); }
 
             /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
             static void writeRigText( const string& writePath, const string& text )

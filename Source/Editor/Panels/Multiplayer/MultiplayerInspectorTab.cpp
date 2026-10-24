@@ -8,6 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorRemoteInspector.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Localization/LocText.h"
@@ -28,12 +29,8 @@ namespace sw::editor
             /** @brief 하이어라키 칸의 너비(창 너비에 대한 비율)입니다. */
             static constexpr float32 kTreeWidthRatio = 0.4f;
 
-            /** @brief 탭과 `netplay.inspect` 가 같이 쓰는 검사기입니다(창을 닫았다 열어도 연결이 남는다 — 에디터 모듈을 다시 불러오면 끊긴다). */
-            static EditorRemoteInspector& getInspector()
-            {
-                static EditorRemoteInspector s_inspector;
-                return s_inspector;
-            }
+            /** @brief 탭과 `netplay.inspect` 가 같이 쓰는 검사기입니다(창을 닫았다 열어도 연결이 남는다 — 에디터 컨텍스트가 사라지면 끊긴다). 에디터 범위의 상태 저장소가 소유한다. */
+            static EditorRemoteInspector& getInspector() { return getEditorState<EditorRemoteInspector>(); }
 
             static EditorNetPlaySession* findSession()
             {

@@ -117,6 +117,7 @@ namespace sw::editor
         Component*                           _pPendingMoveComponent; ///< 카드 메뉴의 Move Up 과 Move Down 이 지정한 컴포넌트다. 목록을 다 그린 뒤가 아니라 그 카드 다음에 적용한다
         int32                                _pendingMoveDirection;
         fixed_string<constant::kMaxBuffer64> _addComponentSearch; ///< Add Component 팝업의 검색어
+        fixed_string<constant::kMaxBuffer64> _presetNameBuffer;   ///< Presets 메뉴의 새 프리셋 이름 칸 글
         uint8                                _bComponentPresetDirty : 1;
         uint8                                _bFavoritesLoaded      : 1; ///< `_favorites` 를 저장 파일에서 읽었다
         [[maybe_unused]] uint8               _reserved              : 6;

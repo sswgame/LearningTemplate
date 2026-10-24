@@ -7,6 +7,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorStateHashCompare.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Localization/LocText.h"
@@ -32,12 +33,8 @@ namespace sw::editor
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
-            /** @brief 탭과 `netplay.sync` 가 같이 쓰는 비교입니다(창을 닫았다 열어도 남는다). */
-            static EditorStateHashCompare& getCompare()
-            {
-                static EditorStateHashCompare s_compare;
-                return s_compare;
-            }
+            /** @brief 탭과 `netplay.sync` 가 같이 쓰는 비교입니다(창을 닫았다 열어도 남는다). 에디터 범위의 상태 저장소가 소유한다. */
+            static EditorStateHashCompare& getCompare() { return getEditorState<EditorStateHashCompare>(); }
 
             static EditorNetPlaySession* findSession()
             {

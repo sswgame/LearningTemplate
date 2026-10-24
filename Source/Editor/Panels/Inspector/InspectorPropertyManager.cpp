@@ -20,6 +20,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
@@ -69,10 +70,10 @@ namespace sw::editor
             fixed_string<constant::kMaxBuffer64> _search;
         };
 
+        /** @brief 열린 선택 팝업의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
         AssetPickerState& getAssetPickerState()
         {
-            static AssetPickerState s_state;
-            return s_state;
+            return getEditorState<AssetPickerState>();
         }
 
         class BuiltinPropertyBase : public IInspectorProperty

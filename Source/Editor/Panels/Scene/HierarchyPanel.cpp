@@ -27,6 +27,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -105,19 +106,17 @@ namespace sw::editor
             /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 담습니다. Shift 범위 선택, Ctrl+A, 화살표가 지난 프레임의 것을 봅니다. */
             struct RowState
             {
-                vector<uint64> _listDrawnRow;
-                vector<uint64> _listPreviousRow;
-                uint64         _anchorObjectID{ 0 }; ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
-                uint64         _revealObjectID{ 0 }; ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
-                uint64         _lastPrimaryID{ 0 };  ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
-                bool           _bClickedThisFrame{ false };
+                vector<uint64>                       _listDrawnRow;
+                vector<uint64>                       _listPreviousRow;
+                uint64                               _anchorObjectID{ 0 };  ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
+                uint64                               _revealObjectID{ 0 };  ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
+                uint64                               _lastPrimaryID{ 0 };   ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
+                fixed_string<constant::kMaxBuffer64> _addComponentSearch{}; ///< "Add Component" 메뉴의 검색 칸 글(메뉴를 닫았다 열어도 남는다)
+                bool                                 _bClickedThisFrame{ false };
             };
 
-            static RowState& getRowState()
-            {
-                static RowState s_state;
-                return s_state;
-            }
+            /** @brief 행 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            static RowState& getRowState() { return getEditorState<RowState>(); }
 
             /** @brief 프레임 시작에 행 순서를 다시 모읍니다(지난 프레임의 것은 `_listPreviousRow` 로 넘긴다). 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보여 줍니다. */
             static void beginRowFrame()
@@ -342,9 +341,8 @@ namespace sw::editor
                 EditorSelfTestMarks::note( "hierarchy.addComponent" );
                 if ( bMenuOpen == false )
                     return;
-                static fixed_string<constant::kMaxBuffer64> s_searchBuf;
-                bool                                        bFailed{ false };
-                (void)EditorComponentMenu::drawAddComponentList( pObj, s_searchBuf, "hierarchy.addComponent", false, bFailed ); // 추가했는지는 되돌리기가 기록한다
+                bool bFailed{ false };
+                (void)EditorComponentMenu::drawAddComponentList( pObj, getRowState()._addComponentSearch, "hierarchy.addComponent", false, bFailed ); // 추가했는지는 되돌리기가 기록한다
                 if ( bFailed )
                     ImGui::OpenPopup( "AddCompFailed" );
                 ImGui::EndMenu();
