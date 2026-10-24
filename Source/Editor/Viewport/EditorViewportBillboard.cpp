@@ -3,7 +3,6 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 
 #include "Core/Math/MatrixMath.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorProfile.h"
@@ -12,6 +11,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -97,10 +97,13 @@ namespace sw::editor
                 uint32            _codePoint{ 0 };
             };
 
-            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<DrawnGlyph>> s_drawnListOwner{};
+            /** @brief 위 목록을 담은 상태입니다. 에디터 범위의 상태 저장소가 소유한다(UI 스레드 하나만 쓴다). */
+            struct DrawnState
+            {
+                vector<DrawnGlyph> _list;
+            };
 
-            static vector<DrawnGlyph>& getDrawnList() { return *s_drawnListOwner.getOrCreate(); }
+            static vector<DrawnGlyph>& getDrawnList() { return getEditorState<DrawnState>()._list; }
 
             /** @brief 한 글자짜리 UTF-8 글의 코드 포인트입니다. 두 글자 이상이면 0 입니다. */
             static uint32 decodeSingleGlyph( const utf8* pGlyph )

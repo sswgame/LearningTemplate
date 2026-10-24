@@ -3,7 +3,6 @@
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 
 #include "Core/Container/GameObjectHandle.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorColor.h"
@@ -33,9 +32,6 @@ namespace sw::editor
     {
         struct EditorColliderHandleToolInternal
         {
-            /** @brief 프레임마다 지우고 다시 채우는 손잡이 버퍼의 소유자입니다(UI 스레드 하나만 쓴다) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<ColliderHandle>> s_handleBufferOwner{};
-
             /** @brief 손잡이 사각형의 반 변(픽셀)입니다. 마우스가 올라오면 키운다. */
             static constexpr float32 kHandleHalfSize = 4.0f;
             /** @brief 손잡이를 집을 수 있는 마우스 거리(픽셀)입니다. */
@@ -43,15 +39,16 @@ namespace sw::editor
 
             struct State
             {
-                GameObjectHandle _object{};
-                ObjectSnapshot   _undoBefore{};
-                ColliderHandle   _active{};
-                bool             _bDragging{ false };
-                bool             _bChanged{ false };
-                bool             _bCapturing{ false };
-                int32            _frame{ -1 };
-                uint32           _commitCount{ 0 };
-                uint32           _drawnHandleCount{ 0 };
+                GameObjectHandle       _object{};
+                ObjectSnapshot         _undoBefore{};
+                ColliderHandle         _active{};
+                vector<ColliderHandle> _listHandle{}; ///< 프레임마다 지우고 다시 채우는 손잡이 재사용 버퍼(UI 스레드 하나만 쓴다)
+                bool                   _bDragging{ false };
+                bool                   _bChanged{ false };
+                bool                   _bCapturing{ false };
+                int32                  _frame{ -1 };
+                uint32                 _commitCount{ 0 };
+                uint32                 _drawnHandleCount{ 0 };
             };
 
             /** @brief 도구의 끌기 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
@@ -176,14 +173,12 @@ namespace sw::editor
             state._bChanged   = Internal::dragHandle( state, *pBody, args, scale ) || state._bChanged;
         }
 
-        vector<ColliderHandle>* const pListHandle = Internal::s_handleBufferOwner.getOrCreate(); // 프레임마다 지우고 다시 채우는 재사용 버퍼다
-        if ( pListHandle == nullptr )
-            return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-        pListHandle->clear();
+        vector<ColliderHandle>& listHandle = state._listHandle;
+        listHandle.clear();
         const vector<PhysicsShapeDesc3D>& listShape = pBody->getShapes();
         for ( uint32 shapeIndex = 0; shapeIndex < listShape.size(); ++shapeIndex )
         {
-            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, *pListHandle );
+            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, listHandle );
         }
 
         const ImVec2 mouse        = ImGui::GetMousePos();
@@ -191,7 +186,7 @@ namespace sw::editor
                                   mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
         const ColliderHandle* pHovered        = nullptr;
         float32               hoveredDistance = Internal::kPickRadius;
-        for ( const ColliderHandle& handle : *pListHandle )
+        for ( const ColliderHandle& handle : listHandle )
         {
             ImVec2 screen;
             if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._position, args._canvasPos, args._canvasSize, screen ) == false )

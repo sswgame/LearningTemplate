@@ -10,11 +10,11 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
@@ -36,10 +36,13 @@ namespace sw::editor
                 uint32                _ticket{ 0 };
             };
 
-            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<PendingCapture>> s_pendingOwner{};
+            /** @brief 위 목록을 담은 상태입니다. 에디터 범위의 상태 저장소가 소유한다 — 에디터가 사라지면 요청 번호도 함께 사라진다. */
+            struct PendingState
+            {
+                vector<PendingCapture> _list;
+            };
 
-            static vector<PendingCapture>& pendingCaptures() { return *s_pendingOwner.getOrCreate(); }
+            static vector<PendingCapture>& pendingCaptures() { return getEditorState<PendingState>()._list; }
 
             static PendingCapture* findPending( const AutomationStep& step )
             {
