@@ -51,10 +51,8 @@ namespace sw
             void add( const LocalStoreBackend& backend )
             {
                 std::scoped_lock<mutex>  lock{ _mutex };
-                const RegistrationResult result = _registeredBackend.add( &backend, backend._pName );
+                const RegistrationResult result = _registeredBackend.addLogged( &backend, "Local store backend", backend._pName );
                 SW_ASSERT( result == RegistrationResult::Added );
-                if ( result != RegistrationResult::Added )
-                    SW_LOG_ERROR( "Local store backend '%#' was not registered (the name is empty, built in, or already registered by another module) - the second one is ignored", backend._pName );
             }
 
             void remove( const LocalStoreBackend& backend )
@@ -97,8 +95,8 @@ namespace sw
                 , _fileBackend{ LocalStoreFactory::kFileBackendName, &LocalStoreFactoryInternal::createFileStorage }
                 , _memoryBackend{ LocalStoreFactory::kMemoryBackendName, &LocalStoreFactoryInternal::createMemoryStorage }
             {
-                (void)_registeredBackend.add( &_fileBackend, _fileBackend._pName );
-                (void)_registeredBackend.add( &_memoryBackend, _memoryBackend._pName );
+                (void)_registeredBackend.addLogged( &_fileBackend, "Local store backend", _fileBackend._pName );
+                (void)_registeredBackend.addLogged( &_memoryBackend, "Local store backend", _memoryBackend._pName );
             }
 
             mutable mutex                             _mutex;

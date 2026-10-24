@@ -92,7 +92,7 @@ namespace sw
 
     void UIBindingConverterRegistry::registerConverter( const UIBindingConverter& converter )
     {
-        _registry.addOrReplace( converter._name, converter );
+        _registry.addOrReplace( converter._name, converter, "UI binding converter" );
     }
 
     const UIBindingConverter* UIBindingConverterRegistry::findConverter( const hashed_string& name ) const

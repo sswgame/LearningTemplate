@@ -29,12 +29,7 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.add( pEntry, pEntry->_pName );
-        }
-        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
-        {
-            SW_LOG_ERROR( "Behavior task '%#' is already registered - the second registration is ignored", pEntry->_pName );
-            return false;
+            result = _registration.addLogged( pEntry, "Behavior task", pEntry->_pName );
         }
         return result == RegistrationResult::Added;
     }

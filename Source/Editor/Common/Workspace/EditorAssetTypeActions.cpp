@@ -57,8 +57,7 @@ namespace sw::editor
             SW_LOG_ERROR( "Asset type actions registered for an invalid kind (%#)", static_cast<uint32>( actions.getKind() ) );
             return;
         }
-        if ( EditorAssetTypeActionsInternal::getList().add( &actions, pKey ) == RegistrationResult::DuplicateName )
-            SW_LOG_ERROR( "Asset type actions for kind %# are already registered - keeping the first", static_cast<uint32>( actions.getKind() ) );
+        (void)EditorAssetTypeActionsInternal::getList().addLogged( &actions, "Asset type actions", pKey );
     }
 
     void EditorAssetTypeActionsRegistry::unregisterActions( const IEditorAssetTypeActions& actions )

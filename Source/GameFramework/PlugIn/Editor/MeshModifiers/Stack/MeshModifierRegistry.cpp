@@ -88,9 +88,7 @@ namespace sw::editor
 
     void MeshModifierRegistry::add( MeshModifierRegistration* pRegistration )
     {
-        const RegistrationResult result = MeshModifierRegistryInternal::getList().add( pRegistration, pRegistration->_pID );
-        if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_ERROR( "Mesh modifier id '%#' is registered twice - the first registration is kept", pRegistration->_pID );
+        (void)MeshModifierRegistryInternal::getList().addLogged( pRegistration, "Mesh modifier id", pRegistration->_pID );
     }
 
     void MeshModifierRegistry::remove( const MeshModifierRegistration* pRegistration )

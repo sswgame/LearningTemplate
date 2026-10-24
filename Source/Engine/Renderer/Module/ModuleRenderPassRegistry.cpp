@@ -11,11 +11,8 @@ namespace sw
     bool ModuleRenderPassRegistry::registerPass( const hashed_string& modulePass )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _registryPass.add( modulePass, vector<Constant>{} ) == false )
-        {
-            SW_LOG_ERROR( "Module render pass '%#' cannot be registered: the name is empty or already registered by another module", modulePass.c_str() );
+        if ( _registryPass.addLogged( modulePass, vector<Constant>{}, "Module render pass" ) == false )
             return false;
-        }
         _uniqueMissingLogged.erase( modulePass );
         return true;
     }

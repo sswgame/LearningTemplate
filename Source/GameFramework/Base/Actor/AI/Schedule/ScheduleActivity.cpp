@@ -18,7 +18,7 @@ namespace sw
 
     bool ScheduleActivityRegistry::registerActivity( const ScheduleActivityDef& def )
     {
-        return _registry.add( def._name, def );
+        return _registry.addLogged( def._name, def, "Schedule activity" );
     }
 
     const ScheduleActivityDef* ScheduleActivityRegistry::findActivity( const hashed_string& name ) const

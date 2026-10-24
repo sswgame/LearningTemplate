@@ -179,11 +179,9 @@ namespace sw
         if ( pCache == nullptr )
             return;
         // 이름은 **지금** 복사해 둔다(`RegistrationList`). 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
-        const utf8*              pKindName = pCache->getAssetKindName();
-        const string_view        kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
-        const RegistrationResult result    = _registeredAssetCache.add( pCache, kindName );
-        if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_ERROR( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
+        const utf8*       pKindName = pCache->getAssetKindName();
+        const string_view kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
+        (void)_registeredAssetCache.addLogged( pCache, "Asset cache kind", kindName );
     }
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const

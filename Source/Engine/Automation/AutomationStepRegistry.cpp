@@ -48,12 +48,7 @@ namespace sw
         const bool bInvalidStepRegistration = pRegistration == nullptr || pRegistration->_pKind == nullptr || ( pRegistration->_pRun == nullptr && pRegistration->_pPrepare == nullptr );
         if ( bInvalidStepRegistration )
             return false;
-        if ( AutomationStepRegistryInternal::getRegistrations().add( pRegistration, pRegistration->_pKind ) != RegistrationResult::Added )
-        {
-            SW_LOG_ERROR( "Automation step <%#> is already defined - the second one is ignored", pRegistration->_pKind );
-            return false;
-        }
-        return true;
+        return AutomationStepRegistryInternal::getRegistrations().addLogged( pRegistration, "Automation step", pRegistration->_pKind ) == RegistrationResult::Added;
     }
 
     void AutomationStepRegistry::unregisterStep( const AutomationStepRegistration* pRegistration )
@@ -71,12 +66,7 @@ namespace sw
         const bool bInvalidBlockerRegistration = pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pIsBlocking == nullptr;
         if ( bInvalidBlockerRegistration )
             return false;
-        if ( AutomationStepRegistryInternal::getBlockers().add( pBlocker, pBlocker->_pName ) != RegistrationResult::Added )
-        {
-            SW_LOG_ERROR( "Automation blocker <%#> is already defined - the second one is ignored", pBlocker->_pName );
-            return false;
-        }
-        return true;
+        return AutomationStepRegistryInternal::getBlockers().addLogged( pBlocker, "Automation blocker", pBlocker->_pName ) == RegistrationResult::Added;
     }
 
     void AutomationStepRegistry::unregisterBlocker( const AutomationBlocker* pBlocker )

@@ -352,7 +352,7 @@ namespace sw
         if ( fitOperator == nullptr )
             return false;
         const hashed_string name = fitOperator->getName();
-        return _registry.add( name, std::move( fitOperator ) );
+        return _registry.addLogged( name, std::move( fitOperator ), "Fit operator" );
     }
 
     const IFitOperator* FitOperatorRegistry::findOperator( const hashed_string& name ) const

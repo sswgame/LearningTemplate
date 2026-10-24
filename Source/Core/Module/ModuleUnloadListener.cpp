@@ -41,11 +41,11 @@ namespace sw
             ModuleUnloadListenerList& list = getModuleUnloadListenerList();
             if ( isWalkingThread( list ) )
             {
-                (void)list._registeredListener.add( pListener ); // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
+                (void)list._registeredListener.addLogged( pListener, "Module unload listener" ); // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
                 return;
             }
             std::scoped_lock<mutex> lock{ list._mutex };
-            (void)list._registeredListener.add( pListener ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
+            (void)list._registeredListener.addLogged( pListener, "Module unload listener" ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
         }
 
         void removeListener( IModuleUnloadListener* pListener )

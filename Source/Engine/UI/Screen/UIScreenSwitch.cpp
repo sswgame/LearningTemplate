@@ -27,12 +27,7 @@ namespace sw
         const bool bInvalidRegistration = pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr;
         if ( bInvalidRegistration )
             return false;
-        if ( getScreenSwitchRegistrations().add( pRegistration, pRegistration->_pName, pRegistration->_order ) != RegistrationResult::Added )
-        {
-            SW_LOG_ERROR( "UI screen switch '%#' is registered twice - the second one is ignored", pRegistration->_pName );
-            return false;
-        }
-        return true;
+        return getScreenSwitchRegistrations().addLogged( pRegistration, "UI screen switch", pRegistration->_pName, pRegistration->_order ) == RegistrationResult::Added;
     }
 
     void UIScreenSwitches::unregisterSwitch( const UIScreenSwitchRegistration* pRegistration )

@@ -725,7 +725,7 @@ namespace sw
         const bool bInvalidKind  = bTooManyPorts || bTooManySlots || kind._pStep == nullptr;
         if ( bInvalidKind )
             return false;
-        return _registry.add( kind._name, kind );
+        return _registry.addLogged( kind._name, kind, "Gimmick node kind" );
     }
 
     const GimmickNodeKind* GimmickNodeRegistry::findKind( const hashed_string& name ) const

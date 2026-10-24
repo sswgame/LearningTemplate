@@ -36,12 +36,7 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.add( pRegistration, pRegistration->_pName );
-        }
-        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
-        {
-            SW_LOG_WARNING( "Dev command '%#' is already registered - the second registration is ignored", pRegistration->_pName );
-            return false;
+            result = _registration.addLogged( pRegistration, "Dev command", pRegistration->_pName );
         }
         return result == RegistrationResult::Added;
     }

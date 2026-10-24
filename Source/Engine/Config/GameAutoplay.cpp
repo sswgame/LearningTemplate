@@ -36,9 +36,7 @@ namespace sw
         const bool bInvalidAutoplayRegistration = pRegistration == nullptr || pRegistration->_pValue == nullptr || pRegistration->_pVariableName == nullptr;
         if ( bInvalidAutoplayRegistration )
             return;
-        const RegistrationResult result = getRegistrations().add( pRegistration, pRegistration->_pVariableName );
-        if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_ERROR( "Game autoplay '%#' is registered twice - the second one is ignored", pRegistration->_pVariableName );
+        (void)getRegistrations().addLogged( pRegistration, "Game autoplay", pRegistration->_pVariableName );
     }
 
     void GameAutoplay::unregisterAutoplay( const GameAutoplayRegistration* pRegistration )

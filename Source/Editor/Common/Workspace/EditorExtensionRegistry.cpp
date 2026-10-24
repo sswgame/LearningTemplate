@@ -32,33 +32,10 @@ namespace sw::editor
     bool EditorExtensionRegistrationList::addRegistration( const EditorExtensionRegistration& registration )
     {
         const string_view        id     = ( registration._pID != nullptr ) ? string_view{ registration._pID } : string_view{};
-        const RegistrationResult result = _registered.add( &registration, id, registration._order );
-        switch ( result )
-        {
-            case RegistrationResult::Added:
-            {
-                ++_generation;
-                return true;
-            }
-            case RegistrationResult::AlreadyPresent:
-            {
-                return true;
-            }
-            case RegistrationResult::EmptyName:
-            {
-                SW_LOG_ERROR( "Editor %# registered with an empty id - ignored", _pKindName );
-                return false;
-            }
-            case RegistrationResult::DuplicateName:
-            {
-                SW_LOG_ERROR( "Editor %# '%#' is already registered - keeping the first", _pKindName, id );
-                return false;
-            }
-            case RegistrationResult::NullItem:
-            {
-                return false;
-            }
-        }
+        const RegistrationResult result = _registered.addLogged( &registration, _pKindName, id, registration._order );
+        if ( result == RegistrationResult::Added )
+            ++_generation;
+        return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 
     void EditorExtensionRegistrationList::removeRegistration( const EditorExtensionRegistration& registration )

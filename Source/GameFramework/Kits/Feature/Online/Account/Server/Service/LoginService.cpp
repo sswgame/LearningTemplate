@@ -344,12 +344,7 @@ namespace sw
             SW_LOG_ERROR( "platform login provider has no valid name" );
             return false;
         }
-        if ( _registeredPlatformProvider.add( pProvider, pProvider->getName() ) != RegistrationResult::Added )
-        {
-            SW_LOG_ERROR( "platform login provider '%#' is already registered", pProvider->getName() );
-            return false;
-        }
-        return true;
+        return _registeredPlatformProvider.addLogged( pProvider, "Platform login provider", pProvider->getName() ) == RegistrationResult::Added;
     }
 
     void LoginService::update( int64 nowMs )
