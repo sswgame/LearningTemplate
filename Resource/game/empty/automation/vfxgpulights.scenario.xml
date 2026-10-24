@@ -17,7 +17,7 @@
 	<At frame="152"><DevCommand line="teleport Effect 0 -200 2"/></At>
 	<At frame="300"><Screenshot file="away.ppm" waitForSettle="false"/></At>
 	<At frame="310">
-		<ExpectImage file="lit.ppm" region="0.1,0.45,0.9,0.95" metric="differingFraction" reference="away.ppm" atLeast="0.02"/>
+		<ExpectImage file="lit.ppm" region="0.1,0.45,0.9,0.95" metric="differingFraction" reference="away.ppm" atLeast="0.02" provisional="첫 측정 전 어림값(밝은 격자 바닥 · away 300 프레임으로 바꾼 뒤, GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>

@@ -10,8 +10,8 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/skyshowcase.scene.xml"/>
 	<At frame="30"><Screenshot file="sky.ppm"/></At>
 	<At frame="40">
-		<ExpectImage file="sky.ppm" region="0.0,0.0,1.0,1.0" metric="meanRedMinusBlue" atMost="-0.02"/>
-		<ExpectImage file="sky.ppm" region="0.0,0.0,1.0,1.0" metric="meanLuma" atLeast="0.05"/>
+		<ExpectImage file="sky.ppm" region="0.0,0.0,1.0,1.0" metric="meanRedMinusBlue" atMost="-0.02" provisional="첫 측정 전 어림값(해 높이를 46도로 올린 뒤, GPU 확인 대기)"/>
+		<ExpectImage file="sky.ppm" region="0.0,0.0,1.0,1.0" metric="meanLuma" atLeast="0.05" provisional="첫 측정 전 어림값(해 높이를 46도로 올린 뒤, GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>
