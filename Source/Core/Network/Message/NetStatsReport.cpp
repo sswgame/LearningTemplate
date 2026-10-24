@@ -95,12 +95,62 @@ namespace sw
                     inoutText += to_string( static_cast<int32>( entry._kind ) ) + ":" + to_string( entry._messageCount ) + ":" + to_string( entry._byteCount );
                 }
             }
+
+            /** @brief ` replicas=<이름>:<수>:<바이트>,…` 를 붙입니다. 이름이 형식에 맞지 않는 항목은 싣지 않습니다(줄 구분자를 깨지 않게). */
+            static void appendReplicas( string& inoutText, const vector<NetStatsReplicaEntry>& listEntry )
+            {
+                inoutText += " replicas=";
+                bool bFirst = true;
+                for ( const NetStatsReplicaEntry& entry : listEntry )
+                {
+                    if ( NetStatsReport::isValidReplicaName( entry._name ) == false )
+                        continue;
+                    if ( bFirst == false )
+                        inoutText += ',';
+                    bFirst = false;
+                    inoutText += entry._name + ":" + to_string( entry._updateCount ) + ":" + to_string( entry._byteCount );
+                }
+            }
+
+            [[nodiscard]] static bool tryParseReplicas( string_view value, vector<NetStatsReplicaEntry>& outListEntry )
+            {
+                bool bValid = true;
+                StringUtil::forEachToken( value, ",", [&outListEntry, &bValid]( string_view token ) -> bool
+                {
+                    const size_t         firstColon  = token.find( ':' );
+                    const size_t         secondColon = firstColon == string_view::npos ? string_view::npos : token.find( ':', firstColon + 1 );
+                    NetStatsReplicaEntry entry;
+                    bValid = secondColon != string_view::npos && NetStatsReport::isValidReplicaName( token.substr( 0, firstColon ) ) &&
+                             StringUtil::parseUint64( token.substr( firstColon + 1, secondColon - firstColon - 1 ), entry._updateCount ) &&
+                             StringUtil::parseUint64( token.substr( secondColon + 1 ), entry._byteCount );
+                    if ( bValid )
+                    {
+                        entry._name = string( token.substr( 0, firstColon ) );
+                        outListEntry.push_back( std::move( entry ) );
+                    }
+                    return bValid;
+                } );
+                return bValid;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    bool NetStatsReport::isValidReplicaName( string_view name )
+    {
+        if ( name.empty() )
+            return false;
+        for ( const utf8 ch : name )
+        {
+            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.' || ch == '-';
+            if ( bAllowed == false )
+                return false;
+        }
+        return true;
+    }
+
     void NetStatsReport::populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally )
     {
         NetStatsReportInternal::populateEntries( receivedTally, _listKindEntry );
@@ -120,6 +170,7 @@ namespace sw
         NetStatsReportInternal::appendFloat( text, "lossPercent", _lossPercent );
         NetStatsReportInternal::appendKinds( text, "kinds", _listKindEntry );
         NetStatsReportInternal::appendKinds( text, "sentKinds", _listSentKindEntry );
+        NetStatsReportInternal::appendReplicas( text, _listReplicaEntry );
         return text;
     }
 
@@ -157,6 +208,8 @@ namespace sw
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listKindEntry );
             else if ( key == "sentKinds" )
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listSentKindEntry );
+            else if ( key == "replicas" )
+                bValid = NetStatsReportInternal::tryParseReplicas( value, parsed._listReplicaEntry );
             else
                 bValid = false; // 모르는 키는 다른 형식의 줄이다 — 건너뛰지 않고 거절한다
             return bValid;

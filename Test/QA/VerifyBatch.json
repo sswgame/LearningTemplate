@@ -476,8 +476,8 @@
     },
     {
       "id": "admin-gm-port-real", "title": "GM 포트 실제 확인 — 전용 서버(_adminServicePort 설정)와 에디터 GM 도구 연결, 실제 IOCP 두 리슨", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "AdminToolSessionTest.*,OnlineServiceHostTest.*",
-      "need_command": "전용 서버를 _adminServicePort 를 준 설정 파일로 띄워 에디터 GM 도구가 붙는 실행은 한 명령이 아직 없다(로그인 훅을 끼우는 계정 키트 쪽 도우미도 없다). 위 필터는 단위 확인까지다",
+      "filter": "AdminToolSessionTest.*,OnlineServiceHostTest.*,AccountGmLoginTest.*",
+      "need_command": "전용 서버를 _adminServicePort 를 준 설정 파일로 띄워 에디터 GM 도구가 붙는 실행은 한 명령이 아직 없다(두 키트를 이어 훅을 거는 조립 쪽 도구 실행 파일도 없다). 위 필터는 단위 확인까지다",
       "source": "docs/plans/OnlineKits.md I6", "result_doc": "docs/plans/OnlineKits.md I6"
     },
     {
@@ -551,6 +551,21 @@
       "id": "container-hash-tag-bench", "title": "구조 최적화 B ③ — 해시 태그 전 · 후(ContainerBenchTest.*) 번갈아 3 ~ 5회", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
       "need_command": "벤치 커밋과 해시 태그 커밋을 번갈아 지은 CoreTest 두 벌이 필요하다. CoreTest.exe --test_filter=ContainerBenchTest.* --load_suites=only",
       "source": "docs/plans/StructuralOptimization.md B 표", "result_doc": "docs/plans/StructuralOptimization.md B 표"
+    },
+    {
+      "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 허프만 없는 복호기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "HTTP2Test.*",
+      "source": "docs/plans/OnlineKits.md G4", "result_doc": "docs/plans/OnlineKits.md G4"
+    },
+    {
+      "id": "server-picker-tests", "title": "서버 목록 모델 테스트(화면 ServerPickerScreen 은 컴파일 확인과 시나리오 시설 뒤 화면 확인)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "ServerListModelTest.*",
+      "source": "docs/plans/OnlineKits.md U1", "result_doc": "docs/plans/OnlineKits.md U1"
+    },
+    {
+      "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "NetStatsReportTest.*",
+      "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
     }
   ]
 }

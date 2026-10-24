@@ -4775,7 +4775,7 @@
     "pack-build"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "`-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 목록을 남기지 않는다(패치를 적용할 수 없는 빌드). `-make-patch` 에서는 새 빌드 번호다"
+   "description": "`-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching=\"none\"` 기록을 남긴다(패치를 쓰지 않는 빌드). `-make-patch` 에서는 새 빌드 번호다"
   },
   {
    "name": "MAKE_PATCH",
