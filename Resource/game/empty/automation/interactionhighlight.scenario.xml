@@ -21,10 +21,10 @@
 	<At frame="100"><Screenshot file="sense.ppm" waitForSettle="false"/></At>
 
 	<At frame="110">
-		<ExpectImage file="outline.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atLeast="0.005"/>
-		<ExpectImage file="outline.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atMost="0.001"/>
-		<ExpectImage file="sense.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atLeast="0.005"/>
-		<ExpectImage file="sense.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atMost="0.001"/>
+		<ExpectImage file="outline.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atLeast="0.005" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
+		<ExpectImage file="outline.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atMost="0.001" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
+		<ExpectImage file="sense.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atLeast="0.005" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
+		<ExpectImage file="sense.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atMost="0.001" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>

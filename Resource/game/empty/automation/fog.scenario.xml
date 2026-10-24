@@ -11,8 +11,8 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
 	<At frame="30"><Screenshot file="fog.ppm"/></At>
 	<At frame="40">
-		<ExpectImage file="fog.ppm" region="0.2,0.3,0.8,0.4" metric="meanLuma" atLeast="0.30"/>
-		<ExpectImage file="fog.ppm" region="0.2,0.9,0.8,0.98" metric="meanLuma" atMost="0.25"/>
+		<ExpectImage file="fog.ppm" region="0.2,0.3,0.8,0.4" metric="meanLuma" atLeast="0.30" provisional="첫 측정 전 어림값(GPU 확인 대기)"/>
+		<ExpectImage file="fog.ppm" region="0.2,0.9,0.8,0.98" metric="meanLuma" atMost="0.25" provisional="첫 측정 전 어림값(GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>

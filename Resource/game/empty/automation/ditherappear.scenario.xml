@@ -21,11 +21,11 @@
 	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값): 다 보임 0.357(다른 화소 비율 0.9998 — 문턱 atLeast 0.9) · 1/4 0.088 · 1/2 0.197 · 3/4 0.288(비율 0.25 · 0.55 · 0.81 — 디더된 그림자가 뒤 단계를 조금 올린다),
 	     다 나타난 뒤와 처음 사진의 차 0. 구간 폭 ±0.035 는 이웃 단계와 겹치지 않는다(단조 증가). -->
 	<At frame="351">
-		<ExpectImage file="dither_end.ppm" region="0.35,0.2,0.65,0.7" metric="differingFraction" reference="dither_0.ppm" atLeast="0.9"/>
-		<ExpectImage file="dither_25.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.088" tolerance="0.035"/>
-		<ExpectImage file="dither_50.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.197" tolerance="0.035"/>
-		<ExpectImage file="dither_75.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.288" tolerance="0.035"/>
-		<ExpectImage file="dither_end.ppm" metric="differingFraction" reference="dither_full.ppm" atMost="0.001"/>
+		<ExpectImage file="dither_end.ppm" region="0.35,0.2,0.65,0.7" metric="differingFraction" reference="dither_0.ppm" atLeast="0.9" measured="2026-10-22 all:0.9998"/>
+		<ExpectImage file="dither_25.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.088" tolerance="0.035" measured="2026-10-22 all:0.088"/>
+		<ExpectImage file="dither_50.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.197" tolerance="0.035" measured="2026-10-22 all:0.197"/>
+		<ExpectImage file="dither_75.ppm" region="0.35,0.2,0.65,0.7" metric="differentFrom" reference="dither_0.ppm" near="0.288" tolerance="0.035" measured="2026-10-22 all:0.288"/>
+		<ExpectImage file="dither_end.ppm" metric="differingFraction" reference="dither_full.ppm" atMost="0.001" measured="2026-10-22 all:0"/>
 		<Pass/>
 	</At>
 </Scenario>

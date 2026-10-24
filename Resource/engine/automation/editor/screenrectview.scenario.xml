@@ -26,9 +26,9 @@
 	<At frame="145">
 		<!-- PiP 사각형(0.55,0.55,0.4,0.4) 안쪽은 큐브가 든 칸이라 기준과 화소가 많이 다르고(배경과 다른 화소 비율 약 0.65 — Release 캡처로 어림, 문턱은 그 절반 아래), 왼쪽 위와 PiP 바로 위는 PiP 가 없는 기준과 같다.
 		     사각형이 게임 뷰 RT 가 아닌 곳(백버퍼)에 그려지면 안쪽이 기준과 같고, 위아래가 뒤집히면(GL 원점) 오른쪽 위가 다르다. 문턱은 GPU 확인 대기 -->
-		<ExpectImage file="screenrectview.ppm" region="0.6,0.6,0.9,0.9" metric="differingFraction" reference="screenrectview_nopip.ppm" atLeast="0.3"/>
-		<ExpectImage file="screenrectview.ppm" region="0.05,0.05,0.45,0.45" metric="differingFraction" reference="screenrectview_nopip.ppm" atMost="0.001"/>
-		<ExpectImage file="screenrectview.ppm" region="0.6,0.05,0.9,0.45" metric="differingFraction" reference="screenrectview_nopip.ppm" atMost="0.001"/>
+		<ExpectImage file="screenrectview.ppm" region="0.6,0.6,0.9,0.9" metric="differingFraction" reference="screenrectview_nopip.ppm" atLeast="0.3" provisional="Release 캡처로 어림한 비율 약 0.65 의 절반 아래 - 문턱 GPU 확인 대기"/>
+		<ExpectImage file="screenrectview.ppm" region="0.05,0.05,0.45,0.45" metric="differingFraction" reference="screenrectview_nopip.ppm" atMost="0.001" provisional="PiP 밖은 기준과 같아야 한다 - 문턱 GPU 확인 대기"/>
+		<ExpectImage file="screenrectview.ppm" region="0.6,0.05,0.9,0.45" metric="differingFraction" reference="screenrectview_nopip.ppm" atMost="0.001" provisional="PiP 밖은 기준과 같아야 한다 - 문턱 GPU 확인 대기"/>
 	</At>
 	<!-- 다음 시나리오가 깨끗한 씬에서 시작하게 되돌린다 -->
 	<At frame="150"><DevCommand line="panel.focus scene_view"/></At>

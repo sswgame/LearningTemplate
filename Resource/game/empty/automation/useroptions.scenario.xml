@@ -35,10 +35,10 @@
 	<At frame="205"><Variable name="gv_colorVisionMode" value="0"/></At>
 
 	<At frame="215">
-		<ExpectImage file="scale.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05"/>
-		<ExpectImage file="distance.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.1"/>
-		<ExpectImage file="postlow.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.002"/>
-		<ExpectImage file="colorvision.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05"/>
+		<ExpectImage file="scale.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05" provisional="측정 전 추정(GPU 확인 대기)"/>
+		<ExpectImage file="distance.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.1" provisional="측정 전 추정(GPU 확인 대기)"/>
+		<ExpectImage file="postlow.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.002" provisional="측정 전 추정(GPU 확인 대기)"/>
+		<ExpectImage file="colorvision.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05" provisional="측정 전 추정(GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>

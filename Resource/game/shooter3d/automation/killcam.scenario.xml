@@ -8,7 +8,7 @@
 	<Launch variable="gv_cameraPreset" value="killcam"/>
 	<At frame="90"><Screenshot file="killcam.ppm"/></At>
 	<At frame="100">
-		<ExpectImage file="killcam.ppm" region="0,0,1,1" metric="meanLuma" atLeast="0.02"/>
+		<ExpectImage file="killcam.ppm" region="0,0,1,1" metric="meanLuma" atLeast="0.02" provisional="측정 전 추정 - 비어 있지 않은 그림의 평균 휘도(GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>
