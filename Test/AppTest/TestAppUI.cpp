@@ -60,12 +60,13 @@ namespace
         static constexpr const utf8* kOutputFolder = "Saved/Automation/engine.uidemo";
         /// 백엔드 사이 영역에서 다른 화소(`AutomationImageMetric::kDifferingMinDistance` 이상)의 비율 상한 — 영역 평균 색 차이는 글자 몇 개 ·
         /// 모서리 하나가 틀린 것을 영역 넓이로 나눠 묻으므로 화소를 센다. 2026-10 Release 네 백엔드 실측은 여섯 영역 모두 0 이다.
-        static constexpr float64     kMaxDifferingFraction = 0.001;
-        static constexpr float32     kEdgeTolerance        = 0.02f; ///< 백엔드 사이 가장자리 수 차(비율)
-        static constexpr float32     kEdgeThreshold        = 0.12f; ///< 이웃 휘도 차가 이보다 크면 가장자리 픽셀
-        static constexpr float32     kMsdfLumaTolerance    = 0.1f;  ///< MSDF 와 SDF 패널 평균 휘도의 상대 차 상한(글자가 사라지거나 번지면 벌어진다)
-        static constexpr float32     kMsdfEdgeTolerance    = 0.15f; ///< MSDF 와 SDF 패널 가장자리 수의 상대 차 상한
-        static constexpr const utf8* kArrRegionName[]      = { "DemoPanel", "Start", "RoundBox", "ClipBox", "NineSlice", "RtlSample" };
+        static constexpr float64 kMaxDifferingFraction = 0.001;
+        static constexpr float32 kEdgeTolerance        = 0.02f; ///< 백엔드 사이 가장자리 수 차(비율)
+        static constexpr float32 kEdgeThreshold        = 0.12f; ///< 이웃 휘도 차가 이보다 크면 가장자리 픽셀
+        // 아래 둘은 MSDF 케이스만 쓰고 그 케이스는 Shipping 에서 건너뛴다(배포본에 스위치가 없다).
+        [[maybe_unused]] static constexpr float32 kMsdfLumaTolerance = 0.1f;  ///< MSDF 와 SDF 패널 평균 휘도의 상대 차 상한(글자가 사라지거나 번지면 벌어진다)
+        [[maybe_unused]] static constexpr float32 kMsdfEdgeTolerance = 0.15f; ///< MSDF 와 SDF 패널 가장자리 수의 상대 차 상한
+        static constexpr const utf8*              kArrRegionName[]   = { "DemoPanel", "Start", "RoundBox", "ClipBox", "NineSlice", "RtlSample" };
 
         /**
          * @brief 레이아웃 덤프에서 코드 화면(`## (code)` — 견본 화면) 절의 위젯 이름 → 사각형을 읽어 그림 픽셀로 맞춥니다(루트 = 그림 크기).
@@ -341,10 +342,10 @@ SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
  */
 SW_TEST_CASE( AppUITest, MsdfGlyphsMatchSdfDemoScreen )
 {
-    using Internal = AppUITestInternal;
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_fontMsdfGlyphs 는 배포본에 등록되지 않는 테스트 스위치
 #else
+    using Internal                            = AppUITestInternal;
     #define SW_APP_UI_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
     constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_UI_BACKEND_SWITCH ) };
     #undef SW_APP_UI_BACKEND_SWITCH
