@@ -24,6 +24,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Character/CharacterIssue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -163,9 +164,9 @@ namespace sw
          */
         void applyOverride( const SocketSet& upper );
         /**
-         * @brief 부모 이름(본 또는 이 에셋의 가상 본)과 가상 본의 두 본이 @p bones 에 있는지 검사합니다. 없으면 오류 문장을 @p pOutError 에 추가하고 false 를 반환합니다.
+         * @brief 부모 이름(본 또는 이 에셋의 가상 본)과 가상 본의 두 본이 @p bones 에 있는지 검사합니다. 없으면 문제(종류 id 와 글)를 @p pOutIssues 에 추가하고 false 를 반환합니다.
          */
-        bool validateBones( const CharacterBoneArray& bones, string* pOutError ) const;
+        bool validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const;
         /**
          * @brief 항목의 유닛 공간 변환을 본 변환에서 계산합니다(부모 본, 가상 본, 루트).
          * @return 부모를 찾지 못하면 false 입니다.

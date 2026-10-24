@@ -299,7 +299,7 @@ namespace sw
             const bool bInvalidPartInput  = partInput._pGeometry == nullptr || partInput._pFitData == nullptr || partInput._pGeometry->isValid() == false;
             if ( bInvalidPartInput )
             {
-                outReport._listMessage.push_back( string( "part '" ) + partInput._name.c_str() + "' has no valid geometry or fit data" );
+                outReport.addMessage( "Character.FitPartInvalid", string( "part '" ) + partInput._name.c_str() + "' has no valid geometry or fit data" );
                 bValid = false;
                 continue;
             }
@@ -307,7 +307,7 @@ namespace sw
             part._pProfile            = tables.findProfile( partInput._pFitData->getProfile() );
             if ( pLayer == nullptr || part._pProfile == nullptr )
             {
-                outReport._listMessage.push_back( string( "part '" ) + partInput._name.c_str() + "' names a layer or profile the fit tables do not have" );
+                outReport.addMessage( "Character.FitPartProfileUnknown", string( "part '" ) + partInput._name.c_str() + "' names a layer or profile the fit tables do not have" );
                 bValid = false;
                 continue;
             }
@@ -391,7 +391,7 @@ namespace sw
         {
             if ( _operatorRegistry.findOperator( interaction._operator ) == nullptr )
             {
-                outResult._report._listMessage.push_back( string( "fit tables name unknown operator '" ) + interaction._operator.c_str() + "'" );
+                outResult._report.addMessage( "Character.FitSolveOperatorUnknown", string( "fit tables name unknown operator '" ) + interaction._operator.c_str() + "'" );
                 return false;
             }
         }

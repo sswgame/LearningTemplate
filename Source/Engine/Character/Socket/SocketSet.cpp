@@ -126,9 +126,9 @@ namespace sw
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
         {
-            string boneError;
-            if ( validateBones( *pBones, &boneError ) == false )
-                reader.addError( "Character.BoneUnknown", boneError );
+            CharacterIssueList boneIssues;
+            if ( validateBones( *pBones, &boneIssues ) == false )
+                reader.addIssues( boneIssues );
         }
         return reader.finish();
     }
@@ -143,9 +143,9 @@ namespace sw
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
         {
-            string boneError;
-            if ( validateBones( *pBones, &boneError ) == false )
-                reader.addError( "Character.BoneUnknown", boneError );
+            CharacterIssueList boneIssues;
+            if ( validateBones( *pBones, &boneIssues ) == false )
+                reader.addIssues( boneIssues );
         }
         return reader.finish();
     }
@@ -345,7 +345,7 @@ namespace sw
         }
     }
 
-    bool SocketSet::validateBones( const CharacterBoneArray& bones, string* pOutError ) const
+    bool SocketSet::validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const
     {
         bool bValid = true;
         for ( const VirtualBoneDef& virtualBone : _listVirtualBone )
@@ -355,12 +355,10 @@ namespace sw
             if ( bFromKnown && bToKnown )
                 continue;
             bValid = false;
-            if ( pOutError != nullptr )
+            if ( pOutIssues != nullptr )
             {
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += string( "virtual bone '" ) + virtualBone._name.c_str() + "' names a bone the skeleton does not have ('" +
-                              ( bFromKnown ? virtualBone._to.c_str() : virtualBone._from.c_str() ) + "')";
+                pOutIssues->add( "Character.VirtualBoneBoneUnknown", string( "virtual bone '" ) + virtualBone._name.c_str() + "' names a bone the skeleton does not have ('" +
+                                                                         ( bFromKnown ? virtualBone._to.c_str() : virtualBone._from.c_str() ) + "')" );
             }
         }
         for ( const SocketDef& socket : _listSocket )
@@ -369,12 +367,8 @@ namespace sw
             if ( bParentEmptyOrResolved )
                 continue;
             bValid = false;
-            if ( pOutError != nullptr )
-            {
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += string( "socket '" ) + socket._name.c_str() + "' has unknown parent bone '" + socket._parent.c_str() + "'";
-            }
+            if ( pOutIssues != nullptr )
+                pOutIssues->add( "Character.SocketParentBoneUnknown", string( "socket '" ) + socket._name.c_str() + "' has unknown parent bone '" + socket._parent.c_str() + "'" );
         }
         return bValid;
     }

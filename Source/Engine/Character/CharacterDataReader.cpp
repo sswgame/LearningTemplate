@@ -79,6 +79,14 @@ namespace sw
         _listError.push_back( { std::move( text ), pID } );
     }
 
+    void CharacterDataReader::addIssues( const CharacterIssueList& issues )
+    {
+        for ( const CharacterIssue& issue : issues.getIssues() )
+        {
+            addError( issue._pID, string_view( issue._text.c_str(), issue._text.size() ) );
+        }
+    }
+
     void CharacterDataReader::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount )
     {
         vector<const utf8*> listUnknown;

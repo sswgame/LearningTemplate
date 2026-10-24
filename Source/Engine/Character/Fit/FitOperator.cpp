@@ -312,7 +312,7 @@ namespace sw
                 message += "' and '";
                 message += state._listPart[pair._outerPart]._pInput->_name.view();
                 message += "' penetrate (rigid against rigid is not resolved automatically)";
-                state._pReport->_listMessage.push_back( std::move( message ) );
+                state._pReport->addMessage( "Character.FitRigidPenetration", std::move( message ) );
             }
 
         private:

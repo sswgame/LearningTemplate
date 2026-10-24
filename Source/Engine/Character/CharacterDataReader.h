@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Character/CharacterIssue.h"
+
 namespace sw
 {
     enum class XMLRootStatus : uint8;
@@ -47,6 +49,8 @@ namespace sw
         void addError( const utf8* pID, const XMLNode& node, string_view message );
         /** @brief id 가 붙은, 원소와 상관없는 오류 하나를 남깁니다(@p pID 는 위와 같다). */
         void addError( const utf8* pID, string_view message );
+        /** @brief 검사가 모은 문제(종류 id 와 글)를 오류로 옮깁니다. id 는 문제마다 검사가 정한 것이다. */
+        void addIssues( const CharacterIssueList& issues );
         /** @brief 테이블에 없는 속성마다 오류를 남깁니다. */
         template <size_t Count>
         void reportUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count] )

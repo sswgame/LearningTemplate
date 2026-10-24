@@ -280,7 +280,7 @@ SW_TEST_CASE( FitCheckSummaryTest, SummarizesCutsDeltasAndPenetrations )
     penetration._maxDepth    = 0.02f;
     penetration._listPoint.push_back( float3( 0.1f, 1.2f, 0.3f ) );
     result._report._listPenetration.push_back( penetration );
-    result._report._listMessage.push_back( "shirt: pushed out 2 vertices" );
+    result._report.addMessage( "Character.FitRigidPenetration", "shirt: pushed out 2 vertices" );
 
     const FitCheckSummary summary = FitCheckSummary::fromResult( result );
     SW_ASSERT_EQUAL( size_t( 2 ), summary._listPart.size() );
