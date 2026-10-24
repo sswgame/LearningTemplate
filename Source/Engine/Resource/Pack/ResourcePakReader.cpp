@@ -22,6 +22,17 @@ namespace sw
     namespace
     {
         SW_LOG_CALLER( "ResourcePakReader" );
+
+        /** @brief 폴더 색인의 키입니다 — 아스키 소문자로 접습니다(폴더 비교가 대소문자를 무시하며 `StringUtil::startsWith` 와 같은 접기입니다). */
+        string makeFolderKey( string_view folder )
+        {
+            string key( folder.data(), folder.size() );
+            for ( utf8& ch : key )
+            {
+                ch = StringUtil::toLowerChar( ch );
+            }
+            return key;
+        }
     } // namespace
 } // namespace sw
 
@@ -33,6 +44,7 @@ namespace sw
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
+        , _mapFolderEntry{}
         , _stringPoolBytes{}
     {
     }
@@ -48,6 +60,7 @@ namespace sw
         , _packFilePath{}
         , _header{}
         , _mapEntry{}
+        , _mapFolderEntry{}
         , _stringPoolBytes{}
     {
         std::scoped_lock<mutex> lock( other._fileMutex );
@@ -71,6 +84,7 @@ namespace sw
         _packFilePath    = std::move( other._packFilePath );
         _header          = other._header;
         _mapEntry        = std::move( other._mapEntry );
+        _mapFolderEntry  = std::move( other._mapFolderEntry );
         _stringPoolBytes = std::move( other._stringPoolBytes );
         other._file.close();
     }
@@ -159,6 +173,7 @@ namespace sw
         _packFilePath.clear();
         _header = PackHeader{};
         _mapEntry.clear();
+        _mapFolderEntry.clear();
         _stringPoolBytes.clear();
     }
 
@@ -207,20 +222,36 @@ namespace sw
 
     void ResourcePakReader::collectFolderEntries( string_view folder, vector<string>& outListPath ) const
     {
+        // 폴더 색인(`populateFolderIndex`)에서 그 폴더의 항목만 읽는다 — 팩 전체를 잠금 안에서 훑지 않는다(항목 N 개에 호출마다 O(N) 이었다).
         std::scoped_lock<mutex> lock( _fileMutex );
+        const auto              itFolder = _mapFolderEntry.find( makeFolderKey( folder ) );
+        if ( itFolder == _mapFolderEntry.end() )
+            return;
+        outListPath.reserve( outListPath.size() + itFolder->second.size() );
+        for ( const uint64 pathHash : itFolder->second )
+        {
+            const auto itEntry = _mapEntry.find( pathHash );
+            if ( itEntry != _mapEntry.end() )
+                outListPath.emplace_back( itEntry->second._relativePath );
+        }
+    }
+
+    void ResourcePakReader::populateFolderIndex()
+    {
+        _mapFolderEntry.clear();
         for ( const auto& mapItem : _mapEntry )
         {
             const string_view path( mapItem.second._relativePath );
-            size_t            nameStart = 0;
-            if ( folder.empty() == false )
+            // 폴더는 마지막 '/' 앞까지다. '/' 가 없으면 팩 맨 위, 맨 앞 '/' 이거나 '/' 로 끝나는 경로(폴더 이름이 비거나 파일 이름이 빔)는 어느 폴더의 항목도 아니다.
+            const size_t slash = path.rfind( '/' );
+            if ( slash == string_view::npos )
             {
-                const bool bUnderFolder = path.size() > folder.size() + 1 && path[folder.size()] == '/' && StringUtil::startsWith( path, folder, true );
-                if ( bUnderFolder == false )
-                    continue;
-                nameStart = folder.size() + 1;
+                _mapFolderEntry[string{}].push_back( mapItem.first );
+                continue;
             }
-            if ( path.find( '/', nameStart ) == string_view::npos )
-                outListPath.emplace_back( path );
+            const bool bHasFolderAndName = 0 < slash && slash + 1 < path.size();
+            if ( bHasFolderAndName )
+                _mapFolderEntry[makeFolderKey( path.substr( 0, slash ) )].push_back( mapItem.first );
         }
     }
 
@@ -436,6 +467,7 @@ namespace sw
             _mapEntry.insert_or_assign( diskEntry._pathHash, std::move( memEntry ) );
         }
 
+        populateFolderIndex();
         return true;
     }
 

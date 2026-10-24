@@ -5,11 +5,13 @@
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -29,6 +31,7 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <thread>
@@ -1402,6 +1405,79 @@ SW_TEST_CASE( ResourcePakTest, WriterLayoutMatchesTheReader )
     reader.collectFolderEntries( "text", listPath );
     SW_ASSERT_EQUAL( size_t( 1 ), listPath.size() );
     SW_EXPECT_EQUAL( sw::string( "text/Long.txt" ), listPath[0] );
+    reader.close();
+}
+
+/**
+ * @brief [ResourcePakTest] 폴더 나열은 팩 전체를 훑던 옛 판정과 같은 항목을 낸다 — 대소문자 무시 · 바로 아래 항목만 · 하위 폴더 제외 (항목 약 1 만 개)
+ * @details 폴더 색인(`populateFolderIndex`)이 옛 판정(`폴더 + '/'` 로 시작하고 그 뒤에 '/' 가 없는 경로)과 같은 답을 내야 한다. 팩 맨 위, 대소문자만 다른 폴더 질의,
+ *          하위 폴더만 든 폴더, 끝 '/' 가 붙은 질의, 폴더가 아닌 질의를 기준 판정과 견준다. 순서는 정하지 않으므로 정렬해서 비교한다.
+ */
+SW_TEST_CASE( ResourcePakTest, FolderListingMatchesAFullScanOfThePack )
+{
+    const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_folder_listing.pack" );
+
+    sw::vector<sw::pair<sw::string, sw::string>> listFile;
+    sw::vector<sw::string>                       listAllPath;
+    sw::fixed_string<sw::constant::kMaxBuffer64> nameBuf{};
+    constexpr uint32                             kFolderCount   = 50;
+    constexpr uint32                             kFilePerFolder = 200;
+    for ( uint32 fileIndex = 0; fileIndex < 40; ++fileIndex )
+    {
+        sw::formatstring( nameBuf.data(), nameBuf.capacity(), "Root%#.txt", fileIndex );
+        listAllPath.push_back( sw::string( nameBuf.c_str() ) );
+    }
+    for ( uint32 folderIndex = 0; folderIndex < kFolderCount; ++folderIndex )
+    {
+        for ( uint32 fileIndex = 0; fileIndex < kFilePerFolder; ++fileIndex )
+        {
+            sw::formatstring( nameBuf.data(), nameBuf.capacity(), "Data/Dir%#/File%#.bin", folderIndex, fileIndex );
+            listAllPath.push_back( sw::string( nameBuf.c_str() ) );
+        }
+    }
+    for ( uint32 fileIndex = 0; fileIndex < 30; ++fileIndex )
+    {
+        sw::formatstring( nameBuf.data(), nameBuf.capacity(), "data/dir0/sub/Deep%#.bin", fileIndex );
+        listAllPath.push_back( sw::string( nameBuf.c_str() ) );
+    }
+    for ( const sw::string& path : listAllPath )
+    {
+        listFile.push_back( sw::pair<sw::string, sw::string>( path, "x" ) );
+    }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
+
+    sw::ResourcePakReader reader;
+    SW_ASSERT_TRUE( reader.open( packPath ) );
+    const sw::vector<sw::string> listQuery  = { "", "Data/Dir3", "data/dir3", "DATA/DIR49", "data/dir0", "data/dir0/sub", "data/dir0/", "data", "missing", "Root0.txt" };
+    bool                         bAllMatch  = true;
+    uint32                       foundTotal = 0;
+    for ( const sw::string& query : listQuery )
+    {
+        // 기준: 팩에 담은 경로 전체를 옛 판정으로 훑는다.
+        sw::vector<sw::string> listExpected;
+        for ( const sw::string& path : listAllPath )
+        {
+            size_t nameStart = 0;
+            if ( query.empty() == false )
+            {
+                const bool bUnderFolder = path.size() > query.size() + 1 && path[query.size()] == '/' && sw::StringUtil::startsWith( path, query, true );
+                if ( bUnderFolder == false )
+                    continue;
+                nameStart = query.size() + 1;
+            }
+            if ( path.find( '/', nameStart ) == sw::string::npos )
+                listExpected.push_back( path );
+        }
+        sw::vector<sw::string> listActual;
+        reader.collectFolderEntries( query, listActual );
+        std::sort( listExpected.begin(), listExpected.end() );
+        std::sort( listActual.begin(), listActual.end() );
+        bAllMatch = bAllMatch && listExpected == listActual;
+        foundTotal += static_cast<uint32>( listActual.size() );
+    }
+    SW_EXPECT_TRUE( bAllMatch );
+    // 질의가 실제로 항목을 찾았는지(빈 답끼리 같은 것이 아닌지) 본다: 맨 위 40 + 폴더 200 개짜리 넷 + 하위 폴더 30 = 870(끝 '/' 가 붙은 질의 · 폴더가 아닌 질의 · 없는 폴더는 0).
+    SW_EXPECT_EQUAL( 40u + kFilePerFolder * 4u + 30u, foundTotal );
     reader.close();
 }
 
