@@ -633,6 +633,41 @@
       "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "NetStatsReportTest.*",
       "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
+    },
+    {
+      "id": "world-streaming-tests", "title": "WorldStreamingTest 필터(격자 · 판 2 설정 왕복 · 셀 쪼개기 · 셀 따라 올리고 내리기 · 셀 미리보기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "WorldStreamingTest.*",
+      "source": "docs/plans/WorldStreaming.md 남은 일", "result_doc": "docs/plans/WorldStreaming.md"
+    },
+    {
+      "id": "world-streaming-net-tests", "title": "NetMMOTest 필터(관찰자 자리가 스트리밍 원점 · 나가는 반경 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NetMMOTest.*",
+      "source": "docs/plans/WorldStreaming.md W5", "result_doc": "docs/plans/WorldStreaming.md"
+    },
+    {
+      "id": "world-streaming-hitch-measure", "title": "WildWest 초원 스트리밍 히치(셀이 오르내리는 프레임의 GT.Scene.tick.destroyPost 최대값, 정점 풀 repack 0)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "셀을 가로질러 걷는 WildWest 시나리오와 perf-compare 케이스가 없다(카메라를 prairie 한 끝에서 다른 끝으로 옮기는 시나리오를 먼저 만든다)",
+      "source": "docs/plans/WorldStreaming.md W7", "result_doc": "docs/plans/WorldStreaming.md · docs/08_Verification.md"
+    },
+    {
+      "id": "world-cells-panel-capture", "title": "World Cells 창 캡처(ux-reviewer)와 uiaudit 시나리오에 창이 잡히는지, 문구 열 개 --check-text", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "사람 눈(ux-reviewer)이 보는 캡처다 — uiaudit 시나리오에 창을 더하는 일과 --check-text 는 한 명령으로 묶이지 않았다",
+      "source": "docs/plans/WorldStreaming.md W6", "result_doc": "docs/plans/WorldStreaming.md"
+    },
+    {
+      "id": "physics-cloth-character-scene", "title": "천 옆을 속 바디를 켠 캐릭터가 지나갈 때 천이 밀리는지(화면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "천과 캐릭터가 함께 있는 장면과 그 장면을 걷는 시나리오가 없다 — 화면(스크린샷)을 사람이 본다",
+      "source": "docs/plans/PhysicsExtensions.md P3", "result_doc": "docs/plans/PhysicsExtensions.md"
+    },
+    {
+      "id": "physics-powered-ragdoll-scene", "title": "_poweredMaxTorque 를 올린 래그돌이 팔다리를 애니메이션 자세로 끄는지, 일어서기에서 모터가 꺼지는지(화면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "파워드 래그돌 장면과 시나리오가 없다 — 쓰러지는 장면을 사람이 본다",
+      "source": "docs/plans/PhysicsExtensions.md P4", "result_doc": "docs/plans/PhysicsExtensions.md"
+    },
+    {
+      "id": "wayland-ci-job", "title": "CI 리눅스 Wayland 잡(Build Linux Debug Wayland) 첫 실행 — 구성 · 빌드 · weston headless 스모크", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "push 뒤 CI 리눅스 잡이 돈다(py -3 -m Scripts ci-jobs --summary) — 로컬 WSL 빌드는 하지 않는다(결정 기록 5-12)",
+      "source": "docs/plans/WaylandWindowLayer.md W2", "result_doc": "docs/plans/WaylandWindowLayer.md"
     }
   ]
 }

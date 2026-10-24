@@ -1,6 +1,8 @@
 # 월드 스트리밍(D1-7) — 설계와 구현 단위
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-7 · 진행: 6/7
+> 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: D1-7 · 진행: 7/7
+
+**남은 확인(통합에서 확인):** 매니페스트 id `world-streaming-tests`, `world-streaming-net-tests`, `world-streaming-hitch-measure`, `world-cells-panel-capture`, `cook-scenes-shipping`(3절 남은 일). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 결정의 정본은 [결정 기록](../09_Decisions.md) 5-12 의 `D1-7` 행이다. 이 문서는 그 결정을 구현 단위로 나누고, 단위마다 무엇을 하고 무엇으로 확인하는지 적는다.
 `design-reviewer` 검토는 아직 받지 않았다(통합 때 받는다).
@@ -52,13 +54,12 @@ VAT 풀(`GPUVertexAnimationPool` 계열)도 같은 "통째로 다시" 모양인�
 | W6 | 에디터: 격자 오버레이(`gv_worldCellDebugDraw`), 개발 명령(`world.cells`), World Cells 창(`Editor/Panels/Scene/WorldCellsPanel` — 쿠커와 같은 나눔 `SceneCooker::previewStreamingCells` 으로 셀마다 엔티티 수와 게임 카메라에서의 올림 · 유지 · 내림, 셀을 넘는 참조 목록, 줄을 누르면 그 오브젝트를 고른다) | `WorldStreamingTest.CellPreviewPointsAtSceneObjects`, `ux-reviewer` 캡처 | 들어감(빌드 · 캡처 미확인) |
 | W7 | WildWest 초원(`prairie.scene.xml`)을 스트리밍 씬으로(셀 16 m, 반경 32 m, 여유 8 m, 프레임당 2 셀, 카메라 · 해 · 땅 · 기수 · 말 · AI · 목장은 늘 올라 있음). 남은 것 — Release 히치 측정 | 측정 기록 | 데이터만 |
 
-남은 일:
-- 빌드와 테스트 — `WorldStreamingTest` 다섯 개, 씬 픽스처를 판 2 로 고친 `SceneTest` · `SceneAsyncTest` · `PrefabOverridesTest` 등, 리플렉션 헤더가 늘어 구성을 다시 돌린다.
-- 쿠킹(`App.exe --cook-scenes`)으로 WildWest 초원이 셀로 나뉘는지(셀을 넘는 참조가 없는지), Shipping 에서 셀이 올라오는지 확인한다.
-- 측정: Release 로 WildWest 를 돌리며 셀이 오르내리는 프레임의 `GT.Scene.tick.destroyPost` 최대값과 정점 풀 repack 횟수(0 이어야 한다).
-- W5: `MMOReplicator` 를 쓰는 게임 서버가 아직 없다 — 첫 MMO 게임이 틱마다 `replicator.update` 다음에 `feedStreamingSources( 씬의 WorldStreamingSubsystem )` 를 부르고 `initialize` 에 `getGrid()` 를 넘긴다.
-- W6: World Cells 창의 캡처(`ux-reviewer`)와 `uiaudit` 시나리오에 창이 잡히는지. 문구 열 개는 `editor.strings.json` · `ko.translation.json` 에 넣었다(`--check-text` 미확인).
-- `GameObject` 가 8 B 커졌다(`_bAlwaysLoaded`, 꼬리 패딩이 없었다) — `GameObjectBenchTest` 로 풀 블록 크기 변화를 본다.
+코드는 W1 ~ W7 이 모두 들어갔다. 남은 일은 확인뿐이고 항목마다 매니페스트에 있다(통합에서 돌린다).
+- 빌드와 테스트 — 매니페스트 id `world-streaming-tests`(`WorldStreamingTest`), `world-streaming-net-tests`(`NetMMOTest`). 씬 픽스처를 판 2 로 고친 `SceneTest` · `SceneAsyncTest` · `PrefabOverridesTest` 와 `GameObjectBenchTest`(`GameObject` 가 8 B 커졌다 — `_bAlwaysLoaded`, 꼬리 패딩이 없었다)는 묶음의 `ctest-nogpu` 가 돈다. 리플렉션 헤더가 늘어 구성을 다시 돌린다.
+- 쿠킹 — WildWest 초원이 셀로 나뉘는지(셀을 넘는 참조가 없는지), Shipping 에서 셀이 올라오는지: 매니페스트 id `cook-scenes-shipping`(`App.exe --cook-scenes`)이 쿠킹을 돌린다. 셀 수는 그 로그로 본다.
+- 측정 — Release 로 WildWest 를 돌리며 셀이 오르내리는 프레임의 `GT.Scene.tick.destroyPost` 최대값과 정점 풀 repack 횟수(0 이어야 한다): 매니페스트 id `world-streaming-hitch-measure`. 셀을 가로질러 걷는 시나리오가 아직 없다.
+- W5: `MMOReplicator` 를 쓰는 게임 서버가 아직 없다 — 첫 MMO 게임이 틱마다 `replicator.update` 다음에 `feedStreamingSources( 씬의 WorldStreamingSubsystem )` 를 부르고 `initialize` 에 `getGrid()` 를 넘긴다. 게임이 생길 때까지 `NetMMOTest` 가 이 연결을 본다.
+- W6: World Cells 창의 캡처(`ux-reviewer`)와 `uiaudit` 시나리오에 창이 잡히는지, 문구 열 개의 `--check-text`: 매니페스트 id `world-cells-panel-capture`.
 
 충돌 후보: W2 · W3 은 오브젝트 · 씬 직렬화(feat14 타입드 컴포넌트)와, C-43 은 그래픽스 브랜치(feat7 형식, feat15 클러스터드)의 `GPUScene.cpp` ·
 `FrameRendererCompute.cpp` · RHI 팩터리와 겹칠 수 있다.
