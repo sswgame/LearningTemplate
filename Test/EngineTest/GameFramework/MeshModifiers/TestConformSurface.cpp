@@ -156,16 +156,16 @@ SW_TEST_CASE( ConformSurfaceTest, ChangedTargetGivesNewResult )
     HillsInputs              inputs{};
     unique_ptr<MeshModifier> conform = ConformSurfaceTestInternal::makeConform( 1.0f );
     MeshModifierMesh         first   = test::MeshModifierTestUtil::makeBoxMesh( 4 );
-    ConformSurfaceTestInternal::applyWith( *conform, first, inputs );
+    ConformSurfaceTestInternal::applyWith( *conform, first, inputs, nullptr );
     MeshModifierMesh again = test::MeshModifierTestUtil::makeBoxMesh( 4 );
-    ConformSurfaceTestInternal::applyWith( *conform, again, inputs ); // 같은 대상 — 캐시된 BVH
+    ConformSurfaceTestInternal::applyWith( *conform, again, inputs, nullptr ); // 같은 대상 — 캐시된 BVH
     for ( size_t index = 0; index < first._listPosition.size(); ++index )
     {
         SW_EXPECT_TRUE( ( first._listPosition[index] - again._listPosition[index] ).getLength() == 0.0f );
     }
     inputs.setShifted( true );
     MeshModifierMesh shifted = test::MeshModifierTestUtil::makeBoxMesh( 4 );
-    ConformSurfaceTestInternal::applyWith( *conform, shifted, inputs ); // 대상이 올라갔으면 캐시를 쓰지 않고 새 결과
+    ConformSurfaceTestInternal::applyWith( *conform, shifted, inputs, nullptr ); // 대상이 올라갔으면 캐시를 쓰지 않고 새 결과
     float32 lifted = 0.0f;
     for ( size_t index = 0; index < first._listPosition.size(); ++index )
     {

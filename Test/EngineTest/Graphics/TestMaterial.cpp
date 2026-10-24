@@ -964,7 +964,7 @@ SW_TEST_CASE( MaterialTest, InstanceRejectsParameterShapeMismatch )
     test::ScopedLogCollector logs;
     instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.25f );
     instance->setVectorParameter( sw::hashed_string( "_tint" ), sw::float4{ 0.1f, 0.2f, 0.3f, 0.4f } );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "cannot take a" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.ParameterShapeMismatch" ) == 0, logs.joined().c_str() );
     SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "_roughness" ) ) );
     SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "_tint" ) ) );
 
@@ -974,7 +974,7 @@ SW_TEST_CASE( MaterialTest, InstanceRejectsParameterShapeMismatch )
         instance->setVectorParameter( sw::hashed_string( "_roughness" ), sw::float4{ 0.5f, 0.0f, 0.0f, 0.0f } );
         instance->setScalarParameter( sw::hashed_string( "_tint" ), 0.5f );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "cannot take a" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.ParameterShapeMismatch" ) == 2, logs.joined().c_str() );
     SW_EXPECT_FALSE( instance->isParameterOverridden( sw::hashed_string( "_roughness" ) ) );
     SW_EXPECT_FALSE( instance->isParameterOverridden( sw::hashed_string( "_tint" ) ) );
 }

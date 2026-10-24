@@ -2,6 +2,7 @@
 
 #include "TestFramework/TestCatalog.h"
 
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Memory/MemoryTag.h"
 
 #include "TestFramework/TestRegistry.h"
