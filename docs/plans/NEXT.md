@@ -26,6 +26,15 @@
 - **main**: 로컬 main 이 `origin/main` 보다 7 커밋 앞서 있다(미푸시). 병합이 끝난 `wt/*` 브랜치와 워크트리(약 50 개)는 통합이 끝난 뒤 `worktree-remove` 로 지운다.
 - **판정 결과**(design-reviewer, 2026-10-24, `09_Decisions.md` 에 반영 끝): 포토 모드는 UI 층을 숨긴다(구현은 judgeapply) · 팝업 잘림은 유지 · 단일체 예외는 종류 키 5개 · 두 계획 문서는 측정대기로 되돌림 · `sw_new` 삭제 · n/n 점검을 커밋 훅에 걸었다. 컴파일 확인: `Memory.h`(`make_unique`, `FixedCountArray`), `UILayer.h`(`ENUM(Flags)` 를 `PROPERTY` 로 쓴 선례 없음, 리플렉션 파서 확인).
 
+### 새 세션이 처음에 할 일
+
+1. **첫 일**: `D:/w/integD`(브랜치 `wt/integD`)에서 plangfx2 가 보고했는지 `git log wt/plangfx2` 로 보고, 보고가 왔으면 병합한다. 안 왔으면 기다리지 말고 있는 것으로 A 단계부터 시작한다(plangfx2 는 나중에 병합).
+2. **A 단계**: `cmake --preset Ninja-Debug` → `full-build --owner integD`, 컴파일 오류는 `-k 0` 으로 모아 한꺼번에 고친다. 아래 "컴파일 확인이 필요한 곳"과 작업자 보고의 파일 목록이 의심 지점이다. 이어서 `py -3 -m Scripts verify-batch --owner integD`.
+3. **결정 대기**: 로거 구조 — `SW_LOW_LEVEL_REPORT`(Core/Common 의 낮은 층 보고기)로 갈지, Logger 를 Container · Memory 에 기대지 않게 만들어 `SW_LOG_*` 를 어디서나 쓰게 할지. design-reviewer 로 언리얼 · 유니티 · 고도와 견주어 정하고, 정한 뒤에는 `09_Decisions.md` 에 적는다(사용자에게 되묻지 않는다).
+4. **병합 · 푸시 못 한 변경**: 로컬 main 은 `origin/main` 보다 앞서 있고(미푸시), `integD` 의 모든 병합도 main 에 들어가지 않았다. 통합 검증이 끝난 뒤 main 병합 · push, `ci-jobs --summary`, `worktree-remove`(약 50 개).
+5. **정리할 것**: 공유 stash 에 남은 작업자 항목(stash@{0..2} 는 plangfx2, stash@{3} 은 `wt/gpB`), 셰이더 주석에 남은 옛 이름 `MaterialShaderHooks`(forwardlit.hlsl · cctvmonitor.hlsl), `08_Verification.md` · `09_Decisions.md` 구조 정리, NEXT 의 A-D 표를 `verify-batch` 설명 한 줄로 줄이기.
+6. **새 병렬 파동**: 통합이 끝나기 전에는 띄우지 않는다. 끝난 뒤 후보: plannet 의 남은 단위(채팅 · 친구 화면, GM 도구 조립 실행 파일, APNs H2-2~5, ServerDebug S6~S8), 로드맵의 `[병렬 가능]` 표시.
+
 ### 통합 검증 · 측정 (한 묶음, 단계마다 한 번)
 
 빌드 구성별로 모아 아래 순서로 한 번에 끝낸다. 한 단계가 실패하면 그 자리에서 고치거나 해당 커밋을 되돌린 뒤 같은 단계부터 다시 한다. 새 측정 질문은 C 단계에 한 줄로 더한다. 측정 결과는 한 번에 해당 문서(계획 문서 · `08_Verification.md` · 결정 기록)에 옮기고 후보 절을 지운다.
