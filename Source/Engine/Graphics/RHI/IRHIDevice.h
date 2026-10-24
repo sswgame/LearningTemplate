@@ -80,6 +80,23 @@ namespace sw
      *          담당한다. 리소스 생성과 파괴는 `getResourceFactory()` 가 반환하는 `IRHIResourceFactory` 가 담당한다.
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
+     *
+     *          **완료 · 동기화 계약** — 네 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
+     *          각 줄을 `RHIDeviceTest` 의 네 백엔드 테스트가 건다(괄호 안).
+     *          - `waitIdle`: 앞서 제출한 **모든** GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
+     *            (`WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend`). 잃은 장치(DX12 제거, Vulkan 손실)는 끝나지 않을 일을 기다리지 않고 큐만 비운다.
+     *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`.
+     *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
+     *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링.
+     *          - 앞서가기 제한: GPU 가 `constant::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
+     *            (DX12 · Vulkan `beginFrame` 의 링 슬롯 대기, DX11 · GL `endFrame` 의 링 대기). Present 를 하지 않는 반복에도 적용된다.
+     *          - `IRHIResourceFactory::readReadbackBuffer`: 기다리지 않는다. 복사를 기록한 프레임이 끝난 뒤(위 콜백)에만 부르고, 읽기 버퍼가 아닌 핸들과
+     *            버퍼를 넘는 크기는 오류를 남기고 false 다(`ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer`).
+     *          - `IRHIResourceFactory::readbackTexture2D`: GPU 를 기다리는 동기 경로다(`TextureReadbackMatchesUpload`).
+     *          - `IRHITimestampProvider::readTimestamps`: 기다리지 않고 마지막으로 모은 프레임을 준다. 묶음을 다시 쓰기 직전에 지난 결과를 모으는 자리(`beginFrame`)에서만
+     *            GPU 를 기다린다(DX12 · Vulkan 펜스, DX11 쿼리 상한 대기, GL 은 준비된 슬롯만 읽는다). `GPUTimestampsMarkUnwrittenSlotsAllBackends`.
+     *          - 백버퍼 크기 변경: 백버퍼를 가리키는 GPU 참조가 끝난 뒤에 놓는다(DX12 `waitForPreviousFrame`, Vulkan 재생성 때 `vkDeviceWaitIdle`, DX11 은 런타임이 참조 중인 버퍼를 지키고 GL 은 해당 없음).
+     *          - 종료(`shutdown`): 위 `waitIdle` 을 거쳐 해제 큐가 빈 뒤에 네이티브 디바이스를 놓고, 빈 것을 단언한다.
      */
     class SW_API IRHIDevice
     {
@@ -134,7 +151,7 @@ namespace sw
         virtual void applyVSyncInternal() {}
 
         /**
-         * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다.
+         * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다. 돌아오면 앞서 제출한 모든 작업이 GPU 에서 끝나 있고 해제 큐가 비어 있습니다(클래스 머리말의 완료 계약).
          * @details **렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다**
          *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::updateTransitions`, 텍스처와 머티리얼
          *          핫 리로드)도 이 순서를 따른다. 실제 대기는 백엔드의 `waitIdleInternal` 이 한다.
@@ -146,7 +163,8 @@ namespace sw
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
-         * @details 백엔드 해제 큐(`RHIReleaseQueue`)에 그 백엔드의 기준으로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 과 GL 은 프레임 지연을 쓴다.
+         * @details 백엔드 해제 큐(`RHIReleaseQueue`)에 GPU 완료를 기준으로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
+         *          네 백엔드 모두 **GPU 가 그 프레임을 끝낸 뒤에만** 부른다(프레임 수로 짐작하지 않는다). 그래서 콜백 안에서 `readReadbackBuffer` 를 기다리지 않고 부를 수 있다.
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.

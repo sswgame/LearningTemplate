@@ -232,6 +232,61 @@ namespace
         const uint32 actual = value;
         return expected <= actual + tolerance && actual <= expected + tolerance;
     }
+
+    /** @brief 원소마다 값이 다른 원본 내용입니다. 일부만 복사돼도 드러난다. */
+    sw::vector<float32> makeContractSourceContents( uint32 elementCount )
+    {
+        sw::vector<float32> contents( elementCount );
+        for ( uint32 index = 0; index < elementCount; ++index )
+        {
+            contents[index] = static_cast<float32>( index ) * 0.5f + 1.0f;
+        }
+        return contents;
+    }
+
+    /** @brief @p listContent 를 담은 구조화 버퍼(SRV 상태)를 만듭니다. 비동기 되읽기의 복사 원본이다. */
+    sw::RHIBufferHandle createContractSourceBuffer( sw::IRHIResourceFactory& resource, const sw::vector<float32>& listContent )
+    {
+        sw::RHIBufferDesc desc{};
+        desc._elementSize  = sizeof( float32 );
+        desc._elementCount = static_cast<uint32>( listContent.size() );
+        desc._sizeBytes    = static_cast<uint32>( listContent.size() * sizeof( float32 ) );
+        desc._usage        = sw::RHIBufferUsage::Structured | sw::RHIBufferUsage::ShaderResource | sw::RHIBufferUsage::UnorderedAccess;
+        desc._pInitialData = listContent.data();
+        return resource.createBuffer( desc );
+    }
+
+    /** @brief 원본 전체를 읽기 버퍼로 복사하는 명령을 @p cmd 에 기록하고 닫습니다(복사 뒤 원본은 SRV 상태로 돌아간다). */
+    void recordContractCopy( sw::IRHICommandList& cmd, sw::RHIBufferHandle source, sw::RHIBufferHandle readback, uint32 sizeBytes )
+    {
+        cmd.beginCommandList();
+        cmd.transitionBuffer( source, sw::RHIBufferState::CopySource );
+        cmd.copyBufferToReadback( source, readback, sizeBytes );
+        cmd.transitionBuffer( source, sw::RHIBufferState::ShaderResource );
+        cmd.endCommandList();
+    }
+
+    /** @brief 프레임마다 맡긴 해제 콜백이 읽기 버퍼를 읽은 결과를 센다. 콜백은 `enqueueGPURelease` 로 부른다. */
+    struct ContractReleaseReads
+    {
+        sw::IRHIResourceFactory*        _pResource{ nullptr };
+        const sw::vector<float32>*      _pExpected{ nullptr };
+        sw::vector<sw::RHIBufferHandle> _listReadback;
+        sw::vector<uint8>               _listScratch;
+        uint32                          _calledCount{ 0 };
+        uint32                          _wrongCount{ 0 }; ///< 읽지 못했거나 내용이 원본과 다른 콜백 수
+
+        /** @brief 프레임 @p frame 의 해제 콜백입니다. GPU 가 그 프레임을 끝냈다면 읽기 버퍼가 기다리지 않고 읽혀 원본과 같아야 한다. */
+        void onGPUDone( uint32 frame )
+        {
+            ++_calledCount;
+            const uint32 sizeBytes = static_cast<uint32>( _pExpected->size() * sizeof( float32 ) );
+            _listScratch.resize( sizeBytes );
+            const bool bRead = _pResource->readReadbackBuffer( _listReadback[frame], sizeBytes, _listScratch.data() );
+            if ( bRead == false || sw::Memory::compare( _listScratch.data(), _pExpected->data(), sizeBytes ) != 0 )
+                ++_wrongCount;
+        }
+    };
 } // namespace
 
 /**
@@ -2860,4 +2915,161 @@ SW_TEST_CASE( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFr
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the async buffer readback test" );
+}
+
+// ------------------------------------------------------------------------------
+// 완료 · 동기화 계약 — 네 백엔드가 같은 테스트로 지킨다(IRHIDevice 머리말의 "완료 · 동기화 계약" 표)
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [RHIDeviceTest] 계약 — `waitIdle` 이 돌아오면 앞서 제출한 복사가 GPU 에서 끝나 있어, 읽기 버퍼를 콜백 없이 바로 읽는다(네 백엔드)
+ * @details `waitIdle` 은 "이전에 제출한 모든 GPU 작업이 끝난 뒤 반환" 이다. 증상: DX11 은 `Flush` 만 하고 돌아와 `Map( DO_NOT_WAIT )` 이 실패했다
+ *          (`AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes` 가 졌던 원인). 읽기는 해제 큐 콜백이 아니라 여기서 직접 해, 대기 자체를 본다.
+ *          원본이 16MB 라 복사가 비어 있는 큐에서 곧바로 끝나지 않는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend )
+{
+    constexpr uint32 kElementCount = 4u * 1024u * 1024u;
+    constexpr uint32 kSizeBytes    = kElementCount * sizeof( float32 );
+
+    const sw::vector<float32> expected = makeContractSourceContents( kElementCount );
+    test::RHIBackendSweep     sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() );
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        const sw::RHIBufferHandle source        = createContractSourceBuffer( *pResource, expected );
+        const sw::RHIBufferHandle readback      = pResource->createReadbackBuffer( sizeof( float32 ), kElementCount );
+        const bool                bBuffersReady = source != 0 && readback != 0;
+        SW_EXPECT_TRUE_MSG( bBuffersReady, ( label + ": failed to create the source or the readback buffer" ).c_str() );
+
+        sw::unique_ptr<sw::IRHICommandList> cmd        = device->createCommandList();
+        const bool                          bCanSubmit = bBuffersReady && cmd != nullptr;
+        if ( bCanSubmit )
+        {
+            recordContractCopy( *cmd, source, readback, kSizeBytes );
+            device->executeCommandListImmediate( cmd.get() );
+            device->waitIdle();
+
+            sw::vector<uint8> bytes( kSizeBytes );
+            SW_EXPECT_TRUE_MSG( pResource->readReadbackBuffer( readback, kSizeBytes, bytes.data() ), ( label + ": waitIdle returned before the GPU finished the copy" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::Memory::compare( bytes.data(), expected.data(), kSizeBytes ) == 0, ( label + ": the readback differs from the source" ).c_str() );
+            SW_EXPECT_EQUAL( 0u, device->getPendingReleaseCount() );
+        }
+        cmd.reset();
+        if ( readback != 0 )
+            pResource->destroyBuffer( readback );
+        if ( source != 0 )
+            pResource->destroyBuffer( source );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the waitIdle completion test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 계약 — `enqueueGPURelease` 콜백은 그 프레임의 GPU 작업이 끝난 뒤에만 불리고, 프레임을 무한히 앞서가게 두지 않는다(네 백엔드)
+ * @details 프레임마다 8MB 복사를 기록하고 그 프레임의 콜백이 읽기 버퍼를 **기다리지 않고** 읽는다. 콜백이 GPU 완료보다 먼저 불리면 읽기가 실패하거나 내용이 다르다.
+ *          Present 를 하지 않는 반복이라 DX11 · GL 이 프레임 수만 세면 GPU 가 뒤처진 채 콜백이 돈다(DX12 · Vulkan 은 펜스라 늘 맞다).
+ *          GPU 가 프레임 `kMaxFrameCountInFlight` 개보다 더 뒤처지지 못하게 하는 링 슬롯 대기는, 마지막 프레임을 낸 뒤 `8 - kMaxFrameCountInFlight` 개 이상의 콜백이 불렸는지로 본다.
+ */
+SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone )
+{
+    constexpr uint32 kElementCount = 2u * 1024u * 1024u;
+    constexpr uint32 kSizeBytes    = kElementCount * sizeof( float32 );
+    constexpr uint32 kFrameCount   = 8;
+
+    const sw::vector<float32> expected = makeContractSourceContents( kElementCount );
+    test::RHIBackendSweep     sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() );
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        const sw::RHIBufferHandle source = createContractSourceBuffer( *pResource, expected );
+        ContractReleaseReads      reads;
+        reads._pResource         = pResource;
+        reads._pExpected         = &expected;
+        bool bAllReadbackCreated = source != 0;
+        for ( uint32 frame = 0; frame < kFrameCount && bAllReadbackCreated; ++frame )
+        {
+            const sw::RHIBufferHandle readback = pResource->createReadbackBuffer( sizeof( float32 ), kElementCount );
+            bAllReadbackCreated                = readback != 0;
+            reads._listReadback.push_back( readback );
+        }
+        SW_EXPECT_TRUE_MSG( bAllReadbackCreated, ( label + ": failed to create the source or the readback buffers" ).c_str() );
+
+        if ( bAllReadbackCreated )
+        {
+            ContractReleaseReads*                           pReads = &reads;
+            sw::vector<sw::unique_ptr<sw::IRHICommandList>> listCmd;
+            for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+            {
+                device->beginFrame();
+                sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+                SW_ASSERT_TRUE( cmd != nullptr );
+                recordContractCopy( *cmd, source, reads._listReadback[frame], kSizeBytes );
+                device->executeCommandList( cmd.get() );
+                device->enqueueGPURelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pReads, frame]()
+                { pReads->onGPUDone( frame ); } ) );
+                device->endFrame( false, false );
+                listCmd.push_back( std::move( cmd ) );
+            }
+            SW_EXPECT_EQUAL( 0u, reads._wrongCount ); // 불린 콜백은 모두 GPU 가 끝낸 뒤였다
+            SW_EXPECT_TRUE_MSG( kFrameCount - sw::constant::kMaxFrameCountInFlight <= reads._calledCount,
+                                ( label + ": the GPU was allowed to fall further behind than the frame ring" ).c_str() );
+
+            device->waitIdle();
+            SW_EXPECT_EQUAL( kFrameCount, reads._calledCount );
+            SW_EXPECT_EQUAL( 0u, reads._wrongCount );
+            SW_EXPECT_EQUAL( 0u, device->getPendingReleaseCount() );
+            listCmd.clear();
+        }
+        for ( const sw::RHIBufferHandle readback : reads._listReadback )
+        {
+            if ( readback != 0 )
+                pResource->destroyBuffer( readback );
+        }
+        if ( source != 0 )
+            pResource->destroyBuffer( source );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU release completion test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 계약 — `readReadbackBuffer` 는 읽기 버퍼가 아닌 핸들과 버퍼를 넘는 크기를 거절한다(네 백엔드)
+ * @details 인터페이스는 "핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘으면 false" 라고 적었다. 증상: DX11 만 스테이징 버퍼인지 검사하고 나머지는 매핑되는 아무 버퍼나 읽어 줬다.
+ */
+SW_TEST_CASE( RHIDeviceTest, ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer )
+{
+    constexpr uint32 kReadbackElementCount = 4;
+
+    const sw::vector<float32> contents = makeContractSourceContents( 64 );
+    test::RHIBackendSweep     sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() );
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        const sw::RHIBufferHandle source   = createContractSourceBuffer( *pResource, contents );
+        const sw::RHIBufferHandle readback = pResource->createReadbackBuffer( sizeof( float32 ), kReadbackElementCount );
+        SW_EXPECT_TRUE_MSG( source != 0 && readback != 0, ( label + ": failed to create the source or the readback buffer" ).c_str() );
+
+        if ( source != 0 && readback != 0 )
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "readReadbackBuffer rejects a buffer that is not a readback buffer and a read past the end" );
+            sw::vector<uint8> bytes( 64 );
+            SW_EXPECT_FALSE_MSG( pResource->readReadbackBuffer( source, kReadbackElementCount * sizeof( float32 ), bytes.data() ),
+                                 ( label + ": a source buffer was read as a readback buffer" ).c_str() );
+            SW_EXPECT_FALSE_MSG( pResource->readReadbackBuffer( readback, static_cast<uint32>( bytes.size() ), bytes.data() ),
+                                 ( label + ": a read past the end of the readback buffer was accepted" ).c_str() );
+        }
+        if ( readback != 0 )
+            pResource->destroyBuffer( readback );
+        if ( source != 0 )
+            pResource->destroyBuffer( source );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the readback buffer rejection test" );
 }

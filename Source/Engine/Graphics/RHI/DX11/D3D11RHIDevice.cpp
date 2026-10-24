@@ -79,6 +79,10 @@ namespace sw
         , _bDriverCommandLists{ SW_FALSE }
         , _timestampFrame{}
         , _clockQuery{}
+        , _idleQuery{}
+        , _arrFrameDoneQuery{}
+        , _frameSerial{ 0 }
+        , _completedFrameSerial{ 0 }
         , _lastTimestampFrequency{ 0 }
         , _listRegisteredBindless{}
         , _listBindlessFree{}

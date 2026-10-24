@@ -57,7 +57,7 @@ R1 의 입력은 [EnvironmentRemainders](EnvironmentRemainders.md) 가 말하는
 - 매니페스트 id `fog-tests` — R1 · R2 안개 테스트.
 - 매니페스트 id `fog-scenario` — 시나리오 `fog`(네 백엔드).
 - 매니페스트 id `sky-tests` — R3 · R4 하늘 테스트.
-- 매니페스트 id `sky-scenario` — 시나리오 `sky`(네 백엔드).
+- 매니페스트 id `sky-scenario` — 시나리오 `sky`(네 백엔드). 첫 실행(2026-10-25)은 네 백엔드가 같은 값(R − B +0.019, 평균 휘도 0.12)으로 졌고 하늘 셰이더는 틀리지 않았다 — 무대(`skyshowcase`)의 해가 수평선 위 4.5° 노을이었다. 해를 46° 로 올렸다(wt/gfxfix). 빌드 · GPU 대기: 다시 돌려 문턱(`atMost` -0.02)을 측정값으로 정한다.
 - 매니페스트 id `realtime-probe-tests` — R5 · R6 테스트(복셀 형식 · 복셀화 · 입력 행 배치 · 수집).
 - 매니페스트 id `realtimegi-scenario` — 시나리오 `realtimegi`(네 백엔드 — 직접광이 닿지 않는 면이 바닥에서 튕긴 빛으로 밝아진다). 컴퓨트 `probeupdate.hlsl` 의 SH 투영 · 복셀 DDA 가 C++ 쪽과 같은 결과인지는 이 시나리오의 밝기와 `SceneVoxelGridTest` 의 DDA 값을 견줘 본다.
 - 매니페스트 id `realtime-probe-measure` — 프로브 수 · 광선 수에 따른 컴퓨트 GPU 시간(`RT.Probe.Update`)과 갱신 주기별 수렴 속도.

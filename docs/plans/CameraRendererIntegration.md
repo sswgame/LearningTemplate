@@ -14,7 +14,7 @@ S4(다중 뷰 보임의 가려짐)도 코드는 들어갔다. 렌더러가 주 �
 | 단위 | 내용 | 상태 |
 |---|---|---|
 | S1 ~ S3 | 카메라별 후처리 값 · 피사계 심도와 렌즈 시프트 · 컷 신호 | 끝(확인은 2절) |
-| S4 | 다중 뷰 보임의 가려짐 — RHI 비동기 되읽기(네 백엔드) · 가림 타일 사본 · 수집기의 가려짐 판정 | 코드 끝, 확인 대기: 매니페스트 id `async-buffer-readback-gpu`, `occlusion-snapshot-tests`, `occlusion-culling-visibility-run` |
+| S4 | 다중 뷰 보임의 가려짐 — RHI 비동기 되읽기(네 백엔드) · 가림 타일 사본 · 수집기의 가려짐 판정 | 코드 끝, 확인 대기: 매니페스트 id `async-buffer-readback-gpu`, `rhi-completion-contract-gpu`, `occlusion-snapshot-tests`, `occlusion-culling-visibility-run` (첫 실행 2026-10-25 은 DX11 만 `AsyncBufferReadback` 테스트가 졌다 — DX11 `waitIdle` 이 GPU 완료를 기다리지 않았다. 이벤트 쿼리로 기다리게 고쳤고(wt/gfxfix) 빌드 대기. 백엔드 감사(wt/backendaudit)가 DX11 · GL 의 해제 콜백도 프레임 수가 아니라 GPU 완료(쿼리 · 펜스 링) 기준으로 바꾸고 계약 테스트 셋을 더했다 — 같은 빌드 대기, 결정은 09_Decisions 5-5) |
 
 ### S4 설계 (들어간 것)
 

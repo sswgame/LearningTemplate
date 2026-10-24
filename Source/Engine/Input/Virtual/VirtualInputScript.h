@@ -49,7 +49,12 @@ namespace sw
         void addMouseDelta( uint32 frameIndex, float32 deltaX, float32 deltaY );
         /** @brief 커서를 창 클라이언트 픽셀 (@p x, @p y) 로 옮깁니다. `MouseMove` 이벤트이며 OS 커서 이동과 같고, 이동량도 생깁니다. */
         void addMousePosition( uint32 frameIndex, int32 x, int32 y );
-        /** @brief 패드 축(스틱, 트리거) 값을 냅니다. */
+        /**
+         * @brief 패드를 가상 연결합니다. 가상 입력 세션의 패드는 끊긴 채 시작하고, 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다.
+         * @details 패드를 쓰는 입력 단계(단추 · 축)는 그 패드를 먼저 연결해야 한다. 같은 연결 이벤트를 여러 번 내도 상태만 다시 정할 뿐이다.
+         */
+        void addGamepadConnection( uint32 frameIndex, uint8 padIndex = 0 );
+        /** @brief 패드 축(스틱, 트리거) 값을 냅니다. 패드는 `addGamepadConnection` 으로 따로 연결한다. */
         void addGamepadAxis( uint32 frameIndex, uint16 axisIndex, float32 value, uint8 padIndex = 0 );
         /**
          * @brief @p firstFrameIndex 이후(포함)의 이벤트를 @p frameCount 프레임 뒤로 밉니다. 이미 낸 이벤트는 그대로입니다.

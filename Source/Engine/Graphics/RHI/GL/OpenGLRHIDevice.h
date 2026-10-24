@@ -125,7 +125,7 @@ namespace sw
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 프레임 지연(`kGPUReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
+        /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. GL 은 프레임 끝마다 내는 펜스(`_arrFrameDoneSync`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
@@ -197,6 +197,11 @@ namespace sw
         void ensureTimestampQueries();
         /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
         void collectTimestampsForSlot();
+        /**
+         * @brief 방금 끝낸 프레임에 펜스(`glFenceSync`)를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
+         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
+         */
+        void retireFrameOnGPU();
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
@@ -389,6 +394,10 @@ namespace sw
         vector<OpenGLRenderPassRecord>            _listRenderPass;
 
         RHIReleaseQueue _releaseQueue;
+        /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.
+        void*  _arrFrameDoneSync[constant::kMaxFrameCountInFlight];
+        uint64 _frameSerial;          ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
+        uint64 _completedFrameSerial; ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;

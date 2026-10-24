@@ -736,6 +736,15 @@ namespace sw
         const bool      bUnreadable = pResource == nullptr || pDestination == nullptr || sizeBytes == 0;
         if ( bUnreadable )
             return false;
+        // 읽기 힙이 아닌 버퍼(업로드 힙 정점 버퍼 등)는 매핑되더라도 읽기 버퍼가 아니다. 네 백엔드가 같이 거절한다.
+        D3D12_HEAP_PROPERTIES heapProperties{};
+        D3D12_HEAP_FLAGS      heapFlags{};
+        const bool            bNotReadback = FAILED( pResource->GetHeapProperties( &heapProperties, &heapFlags ) ) || heapProperties.Type != D3D12_HEAP_TYPE_READBACK;
+        if ( bNotReadback )
+        {
+            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            return false;
+        }
         const bool bTooLarge = static_cast<uint64>( sizeBytes ) > pResource->GetDesc().Width;
         if ( bTooLarge )
         {

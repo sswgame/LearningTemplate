@@ -48,6 +48,9 @@ namespace sw
         , _pipelineStates{}
         , _listRenderPass{}
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _arrFrameDoneSync{}
+        , _frameSerial{ 0 }
+        , _completedFrameSerial{ 0 }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _computeRootConstantUbo{ 0 }
