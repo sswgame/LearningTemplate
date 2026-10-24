@@ -51,6 +51,84 @@ namespace sw::editor
                 SW_LOG_WARNING( "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %#", path.c_str(), error.c_str() );
                 return false;
             }
+
+            /** @brief 지운 키를 모든 표에서 빼고, 고친 줄을 원문 · 번역 표에 적용합니다. 번역이 그대로면 두고(원문만 고쳤으면 그 번역은 낡은 것이 된다), 빈 번역은 지웁니다. */
+            static void applySheetEdits( const LocalizationSheet& sheet, vector<SourceStringTable>& inoutListTable, vector<TranslationTable>& inoutListTranslation )
+            {
+                for ( const string& removedKey : sheet._listRemovedKey )
+                {
+                    for ( SourceStringTable& table : inoutListTable )
+                    {
+                        (void)table.removeEntry( removedKey ); // 그 테이블에 없는 키면 false 이고 할 일이 없다
+                    }
+                    for ( TranslationTable& translation : inoutListTranslation )
+                    {
+                        (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false 이고 할 일이 없다
+                    }
+                }
+
+                for ( const LocalizationRecord& record : sheet._listRecord )
+                {
+                    if ( record._bModified == false || inoutListTable.empty() )
+                        continue;
+                    const uint32     tableIndex = record._tableIndex < inoutListTable.size() ? record._tableIndex : 0u;
+                    SourceTextEntry& source     = inoutListTable[tableIndex].getOrAddEntry( record._key );
+                    source._source              = record._source;
+                    source._context             = record._context;
+                    source._comment             = record._comment;
+                    source._maxLength           = record._maxLength;
+                    const uint64 sourceHash     = LocalizationTextUtil::computeSourceHash( record._source );
+                    for ( size_t cultureIndex = 0; cultureIndex < inoutListTranslation.size() && cultureIndex < record._listTranslation.size(); ++cultureIndex )
+                    {
+                        TranslationTable& translation = inoutListTranslation[cultureIndex];
+                        const string&     text        = record._listTranslation[cultureIndex];
+                        if ( text.empty() )
+                        {
+                            (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false 이고 할 일이 없다
+                            continue;
+                        }
+                        const TranslationEntry* pExisting = translation.findEntry( record._key );
+                        if ( pExisting != nullptr && pExisting->_text == text )
+                            continue; // 번역은 그대로 둔다. 원문만 고쳤으면 이 번역은 낡은 것이 된다
+                        TranslationEntry& entry = translation.getOrAddEntry( record._key );
+                        entry._text             = text;
+                        entry._sourceHash       = sourceHash;
+                        entry._bReview          = false;
+                    }
+                }
+            }
+
+            /**
+             * @brief 원문 표와 번역 표를 파일에 씁니다. 읽지 못해 덮어쓰지 않기로 한 문화권(@p listWritable 이 0)은 건너뛰고, 번역이 하나도 없는 문화권의 빈 파일은 만들지 않습니다.
+             * @return 하나라도 쓰지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeSheetTables( const LocalizationSheet& sheet, const vector<SourceStringTable>& listTable, const vector<TranslationTable>& listTranslation,
+                                                        const vector<uint8>& listWritable )
+            {
+                bool bAllWritten{ true };
+                for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
+                {
+                    if ( listTable[tableIndex].saveToFile( sheet._listTablePath[tableIndex] ) == false )
+                    {
+                        SW_LOG_ERROR( "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
+                        bAllWritten = false;
+                    }
+                }
+                for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size(); ++cultureIndex )
+                {
+                    if ( listWritable[cultureIndex] == 0 )
+                        continue;
+                    const string path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
+                    if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
+                        continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
+                    if ( listTranslation[cultureIndex].saveToFile( path ) == false )
+                    {
+                        SW_LOG_ERROR( "Translation table '%#' could not be written", path.c_str() );
+                        bAllWritten = false;
+                    }
+                }
+                return bAllWritten;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -144,91 +222,31 @@ namespace sw::editor
 
     bool EditorDataTableCommands::saveLocalizationProject( LocalizationSheet& inoutSheet )
     {
+        using Internal = EditorDataTableCommandsInternal;
         // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.
         vector<SourceStringTable> listTable;
-        if ( EditorDataTableCommandsInternal::readSourceTables( inoutSheet, listTable ) == false )
+        if ( Internal::readSourceTables( inoutSheet, listTable ) == false )
         {
             SW_LOG_ERROR( "Localization is not saved - a string table could not be read (fix it and save again)" );
             return false;
         }
-        bool                     bAllWritten{ true };
+        bool                     bAllReadable{ true };
         vector<TranslationTable> listTranslation( inoutSheet._listCulture.size() );
         vector<uint8>            listWritable( inoutSheet._listCulture.size(), 1 );
         for ( size_t cultureIndex = 0; cultureIndex < inoutSheet._listCulture.size(); ++cultureIndex )
         {
             const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
-            if ( EditorDataTableCommandsInternal::readTranslation( path, inoutSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) == false )
+            if ( Internal::readTranslation( path, inoutSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) == false )
             {
                 SW_LOG_ERROR( "Translation table '%#' could not be read - it is not overwritten (fix the file and save again)", path.c_str() );
                 listWritable[cultureIndex] = 0;
-                bAllWritten                = false;
+                bAllReadable               = false;
             }
         }
 
-        for ( const string& removedKey : inoutSheet._listRemovedKey )
-        {
-            for ( SourceStringTable& table : listTable )
-            {
-                (void)table.removeEntry( removedKey ); // 그 테이블에 없는 키면 false 이고 할 일이 없다
-            }
-            for ( TranslationTable& translation : listTranslation )
-            {
-                (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false 이고 할 일이 없다
-            }
-        }
-
-        for ( const LocalizationRecord& record : inoutSheet._listRecord )
-        {
-            if ( record._bModified == false || listTable.empty() )
-                continue;
-            const uint32     tableIndex = record._tableIndex < listTable.size() ? record._tableIndex : 0u;
-            SourceTextEntry& source     = listTable[tableIndex].getOrAddEntry( record._key );
-            source._source              = record._source;
-            source._context             = record._context;
-            source._comment             = record._comment;
-            source._maxLength           = record._maxLength;
-            const uint64 sourceHash     = LocalizationTextUtil::computeSourceHash( record._source );
-            for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size() && cultureIndex < record._listTranslation.size(); ++cultureIndex )
-            {
-                TranslationTable& translation = listTranslation[cultureIndex];
-                const string&     text        = record._listTranslation[cultureIndex];
-                if ( text.empty() )
-                {
-                    (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false 이고 할 일이 없다
-                    continue;
-                }
-                const TranslationEntry* pExisting = translation.findEntry( record._key );
-                if ( pExisting != nullptr && pExisting->_text == text )
-                    continue; // 번역은 그대로 둔다. 원문만 고쳤으면 이 번역은 낡은 것이 된다
-                TranslationEntry& entry = translation.getOrAddEntry( record._key );
-                entry._text             = text;
-                entry._sourceHash       = sourceHash;
-                entry._bReview          = false;
-            }
-        }
-
-        for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
-        {
-            if ( listTable[tableIndex].saveToFile( inoutSheet._listTablePath[tableIndex] ) == false )
-            {
-                SW_LOG_ERROR( "String table '%#' could not be written", inoutSheet._listTablePath[tableIndex].c_str() );
-                bAllWritten = false;
-            }
-        }
-        for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size(); ++cultureIndex )
-        {
-            if ( listWritable[cultureIndex] == 0 )
-                continue;
-            const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
-            if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
-                continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
-            if ( listTranslation[cultureIndex].saveToFile( path ) == false )
-            {
-                SW_LOG_ERROR( "Translation table '%#' could not be written", path.c_str() );
-                bAllWritten = false;
-            }
-        }
-        if ( bAllWritten == false )
+        Internal::applySheetEdits( inoutSheet, listTable, listTranslation );
+        const bool bAllWritten = Internal::writeSheetTables( inoutSheet, listTable, listTranslation, listWritable );
+        if ( bAllWritten == false || bAllReadable == false )
             return false; // 저장되지 않은 것이 남아 있으므로 고친 표시를 지우지 않는다
 
         for ( LocalizationRecord& record : inoutSheet._listRecord )
