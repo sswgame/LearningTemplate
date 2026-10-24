@@ -24,6 +24,10 @@ main 에 `wt/integG` 를 fast-forward 하고 push 했다. 검증은 **Debug `ful
 
 **병합에서 고친 것**: ① `09_Decisions.md` 충돌 셋(정적 지역 상태 결정 둘과 단일체 게이트 줄은 양쪽을 남김, `plansclean` 이 지운 `RuleExceptionAudit` 링크는 `cookers2` 의 `-Wundef` 문장을 살려 뺌), `GpuVerification.md`(shipscen 2.1 절과 thresholdaudit 3 절을 둘 다 두고 절 번호 정리), README 진행 표는 `status-board --write` 로 다시 만듦. ② `sky` 2 개 · `vfxgpulights` 1 개의 `ExpectImage` 에 `provisional` 근거를 달았다(gfxfix 가 고친 무대 기준 어림값). ③ 컴파일 오류 둘 — `editorsc` 의 `noteInputFrame` 이 `staticselftest` 가 지운 `getState()` 를 불렀다(`findState()` 로), `lowlevellog` 의 `TestLowLevelReport` 중첩 구조체 기본 멤버 초기화 오류(이름공간의 `LowLevelReceived` 로 꺼냄).
 
+**CI · 결정 · 미푸시**: ① push(`8767a5e18`)한 main 의 CI Lints 잡이 `CheckDocPaths` 로 졌다 — `docs/09_Decisions.md:250` 이 생성되는 폴더 `Source/Engine/Pch/` 를 경로로 적었다(로컬에는 있고 새 체크아웃에는 없음). 문장을 "새 pch 전용 폴더" 로 고쳐 커밋 · push 했다(이 절을 읽을 때 `py -3 -m Scripts ci-jobs --summary` 로 초록인지 먼저 본다; 계속 지면 `--annotations`). 교훈: 로컬에서만 있는 생성 폴더를 문서 경로로 적지 않는다. ② **사용자 결정 대기 없음**(정적 상태 게이트는 (b) 로 정해졌다). ③ 미푸시 변경 없음(이 절 이후 변경은 이 커밋에 포함). ④ 워크트리: 병합한 14 개는 지웠다. 남은 것은 `staticgate` · `poseaudit` · `staticleft`(다음 묶음) 뿐이다.
+
+**병렬로 띄울 묶음(Roadmap 의 `[병렬 가능]`, 파일 소유가 겹치지 않을 때)**: 위 1~3 의 검증(통합 한 명)이 끝난 뒤에 — A. `staticgate` · `poseaudit` · `staticleft` 병합(통합 한 명, `-k 0` 빌드). B. 로그 id 이전(`countContaining` 약 120 곳) · 레지스트리 중복 로그 약 15 곳(작업자 둘, 파일이 다르다). C. 측정대기 문서 59 개의 판정(GPU 확인 뒤, `끝` 으로 올려 지우기 — `plans --check` 가 막는다). D. `Roadmap.md` 의 `[병렬 가능]` 항목(GpuVerification · Vfx 실행 확인 · 카메라 디렉터 · 미리보기 창 · 오디오 · 애니메이션 · 런타임 UI · 키트 조립 · Wayland 등)은 `py -3 -m Scripts plans` 와 Roadmap 에서 고르되 **작업자 여섯 안팎, 작업자는 빌드하지 않고 커밋만**.
+
 **다음 세션이 처음에 할 일(순서대로)**
 1. 통합 워크트리에서 `ctest -L nogpu` · `-L lint` · `-L race`(Debug), 바뀐 영역 테스트: CoreTest `LowLevelReportTest`, EngineTest `AutomationScenarioTest` · `AutomationScenarioChainTest` · `AnimationCrowdTest` · `SceneCookTest` · `LogTest`, EditorTest 전체. 실패는 어느 브랜치 탓인지 찾아 고친다.
 2. 새 Release App 으로 `--cook-shaders` 후 `--verify-shaders`(`cookfix` 가 쿠커를 바꿨다 — 매니페스트 밖 옛 바이너리 삭제, 건너뛴 갈래 실패 처리).
