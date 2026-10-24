@@ -1768,8 +1768,8 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
         sw::SceneDocument            document;
         SW_EXPECT_FALSE( document.loadXML( ::test::makeTempResourceID( path ) ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "broken.scene.xml:3:" ) > 0, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "not found" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileUnreadable" ) > 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileNotFound" ) == 0, logs.joined().c_str() );
 
     // 정말 없는 파일은 없다고 한다.
     {
@@ -1777,7 +1777,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
         sw::SceneDocument            document;
         SW_EXPECT_FALSE( document.loadXML( test::makeTempResourceID( test::makeTempPath( "missing.scene.xml" ) ) ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "missing.scene.xml: not found" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.FileNotFound" ) == 1, logs.joined().c_str() );
 }
 
 /**

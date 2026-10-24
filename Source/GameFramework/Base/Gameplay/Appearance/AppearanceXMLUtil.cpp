@@ -39,7 +39,7 @@ namespace sw
                 TVector parsed{};
                 if ( pParse( string_view( pText ), parsed ) == false )
                 {
-                    report.addError( "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
+                    report.addErrorWithID( "Appearance.VectorShape", "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
                     return;
                 }
                 inoutValue = parsed;
@@ -67,18 +67,19 @@ namespace sw
         };
     } // namespace
 
-    void AppearanceLoadReport::addMessage( string_view message )
+    void AppearanceLoadReport::addMessage( const utf8* pID, string_view message )
     {
         _listError.push_back( string( message ) );
-        SW_LOG_WARNING( "%#", message );
+        _listErrorID.push_back( pID );
+        SW_LOG_WRITE( sw::LogLevel::Warning, pID, "%#", message );
     }
 
-    uint32 AppearanceLoadReport::countContaining( string_view text ) const
+    uint32 AppearanceLoadReport::countWithID( const utf8* pID ) const
     {
         uint32 count = 0;
-        for ( const string& error : _listError )
+        for ( const utf8* pErrorID : _listErrorID )
         {
-            if ( string_view( error.c_str(), error.size() ).find( text ) != string_view::npos )
+            if ( StringUtil::equals( pErrorID, pID ) )
                 ++count;
         }
         return count;
@@ -102,14 +103,14 @@ namespace sw
             return true;
         for ( const utf8* pName : listUnknown )
         {
-            report.addError( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
+            report.addErrorWithID( "Appearance.UnknownAttribute", "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
         }
         return false;
     }
 
     void AppearanceXMLUtil::reportUnknownChild( const XMLNode& parent, const XMLNode& child, AppearanceLoadReport& report, string_view sourceName )
     {
-        report.addError( "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
+        report.addErrorWithID( "Appearance.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
     }
 
     hashed_string AppearanceXMLUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )

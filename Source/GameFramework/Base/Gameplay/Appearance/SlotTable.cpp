@@ -76,7 +76,7 @@ namespace sw
             for ( const hashed_string& slot : occupancy._listSlot )
             {
                 if ( hasSlot( slot ) == false )
-                    report.addError( "%#: occupancy '%#' names unknown slot '%#'", sourceName, occupancy._id.c_str(), slot.c_str() );
+                    report.addErrorWithID( "Appearance.SlotUnknown", "%#: occupancy '%#' names unknown slot '%#'", sourceName, occupancy._id.c_str(), slot.c_str() );
             }
         }
         if ( _listSlot.empty() )

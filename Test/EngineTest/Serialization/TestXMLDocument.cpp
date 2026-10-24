@@ -142,7 +142,7 @@ SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanIsAReadFailure )
     SW_EXPECT_TRUE( root.readOptionalAttribute( "off", value ) && value == false );
     SW_EXPECT_TRUE( root.readOptionalAttribute( "missing", value ) && value.has_value() == false );
     SW_EXPECT_TRUE( root.readOptionalChild( "good", value ) && value == true );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a boolean" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.count() == 0, logs.joined().c_str() );
 
     {
         test::ScopedDefensiveTestLog expected( "non-boolean attribute and element text" );
@@ -150,8 +150,7 @@ SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanIsAReadFailure )
         SW_EXPECT_FALSE( root.readOptionalAttribute( "empty", value ) );
         SW_EXPECT_FALSE( root.readOptionalChild( "flag", value ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<Root> attribute 'typo' is not a boolean: 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<Root> child 'flag' is not a boolean: 'nope'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.ValueTypeMismatch" ) == 2, logs.joined().c_str() );
 }
 
 /**
@@ -190,7 +189,7 @@ SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
     SW_EXPECT_EQUAL( 0, value );
     SW_EXPECT_TRUE( node.readOptionalAttributeInRange( "high", 0, 3, value ) );
     SW_EXPECT_EQUAL( 3, value );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "outside" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.count() == 0, logs.joined().c_str() );
 
     {
         test::ScopedDefensiveTestLog expected( "out-of-range and non-integer attributes" );
@@ -200,9 +199,8 @@ SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
         SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "text", 0, 255, value ) );
         SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "huge", 0, 255, value ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind over=" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "outside" ) == 2, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "is not a integer" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.AttributeOutOfRange" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.ValueTypeMismatch" ) == 2, logs.joined().c_str() );
 }
 
 /**

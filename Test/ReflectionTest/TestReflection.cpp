@@ -315,7 +315,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchFailsOnHandlesItCannotRemap )
     const sw::TestUnremappableHandleHolderComponent* pRowLoaded = pRowFresh->getComponent<sw::TestUnremappableHandleHolderComponent>();
     SW_ASSERT_NOT_NULL( pRowLoaded );
     SW_EXPECT_EQUAL( size_t( 1 ), pRowLoaded->_uniqueRow.size() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestUnremappableHandleHolderComponent::_uniqueRow' of '" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Object.PropertyCannotRemap" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -544,7 +544,7 @@ SW_TEST_CASE( TypedComponentHandleTest, WrongTypeFailsTheLoadAndMissingTargetCle
         context._savedID = 900002002;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, wrongType, context ) );
         SW_EXPECT_FALSE( batch.finish() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "must point at a 'TestProbeComponent'" ) >= 1, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Object.HandleWrongTargetType" ) >= 1, logs.joined().c_str() );
     }
 
     // 2) 없는 키(#7)를 가리킨다 — 로드는 성공하고 그 핸들만 빈다. 같은 필드의 목록 원소는 따로 본다.
@@ -563,7 +563,7 @@ SW_TEST_CASE( TypedComponentHandleTest, WrongTypeFailsTheLoadAndMissingTargetCle
         const sw::TestProbeLinkComponent* pLoadedLink = pFresh->getComponent<sw::TestProbeLinkComponent>();
         SW_ASSERT_NOT_NULL( pLoadedLink );
         SW_EXPECT_FALSE( pLoadedLink->_probe.isValid() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "no longer exists" ) >= 1, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Object.HandleTargetGone" ) >= 1, logs.joined().c_str() );
     }
 }
 
@@ -605,7 +605,7 @@ SW_TEST_CASE( TypedComponentHandleTest, RuntimeFormIsLiveOnlyAndSaveGameReadsInB
         context._savedID = 900002003;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pFresh, snapshotState.data(), snapshotState.size(), context ) != 0 );
         SW_EXPECT_FALSE( batch.finish() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "holds a runtime component id" ) >= 1, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Object.HandleHoldsRuntimeID" ) >= 1, logs.joined().c_str() );
     }
 
     // 세이브 — 파일 형태. Live · Saved 어느 공간에서 읽어도 새 오브젝트의 형제다.

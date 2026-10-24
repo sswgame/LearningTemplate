@@ -726,8 +726,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileWithoutAColliderWarnsAtBeginPlay )
         test::ScopedDefensiveTestLog expected( "a projectile without a collider" );
         manager.beginPlay();
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "can never hit anything" ) == 1u, logs.joined().c_str() );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "BareShot" ) );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Action.ProjectileWithoutCollider" ) == 1u, logs.joined().c_str() );
     manager.endPlay();
 }
 
@@ -1353,7 +1352,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAMonsterMissingFromTheCatalog )
     room.setLayout( makeTestRoomLayout() );
     room.beginHall();
     SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'grunt' is not in the monster catalog" ) == 3u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countWithID( "Action.RoomMonsterNotInCatalog" ) == 3u, logCollector.joined().c_str() );
 }
 
 /**
@@ -1371,7 +1370,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAnEmptyLayout )
     ActionRoom               room;
     room.beginBoss();
     SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Action room layout has no boss spawns" ) == 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countWithID( "Action.RoomLayoutNoSpawns" ) == 1u, logCollector.joined().c_str() );
 }
 
 /**

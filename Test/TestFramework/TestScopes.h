@@ -251,7 +251,7 @@ namespace test
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
      * @details 테스트마다 `Logger::registerGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
      *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에
-     *          `[Expected Defensive Test]` 가 붙지만 `countContaining` 은 부분 문자열로 찾는다.
+     *          `[Expected Defensive Test]` 가 붙지만 `countWithID` 는 문장이 아니라 id 로 찾으므로 상관없다.
      */
     class ScopedLogCollector
     {
@@ -273,22 +273,17 @@ namespace test
         ScopedLogCollector( const ScopedLogCollector& )            = delete;
         ScopedLogCollector& operator=( const ScopedLogCollector& ) = delete;
 
-        /** @brief 모은 Warning · Error 중 `text` 를 담은 줄의 수입니다. */
-        uint32 countContaining( sw::string_view text ) const
+        /** @brief 모은 Warning · Error 의 총 수입니다 — "아무 줄도 남지 않았다" 를 확인할 때 씁니다(문구를 맞추지 않는다). */
+        uint32 count() const
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
-            uint32                      count = 0;
-            for ( const sw::string& message : _listMessage )
-            {
-                if ( sw::string_view{ message.c_str(), message.size() }.find( text ) != sw::string_view::npos )
-                    ++count;
-            }
-            return count;
+            return static_cast<uint32>( _listMessage.size() );
         }
 
         /**
          * @brief 모은 Warning · Error 중 id 가 `id` 인 줄(`SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID`)의 수입니다.
-         * @details 문장이 아니라 사건으로 찾는다 — 로그 문구를 고쳐도 테스트가 지지 않는다. 새 테스트는 `countContaining` 보다 이것을 쓴다(로그에 id 가 없으면 id 를 붙인다).
+         * @details 문장이 아니라 사건으로 찾는다 — 로그 문구를 고쳐도 테스트가 지지 않는다. 로그 문장을 맞추는 `countContaining` 은 없앴다(재발 방지):
+         *          로그에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 id 를 붙인다. 빈 id 는 id 없는 줄을 세는 것이라 쓸 수 없다.
          */
         uint32 countWithID( sw::string_view id ) const
         {

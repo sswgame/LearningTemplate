@@ -165,18 +165,18 @@ namespace sw
             interaction._operator = reader.readName( node, "operator", true );
             FitTablesInternal::readArguments( node, reader, interaction._listArgument );
             if ( interaction._inner.empty() == false && findProfile( interaction._inner ) == nullptr )
-                reader.addError( node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );
+                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );
             if ( interaction._outer.empty() == false && findProfile( interaction._outer ) == nullptr )
-                reader.addError( node, string( "names unknown outer profile '" ) + interaction._outer.c_str() + "'" );
+                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown outer profile '" ) + interaction._outer.c_str() + "'" );
             const IFitOperator* pOperator = interaction._operator.empty() ? nullptr : operators.findOperator( interaction._operator );
             if ( interaction._operator.empty() == false && pOperator == nullptr )
-                reader.addError( node, string( "names unknown operator '" ) + interaction._operator.c_str() + "'" );
+                reader.addError( "Character.FitOperatorUnknown", node, string( "names unknown operator '" ) + interaction._operator.c_str() + "'" );
             if ( pOperator != nullptr )
             {
                 for ( const FitArgument& argument : interaction._listArgument )
                 {
                     if ( pOperator->acceptsArgument( argument._name ) == false )
-                        reader.addError( node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
+                        reader.addError( "Character.FitArgumentUnknown", node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
                 }
             }
             _listInteraction.push_back( std::move( interaction ) );

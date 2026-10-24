@@ -43,7 +43,7 @@ namespace sw
                     if ( GameDataXML::parseFloat4( token, color ) )
                         outListColor.push_back( color );
                     else
-                        report.addError( "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );
+                        report.addErrorWithID( "Appearance.ColorShape", "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );
                 } );
             }
 

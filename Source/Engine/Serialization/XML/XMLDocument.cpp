@@ -273,7 +273,7 @@ namespace sw
                 return 1;
             if ( XMLDocumentInternal::parseText( pText, outValue ) )
                 return 0;
-            SW_LOG_ERROR( "<%#> %# '%#' is not a %#: '%#'", pElementName, pKind, pName, XMLDocumentInternal::getTypeLabel( outValue ), pText );
+            SW_LOG_ERROR_ID( "Xml.ValueTypeMismatch", "<%#> %# '%#' is not a %#: '%#'", pElementName, pKind, pName, XMLDocumentInternal::getTypeLabel( outValue ), pText );
             return 2;
         }
     } // namespace
@@ -369,7 +369,7 @@ namespace sw
 
     void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
     {
-        SW_LOG_ERROR( "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
+        SW_LOG_ERROR_ID( "Xml.AttributeOutOfRange", "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
     }
 
     XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -552,6 +552,7 @@ namespace sw
     XMLDocument::XMLDocument( XMLDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
         , _lastError{ std::move( other._lastError ) }
+        , _bLastErrorNotFound{ other._bLastErrorNotFound }
     {
     }
 
@@ -559,8 +560,9 @@ namespace sw
     {
         if ( this != &other )
         {
-            _impl      = std::move( other._impl );
-            _lastError = std::move( other._lastError );
+            _impl               = std::move( other._impl );
+            _lastError          = std::move( other._lastError );
+            _bLastErrorNotFound = other._bLastErrorNotFound;
         }
         return *this;
     }
@@ -579,6 +581,7 @@ namespace sw
             _impl = make_unique<Impl>();
         _impl->doc.reset();
         _lastError.clear();
+        _bLastErrorNotFound      = false;
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( xmlText.empty() )
         {
@@ -628,14 +631,16 @@ namespace sw
     {
         if ( relativePath.empty() )
         {
-            _lastError = "empty path";
+            _lastError          = "empty path";
+            _bLastErrorNotFound = false;
             return false;
         }
         string text;
         string absPath;
         if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
         {
-            _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            _lastError          = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            _bLastErrorNotFound = true;
             return false;
         }
         if ( pOutAbsPath != nullptr )

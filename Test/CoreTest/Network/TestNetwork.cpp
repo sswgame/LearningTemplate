@@ -1930,7 +1930,7 @@ SW_TEST_CASE( NetworkTest, OversizedMessagesAreRefusedLoudlyAndAFullWindowQuietl
     SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 63 * NetConnection::kMaxSingleMessageSize ) );
     SW_EXPECT_EQUAL( NetConnection::kReliableWindow - 1, connection.getPendingReliableCount() );
     SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), 1 ) );
-    SW_EXPECT_EQUAL( 0u, log.countContaining( "NetConnection" ) );
+    SW_EXPECT_EQUAL( 0u, log.count() );
 }
 
 /**

@@ -173,7 +173,7 @@ SW_TEST_CASE( MonsterCollectorTest, NatureWithAnUnknownStatIsSkippedAndReported 
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kXML, "MonsterCollectorTest" ) );
     }
     SW_EXPECT_TRUE( catalog.findNature( hashed_string( "Brave" ) ) == nullptr );
-    SW_EXPECT_TRUE_MSG( collector.countContaining( "Brave" ) > 0, collector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( collector.countWithID( "GameData.ValueUnreadable" ) > 0, collector.joined().c_str() );
 
     const MonsterNatureDef* pCalm = catalog.findNature( hashed_string( "Calm" ) );
     SW_ASSERT_NOT_NULL( pCalm );

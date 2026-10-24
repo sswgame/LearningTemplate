@@ -185,9 +185,9 @@ namespace sw
                             waits.appendFormat( "\n  '%#' waits on '%#'", listNode[consumerIndex]._name.c_str(), listNode[producerIndex]._name.c_str() );
                     }
                 }
-                SW_LOG_ERROR( "Render graph has a cycle - %#/%# active passes scheduled; these wait on each other "
-                              "(a pass reads what a later pass writes, which reads this one's output):%#",
-                              static_cast<uint32>( scheduledCount ), static_cast<uint32>( activeCount ), waits.c_str() );
+                SW_LOG_ERROR_ID( "Renderer.GraphCycle", "Render graph has a cycle - %#/%# active passes scheduled; these wait on each other "
+                                                        "(a pass reads what a later pass writes, which reads this one's output):%#",
+                                 static_cast<uint32>( scheduledCount ), static_cast<uint32>( activeCount ), waits.c_str() );
             }
         };
     } // namespace

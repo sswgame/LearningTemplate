@@ -128,7 +128,7 @@ namespace sw
         {
             string boneError;
             if ( validateBones( *pBones, &boneError ) == false )
-                reader.addError( boneError );
+                reader.addError( "Character.BoneUnknown", boneError );
         }
         return reader.finish();
     }
@@ -145,7 +145,7 @@ namespace sw
         {
             string boneError;
             if ( validateBones( *pBones, &boneError ) == false )
-                reader.addError( boneError );
+                reader.addError( "Character.BoneUnknown", boneError );
         }
         return reader.finish();
     }
@@ -187,7 +187,7 @@ namespace sw
             socket._kind = reader.readName( node, "kind", true );
             socket._fieldMask |= SocketFieldBit::kKind;
             if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
-                reader.addError( node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
+                reader.addError( "Character.SocketKindUnknown", node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
         }
         if ( CharacterDataReader::hasAttribute( node, "translation" ) )
         {

@@ -79,7 +79,7 @@ namespace sw
         const uint32         spawnCount = MathUtil::min( spawn._count, freeCount );
         if ( spawnCount < spawn._count && _bWarnedPoolFull == false )
         {
-            SW_LOG_WARNING( "Vfx emitter '%#': pool of %# particles is full, dropping new particles", def._name, def._maxParticles );
+            SW_LOG_WARNING_ID( "Vfx.PoolFull", "Vfx emitter '%#': pool of %# particles is full, dropping new particles", def._name, def._maxParticles );
             _bWarnedPoolFull = true;
         }
 

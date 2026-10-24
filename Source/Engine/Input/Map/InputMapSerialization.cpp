@@ -334,7 +334,7 @@ namespace sw
                 const bool bInRange = 0 <= padIndex && padIndex < static_cast<int32>( kMaxGamepadSlot );
                 if ( bInRange == false )
                 {
-                    SW_LOG_ERROR( "<%# pad=\"%#\"> is outside 0..%# - binding dropped", node.getName(), padIndex, static_cast<int32>( kMaxGamepadSlot ) - 1 );
+                    SW_LOG_ERROR_ID( "Input.PadIndexOutOfRange", "<%# pad=\"%#\"> is outside 0..%# - binding dropped", node.getName(), padIndex, static_cast<int32>( kMaxGamepadSlot ) - 1 );
                     return false;
                 }
                 outPadIndex = static_cast<uint8>( padIndex );
@@ -497,7 +497,7 @@ namespace sw
                 const bool bKnownBits = 0 <= modifierMask && modifierMask <= static_cast<int32>( ModifierKey::All );
                 if ( bKnownBits == false )
                 {
-                    SW_LOG_ERROR( "<%# modifierMask=\"%#\"> is outside 0..%# - binding dropped", node.getName(), modifierMask, static_cast<int32>( ModifierKey::All ) );
+                    SW_LOG_ERROR_ID( "Input.ModifierMaskOutOfRange", "<%# modifierMask=\"%#\"> is outside 0..%# - binding dropped", node.getName(), modifierMask, static_cast<int32>( ModifierKey::All ) );
                     return false;
                 }
                 outModifierMask = static_cast<uint8>( modifierMask );
@@ -776,7 +776,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR( "The source of a single-slot binding is missing or unknown (action=%#, source=%#) - skipping this binding.", pAction, ( pSourceStr != nullptr ) ? pSourceStr : "" );
+                    SW_LOG_ERROR_ID( "Input.BindingSourceUnknown", "The source of a single-slot binding is missing or unknown (action=%#, source=%#) - skipping this binding.", pAction, ( pSourceStr != nullptr ) ? pSourceStr : "" );
                 }
             }
 
@@ -957,9 +957,9 @@ namespace sw
             const bool bHasContinuousBinding = actionNode.findChild( "vector2d" ).isValid() || actionNode.findChild( "stick" ).isValid() || actionNode.findChild( "mouseDelta" ).isValid();
             const bool bIgnoredTrigger       = bActionTriggerWritten && defaultTrigger != ActionTrigger::Down && bHasContinuousBinding;
             if ( bIgnoredTrigger )
-                SW_LOG_WARNING( "Action '%#' sets trigger '%#', but its vector2d/stick/mouseDelta bindings are continuous values read every frame - "
-                                "the trigger is ignored for them",
-                                pActionName, pTriggerAttr );
+                SW_LOG_WARNING_ID( "Input.ContinuousTriggerIgnored", "Action '%#' sets trigger '%#', but its vector2d/stick/mouseDelta bindings are continuous values read every frame - "
+                                                                     "the trigger is ignored for them",
+                                   pActionName, pTriggerAttr );
 
             InputMapActionLoader loader{ map, actionNode, hashed_string( pActionName ), layer, defaultTrigger, bActionTriggerWritten, bValid };
             loader.loadBinds();
@@ -1391,8 +1391,8 @@ namespace sw
             const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
             if ( parsedKind == BindingKind::Count )
             {
-                SW_LOG_ERROR( "The binding kind is missing or unknown (action=%#, kind=%#) - skipping this binding.", pAction,
-                              ( pKindStr != nullptr ) ? pKindStr : "" );
+                SW_LOG_ERROR_ID( "Input.BindingKindUnknown", "The binding kind is missing or unknown (action=%#, kind=%#) - skipping this binding.", pAction,
+                                 ( pKindStr != nullptr ) ? pKindStr : "" );
                 continue;
             }
 

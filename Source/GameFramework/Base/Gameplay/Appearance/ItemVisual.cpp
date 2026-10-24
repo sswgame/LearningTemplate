@@ -80,7 +80,7 @@ namespace sw
             {
                 if ( visual.findPart( part ) != nullptr )
                     return true;
-                report.addError( "%#: visual '%#' %# names unknown part '%#'", sourceName, visual._id.c_str(), pWhere, part.c_str() );
+                report.addErrorWithID( "Appearance.PartUnknown", "%#: visual '%#' %# names unknown part '%#'", sourceName, visual._id.c_str(), pWhere, part.c_str() );
                 return false;
             }
 
@@ -149,7 +149,7 @@ namespace sw
                 part._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                 if ( parseKind( node.getAttributeText( "kind" ), part._kind ) == false )
                 {
-                    report.addError( "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
+                    report.addErrorWithID( "Appearance.PartKindUnknown", "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
                     return;
                 }
                 if ( part._name.empty() || inoutVisual.findPart( part._name ) != nullptr )
@@ -168,7 +168,7 @@ namespace sw
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
-                    report.addError( "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartRigNeedsSkeleton", "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 part._fit                  = AppearanceXMLUtil::readOptionalName( node, "fit" );
                 part._fitTables            = AppearanceXMLUtil::readOptionalName( node, "fitTables" );
                 const bool bFitOnRigidPart = ( part._fit.empty() == false || part._fitTables.empty() == false ) && part._kind != AppearancePartKind::Skinned;
@@ -244,7 +244,7 @@ namespace sw
                 const std::optional<float32> threshold = node.readRequiredAttribute<float32>( "threshold" );
                 if ( threshold.has_value() == false )
                 {
-                    report.addError( "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                    report.addErrorWithID( "Appearance.DamageStageThreshold", "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;
                 }
                 stage._threshold                  = *threshold;
@@ -253,7 +253,7 @@ namespace sw
                 const bool    bInvalidDamageStage = stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false;
                 if ( bInvalidDamageStage )
                 {
-                    report.addError( "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                    report.addErrorWithID( "Appearance.DamageStageThreshold", "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;
                 }
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
@@ -266,8 +266,8 @@ namespace sw
                         entry._variant                 = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
                         const AppearancePartDef* pPart = inoutVisual.findPart( entry._part );
                         if ( pPart == nullptr || pPart->findVariant( entry._variant ) == nullptr )
-                            report.addError( "%#: visual '%#' damage stage '%#' names unknown part/variant '%#'/'%#'", sourceName, inoutVisual._id.c_str(), stage._name.c_str(), entry._part.c_str(),
-                                             entry._variant.c_str() );
+                            report.addErrorWithID( "Appearance.PartUnknown", "%#: visual '%#' damage stage '%#' names unknown part/variant '%#'/'%#'", sourceName, inoutVisual._id.c_str(), stage._name.c_str(), entry._part.c_str(),
+                                                   entry._variant.c_str() );
                         else
                             stage._listVariant.push_back( entry );
                     }
@@ -320,7 +320,7 @@ namespace sw
                 for ( const AppearancePartDef& part : outVisual._listPart )
                 {
                     if ( part._breakStage.empty() == false && outVisual.findDamageStage( part._breakStage ) == nullptr )
-                        report.addError( "%#: visual '%#' part '%#' breaks at unknown damage stage '%#'", sourceName, outVisual._id.c_str(), part._name.c_str(), part._breakStage.c_str() );
+                        report.addErrorWithID( "Appearance.DamageStageUnknown", "%#: visual '%#' part '%#' breaks at unknown damage stage '%#'", sourceName, outVisual._id.c_str(), part._name.c_str(), part._breakStage.c_str() );
                 }
             }
         };

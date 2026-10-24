@@ -418,11 +418,11 @@ SW_TEST_CASE( FitSolverTest, OperatorIsChosenByNameFromData )
     SW_TEST_DEFENSIVE_SCOPE( "unknown fit operator and argument names are load errors" );
     FitTables broken;
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Rigid' operator='Explode'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown operator 'Explode'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitOperatorUnknown" ) > 0 );
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Rigid' operator='Shrink' args='speed=2'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "has no argument 'speed'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitArgumentUnknown" ) > 0 );
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Metal' operator='Shrink'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown outer profile 'Metal'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitProfileUnknown" ) > 0 );
 }
 
 /**

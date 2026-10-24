@@ -240,7 +240,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, RigidBodyMeshShapeLoadsThroughEngineMeshCach
         const test::ScopedLogCollector log;
         manager.beginPlay();
         manager.update( kMeshShapeStep );
-        SW_EXPECT_TRUE_MSG( log.countContaining( "" ) == 0u, log.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( log.count() == 0u, log.joined().c_str() );
     }
     SW_EXPECT_TRUE_MSG( pBody->getBodyHandle().isValid(), "a _meshPath shape must become a body without a test-installed load function" );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), sw::PhysicsMeshShapeCache::getCachedCount() );

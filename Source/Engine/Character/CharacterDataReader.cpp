@@ -63,20 +63,30 @@ namespace sw
 
     void CharacterDataReader::addError( const XMLNode& node, string_view message )
     {
+        addError( "Character.DataInvalid", node, message );
+    }
+
+    void CharacterDataReader::addError( string_view message )
+    {
+        addError( "Character.DataInvalid", message );
+    }
+
+    void CharacterDataReader::addError( const utf8* pID, const XMLNode& node, string_view message )
+    {
         string text = _sourceName;
         text += ": <";
         text += node.isValid() ? node.getName() : "?";
         text += "> ";
         text += message;
-        _listError.push_back( std::move( text ) );
+        _listError.push_back( { std::move( text ), pID } );
     }
 
-    void CharacterDataReader::addError( string_view message )
+    void CharacterDataReader::addError( const utf8* pID, string_view message )
     {
         string text = _sourceName;
         text += ": ";
         text += message;
-        _listError.push_back( std::move( text ) );
+        _listError.push_back( { std::move( text ), pID } );
     }
 
     void CharacterDataReader::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount )
@@ -85,7 +95,7 @@ namespace sw
         (void)XMLNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
         {
-            addError( node, string( "has unknown attribute '" ) + pName + "'" );
+            addError( "Character.UnknownAttribute", node, string( "has unknown attribute '" ) + pName + "'" );
         }
     }
 
@@ -222,9 +232,10 @@ namespace sw
 
     bool CharacterDataReader::finish() const
     {
-        for ( const string& error : _listError )
+        for ( const Error& error : _listError )
         {
-            SW_LOG_ERROR( "%#", error );
+            // id 는 호출한 쪽이 글자 상수로 넘긴 것이다(`addError` 의 약속).
+            SW_LOG_WRITE( sw::LogLevel::Error, error._pID, "%#", error._text );
         }
         return _listError.empty();
     }

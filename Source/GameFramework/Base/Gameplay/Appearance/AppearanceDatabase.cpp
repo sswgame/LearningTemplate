@@ -291,7 +291,7 @@ namespace sw
             {
                 const bool bSetCondition = condition._kind == EquipConditionKind::SetComplete || condition._kind == EquipConditionKind::SetPieces;
                 if ( bSetCondition && _sets.hasSet( condition._setID ) == false )
-                    _report.addError( "item '%#' requires unknown set '%#'", item._id.c_str(), condition._setID.c_str() );
+                    _report.addErrorWithID( "Appearance.SetUnknown", "item '%#' requires unknown set '%#'", item._id.c_str(), condition._setID.c_str() );
             }
         }
         vector<hashed_string> listCycle;
@@ -304,7 +304,7 @@ namespace sw
                     chain += " -> ";
                 chain += itemID.c_str();
             }
-            _report.addError( "equip conditions form a cycle: %#", chain );
+            _report.addErrorWithID( "Appearance.EquipConditionCycle", "equip conditions form a cycle: %#", chain );
         }
         // 공유 코드와 네트워크는 아이템, 외형, 프리셋 id 를 32 비트 해시로 싣는다.
         const vector<ItemDef>& listItem = _pItemCatalog->getAll();
@@ -325,14 +325,14 @@ namespace sw
             for ( const EquipSetPieceDef& piece : set._listPiece )
             {
                 if ( _slotTable.hasSlot( piece._slot ) == false )
-                    _report.addError( "set '%#' names unknown slot '%#'", set._id.c_str(), piece._slot.c_str() );
+                    _report.addErrorWithID( "Appearance.SlotUnknown", "set '%#' names unknown slot '%#'", set._id.c_str(), piece._slot.c_str() );
             }
             vector<hashed_string> listItem;
             _sets.collectSetItems( set._id, listItem );
             for ( const hashed_string& itemID : listItem )
             {
                 if ( _pItemCatalog != nullptr && _pItemCatalog->find( itemID ) == nullptr )
-                    _report.addError( "set '%#' names unknown item '%#'", set._id.c_str(), itemID.c_str() );
+                    _report.addErrorWithID( "Appearance.ItemUnknown", "set '%#' names unknown item '%#'", set._id.c_str(), itemID.c_str() );
             }
             if ( set._completeVisual.empty() == false && _visuals.findVisual( set._completeVisual ) == nullptr )
                 _report.addError( "set '%#' complete visual '%#' is unknown", set._id.c_str(), set._completeVisual.c_str() );
@@ -344,7 +344,7 @@ namespace sw
         for ( const ItemVisualDef& visual : _visuals.getVisuals() )
         {
             if ( visual._occupancy.empty() == false && _slotTable.findOccupancy( visual._occupancy ) == nullptr )
-                _report.addError( "visual '%#' names unknown occupancy '%#'", visual._id.c_str(), visual._occupancy.c_str() );
+                _report.addErrorWithID( "Appearance.OccupancyUnknown", "visual '%#' names unknown occupancy '%#'", visual._id.c_str(), visual._occupancy.c_str() );
             if ( visual._customization.empty() == false && _schemas.findSchema( visual._customization ) == nullptr )
                 _report.addError( "visual '%#' names unknown customization schema '%#'", visual._id.c_str(), visual._customization.c_str() );
             if ( pListKnownBodyRegion == nullptr )
@@ -374,7 +374,7 @@ namespace sw
                     if ( option._visual.empty() == false && _visuals.findVisual( option._visual ) == nullptr )
                         _report.addError( "schema '%#' option '%#.%#' names unknown visual '%#'", schema._id.c_str(), param._name.c_str(), option._name.c_str(), option._visual.c_str() );
                     if ( option._variant.empty() == false && isVariantDeclared( option._variant ) == false )
-                        _report.addError( "schema '%#' option '%#.%#' names variant '%#' no visual declares", schema._id.c_str(), param._name.c_str(), option._name.c_str(), option._variant.c_str() );
+                        _report.addErrorWithID( "Appearance.VisualUndeclared", "schema '%#' option '%#.%#' names variant '%#' no visual declares", schema._id.c_str(), param._name.c_str(), option._name.c_str(), option._variant.c_str() );
                 }
             }
         }
@@ -388,16 +388,16 @@ namespace sw
             {
                 const bool bNamesOwner = condition._kind == AppearanceRuleConditionKind::TargetTag || condition._kind == AppearanceRuleConditionKind::Occupied;
                 if ( bNamesOwner && isOwnerName( condition._target ) == false )
-                    _report.addError( "rule '%#' condition names unknown slot '%#'", rule._id.c_str(), condition._target.c_str() );
+                    _report.addErrorWithID( "Appearance.SlotUnknown", "rule '%#' condition names unknown slot '%#'", rule._id.c_str(), condition._target.c_str() );
             }
             for ( const AppearanceRuleAction& action : rule._listAction )
             {
                 if ( action._target.empty() == false && isOwnerName( action._target ) == false )
                     _report.addError( "rule '%#' %# names unknown target '%#'", rule._id.c_str(), getEnumName( action._kind ), action._target.c_str() );
                 if ( action._kind == AppearanceRuleActionKind::ChooseVariant && isVariantDeclared( action._name ) == false )
-                    _report.addError( "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
+                    _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
-                    _report.addError( "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
+                    _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
                 const bool bUnknownBodyRegion = action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXMLUtil::containsName( *pListKnownBodyRegion, action._name ) == false;
                 if ( bUnknownBodyRegion )
                     _report.addError( "rule '%#' hides unknown body region '%#'", rule._id.c_str(), action._name.c_str() );
@@ -419,9 +419,9 @@ namespace sw
         {
             const CustomizationParamDef* pParam = pSchema->findParameter( value._parameter );
             if ( pParam == nullptr )
-                _report.addError( "%# sets unknown parameter '%#' of schema '%#'", pWhere, value._parameter.c_str(), schemaID.c_str() );
+                _report.addErrorWithID( "Appearance.ParameterUnknown", "%# sets unknown parameter '%#' of schema '%#'", pWhere, value._parameter.c_str(), schemaID.c_str() );
             else if ( value._option.empty() == false && pParam->findOption( value._option ) == nullptr )
-                _report.addError( "%# sets unknown option '%#' of '%#'", pWhere, value._option.c_str(), value._parameter.c_str() );
+                _report.addErrorWithID( "Appearance.OptionUnknown", "%# sets unknown option '%#' of '%#'", pWhere, value._option.c_str(), value._parameter.c_str() );
         }
     }
 
@@ -432,12 +432,12 @@ namespace sw
             CharacterAppearanceDef merged;
             if ( preset._parent.empty() == false && _presets.findPreset( preset._parent ) == nullptr )
             {
-                _report.addError( "preset '%#' names unknown parent '%#'", preset._id.c_str(), preset._parent.c_str() );
+                _report.addErrorWithID( "Appearance.PresetParentUnknown", "preset '%#' names unknown parent '%#'", preset._id.c_str(), preset._parent.c_str() );
                 continue;
             }
             if ( _presets.mergeChain( preset._id, merged ) == false )
             {
-                _report.addError( "preset '%#' parent chain forms a cycle", preset._id.c_str() );
+                _report.addErrorWithID( "Appearance.PresetParentCycle", "preset '%#' parent chain forms a cycle", preset._id.c_str() );
                 continue;
             }
             const string where = string( "preset '" ) + preset._id.c_str() + "'";
@@ -449,7 +449,7 @@ namespace sw
                 const CustomizationParamDef* pParam = pSchema != nullptr ? pSchema->findParameter( value._parameter ) : nullptr;
                 if ( pParam == nullptr )
                 {
-                    _report.addError( "%# sets unknown parameter '%#'", where, value._parameter.c_str() );
+                    _report.addErrorWithID( "Appearance.ParameterUnknown", "%# sets unknown parameter '%#'", where, value._parameter.c_str() );
                     continue;
                 }
                 const bool bOptionKind = pParam->_kind == CustomizationKind::Choice || pParam->_kind == CustomizationKind::Attachment;
@@ -459,13 +459,13 @@ namespace sw
                 for ( const hashed_string& option : value._listOption )
                 {
                     if ( bOptionKind && pParam->findOption( option ) == nullptr )
-                        _report.addError( "%# value '%#' names unknown option '%#'", where, value._parameter.c_str(), option.c_str() );
+                        _report.addErrorWithID( "Appearance.OptionUnknown", "%# value '%#' names unknown option '%#'", where, value._parameter.c_str(), option.c_str() );
                 }
             }
             for ( const hashed_string& setID : preset._listSet )
             {
                 if ( _sets.hasSet( setID ) == false )
-                    _report.addError( "%# equips unknown set '%#'", where, setID.c_str() );
+                    _report.addErrorWithID( "Appearance.SetUnknown", "%# equips unknown set '%#'", where, setID.c_str() );
             }
             for ( const hashed_string& body : preset._listBody )
             {
@@ -475,7 +475,7 @@ namespace sw
             for ( const CharacterAppearanceSlotDef& slot : preset._listSlot )
             {
                 if ( _slotTable.hasSlot( slot._slot ) == false )
-                    _report.addError( "%# equips unknown slot '%#'", where, slot._slot.c_str() );
+                    _report.addErrorWithID( "Appearance.SlotUnknown", "%# equips unknown slot '%#'", where, slot._slot.c_str() );
                 if ( slot._visibleVisual.empty() == false && _visuals.findVisual( slot._visibleVisual ) == nullptr )
                     _report.addError( "%# slot '%#' shows unknown visual '%#'", where, slot._slot.c_str(), slot._visibleVisual.c_str() );
                 for ( const hashed_string& itemID : slot._listItem )
@@ -483,7 +483,7 @@ namespace sw
                     const ItemDef*       pItem   = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
                     const ItemVisualDef* pVisual = pItem != nullptr ? _visuals.findVisual( pItem->_visualID ) : nullptr;
                     if ( _pItemCatalog != nullptr && pItem == nullptr )
-                        _report.addError( "%# slot '%#' names unknown item '%#'", where, slot._slot.c_str(), itemID.c_str() );
+                        _report.addErrorWithID( "Appearance.ItemUnknown", "%# slot '%#' names unknown item '%#'", where, slot._slot.c_str(), itemID.c_str() );
                     else if ( pVisual != nullptr )
                         validateItemValues( slot._customization, pVisual->_customization, where.c_str() );
                 }

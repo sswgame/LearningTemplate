@@ -46,7 +46,7 @@ namespace sw
             readRoot( root, reader );
         string boneError;
         if ( pBones != nullptr && validateBones( *pBones, &boneError ) == false )
-            reader.addError( boneError );
+            reader.addError( "Character.BoneUnknown", boneError );
         return reader.finish();
     }
 
@@ -61,7 +61,7 @@ namespace sw
             readRoot( root, reader );
         string boneError;
         if ( pBones != nullptr && validateBones( *pBones, &boneError ) == false )
-            reader.addError( boneError );
+            reader.addError( "Character.BoneUnknown", boneError );
         return reader.finish();
     }
 

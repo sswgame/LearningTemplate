@@ -440,7 +440,7 @@ namespace sw
             if ( result._releasedCount > 0 && result._bExpected )
                 SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             else if ( result._releasedCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
+                SW_LOG_WARNING_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
             if ( result._bKeepImageMapped )
             {

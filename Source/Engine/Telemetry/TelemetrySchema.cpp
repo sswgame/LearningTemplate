@@ -188,14 +188,14 @@ namespace sw
                 field._bRequired = bRequired.has_value() && *bRequired ? SW_TRUE : SW_FALSE; // 적지 않으면 선택 칸이다
                 if ( Internal::parseFieldType( fieldNode.getAttributeText( "type" ), field._type ) == false )
                 {
-                    SW_LOG_WARNING( "%#: field '%#' of '%#' has an unknown type '%#' (bool, int, float, string)", sourceName, name, event._id.c_str(),
-                                    fieldNode.getAttributeText( "type" ) );
+                    SW_LOG_WARNING_ID( "Telemetry.FieldTypeUnknown", "%#: field '%#' of '%#' has an unknown type '%#' (bool, int, float, string)", sourceName, name, event._id.c_str(),
+                                       fieldNode.getAttributeText( "type" ) );
                     bValid = false;
                 }
                 const bool bBadName = name.empty() || Internal::isReservedFieldName( name ) || event.findField( field._name ) != nullptr;
                 if ( bBadName )
                 {
-                    SW_LOG_WARNING( "%#: event '%#' has an empty, reserved or repeated field name '%#'", sourceName, event._id.c_str(), name );
+                    SW_LOG_WARNING_ID( "Telemetry.FieldNameInvalid", "%#: event '%#' has an empty, reserved or repeated field name '%#'", sourceName, event._id.c_str(), name );
                     bValid = false;
                     continue;
                 }
@@ -208,7 +208,7 @@ namespace sw
             }
             if ( bDuplicate )
             {
-                SW_LOG_WARNING( "%#: event '%#' is declared twice", sourceName, event._id.c_str() );
+                SW_LOG_WARNING_ID( "Telemetry.EventDeclaredTwice", "%#: event '%#' is declared twice", sourceName, event._id.c_str() );
                 bValid = false;
                 continue;
             }

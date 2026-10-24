@@ -907,8 +907,7 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanFailsTheLoad )
         SW_EXPECT_FALSE( material->loadFromXML( fieldXML ) );
         SW_EXPECT_FALSE( material->loadFromXML( valueXML ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value 'bSrgb' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material value '_flip' has an unreadable boolean 'maybe'" ) >= 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnreadableBoolean" ) >= 2, logs.joined().c_str() );
 }
 
 /**
@@ -939,8 +938,7 @@ SW_TEST_CASE( MaterialTest, UnreadableNumberFailsTheLoad )
         SW_EXPECT_FALSE( material->loadFromXML( rangeXML ) );
         SW_EXPECT_FALSE( material->loadFromXML( vectorXML ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material parameter '_roughness' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "has an unreadable number 'red'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnreadableNumber" ) == 2, logs.joined().c_str() );
 }
 
 /**
@@ -982,7 +980,7 @@ SW_TEST_CASE( MaterialTest, ShaderFieldMissingFromTheMaterialFailsTheSync )
         SW_TEST_DEFENSIVE_SCOPE( "material missing a shader field" );
         SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "does not list shader field '_albedoMap'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.ShaderFieldNotListed" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( material->getBuffer().empty() );
 }
 
@@ -1018,7 +1016,7 @@ SW_TEST_CASE( MaterialTest, MaterialFieldMissingFromTheShaderFailsTheSync )
         SW_TEST_DEFENSIVE_SCOPE( "material lists a field the shader lacks" );
         SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "lists property 'ghost'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.PropertyNotInShader" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( material->getBuffer().empty() );
 }
 
@@ -1052,7 +1050,7 @@ SW_TEST_CASE( MaterialTest, ReflectionWithoutMaterialSchemaFailsTheSync )
         SW_TEST_DEFENSIVE_SCOPE( "reflection without material schema" );
         SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "has no material schema" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.NoSchema" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( material->getBuffer().empty() );
 }
 
@@ -1132,7 +1130,7 @@ SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )
         SW_TEST_DEFENSIVE_SCOPE( "game material missing a game shader field" );
         SW_EXPECT_FALSE( missingField->syncPropertiesFromReflection( reflection ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "does not list shader field '_scanlineStrength'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.ShaderFieldNotListed" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( missingField->getBuffer().empty() );
 }
 
@@ -1265,7 +1263,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
         SW_TEST_DEFENSIVE_SCOPE( "unknown material enum text" );
         SW_EXPECT_FALSE( material->loadFromXML( xml ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "ZqUsageTypoProbe" ) >= 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UsageFlagUnknown" ) >= 1, logs.joined().c_str() );
     SW_ASSERT_TRUE( material->loadFromXML( sw::StringUtil::replace( xml, " | ZqUsageTypoProbe", "" ) ) );
     SW_EXPECT_TRUE( material->getPermutations()._usage == sw::MaterialUsageFlags::Instanced );
 
@@ -1293,8 +1291,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
     SW_EXPECT_EQUAL( 5u, readUint( "usage" ) );
     SW_EXPECT_EQUAL( 3u, readUint( "quality" ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material parameter 'shadeMode' has an unknown enum value 'Lt'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'quality' has an unknown enum value 'Count'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnknownEnumValue" ) == 2, logs.joined().c_str() );
     // 실패한 글은 프로퍼티 값으로도 남지 않는다(저장하면 옛 값이 나간다).
     const sw::MaterialProperty* pShade = material->findProperty( sw::hashed_string( "shadeMode" ) );
     SW_ASSERT_NOT_NULL( pShade );

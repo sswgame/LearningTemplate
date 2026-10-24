@@ -143,16 +143,16 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
     struct BadCase
     {
         const utf8* _pXML;
-        const utf8* _pMessage;
+        const utf8* _pID;
     };
     const BadCase arrBad[] = {
-        {                          R"(<TelemetrySchema><Event id="a" color="red"/></TelemetrySchema>)", "unknown attribute 'color'"},
-        {                                     R"(<TelemetrySchema><Metric id="a"/></TelemetrySchema>)",  "unknown element <Metric>"},
-        {R"(<TelemetrySchema><Event id="a"><Field name="x" type="vector"/></Event></TelemetrySchema>)",     "unknown type 'vector'"},
-        { R"(<TelemetrySchema><Event id="a"><Field name="seq" type="int"/></Event></TelemetrySchema>)",                  "reserved"},
-        {                              R"(<TelemetrySchema><Event id="game.kill"/></TelemetrySchema>)",            "declared twice"},
-        {                           R"(<TelemetrySchema><Event id="a" sample="2"/></TelemetrySchema>)",            "> is outside ["},
-        { R"(<TelemetrySchema><Event id="b"/><Pipeline batchEvents="9" speed="1"/></TelemetrySchema>)", "unknown attribute 'speed'"},
+        {                          R"(<TelemetrySchema><Event id="a" color="red"/></TelemetrySchema>)",         "Xml.UnknownAttribute"},
+        {                                     R"(<TelemetrySchema><Metric id="a"/></TelemetrySchema>)",           "Xml.UnknownElement"},
+        {R"(<TelemetrySchema><Event id="a"><Field name="x" type="vector"/></Event></TelemetrySchema>)",   "Telemetry.FieldTypeUnknown"},
+        { R"(<TelemetrySchema><Event id="a"><Field name="seq" type="int"/></Event></TelemetrySchema>)",   "Telemetry.FieldNameInvalid"},
+        {                              R"(<TelemetrySchema><Event id="game.kill"/></TelemetrySchema>)", "Telemetry.EventDeclaredTwice"},
+        {                           R"(<TelemetrySchema><Event id="a" sample="2"/></TelemetrySchema>)",      "Xml.AttributeOutOfRange"},
+        { R"(<TelemetrySchema><Event id="b"/><Pipeline batchEvents="9" speed="1"/></TelemetrySchema>)",         "Xml.UnknownAttribute"},
     };
     for ( const BadCase& bad : arrBad )
     {
@@ -161,7 +161,7 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
             SW_TEST_DEFENSIVE_SCOPE( "broken telemetry schema" );
             SW_EXPECT_FALSE( schema.loadFromXMLText( bad._pXML, "Broken" ) );
         }
-        SW_EXPECT_TRUE_MSG( logs.countContaining( bad._pMessage ) >= 1, ( string( bad._pMessage ) + " not reported:" + logs.joined() ).c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( bad._pID ) >= 1, ( string( bad._pID ) + " not reported:" + logs.joined() ).c_str() );
     }
     // 거절한 파일의 사건(`a` · `b`) · 설정은 들어가지 않았다.
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( schema.getEvents().size() ) );
@@ -263,8 +263,8 @@ SW_TEST_CASE( TelemetryTest, RecordValidatesAgainstTheSchema )
         missingRequired.setFloat( "distance", 3.0 );
         SW_EXPECT_TRUE( telemetry.record( missingRequired ) == TelemetryRecordResult::InvalidField );
     }
-    SW_EXPECT_TRUE( logs.countContaining( "'game.unknown' is not in the schema" ) == 1 );
-    SW_EXPECT_TRUE( logs.countContaining( "misses required field 'weapon'" ) == 1 );
+    SW_EXPECT_TRUE( logs.countWithID( "Telemetry.EventNotInSchema" ) == 1 );
+    SW_EXPECT_TRUE( logs.countWithID( "Telemetry.RequiredFieldMissing" ) == 1 );
     TelemetryEvent intForFloat( "game.kill" );
     intForFloat.setString( "weapon", "pistol" ).setInt( "distance", 7 );
     SW_EXPECT_TRUE( telemetry.record( intForFloat ) == TelemetryRecordResult::Recorded );

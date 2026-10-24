@@ -316,8 +316,8 @@ namespace sw
                 if ( pSystemFamily != nullptr )
                     SW_LOG_INFO( "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
                 else
-                    SW_LOG_WARNING( "[Text] Font family '%#' is not in the font catalog or could not be opened - the next family in the fallback chain is used",
-                                    string( family ).c_str() );
+                    SW_LOG_WARNING_ID( "Text.FontFamilyMissing", "[Text] Font family '%#' is not in the font catalog or could not be opened - the next family in the fallback chain is used",
+                                       string( family ).c_str() );
             }
         }
         _mapOpenedFamilyFace.emplace( familyFaceKey, opened );

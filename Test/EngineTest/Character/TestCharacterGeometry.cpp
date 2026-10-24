@@ -189,7 +189,7 @@ SW_TEST_CASE( SurfaceStateTest, RegionChannelsSetAndDecay )
         SW_TEST_DEFENSIVE_SCOPE( "unknown attributes in surface channel data are load errors" );
         SurfaceChannelTable broken;
         SW_EXPECT_FALSE( broken.loadFromXMLText( "<SurfaceChannels><Channel name='Wet' fade='1'/></SurfaceChannels>", "broken.surfacechannels.xml" ) );
-        SW_EXPECT_TRUE( logs.countContaining( "unknown attribute 'fade'" ) > 0 );
+        SW_EXPECT_TRUE( logs.countWithID( "Character.UnknownAttribute" ) > 0 );
     }
     CharacterSurfaceState state;
     state.initialize( channels, 3, 2 );

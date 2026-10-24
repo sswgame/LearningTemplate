@@ -134,7 +134,7 @@ namespace sw
                     AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
-                report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
+                report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                 return false;
             }
         };
@@ -256,8 +256,8 @@ namespace sw
                     {
                         const bool bConflict = left.isHide() == false && left.hasSameTarget( right ) && left.hasSameValue( right ) == false;
                         if ( bConflict )
-                            report.addError( "%#: rules '%#' and '%#' both %# '%#' differently at priority %# - give one a higher priority", sourceName, lhs._id.c_str(), rhs._id.c_str(),
-                                             getEnumName( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
+                            report.addErrorWithID( "Appearance.RuleConflict", "%#: rules '%#' and '%#' both %# '%#' differently at priority %# - give one a higher priority", sourceName, lhs._id.c_str(), rhs._id.c_str(),
+                                                   getEnumName( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
                     }
                 }
             }

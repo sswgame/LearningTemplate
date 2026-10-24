@@ -262,7 +262,7 @@ namespace sw
             int64           usageValue{ 0 };
             if ( pUsageEnum == nullptr || pUsageEnum->tryParseText( usage, usageValue ) == false )
             {
-                SW_LOG_ERROR( "Material usage '%#' has an unknown flag", usage );
+                SW_LOG_ERROR_ID( "Material.UsageFlagUnknown", "Material usage '%#' has an unknown flag", usage );
                 return false;
             }
             outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );

@@ -537,7 +537,7 @@ SW_TEST_CASE( AnimationLODTest, BoneLODLoadsBesideSkeletonPath )
     {
         const test::ScopedLogCollector log;
         pUnit->setSkeletonPath( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" );
-        SW_EXPECT_EQUAL( 0u, log.countContaining( "Bone LOD" ) );
+        SW_EXPECT_EQUAL( 0u, log.count() );
     }
     SW_ASSERT_NOT_NULL( pUnit->findBoneLOD() );
     AnimationLODState state{};

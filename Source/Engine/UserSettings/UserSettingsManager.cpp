@@ -200,8 +200,8 @@ namespace sw
             return true;
         const string corruptPath = string( filePath ) + ".corrupt";
         const bool   bMovedAside = FileUtil::copyFile( filePath, corruptPath ) && FileUtil::removeFile( filePath );
-        SW_LOG_ERROR( "User settings '%#' could not be read - %# and starting from a fresh file", filePath,
-                      bMovedAside ? ( "moved to '" + corruptPath + "'" ).c_str() : "could not be moved aside" );
+        SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath,
+                         bMovedAside ? ( "moved to '" + corruptPath + "'" ).c_str() : "could not be moved aside" );
         return false;
     }
 
@@ -223,7 +223,7 @@ namespace sw
             const uint32 settingIndex = findIndex( hashed_string( entry._key ) );
             if ( settingIndex == invalid_index::kUint32 )
             {
-                SW_LOG_WARNING( "User settings '%#': dropped unknown key '%#'", sourceName, entry._key );
+                SW_LOG_WARNING_ID( "UserSettings.UnknownKeyDropped", "User settings '%#': dropped unknown key '%#'", sourceName, entry._key );
                 continue;
             }
             string                       normalized;
@@ -234,7 +234,7 @@ namespace sw
                 continue;
             }
             if ( result == UserSettingValueResult::Clamped )
-                SW_LOG_WARNING( "User settings '%#': '%#' = '%#' is out of range - using '%#'", sourceName, entry._key, entry._value, normalized );
+                SW_LOG_WARNING_ID( "UserSettings.ValueOutOfRange", "User settings '%#': '%#' = '%#' is out of range - using '%#'", sourceName, entry._key, entry._value, normalized );
             _listState[settingIndex]._committedValue = normalized;
         }
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
@@ -563,7 +563,7 @@ namespace sw
             {
                 // 대상이 거절한 값은 저장은 되지만 지금 실행에는 반영되지 않았다. 어느 설정인지 남긴다(메뉴와 에디터는 개수만 받는다).
                 ++result._failedCount;
-                SW_LOG_WARNING( "User setting '%#' = '%#' was rejected by its target '%#'", def._id.c_str(), state._committedValue.c_str(), def._targetName.c_str() );
+                SW_LOG_WARNING_ID( "UserSettings.TargetRejected", "User setting '%#' = '%#' was rejected by its target '%#'", def._id.c_str(), state._committedValue.c_str(), def._targetName.c_str() );
             }
             broadcast( def._id, UserSettingEventKind::Applied );
         }

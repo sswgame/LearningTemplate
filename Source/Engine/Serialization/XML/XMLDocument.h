@@ -327,6 +327,8 @@ namespace sw
          *          부르는 쪽(씬, 프리팹)은 이것으로 구문 오류와 없는 파일을 구분한다.
          */
         const string& getLastError() const { return _lastError; }
+        /** @brief 마지막 `loadResource` 가 실패한 이유가 "파일이 없다" 인가(구문 오류 · 읽기 실패가 아니라). 글(`getLastError`)을 뒤지지 않고 가르는 길이다. */
+        bool isLastErrorNotFound() const { return _bLastErrorNotFound; }
         /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XMLNode::getSourceOffset` 이 모를 때). */
         static uint32 computeLineNumber( string_view text, int64 offset );
 
@@ -355,5 +357,6 @@ namespace sw
         struct Impl;
         unique_ptr<Impl> _impl;
         string           _lastError; /**< 마지막 parse 나 load 의 실패 이유(`getLastError`) */
+        bool             _bLastErrorNotFound{ false };
     };
 } // namespace sw

@@ -430,7 +430,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported
                                                                   {"Crimson", 0},
                                                                   {   "Blue", 1}
     } ) ); // 같은 값의 별칭
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "same name hash" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Reflection.EnumeratorHashClash" ) == 0, logs.joined().c_str() );
     {
         test::ScopedDefensiveTestLog expected( "an enum with two enumerators that differ only in case" );
         registry.registerEnum( makeEnum( "swtest::ClashingEnum", {
@@ -438,7 +438,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported
                                                                      {"RED", 1}
         } ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "swtest::ClashingEnum has enumerators" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Reflection.EnumeratorHashClash" ) == 1, logs.joined().c_str() );
     registry.unregisterTypesByModule( "TestEnumClash" );
 }
 

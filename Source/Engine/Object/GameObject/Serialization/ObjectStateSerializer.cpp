@@ -246,9 +246,9 @@ namespace sw
                             continue;
                         if ( idSpace != ObjectIDSpace::Saved )
                             continue;
-                        SW_LOG_ERROR( "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
-                                      "container, or a copy failed) - the load fails",
-                                      pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
+                        SW_LOG_ERROR_ID( "Object.PropertyCannotRemap", "Property '%#::%#' of '%#' holds %# a load batch cannot remap (inside a set element or a map key that is a struct or "
+                                                                       "container, or a copy failed) - the load fails",
+                                         pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str(), pObject->getName().c_str(), pLeafKind );
                         bAllWalked = false;
                     }
                 }
@@ -827,17 +827,17 @@ namespace sw
             pTarget = ObjectStateSerializerInternal::findComponentByKeyHash( pTargetObject, savedHandle.componentID() );
             if ( pTarget == nullptr )
             {
-                SW_LOG_WARNING( "Handle '%#' of '%#' points at a component of '%#' that no longer exists (key hash %#) - the handle is cleared", leafProperty._name.c_str(),
-                                entry._pObject->getName().c_str(), pTargetObject->getName().c_str(), savedHandle.componentID() );
+                SW_LOG_WARNING_ID( "Object.HandleTargetGone", "Handle '%#' of '%#' points at a component of '%#' that no longer exists (key hash %#) - the handle is cleared", leafProperty._name.c_str(),
+                                   entry._pObject->getName().c_str(), pTargetObject->getName().c_str(), savedHandle.componentID() );
                 return ComponentHandle{};
             }
         }
         else if ( _idSpace == ObjectIDSpace::Saved )
         {
             // 런타임 id 를 파일 id 공간으로 읽을 수 없다. 이 실행의 컴포넌트 id 가 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비우고 조용히 넘기지 않는다.
-            SW_LOG_ERROR( "Handle '%#' of '%#' holds a runtime component id but is read as a saved file - write it with a saved id table, as a prefab or as a save game "
-                          "(object %#, component %#) - the load fails",
-                          leafProperty._name.c_str(), entry._pObject->getName().c_str(), savedHandle.objectID(), savedHandle.componentID() );
+            SW_LOG_ERROR_ID( "Object.HandleHoldsRuntimeID", "Handle '%#' of '%#' holds a runtime component id but is read as a saved file - write it with a saved id table, as a prefab or as a save game "
+                                                            "(object %#, component %#) - the load fails",
+                             leafProperty._name.c_str(), entry._pObject->getName().c_str(), savedHandle.objectID(), savedHandle.componentID() );
             outInvalid = true;
             return ComponentHandle{};
         }
@@ -855,9 +855,9 @@ namespace sw
         const bool      bTypesKnown = pTargetType != nullptr && pActualType != nullptr;
         if ( bTypesKnown == false || pActualType->isDerivedFrom( pTargetType ) == false )
         {
-            SW_LOG_ERROR( "Handle '%#' of '%#' must point at a '%#' but points at a '%#' (component '%#') - the load fails", leafProperty._name.c_str(),
-                          entry._pObject->getName().c_str(), leafProperty._handleTargetTypeName.empty() ? "?" : leafProperty._handleTargetTypeName.c_str(),
-                          pActualType != nullptr ? pActualType->_fullyQualifiedName.c_str() : "?", ComponentStableKey::makeKey( pTarget ).c_str() );
+            SW_LOG_ERROR_ID( "Object.HandleWrongTargetType", "Handle '%#' of '%#' must point at a '%#' but points at a '%#' (component '%#') - the load fails", leafProperty._name.c_str(),
+                             entry._pObject->getName().c_str(), leafProperty._handleTargetTypeName.empty() ? "?" : leafProperty._handleTargetTypeName.c_str(),
+                             pActualType != nullptr ? pActualType->_fullyQualifiedName.c_str() : "?", ComponentStableKey::makeKey( pTarget ).c_str() );
             outInvalid = true;
             return ComponentHandle{};
         }

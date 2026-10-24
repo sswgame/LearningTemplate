@@ -43,7 +43,7 @@ namespace sw
         bool bOk = ReflectedXMLFile::loadDesc( path, *this );
         if ( bOk && _listPreset.empty() )
         {
-            SW_LOG_ERROR( "%#: no presets in <_listPreset>", path );
+            SW_LOG_ERROR_ID( "Net.PresetTableEmpty", "%#: no presets in <_listPreset>", path );
             bOk = false;
         }
         for ( size_t presetIndex = 0; presetIndex < _listPreset.size(); ++presetIndex )
@@ -60,7 +60,7 @@ namespace sw
             {
                 if ( StringUtil::equals( _listPreset[otherIndex]._name, preset._name, true ) )
                 {
-                    SW_LOG_ERROR( "%#: preset '%#' appears twice", path, preset._name.c_str() );
+                    SW_LOG_ERROR_ID( "Net.PresetDuplicate", "%#: preset '%#' appears twice", path, preset._name.c_str() );
                     bOk = false;
                 }
             }

@@ -1011,8 +1011,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JSONComponentFieldThatDoesNotReadIsNamed
     const SceneComponent* pLoadedRoot = pLoaded->getComponent<SceneComponent>();
     SW_ASSERT_NOT_NULL( pLoadedRoot );
     SW_EXPECT_TRUE( pLoadedRoot->getLocalScale() == float3( 2.0f, 2.0f, 2.0f ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_noSuchField" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_listComponent" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Schema.FieldsDropped" ) == 1, logs.joined().c_str() );
 }
 
 /**

@@ -1196,7 +1196,7 @@ namespace sw
         collectRangeErrors( typeInfo, instance, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
         {
-            SW_LOG_ERROR( "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
+            SW_LOG_ERROR_ID( "Serialization.ValueOutOfRange", "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
         }
         return false;
     }

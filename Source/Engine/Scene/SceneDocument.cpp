@@ -220,7 +220,10 @@ namespace sw
         if ( bRead == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
-            SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
+            if ( doc.isLastErrorNotFound() )
+                SW_LOG_ERROR_ID( "Scene.FileNotFound", "Scene not loaded - %#", doc.getLastError() );
+            else
+                SW_LOG_ERROR_ID( "Scene.FileUnreadable", "Scene not loaded - %#", doc.getLastError() );
             return false;
         }
         loadScope.beginPhase( AssetLoadPhase::Decode );

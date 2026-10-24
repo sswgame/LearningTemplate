@@ -38,7 +38,7 @@ namespace sw
             return dueStepCount;
         if ( _bWarnedStepLimit == false )
         {
-            SW_LOG_WARNING( "Vfx emitter '%#': frame time %# s needs %# steps, running %# and dropping the rest", _pDef->_name, deltaSeconds, dueStepCount, kMaxStepsPerUpdate );
+            SW_LOG_WARNING_ID( "Vfx.StepsDropped", "Vfx emitter '%#': frame time %# s needs %# steps, running %# and dropping the rest", _pDef->_name, deltaSeconds, dueStepCount, kMaxStepsPerUpdate );
             _bWarnedStepLimit = true;
         }
         return kMaxStepsPerUpdate;

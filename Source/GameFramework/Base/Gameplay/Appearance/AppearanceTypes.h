@@ -71,25 +71,40 @@ namespace sw
     class SW_GF_API AppearanceLoadReport
     {
     public:
+        /** @brief id 없이(`Appearance.DataInvalid`) 오류를 더합니다. 테스트가 찾을 오류는 `addErrorWithID` 로 사건 id 를 단다. */
         template <typename... Args>
         void addError( string_view format, Args&&... args )
         {
+            addErrorWithID( "Appearance.DataInvalid", format, std::forward<Args>( args )... );
+        }
+        /**
+         * @brief 사건 id 가 붙은 오류를 더합니다. 경고 로그에도 같은 id 가 붙는다(`SW_LOG_WARNING_ID` 와 같다).
+         * @param pID `"영역.사건"` 꼴의 **글자 상수**입니다. 같은 사건은 같은 id 를 쓴다.
+         */
+        template <typename... Args>
+        void addErrorWithID( const utf8* pID, string_view format, Args&&... args )
+        {
             utf8 arrBuffer[constant::kMaxBuffer1024];
             FormatString::formatstring( arrBuffer, constant::kMaxBuffer1024, format, std::forward<Args>( args )... );
-            addMessage( string_view( arrBuffer ) );
+            addMessage( pID, string_view( arrBuffer ) );
         }
-        void clear() { _listError.clear(); }
+        void clear()
+        {
+            _listError.clear();
+            _listErrorID.clear();
+        }
 
         bool                  hasErrors() const { return _listError.empty() == false; }
         const vector<string>& getErrors() const { return _listError; }
-        /** @brief @p text 를 포함한 오류의 수입니다. 테스트에 씁니다. */
-        uint32 countContaining( string_view text ) const;
+        /** @brief 사건 id 가 @p pID 인 오류의 수입니다. 테스트에 씁니다(문구가 바뀌어도 지지 않는다). */
+        uint32 countWithID( const utf8* pID ) const;
         /** @brief 오류를 줄바꿈으로 연결한 문자열입니다. 테스트 메시지에 씁니다. */
         string joined() const;
 
     private:
-        void addMessage( string_view message );
+        void addMessage( const utf8* pID, string_view message );
 
-        vector<string> _listError{};
+        vector<string>      _listError{};
+        vector<const utf8*> _listErrorID{};
     };
 } // namespace sw

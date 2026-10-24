@@ -220,8 +220,8 @@ namespace sw
         // 시뮬레이션 대상은 모듈 대상의 교집합이다. 비면 어느 곳에서도 돌 수 없다 — 한쪽 모듈을 조용히 끄지 않고 로드를 멈춘다.
         if ( computeSupportedTargets().isEmpty() )
         {
-            SW_LOG_ERROR( "Vfx '%#': emitter '%#' uses %# (no CPU simulation) and %# (no GPU simulation) - no simulation target runs both", sourceLabel, _name,
-                          findModuleExcluding( VfxSimulationTarget::CPU ), findModuleExcluding( VfxSimulationTarget::GPU ) );
+            SW_LOG_ERROR_ID( "Vfx.NoSimulationTargetForEmitter", "Vfx '%#': emitter '%#' uses %# (no CPU simulation) and %# (no GPU simulation) - no simulation target runs both", sourceLabel, _name,
+                             findModuleExcluding( VfxSimulationTarget::CPU ), findModuleExcluding( VfxSimulationTarget::GPU ) );
             bValid = false;
         }
         return bValid;

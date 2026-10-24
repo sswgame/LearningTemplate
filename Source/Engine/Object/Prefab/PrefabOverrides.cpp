@@ -315,8 +315,8 @@ namespace sw
                             bMatched = bMatched || ( pKey != nullptr && component._key == pKey && component._bUsed );
                         }
                         if ( bMatched == false )
-                            SW_LOG_WARNING( "Prefab override for component '%#' of '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "",
-                                            _instanceName.empty() ? string_view( "?" ) : _instanceName );
+                            SW_LOG_WARNING_ID( "Prefab.OverrideComponentDropped", "Prefab override for component '%#' of '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "",
+                                               _instanceName.empty() ? string_view( "?" ) : _instanceName );
                     }
                     for ( const string& removedKey : listRemovedKey )
                     {

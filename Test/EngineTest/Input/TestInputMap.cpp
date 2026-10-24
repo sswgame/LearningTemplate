@@ -948,8 +948,8 @@ SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "PadButtonWraps" ) == false, "단일 버튼의 pad=\"256\" 이 0 번 패드로 감겼습니다" );
 
     // 버린 것마다 한 줄씩 알린다.
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind pad=" ) == 4, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind modifierMask=" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.PadIndexOutOfRange" ) == 4, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.ModifierMaskOutOfRange" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -985,9 +985,8 @@ SW_TEST_CASE( InputMapTest, UserBindingsReadOnlyTheSavedShape )
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "UnknownKind" ) == false, "모르는 kind 를 단일 슬롯으로 읽었습니다" );
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "CodeForKey" ) == false, "source=key 의 code 특성(저장하지 않는 모양)을 읽었습니다" );
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "NoSource" ) == false, "source 없는 단일 슬롯을 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=NoKind" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=UnknownKind" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=NoSource" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingKindUnknown" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingSourceUnknown" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -1197,7 +1196,7 @@ SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
         test::ScopedLogCollector logs;
         SW_TEST_DEFENSIVE_SCOPE( "a continuous binding with a Pressed trigger is warned about and read as Down" );
         SW_ASSERT_TRUE( inputMap.loadFromResource( ::test::makeTempResourceID( definitionPath ) ) );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "'Move'" ) == 1u, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.ContinuousTriggerIgnored" ) == 1u, logs.joined().c_str() );
     }
 
     const sw::ActionBinding* pSwitchBinding = inputMap.getBinding( "SwitchWeapon", 0 );

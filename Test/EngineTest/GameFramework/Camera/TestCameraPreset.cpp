@@ -304,9 +304,9 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
         SW_EXPECT_FALSE( typo.loadFromXMLText( R"(<CameraPresets><Preset id="x"><View mode="Orbitt" pich="3"/><Lense/></Preset></CameraPresets>)", "typo" ) );
         SW_EXPECT_TRUE( typo.find( "x" ) == nullptr );
     }
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "pich=...> is not a field of" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "mode=\"Orbitt\"> cannot be read" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown section <Lense>" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "GameData.UnknownField" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "GameData.ValueUnreadable" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Camera.PresetUnknownSection" ) );
 }
 
 /**
@@ -372,9 +372,8 @@ SW_TEST_CASE( CameraPresetTest, MalformedVectorAttributeSkipsThePreset )
     SW_EXPECT_TRUE( catalog.find( "shortSensor" ) == nullptr );
     SW_EXPECT_TRUE( catalog.find( "noPoint" ) == nullptr );
     SW_EXPECT_TRUE( catalog.find( "ok" ) != nullptr );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "offset=\"1,2\"> cannot be read" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "sensorSize=\"36\"> cannot be read" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "needs position=" ) );
+    SW_EXPECT_EQUAL( 2u, logs.countWithID( "GameData.ValueUnreadable" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "GameData.AttributeMissing" ) );
 }
 
 /**
@@ -906,15 +905,14 @@ SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
     test::ScopedLogCollector logs;
     pDirector->onTick( 0.016f );
     pDirector->onTick( 0.016f );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "which the InputMap does not have" ) == 0u, logs.joined().c_str() ); // 둘러보기 액션은 맵에 있다
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Camera.PresetActionNotInInputMap" ) == 0u, logs.joined().c_str() ); // 둘러보기 액션은 맵에 있다
 
     input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
     input.beginFrame( 0.016f );
     pDirector->onTick( 0.016f );
     SW_ASSERT_TRUE( pDirector->getActivePresetID() == hashed_string( "zoomer" ) );
     pDirector->onTick( 0.016f );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Camera preset 'zoomer' reads action 'Camera.Zoom'" ) == 1u, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "which the InputMap does not have" ) == 1u, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Camera.PresetActionNotInInputMap" ) == 1u, logs.joined().c_str() );
 
     manager.endPlay();
     scope.unbind<InputManager>();

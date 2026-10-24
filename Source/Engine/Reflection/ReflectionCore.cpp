@@ -822,9 +822,9 @@ namespace sw
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
         if ( shadowedFqn.empty() == false )
-            SW_LOG_WARNING( "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
-                            "addComponentByName look types up by them)",
-                            shortName.c_str(), canonicalKey.c_str(), shadowedFqn.c_str() );
+            SW_LOG_WARNING_ID( "Reflection.TypeShortNameCollision", "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
+                                                                    "addComponentByName look types up by them)",
+                               shortName.c_str(), canonicalKey.c_str(), shadowedFqn.c_str() );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -865,12 +865,12 @@ namespace sw
 
         lock.unlock();
         if ( shadowedFqn.empty() == false )
-            SW_LOG_WARNING( "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
-                            pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
+            SW_LOG_WARNING_ID( "Reflection.EnumShortNameCollision", "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
+                               pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
         if ( bNameClash )
-            SW_LOG_ERROR( "Enum %# has enumerators '%#' (%#) and '%#' (%#) with the same name hash but different values - binary saves and "
-                          "case-insensitive text cannot tell them apart; rename one",
-                          enumName.c_str(), clashFirst.c_str(), clashFirstValue, clashSecond.c_str(), clashSecondValue );
+            SW_LOG_ERROR_ID( "Reflection.EnumeratorHashClash", "Enum %# has enumerators '%#' (%#) and '%#' (%#) with the same name hash but different values - binary saves and "
+                                                               "case-insensitive text cannot tell them apart; rename one",
+                             enumName.c_str(), clashFirst.c_str(), clashFirstValue, clashSecond.c_str(), clashSecondValue );
     }
 
     void TypeRegistry::registerPendingTypes( string_view moduleName, TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )

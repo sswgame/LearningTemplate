@@ -109,7 +109,7 @@ namespace sw
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), getEnumName( drive._kind ), drive._target.c_str() );
+                    report.addErrorWithID( "Appearance.ParameterCannotDrive", "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), getEnumName( drive._kind ), drive._target.c_str() );
                     return;
                 }
                 if ( drive._kind == CustomizationDriveKind::DyeChannel && ( drive._channel < 0 || drive._channel > kMaxDyeChannel ) )
@@ -156,8 +156,8 @@ namespace sw
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
                 if ( pTarget == nullptr )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' condition must name a parameter declared before it, not '%#'", sourceName, schema._id.c_str(), inoutParam._name.c_str(),
-                                     condition._parameter.c_str() );
+                    report.addErrorWithID( "Appearance.ConditionNotDeclaredBefore", "%#: schema '%#' parameter '%#' condition must name a parameter declared before it, not '%#'", sourceName, schema._id.c_str(), inoutParam._name.c_str(),
+                                           condition._parameter.c_str() );
                     return;
                 }
                 if ( pTarget->_kind == CustomizationKind::Slider )
@@ -176,8 +176,8 @@ namespace sw
                 for ( const hashed_string& option : condition._listOption )
                 {
                     if ( pTarget->findOption( option ) == nullptr )
-                        report.addError( "%#: schema '%#' parameter '%#' condition names unknown option '%#' of '%#'", sourceName, schema._id.c_str(), inoutParam._name.c_str(), option.c_str(),
-                                         condition._parameter.c_str() );
+                        report.addErrorWithID( "Appearance.OptionUnknown", "%#: schema '%#' parameter '%#' condition names unknown option '%#' of '%#'", sourceName, schema._id.c_str(), inoutParam._name.c_str(), option.c_str(),
+                                               condition._parameter.c_str() );
                 }
                 inoutParam._listCondition.push_back( condition );
             }
@@ -229,8 +229,8 @@ namespace sw
                     else if ( param._defaultOption.empty() )
                         param._defaultOption = param._listOption.front()._name;
                     else if ( param.findOption( param._defaultOption ) == nullptr )
-                        report.addError( "%#: schema '%#' parameter '%#' default '%#' is not one of its options", sourceName, inoutSchema._id.c_str(), param._name.c_str(),
-                                         param._defaultOption.c_str() );
+                        report.addErrorWithID( "Appearance.DefaultNotAnOption", "%#: schema '%#' parameter '%#' default '%#' is not one of its options", sourceName, inoutSchema._id.c_str(), param._name.c_str(),
+                                               param._defaultOption.c_str() );
                 }
                 inoutSchema._listParameter.push_back( param );
             }

@@ -155,7 +155,7 @@ namespace sw
             const bool bReportableMessage = pMessage->Severity == D3D11_MESSAGE_SEVERITY_CORRUPTION || pMessage->Severity == D3D11_MESSAGE_SEVERITY_ERROR ||
                                             isHazardMessage( pMessage->ID );
             if ( bReportableMessage )
-                SW_LOG_ERROR( "[%#] %#", pStage, pMessage->pDescription );
+                SW_LOG_ERROR_ID( "RHI.ValidationMessage", "[%#] %#", pStage, pMessage->pDescription );
         }
         queue->ClearStoredMessages();
     #else
