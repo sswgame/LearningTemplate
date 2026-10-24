@@ -18,7 +18,7 @@
 
 ## 00000. 2026-10-25 통합 G — 브랜치 14 개가 main 에 들어감(push), 테스트 · 쿠킹 · GPU 대기 (이것부터 읽는다)
 
-main 에 `wt/integG` 를 fast-forward 하고 push 했다. 검증은 **Debug `full-build` 경고 0 · 오류 0 과 `lint-suite` 까지만** 돌렸다(사용자가 범위를 줄임). `ctest -L nogpu|lint`, 바뀐 영역 테스트, Release 쿠킹 · `--verify-shaders`, GPU 확인은 아직 안 돌렸다 — 다음 세션이 이것부터 한다.
+main 에 `wt/integG` 를 fast-forward 하고 push 했다. 검증은 **Debug `full-build` 경고 0 · 오류 0 과 `lint-suite` 까지만** 돌렸다(사용자가 범위를 줄임). GPU 확인만 남았다. 통합 H 가 Debug `ctest -L nogpu` 69 · `lint` 47 · `race` 5 통과, 바뀐 영역 테스트(Core 26/27 1 건너뜀, Engine 42/42)와 Release `--cook-shaders` · `--verify-shaders` 종료 0 을 확인했다. 진 것은 `AppTest_Race` 하나 — thresholdaudit 이 어림값 문턱 시나리오를 UNCONFIRMED 로 끝내게 했는데 `ChainedScenariosShareOneProcess` 가 `chain PASS` 만 찾았다(테스트를 고침). 같은 결함 가능성: `AppTestUtil` 밖에서 `PASS` 문구를 직접 찾는 테스트는 이것뿐이었으나, 시나리오 로그 문구를 grep 하는 Python 쪽 검사는 보지 않았다.
 
 **들어간 브랜치(14)**: `lowlevellog` · `staticengine` · `registries` · `staticeditor` · `staticselftest` · `singletons2` · `cookfix` · `cookers2` · `plansclean` · `gfxfix`(`backendaudit` 에 포함) · `backendaudit` · `editorsc` · `shipscen` · `thresholdaudit`. 내용은 각 병합 커밋 제목과 브랜치 커밋이 원본이다.
 
@@ -29,9 +29,7 @@ main 에 `wt/integG` 를 fast-forward 하고 push 했다. 검증은 **Debug `ful
 **병렬로 띄울 묶음(Roadmap 의 `[병렬 가능]`, 파일 소유가 겹치지 않을 때)**: 위 1~3 의 검증(통합 한 명)이 끝난 뒤에 — A. `staticgate` · `poseaudit` · `staticleft` 병합(통합 한 명, `-k 0` 빌드). B. 로그 id 이전(`countContaining` 약 120 곳) · 레지스트리 중복 로그 약 15 곳(작업자 둘, 파일이 다르다). C. 측정대기 문서 59 개의 판정(GPU 확인 뒤, `끝` 으로 올려 지우기 — `plans --check` 가 막는다). D. `Roadmap.md` 의 `[병렬 가능]` 항목(GpuVerification · Vfx 실행 확인 · 카메라 디렉터 · 미리보기 창 · 오디오 · 애니메이션 · 런타임 UI · 키트 조립 · Wayland 등)은 `py -3 -m Scripts plans` 와 Roadmap 에서 고르되 **작업자 여섯 안팎, 작업자는 빌드하지 않고 커밋만**.
 
 **다음 세션이 처음에 할 일(순서대로)**
-1. 통합 워크트리에서 `ctest -L nogpu` · `-L lint` · `-L race`(Debug), 바뀐 영역 테스트: CoreTest `LowLevelReportTest`, EngineTest `AutomationScenarioTest` · `AutomationScenarioChainTest` · `AnimationCrowdTest` · `SceneCookTest` · `LogTest`, EditorTest 전체. 실패는 어느 브랜치 탓인지 찾아 고친다.
-2. 새 Release App 으로 `--cook-shaders` 후 `--verify-shaders`(`cookfix` 가 쿠커를 바꿨다 — 매니페스트 밖 옛 바이너리 삭제, 건너뛴 갈래 실패 처리).
-3. GPU 확인(`gpu-verifier`, Release `ctest -L hostgpu` · 네 백엔드): 아래 "졌던 것" 전부와 `RHIDeviceTest` 의 새 완료 계약 테스트(`backendaudit`). `sky` · `vfxgpulights` 등 `provisional` 문턱은 `metric` 줄로 `measured` 로 바꾼다(`GpuVerification` 3 절). 어림값이 맞으면 종료 코드 14(`Unconfirmed`)로 끝나 CI 는 초록이고 로그로만 구분된다.
+1. GPU 확인(`gpu-verifier`, Release `ctest -L hostgpu` · 네 백엔드): 아래 "졌던 것" 전부와 `RHIDeviceTest` 의 새 완료 계약 테스트(`backendaudit`). `sky` · `vfxgpulights` 등 `provisional` 문턱은 `metric` 줄로 `measured` 로 바꾼다(`GpuVerification` 3 절). 어림값이 맞으면 종료 코드 14(`Unconfirmed`)로 끝나 CI 는 초록이고 로그로만 구분된다.
 
 **GPU 확인에서 졌던 것(main d679388a5, 위 브랜치가 고침)**: `sky`, `vfxgpulights`(gl 은 `Vfx.md` 의 "GL R32 실수 RW 텍스처 읽기" 가 후보), `RHIDeviceTest.AsyncBufferReadback…`(DX11), `shooter3d.crowd`, `nilecity.gamepadcursor`, 에디터 시나리오 6 개, Shipping `gv_firstScene` `LOAD ERROR` 18 건, Shipping nogpu 7 건, `ShippingSceneMatchesGoldenImage`(dx12 에서 32565 화소 초과 — 아직 안 봄). 지형 여덟 레이어 · 지오모프 전용 시나리오는 저장소에 없다 — 시나리오로 만든다.
 
