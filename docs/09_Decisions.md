@@ -296,7 +296,7 @@
 - **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다(Godot 도 빌드 정의로 준다).
   헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
-- **규칙 예외 감사에서 정한 넷**(2026-10-07, 적용 상태는 [RuleExceptionAudit](plans/RuleExceptionAudit.md)): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다). 적용함(2026-10-24): `Clang.cmake` 가 clang-cl 에 `-clang:-Wall -clang:-Wextra` 를 넘겨 GCC 와 같은 집합이 됩니다.
+- **규칙 예외 감사에서 정한 넷**(2026-10-07, 적용 상태는 [RuleExceptionAudit](plans/RuleExceptionAudit.md)): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다). 적용함(2026-10-24): `Clang.cmake` 가 clang-cl 에 `-clang:-Wall -clang:-Wextra` 를 넘겨 GCC 와 같은 집합이 됩니다. 2026-10-25: 두 집합에 `-Wundef` 를 더했다 — 정의하는 헤더를 빠뜨려 정의되지 않은 매크로를 `#if` 로 읽는 파일(AuthorityGhost 사례)을 잡는다. 서드파티는 SYSTEM include 라 범위 밖이다.
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
 - **게이트와 짝 픽서 · 보고서가 나눠 쓰는 판정은 린트 틀 층(`Scripts/lint/*Rules.py`)에 둡니다**(2026-10-24). 게이트의 변환 · 판정을 픽서가 부르면 층 2 끼리 import 하지 못하는 규칙(`CheckScriptLayers`)에 예외 줄이 늘었습니다.
