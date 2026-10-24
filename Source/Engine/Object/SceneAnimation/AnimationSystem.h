@@ -6,6 +6,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
@@ -195,6 +197,39 @@ namespace sw
 namespace sw
 {
     /**
+     * @class AnimationUnitList
+     * @brief 등록된 애니메이션 유닛을 등록 순서대로 들고, 등록 · 해제 · 위치 찾기를 O(1) 로 받는 목록입니다(`AnimationSystem` 전용).
+     * @details 평가 순서(레벨 안 순서) · 스킨 팔레트 순서가 등록 순서라서, 해제가 남은 유닛의 상대 순서를 바꾸면 안 된다. 그래서 가운데 유닛의 해제는 칸을 비워 두기만 하고
+     *          (O(1)), 비운 칸은 목록을 읽을 때(`getUnits` · `findIndex`) 한 번에 접는다 — 유닛 M 개를 연달아 해제해도 접는 비용은 O(N) 한 번이다.
+     *          마지막 칸의 해제는 바로 뺀다. 읽기 함수가 const 인 채로 접으므로 저장소는 `mutable` 이다 — 게임 스레드 전용이고, 병렬 평가 구간에서는 등록 · 해제도 읽기도 없다.
+     */
+    class SW_API AnimationUnitList
+    {
+    public:
+        /** @brief 유닛을 목록 끝에 더합니다. 이미 있으면 false 입니다. */
+        [[nodiscard]] bool add( SkeletalMeshComponent* pUnit );
+        /** @brief 유닛을 뺍니다(남은 유닛의 상대 순서는 그대로). 없으면 false 입니다. */
+        [[nodiscard]] bool remove( const SkeletalMeshComponent* pUnit );
+        /** @brief 등록된 유닛 수입니다. */
+        uint32 getCount() const { return static_cast<uint32>( _mapIndex.size() ); }
+        /** @brief 등록 순서의 유닛 전부입니다. 비운 칸은 먼저 접으므로 nullptr 가 없습니다. */
+        const vector<SkeletalMeshComponent*>& getUnits() const;
+        /** @brief 유닛이 `getUnits()` 의 몇 번째인지 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
+        uint32 findIndex( const SkeletalMeshComponent* pUnit ) const;
+
+    private:
+        /** @brief 비운 칸을 접고 옮겨진 유닛의 위치를 고칩니다. 비운 칸이 없으면 아무 일도 하지 않습니다. */
+        void compact() const;
+
+        mutable vector<SkeletalMeshComponent*>                      _listUnit;          ///< 등록 순서. 해제한 칸은 nullptr 로 남을 수 있다(`compact` 가 접는다)
+        mutable unordered_map<const SkeletalMeshComponent*, uint32> _mapIndex;          ///< 유닛 → `_listUnit` 안의 위치
+        mutable uint32                                              _removedCount{ 0 }; ///< `_listUnit` 안의 비운 칸 수
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class AnimationSystem
      * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛) 레벨로 나눠 단계마다 평가합니다. 언리얼의 애니메이션 평가, 유니티의 Playable 그래프 평가에 해당합니다.
      * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 레벨을 다시 만든다(위상 정렬이며, 고리는 오류로 알리고 남은 유닛은 등록 순서로 한 유닛씩 뒤 레벨에 둔다 — 레벨 안은 병렬이라 고리 유닛을 모으면 레이스다). (1) 유닛마다 이번 프레임
@@ -225,7 +260,11 @@ namespace sw
 
         /** @brief 유닛을 등록합니다(컴포넌트 등록 때 부릅니다). */
         void registerUnit( SkeletalMeshComponent* pUnit );
-        /** @brief 유닛을 해제합니다. 여러 번 불러도 안전합니다. */
+        /**
+         * @brief 유닛을 해제합니다. 여러 번 불러도 안전합니다.
+         * @details 의존을 가지지도 받지도 않는 유닛(레벨 0 의 외톨이)은 레벨을 다시 짓지 않습니다. 다음 평가가 시작될 때 해제한 유닛을 모아 레벨 0 에서 한 번에 뺍니다.
+         *          그 밖의 유닛은 레벨을 비우고 다음 평가가 다시 짓습니다.
+         */
         void unregisterUnit( SkeletalMeshComponent* pUnit );
         /** @brief 의존이나 리더가 바뀌었음을 알립니다. 다음 평가가 레벨을 다시 만듭니다. */
         void markOrderDirty() { _bOrderDirty = SW_TRUE; }
@@ -274,11 +313,15 @@ namespace sw
         uint32 getCrowdModeCount( AnimationCrowdMode mode ) const { return _arrCrowdModeCount[static_cast<uint32>( mode )]; }
 
         /** @brief 등록된 유닛 수입니다. */
-        uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
-        /** @brief 등록된 유닛 전부입니다(평가 순서는 아닙니다). 레벨은 유닛이 빠지는 순간 비워지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
-        const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
-        /** @brief 의존 레벨입니다(0 이 먼저). 테스트와 진단용입니다. */
-        const vector<vector<SkeletalMeshComponent*>>& getLevels() const { return _listLevel; }
+        uint32 getUnitCount() const { return _unitList.getCount(); }
+        /** @brief 등록된 유닛 전부입니다(등록 순서이고 평가 순서는 아닙니다). 레벨은 다음 평가 때 고쳐지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
+        const vector<SkeletalMeshComponent*>& getUnits() const { return _unitList.getUnits(); }
+        /** @brief 의존 레벨입니다(0 이 먼저). 테스트와 진단용입니다. 해제된 외톨이 유닛을 레벨 0 에서 먼저 빼므로 죽은 유닛 포인터는 보이지 않습니다. */
+        const vector<vector<SkeletalMeshComponent*>>& getLevels()
+        {
+            flushLevelRemoval();
+            return _listLevel;
+        }
         /** @brief 마지막으로 만든 레벨에 의존 고리가 있었으면 true 입니다. */
         bool hasDependencyCycle() const { return _bCycle == SW_TRUE; }
         /** @brief 평가한 프레임 수입니다. */
@@ -304,8 +347,10 @@ namespace sw
     private:
         /** @brief LOD 판정(가시성, 화면 크기, 주기, 본 LOD, 예산)을 하고 클라이언트에 알립니다. */
         void updateLOD();
-        /** @brief 의존을 해석해 레벨을 다시 만듭니다. */
+        /** @brief 의존을 해석해 레벨을 다시 만듭니다. 임시 버퍼(`_listScratch*`)와 레벨 벡터의 용량을 재사용합니다. */
         void rebuildLevels();
+        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 레벨 0 에서 한 번에 뺍니다. 레벨을 다시 지을 예정이면 모아 둔 것만 버립니다. */
+        void flushLevelRemoval();
         /** @brief 단계 하나를 레벨 순서로 처리합니다. */
         void runPhase( AnimationPhase phase );
         /** @brief 이번 프레임에 일하는 유닛만 레벨 순서로 `_listActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 각 레벨의 시작 번호는 `_listLevelStart` 에 남깁니다. */
@@ -325,17 +370,26 @@ namespace sw
         void recordRewindFrame();
 #endif
 
-        vector<SkeletalMeshComponent*>         _listUnit;
-        vector<vector<SkeletalMeshComponent*>> _listLevel;
-        vector<SkeletalMeshComponent*>         _listActive;     ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
-        vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
-        vector<IAnimationLODClient*>           _listLODClient;
-        vector<AnimationLODView>               _listLODView;
-        AnimationLODView                       _pendingLODView;        ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
-        vector<AnimationLODState>              _listScratchLODState;   ///< 판정 중 클라이언트별 상태다(재사용)
-        vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
-        AnimationLODSettings                   _lodSettings;
-        AnimationCrowd                         _crowd;
+        AnimationUnitList                           _unitList;
+        unordered_set<const SkeletalMeshComponent*> _uniqueLevelRemoval; ///< 레벨 0 에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushLevelRemoval` 이 비운다)
+        vector<vector<SkeletalMeshComponent*>>      _listLevel;
+        vector<SkeletalMeshComponent*>              _listActive;     ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
+        vector<uint32>                              _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
+        vector<IAnimationLODClient*>                _listLODClient;
+        vector<AnimationLODView>                    _listLODView;
+        AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
+        vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
+        vector<AnimationBudgetItem>                 _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
+        vector<uint32>                              _listScratchEdgeUpstream;    ///< 레벨을 지을 때 의존 간선의 위 유닛 번호다(재사용)
+        vector<uint32>                              _listScratchEdgeDependent;   ///< 간선의 아래 유닛 번호다(`_listScratchEdgeUpstream` 과 같은 순서, 재사용)
+        vector<uint32>                              _listScratchPendingCount;    ///< 유닛마다 아직 놓이지 않은 위 유닛 수다(재사용)
+        vector<uint32>                              _listScratchDependentStart;  ///< 위 유닛마다 `_listScratchDependent` 안의 아래 유닛 구간 시작이다(끝 하나 더, 재사용)
+        vector<uint32>                              _listScratchDependentCursor; ///< 아래 유닛 구간을 채우는 위치다(재사용)
+        vector<uint32>                              _listScratchDependent;       ///< 위 유닛별로 모은 아래 유닛 번호다(재사용)
+        vector<uint32>                              _listScratchReady;           ///< 이번 레벨에 놓을 유닛 번호다(재사용)
+        vector<uint32>                              _listScratchNext;            ///< 다음 레벨에 놓을 유닛 번호다(재사용)
+        AnimationLODSettings                        _lodSettings;
+        AnimationCrowd                              _crowd;
 #if SW_ANIMATION_REWIND_ENABLED
         AnimationRewindRecorder _rewind;
         Pose                    _rewindScratchPose; ///< 되감기 포즈를 해석할 임시 포즈다(재사용)
