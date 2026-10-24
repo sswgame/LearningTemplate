@@ -86,17 +86,11 @@ namespace sw
             /** @brief `backend="start"` — 시나리오가 시작할 때의 백엔드입니다. `other` 로 건넌 뒤 돌아와 체인의 다음 시나리오가 같은 백엔드에서 돌게 한다. */
             static constexpr const utf8* kStartBackend = "start";
 
-            /** @brief 시나리오가 시작할 때의 백엔드입니다(준비 함수가 적는다). App 모듈은 백엔드 교체 · 모듈 리로드에서 내려가지 않는다. */
-            static RHIBackend& getStartBackend()
-            {
-                static RHIBackend s_backend{ RHIBackend::DirectX12 };
-                return s_backend;
-            }
-
+            /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
             static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
             {
-                const RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
-                if ( pSwitcher == nullptr || pSwitcher->findCommittedBackend( getStartBackend() ) == false )
+                RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
+                if ( pSwitcher == nullptr || pSwitcher->recordStartBackend() == false )
                 {
                     outError = "SwapBackend: backend switching is not available in this process (no RHI)";
                     return false;
@@ -119,7 +113,13 @@ namespace sw
                 if ( requested == kOtherBackend )
                     backend = committed == RHIBackend::DirectX12 ? RHIBackend::DirectX11 : RHIBackend::DirectX12;
                 else if ( requested == kStartBackend )
-                    backend = getStartBackend();
+                {
+                    if ( pSwitcher->findStartBackend( backend ) == false )
+                    {
+                        runner.recordFailure( step, "backend=\"start\" needs the start backend, which the scenario preparation did not record" );
+                        return true;
+                    }
+                }
                 else
                     (void)tryParseBackend( requested, backend ); // 검사에서 확인했다
                 if ( committed == backend && pSwitcher->isSwapPending() == false )

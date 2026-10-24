@@ -52,6 +52,13 @@ namespace sw
         // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
         [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
+        /**
+         * @brief 지금 확정된 백엔드를 "시나리오가 시작할 때의 백엔드" 로 적어 둡니다(`backend="start"` 가 돌아올 곳). RHI 가 없으면 false 이고 적지 않습니다.
+         * @details 교체기는 백엔드 교체와 모듈 리로드를 지나 살아남는 App 의 객체라 시나리오 단계가 맡길 자리로 알맞다. 시나리오 준비 단계가 시작마다 한 번 부른다.
+         */
+        [[nodiscard]] bool recordStartBackend();
+        /** @brief `recordStartBackend` 로 적어 둔 백엔드입니다. 아직 적지 않았으면 false 입니다. */
+        [[nodiscard]] bool findStartBackend( RHIBackend& outBackend ) const;
         /** @brief 요청했지만 아직 적용하지 않은 교체가 있으면 true 입니다. */
         bool isSwapPending() const;
         /** @brief 이 프로세스에서 교체에 실패한 횟수입니다(실패하면 이전 백엔드로 복구한다). */
@@ -75,10 +82,14 @@ namespace sw
         EditorModuleHost* _pModuleHost; // 소유하지 않는다
 
         uint32 _failedSwapCount;
+        /** @brief 시나리오가 시작할 때의 백엔드입니다(`recordStartBackend`). `_bStartBackendRecorded` 가 참일 때만 뜻이 있다. */
+        RHIBackend _startBackend;
 
         uint8 _bEnableEditor : 1;
         /** @brief gv_rhiBackend 를 되돌리는 대입이 변경 콜백을 재귀 호출하지 않게 막습니다. */
-        uint8                  _bHandlingChange : 1;
-        [[maybe_unused]] uint8 _reserved        : 6;
+        uint8 _bHandlingChange : 1;
+        /** @brief `recordStartBackend` 가 성공한 적이 있으면 참입니다. */
+        uint8                  _bStartBackendRecorded : 1;
+        [[maybe_unused]] uint8 _reserved              : 5;
     };
 } // namespace sw

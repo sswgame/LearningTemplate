@@ -36,8 +36,10 @@ namespace sw
         : _pEngine{ nullptr }
         , _pModuleHost{ nullptr }
         , _failedSwapCount{ 0 }
+        , _startBackend{}
         , _bEnableEditor{ SW_FALSE }
         , _bHandlingChange{ SW_FALSE }
+        , _bStartBackendRecorded{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -48,6 +50,24 @@ namespace sw
         if ( pRHI == nullptr )
             return false;
         outBackend = pRHI->getCommittedBackend();
+        return true;
+    }
+
+    bool RHIBackendSwitcher::recordStartBackend()
+    {
+        RHIBackend committed{};
+        if ( findCommittedBackend( committed ) == false )
+            return false;
+        _startBackend          = committed;
+        _bStartBackendRecorded = SW_TRUE;
+        return true;
+    }
+
+    bool RHIBackendSwitcher::findStartBackend( RHIBackend& outBackend ) const
+    {
+        if ( _bStartBackendRecorded == SW_FALSE )
+            return false;
+        outBackend = _startBackend;
         return true;
     }
 
