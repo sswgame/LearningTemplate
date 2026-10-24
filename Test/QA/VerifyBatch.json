@@ -579,7 +579,7 @@
       "source": "docs/plans/VfxGpuLights.md 4절", "result_doc": "docs/plans/VfxGpuLights.md 4절"
     },
     {
-      "id": "shipping-golden-dx12", "title": "Shipping 첫 화면 골든(shippingframe_dx12)을 다시 뜨고 통과를 확인한다(포워드 림이 약해진 변경 뒤의 낡은 골든)", "kind": "golden", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
+      "id": "shipping-golden-dx12", "title": "Shipping 첫 화면 골든(shippingframe_dx12)을 다시 뜨고 통과를 확인한다(포워드 림이 약해진 변경 뒤의 낡은 골든)", "kind": "golden", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": false,
       "need_command": "환경변수 SW_UPDATE_GOLDEN=1 이 필요한데 실행기가 환경변수를 주지 못한다 — build/Ninja-Shipping/Bin 에서 SW_UPDATE_GOLDEN=1 로 AppTest.exe --test_filter=AppSmokeTest.ShippingSceneMatchesGoldenImage 를 돌려 뜨고, 변수 없이 한 번 더 돌려 통과를 본다",
       "source": "docs/plans/GpuVerification.md 3.1절", "result_doc": "docs/plans/GpuVerification.md 3.1절"
     },

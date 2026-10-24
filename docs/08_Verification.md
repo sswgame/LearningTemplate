@@ -489,6 +489,9 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
   줄끝이 체크아웃과 다르면(git 은 같은 파일로 본다) main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다.
   워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
+- **배포 구성(Shipping · Shipping-Server) 빌드 폴더의 `Bin/Packs` 는 활성 게임(empty) 팩만 굽는다** — 오래 쓴 빌드 폴더에는 예전에 구운 다른 게임 팩이 남아 있어,
+  다른 게임의 씬 · 프리팹을 읽는 테스트가 그 낡은 팩으로 통과한다. 새 워크트리에서는 진다(2026-10-25 통합 I, `SerializationRoundTripTest` 63 건). 그런 케이스는 맨 앞에
+  `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 두고, `SW_TEST_SKIP`(환경 건너뜀)보다 **먼저** 둔다 — 환경 건너뜀이 남은 스위트는 "아무것도 검증 안 함" 으로 실패한다.
 - **진단 도구**(`-gv_dumpReflection=…`, `ReflectionParser --dump`, `-gv_dumpRenderGraph=1`, `'A' waits on 'B'`,
   `경로:줄:열: 이유`, `[SW_ASSERT]` stderr, `-gv_screenshot`).
 - **렌더 변경은 스크린샷까지 봐야 검증이다.** 로그 · 테스트가 다 초록인데 화면만 찢어진 적이 있다. 정적 씬은 바이트까지 결정적이라 4 백엔드 전후 sha 로 비교한다.
