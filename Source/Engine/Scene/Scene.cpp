@@ -277,6 +277,79 @@ namespace sw
                     (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
                 }
             }
+
+            /** @brief 문서로 쓸 때 오브젝트 순회 **밖에서** 미리 정해 두는 입력입니다(순회 안에서는 어느 매니저에도 오브젝트를 만들 수 없다 — `GameObjectManager::WalkScope`). */
+            struct SaveInputs
+            {
+                ObjectSavedIDMap                                  _mapSavedID;            ///< 파일 id 를 먼저 모두 정한다. 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
+                unordered_map<string, string>                     _mapPrefabBaseState;    ///< 프리팹 원형의 상태입니다(원형은 임시 매니저에 오브젝트를 만들어 만든다).
+                unordered_set<uint64>                             _uniqueRespawnedPart;   ///< 다시 스폰될 중첩 프리팹 부품입니다 — 적지 않는다.
+                unordered_map<uint64, string>                     _mapDetachedPartPrefab; ///< 다시 스폰될 곳을 잃은 부품이 자기 프리팹의 인스턴스로 적을 경로입니다.
+                unordered_map<uint64, vector<PrefabPartOverride>> _mapPartOverride;       ///< 인스턴스마다 부품에 덮어쓴 것(`<Part>`)입니다.
+            };
+
+            /**
+             * @brief @p inoutInputs 의 프리팹 관련 입력(부품 분류 · 원형 상태 · 부품 덮어쓰기)을 채웁니다. 만들지 못한 프리팹의 원형은 빈 문자열로 남아 전체 상태를 적게 됩니다.
+             */
+            static void prepareSavePrefabInputs( const GameObjectManager& objects, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, SaveInputs& inoutInputs )
+            {
+                // 중첩 프리팹 부품마다 저장 방법을 정한다. 다시 스폰될 부품은 적지 않고, 다시 스폰될 곳을 잃은 부품은 자기 프리팹의 인스턴스로 적는다.
+                classifyNestedParts( objects, mapPrefabSource, inoutInputs._uniqueRespawnedPart, inoutInputs._mapDetachedPartPrefab );
+                if ( pAssetManager == nullptr )
+                    return;
+                for ( const auto& [objectID, prefabPath] : mapPrefabSource )
+                {
+                    (void)objectID;
+                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath );
+                }
+                for ( const auto& [objectID, prefabPath] : inoutInputs._mapDetachedPartPrefab )
+                {
+                    (void)objectID;
+                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath );
+                }
+                // 인스턴스마다 부품에 덮어쓴 것도 순회 밖에서 뽑는다 — 기준 부품을 임시 매니저에 스폰한다.
+                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), mapPrefabSource, inoutInputs._mapPartOverride );
+                collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), inoutInputs._mapDetachedPartPrefab, inoutInputs._mapPartOverride );
+            }
+
+            /**
+             * @brief 오브젝트 하나를 문서의 엔티티로 씁니다. 프리팹 인스턴스는 원형과 다른 것만 적고, 프리팹을 읽지 못했으면 전체 상태를 적습니다(다음 로드가 그 상태로 만든다).
+             * @return 문서에 넣을 엔티티가 만들어졌으면 true 입니다(적을 상태도 프리팹도 없으면 false).
+             */
+            [[nodiscard]] static bool writeEntityNode( GameObject* pGo, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, const SaveInputs& inputs,
+                                                       const ObjectSaveOptions& saveOptions, SceneDocument::SceneObjectNode& outNode )
+            {
+                outNode._name        = pGo->getName().c_str();
+                const auto savedIDIt = inputs._mapSavedID.find( pGo->getObjectID() );
+                outNode._fileID      = ( savedIDIt != inputs._mapSavedID.end() ) ? savedIDIt->second : 0;
+
+                const auto prefabIt = mapPrefabSource.find( pGo->getObjectID() );
+                if ( prefabIt != mapPrefabSource.end() )
+                    outNode._prefab = prefabIt->second;
+                const auto detachedIt = inputs._mapDetachedPartPrefab.find( pGo->getObjectID() );
+                if ( outNode._prefab.empty() && detachedIt != inputs._mapDetachedPartPrefab.end() )
+                    outNode._prefab = detachedIt->second;
+
+                if ( outNode._prefab.empty() == false && pAssetManager != nullptr )
+                {
+                    const UUID guid = pAssetManager->getAssetDatabase().ensureMeta( outNode._prefab );
+                    if ( guid.isNull() == false )
+                        outNode._prefabGuid = guid.toString();
+                }
+                const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
+                // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.
+                const auto    baseIt     = outNode._prefab.empty() ? inputs._mapPrefabBaseState.end() : inputs._mapPrefabBaseState.find( outNode._prefab );
+                const string* pBaseState = ( baseIt != inputs._mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
+                if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, outNode._prefabOverrideXML ) == false )
+                {
+                    outNode._prefabOverrideXML.clear();
+                    outNode._embeddedXML = state;
+                }
+                const auto partIt = outNode._embeddedXML.empty() ? inputs._mapPartOverride.find( pGo->getObjectID() ) : inputs._mapPartOverride.end();
+                if ( partIt != inputs._mapPartOverride.end() && PrefabOverrides::appendPartOverrides( outNode._prefabOverrideXML, partIt->second ) == false )
+                    SW_LOG_ERROR( "Nested part overrides of '%#' could not be written - its parts are saved as the prefab has them", outNode._name );
+                return outNode._embeddedXML.empty() == false || outNode._prefab.empty() == false;
+            }
         };
     } // namespace
 } // namespace sw
@@ -449,40 +522,12 @@ namespace sw
         outDoc._listSceneObjectNode.clear();
         outDoc._bValid = true;
 
-        // 파일 id 를 먼저 모두 정한다. 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
-        ObjectSavedIDMap mapSavedID;
-        collectSavedIDMap( mapSavedID );
+        SceneInternal::SaveInputs inputs;
+        collectSavedIDMap( inputs._mapSavedID );
         ObjectSaveOptions saveOptions{ SerializePurpose::Authoring };
-        saveOptions._pSavedIDMap = &mapSavedID;
-        // 프리팹 원형은 순회 **밖에서** 미리 만든다. 원형은 임시 매니저에 오브젝트를 만들어 만드는데, `forEachGameObject` 콜백 안에서는 어느
-        // 매니저에도 오브젝트를 만들 수 없다(`GameObjectManager::WalkScope`).
-        unordered_map<string, string> mapPrefabBaseState;
-        AssetManager* const           pAssetManager = _services._pAssetManager;
-        // 중첩 프리팹 부품마다 저장 방법을 순회 밖에서 정한다(아래 원형처럼 순회 안에서는 만들 수 없다). 다시 스폰될 부품은 적지 않고, 다시 스폰될 곳을
-        // 잃은 부품은 자기 프리팹의 인스턴스로 적는다.
-        unordered_set<uint64>         uniqueRespawnedPart;
-        unordered_map<uint64, string> mapDetachedPartPrefab;
-        SceneInternal::classifyNestedParts( *_objectManager, _mapPrefabSource, uniqueRespawnedPart, mapDetachedPartPrefab );
-        if ( pAssetManager != nullptr )
-        {
-            for ( const auto& [objectID, prefabPath] : _mapPrefabSource )
-            {
-                (void)objectID;
-                (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 만들지 못한 프리팹은 빈 문자열로 남아 전체 상태를 적게 된다
-            }
-            for ( const auto& [objectID, prefabPath] : mapDetachedPartPrefab )
-            {
-                (void)objectID;
-                (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 위와 같다
-            }
-        }
-        // 인스턴스마다 부품에 덮어쓴 것(`<Part>`)도 순회 밖에서 뽑는다 — 기준 부품을 임시 매니저에 스폰한다.
-        unordered_map<uint64, vector<PrefabPartOverride>> mapPartOverride;
-        if ( pAssetManager != nullptr )
-        {
-            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), _mapPrefabSource, mapPartOverride );
-            SceneInternal::collectInstancePartOverrides( *_objectManager, pAssetManager->getAssetCache<PrefabCache>(), mapDetachedPartPrefab, mapPartOverride );
-        }
+        saveOptions._pSavedIDMap          = &inputs._mapSavedID;
+        AssetManager* const pAssetManager = _services._pAssetManager;
+        SceneInternal::prepareSavePrefabInputs( *_objectManager, pAssetManager, _mapPrefabSource, inputs );
 
         // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 자기 씬 컴포넌트의 부착 필드(부모의 파일 id)로
         // 읽은 뒤 다시 붙는다(`instantiate` 의 배치이므로 순서는 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
@@ -494,39 +539,10 @@ namespace sw
             CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
-            if ( uniqueRespawnedPart.find( pGo->getObjectID() ) != uniqueRespawnedPart.end() )
+            if ( inputs._uniqueRespawnedPart.find( pGo->getObjectID() ) != inputs._uniqueRespawnedPart.end() )
                 return; // 바깥 프리팹 인스턴스가 로드할 때 다시 스폰한다
             SceneDocument::SceneObjectNode node{};
-            node._name           = pGo->getName().c_str();
-            const auto savedIDIt = mapSavedID.find( pGo->getObjectID() );
-            node._fileID         = ( savedIDIt != mapSavedID.end() ) ? savedIDIt->second : 0;
-
-            const auto prefabIt = _mapPrefabSource.find( pGo->getObjectID() );
-            if ( prefabIt != _mapPrefabSource.end() )
-                node._prefab = prefabIt->second;
-            const auto detachedIt = mapDetachedPartPrefab.find( pGo->getObjectID() );
-            if ( node._prefab.empty() && detachedIt != mapDetachedPartPrefab.end() )
-                node._prefab = detachedIt->second;
-
-            if ( node._prefab.empty() == false && pAssetManager != nullptr )
-            {
-                const UUID guid = pAssetManager->getAssetDatabase().ensureMeta( node._prefab );
-                if ( guid.isNull() == false )
-                    node._prefabGuid = guid.toString();
-            }
-            const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
-            // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.
-            const auto    baseIt     = node._prefab.empty() ? mapPrefabBaseState.end() : mapPrefabBaseState.find( node._prefab );
-            const string* pBaseState = ( baseIt != mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
-            if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, node._prefabOverrideXML ) == false )
-            {
-                node._prefabOverrideXML.clear();
-                node._embeddedXML = state;
-            }
-            const auto partIt = node._embeddedXML.empty() ? mapPartOverride.find( pGo->getObjectID() ) : mapPartOverride.end();
-            if ( partIt != mapPartOverride.end() && PrefabOverrides::appendPartOverrides( node._prefabOverrideXML, partIt->second ) == false )
-                SW_LOG_ERROR( "Nested part overrides of '%#' could not be written - its parts are saved as the prefab has them", node._name );
-            if ( node._embeddedXML.empty() == false || node._prefab.empty() == false )
+            if ( SceneInternal::writeEntityNode( pGo, pAssetManager, _mapPrefabSource, inputs, saveOptions, node ) )
                 outDoc._listSceneObjectNode.push_back( std::move( node ) );
         } );
         // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다. 그 자식들이 그 id 로 가리킨다.
