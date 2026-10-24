@@ -78,6 +78,116 @@ namespace sw
                               welded.getVertexCount(), static_cast<uint32>( fit._listVertexDelta.size() ), fit._triangleCount );
                 return false;
             }
+
+            /** @brief 모서리(정점)마다 구울 모프 오프셋(위치 · 노멀)을 채웁니다. 가중치가 0 이거나 없는 타깃은 건너뜁니다. */
+            static void accumulateMorphOffsets( const Mesh& source, vector_reference<const BodyMorphWeight> listMorphWeight, vector<float3>& outListPositionOffset,
+                                                vector<float3>& outListNormalOffset )
+            {
+                const uint32 vertexCount = source.getVertexCount();
+                for ( const BodyMorphWeight& weight : listMorphWeight )
+                {
+                    const int32 targetIndex = source.findMorphTargetIndex( weight._morph );
+                    if ( targetIndex < 0 || weight._weight == 0.0f )
+                        continue;
+                    for ( const MeshMorphDelta& delta : source.getMorphTargets()[static_cast<size_t>( targetIndex )]._listDelta )
+                    {
+                        if ( delta._vertexIndex >= vertexCount )
+                            continue;
+                        outListPositionOffset[delta._vertexIndex] += delta._position * weight._weight;
+                        outListNormalOffset[delta._vertexIndex] += delta._normal * weight._weight;
+                    }
+                }
+            }
+
+            /**
+             * @brief 남는 삼각형의 모서리를 순서대로 옮겨 오프셋과 피팅 델타를 얹습니다(구간은 연속한 정점 범위라 순서를 지키면 구간도 연속이다).
+             * @param pWelded 피팅을 쓸 때만 있습니다(@p pFit 과 함께 있거나 함께 없습니다).
+             * @param outListNewIndex 원본 모서리 번호마다 새 번호입니다. 버려진 모서리는 `invalid_index::kUint32` 입니다.
+             */
+            static void bakeVertices( const Mesh& source, const vector<float3>& listPositionOffset, const vector<float3>& listNormalOffset, const AppearanceGeometry* pWelded,
+                                      const FitPartResult* pFit, vector<RHIVertex>& outListBaked, vector<MeshSkinVertex>& outListBakedSkin, vector<uint32>& outListNewIndex )
+            {
+                const vector<RHIVertex>& listVertex    = source.getVertices();
+                const uint32             vertexCount   = source.getVertexCount();
+                const uint32             triangleCount = vertexCount / 3;
+                const bool               bUseFit       = pWelded != nullptr && pFit != nullptr;
+                outListNewIndex.assign( vertexCount, invalid_index::kUint32 );
+                outListBaked.reserve( vertexCount );
+                for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
+                {
+                    if ( bUseFit && pFit->isTriangleVisible( triangle ) == false )
+                        continue;
+                    for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
+                        const uint32 vertexIndex = triangle * 3 + corner;
+                        RHIVertex    vertex      = listVertex[vertexIndex];
+                        float3       position    = getPosition( vertex ) + listPositionOffset[vertexIndex];
+                        if ( bUseFit )
+                            position += pFit->_listVertexDelta[pWelded->_listIndex[vertexIndex]];
+                        const float3 normal          = CharacterGeometryUtil::makeUnitOr( getNormal( vertex ) + listNormalOffset[vertexIndex], getNormal( vertex ) );
+                        vertex._arrPosition[0]       = position._x;
+                        vertex._arrPosition[1]       = position._y;
+                        vertex._arrPosition[2]       = position._z;
+                        vertex._arrNormal[0]         = normal._x;
+                        vertex._arrNormal[1]         = normal._y;
+                        vertex._arrNormal[2]         = normal._z;
+                        outListNewIndex[vertexIndex] = static_cast<uint32>( outListBaked.size() );
+                        outListBaked.push_back( vertex );
+                        if ( source.hasSkin() )
+                            outListBakedSkin.push_back( source.getSkinVertices()[vertexIndex] );
+                    }
+                }
+            }
+
+            /** @brief 구간을 새 정점 번호로 옮깁니다 — 원본 범위에서 남은 정점의 첫 번호와 수입니다. */
+            static vector<MeshSection> remapSections( const Mesh& source, const vector<uint32>& listNewIndex )
+            {
+                const uint32        vertexCount = source.getVertexCount();
+                vector<MeshSection> listSection;
+                listSection.reserve( source.getSections().size() );
+                for ( const MeshSection& section : source.getSections() )
+                {
+                    MeshSection baked  = section;
+                    baked._firstVertex = 0;
+                    baked._vertexCount = 0;
+                    bool bFirstFound   = false;
+                    for ( uint32 vertexIndex = section._firstVertex; vertexIndex < section._firstVertex + section._vertexCount && vertexIndex < vertexCount; ++vertexIndex )
+                    {
+                        if ( listNewIndex[vertexIndex] == invalid_index::kUint32 )
+                            continue;
+                        if ( bFirstFound == false )
+                            baked._firstVertex = listNewIndex[vertexIndex];
+                        bFirstFound = true;
+                        ++baked._vertexCount;
+                    }
+                    listSection.push_back( baked );
+                }
+                return listSection;
+            }
+
+            /** @brief 베이크하지 않은 모프 타깃을 남은 정점 번호로 옮깁니다. */
+            static vector<MeshMorphTarget> remapKeptMorphTargets( const Mesh& source, vector_reference<const BodyMorphWeight> listMorphWeight, const vector<uint32>& listNewIndex )
+            {
+                const uint32            vertexCount = source.getVertexCount();
+                vector<MeshMorphTarget> listMorphTarget;
+                for ( const MeshMorphTarget& target : source.getMorphTargets() )
+                {
+                    if ( isBaked( target._name, listMorphWeight ) )
+                        continue;
+                    MeshMorphTarget kept;
+                    kept._name = target._name;
+                    for ( const MeshMorphDelta& delta : target._listDelta )
+                    {
+                        if ( delta._vertexIndex >= vertexCount || listNewIndex[delta._vertexIndex] == invalid_index::kUint32 )
+                            continue;
+                        MeshMorphDelta moved = delta;
+                        moved._vertexIndex   = listNewIndex[delta._vertexIndex];
+                        kept._listDelta.push_back( moved );
+                    }
+                    listMorphTarget.push_back( std::move( kept ) );
+                }
+                return listMorphTarget;
+            }
         };
     } // namespace
 } // namespace sw
@@ -140,105 +250,27 @@ namespace sw
     shared_ptr<Mesh> CharacterMeshUtil::createBakedMesh( const Mesh& source, vector_reference<const BodyMorphWeight> listMorphWeight, const AppearanceGeometry* pWelded,
                                                          const FitPartResult* pFit )
     {
-        using Internal                       = CharacterMeshUtilInternal;
-        const vector<RHIVertex>& listVertex  = source.getVertices();
-        const uint32             vertexCount = source.getVertexCount();
-        const bool               bUseFit     = pWelded != nullptr && pFit != nullptr;
+        using Internal           = CharacterMeshUtilInternal;
+        const uint32 vertexCount = source.getVertexCount();
         if ( ( pWelded != nullptr ) != ( pFit != nullptr ) )
         {
             SW_LOG_ERROR( "A baked mesh needs both the welded geometry and its fit result, or neither" );
             return nullptr;
         }
+        const bool bUseFit = pWelded != nullptr && pFit != nullptr;
         if ( bUseFit && Internal::matchesSource( source, *pWelded, *pFit ) == false )
             return nullptr;
 
-        // 모서리마다 구울 모프 오프셋(위치 · 노멀).
         vector<float3> listPositionOffset( vertexCount, float3{} );
         vector<float3> listNormalOffset( vertexCount, float3{} );
-        for ( const BodyMorphWeight& weight : listMorphWeight )
-        {
-            const int32 targetIndex = source.findMorphTargetIndex( weight._morph );
-            if ( targetIndex < 0 || weight._weight == 0.0f )
-                continue;
-            for ( const MeshMorphDelta& delta : source.getMorphTargets()[static_cast<size_t>( targetIndex )]._listDelta )
-            {
-                if ( delta._vertexIndex >= vertexCount )
-                    continue;
-                listPositionOffset[delta._vertexIndex] += delta._position * weight._weight;
-                listNormalOffset[delta._vertexIndex] += delta._normal * weight._weight;
-            }
-        }
+        Internal::accumulateMorphOffsets( source, listMorphWeight, listPositionOffset, listNormalOffset );
 
-        // 남는 삼각형의 모서리를 순서대로 옮긴다(구간은 연속한 정점 범위라 순서를 지키면 구간도 연속이다).
-        const uint32           triangleCount = vertexCount / 3;
-        vector<uint32>         listNewIndex( vertexCount, invalid_index::kUint32 );
+        vector<uint32>         listNewIndex;
         vector<RHIVertex>      listBaked;
         vector<MeshSkinVertex> listBakedSkin;
-        listBaked.reserve( vertexCount );
-        for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
-        {
-            if ( bUseFit && pFit->isTriangleVisible( triangle ) == false )
-                continue;
-            for ( uint32 corner = 0; corner < 3; ++corner )
-            {
-                const uint32 vertexIndex = triangle * 3 + corner;
-                RHIVertex    vertex      = listVertex[vertexIndex];
-                float3       position    = Internal::getPosition( vertex ) + listPositionOffset[vertexIndex];
-                if ( bUseFit )
-                    position += pFit->_listVertexDelta[pWelded->_listIndex[vertexIndex]];
-                const float3 normal       = CharacterGeometryUtil::makeUnitOr( Internal::getNormal( vertex ) + listNormalOffset[vertexIndex], Internal::getNormal( vertex ) );
-                vertex._arrPosition[0]    = position._x;
-                vertex._arrPosition[1]    = position._y;
-                vertex._arrPosition[2]    = position._z;
-                vertex._arrNormal[0]      = normal._x;
-                vertex._arrNormal[1]      = normal._y;
-                vertex._arrNormal[2]      = normal._z;
-                listNewIndex[vertexIndex] = static_cast<uint32>( listBaked.size() );
-                listBaked.push_back( vertex );
-                if ( source.hasSkin() )
-                    listBakedSkin.push_back( source.getSkinVertices()[vertexIndex] );
-            }
-        }
-
-        // 구간 — 원본 범위에서 남은 정점의 첫 번호와 수.
-        vector<MeshSection> listSection;
-        listSection.reserve( source.getSections().size() );
-        for ( const MeshSection& section : source.getSections() )
-        {
-            MeshSection baked  = section;
-            baked._firstVertex = 0;
-            baked._vertexCount = 0;
-            bool bFirstFound   = false;
-            for ( uint32 vertexIndex = section._firstVertex; vertexIndex < section._firstVertex + section._vertexCount && vertexIndex < vertexCount; ++vertexIndex )
-            {
-                if ( listNewIndex[vertexIndex] == invalid_index::kUint32 )
-                    continue;
-                if ( bFirstFound == false )
-                    baked._firstVertex = listNewIndex[vertexIndex];
-                bFirstFound = true;
-                ++baked._vertexCount;
-            }
-            listSection.push_back( baked );
-        }
-
-        // 베이크하지 않은 모프 타깃 — 남은 정점 번호로 옮긴다.
-        vector<MeshMorphTarget> listMorphTarget;
-        for ( const MeshMorphTarget& target : source.getMorphTargets() )
-        {
-            if ( Internal::isBaked( target._name, listMorphWeight ) )
-                continue;
-            MeshMorphTarget kept;
-            kept._name = target._name;
-            for ( const MeshMorphDelta& delta : target._listDelta )
-            {
-                if ( delta._vertexIndex >= vertexCount || listNewIndex[delta._vertexIndex] == invalid_index::kUint32 )
-                    continue;
-                MeshMorphDelta moved = delta;
-                moved._vertexIndex   = listNewIndex[delta._vertexIndex];
-                kept._listDelta.push_back( moved );
-            }
-            listMorphTarget.push_back( std::move( kept ) );
-        }
+        Internal::bakeVertices( source, listPositionOffset, listNormalOffset, pWelded, pFit, listBaked, listBakedSkin, listNewIndex );
+        vector<MeshSection>     listSection     = Internal::remapSections( source, listNewIndex );
+        vector<MeshMorphTarget> listMorphTarget = Internal::remapKeptMorphTargets( source, listMorphWeight, listNewIndex );
 
         shared_ptr<Mesh> baked = Mesh::create();
         baked->setVertices( std::move( listBaked ) ); // 위치가 바뀌었으므로 탄젠트를 다시 구한다
