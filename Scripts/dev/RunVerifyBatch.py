@@ -17,6 +17,11 @@
 오염되지 않게 — 작업 방식 2 절). 한 항목이 져도 나머지는 계속 돈다. 다만 `build` 항목이 지면 같은 구성의 나머지는 `막힘` 이다(없는 바이너리를 돌리지 않는다).
 `need_command` 항목은 돌지 않고 이유를 표에 적으며, `wsl` 항목은 사용자가 요청할 때만 하므로 돌지 않는다. 덮개(`covered`) 항목은 덮개 항목의 결과를 따른다.
 
+`--jobs N`(기본 2)이면 한 구성 안에서 서로 충돌하지 않는 단위를 N 개까지 겹쳐 돌린다(`hasConflict`). 단위는 잠금 한 번에 이어 도는 같은 GPU 방식 묶음이고, 잠금 없는
+`none` 은 항목 하나가 단위다. 빌드 · 쿠킹 · 골든 · 측정 · 독점 항목은 혼자 돌고, 같은 잠금 자원을 쥔 단위(GPU 공유끼리)는 순서대로 돈다. 그래서 겹치는 것은 잠금 없는
+`ctest` · `test` 항목끼리와 GPU 공유 항목뿐이다. `--jobs 1` 이면 옛 순서 그대로다. 결과 표 · `result.json` 은 겹침과 무관하게 매니페스트 순서이고, 항목 출력은
+`logs/<id>.log` 로 따로 간다. 한 항목이 져도 나머지를 끝까지 돌려 모은다.
+
 결과는 `build/verify-batch/<시각>/` 의 `result.md`(표 하나) · `result.json` · `logs/<id>.log` 에 남고 표는 끝에 한 번 더 찍는다. 종료 코드는 실패나 막힘이 있으면 1 이다.
 빌드 · 쿠킹 · 골든 다시 뜨기는 작업 트리를 바꾼다(골든은 `Test/QA/Golden` 의 기준 파일) — 돌린 뒤 `git status` 로 본다.
 """
@@ -30,12 +35,15 @@ import json
 import os
 import platform
 import sys
+import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ConflictSchedule import runConflictSchedule  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -48,6 +56,17 @@ from common.Worktree import findMainRoot  # noqa: E402
 
 #: 결과를 남기는 폴더(저장소 기준) — `build/` 아래라 추적되지 않는다.
 kResultRelDir = "build/verify-batch"
+#: 혼자 돌아야 하는 종류 — 빌드 · 쿠킹 · 골든은 작업 트리를 바꾸고 측정은 CPU 를 다른 일이 쓰면 값이 오염된다(이유는 `09_Decisions.md` 검증 묶음 병렬 행).
+kAloneKindSet = frozenset({"build", "cook", "golden", "measure"})
+#: `--jobs` 기본값 — 항목이 자식 프로세스라 코어 수만큼 띄우면 서로 경합한다(`common/Parallel.py` 머리말). 잠금 없는 일 하나와 GPU 잠금 일 하나가 겹칠 만큼만 둔다.
+kDefaultJobs = 2
+#: 동시에 도는 항목이 시작 · 끝 줄을 찍을 때 한 줄이 섞이지 않게 하는 잠금(항목 출력은 `logs/<id>.log` 로 따로 간다).
+_kPrintLock = threading.Lock()
+
+
+def printLineInternal(text: str) -> None:
+    with _kPrintLock:
+        print(text, flush=True)
 
 
 def selectItems(manifest: VerifyManifest, listOnlyId: list[str], listConfigName: list[str]) -> list[VerifyItem]:
@@ -100,38 +119,82 @@ def runItemInternal(item: VerifyItem, preset: str, repositoryRoot: Path, owner: 
         command = buildItemCommand(item, preset, repositoryRoot, owner, workDir)
     except VerifyManifestError as error:
         return makeResult(item.itemId, kStatusFailed, str(error), formatNow())
-    print(f"[VerifyBatch] 시작 {item.itemId} ({item.kind}, {item.config}): {' '.join(command)}", flush=True)
+    printLineInternal(f"[VerifyBatch] 시작 {item.itemId} ({item.kind}, {item.config}): {' '.join(command)}")
     startTime = time.perf_counter()
     process = runProcess(command, cwd=repositoryRoot, timeoutSeconds=item.timeoutMinutes * 60.0, stdoutPath=logPath)
     seconds = time.perf_counter() - startTime
     outputText = logPath.read_text(encoding="utf-8", errors="replace") if process.bLaunched and logPath.is_file() else process.output
     result = interpretOutcome(item, process.returnCode, process.bLaunched, process.bTimedOut, outputText, seconds, logPath.as_posix(), formatNow())
-    print(f"[VerifyBatch] 끝 {item.itemId}: {result.status} {result.detail} ({seconds:.0f} 초)", flush=True)
+    printLineInternal(f"[VerifyBatch] 끝 {item.itemId}: {result.status} {result.detail} ({seconds:.0f} 초)")
     return result
 
 
-def runBatch(manifest: VerifyManifest, listItem: list[VerifyItem], repositoryRoot: Path, owner: str, waitSeconds: int, outputDir: Path) -> list[ItemResult]:
-    """고른 항목을 구성 순서 → 종류 → GPU 방식 순서로 돌려 항목마다 결과를 낸다. 돌리지 않는 항목도 결과(건너뜀)를 가진다."""
+@dataclass(frozen=True)
+class RunUnit:
+    """겹침을 따지는 단위 — 잠금을 한 번 잡고 이어 돌리는 같은 GPU 방식의 항목들(잠금 없는 `none` 은 항목 하나가 단위다)."""
+
+    configName: str
+    gpuMode: str
+    listItem: tuple[VerifyItem, ...]
+
+    @property
+    def setResource(self) -> frozenset[str]:
+        """이 단위가 쥐는 잠금 자원 이름들(`kMapLockByGpuMode`)."""
+        return frozenset(resource for resource, _ in kMapLockByGpuMode[self.gpuMode])
+
+    @property
+    def bAlone(self) -> bool:
+        """혼자 돌아야 하는가 — 작업 트리를 바꾸거나(빌드 · 쿠킹 · 골든) 측정이거나(CPU 를 다른 일이 쓰면 값이 오염된다) 독점 잠금이다."""
+        return self.gpuMode == "exclusive" or any(item.kind in kAloneKindSet for item in self.listItem)
+
+
+def hasConflict(first: RunUnit, second: RunUnit) -> bool:
+    """두 단위가 같이 돌 수 없는가 — 한쪽이 혼자여야 하거나 같은 잠금 자원을 쥔다(공유끼리도 이 묶음 안에서는 겹치지 않는다: 백엔드를 나눌 수 없다)."""
+    return first.bAlone or second.bAlone or bool(first.setResource & second.setResource)
+
+
+def planUnits(configName: str, listRun: list[VerifyItem]) -> list[RunUnit]:
+    """한 구성의 돌 항목(이미 종류 → GPU 방식 순서)을 단위로 나눈다 — 이어진 같은 GPU 방식 묶음이 잠금 한 번(`jobs` 1 이면 옛 순서 · 옛 잠금 그대로), 잠금 없는 묶음은 항목마다."""
+    listUnit: list[RunUnit] = []
+    for gpuMode, listGroup in groupByGpuMode(listRun):
+        if kMapLockByGpuMode[gpuMode]:
+            listUnit.append(RunUnit(configName, gpuMode, tuple(listGroup)))
+        else:
+            listUnit += [RunUnit(configName, gpuMode, (item,)) for item in listGroup]
+    return listUnit
+
+
+def runUnitInternal(unit: RunUnit, preset: str, repositoryRoot: Path, mainRoot: Path, owner: str, waitSeconds: int, outputDir: Path,
+                    mapResult: dict[str, ItemResult], mapBuildFailed: dict[str, bool]) -> None:
+    """단위 하나의 잠금을 잡고 항목을 차례로 돌려 `mapResult` 에 쓴다. 빌드가 지면 그 구성의 뒤 단위는 막힌다(빌드는 혼자 도는 단위라 뒤 단위가 읽을 때는 이미 정해져 있다)."""
+    with holdLocksInternal(mainRoot, unit.gpuMode, owner, f"verify-batch {unit.configName}", waitSeconds) as lockCode:
+        for item in unit.listItem:
+            if lockCode != 0:
+                mapResult[item.itemId] = makeResult(item.itemId, kStatusBlocked, f"GPU 잠금을 잡지 못함(종료 코드 {lockCode})", formatNow())
+            elif mapBuildFailed[unit.configName] and item.kind != "build":
+                mapResult[item.itemId] = makeResult(item.itemId, kStatusBlocked, f"{unit.configName} 빌드가 졌다", formatNow())
+            else:
+                mapResult[item.itemId] = runItemInternal(item, preset, repositoryRoot, owner, outputDir)
+                if item.kind == "build" and mapResult[item.itemId].status == kStatusFailed:
+                    mapBuildFailed[unit.configName] = True
+
+
+def runBatch(manifest: VerifyManifest, listItem: list[VerifyItem], repositoryRoot: Path, owner: str, waitSeconds: int, outputDir: Path,
+             jobs: int = 1) -> list[ItemResult]:
+    """고른 항목을 구성 순서 → 종류 → GPU 방식 순서로 돌려 항목마다 결과를 낸다. 돌리지 않는 항목도 결과(건너뜀)를 가진다.
+
+    구성 안에서는 서로 충돌하지 않는 단위(`hasConflict`)를 `jobs` 개까지 겹쳐 돌린다. 결과 목록은 겹침과 무관하게 `listItem` 순서다.
+    """
     mainRoot = findMainRoot(repositoryRoot)
     mapResult: dict[str, ItemResult] = {}
+    mapBuildFailed: dict[str, bool] = {}
     for configName, listInConfig in orderItems(manifest, listItem):
         preset = manifest.findConfig(configName).preset
-        bBuildFailed = False
-        for gpuMode, listGroup in groupByGpuMode(listInConfig):
-            for item in (item for item in listGroup if not item.bRunnable and not item.bCovered):
-                mapResult[item.itemId] = makeNotRunResult(item, formatNow())
-            listRun = [item for item in listGroup if item.bRunnable]
-            if not listRun:
-                continue
-            with holdLocksInternal(mainRoot, gpuMode, owner, f"verify-batch {configName}", waitSeconds) as lockCode:
-                for item in listRun:
-                    if lockCode != 0:
-                        mapResult[item.itemId] = makeResult(item.itemId, kStatusBlocked, f"GPU 잠금을 잡지 못함(종료 코드 {lockCode})", formatNow())
-                    elif bBuildFailed and item.kind != "build":
-                        mapResult[item.itemId] = makeResult(item.itemId, kStatusBlocked, f"{configName} 빌드가 졌다", formatNow())
-                    else:
-                        mapResult[item.itemId] = runItemInternal(item, preset, repositoryRoot, owner, outputDir)
-                        bBuildFailed = bBuildFailed or (item.kind == "build" and mapResult[item.itemId].status == kStatusFailed)
+        mapBuildFailed[configName] = False
+        for item in (item for item in listInConfig if not item.bRunnable and not item.bCovered):
+            mapResult[item.itemId] = makeNotRunResult(item, formatNow())
+        runConflictSchedule(planUnits(configName, [item for item in listInConfig if item.bRunnable]), hasConflict,
+                            lambda unit: runUnitInternal(unit, preset, repositoryRoot, mainRoot, owner, waitSeconds, outputDir, mapResult, mapBuildFailed), jobs)
     for item in (item for item in listItem if item.bCovered):
         mapResult[item.itemId] = resolveCoveredResult(item, mapResult, formatNow())
     return [mapResult[item.itemId] for item in listItem]
@@ -166,6 +229,9 @@ def printDryRun(manifest: VerifyManifest, listItem: list[VerifyItem], repository
                     print(f"   {item.itemId}: {' '.join(buildItemCommand(item, preset, repositoryRoot, owner or '<owner>', outputDir / 'work' / item.itemId))}")
                 except VerifyManifestError as error:
                     print(f"   {item.itemId}: (명령을 아직 만들 수 없다 — {error})")
+        print("-- 겹침 단위(--jobs 2 이상이면 충돌하지 않는 단위끼리 겹친다): "
+              + " | ".join(("[혼자] " if unit.bAlone else "") + ",".join(item.itemId for item in unit.listItem)
+                           for unit in planUnits(configName, [item for item in listInConfig if item.bRunnable])))
 
 
 def writeResultFiles(manifest: VerifyManifest, listResult: list[ItemResult], outputDir: Path, environment: str) -> str:
@@ -187,6 +253,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", action="append", default=[], help="이 구성만(여러 번 가능: Debug · Shipping · Release)")
     parser.add_argument("--only", nargs="+", default=[], help="이 id 의 항목만")
     parser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"잠금을 기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 그 묶음은 막힘")
+    parser.add_argument("--jobs", type=int, default=kDefaultJobs, help=f"동시에 돌 항목 수(기본 {kDefaultJobs}). 1 이면 매니페스트 순서로 하나씩. 빌드 · 쿠킹 · 골든 · 측정 · 독점 잠금 항목은 언제나 혼자")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(기본: 이 스크립트의 저장소)")
     args = parser.parse_args(argv)
     repositoryRoot = args.root or getProjectRoot()
@@ -213,8 +280,11 @@ def main(argv: list[str] | None = None) -> int:
         print("[VerifyBatch] 오류: 돌리려면 --owner <이름> 이 필요합니다(잠금에 적힌다)", file=sys.stderr)
         return ExitCode.CheckInvalid
 
+    if args.jobs < 1:
+        print("[VerifyBatch] 오류: --jobs 는 1 이상입니다", file=sys.stderr)
+        return ExitCode.CheckInvalid
     outputDir.mkdir(parents=True, exist_ok=True)
-    listResult = runBatch(manifest, listItem, repositoryRoot, args.owner, args.wait, outputDir)
+    listResult = runBatch(manifest, listItem, repositoryRoot, args.owner, args.wait, outputDir, args.jobs)
     environment = describeEnvironment(repositoryRoot, args.owner)
     report = writeResultFiles(manifest, listResult, outputDir, environment)
     print("\n" + report)

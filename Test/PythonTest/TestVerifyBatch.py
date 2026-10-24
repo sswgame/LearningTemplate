@@ -4,16 +4,22 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import json
 import sys
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
+from typing import Iterator
+from unittest import mock
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
 
+from common.ConflictSchedule import runConflictSchedule  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.VerifyManifest import (ItemResult, VerifyItem, VerifyManifestError, buildItemCommand, checkVerifyPending, extractMetricValues, findPendingLineViolations,  # noqa: E402
                                    findReferencedIds, formatResultTable, groupByGpuMode, interpretOutcome, judgeMetrics, kStatusBlocked,
@@ -250,6 +256,130 @@ class PendingLineTest(unittest.TestCase):
         self.assertEqual([], findPendingLineViolations(root, None))
         (root / "docs" / "plans" / "A.md").write_text(self.kPlanHeader + "실행 대기: 글\n", encoding="utf-8")
         self.assertEqual(1, len(findPendingLineViolations(root, None)))
+
+
+class FakeItemRunner:
+    """`runItemInternal` 대신 자는 가짜 — 항목마다 `(시작, 끝)` 을 적고 `setFail` 의 id 는 진다."""
+
+    def __init__(self, mapSeconds: dict[str, float], setFail: frozenset[str] = frozenset()) -> None:
+        self.mapSeconds = mapSeconds
+        self.setFail = setFail
+        self.mapSpan: dict[str, tuple[float, float]] = {}
+        self.listStarted: list[str] = []
+        self.lock = threading.Lock()
+
+    def __call__(self, item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, outputDir: Path) -> ItemResult:
+        start = time.monotonic()
+        with self.lock:
+            self.listStarted.append(item.itemId)
+        time.sleep(self.mapSeconds.get(item.itemId, 0.1))
+        with self.lock:
+            self.mapSpan[item.itemId] = (start, time.monotonic())
+        return makeResult(item.itemId, kStatusFailed if item.itemId in self.setFail else kStatusPassed, "", "d")
+
+    def isOverlapped(self, first: str, second: str) -> bool:
+        (firstStart, firstEnd), (secondStart, secondEnd) = self.mapSpan[first], self.mapSpan[second]
+        return firstStart < secondEnd and secondStart < firstEnd
+
+
+@contextlib.contextmanager
+def fakeHoldLocks(mainRoot: Path, gpuMode: str, owner: str, purpose: str, waitSeconds: int) -> Iterator[int]:
+    yield 0
+
+
+class ParallelBatchTest(unittest.TestCase):
+    """겹침 규칙 — 매니페스트 순서를 뒤섞어 둔 가짜 항목(sleep)으로 `runBatch` 를 돌린다. 실제 잠금 · 프로세스는 쓰지 않는다."""
+
+    def setUp(self) -> None:
+        listManifestItem = (
+            makeItem("m", "measure", "Debug", "exclusive", tool="scripts", args=["perf"], limit="l", judge="exit"),
+            makeItem("ts", "test", "Debug", "shared", filter="T.*"),
+            makeItem("tn", "test", "Debug", "none", filter="T.*"),
+            makeItem("cs", "ctest", "Debug", "shared", label="x"),
+            makeItem("a", "ctest", "Debug", "none", label="y"),
+            makeItem("b", "build", "Debug", "none"),
+            makeItem("need", "test", "Debug", "none", filter="T.*", need_command="이유"),
+        )
+        self.manifest = parseManifest(makeData(*listManifestItem))
+        self.listItem = list(self.manifest.listItem)
+
+    def runWith(self, jobs: int, runner: FakeItemRunner) -> list[ItemResult]:
+        with mock.patch.object(RunVerifyBatch, "runItemInternal", runner), mock.patch.object(RunVerifyBatch, "holdLocksInternal", fakeHoldLocks), \
+                mock.patch.object(RunVerifyBatch, "findMainRoot", lambda root: root):
+            return RunVerifyBatch.runBatch(self.manifest, self.listItem, Path("."), "o", 1, Path("."), jobs)
+
+    def testPlanSplitsLockFreeItemsAndKeepsLockGroupsWhole(self) -> None:
+        listRun = [item for item in orderItems(self.manifest, self.listItem)[0][1] if item.bRunnable]
+        listUnit = RunVerifyBatch.planUnits("Debug", listRun)
+        self.assertEqual([("none", ["b"]), ("none", ["a"]), ("shared", ["cs"]), ("none", ["tn"]), ("shared", ["ts"]), ("exclusive", ["m"])],
+                         [(unit.gpuMode, [item.itemId for item in unit.listItem]) for unit in listUnit])
+        self.assertEqual([True, False, False, False, False, True], [unit.bAlone for unit in listUnit])
+        self.assertTrue(RunVerifyBatch.hasConflict(listUnit[2], listUnit[4]))        # 같은 gpu 잠금 자원
+        self.assertFalse(RunVerifyBatch.hasConflict(listUnit[1], listUnit[2]))       # 잠금 없는 것과 공유
+        self.assertTrue(RunVerifyBatch.hasConflict(listUnit[0], listUnit[1]))        # 빌드는 혼자
+
+    def testConflictingUnitsAreSerialAndOthersOverlap(self) -> None:
+        runner = FakeItemRunner({"cs": 0.4})
+        listResult = self.runWith(2, runner)
+        for other in ("a", "cs", "tn", "ts", "m"):
+            self.assertFalse(runner.isOverlapped("b", other), f"빌드가 {other} 와 겹쳤다")
+        for other in ("a", "cs", "tn", "ts"):
+            self.assertFalse(runner.isOverlapped("m", other), f"측정이 {other} 와 겹쳤다")
+        self.assertFalse(runner.isOverlapped("cs", "ts"))                            # 같은 gpu 잠금
+        self.assertTrue(runner.isOverlapped("a", "cs"))                              # 잠금 없는 것과 공유는 겹친다
+        self.assertTrue(runner.isOverlapped("tn", "cs"))
+        self.assertLess(runner.mapSpan["cs"][1], runner.mapSpan["ts"][0] + 0.001)
+        self.assertEqual([item.itemId for item in self.listItem], [result.itemId for result in listResult])   # 보고는 매니페스트 순서
+        self.assertEqual(kStatusSkipped, listResult[-1].status)
+        self.assertEqual({kStatusPassed}, {result.status for result in listResult[:-1]})
+
+    def testJobsOneRunsOneAtATimeInTheOldOrder(self) -> None:
+        runner = FakeItemRunner({})
+        self.runWith(1, runner)
+        self.assertEqual(["b", "a", "cs", "tn", "ts", "m"], runner.listStarted)
+        listId = list(runner.mapSpan)
+        for first, second in zip(listId, listId[1:]):
+            self.assertFalse(runner.isOverlapped(first, second))
+
+    def testFailureDoesNotStopOthersAndFailedBuildBlocksTheConfig(self) -> None:
+        runner = FakeItemRunner({}, frozenset({"tn"}))
+        mapStatus = {result.itemId: result.status for result in self.runWith(2, runner)}
+        self.assertEqual(kStatusFailed, mapStatus["tn"])
+        self.assertEqual([kStatusPassed] * 5, [mapStatus[itemId] for itemId in ("m", "ts", "cs", "a", "b")])
+        runner = FakeItemRunner({}, frozenset({"b"}))
+        mapStatus = {result.itemId: result.status for result in self.runWith(2, runner)}
+        self.assertEqual(["b"], runner.listStarted)
+        self.assertEqual([kStatusFailed] + [kStatusBlocked] * 5, [mapStatus[itemId] for itemId in ("b", "a", "cs", "tn", "ts", "m")])
+
+
+class ConflictScheduleTest(unittest.TestCase):
+    def testScheduleRespectsJobsLimitAndSurfacesTheFirstError(self) -> None:
+        mapCount = {"running": 0, "peak": 0}
+        lock = threading.Lock()
+
+        def work(unit: int) -> None:
+            with lock:
+                mapCount["running"] += 1
+                mapCount["peak"] = max(mapCount["peak"], mapCount["running"])
+            time.sleep(0.05)
+            with lock:
+                mapCount["running"] -= 1
+
+        runConflictSchedule(list(range(6)), lambda first, second: False, work, 3)
+        self.assertEqual(3, mapCount["peak"])
+
+        listDone: list[int] = []
+
+        def failing(unit: int) -> None:
+            listDone.append(unit)
+            if unit == 1:
+                raise RuntimeError("boom")
+
+        with self.assertRaisesRegex(RuntimeError, "boom"):
+            runConflictSchedule(list(range(5)), lambda first, second: True, failing, 2)
+        self.assertEqual([0, 1], listDone)            # 예외 뒤로는 새 일을 시작하지 않는다
+        with self.assertRaises(ValueError):
+            runConflictSchedule([1], lambda first, second: False, work, 0)
 
 
 class RepositoryManifestTest(unittest.TestCase):
