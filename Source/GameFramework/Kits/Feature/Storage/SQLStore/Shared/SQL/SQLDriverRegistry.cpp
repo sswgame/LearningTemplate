@@ -31,10 +31,8 @@ namespace sw
             void add( ISQLDriver& driver )
             {
                 std::scoped_lock<mutex>  lock{ _mutex };
-                const RegistrationResult result = _registeredDriver.add( &driver, driver.getName() );
+                const RegistrationResult result = _registeredDriver.addLogged( &driver, "SQL driver", driver.getName() );
                 SW_ASSERT( result == RegistrationResult::Added );
-                if ( result != RegistrationResult::Added )
-                    SW_LOG_ERROR( "SQL driver '%#' was not registered (the name is empty or already registered by another module) - the second one is ignored", driver.getName() );
             }
 
             void remove( ISQLDriver& driver )

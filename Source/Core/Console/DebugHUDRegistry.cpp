@@ -149,14 +149,9 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.add( pRegistration, name, pRegistration->_order );
+            result = _registration.addLogged( pRegistration, "Debug HUD section", name, pRegistration->_order );
             if ( result == RegistrationResult::Added )
                 ++_revision;
-        }
-        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
-        {
-            SW_LOG_WARNING( "Debug HUD section '%#' is already registered - the second registration is ignored", pRegistration->_pName );
-            return false;
         }
         return result == RegistrationResult::Added;
     }

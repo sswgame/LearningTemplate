@@ -103,12 +103,7 @@ namespace sw
             pRegistration == nullptr || pRegistration->_pName == nullptr || ( pRegistration->_pFunction == nullptr ) == ( pRegistration->_pQueryFunction == nullptr );
         if ( bInvalidProbeRegistration )
             return false;
-        if ( AutomationProbeInternal::getRegistrations().add( pRegistration, pRegistration->_pName ) != RegistrationResult::Added )
-        {
-            SW_LOG_ERROR( "Automation probe '%#' is registered twice - the second one is ignored", pRegistration->_pName );
-            return false;
-        }
-        return true;
+        return AutomationProbeInternal::getRegistrations().addLogged( pRegistration, "Automation probe", pRegistration->_pName ) == RegistrationResult::Added;
     }
 
     void AutomationProbes::unregisterProbe( const AutomationProbeRegistration* pRegistration )

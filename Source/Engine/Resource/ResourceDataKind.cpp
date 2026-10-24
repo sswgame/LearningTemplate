@@ -80,12 +80,7 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.add( pKind, pKind->_pLabel );
-        }
-        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
-        {
-            SW_LOG_ERROR( "Resource data kind '%#' is already registered - the second registration is ignored", pKind->_pLabel );
-            return false;
+            result = _registration.addLogged( pKind, "Resource data kind", pKind->_pLabel );
         }
         return result == RegistrationResult::Added;
     }

@@ -40,9 +40,7 @@ namespace sw
         , _pCapture{ pCapture }
         , _pRestore{ pRestore }
     {
-        const RegistrationResult result = ComponentStateStoreInternal::getRegistrationList().add( this, string_view( pTypeName ) );
-        if ( result != RegistrationResult::Added )
-            SW_LOG_ERROR( "Stateful component type '%#' was not registered (duplicate or empty name) - its state does not ride snapshots", pTypeName );
+        (void)ComponentStateStoreInternal::getRegistrationList().addLogged( this, "Stateful component type", string_view( pTypeName ) );
     }
 
     StatefulComponentRegistration::~StatefulComponentRegistration()

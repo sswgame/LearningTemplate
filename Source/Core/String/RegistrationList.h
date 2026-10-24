@@ -98,6 +98,14 @@ namespace sw
     };
 
     /**
+     * @brief 거절된 등록(`DuplicateName` · `EmptyName` · `NullItem`)을 오류 로그로 남깁니다. `Added` · `AlreadyPresent` 는 아무것도 하지 않습니다.
+     * @param pWhat 등록 대상의 영문 이름입니다("Debug HUD section"). 문자열 리터럴이어야 합니다.
+     * @param name 거절된 항목의 이름입니다.
+     * @details 로그 id 는 `Registration.DuplicateName` · `Registration.EmptyName` · `Registration.NullItem` 입니다. 레지스트리가 손으로 문구를 쓰지 않도록 `addLogged` 가 부릅니다.
+     */
+    SW_API void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name );
+
+    /**
      * @class RegistrationList
      * @brief 엔진 · 에디터 레지스트리가 같은 구조로 보관하는 목록입니다. 항목은 소유하지 않습니다(수명은 등록한 쪽).
      * @details 레지스트리마다 다시 짜기 쉬운 다섯 가지를 한 곳에 둡니다:
@@ -201,6 +209,17 @@ namespace sw
             _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), string( name ) );
             _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), order );
             return RegistrationResult::Added;
+        }
+
+        /**
+         * @brief `add` 하고 거절되면(`DuplicateName` · `EmptyName` · `NullItem`) 공용 오류 로그를 남깁니다. 레지스트리는 거절 문구를 따로 쓰지 않습니다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        RegistrationResult addLogged( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
+        {
+            const RegistrationResult result = add( pItem, name, order );
+            reportRegistrationRejected( result, pWhat, name );
+            return result;
         }
 
         /**
@@ -423,6 +442,15 @@ namespace sw
             _listName.push_back( name );
             _listValue.push_back( std::move( value ) );
             return true;
+        }
+
+        /** @brief `add` 하고 거절되면 공용 오류 로그(`Registration.EmptyName` · `Registration.DuplicateName`)를 남깁니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
+        bool addLogged( const hashed_string& name, T value, const utf8* pWhat )
+        {
+            if ( add( name, std::move( value ) ) )
+                return true;
+            reportRegistrationRejected( name.empty() ? RegistrationResult::EmptyName : RegistrationResult::DuplicateName, pWhat, name.c_str() );
+            return false;
         }
 
         /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 무시합니다. */

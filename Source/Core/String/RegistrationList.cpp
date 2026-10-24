@@ -2,6 +2,8 @@
 
 #include "Core/String/RegistrationList.h"
 
+#include "Core/Log/Logger.h"
+
 #include <atomic>
 
 namespace sw
@@ -38,6 +40,35 @@ namespace sw
             RegistrationListChainLock& operator=( const RegistrationListChainLock& ) = delete;
         };
     } // namespace
+
+    SW_LOG_CALLER( "Registration" );
+
+    void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name )
+    {
+        switch ( result )
+        {
+            case RegistrationResult::DuplicateName:
+            {
+                SW_LOG_ERROR_ID( "Registration.DuplicateName", "%# '%#' is already registered - keeping the first", pWhat, name );
+                return;
+            }
+            case RegistrationResult::EmptyName:
+            {
+                SW_LOG_ERROR_ID( "Registration.EmptyName", "%# was registered with an empty name - ignored", pWhat );
+                return;
+            }
+            case RegistrationResult::NullItem:
+            {
+                SW_LOG_ERROR_ID( "Registration.NullItem", "%# was registered as null - ignored", pWhat );
+                return;
+            }
+            case RegistrationResult::Added:
+            case RegistrationResult::AlreadyPresent:
+            {
+                return;
+            }
+        }
+    }
 
     RegistrationReloadScope::RegistrationReloadScope()
     {

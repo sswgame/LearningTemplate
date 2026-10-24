@@ -24,12 +24,7 @@ namespace sw
             SW_LOG_ERROR( "NetSimGameRegistry: a game needs a name and a create function ('%#')", entry._name );
             return false;
         }
-        const RegistrationResult result = getEntries().add( &entry, entry._name );
-        if ( result == RegistrationResult::DuplicateName )
-        {
-            SW_LOG_ERROR( "NetSimGameRegistry: '%#' is already registered", entry._name );
-            return false;
-        }
+        const RegistrationResult result = getEntries().addLogged( &entry, "Net simulation game", entry._name );
         return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 

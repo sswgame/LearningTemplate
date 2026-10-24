@@ -51,10 +51,8 @@ namespace sw
             void add( const LocalStoreBackend& backend )
             {
                 std::scoped_lock<mutex>  lock{ _mutex };
-                const RegistrationResult result = _registeredBackend.add( &backend, backend._pName );
+                const RegistrationResult result = _registeredBackend.addLogged( &backend, "Local store backend", backend._pName );
                 SW_ASSERT( result == RegistrationResult::Added );
-                if ( result != RegistrationResult::Added )
-                    SW_LOG_ERROR( "Local store backend '%#' was not registered (the name is empty, built in, or already registered by another module) - the second one is ignored", backend._pName );
             }
 
             void remove( const LocalStoreBackend& backend )
