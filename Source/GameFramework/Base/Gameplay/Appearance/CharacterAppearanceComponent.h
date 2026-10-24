@@ -73,15 +73,17 @@ namespace sw
      * @class CharacterAppearanceProportionTask
      * @brief 외형 컴포넌트가 몸 유닛에 등록하는 두 번째 단계 작업입니다 — 체형 축이 정한 본 비율(`BoneProportion`)을 몸의 애니메이션 포즈 위에 겹칩니다(가산 층).
      * @details `Attachment` 단계에 한다 — 애니메이터(`BasePose`)가 포즈를 만든 뒤, 후처리 리그(`PostProcess`)가 돌기 전이라 리그가 비율이 반영된 포즈를 본다.
-     *          포즈를 쓰는 작업이라(`Writes`) 몸의 군중 포즈 공유가 꺼진다(유닛마다 비율이 달라 같은 포즈를 나눌 수 없다). 비율이 없으면(`BoneProportion` 비었음) 아무것도 하지 않는다.
+     *          비율이 있으면 포즈를 쓰는 작업이라(`Writes`) 몸의 군중 포즈 공유가 꺼진다(유닛마다 비율이 달라 같은 포즈를 나눌 수 없다). 비율이 없으면(`BoneProportion` 비었음)
+     *          아무것도 하지 않고 `ReadsOnly` 로 선언한다.
      */
     class SW_GF_API CharacterAppearanceProportionTask final : public IAnimationPhaseTask
     {
     public:
         explicit CharacterAppearanceProportionTask( CharacterAppearanceComponent& owner );
 
-        bool                isAnimationActive() const override { return false; }
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        bool isAnimationActive() const override { return false; }
+        /** @brief 본 비율이 있을 때만 쓴다(`runAnimationPhase` 가 같은 판정으로 건너뛴다). 비율이 없는데 등록돼 있어도 군중 공유를 막지 않는다. */
+        AnimationPoseAccess getPoseAccess() const override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
 
