@@ -29,8 +29,8 @@
 | 단위 | 목적 | 벤치 | 전 p50 / p99 | 후 p50 / p99 | 판정 | 유지보수 비용 |
 |---|---|---|---|---|---|---|
 | ① | `SequenceBuffer` 칸을 다시 쓸 때 버퍼 용량 유지(크기 상수화는 feat18) | `NetCoreBenchTest.SequenceBufferSlotReuse` | 233.5 ns/op | 191.6 ns/op | 유지 | 원소에 `resetForReuse`(모든 필드를 `T{}` 로, 버퍼만 남김) |
-| ② | `sw::deque` 바이트 기준 블록 + 고정 용량 큐 링 버퍼 | 미구현 | | | | 컨테이너 직접 구현 — 빌드 없이 넣기에 위험이 커서 다음 묶음 |
-| ③ | 해시 표 노드 `uint32 next + 해시 태그` | 미구현 | | | | map · set 표 코어 통합 — 같은 이유로 다음 묶음 |
+| ② | `sw::deque` 바이트 기준 블록 + 고정 용량 큐 링 버퍼 | `ContainerBenchTest.DequeQueueChurn`(8 · 32 · 128 B, 벤치 커밋) | (통합에서 잰다) | 구현은 전 값을 본 뒤 | | `sw::deque` 는 `std::deque` 를 상속한 감싸개이고 28 개 파일이 쓴다(주소 안정에 기대는 곳이 있다 — `NetTransport.h` · `TestLoopbackCluster.h`). 직접 구현은 전 값에서 원소 크기 따라 비용이 갈릴 때만 한다 |
+| ③ | 해시 표 노드 `uint32 next + 해시 태그` | `ContainerBenchTest.UnorderedMapInsertErase` · `IntegerKeyLookup` · `StringKeyLookup`(벤치 커밋) | (통합에서 잰다) | (통합에서 잰다) | 구현 들어감(빌드 미확인) | 노드가 `uint32` 인덱스 둘(다음, 태그)을 든다. 원소 수 상한 42억. `unordered_map` · `unordered_set` 각각에 넣었다(표 코어 통합은 하지 않았다 — 두 구현의 차이는 노드 값 하나뿐이라 통합은 별개 정리) |
 | ④ | `BitStream` 64비트 워드로 쓰기 · 읽기(와이어 바이트 고정 테스트 `BitStreamWireTest` 먼저) | `NetCoreBenchTest.BitStreamMixedFields` | 쓰기 4.9 · 읽기 3.8 ns/op | 쓰기 4.3 · 읽기 2.0 ns/op | 유지 | 읽기의 8 바이트 통째 읽기는 리틀 엔디언 전제 |
 | ⑤ | `Memory::copy` · `move` · `set` · `compare` 헤더 inline | `MemoryCopyBenchTest.CopyAndCompareBySize` | 8 B 5.8 ns ~ 4 KiB 35.5 ns | 5.7 ~ 35.3 ns(1 ~ 3 %, 잡음 안) | 되돌림(9c1bff0f4) | 헤더를 바꾸면 전체 재컴파일 |
 
@@ -38,7 +38,8 @@
 B 는 B 벤치 커밋(`2b4fc46aa`)과 feat19 끝(`1bb8c33c6`)을 견줬다. A ⑤ 이후 커밋은 그대로는 컴파일되지 않아(리스너 스냅샷이 비 const `broadcast` 를 부름) 통합의 `broadcastSnapshot` 수정만 얹어 쟀다.
 `forkJoin hot` p50 은 2 us 와 17 ~ 19 us 사이를 실행마다 오가 단위 판정에 쓰지 않았다. ③-1 과 ③-2 는 따로 재지 않았다.
 
-B ② · ③ 은 이 묶음에서 하지 않았고(빌드 없이 컨테이너를 직접 구현하는 위험), 이 문서의 B 표에 남아 있다.
+B ③ 은 2026-10-24 에 벤치를 먼저, 해시 태그를 따로 커밋했다(매니페스트 id `container-hash-tag-bench`). 재는 법: 두 커밋을 번갈아 지어 `ContainerBenchTest.*` 를 위 절차로 잰다. 이득이 없으면 해시 태그 커밋만 `git revert` 한다.
+B ② 는 벤치만 들어갔고 구현은 전 값을 본 뒤 정한다.
 
 ## 묶음 설명
 
@@ -46,7 +47,7 @@ B ② · ③ 은 이 묶음에서 하지 않았고(빌드 없이 컨테이너를
 
 - **A 동시성.** 먼저 Core 에 "스레드 칸에 쓰고 읽는 쪽이 합치는" 샤드 카운터 형식을 설계(`integrator`)하고 ① ~ ⑤ 순서로 한다(위 A 표). 대기자 스핀은 워커 루프처럼 세대(`_workEpoch`)로 막는다.
 - **B 컨테이너 · 네트워크.** 보류: `NetConnection` 수신 아레나(출처가 틀렸던 "측정 기각 `C-4`" 가 아니라 측정 없이 `a108c1adf` 로 들어간 것), `NetPrioritizer` 힙, UDP `recvmmsg`(`B-10`). `sw::deque` 직접 구현은 주소 안정에 기대는 곳(`NetTransport.h:121`)을 먼저 본다.
-- **C 리플렉션.** 설계는 [리플렉션 직렬화 형식 계획](ReflectionFormats.md)이 단계 표를 가진다(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
+- **C 리플렉션.** 명세는 [고정 배치형 코덱 계약](../../Source/Engine/Serialization/Fixed/README.md)이 가진다(자기 기술형 유지 + 고정 배치형 신설, 스키마 해시 1개, 코드젠이 타입별 write/read · `==` 생성). 리플렉션 코드젠은 헤더만 읽으므로 `.cpp` 내부(익명 namespace) 형식에는 못 쓴다 → 모듈 내부 헤더로 옮겨 쓴다.
 - **D 셰이더 bindless 입문.** `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다(`C-76`).
 - **공통화 2단계**는 후보 `FunctorLambdaCommonization` 이다.
 

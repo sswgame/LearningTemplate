@@ -261,7 +261,7 @@ namespace
         static void runEditorCase( const utf8* pSwitch )
         {
             const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { "engine/automation/editor" } );
-            SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "engine/automation/editor 에 에디터 시나리오가 없습니다" );
+            SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "There are no editor scenarios in engine/automation/editor" );
 
             // 묶을 수 있는 시나리오는 한 프로세스(실행 시간의 대부분이던 기동 · 모듈 로드를 한 번만)로, 나머지(저장 상태 묶음 · 격리 표식)는 프로세스를 나눠 돈다.
             sw::vector<sw::string> listChained;
@@ -406,7 +406,7 @@ SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-dx12" );
 #endif
@@ -418,7 +418,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-dx11" );
 #endif
@@ -430,7 +430,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-vk" );
 #endif
@@ -442,7 +442,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnOpenGL )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build has no editor" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build has no editor
 #else
     AppScenarioTestInternal::runEditorCase( "-gl" );
 #endif

@@ -6,7 +6,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 영속 레코드의 모르는 칸 보관(계획 PersistentRecordUnknownFields). 옛 빌드와 새 빌드는 필드 이름이 겹치는 두 타입으로 흉내 낸다(`_extra` 는 새 빌드만 안다).
+// 영속 레코드의 모르는 칸 보관(docs/09_Decisions.md 5-9 영속 레코드의 모르는 필드). 옛 빌드와 새 빌드는 필드 이름이 겹치는 두 타입으로 흉내 낸다(`_extra` 는 새 빌드만 안다).
 // 레코드 타입이 `_unknownFields` 를 들고, `readDurable` 이 담고 `encode` 가 다시 싣는다 — 서비스 코드는 레코드를 복사해 고쳐 쓰기만 한다.
 
 using namespace sw;

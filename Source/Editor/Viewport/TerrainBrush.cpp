@@ -60,7 +60,7 @@ namespace sw::editor
         const bool bHoleMode = getTarget( settings._mode ) == TerrainBrushTarget::Hole && settings._mode != TerrainBrushMode::Count;
         if ( bHoleMode == false || inoutListHole.size() != static_cast<size_t>( cellResolution ) * cellResolution )
             return false;
-        const uint8 value    = settings._mode == TerrainBrushMode::CutHole ? 1u : 0u;
+        const uint8 holeFlag = settings._mode == TerrainBrushMode::CutHole ? 1u : 0u;
         bool        bChanged = false;
         for ( const TerrainBrushSample& sample : listSample )
         {
@@ -68,8 +68,8 @@ namespace sw::editor
             if ( bSkipped )
                 continue;
             uint8& cell = inoutListHole[static_cast<size_t>( sample._sampleZ ) * cellResolution + sample._sampleX];
-            bChanged    = bChanged || cell != value;
-            cell        = value;
+            bChanged    = bChanged || cell != holeFlag;
+            cell        = holeFlag;
         }
         return bChanged;
     }

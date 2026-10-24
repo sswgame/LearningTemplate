@@ -176,8 +176,8 @@ namespace sw
         float32 _regenRate{ 20.0f };
         PROPERTY( Min = 0.0 )
         float32 _regenDelay{ 1.0f };
-        PROPERTY( Min = 0.0 )
-        float32 _exhaustThreshold{ 0.0f };
+        PROPERTY( Min = 0.0, Max = "_max" )
+        float32 _exhaustThreshold{ 0.0f }; ///< 스태미나 최대 이하(기반 `ResourceGauge` 가 같은 범위로 거절한다)
     };
 } // namespace sw
 

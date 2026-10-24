@@ -64,7 +64,7 @@ namespace test
         SuiteKindMode getKindMode( SuiteKind kind ) const { return _arrKindMode[static_cast<size_t>( kind )]; }
         /**
          * @brief 요구 백엔드를 읽습니다(쿠킹 표의 명령줄 이름 `dx11` · `dx12` · `vk` · `gl` 을 쉼표로). 모르는 이름이면 실행이 진다.
-         * @details 값의 정본은 `Test/TestPolicy.json` 의 `requiredBackends` 이고 CMake 가 hostgpu 항목에 넘긴다(C-41 3단계).
+         * @details 값의 기준은 `Test/TestPolicy.json` 의 `requiredBackends` 이고 CMake 가 hostgpu 항목에 넘긴다(C-41 3단계).
          */
         void setRequiredBackends( const sw::string& text );
         /** @brief 이 실행이 그 백엔드를 요구하는가 — 요구한 백엔드가 서지 못하면 케이스는 건너뛰지 않고 진다. */

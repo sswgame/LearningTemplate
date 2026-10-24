@@ -1,7 +1,7 @@
 /**
  * @file FixedLayout.h
  * @brief 고정 배치형(B) 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 함수로 쓰고, 읽고, 비교합니다.
- * @details 계획과 근거는 `docs/plans/ReflectionFormats.md` 3절과 6절에 있습니다.
+ * @details 계획과 근거는 `Source/Engine/Serialization/Fixed/README.md` 3절과 6절에 있습니다.
  *
  *          **사용자는 B 를 선언하지 않습니다.** 생성기가 `REFLECT()` 타입마다 코덱을 만들어 `TypeInfo::_pFixedCodec` 에 등록합니다.
  *          필드 타입이 인코딩 표 밖이면(포인터, `MaxCount` 없는 가변 길이, 핸들 등) 코덱 대신 그 이유를 등록합니다.
@@ -377,7 +377,7 @@ namespace sw
         [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
 
         // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —
-        // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(ReflectionFormats.md 3.10).
+        // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Fixed/README.md 3.10).
         friend class NetMessageChannel;
         template <typename T>
         [[nodiscard]] static bool writeBody( const T& object, BitWriter& writer )

@@ -20,12 +20,12 @@
 SW_TEST_REQUIRES_HOST( AppUITest, "launches App.exe on every RHI backend and reads screenshots of the UI demo screen" );
 
 // ------------------------------------------------------------------------------
-// AppUITest — 런타임 UI 를 네 백엔드로 그려 화면을 견준다
+// AppUITest — 런타임 UI 를 네 백엔드로 그려 화면을 비교한다
 //
 // 엔진 시나리오 `engine/automation/uidemo.scenario.xml`(가상 입력 exclusive — 사람 마우스가 호버를 바꾸지 않는다)을 백엔드마다 돌려
 // 스크린샷(PPM)과 레이아웃 덤프(`UILayoutDump` 단계 — 위젯 이름 → 물리 픽셀 사각형)를 받는다. 덤프로 견본의 사각형을 찾아
 // (1) 알려진 영역을 단언하고 — 주 단추 가운데는 강조색(파랑), 둥근 상자 모서리 바깥은 패널 바탕, 자르기 상자 밖은 잘린 빨강이 아니다 —
-// (2) 영역마다 첫 백엔드와 화소 단위로 견준다(다른 화소 비율 ≤ kMaxDifferingFraction, 가장자리 수 차 ≤ 2 %). 알려진 영역의 단언은 색 차 · 대소로 본다(톤맵 · 클리어 색에 버틴다).
+// (2) 영역마다 첫 백엔드와 화소 단위로 비교한다(다른 화소 비율 ≤ kMaxDifferingFraction, 가장자리 수 차 ≤ 2 %). 알려진 영역의 단언은 색 차 · 대소로 본다(톤맵 · 클리어 색에 버틴다).
 // 종료 코드 13 · 77 은 건너뛴다(AppScenarioTest 와 같은 규칙).
 // ------------------------------------------------------------------------------
 
@@ -265,7 +265,7 @@ namespace
             SW_EXPECT_TRUE_MSG( clipOutside._r - clipOutside._g < 0.2f, ( label + "clipped child leaks past the clip box " + describe( clipOutside ) ).c_str() );
         }
 
-        /** @brief @p capture 를 기준 @p reference(첫 백엔드)와 영역마다 견줍니다. */
+        /** @brief @p capture 를 기준 @p reference(첫 백엔드)와 영역마다 비교합니다. */
         static void expectMatchesReference( const AppUICapture& reference, const AppUICapture& capture )
         {
             const sw::string label = capture._backend + " vs " + reference._backend + ": ";

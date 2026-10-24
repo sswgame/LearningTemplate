@@ -29,6 +29,7 @@ namespace sw
         , _lastFocused{ kInvalidWidgetID }
         , _pushOrder{ 0 }
         , _bClosing{ SW_FALSE }
+        , _bHiddenByLayer{ SW_FALSE }
         , _bReportsUnhandledCommands{ SW_TRUE }
     {
         _tree._pScreen = this;

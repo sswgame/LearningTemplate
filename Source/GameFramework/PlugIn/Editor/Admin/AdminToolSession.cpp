@@ -38,6 +38,7 @@ namespace sw::editor
         : _fake{}
         , _live{}
         , _pActive{ &_fake }
+        , _connection{}
         , _lookup{}
         , _lookupAudit{}
         , _reports{}
@@ -62,6 +63,32 @@ namespace sw::editor
     {
         _live.bind( pClient );
         _pActive = &_live;
+    }
+
+    bool AdminToolSession::connectLive( string_view address, string_view gameBuild, string& outError )
+    {
+        if ( _connection.open( address, gameBuild, outError ) == false )
+        {
+            useFake();
+            _statusLine = "GM connection failed: " + outError;
+            return false;
+        }
+        useLiveClient( _connection.getAdminClient() );
+        _statusLine = "Connecting to the GM port...";
+        return true;
+    }
+
+    void AdminToolSession::disconnectLive()
+    {
+        useFake(); // 클라이언트를 가리키는 제공자를 먼저 떼고 닫는다
+        _live.bind( nullptr );
+        _connection.close();
+        _statusLine = "Back to the in-memory provider";
+    }
+
+    void AdminToolSession::updateConnection()
+    {
+        _connection.update( WallClock::nowUnixMilliseconds() );
     }
 
     void AdminToolSession::requestLookup( AccountID accountID )

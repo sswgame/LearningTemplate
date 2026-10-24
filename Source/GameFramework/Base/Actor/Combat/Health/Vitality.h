@@ -12,6 +12,8 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -19,28 +21,52 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 재생 속도가 0 이면 재생하지 않습니다. */
-    struct VitalitySettings
+    /**
+     * @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 재생 속도가 0 이면 재생하지 않습니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `Vitality::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_GF_API VitalitySettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 1.0 )
         float32 _maxHealth{ 100.0f };
-        float32 _maxShield{ 0.0f };         ///< 체력보다 먼저 깎이는 실드 · 방탄(0 = 없음)
-        float32 _shieldRegenDelay{ 3.0f };  ///< 마지막 피해 뒤 이만큼 지나야 실드가 찬다
-        float32 _shieldRegenRate{ 0.0f };   ///< 초당 실드 회복
-        float32 _healthRegenDelay{ 5.0f };  ///< 마지막 피해 뒤 이만큼 지나야 체력이 찬다
-        float32 _healthRegenRate{ 0.0f };   ///< 초당 체력 회복
-        float32 _downedHealth{ 100.0f };    ///< 기절 상태의 출혈 체력(이것이 0 이 되면 죽는다)
-        float32 _bleedoutRate{ 5.0f };      ///< 기절 중 초당 줄어드는 출혈 체력(부활 받는 동안은 멈춘다)
-        float32 _reviveTime{ 5.0f };        ///< 배율 1 로 살리는 데 걸리는 시간
+        PROPERTY( Min = 0.0 )
+        float32 _maxShield{ 0.0f }; ///< 체력보다 먼저 깎이는 실드 · 방탄(0 = 없음)
+        PROPERTY( Min = 0.0 )
+        float32 _shieldRegenDelay{ 3.0f }; ///< 마지막 피해 뒤 이만큼 지나야 실드가 찬다
+        PROPERTY( Min = 0.0 )
+        float32 _shieldRegenRate{ 0.0f }; ///< 초당 실드 회복
+        PROPERTY( Min = 0.0 )
+        float32 _healthRegenDelay{ 5.0f }; ///< 마지막 피해 뒤 이만큼 지나야 체력이 찬다
+        PROPERTY( Min = 0.0 )
+        float32 _healthRegenRate{ 0.0f }; ///< 초당 체력 회복
+        PROPERTY( Min = 0.0 )
+        float32 _downedHealth{ 100.0f }; ///< 기절 상태의 출혈 체력(이것이 0 이 되면 죽는다)
+        PROPERTY( Min = 0.0 )
+        float32 _bleedoutRate{ 5.0f }; ///< 기절 중 초당 줄어드는 출혈 체력(부활 받는 동안은 멈춘다)
+        PROPERTY( Min = 0.0 )
+        float32 _reviveTime{ 5.0f }; ///< 배율 1 로 살리는 데 걸리는 시간
+        PROPERTY( Min = 0.01, Max = 1.0 )
         float32 _reviveHealthRatio{ 0.3f }; ///< 살아난 뒤 체력 = 최대 × 이 비율
+        PROPERTY( Min = 0.0 )
         float32 _invulnerableAfterRevive{ 1.0f };
-        float32 _poiseMax{ 0.0f };                   ///< 경직 · 다운 게이지(0 = 경직 없음). 0 까지 깎이면 경직 붕괴
-        float32 _poiseRegenDelay{ 2.0f };            ///< 마지막 경직 피해 뒤 이만큼 지나야 찬다
-        float32 _poiseRegenRate{ 0.0f };             ///< 초당 경직 게이지 회복
-        float32 _poiseBreakDuration{ 1.0f };         ///< 붕괴(비틀거림, 다운) 시간. 끝나면 게이지가 가득 찬다
-        int32   _maxDownCount{ 0 };                  ///< 이 횟수만큼 기절한 뒤 치명타는 바로 죽음(0 = 제한 없음)
-        uint8   _bDownedEnabled{ SW_FALSE };         ///< 치명타에 바로 죽지 않고 기절(배틀로얄 기절 · DBD 빈사)
-        uint8   _bDamageInterruptsRevive{ SW_TRUE }; ///< 부활 받는 중에 맞으면 부활이 끊긴다
-        uint8   _bKeepReviveProgress{ SW_FALSE };    ///< 끊겨도 진행을 남긴다(DBD 치료). 아니면 처음부터 다시 한다(배틀로얄)
+        PROPERTY( Min = 0.0 )
+        float32 _poiseMax{ 0.0f }; ///< 경직 · 다운 게이지(0 = 경직 없음). 0 까지 깎이면 경직 붕괴
+        PROPERTY( Min = 0.0 )
+        float32 _poiseRegenDelay{ 2.0f }; ///< 마지막 경직 피해 뒤 이만큼 지나야 찬다
+        PROPERTY( Min = 0.0 )
+        float32 _poiseRegenRate{ 0.0f }; ///< 초당 경직 게이지 회복
+        PROPERTY( Min = 0.0 )
+        float32 _poiseBreakDuration{ 1.0f }; ///< 붕괴(비틀거림, 다운) 시간. 끝나면 게이지가 가득 찬다
+        PROPERTY( Min = 0 )
+        int32 _maxDownCount{ 0 }; ///< 이 횟수만큼 기절한 뒤 치명타는 바로 죽음(0 = 제한 없음)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bDownedEnabled{ SW_FALSE }; ///< 치명타에 바로 죽지 않고 기절(배틀로얄 기절 · DBD 빈사)
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bDamageInterruptsRevive{ SW_TRUE }; ///< 부활 받는 중에 맞으면 부활이 끊긴다
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bKeepReviveProgress{ SW_FALSE }; ///< 끊겨도 진행을 남긴다(DBD 치료). 아니면 처음부터 다시 한다(배틀로얄)
     };
 } // namespace sw
 
@@ -105,11 +131,16 @@ namespace sw
     class SW_GF_API Vitality
     {
     public:
+        /** @brief 기본 설정(`VitalitySettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
         Vitality();
-        explicit Vitality( const VitalitySettings& settings );
 
-        /** @brief 설정을 두고 가득 찬 상태로 시작합니다. 죽음, 기절 횟수, 알림도 비웁니다. */
-        void initialize( const VitalitySettings& settings );
+        /**
+         * @brief 설정을 두고 가득 찬 상태로 시작합니다. 죽음, 기절 횟수, 알림도 비웁니다.
+         * @details 범위 밖 값(`VitalitySettings` 의 `PROPERTY( Min · Max )`)은 오류를 남기고 거절하며 false 를 반환한다. 거절하면 상태는 그대로이다. 값을 조용히 맞추지 않는다.
+         */
+        [[nodiscard]] bool initialize( const VitalitySettings& settings );
+        /** @brief 지금 설정 그대로 처음 상태로 되돌립니다(가득 찬 체력, 기절 횟수와 알림을 비움). 설정을 새로 받지 않으므로 실패하지 않습니다. 이미 `initialize` 한 개체를 다시 쓸 때 부릅니다. */
+        void reset();
         /** @brief 같은 설정으로 가득 찬 상태로 복원합니다(리스폰). 기절 횟수는 남기며, 지우려면 `resetDownCount` 를 부릅니다. */
         void respawn();
         /**
@@ -177,6 +208,8 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
+        /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */
+        void applySettings( const VitalitySettings& settings );
         void enterDowned( int32 instigatorID );
         void enterDead( int32 instigatorID );
         void finishRevive();

@@ -98,7 +98,7 @@ namespace sw
 {
     /**
      * @class UserSettingsManager
-     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 핸들러 등록부를 가집니다.
+     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 핸들러 레지스트리를 가집니다.
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
      */

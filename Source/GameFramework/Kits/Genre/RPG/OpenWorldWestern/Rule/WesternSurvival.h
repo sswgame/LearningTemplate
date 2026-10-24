@@ -43,7 +43,8 @@ namespace sw
 
         WesternSurvival();
 
-        void initialize( const WesternCatalog* pCatalog );
+        /** @brief 카탈로그의 생존 수치로 시작합니다. 카탈로그가 없거나(대신 쓸 기본 수치는 없다) 게이지 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다. */
+        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog );
         /**
          * @brief 시간을 흘립니다.
          * @param deltaTime 실제 초(게이지와 데드아이) @param gameHours 이번에 흐른 게임 시간(코어) @param airTemperature 지금 기온(섭씨)

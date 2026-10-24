@@ -215,7 +215,7 @@ namespace sw
         AnimationNotifyHandlerRegistry& operator=( const AnimationNotifyHandlerRegistry& ) = delete;
 
         /** @brief 내장 처리기를 든 표입니다(엔진 수명). */
-        static AnimationNotifyHandlerRegistry& getDefault();
+        static const AnimationNotifyHandlerRegistry& getDefault();
 
         /** @brief 처리기를 이름으로 추가합니다. 같은 이름이 있으면 교체하며, 그 처리기를 가리키던 테이블은 다시 읽어야 합니다. */
         void registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler );

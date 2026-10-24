@@ -105,7 +105,7 @@ namespace sw
         // 시각은 렌더러 시계다(테스트는 고정할 수 있다). 쉬던 추가 뷰(갱신 주기)는 그동안의 시간만큼 한 번에 다가간다.
         const float32 now          = getAnimationTime();
         const float32 deltaSeconds = MathUtil::max( 0.0f, now - view._autoExposureClock );
-        // 기록을 버리는 프레임(처음 · 컷)이거나 이 기록에 아직 잰 값이 없으면(그동안 재지 않던 뷰) 지난 칸을 섞지 않는다 — 새 텍스처에는 값이 없다(NaN 일 수 있다).
+        // 기록을 버리는 프레임(처음 · 컷)이거나 이 기록에 아직 측정한 값이 없으면(그동안 재지 않던 뷰) 지난 칸을 섞지 않는다 — 새 텍스처에는 값이 없다(NaN 일 수 있다).
         const bool bReset            = view._bHistoryReset == SW_TRUE || view._bAutoExposureMeasured == SW_FALSE;
         view._bAutoExposureMeasured  = SW_TRUE;
         view._autoExposureClock      = now;

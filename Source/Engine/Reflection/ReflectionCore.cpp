@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 
@@ -329,10 +330,11 @@ namespace sw
             return false;
 
         // 그 타입이 요구할 수 있는 어떤 정렬보다 넉넉하게. 비트필드의 저장 단위(uint32, uint64)를 통째로 읽고 쓰는 코드가 나온다.
-        constexpr size_t kAlignment = 64;
-        uint8*           pZeroed    = static_cast<uint8*>( Memory::allocateAligned( ownerSize, kAlignment ) );
-        if ( pZeroed == nullptr )
+        constexpr size_t kAlignment  = 64;
+        MemoryBlock      zeroedBlock = MemoryBlock::allocateAligned( ownerSize, kAlignment );
+        if ( zeroedBlock.isValid() == false )
             return false;
+        uint8* pZeroed = zeroedBlock.getAs<uint8>();
         Memory::set( pZeroed, 0, ownerSize );
         pSetBit( pZeroed );
 
@@ -347,7 +349,7 @@ namespace sw
             }
         }
         const uint8 changedBits = ( changedByteCount == 1 ) ? pZeroed[changedByteIndex] : uint8{ 0 };
-        Memory::freeAligned( pZeroed );
+        zeroedBlock.reset();
 
         const bool bSingleBit = changedBits != 0 && ( changedBits & static_cast<uint8>( changedBits - 1 ) ) == 0;
         if ( bSingleBit == false )

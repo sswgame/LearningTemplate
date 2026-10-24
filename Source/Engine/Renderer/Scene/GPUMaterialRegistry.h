@@ -91,7 +91,7 @@ namespace sw
         vector<MaterialGroupState>    _listMaterialGroupState;
         /// @brief 퍼뮤테이션 해시에서 `GPUSceneSnapshot::_pListShaderPermutation` 의 인덱스를 찾는 맵입니다.
         unordered_map<uint64, uint32> _mapPermutationToIndex;
-        /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 재는 데만 씁니다(회수 판정).
+        /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 측정하는 데만 씁니다(회수 판정).
         uint64 _buildCounter{ 0 };
     };
 } // namespace sw

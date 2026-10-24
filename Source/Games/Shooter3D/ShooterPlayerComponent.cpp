@@ -246,7 +246,11 @@ namespace sw
         settings._maxHealth        = _maxHealth;
         settings._healthRegenDelay = _regenDelay;
         settings._healthRegenRate  = _regenPerSecond;
-        _vitality.initialize( settings );
+        if ( _vitality.initialize( settings ) == false )
+        {
+            setCanEverTick( false ); // 체력 설정이 범위 밖이면 플레이어가 서지 않는다 — 이유는 Vitality 가 남겼다
+            return;
+        }
         _weaponIndex                            = 0;
         _downTimer                              = 0.0f;
         GameObject*                   pOwner    = getOwner();

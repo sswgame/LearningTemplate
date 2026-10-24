@@ -40,7 +40,7 @@ namespace sw
         };
 
         /**
-         * @brief 물리 씬 — 높이 0 의 무한한 바닥(위를 향한다) 하나입니다. 굽기가 쓰는 질의(레이캐스트)만 답하고 나머지는 닿지 않습니다.
+         * @brief 물리 씬 — 높이 0 의 무한한 바닥(위를 향한다) 하나입니다. 베이크가 쓰는 질의(레이캐스트)만 답하고 나머지는 닿지 않습니다.
          * @details 실제 물리 백엔드 없이 가림 · 튕김의 식을 본다. 바닥보다 아래에서 쏘거나 위로 쏜 레이는 닿지 않는다.
          */
         class FloorPhysicsScene final : public IPhysicsQueryScene3D
@@ -130,7 +130,7 @@ SW_TEST_CASE( LightProbeBakerTest, DirectLightSumsFacingLights )
 }
 
 /**
- * @brief [LightProbeBakerTest] 물리 씬이 없으면 굽지 않는다 — 가림 없이 구운 프로브는 벽 너머의 빛을 담는다
+ * @brief [LightProbeBakerTest] 물리 씬이 없으면 베이크하지 않는다 — 가림 없이 베이크한 프로브는 벽 너머의 빛을 담는다
  */
 SW_TEST_CASE( LightProbeBakerTest, RefusesToBakeWithoutPhysics )
 {
@@ -149,7 +149,7 @@ SW_TEST_CASE( LightProbeBakerTest, RefusesToBakeWithoutPhysics )
 }
 
 /**
- * @brief [LightProbeBakerTest] 물리 씬이 있는 굽기 — 위쪽은 하늘(스카이 그러데이션), 아래쪽은 바닥이 튕긴 직접광이다. 스카이가 없으면 하늘 채널은 정확히 0 이다
+ * @brief [LightProbeBakerTest] 물리 씬이 있는 베이크 — 위쪽은 하늘(스카이 그러데이션), 아래쪽은 바닥이 튕긴 직접광이다. 스카이가 없으면 하늘 채널은 정확히 0 이다
  * @details 하늘은 파랑, 라이트는 빨강이라 두 항이 채널로 갈린다. 반구 계단을 SH9 로 투영하면 극에서 1.25 · 반대 극에서 −0.25 쯤이다(몬테카를로 잡음 포함).
  */
 SW_TEST_CASE( LightProbeBakerTest, BakesSkyAboveAndFloorBounceBelow )
@@ -183,7 +183,7 @@ SW_TEST_CASE( LightProbeBakerTest, BakesSkyAboveAndFloorBounceBelow )
 }
 
 /**
- * @brief [LightProbeBakerTest] 나눠 굽기(프레임마다 프로브 하나)는 한 번에 구운 것과 비트까지 같다 — 에디터의 나눠 굽기가 결과를 바꾸지 않는다
+ * @brief [LightProbeBakerTest] 나눠 베이크(프레임마다 프로브 하나)는 한 번에 베이크한 것과 비트까지 같다 — 에디터의 나눠 베이크가 결과를 바꾸지 않는다
  */
 SW_TEST_CASE( LightProbeBakerTest, SteppedBakeMatchesOneShotBake )
 {
@@ -217,10 +217,10 @@ SW_TEST_CASE( LightProbeBakerTest, SteppedBakeMatchesOneShotBake )
 }
 
 /**
- * @brief [LightProbeBakerTest] 편집 중(시작 전) 씬의 정적 콜라이더로 세운 가림 씬으로 굽는다 — 열린 자리의 프로브는 하늘과 바닥 튕김을, 방 안의 프로브는 아무 빛도 받지 않는다
+ * @brief [LightProbeBakerTest] 편집 중(시작 전) 씬의 정적 콜라이더로 세운 가림 씬으로 베이크한다 — 열린 자리의 프로브는 하늘과 바닥 튕김을, 방 안의 프로브는 아무 빛도 받지 않는다
  * @details 방은 바닥 위 x 4..6 · y 0..2 · z −1..1 을 지붕과 벽 넷으로 닫는다. 빛은 위에서 오고 지붕이 가리므로 방 안의 면은 직접광이 0 이고,
  *          하늘 방향은 모두 벽에 닿는다 — 방 안 프로브의 계수는 정확히 0 이어야 한다(가림이 새면 하늘 · 튕김이 섞인다).
- *          시작하지 않았으므로 플레이 물리 씬은 없다(에디터의 편집 모드). 열린 프로브 위의 동적 상자는 굽기에 들지 않아야 한다 — 들면 위쪽 하늘이 가려진다.
+ *          시작하지 않았으므로 플레이 물리 씬은 없다(에디터의 편집 모드). 열린 프로브 위의 동적 상자는 베이크에 들지 않아야 한다 — 들면 위쪽 하늘이 가려진다.
  */
 SW_TEST_CASE( LightProbeBakerTest, StaticCollidersOccludeTheEnclosedProbeBeforePlay )
 {

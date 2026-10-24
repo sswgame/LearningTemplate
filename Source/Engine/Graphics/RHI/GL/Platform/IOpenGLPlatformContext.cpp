@@ -22,7 +22,7 @@ namespace sw
 #elif defined( SW_PLATFORM_LINUX )
         return make_unique<GlxPlatformContext>();
 #else
-        SW_LOG_ERROR( "이 플랫폼에는 OpenGL 컨텍스트 구현이 없습니다." );
+        SW_LOG_ERROR( "This platform has no OpenGL context implementation." );
         return nullptr;
 #endif
     }

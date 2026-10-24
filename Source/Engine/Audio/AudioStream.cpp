@@ -61,8 +61,8 @@ namespace sw
                 {
                     for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
                     {
-                        const int16 value = static_cast<int16>( static_cast<uint16>( pSource[sampleIndex * 2] ) | ( static_cast<uint16>( pSource[sampleIndex * 2 + 1] ) << 8 ) );
-                        pOut[sampleIndex] = static_cast<float32>( value ) / 32768.0f;
+                        const int16 decodedSample = static_cast<int16>( static_cast<uint16>( pSource[sampleIndex * 2] ) | ( static_cast<uint16>( pSource[sampleIndex * 2 + 1] ) << 8 ) );
+                        pOut[sampleIndex]         = static_cast<float32>( decodedSample ) / 32768.0f;
                     }
                 }
                 _position += count;

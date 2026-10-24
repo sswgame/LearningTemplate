@@ -312,7 +312,7 @@ namespace sw
         _settings = BenchSceneSettings{};
         if ( ReflectedXMLFile::loadDesc( kBenchSettingsPath, _settings ) == false )
         {
-            SW_LOG_ERROR( "[Bench] %# 을 읽지 못해 벤치를 세우지 않습니다.", kBenchSettingsPath );
+            SW_LOG_ERROR( "[Bench] Failed to read %#, not setting up the bench.", kBenchSettingsPath );
             return false;
         }
 
@@ -369,7 +369,7 @@ namespace sw
 
         // **만든 수와 정리한 수가 같아야 합니다.** 리로드와 백엔드 교체는 despawn 과 spawn 을 한 쌍으로
         // 실행하는데, 정리되지 않은 오브젝트는 그때마다 한 벌씩 쌓여서 다음 측정을 오염시킵니다.
-        SW_LOG_INFO( "[Bench] 오브젝트 %#개를 정리했습니다 (큐브 %# · 그 밖 %#).",
+        SW_LOG_INFO( "[Bench] Cleaned up %# objects (cubes %#, others %#).",
                      removedCount, static_cast<uint32>( _listBenchMesh.size() ),
                      static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
@@ -398,7 +398,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
         if ( pScene == nullptr )
         {
-            SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
+            SW_LOG_ERROR( "[Bench] Failed to create the scene." );
             return nullptr;
         }
         pScene->ensureDefaultCameras();
@@ -417,7 +417,7 @@ namespace sw
             shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
-                SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeID );
+                SW_LOG_ERROR( "[Bench] Failed to create shape '%#'.", pShapeID );
                 return false;
             }
             // GPU 모프는 옵트인입니다. 유니티의 vertexBufferTarget 옵트인에 해당합니다. 켠 메시만 풀에 들어갑니다.
@@ -444,7 +444,7 @@ namespace sw
             _glassMaterial = Material::create();
             if ( _glassMaterial->loadFromFile( _settings._glassMaterial.c_str() ) == false )
             {
-                SW_LOG_WARNING( "[Bench] 투명 머티리얼을 읽지 못했습니다 — 투명 큐브를 건너뜁니다." );
+                SW_LOG_WARNING( "[Bench] Failed to read the transparent material - skipping the transparent cubes." );
                 _glassMaterial.reset();
             }
         }
@@ -547,7 +547,7 @@ namespace sw
 
         Material* pSceneMaterial = pScene->getMaterial();
         if ( pSceneMaterial == nullptr )
-            SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
+            SW_LOG_WARNING( "[Bench] The scene has no default material - cubes may be invisible." );
 
         // 메시 종류 수입니다. 배치 키에 메시가 들어가므로 종류 수가 곧 **배치 수**입니다. 1 이면 배치가 하나로 합쳐져서
         // 드로우 경로(드로우별 상수와 바인딩)를 전혀 측정하지 못합니다. 실제 씬은 늘 여러 메시를 씁니다.
@@ -578,10 +578,10 @@ namespace sw
         if ( gv_benchInstanced != 0 )
         {
             if ( gv_benchMaterialInstances != 0 || transparentPercent > 0 )
-                SW_LOG_WARNING( "[Bench] -gv_benchInstanced=1 은 큐브별 머티리얼 인스턴스·투명 비율을 지원하지 않습니다 — 무시합니다." );
+                SW_LOG_WARNING( "[Bench] -gv_benchInstanced=1 does not support per-cube material instances or a transparent ratio - ignoring them." );
             spawnInstancedGrid( pObjects, pSceneMaterial, meshCount, meshVariantCount, side, origin );
             finishGrid( pScene, side );
-            SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
+            SW_LOG_INFO( "[Bench] In scene '%#', created %# cubes in %# instanced batches (%#x%# grid, no GameObject).",
                          pScene->getName(), meshCount, meshVariantCount, side, side );
             return;
         }
@@ -589,9 +589,9 @@ namespace sw
         spawnCubeGrid( pObjects, pSceneMaterial, meshCount, side, origin, transparentPercent, listTransparentMaterial );
         finishGrid( pScene, side );
 
-        SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
+        SW_LOG_INFO( "[Bench] %# mesh variants (= batch count), %# shapes. Change them with -gv_benchMeshVariants and -gv_benchMeshShapes.",
                      meshVariantCount, shapeCount );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 %#×%# 격자로 만들었습니다.",
+        SW_LOG_INFO( "[Bench] In scene '%#', created %# cubes in a %#x%# grid.",
                      pScene->getName(), static_cast<uint32>( _listBenchMesh.size() ), side, side );
     }
 
@@ -643,7 +643,7 @@ namespace sw
         spawnGround( pScene, halfExtent );
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, halfExtent );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
+        SW_LOG_INFO( "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
     }
 
     void BenchScene::spawnCombat()
@@ -669,7 +669,7 @@ namespace sw
         spawnLight( pScene, _settings._combatHalfExtent );
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, _settings._combatHalfExtent );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 전투 연출(KayKit 스켈레톤 · 칼 · 바닥)을 세웠습니다.", pScene->getName() );
+        SW_LOG_INFO( "[Bench] In scene '%#', set up the combat staging (KayKit skeletons, swords, floor).", pScene->getName() );
     }
 
     void BenchScene::spawnRagdolls( uint32 ragdollCount )
@@ -724,7 +724,7 @@ namespace sw
         spawnGround( pScene, halfExtent );
         _ragdollHalfExtent = halfExtent;
         frameCharacterCameras( pScene, halfExtent );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 래그돌 군중 %#명을 %#×%# 격자로 세웠습니다(주기 %# 프레임).", pScene->getName(), ragdollCount, columns, rows, gv_benchRagdollPeriod );
+        SW_LOG_INFO( "[Bench] In scene '%#', placed a ragdoll crowd of %# in a %#x%# grid (period %# frames).", pScene->getName(), ragdollCount, columns, rows, gv_benchRagdollPeriod );
     }
 
     void BenchScene::updateRagdollChurn( GameObjectManager* pObjects )
@@ -742,7 +742,7 @@ namespace sw
                 const RagdollComponent* pRagdoll = pObjects->resolveComponent( handle );
                 ragdollCount += ( pRagdoll != nullptr && pRagdoll->getState() == RagdollState::Ragdoll ) ? 1u : 0u;
             }
-            SW_LOG_INFO( "[Bench] 프레임 %# 쓰러진 수 %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
+            SW_LOG_INFO( "[Bench] frame %# fallen %#/%#", frame + 1u, ragdollCount, static_cast<uint32>( _listRagdoll.size() ) );
         }
         for ( size_t index = 0; index < _listRagdoll.size(); ++index )
         {
@@ -769,7 +769,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
+            SW_LOG_ERROR( "[Bench] Failed to create the scene." );
             return;
         }
         pScene->ensureDefaultCameras();
@@ -817,7 +817,7 @@ namespace sw
         spawnLight( pScene, _settings._faceLightHalfExtent );
         _bFaceFraming = SW_TRUE;
         frameFaceCameras( pScene );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 테스트 머리 %#개를 스폰했습니다(%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
+        SW_LOG_INFO( "[Bench] In scene '%#', spawned %# test heads (%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
     }
 
     float32 BenchScene::computeFaceCameraDistance( uint32 faceCount ) const
@@ -1010,7 +1010,7 @@ namespace sw
         pLight->setCastShadow( true );
         pLight->setIntensity( _settings._keyLightIntensity );
 
-        SW_LOG_INFO( "[Bench] 주 광원을 만들었습니다 (그림자 볼륨 반경 %#).", static_cast<int32>( halfExtent * _settings._shadowExtentRatio ) );
+        SW_LOG_INFO( "[Bench] Created the main light (shadow volume radius %#).", static_cast<int32>( halfExtent * _settings._shadowExtentRatio ) );
     }
 
     void BenchScene::spawnBenchLights( Scene* pScene, float32 halfExtent )
@@ -1073,7 +1073,7 @@ namespace sw
             _listBenchExtra.push_back( pPoint->getHandle() );
         }
 
-        SW_LOG_INFO( "[Bench] 라이트 %#개를 흩뿌렸습니다 (반경 %#, 절반은 스포트). -gv_benchLightRadius 로 반경을 바꾼다.",
+        SW_LOG_INFO( "[Bench] Scattered %# lights (radius %#, half are spot lights). Change the radius with -gv_benchLightRadius.",
                      lightCount, static_cast<int32>( radius ) );
     }
 
@@ -1101,7 +1101,7 @@ namespace sw
         pMesh->setVisible( true );
         _listBenchExtra.push_back( pMesh->getHandle() );
 
-        SW_LOG_INFO( "[Bench] 바닥 평면을 깔았습니다 (한 변 %#).", static_cast<int32>( size ) );
+        SW_LOG_INFO( "[Bench] Laid the floor plane (side %#).", static_cast<int32>( size ) );
     }
 
     void BenchScene::spawnBenchViews( Scene* pScene, float32 halfExtent )
@@ -1137,7 +1137,7 @@ namespace sw
             pCamera->setRenderOutput( output );
             _listBenchExtra.push_back( pCamera->getHandle() );
         }
-        SW_LOG_INFO( "[Bench] 캡처 카메라 %#개(렌더 텍스처 %#²)를 격자 둘레에 두었습니다.", viewCount, _settings._viewTextureSize );
+        SW_LOG_INFO( "[Bench] Placed %# capture cameras (render texture %#^2) around the grid.", viewCount, _settings._viewTextureSize );
     }
 
     void BenchScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )
@@ -1177,7 +1177,7 @@ namespace sw
         pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), ( halfExtent + distance ) * 3.0f ) );
         pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
 
-        SW_LOG_INFO( "[Bench] 카메라 '%#' 을 격자(반경 %#)에 맞춰 z=%# 로 물렸습니다.",
+        SW_LOG_INFO( "[Bench] Moved camera '%#' to fit the grid (radius %#) at z=%#.",
                      pCamera->getComponentName().c_str(), static_cast<int32>( halfExtent ),
                      static_cast<int32>( -( distance + halfExtent * 0.5f ) ) );
     }

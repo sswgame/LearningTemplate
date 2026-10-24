@@ -78,7 +78,7 @@ namespace
 } // namespace
 
 /**
- * @brief [DestructionDamageTest] 약한 피해는 쌓이기만 하고, 쌓여 뿌리 임계값을 넘으면 큰 덩어리(묶음)로만 갈라지고, 더 맞으면 그 안의 조각이 떨어진다
+ * @brief [DestructionDamageTest] 약한 피해는 쌓이기만 하고, 쌓여 루트 임계값을 넘으면 큰 덩어리(묶음)로만 갈라지고, 더 맞으면 그 안의 조각이 떨어진다
  */
 SW_TEST_CASE( DestructionDamageTest, StrainAccumulatesAndOpensLevelsProgressively )
 {
@@ -95,7 +95,7 @@ SW_TEST_CASE( DestructionDamageTest, StrainAccumulatesAndOpensLevelsProgressivel
     SW_EXPECT_NEAR_EQUAL( 30.0f, state.getNodeStrain( asset._graph.getRootNode() ), 1e-4f );
     SW_EXPECT_EQUAL( 1u, Internal::countActiveNodes( state ) );
 
-    // 쌓여 60 — 뿌리(50)가 갈라지고 넘친 10 은 묶음 임계값(80)에 못 미친다. 떨어진 것은 없다.
+    // 쌓여 60 — 루트(50)가 갈라지고 넘친 10 은 묶음 임계값(80)에 못 미친다. 떨어진 것은 없다.
     SW_ASSERT_TRUE( state.applyDamage( Internal::makeHit( hitPoint, 30.0f, 0.0f, sw::DestructionDamageKind::Point ), change ) );
     SW_EXPECT_FALSE( change.hasGroupChange() );
     const uint32 afterRoot = Internal::countActiveNodes( state );
@@ -268,7 +268,7 @@ SW_TEST_CASE( DestructionDamageTest, LinkStrainSeparatesPiecesThatDoNotShatter )
     sw::FractureAsset asset;
     SW_ASSERT_TRUE( Internal::makeWall( asset ) );
     sw::DestructionProfile profile = Internal::makeProfile();
-    profile._listStrainThreshold   = { 1.0f, 1.0f, 1.0f, 1.0e6f }; // 뿌리 · 두 묶음 레벨은 쉽게 갈라지고 잎(깊이 3)은 깨지지 않는다
+    profile._listStrainThreshold   = { 1.0f, 1.0f, 1.0f, 1.0e6f }; // 루트 · 두 묶음 레벨은 쉽게 갈라지고 잎(깊이 3)은 깨지지 않는다
     sw::DestructionState state;
     state.initialize( asset._graph, profile, Internal::makeBottomAnchors( asset ) );
     uint32 cornerLeaf = 0;

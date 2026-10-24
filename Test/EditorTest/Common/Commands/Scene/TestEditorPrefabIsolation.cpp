@@ -65,8 +65,8 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorPrefabIsolationTest] 문서 단계는 아무것도 숨기지 않고, 중첩 단계는 문서 루트 아래의 다른 오브젝트만 숨기며 나오면 처음 상태로 되살린다
- * @details 환경(조명 · 바닥)은 문서 루트 밖이라 숨기지 않는다 — 숨기면 미리보기가 어두워진다. 격리 전에 꺼져 있던 오브젝트는 되살린 뒤에도 꺼져 있어야 한다.
+ * @brief [EditorPrefabIsolationTest] 문서 단계는 아무것도 숨기지 않고, 중첩 단계는 문서 루트 아래의 다른 오브젝트만 숨기며 나오면 처음 상태로 복원한다
+ * @details 환경(조명 · 바닥)은 문서 루트 밖이라 숨기지 않는다 — 숨기면 미리보기가 어두워진다. 격리 전에 꺼져 있던 오브젝트는 복원한 뒤에도 꺼져 있어야 한다.
  */
 SW_TEST_CASE( EditorPrefabIsolationTest, NestedStageHidesOnlyInsideTheDocumentRootAndRestores )
 {
@@ -115,7 +115,7 @@ SW_TEST_CASE( EditorPrefabIsolationTest, FindInstanceReadsThePreviewSceneTable )
 }
 
 /**
- * @brief [EditorPrefabIsolationTest] 활성 씬은 격리에 닿지 않는다 — 메인 씬 오브젝트는 숨지 않고, 스택을 비워도 되살릴 것이 없다
+ * @brief [EditorPrefabIsolationTest] 활성 씬은 격리에 닿지 않는다 — 메인 씬 오브젝트는 숨지 않고, 스택을 비워도 복원할 것이 없다
  */
 SW_TEST_CASE( EditorPrefabIsolationTest, MainSceneIsNeverTouched )
 {
@@ -129,7 +129,7 @@ SW_TEST_CASE( EditorPrefabIsolationTest, MainSceneIsNeverTouched )
     isolation.push( scene.objects(), "game/prefabs/lamp.prefab.xml", *scene._pNestedB, false );
     SW_EXPECT_TRUE( pMainObject->isActive() );
 
-    isolation.clear(); // 문서를 바꿀 때 — 오브젝트는 되살리지 않고 단계만 버린다
+    isolation.clear(); // 문서를 바꿀 때 — 오브젝트는 복원하지 않고 단계만 버린다
     SW_EXPECT_FALSE( isolation.isActive() );
     SW_EXPECT_TRUE( pMainObject->isActive() );
 }

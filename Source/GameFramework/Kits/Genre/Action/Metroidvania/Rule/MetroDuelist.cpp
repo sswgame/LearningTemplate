@@ -36,19 +36,27 @@ namespace sw
     {
     }
 
-    void MetroDuelist::initialize( const MetroidvaniaCatalog* pCatalog )
+    bool MetroDuelist::initialize( const MetroidvaniaCatalog* pCatalog )
     {
-        _pCatalog = pCatalog;
-        if ( pCatalog != nullptr )
+        if ( pCatalog == nullptr )
         {
-            _vitality.initialize( pCatalog->getRules()._health );
-            _stamina.initialize( pCatalog->getRules()._stamina );
+            SW_LOG_ERROR( "MetroDuelist: refused - no catalog" );
+            return false;
         }
-        _time           = 0.0f;
-        _parryPressTime = MetroDuelistInternal::kNeverPressed;
-        _riposteWindow.clear();
+        // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
+        Vitality      vitality;
+        ResourceGauge stamina;
+        if ( vitality.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
+            return false;
+        _pCatalog         = pCatalog;
+        _vitality         = vitality;
+        _stamina          = stamina;
+        _time             = 0.0f;
+        _parryPressTime   = MetroDuelistInternal::kNeverPressed;
         _damageTakenScale = 1.0f;
         _bGuarding        = SW_FALSE;
+        _riposteWindow.clear();
+        return true;
     }
 
     void MetroDuelist::update( float32 deltaTime )

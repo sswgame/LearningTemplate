@@ -89,6 +89,12 @@
 |---|---|---|---|---|---|
 | `gv_audioDumpPath` | `string` | — | 테스트 | 오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기) | [IAudioService.cpp](../../Source/Engine/Audio/IAudioService.cpp) |
 
+## `Source/Engine/Character`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_socketPartPool` | `int32` | `1` | 테스트 | Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison) | [SocketPartPool.cpp](../../Source/Engine/Character/Socket/SocketPartPool.cpp) |
+
 ## `Source/Engine/Config`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -229,6 +235,7 @@
 | `gv_debugHUDProbeSection` | `string` | — | 테스트 | 자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름 | [DebugHUD.cpp](../../Source/Engine/UI/Debug/DebugHUD.cpp) |
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 테스트 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UIScale.cpp](../../Source/Engine/UI/Layout/UIScale.cpp) |
 | `gv_uiDemo` | `bool` | `false` | 테스트 · 배포본에도 | UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UIDemoScreen.cpp](../../Source/Engine/UI/Debug/UIDemoScreen.cpp) |
+| `gv_uiGlyphRasterBudgetMicros` | `int32` | `4000` | 일반 | 프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다 | [UISystem.cpp](../../Source/Engine/UI/UISystem.cpp) |
 | `gv_uiOptionsMenu` | `bool` | `false` | 테스트 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screen/OptionsMenuScreen.cpp) |
 | `gv_uiTooltipDelay` | `float32` | `0.5` | 일반 | 런타임 UI 툴팁이 뜨기까지 위젯 위에 머무는 시간(초) | [UITooltipService.cpp](../../Source/Engine/UI/Screen/UITooltipService.cpp) |
 

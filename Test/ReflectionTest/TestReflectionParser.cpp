@@ -726,7 +726,7 @@ SW_TEST_CASE( ReflectionParserTest, FixedLayoutAnnotationMistakesStopTheBuild )
 
 /**
  * @brief [ReflectionParserTest] `MaxCount` 는 C++ 정수 상수 이름을 받아 그 값을 코덱 · 정규 문자열 · `PropertyMetadata::_maxCount` 에 넣습니다
- * @details 상한의 정본을 상수 하나로 두려는 것입니다. 이름은 필드가 든 타입에서 먼저 찾고, 없으면 바깥 네임스페이스에서 한정 이름(`Limit::kMax`)으로 찾습니다.
+ * @details 상한의 기준을 상수 하나로 두려는 것입니다. 이름은 필드가 든 타입에서 먼저 찾고, 없으면 바깥 네임스페이스에서 한정 이름(`Limit::kMax`)으로 찾습니다.
  *          찾지 못한 이름, 정수가 아닌 상수, 1 보다 작은 값은 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
  */
 SW_TEST_CASE( ReflectionParserTest, MaxCountReadsANamedIntegerConstant )
@@ -898,7 +898,7 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRenamedByAMacroStopsTheBuild )
 
 /**
  * @brief [ReflectionParserTest] 컴포넌트 핸들 PROPERTY 는 타입 핸들 한 값과 그 시퀀스만 받고 내장 `ComponentHandle` 로 기록하며, 나머지 모양은 생성이 멈춥니다
- * @details 타입 핸들의 대상 타입은 코드에 `_handleTargetTypeName` 으로 실려 묶음이 끝날 때 타입을 확인한다. 타입 없는 핸들 · 맵 · 중첩은 확인할 자리가 없다(TypedComponents.md 3.7).
+ * @details 타입 핸들의 대상 타입은 코드에 `_handleTargetTypeName` 으로 실려 묶음이 끝날 때 타입을 확인한다. 타입 없는 핸들 · 맵 · 중첩은 확인할 자리가 없다(docs/09_Decisions.md 5-6 타입 핸들 직렬화).
  */
 SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyShapes )
 {
@@ -1043,7 +1043,7 @@ SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
 /**
  * @brief [ReflectionParserTest] 파서는 헤더를 이 빌드와 같은 타깃 매크로(플랫폼 · 아키텍처 · `SW_COMPILER_CLANG`)로 읽는다
  * @details libclang 은 CMake 를 거치지 않으므로 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 를 파서가 직접 넘긴다
- *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 갈래가 파서와 컴파일러에서 달라진다. 이 테스트 바이너리가 받은
+ *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 분기가 파서와 컴파일러에서 달라진다. 이 테스트 바이너리가 받은
  *          매크로를 헤더 안에서 `#error` 로 대조한다.
  */
 SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )
@@ -1253,7 +1253,7 @@ SW_TEST_CASE( ReflectionParserTest, BusBodyWithoutExportStopsTheBuild )
 
 /**
  * @brief [ReflectionParserTest] PROPERTY() 의 컴포넌트 핸들(타입 없는 것과 타입 핸들, 단일 값 · 원소 · 맵 키 · 중첩)은 빌드를 세운다
- * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 없다. 로드가 경고와 함께 비우던 폴백을 생성 오류로 바꿨다(TypedComponents.md 3.7).
+ * @details 저장된 컴포넌트 id 를 다른 실행의 컴포넌트로 옮길 형태가 없다. 로드가 경고와 함께 비우던 폴백을 생성 오류로 바꿨다(docs/09_Decisions.md 5-6 타입 핸들 직렬화).
  *          PROPERTY 가 아닌 핸들 필드는 그대로 받는다(런타임 참조로 쓰는 정상 자리).
  */
 SW_TEST_CASE( ReflectionParserTest, ComponentHandlePropertyStopsTheBuild )

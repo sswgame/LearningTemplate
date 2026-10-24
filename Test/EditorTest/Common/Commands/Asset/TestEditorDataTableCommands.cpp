@@ -62,7 +62,8 @@ SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileI
     SW_EXPECT_TRUE( sheet._listRecord[0]._bModified );         // 저장되지 않은 것이 남아 있다
 
     // 고친 뒤에는 모두 저장되고 표시가 풀린다.
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( koPath, R"(<TranslationTable culture="ko"><entries><entry key="greeting" text="안녕하세요" /></entries></TranslationTable>)" ) );
+    const string kFixedKorean = R"(<TranslationTable culture="ko"><entries><entry key="greeting" text="안녕하세요" /></entries></TranslationTable>)";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( koPath, kFixedKorean ) );
     SW_EXPECT_TRUE( EditorDataTableCommands::saveLocalizationProject( sheet ) );
     SW_EXPECT_FALSE( sheet._listRecord[0]._bModified );
 }

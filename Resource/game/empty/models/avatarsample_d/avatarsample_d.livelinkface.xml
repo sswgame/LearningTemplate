@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VRoid AvatarSample_D 의 Live Link Face 연결 표 — 아이폰 앱(ARKit 52 채널)의 값이 이 얼굴 리그(avatarsample_d.facial.xml)의 표정으로 간다.
+  표정 값 = 채널 × 배율의 합(리그가 0..1 로 자른다). 입 모양 다섯(aa · ih · ou · ee · oh)은 턱 · 입술 채널로, 눈 깜빡임은 눈 채널 그대로, 감정 넷(happy · sad · angry · Surprised)은
+  입꼬리 · 눈썹 · 눈 크기 채널의 합으로 만든다. relaxed 는 입력이 없다(앱에 대응 채널이 없다).
+  첫 배율은 ARKit 의 일반 범위로 정한 값이다 — 실제 iPhone 앱으로 얼굴을 움직여 보며 어색한 표정의 배율을 고친다(계획 FacialAnimation F4).
+  쓰는 법: 이 머리를 그리는 오브젝트에 LiveLinkFaceComponent 를 더하고 Mapping 을 이 파일로 둔다(UDP 포트를 열므로 프리팹에 넣지 않는다).
+-->
+<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml">
+	<_listExpression>
+		<LiveLinkFaceExpression _expression="blinkLeft">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="EyeBlinkLeft" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="blinkRight">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="EyeBlinkRight" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="aa">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="JawOpen" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="ih">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthStretchLeft" _scale="0.4" />
+				<LiveLinkFaceChannelWeight _channel="MouthStretchRight" _scale="0.4" />
+				<LiveLinkFaceChannelWeight _channel="MouthLowerDownLeft" _scale="0.2" />
+				<LiveLinkFaceChannelWeight _channel="MouthLowerDownRight" _scale="0.2" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="ou">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthPucker" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="ee">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthSmileLeft" _scale="0.3" />
+				<LiveLinkFaceChannelWeight _channel="MouthSmileRight" _scale="0.3" />
+				<LiveLinkFaceChannelWeight _channel="MouthStretchLeft" _scale="0.3" />
+				<LiveLinkFaceChannelWeight _channel="MouthStretchRight" _scale="0.3" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="oh">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthFunnel" _scale="1.0" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="happy">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthSmileLeft" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="MouthSmileRight" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="CheekSquintLeft" _scale="0.25" />
+				<LiveLinkFaceChannelWeight _channel="CheekSquintRight" _scale="0.25" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="sad">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="MouthFrownLeft" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="MouthFrownRight" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="BrowInnerUp" _scale="0.5" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="angry">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="BrowDownLeft" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="BrowDownRight" _scale="0.5" />
+				<LiveLinkFaceChannelWeight _channel="NoseSneerLeft" _scale="0.25" />
+				<LiveLinkFaceChannelWeight _channel="NoseSneerRight" _scale="0.25" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+		<LiveLinkFaceExpression _expression="Surprised">
+			<_listChannel>
+				<LiveLinkFaceChannelWeight _channel="EyeWideLeft" _scale="0.35" />
+				<LiveLinkFaceChannelWeight _channel="EyeWideRight" _scale="0.35" />
+				<LiveLinkFaceChannelWeight _channel="BrowInnerUp" _scale="0.3" />
+			</_listChannel>
+		</LiveLinkFaceExpression>
+	</_listExpression>
+</LiveLinkFaceMapping>

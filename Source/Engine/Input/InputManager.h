@@ -141,7 +141,7 @@ namespace sw
         /** @brief 단조 시계 마이크로초를 읽는 함수입니다. */
         using ClockFunction = int64 ( * )();
         /**
-         * @brief 이벤트 시각과 프레임 창을 재는 시계를 바꿉니다(테스트가 정해진 시각을 넣는다). 기본은 `MonotonicClock::nowMicroseconds` 입니다.
+         * @brief 이벤트 시각과 프레임 창을 측정하는 시계를 바꿉니다(테스트가 정해진 시각을 넣는다). 기본은 `MonotonicClock::nowMicroseconds` 입니다.
          * @details 큐에 넣는 쪽(창 스레드)과 `beginFrame` 이 같은 시계를 본다. 이벤트가 큐에 있는 동안 바꾸지 않는다. nullptr 은 받지 않는다(어설트).
          */
         void setClock( ClockFunction pfnNowMicroseconds );
@@ -430,7 +430,7 @@ namespace sw
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         vector<FramePress>                   _listFramePress;       /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
         float2                               _frameLookDelta;       /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
-        ClockFunction                        _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 재는 시계입니다(`setClock`). */
+        ClockFunction                        _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
         int64                                _frameEndMicroseconds; /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
         IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
         VirtualCursor                        _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */

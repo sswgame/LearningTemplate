@@ -27,7 +27,7 @@ namespace sw
      * @brief 씬에 놓인 벽 · 엄폐물 상자입니다. 디렉터가 플레이 시작에 모아 몸 이동 판정에 쓰고, 플레이 시작에 같은 상자의 정적 강체를 만들어
      *        물리 질의(히트스캔 · 시야)와 래그돌 · 떨어진 무기가 같은 상자에 막히게 합니다(틱하지 않는다).
      * @details 모양(벽 큐브 · 나무 상자 더미)은 같은 오브젝트 · 자식 오브젝트의 메시이고, 충돌은 이 상자 그대로다 — 에디터에서 오브젝트를 옮기면 함께 옮겨진다.
-     *          상자의 정본은 `_halfSize` 하나다. 강체는 그 값으로 만든 런타임 사본이라 씬에 저장하지 않는다(데이터에 강체를 따로 적으면 두 크기가 어긋난다).
+     *          상자의 기준은 `_halfSize` 하나다. 강체는 그 값으로 만든 런타임 사본이라 씬에 저장하지 않는다(데이터에 강체를 따로 적으면 두 크기가 어긋난다).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Blocker", Tooltip = "Axis-aligned box that blocks the player, the enemies, the shots and the ragdolls" )
     class ShooterBlockerComponent : public Component

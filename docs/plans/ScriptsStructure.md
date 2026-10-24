@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: project · 옛번호: 없음 · 진행: 표
 
-**남은 확인(통합에서 확인):** 병합 뒤 `cmake --preset Ninja-Debug` configure 와 `ctest -L lint -j 2` · `-L python -j 2` 한 번(6절). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `debug-full-build`, `ctest-lint`, `ctest-python`(6절 — configure 는 미리 한다). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 `Scripts/` 의 파이썬 도구는 폴더가 곧 역할이고 이름 · 진입점 · 공용 도우미 · 파이썬 모양을 게이트가 지킨다. C++ 쪽과 비교해 빠진 것은 **import 경로의 형식**과 **의존 방향의 형식** 두 가지다.
 설계 검토(2026-10-21, 기준 main `dd2661d34`)의 권고안 B 를 따른다. 폴더를 크게 옮기지 않고 "단일 import 루트 + 3층 + 층 게이트"로 고친다. 명령 파일 경로는 그대로라 CMake · CI · 훅이 부르는 경로는 바뀌지 않는다(`docs/09_Decisions.md` 5-2 "스크립트 이름과 도움말 규칙").
@@ -83,4 +83,4 @@ Scripts/
   같음을 봤다(LintTargets.cmake 는 새 게이트 `CheckScriptLayers` 두 블록만 다름). 병합 뒤 configure 와 `ctest -L lint -j 2` · `-L python -j 2` 를 한 번 돈다.
 - 2026-10-21 `wt/gatesleft` 에서 다시 봤다. `RunCoreLayerGraph` 의 `None` 폴백은 이미 없다(`readCoreTiers` 가 표 오류에서 멈춘다). `SessionGuard.py` 주석은 `57f166aae` 가 `ExitCode.CiFailing` 을 가리키게 고쳤다.
 - 층 게이트의 CookAssets 간선 예외는 PK4 가 쿠커를 지울 때 함께 사라졌다(`CheckScriptLayers.toml` 에 `CookAssets` 가 없음을 2026-10-23 확인).
-  게이트와 짝 명령의 간선은 [ScriptsPairedLintRules](Candidates-project.md#scriptspairedlintrules) 후보다.
+  게이트와 짝 명령의 간선(픽서 셋 · 보고서 하나)은 판정을 `lint/LoopBraceRules` · `IncludeOrderRules` · `NamespaceBlockRules` · `DiscardReasonRules`(층 1)로 옮겨 예외 네 줄을 지웠다(2026-10-24). 셀프테스트 둘이 자기 게이트를 부르는 예외는 게이트 내부를 검사하는 일이라 남긴다.

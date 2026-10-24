@@ -32,8 +32,8 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorToolDefaultsTest] 값의 정본은 파일 하나다 — 없거나 깨졌거나 필수 칸이 빠지면 실패이고 앞 값을 그대로 둔다(내장 기본값으로 대신하지 않는다)
- * @details 예전에는 헤더 초기값이 기본값이라 파일이 없어도 성공했다. 그러면 파일과 헤더가 같은 값의 두 정본이 되고, 파일을 지워도 아무도 모른다.
+ * @brief [EditorToolDefaultsTest] 값의 기준은 파일 하나다 — 없거나 깨졌거나 필수 칸이 빠지면 실패이고 앞 값을 그대로 둔다(내장 기본값으로 대신하지 않는다)
+ * @details 예전에는 헤더 초기값이 기본값이라 파일이 없어도 성공했다. 그러면 파일과 헤더가 같은 값의 두 기준이 되고, 파일을 지워도 아무도 모른다.
  */
 SW_TEST_CASE( EditorToolDefaultsTest, MissingBrokenOrIncompleteFileFails )
 {

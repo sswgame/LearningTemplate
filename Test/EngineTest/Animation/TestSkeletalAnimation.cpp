@@ -695,7 +695,7 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
 }
 
 /**
- * @brief [SkeletalAnimationTest] 제자리 걷기 클립의 발 속도 — 디딘 발(더 낮은 발)이 뒤로 1 m/s 로 미끄러지는 합성 클립에서 1 m/s 를 잰다
+ * @brief [SkeletalAnimationTest] 제자리 걷기 클립의 발 속도 — 디딘 발(더 낮은 발)이 뒤로 1 m/s 로 미끄러지는 합성 클립에서 1 m/s 를 측정한다
  * @details 앞 반 초는 왼발, 뒤 반 초는 오른발이 땅(y 0)에 있고 z 를 0.25 에서 -0.25 로 옮긴다. 들린 발(y 0.1)은 앞으로 간다.
  *          재생 속도는 이동 속도 / 발 속도를 범위로 자르고, 발 속도가 0 이면 1 이다.
  */

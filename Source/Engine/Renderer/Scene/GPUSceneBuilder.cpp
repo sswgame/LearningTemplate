@@ -729,7 +729,7 @@ namespace sw
                 }
             }
 
-            /** @brief 채운 후보를 지난 프레임의 같은 슬롯과 견줘 표시를 만듭니다. 셰이더가 같으면 지난 해시를 그대로 쓴다. */
+            /** @brief 채운 후보를 지난 프레임의 같은 슬롯과 비교해 표시를 만듭니다. 셰이더가 같으면 지난 해시를 그대로 쓴다. */
             uint8 compareWithPrevious( uint32 index, DrawCandidate& candidate ) const
             {
                 const uint32 prevIndex = ( _pPrevMap != nullptr ) ? _pPrevMap[index] : kInvalidCandidateIndex;
@@ -1008,7 +1008,7 @@ namespace sw
         }
         listBatch.swap( _listScratchParticleBatch );
 
-        // 메시 투명과 한 순서로 섞는다 — 배치마다 첫 인스턴스의 키와 견줘 입자를 그 앞에 끼운다(언리얼 · 유니티의 프리미티브 단위 정렬).
+        // 메시 투명과 한 순서로 섞는다 — 배치마다 첫 인스턴스의 키와 비교해 입자를 그 앞에 끼운다(언리얼 · 유니티의 프리미티브 단위 정렬).
         fillMainBatchHeadKeys( cameraPos, _listScratchBatchHeadKey );
         GPUTransparentSorter::placeParticles( vector_reference<const GPUTransparentSortKey>( _listScratchBatchHeadKey ),
                                               vector_reference<const GPUTransparentSortKey>( _listScratchParticleKey ), _snapshot._listParticleSlot );
@@ -1047,7 +1047,7 @@ namespace sw
 
     void GPUSceneBuilder::fillParticleKeys( const float3& eye, const float3& axis, vector<GPUTransparentSortKey>& outListKey ) const
     {
-        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 잰다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
+        // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 측정한다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
         // 레이어는 기본 키다(방출기에는 정렬 레이어가 없다).
         const vector<GPUParticleBatch>& listBatch      = _snapshot._listParticleBatch;
         const uint32                    defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
@@ -1158,7 +1158,7 @@ namespace sw
         // **불투명 접두부는 그대로다**. 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
         const bool bTransparentOrderChanged = ( _listScratchTransparentIdx != _listBuiltTransparentIdx );
         // 불투명 · 투명의 경계는 스냅샷의 불투명 배치 수 하나다. 배치 수와 원소 항목 수는 그 경계로 자르므로 목록 길이를 넘을 수 없고
-        // (`GPUSceneSnapshot::appendBatch`, `BatchElementTable::truncateToBatches`), 인스턴스 수만 발행본과 견준다.
+        // (`GPUSceneSnapshot::appendBatch`, `BatchElementTable::truncateToBatches`), 인스턴스 수만 발행본과 비교한다.
         const uint32 opaqueInstanceCount = _snapshot.getOpaqueInstanceCount();
         if ( bTransparentOrderChanged && opaqueInstanceCount > pPrevious->size() )
             return false;

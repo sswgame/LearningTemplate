@@ -205,7 +205,7 @@ SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHert
 SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHertzEncrypted )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "UDP encryption without an authenticator is a development-build mode" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // UDP encryption without an authenticator is a development-build mode
 #else
     NetHostConfig hostSettings;
     hostSettings._security._mode      = NetSecurityMode::Encrypted;

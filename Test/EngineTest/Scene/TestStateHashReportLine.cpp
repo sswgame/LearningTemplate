@@ -35,3 +35,39 @@ SW_TEST_CASE( StateHashReportLineTest, ALineRoundTripsInsideALogLine )
     SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " 12:zz,13:ff", parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
+
+/**
+ * @brief [StateHashReportLineTest] 오브젝트별 해시 글은 이름에 공백이 있어도 되읽히고, 두 목록에서 다른 오브젝트의 이름만 짚으며, 형식이 다른 글은 거절한다
+ * @details 어긋난 틱에서 두 프로세스의 `state.objects` 답을 견줘 어느 오브젝트가 다른지 찾는 길이다(서버 디버깅 S7 의 어긋난 오브젝트 짚기).
+ */
+SW_TEST_CASE( StateHashReportLineTest, DifferingObjectsAreNamed )
+{
+    const vector<SceneObjectHash> listLeft = {
+        SceneObjectHash{       "Door", 0x1111ull},
+        SceneObjectHash{       "Hero", 0x2222ull},
+        SceneObjectHash{"Spawn Point", 0x3333ull}
+    };
+    string text;
+    SceneStateHash::writeObjectReport( listLeft, text );
+    vector<SceneObjectHash> parsed;
+    SW_ASSERT_TRUE( SceneStateHash::parseObjectReport( text, parsed ) );
+    SW_ASSERT_EQUAL( size_t( 3 ), parsed.size() );
+    SW_EXPECT_TRUE( parsed[2]._name == "Spawn Point" );
+    SW_EXPECT_EQUAL( uint64( 0x3333ull ), parsed[2]._hash );
+
+    vector<string> listName;
+    SW_EXPECT_FALSE( SceneStateHash::findDifferingObjects( listLeft, parsed, listName ) );
+    SW_EXPECT_TRUE( listName.empty() );
+
+    // Hero 의 해시가 다르고, Door 는 한쪽에만 있다.
+    vector<SceneObjectHash> listRight = listLeft;
+    listRight[1]._hash                = 0x9999ull;
+    listRight.erase( listRight.begin() );
+    SW_EXPECT_TRUE( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), listName.size() );
+    SW_EXPECT_TRUE( listName[0] == "Door" );
+    SW_EXPECT_TRUE( listName[1] == "Hero" );
+
+    SW_EXPECT_FALSE( SceneStateHash::parseObjectReport( "not a hash line\n", parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+}

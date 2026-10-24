@@ -37,7 +37,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 입자 하나(뿌리 다음 본)의 물성입니다. 사슬 값(`RigSpringSettings`)을 이 입자에서만 바꿉니다 — VRM 스프링 본은 관절마다 값이 다르다.
+     * @brief 입자 하나(루트 다음 본)의 물성입니다. 사슬 값(`RigSpringSettings`)을 이 입자에서만 바꿉니다 — VRM 스프링 본은 관절마다 값이 다르다.
      * @details 입자 i 는 본 i 의 위치이고 본 i − 1 을 돌린다. VRM 관절 j(본 j, 끝은 본 j + 1)의 값이 입자 j + 1 의 값이다.
      */
     struct RigSpringParticleSettings
@@ -62,7 +62,7 @@ namespace sw
         float32 _damping{ 0.1f };                 ///< 스텝마다 잃는 속도의 비율이다(0..1).
         float32 _particleRadius{ 0.02f };         ///< 입자 반지름이다(충돌).
         float32 _fixedStep{ 1.0f / 60.0f };       ///< 스텝 길이(초)다. 프레임 시간과 무관하게 같은 결과가 나온다.
-        float32 _teleportDistance{ 1.0f };        ///< 한 프레임에 뿌리가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작한다.
+        float32 _teleportDistance{ 1.0f };        ///< 한 프레임에 루트가 이만큼 넘게 움직이면 순간이동으로 보고 다시 시작한다.
         uint32  _maxSubStep{ 4 };                 ///< 프레임당 스텝 상한(넘는 시간은 버린다)
         uint8   _bUseGravityOverride{ SW_FALSE }; ///< 월드 중력 대신 `_gravityOverride` 를 쓴다(언리얼 AnimDynamics 의 GravityOverride).
         /**
@@ -80,7 +80,7 @@ namespace sw
      * @brief 사슬 하나의 상태(월드 공간 입자)와 시뮬레이션입니다. 첫 본은 애니메이션에 묶이고 나머지가 흔들립니다.
      * @details 스텝은 다음 순서로 진행한다. 속도 = (현재 - 이전) × (1 - 감쇠)를 구하고, 중력을 더하고, 애니메이션 자세(부모 입자 + 애니메이션 상대 방향) 쪽으로 강성만큼 당기고,
      *          부모와의 길이를 맞추고, 충돌체 밖으로 밀어내고, 다시 길이를 맞춘다. 입자가 월드 공간이라 캐릭터가 움직이면 끝이 뒤처진다(관성).
-     *          평면(2D)이면 입자를 뿌리를 지나는 평면에 둔다. 마지막으로 본을 뿌리부터 차례로 입자 쪽으로 돌린다.
+     *          평면(2D)이면 입자를 루트를 지나는 평면에 둔다. 마지막으로 본을 루트부터 차례로 입자 쪽으로 돌린다.
      */
     class SW_API RigSpringChain
     {
@@ -98,7 +98,7 @@ namespace sw
 
         /**
          * @brief @p deltaSeconds 만큼 고정 스텝으로 진행하고 사슬 본을 돌립니다.
-         * @param listBone 뿌리 → 끝 본(각 본이 다음 본의 조상)
+         * @param listBone 루트 → 끝 본(각 본이 다음 본의 조상)
          * @param worldFromModel 유닛의 월드 행렬
          */
         void simulate( RigPoseBuffer& pose, span<const uint32> listBone, const RigSpringSettings& settings, span<const RigSpringCollider> listCollider,

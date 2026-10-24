@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 21/21
 
-**남은 확인(통합에서 확인 · 측정):** 전 프리셋 컴파일 · `-L nogpu` · `-L lint`, 쿠킹 · 패키징 시간 Release 3회와 파이썬이 쓴 팩과의 내용 비교(PK), 전용 서버 팩의 제외 확인(AT), Dev 기동 `.meta` 스캔 시간(TX) — 각 단위 표의 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인 · 측정):** 매니페스트 id `all-presets-compile`, `ctest-nogpu`, `ctest-lint`, `cook-pack-timing-release`, `dedicated-server-pack-exclusion`, `dev-meta-scan-time` — 각 단위 표의 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
 순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
@@ -27,7 +27,7 @@
 | 7.5 절 P4 테스트가 원본을 거치게 함 | HC1 · HC4 의 테스트 정리가 같은 파일(`Test/EngineTest/Config/`)을 만진다. 같은 작업자에게 맡긴다. |
 | W5 도구(`Scripts/common/Config.py` 가 `{}` 를 돌려주는 곳) | PK4 가 `CookAssets.py` 를 지우면 `readOptionalConfig` 의 쿠커 쪽 소비자가 사라진다. W5 는 남은 호출부만 본다. |
 
-[IncrementalCook](IncrementalCook.md)(끝)의 `CookStore` · `CookJob` 이 PK2 의 증분 판정을 맡는다. 새 판정 코드를 만들지 않는다.
+증분 쿠킹([결정 기록](../09_Decisions.md) 5-2)의 `CookStore` · `CookJob` 이 PK2 의 증분 판정을 맡는다. 새 판정 코드를 만들지 않는다.
 동시 빌드는 둘까지다. AT1 은 `AssetFormat.h` 를, HC3 은 `GameConfig.h` 를 바꿔 여러 모듈을 다시 빌드하므로 단독으로 돌린다.
 
 ## 3. 필수 설정 — 폴백을 지운다 (HC)
@@ -84,7 +84,7 @@
 | 압축(zlib `Z_FIXED`, LZ4/Zstd 는 pip 모듈) | 120-180 행 | `ZlibCompressionCodec` · `Lz4CompressionCodec` · `ZstdCompressionCodec`(압축 가능) |
 | 셰이더 스탬프 판정(`verifyShaderCookInternal`, 수집 규칙 247-251 행) | 223-352 행 | `ShaderCookStamp.cpp` 의 `collectStampedSources`(76 행). 규칙이 두 언어에 있고 `CheckShaderStamps.py` 가 파이썬 쪽을 따로 검사함 |
 | 팩에 넣을 파일 고르기(`shouldIncludeFile` — 전역 제외 폴더 · 패턴, 규칙별 제외, 빌드 타깃 제외) | 360-413 행 | 타깃 제외는 `CookContract` X-macro 로 런타임(`ResourcePaths::setHostTarget`)이 이미 같은 테이블을 읽음 |
-| 증분 기록(`PackRecord` · `.packrec`, 키 = 해시) | 431-470 행 | `CookStore` · `CookJob` · `Saved/CookRecord/*.cookrec`([IncrementalCook](IncrementalCook.md)) |
+| 증분 기록(`PackRecord` · `.packrec`, 키 = 해시) | 431-470 행 | `CookStore` · `CookJob` · `Saved/CookRecord/*.cookrec`([결정 기록](../09_Decisions.md) 5-2 증분 쿠킹) |
 | 팩 이름과 게임 목록(`listPackNameOfGame`, 프리셋의 `_packRoot` 를 파이썬이 읽음) | 701-790 행 | `GameSelection` |
 
 소비자는 `Scripts/dev/MakePackage.py`(`CookAssets.py --all` 호출), CMake 의 `CookAssets` 타깃(`CMake/Engine/AssetAndToolTargets.cmake` 73 행), 린트 게이트 `CheckShaderStamps.py`(커밋 훅 패턴 포함)다. `PackConfig.json` 의 설명은 "LZ4 는 pip 의 lz4, Zstd 는 pip 의 zstandard 가 있어야 쿠킹된다"고 적는다. 압축 코덱 선택이 도구 설치 상태에 매인다.

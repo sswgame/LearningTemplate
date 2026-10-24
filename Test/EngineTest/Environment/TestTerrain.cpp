@@ -36,7 +36,7 @@ namespace
         static constexpr float32 kHeightMin = -10.0f;
         static constexpr float32 kHeightMax = 10.0f;
 
-        /** @brief 해석 곡면 h(x, z) 를 해상도 @p resolution · 칸 1 m 로 굽습니다. */
+        /** @brief 해석 곡면 h(x, z) 를 해상도 @p resolution · 칸 1 m 로 베이크합니다. */
         template <typename TSurface>
         static HeightfieldData makeData( uint32 resolution, const TSurface& surface )
         {
@@ -504,7 +504,7 @@ SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
 
 /**
  * @brief [TerrainTest] 저장하지 않은 높이 · 스플랫 편집은 상태 스냅샷(`writeState` → `restoreState`)으로 다시 읽은 지형에 돌아간다 — 모듈 리로드 · 백엔드 교체 경로
- * @details 변이: `writeState` 가 높이나 스플랫을 싣지 않으면 되살린 지형이 디스크 값이라 비교가 진다. 쓰지 않은 지형은 버전과 빈 표시만 싣는다.
+ * @details 변이: `writeState` 가 높이나 스플랫을 싣지 않으면 복원한 지형이 디스크 값이라 비교가 진다. 쓰지 않은 지형은 버전과 빈 표시만 싣는다.
  */
 SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
 {
@@ -634,7 +634,7 @@ SW_TEST_CASE( TerrainTest, ResampleKeepsPlaneAndHoleCells )
 
 /**
  * @brief [TerrainTest] 구멍 쓰기와 크기 바꾸기 — 질의 · 청크 세대가 따라가고, 크기를 바꾼 저장하지 않은 편집은 상태 스냅샷으로 같은 에셋을 다시 읽은 지형에 돌아간다
- * @details 변이: `writeHoles` 가 청크 세대를 올리지 않으면 물리 바디가 낡은 채 남아 세대 비교가 진다. `writeState` 가 크기 바꾸기 표시를 싣지 않으면 되살린 지형이
+ * @details 변이: `writeHoles` 가 청크 세대를 올리지 않으면 물리 바디가 낡은 채 남아 세대 비교가 진다. `writeState` 가 크기 바꾸기 표시를 싣지 않으면 복원한 지형이
  *          에셋 해상도(33)로 남는다. 청크 칸으로 나뉘지 않는 해상도는 거절된다.
  */
 SW_TEST_CASE( TerrainTest, WriteHolesAndResizeSurviveStateSnapshot )

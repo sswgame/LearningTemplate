@@ -102,8 +102,9 @@ namespace sw
         /**
          * @brief 맵을 칠하고 두 기지(본진 · 일꾼 넷 · 광물 여덟 · 간헐천)를 놓습니다.
          * @param bHumanPlayer 0 번을 사람이 맡는가(아니면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
+         * @return 월드(`RTSWorld::initialize`)가 거절하면 false 입니다. 그러면 판을 시작하지 않는다.
          */
-        void initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings );
+        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings );
         /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */

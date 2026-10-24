@@ -22,17 +22,17 @@ namespace sw
     TaskNodePool::~TaskNodePool()
     {
         std::scoped_lock<mutex> lock{ _slabMutex };
-        for ( TaskNode* pSlab : _listSlab )
+        for ( const MemoryBlock& slab : _listSlab )
         {
+            TaskNode* pSlab = slab.getAs<TaskNode>();
             if ( pSlab == nullptr )
                 continue;
             for ( uint32 index = 0; index < kSlabSize; ++index )
             {
                 pSlab[index].~TaskNode();
             }
-            Memory::free( pSlab );
         }
-        _listSlab.clear();
+        _listSlab.clear(); // 노드를 소멸시킨 뒤 블록을 푼다
     }
 
     TaskNode* TaskNodePool::allocate()
@@ -50,7 +50,8 @@ namespace sw
             }
             if ( pMem == nullptr )
             {
-                TaskNode* pSlab = static_cast<TaskNode*>( Memory::allocate( sizeof( TaskNode ) * kSlabSize ) );
+                MemoryBlock slab  = MemoryBlock::allocate( sizeof( TaskNode ) * kSlabSize );
+                TaskNode*   pSlab = slab.getAs<TaskNode>();
                 for ( uint32 index = 0; index < kSlabSize; ++index )
                 {
                     sw_placement_new( &pSlab[index] ) TaskNode();
@@ -59,7 +60,7 @@ namespace sw
                 }
                 {
                     std::scoped_lock<mutex> lock{ _slabMutex };
-                    _listSlab.push_back( pSlab );
+                    _listSlab.push_back( std::move( slab ) ); // pSlab 은 블록 주소라 이동해도 그대로다
                 }
                 for ( uint32 index = 1; index < kSlabSize; ++index )
                 {
@@ -174,8 +175,9 @@ namespace sw
         uint32 referenceCount = 0;
         {
             std::scoped_lock<mutex> lock{ _slabMutex };
-            for ( TaskNode* pSlab : _listSlab )
+            for ( const MemoryBlock& slab : _listSlab )
             {
+                const TaskNode* pSlab = slab.getAs<TaskNode>();
                 for ( uint32 index = 0; index < kSlabSize; ++index )
                 {
                     if ( pSlab[index]._refCount.load( std::memory_order_acquire ) > 0 )
@@ -209,7 +211,7 @@ namespace sw
         ParallelGroup* pGroup = _groupPool.acquire();
         if ( pGroup != nullptr )
             return pGroup;
-        return sw_new ParallelGroup();
+        return make_unique<ParallelGroup>().release(); // 풀이 비면 힙에서 만든다. `deallocateGroup` 이 주소로 갈라서 푼다
     }
 
     void TaskNodePool::deallocateGroup( ParallelGroup* pGroup )

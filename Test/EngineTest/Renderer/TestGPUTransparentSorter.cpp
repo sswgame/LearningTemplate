@@ -31,7 +31,7 @@ SW_TEST_CASE( GPUTransparentSorterTest, DrawOrderIsLayerThenFartherThenIndex )
 }
 
 /**
- * @brief [GPUTransparentSorterTest] 축이 영벡터면 깊이는 눈까지의 거리², 아니면 눈에서 축 방향으로 잰 깊이다
+ * @brief [GPUTransparentSorterTest] 축이 영벡터면 깊이는 눈까지의 거리², 아니면 눈에서 축 방향으로 측정한 깊이다
  */
 SW_TEST_CASE( GPUTransparentSorterTest, SortKeyDepthUsesDistanceOrAxis )
 {
@@ -43,7 +43,7 @@ SW_TEST_CASE( GPUTransparentSorterTest, SortKeyDepthUsesDistanceOrAxis )
     SW_EXPECT_EQUAL( byDistance._candidateIndex, 9u );
     SW_EXPECT_NEAR_EQUAL( byDistance._depth, 9.0f + 16.0f + 100.0f, 1e-4f );
 
-    // 직교 2D 카메라: 시선 축(+Z)으로 재면 카메라의 XY 위치가 깊이에 들어가지 않는다.
+    // 직교 2D 카메라: 시선 축(+Z)으로 측정하면 카메라의 XY 위치가 깊이에 들어가지 않는다.
     const sw::GPUTransparentSortKey byAxis = sw::GPUTransparentSorter::makeTransparentSortKey( 3u, center, eye, sw::float3{ 0.0f, 0.0f, 1.0f }, 9u );
     SW_EXPECT_NEAR_EQUAL( byAxis._depth, 10.0f, 1e-4f );
 }

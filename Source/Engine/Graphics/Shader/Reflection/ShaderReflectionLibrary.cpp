@@ -215,7 +215,7 @@ namespace sw
             archive >> entryCount;
             if ( magic != kMagic || version != kVersion )
             {
-                SW_LOG_WARNING( "리플렉션 매니페스트 형식이 맞지 않습니다 (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
+                SW_LOG_WARNING( "The reflection manifest format does not match (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
                 return false;
             }
 
@@ -226,7 +226,7 @@ namespace sw
                 archive >> entryKey;
                 if ( readReflectionInternal( archive, entryData ) == false )
                 {
-                    SW_LOG_WARNING( "리플렉션 매니페스트가 손상되었습니다: %#", manifestRelative.c_str() );
+                    SW_LOG_WARNING( "The reflection manifest is corrupt: %#", manifestRelative.c_str() );
                     outMapEntry.clear();
                     return false;
                 }
@@ -277,11 +277,11 @@ namespace sw
         const string outPath = FileUtil::joinPath( absDirectory, getManifestFileName() );
         if ( FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR( "리플렉션 매니페스트 쓰기 실패: %#", outPath.c_str() );
+            SW_LOG_ERROR( "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;
         }
 
-        SW_LOG_INFO( "리플렉션 매니페스트 %# (%# 항목, %# bytes)", outPath.c_str(),
+        SW_LOG_INFO( "Reflection manifest %# (%# entries, %# bytes)", outPath.c_str(),
                      static_cast<uint32>( mapEntry.size() ), static_cast<uint32>( bytes.size() ) );
         return true;
     }
@@ -323,7 +323,7 @@ namespace sw
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
                 if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, sourceAbs ) == false )
                 {
-                    SW_LOG_TRACE( "리플렉션 매니페스트가 지금 소스에서 나온 것이 아님 — 런타임 리플렉션으로 폴백: %#",
+                    SW_LOG_TRACE( "The reflection manifest was not produced from the current source - falling back to runtime reflection: %#",
                                   string( desc._filePath ).c_str() );
                     return false;
                 }
@@ -379,7 +379,7 @@ namespace sw
             defineList += '=';
             defineList += define._value;
         }
-        SW_LOG_ERROR( "리플렉션 매니페스트에 '%#' (%#, define: %#) 가 없습니다 — 셰이더를 다시 쿠킹해야 합니다.",
+        SW_LOG_ERROR( "The reflection manifest has no entry for '%#' (%#, define: %#) - the shader must be re-cooked.",
                       string( desc._filePath ).c_str(), missingKey.c_str(), defineList.c_str() );
         return false;
 #else
@@ -390,7 +390,7 @@ namespace sw
                                              : ShaderCompiler::compileHlsl( desc );
         if ( result._bSuccess == false || result._bytecode.empty() )
         {
-            SW_LOG_WARNING( "런타임 리플렉션 폴백 실패: '%#' (%#)", string( desc._filePath ).c_str(),
+            SW_LOG_WARNING( "Runtime reflection fallback failed: '%#' (%#)", string( desc._filePath ).c_str(),
                             result._errorMessage.c_str() );
             return false;
         }

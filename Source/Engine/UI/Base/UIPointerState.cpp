@@ -105,7 +105,7 @@ namespace sw
                 pWidget->onHoverChanged( false );
             }
         }
-        // 새로 든 쪽: 뿌리부터 Enter.
+        // 새로 든 쪽: 루트부터 Enter.
         if ( pTree != nullptr )
         {
             for ( uint32 index = common; index < static_cast<uint32>( newPath._listWidget.size() ); ++index )

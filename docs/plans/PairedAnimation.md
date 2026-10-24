@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 6/6
 
-**남은 확인(통합에서 확인):** M3 에디터 창 화면, P3b 두 프로세스(Server + App) 복제, `bowshoot` 의 투사체 방향 · 가는 줄 · 화살 머리 — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `paired-animation-tests`, `paired-animation-editor-window`, `paired-animation-two-process`, `bowshoot-projectile-checks` — 아래 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 활과 화살, 잡기 · 처형, 말 타기, 문 열기처럼 **여러 개체가 한 타임라인에 묶여 같이 도는 애니메이션**(언리얼의 Contextual Animation, 흔히 페어드 · 싱크드 · 인터랙션 애니메이션)의 일반 구조다.
 애니메이션 영역의 한 단위다([게임플레이 후보](Candidates-gameplay.md) 의 애니메이션 절과 이웃). 첫 단위(P0 ~ P2)와 상호작용 연결 · 에셋 캐시 · 세트 고르기 · 보폭 보정 쥠은 코드와 테스트(`PairedAnimationTest` · `PairedAnimationDefTest` · `InteractionTest`)로 들어갔다.

@@ -121,7 +121,7 @@ namespace
             return pUpdate != nullptr && pUpdate[0] == '1';
         }
 
-        /** @brief 줄끝을 LF 로(저장소 체크아웃이 CRLF 로 바꿔도 견준다). */
+        /** @brief 줄끝을 LF 로(저장소 체크아웃이 CRLF 로 바꿔도 비교한다). */
         static sw::string normalizeNewlines( const sw::string& text )
         {
             sw::string result;
@@ -134,7 +134,7 @@ namespace
             return result;
         }
 
-        /** @brief 덤프 @p text 를 골든 @p fileName 과 견줍니다(갱신 모드면 씁니다). 다르면 첫 다른 줄을 실패 글에 적습니다. */
+        /** @brief 덤프 @p text 를 골든 @p fileName 과 비교합니다(갱신 모드면 씁니다). 다르면 첫 다른 줄을 실패 글에 적습니다. */
         static void expectGolden( const sw::string& fileName, const sw::string& text )
         {
             const sw::string directory = findGoldenDirectory();
@@ -302,7 +302,7 @@ namespace
                    sw::to_string( static_cast<uint32>( condition._uiScale * 100.0f ) ) + "%\n";
         }
 
-        /** @brief 견본 하나를 여섯 조건으로 덤프해 골든 둘(`<이름>.layout.txt` · `<이름>.canvas.txt`)과 견줍니다. */
+        /** @brief 견본 하나를 여섯 조건으로 덤프해 골든 둘(`<이름>.layout.txt` · `<이름>.canvas.txt`)과 비교합니다. */
         static void expectSampleGolden( UIDeterminismSample sample )
         {
             sw::string layout;
@@ -441,7 +441,7 @@ SW_TEST_CASE( UIDeterminismTest, RebuildGivesSameDump )
 
 /**
  * @brief [UIDeterminismTest] 위젯을 만드는 순서를 섞어도(위젯 번호가 달라도) 트리 순서가 같으면 덤프가 같다 — 번호 순 해시 맵 · 누적 순서가 결과에 새지 않는다
- * @details 같은 시스템에 두 화면을 차례로 올려 견준다(두 번째는 앞의 번호를 이어 받는다).
+ * @details 같은 시스템에 두 화면을 차례로 올려 비교한다(두 번째는 앞의 번호를 이어 받는다).
  */
 SW_TEST_CASE( UIDeterminismTest, CreationOrderDoesNotLeak )
 {

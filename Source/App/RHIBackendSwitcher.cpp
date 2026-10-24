@@ -168,15 +168,15 @@ namespace sw
         RHI*       pRHI    = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );
+            SW_LOG_ERROR( "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
             return false;
         }
 
         const bool bReinitOk = _pModuleHost->reinitializeAfterRHISwap( pEditorModule, pGameModule );
         if ( bReinitOk == false )
-            SW_LOG_ERROR( "reinitializeAfterRHISwap 실패." );
+            SW_LOG_ERROR( "reinitializeAfterRHISwap failed." );
         if ( bSwapOk == false )
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — 이전 백엔드로 복구한 뒤 모듈을 재생성했습니다." );
+            SW_LOG_ERROR( "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
         return bSwapOk && bReinitOk;
     }
 } // namespace sw

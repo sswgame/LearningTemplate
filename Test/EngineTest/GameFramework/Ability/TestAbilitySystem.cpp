@@ -1088,7 +1088,7 @@ SW_TEST_CASE( AbilitySystemTest, OwnedTagAddedTriggersAnAbility )
 }
 
 /**
- * @brief [AbilitySystemTest] 어트리뷰트 base 값을 세이브 바이트로 옮기고 되살린다 — 없는 어트리뷰트를 되살리려 하면 실패를 알린다
+ * @brief [AbilitySystemTest] 어트리뷰트 base 값을 세이브 바이트로 옮기고 복원한다 — 없는 어트리뷰트를 되살리려 하면 실패를 알린다
  */
 SW_TEST_CASE( AbilitySystemTest, AttributeBaseValuesRoundTripThroughSaveBytes )
 {

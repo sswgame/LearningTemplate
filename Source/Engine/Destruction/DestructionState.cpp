@@ -346,7 +346,7 @@ namespace sw
                 }
             }
         }
-        // 덩어리 순서는 가장 작은 노드 순이다(노드 목록이 오름차순이므로 뿌리가 가장 작은 인덱스다).
+        // 덩어리 순서는 가장 작은 노드 순이다(노드 목록이 오름차순이므로 루트가 가장 작은 인덱스다).
         vector<int32> listComponentOfRoot( listNode.size(), -1 );
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
         {

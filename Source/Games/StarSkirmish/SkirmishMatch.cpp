@@ -55,10 +55,11 @@ namespace sw
     {
     }
 
-    void SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings )
+    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings )
     {
+        if ( _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} ) == false )
+            return false;
         _settings = matchSettings;
-        _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} );
         _listEvent.clear();
         _listFrameEvent.clear();
         _statusTimer   = 0.0f;
@@ -101,6 +102,7 @@ namespace sw
             }
         }
         SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
+        return true;
     }
 
     void SkirmishMatch::writeState( Archive& outArchive ) const

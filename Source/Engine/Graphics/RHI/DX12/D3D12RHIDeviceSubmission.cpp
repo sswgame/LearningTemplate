@@ -37,7 +37,7 @@ namespace sw
         if ( list->isValid() == false )
         {
             if ( _bDeviceRemovedLogged == 0 )
-                SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: 네이티브 커맨드 리스트 생성 실패." );
+                SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
             return nullptr;
         }
         return list;

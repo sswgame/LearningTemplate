@@ -53,7 +53,8 @@ namespace
         {
             if ( _catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) == false )
                 return false;
-            _world.initialize( &_catalog, width, height, RTSSettings{} );
+            if ( _world.initialize( &_catalog, width, height, RTSSettings{} ) == false )
+                return false;
             return true;
         }
 
@@ -150,6 +151,23 @@ SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listProduct.size() ) );
     catalog.findProducts( hashed_string( "worker" ), listProduct );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( listProduct.size() ) );
+}
+
+SW_TEST_CASE( RealTimeStrategyTest, WorldRefusesOutOfRangeSettingsAndSizesInsteadOfClamping )
+{
+    RTSCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) );
+    RTSWorld world;
+    SW_ASSERT_TRUE( world.initialize( &catalog, 16, 16, RTSSettings{} ) );
+
+    RTSSettings zeroBucket;
+    zeroBucket._bucketSize = 0;
+    SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroBucket ) );
+    RTSSettings zeroStep;
+    zeroStep._fixedStep = 0.0f;
+    SW_EXPECT_FALSE( world.initialize( &catalog, 16, 16, zeroStep ) );
+    SW_EXPECT_FALSE( world.initialize( &catalog, 0, 16, RTSSettings{} ) );
+    SW_EXPECT_FALSE( world.initialize( &catalog, 16, -3, RTSSettings{} ) );
 }
 
 SW_TEST_CASE( RealTimeStrategyTest, WorkersGatherReturnCargoAndMoveOnFromDepletedPatches )
@@ -713,7 +731,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
     RTSCatalog            catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kRateXML, "RealTimeStrategyTest" ) );
     RTSWorld world;
-    world.initialize( &catalog, 32, 32, RTSSettings{} );
+    SW_ASSERT_TRUE( world.initialize( &catalog, 32, 32, RTSSettings{} ) );
     Wallet          blueWallet;
     Wallet          redWallet;
     const int32     blue    = world.addPlayer( 0, &blueWallet, float3{ 2.0f, 0.0f, 2.0f } );

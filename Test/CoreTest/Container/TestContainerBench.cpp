@@ -12,6 +12,8 @@
  *          - 이미 intern 된 이름으로 `hashed_string` 만들기(샤드 락 + 맵 조회).
  *          - `vector::resize( size() + 1 )` 를 되풀이하기 — 재할당이 기하급수로 줄어드는가.
  *          - `SlotHandleTable::get` 락 없는 조회(흩어진 순서).
+ *          - `unordered_map<uint64, uint32>` 넣기 · 지우기 되풀이(구조 최적화 B ③ 노드 배치의 "전").
+ *          - `deque` 를 큐로 쓰기: 뒤에 넣고 앞에서 빼기, 원소 8 · 32 · 128 바이트(B ② 의 "전").
  *
  * @note Release 로 읽는다. Debug 의 컨테이너 레이스 탐지기가 숫자를 다른 것으로 만든다.
  */
@@ -22,6 +24,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -50,6 +53,50 @@ namespace
         value += sw::HashUtil::kGoldenRatio64;
         return sw::HashUtil::mix64( value );
     }
+
+    /** @brief 큐 원소 — 8바이트 칸 @p WordCount 개입니다(`DequeQueueChurn` 이 8 · 32 · 128 바이트를 잰다). */
+    template <uint32 WordCount>
+    struct DequeBenchElement
+    {
+        uint64 _arrWord[WordCount]{};
+    };
+
+    struct ContainerBenchInternal
+    {
+        static constexpr uint32 kQueueDepth = 256;   ///< 큐에 늘 이만큼 쌓여 있다
+        static constexpr uint32 kOpCount    = 50000; ///< 판마다 넣고 빼는 횟수
+
+        /** @brief `deque<Element>` 를 큐로 되풀이해 쓰는 비용을 찍습니다. 큐 길이가 어긋나면 @p inoutWrongCount 를 올립니다. */
+        template <typename Element>
+        static void logDequeQueueChurn( const utf8* pLabel, uint32& inoutWrongCount )
+        {
+            uint32      wrongCount = 0;
+            const int64 deci       = test::measureBestDeciNanosPerOp( kOpCount, kRoundCount, [&]()
+                  {
+                sw::deque<Element> listQueue;
+                for ( uint32 index = 0; index < kQueueDepth; ++index )
+                {
+                    Element element{};
+                    element._arrWord[0] = index;
+                    listQueue.push_back( element );
+                }
+                uint64 sum = 0;
+                for ( uint32 index = 0; index < kOpCount; ++index )
+                {
+                    sum += listQueue.front()._arrWord[0];
+                    listQueue.pop_front();
+                    Element element{};
+                    element._arrWord[0] = index;
+                    listQueue.push_back( element );
+                }
+                if ( listQueue.size() != kQueueDepth )
+                    ++wrongCount;
+                s_benchSink = sum;
+            } );
+            inoutWrongCount += wrongCount;
+            test::logBenchDeciNanos( pLabel, deci );
+        }
+    };
 
 } // namespace
 
@@ -287,4 +334,53 @@ SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
 
     SW_EXPECT_EQUAL( 0u, wrongCount );
     test::logBenchDeciNanos( "SlotHandleTable<uint64>::get hit (16384 slots, scattered)", getDeci );
+}
+
+/**
+ * @brief [ContainerBenchTest] 해시맵 넣기 · 지우기 되풀이 — 노드 배치(구조 최적화 B ③: 해시 표 노드 `uint32 next` + 해시 태그)의 "전" 값이다.
+ *        찾기(`IntegerKeyLookup`)가 아니라 노드를 새로 만들고 이어 붙이고 떼는 비용을 본다.
+ */
+SW_TEST_CASE( ContainerBenchTest, UnorderedMapInsertErase )
+{
+    constexpr uint32   kKeyCount = 20000;
+    sw::vector<uint64> listKey;
+    listKey.reserve( kKeyCount );
+    for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
+        listKey.push_back( mixKey( index ) );
+    }
+
+    uint32      wrongCount = 0;
+    const int64 deci       = test::measureBestDeciNanosPerOp( static_cast<uint64>( kKeyCount ) * 2u, kRoundCount, [&]()
+          {
+        sw::unordered_map<uint64, uint32> map;
+        for ( uint32 index = 0; index < kKeyCount; ++index )
+        {
+            map.emplace( listKey[index], index );
+        }
+        if ( map.size() != kKeyCount )
+            ++wrongCount;
+        for ( uint32 index = 0; index < kKeyCount; ++index )
+        {
+            wrongCount += map.erase( listKey[index] ) == 1u ? 0u : 1u;
+        }
+        if ( map.empty() == false )
+            ++wrongCount;
+        s_benchSink = map.size();
+    } );
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+    test::logBenchDeciNanos( "unordered_map<uint64> emplace + erase (20000 each, from empty)", deci );
+}
+
+/**
+ * @brief [ContainerBenchTest] `deque` 를 큐로 쓰기 — 뒤에 넣고 앞에서 빼는 되풀이, 원소 8 · 32 · 128 바이트. 구조 최적화 B ②(바이트 기준 블록 + 고정 용량 링 버퍼)의 "전" 값이다.
+ * @details 표준 구현은 블록 크기가 구현마다 달라(MSVC 는 16 바이트라 8 바이트보다 큰 원소는 블록당 하나) 원소 크기에 따라 넣기 · 빼기 비용이 갈린다.
+ */
+SW_TEST_CASE( ContainerBenchTest, DequeQueueChurn )
+{
+    uint32 wrongCount = 0;
+    ContainerBenchInternal::logDequeQueueChurn<DequeBenchElement<1>>( "deque<8 B> push_back + pop_front (depth 256)", wrongCount );
+    ContainerBenchInternal::logDequeQueueChurn<DequeBenchElement<4>>( "deque<32 B> push_back + pop_front (depth 256)", wrongCount );
+    ContainerBenchInternal::logDequeQueueChurn<DequeBenchElement<16>>( "deque<128 B> push_back + pop_front (depth 256)", wrongCount );
+    SW_EXPECT_EQUAL( 0u, wrongCount );
 }

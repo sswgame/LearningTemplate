@@ -186,7 +186,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
 }
 
 /**
- * @brief [EditorToolAssetCommandsTest] 타일맵 · 스프라이트 클립 · 시퀀스도 그래프와 같은 세 갈래로 답한다
+ * @brief [EditorToolAssetCommandsTest] 타일맵 · 스프라이트 클립 · 시퀀스도 그래프와 같은 세 분기로 답한다
  * @details 다섯 로더가 같은 결과 타입이고, 문서 패널 기반이 그 결과로 저장을 막는다(`EditorDocumentPanel::reloadDocument`). bool 로 답하는
  *          로더는 "없음(새 문서)" 과 "있는데 읽지 못함" 을 섞어, 깨진 파일을 앞 문서의 내용으로 덮게 한다.
  */

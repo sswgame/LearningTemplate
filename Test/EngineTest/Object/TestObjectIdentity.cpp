@@ -159,7 +159,7 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
 
 /**
  * @brief [ObjectIdentityTest] 복원 목록은 타입 FQN 으로 적히고, FQN 이 다른 타입은 원래 id 를 가져가지 못한다
- * @details 짧은 이름으로 맞추면 이름이 같은 다른 타입이 id 를 가져가 타입 핸들이 다른 타입을 가리킨다(TypedComponents.md 3.3 ⓑ).
+ * @details 짧은 이름으로 맞추면 이름이 같은 다른 타입이 id 를 가져가 타입 핸들이 다른 타입을 가리킨다(docs/09_Decisions.md 5-6 타입 핸들의 찾기).
  */
 SW_TEST_CASE( ObjectIdentityTest, RestoreMatchesTypeFullyQualifiedName )
 {

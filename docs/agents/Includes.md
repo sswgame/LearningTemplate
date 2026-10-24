@@ -1,3 +1,7 @@
+> 질문: 새 파일과 헤더, include 를 어떻게 두는가?
+> 독자: C++ 파일 · 헤더 · include 를 더하거나 옮기는 사람.
+> 결론: 헤더는 전방 선언을 우선하고 include 는 짝 헤더, 범위별 그룹, 플랫폼 분기 순으로 쓴다. 클래스 멤버는 정해진 순서로 선언하고, 아래 층이 위 층을 include 하지 않는다.
+
 ## C++ structure and includes
 
 - In headers, prefer forward declarations. Include only when a forward
@@ -63,9 +67,16 @@
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).
-- Allocate on the heap through the sw allocator, never a bare `new T` / `new T[n]`: `sw_new T( ... )` / `make_unique<T>`
-  for one object, `sw_new_array<T>( n )` + `sw_delete_array( p, n )`, `make_unique<T[]>( n )` or `vector<T>` for arrays. CRT `new` is
-  invisible to memory tags and leak checks. Enforced by `CheckCodeConventions.py` (`Style/RawNew`).
+- Allocate on the heap through an **owning type**, never a bare pointer: `make_unique<T>( ... )` for one object,
+  `vector<T>` or `make_unique<T[]>( n )` for arrays (`FixedCountArray<T, N>` when the elements have destructors),
+  `MemoryBlock` (`Core/Memory/MemoryBlock.h`) for a raw byte block (arena chunks, slabs, scratch state). A bare
+  `new T` / `new T[n]` is invisible to memory tags and leak checks and is rejected (`CheckCodeConventions.py`,
+  `Style/RawNew`); the old `sw_new` macro no longer exists, so the bare-pointer form is not expressible. Where
+  ownership has to leave the type system (a lock-free slot table, a COM refcount, a C-ABI handle, an OS-held overlapped
+  operation), write `make_unique<T>( ... ).release()` so the hand-off is one greppable word.
+  `Memory::allocate` / `allocateAligned` outside `Source/Core/Memory` are listed with a reason in
+  `Scripts/lint/rules/CheckRawAllocation.toml` (library allocator callbacks and the like, which cannot take an owning type);
+  `CheckRawAllocation.py` rejects any file not on that list.
 - **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid
   only inside the current call (at most the current frame). Anything kept across frames — members,
   selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and

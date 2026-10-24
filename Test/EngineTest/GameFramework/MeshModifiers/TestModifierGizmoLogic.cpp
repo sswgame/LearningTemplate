@@ -34,7 +34,7 @@ namespace
             return float3{ value._x * c - value._y * s, value._x * s + value._y * c, value._z };
         }
 
-        /** @brief 두 오일러 각이 같은 회전 행렬을 만드는지 세 단위 축의 기준 방향으로 견줍니다. */
+        /** @brief 두 오일러 각이 같은 회전 행렬을 만드는지 세 단위 축의 기준 방향으로 비교합니다. */
         static bool isSameRotation( const float3& eulerA, const float3& eulerB, float32 tolerance )
         {
             MeshModifierGizmo gizmoA{};

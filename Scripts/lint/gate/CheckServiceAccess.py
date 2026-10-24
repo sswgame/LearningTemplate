@@ -10,12 +10,20 @@
   - `ServiceAccess/RetiredWindow`: 지워진 이름 — `getService<` · `getSceneService<` · `isServiceBound<` · `getBoundEngineServices(`,
     `locateSubsystem<…>( engine::getEngineSubsystems() )`, 그리고 `engine::` 아래의 이름 붙은 접근자(`engine::getTypeRegistry()` 따위).
     `engine::` 아래에 남는 `get*` 은 규칙 데이터의 `allowed_engine_function` 뿐이다. 주석 · 문자열 안의 언급은 보지 않는다.
-  - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()` 와 `static T& get()`(참조를 돌려주는 인자 없는 `get`). 전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
+  - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()` 와 `static T& get()`(참조를 돌려주는 인자 없는 `get`), 그리고 **이름이 무엇이든 같은 모양**.
+    전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
+    이름만 보면 `instance()` · `shared()` 로 우회하므로 모양을 본다: (가) 클래스 안의 `static T& anything()`(자기 타입의 읽고 쓰는 참조를 돌려주는 인자 없는 정적 멤버),
+    (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역을 두어 그 이름을 돌려주는 정의(`T& anything() { static T s; return s; }`, 클래스 밖 자유 함수도).
+    읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`)는 섞인 상태를 내주는 창구가 아니라 상수 표 · 링크 때 목록 머리라 세지 않는다.
   - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
     **형식으로 막지 못하는 틈이라 게이트를 둔다** — 정적 멤버 함수와 정적 변수는 언어가 늘 허락하고, 범위 창구는 쓰는 쪽이 고르는 길이라 타입이 강제할 수 없다.
-  예외는 둘 다 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 이유)이고, 더는 그 모양이 없는 타입은 낡은 예외로 실패한다.
+  예외는 둘 다 `Scripts/lint/rules/CheckServiceAccess.toml` 의 `[exemption]`(타입 이름 → 예외 종류)이고, 더는 그 모양이 없는 타입은 낡은 예외로 실패한다.
+  이유를 자유 글로 적으면 "단일체가 아닌 까닭" 이 줄마다 달라 판단이 쌓이지 않는다(널 객체 · 에디터 계측이 "서비스가 아니다" 로 남아 있었다). 그래서 값은
+  종류 표 `[exemption_kind]` 의 키 넷 — `LinkTimeRegistry`(링크 때 등록 표) · `CrashPath`(크래시 · 할당 훅 경로) · `ScopeOwnedHotPath`(범위가 소유한 저장소의
+  핫 패스 창구) · `Stateless`(상태 없는 함수 묶음) — 중 하나여야 하고, 표 밖 키는 검사가 서지 않는다(종료 2). 어느 종류에도 안 맞으면 단일체가 아니라
+  값(소유자가 든다)이나 서브시스템으로 만든다.
 
 대상은 `Source/` · `Test/` · `Tools/ReflectionParser/` · `Tools/OnlineLoadBot/` 의 `.h` · `.cpp` · `.inl` 이다(생성 `.gen.cpp` 와 ThirdParty 제외).
 
@@ -33,7 +41,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import findFast  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.RuleData import kKindTextList  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.RuleData import kKindReason, kKindTextList  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
 
@@ -41,9 +50,10 @@ _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".cpp", ".inl")
 _kHeaderSuffixes = (".h", ".inl")
 
-_kRuleSchema = {"allowed_engine_function": kKindTextList}
-_kRuleData = LintGate.readRules("CheckServiceAccess", _kRuleSchema, requiredKeys=("allowed_engine_function",))
+_kRuleSchema = {"allowed_engine_function": kKindTextList, "exemption_kind": kKindReason}
+_kRuleData = LintGate.readRules("CheckServiceAccess", _kRuleSchema, requiredKeys=("allowed_engine_function", "exemption_kind"))
 _kSetRemainingEngineFunction = frozenset(_kRuleData["allowed_engine_function"])
+_kMapReasonKind: dict[str, str] = _kRuleData["exemption_kind"]   # 예외의 종류 → 뜻 (`[exemption]` 의 값은 이 표의 키여야 한다)
 
 _kRetiredWindowCategory = "ServiceAccess/RetiredWindow"
 _kSingletonCategory = "ServiceAccess/Singleton"
@@ -61,7 +71,24 @@ _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 # `static T& getInstance()` 와 `static T& get()` — 둘 다 전역 단일체 창구다. `get` 은 참조를 돌려주는 인자 없는 것만 본다(`&` 필수).
 _kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?(?:\bgetInstance\s*\(|&\s*get\s*\(\s*\))")
 _kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
+# 이름이 무엇이든(`instance()` · `shared()` · `global()` …) 단일체 창구인 두 모양 — 이름이 아니라 모양을 본다.
+#   (가) 자기 타입의 참조를 돌려주는 인자 없는 정적 멤버(선언이든 정의든): `static T& anything()` 를 T 클래스 안에서.
+#   (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역(`static T s; … return s;`)을 두는 정의 — 클래스 안 · 밖 · 정적 여부와 무관하다.
+_kStaticOwnReferenceRe = re.compile(r"\bstatic\b([^;{}()=]*?)&\s*(\w+)\s*\(\s*\)")
+_kReferenceAccessorBodyRe = re.compile(r"&\s*(\w+)\s*\(\s*\)\s*(?:noexcept\s*)?\{")
+_kStaticLocalStatementRe = re.compile(r"\bstatic\s+(?!assert\b)([^;]*);")
+_kStaticLocalNameRe = re.compile(r"(\w+)\s*(?:=|\{|\(|\[|$)")
 _kClassHeadRe = re.compile(r"\b(?:class|struct)\s+(?:(?:\w*API|alignas\s*\([^)]*\))\s+)*(\w+)")
+
+
+def getExemptionKinds() -> dict[str, str]:
+    """예외 종류 표(`[exemption_kind]`)의 사본입니다."""
+    return dict(_kMapReasonKind)
+
+
+def findUnknownExemptionKinds(mapExemption: dict[str, str], mapKind: dict[str, str]) -> list[str]:
+    """예외 표에서 값이 종류 표(`[exemption_kind]`)에 없는 줄을 돌려줍니다. 자유 글 이유를 쓰면 여기서 걸립니다."""
+    return [f"{typeName} = {kind!r}" for typeName, kind in mapExemption.items() if kind not in mapKind]
 
 
 def lineOfInternal(text: str, offset: int) -> int:
@@ -112,6 +139,54 @@ def findRetiredWindowUses(relative: str, text: str, code: str) -> list[str]:
     return listViolation
 
 
+def findBlockEnd(code: str, openOffset: int) -> int:
+    """`code[openOffset]` 의 `{` 와 짝인 `}` 의 위치(없으면 글 끝)."""
+    depth = 0
+    for match in re.finditer(r"[{}]", code[openOffset:]):
+        depth += 1 if match.group(0) == "{" else -1
+        if depth == 0:
+            return openOffset + match.start()
+    return len(code)
+
+
+def returnsStaticLocal(body: str) -> bool:
+    """함수 몸이 함수 안 정적 지역을 만들고 그 이름을 돌려주는가(`static T s; return s;` · `return *s;`)."""
+    for statement in _kStaticLocalStatementRe.finditer(body):
+        nameMatch = _kStaticLocalNameRe.search(statement.group(1))
+        if nameMatch is not None and re.search(rf"\breturn\s+\*?\s*{nameMatch.group(1)}\s*;", body[statement.end():]) is not None:
+            return True
+    return False
+
+
+def findShapeSingletons(code: str) -> list[tuple[int, str, str, str]]:
+    """
+    이름이 무엇이든 단일체 창구인 모양(위 `_kStaticOwnReferenceRe` · `_kReferenceAccessorBodyRe`)을 (위치, 클래스 이름, 함수 이름, 모양 설명)으로 모은다.
+    `static … getInstance(` · `static … &get()` 은 `_kStaticGetInstanceRe` 가 이미 센다 — 부른 쪽이 그 자리에 든 것을 걸러낸다.
+    """
+    listHit: list[tuple[int, str, str, str]] = []
+    for match in _kStaticOwnReferenceRe.finditer(code):
+        functionName = match.group(2)
+        if functionName in ("get", "getInstance"):
+            continue
+        className = classNameAtInternal(code, match.start())
+        typeText = re.sub(r"<[^<>]*>", "", match.group(1))
+        typeWords = re.findall(r"\w+", typeText)
+        # 읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`, 링크 때 목록의 머리)는 섞인 상태를 내주는 창구가 아니라 값 · 목록 머리다.
+        if className != "" and typeWords and typeWords[-1] == className and "const" not in typeWords and "*" not in typeText:
+            listHit.append((match.start(2), className, functionName, "자기 타입의 참조를 돌려주는 정적 멤버"))
+    setSeen = {offset for offset, _, _, _ in listHit}
+    for match in _kReferenceAccessorBodyRe.finditer(code):
+        openOffset = match.end() - 1
+        if match.start(1) in setSeen:
+            continue
+        declarationHead = code[max(code.rfind(";", 0, match.start()), code.rfind("{", 0, match.start()), code.rfind("}", 0, match.start())) + 1:match.start()]
+        if re.search(r"\bconst\b", declarationHead) is not None:
+            continue   # 읽기 전용 참조를 돌려주는 함수 안 정적 지역은 늦게 만드는 상수다
+        if returnsStaticLocal(code[openOffset + 1:findBlockEnd(code, openOffset)]):
+            listHit.append((match.start(1), classNameAtInternal(code, match.start(1)), match.group(1), "함수 안 정적 지역을 참조로 돌려주는 접근자"))
+    return listHit
+
+
 def findSingletons(relative: str, text: str, code: str) -> list[str]:
     gate = CheckServiceAccessGate
     listOriginalLine = text.splitlines()
@@ -128,6 +203,16 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
         owner = typeName or "(클래스 밖)"
         listViolation.append(f"{relative}:{lineNumber}: [{_kSingletonCategory}] {owner}::{'get' if match.group(0).rstrip().endswith(')') else 'getInstance'}() — 전역 단일체입니다. "
                              f"새 서비스는 서브시스템으로 만들어 범위에 넣으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
+    listNamed = [match.span() for match in _kStaticGetInstanceRe.finditer(code)]
+    for offset, className, functionName, shape in findShapeSingletons(code):
+        if any(start <= offset < end for start, end in listNamed):
+            continue
+        lineNumber = lineOfInternal(code, offset)
+        if className in gate.mapExemption:   # 클래스 밖의 자유 함수는 예외 표에 올릴 수 없다(열쇠가 타입 이름이다)
+            gate.useExemption(className)
+            continue
+        listViolation.append(f"{relative}:{lineNumber}: [{_kSingletonCategory}] {className + '::' if className else ''}{functionName}() — 전역 단일체입니다({shape}). "
+                             f"이름이 달라도 단일체 창구입니다. 새 서비스는 서브시스템으로 만들어 범위에 넣으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
     for match in _kStaticActiveWindowRe.finditer(code):
         typeName = classNameAtInternal(code, match.start())
         if typeName == "":
@@ -175,7 +260,7 @@ class CheckServiceAccessGate(LintGate):
         "      engine::getSubsystem<TaskManager>()      game::findSubsystem<T>()      editor::findSubsystem<T>()      GameObjectManager::getSubsystem<T>()\n"
         "  새 서비스는 전역 단일체(static getInstance())가 아니라 서브시스템으로 만들어 범위에 넣습니다.\n"
         "  \"지금 도는 것\" 을 정적 포인터로 내주는 창구(static T* findActive())도 두지 않습니다 — 소유자가 범위에 빌려 겁니다(SubsystemScope::bind).\n"
-        "  정말 단일체가 필요하면 Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption] 에 타입 이름과 이유를 적습니다."
+        "  정말 단일체가 필요하면 Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption] 에 타입 이름과 예외 종류([exemption_kind] 의 키)를 적습니다."
     )
     selfTestCases = [
         {
@@ -200,6 +285,20 @@ class CheckServiceAccessGate(LintGate):
             },
         },
         {
+            "name": "이름을 바꾼 단일체(instance) — 자기 타입의 참조를 돌려주는 정적 멤버",
+            "expectedViolation": "Source/Probe/ProbeInstance.h:4: [ServiceAccess/Singleton] ProbeInstance::instance()",
+            "files": {
+                "Source/Probe/ProbeInstance.h": "class ProbeInstance\n{\npublic:\n    static ProbeInstance& instance();\n};\n",
+            },
+        },
+        {
+            "name": "이름을 바꾼 단일체(shared) — 함수 안 정적 지역을 돌려주는 자유 함수",
+            "expectedViolation": "Source/Probe/ProbeShared.h:2: [ServiceAccess/Singleton] shared()",
+            "files": {
+                "Source/Probe/ProbeShared.h": "struct Cache;\ninline Cache& shared()\n{\n    static Cache s_cache;\n    return s_cache;\n}\n",
+            },
+        },
+        {
             "name": "정적 활성 창구",
             "expectedViolation": "Source/Probe/ProbeActive.h:4: [ServiceAccess/ActiveWindow] ProbeActive::findActive()",
             "files": {
@@ -214,6 +313,18 @@ class CheckServiceAccessGate(LintGate):
             },
         },
     ]
+
+    def beginRun(self) -> int:
+        """기반의 확인에 더해, 예외의 이유가 종류 표 안의 키인지 봅니다(표 밖 키는 검사가 서지 않는다 — 종료 2)."""
+        returnCode = super().beginRun()
+        if returnCode != ExitCode.Passed:
+            return returnCode
+        listUnknown = findUnknownExemptionKinds(self.mapExemption, _kMapReasonKind)
+        if listUnknown:
+            print(f"[{self.name}] 예외 종류가 표 밖입니다: {', '.join(listUnknown)} — 아는 종류: {', '.join(_kMapReasonKind)} "
+                  f"(Scripts/lint/rules/CheckServiceAccess.toml 의 [exemption_kind])", file=sys.stderr)
+            return ExitCode.CheckInvalid
+        return ExitCode.Passed
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools 전체)")

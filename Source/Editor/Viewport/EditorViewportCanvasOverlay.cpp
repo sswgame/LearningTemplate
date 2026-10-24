@@ -149,7 +149,8 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorViewportCanvasOverlay::EditorViewportCanvasOverlay()
-        : _rulerStartWorld{ 0.0f, 0.0f, 0.0f }
+        : _gridStats{}
+        , _rulerStartWorld{ 0.0f, 0.0f, 0.0f }
         , _rulerEndWorld{ 0.0f, 0.0f, 0.0f }
         , _bRulerActive{ SW_FALSE }
         , _reserved{ 0 }
@@ -267,7 +268,7 @@ namespace sw::editor
 
         const EditorGridLevel level = EditorGridUtil::selectLevel( viewHeight );
 
-        EditorGridStats& stats     = EditorGridStats::get();
+        EditorGridStats& stats     = _gridStats;
         stats._step                = level._step;
         stats._cameraPos           = cameraPosition;
         stats._majorLineCount      = 0;

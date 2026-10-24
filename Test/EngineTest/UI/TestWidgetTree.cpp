@@ -63,7 +63,7 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
     SW_EXPECT_TRUE( tree.findWidget<sw::uitest::TestBoxWidget>( "a" ) == pReattached );
 }
 
-/** @brief [WidgetTreeTest] 루트 > 고정 크기 패널 > 박스: 박스의 kLayout 은 고정 패널에서 멈춘다 — 더러운 뿌리 = 그 패널, 루트에는 kChildLayout 이 없다 */
+/** @brief [WidgetTreeTest] 루트 > 고정 크기 패널 > 박스: 박스의 kLayout 은 고정 패널에서 멈춘다 — 더러운 루트 = 그 패널, 루트에는 kChildLayout 이 없다 */
 SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
 {
     sw::WidgetTree   tree;
@@ -81,7 +81,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
     SW_EXPECT_TRUE( ( pFixed->getDirtyFlags() & sw::WidgetDirty::kChildLayout ) != 0 );
     SW_EXPECT_EQUAL( 0u, pRoot->getDirtyFlags() & sw::WidgetDirty::kChildLayout );
 
-    // 같은 갈래가 다시 더러워져도 뿌리는 하나다.
+    // 같은 분기가 다시 더러워져도 루트는 하나다.
     pBox->invalidate( sw::WidgetDirty::kLayout );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
 
@@ -93,7 +93,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
     SW_EXPECT_EQUAL( pRoot->getID(), tree.getLayoutDirtyRoots()[0] );
 }
 
-/** @brief [WidgetTreeTest] 그리기만 바뀌면 레이아웃 뿌리는 없고 그리기 목록에 하나 — 불투명도도 그리기 쪽이고, 렌더 변환은 그 위젯만 다시 놓는다(재기 없음) */
+/** @brief [WidgetTreeTest] 그리기만 바뀌면 레이아웃 루트는 없고 그리기 목록에 하나 — 불투명도도 그리기 쪽이고, 렌더 변환은 그 위젯만 다시 놓는다(재기 없음) */
 SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
 {
     sw::WidgetTree   tree;
@@ -123,7 +123,7 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getPaintDirtyWidgets().size() ) );
 }
 
-/** @brief [WidgetTreeTest] 보임이 바뀌면 보수적으로 레이아웃 — Collapsed 로도, Hidden → Visible 로도 레이아웃 뿌리가 생긴다 */
+/** @brief [WidgetTreeTest] 보임이 바뀌면 보수적으로 레이아웃 — Collapsed 로도, Hidden → Visible 로도 레이아웃 루트가 생긴다 */
 SW_TEST_CASE( WidgetTreeTest, CollapsedToggleIsLayoutDirty )
 {
     sw::WidgetTree   tree;

@@ -1368,7 +1368,7 @@ SW_TEST_CASE( ResourcePakTest, WriterLayoutMatchesTheReader )
 
     sw::PackHeader header{};
     SW_ASSERT_TRUE( sw::readPackHeaderFromDisk( packPath, header ) );
-    // 패킹된 구조체의 필드는 참조로 넘기지 않는다 — 값으로 꺼내 견준다.
+    // 패킹된 구조체의 필드는 참조로 넘기지 않는다 — 값으로 꺼내 비교한다.
     const uint64 indexOffset = header._indexOffset;
     const uint32 fileCount   = header._fileCount;
     const uint32 dlcAppID    = header._dlcAppID;

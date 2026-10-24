@@ -27,7 +27,7 @@ namespace sw
                 return s_arrName;
             }
 
-            /** @brief 고르지 않았을 때의 게임 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 구운 게임입니다. 없으면 빈 문자열입니다. */
+            /** @brief 고르지 않았을 때의 게임 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 베이크한 게임입니다. 없으면 빈 문자열입니다. */
             static string readDefaultName()
             {
 #if defined( SW_SHIPPING )

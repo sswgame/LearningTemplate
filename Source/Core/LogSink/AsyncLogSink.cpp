@@ -264,7 +264,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _listOutput.size() >= _s_kMaxOutput )
             {
-                SW_LOG_WARNING( "로그 출력 장치는 최대 %#개입니다. 더 붙일 수 없어 거절합니다.", _s_kMaxOutput );
+                SW_LOG_WARNING( "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
                 return false;
             }
         }

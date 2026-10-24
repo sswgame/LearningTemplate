@@ -105,8 +105,8 @@ namespace sw
         virtual void releasePhysics( ScenePhysics& physics ) { (void)physics; }
         /**
          * @brief 지금 트랜스폼 자리의 3D 정적 바디(막는 것, 트리거 아님)를 서술해 @p outListBody 에 붙입니다. 시작 전(편집 중)에도 불립니다.
-         * @details `ScenePhysics::createStaticScene3D` 가 오프라인 굽기(라이트 프로브)의 가림 씬을 이것으로 세운다. 움직이는 바디는 내지 않는다 —
-         *          굽기에는 정적인 것만 든다(유니티 Contribute GI · 언리얼 Lightmass 의 Static 과 같은 나눔).
+         * @details `ScenePhysics::createStaticScene3D` 가 오프라인 베이크(라이트 프로브)의 가림 씬을 이것으로 세운다. 움직이는 바디는 내지 않는다 —
+         *          베이크에는 정적인 것만 든다(유니티 Contribute GI · 언리얼 Lightmass 의 Static 과 같은 나눔).
          */
         virtual void appendStaticBodies3D( const ScenePhysics& physics, vector<PhysicsBodyDesc3D>& outListBody ) const
         {

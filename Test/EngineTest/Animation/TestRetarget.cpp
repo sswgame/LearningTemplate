@@ -24,7 +24,7 @@
 
 using namespace sw;
 
-// RetargetTest — 리타깃 프로필(데이터) · 모델 공간 회전 차이 옮기기 · 골반 높이 비 · 다리 IK 목표(발이 미끄러지지 않게) · 오프라인 굽기 · 런타임 컴포넌트,
+// RetargetTest — 리타깃 프로필(데이터) · 모델 공간 회전 차이 옮기기 · 골반 높이 비 · 다리 IK 목표(발이 미끄러지지 않게) · 오프라인 베이크 · 런타임 컴포넌트,
 // 그리고 KayKit 기사 클립을 본 비율을 건 해골 스켈레톤으로.
 
 namespace
@@ -307,6 +307,66 @@ SW_TEST_CASE( RetargetTest, BoneMapAndSameNamesTransferWithoutChains )
 }
 
 /**
+ * @brief [RetargetTest] 리타깃 포즈(`target_pose`) — 대상 본을 부모 공간에서 돌려 레퍼런스로 삼고(원본이 레퍼런스 그대로면 대상은 그 포즈), 쓰기 · 읽기가 같은 줄을 돌려주며,
+ *        겹친 본은 읽기 오류, 없는 본은 묶기 오류다
+ */
+SW_TEST_CASE( RetargetTest, TargetPoseTurnsTheTargetReferenceAndRoundTrips )
+{
+    const Skeleton  source = test::makeChainSkeleton( 3 );
+    RetargetProfile profile;
+    SW_ASSERT_TRUE( profile.parseXML( R"(<RetargetProfile translation="Copy">
+	<root source="bone0" target="bone0" />
+	<pelvis source="bone0" target="bone0" />
+	<chains>
+		<item name="Arm"><source><item>bone1</item><item>bone2</item></source><target><item>bone1</item><item>bone2</item></target></item>
+	</chains>
+	<target_pose><item bone="bone1" rotation="0,0,90" /></target_pose>
+</RetargetProfile>)",
+                                      "pose.retarget.xml" ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( profile.getTargetPose().size() ) );
+    SW_EXPECT_NEAR_EQUAL( 90.0f, profile.getTargetPose()[0]._rotationDegrees._z, 1e-4f );
+
+    // 원본이 레퍼런스 그대로면 대상은 레퍼런스에 리타깃 포즈를 얹은 자세다 — 본 2 는 본 1 둘레로 돌아 곧게 서 있지 않다.
+    PoseRetargeter retargeter;
+    SW_ASSERT_TRUE( retargeter.initialize( profile, source, source, nullptr ) );
+    Pose sourcePose;
+    sourcePose.setToReference( source );
+    Pose targetPose;
+    retargeter.retarget( sourcePose, targetPose );
+    vector<float4x4> listTarget;
+    TestRetargetInternal::computeModel( source, targetPose, listTarget );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( listTarget[2].getTranslation()._x ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listTarget[2].getTranslation()._y, 1e-4f );
+
+    // 넘겨받은 덮어쓰기 위에도 얹는다 — 원본 레퍼런스는 그대로다(복사해 쓴다).
+    Pose reference;
+    reference.setToReference( source );
+    PoseRetargeter overridden;
+    SW_ASSERT_TRUE( overridden.initialize( profile, source, source, &reference ) );
+    vector<float4x4> listReference;
+    TestRetargetInternal::computeModel( source, reference, listReference );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listReference[2].getTranslation()._x, 1e-4f );
+
+    // 쓴 글을 다시 읽으면 같은 줄이다.
+    RetargetProfile copy;
+    SW_ASSERT_TRUE( copy.parseXML( profile.toXML(), "pose.copy.retarget.xml" ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( copy.getTargetPose().size() ) );
+    SW_EXPECT_TRUE( copy.getTargetPose()[0]._bone == hashed_string( "bone1" ) );
+    SW_EXPECT_NEAR_EQUAL( 90.0f, copy.getTargetPose()[0]._rotationDegrees._z, 1e-4f );
+
+    test::ScopedDefensiveTestLog expected( "duplicate and unknown target pose bones are rejected" );
+    RetargetProfile              duplicate;
+    SW_EXPECT_FALSE( duplicate.parseXML( R"(<RetargetProfile><root source="r" target="r" /><pelvis source="h" target="h" /><chains />
+	<target_pose><item bone="a" rotation="0,0,1" /><item bone="a" rotation="0,0,2" /></target_pose></RetargetProfile>)",
+                                         "duplicate.retarget.xml" ) );
+    profile.getTargetPoseForEdit().push_back( RetargetPoseBone{
+        hashed_string( "Tail" ), float3{ 0.0f, 0.0f, 10.0f }
+    } );
+    PoseRetargeter unknown;
+    SW_EXPECT_FALSE( unknown.initialize( profile, source, source, nullptr ) );
+}
+
+/**
  * @brief [RetargetTest] 다리가 1.5 배 긴 스켈레톤(본 비율) — 골반 · 발 움직임이 골반 높이 비만큼 커지고 IK 목표가 발을 그 자리에 정확히 둔다. IK 를 끄면 어긋난다
  */
 SW_TEST_CASE( RetargetTest, LongerLegsKeepFeetOnScaledStride )
@@ -355,7 +415,7 @@ SW_TEST_CASE( RetargetTest, LongerLegsKeepFeetOnScaledStride )
 }
 
 /**
- * @brief [RetargetTest] 오프라인 굽기 — 구운 클립을 샘플한 포즈가 런타임 리타깃과 같고, 알림 · 커브 · 반복 · 루트 모션 트랙이 대상으로 옮겨진다
+ * @brief [RetargetTest] 오프라인 베이크 — 베이크한 클립을 샘플한 포즈가 런타임 리타깃과 같고, 알림 · 커브 · 반복 · 루트 모션 트랙이 대상으로 옮겨진다
  */
 SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
 {
@@ -533,7 +593,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
 }
 
 /**
- * @brief [RetargetTest] 파일 굽기(`App --bake-retarget` 의 몸) — 기사 걷기를 프로필의 해골 하수인 스켈레톤 트랙으로 구워 쓰고, 다시 읽은 클립이 같은 길이 · 하수인 본 이름 트랙이다
+ * @brief [RetargetTest] 파일 베이크(`App --bake-retarget` 의 몸) — 기사 걷기를 프로필의 해골 하수인 스켈레톤 트랙으로 베이크해 쓰고, 다시 읽은 클립이 같은 길이 · 하수인 본 이름 트랙이다
  */
 SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
 {

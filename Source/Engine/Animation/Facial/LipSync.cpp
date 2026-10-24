@@ -20,7 +20,7 @@ namespace sw
     {
         struct LipSyncInternal
         {
-            /// 포먼트를 잴 때 솎아 낼 목표 표본율입니다(포먼트는 4 kHz 아래라 그 두 배 남짓이면 된다).
+            /// 포먼트를 측정할 때 솎아 낼 목표 표본율입니다(포먼트는 4 kHz 아래라 그 두 배 남짓이면 된다).
             static constexpr uint32 kFormantTargetRate = 16000;
             /// LPC 차수의 상한입니다(표본율 kHz + 2 가 관례 — 16 kHz 면 18).
             static constexpr uint32 kMaxLpcOrder = 24;
@@ -30,7 +30,7 @@ namespace sw
             static constexpr float32 kFormantStepHz = 20.0f;
             /// 프리엠퍼시스 계수입니다(고역을 올려 둘째 포먼트가 묻히지 않게).
             static constexpr float32 kPreEmphasis = 0.97f;
-            /// 파열음 터짐을 재는 창(초)입니다 — 터짐은 수 ms 안에 오르고 모음의 시작은 수십 ms 에 걸쳐 오른다. 성대 한 주기(남성 약 8 ms)보다 길어야
+            /// 파열음 터짐을 측정하는 창(초)입니다 — 터짐은 수 ms 안에 오르고 모음의 시작은 수십 ms 에 걸쳐 오른다. 성대 한 주기(남성 약 8 ms)보다 길어야
             /// 유성음의 주기마다 출렁이는 에너지를 터짐으로 보지 않는다(2 ms 창은 합성 모음의 첫 프레임을 파열음으로 봤다).
             static constexpr float32 kOnsetWindowSeconds = 0.01f;
 
@@ -482,7 +482,7 @@ namespace sw
         vector<float32> listScore( visemeCount );
         outTrack._listWeight.assign( frameCount * visemeCount, 0.0f );
         float32 previousFrameRms = 0.0f; // 클립 앞은 무음이다
-        float32 previousOnsetRms = 0.0f; // 앞 프레임의 마지막 짧은 창(터짐이 프레임 경계에 걸쳐도 잰다)
+        float32 previousOnsetRms = 0.0f; // 앞 프레임의 마지막 짧은 창(터짐이 프레임 경계에 걸쳐도 측정한다)
         for ( size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             const size_t begin = frameIndex * frameSamples;
@@ -535,7 +535,7 @@ namespace sw
                 arrShape[bandIndex] = bandSum > 0.0 ? static_cast<float32>( arrBandEnergy[bandIndex] / bandSum ) : 0.0f;
             }
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
-            // 유성 프레임(높은 대역이 주가 아닌)은 포먼트를 재 모음 비즘과 견준다 — 대역 셋으로는 가까운 모음(EE · OO 의 낮은 첫 포먼트)을 가르기 어렵다.
+            // 유성 프레임(높은 대역이 주가 아닌)은 포먼트를 재 모음 비즘과 비교한다 — 대역 셋으로는 가까운 모음(EE · OO 의 낮은 첫 포먼트)을 가르기 어렵다.
             // 터짐 · 잡음 프레임의 포락선 봉우리는 성도의 공명이 아니다 — 자음 단서가 있으면 포먼트를 보지 않는다.
             float2     formantHz{ 0.0f, 0.0f };
             const bool bVoiced      = arrShape[2] < settings._unvoicedHighBandRatio && bPlosive == false && bFricative == false;

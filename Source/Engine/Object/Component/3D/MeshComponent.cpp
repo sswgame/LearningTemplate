@@ -313,10 +313,10 @@ namespace sw
 
     void MeshComponent::setFirstPersonView( bool bFirstPerson )
     {
-        const uint8 value = bFirstPerson ? SW_TRUE : SW_FALSE;
-        if ( _bFirstPersonView == value )
+        const uint8 firstPersonFlag = bFirstPerson ? SW_TRUE : SW_FALSE;
+        if ( _bFirstPersonView == firstPersonFlag )
             return;
-        _bFirstPersonView = value;
+        _bFirstPersonView = firstPersonFlag;
         markRenderStateDirty();
     }
 

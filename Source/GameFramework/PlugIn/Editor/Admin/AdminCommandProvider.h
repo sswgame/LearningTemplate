@@ -4,7 +4,7 @@
  * @details 패널은 어느 쪽인지 모른다. 에디터에는 온라인 연결(`OnlineServiceClient`)이 없으므로 기본은 메모리 제공자이고,
  *          운영 도구나 게임이 연결을 만들면 `AdminToolSession::useLiveClient` 로 실제 클라이언트를 건다.
  *          메모리 제공자는 서버 저장 로직(`AdminStoreLogic`, 서버 키트)을 링크하지 않고 같은 규칙의 일부(등급 문지기, 메모와 멱등 키 필수, 회수 잔액 검사, 환불 회수의 빚,
- *          감사 기록)만 흉내 낸다. 서버 쪽 규칙의 정본은 `AdminStoreLogic` 이다.
+ *          감사 기록)만 흉내 낸다. 서버 쪽 규칙의 기준은 `AdminStoreLogic` 이다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -81,7 +81,7 @@ namespace
         config._skillCheckBonus    = 0.01f;
         config._gradeBonus.setValue( hashed_string( "Great" ), 0.1f );
         InteractionProgress generator;
-        generator.initialize( config, &judge, seed );
+        SW_EXPECT_TRUE( generator.initialize( config, &judge, seed ) );
         (void)generator.join( 7 );
         (void)generator.join( 9 );
 
@@ -317,7 +317,7 @@ SW_TEST_CASE( WorldSystemsTest, InteractionScalesWithParticipantsRegressesAndRes
     SW_EXPECT_NEAR_EQUAL( 2.0f, formula.computeParticipantScale( 3 ), 1.0e-6f );
 
     InteractionProgress generator;
-    generator.initialize( config, nullptr, 1 );
+    SW_EXPECT_TRUE( generator.initialize( config, nullptr, 1 ) );
     SW_EXPECT_TRUE( generator.join( 1 ) );
     SW_EXPECT_FALSE( generator.join( 1 ) );
     SW_EXPECT_TRUE( generator.join( 2 ) );
@@ -371,7 +371,7 @@ SW_TEST_CASE( WorldSystemsTest, InteractionScalesWithParticipantsRegressesAndRes
     // 문 따기는 끊기면 처음부터.
     config._bResetOnInterrupt = SW_TRUE;
     InteractionProgress lockpick;
-    lockpick.initialize( config, nullptr, 1 );
+    SW_EXPECT_TRUE( lockpick.initialize( config, nullptr, 1 ) );
     (void)lockpick.join( 4 );
     lockpick.update( 5.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, lockpick.getProgress(), 1.0e-5f );

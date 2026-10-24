@@ -12,7 +12,7 @@
 |---|---|---|
 | P1 | 패널 창구(`IEditorPanelHost::focusPanel` · `maximizePanel`)가 글자 대신 `EditorPanelID`(`Editor/Common/Workspace/EditorPanelID.h`, 명시 생성자)만 받는다. 코어 패널 id(`editorpanel::kSceneView` · `kGameView`)를 그 층에 두고 `SceneViewPanel::kPanelID` · `GameViewPanel::kPanelID` 가 그 상수를 쓴다 | 끝남 |
 | P2 | GameFramework 에디터 플러그인 다섯 패널(`AdminToolPanel` · `GimmickGraphPanel` · `CharacterEditorPanel` · `MeshModifiersPanel` · `ParkLayoutPanel`)에 `kPanelID` 를 두고 등록 · 열기를 `setPanelOpen<T>()` 로. 자체 테스트의 창 제목 글자는 `SceneViewPanel::kPanelTitle` · `ContentBrowserPanel::kPanelTitle` 로 | 끝남 |
-| P3 | 같은 모양 마저 옮기기 — 자체 테스트가 `ImGui::FindWindowByName` 에 넘기던 창 제목 글자(`"Hierarchy"` · `"Game"` · `"Inspector"` · `"Scene"` · `"Park Layout"` · `"GM Tool"` · `"Gimmick Graph"`)를 각 패널의 `kPanelTitle`(`getPanelTitle()` 도 같은 상수)로. 실행 중 id 를 받는 `EditorPanelManager::setPanelOpen( string_view, bool )`(콘솔 인자 · 레이아웃)은 남긴다 | 끝남(빌드 미확인) |
+| P3 | 같은 모양 마저 옮기기 — 자체 테스트가 `ImGui::FindWindowByName` 에 넘기던 창 제목 글자(`"Hierarchy"` · `"Game"` · `"Inspector"` · `"Scene"` · `"Park Layout"` · `"GM Tool"` · `"Gimmick Graph"`)를 각 패널의 `kPanelTitle`(`getPanelTitle()` 도 같은 상수)로. 실행 중 id 를 받는 `EditorPanelManager::setPanelOpen( string_view, bool )`(콘솔 인자 · 레이아웃)은 남긴다 | 끝남(코드). 2026-10-23 Debug `full-build` · `EditorTest` 474 개 통과는 이 옮김 앞의 값이라, 옮긴 뒤의 빌드와 에디터 자체 테스트 실행은 확인 대기: 매니페스트 id `panel-id-literals-p3` |
 
 ## 남은 것
 

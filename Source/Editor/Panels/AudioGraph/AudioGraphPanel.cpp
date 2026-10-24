@@ -328,7 +328,7 @@ namespace sw::editor
                 _editGraph._output = node._name;
                 _bEditDirty        = true;
             }
-            // 이름을 고치면 다른 노드의 입력 · 그래프 출력도 같은 이름을 따라간다(이름이 연결의 정본이다).
+            // 이름을 고치면 다른 노드의 입력 · 그래프 출력도 같은 이름을 따라간다(이름이 연결의 기준이다).
             const hashed_string      previousName = node._name;
             EditorPropertyGridTarget nodeTarget{};
             nodeTarget._pInstance = &node;

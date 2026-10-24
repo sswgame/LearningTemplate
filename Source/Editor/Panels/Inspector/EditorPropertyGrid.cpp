@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
@@ -754,8 +755,10 @@ namespace sw::editor
         if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewKeyHint" ), keyText ) )
         {
             // 키를 키 타입으로 읽어 본다. 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다.
-            void* pKey   = Memory::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
-            void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
+            const MemoryBlock keyBlock   = MemoryBlock::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
+            const MemoryBlock valueBlock = MemoryBlock::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
+            void* const       pKey       = keyBlock.get();
+            void* const       pValue     = valueBlock.get();
             mapWrapper.defaultConstructKey( pKey );
             mapWrapper.defaultConstructValue( pValue );
             if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
@@ -776,8 +779,6 @@ namespace sw::editor
             }
             mapWrapper.destroyKey( pKey );
             mapWrapper.destroyValue( pValue );
-            Memory::freeAligned( pKey );
-            Memory::freeAligned( pValue );
         }
         ImGui::TreePop();
     }

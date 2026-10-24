@@ -73,7 +73,14 @@ namespace sw
         void addRound( const PartyRoundDef& round ) { _listRound.push_back( round ); }
         /** @brief 순위 점수를 정합니다([0] 이 1위). 목록보다 낮은 순위는 0점이며, 다음 `start` 부터 적용합니다. */
         void setPlacementPoints( const vector<int32>& listPoint ) { _seriesSettings._listPlacementPoint = listPoint; }
-        void setWinScore( int32 winScore ) { _seriesSettings._winScore = winScore > 0 ? winScore : 1; }
+        /** @brief 우승 점수를 정합니다. 1 보다 작으면 거절하고 false 를 반환합니다(1 로 올려 대신 받지 않는다). 다음 `start` 부터 적용합니다. */
+        [[nodiscard]] bool setWinScore( int32 winScore )
+        {
+            if ( winScore < 1 )
+                return false;
+            _seriesSettings._winScore = winScore;
+            return true;
+        }
 
         /** @brief 2명 이상으로 점수표를 비우고 첫 라운드를 엽니다. 라운드가 없거나 사람이 모자라면 false 를 반환합니다. */
         [[nodiscard]] bool start( int32 playerCount );

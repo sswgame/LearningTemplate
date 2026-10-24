@@ -67,6 +67,29 @@ namespace sw
         atomic<uint64>   s_clockPacked{ 0 };
         constexpr uint64 kClockFrameBit   = uint64( 1 ) << 63;
         constexpr uint64 kClockNumberMask = kClockFrameBit - 1;
+
+        /**
+         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_REPORT`)를 로그 줄로 넘깁니다. 싱크가 아직 없으면 `SW_LOG_*` 처럼 버리지 않고 stderr 에 남깁니다.
+         */
+        void forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept
+        {
+            const LogLevel logLevel = level == internal::LowLevelReportLevel::Error ? LogLevel::Error : LogLevel::Warning;
+            if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
+            {
+                std::fprintf( stderr, "[%s] %s: %s\n", logLevel == LogLevel::Error ? "Error" : "Warning", pCaller, pMessage );
+                std::fflush( stderr );
+                return;
+            }
+            if ( Logger::shouldLog( logLevel ) )
+                Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, __FILE__, __LINE__ );
+        }
+
+        /// @brief 기동 때 보고자를 건다. 포인터 하나를 상수 초기화된 원자에 넣을 뿐이라 정적 초기화 순서를 타지 않는다.
+        [[maybe_unused]] const bool s_bLowLevelReporterInstalled = []() noexcept
+        {
+            internal::setLowLevelReporter( &forwardLowLevelReport );
+            return true;
+        }();
     } // namespace
 } // namespace sw
 

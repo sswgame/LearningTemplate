@@ -14,7 +14,7 @@
  *            서버가 매기고 게임의 스폰 복제가 클라이언트에 묶은 생성 번호다. 번호가 없는 오브젝트(묶지 않은 생성 오브젝트, 이름이 겹친 씬 오브젝트)가 참가한 세션은
  *            복제할 수 없어 서버가 오류를 남기고 보내지 않는다 — 다른 오브젝트에 조용히 묶지 않는다.
  *          - **롤백.** 소유 상태(`ReplicationServer::setOwnerState`)에 세션을 실으려면 게임이 `PairedAnimationNetState::write` 의 바이트를 싣고, 되감은 뒤
- *            `PairedAnimationReplicationClient::applyState` 를 부른다. 같은 id 가 재생 중이면 중단하고 다시 복원한다(서버 상태가 정본이다).
+ *            `PairedAnimationReplicationClient::applyState` 를 부른다. 같은 id 가 재생 중이면 중단하고 다시 복원한다(서버 상태가 기준이다).
  *          - 트랜스폼은 서버 권위다. 복원은 정렬(`snap` · `warp`)을 하지 않고 트랜스폼 복제가 맞춘다.
  */
 #pragma once
@@ -162,7 +162,7 @@ namespace sw
         void initialize( GameObjectManager* pManager );
         /**
          * @brief 복제 상태로 세션을 복원합니다(게임 스레드, 틱 밖). 받은 메시지와 롤백(되감은 뒤 소유 상태)이 함께 씁니다.
-         * @details 같은 id 가 재생 중이면 먼저 중단하고 복원한다(서버 상태가 정본). 에셋을 읽지 못하면 `AssetNotLoaded`, 역할 수가 에셋과 다르면 `InvalidSnapshot`,
+         * @details 같은 id 가 재생 중이면 먼저 중단하고 복원한다(서버 상태가 기준). 에셋을 읽지 못하면 `AssetNotLoaded`, 역할 수가 에셋과 다르면 `InvalidSnapshot`,
          *          번호의 오브젝트가 없으면 `ParticipantMissing` 이고 모두 오류를 남긴다. 그 밖은 `PairedAnimationSystem::restoreSession` 의 결과다.
          */
         [[nodiscard]] PairedAnimationStartResult applyState( const PairedAnimationNetState& state );

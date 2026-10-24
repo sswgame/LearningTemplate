@@ -25,14 +25,14 @@ namespace test
 namespace test
 {
     /**
-     * @brief 두 이미지를 화소마다 견준 결과입니다(`RHITestImage::compare`).
-     * @details GPU 테스트가 두 판(켬 · 끔, 직렬 · 병렬, 백엔드 · 기준)을 견줄 때의 형식이다. 평균 색 · 평균 밝기의 차이는 조명 식 · 톤맵이 바뀔
+     * @brief 두 이미지를 화소마다 비교한 결과입니다(`RHITestImage::compare`).
+     * @details GPU 테스트가 두 판(켬 · 끔, 직렬 · 병렬, 백엔드 · 기준)을 비교할 때의 형식이다. 평균 색 · 평균 밝기의 차이는 조명 식 · 톤맵이 바뀔
      *          때마다 여유가 흔들리고(평균 (R − B) 차이 16 → 15 로 진 `PostProcessOffViewSkipsThePostChain`), 넓은 영역의 변화와 좁은 영역의 큰
      *          변화를 구분하지 못한다. "몇 화소가 얼마나 달라졌나" 는 바뀐 자리의 넓이를 직접 센다.
      */
     struct RHITestImageDifference
     {
-        uint32 _pixelCount{ 0 };     ///< 견준 화소 수 — 0 이면 크기가 달랐거나 빈 이미지라 견주지 못했다
+        uint32 _pixelCount{ 0 };     ///< 비교한 화소 수 — 0 이면 크기가 달랐거나 빈 이미지라 비교하지 못했다
         uint32 _differingCount{ 0 }; ///< 색 거리(`RHITestImage::getColorDistance`)가 기준 이상인 화소 수
         uint32 _brighterCount{ 0 };  ///< 그 가운데 둘째 이미지가 더 밝은(R + G + B 가 큰) 화소 수
         uint32 _maxDistance{ 0 };    ///< 가장 큰 색 거리
@@ -61,8 +61,8 @@ namespace test
         [[nodiscard]] bool readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName );
         /**
          * @brief 프레임 렌더러의 Present 캡처(화면에 나간 그림, `constant::kBackBufferFormat`)를 되읽습니다. 캡처가 꺼져 있거나 실패하면 false 이고 이미지는 빈다.
-         * @details Present 캡처를 바이트 배열로 들고 채널마다 견주면 알파 · 행 끝 여백까지 세고 형식을 케이스가 알아야 한다. 두 판은 이 이미지로 읽어
-         *          `compare` 로 견준다.
+         * @details Present 캡처를 바이트 배열로 들고 채널마다 비교하면 알파 · 행 끝 여백까지 세고 형식을 케이스가 알아야 한다. 두 판은 이 이미지로 읽어
+         *          `compare` 로 비교한다.
          */
         [[nodiscard]] bool readPresent( sw::FrameRenderer& renderer );
         /**
@@ -85,7 +85,7 @@ namespace test
         sw::RHIFormat getFormat() const { return _format; }
 
         /**
-         * @brief 첫 화소(배경)와 색(R · G · B)이 다른 화소 수입니다. 0 이면 배경뿐이라 두 판을 견줘도 뜻이 없다.
+         * @brief 첫 화소(배경)와 색(R · G · B)이 다른 화소 수입니다. 0 이면 배경뿐이라 두 판을 비교해도 뜻이 없다.
          * @details "같은 그림" 의 허용을 화면 전체가 아니라 이 수에 비례해 둔다 — 그려진 것이 화면의 1 % 도 안 되는 그림(입자)에 화면 1 % 의
          *          허용을 주면 그려진 것이 모두 달라도 통과한다.
          */
@@ -95,8 +95,8 @@ namespace test
         static uint32 getColorDistance( const Rgba8& lhs, const Rgba8& rhs );
 
         /**
-         * @brief 두 이미지를 화소마다 견줍니다 — 색 거리가 @p minDistance 이상인 화소를 다르다고 셉니다. 크기가 다르면 `_pixelCount` 가 0 입니다.
-         * @details @p minDistance 는 같은 경로의 반올림 흔들림(1~2)을 넘을 만큼만 둔다. 두 판을 견주는 판정은 평균이 아니라 이 결과로 한다.
+         * @brief 두 이미지를 화소마다 비교합니다 — 색 거리가 @p minDistance 이상인 화소를 다르다고 셉니다. 크기가 다르면 `_pixelCount` 가 0 입니다.
+         * @details @p minDistance 는 같은 경로의 반올림 흔들림(1~2)을 넘을 만큼만 둔다. 두 판을 비교하는 판정은 평균이 아니라 이 결과로 한다.
          */
         static RHITestImageDifference compare( const RHITestImage& lhs, const RHITestImage& rhs, uint32 minDistance );
         /** @brief `compare` 를 사각형 [@p left, @p right) × [@p top, @p bottom) 안에서만 합니다. 사각형이 이미지 밖으로 나가면 `_pixelCount` 가 0 입니다. */

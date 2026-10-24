@@ -25,7 +25,7 @@
 | `-cook-all` | 플래그(`-이름`) | 씬 쿠킹(`-cook-scenes`)과 팩 쿠킹(`-cook-packs`)을 차례로 하고 끝낸다 — 빌드의 CookAssets 타깃과 배포 패키징이 부른다 | `COOK_ALL` |
 | `-cooked-dir` | 글 값(`-이름=값`) | `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더 | `COOKED_DIR` |
 | `-pack-dir` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더 | `PACK_DIR` |
-| `-pack-build` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 목록을 남기지 않는다(패치를 적용할 수 없는 빌드). `-make-patch` 에서는 새 빌드 번호다 | `PACK_BUILD` |
+| `-pack-build` | 글 값(`-이름=값`) | `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching="none"` 기록을 남긴다(패치를 쓰지 않는 빌드). `-make-patch` 에서는 새 빌드 번호다 | `PACK_BUILD` |
 | `-make-patch` | 플래그(`-이름`) | 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base=<파일>.packbuild.xml`)의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `-patch-dir` 에 만들고 끝낸다. 새 빌드 번호는 `-pack-build` 다 | `MAKE_PATCH` |
 | `-patch-base` | 글 값(`-이름=값`) | `-make-patch` 의 이전 빌드 내용 목록 파일 | `PATCH_BASE` |
 | `-patch-dir` | 글 값(`-이름=값`) | `-make-patch` 가 패치를 쓸 폴더 | `PATCH_DIR` |

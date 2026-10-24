@@ -210,7 +210,8 @@ namespace sw
         , _currentFile{}
         , _currentScene{}
         , _pSettings{ nullptr }
-        , _pUploader{ nullptr }
+        , _nullUploader{}
+        , _pUploader{ &_nullUploader }
         , _sessionSeconds{ 0.0 }
         , _flushTimer{ 0.0f }
         , _currentFileBytes{ 0 }
@@ -418,10 +419,10 @@ namespace sw
         setConsent( StringUtil::parseBool( value, false ) );
     }
 
-    void TelemetryService::setUploader( ITelemetryUploader* pUploader )
+    void TelemetryService::setUploader( ITelemetryUploader& uploader )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _pUploader = pUploader;
+        _pUploader = &uploader;
     }
 
     TelemetryRecordResult TelemetryService::record( const TelemetryEvent& event )
@@ -758,7 +759,7 @@ namespace sw
 
     void TelemetryService::uploadClosedLocked()
     {
-        ITelemetryUploader& uploader = _pUploader != nullptr ? *_pUploader : static_cast<ITelemetryUploader&>( NullTelemetryUploader::get() );
+        ITelemetryUploader& uploader = *_pUploader;
         while ( _listClosedFile.empty() == false )
         {
             TelemetryUploadBatch batch;

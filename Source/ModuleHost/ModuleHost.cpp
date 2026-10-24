@@ -64,6 +64,7 @@ namespace sw
         , _listGameSavedState{}
         , _listGameScopeModule{}
         , _frameState{}
+        , _bShuttingDown{ false }
     {
     }
 
@@ -201,7 +202,9 @@ namespace sw
 
         // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
         // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.
+        _bShuttingDown = true;
         suspendModules( ModuleScope::Both, true );
+        _bShuttingDown = false;
 
 #if !defined( SW_SHIPPING )
         // 콜백은 이 객체의 메서드를 가리킨다. 이 객체가 사라지기 전에 해제한다.
@@ -366,10 +369,21 @@ namespace sw
         // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
         if ( engine::areEngineServicesBound() )
         {
-            if ( engine::getSubsystem<TaskManager>().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
+            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            if ( taskManager.waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
             {
-                SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload — marking the LiveReload graph broken.", LiveReloadManager::kModuleDrainTimeoutMs );
-                markReloadGraphBroken( "task fencing timeout before unload" );
+                // 종료 앞이면 리로드가 없으니 그래프를 깨뜨릴 까닭이 없다 — 남은 태스크 수만 남겨 어떤 배경 일이 5 초 넘게 도는지 좁힌다(스택은 `Scripts stacks <pid>`).
+                if ( _bShuttingDown )
+                {
+                    SW_LOG_ERROR( "Task fencing timeout (%# ms) at shutdown — %# task(s) still running; the task manager joins them next.", LiveReloadManager::kModuleDrainTimeoutMs,
+                                  taskManager.getActiveTaskCount() );
+                }
+                else
+                {
+                    SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload (%# task(s) still running) — marking the LiveReload graph broken.",
+                                  LiveReloadManager::kModuleDrainTimeoutMs, taskManager.getActiveTaskCount() );
+                    markReloadGraphBroken( "task fencing timeout before unload" );
+                }
             }
         }
     }

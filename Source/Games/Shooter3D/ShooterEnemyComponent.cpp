@@ -61,7 +61,7 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
-        , _vitality{ ShooterEnemyComponentInternal::makeVitalitySettings( 30.0f ) }
+        , _vitality{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
         , _attackCooldown{}
@@ -77,13 +77,14 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
+    bool ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
     {
+        if ( _vitality.initialize( ShooterEnemyComponentInternal::makeVitalitySettings( health ) ) == false )
+            return false;
         _director = director;
         _position = position;
         _yaw      = yaw;
-        _vitality.initialize( ShooterEnemyComponentInternal::makeVitalitySettings( health ) );
-        _speed = speed;
+        _speed    = speed;
         _attackCooldown.start( _attackInterval * 0.5f );
         _bLaunched = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
@@ -116,6 +117,7 @@ namespace sw
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
             pPawn->requestControlRotation( yaw, 0.0f );
+        return true;
     }
 
     bool ShooterEnemyComponent::applyDamage( float32 amount )
@@ -225,7 +227,7 @@ namespace sw
             }
             case ShooterEnemyPhase::Attacking:
             {
-                // 클립의 맞는 알림이 왔고 손이 닿는 거리면 한 번 맞힌다 — 시각의 정본은 클립 데이터다.
+                // 클립의 맞는 알림이 왔고 손이 닿는 거리면 한 번 맞힌다 — 시각의 기준은 클립 데이터다.
                 if ( _bAttackLanded == SW_FALSE && _bAttackHitEvent == SW_TRUE )
                 {
                     _bAttackLanded = SW_TRUE;

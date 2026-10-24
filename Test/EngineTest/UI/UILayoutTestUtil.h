@@ -102,7 +102,7 @@ namespace sw::test
 
 namespace sw::test
 {
-    /** @brief 트리 하나 + 레이아웃 문맥입니다. 루트를 정하고 자식을 붙인 뒤 `update` → `dump` 로 견줍니다. */
+    /** @brief 트리 하나 + 레이아웃 문맥입니다. 루트를 정하고 자식을 붙인 뒤 `update` → `dump` 로 비교합니다. */
     class UILayoutFixture
     {
     public:

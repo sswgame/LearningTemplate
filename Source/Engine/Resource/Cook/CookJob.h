@@ -51,7 +51,7 @@ namespace sw
     struct CookJobDesc
     {
         string _cookerName;         ///< 쿠커 이름(예: "Scene")
-        uint32 _cookerVersion{ 0 }; ///< 쿠커 형식 버전 — 출력 형식을 바꾸면 올린다. 그 쿠커의 결과가 모두 다시 구워진다
+        uint32 _cookerVersion{ 0 }; ///< 쿠커 형식 버전 — 출력 형식을 바꾸면 올린다. 그 쿠커의 결과가 모두 다시 베이크된다
         string _target;             ///< 대상 플랫폼 · 백엔드(예: "Windows")
         uint64 _settingsHash{ 0 };  ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
     };
@@ -111,13 +111,13 @@ namespace sw
         [[nodiscard]] static bool admitAsyncRead( string_view resourceID );
         /**
          * @brief 찾지 못한 리소스 읽기를 받아들입니다. 이 스레드에 작업이 있으면 해시 0 으로 기록합니다.
-         * @details 없는 파일을 찾은 결과로 출력이 정해질 수 있다 — 그 파일이 생기면 다시 구워야 한다.
+         * @details 없는 파일을 찾은 결과로 출력이 정해질 수 있다 — 그 파일이 생기면 다시 베이크해야 한다.
          */
         static void admitMissingRead( string_view resourceID );
 
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
-         * @details 폴더를 훑어 출력을 정하는 쿠커는 `FileUtil::collectFiles` 대신 이것을 쓴다 — 파일이 생기거나 사라지면 다시 굽는다.
+         * @details 폴더를 훑어 출력을 정하는 쿠커는 `FileUtil::collectFiles` 대신 이것을 쓴다 — 파일이 생기거나 사라지면 다시 베이크한다.
          *          목록 입력의 id 는 받은 폴더 경로 그대로다(리소스 id 로 줄이지 않는다). 쿠커는 절대 경로를 넘긴다.
          */
         static void collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );

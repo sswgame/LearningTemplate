@@ -112,7 +112,7 @@ namespace
         }
 
         /**
-         * @brief 삼각형 하나를 BIN 청크에 담은 GLB 입니다. 씬 뿌리는 표준을 어기고 자식 노드를 적습니다(UniGLTF 모양: 항등 `tmpParent` 아래
+         * @brief 삼각형 하나를 BIN 청크에 담은 GLB 입니다. 씬 루트는 표준을 어기고 자식 노드를 적습니다(UniGLTF 모양: 항등 `tmpParent` 아래
          *        (2, 0, 1.5) 로 옮긴 메시 노드). 다시 쓴 JSON 은 길이가 달라 4 바이트 정렬 채우기를 지납니다.
          */
         static sw::vector<uint8> makeChildRootGlb()
@@ -356,11 +356,11 @@ SW_TEST_CASE( ModelImporterTest, StampTracksSourceChanges )
 }
 
 /**
- * @brief [ModelImporterTest] 씬 뿌리 목록이 자식 노드를 가리키는 비표준 glTF(UniGLTF 내보내기)도 맨 위 조상부터 읽는다 — 부모 변환이 들어간다
+ * @brief [ModelImporterTest] 씬 루트 목록이 자식 노드를 가리키는 비표준 glTF(UniGLTF 내보내기)도 맨 위 조상부터 읽는다 — 부모 변환이 들어간다
  */
 SW_TEST_CASE( ModelImporterTest, SceneRootListingAChildNodeImportsFromItsTopAncestor )
 {
-    // 노드 0 = 부모(이동 (0,0,5)), 노드 1 = 메시 노드(이동 (1,0,0)). 씬 뿌리는 표준을 어기고 자식 1 을 적는다(조상과 겹치는 경우도 섞는다).
+    // 노드 0 = 부모(이동 (0,0,5)), 노드 1 = 메시 노드(이동 (1,0,0)). 씬 루트는 표준을 어기고 자식 1 을 적는다(조상과 겹치는 경우도 섞는다).
     const sw::string sourcePath = test::makeTempPath( "child_scene_root.gltf" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeSceneGltf( R"("scenes": [ { "nodes": [ 1, 0 ] } ],
   "nodes": [ { "children": [ 1 ], "translation": [ 0.0, 0.0, 5.0 ] }, { "mesh": 0, "translation": [ 1.0, 0.0, 0.0 ] } ])" ) ) );
@@ -370,7 +370,7 @@ SW_TEST_CASE( ModelImporterTest, SceneRootListingAChildNodeImportsFromItsTopAnce
         test::ScopedDefensiveTestLog expected( "the non-conforming scene root is fixed up with a warning" );
         SW_ASSERT_TRUE( sw::editor::ModelImporter::readModel( sourcePath, sw::editor::ModelImportRule{}, listVertex ) );
     }
-    // 뿌리를 조상으로 바꾸고 겹친 것을 지워 삼각형은 한 번만 들어간다. 위치 = 부모 · 자식 이동의 합, X 반전.
+    // 루트를 조상으로 바꾸고 겹친 것을 지워 삼각형은 한 번만 들어간다. 위치 = 부모 · 자식 이동의 합, X 반전.
     SW_ASSERT_EQUAL( size_t( 3 ), listVertex.size() );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ -1.0f, 0.0f, 5.0f } ) );
     SW_EXPECT_TRUE( TestModelImporterInternal::containsPosition( listVertex, sw::float3{ -2.0f, 0.0f, 5.0f } ) );
@@ -582,7 +582,7 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, missingRule, result ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::editor::ModelImporter::makeClipDataPath( copiedPath ), R"({ "clips": { "Walking_Z": { "loop": true } } })" ) );
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
-    // 모르는 규칙 키 · 뿌리 키 · 코덱은 설정 오류다.
+    // 모르는 규칙 키 · 루트 키 · 코덱은 설정 오류다.
     sw::editor::ModelImportConfig config;
     SW_EXPECT_FALSE( config.loadFromJSONString( R"({ "rulez": [] })" ) );
     SW_EXPECT_FALSE( config.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
@@ -592,7 +592,7 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
 }
 
 /**
- * @brief [ModelImporterTest] VRM 은 머티리얼마다 본 메시의 구간 · 툰 머티리얼을 낸다 — 삼각형이 머티리얼대로 이어지고, 정점 색에 머티리얼 색을 굽지 않는다(머티리얼이 든다)
+ * @brief [ModelImporterTest] VRM 은 머티리얼마다 본 메시의 구간 · 툰 머티리얼을 낸다 — 삼각형이 머티리얼대로 이어지고, 정점 색에 머티리얼 색을 베이크하지 않는다(머티리얼이 든다)
  * @details 삼각형 두 개를 같은 위치 접근자로 두 프리미티브(머티리얼 0 · 1)가 쓰는 VRM 0.x glTF. 머티리얼 1 은 반투명 MToon 이다.
  */
 SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
@@ -693,8 +693,8 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
 }
 
 /**
- * @brief [ModelImporterTest] 규칙의 `lods` 는 단계마다 원본을 단순화한 LOD 를 `.mesh` 에 싣고(단계가 내려갈수록 삼각형이 줄고 문턱이 작다), 다시 읽으면 메시가 그 단계를 가진다.
- *        비율 · 문턱이 내려가지 않거나 모르는 키는 설정을 거부하고, 스킨 · 구간 메시에 걸린 LOD 규칙은 임포트를 멈춘다(계획 PreloadAndLod P5)
+ * @brief [ModelImporterTest] 규칙의 `lods` 는 단계마다 원본을 단순화한 LOD 를 `.mesh` 에 싣고(단계가 내려갈수록 삼각형이 줄고 임계값이 작다), 다시 읽으면 메시가 그 단계를 가진다.
+ *        비율 · 임계값이 내려가지 않거나 모르는 키는 설정을 거부하고, 스킨 · 구간 메시에 걸린 LOD 규칙은 임포트를 멈춘다(계획 PreloadAndLod P5)
  */
 SW_TEST_CASE( ModelImporterTest, LODRuleSimplifiesStaticMeshIntoLevels )
 {
@@ -734,7 +734,7 @@ SW_TEST_CASE( ModelImporterTest, LODRuleSimplifiesStaticMeshIntoLevels )
     SW_EXPECT_EQUAL( result._mesh._listLOD[1]._listVertex.size(), read._listLOD[1]._listVertex.size() );
     SW_EXPECT_EQUAL( baseVertexCount, read._listVertex.size() );
 
-    // 삼각형 하나짜리 모델은 줄일 수 없다 — 그 단계를 빼고 쓰지 않고(문턱이 어긋난다) 임포트를 멈춘다.
+    // 삼각형 하나짜리 모델은 줄일 수 없다 — 그 단계를 빼고 쓰지 않고(임계값이 어긋난다) 임포트를 멈춘다.
     const sw::string trianglePath = test::makeTempPath( "lod_triangle.gltf" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( trianglePath, TestModelImporterInternal::makeSceneGltf( R"("scenes": [ { "nodes": [ 0 ] } ], "nodes": [ { "mesh": 0 } ])" ) ) );
     {

@@ -112,7 +112,7 @@ namespace sw
         /** @brief 카탈로그, 아이템, 전리품(빌려 옴), 시드, 지형(빌려 옴, nullptr 가능)을 설정하고 상태를 비웁니다. */
         void  initialize( const BrCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain* pTerrain );
         int32 addTeam( const hashed_string& name );
-        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). */
+        /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 −1 입니다. */
         int32 addPlayer( int32 team );
         void  start();
         void  update( float32 deltaTime );
@@ -154,18 +154,18 @@ namespace sw
 
     private:
         bool isValidPlayer( int32 player ) const { return player >= 0 && player < static_cast<int32>( _listPlayer.size() ); }
-        /** @brief 카탈로그 설정으로 사람 하나를 만듭니다(체력, 부활, 장비, 가방). */
-        void initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const;
-        void stepFixed( float32 deltaTime );
-        void processVitality( int32 player );
-        void handleDowned( int32 player, int32 instigator );
-        void handleDeath( int32 player, int32 instigator );
-        void interruptRevive( int32 target, bool bNotify );
-        void finishRevive( int32 target );
-        void resolveTeamWipe( int32 team );
-        void dropSupply();
-        void collectMatchEvents();
-        void pushEvent( BrEvent::Kind kind, int32 player, int32 other, int32 team, int32 value );
+        /** @brief 카탈로그 설정으로 사람 하나를 만듭니다(체력, 부활, 장비, 가방). 체력 설정이 범위 밖이라 거절되면 false 입니다. */
+        [[nodiscard]] bool initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const;
+        void               stepFixed( float32 deltaTime );
+        void               processVitality( int32 player );
+        void               handleDowned( int32 player, int32 instigator );
+        void               handleDeath( int32 player, int32 instigator );
+        void               interruptRevive( int32 target, bool bNotify );
+        void               finishRevive( int32 target );
+        void               resolveTeamWipe( int32 team );
+        void               dropSupply();
+        void               collectMatchEvents();
+        void               pushEvent( BrEvent::Kind kind, int32 player, int32 other, int32 team, int32 value );
 
         vector<BrPlayer>     _listPlayer;
         vector<BrSupplyDrop> _listSupplyDrop;

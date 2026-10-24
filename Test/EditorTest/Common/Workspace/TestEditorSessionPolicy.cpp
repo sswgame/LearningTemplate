@@ -29,7 +29,7 @@ SW_TEST_CASE( EditorSessionPolicyTest, SceneEditsAllowedOnlyWhenStopped )
 {
     SW_EXPECT_TRUE( sw::editor::EditorSessionPolicy::areSceneEditsAllowed( true, false ) );
     SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::areSceneEditsAllowed( false, false ) );
-    SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::areSceneEditsAllowed( true, true ) ); // 굽는 동안(편집을 막는 작업)
+    SW_EXPECT_FALSE( sw::editor::EditorSessionPolicy::areSceneEditsAllowed( true, true ) ); // 베이크하는 동안(편집을 막는 작업)
 }
 
 SW_TEST_CASE( EditorSessionPolicyTest, QuitPromptUsesSceneAndDocumentDirty )

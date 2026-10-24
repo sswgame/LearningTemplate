@@ -40,28 +40,42 @@ namespace sw
         }
     }
 
-    void WesternSurvival::initialize( const WesternCatalog* pCatalog )
+    bool WesternSurvival::initialize( const WesternCatalog* pCatalog )
     {
-        _pCatalog = pCatalog;
-        const WesternSurvivalDef  fallback{};
-        const WesternSurvivalDef& survival = pCatalog != nullptr ? pCatalog->getSurvival() : fallback;
-        ResourceGaugeSettings     health;
-        health._max        = survival._health;
-        health._regenRate  = survival._healthRegen;
-        health._regenDelay = 4.0f;
-        ResourceGaugeSettings stamina;
-        stamina._max              = survival._stamina;
-        stamina._regenRate        = survival._staminaRegen;
-        stamina._regenDelay       = 1.0f;
-        stamina._exhaustThreshold = survival._stamina * 0.2f;
-        ResourceGaugeSettings deadEye;
-        deadEye._max            = survival._deadEye;
-        deadEye._regenRate      = survival._deadEyeRegen;
-        deadEye._regenDelay     = 2.0f;
-        deadEye._drainPerSecond = survival._deadEyeDrain;
-        _arrGauge[static_cast<size_t>( WesternCore::Health )].initialize( health );
-        _arrGauge[static_cast<size_t>( WesternCore::Stamina )].initialize( stamina );
-        _arrGauge[static_cast<size_t>( WesternCore::DeadEye )].initialize( deadEye );
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR( "WesternSurvival: refused - no catalog (the survival numbers come from the catalog, there is no default set)" );
+            return false;
+        }
+        const WesternSurvivalDef& survival = pCatalog->getSurvival();
+        ResourceGaugeSettings     healthSettings;
+        healthSettings._max        = survival._health;
+        healthSettings._regenRate  = survival._healthRegen;
+        healthSettings._regenDelay = 4.0f;
+        ResourceGaugeSettings staminaSettings;
+        staminaSettings._max              = survival._stamina;
+        staminaSettings._regenRate        = survival._staminaRegen;
+        staminaSettings._regenDelay       = 1.0f;
+        staminaSettings._exhaustThreshold = survival._stamina * 0.2f;
+        ResourceGaugeSettings deadEyeSettings;
+        deadEyeSettings._max            = survival._deadEye;
+        deadEyeSettings._regenRate      = survival._deadEyeRegen;
+        deadEyeSettings._regenDelay     = 2.0f;
+        deadEyeSettings._drainPerSecond = survival._deadEyeDrain;
+        // 따로 만들어 셋 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
+        ResourceGauge health;
+        ResourceGauge stamina;
+        ResourceGauge deadEye;
+        const bool    bHealthAccepted  = health.initialize( healthSettings );
+        const bool    bStaminaAccepted = stamina.initialize( staminaSettings );
+        const bool    bDeadEyeAccepted = deadEye.initialize( deadEyeSettings );
+        const bool    bAllAccepted     = bHealthAccepted && bStaminaAccepted && bDeadEyeAccepted;
+        if ( bAllAccepted == false )
+            return false;
+        _pCatalog                                              = pCatalog;
+        _arrGauge[static_cast<size_t>( WesternCore::Health )]  = health;
+        _arrGauge[static_cast<size_t>( WesternCore::Stamina )] = stamina;
+        _arrGauge[static_cast<size_t>( WesternCore::DeadEye )] = deadEye;
         for ( float32& core : _arrCore )
         {
             core = kCoreMax;
@@ -70,6 +84,7 @@ namespace sw
         _listMark.clear();
         _deadEyeLevel   = 1;
         _bDeadEyeActive = SW_FALSE;
+        return true;
     }
 
     void WesternSurvival::update( float32 deltaTime, float32 gameHours, float32 airTemperature )

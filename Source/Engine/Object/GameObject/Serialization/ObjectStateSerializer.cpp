@@ -302,7 +302,7 @@ namespace sw
                 const ObjectSaveOptions* _pOptions{ nullptr };
                 const GameObject*        _pOuter{ nullptr }; ///< 지금 쓰는 오브젝트다. 컴포넌트 핸들의 대상이 이 오브젝트의 것인지(소유자 0) 가린다
 
-                /** @brief 컴포넌트 핸들의 런타임 id 글(`오브젝트:컴포넌트`)입니다. 같은 실행의 스냅샷이 쓰고, 읽기 처리기의 숫자 갈래가 읽는다. */
+                /** @brief 컴포넌트 핸들의 런타임 id 글(`오브젝트:컴포넌트`)입니다. 같은 실행의 스냅샷이 쓰고, 읽기 처리기의 숫자 분기가 읽는다. */
                 static string writeRuntimeComponentText( const void* pValue )
                 {
                     const ComponentHandle& handle = *static_cast<const ComponentHandle*>( pValue );

@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
 {
@@ -35,6 +36,7 @@ namespace sw
     {
         vector<vector<uint32>> _listPaintOrderByDepth{}; ///< 깊이마다의 그리기 순서(자식 인덱스)
         uint32                 _paintOrderDepth{ 0 };    ///< 지금 칠하는 z 순서 패널의 깊이
+        vector<WidgetID>       _listGlyphRetryWidget{};  ///< 래스터화 예산 때문에 글리프를 미룬 위젯입니다. 순회가 끝나면 `paint` 가 이 위젯을 다시 무효화한다.
     };
 } // namespace sw
 

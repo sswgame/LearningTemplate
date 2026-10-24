@@ -57,7 +57,7 @@ namespace
 } // namespace
 
 /**
- * @brief [InspectorBuiltinValueTest] `ReflectBuiltins.xxx` 의 내장 타입마다 표 줄이 있고 위젯 갈래가 정해져 있다
+ * @brief [InspectorBuiltinValueTest] `ReflectBuiltins.xxx` 의 내장 타입마다 표 줄이 있고 위젯 분기가 정해져 있다
  * @details 직렬화가 읽는 내장 타입마다 인스펙터 위젯이 있어야 한다. 위젯이 없는 타입(int8, int16, uint16, uint64, float4x4, quaternion,
  *          TagID, 핸들)의 프로퍼티는 "No inspector for X" 로 뜬다. 위젯 등록(`InspectorPropertyManager::registerDefaults`)은 이 표와 같은
  *          파일을 include 해서 줄마다 `InspectorWidgetFor<T>` 로 위젯을 만든다.

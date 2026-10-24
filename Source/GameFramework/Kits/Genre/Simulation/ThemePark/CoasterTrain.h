@@ -65,8 +65,12 @@ namespace sw
     public:
         CoasterTrain();
 
-        /** @brief 트랙과 매개변수를 정하고 @p startDistance 에 멈춘 채로 둡니다. */
-        void initialize( const CoasterTrack* pTrack, const CoasterPhysicsParams& params, float32 startDistance = 0.0f );
+        /**
+         * @brief 트랙과 매개변수를 정하고 @p startDistance 에 멈춘 채로 둡니다.
+         * @return 적분 간격이 1/2000..1/30 초 밖이거나 다른 상수가 음수이면 오류를 남기고 false 입니다(가까운 값으로 자르지 않는다). 그러면 열차는 그대로입니다.
+         *         기본 중력이 물리 설정에서 오는 값이라 리플렉션 범위(`PROPERTY`)로 선언하지 않고 손으로 본다.
+         */
+        [[nodiscard]] bool initialize( const CoasterTrack* pTrack, const CoasterPhysicsParams& params, float32 startDistance = 0.0f );
         /** @brief @p deltaTime 만큼 진행합니다(고정 간격으로 나눠 돕니다). */
         void step( float32 deltaTime );
 

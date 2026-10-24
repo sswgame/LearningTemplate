@@ -36,16 +36,24 @@ namespace sw
     {
     }
 
-    void ElementGrid::initialize( int32 width, int32 height, const ElementRuleTable* pTable )
+    bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleTable* pTable )
     {
+        const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && 0.0f < pTable->getStepTime();
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a step time above 0)", width, height,
+                          pTable != nullptr ? "given" : "missing" );
+            return false;
+        }
         _pTable   = pTable;
-        _topology = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
-        _timer    = FixedStepTimer( MathUtil::max( 0.001f, pTable != nullptr ? pTable->getStepTime() : 0.25f ), 1.0f );
+        _topology = GridTopology( width, height );
+        _timer    = FixedStepTimer( pTable->getStepTime(), 1.0f );
         _listCell.clear();
         _listCell.resize( static_cast<size_t>( _topology.getCellCount() ) );
         _eventBuffer.clear();
         _wind      = int2{};
         _stepCount = 0;
+        return true;
     }
 
     void ElementGrid::setMaterial( const int2& cell, int32 material )

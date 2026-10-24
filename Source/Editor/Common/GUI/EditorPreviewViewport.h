@@ -89,6 +89,12 @@ namespace sw::editor
         uint64 getRenderTarget() const;
         /** @brief 지금까지 `draw` 가 호스트에 뷰를 알린 프레임 수입니다. 탐침과 테스트에 씁니다. */
         uint32 getSubmittedFrameCount() const { return _submittedFrameCount; }
+        /**
+         * @brief 이 뷰포트의 렌더 타깃을 @p path(디스크 경로)에 이미지로 씁니다 — 확장자가 `.png` 면 PNG, 아니면 PPM 입니다(`RenderThread::requestScreenshot`). 파일은 몇 프레임 뒤에 생깁니다.
+         * @details 한 번이라도 그린 뷰포트만 쓸 수 있다. 캐릭터 편집 창의 프리셋 썸네일이 쓴다.
+         * @return 렌더 타깃이 없거나 아직 그리지 않았거나 경로가 비어 있으면 false 이고 아무것도 요청하지 않습니다.
+         */
+        [[nodiscard]] bool requestImageFile( string_view path );
 
         /** @brief 오빗 카메라를 정합니다. 각은 라디안입니다. */
         void setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch );

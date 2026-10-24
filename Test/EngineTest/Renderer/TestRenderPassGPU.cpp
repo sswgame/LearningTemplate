@@ -98,7 +98,7 @@ SW_TEST_REQUIRES_HOST( RenderPassGPUTest, "runs FrameRenderer on a real GPU devi
 
 namespace
 {
-    /// @brief 같은 경로로 그린 두 판을 견줄 때 "다른 화소" 로 치는 색 거리(R · G · B 차의 합)의 하한 — 반올림 흔들림(1~2)을 넘는다.
+    /// @brief 같은 경로로 그린 두 판을 비교할 때 "다른 화소" 로 치는 색 거리(R · G · B 차의 합)의 하한 — 반올림 흔들림(1~2)을 넘는다.
     constexpr uint32 kSamePathMinDistance = 6;
     /// @brief 두 그림(백엔드끼리, 드로우 경로끼리)을 같다고 칠 때 허용하는 다른 화소의 비율(%) — 래스터 규칙 차이로 가장자리 몇 화소가 갈릴 여지다.
     ///        평균 색 차이 대신 이것으로 본다. 2026-10 이 기계(네 백엔드)에서 쓰는 케이스는 모두 다른 화소 0 이다.
@@ -430,7 +430,7 @@ namespace
         }
 
         /**
-         * @brief 두 렌더 텍스처를 화소 단위로 견줘 색이 다른 화소 수와 전체 화소 수를 냅니다. 크기가 다르거나 되읽기에 실패하면 false 입니다.
+         * @brief 두 렌더 텍스처를 화소 단위로 비교해 색이 다른 화소 수와 전체 화소 수를 냅니다. 크기가 다르거나 되읽기에 실패하면 false 입니다.
          * @details 같은 카메라 · 같은 장면을 같은 경로로 그리면 두 그림은 화소가 같다 — 경로 하나(후처리 등)가 빠졌는지를 평균 같은 간접 지표가 아니라
          *          "몇 화소가 달라졌나" 로 본다. 다름의 기준은 채널 차의 합이 @p minDistance 이상이다(같은 경로의 반올림 흔들림을 넘기 위한 것).
          */
@@ -756,7 +756,7 @@ namespace
                                     ( sw::string( pName ) + ": 그림자 맵을 비워도 밝아진 화소가 적다 — 그림자가 지지 않는다 (" + difference.describe() + ")" ).c_str() );
             }
             else if ( bOk == false )
-                SW_LOG_WARNING( "%#: %# 에서 파이프라인을 돌리지 못했습니다.", pTestName, pName );
+                SW_LOG_WARNING( "%#: failed to run the pipeline on %#.", pTestName, pName );
         }
 
         if ( comparedCount == 0 )
@@ -831,7 +831,7 @@ namespace
                                     ( sw::string( pName ) + ": " + ( bSpot ? "스폿" : "점광" ) + " 그림자를 꺼도 밝아진 화소가 적다 (" + difference.describe() + ")" ).c_str() );
             }
             else if ( bOk == false )
-                SW_LOG_WARNING( "%#: %# 에서 그리지 못했습니다.", pTestName, pName );
+                SW_LOG_WARNING( "%#: failed to draw on %#.", pTestName, pName );
         }
         if ( comparedCount == 0 )
             SW_TEST_SKIP( "No RHI backend could run the local shadow test" );
@@ -1046,7 +1046,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
     device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
     device->endFrame( false, false );
-    SW_ASSERT_TRUE_MSG( renderer.getTaaHistory() != 0, "디퍼드 파이프라인의 첫 프레임 뒤 TAA 히스토리가 없다" );
+    SW_ASSERT_TRUE_MSG( renderer.getTaaHistory() != 0, "No TAA history after the first frame of the deferred pipeline" );
 
     sw::ShaderCompileResult result{};
     result._bSuccess = true;
@@ -1540,7 +1540,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
 /**
  * @brief [RenderPassGPUTest] 재생 중인 효과의 입자가 투명 패스에서 그려진다 — 같은 장면을 멈춘 효과로 그린 것보다 화면이 밝다 (4 백엔드).
  * @details 입자 PSO 는 투명 패스 PSO 를 물려받아 셰이더만 particle.hlsl 로 바꾼다(`FrameRenderer::ensureParticlePSO`). Shipping 은 쿠킹한 바이너리로
- *          만들므로 쿠커가 그 셰이더를 define 없이 굽지 않으면 이 케이스가 Shipping 에서 진다. 표본 효과는 연기(알파)와 불꽃(더하기, 1 보다 큰 색)이다.
+ *          만들므로 쿠커가 그 셰이더를 define 없이 베이크하지 않으면 이 케이스가 Shipping 에서 진다. 표본 효과는 연기(알파)와 불꽃(더하기, 1 보다 큰 색)이다.
  *          두 방출기는 CPU 전용 모듈이 없어 기본값(`gv_vfxSimulation` GPU, Shipping 고정)으로 GPU 시뮬레이션(vfxsimulate.hlsl → 간접 드로우)을 탄다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
@@ -1793,7 +1793,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
                 else
                 {
                     // 정적 씬이라 백엔드끼리 그림이 같아야 한다. 블렌딩 순서가 어긋나면 겹친 자리의 색이 달라진다 — 평균이 아니라
-                    // 화소마다 견준다(겹친 자리 몇백 화소의 변화는 그려진 화소 전체의 평균에서 묻힌다).
+                    // 화소마다 비교한다(겹친 자리 몇백 화소의 변화는 그려진 화소 전체의 평균에서 묻힌다).
                     const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, image, kSamePathMinDistance );
                     SW_LOG_INFO( "%#: transparent vs reference backend: %#", label, difference.describe() );
                     SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
@@ -2351,7 +2351,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
                 }
                 else
                 {
-                    // 백엔드끼리 같은 그림인지 화소마다 견준다 — 화면 평균은 큐브 하나가 다른 자리에 그려져도 거의 움직이지 않는다.
+                    // 백엔드끼리 같은 그림인지 화소마다 비교한다 — 화면 평균은 큐브 하나가 다른 자리에 그려져도 거의 움직이지 않는다.
                     const test::RHITestImageDifference difference = test::RHITestImage::compare( referenceImage, image, kSamePathMinDistance );
                     SW_LOG_INFO( "%#: SceneColor vs reference backend: %#", label, difference.describe() );
                     SW_EXPECT_TRUE_MSG( difference.isDifferingAtMost( kSameImageDifferingPercent ),
@@ -4290,7 +4290,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
                                       tonemapFormat != sw::RHIFormat::R8G8B8A8_UNORM;
         if ( bCaptureUnusable )
         {
-            SW_LOG_WARNING( "DeferredPresentCopiesTheTonemapResult: %# 에서 비교할 두 장을 얻지 못했습니다.", pName );
+            SW_LOG_WARNING( "DeferredPresentCopiesTheTonemapResult: failed to get the two images to compare on %#.", pName );
             continue;
         }
         ++comparedCount;
@@ -4469,7 +4469,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
                                     .c_str() );
         }
         else if ( bOk == false )
-            SW_LOG_WARNING( "FusedPostChainMatchesStaged: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+            SW_LOG_WARNING( "FusedPostChainMatchesStaged: failed to run the pipeline on %#.", pName );
 
         // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 자원을 놓는다.
     }
@@ -4535,7 +4535,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
                                 ( sw::string( pName ) + ": 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
-            SW_LOG_WARNING( "RenamedAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+            SW_LOG_WARNING( "RenamedAttachmentsRenderTheSameImage: failed to run the pipeline on %#.", pName );
 
         // 컬러 출력이 없는 패스는 그리지 않고 한 번 알린다 — 없는 첨부의 핸들 0(백버퍼)을 열지 않는다.
         if ( bOk )
@@ -4628,7 +4628,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
                                 ( sw::string( pName ) + ": G버퍼 첨부 이름만 바꿨는데 그림이 다르다 (" + difference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
-            SW_LOG_WARNING( "RenamedGBufferAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+            SW_LOG_WARNING( "RenamedGBufferAttachmentsRenderTheSameImage: failed to run the pipeline on %#.", pName );
     }
 
     if ( comparedCount == 0 )
@@ -4704,8 +4704,8 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
 
             SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
             const sw::Texture2D* pOverride = textures.find( kOverrideTexture );
-            SW_ASSERT_TRUE_MSG( pOverride != nullptr, ( label + "인스턴스가 덮어쓴 텍스처를 빌리지 않았습니다" ).c_str() );
-            SW_ASSERT_TRUE_MSG( instance->getBuffer().empty() == false, ( label + "인스턴스 바이트가 만들어지지 않았습니다 — 합친 배치의 인스턴스를 아무도 올리지 않습니다" ).c_str() );
+            SW_ASSERT_TRUE_MSG( pOverride != nullptr, ( label + "the instance did not borrow the overridden texture" ).c_str() );
+            SW_ASSERT_TRUE_MSG( instance->getBuffer().empty() == false, ( label + "the instance bytes were not built - nobody uploads the instances of the merged batch" ).c_str() );
             float32                     roughness{ 0.0f };
             const sw::MaterialProperty* pRoughness = parent->findProperty( sw::hashed_string( "roughness" ) );
             SW_ASSERT_NOT_NULL( pRoughness );
@@ -4765,9 +4765,9 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
         }
 
         const sw::Texture2D* pChecker = textures.find( missingTexture );
-        SW_ASSERT_TRUE_MSG( pChecker != nullptr, ( label + "못 읽은 텍스처 대신 누락 텍스처를 빌리지 않았습니다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( pChecker != nullptr, ( label + "the missing-texture placeholder was not borrowed for the unread texture" ).c_str() );
         const uint32 slot = material->findTextureSlot( sw::hashed_string( "albedoMap" ) );
-        SW_ASSERT_TRUE_MSG( slot < material->getMaterialTextureSrvs().size(), ( label + "albedoMap 이 슬롯 목록에 없습니다 — 흰색으로 샘플합니다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( slot < material->getMaterialTextureSrvs().size(), ( label + "albedoMap is not in the slot list - it samples white" ).c_str() );
         SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs()[slot] == pChecker->getSrv(), ( label + "albedoMap 슬롯이 누락 텍스처가 아닙니다" ).c_str() );
 
         material->releaseRHI( device.get() );
@@ -4861,7 +4861,7 @@ SW_TEST_CASE( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase )
         {
             const sw::TextureHandle             handle   = textures.request( kStreamedTexture, device.get(), sw::AssetLoadStart::Async );
             const sw::shared_ptr<sw::Texture2D> pTexture = handle.wait(); // 이 스레드가 디바이스 스레드다 — 업로드(완료 단계)까지 여기서 한다
-            SW_ASSERT_TRUE_MSG( pTexture != nullptr, ( label + "비동기 텍스처를 읽지 못했습니다" ).c_str() );
+            SW_ASSERT_TRUE_MSG( pTexture != nullptr, ( label + "failed to read the async texture" ).c_str() );
             SW_EXPECT_FALSE_MSG( pTexture->isFullyResident(), ( label + "비동기 로드가 처음부터 밉 전부를 업로드했습니다" ).c_str() );
             SW_EXPECT_EQUAL( 64u, pTexture->getWidth() );
             SW_EXPECT_TRUE( textures.countLoadsInFlight() >= 1u );
@@ -4932,7 +4932,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
                                 ( sw::string( pName ) + ": 프리패스의 깊이 첨부 이름만 바꿨는데 그림이 다르다 (" + renamedDifference.describe() + ")" ).c_str() );
         }
         else if ( bOk == false )
-            SW_LOG_WARNING( "DepthPrepassRendersTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+            SW_LOG_WARNING( "DepthPrepassRendersTheSameImage: failed to run the pipeline on %#.", pName );
     }
 
     if ( comparedCount == 0 )
@@ -5007,7 +5007,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
             SW_EXPECT_TRUE( sw::RenderTargetImageFile::unpackRgba8( bytes, layout, format, rgbaBytes ) );
         }
         else
-            SW_LOG_WARNING( "ShadowMapAttachmentReadsBackAsDepth: %# 에서 그림자 맵을 읽지 못했습니다.", pName );
+            SW_LOG_WARNING( "ShadowMapAttachmentReadsBackAsDepth: failed to read the shadow map on %#.", pName );
         renderer.shutdown();
     }
     if ( checkedCount == 0 )
@@ -5115,7 +5115,7 @@ SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
 
 /**
  * @brief [RenderPassGPUTest] 큐브를 덮는 라이트 프로브 볼륨은 앰비언트를 프로브의 간접광으로 바꾼다 — 네 백엔드 모두
- * @details 볼륨에 밝은 한 색 SH 를 넣으면(굽기 없이 `adoptProbeData`) 그림자 쪽 면이 밝아져 볼륨 없는 그림과 달라야 한다. 같으면 볼륨 원소가 라이트 목록 ·
+ * @details 볼륨에 밝은 한 색 SH 를 넣으면(베이크 없이 `adoptProbeData`) 그림자 쪽 면이 밝아져 볼륨 없는 그림과 달라야 한다. 같으면 볼륨 원소가 라이트 목록 ·
  *          그리드 · 프로브 버퍼(t13) · `LightData::sampleProbeVolume` 중 어딘가에서 빠졌다.
  */
 SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
@@ -5154,7 +5154,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
         }
         if ( bOk == false )
         {
-            SW_LOG_WARNING( "LightProbeVolumeReplacesAmbient: %# 에서 그리지 못했습니다.", pName );
+            SW_LOG_WARNING( "LightProbeVolumeReplacesAmbient: failed to draw on %#.", pName );
             continue;
         }
         ++comparedCount;
@@ -5197,7 +5197,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
             }
             if ( bOk == false )
             {
-                SW_LOG_WARNING( "MetallicChangesForwardAndDeferredPictures: %# 에서 '%#' 를 그리지 못했습니다.", pName, pPipeline );
+                SW_LOG_WARNING( "MetallicChangesForwardAndDeferredPictures: on %#, failed to draw '%#'.", pName, pPipeline );
                 continue;
             }
             ++comparedCount;
@@ -5214,7 +5214,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 
 /**
  * @brief [RenderPassGPUTest] CPU 와 GPU 입자 시뮬레이션이 같은 씨앗 · 같은 단계 수에서 같은 그림을 그린다 — 네 백엔드 모두(Vfx.md V5)
- * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 견준다.
+ * @details 표본 효과(sparks — 연기 알파 · 불꽃 더하기, CPU 전용 모듈 없음)를 `gv_vfxSimulation` CPU 와 GPU 로 각각 읽어 같은 틱 수만큼 돌리고 Present 를 비교한다.
  *          두 시뮬레이션은 같은 시계(`VfxEmitterClock`)와 같은 난수 수열(splitmix64)을 쓰므로 입자 수와 위치가 같아야 한다. 입자 하나가 빠지거나 위치가 틀리면
  *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 화소가 입자 화소의 `kMaxParticleDifferingPercent` % 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있다.
  *          GPU 의 살아 있는 수는 RHI 에 버퍼 되읽기가 없어 직접 세지 않는다(그림이 수를 대신한다).
@@ -5222,7 +5222,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
 SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch
 #else
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GlobalVariableManager& variables                    = sw::engine::getSubsystem<sw::GlobalVariableManager>();
@@ -5266,7 +5266,7 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
         }
         if ( bOk == false )
         {
-            SW_LOG_WARNING( "CPUAndGPUParticleSimulationsDrawTheSameImage: %# 에서 그리지 못했습니다.", pName );
+            SW_LOG_WARNING( "CPUAndGPUParticleSimulationsDrawTheSameImage: failed to draw on %#.", pName );
             continue;
         }
         ++comparedCount;
@@ -5289,14 +5289,14 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
 /**
  * @brief [RenderPassGPUTest] 라이트 컬링 세 방식(그리드 없음 · CPU 그리드 · GPU 그리드)이 같은 그림을 그린다 — 네 백엔드 모두
  * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` 0 · 1 · 2 의
- *          Present 캡처를 견준다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
+ *          Present 캡처를 비교한다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
  *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — 색 거리 `kSamePathMinDistance` 아래라 다른 화소로 세지 않는다.
  *          판정은 다른 화소 0 이다(라이트 하나가 빠지면 그 클러스터의 화소가 모두 어두워진다).
  */
 SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_lightCulling is a development-build switch" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_lightCulling is a development-build switch
 #else
     sw::GlobalVariableInfo* pSwitch = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_lightCulling" );
     SW_ASSERT_TRUE( pSwitch != nullptr );
@@ -5357,7 +5357,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
         }
         if ( bOk == false )
         {
-            SW_LOG_WARNING( "LightCullingProducersDrawTheSameImage: %# 에서 그리지 못했습니다.", pName );
+            SW_LOG_WARNING( "LightCullingProducersDrawTheSameImage: failed to draw on %#.", pName );
             continue;
         }
         ++comparedCount;
@@ -5483,7 +5483,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
                 const sw::float3   expected          = sw::float3::transformVector( localNormal, world.invert().transpose() ).normalize();
                 const sw::float3   worldMatrixNormal = sw::float3::transformVector( localNormal, world ).normalize();
                 SW_ASSERT_TRUE_MSG( expected.dot( worldMatrixNormal ) < kBlindDotLimit,
-                                    ( label + "배치가 테스트가 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
+                                    ( label + "the batch tests nothing - the normal moved by the world matrix is almost the same as expected " + describeVector( worldMatrixNormal ) ).c_str() );
 
                 sw::FrameRenderer renderer;
                 const bool        bReady = renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) && renderer.isReady();
@@ -5545,7 +5545,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
         {
             const sw::string label = backendName + " " + pPipeline + ": ";
             LitCubeScene     cube;
-            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "씬을 만들지 못했다" ).c_str() );
+            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "failed to create the scene" ).c_str() );
 
             test::ScopedLogCollector logs;
             sw::FrameRenderer        renderer;
@@ -5624,7 +5624,7 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
         {
             const sw::string label = backendName + " " + pPipeline + ": ";
             LitCubeScene     cube;
-            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "씬을 만들지 못했다" ).c_str() );
+            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "failed to create the scene" ).c_str() );
             SW_ASSERT_NOT_NULL( cube._pCube );
 
             test::RHITestImage plainImage;
@@ -6054,7 +6054,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
                                     ( label + "스프라이트 여섯이 반투명 배치 하나가 아니다 (배치 " + sw::to_string( batches.size() ) + ")" ).c_str() );
 
                 test::RHITestImage image;
-                SW_ASSERT_TRUE_MSG( image.readTransient( renderer, "SceneColor" ), ( label + "SceneColor 를 되읽지 못했다" ).c_str() );
+                SW_ASSERT_TRUE_MSG( image.readTransient( renderer, "SceneColor" ), ( label + "failed to read back SceneColor" ).c_str() );
                 const int32 row = static_cast<int32>( image.getHeight() / 2 );
                 struct Span
                 {
@@ -6147,7 +6147,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
  * @brief [RenderPassGPUTest] 나눗수 2 로 선언한 첨부는 반 크기로 만들어지고, 그 첨부에 그리는 패스는 첨부 전체를 덮는다 — 4 백엔드
  * @details `RenderPassAttachment::_resolutionDivisor` 는 첨부를 프레임 크기 / 나눗수로 만든다. 패스는 출력 첨부의 크기로 렌더 패스(뷰포트)를
  *          열어야 한다 — 프레임 크기로 열면 반 크기 타깃에 화면의 왼쪽 위 4 분의 1 만 들어간다. 나눈 후처리 파이프라인의 BloomColor 를 반
- *          크기로 바꿔 그리고, SceneColor 와 BloomColor 에서 배경이 아닌 픽셀의 무게중심을 견준다 — BloomColor 의 중심을 두 배 하면
+ *          크기로 바꿔 그리고, SceneColor 와 BloomColor 에서 배경이 아닌 픽셀의 무게중심을 비교한다 — BloomColor 의 중심을 두 배 하면
  *          SceneColor 의 중심이어야 한다(블룸은 원본 색 + 밝은 부분이라 배경 판정이 같다).
  */
 SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
@@ -6882,7 +6882,7 @@ SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
 /**
  * @brief [RenderPassGPUTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
  * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
- *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
+ *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 비교한다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
  */
 SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
 {
@@ -6999,7 +6999,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
 
 /**
  * @brief [RenderPassGPUTest] 출력이 렌더 타깃(에디터 게임 뷰)이어도 Present 캡처가 그 그림을 담는다 — 4 백엔드
- * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_outputRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 견준다.
+ * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_outputRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 비교한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
 {
@@ -7167,7 +7167,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
 
 /**
  * @brief [RenderPassGPUTest] Present 가 백버퍼에 직접 그릴 때(캡처 끔) 화면 사각형 뷰가 백버퍼의 오른쪽 아래에 앉는다 — 4 백엔드
- * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 갈래를 안 지난다
+ * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 분기를 안 지난다
  *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
@@ -7223,7 +7223,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
 /**
  * @brief [RenderPassGPUTest] 추가 뷰(렌더 텍스처)의 투명 순서는 그 뷰의 눈으로 정한다 — 같은 눈을 주 카메라로 둔 그림과 같다(4 백엔드)
  * @details 투명 큐브 여섯(같은 메시 · 머티리얼 = 한 배치, 회전을 달리해 순서가 그림에 남게)과 다른 머티리얼의 투명 큐브 하나(배치 순서)를 겹쳐 두고,
- *          주 카메라는 앞(+Z)에서, 캡처 카메라는 뒤(-Z)에서 본다. 캡처 텍스처를 "그 캡처 카메라를 주 카메라로 둔 렌더러" 의 Present 캡처(같은 크기)와 견준다.
+ *          주 카메라는 앞(+Z)에서, 캡처 카메라는 뒤(-Z)에서 본다. 캡처 텍스처를 "그 캡처 카메라를 주 카메라로 둔 렌더러" 의 Present 캡처(같은 크기)와 비교한다.
  *          주 순서로 그리면 뒤에서 본 그림의 겹침이 거꾸로 섞여 색이 갈린다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
@@ -7416,7 +7416,7 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
 SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "global variable switches (gv_rhiSoftwareAdapter) are a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // global variable switches (gv_rhiSoftwareAdapter) are a development-build feature
 #elif defined( SW_PLATFORM_WINDOWS )
     sw::GlobalVariableInfo* pSwitch = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_rhiSoftwareAdapter" );
     SW_ASSERT_TRUE( pSwitch != nullptr );
@@ -7571,7 +7571,7 @@ SW_TEST_CASE( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject )
 
 /**
  * @brief [RenderPassGPUTest] 자동 노출은 장면 밝기를 재어 노출을 맞추고, 컷 프레임은 지난 EV 를 버리고 그 프레임의 측정값을 쓴다 — 고정 노출은 재지 않고 2^-EV 를 곱한다(4 백엔드, 포워드)
- * @details 적응 속도를 거의 0 으로 둔다. 어두운 장면의 EV 가 남아 있으면 장면을 밝게 바꾼 프레임은 컷이 없을 때 그대로 밝고, 컷을 표시하면 밝은 장면을 잰 EV 로
+ * @details 적응 속도를 거의 0 으로 둔다. 어두운 장면의 EV 가 남아 있으면 장면을 밝게 바꾼 프레임은 컷이 없을 때 그대로 밝고, 컷을 표시하면 밝은 장면을 측정한 EV 로
  *          노출이 내려가 어둡다. 범위가 한 점(최소 = 최대 = 2 EV)이면 노출이 1/4 이라 범위 0 · 0(중립)보다 어둡다.
  *          포워드(후처리 체인 Present 가 톤맵한다)로 그린다 — 디퍼드의 TAA 는 지난 프레임을 섞어 컷 없는 그림이 노출 말고도 달라진다.
  */
@@ -7680,7 +7680,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent )
 
 /**
  * @brief [RenderPassGPUTest] 가림 판정은 지난 프레임 깊이로 거른다 — 벽 뒤에 있던 큐브는 벽을 치운 첫 프레임에 빠지고 다음 프레임에 나오며, 끄거나 컷이면 바로 나온다(컬링이 있는 백엔드, 디퍼드)
- * @details 지난 깊이로 보는 한계(드러난 물체가 한 프레임 늦다)를 그대로 재는 것이 곧 가림 판정이 돈다는 증거다 — 바르게 가린 물체는 그림에 없으니 다른 방법으로는 볼 수 없다.
+ * @details 지난 깊이로 보는 한계(드러난 물체가 한 프레임 늦다)를 그대로 측정하는 것이 곧 가림 판정이 돈다는 증거다 — 바르게 가린 물체는 그림에 없으니 다른 방법으로는 볼 수 없다.
  *          큐브는 화면에서 타일 8 줄 안에 들도록 작게 둔다(넘으면 판정하지 않는다).
  */
 SW_TEST_CASE( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth )
@@ -8045,7 +8045,7 @@ SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSource
 /**
  * @brief [RenderPassGPUTest] 물 정점 셰이더의 파도 함수(gerstner.hlsli)가 CPU 질의(WaterWaveMath)와 같은 변위를 낸다 — 네 백엔드
  * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `Gerstner::computeDisplacement` 를 표본 32 자리에서 불러 float 비트를
- *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
+ *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 비교한다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
  *          식 하나(항의 순서 · Q 나누기 · 분산)라도 갈리면 cm 단위로 벌어진다.
  */
 SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
@@ -8324,7 +8324,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
 /**
  * @brief [RenderPassGPUTest] 2D 점광의 감쇠가 식과 같고, 2D 가림막 뒤는 어둡고 가림막 안쪽은 밝다 — 4 백엔드
  * @details 직교 카메라(높이 4) 앞의 흰 빛 받는 스프라이트(`sprite2dlit.material`) 6 × 6 을 원점의 점광(바깥 반경 2, 안 0, 지수 1)이 비춘다. 가운데 줄의 픽셀을
- *          월드 X 로 옮겨 `PointLight2DComponent::computeAttenuation` × 255 와 견준다. 그다음 (1, 0) 에 0.2 × 1 상자 가림막을 두면 x > 1.1 은 0 이 되고,
+ *          월드 X 로 옮겨 `PointLight2DComponent::computeAttenuation` × 255 와 비교한다. 그다음 (1, 0) 에 0.2 × 1 상자 가림막을 두면 x > 1.1 은 0 이 되고,
  *          가림막 안(x = 1)은 빛 쪽 변에 가려지지 않아 식 그대로다(자기 그림자 없음). 빛 쪽(x < 0.9)은 바뀌지 않는다.
  */
 SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
@@ -8463,8 +8463,8 @@ SW_TEST_CASE( RenderPassGPUTest, ToonShadingHasFewerBrightnessLevelsThanLit )
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
         ToonSphereScene  litScene;
         ToonSphereScene  toonScene;
-        SW_ASSERT_TRUE_MSG( litScene.populate( ToonSphereScene::makeLitMaterial() ), ( label + "램버트 무대를 못 만들었다" ).c_str() );
-        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial( false ) ), ( label + "툰 무대를 못 만들었다" ).c_str() );
+        SW_ASSERT_TRUE_MSG( litScene.populate( ToonSphereScene::makeLitMaterial() ), ( label + "failed to create the Lambert stage" ).c_str() );
+        SW_ASSERT_TRUE_MSG( toonScene.populate( ToonSphereScene::makeToonMaterial( false ) ), ( label + "failed to create the toon stage" ).c_str() );
 
         // 씬마다 렌더러를 따로 둔다(한 렌더러의 씬 빌더는 그리던 씬의 수집 캐시를 든다).
         sw::FrameRenderer  litRenderer;
@@ -8532,7 +8532,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineDrawsDarkRingAroundSilhouette )
             ToonSphereScene  offScene;
             ToonSphereScene  onScene;
             SW_ASSERT_TRUE_MSG( offScene.populate( ToonSphereScene::makeToonMaterial( false ) ) && onScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
-                                ( label + "무대를 못 만들었다" ).c_str() );
+                                ( label + "failed to create the stage" ).c_str() );
 
             sw::FrameRenderer  offRenderer;
             sw::FrameRenderer  onRenderer;
@@ -8569,7 +8569,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineDrawsDarkRingAroundSilhouette )
 /**
  * @brief [RenderPassGPUTest] 스킨드 메시의 외곽선이 스키닝된 자리를 따른다 — GPU 스키닝으로 옮긴 구의 고리가 CPU 로 옮긴 정적 구의 고리와 같다(네 백엔드)
  * @details 구의 모든 정점을 본 1 에 묶고 본 1 을 옆으로 옮긴다. 외곽선 껍질이 레스트 정점(입력 스트림)으로 밀면 고리가 옛 자리에 남아
- *          옮긴 구의 고리와 어긋난다. 두 그림의 어두운 고리 마스크(그려졌고 밝기 40 이하)의 차이를 고리 크기와 견준다.
+ *          옮긴 구의 고리와 어긋난다. 두 그림의 어두운 고리 마스크(그려졌고 밝기 40 이하)의 차이를 고리 크기와 비교한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MeshOutlineFollowsSkinnedPose )
 {
@@ -8646,7 +8646,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineFollowsSkinnedPose )
         ToonSphereScene skinnedScene;
         ToonSphereScene staticScene;
         SW_ASSERT_TRUE_MSG( skinnedScene.populate( ToonSphereScene::makeToonMaterial( true ) ) && staticScene.populate( ToonSphereScene::makeToonMaterial( true ) ),
-                            ( label + "무대를 못 만들었다" ).c_str() );
+                            ( label + "failed to create the stage" ).c_str() );
         const sw::vector<sw::RHIVertex>& listBind = skinnedScene._mesh->getVertices();
         sw::vector<sw::MeshSkinVertex>   listSkin( listBind.size() );
         sw::vector<sw::RHIVertex>        listShifted = listBind;

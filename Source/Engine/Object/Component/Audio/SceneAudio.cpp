@@ -131,7 +131,14 @@ namespace sw
         if ( pEngine == nullptr )
             return;
         std::scoped_lock<mutex> lock{ _mutex };
+        updateListeners( *pEngine, deltaSeconds, pCamera );
+        updateEmitters( *pEngine, deltaSeconds );
+        updateOcclusion( *pEngine, pScene3D, pScene2D );
+        updateReverbZones( *pEngine );
+    }
 
+    void SceneAudio::updateListeners( AudioEngine& audioEngine, float32 deltaSeconds, const CameraComponent* pCamera )
+    {
         // 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬).
         uint32 listenerMask = 0;
         bool   bHavePrimary = false;
@@ -144,7 +151,7 @@ namespace sw
             state._velocity                  = SceneAudioInternal::computeVelocity( state._position, pListener->_lastPosition, pListener->_bHasLastPosition, deltaSeconds );
             pListener->_lastPosition         = state._position;
             pListener->_bHasLastPosition     = true;
-            pEngine->setListener( listenerIndex, state );
+            audioEngine.setListener( listenerIndex, state );
             listenerMask |= 1u << listenerIndex;
             if ( listenerIndex == 0 || bHavePrimary == false )
                 _primaryListenerPosition = state._position;
@@ -167,7 +174,7 @@ namespace sw
             _lastCameraPosition      = state._position;
             _bHasLastCameraPosition  = true;
             _primaryListenerPosition = state._position;
-            pEngine->setListener( 0, state );
+            audioEngine.setListener( 0, state );
             listenerMask = 1u;
         }
         // 지난 프레임에 켰는데 이번에 없는 칸은 끈다.
@@ -175,10 +182,13 @@ namespace sw
         {
             const uint32 bit = 1u << listenerIndex;
             if ( ( _activeListenerMask & bit ) != 0 && ( listenerMask & bit ) == 0 )
-                pEngine->setListener( listenerIndex, AudioListenerState{} );
+                audioEngine.setListener( listenerIndex, AudioListenerState{} );
         }
         _activeListenerMask = listenerMask;
+    }
 
+    void SceneAudio::updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds )
+    {
         // 에미터 자리 · 속도.
         _listEmitterSnapshot.clear();
         for ( AudioEmitterComponent* pEmitter : _emitter.getItems() )
@@ -189,10 +199,13 @@ namespace sw
             const float3 velocity            = SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
             pEmitter->_lastAudioPosition     = position;
             pEmitter->_bHasLastAudioPosition = true;
-            pEngine->setEmitter( pEmitter->getEmitterID(), position, velocity );
+            audioEngine.setEmitter( pEmitter->getEmitterID(), position, velocity );
             _listEmitterSnapshot.push_back( pEmitter );
         }
+    }
 
+    void SceneAudio::updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )
+    {
         // 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다).
         PhysicsAudioOcclusionQuery   physicsQuery;
         Physics2DAudioOcclusionQuery physics2DQuery;
@@ -216,11 +229,14 @@ namespace sw
                 AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + checkIndex ) % emitterCount];
                 if ( pEmitter->usesOcclusion() == false )
                     continue;
-                pEngine->setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
+                audioEngine.setEmitterPropagation( pEmitter->getEmitterID(), pQuery->computePropagation( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
             }
             _occlusionCursor = ( _occlusionCursor + checkCount ) % emitterCount;
         }
+    }
 
+    void SceneAudio::updateReverbZones( AudioEngine& audioEngine )
+    {
         // 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다.
         _listZoneCurrent.clear();
         for ( AudioReverbZoneComponent* pZone : _zone.getItems() )
@@ -249,7 +265,7 @@ namespace sw
                     pPrevious = &previous;
             }
             if ( pPrevious == nullptr || MathUtil::abs( pPrevious->_intensity - current._intensity ) > 1e-4f )
-                pEngine->setSnapshotIntensity( current._snapshot, current._intensity );
+                audioEngine.setSnapshotIntensity( current._snapshot, current._intensity );
         }
         for ( const ZoneValue& previous : _listZoneValue )
         {
@@ -259,7 +275,7 @@ namespace sw
                 bStillZoned = bStillZoned || current._snapshot == previous._snapshot;
             }
             if ( bStillZoned == false )
-                pEngine->setSnapshotIntensity( previous._snapshot, 0.0f );
+                audioEngine.setSnapshotIntensity( previous._snapshot, 0.0f );
         }
         _listZoneValue.swap( _listZoneCurrent );
     }

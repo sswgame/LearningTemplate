@@ -7,7 +7,10 @@ Scripts/lint/gate/CheckStatusBoard.py
 로드맵 · 후보 문서에서 만든 결과와 같은지 검사합니다. 표는 `py -3 -m Scripts status-board --write README.md` 로 채웁니다.
 
 게이트를 두는 이유: 생성물은 원본(머리 줄 · 로드맵 · 후보 문서)이 바뀐 뒤 다시 만들지 않으면 낡는데, 이것을 형식으로 막을 방법이 없다.
+같은 게이트가 `plans --check` 의 로드맵 점검(링크 · 앵커, 진행 `n/n` 인데 구현 중, 상태 `끝` 인데 진행 `n/m`)도 한다 —
+계획 문서를 고치는 커밋에서 낡은 상태가 바로 잡힌다.
 계획 문서 머리 줄이 틀리거나 로드맵이 가리키는 문서가 없을 때도 같은 오류로 멈춘다(건너뛰지 않는다).
+같은 모양으로, 진행이 n/n 인데 상태가 구현중인 문서도 막는다(마지막 단위를 끝낸 사람이 상태를 올리지 않아 쌓이는 것을 `docs/plans/*` 커밋에서 잡는다).
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Plans import PlanFormatError  # noqa: E402
-from common.StatusBoard import StatusBoardError, buildBoard, diffBoard, kReadmeName  # noqa: E402
+from common.StatusBoard import StatusBoardError, buildBoard, checkRoadmap, diffBoard, kReadmeName  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kPlanHeader = "# 계획\n\n> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 1/2\n"
@@ -48,6 +51,16 @@ class CheckStatusBoardGate(LintGate):
             "expectedViolation": "A.md: 둘째 줄이 머리 줄 모양이 아닙니다",
             "files": {"README.md": _kStaleReadme, "docs/plans/A.md": "# 계획\n\n본문\n", "docs/plans/Roadmap.md": _kRoadmap},
         },
+        {
+            "name": "진행 n/n 인데 구현중",
+            "expectedViolation": "진행이 2/2 로 모든 단위가 끝났는데 상태가 `구현중` 입니다",
+            "files": {"README.md": _kStaleReadme, "docs/plans/A.md": _kPlanHeader.replace("1/2", "2/2"), "docs/plans/Roadmap.md": _kRoadmap},
+        },
+        {
+            "name": "상태 끝인데 진행 n/m",
+            "expectedViolation": "상태가 `끝` 인데 진행이 1/2 입니다",
+            "files": {"README.md": _kStaleReadme, "docs/plans/A.md": _kPlanHeader.replace("구현중", "끝"), "docs/plans/Roadmap.md": "# 로드맵\n\n## 지금 순서\n\n1. 항목.\n"},
+        },
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
@@ -56,11 +69,15 @@ class CheckStatusBoardGate(LintGate):
             return GateResult(listViolation=[f"{kReadmeName}: 파일이 없습니다"])
         try:
             listDiff = diffBoard(readme.read_text(encoding="utf-8"), buildBoard(repositoryRoot), kReadmeName)
+            listRoadmapViolation = checkRoadmap(repositoryRoot)
         except (PlanFormatError, StatusBoardError) as error:
             return GateResult(listViolation=[str(error)])
+        listViolation = list(listRoadmapViolation)
         if listDiff:
-            return GateResult(listViolation=[f"{kReadmeName}: 표가 낡았습니다", *listDiff])
-        return GateResult(summary="README 진행 상황 표가 최신")
+            listViolation += [f"{kReadmeName}: 표가 낡았습니다", *listDiff]
+        if listViolation:
+            return GateResult(listViolation=listViolation)
+        return GateResult(summary="README 진행 상황 표가 최신, 로드맵 점검 통과")
 
 
 main = CheckStatusBoardGate.run

@@ -19,6 +19,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
@@ -211,12 +213,20 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 판 하나의 설정입니다. */
-    struct HorrorMatchSettings
+    /**
+     * @brief 판 하나의 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `HorrorMatch::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API HorrorMatchSettings
     {
+        REFLECT_BODY();
+        PROPERTY()
         hashed_string _killerID{};
-        float32       _fixedStep{ 1.0f / 30.0f };
-        uint32        _seed{ 0xD8D0u };
+        PROPERTY( Min = 0.001, Max = 1.0 )
+        float32 _fixedStep{ 1.0f / 30.0f };
+        PROPERTY()
+        uint32 _seed{ 0xD8D0u };
     };
 } // namespace sw
 
@@ -354,7 +364,8 @@ namespace sw
         void resolveEnd();
         void syncHealthState( HorrorSurvivor& survivor );
         void awardScore( StatBlock& outScore, const utf8* pAction, float32 amount );
-        void configureGenerator( int32 generator, bool bRegressing );
+        /** @brief 발전기의 수리 규칙을 카탈로그에서 다시 잡습니다(진행량은 남긴다). 규칙이 범위 밖이라 거절되면 false 이고 발전기는 그대로입니다. */
+        [[nodiscard]] bool configureGenerator( int32 generator, bool bRegressing );
         /** @brief `start` 가 판에 주는 설정입니다. 복원할 때 같은 설정으로 판을 다시 엽니다. */
         MatchSettings makeMatchSettings() const;
         /** @brief 생존자 하나의 상태를 읽어 덮어씁니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). 데이터가 깨졌으면 false 를 반환합니다. */

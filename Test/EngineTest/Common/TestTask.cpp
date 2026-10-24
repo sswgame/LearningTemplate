@@ -801,7 +801,7 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
  *          절대 깨어나지 않는다. 증상은 "느리다" 가 아니라 **완전한 정지**이고, 스택만 보면 기다리는 것이 정상인지 아닌지
  *          알 수 없다.
  *
- *          호출부(`whenAllFutures` · `whenAnyFuture`)가 각자 우회하지 않도록 뿌리인 `then` 이 지킨다.
+ *          호출부(`whenAllFutures` · `whenAnyFuture`)가 각자 우회하지 않도록 루트인 `then` 이 지킨다.
  *          네 조합(T→T · T→void · void→T · void→void)을 모두 본다:
  *          `TaskFuture<T>` 와 `TaskFuture<void>` 는 **서로 다른 특수화**라 한쪽만 고쳐질 수 있다.
  *

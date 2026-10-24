@@ -166,7 +166,7 @@ namespace sw::editor
                     Scene* pRebuilt = pSceneManager->createEmptyActiveScene( data._sceneName );
                     if ( pRebuilt != nullptr )
                         pRebuilt->setSourcePath( data._sceneSourcePath );
-                    SW_LOG_INFO( "플레이 중에 활성 씬이 바뀌었습니다 — 편집하던 씬 '%#' 을 다시 세워 되돌립니다.", data._sceneName.c_str() );
+                    SW_LOG_INFO( "The active scene changed during play - restoring the edited scene '%#'.", data._sceneName.c_str() );
                 }
 
                 Scene*             pScene   = editor::getActiveScene();
@@ -532,7 +532,7 @@ namespace sw::editor
             if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
             {
                 if ( data._bStartQueued == SW_FALSE )
-                    SW_LOG_INFO( "씬을 여는 중입니다 — 로드가 끝나면 플레이를 시작합니다." );
+                    SW_LOG_INFO( "Opening the scene - play starts when loading finishes." );
                 data._bStartQueued = SW_TRUE;
                 data._queuedState  = state;
                 return;

@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/LifetimeScope.h"
+#include "Core/Memory/MemoryBlock.h"
 
 namespace sw
 {
@@ -23,14 +24,6 @@ namespace sw
         {
             static constexpr size_t kBlockBytes = 64 * 1024;
 
-            ~LocalizedTextArena()
-            {
-                for ( utf8* pBlock : _listBlock )
-                {
-                    Memory::free( pBlock );
-                }
-            }
-
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */
             const utf8* store( string_view text )
             {
@@ -44,9 +37,10 @@ namespace sw
                 if ( _pCursor == nullptr || bytes > _remainingBytes )
                 {
                     const size_t blockBytes = bytes > kBlockBytes ? bytes : kBlockBytes;
-                    _pCursor                = static_cast<utf8*>( Memory::allocate( blockBytes ) );
+                    MemoryBlock  block      = MemoryBlock::allocate( blockBytes );
+                    _pCursor                = block.getAs<utf8>();
                     _remainingBytes         = blockBytes;
-                    _listBlock.push_back( _pCursor );
+                    _listBlock.push_back( std::move( block ) );
                 }
                 utf8* const pStored = _pCursor;
                 Memory::copy( pStored, text.data(), text.size() );
@@ -61,7 +55,7 @@ namespace sw
 
         private:
             mutex                              _mutex;
-            vector<utf8*>                      _listBlock;
+            vector<MemoryBlock>                _listBlock;
             unordered_map<uint64, const utf8*> _mapByContent;
             utf8*                              _pCursor{ nullptr };
             size_t                             _remainingBytes{ 0 };

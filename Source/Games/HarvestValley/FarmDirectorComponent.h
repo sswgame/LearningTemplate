@@ -71,7 +71,7 @@ namespace sw
     enum class FarmButton : uint8
     {
         Tool1 = 0, ///< 괭이
-        Tool2,     ///< 물뿌리개
+        Tool2,     ///< 물루트개
         Tool3,     ///< 씨앗
         Tool4,     ///< 손
         SeedPrev,

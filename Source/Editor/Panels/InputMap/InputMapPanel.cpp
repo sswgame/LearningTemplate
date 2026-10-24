@@ -678,7 +678,7 @@ namespace sw::editor
         sw::string conflictingAction;
         if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
         {
-            SW_LOG_WARNING( "'%#' 을(를) %# 에 바인딩합니다 — 같은 레이어의 '%#' 과(와) 겹칩니다.",
+            SW_LOG_WARNING( "Binding '%#' to %# - conflicts with '%#' on the same layer.",
                             _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
         }
 

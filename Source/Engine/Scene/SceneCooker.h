@@ -104,11 +104,11 @@ namespace sw
          *                       그 게임 모듈은 이 빌드에 없고, 배포본은 활성 게임의 팩만 엽니다.
          * @return 기록한 씬 파일 수입니다.
          *
-         * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 굽고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
+         * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 베이크하고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
          *          프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs` 가 쿠킹합니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
          *          "Shipping requires cooked binary scene" 으로 멈춘다.
-         *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 굽는다.
+         *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 베이크한다.
          */
         SW_API static uint32 cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
                                             uint32& outFailedCount );
@@ -119,7 +119,7 @@ namespace sw
         SW_API static CookJobDesc makeCookJobDesc( const TypeRegistry& registry );
 
         /**
-         * @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 구워집니다.
+         * @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 베이크됩니다.
          * @details 2: 월드 설정과 스트리밍 셀(SCN1 판 4).
          */
         static constexpr uint32 kCookVersion = 2;

@@ -117,7 +117,8 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runDebugDrawReachesTheSceneView( EditorSelfTestContext& context )
             {
-                if ( openSceneView( context ) == nullptr )
+                const SceneViewPanel* pPanel = openSceneView( context );
+                if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
                 DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
                 if ( context.expect( pQueue != nullptr, "no DebugDrawQueue service" ) == false )
@@ -140,7 +141,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                const EditorDebugDrawStats& stats  = EditorDebugDrawStats::get();
+                const EditorDebugDrawStats& stats  = pPanel->getViewportClient().getVisualizerStats()._debugDraw;
                 const bool                  bDrawn = stats._segmentCount >= 12 && stats._textCount >= 1;
                 if ( bDrawn == false && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
@@ -486,8 +487,8 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 const int32                 frame     = ImGui::GetFrameCount();
-                const EditorGridStats&      grid      = EditorGridStats::get();
                 const EditorViewportClient& client    = pPanel->getViewportClient();
+                const EditorGridStats&      grid      = client.getGridStats();
                 const bool                  bGrid     = grid._frame == frame;
                 const bool                  bGizmo    = client.getLastGizmoFrame() == frame && client.getLastGizmoObjectCount() >= 1;
                 const bool                  bSceneRan = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
@@ -555,7 +556,9 @@ namespace sw::editor
                 (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
                 (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
                 (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
-                (void)context.expect( EditorGridStats::get()._frame != ImGui::GetFrameCount(), "the grid was drawn while only the game view was visible" );
+                const SceneViewPanel* pSceneView    = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
+                const bool            bGridDrawnNow = pSceneView != nullptr && pSceneView->getViewportClient().getGridStats()._frame == ImGui::GetFrameCount();
+                (void)context.expect( bGridDrawnNow == false, "the grid was drawn while only the game view was visible" );
                 // 카메라 없음 안내가 없으면 이미지 뒤에 그린 것이 하나도 없어야 한다. 격자, 기즈모, 시각화, 통계, 방향 큐브는 씬 뷰가 그린다.
                 if ( pPanel->wasNoCameraHintShown() == false )
                 {

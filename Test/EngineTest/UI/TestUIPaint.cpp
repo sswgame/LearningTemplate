@@ -259,6 +259,35 @@ SW_TEST_CASE( UIPaintTest, AtlasEvictionRepaintsText )
 }
 
 /**
+ * @brief [UIPaintTest] 글리프 래스터화 예산이 차서 글리프를 미룬 글 위젯은 다음 프레임에 다시 칠한다 — 글리프가 프레임마다 하나씩 나타나고, 다 나타나면 더 칠하지 않는다
+ * @details 예산 1 ns 는 프레임마다 새 글리프 하나만 만든다. 변이: `UIPaintPass::paint` 가 미룬 위젯을 다시 무효화하지 않으면 사각형이 하나로 굳어 진다.
+ */
+SW_TEST_CASE( UIPaintTest, DeferredGlyphsRepaintTheTextWidgetNextFrame )
+{
+    UIPaintFontFixture fonts;
+    SW_ASSERT_TRUE( fonts._bInitialized );
+    UIPaintFixture fixture( 400.0f, 100.0f );
+    fonts.bind( fixture );
+    fonts._fonts._fontService->getGlyphCache().setRasterBudgetNanoseconds( 1 );
+    sw::BoxPanel*   pRow  = fixture.setRoot<sw::BoxPanel>();
+    sw::TextWidget* pText = static_cast<sw::TextWidget*>( pRow->addChild( sw::make_unique<sw::TextWidget>() ) );
+    pText->setText( "abc" );
+
+    fixture._paintContext._frameIndex = 1;
+    SW_EXPECT_EQUAL( 2u, fixture.runFrame() ); // 패널과 글 위젯
+    SW_EXPECT_EQUAL( size_t{ 1 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 2;
+    SW_EXPECT_EQUAL( 1u, fixture.runFrame() ); // 글 위젯만
+    SW_EXPECT_EQUAL( size_t{ 2 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 3;
+    SW_EXPECT_EQUAL( 1u, fixture.runFrame() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, fixture._canvas._listQuad.size() );
+    fixture._paintContext._frameIndex = 4;
+    SW_EXPECT_EQUAL( 0u, fixture.runFrame() ); // 다 나타났다
+    SW_EXPECT_EQUAL( size_t{ 3 }, fixture._canvas._listQuad.size() );
+}
+
+/**
  * @brief [UIPaintTest] 글 위젯: 글을 바꾸면 레이아웃 더러움(kLayout), 색만 바꾸면 그리기 더러움(kPaint)뿐이다 — 원하는 크기는 글자 배율을 따른다
  * @details 변이: `TextWidget::setColor` 가 kLayout 을 함께 걸면 진다.
  */
@@ -402,6 +431,62 @@ SW_TEST_CASE( UIPaintTest, OnScreenSuppressionHidesScreensButKeepsTheirState )
     ui.setOnScreenSuppressed( false );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+}
+
+/**
+ * @brief [UIPaintTest] 레이어 숨김 요청은 그 레이어의 화면만 그리기 목록에서 빼고(포인터도 받지 않는다), 요청이 레이어마다 세어져 하나를 풀어도 남은 요청이 있으면 계속 숨긴다
+ * @details 포토 모드가 HUD 를 가리는 길이다. 요청 뒤에 열린 화면도 숨고, 요청을 모두 풀면 다시 그려진다. 건 적 없는 레이어를 푸는 것은 단언이라 여기서 하지 않는다.
+ */
+SW_TEST_CASE( UIPaintTest, LayerHideRequestsHideOnlyThatLayerAndCountPerLayer )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+
+    sw::unique_ptr<sw::OverlayPanel> hudRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *hudRoot, "hud", sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } );
+    sw::UIScreenDesc hudDesc{};
+    hudDesc._layer               = sw::UILayer::HUD;
+    const sw::UIScreenHandle hud = ui.pushScreen( sw::make_unique<sw::UIScreen>( hudDesc, std::move( hudRoot ) ) );
+
+    sw::unique_ptr<sw::OverlayPanel> menuRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *menuRoot, "menu", sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f } );
+    sw::UIScreenDesc menuDesc{};
+    menuDesc._layer = sw::UILayer::Menu;
+    (void)ui.pushScreen( sw::make_unique<sw::UIScreen>( menuDesc, std::move( menuRoot ) ) );
+
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 2 }, ui.getCanvas()._listQuad.size() );
+
+    const sw::UILayerMask hudOnly = sw::UILayerUtil::toMask( sw::UILayer::HUD );
+    ui.addLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() ); // 메뉴만 남는다
+    SW_EXPECT_TRUE( ui.isLayerHidden( sw::UILayer::HUD ) );
+    SW_EXPECT_FALSE( ui.isLayerHidden( sw::UILayer::Menu ) );
+    SW_ASSERT_TRUE( ui.findScreen( hud ) != nullptr );
+    SW_EXPECT_TRUE( ui.findScreen( hud )->isHiddenByLayer() );
+    SW_EXPECT_FALSE( ui.findScreen( hud )->receivesPointer() );
+
+    // 요청 뒤에 열린 HUD 화면도 숨는다. 같은 레이어를 한 번 더 숨겨도 하나를 풀 때는 계속 숨는다(요청은 센다).
+    sw::unique_ptr<sw::OverlayPanel> lateRoot = sw::make_unique<sw::OverlayPanel>();
+    (void)UIPaintFixture::addBox( *lateRoot, "late", sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } );
+    (void)ui.pushScreen( sw::make_unique<sw::UIScreen>( hudDesc, std::move( lateRoot ) ) );
+    ui.addLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+
+    ui.removeLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+    SW_EXPECT_TRUE( ui.isLayerHidden( sw::UILayer::HUD ) );
+
+    ui.removeLayerHideRequest( hudOnly );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 3 }, ui.getCanvas()._listQuad.size() );
+    SW_EXPECT_FALSE( ui.isLayerHidden( sw::UILayer::HUD ) );
+    SW_EXPECT_FALSE( ui.findScreen( hud )->isHiddenByLayer() );
 }
 
 /**

@@ -29,11 +29,32 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 오브젝트 하나의 해시입니다(이름 + 활성 + 월드 위치 비트). 어긋난 틱에서 어느 오브젝트가 다른지 짚는 데 씁니다. */
+    struct SceneObjectHash
+    {
+        string _name{};
+        uint64 _hash{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @struct SceneStateHash @brief 씬 상태 해시 계산입니다. */
     struct SW_API SceneStateHash
     {
         /** @brief 매니저의 오브젝트(이름 있는 것만)를 이름 순으로 접은 해시입니다. 오브젝트가 없으면 빈 해시 값입니다. */
         static uint64 compute( const GameObjectManager& manager );
+        /** @brief 이름 있는 오브젝트마다 해시 하나를 (이름, 해시) 순으로 채웁니다. `compute` 가 접는 값과 같은 칸을 오브젝트별로 접은 것입니다. */
+        static void collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject );
+        /** @brief 한 줄에 하나(`<16자리 16진 해시> <이름>`)로 씁니다. 이름은 줄 끝까지입니다. */
+        static void writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText );
+        /** @brief `writeObjectReport` 의 글을 되읽습니다. 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다(다른 글을 오브젝트 목록으로 받지 않는다). */
+        [[nodiscard]] static bool parseObjectReport( string_view text, vector<SceneObjectHash>& outListObject );
+        /**
+         * @brief 두 목록에서 (이름, 해시) 짝이 한쪽에만 있는 오브젝트의 이름을 이름 순으로 중복 없이 채웁니다. 이름이 같은 오브젝트가 여럿이면 개수까지 견줍니다.
+         * @return 하나라도 다르면 true
+         */
+        [[nodiscard]] static bool findDifferingObjects( const vector<SceneObjectHash>& listLeft, const vector<SceneObjectHash>& listRight, vector<string>& outListName );
     };
 } // namespace sw
 

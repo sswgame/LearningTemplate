@@ -39,21 +39,21 @@ namespace sw
                     }
                     case 2:
                     {
-                        const int16 value = static_cast<int16>( static_cast<uint16>( pSample[0] ) | ( static_cast<uint16>( pSample[1] ) << 8 ) );
-                        return static_cast<float32>( value ) / 32768.0f;
+                        const int16 decodedSample = static_cast<int16>( static_cast<uint16>( pSample[0] ) | ( static_cast<uint16>( pSample[1] ) << 8 ) );
+                        return static_cast<float32>( decodedSample ) / 32768.0f;
                     }
                     case 3:
                     {
                         // 24 비트를 32 비트 위쪽에 올려 부호를 살린다.
-                        const int32 value = static_cast<int32>( ( static_cast<uint32>( pSample[0] ) << 8 ) | ( static_cast<uint32>( pSample[1] ) << 16 ) |
-                                                                ( static_cast<uint32>( pSample[2] ) << 24 ) );
-                        return static_cast<float32>( value ) / 2147483648.0f;
+                        const int32 decodedSample = static_cast<int32>( ( static_cast<uint32>( pSample[0] ) << 8 ) | ( static_cast<uint32>( pSample[1] ) << 16 ) |
+                                                                        ( static_cast<uint32>( pSample[2] ) << 24 ) );
+                        return static_cast<float32>( decodedSample ) / 2147483648.0f;
                     }
                     case 4:
                     {
-                        const int32 value = static_cast<int32>( static_cast<uint32>( pSample[0] ) | ( static_cast<uint32>( pSample[1] ) << 8 ) |
-                                                                ( static_cast<uint32>( pSample[2] ) << 16 ) | ( static_cast<uint32>( pSample[3] ) << 24 ) );
-                        return static_cast<float32>( value ) / 2147483648.0f;
+                        const int32 decodedSample = static_cast<int32>( static_cast<uint32>( pSample[0] ) | ( static_cast<uint32>( pSample[1] ) << 8 ) |
+                                                                        ( static_cast<uint32>( pSample[2] ) << 16 ) | ( static_cast<uint32>( pSample[3] ) << 24 ) );
+                        return static_cast<float32>( decodedSample ) / 2147483648.0f;
                     }
                     default:
                     {

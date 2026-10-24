@@ -43,7 +43,7 @@ namespace sw
                                                              string& outError );
         /**
          * @brief 위젯 타입 @p type 의 기본값 인스턴스를 리플렉션 기본 생성자(`$ctor`)로 sw 할당자 블록에 만듭니다. 만들 수 없으면(추상 타입이거나 생성자가 없음) nullptr 입니다.
-         * @details `unique_ptr<Widget>` 의 해제자(`sw_delete`)가 가상 소멸자를 부르고 같은 블록을 해제하므로, `sw_new` 로 만든 것과 짝이 맞는다.
+         * @details `unique_ptr<Widget>` 의 해제자(`sw_delete`)가 가상 소멸자를 부르고 같은 블록을 해제하므로, `make_unique` 로 만든 것과 짝이 맞는다.
          */
         static unique_ptr<Widget> createWidget( const TypeInfo& type );
     };

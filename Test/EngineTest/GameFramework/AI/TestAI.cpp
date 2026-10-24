@@ -125,14 +125,14 @@ SW_TEST_CASE( AITest, BlackboardStoresTypedValues )
  */
 SW_TEST_CASE( AITest, BehaviorTreeCompositesAndDecorators )
 {
-    // 뿌리 시퀀스: [조건 Healthy] → [공격(3 틱)] → [성공]
+    // 루트 시퀀스: [조건 Healthy] → [공격(3 틱)] → [성공]
     BehaviorTree tree;
     const int32  root = tree.addSequence( -1, "Root" );
     tree.addCondition( root, "Healthy", &isHealthyCondition );
     tree.addAction( root, "Attack", &attackTask );
     tree.addAction( root, "Count", &succeedTask );
     SW_ASSERT_TRUE( tree.isValid() );
-    SW_EXPECT_EQUAL( -1, tree.addSequence( -1, "SecondRoot" ) ); // 뿌리는 하나
+    SW_EXPECT_EQUAL( -1, tree.addSequence( -1, "SecondRoot" ) ); // 루트는 하나
 
     Blackboard         blackboard;
     AITestAgent        agent;

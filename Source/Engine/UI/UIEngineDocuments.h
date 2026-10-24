@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @struct UIEngineDocuments
-     * @brief 엔진 UI 문서 경로입니다. 정본은 `EngineDefaultAssets`(enginedefaultassets.xml)이고, UI 시스템은 기동 때 그 표에서 받는다(`UISystem::setEngineDocuments`).
+     * @brief 엔진 UI 문서 경로입니다. 기준은 `EngineDefaultAssets`(enginedefaultassets.xml)이고, UI 시스템은 기동 때 그 표에서 받는다(`UISystem::setEngineDocuments`).
      * @details 코드에 기본 경로를 두지 않는다 — 받지 않은 묶음은 모두 비고, 빈 경로의 화면은 열리지 않는다(여는 쪽이 오류를 남긴다).
      *          테스트도 같은 표(`test::getEngineDefaultAssets`)에서 받는다.
      */

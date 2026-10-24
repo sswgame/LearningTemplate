@@ -22,7 +22,7 @@ namespace sw
 
     namespace
     {
-        /** @brief VkResult 를 프레임 루프가 분기하는 네 갈래로 접습니다. */
+        /** @brief VkResult 를 프레임 루프가 분기하는 네 분기로 접습니다. */
         VulkanSwapChainStatus toSwapChainStatus( VkResult result )
         {
             if ( result == VK_SUCCESS )
@@ -202,7 +202,7 @@ namespace sw
         }
         if ( surfaceFormat.format != requestedFormat )
         {
-            SW_LOG_INFO( "스왑체인이 요청 포맷(VkFormat %#) 대신 %# 를 채택했습니다 — 백버퍼 PSO 는 getBackBufferFormat() 으로 만든다.",
+            SW_LOG_INFO( "The swap chain adopted a different format than requested (requested VkFormat %#, adopted %#) - back buffer PSOs are built with getBackBufferFormat().",
                          static_cast<uint32>( requestedFormat ), static_cast<uint32>( surfaceFormat.format ) );
         }
 
@@ -231,7 +231,7 @@ namespace sw
             }
 
             if ( presentMode == VK_PRESENT_MODE_FIFO_KHR )
-                SW_LOG_INFO( "VSync 끄기를 요청했지만 서피스가 MAILBOX/IMMEDIATE 를 주지 않습니다 — FIFO 로 남습니다." );
+                SW_LOG_INFO( "VSync off was requested but the surface offers neither MAILBOX nor IMMEDIATE - staying on FIFO." );
         }
 
         // 서피스가 크기를 고정한 경우( currentExtent != UINT32_MAX ) 반드시 그 값을 써야 한다.
@@ -255,7 +255,7 @@ namespace sw
         // 다시 부르므로 여기서는 조용히 물러난다.
         if ( extent.width == 0 || extent.height == 0 )
         {
-            SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#×%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
+            SW_LOG_TRACE( "createSwapChain: surface size is 0 (%#x%#) - the window is minimizing or closing. Skipping swap chain creation.",
                           extent.width, extent.height );
             _bSurfaceEmpty = true;
             return false;

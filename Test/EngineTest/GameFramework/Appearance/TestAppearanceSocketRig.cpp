@@ -94,7 +94,7 @@ namespace
             }
         };
 
-        /** @brief 뿌리(원점) · 오른손(1, 1, 0) · 왼손(-1, 1, 0) 세 본입니다. */
+        /** @brief 루트(원점) · 오른손(1, 1, 0) · 왼손(-1, 1, 0) 세 본입니다. */
         static CharacterBoneArray makeBodyBones()
         {
             CharacterBoneArray bones;
@@ -236,7 +236,7 @@ SW_TEST_CASE( AppearancePreloadTest, PresetAssetsFollowItsReferences )
 }
 
 /**
- * @brief [AppearancePreloadTest] 몸 부품이 가리키는 피팅 표의 영역이 숨김 영역 이름의 정본이다 — 표에 없는 영역을 숨기는 몸 수정은 폴더를 읽을 때 오류다
+ * @brief [AppearancePreloadTest] 몸 부품이 가리키는 피팅 표의 영역이 숨김 영역 이름의 기준이다 — 표에 없는 영역을 숨기는 몸 수정은 폴더를 읽을 때 오류다
  */
 SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
 {
@@ -265,6 +265,26 @@ SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
     AppearanceDatabase unknown;
     SW_EXPECT_FALSE( unknown.loadFromFolder( folder, nullptr ) );
     SW_EXPECT_TRUE( unknown.getReport().joined().find( "unknown body region 'Tail'" ) != string::npos );
+}
+
+/**
+ * @brief [AppearancePreloadTest] 몸 부품의 `bodyShapes`(체형 축 데이터)가 읽히고 미리 올릴 경로에 들며, 스킨드가 아닌 부품에 적으면 오류다
+ */
+SW_TEST_CASE( AppearancePreloadTest, BodyShapesAreReadFromTheBodyPartAndNamedForPreload )
+{
+    AppearanceDatabase database;
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText(
+        "<ItemVisualCatalog><ItemVisual id='body'><Part name='Body' kind='Skinned' mesh='m/body.mesh' bodyShapes='s/body.bodyshape.xml'/></ItemVisual></ItemVisualCatalog>", "body visuals" ) );
+    const ItemVisualDef* pVisual = database.getVisuals().findVisual( hashed_string( "body" ) );
+    SW_ASSERT_NOT_NULL( pVisual );
+    SW_ASSERT_EQUAL( size_t( 1 ), pVisual->_listPart.size() );
+    SW_EXPECT_TRUE( pVisual->_listPart[0]._bodyShapes == hashed_string( "s/body.bodyshape.xml" ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a rigid part cannot have body shape axes" );
+    AppearanceDatabase rigid;
+    (void)rigid.loadSectionFromXMLText( "<ItemVisualCatalog><ItemVisual id='hat'><Part name='Hat' kind='SocketPrefab' prefab='p/hat.prefab.xml' socket='Head' bodyShapes='s/body.bodyshape.xml'/></ItemVisual></ItemVisualCatalog>",
+                                        "rigid visuals" ); // 오류는 보고에 남는다
+    SW_EXPECT_TRUE( rigid.getReport().joined().find( "bodyShapes" ) != string::npos );
 }
 
 /**

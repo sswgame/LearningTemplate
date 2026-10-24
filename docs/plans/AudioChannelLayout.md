@@ -40,7 +40,7 @@
 
 ## 5. 측정
 
-- Release `AudioBenchTest` 를 Stereo · 5.1 · 7.1 로 돌려 렌더 비용 비율을 본다. 보이스 위주 워크로드라 리버브와 버스 처리량은 보이스 0 · 이펙트 켠 버스만으로 따로 잰다.
+- 매니페스트 id `audio-bench-release`(Release `AudioBenchTest.*`, GPU 독점 — 아래 평면 대 인터리브 전후 비교도 같은 실행이다). Release `AudioBenchTest` 를 Stereo · 5.1 · 7.1 로 돌려 렌더 비용 비율을 본다. 보이스 위주 워크로드라 리버브와 버스 처리량은 보이스 0 · 이펙트 켠 버스만으로 따로 잰다.
 - 평면과 인터리브 비교(U1): Debug `AudioBenchTest` 8회 최솟값이 전 312 / 349 / 470 ms, 후 291 / 356 / 471 ms(보이스 32 / 64 / 128)로 같다. **Release 전후 비교는 아직 못 했다**(기준 107 ms, 2026-10-15) — Release 빌드를 허락받은 작업이 `EngineTest.exe --test_filter=AudioBenchTest.* --load_suites=only` 로 재고, 스테레오 기준 느려졌으면 이 결정(평면)을 되돌린다.
   U2 가 보이스 믹스를 두 단계(소스 렌더 → 채널별 게인)로 바꾸고 로우패스를 패닝 앞으로 옮겼으므로 같은 벤치로 함께 본다.
 - 실시간 스레드: 레이아웃은 장치를 닫은 뒤에만 바꾸고(`AudioEngine::setChannelLayout`), 렌더 중 할당은 0 이어야 한다.

@@ -18,6 +18,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
@@ -38,19 +40,35 @@ namespace sw
     class NetMessageChannel;
     class NetMessageWriter;
 
-    /** @brief 판 규칙의 수치입니다. 시간은 초, 거리는 m 입니다. */
-    struct MechArenaSettings
+    /**
+     * @brief 판 규칙의 수치입니다. 시간은 초, 거리는 m 입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `MechArenaWorld::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     *          판 크기와 천장의 범위는 스냅샷(`MechArenaSnapshot`)의 위치 양자화 범위와 같다.
+     */
+    REFLECT()
+    struct SW_KIT_API MechArenaSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001, Max = 1.0 )
         float32 _fixedStep{ 1.0f / 60.0f }; ///< 근접 기술의 프레임 하나가 한 걸음이다
+        PROPERTY()
         float32 _gravity{ 25.0f };
+        PROPERTY( Min = 1.0, Max = 100000.0 )
         float32 _arenaHalfSize{ 200.0f }; ///< 위치는 이 범위 안으로 자른다(직렬화 양자화 범위)
+        PROPERTY( Min = 1.0, Max = 100000.0 )
         float32 _ceiling{ 60.0f };
+        PROPERTY( Min = 0.0 )
         float32 _respawnDelay{ 5.0f };
+        PROPERTY( Min = 0.0 )
         float32 _respawnInvulnerable{ 2.0f };
-        float32 _timeLimit{ 0.0f };  ///< 0이면 제한 없음. 시간이 끝나면 남은 게이지가 많은 팀이 이긴다
+        PROPERTY( Min = 0.0 )
+        float32 _timeLimit{ 0.0f }; ///< 0이면 제한 없음. 시간이 끝나면 남은 게이지가 많은 팀이 이긴다
+        PROPERTY( Min = 0.0 )
         float32 _gaugeScale{ 2.0f }; ///< `_teamGauge` 가 0이면 팀 게이지는 팀원 첫 기체의 코스트 합에 이 값을 곱한 값이다
-        int32   _teamGauge{ 0 };     ///< 팀 게이지를 직접 정한다(0이면 위의 합을 쓴다)
-        uint32  _seed{ 0x5D6C0F1u }; ///< 탄 퍼짐 시드(조종사 번호를 섞는다)
+        PROPERTY( Min = 0 )
+        int32 _teamGauge{ 0 }; ///< 팀 게이지를 직접 정한다(0이면 위의 합을 쓴다)
+        PROPERTY()
+        uint32 _seed{ 0x5D6C0F1u }; ///< 탄 퍼짐 시드(조종사 번호를 섞는다)
     };
 } // namespace sw
 
@@ -226,10 +244,11 @@ namespace sw
 
         MechArenaWorld();
 
-        void initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog, const MoveCatalog* pMoveCatalog );
+        /** @brief 설정과 카탈로그를 받아 판을 비웁니다. 설정이 범위 밖(`MechArenaSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 판은 그대로입니다. */
+        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog, const MoveCatalog* pMoveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
-        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체나 팀이거나, 덱 코스트가 상한을 넘으면 −1 을 반환합니다. */
+        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체나 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이면 −1 을 반환합니다. */
         int32 addPilot( const MechPilotConfig& config );
         /** @brief 팀 게이지를 정하고(코스트 합) 출격시킵니다. */
         void start();
@@ -295,7 +314,8 @@ namespace sw
                          MechWeaponKind kind );
         void activateSkill( int32 pilot, int32 skillIndex );
         void triggerSkills( int32 pilot, MechSkillTrigger trigger );
-        void equipMech( MechPilot& pilot, int32 pilotIndex );
+        /** @brief 지금 장착한 기체로 체력, 부스트, 록온, 무기를 다시 짭니다. 기체의 체력 설정이 범위 밖이라 거절되면 false 입니다. */
+        [[nodiscard]] bool equipMech( MechPilot& pilot, int32 pilotIndex );
         /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 엽니다). */
         MatchSettings makeMatchSettings() const;
         /** @brief 조종사 하나를 읽어 덱과 스킬을 카탈로그에서 찾고, 탄 기체를 장착한 뒤 상태를 덮어씁니다. 바이트가 깨졌으면 false 를 반환합니다. */

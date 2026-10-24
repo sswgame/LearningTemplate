@@ -89,7 +89,7 @@ namespace sw
      *          `kTerrainSettleSeconds` 동안 그대로이면(브러시 드래그가 끝나면) 틱 뒤에 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
      *          다시 계산은 **바뀐 곳만** 한다. 레이어마다 후보의 표면 판정(`PlacementCandidate`)을 들고 있다가 지형이 알려 준 편집 사각형(`TerrainComponent::findEditedArea`)
      *          안의 후보만 다시 판정하고, 최소 거리부터는 전부 다시 풀어(앞 번호가 이기는 순서 규칙이라 연쇄로 바뀔 수 있다) 처음부터 계산한 것과 비트까지 같은 배치를 얻는다.
-     *          그다음 셀마다 내용 해시를 견줘 **바뀐 셀의 배치만** 다시 만든다 — 나머지 셀 배치는 레지스트리에 그대로 남는다. 영역 · 규칙이 바뀌었거나 지형을 다시 읽었으면 통째로 다시 계산한다.
+     *          그다음 셀마다 내용 해시를 비교해 **바뀐 셀의 배치만** 다시 만든다 — 나머지 셀 배치는 레지스트리에 그대로 남는다. 영역 · 규칙이 바뀌었거나 지형을 다시 읽었으면 통째로 다시 계산한다.
      *          스레드: 배치 다시 만들기(`rebuildFoliage`)는 틱 밖에서만 호출한다. 틱은 자기 배치와 자기 머티리얼 인스턴스만 쓴다.
      */
     REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind", Meta = "Icon=Foliage, IconColor=Environment" )

@@ -508,7 +508,7 @@ namespace sw::editor
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {
-            SW_LOG_WARNING( "소스 이미지는 `%#` 아래에 있어야 임포트됩니다: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
+            SW_LOG_WARNING( "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
             return true;
         }
 
@@ -521,10 +521,10 @@ namespace sw::editor
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "텍스처 임포트 실패: %#", problem.c_str() );
+            SW_LOG_ERROR( "Texture import failed: %#", problem.c_str() );
         }
 
-        SW_LOG_INFO( "텍스처 일괄 임포트: %# 바뀜 -> %#개 임포트함", relativePath, summary._importedCount );
+        SW_LOG_INFO( "Texture batch import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 

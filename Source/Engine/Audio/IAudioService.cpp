@@ -94,7 +94,7 @@ namespace sw
         if ( _bInitialized )
             return true;
 
-        // 믹서 그래프는 엔진 데이터가 정본이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
+        // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDesc mixerDesc;
         if ( mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
         {

@@ -1496,7 +1496,7 @@ SW_TEST_CASE( InputMapTest, MissingShellInputMapLeavesNoBindings )
 /**
  * @brief [InputMapTest] 키를 누른 채 레이어를 켜면 Pressed 가 아니라 Held 로 시작하고, 뗐다 다시 누르면 Pressed 가 나온다
  * @details 변이: 꺼진 레이어의 바인딩이 눌림을 추적하지 않으면(`_bPhysicalDown`) 레이어가 켜지는 프레임에 이미 눌려 있던 키가 새 누름으로 발화한다 —
- *          일시정지를 연 Esc 를 누르고 있으면 층 안 Back 이 바로 발화해 메뉴가 닫히던 결함의 뿌리다.
+ *          일시정지를 연 Esc 를 누르고 있으면 층 안 Back 이 바로 발화해 메뉴가 닫히던 결함의 근본 원인다.
  */
 SW_TEST_CASE( InputMapTest, KeyHeldWhenTheLayerTurnsOnStartsHeldNotPressed )
 {
@@ -1696,7 +1696,7 @@ SW_TEST_CASE( InputMapTest, RebuiltBindingStateStartsHeldNotPressed )
 
 /**
  * @brief [InputMapTest] 합성 바인딩(axis1d · vector2d)도 같은 프레임 안의 누름 + 뗌을 한 번 눌린 것으로 본다 — 단일 키와 같은 규칙
- * @details 매크로 · 초고속 탭 · 가상 입력(hold=0)은 한 `beginFrame` 에 누름과 뗌이 함께 들어온다. 합성 갈래가 "지금 눌려 있나" 만 보면
+ * @details 매크로 · 초고속 탭 · 가상 입력(hold=0)은 한 `beginFrame` 에 누름과 뗌이 함께 들어온다. 합성 분기가 "지금 눌려 있나" 만 보면
  *          그 프레임 축이 0 이라 `Pressed` 로 묶은 무기 교체(Shooter3D SwitchWeapon)가 발동하지 않는다.
  */
 SW_TEST_CASE( InputMapTest, CompositeBindingCountsATapWithinOneFrame )

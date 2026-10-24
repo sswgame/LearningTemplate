@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: network · 옛번호: D7-8 · 진행: 표
 
-**남은 확인(통합에서 확인):** Shooter3D 전용 서버 + 클라이언트에 `-gv_netEmuPreset=lte` 를 걸고 보정 횟수와 화면 튐을 본다(아래 "남은 것"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `rollback-prediction-lte-run`(아래 "남은 것"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 상태 동기화와 파괴 동기화는 있지만 입력 예측 · 서버 보정 · 롤백, 그리고 관심 영역(relevancy)으로 복제 대상을 거르는 층이 없었다. 설계는 결정 기록 5-12 `D7-8` 행으로 정했다(서버 권위 + 내 폰만 재시뮬레이션 + 허용 오차 비교, 64인 이하 30 Hz, 첫 게임 Shooter3D). 선행 잠복 결함 셋(`NetOwnerState`, `PredictionReconcileResult`, `RollbackConfig` 범위 거절)은 고쳤다.
 네 단계 모두 코드가 들어갔고 빌드 · 테스트 · 실행 확인이 남았다(아래 "남은 것").
@@ -18,8 +18,8 @@
 
 ## 남은 것
 
-- 확인: Shooter3D 전용 서버 + 클라이언트(`Server -game=Shooter3D` · `App -game=Shooter3D -gv_netConnectAddress=127.0.0.1:7777`)에 `-gv_netEmuPreset=lte` 를 걸고 움직여 보정 횟수(`getCorrectionCount`)와 화면이 튀지 않는지 본다.
+- 확인 대기: 매니페스트 id `shooter-net-jump-lte`. Shooter3D 전용 서버 + 클라이언트(`Server -game=Shooter3D` · `App -game=Shooter3D -gv_netConnectAddress=127.0.0.1:7777`)에 `-gv_netEmuPreset=lte` 를 걸고 움직여 보정 횟수(`getCorrectionCount`)와 화면이 튀지 않는지 본다.
 - 서버의 조종 연결이 하나다(아레나에 플레이어 몸이 하나) — 연결마다 몸을 스폰하는 일은 Shooter3D 멀티플레이 판 설계와 함께 한다.
-- 점프 눌림은 틱이 없는 프레임에서 놓칠 수 있다 — 고정 틱 입력 모으기(눌림을 다음 틱까지 쌓기).
+- 점프 눌림 쌓기는 들어갔다(2026-10-24, `wt/plannet`, 빌드 전): `ShooterNetPawnComponent::_bJumpPending` 이 틱이 없던 프레임의 눌림을 다음 입력 틱까지 쌓아 싣고 비운다. 확인: 위 `lte` 실행에서 짧게 눌러도 점프가 매번 나가는지.
 
 함정: 월드 전체 롤백은 `NetworkExtensionIdeas`([후보](Candidates-network.md)) 쪽이다. 규모 방향은 `UdpSocketLayerScaling` 이다.

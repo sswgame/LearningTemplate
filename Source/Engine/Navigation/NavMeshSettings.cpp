@@ -202,7 +202,7 @@ namespace sw
         hash           = Internal::mixFloat( hash, agentType._maxEdgeError );
         hash           = Internal::mixFloat( hash, agentType._detailSampleDistance );
         hash           = Internal::mixFloat( hash, agentType._detailSampleMaxError );
-        // 장애물 방식이 바뀌면 쿠킹본의 바이트 종류(타일 · 높이 층)가 바뀐다 — 낡은 쿠킹본으로 읽지 않는다. 기본(다시 굽기)은 섞지 않아 있던 쿠킹본이 그대로 맞는다.
+        // 장애물 방식이 바뀌면 쿠킹본의 바이트 종류(타일 · 높이 층)가 바뀐다 — 낡은 쿠킹본으로 읽지 않는다. 기본(다시 베이크)은 섞지 않아 있던 쿠킹본이 그대로 맞는다.
         if ( agentType._obstacleMode != NavObstacleMode::RebakeTiles )
             hash = Internal::mixUint( hash, static_cast<uint32>( agentType._obstacleMode ) );
         return hash;

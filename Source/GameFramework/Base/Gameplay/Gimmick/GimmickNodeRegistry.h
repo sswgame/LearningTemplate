@@ -138,7 +138,7 @@ namespace sw
     class SW_GF_API GimmickNodeRegistry
     {
     public:
-        /** @brief 내장 종류를 모두 가진 레지스트리입니다. 처음 부를 때 만들고 이후에는 바꾸지 않습니다. */
+        /** @brief 내장 종류를 모두 가진 레지스트리입니다. 처음 부를 때 만들고 이후에는 바꾸지 않습니다. 엔진 수명 범위가 소유하므로 엔진 종료가 끝난 뒤에는 부르지 않습니다. */
         static const GimmickNodeRegistry& getDefault();
 
         /** @brief 종류를 추가합니다. 이름이 이미 있거나, 포트가 32 개를 넘거나, 상태 슬롯이 `GimmickNodeState::kMaxSlotCount` 를 넘으면 false 입니다. */

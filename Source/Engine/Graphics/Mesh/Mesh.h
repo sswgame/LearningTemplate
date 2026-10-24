@@ -187,11 +187,11 @@ namespace sw
         void setVertices( vector<RHIVertex>&& listVertex );
         /**
          * @brief 탄젠트가 이미 들어 있는 정점 배열을 그대로 설정합니다(`.mesh` 를 읽은 값, 다른 메시의 사본).
-         * @details 임포트가 `computeTangents` 로 구해 파일에 실은 값이다. 런타임이 로드마다 다시 구하지 않는다(언리얼 · 유니티가 임포트 때 MikkTSpace 를 굽는 것과 같다).
+         * @details 임포트가 `computeTangents` 로 구해 파일에 실은 값이다. 런타임이 로드마다 다시 구하지 않는다(언리얼 · 유니티가 임포트 때 MikkTSpace 를 베이크하는 것과 같다).
          */
         void setVerticesWithTangents( vector<RHIVertex>&& listVertex );
         /**
-         * @brief 삼각형 목록 정점의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 정본은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
+         * @brief 삼각형 목록 정점의 탄젠트(`RHIVertex::_arrTangent`)를 위치 · 노멀 · UV 로 구합니다. 기준은 이 함수 하나입니다(런타임 · 임포트 · `.mesh` 쓰기).
          * @details MikkTSpace 와 같은 규약이다 — 면마다 UV 기울기에서 탄젠트 · 바이탄젠트를 구해 모서리 각도로 가중하고, 위치 · 노멀 · UV 가 비트까지 같은 정점끼리
          *          (손잡이가 같은 면끼리만) 모아 더한 뒤 노멀에 직교화한다. W 는 바이탄젠트 부호(cross( N, T ) 와 면의 바이탄젠트가 같은 쪽이면 +1)다.
          *          UV 가 퇴화해(면적 0) 기울기가 없는 정점은 노멀에 수직이고 +X 에 가장 가까운 방향을 받는다(노멀이 X 축이면 +Z). 셰이더의 노멀 맵은 평평한 맵에서 노멀을 그대로 낸다.
@@ -224,7 +224,7 @@ namespace sw
 
         /**
          * @brief 모프 컴퓨트가 기본 물결 대신 실행할 변형 프로그램(float4 목록)을 넣습니다. 빈 목록이면 프로그램을 뗍니다. 내용 번호는 바뀌지 않습니다.
-         * @details 메시 모디파이어 미리보기(`GF_EditorPlugIn_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 정본이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
+         * @details 메시 모디파이어 미리보기(`GF_EditorPlugIn_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 기준이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
          *          게임 스레드가 아무 때나 바꾸고 렌더 스레드는 프레임마다 사본을 잡아 읽으므로(잠금) 정점 버퍼를 다시 만들지 않고 매개변수만 바꿀 수 있다.
          *          목록은 엔진 안에서 복사해 든다 — 넘긴 쪽(확장 모듈)이 내려가도 소멸 코드가 엔진에 남는다.
          */

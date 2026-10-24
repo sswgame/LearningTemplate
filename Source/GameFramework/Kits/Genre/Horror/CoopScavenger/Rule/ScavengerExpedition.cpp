@@ -52,8 +52,13 @@ namespace sw
     {
     }
 
-    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
+    bool ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
+        if ( crewCount < 1 || data._pCatalog == nullptr )
+        {
+            SW_LOG_ERROR( "ScavengerExpedition: refused - crewCount %# (needs 1 or more) and a catalog (%#)", crewCount, data._pCatalog != nullptr ? "given" : "missing" );
+            return false;
+        }
         _data = data;
         _seed = seed;
         _random.setSeed( seed );
@@ -72,15 +77,21 @@ namespace sw
         _shop.initialize( data._pShopCatalog, data._pItemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
-        _listCrew.resize( static_cast<size_t>( MathUtil::max( 1, crewCount ) ) );
-        if ( data._pCatalog == nullptr )
-            return;
+        _listCrew.resize( static_cast<size_t>( crewCount ) );
         _quota.initialize( data._pCatalog->getQuotaSettings() );
         if ( _pWallet != nullptr )
             _pWallet->setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
         if ( data._pCatalog->getMoons().empty() == false )
             _pMoon = &data._pCatalog->getMoons().front();
+        VitalitySettings crewVitality;
+        crewVitality._maxHealth = data._pCatalog->getCrewHealth();
+        for ( ScavengerCrewMember& member : _listCrew )
+        {
+            if ( member._vitality.initialize( crewVitality ) == false )
+                return false;
+        }
         resetCrew();
+        return true;
     }
 
     ScavengerActionResult ScavengerExpedition::routeTo( const hashed_string& moonID )
@@ -518,11 +529,9 @@ namespace sw
     {
         if ( _data._pCatalog == nullptr )
             return;
-        VitalitySettings settings;
-        settings._maxHealth = _data._pCatalog->getCrewHealth();
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            member._vitality.initialize( settings );
+            member._vitality.reset(); // 설정(최대 체력)은 initialize 가 이미 범위를 보고 받았다
             member._carry.initialize( _data._pCatalog->getCarrySettings() );
             member._areaID         = hashed_string( kShipAreaID );
             member._bBodyRecovered = SW_FALSE;

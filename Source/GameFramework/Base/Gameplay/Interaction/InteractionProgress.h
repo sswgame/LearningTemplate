@@ -79,8 +79,12 @@ namespace sw
     public:
         InteractionProgress();
 
-        /** @brief 규칙, 판정기, 시드를 정하고 처음 상태로 되돌립니다. 판정기는 소유하지 않고 참조만 하며 nullptr 일 수 있습니다. */
-        void initialize( const InteractionConfig& config, const TimingJudge* pJudge, uint32 seed );
+        /**
+         * @brief 규칙, 판정기, 시드를 정하고 처음 상태로 되돌립니다. 판정기는 소유하지 않고 참조만 하며 nullptr 일 수 있습니다.
+         * @return 걸리는 시간이 0.001 초보다 짧거나 참가자 상한이 1 보다 작으면 오류를 남기고 false 입니다(올려 받지 않는다). 그러면 상태는 그대로입니다.
+         *         규칙에 목록 필드가 있어 리플렉션 범위로 선언하지 못한 두 수치만 손으로 본다.
+         */
+        [[nodiscard]] bool initialize( const InteractionConfig& config, const TimingJudge* pJudge, uint32 seed );
         /** @brief 진행량, 참가자, 시계를 처음으로 되돌립니다. 시드도 처음 값으로 되돌립니다. */
         void reset();
 

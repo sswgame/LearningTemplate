@@ -302,7 +302,7 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsCurrencyAtCorpseAndSecondDeathLosesIt 
     MetroSoulsState souls;
     souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
-    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( player.initialize( &scene._catalog ) );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
 
     soulsWallet.add( "geo", 100 );
@@ -363,7 +363,7 @@ SW_TEST_CASE( MetroidvaniaTest, DeathDropsTheWalletCurrencyAndRecoveryReturnsIt 
     MetroSoulsState souls;
     souls.initialize( &scene._catalog, lendMetroWallet( shared ) );
     MetroDuelist player;
-    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( player.initialize( &scene._catalog ) );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
 
     (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
@@ -385,7 +385,7 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     MetroSoulsState souls;
     souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
-    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( player.initialize( &scene._catalog ) );
 
     // 물약 — 두 번 마시면 끝, 죽은 몸에는 듣지 않는다.
     (void)player.getVitality().applyDamage( 80.0f );
@@ -449,9 +449,9 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
     MetroScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
     MetroDuelist player;
-    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( player.initialize( &scene._catalog ) );
     MetroDuelist boss;
-    boss.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( boss.initialize( &scene._catalog ) );
 
     // 창 안(0.05 초 일찍) — 피해 없이 패리, 반격 배율은 한 번만.
     player.pressParry();
@@ -489,7 +489,7 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
 
     // 막기 — 피해만큼 스태미나를 쓰고 체력은 조금. 스태미나가 모자라면 가드 붕괴.
     MetroDuelist guard;
-    guard.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( guard.initialize( &scene._catalog ) );
     guard.setGuarding( true );
     outcome = guard.receiveAttack( 40.0f, 0.0f );
     SW_EXPECT_TRUE( outcome._result == MetroDefenseResult::Blocked );
@@ -505,7 +505,7 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
 
     // 강인도 — 30 을 넘게 깎이면 비틀거리고, 그 상대에게는 패리 없이도 반격 배율.
     MetroDuelist attacker;
-    attacker.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( attacker.initialize( &scene._catalog ) );
     SW_EXPECT_FALSE( boss.receiveAttack( 10.0f, 20.0f )._bStaggered != SW_FALSE );
     SW_EXPECT_NEAR_EQUAL( 10.0f, attacker.computeAttackDamage( 10.0f, boss ), 1.0e-3f );
     SW_EXPECT_TRUE( boss.receiveAttack( 10.0f, 20.0f )._bStaggered != SW_FALSE );
@@ -628,7 +628,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
 
     // 결투 — 한 대 맞고, 패리를 누르고, 막는 중.
     MetroDuelist duelist;
-    duelist.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( duelist.initialize( &scene._catalog ) );
     SW_EXPECT_TRUE( duelist.tryAttack() );
     (void)duelist.receiveAttack( 20.0f, 10.0f );
     duelist.pressParry();
@@ -639,7 +639,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     duelist.setGuarding( true );
     const vector<uint8> duelistBytes = captureMetroBytes( duelist );
     MetroDuelist        restoredDuelist;
-    restoredDuelist.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( restoredDuelist.initialize( &scene._catalog ) );
     SW_ASSERT_TRUE( restoreMetroBytes( duelistBytes, restoredDuelist ) );
     SW_EXPECT_NEAR_EQUAL( 80.0f, restoredDuelist.getVitality().getHealth(), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( duelist.getStamina().getValue(), restoredDuelist.getStamina().getValue(), 1.0e-5f );
@@ -655,7 +655,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     }
     SW_EXPECT_TRUE( captureMetroBytes( duelist ) == captureMetroBytes( restoredDuelist ) );
     MetroDuelist truncatedDuelist;
-    truncatedDuelist.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( truncatedDuelist.initialize( &scene._catalog ) );
     SW_EXPECT_FALSE( restoreTruncatedMetroBytes( duelistBytes, truncatedDuelist ) );
     SW_EXPECT_FALSE( truncatedDuelist.isGuarding() );
 
@@ -696,7 +696,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     MetroSoulsState souls;
     souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
     MetroDuelist player;
-    player.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( player.initialize( &scene._catalog ) );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
     soulsWallet.add( "geo", 100 );
     (void)souls.die( "cross2", float2{ 10.0f, 2.0f }, player.getVitality() );
@@ -716,7 +716,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     SW_EXPECT_FALSE( restoredSouls.isSpawnAlive( "cross1.husk_a" ) );
     SW_EXPECT_TRUE( soulsBytes == captureMetroBytes( restoredSouls ) );
     MetroDuelist restoredPlayer;
-    restoredPlayer.initialize( &scene._catalog );
+    SW_EXPECT_TRUE( restoredPlayer.initialize( &scene._catalog ) );
     SW_EXPECT_TRUE( souls.rest( "bench_town", player.getVitality() ) );
     SW_EXPECT_TRUE( restoredSouls.rest( "bench_town", restoredPlayer.getVitality() ) ); // 졸개가 되살아나고 물약이 찬다
     SW_EXPECT_TRUE( restoredSouls.isSpawnAlive( "cross1.husk_a" ) );

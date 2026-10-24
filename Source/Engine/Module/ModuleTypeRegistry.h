@@ -10,23 +10,34 @@ namespace sw
 {
     struct EnumRegistrar;
     struct GlobalVariableRegistrar;
+    struct ResourceDataKindRegistrar;
     struct TypeRegistrar;
 
     namespace engine
     {
-        /** @brief DLL 로드 직후: 전역 헤드에 매달린 모듈의 리플렉션 타입 · 전역 변수를 떼어 등록합니다. 컴포넌트 생성 함수는 타입(`TypeInfo::_addComponent`)과 함께 오릅니다. */
+        /**
+         * @struct ModuleRegistrarHeads
+         * @brief 이미지 하나의 정적 등록자 목록 머리 모음입니다. 모듈 이미지가 링크 때 목록에 다는 등록자 종류를 늘릴 때 여기 한 줄만 더하면, 올리는 길
+         *        (`registerModuleTypes`)과 핫 리로드(머리를 떼어 두었다 커밋 때 올리고, 중단하면 되돌린다)가 같이 따라온다.
+         */
+        struct ModuleRegistrarHeads
+        {
+            TypeRegistrar*             _pType{ nullptr };
+            EnumRegistrar*             _pEnum{ nullptr };
+            GlobalVariableRegistrar*   _pVariable{ nullptr }; ///< 타입과 달리 캐시해 두었다 다시 쓰지 않는다 — 같은 이름을 두 번 올리면 매니저가 경고하고 무시하므로, 새로 뗀 것만 올린다.
+            ResourceDataKindRegistrar* _pDataKind{ nullptr }; ///< 변수와 같다 — 새로 뗀 것만 올린다(모듈 이름으로 올리고 내리기 전에 뺀다).
+        };
+
+        /** @brief 전역 머리들을 그대로 읽습니다(비우지 않습니다). */
+        [[nodiscard]] SW_API ModuleRegistrarHeads peekGlobalRegistrarHeads();
+        /** @brief 전역 머리들을 @p heads 로 놓습니다. 기본값을 넘기면 모두 비웁니다(올린 쪽이 걷어 간 뒤, 또는 중단한 로드를 되돌릴 때). */
+        SW_API void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads );
+
+        /** @brief DLL 로드 직후: 전역 헤드에 매달린 모듈의 리플렉션 타입 · 전역 변수 · 데이터 파일 종류를 떼어 등록합니다. 컴포넌트 생성 함수는 타입(`TypeInfo::_addComponent`)과 함께 오릅니다. */
         SW_API void registerModuleTypes( string_view moduleName );
 
-        /**
-         * @brief DLL 로드 직후: 지정된 헤드 포인터들로부터 모듈의 타입 · 전역 변수를 등록합니다.
-         * @param pVariableHead 이 로드에서 새로 매달린 전역 변수 등록자입니다. 타입과 달리 캐시해 두었다 다시 쓰지 않습니다 — 같은 이름을
-         *                      두 번 올리면 매니저가 경고하고 무시하므로, 새로 뗀 것이 있을 때만 올립니다.
-         */
-        SW_API void registerModuleTypes(
-            string_view              moduleName,
-            TypeRegistrar*           pTypeHead,
-            EnumRegistrar*           pEnumHead,
-            GlobalVariableRegistrar* pVariableHead );
+        /** @brief DLL 로드 직후: 지정된 헤드들로부터 모듈의 타입 · 전역 변수 · 데이터 파일 종류를 등록합니다(`ModuleRegistrarHeads` 참고). */
+        SW_API void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads );
 
         /**
          * @brief enum 전역 변수가 열거자 이름(`-gv_rhiBackend=Vulkan`)을 받도록 리플렉션 enum 표를 파서로 겁니다. 엔진 타입을 등록한 뒤 부릅니다.

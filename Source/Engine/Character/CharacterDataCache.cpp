@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
@@ -132,7 +133,21 @@ namespace sw
 
 namespace sw
 {
+    template <>
+    struct SharedAssetCacheTraits<BodyShapeSet>
+    {
+        static constexpr const utf8*           kKindName   = "BodyShapeSet";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( string_view path, BodyShapeSet& outShapes ) { return outShapes.loadFromResource( path ); }
+    };
+} // namespace sw
+
+namespace sw
+{
     SW_SHARED_ASSET_CACHE( SocketSet );
+    SW_SHARED_ASSET_CACHE( BodyShapeSet );
     SW_SHARED_ASSET_CACHE( AnimationNotifyTable );
     SW_SHARED_ASSET_CACHE( PairedAnimationDef );
     SW_SHARED_ASSET_CACHE( PhysicsAsset );

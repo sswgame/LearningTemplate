@@ -112,7 +112,7 @@ namespace sw
             _threadCount.store( kMaxThread, std::memory_order_release );
             return nullptr;
         }
-        ThreadBuffer* pBuffer = sw_new ThreadBuffer();
+        ThreadBuffer* pBuffer = make_unique<ThreadBuffer>().release(); // 락 없이 읽는 표(`_arrThreadBuffer`)에 올린다. 해제는 타임라인이 한다
         pBuffer->_ownerThread = currentThread;
         utf8 arrName[constant::kMaxBuffer64]{};
         if ( ThreadName::tryGetCurrentThreadName( arrName, constant::kMaxBuffer64 ) )

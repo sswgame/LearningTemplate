@@ -9,7 +9,6 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
-#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

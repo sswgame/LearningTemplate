@@ -1,8 +1,11 @@
-# 📝 코딩 규칙 — 한국어 예시 모음
+# 코딩 규칙 — 한국어 예시 모음
 
-**규칙의 원본은 [AGENTS.md](../AGENTS.md) 의 목차가 가리키는 `docs/agents/` 파일들입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
-한국어 설명과 함께 모읍니다. 둘이 갈리면 AGENTS.md 가 맞습니다. 규칙을 더하거나 바꿀 때는 AGENTS.md 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
-규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제합니다(목록은 `py -3 -m Scripts --list lint`).
+> 질문: 코딩 규칙은 구체적으로 어떻게 쓰고, 어떻게 쓰지 않는가?
+> 독자: C++ · Python · CMake · HLSL 을 처음 고치는 사람.
+> 결론: 규칙의 원본은 `docs/agents/` 이고 이 문서는 한국어 예시만 가진다. 둘이 갈리면 `docs/agents/` 가 맞다. 규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제한다.
+
+규칙을 다시 적지 않고 `docs/agents/` 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를 한국어 설명과 함께 모읍니다. 규칙을 더하거나 바꿀 때는 `docs/agents/` 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
+게이트 · 픽서의 목록은 `py -3 -m Scripts --list lint` 입니다.
 
 ---
 
@@ -143,9 +146,9 @@ const Deadline deadline = Deadline::afterMilliseconds( 500 );
 while ( deadline.isExpired() == false ) { … }
 const int64 nowMs = WallClock::nowUnixMilliseconds();       // 만료 · 기록 시각(서비스에는 nowMs 매개변수로)
 
-Foo* pFoo = sw_new Foo( arg );                              // 맨 new Foo 대신
+unique_ptr<Foo> pFoo = make_unique<Foo>( arg );            // 맨 new Foo 대신(소유가 형식에 드러난다)
+MemoryBlock block = MemoryBlock::allocate( size );          // 거친 바이트 블록. void* + Memory::free 대신
 sw_placement_new( pMemory ) Foo( arg );                     // 맨 new ( pMemory ) Foo 대신
-uint8* pBuffer = sw_new_array<uint8>( size );
 
 GameObjectHandle _targetHandle;                             // 프레임을 넘겨 보관하는 참조는 핸들
 GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때마다 풀고, 사라졌으면 nullptr
@@ -290,5 +293,3 @@ Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 
 | `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 테스트는 `unittest.main()` (`mainGuard`) |
 | `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |
 
----
-◀ 이전: 핫리로드 및 ABI 가이드 | [🏠 위키 홈으로 돌아가기](../README.md)

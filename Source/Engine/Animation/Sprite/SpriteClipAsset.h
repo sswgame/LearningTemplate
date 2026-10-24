@@ -102,7 +102,7 @@ namespace sw
     /**
      * @class SpriteClipAsset
      * @brief `.sprite.xml` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent, SpriteAnimatorComponent)이 읽는 **하나의 파서**입니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값은 오류). 키는 PROPERTY 이름이 정본이다
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값은 오류). 키는 PROPERTY 이름이 기준이다
      *          (`_atlasPath`, `_atlasPixelSize`, `_listFrame`, `_listKey`, `_listAnimation`). 적지 않은 칸은 구조체 초기값이다.
      *          `_listAnimation` 이 빈 클립은 **프레임 전체가 이름 없는 애니메이션 하나**다(`findFrameRange`).
      *          읽은 뒤 의미만 따로 본다: 프레임 밖 구간은 자르고 알리며, 이름이 비거나 길이가 0 인 구간과 이름이 빈 알림은 버린다.

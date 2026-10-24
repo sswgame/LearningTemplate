@@ -4,6 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
@@ -241,8 +242,7 @@ namespace
      */
     struct ExitProbe
     {
-        ExitProbeRenderResource* _pResource{ nullptr };
-        ~ExitProbe() { sw_delete( _pResource ); }
+        unique_ptr<ExitProbeRenderResource> _pResource;
     };
     ExitProbe s_exitProbe;
 } // namespace
@@ -348,7 +348,7 @@ SW_TEST_CASE( LoaderFuzzTest, ChildLeavesRenderResourceForStaticDestruction )
     {
         target._pfnRun( nullptr, 0 );
     }
-    s_exitProbe._pResource = sw_new ExitProbeRenderResource();
+    s_exitProbe._pResource = make_unique<ExitProbeRenderResource>();
 }
 
 /**

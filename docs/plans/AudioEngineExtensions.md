@@ -36,7 +36,7 @@
 
 | 확인 | 방법 |
 |---|---|
-| 단위 테스트 | `EngineTest --test_filter=AudioSurroundTest.*:AudioOcclusionTest.*:AudioConvolutionTest.*:AudioSceneTest.*:AudioGraphTest.*:AudioMixerTest.*:AudioStreamTest.*` |
+| 단위 테스트 | 매니페스트 id `audio-engine-ext-tests` — `EngineTest --test_filter=AudioSurroundTest.*:AudioOcclusionTest.*:AudioConvolutionTest.*:AudioSceneTest.*:AudioGraphTest.*:AudioMixerTest.*:AudioStreamTest.*` |
 | 소리 그래프 | 실제 그래뉼러 소스(빗소리 · 엔진음)로 밀도 · 흔들림 음색과 RTPC 반응(사람 귀), 128 보이스 그래프의 블록당 비용(Release `AudioBenchTest`). |
 | 버스별 레이아웃 | 5.1 출력에서 `ui` 버스 소리가 FL FR 에만 나는지(`-gv_audioDumpPath` 채널별 에너지). |
 | 헤드폰 | 스피커 모드 `headphones` 로 이동 음원의 앞뒤 · 옆 구분, 머리 근처를 지나갈 때 튀지 않는지(사람 귀). |

@@ -11,6 +11,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "FightingMatch" );
@@ -37,13 +39,13 @@ namespace sw
                        timeline.restoreState( pMove->_frame, timeline.getFrame(), timeline.getHitstopRemaining(), timeline.hasContact(), timeline.wasBlocked() );
             }
 
-            /** @brief 격투의 라운드 규칙입니다. 라운드 승은 1위가 1점이고(순위 점수 목록은 없다), 둘이 함께 선승 조건에 닿으면 무승부입니다. 시간과 대기는 최소 1프레임입니다. */
+            /** @brief 격투의 라운드 규칙입니다. 라운드 승은 1위가 1점이고(순위 점수 목록은 없다), 둘이 함께 선승 조건에 닿으면 무승부입니다. 시간과 대기가 최소 1프레임인 것은 `FightingSettings` 의 범위가 지킨다. */
             static RoundSeriesSettings makeSeriesSettings( const FightingSettings& settings )
             {
                 RoundSeriesSettings series;
                 series._winScore          = settings._roundsToWin;
-                series._roundTicks        = MathUtil::max( 1, settings._roundFrames );
-                series._intermissionTicks = MathUtil::max( 1, settings._roundOverFrames );
+                series._roundTicks        = settings._roundFrames;
+                series._intermissionTicks = settings._roundOverFrames;
                 series._tieRule           = RoundSeriesTieRule::Draw;
                 return series;
             }
@@ -80,6 +82,12 @@ namespace sw
 
     bool FightingMatch::initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "FightingMatch: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
         if ( _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) ) == false )
             return false;
         _settings = settings;

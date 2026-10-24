@@ -12,6 +12,7 @@
 #include "Core/Event/EventType.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -160,10 +161,11 @@ namespace sw
             void* pMem = _arrFrameAllocator[allocIdx].allocate( sizeof( T ), alignof( T ) );
             if ( pMem == nullptr )
             {
-                pMem = Memory::allocate( sizeof( T ) );
-                if ( pMem == nullptr )
+                MemoryBlock overflowBlock = MemoryBlock::allocate( sizeof( T ) );
+                if ( overflowBlock.isValid() == false )
                     return;
-                _arrListOverflowAllocation[allocIdx].push_back( pMem );
+                pMem = overflowBlock.get();
+                _arrListOverflowAllocation[allocIdx].push_back( std::move( overflowBlock ) );
             }
 
             T* pQueuedEvent = sw_placement_new( pMem ) T( event );
@@ -362,8 +364,8 @@ namespace sw
          */
         atomic<std::thread::id> _busThreadID;
 
-        LinearAllocator _arrFrameAllocator[2];
-        vector<void*>   _arrListOverflowAllocation[2];
-        atomic<int32>   _activeAllocatorIndex;
+        LinearAllocator     _arrFrameAllocator[2];
+        vector<MemoryBlock> _arrListOverflowAllocation[2]; ///< 프레임 아레나에 못 담은 이벤트의 블록. 목록이 소유한다
+        atomic<int32>       _activeAllocatorIndex;
     };
 } // namespace sw

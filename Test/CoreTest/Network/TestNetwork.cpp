@@ -1011,7 +1011,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
 SW_TEST_CASE( NetworkTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "debug hold is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // debug hold is a development-build feature
 #else
     NetHostConfig clientSettings;
     clientSettings._timeoutSeconds          = 1.0;
