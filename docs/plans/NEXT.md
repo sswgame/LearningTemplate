@@ -18,7 +18,9 @@
 
 ## 000000. 2026-10-25 통합 H 대기 — 수정 · 정리 브랜치 열이 main 에 안 들어감 (이것부터 읽는다)
 
-**상태**: main 은 `00a6fc842` 이고 push 했다. 아래 브랜치는 모두 `D:/w/<이름>` 워크트리에 커밋만 있고(린트 통과, 빌드 · 테스트 · 실행 안 함) 병합 전이다. 작업자 보고는 각 브랜치의 `git log main..wt/<이름>` 과 커밋 메시지가 원본이다.
+**먼저 볼 것 — main CI 가 졌다**: 실행 40121848026(`954666ef1`, 통합 H 검증 뒤 push)에서 Lints 는 통과했지만 빌드 잡 아홉이 졌다. Linux 빌드 다섯(Shipping · Debug Wayland · Debug · Dedicated Server Shipping · ASan)은 컴파일 단계에서, 로그에 `Test/CoreTest/Common/TestLowLevelReport.cpp:48` 의 `return dup( descriptor );` 가 찍혀 있다(`lowlevellog` 가 들인 테스트 — Linux 에서 `dup` 선언 헤더 `unistd.h` 가 빠진 것으로 보이나 로그를 끝까지 읽지 않았다). Windows 는 컴파일은 되고 ctest 가 졌다(Shipping 5 건 · STL containers 1 건 · Dedicated Server Shipping 4 건, 시한 초과 아님). Linux TSan 은 Setup 단계 시한(exit 124). Windows Debug 는 초록. `py -3 -m Scripts ci-jobs 40121848026 --annotations` 로 잡마다 원인을 읽고, 위 병합 전에 이것부터 고친다(통합 H 의 Debug · Release 검증은 Linux · Shipping 컴파일을 안 봤다). 이번 세션의 작업자 브랜치들이 같은 테스트 파일을 건드렸는지(`lowlevelgaps` · `scenlogs` · `logids`)도 본다.
+
+**상태**: main 은 `1e94e0381`(문서 커밋 셋이 `954666ef1` 위에 있다) 이고 push 하지 않았다. 아래 브랜치는 모두 `D:/w/<이름>` 워크트리에 커밋만 있고(린트 통과, 빌드 · 테스트 · 실행 안 함) 병합 전이다. 작업자 보고는 각 브랜치의 `git log main..wt/<이름>` 과 커밋 메시지가 원본이다.
 
 | 브랜치 | 내용 | 통합이 볼 것 |
 |---|---|---|
