@@ -25,10 +25,10 @@ namespace sw
     struct SW_KIT_API AdventureVitalsSettings
     {
         REFLECT_BODY();
+        PROPERTY( Min = 1 )
+        int32 _maxHeartCount{ 20 }; ///< _startHeartCount 의 범위 필드라 그보다 먼저 둔다(고정 배치 코덱이 범위 값을 먼저 읽는다)
         PROPERTY( Min = 1, Max = "_maxHeartCount" )
         int32 _startHeartCount{ 3 };
-        PROPERTY( Min = 1 )
-        int32 _maxHeartCount{ 20 };
         PROPERTY( Min = 1 )
         int32 _piecesPerHeart{ 4 }; ///< 하트 조각이 이만큼 모이면 하트 그릇 하나가 된다
         PROPERTY( Min = 1.0 )

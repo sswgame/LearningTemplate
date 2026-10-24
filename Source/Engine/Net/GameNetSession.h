@@ -48,6 +48,7 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/NetHostShardSet.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Subsystem/ISubsystem.h"
