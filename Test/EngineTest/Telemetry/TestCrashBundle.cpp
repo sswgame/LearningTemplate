@@ -345,7 +345,7 @@ SW_TEST_CASE( CrashBundleTest, ChildCrashesWithBreadcrumbs )
 SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
 {
 #if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
-    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals — the crash handler does not write the report" );
+    SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // AddressSanitizer owns the fatal signals — the crash handler does not write the report
 #endif
     const string                         crashFolder      = test::makeTempDirectory( "ChildLogs" );
     const string                         reportsFolder    = test::makeTempDirectory( "CrashReports" );

@@ -343,7 +343,7 @@ SW_TEST_CASE( AppUITest, MsdfGlyphsMatchSdfDemoScreen )
 {
     using Internal = AppUITestInternal;
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "gv_fontMsdfGlyphs is a Release-only test switch" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_fontMsdfGlyphs 는 배포본에 등록되지 않는 테스트 스위치
 #else
     #define SW_APP_UI_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
     constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_UI_BACKEND_SWITCH ) };

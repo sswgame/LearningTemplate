@@ -34,6 +34,34 @@ namespace test
             static constexpr int32 kUnhandledLogExitCode = 15;
 
             /**
+             * @brief 명령줄 @p arguments 의 인자가 요구하는 구성 기능이 이 빌드에 있는가 — 없으면 실패를 기록하고 false 를 돌려준다.
+             * @details 구성 차이는 케이스가 `SW_TEST_REQUIRES_FEATURE` 로 먼저 선언해야 한다. 선언 없이 이 구성에 없는 기능을 쓰는 인자로 App 을 띄우면
+             *          조용한 건너뜀(`SW_TEST_SKIP`)이나 모호한 실행 실패 대신 "선언이 빠졌다" 로 바로 진다. 새 인자는 이 표에 한 줄을 더한다.
+             */
+            static bool hasFeaturesForArguments( sw::string_view arguments )
+            {
+                struct ArgumentFeature
+                {
+                    const utf8*        _pToken;
+                    test::BuildFeature _feature;
+                };
+                static constexpr ArgumentFeature kArrArgumentFeature[] = {
+                    {"-EnableEditor", test::BuildFeature::DevelopmentBuild}, // 배포본에는 에디터 모듈이 없다
+                    {       "-game=",  test::BuildFeature::SourceResources}, // 활성이 아닌 게임 팩은 구운 팩에 없다
+                };
+                for ( const ArgumentFeature& entry : kArrArgumentFeature )
+                {
+                    if ( arguments.find( entry._pToken ) == sw::string_view::npos || test::isBuildFeatureAvailable( entry._feature ) )
+                        continue;
+                    const sw::string message = sw::string( "App 인자 " ) + entry._pToken + " 는 이 구성에 없는 기능(" + test::getBuildFeatureName( entry._feature ) +
+                                               ")이 필요하다 — 케이스 첫 줄에 SW_TEST_REQUIRES_FEATURE 로 선언한다";
+                    SW_EXPECT_TRUE_MSG( false, message.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
+            /**
              * @brief 명령줄 @p arguments 가 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl` 토큰)입니다. 스위치가 없으면(빌드 기본 · 배포본) false 다.
              * @details 스위치 철자는 쿠킹 표의 명령줄 이름이다(`TestRunOptions::getBackendName`).
              */
@@ -124,6 +152,8 @@ namespace test
 
     sw::string AppTestUtil::makeAppCommand( sw::string_view arguments )
     {
+        if ( AppTestUtilInternal::hasFeaturesForArguments( arguments ) == false )
+            return {};
         const sw::string executablePath = findAppExecutablePath();
         if ( executablePath.empty() )
             return {};
@@ -155,6 +185,8 @@ namespace test
     sw::vector<sw::string> AppTestUtil::collectBuiltGamePacks()
     {
         sw::vector<sw::string> listGame;
+        // 게임 팩은 Shipping 에 없다 — 부르는 케이스가 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 로 먼저 선언해야 한다(빈 목록을 "건너뜀" 으로 읽지 못하게 막는다).
+        SW_EXPECT_TRUE_MSG( test::isBuildFeatureAvailable( test::BuildFeature::SourceResources ), "collectBuiltGamePacks 는 SourceResources 를 선언한 케이스만 부른다" );
 #if !defined( SW_SHIPPING )
         const sw::string       gamesDirectory = sw::FileUtil::joinPath( sw::FileUtil::getBinaryDirectory(), sw::config::kDirBinGames );
         sw::vector<sw::string> listFile;

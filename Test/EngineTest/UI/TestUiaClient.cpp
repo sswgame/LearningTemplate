@@ -343,6 +343,7 @@ SW_TEST_CASE( UiaClientTest, ClientReadsAndDrivesTheMenuThroughTheRealWindow )
     ui.setAccessibilityBridge( nullptr ); // 창보다 먼저 브리지를 뺀다
     window->destroy();
 #else
-    SW_TEST_SKIP( "UI Automation exists only in Windows client builds" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform );
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // UI Automation exists only in Windows client builds
 #endif
 }

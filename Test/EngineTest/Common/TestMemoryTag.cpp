@@ -80,7 +80,9 @@ SW_TEST_CASE( MemoryTagTest, DiagnosticBootstrapEnablesPlatformLeakChecks )
     SW_EXPECT_EQUAL( _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG, _CrtSetReportMode( _CRT_WARN, _CRTDBG_REPORT_MODE ) );
     SW_EXPECT_EQUAL( _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG, _CrtSetReportMode( _CRT_ERROR, _CRTDBG_REPORT_MODE ) );
 #else
-    SW_TEST_SKIP( "platform leak tracking state is the Windows Debug CRT (no ASan); other configurations have nothing to query" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform );
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
+    SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // platform leak tracking state is the Windows Debug CRT (no ASan); other configurations have nothing to query
 #endif
 }
 
@@ -138,7 +140,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
 SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "mesh vertex and index storage uses std::allocator in the STL container build, which the memory profiler does not see" );
+    SW_TEST_REQUIRES_FEATURE( SwContainerTags ); // mesh vertex and index storage uses std::allocator in the STL container build, which the memory profiler does not see
 #else
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
@@ -204,7 +206,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 {
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 #if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
+    SW_TEST_REQUIRES_FEATURE( SwContainerTags ); // containers use std::allocator in this configuration, so sw memory tags do not see them
 #endif
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
@@ -234,7 +236,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
 {
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 #if defined( SW_ENABLE_STL_CONTAINER )
-    SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
+    SW_TEST_REQUIRES_FEATURE( SwContainerTags ); // containers use std::allocator in this configuration, so sw memory tags do not see them
 #endif
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )

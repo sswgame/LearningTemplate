@@ -397,7 +397,7 @@ SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
     SW_EXPECT_TRUE_MSG( bExitedInTime, "WM_CLOSE 뒤 15 초 안에 App 이 끝나지 않았습니다" );
     SW_EXPECT_EQUAL( 0, exitCode );
 #else
-    SW_TEST_SKIP( "엔진 창을 찾아 닫는 경로가 Win32 전용입니다" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // 엔진 창을 찾아 닫는 경로가 Win32 전용입니다
 #endif
 }
 
@@ -846,6 +846,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
  */
 SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임(-game=)은 구운 팩에 없다
     const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -dx12 -game=ThemeParkTycoon -gv_editorSelfTest=themepark.*", "EditorSelfTest|" );
     if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
@@ -1048,7 +1049,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
 
 #if defined( SW_SHIPPING )
     // 벤치 스위치(`gv_bench*`)는 배포본에 등록되지 않는다(측정은 Release) — 배포본의 화면은 게임 팩 시나리오 · 골든 스크립트가 본다.
-    SW_TEST_SKIP( "the bench switches are not registered in Shipping (measure and compare bench frames in Debug/Release)" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
 #endif
     // 기준 그림은 Empty 게임의 벤치 장면이다 — 다른 게임 프리셋의 App 은 자기 첫 씬(아레나 · 공원 …)을 그려 비교할 것이 없다.
     if ( test::AppTestUtil::readPackRoot( sw::GameSelection::getName() ) != "game/empty" )
@@ -1149,7 +1150,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
 SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
 {
 #if defined( SW_SHIPPING ) == false
-    SW_TEST_SKIP( "this case compares the Shipping build; Debug/Release compare the bench frame (BenchFrameMatchesGoldenImage)" );
+    SW_TEST_REQUIRES_FEATURE( ShippingBuild ); // this case compares the Shipping build; Debug/Release compare the bench frame (BenchFrameMatchesGoldenImage)
 #else
     constexpr uint32      kChannelTolerance = 2;
     constexpr const utf8* kScenarioPath     = "game/empty/automation/shippingframe.scenario.xml";

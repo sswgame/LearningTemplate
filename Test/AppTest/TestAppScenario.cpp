@@ -315,6 +315,7 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
  */
 SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
     const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
     if ( listGame.empty() )
         SW_TEST_SKIP( "no game packs in Bin/Games (Shipping or SW_GAMES is empty)" );
@@ -339,6 +340,7 @@ SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
  */
 SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
     const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
     if ( std::find( listGame.begin(), listGame.end(), sw::string( "HarvestValley" ) ) == listGame.end() )
         SW_TEST_SKIP( "the HarvestValley game pack is not built (Shipping or SW_GAMES)" );

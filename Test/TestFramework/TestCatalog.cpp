@@ -31,13 +31,45 @@ namespace test
 #else
             static constexpr bool kDebugBuild = false;
 #endif
+#if defined( SW_PLATFORM_WINDOWS )
+            static constexpr bool kWindows = true;
+#else
+            static constexpr bool kWindows = false;
+#endif
+#if defined( SW_PLATFORM_LINUX )
+            static constexpr bool kLinux = true;
+#else
+            static constexpr bool kLinux = false;
+#endif
+#if defined( SW_WITH_CLIENT_CODE )
+            static constexpr bool kClientCode = true;
+#else
+            static constexpr bool kClientCode = false;
+#endif
+#if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
+            static constexpr bool kFatalSignalHandling = false;
+#else
+            static constexpr bool kFatalSignalHandling = true;
+#endif
+#if defined( SW_ENABLE_STL_CONTAINER )
+            static constexpr bool kSwContainerTags = false;
+#else
+            static constexpr bool kSwContainerTags = true;
+#endif
             /** @brief `BuildFeature` 와 같은 순서 — 기능 하나에 한 줄. */
             static constexpr BuildFeatureRow kArrBuildFeature[] = {
-                {"DevelopmentBuild",           kDevelopmentBuild},
-                {    "DebugAsserts",                 kDebugBuild},
-                {        "DebugLog",                 kDebugBuild},
-                { "MemoryTagScopes", sw::kMemoryTagScopesEnabled},
-                { "SourceResources",           kDevelopmentBuild},
+                {   "DevelopmentBuild",                kDevelopmentBuild},
+                {       "DebugAsserts",                      kDebugBuild},
+                {           "DebugLog",                      kDebugBuild},
+                {    "MemoryTagScopes",      sw::kMemoryTagScopesEnabled},
+                {    "SourceResources",                kDevelopmentBuild},
+                {      "ShippingBuild",               !kDevelopmentBuild},
+                {    "WindowsPlatform",                         kWindows},
+                {      "LinuxPlatform",                           kLinux},
+                {         "ClientCode",                      kClientCode},
+                {        "AudioAssets", kDevelopmentBuild || kClientCode},
+                {"FatalSignalHandling",             kFatalSignalHandling},
+                {    "SwContainerTags",                 kSwContainerTags},
             };
             static_assert( sizeof( kArrBuildFeature ) / sizeof( kArrBuildFeature[0] ) == static_cast<size_t>( BuildFeature::Count ),
                            "every BuildFeature needs a row in kArrBuildFeature" );

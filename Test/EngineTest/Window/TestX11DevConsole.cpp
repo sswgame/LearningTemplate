@@ -70,6 +70,8 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
     console.reset();
     window->destroy();
 #else
-    SW_TEST_SKIP( "the X11 console overlay exists only in Linux client builds with dev commands" );
+    SW_TEST_REQUIRES_FEATURE( LinuxPlatform );
+    SW_TEST_REQUIRES_FEATURE( ClientCode );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the X11 console overlay exists only in Linux client builds with dev commands
 #endif
 }

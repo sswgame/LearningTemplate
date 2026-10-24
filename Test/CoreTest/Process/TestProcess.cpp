@@ -85,7 +85,7 @@ SW_TEST_CASE( ProcessTest, ExitCodeStillActiveIsNotMistakenForRunning )
     SW_EXPECT_EQUAL( 259, proc.waitForExit() );
     SW_EXPECT_FALSE( proc.isRunning() );
 #else
-    SW_TEST_SKIP( "STILL_ACTIVE(259) 충돌은 Windows 종료 코드 규약의 문제다" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // STILL_ACTIVE(259) 충돌은 Windows 종료 코드 규약의 문제다
 #endif
 }
 

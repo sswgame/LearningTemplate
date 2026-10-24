@@ -774,7 +774,7 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
     SW_EXPECT_TRUE_MSG( text.find( "usage unknown  budget unknown  available 8.0 MB" ) != sw::string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "unknown - no driver usage for this process" ) != sw::string_view::npos, joined.c_str() );
 #else
-    SW_TEST_SKIP( "Info logs are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( DebugLog ); // Info logs are compiled out in this configuration
 #endif
 }
 
