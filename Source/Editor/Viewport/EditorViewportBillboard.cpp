@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorProfile.h"
@@ -96,11 +97,10 @@ namespace sw::editor
                 uint32            _codePoint{ 0 };
             };
 
-            static vector<DrawnGlyph>& getDrawnList()
-            {
-                static vector<DrawnGlyph> s_listDrawn;
-                return s_listDrawn;
-            }
+            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<DrawnGlyph>> s_drawnListOwner{};
+
+            static vector<DrawnGlyph>& getDrawnList() { return *s_drawnListOwner.getOrCreate(); }
 
             /** @brief 한 글자짜리 UTF-8 글의 코드 포인트입니다. 두 글자 이상이면 0 입니다. */
             static uint32 decodeSingleGlyph( const utf8* pGlyph )

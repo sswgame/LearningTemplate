@@ -115,7 +115,7 @@ jobs:
             preset: CI-Debug-TSAN
             vcpkgCache: vcpkg-bin-tsan
 
-          # `SW_ENABLE_STL_CONTAINER` 구성(표준 컨테이너 · 할당자)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
+          # `SW_ENABLE_STL_CONTAINER` 구성(컨테이너 기본 할당자를 std::allocator 로 바꾼 구성)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
           - name: Build Windows STL containers (clang-cl)
             os: windows
             preset: CI-Debug-STL

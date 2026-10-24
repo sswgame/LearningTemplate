@@ -315,8 +315,8 @@ namespace sw
         TComponentHandle<SkeletalMeshComponent> _taskUnit;             ///< 단계 작업을 등록한 몸 유닛
         AppearanceSelection                     _previewSelection;     ///< 미리보기 입히기의 선택(`previewSelection`)
         const AppearanceDatabase*               _pPreviewDatabase;     ///< 미리보기 입히기의 데이터(빌린 것). 있으면 프리셋 id · 게임 서비스를 보지 않는다
-        AppearanceDatabase*                     _pReloadDatabase;      ///< 다시 읽기를 구독한 외형 데이터(플레이 중에만)
-        DelegateHandle                          _reloadSubscription;   ///< `_pReloadDatabase` 의 구독
+        uint64                                  _reloadDatabaseID;     ///< 다시 읽기를 구독한 외형 데이터의 번호(`AppearanceDatabase::getInstanceID`, 플레이 중에만 — 포인터를 들지 않는다)
+        DelegateHandle                          _reloadSubscription;   ///< `_reloadDatabaseID` 데이터의 구독
         vector<MeshAssemblyLoad>                _listMeshAssemblyLoad; ///< 베이크한 메시의 부품 로드(몸이 먼저)
         SharedAssetHandle<FitTables>            _fitTablesLoad;        ///< 몸의 피팅 표 로드. 표가 없으면 요청이 없다
         shared_ptr<FitResult>                   _lastFitResult;        ///< 지난 미리보기 조립이 푼 피팅 결과(`getLastFitResult`)

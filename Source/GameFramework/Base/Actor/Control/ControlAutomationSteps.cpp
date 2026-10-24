@@ -10,8 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -76,7 +76,7 @@ namespace sw
             }
 
             /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
-            static GameObject* findObject( AutomationRunner& runner, const AutomationStep& step, const string& objectName )
+            static GameObject* findObject( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
                 GameObjectManager* pManager = runner.findActiveObjectManager();
                 GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( objectName ) ) : nullptr;
@@ -98,7 +98,7 @@ namespace sw
             }
 
             /** @brief 폰을 기록 조종자로 `frames` 틱 동안 몰고 원래 조종자에게 돌려준다. 버튼은 첫 틱에 발동 + 내내 누름. */
-            static bool runIntentStep( AutomationRunner& runner, const AutomationStep& step )
+            static bool runIntentStep( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const string* pPawnName = step.findAttribute( "pawn" );
                 GameObject*   pObject   = pPawnName != nullptr ? findObject( runner, step, *pPawnName ) : nullptr;
@@ -164,7 +164,7 @@ namespace sw
             }
 
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */
-            static bool runPossessStep( AutomationRunner& runner, const AutomationStep& step )
+            static bool runPossessStep( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const string* pControllerName = step.findAttribute( "controller" );
                 GameObject*   pObject         = pControllerName != nullptr ? findObject( runner, step, *pControllerName ) : nullptr;

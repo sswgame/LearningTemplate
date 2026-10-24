@@ -1,6 +1,6 @@
 # 씬 · 프리팹 파일을 넘는 오브젝트 참조
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: G-5 · 진행: 1/3
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: G-5 · 진행: 2/3
 
 파일 안에서는 엔티티 `id` 로 가리키고, 파일을 넘는 데이터 · 코드가 0 이었습니다. 2026-10-22 사용자 결정으로 착수 조건(레벨 스트리밍 · 하위 레벨 · 다른 씬을 가리키는 데이터)을 갈음했습니다.
 
@@ -16,5 +16,5 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | C1 | 참조 형식 · 해석 · `Scene::getOrAssignFileID` · `findObjectIDByFileID` · 테스트 `SceneTest.CrossSceneReferenceResolvesThroughFileID` | 끝(2026-10-23 Debug 빌드 경고 0, `SceneTest` 전체 통과) |
-| C2 | 에디터 인스펙터에서 다른 씬의 오브젝트를 고르는 위젯(`SceneObjectReference` 칸)과 그 에디터 시나리오 | 남음 |
-| C3 | 오브젝트를 파일 사이로 옮겨도 이어지는 영속 GUID — 그 요구가 생기면 | 남음 |
+| C2 | 에디터 인스펙터에서 다른 씬의 오브젝트를 고르는 위젯(`SceneObjectReference` 칸)과 그 에디터 시나리오 | 끝(코드 · 시나리오, 실행 확인은 매니페스트 id `scene-reference-scenario`) — `SceneObjectReferencePropertyDrawer`(올라와 있는 씬의 오브젝트 콤보, 저장한 적 없는 씬은 이유를 보이고 건너뜀), 테스트 컴포넌트 `EditorSceneReferenceProbeComponent`, 탐침 `Editor.SelectedSceneReference`, 시나리오 `editor/scenereference` |
+| C3 | 오브젝트를 파일 사이로 옮겨도 이어지는 영속 GUID | 남음(조건부 — 잘라 붙이기로 오브젝트를 파일 사이에서 옮기는 일이 생길 때. 지금은 파일 id 가 영속 키라 요구가 없다) |

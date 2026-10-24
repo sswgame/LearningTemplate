@@ -69,6 +69,11 @@ _kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS)?
 _kStepKindConstantRe = re.compile(r'\b(k\w+Kind)\s*(?:\[\s*\])?\s*=\s*"([^"]+)"')
 _kProbeRegistrationRe = re.compile(r'SW_AUTOMATION_(?:QUERY_)?PROBE\s*\(\s*\w+\s*,\s*"([^"]+)"')
 _kDevCommandRegistrationRe = re.compile(r'SW_DEV_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')
+#: 에디터 명령 id — 선언 `SW_EDITOR_COMMAND( 이름, "id", …)` 과 원본 표(`_s_arrCommandRow[]`)의 줄 `{ "id", "라벨", …` 이다.
+#: 시나리오의 `<DevCommand line="editor <id>">` 가 이 id 를 부른다(실행 중 등록이 아니라 선언이라 코드를 돌리지 않고 읽는다).
+_kEditorCommandRegistrationRe = re.compile(r'SW_EDITOR_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')
+_kEditorCommandTableMarker = "_s_arrCommandRow[]"
+_kEditorCommandRowRe = re.compile(r'^\s*\{\s*"([A-Za-z0-9_.]+)"\s*,\s*"', re.M)
 _kQuotedRe = re.compile(r"\"([^\"]*)\"")
 _kPackRe = re.compile(r"\bgame/([a-z0-9_]+)/")
 
@@ -214,11 +219,12 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
     return listViolation, mapCheckedCount
 
 
-def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], set[str]]:
-    """(등록된 시나리오 단계 종류, 탐침 이름, 개발 명령 이름) — `Source` 의 등록 매크로에서 줍는다(종류 상수 `k…Kind` 도 푼다)."""
+def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], set[str], set[str]]:
+    """(등록된 시나리오 단계 종류, 탐침 이름, 개발 명령 이름, 에디터 명령 id) — `Source` 의 등록 매크로 · 표에서 줍는다(종류 상수 `k…Kind` 도 푼다)."""
     uniqueStep: set[str] = set()
     uniqueProbe: set[str] = set()
     uniqueCommand: set[str] = set()
+    uniqueEditorCommand: set[str] = set()
     mapKindConstant: dict[str, str] = {}
     listKindIdentifier: list[str] = []
     for _, text in LintGate.readFiles(collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)):
@@ -229,16 +235,25 @@ def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], se
             uniqueProbe.update(_kProbeRegistrationRe.findall(text))
         if "SW_DEV_COMMAND" in text:
             uniqueCommand.update(_kDevCommandRegistrationRe.findall(text))
+        if "SW_EDITOR_COMMAND" in text:
+            uniqueEditorCommand.update(_kEditorCommandRegistrationRe.findall(text))
+        tableStart = text.find(_kEditorCommandTableMarker)
+        if tableStart >= 0:
+            tableEnd = text.find("\n            };", tableStart)
+            uniqueEditorCommand.update(_kEditorCommandRowRe.findall(text[tableStart:tableEnd if tableEnd > tableStart else len(text)]))
     uniqueStep.update(mapKindConstant[name] for name in listKindIdentifier if name in mapKindConstant)
-    return uniqueStep, uniqueProbe, uniqueCommand
+    return uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand
 
 
 def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     """시나리오의 `<At>` 단계 · `probe` · `<DevCommand line>` 첫 낱말이 등록된 이름인가."""
-    uniqueStep, uniqueProbe, uniqueCommand = collectAutomationNames(repositoryRoot)
+    uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand = collectAutomationNames(repositoryRoot)
     bAutomationEngine = (repositoryRoot / "Source" / "Engine" / "Automation").is_dir()
     if bAutomationEngine and not uniqueStep:
         raise GateError("등록된 시나리오 단계를 하나도 찾지 못했습니다 — SW_AUTOMATION_STEP 모양이 바뀌었나요?")
+    bEditorCommandSource = (repositoryRoot / "Source" / "Editor" / "Common" / "Commands" / "EditorCommandRegistry.h").is_file()
+    if bEditorCommandSource and not uniqueEditorCommand:
+        raise GateError("등록된 에디터 명령 id 를 하나도 찾지 못했습니다 — SW_EDITOR_COMMAND 나 원본 표(_s_arrCommandRow)의 모양이 바뀌었나요?")
     listViolation: list[str] = []
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
@@ -265,6 +280,9 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             listToken = line.split()
             if listToken and listToken[0] not in uniqueCommand:
                 listViolation.append(f"[NameReference/DevCommand] {relative}: 개발 명령 '{listToken[0]}' 이(가) 등록돼 있지 않습니다(SW_DEV_COMMAND)")
+            bEditorCommandLine = len(listToken) >= 2 and listToken[0] == "editor" and bEditorCommandSource
+            if bEditorCommandLine and listToken[1] not in uniqueEditorCommand:
+                listViolation.append(f"[NameReference/EditorCommand] {relative}: 에디터 명령 '{listToken[1]}' 이(가) 등록돼 있지 않습니다(SW_EDITOR_COMMAND · 원본 표)")
     return listViolation, scenarioCount
 
 
@@ -334,6 +352,17 @@ class CheckNameReferencesGate(LintGate):
                                                  "SW_DEV_COMMAND( Bugit, \"bugit\", \"\", \"\", &run );\n"),
                 "Source/Engine/ProbeSteps.h": "static constexpr const utf8* kDevCommandKind = \"DevCommand\";\n",
                 "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><DevCommand line=\"bugitt now\"/></At></Scenario>\n",
+            },
+        },
+        {
+            "name": "시나리오가 선언되지 않은 에디터 명령 id 를 부른다",
+            "expectedViolation": "[NameReference/EditorCommand] Resource/engine/automation/probe.scenario.xml: 에디터 명령 'scene.saev' 이(가) 등록돼 있지 않습니다(SW_EDITOR_COMMAND · 원본 표)",
+            "files": {
+                "Source/Editor/Common/Commands/EditorCommandRegistry.h": "// 에디터 명령 레지스트리\n",
+                "Source/Editor/Probe.cpp": ("SW_AUTOMATION_STEP( devCommand, \"DevCommand\", &run, &validate, false );\n"
+                                            "SW_DEV_COMMAND( EditorCommand, \"editor\", \"\", \"\", &run );\n"
+                                            "SW_EDITOR_COMMAND( ProbeSave, \"scene.save\", 1, \"Save\", nullptr, \"Scene\", \"\", \"\", {}, &run, nullptr, NoScene, nullptr );\n"),
+                "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><DevCommand line=\"editor scene.save\"/><DevCommand line=\"editor scene.saev\"/></At></Scenario>\n",
             },
         },
         {

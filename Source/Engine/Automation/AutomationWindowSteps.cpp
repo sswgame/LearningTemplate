@@ -14,10 +14,13 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -72,7 +75,8 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             static HWND findWindowHandle()
             {
-                IWindow* pWindow = IWindow::getActiveWindow();
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
             }
 
@@ -99,7 +103,7 @@ namespace sw
                 return GetForegroundWindow() == hwnd;
             }
 
-            static bool runMessage( AutomationRunner& runner, const AutomationStep& step )
+            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 if ( hwnd == nullptr )
@@ -129,7 +133,7 @@ namespace sw
                 return true;
             }
 
-            static bool runClip( AutomationRunner& runner, const AutomationStep& step )
+            static bool runClip( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 RECT       clip{};
@@ -157,7 +161,7 @@ namespace sw
                 const bool bLostForeground = bWantLocked && GetForegroundWindow() != hwnd;
                 if ( bLostForeground )
                 {
-                    runner.finish( AutomationResult::Skipped, step.describe() + ": the window lost the foreground while the scenario ran, so the cursor lock cannot be observed" );
+                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": the window lost the foreground while the scenario ran, so the cursor lock cannot be observed" );
                     return true;
                 }
                 runner.recordFailure( step, string( "cursor clip is not " ) + ( bWantLocked ? "inside the client area" : "the whole screen" ) + " (clip " +
@@ -171,7 +175,7 @@ namespace sw
              * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
              *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 루트에 `requireForeground="true"` 를 둔다.
              */
-            static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
+            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
                 RECT       clientRect{};
@@ -179,7 +183,7 @@ namespace sw
                 const bool bCaptureAreaUnavailable = hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE;
                 if ( bCaptureAreaUnavailable )
                 {
-                    runner.finish( AutomationResult::Failed, step.describe() + ": no window to capture" );
+                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": no window to capture" );
                     return true;
                 }
                 if ( GetForegroundWindow() != hwnd || IsIconic( hwnd ) != FALSE )
@@ -191,7 +195,7 @@ namespace sw
                 const int32 height = clientRect.bottom - clientRect.top;
                 if ( width <= 0 || height <= 0 )
                 {
-                    runner.finish( AutomationResult::Failed, step.describe() + ": the window has an empty client area" );
+                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": the window has an empty client area" );
                     return true;
                 }
 
@@ -218,7 +222,7 @@ namespace sw
 
                 if ( bCopied == FALSE || lineCount != height )
                 {
-                    runner.finish( AutomationResult::Failed, step.describe() + ": BitBlt/GetDIBits failed" );
+                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": BitBlt/GetDIBits failed" );
                     return true;
                 }
                 for ( size_t offset = 0; offset < bytes.size(); offset += 4 )
@@ -232,7 +236,7 @@ namespace sw
                 FileUtil::ensureParentDirectoryExists( path );
                 if ( ImageFileWriter::writePngRgba8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
-                    runner.finish( AutomationResult::Failed, step.describe() + ": could not write " + path );
+                    runner.endScenario( AutomationStepEnd::Fail, step.describe() + ": could not write " + path );
                     return true;
                 }
                 SW_LOG_INFO( "[Scenario] window capture %#x%# -> %#", width, height, path.c_str() );
@@ -240,14 +244,14 @@ namespace sw
             }
 #else
             /** @brief 창 메시지와 커서 클립을 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
-            static bool runUnsupported( AutomationRunner& runner, const AutomationStep& step )
+            static bool runUnsupported( AutomationStepContext& runner, const AutomationStep& step )
             {
-                runner.finish( AutomationResult::Skipped, step.describe() + ": window steps are implemented for Windows only" );
+                runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": window steps are implemented for Windows only" );
                 return true;
             }
-            static bool runMessage( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
-            static bool runClip( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
-            static bool runCapture( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runClip( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #endif
         };
     } // namespace

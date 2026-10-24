@@ -22,8 +22,6 @@ namespace sw
 
     AppearanceDataWatcher::AppearanceDataWatcher()
         : _pWatcher{ nullptr }
-        , _pDatabase{ nullptr }
-        , _pItemCatalog{ nullptr }
         , _folder{}
     {
     }
@@ -33,7 +31,7 @@ namespace sw
         shutdown();
     }
 
-    bool AppearanceDataWatcher::initialize( AppearanceDatabase& database, string_view folder, const ItemCatalog* pItemCatalog )
+    bool AppearanceDataWatcher::initialize( string_view folder )
     {
         shutdown();
         // 감시할 디스크 폴더는 필수 파일(slots.xml)의 낱개 파일 자리로 찾는다 — 팩에 든 데이터면 낱개 파일이 없다.
@@ -53,10 +51,8 @@ namespace sw
 #endif
         if ( pWatcher == nullptr || pWatcher->startWatching( absoluteFolder, true ) == false )
             return false; // 감시자가 이유를 오류로 남겼다
-        _pWatcher     = std::move( pWatcher );
-        _pDatabase    = &database;
-        _pItemCatalog = pItemCatalog;
-        _folder       = string( folder );
+        _pWatcher = std::move( pWatcher );
+        _folder   = string( folder );
         return true;
     }
 
@@ -65,13 +61,11 @@ namespace sw
         if ( _pWatcher != nullptr )
             _pWatcher->stopWatching();
         _pWatcher.reset();
-        _pDatabase    = nullptr;
-        _pItemCatalog = nullptr;
     }
 
-    void AppearanceDataWatcher::update()
+    void AppearanceDataWatcher::update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog )
     {
-        if ( _pWatcher == nullptr || _pDatabase == nullptr )
+        if ( _pWatcher == nullptr )
             return;
         vector<FileChangeEvent>   listEvent;
         const FileWatchPollResult result = _pWatcher->pollEvents( listEvent );
@@ -91,7 +85,7 @@ namespace sw
         if ( bChanged == false )
             return;
         string report;
-        if ( _pDatabase->reloadFromFolder( string_view( _folder ), _pItemCatalog, report ) )
+        if ( database.reloadFromFolder( string_view( _folder ), pItemCatalog, report ) )
             SW_LOG_INFO( "Appearance data reloaded from '%#'", _folder.c_str() );
         else
             SW_LOG_ERROR( "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), report.c_str() );

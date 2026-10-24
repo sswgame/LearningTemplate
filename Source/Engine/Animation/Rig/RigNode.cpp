@@ -112,7 +112,14 @@ namespace sw
             fail( makeKeyMessage( key, "must be a non-empty string" ) );
             return false;
         }
-        outValue = hashed_string( string_view{ pValue } );
+        const hashed_string name( string_view{ pValue } );
+        // 빈 이름의 철자(`none`, 대소문자 무시)는 이름이 될 수 없다 — 담으면 빈 이름이 되어 필수 이름이 조용히 비게 된다(`XMLReadUtil::readOptionalName` 과 같은 규칙).
+        if ( name.empty() )
+        {
+            fail( makeKeyMessage( key, "must not spell the empty name (none)" ) );
+            return false;
+        }
+        outValue = name;
         return true;
     }
 
@@ -204,7 +211,13 @@ namespace sw
                 fail( makeKeyMessage( key, "must hold only non-empty <item> names" ) );
                 return false;
             }
-            outListValue.push_back( hashed_string( string_view{ element.getText() } ) );
+            const hashed_string name( string_view{ element.getText() } );
+            if ( name.empty() )
+            {
+                fail( makeKeyMessage( key, "must not hold the empty name (none)" ) );
+                return false;
+            }
+            outListValue.push_back( name );
         }
         return true;
     }

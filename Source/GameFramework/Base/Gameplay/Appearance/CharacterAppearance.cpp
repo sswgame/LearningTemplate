@@ -51,7 +51,7 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrValueAttribute, report, sourceName );
                 CharacterAppearanceValueDef value;
-                value._parameter = AppearanceXMLUtil::readName( node, "name" );
+                value._parameter = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                 AppearanceXMLUtil::readNameList( node, "option", value._listOption );
                 AppearanceXMLUtil::readNameList( node, "options", value._listOption );
                 readColors( node.getAttributeText( "color" ), value._listColor, report, sourceName );
@@ -92,9 +92,9 @@ namespace sw
             static void readItemValue( const XMLNode& node, CharacterAppearanceSlotDef& inoutSlot, AppearanceLoadReport& report, string_view sourceName, const hashed_string& presetID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrItemValueAttribute, report, sourceName );
-                const hashed_string parameter = AppearanceXMLUtil::readName( node, "name" );
+                const hashed_string parameter = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                 if ( node.findAttribute( "option" ) != nullptr )
-                    inoutSlot._customization.setOption( parameter, AppearanceXMLUtil::readName( node, "option" ) );
+                    inoutSlot._customization.setOption( parameter, AppearanceXMLUtil::readRequiredName( node, "option", report, sourceName ) );
                 else if ( node.findAttribute( "color" ) != nullptr )
                 {
                     float4 color{};
@@ -116,7 +116,7 @@ namespace sw
             static void readEquip( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrEquipAttribute, report, sourceName );
-                const hashed_string setID = AppearanceXMLUtil::readName( node, "set" );
+                const hashed_string setID = AppearanceXMLUtil::readOptionalName( node, "set" ); // 세트 또는 슬롯 중 하나라 아래에서 확인한다
                 if ( setID.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
@@ -125,12 +125,12 @@ namespace sw
                     return;
                 }
                 CharacterAppearanceSlotDef slot;
-                slot._slot = AppearanceXMLUtil::readName( node, "slot" );
+                slot._slot = AppearanceXMLUtil::readOptionalName( node, "slot" ); // 세트가 없으면 필수 — 아래에서 확인한다
                 AppearanceXMLUtil::readNameList( node, "item", slot._listItem );
                 AppearanceXMLUtil::readNameList( node, "items", slot._listItem );
                 slot._bClear        = node.findAttribute( "item" ) != nullptr && slot._listItem.empty() ? SW_TRUE : SW_FALSE;
-                slot._visibleVisual = AppearanceXMLUtil::readName( node, "visible" );
-                slot._state         = AppearanceXMLUtil::readName( node, "state" );
+                slot._visibleVisual = AppearanceXMLUtil::readOptionalName( node, "visible" );
+                slot._state         = AppearanceXMLUtil::readOptionalName( node, "state" );
                 AppearanceXMLUtil::readOptionalFloat( node, "damage", 0.0f, 1.0f, slot._damage, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
@@ -158,8 +158,8 @@ namespace sw
             static void readPreset( const XMLNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPresetAttribute, report, sourceName );
-                outDef._parent = AppearanceXMLUtil::readName( node, "parent" );
-                outDef._schema = AppearanceXMLUtil::readName( node, "schema" );
+                outDef._parent = AppearanceXMLUtil::readOptionalName( node, "parent" );
+                outDef._schema = AppearanceXMLUtil::readOptionalName( node, "schema" ); // 부모에서 이어받을 수 있다
                 AppearanceXMLUtil::readNameList( node, "bodyType", outDef._listBodyType );
                 AppearanceXMLUtil::readNameList( node, "bodyShape", outDef._listBodyShape );
                 AppearanceXMLUtil::readNameList( node, "face", outDef._listFace );
@@ -180,7 +180,7 @@ namespace sw
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
                         AppearanceSocketOverride socketOverride;
-                        socketOverride._name = AppearanceXMLUtil::readName( child, "name" );
+                        socketOverride._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
                         AppearanceXMLUtil::readPlacement( child, "parent", socketOverride._placement, report, sourceName );
                         if ( socketOverride._name.empty() || socketOverride._placement.isEmpty() )
                             report.addError( "%#: preset '%#' <SocketOverride> needs a name and a parent", sourceName, outDef._id.c_str() );
@@ -445,10 +445,12 @@ namespace sw
                 continue;
             }
             CharacterAppearanceDef def;
-            def._id = AppearanceXMLUtil::readName( node, "id" );
-            if ( def._id.empty() || findPreset( def._id ) != nullptr )
+            def._id = AppearanceXMLUtil::readRequiredName( node, "id", report, sourceName );
+            if ( def._id.empty() )
+                continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
+            if ( findPreset( def._id ) != nullptr )
             {
-                report.addError( "%#: <CharacterAppearance> without an id or with a duplicate id '%#'", sourceName, def._id.c_str() );
+                report.addError( "%#: <CharacterAppearance> has a duplicate id '%#'", sourceName, def._id.c_str() );
                 continue;
             }
             CharacterAppearanceInternal::readPreset( node, def, report, sourceName );
@@ -466,12 +468,9 @@ namespace sw
             return false;
         }
         CharacterAppearanceDef def;
-        def._id = AppearanceXMLUtil::readName( presetNode, "id" );
+        def._id = AppearanceXMLUtil::readRequiredName( presetNode, "id", report, sourceName );
         if ( def._id.empty() )
-        {
-            report.addError( "%#: <CharacterAppearance> without an id", sourceName );
-            return false;
-        }
+            return false; // 빠진 id 는 위 읽기가 보고서에 남겼다
         CharacterAppearanceInternal::readPreset( presetNode, def, report, sourceName );
         if ( report.getErrors().size() != errorCountBefore )
             return false;

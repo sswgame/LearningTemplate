@@ -9,12 +9,8 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T, typename Allocator = std::allocator<T>>
-    using list = std::list<T, Allocator>;
-#else
     /** @brief std::list 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
-    template <typename T, typename Allocator = Allocator<T>>
+    template <typename T, typename Allocator = ContainerAllocator<T>>
     class list : public std::list<T, Allocator>
     {
         using Base = std::list<T, Allocator>;
@@ -525,5 +521,4 @@ namespace sw
             Base::sort( comp );
         }
     };
-#endif
 } // namespace sw

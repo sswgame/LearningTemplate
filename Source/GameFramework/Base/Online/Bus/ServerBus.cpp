@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
@@ -22,11 +23,10 @@ namespace sw
                 return s_mutex;
             }
 
-            static unordered_set<uint64>& getLoggedKeys()
-            {
-                static unordered_set<uint64> s_uniqueLoggedKeys;
-                return s_uniqueLoggedKeys;
-            }
+            /** @brief 이미 로그를 남긴 키 집합의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<unordered_set<uint64>> s_loggedKeysOwner{};
+
+            static unordered_set<uint64>& getLoggedKeys() { return *s_loggedKeysOwner.getOrCreate(); }
 
             static atomic<uint64>& getRejectedCounter()
             {

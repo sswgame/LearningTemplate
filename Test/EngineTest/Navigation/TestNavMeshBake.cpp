@@ -242,4 +242,5 @@ SW_TEST_CASE( NavMeshBakeTest, SettingsTableValidatesNamesAndRanges )
     SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings _defaultAgentType=\"Nobody\" />" ) );
     SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings><_listAgentType><NavAgentTypeDef _name=\"Odd\" _height=\"0\" /></_listAgentType></NavMeshSettings>" ) );
     SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings _noSuchKey=\"1\" />" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings />" ) ); // 영역 · 에이전트 종류를 선언하지 않은 표는 코드가 채우지 않고 거절한다
 }

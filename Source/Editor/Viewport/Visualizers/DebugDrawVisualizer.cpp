@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/Memory/LifetimeScope.h"
+
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
@@ -22,6 +24,9 @@ namespace sw::editor
         {
             /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게). */
             static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
+
+            /** @brief 선분을 펼치는 재사용 버퍼의 소유자입니다(에디터 UI 는 게임 스레드 하나) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<EditorWorldSegment>> s_segmentBufferOwner{};
 
             static ImU32 toColor( const float4& color )
             {
@@ -42,10 +47,12 @@ namespace sw::editor
                 if ( args._pDebugDrawQueue == nullptr )
                     return;
 
-                static vector<EditorWorldSegment> s_listSegment;
-                s_listSegment.clear();
-                EditorVisualizerGeometryUtil::appendDebugDrawSegments( *args._pDebugDrawQueue, args._bFlat2D, s_listSegment );
-                for ( const EditorWorldSegment& segment : s_listSegment )
+                vector<EditorWorldSegment>* const pListSegment = DebugDrawVisualizerInternal::s_segmentBufferOwner.getOrCreate();
+                if ( pListSegment == nullptr )
+                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+                pListSegment->clear();
+                EditorVisualizerGeometryUtil::appendDebugDrawSegments( *args._pDebugDrawQueue, args._bFlat2D, *pListSegment );
+                for ( const EditorWorldSegment& segment : *pListSegment )
                 {
                     ImVec2 screenFrom;
                     ImVec2 screenTo;

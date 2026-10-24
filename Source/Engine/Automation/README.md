@@ -20,6 +20,7 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 ```
 
 **단계.** `<At>` 아래의 요소 하나가 단계입니다. 단계 종류는 `AutomationStepRegistry` 에 등록되고, 엔진 단계도 같은 레지스트리에 있습니다. 실행기는 단계 이름으로 분기하지 않습니다.
+단계 함수는 실행기(`AutomationRunner`)가 아니라 좁은 문맥 인터페이스 `AutomationStepContext`(`AutomationStepContext.h`)를 받습니다 — 실패 적기 · 시계 잡기 · 산출물 경로 · 가상 입력 · 시나리오 끝내기만 담았습니다. 단계를 등록하는 쪽(UI · GameFramework · Editor · App)은 로그 게이트 · 보고 · 종료 코드 헤더(`AutomationRunner.h`)를 include 하지 않고, 시나리오를 끝낼 때도 종료 코드가 아니라 `AutomationStepEnd`(Pass · Fail · Skip)로 말합니다. 실행기 안 상태를 만지는 엔진 단계(`AutomationRunner.cpp`)만 문맥을 실행기로 되돌려 씁니다.
 
 **탐침.** 시나리오가 읽는 이름 붙은 값입니다. 씬 탐침은 인자 없이 수를 내고(`Farm.FarmerX`), 질의 탐침은 `target` 과 `key` 를 받아 수나 글을 냅니다(`AI.State target="FarmAutoFarmer"` → `Till`).
 글 값은 `is` 로 비교하고, 수 값은 `equals`, `near`, `atLeast`, `atMost` 로 비교합니다.
@@ -165,6 +166,7 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 
 | 파일 | 내용 |
 |------|------|
+| `AutomationStepContext.h` | 단계 함수가 받는 좁은 문맥(`AutomationStepContext`)과 단계가 시나리오를 끝내는 말(`AutomationStepEnd`) |
 | `AutomationRunner.cpp` | 엔진 단계와 실행기 탐침(`Object.*`, `Input.*`, `Assets.Pending`) |
 | `Engine/Probe/AutomationProbe.cpp` | 탐침 레지스트리, 대상 고르기 규칙(`AutomationTarget`, `AutomationProbeQuery::make`) |
 | `Scene/SceneProbes.cpp` · `Environment/Terrain/TerrainProbes.cpp` · `Character/PairedAnimation/PairedAnimationProbes.cpp` | 기능이 자기 폴더에 등록한 탐침(`Scene.*` · `Terrain.*` · `PairedAnimation.*`, `-gv_automationHashDump`) |

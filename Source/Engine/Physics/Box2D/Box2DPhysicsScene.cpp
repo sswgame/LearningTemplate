@@ -156,17 +156,15 @@ namespace sw
 
     // --- 셰이프와 필터 ----------------------------------------------------------------------------------------------------
 
-    const PhysicsMaterialDef& Box2DPhysicsScene::resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const
+    const PhysicsMaterialDef* Box2DPhysicsScene::resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const
     {
         const hashed_string& wanted = name.empty() ? fallback : name;
-        if ( wanted.empty() == false )
-        {
-            const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
-            if ( pMaterial != nullptr )
-                return *pMaterial;
-            SW_LOG_ERROR( "Unknown physics material '%#' - using '%#'", wanted.c_str(), _settings._listMaterial.front()._name.c_str() );
-        }
-        return _settings._listMaterial.front();
+        if ( wanted.empty() )
+            return &_settings._listMaterial.front(); // 이름을 적지 않은 것은 "첫 재질" 이라는 선언이다
+        const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
+        if ( pMaterial == nullptr )
+            SW_LOG_ERROR( "Unknown physics material '%#' - the shape is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
+        return pMaterial;
     }
 
     b2Filter Box2DPhysicsScene::makeFilter( uint8 layer, bool bSensor ) const
@@ -250,7 +248,10 @@ namespace sw
 
     bool Box2DPhysicsScene::attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle )
     {
-        const PhysicsMaterialDef& material  = resolveMaterial( shape._material, defaultMaterial );
+        const PhysicsMaterialDef* pMaterial = resolveMaterial( shape._material, defaultMaterial );
+        if ( pMaterial == nullptr )
+            return false;
+        const PhysicsMaterialDef& material  = *pMaterial;
         const b2Vec2              center    = Box2DUtil::toBox2D( shape._localPosition );
         const b2Rot               rotation  = b2MakeRot( shape._localAngle );
         void* const               pUserData = Box2DUtil::toUserData( handle );

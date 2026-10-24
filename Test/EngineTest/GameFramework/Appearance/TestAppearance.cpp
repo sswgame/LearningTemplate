@@ -613,8 +613,8 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "MainHand" ), sword, listRemoved ) == EquipResult::Ok );
 
     CharacterAppearanceState state;
-    state.initialize( &fixture._database, spec );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    state.initialize( fixture._database, spec );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     vector<AppearanceDetachEvent> listEvent;
     state.takeDetachEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
@@ -623,7 +623,7 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     // 술이 맞아 떨어진다 + 칼날(떨어질 수 없음)도 요청에 섞는다.
     sword._listDetachedPart = { hashed_string( "Tassel" ), hashed_string( "Blade" ) };
     SW_ASSERT_TRUE( equipment.setEquippedInstance( hashed_string( "MainHand" ), sword ) );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     state.takeDetachEvents( listEvent );
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._part._partName == hashed_string( "Tassel" ) );
@@ -637,7 +637,7 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     CustomizationValueSet values = spec._customization;
     values.setNumber( hashed_string( "Fat" ), 0.7f );
     state.setCustomization( values );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     state.takeDetachEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
     SW_EXPECT_EQUAL( size_t( 1 ), state.getResolved()._listDetachedPart.size() );
@@ -737,9 +737,9 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
     fixture.makeEquipment( equipment );
 
     CharacterAppearanceState state;
-    state.initialize( &fixture._database, spec );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
-    SW_EXPECT_FALSE( state.update( &equipment ) );
+    state.initialize( fixture._database, spec );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
+    SW_EXPECT_FALSE( state.update( fixture._database, &equipment ) );
     SW_EXPECT_EQUAL( 1u, state.getResolveCount() );
 
     InventorySlot cap;
@@ -747,19 +747,45 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
     cap._count  = 1;
     vector<InventorySlot> listRemoved;
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Head" ), cap, listRemoved ) == EquipResult::Ok );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     SW_EXPECT_TRUE( state.getResolved().hasOwner( hashed_string( "Head" ) ) );
-    SW_EXPECT_FALSE( state.update( &equipment ) );
+    SW_EXPECT_FALSE( state.update( fixture._database, &equipment ) );
 
     state.setVisibleVisual( hashed_string( "Head" ), hashed_string( "helm_full" ) );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     SW_EXPECT_FALSE( state.getResolved().hasOwner( hashed_string( "Hair" ) ) );
 
     // 데이터를 다시 읽으면(핫 리로드) 다시 해석한다.
     SW_ASSERT_TRUE( fixture._database.loadSectionFromXMLText( appearancetest::kRuleXML, "AppearanceTest.reload" ) );
     SW_ASSERT_TRUE( fixture._database.finishLoad( &fixture._items ) );
-    SW_EXPECT_TRUE( state.update( &equipment ) );
+    SW_EXPECT_TRUE( state.update( fixture._database, &equipment ) );
     SW_EXPECT_EQUAL( 4u, state.getResolveCount() );
+}
+
+/**
+ * @brief [AppearanceTest] 외형 상태는 데이터베이스를 포인터로 들지 않고 번호로 알아본다 — 다른 데이터를 넘기면 오류이고, 새 데이터베이스는 같은 주소여도 다른 것이다
+ * @details 데이터 서비스는 모듈과 함께 컴포넌트보다 먼저 사라질 수 있다. 상태가 포인터를 들면 허공을 가리켰다(AppearanceDatabaseLifetime) — 이제 해석은 부르는 쪽이 그 프레임에 찾은 데이터를 넘긴다.
+ */
+SW_TEST_CASE( AppearanceTest, StateRecognizesItsDatabaseByInstanceID )
+{
+    Fixture fixture;
+    SW_ASSERT_TRUE_MSG( fixture.load(), fixture._database.getReport().joined().c_str() );
+    CharacterAppearanceSpec spec;
+    SW_ASSERT_TRUE( fixture.expand( hashed_string( "Human" ), 0u, spec ) );
+
+    CharacterAppearanceState state;
+    SW_EXPECT_FALSE( state.usesDatabase( fixture._database ) ); // 아직 받지 않았다
+    state.initialize( fixture._database, spec );
+    SW_EXPECT_TRUE( state.usesDatabase( fixture._database ) );
+
+    AppearanceDatabase other;
+    SW_EXPECT_TRUE( other.getInstanceID() != fixture._database.getInstanceID() );
+    SW_EXPECT_FALSE( state.usesDatabase( other ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "updating with a database other than the initialized one is an error" );
+        SW_EXPECT_FALSE( state.update( other, nullptr ) );
+    }
+    SW_EXPECT_EQUAL( 0u, state.getResolveCount() );
 }
 
 /**

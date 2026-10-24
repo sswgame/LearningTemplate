@@ -1,0 +1,329 @@
+diff --git a/Resource/engine/shaders/modulepassdemo.hlsl b/Resource/engine/shaders/modulepassdemo.hlsl
+new file mode 100644
+index 000000000..d263a8ff4
+--- /dev/null
++++ b/Resource/engine/shaders/modulepassdemo.hlsl
+@@ -0,0 +1,28 @@
++// 모듈 렌더 패스 시연 셰이더(ModuleRenderPass M2) — 게임 모듈이 등록한 패스(`Empty.ModulePassDemo`)가 넘긴 패스 상수로 원본 색을 물들인다.
++// 모듈 상수의 이름은 엔진 패스 상수 칸(binding.hlsli 의 PassCB)의 이름이다. 이 셰이더는 다른 패스가 이 패스 동안 쓰지 않는 칸 `g_OutlineColor` 를 틴트로 빌린다 —
++// rgb 가 곱할 색, a 가 섞는 비율(0 이면 원본 그대로). 렌더러는 이 패스를 그린 뒤 그 칸을 원래 값으로 되돌린다(executeModulePass).
++// 입력은 파이프라인이 선언한 SourceColor 역할 첨부, 출력은 패스의 첫 출력이다. 톤맵 전의 HDR 색을 그대로 물들인다.
++#include "binding.hlsli"
++
++struct PSInput
++{
++    float4 position : SV_POSITION;
++    float2 uv : TEXCOORD0;
++};
++
++PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
++{
++    PSInput output;
++    input.position      = input.position;
++    float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
++    output.position     = float4( clipPosition, 0.0f, 1.0f );
++    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
++    return output;
++}
++
++float4 PSMain( PSInput input ) : SV_TARGET
++{
++    const float3 source = PassTexture::sampleSourcePoint( input.uv ).rgb;
++    const float3 tinted = source * g_OutlineColor.rgb;
++    return float4( lerp( source, tinted, saturate( g_OutlineColor.a ) ), 1.0f );
++}
+diff --git a/Resource/game/empty/automation/modulepass.scenario.xml b/Resource/game/empty/automation/modulepass.scenario.xml
+new file mode 100644
+index 000000000..2322abb24
+--- /dev/null
++++ b/Resource/game/empty/automation/modulepass.scenario.xml
+@@ -0,0 +1,18 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++  모듈 렌더 패스(ModuleRenderPass M2) — 게임 모듈(EmptyGame)이 등록한 패스 `Empty.ModulePassDemo` 가 넘긴 상수(g_OutlineColor = 붉은 틴트)를 파이프라인의 `_type="Module"` 패스
++  (셰이더 modulepassdemo.hlsl)가 원본 색에 곱한다. 틴트가 없는 그림은 배경이 푸르스름해 빨강 평균이 파랑 평균보다 낮다(meanRedMinusBlue < 0) — 모듈 패스가 돌았다면 파랑이 1/4 로 줄어 양수가 된다.
++  패스 상수는 그 패스 안에서만 산다(렌더러가 그린 뒤 되돌린다) — Present 의 외곽선 칸이 붉게 새면 UI 글자 색이 아니라 외곽선이 달라지므로 이 시나리오는 그것을 따로 보지 않고, 패스 상수 복원은 EngineTest 가 본다.
++  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_renderPipeline=game/empty/pipeline/modulepasspipeline.xml
++        -scenario=game/empty/automation/modulepass.scenario.xml   (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. 네 백엔드로 돈다)
++-->
++<Scenario name="game.empty.modulepass" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
++	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
++	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/modulepasspipeline.xml"/>
++	<At frame="40"><Screenshot file="modulepass.ppm"/></At>
++	<!-- 문턱은 가늠한 값이다(첫 GPU 실행 전 — 모듈 패스가 돌지 않으면 푸른 배경이라 음수다). 첫 측정으로 정한다. -->
++	<At frame="42">
++		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.02"/>
++		<Pass/>
++	</At>
++</Scenario>
+diff --git a/Resource/game/empty/pipeline/modulepasspipeline.xml b/Resource/game/empty/pipeline/modulepasspipeline.xml
+new file mode 100644
+index 000000000..2d106b630
+--- /dev/null
++++ b/Resource/game/empty/pipeline/modulepasspipeline.xml
+@@ -0,0 +1,265 @@
++<!--
++	모듈 렌더 패스 시연 파이프라인(ModuleRenderPass M2) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)에 `_type="Module"` 패스 하나(ModuleDemo)를 모션 블러와 Present 사이에 끼운 것이다.
++	게임 모듈이 등록한 패스 이름(`Empty.ModulePassDemo`)과 패스 상수가 셰이더(`engine/shaders/modulepassdemo.hlsl`)로 간다. 시나리오 `game/empty/automation/modulepass.scenario.xml` 이
++	`gv_renderPipeline` 로 고른다. 모듈 경계를 넘는 것은 이름과 상수(데이터)뿐이다.
++-->
++<RenderPipelineDesc _name="ModulePassPipeline" _shadingModel="Forward">
++	<_listAttachment>
++		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
++		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
++		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
++		<RenderPassAttachment _name="DepthOfFieldColor"
++		                      _format="R16G16B16A16_FLOAT"
++		                      _clearColor="0.12,0.15,0.18,1"
++		                      _bClear="true" />
++		<RenderPassAttachment _name="MotionBlurColor"
++		                      _format="R16G16B16A16_FLOAT"
++		                      _clearColor="0.12,0.15,0.18,1"
++		                      _bClear="true" />
++		<RenderPassAttachment _name="ModuleDemoColor"
++		                      _format="R16G16B16A16_FLOAT"
++		                      _clearColor="0.12,0.15,0.18,1"
++		                      _bClear="true" />
++	</_listAttachment>
++	<_listPass>
++		<RenderGraphPassDesc _name="Shadow"
++		                     _type="Shadow"
++		                     _depthAttachment="ShadowMap"
++		                     _shaderPath="engine/shaders/shadowdepth.hlsl"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Back"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="true"
++		                     _bEnableBlend="false">
++			<_listInput />
++			<_listOutput>
++				<item>ShadowMap</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<RenderGraphPassDesc _name="ForwardOpaque"
++		                     _type="ForwardOpaque"
++		                     _depthAttachment="SceneDepth"
++		                     _shaderPath="engine/shaders/forwardlit.hlsl"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Back"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="true"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>ShadowMap</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listOutput>
++			<_listPermutation>
++				<item>SW_FORWARD=1</item>
++			</_listPermutation>
++		</RenderGraphPassDesc>
++		<!-- 뒤집은 껍질 외곽선(toon.hlsl 의 외곽선 퍼뮤테이션) — 외곽선을 켠 머티리얼(MATERIAL_OUTLINE)의 배치만 앞면을 컬링해 그린다.
++		     불투명 깊이를 읽는 패스보다 뒤, 반투명보다 앞이다(외곽선이 깊이를 써서 뒤의 반투명을 가린다). -->
++		<RenderGraphPassDesc _name="MeshOutline"
++		                     _type="MeshOutline"
++		                     _depthAttachment="SceneDepth"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Front"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="true"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
++		<RenderGraphPassDesc _name="HighlightOutline"
++		                     _type="HighlightOutline"
++		                     _depthAttachment="SceneDepth"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Front"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++			</_listOutput>
++			<_listPermutation>
++				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
++			</_listPermutation>
++		</RenderGraphPassDesc>
++		<!-- 하늘(SkyComponent) — 불투명 · 외곽선 뒤, 반투명 앞. 깊이 1 의 풀스크린 삼각형을 깊이 테스트로 그려 빈 곳만 칠한다(쓰기 없음). 씬에 하늘이 없으면 돌지 않는다. -->
++		<RenderGraphPassDesc _name="Sky"
++		                     _type="Sky"
++		                     _depthAttachment="SceneDepth"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<RenderGraphPassDesc _name="Transparent"
++		                     _type="Transparent"
++		                     _depthAttachment="SceneDepth"
++		                     _shaderPath="engine/shaders/forwardlit.hlsl"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Back"
++		                     _bEnableDepthTest="true"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="true">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++			</_listOutput>
++			<_listPermutation>
++				<item>SW_TRANSPARENT=1</item>
++			</_listPermutation>
++		</RenderGraphPassDesc>
++		<!-- 감각 모드 외곽선 — 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보인다. 반투명 뒤. -->
++		<RenderGraphPassDesc _name="HighlightSense"
++		                     _type="HighlightSense"
++		                     _depthAttachment="SceneDepth"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="Front"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>SceneColor</item>
++			</_listOutput>
++			<_listPermutation>
++				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
++			</_listPermutation>
++		</RenderGraphPassDesc>
++		<!-- 피사계 심도 — 후처리 체인(Present) 앞에서 장면 색을 착란원만큼 흐린다. 흐림은 이웃 픽셀을 읽어 체인 한 패스에 합칠 수 없다.
++		     카메라 조리개가 0(기본)이거나 후처리를 끈 뷰는 원본을 그대로 낸다. -->
++		<RenderGraphPassDesc _name="DepthOfField"
++		                     _type="DepthOfField"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>SceneColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>DepthOfFieldColor</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<!-- 카메라 모션 블러(motionblur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
++		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 서 있으면 원본 그대로다. -->
++		<RenderGraphPassDesc _name="MotionBlur"
++		                     _type="MotionBlur"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false"
++		                     _minPostQuality="1">
++			<_listInput>
++				<item>DepthOfFieldColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>MotionBlurColor</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<!-- 모듈 패스 시연(ModuleRenderPass M2) — 게임 모듈(EmptyGame)이 `ModuleRenderPassRegistration` 으로 이름 `Empty.ModulePassDemo` 를 등록하고 패스 상수를 넘긴다.
++		     셰이더는 이 패스의 `_shaderPath`, 입력은 선언한 첨부의 역할(SourceColor), 대상은 첫 출력이다. 등록하지 않았으면 오류를 한 번 남기고 그리지 않는다(Present 가 비어 있는 첨부를 읽는다). -->
++		<RenderGraphPassDesc _name="ModuleDemo"
++		                     _type="Module"
++		                     _modulePass="Empty.ModulePassDemo"
++		                     _shaderPath="engine/shaders/modulepassdemo.hlsl"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>MotionBlurColor</item>
++			</_listInput>
++			<_listOutput>
++				<item>ModuleDemoColor</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++		<RenderGraphPassDesc _name="Present"
++		                     _type="Present"
++		                     _shaderPath="engine/shaders/postchain.hlsl"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="false">
++			<_listInput>
++				<item>ModuleDemoColor</item>
++				<item>SceneDepth</item>
++			</_listInput>
++			<_listOutput>
++				<item>Swapchain</item>
++			</_listOutput>
++			<_listPermutation>
++				<item>SW_POST_BLOOM=1</item>
++				<item>SW_POST_OUTLINE=1</item>
++				<item>SW_POST_TONEMAP=1</item>
++			</_listPermutation>
++		</RenderGraphPassDesc>
++		<!-- 화면 2D(UI · 월드 글자) — Present(톤맵) 뒤 같은 출력에 불러온 채 그린다. Swapchain 을 쓰는 마지막 패스여야 한다(스크린샷 캡처 복사도 이 뒤). -->
++		<RenderGraphPassDesc _name="Canvas"
++		                     _type="Canvas"
++		                     _vertexEntryPoint="VSMain"
++		                     _pixelEntryPoint="PSMain"
++		                     _cullMode="None"
++		                     _bEnableDepthTest="false"
++		                     _bEnableDepthWrite="false"
++		                     _bEnableBlend="true">
++			<_listInput />
++			<_listOutput>
++				<item>Swapchain</item>
++			</_listOutput>
++			<_listPermutation />
++		</RenderGraphPassDesc>
++	</_listPass>
++	<_listRenderPassRef>
++		<item>engine/renderpass/defaultrenderpass.xml</item>
++	</_listRenderPassRef>
++</RenderPipelineDesc>

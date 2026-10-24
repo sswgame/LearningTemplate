@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -20,6 +21,9 @@ namespace sw
             static constexpr float32 kMinLengthPixels = 0.01f;
             /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게 — 에디터 씬 뷰와 같은 값). */
             static constexpr float4 kTextShadow{ 0.0f, 0.0f, 0.0f, 0.78f };
+
+            /** @brief 게임 스레드 하나가 패킷을 채우므로 재사용 선분 버퍼 하나로 충분하다. 엔진 수명 범위가 소유한다(함수 정적이면 종료 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<DebugLine>> s_listLine{};
 
             /** @brief clip 좌표를 w 로 나눠 화면 픽셀로 옮깁니다(왼쪽 위 원점). */
             static float2 toScreen( const float4& clip, const float2& targetSize )
@@ -97,13 +101,14 @@ namespace sw
     uint32 DebugDrawCanvasUtil::paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontService* pFontService, uint64 frameIndex,
                                        CanvasDrawList& outCanvas )
     {
-        // 게임 스레드 하나가 패킷을 채운다 — 재사용 버퍼 하나로 충분하다.
-        static vector<DebugLine> s_listLine;
-        s_listLine.clear();
-        queue.appendVisibleSegments( false, s_listLine ); // 게임 카메라는 3D 로 본다 — 구는 대원 셋
+        vector<DebugLine>* const pListLine = DebugDrawCanvasInternal::s_listLine.getOrCreate();
+        if ( pListLine == nullptr )
+            return 0; // 엔진 수명 범위가 닫힌 뒤(종료 중)다 — 그릴 것이 없다
+        pListLine->clear();
+        queue.appendVisibleSegments( false, *pListLine ); // 게임 카메라는 3D 로 본다 — 구는 대원 셋
         CanvasPainter painter( outCanvas, 1.0f );
         uint32        paintedCount = 0;
-        for ( const DebugLine& line : s_listLine )
+        for ( const DebugLine& line : *pListLine )
         {
             float2 screenFrom;
             float2 screenTo;

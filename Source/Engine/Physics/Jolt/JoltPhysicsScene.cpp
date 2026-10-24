@@ -234,17 +234,15 @@ namespace sw
 
     // --- 셰이프 -----------------------------------------------------------------------------------------------------------
 
-    const PhysicsMaterialDef& JoltPhysicsScene::resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const
+    const PhysicsMaterialDef* JoltPhysicsScene::resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const
     {
         const hashed_string& wanted = name.empty() ? fallback : name;
-        if ( wanted.empty() == false )
-        {
-            const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
-            if ( pMaterial != nullptr )
-                return *pMaterial;
-            SW_LOG_ERROR( "Unknown physics material '%#' - using '%#'", wanted.c_str(), _settings._listMaterial.front()._name.c_str() );
-        }
-        return _settings._listMaterial.front();
+        if ( wanted.empty() )
+            return &_settings._listMaterial.front(); // 이름을 적지 않은 것은 "첫 재질" 이라는 선언이다
+        const PhysicsMaterialDef* pMaterial = _settings.findMaterial( wanted );
+        if ( pMaterial == nullptr )
+            SW_LOG_ERROR( "Unknown physics material '%#' - the shape or body is not created", wanted.c_str() ); // 적은 이름이 틀리면 다른 재질로 만들지 않는다
+        return pMaterial;
     }
 
     const JPH::PhysicsMaterial* JoltPhysicsScene::findJoltMaterial( const hashed_string& name ) const
@@ -350,8 +348,10 @@ namespace sw
                 SW_LOG_ERROR( "Triangle mesh shapes need a Static or Kinematic body (a moving mesh has no volume)" );
                 return pResult;
             }
-            const PhysicsMaterialDef& material = resolveMaterial( shape._material, defaultMaterial );
-            JPH::RefConst<JPH::Shape> pShape   = createSingleJoltShape( shape, material, findJoltMaterial( material._name ) );
+            const PhysicsMaterialDef* pMaterial = resolveMaterial( shape._material, defaultMaterial );
+            if ( pMaterial == nullptr )
+                return pResult;
+            JPH::RefConst<JPH::Shape> pShape = createSingleJoltShape( shape, *pMaterial, findJoltMaterial( pMaterial->_name ) );
             if ( pShape == nullptr )
                 return pResult;
             if ( listShape.size() == 1 )
@@ -492,7 +492,10 @@ namespace sw
             return handle;
         }
 
-        const PhysicsMaterialDef& material = resolveMaterial( desc._material, hashed_string{} );
+        const PhysicsMaterialDef* pMaterialDef = resolveMaterial( desc._material, hashed_string{} );
+        if ( pMaterialDef == nullptr )
+            return handle;
+        const PhysicsMaterialDef& material = *pMaterialDef;
         const bool                bMoving  = desc._type != PhysicsBodyType::Static;
         JPH::BodyCreationSettings settings{ pShape.GetPtr(), JoltUtil::toJolt( desc._position ), JoltUtil::toJolt( desc._rotation ),
                                             JoltPhysicsSceneInternal::toMotionType( desc._type ), JoltLayerUtil::makeObjectLayer( desc._layer, bMoving ) };

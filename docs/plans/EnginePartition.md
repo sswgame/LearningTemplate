@@ -1,6 +1,8 @@
 # 엔진 분할 계획
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-1 · 진행: 4/6
+> 상태: 측정대기 · 선행: 없음 · 영역: engine · 옛번호: C-1 · 진행: 6/6
+
+**남은 확인(통합에서 확인):** 매니페스트 id `engine-partition-e3-tests`, `engine-partition-e3-reflection-tests`, `engine-partition-e3-memorytag-tests`, `engine-partition-e3-cube-bench`(6.4 절). 3 단계(링크 분할)는 하지 않기로 했다. 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 `Engine.dll` 하나를 티어 경계로 나누고, 그 전에 의존 방향의 약한 고리를 풉니다. 폴더 의존은 이미 DAG 이고 `CheckEngineLayers.py` 가 지킵니다.
 막힌 곳은 링크 단위가 하나라는 점입니다. 컴포넌트 모델 코어(`GameObject/` 등)가 기능 폴더와 Object 안의 기능 컴포넌트 폴더를 include 하던 것은 0 으로 줄었고 게이트가 지킵니다(2 단계, E3 · E4).
@@ -42,7 +44,7 @@ Object 폴더 **안의** 방향도 0 입니다. 코어 금지 목록에 `Object/
 ## 5. 모듈 확장 진입점과 상태 규칙
 
 - 모듈이 서비스, 렌더 패스, 레지스트리를 등록하는 공식 진입점을 둡니다. 리로드되는 모듈의 변경 가능한 정적 변수를 막는 게이트(허용 목록 + 이유)를 두고,
-  `SQLDriverRegistry` · `LocalStoreFactory` 는 E6 에서 옮겼습니다(정적 등록 객체 + 모듈 언로드 리스너인 표, [결정 기록](../09_Decisions.md) 5-8). `GameDataCache` 가 남았습니다.
+  `SQLDriverRegistry` · `LocalStoreFactory` 는 E6 에서 옮겼습니다(정적 등록 객체 + 모듈 언로드 리스너인 표, [결정 기록](../09_Decisions.md) 5-8). `GameDataCache` 는 정적 객체지만 캐시 목록을 레지스트리(`GameDataCacheRegistry`)가 맞추고 모듈이 해제 없이 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 정리하므로 `SQLDriverRegistry` 와 같은 길을 이미 탄다 — 남은 것은 없다.
 
 ## 건드리지 않는 것
 
@@ -94,7 +96,7 @@ E3 · E4 는 구현이 들어갔습니다(`wt/enginepart`, 빌드 미확인). `M
 
 | 단위 | 남은 확인 | 측정 |
 |---|---|---|
-| E3 | 전체 빌드(App · Server · 모듈 · `AllTests`), `TestGPUScene`, 인스턴스 배치 테스트(`TestMemoryTag` 포함), `ReflectionTest`(부모 사슬과 상속 프로퍼티), 네 백엔드 × 대표 셋 | 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
+| E3 | 매니페스트 id `engine-partition-e3-tests`(`GPUSceneTest`), `engine-partition-e3-reflection-tests`(부모 사슬과 상속 프로퍼티), `engine-partition-e3-memorytag-tests`(인스턴스 배치). 전체 빌드(App · Server · 모듈 · `AllTests`)와 네 백엔드 × 대표 셋은 묶음의 `debug-full-build` · `app-scenarios-release` 가 돈다 | 매니페스트 id `engine-partition-e3-cube-bench` — 큐브 20,000 개 벤치의 `GT.Frame` p50 · p99 를 Release, VSync 끔, 3 ~ 5 판으로 전후 비교합니다 |
 
 ### 6.5 사용자 결정
 

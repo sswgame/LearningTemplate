@@ -48,7 +48,7 @@
 - `attachmentFormatOrDefault` · `getAttachmentClearColorOrDefault` — 근본 원인은 선언하지 않은 첨부를 `ensureNamed` 가 코드 포맷으로 만드는 것이다. 선언 필수화는 파이프라인 XML(셰이더 작업 소관)과 함께 한다.
 - `REFLECT( Alias )` — 제품 데이터 사용 0, 테스트 4. 별칭 유지로 결정돼 제거하지 않는다(4절). 프리팹 JSON 리더는 데이터 0 이지만 에디터가 쓴다(에디터 작업 소관).
 - XML 저작본 ↔ bin 쿠킹본 두 리더(`PrefabAsset` · `SceneDocument`)는 옛 형식이 아니라 쿠킹 파이프라인이다.
-- 같은 모양이 더 있는 곳: `NavMeshSettings::ensureDefaults`, `PhysicsDesc` 의 모르는 재질 → 첫 재질, `MaterialUtil::parseBlendMode` 의 모르는 이름 → Opaque, `GameDataXML` · `CameraPreset`(GameFramework 작업 소관).
+- 같은 모양이 더 있던 곳은 고쳤다: `NavMeshSettings::ensureDefaults` 를 지웠고 영역 · 에이전트 종류를 선언하지 않은 표는 `validate` 가 거절한다(매니페스트 id `nav-settings-required-test`). `PhysicsDesc` 의 모르는 재질은 첫 재질로 가지 않고 바디 · 셰이프 만들기를 거절한다 — 이름을 적지 않은 것만 "첫 재질" 이다(Jolt · Box2D 의 `resolveMaterial` 이 `nullptr` 를 돌려주고 `[[nodiscard]]`; 매니페스트 id `physics-unknown-material-3d-test`, `physics-unknown-material-2d-test`). `MaterialUtil::parseBlendMode` 는 [SilentFallbackAudit](SilentFallbackAudit.md) 에서 오류로 바꿨고, `GameDataXML` 은 필수 이름 읽기(`readRequiredName`)로 갔다. `CameraPreset` 은 이번에 보지 않았다(GameFramework 작업 소관).
 
 ## 6. W4 에서 볼 것
 

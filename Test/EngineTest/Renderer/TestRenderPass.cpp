@@ -26,6 +26,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
@@ -1310,6 +1311,31 @@ SW_TEST_CASE( RenderPassTest, ModulePassRegistrationIsScopedAndCopiesConstants )
     SW_EXPECT_FALSE( registry.copyConstants( key, listConstant ) );
     SW_EXPECT_TRUE( listConstant.empty() );
     SW_EXPECT_FALSE( registry.setConstant( key, sw::hashed_string( "g_TestTint" ), sw::float4{} ) );
+}
+
+/**
+ * @brief [RenderPassTest] 패스 상수는 지울 수 있고, 지우면 버전이 오르며 칸이 비어 셰이더가 0 으로 읽는다 — 모듈 패스가 빌린 칸을 그린 뒤 되돌리는 길(`executeModulePass`)
+ * @details 모듈 상수의 이름은 엔진 패스 상수 칸의 이름이다. 모듈이 쓰기 전에 없던 칸은 그린 뒤 지워야 뒤 패스(Present 의 외곽선)가 모듈 값을 읽지 않는다.
+ */
+SW_TEST_CASE( RenderPassTest, PassConstantValuesRemoveClearsTheSlot )
+{
+    sw::PassConstantValues  values;
+    const sw::hashed_string name( "g_OutlineColor" );
+    uint32                  size{ 0 };
+    SW_EXPECT_TRUE( values.find( name, size ) == nullptr );
+
+    values.setFloat4( name, sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } );
+    SW_ASSERT_TRUE( values.find( name, size ) != nullptr );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::float4 ) ), size );
+
+    const uint32 versionBefore = values.getVersion();
+    values.remove( name );
+    SW_EXPECT_TRUE( values.find( name, size ) == nullptr );
+    SW_EXPECT_TRUE( values.getVersion() != versionBefore );
+
+    const uint32 versionAfterRemove = values.getVersion();
+    values.remove( name ); // 없는 이름은 아무것도 하지 않는다
+    SW_EXPECT_EQUAL( versionAfterRemove, values.getVersion() );
 }
 
 /**

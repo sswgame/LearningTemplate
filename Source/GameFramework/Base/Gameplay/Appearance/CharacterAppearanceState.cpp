@@ -7,11 +7,13 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "Appearance" );
+
     CharacterAppearanceState::CharacterAppearanceState()
         : _spec{}
         , _resolved{}
         , _listPendingEvent{}
-        , _pDatabase{ nullptr }
+        , _databaseID{ 0 }
         , _pLastEquipment{ nullptr }
         , _specRevision{ 1 }
         , _resolvedSpecRevision{ 0 }
@@ -21,9 +23,14 @@ namespace sw
     {
     }
 
-    void CharacterAppearanceState::initialize( const AppearanceDatabase* pDatabase, const CharacterAppearanceSpec& spec )
+    bool CharacterAppearanceState::usesDatabase( const AppearanceDatabase& database ) const
     {
-        _pDatabase    = pDatabase;
+        return _databaseID != 0 && _databaseID == database.getInstanceID();
+    }
+
+    void CharacterAppearanceState::initialize( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec )
+    {
+        _databaseID   = database.getInstanceID();
         _spec         = spec;
         _resolved     = ResolvedAppearance{};
         _resolveCount = 0;
@@ -61,24 +68,27 @@ namespace sw
         ++_specRevision;
     }
 
-    bool CharacterAppearanceState::update( const Equipment* pEquipment )
+    bool CharacterAppearanceState::update( const AppearanceDatabase& database, const Equipment* pEquipment )
     {
-        if ( _pDatabase == nullptr )
+        if ( usesDatabase( database ) == false )
+        {
+            SW_LOG_ERROR( "CharacterAppearanceState::update got a different AppearanceDatabase than initialize - call initialize with it first" );
             return false;
+        }
         const uint32 equipmentRevision = pEquipment != nullptr ? pEquipment->getRevision() : 0;
-        const bool   bUnchanged        = _resolveCount > 0 && _resolvedSpecRevision == _specRevision && _resolvedDatabaseRevision == _pDatabase->getRevision() && _pLastEquipment == pEquipment && _resolvedEquipmentRevision == equipmentRevision;
+        const bool   bUnchanged        = _resolveCount > 0 && _resolvedSpecRevision == _specRevision && _resolvedDatabaseRevision == database.getRevision() && _pLastEquipment == pEquipment && _resolvedEquipmentRevision == equipmentRevision;
         if ( bUnchanged )
             return false;
         CharacterAppearanceSpec input = _spec;
         if ( pEquipment != nullptr )
             AppearanceInputUtil::applyEquipment( *pEquipment, input );
         ResolvedAppearance resolved;
-        AppearanceResolver::resolve( *_pDatabase, input, resolved );
+        AppearanceResolver::resolve( database, input, resolved );
         if ( _resolveCount > 0 )
             collectDetachEvents( _resolved, resolved );
         _resolved                  = std::move( resolved );
         _resolvedSpecRevision      = _specRevision;
-        _resolvedDatabaseRevision  = _pDatabase->getRevision();
+        _resolvedDatabaseRevision  = database.getRevision();
         _resolvedEquipmentRevision = equipmentRevision;
         _pLastEquipment            = pEquipment;
         ++_resolveCount;

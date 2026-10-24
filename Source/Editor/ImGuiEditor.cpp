@@ -59,6 +59,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/EditSessionState.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "RuntimeAPI/Export/EditorModuleExports.h"
@@ -726,7 +727,8 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownWindowCloseQuery()
     {
-        IWindow* pActiveWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pActiveWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pActiveWindow == nullptr )
             return;
         pActiveWindow->setCloseQueryHandler( {} );

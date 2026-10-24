@@ -2,8 +2,7 @@
  * @file unordered_set.h
  * @brief 밀집 배열 해시 집합(sw::unordered_set)입니다.
  * @details 순회는 밀집 배열 순서입니다.
- *          `SW_ENABLE_STL_CONTAINER` 구성도 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다. 순회 순서(넣은 순서, `erase` 는 마지막 원소를
- *          빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않게 하려고 `std::` 해시 컨테이너로 바꾸지 않습니다.
+ *          모든 컨테이너 형식은 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -18,7 +17,7 @@
 namespace sw
 {
     /** @brief 밀집 배열 기반 해시 집합입니다. erase 하면 이터레이터가 무효화될 수 있습니다(두 구성 같음). */
-    template <typename Key, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<Key>>
+    template <typename Key, typename Hash = DefaultHash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = ContainerAllocator<Key>>
     class unordered_set
     {
         SW_RACE_CTX_MEMBER

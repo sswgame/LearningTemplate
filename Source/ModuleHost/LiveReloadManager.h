@@ -16,8 +16,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/stable_unordered_map.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
@@ -262,12 +262,11 @@ namespace sw
             atomic<bool>            _bMtimeDebouncing;
             atomic<bool>            _bForceReload;
 
-            /** @brief 원자 플래그를 끈 기본값으로 만듭니다. */
+            /**
+             * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule`(주소 고정 맵)이 한 번 만든 자리에서 산다.
+             *        연쇄 리로드가 `ModuleRecord*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
+             */
             ModuleRecord() noexcept;
-            /** @brief 핸들과 경로를 옮겨 받습니다. */
-            ModuleRecord( ModuleRecord&& other ) noexcept;
-            /** @brief 이동 대입입니다. */
-            ModuleRecord& operator=( ModuleRecord&& other ) noexcept;
         };
 
         static constexpr int32 kMtimeDebounceMs = 300;
@@ -284,20 +283,20 @@ namespace sw
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildNotice();
 
-        unordered_map<string, ModuleRecord> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`)
-        ModuleDependencyGraph               _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
-        vector<string>                      _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
-        unique_ptr<IFileWatcher>            _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
-        string                              _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
-        FileStamp                           _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
-        mutable mutex                       _buildMutex;
-        BuildNotice                         _buildNotice;
-        OnBeforeCommitBatchDelegate         _onBeforeCommitBatch;
-        DrainWorkersDelegate                _drainWorkers;
-        DeferredImageUnloadQueue            _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
-        uint32                              _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
-        uint8                               _bReloadGraphBroken : 1;
-        uint8                               _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
-        [[maybe_unused]] uint8              _reserved           : 6;
+        stable_unordered_map<string, ModuleRecord> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
+        ModuleDependencyGraph                      _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
+        vector<string>                             _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
+        unique_ptr<IFileWatcher>                   _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
+        string                                     _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
+        FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
+        mutable mutex                              _buildMutex;
+        BuildNotice                                _buildNotice;
+        OnBeforeCommitBatchDelegate                _onBeforeCommitBatch;
+        DrainWorkersDelegate                       _drainWorkers;
+        DeferredImageUnloadQueue                   _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
+        uint32                                     _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        uint8                                      _bReloadGraphBroken : 1;
+        uint8                                      _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
+        [[maybe_unused]] uint8                     _reserved           : 6;
     };
 } // namespace sw

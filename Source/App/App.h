@@ -134,9 +134,10 @@ namespace sw
         DevConsoleHost               _devConsole;
         unique_ptr<EditorModuleHost> _moduleHost;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(Dev). */
-        ModuleCatalog       _moduleCatalog;
-        ModuleResolution    _moduleResolution;
-        unique_ptr<IWindow> _window;
+        ModuleCatalog    _moduleCatalog;
+        ModuleResolution _moduleResolution;
+        /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
+        IWindow* _pWindow;
 
         FixedTimestep _fixedTimestep;
         /** @brief 백엔드 교체기입니다. `bindHostCallbacks` 가 `_host` 에 걸고 `shutdown` 이 풉니다(시나리오 단계 `SwapBackend` · 탐침 `RHI.*` 가 찾는다). */

@@ -227,7 +227,7 @@
     {
       "name": "CI-Debug-STL",
       "displayName": "CI Debug + STL containers (Ninja)",
-      "description": "CI Debug with SW_ENABLE_STL_CONTAINER (std containers and std::allocator) so the option keeps compiling",
+      "description": "CI Debug with SW_ENABLE_STL_CONTAINER (std::allocator as the container allocator) so the option keeps compiling",
       "inherits": "CI-Debug",
       "cacheVariables": {
         "SW_ENABLE_STL_CONTAINER": "ON"

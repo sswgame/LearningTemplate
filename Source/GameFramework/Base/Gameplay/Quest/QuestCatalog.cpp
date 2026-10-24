@@ -68,8 +68,8 @@ namespace sw
                 QuestStageRowDef stageRow;
                 bValid = GameDataXML::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
                 QuestStage stage;
-                stage._id        = GameDataXML::readName( stageNode, "id" );
-                stage._nextStage = GameDataXML::readName( stageNode, "next" );
+                bValid           = GameDataXML::readRequiredName( stageNode, "id", sourceName, stage._id ) && bValid;
+                stage._nextStage = GameDataXML::readOptionalName( stageNode, "next" ); // 마지막 단계는 다음이 없다
                 stage._text      = stageRow._text;
                 stage._timeLimit = stageRow._time;
                 stage._bComplete = stageRow._bComplete ? SW_TRUE : SW_FALSE;
@@ -79,8 +79,8 @@ namespace sw
                     QuestObjectiveRowDef objectiveRow;
                     bValid = GameDataXML::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
                     QuestObjective objective;
-                    objective._kind      = GameDataXML::readName( node, "kind" );
-                    objective._target    = GameDataXML::readName( node, "target" );
+                    bValid               = GameDataXML::readRequiredName( node, "kind", sourceName, objective._kind ) && bValid;
+                    bValid               = GameDataXML::readRequiredName( node, "target", sourceName, objective._target ) && bValid;
                     objective._text      = objectiveRow._text;
                     objective._count     = objectiveRow._count;
                     objective._bOptional = objectiveRow._bOptional ? SW_TRUE : SW_FALSE;
@@ -88,11 +88,12 @@ namespace sw
                 }
                 for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
-                    stage._listBranch.push_back( QuestBranch{ GameDataXML::readName( node, "choice" ), GameDataXML::readName( node, "next" ) } );
+                    QuestBranch branch;
+                    bValid = GameDataXML::readRequiredName( node, "choice", sourceName, branch._choice ) && bValid;
+                    bValid = GameDataXML::readRequiredName( node, "next", sourceName, branch._nextStage ) && bValid;
+                    stage._listBranch.push_back( branch );
                 }
                 bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
-                if ( stage._id.empty() )
-                    SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pID );
                 quest._listStage.push_back( stage );
             }
             // 다음 단계와 분기가 가리키는 단계가 있는지 확인한다.

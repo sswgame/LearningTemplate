@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
+#include "Core/Memory/LifetimeScope.h"
+
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -27,18 +29,22 @@ namespace sw::editor
             EditorSelection*         _pPreviewSelection{ nullptr }; ///< 미리보기 창의 선택을 고쳤으면 그 선택(기록은 그 창의 스택). 메인이면 nullptr
         };
 
+        /** @brief 편집 중인 위젯 표의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+        ScopeOwned<unordered_map<ImGuiID, PendingEdit>> s_pendingEditsOwner;
+
         /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 테이블을 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
         unordered_map<ImGuiID, PendingEdit>& getPendingEdits()
         {
-            static unordered_map<ImGuiID, PendingEdit> s_mapPending;
-            return s_mapPending;
+            return *s_pendingEditsOwner.getOrCreate();
         }
+
+        /** @brief 위젯이 풀린 편집 목록의 소유자입니다(엔진 수명 범위). */
+        ScopeOwned<vector<PendingEdit>> s_finishedEditsOwner;
 
         /** @brief 위젯이 풀린 편집입니다. 기록은 같은 프레임의 편집 통지(다중 선택의 나머지에 값 입히기)가 끝난 뒤 `commitFinishedEdits` 가 한다. */
         vector<PendingEdit>& getFinishedEdits()
         {
-            static vector<PendingEdit> s_listFinished;
-            return s_listFinished;
+            return *s_finishedEditsOwner.getOrCreate();
         }
 
         /** @brief 선택한 오브젝트 전부의 "편집 전" 스냅샷을 찍습니다. @p pLabel 이 널이면 "Property" 입니다. */

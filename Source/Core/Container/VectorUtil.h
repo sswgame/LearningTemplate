@@ -2,8 +2,7 @@
  * @file VectorUtil.h
  * @brief 연속 배열(`sw::vector` · `std::vector` · `small_vector`)에 쓰는 도우미입니다. 전부 static 템플릿이고 특정 vector 타입에 묶이지 않습니다.
  *
- * @note 표준 vector 에 없는 연산만 둡니다. `vector.h` 안에 두면 `SW_ENABLE_STL_CONTAINER` 로 표준 vector 를 쓸 때 "이 함수는 어느 vector 의 것인가" 가
- *       흐려지므로, `StringUtil` · `FileUtil` 처럼 따로 둔 도구 클래스로 부릅니다. 인자는 `size()` · `back()` · `pop_back()` · `operator[]` 만 씁니다
+ * @note 표준 vector 에 없는 연산만 둡니다. 도구 클래스(`StringUtil` · `FileUtil` 처럼)로 부르고, 인자는 `size()` · `back()` · `pop_back()` · `operator[]` 만 씁니다
  *       (`removeIf` · `sortUnique` 는 `begin()` · `end()` · `erase()` 도 씁니다).
  *
  * @details 멤버 기준 찾기(`findBy<&T::_member>`)는 "원소를 돌며 멤버를 비교하고 맞으면 주소를 돌려준다" 는 손 루프를 대신합니다. 키는 데이터

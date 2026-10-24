@@ -220,11 +220,6 @@ namespace sw
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();
 
-        /** @brief App 이 소유하는 활성 창 포인터를 설정합니다(RHI 초기화 등이 씁니다). */
-        static void setActiveWindow( IWindow* pWindow );
-        /** @brief 활성 창을 반환합니다. */
-        static IWindow* getActiveWindow();
-
     protected:
         /** @brief 실제로 창을 띄우거나 내립니다. 의도 기록은 기반이 이미 했습니다. */
         virtual void applyWindowVisibility( bool bShow ) { (void)bShow; }

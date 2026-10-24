@@ -220,6 +220,20 @@ namespace sw
     {
         return false;
     }
+
+    /**
+     * @brief 컨테이너의 기본 할당자입니다. `SW_ENABLE_STL_CONTAINER` 가 구성마다 바꾸는 것은 **이 할당자 하나뿐**입니다.
+     * @details 기본 구성은 엔진 할당자(`Allocator`, 메모리 태그 · 추적)이고, STL 구성은 `std::allocator` 입니다. 컨테이너 형식(`vector` · `array` · `map` · `set` · `pair` ·
+     *          해시 컨테이너 · `string` · `list` · `deque`)은 두 구성에서 같은 구현이라, 같은 이름이 구성마다 다른 형식이 되는 일이 없다.
+     *          컨테이너 헤더의 기본 템플릿 인자는 `Allocator<T>` 가 아니라 이 별칭을 쓴다.
+     */
+#if defined( SW_ENABLE_STL_CONTAINER )
+    template <typename T>
+    using ContainerAllocator = std::allocator<T>;
+#else
+    template <typename T>
+    using ContainerAllocator = Allocator<T>;
+#endif
 } // namespace sw
 
 template <typename T>

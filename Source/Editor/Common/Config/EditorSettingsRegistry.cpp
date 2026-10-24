@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
@@ -58,11 +59,10 @@ namespace sw::editor
              * @brief 파일 값을 이미 입힌 섹션의 인스턴스 주소입니다. 메인 스레드만 씁니다.
              * @details 확장 모듈이 다시 올라오면 그 섹션 인스턴스는 기본값이다. 여기 없는 섹션만 `loadNewSections` 가 읽어, 사용자가 바꾼 값을 두 번 덮지 않는다.
              */
-            static vector<const void*>& getLoadedInstances()
-            {
-                static vector<const void*> s_listLoadedInstance;
-                return s_listLoadedInstance;
-            }
+            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<const void*>> s_loadedInstanceOwner{};
+
+            static vector<const void*>& getLoadedInstances() { return *s_loadedInstanceOwner.getOrCreate(); }
 
             static bool isLoaded( const void* pInstance )
             {

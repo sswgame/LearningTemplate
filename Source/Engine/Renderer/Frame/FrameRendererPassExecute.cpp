@@ -854,15 +854,43 @@ namespace sw
                               bRegistered == false ? "no module registered it (ModuleRenderPassRegistry)" : "its PSO could not be created (see the shader error above)" );
             return;
         }
+        // 모듈 상수는 이 패스 안에서만 산다. 이름은 엔진 패스 상수 칸(PassCB)의 이름이라 뒤 패스(Present 의 외곽선 등)가 같은 칸을 읽는다 — 쓰기 전의 값을 떠 두었다가
+        // 그린 뒤 되돌린다(없던 칸은 지운다). 되돌리지 않으면 모듈이 빌린 칸의 값이 뒤 패스의 그림을 바꾼다.
+        struct SavedConstant
+        {
+            hashed_string _name{};
+            float4        _value{};
+            bool          _bExisted{ false };
+        };
+        vector<SavedConstant> listSaved;
+        listSaved.reserve( listConstant.size() );
         for ( const ModuleRenderPassRegistry::Constant& constant : listConstant )
         {
+            SavedConstant saved;
+            saved._name = constant._name;
+            uint32       valueSize{ 0 };
+            const uint8* pBytes = context._passValues.find( constant._name, valueSize );
+            if ( pBytes != nullptr && valueSize == sizeof( float4 ) )
+            {
+                saved._bExisted = true;
+                Memory::copy( &saved._value, pBytes, sizeof( float4 ) );
+            }
+            listSaved.push_back( saved );
             context._passValues.setFloat4( constant._name, constant._value );
         }
         // 지울지는 실제로 그릴 때 정한다 — 그리지 않은 패스가 "지웠다" 고 적으면 뒤 패스가 지우지 않은 첨부를 불러 온다.
-        if ( beginColorPass( context, target.view(), "", targetClear, colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
-            return;
-        drawFullscreen( context, pso );
-        context._pCmd->endRenderPass();
+        if ( beginColorPass( context, target.view(), "", targetClear, colorLoadFor( target ), RHIRenderPassLoadOp::Load ) )
+        {
+            drawFullscreen( context, pso );
+            context._pCmd->endRenderPass();
+        }
+        for ( const SavedConstant& saved : listSaved )
+        {
+            if ( saved._bExisted )
+                context._passValues.setFloat4( saved._name, saved._value );
+            else
+                context._passValues.remove( saved._name );
+        }
     }
 
     bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,

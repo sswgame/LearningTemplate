@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
@@ -211,7 +212,9 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
-                const string fileAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( resourcePath ) );
+                const string fileAbs = ResourcePaths::makeAbsolutePath( FileUtil::normalizePath( resourcePath ) );
+                if ( fileAbs.empty() )
+                    return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs ) );
             }
         };
@@ -837,6 +840,9 @@ namespace sw::editor
 
         static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValueUtil::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
+
+        /** @brief 메서드 인자 선택기 콤보의 선택지 버퍼 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+        ScopeOwned<vector<InspectorComponentChoice>> s_methodArgChoiceOwner;
     } // namespace
 
     InspectorPropertyManager::InspectorPropertyManager()
@@ -947,9 +953,11 @@ namespace sw::editor
             EditorThemeUtil::textError( pTargetType == nullptr ? "(unknown component type)" : "(no scene: cannot pick a component)" );
             return false;
         }
-        static vector<InspectorComponentChoice> s_listChoice; // 콤보가 열린 프레임에만 채운다(UI 스레드 하나만 그린다)
-        ComponentHandle                         picked{};
-        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), s_listChoice, picked ) == false )
+        vector<InspectorComponentChoice>* const pListChoice = s_methodArgChoiceOwner.getOrCreate(); // 콤보가 열린 프레임에만 채운다(UI 스레드 하나만 그린다)
+        if ( pListChoice == nullptr )
+            return false; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+        ComponentHandle picked{};
+        if ( ComponentHandleProperty::drawPicker( pLabel, *pManager, *pTargetType, slot._value.getValue<ComponentHandle>(), *pListChoice, picked ) == false )
             return false;
         slot._value = TaskValue{ picked };
         return true;

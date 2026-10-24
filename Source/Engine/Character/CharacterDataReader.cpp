@@ -196,7 +196,7 @@ namespace sw
 
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {
-        const hashed_string name = XMLReadUtil::readName( node, pName );
+        const hashed_string name = XMLReadUtil::readOptionalName( node, pName );
         if ( name.empty() && bRequired )
             addError( node, string( "needs attribute '" ) + pName + "'" );
         return name;
@@ -209,7 +209,14 @@ namespace sw
         splitTokens( node.getAttributeText( pName ), listToken );
         for ( const string_view token : listToken )
         {
-            outListName.push_back( hashed_string( token ) );
+            const hashed_string name( token );
+            // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 남긴다.
+            if ( name.empty() )
+            {
+                addError( node, string( "attribute '" ) + pName + "' lists the empty name (none)" );
+                continue;
+            }
+            outListName.push_back( name );
         }
     }
 

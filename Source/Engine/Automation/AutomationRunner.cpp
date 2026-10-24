@@ -30,6 +30,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
 {
@@ -835,10 +836,14 @@ namespace sw
      */
     struct AutomationRunnerEngineSteps
     {
+        /** @brief 엔진 단계는 실행기 자신의 상태(가상 입력 원천 · 스크린샷 대기열 · 종료 시한)를 만진다. 그래서 문맥을 실행기로 되돌려 쓴다 — 이 단계들은 실행기에만 등록되어 돈다. */
+        static AutomationRunner& asRunner( AutomationStepContext& context ) { return static_cast<AutomationRunner&>( context ); }
+
         // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 인자는 검사와 같은 `parse*` 로 읽고, 실패하면 버리지 않고 오류다 ---
 
-        static bool prepareSlotStep( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareSlotStep( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::SlotStepArgs args;
             if ( AutomationRunnerInternal::parseSlotStep( step, args, outError ) == false )
                 return false;
@@ -850,8 +855,9 @@ namespace sw
             return bAdded;
         }
 
-        static bool prepareWheel( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareWheel( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::AxisPairArgs args;
             if ( AutomationRunnerInternal::parseAxisPair( step, args, outError ) == false )
                 return false;
@@ -862,8 +868,9 @@ namespace sw
             return true;
         }
 
-        static bool prepareMouseDelta( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::AxisPairArgs args;
             if ( AutomationRunnerInternal::parseAxisPair( step, args, outError ) == false )
                 return false;
@@ -871,11 +878,13 @@ namespace sw
             return true;
         }
 
-        static bool prepareMousePosition( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareMousePosition( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
-            const IWindow* pWindow             = IWindow::getActiveWindow();
-            const bool     bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            const MainWindowSubsystem* pWindowHost         = engine::findSubsystem<MainWindowSubsystem>();
+            const IWindow*             pWindow             = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+            const bool                 bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForPointer )
             {
                 outError = step.describe() + ": no window to place the pointer in";
@@ -890,8 +899,9 @@ namespace sw
             return true;
         }
 
-        static bool prepareGamepadAxis( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner&                         runner = asRunner( context );
             AutomationRunnerInternal::GamepadAxisArgs args;
             if ( AutomationRunnerInternal::parseGamepadAxis( step, args, outError ) == false )
                 return false;
@@ -899,9 +909,10 @@ namespace sw
             return true;
         }
 
-        static bool prepareText( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareText( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
-            const string* pValue = step.requireAttribute( "value", outError );
+            AutomationRunner& runner = asRunner( context );
+            const string*     pValue = step.requireAttribute( "value", outError );
             if ( pValue == nullptr )
                 return false;
             runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( *pValue ) );
@@ -909,8 +920,9 @@ namespace sw
         }
 
         /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다. */
-        static bool prepareWaitUntil( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
+            AutomationRunner& runner = asRunner( context );
             for ( const AutomationStep& otherStep : runner._scenario.getSteps() )
             {
                 if ( &otherStep != &step && otherStep._frameIndex == step._frameIndex )
@@ -924,19 +936,21 @@ namespace sw
 
         // --- 실행(`AutomationStepFunction`): 씬 틱 뒤에 돈다 -------------------------------------------------------
 
-        static bool runVariable( AutomationRunner& runner, const AutomationStep& step )
+        static bool runVariable( AutomationStepContext& context, const AutomationStep& step )
         {
-            const string& name = *step.findAttribute( "name" );
+            AutomationRunner& runner = asRunner( context );
+            const string&     name   = *step.findAttribute( "name" );
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( name, *step.findAttribute( "value" ) ) == false )
                 runner.recordFailure( step, "could not set " + name + " to '" + *step.findAttribute( "value" ) + "'" );
             return true;
         }
 
-        static bool runExpectVariable( AutomationRunner& runner, const AutomationStep& step )
+        static bool runExpectVariable( AutomationStepContext& context, const AutomationStep& step )
         {
-            const string&             name  = *step.findAttribute( "name" );
-            const string&             value = *step.findAttribute( "value" );
-            const GlobalVariableInfo* pInfo = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
+            AutomationRunner&         runner = asRunner( context );
+            const string&             name   = *step.findAttribute( "name" );
+            const string&             value  = *step.findAttribute( "value" );
+            const GlobalVariableInfo* pInfo  = engine::getSubsystem<GlobalVariableManager>().findVariable( name );
             if ( pInfo == nullptr )
             {
                 runner.recordFailure( step, name + " is no longer registered" ); // 검사 뒤에 모듈이 언로드됐다(핫 리로드)
@@ -952,40 +966,46 @@ namespace sw
             return true;
         }
 
-        static bool runExpect( AutomationRunner& runner, const AutomationStep& step )
+        static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runExpect( step );
             return true;
         }
 
-        static bool runExpectVisited( AutomationRunner& runner, const AutomationStep& step )
+        static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runExpectVisited( step );
             return true;
         }
 
-        static bool runRecord( AutomationRunner& runner, const AutomationStep& step )
+        static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runRecord( step );
             return true;
         }
 
-        static bool runRemember( AutomationRunner& runner, const AutomationStep& step )
+        static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runRemember( step );
             return true;
         }
 
-        static bool runExpectLog( AutomationRunner& runner, const AutomationStep& step )
+        static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runExpectLog( step );
             return true;
         }
 
-        static bool runScreenshot( AutomationRunner& runner, const AutomationStep& step )
+        static bool runScreenshot( AutomationStepContext& context, const AutomationStep& step )
         {
-            const string path      = runner.resolveOutputPath( *step.findAttribute( "file" ) );
-            const string directory = FileUtil::getDirectoryPart( path );
+            AutomationRunner& runner    = asRunner( context );
+            const string      path      = runner.resolveOutputPath( *step.findAttribute( "file" ) );
+            const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory );
             (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
@@ -994,8 +1014,9 @@ namespace sw
             return true;
         }
 
-        static bool runExpectImage( AutomationRunner& runner, const AutomationStep& step )
+        static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             runner.runExpectImage( step );
             return true;
         }
@@ -1013,7 +1034,8 @@ namespace sw
             runner._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose == false )
                 return true;
-            IWindow* pWindow = IWindow::getActiveWindow();
+            MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+            IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )
                 runner.recordFailure( step, "there is no window to close" );
             else
@@ -1021,19 +1043,21 @@ namespace sw
             return true;
         }
 
-        static bool runCloseWindow( AutomationRunner& runner, const AutomationStep& step ) { return startExitDeadline( runner, step, true ); }
+        static bool runCloseWindow( AutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, true ); }
 
-        static bool runExpectExitWithin( AutomationRunner& runner, const AutomationStep& step ) { return startExitDeadline( runner, step, false ); }
+        static bool runExpectExitWithin( AutomationStepContext& context, const AutomationStep& step ) { return startExitDeadline( asRunner( context ), step, false ); }
 
-        static bool runPass( AutomationRunner& runner, const AutomationStep& step )
+        static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner = asRunner( context );
             (void)step;
             runner.finish( AutomationResult::Passed, "<Pass/>" );
             return true;
         }
 
-        static bool runFail( AutomationRunner& runner, const AutomationStep& step )
+        static bool runFail( AutomationStepContext& context, const AutomationStep& step )
         {
+            AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
             const string_view reason  = pReason != nullptr ? string_view{ *pReason } : string_view{ "<Fail/>" };
             runner.recordFailure( step, reason );
@@ -1041,9 +1065,10 @@ namespace sw
             return true;
         }
 
-        static bool runSkip( AutomationRunner& runner, const AutomationStep& step )
+        static bool runSkip( AutomationStepContext& context, const AutomationStep& step )
         {
-            const string* pReason = step.findAttribute( "reason" );
+            AutomationRunner& runner  = asRunner( context );
+            const string*     pReason = step.findAttribute( "reason" );
             runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
             return true;
         }
@@ -1051,8 +1076,9 @@ namespace sw
         // --- 차례(`AutomationStepHoldFunction`) -------------------------------------------------------------------
 
         /** @brief 조건이 참이 될 때까지(또는 시한까지) 시나리오 시계를 붙잡습니다. 놓으면 단계는 끝난다(실행 함수가 없다). */
-        static AutomationStepHold holdWaitUntil( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdWaitUntil( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
+            AutomationRunner& runner = asRunner( context );
             return runner.shouldHoldForCondition( step, input ) ? AutomationStepHold::Hold : AutomationStepHold::Run;
         }
 
@@ -1063,8 +1089,9 @@ namespace sw
          *          기다리는 동안은 `WaitUntil` 처럼 시나리오 시계를 붙잡는다 — 세면 뒤 단계의 프레임이 지나 버려 사진을 요청한 프레임에 한꺼번에 돌고,
          *          그 변화(순간이동 · 변수)가 다음 패킷이 찍는 사진에 들어간다.
          */
-        static AutomationStepHold holdScreenshot( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdScreenshot( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
+            AutomationRunner& runner = asRunner( context );
             if ( AutomationRunnerInternal::capturesWithoutSettling( step ) )
                 return AutomationStepHold::Run;
             const bool bSettled             = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
@@ -1085,8 +1112,9 @@ namespace sw
         }
 
         /** @brief 요청한 스크린샷이 다 써질 때까지 기다립니다. 상한을 넘기면 실패로 적고 측정하지 않고 넘깁니다. */
-        static AutomationStepHold holdExpectImage( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+        static AutomationStepHold holdExpectImage( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
+            AutomationRunner& runner = asRunner( context );
             (void)input;
             const bool bPending = runner._listPendingScreenshot.empty() == false || runner._screenshotCompletedCount < runner._screenshotRequestedCount;
             if ( bPending == false )
@@ -1406,6 +1434,29 @@ namespace sw
         string line = step.describe() + ": " + string( message );
         SW_LOG_WARNING( "[Scenario] %#", line.c_str() );
         _listFailure.push_back( std::move( line ) );
+    }
+
+    void AutomationRunner::endScenario( AutomationStepEnd end, string_view reason )
+    {
+        // 단계의 말(Pass · Fail · Skip)을 종료 코드로 번역하는 곳은 여기 하나다. 새 끝 까닭이 늘면 스위치가 컴파일러 경고로 알린다.
+        switch ( end )
+        {
+            case AutomationStepEnd::Pass:
+            {
+                finish( AutomationResult::Passed, reason );
+                return;
+            }
+            case AutomationStepEnd::Fail:
+            {
+                finish( AutomationResult::Failed, reason );
+                return;
+            }
+            case AutomationStepEnd::Skip:
+            {
+                finish( AutomationResult::Skipped, reason );
+                return;
+            }
+        }
     }
 
     void AutomationRunner::finish( AutomationResult result, string_view reason )

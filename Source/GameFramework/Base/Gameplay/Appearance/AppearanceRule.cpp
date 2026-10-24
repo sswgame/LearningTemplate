@@ -32,7 +32,7 @@ namespace sw
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
                 if ( GameDataXML::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
                     report.addError( "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
-                outCondition._target       = AppearanceXMLUtil::readName( node, "target" );
+                outCondition._target       = AppearanceXMLUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
                 const utf8* pOccupied      = node.findAttribute( "occupied" );
@@ -58,7 +58,7 @@ namespace sw
                 else if ( pOccupied != nullptr )
                 {
                     outCondition._kind   = AppearanceRuleConditionKind::Occupied;
-                    outCondition._target = AppearanceXMLUtil::readName( node, "occupied" );
+                    outCondition._target = AppearanceXMLUtil::readRequiredName( node, "occupied", report, sourceName );
                 }
                 else
                 {
@@ -71,8 +71,8 @@ namespace sw
             [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 const utf8* pName = node.getName();
-                outAction._target = AppearanceXMLUtil::readName( node, "target" );
-                outAction._part   = AppearanceXMLUtil::readName( node, "part" );
+                outAction._target = AppearanceXMLUtil::readOptionalName( node, "target" ); // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
+                outAction._part   = AppearanceXMLUtil::readOptionalName( node, "part" );
                 if ( StringUtil::equals( pName, "Hide", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );
@@ -93,7 +93,7 @@ namespace sw
                     else if ( pRegion != nullptr )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideRegion;
-                        outAction._name = AppearanceXMLUtil::readName( node, "region" );
+                        outAction._name = AppearanceXMLUtil::readRequiredName( node, "region", report, sourceName );
                     }
                     return true;
                 }
@@ -101,28 +101,28 @@ namespace sw
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVariantAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ChooseVariant;
-                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
+                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMesh", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMeshAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
-                    outAction._value = AppearanceXMLUtil::readName( node, "mesh" );
+                    outAction._value = AppearanceXMLUtil::readRequiredName( node, "mesh", report, sourceName );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMaterial", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMaterialAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
-                    outAction._value = AppearanceXMLUtil::readName( node, "material" );
+                    outAction._value = AppearanceXMLUtil::readRequiredName( node, "material", report, sourceName );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "Morph", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ApplyMorph;
-                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
+                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                     AppearanceXMLUtil::readOptionalFloat( node, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, outAction._weight, report, sourceName );
                     return outAction._name.empty() == false;
                 }
@@ -130,7 +130,7 @@ namespace sw
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::OverrideSocket;
-                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
+                    outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                     AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
@@ -189,11 +189,13 @@ namespace sw
             }
             (void)AppearanceXMLUtil::reportUnknownAttributes( ruleNode, AppearanceRuleInternal::kArrRuleAttribute, report, sourceName );
             AppearanceRuleDef rule;
-            rule._id = AppearanceXMLUtil::readName( ruleNode, "id" );
+            rule._id = AppearanceXMLUtil::readRequiredName( ruleNode, "id", report, sourceName );
             AppearanceXMLUtil::readOptionalInt( ruleNode, "priority", MathUtil::kMinInt32, MathUtil::kMaxInt32, rule._priority, report, sourceName );
-            if ( rule._id.empty() || findRule( rule._id ) != nullptr )
+            if ( rule._id.empty() )
+                continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
+            if ( findRule( rule._id ) != nullptr )
             {
-                report.addError( "%#: <Rule> without an id or with a duplicate id '%#'", sourceName, rule._id.c_str() );
+                report.addError( "%#: <Rule> has a duplicate id '%#'", sourceName, rule._id.c_str() );
                 continue;
             }
             for ( XMLNode child = ruleNode.findChild(); child; child = child.findNextSibling() )

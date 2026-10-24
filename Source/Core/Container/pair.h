@@ -2,7 +2,6 @@
  * @file pair.h
  * @brief 값 쌍(sw::pair)과 EBO(Empty Base Optimization) 압축입니다.
  *
- * - SW_ENABLE_STL_CONTAINER 를 정의하면 std::pair 와 std::make_pair 로 바뀝니다.
  * - sw::pair:
  *   1) 상태가 있는 일반 타입의 쌍: std::pair 와 똑같이 first, second 데이터 멤버를 둡니다.
  *   2) 상태가 없는 빈 클래스가 들어가면: 상속(EBO)으로 그쪽을 0바이트로 압축해 보관합니다.
@@ -59,9 +58,8 @@ namespace sw
     } // namespace internal
 
     /**
-     * @brief 빈 함수 객체(해시 · 비교자)를 0 바이트로 담는 쌍입니다. 두 구성에서 같은 형식입니다.
-     * @details `sw::pair` 는 `SW_ENABLE_STL_CONTAINER` 에서 `std::pair` 라 EBO 접근자(`first()`)가 없습니다. 구성과 상관없이 같은 구현을 쓰는
-     *          컨테이너(`unordered_map` · `unordered_set`)는 함수 객체를 이 형식에 담습니다.
+     * @brief 빈 함수 객체(해시 · 비교자)를 0 바이트로 담는 쌍입니다. EBO 접근자(`first()` · `second()`)를 가집니다.
+     * @details 해시 · 비교자 같은 함수 객체는 대개 비어 있다. 늘 접근자 `first()` · `second()` 로 읽으므로 호출부가 원소가 비었는지에 흔들리지 않는다(`unordered_map` · `unordered_set`).
      */
     template <typename T1, typename T2>
     struct CompressedPair : private internal::EmptyElementTag<T1, 0>, private internal::EmptyElementTag<T2, 1>
@@ -74,18 +72,10 @@ namespace sw
         constexpr T2&       second() noexcept { return SecondBase::get(); }
         constexpr const T2& second() const noexcept { return SecondBase::get(); }
     };
+} // namespace sw
 
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T1, typename T2>
-    using pair = std::pair<T1, T2>;
-
-    template <typename T1, typename T2>
-    constexpr std::pair<std::decay_t<T1>, std::decay_t<T2>> make_pair( T1&& a, T2&& b )
-    {
-        return std::make_pair( std::forward<T1>( a ), std::forward<T2>( b ) );
-    }
-#else
-
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 1) Case 1: T1, T2 모두 일반 타입(비어 있지 않음) -> first, second 를 직접 멤버로 둔다
     // ------------------------------------------------------------------------------
@@ -450,15 +440,9 @@ namespace sw
                 return std::move( p.second );
         }
     }
-#endif
 } // namespace sw
 
 // 구조적 바인딩 · tuple 인터페이스
-//
-// 커스텀 pair 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::pair` 는 `std::pair` 의 별칭이므로, 아래
-// 특수화는 표준 라이브러리가 이미 제공하는 `tuple_size<std::pair<…>>` 를 다시 정의하게 된다. 이 블록을 `#if` 밖에 두면
-// 그 옵션을 켰을 때 컴파일 자체가 되지 않는다(`redefinition of 'tuple_size<sw::pair<T1, T2>>'`).
-#if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {
     template <typename T1, typename T2>
@@ -478,4 +462,3 @@ namespace std
         using type = T2;
     };
 } // namespace std
-#endif

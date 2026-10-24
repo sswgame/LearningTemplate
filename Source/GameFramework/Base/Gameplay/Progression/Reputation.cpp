@@ -50,16 +50,17 @@ namespace sw
             for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
             {
                 // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
-                ReputationTier tier{ GameDataXML::readName( child, "name" ), faction._minValue };
-                bValid = GameDataXML::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
-                if ( tier._name.empty() )
+                ReputationTier tier{ hashed_string{}, faction._minValue };
+                const bool     bNamed = GameDataXML::readRequiredName( child, "name", sourceName, tier._name );
+                bValid                = GameDataXML::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
+                if ( bNamed )
                 {
-                    SW_LOG_ERROR( "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
-                    bValid = false;
+                    faction._listTier.push_back( tier );
                 }
                 else
                 {
-                    faction._listTier.push_back( tier );
+                    SW_LOG_ERROR( "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
+                    bValid = false;
                 }
             }
             std::stable_sort( faction._listTier.begin(), faction._listTier.end(), Ascending<&ReputationTier::_minValue>{} );

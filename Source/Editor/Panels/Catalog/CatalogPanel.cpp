@@ -88,7 +88,8 @@ namespace sw::editor
 
             static constexpr float32 kFileListWidth = 300.0f; ///< 96 DPI 기준입니다
 
-            static string makeAbsolutePath( const string& resourceID ) { return FileUtil::joinPath( ResourcePaths::getRootFolderPath(), resourceID ); }
+            /** @brief 리소스 id 의 디스크 경로입니다. 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(못 정하면 빈 문자열). */
+            static string makeAbsolutePath( const string& resourceID ) { return ResourcePaths::makeAbsolutePath( resourceID ); }
         };
     } // namespace
 } // namespace sw::editor

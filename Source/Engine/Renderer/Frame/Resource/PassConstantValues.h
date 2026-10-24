@@ -52,6 +52,9 @@ namespace sw
         /** @brief 이름으로 값을 찾습니다(없으면 nullptr). */
         const uint8* find( hashed_string name, uint32& outSize ) const;
 
+        /** @brief 이름의 값을 지웁니다(없으면 아무것도 하지 않습니다). 지우면 셰이더는 그 칸을 0 으로 읽습니다. */
+        void remove( hashed_string name );
+
     private:
         struct Entry
         {

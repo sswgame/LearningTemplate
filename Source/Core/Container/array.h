@@ -22,10 +22,6 @@
 
 namespace sw
 {
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T, size_t N>
-    using array = std::array<T, N>;
-#else
     /** @brief std::array 에 디버그 레이스 탐지를 더한 것입니다. API 는 STL 과 같습니다. */
     template <typename T, size_t N>
     class array
@@ -287,17 +283,11 @@ namespace sw
         static_assert( I < N, "array index out of bounds" );
         return std::move( a[I] );
     }
-#endif
 } // namespace sw
 
 // ------------------------------------------------------------------------------
 // 구조적 바인딩용 std::tuple_size · std::tuple_element 특수화
-//
-// 커스텀 array 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::array` 는 `std::array` 의 별칭이라,
-// 아래 특수화는 표준 라이브러리가 이미 제공하는 것을 다시 정의하게 된다(그 옵션을 켜면 컴파일되지 않는다).
-// `pair.h` 도 같은 이유로 같은 형태다.
 // ------------------------------------------------------------------------------
-#if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {
     template <typename T, size_t N>
@@ -311,4 +301,3 @@ namespace std
         using type = T;
     };
 } // namespace std
-#endif

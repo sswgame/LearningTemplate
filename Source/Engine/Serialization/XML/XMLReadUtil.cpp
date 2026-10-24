@@ -29,7 +29,7 @@ namespace sw
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;
     }
 
-    hashed_string XMLReadUtil::readName( const XMLNode& node, const utf8* pAttribute )
+    hashed_string XMLReadUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
     {
         const string_view text = StringUtil::trim( node.getAttributeText( pAttribute ) );
         if ( text.empty() )

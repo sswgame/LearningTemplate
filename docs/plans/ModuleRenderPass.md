@@ -1,6 +1,8 @@
 # 모듈이 렌더 패스를 등록하는 창구
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: G-1 · 진행: 1/3
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: G-1 · 진행: 2/3
+
+**남은 확인(통합에서 확인):** 매니페스트 id `module-pass-shader-patch`, `module-pass-scenario`(M2 행). 확인이 끝나면 통합 담당이 M2 를 닫는다.
 
 모듈(게임 · 키트)이 렌더 패스를 넣으려면 `FramePassContext` · 커맨드 리스트 · 트랜지언트 풀을 모듈 경계 밖으로 내야 했고, 그것은 RT 안전 계약까지 내보내는 일이었습니다. 2026-10-22 사용자 결정으로 착수 조건(패스를 등록하려는 모듈)을 갈음했습니다.
 
@@ -20,5 +22,5 @@
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | M1 | `RenderPassType::Module` · 검증 · 패스별 PSO · 실행 · `ModuleRenderPassRegistry` · 테스트 `RenderPassTest.ModulePassRegistrationIsScopedAndCopiesConstants` | 끝(2026-10-23 Debug 빌드 경고 0, `RenderPassTest` · `SceneTest` 81/81, GPU 를 뺀 렌더 관련 스위트 145/145) |
-| M2 | 게임 모듈 하나가 실제로 등록하는 시연 패스(파이프라인 XML + 셰이더 + 등록)와 네 백엔드 캡처. 실행 경로(`executeModulePass` · `createModulePassPSOs`)는 아직 GPU 에서 돈 적이 없다 | 남음(확인 대기: 매니페스트 id `module-render-pass-m2`) |
-| M3 | 모듈이 드로우를 직접 기록해야 하는 요구가 생기면 기록 계약 설계(지금은 하지 않음) | 남음 |
+| M2 | 게임 모듈 하나가 실제로 등록하는 시연 패스(파이프라인 XML + 셰이더 + 등록)와 네 백엔드 캡처 | 끝(코드 · 데이터 · 시나리오, 2026-10-24 — 실행 경로는 아직 GPU 에서 돈 적이 없다). 파이프라인 `game/empty/pipeline/modulepasspipeline.xml`(모션 블러와 Present 사이의 `Module` 패스), `EmptyGame` 이 `Empty.ModulePassDemo` 를 등록하고 상수 `g_OutlineColor`(붉은 틴트)를 넘기며, 시나리오 `game/empty/automation/modulepass.scenario.xml` 이 `meanRedMinusBlue` 로 본다. 셰이더 `engine/shaders/modulepassdemo.hlsl` 은 커밋 훅(쿠킹 바이너리 요구)에 걸리고 에셋 검증(파이프라인이 가리키는 셰이더가 있어야 한다)이 셰이더에 묶여, **셰이더 · 파이프라인 · 시나리오 세 파일을 패치 `ShaderPatches/02-ModuleRenderPass-M2.patch` 하나로** 남겼다 — 통합이 적용하고 `App --cook-shaders` 로 굽는다. 만들면서 고친 것: 모듈 상수의 이름은 엔진 패스 상수 칸(PassCB)의 이름이라 뒤 패스가 같은 칸을 읽으므로, `executeModulePass` 가 쓰기 전 값을 떠 두었다가 그린 뒤 되돌린다(없던 칸은 `PassConstantValues::remove` 로 지운다, 테스트 `PassConstantValuesRemoveClearsTheSlot`). 모듈 전용 칸을 PassCB 에 따로 두는 안은 모든 셰이더를 다시 굽게 하므로 하지 않았다 |
+| M3 | 모듈이 드로우를 직접 기록해야 하는 요구가 생기면 기록 계약 설계(지금은 하지 않음) | 남음(조건부 — 요구가 생길 때. 지금은 요구하는 모듈이 없어 설계할 입력이 없다) |

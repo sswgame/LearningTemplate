@@ -82,7 +82,7 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
       "Source/Probe/N.h": "void f()\n{\n    static auto& s = Foo::getInstance();\n}\n"},
      (0, 0)),
     ("예외 표의 타입", {"Source/Probe/O.h": "class SQLiteDriver\n{\npublic:\n    static SQLiteDriver& getInstance();\n};\n"}, (0, 0)),
-    ("활성 창구 예외 표의 타입", {"Source/Probe/R.h": "class IWindow\n{\npublic:\n    static IWindow* getActiveWindow();\n};\n"}, (0, 0, 0)),
+    ("활성 창구 예외 표의 타입", {"Source/Probe/R.h": "class MemoryProfiler\n{\npublic:\n    static MemoryProfiler* getActive();\n};\n"}, (0, 0, 0)),
     ("참조를 돌려주는 활성 설정 · 인자 있는 함수 · cpp 의 정의는 보지 않는다",
      {"Source/Probe/S.h": "struct Cfg\n{\n    static const Cfg& getActive();\n    static Cfg* findActiveFor( int id );\n};\n",
       "Source/Probe/S.cpp": "Cfg* Cfg::findActive()\n{\n    static Cfg* s_p = nullptr;\n    return s_p;\n}\n"},

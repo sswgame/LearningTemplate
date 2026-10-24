@@ -10,13 +10,14 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 
 namespace sw::editor
@@ -35,11 +36,10 @@ namespace sw::editor
                 uint32                _ticket{ 0 };
             };
 
-            static vector<PendingCapture>& pendingCaptures()
-            {
-                static vector<PendingCapture> s_listPending;
-                return s_listPending;
-            }
+            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<PendingCapture>> s_pendingOwner{};
+
+            static vector<PendingCapture>& pendingCaptures() { return *s_pendingOwner.getOrCreate(); }
 
             static PendingCapture* findPending( const AutomationStep& step )
             {
@@ -74,7 +74,7 @@ namespace sw::editor
             }
 
             /** @brief 처음 차례가 오면 캡처를 요청하고, 결과가 나올 때까지 붙잡습니다. */
-            static AutomationStepHold holdCapture( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdCapture( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 if ( pCapture == nullptr )
@@ -89,7 +89,7 @@ namespace sw::editor
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
             }
 
-            static void expectAtMost( AutomationRunner& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail )
+            static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail )
             {
                 const string* pLimit = step.findAttribute( attributeName );
                 float32       limit{ 0.0f };
@@ -114,7 +114,7 @@ namespace sw::editor
                 runner.recordFailure( step, message );
             }
 
-            static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
+            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 PendingCapture* const  pPending = findPending( step );

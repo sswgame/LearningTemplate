@@ -35,8 +35,7 @@ namespace sw
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
-                outModifier._attribute = GameDataXML::readName( node, "attribute" );
-                if ( outModifier._attribute.empty() )
+                if ( GameDataXML::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
                     return false;
@@ -63,8 +62,8 @@ namespace sw
                 bValid                        = GameDataXML::readOptionalNumber( node, "coefficient", sourceName, -kAny, kAny, outModifier._coefficient ) && bValid;
                 bValid                        = GameDataXML::readOptionalNumber( node, "pre", sourceName, -kAny, kAny, outModifier._preMultiplyAdditive ) && bValid;
                 bValid                        = GameDataXML::readOptionalNumber( node, "post", sourceName, -kAny, kAny, outModifier._postMultiplyAdditive ) && bValid;
-                outModifier._backingAttribute = GameDataXML::readName( node, "backing" );
-                outModifier._setByCallerName  = GameDataXML::readName( node, "name" );
+                outModifier._backingAttribute = GameDataXML::readOptionalName( node, "backing" ); // 아래에서 AttributeBased 일 때 필수로 확인한다
+                outModifier._setByCallerName  = GameDataXML::readOptionalName( node, "name" );    // 아래에서 SetByCaller 일 때 필수로 확인한다
                 if ( bValid == false )
                 {
                     SW_LOG_ERROR( "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
@@ -382,8 +381,13 @@ namespace sw
 
         for ( XMLNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
         {
-            const hashed_string className   = GameDataXML::readName( executionNode, "class" );
-            const auto          factoryIter = _mapExecutionFactory.find( className );
+            hashed_string className;
+            if ( GameDataXML::readRequiredName( executionNode, "class", sourceName, className ) == false )
+            {
+                SW_LOG_ERROR( "%#: effect '%#' has an <Execution> without a class - skipped", sourceName, pID );
+                return false;
+            }
+            const auto factoryIter = _mapExecutionFactory.find( className );
             if ( factoryIter == _mapExecutionFactory.end() )
             {
                 SW_LOG_WARNING( "%#: effect '%#' uses execution class '%#' which is not registered - skipped", sourceName, pID, className.c_str() );
@@ -407,8 +411,8 @@ namespace sw
         AbilityCatalogInternal::readTagChildren( node, "OngoingRequiredTag", outDef._ongoingRequiredTags );
         for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
         {
-            const hashed_string abilityID = GameDataXML::readName( grantNode, "id" );
-            if ( abilityID.empty() )
+            hashed_string abilityID;
+            if ( GameDataXML::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
             {
                 SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
                 return false;
@@ -435,8 +439,8 @@ namespace sw
             return false;
         }
         outDef._cueTag     = TagID::request( string_view( pTag ) );
-        outDef._prefab     = GameDataXML::readName( node, "prefab" );
-        outDef._soundEvent = GameDataXML::readName( node, "sound" );
+        outDef._prefab     = GameDataXML::readOptionalName( node, "prefab" ); // 둘 중 하나는 아래에서 필수로 확인한다
+        outDef._soundEvent = GameDataXML::readOptionalName( node, "sound" );
         bool bValid        = GameDataXML::readOptionalFloat3( node, "offset", sourceName, outDef._offset );
         bValid             = GameDataXML::readOptionalFlag( node, "onRemoved", outDef._bOnRemoved ) && bValid;
         bValid             = GameDataXML::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
@@ -462,9 +466,8 @@ namespace sw
             SW_LOG_WARNING( "%#: <Ability> without an id - skipped", sourceName );
             return false;
         }
-        outDef._id        = hashed_string( pID );
-        outDef._className = GameDataXML::readName( node, "class" );
-        if ( outDef._className.empty() )
+        outDef._id = hashed_string( pID );
+        if ( GameDataXML::readRequiredName( node, "class", sourceName, outDef._className ) == false )
         {
             SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
             return false;
@@ -489,9 +492,12 @@ namespace sw
 
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
-            const hashed_string paramName = GameDataXML::readName( paramNode, "name" );
-            if ( paramName.empty() )
+            hashed_string paramName;
+            if ( GameDataXML::readRequiredName( paramNode, "name", sourceName, paramName ) == false )
+            {
+                bValid = false; // 이름 없는 매개변수를 조용히 건너뛰지 않는다
                 continue;
+            }
             const utf8* pText = paramNode.findAttribute( "text" );
             if ( pText != nullptr )
             {
@@ -523,8 +529,7 @@ namespace sw
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
-            setEntry._className = GameDataXML::readName( setNode, "class" );
-            if ( setEntry._className.empty() )
+            if ( GameDataXML::readRequiredName( setNode, "class", sourceName, setEntry._className ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
                 return false;
@@ -533,9 +538,11 @@ namespace sw
             for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
                 AbilitySetAttributeEntry attributeEntry;
-                attributeEntry._attribute = GameDataXML::readName( attributeNode, "name" );
-                if ( attributeEntry._attribute.empty() )
-                    continue;
+                if ( GameDataXML::readRequiredName( attributeNode, "name", sourceName, attributeEntry._attribute ) == false )
+                {
+                    SW_LOG_ERROR( "%#: ability set '%#' has an <Attribute> without a name - skipped", sourceName, pID );
+                    return false;
+                }
                 // 범위는 적은 쪽만 막는다 — 적지 않은 쪽은 구조체 초기값(실수의 끝)이라 "제한 없음" 이다.
                 constexpr float32 kAny      = MathUtil::kMaxFloat;
                 const bool        bHasRange = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
@@ -556,9 +563,11 @@ namespace sw
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry;
-            abilityEntry._abilityID = GameDataXML::readName( abilityNode, "id" );
-            if ( abilityEntry._abilityID.empty() )
-                continue;
+            if ( GameDataXML::readRequiredName( abilityNode, "id", sourceName, abilityEntry._abilityID ) == false )
+            {
+                SW_LOG_ERROR( "%#: ability set '%#' has an <Ability> without an id - skipped", sourceName, pID );
+                return false;
+            }
             bool bEntryValid = GameDataXML::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
             bEntryValid      = GameDataXML::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
             if ( bEntryValid == false )
@@ -572,9 +581,11 @@ namespace sw
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry;
-            effectEntry._effectID = GameDataXML::readName( effectNode, "id" );
-            if ( effectEntry._effectID.empty() )
-                continue;
+            if ( GameDataXML::readRequiredName( effectNode, "id", sourceName, effectEntry._effectID ) == false )
+            {
+                SW_LOG_ERROR( "%#: ability set '%#' has an <Effect> without an id - skipped", sourceName, pID );
+                return false;
+            }
             if ( GameDataXML::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );

@@ -25,7 +25,7 @@ namespace sw
             [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPieceAttribute, report, sourceName );
-                outPiece._slot = AppearanceXMLUtil::readName( node, "slot" );
+                outPiece._slot = AppearanceXMLUtil::readRequiredName( node, "slot", report, sourceName );
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
@@ -59,10 +59,12 @@ namespace sw
             }
             (void)AppearanceXMLUtil::reportUnknownAttributes( setNode, EquipSetCatalogInternal::kArrSetAttribute, report, sourceName );
             EquipSetDef def;
-            def._id = AppearanceXMLUtil::readName( setNode, "id" );
-            if ( def._id.empty() || findSet( def._id ) != nullptr )
+            def._id = AppearanceXMLUtil::readRequiredName( setNode, "id", report, sourceName );
+            if ( def._id.empty() )
+                continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
+            if ( findSet( def._id ) != nullptr )
             {
-                report.addError( "%#: <Set> without an id or with a duplicate id '%#'", sourceName, def._id.c_str() );
+                report.addError( "%#: <Set> has a duplicate id '%#'", sourceName, def._id.c_str() );
                 continue;
             }
             for ( XMLNode child = setNode.findChild(); child; child = child.findNextSibling() )
@@ -82,7 +84,7 @@ namespace sw
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrVariantAttribute, report, sourceName );
                     EquipSetVariantDef variant;
-                    variant._bodyType = AppearanceXMLUtil::readName( child, "bodyType" );
+                    variant._bodyType = AppearanceXMLUtil::readRequiredName( child, "bodyType", report, sourceName );
                     if ( variant._bodyType.empty() )
                         report.addError( "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
@@ -98,7 +100,7 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Complete", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrCompleteAttribute, report, sourceName );
-                    def._completeVisual = AppearanceXMLUtil::readName( child, "visual" );
+                    def._completeVisual = AppearanceXMLUtil::readRequiredName( child, "visual", report, sourceName );
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
                     if ( def._completeVisual.empty() || def._listCompleteSlot.empty() )
                         report.addError( "%#: set '%#' <Complete> needs a visual and slots", sourceName, def._id.c_str() );

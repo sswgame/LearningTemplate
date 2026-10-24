@@ -31,7 +31,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
         {
             TimingWindow window;
-            window._grade      = GameDataXML::readName( child, "grade" );
+            bValid             = GameDataXML::readRequiredName( child, "grade", sourceName, window._grade ) && bValid;
             float32 width      = window._earlyWidth;
             bValid             = GameDataXML::readOptionalNumber( child, "width", sourceName, 0.0f, kAnyFloat, width ) && bValid;
             window._earlyWidth = width;

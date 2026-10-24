@@ -11,10 +11,13 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw
 {
@@ -49,7 +52,7 @@ namespace sw
 #endif
             }
 
-            static bool runDevCommand( AutomationRunner& runner, const AutomationStep& step )
+            static bool runDevCommand( AutomationStepContext& runner, const AutomationStep& step )
             {
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
@@ -105,7 +108,7 @@ namespace sw
             }
 
             /** @brief 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 창이 최소 크기에서 멈춘다(그것을 보는 단언은 뒤 단계가 한다). */
-            static bool runResize( AutomationRunner& runner, const AutomationStep& step )
+            static bool runResize( AutomationStepContext& runner, const AutomationStep& step )
             {
                 uint32 width  = 0;
                 uint32 height = 0;
@@ -114,7 +117,8 @@ namespace sw
                     runner.recordFailure( step, "width and height must be pixels in 1..16384" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
                 }
-                IWindow* pWindow = IWindow::getActiveWindow();
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, width, height ) == false )
                     runner.recordFailure( step, "this platform could not resize the window" );
                 return true;

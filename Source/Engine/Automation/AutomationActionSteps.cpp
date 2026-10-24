@@ -10,8 +10,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -89,7 +89,7 @@ namespace sw
              * @brief 프레임 길이를 읽습니다 — @p pFramesName(프레임) 또는 @p pSecondsName(초, 시나리오 고정 프레임 시간으로 바꾼다) 하나, 없으면 @p inoutFrames 를 그대로 둡니다.
              * @details 검사 때는 실행기가 없어(@p pRunner 가 nullptr) 형식만 본다.
              */
-            [[nodiscard]] static bool readDuration( const AutomationRunner* pRunner, const AutomationStep& step, const utf8* pFramesName, const utf8* pSecondsName, uint32& inoutFrames,
+            [[nodiscard]] static bool readDuration( const AutomationStepContext* pRunner, const AutomationStep& step, const utf8* pFramesName, const utf8* pSecondsName, uint32& inoutFrames,
                                                     string& outError )
             {
                 const bool bFrames  = step.findAttribute( pFramesName ) != nullptr;
@@ -144,7 +144,7 @@ namespace sw
             }
 
             /** @brief `Action` 단계의 인자를 읽습니다. 검사(@p pRunner 가 nullptr — 초를 프레임으로 바꾸지 않는다)와 실행이 이 함수 하나를 쓴다. */
-            [[nodiscard]] static bool parseAction( const AutomationRunner* pRunner, const AutomationStep& step, ActionArgs& outArgs, string& outError )
+            [[nodiscard]] static bool parseAction( const AutomationStepContext* pRunner, const AutomationStep& step, ActionArgs& outArgs, string& outError )
             {
                 outArgs = ActionArgs{};
                 if ( readDuration( pRunner, step, "hold", "seconds", outArgs._holdFrames, outError ) == false || readUint( step, "count", outArgs._count, outError ) == false )
@@ -154,7 +154,7 @@ namespace sw
             }
 
             /** @brief `ActionAxis` 단계의 인자를 읽습니다(검사와 실행이 함께 쓴다). */
-            [[nodiscard]] static bool parseAxis( const AutomationRunner* pRunner, const AutomationStep& step, AxisArgs& outArgs, string& outError )
+            [[nodiscard]] static bool parseAxis( const AutomationStepContext* pRunner, const AutomationStep& step, AxisArgs& outArgs, string& outError )
             {
                 outArgs = AxisArgs{};
                 return readFloat( step, "x", outArgs._valueX, outError ) && readFloat( step, "y", outArgs._valueY, outError ) &&
@@ -203,7 +203,7 @@ namespace sw
              * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 이유와 nullptr 입니다.
              * @details 바인딩은 시작 프레임의 맵에서 찾는다. 게임이 맵을 다시 읽어도 단계가 이미 낸 이벤트는 그대로다.
              */
-            static const ActionBinding* findBinding( AutomationRunner& runner, const AutomationStep& step, const DeviceFilter& device, bool ( *pAccept )( const ActionBinding& ),
+            static const ActionBinding* findBinding( AutomationStepContext& runner, const AutomationStep& step, const DeviceFilter& device, bool ( *pAccept )( const ActionBinding& ),
                                                      const utf8* pWhat, string& outError )
             {
                 const InputManager* pInput = runner.getInputManager();
@@ -242,7 +242,7 @@ namespace sw
                 return bComposite || binding._kind == BindingKind::GamepadStick2D || binding._kind == BindingKind::MouseDelta2D;
             }
 
-            static bool prepareAction( AutomationRunner& runner, const AutomationStep& step, string& outError )
+            static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 ActionArgs args{};
                 if ( parseAction( &runner, step, args, outError ) == false )
@@ -268,7 +268,7 @@ namespace sw
                 return true;
             }
 
-            static bool preparePressOrRelease( AutomationRunner& runner, const AutomationStep& step, string& outError )
+            static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 DeviceFilter device{};
                 if ( readDevice( step, device, outError ) == false )
@@ -309,7 +309,7 @@ namespace sw
              * @brief 축 값을 @p frames 동안 냅니다. 스틱은 그 값 그대로, 합성 축은 부호의 방향 키(크기는 1), 마우스 이동은 프레임마다 그 픽셀만큼입니다.
              * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="gamepad"` 로 스틱을 고른다.
              */
-            static bool prepareAxis( AutomationRunner& runner, const AutomationStep& step, string& outError )
+            static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 AxisArgs args{};
                 if ( parseAxis( &runner, step, args, outError ) == false )

@@ -13,29 +13,29 @@
 namespace sw
 {
     /**
-     * @brief `vector` 의 원소 타입을 컴파일 시점에 거릅니다. `vector<bool>` 은 두 구성에서 같은 오류로 멈춥니다.
-     * @details 기본 구성의 `sw::vector<bool>` 은 원소마다 바이트 하나이고, `SW_ENABLE_STL_CONTAINER` 구성에서는 비트로 묶는
-     *          `std::vector<bool>` 이라 원소가 프록시 값으로 나와 주소를 잡을 수 없다. 같은 이름이 구성마다 다른 의미가 되므로 형식으로 막는다.
-     *          비트 목록은 `DynamicBitset`, 주소가 필요한 불 원소(리플렉션 컨테이너)는 `vector<uint8>` 을 쓴다.
+     * @brief `vector` 의 원소 타입을 컴파일 시점에 거릅니다. `vector<bool>` 은 오류로 멈춥니다.
+     * @details 불 목록은 한 가지 길로 모은다 — 비트 목록은 `DynamicBitset`(리플렉션이 값 하나로 다룬다), 주소가 필요한 불 원소(리플렉션 컨테이너)는 `vector<uint8>` 이다.
+     *          예전에는 `SW_ENABLE_STL_CONTAINER` 구성의 `vector<bool>` 이 비트로 묶는 `std::vector<bool>` 이라 같은 이름이 구성마다 다른 의미였다.
+     *          지금은 `vector` 가 두 구성에서 같은 구현이지만, 불 원소를 바이트로 두는 쪽이 `DynamicBitset` 과 섞여 읽히므로 막은 채 둔다.
      */
     template <typename T>
     struct VectorElementCheck
     {
-        static_assert( std::is_same_v<std::remove_cv_t<T>, bool> == false,
-                       "sw::vector<bool> is not allowed: its meaning differs per configuration (std::vector<bool> packs bits). Use DynamicBitset or vector<uint8>." );
+        static_assert( std::is_same_v<std::remove_cv_t<T>, bool> == false, "sw::vector<bool> is not allowed. Use DynamicBitset (bits) or vector<uint8> (addressable flags)." );
         using type = void;
     };
+} // namespace sw
 
-#if defined( SW_ENABLE_STL_CONTAINER )
-    template <typename T, typename Allocator = std::allocator<T>, typename = typename VectorElementCheck<T>::type>
-    using vector = std::vector<T, Allocator>;
-#else
-
+namespace sw
+{
     template <typename Alloc, typename = void>
     struct has_inline_allocator : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename Alloc>
     struct has_inline_allocator<Alloc, std::void_t<decltype( std::declval<Alloc&>().get_inline_buffer() )>> : std::true_type
     {
@@ -51,8 +51,8 @@ namespace sw
     template <typename T>
     inline constexpr bool is_bitwise_copyable_v = std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 
-    template <typename T, typename Allocator = sw::Allocator<T>>
-    /** @brief 커스텀 vector 입니다. API 는 STL 과 같고, SBO 와 레이스 탐지를 지원합니다. */
+    template <typename T, typename Allocator = ContainerAllocator<T>>
+    /** @brief 커스텀 vector 입니다. API 는 STL 과 같고, SBO 와 레이스 탐지를 지원합니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자만 다릅니다. */
     class vector : private Allocator
     {
         using ElementCheck = typename VectorElementCheck<T>::type;
@@ -187,6 +187,12 @@ namespace sw
          *          구조체도 넣지 않았다(안에 멤버 포인터가 있는지 형식으로 알 수 없다).
          */
         void valueInitializeRangeInternal( size_t first, size_t last );
+        /**
+         * @brief [first, last) 를 @p value 의 복사로 만듭니다(`assign( count, value )` · `resize( count, value )` 가 함께 씁니다).
+         * @details 버퍼 포인터를 지역으로 한 번 떠서 씁니다. `_pData[i]` 로 바로 쓰면 1 바이트 타입(`uint8` · `utf8`)의 저장이 멤버 `_pData` 와
+         *          겹칠 수 있다고 보여(`char` 는 무엇과도 별칭) 컴파일러가 반복마다 `_pData` 를 다시 읽고 루프를 벡터화 · memset 으로 바꾸지 못한다.
+         */
+        void fillConstructRangeInternal( size_t first, size_t last, const T& value );
 
     private:
         SW_RACE_CTX_MEMBER
@@ -335,9 +341,20 @@ namespace sw
                 return;
             }
         }
+        T* const pData = _pData;
         for ( size_t index = first; index < last; ++index )
         {
-            sw_placement_new( ( _pData + ( index ) ) ) T();
+            sw_placement_new( ( pData + ( index ) ) ) T();
+        }
+    }
+
+    template <typename T, typename Allocator>
+    inline void vector<T, Allocator>::fillConstructRangeInternal( size_t first, size_t last, const T& value )
+    {
+        T* const pData = _pData;
+        for ( size_t index = first; index < last; ++index )
+        {
+            sw_placement_new( ( pData + ( index ) ) ) T( value );
         }
     }
 
@@ -572,10 +589,7 @@ namespace sw
         SW_SCOPED_RACE_WRITE();
         clearInternal();
         reserveInternal( count );
-        for ( size_t index = 0; index < count; ++index )
-        {
-            sw_placement_new( ( _pData + ( index ) ) ) T( value );
-        }
+        fillConstructRangeInternal( 0, count, value );
         _size = count;
     }
 
@@ -1131,17 +1145,11 @@ namespace sw
                 // insert 도 지키는 규칙이고, std::vector 도 이 호출을 허용한다(떠 두지 않으면 해제된 메모리에서 복사한다).
                 const T valueCopy( value );
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
-                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-                {
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( valueCopy );
-                }
+                fillConstructRangeInternal( _size, count, valueCopy );
             }
             else
             {
-                for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
-                {
-                    sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
-                }
+                fillConstructRangeInternal( _size, count, value );
             }
         }
         _size = count;
@@ -1174,9 +1182,13 @@ namespace sw
         SW_SCOPED_RACE_READ_OTHER( other );
         if ( _size != other._size )
             return false;
-        for ( size_t index = 0; index < _size; ++index )
+        // 두 버퍼 포인터를 지역으로 뜬다 — 원소 비교가 부르는 코드가 멤버를 바꿀 수 있다고 보면 반복마다 다시 읽는다.
+        const T* const pLeft  = _pData;
+        const T* const pRight = other._pData;
+        const size_t   count  = _size;
+        for ( size_t index = 0; index < count; ++index )
         {
-            if ( ( _pData[index] == other._pData[index] ) == false )
+            if ( ( pLeft[index] == pRight[index] ) == false )
                 return false;
         }
         return true;
@@ -1204,7 +1216,6 @@ namespace sw
         return _size < other._size;
     }
 
-#endif
     template <typename T, size_t N = 32>
     using small_vector = vector<T, InlineAllocator<T, N>>;
 } // namespace sw

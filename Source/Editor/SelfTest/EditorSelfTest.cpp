@@ -6,9 +6,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
 {
@@ -249,7 +251,8 @@ namespace sw::editor
                 SW_LOG_ERROR( "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
         }
 
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow != nullptr )
             pWindow->requestClose();
     }

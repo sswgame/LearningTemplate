@@ -5,7 +5,7 @@
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/emptyscene.scenario.xml -dx12
 -->
 <Scenario name="editor.emptyscene" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<At frame="10"><DevCommand line="scene.new"/></At>
+	<At frame="10"><DevCommand line="editor scene.new"/></At>
 	<At frame="60">
 		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
 		<Screenshot file="emptyscene.ppm"/>

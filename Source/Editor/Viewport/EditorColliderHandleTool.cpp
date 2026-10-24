@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorColor.h"
@@ -31,6 +32,9 @@ namespace sw::editor
     {
         struct EditorColliderHandleToolInternal
         {
+            /** @brief 프레임마다 지우고 다시 채우는 손잡이 버퍼의 소유자입니다(UI 스레드 하나만 쓴다) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
+            inline static ScopeOwned<vector<ColliderHandle>> s_handleBufferOwner{};
+
             /** @brief 손잡이 사각형의 반 변(픽셀)입니다. 마우스가 올라오면 키운다. */
             static constexpr float32 kHandleHalfSize = 4.0f;
             /** @brief 손잡이를 집을 수 있는 마우스 거리(픽셀)입니다. */
@@ -174,12 +178,14 @@ namespace sw::editor
             state._bChanged   = Internal::dragHandle( state, *pBody, args, scale ) || state._bChanged;
         }
 
-        static vector<ColliderHandle> s_listHandle; // 프레임마다 지우고 다시 채우는 재사용 버퍼입니다(UI 스레드 하나만 쓴다)
-        s_listHandle.clear();
+        vector<ColliderHandle>* const pListHandle = Internal::s_handleBufferOwner.getOrCreate(); // 프레임마다 지우고 다시 채우는 재사용 버퍼다
+        if ( pListHandle == nullptr )
+            return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+        pListHandle->clear();
         const vector<PhysicsShapeDesc3D>& listShape = pBody->getShapes();
         for ( uint32 shapeIndex = 0; shapeIndex < listShape.size(); ++shapeIndex )
         {
-            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, s_listHandle );
+            EditorColliderHandleMath::collectHandles( listShape[shapeIndex], shapeIndex, position, rotation, scale, *pListHandle );
         }
 
         const ImVec2 mouse        = ImGui::GetMousePos();
@@ -187,7 +193,7 @@ namespace sw::editor
                                   mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
         const ColliderHandle* pHovered        = nullptr;
         float32               hoveredDistance = Internal::kPickRadius;
-        for ( const ColliderHandle& handle : s_listHandle )
+        for ( const ColliderHandle& handle : *pListHandle )
         {
             ImVec2 screen;
             if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._position, args._canvasPos, args._canvasSize, screen ) == false )

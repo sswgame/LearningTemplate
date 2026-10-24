@@ -548,6 +548,13 @@
   `erase` 는 마지막 원소를 빈 자리로 옮김)가 구성마다 달라져, 순서에 기대는 코드가 기본 구성에서만 맞았습니다. 이제 STL 구성에서 바뀌는 것은 안쪽 `vector` 의 할당자뿐입니다(`deque` · `list` 와 같은 모양).
   `map` · `set` 은 그대로 나눕니다 — 두 구성 모두 키 순서이고 주소 · 반복자 보장은 기본 구성(정렬된 벡터)이 더 약해, 기본 구성에서 맞는 코드는 `std::map` 에서도 맞습니다.
   함수 객체의 EBO 는 구성과 상관없는 `CompressedPair` 가 맡습니다. 언리얼 `TMap` 도 밀집 배열(`TSet` 의 `TSparseArray`)이고 표준 컨테이너로 바꾸는 구성이 없습니다(기억에 의존).
+- **`SW_ENABLE_STL_CONTAINER` 가 구성마다 바꾸는 것은 컨테이너 기본 할당자 하나입니다**(2026-10-24, EngineCleanups `StlContainerConfig`; 위 `map` · `set` 줄을 대신합니다).
+  구성의 목적은 옵션 설명 그대로 "엔진 할당자 대신 `std::allocator`"(메모리 추적을 빼는 것)로 읽었습니다. `vector` · `array` · `pair` · `map` · `set` · `span` 은 두 구성 모두 자체 구현이고,
+  `string` · `list` · `deque` 는 두 구성 모두 `std::*` 를 상속해 경합 탐지를 얹은 클래스입니다. 바뀌는 기본 할당자는 `ContainerAllocator<T>`(`Memory.h`)이며 컨테이너 헤더의 기본 템플릿 인자는 이것을 씁니다.
+  `InlineAllocator` 도 두 구성에서 같은 SBO 구현입니다(힙 쪽만 `ContainerAllocator`). 이유: 같은 이름이 구성마다 다른 형식이면 기본 구성에서 맞는 코드가 STL 구성에서 달라질 수 있고(`vector<bool>` · 해시 순서),
+  `map` · `set` 을 나눠 둔 근거(약한 쪽이 기본 구성이라 기본 구성에서 맞는 코드는 `std::map` 에서도 맞음)는 구현을 같게 하면 필요 없어집니다. `string` · `list` · `deque` 를 `std::*<T, 할당자>` 별칭으로 줄이지 않은 것은
+  기본 구성의 경합 탐지(디버그)를 잃기 때문입니다. 표준 컨테이너와의 비교나 디버그 STL 검사가 목적이었다면 이 결정을 되돌립니다 — 사용자 확인을 기다립니다.
+  STL 구성에서만 건너뛰는 테스트는 할당자에 기대는 것(`MemoryTagTest` 둘, `PrimitiveMeshIsTaggedMesh`)만 남기고 나머지(`TestVector` · `TestDataStructure` · `TestMemory`)는 두 구성이 같이 돕니다.
 - **메모리 태그 통계의 해제는 센 블록만 뺍니다**(2026-10-18, A-24). `IAllocationTracker::recordAllocation` 이 `AllocationRecord{ 해시, _bCounted }` 를 돌려주고, 할당기는 센 블록의 헤더에
   기록기 번호(`getTrackerID`, 인스턴스마다 다름)를 적어 그 기록기에만 해제를 넘깁니다. 추적을 켜기 전에 잡은 블록을 켠 뒤에 풀면 태그 바이트가 음수 쪽으로, 켠 동안 잡은 블록을 끈 뒤에 풀면 양수 쪽으로 어긋났습니다.
   헤더 크기(48 B)는 그대로이고(쓰지 않던 칸을 씀) 해제마다 비교 하나가 늡니다. 언리얼 LLM 도 할당 때 추적한 포인터만 해제 때 뺍니다(기억에 의존).
@@ -562,7 +569,7 @@
   게임 데이터 XML(`GameDataXML::readFields`)의 자체 범위 검사는 지우고 공통 끝에 맡겼습니다. `deserializeSoft` 는 `bool` 대신 `SoftReadResult`(`NotParsed` · `Rejected` · `Read`)를 돌려줍니다.
   `bool` 하나일 때는 범위 밖 값에서 바로 돌아가 같은 파일의 모르는 키를 알리지 않았고, 범위 밖 값을 "JSON 이 아니다"로 알렸습니다. 이제 `NotParsed` 만 바로 돌아가고 `Rejected` 는 orphan 을 모두 알린 뒤 실패합니다.
   float32 로 보관하는 숫자 경계를 float64 칸과 견주는 어긋남(`Min = 0.1`)은 조사 시점에 그런 칸이 없어(float64 칸의 경계는 `MemoryBudgetMonitor::_megabytes` 의 `Min = 0.0` 하나) 형식을 바꾸지 않았습니다.
-- **이름 읽기(`XMLReadUtil::readName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
+- **이름 읽기(`XMLReadUtil::readOptionalName`)는 글 `none` 을 오류로 알립니다**(2026-10-18, C-59). `hashed_string` 은 언리얼 `FName` 처럼 `none` 을 빈 이름과 같게 보고 빈 이름의 `c_str()` 은 "None" 이라,
   이름으로 받은 열거형 글(`align="none"`)이 "적지 않음"이 되고 적지 않은 경로가 "None" 이 됐습니다. 이름 형식을 바꾸면 리플렉션이 빈 이름을 "None" 으로 쓴 씬 · 프리팹(100 곳 넘음)과 열거자 `None` 이 함께 바뀌므로,
   이름 읽기의 한 창구가 그 글을 오류로 막고 그런 속성은 글로 읽습니다. 경로로 쓰는 이름은 비었는지 먼저 봅니다(`CharacterAppearanceComponent::applyBodyPart`).
 - **열거자 이름의 정본은 리플렉션 `ENUM()` 입니다**(2026-10-15, 같은 해 10-12 의 "enum 이름 테이블 45 곳 유지" 를 뒤집음). 철자가 열거자 이름과 같은 손 이름 표 · `toString( Enum )` 은 지우고

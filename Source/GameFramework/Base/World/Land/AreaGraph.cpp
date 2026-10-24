@@ -43,8 +43,8 @@ namespace sw
                 continue;
             AreaDef area;
             area._id     = hashed_string( pID );
-            area._name   = GameDataXML::readName( areaNode, "name" );
-            area._region = GameDataXML::readName( areaNode, "region" );
+            area._name   = GameDataXML::readOptionalName( areaNode, "name" ); // 적지 않으면 id (`addArea`)
+            area._region = GameDataXML::readOptionalName( areaNode, "region" );
             // 적지 않은 칸은 AreaDef 의 초기값이다. 깨진 값 · 음수 크기는 그 지역을 넣지 않는 오류다(자르지 않는다).
             constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
             bool              bValid    = GameDataXML::readOptionalNumber( areaNode, "x", sourceName, -kAnyFloat, kAnyFloat, area._x );
@@ -60,16 +60,19 @@ namespace sw
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
-            const hashed_string from     = GameDataXML::readName( linkNode, "from" );
-            const hashed_string to       = GameDataXML::readName( linkNode, "to" );
-            bool                bInvalid = false;
-            bool                bOneWay  = false; // 적지 않으면 양방향이다
+            hashed_string from;
+            hashed_string to;
+            const bool    bEnds    = GameDataXML::readRequiredName( linkNode, "from", sourceName, from ) && GameDataXML::readRequiredName( linkNode, "to", sourceName, to );
+            bool          bInvalid = false;
+            bool          bOneWay  = false; // 적지 않으면 양방향이다
+            if ( bEnds == false )
+                continue; // 끝점이 없는 연결은 오류로 알리고 넣지 않는다(위 읽기가 알렸다)
             if ( GameDataXML::readOptionalBool( linkNode, "oneWay", bOneWay ) == false )
             {
                 SW_LOG_ERROR( "%#: link '%#' -> '%#' has an invalid oneWay - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;
             }
-            if ( addLink( from, to, GameDataXML::readName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ), bOneWay, bInvalid ) == false )
+            if ( addLink( from, to, GameDataXML::readOptionalName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ), bOneWay, bInvalid ) == false )
             {
                 SW_LOG_WARNING( "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;

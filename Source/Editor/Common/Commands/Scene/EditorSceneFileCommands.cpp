@@ -23,6 +23,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 namespace sw::editor
 {
@@ -79,7 +80,8 @@ namespace sw::editor
                     (void)EditorSceneFileCommands::tryCreateNewScene(); // 실패는 tryCreateNewScene 이 알린다(플레이 중)
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
-                    IWindow* pWindow = IWindow::getActiveWindow();
+                    MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                    IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                     if ( pWindow != nullptr )
                         pWindow->requestClose();
                 }
@@ -254,7 +256,8 @@ namespace sw::editor
 
     void EditorSceneFileCommands::requestExit()
     {
-        IWindow* pWindow = IWindow::getActiveWindow();
+        MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow != nullptr )
             (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }
@@ -268,7 +271,7 @@ namespace sw::editor
         // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable, 잠그기 전)에는 쓰지 않고 이유를 알린다. 쓰기 실패 로그만으로는 "잠가야 한다" 는 사실이 드러나지 않는다.
         Scene*         pScene     = pSceneManager->getActiveScene();
         const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
-        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourcePaths::getRootFolderPath(), targetPath );
+        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : ResourcePaths::makeAbsolutePath( targetPath );
         EditorContext* pContext   = EditorContext::get();
         if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
         {

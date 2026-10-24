@@ -15,6 +15,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -135,6 +136,12 @@ namespace sw::editor
                     EditorViewportMouseClaim::release( getMouseClaimOwner() );
                 state = DragState{};
             }
+
+            // 프레임마다 다시 채우는 재사용 버퍼의 소유자들입니다(UI 스레드 하나만 쓴다) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다).
+            inline static ScopeOwned<vector<Handle>> s_handleBufferOwner{};
+            inline static ScopeOwned<vector<float3>> s_segmentPointBufferOwner{};
+            inline static ScopeOwned<vector<float3>> s_stagePointBufferOwner{};
+            inline static ScopeOwned<PointSet>       s_pointSetOwner{};
 
             static void drawSegment( const EditorViewportVisualizerArgs& args, const float3& from, const float3& to, ImU32 color, float32 thickness )
             {
@@ -661,11 +668,14 @@ namespace sw::editor
                     session.setSelectedControlPoint( selectedPoint );
                 }
 
-                static vector<Handle> s_listHandle; // 프레임마다 다시 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
-                s_listHandle.clear();
+                vector<Handle>* const pListHandle = s_handleBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
+                if ( pListHandle == nullptr )
+                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+                vector<Handle>& listHandle = *pListHandle;
+                listHandle.clear();
                 if ( set.isValid() )
-                    collectPointHandles( frame, set, selectedPoint, s_listHandle );
-                collectGizmoHandles( frame, s_listHandle );
+                    collectPointHandles( frame, set, selectedPoint, listHandle );
+                collectGizmoHandles( frame, listHandle );
 
                 const ImVec2 mouse        = ImGui::GetMousePos();
                 const bool   bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
@@ -692,9 +702,9 @@ namespace sw::editor
                 if ( bCanHover )
                 {
                     float32 bestDistance = 1e30f;
-                    for ( size_t index = 0; index < s_listHandle.size(); ++index )
+                    for ( size_t index = 0; index < listHandle.size(); ++index )
                     {
-                        const Handle& handle   = s_listHandle[index];
+                        const Handle& handle   = listHandle[index];
                         const float32 length   = handle._kind == DragKind::GizmoRotate ? handle._radius : handle._direction.getLength();
                         const float32 distance = computeHandleDistance( handle, ray );
                         if ( distance <= length * kPickWidthRatio && distance < bestDistance )
@@ -709,7 +719,7 @@ namespace sw::editor
                     {
                         if ( hoveredHandle >= 0 )
                         {
-                            beginDrag( state, s_listHandle[static_cast<size_t>( hoveredHandle )], frame, modifierIndex, selectedPoint, ray );
+                            beginDrag( state, listHandle[static_cast<size_t>( hoveredHandle )], frame, modifierIndex, selectedPoint, ray );
                         }
                         else if ( hoveredPoint >= 0 )
                         {
@@ -727,13 +737,13 @@ namespace sw::editor
 
                 if ( set.isValid() )
                     drawPointSet( args, set, selectedPoint, hoveredPoint );
-                for ( size_t index = 0; index < s_listHandle.size(); ++index )
+                for ( size_t index = 0; index < listHandle.size(); ++index )
                 {
-                    const Handle& handle  = s_listHandle[index];
+                    const Handle& handle  = listHandle[index];
                     const bool    bActive = state._bDragging && state._handle._kind == handle._kind && state._handle._axis == handle._axis;
                     drawHandle( args, handle, bActive || static_cast<int32>( index ) == hoveredHandle );
                 }
-                noteHandleMarks( args, s_listHandle );
+                noteHandleMarks( args, listHandle );
                 ImVec2 centerScreen;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, frame._centerWorld, args._canvasPos, args._canvasSize, centerScreen ) )
                     args._pDrawList->AddCircle( centerScreen, 6.0f, kAxisColor, 0, 2.0f );
@@ -751,9 +761,11 @@ namespace sw::editor
                 MeshModifierSession& session = *pSession;
                 session.refreshPreview();
 
-                static vector<float3> s_listSegmentPoint; // 프레임마다 다시 채우는 재사용 버퍼
-                session.makePreviewSegments( s_listSegmentPoint );
-                drawSegments( args, s_listSegmentPoint, kPreviewColor );
+                vector<float3>* const pListSegmentPoint = s_segmentPointBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼
+                if ( pListSegmentPoint == nullptr )
+                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+                session.makePreviewSegments( *pListSegmentPoint );
+                drawSegments( args, *pListSegmentPoint, kPreviewColor );
 
                 MeshModifier* pModifier = session.getStack().findModifier( session.getSelectedIndex() );
                 Frame         frame{};
@@ -770,10 +782,12 @@ namespace sw::editor
                 drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, kAxisColor, 1.0f );
                 drawRanges( args, frame );
 
-                static PointSet s_pointSet; // 제어점 월드 목록을 프레임마다 다시 채운다
-                s_pointSet = PointSet{};
-                (void)makePointSet( frame, s_pointSet ); // 격자 · ffd2d 가 아니면 빈 채로 둔다
-                processEditing( args, session, frame, s_pointSet );
+                PointSet* const pPointSet = s_pointSetOwner.getOrCreate(); // 제어점 월드 목록을 프레임마다 다시 채운다
+                if ( pPointSet == nullptr )
+                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+                *pPointSet = PointSet{};
+                (void)makePointSet( frame, *pPointSet ); // 격자 · ffd2d 가 아니면 빈 채로 둔다
+                processEditing( args, session, frame, *pPointSet );
             }
 
             static void drawStage( const EditorViewportVisualizerArgs& args )
@@ -782,9 +796,11 @@ namespace sw::editor
                 const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
                 if ( bNoActiveTarget )
                     return;
-                static vector<float3> s_listStagePoint; // 프레임마다 다시 채우는 재사용 버퍼
-                pSession->makeStagePreviewSegments( s_listStagePoint );
-                drawSegments( args, s_listStagePoint, kStageColor );
+                vector<float3>* const pListStagePoint = s_stagePointBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼
+                if ( pListStagePoint == nullptr )
+                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
+                pSession->makeStagePreviewSegments( *pListStagePoint );
+                drawSegments( args, *pListStagePoint, kStageColor );
             }
         };
     } // namespace
