@@ -6,6 +6,8 @@
 <CustomizationSchemaCatalog>
   <Schema id="Adventurer">
     <Color name="OutfitDye" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
+    <!-- 캐릭터 편집 창의 슬라이더 칸(시나리오 editor.charactereditor)이 누르는 슬라이더다. 기본 0.5 는 머티리얼의 기본 _roughness 와 같아 외형이 바뀌지 않는다. -->
+    <Slider name="Roughness" category="Surface" min="0" max="1" default="0.5"><Drive kind="MaterialScalar" target="_roughness"/></Slider>
   </Schema>
   <Schema id="Skeleton">
     <Color name="BoneTint" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
