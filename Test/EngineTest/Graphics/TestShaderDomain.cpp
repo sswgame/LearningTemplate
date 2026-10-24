@@ -77,7 +77,7 @@ SW_TEST_CASE( ShaderDomainTest, ArbitraryDomainStampTracksItsIncludeRootsOnly )
     const sw::string binDir     = resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr );
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, shaderPath ) );
 
@@ -121,7 +121,7 @@ SW_TEST_CASE( ShaderDomainTest, SameNameHeaderCannotHideAnEngineHeader )
 
     const sw::string binDir = resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr );
+    SW_EXPECT_FALSE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) ); // 쓰지 못했다고 알린다(쿠킹이 실패로 센다)
     SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "cook.stamp" ) ) );
 
     sw::vector<sw::string> listVerifyProblem;

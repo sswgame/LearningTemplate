@@ -101,17 +101,24 @@ namespace sw
         // `Renderer/Cook/ShaderCookDriver` 에 있다. 여기는 셰이더 하나를 쿠킹하는 법과 이름 짓기, 최신 판정만 둔다.
 
         /**
-         * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(쿠킹이 끝난 뒤).
+         * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(쿠킹이 끝난 뒤). 다른 include 루트 도메인(`collectIncludeRootDomains`)은 @p resourceRoot 아래에서 @p listPriority 로 찾습니다.
          * @param pFailedSource 이번 쿠킹에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 스탬프에서 빠져 다음 쿠킹이 다시 시도합니다.
          *                      실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 기록하면 그 셰이더가 영영 최신으로 판정되기 때문입니다.
-         */
-        static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
-        /**
-         * @brief `writeCookStamp` 의 본체 — 다른 include 루트 도메인(`collectIncludeRootDomains`)을 @p resourceRoot 아래에서 @p listPriority 로 찾습니다.
-         * @details 루트와 우선순위를 받지 않는 판은 `ResourcePaths` 의 전역 값을 넘긴다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
+         * @return 스탬프를 썼으면 true 입니다. 도메인 설정이 틀렸거나 가려진 헤더가 있거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
+         * @details 루트와 우선순위를 전역(`ResourcePaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
          *          실제 `Resource/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
          */
-        static void writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource );
+        [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource );
+
+        /**
+         * @brief @p binDirectory 의 셰이더 바이너리(`.dxil` · `.dxbc` · `.spv`) 중 파일 이름이 @p uniqueKeepFileName 에 없는 것을 지웁니다. 스탬프 · 매니페스트 같은 다른 파일은 건드리지 않습니다.
+         * @param uniqueKeepFileName 이번 쿠킹이 쓴 리플렉션 매니페스트의 키(= 바이너리 파일 이름, `computeBinaryFileName`)입니다.
+         * @param outRemovedCount 지운 파일 수입니다.
+         * @return 지워야 할 파일을 모두 지웠으면 true 입니다. 하나라도 못 지웠으면 false 입니다(그 파일이 남아 판정이 진다).
+         * @details 퍼뮤테이션 축이 늘거나 셰이더 · 목록 줄이 사라지면 요청의 파일 이름이 바뀌어 옛 바이너리가 매니페스트 밖에 남는다. 그대로 두면 `verifyCookedShaders` 가
+         *          "매니페스트에 없는 바이너리" 로 지고 배포 팩에 실린다. 쿠커가 새 매니페스트를 쓴 자리에서 스스로 치우게 해 손으로 지울 일을 없앤다.
+         */
+        [[nodiscard]] static bool removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount );
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 쿠킹된 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );

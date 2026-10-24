@@ -3,8 +3,12 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Resource/ResourcePaths.h"
+
+#include "EngineTest/ShaderCookTestUtil.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
@@ -71,4 +75,50 @@ SW_TEST_CASE( ShaderDomainCompileTest, SameNameHeaderIsACompileError )
     const sw::ShaderCompileResult result = sw::ShaderCompiler::compileHlsl( makeProbeDesc() );
     SW_EXPECT_FALSE( result._bSuccess );
     SW_EXPECT_TRUE( result._errorMessage.find( "would hide" ) != sw::string::npos );
+}
+
+/**
+ * @brief [ShaderDomainCompileTest] 요청의 퍼뮤테이션 해시가 바뀌어 다시 구우면 옛 바이너리는 쿠커가 지우고, 쿠킹 뒤 판정에 문제가 없다
+ * @details 예전에는 옛 해시의 바이너리가 매니페스트 밖에 남아 `App --verify-shaders` 가 "매니페스트에 없는 바이너리" 로 졌고 통합이 손으로 지웠다.
+ */
+SW_TEST_CASE( ShaderDomainCompileTest, RecookRemovesBinariesOfAChangedPermutation )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string&                  root = resourceRoot.getRootFolderPath();
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "game/domaintest/shaders/probe.hlsl", "float4 PSMain() : SV_Target { return 0; }\n" ) );
+    const sw::string shaderPath = resourceRoot.makePath( "game/domaintest/shaders/probe.hlsl" );
+    const sw::string binDir     = resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" );
+
+    sw::ShaderCookRequest request{};
+    request._shaderPath          = shaderPath;
+    request._entryPoint          = "PSMain";
+    request._stage               = sw::ShaderStage::Pixel;
+    request._listPermutation     = { "SW_PROBE_A" };
+    request._permutationHash     = sw::ShaderCooker::computePermutationHash( request._listPermutation );
+    const sw::string firstBinary = sw::FileUtil::joinPath( binDir, sw::ShaderCooker::computeBinaryFileName( "probe", request._stage, request._entryPoint, request._permutationHash, ".dxil" ) );
+
+    const sw::ShaderCookSummary first = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), { request }, sw::ShaderTargetFormat::DXIL_D3D12, false );
+    if ( first._failedCount > 0 && sw::FileUtil::exists( firstBinary ) == false )
+        SW_TEST_SKIP( "No DXC compiler in this environment" );
+    SW_ASSERT_TRUE( first.isClean() );
+    SW_ASSERT_TRUE( sw::FileUtil::exists( firstBinary ) );
+
+    // 퍼뮤테이션 정의가 바뀌었다 — 파일 이름의 해시가 달라지고 첫 바이너리는 어느 요청도 만들지 않는다.
+    request._listPermutation      = { "SW_PROBE_B" };
+    request._permutationHash      = sw::ShaderCooker::computePermutationHash( request._listPermutation );
+    const sw::string secondBinary = sw::FileUtil::joinPath( binDir, sw::ShaderCooker::computeBinaryFileName( "probe", request._stage, request._entryPoint, request._permutationHash, ".dxil" ) );
+    SW_ASSERT_TRUE( firstBinary != secondBinary );
+
+    const sw::ShaderCookSummary second = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), { request }, sw::ShaderTargetFormat::DXIL_D3D12, false );
+    SW_EXPECT_TRUE( second.isClean() );
+    SW_EXPECT_EQUAL( 1u, second._removedCount );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( secondBinary ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( firstBinary ) );
+
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    sw::vector<sw::string> listProblem;
+    sw::ShaderCooker::verifyCookedShaders( root, test::makeShaderConfigPriority(), "dx12", listProblem );
+    SW_EXPECT_TRUE_MSG( listProblem.empty(), listProblem.empty() ? "" : listProblem.front().c_str() );
 }

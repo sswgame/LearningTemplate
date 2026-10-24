@@ -381,8 +381,8 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
 
 /**
  * @brief [ShaderCookRequestTest] 커밋된 `shaders/bin/<rhi>` 폴더에는 지금 요청이 만드는 바이너리만 있다
- * @details 위 테스트의 반대쪽 — "쿠킹된 것 ⊆ 요청". 쿠커는 매니페스트를 요청으로 새로 쓰지만 요청에서 빠진 바이너리 파일은 지우지 않는다.
- *          셰이더나 쿠킹할 목록 줄을 지우고 그 바이너리를 남기면 매니페스트에 없는 파일이 배포 팩에 실린다.
+ * @details 위 테스트의 반대쪽 — "쿠킹된 것 ⊆ 요청". 쿠커는 매니페스트를 요청으로 새로 쓰고 요청에 없는 바이너리를 스스로 지운다(`ShaderCooker::removeUnlistedBinaries`).
+ *          그래도 이 테스트가 남는 것은, 쿠커를 돌리지 않고 셰이더나 쿠킹할 목록 줄만 지운 변경을 잡기 위해서다 — 그 바이너리가 남으면 매니페스트에 없는 파일이 배포 팩에 실린다.
  */
 SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
 {
@@ -450,6 +450,36 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     }
     SW_EXPECT_TRUE_MSG( checkedCount > 0, "쿠킹된 바이너리를 하나도 찾지 못했다 — 이 테스트가 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( 0u, orphanCount );
+}
+
+/**
+ * @brief [ShaderCookRequestTest] 실제 리소스 트리의 요청은 모두 `shaders` 폴더 안에 있는 소스를 가리킨다
+ * @details 쿠커(`ShaderCookDriver::cookRequests`)는 소스가 없거나 `shaders` 폴더 밖인 요청을 실패로 세어 `App --cook-shaders` 를 종료 코드 0 이 아니게 만든다.
+ *          커밋된 데이터가 이미 그 모양이면 쿠킹이 처음부터 실패하므로, 쿠커를 돌리기 전에 여기서 요청 이름으로 알린다.
+ */
+SW_TEST_CASE( ShaderCookRequestTest, EveryRequestHasASourceInsideAShadersFolder )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    sw::vector<sw::ShaderCookRequest> listRequest;
+    SW_ASSERT_TRUE( sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest ) );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    uint32 badCount{ 0 };
+    for ( const sw::ShaderCookRequest& request : listRequest )
+    {
+        const sw::string absPath = sw::FileUtil::exists( request._shaderPath ) ? request._shaderPath
+                                                                               : sw::ResourcePaths::findLooseFile( request._shaderPath ).getDiskPath();
+        const bool       bExists = sw::FileUtil::exists( absPath );
+        const bool       bInside = bExists && sw::FileUtil::normalizeSeparators( absPath ).find( "/shaders/" ) != sw::string::npos;
+        if ( bInside )
+            continue;
+        constexpr uint32 kReportedBadLimit = 8;
+        if ( badCount < kReportedBadLimit )
+            SW_EXPECT_TRUE_MSG( false, ( request._shaderPath + ( bExists ? " 는 'shaders' 폴더 밖에 있다" : " 의 소스 파일이 없다" ) ).c_str() );
+        ++badCount;
+    }
+    SW_EXPECT_EQUAL( 0u, badCount );
 }
 
 /**

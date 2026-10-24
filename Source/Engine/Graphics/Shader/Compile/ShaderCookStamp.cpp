@@ -275,21 +275,21 @@ namespace sw
              * @param resourceRoot 다른 include 루트 도메인을 찾을 리소스 루트
              * @param binDirectory 매니페스트를 쓴 폴더(`<domain>/shaders/bin/<rhi>`)
              */
-            static void writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource )
+            [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource )
             {
                 // <domain>/shaders/bin/<rhi> → <domain>/shaders
                 const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
                 const string parentDir  = FileUtil::getDirectoryPart( rhiDir );
                 const string shadersDir = FileUtil::getDirectoryPart( parentDir );
                 if ( shadersDir.empty() )
-                    return;
+                    return false;
 
                 vector<StampedSource> listSource;
                 if ( collectStampedSources( resourceRoot, listPriority, shadersDir, false, listSource ) == false )
-                    return; // 스탬프를 쓰지 않는다 — 없는 스탬프는 "낡음" 이라 다음 쿠킹과 판정이 오류를 다시 낸다.
+                    return false; // 스탬프를 쓰지 않는다 — 없는 스탬프는 "낡음" 이라 다음 쿠킹과 판정이 오류를 다시 낸다. 호출자가 실패로 센다.
                 vector<string> listShadowed;
                 if ( findShadowedInDir( resourceRoot, listPriority, shadersDir, listShadowed ) == false )
-                    return; // 가려진 헤더가 있으면 어느 쪽이 쓰였는지 모른다 — 스탬프를 쓰지 않는다(문제 글은 컴파일과 판정이 남긴다).
+                    return false; // 가려진 헤더가 있으면 어느 쪽이 쓰였는지 모른다 — 스탬프를 쓰지 않는다(문제 글은 컴파일과 판정이 남긴다).
 
                 vector<string> listLine;
                 listLine.reserve( listSource.size() );
@@ -328,7 +328,11 @@ namespace sw
 
                 const string stampPath = FileUtil::joinPath( rhiDir, "cook.stamp" );
                 if ( FileUtil::writeTextFile( stampPath, text ) == false )
-                    SW_LOG_WARNING( "Failed to write the cook stamp: %#", stampPath.c_str() );
+                {
+                    SW_LOG_ERROR( "Failed to write the cook stamp: %#", stampPath.c_str() );
+                    return false;
+                }
+                return true;
             }
 
             /** @brief 문제 한 줄을 서식으로 만들어 더합니다. */
@@ -525,14 +529,33 @@ namespace sw
         return true; // 어느 도메인에도 속하지 않는 소스(임시 폴더)는 가릴 헤더가 없다
     }
 
-    void ShaderCooker::writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource )
+    bool ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource )
     {
-        ShaderCookStampInternal::writeCookStamp( ResourcePaths::getRootFolderPath(), ResourcePaths::getSearchPriority(), binDirectory, pFailedSource );
+        return ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, binDirectory, pFailedSource );
     }
 
-    void ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource )
+    bool ShaderCooker::removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount )
     {
-        ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, binDirectory, pFailedSource );
+        outRemovedCount = 0;
+        vector<string> listFile;
+        (void)FileUtil::collectFiles( binDirectory, "", listFile, false ); // 폴더가 없으면 지울 것도 없다
+        bool bAllRemoved = true;
+        for ( const string& filePath : listFile )
+        {
+            if ( ShaderCookStampInternal::isShaderBinaryFile( filePath ) == false || uniqueKeepFileName.find( FileUtil::getFileNamePart( filePath ) ) != uniqueKeepFileName.end() )
+                continue;
+            if ( FileUtil::removeFile( filePath ) )
+            {
+                ++outRemovedCount;
+                SW_LOG_INFO( "Removed a shader binary no cook request makes: %#", filePath );
+            }
+            else
+            {
+                SW_LOG_ERROR( "Could not remove the stale shader binary: %#", filePath );
+                bAllRemoved = false;
+            }
+        }
+        return bAllRemoved;
     }
 
     void ShaderCooker::invalidateSharedHeaderCache()

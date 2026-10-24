@@ -26,8 +26,9 @@ namespace sw
     struct [[nodiscard]] ShaderCookSummary
     {
         uint32 _cookedCount{ 0 };            ///< 새로 쿠킹된 바이너리 수
-        uint32 _failedCount{ 0 };            ///< 컴파일에 실패한 (요청, 포맷) 수. 그 소스는 스탬프에서 빠져 다음 쿠킹이 다시 시도한다
+        uint32 _failedCount{ 0 };            ///< 쿠킹하지 못한 것의 수. 컴파일 실패(그 소스는 스탬프에서 빠져 다음 쿠킹이 다시 시도한다), 소스 없는 요청, 쓰지 못한 매니페스트 · 스탬프, 지우지 못한 옛 바이너리를 센다
         uint32 _contractViolationCount{ 0 }; ///< 바인딩 계약 위반 수
+        uint32 _removedCount{ 0 };           ///< 매니페스트에 없어 지운 옛 바이너리 수
         /** @brief 실패도 위반도 없으면 true 입니다. */
         bool isClean() const { return _failedCount == 0 && _contractViolationCount == 0; }
     };
@@ -44,11 +45,24 @@ namespace sw
          * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 ResourcePaths 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)
          * @param bForceAll true 면 내용 해시와 상관없이 모두 다시 컴파일
-         * @return 쿠킹된 수, 실패 수, 계약 위반 수
+         * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
         static ShaderCookSummary cookAllShaders( string_view        resourceRoot = {},
                                                  ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
                                                  bool               bForceAll    = false );
+
+        /**
+         * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지우고, 쿠킹 스탬프를 씁니다(`cookAllShaders` 의 본체).
+         * @param resourceRoot 다른 include 루트 도메인의 헤더를 찾는 리소스 루트(스탬프 쓰기 · 최신 판정)
+         * @param listPriority 도메인 발견의 기준인 우선순위 설정(`ResourcePaths::getSearchPriority()`). 테스트는 임시 트리와 자기 우선순위를 넘긴다
+         * @details **소스가 없거나 `shaders` 폴더 밖인 요청도 실패로 셉니다.** 조용히 건너뛰면 요청이 어긋난 채 종료 코드 0 으로 끝난다.
+         *          요청이 만들지 않는 바이너리는 지웁니다 — 요청 규칙이 바뀌면(퍼뮤테이션 해시 · 셰이더 삭제) 옛 파일이 매니페스트 밖에 남아 `--verify-shaders` 를 지게 한다.
+         */
+        static ShaderCookSummary cookRequests( string_view                      resourceRoot,
+                                               const vector<string>&            listPriority,
+                                               const vector<ShaderCookRequest>& listRequest,
+                                               ShaderTargetFormat               targetFormat = ShaderTargetFormat::Count,
+                                               bool                             bForceAll    = false );
 
         /**
          * @brief 이 리소스 트리가 쿠킹해야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).
