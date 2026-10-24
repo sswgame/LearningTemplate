@@ -20,7 +20,7 @@ namespace
         return BehaviorStatus::Success;
     }
 
-    constexpr const utf8* kTreeXML = R"(
+    constexpr const utf8* kEditModelTreeXML = R"(
         <BehaviorTree>
             <Selector name="Root" reactive="true">
                 <BlackboardCondition key="Alert" compare="Greater" value="2.5" abort="LowerPriority">
@@ -49,7 +49,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, RoundTripsAndTheLoaderReadsTheSameTree 
 {
     BehaviorTreeEditModel model;
     string                error;
-    SW_ASSERT_TRUE_MSG( model.parse( kTreeXML, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( model.parse( kEditModelTreeXML, error ), error.c_str() );
     SW_EXPECT_EQUAL( 8u, model.getNodeCount() );
 
     const string          written = model.write();
@@ -59,7 +59,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, RoundTripsAndTheLoaderReadsTheSameTree 
 
     BehaviorTreeAsset original;
     BehaviorTreeAsset fromModel;
-    SW_ASSERT_TRUE( original.loadFromXMLText( kTreeXML, "original" ) );
+    SW_ASSERT_TRUE( original.loadFromXMLText( kEditModelTreeXML, "original" ) );
     SW_ASSERT_TRUE( fromModel.loadFromXMLText( written, "fromModel" ) );
     const BehaviorTree& treeA = original.getTree();
     const BehaviorTree& treeB = fromModel.getTree();
@@ -205,7 +205,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, BrokenTextIsRejectedAndKeepsTheModel )
     SW_TEST_DEFENSIVE_SCOPE( "the model logs one error per broken attribute value; the texts below are broken on purpose" );
     BehaviorTreeEditModel model;
     string                error;
-    SW_ASSERT_TRUE_MSG( model.parse( kTreeXML, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( model.parse( kEditModelTreeXML, error ), error.c_str() );
     const string before = model.write();
 
     const utf8* arrBroken[] = {

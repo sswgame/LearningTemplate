@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "Appearance" );
+    SW_LOG_CALLER( "AppearanceXMLUtil" );
 
     namespace
     {

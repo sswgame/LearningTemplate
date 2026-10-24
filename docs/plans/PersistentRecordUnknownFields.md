@@ -13,4 +13,4 @@
 
 - 매니페스트 id `service-record-unknown-fields-test`(`ServiceRecordUnknownFieldsTest.*` 필터 — 케이스가 0개면 실패해 테스트가 있다는 것까지 증명한다). 전체 실행에 든 것은 개별 통과의 증거가 아니라 되돌렸다(2026-10-24 판정). 칸이 없는 레코드 타입은 `readDurable` 의 static_assert 가 컴파일에서 막으므로 "호출부 옮기기" 는 남을 수 없다. 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
-함정(교훈은 `ServiceRecordUnknownFields.h` · `ServiceRecordUtil.h` 머리 주석에 있다): 맨 바깥 칸만 담는다 — 안쪽 구조체에 새로 더한 칸은 담지 않으므로 그 칸을 더할 때는 레코드 버전을 올린다. 버전이 다르면 이관 읽기(`deserializeVersioned`)이고 모르는 칸을 그대로 거절한다. 캐시 레코드(`readCache`)는 이미 서버 버스와 같은 혼합 빌드 읽기다([서버 버스 계획](ServerBusFormat.md) 4절).
+함정(교훈은 `ServiceRecordUnknownFields.h` · `ServiceRecordUtil.h` 머리 주석에 있다): 맨 바깥 칸만 담는다 — 안쪽 구조체에 새로 더한 칸은 담지 않으므로 그 칸을 더할 때는 레코드 버전을 올린다. 버전이 다르면 이관 읽기(`deserializeVersioned`)이고 모르는 칸을 그대로 거절한다. 캐시 레코드(`readCache`)는 이미 서버 버스와 같은 혼합 빌드 읽기다(`ServerBusFormat`(끝나서 문서를 지웠다 — git log) 4절).

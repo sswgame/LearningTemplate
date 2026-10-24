@@ -107,6 +107,8 @@ namespace sw
         , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _occlusionTilesPlaceholder{}
+        , _arrOcclusionReadbackMeta{}
+        , _occlusionReadbackSerial{ 0 }
         , _psoCache{}
         , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }

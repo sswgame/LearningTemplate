@@ -332,7 +332,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | `isDerivedFrom(` | 16 | 에디터 명령, 내비게이션, UI 문서 로더 |
 | `isA<` | 4 |  |
 
-`getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다. 이 수와 상관없이 [TypedComponents](TypedComponents.md) 가 타입별 목록과 `TComponentHandle<T>` 로 풀었습니다. `forEachComponentOfType<` 는 `HealthListenerComponent.cpp:15`, `FirstPersonCameraComponent.cpp:160` 처럼 게임플레이 이벤트 처리에서 부릅니다.
+`getComponent<` 413 건 가운데 틱 안에서 부르는 비율은 세지 않았습니다. 이 수와 상관없이 `TypedComponents`(끝나서 문서를 지웠다 — git log) 가 타입별 목록과 `TComponentHandle<T>` 로 풀었습니다. `forEachComponentOfType<` 는 `HealthListenerComponent.cpp:15`, `FirstPersonCameraComponent.cpp:160` 처럼 게임플레이 이벤트 처리에서 부릅니다.
 결론적으로 캐스트 자체는 이미 핫패스에 쓸 수 있는 구조입니다(잠금 · 해시 · 문자열 없음, O(1)). 남은 비용의 근본 원인은 캐스트가 아니라 **타입 없는 핸들**과 **씬 전체 순회**입니다.
 
 ### 7.4 위험
@@ -368,7 +368,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | 1 | 생성기 · `TypeInfo::_pFixedCodec` · `FixedLayout` 런타임 · 테스트 | 끝남(2026-10-17, `a01e7a79a`) |
-| 2 | `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 설계는 [기믹 회로 상태 구조 계획](GimmickCircuitState.md) 8절 | 끝남(`e6ae53938`, 2026-10-20 Debug `full-build` 경고 0 · 기믹 45 케이스 · `ReflectionTest` · `-L nogpu` 엔진 5 샤드 통과) |
+| 2 | `GimmickCircuitState` 하나에서 컴포넌트는 A, 묶음 · 넷 조각은 B. 설계는 `GimmickCircuitState`(끝나서 문서를 지웠다 — git log) 8절 | 끝남(`e6ae53938`, 2026-10-20 Debug `full-build` 경고 0 · 기믹 45 케이스 · `ReflectionTest` · `-L nogpu` 엔진 5 샤드 통과) |
 | 3 | `FightingMatch` 롤백 B · 세이브 A, 두 읽기가 같은 `validateState`. 손 코덱 · 손 버전 상수 · `RoundSeries` · `InputCommandBuffer` 의 손 `writeState` · `readState` 삭제 | 끝남(`88add323a`, `5a14ccb39`) |
 | 4-a | Mech · Horror 스냅샷을 B 로(`PROPERTY` 범위 키만, 손 코덱 · `kMagic` 없음, 스냅샷은 디스크에 남지 않음). 넷 채널 등록 · 해시 섞기는 후보 `NetChannelSchemaHashHandshake` | 끝남(`7fa9a9c70`, `016656bc2`) |
 | 4-b | 인스펙터가 필드 이름 형태 `Min` · `Max` 를 씀(3.8). `ReflectionTypes.h`, `CodeGenerator.cpp`, `InspectorPropertyLayout.*` | 끝남(`7ce9eafe2`) |
@@ -377,8 +377,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 | 6 | 컴팩트 모드와 호출부 없는 `cloneObject` 삭제, `A-13` · `A-14` 해결 | 끝남(`626210330`) |
 | 7-a | 열거형 이름 조회를 `EnumInfo::_listDenseName` · `EnumNameCache` 로(3.13) | 끝남(`58a651537`) |
 | 7-b | `REFLECT` 둘째 · 가상 베이스를 생성 오류로(7.4, 결정 기록 5-4) | 끝남(`58a651537`) |
-| 7-c | 매니저의 타입별 컴포넌트 목록 | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
-| 7-d | 타입 핸들 `TComponentHandle<T>` | 끝남(2026-10-19, 계획은 [TypedComponents](TypedComponents.md)) |
+| 7-c | 매니저의 타입별 컴포넌트 목록 | 끝남(2026-10-19, 계획은 `TypedComponents`(끝나서 문서를 지웠다 — git log)) |
+| 7-d | 타입 핸들 `TComponentHandle<T>` | 끝남(2026-10-19, 계획은 `TypedComponents`(끝나서 문서를 지웠다 — git log)) |
 | 8 | `MaxCount` 가 C++ 정수 상수 이름을 받고 `PropertyMetadata::_maxCount` 에 상한을 둠(3.5). 기믹 · 온라인 키트의 숫자 중복 117 곳을 상수 이름으로, 대조 테스트(`StateLimitsMatchDeclaredMaxCount`, 키트 11 개의 `DeclaredLimitsMatchTheConstants`) 삭제 | 구현 끝(2026-10-21, `wt/maxcount`, 빌드 · 테스트 미확인) |
 
 단계 3 에서 바뀐 기반 헤더 셋은 `FrameData.h`(`MoveTimeline` 의 `REFLECT`, `GuardStance` 의 `ENUM`), `InputCommandBuffer.h`(`InputFrame` · `InputCommandBuffer` 의 `REFLECT`), `RoundSeries.h`(`REFLECT`, `RoundSeriesPhase` 의 `ENUM`)입니다. 이 헤더를 건드리는 다른 작업과 병합할 때 겹칠 수 있습니다.

@@ -78,8 +78,6 @@ _kDocumentMapPath = "docs/02_DocumentMap.md"
 _kRuleDocRe = re.compile(
     r"^(CLAUDE\.md|AGENTS\.md|docs/\d\d_[^/]+\.md|docs/agents/[^/]+\.md|docs/plans/(NEXT|Roadmap|WorkerRules)\.md)$"
 )
-#: 규칙 6 에서 뺄 기록 문서(같은 문장을 되풀이해도 기록이다).
-_kDuplicateExempt: frozenset[str] = frozenset({"docs/09_Decisions.md"})
 _kHeaderRequired: tuple[str, ...] = ("> 질문:", "> 독자:", "> 결론:")
 _kHeaderScanLines = 15
 _kShingleLength = 24
@@ -300,7 +298,10 @@ class CheckDocPathsGate(LintGate):
             mapShingle: dict[str, set[str]] = {}
             for candidate in sorted(repositoryRoot.glob("*.md")) + sorted((repositoryRoot / "docs").rglob("*.md")):
                 relCandidate = candidate.relative_to(repositoryRoot).as_posix()
-                if _kRuleDocRe.match(relCandidate) is None or relCandidate in _kDuplicateExempt:
+                if _kRuleDocRe.match(relCandidate) is None:
+                    continue
+                if relCandidate in CheckDocPathsGate.mapExemption:  # 규칙 6 에서 뺄 기록 문서(rules/CheckDocPaths.toml)
+                    CheckDocPathsGate.useExemption(relCandidate)
                     continue
                 mapShingle[relCandidate] = collectHangulShingles(candidate.read_text(encoding="utf-8", errors="replace"))
             mapPairCount: dict[tuple[str, str], int] = {}

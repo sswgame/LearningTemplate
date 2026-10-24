@@ -1243,8 +1243,8 @@ namespace sw
         static constexpr uint32 kOcclusionReadbackMetaCount = 8;
         AsyncBufferReadback     _occlusionReadback;
         OcclusionTileMailbox    _occlusionMailbox;
-        OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount]{};
-        uint64                  _occlusionReadbackSerial{ 0 };
+        OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount];
+        uint64                  _occlusionReadbackSerial;
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
         RenderPSOCache _psoCache;

@@ -13,7 +13,7 @@ using namespace sw;
 
 namespace
 {
-    const float4 kWhite{ 1.0f, 1.0f, 1.0f, 1.0f };
+    const float4 kLogWhite{ 1.0f, 1.0f, 1.0f, 1.0f };
 } // namespace
 
 /**
@@ -22,15 +22,15 @@ namespace
 SW_TEST_CASE( VisualLoggerTest, RecordsOnlyWhenEnabledAndFiltersByFrameObjectAndCategory )
 {
     VisualLogger logger;
-    logger.logText( 7, "AI", float3{}, "ignored", kWhite );
+    logger.logText( 7, "AI", float3{}, "ignored", kLogWhite );
     SW_EXPECT_EQUAL( size_t( 0 ), logger.getEntryCount() ); // 꺼져 있다
 
     logger.setEnabled( true );
-    logger.logText( 7, "AI", float3{ 1.0f, 0.0f, 0.0f }, "chase", kWhite ); // 프레임 0
-    logger.logSphere( 9, "Sense", float3{}, 2.0f, kWhite );                 // 프레임 0
+    logger.logText( 7, "AI", float3{ 1.0f, 0.0f, 0.0f }, "chase", kLogWhite ); // 프레임 0
+    logger.logSphere( 9, "Sense", float3{}, 2.0f, kLogWhite );                 // 프레임 0
     logger.endFrame();
-    logger.logLine( 7, "AI", float3{}, float3{ 0.0f, 0.0f, 3.0f }, kWhite, "path" ); // 프레임 1
-    logger.logBox( 0, {}, float3{}, float3{ 1.0f, 1.0f, 1.0f }, kWhite );            // 분류 없음 → Default
+    logger.logLine( 7, "AI", float3{}, float3{ 0.0f, 0.0f, 3.0f }, kLogWhite, "path" ); // 프레임 1
+    logger.logBox( 0, {}, float3{}, float3{ 1.0f, 1.0f, 1.0f }, kLogWhite );            // 분류 없음 → Default
     logger.endFrame();
     SW_EXPECT_EQUAL( uint64( 2 ), logger.getFrame() );
     SW_EXPECT_EQUAL( size_t( 4 ), logger.getEntryCount() );
@@ -62,7 +62,7 @@ SW_TEST_CASE( VisualLoggerTest, DropsTheOldestEntriesPastTheCapacity )
     SW_ASSERT_TRUE( logger.setCapacity( 3 ) );
     for ( uint32 frame = 0; frame < 5; ++frame )
     {
-        logger.logText( 1, "AI", float3{}, "tick", kWhite );
+        logger.logText( 1, "AI", float3{}, "tick", kLogWhite );
         logger.endFrame();
     }
     SW_EXPECT_EQUAL( size_t( 3 ), logger.getEntryCount() );
@@ -86,10 +86,10 @@ SW_TEST_CASE( VisualLoggerTest, ReplayDrawsTheRecordedFrameThroughTheDebugDrawQu
 {
     VisualLogger logger;
     logger.setEnabled( true );
-    logger.logLine( 1, "AI", float3{}, float3{ 0.0f, 0.0f, 2.0f }, kWhite, "to target" ); // 프레임 0: 선 + 설명 글
-    logger.logSphere( 1, "AI", float3{}, 1.0f, kWhite );                                  // 프레임 0: 구
+    logger.logLine( 1, "AI", float3{}, float3{ 0.0f, 0.0f, 2.0f }, kLogWhite, "to target" ); // 프레임 0: 선 + 설명 글
+    logger.logSphere( 1, "AI", float3{}, 1.0f, kLogWhite );                                  // 프레임 0: 구
     logger.endFrame();
-    logger.logBox( 1, "AI", float3{}, float3{ 1.0f, 1.0f, 1.0f }, kWhite ); // 프레임 1
+    logger.logBox( 1, "AI", float3{}, float3{ 1.0f, 1.0f, 1.0f }, kLogWhite ); // 프레임 1
 
     DebugDrawQueue queue;
     SW_EXPECT_EQUAL( 2u, logger.replayFrame( queue, 0, 0, {} ) );
@@ -112,7 +112,7 @@ SW_TEST_CASE( VisualLoggerTest, RoundTripsThroughAFileAndRefusesABrokenOne )
     logger.setEnabled( true );
     logger.logText( 3, "AI", float3{ 1.0f, 2.0f, 3.0f }, "hello", float4{ 1.0f, 0.5f, 0.25f, 1.0f } );
     logger.endFrame();
-    logger.logArrow( 3, "Move", float3{}, float3{ 0.0f, 1.0f, 0.0f }, kWhite, "up" );
+    logger.logArrow( 3, "Move", float3{}, float3{ 0.0f, 1.0f, 0.0f }, kLogWhite, "up" );
     logger.endFrame();
     const string path = FileUtil::joinPath( test::makeTempPath( "vlog" ), "session.vlog.json" );
     SW_ASSERT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );

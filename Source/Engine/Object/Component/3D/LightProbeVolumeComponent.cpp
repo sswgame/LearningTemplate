@@ -60,6 +60,10 @@ namespace sw
         , _realtimeUpdatePeriod{ LightProbeVolumeComponentInternal::kDefaultRealtimeUpdatePeriod }
         , _realtimeBlend{ LightProbeVolumeComponentInternal::kDefaultRealtimeBlend }
         , _probeData{}
+        , _pRealtimeVoxelGrid{}
+        , _realtimeVoxelSetGeneration{ 0 }
+        , _realtimeVoxelBounds{}
+        , _realtimeVoxelCellSize{ 0.0f }
     {
     }
 
