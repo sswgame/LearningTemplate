@@ -32,6 +32,13 @@ namespace sw
      * @class ICompressionCodec
      * @brief 압축 · 해제 알고리즘의 인터페이스입니다.
      * @details 특정 압축 라이브러리(LZ4, Zstd 등)에 묶이지 않도록 인터페이스와 구현을 분리합니다.
+     *
+     *          **동시 호출 계약 — 한 인스턴스의 `compress` · `decompress` · `compressBound` · `decompressBound` 는 여러 스레드에서 동시에 불립니다.**
+     *          레지스트리(`CompressionCodecRegistry`)가 코덱 종류마다 인스턴스 하나만 들고 있고, 리소스 팩 쿠커는 항목별 압축을 병렬로 돌리며
+     *          (`ResourcePakWriter`) 팩 리더 · 네트워크 · 세이브도 같은 인스턴스를 씁니다. 그러므로 구현은 호출 사이에 바뀌는 멤버 · 정적 변수 ·
+     *          재사용 버퍼를 두지 않고, 호출마다 문맥(zlib `z_stream`, zstd `CCtx`, LZ4 HC 상태)을 지역으로 만들어 호출 안에서 거둡니다.
+     *          호출 횟수를 세는 테스트용 코덱 같은 것은 원자 값으로 셉니다. 상태가 꼭 필요한 압축기(학습 사전 등)는 이 인터페이스를 구현하지
+     *          말고 스레드 한 개 전용 별도 클래스로 둡니다(`ZstdDictionaryCompressor` 가 그 예입니다).
      */
     class SW_API ICompressionCodec
     {

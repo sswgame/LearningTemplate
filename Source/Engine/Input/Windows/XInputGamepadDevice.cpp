@@ -20,47 +20,40 @@ namespace sw
             using PFN_XInputGetState = DWORD( WINAPI* )( DWORD, XINPUT_STATE* );
             using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
 
+            /** @brief XInput 라이브러리를 불러옵니다. 못 찾으면 nullptr 입니다(라이브러리는 프로세스 끝까지 쥔다). */
+            static HMODULE loadXInputModule()
+            {
+                HMODULE hModule = LoadLibraryW( L"XINPUT1_4.dll" );
+                if ( hModule == nullptr )
+                    hModule = LoadLibraryW( L"xinput1_3.dll" );
+                if ( hModule == nullptr )
+                    hModule = LoadLibraryW( L"xinput9_1_0.dll" );
+                return hModule;
+            }
+
+            /** @brief 처음 부를 때 한 번만 불러온 XInput 라이브러리입니다. 함수 안 정적 변수의 초기화는 스레드 안전합니다. */
             static HMODULE getXInputModule()
             {
-                static HMODULE s_hModule{ nullptr };
-                static bool    s_bTried{ false };
-                if ( s_bTried )
-                    return s_hModule;
-                s_bTried = true;
-
-                s_hModule = LoadLibraryW( L"XINPUT1_4.dll" );
-                if ( s_hModule == nullptr )
-                    s_hModule = LoadLibraryW( L"xinput1_3.dll" );
-                if ( s_hModule == nullptr )
-                    s_hModule = LoadLibraryW( L"xinput9_1_0.dll" );
+                static const HMODULE s_hModule = loadXInputModule();
                 return s_hModule;
+            }
+
+            /** @brief 라이브러리에서 함수를 찾습니다. 라이브러리나 함수가 없으면 nullptr 입니다. */
+            static FARPROC findXInputProc( const utf8* pName )
+            {
+                const HMODULE hModule = getXInputModule();
+                return hModule != nullptr ? GetProcAddress( hModule, pName ) : nullptr;
             }
 
             static PFN_XInputGetState resolveXInputGetState()
             {
-                static PFN_XInputGetState s_pfn{ nullptr };
-                static bool               s_bTried{ false };
-                if ( s_bTried )
-                    return s_pfn;
-                s_bTried = true;
-
-                HMODULE hModule = getXInputModule();
-                if ( hModule != nullptr )
-                    s_pfn = reinterpret_cast<PFN_XInputGetState>( GetProcAddress( hModule, "XInputGetState" ) );
+                static const PFN_XInputGetState s_pfn = reinterpret_cast<PFN_XInputGetState>( findXInputProc( "XInputGetState" ) );
                 return s_pfn;
             }
 
             static PFN_XInputSetState resolveXInputSetState()
             {
-                static PFN_XInputSetState s_pfn{ nullptr };
-                static bool               s_bTried{ false };
-                if ( s_bTried )
-                    return s_pfn;
-                s_bTried = true;
-
-                HMODULE hModule = getXInputModule();
-                if ( hModule != nullptr )
-                    s_pfn = reinterpret_cast<PFN_XInputSetState>( GetProcAddress( hModule, "XInputSetState" ) );
+                static const PFN_XInputSetState s_pfn = reinterpret_cast<PFN_XInputSetState>( findXInputProc( "XInputSetState" ) );
                 return s_pfn;
             }
 
@@ -68,15 +61,7 @@ namespace sw
 
             static PFN_XInputGetBatteryInformation resolveXInputGetBatteryInformation()
             {
-                static PFN_XInputGetBatteryInformation s_pfn{ nullptr };
-                static bool                            s_bTried{ false };
-                if ( s_bTried )
-                    return s_pfn;
-                s_bTried = true;
-
-                HMODULE hModule = getXInputModule();
-                if ( hModule != nullptr )
-                    s_pfn = reinterpret_cast<PFN_XInputGetBatteryInformation>( GetProcAddress( hModule, "XInputGetBatteryInformation" ) );
+                static const PFN_XInputGetBatteryInformation s_pfn = reinterpret_cast<PFN_XInputGetBatteryInformation>( findXInputProc( "XInputGetBatteryInformation" ) );
                 return s_pfn;
             }
 #endif

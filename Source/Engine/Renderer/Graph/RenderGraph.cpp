@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
+#include <atomic>
 #include <queue>
 
 namespace sw
@@ -435,10 +436,10 @@ namespace sw
                 if ( passCmd == nullptr )
                 {
                     // 디바이스가 죽으면 매 프레임 여기로 온다. 같은 오류를 끝없이 되풀이하지 않는다.
-                    static bool s_bCreateFailureLogged = false;
-                    if ( s_bCreateFailureLogged == false )
+                    // 프로세스에 한 번이다. 그래프가 둘 이상이고 서로 다른 스레드에서 돌 수 있어 `exchange` 로 한 번만 남긴다.
+                    static std::atomic<bool> s_bCreateFailureLogged{ false };
+                    if ( s_bCreateFailureLogged.exchange( true ) == false )
                     {
-                        s_bCreateFailureLogged = true;
                         SW_LOG_ERROR( "executeParallel: could not create a command list for pass '%#' - nothing was recorded or submitted this frame",
                                       passName.c_str() );
                     }

@@ -10,6 +10,7 @@
 #include "Engine/Physics/Jolt/JoltUtil.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
+#include <atomic>
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/IssueReporting.h>
@@ -97,13 +98,17 @@ namespace sw
 
             static JPH::Factory*  s_pFactory;
             static JoltJobSystem* s_pJobSystem;
-            static bool           s_bInitialized;
+            /**
+             * @brief 백엔드가 올라와 있는지입니다. 지연 초기화 플래그가 아니라 수명 상태이고, `initialize` · `shutdown` 은 소유자(`PhysicsSystem`)가 한 스레드에서
+             *        부른다. 읽는 쪽(`isInitialized` · `createScene`)은 다른 스레드일 수 있어 원자 값으로 둔다.
+             */
+            static std::atomic<bool> s_bInitialized;
         };
 
         alignas( JPH::Factory ) uint8 JoltPhysicsBackendInternal::s_arrFactoryStorage[sizeof( JPH::Factory )]{};
-        JPH::Factory*  JoltPhysicsBackendInternal::s_pFactory{ nullptr };
-        JoltJobSystem* JoltPhysicsBackendInternal::s_pJobSystem{ nullptr };
-        bool           JoltPhysicsBackendInternal::s_bInitialized{ false };
+        JPH::Factory*     JoltPhysicsBackendInternal::s_pFactory{ nullptr };
+        JoltJobSystem*    JoltPhysicsBackendInternal::s_pJobSystem{ nullptr };
+        std::atomic<bool> JoltPhysicsBackendInternal::s_bInitialized{ false };
     } // namespace
 } // namespace sw
 
@@ -111,7 +116,7 @@ namespace sw
 {
     bool JoltPhysicsBackend::initialize()
     {
-        if ( JoltPhysicsBackendInternal::s_bInitialized )
+        if ( JoltPhysicsBackendInternal::s_bInitialized.load() )
             return true;
         SW_MEMORY_SCOPE( Physics );
 
@@ -135,8 +140,8 @@ namespace sw
         JPH::Factory::sInstance                = JoltPhysicsBackendInternal::s_pFactory;
         // `JPH::RegisterTypes()` 는 헤더의 버전 ID 를 넘겨서 다르면 abort 한다. 위에서 맞춘 라이브러리의 ID 로 직접 호출한다.
         JPH::RegisterTypesInternal( libraryVersionID );
-        JoltPhysicsBackendInternal::s_pJobSystem   = JoltUtil::createObject<JoltJobSystem>( JoltPhysicsBackendInternal::kMaxJobCount, JoltPhysicsBackendInternal::kMaxBarrierCount );
-        JoltPhysicsBackendInternal::s_bInitialized = true;
+        JoltPhysicsBackendInternal::s_pJobSystem = JoltUtil::createObject<JoltJobSystem>( JoltPhysicsBackendInternal::kMaxJobCount, JoltPhysicsBackendInternal::kMaxBarrierCount );
+        JoltPhysicsBackendInternal::s_bInitialized.store( true );
         SW_LOG_INFO( "Jolt %#.%#.%# initialized (job concurrency %#)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH,
                      JoltPhysicsBackendInternal::s_pJobSystem->GetMaxConcurrency() );
         return true;
@@ -144,25 +149,25 @@ namespace sw
 
     void JoltPhysicsBackend::shutdown()
     {
-        if ( JoltPhysicsBackendInternal::s_bInitialized == false )
+        if ( JoltPhysicsBackendInternal::s_bInitialized.load() == false )
             return;
         JoltUtil::destroyObject( JoltPhysicsBackendInternal::s_pJobSystem );
         JoltPhysicsBackendInternal::s_pJobSystem = nullptr;
         JPH::UnregisterTypes();
         JPH::Factory::sInstance = nullptr;
         JoltPhysicsBackendInternal::s_pFactory->~Factory();
-        JoltPhysicsBackendInternal::s_pFactory     = nullptr;
-        JoltPhysicsBackendInternal::s_bInitialized = false;
+        JoltPhysicsBackendInternal::s_pFactory = nullptr;
+        JoltPhysicsBackendInternal::s_bInitialized.store( false );
     }
 
     bool JoltPhysicsBackend::isInitialized()
     {
-        return JoltPhysicsBackendInternal::s_bInitialized;
+        return JoltPhysicsBackendInternal::s_bInitialized.load();
     }
 
     unique_ptr<IPhysicsScene3D> JoltPhysicsBackend::createScene( const PhysicsSettings& settings )
     {
-        if ( JoltPhysicsBackendInternal::s_bInitialized == false )
+        if ( JoltPhysicsBackendInternal::s_bInitialized.load() == false )
         {
             SW_LOG_ERROR( "createScene: the Jolt backend is not initialized (PhysicsSystem::initialize)" );
             return nullptr;
