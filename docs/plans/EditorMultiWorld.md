@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-7 · 진행: 6/6
 
-**남은 확인(통합에서 확인):** 매니페스트 id `preview-windows-scenarios`, `preview-window-reopen-cost`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `preview-windows-scenarios`, 매니페스트 id `preview-window-reopen-cost`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 옛 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창 · 프리팹 창이 코드로 들어갔습니다(각 단계의 "구현됨" 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.

@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-1, D3-3, D3-4 · 진행: 10/10
 
-**남은 확인(통합에서 확인):** 매니페스트 id `ui-preview-logic-test`, `inspector-handle-scenario`(`Test/QA/VerifyBatch.json`). 리눅스 쪽 두 테스트는 CI 의 xvfb swrender 묶음이 돈다(푸시 뒤 `ci-jobs --summary`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `ui-preview-logic-test`, 매니페스트 id `inspector-handle-scenario`(`Test/QA/VerifyBatch.json`). 리눅스 쪽 두 테스트는 CI 의 xvfb swrender 묶음이 돈다(푸시 뒤 `ci-jobs --summary`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 에디터 후보 문서의 기능 절 넷(지형 칠하기 · UI 미리보기 디자이너 · 콘솔 치트 · 타입 핸들 인스펙터)을 착수하며 옮겼다(2026-10-21). 단위가 끝나면 그 절을 지운다.
 끝난 단위는 빌드 없이 구현했다 — 확인 목록은 2절이다.

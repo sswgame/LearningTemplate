@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: D3-10 · 진행: 3/3
 
-**남은 확인(통합에서 확인):** 매니페스트 id `mesh-modifiers-captures`, `mesh-modifier-preview-cost`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `mesh-modifiers-captures`, 매니페스트 id `mesh-modifier-preview-cost`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 `GF_EditorPlugIn_MeshModifiers` 는 56 id 를 등록했습니다. 구조 · 추가 방법 · 알려진 근사는 [모듈 README](../../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md), 구조는 같은 문서의 "셰이딩 미리보기" 에 있습니다.
 남은 것은 측정이 먼저인 비용 문제와 아직 눈으로 보지 않은 캡처입니다.

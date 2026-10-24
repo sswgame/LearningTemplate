@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: ui · 옛번호: D6-2 · 진행: 3/3
 
-**남은 확인(통합에서 확인):** 매니페스트 id `ui-input-real-device`, `panel-id-literals-p3`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `ui-input-real-device`, 매니페스트 id `panel-id-literals-p3`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 런타임 UI 입력 중 둘이 남아 있었다. 에디터 게임 뷰(Game 패널) 안의 포인터 좌표와 리눅스의 운영체제 클립보드다. 코드(I1 · I2)와 Windows 빌드 · 단위 테스트는 끝났고, I3 에서 사람 손으로 보려던 확인을 테스트로 바꿨다.
 

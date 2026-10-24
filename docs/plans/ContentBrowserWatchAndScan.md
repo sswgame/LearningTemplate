@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: 없음 · 진행: 2/2
 
-**남은 확인(통합에서 확인):** 매니페스트 id `asset-hot-reload-test`, `content-watch-fence-scenarios`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 확인):** 매니페스트 id `asset-hot-reload-test`, 매니페스트 id `content-watch-fence-scenarios`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 참조 역색인은 2026-10-23 에 "마지막 변경을 따라왔다"(`ContentBrowserReferenceSearch::isCurrent`)를 준비로 보고 보이는 패널에서 시계를 잡게 고쳤습니다(`assetmanage` 간헐 실패).
 같은 모양의 폴더 목록 대기는 [Candidates-editor](Candidates-editor.md) 의 `ContentBrowserAsyncWaits` 에 남아 있고, 여기는 그 나머지 둘입니다.
