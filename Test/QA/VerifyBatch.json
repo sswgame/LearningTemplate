@@ -114,6 +114,11 @@
       "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"
     },
     {
+      "id": "pack-cook-parallel-tests", "title": "팩 쿠킹 병렬 압축이 직렬과 같은 바이트를 내는지 · 내용 해시 값이 그대로인지", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 20,
+      "filter": "PackLayoutTest.*,ContentHashTest.*,ResourcePakTest.*",
+      "source": "docs/09_Decisions.md 5-2 팩 쿠킹 병렬 압축", "result_doc": "docs/08_Verification.md 증분 쿠킹 단계별 시간"
+    },
+    {
       "id": "pack-patch-app-start", "title": "만든 패치를 실제 Packs/ 폴더에 두고 App 이 시작해 적용하는 실행", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "need_command": "패치를 만들어 Packs/ 에 두고 App 을 띄워 적용을 보는 흐름을 한 명령으로 묶은 것이 없다(테스트는 scanAndMountPacks 를 직접 부른다)",
       "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"

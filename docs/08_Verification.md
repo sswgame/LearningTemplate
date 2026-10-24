@@ -230,6 +230,8 @@ cd build/Ninja-Debug/Bin
   바뀐 것 없는 실행의 로그는 씬 7 · 프리팹 98 · 레지스트리 12 · 내비메시 1 이 모두 `reused from the DDC` 다.
   **바이트 같음**: 깨끗한 실행 세 번과 바뀐 것 없는 실행 세 번의 쿠킹 폴더(`.bin` 105 · `.txt` 12 · `.navmesh` 1), 팩 13 개(`.packrec` 포함), 셰이더 산출물 6196 개의 SHA-256 이 전부 같다.
   셰이더는 차가운 실행 세 번과 컴파일 캐시를 켠 실행 세 번도 서로 같다(줄바꿈은 LF 로 맞춰 견줌 — `cook.stamp` 는 쓸 때 LF, 저장소는 CRLF).
+  팩 줄은 항목별 압축 · CRC 를 병렬로 돌리기 전 값이다(2026-10-25 병렬 압축, 결정 기록 5-2). 병렬 뒤 값은 같은 명령의 요약 로그 한 줄로 잰다 — `Pack cook: N packs written or reused ... in X ms - read ..., compress W ms wall / C ms cpu, layout ..., hash ..., write ..., other ...`.
+  `compress` 의 벽시계 / CPU 합이 병렬 효과이고, 바뀐 것 없는 실행(1.7 s)은 `hash` 가 거의 전부다(출력 118 MB 해시, 사본 복사를 없앴다). 병렬 뒤 팩 바이트가 직렬과 같음은 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes`(매니페스트 `pack-cook-parallel-tests`)가 지킨다.
   읽는 법: 이득은 셰이더 컴파일 캐시(252 → 5 s)와 팩 증분(12 → 1.7 s)에서 나온다. 씬 · 프리팹 · 레지스트리 · 내비메시는 합쳐도 깨끗한 실행 1.4 s 라 DDC 로 줄어든 몫은 0.5 s 안팎이다(이 데이터 크기에서).
 - **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
   GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.

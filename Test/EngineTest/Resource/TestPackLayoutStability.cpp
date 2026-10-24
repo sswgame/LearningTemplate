@@ -4,6 +4,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Resource/Pack/ResourcePakTypes.h"
 #include "Engine/Resource/Pack/ResourcePakWriter.h"
@@ -60,7 +61,7 @@ namespace sw
             return list;
         }
 
-        [[nodiscard]] bool makePack( const vector<TestFile>& listFile, PackCompressionType compression, bool bReverse, vector<uint8>& outBytes )
+        [[nodiscard]] bool makePack( const vector<TestFile>& listFile, PackCompressionType compression, bool bReverse, vector<uint8>& outBytes, ResourcePakWriteStats* pOutStats = nullptr )
         {
             ResourcePakWriterDesc desc;
             desc._compression = compression;
@@ -70,7 +71,7 @@ namespace sw
                 const TestFile& file = bReverse ? listFile[listFile.size() - 1 - index] : listFile[index];
                 writer.addBytes( file._path, file._bytes );
             }
-            return writer.makePackBytes( outBytes );
+            return writer.makePackBytes( outBytes, pOutStats );
         }
 
         /** @brief 팩의 FAT 를 경로 해시로 찾아 읽습니다. */
@@ -118,6 +119,48 @@ SW_TEST_CASE( PackLayoutTest, SameInputGivesIdenticalBytesRegardlessOfAddOrder )
         SW_ASSERT_TRUE( makePack( listFile, type, true, reversed ) );
         SW_EXPECT_TRUE( first == second );
         SW_EXPECT_TRUE( first == reversed );
+    }
+}
+
+/**
+ * @brief [PackLayoutTest] 압축 · CRC 를 워커에서 병렬로 돌려도 팩 바이트가 직렬로 돌린 것과 비트 단위로 같은가
+ * @details 직렬은 엔진 서비스를 푼 범위(`engine::runParallel` 이 호출 스레드에서 차례로 돈다)이고, 병렬은 워커 넷을 가진 태스크 매니저를 묶은 범위다. 빈 항목과 큰 항목이 섞여 있고
+ *          합이 병렬 문턱(`kMinParallelBytes`)을 넘는다. 단계별 시간 통계의 항목 수 · 입력 바이트도 둘이 같아야 한다.
+ */
+SW_TEST_CASE( PackLayoutTest, ParallelCompressionGivesTheSerialBytes )
+{
+    vector<TestFile> listFile = makeFiles( 80 );
+    listFile.push_back( { "assets/empty/zero.bin", {} } );
+    listFile.push_back( { "assets/big/large.bin", makeContent( 777, 400000 ) } );
+
+    for ( PackCompressionType type : { PackCompressionType::None, PackCompressionType::Zlib, PackCompressionType::LZ4, PackCompressionType::Zstd } )
+    {
+        vector<uint8>         serial;
+        ResourcePakWriteStats serialStats;
+        {
+            const test::ScopedUnboundEngineServices unbound;
+            SW_ASSERT_TRUE( makePack( listFile, type, false, serial, &serialStats ) );
+        }
+
+        vector<uint8>         parallel;
+        ResourcePakWriteStats parallelStats;
+        {
+            test::ScopedEngineServiceOverride scope;
+            TaskManager&                      tasks = scope.add( sw::make_unique<TaskManager>() );
+            SW_ASSERT_TRUE( tasks.initialize( 4 ) );
+            SW_ASSERT_TRUE( scope.bind() == nullptr );
+            SW_ASSERT_TRUE( tasks.getWorkerCount() > 0 );
+            SW_ASSERT_TRUE( makePack( listFile, type, false, parallel, &parallelStats ) );
+            // 담는 순서를 뒤집어도 같다(정렬 키가 경로 해시).
+            vector<uint8> parallelReversed;
+            SW_ASSERT_TRUE( makePack( listFile, type, true, parallelReversed, nullptr ) );
+            SW_EXPECT_TRUE( parallelReversed == serial );
+        }
+
+        SW_EXPECT_TRUE( parallel == serial );
+        SW_EXPECT_EQUAL( parallelStats._entryCount, serialStats._entryCount );
+        SW_EXPECT_EQUAL( parallelStats._inputBytes, serialStats._inputBytes );
+        SW_EXPECT_EQUAL( serialStats._entryCount, static_cast<uint32>( listFile.size() ) );
     }
 }
 

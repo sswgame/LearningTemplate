@@ -10,6 +10,9 @@
  *            상관없이 같은 바이트다. 항목 하나가 바뀌어도 그 항목의 페이로드 · FAT 칸 밖은 그대로다. 단 항목을 더하거나 지우거나 섹터를 넘게 키우면 해시 순으로
  *            뒤에 오는 페이로드가 섹터 단위로 밀린다(내용은 그대로) — 고정 1MB 청크 비교에는 불리하고 내용 기준 청크에는 거의 영향이 없다. 밀림을 없애려면
  *            항목마다 빈 자리를 두는 형식 변경이 필요해 하지 않는다.
+ *          - 항목별 압축 · CRC 는 병렬이고(`engine::runParallel`, 항목마다 자기 결과 칸에만 쓴다) 오프셋 배치 · 바이트 조립은 경로 해시 순으로 직렬이다. 압축 크기를
+ *            안 뒤에야 오프셋이 정해지므로 배치는 직렬 루프 그대로이고, 항목 정렬 키가 경로 해시라 병렬이어도 팩 바이트는 직렬로 돌 때와 비트 단위로 같다
+ *            (테스트 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes`). 엔진 서비스가 없거나 워커가 없으면 호출 스레드가 차례로 돈다.
  *          - 같은 경로(대소문자 무시 해시가 같은 경로)를 두 번 담으면 쓰기가 실패한다. 리더는 해시 하나에 항목 하나만 들므로 어느 쪽이 이길지 조용히
  *            정하지 않는다.
  */
@@ -35,6 +38,34 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ResourcePakWriteStats
+     * @brief 팩 하나를 만들고 쓰는 데 든 단계별 시간(ns)입니다. 쿠킹 요약 로그가 모아 병렬 효과를 보입니다. 단계는 겹치지 않으므로 합이 곧 쓰기에 든 시간입니다.
+     */
+    struct ResourcePakWriteStats
+    {
+        int64  _compressWallNanos{ 0 }; ///< 압축 · CRC 구간의 벽시계 시간(병렬이면 가장 느린 스레드가 정한다)
+        int64  _compressCPUNanos{ 0 };  ///< 항목마다 잰 압축 · CRC 시간의 합(직렬로 돌았다면 든 시간). 벽시계와의 비가 병렬 효과다
+        int64  _layoutNanos{ 0 };       ///< 정렬 · 중복 검사 · 오프셋 배치 · 바이트 조립
+        int64  _writeNanos{ 0 };        ///< 부모 폴더를 만들고 파일을 쓴 시간(`writePackFile` 만)
+        uint64 _inputBytes{ 0 };        ///< 담은 원본 바이트의 합
+        uint32 _entryCount{ 0 };        ///< 항목 수
+
+        /** @brief @p other 의 시간 · 크기를 더합니다(팩 여럿을 한 줄로 요약할 때). */
+        void add( const ResourcePakWriteStats& other )
+        {
+            _compressWallNanos += other._compressWallNanos;
+            _compressCPUNanos += other._compressCPUNanos;
+            _layoutNanos += other._layoutNanos;
+            _writeNanos += other._writeNanos;
+            _inputBytes += other._inputBytes;
+            _entryCount += other._entryCount;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class ResourcePakWriter
      * @brief 항목을 담고(`addBytes`) 팩 바이트를 만듭니다(`makePackBytes` · `writePackFile`). 파일 머리말 참고.
      */
@@ -53,10 +84,10 @@ namespace sw
          * @brief 담은 항목으로 팩 바이트를 만듭니다.
          * @return 같은 경로가 두 번 담겼거나, 코덱이 없거나, 압축 · 크기 한계에서 실패하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool makePackBytes( vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool makePackBytes( vector<uint8>& outBytes, ResourcePakWriteStats* pOutStats = nullptr ) const;
 
-        /** @brief `makePackBytes` 의 결과를 @p packPath 에 원자적으로 씁니다(부모 폴더를 만든다). */
-        [[nodiscard]] bool writePackFile( string_view packPath ) const;
+        /** @brief `makePackBytes` 의 결과를 @p packPath 에 원자적으로 씁니다(부모 폴더를 만든다). @p pOutStats 가 있으면 단계별 시간을 담습니다. */
+        [[nodiscard]] bool writePackFile( string_view packPath, ResourcePakWriteStats* pOutStats = nullptr ) const;
 
     private:
         /** @brief 담은 항목 하나입니다. */
@@ -67,8 +98,10 @@ namespace sw
             vector<uint8> _bytes;
         };
 
-        /** @brief 항목 하나를 팩 코덱으로 압축합니다. 빈 항목과 `None` 은 그대로 둡니다. */
-        [[nodiscard]] bool compressEntry( const Entry& entry, vector<uint8>& outPayloadBytes ) const;
+        /** @brief 항목 하나의 압축 결과 칸입니다(정의는 .cpp). 병렬 구간에서 항목마다 자기 칸에만 씁니다. */
+        struct CompressSlot;
+        /** @brief 항목들을 압축하는 병렬 본문과 그 입력입니다(정의는 .cpp). */
+        struct CompressJob;
 
         vector<Entry>         _listEntry;
         ResourcePakWriterDesc _desc;
