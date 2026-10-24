@@ -9,6 +9,7 @@
 #pragma once
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 namespace sw
 {
@@ -103,6 +104,31 @@ namespace sw::editor
 
     private:
         SubsystemScope    _scope;       ///< 이 서비스만 든 범위
+        ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 스코프 동안 빈 상태 저장소(`EditorStateStore`)를 지금 에디터 범위로 걸어 둡니다 — 파일 안의 상태(`getEditorState<T>()`)를 쓰는 함수가 이 테스트 몫의 값을 봅니다.
+     * @details 테스트가 끝나면 저장소와 값이 함께 사라지므로 테스트끼리 값이 섞이지 않습니다.
+     */
+    class ScopedEditorStateService
+    {
+    public:
+        ScopedEditorStateService()
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.addSubsystem( make_unique<EditorStateStore>() );
+        }
+
+        ScopedEditorStateService( const ScopedEditorStateService& )            = delete;
+        ScopedEditorStateService& operator=( const ScopedEditorStateService& ) = delete;
+
+    private:
+        SubsystemScope    _scope;       ///< 저장소만 든 범위
         ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
     };
 } // namespace sw::editor

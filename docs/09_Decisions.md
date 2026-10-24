@@ -478,6 +478,16 @@
   ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
   (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
   (`Engine/Common/EngineScope.h`). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
+- **`.cpp` 안의 "함수 안 `static` 지역을 참조로 돌려주는 접근자"(`static T& getXxx() { static T s; return s; }`)는 쓰지 않고, 상태에 소유자를 둔다**(2026-10-25, 에디터 영역).
+  서비스 접근 게이트가 보지 못하는 숨은 전역 가변 상태였다 — 에디터를 둘 띄우거나 테스트를 병렬로 돌리면 섞이고, 모듈을 다시 불러도 값이 남거나 사라지는 때가 코드로 정해지지 않는다.
+  소유자는 곳마다 가장 가까운 객체로 고른다. ① 값을 한 패널만 쓰면 패널 멤버이고 탐침은 `findPanel<T>()` 로 읽는다(`ScheduleDebugPanel` · `CharacterEditorPanel` · `RetargetPanel` 의 `Published`,
+  `PreferencesPanel`; 패널의 다른 멤버에서 구해지는 값은 상태를 따로 두지 않는다 — `ModulesPanel` · `ShortcutsPanel`). ② 이미 있는 서브시스템이 주인이면 그 멤버이다(DPI 배율 → `EditorTheme`,
+  텍스처 캐시 → `MeshModifierSession` 이 든 `MeshModifierTextureSampler` 인스턴스, 끌기 상태 → 이 확장이 기여한 서브시스템). ③ 한 파일 안에서만 쓰는 값(그리는 함수 · 탐침이 읽는 값 · 캐시)에는
+  주인이 따로 없으므로 **에디터 범위의 상태 저장소** `EditorStateStore` 가 소유한다 — `getEditorState<T>()` 가 타입마다 값 하나를 처음 물을 때 `T{}` 로 만든다. 저장소는 `EditorContext` 가 맨 먼저 만들어
+  컨텍스트와 함께 사라지고, 테스트는 `ScopedEditorStateService` 로 자기 몫을 건다. **EditorModule 안의 코드만 쓴다** — 확장 모듈 코드는 모듈이 내려갈 때 vtable 이 사라지므로 패널 멤버나
+  `SW_EDITOR_SUBSYSTEM`(내려가기 전에 종료한다)을 쓴다. 상태 타입은 그 번역 단위의 `XxxInternal` 안에 둔다(타입 해시 열쇠라 이름이 겹치는 익명 타입 둘을 크기로 잡는다).
+  `EditorUIContext::getCurrent()` 는 값을 따로 들지 않고 ImGui · ImPlot 의 현재 컨텍스트를 묻는다(주인이 ImGui 자신이다). 남은 것: 등록 줄이 가리키는 설정 인스턴스(`EditorSettingsInstance<T>`)는 등록한
+  DLL 의 함수 정적이 설계다(`hasSectionWithin` 이 언로드 훅과 짝) — 따로 주인을 두는 설계가 필요하다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의

@@ -108,13 +108,6 @@ namespace sw::editor
                 return EditorColorUtil::toImVec4( color.scaleBrightness( factor ).saturate().withAlpha( alpha ) );
             }
 
-            /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 기록하고, 적용할 때 이 값을 곱합니다. */
-            static float32& dpiScale()
-            {
-                static float32 s_dpiScale{ 1.0f };
-                return s_dpiScale;
-            }
-
             /**
              * @brief 스타일의 크기 항목을 ImGui 기본(96 DPI)으로 되돌립니다. 색과 글꼴 크기, 배율은 그대로 둡니다.
              * @details `ScaleAllSizes` 는 테마가 기록하지 않는 크기(도킹 구분선, 창 테두리 호버 여백, 창 최소 크기 등)까지 곱한다. 기본값에서 다시
@@ -184,8 +177,9 @@ namespace sw::editor
                 style.ScrollbarSize    = spacing._scrollbarSize;
                 style.GrabMinSize      = spacing._grabMinSize;
                 // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
-                if ( EditorThemeInternal::dpiScale() != 1.0f )
-                    style.ScaleAllSizes( EditorThemeInternal::dpiScale() );
+                const float32 dpiScale = getSubsystem<EditorTheme>().getDpiScale();
+                if ( dpiScale != 1.0f )
+                    style.ScaleAllSizes( dpiScale );
                 // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
                 style.FontSizeBase = config._typography._fontSize;
             }
@@ -321,17 +315,18 @@ namespace sw::editor
     void EditorThemeUtil::setDpiScale( float32 dpiScale )
     {
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
-        if ( EditorThemeInternal::dpiScale() == scale )
+        EditorTheme&  theme = getSubsystem<EditorTheme>();
+        if ( theme.getDpiScale() == scale )
             return;
         // 테마는 96 DPI 기준 값을 보관하고 있으므로 새 배율로 다시 적용하면 된다.
-        EditorThemeInternal::dpiScale() = scale;
+        theme.setDpiScale( scale );
         applyTheme( getActiveTheme() );
         ImGui::GetStyle().FontScaleDpi = scale;
     }
 
     float32 EditorThemeUtil::getDpiScale()
     {
-        return EditorThemeInternal::dpiScale();
+        return getSubsystem<EditorTheme>().getDpiScale();
     }
 
     bool EditorThemeUtil::loadFromConfig()

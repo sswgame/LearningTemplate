@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -28,24 +29,17 @@ namespace sw::editor
     {
         struct EditorWidgetsInternal
         {
-            /** @brief 0 건 안내를 그린 횟수입니다(`getNoSearchResultHintCount`). */
-            static uint32& noSearchResultHintCount()
+            /** @brief 0 건 안내를 그린 기록입니다. 탐침이 읽는다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
+            struct HintState
             {
-                static uint32 s_count = 0;
-                return s_count;
-            }
+                uint32 _noSearchResultHintCount{ 0 }; ///< 0 건 안내를 그린 횟수(`getNoSearchResultHintCount`)
+                uint32 _filteredHintFrame{ 0 };       ///< 검색어가 있는 0 건 안내를 마지막으로 그린 ImGui 프레임(0 = 그린 적 없음)
+            };
 
             /** @brief ImGui 글꼴로 글자열 너비를 측정합니다(`EditorLabelLayoutUtil::MeasureFunc`). */
             static float32 measureImGuiText( string_view text, void* /*pUserData*/ )
             {
                 return ImGui::CalcTextSize( text.data(), text.data() + text.size() ).x;
-            }
-
-            /** @brief 검색어가 있는 0 건 안내를 마지막으로 그린 ImGui 프레임입니다(0 = 그린 적 없음). */
-            static uint32& filteredHintFrame()
-            {
-                static uint32 s_frame = 0;
-                return s_frame;
             }
 
             /** @brief 애셋 슬롯 버튼 바탕(평소 · 호버)입니다. */
@@ -336,13 +330,14 @@ namespace sw::editor
 
     void EditorWidgets::drawNoSearchResultHint( string_view filter )
     {
-        ++EditorWidgetsInternal::noSearchResultHintCount();
+        EditorWidgetsInternal::HintState& hintState = getEditorState<EditorWidgetsInternal::HintState>();
+        ++hintState._noSearchResultHintCount;
         if ( filter.empty() )
         {
             drawEmptyHint( SW_LOCKEY( "EdCommon", "NoMatches" ) );
             return;
         }
-        EditorWidgetsInternal::filteredHintFrame() = static_cast<uint32>( ImGui::GetFrameCount() );
+        hintState._filteredHintFrame = static_cast<uint32>( ImGui::GetFrameCount() );
 
         // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '{' · '%' 가 들어와도 서식으로 해석되지 않는다.
         const string text = SW_LOCKEYFORMAT( "EdCommon", "NoMatchesForFilter", TextArgumentList().addText( "filter", filter ) );
@@ -351,12 +346,12 @@ namespace sw::editor
 
     uint32 EditorWidgets::getNoSearchResultHintCount()
     {
-        return EditorWidgetsInternal::noSearchResultHintCount();
+        return getEditorState<EditorWidgetsInternal::HintState>()._noSearchResultHintCount;
     }
 
     bool EditorWidgets::wasFilteredNoResultHintDrawnRecently()
     {
-        const uint32 frame = EditorWidgetsInternal::filteredHintFrame();
+        const uint32 frame = getEditorState<EditorWidgetsInternal::HintState>()._filteredHintFrame;
         const uint32 now   = static_cast<uint32>( ImGui::GetFrameCount() );
         return frame != 0 && frame <= now && now - frame <= 1;
     }

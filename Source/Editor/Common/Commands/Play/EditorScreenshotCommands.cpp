@@ -5,6 +5,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
@@ -16,14 +17,18 @@ namespace sw::editor
     {
         struct EditorScreenshotCommandsInternal
         {
-            /** @brief 마지막으로 포커스를 받은 뷰입니다. 모듈 리로드 때 처음 값으로 돌아가도 해가 없다. */
-            inline static EditorViewKind _s_focusedView = EditorViewKind::Game;
-            /** @brief 결과를 기다리는 요청이 있으면 그 요청 전의 완료 번호, 없으면 `invalid_index::kUint32` 입니다. */
-            inline static uint32 _s_waitSerial = invalid_index::kUint32;
+            /** @brief 스크린샷 명령이 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct CaptureState
+            {
+                EditorViewKind _focusedView{ EditorViewKind::Game };  ///< 마지막으로 포커스를 받은 뷰
+                uint32         _waitSerial{ invalid_index::kUint32 }; ///< 결과를 기다리는 요청이 있으면 그 요청 전의 완료 번호, 없으면 `invalid_index::kUint32`
+            };
+
+            static CaptureState& getState() { return getEditorState<CaptureState>(); }
 
             static void request( string_view path, RHITextureHandle sourceTexture )
             {
-                _s_waitSerial = RenderThread::getCompletedScreenshotSerial();
+                getState()._waitSerial = RenderThread::getCompletedScreenshotSerial();
                 RenderThread::requestScreenshot( path, sourceTexture, RHIFormat::R8G8B8A8_UNORM );
             }
         };
@@ -54,7 +59,7 @@ namespace sw::editor
 
     void EditorScreenshotCommands::captureFocusedView()
     {
-        if ( EditorScreenshotCommandsInternal::_s_focusedView == EditorViewKind::Scene )
+        if ( EditorScreenshotCommandsInternal::getState()._focusedView == EditorViewKind::Scene )
             captureSceneView();
         else
             captureGameView();
@@ -62,15 +67,15 @@ namespace sw::editor
 
     void EditorScreenshotCommands::noteFocusedView( EditorViewKind kind )
     {
-        EditorScreenshotCommandsInternal::_s_focusedView = kind;
+        EditorScreenshotCommandsInternal::getState()._focusedView = kind;
     }
 
     void EditorScreenshotCommands::update()
     {
-        if ( EditorScreenshotCommandsInternal::_s_waitSerial == invalid_index::kUint32 ||
-             RenderThread::getCompletedScreenshotSerial() == EditorScreenshotCommandsInternal::_s_waitSerial )
+        EditorScreenshotCommandsInternal::CaptureState& captureState = EditorScreenshotCommandsInternal::getState();
+        if ( captureState._waitSerial == invalid_index::kUint32 || RenderThread::getCompletedScreenshotSerial() == captureState._waitSerial )
             return;
-        EditorScreenshotCommandsInternal::_s_waitSerial = invalid_index::kUint32;
+        captureState._waitSerial = invalid_index::kUint32;
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )

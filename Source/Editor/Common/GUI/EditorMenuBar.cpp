@@ -22,6 +22,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -43,8 +44,16 @@ namespace sw::editor
     {
         struct EditorMenuBarInternal
         {
-            inline static bool    _s_bShowThemeSettings = false;
-            inline static float32 _s_statusAreaWidth    = 0.0f; ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
+            /** @brief 메뉴바가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로이다. */
+            struct MenuBarState
+            {
+                bool                                 _bShowThemeSettings{ false };
+                float32                              _statusAreaWidth{ 0.0f };                    ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
+                fixed_string<constant::kMaxBuffer64> _layoutName{};                               ///< 이름 붙인 레이아웃 저장 칸의 글
+                BuildState                           _lastObservedBuildState{ BuildState::Idle }; ///< 지난 프레임에 본 빌드 상태(컴파일이 끝나는 순간을 잡는다)
+            };
+
+            static MenuBarState& getState() { return getEditorState<MenuBarState>(); }
         };
     } // namespace
 } // namespace sw::editor
@@ -129,12 +138,12 @@ namespace sw::editor
         if ( ImGui::BeginMenu( "Layouts" ) == false )
             return;
 
-        static fixed_string<constant::kMaxBuffer64> s_layoutName;
+        fixed_string<constant::kMaxBuffer64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 12.0f );
-        const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), s_layoutName.data(), s_layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
-        if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( s_layoutName.c_str() ) )
-            s_layoutName.clear();
+        if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
+            layoutName.clear();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SaveLayout" ) );
 
         vector<string> listName;
@@ -164,7 +173,7 @@ namespace sw::editor
         // 상태 영역은 지난 프레임에 측정한 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 위치면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
         // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 측정한다.
         const float32 menuEndX     = ImGui::GetCursorPosX();
-        const float32 statusStartX = ImGui::GetWindowWidth() - EditorMenuBarInternal::_s_statusAreaWidth - ImGui::GetStyle().WindowPadding.x;
+        const float32 statusStartX = ImGui::GetWindowWidth() - EditorMenuBarInternal::getState()._statusAreaWidth - ImGui::GetStyle().WindowPadding.x;
         if ( statusStartX < menuEndX )
             return;
 
@@ -172,18 +181,18 @@ namespace sw::editor
         ImGui::BeginGroup();
         drawStatusContent( pCompiler );
         ImGui::EndGroup();
-        EditorMenuBarInternal::_s_statusAreaWidth = ImGui::GetItemRectSize().x;
+        EditorMenuBarInternal::getState()._statusAreaWidth = ImGui::GetItemRectSize().x;
     }
 
     void EditorMenuBar::notifyLiveCodingResult( IModuleCompiler& compiler )
     {
-        static BuildState s_lastObservedState = BuildState::Idle;
+        BuildState& lastObservedState = EditorMenuBarInternal::getState()._lastObservedBuildState;
 
         const bool       bCompiling = compiler.isCompiling();
         const BuildState state      = compiler.getBuildState();
 
         // 컴파일이 끝나는 순간을 잡는다(Compiling -> Success / Failed)
-        if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
+        if ( lastObservedState == BuildState::Compiling && bCompiling == false )
         {
             const string   targetName  = compiler.getTargetName();
             const string   displayName = targetName.empty() ? string{ SW_LOCKEY( "EdCommon", "LiveCodingAllModules" ) } : targetName;
@@ -206,7 +215,7 @@ namespace sw::editor
             }
         }
 
-        s_lastObservedState = bCompiling ? BuildState::Compiling : state;
+        lastObservedState = bCompiling ? BuildState::Compiling : state;
     }
 
     void EditorMenuBar::drawStatusContent( IModuleCompiler* pCompiler )
@@ -293,18 +302,18 @@ namespace sw::editor
 
     void EditorMenuBar::drawThemeDialog()
     {
-        if ( EditorMenuBarInternal::_s_bShowThemeSettings )
-            EditorThemeUtil::drawThemeSettingsDialog( &EditorMenuBarInternal::_s_bShowThemeSettings );
+        if ( EditorMenuBarInternal::getState()._bShowThemeSettings )
+            EditorThemeUtil::drawThemeSettingsDialog( &EditorMenuBarInternal::getState()._bShowThemeSettings );
     }
 
     void EditorMenuBar::openThemeDialog()
     {
-        EditorMenuBarInternal::_s_bShowThemeSettings = true;
+        EditorMenuBarInternal::getState()._bShowThemeSettings = true;
     }
 
     void EditorMenuBar::closeThemeDialog()
     {
-        EditorMenuBarInternal::_s_bShowThemeSettings = false;
+        EditorMenuBarInternal::getState()._bShowThemeSettings = false;
     }
 
     void EditorMenuBar::processOpenPanelRequests()

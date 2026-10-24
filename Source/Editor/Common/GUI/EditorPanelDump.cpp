@@ -5,6 +5,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/EditorStateStore.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -15,8 +17,11 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct EditorPanelDumpInternal
         {
-            /** @brief 한 번만 찍습니다. 이후 프레임에서 다시 찍지 않도록 기억합니다. */
-            static inline bool s_bDumped{ false };
+            /** @brief 덤프 기록입니다. 한 번만 찍고 이후 프레임에서 다시 찍지 않도록 기억한다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct DumpState
+            {
+                bool _bDumped{ false };
+            };
 
             /**
              * @brief 덤프할 의미가 있는 창인지 판별합니다.
@@ -104,7 +109,7 @@ namespace sw::editor
     void EditorPanelDump::dumpIfRequested()
     {
         const int32 targetFrame = gv_editorPanelDump;
-        if ( targetFrame <= 0 || EditorPanelDumpInternal::s_bDumped )
+        if ( targetFrame <= 0 || getEditorState<EditorPanelDumpInternal::DumpState>()._bDumped )
             return;
 
         ImGuiContext* pContext = ImGui::GetCurrentContext();
@@ -114,7 +119,7 @@ namespace sw::editor
         const int32 frameCount = static_cast<int32>( pContext->FrameCount );
         if ( frameCount < targetFrame )
             return;
-        EditorPanelDumpInternal::s_bDumped = true;
+        getEditorState<EditorPanelDumpInternal::DumpState>()._bDumped = true;
 
         uint32 windowCount = 0;
         uint32 blankCount  = 0;

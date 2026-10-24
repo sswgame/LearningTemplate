@@ -5,6 +5,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Workspace/EditorStateStore.h"
+
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -14,12 +16,11 @@ namespace sw::editor
     {
         struct EditorFolderListingInternal
         {
-            /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. `getChildFolderScanCount` 가 반환합니다. */
-            static atomic<uint64>& getChildFolderScanCounter()
+            /** @brief 폴더 읽기 횟수의 상태입니다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로 센다. */
+            struct ScanStats
             {
-                static atomic<uint64> s_scanCount{ 0 };
-                return s_scanCount;
-            }
+                atomic<uint64> _scanCount{ 0 }; ///< `collectChildFolders` 가 디스크를 읽은 횟수. `getChildFolderScanCount` 가 반환한다
+            };
 
             static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
                                                   const string& rootNorm )
@@ -81,7 +82,7 @@ namespace sw::editor
     void EditorFolderListing::collectChildFolders( string_view folderAbs, vector<string>& outList )
     {
         outList.clear();
-        ++EditorFolderListingInternal::getChildFolderScanCounter();
+        ++getEditorState<EditorFolderListingInternal::ScanStats>()._scanCount;
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
@@ -94,6 +95,6 @@ namespace sw::editor
 
     uint64 EditorFolderListing::getChildFolderScanCount()
     {
-        return EditorFolderListingInternal::getChildFolderScanCounter().load();
+        return getEditorState<EditorFolderListingInternal::ScanStats>()._scanCount.load();
     }
 } // namespace sw::editor

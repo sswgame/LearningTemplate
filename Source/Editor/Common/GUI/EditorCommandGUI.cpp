@@ -25,6 +25,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
@@ -53,12 +54,15 @@ namespace sw::editor
              */
             static uint32 rebuild( const void* pExcludeBegin, const void* pExcludeEnd );
 
-            /** @brief 마지막으로 맞춘 커맨드 등록 세대입니다. EditorModule 을 다시 로드하면 함께 처음 값으로 돌아갑니다. */
-            static uint32& getSyncedGeneration()
+            /**
+             * @brief 커맨드 GUI 가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유하므로 에디터 컨텍스트와 함께 처음 값으로 돌아갑니다.
+             */
+            struct GUIState
             {
-                static uint32 s_syncedGeneration = invalid_index::kUint32;
-                return s_syncedGeneration;
-            }
+                uint32                  _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
+                bool                    _bHotkeysSuspended{ false };                 ///< 단축키 편집기가 조합을 받는 동안 전역 단축키를 멈춘다
+                EditorShortcutOverrides _overrides{};                                ///< 사용자 단축키 덮어쓰기(레지스트리를 다시 만들 때 입힌다)
+            };
 
             // ------------------------------------------------------------------------------
             // 1) 커맨드 동작. 테이블이 함수 포인터로 가리킨다
@@ -526,18 +530,6 @@ namespace sw::editor
                 return pressedModifier;
             }
 
-            static bool& getHotkeysSuspended()
-            {
-                static bool s_bSuspended = false;
-                return s_bSuspended;
-            }
-
-            static EditorShortcutOverrides& getOverrides()
-            {
-                static EditorShortcutOverrides s_overrides;
-                return s_overrides;
-            }
-
             /** @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true 입니다. 수정자 비교는 `EditorCommandRegistry::matchesPressedModifiers` 가 맡습니다. */
             static bool isShortcutPressed( const EditorCommandShortcut& shortcut )
             {
@@ -617,7 +609,7 @@ namespace sw::editor
 
     void EditorCommandGUI::syncWithRegistry()
     {
-        if ( EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == EditorCommandGUIInternal::getSyncedGeneration() )
+        if ( EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == getEditorState<EditorCommandGUIInternal::GUIState>()._syncedGeneration )
             return;
         registerDefaults();
     }
@@ -629,12 +621,12 @@ namespace sw::editor
 
     void EditorCommandGUI::setHotkeysSuspended( bool bSuspended )
     {
-        EditorCommandGUIInternal::getHotkeysSuspended() = bSuspended;
+        getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended = bSuspended;
     }
 
     EditorShortcutOverrides& EditorCommandGUI::getShortcutOverrides()
     {
-        return EditorCommandGUIInternal::getOverrides();
+        return getEditorState<EditorCommandGUIInternal::GUIState>()._overrides;
     }
 
     EditorUserFileResult EditorCommandGUI::loadShortcutOverrides()
@@ -670,7 +662,8 @@ namespace sw::editor
 
         EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
         registry.clear();
-        getSyncedGeneration() = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
+        EditorCommandGUIInternal::GUIState& guiState = getEditorState<EditorCommandGUIInternal::GUIState>();
+        guiState._syncedGeneration                   = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
 
         for ( const EditorCommandGUIInternal::CommandRow& row : EditorCommandGUIInternal::_s_arrCommandRow )
         {
@@ -697,7 +690,7 @@ namespace sw::editor
         // 확장 모듈과 다른 파일의 등록 항목(SW_EDITOR_COMMAND)을 테이블과 같은 레지스트리에 합친다.
         const uint32 excludedCount = EditorCommandTableUtil::appendRegistrations( registry, pExcludeBegin, pExcludeEnd );
         // 사용자가 바꾼 단축키(Saved/Editor/Shortcuts.json)를 적용한다. 기본 조합은 각 커맨드의 _default* 에 남는다.
-        (void)getOverrides().applyTo( registry ); // 적용한 수는 쓰지 않는다. 충돌은 아래 validate 가 알린다
+        (void)guiState._overrides.applyTo( registry ); // 적용한 수는 쓰지 않는다. 충돌은 아래 validate 가 알린다
 
         string report;
         if ( registry.validate( report ) == false )
@@ -714,7 +707,7 @@ namespace sw::editor
     void EditorCommandGUI::processHotkeys()
     {
         EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || EditorCommandGUIInternal::getHotkeysSuspended() )
+        if ( pContext == nullptr || getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended )
             return;
         if ( ImGui::GetIO().WantTextInput )
             return;

@@ -44,8 +44,8 @@ namespace sw::editor
     {
         /** @brief `ImGuiEditor::initialize` 가 컨텍스트를 만든 직후(상태), 지우기 직전(빈 상태)에 부릅니다. */
         static void publish( const EditorUIContextState& state );
-        /** @brief 지금 상태입니다. 컨텍스트가 없으면 두 값 모두 nullptr 입니다. */
-        static const EditorUIContextState& getCurrent();
+        /** @brief 지금 상태입니다. 컨텍스트가 없으면 두 값 모두 nullptr 입니다. 값은 이 모듈의 ImGui · ImPlot 이 가진 현재 컨텍스트이고, 따로 보관하지 않는다. */
+        static EditorUIContextState getCurrent();
     };
 } // namespace sw::editor
 

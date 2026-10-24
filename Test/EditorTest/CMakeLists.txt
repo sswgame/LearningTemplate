@@ -110,6 +110,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorLayoutStore.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPanelVisibility.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorStateStore.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorTransaction.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWindowTitle.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWorkspace.cpp"
