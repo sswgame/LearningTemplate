@@ -547,6 +547,12 @@
 - 여러 스레드가 함께 더하는 카운터(활성 태스크 수 · 메모리 태그 통계)는 `ShardedCounter` · `ShardArray`(스레드 칸 16, 읽는 쪽이 합침)로 둔다(2026-10-18, 언리얼 LLM 스레드별 상태 · 리눅스 `percpu_counter` 와 같은 구조). "0 이 됐나" 를 보는 카운터는 같은 칸에서 올리고 내린다. 메모리 태그 최고치는 합을 읽을 때(프레임 · 패널) 본 값의 최고치다 — 측정(`docs/plans/StructuralOptimization.md`)에서 이득이 없으면 단위 커밋을 되돌린다.
 - **`sw::make_unique` 는 함수 객체(변수 템플릿 `MakeUniqueFunction<T>`)입니다**(2026-10-22). 함수 템플릿이면 std 타입 인자가 ADL 로 `std::make_unique` 를 끌어와 STL 컨테이너 구성에서 호출이 모호해졌다. 일반 탐색이 객체를 찾으면 ADL 이 없다 — C++20 표준 라이브러리의 niebloid 와 같은 방식이다. `make_shared` 는 STL 구성에서 `using std::make_shared` 로 둔다(해제자가 같아서).
 
+- **저장 전용 압축 타입(`half` · `unorm8/16` · `snorm8/16` · `OctahedralNormal` · `RGB10A2`)은 산술 연산자도 암시적 변환도 주지 않습니다**(2026-10-25, `Core/Math`). 계산은 `toFloat` 로 푼 `float32` 로 하고 결과를 `fromFloat` 로 담습니다.
+  변환은 비트 연산을 직접 써서(F16C · NEON · `_Float16` 에 기대지 않음) 모든 플랫폼에서 같은 입력이 같은 비트이고 `constexpr` 입니다. 반올림은 가장 가까운 값(가운데는 짝수), 정규화 정수는 NaN 을 0 으로 자르고 snorm 은 정수 최솟값을 만들지 않습니다(D3D 규칙).
+  월드 좌표와 큰 시간값에는 half 를 쓰지 않습니다(1024 이상에서 간격이 1 이 되어 0.4 m 이동이 사라집니다). 위치는 경계 정규화 `snorm16`, 법선 · 탄젠트는 옥타헤드럴, 색은 `unorm8x4` 입니다.
+  언리얼은 `FFloat16` · `FPackedNormal` · 옥타헤드럴 법선을, 유니티는 `half` 와 `SNorm16` 정점 속성을 같은 목적(정점 · 인스턴스 크기 절감)으로 씁니다. 다른 점은 이 저장소가 `float32` 로의 암시적 변환까지 막아 `half + half` 를 실수로 쓰지 못하게 한 것입니다.
+  적용 순서와 포맷 규칙은 [PackedTypes](plans/PackedTypes.md)입니다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.
