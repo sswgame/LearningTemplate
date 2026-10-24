@@ -15,6 +15,8 @@
     이름만 보면 `instance()` · `shared()` 로 우회하므로 모양을 본다: (가) 클래스 안의 `static T& anything()`(자기 타입의 읽고 쓰는 참조를 돌려주는 인자 없는 정적 멤버),
     (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역을 두어 그 이름을 돌려주는 정의(`T& anything() { static T s; return s; }`, 클래스 밖 자유 함수도).
     읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`)는 섞인 상태를 내주는 창구가 아니라 상수 표 · 링크 때 목록 머리라 세지 않는다.
+    **이 항목이 보지 않는 곳**: `.cpp` 의 익명 · `…Internal` 이름공간 접근자 · 네임스페이스 수준 변수 · 클래스의 `static` 가변 멤버 · `thread_local` — 접근자의 이름과 장소를 가리지 않고
+    정적 저장 기간의 가변 변수 전체를 `CheckMutableStatics` 가 막는다(헤더의 접근자는 두 게이트가 다 본다).
   - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.

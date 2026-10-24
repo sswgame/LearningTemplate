@@ -478,6 +478,8 @@
   ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
   (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
   (`Engine/Common/EngineScope.h`). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
+  ④ 이름 검사의 틈(`.cpp` 익명 접근자, 네임스페이스 수준 변수, `static inline` 멤버, `thread_local`, `ScopeOwned` 로 감싼 전역 칸)은 모양으로 막는다: `CheckMutableStatics` 가 정적 저장 기간의 가변 변수(상수 아닌 것)를
+  장소와 이름에 상관없이 위반으로 본다(예외는 `rules/CheckMutableStatics.toml` 에 `<파일>:<변수>` 와 이유). 소유자는 칸을 감싼 형식이 아니라 칸을 든 객체다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의

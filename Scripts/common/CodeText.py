@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Iterator
 
 #: 주석 · 문자열 · 문자 리터럴. 앞의 두 갈래가 주석이다.
-_kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.DOTALL)
+#: 원시 문자열 `R"구분자( … )구분자"` 는 줄바꿈과 따옴표 · 중괄호를 그대로 품는다 — 일반 문자열보다 먼저 한 덩어리로 가린다(안의 `{` 가 중괄호 깊이를 어긋나게 하지 않도록).
+_kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|R\"(?P<delim>[^(\s)\\]{0,16})\(.*?\)(?P=delim)\"|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.DOTALL)
 
 #: 줄 머리의 `#include <…>` · `#include "…"` — 무리 1 이 경로다. 줄 하나에 `match` 한다.
 kIncludeLineRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')

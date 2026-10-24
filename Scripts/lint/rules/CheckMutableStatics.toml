@@ -1,0 +1,8 @@
+# CheckMutableStatics 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckMutableStatics.py.
+
+# 정적 저장 기간의 가변 변수(함수 안 static · 네임스페이스 수준 · 클래스 static 멤버 · thread_local)를 가져도 되는 자리 → 이유.
+# 키는 "<저장소 기준 파일 경로>:<변수 이름>".
+# 새 서비스 · 캐시 · 카운터 · 버퍼는 서브시스템이나 그것을 쓰는 객체의 멤버로 옮긴다. 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 여기 올린다
+# (예: 범위가 서기 전 · 시그널 안에서도 읽는 크래시 경로의 잠금 없는 저장소). 변수가 더는 위반이 아니면 낡은 예외로 실패한다.
+# 상수(`static const` · `static constexpr`)는 애초에 대상이 아니라 올리지 않는다.
+[exemption]
