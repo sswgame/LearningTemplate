@@ -120,10 +120,12 @@ namespace sw::editor
     void EditorSelfTestMarks::noteInputFrame( const utf8* pKey )
     {
         note( pKey );
-        if ( isEnabled() == false || pKey == nullptr )
+        EditorSelfTestInputInternal::State* pState     = EditorSelfTestInputInternal::findState();
+        const bool                          bRecording = pState != nullptr && pState->_bEnabled;
+        if ( bRecording == false || pKey == nullptr )
             return;
         // 레이블 글까지 한 위젯으로 잡힌 사각형에서 입력 칸만 남긴다. 레이블이 창 밖으로 길게 나가도 가운데가 칸 위에 있게 한다.
-        for ( EditorSelfTestInputInternal::NamedMark& named : EditorSelfTestInputInternal::getState()._listMark )
+        for ( EditorSelfTestInputInternal::NamedMark& named : pState->_listMark )
         {
             if ( named._key == pKey )
             {

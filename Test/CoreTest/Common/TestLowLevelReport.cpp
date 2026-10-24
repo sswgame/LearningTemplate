@@ -12,22 +12,22 @@
 // 한 줄이 파일 · 줄 · 글을 정확히 받는지, Error 가 보고자보다 먼저 stderr 에 쓰이는지, 받는 쪽이 없을 때 stderr 로 가는지, 넘침이 표시되는지 본다.
 namespace
 {
+    /** @brief 보고자가 마지막으로 받은 보고입니다(기본 멤버 초기화가 있어 감싼 클래스 밖에 둔다 — 안에 두면 정적 멤버 초기화가 완성 전 타입을 쓴다). */
+    struct LowLevelReceived
+    {
+        sw::internal::LowLevelReportLevel _level{ sw::internal::LowLevelReportLevel::Warning };
+        std::string                       _file;
+        int32                             _line{ 0 };
+        std::string                       _message;
+        uint32                            _count{ 0 };
+        bool                              _bStderrHadTextAtCall{ false };
+    };
+
     struct LowLevelReportTestInternal
     {
-        /** @brief 보고자가 마지막으로 받은 보고입니다. */
-        struct Received
-        {
-            sw::internal::LowLevelReportLevel _level{ sw::internal::LowLevelReportLevel::Warning };
-            std::string                       _file;
-            int32                             _line{ 0 };
-            std::string                       _message;
-            uint32                            _count{ 0 };
-            bool                              _bStderrHadTextAtCall{ false };
-        };
-
-        inline static Received   _s_received{};
-        inline static std::FILE* _s_pCapture{ nullptr };
-        inline static bool       _s_bHandled{ true };
+        inline static LowLevelReceived _s_received{};
+        inline static std::FILE*       _s_pCapture{ nullptr };
+        inline static bool             _s_bHandled{ true };
 
         static bool reporter( sw::internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
         {
@@ -150,7 +150,7 @@ SW_TEST_CASE( LowLevelReportTest, WarningReachesReporterWithSiteAndText )
     const int32                 expectedLine = __LINE__ + 1;
     SW_LOW_LEVEL_WARNING( "value %u of %s", 7u, "units" );
 
-    const LowLevelReportTestInternal::Received& received = LowLevelReportTestInternal::_s_received;
+    const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
     SW_EXPECT_EQUAL( 1u, received._count );
     SW_EXPECT_TRUE( received._level == sw::internal::LowLevelReportLevel::Warning );
     SW_EXPECT_EQUAL( expectedLine, received._line );
@@ -170,7 +170,7 @@ SW_TEST_CASE( LowLevelReportTest, ErrorIsWrittenToStderrBeforeReporter )
     const int32                 expectedLine = __LINE__ + 1;
     SW_LOW_LEVEL_ERROR( "failed to allocate %zu bytes", static_cast<size_t>( 4096 ) );
 
-    const LowLevelReportTestInternal::Received& received = LowLevelReportTestInternal::_s_received;
+    const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
     SW_EXPECT_EQUAL( 1u, received._count );
     SW_EXPECT_TRUE( received._level == sw::internal::LowLevelReportLevel::Error );
     SW_EXPECT_EQUAL( expectedLine, received._line );
@@ -196,7 +196,7 @@ SW_TEST_CASE( LowLevelReportTest, AssertReportsExpressionMessageAndSite )
     if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 
-    const LowLevelReportTestInternal::Received& received = LowLevelReportTestInternal::_s_received;
+    const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
     SW_EXPECT_EQUAL( 1u, received._count );
     SW_EXPECT_TRUE( received._level == sw::internal::LowLevelReportLevel::Error );
     SW_EXPECT_EQUAL( expectedLine, received._line );
