@@ -33,7 +33,7 @@ namespace sw
                 if ( pText == nullptr )
                 {
                     if ( bRequired )
-                        report.addError( "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
+                        report.addErrorWithID( "Appearance.AttributeMissing", "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
                     return;
                 }
                 TVector parsed{};
@@ -122,7 +122,7 @@ namespace sw
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pAttribute );
         if ( name.empty() )
-            report.addError( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
+            report.addErrorWithID( "Appearance.NameEmpty", "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
         return name;
     }
 
@@ -145,14 +145,14 @@ namespace sw
                                                string_view sourceName )
     {
         if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
-            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+            report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readOptionalInt( const XMLNode& node, const utf8* pAttribute, int32 minValue, int32 maxValue, int32& inoutValue, AppearanceLoadReport& report,
                                              string_view sourceName )
     {
         if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
-            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+            report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )

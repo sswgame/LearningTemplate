@@ -102,7 +102,7 @@ namespace sw
                 AppearanceXMLUtil::readOptionalInt( node, "channel", MathUtil::kMinInt32, MathUtil::kMaxInt32, drive._channel, report, sourceName );
                 if ( parseDriveKind( node.getAttributeText( "kind" ), drive._kind ) == false )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
+                    report.addErrorWithID( "Appearance.DriveKindUnknown", "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
                     return;
                 }
                 const bool bSliderDrive = isSliderDrive( drive._kind );
@@ -114,7 +114,7 @@ namespace sw
                 }
                 if ( drive._kind == CustomizationDriveKind::DyeChannel && ( drive._channel < 0 || drive._channel > kMaxDyeChannel ) )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' dye channel %# is outside 0..3", sourceName, schemaID.c_str(), inoutParam._name.c_str(), drive._channel );
+                    report.addErrorWithID( "Appearance.DyeChannelRange", "%#: schema '%#' parameter '%#' dye channel %# is outside 0..3", sourceName, schemaID.c_str(), inoutParam._name.c_str(), drive._channel );
                     return;
                 }
                 inoutParam._listDrive.push_back( drive );
@@ -135,13 +135,13 @@ namespace sw
                 AppearanceXMLUtil::readOptionalFloat3( node, "rotation", option._rotation, report, sourceName );
                 const bool bChoiceOnly = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
-                    report.addError( "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addErrorWithID( "Appearance.OptionNameInvalid", "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Attachment && bChoiceOnly )
-                    report.addError( "%#: schema '%#' attachment '%#' option '%#' may only name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addErrorWithID( "Appearance.OptionAssetKindInvalid", "%#: schema '%#' attachment '%#' option '%#' may only name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Choice && option._asset.empty() == false )
-                    report.addError( "%#: schema '%#' choice '%#' option '%#' cannot name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addErrorWithID( "Appearance.OptionAssetKindInvalid", "%#: schema '%#' choice '%#' option '%#' cannot name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( prefab.empty() == false && sprite.empty() == false )
-                    report.addError( "%#: schema '%#' option '%#' names both a prefab and a sprite", sourceName, schemaID.c_str(), option._name.c_str() );
+                    report.addErrorWithID( "Appearance.OptionAssetKindInvalid", "%#: schema '%#' option '%#' names both a prefab and a sprite", sourceName, schemaID.c_str(), option._name.c_str() );
                 else
                     inoutParam._listOption.push_back( option );
             }
@@ -169,8 +169,8 @@ namespace sw
                 }
                 else if ( pTarget->_kind == CustomizationKind::Color || condition._listOption.empty() )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' condition on '%#' needs options (choice) or min/max (slider)", sourceName, schema._id.c_str(), inoutParam._name.c_str(),
-                                     condition._parameter.c_str() );
+                    report.addErrorWithID( "Appearance.ConditionShape", "%#: schema '%#' parameter '%#' condition on '%#' needs options (choice) or min/max (slider)", sourceName, schema._id.c_str(), inoutParam._name.c_str(),
+                                           condition._parameter.c_str() );
                     return;
                 }
                 for ( const hashed_string& option : condition._listOption )
@@ -195,13 +195,13 @@ namespace sw
                 AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._max, report, sourceName );
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
                 {
-                    report.addError( "%#: schema '%#' has a parameter without a name or a duplicate '%#'", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
+                    report.addErrorWithID( "Appearance.ParameterNameInvalid", "%#: schema '%#' has a parameter without a name or a duplicate '%#'", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                     return;
                 }
                 if ( kind == CustomizationKind::Slider && ( param._max > param._min ) == false )
-                    report.addError( "%#: schema '%#' slider '%#' needs min < max", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
+                    report.addErrorWithID( "Appearance.SliderRange", "%#: schema '%#' slider '%#' needs min < max", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                 if ( kind == CustomizationKind::Attachment && param._socket.empty() )
-                    report.addError( "%#: schema '%#' attachment '%#' needs a socket", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
+                    report.addErrorWithID( "Appearance.AttachmentNeedsSocket", "%#: schema '%#' attachment '%#' needs a socket", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                 // 슬라이더 기본값을 적지 않으면 범위의 아래 끝이다. 범위 밖 기본값은 자르지 않고 오류다.
                 param._default = param._min;
                 if ( kind == CustomizationKind::Slider )
@@ -225,7 +225,7 @@ namespace sw
                 {
                     param._defaultOption = AppearanceXMLUtil::readOptionalName( node, "default" ); // 적지 않으면 첫 선택지
                     if ( param._listOption.empty() )
-                        report.addError( "%#: schema '%#' parameter '%#' has no <Option>", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
+                        report.addErrorWithID( "Appearance.ParameterNoOption", "%#: schema '%#' parameter '%#' has no <Option>", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                     else if ( param._defaultOption.empty() )
                         param._defaultOption = param._listOption.front()._name;
                     else if ( param.findOption( param._defaultOption ) == nullptr )
@@ -295,7 +295,7 @@ namespace sw
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSchema( schema._id ) != nullptr )
             {
-                report.addError( "%#: <Schema> has a duplicate id '%#'", sourceName, schema._id.c_str() );
+                report.addErrorWithID( "Appearance.IDDuplicate", "%#: <Schema> has a duplicate id '%#'", sourceName, schema._id.c_str() );
                 continue;
             }
             for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
@@ -312,8 +312,8 @@ namespace sw
                 for ( size_t rhs = lhs + 1; rhs < schema._listParameter.size(); ++rhs )
                 {
                     if ( static_cast<uint32>( schema._listParameter[lhs]._name.getHash() ) == static_cast<uint32>( schema._listParameter[rhs]._name.getHash() ) )
-                        report.addError( "%#: schema '%#' parameters '%#' and '%#' share a 32-bit name hash - rename one", sourceName, schema._id.c_str(),
-                                         schema._listParameter[lhs]._name.c_str(), schema._listParameter[rhs]._name.c_str() );
+                        report.addErrorWithID( "Appearance.IDHashClash", "%#: schema '%#' parameters '%#' and '%#' share a 32-bit name hash - rename one", sourceName, schema._id.c_str(),
+                                               schema._listParameter[lhs]._name.c_str(), schema._listParameter[rhs]._name.c_str() );
                 }
             }
             _listSchema.push_back( schema );

@@ -82,7 +82,7 @@ namespace sw
                 }
             }
             if ( bKnownAxis == false )
-                reader.addError( root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
+                reader.addError( "Character.MirrorAxisUnknown", root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
@@ -110,7 +110,7 @@ namespace sw
                     continue;
                 if ( findOverride( boneOverride._bone ) != nullptr )
                 {
-                    reader.addError( child, string( "repeats bone '" ) + boneOverride._bone.c_str() + "'" );
+                    reader.addError( "Character.BoneRepeated", child, string( "repeats bone '" ) + boneOverride._bone.c_str() + "'" );
                     continue;
                 }
                 _listOverride.push_back( boneOverride );

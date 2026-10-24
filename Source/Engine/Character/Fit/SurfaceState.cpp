@@ -67,15 +67,15 @@ namespace sw
             reader.readOptionalBool( child, "clip", bClip );
             channel._bClip = bClip ? SW_TRUE : SW_FALSE;
             if ( resolution < 0 || resolution > SurfaceStateInternal::kMaxMaskResolution )
-                reader.addError( child, "needs maskResolution in [0, 4096]" );
+                reader.addError( "Character.SurfaceMaskResolutionInvalid", child, "needs maskResolution in [0, 4096]" );
             else
                 channel._maskResolution = static_cast<uint16>( resolution );
             if ( channel._decayPerSecond < 0.0f || channel._maxValue <= 0.0f )
-                reader.addError( child, "needs decayPerSecond >= 0 and max > 0" );
+                reader.addError( "Character.SurfaceDecayInvalid", child, "needs decayPerSecond >= 0 and max > 0" );
             if ( channel._name.empty() )
                 continue;
             if ( findChannelIndex( channel._name ) >= 0 )
-                reader.addError( child, string( "repeats channel '" ) + channel._name.c_str() + "'" );
+                reader.addError( "Character.SurfaceChannelRepeated", child, string( "repeats channel '" ) + channel._name.c_str() + "'" );
             else
                 _listChannel.push_back( channel );
         }

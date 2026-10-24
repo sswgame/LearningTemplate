@@ -31,7 +31,7 @@ namespace sw
                 {
                     utf8 arrMessage[constant::kMaxBuffer256];
                     formatstring( arrMessage, constant::kMaxBuffer256, "attribute '%#' must be within -180 and 180 degrees", pName );
-                    reader.addError( node, arrMessage );
+                    reader.addError( "Character.PairedHalfTurnRange", node, arrMessage );
                 }
             }
 
@@ -39,7 +39,7 @@ namespace sw
             static void requireFinite( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 value )
             {
                 if ( MathUtil::isFinite( value ) == false )
-                    reader.addError( node, string( "attribute '" ) + pName + "' is not finite" );
+                    reader.addError( "Character.PairedNotFinite", node, string( "attribute '" ) + pName + "' is not finite" );
             }
 
             /** @brief 유한하지 않거나 음수면 오류를 남깁니다. */
@@ -47,7 +47,7 @@ namespace sw
             {
                 requireFinite( reader, node, pName, value );
                 if ( value < 0.0f )
-                    reader.addError( node, string( "attribute '" ) + pName + "' is negative" );
+                    reader.addError( "Character.PairedNegative", node, string( "attribute '" ) + pName + "' is negative" );
             }
 
             /**
@@ -59,7 +59,7 @@ namespace sw
                 const utf8* pText = node.findAttribute( "align" );
                 if ( pText == nullptr )
                 {
-                    reader.addError( node, "needs attribute 'align'" );
+                    reader.addError( "Character.PairedAlignMissing", node, "needs attribute 'align'" );
                     return PairedAnimationAlign::None;
                 }
                 const string_view text( pText );
@@ -69,7 +69,7 @@ namespace sw
                     return PairedAnimationAlign::Snap;
                 if ( text == "warp" )
                     return PairedAnimationAlign::Warp;
-                reader.addError( node, string( "attribute 'align' must be none, snap or warp: '" ) + pText + "'" );
+                reader.addError( "Character.PairedAlignInvalid", node, string( "attribute 'align' must be none, snap or warp: '" ) + pText + "'" );
                 return PairedAnimationAlign::None;
             }
 
@@ -230,7 +230,7 @@ namespace sw
         _content._duration = reader.readFloat( root, "duration" );
         PairedAnimationDefInternal::requireFinite( reader, root, "duration", _content._duration );
         if ( _content._duration <= 0.0f )
-            reader.addError( root, "attribute 'duration' must be positive" );
+            reader.addError( "Character.PairedDurationInvalid", root, "attribute 'duration' must be positive" );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Role", true ) )
@@ -267,7 +267,7 @@ namespace sw
         // 앵커는 기준이라 정렬을 적지 않는다. 앵커 밖의 역할은 정렬 방식을 꼭 적는다(적지 않음 = 맞추지 않음으로 두지 않는다).
         const bool bHasAlign = CharacterDataReader::hasAttribute( node, "align" );
         if ( role._bAnchor && bHasAlign )
-            reader.addError( node, "is the anchor and must not have 'align'" );
+            reader.addError( "Character.PairedAnchorHasAlign", node, "is the anchor and must not have 'align'" );
         else if ( role._bAnchor == false )
             role._align = PairedAnimationDefInternal::parseAlign( reader, node );
 
@@ -292,7 +292,7 @@ namespace sw
             for ( const utf8* pName : PairedAnimationDefInternal::kArrAlignOnlyAttribute )
             {
                 if ( CharacterDataReader::hasAttribute( node, pName ) )
-                    reader.addError( node, string( "has '" ) + pName + "' but does not align (align is snap or warp)" );
+                    reader.addError( "Character.PairedAlignOnlyAttribute", node, string( "has '" ) + pName + "' but does not align (align is snap or warp)" );
             }
         }
         if ( role._align == PairedAnimationAlign::Warp )
@@ -301,15 +301,15 @@ namespace sw
             PairedAnimationDefInternal::requireFinite( reader, node, "warpEnd", role._warpEndSeconds );
             // 크로스페이드가 끝나야 루트 모션 프레임의 클립이 이 역할의 클립이 된다 — 그 전에 창이 끝나면 한 번도 휘지 않는다.
             if ( role._warpEndSeconds <= role._enterBlendSeconds )
-                reader.addError( node, "attribute 'warpEnd' must be after 'enterBlend'" );
+                reader.addError( "Character.PairedWarpEndOrder", node, "attribute 'warpEnd' must be after 'enterBlend'" );
         }
         else if ( CharacterDataReader::hasAttribute( node, "warpEnd" ) )
         {
-            reader.addError( node, "has 'warpEnd' but align is not warp" );
+            reader.addError( "Character.PairedWarpEndNotWarp", node, "has 'warpEnd' but align is not warp" );
         }
         if ( role._name.empty() == false && findRoleIndex( role._name ) != invalid_index::kUint32 )
         {
-            reader.addError( node, string( "repeats role '" ) + role._name.c_str() + "'" );
+            reader.addError( "Character.PairedRoleRepeated", node, string( "repeats role '" ) + role._name.c_str() + "'" );
             return;
         }
         _content._listRole.push_back( std::move( role ) );
@@ -331,7 +331,7 @@ namespace sw
         reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrSelectAttribute );
         if ( _content._bHasSelect )
         {
-            reader.addError( node, "repeats <Select> (a paired animation has at most one)" );
+            reader.addError( "Character.PairedSelectRepeated", node, "repeats <Select> (a paired animation has at most one)" );
             return;
         }
         _content._bHasSelect                = true;
@@ -358,24 +358,24 @@ namespace sw
             ++anchorCount;
             _anchorRoleIndex = static_cast<uint32>( roleIndex );
             if ( role._bRequired == false )
-                reader.addError( string( "anchor role '" ) + role._name.c_str() + "' must be required" );
+                reader.addError( "Character.PairedAnchorNotRequired", string( "anchor role '" ) + role._name.c_str() + "' must be required" );
             if ( role._startSeconds != 0.0f )
-                reader.addError( string( "anchor role '" ) + role._name.c_str() + "' must start at 0" );
+                reader.addError( "Character.PairedAnchorStart", string( "anchor role '" ) + role._name.c_str() + "' must start at 0" );
         }
         if ( anchorCount != 1 )
-            reader.addError( anchorCount == 0 ? "has no anchor role (exactly one role needs anchor=\"true\")" : "has more than one anchor role" );
+            reader.addError( "Character.PairedAnchorCount", anchorCount == 0 ? "has no anchor role (exactly one role needs anchor=\"true\")" : "has more than one anchor role" );
 
         for ( const PairedAnimationRoleDef& role : _content._listRole )
         {
             if ( role._startSeconds >= _content._duration )
-                reader.addError( string( "role '" ) + role._name.c_str() + "' starts at or after the end of the timeline" );
+                reader.addError( "Character.PairedRoleAfterEnd", string( "role '" ) + role._name.c_str() + "' starts at or after the end of the timeline" );
         }
         for ( const PairedAnimationNotifyDef& notify : _content._listNotify )
         {
             if ( notify._time > _content._duration )
-                reader.addError( string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
+                reader.addError( "Character.PairedNotifyAfterEnd", string( "notify '" ) + notify._name.c_str() + "' is after the end of the timeline" );
             if ( notify._role.empty() == false && findRoleIndex( notify._role ) == invalid_index::kUint32 )
-                reader.addError( string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
+                reader.addError( "Character.PairedNotifyRoleUnknown", string( "notify '" ) + notify._name.c_str() + "' names unknown role '" + notify._role.c_str() + "'" );
         }
         // 고르기 조건은 앵커 밖의 역할을 앵커에서 본다.
         if ( _content._bHasSelect && _content._select._role.empty() == false )
@@ -388,7 +388,7 @@ namespace sw
             else if ( _content._listRole[selectRoleIndex]._bAnchor )
                 formatstring( arrMessage, constant::kMaxBuffer256, "<Select> role '%#' is the anchor (select measures another role from the anchor)", _content._select._role.c_str() );
             if ( arrMessage[0] != '\0' )
-                reader.addError( arrMessage );
+                reader.addError( "Character.PairedSelectRoleInvalid", arrMessage );
         }
         // 세션이 시각 순서로 한 커서를 지나며 낸다.
         std::stable_sort( _content._listNotify.begin(), _content._listNotify.end(), []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )

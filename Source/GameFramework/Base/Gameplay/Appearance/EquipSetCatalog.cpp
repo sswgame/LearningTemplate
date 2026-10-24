@@ -29,7 +29,7 @@ namespace sw
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
-                    report.addError( "%#: set '%#' <Piece> needs a slot and items", sourceName, setID.c_str() );
+                    report.addErrorWithID( "Appearance.SetPieceShape", "%#: set '%#' <Piece> needs a slot and items", sourceName, setID.c_str() );
                     return false;
                 }
                 return true;
@@ -64,7 +64,7 @@ namespace sw
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSet( def._id ) != nullptr )
             {
-                report.addError( "%#: <Set> has a duplicate id '%#'", sourceName, def._id.c_str() );
+                report.addErrorWithID( "Appearance.IDDuplicate", "%#: <Set> has a duplicate id '%#'", sourceName, def._id.c_str() );
                 continue;
             }
             for ( XMLNode child = setNode.findChild(); child; child = child.findNextSibling() )
@@ -76,7 +76,7 @@ namespace sw
                     if ( EquipSetCatalogInternal::readPiece( child, piece, report, sourceName, def._id ) == false )
                         continue;
                     if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) )
-                        report.addError( "%#: set '%#' has two pieces for slot '%#'", sourceName, def._id.c_str(), piece._slot.c_str() );
+                        report.addErrorWithID( "Appearance.SetPieceRepeated", "%#: set '%#' has two pieces for slot '%#'", sourceName, def._id.c_str(), piece._slot.c_str() );
                     else
                         def._listPiece.push_back( piece );
                 }
@@ -86,7 +86,7 @@ namespace sw
                     EquipSetVariantDef variant;
                     variant._bodyType = AppearanceXMLUtil::readRequiredName( child, "bodyType", report, sourceName );
                     if ( variant._bodyType.empty() )
-                        report.addError( "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
+                        report.addErrorWithID( "Appearance.SetVariantNoBodyType", "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
                     {
                         EquipSetPieceDef piece;
@@ -103,7 +103,7 @@ namespace sw
                     def._completeVisual = AppearanceXMLUtil::readRequiredName( child, "visual", report, sourceName );
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
                     if ( def._completeVisual.empty() || def._listCompleteSlot.empty() )
-                        report.addError( "%#: set '%#' <Complete> needs a visual and slots", sourceName, def._id.c_str() );
+                        report.addErrorWithID( "Appearance.SetCompleteShape", "%#: set '%#' <Complete> needs a visual and slots", sourceName, def._id.c_str() );
                 }
                 else
                 {
@@ -111,19 +111,19 @@ namespace sw
                 }
             }
             if ( def._listPiece.empty() )
-                report.addError( "%#: set '%#' has no <Piece>", sourceName, def._id.c_str() );
+                report.addErrorWithID( "Appearance.SetNoPiece", "%#: set '%#' has no <Piece>", sourceName, def._id.c_str() );
             for ( const EquipSetVariantDef& variant : def._listVariant )
             {
                 for ( const EquipSetPieceDef& piece : variant._listPiece )
                 {
                     if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) == false )
-                        report.addError( "%#: set '%#' variant '%#' replaces slot '%#' the set has no piece for", sourceName, def._id.c_str(), variant._bodyType.c_str(), piece._slot.c_str() );
+                        report.addErrorWithID( "Appearance.SetVariantSlotUnknown", "%#: set '%#' variant '%#' replaces slot '%#' the set has no piece for", sourceName, def._id.c_str(), variant._bodyType.c_str(), piece._slot.c_str() );
                 }
             }
             for ( const hashed_string& slot : def._listCompleteSlot )
             {
                 if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, slot ) == false )
-                    report.addError( "%#: set '%#' <Complete> names slot '%#' the set has no piece for", sourceName, def._id.c_str(), slot.c_str() );
+                    report.addErrorWithID( "Appearance.SetCompleteSlotUnknown", "%#: set '%#' <Complete> names slot '%#' the set has no piece for", sourceName, def._id.c_str(), slot.c_str() );
             }
             _listSet.push_back( def );
         }

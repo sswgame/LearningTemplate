@@ -40,12 +40,8 @@ namespace sw
         /** @brief 리소스 경로(또는 절대 경로)의 문서를 읽고 루트 원소를 찾습니다. */
         [[nodiscard]] bool loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot );
 
-        /** @brief 오류 하나를 남깁니다. 원소 이름을 앞에 붙입니다. id 는 `Character.DataInvalid` 입니다. */
-        void addError( const XMLNode& node, string_view message );
-        /** @brief 원소와 상관없는 오류 하나를 남깁니다. id 는 `Character.DataInvalid` 입니다. */
-        void addError( string_view message );
         /**
-         * @brief id 가 붙은 오류 하나를 남깁니다. 원소 이름을 앞에 붙입니다.
+         * @brief 오류 하나를 남깁니다. 원소 이름을 앞에 붙입니다. id 없는 형태는 없다 — 오류 종류마다 id 를 정한다.
          * @param pID `"영역.사건"` 꼴의 **글자 상수**입니다(`SW_LOG_ERROR_ID` 와 같다). 테스트가 문구가 아니라 이것으로 찾는다.
          */
         void addError( const utf8* pID, const XMLNode& node, string_view message );

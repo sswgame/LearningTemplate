@@ -46,9 +46,9 @@ namespace sw
                 if ( slot._accept.empty() )
                     slot._accept = slot._name;
                 if ( slot._name.empty() )
-                    report.addError( "%#: <Slot> without a name", sourceName );
+                    report.addErrorWithID( "Appearance.NameEmpty", "%#: <Slot> without a name", sourceName );
                 else if ( hasSlot( slot._name ) )
-                    report.addError( "%#: slot '%#' is declared twice", sourceName, slot._name.c_str() );
+                    report.addErrorWithID( "Appearance.SlotRepeated", "%#: slot '%#' is declared twice", sourceName, slot._name.c_str() );
                 else
                     _listSlot.push_back( slot );
             }
@@ -59,9 +59,9 @@ namespace sw
                 occupancy._id = AppearanceXMLUtil::readRequiredName( child, "id", report, sourceName );
                 AppearanceXMLUtil::readNameList( child, "slots", occupancy._listSlot );
                 if ( occupancy._id.empty() || occupancy._listSlot.size() < 2 )
-                    report.addError( "%#: <Occupancy> needs an id and at least two slots", sourceName );
+                    report.addErrorWithID( "Appearance.OccupancyShape", "%#: <Occupancy> needs an id and at least two slots", sourceName );
                 else if ( findOccupancy( occupancy._id ) != nullptr )
-                    report.addError( "%#: occupancy '%#' is declared twice", sourceName, occupancy._id.c_str() );
+                    report.addErrorWithID( "Appearance.OccupancyRepeated", "%#: occupancy '%#' is declared twice", sourceName, occupancy._id.c_str() );
                 else
                     _listOccupancy.push_back( occupancy );
             }
@@ -80,7 +80,7 @@ namespace sw
             }
         }
         if ( _listSlot.empty() )
-            report.addError( "%#: <SlotTable> has no <Slot>", sourceName );
+            report.addErrorWithID( "Appearance.SlotTableEmpty", "%#: <SlotTable> has no <Slot>", sourceName );
         return report.getErrors().size() == errorCountBefore;
     }
 

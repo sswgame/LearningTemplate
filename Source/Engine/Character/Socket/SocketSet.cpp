@@ -86,7 +86,7 @@ namespace sw
                 continue;
             if ( hasKind( name ) )
             {
-                reader.addError( child, string( "repeats kind '" ) + name.c_str() + "'" );
+                reader.addError( "Character.SocketKindRepeated", child, string( "repeats kind '" ) + name.c_str() + "'" );
                 continue;
             }
             _listKind.push_back( name );
@@ -174,7 +174,7 @@ namespace sw
             return;
         if ( findSocket( socket._name ) != nullptr )
         {
-            reader.addError( node, string( "repeats socket '" ) + socket._name.c_str() + "'" );
+            reader.addError( "Character.SocketRepeated", node, string( "repeats socket '" ) + socket._name.c_str() + "'" );
             return;
         }
         if ( CharacterDataReader::hasAttribute( node, "parent" ) )
@@ -218,7 +218,7 @@ namespace sw
         {
             const string_view anchorText = StringUtil::trim( node.getAttributeText( "anchor" ) );
             if ( engine::getSubsystem<TypeRegistry>().enumFromString( anchorText, socket._anchor ) == false )
-                reader.addError( node, string( "has unknown anchor '" ) + string( anchorText ) + "' (Bone, Surface)" );
+                reader.addError( "Character.SocketAnchorUnknown", node, string( "has unknown anchor '" ) + string( anchorText ) + "' (Bone, Surface)" );
             socket._fieldMask |= SocketFieldBit::kAnchor;
         }
         _listSocket.push_back( std::move( socket ) );
@@ -237,7 +237,7 @@ namespace sw
             return;
         if ( findVirtualBone( virtualBone._name ) != nullptr )
         {
-            reader.addError( node, string( "repeats virtual bone '" ) + virtualBone._name.c_str() + "'" );
+            reader.addError( "Character.VirtualBoneRepeated", node, string( "repeats virtual bone '" ) + virtualBone._name.c_str() + "'" );
             return;
         }
         _listVirtualBone.push_back( virtualBone );

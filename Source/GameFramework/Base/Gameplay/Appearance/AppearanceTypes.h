@@ -71,14 +71,8 @@ namespace sw
     class SW_GF_API AppearanceLoadReport
     {
     public:
-        /** @brief id 없이(`Appearance.DataInvalid`) 오류를 더합니다. 테스트가 찾을 오류는 `addErrorWithID` 로 사건 id 를 단다. */
-        template <typename... Args>
-        void addError( string_view format, Args&&... args )
-        {
-            addErrorWithID( "Appearance.DataInvalid", format, std::forward<Args>( args )... );
-        }
         /**
-         * @brief 사건 id 가 붙은 오류를 더합니다. 경고 로그에도 같은 id 가 붙는다(`SW_LOG_WARNING_ID` 와 같다).
+         * @brief 사건 id 가 붙은 오류를 더합니다. id 없는 형태는 없다. 경고 로그에도 같은 id 가 붙는다(`SW_LOG_WARNING_ID` 와 같다).
          * @param pID `"영역.사건"` 꼴의 **글자 상수**입니다. 같은 사건은 같은 id 를 쓴다.
          */
         template <typename... Args>
