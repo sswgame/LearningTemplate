@@ -85,6 +85,10 @@ namespace sw
         void flushQueue();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
+        /** @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)에게 한 줄을 알립니다. 락 밖에서 부르며 그 세대 칸에 "부르는 중" 을 올려 둡니다. */
+        void broadcastToListeners( const LogEntry& entry );
+        /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */
+        void submitRecord( LogRecord&& record );
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */
         void dispatchToOutputs( const LogRecord& record );
         /**
