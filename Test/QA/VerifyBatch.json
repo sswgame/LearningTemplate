@@ -628,6 +628,21 @@
       "id": "mesh-modifier-preview-cost", "title": "큰 메시(10 만 정점 이상)에서 매개변수 끌기 · 시간 재생 중 프레임 시간과 Editor.MeshModifiers.* 구간", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
       "need_command": "큰 메시를 열어 매개변수를 끄는 입력 흐름을 한 명령으로 도는 perf-compare 케이스가 없다(프로파일러의 Editor.MeshModifiers.Refresh · Apply · CpuMesh 구간이 값을 낸다)",
       "source": "docs/plans/MeshModifierPreviewCost.md MM2", "result_doc": "docs/plans/MeshModifierPreviewCost.md 2절"
+    },
+    {
+      "id": "behavior-tree-tests", "title": "행동 트리 데이터 파일 로더 · 편집 모델 · 지휘관 AI 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "BehaviorTreeAssetTest.*,BehaviorTreeEditModelTest.*,RealTimeStrategyTest.*",
+      "source": "docs/plans/DesignerDataToolsAudit.md D1 D2", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
+    },
+    {
+      "id": "catalog-curve-model-test", "title": "카탈로그 곡선 · 그래디언트 도우미와 문서(중첩 키 편집 · 빈 채널 키 더하기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "CatalogCurveModelTest.*,CatalogDocumentTest.*",
+      "source": "docs/plans/DesignerDataToolsAudit.md D4", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
+    },
+    {
+      "id": "behavior-tree-editor-selftests", "title": "에디터 자체 테스트 behaviorTree.panelDraws · behaviorTree.modelRoundTrips(행동 트리 창이 확장 이미지에서 그려진다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["AppSmokeTest.EditorSelfTestsPassInsideTheEditor"], "covered_by": "panel-id-literals-p3",
+      "source": "docs/plans/DesignerDataToolsAudit.md D2", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
     }
   ]
 }

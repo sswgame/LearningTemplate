@@ -31,7 +31,7 @@
 레지스트리는 카탈로그 편집기(`CatalogPanel`)의 파일 목록이기도 하다. 그래서 "순수 로더인가" 만으로 옮기지 않고, 올렸을 때 같은 파일을 두 편집기가 쥐지 않는지를 함께 본다. 테스트 표(`kArrDataKind`)에 남긴 줄의 까닭은 넷 중 하나이고 표의 주석에도 적었다.
 
 - 테스트 전용 판단을 든다: `scene` · `prefab` · `uidocument` · `uistylesheet` · `animgraph` · `sequence` · `tilemap` · `vrmavatar` · `usersettings`.
-- 전용 편집기가 있다(올리면 두 편집기가 쥔다): `tileset` · `dialoguegraph` · `animgraph` · `bonemask` · `rig` · `inputmap` · `material` · `spriteclip` · `physicsasset` · `pairedanimation` · `skeleton`.
+- 전용 편집기가 있다(올리면 두 편집기가 쥔다): `tileset` · `dialoguegraph` · `animgraph` · `bonemask` · `rig` · `inputmap` · `material` · `spriteclip` · `physicsasset` · `pairedanimation` · `skeleton` · `behaviortree`(행동 트리 편집 창, [DesignerDataToolsAudit](DesignerDataToolsAudit.md) D2).
 - 표 편집으로 고치는 카탈로그가 아니다: `clipdata` · `sourcemanifest`(JSON) · `scenario` · `automationlogs` · `enginedefaultassets` · `pipeline` · `renderpass`(렌더 구성 에셋) · 로컬라이제이션 문서 다섯(전용 현지화 도구가 쥔다).
 - 읽는 데 다른 표가 먼저 필요하다: `sockets` · `fittables` · `partfit` · `notifytable` · `retargetprofile` · `bonelod` · `livelinkface*`.
 

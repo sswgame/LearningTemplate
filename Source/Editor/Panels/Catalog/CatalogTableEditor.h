@@ -7,6 +7,9 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+
+#include "Editor/Panels/Catalog/CatalogCurveModel.h"
 
 namespace sw::editor
 {
@@ -36,18 +39,29 @@ namespace sw::editor
             SetCell,
             UnsetCell,
             AddRow,
-            RemoveRow
+            RemoveRow,
+            AddCurveKey ///< `_pendingElement` 곡선의 끝에 키를 더한다
         };
 
-        void               drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell );
+        void drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell );
+        /** @brief "곡선 편집" 창입니다 - @p _curveOwner 원소 아래의 모든 곡선을 그래프 · 그래디언트 띠 · 키 표로 고칩니다(키 칸은 `drawCell` 과 같은 길이라 되돌리기 한 단계 = 칸 편집 한 번). */
+        void               drawCurvePopup( const CatalogDocument& document );
+        void               drawGradientBar( const CatalogGradient& gradient ) const;
+        void               drawCurveBlock( const CatalogDocument& document, const CatalogCurve& curve );
         [[nodiscard]] bool applyPending( CatalogDocument& inoutDocument );
 
-        string      _editText;
-        string      _pendingColumn;
-        string      _pendingText;
-        string      _lastActionText;
-        uint32      _editID;
-        int32       _pendingElement;
-        PendingKind _pendingKind;
+        vector<CatalogCurve>    _listCurve;       ///< 곡선 창이 이번 프레임에 그리는 곡선
+        vector<CatalogGradient> _listGradient;    ///< 그 가운데 네 채널이 갖춰진 묶음
+        vector<CatalogCurve>    _listProbeCurve;  ///< 행마다 "곡선이 있나" 를 묻는 재사용 버퍼
+        vector<float32>         _listSample;      ///< 곡선 표본 재사용 버퍼
+        int32                   _curveOwner;      ///< 곡선 창이 보는 원소(-1 이면 닫힘)
+        bool                    _bOpenCurvePopup; ///< 다음 그리기에서 창을 연다
+        string                  _editText;
+        string                  _pendingColumn;
+        string                  _pendingText;
+        string                  _lastActionText;
+        uint32                  _editID;
+        int32                   _pendingElement;
+        PendingKind             _pendingKind;
     };
 } // namespace sw::editor

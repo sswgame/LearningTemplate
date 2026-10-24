@@ -56,6 +56,8 @@
 
 #include "EngineTest/HostTargetTestUtil.h"
 
+#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
+
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
@@ -87,6 +89,7 @@ namespace
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.xml" ); }
         static bool isDialogueGraph( sw::string_view resourceID ) { return endsWith( resourceID, sw::DialogueGraphAsset::kExtension ); }
+        static bool isBehaviorTree( sw::string_view resourceID ) { return endsWith( resourceID, sw::BehaviorTreeAsset::kExtension ); }
         static bool isUserSettingsSchema( sw::string_view resourceID ) { return endsWith( resourceID, ".settings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceID ) { return endsWith( resourceID, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceID ) { return endsWith( resourceID, sw::Skeleton::kExtension ); }
@@ -200,6 +203,13 @@ namespace
             if ( bLoaded == false )
                 SW_LOG_WARNING( "%#", error.c_str() );
             return bLoaded;
+        }
+
+        /** @brief 행동 트리 - 모르는 노드 · 속성 · 비교 · 중단 이름과 등록되지 않은 작업 이름은 로드 오류다. 전용 편집기가 있어 레지스트리에 올리지 않고 이 표에 둔다. */
+        [[nodiscard]] static bool loadBehaviorTree( const sw::string& resourceID )
+        {
+            sw::BehaviorTreeAsset asset;
+            return asset.loadFromResource( resourceID );
         }
 
         [[nodiscard]] static bool loadInputMap( const sw::string& resourceID )
@@ -498,6 +508,7 @@ namespace
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
             {      "dialoguegraph",       &isDialogueGraph,                                 &loadDialogueGraph},
+            {       "behaviortree",        &isBehaviorTree,                                  &loadBehaviorTree},
             {           "sequence",            &isSequence,                                      &loadSequence},
             {            "tileset",             &isTileSet,                                       &loadTileSet},
             {            "tilemap",             &isTileMap,                                       &loadTileMap},
