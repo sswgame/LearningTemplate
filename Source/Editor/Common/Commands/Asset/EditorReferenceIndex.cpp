@@ -6,7 +6,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
+
+#include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
 {
@@ -84,6 +87,31 @@ namespace sw::editor
                 EditorReferenceIndex::extractReferences( resourceID, text, listSortedKnownID, outListReference );
                 return true;
             }
+
+            /**
+             * @brief 전체 스캔의 병렬 본문입니다. 텍스트 에셋 [start, end) 를 읽어 파일마다 **자기 칸**에만 쓴다.
+             * @details 공유하는 것은 읽기 전용(`_listSortedKnownID` · 경로)뿐이고 칸은 서로 겹치지 않아 잠금이 없다. 합치는 것은 호출 스레드가 직렬로 한다.
+             */
+            struct ScanJob
+            {
+                string_view                   _resourceRoot;
+                const vector<string>*         _pListSortedKnownID{ nullptr };
+                const string* const*          _ppTextID{ nullptr };      ///< 텍스트 에셋 id 들(`_listSortedKnownID` 의 원소를 가리킨다)
+                vector<EditorAssetReference>* _pArrReference{ nullptr }; ///< 파일마다 하나인 결과 칸
+                uint8*                        _pArrScanned{ nullptr };   ///< 파일마다 하나인 "읽었다" 표시
+
+                void run( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                    {
+                        if ( scanFile( _resourceRoot, *_ppTextID[index], *_pListSortedKnownID, _pArrReference[index] ) )
+                            _pArrScanned[index] = SW_TRUE;
+                    }
+                }
+            };
+
+            /** @brief 파일 수가 이보다 적으면 나누지 않습니다. 파일 하나가 읽기 · 파싱이라 디스패치 비용보다 훨씬 큽니다. */
+            static constexpr uint32 kSerialFileThreshold = 8;
 
             static string makeResourceID( string_view resourceRoot, string_view filePath )
             {
@@ -169,6 +197,11 @@ namespace sw::editor
 
     void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData )
     {
+        scan( resourceRoot, outData, editor::findSubsystem<TaskManager>() );
+    }
+
+    void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData, TaskManager* pTaskManager )
+    {
         const Stopwatch stopwatch;
         outData = EditorReferenceIndexData{};
         vector<string> listFile;
@@ -184,12 +217,41 @@ namespace sw::editor
         }
         std::sort( outData._listKnownID.begin(), outData._listKnownID.end() );
 
+        vector<const string*> listTextID;
         for ( const string& resourceID : outData._listKnownID )
         {
-            if ( isTextAsset( resourceID ) == false )
+            if ( isTextAsset( resourceID ) )
+                listTextID.push_back( &resourceID );
+        }
+
+        // 파일마다 자기 칸에 담고(병렬), 파일 순서대로 직렬로 합친다. 정렬 키가 (대상, 참조자, 줄)이고 같은 키는 지우므로 병렬이어도 결과가 직렬과 같다.
+        const uint32                          fileCount = static_cast<uint32>( listTextID.size() );
+        vector<vector<EditorAssetReference>>  listFileReference( fileCount );
+        vector<uint8>                         listScanned( fileCount, SW_FALSE );
+        EditorReferenceIndexInternal::ScanJob job{};
+        job._resourceRoot       = resourceRoot;
+        job._pListSortedKnownID = &outData._listKnownID;
+        job._ppTextID           = listTextID.data();
+        job._pArrReference      = listFileReference.data();
+        job._pArrScanned        = listScanned.data();
+        if ( pTaskManager != nullptr )
+        {
+            // 호출 스레드가 워커여도 된다: `runParallel` 은 호출 스레드가 첫 청크부터 직접 돌고, 합류를 기다리는 동안 다른 일을 돕는다.
+            pTaskManager->runParallel( fileCount, EditorReferenceIndexInternal::kSerialFileThreshold,
+                                       SW_DELEGATE_METHOD( ParallelBlockDelegate, &EditorReferenceIndexInternal::ScanJob::run, &job ) );
+        }
+        else
+        {
+            job.run( 0, fileCount );
+        }
+
+        for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
+        {
+            if ( listScanned[fileIndex] == SW_FALSE )
                 continue;
-            if ( EditorReferenceIndexInternal::scanFile( resourceRoot, resourceID, outData._listKnownID, outData._listReference ) )
-                ++outData._scannedFileCount;
+            ++outData._scannedFileCount;
+            outData._listReference.insert( outData._listReference.end(), std::make_move_iterator( listFileReference[fileIndex].begin() ),
+                                           std::make_move_iterator( listFileReference[fileIndex].end() ) );
         }
         sortByTarget( outData._listReference );
         outData._scanMilliseconds = stopwatch.getElapsedMilliseconds();

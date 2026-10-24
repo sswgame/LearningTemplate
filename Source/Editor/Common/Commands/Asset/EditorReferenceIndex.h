@@ -9,6 +9,11 @@
 
 #include "Editor/Common/EditorExports.h"
 
+namespace sw
+{
+    class TaskManager;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief 참조 하나입니다. @p _referrerPath 의 텍스트 안에 @p _targetPath 가 적혀 있습니다. */
@@ -48,8 +53,13 @@ namespace sw::editor
     public:
         EditorReferenceIndex();
 
-        /** @brief @p resourceRoot(`Resource/`) 아래를 모두 스캔해 @p outData 를 채웁니다. 워커에서 호출합니다. */
+        /** @brief @p resourceRoot(`Resource/`) 아래를 모두 스캔해 @p outData 를 채웁니다. 워커에서 호출합니다. 작업 관리자는 에디터 서비스에서 찾습니다. */
         static void scan( string_view resourceRoot, EditorReferenceIndexData& outData );
+        /**
+         * @brief 위와 같되 텍스트 에셋을 @p pTaskManager 로 파일 단위 병렬로 읽습니다. nullptr 이면 현재 스레드가 차례로 읽습니다.
+         * @details 두 경로의 결과는 같습니다(파일 순서로 합친 뒤 전순서 키로 정렬). 호출 스레드가 작업 관리자의 워커여도 막히지 않습니다.
+         */
+        static void scan( string_view resourceRoot, EditorReferenceIndexData& outData, TaskManager* pTaskManager );
         /** @brief 스캔한 결과로 색인을 교체합니다. 이후 `isReady` 가 true 입니다. */
         void assign( EditorReferenceIndexData&& data );
         /** @brief 파일 하나의 참조를 다시 스캔합니다. 파일이 지워졌으면 그 파일이 적은 참조와 그 파일의 id 를 뺍니다. */
