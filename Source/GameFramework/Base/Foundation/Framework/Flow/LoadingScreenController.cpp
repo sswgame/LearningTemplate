@@ -6,11 +6,14 @@
 
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -43,6 +46,26 @@ namespace sw
             const UISystem*                pUISystem   = pController != nullptr ? pController->getUISystem() : nullptr;
             return pUISystem != nullptr && pUISystem->isOnScreenSuppressed() == false && pController->findFadeScreen() != nullptr;
         }
+
+        /** @brief `<Tip text="원문"/>` 들을 읽습니다. `text` 가 없거나 빈 팁은 읽기 오류입니다(조용히 건너뛰지 않는다). */
+        [[nodiscard]] bool readTips( const XMLNode& root, string_view sourceName, vector<string>& outListTip )
+        {
+            bool bValid = true;
+            for ( XMLNode node = root.findChild( "Tip" ); node; node = node.findNextSibling( "Tip" ) )
+            {
+                const utf8* pText = node.findAttribute( "text" );
+                if ( pText == nullptr || pText[0] == '\0' )
+                {
+                    SW_LOG_ERROR( "%#: <Tip> needs a non-empty text", sourceName );
+                    bValid = false;
+                    continue;
+                }
+                outListTip.push_back( pText );
+            }
+            if ( bValid == false )
+                outListTip.clear();
+            return bValid;
+        }
     } // namespace
 
     SW_AUTOMATION_CAPTURE_BLOCKER( screenFade, "ScreenFade", &isScreenFadeCoveringCapture );
@@ -69,6 +92,10 @@ namespace sw
         {
             LoadingScreenSettings settings = _settings;
             settings._documentPath         = pSettings->_loadingScreen; // 칸이 없으면 로딩 화면 없음(`_documentPath.isSet()`)
+            settings._listTip.clear();
+            // 팁 파일을 적었는데 읽지 못하면 기동을 멈춘다 — 적지 않은 것(팁 없음)과 깨진 것을 섞지 않는다.
+            if ( pSettings->_loadingTips.isSet() && loadTipsFromResource( pSettings->_loadingTips.get(), settings._listTip ) == false )
+                return SubsystemInitResult::Failed;
             setSettings( settings );
         }
         UISystem* pUISystem = game::findSubsystem<UISystem>();
@@ -117,12 +144,13 @@ namespace sw
         return true;
     }
 
-    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, ScreenFade& fade )
+    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade )
     {
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen != nullptr )
         {
             _shownSeconds += deltaSeconds;
+            applyProgress( *pScreen, loadProgress );
             if ( bLoading || _shownSeconds < _settings._minimumSeconds )
             {
                 _spinnerAngle    = MathUtil::fmod( _spinnerAngle + kSpinnerRadiansPerSecond * deltaSeconds, MathUtil::kPi * 2.0f );
@@ -143,6 +171,42 @@ namespace sw
             }
         }
         syncFadeOverlay( fade.getOverlayAlpha() );
+    }
+
+    void LoadingScreenController::applyProgress( UIScreen& screen, std::optional<float32> loadProgress )
+    {
+        SliderWidget* pProgress = screen.getTree().findWidget<SliderWidget>( hashed_string( kProgressWidgetName ) );
+        if ( pProgress == nullptr )
+            return;
+        if ( loadProgress.has_value() == false )
+        {
+            pProgress->setVisibility( WidgetVisibility::Collapsed );
+            return;
+        }
+        pProgress->setRange( 0.0f, 1.0f, 0.0f );
+        pProgress->setValue( MathUtil::clamp( *loadProgress, 0.0f, 1.0f ) );
+        pProgress->setVisibility( WidgetVisibility::HitTestInvisible ); // 진행 막대는 입력을 받지 않는다
+    }
+
+    bool LoadingScreenController::loadTipsFromResource( string_view path, vector<string>& outListTip )
+    {
+        outListTip.clear();
+        XMLDocument doc;
+        XMLNode     root;
+        string      sourceName;
+        if ( GameDataXML::loadRoot( doc, path, "LoadingTips", root, sourceName ) == false )
+            return false;
+        return readTips( root, sourceName, outListTip );
+    }
+
+    bool LoadingScreenController::loadTipsFromXMLText( string_view xmlText, string_view sourceName, vector<string>& outListTip )
+    {
+        outListTip.clear();
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "LoadingTips", root ) == false )
+            return false;
+        return readTips( root, sourceName, outListTip );
     }
 
     bool LoadingScreenController::isShowing() const

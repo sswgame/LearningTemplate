@@ -33,6 +33,8 @@ namespace sw
                     return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
                 case RHIBufferState::Index:
                     return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+                case RHIBufferState::CopySource:
+                    return D3D12_RESOURCE_STATE_COPY_SOURCE;
                 case RHIBufferState::Common:
                     return D3D12_RESOURCE_STATE_COMMON;
             }
@@ -949,6 +951,19 @@ namespace sw
         barrier.Transition.StateAfter  = stateAfter;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         commandListForRecord()->ResourceBarrier( 1, &barrier );
+    }
+
+    void D3D12RHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    {
+        const bool bNothingToCopy = _pCmdList == nullptr || source == 0 || readback == 0 || sizeBytes == 0;
+        if ( bNothingToCopy )
+            return;
+        ID3D12Resource* pSource = _pDevice->resolveBuffer( source );
+        ID3D12Resource* pTarget = _pDevice->resolveBuffer( readback );
+        if ( pSource == nullptr || pTarget == nullptr )
+            return;
+        // 읽기 힙 버퍼는 만들 때부터 COPY_DEST 로 둔다(만든 곳 `createReadbackBuffer`) — 배리어가 없다. 원본은 부르는 쪽이 COPY_SOURCE 로 옮겨 두었다.
+        commandListForRecord()->CopyBufferRegion( pTarget, 0, pSource, 0, sizeBytes );
     }
 
 } // namespace sw

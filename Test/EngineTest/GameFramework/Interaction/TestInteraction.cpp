@@ -654,6 +654,55 @@ SW_TEST_CASE( InteractionTest, PairedAnimationStepStartsSessionWithBothAnimators
 }
 
 /**
+ * @brief [InteractionTest] 단계의 몽타주는 하는 쪽의 애니메이터를 실제로 부른다 — 누르고 있는 동안 몽타주 상태이고, 떼어 취소하면 그 전 상태로 돌아간다. 몽타주가 없는 단계는 애니메이터를 건드리지 않는다
+ * @details 클립 폴더(`Idle` 반복, `Craft`)로 애니메이터를 세운다(그래프 파일 없이 클립 이름이 상태 이름). 정의 `Craft` 의 단계 몽타주는 `Craft`, `Plain` 은 비어 있다.
+ */
+SW_TEST_CASE( InteractionTest, StepMontagePlaysOnTheInteractorsAnimatorAndCancelRestores )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string folder   = test::makeTempPath( "interactionmontage" );
+    const bool   bWritten = InteractionTestInternal::writeClip( folder, "Idle", true ) && InteractionTestInternal::writeClip( folder, "Craft", false );
+    SW_ASSERT_TRUE( bWritten );
+
+    GameObjectManager          manager;
+    SkeletalAnimatorComponent* pPlayerAnimator = InteractionTestInternal::addAnimatedObject( manager, "Player", folder );
+    SW_ASSERT_NOT_NULL( pPlayerAnimator );
+    InteractorComponent* pInteractor = pPlayerAnimator->getOwner()->addComponent<InteractorComponent>();
+    SW_ASSERT_NOT_NULL( pInteractor );
+    pInteractor->setEyeOffset( float3{} );
+    InteractionDef craft        = InteractionTestInternal::makeDef( "Craft", InteractionInputMode::Hold );
+    craft._listStep[0]._montage = hashed_string( "Craft" );
+    GameObject* pBench          = manager.createGameObject( hashed_string( "Bench" ) );
+    pBench->addComponent<SceneComponent>()->setWorldPosition( float3{ 0.0f, 0.0f, 1.5f } );
+    InteractableComponent* pBenchInteractable = pBench->addComponent<InteractableComponent>();
+    SW_ASSERT_NOT_NULL( pBenchInteractable );
+    pBenchInteractable->setDefinition( craft );
+
+    manager.beginPlay();
+    SW_ASSERT_TRUE( ::test::finishAssetArrivals( manager ) ); // 클립을 읽는 중에는 재생을 미룬다
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
+    SW_EXPECT_STREQ( "Idle", pPlayerAnimator->getCurrentStateName().c_str() );
+
+    // 누르고 있는 동안 — 몽타주 상태.
+    InteractionTestInternal::updateFrames( manager, 10, pInteractor, true );
+    SW_EXPECT_TRUE( pInteractor->getSession().isActive() );
+    SW_EXPECT_STREQ( "Craft", pPlayerAnimator->getCurrentStateName().c_str() );
+
+    // 떼면 취소 — 그 전 상태로 돌아간다.
+    InteractionTestInternal::updateFrames( manager, 3, pInteractor, false );
+    SW_EXPECT_FALSE( pInteractor->getSession().isActive() );
+    SW_EXPECT_STREQ( "Idle", pPlayerAnimator->getCurrentStateName().c_str() );
+
+    // 몽타주가 없는 정의는 애니메이터를 건드리지 않는다.
+    InteractionDef plain = InteractionTestInternal::makeDef( "Plain", InteractionInputMode::Hold );
+    pBenchInteractable->setDefinition( plain );
+    InteractionTestInternal::updateFrames( manager, 10, pInteractor, true );
+    SW_EXPECT_TRUE( pInteractor->getSession().isActive() );
+    SW_EXPECT_STREQ( "Idle", pPlayerAnimator->getCurrentStateName().c_str() );
+    manager.endPlay();
+}
+
+/**
  * @brief [InteractionTest] 상호작용 표 파일을 고치면 핫 리로드가 레지스트리의 캐시로 새 표를 읽고, 컴포넌트가 다음 틱에 새 정의를 쓴다
  * @details 표 캐시가 모듈 정적 맵이라 레지스트리 밖에 있으면 에디터 핫 리로드가 찾을 이름이 없어, 고친 파일이 다시 시작할 때까지 반영되지 않는다.
  *          게임 서비스가 묶이면(`bindGameService` — `AssetManager` 포함) 캐시가 레지스트리에 오르고, 다시 읽은 뒤에도 옛 정의를 든 쪽은 죽은 메모리를 읽지 않는다.

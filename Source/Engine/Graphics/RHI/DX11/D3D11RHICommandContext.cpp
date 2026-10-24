@@ -250,6 +250,17 @@ namespace sw
         }
     }
 
+    void D3D11RHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    {
+        ID3D11Buffer* pSource        = _pDevice->resolveBuffer( source );
+        ID3D11Buffer* pTarget        = _pDevice->resolveBuffer( readback );
+        const bool    bNothingToCopy = _pContext == nullptr || pSource == nullptr || pTarget == nullptr || sizeBytes == 0;
+        if ( bNothingToCopy )
+            return;
+        const D3D11_BOX region{ 0, 0, 0, sizeBytes, 1, 1 };
+        _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
+    }
+
     void D3D11RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUavAt( index );

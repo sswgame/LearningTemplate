@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -33,60 +34,37 @@ namespace sw::editor
 
     namespace
     {
-        struct AssetHotReloadInternal
+        /**
+         * @brief 실제로 감시할 확장자 목록을 정합니다.
+         * @details `editortooldefaults.json` 의 `_listHotReloadExtension` 이 정책이고, 다시 읽을 캐시가 있는 종류(`EditorAssetTypeRegistry`)가 한계입니다.
+         *          설정이 비어 있으면 그 종류 전부를 봅니다. 설정에 처리할 수 없는 확장자가 있으면 경고하고 뺍니다.
+         */
+        vector<string> resolveWatchExtensions()
         {
-            /** @brief 에셋 경로 프로퍼티(`PROPERTY( AssetPath )` · `AssetType = …`)의 값입니다. 경로 프로퍼티가 아니거나 문자열이 아니면 빈 값입니다. */
-            static string_view readAssetPath( const PropertyInfo& prop, const Component* pComponent )
+            // 반환 객체는 하나다 — 두 지역 변수를 각각 return 하면 NRVO 가 빠진다(`-Wnrvo`).
+            vector<string>        listExtension{};
+            const vector<string>& listConfigured = getEditorToolDefaults()._listHotReloadExtension;
+            if ( listConfigured.empty() )
             {
-                static const hashed_string s_string( "string" );
-                static const hashed_string s_hashedString( "hashed_string" );
-                if ( prop._metadata->_bAssetPath == SW_FALSE && prop._metadata->_assetType.empty() )
-                    return {};
-                if ( prop._typeName == s_string )
-                {
-                    const string* pValue = prop.getValuePtr<string>( pComponent );
-                    return pValue != nullptr ? string_view( *pValue ) : string_view{};
-                }
-                if ( prop._typeName == s_hashedString )
-                {
-                    const hashed_string* pValue = prop.getValuePtr<hashed_string>( pComponent );
-                    return pValue != nullptr ? string_view( pValue->c_str() ) : string_view{};
-                }
-                return {};
-            }
-
-            /**
-             * @brief 실제로 감시할 확장자 목록을 정합니다.
-             * @details `editortooldefaults.json` 의 `_listHotReloadExtension` 이 정책이고, 다시 읽을 캐시가 있는 종류(`EditorAssetTypeRegistry`)가 한계입니다.
-             *          설정이 비어 있으면 그 종류 전부를 봅니다. 설정에 처리할 수 없는 확장자가 있으면 경고하고 뺍니다.
-             */
-            static vector<string> resolveWatchExtensions()
-            {
-                // 반환 객체는 하나다 — 두 지역 변수를 각각 return 하면 NRVO 가 빠진다(`-Wnrvo`).
-                vector<string>        listExtension{};
-                const vector<string>& listConfigured = getEditorToolDefaults()._listHotReloadExtension;
-                if ( listConfigured.empty() )
-                {
-                    EditorAssetTypeRegistry::appendReloadableSuffixes( listExtension );
-                    return listExtension;
-                }
-
-                vector<string> listHandled{};
-                EditorAssetTypeRegistry::appendReloadableSuffixes( listHandled );
-                listExtension.reserve( listConfigured.size() );
-                for ( const string& extension : listConfigured )
-                {
-                    if ( std::any_of( listHandled.begin(), listHandled.end(), [&extension]( const string& handled )
-                    { return StringUtil::equals( handled, extension, true ); } ) )
-                    {
-                        listExtension.push_back( extension );
-                        continue;
-                    }
-                    SW_LOG_WARNING( "Ignoring hot-reload extension '%#' because it has no handler (editortooldefaults.json)", extension.c_str() );
-                }
+                EditorAssetTypeRegistry::appendReloadableSuffixes( listExtension );
                 return listExtension;
             }
-        };
+
+            vector<string> listHandled{};
+            EditorAssetTypeRegistry::appendReloadableSuffixes( listHandled );
+            listExtension.reserve( listConfigured.size() );
+            for ( const string& extension : listConfigured )
+            {
+                if ( std::any_of( listHandled.begin(), listHandled.end(), [&extension]( const string& handled )
+                { return StringUtil::equals( handled, extension, true ); } ) )
+                {
+                    listExtension.push_back( extension );
+                    continue;
+                }
+                SW_LOG_WARNING( "Ignoring hot-reload extension '%#' because it has no handler (editortooldefaults.json)", extension.c_str() );
+            }
+            return listExtension;
+        }
     } // namespace
 
     SW_LOG_CALLER( "AssetHotReload" );
@@ -108,7 +86,7 @@ namespace sw::editor
     {
         shutdown();
 
-        const vector<string> listExtension = AssetHotReloadInternal::resolveWatchExtensions();
+        const vector<string> listExtension = resolveWatchExtensions();
         if ( listExtension.empty() )
         {
             SW_LOG_INFO( "Asset hot reload: no extensions to watch, not enabling it." );
@@ -255,7 +233,7 @@ namespace sw::editor
                     continue;
                 pType->forEachProperty( [pComponent, &reloaded, &notified]( const PropertyInfo& prop )
                 {
-                    const string_view path = AssetHotReloadInternal::readAssetPath( prop, pComponent );
+                    const string_view path = ComponentAssetPathUtil::readAssetPath( prop, pComponent );
                     if ( path.empty() || StringUtil::equals( FileUtil::normalizeSeparators( path ), reloaded, true ) == false )
                         return;
                     pComponent->onPropertyChanged( prop._name );

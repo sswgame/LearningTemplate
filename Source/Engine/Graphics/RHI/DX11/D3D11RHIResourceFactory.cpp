@@ -278,6 +278,52 @@ namespace sw
         _pDevice->_releaseQueue.enqueueLedgerRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryLedger(), buffer );
     }
 
+    RHIBufferHandle D3D11RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    {
+        uint32     totalBytes{ 0 };
+        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        if ( bInvalidReadbackRequest )
+            return 0;
+
+        // 원본이 구조화 버퍼라 같은 모양(구조화 · 원소 크기)의 스테이징 버퍼여야 CopySubresourceRegion 이 받는다.
+        D3D11_BUFFER_DESC bufferDesc{};
+        bufferDesc.Usage               = D3D11_USAGE_STAGING;
+        bufferDesc.ByteWidth           = static_cast<UINT>( totalBytes );
+        bufferDesc.BindFlags           = 0;
+        bufferDesc.CPUAccessFlags      = D3D11_CPU_ACCESS_READ;
+        bufferDesc.MiscFlags           = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+        bufferDesc.StructureByteStride = elementSize;
+
+        Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
+        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ) ) )
+            return 0;
+        return _pDevice->storeBuffer( std::move( buffer ) );
+    }
+
+    bool D3D11RHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    {
+        ID3D11Buffer* pBuffer     = _pDevice->resolveBuffer( readback );
+        const bool    bUnreadable = pBuffer == nullptr || pDestination == nullptr || sizeBytes == 0 || _pDevice->_deviceContext == nullptr;
+        if ( bUnreadable )
+            return false;
+        D3D11_BUFFER_DESC bufferDesc{};
+        pBuffer->GetDesc( &bufferDesc );
+        const bool bNotReadback = bufferDesc.Usage != D3D11_USAGE_STAGING || ( bufferDesc.CPUAccessFlags & D3D11_CPU_ACCESS_READ ) == 0 || sizeBytes > bufferDesc.ByteWidth;
+        if ( bNotReadback )
+        {
+            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
+            return false;
+        }
+        // 즉시 컨텍스트는 스레드 안전하지 않다. 기다리지 않는다 — GPU 가 아직이면(콜백 계약 밖) 실패로 돌려준다.
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
+        if ( FAILED( _pDevice->_deviceContext->Map( pBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped ) ) || mapped.pData == nullptr )
+            return false;
+        Memory::copy( pDestination, mapped.pData, sizeBytes );
+        _pDevice->_deviceContext->Unmap( pBuffer, 0 );
+        return true;
+    }
+
     bool D3D11RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord               = _pDevice->resolveTexture( texture );

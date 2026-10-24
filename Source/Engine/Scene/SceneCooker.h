@@ -102,7 +102,7 @@ namespace sw
          * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 모르는 타입의 컴포넌트가 든 씬도 쓰지 않고 셉니다. 하나라도 있으면 배포본에 그 씬이 없다 —
          *                       쿠킹은 실패다. 다만 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)의 씬이 등록되지 않은 컴포넌트를 쓰면 세지 않고 건너뜁니다 —
          *                       그 게임 모듈은 이 빌드에 없고, 배포본은 활성 게임의 팩만 엽니다.
-         * @return 기록한 씬 파일 수입니다.
+         * @return 기록한 씬 파일 수입니다. 씬마다 옆에 프리로드 목록(`<씬>.preload.json`)도 굽지만 이 수에는 세지 않는다.
          *
          * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 베이크하고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
@@ -117,6 +117,12 @@ namespace sw
          * @brief 씬 쿠킹 작업의 키 값입니다. 설정 해시는 @p registry 의 타입 · 프로퍼티 · 열거자 지문입니다(쿠킹된 상태의 바이트가 그 표로 정해진다).
          */
         SW_API static CookJobDesc makeCookJobDesc( const TypeRegistry& registry );
+
+        /**
+         * @brief 씬 프리로드 목록 쿠킹 작업의 키 값입니다(`ScenePreloadList`). 씬 쿠킹과 따로 도는 작업이라 키가 따로다.
+         * @details 설정 해시는 0 이다 — 목록은 씬이 지어질 때 읽은 입력(씬 · 프리팹 · 컴포넌트 경로)으로만 정해진다. 형식 버전은 `ScenePreloadList::kVersion`.
+         */
+        SW_API static CookJobDesc makePreloadCookJobDesc();
 
         /**
          * @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 베이크됩니다.

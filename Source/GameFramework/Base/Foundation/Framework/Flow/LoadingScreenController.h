@@ -18,6 +18,8 @@
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
+#include <optional>
+
 namespace sw
 {
     class ScreenFade;
@@ -45,7 +47,9 @@ namespace sw
      *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 시작한다.
      *            닫기 애니메이션 역할이며, 검은 화면에서 씬이 드러난다. 페이드는 입력을 막지 않는다.
      *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `getStringByText` 로 문자열을 찾는다.
-     *            진행률은 표시하지 않는다. 씬 매니저에 진행 질의가 없기 때문이다.
+     *            진행률은 부르는 쪽이 넘긴다(`update` 의 `loadProgress` — 씬 매니저의 프리로드 진행 `SceneManager::tryGetLoadProgress`). 문서에 `Progress` 슬라이더가 있으면
+     *            값이 있을 때 보이고(입력은 받지 않는다) 없으면 접는다.
+     *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
      *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 전체 화면 검은 패널을 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
      *          UI 시스템이 없으면(전용 서버, 헤드리스) 아무것도 하지 않는다. 게임 스레드에서만 써야 한다.
@@ -65,6 +69,16 @@ namespace sw
         /** @brief 로딩 문서에서 돌릴 위젯과 팁 글 위젯의 이름입니다. */
         static constexpr const utf8* kSpinnerWidgetName = "Spinner";
         static constexpr const utf8* kTipWidgetName     = "Tip";
+        /** @brief 로딩 문서의 진행 슬라이더 이름입니다(0~1). 없으면 진행률을 그리지 않는다. */
+        static constexpr const utf8* kProgressWidgetName = "Progress";
+
+        /**
+         * @brief 팁 목록 파일(`<LoadingTips><Tip text="원문"/>…</LoadingTips>`)을 읽어 @p outListTip 을 채웁니다(먼저 비운다). 파일을 못 읽거나 `text` 가 빈 팁이 있으면 오류를 남기고 false 입니다.
+         * @details 글은 지역화 원문이다 — 열 때 `LocalizationManager::getStringByText` 로 지금 문화권의 글로 푼다. 수집은 현지화 프로젝트의 `assetRules`(`files`·`attribute="text"`·`elements`)로 한다.
+         */
+        [[nodiscard]] static bool loadTipsFromResource( string_view path, vector<string>& outListTip );
+        /** @brief `loadTipsFromResource` 의 XML 문자열 버전이며 테스트가 씁니다. */
+        [[nodiscard]] static bool loadTipsFromXMLText( string_view xmlText, string_view sourceName, vector<string>& outListTip );
 
         LoadingScreenController();
         ~LoadingScreenController() override;
@@ -84,9 +98,10 @@ namespace sw
         /**
          * @brief 한 프레임을 넘깁니다.
          * @param bLoading 아직 로드 중이면 true 이다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중일 때이다.
+         * @param loadProgress 로드 진행(0~1)입니다. 모르면 비웁니다 — 진행 슬라이더(`Progress`)를 접는다.
          * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 시작한다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
-        void update( float32 deltaSeconds, bool bLoading, ScreenFade& fade );
+        void update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade );
 
         /** @brief 로딩 화면이 떠 있으면 true 입니다. */
         bool isShowing() const;
@@ -104,6 +119,8 @@ namespace sw
         void closeScreens();
         /** @brief 페이드 패널을 알파에 맞춥니다. 알파가 0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춥니다. */
         void syncFadeOverlay( float32 alpha );
+        /** @brief 진행 슬라이더(`Progress`)를 로드 진행에 맞춥니다. 진행을 모르면 접는다. 문서에 슬라이더가 없으면 아무것도 하지 않는다. */
+        static void applyProgress( UIScreen& screen, std::optional<float32> loadProgress );
         /** @brief 팁을 하나 골라 `Tip` 위젯에 넣습니다. 목록이 비면 팁 위젯을 접습니다. */
         void applyTip( UIScreen& screen );
 

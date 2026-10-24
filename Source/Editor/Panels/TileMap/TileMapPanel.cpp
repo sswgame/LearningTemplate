@@ -62,6 +62,30 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readDataLayerCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getDataLayerCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readDataCells( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->countDataCells() );
+                return true;
+            }
+
             [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -83,6 +107,9 @@ namespace sw::editor
     SW_EDITOR_PANEL( TileMapPanel, TileMapPanel::kPanelID, EditorPanelCategory::Tool, 1500 );
     SW_AUTOMATION_PROBE( editorTileMapFlagCells, "Editor.TileMapFlagCells", "Cells set in the Tile Map Tool's selected flag layer (0 on other layers)",
                          &TileMapPanelInternal::readFlagCells );
+    SW_AUTOMATION_PROBE( editorTileMapDataLayers, "Editor.TileMapDataLayers", "Data layers of the Tile Map Tool's map", &TileMapPanelInternal::readDataLayerCount );
+    SW_AUTOMATION_PROBE( editorTileMapDataCells, "Editor.TileMapDataCells", "Cells that differ from the layer default, summed over all data layers of the Tile Map Tool's map",
+                         &TileMapPanelInternal::readDataCells );
     SW_AUTOMATION_PROBE( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker", &TileMapPanelInternal::readPaintTool );
 
     TileMapPanel::TileMapPanel()
@@ -542,15 +569,19 @@ namespace sw::editor
         if ( _layer == PaintLayer::Data )
         {
             ImGui::InputInt( "Value", &_paintDataValue );
+            EditorSelfTestMarks::note( "tileMap.dataLayer.value" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
         }
         ImGui::Separator();
         ImGui::TextUnformatted( "Data Layers" );
         ImGui::InputText( "Name##dataLayer", _newDataLayerName.data(), _newDataLayerName.capacity() );
+        EditorSelfTestMarks::note( "tileMap.dataLayer.name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerNameTip" ) );
         ImGui::InputInt( "Default##dataLayer", &_newDataLayerDefault );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataLayerDefaultTip" ) );
-        if ( ImGui::Button( "Add Data Layer" ) )
+        const bool bAddDataLayer = ImGui::Button( "Add Data Layer" );
+        EditorSelfTestMarks::note( "tileMap.dataLayer.add" );
+        if ( bAddDataLayer )
         {
             // 빈 이름 · 겹치는 이름은 맵이 거절한다 — 읽기도 같은 규칙으로 거절하므로 저장할 수 없는 맵을 만들지 않는다.
             if ( _map.addDataLayer( _newDataLayerName.c_str(), _newDataLayerDefault ) )
@@ -581,6 +612,20 @@ namespace sw::editor
         return count;
     }
 
+    uint32 TileMapPanel::countDataCells() const
+    {
+        uint32 count{ 0 };
+        for ( const TileMapXMLData::DataLayer& dataLayer : _map._listDataLayer )
+        {
+            for ( const int32 value : dataLayer._listValue )
+            {
+                if ( value != dataLayer._defaultValue )
+                    ++count;
+            }
+        }
+        return count;
+    }
+
     void TileMapPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         _atlasThumbnail.clear();
@@ -597,6 +642,7 @@ namespace sw::editor
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 
         ImGui::InputText( "Path", _pathBuffer.data(), _pathBuffer.capacity() );
+        EditorSelfTestMarks::note( "tileMap.path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PathTip" ) );
         ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -615,7 +661,9 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
 
         ImGui::SameLine();
-        if ( ImGui::Button( "Load" ) )
+        const bool bLoad = ImGui::Button( "Load" );
+        EditorSelfTestMarks::note( "tileMap.load" );
+        if ( bLoad )
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
             if ( ResourceIO::hasResource( _pathBuffer.c_str() ) )
@@ -625,7 +673,9 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
         ImGui::SameLine();
-        if ( ImGui::Button( "Save" ) )
+        const bool bSave = ImGui::Button( "Save" );
+        EditorSelfTestMarks::note( "tileMap.save" );
+        if ( bSave )
         {
             if ( saveXML( _pathBuffer.c_str() ) )
             {

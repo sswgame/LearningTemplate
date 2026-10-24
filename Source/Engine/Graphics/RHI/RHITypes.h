@@ -454,6 +454,7 @@ namespace sw
         CopyDest         = 4,
         VertexOrConstant = 5,
         Index            = 6,
+        CopySource       = 7, ///< `IRHICommandList::copyBufferToReadback` 의 원본. 복사가 끝나면 쓰던 상태로 되돌린다
     };
 
     /**

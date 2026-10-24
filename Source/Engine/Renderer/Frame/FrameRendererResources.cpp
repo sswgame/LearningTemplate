@@ -156,6 +156,8 @@ namespace sw
         }
         _transparentRankPlaceholder.release( _pDevice );
         _occlusionTilesPlaceholder.release( _pDevice );
+        _occlusionReadback.shutdown();
+        _occlusionMailbox.clear();
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );

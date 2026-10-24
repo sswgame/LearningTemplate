@@ -95,19 +95,19 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
     uint32                        failedCount = 0;
     SW_EXPECT_EQUAL( 3u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
-    SW_EXPECT_EQUAL( 3u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 6u, store.getTally()._cookedCount ); // 씬 셋 + 씬마다 옆에 굽는 프리로드 목록 셋
 
     // 바뀐 것이 없으면 모두 DDC 에서 다시 쓴다.
     SW_EXPECT_EQUAL( 3u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
-    SW_EXPECT_EQUAL( 3u, store.getTally()._cookedCount );
-    SW_EXPECT_EQUAL( 3u, store.getTally()._reusedCount );
+    SW_EXPECT_EQUAL( 6u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 6u, store.getTally()._reusedCount );
 
     // 프리팹 a 를 고치면 그것을 쓰는 씬 하나만 다시 베이크한다.
     Internal::writePrefab( prefabA, 5.0f );
     SW_EXPECT_EQUAL( 3u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
-    SW_EXPECT_EQUAL( 4u, store.getTally()._cookedCount );
-    SW_EXPECT_EQUAL( 5u, store.getTally()._reusedCount );
+    SW_EXPECT_EQUAL( 8u, store.getTally()._cookedCount ); // 프리팹 a 를 쓰는 씬과 그 프리로드 목록
+    SW_EXPECT_EQUAL( 10u, store.getTally()._reusedCount );
 
     // 쿠커 버전을 올리면 기록이 낡는다 — 모든 씬이 다시 베이크된다.
     sw::CookRecord   record;
@@ -137,7 +137,7 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( ddcDir ) );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( recordDir ) );
     SW_EXPECT_EQUAL( 3u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
-    SW_EXPECT_EQUAL( 7u, store.getTally()._cookedCount );
+    SW_EXPECT_EQUAL( 14u, store.getTally()._cookedCount );
     size_t outputIndex = 0;
     for ( const utf8* pOutput : { "game/demo/maps/usesa.scene.bin", "game/demo/maps/usesb.scene.bin", "game/demo/maps/plain.scene.bin" } )
     {

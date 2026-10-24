@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -42,6 +43,16 @@ namespace sw
         float32                  _durationSeconds{ 0.0f }; ///< 흔들림: 구간 길이(초)
         float32                  _blendSeconds{ 0.0f };    ///< 시네마틱 시작 · 끝: 섞는 시간(초). 0 이면 끊어 바꾼다
         SequenceCameraSignalKind _kind{ SequenceCameraSignalKind::CutBegin };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 시퀀스가 스폰한 오브젝트 하나입니다. 항목 번호로 어느 스폰 항목의 것인지 안다. 스폰에 실패했으면 `_object` 가 무효이고 그 구간이 끝날 때까지 다시 시도하지 않는다. */
+    struct SequenceSpawnedObject
+    {
+        uint32           _itemIndex{ 0 };
+        GameObjectHandle _object{};
     };
 } // namespace sw
 
@@ -87,6 +98,15 @@ namespace sw
          * @details 언리얼 Control Rig 트랙의 가중치 커브, 유니티 Animation Rigging 의 Rig Weight 키에 해당한다.
          */
         static float32 sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame );
+        /**
+         * @brief 스폰 항목(`SequenceItemKind::Spawn`)을 @p frame 에 맞춥니다 — 구간 시작 `getPrerollFrames` 프레임 앞부터 프리팹을 **꺼 둔 채** 스폰하고, 구간 동안 켜고, 구간(끝)이 지나거나 되감아
+         *        창을 벗어나면 지웁니다. 스폰한 오브젝트는 @p inoutListSpawned 가 기억한다(플레이어가 쥔다).
+         * @details 프리롤 동안 꺼 둔 채 두는 까닭: 프리팹의 메시 · 머티리얼 · 애니메이션 에셋이 읽히고 PSO 가 만들어져(`FrameRenderer` 가 씬의 머티리얼마다 만든다) 컷의 첫 프레임이
+         *          튀지 않는다. 스폰은 컴포넌트 틱 중이면 상태가 틱 뒤에 채워지므로(`PrefabCache::spawn`) 끄기도 틱 뒤로 미룬다. 프리팹 캐시가 없는 매니저는 오류를 남기고 아무것도 하지 않는다.
+         */
+        static void applySpawns( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, vector<SequenceSpawnedObject>& inoutListSpawned );
+        /** @brief 시퀀스가 스폰한 오브젝트를 모두 지우고 목록을 비웁니다. 재생을 멈출 때 부릅니다. */
+        static void releaseSpawns( GameObjectManager* pManager, vector<SequenceSpawnedObject>& inoutListSpawned );
         /** @brief 시퀀스에 카메라 컷이 있으면 컷을 풉니다(게임 카메라가 원래 규칙으로 돌아간다). 재생을 멈출 때 부릅니다. */
         static void releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset );
         /**

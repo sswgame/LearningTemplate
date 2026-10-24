@@ -1,6 +1,6 @@
 # 게임별 씬이 새로 들인 CC0 메시를 부르게 한다
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-17 · 진행: 1/2
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-17 · 진행: 2/2
 
 2026-10-17 `res3` 가 여섯 게임에 CC0 모델 팩(KayKit Dungeon · Space Base, Kenney Nature · Fantasy Town · Space · City)의 원본을 배치했지만 씬 · 프리팹은 자리 표시 큐브를 썼습니다.
 
@@ -16,9 +16,14 @@
 | 단위 | 내용 | 상태 |
 |---|---|---|
 | C1 | 여섯 게임 씬에 놓기 — WildWest 는 선인장 · 바위 · 울타리 큐브를 메시로 바꾸고, Shooter3D(KayKit Dungeon 19) · StarSkirmish(KayKit Space 9 · Kenney Space 15) · HarvestValley(3) · MeadowVillage(4) · NileCity(17)는 전시 줄. 키트 머티리얼 여섯을 더했다(`kaykit_dungeon` · `kaykit_space` · `kenney_space` · `town_palette` · `nature` 둘) | 놓음 · `--check` 통과(부르지 않는 메시 0) |
-| C2 | 화면 확인 — 크기(전시 줄의 배율 1 이 맞는지), 머티리얼 색(텍스처 없는 `kenney_space` · `nature` 는 정점 색 추정), WildWest 울타리 방향, 전시 줄이 게임 카메라에 걸리지 않는지 | 남음(GPU) |
+| C2 | 화면 확인 — 크기(전시 줄의 배율 1 이 맞는지), 머티리얼 색(텍스처 없는 `kenney_space` · `nature` 는 정점 색 추정), WildWest 울타리 방향, 전시 줄이 게임 카메라에 걸리지 않는지 | 확인 대기: 매니페스트 id `golden-record`, `cc0-props-visual-review` |
 
 ## 남은 것
 
 - C2 뒤 크기 · 자리를 데이터에서 고치고 스크립트를 다시 돌린다. 게임 규칙에 쓰일 모델(엄폐물 · 건물)은 전시 줄에서 게임 쪽 자리로 옮기는 일을 그 게임의 계획에서 한다.
 - `empty` 의 `avatarsample_d.mesh` 는 이 배치의 대상이 아니다(res3 밖).
+
+## C2 확인 방법
+
+- 게임 카메라에 전시 줄이 걸리는지는 여섯 게임의 QA 골든이 맨다: 여섯 게임(WildWest · Shooter3D · StarSkirmish · HarvestValley · MeadowVillage · NileCity)은 모두 `Test/QA/Games.json` 에 있고, `golden-record` 가 기준 그림을 다시 뜬다 — 전시 줄이 걸렸다면 그림에 낯선 모델이 보인다. 뜬 그림(`Test/QA/Golden/<게임>/*.png`)과 앞 기준의 `git diff` 를 눈으로 본다.
+- 크기 · 머티리얼 색 · 울타리 방향은 모델을 보고 판단하는 일이라 사람 몫이다(`cc0-props-visual-review`). 판단 뒤 고칠 값은 `Config/Editor/Cc0PropPlacement.json` 이고 `Scripts/dev/MakeCc0SceneProps.py` 를 다시 돌린다.

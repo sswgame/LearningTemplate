@@ -1,6 +1,6 @@
 # 패드 가상 커서의 남은 것
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-3 · 진행: 2/3
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-3 · 진행: 3/3
 
 명령형 게임에서 패드로 마우스 커서를 대신하는 가상 커서가 들어갔다(입력 맵 `virtualCursor` · 충돌 검사 `reportVirtualCursorConflict`). Nile · StarSkirmish 는 커서가 왼쪽 스틱, 오른쪽 스틱이 카메라 이동, 확대는 D 패드 위 · 아래다.
 스틱 한 성분을 1D 액션이 읽는 바인딩(`<stick stick="Right" axis="Y" scaleY="<초당 칸>" scaleByDelta="1">`, `GamepadStickAxis`)이 들어가 스틱 확대를 데이터로 묶을 수 있다.
@@ -11,12 +11,14 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| G3 | 실제 패드로 확인하기 | 없음 |
+| G3 | 패드로 확인하기 — 스크립트 패드로 확인(아래)과 실기 감각 | 확인 대기: 매니페스트 id `gamepad-cursor-tests`, `gamepad-cursor-scenario`, `gamepad-cursor-real-pad` |
 
 ### G3 실제 패드로 확인하기
 
-- 시나리오 동안 가상 커서는 쉬어(`_pVirtualInput` 이 있으면 내지 않는다) 패드 길을 시나리오가 보지 않는다. 실기로 커서 이동 · A/B 클릭 · 확대 속도(프레임률과 무관한지)를 본다.
-- 실기에서 D 패드 단계 확대가 거칠다고 보이면 아래 (가)의 가장자리 밀기 바인딩부터 후보로 올린다.
+- 배타 가상 입력(시나리오 `input="exclusive"`)에서도 가상 커서가 돈다(`InputManager` — 배타가 아닌 가상 입력일 때만 쉰다). 그래서 시나리오의 `GamepadAxis` 가 실기와 같은 길로 커서를 움직인다.
+  탐침 `Input.MouseX` · `Input.MouseY` 로 커서 자리를 읽는다. 시나리오 `game/nilecity/automation/gamepadcursor.scenario.xml` 이 왼쪽 스틱으로 커서가 가고 놓으면 서는 것을 본다.
+  프레임률 무관은 `VirtualCursorTest.DistanceDoesNotDependOnFrameRate`, A/B 클릭은 `VirtualCursorTest.PadButtonsBecomeMouseButtons`, 확대 속도는 `InputMapTest.GamepadStickScalesByAxisAndFrameTime` 가 본다.
+- 사람 손이 필요한 몫: 실제 패드로 커서가 손에 맞는지(`_speed` · 곡선)와 D 패드 단계 확대가 거칠다고 보이는지(거칠면 아래 (가)의 가장자리 밀기 바인딩부터 후보로 올린다). 근거: 감각은 장치를 쥔 사람만 판정한다.
 
 ## 2. 끝난 단위의 확인 목록
 

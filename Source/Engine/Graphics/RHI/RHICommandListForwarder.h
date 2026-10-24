@@ -82,6 +82,7 @@ namespace sw
             _pContext->dispatchIndirect( argumentBuffer, argumentBufferOffset );
         }
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override { _pContext->transitionBuffer( buffer, newState ); }
+        void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override { _pContext->copyBufferToReadback( source, readback, sizeBytes ); }
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) override
         {
             _pContext->drawIndexedIndirect( argumentBuffer, argumentBufferOffset );

@@ -5,6 +5,7 @@
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
@@ -47,10 +48,10 @@ namespace
         }
 
         /** @brief 한 프레임 — 페이드 → 로딩 제어 → UI 입력 · 갱신(닫기 요청이 적용된다). 게임 인스턴스와 같은 순서다. */
-        void runFrame( bool bLoading )
+        void runFrame( bool bLoading, std::optional<float32> loadProgress = std::nullopt )
         {
             _fade.update( kFrameSeconds );
-            _loading.update( kFrameSeconds, bLoading, _fade );
+            _loading.update( kFrameSeconds, bLoading, loadProgress, _fade );
             _input.beginFrame( kFrameSeconds );
             _ui.processInput( kFrameSeconds );
             _ui.update( kFrameSeconds, sw::UIViewport{
@@ -166,4 +167,50 @@ SW_TEST_CASE( LoadingScreenTest, FadeOverlayFollowsScreenFadeAlpha )
     }
     SW_EXPECT_TRUE( fixture._fade.getOverlayAlpha() == 0.0f );
     SW_EXPECT_NULL( fixture._loading.findFadeScreen() );
+}
+
+/**
+ * @brief [LoadingScreenTest] 진행 슬라이더(`Progress`)는 로드 진행이 있을 때만 보이고 그 값을 따르며, 진행을 모르면 접는다 · 입력은 받지 않는다
+ * @details 진행은 씬 매니저의 프리로드 세트가 안다(`SceneManager::tryGetLoadProgress`) — 쿠킹이 구운 목록이 없는 씬은 모른다.
+ */
+SW_TEST_CASE( LoadingScreenTest, ProgressBarFollowsTheLoadProgressWhenKnown )
+{
+    LoadingScreenFixture      fixture;
+    sw::LoadingScreenSettings settings{};
+    sw::GameSettings          gameSettings{};
+    SW_ASSERT_TRUE( gameSettings.loadFromXMLText(
+        "<GameSettings><startMap>engine/ui/loading.ui.xml</startMap><loadingScreen>engine/ui/loading.ui.xml</loadingScreen></GameSettings>", "test" ) );
+    settings._documentPath = gameSettings._loadingScreen;
+    fixture._loading.setSettings( settings );
+    SW_ASSERT_TRUE( fixture._loading.beginLoading() );
+
+    fixture.runFrame( true ); // 진행을 모른다 — 접혀 있다
+    sw::UIScreen* pScreen = fixture._loading.findLoadingScreen();
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::SliderWidget* pProgress = pScreen->getTree().findWidget<sw::SliderWidget>( sw::hashed_string( sw::LoadingScreenController::kProgressWidgetName ) );
+    SW_ASSERT_NOT_NULL( pProgress );
+    SW_EXPECT_TRUE( pProgress->getVisibility() == sw::WidgetVisibility::Collapsed );
+
+    fixture.runFrame( true, 0.25f );
+    SW_EXPECT_TRUE( pProgress->getVisibility() == sw::WidgetVisibility::HitTestInvisible );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, pProgress->getValue(), 1e-4f );
+    fixture.runFrame( true, 2.0f ); // 1 을 넘는 값은 1 로 자른다 — 그리는 값일 뿐이다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pProgress->getValue(), 1e-4f );
+    fixture.runFrame( true ); // 프리로드 세트가 놓였다 — 다시 접는다
+    SW_EXPECT_TRUE( pProgress->getVisibility() == sw::WidgetVisibility::Collapsed );
+}
+
+/**
+ * @brief [LoadingScreenTest] 팁 파일(`<LoadingTips><Tip text="원문"/>…`)을 읽어 목록을 채우고, 글이 빈 팁이 있으면 오류로 거절한다
+ */
+SW_TEST_CASE( LoadingScreenTest, TipFileFillsTheListAndRefusesAnEmptyTip )
+{
+    sw::vector<sw::string> listTip;
+    SW_ASSERT_TRUE( sw::LoadingScreenController::loadTipsFromXMLText( R"(<LoadingTips><Tip text="Tip A"/><Tip text="Tip B"/></LoadingTips>)", "tips.xml", listTip ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), listTip.size() );
+    SW_EXPECT_STREQ( "Tip B", listTip[1].c_str() );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a loading tip without text is refused" );
+    SW_EXPECT_FALSE( sw::LoadingScreenController::loadTipsFromXMLText( R"(<LoadingTips><Tip text="Tip A"/><Tip text=""/></LoadingTips>)", "broken.xml", listTip ) );
+    SW_EXPECT_TRUE( listTip.empty() );
 }

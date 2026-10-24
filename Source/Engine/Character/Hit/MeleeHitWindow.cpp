@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Hit/MeleeHitLedger.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -66,6 +67,13 @@ namespace sw
         GameObjectManager* pManager = attacker.getManager();
         if ( pManager == nullptr )
             return 0;
+        // 서버의 장부가 켜져 있으면 스윕을 적어 둔다 — 클라이언트의 맞음 주장을 나중에 이 기록으로 확인한다(`MeleeHitLedger`). 맞지 않은 스윕도 적는다.
+        if ( authority == MeleeHitAuthority::Authority )
+        {
+            MeleeHitLedger* pLedger = MeleeHitLedger::find( *pManager );
+            if ( pLedger != nullptr )
+                pLedger->record( attacker.getObjectID(), params, listPrevious, listCurrent );
+        }
         const size_t            first = outListHit.size();
         vector<CharacterRayHit> inoutListRayHit;
         if ( listPrevious.size() == listCurrent.size() )

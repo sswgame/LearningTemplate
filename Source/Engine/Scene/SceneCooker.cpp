@@ -18,6 +18,7 @@
 #include "Engine/Resource/Cook/CookStore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/ScenePreloadList.h"
 #include "Engine/Scene/WorldCellGrid.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -348,6 +349,34 @@ namespace sw
                              cookedCount );
                 return CookStep::Written;
             }
+
+            /**
+             * @brief 씬 하나의 프리로드 목록(`ScenePreloadList`)을 만들어 @p outputPath 에 씁니다. 씬을 런타임과 같은 길로 지어 컴포넌트의 에셋 경로 프로퍼티를 모은다.
+             * @details 씬 쿠킹과 따로 도는 작업이다(쿠킹 기록은 작업 하나에 출력 하나). 입력은 씬이 지어지며 읽은 모든 것이라, 프리팹을 고치면 목록도 다시 구워진다.
+             */
+            static CookStep cookPreloadList( const SceneEngineServices& services, const string& scenePath, const string& outputPath )
+            {
+                SceneDocument doc{};
+                if ( doc.loadXMLFromDiskFile( scenePath ) == false )
+                {
+                    SW_LOG_ERROR( "Scene preload cook failed to read '%#'.", scenePath );
+                    return CookStep::Failed;
+                }
+                Scene source{ "ScenePreload.Source", services };
+                if ( source.instantiate( doc ) == false )
+                {
+                    SW_LOG_ERROR( "Scene preload cook could not build '%#'.", scenePath );
+                    return CookStep::Failed;
+                }
+                vector<string> listPath;
+                ScenePreloadList::collect( *source.getObjectManager(), listPath );
+                if ( ScenePreloadList::write( outputPath, listPath ) == false )
+                {
+                    SW_LOG_ERROR( "Scene preload cook failed to write '%#'.", outputPath );
+                    return CookStep::Failed;
+                }
+                return CookStep::Written;
+            }
         };
     } // namespace
 } // namespace sw
@@ -494,6 +523,7 @@ namespace sw
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc( registry );
+        const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
         CookTally tally;
         for ( const string& scenePath : listSceneFile )
@@ -515,6 +545,16 @@ namespace sw
             { return SceneCookerInternal::cookScene( services, registry, scenePath, relativeScene, activePackRoot, outputPath ); } );
             outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;
             tally.add( outcome );
+
+            // 쿠킹한 씬마다 프리로드 목록을 옆에 굽는다(레벨 전환이 `PreloadSet` 으로 연다). 씬 쿠킹이 실패했거나 건너뛴 씬은 목록도 없다.
+            const bool bSceneWritten = outcome == CookOutcome::Cooked || outcome == CookOutcome::Reused;
+            if ( bSceneWritten == false )
+                continue;
+            const string      preloadID      = ScenePreloadList::makeListPath( outputID );
+            const string      preloadPath    = ScenePreloadList::makeListPath( outputPath );
+            const CookOutcome preloadOutcome = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
+            { return SceneCookerInternal::cookPreloadList( services, scenePath, preloadPath ); } );
+            outFailedCount += preloadOutcome == CookOutcome::Failed ? 1u : 0u;
         }
 
         SW_LOG_INFO( "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
@@ -590,6 +630,16 @@ namespace sw
             }
         }
         return true;
+    }
+
+    CookJobDesc SceneCooker::makePreloadCookJobDesc()
+    {
+        CookJobDesc desc;
+        desc._cookerName    = "ScenePreload";
+        desc._cookerVersion = ScenePreloadList::kVersion;
+        desc._target        = "Any";
+        desc._settingsHash  = 0; // 목록은 컴포넌트의 경로 프로퍼티 값이 정한다 — 타입 표가 바뀌어 프로퍼티가 달라지면 입력(씬 · 프리팹)을 다시 읽어 알게 된다
+        return desc;
     }
 
     CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )

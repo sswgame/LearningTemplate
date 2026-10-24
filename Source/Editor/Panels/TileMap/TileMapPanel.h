@@ -50,6 +50,10 @@ namespace sw::editor
         void shutdown( IRHIDevice* pRHIDevice ) override;
         /** @brief 현재 선택한 플래그 레이어에서 켜진 셀 수를 반환합니다. 플래그 레이어가 아니면 0 입니다. 프로브 `Editor.TileMapFlagCells` 가 읽습니다. */
         uint32 countSelectedFlagCells() const;
+        /** @brief 맵의 데이터 레이어 수를 반환합니다. 프로브 `Editor.TileMapDataLayers` 가 읽습니다. */
+        uint32 getDataLayerCount() const { return static_cast<uint32>( _map._listDataLayer.size() ); }
+        /** @brief 모든 데이터 레이어에서 기본값과 다른 칸 수의 합을 반환합니다. 고른 레이어와 상관없습니다. 프로브 `Editor.TileMapDataCells` 가 읽습니다. */
+        uint32 countDataCells() const;
         /** @brief 현재 도구 번호를 반환합니다. 0 은 Brush, 1 은 Rect, 2 는 Fill, 3 은 Picker 입니다. 프로브 `Editor.TileMapTool` 이 읽습니다. */
         uint32 getPaintToolIndex() const { return static_cast<uint32>( _tool ); }
 

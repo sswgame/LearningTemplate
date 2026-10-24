@@ -9,8 +9,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/NetInputWindow.h"
+#include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Network/Transport/NetTransport.h"
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -44,6 +47,8 @@
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
@@ -1224,4 +1229,172 @@ SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
     SW_EXPECT_FALSE( IntentPlayback::startFromFile( manager, path, false, error, &started ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_EQUAL( 0u, started );
+}
+
+/**
+ * @brief [ControlTest] 서버 루프가 복제 키트의 의도로 원격 조종 폰을 몬다 — 클라이언트 폰의 의도를 `sendIntent` 로 보내고 서버가 `popIntent` → `receiveIntent` 로 넣으면 같은 궤적이다
+ * @details 클라이언트는 떠도는 AI 가 아날로그 · 점프를 내는 폰을 틱마다 갱신하고 그 의도를 보낸다. 서버는 의도가 도착한 뒤부터 틱마다 `popIntent` 로 꺼낸 의도를 원격 조종자에게
+ *          넣고 폰을 갱신한다(`ShooterNetPawnComponent` 와 같은 모양의 서버 루프). 서버의 폰은 같은 입력 틱의 클라이언트 폰과 같은 자리여야 한다.
+ */
+SW_TEST_CASE( ControlTest, ServerLoopDrivesRemotePawnFromReplicationIntents )
+{
+    using Internal                                = ControlTestInternal;
+    static constexpr uint16 kServerPort           = 4400;
+    static constexpr uint16 kClientPort           = 5400;
+    static constexpr uint32 kServerInputDelayTick = 12; // 지연 50 ms(3 틱)에 여유를 더해, 꺼낼 틱이 늘 도착해 있게 한다
+    static constexpr int32  kFrameCount           = 200;
+
+    LoopbackNetwork        network;
+    NetEmulationTransport  serverTransport( network.createEndpoint( kServerPort ), 31u );
+    NetEmulationTransport  clientTransport( network.createEndpoint( kClientPort ), 32u );
+    NetEmulationConditions conditions;
+    conditions._latency = 0.05;
+    serverTransport.setDefaultConditions( conditions );
+    clientTransport.setDefaultConditions( conditions );
+    NetHostConfig hostSettings;
+    hostSettings._sendInterval = 1.0 / 60.0;
+    NetHost serverHost;
+    NetHost clientHost;
+    serverHost.initialize( &serverTransport, hostSettings );
+    clientHost.initialize( &clientTransport, hostSettings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( kServerPort ) ) );
+    ReplicationServerConfig serverSettings;
+    serverSettings._tickInterval = 1.0f / 60.0f;
+    ReplicationClientConfig clientSettings;
+    clientSettings._tickInterval = 1.0f / 60.0f;
+    ReplicationServer server;
+    ReplicationClient client;
+    SW_ASSERT_TRUE( server.initialize( &serverHost, serverSettings, nullptr ) );
+    SW_ASSERT_TRUE( client.initialize( &clientHost, clientSettings ) );
+
+    GameObjectManager clientManager;
+    GameObjectManager serverManager;
+    PawnComponent*    pClientPawn = Internal::spawnAnalogPawn( clientManager, "Runner" );
+    PawnComponent*    pServerPawn = Internal::spawnAnalogPawn( serverManager, "Runner" );
+    auto*             pRemote     = serverManager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
+    clientManager.beginPlay();
+    serverManager.beginPlay();
+    AIControllerComponent* pAI = Internal::possessWithWanderingAI( clientManager, *pClientPawn );
+    pRemote->possess( *pServerPawn );
+    pRemote->setNextInputTick( 1 );
+
+    float64        time          = 0.0;
+    uint32         clientTick    = 0;
+    uint32         serverFrame   = 0;
+    uint32         nextInputTick = 1;
+    int32          compareCount  = 0;
+    int32          exactCount    = 0;
+    vector<float3> listClientPosition( 1, float3{} ); // 입력 틱이 인덱스(0 은 비워 둔다)
+    vector<uint8>  buffer;
+    for ( int32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        time += 1.0 / 60.0;
+        serverTransport.update( time );
+        clientTransport.update( time );
+        serverHost.update( time );
+        clientHost.update( time );
+        int32          connectionID = -1;
+        NetChannelType channel      = NetChannelType::Unreliable;
+        while ( serverHost.receiveMessage( connectionID, channel, buffer ) )
+        {
+            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionID, buffer ) );
+        }
+        while ( clientHost.receiveMessage( connectionID, channel, buffer ) )
+        {
+            SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
+        }
+        if ( clientHost.getConnectionState( 0 ) != NetConnectionState::Connected )
+            continue;
+
+        // 클라이언트 틱 — 폰을 한 틱 돌리고 그 틱의 의도를 보낸다(입력 틱은 1 부터).
+        ++clientTick;
+        Internal::setThrottle( *pAI, clientTick );
+        if ( clientTick == 10 )
+            pAI->pressButton( "Jump" );
+        clientManager.update( ControlTestInternal::kDeltaTime );
+        listClientPosition.push_back( ControlTestInternal::findPosition( *pClientPawn->getOwner() ) );
+        SW_ASSERT_TRUE( client.sendIntent( clientTick, pClientPawn->getIntent() ) );
+        client.update( ControlTestInternal::kDeltaTime );
+
+        // 서버 틱 — 입력이 도착해 있을 때부터 틱마다 의도 하나를 꺼내 원격 조종자에게 넣고 폰을 돌린다.
+        ++serverFrame;
+        if ( serverFrame <= kServerInputDelayTick )
+            continue;
+        ControlIntent intent;
+        bool          bExact = false;
+        SW_ASSERT_TRUE( server.popIntent( 0, nextInputTick, intent, bExact ) );
+        exactCount += bExact ? 1 : 0;
+        pRemote->receiveIntent( nextInputTick, intent );
+        serverManager.update( ControlTestInternal::kDeltaTime );
+        const float3 serverPosition = ControlTestInternal::findPosition( *pServerPawn->getOwner() );
+        const float3 clientPosition = listClientPosition[nextInputTick];
+        SW_EXPECT_TRUE_MSG( serverPosition._x == clientPosition._x && serverPosition._z == clientPosition._z, ( "input tick " + std::to_string( nextInputTick ) ).c_str() );
+        if ( nextInputTick == 10 )
+            SW_EXPECT_TRUE( pServerPawn->wasButtonTriggered( 0 ) );
+        ++nextInputTick;
+        ++compareCount;
+    }
+    SW_EXPECT_TRUE( compareCount > 100 );
+    SW_EXPECT_EQUAL( compareCount, exactCount ); // 늘 도착해 있어 되풀이한 틱이 없다
+    SW_EXPECT_EQUAL( 0u, pRemote->getMissingTickCount() );
+    clientManager.endPlay();
+    serverManager.endPlay();
+}
+
+/**
+ * @brief [ControlTest] 기록을 키 틱 번째부터 틀면 그 번째 이전은 건너뛰고, 이미 끝난 트랙은 건드리지 않는다 — 되감기가 키 틱에서 이어 돌 때의 재생 시작
+ */
+SW_TEST_CASE( ControlTest, PlaybackStartsFromAGivenTickOfTheTrack )
+{
+    using Internal = ControlTestInternal;
+    ControlIntentHistory history;
+    vector<float3>       listPosition;
+    {
+        GameObjectManager manager;
+        PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
+        ControlSystem::ensureFor( manager ).setRecording( true );
+        manager.beginPlay();
+        AIControllerComponent* pAI = Internal::possessWithWanderingAI( manager, *pPawn );
+        for ( uint32 tick = 0; tick < 40; ++tick )
+        {
+            Internal::setThrottle( *pAI, tick );
+            manager.update( ControlTestInternal::kDeltaTime );
+            listPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
+        }
+        const ControlIntentHistory& recorded = ControlSystem::find( manager )->getHistory();
+        SW_ASSERT_EQUAL( 1, recorded.getTrackCount() );
+        BitWriter writer;
+        SW_ASSERT_TRUE( recorded.write( writer ) );
+        BitReader reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
+        string    error;
+        SW_ASSERT_TRUE_MSG( history.read( reader, error ), error.c_str() );
+        manager.endPlay();
+    }
+
+    // 틱 25 에서 이어 틀기 — 다른 씬에서 폰을 틱 24 뒤의 자리에 두고, 트랙의 25 번째부터 틀면 이후 궤적이 같다.
+    GameObjectManager manager;
+    PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
+    manager.beginPlay();
+    pPawn->getOwner()->getPrimarySceneComponent()->setWorldPosition( listPosition[24] );
+    uint32 skipped = 99;
+    SW_EXPECT_EQUAL( 1u, IntentPlayback::start( manager, history, false, 25, &skipped ) );
+    SW_EXPECT_EQUAL( 0u, skipped );
+    for ( uint32 tick = 25; tick < 40; ++tick )
+    {
+        manager.update( ControlTestInternal::kDeltaTime );
+        const float3 position = ControlTestInternal::findPosition( *pPawn->getOwner() );
+        SW_EXPECT_TRUE( position._x == listPosition[tick]._x && position._z == listPosition[tick]._z );
+    }
+    manager.endPlay();
+
+    // 트랙 길이 이상이면 이미 끝난 트랙이라 시작하지도 건너뛰지도 않는다.
+    GameObjectManager doneManager;
+    Internal::spawnAnalogPawn( doneManager, "Runner" );
+    doneManager.beginPlay();
+    uint32 doneSkipped = 99;
+    SW_EXPECT_EQUAL( 0u, IntentPlayback::start( doneManager, history, false, 40, &doneSkipped ) );
+    SW_EXPECT_EQUAL( 0u, doneSkipped );
+    SW_EXPECT_TRUE( doneManager.findGameObjectByName( "IntentTrack.Runner" ) == nullptr );
+    doneManager.endPlay();
 }

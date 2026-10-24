@@ -58,6 +58,8 @@ namespace sw
         [[nodiscard]] bool add( uint32 tick, vector<uint8> bytes );
         /** @brief @p tick 이하의 가장 가까운 키 스냅샷입니다. 없으면(모두 그 뒤이거나 비었으면) nullptr 입니다. */
         const KeySnapshot* findAtOrBefore( uint32 tick ) const;
+        /** @brief 가장 오래된 키 스냅샷입니다. 비었으면 nullptr 입니다(되감을 수 있는 가장 이른 틱). */
+        const KeySnapshot* findOldest() const;
         /** @brief @p tick 뒤의 키 스냅샷을 버립니다(되감은 자리에서 다시 돌기 전에). */
         void discardAfter( uint32 tick );
         /** @brief 모두 버립니다. 설정은 그대로입니다. */

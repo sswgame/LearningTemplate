@@ -84,8 +84,8 @@
       "source": "docs/plans/MovingGroundFollowUps.md 2절", "result_doc": "docs/plans/MovingGroundFollowUps.md 상태를 끝으로"
     },
     {
-      "id": "moving-ground-net-scene", "title": "움직이는 바닥 M4 — 바닥이 있는 넷 씬에서 예측이 보정 없이 맞는가", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "need_command": "바닥을 놓은 넷 씬(서버 + 클라이언트)이 아직 없다 — 그 씬이 생긴 뒤에야 볼 수 있다",
+      "id": "moving-ground-net-scene", "title": "움직이는 바닥 M4 — 바닥이 있는 넷 씬(서버 세계 + 클라이언트 세계)에서 예측이 보정 없이 맞는가", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NetMovingGroundTest.*",
       "source": "docs/plans/MovingGroundFollowUps.md 남은 것", "result_doc": "docs/plans/MovingGroundFollowUps.md 상태를 끝으로"
     },
     {
@@ -176,8 +176,9 @@
       "source": "docs/plans/PanelIDLiterals.md 단계 표 P3", "result_doc": "docs/plans/PanelIDLiterals.md P3"
     },
     {
-      "id": "tilemap-layers-editor-roundtrip", "title": "타일맵 레이어 추가 · 칠하기 · 저장 왕복(에디터)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "need_command": "에디터 시나리오(CaptureEditorUI)가 아직 없다",
+      "id": "tilemap-layers-editor-roundtrip", "title": "타일맵 레이어 추가 · 칠하기 · 저장 왕복(에디터)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/tilemapdatalayers.scenario.xml"],
+      "covered_by": "app-scenarios-release",
       "source": "docs/plans/TilemapCellDataLayers.md 단계 표 T3", "result_doc": "docs/plans/TilemapCellDataLayers.md T3"
     },
     {
@@ -365,8 +366,11 @@
       "source": "docs/plans/ClusteredLighting.md 측정", "result_doc": "docs/plans/ClusteredLighting.md S3"
     },
     {
-      "id": "interaction-bench", "title": "상호작용 벤치(하는 쪽 하나 × 대상 16)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
-      "tool": "scripts", "args": ["test", "InteractionBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"], "limit": "보고만 — I3 케이스가 생기면 같은 필터에 든다", "judge": "exit",
+      "id": "interaction-bench", "title": "상호작용 벤치(하는 쪽 하나 × 대상 16, 하는 쪽 여럿 × 대상 수천)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
+      "tool": "scripts",
+      "args": ["test", "InteractionBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "limit": "보고만 — 하는 쪽 1 · 8 · 64 × 대상 2,000 · 5,000(SharedGridTickWithManyInteractors)의 틱 표본을 견준다",
+      "judge": "exit",
       "source": "docs/plans/InteractionSpatialGrid.md 단위 표 I3", "result_doc": "docs/plans/InteractionSpatialGrid.md I3"
     },
     {
@@ -703,6 +707,119 @@
       "id": "nav-settings-required-test", "title": "NavMeshBakeTest.SettingsTableValidatesNamesAndRanges(영역 · 에이전트 종류를 선언하지 않은 표는 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "NavMeshBakeTest.SettingsTableValidatesNamesAndRanges",
       "source": "docs/plans/DataDriven.md 5절", "result_doc": "docs/plans/DataDriven.md"
+    },
+    {
+      "id": "melee-hit-ledger-test", "title": "근접 맞음 주장의 서버 확인(MeleeHitLedger)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AnimationNotify2DTest.MeleeHitLedgerConfirmsClaimsAgainstServerSweeps",
+      "source": "docs/plans/MeleeHitUnify.md 3절", "result_doc": "docs/plans/MeleeHitUnify.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-rewind-tests", "title": "의도 되감기 세션 · 리플레이 막대 · 서버 루프 · 키 틱 재생 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "IntentRewindTest.*,ControlTest.PlaybackStartsFromAGivenTickOfTheTrack,ControlTest.ServerLoopDrivesRemotePawnFromReplicationIntents",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-killcam-scenario", "title": "Shooter3D 킬캠 프리셋 시나리오(네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/shooter3d/automation/killcam.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "intent-replay-bar-screen", "title": "리플레이 막대를 연 게임에서 슬라이더 되감기(장면이 키 틱으로 돌아가 나눠 돌고 멈춘 그림)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "막대를 여는 게임 흐름(리플레이 씬을 띄우는 연결)이 아직 없다 — 막대 · 세션 로직은 intent-rewind-tests 가 본다",
+      "source": "docs/plans/IntentNetworkWiring.md 남은 것", "result_doc": "docs/plans/IntentNetworkWiring.md 상태를 끝으로"
+    },
+    {
+      "id": "interaction-montage-tests", "title": "상호작용 몽타주 실행 · 강조 요청 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "InteractionTest.StepMontagePlaysOnTheInteractorsAnimatorAndCancelRestores,InteractionTest.HighlightRequestReachesTheOwnersMeshes",
+      "source": "docs/plans/InteractionHighlightAndMontage.md 확인", "result_doc": "docs/plans/InteractionHighlightAndMontage.md 상태를 끝으로"
+    },
+    {
+      "id": "interaction-highlight-scenario", "title": "상호작용 강조 패스 시나리오(외곽선 · 감각 모드, 네 백엔드)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/interactionhighlight.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/InteractionHighlightAndMontage.md H3", "result_doc": "docs/plans/InteractionHighlightAndMontage.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-tests", "title": "패드 가상 커서 테스트(프레임률 무관 · 버튼 · 스틱 입력 맵)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "VirtualCursorTest.*,InputMapTest.GamepadStickAxisFeedsOneDimensionalAction,InputMapTest.GamepadStickScalesByAxisAndFrameTime",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-scenario", "title": "NileCity 패드 가상 커서 시나리오(스크립트 스틱으로 커서 이동)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/nilecity/automation/gamepadcursor.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
+    },
+    {
+      "id": "gamepad-cursor-real-pad", "title": "실제 패드로 커서 감각 · D 패드 단계 확대", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "실제 게임패드를 쥔 사람의 감각 판정이라 스크립트로 판정할 값이 없다",
+      "source": "docs/plans/GamepadVirtualCursor.md G3", "result_doc": "docs/plans/GamepadVirtualCursor.md 상태를 끝으로"
+    },
+    {
+      "id": "frontiertown-scenario", "title": "FrontierTown month 시나리오(도시 + RTS 한 땅 · 한 시계, refused 로그 0)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/frontiertown/automation/month.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/KitCompositionGames.md K2", "result_doc": "docs/plans/KitCompositionGames.md 상태를 끝으로"
+    },
+    {
+      "id": "cc0-props-visual-review", "title": "CC0 모델 배치 눈 확인(크기 · 머티리얼 색 · WildWest 울타리 방향 · 전시 줄)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "모델의 크기 · 색 · 방향이 맞는지는 사람이 그림을 보고 판단한다(골든 다시 뜨기 golden-record 가 볼 그림을 만든다)",
+      "source": "docs/plans/GameSceneCc0Meshes.md C2", "result_doc": "docs/plans/GameSceneCc0Meshes.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-scenario", "title": "사용자 설정 화면 시나리오(렌더 스케일 · 시야 거리 · 후처리 품질 · 색각 보정)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/useroptions.scenario.xml"],
+      "covered_by": "app-scenarios-release",
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-visual-review", "title": "사용자 설정 눈 확인(UI 는 그대로 · 텍스처 low · 이펙트 low · 색각 보정 한 번씩 · 포워드 모션 블러)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "장면 아닌 UI · 렌더 텍스처 모니터 · 입자까지 한 그림에서 사람이 판단하는 확인이라 지표로 정할 값이 없다",
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
+    },
+    {
+      "id": "usersettings-render-tests", "title": "렌더 패스 GPU 테스트(TAA 이웃 클램프 · 모션 블러 · 가림 판정 등)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 40,
+      "filter": "RenderPassGPUTest.TaaLeavesNoGhostOfAMovedObject,ShaderCookRequestTest.*",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/UserSettingsConsumers.md U4", "result_doc": "docs/plans/UserSettingsConsumers.md 상태를 끝으로"
+    },
+    {
+      "id": "preload-lod-tests", "title": "프리로드 · LOD · 씬 프리로드 목록 · 시퀀서 스폰 · 로딩 화면 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 40,
+      "filter": "AssetStreamingTest.*,PrefabPoolTest.*,AnimationLODTest.PendingViewWarmsUnitsOfTheNextCut,MeshAssetTest.LODLevelsRoundTripAndFollowLODZero,MeshAssetTest.MeshLODSystemPicksLevelsByScreenSize,ModelImporterTest.LODRuleSimplifiesStaticMeshIntoLevels,ScenePreloadListTest.*,SceneCookTest.*,SequencerTest.*,LoadingScreenTest.*",
+      "source": "docs/plans/PreloadAndLod.md P11", "result_doc": "docs/plans/PreloadAndLod.md 상태를 끝으로"
+    },
+    {
+      "id": "preload-lod-gpu-tests", "title": "텍스처 밉 스트리밍 GPU 테스트(위쪽 밉 · 화면 크기 우선순위, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
+      "filter": "RenderPassGPUTest.AsyncTextureStreamsTopMipsAfterBase,RenderPassGPUTest.StreamingUploadsTheTextureNotedAsLargestOnScreenFirst",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/PreloadAndLod.md P11", "result_doc": "docs/plans/PreloadAndLod.md 상태를 끝으로"
+    },
+    {
+      "id": "preload-lod-visual-review", "title": "시퀀서 컷 프리롤 첫 프레임 포즈 · LOD 단계 캡처(-gv_meshLodForce)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "LOD 가 든 실제 모델과 스폰 항목을 쓴 시퀀스 시나리오가 아직 없어 스크립트로 판정할 그림이 없다(사람이 캡처를 본다)",
+      "source": "docs/plans/PreloadAndLod.md P11", "result_doc": "docs/plans/PreloadAndLod.md 상태를 끝으로"
+    },
+    {
+      "id": "visual-logger-tests", "title": "비주얼 로거 테스트(질의 · 용량 · 다시 보기 · 파일 왕복)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "VisualLoggerTest.*",
+      "source": "docs/plans/FeatureQueue.md 1절", "result_doc": "docs/plans/FeatureQueue.md 비주얼 로거 줄"
+    },
+    {
+      "id": "async-buffer-readback-gpu", "title": "RHI 비동기 버퍼 되읽기(복사 → 해제 콜백 → 읽기, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
+      "filter": "RHIDeviceTest.AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
+    },
+    {
+      "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "OcclusionTileQueryTest.*,OcclusionTileMailboxTest.*,RenderViewCollectorTest.*",
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
+    },
+    {
+      "id": "occlusion-culling-visibility-run", "title": "가림 컬링을 켠(-gv_occlusionCulling=1) Shooter3D 에서 CCTV 모니터를 벽 뒤로 보내면 CCTV 뷰가 쉬는가(네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "모니터가 가려지는 카메라 위치를 장면에서 눈으로 정해야 하고, 뷰가 쉬었는지 읽을 탐침도 없다 — 사람이 -gv_occlusionCulling=1 로 돌려 CCTV 뷰가 가려지면 멈추고 드러나면 다시 그리는지 본다",
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
     }
   ]
 }

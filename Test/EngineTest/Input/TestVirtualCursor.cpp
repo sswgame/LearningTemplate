@@ -139,3 +139,50 @@ SW_TEST_CASE( VirtualCursorTest, PadButtonsBecomeMouseButtons )
     pPad->setVirtualSession( false );
     input.shutdown();
 }
+
+/**
+ * @brief [VirtualCursorTest] 커서 이동은 프레임률과 무관하다 — 같은 시간을 한 프레임으로 가든 여러 프레임으로 가든 간 거리가 같다(속도 × 시간)
+ */
+SW_TEST_CASE( VirtualCursorTest, DistanceDoesNotDependOnFrameRate )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::GamepadDevice* pPad = input.getGamepad( 0 );
+    if ( pPad == nullptr )
+    {
+        input.shutdown();
+        return; // 이 플랫폼에는 게임패드 장치가 없다
+    }
+    pPad->setVirtualSession( true );
+    pPad->setVirtualConnected( true );
+    pPad->setAxis( 0, 1.0f );
+    pPad->setAxis( 2, 1.0f );
+
+    // 0.12 초를 한 프레임, 여섯 프레임(0.02 초), 열두 프레임(0.01 초)으로 간다. 이벤트의 마우스 위치를 따라가며 마지막 위치를 견준다.
+    const float32 arrFrameSeconds[] = { 0.12f, 0.02f, 0.01f };
+    float32       arrFinalX[3]{};
+    for ( int32 caseIndex = 0; caseIndex < 3; ++caseIndex )
+    {
+        sw::VirtualCursor             cursor = TestVirtualCursorInternal::makeCursor();
+        sw::vector<sw::RawInputEvent> listEvent;
+        sw::int2                      mouse{ 100, 100 };
+        const int32                   frameCount = static_cast<int32>( 0.12f / arrFrameSeconds[caseIndex] + 0.5f );
+        for ( int32 frame = 0; frame < frameCount; ++frame )
+        {
+            listEvent.clear();
+            cursor.emitFrame( pPad, mouse, TestVirtualCursorInternal::kClientSize, arrFrameSeconds[caseIndex], listEvent );
+            for ( const sw::RawInputEvent& event : listEvent )
+            {
+                if ( event._type == sw::RawInputEventType::MouseMove )
+                    mouse = sw::int2{ event._payload._mouseData._x, event._payload._mouseData._y };
+            }
+        }
+        arrFinalX[caseIndex] = static_cast<float32>( mouse._x );
+    }
+    // 1000 px/s × 0.12 s = 120 px. 프레임마다 정수 픽셀로 반올림되므로 프레임 수만큼의 오차는 허용한다.
+    SW_EXPECT_NEAR_EQUAL( 220.0f, arrFinalX[0], 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 220.0f, arrFinalX[1], 6.0f );
+    SW_EXPECT_NEAR_EQUAL( 220.0f, arrFinalX[2], 12.0f );
+    pPad->setVirtualSession( false );
+    input.shutdown();
+}

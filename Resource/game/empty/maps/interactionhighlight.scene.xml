@@ -1,0 +1,134 @@
+<Scene formatVersion="2" name="InteractionHighlight">
+	<!-- 상호작용 강조 패스 확인(automation/interactionhighlight)의 무대 — 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다.
+	     카메라는 움직이지 않는다. 하는 쪽(Player, 눈에 안 보이는 빈 오브젝트)만 시나리오가 순간이동(teleport Player …)으로 옮겨, 같은 그림틀에서 강조만 켜고 끈다.
+	     PickCube(PickUp = 외곽선)와 HideCube(Hide = 감각 모드, 벽 너머로도 보인다)는 각각 하는 쪽이 1.2 m 안에 서면 고른다. -->
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-6"
+					                 _localRotation="0.15,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<SceneComponent _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0.5,-14"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<InteractorComponent _componentName="InteractorComponent"
+					                     _bActive="true"
+					                     _eyeOffset="0,0,0"
+					                     _bUseLineOfSight="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="PickCube">
+			<GameObject _schemaVersion="0" _name="PickCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.5,0.5,1"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="0.9"
+					               _blendMode="Opaque" />
+					<InteractableComponent _componentName="InteractableComponent"
+					                       _bActive="true"
+					                       _interactionID="PickUp"
+					                       _catalogPath="common/data/interactions/default.interactions.xml"
+					                       _priority="0"
+					                       _bEnabled="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2,1,1.3"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,0.2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="cube"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="1.5"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="HideCube">
+			<GameObject _schemaVersion="0" _name="HideCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2,0.5,2"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="0.9"
+					               _blendMode="Opaque" />
+					<InteractableComponent _componentName="InteractableComponent"
+					                       _bActive="true"
+					                       _interactionID="Hide"
+					                       _catalogPath="common/data/interactions/default.interactions.xml"
+					                       _priority="0"
+					                       _bEnabled="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

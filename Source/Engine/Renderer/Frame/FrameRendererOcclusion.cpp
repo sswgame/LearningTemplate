@@ -5,6 +5,8 @@
  *          절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 그 깊이를 그린 프레임의 뷰-투영으로 옮겨, 덮는 타일의 최대 깊이보다 모두 멀면 그리지 않는다.
  *          언리얼의 HZB 가림(지난 프레임 깊이의 최대 밉 사슬)을 밉 한 단만 둔 모양이다 — 화면에서 타일 8 x 8 을 넘게 덮는 큰 물체는 판정하지 않는다(보인다).
  *          지난 프레임 깊이로 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나오고, 기록을 버리는 프레임(처음 · 컷)은 판정하지 않는다.
+ *          주 시점의 타일은 GPU 컬링 말고 게임 스레드도 쓴다 — `requestOcclusionReadback` 이 타일을 `AsyncBufferReadback` 으로 몇 프레임 늦게 되읽어
+ *          `OcclusionTileMailbox` 에 올리면 `RenderViewCollector` 가 모니터(보임 오브젝트)의 구를 같은 식으로 판정한다(언리얼 `WasRecentlyRendered`).
  * @note 기본은 끔이다(`gv_occlusionCulling`) — 켜는 것은 Release 측정으로 이득을 보인 뒤 정한다(측정 없이 최적화하지 않는다).
  */
 #include "pch.h"
@@ -105,6 +107,76 @@ namespace sw
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).
         _pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
         target._bOcclusionTilesThisFrame = SW_TRUE;
+    }
+
+    void FrameRenderer::requestOcclusionReadback( const ViewTarget& view )
+    {
+        // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
+        const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && _pDevice != nullptr && _pCmd != nullptr;
+        if ( bEnabled == false )
+        {
+            if ( _occlusionReadback.isInitialized() )
+            {
+                _occlusionReadback.shutdown();
+                _occlusionMailbox.clear();
+            }
+            return;
+        }
+
+        // 먼저 도착한 사본을 우편함에 올린다. 요청 때 기록을 버리는 프레임이었으면 올리지 않고 비운다.
+        vector<uint8> bytes;
+        uint64        serial = 0;
+        if ( _occlusionReadback.takeLatest( bytes, serial ) )
+        {
+            const OcclusionReadbackMeta& meta = _arrOcclusionReadbackMeta[serial % kOcclusionReadbackMetaCount];
+            if ( meta._bValid == SW_FALSE )
+            {
+                _occlusionMailbox.clear();
+            }
+            else
+            {
+                shared_ptr<OcclusionTileSnapshot> pSnapshot = make_shared<OcclusionTileSnapshot>();
+                pSnapshot->_viewProj                        = meta._viewProj;
+                pSnapshot->_columns                         = meta._columns;
+                pSnapshot->_rows                            = meta._rows;
+                pSnapshot->_tileSize                        = FrameRendererUtil::kOcclusionTileSize;
+                pSnapshot->_depthWidth                      = meta._depthWidth;
+                pSnapshot->_depthHeight                     = meta._depthHeight;
+                pSnapshot->_serial                          = serial;
+                pSnapshot->_listTileDepth.resize( bytes.size() / sizeof( float32 ) );
+                Memory::copy( pSnapshot->_listTileDepth.data(), bytes.data(), pSnapshot->_listTileDepth.size() * sizeof( float32 ) );
+                if ( pSnapshot->isValid() )
+                    _occlusionMailbox.publish( std::move( pSnapshot ) );
+                else
+                    _occlusionMailbox.clear();
+            }
+        }
+
+        // 이번 프레임에 타일을 짓지 않았으면 복사할 것이 없다. 격자 크기가 바뀌었으면 읽기 버퍼를 다시 만든다.
+        if ( view._bOcclusionTilesThisFrame == SW_FALSE || view._occlusionTiles.isValid() == false )
+            return;
+        const uint32 elementCount = view._occlusionColumns * view._occlusionRows;
+        const bool   bResized     = _occlusionReadback.isInitialized() && _occlusionReadback.getElementCount() != elementCount;
+        if ( bResized )
+        {
+            _occlusionReadback.shutdown();
+            _occlusionMailbox.clear();
+        }
+        if ( _occlusionReadback.isInitialized() == false && _occlusionReadback.initialize( _pDevice, sizeof( float32 ), elementCount ) == false )
+            return; // 만들지 못했다 — 이유는 initialize 가 남겼다. 가림을 보지 않는 채로 둔다.
+
+        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
+        const uint64                              next  = _occlusionReadbackSerial + 1;
+        OcclusionReadbackMeta&                    meta  = _arrOcclusionReadbackMeta[next % kOcclusionReadbackMetaCount];
+        meta._viewProj                                  = view._depthHistoryViewProj;
+        meta._columns                                   = view._occlusionColumns;
+        meta._rows                                      = view._occlusionRows;
+        meta._depthWidth                                = static_cast<float32>( depth._width );
+        meta._depthHeight                               = static_cast<float32>( depth._height );
+        meta._bValid                                    = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
+        // 타일은 이 프레임의 컬링이 읽으므로 복사 뒤 SRV 상태로 되돌린다(`recordOcclusionTiles` 가 끝낸 상태).
+        if ( _occlusionReadback.request( *_pCmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
+            _occlusionReadbackSerial = next;
     }
 
     void FrameRenderer::fillOcclusionParams( const ViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const

@@ -145,6 +145,7 @@
 | `gv_animationRewind` | `int32` | `0` | 테스트 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 테스트 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_meshLodForce` | `int32` | `-1` | 테스트 | Draw every LOD mesh at this LOD level regardless of screen size (-1 = pick by screen size) | [MeshLODSystem.cpp](../../Source/Engine/Object/Component/3D/MeshLODSystem.cpp) |
+| `gv_textureStreamByScreenSize` | `bool` | `true` | 테스트 | Upload the top mips of textures used by large on-screen meshes first (false = in load order) | [TextureStreamingSystem.cpp](../../Source/Engine/Object/Component/3D/TextureStreamingSystem.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 테스트 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/Tick/TickRegistry.cpp) |
 | `gv_tickCostDispatch` | `bool` | `false` | 테스트 | 씬 틱 병렬 분배를 잰 비용으로 고른다(0 이면 항목 16 개 이상이면 늘 나눈다 — 기본) | [SceneTickScheduler.cpp](../../Source/Engine/Object/GameObject/Tick/SceneTickScheduler.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 — 원근 카메라의 먼 평면에 곱한다 (사용자 설정 graphics.viewDistance) | [CameraComponent.cpp](../../Source/Engine/Object/Component/CameraComponent.cpp) |
@@ -210,6 +211,10 @@
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 | `gv_physicsDebugDraw` | `bool` | `false` | 일반 | 강체 물리 바디 · 캐릭터를 디버그 선으로 그린다 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
+| `gv_scenePreload` | `bool` | `true` | 일반 | 씬 로드 요청 때 쿠킹이 구운 프리로드 목록(<씬>.preload.json)의 파일을 미리 읽는다 (끄면 씬이 에셋을 잡을 때 읽는다) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadHoldFrames` | `int32` | `120` | 일반 | 로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadInFlight` | `int32` | `8` | 일반 | 씬 프리로드가 한 번에 걸어 두는 읽기 요청 수 (프레임에 IO 를 몰지 않는 예산) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
+| `gv_scenePreloadPinMegabytes` | `int32` | `256` | 일반 | 씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다) | [SceneManager.cpp](../../Source/Engine/Scene/SceneManager.cpp) |
 | `gv_stateHashHistory` | `int32` | `0` | 테스트 | 틱별 씬 상태 해시 이력 길이 (0=끄기) | [SceneStateHash.cpp](../../Source/Engine/Scene/SceneStateHash.cpp) |
 | `gv_worldCellDebugDraw` | `bool` | `false` | 일반 | 월드 스트리밍 격자를 카메라 둘레에 그린다 — 올라 있는 셀 초록, 로딩 반경 안 노랑, 그 밖 회색 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 
@@ -240,7 +245,7 @@
 | `gv_cameraFieldOfView` | `float32` | `70.0` | 일반 | 카메라 시야각(도) (사용자 설정 gameplay.fieldOfView) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraHeadBob` | `bool` | `true` | 일반 | 걷기 머리 흔들림 (사용자 설정 gameplay.headBob) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraShakeScale` | `float32` | `1.0` | 일반 | 카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스 — 톤맵 셰이더는 쿠킹 대기) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스와 화면 출력 뷰의 톤맵 — postgrade.hlsli) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUD` | `bool` | `false` | 일반 | 디버그 HUD 표시 — Dev 전용, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDCorner` | `int32` | `0` | 일반 | 디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDOpacity` | `float32` | `0.85` | 일반 | 디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |

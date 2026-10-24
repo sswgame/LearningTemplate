@@ -22,6 +22,7 @@
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
@@ -124,6 +125,7 @@ namespace sw::engine
         {
             SW_MEMORY_SCOPE( RenderCPU );
             services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
+            services.addSubsystem( sw::make_unique<VisualLogger>() );
             services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
             services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
 #if defined( SW_WITH_CLIENT_CODE )

@@ -745,6 +745,34 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 스테이징 생성 · 전이 · 복사 · 대기 · 매핑의 순서가 곧 의미라 나누지 않는다.
+    RHIBufferHandle VulkanRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    {
+        uint32     totalBytes{ 0 };
+        const bool bInvalidReadbackRequest = elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        if ( bInvalidReadbackRequest )
+            return 0;
+        // 모든 Vulkan 버퍼가 HOST_VISIBLE | HOST_COHERENT 메모리다(createVulkanBuffer) — 복사 도착지 용도로 만들면 맵해 읽을 수 있다.
+        return _pDevice->createVulkanBuffer( totalBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
+    }
+
+    bool VulkanRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    {
+        VulkanRHIDevice::VulkanBufferRecord* pRecord     = _pDevice->resolveAllocatedBuffer( readback );
+        const bool                           bUnreadable = pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pDestination == nullptr || sizeBytes == 0 || sizeBytes > pRecord->_sizeBytes;
+        if ( bUnreadable )
+            return false;
+        // 프레임 펜스를 기다린 뒤(해제 콜백)라 GPU 쓰기가 호스트에 보인다.
+        void* pMapped{ nullptr };
+        if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, sizeBytes, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "readReadbackBuffer: failed to map the readback memory (%# bytes)", sizeBytes );
+            return false;
+        }
+        Memory::copy( pDestination, pMapped, sizeBytes );
+        vkUnmapMemory( _pDevice->_device, pRecord->_memory );
+        return true;
+    }
+
     bool VulkanRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가

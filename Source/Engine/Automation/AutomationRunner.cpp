@@ -16,6 +16,7 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -679,6 +680,22 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Input.MouseX` · `Input.MouseY` 입니다. 마우스(가상 커서가 옮긴 것 포함)의 창 클라이언트 픽셀 위치입니다. */
+            [[nodiscard]] static bool readMousePosition( bool bX, float64& outValue )
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                const MouseDevice* pMouse = engine::getSubsystem<InputManager>().getMouse();
+                if ( pMouse == nullptr )
+                    return false;
+                const int2 position = pMouse->getPosition();
+                outValue            = static_cast<float64>( bX ? position._x : position._y );
+                return true;
+            }
+
+            [[nodiscard]] static bool readMouseX( const GameObjectManager* /*pManager*/, float64& outValue ) { return readMousePosition( true, outValue ); }
+            [[nodiscard]] static bool readMouseY( const GameObjectManager* /*pManager*/, float64& outValue ) { return readMousePosition( false, outValue ); }
+
             /** @brief 탐침 `Assets.Pending` 입니다. 씬이 기다리는 에셋 일의 수입니다(`AutomationCaptureUtil::countPendingAssetWork`). 0 이면 화면이 다 읽힌 상태입니다. */
             [[nodiscard]] static bool readAssetsPending( const GameObjectManager* pManager, float64& outValue )
             {
@@ -810,6 +827,8 @@ namespace sw
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
     SW_AUTOMATION_PROBE( inputVirtualCursorEnabled, "Input.VirtualCursorEnabled", "1 while the gamepad virtual cursor is on (command directors turn it on for play)",
                          &AutomationRunnerInternal::readVirtualCursorEnabled );
+    SW_AUTOMATION_PROBE( inputMouseX, "Input.MouseX", "Mouse pointer X in window client pixels (the gamepad virtual cursor moves it too)", &AutomationRunnerInternal::readMouseX );
+    SW_AUTOMATION_PROBE( inputMouseY, "Input.MouseY", "Mouse pointer Y in window client pixels (the gamepad virtual cursor moves it too)", &AutomationRunnerInternal::readMouseY );
     SW_AUTOMATION_PROBE( assetsPending, "Assets.Pending", "Meshes still loading, waiting for animation or dithering in, plus textures still loading or uploading (0 = settled)",
                          &AutomationRunnerInternal::readAssetsPending );
     SW_AUTOMATION_QUERY_PROBE( objectX, "Object.X", "World X of the target object (m)", &AutomationRunnerInternal::readObjectX, true, false );

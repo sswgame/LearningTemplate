@@ -1,6 +1,6 @@
 # 키트 조립의 두 번째 테스트 게임과 땅 쓰기
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-4 · 진행: 1/2
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-4 · 진행: 2/2
 
 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest`)과 `MeadowVillage` 에 이어, 둘째 조립(도시 + RTS)의 테스트 게임 `FrontierTown`(`Source/Games/FrontierTown`, 팩 `game/frontiertown`)이 들어갔다.
 규칙은 `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"이다. 공유 상태가 땅을 연다(`FrontierTownData::makeStateSettings` 의 `_landWidth` · `_landHeight`). 도시와 RTS 디렉터가 각자 키트의 `bindLand` 로 같은 땅을 원점 (0, 0) 에 빌린다.
@@ -9,7 +9,6 @@
 
 ## K2 빌드와 실행 확인
 
-- `Ninja-Debug` 전체 빌드(게임 폴더는 모두 컴파일된다)로 `FrontierTown` 의 컴파일을 확인한다. 작업자는 빌드하지 않았다.
-- `App.exe -game=FrontierTown -dx12 -scenario=game/frontiertown/automation/month.scenario.xml` 이 0 으로 끝나는지, `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 가 네 백엔드에서 이 팩을 통과하는지 본다.
-- 캡처로 신전 · 도로 판, 병영이 서는 것, 해병이 신전을 돌아 오가는 것을 본다. 로그에 `[Frontier] ... refused` 오류가 없어야 한다(배치가 땅과 맞지 않으면 남는다).
-- QA 골든(`Test/QA/Golden/FrontierTown`)은 아직 없다 — `Test/QA/Games.json` 에 줄만 넣었다.
+- 확인 대기: 매니페스트 id `debug-full-build`, `frontiertown-scenario`, `golden-record`.
+- `debug-full-build` 가 `FrontierTown` 의 컴파일을 본다(게임 폴더는 모두 컴파일된다). `frontiertown-scenario`(`month.scenario.xml`)는 0 으로 끝나고 끝에서 `[Frontier] ... refused` 오류 로그가 0 줄이어야 하며, 네 백엔드에서 이 팩이 통과하는지는 덮개 `app-scenarios-release`(`AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend`)가 본다.
+- 캡처(신전 · 도로 판, 병영이 서는 것, 해병이 신전을 돌아 오가는 것)는 QA 골든이 맡는다: `Test/QA/Games.json` 에 `FrontierTown` 줄이 있고 `golden-record` 가 `Test/QA/Golden/FrontierTown` 을 만든다 — 뜬 뒤 그림을 눈으로 보고 커밋한다.

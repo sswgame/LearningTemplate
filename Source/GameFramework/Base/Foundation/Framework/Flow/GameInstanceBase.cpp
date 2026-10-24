@@ -393,11 +393,16 @@ namespace sw
         // 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이면 로딩 중이다. 페이드를 먼저 진행하고, 로딩 화면이 닫히면 페이드 인을 건다.
         const SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
+        // 로드 진행은 씬 매니저의 프리로드가 안다(쿠킹이 구운 목록이 없으면 모른다 — 로딩 화면은 진행 막대를 접는다).
+        std::optional<float32> loadProgress;
+        float32                progressValue = 0.0f;
+        if ( pSceneManager != nullptr && pSceneManager->tryGetLoadProgress( progressValue ) )
+            loadProgress = progressValue;
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
         const float32            realDeltaTime    = GameTimeScale::getUnscaledDeltaTime();
         ScreenTransitionManager& screenTransition = getSubsystem<ScreenTransitionManager>();
         screenTransition.update( realDeltaTime );
-        getSubsystem<LoadingScreenController>().update( realDeltaTime, bLoading, screenTransition.fade() );
+        getSubsystem<LoadingScreenController>().update( realDeltaTime, bLoading, loadProgress, screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.

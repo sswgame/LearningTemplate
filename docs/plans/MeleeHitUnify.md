@@ -1,6 +1,6 @@
 # 근접 판정 한 길로
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 2/3
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 3/3
 
 근접 타격 판정이 둘로 갈라져 있었습니다. 애니메이션 알림 `HitWindow` 는 칼날을 쓸어(처음 닿은 하나만) `onHitReceived` 로 알렸고, ActionCombat 킷의 `MeleeHitboxComponent` 는 2D 콜라이더의 겹침 이벤트로 접촉을 따로 세고 `UnitStatsComponent::takeDamage` 를 직접 불렀습니다. "이미 맞힘" · 공격자 제외 · 피해 전달을 두 곳이 따로 들고 있었고, 어느 쪽도 클라이언트에서 피해를 막지 않았습니다.
 
@@ -18,4 +18,14 @@
 |---|---|---|
 | M1 | `MeleeHitWindowUtil::sweep` · `CharacterHitUtil::sweepAll`, `HitWindow` · `MeleeHitboxComponent` 옮기기, 겹침 길 지우기, `UnitStatsComponent::onHitReceived` | 끝 |
 | M2 | 서버 권위(`MeleeHitAuthority`, 클라이언트는 전달하지 않음), 테스트 `AnimationNotify2DTest.MeleeHitWindowDeliversOnlyWithAuthority` | 끝 |
-| M3 | 클라이언트의 예측 맞음을 서버로 보내 서버가 자기 스윕 기록(창 · 칼날 궤적)으로 확인하는 넷 경로. 지금은 서버가 자기 스윕으로만 정하고, 클라이언트의 예측 맞음은 기록(타격감)에만 쓰입니다. 근접 공격을 네트워크로 겨루는 게임이 생길 때 착수합니다 | 남음 |
+| M3 | 클라이언트의 예측 맞음 주장(`MeleeHitClaim`)을 서버가 자기 스윕 기록(`MeleeHitLedger`)으로 확인하는 경로 — 3절. 테스트 `AnimationNotify2DTest.MeleeHitLedgerConfirmsClaimsAgainstServerSweeps` | 코드 · 테스트, 빌드 미확인 |
+
+## 3. 클라이언트 맞음 주장의 서버 확인 (M3)
+
+- **문제**: 서버는 자기 시점의 스윕으로만 맞음을 정한다. 지연된 월드를 보고 휘두른 클라이언트는 맞혔다고 보지만, 서버의 칼날이 닿는 순간 표적은 이미 비켜서 있을 수 있다. 반대로 클라이언트가 지어낸 맞음을 서버가 믿으면 안 된다.
+- **구조**: `Engine/Character/Hit/MeleeHitLedger.h` — 서버가 `MeleeHitLedger::ensureFor( manager )` 로 켠 씬에서 권위 스윕(`MeleeHitWindowUtil::sweep`, `Authority`)이 칼날 표본점 줄 · 두께 · 피해를 프레임 번호로 적는다(맞지 않은 스윕도). 클라이언트와 혼자 하는 게임은 장부를 켜지 않아 기록하지 않는다.
+  클라이언트는 `MeleeHitClaim`(서버 프레임 · 표적 번호)을 **입력 바이트 안에** 실어 보낸다 — 키트의 와이어 형식을 바꾸지 않는다(`MeleeHitClaim::write` · `read`). 서버의 폰 루프가 입력 틱을 그 입력을 처리한 서버 프레임으로 옮기고, 지연 보상(`LagCompensationHistory::sampleAt`)이 보던 틱으로 되감은 표적 자리를 `claimHit` 에 넘긴다.
+- **판정**: 표적 구(중심 · 반지름)가 주장 프레임 안팎(`kClaimSlackFrames`)의 기록된 칼날 토막(표본점마다 지난 → 지금, 칼날 자체)에서 칼날 두께 + 반지름 + 여유(`kClaimToleranceMeters`) 안이면 `Confirmed`. 스윕 기록이 없으면 `NoSweep`(휘두르지 않은 쪽 · 너무 오래된 주장), 스윕은 있지만 닿지 않으면 `OutOfBlade`.
+  인정된 주장만 기록된 피해 · 충격량으로 `onHitReceived` 에 전달하고, 창에서 이미 맞힌 오브젝트는 건너뛴다(한 창에 오브젝트 하나는 한 번).
+- **확인 대기**: 매니페스트 id `melee-hit-ledger-test`.
+- **남은 연결**: 근접을 네트워크로 겨루는 게임이 생기면 그 게임의 서버 루프가 위 두 호출(입력 틱 → 프레임 옮김, `claimHit`)을 잇는다. 그 게임이 아직 없어 키트 쪽 메시지는 더하지 않았다.

@@ -58,6 +58,13 @@ namespace sw
         { pMover->setTickOffset( tickOffset ); } );
     }
 
+    void TickedPathMoverComponent::setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong )
+    {
+        _listWaypoint   = listWaypoint;
+        _segmentSeconds = segmentSeconds;
+        _bPingPong      = bPingPong;
+    }
+
     void TickedPathMoverComponent::applyTick( uint32 tick )
     {
         GameObject*     pOwner = getOwner();

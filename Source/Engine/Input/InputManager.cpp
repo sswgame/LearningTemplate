@@ -429,10 +429,12 @@ namespace sw
             ++_virtualFrameIndex;
         }
 
-        // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있으면 그쪽이 입력을 정하므로 쉰다.
-        //      켜고 끄기와 스틱은 게임플레이 입력 맵이 정한다(`<InputMap virtualCursor>`) — 맵을 바꾸면 이 프레임부터 따른다.
+        // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있어도 배타 모드(OS 입력을 버려 패드가 스크립트의 것뿐)면 돈다 —
+        //      시나리오의 `GamepadAxis` 가 만든 스틱이 커서를 움직이는 길(실기와 같은 길)을 시나리오가 볼 수 있어야 한다. 배타가 아니면 사람의 패드와 스크립트가
+        //      섞이므로 쉰다. 켜고 끄기와 스틱은 게임플레이 입력 맵이 정한다(`<InputMap virtualCursor>`) — 맵을 바꾸면 이 프레임부터 따른다.
         syncVirtualCursorToMap();
-        const bool bVirtualCursorActive = _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr;
+        const bool bVirtualInputOwnsPad = _pVirtualInput != nullptr && _virtualInputMode != VirtualInputMode::Exclusive;
+        const bool bVirtualCursorActive = _virtualCursor.isEnabled() && bVirtualInputOwnsPad == false && _pMouse != nullptr;
         if ( bVirtualCursorActive )
         {
             // 커서는 게임 화면 안에 머문다(창 전체가 아니다 — 에디터 게임 뷰는 창의 일부다).

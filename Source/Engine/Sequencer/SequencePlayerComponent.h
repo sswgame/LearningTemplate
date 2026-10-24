@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -86,6 +87,8 @@ namespace sw
         uint8                  _bAutoPlay : 1;
         [[maybe_unused]] uint8 _reserved  : 6;
         SequencePlayer         _player;
+        /** @brief 스폰 항목이 만든 오브젝트입니다(`SequenceTimelineUtil::applySpawns`). 저장하지 않는다 — 재생이 만들고 멈추면 지운다. */
+        vector<SequenceSpawnedObject> _listSpawned;
         /** @brief 이벤트 항목 구독자들입니다. 저장하지 않습니다. 코드가 등록하는 것이기 때문입니다. */
         MulticastDelegate<void( const SequenceTrackItem& )> _sequenceEventMulticast;
         /** @brief 카메라 신호 구독자들입니다. 저장하지 않습니다. */

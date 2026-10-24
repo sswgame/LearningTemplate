@@ -1,6 +1,6 @@
 # 상호작용 강조 패스와 몽타주 실행 확인
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-12 · 진행: 2/4
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-12 · 진행: 4/4
 
 상호작용 · 기믹(`GameFramework/Base/Gameplay/Interaction` · `Gimmick` · `Spline` README)의 남은 두 조각입니다. 고른 대상이 화면에서 외곽선으로 구별되고(감각 모드는 벽 너머로도), 상호작용 단계의 몽타주가 실제로 애니메이터를 부르는지 확인합니다.
 
@@ -17,10 +17,15 @@
 |---|---|---|
 | H1 | 인스턴스 강조 칸 — `MeshComponent::setHighlight` → `GPUSceneBuilder` → `GPUInstance::_highlight`, 상호작용 정의의 색, `InteractableComponent::applyHighlightToMeshes` | 코드 · 테스트(`InteractionTest.HighlightRequestReachesTheOwnersMeshes`), 빌드 미확인 |
 | H2 | 강조 패스 둘(`RenderPassType::HighlightOutline` · `HighlightSense`) · 셰이더(`highlightoutline.hlsl`, `instancedata.hlsli` 의 `highlight` 칸) · 다섯 파이프라인 XML · 엔진 기본 에셋 `_shaderHighlightOutline` | 들어감 — 묶음 6 셰이더 병합(`f33a7f91f`)이 패치를 얹고 쿠킹했다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct` 가 `highlight` · `appearance` 칸을 대조한다 |
-| H3 | 화면 확인 — 네 백엔드에서 외곽선이 대상 둘레에만, 감각 모드가 벽 너머로 보이는지 | 남음(GPU) |
-| H4 | 몽타주 실행 확인 — 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지(그래프 에셋이 있는 씬). 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다 | 남음(씬 실행) |
+| H3 | 화면 확인 — 네 백엔드에서 외곽선이 대상 둘레에만, 감각 모드가 벽 너머로 보이는지 | 시나리오 `game/empty/automation/interactionhighlight.scenario.xml`(무대 `maps/interactionhighlight`)를 만들었다 — 카메라는 고정이고 하는 쪽만 순간이동해 같은 그림틀에서 강조만 켜고 끈다. 실행은 통합(GPU), 문턱은 첫 캡처로 맞춘다 |
+| H4 | 몽타주 실행 확인 — 상호작용 단계 몽타주가 애니메이터를 실제로 부르는지. 3D 기믹 변형의 겹침은 `GimmickGenreTest.Gimmick3DTriggerVariantsReceiveOverlapsInA3DScene` 이 본다 | 테스트 `InteractionTest.StepMontagePlaysOnTheInteractorsAnimatorAndCancelRestores`(클립 폴더로 세운 애니메이터가 누르는 동안 몽타주 상태, 떼면 그 전 상태), 빌드 미확인 |
 
 ## 남은 것
 
 - `GPUInstance` 의 예약 칸은 이제 하나(`reserved1`)다 — 강조(`highlight`)와 디더 등장(`appearance`)이 둘을 가져갔다. 새 칸이 더 필요하면 원소를 144 바이트로 늘리는 결정이 먼저다(128 바이트 · 16 의 배수를 지킨다).
 - 반투명 메시는 강조 패스가 보지 않는다(불투명 배치만 그린다). 필요해지면 반투명 꼬리 배치를 같은 셰이더로 그리는 패스를 더한다.
+
+## 확인 (통합)
+
+- 확인 대기: 매니페스트 id `interaction-montage-tests`.
+- 네 백엔드 화면 확인 대기: 매니페스트 id `interaction-highlight-scenario`(`AppScenarioTest` 의 팩 시나리오 열거에 든다). 시나리오 문턱 0.005 는 측정 전 추정이다 — 첫 캡처로 `base.ppm` · `outline.ppm` · `sense.ppm` 을 눈으로 본 뒤 맞춘다.

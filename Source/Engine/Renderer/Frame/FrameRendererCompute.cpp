@@ -362,6 +362,7 @@ namespace sw
         // 가림 타일은 옮긴 깊이 히스토리에서 바로 짓는다 — 컬링(dispatchCullAndSort)이 이 뒤에 읽는다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
         recordDepthHistory( _mainView );
         recordOcclusionTiles( _mainView );
+        requestOcclusionReadback( _mainView );
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             recordDepthHistory( *pView );

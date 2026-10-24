@@ -135,6 +135,21 @@ namespace sw
         /** @brief GPU 버퍼 리소스를 삭제합니다. */
         virtual void destroyBuffer( RHIBufferHandle buffer ) = 0;
 
+        /**
+         * @brief GPU 에서 CPU 로 되읽을 읽기 전용 버퍼(@p elementSize x @p elementCount 바이트)를 만듭니다. 만들지 못하면 0 입니다.
+         * @details 비동기 되읽기의 도착지다 — `IRHICommandList::copyBufferToReadback` 이 채우고, 그 프레임이 끝난 뒤(`IRHIDevice::enqueueGPURelease` 콜백) `readReadbackBuffer` 로 읽는다.
+         *          원본이 구조화 버퍼면 같은 원소 크기로 만든다(DX11 은 구조화 버퍼끼리만 복사한다). 지우는 것은 `destroyBuffer` 다.
+         */
+        [[nodiscard]] virtual RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) = 0;
+
+        /**
+         * @brief 읽기 버퍼의 앞쪽 @p sizeBytes 를 @p pDestination 에 복사합니다. 기다리지 않습니다.
+         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::enqueueGPURelease` 콜백 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
+         *          이 함수는 어느 스레드에서 불러도 안전하다(DX11 은 즉시 컨텍스트를 잠그고 GL 은 컨텍스트를 빌린다). 끝나기 전에 부르면 이전 내용이거나 0 이다.
+         * @return 핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘거나 내용을 가져오지 못하면 false 입니다(이유는 로그).
+         */
+        [[nodiscard]] virtual bool readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) = 0;
+
         /** @brief 2D 텍스처(렌더 타깃 포함)를 만듭니다. */
         virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
 

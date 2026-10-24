@@ -6,6 +6,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
@@ -26,6 +27,8 @@ namespace
         CameraComponent* _pMainCamera{ nullptr };
         SceneComponent*  _pMonitor{ nullptr };
         CameraComponent* _pCapture{ nullptr };
+        /// 주 시점 가림 타일 사본. nullptr 이면 가려짐을 보지 않는다.
+        const OcclusionTileSnapshot* _pOcclusion{ nullptr };
 
         bool populate( float32 minScreenSize )
         {
@@ -64,7 +67,7 @@ namespace
             vector<RenderViewRequest> listView;
             const float4x4            mainViewProj = _pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
             RenderViewCollector::collectExtraViews( *_scene.getObjectManager(), _pMainCamera, mainViewProj, _pMainCamera->getCameraPosition(), 1280, 720, now,
-                                                    RenderViewBudget{}, scheduler, listView );
+                                                    RenderViewBudget{}, scheduler, _pOcclusion, listView );
             return listView.size() == 1 ? listView[0] : RenderViewRequest{};
         }
     };
@@ -257,6 +260,40 @@ SW_TEST_CASE( RenderViewCollectorTest, VisibilityNeedsOnScreenSize )
 
     const RenderViewRequest backRequest = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 3.0 );
     SW_EXPECT_TRUE( backRequest._bRender == SW_TRUE );
+}
+
+/**
+ * @brief [RenderViewCollectorTest] 주 시점의 가림 타일 사본이 모니터를 가리면 캡처 뷰를 쉬고, 가리지 않거나 사본이 없으면 그린다(지난 프레임에 그려졌나)
+ * @details 모니터는 주 카메라 앞 40 m(화면 크기 약 0.069 — 임계값 0.05 이상)이고 타일 몇 개에 든다. 타일 깊이 0 은 카메라 바로 앞의 벽이라 가리고, 1 은 가리지 않는다.
+ */
+SW_TEST_CASE( RenderViewCollectorTest, OccludedMonitorStopsTheViewOnlyWithASnapshot )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.05f ) );
+    RenderViewScheduler scheduler;
+    const float3        monitor{ 0.0f, 0.0f, 40.0f };
+
+    OcclusionTileSnapshot snapshot;
+    snapshot._viewProj    = stage._pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
+    snapshot._columns     = 80;
+    snapshot._rows        = 45;
+    snapshot._tileSize    = 16;
+    snapshot._depthWidth  = 1280.0f;
+    snapshot._depthHeight = 720.0f;
+    snapshot._listTileDepth.assign( 80u * 45u, 0.0f );
+
+    stage._pOcclusion                  = nullptr;
+    const RenderViewRequest noSnapshot = stage.collectAt( monitor, scheduler, 0.0 );
+    SW_EXPECT_TRUE( noSnapshot._bRender == SW_TRUE ); // 사본이 없으면 가려짐을 보지 않는다
+
+    stage._pOcclusion                = &snapshot;
+    const RenderViewRequest occluded = stage.collectAt( monitor, scheduler, 1.0 );
+    SW_EXPECT_EQUAL( stage._pCapture->getComponentID(), occluded._viewID ); // 쉬는 뷰도 실린다
+    SW_EXPECT_TRUE( occluded._bRender == SW_FALSE );
+
+    snapshot._listTileDepth.assign( 80u * 45u, 1.0f ); // 벽이 사라졌다
+    const RenderViewRequest open = stage.collectAt( monitor, scheduler, 2.0 );
+    SW_EXPECT_TRUE( open._bRender == SW_TRUE );
 }
 
 /**

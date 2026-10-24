@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
@@ -23,6 +24,7 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
+#include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
@@ -245,6 +247,12 @@ namespace sw
         RenderViewMode getSceneViewMode() const;
         /** @brief 이 렌더러가 그리는 디바이스입니다. 초기화 전이면 nullptr 이며, 백엔드 이름 같은 정보를 읽을 때 씁니다. */
         IRHIDevice* getDevice() const { return _pDevice; }
+        /**
+         * @brief 주 시점의 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다. 어느 스레드에서 불러도 됩니다.
+         * @details `gv_occlusionCulling` 이 꺼졌거나 사본이 아직 없거나 기록을 버린 프레임(처음 · 컷) 뒤면 nullptr — 부르는 쪽은 가림을 보지 않는다.
+         *          `RenderViewCollector` 가 모니터의 "지난 프레임에 그려졌나" 판정에 쓴다(`OcclusionTileQuery::isSphereOccluded`).
+         */
+        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _occlusionMailbox.getLatest(); }
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
@@ -597,6 +605,12 @@ namespace sw
          * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
          */
         void recordOcclusionTiles( ViewTarget& target );
+        /**
+         * @brief 주 시점 가림 타일을 되읽는 복사를 컴퓨트 프리패스 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getOcclusionSnapshot`).
+         * @details `recordOcclusionTiles` 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
+         *          요청 때의 뷰-투영 · 격자는 `_arrOcclusionReadbackMeta` 에 적어 두었다가 사본이 도착하면 붙인다.
+         */
+        void requestOcclusionReadback( const ViewTarget& view );
         /**
          * @brief 뷰 @p view 의 컬링 상수에 가림 판정 값을 채웁니다. 이번 프레임에 타일을 지었고 기록을 버리는 프레임(처음 · 컷)이 아닐 때만 켭니다.
          * @details 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다(언리얼의 지난 프레임 HZB 와 같은 한계). 컷 프레임은 지난 깊이가
@@ -1148,6 +1162,21 @@ namespace sw
         RHIStructuredBufferSlot _transparentRankPlaceholder;
         /// @brief 가림 타일이 없는 컬링(그림자 슬롯 · 가림을 보지 않는 뷰)이 t2 에 바인딩하는 원소 하나(깊이 1 — 아무것도 가리지 않는다)짜리 자리 표시 버퍼입니다. 셰이더는 가림이 꺼지면 읽지 않습니다.
         RHIStructuredBufferSlot _occlusionTilesPlaceholder;
+        /// @brief 주 시점 가림 타일의 되읽기 고리, 게임 스레드가 가져가는 우편함, 요청 때의 메타데이터(요청 번호 % 개수 로 찾는다)입니다. 요청한 프레임과 사본이 도착하는 프레임은 다르다.
+        struct OcclusionReadbackMeta
+        {
+            float4x4 _viewProj{};
+            uint32   _columns{ 0 };
+            uint32   _rows{ 0 };
+            float32  _depthWidth{ 0.0f };
+            float32  _depthHeight{ 0.0f };
+            uint8    _bValid{ SW_FALSE }; ///< 이 요청의 타일이 판정에 쓸 수 있는 프레임이었다(기록을 버리는 프레임이 아니었다)
+        };
+        static constexpr uint32 kOcclusionReadbackMetaCount = 8;
+        AsyncBufferReadback     _occlusionReadback;
+        OcclusionTileMailbox    _occlusionMailbox;
+        OcclusionReadbackMeta   _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount]{};
+        uint64                  _occlusionReadbackSerial{ 0 };
         /// @brief 이 렌더러가 소유하는 PSO 저장소입니다(엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃). 소유와 해제 순서는 캐시가 관리합니다.
         ///        미리보기 씬 렌더러는 이것을 비워 둔다 — `_pPSOCache` 가 주 렌더러의 것을 가리킨다.
         RenderPSOCache _psoCache;
