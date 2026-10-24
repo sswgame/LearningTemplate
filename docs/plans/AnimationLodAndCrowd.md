@@ -39,4 +39,5 @@
 - C4 확인(통합에서 확인): 매니페스트 id `skinned-lod-mesh-test`(`MeshAssetTest` 필터 — `.mesh` 왕복 · 사본 · 거절), 매니페스트 id `skinned-lod-gpu-check`(LOD 규칙을 건 스킨드 모델을 `--import-models` 로 다시 임포트해 먼 거리 스크린샷에서 낮은 단계가 스키닝되어 그려지는지, 본 LOD 단계가 메시 단계를 따르는지 눈으로 본다 — 스키닝 컴퓨트 · 쿠킹된 메시 형식이 걸려 GPU 가 필요하다).
 - C1 · C2 · C3 · 측정 확인(통합에서 확인): 매니페스트 id `shooter-crowd-scenario`(자동 플레이로 `Animation.CrowdSharedUnits` · `CrowdSoloUnits` 탐침을 기록하고 사진 — 적 무기 · 방패가 손을 따라가는지, 섞기 묶음이 끝날 때 위상이
   튀는지 눈으로 본다. 튀면 섞기 묶음의 들어가는 클립 시각을 다음 묶음의 칸 시각에 맞추는 길을 본다), 매니페스트 id `shooter-crowd-measure`(적 30 마리에서 `GT.Animation` 전후, Release, 혼자 돌 때).
+  첫 실행(2026-10-25)은 `CrowdSharedUnits` 0 · `CrowdSoloUnits` 4 로 졌다 — 스켈레톤이 래그돌(`RagdollAnimationBinding`)을 받은 뒤 포즈를 쓰는 작업이 둘이라 혼자 평가했다. 래그돌을 깨어 있을 때만 `Writes` 로 세게 고쳤다(wt/gfxfix, `AnimationCrowdTest.TaskThatWritesOnlyWhileActiveBlocksSharingOnlyThen`). 빌드 · GPU 대기: 시나리오를 다시 돈다.
   휘두름 · 움찔 클립(반복하지 않음)으로 갈 때 혼자로 내려가는 것은 맞다.

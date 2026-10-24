@@ -11,7 +11,7 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| G3 | 패드로 확인하기 — 스크립트 패드로 확인(아래)과 실기 감각 | 확인 대기: 매니페스트 id `gamepad-cursor-tests`, `gamepad-cursor-scenario`, `gamepad-cursor-real-pad` |
+| G3 | 패드로 확인하기 — 스크립트 패드로 확인(아래)과 실기 감각 | 확인 대기: 매니페스트 id `gamepad-cursor-tests`, `gamepad-cursor-scenario`, `gamepad-cursor-real-pad` (첫 실행 2026-10-25 은 네 백엔드 모두 `Input.MouseX` 128 그대로 — `GamepadAxis` 단계가 패드를 연결하지 않아 끊긴 패드를 가상 커서가 쉬었다. 단계가 패드를 먼저 연결하게 고쳤고(wt/gfxfix) 빌드 · GPU 대기) |
 
 ### G3 실제 패드로 확인하기
 
