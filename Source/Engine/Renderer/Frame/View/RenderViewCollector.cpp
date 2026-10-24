@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
@@ -73,8 +74,10 @@ namespace sw
             /**
              * @brief 보임 오브젝트(모니터)가 화면들 중 가장 크게 보이는 크기(경계 구 지름 / 화면 높이, 애니메이션 LOD 와 같은 식)입니다. 어느 화면에도 없으면 0 입니다.
              * @details 메시가 없으면 오브젝트 위치(반지름 1)로 봅니다. 오브젝트가 없으면(파괴됐다) 볼 것이 없으니 0 입니다.
+             *          @p pMainOcclusion 이 있고 첫 화면(주 시점)에서 경계 구가 가림 타일 뒤에 가려졌으면 그 화면은 세지 않는다.
              */
-            static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const AnimationLODView* pView, uint32 viewCount )
+            static float32 computeVisibleScreenSize( const GameObjectManager& manager, const GameObjectHandle& handle, const AnimationLODView* pView, uint32 viewCount,
+                                                     const OcclusionTileSnapshot* pMainOcclusion )
             {
                 const GameObject* pObject = manager.resolveGameObject( handle );
                 if ( pObject == nullptr )
@@ -91,6 +94,10 @@ namespace sw
                 float32        screenSize = 0.0f;
                 for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
                 {
+                    // 첫 화면이 주 시점이다. 가림 타일은 주 시점의 깊이에서 지었으므로 다른 화면에는 쓰지 않는다.
+                    const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, world.getTranslation(), radius );
+                    if ( bOccludedInMain )
+                        continue;
                     screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( pView[viewIndex], world.getTranslation(), radius ) );
                 }
                 return screenSize;
@@ -135,7 +142,7 @@ namespace sw
 
     void RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
                                                  const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float64 now, const RenderViewBudget& budget,
-                                                 RenderViewScheduler& scheduler, vector<RenderViewRequest>& outListView )
+                                                 RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
         RenderViewScheduler::Candidate arrCandidate[kMaxExtraRenderView]{};
@@ -208,7 +215,7 @@ namespace sw
             const CameraRenderOutput& output = *arrCameraOutput[index];
             if ( output._visibilityObject.isValid() == false )
                 continue;
-            const float32 screenSize      = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount );
+            const float32 screenSize      = RenderViewCollectorInternal::computeVisibleScreenSize( manager, output._visibilityObject, arrVisibilityView, visibilityViewCount, pMainOcclusion );
             const bool    bVisible        = screenSize > 0.0f && screenSize >= output._minScreenSize;
             arrCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
         }

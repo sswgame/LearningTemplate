@@ -603,11 +603,12 @@ namespace sw
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
         // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
+        const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _occlusionMailbox.getLatest();
         if ( scene.getObjectManager() != nullptr )
         {
             RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, cameraPos, _outputWidth, _outputHeight,
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
-                                                    _listDirectViewScratch );
+                                                    occlusionSnapshot.get(), _listDirectViewScratch );
         }
         // 추가 뷰마다 자기 카메라에 맞춘 방향광 그림자 — 패킷 경로(RenderPacketBuilder)와 같은 함수다.
         for ( RenderViewRequest& request : _listDirectViewScratch )

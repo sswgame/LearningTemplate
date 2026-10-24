@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -2798,4 +2799,65 @@ SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the vertex buffer region update test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 비동기 되읽기 — 복사를 넣은 프레임이 끝나면 버퍼 내용이 CPU 로 오고, 읽기 버퍼가 모두 쓰이는 중이면 요청을 거절한다
+ * @details `AsyncBufferReadback`(읽기 버퍼 만들기 + `copyBufferToReadback` + `enqueueGPURelease` 콜백 안의 읽기)을 네 백엔드에서 한 바퀴 돈다.
+ *          원본은 구조화 버퍼(SRV 상태)이고, 복사 뒤에 원래 상태로 돌아가 다시 복사할 수 있어야 한다.
+ */
+SW_TEST_CASE( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes )
+{
+    const float32         arrValue[4] = { 1.5f, -2.0f, 3.25f, 4096.0f };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() );
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHIBufferDesc desc{};
+        desc._elementSize                = sizeof( float32 );
+        desc._elementCount               = 4;
+        desc._sizeBytes                  = sizeof( arrValue );
+        desc._usage                      = sw::RHIBufferUsage::Structured | sw::RHIBufferUsage::ShaderResource | sw::RHIBufferUsage::UnorderedAccess;
+        desc._pInitialData               = arrValue;
+        const sw::RHIBufferHandle source = pResource->createBuffer( desc );
+        SW_EXPECT_TRUE_MSG( source != 0, ( label + ": failed to create the source buffer" ).c_str() );
+
+        sw::AsyncBufferReadback readback;
+        const bool              bInitialized = source != 0 && readback.initialize( device.get(), sizeof( float32 ), 4 );
+        SW_EXPECT_TRUE_MSG( bInitialized, ( label + ": failed to create the readback buffers" ).c_str() );
+
+        sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+        if ( bInitialized && cmd != nullptr )
+        {
+            cmd->beginCommandList();
+            uint32 acceptedCount = 0;
+            for ( uint32 index = 0; index < sw::AsyncBufferReadback::kSlotCount; ++index )
+            {
+                if ( readback.request( *cmd, source, sw::RHIBufferState::ShaderResource, 7 + index ) )
+                    ++acceptedCount;
+            }
+            // 읽기 버퍼가 모두 쓰이는 중이라 하나 더는 받지 않는다(기다리지 않는다).
+            const bool bExtraAccepted = readback.request( *cmd, source, sw::RHIBufferState::ShaderResource, 99 );
+            cmd->endCommandList();
+            device->executeCommandListImmediate( cmd.get() );
+            device->waitIdle(); // 남은 해제 콜백을 모두 부른다 — 읽기가 여기서 일어난다
+            SW_EXPECT_EQUAL( sw::AsyncBufferReadback::kSlotCount, acceptedCount );
+            SW_EXPECT_FALSE_MSG( bExtraAccepted, ( label + ": a request past the slot count must be refused" ).c_str() );
+
+            sw::vector<uint8> bytes;
+            uint64            tag = 0;
+            SW_EXPECT_TRUE_MSG( readback.takeLatest( bytes, tag ), ( label + ": nothing arrived after the frame completed" ).c_str() );
+            SW_EXPECT_EQUAL( uint64( 7 + sw::AsyncBufferReadback::kSlotCount - 1 ), tag ); // 가장 최근 요청
+            SW_ASSERT_EQUAL( sizeof( arrValue ), bytes.size() );
+            SW_EXPECT_TRUE_MSG( sw::Memory::compare( bytes.data(), arrValue, sizeof( arrValue ) ) == 0, ( label + ": the readback differs from the source" ).c_str() );
+            SW_EXPECT_FALSE( readback.takeLatest( bytes, tag ) ); // 가져갔으니 새 것이 없다
+        }
+        readback.shutdown();
+        if ( source != 0 )
+            pResource->destroyBuffer( source );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the async buffer readback test" );
 }

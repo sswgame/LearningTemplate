@@ -667,6 +667,22 @@
       "id": "visual-logger-tests", "title": "비주얼 로거 테스트(질의 · 용량 · 다시 보기 · 파일 왕복)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "VisualLoggerTest.*",
       "source": "docs/plans/FeatureQueue.md 1절", "result_doc": "docs/plans/FeatureQueue.md 비주얼 로거 줄"
+    },
+    {
+      "id": "async-buffer-readback-gpu", "title": "RHI 비동기 버퍼 되읽기(복사 → 해제 콜백 → 읽기, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
+      "filter": "RHIDeviceTest.AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
+    },
+    {
+      "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "OcclusionTileQueryTest.*,OcclusionTileMailboxTest.*,RenderViewCollectorTest.*",
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
+    },
+    {
+      "id": "occlusion-culling-visibility-run", "title": "가림 컬링을 켠(-gv_occlusionCulling=1) Shooter3D 에서 CCTV 모니터를 벽 뒤로 보내면 CCTV 뷰가 쉬는가(네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "모니터가 가려지는 카메라 위치를 장면에서 눈으로 정해야 하고, 뷰가 쉬었는지 읽을 탐침도 없다 — 사람이 -gv_occlusionCulling=1 로 돌려 CCTV 뷰가 가려지면 멈추고 드러나면 다시 그리는지 본다",
+      "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
     }
   ]
 }

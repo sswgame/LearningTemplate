@@ -1,25 +1,27 @@
 # 카메라의 렌더러 쪽 연결과 다중 뷰 검증
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-5 · 진행: 3/4
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-5 · 진행: 4/4
 
 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일, 다중 뷰의 화면 크기 보임 판정과 뷰 수 · 픽셀 예산(`RenderViewCollector` · `RenderViewScheduler` 헤더), 에디터 게임 뷰의 화면 사각형 뷰 시나리오(`screenrectview`)는 들어갔다(`Source/GameFramework/` "카메라" 절).
 카메라별 후처리 값은 렌더러가 뷰마다 읽는다 — `CameraPostProcessValues`(엔진, `Engine/Object/Component/CameraPostProcessValues.h`)를 카메라 컴포넌트가 갖고, 수집기가 `RenderViewSettings::_postProcess` 에 싣고, `FrameRenderer::applyViewPassConstants` 가 `g_CameraGrade` · `g_CameraFrame` · 블룸 세기로 채우며, `postgrade.hlsli` 가 톤맵 앞뒤에서 적용한다.
 피사계 심도(패스 종류 `DepthOfField`, `CameraDepthOfFieldValues` 머리 주석)와 렌즈 시프트(`CameraComponent::getLensShift` — 투영 행렬이 비대칭이 된다)도 같은 길로 들어갔다.
 자동 노출(카메라의 EV 범위 · 적응 속도, `FrameRendererExposure.cpp` 머리 주석)과 컷 신호(S3)도 들어갔다 — 컷은 뷰마다 한 곳(`FrameRenderer::beginViewHistory` → `ViewTarget::_bHistoryReset`)에서 정하고 TAA · 모션 블러 · 자동 노출 · 가림 판정이 그것 하나를 본다.
-남은 단위는 아래 하나다. 단위가 끝나면 그 절을 지우고 교훈은 코드의 헤더 주석으로 옮긴다.
+S4(다중 뷰 보임의 가려짐)도 코드는 들어갔다. 렌더러가 주 시점의 가림 타일(`FrameRendererOcclusion.cpp`)을 GPU 에서 CPU 로 몇 프레임 늦게 되읽고(`AsyncBufferReadback`),
+수집기가 모니터의 경계 구를 그 사본으로 가려졌는지 본다(`OcclusionTileQuery::isSphereOccluded` — gpucull.hlsl 의 `isOccluded` 와 같은 식). 남은 것은 아래 확인뿐이다.
 
 ## 1. 단위
 
-| 단위 | 내용 | 선행 |
+| 단위 | 내용 | 상태 |
 |---|---|---|
-| S4 | 다중 뷰 보임의 가려짐 | GPU → CPU 비동기 되읽기(RHI) |
+| S1 ~ S3 | 카메라별 후처리 값 · 피사계 심도와 렌즈 시프트 · 컷 신호 | 끝(확인은 2절) |
+| S4 | 다중 뷰 보임의 가려짐 — RHI 비동기 되읽기(네 백엔드) · 가림 타일 사본 · 수집기의 가려짐 판정 | 코드 끝, 확인 대기: 매니페스트 id `async-buffer-readback-gpu`, `occlusion-snapshot-tests`, `occlusion-culling-visibility-run` |
 
-### S4 다중 뷰 보임의 가려짐
+### S4 설계 (들어간 것)
 
-- 렌더러의 가림 판정은 들어갔다 — GPU 컬링이 지난 프레임 장면 깊이의 타일 최대 깊이(가림 타일)로 가려진 인스턴스를 거른다(`FrameRendererOcclusion.cpp` 머리 주석, `gv_occlusionCulling` 기본 끔).
-- 남은 것은 그 판정을 게임 스레드가 보는 길이다. 모니터(보임 오브젝트)가 지난 프레임에 그려졌는지(언리얼 `WasRecentlyRendered`)로 `RenderViewCollector::computeVisibleScreenSize` 의 판정을 바꾼다.
-- 짧은 설계: (1) 패킷에 보임 질의(질의 id · 월드 경계 구)를 싣는다 — 수집기가 보임 오브젝트마다 하나. (2) 컬링 뒤 작은 컴퓨트가 질의마다 주 시점 · 화면 사각형 뷰의 절두체와 가림 타일로 판정해 결과 버퍼에 쓴다(gpucull.hlsl 의 `isVisible` · `isOccluded` 를 그대로). (3) 결과 버퍼를 몇 프레임 늦게 되읽어 게임 스레드에 넘기고 수집기가 마지막으로 받은 값을 쓴다.
-- 선행: RHI 에 GPU 버퍼의 비동기 되읽기가 없다(`IRHIResourceFactory::readbackTexture2D` 는 장치를 기다리는 진단용). 네 백엔드에 "복사 → 펜스 → 몇 프레임 뒤 맵" 을 더하는 것이 먼저다.
+- 선행이던 RHI 비동기 되읽기: `IRHIResourceFactory::createReadbackBuffer` · `readReadbackBuffer`, `IRHICommandList::copyBufferToReadback`, `RHIBufferState::CopySource`(RHI ABI v33). 네 백엔드 구현은 DX11 스테이징 구조화 버퍼, DX12 읽기 힙, Vulkan 호스트 보임 버퍼(`vkCmdCopyBuffer`), GL `glCopyBufferSubData`. 끝났는지 알리는 새 펜스 API 는 만들지 않고 기존 `IRHIDevice::enqueueGPURelease` 콜백 안에서 읽는다(읽기는 기다리지 않는다).
+- 그 위의 고리 `AsyncBufferReadback`(읽기 버퍼 4 개를 돌려 쓰고, 모두 쓰이는 중이면 그 프레임은 건너뛴다)과 `FrameRenderer::requestOcclusionReadback`(컴퓨트 프리패스에서 `recordOcclusionTiles` 직후 복사 — 요청 때의 뷰-투영 · 격자는 요청 번호로 짝지어 둔다). 기록을 버리는 프레임(처음 · 컷)의 타일은 사본으로 올리지 않고 우편함을 비운다.
+- 게임 스레드 쪽: `OcclusionTileMailbox`(`FrameRenderer::getOcclusionSnapshot`)의 가장 최근 사본을 패킷 만들기(`RenderPacketBuilder`)와 직접 경로(`FrameRenderer::execute( scene )`)가 `RenderViewCollector::collectExtraViews` 에 넘긴다. 사본이 없으면(`gv_occlusionCulling` 꺼짐 — 기본) 판정은 그대로 화면 크기뿐이다. 화면 사각형 뷰는 사본이 없어 가려짐을 보지 않는다.
+- 처음 설계의 "패킷에 보임 질의를 싣고 작은 컴퓨트로 판정" 대신 타일 사본을 CPU 가 읽는 길을 택했다. 타일 버퍼가 이미 있고 작아(1080p 에서 8,160 float) 되읽기가 싸며, 새 셰이더(쿠킹 바이너리 동반 커밋)가 필요 없고, 판정 식을 CPU 단위 테스트로 직접 잴 수 있다.
 
 ## 2. 끝난 단위의 확인 목록
 
