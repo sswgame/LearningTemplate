@@ -62,18 +62,9 @@ namespace sw
             }
             case Kind::Bool:
             {
-                bool& target = *static_cast<bool*>( _pTarget );
-                if ( first == "1" || first == "true" )
-                {
-                    target = true;
+                if ( StringUtil::tryParseBool( first, *static_cast<bool*>( _pTarget ) ) )
                     return true;
-                }
-                if ( first == "0" || first == "false" )
-                {
-                    target = false;
-                    return true;
-                }
-                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be 0 or 1 (got '" + first + "')";
+                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be a boolean (0, 1, true or false; got '" + first + "')";
                 return false;
             }
             case Kind::Text:

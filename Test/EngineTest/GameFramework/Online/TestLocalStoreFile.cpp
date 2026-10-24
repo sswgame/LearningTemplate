@@ -14,6 +14,12 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 기반 이름을 덮으려는 등록에 쓰는 만들기 함수입니다. 등록이 거절되므로 불리지 않습니다. */
+    unique_ptr<ILocalSlotStorage> createNeverUsedLocalStorage( string_view /*rootPath*/, string& /*outError*/ )
+    {
+        return nullptr;
+    }
+
     struct FileLocalFixture
     {
         test::LocalStoreTestKey        _key;
@@ -90,10 +96,13 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     SW_EXPECT_TRUE( LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error ) == nullptr );
     SW_EXPECT_TRUE( error.find( "cloud" ) != string::npos );
     {
-        // 기반 이름은 키트가 덮지 못한다 — 등록은 단언으로 멈추고 표에 오르지 않는다.
+        // 기반 이름은 키트가 덮지 못한다 — 기반 백엔드도 같은 표에 있어 이름 중복으로 거절되고, 등록은 단언으로 멈춘다.
         test::ScopedAssertCapture           assertCapture;
-        const LocalStoreBackendRegistration reserved{ LocalStoreFactory::kFileBackendName, nullptr };
+        const LocalStoreBackendRegistration reserved{ LocalStoreFactory::kFileBackendName, createNeverUsedLocalStorage };
         if ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+        settings._backend = LocalStoreFactory::kFileBackendName;
+        error.clear();
+        SW_EXPECT_NOT_NULL( LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error ) ); // 기반 파일 백엔드가 그대로 만든다
     }
 }

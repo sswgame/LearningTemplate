@@ -207,3 +207,29 @@ SW_TEST_CASE( RegistrationListTest, ListAppearsInTheGlobalEnumerationWhileAlive 
     }
     SW_EXPECT_EQUAL( listCountBefore, RegistrationListBase::getListCount() );
 }
+
+/**
+ * @brief [NameRegistryTest] 이름이 비었거나 겹치면 올리지 않고, 이름으로 빼도 남은 것의 등록 순서는 그대로다
+ * @details 값을 소유하는 레지스트리(활동 종류 · 연산 · 모듈 렌더 패스)가 이름 거절과 빼기를 직접 짜지 않게 하는 공용 형식이다.
+ */
+SW_TEST_CASE( NameRegistryTest, RejectsEmptyAndDuplicateNamesAndRemovesByNameInOrder )
+{
+    NameRegistry<int32> registry;
+    SW_EXPECT_FALSE( registry.add( hashed_string{}, 1 ) );
+    SW_EXPECT_TRUE( registry.add( hashed_string{ "a" }, 1 ) );
+    SW_EXPECT_TRUE( registry.add( hashed_string{ "b" }, 2 ) );
+    SW_EXPECT_TRUE( registry.add( hashed_string{ "c" }, 3 ) );
+    SW_EXPECT_FALSE( registry.add( hashed_string{ "b" }, 9 ) );
+    SW_ASSERT_EQUAL( 3u, registry.getCount() );
+    SW_ASSERT_NOT_NULL( registry.find( hashed_string{ "b" } ) );
+    SW_EXPECT_EQUAL( 2, *registry.find( hashed_string{ "b" } ) );
+
+    SW_EXPECT_TRUE( registry.remove( hashed_string{ "b" } ) );
+    SW_EXPECT_FALSE( registry.remove( hashed_string{ "b" } ) );
+    SW_EXPECT_FALSE( registry.remove( hashed_string{} ) );
+    SW_ASSERT_EQUAL( 2u, registry.getCount() );
+    SW_EXPECT_NULL( registry.find( hashed_string{ "b" } ) );
+    SW_EXPECT_EQUAL( 1, registry.getItems()[0] );
+    SW_EXPECT_EQUAL( 3, registry.getItems()[1] );
+    SW_EXPECT_TRUE( registry.add( hashed_string{ "b" }, 4 ) ); // 빼면 같은 이름을 다시 올릴 수 있다
+}

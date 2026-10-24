@@ -21,6 +21,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
@@ -190,34 +191,33 @@ namespace sw
         void updateRevocations( int64 nowMs );
         void pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant );
         /** @brief 빌드 버전을 확인합니다. 최소 버전 미만이면 `UpdateRequired` 이고 @p outGrant 에 상점 주소를 채웁니다. 권장 버전 미만이면 Ok 와 `_bUpdateRecommended` 를 반환합니다. */
-        LoginResult             evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
-        IPlatformLoginProvider* findPlatformProvider( string_view provider ) const;
-        void                    beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
-                                                   const LoginGrant& buildGrant, int64 nowMs, uint64 requestTag );
-        void                    finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
-        void                    removeOfflineIdentities();
+        LoginResult evaluateClientBuild( const AccountClientInfo& clientInfo, LoginGrant& outGrant ) const;
+        void        beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
+                                       const LoginGrant& buildGrant, int64 nowMs, uint64 requestTag );
+        void        finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
+        void        removeOfflineIdentities();
 
-        EventBuffer<LoginEvent>                _eventBuffer;
-        EventBuffer<LoginEvent>                _remoteRevokeBuffer;
-        EventBuffer<LoginCompletion>           _completionBuffer;
-        LoginTicketAuthority                   _ticketAuthority;
-        LoginServiceConfig                     _settings;
-        vector<IPlatformLoginProvider*>        _listPlatformProvider;
-        vector<PendingVerification>            _listPendingVerification;
-        vector<PlatformLoginVerification>      _listVerificationScratch;
-        vector<PlatformLoginRevocation>        _listRevocationScratch;
-        vector<PendingRevocation>              _listPendingRevocation;
-        unordered_map<uint64, uint64>          _mapAccountToSession;      ///< 이 프로세스에 접속해 있는 계정에서 세션으로 가는 맵이다
-        unordered_map<uint64, AccountIdentity> _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
-        unordered_map<string, uint64>          _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
-        TokenBucketMap                         _mapClientToAttemptBucket; ///< 시도 제한이다. 원격 주소 해시마다 버킷을 둔다
-        IServiceStore*                         _pStore;
-        ILoginCrypto*                          _pCrypto;
-        const RemoteConfig*                    _pRemoteConfig;
-        const LoginSecretVault*                _pSecretVault;
-        int64                                  _nextRevocationScanMs;
-        size_t                                 _refreshCursor;
-        int32                                  _pendingCount;
-        uint8                                  _bRevocationScanInFlight;
+        EventBuffer<LoginEvent>                  _eventBuffer;
+        EventBuffer<LoginEvent>                  _remoteRevokeBuffer;
+        EventBuffer<LoginCompletion>             _completionBuffer;
+        LoginTicketAuthority                     _ticketAuthority;
+        LoginServiceConfig                       _settings;
+        RegistrationList<IPlatformLoginProvider> _registeredPlatformProvider; ///< 이름은 제공자 이름이다. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
+        vector<PendingVerification>              _listPendingVerification;
+        vector<PlatformLoginVerification>        _listVerificationScratch;
+        vector<PlatformLoginRevocation>          _listRevocationScratch;
+        vector<PendingRevocation>                _listPendingRevocation;
+        unordered_map<uint64, uint64>            _mapAccountToSession;      ///< 이 프로세스에 접속해 있는 계정에서 세션으로 가는 맵이다
+        unordered_map<uint64, AccountIdentity>   _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
+        unordered_map<string, uint64>            _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
+        TokenBucketMap                           _mapClientToAttemptBucket; ///< 시도 제한이다. 원격 주소 해시마다 버킷을 둔다
+        IServiceStore*                           _pStore;
+        ILoginCrypto*                            _pCrypto;
+        const RemoteConfig*                      _pRemoteConfig;
+        const LoginSecretVault*                  _pSecretVault;
+        int64                                    _nextRevocationScanMs;
+        size_t                                   _refreshCursor;
+        int32                                    _pendingCount;
+        uint8                                    _bRevocationScanInFlight;
     };
 } // namespace sw

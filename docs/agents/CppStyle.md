@@ -75,3 +75,5 @@
 - Build strings with `formatstring` and its `%#` placeholder, never by chaining `to_string` or `+`.
 - Do not add a wrapper function that has one caller. Change the existing function's shape instead of adding a new dedicated one.
 - A static registration table is a `RegistrationList`. On the user-configuration side the name is `Handler`.
+- A registry keyed by name does not reject empty or duplicate names with its own `if`: borrowed pointers go in a `RegistrationList` (`bRequireName`), owned values in a `NameRegistry`, and the caller only reports the result of `add`.
+- A boolean in text (`true` / `1` / `on` ...) is read with `StringUtil::tryParseBool`, never with a hand-written spelling list.

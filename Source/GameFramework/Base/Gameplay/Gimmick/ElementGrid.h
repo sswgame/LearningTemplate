@@ -92,6 +92,14 @@ namespace sw
             uint8 _material{ 0 };
             uint8 _statusBits{ 0 };
             uint8 _arrStatusValue[ElementRuleTable::kMaxStatusCount]{};
+
+            /** @brief `write` 가 쓰는 바이트 수입니다. 필드의 크기를 더해 만들고, 필드를 늘리고 여기에 더하지 않으면 `write` 의 정적 검사가 막습니다. */
+            static constexpr uint64 kStateBytes = sizeof( _material ) + sizeof( _statusBits ) + sizeof( _arrStatusValue );
+
+            /** @brief 재질, 상태 비트, 상태 값(남은 시간, 세기)을 씁니다. 비트만 실으면 복원한 불이 처음부터 다시 탄다. */
+            void write( Archive& outArchive ) const;
+            /** @brief `write` 가 쓴 바이트를 읽습니다. 오류는 아카이브가 기억합니다. */
+            void read( Archive& archive );
         };
 
         /** @brief 스텝 규칙이 모은 작업 하나입니다. */

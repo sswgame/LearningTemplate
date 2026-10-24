@@ -293,7 +293,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, FactoryReadsTheEndpointAndRefuse
 
     SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "cache.invalid:6379", endpoint, error ) ); // 풀리지 않는 이름(.invalid 는 RFC 6761 예약)은 기동 오류다
     SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "127.0.0.1:6379?db=2", endpoint, error ) );
-    SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "127.0.0.1:6379?tls=yes", endpoint, error ) );
+    SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "127.0.0.1:6379?tls=maybe", endpoint, error ) );
     SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "", endpoint, error ) );
 
     unique_ptr<IEphemeralStore> memory = CacheStoreFactory::createEphemeralStore( OnlineStoreDriverTable::kMemoryDriverName, "", "", error );

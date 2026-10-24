@@ -3,9 +3,9 @@
 #include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/vector.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/String/RegistrationList.h"
 
 #include "GameFramework/Base/Online/Local/FileLocalSlotStorage.h"
 #include "GameFramework/Base/Online/Local/MemoryLocalStore.h"
@@ -15,63 +15,59 @@ namespace sw
 {
     namespace
     {
+        struct LocalStoreFactoryInternal
+        {
+            /** @brief 기반 백엔드 "file" 의 만들기 함수입니다. */
+            static unique_ptr<ILocalSlotStorage> createFileStorage( string_view rootPath, string& outError )
+            {
+                (void)outError;
+                return sw::make_unique<FileLocalSlotStorage>( string( rootPath ) );
+            }
+
+            /** @brief 기반 백엔드 "memory" 의 만들기 함수입니다. 경로는 쓰지 않는다. */
+            static unique_ptr<ILocalSlotStorage> createMemoryStorage( string_view rootPath, string& outError )
+            {
+                (void)rootPath;
+                (void)outError;
+                return sw::make_unique<MemoryLocalDatabase>();
+            }
+        };
+
         /**
          * @class LocalStoreBackendTable
-         * @brief 키트가 올린 바닥 표입니다. 모듈 언로드 리스너라서, 핫 리로드가 이미지를 내리기 전에 그 이미지의 만들기 함수를 지운다.
-         * @details 지우는 것은 정상 경로다 — 키트의 정적 등록 객체는 이미지를 실제로 언로드할 때야 소멸하고, 핫 리로드는 그 언로드를 미룬다.
+         * @brief 바닥 표입니다. 기반 백엔드("file" · "memory")와 키트가 올린 백엔드가 한 목록에 있어, 기반 이름을 키트가 덮는 일은 이름 중복으로 거절된다.
+         * @details 모듈 언로드 리스너라서, 핫 리로드가 이미지를 내리기 전에 그 이미지의 만들기 함수를 지운다.
+         *          지우는 것은 정상 경로다 — 키트의 정적 등록 객체는 이미지를 실제로 언로드할 때야 소멸하고, 핫 리로드는 그 언로드를 미룬다.
          */
         class LocalStoreBackendTable final : public IModuleUnloadListener
         {
         public:
-            struct Backend
-            {
-                string                         _name{};
-                LocalSlotStorageCreateFunction _createFunction{ nullptr };
-            };
-
             static LocalStoreBackendTable& get()
             {
                 static LocalStoreBackendTable s_table;
                 return s_table;
             }
 
-            void add( const utf8* pBackendName, LocalSlotStorageCreateFunction createFunction )
+            void add( const LocalStoreBackend& backend )
             {
-                const string_view backendName{ pBackendName };
-                const bool        bReserved = backendName == LocalStoreFactory::kFileBackendName || backendName == LocalStoreFactory::kMemoryBackendName;
-                SW_ASSERT( bReserved == false && createFunction != nullptr );
-                if ( bReserved || createFunction == nullptr )
-                {
-                    SW_LOG_ERROR( "Local store backend '%#' cannot be registered: the name is built in or the create function is null", pBackendName );
-                    return;
-                }
-                std::scoped_lock<mutex> lock{ _mutex };
-                const bool              bDuplicate = findLocked( backendName ) != nullptr;
-                SW_ASSERT( bDuplicate == false );
-                if ( bDuplicate )
-                {
-                    SW_LOG_ERROR( "Local store backend '%#' is already registered by another module - the second one is ignored", pBackendName );
-                    return;
-                }
-                _listBackend.push_back( Backend{ string( backendName ), createFunction } );
+                std::scoped_lock<mutex>  lock{ _mutex };
+                const RegistrationResult result = _registeredBackend.add( &backend, backend._pName );
+                SW_ASSERT( result == RegistrationResult::Added );
+                if ( result != RegistrationResult::Added )
+                    SW_LOG_ERROR( "Local store backend '%#' was not registered (the name is empty, built in, or already registered by another module) - the second one is ignored", backend._pName );
             }
 
-            void remove( LocalSlotStorageCreateFunction createFunction )
+            void remove( const LocalStoreBackend& backend )
             {
                 std::scoped_lock<mutex> lock{ _mutex };
-                for ( size_t index = 0; index < _listBackend.size(); ++index )
-                {
-                    if ( _listBackend[index]._createFunction != createFunction )
-                        continue;
-                    _listBackend.erase( _listBackend.begin() + static_cast<ptrdiff_t>( index ) );
-                    return;
-                }
+                (void)_registeredBackend.remove( &backend ); // 언로드 리스너가 이미 지웠거나 거절된 등록이면 올라 있지 않다
             }
 
             LocalSlotStorageCreateFunction find( string_view backendName ) const
             {
-                std::scoped_lock<mutex> lock{ _mutex };
-                return findLocked( backendName );
+                std::scoped_lock<mutex>  lock{ _mutex };
+                const LocalStoreBackend* pBackend = _registeredBackend.findByName( backendName );
+                return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
 
             const utf8* getModuleUnloadListenerName() const override { return "local store backends"; }
@@ -82,11 +78,12 @@ namespace sw
                 (void)outKeepImageMapped;
                 std::scoped_lock<mutex> lock{ _mutex };
                 uint32                  releasedCount = 0;
-                for ( size_t index = _listBackend.size(); index > 0; --index )
+                for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )
                 {
-                    if ( isAddressWithin( reinterpret_cast<const void*>( _listBackend[index - 1]._createFunction ), pBegin, pEnd ) == false )
+                    const LocalStoreBackend* pBackend = _registeredBackend.getAt( index - 1 );
+                    if ( isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
                         continue;
-                    _listBackend.erase( _listBackend.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                    (void)_registeredBackend.remove( pBackend ); // 방금 목록에서 읽은 항목이라 올라 있다
                     ++releasedCount;
                 }
                 return releasedCount;
@@ -96,22 +93,18 @@ namespace sw
             LocalStoreBackendTable()
                 : IModuleUnloadListener{}
                 , _mutex{}
-                , _listBackend{}
+                , _registeredBackend{ "LocalStoreFactory", RegistrationOrder::Insertion, true }
+                , _fileBackend{ LocalStoreFactory::kFileBackendName, &LocalStoreFactoryInternal::createFileStorage }
+                , _memoryBackend{ LocalStoreFactory::kMemoryBackendName, &LocalStoreFactoryInternal::createMemoryStorage }
             {
+                (void)_registeredBackend.add( &_fileBackend, _fileBackend._pName );
+                (void)_registeredBackend.add( &_memoryBackend, _memoryBackend._pName );
             }
 
-            LocalSlotStorageCreateFunction findLocked( string_view backendName ) const
-            {
-                for ( const Backend& backend : _listBackend )
-                {
-                    if ( backend._name == backendName )
-                        return backend._createFunction;
-                }
-                return nullptr;
-            }
-
-            mutable mutex   _mutex;
-            vector<Backend> _listBackend;
+            mutable mutex                             _mutex;
+            RegistrationList<const LocalStoreBackend> _registeredBackend;
+            LocalStoreBackend                         _fileBackend;   ///< 기반 백엔드. 표가 소유하고, 이미지를 내려도 지워지지 않는다(만들기 함수가 기반 이미지에 있다)
+            LocalStoreBackend                         _memoryBackend; ///< 기반 백엔드
         };
     } // namespace
 } // namespace sw
@@ -121,41 +114,26 @@ namespace sw
     unique_ptr<ILocalStore> LocalStoreFactory::createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext,
                                                                  string& outError )
     {
-        unique_ptr<ILocalSlotStorage> storage;
-        if ( settings._backend == kMemoryBackendName )
+        const LocalSlotStorageCreateFunction createFunction = LocalStoreBackendTable::get().find( settings._backend );
+        if ( createFunction == nullptr )
         {
-            storage = sw::make_unique<MemoryLocalDatabase>();
+            outError = "local store backend '" + settings._backend + "' is not registered (file, memory, or a loaded kit's backend)";
+            return nullptr;
         }
-        else
-        {
-            const string rootPath = UserDataPath::resolve( gameName, settings._root );
-            if ( settings._backend == kFileBackendName )
-            {
-                storage = sw::make_unique<FileLocalSlotStorage>( rootPath );
-            }
-            else
-            {
-                const LocalSlotStorageCreateFunction createFunction = LocalStoreBackendTable::get().find( settings._backend );
-                if ( createFunction == nullptr )
-                {
-                    outError = "local store backend '" + settings._backend + "' is not registered (file, memory, or a loaded kit's backend)";
-                    return nullptr;
-                }
-                storage = createFunction( rootPath, outError );
-            }
-        }
+        const string                  rootPath = UserDataPath::resolve( gameName, settings._root );
+        unique_ptr<ILocalSlotStorage> storage  = createFunction( rootPath, outError );
         if ( storage == nullptr )
             return nullptr;
         return sw::make_unique<ThreadedLocalStore>( std::move( storage ), sealContext );
     }
 
-    void LocalStoreFactory::registerBackend( const utf8* pBackendName, LocalSlotStorageCreateFunction createFunction )
+    void LocalStoreFactory::registerBackend( const LocalStoreBackend& backend )
     {
-        LocalStoreBackendTable::get().add( pBackendName, createFunction );
+        LocalStoreBackendTable::get().add( backend );
     }
 
-    void LocalStoreFactory::unregisterBackend( LocalSlotStorageCreateFunction createFunction )
+    void LocalStoreFactory::unregisterBackend( const LocalStoreBackend& backend )
     {
-        LocalStoreBackendTable::get().remove( createFunction );
+        LocalStoreBackendTable::get().remove( backend );
     }
 } // namespace sw

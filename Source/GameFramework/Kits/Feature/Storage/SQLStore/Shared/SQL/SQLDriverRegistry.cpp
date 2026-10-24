@@ -5,6 +5,7 @@
 #include "Core/Common/BuildInfo.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
@@ -27,46 +28,33 @@ namespace sw
                 return s_table;
             }
 
-            void add( ISQLDriver* pDriver )
+            void add( ISQLDriver& driver )
             {
-                SW_ASSERT( pDriver != nullptr );
-                if ( pDriver == nullptr )
-                    return;
-                std::scoped_lock<mutex> lock{ _mutex };
-                const bool              bDuplicate = findLocked( pDriver->getName() ) != nullptr;
-                SW_ASSERT( bDuplicate == false );
-                if ( bDuplicate )
-                {
-                    SW_LOG_ERROR( "SQL driver '%#' is already registered by another module - the second one is ignored", pDriver->getName() );
-                    return;
-                }
-                _listDriver.push_back( pDriver );
+                std::scoped_lock<mutex>  lock{ _mutex };
+                const RegistrationResult result = _registeredDriver.add( &driver, driver.getName() );
+                SW_ASSERT( result == RegistrationResult::Added );
+                if ( result != RegistrationResult::Added )
+                    SW_LOG_ERROR( "SQL driver '%#' was not registered (the name is empty or already registered by another module) - the second one is ignored", driver.getName() );
             }
 
-            void remove( ISQLDriver* pDriver )
+            void remove( ISQLDriver& driver )
             {
                 std::scoped_lock<mutex> lock{ _mutex };
-                for ( size_t driverIndex = 0; driverIndex < _listDriver.size(); ++driverIndex )
-                {
-                    if ( _listDriver[driverIndex] != pDriver )
-                        continue;
-                    _listDriver.erase( _listDriver.begin() + static_cast<ptrdiff_t>( driverIndex ) );
-                    return;
-                }
+                (void)_registeredDriver.remove( &driver ); // 언로드 리스너가 이미 지웠거나 거절된 등록이면 올라 있지 않다
             }
 
             ISQLDriver* find( string_view driverName, string& outError ) const
             {
                 std::scoped_lock<mutex> lock{ _mutex };
-                ISQLDriver*             pDriver = findLocked( driverName );
+                ISQLDriver*             pDriver = _registeredDriver.findByName( driverName );
                 if ( pDriver != nullptr )
                     return pDriver;
                 string available;
-                for ( const ISQLDriver* pRegistered : _listDriver )
+                for ( uint32 driverIndex = 0; driverIndex < _registeredDriver.getCount(); ++driverIndex )
                 {
                     if ( available.empty() == false )
                         available += ", ";
-                    available += pRegistered->getName();
+                    available += _registeredDriver.getNameAt( driverIndex );
                 }
                 StringBuilder<constant::kMaxBuffer512> text;
                 text.appendFormat( "no SQL driver '%#' in this build target (%#) - available: %#", driverName, build::kTargetName, available.c_str() );
@@ -77,9 +65,9 @@ namespace sw
             void collectNames( vector<string>& outListName ) const
             {
                 std::scoped_lock<mutex> lock{ _mutex };
-                for ( const ISQLDriver* pDriver : _listDriver )
+                for ( uint32 driverIndex = 0; driverIndex < _registeredDriver.getCount(); ++driverIndex )
                 {
-                    outListName.push_back( string( pDriver->getName() ) );
+                    outListName.push_back( _registeredDriver.getNameAt( driverIndex ) );
                 }
             }
 
@@ -91,11 +79,12 @@ namespace sw
                 (void)outKeepImageMapped;
                 std::scoped_lock<mutex> lock{ _mutex };
                 uint32                  releasedCount = 0;
-                for ( size_t driverIndex = _listDriver.size(); driverIndex > 0; --driverIndex )
+                for ( uint32 driverIndex = _registeredDriver.getCount(); driverIndex > 0; --driverIndex )
                 {
-                    if ( isAddressWithin( findVtableAddress( _listDriver[driverIndex - 1] ), pBegin, pEnd ) == false )
+                    ISQLDriver* pDriver = _registeredDriver.getAt( driverIndex - 1 );
+                    if ( isAddressWithin( findVtableAddress( pDriver ), pBegin, pEnd ) == false )
                         continue;
-                    _listDriver.erase( _listDriver.begin() + static_cast<ptrdiff_t>( driverIndex - 1 ) );
+                    (void)_registeredDriver.remove( pDriver ); // 방금 목록에서 읽은 항목이라 올라 있다
                     ++releasedCount;
                 }
                 return releasedCount;
@@ -105,36 +94,26 @@ namespace sw
             SQLDriverTable()
                 : IModuleUnloadListener{}
                 , _mutex{}
-                , _listDriver{}
+                , _registeredDriver{ "SQLDriverRegistry" }
             {
             }
 
-            ISQLDriver* findLocked( string_view driverName ) const
-            {
-                for ( ISQLDriver* pDriver : _listDriver )
-                {
-                    if ( driverName == pDriver->getName() )
-                        return pDriver;
-                }
-                return nullptr;
-            }
-
-            mutable mutex       _mutex;
-            vector<ISQLDriver*> _listDriver;
+            mutable mutex                _mutex;
+            RegistrationList<ISQLDriver> _registeredDriver; ///< 이름은 올릴 때 복사한다 — 이미지가 내려간 뒤에도 안내 문구가 죽은 드라이버를 묻지 않는다
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    void SQLDriverRegistry::registerDriver( ISQLDriver* pDriver )
+    void SQLDriverRegistry::registerDriver( ISQLDriver& driver )
     {
-        SQLDriverTable::get().add( pDriver );
+        SQLDriverTable::get().add( driver );
     }
 
-    void SQLDriverRegistry::unregisterDriver( ISQLDriver* pDriver )
+    void SQLDriverRegistry::unregisterDriver( ISQLDriver& driver )
     {
-        SQLDriverTable::get().remove( pDriver );
+        SQLDriverTable::get().remove( driver );
     }
 
     ISQLDriver* SQLDriverRegistry::findDriver( string_view driverName, string& outError )
