@@ -15,7 +15,14 @@
   `UIPaintPass::paint` 가 순회 뒤 그 위젯을 `kPaint` 로 다시 무효화한다(트리의 "바뀜" 표시가 서므로 다음 프레임이 출력 재사용으로 건너뛰지 않는다). 글리프가 다 나타나면 무효화가 멈춘다.
 - **G1 · G3 — 컴퓨트 SDF 는 하지 않는다.** G3 의 취소 조건("4 ms/프레임 안에 글리프 하나가 든다")이 위 측정(글리프당 2.3 ms)으로 이미 맞는다. 프레임당 비용은 예산이 묶으므로(예산 + 글리프 하나) 히치는 컴퓨트 없이 사라진다.
   `bsdf` 로 바꾸는 비교는 한 프레임에 나오는 글리프 수(처리량)만 바꾸고 히치는 바꾸지 않아 따로 두지 않았다. 처리량이 모자라 보이면 예산 값을 올리는 것이 먼저다.
-- 테스트: `GlyphAtlasTest.GlyphCacheDefersNewGlyphsOverTheFrameBudget` · `CanvasDrawListTest.DeferredGlyphIsCountedNotDrawn` · `UIPaintTest.DeferredGlyphsRepaintTheTextWidgetNextFrame`(빌드 미확인).
+- **프레임 시계는 캐시가 쥔다(결함 수정).** 처음에는 프레임 번호를 `FrameProfiler::getFrameCount()` 에서 가져왔는데, 프로파일러가 꺼진 기본 설정에서는 `endFrame` 이 일찍 돌아와 그 값이 늘 0 이었다.
+  그러면 `_budgetFrameIndex` 가 바뀌지 않아 예산이 되살아나지 않고, 처음 4 ms 를 쓴 뒤로는 새 글리프가 하나도 안 만들어졌다(Shooter3D HUD · `-gv_uiDemo=1` 의 글자가 빠짐, 예산 0 이면 정상).
+  이제 `GlyphCache::beginFrame()` 이 시계를 올리고(`Engine::updateFrameServices` 가 게임 프레임마다 한 번) `getFrameIndex()` 를 UI(`UISystem::makePaintContext`)와 디버그 드로우 · 테스트 그림(`RenderPacketBuilder::populateCanvas`)이 쓴다. 켜고 끄는 시계에서는 번호를 가져오지 않는다.
+  같은 번호가 아틀라스 페이지의 "이번 프레임에 씀" 표시이기도 해서, 늘 0 이던 때는 가장 오래된 페이지 비우기도 구분 없이 돌았다.
+- **끝까지 그려졌음은 탐침으로 단언한다.** `UISystem::getDeferredGlyphCount`(지난 그리기가 미룬 글리프 수, 재사용한 프레임은 0)를 탐침 `UI.DeferredGlyphs`(`Engine/UI/World/WidgetProbes.cpp`)로 낸다.
+  `uidemo.scenario.xml` 이 스크린샷 앞에서 `WaitUntil probe="UI.DeferredGlyphs" equals="0"` 로 기다린다 — 미완성 화면이 meanLuma 만 보는 단언을 통과하던 틈이 닫혔다(예산이 안 되살아나면 시한으로 진다).
+- 테스트: `GlyphAtlasTest.GlyphCacheDefersNewGlyphsOverTheFrameBudget` · `GlyphAtlasTest.GlyphCacheFrameClockRevivesTheBudgetEveryFrame` · `CanvasDrawListTest.DeferredGlyphIsCountedNotDrawn` · `UIPaintTest.DeferredGlyphsRepaintTheTextWidgetNextFrame` · `UIPaintTest.AllDeferredGlyphsAppearWithinGlyphCountFrames`(빌드 미확인).
+- 남은 틈: 단위 테스트는 프레임 번호를 직접 넣으므로 "엔진이 시계를 올리는가" 는 `uidemo` 시나리오(기본 설정, 프로파일러 꺼짐)만 본다.
 
 ## 2. 확인 (남음)
 

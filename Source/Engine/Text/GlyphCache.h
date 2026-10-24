@@ -61,6 +61,15 @@ namespace sw
         GlyphCache& operator=( const GlyphCache& ) = delete;
 
         /**
+         * @brief 프레임 시계를 하나 올립니다. 엔진이 게임 프레임마다 정확히 한 번 부릅니다(`Engine::updateFrameServices`).
+         * @details 래스터화 예산과 아틀라스 페이지 사용 표시가 쓰는 프레임 번호의 유일한 출처다. 프로파일러의 프레임 수는 프로파일러가 꺼지면 늘 0 이라
+         *          예산이 되살아나지 않아 새 글리프가 영영 안 만들어졌다 — 켜고 끄는 시계에서 번호를 가져오지 않는다.
+         */
+        void beginFrame() { ++_frameIndex; }
+        /** @brief 지금 프레임 번호입니다(`beginFrame` 을 부를 때마다 하나 오르며 처음은 0 입니다). `findOrAddGlyph` 의 `frameIndex` 로 넘깁니다. */
+        uint64 getFrameIndex() const { return _frameIndex; }
+
+        /**
          * @brief 글리프를 찾고, 없으면 래스터화해 아틀라스에 올립니다. 이번 프레임에 쓴 페이지로 표시합니다.
          * @details 아틀라스가 가득 차면 이번 프레임에 안 쓴 가장 오래된 페이지를 비우고(그 페이지 글리프를 테이블에서 지운다) 한 번 더 시도한다.
          *          그래도 자리가 없으면(한 프레임이 페이지를 다 쓴다) `Failed` 를 반환하고 경고한다. 그 글자는 이번 프레임에 보이지 않는다. 래스터화가 실패해도 `Failed` 이다.
@@ -103,5 +112,6 @@ namespace sw
         int64                              _rasterBudgetNanoseconds; ///< 프레임당 새 글리프 시간 예산입니다(0 이면 제한 없음).
         int64                              _spentNanoseconds;        ///< `_budgetFrameIndex` 프레임에 새 글리프에 쓴 시간입니다.
         uint64                             _budgetFrameIndex;        ///< `_spentNanoseconds` 가 센 프레임입니다(다른 프레임 번호가 오면 0 으로 되돌립니다).
+        uint64                             _frameIndex;              ///< 프레임 시계입니다(`beginFrame` 이 올린다).
     };
 } // namespace sw

@@ -369,6 +369,11 @@ namespace sw
         /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 시작하며, 같으면 렌더러가 사각형을 다시 업로드하지 않습니다). */
         uint64 getCanvasRevision() const { return _canvasRevision; }
         /**
+         * @brief 지난 그리기가 글리프 래스터화 예산(`gv_uiGlyphRasterBudgetMicros`) 때문에 못 그리고 다음 프레임으로 미룬 글리프 수입니다. 0 이면 화면의 글자가 다 그려졌다.
+         * @details 지난 그리기를 그대로 재사용한 프레임은 0 이다(미룬 위젯은 다시 무효화되므로 재사용할 수 없다). 자동화 탐침 `UI.DeferredGlyphs` 가 읽는다.
+         */
+        uint32 getDeferredGlyphCount() const { return _deferredGlyphCount; }
+        /**
          * @brief 스택의 화면마다 레이아웃 덤프(`UILayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다. 화면마다 첫 줄은 `## <문서 경로 또는 (code)>` 입니다.
          * @details 실기동 테스트(`AppUITest`, 시나리오 단계 `UILayoutDump`)가 위젯 이름으로 스크린샷 안의 사각형을 찾는 경로다.
          */
@@ -471,6 +476,7 @@ namespace sw
         CanvasDrawList            _canvasScratch;                    ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
         mutable UIPaintScratch    _paintScratch;                     ///< 그리기 순회 스크래치입니다. 칠하기 문맥(`makePaintContext`)으로 넘기고, 이 시스템과 함께 사라집니다.
         uint64                    _canvasRevision;                   ///< `_canvas` 내용의 번호입니다.
+        uint32                    _deferredGlyphCount;               ///< 지난 그리기가 래스터화 예산 때문에 미룬 글리프 수입니다(`getDeferredGlyphCount`).
         vector<const WidgetTree*> _listPaintedTree;                  ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
         uint8                     _bLastCanvasReusable;              ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
         uint16                    _arrLayerHideCount[kUILayerCount]; ///< 레이어마다 건 숨김 요청 수입니다(`addLayerHideRequest`).

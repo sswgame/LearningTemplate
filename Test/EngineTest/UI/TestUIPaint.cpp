@@ -288,6 +288,36 @@ SW_TEST_CASE( UIPaintTest, DeferredGlyphsRepaintTheTextWidgetNextFrame )
 }
 
 /**
+ * @brief [UIPaintTest] 예산이 아무리 작아도 글자 수만큼의 프레임 뒤에는 모든 글리프가 그려져 있고 더 칠하지 않는다 — 프레임 번호는 글리프 캐시의 시계(`beginFrame`)에서 온다
+ * @details 예산 1 ns 는 프레임마다 새 글리프 하나만 만든다. 시계를 올리지 않으면 프레임이 갈리지 않아 예산이 되살아나지 않는다(프로파일러가 꺼진 기본 설정에서 UI 글자가 영영 비던 결함).
+ */
+SW_TEST_CASE( UIPaintTest, AllDeferredGlyphsAppearWithinGlyphCountFrames )
+{
+    UIPaintFontFixture fonts;
+    SW_ASSERT_TRUE( fonts._bInitialized );
+    UIPaintFixture fixture( 400.0f, 100.0f );
+    fonts.bind( fixture );
+    sw::GlyphCache& cache = fonts._fonts._fontService->getGlyphCache();
+    cache.setRasterBudgetNanoseconds( 1 );
+    sw::BoxPanel*   pRow  = fixture.setRoot<sw::BoxPanel>();
+    sw::TextWidget* pText = static_cast<sw::TextWidget*>( pRow->addChild( sw::make_unique<sw::TextWidget>() ) );
+    pText->setText( "abcdefghijkl" );
+
+    constexpr uint32 kGlyphCount = 12;
+    for ( uint32 frame = 1; frame <= kGlyphCount; ++frame )
+    {
+        cache.beginFrame();
+        fixture._paintContext._frameIndex = cache.getFrameIndex();
+        (void)fixture.runFrame();
+        SW_EXPECT_EQUAL( static_cast<size_t>( frame ), fixture._canvas._listQuad.size() ); // 프레임마다 글리프가 하나씩 나아간다
+    }
+    cache.beginFrame();
+    fixture._paintContext._frameIndex = cache.getFrameIndex();
+    SW_EXPECT_EQUAL( 0u, fixture.runFrame() ); // 다 그려졌다
+    SW_EXPECT_EQUAL( static_cast<size_t>( kGlyphCount ), fixture._canvas._listQuad.size() );
+}
+
+/**
  * @brief [UIPaintTest] 글 위젯: 글을 바꾸면 레이아웃 더러움(kLayout), 색만 바꾸면 그리기 더러움(kPaint)뿐이다 — 원하는 크기는 글자 배율을 따른다
  * @details 변이: `TextWidget::setColor` 가 kLayout 을 함께 걸면 진다.
  */

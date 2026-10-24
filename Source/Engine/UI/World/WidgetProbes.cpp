@@ -4,9 +4,11 @@
  */
 #include "pch.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
 namespace sw
@@ -36,8 +38,21 @@ namespace sw
             outValue.setNumber( pContent != nullptr && pContent->getVisibility() != WidgetVisibility::Collapsed ? 1.0 : 0.0 );
             return true;
         }
+
+        /**
+         * @brief 탐침 `UI.DeferredGlyphs` 입니다. 지난 UI 그리기가 글리프 래스터화 예산 때문에 미룬 글리프 수이며 0 이면 화면의 글자가 다 그려졌다.
+         * @details 예산이 다음 프레임에 살아나지 않거나 미룬 위젯이 다시 칠해지지 않으면 이 값이 0 이 되지 않아 `WaitUntil` 이 시한으로 지고, 글자가 빈 화면이 통과하지 못한다.
+         */
+        [[nodiscard]] bool readDeferredGlyphs( const GameObjectManager* pManager, float64& outValue )
+        {
+            (void)pManager;
+            const UISystem* pUI = engine::findSubsystem<UISystem>();
+            outValue            = pUI != nullptr ? static_cast<float64>( pUI->getDeferredGlyphCount() ) : 0.0;
+            return pUI != nullptr && pUI->isInitialized();
+        }
     } // namespace
 
+    SW_AUTOMATION_PROBE( uiDeferredGlyphs, "UI.DeferredGlyphs", "Glyphs the last UI paint left for the next frame because the glyph raster budget ran out (0: all text is drawn)", &readDeferredGlyphs );
     SW_AUTOMATION_QUERY_PROBE( widgetMarkerVisible, "UI.MarkerVisible", "1 while the target object's screen-space widget marker is shown (0: collapsed, world space or no content)",
                                &readWidgetMarkerVisible, true, false );
 } // namespace sw
