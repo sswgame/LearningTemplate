@@ -10,7 +10,6 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -122,21 +121,11 @@ namespace sw::editor
         , _pOccluders{}
         , _job{}
         , _lastError{}
-        , _sceneGeneration{ 0 }
-        , _heldEditCount{ 0 }
+        , _run{}
         , _nextVolumeIndex{ 0 }
         , _bakedCount{ 0 }
-        , _finishedRunSceneGeneration{ 0 }
-        , _finishedRunCount{ 0 }
-        , _bRunning{ false }
         , _bJobActive{ false }
     {
-    }
-
-    EditorLightProbeBakeSession::~EditorLightProbeBakeSession()
-    {
-        if ( _bRunning )
-            EditorPlaySession::releaseSceneEdits();
     }
 
     void EditorLightProbeBakeSession::start()
@@ -145,7 +134,7 @@ namespace sw::editor
         GameObjectManager* pManager      = editor::getActiveObjectManager();
         SceneManager*      pSceneManager = editor::findSubsystem<SceneManager>();
         const bool         bNoScene      = pScene == nullptr || pManager == nullptr || pSceneManager == nullptr;
-        if ( bNoScene || _bRunning )
+        if ( bNoScene || _run.isRunning() )
             return;
         vector<LightProbeVolumeComponent*> listVolume;
         EditorLightProbeBakeSessionInternal::collectVolumes( *pManager, listVolume );
@@ -155,21 +144,18 @@ namespace sw::editor
             if ( pVolume->getOwner() != nullptr )
                 _listObjectID.push_back( pVolume->getOwner()->getObjectID() );
         }
-        _sceneGeneration = pSceneManager->getSceneGeneration();
-        _heldEditCount   = EditorPlaySession::getHeldSceneEditCount();
         _nextVolumeIndex = 0;
         _bakedCount      = 0;
         _lastError.clear();
         _bJobActive = false;
-        _bRunning   = true;
-        EditorPlaySession::holdSceneEdits();
+        _run.begin( pSceneManager->getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
     }
 
     void EditorLightProbeBakeSession::cancel( const utf8* pReason )
     {
-        if ( _bRunning == false )
+        if ( _run.isRunning() == false )
             return;
         _lastError = pReason;
         finish( true );
@@ -177,31 +163,20 @@ namespace sw::editor
 
     void EditorLightProbeBakeSession::update()
     {
-        if ( _bRunning == false )
+        if ( _run.isRunning() == false )
             return;
-        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-        Scene*        pScene        = editor::getActiveScene();
-        const bool    bSceneGone    = pSceneManager == nullptr || pScene == nullptr || pSceneManager->getSceneGeneration() != _sceneGeneration;
-        if ( bSceneGone )
+        const utf8* pStopReason = _run.findStopReason();
+        if ( pStopReason != nullptr )
         {
-            cancel( "the active scene changed during the bake" );
+            cancel( pStopReason );
             return;
         }
-        if ( EditorPlaySession::isStopped() == false )
-        {
-            cancel( "play started during the bake" );
-            return;
-        }
-        if ( EditorPlaySession::getHeldSceneEditCount() != _heldEditCount )
-        {
-            cancel( "the scene was edited during the bake" );
-            return;
-        }
+        Scene*          pScene = editor::getActiveScene(); // 멈출 이유가 없으면 활성 씬이 있다
         const Stopwatch stopwatch;
-        while ( _bRunning && stopwatch.getElapsedMilliseconds() < kFrameBudgetMilliseconds )
+        while ( _run.isRunning() && stopwatch.getElapsedMilliseconds() < EditorBakeRunState::kFrameBudgetMilliseconds )
         {
             if ( _bJobActive == false && beginNextVolume( *pScene ) == false )
-                continue; // 다음 볼륨으로(이유는 `_lastError`) — 끝이면 `finish` 가 `_bRunning` 을 내린다
+                continue; // 다음 볼륨으로(이유는 `_lastError`) — 끝이면 `finish` 가 `_run` 을 끝낸다
             if ( _job.step( 1 ) )
                 completeVolume( *pScene );
         }
@@ -278,17 +253,10 @@ namespace sw::editor
 
     void EditorLightProbeBakeSession::finish( bool bCanceled )
     {
-        _bRunning   = false;
         _bJobActive = false;
         _job        = LightProbeBakeJob{};
         _pOccluders.reset(); // 작업이 빌리던 가림 씬 — 작업을 비운 뒤에 놓는다
-        if ( _finishedRunSceneGeneration != _sceneGeneration )
-        {
-            _finishedRunSceneGeneration = _sceneGeneration;
-            _finishedRunCount           = 0;
-        }
-        ++_finishedRunCount;
-        EditorPlaySession::releaseSceneEdits();
+        _run.end();
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;

@@ -21,9 +21,9 @@ from .Process import isProcessAlive, runProcess
 kLockRoot = "build/.shared-locks"
 #: 소유자 기록이 없는(쓰다 만) 잠금이 이만큼 지나면 버려진 잠금이다(초).
 kStaleSeconds = 6 * 3600
-#: 기다리는 최대 시간 기본값(초)과 폴링 간격(초).
+#: 기다리는 최대 시간 기본값(초)과 폴링 간격(초). 잠금 확인은 파일 한 번 읽는 값이라 싸고, 간격이 길면 풀린 뒤 그만큼 늦게 안다.
 kDefaultWaitSeconds = 1800
-kPollSeconds = 5
+kPollSeconds = 1
 #: 공유 모드를 쓰는 자원 → 칸 수. 칸 수를 부르는 쪽마다 주면 서로 다른 한도로 잡아 한도가 무너진다 — 그래서 자원이 정한다.
 #: `build` 는 동시 빌드 한도(작업 방식 2 절: 둘)다. 표에 없는 자원은 독점만 쓴다.
 kMapSharedSlotCount: dict[str, int] = {"gpu": 2, "build": 2}

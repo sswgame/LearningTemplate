@@ -47,6 +47,7 @@ namespace sw::editor
     EditorThumbnailCache::EditorThumbnailCache()
         : _listEntry{}
         , _listPendingID{}
+        , _listLoading{}
         , _listFailedID{}
         , _frame{ 0 }
     {
@@ -79,6 +80,7 @@ namespace sw::editor
         }
         _listEntry.clear();
         _listPendingID.clear();
+        _listLoading.clear(); // 핸들만 놓는다 — 워커가 읽던 로드는 엔진이 끝내고, 참조를 쥐었다면 블록이 사라질 때 스스로 놓는다
         _listFailedID.clear();
     }
 
@@ -92,7 +94,11 @@ namespace sw::editor
             entry._lastUsedFrame = _frame;
             return entry._pTextureID;
         }
-        const bool bKnown = VectorUtil::contains( _listPendingID, key ) || VectorUtil::contains( _listFailedID, key );
+        bool bKnown = VectorUtil::contains( _listPendingID, key ) || VectorUtil::contains( _listFailedID, key );
+        for ( const Loading& loading : _listLoading )
+        {
+            bKnown = bKnown || loading._resourceID == key;
+        }
         if ( bKnown == false )
             _listPendingID.push_back( key );
         return nullptr;
@@ -118,27 +124,67 @@ namespace sw::editor
             _listEntry.erase( _listEntry.begin() + static_cast<std::ptrdiff_t>( entryIndex - 1 ) );
         }
 
-        loadPending( pDevice );
+        startLoads( pDevice );
+        finishLoads( pDevice );
         evictOverCapacity( pDevice );
     }
 
-    void EditorThumbnailCache::loadPending( IRHIDevice* pDevice )
+    void EditorThumbnailCache::startLoads( IRHIDevice* pDevice )
     {
-        if ( _listPendingID.empty() )
-            return;
-        const string resourceID = _listPendingID.front();
-        _listPendingID.erase( _listPendingID.begin() );
+        TextureCache* pTextures = EditorThumbnailCacheInternal::findTextureCache();
+        while ( _listPendingID.empty() == false && _listLoading.size() < kMaxLoading )
+        {
+            const string resourceID = _listPendingID.front();
+            _listPendingID.erase( _listPendingID.begin() );
 
-        TextureCache*          pTextures          = EditorThumbnailCacheInternal::findTextureCache();
-        IImGuiRendererBackend* pBackend           = EditorThumbnailCacheInternal::findRendererBackend();
-        Texture2D*             pTexture           = pTextures != nullptr ? pTextures->acquire( resourceID, pDevice ) : nullptr;
-        const bool             bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
+            // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
+            const TextureHandle handle = pTextures != nullptr ? pTextures->request( resourceID, pDevice, AssetLoadStart::Async ) : TextureHandle{};
+            if ( handle.isValid() == false )
+            {
+                _listFailedID.push_back( resourceID );
+                continue;
+            }
+            _listLoading.push_back( Loading{ resourceID, handle.getBlock() } );
+        }
+    }
+
+    void EditorThumbnailCache::finishLoads( IRHIDevice* pDevice )
+    {
+        uint32 uploadedCount = 0;
+        for ( size_t loadingIndex = 0; loadingIndex < _listLoading.size(); )
+        {
+            TextureLoadBlock& block = *_listLoading[loadingIndex]._pBlock;
+            // 워커가 읽기를 마친 로드는 여기서 올린다 — 이 스레드가 디바이스를 쓰는 스레드다(예전 `acquire` 와 같은 자리). 다른 스레드가 이미 집었으면 false 다.
+            const bool bMayUpload = block.getState() == AssetLoadState::Loading && uploadedCount < kMaxUploadsPerUpdate;
+            if ( bMayUpload && block.runCompletionIfPending() )
+                ++uploadedCount;
+
+            const AssetLoadState state = block.getState();
+            if ( state == AssetLoadState::Loading )
+            {
+                ++loadingIndex;
+                continue;
+            }
+            const string resourceID = _listLoading[loadingIndex]._resourceID;
+            if ( state == AssetLoadState::Failed || adoptReady( resourceID, pDevice ) == false )
+                _listFailedID.push_back( resourceID );
+            // 핸들 몫의 참조는 지우며 놓인다 — `adoptReady` 가 우리 몫을 따로 쥐었으므로 항목은 남는다.
+            _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
+        }
+    }
+
+    bool EditorThumbnailCache::adoptReady( const string& resourceID, IRHIDevice* pDevice )
+    {
+        TextureCache*          pTextures = EditorThumbnailCacheInternal::findTextureCache();
+        IImGuiRendererBackend* pBackend  = EditorThumbnailCacheInternal::findRendererBackend();
+        // 준비된 텍스처라 읽지 않는다(캐시 적중) — 핸들이 살아 있는 동안 참조를 하나 더 세어 해제를 `releaseEntry` 의 `release` 짝으로 맞춘다.
+        Texture2D* pTexture           = pTextures != nullptr ? pTextures->acquire( resourceID, pDevice ) : nullptr;
+        const bool bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
         if ( bThumbnailUnusable )
         {
             if ( pTexture != nullptr && pTextures != nullptr )
                 pTextures->release( resourceID, pDevice );
-            _listFailedID.push_back( resourceID );
-            return;
+            return false;
         }
 
         Entry entry{};
@@ -149,10 +195,10 @@ namespace sw::editor
         if ( entry._pTextureID == nullptr )
         {
             pTextures->release( resourceID, pDevice );
-            _listFailedID.push_back( resourceID );
-            return;
+            return false;
         }
         _listEntry.push_back( std::move( entry ) );
+        return true;
     }
 
     void EditorThumbnailCache::evictOverCapacity( IRHIDevice* pDevice )

@@ -80,13 +80,21 @@ namespace
         return path;
     }
 
+    /** @brief 줄마다 할 일이 없는 판의 `onLine` 입니다. */
+    struct IgnoreLine
+    {
+        void operator()( Process&, const string& ) const {}
+    };
+
     /**
-     * @brief Server 를 @p arguments 로 띄우고 끝날 때까지 출력을 읽습니다. "ready" 줄을 처음 보면 @p onReady 를 한 번 부릅니다.
+     * @brief Server 를 @p arguments 로 띄우고 끝날 때까지 출력을 읽습니다. "ready" 줄을 처음 보면 @p onReady 를 한 번 부르고, 줄마다 @p onLine 을 부릅니다.
      * @details 시한은 공용 하네스(`test::runProcessWithDeadline`)가 지킨다 — 넘으면 서버를 죽이고 `_bTimedOut` 이 선다.
      *          인자에 `-server-config` 가 없으면 게임 포트 0 인 설정(`writeServerConfig`)을 붙인다 — 저장소 설정(`Config/Server/<게임>.json`)의 고정 게임 포트로 뜨지 않게.
+     *          서버의 반응을 기다려야 하는 테스트는 잠들지 않고 @p onLine 에서 출력 줄을 보고 다음 명령을 보낸다 — 두 콜백은 출력을 읽는 스레드(호출한 스레드)에서 불리고,
+     *          줄이 끝내 오지 않으면 위 시한이 서버를 죽여 `expectCleanExit` 가 실패한다. @p onLine 은 ready 줄에도 불린다(@p onReady 다음).
      */
-    template <typename TOnReady>
-    ServerRun runServer( string_view arguments, const ProcessOptions& options, TOnReady&& onReady )
+    template <typename TOnReady, typename TOnLine = IgnoreLine>
+    ServerRun runServer( string_view arguments, const ProcessOptions& options, TOnReady&& onReady, TOnLine&& onLine = TOnLine{} )
     {
         ServerRun    run;
         const string serverPath = findServerPath();
@@ -108,7 +116,7 @@ namespace
         const string command = "exec \"" + serverPath + "\" " + fullArguments;
 #endif
         const test::ProcessRunResult result =
-            test::runProcessWithDeadline( command, options, kRunTimeoutSeconds, [&run, &onReady]( Process& process, const string& line )
+            test::runProcessWithDeadline( command, options, kRunTimeoutSeconds, [&run, &onReady, &onLine]( Process& process, const string& line )
         {
             if ( line.find( "[Error]" ) != string::npos && run._errorCount++ == 0 )
                 run._firstErrorLine = line;
@@ -117,6 +125,7 @@ namespace
                 run._bReadySeen = true;
                 onReady( process );
             }
+            onLine( process, line );
         } );
         if ( bWriteConfig )
             (void)FileUtil::removeDirectory( makeConfigFolder() ); // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
@@ -153,17 +162,27 @@ namespace
     /**
      * @brief Server 를 @p arguments 로 띄우고, ready 뒤에 이 프로세스의 클라이언트가 게임 포트 @p port 에 붙은 다음 `net.status` · quit 를 보냅니다.
      * @details 접속을 서버 로그 · 개발 명령 `net.status`(Dev) 로 확인하고, quit 뒤에 세션을 닫은 줄이 남는지 본다.
+     *          서버가 접속을 로그로 알리면 `net.status`(Dev), 그 답 줄이 연결 1 을 알리면 quit 를 보낸다 — 클라이언트는 서버가 끝날 때까지 붙어 있다.
      */
     void expectServerAcceptsAClient( const string& arguments, uint16 port )
     {
+        enum class Step : uint8
+        {
+            WaitForAcceptLog, ///< 클라이언트를 붙인 뒤, 서버가 접속을 로그로 알리기를 기다린다
+            WaitForStatus,    ///< `net.status` 를 보낸 뒤, 연결 1 을 알리는 답 줄을 기다린다(Dev)
+            Done              ///< quit 를 보냈다
+        };
         ProcessOptions options;
         options._bPipeStandardInput = true;
         bool            bConnected  = false;
-        const ServerRun run         = runServer( arguments, options, [port, &bConnected]( Process& process )
-                {
-            UDPNetTransport transport;
-            NetHost         client;
-            NetHostThread   thread;
+        Step            step        = Step::WaitForAcceptLog;
+        UDPNetTransport transport;
+        NetHost         client;
+        NetHostThread   thread;
+        const ServerRun run = runServer(
+            arguments, options,
+            [&]( Process& process )
+        {
             if ( transport.open( 0, true ) )
             {
                 client.initialize( &transport, NetHostConfig{} );
@@ -178,11 +197,32 @@ namespace
                     bConnected = future.isReady() && future.get().isConnected();
                 }
             }
-            (void)process.writeInput( "net.status\nquit\n" );                // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
-            std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) ); // 끊기 전에 상태 줄이 연결 1 을 보게
-            thread.stop();
-            client.disconnectAll();
+            if ( bConnected == false )
+            {
+                step = Step::Done;
+                (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+            }
+        },
+            [&]( Process& process, const string& line )
+        {
+            if ( step == Step::WaitForAcceptLog && line.find( "Net session client 0 connected from 127.0.0.1" ) != string::npos )
+            {
+#if !defined( SW_SHIPPING )
+                step = Step::WaitForStatus;
+                (void)process.writeInput( "net.status\n" ); // 못 쓰면 답 줄이 없어 시한이 서버를 죽이고 expectCleanExit 가 실패한다
+#else
+                step = Step::Done;                    // Shipping 에는 net.status 가 없다
+                (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+#endif
+            }
+            else if ( step == Step::WaitForStatus && line.find( "net session: Server, connected 1" ) != string::npos )
+            {
+                step = Step::Done;
+                (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+            }
         } );
+        thread.stop();
+        client.disconnectAll();
         expectCleanExit( run, "ConsoleCommand" );
         SW_EXPECT_TRUE( bConnected );
         SW_EXPECT_TRUE_MSG( run._output.find( "Net session listening on UDP port " + to_string( port ) ) != string::npos, "the game instance did not open the port" );
@@ -290,7 +330,9 @@ SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
 
 /**
  * @brief [ServerBootTest] Dev 의 pause 는 게임 틱을 멈추고 step N 은 정확히 N 틱만 돌린다(서버 디버깅 S2 — 디버거 없는 중단점)
- * @details 멈춘 1 초 동안 틱이 돌았다면 step 뒤의 틱 번호가 멈춘 틱 + 3 보다 크다. 재개하면 틱 상한까지 돌아 스스로 끝난다.
+ * @details 서버가 멈춘 줄을 알리면 `status` 로 한 바퀴 돌려 멈춘 채 틱이 그대로인지 보고, 그 답 줄이 오면 `step 3`, 한 틱 진행 줄이 오면 `status` · `resume` 을 보낸다 —
+ *          고정 시간 잠으로 기다리지 않고 서버 출력 줄이 다음 단계를 부른다(줄이 안 오면 하네스 시한이 서버를 죽여 `expectCleanExit` 가 실패한다).
+ *          멈춘 동안 틱이 돌았다면 step 뒤의 틱 번호가 멈춘 틱 + 3 보다 크다. 재개하면 틱 상한까지 돌아 스스로 끝난다.
  */
 SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
 {
@@ -299,15 +341,37 @@ SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    enum class Step : uint8
+    {
+        WaitForPaused,  ///< `pause` 를 보냈다 — 멈춘 줄을 기다린다
+        WaitForStatus,  ///< `status` 를 보냈다 — 멈춘 서버가 명령 한 바퀴를 돈 뒤의 답 줄을 기다린다
+        WaitForStepped, ///< `step 3` 을 보냈다 — 진행 줄을 기다린다
+        Done            ///< `status` · `resume` 을 보냈다
+    };
     ProcessOptions options;
     options._bPipeStandardInput = true;
-    const ServerRun run         = runServer( "-gv_serverExitAfterTicks=120", options, []( Process& process )
-            {
-        (void)process.writeInput( "pause\n" ); // 못 쓰면 멈춘 줄이 없어 아래 단언이 실패한다
-        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-        (void)process.writeInput( "step 3\n" ); // 못 쓰면 한 틱 진행 줄이 없어 아래 단언이 실패한다
-        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-        (void)process.writeInput( "status\nresume\n" ); // 못 쓰면 서버가 멈춘 채 끝나지 않아 expectCleanExit 가 실패한다
+    Step            step        = Step::WaitForPaused;
+    const ServerRun run         = runServer(
+        "-gv_serverExitAfterTicks=120", options,
+        []( Process& process )
+    { (void)process.writeInput( "pause\n" ); }, // 못 쓰면 멈춘 줄이 없어 시한이 서버를 죽이고 아래 단언이 실패한다
+        [&step]( Process& process, const string& line )
+    {
+        if ( step == Step::WaitForPaused && line.find( "Server paused at tick " ) != string::npos )
+        {
+            step = Step::WaitForStatus;
+            (void)process.writeInput( "status\n" ); // 못 쓰면 답 줄이 없어 시한이 서버를 죽이고 아래 단언이 실패한다
+        }
+        else if ( step == Step::WaitForStatus && line.find( "Dedicated server status" ) != string::npos )
+        {
+            step = Step::WaitForStepped;
+            (void)process.writeInput( "step 3\n" ); // 못 쓰면 한 틱 진행 줄이 없어 시한이 서버를 죽이고 아래 단언이 실패한다
+        }
+        else if ( step == Step::WaitForStepped && line.find( "Server stepped to tick " ) != string::npos )
+        {
+            step = Step::Done;
+            (void)process.writeInput( "status\nresume\n" ); // 못 쓰면 서버가 멈춘 채 끝나지 않아 expectCleanExit 가 실패한다
+        }
     } );
     expectCleanExit( run, "TickLimit" );
     const string pausedLine  = "Server paused at tick ";
@@ -322,9 +386,13 @@ SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
     const size_t steppedEnd = run._output.find( ' ', steppedAt + steppedLine.size() );
     SW_ASSERT_TRUE( StringUtil::parseInt64( run._output.substr( steppedAt + steppedLine.size(), steppedEnd - steppedAt - steppedLine.size() ), steppedTick ) );
     SW_EXPECT_EQUAL( pausedTick + 3, steppedTick );
-    const size_t statusAt = run._output.find( "Dedicated server status" );
-    SW_ASSERT_TRUE( statusAt != string::npos );
-    SW_EXPECT_TRUE( run._output.substr( statusAt, run._output.find( '\n', statusAt ) - statusAt ).find( "(paused)" ) != string::npos );
+    // 첫 status 는 멈춘 직후(틱이 그대로여야 한다), 마지막 status 는 step 뒤(여전히 멈춰 있어야 한다)다.
+    const size_t pausedStatusAt  = run._output.find( "Dedicated server status" );
+    const size_t steppedStatusAt = run._output.rfind( "Dedicated server status" );
+    SW_ASSERT_TRUE( pausedStatusAt != string::npos && steppedStatusAt != pausedStatusAt );
+    const string pausedStatus = run._output.substr( pausedStatusAt, run._output.find( '\n', pausedStatusAt ) - pausedStatusAt );
+    SW_EXPECT_TRUE_MSG( pausedStatus.find( ", tick " + to_string( pausedTick ) + " (paused)" ) != string::npos, pausedStatus.c_str() );
+    SW_EXPECT_TRUE( run._output.substr( steppedStatusAt, run._output.find( '\n', steppedStatusAt ) - steppedStatusAt ).find( "(paused)" ) != string::npos );
     SW_EXPECT_TRUE( run._output.find( "Server resumed at tick" ) != string::npos );
 #endif
 }
