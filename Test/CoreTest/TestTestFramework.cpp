@@ -65,6 +65,19 @@ namespace
         SW_LOG_WARNING( "Deliberate probe warning (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
     }
 
+    /** @brief 지역 레지스트리의 케이스 본문 — 로그 id(`Probe.Deliberate`)가 붙은 Error 를 하나 남깁니다. */
+    void logProbeErrorWithID()
+    {
+        SW_LOG_ERROR_ID( "Probe.Deliberate", "Deliberate probe error with a log id (TestFrameworkTest.AllowedLogIsToleratedOnlyForItsSuiteAndID)" );
+    }
+
+    /** @brief 지역 레지스트리의 호스트 판정기에 허용 목록 글을 직접 넣습니다 — 저장소의 파일을 읽지 않는다. */
+    void useAllowList( test::TestRegistry& registry, const utf8* pAllowListJSON )
+    {
+        sw::string error;
+        SW_EXPECT_TRUE_MSG( registry.getHostLogJudge().getPolicy().parseAllowList( pAllowListJSON, "probe.json", error ), error.c_str() );
+    }
+
     /** @brief 지역 레지스트리의 케이스 본문 — 방어 테스트 구간 안에서 Error 를 남깁니다. */
     void logProbeErrorInDefensiveScope()
     {
@@ -390,11 +403,13 @@ SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )
 SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
 {
     test::TestRegistry hostRegistry;
+    useAllowList( hostRegistry, R"({ "allowed": [] })" );
     hostRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     hostRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( hostRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Error must fail" );
 
     test::TestRegistry warningRegistry;
+    useAllowList( warningRegistry, R"({ "allowed": [] })" );
     warningRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     warningRegistry.getCatalog().addCase( "GpuProbeTest", "LogsWarning", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeWarning ) );
     SW_EXPECT_TRUE_MSG( warningRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Warning must fail" );
@@ -410,29 +425,35 @@ SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
 }
 
 /**
- * @brief [TestFrameworkTest] 알려진 Error 선언은 그 스위트 · 그 문구만 견딘다
- * @details `SW_TEST_KNOWN_LOG` 는 원인이 엔진에 있고 아직 못 고친 Error 를 그 스위트에서만 빼 준다. 다른 문구나 다른 스위트까지
- *          빼 주면 호스트 스위트의 Error 판정이 다시 구멍이 된다.
+ * @brief [TestFrameworkTest] 허용 목록의 `suite` 항목은 그 스위트 · 그 로그 id 만 견디고, 로그 id 가 없는 줄은 어떤 항목으로도 가릴 수 없다
+ * @details 허용 목록(`allowedlogs.json`)은 시나리오 실행기와 호스트 스위트가 함께 쓰는 하나뿐인 목록이다. 다른 id 나 다른 스위트까지 빼 주거나
+ *          id 없는 줄을 문구로 빼 주면 호스트 스위트의 Error 판정이 다시 구멍이 된다.
  */
-SW_TEST_CASE( TestFrameworkTest, KnownLogIsToleratedOnlyForItsSuiteAndText )
+SW_TEST_CASE( TestFrameworkTest, AllowedLogIsToleratedOnlyForItsSuiteAndID )
 {
     test::TestRegistry knownRegistry;
+    useAllowList( knownRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     knownRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    knownRegistry.getCatalog().addKnownLog( "GpuProbeTest", "Deliberate probe error", "probe" );
-    knownRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "a declared known error must be tolerated" );
+    knownRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
+    SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "an allowed log id must be tolerated in its suite" );
 
-    test::TestRegistry otherTextRegistry;
-    otherTextRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    otherTextRegistry.getCatalog().addKnownLog( "GpuProbeTest", "some other text", "probe" );
-    otherTextRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( otherTextRegistry.runAllTests() == 1, "a known error must not tolerate a different text" );
+    test::TestRegistry otherIDRegistry;
+    useAllowList( otherIDRegistry, R"({ "allowed": [ { "id": "Probe.Other", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
+    otherIDRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    otherIDRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
+    SW_EXPECT_TRUE_MSG( otherIDRegistry.runAllTests() == 1, "an allowed log id must not tolerate a different id" );
 
     test::TestRegistry otherSuiteRegistry;
+    useAllowList( otherSuiteRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "OtherProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
     otherSuiteRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    otherSuiteRegistry.getCatalog().addKnownLog( "OtherProbeTest", "Deliberate probe error", "probe" );
-    otherSuiteRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "a known error must not tolerate another suite" );
+    otherSuiteRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorWithID ) );
+    SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "an allowed log id must not tolerate another suite" );
+
+    test::TestRegistry noIDRegistry;
+    useAllowList( noIDRegistry, R"({ "allowed": [ { "id": "Probe.Deliberate", "suite": "GpuProbeTest", "reason": "probe", "plan": "TestFramework" } ] })" );
+    noIDRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    noIDRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( noIDRegistry.runAllTests() == 1, "a line without a log id can never be tolerated" );
 }
 
 /**

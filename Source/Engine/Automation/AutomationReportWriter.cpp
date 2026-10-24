@@ -74,6 +74,10 @@ namespace sw
         Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
         json += ",\n  \"unconfirmed\": ";
         Internal::appendStringArray( json, params._pListUnconfirmed != nullptr ? *params._pListUnconfirmed : listEmpty );
+        json += ",\n  \"unhandledLogs\": ";
+        Internal::appendStringArray( json, params._pListUnhandledLog != nullptr ? *params._pListUnhandledLog : listEmpty );
+        json += ",\n  \"allowedLogs\": ";
+        Internal::appendStringArray( json, params._pListAllowedLog != nullptr ? *params._pListAllowedLog : listEmpty );
         json += ",\n  \"metrics\": ";
         Internal::appendStringArray( json, _listMetricLine );
         json += ",\n  \"records\": ";

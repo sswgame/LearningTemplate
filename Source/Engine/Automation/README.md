@@ -4,7 +4,8 @@
 
 자동화 시나리오는 실제 `App.exe` 를 띄운 채 프레임마다 입력을 넣고 게임 상태를 단언하는 XML 파일입니다(`Resource/<영역>/automation/*.scenario.xml`).
 사람이 화면을 보고 확인하던 일, 예를 들어 "점프하고 앞으로 달린다", "10 시에 상점 주인이 가게에 있다", "자동 농부가 갈고 심고 물을 준다" 를 파일로 남겨 네 백엔드에서 반복합니다.
-종료 코드가 결과입니다(0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 14 미확정 — 단언은 맞았지만 어림값 문턱이 들어 있다). `AppScenarioTest` 가 시나리오 파일을 찾아 백엔드마다 돌립니다.
+종료 코드가 결과입니다(0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 14 미확정 — 단언은 맞았지만 어림값 문턱이 들어 있다, 15 처리하지 않은 로그 — 단언은 맞았지만 처리하지 않은 `[Warning]` · `[Error]` 줄이 남았다. 15 는 14 보다 앞선다).
+0 은 로그까지 깨끗하다는 뜻입니다("로그 게이트"). `AppScenarioTest` 가 시나리오 파일을 찾아 백엔드마다 돌립니다.
 
 언리얼의 Automation Test 와 Functional Test, 프로세스를 띄워 결과를 모으는 Gauntlet 에 해당하고, 유니티의 Input Test Fixture(장치 입력 흉내)와 Test Framework 의 PlayMode 테스트에 해당합니다.
 그들과 다른 점은 시나리오가 코드가 아니라 데이터라는 것입니다. 단계와 탐침은 레지스트리에 한 줄로 등록하고, 게임은 기반(판 상태, 일정 시스템, AI 조종자, 폰)을 쓰기만 하면 시나리오에서 그 상태를 물을 수 있습니다.
@@ -70,7 +71,7 @@ HarvestValley 의 상점 주인이 10 시에 가게에 있는지 확인하는 �
 2. 프레임 11 에서 판 상태의 시계를 다음 10 시로 감습니다. 지나간 시와 날의 경계는 알림으로 남아 다음 틱의 디렉터와 일정이 받습니다.
 3. 한 프레임 뒤 일정상 활동과 위치를 확인하고, 그다음 프레임에 몸(`Villager.pierre` 오브젝트)이 가게 위치에 있는지 봅니다. 몸은 다음 틱에 따라오므로 한 프레임을 띄웁니다.
    몸은 평소 내비 격자 위를 걸어 일정상 위치를 쫓고, 시계를 감아 일정상 위치가 멀리 뛰면 그 자리에 놓입니다(`FarmVillageDirectorComponent`).
-4. 실행합니다. `App -game=HarvestValley -scenario=game/harvestvalley/automation/schedule.scenario.xml` 의 종료 코드가 0 이면 통과입니다.
+4. 실행합니다. `App -game=HarvestValley -scenario=game/harvestvalley/automation/schedule.scenario.xml` 의 종료 코드가 0 이면 통과입니다(15 면 처리하지 않은 로그가 남은 것이라 "로그 게이트" 를 따라 고칩니다).
 
 단언이 실패하면 로그와 보고에 어느 단계에서 무엇이 달랐는지 한 줄이 남습니다.
 
@@ -120,9 +121,18 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. 다시 돌릴 때는 디스크 경로가 아니라 id 를 줍니다 — 시나리오 실행은 작업 폴더의 `Saved` 를 디스크 도메인 `saved` 로 붙이므로
 `Saved/Automation/Recorded/a.scenario.xml` 은 `-scenario=saved/Automation/Recorded/a.scenario.xml` 입니다(`ScenarioRecorder::makeReplayID`, 녹화를 마칠 때 로그에도 찍힌다). `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
-**로그 게이트.** `<Pass/>` 에 닿은 시나리오도 선언하지 않은 `[Warning]` · `[Error]` 를 남겼으면 실패입니다(`AutomationLogPolicy`). 실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다.
-`AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다. 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">` 로 적고,
-고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 넣습니다. 실행기 줄(`[Scenario]`)과 테스트의 방어 구간 줄(`[Expected Defensive Test]`)은 보지 않습니다.
+**로그 게이트.** `<Pass/>` 에 닿은 시나리오도 처리하지 않은 `[Warning]` · `[Error]` 를 남겼으면 종료 코드 15(`UnhandledLog`)로 끝납니다(`AutomationLogPolicy`). 단언이 모두 맞아도, 어림값 문턱이 있어도(14) 마찬가지입니다.
+실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다. `AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다.
+줄 하나가 처리됐다는 것은 둘 중 하나입니다.
+
+- 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">` 로 선언합니다(줄 수 단언과 짝입니다).
+- 고칠 수 없는 줄은 `Resource/engine/automation/allowedlogs.json` 의 항목으로 허용합니다. 항목은 **로그 id**(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`), **범위**(`scenario` 나 `suite` 중 정확히 하나 — 전역 허용은 없다),
+  **사유**(`reason`), **처리 계획 문서 이름**(`plan`)이 모두 있어야 읽힙니다. 하나라도 비었거나 `TODO` 이면, id 에 와일드카드가 있거나 같은 항목이 두 번이면 시나리오가 읽기 오류(11)로 섭니다.
+
+로그 id 가 없는 줄은 허용 목록으로 가릴 수 없습니다 — 소스에 id 를 붙입니다(텍스트 로그에는 `[id:영역.사건]` 꼬리표로 찍혀 `AppScenarioTest` 가 기동 · 종료 구간의 줄도 id 로 가립니다).
+실행기 줄(`[Scenario]`)과 테스트의 방어 구간 줄(`[Expected Defensive Test]`)은 보지 않습니다. 호스트 테스트 스위트(`HostLogJudge`)도 이 목록의 `suite` 항목을 씁니다.
+보고 JSON 의 `unhandledLogs[]`(처리하지 않은 줄)와 `allowedLogs[]`(맞은 허용 항목의 id)를 `py -3 -m Scripts scenario-logs` 가 읽습니다. `--check` 는 목록에 있으나 끝까지 도는 시나리오에서 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를
+실패로 세고, `--regen` 은 처리하지 않은 줄을 사유 · 계획이 `TODO` 인 초안 항목으로 더합니다. 처음 채우는 절차는 [GPU 검증](../../../docs/plans/GpuVerification.md) 4절입니다.
 
 ## 확장하는 법
 

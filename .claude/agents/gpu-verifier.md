@@ -35,3 +35,7 @@ PPM 은 PNG 로 바꿔(작은 스크립트를 scratchpad 에 쓴다) Read 로 �
 
 ## 보고
 한국어, 열 줄 안쪽. 실행한 명령 · 백엔드 · 종료 코드 · 캡처 경로 · 본 것 · 재현율. 못 본 것은 못 봤다고 적는다.
+
+**시나리오의 "통과" 는 종료 코드 0 에 로그까지 깨끗할 때만이다.** 허용 목록(`Resource/engine/automation/allowedlogs.json`)에도 시나리오의 `<ExpectLog>` 에도 없는 `[Warning]` · `[Error]` 가 하나라도 있으면(종료 코드 15 `UnhandledLog`, 보고 JSON 의 `unhandledLogs[]`) "통과" 로 쓰지 않고 "실패(UnhandledLog)" 로 보고한다.
+14(미확정)보다 15 가 앞서고, 단언이 모두 맞았어도 같다. 실패한 시나리오마다 처리하지 않은 줄의 로그 id 와 문구(id 없는 줄은 "로그 id 없음")를 표로 적고, 시나리오를 다 돌린 뒤 `py -3 -m Scripts scenario-logs --check`(낡은 항목 · 15 보고)를 한 번 돌려 결과를 옮긴다.
+표를 허용 목록에 직접 넣지 않는다(소스를 고치지 않는다) — 목록을 채우는 것은 통합 담당이다.

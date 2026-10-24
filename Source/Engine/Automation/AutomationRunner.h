@@ -26,13 +26,14 @@ namespace sw
     /** @brief 시나리오가 끝난 까닭 = App 종료 코드입니다. */
     enum class AutomationResult : int32
     {
-        Running     = -1,
-        Passed      = 0,
-        Failed      = 10,
-        LoadError   = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
-        TimedOut    = 12,
-        Skipped     = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
-        Unconfirmed = 14, ///< 단언은 모두 맞았지만 아직 재지 않은 어림값 문턱(`provisional`)이 들어 있습니다. 통과(0)로 세지 않고 잰 값을 `measured` 로 옮길 때까지 미확정으로 보고합니다.
+        Running      = -1,
+        Passed       = 0,
+        Failed       = 10,
+        LoadError    = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
+        TimedOut     = 12,
+        Skipped      = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
+        Unconfirmed  = 14, ///< 단언은 모두 맞았지만 아직 재지 않은 어림값 문턱(`provisional`)이 들어 있습니다. 통과(0)로 세지 않고 잰 값을 `measured` 로 옮길 때까지 미확정으로 보고합니다.
+        UnhandledLog = 15, ///< 단언은 모두 맞았지만 허용 목록에도 `<ExpectLog>` 에도 없는 `[Warning]` · `[Error]` 줄이 남았습니다(id 없는 줄 포함). 통과(0)도 미확정(14)도 아니며 14 보다 항상 앞섭니다.
     };
 } // namespace sw
 
@@ -125,6 +126,8 @@ namespace sw
         const vector<string>&     getFailures() const { return _listFailure; }
         /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
         const vector<string>& getUnconfirmed() const { return _listUnconfirmed; }
+        /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
+        const vector<string>& getUnhandledLogs() const { return _listUnhandledLog; }
         const string&         getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
@@ -200,9 +203,10 @@ namespace sw
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         /**
-         * @brief 로그 게이트입니다. 통과한 시나리오가 허용하지 않은 Warning · Error 를 남겼거나 현지화 키가 빠졌으면 실패로 바꿉니다.
-         * @details 허용은 `AutomationLogPolicy`(전역 목록 + 이 시나리오의 `<ExpectLog>`)가 정한다. 빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로
-         *          프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도 여기서 잡는다).
+         * @brief 로그 게이트입니다. 통과한 시나리오가 처리하지 않은 Warning · Error 를 남겼거나 현지화 키가 빠졌으면 결과를 `UnhandledLog`(15)로 바꿉니다.
+         * @details 처리는 `AutomationLogPolicy`(전역 허용 목록의 이 시나리오 항목 + 이 시나리오의 `<ExpectLog>`)가 정한다. id 없는 줄은 허용 목록으로 가릴 수 없다.
+         *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
+         *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `_listAllowedLogID` 에 남아 보고에 적힌다.
          */
         void applyLogGate();
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
@@ -215,6 +219,8 @@ namespace sw
         AutomationReportWriter  _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
         vector<string>          _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<string>          _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
+        vector<string>          _listUnhandledLog;      ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
+        vector<string>          _listAllowedLogID;      ///< 이 실행에서 허용 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
         vector<string>          _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
         vector<ProbeWatch>      _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
         vector<RememberedValue> _listRemembered;        ///< `<Remember>` 가 남긴 값

@@ -19,7 +19,9 @@ namespace sw
         uint32                _frameCount{ 0 };
         string_view           _reason{};
         const vector<string>* _pListFailure{ nullptr };
-        const vector<string>* _pListUnconfirmed{ nullptr }; ///< 맞았지만 어림값 문턱이라 미확정인 단언 줄
+        const vector<string>* _pListUnconfirmed{ nullptr };  ///< 맞았지만 어림값 문턱이라 미확정인 단언 줄
+        const vector<string>* _pListUnhandledLog{ nullptr }; ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
+        const vector<string>* _pListAllowedLog{ nullptr };   ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
     };
 } // namespace sw
 
@@ -28,7 +30,7 @@ namespace sw
     /**
      * @class AutomationReportWriter
      * @brief 보고 경로와 지표 줄을 모아 두었다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
-     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `unconfirmed[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
+     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `unconfirmed[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
      */
     class SW_API AutomationReportWriter
     {

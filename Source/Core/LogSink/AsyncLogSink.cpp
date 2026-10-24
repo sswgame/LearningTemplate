@@ -113,22 +113,34 @@ namespace sw
                 return tickTag;
             }
 
+            /**
+             * @brief 줄의 종류 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)를 본문 앞에 붙일 꼬리표 `[id:영역.사건] ` 로 만듭니다. id 가 없으면 빈 글입니다.
+             * @details 자식 프로세스의 출력만 본 쪽(`AppScenarioTest` 의 로그 게이트)도 허용 목록의 id 로 줄을 가릴 수 있게 한다. 줄 전체가 버퍼를 넘으면 `formatLine` 이 자른다.
+             */
+            static fixed_string<128> makeIDTag( const utf8* pID )
+            {
+                fixed_string<128> idTag{};
+                if ( StringUtil::isNullOrEmpty( pID ) == false )
+                    formatstring( idTag.data(), idTag.capacity(), "%#%#%#", LogIDTag::kOpen, pID, LogIDTag::kClose );
+                return idTag;
+            }
+
             /** @brief 로그 한 줄을 @p outBuffer 에 한 번만 포맷합니다(스택 버퍼라 힙 할당이 없다). 호출자(caller)가 없으면 그 칸을 뺍니다. */
             static void formatLine( fixed_string<constant::kMaxBuffer8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
-                                    const utf8* pContextTag, const utf8* pMessage, const utf8* pFile, int32 line )
+                                    const utf8* pContextTag, const utf8* pIDTag, const utf8* pMessage, const utf8* pFile, int32 line )
             {
                 static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
                 static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
                 const utf8* pHeader = kArrHeader[static_cast<size_t>( level )];
                 if ( StringUtil::isNullOrEmpty( pCaller ) == false )
                 {
-                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", stamp._text.c_str(), pTag, pCaller, pHeader, pTickTag, pContextTag,
-                                  pMessage, pFile, line );
+                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pCaller, pHeader, pTickTag, pContextTag,
+                                  pIDTag, pMessage, pFile, line );
                 }
                 else
                 {
-                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pMessage,
-                                  pFile, line );
+                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pIDTag,
+                                  pMessage, pFile, line );
                 }
             }
         };
@@ -501,7 +513,8 @@ namespace sw
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, pEffectiveCaller, tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
+        const fixed_string<128>                idTag = Internal::makeIDTag( pID );
+        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, pEffectiveCaller, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, line );
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
         //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).

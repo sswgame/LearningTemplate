@@ -30,8 +30,8 @@ namespace test
             static constexpr int32 kSkippedExitCode = 13;
             /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다(`AutomationResult::Unconfirmed`). 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
             static constexpr int32 kUnconfirmedExitCode = 14;
-            /** @brief 시나리오는 통과했지만 출력에 허용하지 않은 Warning · Error 가 있다(`AutomationResult::Failed` 와 같은 값). */
-            static constexpr int32 kUnexpectedLogExitCode = 10;
+            /** @brief 시나리오는 통과했지만 출력에 처리하지 않은 Warning · Error 가 있다(`AutomationResult::UnhandledLog` 와 같은 값). 실행기 안의 로그 게이트와 같은 코드로 끝난다. */
+            static constexpr int32 kUnhandledLogExitCode = 15;
 
             /**
              * @brief 명령줄 @p arguments 가 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl` 토큰)입니다. 스위치가 없으면(빌드 기본 · 배포본) false 다.
@@ -267,10 +267,10 @@ namespace test
             const sw::vector<sw::string> listUnexpected = collectUnexpectedLogLines( result._output, scenarioArgument );
             for ( const sw::string& line : listUnexpected )
             {
-                outScenarioLines += "unexpected log (outside the scenario window): " + line + "\n";
+                outScenarioLines += "unhandled log (outside the scenario window): " + line + "\n";
             }
             if ( listUnexpected.empty() == false )
-                result._exitCode = AppTestUtilInternal::kUnexpectedLogExitCode;
+                result._exitCode = AppTestUtilInternal::kUnhandledLogExitCode;
         }
         return judgeRun( result, arguments, "log: " + outputBase + ".log\n" + outScenarioLines );
     }
@@ -329,24 +329,41 @@ namespace test
             sw::AutomationScenario scenario;
             if ( scenario.loadFromPath( scenarioPath, error ) == false )
                 return; // 읽지 못한 시나리오는 App 이 이미 11(읽기 오류)로 끝냈다
+            policy.selectScenario( scenario.getName() );
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
                 const sw::string* pContains = step._kind == "ExpectLog" ? step.findAttribute( "contains" ) : nullptr;
                 if ( pContains != nullptr )
-                    policy.addAllowed( *pContains, "declared by <ExpectLog>" );
+                    policy.declareExpected( *pContains );
             }
         } );
         sw::StringUtil::forEachLine( output, [&policy, &listLine]( sw::string_view line )
         {
-            // 콘솔 줄 모양: `[시각] [태그] [호출자] [Warning] - 본문`
-            size_t levelAt = line.find( "] [Warning] - " );
+            // 콘솔 줄 모양: `[시각] [태그] [호출자] [Warning] - [id:영역.사건] 본문` (`[id:…]` 꼬리표는 id 가 있는 줄에만 붙는다 — `AsyncLogSink`)
+            size_t       levelAt = line.find( "] [Warning] - " );
+            sw::LogLevel level   = sw::LogLevel::Warning;
             if ( levelAt == sw::string_view::npos )
+            {
                 levelAt = line.find( "] [Error] - " );
+                level   = sw::LogLevel::Error;
+            }
             if ( levelAt == sw::string_view::npos )
                 return;
-            const sw::string_view message  = line.substr( line.find( " - ", levelAt ) + 3 );
-            const bool            bIgnored = sw::AutomationLogPolicy::isExemptMessage( message ) || policy.isAllowed( line );
-            if ( bIgnored == false )
+            sw::string_view message = line.substr( line.find( " - ", levelAt ) + 3 );
+            sw::string_view id;
+            if ( sw::StringUtil::startsWith( message, sw::LogIDTag::kOpen ) )
+            {
+                const size_t closeAt = message.find( sw::LogIDTag::kClose );
+                if ( closeAt != sw::string_view::npos )
+                {
+                    const size_t bodyAt = closeAt + sw::LogIDTag::kCloseLength;
+                    id                  = message.substr( sw::LogIDTag::kOpenLength, closeAt - sw::LogIDTag::kOpenLength );
+                    message             = bodyAt < message.size() ? message.substr( bodyAt ) : sw::string_view{};
+                }
+            }
+            const sw::AutomationLogVerdict verdict    = policy.classify( level, id, message );
+            const bool                     bUnhandled = verdict == sw::AutomationLogVerdict::MissingID || verdict == sw::AutomationLogVerdict::NotAllowed;
+            if ( bUnhandled )
                 listLine.push_back( sw::string( line ) );
         } );
         return listLine;

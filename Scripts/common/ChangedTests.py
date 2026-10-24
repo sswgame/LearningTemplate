@@ -71,7 +71,7 @@ kListPathRule: list[tuple[str, str]] = [
 kSetLintOnlySuffix = {".md"}
 
 #: 테스트 파일이 그 실행 파일 전체를 돌리게 하는 낱말 — 리플렉션 · 전역 등록은 다른 스위트가 훑는 표에 들어간다.
-_kWholeExecutableMarkerRe = re.compile(r"\b(REFLECT|REFLECT_ENUM|SW_TEST_REQUIRES_HOST|SW_TEST_LOAD_SUITE|SW_TEST_KNOWN_LOG|SW_REGISTER_\w+)\b")
+_kWholeExecutableMarkerRe = re.compile(r"\b(REFLECT|REFLECT_ENUM|SW_TEST_REQUIRES_HOST|SW_TEST_LOAD_SUITE|SW_REGISTER_\w+)\b")
 _kTestCaseRe = re.compile(r"SW_TEST_CASE\s*\(\s*(\w+)\s*,")
 #: ninja 오브젝트 경로에서 타깃 이름(`…/CMakeFiles/<타깃>.dir/…`).
 _kObjectTargetRe = re.compile(r"CMakeFiles/([^/]+)\.dir/")

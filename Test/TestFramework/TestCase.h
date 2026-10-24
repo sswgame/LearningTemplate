@@ -87,22 +87,6 @@ namespace test
 
 namespace test
 {
-    /**
-     * @brief 호스트 스위트에서 아직 고치지 못한 Error · Warning 로그 하나(`SW_TEST_KNOWN_LOG`).
-     * @details 그 스위트의 케이스가 남긴 Error · Warning 중 `_substring` 을 담은 줄은 예상 밖 줄로 세지 않고 `_hitCount` 에 센다.
-     *          실행 요약이 견딘 줄 수를 찍으므로 조용히 묻히지 않는다.
-     */
-    struct KnownLog
-    {
-        sw::string _suiteName;
-        sw::string _substring;
-        sw::string _reason;
-        uint32     _hitCount{ 0 };
-    };
-} // namespace test
-
-namespace test
-{
     /** @brief 바깥 환경(DB 서버 등)을 요구하는 스위트 선언(`SW_TEST_REQUIRES_ENVIRONMENT`). */
     struct EnvironmentSuite
     {
