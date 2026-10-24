@@ -20,7 +20,9 @@
 | 프리팹 | `prefabwindow`(프리팹 창 열기 · X 미저장 확인) · `flowprefab`(만들기 · 스폰 · 적용 — 단독을 겸한다) | `flowprefab`(적용 → 다른 인스턴스 갱신 · 덮어쓴 값 유지 · 되돌리기 · 저장 · 다시 열기) · `flowprefabnested`(자식 인스턴스 → 중첩 부품, 적용 → 다른 프리팹이 스폰한 부품 갱신 · 다시 열기) |
 | 지형 브러시 | `terrainbrush` · `rhiswap/terrainedits` | `flowterrain`(편집 → 플레이 → 백엔드 교체 → 되돌리기) |
 | 메시 모디파이어 | `meshmodifiers` | `flowedit`(배치 → 휘기 → 플레이 뒤 미리보기 유지) |
-| 캐릭터 편집 | `charactereditor` | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
+| 캐릭터 편집 | `charactereditor`(미리보기 탭의 꾸미기 슬라이더는 shooter3d `customization.xml` 의 Adventurer `Roughness` 슬라이더가 있어야 그려진다) · `retarget`(리타깃 프로필 창 — 위 구역을 접어 포즈 칸에 닿는다) | `game/shooter3d/automation/charactereditorscene`(외형 → 데이터 프리셋 내보내기 → 씬의 외형 컴포넌트가 그 id → 플레이 조립) |
+| 타일맵 | `tilemapdatalayers`(데이터 레이어 칠하기 · 저장 왕복) | — |
+| 에디터 시작 | `editorstartup`(`Editor.HasPanel` 로 패널을 등록하는 이미지마다 대표 패널을 id 로 묻는다 — 패널 수를 숫자로 박지 않는다) | — |
 | 입력 맵 창 | `inputmapedit` · `inputmaptaps` · `panelclose`(문서 패널이 아닌 패널의 닫기 확인 · 창 크기를 바꾼 뒤에도 확인이 호스트 창 가운데에 뜬다) | — |
 | UI 미리보기 · 디자이너 | `uipreview` · `uipreviewdesigner` · `uiscale` | — |
 | 다중 월드 미리보기 | `previewscene` · `previewreopen`(머티리얼 · 프리팹 창을 연 채 8 번 여닫기, 렌더러 내리기 — 탐침 `Editor.ScenePreviewRenderers` 가 닫을 때 줄고 열 때 돌아오는지) | `previewswap`(창을 연 채 `SwapBackend other` → `start`, 교체 뒤 렌더러 수가 교체 앞과 같은지) |
@@ -51,6 +53,9 @@
 ## 시나리오 규칙 — 임시 자리
 
 - **임시 파일**은 작업 폴더의 `Saved/Automation/<시나리오>/` 에 둔다(`asset.open` · `prefab.create` · `scene.saveAs`). 리소스 트리는 거절한다.
+  에디터 저장은 없는 폴더를 만들지 않으므로(오류로 멈춘다), 캡처 · `asset.open` 이 폴더를 만들어 주지 않는 시나리오는 처음에 `asset.makeTempFolder Saved/Automation/<시나리오>` 를 부른다(`tilemapdatalayers`).
+- **누를 위젯이 창의 보이는 영역 밖이면** 클릭 단계가 "outside the visible area" 로 알린다. 시나리오가 위 구역을 눌러 접거나(`retarget` 의 `retarget.section.<제목>`) 창 크기를 키워 닿게 한다.
+  콤보 팝업은 기본 8 줄이라 뒤의 항목이 스크롤 아래로 가려진다 — 항목이 많은 콤보는 `ImGuiComboFlags_HeightLarge` 로 연다(`scenereference`). 레이블 글이 붙은 입력은 `EditorSelfTestMarks::noteInputFrame` 으로 입력 칸만 표식으로 남긴다(`inspector.method.arg.*`).
 - **임포트한 에셋**은 리소스 id 가 있어야 씬이 쓰므로 리소스 트리 안의 임시 폴더 `editor/automationtemp/<시나리오>/` 에만 가져온다(`asset.import <원본> <폴더>`).
   이 폴더는 `.gitignore` 가 무시하고, 시나리오가 처음과 끝에 `asset.removeImportFolder` 로 지운다. 남은 파일이 있으면 같은 이름이 새 이름(`_1`)을 받아 뒤 단계가 어긋난다.
   원본은 작업 폴더 기준 경로나 리소스 id 이고, 모델 원본(glTF)의 변환은 에디터가 아니라 `App --import-models` 가 한다.
