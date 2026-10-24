@@ -52,6 +52,11 @@ namespace sw
                 /** @brief 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다. */
                 unordered_map<string, unordered_set<string>> _mapFailedSourceByDir;
                 /**
+                 * @brief RHI 폴더마다 소스(정규화한 절대 경로)가 연 헤더(절대 경로)의 합집합입니다. 컴파일한 작업은 컴파일 결과의 목록을, 최신이라 건너뛴 작업은 스탬프에 적힌 목록을 낸다.
+                 *        스탬프가 소스별 "연 헤더" 로 적는다(`ShaderCooker::writeCookStamp`). 합치는 단계(직렬)만 쓴다.
+                 */
+                unordered_map<string, unordered_map<string, unordered_set<string>>> _mapIncludedByDir;
+                /**
                  * @brief 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
                  *        압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
                  */
@@ -74,6 +79,7 @@ namespace sw
             struct FormatResult
             {
                 ShaderReflectionData _reflection;
+                vector<string>       _listIncludedFile;    ///< 이 작업의 소스가 연 헤더(컴파일 성공 또는 최신일 때만 채운다 — 작업 스레드는 자기 칸에만 쓴다)
                 int64                _compileNanos{ 0 };   ///< 최신 판정과 컴파일에 쓴 시간
                 int64                _reflectNanos{ 0 };   ///< 바이너리 읽기 · 리플렉션 · 계약 검사에 쓴 시간
                 uint32               _violationCount{ 0 }; ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
@@ -124,12 +130,16 @@ namespace sw
                     // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
                     // "산출물이 더 새것"이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내
                     // 백엔드 버그처럼 보인다.
-                    const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) && ShaderCooker::isCookedOutputCurrent( _pState->_resourceRoot, _pState->_listPriority, task._outDir, task._normPath );
+                    const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) &&
+                                           ShaderCooker::isCookedOutputCurrent( _pState->_resourceRoot, _pState->_listPriority, task._outDir, task._normPath, &outResult._listIncludedFile );
                     if ( bUpToDate == false )
                     {
+                        outResult._listIncludedFile.clear();
                         ShaderCookResult cookResult{};
                         outResult._bCooked        = ShaderCooker::cookShader( task._absPath, task._outPath, request._entryPoint, request._stage, task._format, &request._listPermutation, &cookResult );
                         outResult._bCompileFailed = outResult._bCooked == false;
+                        if ( outResult._bCooked )
+                            outResult._listIncludedFile = std::move( cookResult._listIncludedFile );
                     }
                     outResult._compileNanos = compileWatch.getElapsedNanoseconds();
                     if ( bSkipReflection )
@@ -259,6 +269,11 @@ namespace sw
                     reflectNanos += result._reflectNanos;
                     if ( result._bCooked )
                         ++ioState._summary._cookedCount;
+                    if ( result._listIncludedFile.empty() == false )
+                    {
+                        unordered_set<string>& uniqueHeader = ioState._mapIncludedByDir[task._outDir][task._normPath];
+                        uniqueHeader.insert( result._listIncludedFile.begin(), result._listIncludedFile.end() );
+                    }
                     if ( result._bCompileFailed )
                     {
                         ++ioState._summary._failedCount;
@@ -311,8 +326,17 @@ namespace sw
                     ioState._summary._removedCount += removedCount;
                     if ( bAllRemoved == false )
                         ++ioState._summary._failedCount;
-                    const auto failedIt = ioState._mapFailedSourceByDir.find( manifestPair.first );
-                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr ) == false )
+                    const auto                            failedIt = ioState._mapFailedSourceByDir.find( manifestPair.first );
+                    unordered_map<string, vector<string>> mapIncludedFile;
+                    const auto                            includedIt = ioState._mapIncludedByDir.find( manifestPair.first );
+                    if ( includedIt != ioState._mapIncludedByDir.end() )
+                    {
+                        for ( const auto& [sourcePath, uniqueHeader] : includedIt->second )
+                        {
+                            mapIncludedFile[sourcePath].assign( uniqueHeader.begin(), uniqueHeader.end() );
+                        }
+                    }
+                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile ) == false )
                     {
                         SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;

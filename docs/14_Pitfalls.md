@@ -26,7 +26,7 @@
 - `-gv_screenshot` · `-gv_screenshotEditor` 만 주면 사진 뒤에도 앱이 끝나지 않는다(종료 코드 124 로 죽는다). 사진만 찍을 거면 `-gv_screenshotQuit=1`, 측정과 함께면 `-gv_profileFrames`([검증과 측정](08_Verification.md) 1절).
 - `-scenario=` 는 리소스 ID(`engine/automation/x.scenario.xml`)도 받는다. 읽기 실패 로그는 `[read]`(파일을 못 찾음 — 리소스 루트 · 작업 폴더 · 낱개 파일 금지 구성이 함께 찍힌다) · `[xml]`(문법) · `[scenario]`(형식)로 막힌 단계를 가른다.
 - 정렬 할당 객체를 기반 포인터로 지우면 배포본 힙이 깨진다(Debug 는 조용). 모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 않는다.
-- 무효 bindless 인덱스(`0xFFFFFFFF`)는 DX12 페이지 폴트, Vulkan DEVICE_LOST 다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders`.
+- 무효 bindless 인덱스(`0xFFFFFFFF`)는 DX12 페이지 폴트, Vulkan DEVICE_LOST 다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders`(헤더를 고치면 그 헤더를 연 셰이더만 다시 구워진다 — 스탬프가 소스별로 연 헤더를 적는다).
 - `castTo<Component>( Component*, 타입 )` 은 항상 성공한다. 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
 - `ImGui::BeginPopupModal` 은 창 이름마다 처음 한 번만(`FirstUseEver`) 가운데에 놓고, 다시 열면 옛 자리를 쓴다. 시나리오가 창 크기를 바꾼 뒤 모달이 작아진 창의 오른쪽 아래 가장자리에 붙어 글자가 잘렸다. 에디터의 모달은 `EditorWidgets::beginCenteredModal`(열릴 때마다 호스트 뷰포트 가운데)로 연다.
 - ImGui 렌더러 백엔드(Vulkan · DX12)는 `RenderDrawData` 를 부를 때마다 뷰포트의 정점 · 인덱스 버퍼 링을 한 칸 넘기고, 모자란 칸은 GPU 를 기다리지 않고 바로 지운다. 한 프레임에 같은 뷰포트를 한 번 더 그리면(에디터 UI 캡처처럼) `kImGuiDrawsPerViewportPerFrame` 을 올린다 — 안 올리면 Vulkan 검증 레이어가 `vkDestroyBuffer ... in use by VkCommandBuffer`(VUID-vkDestroyBuffer-buffer-00922)를 낸다.

@@ -316,7 +316,7 @@ namespace sw
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
                 // 판정 기준은 ShaderCache 와 **같은 것 하나**, cook.stamp 의 내용 해시다. 파일 시간으로
-                // 보면 안 되는 이유는 ShaderCooker::computeEffectiveSourceHash 주석에 있다.
+                // 보면 안 되는 이유는 ShaderCookStamp.cpp 머리 주석에 있다.
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
                 if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, sourceAbs ) == false )
                 {

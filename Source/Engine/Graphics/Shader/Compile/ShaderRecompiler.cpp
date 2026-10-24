@@ -2,31 +2,10 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/File/FileUtil.h"
-
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 파일 내용이 주어진 바이트열과 같은지 확인합니다. 파일이 없으면 false 입니다. */
-        bool fileHasSameBytes( const string& filePath, const vector<uint8>& bytes )
-        {
-            if ( FileUtil::exists( filePath ) == false )
-                return false;
-
-            vector<uint8> listExisting;
-            if ( FileUtil::readFile( filePath, listExisting ) == false )
-                return false;
-            return listExisting == bytes;
-        }
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -51,9 +30,9 @@ namespace sw
         if ( _bInitialized == false || engine::areEngineServicesBound() == false )
             return;
 
-        // 공유 헤더(.hlsli) 해시 캐시를 한 번 버린다. 이게 없으면 컴파일 캐시의 키가 그대로라
-        // **바뀐 헤더가 반영되지 않는다.** 반대로 캐시를 통째로 우회하지는 않는다. 그러면 이번
-        // 편집과 무관한 셰이더까지 모두 다시 컴파일한다. 키를 정확하게 만들어 두고 캐시가 거르게 한다.
+        // 파일 내용 해시 캐시와 스탬프 읽기 결과를 한 번 버린다("전부 다시 본다" 는 약속). 컴파일 캐시는 항목마다 연 헤더의 내용을 직접 보고 낡음을 아니 이것이 없어도 편집은 반영되지만,
+        // 같은 시각 · 같은 크기로 다시 쓴 파일은 내용 해시 캐시가 놓칠 수 있다. 반대로 컴파일 캐시를 통째로 우회하지는 않는다. 그러면 이번
+        // 편집과 무관한 셰이더까지 모두 다시 컴파일한다. 항목이 자기 헤더만 보고 거른다.
         ShaderCooker::invalidateSharedHeaderCache();
 
         // 등록 목록을 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다
@@ -84,8 +63,8 @@ namespace sw
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
             // 컴파일 캐시는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
-            // 타지 않는다. 키에 소스와 모든 공유 헤더의 내용 해시(유효 소스 해시)가 들어 있으므로, 방금
-            // 무효화한 덕분에 바뀐 것만 실제로 다시 컴파일된다.
+            // 타지 않는다. 캐시 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
+            // 연 셰이더만 실제로 다시 컴파일된다.
             // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 요청 그대로(최적화) 컴파일하면 리로드한
             // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 곳에 최적화 코드젠을 덮어쓴다.
             const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
@@ -98,23 +77,15 @@ namespace sw
                 continue;
             }
 
-            // 캐시가 읽는 이름 그대로 쓴다. 여기서 이름을 따로 만들면 퍼뮤테이션 해시 같은 축이 한쪽에서만
-            // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸린다(실제로 둘 다 해시가 없었다).
-            const string localPath = ShaderCache::makeLocalCachePath( liveDesc );
-
-            // **바이트가 같으면 쓰지 않는다.** 쓰면 "갱신" 으로 세어 재컴파일 콜백이 불리고, 바뀌지 않은
-            // 셰이더의 PSO 까지 다시 만들게 된다.
-            if ( fileHasSameBytes( localPath, newResult._bytecode ) )
-                continue;
-
-            const string localDir = FileUtil::getDirectoryPart( localPath );
-            if ( localDir.empty() == false )
-                FileUtil::ensureDirectoryExists( localDir );
-
-            // 경로에 지금 소스의 유효 해시가 들어 있으므로 다음 getOrCompile 이 이 바이트코드를 집는다
+            // 캐시가 읽는 이름 그대로 쓴다. 이름은 캐시(`ShaderCache::storeLocalCache`)가 정하므로 퍼뮤테이션 해시 같은 축이 한쪽에서만
+            // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸리는 일이 없다(실제로 둘 다 해시가 없었다).
+            // **바이트가 같으면 바이트 파일은 쓰지 않는다.** 쓰면 "갱신" 으로 세어 재컴파일 콜백이 불리고, 바뀌지 않은
+            // 셰이더의 PSO 까지 다시 만들게 된다. 연 헤더의 의존 기록은 같아도 새로 쓴다(헤더만 고쳤으면 옛 기록이 낡음으로 남는다).
+            // 경로에 지금 소스의 지문이 들어 있고 기록이 지금 헤더와 맞으므로 다음 getOrCompile 이 이 바이트코드를 집는다
             // (ShaderCache 의 1순위가 이 로컬 라이브 캐시다).
-            if ( FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() ) == false )
-                SW_LOG_WARNING( "Could not write the live shader cache '%#' - the next run recompiles it", localPath );
+            const bool bBytesChanged = ShaderCache::storeLocalCache( liveDesc, newResult );
+            if ( bBytesChanged == false )
+                continue;
 
             ++changed;
             if ( _onAnyRecompiled.isBound() )

@@ -173,9 +173,16 @@ namespace sw
      */
     struct ShaderCompileResult
     {
-        vector<uint8> _bytecode;          ///< 컴파일된 바이트코드
-        string        _errorMessage;      ///< 실패했을 때의 컴파일러 오류 메시지
-        bool          _bSuccess{ false }; ///< 컴파일 성공 여부
+        vector<uint8> _bytecode;     ///< 컴파일된 바이트코드
+        string        _errorMessage; ///< 실패했을 때의 컴파일러 오류 메시지
+        /**
+         * @brief 컴파일러가 소스를 읽다 실제로 연 `#include` 파일입니다(해석된 경로, `/` 구분자, 중복 없이 정렬). 주 소스 파일은 넣지 않습니다.
+         * @details 쿠킹 최신 판정과 컴파일 캐시가 "이 셰이더가 어느 헤더에 기대는가" 를 이 목록으로 안다. 바이트코드의 리플렉션은 바인딩 정보라
+         *          어느 헤더를 열었는지 담지 못해서, 소스를 읽는 순간 include 처리기가 적는다. 디스크 캐시에 맞았을 때는 캐시와 함께 저장해 둔 목록이 담긴다.
+         *          컴파일에 실패한 결과의 목록은 믿지 않는다(비어 있을 수 있다).
+         */
+        vector<string> _listIncludedFile;
+        bool           _bSuccess{ false }; ///< 컴파일 성공 여부
     };
 } // namespace sw
 
