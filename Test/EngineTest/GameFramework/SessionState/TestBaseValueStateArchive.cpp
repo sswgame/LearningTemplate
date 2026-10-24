@@ -504,6 +504,32 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 }
 
 /**
+ * @brief [BaseValueStateArchiveTest] 원소 격자 — 잘린 바이트는 거절하고 격자는 그대로다
+ * @details 셀 크기(`Cell::kStateBytes`)가 쓰기와 어긋나면 짧은 바이트를 셀이 모자란 줄 모르고 읽어 버린다. 끝 한 바이트를 뗀 바이트로 확인한다.
+ */
+SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridRefusesAShortArchive )
+{
+    ElementRuleTable table;
+    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
+    ElementGrid grid;
+    SW_ASSERT_TRUE( grid.initialize( 4, 2, &table ) );
+    grid.setMaterial( int2{ 1, 1 }, table.findMaterial( "Grass" ) );
+    const vector<uint8> bytes = captureValueBytes( grid );
+    SW_ASSERT_TRUE( bytes.size() > 1u );
+
+    ElementGrid target;
+    SW_ASSERT_TRUE( target.initialize( 4, 2, &table ) );
+    const uint32 hashBefore = target.computeStateHash();
+    Archive      shortReader( bytes.data(), bytes.size() - 1 );
+    SW_EXPECT_FALSE( target.readState( shortReader ) );
+    SW_EXPECT_EQUAL( hashBefore, target.computeStateHash() );
+
+    Archive fullReader( bytes.data(), bytes.size() );
+    SW_EXPECT_TRUE( target.readState( fullReader ) );
+    SW_EXPECT_EQUAL( grid.computeStateHash(), target.computeStateHash() );
+}
+
+/**
  * @brief [BaseValueStateArchiveTest] 스폰 디렉터 — 예산 · 난수 · 살아 있는 것이 이어져 같은 다음 스폰을 낸다
  */
 SW_TEST_CASE( BaseValueStateArchiveTest, SpawnDirectorReplaysAfterRestore )

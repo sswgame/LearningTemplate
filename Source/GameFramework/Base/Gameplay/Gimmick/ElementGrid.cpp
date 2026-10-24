@@ -23,6 +23,27 @@ namespace sw
 
 namespace sw
 {
+    void ElementGrid::Cell::write( Archive& outArchive ) const
+    {
+        static_assert( kStateBytes == sizeof( Cell ), "Cell has a field that kStateBytes does not count (or padding) - update kStateBytes, write and read together" );
+        outArchive << _material;
+        outArchive << _statusBits;
+        for ( const uint8 value : _arrStatusValue )
+        {
+            outArchive << value;
+        }
+    }
+
+    void ElementGrid::Cell::read( Archive& archive )
+    {
+        archive >> _material;
+        archive >> _statusBits;
+        for ( uint8& value : _arrStatusValue )
+        {
+            archive >> value;
+        }
+    }
+
     ElementGrid::ElementGrid()
         : _listCell{}
         , _eventBuffer{}
@@ -377,12 +398,7 @@ namespace sw
         outArchive << _topology._height;
         for ( const Cell& cell : _listCell )
         {
-            outArchive << cell._material;
-            outArchive << cell._statusBits;
-            for ( const uint8 value : cell._arrStatusValue )
-            {
-                outArchive << value; // 상태 값(남은 시간, 세기). 비트만 실으면 복원한 불이 처음부터 다시 탄다
-            }
+            cell.write( outArchive );
         }
         StateArchiveUtil::writeInt2( outArchive, _wind );
         StateArchiveUtil::writeStepTimer( outArchive, _timer );
@@ -396,20 +412,15 @@ namespace sw
         archive >> width;
         archive >> height;
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        // 크기는 initialize 의 것이어야 한다. 셀마다 재질, 상태 비트(2), 상태 값을 쓴다
-        const uint64 cellBytes           = 2u + ElementRuleTable::kMaxStatusCount;
-        const bool   bInvalidGridArchive = archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * cellBytes ) == false;
+        // 크기는 initialize 의 것이어야 한다. 셀마다 `Cell::write` 가 쓴 바이트(`Cell::kStateBytes`)가 있어야 한다
+        const bool bInvalidGridArchive =
+            archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * Cell::kStateBytes ) == false;
         if ( bInvalidGridArchive )
             return false;
         vector<Cell> listCell( static_cast<size_t>( cellCount ) );
         for ( Cell& cell : listCell )
         {
-            archive >> cell._material;
-            archive >> cell._statusBits;
-            for ( uint8& value : cell._arrStatusValue )
-            {
-                archive >> value;
-            }
+            cell.read( archive );
         }
         int2           wind      = {};
         FixedStepTimer timer     = _timer;
