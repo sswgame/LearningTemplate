@@ -1,0 +1,99 @@
+<Scene formatVersion="2" name="RealtimeGI">
+	<!-- 실시간 프로브 갱신 시나리오(automation/realtimegi)의 무대 — 방향광 아래 밝은 바닥과 큐브 하나, 큐브를 덮는 실시간 라이트 프로브 볼륨.
+	     햇빛은 거의 수직으로 내리꽂혀 카메라를 향한 큐브 옆면에는 직접광이 거의 없고(앰비언트 0), 그 면은 바닥에서 한 번 튕긴 빛(프로브의 간접광)만 받는다.
+	     프로브 갱신이 돌면 옆면이 밝아지고, 안 돌면 거의 검다. 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다. -->
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-4"
+					                 _localRotation="0.1,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="1.5,0,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="3.0"
+					                           _ambient="0"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,3"
+					               _localRotation="0,0,0"
+					               _localScale="20,1,20"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="plane"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="15"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Cube">
+			<GameObject _schemaVersion="0" _name="Cube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1,3"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="cube"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="ProbeVolume">
+			<GameObject _schemaVersion="0" _name="ProbeVolume" _bActive="true">
+				<_listComponent>
+					<LightProbeVolumeComponent _componentName="LightProbeVolumeComponent"
+					                           _bActive="true"
+					                           _localPosition="0,1.5,3"
+					                           _localRotation="0,0,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _extent="8,3,8"
+					                           _spacing="1"
+					                           _probeDataPath=""
+					                           _bakeSampleCount="256"
+					                           _bounceAlbedo="0.5"
+					                           _bRealtime="true"
+					                           _voxelSize="0.5"
+					                           _realtimeRayCount="64"
+					                           _realtimeUpdatePeriod="4"
+					                           _realtimeBlend="0.25" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

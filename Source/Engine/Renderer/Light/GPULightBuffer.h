@@ -19,8 +19,10 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -42,6 +44,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 실시간으로 갱신할 라이트 프로브 볼륨 하나의 요청입니다(`collectSceneLights` 가 만들고 렌더 스레드의 `RealtimeProbeUpdater` 가 읽는다 — RealtimeGlobalIllumination.md R6).
+     * @details 볼륨 원소(`_volumeElement`)가 격자 모양(시작점 · 간격 · 수)과 프로브 버퍼 안의 자리를 이미 담고 있어 여기에는 갱신에만 필요한 값을 둔다.
+     *          복셀 격자는 불변 공유 값이다 — 컴포넌트의 캐시와 같은 것을 가리키고, 렌더 스레드는 포인터가 바뀐 프레임에만 다시 올린다.
+     */
+    struct RealtimeProbeRequest
+    {
+        GPULight                         _volumeElement{};      ///< 라이트 목록에 넣은 볼륨 원소의 사본 - 격자 모양(시작점 `_colorIntensity.xyz` · 간격 `_directionType.xyz` · 수 `_params.xyz`)과 프로브 버퍼 안의 첫 프로브 번호(`_params.w`)
+        uint64                           _volumeID{ 0 };        ///< 컴포넌트 번호 — 프레임을 넘는 기록(history)의 열쇠
+        uint32                           _probeCount{ 0 };      ///< 볼륨의 프로브 수
+        uint32                           _rayCount{ 0 };        ///< 프로브 하나를 한 번 갱신할 때 쏘는 광선 수
+        uint32                           _updatePeriod{ 1 };    ///< 모든 프로브가 한 번씩 갱신되는 프레임 수
+        float32                          _blend{ 1.0f };        ///< 새 값이 기록에 섞이는 비율
+        float32                          _bounceAlbedo{ 0.5f }; ///< 닿은 면의 반사율
+        shared_ptr<const SceneVoxelGrid> _pVoxelGrid;           ///< 광선이 걷는 점유 복셀
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 씬의 활성 라이트를 GPU 원소로 모읍니다(게임 스레드).
      * @details 레지스트리(`ComponentRegistry`)만 봅니다. 주의: 모든 GameObject 를 도는 경로를 만들지 않습니다
      *          (큐브 20,000 개에서 그 훑기 한 번이 2.9ms 입니다).
@@ -56,9 +78,12 @@ namespace sw
      *                             nullptr 이면 볼륨도 반사 프로브도 모으지 않습니다.
      * @param pOutListCookie 비지 않으면 쿠키 텍스처를 쓰는 빛(`LightComponent::getCookieTexturePath`)마다 원소 번호와 경로를 지우고 채웁니다. nullptr 이면
      *                       그 빛은 쿠키 없이 그려진다 — 아틀라스를 만들지 않는 경로(라이트 프로브 베이크)만 넘긴다.
+     * @param pOutListRealtimeProbe 비지 않으면 실시간 갱신 볼륨(`LightProbeVolumeComponent::isRealtime`)마다 볼륨 원소(자리는 0 으로 채운 프로브 원소)를 넣고 갱신 요청을 지우고 채웁니다.
+     *                              nullptr 이면 실시간 볼륨은 모으지 않습니다(갱신을 돌릴 수 없는 경로 — 미리보기와 베이크).
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
-                                    vector<float4>* pOutListProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr );
+                                    vector<float4>* pOutListProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
+                                    vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr );
 
     /**
      * @enum LightGridProducer
@@ -105,8 +130,9 @@ namespace sw
          * @details 상한 처리(`shaderslot::kMaxFrameLight` 에서 GPU 구간을 뺀 몫)는 GPU 구간 수를 아는 `update` 가 합니다.
          *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 라이트 뒤에 붙고 `getCount` 에 들지 않습니다.
          *          @p listProbeElement(라이트 프로브 SH9, `collectSceneLights`)는 따로 프로브 버퍼(t13)로 올라갑니다.
+         * @param bProbeWritable 실시간 프로브 볼륨이 있어 컴퓨트(`probeupdate.hlsl`)가 프로브 버퍼를 쓴다 — 프로브 버퍼가 UAV 가 있는 기본 힙 버퍼가 된다.
          */
-        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement );
+        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement, bool bProbeWritable );
 
         /**
          * @brief 라이트 버퍼를 올리고, 뷰마다 라이트 그리드를 준비합니다.
@@ -139,6 +165,8 @@ namespace sw
         bool isBindable() const { return _count > 0 && _buffer._buffer != 0 && _buffer._srv != kInvalidDescriptorIndex; }
         /** @brief 라이트 프로브 SH9 버퍼(t13)입니다. 이번 프레임에 쓸 프로브가 없으면 nullptr 입니다(볼륨 원소도 목록에 없다). */
         const RHIStructuredBufferSlot* findProbeBuffer() const;
+        /** @brief 프로브 갱신 컴퓨트가 프로브 버퍼를 쓰는 UAV 입니다. 이번 프레임에 쓸 수 없으면(실시간 볼륨이 없다 · 버퍼가 없다 · 백엔드가 UAV 를 거절했다) `kInvalidDescriptorIndex` 입니다. */
+        RHIDescriptorIndex getProbeUav() const { return ( _bProbeWritable == SW_TRUE && _probeElementCount > 0 ) ? _probeBuffer._uav : kInvalidDescriptorIndex; }
 
         /** @brief GPU 생산자가 이번 프레임에 채울 뷰 수입니다. 0 이면 디스패치할 것이 없습니다. */
         uint32 getGPUGridViewCount() const { return _gpuGridViewCount; }
@@ -167,6 +195,7 @@ namespace sw
         RHIStructuredBufferSlot _probeBuffer;                             ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
         vector<float4>          _listProbeScratch;                        ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
         uint32                  _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
+        uint8                   _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
         vector<GPULight>        _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
         vector<GPULight>        _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
         vector<GPULight>        _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
@@ -187,5 +216,6 @@ namespace sw
         uint8 _bWarnedGPULightRefused{ SW_FALSE };
         /// @brief 백엔드가 라이트 버퍼의 UAV 를 거절했습니다(다시 잡아 봐야 같다 — 오류도 한 번만).
         uint8 _bUavDenied{ SW_FALSE };
+        uint8 _bProbeUavDenied{ SW_FALSE }; ///< 프로브 버퍼의 UAV 를 백엔드가 거절했다(한 번만 알리고 다시 잡지 않는다)
     };
 } // namespace sw

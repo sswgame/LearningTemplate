@@ -43,6 +43,8 @@ namespace sw
         vector<float4> _listLightProbe;
         /** @brief 쿠키(빛 텍스처)를 쓰는 빛들입니다(`collectSceneLights`). 렌더러가 쿠키 아틀라스 칸을 나눠 `_listLight` 원소의 `_extra.w` 에 적습니다. */
         vector<GPULightCookie> _listLightCookie;
+        /** @brief 실시간으로 갱신할 라이트 프로브 볼륨들의 요청입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 복셀 격자는 공유 포인터로 실린다(렌더 스레드는 읽기만 한다). */
+        vector<RealtimeProbeRequest> _listRealtimeProbe;
         /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
         SkyGradient _sky;
         /** @brief 씬의 안개(`FogComponent`, 카메라가 물속이면 물속 안개로 덮은 값)입니다. `_bHasFog` 가 0 이면 값이 없고 안개 패스가 그리지 않는다. */
@@ -98,6 +100,7 @@ namespace sw
             , _listLight{}
             , _listLightProbe{}
             , _listLightCookie{}
+            , _listRealtimeProbe{}
             , _sky{}
             , _fog{}
             , _listView{}
@@ -149,6 +152,7 @@ namespace sw
             _listLight.clear();
             _listLightProbe.clear();
             _listLightCookie.clear();
+            _listRealtimeProbe.clear();
             _sky = SkyGradient{};
             _fog = FogSettings{};
             _listView.clear();

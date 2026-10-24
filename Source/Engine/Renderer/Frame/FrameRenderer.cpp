@@ -459,6 +459,8 @@ namespace sw
         dispatchLightGrid();
         // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
         dispatchVolumetricFog();
+        // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
+        dispatchRealtimeProbes();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -565,7 +567,7 @@ namespace sw
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie );
+        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie, &_listScratchRealtimeProbe );
         // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
@@ -602,7 +604,8 @@ namespace sw
         applyFrameShadow();
         // 쿠키를 쓰는 2D 빛에 아틀라스 칸을 나눠 원소에 적는다(업로드 전). 칸에 그리는 것은 기록 중 프리패스(drawLight2DCookieAtlas)다.
         _cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
-        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe );
+        _listFrameRealtimeProbe = _listScratchRealtimeProbe;
+        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe, _listFrameRealtimeProbe.empty() == false );
         resetPassCbRing();
         setIdentityWorld( _frameContext );
         updatePassConstants( _frameContext, mainCameraViewProj );
@@ -697,7 +700,8 @@ namespace sw
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
         _cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
-        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe );
+        _listFrameRealtimeProbe = packet._listRealtimeProbe;
+        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe, _listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
@@ -789,6 +793,8 @@ namespace sw
         updateLightBuffer( pDevice );
         // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
         prepareVolumetricFog( pDevice );
+        // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
+        prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {

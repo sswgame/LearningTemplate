@@ -27,6 +27,13 @@ namespace sw
             static constexpr float32 kMinSpacing{ 0.1f };
             /// @brief 읽은 격자와 지금 격자를 같다고 볼 위치 · 간격의 오차(m).
             static constexpr float32 kLayoutTolerance{ 1e-3f };
+            /// @brief 실시간 갱신의 기본값 — 복셀 0.5 m, 프로브마다 광선 64 개, 8 프레임에 한 바퀴, 새 값 10 % 섞기.
+            static constexpr float32 kDefaultVoxelSize{ 0.5f };
+            static constexpr uint32  kDefaultRealtimeRayCount{ 64 };
+            static constexpr uint32  kDefaultRealtimeUpdatePeriod{ 8 };
+            static constexpr float32 kDefaultRealtimeBlend{ 0.1f };
+            /// @brief 복셀 상자가 볼륨 상자 바깥으로 더 가지는 고정 여유(m) — 간격에 더한다. 상자 가장자리 프로브 곁의 벽이 빠지지 않게 한다.
+            static constexpr float32 kVoxelMargin{ 2.0f };
 
             /** @brief 한 축의 프로브 수와 실제 간격입니다 — 상자 양 끝에 프로브가 놓이게 고르게 나눈다. */
             static void computeAxis( float32 extent, float32 spacing, uint32& outCount, float32& outSpacing )
@@ -47,8 +54,44 @@ namespace sw
         , _probeDataPath{}
         , _bakeSampleCount{ LightProbeVolumeComponentInternal::kDefaultBakeSampleCount }
         , _bounceAlbedo{ LightProbeVolumeComponentInternal::kDefaultBounceAlbedo }
+        , _bRealtime{ SW_FALSE }
+        , _voxelSize{ LightProbeVolumeComponentInternal::kDefaultVoxelSize }
+        , _realtimeRayCount{ LightProbeVolumeComponentInternal::kDefaultRealtimeRayCount }
+        , _realtimeUpdatePeriod{ LightProbeVolumeComponentInternal::kDefaultRealtimeUpdatePeriod }
+        , _realtimeBlend{ LightProbeVolumeComponentInternal::kDefaultRealtimeBlend }
         , _probeData{}
     {
+    }
+
+    void LightProbeVolumeComponent::setRealtime( bool bRealtime )
+    {
+        _bRealtime = bRealtime ? SW_TRUE : SW_FALSE;
+        onPropertyChanged( hashed_string( "_bRealtime" ) );
+    }
+
+    AABB LightProbeVolumeComponent::computeRealtimeVoxelBounds() const
+    {
+        const float32 margin = MathUtil::max( _spacing, 0.0f ) + LightProbeVolumeComponentInternal::kVoxelMargin;
+        const float3  center = getWorldPosition();
+        const float3  half   = _extent * 0.5f + float3{ margin, margin, margin };
+        return AABB{ center - half, center + half };
+    }
+
+    shared_ptr<const SceneVoxelGrid> LightProbeVolumeComponent::findRealtimeVoxelGrid( uint64 primitiveSetGeneration ) const
+    {
+        const AABB bounds = computeRealtimeVoxelBounds();
+        // 상자(볼륨을 옮기거나 키웠다) · 칸 크기 · 프리미티브 집합이 그대로여야 캐시가 맞다.
+        const bool bSameBounds = _realtimeVoxelBounds._min == bounds._min && _realtimeVoxelBounds._max == bounds._max;
+        const bool bFresh      = _pRealtimeVoxelGrid != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize ) && _realtimeVoxelSetGeneration == primitiveSetGeneration;
+        return bFresh ? _pRealtimeVoxelGrid : nullptr;
+    }
+
+    void LightProbeVolumeComponent::setRealtimeVoxelGrid( shared_ptr<const SceneVoxelGrid> grid, uint64 primitiveSetGeneration ) const
+    {
+        _pRealtimeVoxelGrid         = std::move( grid );
+        _realtimeVoxelSetGeneration = primitiveSetGeneration;
+        _realtimeVoxelBounds        = computeRealtimeVoxelBounds();
+        _realtimeVoxelCellSize      = _voxelSize;
     }
 
     void LightProbeVolumeComponent::setExtent( const float3& extent )
@@ -144,7 +187,7 @@ namespace sw
         const bool bNoExtent = _extent._x <= 0.0f && _extent._y <= 0.0f && _extent._z <= 0.0f;
         if ( bNoExtent )
             context.addError( "Extent is 0 on every axis - the volume holds a single probe" );
-        if ( _probeDataPath.empty() )
+        if ( _probeDataPath.empty() && _bRealtime == SW_FALSE )
             context.addWarning( "Light probe volume is not baked - it gives no indirect light" );
     }
 } // namespace sw

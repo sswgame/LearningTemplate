@@ -161,6 +161,7 @@ namespace sw
         _lightBuffer.release( _pDevice );
         _fogVolumeBuffer.release( _pDevice );
         _fogVolumeParamBuffer.release( _pDevice );
+        _probeUpdater.release( _pDevice );
         _cookieAtlas.release( _pDevice );
         for ( MaterialFallback& fallback : _listMaterialFallback )
         {

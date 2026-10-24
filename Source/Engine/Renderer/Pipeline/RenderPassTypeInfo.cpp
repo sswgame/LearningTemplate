@@ -358,6 +358,13 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::ProbeUpdate:
+                    {
+                        // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderProbeUpdate;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                 }
                 return info;
             }

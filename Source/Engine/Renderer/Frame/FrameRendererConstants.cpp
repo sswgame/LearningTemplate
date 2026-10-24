@@ -27,7 +27,8 @@ namespace sw
     void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
     {
         // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
-        _bHasFrameSky = bHasSky ? SW_TRUE : SW_FALSE;
+        _bHasFrameSky   = bHasSky ? SW_TRUE : SW_FALSE;
+        _frameSkySource = bHasSky ? sky : SkyGradient{};
         if ( bHasSky == false )
         {
             _frameSky = FrameSkyState{};

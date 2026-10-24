@@ -92,6 +92,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_shaderSky` | `DataPath` | — |  |  | 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형 |
 | `_shaderFog` | `DataPath` | — |  |  | 높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다 |
 | `_shaderVolumetricFog` | `DataPath` | — |  |  | 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다 |
+| `_shaderProbeUpdate` | `DataPath` | — |  |  | 실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다 |
 | `_shaderToon` | `DataPath` | — |  |  | 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다 |
 | `_shaderHighlightOutline` | `DataPath` | — |  |  | 인스턴스 강조 외곽선(상호작용 대상 · 감각 모드) — 강조 패스 둘의 셰이더 |
 | `_shaderCanvas` | `DataPath` | — |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |

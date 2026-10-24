@@ -135,6 +135,11 @@ namespace sw
          *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FrameRenderer::dispatchVolumetricFog`).
          */
         VolumetricFog,
+        /**
+         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probeupdate.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
+         *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`, RealtimeGlobalIllumination.md R6). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
+         */
+        ProbeUpdate,
     };
 
     /**

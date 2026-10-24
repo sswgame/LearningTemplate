@@ -801,6 +801,15 @@
        "description": "볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다"
       },
       {
+       "name": "_shaderProbeUpdate",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다"
+      },
+      {
        "name": "_shaderToon",
        "type": "DataPath",
        "default": "",

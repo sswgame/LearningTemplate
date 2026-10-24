@@ -101,7 +101,7 @@ namespace sw
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::VolumetricFog ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::ProbeUpdate ) + 1;
 
     /**
      * @struct RenderPassTraitFlag

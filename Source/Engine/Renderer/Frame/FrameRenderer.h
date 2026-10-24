@@ -28,6 +28,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Light/Light2DCookieAtlas.h"
+#include "Engine/Renderer/Light/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -736,6 +737,13 @@ namespace sw
         void prepareVolumetricFog( IRHIDevice* pDevice );
         /** @brief 볼륨 안개 컴퓨트를 기록합니다(라이트 그리드 디스패치 뒤). `_bFogVolumeActive` 일 때만 돕니다. */
         void dispatchVolumetricFog();
+        /**
+         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
+         * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).
+         */
+        void prepareRealtimeProbes( IRHIDevice* pDevice );
+        /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다(라이트 그리드 · 볼륨 안개 뒤, 조명 패스 앞). `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
+        void dispatchRealtimeProbes();
         /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /**
@@ -1097,6 +1105,11 @@ namespace sw
         /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
         vector<float4>         _listScratchLightProbe;
         vector<GPULightCookie> _listScratchLightCookie; ///< 직접 경로의 쿠키 목록(`collectSceneLights`)
+        /// @brief 실시간 프로브 갱신 요청입니다 - 직접 경로가 모으는 임시 버퍼(`_listScratchRealtimeProbe`)와, 이번 프레임 기록이 읽는 사본(`_listFrameRealtimeProbe` - 패킷 경로도 여기에 받는다).
+        vector<RealtimeProbeRequest> _listScratchRealtimeProbe;
+        vector<RealtimeProbeRequest> _listFrameRealtimeProbe;
+        RealtimeProbeUpdater         _probeUpdater;   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`prepareRealtimeProbes` · `dispatchRealtimeProbes`)
+        SkyGradient                  _frameSkySource; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
