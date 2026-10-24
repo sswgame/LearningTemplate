@@ -5,6 +5,7 @@
 
 #if !defined( SW_SHIPPING )
 
+    #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
 
     #include "Engine/Common/EngineServices.h"
@@ -80,13 +81,12 @@ SW_TEST_CASE( LiveShaderTest, ManualReloadWithNoTargetsIsNoop )
 }
 
 /**
- * @brief [LiveShaderTest] `.hlsli` 만 고쳐도 수동 리로드가 새 바이트코드를 만드는지 검증.
- * @details 이게 이 기능의 전부다. 함정은 `ShaderCompiler` 의 디스크 캐시인데, 키에 드는 공유 헤더 해시
- *          (`ShaderCooker::getSharedHeaderContentHash`)는 `.hlsli` 집합을 한 번 훑고 **캐시된다**.
- *          `.hlsli` 만 고치면 키가 그대로라 옛 바이트코드가 그대로 돌아온다 —
- *          로그는 "Succeeded" 를 찍는데 화면은 안 바뀌는, 가장 조용한 종류의 어긋남이다.
- *          그래서 리로드는 그 캐시를 한 번 버린다(`invalidateSharedHeaderCache`) — 컴파일 캐시를 통째로 우회하지는 않는다.
- *          우회하면 이번 편집과 무관한 셰이더까지 전부 다시 컴파일된다.
+ * @brief [LiveShaderTest] `.hlsli` 만 고쳐도 다시 컴파일하면 새 바이트코드를 만드는지 검증.
+ * @details 이게 이 기능의 전부다. 함정은 `ShaderCompiler` 의 디스크 캐시인데, 키는 소스 바이트만 보므로 `.hlsli` 만 고치면 키가 그대로다 —
+ *          옛 바이트코드가 그대로 돌아오면 로그는 "Succeeded" 를 찍는데 화면은 안 바뀌는, 가장 조용한 종류의 어긋남이다.
+ *          그래서 캐시 항목은 컴파일할 때 연 헤더와 그 내용 해시를 항목 옆의 의존 기록에 적고(`ShaderCooker::writeIncludeRecord`), 맞출 때 그 헤더가 그대로인지 본다.
+ *          전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 되므로, 그 셰이더가 연 헤더만 본다.
+ *          컴파일 캐시를 통째로 우회하지도 않는다. 우회하면 이번 편집과 무관한 셰이더까지 전부 다시 컴파일된다.
  */
 SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 {
@@ -147,19 +147,79 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
         SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( includeAbs, written + 5 * sw::FileUtil::kFileTimeTicksPerSecond ) );
     }
 
-    // 공유 헤더 해시가 캐시돼 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
-    const sw::ShaderCompileResult stale = sw::ShaderCompiler::compileHlsl( desc );
-    SW_ASSERT_TRUE( stale._bSuccess );
-    SW_EXPECT_TRUE( stale._bytecode == first._bytecode );
-
-    // 수동 리로드가 하는 것과 같다 — 공유 헤더 해시를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
-    // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
-    // 다시 컴파일된다.
-    sw::ShaderCooker::invalidateSharedHeaderCache();
+    // 캐시 항목의 의존 기록이 연 헤더의 변경을 알아채 **옛 바이트코드를 돌려주지 않는다** — 수동 리로드(`invalidateSharedHeaderCache`)를 누르지 않아도 그렇다.
+    // 캐시를 우회하는 것이 아니다: 이 셰이더가 열지 않은 헤더를 고쳐도 캐시 항목은 맞는다(아래 케이스).
     const sw::ShaderCompileResult reloaded = sw::ShaderCompiler::compileHlsl( desc );
 
     SW_ASSERT_TRUE( reloaded._bSuccess );
     SW_EXPECT_TRUE( reloaded._bytecode != first._bytecode );
+}
+
+/**
+ * @brief [LiveShaderTest] 컴파일러가 연 `#include` 를 전이까지 모두 적고, 열지 않은 헤더는 적지 않는다 — 디스크 캐시에 맞아도 같은 목록이 온다
+ * @details 쿠킹 스탬프와 컴파일 캐시가 "이 셰이더가 어느 헤더에 기대는가" 를 이 목록으로 안다(바이트코드의 리플렉션은 바인딩 정보라 담지 못한다).
+ *          소스 → A → C 에서 C 를 고치면 다시 컴파일되고, 열지 않은 D 를 고치면 캐시에 맞아 같은 목록이 돌아온다(전역 헤더 해시였다면 D 도 무효가 되었다).
+ */
+SW_TEST_CASE( LiveShaderTest, CompileRecordsEveryOpenedInclude )
+{
+    const test::ScopedTempResourceRoot resourceRoot;
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/increcorda.hlsli", "#include \"increcorderc.hlsli\"\n#define SW_REC_A 1.0\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/increcorderc.hlsli", "#define SW_REC_C 1.0\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/incrunopened.hlsli", "#define SW_REC_D 1.0\n" ) );
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/incrprobe.hlsl",
+                                                "#include \"increcorda.hlsli\"\n"
+                                                "float4 VSMain( float3 pos : POSITION ) : SV_POSITION\n"
+                                                "{\n"
+                                                "    return float4( pos * SW_REC_A * SW_REC_C, 1.0 );\n"
+                                                "}\n" ) );
+
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []()
+    {
+        sw::ShaderCooker::invalidateSharedHeaderCache();
+    } ) );
+
+    sw::ShaderCompileDesc desc{};
+    desc._filePath   = "engine/shaders/incrprobe.hlsl";
+    desc._entryPoint = "VSMain";
+    desc._stage      = sw::ShaderStage::Vertex;
+    #if defined( SW_PLATFORM_WINDOWS )
+    desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
+    #else
+    desc._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
+    #endif
+
+    const sw::ShaderCompileResult first = sw::ShaderCompiler::compileHlsl( desc );
+    if ( first._bSuccess == false && first._errorMessage.find( "unavailable" ) != sw::string::npos )
+        SW_TEST_SKIP( first._errorMessage.c_str() );
+    SW_ASSERT_TRUE( first._bSuccess );
+
+    // 연 파일은 A 와 전이 include 인 C 둘이다. 주 소스와 열지 않은 D 는 없다.
+    SW_ASSERT_EQUAL( size_t( 2 ), first._listIncludedFile.size() );
+    bool bHasA = false;
+    bool bHasC = false;
+    for ( const sw::string& file : first._listIncludedFile )
+    {
+        bHasA = bHasA || sw::StringUtil::endsWith( file, "/increcorda.hlsli", true );
+        bHasC = bHasC || sw::StringUtil::endsWith( file, "/increcorderc.hlsli", true );
+    }
+    SW_EXPECT_TRUE( bHasA );
+    SW_EXPECT_TRUE( bHasC );
+
+    // 열지 않은 헤더를 고쳐도 캐시에 맞는다 — 같은 바이트코드와 같은 목록이 돌아온다.
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/incrunopened.hlsli", "#define SW_REC_D 22222.0\n" ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    const sw::ShaderCompileResult afterUnopened = sw::ShaderCompiler::compileHlsl( desc );
+    SW_ASSERT_TRUE( afterUnopened._bSuccess );
+    SW_EXPECT_TRUE( afterUnopened._bytecode == first._bytecode );
+    SW_EXPECT_TRUE( afterUnopened._listIncludedFile == first._listIncludedFile );
+
+    // 전이 include 의 C 를 고치면 다시 컴파일되어 바이트코드가 달라진다.
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "engine/shaders/increcorderc.hlsli", "#define SW_REC_C 7.5\n" ) );
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    const sw::ShaderCompileResult afterTransitive = sw::ShaderCompiler::compileHlsl( desc );
+    SW_ASSERT_TRUE( afterTransitive._bSuccess );
+    SW_EXPECT_TRUE( afterTransitive._bytecode != first._bytecode );
+    SW_EXPECT_TRUE( afterTransitive._listIncludedFile == first._listIncludedFile );
 }
 
 /**

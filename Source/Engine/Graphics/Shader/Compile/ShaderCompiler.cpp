@@ -16,6 +16,8 @@
 #include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include <algorithm>
+
 #if defined( SW_HAS_DXC_API )
     #include <dxcapi.h>
 #endif
@@ -54,15 +56,30 @@ namespace sw
                 return true;
             }
 
+            /** @brief 컴파일러가 연 파일 목록을 정렬하고 중복을 없앱니다(`ShaderCompileResult::_listIncludedFile` 의 규칙). */
+            [[nodiscard]] static vector<string> sortUniqueIncludedFile( vector<string> listFile )
+            {
+                std::sort( listFile.begin(), listFile.end() );
+                listFile.erase( std::unique( listFile.begin(), listFile.end() ), listFile.end() );
+                return listFile;
+            }
+
 #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief 여러 루트를 도는 ID3DInclude 입니다(common/shaders → engine/shaders/binding.hlsli 등). */
+            /**
+             * @brief 여러 루트를 도는 ID3DInclude 입니다(common/shaders → engine/shaders/binding.hlsli 등). 연 파일을 적어 둡니다.
+             * @details 기록은 이 객체 안이다 — 컴파일 호출마다 하나를 만들어 쓰므로 병렬 컴파일에서도 서로 섞이지 않는다(전역 · static 기록 금지).
+             */
             class MultiRootD3DInclude final : public ID3DInclude
             {
             public:
                 explicit MultiRootD3DInclude( vector<string> listRoot )
                     : _listRoot{ std::move( listRoot ) }
+                    , _listIncludedFile{}
                 {
                 }
+
+                /** @brief 지금까지 연 파일을 정렬 · 중복 제거해 돌려주고 기록을 비웁니다. */
+                [[nodiscard]] vector<string> takeIncludedFiles() { return sortUniqueIncludedFile( std::move( _listIncludedFile ) ); }
 
                 STDMETHOD( Open )
                 ( D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID pParentData,
@@ -90,6 +107,7 @@ namespace sw
                         Memory::copy( pHeap, bytes.data(), bytes.size() );
                         *ppData = pHeap;
                         *pBytes = static_cast<UINT>( bytes.size() );
+                        _listIncludedFile.push_back( candidate ); // 읽은 파일만 적는다(찾지 못한 후보나 못 읽은 것은 컴파일 결과에 닿지 않았다)
                         return S_OK;
                     }
                     return E_FAIL;
@@ -105,6 +123,7 @@ namespace sw
 
             private:
                 vector<string> _listRoot;
+                vector<string> _listIncludedFile;
             };
 #endif
 
@@ -231,9 +250,11 @@ namespace sw
                 }
                 // 주 소스 바이트만 해시하면 **include 된 .hlsli 는 키에 없다**. common.hlsli 의 상수버퍼 바인딩을 고쳐도
                 // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
-                // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 스테일 판정 기준은 하나여야 하므로
-                // ShaderCooker 의 유효 소스 해시(모든 .hlsli 포함)를 키에 섞는다.
-                hash = HashUtil::computeStringHash64( to_string( ShaderCooker::computeEffectiveSourceHash( absPathStr ) ), false, hash );
+                // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는 컴파일하고 나서야 알아서
+                // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 캐시 파일 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
+                // (`ShaderCooker::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
+                // 도구 지문은 키에 섞는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다.
+                hash = HashUtil::computeStringHash64( to_string( ShaderCooker::getToolchainFingerprint() ), false, hash );
                 // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
                 // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
@@ -244,15 +265,29 @@ namespace sw
                 return FileUtil::joinPath( cacheDir, buf.c_str() );
             }
 
-            /** @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드를 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다). */
-            static void saveToCacheIfEnabled( const string& cachePath, const vector<uint8>& bytecode )
+            /**
+             * @brief 디스크 캐시가 켜져 있고 자리가 있으면 바이트코드와 의존 기록(연 헤더와 내용 해시)을 씁니다. 못 쓰면 경고만 남깁니다(다음 컴파일이 다시 만든다).
+             * @details 옛 의존 기록을 먼저 지운다 — 바이트코드를 쓰다 멈추면 새 바이트코드 옆에 옛 기록이 남고, 헤더가 옛 내용으로 돌아간 날 그 기록이 맞아 버린다.
+             */
+            static void saveToCacheIfEnabled( const string& cachePath, const ShaderCompileResult& result )
             {
-                const bool bDiskCacheWritable = s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false;
+                const bool bDiskCacheWritable = s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && result._bytecode.empty() == false;
                 if ( bDiskCacheWritable == false )
                     return;
+                const string recordPath = cachePath + ShaderCooker::kIncludeRecordSuffix;
+                if ( FileUtil::exists( recordPath ) && FileUtil::removeFile( recordPath ) == false )
+                {
+                    SW_LOG_WARNING( "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
+                    return;
+                }
                 FileUtil::ensureParentDirectoryExists( cachePath );
-                if ( FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() ) == false )
+                if ( FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
+                {
                     SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
+                    return;
+                }
+                if ( ShaderCooker::writeIncludeRecord( recordPath, result._listIncludedFile ) == false )
+                    SW_LOG_WARNING( "Could not write the shader cache record '%#'", recordPath );
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -311,7 +346,8 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
-                outResult._bSuccess = true;
+                outResult._listIncludedFile = includeHandler.takeIncludedFiles();
+                outResult._bSuccess         = true;
                 SW_LOG_TRACE( "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
                 return true;
             }
@@ -324,6 +360,69 @@ namespace sw
                 Compiled, ///< 바이트코드를 얻었다
                 Rejected, ///< 셰이더 오류로 실패했다(오류 글을 담았다) — 다른 컴파일러로 넘기지 않는다
                 NoOutput, ///< DXC 를 못 쓰거나 출력이 없었다
+            };
+
+            /**
+             * @brief DXC 기본 include 처리기를 감싸 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
+             * @details 컴파일 호출마다 하나를 만든다. 기록은 이 객체 안이고 전역 · static 이 아니라서 컴파일을 병렬로 돌려도 섞이지 않는다.
+             *          전이 include 도 DXC 가 이 처리기를 거쳐 읽으므로 모두 잡힌다. 참조 수로 사는 COM 객체다 — `make_unique(...).release()` 로 만들어
+             *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다.
+             */
+            class RecordingDxcInclude final : public IDxcIncludeHandler
+            {
+            public:
+                explicit RecordingDxcInclude( DxcComPtr<IDxcIncludeHandler> pInner )
+                    : _pInner{ std::move( pInner ) }
+                    , _listIncludedFile{}
+                    , _refCount{ 1 }
+                {
+                }
+
+                RecordingDxcInclude( const RecordingDxcInclude& )            = delete;
+                RecordingDxcInclude& operator=( const RecordingDxcInclude& ) = delete;
+
+                /** @brief 지금까지 연 파일을 정렬 · 중복 제거해 돌려주고 기록을 비웁니다. */
+                [[nodiscard]] vector<string> takeIncludedFiles() { return sortUniqueIncludedFile( std::move( _listIncludedFile ) ); }
+
+                HRESULT STDMETHODCALLTYPE LoadSource( LPCWSTR pFilename, IDxcBlob** ppIncludeSource ) override
+                {
+                    const bool bInvalidArguments = pFilename == nullptr || ppIncludeSource == nullptr || _pInner == nullptr;
+                    if ( bInvalidArguments )
+                        return E_FAIL;
+                    const HRESULT hr      = _pInner->LoadSource( pFilename, ppIncludeSource );
+                    const bool    bLoaded = SUCCEEDED( hr ) && *ppIncludeSource != nullptr;
+                    if ( bLoaded )
+                        _listIncludedFile.push_back( FileUtil::normalizeSeparators( StringUtil::utf16ToUtf8( pFilename ) ) ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
+                    return hr;
+                }
+
+                ULONG STDMETHODCALLTYPE AddRef() override { return static_cast<ULONG>( ++_refCount ); }
+
+                ULONG STDMETHODCALLTYPE Release() override
+                {
+                    const uint32 remaining = _refCount.fetch_sub( 1 ) - 1;
+                    if ( remaining == 0 )
+                        sw_delete( this );
+                    return static_cast<ULONG>( remaining );
+                }
+
+                HRESULT STDMETHODCALLTYPE QueryInterface( REFIID riid, void** ppOutObject ) override
+                {
+                    if ( ppOutObject == nullptr )
+                        return E_INVALIDARG;
+                    *ppOutObject          = nullptr;
+                    const bool bSupported = IsEqualGUID( riid, __uuidof( IUnknown ) ) || IsEqualGUID( riid, __uuidof( IDxcIncludeHandler ) );
+                    if ( bSupported == false )
+                        return E_NOINTERFACE;
+                    *ppOutObject = static_cast<IDxcIncludeHandler*>( this );
+                    AddRef();
+                    return S_OK;
+                }
+
+            private:
+                DxcComPtr<IDxcIncludeHandler> _pInner;
+                vector<string>                _listIncludedFile;
+                atomic<uint32>                _refCount;
             };
 
             /** @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다. */
@@ -457,8 +556,12 @@ namespace sw
                 if ( utils == nullptr || compiler == nullptr )
                     return DxcOutcome::NoOutput;
 
+                // 기본 처리기를 연 파일을 적는 처리기로 감싼다. 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
+                DxcComPtr<IDxcIncludeHandler> defaultIncludeHandler;
+                utils->CreateDefaultIncludeHandler( dxcAddressOf( defaultIncludeHandler ) );
+                RecordingDxcInclude*          pIncludeRecorder = make_unique<RecordingDxcInclude>( std::move( defaultIncludeHandler ) ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
-                utils->CreateDefaultIncludeHandler( dxcAddressOf( includeHandler ) );
+                includeHandler.Attach( pIncludeRecorder );
 
                 wstring                     wPath = StringUtil::utf8ToUtf16( absPathStr.c_str() );
                 DxcComPtr<IDxcBlobEncoding> sourceBlob;
@@ -560,7 +663,8 @@ namespace sw
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
                 if ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
                     patchSpirvBuiltinsForOpenGL( outResult._bytecode );
-                outResult._bSuccess = true;
+                outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
+                outResult._bSuccess         = true;
     #if defined( SW_DEBUG )
                 const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                                             ? "Vulkan (SPIR-V, Vulkan API target)"
@@ -573,13 +677,19 @@ namespace sw
             }
 
     #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief DXC 가 출력을 못 낸 DX 타깃을 FXC 로 컴파일합니다(기본 include 처리기, 타깃 매크로 없음). 성공하면 true 입니다. */
+            /** @brief DXC 가 출력을 못 낸 DX 타깃을 FXC 로 컴파일합니다(연 헤더를 적는 include 처리기, 타깃 매크로 없음). 성공하면 true 입니다. */
             [[nodiscard]] static bool compileWithFxc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
             {
                 UINT                             compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
                 Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
                 Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
                 wstring                          wPath( absPathStr.begin(), absPathStr.end() );
+
+                // 표준 파일 include(`D3D_COMPILE_STANDARD_FILE_INCLUDE`)는 어느 헤더를 열었는지 알려 주지 않는다. 최신 판정이 그 목록에 기대므로 같은 루트를 도는 처리기를 쓴다.
+                vector<string> listIncludeDir;
+                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
+                    return false;
+                MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
 
                 vector<D3D_SHADER_MACRO> listMacro;
                 listMacro.reserve( desc._listDefine.size() + 1 );
@@ -594,7 +704,7 @@ namespace sw
                 HRESULT hrFallback = D3DCompileFromFile(
                     wPath.c_str(),
                     listMacro.data(),
-                    D3D_COMPILE_STANDARD_FILE_INCLUDE,
+                    &includeHandler,
                     desc._entryPoint.c_str(),
                     profile.c_str(),
                     compileFlags,
@@ -606,7 +716,8 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
-                outResult._bSuccess = true;
+                outResult._listIncludedFile = includeHandler.takeIncludedFiles();
+                outResult._bSuccess         = true;
                 SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
                 return true;
             }
@@ -679,11 +790,16 @@ namespace sw
             cachePath = Internal::computeCachePath( desc, absPathStr );
             if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
             {
-                vector<uint8> cachedBytes;
-                if ( FileUtil::readFile( cachePath, cachedBytes ) && cachedBytes.empty() == false )
+                // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
+                vector<string> listIncludedFile;
+                vector<uint8>  cachedBytes;
+                const bool     bRecordCurrent = ShaderCooker::readIncludeRecord( cachePath + ShaderCooker::kIncludeRecordSuffix, listIncludedFile );
+                const bool     bBytesRead     = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes );
+                if ( bBytesRead && cachedBytes.empty() == false )
                 {
-                    result._bytecode = std::move( cachedBytes );
-                    result._bSuccess = true;
+                    result._bytecode         = std::move( cachedBytes );
+                    result._listIncludedFile = std::move( listIncludedFile );
+                    result._bSuccess         = true;
                     return result;
                 }
             }
@@ -695,7 +811,7 @@ namespace sw
         if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
         {
             if ( Internal::compileDxbc( desc, absPathStr, profile, result ) )
-                Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+                Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
 #else
@@ -715,7 +831,7 @@ namespace sw
         const Internal::DxcOutcome outcome = Internal::compileDxc( desc, absPathStr, profile, result );
         if ( outcome == Internal::DxcOutcome::Compiled )
         {
-            Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+            Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
         if ( outcome == Internal::DxcOutcome::Rejected )
@@ -725,7 +841,7 @@ namespace sw
         const bool bFxcTarget = desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan && desc._targetFormat != ShaderTargetFormat::SPIRV_OpenGL;
         if ( bFxcTarget && Internal::compileWithFxc( desc, absPathStr, profile, result ) )
         {
-            Internal::saveToCacheIfEnabled( cachePath, result._bytecode );
+            Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
     #endif // SW_PLATFORM_WINDOWS

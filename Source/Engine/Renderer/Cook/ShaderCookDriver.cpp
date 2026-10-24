@@ -45,6 +45,11 @@ namespace sw
                 /** @brief 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다. */
                 unordered_map<string, unordered_set<string>> _mapFailedSourceByDir;
                 /**
+                 * @brief RHI 폴더마다 소스(정규화한 절대 경로)가 연 헤더(절대 경로)의 합집합입니다. 컴파일한 요청은 컴파일 결과의 목록을, 최신이라 건너뛴 요청은 스탬프에 적힌 목록을 더한다.
+                 *        스탬프가 소스별 "연 헤더" 로 적는다(`ShaderCooker::writeCookStamp`).
+                 */
+                unordered_map<string, unordered_map<string, unordered_set<string>>> _mapIncludedByDir;
+                /**
                  * @brief 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
                  *        압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
                  */
@@ -73,14 +78,22 @@ namespace sw
                 // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
                 // "산출물이 더 새것"이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내
                 // 백엔드 버그처럼 보인다.
-                const bool bUpToDate   = ( bForceAll == false ) && FileUtil::exists( outPath ) && ShaderCooker::isCookedOutputCurrent( ioState._resourceRoot, ioState._listPriority, outDir, normPath );
-                bool       bCookFailed = false;
-                if ( bUpToDate == false )
+                vector<string> listStampedHeader;
+                const bool     bUpToDate   = ( bForceAll == false ) && FileUtil::exists( outPath ) && ShaderCooker::isCookedOutputCurrent( ioState._resourceRoot, ioState._listPriority, outDir, normPath, &listStampedHeader );
+                bool           bCookFailed = false;
+                if ( bUpToDate )
+                {
+                    unordered_set<string>& uniqueHeader = ioState._mapIncludedByDir[outDir][normPath];
+                    uniqueHeader.insert( listStampedHeader.begin(), listStampedHeader.end() );
+                }
+                else
                 {
                     ShaderCookResult result{};
                     if ( ShaderCooker::cookShader( absPath, outPath, request._entryPoint, request._stage, fmt, &request._listPermutation, &result ) )
                     {
                         ++ioState._summary._cookedCount;
+                        unordered_set<string>& uniqueHeader = ioState._mapIncludedByDir[outDir][normPath];
+                        uniqueHeader.insert( result._listIncludedFile.begin(), result._listIncludedFile.end() );
                     }
                     else
                     {
@@ -164,8 +177,17 @@ namespace sw
                     ioState._summary._removedCount += removedCount;
                     if ( bAllRemoved == false )
                         ++ioState._summary._failedCount;
-                    const auto failedIt = ioState._mapFailedSourceByDir.find( manifestPair.first );
-                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr ) == false )
+                    const auto                            failedIt = ioState._mapFailedSourceByDir.find( manifestPair.first );
+                    unordered_map<string, vector<string>> mapIncludedFile;
+                    const auto                            includedIt = ioState._mapIncludedByDir.find( manifestPair.first );
+                    if ( includedIt != ioState._mapIncludedByDir.end() )
+                    {
+                        for ( const auto& [sourcePath, uniqueHeader] : includedIt->second )
+                        {
+                            mapIncludedFile[sourcePath].assign( uniqueHeader.begin(), uniqueHeader.end() );
+                        }
+                    }
+                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile ) == false )
                     {
                         SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;

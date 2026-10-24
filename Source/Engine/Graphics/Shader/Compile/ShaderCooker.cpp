@@ -204,6 +204,7 @@ namespace sw
             pOutResult->_targetFormat = targetFormat;
             pOutResult->_byteCodeSize = 0;
             pOutResult->_bSuccess     = SW_FALSE;
+            pOutResult->_listIncludedFile.clear();
         }
 
         ShaderCompileDesc desc{};
@@ -256,8 +257,9 @@ namespace sw
 
         if ( pOutResult != nullptr )
         {
-            pOutResult->_byteCodeSize = compileResult._bytecode.size();
-            pOutResult->_bSuccess     = SW_TRUE;
+            pOutResult->_byteCodeSize     = compileResult._bytecode.size();
+            pOutResult->_listIncludedFile = std::move( compileResult._listIncludedFile ); // 쿠킹 스탬프가 소스별 의존 목록으로 적는다
+            pOutResult->_bSuccess         = SW_TRUE;
         }
 
         SW_LOG_INFO( "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",

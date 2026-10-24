@@ -77,14 +77,18 @@ SW_TEST_CASE( ShaderDomainTest, ArbitraryDomainStampTracksItsIncludeRootsOnly )
     const sw::string binDir     = resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) );
+    // 컴파일러가 연 헤더: engine 의 domaininc.hlsli 하나(다른 게임의 헤더는 include 루트가 아니라 열 수 없다).
+    const sw::unordered_map<sw::string, sw::vector<sw::string>> mapIncludedFile{
+        { sw::FileUtil::normalizeSeparators( shaderPath ), { resourceRoot.makePath( "engine/shaders/domaininc.hlsli" ) } },
+    };
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr, mapIncludedFile ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, shaderPath ) );
 
     sw::string stampText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( binDir, "cook.stamp" ), stampText ) );
     SW_EXPECT_TRUE( stampText.find( " probe.hlsl" ) != sw::string::npos );
-    SW_EXPECT_TRUE( stampText.find( " engine:domaininc.hlsli" ) != sw::string::npos );
+    SW_EXPECT_TRUE( stampText.find( "?engine:domaininc.hlsli" ) != sw::string::npos );
     SW_EXPECT_TRUE( stampText.find( "other.hlsli" ) == sw::string::npos ); // 다른 게임은 include 루트가 아니다
 
     // engine 헤더가 바뀌면 낡음이다. 다른 게임의 헤더가 바뀌어도 이 게임은 그대로다.
@@ -121,7 +125,7 @@ SW_TEST_CASE( ShaderDomainTest, SameNameHeaderCannotHideAnEngineHeader )
 
     const sw::string binDir = resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
-    SW_EXPECT_FALSE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) ); // 쓰지 못했다고 알린다(쿠킹이 실패로 센다)
+    SW_EXPECT_FALSE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr, {} ) ); // 쓰지 못했다고 알린다(쿠킹이 실패로 센다)
     SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "cook.stamp" ) ) );
 
     sw::vector<sw::string> listVerifyProblem;
