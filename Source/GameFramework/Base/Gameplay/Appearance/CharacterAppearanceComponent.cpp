@@ -133,17 +133,9 @@ namespace sw
             /** @brief 메시에 머티리얼 값을 적용합니다. 메시 전용 인스턴스에 넣고, 없으면 메시의 머티리얼에서 새로 만듭니다. */
             static void applyParameter( MeshComponent& mesh, const ResolvedMaterialValue& value )
             {
-                shared_ptr<MaterialInstance> instance = mesh.getMaterialInstance();
-                if ( instance == nullptr )
-                {
-                    if ( mesh.getMaterial() == nullptr )
-                        return;
-                    instance = MaterialInstance::create( mesh.getMaterial() );
-                    if ( instance == nullptr )
-                        return;
-                    mesh.setMaterialInstance( instance );
-                }
-                instance->setVectorParameter( value._name, value._value );
+                MaterialInstance* pInstance = CharacterSurfaceBinding::acquireInstance( mesh ); // 표면 상태와 같은 인스턴스를 나눈다
+                if ( pInstance != nullptr )
+                    pInstance->setVectorParameter( value._name, value._value );
             }
         };
     } // namespace
@@ -203,6 +195,7 @@ namespace sw
     CharacterAppearanceComponent::CharacterAppearanceComponent()
         : _presetID{}
         , _seed{ 0 }
+        , _surfaceChannelsPath{}
         , _bMergeParts{ SW_FALSE }
         , _reservedProperty{ 0 }
         , _socketTask{ *this }
@@ -242,6 +235,11 @@ namespace sw
         , _bMeshMerged{ SW_FALSE }
         , _reserved{ 0 }
         , _mergedBodySection{}
+        , _surface{}
+        , _surfaceBinding{}
+        , _loadedSurfaceChannels{}
+        , _surfaceAppliedRevision{ invalid_index::kUint64 }
+        , _surfaceRegionCount{ 0 }
     {
     }
 
@@ -265,6 +263,11 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _assembleCount == 0 )
             return;
+        if ( hasSurfaceState() )
+        {
+            _surface.update( deltaTime ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
+            applySurface( *pManager, false );
+        }
         if ( _bMeshAssemblyPending == SW_TRUE )
         {
             if ( isMeshAssemblyLoading() )
@@ -301,6 +304,11 @@ namespace sw
         _pReloadDatabase    = nullptr;
         _reloadSubscription = DelegateHandle{};
         unregisterSocketTask();
+        _surfaceBinding.releaseTextures(); // 마스크 텍스처를 놓는다(상태 값은 다음 시작에 다시 만든다)
+        _surface = CharacterSurfaceState{};
+        _loadedSurfaceChannels.clear();
+        _surfaceRegionCount     = 0;
+        _surfaceAppliedRevision = invalid_index::kUint64;
         // 끝날 때 붙은 부품은 이미 이 오브젝트의 자식으로 함께 지울 예정이다 — 풀에 넣을 수 없다(넣으려면 부르는 쪽이 지우기 전에 `stowParts`).
         despawnParts();
         _listMeshAssemblyLoad.clear();
@@ -313,8 +321,16 @@ namespace sw
     void CharacterAppearanceComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        if ( _bStarted == SW_TRUE && ( propertyName == hashed_string( "_presetID" ) || propertyName == hashed_string( "_seed" ) ) )
+        const bool bAssembleProperty = propertyName == hashed_string( "_presetID" ) || propertyName == hashed_string( "_seed" ) || propertyName == hashed_string( "_bMergeParts" );
+        if ( _bStarted == SW_TRUE && bAssembleProperty )
             requestAssemble();
+        GameObjectManager* pManager      = findManager();
+        const bool         bSurfaceReady = _bStarted == SW_TRUE && pManager != nullptr;
+        if ( bSurfaceReady && propertyName == hashed_string( "_surfaceChannelsPath" ) )
+        {
+            rebuildSurfaceState( _surfaceRegionCount );
+            applySurface( *pManager, true );
+        }
     }
 
     void CharacterAppearanceComponent::setPreset( const hashed_string& presetID, uint32 seed )
@@ -591,6 +607,8 @@ namespace sw
         bindRigUnits( *pManager );
         applyMaterialValues( *pManager, *pBody );
         applyVisibility( *pManager );
+        rebuildSurfaceState( _surfaceRegionCount ); // 영역 수는 피팅 표를 읽은 뒤 `applyMeshAssembly` 가 맞춘다
+        applySurface( *pManager, true );
         registerSocketTask( *pBody );
         ++_assembleCount;
         requestMeshAssembly( *pManager );
@@ -930,6 +948,80 @@ namespace sw
         }
     }
 
+    void CharacterAppearanceComponent::rebuildSurfaceState( uint32 regionCount )
+    {
+        if ( _surfaceChannelsPath.empty() )
+        {
+            if ( hasSurfaceState() )
+            {
+                _surfaceBinding.releaseTextures();
+                _surface = CharacterSurfaceState{};
+                _loadedSurfaceChannels.clear();
+                _surfaceRegionCount = 0;
+            }
+            return;
+        }
+        // 부품 칸이 늘면 다시 만든다(마스크가 부품 번호별이라 늘리는 길이 없다). 같은 파일 · 같은 영역 수 · 충분한 부품 칸이면 값을 지킨다 — 장비를 바꿔도 젖음 · 피가 사라지지 않게.
+        const uint32 partCount = static_cast<uint32>( _state.getResolved()._listPart.size() );
+        const bool   bSameData = _loadedSurfaceChannels == _surfaceChannelsPath && _surfaceRegionCount == regionCount;
+        const bool   bFits     = hasSurfaceState() && _surface.getPartCount() >= partCount;
+        if ( bSameData && bFits )
+            return;
+        SurfaceChannelTable channels;
+        if ( channels.loadFromResource( _surfaceChannelsPath ) == false )
+        {
+            SW_LOG_ERROR( "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
+            _surfaceBinding.releaseTextures();
+            _surface = CharacterSurfaceState{};
+            _loadedSurfaceChannels.clear();
+            _surfaceRegionCount = 0;
+            return;
+        }
+        _surfaceBinding.releaseTextures();
+        _surface.initialize( channels, regionCount, partCount );
+        _loadedSurfaceChannels  = _surfaceChannelsPath;
+        _surfaceRegionCount     = regionCount;
+        _surfaceAppliedRevision = invalid_index::kUint64;
+    }
+
+    void CharacterAppearanceComponent::applySurface( GameObjectManager& manager, bool bForce )
+    {
+        const bool bUpToDate = bForce == false && _surfaceAppliedRevision == _surface.getRevision();
+        if ( hasSurfaceState() == false || bUpToDate )
+            return;
+        const GameObject* pOwner    = getOwner();
+        const uint64      ownerKey  = pOwner != nullptr ? pOwner->getHandle().objectID() : 0;
+        bool              bComplete = true; // 머티리얼이 아직 없는 메시가 있으면 번호를 남기지 않아 다음 틱에 다시 시도한다
+        for ( uint32 partIndex = 0; partIndex < _surface.getPartCount() && partIndex < _state.getResolved()._listPart.size(); ++partIndex )
+        {
+            const auto applyToMesh = [this, ownerKey, partIndex, &bComplete]( MeshComponent& mesh )
+            {
+                MaterialInstance* pInstance = CharacterSurfaceBinding::acquireInstance( mesh );
+                if ( pInstance == nullptr )
+                {
+                    bComplete = false;
+                    return;
+                }
+                CharacterSurfaceBinding::applyValues( _surface, *pInstance );
+                _surfaceBinding.applyMasks( ownerKey, _surface, partIndex, *pInstance );
+            };
+            if ( static_cast<int32>( partIndex ) == _bodyPart )
+            {
+                SkeletalMeshComponent* pBody = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+                if ( pBody != nullptr )
+                    applyToMesh( *pBody );
+                continue;
+            }
+            for ( const SpawnedPart& spawned : _listSpawnedPart )
+            {
+                if ( spawned._partIndex == partIndex && spawned._bSocketPart == SW_FALSE )
+                    forEachPartMesh( manager, spawned, applyToMesh );
+            }
+        }
+        if ( bComplete )
+            _surfaceAppliedRevision = _surface.getRevision();
+    }
+
     void CharacterAppearanceComponent::refreshSocketTransforms( const SkeletalMeshComponent& body )
     {
         GameObjectManager* pManager = findManager();
@@ -1130,6 +1222,9 @@ namespace sw
         }
         _bMeshAssembled = bAnyBaked ? SW_TRUE : SW_FALSE;
         applyVisibility( *pManager );
+        // 영역 수는 피팅 표의 영역 수다(표가 없으면 영역이 없다). 합친 구간 컴포넌트가 이제 생겼으니 표면도 다시 올린다.
+        rebuildSurfaceState( pTables != nullptr ? static_cast<uint32>( pTables->getRegions().size() ) : 0 );
+        applySurface( *pManager, true );
     }
 
     bool CharacterAppearanceComponent::applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const vector<shared_ptr<Mesh>>& listSource,

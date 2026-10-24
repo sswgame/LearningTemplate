@@ -16,6 +16,7 @@
 
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
@@ -26,6 +27,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceState.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterSurfaceBinding.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -187,6 +189,14 @@ namespace sw
         const ResolvedAppearance& getResolvedAppearance() const { return _state.getResolved(); }
         /** @brief 소켓 테이블입니다. */
         const AppearanceSocketRig& getSocketRig() const { return _rig; }
+        /**
+         * @brief 몸 표면 상태입니다(젖음 · 흙 · 피 · 찢김). 게임플레이가 영역 값을 정하고 맞은 위치에 스탬프를 찍는다(`CharacterSurfaceState`) — 틱이 감쇠시키고 바뀐 프레임에 머티리얼로 올린다.
+         *        `_surfaceChannelsPath` 가 비어 있으면 채널이 없는 빈 상태입니다(`hasSurfaceState` 가 false).
+         */
+        CharacterSurfaceState&       getSurfaceState() { return _surface; }
+        const CharacterSurfaceState& getSurfaceState() const { return _surface; }
+        /** @brief 표면 상태가 채널을 가지고 있으면 true 입니다. */
+        bool hasSurfaceState() const { return _surface.getChannels().empty() == false; }
         /** @brief 조립한 횟수입니다. 진단과 테스트에 씁니다. */
         uint32 getAssembleCount() const { return _assembleCount; }
         /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품 하나씩). 합치지 않았으면 0 입니다. 진단과 탐침에 씁니다. */
@@ -316,12 +326,22 @@ namespace sw
         void forEachPartMesh( GameObjectManager& manager, const SpawnedPart& spawned, Func&& func ) const;
         /** @brief 피팅 표 · 피팅 데이터 캐시의 다시 읽은 횟수 합입니다(오르기만 한다). */
         static uint32 computeFitReloadStamp();
+        /**
+         * @brief 표면 상태를 채널 파일(`_surfaceChannelsPath`)과 영역 수로 맞춥니다. 파일이 비면 상태를 끄고, 같은 파일 · 같은 영역 수면 값을 지키며, 바뀌면 처음부터 다시 만듭니다.
+         *        읽지 못하면 오류를 남기고 상태를 끕니다(말없이 다른 채널을 쓰지 않는다).
+         */
+        void rebuildSurfaceState( uint32 regionCount );
+        /** @brief 표면 상태를 부품의 머티리얼에 올립니다(채널 스칼라 · 영역 벡터 · 마스크 텍스처). 상태 번호가 그대로면 @p bForce 가 아닌 한 올리지 않습니다. */
+        void applySurface( GameObjectManager& manager, bool bForce );
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
         string _presetID;
         PROPERTY( Category = "Appearance", DisplayName = "Seed", Tooltip = "Seed for the preset's random choices (lists, ranges, colour lists)" )
         int32 _seed;
+        PROPERTY( Category = "Appearance", DisplayName = "Surface Channels",
+                  Tooltip = "Surface channel table (*.surfacechannels.xml): wetness, dirt, blood, tears... Empty keeps the body surface state off" )
+        string _surfaceChannelsPath;
         PROPERTY( Category = "Appearance", DisplayName = "Merge Parts",
                   Tooltip = "Merge the body and the skinned parts that follow it into one sectioned mesh: one skinning unit and one pose, each part still drawn with its own material" )
         uint8                  _bMergeParts      : 1;
@@ -363,6 +383,11 @@ namespace sw
         uint8                                   _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
         uint8                                   _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
         [[maybe_unused]] uint8                  _reserved             : 2;
-        hashed_string                           _mergedBodySection; ///< 합친 메시에서 몸이 그리는 구간 이름(몸 부품 이름)
+        hashed_string                           _mergedBodySection;      ///< 합친 메시에서 몸이 그리는 구간 이름(몸 부품 이름)
+        CharacterSurfaceState                   _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
+        CharacterSurfaceBinding                 _surfaceBinding;         ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
+        string                                  _loadedSurfaceChannels;  ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
+        uint64                                  _surfaceAppliedRevision; ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
+        uint32                                  _surfaceRegionCount;     ///< 상태가 가진 영역 수(피팅 표의 영역 수)
     };
 } // namespace sw
