@@ -120,9 +120,12 @@ namespace sw
          * @details 로거는 비동기라 멈추면 큐의 메시지를 잃을 수 있습니다(`SW_ASSERT` 의 `printAssertFailure` 와 같은 이유). 매크로가 이 함수를 거치지 않고는 멈출 수 없게 한 곳에 둡니다.
          */
         static void printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept;
-        /** @brief 전역 싱크에 리스너를 붙입니다. */
-        static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
-        /** @brief 전역 싱크에서 리스너를 해제합니다. */
+        /**
+         * @brief 전역 싱크에 리스너를 붙입니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 핸들을 돌려줍니다.
+         * @details 핸들을 버리면 해제할 수 없으므로 `[[nodiscard]]` 입니다.
+         */
+        [[nodiscard]] static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
+        /** @brief 전역 싱크에서 리스너를 해제합니다. 싱크가 이미 없으면 리스너도 싱크와 함께 사라졌으므로 할 일이 없습니다(종료 순서에서 정상). */
         static void unregisterGlobalListener( const DelegateHandle& handle );
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );

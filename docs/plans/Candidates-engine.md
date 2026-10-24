@@ -81,7 +81,7 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 ### LowLevelReportingGaps
 제목: 낮은 티어의 로그 사용을 빌드 구조로 막기
 옛번호: 없음
-왜 필요한가: 낮은 티어(Memory · Container · Math)가 `SW_LOG_*` 를 쓰지 못하는 것은 린트 규칙(`CheckCoreLayers`)만이 막습니다. (`SW_LOG_ASSERT` 의 stderr 동기 쓰기와 싱크 없는 `SW_LOG_*` 의 stderr 출력은 2026-10-25 `wt/lowlevelgaps` 에서 끝났습니다.)
+왜 필요한가: 낮은 티어(Memory · Container · Math)가 `SW_LOG_*` 를 쓰지 못하는 것은 린트 규칙(`CheckCoreLayers`)만이 막습니다. (`SW_LOG_ASSERT` 의 stderr 동기 쓰기, 싱크 없는 `SW_LOG_*` 의 stderr 출력, 싱크 없는 `registerGlobalListener` 의 보고는 2026-10-25 `wt/lowlevelgaps` 에서 끝났고 자식 프로세스 테스트가 있습니다.)
 남은 것: 낮은 티어를 로거 헤더가 없는 OBJECT 라이브러리 + 전용 pch 로 빌드해 `SW_LOG_*` 를 쓰면 컴파일이 실패하게 하는 안을 따집니다. 되면 `CheckCoreLayers` 의 해당 규칙을 지웁니다.
 
 

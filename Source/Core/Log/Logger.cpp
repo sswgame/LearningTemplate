@@ -241,6 +241,8 @@ namespace sw
     DelegateHandle Logger::registerGlobalListener( const LogWrittenDelegate& listener )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
+        // 리스너를 붙일 곳이 없는데 조용히 빈 핸들을 돌려주면 부르는 쪽은 줄이 오지 않는 이유를 알 길이 없다. 순서 위반을 보고하고(Debug 는 멈춘다) 빈 핸들을 돌려준다.
+        SW_LOW_LEVEL_ASSERT( pSink != nullptr, "Logger::registerGlobalListener needs a global log sink - create the sink before attaching listeners" );
         if ( pSink == nullptr )
             return {};
 
