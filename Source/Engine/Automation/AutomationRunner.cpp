@@ -866,9 +866,12 @@ namespace sw
             AutomationRunnerInternal::SlotStepArgs args;
             if ( AutomationRunnerInternal::parseSlotStep( step, args, outError ) == false )
                 return false;
-            const string_view kind   = step._kind;
-            const bool        bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, args._slot, args._holdFrameCount )
-                                                     : runner._inputScript.addSlot( step._frameIndex, args._slot, kind == "Press" );
+            const string_view kind = step._kind;
+            // 가상 입력 세션의 패드는 끊긴 채 시작한다 — 패드 단추를 누르는 단계는 그 패드를 먼저 연결한다(안 하면 단추가 입력 맵에 닿지 않는다).
+            if ( args._slot._deviceKind == InputDeviceKind::Gamepad )
+                runner._inputScript.addGamepadConnection( step._frameIndex, args._slot._deviceIndex );
+            const bool bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, args._slot, args._holdFrameCount )
+                                              : runner._inputScript.addSlot( step._frameIndex, args._slot, kind == "Press" );
             if ( bAdded == false )
                 outError = step.describe() + ": that slot cannot be pressed (an axis or an unknown device)";
             return bAdded;
@@ -924,6 +927,8 @@ namespace sw
             AutomationRunnerInternal::GamepadAxisArgs args;
             if ( AutomationRunnerInternal::parseGamepadAxis( step, args, outError ) == false )
                 return false;
+            // 가상 입력 세션의 패드는 끊긴 채 시작하고 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다 — 축을 내는 단계는 그 패드를 먼저 연결한다.
+            runner._inputScript.addGamepadConnection( step._frameIndex, static_cast<uint8>( args._pad ) );
             runner._inputScript.addGamepadAxis( step._frameIndex, static_cast<uint16>( args._axis ), args._value, static_cast<uint8>( args._pad ) );
             return true;
         }

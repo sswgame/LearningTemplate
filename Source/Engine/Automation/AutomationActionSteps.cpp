@@ -283,20 +283,11 @@ namespace sw
                 return false;
             }
 
-            /**
-             * @brief 패드를 가상 연결합니다. 가상 입력 세션의 패드는 끊긴 채 시작하고(`GamepadDevice::setVirtualSession`) 끊긴 패드의 스틱은 입력 맵이 읽지 않는다.
-             * @details 같은 연결 이벤트를 여러 번 내도 상태만 다시 정할 뿐이다.
-             */
-            static void connectGamepad( VirtualInputScript& script, uint32 frameIndex, uint8 padIndex )
-            {
-                script.addEvent( frameIndex, RawInputEvent::makeGamepadConnection( padIndex, true ) );
-            }
-
-            /** @brief 슬롯이 패드 단추면 그 패드를 먼저 연결합니다. */
+            /** @brief 슬롯이 패드 단추면 그 패드를 먼저 연결합니다(`VirtualInputScript::addGamepadConnection`). */
             static void connectGamepadOf( VirtualInputScript& script, uint32 frameIndex, const InputSlot& slot )
             {
                 if ( slot._deviceKind == InputDeviceKind::Gamepad )
-                    connectGamepad( script, frameIndex, slot._deviceIndex );
+                    script.addGamepadConnection( frameIndex, slot._deviceIndex );
             }
 
             /** @brief 디지털 슬롯 하나를 @p frames 동안 누릅니다. */
@@ -333,7 +324,7 @@ namespace sw
                         const bool    bXOnly = pBinding->_stickAxis == GamepadStickAxis::X;
                         const float32 stickX = bYOnly ? 0.0f : valueX;
                         const float32 stickY = bYOnly ? valueX : ( bXOnly ? 0.0f : valueY );
-                        connectGamepad( script, first, pBinding->_deviceIndex );
+                        script.addGamepadConnection( first, pBinding->_deviceIndex );
                         script.addGamepadAxis( first, axisX, stickX, pBinding->_deviceIndex );
                         script.addGamepadAxis( first, static_cast<uint16>( axisX + 1 ), stickY, pBinding->_deviceIndex );
                         script.addGamepadAxis( first + frames, axisX, 0.0f, pBinding->_deviceIndex );

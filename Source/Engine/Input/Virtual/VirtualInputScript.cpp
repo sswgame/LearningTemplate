@@ -92,6 +92,11 @@ namespace sw
         return int2{};
     }
 
+    void VirtualInputScript::addGamepadConnection( uint32 frameIndex, uint8 padIndex )
+    {
+        addEvent( frameIndex, RawInputEvent::makeGamepadConnection( padIndex, true ) );
+    }
+
     void VirtualInputScript::addGamepadAxis( uint32 frameIndex, uint16 axisIndex, float32 value, uint8 padIndex )
     {
         addEvent( frameIndex, RawInputEvent::makeGamepadAxis( axisIndex, value, padIndex ) );
