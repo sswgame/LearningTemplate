@@ -3,6 +3,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
@@ -134,6 +135,11 @@ namespace sw
         bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
         [[nodiscard]] bool loadIndexTable();
         /**
+         * @brief `_mapEntry` 의 항목을 폴더별로 모아 `_mapFolderEntry` 를 짓습니다(`loadIndexTable` 이 항목을 다 읽은 뒤 한 번 부릅니다).
+         * @details 폴더 나열(`collectFolderEntries`)이 팩 전체를 잠금 안에서 훑지 않고 그 폴더의 항목만 읽게 합니다. 폴더 안의 순서는 `_mapEntry` 의 순서입니다.
+         */
+        void populateFolderIndex();
+        /**
          * @brief 압축 항목을 풀어 @p outBytes 를 @p uncompressedSize 로 채웁니다. **할당도 여기서 합니다.**
          * @details 엔트리의 원본 크기는 파일에서 온 값입니다. 코덱의 팽창률 상한(`ICompressionCodec::decompressBound`)과 비교한 뒤에만
          *          resize 하도록 할당과 해제를 한 함수에 묶었습니다 — 부르는 쪽이 먼저 resize 하는 모양을 쓸 수 없게 하려는 것입니다(B-5).
@@ -151,7 +157,9 @@ namespace sw
         string                               _packFilePath;
         PackHeader                           _header;
         unordered_map<uint64, PackFileEntry> _mapEntry;
-        vector<utf8>                         _stringPoolBytes;
+        /// 폴더(아스키 소문자, 끝 '/' 없음, 팩 맨 위는 빈 문자열) → 그 폴더 바로 아래 항목의 경로 해시. `populateFolderIndex` 가 짓고 읽기만 한다
+        unordered_map<string, vector<uint64>> _mapFolderEntry;
+        vector<utf8>                          _stringPoolBytes;
     };
 
 } // namespace sw

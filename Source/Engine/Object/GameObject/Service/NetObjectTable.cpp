@@ -2,6 +2,8 @@
 
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
+#include "Core/Container/unordered_map.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -40,11 +42,27 @@ namespace sw
     {
         vector<GameObject*> listObject;
         _pManager->getAllGameObjects( listObject );
+        // 이미 번호가 있는 오브젝트(씬 · 생성)를 한 번 모아 정렬한다 — 오브젝트마다 두 목록을 선형으로 훑지 않는다(오브젝트 N 개에 O(N log N)).
+        vector<GameObjectHandle> listKnown;
+        listKnown.reserve( _listScene.size() + _listSpawned.size() );
+        for ( const Entry& entry : _listScene )
+        {
+            listKnown.push_back( entry._object );
+        }
+        for ( const Entry& entry : _listSpawned )
+        {
+            listKnown.push_back( entry._object );
+        }
+        std::sort( listKnown.begin(), listKnown.end() );
+
+        // 새 씬 번호는 모았다가 정렬해 한 번에 끼운다(하나씩 끼우면 목록 뒤쪽을 매번 옮겨 O(N²)). 이 호출 안에서 새로 잡은 번호끼리 겹치면 해시 표로 가린다.
+        // 겹친 번호는 먼저 만난 오브젝트의 항목이 모호 표시를 달고 남는다(하나씩 끼울 때와 같다).
+        vector<Entry>                 listNew;
+        unordered_map<uint32, uint32> mapNewIndex;
         for ( GameObject* pObject : listObject )
         {
             const GameObjectHandle handle = pObject->getHandle();
-            const bool             bKnown = findSpawnedEntryByObject( handle ) != nullptr || std::any_of( _listScene.begin(), _listScene.end(), [&handle]( const Entry& entry )
-                        { return entry._object == handle; } );
+            const bool             bKnown = std::binary_search( listKnown.begin(), listKnown.end(), handle );
             if ( bKnown || pObject->isPendingDestroy() )
                 continue;
             const uint32 sceneID = computeSceneID( *pObject );
@@ -58,11 +76,33 @@ namespace sw
                 it->_bAmbiguous = SW_TRUE;
                 continue;
             }
+            const auto itNew = mapNewIndex.find( sceneID );
+            if ( itNew != mapNewIndex.end() )
+            {
+                Entry& earlier = listNew[itNew->second];
+                if ( earlier._bAmbiguous == SW_FALSE )
+                    SW_LOG_ERROR( "Net object '%#' shares its scene id %# with another object - give replicated scene objects unique names", pObject->getName().c_str(), sceneID );
+                earlier._bAmbiguous = SW_TRUE;
+                continue;
+            }
             Entry entry{};
             entry._netID  = sceneID;
             entry._object = handle;
-            (void)_listScene.insert( it, entry );
+            mapNewIndex.emplace( sceneID, static_cast<uint32>( listNew.size() ) );
+            listNew.push_back( entry );
         }
+        if ( listNew.empty() )
+            return;
+        const auto byNetID = []( const Entry& left, const Entry& right )
+        { return left._netID < right._netID; };
+        std::sort( listNew.begin(), listNew.end(), byNetID );
+        const size_t oldCount = _listScene.size();
+        _listScene.reserve( oldCount + listNew.size() );
+        for ( const Entry& entry : listNew )
+        {
+            _listScene.push_back( entry );
+        }
+        std::inplace_merge( _listScene.begin(), _listScene.begin() + oldCount, _listScene.end(), byNetID );
     }
 
     const NetObjectTable::Entry* NetObjectTable::findSceneEntry( uint32 netID ) const

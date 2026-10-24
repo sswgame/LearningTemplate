@@ -1,8 +1,12 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationPlayer.h"
@@ -91,6 +95,81 @@ namespace
             if ( pUnit != nullptr )
                 pUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( boneCount ) ) );
             return pUnit;
+        }
+
+        /**
+         * @brief 유닛 번호가 @p listAlive 에서 켜진 유닛만 번호 순서로 만들고 의존을 겁니다(번호를 7 로 나눈 나머지가 1 · 2 이면 바로 앞 번호에 의존 — 7 개마다 세 단계 사슬이고 나머지는 외톨이).
+         * @param outListUnit 번호 → 유닛(꺼진 번호는 nullptr)
+         * @param outMapUnitID 유닛 → 번호
+         */
+        static void createDependencyUnits( GameObjectManager& manager, const vector<uint8>& listAlive, vector<SkeletalMeshComponent*>& outListUnit,
+                                           unordered_map<const SkeletalMeshComponent*, uint32>& outMapUnitID )
+        {
+            const uint32 unitCount = static_cast<uint32>( listAlive.size() );
+            outListUnit.assign( unitCount, nullptr );
+            outMapUnitID.clear();
+            for ( uint32 unitID = 0; unitID < unitCount; ++unitID )
+            {
+                if ( listAlive[unitID] == SW_FALSE )
+                    continue;
+                fixed_string<constant::kMaxBuffer32> nameBuf{};
+                formatstring( nameBuf.data(), nameBuf.capacity(), "Unit%#", unitID );
+                outListUnit[unitID] = createUnit( manager, nameBuf.c_str(), 2 );
+                outMapUnitID.emplace( static_cast<const SkeletalMeshComponent*>( outListUnit[unitID] ), unitID );
+            }
+            for ( uint32 unitID = 1; unitID < unitCount; ++unitID )
+            {
+                const bool bDependent = unitID % 7 == 1 || unitID % 7 == 2;
+                const bool bBothAlive = outListUnit[unitID] != nullptr && outListUnit[unitID - 1] != nullptr;
+                if ( bDependent && bBothAlive )
+                    outListUnit[unitID]->addAnimationDependency( outListUnit[unitID - 1] );
+            }
+        }
+
+        /** @brief 시스템의 레벨을 유닛 번호의 목록으로 바꿔 모읍니다(맵에 없는 유닛은 `kUint32`). */
+        static vector<vector<uint32>> collectLevelIDs( AnimationSystem& system, const unordered_map<const SkeletalMeshComponent*, uint32>& mapUnitID )
+        {
+            vector<vector<uint32>> listLevelID;
+            for ( const vector<SkeletalMeshComponent*>& level : system.getLevels() )
+            {
+                vector<uint32> listID;
+                for ( const SkeletalMeshComponent* pUnit : level )
+                {
+                    const auto it = mapUnitID.find( pUnit );
+                    listID.push_back( it != mapUnitID.end() ? it->second : invalid_index::kUint32 );
+                }
+                listLevelID.push_back( std::move( listID ) );
+            }
+            return listLevelID;
+        }
+
+        static bool isSameLevels( const vector<vector<uint32>>& listLeftLevel, const vector<vector<uint32>>& listRightLevel )
+        {
+            if ( listLeftLevel.size() != listRightLevel.size() )
+                return false;
+            for ( size_t levelIndex = 0; levelIndex < listLeftLevel.size(); ++levelIndex )
+            {
+                if ( listLeftLevel[levelIndex].size() != listRightLevel[levelIndex].size() )
+                    return false;
+                for ( size_t unitIndex = 0; unitIndex < listLeftLevel[levelIndex].size(); ++unitIndex )
+                {
+                    if ( listLeftLevel[levelIndex][unitIndex] != listRightLevel[levelIndex][unitIndex] )
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        static bool isSameUnits( const vector<SkeletalMeshComponent*>& listLeft, const vector<SkeletalMeshComponent*>& listRight )
+        {
+            if ( listLeft.size() != listRight.size() )
+                return false;
+            for ( size_t unitIndex = 0; unitIndex < listLeft.size(); ++unitIndex )
+            {
+                if ( listLeft[unitIndex] != listRight[unitIndex] )
+                    return false;
+            }
+            return true;
         }
     };
 } // namespace
@@ -486,6 +565,128 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
     pUnitA->unregisterAnimationPhaseTask( &taskA );
     pUnitB->unregisterAnimationPhaseTask( &taskB );
     pUnitC->unregisterAnimationPhaseTask( &taskC );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 유닛 목록은 가운데 유닛을 많이 해제해도 옛 방식(`removeFirst`)과 같은 등록 순서 · 위치를 지킨다 (유닛 1 만 개)
+ * @details 주소만 쓰는 가짜 포인터 1 만 개를 등록하고 셋 중 하나와 끝 100 개를 해제한다. 목록 · 위치 색인이 `VectorUtil::removeFirst` 로 줄인 기준 목록과 같아야 하고,
+ *          다시 등록한 유닛은 끝에 붙는다. 해제는 칸만 비우고 읽을 때 접으므로 읽기 전에 해제를 이어 해도 같다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, UnitListKeepsRegistrationOrderAfterBulkRemoval )
+{
+    constexpr uint32               kUnitCount = 10000;
+    vector<uint8>                  bytes( kUnitCount, 0 ); // 주소만 쓴다 — 역참조하지 않는다
+    vector<SkeletalMeshComponent*> listFake;
+    for ( uint32 unitIndex = 0; unitIndex < kUnitCount; ++unitIndex )
+    {
+        listFake.push_back( reinterpret_cast<SkeletalMeshComponent*>( &bytes[unitIndex] ) );
+    }
+
+    AnimationUnitList              unitList;
+    vector<SkeletalMeshComponent*> listExpected;
+    for ( SkeletalMeshComponent* pFake : listFake )
+    {
+        SW_ASSERT_TRUE( unitList.add( pFake ) );
+        listExpected.push_back( pFake );
+    }
+    SW_EXPECT_FALSE( unitList.add( listFake[5] ) ); // 이미 있다
+    SW_EXPECT_EQUAL( kUnitCount, unitList.getCount() );
+
+    // 읽기 없이 이어서 해제한다(칸만 비운다).
+    for ( uint32 unitIndex = 0; unitIndex < kUnitCount; ++unitIndex )
+    {
+        const bool bRemove = unitIndex % 3 == 0 || unitIndex >= kUnitCount - 100;
+        if ( bRemove == false )
+            continue;
+        SW_ASSERT_TRUE( unitList.remove( listFake[unitIndex] ) );
+        SW_ASSERT_EQUAL( 1u, static_cast<uint32>( VectorUtil::removeFirst( listExpected, listFake[unitIndex] ) ) );
+    }
+    SW_EXPECT_FALSE( unitList.remove( listFake[0] ) ); // 이미 뺐다
+    SW_EXPECT_EQUAL( static_cast<uint32>( listExpected.size() ), unitList.getCount() );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getUnits() ) );
+    bool bIndexMatches = true;
+    for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listExpected.size() ); ++unitIndex )
+    {
+        bIndexMatches = bIndexMatches && unitList.findIndex( listExpected[unitIndex] ) == unitIndex;
+    }
+    SW_EXPECT_TRUE( bIndexMatches );
+    SW_EXPECT_EQUAL( invalid_index::kUint32, unitList.findIndex( listFake[0] ) );
+
+    // 해제한 유닛을 다시 등록하면 끝에 붙고, 목록이 접힌 뒤의 해제도 같은 결과를 낸다.
+    SW_ASSERT_TRUE( unitList.add( listFake[0] ) );
+    listExpected.push_back( listFake[0] );
+    SW_ASSERT_TRUE( unitList.remove( listFake[1] ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( VectorUtil::removeFirst( listExpected, listFake[1] ) ) );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getUnits() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( listExpected.size() ) - 1u, unitList.findIndex( listFake[0] ) );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 유닛을 해제해도 레벨은 처음부터 다시 지은 것과 같다 — 외톨이 해제의 지름길 · 의존 유닛 해제의 전체 재구성 (유닛 2 천 개)
+ * @details 7 개마다 세 단계 사슬이고 나머지는 외톨이인 유닛을 등록한다. (1) 외톨이만 해제하면 평가 전에 `getLevels` 를 불러도, 평가 뒤에도 해제한 유닛을 뺀 채 새로 지은
+ *          시스템과 같은 레벨이다. (2) 사슬의 유닛(위 · 아래)을 해제하면 남은 유닛으로 새로 지은 시스템과 같다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, SystemLevelsMatchFreshBuildAfterUnregister )
+{
+    constexpr uint32 kUnitCount = 2000;
+    vector<uint8>    listAlive( kUnitCount, SW_TRUE );
+
+    GameObjectManager                                   manager;
+    vector<SkeletalMeshComponent*>                      listUnit;
+    unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID;
+    TestSkeletalAnimationInternal::createDependencyUnits( manager, listAlive, listUnit, mapUnitID );
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 0.016f );
+    SW_ASSERT_EQUAL( kUnitCount, system.getUnitCount() );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( system.getLevels().size() ) );
+
+    // (1) 외톨이(번호를 7 로 나눈 나머지가 3 이상)만 해제한다.
+    for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
+    {
+        if ( unitID % 7 >= 3 && unitID % 11 == 0 )
+        {
+            system.unregisterUnit( listUnit[unitID] );
+            listAlive[unitID] = SW_FALSE;
+        }
+    }
+    {
+        GameObjectManager                                   referenceManager;
+        vector<SkeletalMeshComponent*>                      listReferenceUnit;
+        unordered_map<const SkeletalMeshComponent*, uint32> mapReferenceID;
+        TestSkeletalAnimationInternal::createDependencyUnits( referenceManager, listAlive, listReferenceUnit, mapReferenceID );
+        AnimationSystem& referenceSystem = referenceManager.getSubsystem<AnimationSystem>();
+        referenceSystem.evaluate( 0.016f );
+        const vector<vector<uint32>> listExpectedLevel = TestSkeletalAnimationInternal::collectLevelIDs( referenceSystem, mapReferenceID );
+
+        SW_EXPECT_EQUAL( referenceSystem.getUnitCount(), system.getUnitCount() );
+        // 평가 전에 읽어도 해제한 유닛은 없다.
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedLevel, TestSkeletalAnimationInternal::collectLevelIDs( system, mapUnitID ) ) );
+        system.evaluate( 0.016f );
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedLevel, TestSkeletalAnimationInternal::collectLevelIDs( system, mapUnitID ) ) );
+    }
+
+    // (2) 사슬의 유닛(위 · 아래)을 해제한다 — 전체 재구성이다.
+    for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
+    {
+        if ( listAlive[unitID] == SW_TRUE && unitID % 13 == 0 )
+        {
+            system.unregisterUnit( listUnit[unitID] );
+            listAlive[unitID] = SW_FALSE;
+        }
+    }
+    {
+        GameObjectManager                                   referenceManager;
+        vector<SkeletalMeshComponent*>                      listReferenceUnit;
+        unordered_map<const SkeletalMeshComponent*, uint32> mapReferenceID;
+        TestSkeletalAnimationInternal::createDependencyUnits( referenceManager, listAlive, listReferenceUnit, mapReferenceID );
+        AnimationSystem& referenceSystem = referenceManager.getSubsystem<AnimationSystem>();
+        referenceSystem.evaluate( 0.016f );
+        system.evaluate( 0.016f );
+        SW_EXPECT_EQUAL( referenceSystem.getUnitCount(), system.getUnitCount() );
+        SW_EXPECT_FALSE( system.hasDependencyCycle() );
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( TestSkeletalAnimationInternal::collectLevelIDs( referenceSystem, mapReferenceID ),
+                                                                     TestSkeletalAnimationInternal::collectLevelIDs( system, mapUnitID ) ) );
+    }
 }
 
 /**
