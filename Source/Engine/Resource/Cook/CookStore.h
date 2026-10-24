@@ -106,8 +106,13 @@ namespace sw
         const DerivedDataCache& getDerivedDataCache() const { return _derivedDataCache; }
         /** @brief 이 저장소로 만든 출력의 결과 수입니다(누적). */
         const CookTally& getTally() const { return _tally; }
+        /** @brief 이 저장소가 출력 내용 해시(재사용 판정 · 기록 만들기)에 쓴 시간의 누적(ns)입니다. 쿠킹 요약이 전후 차로 읽는다. */
+        int64 getOutputHashNanos() const { return _outputHashNanos; }
 
     private:
+        /** @brief 출력 바이트의 내용 해시를 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
+        uint64 hashOutput( const vector<uint8>& bytes ) const;
+
         /** @brief 기록이 새것이고 DDC 에 그 출력이 있으면 출력 파일에 쓰고 true 입니다. */
         [[nodiscard]] bool reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const;
         /** @brief 작업이 쓴 출력으로 기록과 DDC 를 씁니다. */
@@ -119,7 +124,8 @@ namespace sw
 
         string                        _recordRootPath;
         DerivedDataCache              _derivedDataCache;
-        mutable CookTally             _tally;          ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
-        mutable unordered_set<string> _setRequestedID; ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
+        mutable CookTally             _tally;                ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
+        mutable unordered_set<string> _setRequestedID;       ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
+        mutable int64                 _outputHashNanos{ 0 }; ///< `hashOutput` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
     };
 } // namespace sw

@@ -22,22 +22,28 @@ namespace sw::editor
 {
     namespace
     {
+        /** @brief 지금 에디터 범위와 그 범위를 등록한 스레드입니다. 둘은 `setEditorScope` 가 함께 바꾸는 한 칸이다. */
+        struct EditorScopeSlot
+        {
+            SubsystemScope* _pScope{ nullptr }; ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
+#if defined( SW_DEBUG )
+            /// 지금 범위를 등록한 스레드(에디터 UI 가 도는 스레드)입니다. 범위가 없으면 기본값입니다. 읽는 쪽이 다른 스레드일 수 있어 atomic 입니다.
+            std::atomic<std::thread::id> _ownerThreadID{};
+#endif
+        };
+
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
-        SubsystemScope*          s_pEditorScope{ nullptr };  ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
+        EditorScopeSlot          s_editorScope{};
         EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
         CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
         EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
         vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
-#if defined( SW_DEBUG )
-        /// 지금 범위를 등록한 스레드(에디터 UI 가 도는 스레드)입니다. 범위가 없으면 기본값입니다. 읽는 쪽이 다른 스레드일 수 있어 atomic 입니다.
-        std::atomic<std::thread::id> s_scopeThreadID{};
-#endif
 
         /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */
         EditorSelection* findMainSceneSelectionInScope()
         {
             // 타입 조회(`findSubsystem<EditorSelection>`)는 막혀 있다 — 범위를 직접 본다. 이 파일만 메인 선택이 어디 있는지 안다.
-            return locateSubsystem<EditorSelection>( s_pEditorScope );
+            return locateSubsystem<EditorSelection>( s_editorScope._pScope );
         }
     } // namespace
 
@@ -56,18 +62,18 @@ namespace sw::editor
 #if defined( SW_DEBUG )
         // 범위는 락 없이 읽고 쓴다 — 워커가 읽는 동안 종료가 범위를 허물면 해제된 메모리를 본다. 워커 본문은 범위를 직접 찾지 않고,
         // 제출 시점(범위를 등록한 스레드)에 서비스를 찾아 값으로 받는다. 어기면 여기서 멈춘다.
-        const std::thread::id scopeThreadID = s_scopeThreadID.load();
+        const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load();
         SW_ASSERT( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() );
 #endif
-        return s_pEditorScope;
+        return s_editorScope._pScope;
     }
 
     void setEditorScope( SubsystemScope* pScope )
     {
 #if defined( SW_DEBUG )
-        s_scopeThreadID.store( pScope != nullptr ? std::this_thread::get_id() : std::thread::id{} );
+        s_editorScope._ownerThreadID.store( pScope != nullptr ? std::this_thread::get_id() : std::thread::id{} );
 #endif
-        s_pEditorScope = pScope;
+        s_editorScope._pScope = pScope;
     }
 
     namespace internal

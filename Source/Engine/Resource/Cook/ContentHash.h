@@ -22,8 +22,6 @@ namespace sw
     public:
         /** @brief 바이트의 내용 해시입니다(CR 을 빼고 FNV-1a 64). 사본을 만들지 않고 한 번에 훑는다. */
         static uint64 computeBytes( const uint8* pData, size_t size );
-        /** @brief 지난번 부른 뒤 `computeBytes` 에 쓴 시간(ns, 모든 스레드의 합)을 돌려주고 0 으로 되돌립니다. 쿠킹 요약의 해시 시간입니다. */
-        static int64 consumeComputeNanos();
         /** @brief 바이트의 내용 해시입니다. */
         static uint64 computeBytes( const vector<uint8>& bytes ) { return computeBytes( bytes.data(), bytes.size() ); }
         /** @brief 파일의 내용 해시입니다. 크기와 쓰기 시각이 지난번과 같으면 파일을 열지 않습니다. 읽지 못하면 0 입니다. */

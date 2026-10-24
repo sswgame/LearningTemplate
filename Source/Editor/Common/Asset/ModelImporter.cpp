@@ -17,6 +17,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
@@ -793,8 +794,9 @@ namespace sw::editor
         if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
             return true;
         // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
-        const ModelRawImporter   importer{ config };
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) } );
+        const ModelRawImporter importer{ config };
+        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 원본 하나라 직렬과 같다.
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Model import failed: %#", problem.c_str() );
@@ -806,7 +808,7 @@ namespace sw::editor
     AssetImportSummary ModelImporter::importAllModels( string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
         const ModelRawImporter importer{ config };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() );
     }
 
     string ModelImporter::makeImportedModelPath( string_view rawModelPath )

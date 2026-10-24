@@ -7,8 +7,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
-#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
+#include "Editor/Common/Workspace/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/AssetManager.h"
@@ -187,7 +187,7 @@ SW_TEST_CASE( AssetHotReloadImportTest, ImportSourcesTouchesOnlyTheChangedSource
 
     TestScopeProbe                 probe;
     const TestScopeRawImporter     importer{ &probe };
-    sw::editor::AssetImportSummary summary = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale );
+    sw::editor::AssetImportSummary summary = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale, nullptr );
     SW_ASSERT_EQUAL( 4u, summary._importedCount );
     SW_ASSERT_EQUAL( 4, probe._hashCount.load() );
 
@@ -196,7 +196,7 @@ SW_TEST_CASE( AssetHotReloadImportTest, ImportSourcesTouchesOnlyTheChangedSource
     probe._hashCount.store( 0 );
     probe._importCount.store( 0 );
     probe._listImported.clear();
-    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/b.dat" } );
+    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/b.dat" }, nullptr );
     SW_EXPECT_EQUAL( 1u, summary._sourceCount );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
     SW_EXPECT_TRUE( summary.isClean() );
@@ -208,27 +208,27 @@ SW_TEST_CASE( AssetHotReloadImportTest, ImportSourcesTouchesOnlyTheChangedSource
     SW_EXPECT_STREQ( "b2;", outText.c_str() );
 
     // 다른 원본의 스탬프 줄은 보존됐다 — 전체 대조가 깨끗하다.
-    SW_EXPECT_TRUE( sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly ).isClean() );
+    SW_EXPECT_TRUE( sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly, nullptr ).isClean() );
 
     // 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
     probe._importCount.store( 0 );
-    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/b.dat" } );
+    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/b.dat" }, nullptr );
     SW_EXPECT_EQUAL( 0u, summary._importedCount );
     SW_EXPECT_EQUAL( 0, probe._importCount.load() );
 
     // 구분자 · 대소문자가 달라도 같은 원본이다.
     SW_ASSERT_TRUE( writeScopeSource( root, "game/test/fake_raw/c.dat", "c2;" ) );
-    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "GAME\\test\\fake_raw\\C.DAT" } );
+    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "GAME\\test\\fake_raw\\C.DAT" }, nullptr );
     SW_EXPECT_EQUAL( 1u, summary._importedCount );
 
     // 범위 밖에서 어긋난 것(a · d)은 보정하지 않는다 — 전체 대조가 그 둘을 보고한다.
     SW_ASSERT_TRUE( writeScopeSource( root, "game/test/fake_raw/a.dat", "a2;" ) && writeScopeSource( root, "game/other/fake_raw/d.dat", "d2;" ) );
-    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/c.dat" } );
+    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/c.dat" }, nullptr );
     SW_EXPECT_EQUAL( 0u, summary._importedCount );
-    SW_EXPECT_EQUAL( size_t( 2 ), sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly )._listProblem.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly, nullptr )._listProblem.size() );
 
     // 원본이 없는 경로는 아무 일도 아니다.
-    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/none.dat" } );
+    summary = sw::editor::AssetImportStampUtil::importSources( root, importer, { "game/test/fake_raw/none.dat" }, nullptr );
     SW_EXPECT_EQUAL( 0u, summary._sourceCount );
     SW_EXPECT_TRUE( summary.isClean() );
 }

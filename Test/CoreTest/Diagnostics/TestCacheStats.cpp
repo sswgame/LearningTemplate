@@ -61,9 +61,9 @@ SW_TEST_CASE( CacheStatsTest, CountsHitMissClearAndItemsPerName )
  */
 SW_TEST_CASE( CacheStatsTest, DuplicateNameIsRejectedAndGetOrCreateReturnsTheSameCounters )
 {
-    static std::atomic<uint32> s_runCount{ 0 };
-    utf8                       arrName[sw::CacheStatsCounters::kMaxNameLength + 1]{};
-    std::snprintf( arrName, sizeof( arrName ), "TestCacheStats.Strict.%u", s_runCount.fetch_add( 1 ) );
+    // 레지스트리는 프로세스에 하나라 반복 실행마다 새 이름이 필요하다 — 칸 수는 등록마다 늘고 줄지 않아 접미사로 쓴다.
+    utf8 arrName[sw::CacheStatsCounters::kMaxNameLength + 1]{};
+    std::snprintf( arrName, sizeof( arrName ), "TestCacheStats.Strict.%u", sw::CacheStats::getCount() );
 
     const uint32               beforeCount = sw::CacheStats::getCount();
     const sw::CacheStatsHandle first       = sw::CacheStats::registerCache( arrName );

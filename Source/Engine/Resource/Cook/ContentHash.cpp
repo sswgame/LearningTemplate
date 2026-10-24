@@ -3,12 +3,10 @@
 #include "Engine/Resource/Cook/ContentHash.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -26,8 +24,6 @@ namespace sw
             inline static unordered_map<string, Entry> _s_mapEntry{};
             /// @brief `_s_mapEntry` 의 락입니다. 셰이더 컴파일 · 쿠킹은 워커에서도 돕니다.
             inline static mutex _s_mutex{};
-            /// @brief `computeBytes` 에 쓴 시간의 누적(ns)입니다. 쿠킹 요약 로그가 `consumeComputeNanos` 로 가져간다.
-            inline static atomic<int64> _s_computeNanos{ 0 };
 
             /** @brief 파일을 읽어 해시를 구합니다(캐시 밖 본체). */
             static uint64 readFileHash( string_view absPath )
@@ -45,7 +41,6 @@ namespace sw
 {
     uint64 ContentHash::computeBytes( const uint8* pData, size_t size )
     {
-        const Stopwatch stopwatch;
         // CR 을 건너뛰며 바로 섞는다 — CR 을 뺀 사본을 만들지 않는다(출력 해시는 팩 하나가 수십 MB 이고 항목마다 부른다).
         // 값은 사본을 `computeStringHash64( ..., bIgnoreCase = false )` 로 섞던 것과 같다: 같은 시작값에 CR 아닌 바이트를 차례로 `fnvStep64` 한다.
         uint64 hash = HashUtil::kFnvOffset64;
@@ -55,13 +50,7 @@ namespace sw
             if ( byte != static_cast<uint8>( '\r' ) )
                 hash = HashUtil::fnvStep64( hash, byte );
         }
-        ContentHashInternal::_s_computeNanos.fetch_add( stopwatch.getElapsedNanoseconds(), std::memory_order_relaxed );
         return hash;
-    }
-
-    int64 ContentHash::consumeComputeNanos()
-    {
-        return ContentHashInternal::_s_computeNanos.exchange( 0, std::memory_order_relaxed );
     }
 
     uint64 ContentHash::computeFile( string_view absPath )

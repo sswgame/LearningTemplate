@@ -181,6 +181,7 @@ namespace sw::editor
                 FileResult*                    _pListFileResult{ nullptr }; ///< 파일 수만큼
                 atomic<uint32>                 _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
                 AssetImportMode                _mode{ AssetImportMode::ImportStale };
+                TaskManager*                   _pTaskManager{ nullptr }; ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
 
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
@@ -254,7 +255,7 @@ namespace sw::editor
                     _pListRunChain          = &listRunChain;
                     const uint32 chainCount = static_cast<uint32>( listRunChain.size() );
                     _nextSlot.store( 0 );
-                    TaskManager* const pTaskManager = bParallel && chainCount > 1 ? editor::findSubsystem<TaskManager>() : nullptr;
+                    TaskManager* const pTaskManager = bParallel && chainCount > 1 ? _pTaskManager : nullptr;
                     if ( pTaskManager == nullptr )
                     {
                         drain( 0, chainCount );
@@ -330,7 +331,7 @@ namespace sw::editor
              *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
              */
             static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
-                                         const unordered_set<string>* pScope, AssetImportSummary& inoutSummary )
+                                         const unordered_set<string>* pScope, TaskManager* pTaskManager, AssetImportSummary& inoutSummary )
             {
                 const string            stampPath = FileUtil::joinPath( rawFolder, kImportStampFileName );
                 map<string, StampEntry> mapStamped;
@@ -383,6 +384,7 @@ namespace sw::editor
                 job._pListChain      = &listChain;
                 job._pListFileResult = listFileResult.data();
                 job._mode            = mode;
+                job._pTaskManager    = pTaskManager;
                 job.importChains( listParallelChain, true );
                 job.importChains( listSerialChain, false );
 
@@ -443,7 +445,8 @@ namespace sw::editor
             }
 
             /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
-            static AssetImportSummary importFolders( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope )
+            static AssetImportSummary importFolders( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope,
+                                                     TaskManager* pTaskManager )
             {
                 AssetImportSummary summary;
                 const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
@@ -464,7 +467,7 @@ namespace sw::editor
                     const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || hasScopeUnder( *pScope, string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) == false );
                     if ( bOutOfScope )
                         continue;
-                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, summary );
+                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, pTaskManager, summary );
                 }
                 return summary;
             }
@@ -479,19 +482,20 @@ namespace sw::editor
         return AssetImportStampUtil::computeFileHash( importedPath );
     }
 
-    AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode )
+    AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager )
     {
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager );
     }
 
-    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath )
+    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath,
+                                                            TaskManager* pTaskManager )
     {
         unordered_set<string> uniqueScope;
         for ( const string& resourcePath : listResourcePath )
         {
             uniqueScope.insert( AssetImportStampInternal::makeScopeKey( resourcePath ) );
         }
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager );
     }
 
     string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )

@@ -9,9 +9,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/LayerWeightsData.h"
@@ -284,7 +286,9 @@ namespace sw::editor
             return false;
         // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
         const HeightfieldRawImporter importer;
-        const AssetImportSummary     summary = AssetImportStampUtil::importSources( ResourcePaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ) );
+        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
+        const AssetImportSummary summary =
+            AssetImportStampUtil::importSources( ResourcePaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );
@@ -379,6 +383,6 @@ namespace sw::editor
     AssetImportSummary HeightfieldImporter::importAllHeightfields( string_view resourceRoot, AssetImportMode mode )
     {
         const HeightfieldRawImporter importer;
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() );
     }
 } // namespace sw::editor

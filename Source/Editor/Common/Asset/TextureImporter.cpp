@@ -525,8 +525,9 @@ namespace sw::editor
         TextureImportConfig config{};
         if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return true;
-        const TextureRawImporter importer{ config };
-        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) } );
+        // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
+        const TextureRawImporter importer{ config, nullptr };
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Texture import failed: %#", problem.c_str() );
@@ -539,8 +540,9 @@ namespace sw::editor
     AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
-        const TextureRawImporter importer{ config, editor::findSubsystem<TaskManager>() };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
+        TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>();
+        const TextureRawImporter importer{ config, pTaskManager };
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
     }
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )

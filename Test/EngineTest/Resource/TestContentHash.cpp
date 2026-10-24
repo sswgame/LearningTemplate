@@ -71,7 +71,4 @@ SW_TEST_CASE( ContentHashTest, MatchesTheCopyingReferenceOnLargeBuffers )
     const uint64 reference = computeReferenceHash( bytes );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes ), reference );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes.data(), bytes.size() ), reference );
-
-    // 해시에 쓴 시간이 쌓이고 가져가면 비워진다 — 쿠킹 요약 로그의 해시 시간.
-    SW_EXPECT_TRUE( ContentHash::consumeComputeNanos() > 0 );
 }

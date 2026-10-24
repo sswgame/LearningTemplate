@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"
@@ -45,7 +46,7 @@ namespace sw
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
         vector<uint8> bytes;
-        const bool    bOutputCurrent = FileUtil::isRegularFile( outputPath ) && FileUtil::readFile( outputPath, bytes ) && ContentHash::computeBytes( bytes ) == record._outputHash;
+        const bool    bOutputCurrent = FileUtil::isRegularFile( outputPath ) && FileUtil::readFile( outputPath, bytes ) && hashOutput( bytes ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
         bytes.clear();
@@ -54,7 +55,7 @@ namespace sw
             SW_LOG_INFO( "Cook: '%#' has a fresh record but no DDC entry - cooked again", outputID );
             return false;
         }
-        if ( ContentHash::computeBytes( bytes ) != record._outputHash )
+        if ( hashOutput( bytes ) != record._outputHash )
         {
             SW_LOG_WARNING( "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
             return false;
@@ -65,6 +66,14 @@ namespace sw
             return false;
         }
         return true;
+    }
+
+    uint64 CookStore::hashOutput( const vector<uint8>& bytes ) const
+    {
+        const Stopwatch watch;
+        const uint64    hash = ContentHash::computeBytes( bytes );
+        _outputHashNanos += watch.getElapsedNanoseconds();
+        return hash;
     }
 
     CookOutcome CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
@@ -85,7 +94,9 @@ namespace sw
             SW_LOG_ERROR( "Cook: '%#' was reported written but cannot be read back", outputPath );
             return CookOutcome::Failed;
         }
-        const CookRecord record = CookRecord::make( job, bytes );
+        const Stopwatch  makeWatch;
+        const CookRecord record = CookRecord::make( job, bytes ); // 기록의 출력 해시가 거의 전부다
+        _outputHashNanos += makeWatch.getElapsedNanoseconds();
         if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR( "Cook: could not store '%#' in the DDC or write its record", outputID );

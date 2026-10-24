@@ -9,8 +9,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
-#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"

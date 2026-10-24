@@ -253,12 +253,12 @@ namespace
         {
             SW_ASSERT_TRUE( writeFixture( root ) );
             const TestFakeRawImporter importer{ pProbe };
-            outResult._import   = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale );
+            outResult._import   = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale, sw::editor::findSubsystem<sw::TaskManager>() );
             outResult._snapshot = makeSnapshot( root );
 
             // 스탬프에는 맞는 원본 둘의 내용을 바꾸고 검사만 돌린다 — 어긋남 줄도 직렬과 같은 순서여야 한다.
             SW_ASSERT_TRUE( writeSource( root, "m03.dat", "changed03;" ) && writeSource( root, "m11.dat", "changed11;" ) );
-            outResult._check = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly );
+            outResult._check = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::CheckOnly, sw::editor::findSubsystem<sw::TaskManager>() );
         }
     };
 } // namespace
@@ -340,7 +340,7 @@ SW_TEST_CASE( AssetImportParallelTest, WorkerBodyUsesServiceHandedByValueWithout
         SW_ASSERT_TRUE( taskManager.isReady() );
         // 제출 시점(이 스레드)에 서비스를 찾아 값으로 넘긴다. 임포터의 본문은 범위를 찾지 않는다.
         const TestHandoffRawImporter importer{ sw::editor::findSubsystem<sw::TaskManager>(), &probe };
-        summary = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale );
+        summary = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale, sw::editor::findSubsystem<sw::TaskManager>() );
     }
 
     SW_EXPECT_EQUAL( Internal::kPlainSourceCount, summary._sourceCount );

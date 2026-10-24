@@ -10,6 +10,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+namespace sw
+{
+    class TaskManager;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -112,13 +117,14 @@ namespace sw::editor
          *          `git` 이 시간 순서를 임의로 뒤집기 때문이다. 원본이 사라진 스탬프 줄도 어긋남이다. ImportStale 은 줄만 지우고 결과는 두므로,
          *          남은 결과는 사람이 정리한다. 스탬프는 내용이 바뀔 때만 쓴다.
          *
-         *          **원본 파일은 병렬로 임포트하고 합치기는 직렬로 한다.** 원본 폴더마다 파일 목록과 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 만든 뒤 사슬 단위로 작업 시스템(`editor::findSubsystem<TaskManager>()`)과
+         *          **원본 파일은 병렬로 임포트하고 합치기는 직렬로 한다.** 원본 폴더마다 파일 목록과 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 만든 뒤 사슬 단위로 작업 시스템(@p pTaskManager)과
          *          나눠 돌고(해시 계산 · 대조 · 임포트가 한 파일의 일이다), `IRawAssetImporter::hasOrderDependency` 인 원본이 든 사슬은 그 뒤에 이 스레드에서 직렬로 돈다.
          *          파일마다 결과가 자기 칸에 담기고 요약(`_listProblem` 의 순서 · 카운터)과 스탬프 표는 파일 순서대로 합치므로, 결과 바이트 · 스탬프 · 요약은 직렬로 돌 때와 같다.
          *          작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 이 스레드가 사슬을 파일 순서대로 돈다. 임포터 로그의 줄 순서만 병렬로 돌 때 파일 사이에서 섞인다.
          * @param resourceRoot `Resource/` 의 절대 경로
+         * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
          */
-        [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode );
+        [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager );
 
         /**
          * @brief @p listResourcePath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
@@ -126,9 +132,10 @@ namespace sw::editor
          *          스탬프를 쓰는 길은 `importAll` 과 같은 한 곳이다(에디터가 임포트한 것과 `App --import-*` 가 임포트한 것이 같은 판정을 받는다). 범위 밖 원본의 스탬프 줄은 그대로 둔다.
          *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.
          *          **범위 밖에서 어긋난 것(규칙 파일만 고친 다른 원본 등)은 보정하지 않는다.** 그 보정은 `App --import-*` 의 전체 대조가 한다.
-         *          병렬 구간은 작업 시스템과 나눠 돌므로 에디터 스레드에서도 워커에서도 부를 수 있다.
+         *          작업 시스템(@p pTaskManager, `importAll` 과 같음)을 부르는 쪽이 넘기므로 에디터 스레드에서도 워커에서도 부를 수 있다.
          */
-        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath );
+        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath,
+                                                               TaskManager* pTaskManager );
 
         /**
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).

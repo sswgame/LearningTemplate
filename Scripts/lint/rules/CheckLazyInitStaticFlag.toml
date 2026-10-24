@@ -4,8 +4,8 @@
 #   total    : 맨 `static bool` 플래그 수.
 #   lazyFill : 정적 · 전역 변수를 `if` 로 검사하고 같은 블록에서 채우는 곳(`static T* s_p = nullptr; if ( s_p == nullptr ) s_p = ...;`).
 [baseline]
-# 남은 하나는 ShaderReflectionDx.cpp 의 dxcompiler 로더다. 셰이더 쿠킹 병렬화 커밋(88cd7020c)이 함수 안 정적 변수로 고치므로, 그것을 병합한 뒤 0 으로 낮춘다.
-total = 1
+# 마지막 하나(ShaderReflectionDx.cpp 의 dxcompiler 로더)는 셰이더 쿠킹 병렬화(cookfast)가 함수 안 정적 변수로 고쳐 0 이다.
+total = 0
 # 남은 여섯은 모두 메인 스레드(창 · 입력 · 에디터 UI 초기화) 전용이라 동시 첫 호출이 없다 — 근거:
 #   - Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp:201 s_MainDisplay : ImGui 렌더러 백엔드 init 안(메인 스레드, GLX 컨텍스트가 그 스레드에 묶임).
 #   - Source/Engine/Input/Linux/InputManagerX11.cpp:86, 91 s_pInputContext · s_pInputMethod : X11 입력기(XIM/XIC) 재생성. 입력 폴링은 창을 만든 메인 스레드에서만 돈다.
