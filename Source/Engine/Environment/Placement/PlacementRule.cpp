@@ -95,12 +95,11 @@ namespace sw
                     return;
                 if ( sample._height < rule._heightMin || rule._heightMax < sample._height )
                     return;
-                const float32 arrWeight[4] = { sample._layerWeight._x, sample._layerWeight._y, sample._layerWeight._z, sample._layerWeight._w };
-                const bool    bLayerFilter = 0 <= rule._layerIndex && rule._layerIndex < 4;
-                if ( bLayerFilter && arrWeight[rule._layerIndex] < rule._layerMinWeight )
+                const bool bLayerFilter = 0 <= rule._layerIndex && rule._layerIndex < static_cast<int32>( SurfaceLayerWeights::kLayerCount );
+                if ( bLayerFilter && sample._layerWeight.get( static_cast<uint32>( rule._layerIndex ) ) < rule._layerMinWeight )
                     return;
-                const bool bDensityLayer = 0 <= rule._densityLayerIndex && rule._densityLayerIndex < 4;
-                if ( bDensityLayer && PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneDensity ) ) >= arrWeight[rule._densityLayerIndex] )
+                const bool bDensityLayer = 0 <= rule._densityLayerIndex && rule._densityLayerIndex < static_cast<int32>( SurfaceLayerWeights::kLayerCount );
+                if ( bDensityLayer && PlacementScatter::toUnit( PlacementScatter::hashCandidate( rule._seed, candidateIndex, kLaneDensity ) ) >= sample._layerWeight.get( static_cast<uint32>( rule._densityLayerIndex ) ) )
                     return;
                 outCandidate._normal  = sample._normal;
                 outCandidate._height  = sample._height;

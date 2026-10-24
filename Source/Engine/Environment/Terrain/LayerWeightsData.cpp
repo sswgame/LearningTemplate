@@ -4,6 +4,7 @@
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/ResourceIO.h"
 
@@ -37,22 +38,26 @@ namespace sw
             SW_LOG_ERROR( "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
             return false;
         }
-        const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
-        if ( version != kVersion )
+        // 레이어 넷 시절의 파일(버전 1)도 읽는다 - 레이어 4..7 은 0 으로 채워 이관한다. 저장은 늘 현재 버전이다.
+        const uint32 version        = LittleEndianUtil::readUint32( bytes.data() + 4 );
+        const bool   bLegacy        = version == kLegacyVersion;
+        const uint32 fileLayerCount = bLegacy ? kLegacyLayerCount : kLayerCount;
+        if ( version != kVersion && bLegacy == false )
         {
-            SW_LOG_ERROR( "'%#' is layer weight map version %# - this build reads version %# only", sourceName, version, kVersion );
+            SW_LOG_ERROR( "'%#' is layer weight map version %# - this build reads versions %# and %# only", sourceName, version, kLegacyVersion, kVersion );
             return false;
         }
         const uint32 width      = LittleEndianUtil::readUint32( bytes.data() + 8 );
         const uint32 height     = LittleEndianUtil::readUint32( bytes.data() + 12 );
         const uint32 layerCount = LittleEndianUtil::readUint32( bytes.data() + 16 );
         const bool   bSizeOk    = width >= 1 && width <= kMaxResolution && height >= 1 && height <= kMaxResolution;
-        if ( bSizeOk == false || layerCount != kLayerCount )
+        if ( bSizeOk == false || layerCount != fileLayerCount )
         {
-            SW_LOG_ERROR( "'%#' is %#x%# with %# layers - expected 1..%# per side and %# layers", sourceName, width, height, layerCount, kMaxResolution, kLayerCount );
+            SW_LOG_ERROR( "'%#' is %#x%# with %# layers - expected 1..%# per side and %# layers (version %#)", sourceName, width, height, layerCount, kMaxResolution, fileLayerCount, version );
             return false;
         }
-        const size_t weightBytes = static_cast<size_t>( width ) * height * kLayerCount;
+        const size_t texelCount  = static_cast<size_t>( width ) * height;
+        const size_t weightBytes = texelCount * fileLayerCount;
         if ( bytes.size() != Internal::kHeaderBytes + weightBytes )
         {
             SW_LOG_ERROR( "'%#' has %# bytes - %#x%# needs %#", sourceName, static_cast<uint64>( bytes.size() ), width, height,
@@ -61,7 +66,16 @@ namespace sw
         }
         _width  = width;
         _height = height;
-        _bytes.assign( bytes.begin() + static_cast<ptrdiff_t>( Internal::kHeaderBytes ), bytes.end() );
+        if ( bLegacy == false )
+        {
+            _bytes.assign( bytes.begin() + static_cast<ptrdiff_t>( Internal::kHeaderBytes ), bytes.end() );
+            return true;
+        }
+        _bytes.assign( texelCount * kLayerCount, 0u );
+        for ( size_t texel = 0; texel < texelCount; ++texel )
+        {
+            Memory::copy( _bytes.data() + texel * kLayerCount, bytes.data() + Internal::kHeaderBytes + texel * kLegacyLayerCount, kLegacyLayerCount );
+        }
         return true;
     }
 

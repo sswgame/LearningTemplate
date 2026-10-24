@@ -45,7 +45,7 @@ namespace sw
 {
     /**
      * @class TerrainComponent
-     * @brief 높이장(`.heightfield`)을 청크로 나눠 거리 LOD 메시로 그리고, 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어를 칠합니다.
+     * @brief 높이장(`.heightfield`)을 청크로 나눠 거리 LOD 메시로 그리고, 스플랫 맵 둘(RGBA 한 장에 레이어 넷 - 레이어 0..7 가중치)로 레이어를 칠합니다.
      * @details 지형은 오너의 월드 위치에서 x 와 z 방향으로 `_size` 만큼 펼쳐진다(회전과 크기는 보지 않는다). 청크마다 `MeshInstanceBatch`
      *          하나(항목 하나)를 프리미티브 레지스트리에 넣어, 메시 컴포넌트와 같은 경로(GPUScene, GPU 컬링)로 그린다. 청크를 오브젝트로
      *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 보이지 않는다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
@@ -53,7 +53,7 @@ namespace sw
      *
      *          레이어 가중치 맵(`_layerWeightsPath`, `.layerweights` 데이터 에셋 — `LayerWeightsData`)은 클라이언트와 전용 서버가 같은 파일을 CPU 로 읽는다.
      *          텍스처가 아니므로 서버 패키지에 남아 서버의 레이어 질의(발소리 · 표면 재질 · 이동 속도)도 정확하다. 그리는 쪽의 GPU 텍스처는 읽은 바이트로
-     *          지형마다 하나 만든다(`getCPUSplatPath`). `computeLayerWeightsAt` 이 셰이더와 같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다.
+     *          지형마다 둘(평면마다 하나) 만든다(`getCPUSplatPath`). `computeLayerWeightsAt` 이 셰이더와 같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다.
      *          레이어 색, 디테일, 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣는다.
      *
      *          스레드: 질의(`findHeightAt` 등)는 읽기만 하므로 병렬 틱과 배치 계산이 동시에 호출해도 된다. 다시 읽기(`reloadTerrain`)는 틱 밖에서만 호출한다.
@@ -64,8 +64,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 레이어 수의 상한(스플랫 RGBA)입니다. */
-        static constexpr uint32 kMaxLayerCount = 4;
+        /** @brief 레이어 수의 상한(스플랫 RGBA 둘)입니다. `SurfaceLayerWeights::kLayerCount` 가 정본이다. */
+        static constexpr uint32 kMaxLayerCount = SurfaceLayerWeights::kLayerCount;
 
         TerrainComponent();
         virtual ~TerrainComponent() override;
@@ -107,7 +107,7 @@ namespace sw
         /** @brief 월드 (x, z) 가 구멍이면 true 입니다. */
         bool isHoleAt( float32 worldX, float32 worldZ ) const { return _heightfield.isHoleAt( worldX, worldZ ); }
         /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. */
-        float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
+        SurfaceLayerWeights computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
         /** @brief CPU 높이장을 반환합니다(물리 충돌 `TerrainColliderComponent` 와 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
         /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 비교합니다. */
@@ -134,7 +134,7 @@ namespace sw
          *          (`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다). 디스크 에셋은 `saveSplat` 전까지 그대로이고
          *          `reloadTerrain` 은 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
          */
-        [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
+        [[nodiscard]] bool writeLayerWeights( const vector<SurfaceLayerWeights>& listWeight, const TerrainSampleRect& rect );
         /**
          * @brief 구멍 마스크 전부(`getHeightfield().readHoleCells` 로 읽어 고친 사본)에서 @p cellRect(셀 좌표)를 반영합니다.
          * @details 구멍은 렌더 메시(`TerrainMeshBuilder`) · 충돌(`TerrainColliderComponent`) · 내비(`TerrainNavGeometry`) · 높이 질의가 모두 같은 마스크로 건너뛴다.
@@ -165,8 +165,8 @@ namespace sw
          * @return 그 뒤에 바뀐 청크가 있으면 true 입니다.
          */
         [[nodiscard]] bool findEditedArea( uint32 sinceGeneration, uint32 sinceSplatRevision, float2& outMin, float2& outMax ) const;
-        /** @brief 이 지형이 그리는 자기 스플랫 텍스처의 캐시 경로(`cpu/terrain/...`)입니다. 가중치가 없거나 엔진 서비스가 없으면(CPU 테스트) 비어 있습니다. */
-        const string& getCPUSplatPath() const { return _cpuSplatPath; }
+        /** @brief 이 지형이 그리는 자기 스플랫 텍스처 평면 @p plane (0 = 레이어 0..3, 1 = 4..7, `SurfaceLayerWeights::kPlaneCount` 미만)의 캐시 경로(`cpu/terrain/...`)입니다. 가중치가 없거나 엔진 서비스가 없으면(CPU 테스트) 비어 있습니다. */
+        const string& getCPUSplatPath( uint32 plane ) const { return _arrCPUSplatPath[plane]; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
         /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsData`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
@@ -205,7 +205,10 @@ namespace sw
         void          setHeightRange( float32 heightMin, float32 heightMax );
         void          setChunkCells( uint32 chunkCells ) { _chunkCells = chunkCells; }
         void          setLODDistance( float32 lodDistance ) { _lodDistance = lodDistance; }
-        void          setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
+        /** @brief 지오모프(LOD 교체 때의 튐을 정점 셰이더가 거친 LOD 높이로 섞어 없앤다 - E4)를 켜고 끕니다. 켜면 지오모프 머티리얼을 쓰고 정점이 섞기 값을 담습니다. 읽기 전(`reloadTerrain`)에 정합니다. */
+        void setGeomorph( bool bGeomorph ) { _bGeomorph = bGeomorph ? SW_TRUE : SW_FALSE; }
+        bool isGeomorph() const { return _bGeomorph == SW_TRUE; }
+        void setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
 
     private:
         /** @brief 청크 하나입니다. 배치 하나와 현재 메시의 LOD, 이웃 LOD 를 담습니다. */
@@ -253,7 +256,7 @@ namespace sw
         [[nodiscard]] bool loadSplatWeights();
         /** @brief 스플랫 텍셀 사각형 @p texelRect 의 가중치를 읽는 청크(쌍선형이 이웃 텍셀을 읽으므로 한 텍셀 바깥까지)에 지금 스플랫 세대를 적습니다. */
         void markSplatChunks( const TerrainSampleRect& texelRect );
-        /** @brief 자기 스플랫 텍스처(`_cpuSplatPath`)를 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
+        /** @brief 자기 스플랫 텍스처 둘(`_arrCPUSplatPath`)을 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
         void releaseCPUSplat();
 
     private:
@@ -261,11 +264,11 @@ namespace sw
         string _heightfieldPath;
         PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl). Empty uses the engine default terrain material" )
         string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_terrainMaterial` 이다
-        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", AssetPath, FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..3); read by client and dedicated server" )
+        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", AssetPath, FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..7); read by client and dedicated server" )
         string _layerWeightsPath;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Map", AssetPath, AssetType = "Texture", Tooltip = "Tileable detail, one channel per layer" )
         string _detailTexturePath;
-        PROPERTY( Category = "Terrain", DisplayName = "Layers", Tooltip = "Up to four layers, one per splat channel" )
+        PROPERTY( Category = "Terrain", DisplayName = "Layers", Tooltip = "Up to eight layers, one per splat channel (two RGBA splat maps)" )
         vector<TerrainLayer> _listLayer;
         PROPERTY( Category = "Terrain", DisplayName = "Size", Units = m, Tooltip = "World extent along x and z" )
         float2 _size;
@@ -277,12 +280,14 @@ namespace sw
         float32 _detailTiling;
         PROPERTY( Category = "Terrain", DisplayName = "Cliff Start", Min = 0.0, Max = 1.0, Tooltip = "Normal Y below which the cliff layer takes over" )
         float32 _cliffStart;
-        PROPERTY( Category = "Terrain", DisplayName = "Cliff Layer", Min = -1, Max = 3, Tooltip = "Layer forced on steep slopes (-1 = off)" )
+        PROPERTY( Category = "Terrain", DisplayName = "Cliff Layer", Min = -1, Max = 7, Tooltip = "Layer forced on steep slopes (-1 = off)" )
         int32 _cliffLayer;
         PROPERTY( Category = "LOD", DisplayName = "Chunk Cells", Min = 2, Tooltip = "Cells per chunk side (power of two dividing resolution - 1)" )
         uint32 _chunkCells;
         PROPERTY( Category = "LOD", DisplayName = "LOD Distance", Min = 0.0, Units = m, Tooltip = "Distance of the first LOD step; each next step doubles it" )
         float32 _lodDistance;
+        PROPERTY( Category = "LOD", DisplayName = "Geomorph", Tooltip = "Blend vertices to the next coarser LOD height near the LOD switch distance so the switch does not pop (uses the geomorph terrain material - the terrain then leaves the depth prepass)" )
+        uint8 _bGeomorph;
 
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
@@ -292,14 +297,14 @@ namespace sw
         vector<uint32>      _listChunkSplatRevision; ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
         vector<uint32>      _listStaleChunk;         ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
         EnvironmentMaterial _material;
-        string              _cpuSplatPath;          ///< 가중치로 만든 자기 스플랫 텍스처(`getCPUSplatPath`)
-        PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
-        uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
-        atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
-        bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
-        bool                _bHolesWritten;         ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
-        bool                _bResolutionReplaced;   ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 복원한다
-        string              _loadedHeightfieldPath; ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
+        string              _arrCPUSplatPath[SurfaceLayerWeights::kPlaneCount]; ///< 가중치로 만든 자기 스플랫 텍스처 둘(`getCPUSplatPath` - 평면 0 은 레이어 0..3, 1 은 4..7)
+        PrimitiveRegistry*  _pPrimitiveRegistry;                                ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
+        uint32              _heightfieldGeneration;                             ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
+        uint32              _splatRevision;                                     ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
+        atomic<bool>        _bOriginDirty;                                      ///< 오너가 움직여 지형 원점이 낡았다
+        bool                _bHeightsWritten;                                   ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        bool                _bHolesWritten;                                     ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        bool                _bResolutionReplaced;                               ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 복원한다
+        string              _loadedHeightfieldPath;                             ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

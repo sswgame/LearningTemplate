@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Environment/Placement/SurfaceLayerWeights.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -82,9 +83,9 @@ namespace sw
         float32 _heightOffset{ 0.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Minimum weight of the filter layer" )
         float32 _layerMinWeight{ 0.5f };
-        PROPERTY( Min = -1, Max = 3, Tooltip = "Surface layer that must be present (-1 = any)" )
+        PROPERTY( Min = -1, Max = 7, Tooltip = "Surface layer that must be present (-1 = any)" )
         int32 _layerIndex{ -1 };
-        PROPERTY( Min = -1, Max = 3, Tooltip = "Surface layer whose weight scales the density (density map, -1 = none)" )
+        PROPERTY( Min = -1, Max = 7, Tooltip = "Surface layer whose weight scales the density (density map, -1 = none)" )
         int32 _densityLayerIndex{ -1 };
         PROPERTY( Tooltip = "Same seed, same layout" )
         uint32 _seed{ 1u };
@@ -93,13 +94,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 표면 한 점의 값입니다. 레이어 가중치는 넷까지이고 합이 1 이 아니어도 됩니다(필터는 각 값을 그대로 봅니다). */
+    /** @brief 표면 한 점의 값입니다. 레이어 가중치는 여덟까지이고 합이 1 이 아니어도 됩니다(필터는 각 값을 그대로 봅니다). */
     struct PlacementSurfaceSample
     {
-        float4  _layerWeight{ 1.0f, 0.0f, 0.0f, 0.0f };
-        float3  _normal{ 0.0f, 1.0f, 0.0f }; ///< 3D 는 위쪽이 +Y 입니다. 2D 표면도 같은 값을 줍니다(경사 0)
-        float32 _height{ 0.0f };
-        uint8   _bValid{ SW_TRUE }; ///< 놓을 수 없는 위치(지형 구멍, 맵 밖)면 SW_FALSE 다.
+        SurfaceLayerWeights _layerWeight{};
+        float3              _normal{ 0.0f, 1.0f, 0.0f }; ///< 3D 는 위쪽이 +Y 입니다. 2D 표면도 같은 값을 줍니다(경사 0)
+        float32             _height{ 0.0f };
+        uint8               _bValid{ SW_TRUE }; ///< 놓을 수 없는 위치(지형 구멍, 맵 밖)면 SW_FALSE 다.
     };
 } // namespace sw
 

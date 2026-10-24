@@ -110,6 +110,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _terrainMaterial; ///< 지형(`TerrainComponent`)
         PROPERTY( Required )
+        DataPath _terrainGeomorphMaterial; ///< 지오모프를 켠 지형 - terrain.hlsl 에 정점 변형(MATERIAL_VERTEX_DEFORM)을 켠 같은 머티리얼
+        PROPERTY( Required )
         DataPath _waterMaterial; ///< 물(`WaterBodyComponent`)
 
         PROPERTY( Required )

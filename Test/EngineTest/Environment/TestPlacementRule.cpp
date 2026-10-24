@@ -21,12 +21,13 @@ namespace
 
         bool sampleSurface( const float2& planePosition, PlacementSurfaceSample& outSample ) const override
         {
-            outSample                 = PlacementSurfaceSample{};
-            const bool bSloped        = planePosition._x < 50.0f;
-            outSample._height         = bSloped ? planePosition._x * 0.5f : 25.0f;
-            outSample._normal         = bSloped ? float3{ -0.5f, 1.0f, 0.0f }.normalize() : float3{ 0.0f, 1.0f, 0.0f };
-            const float32 upperWeight = planePosition._y > 50.0f ? 1.0f : 0.0f;
-            outSample._layerWeight    = float4{ 1.0f - upperWeight, upperWeight, 0.0f, 0.0f };
+            outSample                    = PlacementSurfaceSample{};
+            const bool bSloped           = planePosition._x < 50.0f;
+            outSample._height            = bSloped ? planePosition._x * 0.5f : 25.0f;
+            outSample._normal            = bSloped ? float3{ -0.5f, 1.0f, 0.0f }.normalize() : float3{ 0.0f, 1.0f, 0.0f };
+            const float32 upperWeight    = planePosition._y > 50.0f ? 1.0f : 0.0f;
+            outSample._layerWeight._low  = float4{ 1.0f - upperWeight, upperWeight, 0.0f, 0.0f };
+            outSample._layerWeight._high = float4{ 0.0f, 0.0f, planePosition._x > 50.0f ? 1.0f : 0.0f, 0.0f }; // 레이어 6 은 x > 50
             return true;
         }
     };
@@ -190,6 +191,20 @@ SW_TEST_CASE( PlacementRuleTest, LayerFilterAndDensityMap )
     vector<PlacementInstance> listDense;
     PlacementScatter::scatter( densityRule, PlacementRuleTestUtil::makeRegion( 100.0f ), &surface, {}, {}, listDense );
     SW_EXPECT_EQUAL( listInstance.size(), listDense.size() );
+
+    // 높은 평면의 레이어(4..7)도 같은 필터를 받는다 - 레이어 6 은 x > 50 에만 있다.
+    PlacementRule highRule   = PlacementRuleTestUtil::makeRule();
+    highRule._layerIndex     = 6;
+    highRule._layerMinWeight = 0.5f;
+    vector<PlacementInstance> listHigh;
+    PlacementScatter::scatter( highRule, PlacementRuleTestUtil::makeRegion( 100.0f ), &surface, {}, {}, listHigh );
+    SW_ASSERT_TRUE( listHigh.empty() == false );
+    bool bRightOnly = true;
+    for ( const PlacementInstance& instance : listHigh )
+    {
+        bRightOnly = bRightOnly && instance._planePosition._x > 50.0f;
+    }
+    SW_EXPECT_TRUE( bRightOnly );
 }
 
 /**
