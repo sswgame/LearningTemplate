@@ -37,6 +37,21 @@ namespace sw
         Frame     ///< 가변 프레임(리슨 호스트 App) — `[frame=N]`
     };
 
+    /**
+     * @brief 텍스트 로그 줄에서 id 가 든 줄의 본문 앞에 붙는 꼬리표 `[id:영역.사건] ` 의 모양입니다.
+     * @details 쓰는 쪽(`AsyncLogSink`)과 읽는 쪽(자식 프로세스 출력만 보는 `AppScenarioTest` 의 로그 게이트)이 같은 정의를 쓴다.
+     */
+    struct LogIDTag
+    {
+        static constexpr const utf8* kOpen        = "[id:";
+        static constexpr size_t      kOpenLength  = 4; ///< `kOpen` 의 글자 수
+        static constexpr const utf8* kClose       = "] ";
+        static constexpr size_t      kCloseLength = 2; ///< `kClose` 의 글자 수
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {

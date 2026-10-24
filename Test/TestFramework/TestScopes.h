@@ -3,6 +3,7 @@
  * @brief 케이스 안에서 쓰는 범위 도우미 — 실패 · 로그 · 엔진 단언 가로채기, 방어 테스트 표식, 실패 추적
  */
 #pragma once
+#include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/EngineMinimal.h"
 
 #include "TestFramework/TestRegistry.h"
@@ -116,7 +117,7 @@ namespace test
             if ( level == sw::LogLevel::Error || level == sw::LogLevel::Warning )
             {
                 sw::fixed_string<sw::constant::kMaxBuffer4096> decoratedMsg{};
-                sw::formatstring( decoratedMsg.data(), decoratedMsg.capacity(), "[Expected Defensive Test] %#", pMessage != nullptr ? pMessage : "" );
+                sw::formatstring( decoratedMsg.data(), decoratedMsg.capacity(), "%# %#", sw::AutomationLogPolicy::kDefensivePrefix, pMessage != nullptr ? pMessage : "" );
                 _pWrappedSink->writeLogWithID( level, pTag, pCaller, decoratedMsg.c_str(), pFile, line, pID );
             }
             else

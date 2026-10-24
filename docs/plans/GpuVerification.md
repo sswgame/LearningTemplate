@@ -65,6 +65,25 @@ GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를
 잰 값(`measured`)으로 옮긴 것은 `ditherappear` 5 · `light2dcookie` 6 · `motionblur` 1 · `themepark/shadow` 5 입니다(기존 주석의 첫 측정 값).
 탐침 단언(`Expect probe=… equals/atLeast`)은 상태 값이라 이 형식 밖입니다. 개수처럼 코드에서 정해지는 값을 손으로 적던 틈(`editorstartup` 의 패널 수)은 `wt/editorsc` 가 대표 패널 id 질의(`Editor.HasPanel`)로 바꿨습니다.
 
-## 4. 사용자 결정
+## 4. 시나리오의 종료 코드와 처리하지 않은 로그 (2026-10-25)
+
+시나리오가 종료 코드 0(이나 14)으로 끝나도 로그에 `[Warning]` · `[Error]` 가 남아 있으면 아무도 고치지 않았습니다. 근본 원인은 로그 판정이 줄 문구의 부분 문자열이고 허용 항목에 범위 · 사유의 처리 계획이 없어, 목록을 늘리는 것이 고치는 것보다 쌌던 점입니다. 형식으로 막았습니다([결정 기록](../09_Decisions.md) 2026-10-25 "처리하지 않은 로그").
+
+| 종료 코드 | 이름 | 뜻 |
+|---|---|---|
+| 0 | `Passed` | 단언이 맞고, 처리하지 않은 Warning · Error 줄이 없다 |
+| 10 | `Failed` | 단언 실패 |
+| 11 | `LoadError` | 시나리오 · 허용 목록 읽기 오류(허용 목록의 칸이 비었거나 `TODO` 면 여기서 선다) |
+| 12 · 13 | `TimedOut` · `Skipped` | 시간 초과 · 이 기계에서 못 돎 |
+| 14 | `Unconfirmed` | 단언은 맞았으나 어림값 문턱(`provisional`)이 들어 있다 |
+| 15 | `UnhandledLog` | 단언은 맞았으나 허용 목록에도 `<ExpectLog>` 에도 없는 Warning · Error 줄이 남았다. 14 보다 항상 앞선다 |
+
+- **허용 목록은 하나입니다.** `Resource/engine/automation/allowedlogs.json` 의 항목마다 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`), 범위(`scenario` 나 `suite` 중 정확히 하나), 사유(`reason`), 처리 계획 문서 이름(`plan`)이 모두 있어야 읽힙니다. 하나라도 비었거나 `TODO` 이면, 와일드카드 id 이거나 같은 항목이 두 번이면 읽기 오류(11)로 멈춥니다. 시나리오 실행기와 호스트 테스트 스위트(`HostLogJudge`)가 같은 목록을 읽어 예전 `SW_TEST_KNOWN_LOG` 는 없앴습니다.
+- **로그 id 가 없는 줄은 목록으로 가릴 수 없습니다.** 소스에 `SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID` 를 붙여야 합니다. 시나리오가 일부러 만드는 줄만 시나리오의 `<ExpectLog contains>` 로 선언합니다.
+- **래칫:** 목록에 있으나 끝까지 도는 시나리오에서 더 이상 나오지 않는 항목은 `py -3 -m Scripts scenario-logs --check` 가 실패로 셉니다(보고 `allowedLogs[]` 로 비교하며, 백엔드마다 다를 수 있어 보고 전체를 모아 본다). 처리하지 않은 로그(15)로 끝난 보고가 있어도 실패입니다.
+- **처음 채울 때:** 시나리오를 돌려 보고(`-scenario-report`)를 모은 뒤 `py -3 -m Scripts scenario-logs --regen` 이 id 가 있는 줄을 `reason` · `plan` 이 `TODO` 인 초안 항목으로 더합니다. TODO 가 남으면 모든 시나리오가 읽기 오류로 서므로 사람이 사유와 계획을 채워야 합니다. id 가 없는 줄은 표로 찍히고 소스 쪽을 먼저 고칩니다.
+- **남은 일:** 현재 로그를 모은 표는 `gpu-verifier` 의 첫 보고를 받아 채우므로 허용 목록은 비어 있습니다(그래서 Warning · Error 를 남기는 시나리오는 지금 15 로 끝납니다). `plan` 칸이 가리키는 문서가 실제로 있는지는 아직 기계가 확인하지 않습니다.
+
+## 5. 사용자 결정
 
 없습니다.

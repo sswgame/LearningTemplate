@@ -9,7 +9,7 @@
 ## 1. 손대기 전에 — 검증 규칙
 
 숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. 금방 낡는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 측정한다.**
-통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다.
+통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다. 시나리오(`-scenario`)는 종료 코드 0 만으로 통과가 아니다 — 아래 "시나리오 통과 기준" 이다.
 
 개발 기본 빌드(`cmake --build --preset Ninja-Debug`)는 테스트 실행 파일을 짓지 않는다. 테스트까지 지으려면 `--target all AllTests` 를 붙인다.
 `ctest` 는 실행 파일 테스트 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS SWTestBinaries` — 픽스처 이름이다. CI 의 Test 단계가 그렇게 돌려 Build 단계 뒤 두 번째 링크가 없다).
@@ -47,6 +47,11 @@ cd build/Ninja-Debug/Bin
 ./App.exe -gv_profileFrames=40 -vk   -EnableEditor
 ./App.exe -gv_profileFrames=40 -gl   -EnableEditor
 ```
+
+**시나리오 통과 기준.** 시나리오는 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 처리하지 않은 줄이 하나라도 남으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 항상 앞선다.
+줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog contains="…">` 가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
+목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 보고에는 이렇게 쓴다 — 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 다.
+시나리오를 돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다. 처음 목록을 채울 때는 `--regen` 이 초안(사유 · 계획이 `TODO`)을 만든다. 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
 
 **단위마다 이 순서로 한다.** 테스트 먼저(이전 코드에서 지는 것을 확인) → 고침 → 변이 검사(고침을 되돌리면 테스트가 지는가) →
 Debug(`nogpu` · `race`) · Shipping(`hostgpu`) → 커밋. 변이로 죽지 않는 테스트는 아무것도 지키지 않는다.

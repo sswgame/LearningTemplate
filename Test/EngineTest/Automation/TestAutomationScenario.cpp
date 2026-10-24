@@ -710,52 +710,167 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
 }
 
 /**
- * @brief [AutomationScenarioTest] 로그 게이트 — 선언하지 않은 Warning 을 남긴 시나리오는 `<Pass/>` 에 닿아도 실패고, 방어 구간 줄은 보지 않는다
- * @details 게이트를 걸리게 할 줄은 방어 구간 밖에서 남겨야 하므로 테스트 로그에 `[AutoProbe] undeclared` 경고 한 줄이 남는다.
+ * @brief [AutomationScenarioTest] 로그 게이트 — 처리하지 않은 Warning 을 남긴 시나리오는 `<Pass/>` 에 닿아도 UnhandledLog(15)로 끝나고, 방어 구간 줄은 보지 않는다
+ * @details 게이트를 걸리게 할 줄은 방어 구간 밖에서 남겨야 하므로 테스트 로그에 `[AutoProbe] undeclared` 경고 한 줄이 남는다. 이 줄은 로그 id 가 없어
+ *          허용 목록으로 가릴 수도 없다. 로그 id 는 있으나 허용 항목이 없는 줄(`Probe.Unlisted`)도 같은 코드로 끝난다.
  */
-SW_TEST_CASE( AutomationScenarioTest, UnexpectedWarningFailsAPassingScenario )
+SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
 {
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
+    for ( const bool bWithID : { false, true } )
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="3"><Pass/></At></Scenario>)" ) );
+        sw::AutomationResult result = sw::AutomationResult::Running;
+        for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
+        {
+            runner.onFrameBegin( input );
+            input.beginFrame( 1.0f / 60.0f );
+            if ( frame == 1 )
+            {
+                SW_TEST_DEFENSIVE_SCOPE( "the gate ignores lines a test marked as expected" );
+                SW_LOG_WARNING( "[AutoProbe] marked" );
+            }
+            if ( frame == 2 && bWithID )
+                SW_LOG_WARNING_ID( "Probe.Unlisted", "[AutoProbe] undeclared with an id" ); // 허용 항목이 없다
+            if ( frame == 2 && bWithID == false )
+                SW_LOG_WARNING( "[AutoProbe] undeclared" ); // id 가 없다
+            result = runner.onFrameEnd( input );
+            input.endFrame();
+        }
+        SW_EXPECT_TRUE( result == sw::AutomationResult::UnhandledLog );
+        SW_EXPECT_EQUAL( 15, static_cast<int32>( result ) );
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnhandledLogs().size() ) );
+        SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( sw::AutomationLogPolicy::kAllowListPath ) != sw::string::npos, runner.getFinishReason().c_str() );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 처리하지 않은 로그(15)는 미확정(14)보다 앞선다 — 어림값 문턱이 맞아도 로그가 남았으면 UnhandledLog 다
+ */
+SW_TEST_CASE( AutomationScenarioTest, UnhandledLogOutranksUnconfirmed )
+{
+    const sw::string folder    = test::makeTempDirectory( "UnhandledLogPriority" );
+    const sw::string imagePath = folder + "/flat.ppm";
+    sw::string       ppm       = "P6\n2 2\n255\n";
+    for ( uint32 index = 0; index < 4 * 3; ++index )
+    {
+        ppm.push_back( static_cast<utf8>( 255 ) );
+    }
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( imagePath, ppm ) );
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
-    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="3"><Pass/></At></Scenario>)" ) );
+    const sw::string     text = sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><ExpectImage file=")" ) + imagePath +
+                            R"(" metric="meanLuma" atLeast="0.5" provisional="guess"/><Pass/></At></Scenario>)";
+    SW_ASSERT_TRUE( runner.startFromText( text ) );
     sw::AutomationResult result = sw::AutomationResult::Running;
     for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
     {
         runner.onFrameBegin( input );
         input.beginFrame( 1.0f / 60.0f );
-        if ( frame == 1 )
-        {
-            SW_TEST_DEFENSIVE_SCOPE( "the gate ignores lines a test marked as expected" );
-            SW_LOG_WARNING( "[AutoProbe] marked" );
-        }
-        if ( frame == 2 )
-            SW_LOG_WARNING( "[AutoProbe] undeclared" ); // 이 줄이 게이트에 걸린다
+        SW_LOG_WARNING( "[AutoProbe] undeclared next to a provisional threshold" );
         result = runner.onFrameEnd( input );
         input.endFrame();
     }
-    SW_EXPECT_TRUE( result == sw::AutomationResult::Failed );
-    SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( sw::AutomationLogPolicy::kAllowListPath ) != sw::string::npos, runner.getFinishReason().c_str() );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::UnhandledLog, runner.getFinishReason().c_str() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnconfirmed().size() ) ); // 미확정도 보고에는 남는다
     input.shutdown();
 }
 
 /**
- * @brief [AutomationScenarioTest] 허용 목록은 항목마다 이유가 있어야 읽히고, 부분 문자열로 줄을 허용한다
+ * @brief [AutomationScenarioTest] 허용 목록은 항목마다 id · 범위 하나 · 사유 · 계획이 모두 채워져야 읽히고, 틀린 항목이 있으면 아무것도 더하지 않는다
+ * @details 와일드카드 id, 범위 없는 전역 항목, 둘을 함께 쓴 범위, `TODO` 로 남은 칸, 모르는 키, 같은 항목 두 번이 모두 읽기 오류다. 저장소의 목록도 읽혀야 한다.
  */
-SW_TEST_CASE( AutomationScenarioTest, LogAllowListNeedsAReasonPerEntry )
+SW_TEST_CASE( AutomationScenarioTest, LogAllowListRejectsIncompleteEntries )
 {
-    sw::AutomationLogPolicy policy;
+    sw::AutomationLogPolicy ok;
     sw::string              error;
-    SW_EXPECT_TRUE( policy.parseAllowList( R"({ "allowed": [ { "contains": "font has no glyph", "reason": "system font varies per PC" } ] })", "ok.json", error ) );
-    SW_EXPECT_TRUE( policy.isAllowed( "[Warning] [FontService] font has no glyph for U+AC00" ) );
-    SW_EXPECT_FALSE( policy.isAllowed( "[Warning] [FontService] font is missing" ) );
-    SW_EXPECT_FALSE( policy.parseAllowList( R"({ "allowed": [ { "contains": "x" } ] })", "noreason.json", error ) );
-    SW_EXPECT_TRUE( error.find( "reason" ) != sw::string::npos );
-    SW_EXPECT_TRUE( sw::AutomationLogPolicy::isExemptMessage( "[Expected Defensive Test] broken file" ) );
-    SW_EXPECT_TRUE( sw::AutomationLogPolicy::isExemptMessage( "[Scenario] FAIL t" ) );
+    SW_EXPECT_TRUE_MSG( ok.parseAllowList( R"({ "allowed": [ { "id": "Font.NoGlyph", "scenario": "uidemo", "reason": "system font varies per PC", "plan": "UiFonts" } ] })", "ok.json", error ),
+                        error.c_str() );
+    SW_EXPECT_TRUE( ok.isLoaded() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( ok.getAllowed().size() ) );
+
+    struct BadCase
+    {
+        const utf8* _pJSON;
+        const utf8* _pExpectedInError;
+    };
+    static constexpr BadCase kArrBadCase[] = {
+        {                                                                            R"({ "allowed": [ { "id": "A.B", "scenario": "s", "reason": "r" } ] })",      "field 'plan'"},
+        {                                                                              R"({ "allowed": [ { "id": "A.B", "scenario": "s", "plan": "p" } ] })",    "field 'reason'"},
+        {                                                                            R"({ "allowed": [ { "scenario": "s", "reason": "r", "plan": "p" } ] })",        "field 'id'"},
+        {                                                                                R"({ "allowed": [ { "id": "A.B", "reason": "r", "plan": "p" } ] })", "exactly one scope"},
+        {                                                 R"({ "allowed": [ { "id": "A.B", "scenario": "s", "suite": "t", "reason": "r", "plan": "p" } ] })", "exactly one scope"},
+        {                                                               R"({ "allowed": [ { "id": "A.*", "scenario": "s", "reason": "r", "plan": "p" } ] })",      "no wildcards"},
+        {                                                            R"({ "allowed": [ { "id": "A.B", "scenario": "s", "reason": "TODO", "plan": "p" } ] })",    "field 'reason'"},
+        {                                             R"({ "allowed": [ { "id": "A.B", "scenario": "s", "reason": "r", "plan": "TODO: name the plan" } ] })",      "field 'plan'"},
+        {                                              R"({ "allowed": [ { "id": "A.B", "scenario": "s", "reason": "r", "plan": "p", "contains": "x" } ] })",       "unknown key"},
+        {R"({ "allowed": [ { "id": "A.B", "scenario": "s", "reason": "r", "plan": "p" }, { "id": "A.B", "scenario": "s", "reason": "r2", "plan": "p" } ] })",           "repeats"},
+        {                                                                                                                         R"({ "allowed": "none" })",           "allowed"},
+    };
+    for ( const BadCase& badCase : kArrBadCase )
+    {
+        sw::AutomationLogPolicy policy;
+        sw::string              badError;
+        SW_EXPECT_FALSE_MSG( policy.parseAllowList( badCase._pJSON, "bad.json", badError ), badCase._pJSON );
+        SW_EXPECT_TRUE_MSG( badError.find( badCase._pExpectedInError ) != sw::string::npos, badError.c_str() );
+        SW_EXPECT_FALSE( policy.isLoaded() );
+        SW_EXPECT_TRUE( policy.getAllowed().empty() );
+    }
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::AutomationLogPolicy repository;
     SW_EXPECT_TRUE_MSG( repository.loadAllowList( error ), error.c_str() );
+}
+
+/**
+ * @brief [AutomationScenarioTest] 로그 판정 — id + 범위가 맞는 줄만 허용이고, id 없는 줄은 어떤 항목으로도 가릴 수 없다
+ * @details `<ExpectLog>` 선언은 id 없는 줄도 가린다(시나리오가 일부러 만드는 줄을 그 자리에서 적는다). 실행기 줄 · 방어 구간 줄 · Info 는 보지 않는다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, LogPolicyJudgesByIDAndScope )
+{
+    sw::AutomationLogPolicy policy;
+    sw::string              error;
+    SW_ASSERT_TRUE_MSG( policy.parseAllowList( R"({ "allowed": [
+        { "id": "Font.NoGlyph", "scenario": "alpha", "reason": "system font varies per PC", "plan": "UiFonts" },
+        { "id": "Gpu.Validation", "suite": "RHITest", "reason": "driver", "plan": "RhiValidation" } ] })",
+                                               "judge.json", error ),
+                        error.c_str() );
+    using Verdict = sw::AutomationLogVerdict;
+    policy.selectScenario( "alpha" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.NoGlyph", "no glyph" ) == Verdict::Allowed );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "Font.NoGlyph", "no glyph" ) == Verdict::Allowed );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Other", "no glyph" ) == Verdict::NotAllowed );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Gpu.Validation", "suite entry" ) == Verdict::NotAllowed ); // 스위트 항목은 시나리오 범위에서 맞지 않는다
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "no glyph" ) == Verdict::MissingID );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Info, "", "plain info" ) == Verdict::NotGated );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "", "[Scenario] FAIL t" ) == Verdict::NotGated );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "", "[Expected Defensive Test] broken file" ) == Verdict::NotGated );
+    policy.declareExpected( "deliberate" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "a deliberate warning" ) == Verdict::Declared );
+
+    sw::AutomationLogPolicy otherScenario;
+    SW_ASSERT_TRUE_MSG( otherScenario.parseAllowList( R"({ "allowed": [ { "id": "Font.NoGlyph", "scenario": "alpha", "reason": "r", "plan": "p" } ] })", "other.json", error ), error.c_str() );
+    otherScenario.selectScenario( "beta" );
+    SW_EXPECT_TRUE( otherScenario.classify( sw::LogLevel::Warning, "Font.NoGlyph", "no glyph" ) == Verdict::NotAllowed ); // 다른 시나리오에서는 맞지 않는다
+
+    policy.clearScope();
+    policy.selectSuite( "RHITest" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "Gpu.Validation", "suite entry" ) == Verdict::Allowed );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.NoGlyph", "no glyph" ) == Verdict::NotAllowed ); // 시나리오 항목은 스위트 범위에서 맞지 않는다
+
+    sw::AutomationLogJudgement judgement;
+    policy.judge( sw::LogLevel::Error, "Rhi", "Gpu.Validation", "first", judgement );
+    policy.judge( sw::LogLevel::Error, "Rhi", "Gpu.Validation", "second", judgement );
+    SW_EXPECT_FALSE( judgement.hasUnhandled() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( judgement._listAllowedID.size() ) ); // 같은 id 는 한 번만 적는다
+    policy.judge( sw::LogLevel::Warning, "Rhi", "", "no id", judgement );
+    policy.judge( sw::LogLevel::Warning, "Rhi", "Gpu.Unlisted", "no entry", judgement );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( judgement._listUnhandled.size() ) );
+    SW_EXPECT_EQUAL( 1u, judgement._missingIDCount );
+    SW_EXPECT_EQUAL( 1u, judgement._notAllowedCount );
 }
 
 /**

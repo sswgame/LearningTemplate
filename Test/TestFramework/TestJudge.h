@@ -5,6 +5,8 @@
  *          그 케이스가 진다. 다음 단계의 판정(GPU 메모리 누수, 프레임 예산)은 판정기 하나를 더 붙인다(`TestRegistry::registerJudge`) — 실행기를 고치지 않는다.
  */
 #pragma once
+#include "Engine/Automation/AutomationLogPolicy.h"
+
 #include "TestFramework/TestCase.h"
 
 namespace test
@@ -32,10 +34,11 @@ namespace test
 namespace test
 {
     /**
-     * @brief 호스트 스위트 케이스 하나 동안 남은 예상 밖 Error · Warning 로그를 세어, 하나라도 있으면 그 케이스를 지게 합니다.
+     * @brief 호스트 스위트 케이스 하나 동안 남은 처리하지 않은 Error · Warning 로그를 모아, 하나라도 있으면 그 케이스를 지게 합니다.
      * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 로그로만 남기고 단언은 통과할 수 있다. 의도된 줄은 `SW_TEST_DEFENSIVE_SCOPE`
-     *          안에서 남기면 표식이 붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 그 스위트에 선언된 알려진 줄
-     *          (`SW_TEST_KNOWN_LOG`)는 세지 않고 그 선언의 `_hitCount` 에 센다. 실패를 기록하며 남기는 `[FAILED]` 줄은 세지 않는다.
+     *          안에서 남기면 표식이 붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 실패를 기록하며 남기는 `[FAILED]` 줄은 세지 않는다.
+     *          나머지 줄은 시나리오 실행기와 같은 허용 목록(`AutomationLogPolicy` — `Resource/engine/automation/allowedlogs.json`)의 `suite` 항목으로만 가릴 수 있고,
+     *          로그 id(`SW_LOG_*_ID`)가 없는 줄은 가릴 수 없다. 목록은 케이스가 끝난 뒤 처음 필요할 때 한 번 읽는다 — 읽지 못하면 그 이유가 실패 메시지에 든다.
      */
     class HostLogJudge final : public ITestCaseJudge
     {
@@ -49,11 +52,22 @@ namespace test
         void beginCase( const TestCaseInfo& testInfo ) override;
         void endCase( const TestCaseInfo& testInfo, float64 elapsedMs, TestRegistry& registry ) override;
 
+        /** @brief 허용 목록과 범위를 들고 있는 정책입니다. 틀 테스트는 여기에 `parseAllowList` 로 목록을 직접 넣어 파일을 읽지 않게 합니다. */
+        sw::AutomationLogPolicy& getPolicy() { return _policy; }
+        /** @brief 이번 실행에서 허용 항목이 맞은 줄 수를 `스위트 id (n)` 줄로 찍습니다. 맞은 것이 없으면 아무것도 찍지 않습니다. */
+        void printAllowedSummary() const;
+
     private:
         struct State;
 
-        TestCatalog*          _pCatalog;
-        sw::unique_ptr<State> _pState;
+        /** @brief 허용 목록을 아직 읽지 않았으면 한 번 읽습니다. 읽지 못하면 이유를 `_loadError` 에 남기고 목록 없이 판정합니다(어떤 줄도 가려지지 않는다). */
+        void ensureAllowListLoaded();
+
+        TestCatalog*            _pCatalog;
+        sw::unique_ptr<State>   _pState;
+        sw::AutomationLogPolicy _policy;
+        sw::string              _loadError;
+        bool                    _bLoadAttempted;
     };
 } // namespace test
 

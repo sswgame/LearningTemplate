@@ -115,8 +115,9 @@ namespace test
          */
         static sw::vector<sw::string> readReportRecords( const sw::string& reportPath );
         /**
-         * @brief 프로세스 출력 @p output 에서 로그 게이트가 보는 줄(`[Warning]` · `[Error]`) 가운데 허용하지 않은 것을 돌려줍니다.
-         * @details 허용은 `AutomationLogPolicy` 의 전역 목록과 @p scenarioArgument(경로 하나 또는 쉼표 목록) 시나리오들의 `<ExpectLog>` 다.
+         * @brief 프로세스 출력 @p output 에서 로그 게이트가 보는 줄(`[Warning]` · `[Error]`) 가운데 처리하지 않은 것을 돌려줍니다.
+         * @details 처리는 `AutomationLogPolicy` 의 전역 목록에서 @p scenarioArgument(경로 하나 또는 쉼표 목록) 시나리오들 범위의 항목과 그 시나리오들의 `<ExpectLog>` 다.
+         *          줄의 id 는 텍스트 줄의 `[id:…]` 꼬리표(`LogIDTag`)에서 읽으므로 id 없는 줄은 허용 목록으로 가릴 수 없다.
          *          실행기는 시나리오 구간만 보므로, 기동 · 종료 구간의 줄은 여기서 잡는다. 목록을 읽지 못하면 그 이유를 한 줄로 돌려준다.
          */
         static sw::vector<sw::string> collectUnexpectedLogLines( const sw::string& output, const sw::string& scenarioArgument );
@@ -129,7 +130,7 @@ namespace test
         [[nodiscard]] static AppRunOutcome judgeRun( const ProcessRunResult& run, sw::string_view arguments, const sw::string& detail );
         /**
          * @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 판정합니다.
-         * @details 종료 코드 0 이어도 출력에 허용하지 않은 Warning · Error 가 있으면 그 줄을 @p outScenarioLines 에 붙이고 실패(10)로 판정한다.
+         * @details 종료 코드 0(이나 14)이어도 출력에 처리하지 않은 Warning · Error 가 있으면 그 줄을 @p outScenarioLines 에 붙이고 실패(15, `UnhandledLog`)로 판정한다.
          */
         [[nodiscard]] static AppRunOutcome runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch,
                                                                 sw::string& outScenarioLines, sw::string_view extraArguments, uint32 timeoutSeconds );

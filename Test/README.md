@@ -154,11 +154,12 @@ py -3 -m Scripts test --changed                                    # main 과 �
 `<타깃>_HostOnly` 는 `--host_suites=only` 로 호스트 스위트만 돌고 `hostgpu` 라벨을 받습니다. 지금 선언된 호스트 스위트는 `EngineTest --test_list` 끝에 이유와 함께 출력됩니다.
 
 - `--host_suites=only` 실행이 아무것도 고르지 않으면 실패합니다. 선언한 스위트에 케이스가 없어도 실패합니다.
-- **호스트 스위트의 케이스는 예상하지 못한 `[Error]` · `[Warning]` 로그 하나로 실패합니다.** 검증 레이어와 드라이버 오류는 로그로만 남고 단언은 통과할 수 있기 때문입니다.
+- **호스트 스위트의 케이스는 처리하지 않은 `[Error]` · `[Warning]` 로그 하나로 실패합니다.** 검증 레이어와 드라이버 오류는 로그로만 남고 단언은 통과할 수 있기 때문입니다.
   일부러 거절 경로를 부르는 곳은 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 감쌉니다. 그 안의 줄은 표시가 붙어 세지 않습니다.
-  App 을 띄우는 시나리오(`AppScenarioTest`)는 같은 규칙을 시나리오 실행기의 로그 게이트(`Source/Engine/Automation/AutomationLogPolicy.h`)로 지킵니다.
-- 원인이 엔진에 있고 아직 고치지 못한 줄은 스위트 파일에 `SW_TEST_KNOWN_LOG( 스위트, "문구", "이유" )` 로 적습니다.
-  그 스위트의 그 문구만 허용하고, 실행 요약이 허용한 줄 수를 출력합니다. 한 번도 나오지 않으면 지우라고 알립니다.
+  App 을 띄우는 시나리오(`AppScenarioTest`)는 같은 규칙을 시나리오 실행기의 로그 게이트(`Source/Engine/Automation/AutomationLogPolicy.h`)로 지킵니다. 실패는 종료 코드 15(`UnhandledLog`)입니다.
+- 원인이 엔진에 있고 아직 고치지 못한 줄은 허용 목록 `Resource/engine/automation/allowedlogs.json` 에 `suite` 항목(로그 id · 스위트 이름 · 사유 · 처리 계획 문서)으로 적습니다. 시나리오 실행기와 같은 하나뿐인 목록입니다.
+  그 스위트의 그 로그 id 만 허용하고, 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 어떤 항목으로도 가릴 수 없습니다. 실행 요약이 허용한 케이스 수를 출력합니다. 칸이 비었거나 `TODO` 이면 목록을 읽지 못해 실패 메시지에 이유가 듭니다.
+  예전 `SW_TEST_KNOWN_LOG`(문구 부분 문자열)는 없앴습니다.
 
 **샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은
 `max(60, 4 × max(조각 하나의 초, 가장 비싼 케이스의 초))` 입니다. 샤드는 `<타깃>_Shard1..n` 으로 등록되고 각각 `--test_shard=<k>/<n>` 으로 돕니다.
@@ -282,7 +283,7 @@ cd build/Ninja-Debug/Bin
 `Engine` 전체를 돌리는 자동 테스트는 이것뿐입니다.
 
 - **`AppSmokeTest`** 는 App을 네 백엔드와 에디터 유무 조합으로 띄워 종료 코드와 `[Error]` 로그를 봅니다. 창 닫기, 백엔드 교체, 메모리 태그 보고, 골든 이미지 비교도 여기에 있습니다.
-- **`AppScenarioTest`** 는 자동화 시나리오(`*.scenario.xml`)를 백엔드마다 돌리고 종료 코드 0을 확인합니다. 엔진 시나리오와 활성 게임 팩의 시나리오를 모두 찾으므로, 파일을 두기만 하면 돕니다.
+- **`AppScenarioTest`** 는 자동화 시나리오(`*.scenario.xml`)를 백엔드마다 돌리고 종료 코드 0을 확인합니다(처리하지 않은 Warning · Error 가 남으면 15 라 실패입니다. 기동 · 종료 구간의 줄은 출력의 `[id:…]` 꼬리표로 같은 허용 목록에 건다). 엔진 시나리오와 활성 게임 팩의 시나리오를 모두 찾으므로, 파일을 두기만 하면 돕니다.
   시나리오 형식과 실행기는 `Source/Engine/Automation/` 의 소스와 헤더 주석에 있습니다.
 - **`AppUITest`** 는 엔진 시나리오 `engine/automation/uidemo.scenario.xml` 을 백엔드마다 돌려 UI 견본 화면의 스크린샷과 레이아웃 덤프(`UILayoutDump`)를 받습니다.
   덤프에서 위젯 이름으로 사각형을 찾아, 알려진 영역의 색을 확인하고(주 버튼 가운데는 강조색), 영역마다 평균 색과 가장자리 수를 첫 백엔드와 비교합니다(평균 차 0.02 이하, 가장자리 수 차 2% 이하).

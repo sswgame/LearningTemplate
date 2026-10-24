@@ -370,6 +370,10 @@
   시나리오는 실행기(`AutomationRunner::applyLogGate`, 시나리오 구간 + 프로세스 전체의 빠진 현지화 키)와 `AppScenarioTest`(출력 전체, 기동 · 종료 포함) 두 겹이고,
   허용은 시나리오의 `<ExpectLog>` 와 전역 목록 `Resource/engine/automation/allowedlogs.json`(항목마다 이유 필수) 둘뿐입니다. 호스트 스위트는 `SW_TEST_DEFENSIVE_SCOPE` · `SW_TEST_KNOWN_LOG` 입니다.
   CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않습니다 — 일부러 깨진 픽스처가 많아 경고 1,500 줄 남짓이 표식 없이 나옵니다(백로그).
+- **처리하지 않은 Warning · Error 는 종료 코드 15(`UnhandledLog`)로 끝나고, 허용은 로그 id + 범위 + 사유 + 계획의 한 목록뿐입니다**(2026-10-25). 앞 결정의 로그 게이트는 있었지만 허용 항목이 문구 부분 문자열이고 범위 · 처리 계획이 없어, 목록에 한 줄 더하는 것이 고치는 것보다 쌌고 결과도 단언 실패(10)와 섞였습니다.
+  언리얼 Automation 의 `AddExpectedError` 가 시험마다 기대한 줄을 선언하게 한 것과 같은 쪽으로, 항목마다 로그 id · 범위(`scenario` 나 `suite` 정확히 하나) · 사유 · 계획 문서 이름이 모두 있어야 읽히고 비거나 `TODO` 면 읽기 오류(11)로 멈춥니다(전역 허용 · 와일드카드 · 중복은 읽기 오류).
+  로그 id 가 없는 줄은 목록으로 가릴 수 없고(소스에 `SW_LOG_*_ID`), 15 는 14 보다 앞섭니다. 호스트 스위트의 `SW_TEST_KNOWN_LOG`(문구 부분 문자열)는 같은 목록의 `suite` 항목으로 합쳐 없앴습니다.
+  래칫(낡은 항목 → 지운다)은 시나리오 한 편이 백엔드마다 다른 줄을 낼 수 있어 실행 하나가 아니라 보고 전체를 모아 `py -3 -m Scripts scenario-logs --check` 가 셉니다. 목록은 빈 채로 두고 `--regen` 이 TODO 초안을 만듭니다. 목록은 [GPU 검증](plans/GpuVerification.md) 4절입니다.
 - **시나리오 사진 단언의 문턱은 잰 값(`measured`)인지 어림값(`provisional`)인지 속성으로 갈립니다**(2026-10-25). 측정 전에 숫자를 시나리오에 적는 흐름에서 어림값이 잰 값처럼 남았다(`sky` · `vfxgpulights` · `fog` 등). 둘 중 하나가 없으면 읽기 오류이고, 어림값이 맞은 시나리오는 종료 코드 14(`Unconfirmed`)와 보고 `unconfirmed[]` 로 미확정을 따로 알립니다(틀리면 실패). 언리얼 Automation 의 골든 비교가 기준 이미지를 데이터로 두는 것과 같은 쪽으로, 숫자의 출처를 단언 옆 데이터에 둡니다. 게이트가 아니라 형식으로 막았고, 목록은 [GPU 검증](plans/GpuVerification.md) 3절입니다.
 - **`--check-text` 는 빠진 번역도 실패로 봅니다 — 프로젝트의 출시 문화권(`*.locproject.json` 의 `stagedCultures`)만**(2026-10-15, 2026-10-16 기준 변경). 런타임이 원문으로 대체하며 아무 경고도 내지 않아 한국어 실행에서도 빠진 번역이 드러나지 않았습니다(언리얼 Localization Dashboard 는 완성도만 보여 준다).
   처음에는 "번역 테이블 파일이 있는가" 로 대상을 정했는데, 파일 하나를 지우면 게이트가 조용히 꺼졌습니다. 지금은 언리얼 Cultures to Stage 처럼 출시 목록을 명시하고(`cultures` 의 부분 집합, 아니면 로드 오류), 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 집니다.

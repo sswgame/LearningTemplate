@@ -171,19 +171,6 @@ namespace test
             }
         }
 
-        if ( catalog.getListKnownLog().empty() == false )
-        {
-            std::fprintf( stdout, " Known error logs (SW_TEST_KNOWN_LOG - fix the cause, then delete the declaration):\n" );
-            for ( const KnownLog& known : catalog.getListKnownLog() )
-            {
-                if ( known._hitCount > 0 )
-                    std::fprintf( stdout, "   %s: tolerated %u line(s) containing '%s' - %s\n", known._suiteName.c_str(), known._hitCount, known._substring.c_str(),
-                                  known._reason.c_str() );
-                else
-                    std::fprintf( stdout, "   %s: '%s' did not appear in this run - delete the declaration if it is fixed\n", known._suiteName.c_str(), known._substring.c_str() );
-            }
-        }
-
         printFailureRates( summary, options._repeatCount );
         std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", summary._passedCount, summary._passedCount + summary._failedCount + summary._skippedCount,
                       summary._skippedCount, summary._totalMs );

@@ -1,8 +1,9 @@
 /**
  * @file Test/TestFramework/TestCatalog.h
- * @brief 케이스 등록 — 케이스와 스위트 선언(호스트 · 부하 · 환경 · 알려진 Error · 시간 예산)을 담는 표와, 그것을 채우는 매크로
+ * @brief 케이스 등록 — 케이스와 스위트 선언(호스트 · 부하 · 환경 · 시간 예산)을 담는 표와, 그것을 채우는 매크로
  * @details 선언이 곧 분류다. CMake 에는 스위트 이름을 적지 않고, 실행 파일이 이 표를 들고 있다가 `--host_suites=` · `--load_suites=` 로 가른다.
- *          표는 정적 초기화로 채워지고 실행 중에는 읽기만 한다(알려진 Error 의 `_hitCount` 만 센다).
+ *          표는 정적 초기화로 채워지고 실행 중에는 읽기만 한다. 호스트 스위트가 아직 못 고친 Error · Warning 은 이 표가 아니라 허용 목록
+ *          (`Resource/engine/automation/allowedlogs.json` 의 `suite` 항목)에 적는다.
  */
 #pragma once
 #include "TestFramework/TestCase.h"
@@ -18,8 +19,6 @@ namespace test
         void addSuiteKind( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason );
         /** @brief 스위트가 바깥 환경을 요구하며 환경 변수 @p pEnvironmentName 이 그 주소를 준다고 선언합니다(`SW_TEST_REQUIRES_ENVIRONMENT`). */
         void addEnvironmentSuite( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason );
-        /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 더합니다(`SW_TEST_KNOWN_LOG`). */
-        void addKnownLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
         /** @brief 스위트의 케이스 하나가 넘지 말아야 할 시간을 선언합니다(`SW_TEST_TIME_BUDGET`). */
         void addTimeBudget( const utf8* pSuiteName, float64 maxCaseMilliseconds, const utf8* pReason );
 
@@ -30,9 +29,7 @@ namespace test
         bool                                         isSuiteOfKind( const sw::string& suiteName, SuiteKind kind ) const;
         const sw::map<sw::string, EnvironmentSuite>& getEnvironmentSuites() const { return _mapEnvironmentSuite; }
         /** @brief 이 스위트가 환경 스위트이고 그 변수가 비었는가입니다. */
-        bool                        isEnvironmentMissing( const sw::string& suiteName ) const;
-        sw::vector<KnownLog>&       getListKnownLog() { return _listKnownLog; }
-        const sw::vector<KnownLog>& getListKnownLog() const { return _listKnownLog; }
+        bool isEnvironmentMissing( const sw::string& suiteName ) const;
         /** @brief 스위트의 시간 예산(없으면 널)입니다. */
         const TimeBudget* findTimeBudget( const sw::string& suiteName ) const;
         /** @brief 스위트에 케이스가 하나라도 있는가. */
@@ -48,7 +45,6 @@ namespace test
         sw::vector<TestCaseInfo>              _listCase;
         sw::map<sw::string, sw::string>       _arrMapSuiteKindReason[static_cast<size_t>( SuiteKind::Count )];
         sw::map<sw::string, EnvironmentSuite> _mapEnvironmentSuite;
-        sw::vector<KnownLog>                  _listKnownLog;
         sw::map<sw::string, TimeBudget>       _mapTimeBudget;
     };
 } // namespace test
@@ -80,16 +76,6 @@ namespace test
     {
     public:
         EnvironmentSuiteRegistrar( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason );
-    };
-} // namespace test
-
-namespace test
-{
-    /** @brief 정적 초기화로 알려진 Error 로그 선언을 붙입니다(`SW_TEST_KNOWN_LOG`). */
-    class KnownLogRegistrar
-    {
-    public:
-        KnownLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
     };
 } // namespace test
 
@@ -136,18 +122,6 @@ namespace test
  *          `--host_suites` 와 섞이지 않는다. 케이스는 `test::getEnvironmentValue( envName )` 로 주소를 읽는다. 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
  */
 #define SW_TEST_REQUIRES_ENVIRONMENT( SuiteName, envName, reason ) static test::EnvironmentSuiteRegistrar environmentSuite_##SuiteName( #SuiteName, envName, reason )
-
-/**
- * @brief 호스트 스위트가 남기는 Error 로그 가운데 **아직 고치지 못한 것** 하나를 견딥니다.
- * @param SuiteName 그 스위트(`SW_TEST_REQUIRES_HOST` 로 선언한 것).
- * @param substring 그 Error 줄에 든 고정 문구(영문 원문).
- * @param reason    왜 견디는지 · 어디서 고칠지(영문 — 실행 요약에 찍힌다).
- * @details 호스트 스위트의 케이스는 예상 밖 Error 로그 하나로 진다(검증 레이어 · 드라이버 오류가 단언 없이 지나가지 않게).
- *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 테스트 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
- *          실행 요약이 견딘 줄 수를 찍고, 한 번도 나오지 않았으면 "지워도 된다" 고 알린다. 고쳤으면 이 줄을 지운다.
- */
-#define SW_TEST_KNOWN_LOG( SuiteName, substring, reason ) \
-    static test::KnownLogRegistrar SW_CONCAT( knownLog_##SuiteName##_, __LINE__ )( #SuiteName, substring, reason )
 
 /**
  * @brief 스위트의 케이스 하나가 @p milliseconds 를 넘지 말아야 한다고 선언합니다(시간 예산 — `TimeBudget`).

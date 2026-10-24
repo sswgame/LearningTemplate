@@ -64,18 +64,15 @@ namespace sw
         return matchCount;
     }
 
-    vector<string> AutomationLogCapture::collectUnexpectedLines( const AutomationLogPolicy& policy ) const
+    AutomationLogJudgement AutomationLogCapture::judgeLines( const AutomationLogPolicy& policy ) const
     {
-        vector<string>          listLine;
+        AutomationLogJudgement  judgement;
         std::scoped_lock<mutex> lock{ _mutex };
         for ( const AutomationLogLine& line : _listLogLine )
         {
-            const bool bGated = AutomationLogPolicy::isGatedLevel( line._level ) && AutomationLogPolicy::isExemptMessage( line._message ) == false;
-            if ( bGated == false || policy.isAllowed( line._message ) )
-                continue;
-            listLine.push_back( string( line._level == LogLevel::Error ? "[Error] [" : "[Warning] [" ) + line._caller + "] " + line._message );
+            policy.judge( line._level, line._caller, line._id, line._message, judgement );
         }
-        return listLine;
+        return judgement;
     }
 
     bool AutomationLogCapture::containsLine( string_view needle ) const
@@ -96,6 +93,7 @@ namespace sw
         AutomationLogLine line{};
         line._message    = entry._message;
         line._caller     = entry._caller;
+        line._id         = entry._pID != nullptr ? entry._pID : "";
         line._level      = entry._level;
         line._frameIndex = _frameIndex.load( std::memory_order_relaxed );
         _listLogLine.push_back( std::move( line ) );

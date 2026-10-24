@@ -1213,6 +1213,8 @@ namespace sw
         , _reportWriter{}
         , _listFailure{}
         , _listUnconfirmed{}
+        , _listUnhandledLog{}
+        , _listAllowedLogID{}
         , _listPendingScreenshot{}
         , _listWatch{}
         , _listRemembered{}
@@ -1527,6 +1529,8 @@ namespace sw
                 return "SKIP";
             case AutomationResult::Unconfirmed:
                 return "UNCONFIRMED";
+            case AutomationResult::UnhandledLog:
+                return "UNHANDLED LOG";
         }
         return "UNKNOWN";
     }
@@ -1560,11 +1564,12 @@ namespace sw
                 return false;
         }
         if ( _logPolicy.loadAllowList( outError ) == false )
-            return false;
+            return false; // 허용 목록이 틀리면 폴백 없이 읽기 오류(11)로 멈춘다
+        _logPolicy.selectScenario( _scenario.getName() );
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             if ( step._kind == "ExpectLog" )
-                _logPolicy.addAllowed( *step.findAttribute( "contains" ), "declared by <ExpectLog>" ); // 검사 함수가 contains 를 요구했다
+                _logPolicy.declareExpected( *step.findAttribute( "contains" ) ); // 검사 함수가 contains 를 요구했다
         }
         prepareWatches();
         _listRemembered.clear();
@@ -1970,26 +1975,31 @@ namespace sw
 
     void AutomationRunner::applyLogGate()
     {
-        vector<string> listUnexpected = _logCapture.collectUnexpectedLines( _logPolicy );
+        AutomationLogJudgement judgement = _logCapture.judgeLines( _logPolicy );
         if ( engine::areEngineServicesBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
             {
                 const string line         = "Missing localized text for key '" + key + "'";
                 const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
-                if ( bAlreadySeen == false && _logPolicy.isAllowed( line ) == false )
-                    listUnexpected.push_back( "[Warning] [LocalizationManager] " + line + " (before the scenario started)" );
+                if ( bAlreadySeen || _logPolicy.isDeclared( line ) )
+                    continue;
+                ++judgement._missingIDCount; // 이 줄은 합성이라 id 가 없다 — `<ExpectLog>` 로만 가릴 수 있다
+                judgement._listUnhandled.push_back( "[Warning] [LocalizationManager] (no log id) " + line + " (before the scenario started)" );
             }
         }
-        if ( listUnexpected.empty() )
+        _listAllowedLogID = std::move( judgement._listAllowedID );
+        if ( judgement.hasUnhandled() == false )
             return;
-        for ( string& line : listUnexpected )
+        _listUnhandledLog = std::move( judgement._listUnhandled );
+        for ( const string& line : _listUnhandledLog )
         {
-            _listFailure.push_back( "unexpected log: " + std::move( line ) );
+            _listFailure.push_back( "unhandled log: " + line );
         }
-        _result       = AutomationResult::Failed;
-        _finishReason = "unexpected Warning/Error log line(s) - fix them, declare them with <ExpectLog>, or add them with a reason to " +
-                        string( AutomationLogPolicy::kAllowListPath );
+        _result       = AutomationResult::UnhandledLog;
+        _finishReason = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
+                        " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
+                        string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }
 
     void AutomationRunner::endRun( InputManager* pInput )
@@ -2028,13 +2038,15 @@ namespace sw
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getResultName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
         AutomationReportParams report{};
-        report._scenarioName     = _scenario.getName();
-        report._pResultName      = getResultName( _result );
-        report._exitCode         = static_cast<int32>( _result );
-        report._frameCount       = _frameIndex;
-        report._reason           = _finishReason;
-        report._pListFailure     = &_listFailure;
-        report._pListUnconfirmed = &_listUnconfirmed;
+        report._scenarioName      = _scenario.getName();
+        report._pResultName       = getResultName( _result );
+        report._exitCode          = static_cast<int32>( _result );
+        report._frameCount        = _frameIndex;
+        report._reason            = _finishReason;
+        report._pListFailure      = &_listFailure;
+        report._pListUnconfirmed  = &_listUnconfirmed;
+        report._pListUnhandledLog = &_listUnhandledLog;
+        report._pListAllowedLog   = &_listAllowedLogID;
         _reportWriter.write( report );
     }
 } // namespace sw
