@@ -259,7 +259,7 @@ SW_TEST_CASE( UIScreenStackTest, ModuleUnloadClosesScreensWithItsWidgets )
     bool                     bKeepMapped = false;
     SW_EXPECT_EQUAL( 1u, fixture._ui.onModuleUnloading( pVtable, pVtable + 1, bKeepMapped ) );
     SW_EXPECT_TRUE( fixture._ui.findScreen( menu ) == nullptr );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "closed for module reload" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "UI.ScreenClosedForModuleReload" ) );
     SW_EXPECT_FALSE( bKeepMapped );
     SW_EXPECT_TRUE( fixture._ui.findScreen( other ) != nullptr );
 }

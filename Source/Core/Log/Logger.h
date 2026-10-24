@@ -4,6 +4,9 @@
  *
  * 로그 태그(Engine / Editor / Game)는 호출하는 모듈의 컴파일 정의 SW_LOG_TAG 로 정해집니다. 전역 _target 을 덮어쓰지
  * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 registerLogWrittenListener 로 구독합니다.
+ *
+ * **줄의 종류 id.** 테스트가 로그 문장(`countContaining("…")`)을 맞추면 문구를 고칠 때마다 지므로, 테스트가 찾을 줄에는 `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` 로
+ * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeLogWithID`)는 id 를 그대로 넘겨야 한다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -47,8 +50,16 @@ namespace sw
         virtual void initialize() = 0;
         /** @brief 출력 장치와 리스너를 닫습니다. */
         virtual void shutdown() = 0;
-        /** @brief 한 줄을 출력 장치와 리스너에 남깁니다. */
-        virtual void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) = 0;
+        /**
+         * @brief 한 줄을 출력 장치와 리스너에 남깁니다. @p pID 는 줄의 종류 id 입니다(`SW_LOG_ERROR_ID` · `LogEntry::_pID`) — 정적 글자여야 하고 없으면 nullptr 입니다.
+         * @details 감싸는 싱크는 @p pID 를 감싼 싱크로 그대로 넘깁니다. 넘기지 않으면 테스트가 id 로 줄을 찾지 못한다.
+         */
+        virtual void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) = 0;
+        /** @brief id 가 없는 한 줄입니다(`writeLogWithID` 에 nullptr 를 넘긴다). */
+        void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+        {
+            writeLogWithID( level, pTag, pCaller, pMessage, pFile, line, nullptr );
+        }
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
         virtual DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
         /** @brief 핸들로 리스너를 해제합니다. */
@@ -101,7 +112,7 @@ namespace sw
         /** @brief 전역 싱크가 @p pSink 이면 해제합니다(기본 싱크가 파괴될 때 부릅니다). */
         static void unregisterGlobalSink( ILogSink* pSink );
         /** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
-        static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
+        static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
         /** @brief 전역 싱크에 리스너를 붙입니다. */
         static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
         /** @brief 전역 싱크에서 리스너를 해제합니다. */
@@ -207,29 +218,41 @@ namespace sw
  * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 8KB 버퍼 포맷 비용도 치르지 않습니다.
  * @note 메시지 문자열을 __VA_ARGS__ 의 첫 인자로 받으므로, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
  */
-#define SW_LOG_INTERNAL( level, ... )                                                                  \
-    do                                                                                                 \
-    {                                                                                                  \
-        if ( ::sw::Logger::shouldLog( level ) )                                                        \
-        {                                                                                              \
-            ::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                          \
-            ::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );              \
-            ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__ ); \
-        }                                                                                              \
+#define SW_LOG_WRITE( level, pID, ... )                                                                     \
+    do                                                                                                      \
+    {                                                                                                       \
+        if ( ::sw::Logger::shouldLog( level ) )                                                             \
+        {                                                                                                   \
+            ::utf8 arrBuffer[::sw::constant::kMaxBuffer8192];                                               \
+            ::sw::formatstring( arrBuffer, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );                   \
+            ::sw::Logger::writeLogGlobal( level, SW_LOG_TAG, nullptr, arrBuffer, __FILE__, __LINE__, pID ); \
+        }                                                                                                   \
     } while ( false )
+
+/// @brief id 가 없는 줄입니다.
+#define SW_LOG_INTERNAL( level, ... ) SW_LOG_WRITE( level, nullptr, __VA_ARGS__ )
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR )
     /** @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. */
     #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )
+    /**
+     * @brief id 가 붙은 Error 입니다. 테스트가 줄의 문장이 아니라 id 로 찾는다(`test::ScopedLogCollector::countWithID`) — 문구를 고쳐도 테스트가 지지 않는다.
+     * @param id `"영역.사건"` 꼴의 **글자 상수**(예: `"Cook.RemovedOutput"`)입니다. 변수는 받지 않습니다(`"" id` 로 글자 상수를 강제한다). 같은 사건은 같은 id 를 씁니다.
+     */
+    #define SW_LOG_ERROR_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Error, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_ERROR( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_ERROR( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_ERROR_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING )
     /** @brief Warning 수준으로 포맷해 남깁니다. 배포본에도 남습니다. */
     #define SW_LOG_WARNING( ... ) SW_LOG_INTERNAL( sw::LogLevel::Warning, __VA_ARGS__ )
+    /** @brief id 가 붙은 Warning 입니다(`SW_LOG_ERROR_ID` 와 같다). */
+    #define SW_LOG_WARNING_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Warning, "" id, __VA_ARGS__ )
 #else
-    #define SW_LOG_WARNING( ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_WARNING( ... )        SW_LOG_DISCARDED( __VA_ARGS__ )
+    #define SW_LOG_WARNING_ID( id, ... ) SW_LOG_DISCARDED( __VA_ARGS__ )
 #endif
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )

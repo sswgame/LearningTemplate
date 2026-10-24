@@ -192,7 +192,7 @@ namespace sw
         std::filesystem::create_directories( FileUtilStdInternal::toPath( directoryPath ), errorCode );
         if ( errorCode || isDirectory( directoryPath ) == false )
         {
-            SW_LOG_ERROR( "Could not create directory '%#': %#", directoryPath, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "a file is in the way" );
+            SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", directoryPath, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "a file is in the way" );
             return false;
         }
         return true;

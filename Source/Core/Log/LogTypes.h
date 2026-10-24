@@ -40,14 +40,15 @@ namespace sw
     /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {
-        string     _tag;
-        string     _caller;
-        string     _message;
-        string     _file;
-        string     _timeStamp;
-        LogContext _context{}; ///< 줄을 쓴 스레드의 로그 문맥(요청 추적 id · 주체) — 리스너가 줄을 거를 수 있게
-        int32      _line{ 0 };
-        LogLevel   _level = LogLevel::Info;
+        string      _tag;
+        string      _caller;
+        string      _message;
+        string      _file;
+        string      _timeStamp;
+        LogContext  _context{};      ///< 줄을 쓴 스레드의 로그 문맥(요청 추적 id · 주체) — 리스너가 줄을 거를 수 있게
+        const utf8* _pID{ nullptr }; ///< 줄의 종류 id(`SW_LOG_ERROR_ID`)의 정적 글자. id 없이 남긴 줄은 nullptr — 문구가 바뀌어도 같은 사건을 가리킨다
+        int32       _line{ 0 };
+        LogLevel    _level = LogLevel::Info;
     };
 } // namespace sw
 

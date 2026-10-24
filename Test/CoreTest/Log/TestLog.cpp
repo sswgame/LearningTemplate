@@ -297,6 +297,22 @@ SW_TEST_CASE( LogTest, ErrorAndWarningSurviveEveryBuild )
 }
 
 /**
+ * @brief [LogTest] id 가 붙은 줄(`SW_LOG_*_ID`)은 문구와 상관없이 id 로 찾아지고, id 없는 줄은 어떤 id 로도 잡히지 않으며, 방어 구간의 감싼 싱크도 id 를 넘긴다
+ */
+SW_TEST_CASE( LogTest, LinesAreFoundByIDNotWording )
+{
+    test::ScopedLogCollector logs;
+    SW_TEST_DEFENSIVE_SCOPE( "the wrapped sink must keep the id" ); // 감싼 싱크가 id 를 넘기지 않으면 아래 세기가 0 이 된다
+    SW_LOG_WARNING_ID( "Test.LogIDProbe", "first wording %#", 1 );
+    SW_LOG_ERROR_ID( "Test.LogIDProbe", "completely different wording" );
+    SW_LOG_WARNING_ID( "Test.LogIDOther", "third" );
+    SW_LOG_WARNING( "Test.LogIDProbe is only a word in a line without an id" );
+    SW_EXPECT_EQUAL( 2u, logs.countWithID( "Test.LogIDProbe" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Test.LogIDOther" ) );
+    SW_EXPECT_EQUAL( 0u, logs.countWithID( "Test.LogIDMissing" ) );
+}
+
+/**
  * @brief [LogTest] 로그 레벨 개수
  */
 SW_TEST_CASE( LogTest, LogLevelCount )

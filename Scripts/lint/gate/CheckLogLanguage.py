@@ -29,7 +29,7 @@ _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 
 #: 로그 · assert 호출의 시작. 인자는 `;` 까지다.
-_kCallRe = re.compile(r"\bSW_(?:LOG_(?:ERROR|WARNING|INFO|TRACE|ASSERT)|ASSERT\w*)\s*\(")
+_kCallRe = re.compile(r"\bSW_(?:LOG_(?:ERROR|WARNING|INFO|TRACE|ASSERT)(?:_ID)?|ASSERT\w*)\s*\(")
 _kHangulRe = re.compile(r"[가-힣]")
 
 

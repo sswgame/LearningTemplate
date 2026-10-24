@@ -1668,13 +1668,14 @@ namespace
         void initialize() override {}
         void shutdown() override {}
 
-        void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
+        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
         {
             (void)level;
             (void)pTag;
             (void)pCaller;
             (void)pFile;
             (void)line;
+            (void)pID;
             ++_writeCount;
             // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 테스트가 스택을 넘기지 않도록 여기서 끊는다.
             if ( _writeCount > kMaxWriteCount )

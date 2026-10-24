@@ -108,7 +108,7 @@ namespace test
                 _pWrappedSink->shutdown();
         }
 
-        void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
+        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
         {
             if ( _pWrappedSink == nullptr )
                 return;
@@ -117,11 +117,11 @@ namespace test
             {
                 sw::fixed_string<sw::constant::kMaxBuffer4096> decoratedMsg{};
                 sw::formatstring( decoratedMsg.data(), decoratedMsg.capacity(), "[Expected Defensive Test] %#", pMessage != nullptr ? pMessage : "" );
-                _pWrappedSink->writeLog( level, pTag, pCaller, decoratedMsg.c_str(), pFile, line );
+                _pWrappedSink->writeLogWithID( level, pTag, pCaller, decoratedMsg.c_str(), pFile, line, pID );
             }
             else
             {
-                _pWrappedSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
+                _pWrappedSink->writeLogWithID( level, pTag, pCaller, pMessage, pFile, line, pID );
             }
         }
 
@@ -264,6 +264,7 @@ namespace test
                     return;
                 std::scoped_lock<sw::mutex> lock{ _mutex };
                 _listMessage.push_back( entry._message );
+                _listID.push_back( entry._pID != nullptr ? sw::string( entry._pID ) : sw::string{} );
             } ) );
         }
 
@@ -285,6 +286,22 @@ namespace test
             return count;
         }
 
+        /**
+         * @brief 모은 Warning · Error 중 id 가 `id` 인 줄(`SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID`)의 수입니다.
+         * @details 문장이 아니라 사건으로 찾는다 — 로그 문구를 고쳐도 테스트가 지지 않는다. 새 테스트는 `countContaining` 보다 이것을 쓴다(로그에 id 가 없으면 id 를 붙인다).
+         */
+        uint32 countWithID( sw::string_view id ) const
+        {
+            std::scoped_lock<sw::mutex> lock{ _mutex };
+            uint32                      count = 0;
+            for ( const sw::string& lineID : _listID )
+            {
+                if ( sw::string_view{ lineID.c_str(), lineID.size() } == id )
+                    ++count;
+            }
+            return count;
+        }
+
         /** @brief 모은 줄을 한 줄에 하나씩 이어 붙입니다 — 실패 메시지에 붙여 "무엇이 나왔나" 를 보입니다. */
         sw::string joined() const
         {
@@ -301,6 +318,7 @@ namespace test
     private:
         mutable sw::mutex      _mutex;
         sw::vector<sw::string> _listMessage;
+        sw::vector<sw::string> _listID; ///< `_listMessage` 와 같은 순서. id 없는 줄은 빈 글
         sw::DelegateHandle     _handle;
     };
 } // namespace test

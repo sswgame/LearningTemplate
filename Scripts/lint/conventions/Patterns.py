@@ -147,7 +147,7 @@ _kOutParamNamingRe = re.compile(
 
 # 타입세이프 포매터(SW_LOG_* / formatstring / appendFormat / SW_ASSERT_MSG)를 호출하는 라인
 _kFormatterCallRe = re.compile(
-    r'\b(?:SW_LOG_(?:INFO|WARNING|ERROR|DEBUG|FATAL|TRACE|VERBOSE)|SW_ASSERT_MSG|formatstring|appendFormat|appendFormatLine)\s*\('
+    r'\b(?:SW_LOG_(?:INFO|WARNING|ERROR|DEBUG|FATAL|TRACE|VERBOSE)(?:_ID)?|SW_ASSERT_MSG|formatstring|appendFormat|appendFormatLine)\s*\('
 )
 # 이 포매터가 파싱하지 못하는 printf 스펙.
 #
