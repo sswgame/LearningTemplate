@@ -97,10 +97,10 @@ namespace sw
             return false;
         _translationMode = profile.getTranslationMode();
 
-        bool bOk = PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourceRoot(), "source", _sourceRoot ) &&
-                   PoseRetargeterInternal::findBone( targetSkeleton, profile.getTargetRoot(), "target", _targetRoot ) &&
-                   PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourcePelvis(), "source", _sourcePelvis ) &&
-                   PoseRetargeterInternal::findBone( targetSkeleton, profile.getTargetPelvis(), "target", _targetPelvis );
+        const bool bOk = PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourceRoot(), "source", _sourceRoot ) &&
+                         PoseRetargeterInternal::findBone( targetSkeleton, profile.getTargetRoot(), "target", _targetRoot ) &&
+                         PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourcePelvis(), "source", _sourcePelvis ) &&
+                         PoseRetargeterInternal::findBone( targetSkeleton, profile.getTargetPelvis(), "target", _targetPelvis );
         if ( bOk == false )
             return false;
 
@@ -115,6 +115,29 @@ namespace sw
         listTargetBone.push_back( _targetRoot );
         listSourceBone.push_back( _sourcePelvis );
         listTargetBone.push_back( _targetPelvis );
+        if ( collectChainBones( profile, sourceSkeleton, targetSkeleton, listSourceBone, listTargetBone ) == false )
+            return false;
+        if ( collectNamedBones( profile, sourceSkeleton, targetSkeleton, listSourceBone, listTargetBone ) == false )
+            return false;
+        populatePairs( listSourceBone, listTargetBone );
+
+        _sourceRootReference       = _sourceBuffer.getModelPosition( _sourceRoot );
+        _targetRootReference       = _targetBuffer.getModelPosition( _targetRoot );
+        _sourcePelvisReference     = _sourceBuffer.getModelPosition( _sourcePelvis );
+        _targetPelvisReference     = _targetBuffer.getModelPosition( _targetPelvis );
+        const float32 sourceHeight = _sourcePelvisReference._y - _sourceRootReference._y;
+        const float32 targetHeight = _targetPelvisReference._y - _targetRootReference._y;
+        _heightRatio               = ( MathUtil::abs( sourceHeight ) > MathUtil::kEpsilon ) ? targetHeight / sourceHeight : 1.0f;
+        if ( profile.getHeightRatioOverride() > 0.0f )
+            _heightRatio = profile.getHeightRatioOverride();
+        _bInitialized = SW_TRUE;
+        return true;
+    }
+
+    bool PoseRetargeter::collectChainBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,
+                                            vector<uint32>& inoutListTargetBone )
+    {
+        bool bOk = true;
         for ( const RetargetChain& chain : profile.getChains() )
         {
             vector<uint32> listChainSource;
@@ -141,8 +164,8 @@ namespace sw
             {
                 const float32 ratio       = targetCount > 1 ? static_cast<float32>( targetIndex ) / static_cast<float32>( targetCount - 1 ) : 0.0f;
                 const size_t  sourceIndex = static_cast<size_t>( MathUtil::round( ratio * static_cast<float32>( sourceCount - 1 ) ) );
-                listSourceBone.push_back( listChainSource[sourceIndex] );
-                listTargetBone.push_back( listChainTarget[targetIndex] );
+                inoutListSourceBone.push_back( listChainSource[sourceIndex] );
+                inoutListTargetBone.push_back( listChainTarget[targetIndex] );
             }
             if ( chain._bIKGoal == SW_TRUE && targetCount >= 2 )
             {
@@ -154,18 +177,23 @@ namespace sw
                 _listIKChain.push_back( ikChain );
             }
         }
+        return true;
+    }
 
-        // 본 이름 테이블과 같은 이름 짝은 사슬 뒤에 넣는다. 아래 중복 검사가 먼저 정한 짝을 남긴다.
+    bool PoseRetargeter::collectNamedBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,
+                                            vector<uint32>& inoutListTargetBone ) const
+    {
+        // 본 이름 테이블과 같은 이름 짝은 사슬 뒤에 넣는다. populatePairs 의 중복 검사가 먼저 정한 짝을 남긴다.
         for ( const RetargetBonePair& namePair : profile.getBonePairs() )
         {
-            uint32 sourceBone = 0;
-            uint32 targetBone = 0;
-            bOk               = PoseRetargeterInternal::findBone( sourceSkeleton, namePair._source, "source", sourceBone ) &&
-                  PoseRetargeterInternal::findBone( targetSkeleton, namePair._target, "target", targetBone );
+            uint32     sourceBone = 0;
+            uint32     targetBone = 0;
+            const bool bOk        = PoseRetargeterInternal::findBone( sourceSkeleton, namePair._source, "source", sourceBone ) &&
+                             PoseRetargeterInternal::findBone( targetSkeleton, namePair._target, "target", targetBone );
             if ( bOk == false )
                 return false;
-            listSourceBone.push_back( sourceBone );
-            listTargetBone.push_back( targetBone );
+            inoutListSourceBone.push_back( sourceBone );
+            inoutListTargetBone.push_back( targetBone );
         }
         if ( profile.isMappingSameNames() )
         {
@@ -174,11 +202,15 @@ namespace sw
                 const int32 sourceBone = sourceSkeleton.findBoneIndex( targetSkeleton.getBone( targetBone )._name );
                 if ( sourceBone < 0 )
                     continue;
-                listSourceBone.push_back( static_cast<uint32>( sourceBone ) );
-                listTargetBone.push_back( targetBone );
+                inoutListSourceBone.push_back( static_cast<uint32>( sourceBone ) );
+                inoutListTargetBone.push_back( targetBone );
             }
         }
+        return true;
+    }
 
+    void PoseRetargeter::populatePairs( const vector<uint32>& listSourceBone, const vector<uint32>& listTargetBone )
+    {
         for ( size_t index = 0; index < listTargetBone.size(); ++index )
         {
             bool bDuplicate = false;
@@ -197,18 +229,6 @@ namespace sw
         }
         // 대상 본 순서(부모가 먼저)로 처리한다. 모델 회전을 쓸 때 부모가 이미 이번 값이어야 하기 때문이다.
         std::sort( _listPair.begin(), _listPair.end(), &PoseRetargeter::isPairBefore );
-
-        _sourceRootReference       = _sourceBuffer.getModelPosition( _sourceRoot );
-        _targetRootReference       = _targetBuffer.getModelPosition( _targetRoot );
-        _sourcePelvisReference     = _sourceBuffer.getModelPosition( _sourcePelvis );
-        _targetPelvisReference     = _targetBuffer.getModelPosition( _targetPelvis );
-        const float32 sourceHeight = _sourcePelvisReference._y - _sourceRootReference._y;
-        const float32 targetHeight = _targetPelvisReference._y - _targetRootReference._y;
-        _heightRatio               = ( MathUtil::abs( sourceHeight ) > MathUtil::kEpsilon ) ? targetHeight / sourceHeight : 1.0f;
-        if ( profile.getHeightRatioOverride() > 0.0f )
-            _heightRatio = profile.getHeightRatioOverride();
-        _bInitialized = SW_TRUE;
-        return true;
     }
 
     bool RetargetPoseUtil::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )

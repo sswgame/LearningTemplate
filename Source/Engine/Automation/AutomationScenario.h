@@ -131,6 +131,12 @@ namespace sw
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */
         [[nodiscard]] bool parseLoad( const XMLNode& node, string& outReason );
+        /** @brief `<Scenario>` 의 속성 하나를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다(오타가 기본값으로 조용히 바뀌지 않게 한다). */
+        [[nodiscard]] bool parseRootAttribute( string_view name, const utf8* pText, string& outReason );
+        /** @brief `<Scenario>` 의 자식(`<Load>` `<Scratch>` `<Launch>` `<At>`)을 차례로 읽습니다. 틀리면 false 와 이유(원본 이름 포함)입니다. */
+        [[nodiscard]] bool parseChildren( const XMLNode& root, string& outError );
+        /** @brief `<At>` 하나의 시점과 단계들을 읽어 `_listStep` 에 더합니다. 단계 번호와 앞 시점을 이어 갱신합니다. */
+        [[nodiscard]] bool parseAtNode( const XMLNode& atNode, uint32& inoutOrderInFile, uint32& inoutPreviousFrame, string& outError );
 
         vector<AutomationStep>          _listStep;
         vector<AutomationScratchFolder> _listScratchFolder;

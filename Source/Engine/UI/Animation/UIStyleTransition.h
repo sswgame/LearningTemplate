@@ -101,5 +101,14 @@ namespace sw
          * @details 부모의 채널이 방금 만들어졌든(같은 스타일 패스) 진행 중이든 같은 출발값 · 지연 · 진행을 그대로 가져와 두 위젯이 같은 값을 보이게 한다.
          */
         static bool findParentChannel( const Widget& widget, UIStyleField field, const float32 ( &newArr )[4], UIStyleTransitionState::Channel& outChannel );
+        /**
+         * @brief 바뀐 필드 하나의 새 채널을 만듭니다. 목표값은 새 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값입니다.
+         * @param inoutFrom 출발값입니다. @p bHaveFrom 이 참이면(진행 중이던 채널의 지금 값) 그대로 쓰고, 아니면 옛 스타일 · 위젯의 옛 값으로 채웁니다.
+         * @return 새 채널이 필요 없으면 false 입니다(전환을 적지 않은 필드 · 읽지 못하는 위젯 · 출발값과 목표가 같음 — 바로 바뀐다).
+         */
+        [[nodiscard]] static bool makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
+                                               uint32 oldStates, uint32 newStates, bool bHaveFrom, float32 ( &inoutFrom )[4], UIStyleTransitionState::Channel& outChannel );
+        /** @brief 채널이 남은 상태의 보이는 값을 새 스타일에서 다시 만들고(채널의 지금 값을 얹는다), 새로 들어온 위젯이면 트리의 전환 목록에 올립니다. */
+        static void refreshShownStyle( Widget& widget, UIStyleTransitionState& state, const UIComputedStyle& newStyle );
     };
 } // namespace sw

@@ -116,6 +116,108 @@ namespace sw
                     return nullptr;
                 return make_unique<GoogleReceiptValidator>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
             }
+
+            /** @brief 항목의 `sandbox`(참 · 거짓, 없으면 거짓)를 읽습니다. 참 · 거짓이 아니면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readSandbox( const JSONValue& entry, const utf8* pKind, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                bool bSandbox = false;
+                if ( entry.readOptionalInto( "sandbox", bSandbox ) == false )
+                {
+                    outError = string( "receipt provider '" ) + pKind + "' has a sandbox that is not true or false";
+                    return false;
+                }
+                outConfig._bSandbox = bSandbox ? SW_TRUE : SW_FALSE;
+                return true;
+            }
+
+            /** @brief 스팀 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readSteamEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                outConfig._appID                = readText( entry, "appId" );
+                outConfig._keySecretEnvironment = readText( entry, "keySecretEnvironment" );
+                if ( readSandbox( entry, kKindSteam, outConfig, outError ) == false )
+                    return false;
+                if ( SteamReceiptValidator::isOrderID( outConfig._appID ) == false || outConfig._keySecretEnvironment.empty() )
+                {
+                    outError = "receipt provider 'steam' needs a numeric appId and keySecretEnvironment";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 애플 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readAppleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                outConfig._issuerID                    = readText( entry, "issuerId" );
+                outConfig._keyID                       = readText( entry, "keyId" );
+                outConfig._bundleID                    = readText( entry, "bundleId" );
+                outConfig._signingKeySecretEnvironment = readText( entry, "signingKeySecretEnvironment" );
+                outConfig._rootCertificateFile         = readText( entry, "rootCertificateFile" );
+                if ( readSandbox( entry, kKindApple, outConfig, outError ) == false )
+                    return false;
+                const bool bIdentityGiven = outConfig._issuerID.empty() == false && outConfig._keyID.empty() == false && outConfig._bundleID.empty() == false;
+                const bool bFilesGiven    = outConfig._signingKeySecretEnvironment.empty() == false && outConfig._rootCertificateFile.empty() == false;
+                if ( bIdentityGiven == false || bFilesGiven == false )
+                {
+                    outError = "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 구글 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readGoogleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                outConfig._packageName               = readText( entry, "packageName" );
+                outConfig._serviceAccountEnvironment = readText( entry, "serviceAccountEnvironment" );
+                outConfig._tokenURL                  = readText( entry, "tokenUrl" );
+                if ( outConfig._packageName.empty() || outConfig._serviceAccountEnvironment.empty() )
+                {
+                    outError = "receipt provider 'google' needs packageName and serviceAccountEnvironment";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief `providers` 배열의 항목 하나를 읽습니다 — 알려진 키만, 종류와 폴링 주기를 검사하고 종류별 설정을 읽습니다. */
+            [[nodiscard]] static bool readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                if ( entry.isObject() == false )
+                {
+                    outError = "receipt provider entry is not an object";
+                    return false;
+                }
+                for ( const string& key : entry.getMemberNames() )
+                {
+                    if ( VectorUtil::contains( kKnownKeys, key ) == false )
+                    {
+                        outError = "unknown receipt provider setting '" + key + "'";
+                        return false;
+                    }
+                }
+                outConfig._kind       = readText( entry, "kind" );
+                outConfig._baseURL    = readText( entry, "baseUrl" );
+                const bool bSteam     = outConfig._kind == kKindSteam;
+                const bool bGoogle    = outConfig._kind == kKindGoogle;
+                const bool bApple     = outConfig._kind == kKindApple;
+                const bool bKnownKind = bSteam || bGoogle || bApple;
+                if ( bKnownKind == false )
+                {
+                    outError = "receipt provider kind '" + outConfig._kind + "' is unknown (steam, google, apple)";
+                    return false;
+                }
+                const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
+                if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < kMinPollSeconds )
+                {
+                    outError = "receipt provider '" + outConfig._kind + "' needs " + pPollKey + " of at least " + to_string( kMinPollSeconds );
+                    return false;
+                }
+                if ( bSteam )
+                    return readSteamEntry( entry, outConfig, outError );
+                if ( bApple )
+                    return readAppleEntry( entry, outConfig, outError );
+                return readGoogleEntry( entry, outConfig, outError );
+            }
         };
     } // namespace
 } // namespace sw
@@ -134,7 +236,6 @@ namespace sw
 
     bool ReceiptProviderSet::readSettings( string_view jsonText, vector<ReceiptProviderConfig>& outListSettings, string& outError )
     {
-        using Internal = ReceiptProviderSetInternal;
         outListSettings.clear();
         JSONDocument document;
         if ( document.tryParse( jsonText ) == false )
@@ -150,88 +251,9 @@ namespace sw
         }
         for ( size_t index = 0; index < providers.size(); ++index )
         {
-            const JSONValue entry = providers.at( index );
-            if ( entry.isObject() == false )
-            {
-                outError = "receipt provider entry is not an object";
-                return false;
-            }
-            for ( const string& key : entry.getMemberNames() )
-            {
-                if ( VectorUtil::contains( Internal::kKnownKeys, key ) == false )
-                {
-                    outError = "unknown receipt provider setting '" + key + "'";
-                    return false;
-                }
-            }
             ReceiptProviderConfig& config = outListSettings.emplace_back();
-            config._kind                  = Internal::readText( entry, "kind" );
-            config._baseURL               = Internal::readText( entry, "baseUrl" );
-            const bool bSteam             = config._kind == Internal::kKindSteam;
-            const bool bGoogle            = config._kind == Internal::kKindGoogle;
-            const bool bApple             = config._kind == Internal::kKindApple;
-            const bool bKnownKind         = bSteam || bGoogle || bApple;
-            if ( bKnownKind == false )
-            {
-                outError = "receipt provider kind '" + config._kind + "' is unknown (steam, google, apple)";
+            if ( ReceiptProviderSetInternal::readEntry( providers.at( index ), config, outError ) == false )
                 return false;
-            }
-            const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
-            if ( entry.readOptionalInto( pPollKey, config._pollSeconds ) == false || config._pollSeconds < Internal::kMinPollSeconds )
-            {
-                outError = "receipt provider '" + config._kind + "' needs " + pPollKey + " of at least " + to_string( Internal::kMinPollSeconds );
-                return false;
-            }
-            if ( bSteam )
-            {
-                config._appID                = Internal::readText( entry, "appId" );
-                config._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment" );
-                bool bSandbox                = false;
-                if ( entry.readOptionalInto( "sandbox", bSandbox ) == false )
-                {
-                    outError = "receipt provider 'steam' has a sandbox that is not true or false";
-                    return false;
-                }
-                config._bSandbox = bSandbox ? SW_TRUE : SW_FALSE;
-                if ( SteamReceiptValidator::isOrderID( config._appID ) == false || config._keySecretEnvironment.empty() )
-                {
-                    outError = "receipt provider 'steam' needs a numeric appId and keySecretEnvironment";
-                    return false;
-                }
-            }
-            else if ( bApple )
-            {
-                config._issuerID                    = Internal::readText( entry, "issuerId" );
-                config._keyID                       = Internal::readText( entry, "keyId" );
-                config._bundleID                    = Internal::readText( entry, "bundleId" );
-                config._signingKeySecretEnvironment = Internal::readText( entry, "signingKeySecretEnvironment" );
-                config._rootCertificateFile         = Internal::readText( entry, "rootCertificateFile" );
-                bool bSandbox                       = false;
-                if ( entry.readOptionalInto( "sandbox", bSandbox ) == false )
-                {
-                    outError = "receipt provider 'apple' has a sandbox that is not true or false";
-                    return false;
-                }
-                config._bSandbox          = bSandbox ? SW_TRUE : SW_FALSE;
-                const bool bIdentityGiven = config._issuerID.empty() == false && config._keyID.empty() == false && config._bundleID.empty() == false;
-                const bool bFilesGiven    = config._signingKeySecretEnvironment.empty() == false && config._rootCertificateFile.empty() == false;
-                if ( bIdentityGiven == false || bFilesGiven == false )
-                {
-                    outError = "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
-                    return false;
-                }
-            }
-            else
-            {
-                config._packageName               = Internal::readText( entry, "packageName" );
-                config._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
-                config._tokenURL                  = Internal::readText( entry, "tokenUrl" );
-                if ( config._packageName.empty() || config._serviceAccountEnvironment.empty() )
-                {
-                    outError = "receipt provider 'google' needs packageName and serviceAccountEnvironment";
-                    return false;
-                }
-            }
         }
         return true;
     }

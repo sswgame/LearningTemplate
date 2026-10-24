@@ -108,6 +108,374 @@ namespace sw
             return FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" ),
                                        string( prefix ) + "_" + to_string( wallUnixMilliseconds ) + ProfilerTraceExport::kFileExtension );
         }
+
+        /** @brief 합치기에서 파일 하나의 정보입니다. */
+        struct MergeSource
+        {
+            JSONDocument _document;
+            JSONValue    _listEvent;
+            string       _label;
+            string       _hostName;
+            string       _alignment;
+            int64        _wallUnixMilliseconds{ 0 };
+            int64        _monotonicNanoseconds{ 0 };
+            int64        _shiftNanos{ 0 };
+            int64        _sourcePID{ 0 };
+            int64        _outputPID{ 0 };
+            bool         _bHasClock{ false };
+        };
+
+        /** @brief 트레이스를 읽을 때 들고 가는 상태입니다 — 스레드 키(pid, tid) 목록과 프로세스 이름 목록. 스레드 번호는 `ProfilerLoadedTrace::_listThread` 와 같은 순서다. */
+        struct TraceParseState
+        {
+            struct ThreadKey
+            {
+                int64 _pid;
+                int64 _tid;
+            };
+            struct ProcessName
+            {
+                int64  _pid;
+                string _name;
+            };
+            vector<ThreadKey>   _listKey;
+            vector<ProcessName> _listProcessName; ///< 합친 파일이면 스레드 줄 앞에 프로세스 이름을 붙인다
+        };
+
+        struct ProfilerTraceExportInternal
+        {
+            /** @brief 머리말(`otherData`) 칸을 읽습니다. 칸은 모두 선택이다(다른 도구가 쓴 파일). 없으면 머리말의 초기값이고, 타입이 다르면 false 입니다. */
+            [[nodiscard]] static bool readMeta( const JSONValue& root, ProfilerTraceMeta& outMeta, string& outError )
+            {
+                const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
+                if ( other.isObject() == false )
+                    return true;
+                outMeta._processName = other.get( "processName" ).asString();
+                outMeta._hostName    = other.get( "hostName" ).asString();
+                const bool bMetaRead = other.readOptionalInto( "processID", outMeta._processID ) && other.readOptionalInto( "wallUnixMilliseconds", outMeta._wallUnixMilliseconds ) &&
+                                       other.readOptionalInto( "monotonicNanoseconds", outMeta._monotonicNanoseconds ) && other.readOptionalInto( "truncated", outMeta._bTruncated );
+                if ( bMetaRead == false )
+                {
+                    outError = "otherData has a value of the wrong type";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief (pid, tid) 의 스레드 번호를 찾고, 없으면 `tid N` 이름으로 새로 더합니다. */
+            static size_t findThread( TraceParseState& inoutState, ProfilerLoadedTrace& inoutTrace, int64 pid, int64 tid )
+            {
+                for ( size_t index = 0; index < inoutState._listKey.size(); ++index )
+                {
+                    if ( inoutState._listKey[index]._pid == pid && inoutState._listKey[index]._tid == tid )
+                        return index;
+                }
+                inoutState._listKey.push_back( { pid, tid } );
+                ProfilerTimelineThread thread;
+                thread._name = "tid " + to_string( tid );
+                inoutTrace._listThread.push_back( thread );
+                return inoutState._listKey.size() - 1;
+            }
+
+            /** @brief 구간 이름의 슬롯 번호를 찾고, 없으면 이름 표에 더합니다. */
+            static uint32 findSlot( ProfilerLoadedTrace& inoutTrace, const string& name )
+            {
+                for ( size_t index = 0; index < inoutTrace._listSlotName.size(); ++index )
+                {
+                    if ( inoutTrace._listSlotName[index] == name )
+                        return static_cast<uint32>( index );
+                }
+                inoutTrace._listSlotName.push_back( name );
+                return static_cast<uint32>( inoutTrace._listSlotName.size() - 1 );
+            }
+
+            /**
+             * @brief `traceEvents` 를 읽어 구간(ph=X) · 스레드 이름 · 프로세스 이름 · 프레임 표시(ph=i)를 @p inoutTrace 에 담습니다.
+             * @return 구간이 하나도 없거나 칸이 틀리면 이유를 @p outError 에 적고 false 입니다.
+             */
+            [[nodiscard]] static bool readEvents( const JSONValue& events, TraceParseState& inoutState, ProfilerLoadedTrace& inoutTrace, string& outError )
+            {
+                size_t eventCount = 0;
+                for ( size_t index = 0; index < events.size(); ++index )
+                {
+                    const JSONValue event = events.at( index );
+                    const string    phase = event.get( "ph" ).asString();
+                    // pid · tid 는 없으면 0 번 프로세스 · 스레드다(Trace Event 사양). 정수가 아니면 파일을 거절한다.
+                    int64 pid{ 0 };
+                    int64 tid{ 0 };
+                    if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
+                    {
+                        outError = "event " + to_string( index ) + " has a pid or tid that is not an integer";
+                        return false;
+                    }
+                    if ( phase == "X" )
+                    {
+                        const std::optional<float64> begin    = event.readRequired<float64>( "ts" );
+                        const std::optional<float64> duration = event.readRequired<float64>( "dur" );
+                        if ( begin.has_value() == false || duration.has_value() == false )
+                        {
+                            outError = "complete event " + to_string( index ) + " needs numeric ts and dur";
+                            return false;
+                        }
+                        ProfilerTimelineEvent loaded;
+                        loaded._beginNanos = static_cast<uint64>( *begin * constant::kNanosecondsPerMicrosecond + 0.5 );
+                        loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::kNanosecondsPerMicrosecond + 0.5 );
+                        loaded._slot       = findSlot( inoutTrace, event.get( "name" ).asString() );
+                        inoutTrace._listThread[findThread( inoutState, inoutTrace, pid, tid )]._listEvent.push_back( loaded );
+                        ++eventCount;
+                    }
+                    else if ( phase == "M" && event.get( "name" ).asString() == "thread_name" )
+                    {
+                        inoutTrace._listThread[findThread( inoutState, inoutTrace, pid, tid )]._name = event.get( "args" ).get( "name" ).asString();
+                    }
+                    else if ( phase == "M" && event.get( "name" ).asString() == "process_name" )
+                    {
+                        inoutState._listProcessName.push_back( { pid, event.get( "args" ).get( "name" ).asString() } );
+                    }
+                    else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
+                    {
+                        const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
+                        if ( frameBegin.has_value() == false )
+                        {
+                            outError = "frame marker " + to_string( index ) + " needs a numeric ts";
+                            return false;
+                        }
+                        inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::kNanosecondsPerMicrosecond + 0.5 ) );
+                    }
+                }
+                if ( eventCount == 0 )
+                {
+                    outError = "no complete events (ph=X) in the file";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 여러 프로세스를 합친 파일이면 같은 스레드 이름("Game Thread")이 프로세스마다 있으니 줄 이름 앞에 프로세스를 붙입니다. */
+            static void prefixProcessNames( const TraceParseState& state, ProfilerLoadedTrace& inoutTrace )
+            {
+                bool bMultiProcess = false;
+                for ( const TraceParseState::ThreadKey& key : state._listKey )
+                {
+                    bMultiProcess = bMultiProcess || key._pid != state._listKey[0]._pid;
+                }
+                if ( bMultiProcess == false )
+                    return;
+                for ( size_t index = 0; index < state._listKey.size(); ++index )
+                {
+                    string processName = "pid " + to_string( state._listKey[index]._pid );
+                    for ( const TraceParseState::ProcessName& entry : state._listProcessName )
+                    {
+                        if ( entry._pid == state._listKey[index]._pid )
+                            processName = entry._name;
+                    }
+                    inoutTrace._listThread[index]._name = processName + " / " + inoutTrace._listThread[index]._name;
+                }
+            }
+
+            /** @brief 스레드마다 구간을 시작 시각 순으로 세우고 깊이(아직 안 끝난 바깥 구간 수)를 정하며, 전체 시작 · 끝 시각을 채웁니다. */
+            static void assignDepthsAndRange( ProfilerLoadedTrace& inoutTrace )
+            {
+                bool bFirst = true;
+                for ( ProfilerTimelineThread& thread : inoutTrace._listThread )
+                {
+                    std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(),
+                                      []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
+                    { return left._beginNanos < right._beginNanos; } );
+                    vector<uint64> listOpenEnd;
+                    for ( ProfilerTimelineEvent& event : thread._listEvent )
+                    {
+                        while ( listOpenEnd.empty() == false && listOpenEnd.back() <= event._beginNanos )
+                        {
+                            listOpenEnd.pop_back();
+                        }
+                        event._depth = static_cast<uint16>( listOpenEnd.size() );
+                        listOpenEnd.push_back( event._endNanos );
+                        inoutTrace._beginNanos = ( bFirst || event._beginNanos < inoutTrace._beginNanos ) ? event._beginNanos : inoutTrace._beginNanos;
+                        inoutTrace._endNanos   = ( bFirst || event._endNanos > inoutTrace._endNanos ) ? event._endNanos : inoutTrace._endNanos;
+                        bFirst                 = false;
+                    }
+                }
+            }
+
+            /** @brief 마이크로초(실수) 시각에 나노초 이동을 더해 나노초 정수로 돌려줍니다(음수는 0). */
+            static uint64 shiftMicroseconds( float64 micro, int64 shiftNanos )
+            {
+                const float64 nanos = micro * constant::kNanosecondsPerMicrosecond + static_cast<float64>( shiftNanos );
+                return nanos <= 0.0 ? 0 : static_cast<uint64>( nanos + 0.5 );
+            }
+
+            /** @brief 합칠 파일 하나를 읽습니다 — 이벤트 배열, 시계 머리말, 표시 이름, 원래 pid. 틀리면 이유를 @p outReport 에 적고 false 입니다. */
+            [[nodiscard]] static bool readMergeSource( const ProfilerTraceMergeInput& input, size_t index, MergeSource& outSource, string& outReport )
+            {
+                if ( outSource._document.parse( input._json ) == false )
+                {
+                    outReport = "input " + to_string( index ) + " is not valid JSON: " + outSource._document.getLastError();
+                    return false;
+                }
+                const JSONValue root = outSource._document.getRoot();
+                outSource._listEvent = root.isArray() ? root : root.get( "traceEvents" );
+                if ( outSource._listEvent.isArray() == false )
+                {
+                    outReport = "input " + to_string( index ) + " has no traceEvents array";
+                    return false;
+                }
+                const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
+                const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
+                if ( bHasClockData )
+                {
+                    const std::optional<int64> wallMilliseconds     = other.readRequired<int64>( "wallUnixMilliseconds" );
+                    const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
+                    if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
+                    {
+                        outReport = "input " + to_string( index ) + " has a clock header that is not integers";
+                        return false;
+                    }
+                    outSource._bHasClock            = true;
+                    outSource._hostName             = other.get( "hostName" ).asString();
+                    outSource._wallUnixMilliseconds = *wallMilliseconds;
+                    outSource._monotonicNanoseconds = *monotonicNanoseconds;
+                }
+                outSource._label = input._label;
+                if ( outSource._label.empty() && other.isObject() )
+                    outSource._label = other.get( "processName" ).asString();
+                if ( outSource._label.empty() )
+                    outSource._label = "trace " + to_string( index );
+                for ( size_t eventIndex = 0; eventIndex < outSource._listEvent.size(); ++eventIndex )
+                {
+                    const JSONValue pid = outSource._listEvent.at( eventIndex ).get( "pid" );
+                    if ( pid.isNumber() )
+                    {
+                        const std::optional<int64> sourcePID = pid.read<int64>();
+                        if ( sourcePID.has_value() == false )
+                        {
+                            outReport = "input " + to_string( index ) + " has a pid that is not an integer";
+                            return false;
+                        }
+                        outSource._sourcePID = *sourcePID;
+                        break;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 시간을 맞춥니다 — 첫 파일이 기준이다. 같은 기계는 단조 시계가 같으니 그대로, 다른 기계는 벽시계 − 단조 시계 차이만큼 옮긴다. */
+            static void alignSources( vector<unique_ptr<MergeSource>>& inoutListSource )
+            {
+                const MergeSource& reference = *inoutListSource[0];
+                for ( unique_ptr<MergeSource>& pSource : inoutListSource )
+                {
+                    if ( pSource.get() == &reference )
+                    {
+                        pSource->_alignment = "reference";
+                    }
+                    else if ( pSource->_bHasClock == false || reference._bHasClock == false )
+                    {
+                        pSource->_alignment = "unaligned (no clock header)";
+                    }
+                    else if ( pSource->_hostName.empty() == false && pSource->_hostName == reference._hostName )
+                    {
+                        pSource->_alignment = "same host (exact)";
+                    }
+                    else
+                    {
+                        pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * constant::kNanosecondsPerMillisecond -
+                                               ( pSource->_monotonicNanoseconds - reference._monotonicNanoseconds );
+                        pSource->_alignment = "wall clock (off by the clock difference between hosts)";
+                    }
+                }
+            }
+
+            /** @brief 줄 묶음 번호를 정합니다 — 원래 pid 를 쓰되 앞 파일과 겹치면 새 번호. */
+            static void assignOutputPIDs( vector<unique_ptr<MergeSource>>& inoutListSource )
+            {
+                int64 maxPID = 0;
+                for ( const unique_ptr<MergeSource>& pSource : inoutListSource )
+                {
+                    maxPID = pSource->_sourcePID > maxPID ? pSource->_sourcePID : maxPID;
+                }
+                for ( size_t index = 0; index < inoutListSource.size(); ++index )
+                {
+                    MergeSource& source = *inoutListSource[index];
+                    source._outputPID   = source._sourcePID;
+                    for ( size_t previous = 0; previous < index; ++previous )
+                    {
+                        if ( inoutListSource[previous]->_outputPID == source._outputPID )
+                        {
+                            source._outputPID = ++maxPID;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            /** @brief 합친 파일의 머리(`otherData` 와 `traceEvents` 배열의 여는 부분)를 씁니다. */
+            static void appendMergedHeader( string& outJSON, const vector<unique_ptr<MergeSource>>& listSource )
+            {
+                outJSON = "{\"displayTimeUnit\":\"ms\",\"otherData\":{\"processName\":\"merged\",\"merged\":true,\"sources\":[";
+                for ( size_t index = 0; index < listSource.size(); ++index )
+                {
+                    const MergeSource& source = *listSource[index];
+                    outJSON += index == 0 ? "{\"label\":" : ",{\"label\":";
+                    appendQuoted( outJSON, source._label );
+                    outJSON += ",\"hostName\":";
+                    appendQuoted( outJSON, source._hostName );
+                    outJSON += ",\"processID\":" + to_string( source._outputPID ) + ",\"shiftNanoseconds\":" + to_string( source._shiftNanos ) + ",\"alignment\":";
+                    appendQuoted( outJSON, source._alignment );
+                    outJSON += '}';
+                }
+                outJSON += "]},\"traceEvents\":[";
+            }
+
+            /** @brief 파일마다 프로세스 이름 줄을 쓰고 이벤트를 pid · 시각을 옮겨 씁니다. 쓴 이벤트 수를 반환합니다. */
+            static size_t appendMergedEvents( string& outJSON, const vector<unique_ptr<MergeSource>>& listSource )
+            {
+                size_t eventCount = 0;
+                bool   bFirst     = true;
+                for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
+                {
+                    const MergeSource& source = *listSource[sourceIndex];
+                    const string       pid    = to_string( source._outputPID );
+                    string             label  = source._label;
+                    if ( source._hostName.empty() == false )
+                        label += " @ " + source._hostName;
+                    label += " [" + source._alignment + "]";
+                    outJSON += bFirst ? "" : ",";
+                    bFirst = false;
+                    outJSON += "{\"name\":\"process_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"name\":";
+                    appendQuoted( outJSON, label );
+                    outJSON += "}},{\"name\":\"process_sort_index\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"sort_index\":" + to_string( sourceIndex ) + "}}";
+
+                    for ( size_t eventIndex = 0; eventIndex < source._listEvent.size(); ++eventIndex )
+                    {
+                        const JSONValue event = source._listEvent.at( eventIndex );
+                        if ( event.isObject() == false )
+                            continue;
+                        if ( event.get( "ph" ).asString() == "M" && event.get( "name" ).asString() == "process_name" )
+                            continue; // 위에서 맞춘 방법을 담은 이름으로 바꿨다
+                        outJSON += ",{";
+                        bool bFirstMember = true;
+                        for ( const string& member : event.getMemberNames() )
+                        {
+                            outJSON += bFirstMember ? "" : ",";
+                            bFirstMember = false;
+                            appendQuoted( outJSON, member );
+                            outJSON += ':';
+                            const JSONValue value = event.get( member, false );
+                            if ( member == "pid" )
+                                outJSON += pid;
+                            else if ( const std::optional<float64> ts = member == "ts" && value.isNumber() ? value.read<float64>() : std::nullopt; ts.has_value() )
+                                appendMicroseconds( outJSON, shiftMicroseconds( *ts, source._shiftNanos ) );
+                            else
+                                outJSON += value.dump();
+                        }
+                        outJSON += '}';
+                        ++eventCount;
+                    }
+                }
+                return eventCount;
+            }
+        };
     } // namespace
 
     string ProfilerTraceExport::makeTraceJSON( const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
@@ -213,7 +581,8 @@ namespace sw
 
     bool ProfilerTraceExport::parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError )
     {
-        outTrace = ProfilerLoadedTrace{};
+        using Internal = ProfilerTraceExportInternal;
+        outTrace       = ProfilerLoadedTrace{};
         JSONDocument document;
         if ( document.parse( json ) == false )
         {
@@ -228,152 +597,14 @@ namespace sw
             outError = "no traceEvents array";
             return false;
         }
-        const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
-        if ( other.isObject() )
-        {
-            // 머리말 칸은 모두 선택이다(다른 도구가 쓴 파일). 없으면 머리말의 초기값이고, 타입이 다르면 파일을 거절한다.
-            outTrace._meta._processName = other.get( "processName" ).asString();
-            outTrace._meta._hostName    = other.get( "hostName" ).asString();
-            const bool bMetaRead        = other.readOptionalInto( "processID", outTrace._meta._processID ) &&
-                                   other.readOptionalInto( "wallUnixMilliseconds", outTrace._meta._wallUnixMilliseconds ) &&
-                                   other.readOptionalInto( "monotonicNanoseconds", outTrace._meta._monotonicNanoseconds ) &&
-                                   other.readOptionalInto( "truncated", outTrace._meta._bTruncated );
-            if ( bMetaRead == false )
-            {
-                outError = "otherData has a value of the wrong type";
-                return false;
-            }
-        }
-
-        struct ThreadKey
-        {
-            int64 _pid;
-            int64 _tid;
-        };
-        vector<ThreadKey> listKey;
-        const auto        findThread = [&]( int64 pid, int64 tid ) -> size_t
-        {
-            for ( size_t index = 0; index < listKey.size(); ++index )
-            {
-                if ( listKey[index]._pid == pid && listKey[index]._tid == tid )
-                    return index;
-            }
-            listKey.push_back( { pid, tid } );
-            ProfilerTimelineThread thread;
-            thread._name = "tid " + to_string( tid );
-            outTrace._listThread.push_back( thread );
-            return listKey.size() - 1;
-        };
-        struct ProcessName
-        {
-            int64  _pid;
-            string _name;
-        };
-        vector<ProcessName> listProcessName; // 합친 파일이면 스레드 줄 앞에 프로세스 이름을 붙인다
-        const auto          findSlot = [&]( const string& name ) -> uint32
-        {
-            for ( size_t index = 0; index < outTrace._listSlotName.size(); ++index )
-            {
-                if ( outTrace._listSlotName[index] == name )
-                    return static_cast<uint32>( index );
-            }
-            outTrace._listSlotName.push_back( name );
-            return static_cast<uint32>( outTrace._listSlotName.size() - 1 );
-        };
-
-        size_t eventCount = 0;
-        for ( size_t index = 0; index < events.size(); ++index )
-        {
-            const JSONValue event = events.at( index );
-            const string    phase = event.get( "ph" ).asString();
-            // pid · tid 는 없으면 0 번 프로세스 · 스레드다(Trace Event 사양). 정수가 아니면 파일을 거절한다.
-            int64 pid{ 0 };
-            int64 tid{ 0 };
-            if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
-            {
-                outError = "event " + to_string( index ) + " has a pid or tid that is not an integer";
-                return false;
-            }
-            if ( phase == "X" )
-            {
-                const std::optional<float64> begin    = event.readRequired<float64>( "ts" );
-                const std::optional<float64> duration = event.readRequired<float64>( "dur" );
-                if ( begin.has_value() == false || duration.has_value() == false )
-                {
-                    outError = "complete event " + to_string( index ) + " needs numeric ts and dur";
-                    return false;
-                }
-                ProfilerTimelineEvent loaded;
-                loaded._beginNanos = static_cast<uint64>( *begin * constant::kNanosecondsPerMicrosecond + 0.5 );
-                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::kNanosecondsPerMicrosecond + 0.5 );
-                loaded._slot       = findSlot( event.get( "name" ).asString() );
-                outTrace._listThread[findThread( pid, tid )]._listEvent.push_back( loaded );
-                ++eventCount;
-            }
-            else if ( phase == "M" && event.get( "name" ).asString() == "thread_name" )
-            {
-                outTrace._listThread[findThread( pid, tid )]._name = event.get( "args" ).get( "name" ).asString();
-            }
-            else if ( phase == "M" && event.get( "name" ).asString() == "process_name" )
-            {
-                listProcessName.push_back( { pid, event.get( "args" ).get( "name" ).asString() } );
-            }
-            else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
-            {
-                const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
-                if ( frameBegin.has_value() == false )
-                {
-                    outError = "frame marker " + to_string( index ) + " needs a numeric ts";
-                    return false;
-                }
-                outTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::kNanosecondsPerMicrosecond + 0.5 ) );
-            }
-        }
-        if ( eventCount == 0 )
-        {
-            outError = "no complete events (ph=X) in the file";
+        if ( Internal::readMeta( root, outTrace._meta, outError ) == false )
             return false;
-        }
-        bool bMultiProcess = false;
-        for ( const ThreadKey& key : listKey )
-        {
-            bMultiProcess = bMultiProcess || key._pid != listKey[0]._pid;
-        }
-        if ( bMultiProcess )
-        {
-            // 여러 프로세스를 합친 파일이다 — 같은 스레드 이름("Game Thread")이 프로세스마다 있으니 줄 이름 앞에 프로세스를 붙인다.
-            for ( size_t index = 0; index < listKey.size(); ++index )
-            {
-                string processName = "pid " + to_string( listKey[index]._pid );
-                for ( const ProcessName& entry : listProcessName )
-                {
-                    if ( entry._pid == listKey[index]._pid )
-                        processName = entry._name;
-                }
-                outTrace._listThread[index]._name = processName + " / " + outTrace._listThread[index]._name;
-            }
-        }
 
-        bool bFirst = true;
-        for ( ProfilerTimelineThread& thread : outTrace._listThread )
-        {
-            std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(),
-                              []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
-            { return left._beginNanos < right._beginNanos; } );
-            vector<uint64> listOpenEnd; // 깊이 = 아직 안 끝난 바깥 구간 수
-            for ( ProfilerTimelineEvent& event : thread._listEvent )
-            {
-                while ( listOpenEnd.empty() == false && listOpenEnd.back() <= event._beginNanos )
-                {
-                    listOpenEnd.pop_back();
-                }
-                event._depth = static_cast<uint16>( listOpenEnd.size() );
-                listOpenEnd.push_back( event._endNanos );
-                outTrace._beginNanos = ( bFirst || event._beginNanos < outTrace._beginNanos ) ? event._beginNanos : outTrace._beginNanos;
-                outTrace._endNanos   = ( bFirst || event._endNanos > outTrace._endNanos ) ? event._endNanos : outTrace._endNanos;
-                bFirst               = false;
-            }
-        }
+        TraceParseState state;
+        if ( Internal::readEvents( events, state, outTrace, outError ) == false )
+            return false;
+        Internal::prefixProcessNames( state, outTrace );
+        Internal::assignDepthsAndRange( outTrace );
         std::sort( outTrace._listFrameBegin.begin(), outTrace._listFrameBegin.end() );
         return true;
     }
@@ -648,34 +879,9 @@ namespace sw
             SW_LOG_WARNING( "Exit trace not saved to %#: %#", savedPath, reply );
     }
 
-    namespace
-    {
-        /** @brief 합치기에서 파일 하나의 정보입니다. */
-        struct MergeSource
-        {
-            JSONDocument _document;
-            JSONValue    _listEvent;
-            string       _label;
-            string       _hostName;
-            string       _alignment;
-            int64        _wallUnixMilliseconds{ 0 };
-            int64        _monotonicNanoseconds{ 0 };
-            int64        _shiftNanos{ 0 };
-            int64        _sourcePID{ 0 };
-            int64        _outputPID{ 0 };
-            bool         _bHasClock{ false };
-        };
-
-        /** @brief 마이크로초(실수) 시각에 나노초 이동을 더해 나노초 정수로 돌려줍니다(음수는 0). */
-        uint64 shiftMicroseconds( float64 micro, int64 shiftNanos )
-        {
-            const float64 nanos = micro * constant::kNanosecondsPerMicrosecond + static_cast<float64>( shiftNanos );
-            return nanos <= 0.0 ? 0 : static_cast<uint64>( nanos + 0.5 );
-        }
-    } // namespace
-
     bool ProfilerTraceExport::mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport )
     {
+        using Internal = ProfilerTraceExportInternal;
         outJSON.clear();
         if ( listInput.size() < 2 )
         {
@@ -686,159 +892,15 @@ namespace sw
         for ( size_t index = 0; index < listInput.size(); ++index )
         {
             unique_ptr<MergeSource> pSource = make_unique<MergeSource>();
-            if ( pSource->_document.parse( listInput[index]._json ) == false )
-            {
-                outReport = "input " + to_string( index ) + " is not valid JSON: " + pSource->_document.getLastError();
+            if ( Internal::readMergeSource( listInput[index], index, *pSource, outReport ) == false )
                 return false;
-            }
-            const JSONValue root = pSource->_document.getRoot();
-            pSource->_listEvent  = root.isArray() ? root : root.get( "traceEvents" );
-            if ( pSource->_listEvent.isArray() == false )
-            {
-                outReport = "input " + to_string( index ) + " has no traceEvents array";
-                return false;
-            }
-            const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
-            const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
-            if ( bHasClockData )
-            {
-                const std::optional<int64> wallMilliseconds     = other.readRequired<int64>( "wallUnixMilliseconds" );
-                const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
-                if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
-                {
-                    outReport = "input " + to_string( index ) + " has a clock header that is not integers";
-                    return false;
-                }
-                pSource->_bHasClock            = true;
-                pSource->_hostName             = other.get( "hostName" ).asString();
-                pSource->_wallUnixMilliseconds = *wallMilliseconds;
-                pSource->_monotonicNanoseconds = *monotonicNanoseconds;
-            }
-            pSource->_label = listInput[index]._label;
-            if ( pSource->_label.empty() && other.isObject() )
-                pSource->_label = other.get( "processName" ).asString();
-            if ( pSource->_label.empty() )
-                pSource->_label = "trace " + to_string( index );
-            for ( size_t eventIndex = 0; eventIndex < pSource->_listEvent.size(); ++eventIndex )
-            {
-                const JSONValue pid = pSource->_listEvent.at( eventIndex ).get( "pid" );
-                if ( pid.isNumber() )
-                {
-                    const std::optional<int64> sourcePID = pid.read<int64>();
-                    if ( sourcePID.has_value() == false )
-                    {
-                        outReport = "input " + to_string( index ) + " has a pid that is not an integer";
-                        return false;
-                    }
-                    pSource->_sourcePID = *sourcePID;
-                    break;
-                }
-            }
             listSource.push_back( std::move( pSource ) );
         }
+        Internal::alignSources( listSource );
+        Internal::assignOutputPIDs( listSource );
 
-        // 시간 맞추기 — 첫 파일이 기준이다. 같은 기계는 단조 시계가 같으니 그대로, 다른 기계는 벽시계 − 단조 시계 차이만큼 옮긴다.
-        const MergeSource& reference = *listSource[0];
-        for ( unique_ptr<MergeSource>& pSource : listSource )
-        {
-            if ( pSource.get() == &reference )
-            {
-                pSource->_alignment = "reference";
-            }
-            else if ( pSource->_bHasClock == false || reference._bHasClock == false )
-            {
-                pSource->_alignment = "unaligned (no clock header)";
-            }
-            else if ( pSource->_hostName.empty() == false && pSource->_hostName == reference._hostName )
-            {
-                pSource->_alignment = "same host (exact)";
-            }
-            else
-            {
-                pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * constant::kNanosecondsPerMillisecond -
-                                       ( pSource->_monotonicNanoseconds - reference._monotonicNanoseconds );
-                pSource->_alignment = "wall clock (off by the clock difference between hosts)";
-            }
-        }
-
-        // 줄 묶음 번호 — 원래 pid 를 쓰되 앞 파일과 겹치면 새 번호.
-        int64 maxPID = 0;
-        for ( const unique_ptr<MergeSource>& pSource : listSource )
-        {
-            maxPID = pSource->_sourcePID > maxPID ? pSource->_sourcePID : maxPID;
-        }
-        for ( size_t index = 0; index < listSource.size(); ++index )
-        {
-            MergeSource& source = *listSource[index];
-            source._outputPID   = source._sourcePID;
-            for ( size_t previous = 0; previous < index; ++previous )
-            {
-                if ( listSource[previous]->_outputPID == source._outputPID )
-                {
-                    source._outputPID = ++maxPID;
-                    break;
-                }
-            }
-        }
-
-        outJSON = "{\"displayTimeUnit\":\"ms\",\"otherData\":{\"processName\":\"merged\",\"merged\":true,\"sources\":[";
-        for ( size_t index = 0; index < listSource.size(); ++index )
-        {
-            const MergeSource& source = *listSource[index];
-            outJSON += index == 0 ? "{\"label\":" : ",{\"label\":";
-            appendQuoted( outJSON, source._label );
-            outJSON += ",\"hostName\":";
-            appendQuoted( outJSON, source._hostName );
-            outJSON += ",\"processID\":" + to_string( source._outputPID ) + ",\"shiftNanoseconds\":" + to_string( source._shiftNanos ) + ",\"alignment\":";
-            appendQuoted( outJSON, source._alignment );
-            outJSON += '}';
-        }
-        outJSON += "]},\"traceEvents\":[";
-
-        size_t eventCount = 0;
-        bool   bFirst     = true;
-        for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
-        {
-            const MergeSource& source = *listSource[sourceIndex];
-            const string       pid    = to_string( source._outputPID );
-            string             label  = source._label;
-            if ( source._hostName.empty() == false )
-                label += " @ " + source._hostName;
-            label += " [" + source._alignment + "]";
-            outJSON += bFirst ? "" : ",";
-            bFirst = false;
-            outJSON += "{\"name\":\"process_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"name\":";
-            appendQuoted( outJSON, label );
-            outJSON += "}},{\"name\":\"process_sort_index\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"sort_index\":" +
-                       to_string( sourceIndex ) + "}}";
-
-            for ( size_t eventIndex = 0; eventIndex < source._listEvent.size(); ++eventIndex )
-            {
-                const JSONValue event = source._listEvent.at( eventIndex );
-                if ( event.isObject() == false )
-                    continue;
-                if ( event.get( "ph" ).asString() == "M" && event.get( "name" ).asString() == "process_name" )
-                    continue; // 위에서 맞춘 방법을 담은 이름으로 바꿨다
-                outJSON += ",{";
-                bool bFirstMember = true;
-                for ( const string& member : event.getMemberNames() )
-                {
-                    outJSON += bFirstMember ? "" : ",";
-                    bFirstMember = false;
-                    appendQuoted( outJSON, member );
-                    outJSON += ':';
-                    const JSONValue value = event.get( member, false );
-                    if ( member == "pid" )
-                        outJSON += pid;
-                    else if ( const std::optional<float64> ts = member == "ts" && value.isNumber() ? value.read<float64>() : std::nullopt; ts.has_value() )
-                        appendMicroseconds( outJSON, shiftMicroseconds( *ts, source._shiftNanos ) );
-                    else
-                        outJSON += value.dump();
-                }
-                outJSON += '}';
-                ++eventCount;
-            }
-        }
+        Internal::appendMergedHeader( outJSON, listSource );
+        const size_t eventCount = Internal::appendMergedEvents( outJSON, listSource );
         outJSON += "]}\n";
         if ( eventCount == 0 )
         {

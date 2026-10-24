@@ -120,6 +120,71 @@ namespace sw
                 if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
                     node._prefab = std::move( resolved );
             }
+
+            /**
+             * @brief 월드 설정은 판 2부터 필수다 — 없으면 스트리밍 여부를 지어내지 않고 읽지 않는다. 읽고 검증해 @p outSettings 에 담는다.
+             * @return 요소가 없거나 읽지 못하거나 쓸 수 없으면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool readWorldSettings( const XMLNode& root, string_view sceneName, string_view absPath, WorldSettings& outSettings )
+            {
+                const XMLNode worldSettingsNode = root.findChild( WorldSettings::kElementName );
+                if ( worldSettingsNode.isValid() == false )
+                {
+                    SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+                    return false;
+                }
+                const bool bWorldSettingsRead = XMLSerializer::deserialize( &outSettings, *WorldSettings::StaticType(), worldSettingsNode.toString() );
+                if ( bWorldSettingsRead == false || outSettings.validate( sceneName ) == false )
+                {
+                    SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief `<Entity>` 요소 하나를 읽습니다. 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다) — 없거나 못 읽는 문서는 받지 않는다.
+             *        부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
+             * @return 파일 id 가 없거나 틀리면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool readEntityNode( const XMLNode& sceneObjectNode, string_view absPath, SceneDocument::SceneObjectNode& outNode )
+            {
+                const utf8* pName = sceneObjectNode.findAttribute( kName );
+                if ( pName != nullptr )
+                    outNode._name = pName;
+
+                const utf8* pFileID        = sceneObjectNode.findAttribute( kFileID );
+                const bool  bInvalidFileID = pFileID == nullptr || StringUtil::parseUint64( pFileID, outNode._fileID ) == false || outNode._fileID == 0;
+                if ( bInvalidFileID )
+                {
+                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", outNode._name, pFileID != nullptr ? pFileID : "", absPath );
+                    return false;
+                }
+
+                const utf8* pPrefabGuid = sceneObjectNode.findAttribute( "prefabGuid" );
+                if ( pPrefabGuid != nullptr )
+                    outNode._prefabGuid = pPrefabGuid;
+
+                const utf8* pPrefab = sceneObjectNode.findAttribute( kPrefab );
+                if ( pPrefab != nullptr )
+                    outNode._prefab = pPrefab;
+
+                resolvePrefabPathByGuid( outNode );
+
+                const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
+                if ( overrideNode.isValid() )
+                    outNode._prefabOverrideXML = overrideNode.toString();
+
+                XMLNode stateNode = sceneObjectNode.findChild( kGameObject );
+                // 서브트리는 XML 문서가 쓴다(`XMLNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
+                // (XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로).
+                if ( stateNode.isValid() )
+                    outNode._embeddedXML = stateNode.toString();
+
+                if ( outNode._name.empty() )
+                    outNode._name = kDefaultEntity;
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -181,68 +246,24 @@ namespace sw
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        // 월드 설정은 판 2부터 필수다 — 없으면 스트리밍 여부를 지어내지 않고 읽지 않는다.
-        const XMLNode worldSettingsNode = root.findChild( WorldSettings::kElementName );
-        if ( worldSettingsNode.isValid() == false )
+        if ( SceneDocumentInternal::readWorldSettings( root, _name, absPath, _worldSettings ) == false )
         {
-            SW_LOG_ERROR( "Scene has no <%#> in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
-            *this = {};
-            return false;
-        }
-        const bool bWorldSettingsRead = XMLSerializer::deserialize( &_worldSettings, *WorldSettings::StaticType(), worldSettingsNode.toString() );
-        if ( bWorldSettingsRead == false || _worldSettings.validate( _name ) == false )
-        {
-            SW_LOG_ERROR( "Scene <%#> could not be read or is not usable in %# - the scene is not loaded", WorldSettings::kElementName, absPath );
             *this = {};
             return false;
         }
 
-        XMLNode entities = root.findChild( SceneDocumentInternal::kEntities );
-
+        const XMLNode entities = root.findChild( SceneDocumentInternal::kEntities );
         if ( entities.isValid() )
         {
             for ( XMLNode sceneObjectNode = entities.findChild( SceneDocumentInternal::kEntity ); sceneObjectNode.isValid();
                   sceneObjectNode         = sceneObjectNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
                 SceneObjectNode node{};
-                const utf8*     pName = sceneObjectNode.findAttribute( SceneDocumentInternal::kName );
-                if ( pName != nullptr )
-                    node._name = pName;
-
-                // 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다). 없거나 못 읽는 문서는 받지 않는다 —
-                // 부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
-                const utf8* pFileID        = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileID );
-                const bool  bInvalidFileID = pFileID == nullptr || StringUtil::parseUint64( pFileID, node._fileID ) == false || node._fileID == 0;
-                if ( bInvalidFileID )
+                if ( SceneDocumentInternal::readEntityNode( sceneObjectNode, absPath, node ) == false )
                 {
-                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileID != nullptr ? pFileID : "",
-                                  absPath );
                     *this = {};
                     return false;
                 }
-
-                const utf8* pPrefabGuid = sceneObjectNode.findAttribute( "prefabGuid" );
-                if ( pPrefabGuid != nullptr )
-                    node._prefabGuid = pPrefabGuid;
-
-                const utf8* pPrefab = sceneObjectNode.findAttribute( SceneDocumentInternal::kPrefab );
-                if ( pPrefab != nullptr )
-                    node._prefab = pPrefab;
-
-                SceneDocumentInternal::resolvePrefabPathByGuid( node );
-
-                const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
-                if ( overrideNode.isValid() )
-                    node._prefabOverrideXML = overrideNode.toString();
-
-                XMLNode stateNode = sceneObjectNode.findChild( SceneDocumentInternal::kGameObject );
-                // 서브트리는 XML 문서가 쓴다(`XMLNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
-                // (XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로).
-                if ( stateNode.isValid() )
-                    node._embeddedXML = stateNode.toString();
-
-                if ( node._name.empty() )
-                    node._name = SceneDocumentInternal::kDefaultEntity;
                 _listSceneObjectNode.push_back( std::move( node ) );
             }
         }

@@ -22,6 +22,128 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct ModelImportGeometryInternal
+        {
+            /** @brief 파일 바이트 안에서 glTF JSON 이 놓인 자리입니다(GLB 면 JSON 청크, 아니면 파일 전체). */
+            struct GltfJSONSpan
+            {
+                size_t _jsonOffset{ 0 };
+                size_t _jsonSize{ 0 };
+                bool   _bGlb{ false };
+            };
+
+            /** @brief JSON 자리를 찾습니다. GLB 인데 첫 청크가 JSON 이 아니거나 범위를 벗어나면 false 입니다(고치지 않고 cgltf 가 알리게 한다). */
+            [[nodiscard]] static bool findJSONSpan( const vector<uint8>& bytes, GltfJSONSpan& outSpan )
+            {
+                outSpan._bGlb       = bytes.size() >= ModelImportUtil::kGlbHeaderSize + ModelImportUtil::kGlbChunkHeaderSize && LittleEndianUtil::readUint32( bytes.data() ) == ModelImportUtil::kGlbMagic;
+                outSpan._jsonOffset = 0;
+                outSpan._jsonSize   = bytes.size();
+                if ( outSpan._bGlb == false )
+                    return true;
+                if ( LittleEndianUtil::readUint32( bytes.data() + ModelImportUtil::kGlbHeaderSize + 4 ) != ModelImportUtil::kGlbJSONChunkType )
+                    return false;
+                outSpan._jsonOffset = ModelImportUtil::kGlbHeaderSize + ModelImportUtil::kGlbChunkHeaderSize;
+                outSpan._jsonSize   = LittleEndianUtil::readUint32( bytes.data() + ModelImportUtil::kGlbHeaderSize );
+                return outSpan._jsonOffset + outSpan._jsonSize <= bytes.size();
+            }
+
+            /** @brief 노드마다 부모 번호 표를 만듭니다(노드 수 = 부모 없음). 읽지 못하는 자식 번호가 있으면 false 입니다. */
+            [[nodiscard]] static bool collectParents( const JSONValue& root, vector<size_t>& outListParent )
+            {
+                const JSONValue nodes     = root.get( "nodes", false );
+                const size_t    nodeCount = nodes.isArray() ? nodes.size() : 0;
+                outListParent.assign( nodeCount, nodeCount ); // nodeCount = 부모 없음
+                for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+                {
+                    const JSONValue children   = nodes.at( nodeIndex ).get( "children", false );
+                    const size_t    childCount = children.isArray() ? children.size() : 0;
+                    for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
+                    {
+                        const std::optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
+                        if ( childIndex.has_value() == false )
+                            return false;
+                        if ( *childIndex < nodeCount )
+                            outListParent[*childIndex] = nodeIndex;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 장면마다 루트 목록에서 부모가 있는 노드를 최상위 조상으로 바꾸고 중복을 지웁니다. 바꾼 항목 수를 더합니다. 읽지 못하는 번호가 있으면 false 입니다. */
+            [[nodiscard]] static bool promoteSceneNodes( const JSONValue& root, const vector<size_t>& listParent, uint32& outPromotedCount )
+            {
+                const size_t    nodeCount  = listParent.size();
+                const JSONValue scenes     = root.get( "scenes", false );
+                const size_t    sceneCount = scenes.isArray() ? scenes.size() : 0;
+                for ( size_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex )
+                {
+                    const JSONValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
+                    if ( sceneNodes.isArray() == false )
+                        continue;
+
+                    vector<uint64> listRoot;
+                    bool           bPromoted = false;
+                    for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
+                    {
+                        const std::optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
+                        if ( listedSlot.has_value() == false )
+                            return false;
+                        const uint64 listedIndex = *listedSlot;
+                        uint64       rootIndex   = listedIndex;
+                        for ( size_t step = 0; rootIndex < nodeCount && listParent[rootIndex] != nodeCount && step < nodeCount; ++step )
+                        {
+                            rootIndex = listParent[rootIndex];
+                        }
+                        if ( rootIndex != listedIndex )
+                        {
+                            ++outPromotedCount;
+                            bPromoted = true;
+                        }
+                        if ( VectorUtil::contains( listRoot, rootIndex ) == false )
+                            listRoot.push_back( rootIndex );
+                    }
+                    if ( bPromoted == false )
+                        continue;
+                    sceneNodes.setArray();
+                    for ( const uint64 rootIndex : listRoot )
+                    {
+                        sceneNodes.pushBack().setUint( rootIndex );
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 고친 JSON 글로 파일 바이트를 다시 만듭니다. GLB 청크는 4 바이트 정렬이고 JSON 청크는 공백으로 채운다. BIN 청크 이하는 그대로 옮긴다. */
+            static vector<uint8> rewriteBytes( const vector<uint8>& bytes, const GltfJSONSpan& span, const string& json )
+            {
+                vector<uint8> rewrittenBytes;
+                if ( span._bGlb == false )
+                {
+                    rewrittenBytes.assign( reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
+                    return rewrittenBytes;
+                }
+                const size_t paddedJSONSize = ( json.size() + 3 ) & ~size_t( 3 );
+                const size_t tailOffset     = span._jsonOffset + span._jsonSize;
+                const size_t totalSize      = span._jsonOffset + paddedJSONSize + ( bytes.size() - tailOffset );
+                rewrittenBytes.reserve( totalSize );
+                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportUtil::kGlbMagic );
+                LittleEndianUtil::appendUint32( rewrittenBytes, LittleEndianUtil::readUint32( bytes.data() + 4 ) );
+                LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( totalSize ) );
+                LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( paddedJSONSize ) );
+                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportUtil::kGlbJSONChunkType );
+                rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
+                rewrittenBytes.resize( span._jsonOffset + paddedJSONSize, static_cast<uint8>( ' ' ) );
+                rewrittenBytes.insert( rewrittenBytes.end(), bytes.begin() + static_cast<ptrdiff_t>( tailOffset ), bytes.end() );
+                return rewrittenBytes;
+            }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
     SW_LOG_CALLER( "ModelImporter" );
 
     bool ModelImportUtil::isSourceModel( string_view path )
@@ -227,59 +349,30 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
-                                           MergedMesh& inoutMesh )
+    ModelImportUtil::PrimitiveAccessors ModelImportUtil::findPrimitiveAccessors( const cgltf_primitive& primitive )
     {
-        if ( primitive.type != cgltf_primitive_type_triangles )
-        {
-            SW_LOG_WARNING( "Skipping a non-triangle primitive (type %#)", static_cast<uint32>( primitive.type ) );
-            ++inoutMesh._skippedPrimitiveCount;
-            return true;
-        }
-
-        const cgltf_accessor* pPosition = nullptr;
-        const cgltf_accessor* pNormal   = nullptr;
-        const cgltf_accessor* pUv       = nullptr;
-        const cgltf_accessor* pColor    = nullptr;
-        const cgltf_accessor* pJoint    = nullptr;
-        const cgltf_accessor* pWeight   = nullptr;
+        PrimitiveAccessors accessors{};
         for ( cgltf_size attributeIndex = 0; attributeIndex < primitive.attributes_count; ++attributeIndex )
         {
             const cgltf_attribute& attribute = primitive.attributes[attributeIndex];
             if ( attribute.type == cgltf_attribute_type_position )
-                pPosition = attribute.data;
+                accessors._pPosition = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_normal )
-                pNormal = attribute.data;
+                accessors._pNormal = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_texcoord && attribute.index == 0 )
-                pUv = attribute.data;
+                accessors._pUv = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_color && attribute.index == 0 )
-                pColor = attribute.data;
+                accessors._pColor = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_joints && attribute.index == 0 )
-                pJoint = attribute.data;
+                accessors._pJoint = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_weights && attribute.index == 0 )
-                pWeight = attribute.data;
+                accessors._pWeight = attribute.data;
         }
-        if ( pPosition == nullptr || pPosition->count == 0 )
-        {
-            SW_LOG_WARNING( "Skipping a primitive without positions" );
-            ++inoutMesh._skippedPrimitiveCount;
-            return true;
-        }
-        // 정점 속성은 접근자 단위로 통째로 읽는다 — 정점 하나씩 읽다 실패한 칸을 0 · 흰색으로 남기지 않는다(못 읽으면 임포트가 실패한다).
-        const cgltf_size vertexCount = pPosition->count;
-        vector<float32>  listPosition;
-        vector<float32>  listNormal;
-        vector<float32>  listUv;
-        vector<float32>  listColor;
-        vector<float32>  listWeight;
-        const cgltf_size colorComponentCount = pColor != nullptr ? cgltf_num_components( pColor->type ) : 0;
-        const bool       bSkinnedPrimitive   = pSkin != nullptr && pJoint != nullptr && pWeight != nullptr;
-        const bool       bAttributesRead     = unpackFloats( pPosition, 3, listPosition ) && unpackOptionalFloats( pNormal, 3, vertexCount, listNormal ) &&
-                                     unpackOptionalFloats( pUv, 2, vertexCount, listUv ) && unpackOptionalFloats( pColor, colorComponentCount, vertexCount, listColor ) &&
-                                     ( bSkinnedPrimitive == false || unpackOptionalFloats( pWeight, kInfluenceCount, vertexCount, listWeight ) );
-        if ( bAttributesRead == false )
-            return false;
+        return accessors;
+    }
 
+    float4 ModelImportUtil::readPrimitiveBaseColor( const cgltf_primitive& primitive, MergedMesh& inoutMesh )
+    {
         float4 baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
         if ( primitive.material != nullptr && primitive.material->has_pbr_metallic_roughness != 0 )
         {
@@ -294,8 +387,29 @@ namespace sw::editor
                 inoutMesh._baseColorTextureUri = pUri != nullptr ? pUri : "(embedded image)";
             }
         }
+        return baseColor;
+    }
 
-        const uint32 baseVertex = static_cast<uint32>( inoutMesh._listVertex.size() );
+    bool ModelImportUtil::appendPrimitiveVertices( const cgltf_primitive& primitive, const PrimitiveAccessors& accessors, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                                   MergedMesh& inoutMesh )
+    {
+        // 정점 속성은 접근자 단위로 통째로 읽는다 — 정점 하나씩 읽다 실패한 칸을 0 · 흰색으로 남기지 않는다(못 읽으면 임포트가 실패한다).
+        const cgltf_size vertexCount = accessors._pPosition->count;
+        vector<float32>  listPosition;
+        vector<float32>  listNormal;
+        vector<float32>  listUv;
+        vector<float32>  listColor;
+        vector<float32>  listWeight;
+        const cgltf_size colorComponentCount = accessors._pColor != nullptr ? cgltf_num_components( accessors._pColor->type ) : 0;
+        const bool       bSkinnedPrimitive   = pSkin != nullptr && accessors._pJoint != nullptr && accessors._pWeight != nullptr;
+        const bool       bAttributesRead     = unpackFloats( accessors._pPosition, 3, listPosition ) && unpackOptionalFloats( accessors._pNormal, 3, vertexCount, listNormal ) &&
+                                     unpackOptionalFloats( accessors._pUv, 2, vertexCount, listUv ) &&
+                                     unpackOptionalFloats( accessors._pColor, colorComponentCount, vertexCount, listColor ) &&
+                                     ( bSkinnedPrimitive == false || unpackOptionalFloats( accessors._pWeight, kInfluenceCount, vertexCount, listWeight ) );
+        if ( bAttributesRead == false )
+            return false;
+
+        const float4 baseColor = readPrimitiveBaseColor( primitive, inoutMesh );
         for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
         {
             ImportVertex vertex;
@@ -321,7 +435,7 @@ namespace sw::editor
 
             if ( bSkinnedPrimitive )
             {
-                if ( readSkinInfluence( *pSkin, pJoint, &listWeight[vertexIndex * kInfluenceCount], vertexIndex, vertex ) == false )
+                if ( readSkinInfluence( *pSkin, accessors._pJoint, &listWeight[vertexIndex * kInfluenceCount], vertexIndex, vertex ) == false )
                     return false;
             }
             else if ( pSkin != nullptr )
@@ -330,6 +444,30 @@ namespace sw::editor
             }
             inoutMesh._listVertex.push_back( vertex );
         }
+        return true;
+    }
+
+    bool ModelImportUtil::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                           MergedMesh& inoutMesh )
+    {
+        if ( primitive.type != cgltf_primitive_type_triangles )
+        {
+            SW_LOG_WARNING( "Skipping a non-triangle primitive (type %#)", static_cast<uint32>( primitive.type ) );
+            ++inoutMesh._skippedPrimitiveCount;
+            return true;
+        }
+
+        const PrimitiveAccessors accessors = findPrimitiveAccessors( primitive );
+        if ( accessors._pPosition == nullptr || accessors._pPosition->count == 0 )
+        {
+            SW_LOG_WARNING( "Skipping a primitive without positions" );
+            ++inoutMesh._skippedPrimitiveCount;
+            return true;
+        }
+        const uint32     baseVertex  = static_cast<uint32>( inoutMesh._listVertex.size() );
+        const cgltf_size vertexCount = accessors._pPosition->count;
+        if ( appendPrimitiveVertices( primitive, accessors, arrWorld, pSkin, inoutMesh ) == false )
+            return false;
         if ( appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, vertexCount, inoutMesh ) == false )
             return false;
         appendPrimitiveTriangles( primitive, pSourceMesh, arrWorld, baseVertex, vertexCount, inoutMesh );
@@ -397,107 +535,27 @@ namespace sw::editor
 
     uint32 ModelImportUtil::promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
     {
-        const bool bGlb       = inoutBytes.size() >= kGlbHeaderSize + kGlbChunkHeaderSize && LittleEndianUtil::readUint32( inoutBytes.data() ) == kGlbMagic;
-        size_t     jsonOffset = 0;
-        size_t     jsonSize   = inoutBytes.size();
-        if ( bGlb )
-        {
-            if ( LittleEndianUtil::readUint32( inoutBytes.data() + kGlbHeaderSize + 4 ) != kGlbJSONChunkType )
-                return 0;
-            jsonOffset = kGlbHeaderSize + kGlbChunkHeaderSize;
-            jsonSize   = LittleEndianUtil::readUint32( inoutBytes.data() + kGlbHeaderSize );
-            if ( jsonOffset + jsonSize > inoutBytes.size() )
-                return 0;
-        }
+        using Internal = ModelImportGeometryInternal;
+        Internal::GltfJSONSpan span{};
+        if ( Internal::findJSONSpan( inoutBytes, span ) == false )
+            return 0;
 
         // 읽지 못하는 JSON 은 그대로 두고 cgltf 가 알리게 한다.
         JSONDocument document;
-        if ( document.parse( string_view( reinterpret_cast<const utf8*>( inoutBytes.data() ) + jsonOffset, jsonSize ) ) == false )
+        if ( document.parse( string_view( reinterpret_cast<const utf8*>( inoutBytes.data() ) + span._jsonOffset, span._jsonSize ) ) == false )
             return 0;
         const JSONValue root = document.getRoot();
         if ( root.isObject() == false )
             return 0;
 
-        const JSONValue nodes     = root.get( "nodes", false );
-        const size_t    nodeCount = nodes.isArray() ? nodes.size() : 0;
-        vector<size_t>  listParent( nodeCount, nodeCount ); // nodeCount = 부모 없음
-        for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-        {
-            const JSONValue children   = nodes.at( nodeIndex ).get( "children", false );
-            const size_t    childCount = children.isArray() ? children.size() : 0;
-            for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
-            {
-                const std::optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
-                if ( childIndex.has_value() == false )
-                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
-                if ( *childIndex < nodeCount )
-                    listParent[*childIndex] = nodeIndex;
-            }
-        }
-
-        uint32          promotedCount = 0;
-        const JSONValue scenes        = root.get( "scenes", false );
-        const size_t    sceneCount    = scenes.isArray() ? scenes.size() : 0;
-        for ( size_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex )
-        {
-            const JSONValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
-            if ( sceneNodes.isArray() == false )
-                continue;
-
-            vector<uint64> listRoot;
-            bool           bPromoted = false;
-            for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
-            {
-                const std::optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
-                if ( listedSlot.has_value() == false )
-                    return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
-                const uint64 listedIndex = *listedSlot;
-                uint64       rootIndex   = listedIndex;
-                for ( size_t step = 0; rootIndex < nodeCount && listParent[rootIndex] != nodeCount && step < nodeCount; ++step )
-                {
-                    rootIndex = listParent[rootIndex];
-                }
-                if ( rootIndex != listedIndex )
-                {
-                    ++promotedCount;
-                    bPromoted = true;
-                }
-                if ( VectorUtil::contains( listRoot, rootIndex ) == false )
-                    listRoot.push_back( rootIndex );
-            }
-            if ( bPromoted == false )
-                continue;
-            sceneNodes.setArray();
-            for ( const uint64 rootIndex : listRoot )
-            {
-                sceneNodes.pushBack().setUint( rootIndex );
-            }
-        }
+        vector<size_t> listParent;
+        uint32         promotedCount = 0;
+        if ( Internal::collectParents( root, listParent ) == false || Internal::promoteSceneNodes( root, listParent, promotedCount ) == false )
+            return 0; // 읽지 못하는 번호 — 고치지 않고 cgltf 가 알리게 한다
         if ( promotedCount == 0 )
             return promotedCount;
 
-        const string  json = document.dump();
-        vector<uint8> rewrittenBytes;
-        if ( bGlb == false )
-        {
-            rewrittenBytes.assign( reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
-        }
-        else
-        {
-            // GLB 청크는 4 바이트 정렬이고 JSON 청크는 공백으로 채운다. BIN 청크 이하는 그대로 옮긴다.
-            const size_t paddedJSONSize = ( json.size() + 3 ) & ~size_t( 3 );
-            const size_t tailOffset     = jsonOffset + jsonSize;
-            const size_t totalSize      = jsonOffset + paddedJSONSize + ( inoutBytes.size() - tailOffset );
-            rewrittenBytes.reserve( totalSize );
-            LittleEndianUtil::appendUint32( rewrittenBytes, kGlbMagic );
-            LittleEndianUtil::appendUint32( rewrittenBytes, LittleEndianUtil::readUint32( inoutBytes.data() + 4 ) );
-            LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( totalSize ) );
-            LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( paddedJSONSize ) );
-            LittleEndianUtil::appendUint32( rewrittenBytes, kGlbJSONChunkType );
-            rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
-            rewrittenBytes.resize( jsonOffset + paddedJSONSize, static_cast<uint8>( ' ' ) );
-            rewrittenBytes.insert( rewrittenBytes.end(), inoutBytes.begin() + static_cast<ptrdiff_t>( tailOffset ), inoutBytes.end() );
-        }
+        vector<uint8> rewrittenBytes = Internal::rewriteBytes( inoutBytes, span, document.dump() );
         inoutBytes.swap( rewrittenBytes );
         return promotedCount;
     }

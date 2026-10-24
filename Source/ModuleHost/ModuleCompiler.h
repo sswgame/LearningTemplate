@@ -79,6 +79,12 @@ namespace sw
     private:
         void   runBuildThread( const string& targetName, MemoryTag memoryTag );
         string findBuildDirectory() const;
+        /** @brief 빌드를 시작하지 못한 끝 경로입니다(빌드 폴더 없음 · 프로세스 시작 실패). 실패로 두고 리로드 관리자에 알리고 컴파일 중 표시를 내립니다. */
+        void failBeforeBuild( const string& targetName );
+        /** @brief 빌드 프로세스의 출력 줄을 읽어 수준별로 로그에 남깁니다. 이미 로드된 바이너리를 못 덮어쓴 줄이면 그 표시를 올립니다. 프로세스가 끝나면 돌아옵니다. */
+        void relayBuildOutput();
+        /** @brief 프로세스를 기다려 종료 코드를 받고 결과(취소 · 성공 · 실패)를 기록해 로그로 알립니다. 성공했는지 반환합니다. */
+        bool recordBuildResult( const string& targetDisplayName );
         /** @brief 빌드가 끝났음을 리로드 관리자에 넘깁니다(빌드 스레드에서, 모든 끝 경로가 한 번씩). */
         void notifyBuildFinished( bool bSucceeded, const string& targetName );
 

@@ -165,6 +165,58 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 스킨마다 관절 번호 → 본 번호 표를 만듭니다. */
+            static vector<SkinBinding> makeSkinBindings( const cgltf_data& data, unordered_map<const cgltf_node*, int32>& inoutMapJointBone )
+            {
+                vector<SkinBinding> listBinding( data.skins_count );
+                for ( cgltf_size skinIndex = 0; skinIndex < data.skins_count; ++skinIndex )
+                {
+                    const cgltf_skin& skin    = data.skins[skinIndex];
+                    SkinBinding&      binding = listBinding[skinIndex];
+                    binding._pSkin            = &skin;
+                    binding._listJointToBone.resize( skin.joints_count, -1 );
+                    for ( cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex )
+                    {
+                        binding._listJointToBone[jointIndex] = inoutMapJointBone[skin.joints[jointIndex]];
+                    }
+                }
+                return listBinding;
+            }
+
+            /**
+             * @brief 관절 아래의 스킨 없는 메시를 부착으로 읽어 결과에 더합니다. 부착은 메시가 노드 로컬 공간에 있고, 변환은 가장 가까운 관절을 기준으로 한다. 사이의 비관절 노드는 곱해서 합친다.
+             * @return 메시를 읽지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool readAttachment( const cgltf_data& data, const cgltf_node& node, const cgltf_node& joint, unordered_map<const cgltf_node*, int32>& inoutMapJointBone,
+                                                      unordered_map<string, uint32>& inoutMapStemUse, string_view sourcePath, ModelImportResult& inoutResult )
+            {
+                float32               arrIdentity[16]{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+                ModelImportAttachment attachment{};
+                attachment._name       = makeNodeName( data, node );
+                attachment._parentBone = inoutResult._skeleton.getBone( static_cast<uint32>( inoutMapJointBone[&joint] ) )._name;
+                float4x4 local         = float4x4::Identity;
+                for ( const cgltf_node* pStep = &node; pStep != nullptr && pStep != &joint; pStep = pStep->parent )
+                {
+                    float32 arrLocal[16]{};
+                    cgltf_node_transform_local( pStep, arrLocal );
+                    local = local * convertMatrixToEngineSpace( arrLocal );
+                }
+                attachment._localTransform = BoneTransform::makeFromMatrix( local );
+                const string baseStem      = makeFileStem( attachment._name );
+                const uint32 useCount      = inoutMapStemUse[baseStem]++;
+                attachment._fileStem       = makeNumberedStem( baseStem, useCount );
+                MergedMesh part;
+                for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
+                {
+                    if ( appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrIdentity, nullptr, part ) == false )
+                        return reportUnreadableMesh( sourcePath, node, data );
+                }
+                expandTriangles( part, 0, attachment._mesh );
+                if ( attachment._mesh._listVertex.empty() == false )
+                    inoutResult._listAttachment.push_back( std::move( attachment ) );
+                return true;
+            }
+
             /**
              * @brief 스킨드 모델을 읽습니다. 모든 스킨이 한 스켈레톤을 쓰며, 관절 노드가 같으면 한 본입니다.
              * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다. 본 메시를 머티리얼 구간으로도 나눕니다.
@@ -178,18 +230,7 @@ namespace sw::editor
                     return false;
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
 
-                vector<SkinBinding> listBinding( data.skins_count );
-                for ( cgltf_size skinIndex = 0; skinIndex < data.skins_count; ++skinIndex )
-                {
-                    const cgltf_skin& skin    = data.skins[skinIndex];
-                    SkinBinding&      binding = listBinding[skinIndex];
-                    binding._pSkin            = &skin;
-                    binding._listJointToBone.resize( skin.joints_count, -1 );
-                    for ( cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex )
-                    {
-                        binding._listJointToBone[jointIndex] = mapJointBone[skin.joints[jointIndex]];
-                    }
-                }
+                const vector<SkinBinding> listBinding = makeSkinBindings( data, mapJointBone );
                 // 스킨 없는 메시를 몸에 합칠 때 쓰는 고정 본 매핑이다. 루트 본 0 에 가중치 1 을 준다.
                 SkinBinding rigidBinding{};
 
@@ -233,31 +274,8 @@ namespace sw::editor
                         }
                         continue;
                     }
-
-                    // 부착은 메시가 노드 로컬 공간에 있고, 변환은 가장 가까운 관절을 기준으로 한다. 사이의 비관절 노드는 곱해서 합친다.
-                    ModelImportAttachment attachment{};
-                    attachment._name       = makeNodeName( data, *pNode );
-                    attachment._parentBone = outResult._skeleton.getBone( static_cast<uint32>( mapJointBone[pJoint] ) )._name;
-                    float4x4 local         = float4x4::Identity;
-                    for ( const cgltf_node* pStep = pNode; pStep != nullptr && pStep != pJoint; pStep = pStep->parent )
-                    {
-                        float32 arrLocal[16]{};
-                        cgltf_node_transform_local( pStep, arrLocal );
-                        local = local * convertMatrixToEngineSpace( arrLocal );
-                    }
-                    attachment._localTransform = BoneTransform::makeFromMatrix( local );
-                    const string baseStem      = makeFileStem( attachment._name );
-                    const uint32 useCount      = mapStemUse[baseStem]++;
-                    attachment._fileStem       = makeNumberedStem( baseStem, useCount );
-                    MergedMesh part;
-                    for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                    {
-                        if ( appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, nullptr, part ) == false )
-                            return reportUnreadableMesh( sourcePath, *pNode, data );
-                    }
-                    expandTriangles( part, 0, attachment._mesh );
-                    if ( attachment._mesh._listVertex.empty() == false )
-                        outResult._listAttachment.push_back( std::move( attachment ) );
+                    if ( readAttachment( data, *pNode, *pJoint, mapJointBone, mapStemUse, sourcePath, outResult ) == false )
+                        return false;
                 }
                 if ( body._listIndex.empty() )
                 {
@@ -419,6 +437,189 @@ namespace sw::editor
                 }
                 return bValid;
             }
+
+            /** @brief cgltf 가 읽은 데이터의 소유자입니다 — 어느 반환 경로에서도 `cgltf_free` 가 불립니다(반환마다 손으로 풀면 새 경로에서 빠뜨린다). */
+            struct GltfData
+            {
+                cgltf_data* _pData{ nullptr };
+
+                GltfData()                             = default;
+                GltfData( const GltfData& )            = delete;
+                GltfData& operator=( const GltfData& ) = delete;
+                ~GltfData() { cgltf_free( _pData ); }
+            };
+
+            /**
+             * @brief 파일을 읽어 cgltf 로 파싱 · 버퍼 로드 · 검증합니다. 옳지 않은 부모를 가진 장면 루트는 최상위 조상으로 바꿉니다.
+             * @param inoutBytes 파일 바이트입니다. cgltf 는 GLB 의 JSON 청크와 BIN 청크를 이 안에서 가리키므로 @p outData 보다 오래 살아야 한다.
+             */
+            [[nodiscard]] static bool parseGltf( string_view sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
+            {
+                if ( FileUtil::readFile( sourcePath, inoutBytes ) == false || inoutBytes.empty() )
+                {
+                    SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+                    return false;
+                }
+                const uint32 promotedCount = promoteSceneRootsToTopAncestor( inoutBytes );
+                if ( promotedCount > 0 )
+                    SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath, promotedCount );
+
+                const string        path    = string( sourcePath );
+                const cgltf_options options = makeOptions();
+                cgltf_result        result  = cgltf_parse( &options, inoutBytes.data(), inoutBytes.size(), &outData._pData );
+                if ( result == cgltf_result_success )
+                    result = cgltf_load_buffers( &options, outData._pData, path.c_str() );
+                if ( result == cgltf_result_success )
+                    result = cgltf_validate( outData._pData );
+                if ( result != cgltf_result_success )
+                {
+                    SW_LOG_ERROR( "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 스킨이 있는 모델을 읽습니다. 규칙의 이동 · 재중심이나 LOD 는 스킨드 모델에 맞지 않아 거절합니다. 읽었으면 아바타에 없는 본을 경고합니다. */
+            [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
+                                                        string_view sourcePath, ModelImportResult& outResult )
+            {
+                const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
+                if ( bMoves )
+                {
+                    SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
+                    return false;
+                }
+                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listToon, outResult ) == false )
+                    return false;
+                warnMissingAvatarBones( outResult, sourcePath );
+                return true;
+            }
+
+            /** @brief 스킨 없는 정적 모델을 읽습니다 — 장면 루트마다 메시를 합치고 규칙을 적용해 구간(VRM) 또는 LOD 단계를 만든다. */
+            [[nodiscard]] static bool readStaticModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
+                                                       string_view sourcePath, ModelImportResult& outResult )
+            {
+                MergedMesh merged;
+                merged._bBakeMaterialColor = listToon.empty();
+                for ( const cgltf_node* pRoot : listRoot )
+                {
+                    if ( appendNode( *pRoot, merged ) == false )
+                    {
+                        SW_LOG_ERROR( "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, makeNodeName( data, *pRoot ).c_str() );
+                        return false;
+                    }
+                }
+                if ( data.animations_count > 0 )
+                    SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, data.animations_count );
+
+                if ( merged._listIndex.empty() )
+                {
+                    SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
+                    return false;
+                }
+                if ( merged._baseColorTextureUri.empty() == false && listToon.empty() )
+                    SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
+
+                applyRule( rule, merged );
+                // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
+                const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
+                if ( bLODUnsupported )
+                {
+                    SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
+                                  rule._name.c_str() );
+                    return false;
+                }
+                if ( listToon.empty() == false )
+                {
+                    populateMaterialSections( merged, data, listToon, outResult );
+                    if ( collectSectionTextures( data, sourcePath, outResult ) == false )
+                        return false;
+                    expandTrianglesInOrder( merged, 0, outResult._mesh );
+                    outResult._mesh._listSection = makeMeshSections( outResult._listSection );
+                    return true;
+                }
+                expandTriangles( merged, 0, outResult._mesh );
+                return makeLODLevels( merged, rule, sourcePath, 0, outResult._mesh._listLOD );
+            }
+
+            /**
+             * @brief 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지웁니다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
+             * @return 스킨드 모델에 파쇄 규칙이 걸렸거나 쓰기 · 지우기에 실패하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeFractureAsset( const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, string_view outputPath )
+            {
+                const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+                if ( rule._bFracture != SW_TRUE )
+                {
+                    if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+                        return false;
+                    }
+                    return true;
+                }
+                if ( result._bSkinned == SW_TRUE )
+                {
+                    SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                    return false;
+                }
+                FractureAsset fracture;
+                string        error;
+                if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+                {
+                    SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                    return false;
+                }
+                if ( fracture.saveToFile( fracturePath ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                    return false;
+                }
+                SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                             fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+                return true;
+            }
+
+            /** @brief 부착 메시를 옆 폴더에 쓰고 스켈레톤에 부착으로 올립니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeAttachments( ModelImportResult& inoutResult, const string& sideFolder )
+            {
+                for ( const ModelImportAttachment& attachment : inoutResult._listAttachment )
+                {
+                    const string partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
+                    if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
+                        return false;
+                    }
+                    SkeletonAttachment entry{};
+                    entry._name           = attachment._name;
+                    entry._meshPath       = ResourcePaths::toResourceID( partPath );
+                    entry._parentBone     = attachment._parentBone;
+                    entry._localTransform = attachment._localTransform;
+                    inoutResult._skeleton.addAttachment( entry );
+                }
+                return true;
+            }
+
+            /** @brief 클립을 옆 폴더에 쓰고 원본 · 압축 바이트 합을 더합니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeClips( const ModelImportResult& result, const ModelImportRule& rule, const string& sideFolder, uint64& inoutRawByteTotal, uint64& inoutCompressedByteTotal )
+            {
+                for ( const ModelImportClip& imported : result._listClip )
+                {
+                    const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
+                    if ( imported._clip.saveToFile( clipPath ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
+                        return false;
+                    }
+                    inoutRawByteTotal += imported._stats._rawByteCount;
+                    inoutCompressedByteTotal += imported._stats._compressedByteCount;
+                    SW_LOG_INFO( "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
+                                 imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
+                                 imported._stats._maxError * 1000.0f );
+                }
+                return true;
+            }
         };
 
         /**
@@ -471,111 +672,23 @@ namespace sw::editor
 
     bool ModelImporter::readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
     {
-        outResult = ModelImportResult{};
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
-        {
-            SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+        using Internal = ModelImporterInternal;
+        outResult      = ModelImportResult{};
+        vector<uint8>      bytes; // 소유자(`holder`)보다 오래 산다
+        Internal::GltfData holder;
+        if ( Internal::parseGltf( sourcePath, bytes, holder ) == false )
             return false;
-        }
-        const uint32 promotedCount = ModelImporterInternal::promoteSceneRootsToTopAncestor( bytes );
-        if ( promotedCount > 0 )
-            SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath,
-                            promotedCount );
-
-        // cgltf 는 GLB 의 JSON 청크와 BIN 청크를 @p bytes 안에서 가리킨다. cgltf_free 까지 bytes 가 살아 있어야 한다.
-        const string        path    = string( sourcePath );
-        const cgltf_options options = ModelImporterInternal::makeOptions();
-        cgltf_data*         pData   = nullptr;
-        cgltf_result        result  = cgltf_parse( &options, bytes.data(), bytes.size(), &pData );
-        if ( result == cgltf_result_success )
-            result = cgltf_load_buffers( &options, pData, path.c_str() );
-        if ( result == cgltf_result_success )
-            result = cgltf_validate( pData );
-        if ( result != cgltf_result_success )
-        {
-            SW_LOG_ERROR( "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
-            cgltf_free( pData );
-            return false;
-        }
+        const cgltf_data& data = *holder._pData;
 
         vector<const cgltf_node*> listRoot;
-        ModelImporterInternal::collectSceneRoots( *pData, listRoot );
+        Internal::collectSceneRoots( data, listRoot );
         vector<ToonMaterialDesc> listToon;
-        if ( ModelImporterInternal::readToonMaterials( *pData, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false ||
-             ModelImporterInternal::readVrmAvatar( *pData, sourcePath, outResult ) == false )
-        {
-            cgltf_free( pData );
+        if ( Internal::readToonMaterials( data, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false || Internal::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
-        }
-        bool bRead = true;
-        if ( pData->skins_count > 0 )
-        {
-            const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
-            if ( bMoves )
-            {
-                SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
-                bRead = false;
-            }
-            else
-            {
-                bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
-            }
-            cgltf_free( pData );
-            if ( bRead )
-                ModelImporterInternal::warnMissingAvatarBones( outResult, sourcePath );
-            return bRead;
-        }
 
-        ModelImporterInternal::MergedMesh merged;
-        merged._bBakeMaterialColor = listToon.empty();
-        for ( const cgltf_node* pRoot : listRoot )
-        {
-            if ( ModelImporterInternal::appendNode( *pRoot, merged ) == false )
-            {
-                SW_LOG_ERROR( "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, ModelImporterInternal::makeNodeName( *pData, *pRoot ).c_str() );
-                cgltf_free( pData );
-                return false;
-            }
-        }
-        if ( pData->animations_count > 0 )
-            SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, pData->animations_count );
-
-        if ( merged._listIndex.empty() )
-        {
-            SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
-            cgltf_free( pData );
-            return false;
-        }
-        if ( merged._baseColorTextureUri.empty() == false && listToon.empty() )
-            SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
-
-        ModelImporterInternal::applyRule( rule, merged );
-        // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
-        const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
-        if ( bLODUnsupported )
-        {
-            SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
-                          rule._name.c_str() );
-            cgltf_free( pData );
-            return false;
-        }
-        if ( listToon.empty() == false )
-        {
-            ModelImporterInternal::populateMaterialSections( merged, *pData, listToon, outResult );
-            if ( ModelImporterInternal::collectSectionTextures( *pData, sourcePath, outResult ) == false )
-            {
-                cgltf_free( pData );
-                return false;
-            }
-            cgltf_free( pData );
-            ModelImporterInternal::expandTrianglesInOrder( merged, 0, outResult._mesh );
-            outResult._mesh._listSection = ModelImporterInternal::makeMeshSections( outResult._listSection );
-            return true;
-        }
-        cgltf_free( pData );
-        ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
-        return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, 0, outResult._mesh._listLOD );
+        if ( data.skins_count > 0 )
+            return Internal::readSkinnedAsset( data, listRoot, listToon, rule, sourcePath, outResult );
+        return Internal::readStaticModel( data, listRoot, listToon, rule, sourcePath, outResult );
     }
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
@@ -606,6 +719,7 @@ namespace sw::editor
 
     bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
     {
+        using Internal = ModelImporterInternal;
         ModelImportResult result{};
         if ( readModelAsset( sourcePath, rule, result ) == false )
             return false;
@@ -625,58 +739,18 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
             return false;
         }
-        if ( ModelImporterInternal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
+        if ( Internal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
             return false;
-        // 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지운다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
-        const string fracturePath = FractureAsset::makePathForMesh( outputPath );
-        if ( rule._bFracture == SW_TRUE )
-        {
-            if ( result._bSkinned == SW_TRUE )
-            {
-                SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
-                return false;
-            }
-            FractureAsset fracture;
-            string        error;
-            if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
-            {
-                SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
-                return false;
-            }
-            if ( fracture.saveToFile( fracturePath ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
-                return false;
-            }
-            SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
-                         fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
-        }
-        else if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
-        {
-            SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+        if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;
-        }
         if ( result._bSkinned == SW_FALSE )
         {
             SW_LOG_INFO( "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
             return true;
         }
 
-        for ( const ModelImportAttachment& attachment : result._listAttachment )
-        {
-            const string partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
-            if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
-                return false;
-            }
-            SkeletonAttachment entry{};
-            entry._name           = attachment._name;
-            entry._meshPath       = ResourcePaths::toResourceID( partPath );
-            entry._parentBone     = attachment._parentBone;
-            entry._localTransform = attachment._localTransform;
-            result._skeleton.addAttachment( entry );
-        }
+        if ( Internal::writeAttachments( result, sideFolder ) == false )
+            return false;
         const string stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
         const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
         if ( result._skeleton.saveToFile( skeletonPath ) == false )
@@ -684,26 +758,14 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        if ( ModelImporterInternal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+        if ( Internal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
             return false;
-        if ( ModelImporterInternal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
+        if ( Internal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;
-        for ( const ModelImportClip& imported : result._listClip )
-        {
-            const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
-            if ( imported._clip.saveToFile( clipPath ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
-                return false;
-            }
-            rawByteTotal += imported._stats._rawByteCount;
-            compressedByteTotal += imported._stats._compressedByteCount;
-            SW_LOG_INFO( "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
-                         imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
-                         imported._stats._maxError * 1000.0f );
-        }
+        if ( Internal::writeClips( result, rule, sideFolder, rawByteTotal, compressedByteTotal ) == false )
+            return false;
         SW_LOG_INFO( "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
                      result._mesh._listVertex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
                      compressedByteTotal );

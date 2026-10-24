@@ -773,6 +773,91 @@ namespace sw::editor
         _editorContext->getSubsystem<EditorPanelManager>().preRenderOpenPanels( pRHIDevice );
     }
 
+    void ImGuiEditor::prepareFrameState()
+    {
+        if ( _editorContext == nullptr )
+            return;
+        // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
+        // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
+        _editorContext->syncExtensionRegistrations();
+        // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
+        if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
+            EditorThemeUtil::reloadThemes();
+#if !defined( SW_SHIPPING )
+        // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
+        if ( EditorPreferencesStore::hasNewSections() )
+            (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
+#endif
+        _editorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
+        _editorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
+        _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
+    }
+
+    void ImGuiEditor::openFrame()
+    {
+        // 프레임 열기는 단계로 옮기지 않는다. 메뉴 · 툴바는 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄고, 도크스페이스는 어느 단계보다 먼저 열려야
+        // 패널이 그 안에 도킹된다. 그래서 순서가 ImGui 가 정한 것이고 셸이 소유한 도킹 레이아웃(`_dockLayout`)을 쓴다.
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.newFrame" );
+        beginFrame();
+        EditorMenuBar::drawThemeDialog();
+        EditorMenuBar::draw( _dockLayout );
+        EditorPlayToolbar::draw(); // 메뉴 바 아래에 둔다. 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄어든다
+        _dockLayout.beginDockspace();
+    }
+
+    void ImGuiEditor::closeAndPublishFrame()
+    {
+        // 아래는 단계로 옮기지 않는다. ImGui 프레임을 닫고(Render) draw 스냅샷을 렌더 스레드에 넘기는 셸의 약속이라, 위치가 곧 뜻이다.
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.endFrame" );
+        {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.render" );
+            endFrame();
+        }
+
+        // EndFrame 이후에 호출해야 창의 DrawList 에 이번 프레임의 최종 내용이 담긴다.
+        // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
+        EditorPanelDump::dumpIfRequested();
+
+        // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신, 보조 뷰포트 렌더)을
+        // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
+        const bool bRenderThreadContext = _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
+
+        // ImGui 1.92 동적 아틀라스는 폰트와 텍스처의 생성과 갱신을 그리기 전에 마쳐야 한다.
+        // 메인 스냅샷은 Textures==nullptr 로 넘겨, 렌더 스레드가 이 리스트를 건드리지 않게 한다.
+        if ( _rendererBackend != nullptr && bRenderThreadContext == false )
+            _rendererBackend->processTextureUpdates();
+
+        ImGuiIO& io = ImGui::GetIO();
+        if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
+        {
+            // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로, 보조(플로팅)
+            // 뷰포트의 GPU 렌더와 present 는 한 스레드에서만 실행해야 한다. GL 에서는 그 스레드가 렌더 스레드다(아래 render() 에서 처리).
+            // 창 생성, 크기 변경, 파괴와 렌더가 GPU 큐에 제출하고 대기하므로 렌더러 백엔드의 큐 락 안에서 실행한다.
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
+            const std::unique_lock<mutex> queueLock = ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
+            ImGui::UpdatePlatformWindows();
+            if ( bRenderThreadContext == false )
+                ImGui::RenderPlatformWindowsDefault();
+        }
+
+        const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
+
+        // 스냅샷을 내기 전에 번호를 알린다. 이 뒤에 해제하는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
+        ++_lastDrawSnapshotSequence;
+        {
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
+            // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 측정한다.
+            EditorUICaptureJob captureJob{};
+            const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
+            _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
+        }
+        if ( _rendererBackend != nullptr )
+            _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
+        // 게시하면 이 프레임이 "렌더 대기" 가 된다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle 에서 postPresent 까지 막힌다.
+        // 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태(텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
+        _drawSnapshotHandoff.publish( writeSlot );
+    }
+
     void ImGuiEditor::updateUI()
     {
         if ( _bInitialized == SW_FALSE )
@@ -785,34 +870,8 @@ namespace sw::editor
             waitForDrawSnapshotIdle();
         }
 
-        if ( _editorContext != nullptr )
-        {
-            // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
-            // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
-            _editorContext->syncExtensionRegistrations();
-            // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
-            if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
-                EditorThemeUtil::reloadThemes();
-#if !defined( SW_SHIPPING )
-            // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
-            if ( EditorPreferencesStore::hasNewSections() )
-                (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
-#endif
-            _editorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
-            _editorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
-            _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
-        }
-
-        // 프레임 열기는 단계로 옮기지 않는다. 메뉴 · 툴바는 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄고, 도크스페이스는 어느 단계보다 먼저 열려야
-        // 패널이 그 안에 도킹된다. 그래서 순서가 ImGui 가 정한 것이고 셸이 소유한 도킹 레이아웃(`_dockLayout`)을 쓴다.
-        {
-            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.newFrame" );
-            beginFrame();
-            EditorMenuBar::drawThemeDialog();
-            EditorMenuBar::draw( _dockLayout );
-            EditorPlayToolbar::draw(); // 메뉴 바 아래에 둔다. 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄어든다
-            _dockLayout.beginDockspace();
-        }
+        prepareFrameState();
+        openFrame();
 
         // 프레임 안의 일(단축키 → 에셋 리로드 → 패널 → 자체 테스트 → 창 제목 → 스크린샷)은 등록된 단계가 `_order` 순서로 한다(`EditorFrameStep.h`).
         // 셸은 단계를 모른다. 새 단계는 자기 .cpp 의 `SW_EDITOR_FRAME_STEP` 한 줄이다. 셸이 아는 단계는 `EditorFrameSteps.cpp` 에 있다.
@@ -822,59 +881,7 @@ namespace sw::editor
             ImGuiEditorInternal::runFrameSteps( *_editorContext );
         }
 
-        // 아래는 단계로 옮기지 않는다. ImGui 프레임을 닫고(Render) draw 스냅샷을 렌더 스레드에 넘기는 셸의 약속이라, 위치가 곧 뜻이다.
-        {
-            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.endFrame" );
-            {
-                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.render" );
-                endFrame();
-            }
-
-            // EndFrame 이후에 호출해야 창의 DrawList 에 이번 프레임의 최종 내용이 담긴다.
-            // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
-            EditorPanelDump::dumpIfRequested();
-
-            // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신, 보조 뷰포트 렌더)을
-            // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
-            const bool bRenderThreadContext =
-                _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
-
-            // ImGui 1.92 동적 아틀라스는 폰트와 텍스처의 생성과 갱신을 그리기 전에 마쳐야 한다.
-            // 메인 스냅샷은 Textures==nullptr 로 넘겨, 렌더 스레드가 이 리스트를 건드리지 않게 한다.
-            if ( _rendererBackend != nullptr && bRenderThreadContext == false )
-                _rendererBackend->processTextureUpdates();
-
-            ImGuiIO& io = ImGui::GetIO();
-            if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-            {
-                // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로, 보조(플로팅)
-                // 뷰포트의 GPU 렌더와 present 는 한 스레드에서만 실행해야 한다. GL 에서는 그 스레드가 렌더 스레드다(아래 render() 에서 처리).
-                // 창 생성, 크기 변경, 파괴와 렌더가 GPU 큐에 제출하고 대기하므로 렌더러 백엔드의 큐 락 안에서 실행한다.
-                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
-                const std::unique_lock<mutex> queueLock =
-                    ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
-                ImGui::UpdatePlatformWindows();
-                if ( bRenderThreadContext == false )
-                    ImGui::RenderPlatformWindowsDefault();
-            }
-
-            const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
-
-            // 스냅샷을 내기 전에 번호를 알린다. 이 뒤에 해제하는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
-            ++_lastDrawSnapshotSequence;
-            {
-                SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
-                // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 측정한다.
-                EditorUICaptureJob captureJob{};
-                const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
-                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
-            }
-            if ( _rendererBackend != nullptr )
-                _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
-            // 게시하면 이 프레임이 "렌더 대기" 가 된다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle 에서 postPresent 까지 막힌다.
-            // 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태(텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
-            _drawSnapshotHandoff.publish( writeSlot );
-        }
+        closeAndPublishFrame();
     }
 
     void ImGuiEditor::render( IRHIDevice* pRHIDevice )

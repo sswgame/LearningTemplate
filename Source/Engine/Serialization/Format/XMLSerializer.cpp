@@ -358,6 +358,144 @@ namespace sw
             }
 
             /**
+             * @brief `readXMLIntoInstance` 가 필드마다 나눠 쓰는 읽기 상태입니다.
+             * @details 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · JSON 과 같다).
+             *          되돌리는 단위는 필드 하나다. 구조체 칸은 안쪽 읽기가 같은 규칙으로 안쪽 필드만 되돌리므로, 칸 자신은 담지 않는다.
+             *          되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 그 뒤를 읽지 않고 객체째 실패한다(`_bObjectFailed`).
+             */
+            struct XMLReadState
+            {
+                MutableObjectAddress       _instance;
+                const TypeInfo&            _typeInfo;
+                IXMLBackend&               _backend;
+                const SerializeContext&    _context;
+                vector<SchemaOrphanValue>* _pOutListOrphan;
+                bool                       _bContinuesAfterUnreadable;
+                PropertyReadRollback       _rollback{};
+                bool                       _bFieldError{ false };
+                bool                       _bForbiddenField{ false };
+                bool                       _bObjectFailed{ false };
+            };
+
+            /** @brief 프로퍼티 이름 요소 안에 든 컨테이너 필드를 읽습니다. 요소가 없으면 기본값을 채웁니다. */
+            static void readContainerProperty( XMLReadState& state, const PropertyInfo& prop )
+            {
+                void* const pInstance = state._instance.get();
+                void* const pPropPtr  = prop.getRawPtr( pInstance );
+                const bool  entered   = tryNameOrAlias( prop, [&]( const utf8* pName )
+                   {
+                    return state._backend.pushChild( pName );
+                } );
+                if ( entered == false )
+                {
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, state._context );
+                    return;
+                }
+                if ( state._bContinuesAfterUnreadable && state._rollback.keepValueBeforeRead( state._typeInfo, prop, ObjectAddress{ pInstance }, state._context ) == false )
+                {
+                    state._bObjectFailed = true;
+                }
+                else
+                {
+                    const size_t          orphanCountBefore = state._bContinuesAfterUnreadable ? state._pOutListOrphan->size() : 0;
+                    ContainerReader       reader( state._backend, state._context, state._pOutListOrphan, prop );
+                    const FieldReadResult containerResult =
+                        ContainerVisitor::toFieldResult( ContainerVisitor::read( MutableValueAddress{ pPropPtr }, prop.getContainerShape(), reader, state._context ) );
+                    switch ( containerResult )
+                    {
+                        case FieldReadResult::Read:
+                        {
+                            break;
+                        }
+                        case FieldReadResult::FieldFailed:
+                        {
+                            state._bFieldError = true;
+                            if ( state._bContinuesAfterUnreadable )
+                                state._bObjectFailed = restoreContainerField( state._rollback, prop, state._instance, state._backend, state._context, orphanCountBefore, *state._pOutListOrphan ) == false;
+                            break;
+                        }
+                        case FieldReadResult::ObjectRejected:
+                        {
+                            // 원소 안의 금지된 필드 · 되돌리지 못한 필드다. 칸을 되돌려 orphan 으로 넘기지 않고 객체째 실패한다.
+                            state._bFieldError   = true;
+                            state._bObjectFailed = true;
+                            break;
+                        }
+                    }
+                }
+                state._backend.popChild();
+            }
+
+            /** @brief 중첩 구조체 필드를 읽습니다. 요소가 없으면 기본값을 채웁니다. */
+            static void readNestedProperty( XMLReadState& state, const PropertyInfo& prop, const TypeInfo& nestedType )
+            {
+                void* const pInstance = state._instance.get();
+                void* const pPropPtr  = prop.getRawPtr( pInstance );
+                const bool  entered   = tryNameOrAlias( prop, [&]( const utf8* pName )
+                   {
+                    return state._backend.pushChild( pName );
+                } );
+                if ( entered == false )
+                {
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, state._context );
+                    return;
+                }
+                // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸으므로 FieldFailed 는 엄격 읽기에서만 온다.
+                const FieldReadResult nestedResult = readNestedXMLIntoInstance( MutableObjectAddress{ pPropPtr }, nestedType, state._backend, state._context, state._pOutListOrphan );
+                switch ( nestedResult )
+                {
+                    case FieldReadResult::Read:
+                    {
+                        break;
+                    }
+                    case FieldReadResult::FieldFailed:
+                    {
+                        state._bFieldError = true;
+                        break;
+                    }
+                    case FieldReadResult::ObjectRejected:
+                    {
+                        state._bFieldError   = true;
+                        state._bObjectFailed = true;
+                        break;
+                    }
+                }
+                state._backend.popChild();
+            }
+
+            /** @brief 속성 하나로 적힌 스칼라 필드를 읽습니다. 속성이 없으면 기본값을 채웁니다. */
+            static void readScalarProperty( XMLReadState& state, const PropertyInfo& prop )
+            {
+                void* const pInstance = state._instance.get();
+                void* const pPropPtr  = prop.getRawPtr( pInstance );
+                string      strValue;
+                const bool  readOk = tryNameOrAlias( prop, [&]( const utf8* pName )
+                 {
+                    return state._backend.readAttribute( pName, strValue );
+                } );
+                if ( readOk == false )
+                {
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, state._context );
+                    return;
+                }
+                if ( state._bContinuesAfterUnreadable && state._rollback.keepValueBeforeRead( state._typeInfo, prop, ObjectAddress{ pInstance }, state._context ) == false )
+                {
+                    state._bObjectFailed = true;
+                    return;
+                }
+                // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
+                const bool bApplied = ( prop._bIsBitField == SW_TRUE ) ? SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, state._context )
+                                                                       : parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, strValue, state._context );
+                if ( bApplied == false )
+                {
+                    state._bFieldError = true;
+                    recordDroppedText( state._pOutListOrphan, prop, strValue );
+                    if ( state._bContinuesAfterUnreadable )
+                        state._bObjectFailed = state._rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, state._context ) == false;
+                }
+            }
+
+            /**
              * @brief 지금 원소에서 @p typeInfo 의 필드를 읽습니다.
              * @return 금지된 필드가 있거나 되돌리지 못하면 ObjectRejected, 엄격 읽기(orphan 목록 없음)에서 읽지 못한 필드가 있으면 FieldFailed 입니다.
              *         소프트 읽기는 읽지 못한 필드를 orphan 으로 넘기고 Read 입니다.
@@ -365,19 +503,11 @@ namespace sw
             [[nodiscard]] static FieldReadResult readXMLIntoInstance( const MutableObjectAddress instance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
                                                                       vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                void* const pInstance = instance.get();
-                bool        bFieldError{ false };
-                bool        bForbiddenField{ false };
-                // 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · JSON 과 같다).
-                // 되돌리는 단위는 필드 하나다. 구조체 칸은 안쪽 읽기가 같은 규칙으로 안쪽 필드만 되돌리므로, 칸 자신은 담지 않는다.
-                // 되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 그 뒤를 읽지 않고 객체째 실패한다.
-                const bool           bContinuesAfterUnreadable = pOutListOrphan != nullptr;
-                PropertyReadRollback rollback;
-                bool                 bObjectFailed{ false };
+                XMLReadState state{ instance, typeInfo, backend, context, pOutListOrphan, pOutListOrphan != nullptr };
 
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
-                    if ( bObjectFailed )
+                    if ( state._bObjectFailed )
                         return;
                     // 이 목적이 다루지 않는 필드는 지금 값 그대로다(기본값을 채우지 않는다). 저작 파일의 런타임 상태는 로드 오류다.
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
@@ -385,130 +515,28 @@ namespace sw
                         if ( SerializerUtil::isForbiddenInFile( prop, context ) && hasXMLField( backend, prop ) )
                         {
                             SerializerUtil::reportForbiddenProperty( typeInfo, prop );
-                            bForbiddenField = true;
+                            state._bForbiddenField = true;
                         }
                         return;
                     }
-                    void* pPropPtr = prop.getRawPtr( pInstance );
-
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
-                        // 컨테이너는 프로퍼티 이름 요소 안에 들어 있다.
-                        const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
-                        {
-                            return backend.pushChild( pName );
-                        } );
-                        if ( entered )
-                        {
-                            if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
-                            {
-                                bObjectFailed = true;
-                            }
-                            else
-                            {
-                                const size_t          orphanCountBefore = bContinuesAfterUnreadable ? pOutListOrphan->size() : 0;
-                                ContainerReader       reader( backend, context, pOutListOrphan, prop );
-                                const FieldReadResult containerResult = ContainerVisitor::toFieldResult( ContainerVisitor::read( MutableValueAddress{ pPropPtr }, prop.getContainerShape(), reader, context ) );
-                                switch ( containerResult )
-                                {
-                                    case FieldReadResult::Read:
-                                    {
-                                        break;
-                                    }
-                                    case FieldReadResult::FieldFailed:
-                                    {
-                                        bFieldError = true;
-                                        if ( bContinuesAfterUnreadable )
-                                            bObjectFailed = restoreContainerField( rollback, prop, instance, backend, context, orphanCountBefore, *pOutListOrphan ) == false;
-                                        break;
-                                    }
-                                    case FieldReadResult::ObjectRejected:
-                                    {
-                                        // 원소 안의 금지된 필드 · 되돌리지 못한 필드다. 칸을 되돌려 orphan 으로 넘기지 않고 객체째 실패한다.
-                                        bFieldError   = true;
-                                        bObjectFailed = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            backend.popChild();
-                        }
-                        else
-                            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
+                        readContainerProperty( state, prop );
+                        return;
                     }
+                    const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
+                    if ( pNestedType != nullptr )
+                        readNestedProperty( state, prop, *pNestedType );
                     else
-                    {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
-                        if ( pNestedType != nullptr )
-                        {
-                            const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
-                            {
-                                return backend.pushChild( pName );
-                            } );
-                            if ( entered )
-                            {
-                                // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸으므로 FieldFailed 는 엄격 읽기에서만 온다.
-                                const FieldReadResult nestedResult = readNestedXMLIntoInstance( MutableObjectAddress{ pPropPtr }, *pNestedType, backend, context, pOutListOrphan );
-                                switch ( nestedResult )
-                                {
-                                    case FieldReadResult::Read:
-                                    {
-                                        break;
-                                    }
-                                    case FieldReadResult::FieldFailed:
-                                    {
-                                        bFieldError = true;
-                                        break;
-                                    }
-                                    case FieldReadResult::ObjectRejected:
-                                    {
-                                        bFieldError   = true;
-                                        bObjectFailed = true;
-                                        break;
-                                    }
-                                }
-                                backend.popChild();
-                            }
-                            else
-                                SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
-                            return;
-                        }
-
-                        string     strValue;
-                        const bool readOk = tryNameOrAlias( prop, [&]( const utf8* pName )
-                        {
-                            return backend.readAttribute( pName, strValue );
-                        } );
-
-                        if ( readOk )
-                        {
-                            if ( bContinuesAfterUnreadable && rollback.keepValueBeforeRead( typeInfo, prop, ObjectAddress{ pInstance }, context ) == false )
-                            {
-                                bObjectFailed = true;
-                                return;
-                            }
-                            // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
-                            const bool bApplied = ( prop._bIsBitField == SW_TRUE ) ? SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, context )
-                                                                                   : parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, strValue, context );
-                            if ( bApplied == false )
-                            {
-                                bFieldError = true;
-                                recordDroppedText( pOutListOrphan, prop, strValue );
-                                if ( bContinuesAfterUnreadable )
-                                    bObjectFailed = rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false;
-                            }
-                        }
-                        else
-                            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
-                    }
+                        readScalarProperty( state, prop );
                 }, true /* 상속 PROPERTY 포함 */ );
 
                 // 금지된 필드는 소프트 읽기(orphan 목록)에서도 실패다 — orphan 으로 넘기면 경고 한 줄로 사라진다. 바깥 칸도 이것을 칸 실패로 낮추지 않는다.
-                if ( bForbiddenField || bObjectFailed )
+                if ( state._bForbiddenField || state._bObjectFailed )
                     return FieldReadResult::ObjectRejected;
                 if ( pOutListOrphan != nullptr )
                     return FieldReadResult::Read;
-                return bFieldError ? FieldReadResult::FieldFailed : FieldReadResult::Read;
+                return state._bFieldError ? FieldReadResult::FieldFailed : FieldReadResult::Read;
             }
 
             /** @brief 지금 원소에 프로퍼티 @p prop 의 속성이나 자식(지금 이름 또는 옛 이름)이 있으면 true 입니다. 읽는 위치는 그대로입니다. */

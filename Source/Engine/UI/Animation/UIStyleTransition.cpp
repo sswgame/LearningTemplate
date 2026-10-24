@@ -356,6 +356,23 @@ namespace sw
                 }
                 inoutSpec._listEntry.push_back( entry );
             }
+
+            /** @brief 필드 @p field 의 진행 중인 채널이 있으면 그 지금 값을 @p outFrom 에 담고 채널을 뺍니다(새 채널이 그 값에서 이어 간다). */
+            [[nodiscard]] static bool takeRunningValue( UIStyleTransitionState* pState, UIStyleField field, float32 ( &outFrom )[4] )
+            {
+                if ( pState == nullptr )
+                    return false;
+                vector<UIStyleTransitionState::Channel>& listChannel = pState->_listChannel;
+                for ( size_t channelIndex = 0; channelIndex < listChannel.size(); ++channelIndex )
+                {
+                    if ( listChannel[channelIndex]._field != field )
+                        continue;
+                    evaluateChannel( listChannel[channelIndex], outFrom );
+                    listChannel.erase( listChannel.begin() + static_cast<ptrdiff_t>( channelIndex ) );
+                    return true;
+                }
+                return false;
+            }
         };
     } // namespace
 } // namespace sw
@@ -420,6 +437,72 @@ namespace sw
         return false;
     }
 
+    void UIStyleTransition::refreshShownStyle( Widget& widget, UIStyleTransitionState& state, const UIComputedStyle& newStyle )
+    {
+        using Internal = UIStyleTransitionInternal;
+        // 보이는 값은 새 목표에 도는 필드의 지금 값을 반영한 것이다. 새로 들어온 위젯이면 트리의 전환 목록에 올린다.
+        state._shown = newStyle;
+        for ( const UIStyleTransitionState::Channel& channel : state._listChannel )
+        {
+            float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+            Internal::evaluateChannel( channel, arrValue );
+            Internal::writeField( state._shown._value, channel._field, arrValue );
+            state._shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
+        }
+        WidgetTree* pTree = widget.getTree();
+        if ( pTree != nullptr && VectorUtil::contains( pTree->_listStyleTransition, widget.getID() ) == false )
+            pTree->_listStyleTransition.push_back( widget.getID() );
+    }
+
+    bool UIStyleTransition::makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
+                                         uint32 oldStates, uint32 newStates, bool bHaveFrom, float32 ( &inoutFrom )[4], UIStyleTransitionState::Channel& outChannel )
+    {
+        using Internal                               = UIStyleTransitionInternal;
+        const UIStyleTransitionSpec::Entry* pEntry   = spec.findEntry( field );
+        const bool                          bOwnSpec = pEntry != nullptr && pEntry->_duration > 0.0f;
+        // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
+        UIStyleTransitionState::Channel channel{};
+        if ( newStyle.has( field ) )
+            Internal::readField( newStyle._value, field, channel._arrTo );
+        else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
+            return false;
+        UIStyleTransitionState::Channel mirrored{};
+        const bool                      bMirror = bOwnSpec == false && newStyle.has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
+                             findParentChannel( widget, field, channel._arrTo, mirrored );
+        if ( bOwnSpec == false && bMirror == false )
+            return false; // 적지 않은 필드는 바로 바꾼다
+        if ( bMirror )
+        {
+            channel = mirrored;
+            for ( uint32 component = 0; component < 4; ++component )
+            {
+                inoutFrom[component] = channel._arrFrom[component];
+            }
+        }
+        else
+        {
+            // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
+            if ( bHaveFrom == false && oldStyle.has( field ) )
+                Internal::readField( oldStyle._value, field, inoutFrom );
+            else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, oldStates, inoutFrom ) == false )
+                return false;
+            channel._field    = field;
+            channel._duration = pEntry->_duration;
+            channel._curve    = pEntry->_curve;
+            channel._delay    = pEntry->_delay;
+        }
+        bool bSame = true;
+        for ( uint32 component = 0; component < 4; ++component )
+        {
+            channel._arrFrom[component] = inoutFrom[component];
+            bSame                       = bSame && inoutFrom[component] == channel._arrTo[component];
+        }
+        if ( bSame )
+            return false;
+        outChannel = channel;
+        return true;
+    }
+
     void UIStyleTransition::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields, uint32 oldStates, uint32 newStates )
     {
         using Internal = UIStyleTransitionInternal;
@@ -445,61 +528,10 @@ namespace sw
             if ( ( changedFields & UIStyleFieldTable::makeBit( field ) ) == 0 )
                 continue;
             // 바뀐 필드: 기존 채널은 지금 값을 넘겨주고 빠진다.
-            float32 arrFrom[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-            bool    bHaveFrom = false;
-            if ( state != nullptr )
-            {
-                vector<UIStyleTransitionState::Channel>& listChannel = state->_listChannel;
-                for ( size_t channelIndex = 0; channelIndex < listChannel.size(); ++channelIndex )
-                {
-                    if ( listChannel[channelIndex]._field != field )
-                        continue;
-                    Internal::evaluateChannel( listChannel[channelIndex], arrFrom );
-                    bHaveFrom = true;
-                    listChannel.erase( listChannel.begin() + static_cast<ptrdiff_t>( channelIndex ) );
-                    break;
-                }
-            }
-            const UIStyleTransitionSpec::Entry* pEntry   = spec.findEntry( field );
-            const bool                          bOwnSpec = pEntry != nullptr && pEntry->_duration > 0.0f;
-            // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
+            float32                         arrFrom[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+            const bool                      bHaveFrom = Internal::takeRunningValue( state.get(), field, arrFrom );
             UIStyleTransitionState::Channel channel{};
-            if ( pNew->has( field ) )
-                Internal::readField( pNew->_value, field, channel._arrTo );
-            else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
-                continue;
-            UIStyleTransitionState::Channel mirrored{};
-            const bool                      bMirror = bOwnSpec == false && pNew->has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
-                                 findParentChannel( widget, field, channel._arrTo, mirrored );
-            if ( bOwnSpec == false && bMirror == false )
-                continue; // 적지 않은 필드는 바로 바꾼다
-            if ( bMirror )
-            {
-                channel = mirrored;
-                for ( uint32 component = 0; component < 4; ++component )
-                {
-                    arrFrom[component] = channel._arrFrom[component];
-                }
-            }
-            else
-            {
-                // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
-                if ( bHaveFrom == false && pOld->has( field ) )
-                    Internal::readField( pOld->_value, field, arrFrom );
-                else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, oldStates, arrFrom ) == false )
-                    continue;
-                channel._field    = field;
-                channel._duration = pEntry->_duration;
-                channel._curve    = pEntry->_curve;
-                channel._delay    = pEntry->_delay;
-            }
-            bool bSame = true;
-            for ( uint32 component = 0; component < 4; ++component )
-            {
-                channel._arrFrom[component] = arrFrom[component];
-                bSame                       = bSame && arrFrom[component] == channel._arrTo[component];
-            }
-            if ( bSame )
+            if ( makeChannel( widget, *pOld, *pNew, field, spec, oldStates, newStates, bHaveFrom, arrFrom, channel ) == false )
                 continue;
             if ( state == nullptr )
                 state = make_unique<UIStyleTransitionState>();
@@ -513,18 +545,7 @@ namespace sw
             state.reset();
             return;
         }
-        // 보이는 값은 새 목표에 도는 필드의 지금 값을 반영한 것이다. 새로 들어온 위젯이면 트리의 전환 목록에 올린다.
-        state->_shown = *pNew;
-        for ( const UIStyleTransitionState::Channel& channel : state->_listChannel )
-        {
-            float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-            Internal::evaluateChannel( channel, arrValue );
-            Internal::writeField( state->_shown._value, channel._field, arrValue );
-            state->_shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
-        }
-        WidgetTree* pTree = widget.getTree();
-        if ( pTree != nullptr && VectorUtil::contains( pTree->_listStyleTransition, widget.getID() ) == false )
-            pTree->_listStyleTransition.push_back( widget.getID() );
+        Internal::refreshShownStyle( widget, *state, *pNew );
     }
 
     uint32 UIStyleTransition::update( WidgetTree& tree, float32 deltaSeconds )

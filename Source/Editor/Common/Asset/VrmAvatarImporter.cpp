@@ -669,10 +669,9 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 1.0 VRMC_springBone 을 읽습니다. */
-            [[nodiscard]] static bool readVrm1Springs( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            /** @brief 1.0 VRMC_springBone 의 콜라이더(구 · 캡슐)를 읽습니다. */
+            [[nodiscard]] static bool readVrm1Colliders( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
-                collectUnknownKeys( springBone, kArrVrm1SpringRootKey, "VRMC_springBone", pOutListIgnored );
                 const JSONValue listCollider = springBone.get( "colliders", false );
                 for ( size_t index = 0; index < listCollider.size(); ++index )
                 {
@@ -717,7 +716,12 @@ namespace sw::editor
                     }
                     inoutDef._listCollider.push_back( std::move( collider ) );
                 }
+                return true;
+            }
 
+            /** @brief 1.0 VRMC_springBone 의 콜라이더 그룹을 읽습니다. 콜라이더는 앞에서 읽은 목록의 번호로 가리킵니다. */
+            [[nodiscard]] static bool readVrm1ColliderGroups( const JSONValue& springBone, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            {
                 const JSONValue listGroup = springBone.get( "colliderGroups", false );
                 for ( size_t index = 0; index < listGroup.size(); ++index )
                 {
@@ -736,7 +740,13 @@ namespace sw::editor
                     }
                     inoutDef._listColliderGroup.push_back( std::move( group ) );
                 }
+                return true;
+            }
 
+            /** @brief 1.0 VRMC_springBone 의 스프링(중심 · 콜라이더 그룹 · 관절)을 읽습니다. */
+            [[nodiscard]] static bool readVrm1SpringChains( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored,
+                                                            string& outError )
+            {
                 const JSONValue listSpring = springBone.get( "springs", false );
                 for ( size_t index = 0; index < listSpring.size(); ++index )
                 {
@@ -779,6 +789,14 @@ namespace sw::editor
                     inoutDef._listSpring.push_back( std::move( spring ) );
                 }
                 return true;
+            }
+
+            /** @brief 1.0 VRMC_springBone 을 읽습니다 — 콜라이더, 콜라이더 그룹, 스프링 순서로(뒤의 것이 앞의 번호를 가리킨다). */
+            [[nodiscard]] static bool readVrm1Springs( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            {
+                collectUnknownKeys( springBone, kArrVrm1SpringRootKey, "VRMC_springBone", pOutListIgnored );
+                return readVrm1Colliders( springBone, names, inoutDef, pOutListIgnored, outError ) && readVrm1ColliderGroups( springBone, inoutDef, pOutListIgnored, outError ) &&
+                       readVrm1SpringChains( springBone, names, inoutDef, pOutListIgnored, outError );
             }
 
             /** @brief 표정 목록(`_listExpression`)을 @p root 에 씁니다. */

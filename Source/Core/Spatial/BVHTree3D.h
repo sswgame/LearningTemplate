@@ -71,6 +71,14 @@ namespace sw
         void  insertLeaf( int32 leafIndex );
         void  removeLeaf( int32 leafIndex );
         int32 balance( int32 nodeIndex );
+        /** @brief 새 잎의 형제로 가장 좋은 노드(표면적 휴리스틱)를 찾습니다. 트리가 비어 있으면 안 됩니다. */
+        int32 findBestSibling( const AABB& leafAABB ) const;
+        /** @brief 노드 @p childIndex 로 내려갈 때 잎이 더하는 비용(표면적 증가분 + 상속 비용)입니다. */
+        float32 computeDescentCost( int32 childIndex, const AABB& leafAABB, float32 inheritanceCost ) const;
+        /** @brief @p startIndex 부터 뿌리까지 올라가며 균형을 잡고 경계와 높이를 다시 맞춥니다. */
+        void refitUpward( int32 startIndex );
+        /** @brief 노드 @p nodeIndex 의 자식 @p upIndex 를 위로 회전합니다(@p stayIndex 는 남는 다른 자식, @p bUpIsRight 는 올린 쪽이 오른쪽 자식인지). */
+        void rotateUp( int32 nodeIndex, int32 upIndex, int32 stayIndex, bool bUpIsRight );
 
         static AABB    combineAABB( const AABB& a, const AABB& b );
         static float32 getSurfaceArea( const AABB& box );

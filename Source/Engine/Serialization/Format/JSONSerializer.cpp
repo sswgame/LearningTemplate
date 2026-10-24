@@ -19,6 +19,41 @@ namespace sw
     {
         struct JSONSerializerInternal
         {
+            /** @brief 파일의 모르는 키를 orphan 으로 담습니다. 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만). */
+            static void pushUnknownKeyOrphan( vector<SchemaOrphanValue>& outListOrphan, const string& keyRaw, const JSONValue& field )
+            {
+                SchemaOrphanValue orphan;
+                orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
+                orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
+                orphan._text     = field.dump();
+                // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
+                orphan._writtenName = keyRaw;
+                outListOrphan.push_back( std::move( orphan ) );
+            }
+
+            /** @brief 읽지 못한 알려진 필드를 orphan 으로 담습니다. */
+            static void pushUnreadableFieldOrphan( vector<SchemaOrphanValue>& outListOrphan, const PropertyInfo& prop, const JSONValue& field )
+            {
+                SchemaOrphanValue orphan;
+                orphan._name     = prop._name;
+                orphan._nameHash = prop.getNameHash();
+                orphan._text     = field.dump();
+                outListOrphan.push_back( std::move( orphan ) );
+            }
+
+            /** @brief 읽은 필드가 아닌 프로퍼티는 기본값으로 채웁니다. 이 목적이 다루지 않는 필드는 지금 값 그대로다. */
+            static void applyDefaultsToUnmatched( const TypeInfo& typeInfo, void* pInstance, const SerializeContext& context, const unordered_set<uint32>& uniqueMatched )
+            {
+                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+                {
+                    const bool bKeepCurrent = uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() ||
+                                              SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
+                    if ( bKeepCurrent )
+                        continue;
+                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
+                }
+            }
+
             // 주소는 값 자체다(프로퍼티 오프셋을 더한 뒤). 객체 주소는 `writeProperty` 가 받는다.
             static void writeJSONValue( JSONValue dst, const ValueAddress value, const hashed_string& typeName, const SerializeContext& context )
             {
@@ -510,16 +545,7 @@ namespace sw
             if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
             {
                 if ( pOutListOrphan != nullptr )
-                {
-                    // 파일의 모르는 키를 전역 이름 표에 넣지 않는다(XML 과 같다 — 아는 이름이면 그것을, 아니면 해시만).
-                    SchemaOrphanValue orphan;
-                    orphan._name     = hashed_string::findInterned( string_view{ keyRaw.c_str(), keyRaw.size() } );
-                    orphan._nameHash = hashed_string::computeHash( string_view{ keyRaw.c_str(), keyRaw.size() } );
-                    orphan._text     = field.dump();
-                    // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
-                    orphan._writtenName = keyRaw;
-                    pOutListOrphan->push_back( std::move( orphan ) );
-                }
+                    JSONSerializerInternal::pushUnknownKeyOrphan( *pOutListOrphan, keyRaw, field );
                 else
                     bFieldError = true;
                 continue;
@@ -551,11 +577,7 @@ namespace sw
                         // 읽다 만 값(원소를 채우다 만 컨테이너, 필드를 채우다 만 구조체)을 읽기 전 값으로 되돌린다. 되돌릴 수 없으면 객체째 실패다.
                         if ( rollback.restoreValueBeforeRead( MutableObjectAddress{ pInstance }, context ) == false )
                             return FieldReadResult::ObjectRejected;
-                        SchemaOrphanValue orphan;
-                        orphan._name     = pMatched->_name;
-                        orphan._nameHash = pMatched->getNameHash();
-                        orphan._text     = field.dump();
-                        pOutListOrphan->push_back( std::move( orphan ) );
+                        JSONSerializerInternal::pushUnreadableFieldOrphan( *pOutListOrphan, *pMatched, field );
                     }
                     else
                     {
@@ -571,14 +593,7 @@ namespace sw
             }
         }
 
-        for ( const PropertyInfo& prop : listProp )
-        {
-            const bool bKeepCurrent = uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() ||
-                                      SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
-            if ( bKeepCurrent )
-                continue;
-            SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance }, context );
-        }
+        JSONSerializerInternal::applyDefaultsToUnmatched( typeInfo, pInstance, context, uniqueMatched );
 
         // 금지된 필드는 소프트 읽기에서도 실패다(XML · 바이너리와 같다). 바깥 칸도 이것을 칸 실패로 낮추지 않는다.
         if ( bForbiddenField )

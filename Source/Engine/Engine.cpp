@@ -170,6 +170,9 @@ namespace sw
         return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
     }
 
+    // 길이를 나누지 않는다: 기동 순서(부트스트랩 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
+    // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
+    // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 이미지 창구 · 자동화 구동기) 아래로
@@ -525,35 +528,8 @@ namespace sw
         }
     }
 
-    void Engine::update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    void Engine::updateFrameServices( float32 deltaTime )
     {
-        // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
-        const HostViewTarget& mainOutput = views.getMainOutput();
-        const bool            bSceneMain = views.isSceneViewMain();
-        // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
-        // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
-        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        const IWindow* const             pMainWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool                       bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
-        const bool                       bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
-        const uint32                     vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
-        const uint32                     vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
-        _frameDeltaSeconds                           = deltaTime;
-
-        if ( _headlessState.isHeadless() )
-            return;
-
-        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
-        profiler.beginFrame();
-
-        // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
-        // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
-        SW_PROFILE_SCOPE( "GT.Frame" );
-#if SW_DEV_COMMANDS_ENABLED
-        // 개발 명령 `profile.stall` 이 건 지연을 이 구간 안에서 소비합니다. 스파이크를 프레임 비용에 기대지 않고 만듭니다.
-        FrameStall::consume();
-#endif
-
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )
@@ -577,7 +553,10 @@ namespace sw
             if ( _pAudioService != nullptr )
                 _pAudioService->update( deltaTime );
         }
+    }
 
+    void Engine::updateScenes( float32 deltaTime, const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
+    {
         _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
@@ -598,55 +577,40 @@ namespace sw
             if ( _pSceneManager != nullptr )
                 _pSceneManager->updatePreviewScenes( deltaTime );
         }
+    }
 
-        // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
-        if ( _pSceneManager != nullptr )
-            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+    void Engine::updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight )
+    {
+        if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
+            return;
 #if SW_DEV_COMMANDS_ENABLED
-        // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
-        if ( _pSceneManager != nullptr )
-            if ( AuthorityGhost* pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); pAuthorityGhost != nullptr )
-                pAuthorityGhost->update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+        // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
+        DebugHUD* const pDebugHUD = _pUISystem->getDebugHUD();
+        if ( pDebugHUD != nullptr )
+            pDebugHUD->update( _shellActions.getInputMap() );
 #endif
-
-        // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
-        if ( _listFrameObserver.empty() == false )
+        // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
+        const MainWindowSubsystem* const pWindowHost  = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow* const             pMainWindow  = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const float32                    contentScale = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
+        UIViewport                       viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
+        viewport._pointerOrigin                       = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
+        // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
+        if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
         {
-            const EngineFrameContext context = makeFrameContext();
-            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
-            {
-                pObserver->onAfterSceneTick( context );
-            }
+            vector<AudioSubtitleCue> listCue;
+            _pAudioService->getEngine().takeSubtitleCues( listCue );
+            _pUISystem->getSubtitles().postAudioCues( listCue );
         }
+        _pUISystem->update( GameTimeScale::getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+    }
 
-        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
-        // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
-        if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
-        {
-#if SW_DEV_COMMANDS_ENABLED
-            // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
-            DebugHUD* const pDebugHUD = _pUISystem->getDebugHUD();
-            if ( pDebugHUD != nullptr )
-                pDebugHUD->update( _shellActions.getInputMap() );
-#endif
-            // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
-            const float32 contentScale = pMainWindow != nullptr ? pMainWindow->getContentScale() : 1.0f;
-            UIViewport    viewport     = _pUISystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
-            viewport._pointerOrigin    = int2{ mainOutput._windowX, mainOutput._windowY }; // 백버퍼면 빈 출력이라 0 이다
-            // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
-            if ( _pAudioService != nullptr && _pAudioService->isInitialized() )
-            {
-                vector<AudioSubtitleCue> listCue;
-                _pAudioService->getEngine().takeSubtitleCues( listCue );
-                _pUISystem->getSubtitles().postAudioCues( listCue );
-            }
-            _pUISystem->update( GameTimeScale::getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
-        }
-
+    void Engine::submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
+    {
+#if defined( SW_WITH_CLIENT_CODE )
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
         // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
-#if defined( SW_WITH_CLIENT_CODE )
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
             MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
@@ -691,7 +655,7 @@ namespace sw
             // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.
             if ( _pSceneManager != nullptr )
                 _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
-            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _pRHI );
+            RenderPacketBuilder::populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
 
             if ( _pRenderThread != nullptr )
             {
@@ -702,9 +666,68 @@ namespace sw
         }
 #else
         // Server 타깃 — 렌더러가 없어 올릴 머티리얼도 낼 패킷도 없다(뷰 · 카메라 조회는 쓰지 않는다).
-        (void)bSceneMain;
+        (void)deltaTime;
+        (void)views;
         (void)sceneViewCameraProvider;
 #endif
+    }
+
+    void Engine::update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    {
+        // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
+        const HostViewTarget& mainOutput = views.getMainOutput();
+        // 게임이 그려지는 픽셀 크기 — 주 출력이 있으면 그 크기(에디터 게임 뷰의 이미지), 없으면 백버퍼(게임 창)다. 창 크기가 아니다:
+        // 에디터의 게임 뷰는 창의 일부라 창 크기로 종횡비를 세면 카메라가 늘어난다. 카메라(종횡비 · 픽셀 퍼펙트)와 런타임 UI 가 이 값 하나를 쓴다.
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow* const             pMainWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        const bool                       bHasDevice  = _pRHI != nullptr && _pRHI->hasDevice();
+        const bool                       bHasOutput  = mainOutput._width > 0 && mainOutput._height > 0;
+        const uint32                     vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
+        const uint32                     vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
+        _frameDeltaSeconds                           = deltaTime;
+
+        if ( _headlessState.isHeadless() )
+            return;
+
+        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
+        profiler.beginFrame();
+
+        // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
+        // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
+        SW_PROFILE_SCOPE( "GT.Frame" );
+#if SW_DEV_COMMANDS_ENABLED
+        // 개발 명령 `profile.stall` 이 건 지연을 이 구간 안에서 소비합니다. 스파이크를 프레임 비용에 기대지 않고 만듭니다.
+        FrameStall::consume();
+#endif
+
+        // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
+        updateFrameServices( deltaTime );
+        updateScenes( deltaTime, mainOutput, vpWidth, vpHeight, bTickScene );
+
+        // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
+        if ( _pSceneManager != nullptr )
+            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+#if SW_DEV_COMMANDS_ENABLED
+        // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
+        if ( _pSceneManager != nullptr )
+            if ( AuthorityGhost* pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); pAuthorityGhost != nullptr )
+                pAuthorityGhost->update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
+#endif
+
+        // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
+        if ( _listFrameObserver.empty() == false )
+        {
+            const EngineFrameContext context = makeFrameContext();
+            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            {
+                pObserver->onAfterSceneTick( context );
+            }
+        }
+
+        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). UI 단위 크기 · 배율 · 안전 영역은
+        // 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
+        updateRuntimeUI( mainOutput, vpWidth, vpHeight );
+        submitRenderPacket( deltaTime, views, sceneViewCameraProvider );
     }
 
     void Engine::endFrame()

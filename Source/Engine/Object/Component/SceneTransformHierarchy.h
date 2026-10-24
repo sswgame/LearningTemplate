@@ -279,6 +279,12 @@ namespace sw
          * @param bUseCachedTarget 건이 가진 `_pTarget` 을 믿고 핸들을 다시 찾지 않을지 나타냅니다. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
          */
         static uint32 applyWriteRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget );
+        /** @brief 틱 중의 배치입니다. 세터로 돌려 틱 중 쓰기 길을 타게 합니다(병렬 적용은 틱 밖에서만 안전하다). 세터로 돌린 건수를 반환합니다. */
+        static uint32 applyBatchThroughSetters( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count );
+        /** @brief 대상이 엄격히 늘어나는 배치를 연속 구간으로 나눠 병렬로 적용합니다. 바뀐 건수를 반환합니다. */
+        static uint32 applyBatchByRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count );
+        /** @brief 대상 버킷으로 나눠 병렬로 적용합니다(같은 핸들은 같은 버킷이라 한 워커가 배열 순서대로 쓴다). 바뀐 건수를 반환합니다. */
+        uint32 applyBatchByBucket( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 count );
         /** @brief 대기 슬롯 목록을 이어 붙인 번호 공간을 고르게 나눠 적용합니다(`applyTickWrites` 의 앞 절반). 바뀐 슬롯 수를 반환합니다. */
         uint32 applyPendingSlots( PrimitiveRegistry& registry );
         /** @brief 쓰기 큐를 대상 단위로 정렬하고 분할해 적용합니다(`applyTickWrites` 의 뒤 절반). 바뀐 건수를 반환합니다. */

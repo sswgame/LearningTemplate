@@ -81,6 +81,15 @@ namespace sw
         /** @brief 짝을 대상 본 순서로 세울 때의 비교입니다. */
         static bool isPairBefore( const BonePair& lhs, const BonePair& rhs ) { return lhs._target < rhs._target; }
 
+        /** @brief 사슬의 원본 · 대상 본을 짝지어 더하고(본 수가 다르면 길이 비율로 가장 가까운 원본 본) IK 사슬을 모읍니다. 본을 못 찾으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool collectChainBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,
+                                              vector<uint32>& inoutListTargetBone );
+        /** @brief 본 이름 짝과 같은 이름 매핑을 더합니다. 본을 못 찾으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool collectNamedBones( const RetargetProfile& profile, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton, vector<uint32>& inoutListSourceBone,
+                                              vector<uint32>& inoutListTargetBone ) const;
+        /** @brief 모은 본 짝에서 대상 본이 겹치지 않게(먼저 모은 짝이 이긴다) 짝 목록을 만들고 대상 본 순서(부모가 먼저)로 세웁니다. */
+        void populatePairs( const vector<uint32>& listSourceBone, const vector<uint32>& listTargetBone );
+
         vector<BonePair>        _listPair; ///< 대상 본 순서(부모가 먼저)
         vector<IKChain>         _listIKChain;
         vector<float3>          _listGoal; ///< IK 목표(사슬마다, 재사용)

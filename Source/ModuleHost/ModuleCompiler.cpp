@@ -118,50 +118,16 @@ namespace sw
         return resultDir;
     }
 
-    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag )
+    void ModuleCompiler::failBeforeBuild( const string& targetName )
     {
-        // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
-        const ScopedMemoryTag threadMemoryTag{ memoryTag };
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
-        ThreadCrashStack::initializeCurrentThread();
-        const string buildDir = findBuildDirectory();
-        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
-        {
-            SW_LOG_ERROR( "Failed to find build directory for compilation!" );
-            _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-            _lastExitCode.store( -1, std::memory_order_relaxed );
-            notifyBuildFinished( false, targetName );
-            _bIsCompiling.store( false, std::memory_order_relaxed );
-            return;
-        }
+        _buildState.store( BuildState::Failed, std::memory_order_relaxed );
+        _lastExitCode.store( -1, std::memory_order_relaxed );
+        notifyBuildFinished( false, targetName );
+        _bIsCompiling.store( false, std::memory_order_relaxed );
+    }
 
-        const string targetDisplayName = targetName.empty() ? "all" : targetName;
-        SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
-
-        string cmdLine = "cmake --build \"" + buildDir + "\"";
-        if ( targetName.empty() == false )
-            cmdLine += " --target " + targetName;
-
-        ProcessOptions options{};
-        options._workingDirectory = buildDir;
-        options._bCreateWindow    = false;
-
-        unique_ptr<Process> pProcess = make_unique<Process>();
-        if ( pProcess->launch( cmdLine, options ) == false )
-        {
-            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
-            _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-            _lastExitCode.store( -1, std::memory_order_relaxed );
-            notifyBuildFinished( false, targetName );
-            _bIsCompiling.store( false, std::memory_order_relaxed );
-            return;
-        }
-
-        {
-            std::scoped_lock<mutex> lock( _mutex );
-            _pCurrentProcess = std::move( pProcess );
-        }
-
+    void ModuleCompiler::relayBuildOutput()
+    {
         string outputLine;
         while ( _pCurrentProcess != nullptr && _pCurrentProcess->readOutputLine( outputLine ) )
         {
@@ -181,7 +147,10 @@ namespace sw
             else
                 SW_LOG_INFO( "%#", outputLine.c_str() );
         }
+    }
 
+    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName )
+    {
         int32 exitCode = -1;
         {
             std::scoped_lock<mutex> lock( _mutex );
@@ -202,28 +171,69 @@ namespace sw
         {
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             SW_LOG_WARNING( "Compilation was cancelled by user." );
+            return false;
         }
-        else if ( exitCode == 0 )
+        if ( exitCode == 0 )
         {
             _buildState.store( BuildState::Success, std::memory_order_relaxed );
             SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
+            return true;
+        }
+        _buildState.store( BuildState::Failed, std::memory_order_relaxed );
+        if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
+        {
+            SW_LOG_ERROR( "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
+                          "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
+                          targetDisplayName.c_str() );
         }
         else
         {
-            _buildState.store( BuildState::Failed, std::memory_order_relaxed );
-            if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
-            {
-                SW_LOG_ERROR( "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
-                              "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
-                              targetDisplayName.c_str() );
-            }
-            else
-            {
-                SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
-            }
+            SW_LOG_ERROR( "Compilation failed with exit code %# (target: %#)", exitCode, targetDisplayName.c_str() );
+        }
+        return false;
+    }
+
+    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag )
+    {
+        // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
+        const ScopedMemoryTag threadMemoryTag{ memoryTag };
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
+        const string buildDir = findBuildDirectory();
+        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
+        {
+            SW_LOG_ERROR( "Failed to find build directory for compilation!" );
+            failBeforeBuild( targetName );
+            return;
         }
 
-        notifyBuildFinished( _buildState.load( std::memory_order_relaxed ) == BuildState::Success, targetName );
+        const string targetDisplayName = targetName.empty() ? "all" : targetName;
+        SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
+
+        string cmdLine = "cmake --build \"" + buildDir + "\"";
+        if ( targetName.empty() == false )
+            cmdLine += " --target " + targetName;
+
+        ProcessOptions options{};
+        options._workingDirectory = buildDir;
+        options._bCreateWindow    = false;
+
+        unique_ptr<Process> pProcess = make_unique<Process>();
+        if ( pProcess->launch( cmdLine, options ) == false )
+        {
+            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
+            failBeforeBuild( targetName );
+            return;
+        }
+
+        {
+            std::scoped_lock<mutex> lock( _mutex );
+            _pCurrentProcess = std::move( pProcess );
+        }
+
+        relayBuildOutput();
+        const bool bSucceeded = recordBuildResult( targetDisplayName );
+        notifyBuildFinished( bSucceeded, targetName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
     }
 

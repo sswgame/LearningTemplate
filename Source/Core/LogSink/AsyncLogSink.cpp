@@ -56,6 +56,82 @@ namespace sw
         };
 
         thread_local LogDateCache t_logDateCache{};
+
+        struct AsyncLogSinkInternal
+        {
+            /** @brief 로그 줄에 찍는 시각 문자열과, 레코드가 나르는 달력 값(로그 파일 이름용)입니다. */
+            struct DateStamp
+            {
+                fixed_string<constant::kMaxBuffer32> _text{};
+                int32                                _year{ 0 };
+                int32                                _month{ 0 };
+                int32                                _day{ 0 };
+                int32                                _hour{ 0 };
+            };
+
+            /** @brief 지금 시각을 읽습니다. 같은 초 안에서는 스레드의 캐시 문자열을 재사용합니다. */
+            static DateStamp readDateStamp()
+            {
+                DateStamp         stamp{};
+                LogDateCache&     cache   = t_logDateCache;
+                const std::time_t timeSec = std::time( nullptr );
+                if ( timeSec == cache._timeSec )
+                {
+                    stamp._text  = cache._arrDate;
+                    stamp._year  = cache._year;
+                    stamp._month = cache._month;
+                    stamp._day   = cache._day;
+                    stamp._hour  = cache._hour;
+                    return stamp;
+                }
+                // 로그 줄은 날짜를 못 바꿔도 남긴다 — 바꾸지 못한 시각(플랫폼 범위 밖)은 0 날짜로 찍혀 눈에 띈다.
+                LocalCalendarTime localTime{};
+                (void)WallClock::toLocalCalendar( static_cast<int64>( timeSec ), localTime );
+                stamp._year  = localTime._year;
+                stamp._month = localTime._month;
+                stamp._day   = localTime._day;
+                stamp._hour  = localTime._hour;
+
+                formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", stamp._year, stamp._month, stamp._day, stamp._hour, localTime._minute, localTime._second );
+                stamp._text    = cache._arrDate;
+                cache._timeSec = timeSec;
+                cache._year    = stamp._year;
+                cache._month   = stamp._month;
+                cache._day     = stamp._day;
+                cache._hour    = stamp._hour;
+                return stamp;
+            }
+
+            /** @brief 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)입니다. 정하지 않았으면 빈 글입니다. */
+            static fixed_string<32> makeClockTag()
+            {
+                fixed_string<32> tickTag{};
+                LogClock         clock{ LogClock::Tick };
+                uint64           clockNumber{ 0 };
+                if ( Logger::getClockNumber( clock, clockNumber ) )
+                    formatstring( tickTag.data(), tickTag.capacity(), ( clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", clockNumber );
+                return tickTag;
+            }
+
+            /** @brief 로그 한 줄을 @p outBuffer 에 한 번만 포맷합니다(스택 버퍼라 힙 할당이 없다). 호출자(caller)가 없으면 그 칸을 뺍니다. */
+            static void formatLine( fixed_string<constant::kMaxBuffer8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pTickTag,
+                                    const utf8* pContextTag, const utf8* pMessage, const utf8* pFile, int32 line )
+            {
+                static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
+                static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
+                const utf8* pHeader = kArrHeader[static_cast<size_t>( level )];
+                if ( StringUtil::isNullOrEmpty( pCaller ) == false )
+                {
+                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", stamp._text.c_str(), pTag, pCaller, pHeader, pTickTag, pContextTag,
+                                  pMessage, pFile, line );
+                }
+                else
+                {
+                    formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pMessage,
+                                  pFile, line );
+                }
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -346,97 +422,12 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+    void AsyncLogSink::broadcastToListeners( const LogEntry& entry )
     {
-        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
-        SW_MEMORY_SCOPE( EngineMisc );
-        // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
-        int32 year{ 0 }, month{ 0 }, day{ 0 }, hour{ 0 };
-
-        fixed_string<constant::kMaxBuffer32> dateStr{};
-        {
-            LogDateCache&     cache   = t_logDateCache;
-            const std::time_t timeSec = std::time( nullptr );
-            if ( timeSec == cache._timeSec )
-            {
-                dateStr = cache._arrDate;
-                year    = cache._year;
-                month   = cache._month;
-                day     = cache._day;
-                hour    = cache._hour;
-            }
-            else
-            {
-                // 로그 줄은 날짜를 못 바꿔도 남긴다 — 바꾸지 못한 시각(플랫폼 범위 밖)은 0 날짜로 찍혀 눈에 띈다.
-                LocalCalendarTime localTime{};
-                (void)WallClock::toLocalCalendar( static_cast<int64>( timeSec ), localTime );
-                year               = localTime._year;
-                month              = localTime._month;
-                day                = localTime._day;
-                hour               = localTime._hour;
-                const int32 minute = localTime._minute;
-                const int32 second = localTime._second;
-
-                formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", year, month, day, hour, minute, second );
-                dateStr        = cache._arrDate;
-                cache._timeSec = timeSec;
-                cache._year    = year;
-                cache._month   = month;
-                cache._day     = day;
-                cache._hour    = hour;
-            }
-        }
-
-        static constexpr const utf8* kArrHeader[] = { "Error", "Warning", "Info", "Trace" };
-        static_assert( SW_COUNT_OF( kArrHeader ) == static_cast<uint32>( LogLevel::Count ), "LogLevel과 같아야 합니다" );
-
-        const size_t levelIndex       = static_cast<size_t>( level );
-        const utf8*  pEffectiveTag    = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
-        const utf8*  pEffectiveFile   = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
-        const utf8*  pEffectiveMsg    = ( pMessage != nullptr ) ? pMessage : "";
-        const utf8*  pEffectiveCaller = pCaller;
-        if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
-            pEffectiveCaller = Logger::getCaller( pFile );
-
-        // 문맥(요청 추적 id · 주체)은 부른 스레드의 것이라 큐에 넣기 전에 읽는다. 문맥이 없으면 꼬리표가 빈 글이라 줄은 바이트가 같다.
-        const LogContext& context = LogContext::getCurrent();
-        utf8              arrContextTag[LogContext::kMaxTagSize];
-        (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
-        // 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)도 같은 위치에 붙는다. 정하지 않았으면 빈 글이다.
-        fixed_string<32> tickTag{};
-        LogClock         clock{ LogClock::Tick };
-        uint64           clockNumber{ 0 };
-        if ( Logger::getClockNumber( clock, clockNumber ) )
-            formatstring( tickTag.data(), tickTag.capacity(), ( clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", clockNumber );
-
-        // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
-        fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
-        if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) == false )
-        {
-            formatstring( formattedBuffer.data(), formattedBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", dateStr.c_str(), pEffectiveTag,
-                          pEffectiveCaller, kArrHeader[levelIndex], tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
-        }
-        else
-        {
-            formatstring( formattedBuffer.data(), formattedBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", dateStr.c_str(), pEffectiveTag,
-                          kArrHeader[levelIndex], tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
-        }
-
-        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
-        //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
-        string      fallbackUtf8;
-        const utf8* pFormattedBuffer = formattedBuffer.c_str();
-        if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
-        {
-            fallbackUtf8     = StringUtil::escapeInvalidUtf8( string_view{ pFormattedBuffer } );
-            pFormattedBuffer = fallbackUtf8.c_str();
-        }
-
-        // 4단계: 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
-        //        "부르는 중" 을 올려 두어, 리스너 제거가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`). 리스너가 없으면 락도 잡지 않는다.
+        // 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
+        // "부르는 중" 을 올려 두어, 리스너 제거가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`).
         shared_ptr<const LogWrittenMulticast> listenerSnapshot;
         uint32                                broadcastSlot{ 0 };
-        if ( _bHasListener.load( std::memory_order_acquire ) )
         {
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _listenerSnapshot != nullptr )
@@ -446,33 +437,17 @@ namespace sw
                 _arrBroadcastInFlight[broadcastSlot].fetch_add( 1, std::memory_order_acq_rel );
             }
         }
+        if ( listenerSnapshot == nullptr )
+            return;
+        ++t_broadcastDepth;
+        listenerSnapshot->broadcastSnapshot( entry );
+        --t_broadcastDepth;
+        _arrBroadcastInFlight[broadcastSlot].fetch_sub( 1, std::memory_order_acq_rel );
+    }
 
-        if ( listenerSnapshot != nullptr )
-        {
-            LogEntry entry;
-            entry._level     = level;
-            entry._tag       = pEffectiveTag;
-            entry._caller    = ( pEffectiveCaller != nullptr ) ? pEffectiveCaller : "";
-            entry._message   = pEffectiveMsg;
-            entry._file      = pEffectiveFile;
-            entry._line      = line;
-            entry._timeStamp = dateStr.c_str();
-            entry._context   = context;
-            ++t_broadcastDepth;
-            listenerSnapshot->broadcastSnapshot( entry );
-            --t_broadcastDepth;
-            _arrBroadcastInFlight[broadcastSlot].fetch_sub( 1, std::memory_order_acq_rel );
-        }
-
-        // 5단계: 비동기 I/O 큐에 넣는다(초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다)
-        LogRecord record;
-        record._level     = level;
-        record._formatted = pFormattedBuffer;
-        record._year      = year;
-        record._month     = month;
-        record._day       = day;
-        record._hour      = hour;
-
+    void AsyncLogSink::submitRecord( LogRecord&& record )
+    {
+        // 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다.
         if ( _bInitialized == false || _bIsRunning.load( std::memory_order_relaxed ) == false )
         {
             dispatchToOutputs( record );
@@ -501,5 +476,66 @@ namespace sw
         // 큐에 영영 남는다. 여기서 직접 비운다(장치가 이미 닫혔으면 장치가 조용히 버린다).
         if ( _bIsRunning.load( std::memory_order_acquire ) == false )
             flushQueue();
+    }
+
+    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+    {
+        using Internal = AsyncLogSinkInternal;
+        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
+        SW_MEMORY_SCOPE( EngineMisc );
+        // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
+        const Internal::DateStamp stamp = Internal::readDateStamp();
+
+        const utf8* pEffectiveTag    = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::kDefaultLogTag : pTag;
+        const utf8* pEffectiveFile   = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::kDefaultLogFile : pFile;
+        const utf8* pEffectiveMsg    = ( pMessage != nullptr ) ? pMessage : "";
+        const utf8* pEffectiveCaller = pCaller;
+        if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) && pFile != nullptr )
+            pEffectiveCaller = Logger::getCaller( pFile );
+
+        // 문맥(요청 추적 id · 주체)은 부른 스레드의 것이라 큐에 넣기 전에 읽는다. 문맥이 없으면 꼬리표가 빈 글이라 줄은 바이트가 같다.
+        const LogContext& context = LogContext::getCurrent();
+        utf8              arrContextTag[LogContext::kMaxTagSize];
+        (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
+        const fixed_string<32> tickTag = Internal::makeClockTag();
+
+        // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
+        fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
+        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, pEffectiveCaller, tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
+
+        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
+        //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
+        string      fallbackUtf8;
+        const utf8* pFormattedBuffer = formattedBuffer.c_str();
+        if ( StringUtil::isValidUtf8( pFormattedBuffer ) == false )
+        {
+            fallbackUtf8     = StringUtil::escapeInvalidUtf8( string_view{ pFormattedBuffer } );
+            pFormattedBuffer = fallbackUtf8.c_str();
+        }
+
+        // 4단계: 리스너에게 락 밖에서 알린다. 리스너가 없으면 락도 잡지 않는다.
+        if ( _bHasListener.load( std::memory_order_acquire ) )
+        {
+            LogEntry entry;
+            entry._level     = level;
+            entry._tag       = pEffectiveTag;
+            entry._caller    = ( pEffectiveCaller != nullptr ) ? pEffectiveCaller : "";
+            entry._message   = pEffectiveMsg;
+            entry._file      = pEffectiveFile;
+            entry._line      = line;
+            entry._timeStamp = stamp._text.c_str();
+            entry._context   = context;
+            broadcastToListeners( entry );
+        }
+
+        // 5단계: 비동기 I/O 큐에 넣는다
+        LogRecord record;
+        record._level     = level;
+        record._formatted = pFormattedBuffer;
+        record._year      = stamp._year;
+        record._month     = stamp._month;
+        record._day       = stamp._day;
+        record._hour      = stamp._hour;
+        submitRecord( std::move( record ) );
     }
 } // namespace sw

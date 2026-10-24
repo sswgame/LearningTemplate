@@ -253,6 +253,15 @@ namespace sw
          * @details 바이트가 지난 업로드와 같으면 건너뛴다. 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
          */
         void uploadMaterialGroups( IRHIDevice* pDevice );
+        /**
+         * @brief 그룹의 원소 stride 를 셰이더 리플렉션이 준 구조버퍼 원소 크기에서 구합니다. 같은 셰이더의 머티리얼은 같은 stride 를 가지고, 다르면 가장 큰 것을 씁니다.
+         * @return 올릴 원소가 없으면 0 입니다.
+         */
+        static uint32 computeMaterialGroupStride( IRHIDevice* pDevice, const GPUMaterialGroup& group );
+        /** @brief 그룹 하나의 머티리얼 바이트를 stride 로 이어 붙여 구조 버퍼에 올립니다(지난 업로드와 같으면 건너뛴다). */
+        void uploadMaterialGroup( IRHIDevice* pDevice, const GPUMaterialGroup& group );
+        /** @brief 그룹당 한 번 푼 버퍼와 SRV 를 배치에 기록합니다. */
+        void bindBatchMaterials();
         /** @brief 배치 메시를 정점 풀에 모으고(동적 메시 포함) 배치에 풀 버퍼와 시작 정점을 적습니다. 풀 밖 배치는 자기 정점 버퍼를 만듭니다. 풀이 바뀌면 배치 테이블을 더티로 둡니다. */
         void updateVertexPool( IRHIDevice* pDevice );
         /** @brief 인스턴스 버퍼를 확보해 통째로 또는 바뀐 구간만 올리고, 뷰마다의 가시 인스턴스 ID 버퍼를 확보합니다. */

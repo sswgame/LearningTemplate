@@ -280,50 +280,51 @@ namespace sw::editor
             drawExternalOutput();
     }
 
-    void TestRunnerPanel::drawUnitTestTab()
+    void TestRunnerPanel::refreshExecutableList( const string& binDirectory )
     {
-        const string binDirectory = TestRunnerPanelInternal::getBinDirectory();
-        if ( _bExecutableListDirty == SW_TRUE )
+        if ( _bExecutableListDirty != SW_TRUE )
+            return;
+        _bExecutableListDirty = SW_FALSE;
+        _listTestExecutablePath.clear();
+        vector<string> listFilePath;
+        if ( FileUtil::collectFiles( FileUtil::joinPath( binDirectory, "../TestBin" ), ".exe", listFilePath, false ) )
         {
-            _bExecutableListDirty = SW_FALSE;
-            _listTestExecutablePath.clear();
-            vector<string> listFilePath;
-            if ( FileUtil::collectFiles( FileUtil::joinPath( binDirectory, "../TestBin" ), ".exe", listFilePath, false ) )
+            for ( const string& filePath : listFilePath )
             {
-                for ( const string& filePath : listFilePath )
-                {
-                    if ( StringUtil::endsWith( FileUtil::getFileNamePart( filePath ), "Test.exe" ) )
-                        _listTestExecutablePath.push_back( filePath );
-                }
+                if ( StringUtil::endsWith( FileUtil::getFileNamePart( filePath ), "Test.exe" ) )
+                    _listTestExecutablePath.push_back( filePath );
             }
-            std::sort( _listTestExecutablePath.begin(), _listTestExecutablePath.end() );
         }
+        std::sort( _listTestExecutablePath.begin(), _listTestExecutablePath.end() );
+    }
 
-        const bool bBusy = _pJob->isPending();
+    void TestRunnerPanel::drawExecutableCombo( const string& binDirectory, bool bBusy, bool bExecutableChosen )
+    {
         ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
-        const bool  bExecutableChosen = _selectedExecutableIndex < _listTestExecutablePath.size();
-        const utf8* pPreview          = bExecutableChosen ? _listTestExecutablePath[_selectedExecutableIndex].c_str() : "Choose a test executable";
-        if ( ImGui::BeginCombo( "##TestExecutable", pPreview ) )
+        const utf8* pPreview = bExecutableChosen ? _listTestExecutablePath[_selectedExecutableIndex].c_str() : "Choose a test executable";
+        if ( ImGui::BeginCombo( "##TestExecutable", pPreview ) == false )
+            return;
+        for ( uint32 index = 0; index < static_cast<uint32>( _listTestExecutablePath.size() ); ++index )
         {
-            for ( uint32 index = 0; index < static_cast<uint32>( _listTestExecutablePath.size() ); ++index )
+            const string fileName = FileUtil::getFileNamePart( _listTestExecutablePath[index] );
+            if ( ImGui::Selectable( fileName.c_str(), _selectedExecutableIndex == index ) && bBusy == false )
             {
-                const string fileName = FileUtil::getFileNamePart( _listTestExecutablePath[index] );
-                if ( ImGui::Selectable( fileName.c_str(), _selectedExecutableIndex == index ) && bBusy == false )
+                // 케이스 목록은 실행 파일에 묻는다(--test_list) — 필터를 적용한 목록이라 지금 고를 수 있는 것과 같다.
+                _selectedExecutableIndex = index;
+                _listUnitTestName.clear();
+                _uniqueSelectedUnitTest.clear();
+                if ( _pJob->request( "\"" + _listTestExecutablePath[index] + "\" --test_list", binDirectory ) )
                 {
-                    // 케이스 목록은 실행 파일에 묻는다(--test_list) — 필터를 적용한 목록이라 지금 고를 수 있는 것과 같다.
-                    _selectedExecutableIndex = index;
-                    _listUnitTestName.clear();
-                    _uniqueSelectedUnitTest.clear();
-                    if ( _pJob->request( "\"" + _listTestExecutablePath[index] + "\" --test_list", binDirectory ) )
-                    {
-                        _externalRunKind = ExternalRunKind::UnitTestList;
-                        _externalTitle   = fileName + " --test_list";
-                    }
+                    _externalRunKind = ExternalRunKind::UnitTestList;
+                    _externalTitle   = fileName + " --test_list";
                 }
             }
-            ImGui::EndCombo();
         }
-        ImGui::SameLine();
+        ImGui::EndCombo();
+    }
+
+    void TestRunnerPanel::drawRunSelectedCasesButton( const string& binDirectory, bool bBusy, bool bExecutableChosen )
+    {
         ImGui::BeginDisabled( bBusy || _uniqueSelectedUnitTest.empty() || bExecutableChosen == false );
         if ( ImGui::Button( "Run Selected Cases" ) && bExecutableChosen )
         {
@@ -342,12 +343,10 @@ namespace sw::editor
             }
         }
         ImGui::EndDisabled();
-        ImGui::SameLine();
-        if ( ImGui::SmallButton( "Refresh" ) )
-            _bExecutableListDirty = SW_TRUE;
-        if ( _listTestExecutablePath.empty() )
-            ImGui::TextDisabled( "No *Test.exe next to this build (build the AllTests target)" );
+    }
 
+    void TestRunnerPanel::drawUnitTestList()
+    {
         if ( ImGui::BeginChild( "##UnitTestList", ImVec2{ 0.0f, ImGui::GetContentRegionAvail().y * 0.5f }, ImGuiChildFlags_Borders ) )
         {
             string_view openSuite;
@@ -391,6 +390,25 @@ namespace sw::editor
                 ImGui::TreePop();
         }
         ImGui::EndChild();
+    }
+
+    void TestRunnerPanel::drawUnitTestTab()
+    {
+        const string binDirectory = TestRunnerPanelInternal::getBinDirectory();
+        refreshExecutableList( binDirectory );
+
+        const bool bBusy             = _pJob->isPending();
+        const bool bExecutableChosen = _selectedExecutableIndex < _listTestExecutablePath.size();
+        drawExecutableCombo( binDirectory, bBusy, bExecutableChosen );
+        ImGui::SameLine();
+        drawRunSelectedCasesButton( binDirectory, bBusy, bExecutableChosen );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Refresh" ) )
+            _bExecutableListDirty = SW_TRUE;
+        if ( _listTestExecutablePath.empty() )
+            ImGui::TextDisabled( "No *Test.exe next to this build (build the AllTests target)" );
+
+        drawUnitTestList();
         if ( _externalRunKind == ExternalRunKind::UnitTestRun || _externalRunKind == ExternalRunKind::UnitTestList )
             drawExternalOutput();
     }

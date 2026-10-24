@@ -175,6 +175,43 @@ namespace sw
                 }
                 return bestPriority;
             }
+
+            /**
+             * @brief 지금 할 일을 고릅니다 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기. 할 일이 없으면 종류가 `None` 입니다.
+             * @param seasonalSeed 이번 계절 씨앗의 번호입니다(없으면 음수).
+             */
+            static Task chooseTask( const FarmDirectorComponent& director, const SessionStateComponent& state, const vector<hashed_string>& listSeed, int32 seasonalSeed, bool bHasSeed,
+                                    int32 cultivateLimit )
+            {
+                const Inventory&   bag          = state.getInventory();
+                const CropCatalog& catalog      = director.getCropCatalog();
+                const bool         bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < state.getClock().getDay();
+                const int32        produceCount = countProduce( catalog, bag );
+                Task               task;
+                if ( produceCount > 0 && ( bTired || produceCount >= 6 ) )
+                {
+                    task = makeShipTask( director );
+                }
+                else if ( bTired == false )
+                {
+                    const int32 bestPriority = chooseTileTask( director.getField(), cultivateLimit, seasonalSeed, bHasSeed, task );
+                    // 심을 칸이 있는데 씨앗이 없으면 산다.
+                    const bool bNeedsSeedPurchase = bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0;
+                    if ( bNeedsSeedPurchase )
+                    {
+                        const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seasonalSeed )] );
+                        if ( pCrop != nullptr && state.getWallet().canAfford( director.getCurrency(), pCrop->_seedPrice ) )
+                        {
+                            task._kind          = TaskKind::Shop;
+                            task._standPosition = director.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f };
+                        }
+                    }
+                }
+                // 밭에 할 일이 없으면 남은 수확물을 넣고, 그것도 없으면 잔다.
+                if ( task._kind == TaskKind::None && produceCount > 0 )
+                    task = makeShipTask( director );
+                return task;
+            }
         };
     } // namespace
 } // namespace sw
@@ -240,7 +277,6 @@ namespace sw
         const FarmDirectorComponent& director = *pDirector;
         const Inventory&             bag      = pState->getInventory();
         const CropCatalog&           catalog  = director.getCropCatalog();
-        const FarmField&             field    = director.getField();
         const hashed_string          season   = pState->getClock().getSeasonName();
         const vector<hashed_string>& listSeed = director.getSeeds();
 
@@ -265,33 +301,8 @@ namespace sw
         if ( bSeedSelected == false )
             pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::SeedNext ) ) );
         const bool bHasSeed = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
-
         // 할 일 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기.
-        const bool     bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < pState->getClock().getDay();
-        const int32    produceCount = Internal::countProduce( catalog, bag );
-        Internal::Task task;
-        if ( produceCount > 0 && ( bTired || produceCount >= 6 ) )
-        {
-            task = Internal::makeShipTask( director );
-        }
-        else if ( bTired == false )
-        {
-            const int32 bestPriority = Internal::chooseTileTask( field, _cultivateLimit, seasonalSeed, bHasSeed, task );
-            // 심을 칸이 있는데 씨앗이 없으면 산다.
-            const bool bNeedsSeedPurchase = bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0;
-            if ( bNeedsSeedPurchase )
-            {
-                const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seasonalSeed )] );
-                if ( pCrop != nullptr && pState->getWallet().canAfford( director.getCurrency(), pCrop->_seedPrice ) )
-                {
-                    task._kind          = Internal::TaskKind::Shop;
-                    task._standPosition = director.getShopPosition() + float3{ 1.4f, 0.0f, 0.0f };
-                }
-            }
-        }
-        // 밭에 할 일이 없으면 남은 수확물을 넣고, 그것도 없으면 잔다.
-        if ( task._kind == Internal::TaskKind::None && produceCount > 0 )
-            task = Internal::makeShipTask( director );
+        const Internal::Task task = Internal::chooseTask( director, *pState, listSeed, seasonalSeed, bHasSeed, _cultivateLimit );
         setStateName( hashed_string( Internal::getStateName( task ) ) );
         getBlackboard().setInt( "Stamina", director.getStamina() );
         if ( task._kind == Internal::TaskKind::None )

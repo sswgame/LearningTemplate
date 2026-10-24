@@ -158,19 +158,19 @@ namespace sw
         _mapHandleToNode.clear();
     }
 
-    void BVHTree3D::insertLeaf( int32 leafIndex )
+    float32 BVHTree3D::computeDescentCost( int32 childIndex, const AABB& leafAABB, float32 inheritanceCost ) const
     {
-        if ( _rootIndex == invalid_index::kInt32 )
-        {
-            _rootIndex                                           = leafIndex;
-            _listNode[static_cast<size_t>( _rootIndex )]._parent = invalid_index::kInt32;
-            return;
-        }
+        const BVHNode3D& child = _listNode[static_cast<size_t>( childIndex )];
+        const AABB       aabb  = combineAABB( child._bounds, leafAABB );
+        if ( child.isLeaf() )
+            return getSurfaceArea( aabb ) + inheritanceCost;
+        return ( getSurfaceArea( aabb ) - getSurfaceArea( child._bounds ) ) + inheritanceCost;
+    }
 
+    int32 BVHTree3D::findBestSibling( const AABB& leafAABB ) const
+    {
         // 표면적 휴리스틱(SAH)으로 가장 좋은 형제 노드를 찾는다
-        const AABB leafAABB = _listNode[static_cast<size_t>( leafIndex )]._bounds;
-        int32      index    = _rootIndex;
-
+        int32 index = _rootIndex;
         while ( _listNode[static_cast<size_t>( index )].isLeaf() == false )
         {
             const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
@@ -183,43 +183,45 @@ namespace sw
             const float32 cost            = BVHTree3DInternal::kSurfaceAreaFactor * combinedArea;
             const float32 inheritanceCost = BVHTree3DInternal::kSurfaceAreaFactor * ( combinedArea - area );
 
-            // 왼쪽 자식으로 내려갈 때의 비용
-            float32 costLeft = 0.0f;
-            if ( _listNode[static_cast<size_t>( leftChild )].isLeaf() )
-            {
-                const AABB aabb = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
-                costLeft        = getSurfaceArea( aabb ) + inheritanceCost;
-            }
-            else
-            {
-                const AABB    aabb    = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
-                const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( leftChild )]._bounds );
-                const float32 newArea = getSurfaceArea( aabb );
-                costLeft              = ( newArea - oldArea ) + inheritanceCost;
-            }
-
-            // 오른쪽 자식으로 내려갈 때의 비용
-            float32 costRight = 0.0f;
-            if ( _listNode[static_cast<size_t>( rightChild )].isLeaf() )
-            {
-                const AABB aabb = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
-                costRight       = getSurfaceArea( aabb ) + inheritanceCost;
-            }
-            else
-            {
-                const AABB    aabb    = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
-                const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( rightChild )]._bounds );
-                const float32 newArea = getSurfaceArea( aabb );
-                costRight             = ( newArea - oldArea ) + inheritanceCost;
-            }
-
+            // 각 자식으로 내려갈 때의 비용
+            const float32 costLeft  = computeDescentCost( leftChild, leafAABB, inheritanceCost );
+            const float32 costRight = computeDescentCost( rightChild, leafAABB, inheritanceCost );
             if ( cost < costLeft && cost < costRight )
                 break;
 
             index = ( costLeft < costRight ) ? leftChild : rightChild;
         }
+        return index;
+    }
 
-        const int32 sibling = index;
+    void BVHTree3D::refitUpward( int32 startIndex )
+    {
+        int32 index = startIndex;
+        while ( index != invalid_index::kInt32 )
+        {
+            index = balance( index );
+
+            const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
+            const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
+
+            _listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max( _listNode[static_cast<size_t>( leftChild )]._height, _listNode[static_cast<size_t>( rightChild )]._height );
+            _listNode[static_cast<size_t>( index )]._bounds = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, _listNode[static_cast<size_t>( rightChild )]._bounds );
+
+            index = _listNode[static_cast<size_t>( index )]._parent;
+        }
+    }
+
+    void BVHTree3D::insertLeaf( int32 leafIndex )
+    {
+        if ( _rootIndex == invalid_index::kInt32 )
+        {
+            _rootIndex                                           = leafIndex;
+            _listNode[static_cast<size_t>( _rootIndex )]._parent = invalid_index::kInt32;
+            return;
+        }
+
+        const AABB  leafAABB = _listNode[static_cast<size_t>( leafIndex )]._bounds;
+        const int32 sibling  = findBestSibling( leafAABB );
 
         // 새 부모 노드를 만든다
         const int32 oldParent = _listNode[static_cast<size_t>( sibling )]._parent;
@@ -247,23 +249,7 @@ namespace sw
         }
 
         // 트리를 거슬러 올라가며 AABB 를 다시 맞추고 균형을 잡는다
-        index = _listNode[static_cast<size_t>( leafIndex )]._parent;
-        while ( index != invalid_index::kInt32 )
-        {
-            index = balance( index );
-
-            const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
-            const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
-
-            _listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
-                                                                      _listNode[static_cast<size_t>( leftChild )]._height,
-                                                                      _listNode[static_cast<size_t>( rightChild )]._height );
-            _listNode[static_cast<size_t>( index )]._bounds = combineAABB(
-                _listNode[static_cast<size_t>( leftChild )]._bounds,
-                _listNode[static_cast<size_t>( rightChild )]._bounds );
-
-            index = _listNode[static_cast<size_t>( index )]._parent;
-        }
+        refitUpward( _listNode[static_cast<size_t>( leafIndex )]._parent );
     }
 
     void BVHTree3D::removeLeaf( int32 leafIndex )
@@ -289,24 +275,7 @@ namespace sw
 
             _listNode[static_cast<size_t>( sibling )]._parent = grandParent;
             freeNode( parent );
-
-            int32 index = grandParent;
-            while ( index != invalid_index::kInt32 )
-            {
-                index = balance( index );
-
-                const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
-                const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
-
-                _listNode[static_cast<size_t>( index )]._bounds = combineAABB(
-                    _listNode[static_cast<size_t>( leftChild )]._bounds,
-                    _listNode[static_cast<size_t>( rightChild )]._bounds );
-                _listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
-                                                                          _listNode[static_cast<size_t>( leftChild )]._height,
-                                                                          _listNode[static_cast<size_t>( rightChild )]._height );
-
-                index = _listNode[static_cast<size_t>( index )]._parent;
-            }
+            refitUpward( grandParent );
         }
         else
         {
@@ -316,120 +285,69 @@ namespace sw
         }
     }
 
+    void BVHTree3D::rotateUp( int32 nodeIndex, int32 upIndex, int32 stayIndex, bool bUpIsRight )
+    {
+        BVHNode3D&  A  = _listNode[static_cast<size_t>( nodeIndex )];
+        BVHNode3D&  U  = _listNode[static_cast<size_t>( upIndex )];
+        BVHNode3D&  S  = _listNode[static_cast<size_t>( stayIndex )];
+        const int32 iX = U._leftChild;
+        const int32 iY = U._rightChild;
+        BVHNode3D&  X  = _listNode[static_cast<size_t>( iX )];
+        BVHNode3D&  Y  = _listNode[static_cast<size_t>( iY )];
+
+        U._leftChild = nodeIndex;
+        U._parent    = A._parent;
+        A._parent    = upIndex;
+
+        if ( U._parent != invalid_index::kInt32 )
+        {
+            if ( _listNode[static_cast<size_t>( U._parent )]._leftChild == nodeIndex )
+                _listNode[static_cast<size_t>( U._parent )]._leftChild = upIndex;
+            else
+                _listNode[static_cast<size_t>( U._parent )]._rightChild = upIndex;
+        }
+        else
+        {
+            _rootIndex = upIndex;
+        }
+
+        // 키가 더 큰 손자는 올라간 노드에 남고, 작은 손자가 A 로 옮겨 A 의 빈 자리(올라간 쪽)를 채운다.
+        const bool  bKeepX = X._height > Y._height;
+        BVHNode3D&  kept   = bKeepX ? X : Y;
+        BVHNode3D&  moved  = bKeepX ? Y : X;
+        const int32 iKept  = bKeepX ? iX : iY;
+        const int32 iMoved = bKeepX ? iY : iX;
+        U._rightChild      = iKept;
+        if ( bUpIsRight )
+            A._rightChild = iMoved;
+        else
+            A._leftChild = iMoved;
+        moved._parent = nodeIndex;
+        A._bounds     = combineAABB( S._bounds, moved._bounds );
+        U._bounds     = combineAABB( A._bounds, kept._bounds );
+        A._height     = 1 + MathUtil::max( S._height, moved._height );
+        U._height     = 1 + MathUtil::max( A._height, kept._height );
+    }
+
     int32 BVHTree3D::balance( int32 nodeIndex )
     {
-        BVHNode3D& A = _listNode[static_cast<size_t>( nodeIndex )];
+        const BVHNode3D& A = _listNode[static_cast<size_t>( nodeIndex )];
         if ( A.isLeaf() || A._height < 2 )
             return nodeIndex;
 
-        const int32 iB = A._leftChild;
-        const int32 iC = A._rightChild;
-
-        BVHNode3D& B = _listNode[static_cast<size_t>( iB )];
-        BVHNode3D& C = _listNode[static_cast<size_t>( iC )];
-
-        const int32 balanceFactor = C._height - B._height;
-
-        // C 를 위로 회전한다
+        const int32 iB            = A._leftChild;
+        const int32 iC            = A._rightChild;
+        const int32 balanceFactor = _listNode[static_cast<size_t>( iC )]._height - _listNode[static_cast<size_t>( iB )]._height;
         if ( balanceFactor > 1 )
         {
-            const int32 iF = C._leftChild;
-            const int32 iG = C._rightChild;
-            BVHNode3D&  F  = _listNode[static_cast<size_t>( iF )];
-            BVHNode3D&  G  = _listNode[static_cast<size_t>( iG )];
-
-            C._leftChild = nodeIndex;
-            C._parent    = A._parent;
-            A._parent    = iC;
-
-            if ( C._parent != invalid_index::kInt32 )
-            {
-                if ( _listNode[static_cast<size_t>( C._parent )]._leftChild == nodeIndex )
-                    _listNode[static_cast<size_t>( C._parent )]._leftChild = iC;
-                else
-                    _listNode[static_cast<size_t>( C._parent )]._rightChild = iC;
-            }
-            else
-            {
-                _rootIndex = iC;
-            }
-
-            if ( F._height > G._height )
-            {
-                C._rightChild = iF;
-                A._rightChild = iG;
-                G._parent     = nodeIndex;
-                A._bounds     = combineAABB( B._bounds, G._bounds );
-                C._bounds     = combineAABB( A._bounds, F._bounds );
-
-                A._height = 1 + MathUtil::max( B._height, G._height );
-                C._height = 1 + MathUtil::max( A._height, F._height );
-            }
-            else
-            {
-                C._rightChild = iG;
-                A._rightChild = iF;
-                F._parent     = nodeIndex;
-                A._bounds     = combineAABB( B._bounds, F._bounds );
-                C._bounds     = combineAABB( A._bounds, G._bounds );
-
-                A._height = 1 + MathUtil::max( B._height, F._height );
-                C._height = 1 + MathUtil::max( A._height, G._height );
-            }
-
+            rotateUp( nodeIndex, iC, iB, true ); // C 를 위로 회전한다
             return iC;
         }
-
-        // B 를 위로 회전한다
         if ( balanceFactor < -1 )
         {
-            const int32 iD = B._leftChild;
-            const int32 iE = B._rightChild;
-            BVHNode3D&  D  = _listNode[static_cast<size_t>( iD )];
-            BVHNode3D&  E  = _listNode[static_cast<size_t>( iE )];
-
-            B._leftChild = nodeIndex;
-            B._parent    = A._parent;
-            A._parent    = iB;
-
-            if ( B._parent != invalid_index::kInt32 )
-            {
-                if ( _listNode[static_cast<size_t>( B._parent )]._leftChild == nodeIndex )
-                    _listNode[static_cast<size_t>( B._parent )]._leftChild = iB;
-                else
-                    _listNode[static_cast<size_t>( B._parent )]._rightChild = iB;
-            }
-            else
-            {
-                _rootIndex = iB;
-            }
-
-            if ( D._height > E._height )
-            {
-                B._rightChild = iD;
-                A._leftChild  = iE;
-                E._parent     = nodeIndex;
-                A._bounds     = combineAABB( C._bounds, E._bounds );
-                B._bounds     = combineAABB( A._bounds, D._bounds );
-
-                A._height = 1 + MathUtil::max( C._height, E._height );
-                B._height = 1 + MathUtil::max( A._height, D._height );
-            }
-            else
-            {
-                B._rightChild = iE;
-                A._leftChild  = iD;
-                D._parent     = nodeIndex;
-                A._bounds     = combineAABB( C._bounds, D._bounds );
-                B._bounds     = combineAABB( A._bounds, E._bounds );
-
-                A._height = 1 + MathUtil::max( C._height, D._height );
-                B._height = 1 + MathUtil::max( A._height, E._height );
-            }
-
+            rotateUp( nodeIndex, iB, iC, false ); // B 를 위로 회전한다
             return iB;
         }
-
         return nodeIndex;
     }
 

@@ -13,21 +13,120 @@ namespace sw
 
     namespace
     {
-        /**
-         * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 분리하고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
-         * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 부릅니다.
-         */
-        bool takeBufferedLine( string& inoutBuffer, string& outLine )
+        struct WindowsProcessInternal
         {
-            const size_t newlinePos = inoutBuffer.find_first_of( "\r\n" );
-            if ( newlinePos == string::npos )
-                return false;
+            /**
+             * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 분리하고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
+             * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 부릅니다.
+             */
+            static bool takeBufferedLine( string& inoutBuffer, string& outLine )
+            {
+                const size_t newlinePos = inoutBuffer.find_first_of( "\r\n" );
+                if ( newlinePos == string::npos )
+                    return false;
 
-            outLine          = inoutBuffer.substr( 0, newlinePos );
-            const bool bCrLf = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 < inoutBuffer.length() && inoutBuffer[newlinePos + 1] == '\n';
-            inoutBuffer.erase( 0, newlinePos + ( bCrLf ? 2 : 1 ) );
-            return true;
-        }
+                outLine          = inoutBuffer.substr( 0, newlinePos );
+                const bool bCrLf = inoutBuffer[newlinePos] == '\r' && newlinePos + 1 < inoutBuffer.length() && inoutBuffer[newlinePos + 1] == '\n';
+                inoutBuffer.erase( 0, newlinePos + ( bCrLf ? 2 : 1 ) );
+                return true;
+            }
+
+            /** @brief 자식의 표준 출력 · 입력에 쓰는 파이프 끝 넷입니다. 쓰는 끝 · 읽는 끝 중 자식에게 줄 끝은 `closeChildEnds` 로 부모가 닫습니다. */
+            struct StdPipes
+            {
+                HANDLE _hOutRead{ nullptr };
+                HANDLE _hOutWrite{ nullptr };
+                HANDLE _hInRead{ nullptr };
+                HANDLE _hInWrite{ nullptr };
+
+                static void closeHandle( HANDLE& inoutHandle )
+                {
+                    if ( inoutHandle != nullptr )
+                    {
+                        CloseHandle( inoutHandle );
+                        inoutHandle = nullptr;
+                    }
+                }
+
+                /** @brief 자식에게 넘긴 끝(표준 출력의 쓰는 끝, 표준 입력의 읽는 끝)을 닫습니다. 띄운 뒤 부모는 쓸모가 없다. */
+                void closeChildEnds()
+                {
+                    closeHandle( _hOutWrite );
+                    closeHandle( _hInRead );
+                }
+
+                void closeAll()
+                {
+                    closeHandle( _hOutRead );
+                    closeHandle( _hOutWrite );
+                    closeHandle( _hInRead );
+                    closeHandle( _hInWrite );
+                }
+            };
+
+            /**
+             * @brief 표준 출력 파이프와, 표준 입력 파이프(@p bPipeStandardInput) 또는 NUL 을 엽니다. 비워 두면 자식은 표준 입력 핸들이 없다.
+             *        실패하면 연 것을 닫고 false 입니다.
+             */
+            [[nodiscard]] static bool createStdPipes( bool bPipeStandardInput, StdPipes& outPipes )
+            {
+                SECURITY_ATTRIBUTES saAttr{};
+                saAttr.nLength              = sizeof( SECURITY_ATTRIBUTES );
+                saAttr.bInheritHandle       = TRUE;
+                saAttr.lpSecurityDescriptor = nullptr;
+
+                if ( CreatePipe( &outPipes._hOutRead, &outPipes._hOutWrite, &saAttr, 0 ) == FALSE )
+                {
+                    SW_LOG_ERROR( "CreatePipe failed!" );
+                    return false;
+                }
+                SetHandleInformation( outPipes._hOutRead, HANDLE_FLAG_INHERIT, 0 );
+
+                // 표준 입력: 파이프(쓰는 끝은 이 프로세스만) 또는 NUL.
+                if ( bPipeStandardInput )
+                {
+                    if ( CreatePipe( &outPipes._hInRead, &outPipes._hInWrite, &saAttr, 0 ) == FALSE )
+                    {
+                        outPipes.closeAll();
+                        SW_LOG_ERROR( "CreatePipe (stdin) failed!" );
+                        return false;
+                    }
+                    SetHandleInformation( outPipes._hInWrite, HANDLE_FLAG_INHERIT, 0 );
+                }
+                else
+                {
+                    outPipes._hInRead = CreateFileW( L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &saAttr, OPEN_EXISTING, 0, nullptr );
+                    if ( outPipes._hInRead == INVALID_HANDLE_VALUE )
+                        outPipes._hInRead = nullptr;
+                }
+                return true;
+            }
+
+            /**
+             * @brief **자식이 물려받는 핸들을 이 파이프 하나로 못박는** 속성 목록을 만듭니다. `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
+             *        전부* 가 넘어간다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 파이프 쓰기 끝을 물려받고, 그러면 한쪽의 읽기는 자기 자식이
+             *        끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
+             * @return 만들지 못하면 false 입니다(목록은 정리된 상태). 성공하면 호출한 쪽이 `DeleteProcThreadAttributeList` 로 지운다.
+             */
+            static bool restrictInheritedHandles( const StdPipes& pipes, vector<uint8>& outAttributeBytes, LPPROC_THREAD_ATTRIBUTE_LIST& outAttributePointer )
+            {
+                SIZE_T attributeListSize = 0;
+                InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
+                outAttributeBytes.resize( attributeListSize );
+                outAttributePointer               = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( outAttributeBytes.data() );
+                HANDLE      arrInheritedHandle[2] = { pipes._hOutWrite, pipes._hInRead };
+                const DWORD inheritedHandleSize   = static_cast<DWORD>( sizeof( HANDLE ) * ( pipes._hInRead != nullptr ? 2 : 1 ) );
+                const bool  bAttributeReady       = InitializeProcThreadAttributeList( outAttributePointer, 1, 0, &attributeListSize ) != FALSE;
+                if ( bAttributeReady == false ||
+                     UpdateProcThreadAttribute( outAttributePointer, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, inheritedHandleSize, nullptr, nullptr ) == FALSE )
+                {
+                    if ( bAttributeReady )
+                        DeleteProcThreadAttributeList( outAttributePointer );
+                    return false;
+                }
+                return true;
+            }
+        };
     } // namespace
 
     void Process::shutdown()
@@ -57,78 +156,31 @@ namespace sw
 
     bool Process::launch( string_view command, const ProcessOptions& options )
     {
+        using Internal = WindowsProcessInternal;
         shutdown();
 
-        SECURITY_ATTRIBUTES saAttr{};
-        saAttr.nLength              = sizeof( SECURITY_ATTRIBUTES );
-        saAttr.bInheritHandle       = TRUE;
-        saAttr.lpSecurityDescriptor = nullptr;
-
-        HANDLE hStdOutRead  = nullptr;
-        HANDLE hStdOutWrite = nullptr;
-        if ( CreatePipe( &hStdOutRead, &hStdOutWrite, &saAttr, 0 ) == FALSE )
-        {
-            SW_LOG_ERROR( "CreatePipe failed!" );
+        Internal::StdPipes pipes;
+        if ( Internal::createStdPipes( options._bPipeStandardInput, pipes ) == false )
             return false;
-        }
-
-        SetHandleInformation( hStdOutRead, HANDLE_FLAG_INHERIT, 0 );
-
-        // 표준 입력: 파이프(쓰는 끝은 이 프로세스만) 또는 NUL. 비워 두면 자식은 표준 입력 핸들이 없다.
-        HANDLE hStdInRead  = nullptr;
-        HANDLE hStdInWrite = nullptr;
-        if ( options._bPipeStandardInput )
-        {
-            if ( CreatePipe( &hStdInRead, &hStdInWrite, &saAttr, 0 ) == FALSE )
-            {
-                CloseHandle( hStdOutRead );
-                CloseHandle( hStdOutWrite );
-                SW_LOG_ERROR( "CreatePipe (stdin) failed!" );
-                return false;
-            }
-            SetHandleInformation( hStdInWrite, HANDLE_FLAG_INHERIT, 0 );
-        }
-        else
-        {
-            hStdInRead = CreateFileW( L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &saAttr, OPEN_EXISTING, 0, nullptr );
-            if ( hStdInRead == INVALID_HANDLE_VALUE )
-                hStdInRead = nullptr;
-        }
 
         string  cmdStr     = string( command );
         wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
-        // **자식이 물려받는 핸들을 이 파이프 하나로 못박는다.** `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
-        // 전부* 가 넘어간다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 파이프 쓰기 끝을 물려받고, 그러면 한쪽의 읽기는 자기 자식이
-        // 끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
-        SIZE_T attributeListSize = 0;
-        InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
-        vector<uint8>                attributeListBytes( attributeListSize );
-        LPPROC_THREAD_ATTRIBUTE_LIST pAttributeList        = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( attributeListBytes.data() );
-        HANDLE                       arrInheritedHandle[2] = { hStdOutWrite, hStdInRead };
-        const DWORD                  inheritedHandleSize   = static_cast<DWORD>( sizeof( HANDLE ) * ( hStdInRead != nullptr ? 2 : 1 ) );
-        const bool                   bAttributeReady       = InitializeProcThreadAttributeList( pAttributeList, 1, 0, &attributeListSize ) != FALSE;
-        if ( bAttributeReady == false ||
-             UpdateProcThreadAttribute( pAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, inheritedHandleSize, nullptr, nullptr ) == FALSE )
+        vector<uint8>                attributeListBytes;
+        LPPROC_THREAD_ATTRIBUTE_LIST pAttributeList = nullptr;
+        if ( Internal::restrictInheritedHandles( pipes, attributeListBytes, pAttributeList ) == false )
         {
-            if ( bAttributeReady )
-                DeleteProcThreadAttributeList( pAttributeList );
-            CloseHandle( hStdOutRead );
-            CloseHandle( hStdOutWrite );
-            if ( hStdInRead != nullptr )
-                CloseHandle( hStdInRead );
-            if ( hStdInWrite != nullptr )
-                CloseHandle( hStdInWrite );
+            pipes.closeAll();
             SW_LOG_ERROR( "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
             return false;
         }
 
         STARTUPINFOEXW startupInfo{};
         startupInfo.StartupInfo.cb         = sizeof( STARTUPINFOEXW );
-        startupInfo.StartupInfo.hStdError  = hStdOutWrite;
-        startupInfo.StartupInfo.hStdOutput = hStdOutWrite;
-        startupInfo.StartupInfo.hStdInput  = hStdInRead;
+        startupInfo.StartupInfo.hStdError  = pipes._hOutWrite;
+        startupInfo.StartupInfo.hStdOutput = pipes._hOutWrite;
+        startupInfo.StartupInfo.hStdInput  = pipes._hInRead;
         startupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
         startupInfo.lpAttributeList = pAttributeList;
 
@@ -153,23 +205,19 @@ namespace sw
             &pi );
 
         DeleteProcThreadAttributeList( pAttributeList );
-        CloseHandle( hStdOutWrite );
-        if ( hStdInRead != nullptr )
-            CloseHandle( hStdInRead );
+        pipes.closeChildEnds();
 
         if ( bCreated == FALSE )
         {
-            CloseHandle( hStdOutRead );
-            if ( hStdInWrite != nullptr )
-                CloseHandle( hStdInWrite );
+            pipes.closeAll();
             SW_LOG_ERROR( "Failed to launch command: %#", cmdStr.c_str() );
             return false;
         }
 
         _pNativeHandle    = pi.hProcess;
         _pNativeThread    = pi.hThread;
-        _pStdOutRead      = hStdOutRead;
-        _pStdInWrite      = hStdInWrite;
+        _pStdOutRead      = pipes._hOutRead;
+        _pStdInWrite      = pipes._hInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
         _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
@@ -208,7 +256,7 @@ namespace sw
             return false;
 
         // 1) 버퍼에 이미 개행 문자가 남아 있는지 확인한다
-        if ( takeBufferedLine( _bufferedOutput, outLine ) )
+        if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
             return true;
 
         // 2) 파이프에서 데이터를 더 읽는다
@@ -219,7 +267,7 @@ namespace sw
         {
             arrReadBuffer[bytesRead] = '\0';
             _bufferedOutput.append( arrReadBuffer, bytesRead );
-            if ( takeBufferedLine( _bufferedOutput, outLine ) )
+            if ( WindowsProcessInternal::takeBufferedLine( _bufferedOutput, outLine ) )
                 return true;
         }
 

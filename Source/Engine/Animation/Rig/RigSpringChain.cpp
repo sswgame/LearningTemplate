@@ -33,6 +33,40 @@ namespace sw
                     return child;
                 return parent + offset * ( length / current );
             }
+
+            /** @brief 입자 위치 @p next 를 충돌체(구 · 캡슐) 밖으로 밀어냅니다. 입자 반지름만큼 띄운다. */
+            static float3 pushOutOfColliders( const float3& next, float32 particleRadius, span<const RigSpringCollider> listCollider, RigPoseBuffer& pose, const float4x4& worldFromModel )
+            {
+                float3 result = next;
+                for ( const RigSpringCollider& collider : listCollider )
+                {
+                    if ( collider._bone >= pose.getBoneCount() )
+                        continue;
+                    const float4x4 boneWorld = pose.getModelMatrix( collider._bone ) * worldFromModel;
+                    const float3   pointA    = float3::transform( collider._pointA, boneWorld );
+                    const float3   closest   = ( collider._shape == RigSpringColliderShape::Capsule ) ? findClosestOnSegment( result, pointA, float3::transform( collider._pointB, boneWorld ) ) : pointA;
+                    const float3   away      = result - closest;
+                    const float32  distance  = away.getLength();
+                    const float32  minimum   = collider._radius + particleRadius;
+                    if ( distance < minimum && distance > 1e-8f )
+                        result = closest + away * ( minimum / distance );
+                }
+                return result;
+            }
+
+            /** @brief 누적 시간 @p inoutAccumulator 에서 고정 스텝 수를 꺼냅니다. 상한(@p maxSubStep)을 넘는 시간은 버린다. 히치 뒤에 한꺼번에 따라잡느라 튀지 않게 하려는 것이다. */
+            static uint32 consumeSubSteps( float32& inoutAccumulator, float32 deltaSeconds, float32 step, uint32 maxSubStep )
+            {
+                inoutAccumulator += MathUtil::max( deltaSeconds, 0.0f );
+                uint32 stepCount = static_cast<uint32>( inoutAccumulator / step );
+                inoutAccumulator -= static_cast<float32>( stepCount ) * step;
+                if ( stepCount > maxSubStep )
+                {
+                    stepCount        = maxSubStep;
+                    inoutAccumulator = 0.0f;
+                }
+                return stepCount;
+            }
         };
     } // namespace
 } // namespace sw
@@ -88,15 +122,8 @@ namespace sw
             _lastRootPosition     = root;
         }
 
-        const float32 step = MathUtil::max( settings._fixedStep, 1e-4f );
-        _accumulator += MathUtil::max( deltaSeconds, 0.0f );
-        uint32 stepCount = static_cast<uint32>( _accumulator / step );
-        _accumulator -= static_cast<float32>( stepCount ) * step;
-        if ( stepCount > settings._maxSubStep )
-        {
-            stepCount    = settings._maxSubStep;
-            _accumulator = 0.0f; // 넘는 시간은 버린다. 히치 뒤에 한꺼번에 따라잡느라 튀지 않게 하려는 것이다.
-        }
+        const float32 step      = MathUtil::max( settings._fixedStep, 1e-4f );
+        const uint32  stepCount = RigSpringChainInternal::consumeSubSteps( _accumulator, deltaSeconds, step, settings._maxSubStep );
 
         const float3 planeNormal = ( space._bPlanar == SW_TRUE ) ? float3::transformVector( space._planeNormal, worldFromModel ).normalize() : float3::Zero;
         // 입자마다 물성 — "joints" 가 있으면 그 값, 없으면 사슬 값 하나. 길이가 맞지 않는 데이터는 노드가 읽을 때 거른다(RigSpringChainNode::parse).
@@ -134,22 +161,8 @@ namespace sw
                     next = next + animatedOffset * ( particle._axisPull * step / _listLength[index] );
                 if ( space._bPlanar == SW_TRUE )
                     next = next - planeNormal * ( next - root ).dot( planeNormal );
-                next = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
-                for ( const RigSpringCollider& collider : listCollider )
-                {
-                    if ( collider._bone >= pose.getBoneCount() )
-                        continue;
-                    const float4x4 boneWorld = pose.getModelMatrix( collider._bone ) * worldFromModel;
-                    const float3   pointA    = float3::transform( collider._pointA, boneWorld );
-                    const float3   closest   = ( collider._shape == RigSpringColliderShape::Capsule )
-                                                 ? RigSpringChainInternal::findClosestOnSegment( next, pointA, float3::transform( collider._pointB, boneWorld ) )
-                                                 : pointA;
-                    const float3   away      = next - closest;
-                    const float32  distance  = away.getLength();
-                    const float32  minimum   = collider._radius + particle._radius;
-                    if ( distance < minimum && distance > 1e-8f )
-                        next = closest + away * ( minimum / distance );
-                }
+                next                 = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
+                next                 = RigSpringChainInternal::pushOutOfColliders( next, particle._radius, listCollider, pose, worldFromModel );
                 _listPosition[index] = RigSpringChainInternal::keepLength( _listPosition[index - 1], next, _listLength[index] );
             }
         }

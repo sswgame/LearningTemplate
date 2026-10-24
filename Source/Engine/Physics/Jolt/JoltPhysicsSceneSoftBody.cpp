@@ -82,6 +82,96 @@ namespace sw
                 }
                 return true;
             }
+
+            /** @brief 서술이 맞는지 봅니다 — 정점 · 온전한 삼각형 · 양의 질량, 인덱스 범위, 스킨 구속. 틀리면 오류를 남기고 false 입니다. */
+            static bool validateDesc( const PhysicsSoftBodyDesc& desc )
+            {
+                const size_t vertexCount      = desc._listVertex.size();
+                const bool   bWholeTriangles  = desc._listTriangleIndex.empty() == false && ( desc._listTriangleIndex.size() % 3 ) == 0;
+                const bool   bInvalidSoftBody = vertexCount == 0 || bWholeTriangles == false || desc._vertexMass <= 0.0f;
+                if ( bInvalidSoftBody )
+                {
+                    SW_LOG_ERROR( "Soft body needs vertices, whole triangles and a positive vertex mass (%# vertices, %# indices, mass %#)", vertexCount, desc._listTriangleIndex.size(),
+                                  desc._vertexMass );
+                    return false;
+                }
+                for ( const vector<uint32>* pListIndex : { &desc._listTriangleIndex, &desc._listPinnedVertex } )
+                {
+                    for ( const uint32 vertexIndex : *pListIndex )
+                    {
+                        if ( vertexCount <= vertexIndex )
+                        {
+                            SW_LOG_ERROR( "Soft body names vertex %# of %#", vertexIndex, vertexCount );
+                            return false;
+                        }
+                    }
+                }
+                return validateSkinning( desc );
+            }
+
+            /** @brief 스킨 구속 — 뼈마다 역바인드, 정점마다 뼈 가중(남는 칸은 가중 0)을 넣습니다. 법선은 면에서 구한다(되받침 거리를 쓰지 않아도 Jolt 가 요구한다). 최적화(구속 재배열) 앞에 부른다. */
+            static void addSkinConstraints( JPH::SoftBodySharedSettings& inoutShared, const PhysicsSoftBodyDesc& desc )
+            {
+                inoutShared.mInvBindMatrices.reserve( desc._listInverseBind.size() );
+                for ( uint32 jointIndex = 0; jointIndex < desc._listInverseBind.size(); ++jointIndex )
+                {
+                    inoutShared.mInvBindMatrices.push_back( JPH::SoftBodySharedSettings::InvBind{ jointIndex, toJoltMatrix( desc._listInverseBind[jointIndex] ) } );
+                }
+                inoutShared.mSkinnedConstraints.reserve( desc._listSkinnedVertex.size() );
+                for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
+                {
+                    JPH::SoftBodySharedSettings::Skinned constraint{ skinned._vertex, skinned._maxDistance, 0.0f, 0.0f };
+                    for ( uint32 weightIndex = 0; weightIndex < JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights; ++weightIndex )
+                    {
+                        const bool bUsed                 = weightIndex < skinned._weightCount;
+                        constraint.mWeights[weightIndex] = bUsed ? JPH::SoftBodySharedSettings::SkinWeight{ skinned._arrWeight[weightIndex]._jointIndex, skinned._arrWeight[weightIndex]._weight }
+                                                                 : JPH::SoftBodySharedSettings::SkinWeight{ 0, 0.0f };
+                    }
+                    inoutShared.mSkinnedConstraints.push_back( constraint );
+                }
+                inoutShared.CalculateSkinnedConstraintNormals();
+            }
+
+            /**
+             * @brief 정점 · 면 · 구속(늘어남 · 비틀림 · 굽힘 · 스킨)을 넣은 공유 설정을 만듭니다. 서술은 `validateDesc` 를 통과한 것이어야 합니다.
+             * @return 같은 정점을 되풀이하는 삼각형이 있으면 오류를 남기고 nullptr 입니다.
+             */
+            static JPH::Ref<JPH::SoftBodySharedSettings> makeSharedSettings( const PhysicsSoftBodyDesc& desc )
+            {
+                JPH::Ref<JPH::SoftBodySharedSettings> pShared = JoltUtil::createObject<JPH::SoftBodySharedSettings>(); // Jolt 참조 카운트 객체다. 바디가 들고 Ref 가 해제한다.
+                pShared->mVertices.reserve( desc._listVertex.size() );
+                const float32 inverseMass = 1.0f / desc._vertexMass;
+                for ( const float3& position : desc._listVertex )
+                {
+                    pShared->mVertices.push_back( JPH::SoftBodySharedSettings::Vertex{
+                        JPH::Float3{position._x, position._y, position._z},
+                        JPH::Float3{       0.0f,        0.0f,        0.0f},
+                        inverseMass
+                    } );
+                }
+                for ( const uint32 vertexIndex : desc._listPinnedVertex )
+                {
+                    pShared->mVertices[vertexIndex].mInvMass = 0.0f;
+                }
+                for ( size_t index = 0; index < desc._listTriangleIndex.size(); index += 3 )
+                {
+                    const JPH::SoftBodySharedSettings::Face face{ desc._listTriangleIndex[index], desc._listTriangleIndex[index + 1], desc._listTriangleIndex[index + 2] };
+                    if ( face.IsDegenerate() )
+                    {
+                        SW_LOG_ERROR( "Soft body triangle %# repeats a vertex", index / 3 );
+                        return JPH::Ref<JPH::SoftBodySharedSettings>{};
+                    }
+                    pShared->AddFace( face );
+                }
+                // 정점 속성 하나를 모든 정점이 나눠 쓴다(속성 수가 정점보다 적으면 Jolt 가 마지막 것을 되풀이한다).
+                const bool                                          bBend = desc._bendCompliance >= 0.0f;
+                const JPH::SoftBodySharedSettings::VertexAttributes attributes{ desc._stretchCompliance, desc._shearCompliance, bBend ? desc._bendCompliance : FLT_MAX };
+                pShared->CreateConstraints( &attributes, 1, bBend ? JPH::SoftBodySharedSettings::EBendType::Distance : JPH::SoftBodySharedSettings::EBendType::None );
+                if ( desc._listSkinnedVertex.empty() == false )
+                    addSkinConstraints( *pShared, desc );
+                pShared->Optimize();
+                return pShared;
+            }
         };
     } // namespace
 } // namespace sw
@@ -90,82 +180,12 @@ namespace sw
 {
     PhysicsSoftBodyHandle JoltPhysicsScene::createSoftBody( const PhysicsSoftBodyDesc& desc )
     {
-        const size_t vertexCount      = desc._listVertex.size();
-        const bool   bWholeTriangles  = desc._listTriangleIndex.empty() == false && ( desc._listTriangleIndex.size() % 3 ) == 0;
-        const bool   bInvalidSoftBody = vertexCount == 0 || bWholeTriangles == false || desc._vertexMass <= 0.0f;
-        if ( bInvalidSoftBody )
-        {
-            SW_LOG_ERROR( "Soft body needs vertices, whole triangles and a positive vertex mass (%# vertices, %# indices, mass %#)", vertexCount,
-                          desc._listTriangleIndex.size(), desc._vertexMass );
+        using Internal = JoltPhysicsSceneSoftBodyInternal;
+        if ( Internal::validateDesc( desc ) == false )
             return PhysicsSoftBodyHandle{};
-        }
-        for ( const vector<uint32>* pListIndex : { &desc._listTriangleIndex, &desc._listPinnedVertex } )
-        {
-            for ( const uint32 vertexIndex : *pListIndex )
-            {
-                if ( vertexCount <= vertexIndex )
-                {
-                    SW_LOG_ERROR( "Soft body names vertex %# of %#", vertexIndex, vertexCount );
-                    return PhysicsSoftBodyHandle{};
-                }
-            }
-        }
-        if ( JoltPhysicsSceneSoftBodyInternal::validateSkinning( desc ) == false )
+        JPH::Ref<JPH::SoftBodySharedSettings> pShared = Internal::makeSharedSettings( desc );
+        if ( pShared.GetPtr() == nullptr )
             return PhysicsSoftBodyHandle{};
-
-        JPH::Ref<JPH::SoftBodySharedSettings> pShared = JoltUtil::createObject<JPH::SoftBodySharedSettings>(); // Jolt 참조 카운트 객체다. 바디가 들고 Ref 가 해제한다.
-        pShared->mVertices.reserve( vertexCount );
-        const float32 inverseMass = 1.0f / desc._vertexMass;
-        for ( const float3& position : desc._listVertex )
-        {
-            pShared->mVertices.push_back( JPH::SoftBodySharedSettings::Vertex{
-                JPH::Float3{position._x, position._y, position._z},
-                JPH::Float3{       0.0f,        0.0f,        0.0f},
-                inverseMass
-            } );
-        }
-        for ( const uint32 vertexIndex : desc._listPinnedVertex )
-        {
-            pShared->mVertices[vertexIndex].mInvMass = 0.0f;
-        }
-        for ( size_t index = 0; index < desc._listTriangleIndex.size(); index += 3 )
-        {
-            const JPH::SoftBodySharedSettings::Face face{ desc._listTriangleIndex[index], desc._listTriangleIndex[index + 1], desc._listTriangleIndex[index + 2] };
-            if ( face.IsDegenerate() )
-            {
-                SW_LOG_ERROR( "Soft body triangle %# repeats a vertex", index / 3 );
-                return PhysicsSoftBodyHandle{};
-            }
-            pShared->AddFace( face );
-        }
-        // 정점 속성 하나를 모든 정점이 나눠 쓴다(속성 수가 정점보다 적으면 Jolt 가 마지막 것을 되풀이한다).
-        const bool                                          bBend = desc._bendCompliance >= 0.0f;
-        const JPH::SoftBodySharedSettings::VertexAttributes attributes{ desc._stretchCompliance, desc._shearCompliance, bBend ? desc._bendCompliance : FLT_MAX };
-        pShared->CreateConstraints( &attributes, 1, bBend ? JPH::SoftBodySharedSettings::EBendType::Distance : JPH::SoftBodySharedSettings::EBendType::None );
-        // 스킨 구속 — 뼈마다 역바인드, 정점마다 뼈 가중(남는 칸은 가중 0). 법선은 면에서 구한다(되받침 거리를 쓰지 않아도 Jolt 가 요구한다). 최적화(구속 재배열) 앞에 둔다.
-        if ( desc._listSkinnedVertex.empty() == false )
-        {
-            pShared->mInvBindMatrices.reserve( desc._listInverseBind.size() );
-            for ( uint32 jointIndex = 0; jointIndex < desc._listInverseBind.size(); ++jointIndex )
-            {
-                pShared->mInvBindMatrices.push_back(
-                    JPH::SoftBodySharedSettings::InvBind{ jointIndex, JoltPhysicsSceneSoftBodyInternal::toJoltMatrix( desc._listInverseBind[jointIndex] ) } );
-            }
-            pShared->mSkinnedConstraints.reserve( desc._listSkinnedVertex.size() );
-            for ( const PhysicsSoftBodySkinnedVertex& skinned : desc._listSkinnedVertex )
-            {
-                JPH::SoftBodySharedSettings::Skinned constraint{ skinned._vertex, skinned._maxDistance, 0.0f, 0.0f };
-                for ( uint32 weightIndex = 0; weightIndex < JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights; ++weightIndex )
-                {
-                    const bool bUsed                 = weightIndex < skinned._weightCount;
-                    constraint.mWeights[weightIndex] = bUsed ? JPH::SoftBodySharedSettings::SkinWeight{ skinned._arrWeight[weightIndex]._jointIndex, skinned._arrWeight[weightIndex]._weight }
-                                                             : JPH::SoftBodySharedSettings::SkinWeight{ 0, 0.0f };
-                }
-                pShared->mSkinnedConstraints.push_back( constraint );
-            }
-            pShared->CalculateSkinnedConstraintNormals();
-        }
-        pShared->Optimize();
 
         JPH::SoftBodyCreationSettings settings{ pShared, JoltUtil::toJolt( desc._position ), JoltUtil::toJolt( desc._rotation ), JoltLayerUtil::makeObjectLayer( desc._layer, true ) };
         settings.mNumIterations  = desc._iterationCount;

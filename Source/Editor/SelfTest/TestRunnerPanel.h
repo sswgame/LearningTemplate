@@ -40,6 +40,14 @@ namespace sw::editor
         void drawScenarioTab();
         /** @brief 단위 테스트 탭 — `TestBin/<이름>Test.exe` 마다 `--test_list` 나무, 고른 케이스를 새 프로세스로. */
         void drawUnitTestTab();
+        /** @brief 더럽혀졌으면 `TestBin` 의 `*Test.exe` 목록을 다시 모읍니다. */
+        void refreshExecutableList( const string& binDirectory );
+        /** @brief 실행 파일 고르기 콤보를 그립니다. 고르면 그 파일에 케이스 목록을 묻습니다(`--test_list`). */
+        void drawExecutableCombo( const string& binDirectory, bool bBusy, bool bExecutableChosen );
+        /** @brief 고른 케이스만 새 프로세스로 돌리는 단추를 그립니다. */
+        void drawRunSelectedCasesButton( const string& binDirectory, bool bBusy, bool bExecutableChosen );
+        /** @brief 케이스 나무(스위트별 접기 · 체크 · 마지막 결과)를 그립니다. */
+        void drawUnitTestList();
         /** @brief 외부 실행이 끝났으면 결과를 가져옵니다. */
         void pollExternalRun();
         /** @brief 외부 실행 결과 줄 · 종료 코드를 그립니다(시나리오 · 단위 테스트가 같이 쓴다). */

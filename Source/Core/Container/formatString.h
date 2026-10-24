@@ -382,45 +382,33 @@ namespace sw
             bool   _bHasOverrideFormat{ false };
         };
 
-        /**
-         * @brief `%` 뒤의 printf 서식(플래그, 너비, 정밀도, 길이, 변환 문자)을 읽어 Format 으로 옮깁니다.
-         * @details 문법은 printf 와 같다. `% [flags] [width] [.precision] [length] conversion` 형식이다. 문자를 읽어 Format 의 스위치를
-         *          켜기만 하고, 값을 출력하는 코드는 건드리지 않는다.
-         * @param format     `%` 바로 다음부터 남은 문자열
-         * @param outFormat  읽어 낸 옵션을 켤 Format
-         * @param outHasSpec 옵션을 하나라도 읽었으면 true
-         * @return 소비한 길이(`%` 포함). 서식이 아니면 0
-         */
-        static constexpr size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
+        /** @brief printf 서식의 플래그(`-` `+` `0`)를 @p cursor 부터 읽어 Format 에 켭니다. 순서는 상관없고 여러 개가 올 수 있습니다. */
+        static constexpr void parseFormatFlags( string_view format, size_t& inoutCursor, Format& outFormat, bool& outHasSpec ) noexcept
         {
-            size_t cursor{ 0 };
-            outHasSpec = false;
-
-            // 1) 플래그. 순서는 상관없고 여러 개가 올 수 있다.
             bool bDone{ false };
-            while ( cursor < format.size() && bDone == false )
+            while ( inoutCursor < format.size() && bDone == false )
             {
-                switch ( format[cursor] )
+                switch ( format[inoutCursor] )
                 {
                     case '-':
                     {
                         outFormat.leftAlign();
                         outHasSpec = true;
-                        ++cursor;
+                        ++inoutCursor;
                         break;
                     }
                     case '+':
                     {
                         outFormat.showSign();
                         outHasSpec = true;
-                        ++cursor;
+                        ++inoutCursor;
                         break;
                     }
                     case '0':
                     {
                         outFormat.zeroPad();
                         outHasSpec = true;
-                        ++cursor;
+                        ++inoutCursor;
                         break;
                     }
                     // `#` 은 플래그가 아니다. `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 플레이스홀더라 여기로 오지 않는다.
@@ -432,15 +420,18 @@ namespace sw
                     }
                 }
             }
+        }
 
-            // 2) 너비
+        /** @brief 너비(숫자)와 정밀도(`.` 숫자)를 읽어 Format 에 옮깁니다. 정밀도는 printf 규약 그대로입니다(`%.f` 는 정밀도 0). */
+        static constexpr void parseFormatWidthAndPrecision( string_view format, size_t& inoutCursor, Format& outFormat, bool& outHasSpec ) noexcept
+        {
             uint32 widthValue{ 0 };
             bool   bHasWidth{ false };
-            while ( cursor < format.size() && StringUtil::isDigitChar( format[cursor] ) )
+            while ( inoutCursor < format.size() && StringUtil::isDigitChar( format[inoutCursor] ) )
             {
-                widthValue = widthValue * 10u + static_cast<uint32>( format[cursor] - '0' );
+                widthValue = widthValue * 10u + static_cast<uint32>( format[inoutCursor] - '0' );
                 bHasWidth  = true;
-                ++cursor;
+                ++inoutCursor;
             }
             if ( bHasWidth )
             {
@@ -448,58 +439,61 @@ namespace sw
                 outHasSpec = true;
             }
 
-            // 3) 정밀도. printf 규약 그대로다(`%.f` 는 정밀도 0).
-            if ( cursor < format.size() && format[cursor] == '.' )
+            if ( inoutCursor < format.size() && format[inoutCursor] == '.' )
             {
-                ++cursor;
+                ++inoutCursor;
                 uint32 precisionValue{ 0 };
-                while ( cursor < format.size() && StringUtil::isDigitChar( format[cursor] ) )
+                while ( inoutCursor < format.size() && StringUtil::isDigitChar( format[inoutCursor] ) )
                 {
-                    precisionValue = precisionValue * 10u + static_cast<uint32>( format[cursor] - '0' );
-                    ++cursor;
+                    precisionValue = precisionValue * 10u + static_cast<uint32>( format[inoutCursor] - '0' );
+                    ++inoutCursor;
                 }
                 outFormat.precision( static_cast<int32>( precisionValue ) );
                 outHasSpec = true;
             }
+        }
 
-            // 4) 길이 수식어. 값의 타입은 인자가 정하므로 읽고 버린다.
-            if ( cursor + 1 < format.size() && format.substr( cursor, 2 ) == "ll" )
-                cursor += 2;
-            else if ( cursor < format.size() &&
-                      ( format[cursor] == 'l' || format[cursor] == 'z' || format[cursor] == 'h' || format[cursor] == 'j' ||
-                        format[cursor] == 't' ) )
-                ++cursor;
+        /** @brief 길이 수식어(`ll` `l` `z` `h` `j` `t`)를 읽고 버립니다. 값의 타입은 인자가 정합니다. */
+        static constexpr void skipFormatLengthModifier( string_view format, size_t& inoutCursor ) noexcept
+        {
+            if ( inoutCursor + 1 < format.size() && format.substr( inoutCursor, 2 ) == "ll" )
+                inoutCursor += 2;
+            else if ( inoutCursor < format.size() &&
+                      ( format[inoutCursor] == 'l' || format[inoutCursor] == 'z' || format[inoutCursor] == 'h' || format[inoutCursor] == 'j' || format[inoutCursor] == 't' ) )
+                ++inoutCursor;
+        }
 
-            // 5) 변환 문자
-            if ( cursor >= format.size() )
-                return 0;
-
-            switch ( format[cursor] )
+        /**
+         * @brief 변환 문자 하나를 읽습니다. 진법 지정자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버립니다.
+         * @return 변환 문자가 아니면 false 입니다.
+         */
+        [[nodiscard]] static constexpr bool applyFormatConversion( utf8 conversion, Format& outFormat, bool& outHasSpec ) noexcept
+        {
+            switch ( conversion )
             {
-                // 진법 지정자(x/X/o/p)는 Format 으로 옮기고, 나머지 변환 문자는 타입이 인자에서 오므로 읽고 버린다.
                 case 'x':
                 {
                     outFormat.hex();
                     outHasSpec = true;
-                    break;
+                    return true;
                 }
                 case 'X':
                 {
                     outFormat.hexUpper();
                     outHasSpec = true;
-                    break;
+                    return true;
                 }
                 case 'p':
                 {
                     outFormat.hex();
                     outHasSpec = true;
-                    break;
+                    return true;
                 }
                 case 'o':
                 {
                     outFormat.octal();
                     outHasSpec = true;
-                    break;
+                    return true;
                 }
                 case 'd':
                 case 'i':
@@ -513,13 +507,33 @@ namespace sw
                 case 's':
                 case 'c':
                 {
-                    break;
+                    return true;
                 }
                 default:
                 {
-                    return 0; // 서식이 아니다
+                    return false; // 서식이 아니다
                 }
             }
+        }
+
+        /**
+         * @brief `%` 뒤의 printf 서식(플래그, 너비, 정밀도, 길이, 변환 문자)을 읽어 Format 으로 옮깁니다.
+         * @details 문법은 printf 와 같다. `% [flags] [width] [.precision] [length] conversion` 형식이다. 문자를 읽어 Format 의 스위치를
+         *          켜기만 하고, 값을 출력하는 코드는 건드리지 않는다.
+         * @param format     `%` 바로 다음부터 남은 문자열
+         * @param outFormat  읽어 낸 옵션을 켤 Format
+         * @param outHasSpec 옵션을 하나라도 읽었으면 true
+         * @return 소비한 길이(`%` 포함). 서식이 아니면 0
+         */
+        static constexpr size_t parseFormatSpec( string_view format, Format& outFormat, bool& outHasSpec ) noexcept
+        {
+            size_t cursor{ 0 };
+            outHasSpec = false;
+            parseFormatFlags( format, cursor, outFormat, outHasSpec );
+            parseFormatWidthAndPrecision( format, cursor, outFormat, outHasSpec );
+            skipFormatLengthModifier( format, cursor );
+            if ( cursor >= format.size() || applyFormatConversion( format[cursor], outFormat, outHasSpec ) == false )
+                return 0;
             return cursor + 2; // `%` + 여기까지
         }
 

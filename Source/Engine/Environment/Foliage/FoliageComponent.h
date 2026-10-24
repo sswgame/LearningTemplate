@@ -168,6 +168,11 @@ namespace sw
         void computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<PlacementInstance>& outListInstance );
         /** @brief 레이어 @p layerIndex 의 배치를 셀로 나눠, 내용이 바뀐 셀만 배치를 새로 만들고 없어진 셀은 놓습니다. */
         void applyLayerInstances( uint32 layerIndex, const vector<PlacementInstance>& listInstance );
+        /** @brief 셀 하나(@p listIndex 의 인스턴스들, 모두 메시 @p mesh)의 배치를 만들어 레지스트리에 더합니다. 바운드는 인스턴스 위치 상자에 메시 반지름 × 최대 크기를 더한 구입니다. */
+        Cell makeCell( uint32 layerIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex, const shared_ptr<Mesh>& mesh,
+                       float32 meshRadius );
+        /** @brief 레이어 @p layerIndex 의 셀 중 @p listKeep 이 참이 아닌 것을 놓습니다(배치의 소멸자가 레지스트리에서 뺀다). 다른 레이어의 셀은 그대로입니다. */
+        void releaseLayerCells( uint32 layerIndex, const vector<uint8>& listKeep );
         /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
         void releaseCells();
 

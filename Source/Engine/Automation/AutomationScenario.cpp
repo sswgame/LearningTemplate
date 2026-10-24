@@ -50,6 +50,17 @@ namespace sw
                 return true;
             }
 
+            /** @brief `true` / `false` 속성을 읽습니다. 그 밖의 글이면 false 와 이유(값은 false 로 둔다). */
+            [[nodiscard]] static bool readBool( const utf8* pName, const utf8* pValue, bool& outValue, string& outReason )
+            {
+                const string_view value = pValue;
+                const bool        bOk   = value == "true" || value == "false";
+                outValue                = value == "true";
+                if ( bOk == false )
+                    outReason = string( pName ) + " must be true or false, got '" + pValue + "'";
+                return bOk;
+            }
+
             /** @brief 음이 아닌 초를 프레임으로 바꿉니다(고정 프레임 시간으로 반올림). 형식이 틀리면 false 와 이유. */
             [[nodiscard]] static bool readSeconds( const utf8* pValue, const utf8* pName, float32 fixedDelta, uint32& outFrames, string& outReason )
             {
@@ -252,11 +263,159 @@ namespace sw
         return true;
     }
 
-    bool AutomationScenario::parse( string_view xmlText, string_view sourceName, string& outError )
+    bool AutomationScenario::parseRootAttribute( string_view name, const utf8* pText, string& outReason )
     {
         using Internal = AutomationScenarioInternal;
-        *this          = AutomationScenario{};
-        _sourcePath    = sourceName.empty() ? string( "<memory>" ) : string( sourceName );
+        if ( name == "name" )
+        {
+            _name = pText;
+            return true;
+        }
+        if ( name == "fixedDelta" )
+        {
+            const bool bOk = StringUtil::parseFloat( string_view{ pText }, _fixedDelta ) && _fixedDelta > 0.0f;
+            if ( bOk == false )
+                outReason = string( "fixedDelta must be a positive number, got '" ) + pText + "'";
+            return bOk;
+        }
+        if ( name == "timeoutFrames" )
+            return Internal::readUint( pText, "timeoutFrames", _timeoutFrames, outReason );
+        if ( name == "startTimeoutFrames" )
+            return Internal::readUint( pText, "startTimeoutFrames", _startTimeoutFrames, outReason );
+        if ( name == "startAfter" )
+        {
+            const string_view value = pText;
+            if ( value == "ScenePlaying" )
+                _startCondition = AutomationStartCondition::ScenePlaying;
+            else if ( value == "Immediately" )
+                _startCondition = AutomationStartCondition::Immediately;
+            else
+            {
+                outReason = string( "unknown startAfter '" ) + pText + "' (ScenePlaying | Immediately)";
+                return false;
+            }
+            return true;
+        }
+        if ( name == "isolated" )
+            return Internal::readBool( "isolated", pText, _bIsolated, outReason );
+        if ( name == "requireForeground" )
+            return Internal::readBool( "requireForeground", pText, _bRequiresForeground, outReason );
+        if ( name == "editor" )
+            return Internal::readBool( "editor", pText, _bRequiresEditor, outReason );
+        if ( name == "input" )
+        {
+            const string_view value = pText;
+            if ( value == "exclusive" )
+                _inputMode = VirtualInputMode::Exclusive;
+            else if ( value == "mixed" )
+                _inputMode = VirtualInputMode::Mixed;
+            else
+            {
+                outReason = string( "unknown input mode '" ) + pText + "' (exclusive | mixed)";
+                return false;
+            }
+            return true;
+        }
+        outReason = "unknown <Scenario> attribute '" + string( name ) + "'";
+        return false;
+    }
+
+    bool AutomationScenario::parseAtNode( const XMLNode& atNode, uint32& inoutOrderInFile, uint32& inoutPreviousFrame, string& outError )
+    {
+        using Internal = AutomationScenarioInternal;
+        string reason;
+        uint32 frameIndex = 0;
+        if ( Internal::readAtFrame( atNode, _fixedDelta, inoutPreviousFrame, frameIndex, reason ) == false )
+        {
+            outError = _sourcePath + ": " + reason;
+            return false;
+        }
+        inoutPreviousFrame     = frameIndex;
+        const string frameText = to_string( frameIndex );
+        for ( XMLNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
+        {
+            const string_view kind = stepNode.getName();
+            if ( kind.empty() )
+            {
+                outError = _sourcePath + ": <At frame=\"" + frameText + "\"> holds text — only step elements may sit there";
+                return false;
+            }
+            AutomationStep step{};
+            step._kind        = string( kind );
+            step._frameIndex  = frameIndex;
+            step._orderInFile = inoutOrderInFile++;
+            for ( XMLAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+            {
+                AutomationAttribute value{};
+                value._name  = attribute.getName();
+                value._value = attribute.getValue();
+                step._listAttribute.push_back( std::move( value ) );
+            }
+            _listStep.push_back( std::move( step ) );
+        }
+        return true;
+    }
+
+    bool AutomationScenario::parseChildren( const XMLNode& root, string& outError )
+    {
+        using Internal = AutomationScenarioInternal;
+        string reason;
+        uint32 orderInFile   = 0;
+        uint32 previousFrame = 0;
+        for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
+        {
+            const string_view elementName = atNode.getName();
+            if ( elementName == "Load" )
+            {
+                if ( _load._bDeclared )
+                {
+                    outError = _sourcePath + ": only one <Load> may sit under <Scenario>";
+                    return false;
+                }
+                if ( parseLoad( atNode, reason ) == false )
+                {
+                    outError = _sourcePath + ": <Load> " + reason;
+                    return false;
+                }
+                continue;
+            }
+            if ( elementName == "Scratch" )
+            {
+                AutomationScratchFolder folder;
+                folder._sourceID  = string( atNode.getAttributeText( "from", false ) );
+                folder._scratchID = string( atNode.getAttributeText( "as", false ) );
+                if ( AutomationScratch::isValidFolder( folder, reason ) == false )
+                {
+                    outError = _sourcePath + ": " + reason;
+                    return false;
+                }
+                _listScratchFolder.push_back( std::move( folder ) );
+                continue;
+            }
+            if ( elementName == "Launch" )
+            {
+                if ( Internal::readLaunchVariable( atNode, _listLaunchVariable, reason ) == false )
+                {
+                    outError = _sourcePath + ": <Launch> " + reason;
+                    return false;
+                }
+                continue;
+            }
+            if ( elementName != "At" )
+            {
+                outError = _sourcePath + ": only <Load>, <Scratch>, <Launch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
+                return false;
+            }
+            if ( parseAtNode( atNode, orderInFile, previousFrame, outError ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    bool AutomationScenario::parse( string_view xmlText, string_view sourceName, string& outError )
+    {
+        *this       = AutomationScenario{};
+        _sourcePath = sourceName.empty() ? string( "<memory>" ) : string( sourceName );
 
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
@@ -275,91 +434,7 @@ namespace sw
         string reason;
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            const string_view name  = attribute.getName();
-            const utf8*       pText = attribute.getValue();
-            bool              bOk   = true;
-            if ( name == "name" )
-            {
-                _name = pText;
-            }
-            else if ( name == "fixedDelta" )
-            {
-                bOk = StringUtil::parseFloat( string_view{ pText }, _fixedDelta ) && _fixedDelta > 0.0f;
-                if ( bOk == false )
-                    reason = string( "fixedDelta must be a positive number, got '" ) + pText + "'";
-            }
-            else if ( name == "timeoutFrames" )
-            {
-                bOk = Internal::readUint( pText, "timeoutFrames", _timeoutFrames, reason );
-            }
-            else if ( name == "startTimeoutFrames" )
-            {
-                bOk = Internal::readUint( pText, "startTimeoutFrames", _startTimeoutFrames, reason );
-            }
-            else if ( name == "startAfter" )
-            {
-                const string_view value = pText;
-                if ( value == "ScenePlaying" )
-                {
-                    _startCondition = AutomationStartCondition::ScenePlaying;
-                }
-                else if ( value == "Immediately" )
-                {
-                    _startCondition = AutomationStartCondition::Immediately;
-                }
-                else
-                {
-                    bOk    = false;
-                    reason = string( "unknown startAfter '" ) + pText + "' (ScenePlaying | Immediately)";
-                }
-            }
-            else if ( name == "isolated" )
-            {
-                const string_view value = pText;
-                bOk                     = value == "true" || value == "false";
-                _bIsolated              = value == "true";
-                if ( bOk == false )
-                    reason = string( "isolated must be true or false, got '" ) + pText + "'";
-            }
-            else if ( name == "requireForeground" )
-            {
-                const string_view value = pText;
-                bOk                     = value == "true" || value == "false";
-                _bRequiresForeground    = value == "true";
-                if ( bOk == false )
-                    reason = string( "requireForeground must be true or false, got '" ) + pText + "'";
-            }
-            else if ( name == "editor" )
-            {
-                const string_view value = pText;
-                bOk                     = value == "true" || value == "false";
-                _bRequiresEditor        = value == "true";
-                if ( bOk == false )
-                    reason = string( "editor must be true or false, got '" ) + pText + "'";
-            }
-            else if ( name == "input" )
-            {
-                const string_view value = pText;
-                if ( value == "exclusive" )
-                {
-                    _inputMode = VirtualInputMode::Exclusive;
-                }
-                else if ( value == "mixed" )
-                {
-                    _inputMode = VirtualInputMode::Mixed;
-                }
-                else
-                {
-                    bOk    = false;
-                    reason = string( "unknown input mode '" ) + pText + "' (exclusive | mixed)";
-                }
-            }
-            else
-            {
-                bOk    = false;
-                reason = "unknown <Scenario> attribute '" + string( name ) + "'";
-            }
-            if ( bOk == false )
+            if ( parseRootAttribute( attribute.getName(), attribute.getValue(), reason ) == false )
             {
                 outError = _sourcePath + ": " + reason;
                 return false;
@@ -371,81 +446,8 @@ namespace sw
             return false;
         }
 
-        uint32 orderInFile   = 0;
-        uint32 previousFrame = 0;
-        for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
-        {
-            if ( string_view{ atNode.getName() } == "Load" )
-            {
-                if ( _load._bDeclared )
-                {
-                    outError = _sourcePath + ": only one <Load> may sit under <Scenario>";
-                    return false;
-                }
-                if ( parseLoad( atNode, reason ) == false )
-                {
-                    outError = _sourcePath + ": <Load> " + reason;
-                    return false;
-                }
-                continue;
-            }
-            if ( string_view{ atNode.getName() } == "Scratch" )
-            {
-                AutomationScratchFolder folder;
-                folder._sourceID  = string( atNode.getAttributeText( "from", false ) );
-                folder._scratchID = string( atNode.getAttributeText( "as", false ) );
-                if ( AutomationScratch::isValidFolder( folder, reason ) == false )
-                {
-                    outError = _sourcePath + ": " + reason;
-                    return false;
-                }
-                _listScratchFolder.push_back( std::move( folder ) );
-                continue;
-            }
-            if ( string_view{ atNode.getName() } == "Launch" )
-            {
-                if ( Internal::readLaunchVariable( atNode, _listLaunchVariable, reason ) == false )
-                {
-                    outError = _sourcePath + ": <Launch> " + reason;
-                    return false;
-                }
-                continue;
-            }
-            if ( string_view{ atNode.getName() } != "At" )
-            {
-                outError = _sourcePath + ": only <Load>, <Scratch>, <Launch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
-                return false;
-            }
-            uint32 frameIndex = 0;
-            if ( Internal::readAtFrame( atNode, _fixedDelta, previousFrame, frameIndex, reason ) == false )
-            {
-                outError = _sourcePath + ": " + reason;
-                return false;
-            }
-            previousFrame          = frameIndex;
-            const string frameText = to_string( frameIndex );
-            for ( XMLNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
-            {
-                const string_view kind = stepNode.getName();
-                if ( kind.empty() )
-                {
-                    outError = _sourcePath + ": <At frame=\"" + frameText + "\"> holds text — only step elements may sit there";
-                    return false;
-                }
-                AutomationStep step{};
-                step._kind        = string( kind );
-                step._frameIndex  = frameIndex;
-                step._orderInFile = orderInFile++;
-                for ( XMLAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    AutomationAttribute value{};
-                    value._name  = attribute.getName();
-                    value._value = attribute.getValue();
-                    step._listAttribute.push_back( std::move( value ) );
-                }
-                _listStep.push_back( std::move( step ) );
-            }
-        }
+        if ( parseChildren( root, outError ) == false )
+            return false;
         // 프레임 순이다(같은 프레임은 파일 순이며 안정 정렬이다).
         std::stable_sort( _listStep.begin(), _listStep.end(), []( const AutomationStep& lhs, const AutomationStep& rhs )
         {

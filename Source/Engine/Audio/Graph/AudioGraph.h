@@ -174,6 +174,16 @@ namespace sw
         void sumInputs( uint32 nodeIndex, float32* pOut, uint32 frameCount ) const;
         /** @brief 그래뉼러 노드 하나를 렌더합니다. */
         void renderGranular( uint32 nodeIndex, const float32* pParameter, float32* pOut, uint32 frameCount );
+        /** @brief 이번 블록 값을 정합니다 — 노드 상수에 게임 파라미터 곡선을 덮고 종류 표의 범위로 묶습니다. */
+        void updateBlockParameters();
+        /** @brief 오실레이터 노드(사인 · 톱니 · 사각 · 삼각) 하나를 렌더합니다. */
+        void renderOscillator( const AudioGraph::Node& node, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount );
+        /** @brief 엔벨로프 노드 하나를 렌더합니다 — 입력 합에 시간에 따른 곡선을 곱합니다. */
+        void renderEnvelope( uint32 nodeIndex, const float32* pParameter, float32* pOut, uint32 frameCount );
+        /** @brief 필터 노드(저역 · 고역 · 대역) 하나를 렌더합니다. 주파수나 Q 가 바뀐 블록에서만 계수를 다시 만듭니다. */
+        void renderFilter( uint32 nodeIndex, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount );
+        /** @brief 게인 노드 하나를 렌더합니다 — 블록 안에서 이전 게인에서 목표 게인으로 선형으로 옮깁니다. */
+        void renderGain( uint32 nodeIndex, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount );
         /** @brief 노드 상태와 난수를 처음으로 되돌립니다. */
         void resetState();
         /** @brief 노드 @p nodeIndex 의 이번 블록 값 배열입니다. */

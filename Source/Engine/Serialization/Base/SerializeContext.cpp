@@ -340,6 +340,57 @@ namespace sw
                 registerVectorTextHandler<quaternion, float32, 4>( context, hashed_string( PredefinedNameType::NameType_quaternion ) );
                 registerVectorTextHandler<float4x4, float32, 16>( context, hashed_string( PredefinedNameType::NameType_float4x4 ) );
             }
+
+            /** @brief 핸들(컴포넌트 · 게임 오브젝트)과 비트 목록의 텍스트 핸들러를 등록합니다. */
+            static void registerHandleTextHandlers( SerializeContext& context )
+            {
+                context.registerTextHandler(
+                    hashed_string( "ComponentHandle" ),
+                    []( const void* pPtr )
+                {
+                    const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
+                    StringBuilder<constant::kMaxBuffer64> sb;
+                    sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
+                    return string{ sb.c_str(), sb.size() };
+                },
+                    []( void* pPtr, string_view strView )
+                {
+                    const string_view trimmed = StringUtil::trim( strView );
+                    const size_t      sep     = trimmed.find( ':' );
+                    if ( sep == string_view::npos )
+                        return false;
+                    uint64 objectID{ 0 };
+                    uint64 componentID{ 0 };
+                    if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectID, 10 ) == false ||
+                         StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentID, 10 ) == false )
+                        return false;
+                    *static_cast<ComponentHandle*>( pPtr ) =
+                        ComponentHandle::makeOwned( objectID, componentID );
+                    return true;
+                } );
+
+                context.registerTextHandler(
+                    hashed_string( "GameObjectHandle" ),
+                    []( const void* pPtr )
+                { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
+                    []( void* pPtr, string_view strView )
+                {
+                    uint64 objectID{ 0 };
+                    if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
+                        return false;
+                    *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
+                    return true;
+                } );
+
+                // 비트 목록은 '0' · '1' 글 하나로 값째 쓰고 읽는다(맨 왼쪽이 가장 높은 비트, `DynamicBitset::to_string`). 원소 주소가 없으므로 컨테이너 래퍼를 쓰지 않는다.
+                // 다른 글자가 섞이면 실패다(값은 그대로, `DynamicBitset::parse`).
+                context.registerTextHandler(
+                    hashed_string( "DynamicBitset" ),
+                    []( const void* pPtr )
+                { return static_cast<const DynamicBitset*>( pPtr )->to_string(); },
+                    []( void* pPtr, string_view strView )
+                { return DynamicBitset::parse( SerializeContextInternal::stripQuotes( StringUtil::trim( strView ) ), *static_cast<DynamicBitset*>( pPtr ) ); } );
+            }
         };
     } // namespace
 } // namespace sw
@@ -465,53 +516,7 @@ namespace sw
                                      SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readSlotHandleText ) );
 
         DataPath::registerSerializeHandler( context );
-
-        context.registerTextHandler(
-            hashed_string( "ComponentHandle" ),
-            []( const void* pPtr )
-        {
-            const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
-            StringBuilder<constant::kMaxBuffer64> sb;
-            sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
-            return string{ sb.c_str(), sb.size() };
-        },
-            []( void* pPtr, string_view strView )
-        {
-            const string_view trimmed = StringUtil::trim( strView );
-            const size_t      sep     = trimmed.find( ':' );
-            if ( sep == string_view::npos )
-                return false;
-            uint64 objectID{ 0 };
-            uint64 componentID{ 0 };
-            if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectID, 10 ) == false ||
-                 StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentID, 10 ) == false )
-                return false;
-            *static_cast<ComponentHandle*>( pPtr ) =
-                ComponentHandle::makeOwned( objectID, componentID );
-            return true;
-        } );
-
-        context.registerTextHandler(
-            hashed_string( "GameObjectHandle" ),
-            []( const void* pPtr )
-        { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
-            []( void* pPtr, string_view strView )
-        {
-            uint64 objectID{ 0 };
-            if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
-                return false;
-            *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
-            return true;
-        } );
-
-        // 비트 목록은 '0' · '1' 글 하나로 값째 쓰고 읽는다(맨 왼쪽이 가장 높은 비트, `DynamicBitset::to_string`). 원소 주소가 없으므로 컨테이너 래퍼를 쓰지 않는다.
-        // 다른 글자가 섞이면 실패다(값은 그대로, `DynamicBitset::parse`).
-        context.registerTextHandler(
-            hashed_string( "DynamicBitset" ),
-            []( const void* pPtr )
-        { return static_cast<const DynamicBitset*>( pPtr )->to_string(); },
-            []( void* pPtr, string_view strView )
-        { return DynamicBitset::parse( SerializeContextInternal::stripQuotes( StringUtil::trim( strView ) ), *static_cast<DynamicBitset*>( pPtr ) ); } );
+        SerializeContextInternal::registerHandleTextHandlers( context );
 
         SerializeContextInternal::registerFloatVectorTextHandlers( context );
         registerReflectAnyHandlers( context );
