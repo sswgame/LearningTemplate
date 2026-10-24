@@ -117,6 +117,7 @@ namespace sw
         , _canvasScratch{}
         , _paintScratch{}
         , _canvasRevision{ 1 }
+        , _deferredGlyphCount{ 0 }
         , _listPaintedTree{}
         , _bLastCanvasReusable{ SW_FALSE }
         , _arrLayerHideCount{}
@@ -961,13 +962,13 @@ namespace sw
         context._pTextLayout   = _textLayout.get();
         context._uiScale       = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
-        context._frameIndex    = engine::getSubsystem<FrameProfiler>().getFrameCount();
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
         {
             context._pGlyphCache = &_pFontService->getGlyphCache();
+            context._frameIndex  = context._pGlyphCache->getFrameIndex(); // 글리프 캐시의 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 예산이 되살아나지 않는다)
             context._pGlyphCache->setRasterBudgetNanoseconds( static_cast<int64>( gv_uiGlyphRasterBudgetMicros ) * constant::kNanosecondsPerMicrosecond );
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
@@ -1302,6 +1303,7 @@ namespace sw
         }
         if ( bUnchanged )
         {
+            _deferredGlyphCount = 0; // 미룬 위젯은 다시 무효화되므로 지난 출력을 재사용할 수 있었다면 미룬 글리프가 없다
             SW_PROFILE_COUNT( "UI.PaintWidgets", 0 );
             SW_PROFILE_COUNT( "UI.CanvasQuads", _canvas._listQuad.size() );
             publishCanvasAnchors();
@@ -1333,6 +1335,7 @@ namespace sw
             if ( pFocused != nullptr && pFocused->isVisible() )
                 UIPaintPass::paintFocusRing( *pFocused, painter );
         }
+        _deferredGlyphCount = painter.getDeferredGlyphCount();
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
         SW_PROFILE_COUNT( "UI.CanvasQuads", _canvasScratch._listQuad.size() );
         publishCanvasAnchors(); // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다)

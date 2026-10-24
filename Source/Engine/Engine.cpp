@@ -528,6 +528,9 @@ namespace sw
 
     void Engine::updateFrameServices( float32 deltaTime )
     {
+        // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
+        if ( _pFontService != nullptr && _pFontService->isInitialized() )
+            _pFontService->getGlyphCache().beginFrame();
         BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
         {
 #if !defined( SW_SHIPPING )

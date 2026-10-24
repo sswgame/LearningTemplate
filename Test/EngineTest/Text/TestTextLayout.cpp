@@ -219,3 +219,39 @@ SW_TEST_CASE( TextLayoutTest, MeasureMatchesLayoutSize )
     SW_EXPECT_NEAR_EQUAL( 10.0f, wide._y, 1e-4f ); // 한 줄
     SW_EXPECT_NEAR_EQUAL( 0.0f, fixture._layout.measure( "", style, 30.0f )._x, 1e-4f );
 }
+
+/**
+ * @brief [TextLayoutTest] 글리프 원점이 펜 진행을 따른다 — 글자 0.5 em · 공백 0.25 em · 자간(em)이 글리프마다 더해지고, 줄을 넘기면 새 줄의 원점이 0 에서 다시 시작한다
+ * @details 글자 크기 10 에 자간 0.1 em 이면 글자 6 · 공백 3.5 이다. 배치 단계 분리(0cd29b8e5) 전후로 자간이 달라지지 않는다는 보증이다.
+ */
+SW_TEST_CASE( TextLayoutTest, GlyphOriginsFollowThePenAdvance )
+{
+    TextLayoutTestFixture fixture;
+    SW_ASSERT_TRUE( fixture._bInitialized );
+    sw::TextLayoutStyle  style = TextLayoutTestFixture::makeStyle();
+    sw::TextLayoutResult plain{};
+    fixture._layout.layout( "a b", style, 0.0f, plain );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( plain._listGlyph.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, plain._listGlyph[0]._origin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, plain._listGlyph[1]._origin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 7.5f, plain._listGlyph[2]._origin._x, 1e-4f );
+
+    style._letterSpacing = 0.1f;
+    sw::TextLayoutResult spaced{};
+    fixture._layout.layout( "a b", style, 0.0f, spaced );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( spaced._listGlyph.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, spaced._listGlyph[0]._origin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, spaced._listGlyph[1]._origin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 9.5f, spaced._listGlyph[2]._origin._x, 1e-4f );
+
+    style._letterSpacing = 0.0f;
+    sw::TextLayoutResult wrapped{};
+    fixture._layout.layout( "aaaa bbbb", style, 30.0f, wrapped );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( wrapped._listLine.size() ) );
+    const sw::LaidOutLine& second = wrapped._listLine[1];
+    SW_ASSERT_EQUAL( 4u, second._glyphCount );
+    for ( uint32 index = 0; index < second._glyphCount; ++index )
+    {
+        SW_EXPECT_NEAR_EQUAL( 5.0f * static_cast<float32>( index ), wrapped._listGlyph[second._firstGlyph + index]._origin._x, 1e-4f );
+    }
+}

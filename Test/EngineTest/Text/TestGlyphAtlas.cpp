@@ -206,6 +206,36 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheDefersNewGlyphsOverTheFrameBudget )
     SW_EXPECT_EQUAL( 6u, rasterizer.getRasterizeCount() );
 }
 
+/**
+ * @brief [GlyphAtlasTest] 예산이 아무리 작아도 글리프 수만큼의 프레임 뒤에는 모든 글리프가 만들어져 있다 — 프레임 시계는 캐시가 쥐고 `beginFrame` 으로만 오른다
+ * @details 예산 1 ns 는 프레임마다 새 글리프 하나만 만든다. 변이: `beginFrame` 이 시계를 올리지 않으면(프로파일러가 꺼진 때의 프레임 수처럼 늘 같은 번호) 첫 프레임 뒤 아무 글리프도 안 만들어진다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, GlyphCacheFrameClockRevivesTheBudgetEveryFrame )
+{
+    sw::test::FakeFontRasterizer rasterizer;
+    const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    cache.setRasterBudgetNanoseconds( 1 );
+    SW_EXPECT_EQUAL( uint64{ 0 }, cache.getFrameIndex() );
+
+    constexpr uint32 kGlyphCount = 10;
+    uint32           readyCount  = 0;
+    for ( uint32 frame = 1; frame <= kGlyphCount; ++frame )
+    {
+        cache.beginFrame();
+        SW_ASSERT_EQUAL( static_cast<uint64>( frame ), cache.getFrameIndex() );
+        readyCount = 0;
+        for ( uint32 index = 0; index < kGlyphCount; ++index ) // 한 프레임이 모든 글리프를 순서대로 요청한다 — 앞쪽이 이미 있어도 뒤쪽이 굶지 않는다
+        {
+            if ( cache.findOrAddGlyph( face, 'A' + index, cache.getFrameIndex() )._status == sw::GlyphLookupStatus::Ready )
+                ++readyCount;
+        }
+        SW_EXPECT_EQUAL( frame, readyCount ); // 프레임마다 정확히 하나씩 나아간다
+        SW_EXPECT_EQUAL( frame, rasterizer.getRasterizeCount() );
+    }
+    SW_EXPECT_EQUAL( kGlyphCount, readyCount ); // 다 만들어졌다
+}
+
 /** @brief [GlyphAtlasTest] MSDF 아틀라스는 텍셀당 4 바이트다 — 페이지 바이트가 네 배이고, 쓴 구간의 업로드는 행마다 너비 × 4 바이트로 나가며 텍셀당 바이트가 업로드에 실린다 */
 SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
 {

@@ -362,6 +362,8 @@ namespace sw
         }
         if ( bUIReady )
             pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+        // 글리프 캐시의 프레임 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 래스터화 예산이 되살아나지 않는다). 캐시가 없으면 글리프를 그리지 않으므로 값이 쓰이지 않는다.
+        const uint64 glyphFrameIndex = pFontService != nullptr && pFontService->isInitialized() ? pFontService->getGlyphCache().getFrameIndex() : 0;
         // 디버그 드로우 겹치기 — UI 위, 테스트 그림 아래. 주 시점이 카메라에서 온 패킷만(행렬이 없으면 그릴 눈이 없다).
         const bool bSubmitDebugDraw = bSceneMain == false && DebugDrawCanvasUtil::isGameViewOverlayEnabled() && packet._bHasViewProj == SW_TRUE && pRHI != nullptr && pRHI->hasDevice();
         if ( bSubmitDebugDraw )
@@ -371,8 +373,8 @@ namespace sw
             const float2 targetSize{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) };
             if ( packet._canvas._mainOutput.isEmpty() )
                 packet._canvas._mainOutput._targetSize = targetSize;
-            const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), packet._viewProj, targetSize, pFontService,
-                                                                    engine::getSubsystem<FrameProfiler>().getFrameCount(), packet._canvas._mainOutput );
+            const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), packet._viewProj, targetSize, pFontService, glyphFrameIndex,
+                                                                    packet._canvas._mainOutput );
             if ( paintedCount > 0 )
                 packet._canvas._contentRevision = 0; // 겹친 도형은 프레임마다 바뀐다 — 내용 번호 없이 늘 올린다(테스트 그림과 같다)
         }
@@ -383,7 +385,7 @@ namespace sw
             const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : pRHI->getDevice().getBackBufferWidth();
             const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : pRHI->getDevice().getBackBufferHeight();
             CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) }, pFontService,
-                                      engine::getSubsystem<FrameProfiler>().getFrameCount() );
+                                      glyphFrameIndex );
         }
         if ( pFontService != nullptr && pFontService->isInitialized() )
             pFontService->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );

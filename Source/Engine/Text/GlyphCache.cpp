@@ -25,6 +25,7 @@ namespace sw
         , _rasterBudgetNanoseconds{ 0 }
         , _spentNanoseconds{ 0 }
         , _budgetFrameIndex{ invalid_index::kUint64 }
+        , _frameIndex{ 0 }
     {
     }
 
