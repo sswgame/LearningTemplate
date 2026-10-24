@@ -415,6 +415,43 @@ SW_TEST_CASE( ShaderCookDriverTest, RequestWithoutUsableSourceIsAFailure )
 }
 
 /**
+ * @brief [ShaderCookDriverTest] 컴파일에 실패하는 요청이 여럿이면 병렬로 돌아도 실패가 모두 세어지고, 실패한 소스는 스탬프에 오르지 않는다
+ * @details 컴파일러가 없는 환경에서도 같은 결과(실패)라 컴파일러 유무와 상관없이 돈다. 요청마다 파일이 다른 병렬 쿠킹에서 카운터가 요청 수와 어긋나지 않는지 본다.
+ */
+SW_TEST_CASE( ShaderCookDriverTest, ManyFailingRequestsAreAllCountedAndLeftOutOfTheStamp )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const sw::string root       = test::makeTempDirectory( "cook_driver_many_fail" );
+    const sw::string shadersDir = sw::FileUtil::joinPath( root, "shaders" );
+    const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
+    const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
+
+    constexpr uint32                  kRequestCount = 8;
+    sw::vector<sw::ShaderCookRequest> listRequest( kRequestCount );
+    for ( uint32 requestIndex = 0; requestIndex < kRequestCount; ++requestIndex )
+    {
+        sw::ShaderCookRequest& request = listRequest[requestIndex];
+        request._shaderPath            = brokenPath;
+        request._entryPoint            = "main";
+        request._stage                 = sw::ShaderStage::Pixel;
+        request._listPermutation       = { "SW_BROKEN_" + sw::to_string( requestIndex ) }; // 퍼뮤테이션마다 출력 파일이 다르다
+        request._permutationHash       = sw::ShaderCooker::computePermutationHash( request._listPermutation );
+    }
+
+    const sw::ShaderCookSummary summary = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), listRequest, sw::ShaderTargetFormat::DXIL_D3D12, false );
+    SW_EXPECT_FALSE( summary.isClean() );
+    SW_EXPECT_EQUAL( kRequestCount, summary._failedCount );
+    SW_EXPECT_EQUAL( 0u, summary._cookedCount );
+
+    sw::string stampText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( binDir, "cook.stamp" ), stampText ) );
+    SW_EXPECT_TRUE_MSG( stampText.find( "broken.hlsl" ) == sw::string::npos, "컴파일에 실패한 소스는 스탬프에서 빠져 다음 쿠킹이 다시 시도해야 한다" );
+}
+
+/**
  * @brief [ShaderCookerTest] 잘못된 파일 경로 및 디렉터리에 대한 방어적 실패 처리 검증
  */
 SW_TEST_CASE( ShaderCookerTest, DefensiveFileOperations )
