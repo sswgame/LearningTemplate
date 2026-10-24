@@ -649,6 +649,8 @@ namespace sw::editor
                 (void)sourcePath;
                 return nullptr;
             }
+            /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface` 가 `MeshCache` 로 읽는다)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
+            bool               hasOrderDependency( string_view resourcePath ) const override { return _config.findMatchingRule( resourcePath )._bodySurface.empty() == false; }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
                 return ModelImporter::importModel( sourcePath, _config.findMatchingRule( resourcePath ), importedPath );
