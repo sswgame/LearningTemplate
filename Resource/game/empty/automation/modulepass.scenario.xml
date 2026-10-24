@@ -10,9 +10,9 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
 	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/modulepasspipeline.xml"/>
 	<At frame="40"><Screenshot file="modulepass.ppm"/></At>
-	<!-- 문턱은 가늠한 값이다(첫 GPU 실행 전 — 모듈 패스가 돌지 않으면 푸른 배경이라 음수다). 첫 측정으로 정한다. -->
+	<!-- 문턱 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842, 네 백엔드 차이 3e-6 이하)은 평균 R − B 0.2158 이다. 문턱은 그 3분의 2 아래(0.15)다 — 모듈 패스가 돌지 않으면 푸른 배경이라 음수다. -->
 	<At frame="42">
-		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.02" provisional="가늠한 값(첫 GPU 실행 전)"/>
+		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.15" measured="2026-10-25 dx11:0.21576 dx12:0.21575 vk:0.21575 gl:0.21576"/>
 		<Pass/>
 	</At>
 </Scenario>

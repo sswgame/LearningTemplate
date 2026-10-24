@@ -60,6 +60,9 @@ namespace sw
             psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
                                                  ? D3D12_CULL_MODE_FRONT
                                                  : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
+            // 가까운 · 먼 평면에서 자른다 — DX11(DepthClipEnable) · Vulkan(depthClampEnable 끔) · GL(GL_DEPTH_CLAMP 끔)과 같다. 0 으로 두면 DX12 만 평면 밖 기하를 깊이 1 로 눌러 그린다
+            // (psoDesc{} 의 기본값이 FALSE 다). 시야 거리 설정(gv_viewDistanceScale)이 먼 평면을 당겨도 DX12 에서만 먼 기하가 남았다(useroptions distance 0.307, 나머지 0.665).
+            psoDesc.RasterizerState.DepthClipEnable = TRUE;
             // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias).
             psoDesc.RasterizerState.DepthBias            = desc._depthBias;
             psoDesc.RasterizerState.SlopeScaledDepthBias = desc._slopeScaledDepthBias;

@@ -23,10 +23,10 @@
 	<At frame="154"><DevCommand line="teleport GameCamera 0.25 1.6 -6"/><Screenshot file="moving_off.ppm" waitForSettle="false"/></At>
 	<At frame="184"><Screenshot file="still_off.ppm" waitForSettle="false"/></At>
 
-	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값, 상자 영역): 움직인 켬 · 끔 평균 차 0.0067 · 다른 화소 비율 0.144, 멈춘 켬 · 끔 평균 차 0.00003. 문턱은 움직인 비율의 절반(atLeast 0.07, 기존 캡처로 정함 — GPU 확인 대기)과 멈춘 쪽의 0.001. -->
+	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값, 상자 영역): 움직인 켬 · 끔 평균 차 0.0067 · 다른 화소 비율 0.144, 멈춘 켬 · 끔 평균 차 0.00003. 문턱은 움직인 비율의 절반(atLeast 0.07)과 멈춘 쪽의 0.001. 같은 값을 2026-10-25 에 다시 쟀다(Release, 측정 커밋 00a6fc842): 움직인 비율 0.14398 ~ 0.14403, 멈춘 비율 네 백엔드 모두 0. -->
 	<At frame="190">
-		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="moving_off.ppm" atLeast="0.07" measured="2026-10-22 all:0.144"/>
-		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="still_off.ppm" atMost="0.001" provisional="멈춘 쪽 다른 화소 비율은 기록이 없다(평균 차 0.00003 만 기록)"/>
+		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="moving_off.ppm" atLeast="0.07" measured="2026-10-25 dx11:0.14398 dx12:0.14403 vk:0.14403 gl:0.14399"/>
+		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="still_off.ppm" atMost="0.001" measured="2026-10-25 all:0"/>
 		<Variable name="gv_motionBlur" value="1"/>
 		<Pass/>
 	</At>
