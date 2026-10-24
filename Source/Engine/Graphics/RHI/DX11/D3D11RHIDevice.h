@@ -403,6 +403,8 @@ namespace sw
          * @details disjoint 로 감싸지 않는다. 프레임의 disjoint 가 열려 있는 동안 불리고, 주파수는 마지막 프레임의 disjoint 값을 쓴다.
          */
         Microsoft::WRL::ComPtr<ID3D11Query> _clockQuery;
+        /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 처음 기다릴 때 만듭니다.
+        Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         vector<RHIBufferHandle> _listRegisteredBindless;

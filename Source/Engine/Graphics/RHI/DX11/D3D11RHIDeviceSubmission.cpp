@@ -32,6 +32,8 @@ namespace sw
         {
             /** @brief GPU 시계 읽기가 기다리는 상한입니다. 큐에 프레임 몇 개가 쌓여 있어도 넉넉하다. */
             static constexpr uint32 kClockReadTimeoutMilliseconds = 500;
+            /** @brief `waitIdle` 이 GPU 를 기다리는 상한입니다. 넘으면 오류를 남기고 해제 큐를 비운다(끝나지 않은 일이 있다는 뜻이라 조용히 넘기지 않는다). */
+            static constexpr uint32 kIdleWaitTimeoutMilliseconds = 10000;
         };
     } // namespace
 
@@ -260,7 +262,37 @@ namespace sw
         if ( _deviceContext != nullptr )
         {
             std::scoped_lock<mutex> lock{ _immediateContextMutex };
-            _deviceContext->Flush();
+            // Flush 는 명령을 GPU 로 보낼 뿐 끝나기를 기다리지 않는다. 이벤트 쿼리를 내고 GPU 가 거기를 지날 때까지 묻는다.
+            // 기다리지 않으면 아래 해제 큐 콜백(비동기 되읽기의 Map 등)이 GPU 가 끝나기 전에 돌아 "끝난 뒤" 라는 약속이 깨진다.
+            if ( _idleQuery == nullptr && _device != nullptr )
+            {
+                D3D11_QUERY_DESC eventDesc{};
+                eventDesc.Query = D3D11_QUERY_EVENT;
+                if ( FAILED( _device->CreateQuery( &eventDesc, &_idleQuery ) ) )
+                    SW_LOG_ERROR( "waitIdle: failed to create the event query - the GPU is not waited for" );
+            }
+            if ( _idleQuery != nullptr )
+            {
+                _deviceContext->End( _idleQuery.Get() );
+                _deviceContext->Flush();
+                const Deadline deadline = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
+                BOOL           bDone    = FALSE;
+                HRESULT        hr       = _deviceContext->GetData( _idleQuery.Get(), &bDone, sizeof( bDone ), 0 );
+                while ( hr == S_FALSE || ( SUCCEEDED( hr ) && bDone == FALSE ) )
+                {
+                    if ( deadline.isExpired() )
+                    {
+                        SW_LOG_ERROR( "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
+                        break;
+                    }
+                    std::this_thread::yield();
+                    hr = _deviceContext->GetData( _idleQuery.Get(), &bDone, sizeof( bDone ), 0 );
+                }
+            }
+            else
+            {
+                _deviceContext->Flush();
+            }
         }
         _releaseQueue.flushAll();
     }
