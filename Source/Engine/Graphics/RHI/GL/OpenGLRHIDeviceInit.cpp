@@ -293,6 +293,10 @@ namespace sw
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
 
+        // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
+        _frameSerial          = 0;
+        _completedFrameSerial = 0;
+
         if ( _defaultSampler )
         {
             for ( uint32 unit = 0; unit < 64; ++unit )
