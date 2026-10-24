@@ -33,6 +33,12 @@ namespace sw
     {
         uint64 _callStackHash{ 0 }; ///< 해제 때 그대로 돌려받는 콜 스택 해시(세부 추적이 꺼져 있으면 0)
         bool   _bCounted{ false };  ///< 기록기가 이 블록을 세었으면 true. 그때만 해제를 기록기에 알린다
+        /**
+         * @brief 기록기가 이 블록에 붙인 스탬프입니다(0 이면 없음). 할당기는 뜻을 모르고 블록 헤더에 적어 두었다가 해제 때 그대로 돌려줍니다.
+         * @details 기록기는 이것으로 "측정 창 안에서 태어난 블록인가" 를 가립니다(`MemoryProfiler::beginLeakWindow`). 창 밖에서 태어난 오래된 블록의
+         *          해제가 창 안의 증가를 상쇄하지 않게 하는 근거입니다.
+         */
+        uint32 _windowStamp{ 0 };
     };
 } // namespace sw
 
@@ -62,8 +68,8 @@ namespace sw
          * @return 센 여부와 할당 헤더에 적어 둘 콜 스택 해시(해제 때 그대로 돌려받는다)
          */
         [[nodiscard]] virtual AllocationRecord recordAllocation( void* pPtr, size_t size, MemoryTag tag ) = 0;
-        /** @brief 해제 하나를 기록합니다. 이 기록기가 센(`_bCounted`) 블록만 옵니다. @p callStackHash 는 할당 때 돌려준 값입니다. */
-        virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash ) = 0;
+        /** @brief 해제 하나를 기록합니다. 이 기록기가 센(`_bCounted`) 블록만 옵니다. @p born 은 할당 때 돌려준 값 그대로입니다(콜 스택 해시 · 스탬프). */
+        virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, const AllocationRecord& born ) = 0;
 
         /** @brief 이 기록기의 번호입니다. 같은 주소에 새로 만든 기록기도 번호가 다릅니다. */
         uint64 getTrackerID() const { return _trackerID; }
@@ -152,16 +158,9 @@ namespace sw
 
 namespace sw
 {
-    struct MemoryAllocTag
-    {
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned` · `freeAligned`)으로 잡아야 하는지입니다.
-     * @details **`sw_new` · `sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
+     * @details **`sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
      *          고르는 경계(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`, x64 에서 16)입니다. `Memory::allocate` 는 16 바이트 정렬을 보장합니다(헤더 48 바이트).
      *
      *          주의: 할당과 해제가 다른 기준을 보면 힙이 깨집니다. 예컨대 `alignof( std::max_align_t )` 는 MSVC 에서 **8** 이라, 한쪽만
@@ -223,40 +222,6 @@ namespace sw
     }
 } // namespace sw
 
-// sw_new 용 전역 placement new/delete 오버로드. 정렬이 기본(16)보다 큰 타입은 컴파일러가 align_val_t 판을 고른다(kUsesAlignedAllocation).
-inline void* operator new( size_t size, sw::MemoryAllocTag )
-{
-    return sw::Memory::allocate( size );
-}
-inline void* operator new[]( size_t size, sw::MemoryAllocTag )
-{
-    return sw::Memory::allocate( size );
-}
-inline void operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept
-{
-    sw::Memory::free( pPtr );
-}
-inline void operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept
-{
-    sw::Memory::free( pPtr );
-}
-inline void* operator new( size_t size, std::align_val_t alignment, sw::MemoryAllocTag )
-{
-    return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) );
-}
-inline void* operator new[]( size_t size, std::align_val_t alignment, sw::MemoryAllocTag )
-{
-    return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) );
-}
-inline void operator delete( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept
-{
-    sw::Memory::freeAligned( pPtr );
-}
-inline void operator delete[]( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept
-{
-    sw::Memory::freeAligned( pPtr );
-}
-
 template <typename T>
 void sw_delete_func( T* pPtr )
 {
@@ -271,17 +236,15 @@ void sw_delete_func( T* pPtr )
 }
 
 /**
- * @brief sw_new 로 만든 배열을 해제합니다. **원소의 소멸자는 부르지 않습니다.**
- * @warning 그래서 소멸자가 하는 일이 없는 타입(trivially destructible)에만 쓸 수 있습니다. 그렇지 않은 타입을
- *          `sw_new T[n]` 으로 만들고 이것으로 해제하면 원소가 새고, 컴파일러가 배열 앞에 넣는 원소 개수 쿠키 때문에 해제
- *          주소도 어긋납니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나 `sw_new_array<T>( n )` / `sw_delete_array( p, n )` 을
- *          짝으로 쓰십시오(`PagedArray` 가 후자입니다. 임의의 T 를 담기 때문입니다).
+ * @brief `make_unique<T[]>` 가 만든 배열을 해제합니다(`default_delete<T[]>` 만 부릅니다). **원소의 소멸자는 부르지 않습니다.**
+ * @warning 그래서 소멸자가 하는 일이 없는 타입(trivially destructible)에만 쓸 수 있습니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나,
+ *          개수를 컴파일 때 아는 청크는 `FixedCountArray<T, N>`(`makeFixedCountArray`)를 쓰십시오(`PagedArray` 가 후자입니다. 임의의 T 를 담기 때문입니다).
  */
 template <typename T>
 void sw_delete_array_func( T* pPtr )
 {
     static_assert( std::is_trivially_destructible_v<T>,
-                   "sw_delete_array 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 sw_new_array / sw_delete_array( p, n ) 짝을 쓰세요." );
+                   "sw_delete_array_func 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 FixedCountArray<T, N> 을 쓰세요." );
     if ( pPtr != nullptr )
     {
         if constexpr ( sw::kUsesAlignedAllocation<T> )
@@ -291,18 +254,15 @@ void sw_delete_array_func( T* pPtr )
     }
 }
 
-#define sw_new new ( sw::MemoryAllocTag{} )
 // `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가 암시적 다단 포인터
 // 변환이 되어, 의도한 것인지 읽는 사람이 알 수 없기 때문이다.
 #define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )
 #define sw_delete                sw_delete_func
-#define sw_delete_array          sw_delete_array_func
-#define sw_new_array             sw_new_array_func
 
 /**
- * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. `sw_delete_array( pArray, count )` 로 풉니다.
- * @details `sw_new T[n]` 과 달리 배열 앞에 개수 쿠키를 두지 않으므로 소멸자가 있는 타입도 담을 수 있습니다. 대신 풀 때 같은 개수를 다시
- *          넘겨야 원소 소멸자가 불립니다. 원소 생성자는 예외를 던지지 않아야 합니다(던지면 이미 만든 원소와 블록이 샙니다).
+ * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. **맨 포인터를 돌려주므로 `make_unique<T[]>` · `makeFixedCountArray` 안에서만 부릅니다.**
+ * @details 배열 앞에 개수 쿠키를 두지 않으므로 소멸자가 있는 타입도 담을 수 있습니다. 대신 풀 때 같은 개수를 다시
+ *          넘겨야 원소 소멸자가 불립니다(그 짝을 손으로 맞추지 않게 `FixedCountArray` 가 개수를 해제자 타입에 넣습니다). 원소 생성자는 예외를 던지지 않아야 합니다(던지면 이미 만든 원소와 블록이 샙니다).
  * @return 첫 원소 주소. 크기가 넘치거나 할당에 실패하면 `std::bad_alloc` 을 던집니다(`Allocator::allocate` 와 같습니다).
  */
 template <typename T>
@@ -328,7 +288,7 @@ template <typename T>
 }
 
 /**
- * @brief `sw_new_array` 로 만든 배열의 원소 @p count 개를 소멸시키고 블록을 풉니다. @p count 는 만들 때 넘긴 값과 같아야 합니다.
+ * @brief `sw_new_array_func` 로 만든 배열의 원소 @p count 개를 소멸시키고 블록을 풉니다. @p count 는 만들 때 넘긴 값과 같아야 합니다(`FixedCountArray` 의 해제자만 부릅니다).
  */
 template <typename T>
 void sw_delete_array_func( T* pArray, size_t count )
@@ -376,7 +336,7 @@ namespace sw
 {
     /**
      * @brief `unique_ptr<T[]>` 의 해제자입니다. 원소 소멸자를 부르지 않으므로(개수를 모른다) 소멸자가 하는 일이 없는 원소만 담습니다.
-     * @details 소멸이 필요한 원소의 배열은 `vector<T>` 로 담습니다. 그런 `T` 로 이 해제자를 만들면 `sw_delete_array` 의 static_assert 가 막습니다.
+     * @details 소멸이 필요한 원소의 배열은 `vector<T>` 로 담습니다. 그런 `T` 로 이 해제자를 만들면 `sw_delete_array_func` 의 static_assert 가 막습니다.
      */
     template <typename T>
     struct default_delete<T[]>
@@ -407,22 +367,58 @@ namespace sw
                 static_assert( std::extent_v<T> == 0 && sizeof...( Args ) == 1, "make_unique<T[]> takes the element count only" );
                 return unique_ptr<T>( sw_new_array_func<std::remove_extent_t<T>>( static_cast<size_t>( args )... ) );
             }
-            else if constexpr ( kUsesAlignedAllocation<T> )
-            {
-                void* pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
-                if ( pMem == nullptr )
-                    throw std::bad_alloc();
-                return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
-            }
             else
             {
-                return unique_ptr<T>( sw_new T( std::forward<Args>( args )... ) );
+                void* pMem{ nullptr };
+                if constexpr ( kUsesAlignedAllocation<T> )
+                    pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
+                else
+                    pMem = Memory::allocate( sizeof( T ) );
+                if ( pMem == nullptr )
+                    throw std::bad_alloc();
+                try
+                {
+                    return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
+                }
+                catch ( ... )
+                {
+                    // 생성자가 던지면 소유자가 아직 없다 — 블록을 여기서 풀고 다시 던진다(옛 `sw_new` 의 짝 operator delete 가 하던 일).
+                    if constexpr ( kUsesAlignedAllocation<T> )
+                        Memory::freeAligned( pMem );
+                    else
+                        Memory::free( pMem );
+                    throw;
+                }
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T>
     inline constexpr MakeUniqueFunction<T> make_unique{};
+
+    /**
+     * @brief 해제자가 원소 개수 @p kCount 를 아는 소유 배열의 해제자입니다. 원소 소멸자를 부르고 블록을 풉니다.
+     * @details 개수가 타입에 있으므로 만들 때와 풀 때 개수가 어긋날 수 없고, 해제자가 비어 있어 `unique_ptr` 가 포인터 하나 크기입니다.
+     */
+    template <typename T, size_t kCount>
+    struct FixedCountArrayDeleter
+    {
+        void operator()( T* pArray ) const { sw_delete_array_func( pArray, kCount ); }
+    };
+
+    /** @brief 원소 @p kCount 개를 값 초기화해 담는 소유 배열입니다. 소멸자가 있는 원소도 담습니다(`make_unique<T[]>` 는 그것을 못 담습니다). */
+    template <typename T, size_t kCount>
+    using FixedCountArray = unique_ptr<T, FixedCountArrayDeleter<T, kCount>>;
+
+    /** @brief 원소 @p kCount 개를 값 초기화한 `FixedCountArray` 를 만듭니다. 원소 생성자는 예외를 던지지 않아야 합니다. */
+    template <typename T, size_t kCount>
+    [[nodiscard]] FixedCountArray<T, kCount> makeFixedCountArray()
+    {
+        return FixedCountArray<T, kCount>( sw_new_array_func<T>( kCount ) );
+    }
 
     template <typename T>
     using shared_ptr = std::shared_ptr<T>;

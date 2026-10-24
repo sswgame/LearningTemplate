@@ -175,7 +175,7 @@ namespace sw
             {
                 // 여기서 조용히 나가면 t5 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
                 // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
-                SW_LOG_ERROR( "머티리얼 폴백 버퍼가 stride %# 에 없습니다 — 이 드로우는 g_SwMaterials 를 비운 채 나갑니다.",
+                SW_LOG_ERROR( "No material fallback buffer for stride %# - this draw goes out with g_SwMaterials empty.",
                               pSlot->_elementStride );
             }
             return;

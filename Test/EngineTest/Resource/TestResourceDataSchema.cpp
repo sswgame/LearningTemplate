@@ -15,9 +15,6 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioMixerDesc.h"
-#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
@@ -129,9 +126,6 @@ namespace
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceID ) { return endsWith( resourceID, "/data/render2d.xml" ); }
-        static bool isAudioMixer( sw::string_view resourceID ) { return endsWith( resourceID, ".audiomixer.xml" ); }
-        static bool isAudioEvents( sw::string_view resourceID ) { return endsWith( resourceID, ".audioevents.xml" ); }
-        static bool isAudioMusic( sw::string_view resourceID ) { return endsWith( resourceID, ".music.xml" ); }
         static bool isFontCatalog( sw::string_view resourceID ) { return endsWith( resourceID, "fontcatalog.xml" ); }
         static bool isUIScale( sw::string_view resourceID ) { return endsWith( resourceID, "uiscale.xml" ); }
         static bool isUIDocument( sw::string_view resourceID ) { return endsWith( resourceID, sw::UIDocumentAsset::kExtension ); }
@@ -574,9 +568,6 @@ namespace
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
             {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
             {           "bonemask",            &isBoneMask,                                      &loadBoneMask},
-            {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
-            {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
-            {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
             {        "fontcatalog",         &isFontCatalog,                  &loadCatalog<sw::FontCatalogDesc>},
             {            "uiscale",             &isUIScale,                  &loadCatalog<sw::UIScaleSettings>},
             {         "uidocument",          &isUIDocument,                                    &loadUIDocument},
@@ -744,7 +735,7 @@ namespace
          * @brief 검증 결과를 일부러 내는 테스트 데이터입니다(맵 검사 시나리오가 연다). 이 파일만 검증 경고 줄을 받고, 그 줄이 없으면 진다.
          * @details 검증 결과 말고 다른 경고(모르는 이름)는 다른 파일과 똑같이 진다.
          */
-        // 검증 결과를 일부러 내는 씬 — 맵 검사 기대 오류, 굽기 시나리오가 구울 아직 굽지 않은 라이트 프로브 볼륨.
+        // 검증 결과를 일부러 내는 씬 — 맵 검사 기대 오류, 베이크 시나리오가 구울 아직 베이크하지 않은 라이트 프로브 볼륨.
         static constexpr const utf8* kArrValidationFixture[] = { "engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml",
                                                                  "engine/automation/editor/lightprobebake/bake_cancel.scene.xml" };
 
@@ -803,7 +794,7 @@ namespace
             outKind = ResolvedKind{};
             outConflict.clear();
             sw::vector<const sw::ResourceDataKind*> listRegistered;
-            sw::ResourceDataKindRegistry::get().collectMatches( resourceID, listRegistered );
+            sw::engine::getSubsystem<sw::ResourceDataKindRegistry>().collectMatches( resourceID, listRegistered );
             for ( const DataKind& kind : kArrDataKind )
             {
                 if ( kind._pIsKind( resourceID ) == false )

@@ -257,7 +257,7 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 **`PROPERTY` 의 선언 순서는 고정 배치형 와이어 형식입니다.** B 코덱은 필드를 선언 순서로 태그 없이 씁니다. 순서 · 이름 · 범위 키를 바꾸면 스키마 해시가 바뀌어
 다른 빌드의 바이트는 `SchemaMismatch` 로 거절됩니다(조용히 잘못 읽지는 않습니다). `Min` · `Max` 는 B 의 와이어 범위이기도 해서, 정수는 범위 비트 수로 쓰고
 범위 밖 값은 쓰기가 실패합니다. 키를 잘못 적은 것(범위 필드가 뒤에 있음, float32 로 정확히 나타낼 수 없는 정수 경계, 찾지 못한 범위 이름, 숫자가 아닌 필드의 `Min` · `Max`, 가변 길이가 아닌 필드의 `MaxCount`)은
-헤더 경로 · 줄 · 필드와 함께 생성 오류입니다. 표 밖의 타입(포인터, `MaxCount` 없는 vector)은 오류가 아니라 코덱이 없을 뿐입니다. 명세는 [리플렉션 직렬화 형식 계획](../../docs/plans/ReflectionFormats.md)입니다.
+헤더 경로 · 줄 · 필드와 함께 생성 오류입니다. 표 밖의 타입(포인터, `MaxCount` 없는 vector)은 오류가 아니라 코덱이 없을 뿐입니다. 명세는 [고정 배치형 코덱 계약](../../Source/Engine/Serialization/Fixed/README.md)입니다.
 
 **같은 상한을 코드도 쓰면 `MaxCount` 에 상수 이름을 적으세요.** `PROPERTY( MaxCount = kMaxSlotCount )`, `MaxCount = LedgerConstant::kMaxAssetIDSize` 처럼 적으면
 `AstVisitor::resolveMaxCountName` 이 필드가 든 타입과 바깥 범위에서 그 정수 상수를 찾아 값을 계산합니다. 숫자를 상수와 애노테이션 두 곳에 적지 않습니다.

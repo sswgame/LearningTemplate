@@ -267,7 +267,8 @@ namespace sw
                     _pQueue->finish( pRequest, AsyncIOStatus::Succeeded );
                     continue;
                 }
-                IOUringReadOperation* pOperation = sw_new IOUringReadOperation{};
+                // 완료 항목이 올 때까지 커널이 연산을 쥔다 — 소유를 놓고 완료 처리(`onReadCompleted`)가 `sw_delete` 로 푼다.
+                IOUringReadOperation* pOperation = make_unique<IOUringReadOperation>().release();
                 pOperation->_pRequest            = std::move( pRequest );
                 pushReadSqe( pOperation );
             }

@@ -309,7 +309,7 @@ namespace sw
         /**
          * @brief 컴포넌트를 목록에서 이웃과 위치를 바꿉니다. @p direction 이 음수면 앞으로, 양수면 뒤로 옮기며 인스펙터의 Move Up/Down 이 씁니다.
          * @return 바꿨으면 true 입니다. 목록의 끝이거나, 틱 중(구조가 막혀 있음)이거나, 둘 중 하나가 주 씬 컴포넌트면 false 입니다.
-         *         주 씬 컴포넌트는 오브젝트의 뿌리 트랜스폼이라 위치를 옮기지 않습니다(유니티의 Transform 이 늘 첫 컴포넌트인 것과 같습니다).
+         *         주 씬 컴포넌트는 오브젝트의 루트 트랜스폼이라 위치를 옮기지 않습니다(유니티의 Transform 이 늘 첫 컴포넌트인 것과 같습니다).
          */
         [[nodiscard]] bool moveComponent( Component* pComp, int32 direction );
 

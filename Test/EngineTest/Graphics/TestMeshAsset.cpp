@@ -66,7 +66,7 @@ namespace
 
     struct TestMeshLODInternal
     {
-        /** @brief LOD 0 은 삼각형 넷, LOD 1 은 둘(문턱 0.5), LOD 2 는 하나(문턱 0.1)인 메시입니다. */
+        /** @brief LOD 0 은 삼각형 넷, LOD 1 은 둘(임계값 0.5), LOD 2 는 하나(임계값 0.1)인 메시입니다. */
         static sw::MeshAssetData makeLODData()
         {
             sw::MeshAssetData data{};
@@ -252,7 +252,7 @@ SW_TEST_CASE( MeshAssetTest, ReadySetHoldsMeshesUntilCleared )
 
 /**
  * @brief [MeshAssetTest] 동기 acquire 는 요청과 같은 로드 블록을 탄다 — 먼저 낸 요청의 핸들과 acquire 가 같은 메시를 받고, 핸들 상태는 `Ready` 다
- * @details 두 갈래(비동기 요청 · 동기 읽기)가 따로 읽으면 같은 경로가 두 번 읽히고 배치 키(메시 포인터)가 갈린다.
+ * @details 두 분기(비동기 요청 · 동기 읽기)가 따로 읽으면 같은 경로가 두 번 읽히고 배치 키(메시 포인터)가 갈린다.
  */
 SW_TEST_CASE( MeshAssetTest, AcquireWaitsOnTheSameLoadAsRequest )
 {
@@ -558,7 +558,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentDrawsNamedSectionAndHonorsPerson )
 
 /**
  * @brief [MeshAssetTest] LOD 단계는 `.mesh` 를 오가고(`LODS` 덩어리), 메시는 LOD 0 을 CPU 정점으로 두고 낮은 단계를 그릴 정점 흐름 뒤에 잇는다.
- *        문턱이 내려가지 않거나 삼각형이 아닌 단계, 구간이 있는 메시의 LOD 는 거절한다(계획 PreloadAndLod P5)
+ *        임계값이 내려가지 않거나 삼각형이 아닌 단계, 구간이 있는 메시의 LOD 는 거절한다(계획 PreloadAndLod P5)
  */
 SW_TEST_CASE( MeshAssetTest, LODLevelsRoundTripAndFollowLODZero )
 {
@@ -642,8 +642,8 @@ SW_TEST_CASE( MeshAssetTest, MeshLODSystemPicksLevelsByScreenSize )
     SW_EXPECT_EQUAL( 12u, first );
     SW_EXPECT_EQUAL( 6u, count );
     SW_EXPECT_EQUAL( 2u, lodAtScreenSize( 0.05f ) );
-    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.2f ) );  // 거친 쪽에서 고운 쪽으로 — 문턱 0.1 의 여유를 넘었다
-    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.52f ) ); // 문턱 0.5 를 넘었지만 여유(10 %) 안이다 — 그대로
+    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.2f ) );  // 거친 쪽에서 고운 쪽으로 — 임계값 0.1 의 여유를 넘었다
+    SW_EXPECT_EQUAL( 1u, lodAtScreenSize( 0.52f ) ); // 임계값 0.5 를 넘었지만 여유(10 %) 안이다 — 그대로
     SW_EXPECT_EQUAL( 0u, lodAtScreenSize( 0.6f ) );
     SW_EXPECT_TRUE( pMesh->findDrawSection( first, count ) );
     SW_EXPECT_EQUAL( 0u, count ); // 원본은 메시 전체(LOD 0)

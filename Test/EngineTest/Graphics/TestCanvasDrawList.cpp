@@ -293,7 +293,7 @@ SW_TEST_CASE( CanvasDrawListTest, GlyphQuadUsesAtlasRect )
     SW_EXPECT_NEAR_EQUAL( size, quad._rect._z, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 2.0f * static_cast<float32>( cache.getRasterParams()._spreadPx ) * 2.0f, quad._params._x, 1e-4f );
 
-    const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A', 1 );
+    const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A', 1 )._pGlyph;
     SW_ASSERT_NOT_NULL( pGlyph );
     const float32 page = static_cast<float32>( sw::GlyphAtlas::kPageSize );
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( pGlyph->_rect._x ) / page, quad._uvRect._x, 1e-6f );
@@ -301,6 +301,27 @@ SW_TEST_CASE( CanvasDrawListTest, GlyphQuadUsesAtlasRect )
     SW_ASSERT_EQUAL( size_t{ 1 }, list._listBatch.size() );
     SW_EXPECT_EQUAL( pGlyph->_rect._page, list._listBatch[0]._arrTexture[0]._atlasPage );
     SW_EXPECT_EQUAL( 0u, quad._textureSlot );
+    SW_EXPECT_EQUAL( 0u, painter.getDeferredGlyphCount() );
+}
+
+/** @brief [CanvasDrawListTest] 래스터화 예산이 찬 프레임의 새 글리프는 그리지 않고 미룬 수로 센다 — 그리기 순회가 그 위젯을 다음 프레임에 다시 칠한다 */
+SW_TEST_CASE( CanvasDrawListTest, DeferredGlyphIsCountedNotDrawn )
+{
+    sw::test::FakeFontRasterizer rasterizer;
+    const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+    cache.setRasterBudgetNanoseconds( 1 ); // 프레임의 첫 새 글리프가 예산을 채운다
+
+    sw::CanvasDrawList   list{};
+    sw::CanvasPainter    painter( list, 1.0f );
+    sw::CanvasGlyphStyle style{};
+    style._fontSize = static_cast<float32>( cache.getRasterParams()._pixelSize );
+    SW_EXPECT_TRUE( painter.drawGlyph( sw::float2{ 10.0f, 20.0f }, face, 'A', style, cache, 1 ) );
+    SW_EXPECT_FALSE( painter.drawGlyph( sw::float2{ 30.0f, 20.0f }, face, 'B', style, cache, 1 ) );
+    SW_EXPECT_EQUAL( 1u, painter.getDeferredGlyphCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, list._listQuad.size() );
+    SW_EXPECT_TRUE( painter.drawGlyph( sw::float2{ 30.0f, 20.0f }, face, 'B', style, cache, 2 ) ); // 다음 프레임에 그려진다
+    SW_EXPECT_EQUAL( 1u, painter.getDeferredGlyphCount() );
 }
 
 /** @brief [CanvasDrawListTest] 한 페이지의 구간 업로드가 한도를 넘으면 경계 상자 하나로 합치고, 한도 안이면 그대로 둔다(업로드 비용은 호출 수가 지배한다) */

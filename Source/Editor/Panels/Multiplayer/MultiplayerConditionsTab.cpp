@@ -73,7 +73,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 탐침 `Editor.NetPlayMeasuredLossPercent` — 연결이 잰 손실(%) 가운데 가장 큰 값입니다(연결 쪽 추정이 흉내를 따라가는지 본다). */
+            /** @brief 탐침 `Editor.NetPlayMeasuredLossPercent` — 연결이 측정한 손실(%) 가운데 가장 큰 값입니다(연결 쪽 추정이 흉내를 따라가는지 본다). */
             [[nodiscard]] static bool readMeasuredLoss( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorNetPlaySession* pSession = findSession();

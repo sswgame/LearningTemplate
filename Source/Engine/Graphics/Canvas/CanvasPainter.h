@@ -107,7 +107,7 @@ namespace sw
         /**
          * @brief 글리프 하나를 칠합니다. 아틀라스 사각형을 캐시에서 찾고(없으면 래스터화) SDF 사각형 하나를 냅니다. 빈 글리프(공백)는 내지 않습니다.
          * @param origin 기준선 위의 글리프 원점입니다(UI 단위).
-         * @return 사각형을 냈으면 true 입니다(빈 글리프, 캐시 실패, 전부 잘린 경우는 false).
+         * @return 사각형을 냈으면 true 입니다(빈 글리프, 캐시 실패, 전부 잘린 경우는 false). 래스터화 예산이 차서 미룬 글리프도 false 이며 `getDeferredGlyphCount` 가 오릅니다.
          */
         bool drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex );
         /** @brief 둥근 상자의 흐린 그림자를 칠합니다(상자는 @p offset 만큼 밀린 위치입니다). */
@@ -148,6 +148,11 @@ namespace sw
         /** @brief 지금 자르기가 쌓여 있으면 true 입니다. */
         bool hasClip() const { return _listClip.empty() == false; }
         /**
+         * @brief 지금까지 `drawGlyph` 가 래스터화 예산(`GlyphCache::findOrAddGlyph` 의 `Deferred`) 때문에 못 그린 글리프의 수입니다.
+         * @details 그리기 순회가 위젯마다 앞뒤 값을 견줘, 못 그린 글리프가 있는 위젯을 다음 프레임에 다시 칠한다(`UIPaintPass`). 캐시가 빈 글리프 상태로 굳지 않게 하는 길이다.
+         */
+        uint32 getDeferredGlyphCount() const { return _deferredGlyphCount; }
+        /**
          * @brief 칠할 목록을 바꿉니다. 변환, 자르기, 불투명도 스택은 그대로입니다(위젯 그리기가 위젯마다 자기 이미지 캐시로 바꿉니다).
          * @details 가위를 대상 안으로 자르는 크기(`_targetSize`)는 새 목록의 것을 쓴다.
          */
@@ -178,7 +183,8 @@ namespace sw
         vector<ClipState>       _listClip;
         vector<float32>         _listOpacity;
         float32                 _uiScale;
-        uint32                  _anchor; ///< 사각형에 붙일 화면 앵커 번호(없으면 invalid_index::kUint32)
+        uint32                  _anchor;             ///< 사각형에 붙일 화면 앵커 번호(없으면 invalid_index::kUint32)
+        uint32                  _deferredGlyphCount; ///< 래스터화 예산 때문에 미룬 글리프 수입니다(`drawGlyph` 가 올린다).
     };
 } // namespace sw
 

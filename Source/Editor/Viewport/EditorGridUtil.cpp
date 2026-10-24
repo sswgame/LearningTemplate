@@ -6,12 +6,6 @@
 
 namespace sw::editor
 {
-    EditorGridStats& EditorGridStats::get()
-    {
-        static EditorGridStats s_stats;
-        return s_stats;
-    }
-
     EditorGridLevel EditorGridUtil::selectLevel( float32 viewHeight )
     {
         const float32 height     = MathUtil::max( MathUtil::abs( viewHeight ), kLevelReferenceHeight );

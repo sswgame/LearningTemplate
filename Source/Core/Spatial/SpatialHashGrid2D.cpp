@@ -290,7 +290,7 @@ namespace sw
         const float32 tDeltaX = ( stepX != 0 ) ? ( _cellSize * static_cast<float32>( stepX ) ) / directionX : MathUtil::kMaxFloat;
         const float32 tDeltaY = ( stepY != 0 ) ? ( _cellSize * static_cast<float32>( stepY ) ) / directionY : MathUtil::kMaxFloat;
 
-        // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다. 셀 크기에 견줘 사거리가
+        // 걸음 수를 막는 이유는 나머지 셋이 셀 수를 막는 이유와 같다. 셀 크기에 비교해 사거리가
         // 길면 훑을 셀이 끝없이 늘어난다. 상한은 `kMaxQueryCellCount` 하나를 같이 쓴다.
         float32 currentT  = 0.0f;
         int64   stepCount = 0;

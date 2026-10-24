@@ -89,7 +89,7 @@ namespace sw
         uint32 _subStepCount2D{ 4 };
         /**
          * @brief 2D 씬 하나가 스텝에 쓰는 일꾼 수(스텝 스레드 포함)입니다. 1 이면 한 스레드이고, 2 이상이면 씬마다 전용 워커를 그만큼 하나 적게 띄웁니다(`Box2DWorkerPool`).
-         * @details 바디가 수천일 때만 이득이다 — 재는 법은 `PhysicsBenchTest.Box2DStepByWorkerCount`. 결과는 워커 수와 관계없이 같다.
+         * @details 바디가 수천일 때만 이득이다 — 측정하는 법은 `PhysicsBenchTest.Box2DStepByWorkerCount`. 결과는 워커 수와 관계없이 같다.
          */
         PROPERTY( Min = 1, Max = 16, Tooltip = "Threads a 2D scene steps with (1 = single thread; more starts dedicated Box2D workers per scene)" )
         uint32 _workerCount2D{ 1 };

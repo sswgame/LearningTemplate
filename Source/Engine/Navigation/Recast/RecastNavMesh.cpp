@@ -103,6 +103,251 @@ namespace sw
             };
 
             static float3 toFloat3( const float32* pValue ) { return float3{ pValue[0], pValue[1], pValue[2] }; }
+
+            // ------------------------------------------------------------------------------
+            // 타일 베이크 단계 — `RecastNavMesh::bakeTile` 이 위에서 아래로 부른다.
+            // ------------------------------------------------------------------------------
+
+            /** @brief 에이전트 설정과 타일 범위(베이크 테두리 포함)로 Recast 구성을 만듭니다. */
+            static rcConfig makeConfig( const NavAgentTypeDef& agent, const AABB& tileBounds, float32 minY, float32 maxY )
+            {
+                rcConfig config{};
+                config.cs                     = agent._cellSize;
+                config.ch                     = agent._cellHeight;
+                config.walkableSlopeAngle     = MathUtil::toDegree( agent._maxSlope );
+                config.walkableHeight         = static_cast<int32>( MathUtil::ceil( agent._height / config.ch ) );
+                config.walkableClimb          = static_cast<int32>( MathUtil::floor( agent._maxClimb / config.ch ) );
+                config.walkableRadius         = static_cast<int32>( MathUtil::ceil( agent._radius / config.cs ) );
+                config.maxEdgeLen             = static_cast<int32>( agent._maxEdgeLength / config.cs );
+                config.maxSimplificationError = agent._maxEdgeError;
+                config.minRegionArea          = static_cast<int32>( agent._minRegionSize * agent._minRegionSize );
+                config.mergeRegionArea        = static_cast<int32>( agent._mergeRegionSize * agent._mergeRegionSize );
+                config.maxVertsPerPoly        = DT_VERTS_PER_POLYGON;
+                config.tileSize               = static_cast<int32>( agent._tileSize );
+                config.borderSize             = config.walkableRadius + 3;
+                config.width                  = config.tileSize + config.borderSize * 2;
+                config.height                 = config.tileSize + config.borderSize * 2;
+                config.detailSampleDist       = agent._detailSampleDistance < 0.9f ? 0.0f : config.cs * agent._detailSampleDistance;
+                config.detailSampleMaxError   = config.ch * agent._detailSampleMaxError;
+
+                const float32 border = static_cast<float32>( config.borderSize ) * config.cs;
+                config.bmin[0]       = tileBounds._min._x - border;
+                config.bmin[1]       = minY;
+                config.bmin[2]       = tileBounds._min._z - border;
+                config.bmax[0]       = tileBounds._max._x + border;
+                config.bmax[1]       = maxY;
+                config.bmax[2]       = tileBounds._max._z + border;
+                return config;
+            }
+
+            /**
+             * @brief 타일에 닿는 삼각형을 복셀화하고 걸을 수 있는 영역을 깎아 압축 높이장(`scratch._pCompact`)을 만듭니다. 실패하면 false 입니다.
+             * @details 타일에 닿는 삼각형만 번호와 영역을 모아 한 번에 복셀화한다. 경사가 걸을 수 없는 삼각형은 영역을 지운다(막기는 한다).
+             */
+            [[nodiscard]] static bool buildCompactHeightfield( rcContext& context, const NavMeshGeometry& geometry, const vector<uint32>& listTriangle, const rcConfig& config, BuildScratch& scratch )
+            {
+                const vector<float3>& listVertex = geometry.getVertices();
+                const vector<uint32>& listIndex  = geometry.getIndices();
+                const vector<uint8>&  listArea   = geometry.getTriangleAreas();
+                static_assert( sizeof( float3 ) == sizeof( float32 ) * 3, "float3 must be three packed floats for Recast" );
+                const float32* pVertex     = reinterpret_cast<const float32*>( listVertex.data() );
+                const int32    vertexCount = static_cast<int32>( listVertex.size() );
+
+                scratch._pSolid = rcAllocHeightfield();
+                if ( scratch._pSolid == nullptr || rcCreateHeightfield( &context, *scratch._pSolid, config.width, config.height, config.bmin, config.bmax, config.cs, config.ch ) == false )
+                    return false;
+
+                vector<int32> listTriangleIndex( listTriangle.size() * 3 );
+                vector<uint8> listTriangleArea( listTriangle.size() );
+                for ( size_t slot = 0; slot < listTriangle.size(); ++slot )
+                {
+                    const uint32 triangleIndex      = listTriangle[slot];
+                    listTriangleIndex[slot * 3 + 0] = static_cast<int32>( listIndex[triangleIndex * 3 + 0] );
+                    listTriangleIndex[slot * 3 + 1] = static_cast<int32>( listIndex[triangleIndex * 3 + 1] );
+                    listTriangleIndex[slot * 3 + 2] = static_cast<int32>( listIndex[triangleIndex * 3 + 2] );
+                    listTriangleArea[slot]          = RecastAreaUtil::toRecastArea( listArea[triangleIndex] );
+                }
+                const int32 triangleCount = static_cast<int32>( listTriangle.size() );
+                rcClearUnwalkableTriangles( &context, config.walkableSlopeAngle, pVertex, vertexCount, listTriangleIndex.data(), triangleCount, listTriangleArea.data() );
+                if ( rcRasterizeTriangles( &context, pVertex, vertexCount, listTriangleIndex.data(), listTriangleArea.data(), triangleCount, *scratch._pSolid, config.walkableClimb ) == false )
+                    return false;
+
+                rcFilterLowHangingWalkableObstacles( &context, config.walkableClimb, *scratch._pSolid );
+                rcFilterLedgeSpans( &context, config.walkableHeight, config.walkableClimb, *scratch._pSolid );
+                rcFilterWalkableLowHeightSpans( &context, config.walkableHeight, *scratch._pSolid );
+
+                scratch._pCompact = rcAllocCompactHeightfield();
+                if ( scratch._pCompact == nullptr || rcBuildCompactHeightfield( &context, config.walkableHeight, config.walkableClimb, *scratch._pSolid, *scratch._pCompact ) == false )
+                    return false;
+                rcFreeHeightField( scratch._pSolid );
+                scratch._pSolid = nullptr;
+                return rcErodeWalkableArea( &context, config.walkableRadius, *scratch._pCompact );
+            }
+
+            /** @brief 볼록 부피를 칠합니다. 깎은 뒤에 칠하므로, 뚫는 부피(장애물)는 몸 반지름만큼 넓혀서 칠한다(유니티 Carve 와 같은 결과다). */
+            static void markConvexVolumes( rcContext& context, const NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, float32 agentRadius, const rcConfig& config,
+                                           BuildScratch& scratch )
+            {
+                vector<float32>                listVolumePoint;
+                vector<float32>                listOffsetPoint;
+                vector<const NavConvexVolume*> listVolume;
+                for ( const NavConvexVolume& volume : geometry.getConvexVolumes() )
+                {
+                    listVolume.push_back( &volume );
+                }
+                if ( pExtraVolume != nullptr )
+                {
+                    for ( const NavConvexVolume& volume : *pExtraVolume )
+                    {
+                        listVolume.push_back( &volume );
+                    }
+                }
+                for ( const NavConvexVolume* pVolume : listVolume )
+                {
+                    const NavConvexVolume& volume       = *pVolume;
+                    const AABB             volumeBounds = volume.computeBounds();
+                    const bool             bOverlaps    = volumeBounds._min._x <= config.bmax[0] && config.bmin[0] <= volumeBounds._max._x && volumeBounds._min._z <= config.bmax[2] &&
+                                           config.bmin[2] <= volumeBounds._max._z;
+                    if ( bOverlaps == false )
+                        continue;
+                    listVolumePoint.clear();
+                    for ( const float3& point : volume._listPoint )
+                    {
+                        listVolumePoint.push_back( point._x );
+                        listVolumePoint.push_back( volume._minY );
+                        listVolumePoint.push_back( point._z );
+                    }
+                    const uint8    recastArea  = RecastAreaUtil::toRecastArea( volume._area );
+                    const int32    pointCount  = static_cast<int32>( volume._listPoint.size() );
+                    const float32* pPolygon    = listVolumePoint.data();
+                    int32          polygonSize = pointCount;
+                    if ( recastArea == RC_NULL_AREA && agentRadius > 0.0f )
+                    {
+                        const int32 maxOffsetPoint = pointCount * 4 + 8;
+                        listOffsetPoint.assign( static_cast<size_t>( maxOffsetPoint ) * 3, 0.0f );
+                        const int32 offsetCount = rcOffsetPoly( listVolumePoint.data(), pointCount, agentRadius, listOffsetPoint.data(), maxOffsetPoint );
+                        if ( offsetCount >= 3 )
+                        {
+                            pPolygon    = listOffsetPoint.data();
+                            polygonSize = offsetCount;
+                        }
+                    }
+                    rcMarkConvexPolyArea( &context, pPolygon, polygonSize, volume._minY, volume._maxY, recastArea, *scratch._pCompact );
+                }
+            }
+
+            /** @brief 시작점이 이 타일에 포함된 오프 메시 링크만 모읍니다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 연결된다. */
+            static vector<NavOffMeshLink> collectLinksInTile( const NavMeshGeometry& geometry, const AABB& tileBounds )
+            {
+                vector<NavOffMeshLink> listLinkInTile;
+                for ( const NavOffMeshLink& link : geometry.getOffMeshLinks() )
+                {
+                    const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
+                                              link._start._z < tileBounds._max._z;
+                    if ( bStartInTile )
+                        listLinkInTile.push_back( link );
+                }
+                return listLinkInTile;
+            }
+
+            /**
+             * @brief 압축 높이장에서 영역 · 윤곽 · 폴리곤 메시 · 상세 메시를 짓고 Detour 타일 바이트(`outTile._bytes`)로 만듭니다.
+             * @return 짓다 실패하면 false 입니다. 윤곽이나 폴리곤이 없는 타일은 true 이며 바이트가 비어 있습니다.
+             */
+            [[nodiscard]] static bool buildTileData( rcContext& context, const NavMeshGeometry& geometry, const NavAgentTypeDef& agent, const rcConfig& config, const AABB& tileBounds, int32 tileX,
+                                                     int32 tileZ, BuildScratch& scratch, NavTileData& outTile )
+            {
+                if ( rcBuildDistanceField( &context, *scratch._pCompact ) == false ||
+                     rcBuildRegions( &context, *scratch._pCompact, config.borderSize, config.minRegionArea, config.mergeRegionArea ) == false )
+                    return false;
+                scratch._pContour = rcAllocContourSet();
+                if ( scratch._pContour == nullptr || rcBuildContours( &context, *scratch._pCompact, config.maxSimplificationError, config.maxEdgeLen, *scratch._pContour ) == false )
+                    return false;
+                if ( scratch._pContour->nconts == 0 )
+                    return true;
+                scratch._pPolyMesh = rcAllocPolyMesh();
+                if ( scratch._pPolyMesh == nullptr || rcBuildPolyMesh( &context, *scratch._pContour, config.maxVertsPerPoly, *scratch._pPolyMesh ) == false )
+                    return false;
+                scratch._pDetail = rcAllocPolyMeshDetail();
+                if ( scratch._pDetail == nullptr ||
+                     rcBuildPolyMeshDetail( &context, *scratch._pPolyMesh, *scratch._pCompact, config.detailSampleDist, config.detailSampleMaxError, *scratch._pDetail ) == false )
+                    return false;
+                rcPolyMesh& polyMesh = *scratch._pPolyMesh;
+                if ( polyMesh.npolys == 0 )
+                    return true;
+                if ( polyMesh.nverts >= 0xffff )
+                {
+                    SW_LOG_ERROR( "Navmesh '%#' tile (%#, %#) has %# vertices - raise the cell size or lower the tile size", agent._name.c_str(), tileX, tileZ, polyMesh.nverts );
+                    return false;
+                }
+                // 영역 → 표시 비트(거름의 영역 비트와 같다).
+                for ( int32 polyIndex = 0; polyIndex < polyMesh.npolys; ++polyIndex )
+                {
+                    polyMesh.flags[polyIndex] = RecastAreaUtil::toPolyFlags( polyMesh.areas[polyIndex] );
+                }
+
+                // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다.
+                vector<float32> listLinkVertex;
+                vector<float32> listLinkRadius;
+                vector<uint16>  listLinkFlag;
+                vector<uint8>   listLinkArea;
+                vector<uint8>   listLinkDirection;
+                vector<uint32>  listLinkUserID;
+                for ( const NavOffMeshLink& link : collectLinksInTile( geometry, tileBounds ) )
+                {
+                    const uint8 recastArea = RecastAreaUtil::toRecastArea( link._area );
+                    for ( const float3* pPoint : { &link._start, &link._end } )
+                    {
+                        listLinkVertex.push_back( pPoint->_x );
+                        listLinkVertex.push_back( pPoint->_y );
+                        listLinkVertex.push_back( pPoint->_z );
+                    }
+                    listLinkRadius.push_back( link._radius );
+                    listLinkArea.push_back( recastArea );
+                    listLinkFlag.push_back( RecastAreaUtil::toPolyFlags( recastArea ) );
+                    listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
+                    listLinkUserID.push_back( link._userID );
+                }
+
+                dtNavMeshCreateParams params{};
+                params.verts            = polyMesh.verts;
+                params.vertCount        = polyMesh.nverts;
+                params.polys            = polyMesh.polys;
+                params.polyAreas        = polyMesh.areas;
+                params.polyFlags        = polyMesh.flags;
+                params.polyCount        = polyMesh.npolys;
+                params.nvp              = polyMesh.nvp;
+                params.detailMeshes     = scratch._pDetail->meshes;
+                params.detailVerts      = scratch._pDetail->verts;
+                params.detailVertsCount = scratch._pDetail->nverts;
+                params.detailTris       = scratch._pDetail->tris;
+                params.detailTriCount   = scratch._pDetail->ntris;
+                params.offMeshConVerts  = listLinkVertex.data();
+                params.offMeshConRad    = listLinkRadius.data();
+                params.offMeshConFlags  = listLinkFlag.data();
+                params.offMeshConAreas  = listLinkArea.data();
+                params.offMeshConDir    = listLinkDirection.data();
+                params.offMeshConUserID = listLinkUserID.data();
+                params.offMeshConCount  = static_cast<int32>( listLinkRadius.size() );
+                params.walkableHeight   = agent._height;
+                params.walkableRadius   = agent._radius;
+                params.walkableClimb    = agent._maxClimb;
+                params.tileX            = tileX;
+                params.tileY            = tileZ;
+                params.tileLayer        = 0;
+                rcVcopy( params.bmin, polyMesh.bmin );
+                rcVcopy( params.bmax, polyMesh.bmax );
+                params.cs          = config.cs;
+                params.ch          = config.ch;
+                params.buildBvTree = true;
+                uint8* pData       = nullptr;
+                int32  dataSize    = 0;
+                if ( dtCreateNavMeshData( &params, &pData, &dataSize ) == false )
+                    return false;
+                outTile._bytes.assign( pData, pData + dataSize );
+                dtFree( pData );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -243,7 +488,7 @@ namespace sw
         const bool bInsideGrid = 0 <= tileX && tileX < _grid._tileCountX && 0 <= tileZ && tileZ < _grid._tileCountZ;
         if ( _pNavMesh == nullptr || bInsideGrid == false )
             return false;
-        // 장애물 캐시는 장애물을 층에 굽지 않는다(층이 정적 몫이라 장애물이 움직이면 낡는다) — 장애물은 `addCacheObstacle` 로 넣는다.
+        // 장애물 캐시는 장애물을 층에 베이크하지 않는다(층이 정적 몫이라 장애물이 움직이면 낡는다) — 장애물은 `addCacheObstacle` 로 넣는다.
         const bool bCacheWithObstacleVolumes = _pTileCache != nullptr && pExtraVolume != nullptr && pExtraVolume->empty() == false;
         if ( bCacheWithObstacleVolumes )
         {
@@ -251,34 +496,8 @@ namespace sw
             return false;
         }
 
-        const NavAgentTypeDef& agent = _agentType;
-        rcConfig               config{};
-        config.cs                     = agent._cellSize;
-        config.ch                     = agent._cellHeight;
-        config.walkableSlopeAngle     = MathUtil::toDegree( agent._maxSlope );
-        config.walkableHeight         = static_cast<int32>( MathUtil::ceil( agent._height / config.ch ) );
-        config.walkableClimb          = static_cast<int32>( MathUtil::floor( agent._maxClimb / config.ch ) );
-        config.walkableRadius         = static_cast<int32>( MathUtil::ceil( agent._radius / config.cs ) );
-        config.maxEdgeLen             = static_cast<int32>( agent._maxEdgeLength / config.cs );
-        config.maxSimplificationError = agent._maxEdgeError;
-        config.minRegionArea          = static_cast<int32>( agent._minRegionSize * agent._minRegionSize );
-        config.mergeRegionArea        = static_cast<int32>( agent._mergeRegionSize * agent._mergeRegionSize );
-        config.maxVertsPerPoly        = DT_VERTS_PER_POLYGON;
-        config.tileSize               = static_cast<int32>( agent._tileSize );
-        config.borderSize             = config.walkableRadius + 3;
-        config.width                  = config.tileSize + config.borderSize * 2;
-        config.height                 = config.tileSize + config.borderSize * 2;
-        config.detailSampleDist       = agent._detailSampleDistance < 0.9f ? 0.0f : config.cs * agent._detailSampleDistance;
-        config.detailSampleMaxError   = config.ch * agent._detailSampleMaxError;
-
-        const AABB    tileBounds = _grid.computeTileBounds( tileX, tileZ, _minY, _maxY );
-        const float32 border     = static_cast<float32>( config.borderSize ) * config.cs;
-        config.bmin[0]           = tileBounds._min._x - border;
-        config.bmin[1]           = _minY;
-        config.bmin[2]           = tileBounds._min._z - border;
-        config.bmax[0]           = tileBounds._max._x + border;
-        config.bmax[1]           = _maxY;
-        config.bmax[2]           = tileBounds._max._z + border;
+        const AABB     tileBounds = _grid.computeTileBounds( tileX, tileZ, _minY, _maxY );
+        const rcConfig config     = Internal::makeConfig( _agentType, tileBounds, _minY, _maxY );
 
         vector<uint32> listTriangle;
         geometry.collectTriangles( float2{ config.bmin[0], config.bmin[2] }, float2{ config.bmax[0], config.bmax[2] }, listTriangle );
@@ -287,206 +506,15 @@ namespace sw
 
         rcContext              context( false );
         Internal::BuildScratch scratch;
-        const vector<float3>&  listVertex = geometry.getVertices();
-        const vector<uint32>&  listIndex  = geometry.getIndices();
-        const vector<uint8>&   listArea   = geometry.getTriangleAreas();
-        static_assert( sizeof( float3 ) == sizeof( float32 ) * 3, "float3 must be three packed floats for Recast" );
-        const float32* pVertex     = reinterpret_cast<const float32*>( listVertex.data() );
-        const int32    vertexCount = static_cast<int32>( listVertex.size() );
-
-        scratch._pSolid = rcAllocHeightfield();
-        if ( scratch._pSolid == nullptr ||
-             rcCreateHeightfield( &context, *scratch._pSolid, config.width, config.height, config.bmin, config.bmax, config.cs, config.ch ) == false )
+        if ( Internal::buildCompactHeightfield( context, geometry, listTriangle, config, scratch ) == false )
             return false;
-
-        // 타일에 닿는 삼각형만 번호와 영역을 모아 한 번에 복셀화한다. 경사가 걸을 수 없는 삼각형은 영역을 지운다(막기는 한다).
-        vector<int32> listTriangleIndex( listTriangle.size() * 3 );
-        vector<uint8> listTriangleArea( listTriangle.size() );
-        for ( size_t slot = 0; slot < listTriangle.size(); ++slot )
-        {
-            const uint32 triangleIndex      = listTriangle[slot];
-            listTriangleIndex[slot * 3 + 0] = static_cast<int32>( listIndex[triangleIndex * 3 + 0] );
-            listTriangleIndex[slot * 3 + 1] = static_cast<int32>( listIndex[triangleIndex * 3 + 1] );
-            listTriangleIndex[slot * 3 + 2] = static_cast<int32>( listIndex[triangleIndex * 3 + 2] );
-            listTriangleArea[slot]          = RecastAreaUtil::toRecastArea( listArea[triangleIndex] );
-        }
-        const int32 triangleCount = static_cast<int32>( listTriangle.size() );
-        rcClearUnwalkableTriangles( &context, config.walkableSlopeAngle, pVertex, vertexCount, listTriangleIndex.data(), triangleCount, listTriangleArea.data() );
-        if ( rcRasterizeTriangles( &context, pVertex, vertexCount, listTriangleIndex.data(), listTriangleArea.data(), triangleCount, *scratch._pSolid,
-                                   config.walkableClimb ) == false )
-            return false;
-
-        rcFilterLowHangingWalkableObstacles( &context, config.walkableClimb, *scratch._pSolid );
-        rcFilterLedgeSpans( &context, config.walkableHeight, config.walkableClimb, *scratch._pSolid );
-        rcFilterWalkableLowHeightSpans( &context, config.walkableHeight, *scratch._pSolid );
-
-        scratch._pCompact = rcAllocCompactHeightfield();
-        if ( scratch._pCompact == nullptr ||
-             rcBuildCompactHeightfield( &context, config.walkableHeight, config.walkableClimb, *scratch._pSolid, *scratch._pCompact ) == false )
-            return false;
-        rcFreeHeightField( scratch._pSolid );
-        scratch._pSolid = nullptr;
-        if ( rcErodeWalkableArea( &context, config.walkableRadius, *scratch._pCompact ) == false )
-            return false;
-
-        // 볼록 부피는 깎은 뒤에 칠하므로, 뚫는 부피(장애물)는 몸 반지름만큼 넓혀서 칠한다(유니티 Carve 와 같은 결과다).
-        vector<float32>                listVolumePoint;
-        vector<float32>                listOffsetPoint;
-        vector<const NavConvexVolume*> listVolume;
-        for ( const NavConvexVolume& volume : geometry.getConvexVolumes() )
-        {
-            listVolume.push_back( &volume );
-        }
-        if ( pExtraVolume != nullptr )
-        {
-            for ( const NavConvexVolume& volume : *pExtraVolume )
-            {
-                listVolume.push_back( &volume );
-            }
-        }
-        for ( const NavConvexVolume* pVolume : listVolume )
-        {
-            const NavConvexVolume& volume       = *pVolume;
-            const AABB             volumeBounds = volume.computeBounds();
-            const bool             bOverlaps    = volumeBounds._min._x <= config.bmax[0] && config.bmin[0] <= volumeBounds._max._x &&
-                                   volumeBounds._min._z <= config.bmax[2] && config.bmin[2] <= volumeBounds._max._z;
-            if ( bOverlaps == false )
-                continue;
-            listVolumePoint.clear();
-            for ( const float3& point : volume._listPoint )
-            {
-                listVolumePoint.push_back( point._x );
-                listVolumePoint.push_back( volume._minY );
-                listVolumePoint.push_back( point._z );
-            }
-            const uint8    recastArea  = RecastAreaUtil::toRecastArea( volume._area );
-            const int32    pointCount  = static_cast<int32>( volume._listPoint.size() );
-            const float32* pPolygon    = listVolumePoint.data();
-            int32          polygonSize = pointCount;
-            if ( recastArea == RC_NULL_AREA && agent._radius > 0.0f )
-            {
-                const int32 maxOffsetPoint = pointCount * 4 + 8;
-                listOffsetPoint.assign( static_cast<size_t>( maxOffsetPoint ) * 3, 0.0f );
-                const int32 offsetCount = rcOffsetPoly( listVolumePoint.data(), pointCount, agent._radius, listOffsetPoint.data(), maxOffsetPoint );
-                if ( offsetCount >= 3 )
-                {
-                    pPolygon    = listOffsetPoint.data();
-                    polygonSize = offsetCount;
-                }
-            }
-            rcMarkConvexPolyArea( &context, pPolygon, polygonSize, volume._minY, volume._maxY, recastArea, *scratch._pCompact );
-        }
+        Internal::markConvexVolumes( context, geometry, pExtraVolume, _agentType._radius, config, scratch );
 
         // 장애물 캐시 — 여기까지(복셀화 · 깎기 · 정적 부피 칠하기)가 층에 남는 정적 몫이다. 층으로 나눠 묶음으로 낸다. 폴리곤은 끼울 때 · 장애물이 바뀔 때 캐시가 짓는다.
         if ( _pTileCache != nullptr )
-        {
-            vector<NavOffMeshLink> listLinkInTile;
-            for ( const NavOffMeshLink& link : geometry.getOffMeshLinks() )
-            {
-                const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
-                                          link._start._z < tileBounds._max._z;
-                if ( bStartInTile )
-                    listLinkInTile.push_back( link );
-            }
-            return RecastTileCache::makeLayerPack( context, *scratch._pCompact, config, tileX, tileZ, listLinkInTile, outTile._bytes );
-        }
+            return RecastTileCache::makeLayerPack( context, *scratch._pCompact, config, tileX, tileZ, Internal::collectLinksInTile( geometry, tileBounds ), outTile._bytes );
 
-        if ( rcBuildDistanceField( &context, *scratch._pCompact ) == false ||
-             rcBuildRegions( &context, *scratch._pCompact, config.borderSize, config.minRegionArea, config.mergeRegionArea ) == false )
-            return false;
-        scratch._pContour = rcAllocContourSet();
-        if ( scratch._pContour == nullptr ||
-             rcBuildContours( &context, *scratch._pCompact, config.maxSimplificationError, config.maxEdgeLen, *scratch._pContour ) == false )
-            return false;
-        if ( scratch._pContour->nconts == 0 )
-            return true;
-        scratch._pPolyMesh = rcAllocPolyMesh();
-        if ( scratch._pPolyMesh == nullptr || rcBuildPolyMesh( &context, *scratch._pContour, config.maxVertsPerPoly, *scratch._pPolyMesh ) == false )
-            return false;
-        scratch._pDetail = rcAllocPolyMeshDetail();
-        if ( scratch._pDetail == nullptr || rcBuildPolyMeshDetail( &context, *scratch._pPolyMesh, *scratch._pCompact, config.detailSampleDist,
-                                                                   config.detailSampleMaxError, *scratch._pDetail ) == false )
-            return false;
-        rcPolyMesh& polyMesh = *scratch._pPolyMesh;
-        if ( polyMesh.npolys == 0 )
-            return true;
-        if ( polyMesh.nverts >= 0xffff )
-        {
-            SW_LOG_ERROR( "Navmesh '%#' tile (%#, %#) has %# vertices - raise the cell size or lower the tile size", agent._name.c_str(), tileX, tileZ,
-                          polyMesh.nverts );
-            return false;
-        }
-        // 영역 → 표시 비트(거름의 영역 비트와 같다).
-        for ( int32 polyIndex = 0; polyIndex < polyMesh.npolys; ++polyIndex )
-        {
-            polyMesh.flags[polyIndex] = RecastAreaUtil::toPolyFlags( polyMesh.areas[polyIndex] );
-        }
-
-        // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 연결된다.
-        vector<float32> listLinkVertex;
-        vector<float32> listLinkRadius;
-        vector<uint16>  listLinkFlag;
-        vector<uint8>   listLinkArea;
-        vector<uint8>   listLinkDirection;
-        vector<uint32>  listLinkUserID;
-        for ( const NavOffMeshLink& link : geometry.getOffMeshLinks() )
-        {
-            const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
-                                      link._start._z < tileBounds._max._z;
-            if ( bStartInTile == false )
-                continue;
-            const uint8 recastArea = RecastAreaUtil::toRecastArea( link._area );
-            for ( const float3* pPoint : { &link._start, &link._end } )
-            {
-                listLinkVertex.push_back( pPoint->_x );
-                listLinkVertex.push_back( pPoint->_y );
-                listLinkVertex.push_back( pPoint->_z );
-            }
-            listLinkRadius.push_back( link._radius );
-            listLinkArea.push_back( recastArea );
-            listLinkFlag.push_back( RecastAreaUtil::toPolyFlags( recastArea ) );
-            listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
-            listLinkUserID.push_back( link._userID );
-        }
-
-        dtNavMeshCreateParams params{};
-        params.verts            = polyMesh.verts;
-        params.vertCount        = polyMesh.nverts;
-        params.polys            = polyMesh.polys;
-        params.polyAreas        = polyMesh.areas;
-        params.polyFlags        = polyMesh.flags;
-        params.polyCount        = polyMesh.npolys;
-        params.nvp              = polyMesh.nvp;
-        params.detailMeshes     = scratch._pDetail->meshes;
-        params.detailVerts      = scratch._pDetail->verts;
-        params.detailVertsCount = scratch._pDetail->nverts;
-        params.detailTris       = scratch._pDetail->tris;
-        params.detailTriCount   = scratch._pDetail->ntris;
-        params.offMeshConVerts  = listLinkVertex.data();
-        params.offMeshConRad    = listLinkRadius.data();
-        params.offMeshConFlags  = listLinkFlag.data();
-        params.offMeshConAreas  = listLinkArea.data();
-        params.offMeshConDir    = listLinkDirection.data();
-        params.offMeshConUserID = listLinkUserID.data();
-        params.offMeshConCount  = static_cast<int32>( listLinkRadius.size() );
-        params.walkableHeight   = agent._height;
-        params.walkableRadius   = agent._radius;
-        params.walkableClimb    = agent._maxClimb;
-        params.tileX            = tileX;
-        params.tileY            = tileZ;
-        params.tileLayer        = 0;
-        rcVcopy( params.bmin, polyMesh.bmin );
-        rcVcopy( params.bmax, polyMesh.bmax );
-        params.cs          = config.cs;
-        params.ch          = config.ch;
-        params.buildBvTree = true;
-        uint8* pData       = nullptr;
-        int32  dataSize    = 0;
-        if ( dtCreateNavMeshData( &params, &pData, &dataSize ) == false )
-            return false;
-        outTile._bytes.assign( pData, pData + dataSize );
-        dtFree( pData );
-        return true;
+        return Internal::buildTileData( context, geometry, _agentType, config, tileBounds, tileX, tileZ, scratch, outTile );
     }
 
     bool RecastNavMesh::replaceTile( const NavTileData& tile )
@@ -530,7 +558,7 @@ namespace sw
 
     void RecastNavMesh::applyLinkFlags( int32 tileX, int32 tileZ )
     {
-        // 자리 하나에 층 여럿이 있을 수 있다(장애물 캐시). 다시 굽기는 층 0 하나뿐이다.
+        // 자리 하나에 층 여럿이 있을 수 있다(장애물 캐시). 다시 베이크는 층 0 하나뿐이다.
         const dtNavMesh* const pConst = _pNavMesh;
         const dtMeshTile*      arrTile[RecastTileCache::kMaxLayerCount * 2];
         const int32            tileCount = pConst->getTilesAt( tileX, tileZ, arrTile, static_cast<int32>( RecastTileCache::kMaxLayerCount * 2 ) );

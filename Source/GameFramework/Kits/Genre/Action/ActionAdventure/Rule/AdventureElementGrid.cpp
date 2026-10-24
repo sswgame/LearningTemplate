@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+
 namespace sw
 {
     namespace
@@ -102,7 +104,7 @@ namespace sw
     {
         using Internal = AdventureElementGridInternal;
         _table.clear();
-        _table.setStepTime( MathUtil::max( 0.001f, _settings._stepTime ) );
+        _table.setStepTime( _settings._stepTime );
         const int32 flammable  = _table.addFlag( "Flammable" );
         const int32 conductive = _table.addFlag( "Conductive" );
         _updraftFlag           = _table.addFlag( "Updraft" );
@@ -176,16 +178,25 @@ namespace sw
         _table.addStepRule( spread );
     }
 
-    void AdventureElementGrid::initialize( int32 width, int32 height, const AdventureElementSettings& settings )
+    bool AdventureElementGrid::initialize( int32 width, int32 height, const AdventureElementSettings& settings )
     {
-        _settings                   = settings;
-        _settings._grassBurnSteps   = MathUtil::clamp( _settings._grassBurnSteps, 1, 255 );
-        _settings._woodBurnSteps    = MathUtil::clamp( _settings._woodBurnSteps, 1, 255 );
-        _settings._spreadDelaySteps = MathUtil::clamp( _settings._spreadDelaySteps, 1, 255 );
-        _settings._chargeSteps      = MathUtil::clamp( _settings._chargeSteps, 1, 255 );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "AdventureElementGrid: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "AdventureElementGrid: refused size %#x%# (both need 1 or more)", width, height );
+            return false;
+        }
+        _settings = settings;
         populateRuleTable();
-        _grid.initialize( width, height, &_table );
+        if ( _grid.initialize( width, height, &_table ) == false )
+            return false;
         _listEvent.clear();
+        return true;
     }
 
     void AdventureElementGrid::setMaterial( const int2& cell, AdventureMaterial material )

@@ -119,7 +119,7 @@ namespace sw
         // 같은 구조의 `TextureCache::release` 도 같은 검사를 한다.
         if ( it->second._refCount == 0 )
         {
-            SW_LOG_WARNING( "Material '%#' 를 acquire 보다 많이 release 했습니다 — 무시합니다.", key.c_str() );
+            SW_LOG_WARNING( "Material '%#' was released more times than acquired - ignoring.", key.c_str() );
             return;
         }
 

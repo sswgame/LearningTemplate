@@ -32,6 +32,6 @@ XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뺀 것입
 | `_defaultLanguage` | `string` | `ko_kr` |  |  | 기본 활성 언어 |
 | `_fallbackLanguage` | `string` | `en_us` |  |  | 대체(Fallback) 언어 |
 | `_inputMap` | `DataPath` | — |  |  | 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다). 없으면 입력 맵을 바꾸지 않는다 |
-| `_loadingScreen` | `DataPath` | — |  |  | 씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 정본은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음 |
+| `_loadingScreen` | `DataPath` | — |  |  | 씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 기준은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음 |
 | `_loadingTips` | `DataPath` | — |  |  | 로딩 화면 팁 목록(`*.loadingtips.xml` — `<LoadingTips><Tip text="원문"/>…`). 글은 지역화 원문이고 현지화 프로젝트의 `assetRules` 로 수집한다. 적지 않으면 팁 없음(팁 위젯을 접는다) |
 | `_audioEvents` | `DataPath` | — |  |  | 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstanceBase` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음 |

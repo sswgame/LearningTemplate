@@ -4,6 +4,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -148,4 +149,7 @@ namespace sw
                                static_cast<float64>( _listSegment[segmentIndex]._bars );
         return static_cast<uint64>( frames + 0.5 );
     }
+
+    /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
+    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &ResourceDataKindUtil::loadCatalog<AudioMusicDesc> );
 } // namespace sw

@@ -248,7 +248,7 @@ namespace sw
 
     void InputManager::assignFrameFractions( size_t osEventCount, float32 deltaSeconds )
     {
-        // 창은 지난 프레임 길이만큼이다 — 엔진이 잰 델타와 같은 시계(QPC)를 본다. 창 밖(그보다 먼저 들어온 이벤트)은 0, 시계 앞은 1 로 자른다.
+        // 창은 지난 프레임 길이만큼이다 — 엔진이 측정한 델타와 같은 시계(QPC)를 본다. 창 밖(그보다 먼저 들어온 이벤트)은 0, 시계 앞은 1 로 자른다.
         const int64   windowMicroseconds = MathUtil::max( int64{ 1 }, static_cast<int64>( static_cast<float64>( deltaSeconds ) * 1.0e6 ) );
         const int64   windowStart        = _frameEndMicroseconds - windowMicroseconds;
         const float64 inverseWindow      = 1.0 / static_cast<float64>( windowMicroseconds );

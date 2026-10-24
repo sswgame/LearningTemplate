@@ -86,7 +86,7 @@ namespace sw::editor
         AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
         {
-            SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
+            SW_LOG_WARNING( "Cannot spawn the prefab because there is no AssetManager service: %#", pPath );
             return nullptr;
         }
 

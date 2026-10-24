@@ -1,6 +1,6 @@
 /**
  * @file PackCooker.h
- * @brief 도메인 폴더(`engine` · `common` · `game/<팩>`)마다 팩 하나(`engine.pack` · `common.pack` · `game_<팩>.pack`)를 굽습니다. `App --cook-packs` · `--cook-all` 이 부릅니다.
+ * @brief 도메인 폴더(`engine` · `common` · `game/<팩>`)마다 팩 하나(`engine.pack` · `common.pack` · `game_<팩>.pack`)를 베이크합니다. `App --cook-packs` · `--cook-all` 이 부릅니다.
  * @details 무엇을 담을지(이 파일)와 어떤 바이트가 되는지(`ResourcePakWriter`)를 나눈다. 쿠킹은 엔진 언어 한 곳이다 — 예전 파이썬 쿠커(`CookAssets.py`)가
  *          레이아웃 · 압축 · 증분 기록을 따로 들던 것을 옮겼다(계획 `StructureSimplification` PK2).
  *          - 담는 것: 도메인 폴더의 파일 중 `PackConfig` 의 제외(전역 · 규칙별 폴더 · 패턴), 셰이더 원본, 다른 백엔드의 셰이더 바이너리, 빌드 타깃이 빼는
@@ -34,11 +34,11 @@ namespace sw
         string _packOutputDir;  ///< 팩을 쓸 폴더(`--pack-dir`)
         string _shaderFolder;   ///< 담을 셰이더 바이너리 폴더(`dx12` 등, 쿠킹 표의 `shader_folder`)
         string _buildTarget;    ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
-        string _gamePackFolder; ///< 비우면 `Resource/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 굽는다
+        string _gamePackFolder; ///< 비우면 `Resource/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 베이크한다
         /**
          * @brief 담지 않을 소스 파일의 절대 경로(`FileUtil::normalizePath`)입니다. 비어 있을 수 있다.
          * @details 이 층(Resource)이 읽을 수 없는 규칙으로 위 층이 정한다 — 출시 문화권(`stagedCultures`) 밖의 번역 테이블(`LocalizationProject::collectUnstagedTranslationTables`).
-         *          목록은 쿠킹 설정 해시에 들어가 바뀌면 팩을 다시 굽는다.
+         *          목록은 쿠킹 설정 해시에 들어가 바뀌면 팩을 다시 베이크한다.
          */
         vector<string> _listExcludedSourceFile;
     };
@@ -66,7 +66,7 @@ namespace sw
         static bool shouldIncludeFile( string_view relativePath, const PackConfig& config, string_view shaderFolder, string_view buildTarget );
 
         /**
-         * @brief 모든 도메인의 팩을 굽습니다.
+         * @brief 모든 도메인의 팩을 베이크합니다.
          * @param outPackCount 쓰거나 기록에서 다시 쓴 팩 수입니다.
          * @return 팩 하나라도 실패하면(이유는 오류로 남긴다) false 입니다. 굽을 도메인이 하나도 없어도 false 입니다.
          */

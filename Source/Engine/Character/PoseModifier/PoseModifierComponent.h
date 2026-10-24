@@ -91,7 +91,7 @@ namespace sw
         void bindUnit( const hashed_string& unitName, SkeletalMeshComponent* pUnit, shared_ptr<const SocketSet> sockets = nullptr );
         /**
          * @brief 리그의 `unit` 이름에 본 없는 강체 오브젝트(정적 메시 무기 같은 장비 부품)를 연결합니다. 그 유닛의 소켓 대상은 "오브젝트 월드 × 소켓 로컬" 로 풀립니다.
-         * @details 소켓 로컬은 오브젝트 원점 기준이다(강체 부품의 뿌리 — 외형 소켓 테이블의 강체 유닛과 같은 규약). 본 대상은 오류다. 의존은 걸지 않는다 — 부품 위치는
+         * @details 소켓 로컬은 오브젝트 원점 기준이다(강체 부품의 루트 — 외형 소켓 테이블의 강체 유닛과 같은 규약). 본 대상은 오류다. 의존은 걸지 않는다 — 부품 위치는
          *          지난 프레임 값이므로 손에 붙은 부품은 `space` 로 손 본 기준으로 받아야 늦지 않는다. @p pObject 가 nullptr 이면 연결을 풀고 그 대상은 값이 없다(노드가 쉰다).
          */
         void bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets );

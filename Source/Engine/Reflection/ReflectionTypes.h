@@ -58,7 +58,7 @@ namespace sw
     public:
         /** @brief 기본값 메타데이터를 만듭니다. `T` 의 정의가 보여야 합니다. */
         ReflectMetadataBox()
-            : _pValue{ sw_new T{} }
+            : _pValue{ make_unique<T>().release() }
             , _pOps{ &getOps() }
         {
         }
@@ -112,7 +112,7 @@ namespace sw
 
         static T* cloneValue( const T& value )
         {
-            return sw_new T{ value };
+            return make_unique<T>( value ).release();
         }
         static void destroyValue( T* pValue )
         {
@@ -182,7 +182,7 @@ namespace sw
         /**
          * @brief 타입 핸들(`TComponentHandle<T>`)이 가리키는 컴포넌트 타입 `T` 의 이름입니다. 타입 핸들이 아니면 비어 있습니다.
          * @details 값(`_typeName`) 또는 시퀀스 원소(`_elementTypeName`)는 내장 `ComponentHandle` 로 기록되고, 대상 타입은 여기에만 있습니다.
-         *          파서가 값 하나와 시퀀스 원소만 허용하므로 필드당 하나면 충분합니다(`docs/plans/TypedComponents.md` 3.7).
+         *          파서가 값 하나와 시퀀스 원소만 허용하므로 필드당 하나면 충분합니다(`docs/09_Decisions.md` 5-6 타입 핸들 직렬화).
          */
         hashed_string                        _handleTargetTypeName;
         vector<hashed_string>                _listAlias; ///< `PROPERTY( Alias = … )` 로 적은 다른 키 목록이다. 이름을 바꾸기 전의 키를 적는다

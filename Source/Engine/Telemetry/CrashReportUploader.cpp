@@ -54,12 +54,6 @@ namespace sw
         return CrashReportUploadResult::Kept;
     }
 
-    NullCrashReportUploader& NullCrashReportUploader::get()
-    {
-        static NullCrashReportUploader s_uploader;
-        return s_uploader;
-    }
-
     HTTPCrashReportUploader::HTTPCrashReportUploader( IHTTPClient& client, string_view endpoint )
         : _endpoint{ endpoint }
         , _pClient{ &client }

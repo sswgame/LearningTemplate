@@ -41,8 +41,11 @@ namespace sw
     public:
         ElementGrid();
 
-        /** @brief 크기와 규칙 테이블을 정하고 모든 셀을 첫 재질(테이블의 0 번)로 비웁니다. 스텝 시간은 테이블의 값을 씁니다. */
-        void initialize( int32 width, int32 height, const ElementRuleTable* pTable );
+        /**
+         * @brief 크기와 규칙 테이블을 정하고 모든 셀을 첫 재질(테이블의 0 번)로 비웁니다. 스텝 시간은 테이블의 값을 씁니다.
+         * @return 크기가 1 보다 작거나, 테이블이 없거나, 테이블의 스텝 시간이 0 이하이면 오류를 남기고 false 입니다(크기를 올리거나 기본 스텝 시간으로 대신하지 않는다). 그러면 격자는 그대로입니다.
+         */
+        [[nodiscard]] bool initialize( int32 width, int32 height, const ElementRuleTable* pTable );
         /** @brief 셀은 그대로 두고 규칙 테이블만 바꿔서 가리킵니다. 같은 구조의 테이블로 바꿀 때 쓰며, 테이블을 보관한 쪽을 복사했을 때가 해당합니다. */
         void setTable( const ElementRuleTable* pTable ) { _pTable = pTable; }
 

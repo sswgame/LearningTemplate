@@ -1122,13 +1122,13 @@ namespace sw::editor
             duration = pChosen != nullptr ? pChosen->computeDuration() : 0.0f;
             time     = MathUtil::clamp( _animationScrub, 0.0f, duration );
         }
-        float32 value = time;
+        float32 scrubSeconds = time;
         ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
-        if ( ImGui::SliderFloat( "##uipreviewanimationtime", &value, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
+        if ( ImGui::SliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
         {
-            _animationScrub   = value;
+            _animationScrub   = scrubSeconds;
             _bAnimationPaused = true;
-            (void)player.seek( _animation, value );
+            (void)player.seek( _animation, scrubSeconds );
             markPreviewMutated();
         }
         else if ( bActive )

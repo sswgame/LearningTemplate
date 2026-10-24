@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -64,20 +65,41 @@ namespace sw
                                 moduleName, moduleName );
             }
             // **캐시 병합은 아래 오버로드가 한 자리에서 한다.**
-            registerModuleTypes( moduleName, TypeRegistrar::getHead(), EnumRegistrar::getHead(), GlobalVariableRegistrar::getHead() );
+            registerModuleTypes( moduleName, peekGlobalRegistrarHeads() );
 
             // 소비했으므로 비운다. 다음 DLL 이 자기 것만 매달도록.
-            TypeRegistrar::getHead()           = nullptr;
-            EnumRegistrar::getHead()           = nullptr;
-            GlobalVariableRegistrar::getHead() = nullptr;
+            setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
         }
 
-        void registerModuleTypes( string_view moduleName, TypeRegistrar* pTypeHead, EnumRegistrar* pEnumHead, GlobalVariableRegistrar* pVariableHead )
+        ModuleRegistrarHeads peekGlobalRegistrarHeads()
+        {
+            ModuleRegistrarHeads heads;
+            heads._pType     = TypeRegistrar::getHead();
+            heads._pEnum     = EnumRegistrar::getHead();
+            heads._pVariable = GlobalVariableRegistrar::getHead();
+            heads._pDataKind = ResourceDataKindRegistrar::getHead();
+            return heads;
+        }
+
+        void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads )
+        {
+            TypeRegistrar::getHead()             = heads._pType;
+            EnumRegistrar::getHead()             = heads._pEnum;
+            GlobalVariableRegistrar::getHead()   = heads._pVariable;
+            ResourceDataKindRegistrar::getHead() = heads._pDataKind;
+        }
+
+        void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )
         {
             SW_MEMORY_SCOPE( Reflection );
+            TypeRegistrar* pTypeHead = heads._pType;
+            EnumRegistrar* pEnumHead = heads._pEnum;
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다). 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
-            if ( pVariableHead != nullptr )
-                getSubsystem<GlobalVariableManager>().registerPendingVariables( moduleName, pVariableHead );
+            if ( heads._pVariable != nullptr )
+                getSubsystem<GlobalVariableManager>().registerPendingVariables( moduleName, heads._pVariable );
+            // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
+            if ( heads._pDataKind != nullptr )
+                (void)getSubsystem<ResourceDataKindRegistry>().registerModuleKinds( moduleName, heads._pDataKind );
 
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
@@ -143,6 +165,7 @@ namespace sw
             }
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
+            (void)getSubsystem<ResourceDataKindRegistry>().unregisterModuleKinds( moduleName );
         }
 #endif
     } // namespace engine

@@ -94,7 +94,7 @@ SW_TEST_CASE( AudioBenchTest, RenderCostPerVoice )
 
 /**
  * @brief [AudioBenchTest] 블록마다의 게시(`publishState`) 비용 — 이벤트 창 사본이 인스턴스마다 보이스를 모두 훑는다(인스턴스 × 보이스, E6)
- * @details 인스턴스 N 개(보이스 하나씩, 모두 가상이 아니게)로 1 초를 렌더하고, 엔진이 블록마다 잰 게시 시간(`AudioEngineStats::_publishNanoseconds` · 최댓값)을
+ * @details 인스턴스 N 개(보이스 하나씩, 모두 가상이 아니게)로 1 초를 렌더하고, 엔진이 블록마다 측정한 게시 시간(`AudioEngineStats::_publishNanoseconds` · 최댓값)을
  *          로그로 남긴다. N 이 두 배일 때 게시 시간이 네 배 가까이 늘면 훑기가 비용의 대부분이다 — 그때 보이스를 한 번만 훑어 인스턴스에 모으도록 바꾼다.
  *          테스트는 그만큼의 인스턴스가 게시됐는지만 본다(시간은 기계마다 다르다).
  */

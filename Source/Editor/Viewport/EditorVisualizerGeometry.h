@@ -31,23 +31,6 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @brief `debug_draw` 시각화가 마지막으로 그린 양입니다. 에디터 자체 테스트(`sceneView.debugDraw`)가 그려졌는지 확인할 때 읽습니다.
-     * @details 시각화는 그리기 함수 하나뿐이라 자기 상태를 둘 곳이 없으므로 이 값 하나만 둔다. 그린 프레임 번호(ImGui 프레임)를 함께 기록한다.
-     */
-    struct SW_EDITOR_API EditorDebugDrawStats
-    {
-        uint32 _segmentCount{ 0 };
-        uint32 _textCount{ 0 };
-        int32  _frame{ -1 };
-
-        /** @brief 에디터 모듈 하나가 가진 값입니다. */
-        static EditorDebugDrawStats& get();
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
      * @struct EditorVisualizerGeometryUtil
      * @brief 시각화가 함께 쓰는 월드 도형 계산입니다. 판정이 ImGui 밖에 있어야 `Test/EditorTest` 가 테스트할 수 있습니다.
      */

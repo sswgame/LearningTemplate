@@ -3,6 +3,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -28,19 +29,18 @@ namespace sw
          */
         struct ThreadSignalStackHolder
         {
-            uint8* _pStack{ nullptr };
+            MemoryBlock _stack;
 
             ~ThreadSignalStackHolder() { release(); }
 
             void release()
             {
-                if ( _pStack == nullptr )
+                if ( _stack.isValid() == false )
                     return;
                 stack_t disableStack{};
                 disableStack.ss_flags = SS_DISABLE;
                 sigaltstack( &disableStack, nullptr );
-                Memory::free( _pStack );
-                _pStack = nullptr;
+                _stack.reset();
             }
         };
 
@@ -52,24 +52,23 @@ namespace sw
 {
     void ThreadCrashStack::initializeCurrentThread()
     {
-        if ( t_signalStack._pStack != nullptr )
+        if ( t_signalStack._stack.isValid() )
             return;
 
-        uint8* pStack = static_cast<uint8*>( Memory::allocate( kSignalStackSize ) );
-        if ( pStack == nullptr )
+        MemoryBlock stack = MemoryBlock::allocate( kSignalStackSize );
+        if ( stack.isValid() == false )
             return;
 
         stack_t signalStack{};
-        signalStack.ss_sp    = pStack;
+        signalStack.ss_sp    = stack.get();
         signalStack.ss_size  = kSignalStackSize;
         signalStack.ss_flags = 0;
         if ( sigaltstack( &signalStack, nullptr ) != 0 )
         {
-            Memory::free( pStack );
             SW_LOG_WARNING( "sigaltstack failed — a stack overflow on this thread will not be reported" );
             return;
         }
-        t_signalStack._pStack = pStack;
+        t_signalStack._stack = std::move( stack );
     }
 
     void ThreadCrashStack::releaseCurrentThread()

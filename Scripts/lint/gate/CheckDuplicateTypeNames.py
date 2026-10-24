@@ -9,6 +9,7 @@
   붙인다(`MonsterCollectorCatalog`).
 
   - 대상: `Source/` 의 `.h` · `.cpp`, 이름 있는 네임스페이스 바로 안의 정의. 중첩 타입 · 함수 안 타입 · 익명 네임스페이스(파일 지역)는 보지 않는다.
+  - `struct A::B`(중첩 타입의 밖 정의)는 `A` 의 정의가 아니라서 세지 않는다.
   - 같은 이름이 같은 줄기의 `.h` · `.cpp`(선언과 정의를 나눈 것)에만 있으면 하나로 본다.
 
   python Scripts/lint/gate/CheckDuplicateTypeNames.py [--root <repo>]
@@ -27,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
-_kTypeRe = re.compile(r"^\s*(?:template\s*<[^;{]*>\s*)?(?:class|struct)\s+(?:SW_\w+\s+|alignas\s*\([^)]*\)\s+)*(\w+)(?:\s+final)?\s*(?::[^;{]*)?\{?\s*$")
+_kTypeRe = re.compile(r"^\s*(?:template\s*<[^;{]*>\s*)?(?:class|struct)\s+(?:SW_\w+\s+|alignas\s*\([^)]*\)\s+)*(\w+)(?!\w|\s*::)(?:\s+final)?\s*(?::[^;{]*)?\{?\s*$")
 _kNamespaceRe = re.compile(r"^\s*namespace(?:\s+([\w:]+))?\s*\{?\s*$")
 _kBraceRe = re.compile(r"[{}]")
 
@@ -90,6 +91,17 @@ class CheckDuplicateTypeNamesGate(LintGate):
             "files": {
                 "Source/GameFramework/Kits/KitA/Catalog.h": "#pragma once\nnamespace sw\n{\n    class SharedCatalog\n    {\n    };\n} // namespace sw\n",
                 "Source/GameFramework/Kits/KitB/Other.h": "#pragma once\nnamespace sw\n{\n    struct SharedCatalog\n    {\n        int value;\n    };\n} // namespace sw\n",
+            },
+        },
+        {
+            # `struct Holder::Inner` 는 `Holder` 안의 중첩 타입을 밖에서 정의하는 줄이다 — 이름의 `::` 를 상속(`: Base`)으로 읽어 `Holder` 를 정의로 세면 오탐이다.
+            "name": "중첩 타입의 밖 정의(struct A::B)는 A 의 정의가 아니다",
+            "expectedViolation": "sw::SharedCatalog: Source/GameFramework/Kits/KitA/Catalog.h · Source/GameFramework/Kits/KitB/Other.h 가 같은 이름을 정의합니다",
+            "unexpectedViolation": "sw::Holder:",
+            "files": {
+                "Source/GameFramework/Kits/KitA/Catalog.h": "#pragma once\nnamespace sw\n{\n    class SharedCatalog\n    {\n    };\n    class Holder\n    {\n    };\n} // namespace sw\n",
+                "Source/GameFramework/Kits/KitB/Other.h": ("#pragma once\nnamespace sw\n{\n    struct SharedCatalog\n    {\n        int value;\n    };\n"
+                                                           "    struct Holder::Inner\n    {\n        int value;\n    };\n    struct Holder::Other : Base\n    {\n    };\n} // namespace sw\n"),
             },
         },
     ]

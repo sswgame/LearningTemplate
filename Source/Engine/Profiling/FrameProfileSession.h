@@ -52,7 +52,7 @@ namespace sw
 
         /** @brief 히치 꼬리에 남기는 최악 프레임 수입니다. */
         static constexpr uint32 kWorstFrameCount = 5;
-        /** @brief 히치로 세는 프레임 간격 문턱(마이크로초) — 60 Hz 한 주기 · 두 주기 · 100 ms 입니다. */
+        /** @brief 히치로 세는 프레임 간격 임계값(마이크로초) — 60 Hz 한 주기 · 두 주기 · 100 ms 입니다. */
         static constexpr int64 kArrHitchThresholdMicro[] = { 16667, 33333, 100000 };
 
     private:
@@ -60,7 +60,7 @@ namespace sw
         void reportAllocations( uint64 frames );
         /** @brief 측정 창 안 게임 스레드 프레임 간격(벽시계) 하나를 히치 꼬리에 더합니다. */
         void recordFrameInterval( int64 intervalMicro );
-        /** @brief 히치 꼬리 줄(`[Profile] hitch`)을 남깁니다 — 최악 프레임 다섯과 문턱을 넘은 프레임 수. 평균 · 백분위 표가 가리는 한 번의 긴 프레임을 본다. */
+        /** @brief 히치 꼬리 줄(`[Profile] hitch`)을 남깁니다 — 최악 프레임 다섯과 임계값을 넘은 프레임 수. 평균 · 백분위 표가 가리는 한 번의 긴 프레임을 본다. */
         void reportHitches() const;
 
         /** @brief 측정할 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
@@ -89,7 +89,7 @@ namespace sw
         int64 _lastFrameEndMicro{ 0 };
         /** @brief 측정 창의 가장 긴 프레임 간격들(마이크로초, 큰 순)입니다. */
         int64 _arrWorstFrameMicro[kWorstFrameCount]{};
-        /** @brief `kArrHitchThresholdMicro` 의 문턱마다 넘은 프레임 수입니다. */
+        /** @brief `kArrHitchThresholdMicro` 의 임계값마다 넘은 프레임 수입니다. */
         uint32 _arrHitchCount[3]{};
     };
 } // namespace sw

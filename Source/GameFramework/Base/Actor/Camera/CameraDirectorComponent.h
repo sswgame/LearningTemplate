@@ -14,6 +14,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Screen/UILayer.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
@@ -79,8 +80,10 @@ namespace sw
         void clearViewOverride();
         bool isViewOverridden() const { return _bViewOverride; }
         /**
-         * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), 지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
-         * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청 하나뿐이다.
+         * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), UI 레이어를 숨기고(`_photoHiddenUILayers` 속성이 정한 레이어에 `UISystem::addLayerHideRequest`),
+         *        지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
+         * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청과 UI 숨김 요청뿐이다.
+         *          카메라 컴포넌트는 UI 를 모르고, 이 디렉터가 UI 시스템에 "이 레이어를 숨겨 달라" 는 요청만 건다 — 어느 레이어인지는 게임 데이터(속성)가 정한다.
          *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 함수라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
          *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 그래서 게임마다 맵에 액션을 더하지 않아도 되고,
          *          게임 키와 겹쳐도 게임이 멈춰 있어 부딪히지 않는다(언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).
@@ -159,6 +162,8 @@ namespace sw
         void warnMissingPresetActions( const InputMap& inputMap, const CameraInputDef& inputDef );
         /** @brief 포토 모드 입력 맵(`_photoInputMap`)을 갱신하고 그 액션(`Photo.Move` 등)을 모아 자유 카메라에 넣습니다. */
         void gatherPhotoModeInput( float32 unscaledDeltaTime );
+        /** @brief 포토 모드가 건 UI 레이어 숨김 요청을 풉니다(건 적 없으면 아무 일도 하지 않습니다). */
+        void releasePhotoModeUILayers();
         /** @brief 미뤄 둔 포즈 계산과 쓰기를 합니다. 틱 뒤 게임 스레드에서 돕니다. */
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
@@ -198,6 +203,9 @@ namespace sw
         float32 _photoZoomStep;
         PROPERTY( Category = "Photo Mode", DisplayName = "Max Exposure Offset", Min = 0.0, Tooltip = "Photo mode exposure compensation limit (+/- EV)", Meta = "Units=EV" )
         float32 _photoMaxExposureOffset;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Hidden UI Layers",
+                  Tooltip = "UI layers hidden while photo mode is on (HUD, in-game menus, notifications by default); the engine only provides the layer visibility request, the game data decides which layers" )
+        UILayerMask _photoHiddenUILayers;
         PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed the look, zoom, pan and rotate actions to presets with an <Input> section" )
         bool _bReadInput;
         PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
@@ -216,8 +224,9 @@ namespace sw
         bool            _bViewOverride;
 
         PhotoModeCamera      _photoMode;
-        unique_ptr<InputMap> _photoInputMap; ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
-        bool                 _bPhotoModeCut; ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        unique_ptr<InputMap> _photoInputMap;            ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
+        bool                 _bPhotoModeCut;            ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        UILayerMask          _photoAppliedHiddenLayers; ///< 포토 모드가 켤 때 UI 에 건 숨김 요청의 레이어(`enterPhotoMode`). 끌 때 같은 집합으로 푼다 — 켜 있는 동안 속성을 바꿔도 요청 수가 어긋나지 않는다
 
         CameraPresetCatalog          _catalog;
         CameraDirector               _director;

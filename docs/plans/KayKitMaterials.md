@@ -1,6 +1,6 @@
 # KayKit 캐릭터 텍스처를 머티리얼로
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 1/2
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-6 · 진행: 2/2
 
 Shooter3D 팩의 아틀라스(`textures_raw/kaykit_*.png` → `textures/kaykit_*.dds`)와 머티리얼(`materials/kaykit_*.material`)을 다른 게임도 쓰게 했다.
 KayKit 캐릭터를 그리는 다른 곳은 Empty 의 벤치뿐이었다(`data/benchscene.xml` — 기사 · 리그 무기 · 망토 · 전투 적 · 칼이 흰 기본 머티리얼이었다).
@@ -9,4 +9,7 @@ StarSkirmish 의 KayKit Space 아틀라스(`textures/kaykit_space.dds`)는 꺼�
 
 ## K2 화면 확인
 
-- 벤치의 캐릭터 · 리그 · 전투 장면(`-gv_benchCharacters` · 리그 · 전투 모드)을 캡처해 아틀라스 색이 입혀졌는지 본다. 텍스처 샘플이 늘어 벤치 수치가 바뀔 수 있다 — 측정 기준을 다시 잡는다.
+벤치의 캐릭터 · 리그 · 전투 장면을 캡처하는 시나리오를 만들었다(`game/empty/automation/kaykitcharacters.scenario.xml` · `kaykitrig.scenario.xml` · `kaykitcombat.scenario.xml`, 변수 `-gv_benchCharacters` · `-gv_benchRig` · `-gv_benchCombat`).
+사진을 보고 아틀라스 색이 입혀졌는지 눈으로 확인한다. 텍스처 샘플이 늘어 벤치 수치가 바뀔 수 있어, 같은 인자로 `GT.Animation` 측정 기준을 다시 잡는다.
+
+**남은 확인(통합에서 확인):** 매니페스트 id `kaykit-bench-scenarios`(사진), 매니페스트 id `kaykit-bench-rebaseline`(측정 기준 다시 잡기). 끝나면 통합 담당이 이 문서를 닫는다.

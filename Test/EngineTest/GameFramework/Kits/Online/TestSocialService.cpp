@@ -431,7 +431,7 @@ SW_TEST_CASE( SocialProtocolTest, MessagesRoundTripAndRefuseOutOfRange )
 
 /**
  * @brief [SocialProtocolTest] 다른 서버로 가는 알림 중계는 받는 서버가 자기 빌드의 번호와 B 로 다시 쓰고, 모르는 알림 · 다른 본문 타입은 버린다
- * @details 봉투는 알림 번호 · B 대신 알림 열거자 이름과 본문 A 를 싣는다(docs/plans/ServerBusFormat.md 3.5). 소셜 키트가 `Social.Notification` 항목을 등록한다.
+ * @details 봉투는 알림 번호 · B 대신 알림 열거자 이름과 본문 A 를 싣는다(docs/09_Decisions.md 5-9 서버 버스 push 중계). 소셜 키트가 `Social.Notification` 항목을 등록한다.
  */
 SW_TEST_CASE( SocialProtocolTest, RelayedPushIsRewrittenByTheReceivingBuild )
 {

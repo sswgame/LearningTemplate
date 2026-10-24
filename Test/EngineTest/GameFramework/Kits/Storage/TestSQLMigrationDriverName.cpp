@@ -8,7 +8,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 마이그레이션 목록 검사(`SQLMigrationListDataKind`)가 보는 드라이버 이름은 손으로 적은 목록이 아니다 — 드라이버 등록 표의 이름에
-// 폴더의 방언 분기 파일(`NNNN_이름.<드라이버>.sql`)이 가리키는 이름을 더한다. 등록 표에 늦게 오르는 드라이버의 갈래도 빠뜨리지 않는다.
+// 폴더의 방언 분기 파일(`NNNN_이름.<드라이버>.sql`)이 가리키는 이름을 더한다. 등록 표에 늦게 오르는 드라이버의 분기도 빠뜨리지 않는다.
 
 using namespace sw;
 
@@ -37,7 +37,7 @@ SW_TEST_CASE( SQLMigrationDriverNameTest, DialectFilesAddTheirDriverOnce )
 
 SW_TEST_CASE( SQLMigrationDriverNameTest, MissingDialectBranchIsCaughtForTheAddedDriver )
 {
-    // 1 번은 postgres 갈래만 있다 — 등록 표에 postgres 가 없어도 폴더가 그 이름을 내므로 sqlite 로 읽기가 실패해 드러난다.
+    // 1 번은 postgres 분기만 있다 — 등록 표에 postgres 가 없어도 폴더가 그 이름을 내므로 sqlite 로 읽기가 실패해 드러난다.
     const string folder = test::makeTempDirectory( "migration_missing_branch" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "0001_first.postgres.sql" ), "SELECT 1;" ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName ), R"(<SQLMigrationList><Migration _name="0001_first" /></SQLMigrationList>)" ) );

@@ -160,7 +160,8 @@ namespace sw
                 return;
             }
 
-            IocpReadOperation* pOperation = sw_new IocpReadOperation{};
+            // 완료 패킷이 올 때까지 OS 가 `OVERLAPPED` 를 쥔다 — 소유를 놓고 완료 처리(`onReadCompleted`)가 `sw_delete` 로 푼다.
+            IocpReadOperation* pOperation = make_unique<IocpReadOperation>().release();
             pOperation->_pRequest         = pRequest;
             issueRead( pOperation );
         }

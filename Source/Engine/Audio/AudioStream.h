@@ -68,7 +68,7 @@ namespace sw
          * @brief 바이트가 스트리밍할 수 있는 형식이고 길이가 @p minSeconds 초 이상이면 소스를 만듭니다.
          * @param path 확장자(`.ogg`, `.wav`)로 형식을 고릅니다.
          * @param inoutBytes 파일 바이트입니다. **만들었을 때만** 소스가 가져가고(비워집니다), 실패하면 그대로 남아 호출자가 통째로 풉니다.
-         * @param minSeconds 이보다 짧은 소리는 만들지 않습니다(클립 자신의 샘플레이트로 잰 길이). 0 이면 길이를 보지 않습니다.
+         * @param minSeconds 이보다 짧은 소리는 만들지 않습니다(클립 자신의 샘플레이트로 측정한 길이). 0 이면 길이를 보지 않습니다.
          * @return 짧거나 지원하지 않는 형식이거나 헤더가 틀렸으면 nullptr 입니다.
          */
         static shared_ptr<const AudioStreamSource> tryCreate( string_view path, vector<uint8>& inoutBytes, float32 minSeconds );

@@ -62,8 +62,6 @@ namespace sw
     {
     public:
         CrashReportUploadResult upload( const CrashReportUploadBundle& bundle ) override;
-
-        static NullCrashReportUploader& get();
     };
 } // namespace sw
 

@@ -62,7 +62,7 @@ namespace sw
             static ActiveStorage& getStorage();
 
             /**
-             * @brief 엔진 파일(정본 하나)을 읽어 @p outSettings 에 넣습니다. 못 읽으면 오류를 남기고 false 이며 표는 그대로입니다.
+             * @brief 엔진 파일(기준 하나)을 읽어 @p outSettings 에 넣습니다. 못 읽으면 오류를 남기고 false 이며 표는 그대로입니다.
              * @details 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 테스트) — 루트를 못 잡는 것도 실패다.
              */
             [[nodiscard]] static bool loadActive( Render2DSettings& outSettings )

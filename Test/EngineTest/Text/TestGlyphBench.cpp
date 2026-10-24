@@ -1,5 +1,5 @@
 // 글리프 벤치 — 한글 장문을 처음 띄우는 프레임의 CPU 몫(새 글리프 수백 개의 글꼴 찾기 · 래스터화 · SDF · 아틀라스 자리 잡기). 값은 Release 로 읽는다.
-// GPU 업로드 몫은 App 탐침(`-gv_benchUiHangulGlyphs=N`, 표의 `RT.Canvas.Upload` max)으로 잰다.
+// GPU 업로드 몫은 App 탐침(`-gv_benchUiHangulGlyphs=N`, 표의 `RT.Canvas.Upload` max)으로 측정한다.
 #include "pch.h"
 
 #include "Core/Time/MonotonicClock.h"
@@ -63,7 +63,7 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
     SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
     SW_ASSERT_TRUE( fontService.initialize( test::getEngineDefaultAssets()._fontCatalog.get() ) );
     const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
-    // 대체 면을 미리 연다 — 판이 재는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
+    // 대체 면을 미리 연다 — 판이 측정하는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
     uint32 warmGlyphIndex = 0;
     (void)fontService.findFaceForCodepoint( chain, GlyphBenchInternal::kHangulFirst, warmGlyphIndex );
 
@@ -78,7 +78,7 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
             const uint32         codepoint  = GlyphBenchInternal::kHangulFirst + ( codepointCursor * GlyphBenchInternal::kHangulStride ) % GlyphBenchInternal::kHangulCount;
             uint32               glyphIndex = 0;
             const sw::FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
-            if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u ) != nullptr )
+            if ( fontService.getGlyphCache().findOrAddGlyph( face, glyphIndex, round + 1u )._pGlyph != nullptr )
                 ++rasterizedCount;
         }
         const int64 micros = stopwatch.getElapsedNanoseconds() / 1000;

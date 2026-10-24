@@ -47,18 +47,21 @@ namespace sw
         _pDef     = pCatalog != nullptr ? pCatalog->findHorse( horseID ) : nullptr;
         if ( _pDef == nullptr )
             return false;
-        ResourceGaugeSettings health;
-        health._max        = _pDef->_health;
-        health._regenRate  = _pDef->_health * 0.02f;
-        health._regenDelay = 3.0f;
-        _health.initialize( health );
-        ResourceGaugeSettings stamina;
-        stamina._max              = _pDef->_stamina;
-        stamina._regenRate        = _pDef->_stamina * 0.1f;
-        stamina._regenDelay       = 1.0f;
-        stamina._drainPerSecond   = _pDef->_gallopDrain;
-        stamina._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4분의 1까지 쉬어야 다시 달릴 수 있다
-        _stamina.initialize( stamina );
+        ResourceGaugeSettings healthSettings;
+        healthSettings._max        = _pDef->_health;
+        healthSettings._regenRate  = _pDef->_health * 0.02f;
+        healthSettings._regenDelay = 3.0f;
+        ResourceGaugeSettings staminaSettings;
+        staminaSettings._max              = _pDef->_stamina;
+        staminaSettings._regenRate        = _pDef->_stamina * 0.1f;
+        staminaSettings._regenDelay       = 1.0f;
+        staminaSettings._drainPerSecond   = _pDef->_gallopDrain;
+        staminaSettings._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4분의 1까지 쉬어야 다시 달릴 수 있다
+        if ( _health.initialize( healthSettings ) == false || _stamina.initialize( staminaSettings ) == false )
+        {
+            _pDef = nullptr; // 게이지 설정이 거절된 말은 서지 않는다(update 가 _pDef 없음으로 멈춘다)
+            return false;
+        }
         _random.setSeed( seed );
         _eventBuffer.clear();
         _listAbility.clear();

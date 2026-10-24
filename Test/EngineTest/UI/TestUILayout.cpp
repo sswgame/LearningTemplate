@@ -17,7 +17,7 @@
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
-// UILayoutTest — 레이아웃 두 걷기(measure · arrange)와 패널. 결과는 사각형 덤프 글(UILayoutDump)로 견준다. 디바이스 없음(nogpu).
+// UILayoutTest — 레이아웃 두 걷기(measure · arrange)와 패널. 결과는 사각형 덤프 글(UILayoutDump)로 비교한다. 디바이스 없음(nogpu).
 
 namespace
 {
@@ -66,7 +66,7 @@ namespace
 
         /**
          * @brief 캔버스 루트를 채우는 세로 스크롤 패널(200×100) 안에 세로 상자 하나 · 높이 40 줄 다섯(내용 높이 200)을 짓습니다.
-         * @details 스크롤 패널을 루트가 아닌 자리에 둔다 — 루트면 뷰포트 걷기가 늘 다시 놓아 kArrange 뿌리 경로를 테스트하지 못한다.
+         * @details 스크롤 패널을 루트가 아닌 자리에 둔다 — 루트면 뷰포트 걷기가 늘 다시 놓아 kArrange 루트 경로를 테스트하지 못한다.
          */
         static sw::ScrollPanel* makeScrollList( sw::test::UILayoutFixture& fixture, sw::vector<sw::test::TestFixedWidget*>& outListItem )
         {

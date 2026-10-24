@@ -378,7 +378,8 @@ namespace sw
         matchSettings._rushAI                = _rushAI;
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
-        _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
+        if ( _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings ) == false )
+            return false;
         _selection.clear();
         _selection.setPlayer( 0 );
         _selection.setMaxCount( _maxSelectionCount );

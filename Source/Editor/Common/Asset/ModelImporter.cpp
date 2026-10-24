@@ -599,7 +599,7 @@ namespace sw::editor
         ModelImportResult result{};
         if ( readModelAsset( sourcePath, rule, result ) == false )
             return false;
-        // 장비 메시 — 몸의 스킨 · 체형 모프를 옮겨 쓴다(쿠킹 단계 전이, 외형 피팅이 같은 체형을 장비에 굽는다).
+        // 장비 메시 — 몸의 스킨 · 체형 모프를 옮겨 쓴다(쿠킹 단계 전이, 외형 피팅이 같은 체형을 장비에 베이크한다).
         if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath, rule, result._mesh ) == false )
             return false;
 
@@ -709,7 +709,7 @@ namespace sw::editor
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {
-            SW_LOG_WARNING( "모델 원본은 `%#` 아래에 있어야 임포트됩니다: %#", ModelImporterInternal::kRawModelFolder, relativePath );
+            SW_LOG_WARNING( "Model sources must be under `%#` to be imported: %#", ModelImporterInternal::kRawModelFolder, relativePath );
             return true;
         }
 
@@ -721,9 +721,9 @@ namespace sw::editor
         const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
-            SW_LOG_ERROR( "모델 임포트 실패: %#", problem.c_str() );
+            SW_LOG_ERROR( "Model import failed: %#", problem.c_str() );
         }
-        SW_LOG_INFO( "모델 일괄 임포트: %# 바뀜 -> %#개 임포트함", relativePath, summary._importedCount );
+        SW_LOG_INFO( "Model batch import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 

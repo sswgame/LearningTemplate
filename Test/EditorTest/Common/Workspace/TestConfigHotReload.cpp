@@ -30,7 +30,7 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     const string rootDir = test::makeTempPath( "sw_config_hot_reload" );
     const string path    = FileUtil::joinPath( rootDir, "HotEngineConfig.json" );
     FileUtil::ensureDirectoryExists( rootDir );
-    // `EngineConfig` 는 값이 파일에만 있다 — 구성 때 구운 바탕 파일 사본에서 한 칸만 바꿔 쓴다.
+    // `EngineConfig` 는 값이 파일에만 있다 — 구성 때 베이크한 바탕 파일 사본에서 한 칸만 바꿔 쓴다.
     JSONDocument document;
     SW_ASSERT_TRUE( document.parse( shipping_host::kEngineConfigJSON ) );
     document.getRoot().set( "_maxFrameDeltaTime", false ).setFloat( 0.25 );

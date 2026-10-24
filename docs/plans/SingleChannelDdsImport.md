@@ -18,4 +18,4 @@ RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는데 `App --import-tex
 | R1 | 형식 표 · R8 출력 · DX10 머리 · 규칙 표 · 테스트 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` | 끝 |
 | R2 | 빌드와 `EditorTest` 실행, 생성 문서 `docs/Config/TextureImportConfig.md` 갱신 확인 | 끝(2026-10-23 Debug 빌드 경고 0, `EditorTexturePipelineTest` 18/18, `CheckConfigReference` 통과) |
 
-R8 텍스처를 네 백엔드에서 실제로 샘플링하는 확인은 이 일의 단위가 아닙니다. 맞는 원본(`*_mask.*`)이 생기면 그 게임의 시나리오가 봅니다(GPU 확인 대기).
+R8 텍스처를 네 백엔드에서 실제로 샘플링하는 확인은 이 일의 단위가 아닙니다. 맞는 원본(`*_mask.*`)이 생기면 그 게임의 시나리오가 봅니다(확인 대기: 매니페스트 id `r8-texture-sampling`).

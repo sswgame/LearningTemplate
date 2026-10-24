@@ -43,7 +43,7 @@ namespace sw
 
         /**
          * @brief @p path 의 표를 읽습니다. 모르는 이름 · 범위 밖 값 · 빈 표면 오류를 남기고 false 이며 표가 빕니다.
-         * @details 엔진 팩의 표 경로는 엔진 기본 에셋 표(`EngineDefaultAssets::_uiResolutionPresets`)가 정본이다 — 코드에 경로를 두지 않는다.
+         * @details 엔진 팩의 표 경로는 엔진 기본 에셋 표(`EngineDefaultAssets::_uiResolutionPresets`)가 기준이다 — 코드에 경로를 두지 않는다.
          */
         [[nodiscard]] bool loadFromResource( string_view path );
     };

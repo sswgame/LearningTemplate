@@ -67,7 +67,7 @@ namespace sw
         uint32 _highlight{ 0 };
         /**
          * @brief 등장 비율(0 ~ 1)입니다. 1 이면 다 보인다. 1 보다 작은 인스턴스는 디더 변형(`kAppearanceDitherDefine`)으로 그려져 그 비율만큼의 픽셀만 남는다.
-         * @details 로드가 끝난 메시 · 텔레포트 · 사라지기가 이 값을 올리고 내린다(`MeshComponent::beginAppearance`). 디더 문턱은 화면 픽셀의 4x4 Bayer 행렬이라
+         * @details 로드가 끝난 메시 · 텔레포트 · 사라지기가 이 값을 올리고 내린다(`MeshComponent::beginAppearance`). 디더 임계값은 화면 픽셀의 4x4 Bayer 행렬이라
          *          깊이 프리패스 · 그림자 · 기본 패스가 같은 픽셀을 버린다(binding.hlsli `Appearance::clipDither`). 셰이더의 `appearance` 에 해당한다.
          */
         float32 _appearance{ 1.0f };

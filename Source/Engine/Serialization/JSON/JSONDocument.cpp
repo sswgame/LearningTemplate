@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Resource/ResourceIO.h"
@@ -342,6 +343,31 @@ namespace sw
         if ( bInvalidArrayIndex )
             return {};
         return JSONValue{ &( *pValue )[index] };
+    }
+
+    bool JSONValue::readFloats( size_t offset, float32* pOutValue, size_t count ) const
+    {
+        const size_t totalCount  = size();
+        const bool   bOutOfRange = isArray() == false || offset > totalCount || count > totalCount - offset;
+        if ( bOutOfRange )
+            return false;
+        for ( size_t index = 0; index < count; ++index )
+        {
+            const std::optional<float32> number = at( offset + index ).read<float32>();
+            if ( number.has_value() == false )
+                return false;
+            pOutValue[index] = *number;
+        }
+        return true;
+    }
+
+    bool JSONValue::readFloat3( size_t offset, float3& outValue ) const
+    {
+        float32 arrValue[3];
+        if ( readFloats( offset, arrValue, 3 ) == false )
+            return false;
+        outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
+        return true;
     }
 
     string JSONValue::dump( int32 indent ) const

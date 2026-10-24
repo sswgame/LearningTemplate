@@ -47,7 +47,7 @@ namespace sw
         static constexpr float32 kMinReadingSeconds = 2.0f;
         /** @brief 글자 하나의 읽기 시간(초)입니다. */
         static constexpr float32 kReadingSecondsPerCharacter = 0.06f;
-        // 자막 화면 문서는 엔진 기본 에셋 표가 정본이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
+        // 자막 화면 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
 
         explicit UISubtitleService( UISystem& uiSystem );
         ~UISubtitleService();
@@ -62,7 +62,7 @@ namespace sw
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
         /**
          * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
-         * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 정본은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDesc::_subtitleSpeakerKey`)다.
+         * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDesc::_subtitleSpeakerKey`)다.
          */
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
         /** @brief 줄을 모두 지우고 화면을 닫습니다(`UISystem::shutdown` 과 장면 전환 때 부릅니다). */

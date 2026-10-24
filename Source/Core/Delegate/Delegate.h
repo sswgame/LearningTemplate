@@ -217,7 +217,7 @@ namespace sw
             }
             else
             {
-                Lambda* pHeapLambda                                       = sw_new Lambda( lambdaFunc );
+                Lambda* pHeapLambda                                       = make_unique<Lambda>( lambdaFunc ).release(); // 소유는 델리게이트의 포인터 칸으로 간다. 해제는 관리 함수(`sw_delete`)
                 *reinterpret_cast<Lambda**>( &newDelegate._inlineBuffer ) = pHeapLambda;
                 newDelegate._pInstance                                    = pHeapLambda;
             }
@@ -280,7 +280,7 @@ namespace sw
                     }
                     else
                     {
-                        Lambda* pNewHeap                = sw_new Lambda( **static_cast<Lambda* const*>( pSrc ) );
+                        Lambda* pNewHeap                = make_unique<Lambda>( **static_cast<Lambda* const*>( pSrc ) ).release();
                         *static_cast<Lambda**>( pDest ) = pNewHeap;
                         return pNewHeap;
                     }

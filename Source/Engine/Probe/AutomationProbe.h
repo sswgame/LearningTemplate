@@ -18,7 +18,7 @@ namespace sw
     /**
      * @struct AutomationProbeValue
      * @brief 질의 탐침이 내는 값 하나입니다. 수(`near` · `atLeast` 등으로 비교)나 글(`is` 로 비교 — AI 상태 · 일정 활동 이름)입니다.
-     * @details 수 값도 `is` 로 비교할 수 있다(실행기가 끝의 0 을 정리한 글로 바꿔 견준다). 글 값은 수 비교를 할 수 없다.
+     * @details 수 값도 `is` 로 비교할 수 있다(실행기가 끝의 0 을 정리한 글로 바꿔 비교한다). 글 값은 수 비교를 할 수 없다.
      */
     struct AutomationProbeValue
     {

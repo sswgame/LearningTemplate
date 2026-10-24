@@ -87,12 +87,18 @@ namespace sw
 
     uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다(깨진 값을 건너뛰어 순위가 밀리지 않게).
+        // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다 — 깨진 값은 오류를 남기고 이 파일을 읽지 않는다(깨진 값을 건너뛰어 순위가 밀리지 않게).
         std::optional<int32> winScore;
         if ( root.readOptionalAttribute( "winScore", winScore ) == false )
+        {
             SW_LOG_ERROR( "%#: <%# winScore> is not a number", sourceName, root.getName() );
-        else if ( winScore.has_value() )
-            setWinScore( *winScore );
+            return 0;
+        }
+        if ( winScore.has_value() && setWinScore( *winScore ) == false )
+        {
+            SW_LOG_ERROR( "%#: <%# winScore=\"%#\"> needs 1 or more", sourceName, root.getName(), *winScore );
+            return 0;
+        }
         const string_view points = root.getAttributeText( "placementPoints" );
         if ( points.empty() == false )
         {
@@ -107,10 +113,12 @@ namespace sw
                 else
                     bPoints = false;
             } );
-            if ( bPoints )
-                _seriesSettings._listPlacementPoint = listPlacementPoint;
-            else
+            if ( bPoints == false )
+            {
                 SW_LOG_ERROR( "%#: <%# placementPoints=\"%#\"> needs integers of 0 or more", sourceName, root.getName(), points );
+                return 0;
+            }
+            _seriesSettings._listPlacementPoint = listPlacementPoint;
         }
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )

@@ -2,7 +2,7 @@
 
 CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드 품질 검사는 여기서 처리한다.
 
-폴더는 하는 일로 가른다: `common/`(공용) · `setup/`(환경) · `generate/`(생성) · `lint/`(검사 · 수정) · `dev/`(실험) · `qa/`(App 비교) · `asset/`(에셋 병합). 진입점은 `py -3 -m Scripts <명령>` 이다.
+폴더는 하는 일로 가른다: `common/`(공용) · `setup/`(환경) · `generate/`(생성) · `lint/`(검사 · 수정) · `dev/`(워크트리 · 빌드 · 테스트 · 문서 · 에셋 만들기 같은 개발 도구 명령) · `qa/`(App 비교) · `asset/`(에셋 병합). 진입점은 `py -3 -m Scripts <명령>` 이다.
 파일 목록과 한 줄 설명은 `py -3 -m Scripts --list [폴더]` 가 docstring 에서 만든다. 상세는 영역별 문서로 나눴다(`Scripts/docs/`). 절 하나만 읽으려면 `py -3 -m Scripts doc Scripts/docs/<파일> --section <제목>`.
 
 | 문서 | 내용 |

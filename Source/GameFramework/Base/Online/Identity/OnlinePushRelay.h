@@ -1,7 +1,7 @@
 /**
  * @file OnlinePushRelay.h
  * @brief 다른 서버에 접속한 계정에게 가는 클라이언트 알림의 중계 봉투와, 받는 서버가 그 봉투를 자기 빌드의 알림으로 바꾸는 등록 테이블입니다.
- * @details docs/plans/ServerBusFormat.md 3.5 입니다.
+ * @details docs/09_Decisions.md 5-9 서버 버스 push 중계 입니다.
  *          - 알림 번호(메서드 테이블의 열거자 순서)와 알림 본문(B)은 빌드마다 다를 수 있으므로 봉투는 그것을 싣지 않습니다. 알림 열거형 FQN, 열거자 이름, 본문 타입 FQN,
  *            본문의 A(본문 타입의 `kBusVersion` 머리)를 싣고, 받는 서버가 자기 빌드의 번호와 B 로 다시 씁니다. 그래서 클라이언트는 언제나 접속한 서버 빌드의 B 를 받습니다.
  *          - 중계할 수 있는 알림은 키트 서버 `.cpp` 가 이름 공간 범위의 `OnlinePushRelayEntry` 로 등록합니다(메서드 테이블, 알림 열거자, 키트 메시지 목록, 본문 타입).
@@ -31,7 +31,7 @@ namespace sw
     struct SW_GF_API OnlinePushRelay
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = 128 )
         string _pushEnum{}; ///< 알림 열거형의 FQN(`typeFqn<XxxPushName>`)
         PROPERTY( MaxCount = 64 )

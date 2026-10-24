@@ -292,8 +292,8 @@ namespace sw
         // 디렉터리마다 로그를 찍으면 묻히므로 한 줄로 모으고, 흔한 원인을 함께 적는다.
         if ( failedCount > 0 )
         {
-            SW_LOG_WARNING( "%# 개 하위 디렉터리를 감시하지 못했습니다 — 그 아래 변경은 감지되지 않습니다. "
-                            "inotify 한도일 수 있습니다(/proc/sys/fs/inotify/max_user_watches).",
+            SW_LOG_WARNING( "Failed to watch %# subdirectories - changes below them will not be detected. "
+                            "This may be the inotify limit (/proc/sys/fs/inotify/max_user_watches).",
                             failedCount );
         }
         return true;

@@ -48,9 +48,9 @@ namespace sw
         struct HeadlessSubsystemInternal
         {
             /**
-             * @brief 씬 · 프리팹 · GUID 레지스트리 · VAT · 내비메시를 @p cookedDir 에 굽습니다. 하나라도 실패하면 false 입니다.
+             * @brief 씬 · 프리팹 · GUID 레지스트리 · VAT · 내비메시를 @p cookedDir 에 베이크합니다. 하나라도 실패하면 false 입니다.
              * @details 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고, 그것은 엔진 안에만 있다. 형식과 규칙을 쓰는 곳이 엔진 하나다.
-             *          @p bCrowdSettingsLoaded 가 거짓이면 코드 기본 프레임율로 굽지 않고 VAT 굽기를 실패로 센다(군중 표는 쿠킹 세션 전에 읽는다 — 작업 키의 설정이다).
+             *          @p bCrowdSettingsLoaded 가 거짓이면 코드 기본 프레임율로 베이크하지 않고 VAT 베이크를 실패로 센다(군중 표는 쿠킹 세션 전에 읽는다 — 작업 키의 설정이다).
              */
             [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const AnimationCrowdSettings& crowdSettings, bool bCrowdSettingsLoaded )
             {
@@ -103,9 +103,9 @@ namespace sw
             }
 
             /**
-             * @brief 팩을 굽습니다. 셰이더 판정을 켰으면(배포 빌드) 먼저 그 백엔드를 보고, 낡았으면 다시 쿠킹한 뒤 다시 본다 — 그래도 맞지 않으면 굽지 않는다.
+             * @brief 팩을 베이크합니다. 셰이더 판정을 켰으면(배포 빌드) 먼저 그 백엔드를 보고, 낡았으면 다시 쿠킹한 뒤 다시 본다 — 그래도 맞지 않으면 베이크하지 않는다.
              * @details 빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
-             *          `-game=` 을 주면 그 게임 팩만 굽는다(배포 패키지).
+             *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
              */
             [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore )
             {
@@ -127,7 +127,7 @@ namespace sw
                         return false;
                     }
 #else
-                    // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않는다 — 고칠 수 없으니 굽지 않는다.
+                    // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않는다 — 고칠 수 없으니 베이크하지 않는다.
                     SW_LOG_ERROR( "Cooked shaders are stale and this build has no shader cooker - cook them with App --cook-shaders" );
                     return false;
 #endif
@@ -163,11 +163,12 @@ namespace sw
                 uint32 packCount = 0;
                 if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
                     return false;
-                // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 적용할 수 없는 빌드다.
+                // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 쓰지 않는 빌드이며, 기록을 남기지 않는 대신
+                // `patching="none"` 을 명시한 기록을 남긴다(기록이 없는 폴더와 구별되고, 그 폴더에 패치 목록이 있으면 시작 마운트가 오류로 멈춘다).
                 string build;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
                 if ( build.empty() )
-                    return true;
+                    return PackPatchBuilder::writeNoPatchingRecord( FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
                 return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
             }
 
@@ -256,7 +257,7 @@ namespace sw
             return SubsystemInitResult::SkipDependents;
         }
 
-        // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
+        // 리타깃 베이크(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
         string bakeRetarget;
         if ( commandLine.getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
         {
@@ -295,7 +296,7 @@ namespace sw
             return SubsystemInitResult::SkipDependents;
         }
 
-        // 패치 만들기(`-make-patch`) — 구운 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다.
+        // 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다.
         bool bMakePatch = false;
         if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) && bMakePatch )
         {
@@ -326,7 +327,7 @@ namespace sw
             bool              bSucceeded = true;
             if ( bCookScenes || bCookAll )
                 bSucceeded = HeadlessSubsystemInternal::cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );
-            // 씬 단계가 실패하면 팩을 굽지 않는다 — 빠진 산출물로 구운 팩은 배포본에서야 실패가 드러난다.
+            // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
             if ( bSucceeded && ( bCookPacks || bCookAll ) )
                 bSucceeded = HeadlessSubsystemInternal::cookPackStage( commandLine, _bDedicatedServer, cookedDir, cookStore );
             _state._bFailed = bSucceeded == false;

@@ -686,7 +686,7 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
 /**
  * @brief [VfxComponentTest] 입자 그리기는 메시 투명 배치와 한 순서로 섞인다 — 주 시점은 주 배치 순서 안에, 추가 뷰는 그 뷰의 배치 순서 안에 자리를 받는다
  * @details 메시 투명 둘(z 30 · 10, 메시가 달라 배치 둘)과 효과 둘(z 20 · 5, 방출기 둘씩). 주 시점(원점)에서는 30 → 20 → 10 → 5 순이고,
- *          z 40 의 추가 뷰에서는 5 → 10 → 20 → 30 순이다(배치는 첫 인스턴스의 키, 방출기는 위치의 키로 견준다).
+ *          z 40 의 추가 뷰에서는 5 → 10 → 20 → 30 순이다(배치는 첫 인스턴스의 키, 방출기는 위치의 키로 비교한다).
  */
 SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
 {

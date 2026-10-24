@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import argparse
 import platform
-import re
 import statistics
 import sys
 from dataclasses import dataclass, field
@@ -27,10 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable, runApp  # noqa: E402
-
-#: `[Bench] <이름>  min N us  p50 N us  p90 N us  p99 N us  max N us  (N samples)`(`test::logBenchSamples`)
-_kBenchRowRe = re.compile(r"\[Bench\] (.+?)\s+min (-?\d+) us\s+p50 (-?\d+) us\s+p90 (-?\d+) us\s+p99 (-?\d+) us\s+max (-?\d+) us")
+from common.AppRun import addAppRunArguments, kBackendSwitch, kBenchRowRe, parseProfileTable, runApp  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -84,8 +80,10 @@ kListCase: tuple[PerfCase, ...] = (
     PerfCase("hangulGlyphs", "app", "switch", "한글 장문 첫 프레임 — 새 음절 400 개(없음이 A). 최악 프레임(max) 4 ms 가 기준",
              ("-lang=ko", "-gv_benchMeshes=100", "-gv_benchProbeFrame=180"), (), ("-gv_benchUiHangulGlyphs=400",),
              ("GT.Frame", "GT.UI.Paint", "RT.Canvas.Upload", "RT.Frame")),
-    PerfCase("deferredBloom", "app", "binary", "디퍼드 블룸의 밝은 부분을 반해상도 패스로(ee6fff232) — 큐브 2000. 전 GPU.PostBloom 대 후 GPU.BloomDownsample + GPU.PostBloom",
+    PerfCase("deferredBloom", "app", "binary", "디퍼드 블룸의 밝은 부분을 반해상도 패스로(ee6fff232) — 큐브 2000. 전 GPU.PostBloom 대 후 GPU.BloomDownsample + GPU.PostBloom. 전 바이너리는 ee6fff232^ 의 Release 빌드",
              ("-gv_deferred=1", "-gv_benchMeshes=2000"), listScope=("GPU.Frame", "GPU.PostBloom", "GPU.BloomDownsample")),
+    PerfCase("shadowPassShare", "app", "single", "그림자 패스의 몫(기준값, GraphicsMeasurements M3) — 큐브 4000. GPU.Shadow 가 GPU.Frame 의 한 자리 퍼센트면 캐스케이드별 컬링은 이득이 없다",
+             ("-gv_deferred=1", "-gv_benchMeshes=4000"), listScope=("GPU.Frame", "GPU.Shadow")),
     PerfCase("hangulGlyphsCPU", "test", "single", "한글 새 글리프 400 개의 CPU 래스터화 · SDF(기준값, 시스템 한글 글꼴이 없으면 건너뜀)",
              ("--test_filter=GlyphBenchTest.*",)),
 ) + tuple(
@@ -123,7 +121,7 @@ def findTestExecutableInternal(appPath: Path) -> Path:
 def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> None:
     if case.kind == "test":
         for line in listLine:
-            match = _kBenchRowRe.search(line)
+            match = kBenchRowRe.search(line)
             if match is None:
                 continue
             label = match.group(1).strip()

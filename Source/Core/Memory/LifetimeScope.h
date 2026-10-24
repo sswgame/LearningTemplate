@@ -151,7 +151,8 @@ namespace sw
             SW_ASSERT( bAttached );
             if ( bAttached == false )
                 return nullptr;
-            pValue = sw_new T();
+            // 락 없이 읽는 슬롯(`_pValue`)에 올리는 자리에서만 소유를 놓는다. 값은 `destroyValue` · 소멸자가 `sw_delete` 로 푼다.
+            pValue = make_unique<T>().release();
             _pValue.store( pValue, std::memory_order_release );
             return pValue;
         }

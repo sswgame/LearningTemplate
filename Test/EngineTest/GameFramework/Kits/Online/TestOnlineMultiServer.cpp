@@ -310,7 +310,7 @@ SW_TEST_CASE( OnlineMultiServerTest, AdministrativeRevokeOnOneServerReachesTheOt
 }
 
 /**
- * @brief [OnlineMultiServerTest] 필드를 더한 새 빌드가 보낸 해지 알림도 옛 빌드의 계정 서버가 읽고 연결을 닫는다(배포 중 혼합 빌드, docs/plans/ServerBusFormat.md 3.3)
+ * @brief [OnlineMultiServerTest] 필드를 더한 새 빌드가 보낸 해지 알림도 옛 빌드의 계정 서버가 읽고 연결을 닫는다(배포 중 혼합 빌드, docs/09_Decisions.md 5-9 서버 버스 읽기 정책)
  * @details 보안 알림이 혼합 빌드에서 버려지면 끊긴 세션이 세션 다시 읽기 주기까지 살아 있다(이 고정물은 다시 읽기를 껐다).
  */
 SW_TEST_CASE( OnlineMultiServerTest, ARevokeNoticeFromANewerBuildStillClosesTheConnectionOnTheOtherServer )

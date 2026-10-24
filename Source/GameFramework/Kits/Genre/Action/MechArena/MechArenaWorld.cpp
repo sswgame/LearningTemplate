@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -20,6 +21,33 @@ namespace sw
         uint32 mixMechArenaSeed( uint32 seed, int32 pilot, int32 slot )
         {
             return GameHash::mix32( seed ^ GameHash::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
+        }
+
+        /** @brief 기체 정의에서 기반 `Vitality` 설정을 만듭니다(범위는 `Vitality::initialize` 가 본다). */
+        VitalitySettings makeMechVitality( const MechDef& mech )
+        {
+            VitalitySettings vitality;
+            vitality._maxHealth          = mech._maxHealth;
+            vitality._poiseMax           = mech._downMax;
+            vitality._poiseRegenDelay    = mech._downRecoveryDelay;
+            vitality._poiseRegenRate     = mech._downRecovery;
+            vitality._poiseBreakDuration = mech._downTime;
+            vitality._bDownedEnabled     = SW_FALSE;
+            return vitality;
+        }
+
+        /** @brief 기체 정의에서 부스트(과열형 `ResourceGauge`) 설정을 만듭니다(범위는 `ResourceGauge::initialize` 가 본다). */
+        ResourceGaugeSettings makeMechBoost( const MechDef& mech )
+        {
+            ResourceGaugeSettings boost;
+            boost._max                  = mech._boostMax;
+            boost._regenRate            = mech._boostRegen;
+            boost._regenDelay           = mech._boostRegenDelay;
+            boost._drainPerSecond       = mech._hoverPerSecond;
+            boost._overheatCooldown     = mech._overheatPenalty;
+            boost._overheatRecoverLevel = mech._overheatRecover;
+            boost._bOverheatMode        = SW_TRUE;
+            return boost;
         }
     } // namespace
 
@@ -51,16 +79,19 @@ namespace sw
     {
     }
 
-    void MechArenaWorld::initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
+    bool MechArenaWorld::initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
                                      const MoveCatalog* pMoveCatalog )
     {
-        _settings                = settings;
-        _settings._fixedStep     = MathUtil::max( 1.0e-3f, _settings._fixedStep );
-        _settings._arenaHalfSize = MathUtil::max( 1.0f, _settings._arenaHalfSize );
-        _settings._ceiling       = MathUtil::max( 1.0f, _settings._ceiling );
-        _pMechCatalog            = pMechCatalog;
-        _pWeaponCatalog          = pWeaponCatalog;
-        _pMoveCatalog            = pMoveCatalog;
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "MechArenaWorld: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        _settings       = settings;
+        _pMechCatalog   = pMechCatalog;
+        _pWeaponCatalog = pWeaponCatalog;
+        _pMoveCatalog   = pMoveCatalog;
         _listPilot.clear();
         _listProjectile.clear();
         _listTeamName.clear();
@@ -70,6 +101,7 @@ namespace sw
         _tick         = 0;
         _bStarted     = SW_FALSE;
         _bEndReported = SW_FALSE;
+        return true;
     }
 
     int32 MechArenaWorld::addTeam( const hashed_string& name )
@@ -91,6 +123,11 @@ namespace sw
             const MechDef* pMech = _pMechCatalog->findMech( mechID );
             if ( pMech == nullptr || pMech->_listMode.empty() )
                 return -1;
+            // 기체를 바꿀 때마다 체력과 부스트를 다시 짜므로(equipMech) 덱의 모든 기체가 지금 범위 안이어야 한다(거절 사유는 각 initialize 가 남긴다).
+            Vitality      probeVitality;
+            ResourceGauge probeBoost;
+            if ( probeVitality.initialize( makeMechVitality( *pMech ) ) == false || probeBoost.initialize( makeMechBoost( *pMech ) ) == false )
+                return -1;
             deckCost += pMech->_cost;
             pilot._listDeckMech.push_back( pMech );
         }
@@ -110,7 +147,11 @@ namespace sw
         pilot._position      = config._spawnPosition;
         _listPilot.push_back( pilot );
         const int32 index = static_cast<int32>( _listPilot.size() ) - 1;
-        equipMech( _listPilot.back(), index );
+        if ( equipMech( _listPilot.back(), index ) == false )
+        {
+            _listPilot.pop_back();
+            return -1;
+        }
         return index;
     }
 
@@ -276,29 +317,16 @@ namespace sw
         }
     }
 
-    void MechArenaWorld::equipMech( MechPilot& pilot, int32 pilotIndex )
+    bool MechArenaWorld::equipMech( MechPilot& pilot, int32 pilotIndex )
     {
         const MechDef* pMech = pilot.getMech();
         if ( pMech == nullptr )
-            return;
-        VitalitySettings vitality;
-        vitality._maxHealth          = pMech->_maxHealth;
-        vitality._poiseMax           = pMech->_downMax;
-        vitality._poiseRegenDelay    = pMech->_downRecoveryDelay;
-        vitality._poiseRegenRate     = pMech->_downRecovery;
-        vitality._poiseBreakDuration = pMech->_downTime;
-        vitality._bDownedEnabled     = SW_FALSE;
-        pilot._vitality.initialize( vitality );
+            return true;
+        if ( pilot._vitality.initialize( makeMechVitality( *pMech ) ) == false )
+            return false;
 
-        ResourceGaugeSettings boost;
-        boost._max                  = pMech->_boostMax;
-        boost._regenRate            = pMech->_boostRegen;
-        boost._regenDelay           = pMech->_boostRegenDelay;
-        boost._drainPerSecond       = pMech->_hoverPerSecond;
-        boost._overheatCooldown     = pMech->_overheatPenalty;
-        boost._overheatRecoverLevel = pMech->_overheatRecover;
-        boost._bOverheatMode        = SW_TRUE;
-        pilot._boost.initialize( boost );
+        if ( pilot._boost.initialize( makeMechBoost( *pMech ) ) == false )
+            return false;
         pilot._bWasOverheated = SW_FALSE;
 
         LockOnSettings lockOn;
@@ -330,12 +358,18 @@ namespace sw
             pilot._listSkillRemaining[index].clear();
             pilot._listSkillSpent[index] = SW_FALSE;
         }
+        return true;
     }
 
     void MechArenaWorld::spawnPilot( int32 pilotIndex, bool bRespawn )
     {
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
-        equipMech( pilot, pilotIndex );
+        if ( equipMech( pilot, pilotIndex ) == false )
+        {
+            // 덱의 모든 기체를 `addPilot` 이 범위 안인지 봤으므로 여기에 닿지 않는다. 닿으면 그 조종사는 출격시키지 않는다(옛 기체로 대신 뜨지 않는다).
+            pilot._state = MechPilotState::Retired;
+            return;
+        }
         pilot._position = pilot._spawnPosition;
         pilot._velocity = float3{};
         pilot._forward  = float3{ 0.0f, 0.0f, 1.0f };

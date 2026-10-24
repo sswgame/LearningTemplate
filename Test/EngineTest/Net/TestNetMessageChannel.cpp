@@ -8,7 +8,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 넷 채널의 스키마 해시 핸드셰이크(계획 NetChannelSchemaHashHandshake). 배치가 다른 두 빌드는 필드가 하나 다른 두 타입으로 흉내 낸다.
+// 넷 채널의 스키마 해시 핸드셰이크(docs/09_Decisions.md 5-9 넷 채널 스키마 해시). 배치가 다른 두 빌드는 필드가 하나 다른 두 타입으로 흉내 낸다.
 
 using namespace sw;
 

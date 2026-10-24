@@ -615,7 +615,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
 SW_TEST_CASE( NetClientServerTest, EmulationConditionsComeFromGlobalVariables )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "Test global variables (-gv_netEmu*) are not registered in Shipping" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // Test global variables (-gv_netEmu*) are not registered in Shipping
 #endif
     GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
     GlobalVariableInfo*    pLatency  = variables.findVariable( "gv_netEmuLatencyMs" );

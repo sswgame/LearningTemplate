@@ -44,6 +44,7 @@ namespace sw
     RetargetProfile::RetargetProfile()
         : _listChain{}
         , _listBonePair{}
+        , _listTargetPose{}
         , _sourceSkeletonPath{}
         , _targetSkeletonPath{}
         , _sourceRoot{}
@@ -60,6 +61,7 @@ namespace sw
     {
         _listChain.clear();
         _listBonePair.clear();
+        _listTargetPose.clear();
         _sourceSkeletonPath.clear();
         _targetSkeletonPath.clear();
         _sourceRoot          = hashed_string{};
@@ -143,6 +145,16 @@ namespace sw
                 Internal::writePair( boneMap.appendChild( "item" ), pair._source, pair._target );
             }
         }
+        if ( _listTargetPose.empty() == false )
+        {
+            const XMLNode targetPose = root.appendChild( "target_pose" );
+            for ( const RetargetPoseBone& poseBone : _listTargetPose )
+            {
+                const XMLNode item = targetPose.appendChild( "item" );
+                item.appendAttribute( "bone", string_view( poseBone._bone.c_str() ) );
+                item.appendAttribute( "rotation", string_view{ XMLReadUtil::makeFloatListText( &poseBone._rotationDegrees._x, 3 ) } );
+            }
+        }
         return document.saveToString();
     }
 
@@ -168,6 +180,7 @@ namespace sw
         const XMLNode    arrPair[2]  = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
         const RigXMLList chains      = reader.readArray( "chains", true );
         const RigXMLList boneMap     = reader.readArray( "bone_map", false );
+        const RigXMLList targetPose  = reader.readArray( "target_pose", false );
         bool             bMapSame    = false;
         float32          heightRatio = 0.0f;
         bOk                          = reader.readBool( "map_same_names", bMapSame, false ) && reader.readFloat( "height_ratio", heightRatio, false ) && bOk;
@@ -190,6 +203,24 @@ namespace sw
             if ( ( entryReader.finish() && bOk ) == false )
                 return false;
             _listBonePair.push_back( pair );
+        }
+
+        for ( size_t index = 0; targetPose.isValid() && index < targetPose.size(); ++index )
+        {
+            RigXMLReader     entryReader( targetPose.at( index ), sourceLabel );
+            RetargetPoseBone poseBone{};
+            bOk = entryReader.readName( "bone", poseBone._bone, true ) && entryReader.readFloat3( "rotation", poseBone._rotationDegrees, true );
+            if ( ( entryReader.finish() && bOk ) == false )
+                return false;
+            for ( const RetargetPoseBone& existing : _listTargetPose )
+            {
+                if ( existing._bone == poseBone._bone )
+                {
+                    SW_LOG_ERROR( "Retarget profile '%#': duplicate target pose bone '%#'", sourceLabel, poseBone._bone.c_str() );
+                    return false;
+                }
+            }
+            _listTargetPose.push_back( poseBone );
         }
 
         hashed_string* arrSource[2] = { &_sourceRoot, &_sourcePelvis };

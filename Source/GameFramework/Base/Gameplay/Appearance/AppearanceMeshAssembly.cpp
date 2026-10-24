@@ -24,14 +24,14 @@ namespace sw
     {
         struct AppearanceMeshAssemblyInternal
         {
-            /** @brief 구운 메시 캐시의 항목 하나입니다. 원본을 그리는 부품(nullptr)은 표시로 남긴다 — 약한 참조로는 "사라짐" 과 구분되지 않는다. */
+            /** @brief 베이크한 메시 캐시의 항목 하나입니다. 원본을 그리는 부품(nullptr)은 표시로 남긴다 — 약한 참조로는 "사라짐" 과 구분되지 않는다. */
             struct BakedEntry
             {
                 vector<weak_ptr<Mesh>> _listMesh{};
                 vector<uint8>          _listBaked{};
             };
 
-            /** @brief 구운 메시 캐시의 표입니다. */
+            /** @brief 베이크한 메시 캐시의 표입니다. */
             struct BakedTable
             {
                 mutex                             _mutex;
@@ -41,7 +41,7 @@ namespace sw
             /** @brief 표는 엔진 수명 범위가 소유한다(처음 찾을 때 만들어진다). */
             inline static ScopeOwned<BakedTable> s_bakedTable{};
 
-            /** @brief 항목의 구운 메시가 모두 살아 있으면 true 입니다. */
+            /** @brief 항목의 베이크한 메시가 모두 살아 있으면 true 입니다. */
             static bool isAlive( const BakedEntry& entry )
             {
                 for ( size_t index = 0; index < entry._listMesh.size(); ++index )
@@ -145,7 +145,7 @@ namespace sw
 namespace sw
 {
     bool AppearanceMeshAssembly::assemble( const ResolvedAppearance& resolved, vector_reference<const AppearanceMeshPart> listPart, const FitTables* pTables,
-                                           const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport )
+                                           const CharacterBoneArray& bindBones, vector<shared_ptr<Mesh>>& outListMesh, string& outReport, FitResult* pOutFitResult )
     {
         using Internal = AppearanceMeshAssemblyInternal;
         outListMesh.clear();
@@ -234,6 +234,8 @@ namespace sw
                 return false;
             }
         }
+        if ( pOutFitResult != nullptr )
+            *pOutFitResult = std::move( result );
         return true;
     }
 } // namespace sw

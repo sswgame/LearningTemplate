@@ -50,6 +50,10 @@ namespace sw
 {
     SW_LOG_CALLER( "UISystem" );
 
+    /// 한 프레임에 새 글리프를 만드는 데 쓸 시간(마이크로초, 0=제한 없음)입니다. 글리프 하나가 2 ms 안팎이라(한글, FreeType sdf) 4 ms 면 두 개 안팎이 프레임마다 나옵니다.
+    /// 예산이 차면 나머지 글리프는 다음 프레임에 그립니다(`GlyphCache::findOrAddGlyph`, 글리프 래스터화 히치 G2).
+    SW_GLOBAL_VARIABLE( int32, gv_uiGlyphRasterBudgetMicros, 4000, "프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다" );
+
     namespace
     {
         struct UISystemInternal
@@ -115,6 +119,9 @@ namespace sw
         , _canvasRevision{ 1 }
         , _listPaintedTree{}
         , _bLastCanvasReusable{ SW_FALSE }
+        , _arrLayerHideCount{}
+        , _hiddenLayers{ UILayerMask::None }
+        , _paintedHiddenLayers{ UILayerMask::None }
         , _activeScreen{ kInvalidUIScreenHandle }
         , _markerScreen{ kInvalidUIScreenHandle }
         , _accessibleFocusScreen{ kInvalidUIScreenHandle }
@@ -230,7 +237,7 @@ namespace sw
         if ( themes.loadFromResource( PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) ) == false )
             return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
-        // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 정본이다.
+        // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 기준이다.
         // 엔진 기본 메뉴(옵션 · 일시정지) — 팩 설정이 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
         setEngineDocuments( UIEngineDocuments::makeFromDefaultAssets( defaultAssets ) );
         setOptionsMenuDocument( PackEngineSettings::resolve( packSettings._uiOptionsMenu, defaultAssets._uiOptionsMenu ) );
@@ -368,6 +375,8 @@ namespace sw
         screen->_handle    = _nextScreenHandle++;
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
+        // 숨김 요청이 걸린 레이어에 열리는 화면도 숨긴다(포토 모드 중에 뜬 알림이 그려지지 않게).
+        screen->_bHiddenByLayer = UILayerUtil::contains( _hiddenLayers, screen->_desc._layer ) ? SW_TRUE : SW_FALSE;
         if ( screen->_animationPlayer.findAnimation( hashed_string( UIAnimation::kOpenName ) ) != nullptr )
             (void)screen->_animationPlayer.play( hashed_string( UIAnimation::kOpenName ) );
         // 같은 레이어의 끝(그 레이어에서 맨 위)에 끼운다.
@@ -958,7 +967,8 @@ namespace sw
         context._pActionGlyphs = &_actionGlyphs;
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
         {
-            context._pGlyphCache     = &_pFontService->getGlyphCache();
+            context._pGlyphCache = &_pFontService->getGlyphCache();
+            context._pGlyphCache->setRasterBudgetNanoseconds( static_cast<int64>( gv_uiGlyphRasterBudgetMicros ) * constant::kNanosecondsPerMicrosecond );
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
         return context;
@@ -1238,6 +1248,44 @@ namespace sw
         return _pUserSettings;
     }
 
+    void UISystem::addLayerHideRequest( UILayerMask layers )
+    {
+        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
+        {
+            if ( UILayerUtil::contains( layers, static_cast<UILayer>( layerIndex ) ) )
+                ++_arrLayerHideCount[layerIndex];
+        }
+        refreshHiddenLayers();
+    }
+
+    void UISystem::removeLayerHideRequest( UILayerMask layers )
+    {
+        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
+        {
+            if ( UILayerUtil::contains( layers, static_cast<UILayer>( layerIndex ) ) == false )
+                continue;
+            SW_ASSERT( _arrLayerHideCount[layerIndex] > 0 );
+            if ( _arrLayerHideCount[layerIndex] > 0 )
+                --_arrLayerHideCount[layerIndex];
+        }
+        refreshHiddenLayers();
+    }
+
+    void UISystem::refreshHiddenLayers()
+    {
+        UILayerMask hidden = UILayerMask::None;
+        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
+        {
+            if ( _arrLayerHideCount[layerIndex] > 0 )
+                hidden = EnumUtil::setFlag( hidden, UILayerUtil::toMask( static_cast<UILayer>( layerIndex ) ) );
+        }
+        _hiddenLayers = hidden;
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            screen->_bHiddenByLayer = UILayerUtil::contains( hidden, screen->_desc._layer ) ? SW_TRUE : SW_FALSE;
+        }
+    }
+
     void UISystem::paintScreens()
     {
         SW_PROFILE_SCOPE( "GT.UI.Paint" );
@@ -1246,7 +1294,7 @@ namespace sw
         // 이어 붙이기와 같은 내용 비교(사각형 수 × 144 바이트씩)를 건너뛴다. 움직이는 화면 마커만 있는 프레임이 이 길이다(앵커만 바뀐다).
         const bool bFocusRingMode = _input.getInputMode() == UIInputMode::Navigation && _input.getFocusManager().getFocusedTree() != nullptr;
         bool       bUnchanged     = _bLastCanvasReusable == SW_TRUE && bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE &&
-                          _listPaintedTree.size() == _listScreen.size() && _canvas._targetSize == _viewport._physicalSize;
+                          _paintedHiddenLayers == _hiddenLayers && _listPaintedTree.size() == _listScreen.size() && _canvas._targetSize == _viewport._physicalSize;
         for ( size_t index = 0; bUnchanged && index < _listScreen.size(); ++index )
         {
             const WidgetTree& tree = _listScreen[index]->getTree();
@@ -1265,6 +1313,7 @@ namespace sw
             _listPaintedTree.push_back( &screen->getTree() );
         }
         _bLastCanvasReusable = ( bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        _paintedHiddenLayers = _hiddenLayers;
         _canvasScratch.clear();
         _canvasScratch._targetSize = _viewport._physicalSize;
         CanvasPainter painter( _canvasScratch, context._uiScale );
@@ -1273,6 +1322,8 @@ namespace sw
         {
             if ( _bOnScreenSuppressed == SW_TRUE )
                 break; // 그리기 목록을 비운다. 아래 같은 내용 확인이 바뀐 것으로 보고 번호를 올린다
+            if ( screen->isHiddenByLayer() )
+                continue; // 레이어 숨김 요청(`addLayerHideRequest`)이 가린 화면 — 포커스 테두리도 그리지 않는다
             WidgetTree& tree = screen->getTree();
             paintedCount += UIPaintPass::paint( tree, context, painter, _canvasScratch );
             // 포커스 테두리는 패드나 키보드로 다룰 때만 그린다(언리얼 CommonUI, 콘솔 게임과 같다). 그 화면 위, 위 화면 아래에 놓는다.

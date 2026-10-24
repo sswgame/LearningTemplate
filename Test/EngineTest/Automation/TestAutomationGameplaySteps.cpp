@@ -116,7 +116,7 @@ SW_TEST_CASE( AutomationGameplayStepsTest, AtTimingTakesFramesSecondsOrRelativeO
 }
 
 /**
- * @brief [AutomationGameplayStepsTest] 질의 탐침은 target · key 를 받고 글 값은 is 로 견준다 — 실패 줄은 어느 단계 · 어느 대상 · 무엇을 기대했고 무엇을 봤는지 적는다
+ * @brief [AutomationGameplayStepsTest] 질의 탐침은 target · key 를 받고 글 값은 is 로 비교한다 — 실패 줄은 어느 단계 · 어느 대상 · 무엇을 기대했고 무엇을 봤는지 적는다
  */
 SW_TEST_CASE( AutomationGameplayStepsTest, QueryProbeComparesTextAndReportsTheTarget )
 {

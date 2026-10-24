@@ -411,7 +411,7 @@ namespace sw
         const bool                    bForward = from <= to;
         float32                       previousTime{ from };
         UIAnimatedValue               previousValue = evaluateTrack( track, from );
-        // 한 구간(@p time 까지)에서 문턱을 지난 사건을 둡니다. 키 사이 곡선은 한 방향이라 두 끝 값만 보면 되고, 지난 시각은 두 끝 사이를 선형으로 나눠 정렬에 쓴다.
+        // 한 구간(@p time 까지)에서 임계값을 지난 사건을 둡니다. 키 사이 곡선은 한 방향이라 두 끝 값만 보면 되고, 지난 시각은 두 끝 사이를 선형으로 나눠 정렬에 쓴다.
         const auto checkSegment = [&]( float32 time )
         {
             const UIAnimatedValue value = evaluateTrack( track, time );

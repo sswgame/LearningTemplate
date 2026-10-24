@@ -100,7 +100,7 @@ namespace sw
                                                         SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &EditorModuleHost::isEditorImageUsable, this ) );
                 if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
-                    SW_LOG_ERROR( "Editor Module 로드에 실패했습니다." );
+                    SW_LOG_ERROR( "Failed to load the Editor Module." );
                     return false;
                 }
 

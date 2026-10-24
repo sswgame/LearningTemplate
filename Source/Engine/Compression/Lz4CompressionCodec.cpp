@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 
 #include <lz4.h>
 #include <lz4hc.h>
@@ -52,7 +53,7 @@ namespace sw
             return false;
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
-            SW_LOG_ERROR( "LZ4 입력이 한계를 넘었습니다 (%# bytes > %# ).",
+            SW_LOG_ERROR( "LZ4 input exceeds the limit (%# bytes > %# ).",
                           static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
             return false;
         }
@@ -68,11 +69,10 @@ namespace sw
         if ( compressionLevel > 0 )
         {
             // HC 는 상태(~256 KB)를 힙에 둔다. LZ4_compress_HC 는 그것을 CRT malloc 으로 잡으므로 상태를 sw 할당자로 잡아 넘긴다.
-            void* pState = Memory::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
-            if ( pState == nullptr )
+            const MemoryBlock state = MemoryBlock::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
+            if ( state.isValid() == false )
                 return false;
-            written = LZ4_compress_HC_extStateHC( pState, pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
-            Memory::free( pState );
+            written = LZ4_compress_HC_extStateHC( state.get(), pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
         }
         else
             written = LZ4_compress_default( pSrcBytes, pDstBytes, srcBytes, dstBytes );
@@ -99,7 +99,7 @@ namespace sw
         // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
-            SW_LOG_ERROR( "LZ4 해제 입력이 한계를 넘었습니다 (%# bytes > %#).",
+            SW_LOG_ERROR( "LZ4 decompression input exceeds the limit (%# bytes > %#).",
                           static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
             return false;
         }
@@ -113,7 +113,7 @@ namespace sw
                                                     static_cast<int32>( srcSize ), dstBytes );
         if ( written < 0 )
         {
-            SW_LOG_ERROR( "LZ4 해제 실패 (src %# → dst %# bytes).",
+            SW_LOG_ERROR( "LZ4 decompression failed (src %# -> dst %# bytes).",
                           static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
             return false;
         }

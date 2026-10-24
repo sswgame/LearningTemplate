@@ -1243,7 +1243,7 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetGrowKeepsTailBitsClear )
 /**
  * @brief [DataStructureTest] DynamicBitset 의 블록 단위 연산이 비트 하나씩 계산한 모델과 같은 답을 낸다(무작위 입력)
  * @details 블록 루프(&= · |= · ^= · ~ · << · >> · == · < · to_string · parse)는 블록 경계와 마지막 블록의 남는 비트에서 틀리기 쉽다.
- *          크기 0 · 1 · 63 · 64 · 65 · 128 · 129 · 1000 과 시프트 양 0 · 1 · 63 · 64 · 65 · n-1 · n · n+5 를 비트 하나씩 계산한 값과 견준다.
+ *          크기 0 · 1 · 63 · 64 · 65 · 128 · 129 · 1000 과 시프트 양 0 · 1 · 63 · 64 · 65 · n-1 · n · n+5 를 비트 하나씩 계산한 값과 비교한다.
  */
 SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
 {

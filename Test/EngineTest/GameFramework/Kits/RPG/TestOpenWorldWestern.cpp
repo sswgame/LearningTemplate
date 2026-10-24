@@ -432,9 +432,9 @@ SW_TEST_CASE( OpenWorldWesternTest, PlayerCoresDrainWithColdUnlessDressedAndDead
     WesternCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternSurvival naked;
-    naked.initialize( &catalog );
+    SW_EXPECT_TRUE( naked.initialize( &catalog ) );
     WesternSurvival dressed;
-    dressed.initialize( &catalog );
+    SW_EXPECT_TRUE( dressed.initialize( &catalog ) );
     dressed.setClothing( vector<hashed_string>{ hashed_string( "shirt" ), hashed_string( "sheepskin_coat" ) } );
     SW_EXPECT_NEAR_EQUAL( 17.0f, dressed.computeWarmth(), 1.0e-4f );
 
@@ -456,7 +456,7 @@ SW_TEST_CASE( OpenWorldWesternTest, PlayerCoresDrainWithColdUnlessDressedAndDead
 
     // 데드아이: 1 단계는 느려지기만, 2 단계는 셋까지 표시. 바닥나면 꺼진다.
     WesternSurvival shooter;
-    shooter.initialize( &catalog );
+    SW_EXPECT_TRUE( shooter.initialize( &catalog ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, shooter.getTimeScale(), 1.0e-5f );
     SW_EXPECT_TRUE( shooter.activateDeadEye() );
     SW_EXPECT_FALSE( shooter.activateDeadEye() );
@@ -615,7 +615,7 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
 
     // 생존 — 옷 · 추위로 준 코어, 2 단계 데드아이로 하나를 표시했다.
     WesternSurvival survival;
-    survival.initialize( &catalog );
+    SW_EXPECT_TRUE( survival.initialize( &catalog ) );
     survival.setClothing( vector<hashed_string>{ hashed_string( "shirt" ) } );
     survival.update( 0.0f, 2.0f, -5.0f );
     survival.setDeadEyeLevel( 2 );
@@ -625,7 +625,7 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
 
     const vector<uint8> survivalBytes = captureWesternBytes( survival );
     WesternSurvival     restoredSurvival;
-    restoredSurvival.initialize( &catalog );
+    SW_EXPECT_TRUE( restoredSurvival.initialize( &catalog ) );
     Archive survivalReader( survivalBytes.data(), survivalBytes.size() );
     SW_ASSERT_TRUE( restoredSurvival.readState( survivalReader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, survivalReader.getRemainingBytes() );
@@ -638,7 +638,7 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
     SW_EXPECT_TRUE( captureWesternBytes( survival ) == captureWesternBytes( restoredSurvival ) );
 
     WesternSurvival truncatedSurvival;
-    truncatedSurvival.initialize( &catalog );
+    SW_EXPECT_TRUE( truncatedSurvival.initialize( &catalog ) );
     Archive survivalCut( survivalBytes.data(), survivalBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedSurvival.readState( survivalCut ) );
     SW_EXPECT_FALSE( truncatedSurvival.isDeadEyeActive() );

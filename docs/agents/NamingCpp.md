@@ -1,3 +1,7 @@
+> 질문: C++ 이름(대소문자, 접두어, 컨테이너, 클래스 접미사, 함수 어휘)을 어떻게 짓는가?
+> 독자: C++ 이름을 짓거나 바꾸는 사람.
+> 결론: 타입은 `PascalCase`, 함수와 지역은 `camelCase`, 멤버는 `_camelCase`, 상수는 `kPascalCase`, 전역은 `gv_camelCase` 다. 컨테이너는 접두어 + 단수(`_listItem`)이고, 클래스 접미사와 함수 어휘는 아래 절을 따른다.
+
 ## Naming
 
 ### C++
@@ -118,6 +122,11 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   game settings someone changes at run time (project-wide engine settings tables such as `PhysicsSettings` · `UIScaleSettings` keep
   the Unreal `U*Settings` name, and so do match rules a game picks per match); `Params` — call arguments bundled into one value.
   A sub-struct of a catalog file is a `Def` (`BrZoneDef` inside `BrCatalog`).
+  `Context` — the environment a caller hands to a callee for one call, pass, frame or operation (`RenderGraphPassContext`,
+  `UIPaintContext`, `SerializeContext`); a graphics API object keeps the API's own term (`RHICommandContext`). A record the owner
+  keeps for each thing it manages is a `Record` (`LiveReloadManager::ModuleRecord`), not a `Context`.
+  `Unit` is a game-play unit (`RTSUnit`, `SRPGUnit`), an animated skeletal mesh in `AnimationSystem`, or a measurement unit
+  (`ReflectUnit`); the three live in separate namespaces and each header says which one it means.
 - **`RT` means render thread** (profile tags `RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
 
 - **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts

@@ -145,7 +145,7 @@ namespace sw::editor
         static EditorAssetType findKind( string_view path );
         /**
          * @brief 엔진 에셋 종류(`AssetTypeDef::_name`)가 속한 에디터 종류를 반환합니다. 규칙 표에 오르지 않은 종류는 `Unknown` 입니다.
-         * @details 접미사가 아니라 엔진의 종류 정의로 가리키는 규칙(씬 · 프리팹 포함)만 찾는다. 이름으로 견주는 것은 정의가 DLL 마다 사본이라 주소로 견줄 수 없어서다.
+         * @details 접미사가 아니라 엔진의 종류 정의로 가리키는 규칙(씬 · 프리팹 포함)만 찾는다. 이름으로 비교하는 것은 정의가 DLL 마다 사본이라 주소로 비교할 수 없어서다.
          */
         static EditorAssetType findKindOfEngineType( string_view typeName );
         /**

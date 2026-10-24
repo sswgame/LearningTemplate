@@ -391,7 +391,7 @@ class PlacementNewRule( ConventionRule ):
 
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
-        # 매크로 정의(`sw_placement_new` · `sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
+        # 매크로 정의(`sw_placement_new` 자신)는 맨 new 를 쓸 수밖에 없다.
         if ctx.trimmed.startswith("#") or "new" not in ctx.codeWithoutStrings:
             return violations
         for newMatch in _kRawPlacementNewRe.finditer(ctx.codeWithoutStrings):
@@ -422,7 +422,7 @@ class RawNewRule( ConventionRule ):
 
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
         violations: list[ConventionViolation] = []
-        # 매크로 정의(`sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
+        # 매크로 정의 줄은 맨 new 를 쓸 수밖에 없다.
         if ctx.trimmed.startswith("#") or "new" not in ctx.codeWithoutStrings:
             return violations
         for newMatch in _kRawNewRe.finditer(ctx.codeWithoutStrings):
@@ -435,8 +435,8 @@ class RawNewRule( ConventionRule ):
                     line_number=ctx.lineNum,
                     rule_category="Style/RawNew",
                     message=(
-                        "맨 `new` 대신 sw 할당자를 쓰세요 — 객체는 `sw_new T( ... )` · `make_unique<T>`, 배열은 `sw_new_array<T>( n )` · "
-                        "`make_unique<T[]>( n )` · `vector<T>`(Core/Memory/Memory.h). CRT new 는 메모리 태그 · 누수 검사에 보이지 않습니다."
+                        "맨 `new` 대신 소유 형식을 쓰세요 — 객체는 `make_unique<T>( ... )`, 배열은 `makeFixedCountArray<T, N>()` · "
+                        "`make_unique<T[]>( n )` · `vector<T>`, 거친 바이트 블록은 `MemoryBlock`(Core/Memory). CRT new 는 메모리 태그 · 누수 검사에 보이지 않습니다."
                     ),
                     snippet=ctx.trimmed,
                 )

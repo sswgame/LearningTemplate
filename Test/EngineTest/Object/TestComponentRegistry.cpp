@@ -161,7 +161,7 @@ using namespace sw;
 
 /**
  * @brief [ComponentRegistryTest] 붙이기 · 떼기 · 오브젝트 파괴를 섞은 400 걸음 내내 레지스트리가 씬 전수 훑기와 같다
- * @details 지연 파괴는 플러시까지 살아 있는 오브젝트라(훑기는 파괴 예약을 건너뛴다) 플러시 뒤에 견준다.
+ * @details 지연 파괴는 플러시까지 살아 있는 오브젝트라(훑기는 파괴 예약을 건너뛴다) 플러시 뒤에 비교한다.
  */
 SW_TEST_CASE( ComponentRegistryTest, MatchesFullSceneScanThroughChurn )
 {
@@ -335,7 +335,7 @@ SW_TEST_CASE( ComponentRegistryTest, EnvironmentFindersSeeTheSameAsTheSceneScan 
 /**
  * @brief [TypedComponentBucketTest] 붙이기 · 떼기 · 지연 파괴 · 비우기 · 이번 프레임 생성을 섞은 600 걸음 내내 타입별 버킷 순회가 오브젝트 전수 훑기와 같은 집합이다
  * @details 기반(`Component`, `SceneComponent`), 중간(`LightComponent`), 말단(`PointLightComponent`) 타입을 모두 묻는다. 삭제 대기 컴포넌트와 삭제 대기 오브젝트는
- *          두 순회가 모두 건너뛰어야 하므로 지연 파괴를 플러시하지 않은 걸음에서도 견준다. 순서는 약속이 아니라 정렬한 집합으로 비교한다.
+ *          두 순회가 모두 건너뛰어야 하므로 지연 파괴를 플러시하지 않은 걸음에서도 비교한다. 순서는 약속이 아니라 정렬한 집합으로 비교한다.
  */
 SW_TEST_CASE( TypedComponentBucketTest, MatchesObjectScanThroughChurn )
 {

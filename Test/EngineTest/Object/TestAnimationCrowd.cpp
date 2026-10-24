@@ -30,7 +30,7 @@
 
 using namespace sw;
 
-// AnimationCrowdTest — 군중 포즈 공유(묶음 · 변형 칸 · 혼자 · VAT · 지우기)와 VAT 굽기.
+// AnimationCrowdTest — 군중 포즈 공유(묶음 · 변형 칸 · 혼자 · VAT · 지우기)와 VAT 베이크.
 
 namespace
 {
@@ -356,7 +356,7 @@ SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
 }
 
 /**
- * @brief [AnimationCrowdTest] VAT 굽기 — 프레임 시각의 표 위치는 그 시각 포즈로 CPU 스키닝한 위치와 같고, 프레임 사이는 선형 보간, 반복 클립은 끝에서 처음으로 감긴다
+ * @brief [AnimationCrowdTest] VAT 베이크 — 프레임 시각의 표 위치는 그 시각 포즈로 CPU 스키닝한 위치와 같고, 프레임 사이는 선형 보간, 반복 클립은 끝에서 처음으로 감긴다
  */
 SW_TEST_CASE( AnimationCrowdTest, VertexAnimationBakeMatchesSkinning )
 {
@@ -509,7 +509,7 @@ SW_TEST_CASE( AnimationCrowdTest, ReaderTasksAndLeaderFollowersShareBuckets )
 }
 
 /**
- * @brief [AnimationCrowdTest] VAT 쿠킹 — 목록이 고른 (메시, 클립)의 쿠킹본은 런타임 굽기와 바이트까지 같고, 쿠킹본이 있으면 런타임은 굽지 않고 읽는다
+ * @brief [AnimationCrowdTest] VAT 쿠킹 — 목록이 고른 (메시, 클립)의 쿠킹본은 런타임 베이크와 바이트까지 같고, 쿠킹본이 있으면 런타임은 베이크하지 않고 읽는다
  */
 SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
 {
@@ -553,7 +553,7 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     SW_ASSERT_TRUE( reread.readFromBytes( cookedBytes.data(), cookedBytes.size(), "cooked" ) );
     SW_EXPECT_EQUAL( runtime._frameCount, reread._frameCount );
 
-    // 쿠킹본이 있으면 런타임은 읽는다(굽지 않는다).
+    // 쿠킹본이 있으면 런타임은 읽는다(베이크하지 않는다).
     AnimationCrowd crowd;
     crowd.setSettings( AnimationCrowdSettings{} );
     SW_ASSERT_NOT_NULL( crowd.findVertexAnimationMesh( mesh, *skeleton, clip, false, list._meshPath ).get() );

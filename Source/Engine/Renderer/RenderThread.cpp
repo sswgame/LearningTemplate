@@ -114,7 +114,7 @@ namespace sw
 
     /**
      * @brief `-gv_screenshotQuit` 입니다. `-gv_screenshot` · `-gv_screenshotEditor` 로 요청한 사진을 모두 찍으면 앱이 스스로 끝납니다(종료 코드 0, 파일을 쓰지 못했으면 14).
-     * @details 기본은 끄기입니다. `-gv_profileFrames` 와 함께 쓰는 실행(사진을 찍으며 프로파일을 잰다)이 사진 뒤에 일찍 끝나지 않게 하려는 것이고,
+     * @details 기본은 끄기입니다. `-gv_profileFrames` 와 함께 쓰는 실행(사진을 찍으며 프로파일을 측정한다)이 사진 뒤에 일찍 끝나지 않게 하려는 것이고,
      *          표준 입력의 quit 으로 끝내던 호출자도 그대로 돕니다. 사진 인자를 주지 않으면 끝낼 근거가 없어 아무 일도 하지 않습니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_screenshotQuit, false, "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)" );

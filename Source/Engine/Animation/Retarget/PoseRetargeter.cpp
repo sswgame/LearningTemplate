@@ -92,6 +92,9 @@ namespace sw
             _targetReference = *pTargetReference;
         else
             _targetReference.setToReference( targetSkeleton );
+        // 리타깃 포즈는 넘겨받은 덮어쓰기(본 비율) 위에 얹는다 — 회전 차이의 기준이 되는 대상 레퍼런스가 이 포즈다.
+        if ( RetargetPoseUtil::applyTargetPose( profile, targetSkeleton, _targetReference ) == false )
+            return false;
         _translationMode = profile.getTranslationMode();
 
         bool bOk = PoseRetargeterInternal::findBone( sourceSkeleton, profile.getSourceRoot(), "source", _sourceRoot ) &&
@@ -208,6 +211,31 @@ namespace sw
         return true;
     }
 
+    bool RetargetPoseUtil::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )
+    {
+        if ( inoutPose.getBoneCount() != targetSkeleton.getBoneCount() )
+        {
+            SW_LOG_ERROR( "Retarget: the target pose has %# bones but the target skeleton has %#", inoutPose.getBoneCount(), targetSkeleton.getBoneCount() );
+            return false;
+        }
+        // 한 본이라도 없으면 아무것도 바꾸지 않는다(일부만 얹은 포즈로 몰래 이어 가지 않는다).
+        vector<uint32> listBone;
+        for ( const RetargetPoseBone& poseBone : profile.getTargetPose() )
+        {
+            uint32 bone = 0;
+            if ( PoseRetargeterInternal::findBone( targetSkeleton, poseBone._bone, "target", bone ) == false )
+                return false;
+            listBone.push_back( bone );
+        }
+        for ( size_t index = 0; index < listBone.size(); ++index )
+        {
+            BoneTransform local = inoutPose.getBoneTransform( listBone[index] );
+            local._rotation     = ( quaternion::makeFromYawPitchRoll( profile.getTargetPose()[index]._rotationDegrees * MathUtil::kDegreeToRadian ) * local._rotation ).normalize();
+            inoutPose.setBoneTransform( listBone[index], local );
+        }
+        return true;
+    }
+
     void PoseRetargeter::retarget( const Pose& sourcePose, Pose& outTargetPose )
     {
         outTargetPose = _targetReference;
@@ -223,7 +251,7 @@ namespace sw
             _targetBuffer.setModelRotation( pair._target, delta * pair._targetReferenceRotation );
         }
 
-        // 2) 뿌리와 골반 이동: 레퍼런스에서 움직인 만큼을 높이 비로 옮긴다.
+        // 2) 루트와 골반 이동: 레퍼런스에서 움직인 만큼을 높이 비로 옮긴다.
         if ( _translationMode != RetargetTranslationMode::None )
         {
             const float32 scale = ( _translationMode == RetargetTranslationMode::ScaleByPelvisHeight ) ? _heightRatio : 1.0f;
@@ -327,7 +355,7 @@ namespace sw
         {
             outClip.addCurve( curve );
         }
-        // 루트 모션 트랙은 원본 뿌리를 가리켰으면 대상 뿌리로 옮긴다.
+        // 루트 모션 트랙은 원본 루트를 가리켰으면 대상 루트로 옮긴다.
         const int32 sourceRootMotion        = sourceClip.getRootMotionTrack();
         const bool  bRootMotionOnSourceRoot = 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&
                                              listTrackToBone[static_cast<size_t>( sourceRootMotion )] == static_cast<int32>( retargeter.getSourceRootBone() );

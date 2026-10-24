@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -42,26 +43,30 @@ namespace sw
         , _bReviving{ SW_FALSE }
         , _bDamageImmune{ SW_FALSE }
     {
-        initialize( _settings );
+        // 기본 설정은 선언된 범위 안이다(테스트 `VitalityDefaultSettingsAreInRange` 가 지킨다) — 검사하지 않고 바로 쓴다.
+        applySettings( VitalitySettings{} );
     }
 
-    Vitality::Vitality( const VitalitySettings& settings )
-        : Vitality()
+    bool Vitality::initialize( const VitalitySettings& settings )
     {
-        initialize( settings );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "Vitality: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        applySettings( settings );
+        return true;
     }
 
-    void Vitality::initialize( const VitalitySettings& settings )
+    void Vitality::reset()
     {
-        _settings                     = settings;
-        _settings._maxHealth          = MathUtil::max( 1.0f, _settings._maxHealth );
-        _settings._maxShield          = MathUtil::max( 0.0f, _settings._maxShield );
-        _settings._downedHealth       = MathUtil::max( 0.0f, _settings._downedHealth );
-        _settings._reviveTime         = MathUtil::max( 0.0f, _settings._reviveTime );
-        _settings._reviveHealthRatio  = MathUtil::clamp( _settings._reviveHealthRatio, 0.01f, 1.0f );
-        _settings._poiseMax           = MathUtil::max( 0.0f, _settings._poiseMax );
-        _settings._poiseBreakDuration = MathUtil::max( 0.0f, _settings._poiseBreakDuration );
-        _settings._maxDownCount       = MathUtil::max( 0, _settings._maxDownCount );
+        applySettings( VitalitySettings( _settings ) );
+    }
+
+    void Vitality::applySettings( const VitalitySettings& settings )
+    {
+        _settings = settings;
         _eventBuffer.clear();
         _downCount = 0;
         respawn();
@@ -228,9 +233,9 @@ namespace sw
 
         _sinceDamage += deltaTime;
         const float32 shieldRegenTime = computeRegenTime( _sinceDamage, _settings._shieldRegenDelay, deltaTime );
-        _shield                       = MathUtil::min( _settings._maxShield, _shield + MathUtil::max( 0.0f, _settings._shieldRegenRate ) * shieldRegenTime );
+        _shield                       = MathUtil::min( _settings._maxShield, _shield + _settings._shieldRegenRate * shieldRegenTime );
         const float32 healthRegenTime = computeRegenTime( _sinceDamage, _settings._healthRegenDelay, deltaTime );
-        _health                       = MathUtil::min( _settings._maxHealth, _health + MathUtil::max( 0.0f, _settings._healthRegenRate ) * healthRegenTime );
+        _health                       = MathUtil::min( _settings._maxHealth, _health + _settings._healthRegenRate * healthRegenTime );
 
         if ( _settings._poiseMax <= 0.0f )
             return;
@@ -246,7 +251,7 @@ namespace sw
         }
         _sincePoiseDamage += deltaTime;
         const float32 poiseRegenTime = computeRegenTime( _sincePoiseDamage, _settings._poiseRegenDelay, deltaTime );
-        _poise                       = MathUtil::min( _settings._poiseMax, _poise + MathUtil::max( 0.0f, _settings._poiseRegenRate ) * poiseRegenTime );
+        _poise                       = MathUtil::min( _settings._poiseMax, _poise + _settings._poiseRegenRate * poiseRegenTime );
     }
 
     bool Vitality::startRevive( int32 reviverID, float32 speedScale )

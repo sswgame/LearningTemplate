@@ -103,7 +103,7 @@ namespace
     /** @brief 가로 8 × 세로 3 — 가운데 줄이 풀, 불 위는 얼음, 불 아래는 나무입니다. */
     void fillMeadow( AdventureElementGrid& grid, const int2& wind )
     {
-        grid.initialize( 8, 3, AdventureElementSettings{} );
+        SW_EXPECT_TRUE( grid.initialize( 8, 3, AdventureElementSettings{} ) );
         for ( int32 column = 0; column < 8; ++column )
         {
             grid.setMaterial( int2{ column, 1 }, AdventureMaterial::Grass );
@@ -311,6 +311,54 @@ SW_TEST_CASE( ActionAdventureTest, DefaultFlagNamesCarryTheirKind )
 }
 
 /**
+ * @brief [ActionAdventureTest] 몸 설정은 범위 밖 값을 맞추지 않고 거절하며, 거절하면 상태가 그대로이다
+ */
+SW_TEST_CASE( ActionAdventureTest, VitalsRefuseOutOfRangeSettingsInsteadOfClamping )
+{
+    AdventureVitals         vitals;
+    AdventureVitalsSettings valid;
+    valid._startHeartCount = 5;
+    SW_ASSERT_TRUE( vitals.initialize( valid ) );
+
+    AdventureVitalsSettings noHearts;
+    noHearts._startHeartCount = 0;
+    SW_EXPECT_FALSE( vitals.initialize( noHearts ) );
+    AdventureVitalsSettings startAboveMax;
+    startAboveMax._startHeartCount = 30;
+    SW_EXPECT_FALSE( vitals.initialize( startAboveMax ) );
+    AdventureVitalsSettings recoverAboveStamina;
+    recoverAboveStamina._staminaRecoverLevel = 150.0f;
+    SW_EXPECT_FALSE( vitals.initialize( recoverAboveStamina ) );
+    AdventureVitalsSettings noPieces;
+    noPieces._piecesPerHeart = 0;
+    SW_EXPECT_FALSE( vitals.initialize( noPieces ) );
+
+    SW_EXPECT_EQUAL( 5, vitals.getHeartCount() );
+    SW_EXPECT_EQUAL( 20, vitals.getMaxHealthQuarters() );
+}
+
+/**
+ * @brief [ActionAdventureTest] 화학 격자 설정은 범위 밖 값과 1 보다 작은 크기를 맞추지 않고 거절한다
+ */
+SW_TEST_CASE( ActionAdventureTest, ElementGridRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    AdventureElementGrid grid;
+    SW_ASSERT_TRUE( grid.initialize( 4, 3, AdventureElementSettings{} ) );
+
+    AdventureElementSettings zeroBurn;
+    zeroBurn._grassBurnSteps = 0;
+    SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroBurn ) );
+    AdventureElementSettings tooLongCharge;
+    tooLongCharge._chargeSteps = 256;
+    SW_EXPECT_FALSE( grid.initialize( 4, 3, tooLongCharge ) );
+    AdventureElementSettings zeroStep;
+    zeroStep._stepTime = 0.0f;
+    SW_EXPECT_FALSE( grid.initialize( 4, 3, zeroStep ) );
+    SW_EXPECT_FALSE( grid.initialize( 0, 3, AdventureElementSettings{} ) );
+    SW_EXPECT_FALSE( grid.initialize( 4, -1, AdventureElementSettings{} ) );
+}
+
+/**
  * @brief [ActionAdventureTest] 몸 — 하트 조각 넷이 그릇 하나(가득 참), 두 배 마법, 오르다 바닥나면 떨어지고 탈진 동안은 스태미나를 못 쓰며, 헤엄치다 바닥나면 빠져 피해를 입는다
  */
 SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
@@ -318,7 +366,7 @@ SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
     AdventureVitalsSettings settings;
     settings._staminaVesselMax = 40.0f;
     AdventureVitals vitals;
-    vitals.initialize( settings );
+    SW_EXPECT_TRUE( vitals.initialize( settings ) );
     SW_EXPECT_EQUAL( 12, vitals.getMaxHealthQuarters() );
     SW_EXPECT_FALSE( vitals.applyDamage( 5 ) );
     SW_EXPECT_EQUAL( 7, vitals.computeHealthQuarters() );
@@ -361,7 +409,7 @@ SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
     SW_EXPECT_TRUE( vitals.trySpendStamina( 5.0f ) );
 
     // 헤엄 8/초 — 바닥나면 빠져 하트 하나를 잃고 스태미나는 다시 찬다.
-    vitals.initialize( settings );
+    SW_EXPECT_TRUE( vitals.initialize( settings ) );
     AdventureStaminaOutcome outcome = AdventureStaminaOutcome::Continue;
     int32                   tick    = 0;
     for ( ; tick < 100 && outcome == AdventureStaminaOutcome::Continue; ++tick )
@@ -492,7 +540,7 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
 SW_TEST_CASE( ActionAdventureTest, ElectricityConductsAndIceBlocks )
 {
     AdventureElementGrid grid;
-    grid.initialize( 6, 2, AdventureElementSettings{} );
+    SW_EXPECT_TRUE( grid.initialize( 6, 2, AdventureElementSettings{} ) );
     grid.setMaterial( int2{ 0, 0 }, AdventureMaterial::Metal );
     grid.setMaterial( int2{ 1, 0 }, AdventureMaterial::Metal );
     grid.setMaterial( int2{ 2, 0 }, AdventureMaterial::Water );
@@ -638,7 +686,7 @@ SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
     SW_EXPECT_TRUE( worldMap.canWarpTo( "s1" ) );
 
     AdventureVitals vitals;
-    vitals.initialize( AdventureVitalsSettings{} );
+    SW_EXPECT_TRUE( vitals.initialize( AdventureVitalsSettings{} ) );
     SW_EXPECT_TRUE( worldMap.completeShrine( "s1" ) );
     SW_EXPECT_FALSE( worldMap.completeShrine( "s1" ) ); // 같은 사당은 한 번
     SW_EXPECT_TRUE( worldMap.completeShrine( "s2" ) );
@@ -707,7 +755,7 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     }
     SW_EXPECT_TRUE( captureAdventureBytes( grid ) == captureAdventureBytes( restoredGrid ) );
     AdventureElementGrid smallerGrid;
-    smallerGrid.initialize( 4, 3, AdventureElementSettings{} );
+    SW_EXPECT_TRUE( smallerGrid.initialize( 4, 3, AdventureElementSettings{} ) );
     Archive smallerReader( gridBytes.data(), gridBytes.size() );
     SW_EXPECT_FALSE( smallerGrid.readState( smallerReader ) );
     AdventureElementGrid truncatedGrid;
@@ -750,7 +798,7 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
 
     // 몸 — 하트 넷 + 조각 하나, 두 배 마법을 조금 썼고, 오르다 지구력이 줄었다.
     AdventureVitals vitals;
-    vitals.initialize( AdventureVitalsSettings{} );
+    SW_EXPECT_TRUE( vitals.initialize( AdventureVitalsSettings{} ) );
     for ( int32 piece = 0; piece < 5; ++piece )
     {
         (void)vitals.addHeartPiece();
@@ -764,7 +812,7 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     }
     const vector<uint8> vitalsBytes = captureAdventureBytes( vitals );
     AdventureVitals     restoredVitals;
-    restoredVitals.initialize( AdventureVitalsSettings{} );
+    SW_EXPECT_TRUE( restoredVitals.initialize( AdventureVitalsSettings{} ) );
     SW_ASSERT_TRUE( restoreAdventureBytes( vitalsBytes, restoredVitals ) );
     SW_EXPECT_EQUAL( 4, restoredVitals.getHeartCount() );
     SW_EXPECT_EQUAL( 1, restoredVitals.getHeartPieceCount() );
@@ -779,7 +827,7 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     }
     SW_EXPECT_TRUE( captureAdventureBytes( vitals ) == captureAdventureBytes( restoredVitals ) );
     AdventureVitals truncatedVitals;
-    truncatedVitals.initialize( AdventureVitalsSettings{} );
+    SW_EXPECT_TRUE( truncatedVitals.initialize( AdventureVitalsSettings{} ) );
     SW_EXPECT_FALSE( restoreTruncatedAdventureBytes( vitalsBytes, truncatedVitals ) );
     SW_EXPECT_EQUAL( 3, truncatedVitals.getHeartCount() );
 }

@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 링의 칸입니다. 칸마다 도장으로 덮이는 중인지 가린다(칸 단위 seqlock). */
+        /** @brief 링의 칸입니다. 칸마다 스탬프로 덮이는 중인지 가린다(칸 단위 seqlock). */
         struct NetFlowRing
         {
             static constexpr uint32 kCapacity = NetFlowLog::kCapacity;

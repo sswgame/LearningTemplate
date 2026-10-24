@@ -4,7 +4,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameArenaAllocator" );
     FrameArenaAllocator::FrameArenaAllocator( size_t defaultCapacity )
         : _defaultCapacity{ defaultCapacity }
         , _totalAllocatedBytes{ 0 }
@@ -16,25 +15,14 @@ namespace sw
         allocateNewChunk( _defaultCapacity );
     }
 
-    FrameArenaAllocator::~FrameArenaAllocator()
-    {
-        for ( Chunk& chunk : _listChunk )
-        {
-            if ( chunk._pBuffer != nullptr )
-            {
-                Memory::free( chunk._pBuffer );
-                chunk._pBuffer = nullptr;
-            }
-        }
-        _listChunk.clear();
-    }
+    FrameArenaAllocator::~FrameArenaAllocator() = default; // 청크 버퍼는 `Chunk::_buffer` 가 푼다
 
     void* FrameArenaAllocator::allocateSlow( size_t size, size_t alignment )
     {
         while ( _currentChunkIndex < _listChunk.size() )
         {
             Chunk&          chunk   = _listChunk[_currentChunkIndex];
-            const uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
+            const uintptr_t current = reinterpret_cast<uintptr_t>( chunk.getBuffer() + chunk._offset );
 
             const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
             const size_t    padding = static_cast<size_t>( aligned - current );
@@ -99,15 +87,15 @@ namespace sw
 
     bool FrameArenaAllocator::allocateNewChunk( size_t minSize )
     {
-        size_t chunkSize = MathUtil::max( _defaultCapacity, minSize );
-        uint8* pBuf      = static_cast<uint8*>( Memory::allocate( chunkSize ) );
-        if ( pBuf == nullptr )
+        size_t      chunkSize = MathUtil::max( _defaultCapacity, minSize );
+        MemoryBlock buffer    = MemoryBlock::allocate( chunkSize );
+        if ( buffer.isValid() == false )
         {
-            SW_LOG_ERROR( "Failed to allocate a %# byte frame arena chunk.", static_cast<uint64>( chunkSize ) );
+            SW_LOW_LEVEL_REPORT( Error, "FrameArenaAllocator", "Failed to allocate a %zu byte frame arena chunk.", chunkSize );
             return false;
         }
 
-        _listChunk.push_back( Chunk{ pBuf, chunkSize, 0 } );
+        _listChunk.push_back( Chunk{ std::move( buffer ), chunkSize, 0 } );
         _totalAllocatedBytes += chunkSize;
         return true;
     }

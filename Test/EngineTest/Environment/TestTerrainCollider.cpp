@@ -27,7 +27,7 @@ namespace
 
         static float32 wave( float32 x, float32 z ) { return 3.0f * MathUtil::sin( x * 0.3f ) * MathUtil::cos( z * 0.2f ); }
 
-        /** @brief 칸 1 m · 해상도 @p resolution 의 높이장을 @p surface 로 굽습니다. */
+        /** @brief 칸 1 m · 해상도 @p resolution 의 높이장을 @p surface 로 베이크합니다. */
         template <typename TSurface>
         static HeightfieldData makeData( uint32 resolution, const TSurface& surface )
         {

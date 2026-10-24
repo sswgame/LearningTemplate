@@ -177,6 +177,19 @@ namespace sw
         return true;
     }
 
+    bool PackPatchBuilder::writeNoPatchingRecord( string_view recordPath )
+    {
+        PackBuildRecord record;
+        record._patching = PackPatching::None;
+        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( record ) ) == false )
+        {
+            SW_LOG_ERROR( "Build record '%#' could not be written", recordPath );
+            return false;
+        }
+        SW_LOG_INFO( "Pack build record: this build takes no patches (patching=\"none\") -> %#", recordPath );
+        return true;
+    }
+
     bool PackPatchBuilder::makePatch( const PackPatchBuildParams& params )
     {
         using Internal           = PackPatchBuilderInternal;
@@ -200,6 +213,11 @@ namespace sw
         }
         if ( PackPatchUtil::parseBuildRecord( previousText, params._previousRecordPath, previous ) == false )
             return false;
+        if ( previous._patching == PackPatching::None )
+        {
+            SW_LOG_ERROR( "Previous build record '%#' says patching=\"none\" - a build that takes no patches has no content list to patch from", params._previousRecordPath );
+            return false;
+        }
         if ( previous._build == params._newBuild )
         {
             SW_LOG_ERROR( "The new build '%#' is the same as the previous build - a patch goes from one build to another", params._newBuild );

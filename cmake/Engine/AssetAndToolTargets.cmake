@@ -70,6 +70,11 @@ set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=
 if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND swCookArgs --verify-shaders)
 endif()
+# Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`MakePackage` 도 그 게임의 팩만 고른다).
+# Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
+if(SW_SHIPPING_BUILD)
+	list(APPEND swCookArgs "--game=${SW_ACTIVE_GAME}")
+endif()
 
 add_custom_target(CookAssets
 	COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}

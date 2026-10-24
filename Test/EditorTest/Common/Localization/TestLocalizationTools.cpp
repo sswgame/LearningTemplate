@@ -163,7 +163,7 @@ SW_TEST_CASE( LocalizationGatherTest, GatherProjectWritesTableStampsHashesAndChe
 SW_TEST_CASE( LocalizationGatherTest, RepositoryProjectsAreUpToDate )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build carries no property metadata (Localizable) - gathering runs in development builds" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping build carries no property metadata (Localizable) - gathering runs in development builds
 #endif
     sw::vector<sw::string> listProjectPath;
     sw::LocalizationTools::collectProjectPaths( listProjectPath, true );

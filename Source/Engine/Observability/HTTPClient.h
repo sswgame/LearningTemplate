@@ -67,8 +67,5 @@ namespace sw
     {
     public:
         HTTPResponse send( const HTTPRequest& request ) override;
-
-        /** @brief 이 프로세스의 공용 인스턴스입니다(상태가 없다). */
-        static NullHTTPClient& get();
     };
 } // namespace sw

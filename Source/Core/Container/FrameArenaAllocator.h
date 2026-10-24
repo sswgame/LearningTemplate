@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 
 namespace sw
 {
@@ -56,7 +57,7 @@ namespace sw
             if ( _currentChunkIndex < _listChunk.size() )
             {
                 Chunk&          chunk   = _listChunk[_currentChunkIndex];
-                const uintptr_t current = reinterpret_cast<uintptr_t>( chunk._pBuffer + chunk._offset );
+                const uintptr_t current = reinterpret_cast<uintptr_t>( chunk.getBuffer() + chunk._offset );
                 const uintptr_t aligned = MathUtil::align( current, static_cast<uintptr_t>( alignment ) );
                 const size_t    padding = static_cast<size_t>( aligned - current );
 
@@ -122,9 +123,11 @@ namespace sw
         /** @brief 청크 하나의 버퍼 · 용량 · 쓰기 오프셋입니다. */
         struct Chunk
         {
-            uint8* _pBuffer{ nullptr };
-            size_t _capacity{ 0 };
-            size_t _offset{ 0 };
+            MemoryBlock _buffer;
+            size_t      _capacity{ 0 };
+            size_t      _offset{ 0 };
+
+            uint8* getBuffer() const noexcept { return _buffer.getAs<uint8>(); }
         };
 
         /**

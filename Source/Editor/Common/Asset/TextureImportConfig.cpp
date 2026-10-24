@@ -155,9 +155,9 @@ namespace sw::editor
         if ( shadowingIndex < _listRule.size() )
         {
             const TextureImportRule& shadowingRule = _listRule[shadowingIndex];
-            SW_LOG_WARNING( "TextureImportConfig: %#번 규칙('%#')이 조건 없이 모든 경로에 매칭되어 뒤의 %#개 규칙이 절대 선택되지 않습니다. "
-                            "조건 없는 규칙은 목록 맨 끝에 두십시오.",
-                            shadowingIndex, shadowingRule._name.empty() ? "이름 없음" : shadowingRule._name.c_str(),
+            SW_LOG_WARNING( "TextureImportConfig: rule #%# ('%#') matches every path without a condition, so the following %# rules are never selected. "
+                            "Put unconditional rules at the very end of the list.",
+                            shadowingIndex, shadowingRule._name.empty() ? "(unnamed)" : shadowingRule._name.c_str(),
                             _listRule.size() - shadowingIndex - 1 );
         }
 

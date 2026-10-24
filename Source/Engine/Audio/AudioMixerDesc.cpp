@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Audio/DSP/AudioEffect.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -122,7 +123,7 @@ namespace sw
                 return bValid;
             }
 
-            /** @brief 버스 하나를 검사합니다(이름, 중복, 부모, 이펙트, 덕킹 · 센드). 뿌리 버스면 @p inoutRootCount 를 올립니다. */
+            /** @brief 버스 하나를 검사합니다(이름, 중복, 부모, 이펙트, 덕킹 · 센드). 루트 버스면 @p inoutRootCount 를 올립니다. */
             [[nodiscard]] static bool validateBus( const AudioMixerDesc& mixer, size_t busIndex, string_view sourceName, uint32& inoutRootCount )
             {
                 const AudioBusDesc& bus = mixer._listBus[busIndex];
@@ -428,4 +429,7 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( AudioMixerDesc, AudioMixerDesc::kAssetType );
+
+    /** @brief 오디오 믹서 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
+    SW_RESOURCE_DATA_KIND( AudioMixer, "audiomixer", nullptr, nullptr, ".audiomixer.xml", &ResourceDataKindUtil::loadCatalog<AudioMixerDesc> );
 } // namespace sw

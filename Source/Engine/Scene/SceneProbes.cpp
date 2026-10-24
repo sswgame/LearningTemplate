@@ -55,7 +55,7 @@ namespace sw
         /**
          * @brief 탐침 `Scene.TransformHash` 입니다. 활성 씬 오브젝트마다 (이름, 1 mm 로 자른 월드 위치)를 해시해 더한 32 비트 값입니다.
          * @details 오브젝트 순서 · id 와 무관하다(합). 같은 시나리오를 같은 고정 틱으로 돌리면 백엔드와 상관없이 같아야 한다 — 게임 상태는 CPU 에서만 정해진다.
-         *          32 비트라 `float64` 에 정확히 담기고 `equals` · `<Record>` 로 견줄 수 있다.
+         *          32 비트라 `float64` 에 정확히 담기고 `equals` · `<Record>` 로 비교할 수 있다.
          */
         [[nodiscard]] bool readSceneTransformHash( const GameObjectManager* pManager, float64& outValue )
         {

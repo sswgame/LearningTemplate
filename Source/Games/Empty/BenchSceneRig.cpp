@@ -33,7 +33,7 @@ namespace sw
         struct BenchSceneRigInternal
         {
             /**
-             * @brief 스킨 없는 메시를 본 하나(0)에 가중치 1 로 묶은 스킨드 사본을 만듭니다 — 암묵 스켈레톤 유닛(무기)이 뿌리 본 포즈로 움직인다.
+             * @brief 스킨 없는 메시를 본 하나(0)에 가중치 1 로 묶은 스킨드 사본을 만듭니다 — 암묵 스켈레톤 유닛(무기)이 루트 본 포즈로 움직인다.
              */
             static shared_ptr<Mesh> createRigidSkinnedCopy( const Mesh& source )
             {
@@ -44,7 +44,7 @@ namespace sw
             }
 
             /**
-             * @brief 망토 메시를 망토 스켈레톤(`knight_cape.skeleton.xml` — 뿌리 + 아래로 사슬)에 높이로 나눠 묶은 스킨드 사본을 만듭니다.
+             * @brief 망토 메시를 망토 스켈레톤(`knight_cape.skeleton.xml` — 루트 + 아래로 사슬)에 높이로 나눠 묶은 스킨드 사본을 만듭니다.
              * @details 원본 망토(KayKit)는 스킨이 없는 단단한 부품이다 — 스프링 본을 보이려고 데모가 뼈 데이터를 두고 가중치를 높이로 나눈다
              *          (실제 게임은 DCC 에서 스킨한 망토). 정점 높이가 사슬 본 두 개 사이면 둘에 선형으로 나눈다.
              */
@@ -169,7 +169,7 @@ namespace sw
 
     SkeletalMeshComponent* BenchScene::spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
-        // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그립니다.
+        // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 루트 본에 묶은 사본으로 그립니다.
         GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
         SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh, _settings._rigWeaponMaterial ) : nullptr;
         // 사본을 만들 원본은 지금 있어야 한다 — 컴포넌트의 비동기 로드를 기다리지 않고 같은 로드를 동기로 받는다(`MeshCache::acquire`).
@@ -192,7 +192,7 @@ namespace sw
 
     void BenchScene::spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
-        // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 뿌리 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
+        // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 루트 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
         GameObject*            pCape      = objects.createGameObject( "RigCape" );
         SkeletalMeshComponent* pCapeUnit  = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh, _settings._rigCapeMaterial ) : nullptr;
         const shared_ptr<Mesh> capeSource = MeshCache::acquire( _settings._rigCapeMesh ); // 무기와 같다 — 사본의 원본은 동기로 받는다
@@ -266,7 +266,7 @@ namespace sw
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
         if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false ||
              weaponSockets->loadFromResource( _settings._rigWeaponSockets.c_str(), kinds ) == false )
-            SW_LOG_ERROR( "[Bench] 쇠뇌 소켓 '%#' 을 읽지 못했습니다.", _settings._rigWeaponSockets.c_str() );
+            SW_LOG_ERROR( "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
 
         const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
@@ -277,7 +277,7 @@ namespace sw
         const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );
         spawnLight( pScene, halfExtent );
         frameRigCameras( pScene );
-        SW_LOG_INFO( "[Bench] 리그 기사 %#명을 기울기 위에 세웠습니다(리그 %#).", characterCount, bRig ? "켬" : "끔" );
+        SW_LOG_INFO( "[Bench] Placed %# rig knights on the slope (rig %#).", characterCount, bRig ? "on" : "off" );
     }
 
     void BenchScene::frameRigCameras( Scene* pScene )

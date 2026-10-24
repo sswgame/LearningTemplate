@@ -1,8 +1,8 @@
 /**
  * @file VertexAnimationCooker.h
- * @brief 정점 애니메이션(VAT) 쿠킹 — 데이터(`*.vertexanimation.xml`)가 고른 (메시, 클립)을 쿠킹 때 `.vat` 로 굽습니다.
+ * @brief 정점 애니메이션(VAT) 쿠킹 — 데이터(`*.vertexanimation.xml`)가 고른 (메시, 클립)을 쿠킹 때 `.vat` 로 베이크합니다.
  * @details 배포본은 쿠킹본을 팩에서 읽고(`AnimationCrowd::findVertexAnimationMesh`), Dev 는 쿠킹 폴더를 마운트하지 않아 처음 쓸 때 같은 함수
- *          (`MeshVertexAnimationBaker`)로 굽습니다 — 두 길의 결과가 바이트까지 같습니다. 쿠킹은 `App --cook-scenes` 단계가 부릅니다.
+ *          (`MeshVertexAnimationBaker`)로 베이크합니다 — 두 길의 결과가 바이트까지 같습니다. 쿠킹은 `App --cook-scenes` 단계가 부릅니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,8 +23,8 @@ namespace sw
     /**
      * @struct VertexAnimationCookList
      * @brief 쿠킹 목록 하나(`<이름>.vertexanimation.xml`): `<VertexAnimationCookList mesh skeleton clip_folder><clips><item>클립 이름</item>…</clips></VertexAnimationCookList>`.
-     * @details 모르는 속성 · 자식 · 없는 메시 · 스켈레톤 · 클립 파일은 오류입니다(`ResourceDataSchemaTest` 가 확인합니다). 루트 모션은 묶지 않고 굽습니다
-     *          (루트 모션을 뽑는 유닛은 쿠킹본을 쓰지 않고 처음 쓸 때 굽는다).
+     * @details 모르는 속성 · 자식 · 없는 메시 · 스켈레톤 · 클립 파일은 오류입니다(`ResourceDataSchemaTest` 가 확인합니다). 루트 모션은 묶지 않고 베이크합니다
+     *          (루트 모션을 뽑는 유닛은 쿠킹본을 쓰지 않고 처음 쓸 때 베이크한다).
      */
     struct SW_API VertexAnimationCookList
     {
@@ -62,19 +62,19 @@ namespace sw
      */
     struct SW_API VertexAnimationCooker
     {
-        /** @brief VAT 쿠커 버전입니다. `.vat` 형식이나 굽기(`MeshVertexAnimationBaker`)를 바꾸면 올립니다 — 모든 VAT 가 다시 구워집니다. */
+        /** @brief VAT 쿠커 버전입니다. `.vat` 형식이나 베이크(`MeshVertexAnimationBaker`)를 바꾸면 올립니다 — 모든 VAT 가 다시 베이크됩니다. */
         static constexpr uint32 kCookVersion = 1;
 
         /**
-         * @brief 모든 목록을 굽습니다. 활성 게임이 아닌 게임 팩의 목록은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
-         * @param framesPerSecond VAT 프레임율(군중 표 `animationcrowd.xml` 과 같은 값이어야 런타임 굽기와 같다). 작업 키의 설정이다.
-         * @param store 기록과 DDC 입니다. (목록, 클립)마다 작업 하나로 굽고 — 목록 · 메시 · 스켈레톤 · 클립이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
-         * @return 쓴 `.vat` 수입니다. 읽지 못한 목록 · 굽지 못한 클립은 @p outFailedCount 에 셉니다.
+         * @brief 모든 목록을 베이크합니다. 활성 게임이 아닌 게임 팩의 목록은 건너뜁니다(배포본은 활성 게임의 팩만 연다).
+         * @param framesPerSecond VAT 프레임율(군중 표 `animationcrowd.xml` 과 같은 값이어야 런타임 베이크와 같다). 작업 키의 설정이다.
+         * @param store 기록과 DDC 입니다. (목록, 클립)마다 작업 하나로 베이크하고 — 목록 · 메시 · 스켈레톤 · 클립이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
+         * @return 쓴 `.vat` 수입니다. 읽지 못한 목록 · 베이크하지 못한 클립은 @p outFailedCount 에 셉니다.
          */
         static uint32 cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store, uint32& outFailedCount );
-        /** @brief 목록 하나를 굽습니다. 쓴 수를 돌려줍니다. @p cookedDir 가 비었으면 메시 경로 곁에 씁니다(테스트). */
+        /** @brief 목록 하나를 베이크합니다. 쓴 수를 돌려줍니다. @p cookedDir 가 비었으면 메시 경로 곁에 씁니다(테스트). */
         static uint32 cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount );
-        /** @brief 목록의 클립 하나를 @p outputPath 에 굽습니다. 메시 · 스켈레톤 · 클립을 읽습니다. 실패하면 오류를 남기고 false 입니다. */
+        /** @brief 목록의 클립 하나를 @p outputPath 에 베이크합니다. 메시 · 스켈레톤 · 클립을 읽습니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const string& outputPath, float32 framesPerSecond );
         /** @brief VAT 쿠킹 작업의 키 값입니다. 설정 해시는 프레임율입니다. */
         static CookJobDesc makeCookJobDesc( float32 framesPerSecond );

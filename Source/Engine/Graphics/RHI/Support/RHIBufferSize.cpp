@@ -11,7 +11,7 @@ namespace sw
         const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
         if ( totalBytes > static_cast<uint64>( ~uint32{ 0 } ) )
         {
-            SW_LOG_ERROR( "구조 버퍼가 32비트 크기에 담기지 않습니다 (%# x %# = %# 바이트).", elementSize, elementCount, totalBytes );
+            SW_LOG_ERROR( "The structured buffer does not fit in a 32-bit size (%# x %# = %# bytes).", elementSize, elementCount, totalBytes );
             outTotalBytes = 0;
             return false;
         }

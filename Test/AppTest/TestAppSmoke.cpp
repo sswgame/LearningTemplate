@@ -897,7 +897,7 @@ SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
 SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 {
     const HeadlessRunResult result = runHeadless( "--check-textures", "Texture check:" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "Failed to launch App" );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( result._exitCode != 0 );
     SW_EXPECT_TRUE( result._listMarkedLine.empty() );
@@ -916,7 +916,7 @@ SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
 {
     const HeadlessRunResult result = runHeadless( "--check-models", "Model check:" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "Failed to launch App" );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE( result._exitCode != 0 );
     SW_EXPECT_TRUE( result._listMarkedLine.empty() );
@@ -930,7 +930,7 @@ SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
 
 #if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 /**
- * @brief [AppSmokeTest] 헤드리스 작업은 어느 것이든 종료 때 누수를 기준선과 견준다(기준선 없는 통째 덤프가 아니다)
+ * @brief [AppSmokeTest] 헤드리스 작업은 어느 것이든 종료 때 누수를 기준선과 비교한다(기준선 없는 통째 덤프가 아니다)
  * @details 보통 실행은 기동 끝에서 CRT 누수 기준선을 잡는다. 헤드리스 작업은 그 자리에 닿지 않고 끝나, 기준선이 없으면 종료 때 살아 있는 블록 전부(수천 개)를
  *          누수로 찍는다 — 진짜 누수가 그 소음에 묻힌다. 기준선은 `HeadlessTaskState::enterHeadless` 가 잡으므로 헤드리스 분기마다 같은 모양이어야 하고,
  *          이 표가 그것을 인자마다 지킨다. 파일을 쓰거나 바꾸지 않는 작업만 둔다(쿠킹 · 임포트 · 패치 만들기는 산출물이 남는다).
@@ -943,7 +943,7 @@ SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
     for ( const string& argument : arrArgument )
     {
         const HeadlessRunResult result = runHeadless( argument, "[MemoryLeak]" );
-        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+        SW_ASSERT_TRUE_MSG( result._bLaunched, "Failed to launch App" );
         SW_EXPECT_TRUE_MSG( result._exitCode == 0, ( argument + " : " + result._firstErrorLine ).c_str() );
 
         bool bBaselineCaptured = false;
@@ -961,7 +961,7 @@ SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
 
 /**
  * @brief [AppSmokeTest] 보통 실행과 에디터를 켠 실행 모두, 끝내면 어느 메모리 태그도 기동 뒤 기준선보다 크지 않다
- * @details 종료 끝(부트스트랩 범위의 `DiagnosticsSubsystem` 소멸)이 태그별로 기준선과 견줘 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
+ * @details 종료 끝(부트스트랩 범위의 `DiagnosticsSubsystem` 소멸)이 태그별로 기준선과 비교해 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
  *          경로 캐시 · 번역 문자열 · 레지스트리 용량)가 기동 뒤 자란 몫을 돌려주지 않으면 "tag … grew by" 줄이 나온다. CRT 검사는 합계만 봐 이것을
  *          "no CRT leaks" 라고 한다. 에디터와 게임 모듈은 기준선 뒤에 오르므로 에디터를 켠 실행이 그 몫을 따로 본다.
  */
@@ -1054,7 +1054,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
         SW_TEST_SKIP( "golden images are the Empty game's bench scene; this preset runs another game" );
 
     const string goldenDirectory = findGoldenDirectory();
-    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden 을 찾지 못했습니다 — 작업 폴더가 build/<프리셋>/Bin 입니까?" );
+    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden not found - is the working directory build/<preset>/Bin?" );
 
     const utf8* pUpdate = std::getenv( "SW_UPDATE_GOLDEN" );
     const bool  bUpdate = pUpdate != nullptr && pUpdate[0] == '1';
@@ -1083,7 +1083,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
             vector<uint8> screenshotBytes;
             PpmImage      actual{};
             const bool    bRead = FileUtil::readFile( screenshotPath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
-            SW_EXPECT_TRUE_MSG( bRead, ( "스크린샷을 읽지 못했습니다: " + imageName ).c_str() );
+            SW_EXPECT_TRUE_MSG( bRead, ( "Failed to read the screenshot: " + imageName ).c_str() );
             if ( bRead == false )
                 continue;
 
@@ -1140,7 +1140,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
 }
 
 /**
- * @brief [AppSmokeTest] 배포본(Shipping)이 구운 팩의 첫 씬을 골든 이미지와 같게 그린다(`Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z`)
+ * @brief [AppSmokeTest] 배포본(Shipping)이 베이크한 팩의 첫 씬을 골든 이미지와 같게 그린다(`Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z`)
  * @details 배포본에는 벤치 스위치가 없어 `BenchFrameMatchesGoldenImage` 가 건너뛴다. 이 케이스는 Empty 팩 시나리오 `shippingframe` 가
  *          고정 틱 30 프레임에서 찍은 그림을 쓴다(시나리오 실행기와 `Screenshot` 단계는 배포본에도 있다). 기준을 새로 뜨려면 Shipping 빌드에서
  *          `SW_UPDATE_GOLDEN=1` 로 이 케이스를 돌린다. 기준이 없으면 윈도우에서는 실패다(벤치 골든과 같은 규칙 — 조용히 넘기지 않는다).
@@ -1173,7 +1173,7 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
     if ( test::AppTestUtil::readPackRoot( sw::GameSelection::getName() ) != "game/empty" )
         SW_TEST_SKIP( "the Shipping golden image is the Empty game's first scene; this preset runs another game" );
     const string goldenDirectory = findGoldenDirectory();
-    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden 을 찾지 못했습니다 — 작업 폴더가 build/<프리셋>/Bin 입니까?" );
+    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden not found - is the working directory build/<preset>/Bin?" );
 
     (void)FileUtil::tryRemoveFile( kImagePath ); // 지난 실행의 그림을 읽지 않게 지운다
     string                    scenarioLines;
@@ -1186,7 +1186,7 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
     vector<uint8> screenshotBytes;
     PpmImage      actual{};
     const bool    bRead = FileUtil::readFile( kImagePath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
-    SW_ASSERT_TRUE_MSG( bRead, ( string( "스크린샷을 읽지 못했습니다: " ) + kImagePath ).c_str() );
+    SW_ASSERT_TRUE_MSG( bRead, ( string( "Failed to read the screenshot: " ) + kImagePath ).c_str() );
 
     const string imageName  = string( "shippingframe_" ) + kBackendName;
     const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
@@ -1212,7 +1212,7 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
     const bool    bGolden = FileUtil::readFile( goldenPath, goldenBytes ) &&
                          CompressionStream::decompressBuffer( goldenBytes.data(), goldenBytes.size(), goldenPpmBytes, &getGoldenCodecRegistry() ) &&
                          parsePpm( goldenPpmBytes, expected );
-    SW_ASSERT_TRUE_MSG( bGolden, ( "골든 이미지를 읽지 못했습니다(Shipping 에서 SW_UPDATE_GOLDEN=1 로 뜬다): " + goldenPath ).c_str() );
+    SW_ASSERT_TRUE_MSG( bGolden, ( "Failed to read the golden image (create it with SW_UPDATE_GOLDEN=1 in Shipping): " + goldenPath ).c_str() );
     const GoldenDifference difference = compareImage( expected, actual, kChannelTolerance );
     const string           message    = imageName + ": " + sw::to_string( difference._pixelOverTolerance ) +
                            " pixel(s) differ by more than the tolerance, max channel difference " + sw::to_string( difference._maxChannelDifference );

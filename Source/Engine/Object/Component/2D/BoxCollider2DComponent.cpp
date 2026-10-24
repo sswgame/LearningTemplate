@@ -23,10 +23,10 @@ namespace sw
         {
             /**
              * @brief 바디 상자의 가장 작은 반 크기입니다.
-             * @details Box2D 는 크기 0 인 상자를 받지 않는다(단언). 크기 0 콜라이더(점)는 이 크기의 상자로 잰다 — 점이 닿는 것만 겹친다.
+             * @details Box2D 는 크기 0 인 상자를 받지 않는다(단언). 크기 0 콜라이더(점)는 이 크기의 상자로 측정한다 — 점이 닿는 것만 겹친다.
              */
             static constexpr float32 kMinHalfExtent = 0.0005f;
-            /** @brief 이보다 덜 움직였으면 연속 판정의 쓸기를 하지 않습니다(제자리 겹침은 센서가 잰다). */
+            /** @brief 이보다 덜 움직였으면 연속 판정의 쓸기를 하지 않습니다(제자리 겹침은 센서가 측정한다). */
             static constexpr float32 kMinSweepDistance = 1.0e-4f;
 
             static AABB makeColliderAABB( const float2& minB, const float2& maxB )
@@ -230,7 +230,7 @@ namespace sw
         // 이번 프레임의 출발점 — 시작한 자리 또는 지난 프레임의 중심이다. 순간이동했거나 출발점이 없으면 제자리다(쓸지 않고, 움직인 상대로도 보지 않는다).
         // 쓸기는 여기서 하지 않는다 — 모든 콜라이더가 이번 자리로 옮겨진 뒤 씬 물리가 부른다(`ScenePhysics::sweepContinuousColliders2D`).
         _frameFromCenter = ( _bSweepOriginValid && bTeleported == false ) ? _sweepOrigin : center;
-        // 크기 · 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 견준다.
+        // 크기 · 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 비교한다.
         const bool bShapeChanged = _body.isValid() &&
                                    ( _bodyHalfExtent != halfExtents || _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger || pScene->isBodyValid( _body ) == false );
         if ( consumeRebuild() || bShapeChanged )
@@ -283,7 +283,7 @@ namespace sw
 
         vector<SweptOverlap2D> listSwept;
 
-        // 1) 가만히 있던 바디 — 이번 자리 그대로 Box2D 로 쓴다. 움직인 콜라이더의 바디는 2) 가 잰다(이번 자리에 선 채로 재면 틀린다).
+        // 1) 가만히 있던 바디 — 이번 자리 그대로 Box2D 로 쓴다. 움직인 콜라이더의 바디는 2) 가 측정한다(이번 자리에 선 채로 측정하면 틀린다).
         const PhysicsShapeDesc2D box = Internal::makeBox( _bodyHalfExtent );
         vector<PhysicsCastHit2D> listHit;
         (void)pScene->shapeCastAll( box, _frameFromCenter, 0.0f, delta * ( 1.0f / length ), length, filter, listHit );

@@ -102,8 +102,12 @@ namespace sw
 
         AutosaveManager();
 
-        /** @brief 정책과 델리게이트를 두고 폴더의 슬롯 기록을 읽어 순번을 잇습니다. 타이머, 요청, 막기는 비웁니다. */
-        void initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad );
+        /**
+         * @brief 정책과 델리게이트를 두고 폴더의 슬롯 기록을 읽어 순번을 잇습니다. 타이머, 요청, 막기는 비웁니다.
+         * @return 슬롯 수가 1..64 밖이거나 간격 · 최소 간격이 음수이면 오류를 남기고 false 입니다(가까운 값으로 맞추지 않는다). 그러면 상태는 그대로입니다.
+         *         XML 읽기(`loadFromNode`)는 같은 범위를 읽을 때 이미 거절한다.
+         */
+        [[nodiscard]] bool initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad );
         /** @brief 플레이 시간을 넘기고(간격 저장), 쌓인 요청을 막기가 없을 때 하나로 저장합니다. 게임 업데이트에서 부릅니다. */
         void update( float32 deltaTime );
 

@@ -236,8 +236,8 @@ namespace sw
             // 핫스왑은 Windows 에서 창과 컨텍스트를 통째로 재생성한다). 둘을 같은 문구로 찍으면
             // 첨부 포맷 문제인 줄 알고 엉뚱한 데를 파게 된다.
             if ( status == 0 )
-                SW_LOG_WARNING( "Composite FBO 확인 실패 — 현재 GL 컨텍스트가 없습니다 "
-                                "(스레드 바인딩 또는 백엔드 핫스왑 중 창/컨텍스트 재생성 확인)." );
+                SW_LOG_WARNING( "Composite FBO check failed - there is no current GL context "
+                                "(check thread binding, or window/context recreation during a backend hot swap)." );
             else
                 SW_LOG_WARNING( "Composite FBO incomplete (status=%#).", static_cast<uint32>( status ) );
             glDeleteFramebuffers( 1, &fbo );

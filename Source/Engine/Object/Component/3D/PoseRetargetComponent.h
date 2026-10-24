@@ -43,7 +43,7 @@ namespace sw
      * @class PoseRetargetComponent
      * @brief 원본 유닛을 의존으로 걸고, 기본 포즈 단계에서 그 유닛의 **기본 포즈**(그 유닛의 후처리 리그 앞)를 이 유닛 스켈레톤으로 옮깁니다.
      * @details 비율이 다른 스켈레톤(다리 길이 · `BoneProportion` 을 건 레퍼런스)도 골반 높이 비와 다리 IK 목표로 보폭을 맞춥니다(`PoseRetargeter`).
-     *          이 유닛의 후처리 리그(`PoseModifierComponent` — 발 디딤 등)는 그 뒤에 돕니다. 같은 클립을 여러 캐릭터가 쓸 때 미리 구워 두려면
+     *          이 유닛의 후처리 리그(`PoseModifierComponent` — 발 디딤 등)는 그 뒤에 돕니다. 같은 클립을 여러 캐릭터가 쓸 때 미리 베이크해 두려면
      *          `RetargetBakeUtil::bakeClip` 입니다.
      */
     REFLECT( Category = "Animation 3D", DisplayName = "Pose Retarget Component", Tooltip = "Copies another unit's pose onto this skeleton through a retarget profile" )

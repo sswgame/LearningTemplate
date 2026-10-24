@@ -161,7 +161,7 @@ namespace sw
         /**
          * @brief 움직이는 장애물을 다루는 방식입니다(`initialize` 의 에이전트 종류 `_obstacleMode`).
          * @details `TileCache` 면 타일 바이트(`bakeTile` · `replaceTile` · `collectTiles`)가 높이 층 묶음이고, `bakeTile` 은 덧칠 부피(@p pExtraVolume)를 받지 않는다 —
-         *          장애물은 `addCacheObstacle` 로 넣는다. `RebakeTiles` 면 장애물 부피를 덧칠해 타일을 다시 굽고, 아래 세 함수는 오류다.
+         *          장애물은 `addCacheObstacle` 로 넣는다. `RebakeTiles` 면 장애물 부피를 덧칠해 타일을 다시 베이크하고, 아래 세 함수는 오류다.
          */
         virtual NavObstacleMode getObstacleMode() const = 0;
         /** @brief 장애물 캐시에 장애물을 넣습니다(다음 `updateCacheObstacles` 가 닿은 타일을 층에서 다시 짓는다). 실패하면 오류를 남기고 0 입니다. */

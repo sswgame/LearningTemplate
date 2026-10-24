@@ -30,6 +30,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 
 namespace sw
 {
@@ -438,10 +439,10 @@ namespace sw
         atomic<uint32> _entryCount{ 0 };        /**< 지금까지 등록된 문자열 수(단조 증가하는 인덱스) */
         mutex          _globalAppendMutex;      /**< 새 청크를 만들거나 64KB 아레나 블록을 더할 때 쓰는 뮤텍스 */
 
-        vector<value_type*> _listArenaBlock;                /**< 64KB 단위 연속 문자열 아레나 블록 목록 */
-        value_type*         _pCurrentArenaBlock{ nullptr }; ///< 지금 문자열을 채우고 있는 활성 아레나 블록
+        vector<MemoryBlock> _listArenaBlock;                /**< 64KB 단위 연속 문자열 아레나 블록 목록(목록이 소유한다) */
+        value_type*         _pCurrentArenaBlock{ nullptr }; ///< 지금 문자열을 채우고 있는 활성 아레나 블록(`_listArenaBlock` 의 마지막 블록을 빌려 본다)
         size_t              _arenaOffset{ 0 };              ///< 활성 아레나 블록 안에서 다음에 쓸 위치
-        vector<value_type*> _listLargeAllocation;           /**< 64KB 를 넘는 큰 문자열 전용 개별 힙 블록 목록 */
+        vector<MemoryBlock> _listLargeAllocation;           /**< 64KB 를 넘는 큰 문자열 전용 개별 힙 블록 목록(목록이 소유한다) */
 
         Shard _arrShard[kNumShards]; /**< 32개 샤드 해시맵 배열 */
 
@@ -495,19 +496,12 @@ namespace sw
                     Memory::free( pChunk );
             }
 
-            for ( value_type* pBlock : _listArenaBlock )
-            {
-                Memory::free( pBlock );
-            }
-            _listArenaBlock     = vector<value_type*>{};
+            // 블록은 목록이 소유한다. 빈 목록을 대입하면 블록과 목록 저장소가 함께 풀린다.
+            _listArenaBlock     = vector<MemoryBlock>{};
             _pCurrentArenaBlock = nullptr;
             _arenaOffset        = 0;
 
-            for ( value_type* largeBlock : _listLargeAllocation )
-            {
-                Memory::free( largeBlock );
-            }
-            _listLargeAllocation = vector<value_type*>{};
+            _listLargeAllocation = vector<MemoryBlock>{};
 
             _entryCount.store( 0, std::memory_order_release );
         }
@@ -521,18 +515,20 @@ namespace sw
             // 64KB 를 넘는 큰 문자열은 따로 할당한다.
             if ( requiredBytes > kArenaBlockSize )
             {
-                value_type* pLargeBuf = static_cast<value_type*>( Memory::allocate( requiredBytes ) );
+                MemoryBlock largeBlock = MemoryBlock::allocate( requiredBytes );
+                value_type* pLargeBuf  = largeBlock.getAs<value_type>();
                 std::char_traits<value_type>::copy( pLargeBuf, pStr, length );
                 pLargeBuf[length] = static_cast<value_type>( 0 );
-                _listLargeAllocation.push_back( pLargeBuf );
+                _listLargeAllocation.push_back( std::move( largeBlock ) );
                 return pLargeBuf;
             }
 
             // 현재 블록의 공간이 모자라면 새 64KB 블록을 할당한다.
             if ( _pCurrentArenaBlock == nullptr || ( _arenaOffset + requiredChars ) * sizeof( value_type ) > kArenaBlockSize )
             {
-                _pCurrentArenaBlock = static_cast<value_type*>( Memory::allocate( kArenaBlockSize ) );
-                _listArenaBlock.push_back( _pCurrentArenaBlock );
+                MemoryBlock arenaBlock = MemoryBlock::allocate( kArenaBlockSize );
+                _pCurrentArenaBlock    = arenaBlock.getAs<value_type>();
+                _listArenaBlock.push_back( std::move( arenaBlock ) );
                 _arenaOffset = 0;
             }
 
@@ -689,7 +685,7 @@ namespace sw
         const uint32 newIndex = info._entryCount.load( std::memory_order_relaxed );
         if ( newIndex >= kMaxChunks * kChunkSize )
         {
-            SW_LOG_ASSERT( false, "hashed_string 풀 용량(1,048,576개)을 초과했습니다!" );
+            SW_LOG_ASSERT( false, "hashed_string pool capacity (1,048,576 entries) exceeded!" );
             return {};
         }
 

@@ -26,7 +26,7 @@ namespace sw
         explicit WorkStealingDeque( size_t capacity = constant::kDefaultDequeCapacity )
             : _top{ 0 }
             , _bottom{ 0 }
-            , _pBuffer{ nullptr }
+            , _buffer{}
             , _capacityMask{ 0 }
         {
             size_t cap = kMinCapacity;
@@ -37,14 +37,11 @@ namespace sw
             capacity = cap;
 
             _capacityMask = capacity - 1;
-            _pBuffer      = sw_new atomic<T>[capacity];
+            _buffer       = make_unique<atomic<T>[]>( capacity );
         }
 
-        /** @brief 버퍼를 해제합니다. 남은 항목은 호출하는 쪽이 이미 비웠다고 가정합니다. */
-        ~WorkStealingDeque()
-        {
-            sw_delete_array( _pBuffer );
-        }
+        /** @brief 버퍼는 `_buffer` 가 해제합니다. 남은 항목은 호출하는 쪽이 이미 비웠다고 가정합니다. */
+        ~WorkStealingDeque() = default;
 
         /** @brief 복사를 금지합니다. */
         WorkStealingDeque( const WorkStealingDeque& ) = delete;
@@ -68,7 +65,7 @@ namespace sw
                 return false;
             }
 
-            _pBuffer[bottom & _capacityMask].store( item, std::memory_order_relaxed );
+            _buffer[bottom & _capacityMask].store( item, std::memory_order_relaxed );
 
             std::atomic_thread_fence( std::memory_order_release );
             _bottom.store( bottom + 1, std::memory_order_relaxed );
@@ -97,7 +94,7 @@ namespace sw
 
             if ( top <= bottom )
             {
-                outItem = _pBuffer[bottom & _capacityMask].load( std::memory_order_relaxed );
+                outItem = _buffer[bottom & _capacityMask].load( std::memory_order_relaxed );
                 if ( top == bottom )
                 {
                     // 마지막 남은 하나
@@ -139,7 +136,7 @@ namespace sw
 
             if ( top < bottom )
             {
-                outItem = _pBuffer[top & _capacityMask].load( std::memory_order_relaxed );
+                outItem = _buffer[top & _capacityMask].load( std::memory_order_relaxed );
                 if ( _top.compare_exchange_strong( top, top + 1, std::memory_order_seq_cst, std::memory_order_relaxed ) == false )
                     return false;
                 return true;
@@ -153,7 +150,7 @@ namespace sw
         alignas( 64 ) atomic<uint64> _top;
         alignas( 64 ) atomic<uint64> _bottom;
 
-        atomic<T>* _pBuffer;
-        uint64     _capacityMask;
+        unique_ptr<atomic<T>[]> _buffer;
+        uint64                  _capacityMask;
     };
 } // namespace sw

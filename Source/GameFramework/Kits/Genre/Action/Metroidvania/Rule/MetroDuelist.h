@@ -55,8 +55,11 @@ namespace sw
 
         MetroDuelist();
 
-        /** @brief 카탈로그의 체력, 스태미나, 패리 규칙으로 가득 찬 상태에서 시작합니다. */
-        void initialize( const MetroidvaniaCatalog* pCatalog );
+        /**
+         * @brief 카탈로그의 체력, 스태미나, 패리 규칙으로 가득 찬 상태에서 시작합니다.
+         * @details 카탈로그가 없거나 체력 · 스태미나 규칙이 범위 밖이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다(카탈로그를 읽을 때 이미 거절하므로 읽은 카탈로그는 닿지 않는다).
+         */
+        [[nodiscard]] bool initialize( const MetroidvaniaCatalog* pCatalog );
         /** @brief 시간을 흘립니다. 체력(강인도 회복), 스태미나, 반격 창이 갱신됩니다. */
         void update( float32 deltaTime );
 

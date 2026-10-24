@@ -17,25 +17,46 @@
 
 namespace sw
 {
-    /** @brief 몸의 수치입니다. 하트는 개수로, 피해와 회복은 4분의 1 하트 단위로 셉니다. */
-    struct AdventureVitalsSettings
+    /**
+     * @brief 몸의 수치입니다. 하트는 개수로, 피해와 회복은 4분의 1 하트 단위로 셉니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `AdventureVitals::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API AdventureVitalsSettings
     {
-        int32   _startHeartCount{ 3 };
-        int32   _maxHeartCount{ 20 };
-        int32   _piecesPerHeart{ 4 }; ///< 하트 조각이 이만큼 모이면 하트 그릇 하나가 된다
+        REFLECT_BODY();
+        PROPERTY( Min = 1, Max = "_maxHeartCount" )
+        int32 _startHeartCount{ 3 };
+        PROPERTY( Min = 1 )
+        int32 _maxHeartCount{ 20 };
+        PROPERTY( Min = 1 )
+        int32 _piecesPerHeart{ 4 }; ///< 하트 조각이 이만큼 모이면 하트 그릇 하나가 된다
+        PROPERTY( Min = 1.0 )
         float32 _magicMax{ 48.0f };
+        PROPERTY( Min = 0.0 )
         float32 _magicUpgrade{ 48.0f }; ///< 두 배 마법이 더하는 양
-        float32 _staminaMax{ 100.0f };  ///< 처음 스태미나 바퀴 하나의 양
+        PROPERTY( Min = 1.0 )
+        float32 _staminaMax{ 100.0f }; ///< 처음 스태미나 바퀴 하나의 양
+        PROPERTY( Min = 0.0 )
         float32 _staminaVessel{ 20.0f };
+        PROPERTY( Min = 0.0 )
         float32 _staminaVesselMax{ 200.0f }; ///< 그릇으로 늘릴 수 있는 보너스의 최대값
+        PROPERTY( Min = 0.0 )
         float32 _staminaRegenRate{ 40.0f };
+        PROPERTY( Min = 0.0 )
         float32 _staminaRegenDelay{ 0.5f };
+        PROPERTY( Min = 0.001, Max = "_staminaMax" )
         float32 _staminaRecoverLevel{ 100.0f }; ///< 탈진한 뒤 이만큼 다시 차야 스태미나를 쓸 수 있다
-        float32 _climbDrain{ 10.0f };           ///< 초당 소모량
+        PROPERTY( Min = 0.0 )
+        float32 _climbDrain{ 10.0f }; ///< 초당 소모량
+        PROPERTY( Min = 0.0 )
         float32 _sprintDrain{ 15.0f };
+        PROPERTY( Min = 0.0 )
         float32 _glideDrain{ 6.0f };
+        PROPERTY( Min = 0.0 )
         float32 _swimDrain{ 8.0f };
-        int32   _drownDamage{ 4 }; ///< 수영 중 스태미나가 바닥나 빠졌을 때 받는 피해(4분의 1 하트)
+        PROPERTY( Min = 0 )
+        int32 _drownDamage{ 4 }; ///< 수영 중 스태미나가 바닥나 빠졌을 때 받는 피해(4분의 1 하트)
     };
 } // namespace sw
 
@@ -75,9 +96,11 @@ namespace sw
         static constexpr uint32 kStateVersion     = 1;
         static constexpr int32  kQuartersPerHeart = 4;
 
+        /** @brief 기본 설정(`AdventureVitalsSettings{}`, 범위 안)으로 시작합니다. 다른 설정은 `initialize` 로 줍니다. */
         AdventureVitals();
 
-        void initialize( const AdventureVitalsSettings& settings );
+        /** @brief 설정을 받고 처음 상태로 시작합니다. 범위 밖(`AdventureVitalsSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다. */
+        [[nodiscard]] bool initialize( const AdventureVitalsSettings& settings );
 
         /** @brief 4분의 1 하트 단위로 피해를 줍니다. 이번에 죽었으면 true 를 반환합니다. */
         [[nodiscard]] bool applyDamage( int32 quarters );
@@ -118,8 +141,8 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        /** @brief 하트 수에 맞춰 체력 최대값을 다시 설정하고 체력을 가득 채웁니다. */
-        void resetHealth();
+        /** @brief 하트 수에 맞춰 체력 최대값을 다시 설정하고 체력을 가득 채웁니다. 하트 수가 범위 안이면 실패하지 않습니다. */
+        [[nodiscard]] bool resetHealth();
 
         AdventureVitalsSettings _settings;
         Vitality                _health;

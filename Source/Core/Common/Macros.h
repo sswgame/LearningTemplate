@@ -73,6 +73,7 @@
  *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
+ * 로그보다 아래 티어(메모리 · 수학 · 컨테이너 등)는 `SW_LOG_ASSERT` · `SW_LOG_*` 를 쓸 수 없으므로 아래 10) 의 `SW_LOW_LEVEL_ASSERT` · `SW_LOW_LEVEL_REPORT` 를 씁니다.
  */
 #if defined( SW_DEBUG )
 namespace sw::internal
@@ -200,6 +201,75 @@ namespace sw::internal
      */
     [[nodiscard]] SW_API bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
 } // namespace sw::internal
+#endif
+
+// ------------------------------------------------------------------------------
+// 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다(`CheckCoreLayers`).
+//     아래 티어는 이 창구로 보고한다: 로그가 설치한 보고자(`setLowLevelReporter`, `Logger.cpp` 가 기동 때 건다)가 있으면 그리로 로그 줄이 되고,
+//     없으면(로거 이전 · 로거 없는 도구) stderr 에 한 줄 남는다. 정의는 `Core/Common/Macros.cpp` 에 있다.
+// ------------------------------------------------------------------------------
+namespace sw::internal
+{
+    /** @brief 아래 티어 보고의 심각도입니다. 로그 수준 `Warning` · `Error` 와 같은 뜻입니다. */
+    enum class LowLevelReportLevel : uint8
+    {
+        Warning,
+        Error,
+    };
+
+    /** @brief 보고자 함수입니다. @p pCaller 는 보고하는 쪽의 이름(로그 줄의 Caller)이고 @p pMessage 는 끝난 글입니다. */
+    using LowLevelReporterFunc = void ( * )( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept;
+
+    /** @brief 보고자를 설치합니다. nullptr 이면 해제하며, 이후 보고는 stderr 로 갑니다. */
+    SW_API void setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
+    /** @brief 한 줄을 보고합니다. 보고자가 있으면 그리로, 없으면 stderr 로 갑니다. */
+    SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept;
+    /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글). */
+    SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
+} // namespace sw::internal
+
+/**
+ * @brief 로그보다 아래 티어가 한 줄을 보고합니다(`SW_LOG_ERROR` · `SW_LOG_WARNING` 의 자리). 첫 인자는 `Warning` 또는 `Error`, 둘째는 보고하는 쪽의 이름이고
+ *        나머지는 `printf` 식 서식과 인자입니다(512 자까지).
+ */
+#define SW_LOW_LEVEL_REPORT( level, pCaller, ... )                                                                 \
+    do                                                                                                             \
+    {                                                                                                              \
+        utf8 arrLowLevelMessage[512];                                                                              \
+        std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                            \
+        ::sw::internal::reportLowLevel( ::sw::internal::LowLevelReportLevel::level, pCaller, arrLowLevelMessage ); \
+    } while ( false )
+
+#if defined( SW_DEBUG )
+    /**
+     * @brief 로그보다 아래 티어의 `SW_LOG_ASSERT` 입니다. 거짓이면 보고하고 Debug 에서는 멈춥니다(가로채기 · 대화상자는 `SW_ASSERT` 와 같다).
+     *        메시지는 `printf` 식 서식입니다(512 자까지).
+     */
+    #define SW_LOW_LEVEL_ASSERT( expr, pCaller, ... )                                                                                 \
+        do                                                                                                                            \
+        {                                                                                                                             \
+            if ( !( expr ) )                                                                                                          \
+            {                                                                                                                         \
+                utf8 arrLowLevelMessage[512];                                                                                         \
+                std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                                       \
+                ::sw::internal::reportLowLevelAssert( #expr, pCaller, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ); \
+                if ( ::sw::internal::tryCaptureAssert() == false &&                                                                   \
+                     ::sw::internal::shouldBreakOnAssert( #expr, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ) )     \
+                    SW_DEBUG_BREAK();                                                                                                 \
+            }                                                                                                                         \
+        } while ( false )
+#else
+    /** @brief Debug 가 아니면 멈추지 않고 보고만 합니다(`SW_LOG_ASSERT` 와 같다 — 배포본에서도 계약이 깨진 순간을 남긴다). */
+    #define SW_LOW_LEVEL_ASSERT( expr, pCaller, ... )                                                                                 \
+        do                                                                                                                            \
+        {                                                                                                                             \
+            if ( !( expr ) )                                                                                                          \
+            {                                                                                                                         \
+                utf8 arrLowLevelMessage[512];                                                                                         \
+                std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                                       \
+                ::sw::internal::reportLowLevelAssert( #expr, pCaller, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ); \
+            }                                                                                                                         \
+        } while ( false )
 #endif
 
 /** @brief 코드 블록을 명시적으로 구분할 때 사용합니다 (세미콜론 없이: BLOCK( "..." )). */

@@ -183,7 +183,7 @@ namespace sw
         const bool bNetSessionOpened = netSession.openFromLaunch();
         if ( bNetSessionOpened == false )
             SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
-        // 사운드 이벤트는 gamesettings 가 정본이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
+        // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
         registerSessionCommands();
 
@@ -590,7 +590,7 @@ namespace sw
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( purpose, bytesScene ) == false )
-            SW_LOG_INFO( "씬 오브젝트 스냅샷이 비었습니다 — 활성 씬이 없거나 게임 서비스가 바인딩되지 않았습니다. 커스텀 상태만 저장됩니다." );
+            SW_LOG_INFO( "The scene object snapshot is empty - there is no active scene or the game service is not bound. Only the custom state is saved." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 스냅샷

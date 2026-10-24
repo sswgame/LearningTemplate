@@ -153,9 +153,9 @@ namespace test
             const string    second     = fixture.makeTableName( "second" );
             writeMigration( folder, "0001_first.sql", "CREATE TABLE " + first + " ( id BIGINT PRIMARY KEY, bytes {{blob}} );\r\n" );
             writeMigration( folder, "0002_second.sql", "CREATE TABLE common_only_must_not_run ( id BIGINT );" );
-            writeMigration( folder, "0002_second." + driverName + ".sql", "CREATE TABLE " + second + " ( id BIGINT );" );                                                             // 방언 갈래가 공통 파일을 대신한다
-            writeMigration( folder, "0002_second.otherdriver.sql", "THIS IS NOT SQL" );                                                                                               // 다른 드라이버 갈래는 읽지 않는다
-            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /></SQLMigrationList>)" ); // 목록이 정본이다(팩은 폴더를 훑을 수 없다)
+            writeMigration( folder, "0002_second." + driverName + ".sql", "CREATE TABLE " + second + " ( id BIGINT );" );                                                             // 방언 분기가 공통 파일을 대신한다
+            writeMigration( folder, "0002_second.otherdriver.sql", "THIS IS NOT SQL" );                                                                                               // 다른 드라이버 분기는 읽지 않는다
+            writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /></SQLMigrationList>)" ); // 목록이 기준이다(팩은 폴더를 훑을 수 없다)
 
             vector<SQLMigration> listMigration;
             string               error;

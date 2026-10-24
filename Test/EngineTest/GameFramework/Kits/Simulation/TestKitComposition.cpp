@@ -621,7 +621,7 @@ namespace sw
     private:
         static void initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
         {
-            outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} );
+            SW_EXPECT_TRUE( outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} ) );
             outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
             (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } );
         }
@@ -710,7 +710,7 @@ namespace
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
-    /** @brief 판을 견줄 숫자들입니다. */
+    /** @brief 판을 비교할 숫자들입니다. */
     struct KitCompositionDigest
     {
         int64       _gold{ 0 };
@@ -794,7 +794,7 @@ namespace
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
-    /** @brief 둘째 조립의 판을 견줄 숫자들입니다. */
+    /** @brief 둘째 조립의 판을 비교할 숫자들입니다. */
     struct LandCompositionDigest
     {
         int64         _deben{ 0 };

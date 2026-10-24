@@ -218,6 +218,18 @@ namespace sw
             return false;
         }
         bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers" }, sourceLabel );
+        bValid      = parseNodes( root, sourceLabel ) && bValid;
+        bValid      = parseLinks( root, sourceLabel ) && bValid;
+        if ( parseLayers( root ) == false )
+            bValid = false;
+        if ( bValid == false )
+            clear();
+        return bValid;
+    }
+
+    bool AnimationGraphAsset::parseNodes( const XMLNode& root, string_view sourceLabel )
+    {
+        bool bValid = true;
         for ( XMLNode nodeXML = root.findChild( "nodes", false ).findChild(); nodeXML.isValid(); nodeXML = nodeXML.findNextSibling() )
         {
             // id 는 필수이고 1 이상이다. 위치는 없으면 노드의 초기 자리다. 반복은 적었을 때만 클립 설정을 덮는다.
@@ -264,7 +276,12 @@ namespace sw
             }
             _listNode.push_back( std::move( node ) );
         }
+        return bValid;
+    }
 
+    bool AnimationGraphAsset::parseLinks( const XMLNode& root, string_view sourceLabel )
+    {
+        bool bValid = true;
         for ( XMLNode linkXML = root.findChild( "links", false ).findChild(); linkXML.isValid(); linkXML = linkXML.findNextSibling() )
         {
             // id · from · to 는 필수다. 크로스페이드 길이 · 반감기는 없으면 링크의 초기값(플레이어 기본 · 즉시)이다.
@@ -333,10 +350,6 @@ namespace sw
             }
             _listLink.push_back( link );
         }
-        if ( parseLayers( root ) == false )
-            bValid = false;
-        if ( bValid == false )
-            clear();
         return bValid;
     }
 
@@ -349,6 +362,12 @@ namespace sw
     }
 
     bool AnimationGraphAsset::parseLayers( const XMLNode& root )
+    {
+        const bool bMasksValid = parseBoneMasks( root );
+        return parseLayerDefs( root ) && bMasksValid;
+    }
+
+    bool AnimationGraphAsset::parseBoneMasks( const XMLNode& root )
     {
         bool   bValid = true;
         size_t maskIndex{ 0 };
@@ -374,7 +393,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 정본인지 모르므로 오류다.
+            // 프리셋 파일("file")이나 바로 적은 본문(<roots>, <bones>) 중 하나다. 둘 다 적으면 어느 쪽이 기준인지 모르므로 오류다.
             if ( XMLReadUtil::hasOnlyKnownNames( maskXML, { "name", "file" }, { "roots", "bones" }, mask._name.c_str() ) == false )
             {
                 bValid = false;
@@ -397,7 +416,12 @@ namespace sw
             }
             _listBoneMask.push_back( std::move( mask ) );
         }
+        return bValid;
+    }
 
+    bool AnimationGraphAsset::parseLayerDefs( const XMLNode& root )
+    {
+        bool   bValid = true;
         size_t layerIndex{ 0 };
         for ( XMLNode layerXML = root.findChild( "layers", false ).findChild(); layerXML.isValid(); layerXML = layerXML.findNextSibling(), ++layerIndex )
         {

@@ -66,7 +66,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Min = 1.0 )
-        float32 _secondsPerDay{ 720.0f }; ///< 실제 초로 잰 하루 24시간의 길이
+        float32 _secondsPerDay{ 720.0f }; ///< 실제 초로 측정한 하루 24시간의 길이
         PROPERTY( Name = "arrival", Min = 0.0, Max = 23.0 )
         float32 _arrivalHour{ 7.0f }; ///< 위성에 내리는 시각
         PROPERTY( Name = "dusk", Min = "_arrivalHour", Max = 24.0 )

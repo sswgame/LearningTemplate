@@ -29,7 +29,7 @@ Scripts/lint/fixer/FormatBranchBraces.py
 
 **4) 본문에 중괄호가 없는 for · 범위 for · while 에 중괄호를 씌운다.**
 
-  - 판정은 게이트 `Scripts/lint/gate/CheckLoopBraces.py` 한 자리다(`insertLoopBraces`). 여러 줄에 걸친 한 문장 · if/else 사슬 · 중첩 반복
+  - 판정은 `Scripts/lint/LoopBraceRules.py` 한 자리다(`insertLoopBraces`, 게이트 `CheckLoopBraces` 도 읽는다). 여러 줄에 걸친 한 문장 · if/else 사슬 · 중첩 반복
     본문은 그 전체를 한 문장으로 감싸고, 같은 줄 본문(`for ( … ) f();`)은 줄을 끊어 감싸며, 빈 본문(`while ( x );`)은 `{}` 로 쓴다.
   - `do { … } while ( … )` 의 꼬리는 반복문 머리가 아니다. 머리 다음 줄부터 본문 끝까지 주석 · 전처리기 · 매크로 줄바꿈이 끼면
     건드리지 않는다(게이트가 "손으로" 로 알린다).
@@ -53,7 +53,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.gate.CheckLoopBraces import insertLoopBraces  # noqa: E402
+from lint.LoopBraceRules import insertLoopBraces  # noqa: E402
 from lint.LintFixer import FixPass, LintFixer  # noqa: E402
 # 중괄호를 벗기면 안 되는 본문: 스스로 분기/반복을 여는 문장(달랑거리는 else 위험) 및 레이블.
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")

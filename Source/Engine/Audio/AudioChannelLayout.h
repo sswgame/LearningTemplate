@@ -5,7 +5,7 @@
  *          채널 순서는 FL FR FC LFE BL BR SL SR 의 앞부분이다(스테레오 FL FR, 5.1 FL FR FC LFE BL BR, 7.1 은 뒤에 SL SR). WAV 의 채널 마스크 순서와 같아서
  *          장치(`WAVEFORMATEXTENSIBLE`)와 덤프 파일에 그대로 넘긴다.
  *          레이아웃은 장치를 닫은 뒤에만 바꾼다. 최대 채널 수(`audio::kMaxChannelCount`)보다 큰 구성(7.1.4, 앰비소닉)은 다루지 않는다.
- *          레이아웃의 정본은 장치 협상과 사용자 설정(`audio.speakerMode` → `AudioSpeakerMode`)이다. 믹서 그래프 데이터는 채널 중립이다.
+ *          레이아웃의 기준은 장치 협상과 사용자 설정(`audio.speakerMode` → `AudioSpeakerMode`)이다. 믹서 그래프 데이터는 채널 중립이다.
  */
 #pragma once
 #include "Core/Common/Types.h"

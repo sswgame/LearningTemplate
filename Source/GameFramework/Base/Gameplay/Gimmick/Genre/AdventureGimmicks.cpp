@@ -121,11 +121,15 @@ namespace sw
             SW_LOG_ERROR( "Element rule table %# could not be read", _tablePath.c_str() );
             return;
         }
-        _grid.initialize( 1, 1, pTable );
+        if ( _grid.initialize( 1, 1, pTable ) == false )
+            return; // 이유는 ElementGrid 가 남겼다
         const int32 material = pTable->findMaterial( _material );
         if ( material < 0 )
+        {
             SW_LOG_ERROR( "Element material '%#' is not in the rule table", _material.c_str() );
-        _grid.setMaterial( int2{ 0, 0 }, MathUtil::max( 0, material ) );
+            return; // 0 번 재질로 대신 서지 않는다
+        }
+        _grid.setMaterial( int2{ 0, 0 }, material );
     }
 
     void ElementStatusComponent::onPostLoad()

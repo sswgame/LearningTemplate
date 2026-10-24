@@ -247,7 +247,7 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
 
 /**
  * @brief [ServerBootTest] 빌드된 게임마다 전용 서버로 서고 60 틱을 돈 뒤 정상 종료한다 — 게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰면 여기서 진다
- * @details 게임 목록은 산출물 폴더 `Games/<이름>/` 를 훑어 정한다(빌드 구성 `SW_GAMES` 가 정본이라 테스트에 이름을 다시 적지 않는다). 기본 게임은
+ * @details 게임 목록은 산출물 폴더 `Games/<이름>/` 를 훑어 정한다(빌드 구성 `SW_GAMES` 가 기준이라 테스트에 이름을 다시 적지 않는다). 기본 게임은
  *          `StartsTicksAndExitsWithoutWindowOrGPU` 가 본다. 언리얼이 맵마다 서버 기동 자동화 테스트를 두는 것과 같은 자리다.
  */
 SW_TEST_CASE( ServerBootTest, EveryBuiltGameStartsAsADedicatedServer )
@@ -295,7 +295,7 @@ SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
 SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "pause and step are development-build console commands" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // pause and step are development-build console commands
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ServerBootTest, ServerConfigGamePortAcceptsAClientFromAnotherProce
 SW_TEST_CASE( ServerBootTest, NetListenPortOverridesTheServerConfigGamePort )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "-gv_netListenPort is a development global variable - covered in Shipping by ServerConfigGamePortAcceptsAClientFromAnotherProcess" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // -gv_netListenPort is a development global variable - covered in Shipping by ServerConfigGamePortAcceptsAClientFromAnotherProcess
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -413,7 +413,7 @@ SW_TEST_CASE( ServerBootTest, NetListenPortOverridesTheServerConfigGamePort )
 SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheServerConfig )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping server needs real TLS certificate and key paths for the service port" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping server needs real TLS certificate and key paths for the service port
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -524,7 +524,7 @@ namespace
 SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -589,7 +589,7 @@ SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken
 SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -645,7 +645,7 @@ namespace
                 bGood              = bGood && client.request( "pause", 5000, reply );
                 result._pausedTick = bGood ? parsePausedTick( reply ) : 0;
                 uint64 currentTick = result._pausedTick;
-                // 틱 수가 정본이다 - 목표 틱까지 `step` 하고 그 틱의 해시가 남을 때까지 기다린다(시한은 멈춤을 잡는 그물이라 틱 수에 비례).
+                // 틱 수가 기준이다 - 목표 틱까지 `step` 하고 그 틱의 해시가 남을 때까지 기다린다(시한은 멈춤을 잡는 그물이라 틱 수에 비례).
                 auto stepTo = [&]( uint64 targetTick ) -> bool
                 {
                     if ( targetTick <= currentTick )
@@ -705,7 +705,7 @@ namespace
 SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -721,7 +721,7 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 SW_TEST_CASE( ServerBootTest, StateHashHistoryToleratesServersPausingAtDistantTicks )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
@@ -760,7 +760,7 @@ SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
 SW_TEST_CASE( ServerBootTest, AuthorityGhostDeltaMatchesHowFarTheServerMovedAnObject )
 {
 #if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the debug channel is a development-build feature
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );

@@ -51,7 +51,7 @@ namespace sw
     void PrefabInstanceRegistry::restoreNestedPart( uint64 objectID, const PrefabNestedPart& part )
     {
         _mapNestedPart[objectID] = part;
-        // 되살린 순서보다 뒤에 기록하는 부품이 늘 뒤에 오게 한다.
+        // 복원한 순서보다 뒤에 기록하는 부품이 늘 뒤에 오게 한다.
         _nextRegistration = std::max( _nextRegistration, part._registrationOrder + 1 );
     }
 

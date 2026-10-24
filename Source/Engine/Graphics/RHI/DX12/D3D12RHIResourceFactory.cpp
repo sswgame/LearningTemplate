@@ -851,7 +851,7 @@ namespace sw
                 // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
                 // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
-                SW_LOG_ERROR( "오프스크린 RTV 디스크립터 고갈(최대 %#) — 이 텍스처는 렌더타깃으로 쓸 수 없습니다.",
+                SW_LOG_ERROR( "Offscreen RTV descriptors exhausted (max %#) - this texture cannot be used as a render target.",
                               static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRtvs ) );
             }
             if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRtvs )
@@ -898,7 +898,7 @@ namespace sw
             else
             {
                 dsvSlot = D3D12RHIDevice::kMaxOffscreenDsvs;
-                SW_LOG_ERROR( "오프스크린 DSV 디스크립터 고갈(최대 %#) — 이 텍스처는 뎁스로 쓸 수 없습니다.",
+                SW_LOG_ERROR( "Offscreen DSV descriptors exhausted (max %#) - this texture cannot be used as depth.",
                               static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDsvs ) );
             }
             if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDsvs )

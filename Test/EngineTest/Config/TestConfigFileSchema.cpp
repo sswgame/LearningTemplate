@@ -46,9 +46,9 @@ namespace
             return true;
         }
 
-        /** @brief 바탕 층 파일에서 빠져도 되는 키와 이유입니다. 값의 출처가 다른 정본 하나다. */
+        /** @brief 바탕 층 파일에서 빠져도 되는 키와 이유입니다. 값의 출처가 다른 기준 하나다. */
         static constexpr const utf8* kArrBaseLayerExemptKey[] = {
-            "_window._defaultRHI", // 쿠킹 표 `default_rhi_backend` 가 정본 — 파일에 적으면 두 곳이 된다
+            "_window._defaultRHI", // 쿠킹 표 `default_rhi_backend` 가 기준 — 파일에 적으면 두 곳이 된다
         };
 
         /** @brief @p shape 의 키마다(객체는 안으로 들어간다) @p file 에 없으면 경로를 담습니다. */
@@ -76,7 +76,7 @@ namespace
         }
 
         /**
-         * @brief 바탕 층(값의 정본이 파일이고 헤더는 형식만인 설정 — `EngineConfig`)을 엄격하게 읽고, 모든 키를 적었는지 봅니다.
+         * @brief 바탕 층(값의 기준이 파일이고 헤더는 형식만인 설정 — `EngineConfig`)을 엄격하게 읽고, 모든 키를 적었는지 봅니다.
          * @details 언리얼 `BaseEngine.ini` 와 같은 층이라 "기본값과 다른 값만" 규칙 대신 "빠짐없이" 규칙이다. 빠진 키는 헤더의 빈 형식(0)이 되어 버린다.
          */
         template <typename T>

@@ -107,7 +107,7 @@ namespace sw
             const HRESULT hrPSO = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
             if ( FAILED( hrPSO ) )
             {
-                SW_LOG_ERROR( "CreateGraphicsPipelineState 실패 (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
+                SW_LOG_ERROR( "CreateGraphicsPipelineState failed (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
                 _pDevice->flushDebugMessages( "CreateGraphicsPipelineState" );
             }
         }

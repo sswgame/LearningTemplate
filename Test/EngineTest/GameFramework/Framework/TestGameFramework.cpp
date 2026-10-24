@@ -2942,7 +2942,8 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
                                              R"(<LocalizationProject name="boot" sourceCulture="en_us"><cultures><item>ko_kr</item></cultures><stringTables><item>boot.strings.xml</item></stringTables></LocalizationProject>)" ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "boot.strings.xml" ),
                                              R"(<SourceStringTable culture="en_us"><entries><entry key="UI_PLAY" source="Play" /><entry key="UI_ONLY_EN" source="English" /></entries></SourceStringTable>)" ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.xml" ), R"(<TranslationTable culture="ko_kr"><entries><entry key="UI_PLAY" text="플레이" /></entries></TranslationTable>)" ) );
+    const string koTranslationXML = R"(<TranslationTable culture="ko_kr"><entries><entry key="UI_PLAY" text="플레이" /></entries></TranslationTable>)";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( localeDir, "ko_kr.translation.xml" ), koTranslationXML ) );
 
     class BootstrapGame : public GameInstanceBase
     {

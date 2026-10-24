@@ -21,12 +21,26 @@ namespace sw
         uint64 _byteCount{ 0 };
         uint8  _kind{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 메시지 종류별 셈의 방향입니다. */
     enum class NetStatsKindDirection : uint8
     {
         Received = 0, ///< 라우터가 꺼낸 메시지(`kinds=`)
         Sent          ///< 호스트가 보내기 큐에 넣은 메시지(`sentKinds=`)
+    };
+
+    /**
+     * @brief 복제 키트가 올리는 셈 하나입니다(보고 줄의 `replicas=<이름>:<갱신 수>:<바이트>,…` 한 항목).
+     * @details 공통 원천이 없는 값(스냅숏 크기 · 오브젝트별 복제 빈도)을 키트가 이름 붙여 싣는 창구다. 이름은 `[a-z0-9_.-]` 글자만이다(줄 형식의 구분자를 쓰지 못하게).
+     */
+    struct NetStatsReplicaEntry
+    {
+        string _name{};
+        uint64 _updateCount{ 0 }; ///< 보낸 갱신(스냅숏 · 델타)의 누적 수
+        uint64 _byteCount{ 0 };   ///< 그 갱신들의 누적 바이트
     };
 } // namespace sw
 
@@ -44,17 +58,22 @@ namespace sw
         static constexpr const utf8* kLinePrefix = "Net traffic stats";
         /** @brief 줄에 싣는 메시지 종류의 상한입니다. 바이트가 큰 종류부터 싣습니다. */
         static constexpr int32 kMaxKindEntry = 8;
+        /** @brief 줄에 싣는 복제 셈의 상한입니다. */
+        static constexpr int32 kMaxReplicaEntry = 8;
+        /** @brief 복제 셈의 이름으로 쓸 수 있는가(비어 있지 않고 `[a-z0-9_.-]` 만)입니다. */
+        [[nodiscard]] static bool isValidReplicaName( string_view name );
 
-        vector<NetStatsKindEntry> _listKindEntry{};            ///< 받은 메시지 — 바이트가 큰 순서
-        vector<NetStatsKindEntry> _listSentKindEntry{};        ///< 보낸 메시지(큐에 넣은 것) — 바이트가 큰 순서
-        uint64                    _sentPacketCount{ 0 };       ///< 연결들이 보낸 패킷의 합(누적)
-        uint64                    _receivedPacketCount{ 0 };   ///< 연결들이 받은 패킷의 합(누적)
-        uint64                    _resentMessageCount{ 0 };    ///< 연결들이 다시 보낸 신뢰 메시지의 합(누적)
-        float32                   _sentBytesPerSecond{ 0.0f }; ///< 연결들의 최근 1 초 보낸 바이트의 합
-        float32                   _receivedBytesPerSecond{ 0.0f };
-        float32                   _rttMilliseconds{ 0.0f }; ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
-        float32                   _lossPercent{ 0.0f };     ///< 연결들이 잰 손실 중 가장 큰 값(%)
-        int32                     _connectionCount{ 0 };
+        vector<NetStatsKindEntry>    _listKindEntry{};            ///< 받은 메시지 — 바이트가 큰 순서
+        vector<NetStatsKindEntry>    _listSentKindEntry{};        ///< 보낸 메시지(큐에 넣은 것) — 바이트가 큰 순서
+        vector<NetStatsReplicaEntry> _listReplicaEntry{};         ///< 복제 키트가 올린 셈 — 바이트가 큰 순서, 최대 `kMaxReplicaEntry` 개
+        uint64                       _sentPacketCount{ 0 };       ///< 연결들이 보낸 패킷의 합(누적)
+        uint64                       _receivedPacketCount{ 0 };   ///< 연결들이 받은 패킷의 합(누적)
+        uint64                       _resentMessageCount{ 0 };    ///< 연결들이 다시 보낸 신뢰 메시지의 합(누적)
+        float32                      _sentBytesPerSecond{ 0.0f }; ///< 연결들의 최근 1 초 보낸 바이트의 합
+        float32                      _receivedBytesPerSecond{ 0.0f };
+        float32                      _rttMilliseconds{ 0.0f }; ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
+        float32                      _lossPercent{ 0.0f };     ///< 연결들이 측정한 손실 중 가장 큰 값(%)
+        int32                        _connectionCount{ 0 };
 
         /**
          * @brief 받은 쪽(라우터) · 보낸 쪽(호스트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.

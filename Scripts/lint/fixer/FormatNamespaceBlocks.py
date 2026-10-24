@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatNamespaceBlocks.py
 
-한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다 — 규칙과 판정은 `gate/CheckNamespaceBlocks.py` 한 자리.
+한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다 — 규칙과 판정은 `lint/NamespaceBlockRules.py` 한 자리(게이트 `CheckNamespaceBlocks` 도 읽는다).
 
   py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files Source/Engine/Scene/Scene.h
 """
@@ -17,16 +17,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from lint.gate import CheckNamespaceBlocks  # noqa: E402
+from lint import NamespaceBlockRules  # noqa: E402
 from lint.LintFixer import FixPass, LintFixer  # noqa: E402
 
 
 class FormatNamespaceBlocksFixer(LintFixer):
-    description = "정의마다 namespace 블록을 나눈다(CheckNamespaceBlocks 의 규칙)"
+    description = "정의마다 namespace 블록을 나눈다(NamespaceBlockRules 의 규칙)"
     listScopeRelDir = kLintTargetRelDirs   # 게이트가 보는 범위
     listPass = (
-        FixPass(transform=CheckNamespaceBlocks.fixText, problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
-                badSample=CheckNamespaceBlocks.kFixBadSample, fixedSample=CheckNamespaceBlocks.kFixGoodSample, goodSample=CheckNamespaceBlocks.kFixGoodSample),
+        FixPass(transform=NamespaceBlockRules.fixText, problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
+                badSample=NamespaceBlockRules.kFixBadSample, fixedSample=NamespaceBlockRules.kFixGoodSample, goodSample=NamespaceBlockRules.kFixGoodSample),
     )
 
 

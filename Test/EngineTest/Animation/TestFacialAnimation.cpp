@@ -288,7 +288,7 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 
 /**
  * @brief [FacialAnimationTest] 선형 예측 포락선의 두 봉우리가 합성 모음의 포먼트에 닿는다 — 첫째 · 둘째 포먼트가 실제 값의 20 % 안이다
- * @details 모음 셋(AA 750/1150, EE 300/2300, OO 320/800 Hz)을 한 프레임(1/30 초) 창으로 잰다. 무음 · 너무 짧은 창은 잴 수 없다.
+ * @details 모음 셋(AA 750/1150, EE 300/2300, OO 320/800 Hz)을 한 프레임(1/30 초) 창으로 측정한다. 무음 · 너무 짧은 창은 측정할 수 없다.
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncFormantsTrackSyntheticVowels )
 {
@@ -392,7 +392,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 
 /**
  * @brief [FacialAnimationTest] 자음 단서 — 무음 뒤 짧은 터짐은 파열음(PP), 영교차가 잦은 낮은 대역 잡음은 마찰음(FF)이다. 터짐 없이 서서히 열리는 같은 모음은 PP 가 아니다
- * @details 낮은 통과 잡음은 높은 대역이 주가 아니라 대역 형태만으로는 유성으로 보여 잡음 포락선의 봉우리를 포먼트로 잴 뻔한다 — 마찰음 단서가 포먼트 비교를 끈다.
+ * @details 낮은 통과 잡음은 높은 대역이 주가 아니라 대역 형태만으로는 유성으로 보여 잡음 포락선의 봉우리를 포먼트로 측정할 뻔한다 — 마찰음 단서가 포먼트 비교를 끈다.
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncConsonantCuesMarkPlosivesAndFricatives )
 {
@@ -693,6 +693,34 @@ SW_TEST_CASE( FacialAnimationTest, LiveLinkFacePacketsParseAgainstTheDataLayout 
     SW_EXPECT_FALSE( mapping.parseXML( R"(<LiveLinkFaceMapping _layoutPath="engine/animation/livelinkface.xml"><_listExpression><LiveLinkFaceExpression _expression="Happy"><_listChannel /></LiveLinkFaceExpression></_listExpression></LiveLinkFaceMapping>)",
                                        "empty expression", mappedLayout ) );
     SW_EXPECT_TRUE( mapping._listExpression.empty() );
+}
+
+/**
+ * @brief [FacialAnimationTest] 실제 머리(VRoid AvatarSample_D, CC0)의 연결 표 — 표가 가리키는 표정이 모두 그 머리의 얼굴 리그에 있고, 입 모양 · 눈 깜빡임 · 감정 채널이 하나 이상 걸린다
+ */
+SW_TEST_CASE( FacialAnimationTest, AvatarSampleLiveLinkMappingNamesOnlyExpressionsOfItsRig )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    FacialRig rig;
+    SW_ASSERT_TRUE( rig.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.facial.xml" ) );
+    LiveLinkFaceMapping mapping;
+    LiveLinkFaceLayout  layout;
+    SW_ASSERT_TRUE( mapping.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.livelinkface.xml", layout ) );
+    SW_EXPECT_FALSE( mapping._listExpression.empty() );
+    for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
+    {
+        SW_EXPECT_TRUE_MSG( rig.findExpressionIndex( expression._expression ) >= 0, expression._expression.c_str() );
+    }
+    // 눈 깜빡임 둘 · 턱 · 입술 · 감정 하나 이상이 걸려 있다.
+    for ( const utf8* pName : { "blinkLeft", "blinkRight", "aa", "ou", "happy" } )
+    {
+        bool bMapped = false;
+        for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
+        {
+            bMapped = bMapped || expression._expression == hashed_string( pName );
+        }
+        SW_EXPECT_TRUE_MSG( bMapped, pName );
+    }
 }
 
 /**

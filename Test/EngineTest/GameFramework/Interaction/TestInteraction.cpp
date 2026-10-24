@@ -739,7 +739,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
 
     SW_EXPECT_NULL( resources.findAssetCache( "InteractionCatalog" ) ); // 서비스가 풀리면 레지스트리에서 내려간다
     SW_ASSERT_NOT_NULL( pInteractable );
-    SW_ASSERT_TRUE_MSG( pCache != nullptr, "상호작용 표 캐시가 에셋 캐시 등록부에 없다 — 에디터 핫 리로드가 고친 표를 다시 읽을 길이 없다" );
+    SW_ASSERT_TRUE_MSG( pCache != nullptr, "The interaction table cache is not in the asset cache registry - the editor hot reload has no way to re-read an edited table" );
     SW_EXPECT_TRUE( bCached );
     SW_ASSERT_NOT_NULL( pBefore );
     SW_ASSERT_NOT_NULL( pAfter );

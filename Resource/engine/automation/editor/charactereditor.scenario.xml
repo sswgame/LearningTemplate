@@ -41,5 +41,8 @@
 	<At frame="565"><EditorClick mark="charactereditor.playClip"/></At>
 	<At frame="610"><Expect probe="Editor.CharacterEditorPreviewClipPlaying" atLeast="1"/></At>
 	<At frame="650"><CaptureEditorUI file="charactereditor/clip.png"/></At>
-	<At frame="680"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+	<!-- 꾸미기 슬라이더(스키마가 있는 프리셋이면 뷰포트 아래에 나온다): 눌러 값을 바꾸고 놓으면 몸이 다시 입혀진다 — 눈으로 본다 -->
+	<At frame="660"><EditorClick mark="charactereditor.slider.last"/></At>
+	<At frame="720"><CaptureEditorUI file="charactereditor/slider.png"/></At>
+	<At frame="740"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

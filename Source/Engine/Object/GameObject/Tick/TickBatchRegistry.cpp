@@ -1,6 +1,6 @@
 /**
  * @file TickBatchRegistry.cpp
- * @brief 타입별 일괄 틱 등록부 구현입니다(프로세스 전역 목록 · 세대).
+ * @brief 타입별 일괄 틱 레지스트리 구현입니다(프로세스 전역 목록 · 세대).
  */
 #include "pch.h"
 
@@ -88,7 +88,7 @@ namespace sw
         std::scoped_lock<mutex>           lock{ state._mutex };
         for ( const TickBatchRegistryInternal::Entry& entry : state._listEntry )
         {
-            // 주소가 아니라 지금의 `StaticType` 과 견준다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
+            // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
             if ( entry._pStaticType() == pType )
                 return entry._pFunction;
         }

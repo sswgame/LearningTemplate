@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Viewport/EditorVisualizerStats.h"
 #include "Editor/Viewport/EditorVisualizerToggles.h"
 
 struct ImDrawList;
@@ -51,6 +52,8 @@ namespace sw::editor
         bool _bGizmoDragging{ false };
         /** @brief 2D 뷰(직교 카메라가 월드 Z 축을 본다)이면 true 입니다(`EditorVisualizerGeometryUtil::isFlat2DView`). */
         bool _bFlat2D{ false };
+        /** @brief 이 뷰포트가 든 시각화 통계입니다. 그린 양을 적는 시각화가 쓰며, 인자를 만드는 뷰포트가 항상 채웁니다(없는 경우가 없으니 널 검사를 하지 않는다). */
+        EditorVisualizerStats* _pStats{ nullptr };
     };
 } // namespace sw::editor
 

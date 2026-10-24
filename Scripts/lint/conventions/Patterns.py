@@ -378,23 +378,24 @@ _kBasicTypesRe = re.compile(
 
 # [placement new 표기 검사]
 # 정규식 패턴: r'(?<!\w)new\s*\('
-#   - (?<!\w)  : 앞이 식별자 글자가 아니어야 한다 — `sw_new` · `sw_placement_new(` 는 여기서 빠진다
+#   - (?<!\w)  : 앞이 식별자 글자가 아니어야 한다 — `sw_placement_new(` 는 여기서 빠진다
 #   - new\s*\( : `new` 바로 뒤에 괄호가 오는 형태, 즉 placement 구문
 # `operator new(` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
 # 매칭 예시 (위반): new ( pMemory ) T();, ::new ( &storage ) T( value );
-# 올바른 예시: sw_placement_new( pMemory ) T();, sw_new T();
+# 올바른 예시: sw_placement_new( pMemory ) T();, make_unique<T>();
 # 컨벤션 규칙: 이미 잡아 둔 메모리에 객체를 만들 때는 Memory.h 의 sw_placement_new 를 씁니다.
 _kRawPlacementNewRe = re.compile(r'(?<!\w)new\s*\(')
 
 # [맨 new 검사]
 # 정규식 패턴: r'(?<!\w)new\s+(?=[A-Za-z_:])'
-#   - (?<!\w)               : 앞이 식별자 글자가 아니어야 한다 — `sw_new T` 는 여기서 빠진다(`::new T` 는 잡힌다)
+#   - (?<!\w)               : 앞이 식별자 글자가 아니어야 한다(`::new T` 는 잡힌다)
 #   - new\s+(?=[A-Za-z_:])  : `new` 뒤에 타입 이름이 오는 형태(`new T` · `new T[n]` · `new T( ... )` · `new ::ns::T`)
 # placement 구문(`new (`)은 Style/PlacementNew 가 본다. `operator new` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
 # 매칭 예시 (위반): pChunk = new T[count]{};, pPage = new Page;
-# 올바른 예시: sw_new Page, sw_new_array<T>( count ), make_unique<T>( ... )
+# 올바른 예시: make_unique<Page>(), makeFixedCountArray<T, N>(), make_unique<T>( ... )
 # 컨벤션 규칙: 힙 객체는 sw 할당자(Memory.h)로 만든다. CRT new 는 메모리 태그 · 누수 검사에 보이지 않는다.
 _kRawNewRe = re.compile(r'(?<!\w)new\s+(?=[A-Za-z_:])')
+
 _kOperatorKeywordTailRe = re.compile(r'\boperator\s*$')
 
 # [생성자 멤버 초기화 리스트 괄호 검사]

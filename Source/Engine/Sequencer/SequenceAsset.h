@@ -193,7 +193,7 @@ namespace sw
      * @class SequenceAsset
      * @brief 구간 항목(클립, 이벤트, 카메라 컷)과 키 트랙(트랜스폼, 프로퍼티)을 담는 타임라인 에셋입니다.
      * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 모르는 종류 이름 · 읽지 못한 값 · 범위 밖 숫자는 오류).
-     *          키는 PROPERTY 이름이 정본이다. 읽은 뒤 프레임 번호의 범위(`kSequenceFrameLimit`) · 순서, 종류마다의 채널 수를 따로 보고,
+     *          키는 PROPERTY 이름이 기준이다. 읽은 뒤 프레임 번호의 범위(`kSequenceFrameLimit`) · 순서, 종류마다의 채널 수를 따로 보고,
      *          커브는 시각 순으로 정렬해 자동 접선을 다시 센다.
      */
     REFLECT()

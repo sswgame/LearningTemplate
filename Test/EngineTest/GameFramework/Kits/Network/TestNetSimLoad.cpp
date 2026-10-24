@@ -16,7 +16,7 @@
 //   SW_LOAD_RAMP_UP_SECONDS=<s>   이 시간에 걸쳐 클라이언트를 늘린다(기본 2)
 //   SW_LOAD_DURATION_SECONDS=<s>  창(60 Hz 틱, 기본 12) — 그 뒤 모두가 서버와 같아질 때까지 상한 안에서 더 돈다
 //   SW_LOAD_NETWORK=<프리셋>      off · lan · wifi · lte · badwifi(기본 lte)
-// 결과는 `[LoadMetric] <이름>=<값>` 줄로 남긴다 — `Scripts/qa/Load.py` 가 읽어 예산 · 기준선과 견준다.
+// 결과는 `[LoadMetric] <이름>=<값>` 줄로 남긴다 — `Scripts/qa/Load.py` 가 읽어 예산 · 기준선과 비교한다.
 
 SW_TEST_LOAD_SUITE( NetSimLoadTest, "서버 + 클라이언트 여럿의 틱 시간과 부하 중 상태 해시 일치를 잰다(부하 검증의 cluster 드라이버)" );
 SW_TEST_TIME_BUDGET( NetSimLoadTest, 10500, "Release 케이스 최대 2517 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );

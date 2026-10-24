@@ -49,6 +49,16 @@
       "source": "docs/plans/GraphicsMeasurements.md M3", "result_doc": "docs/plans/GraphicsMeasurements.md M3"
     },
     {
+      "id": "net-message-channel-test", "title": "NetMessageChannel 스키마 해시 핸드셰이크와 키트 스냅샷 왕복", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NetMessageChannelTest.*,MechArenaTest.SnapshotRoundTripsAndRefusesOutOfRangeValues,AsymmetricHorrorTest.SnapshotRoundTripsAndRefusesOutOfRangeValues",
+      "source": "docs/plans/NetChannelSchemaHashHandshake.md 남은 확인", "result_doc": "docs/plans/NetChannelSchemaHashHandshake.md 상태를 끝으로"
+    },
+    {
+      "id": "service-record-unknown-fields-test", "title": "ServiceRecord 모르는 필드 보존", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "ServiceRecordUnknownFieldsTest.*",
+      "source": "docs/plans/PersistentRecordUnknownFields.md 남은 확인", "result_doc": "docs/plans/PersistentRecordUnknownFields.md 상태를 끝으로"
+    },
+    {
       "id": "ability-system-test", "title": "AbilitySystemTest 필터", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "AbilitySystemTest.*",
       "source": "docs/plans/AbilitySystemExtensions.md 남은 것", "result_doc": "docs/plans/AbilitySystemExtensions.md 상태를 끝으로"
@@ -100,7 +110,7 @@
     },
     {
       "id": "pack-patch-tests", "title": "팩 패치 · 팩 읽기 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "PackPatchTest.*,ResourcePakTest.*",
+      "filter": "PackPatchTest.*,ResourcePakTest.*,PackLayoutTest.*",
       "source": "docs/plans/PatchDeltaDelivery.md 남은 것", "result_doc": "docs/plans/PatchDeltaDelivery.md 상태를 끝으로"
     },
     {
@@ -369,6 +379,11 @@
       "source": "docs/plans/InteractionSpatialGrid.md 단위 표 I3", "result_doc": "docs/plans/InteractionSpatialGrid.md I3"
     },
     {
+      "id": "interaction-spatial-grid-i3", "title": "InteractionSpatialGrid I3 — 하는 쪽 여럿 × 대상 수천 케이스의 이득(Release)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
+      "need_command": "TestInteractionBench 에 하는 쪽 여럿 × 대상 수천 케이스가 아직 없다 — I3 가 케이스를 더하는 일이고, 더하면 interaction-bench 가 돌린다",
+      "source": "docs/plans/InteractionSpatialGrid.md 단위 표 I3", "result_doc": "docs/plans/InteractionSpatialGrid.md I3"
+    },
+    {
       "id": "net-udp-bench", "title": "UDP 소켓 계층 벤치(Windows Release, 패킷당 시간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
       "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
       "limit": "보고만 — 패킷당 약 6.5 us(08_Verification 2절 UDP 소켓 계층)와 나란히 둔다. 일괄 받기는 시스템 호출이 지배적일 때만 착수", "judge": "exit",
@@ -433,6 +448,128 @@
       "id": "runtime-quality-adjust-tracy", "title": "렌더 벤치 · aiskirmish 의 13 ~ 20 ms 프레임 한 번을 Tracy 로 보기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "Tracy 로 그 프레임을 보는 일이라 표로 판정할 값이 없다(gv_profileTracePath 트레이스를 사람이 연다)",
       "source": "docs/plans/Candidates-quality.md", "result_doc": "docs/plans/Candidates-quality.md 부하 검증 후보"
+    },
+    {"id": "retarget-test", "title": "RetargetTest 필터(리타깃 포즈 target_pose)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "RetargetTest.*", "source": "docs/plans/AnimationAdvancedFeatures.md A4", "result_doc": "docs/plans/AnimationAdvancedFeatures.md 상태를 끝으로"},
+    {"id": "facial-animation-test", "title": "FacialAnimationTest 필터(아바타 연결 표)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "FacialAnimationTest.*", "source": "docs/plans/FacialAnimation.md F4", "result_doc": "docs/plans/FacialAnimation.md 상태를 끝으로"},
+    {"id": "appearance-preload-test", "title": "AppearancePreloadTest 필터(체형 축 bodyShapes)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "AppearancePreloadTest.*", "source": "docs/plans/CharacterAppearanceIntegration.md 남은 것", "result_doc": "docs/plans/CharacterAppearanceIntegration.md 남은 것"},
+    {"id": "animation-cost-curve", "title": "합성 리그 벤치 비용 곡선(own+fullbody 모드, 코덱 디코드 비용)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60, "filter": "SyntheticRigBenchTest.*", "extra_args": ["--load_suites=only"], "source": "docs/plans/AnimationAdvancedFeatures.md A1 · A3", "result_doc": "docs/08_Verification.md 애니메이션 갱신 표"},
+    {"id": "editor-retarget-scenario", "title": "editor/retarget 시나리오(새 프로필 · 열기 · 3D 미리보기 · 리타깃 포즈)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["engine/automation/editor/retarget.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/AnimationAdvancedFeatures.md A4", "result_doc": "docs/plans/AnimationAdvancedFeatures.md 상태를 끝으로"},
+    {"id": "editor-charactereditor-scenario", "title": "editor/charactereditor 시나리오(꾸미기 슬라이더 사진 포함)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["engine/automation/editor/charactereditor.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/EditorCharacterEditor.md 남은 것", "result_doc": "docs/plans/EditorCharacterEditor.md 남은 것"},
+    {"id": "shooter-stride-warping-scenario", "title": "Shooter3D stridewarping 시나리오(서 있을 때 배율 1, 뒷걸음 달리기 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/stridewarping.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterStrideWarping.md S2", "result_doc": "docs/plans/ShooterStrideWarping.md 상태를 끝으로"},
+    {"id": "shooter-body-views-scenario", "title": "Shooter3D bodyviews 시나리오(1인칭 몸 · 3인칭 · 무기마다 왼손 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/bodyviews.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
+    {"id": "shooter-enemy-death-scenario", "title": "Shooter3D enemydeath 시나리오(래그돌 · 떨어진 무기 · 시체 걷힘 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/enemydeath.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
+    {"id": "shooter-crowd-scenario", "title": "Shooter3D crowd 시나리오(적 군중 공유 탐침 기록 · 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/crowd.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/AnimationLodAndCrowd.md 남은 것", "result_doc": "docs/plans/AnimationLodAndCrowd.md 남은 것"},
+    {"id": "shooter-cape-scenario", "title": "Shooter3D cape 시나리오(스프링 망토 흔들림 사진 — shooter-cape-import 뒤)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/cape.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterCharacterIntegration.md S7", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
+    {"id": "kaykit-bench-scenarios", "title": "Empty kaykit 벤치 시나리오 셋(아틀라스 색 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/empty/automation/kaykitcharacters.scenario.xml", "game/empty/automation/kaykitrig.scenario.xml", "game/empty/automation/kaykitcombat.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/KayKitMaterials.md K2", "result_doc": "docs/plans/KayKitMaterials.md 상태를 끝으로"},
+    {"id": "wildwest-mount-scenario", "title": "WildWest mount 시나리오(스킨드 말 · 기수 안장 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/wildwest/automation/mount.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/WildWestHorseMount.md W2", "result_doc": "docs/plans/WildWestHorseMount.md 남은 것"},
+    {"id": "shooter-crowd-measure", "title": "적 30 마리 GT.Animation 전후(군중 공유)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "need_command": "적 30 마리를 세우는 perf-compare 케이스가 없다", "source": "docs/plans/AnimationLodAndCrowd.md 남은 것", "result_doc": "docs/plans/AnimationLodAndCrowd.md 남은 것"},
+    {"id": "socket-part-pool-measure", "title": "소켓 부품 풀 전 · 후 스폰 비용(GT.Appearance.syncParts, -gv_socketPartPool=0 대 1)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "need_command": "적 스폰 · 퇴장을 되풀이하는 perf-compare 케이스가 없다", "source": "docs/plans/ShooterCharacterIntegration.md 남은 것", "result_doc": "docs/plans/ShooterCharacterIntegration.md 남은 것"},
+    {"id": "shooter-cape-import", "title": "스프링 망토 임포트(MakeSkinnedCape.py → App --import-models → itemvisuals cape_knight 한 커밋)와 휘두름 Impact 알림 재임포트", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "need_command": "App --import-models 를 돌려 산출물과 데이터 전환을 한 커밋으로 남기는 일이라 한 명령으로 도는 항목이 아니다", "source": "docs/plans/ShooterCharacterIntegration.md S7", "result_doc": "docs/plans/ShooterCharacterIntegration.md 상태를 끝으로"},
+    {"id": "kaykit-bench-rebaseline", "title": "KayKit 머티리얼 뒤 벤치 GT.Animation 측정 기준 다시 잡기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "need_command": "기준 수치를 어느 문서 표에 갈아 쓸지 사람이 정한다", "source": "docs/plans/KayKitMaterials.md K2", "result_doc": "docs/plans/KayKitMaterials.md 상태를 끝으로"},
+    {"id": "livelinkface-device", "title": "Live Link Face 실제 iPhone 앱 확인(판 번호 · 채널 순서 · 아바타 표정 배율)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "need_command": "사람과 iPhone 장비가 필요하다", "source": "docs/plans/FacialAnimation.md F4", "result_doc": "docs/plans/FacialAnimation.md 상태를 끝으로"},
+    {"id": "lipsync-real-voice", "title": "실제 음성 녹음으로 립싱크 트랙 다시 만들기 · 자음 문턱 고치기", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "need_command": "CC0 음성 녹음 파일이 저장소에 들어와야 한다(외부 에셋)", "source": "docs/plans/FacialAnimation.md F5", "result_doc": "docs/plans/FacialAnimation.md 상태를 끝으로"},
+    {
+      "id": "config-range-reject-tests", "title": "설정 범위 거절 리팩터의 테스트(Vitality · ResourceGauge · 장르 키트 설정)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 40,
+      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
+      "source": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining", "result_doc": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining"
+    },
+    {
+      "id": "shooter-net-jump-lte", "title": "Shooter3D 전용 서버 + 클라이언트 lte 에서 짧은 점프 입력이 매번 나가는지와 보정 횟수", "kind": "measure", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "서버 + 클라이언트 두 프로세스에 -gv_netEmuPreset=lte 를 걸고 사람이 점프를 짧게 눌러 보는 일이라 한 명령 시나리오가 아직 없다(netplay.scenario.xml 에 점프 입력 단계를 더하면 된다)",
+      "source": "docs/plans/RollbackPrediction.md 남은 것", "result_doc": "docs/plans/RollbackPrediction.md 남은 것"
+    },
+    {
+      "id": "admin-gm-port-real", "title": "GM 포트 실제 확인 — 전용 서버(_adminServicePort 설정)와 에디터 GM 도구 연결, 실제 IOCP 두 리슨", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "AdminToolSessionTest.*,OnlineServiceHostTest.*,AccountGmLoginTest.*",
+      "need_command": "전용 서버를 _adminServicePort 를 준 설정 파일로 띄워 에디터 GM 도구가 붙는 실행은 한 명령이 아직 없다(두 키트를 이어 훅을 거는 조립 쪽 도구 실행 파일도 없다). 위 필터는 단위 확인까지다",
+      "source": "docs/plans/OnlineKits.md I6", "result_doc": "docs/plans/OnlineKits.md I6"
+    },
+    {
+      "id": "audio-bench-release", "title": "AudioBenchTest Release — Stereo · 5.1 · 7.1 렌더 비용 비율과 평면 대 인터리브 전후", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
+      "filter": "AudioBenchTest.*",
+      "source": "docs/plans/AudioChannelLayout.md 5절", "result_doc": "docs/plans/AudioChannelLayout.md 상태를 끝으로"
+    },
+    {
+      "id": "audio-engine-ext-tests", "title": "오디오 서라운드 · 가림 · 컨볼루션 · 소리 그래프 · 믹서 · 스트림 단위 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "AudioSurroundTest.*,AudioOcclusionTest.*,AudioConvolutionTest.*,AudioSceneTest.*,AudioGraphTest.*,AudioMixerTest.*,AudioStreamTest.*,AudioSpatialTest.*,AudioDSPTest.*",
+      "source": "docs/plans/AudioEngineExtensions.md 4절", "result_doc": "docs/plans/AudioEngineExtensions.md 상태를 끝으로"
+    },
+    {
+      "id": "state-object-hash-tests", "title": "오브젝트별 상태 해시 글 되읽기와 다른 오브젝트 짚기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "StateHashReportLineTest.*",
+      "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
+    },
+    {
+      "id": "epoll-stream-transport-wsl", "title": "리눅스 epoll 스트림 전송 — StreamTransportTest 를 반복 20 회(WSL Debug · Shipping)", "kind": "test", "config": "Debug", "platform": "wsl", "gpu": "none", "pending": true, "timeout_minutes": 40,
+      "filter": "StreamTransportTest.*",
+      "need_command": "--test_repeat=20 과 변이(setReceivePaused( false ) 의 할 일을 빼면 백프레셔 테스트가 진다) 확인은 한 명령이 아니다. WSL 은 사용자가 요청할 때만 돌린다",
+      "source": "docs/plans/Candidates-network.md EpollAndRealStoreVerification", "result_doc": "docs/plans/Candidates-network.md EpollAndRealStoreVerification"
+    },
+    {
+      "id": "real-store-contract", "title": "PostgreSQL · RESP 계약 테스트를 실제 서버로(SW_TEST_POSTGRES_URL · SW_TEST_RESP_URL)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "need_command": "이 PC 에 PostgreSQL · Valkey(WSL) · Garnet(Windows) 서버가 없다. 서버를 띄우고 환경 변수 두 개를 준 뒤 ServiceStoreContract 를 쓰는 테스트 필터를 돌린다",
+      "source": "docs/plans/Candidates-network.md EpollAndRealStoreVerification", "result_doc": "docs/plans/Candidates-network.md EpollAndRealStoreVerification"
+    },
+    {
+      "id": "glyph-raster-budget-tests", "title": "글리프 래스터화 예산 테스트(GlyphAtlasTest · CanvasDrawListTest · UIPaintTest)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "GlyphAtlasTest.*,CanvasDrawListTest.*,UIPaintTest.*",
+      "source": "docs/plans/GlyphRasterizationHitch.md 2절", "result_doc": "docs/plans/GlyphRasterizationHitch.md 2절"
+    },
+    {
+      "id": "glyph-hangul-hitch-measure", "title": "한글 400 글리프 첫 프레임 GT.Frame max(예산 4000 us 대 제한 없음 0)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "App -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -lang=ko 에 -gv_uiGlyphRasterBudgetMicros 를 0 과 4000 으로 준 탐침 프레임의 GT.Frame max 를 읽는 perf-compare 케이스가 없다",
+      "source": "docs/plans/GlyphRasterizationHitch.md 2절", "result_doc": "docs/plans/GlyphRasterizationHitch.md 2절"
+    },
+    {
+      "id": "ui-draw-performance-measures", "title": "런타임 UI 그리기 성능 세 측정(멈춘 화면 · 일부만 바뀜 · 조상 변환)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "-gv_benchUiWidgets=10000 에 -gv_benchUiChurn=10 · -gv_benchUiOpacityPulse=true 를 준 세 실행의 GT.UI.Paint + GT.UI.Layout p50 합을 읽는 perf-compare 케이스가 없다",
+      "source": "docs/plans/UiDrawPerformance.md 2절", "result_doc": "docs/plans/UiDrawPerformance.md 2절"
+    },
+    {
+      "id": "light-culling-perf-compare", "title": "클러스터드 라이팅 S3 — 라이트 16 · 128 · 1024 개 CPU · GPU 생산자 대 그리드 없음", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 90,
+      "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "lightCullingCpu16", "lightCullingGpu16", "lightCullingCpu128", "lightCullingGpu128", "lightCullingCpu1024", "lightCullingGpu1024", "--runs", "5"], "limit": "보고만 — GPU.Frame · GPU.Shading · GPU.Compute · RT.Frame, 클러스터 크기는 결과를 보고 정한다", "judge": "exit",
+      "source": "docs/plans/ClusteredLighting.md S3", "result_doc": "docs/plans/ClusteredLighting.md S3"
+    },
+    {
+      "id": "terrain-bench-release", "title": "지형 LOD 교체 · 쓰기 벤치 Release 3회(LODSweepWorstFrame · ColliderRebuildAfterBrushWrite · WriteHeightsRectSizes)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "TerrainBenchTest.*", "extra_args": ["--load_suites=only", "--host_suites=all"],
+      "note": "3회 돌려 PC(코어 수)와 커밋을 적는다. 결과로 kMaxChunkMeshRebuildsPerFrame 을 GT 2 ms 에 맞춘다. 식생 부분 계산(쇼케이스 브러시 한 번 뒤 `Foliage: refreshed` 로그의 시간)과 RT.GPUScene.vertexPool 교체 프레임 최대값은 App 프로파일 표에서 따로 본다.",
+      "source": "docs/plans/TerrainEditCost.md T3", "result_doc": "docs/plans/TerrainEditCost.md T3"
+    },
+    {
+      "id": "complex-text-install", "title": "복합 문자 빌드(harfbuzz 오버레이 포트 · sheenbidi) 설치와 ComplexShapingTest 연결형 기대", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "-DVCPKG_MANIFEST_FEATURES=complex-text -DSW_ENABLE_COMPLEX_TEXT=ON 으로 따로 구성한 빌드 트리가 필요하다(기본 구성과 설치 폴더를 나눠야 한다)",
+      "source": "docs/plans/ThirdPartyGaps.md T2", "result_doc": "docs/plans/ThirdPartyGaps.md T2"
+    },
+    {
+      "id": "build-speed-unity-batch", "title": "유니티 범위 확대 — 교차 3 쌍 × 배치 4 · 8 · 16(SW_UNITY_BATCH_CORE · SW_UNITY_BATCH_KIT)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "PCH 끔 + 캐시 없음 풀 빌드를 구성마다 새 빌드 트리에서 재야 해서 한 명령으로 도는 케이스가 없다(다른 빌드가 없을 때만)",
+      "source": "docs/plans/BuildSpeed.md 5절", "result_doc": "docs/plans/BuildSpeed.md 5절"
+    },
+    {
+      "id": "build-speed-reflection-fanout", "title": "리플렉션 헤더 팬아웃 — 의존 TU 수와 증분 시간(TypeRegistry.h · ReflectionMetadata.h)", "kind": "measure", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "후보 pch.h 를 -I 맨 앞에 둔 /clang:-M 전처리로 의존 TU 를 세고 헤더를 건드린 증분 시간을 재는 명령이 없다. 전체 빌드 통과는 debug-full-build 가 본다",
+      "source": "docs/plans/BuildSpeed.md 12절", "result_doc": "docs/plans/BuildSpeed.md 12절"
+    },
+    {
+      "id": "container-hash-tag-bench", "title": "구조 최적화 B ③ — 해시 태그 전 · 후(ContainerBenchTest.*) 번갈아 3 ~ 5회", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "벤치 커밋과 해시 태그 커밋을 번갈아 지은 CoreTest 두 벌이 필요하다. CoreTest.exe --test_filter=ContainerBenchTest.* --load_suites=only",
+      "source": "docs/plans/StructuralOptimization.md B 표", "result_doc": "docs/plans/StructuralOptimization.md B 표"
+    },
+    {
+      "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 허프만 없는 복호기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "HTTP2Test.*",
+      "source": "docs/plans/OnlineKits.md G4", "result_doc": "docs/plans/OnlineKits.md G4"
+    },
+    {
+      "id": "server-picker-tests", "title": "서버 목록 모델 테스트(화면 ServerPickerScreen 은 컴파일 확인과 시나리오 시설 뒤 화면 확인)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "ServerListModelTest.*",
+      "source": "docs/plans/OnlineKits.md U1", "result_doc": "docs/plans/OnlineKits.md U1"
+    },
+    {
+      "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "NetStatsReportTest.*",
+      "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
     },
     {
       "id": "melee-hit-ledger-test", "title": "근접 맞음 주장의 서버 확인(MeleeHitLedger)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,

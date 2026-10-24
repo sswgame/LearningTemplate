@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -166,11 +167,18 @@ namespace sw
         using Internal = TrampolineArenaInternal;
         if ( playerCount < Internal::kMinPlayers || playerCount > Internal::kMaxPlayers )
             return false;
-        _settings              = settings;
-        _settings._step        = MathUtil::max( 1.0e-3f, _settings._step );
-        _settings._arenaRadius = MathUtil::max( 1.0f, _settings._arenaRadius );
-        _settings._gravity     = MathUtil::max( 0.1f, _settings._gravity );
-        _settings._maxCombo    = MathUtil::max( 0, _settings._maxCombo );
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "TrampolineArena: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        if ( roundTime < 0.0f || scoreLimit < 0 )
+        {
+            SW_LOG_ERROR( "TrampolineArena: refused roundTime %# or scoreLimit %# (0 means no limit, negative is not a limit)", roundTime, scoreLimit );
+            return false;
+        }
+        _settings = settings;
         if ( _judge.getWindows().empty() )
         {
             vector<TimingWindow> listWindow( 2 );
@@ -184,8 +192,8 @@ namespace sw
         }
 
         MatchSettings match;
-        match._timeLimit    = MathUtil::max( 0.0f, roundTime );
-        match._scoreLimit   = MathUtil::max( 0, scoreLimit );
+        match._timeLimit    = roundTime;
+        match._scoreLimit   = scoreLimit;
         match._respawnDelay = _settings._respawnDelay;
         match._assistWindow = _settings._creditWindow;
         match._scorePerKill = _settings._ringOutScore;

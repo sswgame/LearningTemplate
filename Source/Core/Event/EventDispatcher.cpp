@@ -54,9 +54,9 @@ namespace sw
     {
 #if defined( SW_DEBUG )
         SW_LOG_ASSERT( isBusThread(),
-                       "EventDispatcher 의 버스(subscribe/unsubscribe/publish/processEvents/clear)는 "
-                       "processEvents 를 부르는 스레드에서만 쓸 수 있습니다. "
-                       "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
+                       "The EventDispatcher bus (subscribe/unsubscribe/publish/processEvents/clear) "
+                       "may only be used on the thread that calls processEvents. "
+                       "To send an event from another thread, use push." );
 #endif
     }
 
@@ -100,12 +100,7 @@ namespace sw
 
         if ( activeChannels.empty() )
         {
-            for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
-            {
-                if ( pOverflowMem != nullptr )
-                    Memory::free( pOverflowMem );
-            }
-            _arrListOverflowAllocation[currentAllocIdx].clear();
+            _arrListOverflowAllocation[currentAllocIdx].clear(); // 블록은 목록이 소유한다
             _arrFrameAllocator[currentAllocIdx].reset();
             return;
         }
@@ -148,11 +143,6 @@ namespace sw
 
         BLOCK( "Cleanup Frame Allocator" )
         {
-            for ( void* pOverflowMem : _arrListOverflowAllocation[currentAllocIdx] )
-            {
-                if ( pOverflowMem != nullptr )
-                    Memory::free( pOverflowMem );
-            }
             _arrListOverflowAllocation[currentAllocIdx].clear();
             _arrFrameAllocator[currentAllocIdx].reset();
         }
@@ -266,11 +256,6 @@ namespace sw
             _mapChannelQueue.clear();
             for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )
             {
-                for ( void* pOverflowMem : _arrListOverflowAllocation[allocIndex] )
-                {
-                    if ( pOverflowMem != nullptr )
-                        Memory::free( pOverflowMem );
-                }
                 _arrListOverflowAllocation[allocIndex].clear();
             }
             _arrFrameAllocator[0].clear();

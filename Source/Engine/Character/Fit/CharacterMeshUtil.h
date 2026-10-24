@@ -1,9 +1,9 @@
 /**
  * @file CharacterMeshUtil.h
- * @brief 메시 에셋(`Mesh`)과 외형 계산의 중립 형상(`AppearanceGeometry`) 사이의 다리입니다. 피팅은 형상에서 풀고, 결과는 구운 메시 사본으로 돌아갑니다.
- * @details 결정: 체형 모프와 피팅 델타는 **사본의 레스트 정점에 굽는다**(GPU 모프 가중치로 매 프레임 걸지 않는다). 피팅은 그 체형을 적용한 형상에서 풀므로 체형이 바뀌면
- *          어차피 다시 풀어야 하고, 구우면 매 프레임 가중치를 내는 작업이 없어 같은 차림의 캐릭터가 군중 포즈를 나눌 수 있다(Mutable 이 결과 메시를 굽는 것과 같다).
- *          구운 모프 타깃은 사본에서 빠진다 — 커브 · 얼굴이 같은 이름에 가중치를 내도 두 번 걸리지 않는다. 굽지 않은 타깃(얼굴)은 그대로 남아 GPU 모프 풀이 건다.
+ * @brief 메시 에셋(`Mesh`)과 외형 계산의 중립 형상(`AppearanceGeometry`) 사이의 다리입니다. 피팅은 형상에서 풀고, 결과는 베이크한 메시 사본으로 돌아갑니다.
+ * @details 결정: 체형 모프와 피팅 델타는 **사본의 레스트 정점에 베이크한다**(GPU 모프 가중치로 매 프레임 걸지 않는다). 피팅은 그 체형을 적용한 형상에서 풀므로 체형이 바뀌면
+ *          어차피 다시 풀어야 하고, 구우면 매 프레임 가중치를 내는 작업이 없어 같은 차림의 캐릭터가 군중 포즈를 나눌 수 있다(Mutable 이 결과 메시를 베이크하는 것과 같다).
+ *          베이크한 모프 타깃은 사본에서 빠진다 — 커브 · 얼굴이 같은 이름에 가중치를 내도 두 번 걸리지 않는다. 베이크하지 않은 타깃(얼굴)은 그대로 남아 GPU 모프 풀이 건다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -32,10 +32,10 @@ namespace sw
          */
         static void makeWeldedGeometry( const Mesh& mesh, AppearanceGeometry& outGeometry );
         /**
-         * @brief 구운 메시 사본을 만듭니다 — 원본 정점에 모프 가중치를 더하고, 피팅 결과가 있으면 형상 정점의 델타를 더하고 보이지 않는 삼각형을 뺍니다.
+         * @brief 베이크한 메시 사본을 만듭니다 — 원본 정점에 모프 가중치를 더하고, 피팅 결과가 있으면 형상 정점의 델타를 더하고 보이지 않는 삼각형을 뺍니다.
          * @param listMorphWeight 구울 모프 가중치입니다. 메시에 없는 이름은 건너뛰고, 가중치가 0 이 아닌 타깃은 사본에서 뺍니다.
          * @param pWelded @p source 로 `makeWeldedGeometry` 가 만든 형상입니다. 피팅 결과가 없으면 nullptr 입니다.
-         * @param pFit 그 형상의 피팅 결과입니다(삼각형 보임 · 정점 델타, 바인드 공간). nullptr 이면 모프만 굽습니다.
+         * @param pFit 그 형상의 피팅 결과입니다(삼각형 보임 · 정점 델타, 바인드 공간). nullptr 이면 모프만 베이크합니다.
          * @return 형상 · 결과의 크기가 원본과 맞지 않거나 구간을 옮기지 못하면 오류를 남기고 nullptr 입니다. 남은 스킨 · 모프 · 구간은 남은 정점 번호로 옮깁니다.
          */
         static shared_ptr<Mesh> createBakedMesh( const Mesh& source, vector_reference<const BodyMorphWeight> listMorphWeight, const AppearanceGeometry* pWelded,

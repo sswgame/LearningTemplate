@@ -37,7 +37,7 @@ namespace sw
             static constexpr uint32 kMaxUpscaleZoom = 16;
             /// 백만 픽셀 단위 예산을 픽셀 수로 바꾸는 비율입니다.
             static constexpr float64 kPixelsPerMegapixel = 1.0e6;
-            /// 보임을 재는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
+            /// 보임을 측정하는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
             static constexpr uint32 kMaxVisibilityView = kMaxExtraRenderView + 1;
 
             /**
@@ -194,7 +194,7 @@ namespace sw
             ++candidateCount;
         }
 
-        // 보임은 사람이 보는 화면 전부에서 잰다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
+        // 보임은 사람이 보는 화면 전부에서 측정한다 — 주 시점과 화면 사각형 뷰(분할 화면의 다른 칸에 모니터가 보일 수 있다). 렌더 텍스처 뷰 너머로 보이는 모니터는 세지 않는다.
         AnimationLODView arrVisibilityView[RenderViewCollectorInternal::kMaxVisibilityView]{};
         uint32           visibilityViewCount     = 0;
         arrVisibilityView[visibilityViewCount++] = AnimationLODView::make( mainViewProj, mainPosition );

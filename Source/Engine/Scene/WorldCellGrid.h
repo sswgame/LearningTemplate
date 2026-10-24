@@ -7,7 +7,7 @@
  * 올리고 내린다. 언리얼 World Partition 의 런타임 격자(`UWorldPartitionRuntimeHashSet` 의 셀 크기 · 로딩 반경)와 같은 자리다.
  * 설계와 단위 나눔은 docs/plans/WorldStreaming.md.
  *
- * [값의 정본]
+ * [값의 기준]
  * 셀 크기와 로딩 반경은 데이터(`WorldCellGridDef`, 씬의 월드 설정)다. 코드에는 형식만 있고 기본값이 없다 — 셀 크기가 0 이하면 격자를
  * 만들지 않고 오류로 멈춘다(`tryCreate`).
  *

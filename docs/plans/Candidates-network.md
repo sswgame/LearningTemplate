@@ -2,7 +2,7 @@
 
 > 상태: 후보 · 선행: 없음 · 영역: network · 옛번호: B-9, B-10, C-54, D7-1, D7-2, D7-5, D7-6, D7-9, G-15, H-3 · 진행: 해당없음
 
-이 문서는 네트워크 · 서버 · 온라인 서비스 영역에서 아직 착수하지 않은 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 서버 디버깅은 [ServerDebug](ServerDebug.md), 서버 버스 형식은 [ServerBusFormat](ServerBusFormat.md)에 있습니다.
+이 문서는 네트워크 · 서버 · 온라인 서비스 영역에서 아직 착수하지 않은 후보의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 서버 디버깅은 [ServerDebug](ServerDebug.md), 서버 버스 형식은 [결정 기록](../09_Decisions.md) 5-9 에 있습니다.
 
 ## 확인 대기
 
@@ -11,7 +11,7 @@
 옛번호: B-9
 왜 필요한가: UDP 압축을 끈 결정과 측정값은 [결정 기록](../09_Decisions.md) 5-9 에 있다. 압축 시간은 컴파일러 · libc 에 따라 다르다.
 남은 것: WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다. 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
-실행 대기: 벤치는 `Test/EngineTest/GameFramework/Kits/Network/TestNetCompressionBench.cpp` 에 있다. 통합에서 WSL-Release 로 `NetCompressionBenchTest` 필터 하나만 돌려 결정 기록 5-9 표 옆에 적는다.
+실행 대기: 매니페스트 id `net-compression-bench`, `net-compression-bench-wsl`(WSL 은 사용자가 요청할 때만). 결정 기록 5-9 표 옆에 적는다.
 
 ### UdpSocketLayerScaling
 제목: MMO 규모 서버의 UDP 소켓 계층
@@ -22,13 +22,15 @@
 - 일괄 받기 · 보내기: 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`).
 - 포트 샤딩은 들어갔다(`GameNetSession` 샤드마다 `NetHost` · 스레드, 키트는 `NetHostShardSet`, 배정이 `ServerDescriptor::pickPort` 로 샤드 포트를 준다, 리눅스는 `SO_REUSEPORT` 한 포트도). 전후 측정은 아래 함정대로 남았다.
 함정: 일괄 받기와 샤딩 모두 `NetUDPBenchTest` 숫자로 전후를 측정한다.
-실행 대기: 벤치는 `Test/EngineTest/Network/TestNetUDPBench.cpp` 에 있다. 통합에서 다른 빌드가 없을 때 Windows Release 와 WSL Release(`ulimit -n 8192`)를 `NetUDPBenchTest` 필터로 차례로 돌려 08_Verification 2절 표에 나란히 둔다. 일괄 받기는 그 숫자에서 시스템 호출이 지배적일 때만 착수한다.
+실행 대기: 매니페스트 id `net-udp-bench`, `net-udp-bench-wsl`(WSL 은 사용자가 요청할 때만). 다른 빌드가 없을 때 돌려 08_Verification 2절 표에 나란히 둔다. 일괄 받기는 그 숫자에서 시스템 호출이 지배적일 때만 착수한다.
 
 ### EpollAndRealStoreVerification
 제목: 리눅스 epoll · 실제 DB 서버 확인
 옛번호: D7-5
 왜 필요한가: 온라인 서비스 계층 확인 방법 중 이 PC 에서 아직 못 한 것이다.
 남은 것:
+- 확인 대기: 매니페스트 id `epoll-stream-transport-wsl`(WSL 은 사용자가 요청할 때만).
+- 확인 대기: 매니페스트 id `real-store-contract`(실제 서버가 있는 기계에서).
 - 리눅스 epoll(`EpollStreamTransport`): `WSL-Debug` · `WSL-Shipping` 에서 `StreamTransportTest` 를 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 테스트가 진다)로. io_uring 은 측정 뒤.
 - PostgreSQL · RESP 계약 테스트를 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각, 이 PC 에는 서버가 없다). 계약 테스트(`ServiceStoreContract.h`)를 SQL 구현에도 같이 돌린다.
 
@@ -37,7 +39,7 @@
 옛번호: D7-6
 왜 필요한가: Core 창구(`Network/Security/`) · OpenSSL 3.6 구현 · 스트림 TLS 1.3 · UDP 보안 · 서버 설정의 TLS 인증서 배선은 있다. 방향은 [결정 기록](../09_Decisions.md) 5-9. 암호화의 비용 숫자가 없다.
 남은 것: 벤치 판 `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertzEncrypted` 가 있다(평문 판과 `[Bench]` 줄을 나란히 남긴다). Release 로 세 번 돌려 두 줄의 차를 [결정 기록](../09_Decisions.md) 3절에 숫자 한 줄로 적는다.
-실행 대기: 벤치는 `Test/EngineTest/GameFramework/Kits/Network/TestNetReplicationBench.cpp` 에 있다. 통합에서 혼자 돌 때 Release 로 `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertz*` 를 세 번 돌린다.
+실행 대기: 매니페스트 id `net-replication-bench`(혼자 돌 때 Release, 세 번).
 
 ## 정리
 
@@ -45,10 +47,10 @@
 제목: 설정이 범위 밖 값을 조용히 맞추는 남은 곳
 옛번호: C-54
 왜 필요한가: 넷 키트 전부 · `MatchMaker` · Base 의 `ScheduleSystem` · `RoundSeries` · `WorldClock` · `SessionStateComponent` 는 "선언된 범위 + 받을 때 거절"로 옮겼다(공통 형식은 `Base/Foundation/Utility/ConfigRangeUtil.h` 머리 주석). 설정 구조체가 범위를 선언하지 않아 받는 쪽마다 손으로 맞추는 곳이 남았다.
-남은 것:
-- Base 의 `Vitality`: `initialize` 가 실패를 돌려주면 받는 장르 키트 여섯(`BrMatch` · `HorrorMatch` · `MechArenaWorld` · `ScavengerExpedition` · `MetroDuelist` · `AdventureVitals`)과 `Shooter3D` 의 void 함수가 모두 바뀐다. `MetroidvaniaCatalog` 처럼 데이터에서 읽는 쪽은 카탈로그를 읽을 때 거절하는 편이 맞다. 쓰는 곳의 재생 속도 `max( 0, … )` 도 같은 모양이다.
-- 장르 키트: `FightingSettings`(라운드 시간 · 대기 `max( 1, … )`) · `PartyRoundSeries`(`setWinScore` · 순위 점수 · 라운드 시간) · `AdventureVitals` · `AdventureElementGrid` · `KlondikeGame` · `RTSWorld` · `TrampolineArena` 등.
-함정: 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 바꾸고 `initialize` 가 `ConfigRangeUtil` 로 거절한다. 받는 쪽에서 손으로 맞추지 않는다.
+끝난 것(2026-10-24, `wt/plannet`, 빌드 전): `Vitality`(`VitalitySettings` 선언 범위 + `[[nodiscard]] bool initialize` + 실패하지 않는 `reset`) · `ResourceGauge`(탈진 문턱 · 복귀 수준은 `Max = "_max"`) 와 받는 쪽 전부(`BrMatch` · `HorrorMatch` · `MechArenaWorld` · `ScavengerExpedition` · `MetroDuelist` · `AdventureVitals` · `HorrorSession` · `WesternHorse` · `WesternSurvival` · `WitcherCombat` · Shooter3D 적 · 플레이어). `FightingSettings` · `PartyRoundSeries::setWinScore` · `AdventureElementGrid` · `ElementGrid` · `KlondikeGame` · `RTSWorld` · `TrampolineArena` · `MechArenaSettings` · `HorrorMatchSettings` · `RhythmPlaySession` · `InteractionProgress` · `AutosaveManager` · `CoasterTrain`. 카탈로그가 없을 때 기본 규칙으로 대신 서던 곳(`HorrorSession` · `WesternSurvival` · `WitcherCombat`)도 오류로 멈춘다.
+확인 대기: 매니페스트 id `config-range-reject-tests`(테스트 필터 묶음 — 빌드와 함께 처음 돈다).
+남은 것: 위 목록 밖에서 `initialize` 안의 `MathUtil::max` · `clamp` 로 설정을 맞추는 곳(카드 게임 Poker · Matgo · Uno, SRPG, CityBuilder 등 — 이름이 같은 모양의 `grep` 으로 찾는다). 하나씩 같은 방식으로 옮긴다.
+함정: 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 바꾸고 `initialize` 가 `ConfigRangeUtil` 로 거절한다. 받는 쪽에서 손으로 맞추지 않는다. 목록 필드나 함수 호출 기본값이 있어 `REFLECT` 로 못 쓰는 설정(`RhythmPlaySettings` · `InteractionConfig` · `CoasterPhysicsParams` · `AutosaveSettings`)은 `initialize` 안에서 손으로 보고 거절한다.
 
 ## 기능
 
@@ -59,7 +61,7 @@
 남은 것:
 - 사건 지연 측정: 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b)이다. 250 ms · 손실 15 % 의 사건 지연 평균 · 최대 전/후를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잰다(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도 받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서.
 - 컴포넌트를 둘 씬: 들어갔다(2026-10-22) — `game/empty/maps/destructionnet.scene.xml` 은 쇼케이스 글을 그대로 옮기고 `DestructionNetSessionComponent` 오브젝트 하나를 에디터 저장과 같은 형식으로 더했다(테스트 `DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase`, 실행 전).
-- 실행 대기: 통합에서 `NetSimDestructionMatrixTest` · `DestructionShowcaseTest.NetworkSceneAddsTheSessionComponentToTheShowcase` 를 돌려 빌드 확인과 사건 지연 전/후를 한 번에 얻는다.
+- 실행 대기: 매니페스트 id `destruction-net-tests` — 빌드 확인과 사건 지연 전/후를 한 번에 얻는다.
 - 두 로그 견주기: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777` ↔ 클라이언트 `App -gv_firstScene=<씬> -gv_netConnectAddress=127.0.0.1:7777`. 리눅스 서버 ↔ Windows 클라이언트는 CI 잡 몫이다(결정 기록 5-12).
 함정: 같은 입력의 해시가 구성을 넘어 같은 것은 `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`(해시 다섯)가 지킨다. Windows Debug · Release · Shipping 같은 값을 확인했고, 리눅스 clang 에서 다르면 CI 잡이 진다.
 
