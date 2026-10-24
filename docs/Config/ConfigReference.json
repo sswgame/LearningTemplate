@@ -798,7 +798,16 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다        PROPERTY( Required )"
+       "description": "볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다"
+      },
+      {
+       "name": "_shaderToon",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다"
       },
       {
        "name": "_shaderHighlightOutline",
