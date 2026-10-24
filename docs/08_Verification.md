@@ -23,6 +23,7 @@ ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · �
 py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반(코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과) 영역별 표 — 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다
 # -j 는 값 없이 준다(CMake 3.29+: 이 PC 의 스레드 수). 테스트 프리셋은 CTEST_PARALLEL_LEVEL="" 로 같은 뜻이다(CMakePresets.json 의 parallel).
 # 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼.
+# 예외: AppTest 의 hostgpu 조각 · Race 와 QaGoldenImages 는 AppBin 잠금으로 서로 직렬이다(에디터 시나리오가 고정 이름 폴더에 쓴다). 푸는 계획: docs/plans/HostGpuIsolation.md.
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 
