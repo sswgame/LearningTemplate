@@ -148,6 +148,7 @@ namespace
  */
 SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSameBytes )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 씬 · 프리팹은 구운 팩(Shipping)에 없다 — 낡은 게임 팩이 남은 빌드 폴더에서만 통과하던 의존
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::vector<sw::string> listResourceID = SerializationRoundTripInternal::collectSceneAndPrefabIDs();
     SW_ASSERT_TRUE( listResourceID.size() >= 5u );
@@ -186,6 +187,7 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
     const utf8* pDumpDir = std::getenv( "SW_SERIALIZATION_DUMP_DIR" );
     if ( pDumpDir == nullptr || pDumpDir[0] == 0 )
         SW_TEST_SKIP( "SW_SERIALIZATION_DUMP_DIR is not set" );
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     test::ScopedLogSuppressor suppressor;
