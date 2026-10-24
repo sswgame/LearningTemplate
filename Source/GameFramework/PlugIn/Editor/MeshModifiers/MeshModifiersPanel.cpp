@@ -662,6 +662,8 @@ namespace sw::editor
         }
     }
 
+    // 길이를 나누지 않는다: 매개변수 종류마다 짧은 경우(입력칸 하나 + 값 쓰기 + 툴팁)를 늘어놓은 switch 디스패처다. 긴 경우(곡선 · 참조 · 숫자 목록)는 이미 따로 뺐고,
+    // 남은 경우를 더 가르면 같은 모양의 함수가 종류 수만큼 생겨 새 종류를 더할 때 고칠 곳이 둘이 된다.
     void MeshModifiersPanel::drawParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
     {
         const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];

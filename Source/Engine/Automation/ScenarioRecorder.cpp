@@ -376,7 +376,12 @@ namespace sw
                 }
             }
 
-            /** @brief 한 프레임의 이벤트를 단계 글로 씁니다. 쓴 단계 수를 더하고, 못 쓴 이벤트를 셉니다. */
+            /**
+             * @brief 한 프레임의 이벤트를 단계 글로 씁니다. 쓴 단계 수를 더하고, 못 쓴 이벤트를 셉니다.
+             * @details Win32 는 두 번째 누름을 Down 대신 DoubleClick 으로 보낸다(Down · Up · DoubleClick · Up). 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다.
+             *          건너뛰면 두 번째 누름이 사라진다. 재생은 원시 Down 둘을 낸다. DoubleClick 이벤트 자체를 읽는 쪽은 없다 — 입력 관리자는 Down 으로 다루고,
+             *          입력 맵(DoubleClicked)과 ImGui 는 누름 간격으로 스스로 판정한다. 그 이벤트를 읽는 코드가 생기면 VirtualInputScript 에 DoubleClick 단계를 더한다.
+             */
             static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
                                           ScenarioRecordOutput& outResult )
             {
@@ -401,10 +406,6 @@ namespace sw
                         case RawInputEventType::MouseButtonDown:
                         case RawInputEventType::MouseDoubleClick:
                         {
-                            // Win32 는 두 번째 누름을 Down 대신 DoubleClick 으로 보낸다(Down · Up · DoubleClick · Up).
-                            // 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다. 건너뛰면 두 번째 누름이 사라진다.
-                            // 재생은 원시 Down 둘을 낸다. DoubleClick 이벤트 자체를 읽는 쪽은 없다 — 입력 관리자는 Down 으로 다루고, 입력 맵(DoubleClicked)과
-                            // ImGui 는 누름 간격으로 스스로 판정한다. 그 이벤트를 읽는 코드가 생기면 VirtualInputScript 에 DoubleClick 단계를 더한다.
                             appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }

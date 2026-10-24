@@ -168,6 +168,9 @@ namespace sw
         return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
     }
 
+    // 길이를 나누지 않는다: 기동 순서(부트스트랩 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
+    // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
+    // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 이미지 창구 · 자동화 구동기) 아래로
