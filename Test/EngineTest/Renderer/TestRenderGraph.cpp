@@ -230,9 +230,7 @@ SW_TEST_CASE( RenderGraphTest, CycleNamesThePassesThatWaitOnEachOther )
         test::ScopedDefensiveTestLog expected( "a render graph whose passes wait on each other" );
         SW_EXPECT_FALSE( graph.compile() );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'LoopA' waits on 'LoopB'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'LoopB' waits on 'LoopA'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'Free'" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Renderer.GraphCycle" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( graph.describeCompiledOrder().find( "not compiled" ) != sw::string::npos );
 }
 

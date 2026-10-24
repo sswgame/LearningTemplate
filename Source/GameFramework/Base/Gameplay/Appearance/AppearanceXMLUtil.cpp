@@ -33,13 +33,13 @@ namespace sw
                 if ( pText == nullptr )
                 {
                     if ( bRequired )
-                        report.addError( "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
+                        report.addErrorWithID( "Appearance.AttributeMissing", "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
                     return;
                 }
                 TVector parsed{};
                 if ( pParse( string_view( pText ), parsed ) == false )
                 {
-                    report.addError( "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
+                    report.addErrorWithID( "Appearance.VectorShape", "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
                     return;
                 }
                 inoutValue = parsed;
@@ -67,18 +67,19 @@ namespace sw
         };
     } // namespace
 
-    void AppearanceLoadReport::addMessage( string_view message )
+    void AppearanceLoadReport::addMessage( const utf8* pID, string_view message )
     {
         _listError.push_back( string( message ) );
-        SW_LOG_WARNING( "%#", message );
+        _listErrorID.push_back( pID );
+        SW_LOG_WRITE( sw::LogLevel::Warning, pID, "%#", message );
     }
 
-    uint32 AppearanceLoadReport::countContaining( string_view text ) const
+    uint32 AppearanceLoadReport::countWithID( const utf8* pID ) const
     {
         uint32 count = 0;
-        for ( const string& error : _listError )
+        for ( const utf8* pErrorID : _listErrorID )
         {
-            if ( string_view( error.c_str(), error.size() ).find( text ) != string_view::npos )
+            if ( StringUtil::equals( pErrorID, pID ) )
                 ++count;
         }
         return count;
@@ -102,14 +103,14 @@ namespace sw
             return true;
         for ( const utf8* pName : listUnknown )
         {
-            report.addError( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
+            report.addErrorWithID( "Appearance.UnknownAttribute", "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
         }
         return false;
     }
 
     void AppearanceXMLUtil::reportUnknownChild( const XMLNode& parent, const XMLNode& child, AppearanceLoadReport& report, string_view sourceName )
     {
-        report.addError( "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
+        report.addErrorWithID( "Appearance.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
     }
 
     hashed_string AppearanceXMLUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
@@ -121,7 +122,7 @@ namespace sw
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pAttribute );
         if ( name.empty() )
-            report.addError( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
+            report.addErrorWithID( "Appearance.NameEmpty", "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
         return name;
     }
 
@@ -144,14 +145,14 @@ namespace sw
                                                string_view sourceName )
     {
         if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
-            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+            report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readOptionalInt( const XMLNode& node, const utf8* pAttribute, int32 minValue, int32 maxValue, int32& inoutValue, AppearanceLoadReport& report,
                                              string_view sourceName )
     {
         if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
-            report.addError( "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
+            report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )

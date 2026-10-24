@@ -149,8 +149,8 @@ namespace sw
         }
         _listAnimation = std::move( listKept );
         if ( clampedCount > 0 )
-            SW_LOG_WARNING( "Sprite clip '%#': %# animation range(s) fell outside the %# frame(s) and were clamped or dropped", sourceLabel, clampedCount,
-                            frameCount );
+            SW_LOG_WARNING_ID( "Animation.SpriteClipRangeClamped", "Sprite clip '%#': %# animation range(s) fell outside the %# frame(s) and were clamped or dropped", sourceLabel, clampedCount,
+                               frameCount );
         return true;
     }
 

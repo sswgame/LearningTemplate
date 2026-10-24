@@ -439,7 +439,7 @@ namespace sw
         if ( pDef == nullptr )
         {
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' is not in the schema - dropped", event.getID().c_str() );
+            SW_LOG_WARNING_ID( "Telemetry.EventNotInSchema", "Telemetry event '%#' is not in the schema - dropped", event.getID().c_str() );
             return TelemetryRecordResult::UnknownEvent;
         }
         // 스키마 대조 — 받는 쪽 테이블과 어긋나는 줄은 쓰지 않는다.
@@ -460,7 +460,7 @@ namespace sw
             if ( field._bRequired == SW_FALSE || event.findValue( field._name ) != nullptr )
                 continue;
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' misses required field '%#' - dropped", event.getID().c_str(), field._name.c_str() );
+            SW_LOG_WARNING_ID( "Telemetry.RequiredFieldMissing", "Telemetry event '%#' misses required field '%#' - dropped", event.getID().c_str(), field._name.c_str() );
             return TelemetryRecordResult::InvalidField;
         }
 

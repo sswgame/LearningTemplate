@@ -80,13 +80,13 @@ namespace sw
                 {
                     if ( bRequired == false )
                         return true;
-                    SW_LOG_ERROR( "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
+                    SW_LOG_ERROR_ID( "GameData.AttributeMissing", "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
                     return false;
                 }
                 TVector parsed{};
                 if ( pParse( string_view( pText ), parsed ) == false )
                 {
-                    SW_LOG_ERROR( "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
+                    SW_LOG_ERROR_ID( "GameData.AttributeShapeMismatch", "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
                     return false;
                 }
                 inoutValue = parsed;
@@ -99,7 +99,7 @@ namespace sw
             {
                 if ( node.readOptionalAttributeInRange( pAttribute, minValue, maxValue, inoutValue ) )
                     return true;
-                SW_LOG_ERROR( "%#: <%#> has an invalid %# (listed above)", sourceName, node.getName(), pAttribute );
+                SW_LOG_ERROR_ID( "GameData.ValueInvalid", "%#: <%#> has an invalid %# (listed above)", sourceName, node.getName(), pAttribute );
                 return false;
             }
 
@@ -202,14 +202,14 @@ namespace sw
             }
             if ( pFound == nullptr )
             {
-                SW_LOG_ERROR( "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() );
+                SW_LOG_ERROR_ID( "GameData.UnknownField", "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() );
                 bOk = false;
                 continue;
             }
             const utf8* const pValue = attribute.getValue() != nullptr ? attribute.getValue() : "";
             if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
             {
-                SW_LOG_ERROR( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
+                SW_LOG_ERROR_ID( "GameData.ValueUnreadable", "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
                 bOk = false;
             }
         }
@@ -222,7 +222,7 @@ namespace sw
             const string attributeName = Internal::makeAttributeName( prop );
             if ( node.findAttribute( attributeName.c_str() ) == nullptr )
             {
-                SW_LOG_ERROR( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );
+                SW_LOG_ERROR_ID( "GameData.RequiredFieldMissing", "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );
                 bOk = false;
             }
         }
@@ -231,7 +231,7 @@ namespace sw
         //    바이너리 · JSON · XML 과 같은 읽기 공통 끝이 칸마다 알린다. 여기서는 어느 파일 · 원소인지만 덧붙인다.
         if ( SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) == false )
         {
-            SW_LOG_ERROR( "%#: <%#> has values outside PROPERTY( Min, Max ) of %# (listed above)", sourceName, pElement, typeInfo._name.c_str() );
+            SW_LOG_ERROR_ID( "GameData.ValueOutOfRange", "%#: <%#> has values outside PROPERTY( Min, Max ) of %# (listed above)", sourceName, pElement, typeInfo._name.c_str() );
             bOk = false;
         }
         return bOk;

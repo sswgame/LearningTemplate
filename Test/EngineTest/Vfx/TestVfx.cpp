@@ -406,7 +406,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, FullPoolDropsNewParticlesAndWarnsOnce )
     test::ScopedLogCollector collector;
     (void)sw::runSteps( simulation, 60 );
     SW_EXPECT_EQUAL( uint32( 8 ), simulation.getAliveCount() );
-    SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "pool of 8 particles is full" ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), collector.countWithID( "Vfx.PoolFull" ) );
 }
 
 /**
@@ -424,7 +424,7 @@ SW_TEST_CASE( VfxCPUSimulationTest, LongFrameRunsAtMostTheStepLimit )
     simulation.update( 1.0f, nullptr ); // 60 단계 몫 — 상한 8 단계만 돈다
     simulation.update( 1.0f, nullptr );
     SW_EXPECT_NEAR_EQUAL( 16.0f, static_cast<float32>( simulation.getAliveCount() ), 1.0f );
-    SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "dropping the rest" ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), collector.countWithID( "Vfx.StepsDropped" ) );
 }
 
 /**
@@ -873,7 +873,7 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     {
         test::ScopedLogCollector collector;
         SW_EXPECT_FALSE( impossible.validate( "test" ) );
-        SW_EXPECT_EQUAL( uint32( 1 ), collector.countContaining( "no simulation target runs both" ) );
+        SW_EXPECT_EQUAL( uint32( 1 ), collector.countWithID( "Vfx.NoSimulationTargetForEmitter" ) );
     }
     // 깊이 방법은 두께가 있어야 한다.
     sw::VfxEmitterDef thin          = depth;

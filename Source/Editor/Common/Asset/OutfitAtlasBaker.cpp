@@ -89,15 +89,15 @@ namespace sw::editor
             static void validateSpec( const OutfitAtlasSpec& spec, CharacterDataReader& reader )
             {
                 if ( spec._listPart.empty() )
-                    reader.addError( "OutfitAtlas needs at least one Part" );
+                    reader.addError( "Outfit.NoPart", "OutfitAtlas needs at least one Part" );
                 if ( spec._listMap.empty() )
-                    reader.addError( "OutfitAtlas needs at least one Map" );
+                    reader.addError( "Outfit.NoMap", "OutfitAtlas needs at least one Map" );
                 if ( spec._size <= 0 || spec._padding < 0 )
-                    reader.addError( "OutfitAtlas size must be positive and padding 0 or more" );
+                    reader.addError( "Outfit.SizeInvalid", "OutfitAtlas size must be positive and padding 0 or more" );
                 for ( const OutfitAtlasMapSpec& map : spec._listMap )
                 {
                     if ( map._listSource.size() != spec._listPart.size() )
-                        reader.addError( string( "Map '" ) + map._name.c_str() + "' needs one Source per Part" );
+                        reader.addError( "Outfit.MapSourceCount", string( "Map '" ) + map._name.c_str() + "' needs one Source per Part" );
                     for ( const OutfitAtlasSourceSpec& source : map._listSource )
                     {
                         bool bKnown = false;
@@ -106,7 +106,7 @@ namespace sw::editor
                             bKnown = bKnown || part._name == source._part;
                         }
                         if ( bKnown == false )
-                            reader.addError( string( "Map '" ) + map._name.c_str() + "' names unknown part '" + source._part.c_str() + "'" );
+                            reader.addError( "Outfit.MapPartUnknown", string( "Map '" ) + map._name.c_str() + "' names unknown part '" + source._part.c_str() + "'" );
                     }
                 }
             }

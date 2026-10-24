@@ -180,7 +180,7 @@ namespace sw
             reader.readOptionalFloat( axisNode, "default", axis._default );
             const bool bInvalidAxisRange = axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max;
             if ( bInvalidAxisRange )
-                reader.addError( axisNode, "needs min <= 0 <= max with min < max" );
+                reader.addError( "Character.BodyAxisRangeInvalid", axisNode, "needs min <= 0 <= max with min < max" );
             for ( XMLNode sideNode = axisNode.findChild(); sideNode; sideNode = sideNode.findNextSibling() )
             {
                 if ( StringUtil::equals( sideNode.getName(), "Positive", true ) )
@@ -194,7 +194,7 @@ namespace sw
                 continue;
             if ( findAxis( axis._name ) != nullptr )
             {
-                reader.addError( axisNode, string( "repeats axis '" ) + axis._name.c_str() + "'" );
+                reader.addError( "Character.BodyAxisRepeated", axisNode, string( "repeats axis '" ) + axis._name.c_str() + "'" );
                 continue;
             }
             _listAxis.push_back( std::move( axis ) );

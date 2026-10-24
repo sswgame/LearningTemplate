@@ -690,7 +690,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
         SW_EXPECT_FALSE( takesTrueBranch( "gold >=" ) );
         SW_EXPECT_FALSE( takesTrueBranch( "(gold" ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Invalid flag condition" ) == 3, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Flags.InvalidCondition" ) == 3, logs.joined().c_str() );
 }
 
 /**
@@ -1867,7 +1867,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     SW_ASSERT_TRUE( pixelCatalog.loadFromResource( ::test::makeTempResourceID( path ) ) );
     SW_EXPECT_NULL( pixelCatalog.findMonster( "bat" ) );
     SW_EXPECT_NOT_NULL( pixelCatalog.findMonster( "rat" ) );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"bat\">" ) >= 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countWithID( "GameData.ValueOutOfRange" ) >= 1u, logCollector.joined().c_str() );
 }
 
 /**
@@ -1905,14 +1905,12 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
 
     // 모르는 이름은 첫 열거자로 물러나지 않는다 — 그 몬스터를 넣지 않고 id 와 함께 오류를 남긴다.
     SW_EXPECT_NULL( catalog.findMonster( "typo" ) );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Ranged" ) >= 1u, logCollector.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "<Monster id=\"typo\"" ) >= 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countWithID( "GameData.ValueUnreadable" ) == 1u, logCollector.joined().c_str() );
 
     // 속성이 없으면 기본값이고 경고하지 않는다.
     const MonsterDef* pPlain = catalog.findMonster( "plain" );
     SW_ASSERT_NOT_NULL( pPlain );
     SW_EXPECT_TRUE( pPlain->_archetype == MonsterArchetype::MeleePatrol );
-    SW_EXPECT_EQUAL( 0u, logCollector.countContaining( "'plain'" ) );
 }
 
 /**

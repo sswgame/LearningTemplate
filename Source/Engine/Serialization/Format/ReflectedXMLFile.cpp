@@ -44,7 +44,7 @@ namespace sw
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
-            SW_LOG_ERROR( "%#: '%#' is unknown to %# or its value '%#' cannot be read", assetRelativePath, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
+            SW_LOG_ERROR_ID( "Serialization.OrphanValue", "%#: '%#' is unknown to %# or its value '%#' cannot be read", assetRelativePath, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
         }
         return result == SoftReadResult::Read && listOrphan.empty();
     }

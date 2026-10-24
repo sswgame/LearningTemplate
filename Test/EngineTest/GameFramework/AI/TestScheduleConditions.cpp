@@ -90,7 +90,7 @@ SW_TEST_CASE( ScheduleConditionTest, DaysOfSeasonAcceptRanges )
         const ScheduleCondition      bad = Internal::readCondition( "daysOfSeason=\"9-5,0,400,x\"" );
         SW_EXPECT_TRUE( bad._listDayOfSeason.empty() );
     }
-    SW_EXPECT_TRUE( logs.countContaining( "invalid day of season" ) >= 4 );
+    SW_EXPECT_TRUE( logs.countWithID( "Schedule.DayListInvalid" ) >= 4 );
 }
 
 /**
@@ -166,9 +166,8 @@ SW_TEST_CASE( ScheduleConditionTest, BadDatesAndAffinityRangesWarn )
         SW_EXPECT_TRUE( noDay._fromDay == 0 && zero._toDay == 0 );
         SW_EXPECT_FALSE( flip.matches( Internal::makeContext( Internal::makeSeasonOrder(), "Spring", 1, 5 ) ) );
     }
-    SW_EXPECT_TRUE( logs.countContaining( "invalid from date" ) >= 1 );
-    SW_EXPECT_TRUE( logs.countContaining( "invalid to date" ) >= 1 );
-    SW_EXPECT_TRUE( logs.countContaining( "minAffinity" ) >= 1 );
+    SW_EXPECT_TRUE( logs.countWithID( "Schedule.DateInvalid" ) >= 2 );
+    SW_EXPECT_TRUE( logs.countWithID( "Schedule.AffinityRangeEmpty" ) >= 1 );
 }
 
 /**
@@ -216,7 +215,7 @@ SW_TEST_CASE( ScheduleConditionTest, OvernightBlockSplitsAtMidnight )
         test::ScopedDefensiveTestLog expected( "a backwards block without overnight" );
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kXML, "night" ) );
     }
-    SW_EXPECT_TRUE( logs.countContaining( "needs start < end" ) >= 1 );
+    SW_EXPECT_TRUE( logs.countWithID( "Schedule.BlockTimeOrder" ) >= 1 );
     const ScheduleNpcDef* pNpc = catalog.findNpc( "x" );
     SW_ASSERT_NOT_NULL( pNpc );
     SW_ASSERT_EQUAL( size_t( 2 ), pNpc->_listRoutine.size() );

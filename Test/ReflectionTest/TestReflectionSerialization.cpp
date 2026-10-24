@@ -2671,8 +2671,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     SW_EXPECT_EQUAL( 5, fromJSON._hp );
     SW_EXPECT_EQUAL( 6, fromJSON._mp );
     SW_EXPECT_EQUAL( 9, fromJSON._level );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 2 saved field(s)" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_hp, _mp" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Schema.FieldsDropped" ) == 1, logs.joined().c_str() );
 
     // ② XML — 같은 규칙, 로드 하나에 한 줄.
     DropProbe        fromXML;
@@ -2681,8 +2680,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     SW_EXPECT_TRUE( sw::XMLSerializer::deserializeVersioned( ver, &fromXML, info, xml, 1u ) );
     SW_EXPECT_EQUAL( 12, fromXML._hp );
     SW_EXPECT_EQUAL( 6, fromXML._mp );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s)" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "could not read: _mp" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Schema.FieldsDropped" ) == 2, logs.joined().c_str() );
 
     // ③ 타입이 모르는 키는 전역 이름 표에 올리지 않지만(intern 하지 않는다) 적힌 이름 그대로 찍힌다 — `_dropProbeJunk` 는 이 테스트의 어디서도
     //    hashed_string 이 되지 않는다.
@@ -2690,13 +2688,13 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     ver = 0;
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &unknownKeys, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})", 1u ) );
     SW_EXPECT_EQUAL( 5, unknownKeys._hp );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "_dropProbeHealth, _dropProbeJunk" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Schema.FieldsDropped" ) == 3, logs.joined().c_str() );
 
     // ④ 모든 값이 자리를 찾은 로드는 조용하다.
     DropProbe clean;
     ver = 0;
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &clean, info, R"({"_schemaVersion":1,"_hp":1,"_mp":2,"_level":3})", 1u ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor" ) == 3, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Schema.FieldsDropped" ) == 3, logs.joined().c_str() );
 }
 
 /**

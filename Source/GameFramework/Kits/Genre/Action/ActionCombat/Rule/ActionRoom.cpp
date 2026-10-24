@@ -77,7 +77,7 @@ namespace sw
     {
         startFight( kind );
         if ( listSpawn.empty() )
-            SW_LOG_ERROR( "Action room layout has no %# spawns - the fight starts without enemies (ActionRoom::setLayout)", pKindName );
+            SW_LOG_ERROR_ID( "Action.RoomLayoutNoSpawns", "Action room layout has no %# spawns - the fight starts without enemies (ActionRoom::setLayout)", pKindName );
         for ( const ActionRoomSpawnDef& spawn : listSpawn )
         {
             spawnMonster( spawn._monsterID, spawn._position );
@@ -243,7 +243,7 @@ namespace sw
         const MonsterDef* pFound = pCatalog->findMonster( monsterID );
         if ( pFound == nullptr )
         {
-            SW_LOG_ERROR( "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
+            SW_LOG_ERROR_ID( "Action.RoomMonsterNotInCatalog", "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
             return -1;
         }
         _listMonsterDef.push_back( *pFound );

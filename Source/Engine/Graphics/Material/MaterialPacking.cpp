@@ -252,7 +252,7 @@ namespace sw
                     }
                     if ( bRead == false )
                     {
-                        SW_LOG_ERROR( "Material value '%#' has an unreadable number '%#'", value, tokens[wordIndex] );
+                        SW_LOG_ERROR_ID( "Material.VectorNumberUnreadable", "Material value '%#' has an unreadable number '%#'", value, tokens[wordIndex] );
                         return false;
                     }
                 }
@@ -265,7 +265,7 @@ namespace sw
             [[nodiscard]] static bool packBool( const MaterialProperty& prop, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
             {
                 bool bValue{ false };
-                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, bValue ) == false )
+                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bValue ) == false )
                     return false;
                 const uint32 boolVal = bValue ? 1u : 0u;
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
@@ -282,7 +282,7 @@ namespace sw
                 int64 enumVal{ 0 };
                 if ( tryParseEnumOrFlags( prop, prop._value, bFlags, enumVal ) == false )
                 {
-                    SW_LOG_WARNING( "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
+                    SW_LOG_WARNING_ID( "Material.UnknownEnumValue", "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
                     return false;
                 }
                 if ( bFlags == false && shaderType == MaterialPropertyType::Int )
@@ -339,7 +339,7 @@ namespace sw
                 float32 floatVal{ 0.0f };
                 if ( StringUtil::parseFloat( prop._value, floatVal ) == false )
                 {
-                    SW_LOG_ERROR( "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
+                    SW_LOG_ERROR_ID( "Material.ParameterNumberUnreadable", "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
                     return false;
                 }
                 if ( prop._min < prop._max )
@@ -493,12 +493,12 @@ namespace sw
         return bytes;
     }
 
-    bool MaterialUtil::parseBoolToken( string_view token, string_view name, bool& outValue )
+    bool MaterialUtil::parseBoolToken( string_view token, string_view name, const utf8* pID, bool& outValue )
     {
         bool value{ false };
         if ( StringUtil::trim( token ).empty() || StringUtil::tryParseBool( token, value ) == false )
         {
-            SW_LOG_ERROR( "Material value '%#' has an unreadable boolean '%#'", name, token );
+            SW_LOG_WRITE( sw::LogLevel::Error, pID, "Material value '%#' has an unreadable boolean '%#'", name, token );
             return false;
         }
         outValue = value;

@@ -98,6 +98,26 @@ namespace sw
     {
         vector<FitPenetration> _listPenetration{};
         vector<string>         _listMessage{};
+        vector<const utf8*>    _listMessageID{}; ///< `_listMessage` 와 같은 순서의 종류 id(글자 상수). `addMessage` 로만 더한다.
+
+        /** @brief 설명 문장 하나를 종류 id(`"영역.사건"` 글자 상수)와 함께 더합니다. 테스트는 문장이 아니라 id 로 찾는다. */
+        void addMessage( const utf8* pID, string text )
+        {
+            _listMessage.push_back( std::move( text ) );
+            _listMessageID.push_back( pID );
+        }
+
+        /** @brief 종류 id 가 @p pID 인 문장의 수입니다. */
+        uint32 countWithID( const utf8* pID ) const
+        {
+            uint32 count = 0;
+            for ( const utf8* pMessageID : _listMessageID )
+            {
+                if ( string_view( pMessageID ) == string_view( pID ) )
+                    ++count;
+            }
+            return count;
+        }
     };
 } // namespace sw
 

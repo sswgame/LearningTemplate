@@ -27,7 +27,7 @@ namespace sw
             {
                 if ( inoutSeen != SW_FALSE )
                 {
-                    reader.addError( node, "appears twice" );
+                    reader.addError( "Destruction.ElementRepeated", node, "appears twice" );
                     return false;
                 }
                 inoutSeen = SW_TRUE;
@@ -113,7 +113,7 @@ namespace sw
                 const utf8* pText = child.findAttribute( "thresholds" );
                 if ( pText == nullptr )
                 {
-                    reader.addError( child, "needs thresholds" );
+                    reader.addError( "Destruction.ThresholdsMissing", child, "needs thresholds" );
                     continue;
                 }
                 vector<string_view> listToken;
@@ -123,7 +123,7 @@ namespace sw
                 {
                     float32 value = 0.0f;
                     if ( StringUtil::parseFloat( token, value ) == false || value <= 0.0f )
-                        reader.addError( child, string( "threshold '" ) + string( token ) + "' is not a positive number" );
+                        reader.addError( "Destruction.ThresholdInvalid", child, string( "threshold '" ) + string( token ) + "' is not a positive number" );
                     else
                         _listStrainThreshold.push_back( value );
                 }
@@ -159,7 +159,7 @@ namespace sw
                 reader.readOptionalFloat( child, "keepCollisionVolume", _keepCollisionVolume );
                 reader.readOptionalFloat( child, "hullShrink", _hullShrink );
                 if ( maxBody < 0 )
-                    reader.addError( child, "maxBodies must not be negative" );
+                    reader.addError( "Destruction.MaxBodiesNegative", child, "maxBodies must not be negative" );
                 else
                     _maxDebrisBody = static_cast<uint32>( maxBody );
             }
@@ -179,7 +179,7 @@ namespace sw
                                _impactRadius >= 0.0f && _debrisLifetime > 0.0f && _smallDebrisVolume >= 0.0f && _fadeTime >= 0.0f && _sleepRemoveTime >= 0.0f &&
                                _keepCollisionVolume >= 0.0f && _hullShrink >= 0.0f && _networkPoseRate > 0.0f;
         if ( bPositive == false )
-            reader.addError( root, "density, strengths, lifetime and pose rate must be positive; the other numbers must not be negative" );
+            reader.addError( "Destruction.NumbersInvalid", root, "density, strengths, lifetime and pose rate must be positive; the other numbers must not be negative" );
     }
 
     /** @brief 파괴 프로파일 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */

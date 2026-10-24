@@ -4544,7 +4544,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
             test::ScopedLogCollector collector;
             test::RHITestImage       brokenImage;
             (void)renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( brokenPath ).c_str(), brokenImage );
-            SW_EXPECT_TRUE_MSG( collector.countContaining( "no color output" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
+            SW_EXPECT_TRUE_MSG( collector.countWithID( "Renderer.PassNoColorOutput" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
     }
 
@@ -5640,7 +5640,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                     device->waitIdle();
                 }
                 ++checkedCount;
-                const uint32 hazardCount = logs.countContaining( "still bound on input" ) + logs.countContaining( "Forcing PS shader resource" );
+                const uint32 hazardCount = logs.countWithID( "RHI.ValidationHazard" );
                 SW_EXPECT_TRUE_MSG( hazardCount == 0,
                                     ( label + "깊이를 첨부로 걸 때 SRV 로도 걸려 있었다 (해저드 " + sw::to_string( hazardCount ) + " 줄)" + logs.joined() ).c_str() );
             }

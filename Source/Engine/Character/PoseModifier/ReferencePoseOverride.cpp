@@ -20,15 +20,6 @@ namespace sw
             static constexpr const utf8* kArrBoneAttribute[]   = { "name", "translation", "rotation", "scale" };
             static constexpr const utf8* kArrMirrorAttribute[] = { "left", "right" };
             static constexpr const utf8* kArrAxisName[]        = { "X", "Y", "Z" };
-
-            static void appendError( string* pOutError, const string& message )
-            {
-                if ( pOutError == nullptr )
-                    return;
-                if ( pOutError->empty() == false )
-                    *pOutError += "\n";
-                *pOutError += message;
-            }
         };
     } // namespace
 } // namespace sw
@@ -44,9 +35,9 @@ namespace sw
         XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "ReferencePose", root ) )
             readRoot( root, reader );
-        string boneError;
-        if ( pBones != nullptr && validateBones( *pBones, &boneError ) == false )
-            reader.addError( boneError );
+        CharacterIssueList boneIssues;
+        if ( pBones != nullptr && validateBones( *pBones, &boneIssues ) == false )
+            reader.addIssues( boneIssues );
         return reader.finish();
     }
 
@@ -59,9 +50,9 @@ namespace sw
         XMLNode             root;
         if ( reader.loadRoot( document, path, "ReferencePose", root ) )
             readRoot( root, reader );
-        string boneError;
-        if ( pBones != nullptr && validateBones( *pBones, &boneError ) == false )
-            reader.addError( boneError );
+        CharacterIssueList boneIssues;
+        if ( pBones != nullptr && validateBones( *pBones, &boneIssues ) == false )
+            reader.addIssues( boneIssues );
         return reader.finish();
     }
 
@@ -82,7 +73,7 @@ namespace sw
                 }
             }
             if ( bKnownAxis == false )
-                reader.addError( root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
+                reader.addError( "Character.MirrorAxisUnknown", root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
@@ -110,7 +101,7 @@ namespace sw
                     continue;
                 if ( findOverride( boneOverride._bone ) != nullptr )
                 {
-                    reader.addError( child, string( "repeats bone '" ) + boneOverride._bone.c_str() + "'" );
+                    reader.addError( "Character.BoneRepeated", child, string( "repeats bone '" ) + boneOverride._bone.c_str() + "'" );
                     continue;
                 }
                 _listOverride.push_back( boneOverride );
@@ -232,7 +223,7 @@ namespace sw
         return true;
     }
 
-    bool ReferencePoseOverride::validateBones( const CharacterBoneArray& bones, string* pOutError ) const
+    bool ReferencePoseOverride::validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const
     {
         bool bValid = true;
         for ( const BoneOverride& boneOverride : _listOverride )
@@ -240,7 +231,8 @@ namespace sw
             if ( bones.findBone( boneOverride._bone ) >= 0 )
                 continue;
             bValid = false;
-            ReferencePoseOverrideInternal::appendError( pOutError, string( "reference pose overrides unknown bone '" ) + boneOverride._bone.c_str() + "'" );
+            if ( pOutIssues != nullptr )
+                pOutIssues->add( "Character.OverrideBoneUnknown", string( "reference pose overrides unknown bone '" ) + boneOverride._bone.c_str() + "'" );
         }
         for ( const BoneMirrorPair& pair : _listMirrorPair )
         {
@@ -249,7 +241,8 @@ namespace sw
             if ( bLeftKnown && bRightKnown )
                 continue;
             bValid = false;
-            ReferencePoseOverrideInternal::appendError( pOutError, string( "mirror pair names unknown bone '" ) + ( bLeftKnown ? pair._right.c_str() : pair._left.c_str() ) + "'" );
+            if ( pOutIssues != nullptr )
+                pOutIssues->add( "Character.MirrorPairBoneUnknown", string( "mirror pair names unknown bone '" ) + ( bLeftKnown ? pair._right.c_str() : pair._left.c_str() ) + "'" );
         }
         return bValid;
     }

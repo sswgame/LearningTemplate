@@ -182,7 +182,7 @@ namespace sw
                     }
                     else
                     {
-                        SW_LOG_ERROR( "%#: preset '%#' has unknown section <%#>", sourceName, inoutDef._id.c_str(), pName );
+                        SW_LOG_ERROR_ID( "Camera.PresetUnknownSection", "%#: preset '%#' has unknown section <%#>", sourceName, inoutDef._id.c_str(), pName );
                         bValid = false;
                     }
                 }

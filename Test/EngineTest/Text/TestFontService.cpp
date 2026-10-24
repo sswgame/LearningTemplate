@@ -128,13 +128,13 @@ SW_TEST_CASE( FontServiceTest, MissingSystemFallbackIsNotAWarning )
     spec._family                  = "Sw Not Installed Sans";
     const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( chain._faceCount ) ); // 기본 가족만
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Sw Not Installed Sans" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.count() == 0, logs.joined().c_str() );
 
     // 카탈로그에 없는 가족은 데이터 잘못이라 그대로 경고한다.
     SW_TEST_DEFENSIVE_SCOPE( "a family missing from the catalog warns" );
     spec._family = "No Such Family";
     (void)fixture._fontService->getFaceChain( spec );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "No Such Family" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Text.FontFamilyMissing" ) );
 }
 
 /** @brief [FontServiceTest] 굵기는 가장 가까운 면을 고르고, 굵은 면이 없으면 일반 면 + 가짜 굵게 · 기운 면이 없으면 가짜 기울임 */

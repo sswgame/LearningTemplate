@@ -381,11 +381,10 @@ SW_TEST_CASE( ControlTest, PossessionWarnsAboutAxisActionsAndLayersTheMapLacks )
 
         test::ScopedLogCollector logs;
         pPlayer->possess( *pWalker->getComponent<PawnComponent>() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "axis action 'Look' has no InputMap action" ) == 1u, logs.joined().c_str() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "axis action 'Move'" ) == 0u, logs.joined().c_str() );     // 이동 액션은 맵에 있다
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "is not in the InputMap" ) == 0u, logs.joined().c_str() ); // OnFoot 레이어는 맵에 있다
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Control.AxisActionNotInInputMap" ) == 1u, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Control.InputLayerNotInInputMap" ) == 0u, logs.joined().c_str() ); // OnFoot 레이어는 맵에 있다
         pPlayer->possess( *pRider->getComponent<PawnComponent>() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( "input layer 'Horse' is not in the InputMap" ) == 1u, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( "Control.InputLayerNotInInputMap" ) == 1u, logs.joined().c_str() );
         manager.endPlay();
     }
     input.shutdown();

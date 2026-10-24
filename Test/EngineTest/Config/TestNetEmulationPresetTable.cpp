@@ -45,14 +45,14 @@ SW_TEST_CASE( NetEmulationPresetTableTest, BrokenTableIsRejectedAtLoad )
     struct BrokenCase
     {
         const utf8* _pXML;
-        const utf8* _pExpectedLog;
+        const utf8* _pExpectedID;
     };
     const BrokenCase arrCase[] = {
-        {                                   "<NetEmulationPresetTable><_listPreset><NetEmulationPresetDef _name=\"a\" _label=\"A\" _pingMs=\"5\"/></_listPreset></NetEmulationPresetTable>","_pingMs"                                                                                                                                                                                            },
-        {                            "<NetEmulationPresetTable><_listPreset><NetEmulationPresetDef _name=\"a\" _label=\"A\" _lossPercent=\"150\"/></_listPreset></NetEmulationPresetTable>", "_lossPercent"},
+        {                                   "<NetEmulationPresetTable><_listPreset><NetEmulationPresetDef _name=\"a\" _label=\"A\" _pingMs=\"5\"/></_listPreset></NetEmulationPresetTable>","Serialization.OrphanValue"                                                                                                                                                                                            },
+        {                            "<NetEmulationPresetTable><_listPreset><NetEmulationPresetDef _name=\"a\" _label=\"A\" _lossPercent=\"150\"/></_listPreset></NetEmulationPresetTable>", "Serialization.ValueOutOfRange"},
         {"<NetEmulationPresetTable><_listPreset><NetEmulationPresetDef _name=\"a\" _label=\"A\"/><NetEmulationPresetDef _name=\"A\" _label=\"B\"/></_listPreset></NetEmulationPresetTable>",
-         "appears twice"                                                                                                                                                                                   },
-        {                                                                                                  "<NetEmulationPresetTable><_listPreset></_listPreset></NetEmulationPresetTable>",   "no presets"},
+         "Net.PresetDuplicate"                                                                                                                                                                                              },
+        {                                                                                                  "<NetEmulationPresetTable><_listPreset></_listPreset></NetEmulationPresetTable>",          "Net.PresetTableEmpty"},
     };
     for ( const BrokenCase& brokenCase : arrCase )
     {
@@ -63,6 +63,6 @@ SW_TEST_CASE( NetEmulationPresetTableTest, BrokenTableIsRejectedAtLoad )
         NetEmulationPresetTable  table;
         SW_EXPECT_FALSE_MSG( table.loadFromResource( ::test::makeTempResourceID( path ) ), brokenCase._pXML );
         SW_EXPECT_TRUE( table._listPreset.empty() );
-        SW_EXPECT_TRUE_MSG( logCollector.countContaining( brokenCase._pExpectedLog ) >= 1u, logCollector.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logCollector.countWithID( brokenCase._pExpectedID ) >= 1u, logCollector.joined().c_str() );
     }
 }

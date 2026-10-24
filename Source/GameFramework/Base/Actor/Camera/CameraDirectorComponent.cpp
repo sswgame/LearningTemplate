@@ -443,8 +443,8 @@ namespace sw
         {
             const bool bMissing = pAction != nullptr && pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false;
             if ( bMissing )
-                SW_LOG_WARNING( "Camera preset '%#' reads action '%#', which the InputMap does not have - that control does nothing", _inputCheckedPresetID.c_str(),
-                                pAction->c_str() );
+                SW_LOG_WARNING_ID( "Camera.PresetActionNotInInputMap", "Camera preset '%#' reads action '%#', which the InputMap does not have - that control does nothing", _inputCheckedPresetID.c_str(),
+                                   pAction->c_str() );
         }
     }
 

@@ -66,7 +66,7 @@ namespace sw::editor
                     const string_view first  = child.getAttributeText( "first" );
                     const string_view second = child.getAttributeText( "second" );
                     if ( inoutRules.addPair( first, second ) == false )
-                        reader.addError( child, "needs two different non-empty attributes 'first' and 'second'" );
+                        reader.addError( "Character.MirrorPairInvalid", child, "needs two different non-empty attributes 'first' and 'second'" );
                 }
             }
         };

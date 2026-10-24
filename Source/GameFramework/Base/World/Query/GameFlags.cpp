@@ -300,7 +300,7 @@ namespace sw
         const bool bResult = parser.evaluateOr();
         if ( parser._bError || parser.isAtEnd() == false )
         {
-            SW_LOG_WARNING( "Invalid flag condition '%#' near column %#", expression, static_cast<int32>( parser._position ) );
+            SW_LOG_WARNING_ID( "Flags.InvalidCondition", "Invalid flag condition '%#' near column %#", expression, static_cast<int32>( parser._position ) );
             return false;
         }
         outResult = bResult;

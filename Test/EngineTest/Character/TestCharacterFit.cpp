@@ -377,7 +377,7 @@ SW_TEST_CASE( FitSolverTest, ReportListsRigidAgainstRigidPenetration )
     SW_ASSERT_EQUAL( size_t( 1 ), result._report._listPenetration.size() );
     SW_EXPECT_TRUE( result._report._listPenetration[0]._vertexCount > 0 );
     SW_EXPECT_NEAR_EQUAL( 0.02f, result._report._listPenetration[0]._maxDepth, 1.0e-3f );
-    SW_EXPECT_FALSE( result._report._listMessage.empty() );
+    SW_EXPECT_TRUE( result._report.countWithID( "Character.FitRigidPenetration" ) > 0 );
     for ( const float3& delta : result._listPart[1]._listVertexDelta )
     {
         SW_EXPECT_TRUE( delta.getLengthSquared() < 1.0e-12f ); // 보고만 한다
@@ -418,11 +418,11 @@ SW_TEST_CASE( FitSolverTest, OperatorIsChosenByNameFromData )
     SW_TEST_DEFENSIVE_SCOPE( "unknown fit operator and argument names are load errors" );
     FitTables broken;
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Rigid' operator='Explode'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown operator 'Explode'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitOperatorUnknown" ) > 0 );
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Rigid' operator='Shrink' args='speed=2'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "has no argument 'speed'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitArgumentUnknown" ) > 0 );
     SW_EXPECT_FALSE( Internal::loadTables( solver, "<Interaction inner='Cloth' outer='Metal' operator='Shrink'/>", broken ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown outer profile 'Metal'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.FitProfileUnknown" ) > 0 );
 }
 
 /**

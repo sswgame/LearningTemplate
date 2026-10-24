@@ -22,6 +22,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Character/CharacterIssue.h"
+
 namespace sw
 {
     struct CharacterBoneArray;
@@ -82,8 +84,8 @@ namespace sw
          * @return 짝이나 원본 덮어쓰기가 없으면 false 입니다.
          */
         bool mirrorOverride( const hashed_string& sourceBone );
-        /** @brief 덮어쓰기와 쌍의 본 이름이 @p bones 에 모두 있으면 true 를 반환하고, 아니면 오류 문장을 추가하고 false 를 반환합니다. */
-        bool validateBones( const CharacterBoneArray& bones, string* pOutError ) const;
+        /** @brief 덮어쓰기와 쌍의 본 이름이 @p bones 에 모두 있으면 true 를 반환하고, 아니면 문제(종류 id 와 글)를 @p pOutIssues 에 추가하고 false 를 반환합니다. */
+        bool validateBones( const CharacterBoneArray& bones, CharacterIssueList* pOutIssues ) const;
         /** @brief 본 배열의 로컬 변환에 덮어쓰기를 적용하고 모델 변환을 다시 계산합니다. */
         void apply( CharacterBoneArray& inoutBones ) const;
 

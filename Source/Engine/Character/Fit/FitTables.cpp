@@ -34,7 +34,7 @@ namespace sw
                     const bool   bHasEqual = equalPosition != string_view::npos && equalPosition > 0;
                     if ( bHasEqual == false || StringUtil::parseFloat( token.substr( equalPosition + 1 ), argument._value ) == false )
                     {
-                        reader.addError( node, string( "has malformed argument '" ) + string( token ) + "' (name=number)" );
+                        reader.addError( "Character.FitArgumentMalformed", node, string( "has malformed argument '" ) + string( token ) + "' (name=number)" );
                         continue;
                     }
                     argument._name = hashed_string( token.substr( 0, equalPosition ) );
@@ -104,7 +104,7 @@ namespace sw
                 if ( layer._name.empty() )
                     continue;
                 if ( findLayer( layer._name ) != nullptr )
-                    reader.addError( child, string( "repeats layer '" ) + layer._name.c_str() + "'" );
+                    reader.addError( "Character.FitLayerRepeated", child, string( "repeats layer '" ) + layer._name.c_str() + "'" );
                 else
                     _listLayer.push_back( layer );
             }
@@ -119,11 +119,11 @@ namespace sw
                 const bool bHasBones = region._listBone.empty() == false;
                 const bool bHasGroup = region._group.empty() == false;
                 if ( bHasBones == bHasGroup )
-                    reader.addError( child, "needs exactly one of 'bones' (bone weights) or 'group' (painted vertex group)" );
+                    reader.addError( "Character.FitRegionSourceInvalid", child, "needs exactly one of 'bones' (bone weights) or 'group' (painted vertex group)" );
                 if ( region._name.empty() )
                     continue;
                 if ( findRegionIndex( region._name ) >= 0 )
-                    reader.addError( child, string( "repeats region '" ) + region._name.c_str() + "'" );
+                    reader.addError( "Character.FitRegionRepeated", child, string( "repeats region '" ) + region._name.c_str() + "'" );
                 else
                     _listRegion.push_back( std::move( region ) );
             }
@@ -138,11 +138,11 @@ namespace sw
                 reader.readOptionalFloat( child, "falloffWidth", profile._falloffWidth );
                 reader.readOptionalFloat( child, "coverageDistance", profile._coverageDistance );
                 if ( profile._rigidity < 0.0f || profile._rigidity > 1.0f )
-                    reader.addError( child, "needs rigidity in [0, 1]" );
+                    reader.addError( "Character.FitRigidityInvalid", child, "needs rigidity in [0, 1]" );
                 if ( profile._name.empty() )
                     continue;
                 if ( findProfile( profile._name ) != nullptr )
-                    reader.addError( child, string( "repeats profile '" ) + profile._name.c_str() + "'" );
+                    reader.addError( "Character.FitProfileRepeated", child, string( "repeats profile '" ) + profile._name.c_str() + "'" );
                 else
                     _listProfile.push_back( profile );
             }
@@ -165,18 +165,18 @@ namespace sw
             interaction._operator = reader.readName( node, "operator", true );
             FitTablesInternal::readArguments( node, reader, interaction._listArgument );
             if ( interaction._inner.empty() == false && findProfile( interaction._inner ) == nullptr )
-                reader.addError( node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );
+                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown inner profile '" ) + interaction._inner.c_str() + "'" );
             if ( interaction._outer.empty() == false && findProfile( interaction._outer ) == nullptr )
-                reader.addError( node, string( "names unknown outer profile '" ) + interaction._outer.c_str() + "'" );
+                reader.addError( "Character.FitProfileUnknown", node, string( "names unknown outer profile '" ) + interaction._outer.c_str() + "'" );
             const IFitOperator* pOperator = interaction._operator.empty() ? nullptr : operators.findOperator( interaction._operator );
             if ( interaction._operator.empty() == false && pOperator == nullptr )
-                reader.addError( node, string( "names unknown operator '" ) + interaction._operator.c_str() + "'" );
+                reader.addError( "Character.FitOperatorUnknown", node, string( "names unknown operator '" ) + interaction._operator.c_str() + "'" );
             if ( pOperator != nullptr )
             {
                 for ( const FitArgument& argument : interaction._listArgument )
                 {
                     if ( pOperator->acceptsArgument( argument._name ) == false )
-                        reader.addError( node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
+                        reader.addError( "Character.FitArgumentUnknown", node, string( "operator '" ) + interaction._operator.c_str() + "' has no argument '" + argument._name.c_str() + "'" );
                 }
             }
             _listInteraction.push_back( std::move( interaction ) );

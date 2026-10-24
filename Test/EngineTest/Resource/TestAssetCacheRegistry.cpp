@@ -289,6 +289,6 @@ SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
     SW_EXPECT_EQUAL( registeredCount - 1, resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_FALSE_MSG( probe._bCleared, "등록부는 내리기만 한다 — 캐시는 그것을 만든 모듈이 지운다" );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "asset caches" ) >= 1u, logCollector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logCollector.countWithID( "Module.ListenerLeftBehind" ) >= 1u, logCollector.joined().c_str() );
 }
 #endif

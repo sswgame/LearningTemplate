@@ -67,48 +67,48 @@ SW_TEST_CASE( AppearanceTest, UnknownNamesAreLoadErrors )
     struct Case
     {
         const utf8* _pXML;
-        const utf8* _pExpected;
+        const utf8* _pExpectedID;
     };
     const Case arrCase[] = {
-        {                                                                 R"(<ItemVisualCatalog><ItemVisual id="x" colour="red"><Part name="A" kind="Skinned" mesh="m"/></ItemVisual></ItemVisualCatalog>)","unknown attribute 'colour'"                                                                                                                                                                                                            },
-        {                                                                      R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m"/><Partt/></ItemVisual></ItemVisualCatalog>)",                       "unknown element <Partt>"},
-        {                                                                                 R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Mesh" mesh="m"/></ItemVisual></ItemVisualCatalog>)",                           "unknown kind 'Mesh'"},
-        {                                                      R"(<ItemVisualCatalog><ItemVisual id="x" occupancy="ThreeHanded"><Part name="A" kind="Skinned" mesh="m"/></ItemVisual></ItemVisualCatalog>)",                             "unknown occupancy"},
+        {                                                                 R"(<ItemVisualCatalog><ItemVisual id="x" colour="red"><Part name="A" kind="Skinned" mesh="m"/></ItemVisual></ItemVisualCatalog>)","Appearance.UnknownAttribute"                                                                                                                                                                                                            },
+        {                                                                      R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m"/><Partt/></ItemVisual></ItemVisualCatalog>)",       "Appearance.UnknownElement"},
+        {                                                                                 R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Mesh" mesh="m"/></ItemVisual></ItemVisualCatalog>)",      "Appearance.PartKindUnknown"},
+        {                                                      R"(<ItemVisualCatalog><ItemVisual id="x" occupancy="ThreeHanded"><Part name="A" kind="Skinned" mesh="m"/></ItemVisual></ItemVisualCatalog>)",     "Appearance.OccupancyUnknown"},
         {                          R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m"/><State name="S"><Place part="B" socket="s"/></State></ItemVisual></ItemVisualCatalog>)",
-         "unknown part 'B'"                                                                                                                                                                                                                                 },
-        {                                                            R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" breakStage="Gone"/></ItemVisual></ItemVisualCatalog>)",                   "unknown damage stage 'Gone'"},
+         "Appearance.PartUnknown"                                                                                                                                                                                                             },
+        {                                                            R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" breakStage="Gone"/></ItemVisual></ItemVisualCatalog>)",   "Appearance.DamageStageUnknown"},
         {R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m"/><DamageStage name="B" threshold="0.5"/><DamageStage name="C" threshold="0.4"/></ItemVisual></ItemVisualCatalog>)",
-         "threshold in (previous, 1]"                                                                                                                                                                                                                       },
-        {                                                                                                                    R"(<SlotTable><Slot name="A"/><Occupancy id="O" slots="A,Nope"/></SlotTable>)",                           "unknown slot 'Nope'"},
-        {                                                                                               R"(<EquipSetCatalog><Set id="S"><Piece slot="Head" items="no_such_item"/></Set></EquipSetCatalog>)",                   "unknown item 'no_such_item'"},
+         "Appearance.DamageStageThreshold"                                                                                                                                                                                                    },
+        {                                                                                                                    R"(<SlotTable><Slot name="A"/><Occupancy id="O" slots="A,Nope"/></SlotTable>)",          "Appearance.SlotUnknown"},
+        {                                                                                               R"(<EquipSetCatalog><Set id="S"><Piece slot="Head" items="no_such_item"/></Set></EquipSetCatalog>)",          "Appearance.ItemUnknown"},
         {                      R"(<CustomizationSchemaCatalog><Schema id="S"><Slider name="A"><Condition parameter="B" min="0" max="1"/></Slider><Slider name="B"/></Schema></CustomizationSchemaCatalog>)",
-         "declared before it"                                                                                                                                                                                                                               },
-        {                                                    R"(<CustomizationSchemaCatalog><Schema id="S"><Choice name="A" default="Z"><Option name="X"/></Choice></Schema></CustomizationSchemaCatalog>)",                     "is not one of its options"},
-        {                                             R"(<CustomizationSchemaCatalog><Schema id="S"><Slider name="A"><Drive kind="DyeChannel" target="T"/></Slider></Schema></CustomizationSchemaCatalog>)",                                  "cannot drive"},
-        {                                                                               R"(<AppearanceRuleTable><Rule id="R"><When target="Nope" tag="T"/><Hide region="X"/></Rule></AppearanceRuleTable>)",                           "unknown slot 'Nope'"},
-        {                                                                  R"(<AppearanceRuleTable><Rule id="R"><When tag="T"/><Variant target="Body" name="NoSuchVariant"/></Rule></AppearanceRuleTable>)",                            "no visual declares"},
-        {                                                                                        R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" parent="Ghost"/></CharacterAppearanceCatalog>)",                        "unknown parent 'Ghost'"},
+         "Appearance.ConditionNotDeclaredBefore"                                                                                                                                                                                              },
+        {                                                    R"(<CustomizationSchemaCatalog><Schema id="S"><Choice name="A" default="Z"><Option name="X"/></Choice></Schema></CustomizationSchemaCatalog>)",   "Appearance.DefaultNotAnOption"},
+        {                                             R"(<CustomizationSchemaCatalog><Schema id="S"><Slider name="A"><Drive kind="DyeChannel" target="T"/></Slider></Schema></CustomizationSchemaCatalog>)", "Appearance.ParameterCannotDrive"},
+        {                                                                               R"(<AppearanceRuleTable><Rule id="R"><When target="Nope" tag="T"/><Hide region="X"/></Rule></AppearanceRuleTable>)",          "Appearance.SlotUnknown"},
+        {                                                                  R"(<AppearanceRuleTable><Rule id="R"><When tag="T"/><Variant target="Body" name="NoSuchVariant"/></Rule></AppearanceRuleTable>)",     "Appearance.VisualUndeclared"},
+        {                                                                                        R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" parent="Ghost"/></CharacterAppearanceCatalog>)",  "Appearance.PresetParentUnknown"},
         {                                    R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" schema="Human"><Value name="Wings" value="1"/></CharacterAppearance></CharacterAppearanceCatalog>)",
-         "unknown parameter 'Wings'"                                                                                                                                                                                                                        },
+         "Appearance.ParameterUnknown"                                                                                                                                                                                                        },
         {                               R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" schema="Human"><Value name="Hair" option="Mohawk"/></CharacterAppearance></CharacterAppearanceCatalog>)",
-         "unknown option 'Mohawk'"                                                                                                                                                                                                                          },
-        {                                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P"><Equip slot="Tail" item="sword"/></CharacterAppearance></CharacterAppearanceCatalog>)",                           "unknown slot 'Tail'"},
-        {                                                    R"(<CharacterAppearanceCatalog><CharacterAppearance id="A" parent="B"/><CharacterAppearance id="B" parent="A"/></CharacterAppearanceCatalog>)",                                 "forms a cycle"},
+         "Appearance.OptionUnknown"                                                                                                                                                                                                           },
+        {                                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P"><Equip slot="Tail" item="sword"/></CharacterAppearance></CharacterAppearanceCatalog>)",          "Appearance.SlotUnknown"},
+        {                                                    R"(<CharacterAppearanceCatalog><CharacterAppearance id="A" parent="B"/><CharacterAppearance id="B" parent="A"/></CharacterAppearanceCatalog>)",    "Appearance.PresetParentCycle"},
         // 벡터 · 색은 정확한 개수의 실수여야 한다 — 모자란 성분을 기본값으로 메우지 않고 로드 오류로 올린다.
-        {                                                                R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" impulse="1 2"/></ItemVisual></ItemVisualCatalog>)",                        "must be numbers shaped"},
-        {                                                      R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" socket="s" offset="0 1"/></ItemVisual></ItemVisualCatalog>)",                        "must be numbers shaped"},
-        {                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" schema="Human"><Value name="Skin" color="1 1 1"/></CharacterAppearance></CharacterAppearanceCatalog>)",                          "must be four numbers"},
+        {                                                                R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" impulse="1 2"/></ItemVisual></ItemVisualCatalog>)",          "Appearance.VectorShape"},
+        {                                                      R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" socket="s" offset="0 1"/></ItemVisual></ItemVisualCatalog>)",          "Appearance.VectorShape"},
+        {                                 R"(<CharacterAppearanceCatalog><CharacterAppearance id="P" schema="Human"><Value name="Skin" color="1 1 1"/></CharacterAppearance></CharacterAppearanceCatalog>)",           "Appearance.ColorShape"},
         // 자기 리그는 자기 스켈레톤을 가진 스킨드 부품만 — 몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다.
-        {                                                              R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" rig="r.rig.xml"/></ItemVisual></ItemVisualCatalog>)", "is not a Skinned part with its own 'skeleton'"},
+        {                                                              R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="Skinned" mesh="m" rig="r.rig.xml"/></ItemVisual></ItemVisualCatalog>)", "Appearance.PartRigNeedsSkeleton"},
         {                               R"(<ItemVisualCatalog><ItemVisual id="x"><Part name="A" kind="SocketPrefab" prefab="p" socket="s" skeleton="k" rig="r.rig.xml"/></ItemVisual></ItemVisualCatalog>)",
-         "is not a Skinned part with its own 'skeleton'"                                                                                                                                                                                                    },
+         "Appearance.PartRigNeedsSkeleton"                                                                                                                                                                                                    },
     };
     for ( const Case& testCase : arrCase )
     {
         Fixture fixture;
         SW_EXPECT_FALSE_MSG( Internal::loadWithExtra( testCase._pXML, fixture ), testCase._pXML );
-        SW_EXPECT_TRUE_MSG( fixture._database.getReport().countContaining( testCase._pExpected ) >= 1,
-                            ( string( testCase._pExpected ) + " missing in:" + fixture._database.getReport().joined() ).c_str() );
+        SW_EXPECT_TRUE_MSG( fixture._database.getReport().countWithID( testCase._pExpectedID ) >= 1,
+                            ( string( testCase._pExpectedID ) + " missing in:" + fixture._database.getReport().joined() ).c_str() );
     }
 }
 
@@ -128,8 +128,8 @@ SW_TEST_CASE( AppearanceTest, EquipConditionCycleIsALoadError )
 </ItemCatalog>)",
                                             "AppearanceTest.cycle" ) );
     SW_EXPECT_FALSE( fixture._database.finishLoad( &cyclic ) );
-    SW_EXPECT_TRUE_MSG( fixture._database.getReport().countContaining( "equip conditions form a cycle: a -> b -> a" ) == 1, fixture._database.getReport().joined().c_str() );
-    SW_EXPECT_TRUE( fixture._database.getReport().countContaining( "unknown set 'NoSuchSet'" ) == 1 );
+    SW_EXPECT_TRUE_MSG( fixture._database.getReport().countWithID( "Appearance.EquipConditionCycle" ) == 1, fixture._database.getReport().joined().c_str() );
+    SW_EXPECT_TRUE( fixture._database.getReport().countWithID( "Appearance.SetUnknown" ) == 1 );
 
     // 한쪽만 요구하면 순환이 아니다.
     vector<hashed_string> listCycle;
@@ -151,7 +151,7 @@ SW_TEST_CASE( AppearanceTest, EqualPriorityRuleConflictIsALoadError )
   <Rule id="B" priority="3"><When occupied="Back"/><Variant target="Hair" name="Lean"/></Rule>
 </AppearanceRuleTable>)",
                                                   fixture ) );
-        SW_EXPECT_TRUE_MSG( fixture._database.getReport().countContaining( "rules 'A' and 'B' both ChooseVariant 'Hair' differently at priority 3" ) == 1,
+        SW_EXPECT_TRUE_MSG( fixture._database.getReport().countWithID( "Appearance.RuleConflict" ) == 1,
                             fixture._database.getReport().joined().c_str() );
     }
     const utf8* arrAllowed[] = {

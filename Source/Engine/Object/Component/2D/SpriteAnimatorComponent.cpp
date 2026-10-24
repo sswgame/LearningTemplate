@@ -441,8 +441,8 @@ namespace sw
             if ( _bRootWarned == SW_FALSE )
             {
                 _bRootWarned = SW_TRUE;
-                SW_LOG_WARNING( "'%#': the sprite clip has transform keys but the sprite is the object's root - keys are not applied; attach the sprite under a root",
-                                pOwner->getName().c_str() );
+                SW_LOG_WARNING_ID( "Animation.SpriteClipKeysOnRootSprite", "'%#': the sprite clip has transform keys but the sprite is the object's root - keys are not applied; attach the sprite under a root",
+                                   pOwner->getName().c_str() );
             }
             return;
         }

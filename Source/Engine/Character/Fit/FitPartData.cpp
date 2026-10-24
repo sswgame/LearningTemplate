@@ -93,7 +93,7 @@ namespace sw
                 reader.readOptionalFloat( child, "width", ring._width );
                 const bool bInvalidRing = ring._radius <= 0.0f || ring._width < 0.0f || ring._axis.getLengthSquared() <= 0.0f;
                 if ( bInvalidRing )
-                    reader.addError( child, "needs radius > 0, width >= 0 and a non-zero axis" );
+                    reader.addError( "Character.FitRingInvalid", child, "needs radius > 0, width >= 0 and a non-zero axis" );
                 else
                     _listRing.push_back( ring );
             }
@@ -113,7 +113,7 @@ namespace sw
                     const int32 vertex = reader.readInt( deltaNode, "vertex" );
                     if ( vertex < 0 )
                     {
-                        reader.addError( deltaNode, "needs vertex >= 0" );
+                        reader.addError( "Character.FitDeltaVertexInvalid", deltaNode, "needs vertex >= 0" );
                         continue;
                     }
                     FitCorrectiveDelta delta;

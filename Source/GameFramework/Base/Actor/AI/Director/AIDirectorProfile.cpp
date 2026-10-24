@@ -183,8 +183,8 @@ namespace sw
             }
             if ( Internal::kSignalKindTable.parse( child.getAttributeText( "kind" ), signal._kind ) == false )
             {
-                SW_LOG_ERROR( "%#: signal '%#' has an unknown kind '%#' (%#)", sourceName, signal._id.c_str(), child.getAttributeText( "kind" ),
-                              Internal::kSignalKindTable.joinNames().c_str() );
+                SW_LOG_ERROR_ID( "AI.DirectorSignalKindUnknown", "%#: signal '%#' has an unknown kind '%#' (%#)", sourceName, signal._id.c_str(), child.getAttributeText( "kind" ),
+                                 Internal::kSignalKindTable.joinNames().c_str() );
                 bValid = false;
                 continue;
             }
@@ -244,7 +244,7 @@ namespace sw
         const string_view triggerText = node.getAttributeText( "trigger" );
         if ( Internal::kPoolTriggerTable.parse( triggerText, pool._trigger ) == false )
         {
-            SW_LOG_ERROR( "%#: pool '%#' has an unknown trigger '%#' (%#)", sourceName, pool._id.c_str(), triggerText, Internal::kPoolTriggerTable.joinNames().c_str() );
+            SW_LOG_ERROR_ID( "AI.DirectorPoolTriggerUnknown", "%#: pool '%#' has an unknown trigger '%#' (%#)", sourceName, pool._id.c_str(), triggerText, Internal::kPoolTriggerTable.joinNames().c_str() );
             bValid = false;
         }
         ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
@@ -299,7 +299,7 @@ namespace sw
         {
             if ( findPhaseIndex( phaseID ) >= 0 )
                 continue;
-            SW_LOG_ERROR( "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
+            SW_LOG_ERROR_ID( "AI.DirectorPacingPhaseUnknown", "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
             bValid = false;
         }
         return bValid;
@@ -310,13 +310,13 @@ namespace sw
         bool bValid = true;
         if ( _listPhase.empty() )
         {
-            SW_LOG_ERROR( "%#: no <Phase>", sourceName );
+            SW_LOG_ERROR_ID( "AI.DirectorNoPhase", "%#: no <Phase>", sourceName );
             return false;
         }
         _startPhaseIndex = _startPhase.empty() ? 0 : findPhaseIndex( _startPhase );
         if ( _startPhaseIndex < 0 )
         {
-            SW_LOG_ERROR( "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
+            SW_LOG_ERROR_ID( "AI.DirectorStartPhaseUnknown", "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
             bValid = false;
         }
         // 단계 이름은 나가는 길 · 풀 · 항목이 가리킨다 — 모르는 이름은 쓰는 쪽에서 조용히 "늘 거짓" 이 되므로 여기서 막는다.
@@ -327,7 +327,7 @@ namespace sw
                 exit._toIndex = findPhaseIndex( exit._to );
                 if ( exit._toIndex >= 0 )
                     continue;
-                SW_LOG_ERROR( "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
+                SW_LOG_ERROR_ID( "AI.DirectorExitPhaseUnknown", "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
                 bValid = false;
             }
         }
@@ -349,7 +349,7 @@ namespace sw
             }
             if ( pool._needSignal.empty() == false && findSignalIndex( pool._needSignal ) < 0 )
             {
-                SW_LOG_ERROR( "%#: pool '%#' reads an unknown signal '%#'", sourceName, pool._id.c_str(), pool._needSignal.c_str() );
+                SW_LOG_ERROR_ID( "AI.DirectorPoolSignalUnknown", "%#: pool '%#' reads an unknown signal '%#'", sourceName, pool._id.c_str(), pool._needSignal.c_str() );
                 bValid = false;
             }
         }

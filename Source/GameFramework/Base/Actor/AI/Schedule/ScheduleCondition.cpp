@@ -66,7 +66,7 @@ namespace sw
                     const bool bInvalidDayRange = bValid == false || first < 1 || last < first || maxDay < last;
                     if ( bInvalidDayRange )
                     {
-                        SW_LOG_WARNING( "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
+                        SW_LOG_WARNING_ID( "Schedule.DayListInvalid", "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
                         return;
                     }
                     for ( int32 day = first; day <= last; ++day )
@@ -97,17 +97,17 @@ namespace sw
                 const bool bInvalidSeasonDate = seasonName.empty() || StringUtil::parseInt( dayText, day ) == false || day < 1;
                 if ( bInvalidSeasonDate )
                 {
-                    SW_LOG_WARNING( "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
+                    SW_LOG_WARNING_ID( "Schedule.DateInvalid", "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
                     return false;
                 }
                 outSeason = hashed_string( seasonName );
                 outDay    = day;
-                warnUnknownNames( { outSeason }, listKnownSeason, "season", sourceName, ownerName );
+                warnUnknownNames( { outSeason }, listKnownSeason, "season", "Schedule.SeasonUnknown", sourceName, ownerName );
                 return true;
             }
 
             /** @brief 어휘가 있으면 목록의 이름이 어휘에 있는지 봅니다. */
-            static void warnUnknownNames( const vector<hashed_string>& listName, const vector<hashed_string>& listKnown, const utf8* pKind, string_view sourceName,
+            static void warnUnknownNames( const vector<hashed_string>& listName, const vector<hashed_string>& listKnown, const utf8* pKind, const utf8* pID, string_view sourceName,
                                           string_view ownerName )
             {
                 if ( listKnown.empty() )
@@ -115,7 +115,7 @@ namespace sw
                 for ( const hashed_string& name : listName )
                 {
                     if ( VectorUtil::contains( listKnown, name ) == false )
-                        SW_LOG_WARNING( "%#: '%#' has an unknown %# '%#'", sourceName, ownerName, pKind, name.c_str() );
+                        SW_LOG_WRITE( sw::LogLevel::Warning, pID, "%#: '%#' has an unknown %# '%#'", sourceName, ownerName, pKind, name.c_str() );
                 }
             }
 
@@ -221,9 +221,9 @@ namespace sw
         parseNameList( node.getAttributeText( "days" ), _listWeekday );
         parseNameList( node.getAttributeText( "seasons" ), _listSeason );
         parseNameList( node.getAttributeText( "weathers" ), _listWeather );
-        Internal::warnUnknownNames( _listWeekday, vocabulary._listWeekday, "day", sourceName, ownerName );
-        Internal::warnUnknownNames( _listSeason, vocabulary._listSeason, "season", sourceName, ownerName );
-        Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", sourceName, ownerName );
+        Internal::warnUnknownNames( _listWeekday, vocabulary._listWeekday, "day", "Schedule.DayUnknown", sourceName, ownerName );
+        Internal::warnUnknownNames( _listSeason, vocabulary._listSeason, "season", "Schedule.SeasonUnknown", sourceName, ownerName );
+        Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", "Schedule.WeatherUnknown", sourceName, ownerName );
 
         // 계절의 날은 1 부터 366 까지(`a-b` 범위 가능). 주는 1 부터 53 까지.
         Internal::parseDayList( node.getAttributeText( "daysOfSeason" ), _listDayOfSeason, 366, sourceName, ownerName, "day of season" );
@@ -249,7 +249,7 @@ namespace sw
             _maxAffinity = *maxAffinity;
         if ( _minAffinity > _maxAffinity )
         {
-            SW_LOG_ERROR( "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
+            SW_LOG_ERROR_ID( "Schedule.AffinityRangeEmpty", "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
             bValid = false;
         }
 
@@ -274,7 +274,7 @@ namespace sw
             bool            bIgnored = false;
             if ( GameFlags::parseCondition( _flags, noFlags, bIgnored ) == false )
             {
-                SW_LOG_ERROR( "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
+                SW_LOG_ERROR_ID( "Schedule.FlagsInvalid", "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
                 bValid = false;
             }
         }

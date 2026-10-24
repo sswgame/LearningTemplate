@@ -84,9 +84,15 @@ namespace sw
             return;
         CharacterBoneArray bones;
         SocketSetComponentInternal::makeBoneArray( pUnit->getSkeleton(), bones );
-        string error;
-        if ( _socketSet->validateBones( bones, &error ) == false )
-            SW_LOG_ERROR( "'%#': socket set '%#' names bones the skeleton does not have: %#", pOwner->getName().c_str(), _socketSetPath.c_str(), error.c_str() );
+        CharacterIssueList issues;
+        if ( _socketSet->validateBones( bones, &issues ) == false )
+        {
+            for ( const CharacterIssue& issue : issues.getIssues() )
+            {
+                SW_LOG_WRITE( sw::LogLevel::Error, issue._pID, "'%#': socket set '%#' names bones the skeleton does not have: %#", pOwner->getName().c_str(), _socketSetPath.c_str(),
+                              issue._text.c_str() );
+            }
+        }
     }
 
     bool SocketSetComponent::computeSocketUnitTransform( const hashed_string& socketName, const SkeletalMeshComponent* pUnit, float4x4& outUnitTransform ) const

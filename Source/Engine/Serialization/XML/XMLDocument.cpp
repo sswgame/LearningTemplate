@@ -267,13 +267,13 @@ namespace sw
 
         /** @brief 속성 · 자식 글 하나를 읽고, 깨졌으면 원소 · 이름 · 글과 함께 오류를 남깁니다. 결과는 0 읽음 · 1 없음 · 2 깨짐입니다. */
         template <typename T>
-        uint8 readNodeValueText( const utf8* pElementName, const utf8* pKind, const utf8* pName, const utf8* pText, T& outValue )
+        uint8 readNodeValueText( const utf8* pElementName, const utf8* pKind, const utf8* pID, const utf8* pName, const utf8* pText, T& outValue )
         {
             if ( pText == nullptr )
                 return 1;
             if ( XMLDocumentInternal::parseText( pText, outValue ) )
                 return 0;
-            SW_LOG_ERROR( "<%#> %# '%#' is not a %#: '%#'", pElementName, pKind, pName, XMLDocumentInternal::getTypeLabel( outValue ), pText );
+            SW_LOG_WRITE( sw::LogLevel::Error, pID, "<%#> %# '%#' is not a %#: '%#'", pElementName, pKind, pName, XMLDocumentInternal::getTypeLabel( outValue ), pText );
             return 2;
         }
     } // namespace
@@ -346,14 +346,14 @@ namespace sw
         return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
     }
 
-#define SW_XML_NODE_VALUE_READERS( Type )                                                                                         \
-    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, Type& outValue ) const                                 \
-    {                                                                                                                             \
-        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", pName, findAttribute( pName ), outValue ) ); \
-    }                                                                                                                             \
-    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, Type& outValue ) const                                     \
-    {                                                                                                                             \
-        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", pName, findChildText( pName ), outValue ) );     \
+#define SW_XML_NODE_VALUE_READERS( Type )                                                                                                                      \
+    XMLNode::XMLValueRead XMLNode::parseAttributeValue( const utf8* pName, Type& outValue ) const                                                              \
+    {                                                                                                                                                          \
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "attribute", "Xml.AttributeTypeMismatch", pName, findAttribute( pName ), outValue ) ); \
+    }                                                                                                                                                          \
+    XMLNode::XMLValueRead XMLNode::parseChildValue( const utf8* pName, Type& outValue ) const                                                                  \
+    {                                                                                                                                                          \
+        return static_cast<XMLValueRead>( readNodeValueText( getName(), "child", "Xml.ChildTypeMismatch", pName, findChildText( pName ), outValue ) );         \
     }
     SW_XML_NODE_VALUE_READERS( int32 )
     SW_XML_NODE_VALUE_READERS( uint32 )
@@ -369,7 +369,7 @@ namespace sw
 
     void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
     {
-        SW_LOG_ERROR( "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
+        SW_LOG_ERROR_ID( "Xml.AttributeOutOfRange", "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
     }
 
     XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -552,6 +552,7 @@ namespace sw
     XMLDocument::XMLDocument( XMLDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
         , _lastError{ std::move( other._lastError ) }
+        , _bLastErrorNotFound{ other._bLastErrorNotFound }
     {
     }
 
@@ -559,8 +560,9 @@ namespace sw
     {
         if ( this != &other )
         {
-            _impl      = std::move( other._impl );
-            _lastError = std::move( other._lastError );
+            _impl               = std::move( other._impl );
+            _lastError          = std::move( other._lastError );
+            _bLastErrorNotFound = other._bLastErrorNotFound;
         }
         return *this;
     }
@@ -579,6 +581,7 @@ namespace sw
             _impl = make_unique<Impl>();
         _impl->doc.reset();
         _lastError.clear();
+        _bLastErrorNotFound      = false;
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( xmlText.empty() )
         {
@@ -628,14 +631,16 @@ namespace sw
     {
         if ( relativePath.empty() )
         {
-            _lastError = "empty path";
+            _lastError          = "empty path";
+            _bLastErrorNotFound = false;
             return false;
         }
         string text;
         string absPath;
         if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
         {
-            _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            _lastError          = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
+            _bLastErrorNotFound = true;
             return false;
         }
         if ( pOutAbsPath != nullptr )

@@ -219,13 +219,13 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
     struct Case
     {
         const utf8* _pJSON;
-        const utf8* _pExpectedName;
+        const utf8* _pExpectedID;
     };
     const Case arrCase[] = {
-        {      "{ \"_maxFrameDeltaTme\": 0.2 }",  "_maxFrameDeltaTme"}, // 모르는 키
-        {     "{ \"_MaxFrameDeltaTime\": 0.2 }", "_MaxFrameDeltaTime"}, // 대소문자만 다르다
-        {          "{ \"_fixedDeltaTime\": 0 }",    "_fixedDeltaTime"}, // Min 밖
-        {"{ \"_window\": { \"_widht\": 800 } }",            "_window"}, // 구조체 칸 안의 모르는 키는 바깥 칸 이름으로
+        {      "{ \"_maxFrameDeltaTme\": 0.2 }",             "Config.KeyUnknown"}, // 모르는 키
+        {     "{ \"_MaxFrameDeltaTime\": 0.2 }",             "Config.KeyUnknown"}, // 대소문자만 다르다
+        {          "{ \"_fixedDeltaTime\": 0 }", "Serialization.ValueOutOfRange"}, // Min 밖
+        {"{ \"_window\": { \"_widht\": 800 } }",             "Config.KeyUnknown"}, // 구조체 칸 안의 모르는 키는 바깥 칸 이름으로
     };
     for ( const Case& testCase : arrCase )
     {
@@ -235,7 +235,7 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
         ConfigManager                manager;
         SW_EXPECT_TRUE_MSG( manager.loadHostConfig<EngineConfig>( ConfigSource::disk( path ) ) == nullptr, testCase._pJSON );
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( testCase._pExpectedName ) >= 1u, string( testCase._pJSON ) + logs.joined() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( testCase._pExpectedID ) >= 1u, string( testCase._pJSON ) + logs.joined() );
     }
     SW_EXPECT_TRUE( FileUtil::removeFile( path ) );
 #endif

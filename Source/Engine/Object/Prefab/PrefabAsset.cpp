@@ -1475,8 +1475,8 @@ namespace sw
         for ( const PrefabPartOverride& part : listPartOverride )
         {
             if ( VectorUtil::contains( listSpawnedPath, part._partPath ) == false )
-                SW_LOG_WARNING( "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
-                                pRoot != nullptr ? pRoot->getName().c_str() : "?", asset.getName() );
+                SW_LOG_WARNING_ID( "Prefab.NestedPartOverrideDropped", "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
+                                   pRoot != nullptr ? pRoot->getName().c_str() : "?", asset.getName() );
         }
         return createdCount;
     }

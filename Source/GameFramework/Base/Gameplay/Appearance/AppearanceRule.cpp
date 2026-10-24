@@ -31,7 +31,7 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
                 if ( GameDataXML::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
-                    report.addError( "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
+                    report.addErrorWithID( "Appearance.RuleWhenNotInvalid", "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
                 outCondition._target       = AppearanceXMLUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
@@ -42,7 +42,7 @@ namespace sw
                 const bool  bTargetUsed    = pTag != nullptr;
                 if ( predicateCount != 1 || ( outCondition._target.empty() == false && bTargetUsed == false ) )
                 {
-                    report.addError( "%#: rule '%#' <When> needs exactly one of tag / characterTag / occupied / bodyShape / bodyType (target only with tag)", sourceName, ruleID.c_str() );
+                    report.addErrorWithID( "Appearance.RuleWhenShape", "%#: rule '%#' <When> needs exactly one of tag / characterTag / occupied / bodyShape / bodyType (target only with tag)", sourceName, ruleID.c_str() );
                     return false;
                 }
                 if ( pTag != nullptr )
@@ -81,7 +81,7 @@ namespace sw
                     const int32 kindCount = ( outAction._target.empty() ? 0 : 1 ) + ( pItemTag != nullptr ? 1 : 0 ) + ( pRegion != nullptr ? 1 : 0 );
                     if ( kindCount != 1 )
                     {
-                        report.addError( "%#: rule '%#' <Hide> needs exactly one of target / itemTag / region", sourceName, ruleID.c_str() );
+                        report.addErrorWithID( "Appearance.RuleHideShape", "%#: rule '%#' <Hide> needs exactly one of target / itemTag / region", sourceName, ruleID.c_str() );
                         return false;
                     }
                     outAction._kind = AppearanceRuleActionKind::HideTarget;
@@ -134,7 +134,7 @@ namespace sw
                     AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement, report, sourceName );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
-                report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
+                report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                 return false;
             }
         };
@@ -195,7 +195,7 @@ namespace sw
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findRule( rule._id ) != nullptr )
             {
-                report.addError( "%#: <Rule> has a duplicate id '%#'", sourceName, rule._id.c_str() );
+                report.addErrorWithID( "Appearance.IDDuplicate", "%#: <Rule> has a duplicate id '%#'", sourceName, rule._id.c_str() );
                 continue;
             }
             for ( XMLNode child = ruleNode.findChild(); child; child = child.findNextSibling() )
@@ -212,10 +212,10 @@ namespace sw
                 if ( AppearanceRuleInternal::readAction( child, action, report, sourceName, rule._id ) )
                     rule._listAction.push_back( action );
                 else if ( report.getErrors().size() == errorCountBeforeAction )
-                    report.addError( "%#: rule '%#' <%#> is missing a required attribute", sourceName, rule._id.c_str(), child.getName() );
+                    report.addErrorWithID( "Appearance.RuleActionAttributeMissing", "%#: rule '%#' <%#> is missing a required attribute", sourceName, rule._id.c_str(), child.getName() );
             }
             if ( rule._listAction.empty() )
-                report.addError( "%#: rule '%#' has no action", sourceName, rule._id.c_str() );
+                report.addErrorWithID( "Appearance.RuleNoAction", "%#: rule '%#' has no action", sourceName, rule._id.c_str() );
             _listRule.push_back( rule );
         }
         reportConflicts( report, sourceName );
@@ -256,8 +256,8 @@ namespace sw
                     {
                         const bool bConflict = left.isHide() == false && left.hasSameTarget( right ) && left.hasSameValue( right ) == false;
                         if ( bConflict )
-                            report.addError( "%#: rules '%#' and '%#' both %# '%#' differently at priority %# - give one a higher priority", sourceName, lhs._id.c_str(), rhs._id.c_str(),
-                                             getEnumName( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
+                            report.addErrorWithID( "Appearance.RuleConflict", "%#: rules '%#' and '%#' both %# '%#' differently at priority %# - give one a higher priority", sourceName, lhs._id.c_str(), rhs._id.c_str(),
+                                                   getEnumName( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
                     }
                 }
             }

@@ -95,11 +95,11 @@ SW_TEST_CASE( SocketSetTest, UnknownNamesAreLoadErrors )
     SW_TEST_DEFENSIVE_SCOPE( "unknown socket kinds, bones and attributes are load errors" );
     SocketSet sockets;
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' kind='Holster'/></SocketSet>", "a.sockets.xml", kinds ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown kind 'Holster'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.SocketKindUnknown" ) > 0 );
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' parent='tail'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown parent bone 'tail'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.SocketParentBoneUnknown" ) > 0 );
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' offset='0 0 1'/></SocketSet>", "a.sockets.xml", kinds ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown attribute 'offset'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.UnknownAttribute" ) > 0 );
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A'/><Socket name='A'/></SocketSet>", "a.sockets.xml", kinds ) );
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><VirtualBone name='V' from='hand' to='toe'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
     SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' anchor='Skin'/></SocketSet>", "a.sockets.xml", kinds ) );
@@ -325,7 +325,7 @@ SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
     SW_TEST_DEFENSIVE_SCOPE( "unknown bones in a reference pose override are load errors" );
     ReferencePoseOverride broken;
     SW_EXPECT_FALSE( broken.loadFromXMLText( "<ReferencePose><Bone name='tail' scale='2 2 2'/></ReferencePose>", "broken.refpose.xml", &bones ) );
-    SW_EXPECT_TRUE( logs.countContaining( "unknown bone 'tail'" ) > 0 );
+    SW_EXPECT_TRUE( logs.countWithID( "Character.OverrideBoneUnknown" ) > 0 );
 }
 
 /**

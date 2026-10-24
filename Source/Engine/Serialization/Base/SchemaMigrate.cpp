@@ -234,8 +234,8 @@ namespace sw
                 }
                 if ( listListedHash.empty() )
                     return;
-                SW_LOG_WARNING( "%#: dropped %# saved field(s) that the type does not have or could not read: %#", typeInfo._name.c_str(),
-                                static_cast<uint32>( listListedHash.size() ), names );
+                SW_LOG_WARNING_ID( "Schema.FieldsDropped", "%#: dropped %# saved field(s) that the type does not have or could not read: %#", typeInfo._name.c_str(),
+                                   static_cast<uint32>( listListedHash.size() ), names );
             }
         };
     } // namespace

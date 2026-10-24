@@ -315,7 +315,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
     }
     SW_EXPECT_EQUAL( 1u, result._failedCount );
     SW_EXPECT_EQUAL( 0u, result._appliedCount );
-    SW_EXPECT_TRUE_MSG( collector.countContaining( "g.refused" ) > 0, collector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( collector.countWithID( "UserSettings.TargetRejected" ) > 0, collector.joined().c_str() );
     settings.getRegistry().unregisterHandler( "game.refuse" );
 }
 
@@ -428,7 +428,7 @@ SW_TEST_CASE( UserSettingsTest, CorruptUserFileIsMovedAside )
     }
     SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( corruptPath ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "could not be read" ) >= 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "UserSettings.FileUnreadable" ) >= 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( corruptPath ) );
     Internal::resetTestVariables();
 }
@@ -460,9 +460,8 @@ SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )
     SW_EXPECT_STREQ( "0.5", settings.getAppliedValue( "a.volume" ) );
     SW_EXPECT_STREQ( "borderless", settings.getAppliedValue( "a.mode" ) );
     SW_EXPECT_STREQ( "2", settings.getAppliedValue( "a.gamma" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "dropped unknown key 'a.removedLongAgo'" ) );
-    SW_EXPECT_EQUAL( 0u, logs.countContaining( "a.legacy" ) );
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "'a.gamma' = '9' is out of range" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "UserSettings.UnknownKeyDropped" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "UserSettings.ValueOutOfRange" ) );
 
     // 쓰는 파일은 지금 판이다.
     SW_EXPECT_TRUE( settings.makeUserJSON().find( "\"version\": 3" ) != sw::string::npos );

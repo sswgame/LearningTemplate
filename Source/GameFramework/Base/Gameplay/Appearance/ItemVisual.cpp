@@ -72,7 +72,7 @@ namespace sw
                 for ( const utf8* pAttribute : kArrAssetAttribute )
                 {
                     if ( node.findAttribute( pAttribute ) != nullptr && ( pExpected == nullptr || StringUtil::equals( pAttribute, pExpected, true ) == false ) )
-                        report.addError( "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualID.c_str(), node.getName(), getEnumName( kind ), pAttribute );
+                        report.addErrorWithID( "Appearance.PartAttributeNotAllowed", "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualID.c_str(), node.getName(), getEnumName( kind ), pAttribute );
                 }
             }
 
@@ -80,7 +80,7 @@ namespace sw
             {
                 if ( visual.findPart( part ) != nullptr )
                     return true;
-                report.addError( "%#: visual '%#' %# names unknown part '%#'", sourceName, visual._id.c_str(), pWhere, part.c_str() );
+                report.addErrorWithID( "Appearance.PartUnknown", "%#: visual '%#' %# names unknown part '%#'", sourceName, visual._id.c_str(), pWhere, part.c_str() );
                 return false;
             }
 
@@ -97,7 +97,7 @@ namespace sw
                     variant._asset    = AppearanceXMLUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
                     variant._material = AppearanceXMLUtil::readOptionalName( child, "material" );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
-                        report.addError( "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
+                        report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
                         inoutPart._listVariant.push_back( variant );
                 }
@@ -109,7 +109,7 @@ namespace sw
                     variant._material          = AppearanceXMLUtil::readRequiredName( child, "material", report, sourceName );
                     const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr;
                     if ( bInvalidVariant )
-                        report.addError( "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
+                        report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
                         inoutPart._listMaterialVariant.push_back( variant );
                 }
@@ -149,12 +149,12 @@ namespace sw
                 part._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                 if ( parseKind( node.getAttributeText( "kind" ), part._kind ) == false )
                 {
-                    report.addError( "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
+                    report.addErrorWithID( "Appearance.PartKindUnknown", "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
                     return;
                 }
                 if ( part._name.empty() || inoutVisual.findPart( part._name ) != nullptr )
                 {
-                    report.addError( "%#: visual '%#' has a part without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartNameInvalid", "%#: visual '%#' has a part without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                     return;
                 }
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
@@ -168,31 +168,31 @@ namespace sw
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
-                    report.addError( "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartRigNeedsSkeleton", "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 part._fit                  = AppearanceXMLUtil::readOptionalName( node, "fit" );
                 part._fitTables            = AppearanceXMLUtil::readOptionalName( node, "fitTables" );
                 const bool bFitOnRigidPart = ( part._fit.empty() == false || part._fitTables.empty() == false ) && part._kind != AppearancePartKind::Skinned;
                 if ( bFitOnRigidPart )
-                    report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
-                                     part._name.c_str(), getEnumName( part._kind ) );
+                    report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
+                                           part._name.c_str(), getEnumName( part._kind ) );
                 part._bodyShapes = AppearanceXMLUtil::readOptionalName( node, "bodyShapes" );
                 if ( part._bodyShapes.empty() == false && part._kind != AppearancePartKind::Skinned )
-                    report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
-                                     part._name.c_str(), getEnumName( part._kind ) );
+                    report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
+                                           part._name.c_str(), getEnumName( part._kind ) );
                 // 적지 않으면 스킨 파츠만 변형하고, 부서지는 단계를 적은 파츠만 떨어진다(이 파츠의 데이터에서 온 값).
                 part._bDeforms   = part._kind == AppearancePartKind::Skinned ? SW_TRUE : SW_FALSE;
                 part._bBreakable = part._breakStage.empty() == false ? SW_TRUE : SW_FALSE;
                 AppearanceXMLUtil::readOptionalInt( node, "layer", MathUtil::kMinInt32, MathUtil::kMaxInt32, part._layer, report, sourceName );
                 if ( GameDataXML::readOptionalFlag( node, "deforms", part._bDeforms ) == false || GameDataXML::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
-                    report.addError( "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
                 AppearanceXMLUtil::readPlacement( node, "socket", part._placement, report, sourceName );
                 if ( pAssetAttribute != nullptr && part._asset.empty() )
-                    report.addError( "%#: visual '%#' part '%#' needs '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), pAssetAttribute );
+                    report.addErrorWithID( "Appearance.PartAssetMissing", "%#: visual '%#' part '%#' needs '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), pAssetAttribute );
                 if ( part._kind == AppearancePartKind::SocketPrefab && part._placement.isEmpty() )
-                    report.addError( "%#: visual '%#' part '%#' needs a socket", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartSocketMissing", "%#: visual '%#' part '%#' needs a socket", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 if ( part._kind == AppearancePartKind::BodyModification && ( part._placement.isEmpty() == false || part._bBreakable == SW_TRUE ) )
-                    report.addError( "%#: visual '%#' body modification '%#' cannot have a socket or break off", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                    report.addErrorWithID( "Appearance.PartBodyModificationInvalid", "%#: visual '%#' body modification '%#' cannot have a socket or break off", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     readPartChild( child, node, part, report, sourceName, inoutVisual._id );
@@ -207,7 +207,7 @@ namespace sw
                 state._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                 if ( state._name.empty() || inoutVisual.findState( state._name ) != nullptr )
                 {
-                    report.addError( "%#: visual '%#' has a state without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), state._name.c_str() );
+                    report.addErrorWithID( "Appearance.StateNameInvalid", "%#: visual '%#' has a state without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), state._name.c_str() );
                     return;
                 }
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
@@ -244,7 +244,7 @@ namespace sw
                 const std::optional<float32> threshold = node.readRequiredAttribute<float32>( "threshold" );
                 if ( threshold.has_value() == false )
                 {
-                    report.addError( "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                    report.addErrorWithID( "Appearance.DamageStageThreshold", "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;
                 }
                 stage._threshold                  = *threshold;
@@ -253,7 +253,7 @@ namespace sw
                 const bool    bInvalidDamageStage = stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false;
                 if ( bInvalidDamageStage )
                 {
-                    report.addError( "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                    report.addErrorWithID( "Appearance.DamageStageThreshold", "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;
                 }
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
@@ -266,8 +266,8 @@ namespace sw
                         entry._variant                 = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
                         const AppearancePartDef* pPart = inoutVisual.findPart( entry._part );
                         if ( pPart == nullptr || pPart->findVariant( entry._variant ) == nullptr )
-                            report.addError( "%#: visual '%#' damage stage '%#' names unknown part/variant '%#'/'%#'", sourceName, inoutVisual._id.c_str(), stage._name.c_str(), entry._part.c_str(),
-                                             entry._variant.c_str() );
+                            report.addErrorWithID( "Appearance.PartUnknown", "%#: visual '%#' damage stage '%#' names unknown part/variant '%#'/'%#'", sourceName, inoutVisual._id.c_str(), stage._name.c_str(), entry._part.c_str(),
+                                                   entry._variant.c_str() );
                         else
                             stage._listVariant.push_back( entry );
                     }
@@ -314,13 +314,13 @@ namespace sw
                         AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                 }
                 if ( outVisual._defaultState.empty() == false && outVisual.findState( outVisual._defaultState ) == nullptr )
-                    report.addError( "%#: visual '%#' default state '%#' is not one of its states", sourceName, outVisual._id.c_str(), outVisual._defaultState.c_str() );
+                    report.addErrorWithID( "Appearance.DefaultStateUnknown", "%#: visual '%#' default state '%#' is not one of its states", sourceName, outVisual._id.c_str(), outVisual._defaultState.c_str() );
                 if ( outVisual._defaultState.empty() && outVisual._listState.empty() == false )
                     outVisual._defaultState = outVisual._listState.front()._name;
                 for ( const AppearancePartDef& part : outVisual._listPart )
                 {
                     if ( part._breakStage.empty() == false && outVisual.findDamageStage( part._breakStage ) == nullptr )
-                        report.addError( "%#: visual '%#' part '%#' breaks at unknown damage stage '%#'", sourceName, outVisual._id.c_str(), part._name.c_str(), part._breakStage.c_str() );
+                        report.addErrorWithID( "Appearance.DamageStageUnknown", "%#: visual '%#' part '%#' breaks at unknown damage stage '%#'", sourceName, outVisual._id.c_str(), part._name.c_str(), part._breakStage.c_str() );
                 }
             }
         };
@@ -394,7 +394,7 @@ namespace sw
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findVisual( visual._id ) != nullptr )
             {
-                report.addError( "%#: <ItemVisual> has a duplicate id '%#'", sourceName, visual._id.c_str() );
+                report.addErrorWithID( "Appearance.IDDuplicate", "%#: <ItemVisual> has a duplicate id '%#'", sourceName, visual._id.c_str() );
                 continue;
             }
             ItemVisualInternal::readVisual( node, visual, report, sourceName );

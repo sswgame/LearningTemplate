@@ -205,7 +205,7 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 | `test::ScopedFailureCapture` | 테스트 단언의 실패를 가로챕니다. 단언 자체를 테스트할 때 씁니다 |
 | `test::runThisExecutableAsChild` | 자기 실행 파일을 자식 프로세스로 띄워 케이스 하나를 돌립니다 |
 
-- `ScopedLogCollector` 로 모은 로그는 `countContaining( "..." )` 로 그 경고가 나왔는지 확인하고, 실패 메시지에는 `joined()` 로 붙입니다. 이 도우미들은 `Test/TestFramework/TestScopes.h` 에 있습니다.
+- `ScopedLogCollector` 로 모은 로그는 `countWithID( "영역.사건" )` 로 그 경고가 나왔는지 확인하고(문장이 아니라 소스의 `SW_LOG_*_ID` id 로 찾는다 — 문구를 고쳐도 지지 않는다. 문자열 부분 일치 API 는 없다. 아무 줄도 없다는 확인은 `count()`), 실패 메시지에는 `joined()` 로 붙입니다. 이 도우미들은 `Test/TestFramework/TestScopes.h` 에 있습니다.
 - `test::ScopedTrace( "backend=Vulkan" )` 는 gtest 의 `SCOPED_TRACE` 와 같습니다. 그 범위에서 진 단언과 재현 요약에 맥락 한 줄이 붙습니다. `RHIBackendSweep` 은 백엔드마다 겁니다.
 - `ScopedDefensiveTestLog` 의 표시는 로그를 읽는 사람이 의도한 오류를 실패로 오해하지 않게 하려는 것입니다.
 - Debug의 엔진 단언은 디버거를 멈추지만(`SW_DEBUG_BREAK`), `ScopedAssertCapture` 를 건 동안은 멈추지 않고 셉니다. 그래서 방어 경로 테스트가 Debug에서도 돕니다. 유니티의 `LogAssert.Expect` 와 같습니다.

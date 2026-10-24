@@ -1383,15 +1383,15 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     registry.registerClass( makeType( "swtest::left" ) ); // 같은 타입의 재등록(핫 리로드)은 조용하다
     registry.registerEnum( makeEnum( "swtest::left" ) );
     registry.registerEnum( makeEnum( "swtest::left" ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Twin" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.count() == 0, logs.joined().c_str() );
 
     {
         test::ScopedDefensiveTestLog expected( "two reflected types and two enums share a short name" );
         registry.registerClass( makeType( "swtest::right" ) );
         registry.registerEnum( makeEnum( "swtest::right" ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( ( "no longer swtest::left::TwinType" + suffix ).c_str() ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( ( "now means swtest::right::TwinEnum" + suffix ).c_str() ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Reflection.TypeShortNameCollision" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Reflection.EnumShortNameCollision" ) == 1, logs.joined().c_str() );
     // 동작은 그대로 — 나중 것이 이긴다.
     const sw::TypeInfo* pByShortName = registry.findType( sw::hashed_string( ( "TwinType" + suffix ).c_str() ) );
     SW_ASSERT_NOT_NULL( pByShortName );

@@ -620,7 +620,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
         test::ScopedDefensiveTestLog expected( "transform keys on a root sprite are not applied" );
         pRootAnimator->play( "b" );
         pRootAnimator->onTick( 0.1f );
-        SW_EXPECT_EQUAL( 1u, collector.countContaining( "the sprite is the object's root" ) );
+        SW_EXPECT_EQUAL( 1u, collector.countWithID( "Animation.SpriteClipKeysOnRootSprite" ) );
     }
     SW_EXPECT_NEAR_EQUAL( 7.0f, pPrimarySprite->getLocalPosition()._x, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 8.0f, pPrimarySprite->getLocalPosition()._y, 1e-6f );

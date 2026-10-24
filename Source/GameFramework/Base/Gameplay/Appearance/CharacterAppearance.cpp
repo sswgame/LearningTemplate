@@ -43,7 +43,7 @@ namespace sw
                     if ( GameDataXML::parseFloat4( token, color ) )
                         outListColor.push_back( color );
                     else
-                        report.addError( "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );
+                        report.addErrorWithID( "Appearance.ColorShape", "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );
                 } );
             }
 
@@ -75,14 +75,14 @@ namespace sw
                 const bool  bInvalidValueShape = value._parameter.empty() || shapeCount != 1 || value._max < value._min;
                 if ( bInvalidValueShape )
                 {
-                    report.addError( "%#: preset '%#' <Value name='%#'> needs exactly one of value / min+max / option(s) / color(s)", sourceName, inoutDef._id.c_str(), value._parameter.c_str() );
+                    report.addErrorWithID( "Appearance.PresetValueShape", "%#: preset '%#' <Value name='%#'> needs exactly one of value / min+max / option(s) / color(s)", sourceName, inoutDef._id.c_str(), value._parameter.c_str() );
                     return;
                 }
                 for ( CharacterAppearanceValueDef& existing : inoutDef._listValue )
                 {
                     if ( existing._parameter == value._parameter )
                     {
-                        report.addError( "%#: preset '%#' sets '%#' twice", sourceName, inoutDef._id.c_str(), value._parameter.c_str() );
+                        report.addErrorWithID( "Appearance.PresetValueRepeated", "%#: preset '%#' sets '%#' twice", sourceName, inoutDef._id.c_str(), value._parameter.c_str() );
                         return;
                     }
                 }
@@ -107,10 +107,10 @@ namespace sw
                     if ( number.has_value() )
                         inoutSlot._customization.setNumber( parameter, *number );
                     else
-                        report.addError( "%#: preset '%#' slot '%#' item value '%#' has an invalid value", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
+                        report.addErrorWithID( "Appearance.ValueInvalid", "%#: preset '%#' slot '%#' item value '%#' has an invalid value", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
                 }
                 else
-                    report.addError( "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
+                    report.addErrorWithID( "Appearance.PresetItemValueShape", "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
             }
 
             static void readEquip( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
@@ -120,7 +120,7 @@ namespace sw
                 if ( setID.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
-                        report.addError( "%#: preset '%#' <Equip> names both a set and a slot", sourceName, inoutDef._id.c_str() );
+                        report.addErrorWithID( "Appearance.EquipSetAndSlot", "%#: preset '%#' <Equip> names both a set and a slot", sourceName, inoutDef._id.c_str() );
                     inoutDef._listSet.push_back( setID );
                     return;
                 }
@@ -141,14 +141,14 @@ namespace sw
                 }
                 if ( slot._slot.empty() )
                 {
-                    report.addError( "%#: preset '%#' <Equip> needs a set or a slot", sourceName, inoutDef._id.c_str() );
+                    report.addErrorWithID( "Appearance.EquipNeedsSetOrSlot", "%#: preset '%#' <Equip> needs a set or a slot", sourceName, inoutDef._id.c_str() );
                     return;
                 }
                 for ( const CharacterAppearanceSlotDef& existing : inoutDef._listSlot )
                 {
                     if ( existing._slot == slot._slot )
                     {
-                        report.addError( "%#: preset '%#' equips slot '%#' twice", sourceName, inoutDef._id.c_str(), slot._slot.c_str() );
+                        report.addErrorWithID( "Appearance.EquipSlotRepeated", "%#: preset '%#' equips slot '%#' twice", sourceName, inoutDef._id.c_str(), slot._slot.c_str() );
                         return;
                     }
                 }
@@ -183,7 +183,7 @@ namespace sw
                         socketOverride._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
                         AppearanceXMLUtil::readPlacement( child, "parent", socketOverride._placement, report, sourceName );
                         if ( socketOverride._name.empty() || socketOverride._placement.isEmpty() )
-                            report.addError( "%#: preset '%#' <SocketOverride> needs a name and a parent", sourceName, outDef._id.c_str() );
+                            report.addErrorWithID( "Appearance.SocketOverrideInvalid", "%#: preset '%#' <SocketOverride> needs a name and a parent", sourceName, outDef._id.c_str() );
                         else
                             outDef._listSocketOverride.push_back( socketOverride );
                     }
@@ -450,7 +450,7 @@ namespace sw
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findPreset( def._id ) != nullptr )
             {
-                report.addError( "%#: <CharacterAppearance> has a duplicate id '%#'", sourceName, def._id.c_str() );
+                report.addErrorWithID( "Appearance.IDDuplicate", "%#: <CharacterAppearance> has a duplicate id '%#'", sourceName, def._id.c_str() );
                 continue;
             }
             CharacterAppearanceInternal::readPreset( node, def, report, sourceName );
@@ -464,7 +464,7 @@ namespace sw
         const size_t errorCountBefore = report.getErrors().size();
         if ( StringUtil::equals( presetNode.getName(), "CharacterAppearance", true ) == false )
         {
-            report.addError( "%#: a preset asset needs a <CharacterAppearance> root, got <%#>", sourceName, presetNode.getName() );
+            report.addErrorWithID( "Appearance.RootUnknown", "%#: a preset asset needs a <CharacterAppearance> root, got <%#>", sourceName, presetNode.getName() );
             return false;
         }
         CharacterAppearanceDef def;

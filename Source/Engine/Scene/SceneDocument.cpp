@@ -220,7 +220,10 @@ namespace sw
         if ( bRead == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
-            SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
+            if ( doc.isLastErrorNotFound() )
+                SW_LOG_ERROR_ID( "Scene.FileNotFound", "Scene not loaded - %#", doc.getLastError() );
+            else
+                SW_LOG_ERROR_ID( "Scene.FileUnreadable", "Scene not loaded - %#", doc.getLastError() );
             return false;
         }
         loadScope.beginPhase( AssetLoadPhase::Decode );
@@ -395,8 +398,8 @@ namespace sw
         arch >> version;
         if ( version != SceneDocumentInternal::kBinVersion )
         {
-            SW_LOG_ERROR( "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                          SceneDocumentInternal::kBinVersion );
+            SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
+                             SceneDocumentInternal::kBinVersion );
             return false;
         }
 

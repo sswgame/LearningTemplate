@@ -297,7 +297,7 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
         SW_EXPECT_FALSE( doc.loadBinary( path ) );
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "Unsupported binary version 2" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Scene.UnsupportedBinaryVersion" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -354,7 +354,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverrideOfVanishedComponentIsDroppedWithTheEn
     test::ScopedLogCollector logs;
     sw::string               rebuiltState;
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateGone", rebuiltState ) );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "'Gone#0' of 'CrateGone' is dropped" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Prefab.OverrideComponentDropped" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( rebuiltState.find( "9,9,9" ) == sw::string::npos, rebuiltState.c_str() );
 }
 

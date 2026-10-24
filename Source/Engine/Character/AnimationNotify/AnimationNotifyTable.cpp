@@ -54,7 +54,7 @@ namespace sw
                     {
                         param._text = string( node.getAttributeText( def._pName ) );
                         if ( param._text.empty() )
-                            reader.addError( node, string( "has an empty '" ) + def._pName + "'" );
+                            reader.addError( "Character.NotifyValueEmpty", node, string( "has an empty '" ) + def._pName + "'" );
                         break;
                     }
                     case AnimationNotifyParamKind::Float:
@@ -171,7 +171,7 @@ namespace sw
         for ( const AnimationFootContactDef& def : _listFootContact )
         {
             if ( findEntry( def._notify ) == nullptr )
-                reader.addError( string( "FootContact names notify '" ) + def._notify.c_str() + "' that has no <Notify> entry" );
+                reader.addError( "Character.FootContactNotifyMissing", string( "FootContact names notify '" ) + def._notify.c_str() + "' that has no <Notify> entry" );
         }
     }
 
@@ -191,12 +191,12 @@ namespace sw
         def._releaseHeight    = reader.readFloat( node, "release_height" );
         def._maxVerticalSpeed = reader.readFloat( node, "max_vertical_speed" );
         if ( def._releaseHeight <= def._contactHeight )
-            reader.addError( node, "needs 'release_height' above 'contact_height'" );
+            reader.addError( "Character.FootContactHeightOrder", node, "needs 'release_height' above 'contact_height'" );
         if ( def._maxVerticalSpeed <= 0.0f )
-            reader.addError( node, "needs a positive 'max_vertical_speed'" );
+            reader.addError( "Character.FootContactSpeedInvalid", node, "needs a positive 'max_vertical_speed'" );
         if ( isFootContactNotify( def._notify ) )
         {
-            reader.addError( node, string( "repeats foot contact notify '" ) + def._notify.c_str() + "'" );
+            reader.addError( "Character.FootContactRepeated", node, string( "repeats foot contact notify '" ) + def._notify.c_str() + "'" );
             return;
         }
         _listFootContact.push_back( def );
@@ -212,7 +212,7 @@ namespace sw
         entry._pHandler = registry.findHandler( entry._handlerName );
         if ( entry._pHandler == nullptr )
         {
-            reader.addError( node, string( "names unknown handler '" ) + entry._handlerName.c_str() + "'" );
+            reader.addError( "Character.NotifyHandlerUnknown", node, string( "names unknown handler '" ) + entry._handlerName.c_str() + "'" );
             return;
         }
         const vector_reference<const AnimationNotifyParamDef> listDef = entry._pHandler->getParams();
@@ -222,7 +222,7 @@ namespace sw
             const utf8* pName      = attribute.getName();
             const bool  bBaseField = StringUtil::equals( pName, "name", true ) || StringUtil::equals( pName, "handler", true );
             if ( bBaseField == false && AnimationNotifyTableInternal::findParamDef( listDef, pName ) == nullptr )
-                reader.addError( node, string( "has unknown argument '" ) + pName + "' for handler '" + entry._handlerName.c_str() + "'" );
+                reader.addError( "Character.NotifyArgumentUnknown", node, string( "has unknown argument '" ) + pName + "' for handler '" + entry._handlerName.c_str() + "'" );
         }
         // 선언한 인자는 모두 채운다 — 적지 않은 선택 인자는 선언의 "적지 않음" 값이고, 처리기는 대신할 값을 따로 들지 않는다.
         for ( const AnimationNotifyParamDef& def : listDef )
@@ -230,13 +230,13 @@ namespace sw
             if ( CharacterDataReader::hasAttribute( node, def._pName ) )
                 entry._listParam.push_back( AnimationNotifyTableInternal::readParam( node, def, reader ) );
             else if ( def._bRequired )
-                reader.addError( node, string( "needs argument '" ) + def._pName + "' for handler '" + entry._handlerName.c_str() + "'" );
+                reader.addError( "Character.NotifyArgumentMissing", node, string( "needs argument '" ) + def._pName + "' for handler '" + entry._handlerName.c_str() + "'" );
             else
                 entry._listParam.push_back( AnimationNotifyTableInternal::makeAbsentParam( def ) );
         }
         if ( findEntry( entry._notify ) != nullptr )
         {
-            reader.addError( node, string( "repeats notify '" ) + entry._notify.c_str() + "'" );
+            reader.addError( "Character.NotifyRepeated", node, string( "repeats notify '" ) + entry._notify.c_str() + "'" );
             return;
         }
         _listEntry.push_back( std::move( entry ) );

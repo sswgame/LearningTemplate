@@ -49,34 +49,42 @@ namespace sw
             }
             case XMLRootStatus::NotLoaded:
             {
-                addError( document.getLastError().empty() ? string( "cannot read" ) : document.getLastError() );
+                addError( "Character.FileUnreadable", document.getLastError().empty() ? string( "cannot read" ) : document.getLastError() );
                 return false;
             }
             case XMLRootStatus::RootMissing:
             {
-                addError( string( "root element <" ) + pRootName + "> is missing" );
+                addError( "Character.RootMissing", string( "root element <" ) + pRootName + "> is missing" );
                 return false;
             }
         }
         return false;
     }
 
-    void CharacterDataReader::addError( const XMLNode& node, string_view message )
+    void CharacterDataReader::addError( const utf8* pID, const XMLNode& node, string_view message )
     {
         string text = _sourceName;
         text += ": <";
         text += node.isValid() ? node.getName() : "?";
         text += "> ";
         text += message;
-        _listError.push_back( std::move( text ) );
+        _listError.push_back( { std::move( text ), pID } );
     }
 
-    void CharacterDataReader::addError( string_view message )
+    void CharacterDataReader::addError( const utf8* pID, string_view message )
     {
         string text = _sourceName;
         text += ": ";
         text += message;
-        _listError.push_back( std::move( text ) );
+        _listError.push_back( { std::move( text ), pID } );
+    }
+
+    void CharacterDataReader::addIssues( const CharacterIssueList& issues )
+    {
+        for ( const CharacterIssue& issue : issues.getIssues() )
+        {
+            addError( issue._pID, string_view( issue._text.c_str(), issue._text.size() ) );
+        }
     }
 
     void CharacterDataReader::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount )
@@ -85,20 +93,20 @@ namespace sw
         (void)XMLNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
         {
-            addError( node, string( "has unknown attribute '" ) + pName + "'" );
+            addError( "Character.UnknownAttribute", node, string( "has unknown attribute '" ) + pName + "'" );
         }
     }
 
     void CharacterDataReader::reportUnknownElement( const XMLNode& node )
     {
-        addError( node, "is not a known element here" );
+        addError( "Character.ElementUnknown", node, "is not a known element here" );
     }
 
     const utf8* CharacterDataReader::findRequiredText( const XMLNode& node, const utf8* pName )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
-            addError( node, string( "needs attribute '" ) + pName + "'" );
+            addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
         return pText;
     }
 
@@ -106,7 +114,7 @@ namespace sw
     {
         float32 value = 0.0f;
         if ( StringUtil::parseFloat( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( node, string( "attribute '" ) + pName + "' is not a number: '" + pText + "'" );
+            addError( "Character.NumberInvalid", node, string( "attribute '" ) + pName + "' is not a number: '" + pText + "'" );
         return value;
     }
 
@@ -114,7 +122,7 @@ namespace sw
     {
         int32 value = 0;
         if ( StringUtil::parseInt( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( node, string( "attribute '" ) + pName + "' is not an integer: '" + pText + "'" );
+            addError( "Character.IntegerInvalid", node, string( "attribute '" ) + pName + "' is not an integer: '" + pText + "'" );
         return value;
     }
 
@@ -122,7 +130,7 @@ namespace sw
     {
         bool value = false;
         if ( StringUtil::tryParseBool( StringUtil::trim( string_view( pText ) ), value ) == false )
-            addError( node, string( "attribute '" ) + pName + "' is not a boolean: '" + pText + "'" );
+            addError( "Character.BooleanInvalid", node, string( "attribute '" ) + pName + "' is not a boolean: '" + pText + "'" );
         return value;
     }
 
@@ -137,7 +145,7 @@ namespace sw
             bOk = StringUtil::parseFloat( listToken[axis], value.data()[axis] );
         }
         if ( bOk == false )
-            addError( node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
+            addError( "Character.Vector3Invalid", node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
         return value;
     }
 
@@ -198,7 +206,7 @@ namespace sw
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pName );
         if ( name.empty() && bRequired )
-            addError( node, string( "needs attribute '" ) + pName + "'" );
+            addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
         return name;
     }
 
@@ -213,7 +221,7 @@ namespace sw
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 남긴다.
             if ( name.empty() )
             {
-                addError( node, string( "attribute '" ) + pName + "' lists the empty name (none)" );
+                addError( "Character.NameEmpty", node, string( "attribute '" ) + pName + "' lists the empty name (none)" );
                 continue;
             }
             outListName.push_back( name );
@@ -222,9 +230,10 @@ namespace sw
 
     bool CharacterDataReader::finish() const
     {
-        for ( const string& error : _listError )
+        for ( const Error& error : _listError )
         {
-            SW_LOG_ERROR( "%#", error );
+            // id 는 호출한 쪽이 글자 상수로 넘긴 것이다(`addError` 의 약속).
+            SW_LOG_WRITE( sw::LogLevel::Error, error._pID, "%#", error._text );
         }
         return _listError.empty();
     }

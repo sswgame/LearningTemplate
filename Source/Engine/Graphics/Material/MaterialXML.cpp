@@ -111,7 +111,7 @@ namespace sw
             outValue = absentValue;
             return true;
         }
-        return MaterialUtil::parseBoolToken( text, pName != nullptr ? pName : "", outValue );
+        return MaterialUtil::parseBoolToken( text, pName != nullptr ? pName : "", "Material.BooleanFieldUnreadable", outValue );
     }
 
     bool MaterialUtil::parsePropertyNode( XMLNode item, MaterialProperty& outProp )
@@ -167,7 +167,7 @@ namespace sw
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
         const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
         bool       bUnused{ false };
-        if ( bBooleanValue && MaterialUtil::parseBoolToken( prop._value, prop._name, bUnused ) == false )
+        if ( bBooleanValue && MaterialUtil::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bUnused ) == false )
             return false;
         // 숫자 값도 읽을 때 확인한다 — 패커가 못 읽는 글을 0 으로 쓰지 않고 거절하므로 로드를 멈춘다. 같은 패커로 확인해 규칙이 하나다.
         const bool bNumericValue = prop._type <= MaterialPropertyType::Int4 || prop._type == MaterialPropertyType::Range || prop._type == MaterialPropertyType::Color;
@@ -262,7 +262,7 @@ namespace sw
             int64           usageValue{ 0 };
             if ( pUsageEnum == nullptr || pUsageEnum->tryParseText( usage, usageValue ) == false )
             {
-                SW_LOG_ERROR( "Material usage '%#' has an unknown flag", usage );
+                SW_LOG_ERROR_ID( "Material.UsageFlagUnknown", "Material usage '%#' has an unknown flag", usage );
                 return false;
             }
             outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );
