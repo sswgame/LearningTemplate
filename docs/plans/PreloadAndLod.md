@@ -11,7 +11,7 @@
 - 컷 준비의 애니메이션 LOD · 메시 LOD: `CameraManagerComponent` 가 대기 뷰의 카메라를 프레임마다 `AnimationSystem::setPendingLODView` · `MeshLODSystem::setPendingView` 로 넣는다.
 - 메시 LOD: 모델 임포트 규칙의 `lods`(단계마다 삼각형 비율 · 화면 크기 임계값 · 허용 오차)로 `meshopt_simplify` 가 단계를 만들고 `.mesh` 의 `LODS` 덩어리에 싣는다(LOD 없는 파일은 바이트가 그대로).
   `Mesh` 는 LOD 0 을 CPU 정점으로 두고(물리 · 내비 · 피킹은 LOD 0) 낮은 단계를 그릴 정점 흐름 뒤에 연결한다. 씬 서비스 `MeshLODSystem` 이 프레임마다 화면 크기로 컴포넌트의 단계를 고르고(고운 쪽은 10 % 여유),
-  렌더 수집은 그 단계의 정점 범위로 배치를 나눈다. 스킨 · 모프 · 구간이 있는 메시는 LOD 를 받지 않는다.
+  렌더 수집은 그 단계의 정점 범위로 배치를 나눈다. 모프 · 구간이 있는 메시는 LOD 를 받지 않는다. 스킨드 메시는 받는다 — 단계마다 스킨 정점(`.mesh` 의 `LSKN`)을 싣고 GPU 스키닝이 낮은 단계 정점도 변형한다([AnimationLodAndCrowd](AnimationLodAndCrowd.md) C4).
 - PSO 미리 만들기: 씬에 있는 머티리얼은 렌더러가 배치마다(보이든 아니든) PSO 를 만들므로 대기 뷰에 보일 것은 이미 준비돼 있다. 고정한 머티리얼(아직 씬에 없는 다음 레벨 · 컷의 것)은
   렌더러가 기록 전에 이번 프레임 보기 모드의 불투명 또는 투명 패스마다, 등장 디더 변형까지 PSO 를 미리 만든다(`FrameRenderer::warmPinnedMaterialPSOs`).
 - 텍스처 밉 스트리밍: 비동기로 읽는 텍스처는 아래쪽 밉(짧은 변 64 근처)만 먼저 업로드하고, 렌더 스레드가 한 프레임에 둘씩 위쪽 밉까지 새 GPU 텍스처 · SRV 로 바꿔 끼운다(`TextureCache::updateStreaming`).
