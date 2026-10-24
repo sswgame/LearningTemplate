@@ -683,3 +683,77 @@ SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput )
     SW_EXPECT_EQUAL( 0, child._exitCode );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_CONSOLE_LOG_PROBE warning line" ), child.getOutputTail().c_str() );
 }
+
+/**
+ * @brief [LogTest] 자식 역할: 전역 싱크를 뗀 채 로그 줄을 남기거나, 단언을 실패시킨다. 그냥 실행하면 건너뛴다.
+ * @details `nosink` 는 싱크가 없을 때 줄이 stderr 로 가는지, `assert` 는 `SW_LOG_ASSERT` 가 stderr 에 동기로 쓰는지 본다(단언은 가로채서 멈추지 않는다).
+ */
+SW_TEST_CASE( LogTest, StderrChildRoleWritesMarkers )
+{
+    const utf8* pRole = std::getenv( "SW_TEST_LOG_STDERR_CHILD" );
+    if ( pRole == nullptr )
+        SW_TEST_SKIP( "child only — the stderr cases launch it" );
+
+    if ( sw::StringUtil::equals( pRole, "nosink" ) )
+    {
+        sw::Logger::setGlobalSink( nullptr );
+        SW_LOG_ERROR( "SW_NOSINK_PROBE error line" );
+    }
+    else
+    {
+        test::ScopedAssertCapture capture;
+        const bool                bLogAssertProbeHolds = false;
+        SW_LOG_ASSERT( bLogAssertProbeHolds, "SW_ASSERT_PROBE message" );
+    }
+}
+
+/**
+ * @brief [LogTest] 싱크가 없을 때 `SW_LOG_*` 줄은 버려지지 않고 stderr 로 나간다
+ */
+SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError )
+{
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_TEST_LOG_STDERR_CHILD", "nosink" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "LogTest.StderrChildRoleWritesMarkers", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE( child._bTimedOut );
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_NOSINK_PROBE error line" ), child.getOutputTail().c_str() );
+}
+
+/**
+ * @brief [LogTest] 실패한 `SW_LOG_ASSERT` 는 식 · 메시지 · 자리를 stderr 에 먼저 남긴다(Debug)
+ */
+SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping )
+{
+#if !defined( SW_DEBUG )
+    SW_TEST_SKIP( "SW_LOG_ASSERT stops only in Debug builds" );
+#else
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_TEST_LOG_STDERR_CHILD", "assert" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "LogTest.StderrChildRoleWritesMarkers", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE( child._bTimedOut );
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "[SW_LOG_ASSERT] bLogAssertProbeHolds" ), child.getOutputTail().c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_ASSERT_PROBE message" ), child.getOutputTail().c_str() );
+#endif
+}
+
+/**
+ * @brief [LogTest] 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고하고 빈 핸들을 돌려준다(조용히 무시하지 않는다)
+ */
+SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported )
+{
+    test::ScopedAssertCapture capture;
+    sw::DelegateHandle        handle;
+    {
+        test::ScopedLogSuppressor noSink;
+        handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, []( const sw::LogEntry& ) {} ) );
+    }
+    SW_EXPECT_FALSE( handle.isValid() );
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, capture.getCount() );
+}

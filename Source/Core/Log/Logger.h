@@ -111,11 +111,21 @@ namespace sw
         static void registerGlobalSink( ILogSink* pSink );
         /** @brief 전역 싱크가 @p pSink 이면 해제합니다(기본 싱크가 파괴될 때 부릅니다). */
         static void unregisterGlobalSink( ILogSink* pSink );
-        /** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
+        /**
+         * @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 줄을 버리지 않고 stderr 에 쓰고 비웁니다(기동이 이르거나 로거가 없는 도구에서도 줄이 남는다).
+         */
         static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
-        /** @brief 전역 싱크에 리스너를 붙입니다. */
-        static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
-        /** @brief 전역 싱크에서 리스너를 해제합니다. */
+        /**
+         * @brief `SW_LOG_ASSERT`(Debug)가 멈추기 전에 식 · 메시지 · 위치를 stderr 에 동기로 쓰고 비웁니다.
+         * @details 로거는 비동기라 멈추면 큐의 메시지를 잃을 수 있습니다(`SW_ASSERT` 의 `printAssertFailure` 와 같은 이유). 매크로가 이 함수를 거치지 않고는 멈출 수 없게 한 곳에 둡니다.
+         */
+        static void printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept;
+        /**
+         * @brief 전역 싱크에 리스너를 붙입니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 핸들을 돌려줍니다.
+         * @details 핸들을 버리면 해제할 수 없으므로 `[[nodiscard]]` 입니다.
+         */
+        [[nodiscard]] static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
+        /** @brief 전역 싱크에서 리스너를 해제합니다. 싱크가 이미 없으면 리스너도 싱크와 함께 사라졌으므로 할 일이 없습니다(종료 순서에서 정상). */
         static void unregisterGlobalListener( const DelegateHandle& handle );
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
@@ -277,25 +287,26 @@ namespace sw
      * @note Debug 에서만 멈춥니다. 그 밖의 빌드는 아래에서 **로그만** 남깁니다. 배포본에서 단언이 통째로 사라지면 무엇이
      *       어긋났는지 알 길이 없기 때문입니다.
      */
-    #define SW_LOG_ASSERT( expr, ... )                                                              \
-        do                                                                                          \
-        {                                                                                           \
-            if ( !( expr ) )                                                                        \
-            {                                                                                       \
-                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                      \
-                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );          \
-                SW_LOG_INTERNAL( sw::LogLevel::Error,                                               \
-                                 "ASSERT failed\n"                                                  \
-                                 "Expression : %#\n"                                                \
-                                 "Message    : %#\n"                                                \
-                                 "FileName   : %#\n"                                                \
-                                 "Function   : %#\n"                                                \
-                                 "Line       : %#",                                                 \
-                                 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );    \
-                if ( ::sw::internal::tryCaptureAssert() == false &&                                 \
-                     ::sw::internal::shouldBreakOnAssert( #expr, _assertMsg, __FILE__, __LINE__ ) ) \
-                    SW_DEBUG_BREAK();                                                               \
-            }                                                                                       \
+    #define SW_LOG_ASSERT( expr, ... )                                                                                                          \
+        do                                                                                                                                      \
+        {                                                                                                                                       \
+            if ( !( expr ) )                                                                                                                    \
+            {                                                                                                                                   \
+                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                                                                  \
+                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );                                                      \
+                ::sw::Logger::printAssertFailureToStderr( #expr, _assertMsg, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
+                SW_LOG_INTERNAL( sw::LogLevel::Error,                                                                                           \
+                                 "ASSERT failed\n"                                                                                              \
+                                 "Expression : %#\n"                                                                                            \
+                                 "Message    : %#\n"                                                                                            \
+                                 "FileName   : %#\n"                                                                                            \
+                                 "Function   : %#\n"                                                                                            \
+                                 "Line       : %#",                                                                                             \
+                                 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );                                                \
+                if ( ::sw::internal::tryCaptureAssert() == false &&                                                                             \
+                     ::sw::internal::shouldBreakOnAssert( #expr, _assertMsg, __FILE__, __LINE__ ) )                                             \
+                    SW_DEBUG_BREAK();                                                                                                           \
+            }                                                                                                                                   \
         } while ( false )
 #else
     /**

@@ -79,10 +79,10 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 ## 기능
 
 ### LowLevelReportingGaps
-제목: 로그 경로의 조용한 유실 두 곳과 낮은 티어의 로그 사용을 빌드 구조로 막기
+제목: 낮은 티어의 로그 사용을 빌드 구조로 막기
 옛번호: 없음
-왜 필요한가: `SW_LOW_LEVEL_*` 정리(`wt/lowlevellog`, 2026-10-25)에서 같은 계열의 틈 셋이 남았습니다. (1) `SW_LOG_ASSERT` 는 멈추기 전에 stderr 에 동기로 쓰지 않아 비동기 큐가 크래시 직전 메시지를 잃습니다(`SW_ASSERT` 와 `SW_LOW_LEVEL_ASSERT` 는 이미 먼저 씁니다). (2) `SW_LOG_*` 는 싱크가 없으면 줄을 조용히 버립니다(`Logger::writeLogGlobal`) — 폴백을 두지 않는다는 원칙에 어긋납니다. (3) 낮은 티어(Memory · Container · Math)가 `SW_LOG_*` 를 쓰지 못하는 것은 린트 규칙(`CheckCoreLayers`)만이 막습니다.
-남은 것: (1) `SW_LOG_ASSERT` 의 Debug 분기에서 `printAssertFailure` 처럼 stderr 에 쓰고 flush 한 뒤 로그로 넘깁니다. (2) 싱크가 없을 때 `writeLogGlobal` 이 stderr 로 남길지, 오류로 멈출지 정합니다. 로그 줄은 기동 순서가 이르면 싱크가 없는 것이 정상이라, 기동 때 한 번 알리는 방식도 비교합니다. (3) 낮은 티어를 로거 헤더가 없는 OBJECT 라이브러리 + 전용 pch 로 빌드해 `SW_LOG_*` 를 쓰면 컴파일이 실패하게 하는 안을 따집니다. 되면 `CheckCoreLayers` 의 해당 규칙을 지웁니다.
+왜 필요한가: 낮은 티어(Memory · Container · Math)가 `SW_LOG_*` 를 쓰지 못하는 것은 린트 규칙(`CheckCoreLayers`)만이 막습니다. (`SW_LOG_ASSERT` 의 stderr 동기 쓰기, 싱크 없는 `SW_LOG_*` 의 stderr 출력, 싱크 없는 `registerGlobalListener` 의 보고는 2026-10-25 `wt/lowlevelgaps` 에서 끝났고 자식 프로세스 테스트가 있습니다.)
+남은 것: 낮은 티어를 로거 헤더가 없는 OBJECT 라이브러리 + 전용 pch 로 빌드해 `SW_LOG_*` 를 쓰면 컴파일이 실패하게 하는 안을 따집니다. 되면 `CheckCoreLayers` 의 해당 규칙을 지웁니다.
 
 
 ## 조건부
