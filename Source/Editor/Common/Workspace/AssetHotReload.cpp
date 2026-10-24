@@ -9,6 +9,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
+#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -21,6 +22,7 @@
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
@@ -44,6 +46,31 @@ namespace sw::editor
             static constexpr const utf8* kFenceFileName = "contentfence.tmp";
             /** @brief 표지 사건을 기다리는 시한(밀리초)입니다. 감시는 보통 몇 ms 안에 알린다. */
             static constexpr int64 kFenceTimeoutMilliseconds = 5000;
+            /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
+            static constexpr int64 kFenceImportTimeoutMilliseconds = 120000;
+
+            /** @brief 에디터가 없으면 nullptr 입니다. */
+            static AssetHotReload* findHotReload()
+            {
+                EditorContext* pContext = EditorContext::get();
+                return pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr;
+            }
+
+            /** @brief 탐침 `Editor.AssetImportBusy` — 원본 임포트가 돌거나 기다리면 1 입니다. 시나리오가 임포트가 끝나기를 기다린다. */
+            [[nodiscard]] static bool readImportBusy( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AssetHotReload* pHotReload = findHotReload();
+                outValue                         = pHotReload != nullptr && pHotReload->isImportBusy() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 탐침 `Editor.AssetImportFinishedCount` — 끝난 원본 임포트의 누적 수입니다(`WaitUntil` 이 임포트가 시작돼 끝난 것을 알아본다). */
+            [[nodiscard]] static bool readImportFinishedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AssetHotReload* pHotReload = findHotReload();
+                outValue                         = pHotReload != nullptr ? static_cast<float64>( pHotReload->getFinishedImportCount() ) : 0.0;
+                return true;
+            }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
             static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), kFenceFileName ); }
@@ -108,6 +135,13 @@ namespace sw::editor
 
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
+        , _pImportJob{ make_unique<EditorAssetImportJob>() }
+        , _listQueuedImport{}
+        , _listRunningImport{}
+        , _listDeferredFile{}
+        , _bImportInFlight{ false }
+        , _finishedImportCount{ 0 }
+        , _fenceImportDeadlineNanoseconds{ 0 }
         , _resourceWatchHandle{}
         , _contentWatchHandle{}
         , _contentChangeSerial{ 0 }
@@ -156,6 +190,21 @@ namespace sw::editor
 
     void AssetHotReload::shutdown()
     {
+        // 도는 임포트 잡은 모듈이 내려가기 전에 끝낸다 — 내려간 모듈의 코드를 도는 워커를 남기지 않는다. 진행 중인 원본 하나만 끝까지 가고 나머지는 건너뛴다.
+        if ( _pImportJob != nullptr )
+        {
+            _pImportJob->cancel();
+            EditorAssetImportResult discarded{};
+            while ( _pImportJob->take( discarded ) == EditorTaskPoll::Running )
+            {
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond );
+            }
+        }
+        _listQueuedImport.clear();
+        _listRunningImport.clear();
+        _listDeferredFile.clear();
+        _bImportInFlight = false;
+
         if ( _pFileWatchDispatcher == nullptr )
             return;
 
@@ -174,6 +223,7 @@ namespace sw::editor
     {
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
+        pumpImportJob();
     }
 
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
@@ -250,6 +300,17 @@ namespace sw::editor
             return true;
         if ( _bFenceSeen == false )
             SW_LOG_ERROR( "[ContentWatchFence] the file watch did not report the fence marker within %# ms - the scenario starts anyway", Internal::kFenceTimeoutMilliseconds );
+        else if ( isImportBusy() )
+        {
+            // 표지 앞의 사본 쓰기가 일으킨 원본 임포트가 워커에서 돈다. 임포트가 끝나기 전에 시작하면 시나리오가 낡은 결과(옛 DDS · 메시)를 읽는다.
+            const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
+            if ( _fenceImportDeadlineNanoseconds == 0 )
+                _fenceImportDeadlineNanoseconds = nowNanoseconds + Internal::kFenceImportTimeoutMilliseconds * constant::kNanosecondsPerMillisecond;
+            if ( nowNanoseconds < _fenceImportDeadlineNanoseconds )
+                return true;
+            SW_LOG_ERROR( "[ContentWatchFence] the asset import did not finish within %# ms - the scenario starts anyway", Internal::kFenceImportTimeoutMilliseconds );
+        }
+        _fenceImportDeadlineNanoseconds = 0;
         (void)FileUtil::removeFile( markerPath ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
         _bFenceWaiting     = false;
         _fencePrepareCount = _fenceArmedCount;
@@ -272,21 +333,149 @@ namespace sw::editor
         if ( relPath.empty() )
             return;
 
+        // 워커 임포터의 원본(모델 · 텍스처 · 높이장 원본)은 임포트 잡이 임포트한다 — 에디터 스레드에서 동기로 돌지 않는다. 원본은 임포트가 쓰는 파일이 아니라 바로 검증을 요청한다.
+        const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relPath );
+        if ( route._pfnImportSource != nullptr && route._importThread == AssetImportThread::Worker )
+        {
+            if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
+                pContext->getSubsystem<EditorAssetValidation>().requestValidation( relPath );
+            requestSourceImport( relPath, route._pfnImportSource );
+            return;
+        }
+
+        // 임포트가 도는 동안 그 밖의 파일은 미룬다 — 임포트 결과는 여러 파일이라, 쓰는 도중에 읽으면 반쯤 쓴 DDS 나 옆 폴더가 비어 있는 메시를 읽는다.
+        if ( isImportBusy() )
+        {
+            if ( std::find( _listDeferredFile.begin(), _listDeferredFile.end(), relPath ) == _listDeferredFile.end() )
+                _listDeferredFile.push_back( std::move( relPath ) );
+            return;
+        }
+        handleChangedFile( relPath );
+    }
+
+    void AssetHotReload::handleChangedFile( const string& relativePath )
+    {
         // 바뀐 파일(에디터 저장 · 임포트 산출물 · 바깥 도구의 쓰기)마다 검증 규칙을 돌린다 — 결과는 로그로 남는다.
         if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
-            pContext->getSubsystem<EditorAssetValidation>().requestValidation( relPath );
+            pContext->getSubsystem<EditorAssetValidation>().requestValidation( relativePath );
 
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
-        if ( reloadChangedAsset( relPath ) == ReloadOutcome::Failed )
-            SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relPath.c_str() );
+        if ( reloadChangedAsset( relativePath ) == ReloadOutcome::Failed )
+            SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );
+    }
+
+    void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport )
+    {
+        const string path     = FileUtil::normalizeSeparators( relativePath );
+        const auto   isSameAs = [&path]( const ImportRequest& request )
+        { return StringUtil::equals( FileUtil::normalizeSeparators( request._relativePath ), path, true ); };
+
+        // 같은 원본을 지금 임포트하는 중이면 그 잡이 읽은 내용은 낡았다 — 다음 원본 전에 멈추게 하고 이 원본은 아래에서 다시 올린다.
+        // (진행 중인 원본 하나는 끝까지 간다. 그 결과 파일은 임포트가 모두 끝날 때까지 읽히지 않는다 — `onResourceFileChanged` 의 미룸.)
+        if ( _bImportInFlight && std::any_of( _listRunningImport.begin(), _listRunningImport.end(), isSameAs ) )
+            _pImportJob->cancel();
+        if ( std::none_of( _listQueuedImport.begin(), _listQueuedImport.end(), isSameAs ) )
+            _listQueuedImport.push_back( ImportRequest{ path, pfnImport } );
+    }
+
+    void AssetHotReload::pumpImportJob()
+    {
+        EditorAssetImportResult result{};
+        const EditorTaskPoll    poll = _pImportJob->take( result );
+        if ( poll == EditorTaskPoll::Running )
+            return;
+        if ( poll == EditorTaskPoll::Ready )
+            finishImport( result );
+        else if ( _bImportInFlight )
+        {
+            SW_LOG_ERROR( "Asset import job lost its result - dropping the %# running source(s)", _listRunningImport.size() );
+            _listRunningImport.clear();
+            _bImportInFlight = false;
+        }
+
+        if ( _listQueuedImport.empty() == false )
+            startQueuedImport();
+        else if ( _bImportInFlight == false )
+            flushDeferredFiles();
+    }
+
+    void AssetHotReload::startQueuedImport()
+    {
+        vector<EditorAssetImportItem> listItem;
+        listItem.reserve( _listQueuedImport.size() );
+        for ( const ImportRequest& request : _listQueuedImport )
+        {
+            listItem.push_back( EditorAssetImportItem{ request._relativePath, request._pfnImport } );
+        }
+        const size_t sourceCount = listItem.size();
+        if ( _pImportJob->request( std::move( listItem ) ) == false )
+        {
+            SW_LOG_ERROR( "Asset import job is still running - %# source(s) wait for the next frame", sourceCount );
+            return;
+        }
+        _listRunningImport = std::move( _listQueuedImport );
+        _listQueuedImport.clear();
+        _bImportInFlight = true;
+        SW_LOG_INFO( "Asset import started: %# changed source(s)", sourceCount );
+    }
+
+    void AssetHotReload::finishImport( EditorAssetImportResult& result )
+    {
+        _bImportInFlight = false;
+        size_t skippedCount{ 0 };
+        for ( size_t index = 0; index < result._listItem.size(); ++index )
+        {
+            const EditorAssetImportItemResult& itemResult = result._listItem[index];
+            if ( itemResult._bRan == false )
+            {
+                // 취소로 건너뛴 원본 — 다시 올린다(그 사이 같은 원본이 또 올라왔으면 합쳐진다).
+                ++skippedCount;
+                if ( index < _listRunningImport.size() )
+                    requestSourceImport( _listRunningImport[index]._relativePath, _listRunningImport[index]._pfnImport );
+                continue;
+            }
+            ++_finishedImportCount;
+            if ( itemResult._bHandled == false )
+            {
+                // 임포터가 원본으로 보지 않은 파일 — 옛 길처럼 캐시가 다시 읽는다. 표가 임포터를 달아 둔 파일에서만 일어난다.
+                const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( itemResult._relativePath );
+                if ( reloadCaches( route, itemResult._relativePath ) == ReloadOutcome::Failed )
+                    SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", itemResult._relativePath.c_str() );
+            }
+        }
+        SW_LOG_INFO( "Asset import finished: %# source(s)%#", result._listItem.size() - skippedCount, result._bCanceled ? " (canceled; the rest runs again)" : "" );
+        _listRunningImport.clear();
+    }
+
+    void AssetHotReload::flushDeferredFiles()
+    {
+        if ( _listDeferredFile.empty() )
+            return;
+        vector<string> listFile = std::move( _listDeferredFile );
+        _listDeferredFile.clear();
+        for ( const string& relativePath : listFile )
+        {
+            handleChangedFile( relativePath );
+        }
     }
 
     ReloadOutcome AssetHotReload::reloadChangedAsset( string_view relativePath )
     {
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relativePath );
-        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
-        if ( route._pfnImportSource != nullptr && route._pfnImportSource( relativePath ) )
-            return ReloadOutcome::Reloaded;
+        if ( route._pfnImportSource != nullptr )
+        {
+            // 워커 임포터의 원본은 임포트 잡이 임포트한다(`onResourceFileChanged`). 에디터 스레드에서 동기로 돌리지 않는다.
+            if ( route._importThread == AssetImportThread::Worker )
+                return ReloadOutcome::NotTracked;
+            // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
+            if ( route._pfnImportSource( relativePath ) )
+                return ReloadOutcome::Reloaded;
+        }
+        return reloadCaches( route, relativePath );
+    }
+
+    ReloadOutcome AssetHotReload::reloadCaches( const AssetReloadRoute& route, string_view relativePath )
+    {
         if ( route._pCacheKindName == nullptr )
             return ReloadOutcome::NotTracked;
 
@@ -367,4 +556,10 @@ namespace sw::editor
 {
     // 사본을 감시가 알리기 전에 시나리오가 콘텐츠 색인을 읽으면 낡은 색인이 맞다고 보인다 — 시작 전에 표지 사건으로 한 번 기다린다(ContentBrowserWatchAndScan CW1).
     SW_AUTOMATION_START_BLOCKER( contentWatchFence, "ContentWatchFence", &AssetHotReloadInternal::isFenceBlocking );
+
+    // 원본 임포트는 워커에서 돈다 — 시나리오가 원본을 쓴 뒤 결과를 읽으려면 임포트가 끝난 것을 알아야 한다. `Busy` 는 0 이 될 때까지, `FinishedCount` 는 시작 값보다 커질 때까지 기다린다.
+    SW_AUTOMATION_PROBE( editorAssetImportBusy, "Editor.AssetImportBusy", "1 while a changed source (model, texture, heightfield) is being imported or waits for the import",
+                         &AssetHotReloadInternal::readImportBusy );
+    SW_AUTOMATION_PROBE( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
+                         &AssetHotReloadInternal::readImportFinishedCount );
 } // namespace sw::editor

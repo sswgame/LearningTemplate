@@ -519,19 +519,20 @@ namespace sw::editor
             return true;
         }
 
-        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 처리한다. 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과
-        // `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
+        // 바뀐 원본 하나만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 기록하는 길은 `importAllTextures` 와 같은 `AssetImportStampUtil` 한 곳이라
+        // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
         // 설정 파일이 없으면 기본 규칙을 쓴다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
         if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return true;
-        const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
+        const TextureRawImporter importer{ config };
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) } );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Texture import failed: %#", problem.c_str() );
         }
 
-        SW_LOG_INFO( "Texture batch import: %# changed -> %# imported", relativePath, summary._importedCount );
+        SW_LOG_INFO( "Texture import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 

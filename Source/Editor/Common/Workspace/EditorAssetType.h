@@ -55,6 +55,16 @@ namespace sw::editor
     using AssetSourceImporterFunc = bool ( * )( string_view relativePath );
 
     /**
+     * @enum AssetImportThread
+     * @brief 소스 임포터(`AssetSourceImporterFunc`)가 도는 스레드입니다. 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+     */
+    enum class AssetImportThread : uint8
+    {
+        Editor, ///< 에디터 스레드에서 바로 부릅니다. 에디터 서브시스템을 건드리는 짧은 일(테마 토큰 표시)만 여기에 둡니다.
+        Worker, ///< 백그라운드 잡(`EditorAssetImportJob`)이 워커에서 부릅니다. 임포터는 UI 와 공유 상태를 건드리지 않습니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
+    };
+
+    /**
      * @struct AssetReloadRoute
      * @brief 핫 리로드가 변경된 파일 하나를 처리하는 방법입니다(`EditorAssetTypeRegistry::findReloadRoute`).
      */
@@ -66,8 +76,9 @@ namespace sw::editor
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 
-        const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
-        AssetSourceImporterFunc _pfnImportSource{ nullptr }; ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
+        const utf8*             _pCacheKindName{ nullptr };                 ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니고, 빈 문자열이면 `kAnyCacheHoldingPath` 이다
+        AssetSourceImporterFunc _pfnImportSource{ nullptr };                ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
+        AssetImportThread       _importThread{ AssetImportThread::Editor }; ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
     };
 } // namespace sw::editor
 

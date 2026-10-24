@@ -121,6 +121,16 @@ namespace sw::editor
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode );
 
         /**
+         * @brief @p listResourcePath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
+         * @details 루트 전체를 훑는 `importAll` 은 원본마다 내용 해시를 읽어 비용이 바뀐 파일 수가 아니라 원본 수에 비례한다. 이쪽은 범위 안 원본이 든 폴더만 훑고 범위 밖 원본은 읽지 않는다.
+         *          스탬프를 쓰는 길은 `importAll` 과 같은 한 곳이다(에디터가 임포트한 것과 `App --import-*` 가 임포트한 것이 같은 판정을 받는다). 범위 밖 원본의 스탬프 줄은 그대로 둔다.
+         *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.
+         *          **범위 밖에서 어긋난 것(규칙 파일만 고친 다른 원본 등)은 보정하지 않는다.** 그 보정은 `App --import-*` 의 전체 대조가 한다.
+         *          병렬 구간은 작업 시스템과 나눠 돌므로 에디터 스레드에서도 워커에서도 부를 수 있다.
+         */
+        [[nodiscard]] static AssetImportSummary importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath );
+
+        /**
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).
          * @details 원본 폴더 이름은 경로 구간 경계에서만 찾는다. `my_textures_raw_backup` 은 해당하지 않는다. 없으면 빈 문자열을 반환한다.
          */

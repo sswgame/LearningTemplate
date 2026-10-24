@@ -54,7 +54,9 @@ namespace sw::editor
         /** @brief `heightfields_raw/` 아래의 원본, 구멍 마스크, 스플랫 원본(`.png`, `.r16`)이면 true 입니다. 에디터 핫 리로드는 이 경로를 텍스처가 아니라 높이장 임포트로 보냅니다. */
         static bool isRawHeightfieldPath( string_view path );
         /**
-         * @brief 에디터 핫 리로드가 넘긴 원본(리소스 루트 기준 경로)이 바뀌었을 때 부릅니다. 어긋난 높이장을 모두 임포트합니다(`App --import-heightfields` 와 같은 경로).
+         * @brief 에디터 핫 리로드가 넘긴 원본(리소스 루트 기준 경로)이 바뀌었을 때 부릅니다. 그 파일이 영향을 주는 높이장 원본만 임포트합니다(스탬프를 쓰는 길은 `App --import-heightfields` 와 같다).
+         * @details 곁 파일의 변경은 그 곁 파일을 쓰는 원본으로 옮긴다 — 구멍 마스크 `x_holes.png` 는 `x.png` · `x.r16`, 레이어 4..7 파일 `x_splat1.png` 는 `x_splat.png` 다(원본 해시에 들어간다).
+         *          루트 전체의 대조는 `importAllHeightfields` 가 한다. 워커에서 불린다(`AssetHotReload` 의 임포트 잡).
          * @return 처리했으면 true(임포트했거나 바뀐 것이 없었다). 높이장 원본 경로가 아니면 false 입니다.
          */
         [[nodiscard]] static bool importChangedSourceHeightfield( string_view relativePath );

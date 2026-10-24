@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 #include "Engine/Serialization/Base/ReloadOutcome.h"
@@ -22,6 +23,10 @@ namespace sw
 
 namespace sw::editor
 {
+    struct EditorAssetImportResult;
+
+    class EditorAssetImportJob;
+
     /**
      * @class AssetHotReload
      * @brief `Resource/` 하위 변경을 폴링해, 그 파일을 가진 엔진 캐시(`IAssetCache`)가 다시 읽게 합니다.
@@ -61,7 +66,10 @@ namespace sw::editor
         /** @brief 워치를 해제하고 감시 스레드를 멈춥니다. */
         void shutdown();
 
-        /** @brief 에디터 프레임마다 호출해 변경 이벤트를 꺼냅니다. */
+        /**
+         * @brief 에디터 프레임마다 호출해 변경 이벤트를 꺼내고, 끝난 임포트 잡의 결과를 가져와 다음 잡을 시작합니다. **에디터 스레드에서만 부릅니다.**
+         * @details 캐시 리로드와 씬 알림은 모두 이 함수 안(감시 대리자와 잡 결과 처리)에서 에디터 스레드가 한다. 워커는 원본을 임포트해 파일을 쓸 뿐이다.
+         */
         void update();
 
         /**
@@ -87,16 +95,39 @@ namespace sw::editor
          * @brief 감시 울타리를 돌립니다 — 자동화 시나리오의 사본 폴더(`AutomationScratch::prepare`)를 새로 만들었으면, 감시 트리에 표지 파일을 쓰고 감시가 그 사건을 알릴 때까지 참을 돌려줍니다.
          * @details 에디터 밖의 쓰기는 OS 파일 감시가 알려야 변경 번호가 오른다. 알림 전에는 낡은 색인이 "맞다" 고 보인다(`ContentBrowserReferenceSearch::isCurrent`). 표지 사건이 왔으면 그 앞의 사본 쓰기도
          *          알려졌다(같은 감시 흐름의 순서). 시나리오 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)이 매 프레임 부른다. 5 초 안에 안 오면 오류를 남기고 풀어 시나리오가 멈추지 않게 한다.
+         *          표지 사건이 온 뒤에도 사본이 일으킨 원본 임포트(`isImportBusy`)가 끝날 때까지 기다린다(시한 120 초, 넘으면 오류를 남기고 푼다) — 임포트가 워커에서 돌아 사건이 와도 결과가 아직 없을 수 있다.
          * @return 아직 기다리는 중이면 true 입니다. 사본을 새로 만든 적이 없거나 감시가 꺼져 있으면 false 입니다.
          */
         [[nodiscard]] bool pollContentWatchFence();
 
         /**
-         * @brief 바뀐 에셋 하나를 다시 읽습니다. 임포터(있으면), 엔진 캐시의 `reload`, 활성 씬의 `notifyAssetUsers` 순서로 처리합니다. 게임 스레드에서 틱 밖에서 호출합니다.
-         * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면 `NotTracked`,
+         * @brief 바뀐 에셋 하나를 다시 읽습니다. 에디터 스레드 임포터(있으면), 엔진 캐시의 `reload`, 활성 씬의 `notifyAssetUsers` 순서로 처리합니다. 게임 스레드에서 틱 밖에서 호출합니다.
+         * @details **워커 임포터를 가진 원본(`AssetImportThread::Worker`: 모델 · 텍스처 · 높이장 원본)은 여기서 임포트하지 않습니다** — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+         *          그런 원본은 감시 이벤트가 임포트 잡(`EditorAssetImportJob`)으로 보내고, 임포트가 쓴 결과 파일의 사건이 이 함수로 와서 캐시 리로드 · 씬 알림을 한다.
+         * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면(워커 임포터의 원본 포함) `NotTracked`,
          *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.
          */
         [[nodiscard]] static ReloadOutcome reloadChangedAsset( string_view relativePath );
+
+        /**
+         * @brief 임포트 잡이 도는 중이거나 기다리는 원본이 있으면 true 입니다. 이 동안 임포트 결과를 읽는 쪽(캐시 리로드 · 검증)은 미뤄진다.
+         * @details 자동화 시나리오가 "임포트 끝" 을 알 수 있도록 탐침 `Editor.AssetImportBusy` 로도 나간다. 감시 울타리(`pollContentWatchFence`)도 이 값이 거짓이 될 때까지 기다린다.
+         */
+        [[nodiscard]] bool isImportBusy() const { return _bImportInFlight || _listQueuedImport.empty() == false; }
+        /** @brief 지금 도는 임포트 잡의 원본 수입니다(없으면 0). 상태줄이 보인다. */
+        [[nodiscard]] size_t getRunningImportCount() const { return _bImportInFlight ? _listRunningImport.size() : 0u; }
+        /** @brief 아직 잡에 싣지 않고 기다리는 원본 수입니다. */
+        [[nodiscard]] size_t getQueuedImportCount() const { return _listQueuedImport.size(); }
+        /** @brief 끝난(성공 · 실패 · 건너뜀 포함) 원본 임포트의 누적 수입니다. 시나리오가 `WaitUntil` 로 기다리는 값이다. */
+        [[nodiscard]] uint64 getFinishedImportCount() const { return _finishedImportCount; }
+
+        /**
+         * @brief 원본 하나의 임포트를 잡에 올립니다. 에디터 스레드에서만 부릅니다(감시 이벤트가 부르며, 테스트가 직접 넣는다).
+         * @details 같은 원본이 이미 기다리면 합친다. 같은 원본을 지금 임포트하는 중이면 잡을 취소해(다음 원본 전에 멈춘다) 앞 잡의 남은 일을 버리고, 이 원본을 다시 올린다.
+         *          한 번에 잡 하나만 돌고 다음 잡은 `update` 가 시작한다.
+         * @param pfnImport 워커에서 부를 임포터입니다(`AssetReloadRoute::_pfnImportSource`, `Worker` 인 것만).
+         */
+        void requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport );
 
         /**
          * @brief @p resources 의 레지스트리에서 그 경로를 가진 캐시(`IAssetCache::isCached`)마다 `reload` 를 호출합니다. 이름을 모르는 모듈 캐시를 처리하는 경로입니다.
@@ -118,20 +149,53 @@ namespace sw::editor
          */
         void onResourceTreeChanged( const FileChangeEvent& changeEvent );
 
-    private:
-        /** @brief 바뀐 파일 하나를 `reloadChangedAsset` 으로 보냅니다. 수정 이벤트만 처리합니다. */
+        /**
+         * @brief 바뀐 파일 하나를 처리합니다. 수정 이벤트만 다룹니다. 감시 대리자가 부르며, 테스트가 이벤트를 직접 넣는다. 에디터 스레드에서만 부릅니다.
+         * @details 워커 임포터의 원본이면 임포트 잡에 올리고, 그 밖의 파일은 `handleChangedFile` 로 보냅니다.
+         *          임포트가 도는 동안은 그 밖의 파일의 처리를 미룬다(`_listDeferredFile`, 임포트가 모두 끝난 `update` 에서 처리) — 임포트 결과는 여러 파일이고(`.mesh` · 옆 폴더 · DDS)
+         *          쓰는 도중의 파일을 읽으면 안 된다. DDS 는 원자적이지 않게 쓰이고, 모델은 옆 폴더를 지우고 다시 쓴다. 동기 임포트에서는 임포트가 끝난 뒤에야 사건이 와서 생기지 않던 일이다.
+         */
         void onResourceFileChanged( const FileChangeEvent& changeEvent );
 
-        unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
-        FileWatchHandle                 _resourceWatchHandle;
-        FileWatchHandle                 _contentWatchHandle; ///< 확장자와 무관한 감시다. 변경 번호와 바뀐 파일을 모은다
-        uint64                          _contentChangeSerial;
-        vector<string>                  _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
-        bool                            _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
-        uint64                          _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
-        uint64                          _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
-        int64                           _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
-        bool                            _bFenceWaiting;            ///< 표지 사건을 기다리는 중이다
-        bool                            _bFenceSeen;               ///< 표지 파일의 사건이 왔다
+    private:
+        /** @brief 잡에 올렸거나 기다리는 원본 하나와 그 임포터입니다. */
+        struct ImportRequest
+        {
+            string                  _relativePath;
+            AssetSourceImporterFunc _pfnImport{ nullptr };
+        };
+
+        /** @brief 바뀐 파일의 검증을 요청하고 캐시를 다시 읽습니다(`reloadChangedAsset`). */
+        void handleChangedFile( const string& relativePath );
+        /** @brief @p route 가 가리키는 엔진 캐시를 다시 읽고 활성 씬의 사용자에게 알립니다. 임포터는 부르지 않는다. 에디터 스레드에서만 부릅니다. */
+        [[nodiscard]] static ReloadOutcome reloadCaches( const AssetReloadRoute& route, string_view relativePath );
+
+        /** @brief 끝난 잡의 결과를 가져오고 다음 잡을 시작하며, 더 할 일이 없으면 미룬 파일을 처리합니다. */
+        void pumpImportJob();
+        /** @brief 기다리는 원본 전부를 잡 하나로 시작합니다. */
+        void startQueuedImport();
+        /** @brief 끝난 잡의 결과를 정리합니다. 취소로 건너뛴 원본은 다시 기다리게 한다. */
+        void finishImport( EditorAssetImportResult& result );
+        /** @brief 미룬 파일을 처리합니다(임포트가 모두 끝났을 때). */
+        void flushDeferredFiles();
+
+        unique_ptr<FileWatchDispatcher>  _pFileWatchDispatcher;
+        unique_ptr<EditorAssetImportJob> _pImportJob;
+        vector<ImportRequest>            _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
+        vector<ImportRequest>            _listRunningImport;              ///< 지금 도는 잡의 원본
+        vector<string>                   _listDeferredFile;               ///< 임포트가 도는 동안 미룬 바뀐 파일(중복 없음)
+        bool                             _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
+        uint64                           _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
+        int64                            _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
+        FileWatchHandle                  _resourceWatchHandle;
+        FileWatchHandle                  _contentWatchHandle; ///< 확장자와 무관한 감시다. 변경 번호와 바뀐 파일을 모은다
+        uint64                           _contentChangeSerial;
+        vector<string>                   _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
+        bool                             _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
+        uint64                           _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
+        uint64                           _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
+        int64                            _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
+        bool                             _bFenceWaiting;            ///< 표지 사건을 기다리는 중이다
+        bool                             _bFenceSeen;               ///< 표지 파일의 사건이 왔다
     };
 } // namespace sw::editor
