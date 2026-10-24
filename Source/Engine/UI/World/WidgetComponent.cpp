@@ -461,8 +461,8 @@ namespace sw
         if ( pMesh->getMaterial() != nullptr )
         {
             shared_ptr<MaterialInstance> instance = MaterialInstance::create( pMesh->getMaterial() );
-            instance->setTextureParameter( hashed_string( "albedoMap" ), getRenderTargetPath() );
-            instance->setParameter( hashed_string( "premultipliedTexture" ), "1" );
+            instance->setTextureParameter( hashed_string( "_albedoMap" ), getRenderTargetPath() );
+            instance->setParameter( hashed_string( "_premultipliedTexture" ), "1" );
             pMesh->setMaterialInstance( std::move( instance ) );
         }
         _worldQuad = pQuad->getHandle();

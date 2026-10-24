@@ -27,12 +27,12 @@
 /** @brief 뷰 하나의 생산 입력입니다(g_LightGridViews 의 float4 여섯 개, 배치는 bindingslots.hlsli 10 절). */
 struct GridView
 {
-    float4x4 viewProj;
-    float    nearDepth;
-    float    sliceScale;
-    bool     bPerspective;
-    uint     lightCount;
-    uint     gridBase;
+    float4x4 _viewProj;
+    float    _nearDepth;
+    float    _sliceScale;
+    bool     _bPerspective;
+    uint     _lightCount;
+    uint     _gridBase;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_LightGridLights, 0 );
@@ -57,12 +57,12 @@ GridView loadView( uint viewIndex )
     const float4 depth   = g_LightGridViews[element + 4u];
     const uint4  counts  = asuint( g_LightGridViews[element + 5u] );
     GridView     view;
-    view.viewProj     = float4x4( g_LightGridViews[element], g_LightGridViews[element + 1u], g_LightGridViews[element + 2u], g_LightGridViews[element + 3u] );
-    view.nearDepth    = depth.x;
-    view.sliceScale   = depth.y;
-    view.bPerspective = depth.z > 0.5f;
-    view.lightCount   = counts.x;
-    view.gridBase     = counts.y;
+    view._viewProj     = float4x4( g_LightGridViews[element], g_LightGridViews[element + 1u], g_LightGridViews[element + 2u], g_LightGridViews[element + 3u] );
+    view._nearDepth    = depth.x;
+    view._sliceScale   = depth.y;
+    view._bPerspective = depth.z > 0.5f;
+    view._lightCount   = counts.x;
+    view._gridBase     = counts.y;
     return view;
 }
 
@@ -80,17 +80,17 @@ uint clampSlice( float slicePosition )
  */
 bool computeLightRange( GridView view, LightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
-    const float3 center        = light.positionRadius.xyz;
-    const float  radius        = light.positionRadius.w;
-    const float4 centerClip    = mul( float4( center, 1.0f ), view.viewProj );
-    const float3 depthGradient = view.bPerspective ? float3( view.viewProj[0][3], view.viewProj[1][3], view.viewProj[2][3] )
-                                                   : float3( view.viewProj[0][2], view.viewProj[1][2], view.viewProj[2][2] );
-    const float  centerDepth   = view.bPerspective ? centerClip.w : centerClip.z;
+    const float3 center        = light._positionRadius.xyz;
+    const float  radius        = light._positionRadius.w;
+    const float4 centerClip    = mul( float4( center, 1.0f ), view._viewProj );
+    const float3 depthGradient = view._bPerspective ? float3( view._viewProj[0][3], view._viewProj[1][3], view._viewProj[2][3] )
+                                                    : float3( view._viewProj[0][2], view._viewProj[1][2], view._viewProj[2][2] );
+    const float  centerDepth   = view._bPerspective ? centerClip.w : centerClip.z;
     const float  depthReach    = radius * length( depthGradient );
     const float  minDepth      = centerDepth - depthReach;
     const float  maxDepth      = centerDepth + depthReach;
-    const bool   bBehind       = view.bPerspective ? ( maxDepth < view.nearDepth ) : ( maxDepth < 0.0f );
-    const bool   bBeyond       = ( view.bPerspective == false ) && ( minDepth > 1.0f );
+    const bool   bBehind       = view._bPerspective ? ( maxDepth < view._nearDepth ) : ( maxDepth < 0.0f );
+    const bool   bBeyond       = ( view._bPerspective == false ) && ( minDepth > 1.0f );
 
     // 처음 값은 빈 범위(±최대)다 — 화면 끝(±1)에서 시작하면 모서리가 모두 화면 밖 한쪽에 있어도 범위가 화면 끝에 걸쳐 남는다.
     const float maxFloat    = asfloat( 0x7f7fffffu );
@@ -100,8 +100,8 @@ bool computeLightRange( GridView view, LightData light, out uint3 outMinimum, ou
     SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
     {
         const float3 offset        = float3( ( corner & 1u ) != 0u ? radius : -radius, ( corner & 2u ) != 0u ? radius : -radius, ( corner & 4u ) != 0u ? radius : -radius );
-        const float4 clip          = mul( float4( center + offset, 1.0f ), view.viewProj );
-        const bool   bBehindCamera = view.bPerspective && ( clip.w < SW_LIGHT_GRID_MIN_CORNER_CLIP_W );
+        const float4 clip          = mul( float4( center + offset, 1.0f ), view._viewProj );
+        const bool   bBehindCamera = view._bPerspective && ( clip.w < SW_LIGHT_GRID_MIN_CORNER_CLIP_W );
         const float2 ndc           = clip.xy / ( bBehindCamera ? 1.0f : clip.w );
         bFullScreen                = bFullScreen || bBehindCamera;
         minNdc                     = bBehindCamera ? minNdc : min( minNdc, ndc );
@@ -111,8 +111,8 @@ bool computeLightRange( GridView view, LightData light, out uint3 outMinimum, ou
     maxNdc                = bFullScreen ? float2( 1.0f, 1.0f ) : maxNdc;
     const bool bOffScreen = maxNdc.x < -1.0f || 1.0f < minNdc.x || maxNdc.y < -1.0f || 1.0f < minNdc.y;
 
-    const float minSlice = LightGrid::computeSlicePosition( minDepth, view.bPerspective, view.nearDepth, view.sliceScale ) - SW_LIGHT_GRID_SLICE_PAD;
-    const float maxSlice = LightGrid::computeSlicePosition( maxDepth, view.bPerspective, view.nearDepth, view.sliceScale ) + SW_LIGHT_GRID_SLICE_PAD;
+    const float minSlice = LightGrid::computeSlicePosition( minDepth, view._bPerspective, view._nearDepth, view._sliceScale ) - SW_LIGHT_GRID_SLICE_PAD;
+    const float maxSlice = LightGrid::computeSlicePosition( maxDepth, view._bPerspective, view._nearDepth, view._sliceScale ) + SW_LIGHT_GRID_SLICE_PAD;
     outMinimum           = uint3( LightGrid::computeTile( minNdc.x - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), LightGrid::computeTile( minNdc.y - SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
                                   clampSlice( minSlice ) );
     outMaximum           = uint3( LightGrid::computeTile( maxNdc.x + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_X ), LightGrid::computeTile( maxNdc.y + SW_LIGHT_GRID_NDC_PAD, SW_LIGHT_GRID_DIM_Y ),
@@ -123,7 +123,7 @@ bool computeLightRange( GridView view, LightData light, out uint3 outMinimum, ou
 /** @brief 라이트 하나의 생산 방식입니다 — 0 은 그리드에 넣지 않음(2D 라이트 · 2D 그림자 세그먼트 · 화면 밖), 1 은 전역 구간(방향광), 2 는 클러스터 범위(SW_LIGHT_GRID_LOCAL_TYPE_MASK 의 타입 — 점광 · 스폿 · 반사 프로브 · 라이트 프로브 볼륨)입니다. */
 uint classifyLight( GridView view, LightData light, out uint3 outMinimum, out uint3 outMaximum )
 {
-    const uint lightType = (uint)( light.directionType.w + 0.5f );
+    const uint lightType = (uint)( light._directionType.w + 0.5f );
     const bool bLocal    = lightType < 32u && ( ( SW_LIGHT_GRID_LOCAL_TYPE_MASK >> lightType ) & 1u ) != 0u;
     const bool bInRange  = computeLightRange( view, light, outMinimum, outMaximum );
     return ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? 1u : ( ( bLocal && bInRange ) ? 2u : 0u );
@@ -153,7 +153,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
     GroupMemoryBarrierWithGroupSync();
 
     // 1) 세기
-    for ( uint countLight = thread; countLight < view.lightCount; countLight += SW_LIGHT_GRID_GPU_THREAD_COUNT )
+    for ( uint countLight = thread; countLight < view._lightCount; countLight += SW_LIGHT_GRID_GPU_THREAD_COUNT )
     {
         uint3      minimum;
         uint3      maximum;
@@ -196,13 +196,13 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
             s_arrThreadSum[sumThread] = running;
             running += threadSum;
         }
-        const uint base                                       = view.gridBase;
+        const uint base                                       = view._gridBase;
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_DIM_X]        = SW_LIGHT_GRID_DIM_X;
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_DIM_Y]        = SW_LIGHT_GRID_DIM_Y;
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_DIM_Z]        = SW_LIGHT_GRID_DIM_Z;
-        g_LightGridRW[base + SW_LIGHT_GRID_WORD_PERSPECTIVE]  = view.bPerspective ? 1u : 0u;
-        g_LightGridRW[base + SW_LIGHT_GRID_WORD_NEAR_DEPTH]   = asuint( view.nearDepth );
-        g_LightGridRW[base + SW_LIGHT_GRID_WORD_SLICE_SCALE]  = asuint( view.sliceScale );
+        g_LightGridRW[base + SW_LIGHT_GRID_WORD_PERSPECTIVE]  = view._bPerspective ? 1u : 0u;
+        g_LightGridRW[base + SW_LIGHT_GRID_WORD_NEAR_DEPTH]   = asuint( view._nearDepth );
+        g_LightGridRW[base + SW_LIGHT_GRID_WORD_SLICE_SCALE]  = asuint( view._sliceScale );
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_GLOBAL_COUNT] = s_globalCount;
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_CLUSTER_BASE] = SW_LIGHT_GRID_HEADER_WORD_COUNT;
         g_LightGridRW[base + SW_LIGHT_GRID_WORD_INDEX_BASE]   = kIndexBase;
@@ -215,7 +215,7 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         // 넘친 클러스터는 개수를 상한까지 자른다 — 그 뒤 클러스터의 시작은 모두 상한 밖이라 개수가 0 이다.
         const uint count                = s_arrClusterCount[startCluster];
         const uint kept                 = min( count, SW_LIGHT_GRID_GPU_MAX_ENTRY_COUNT - min( offset, SW_LIGHT_GRID_GPU_MAX_ENTRY_COUNT ) );
-        const uint wordIndex            = view.gridBase + SW_LIGHT_GRID_HEADER_WORD_COUNT + startCluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+        const uint wordIndex            = view._gridBase + SW_LIGHT_GRID_HEADER_WORD_COUNT + startCluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
         g_LightGridRW[wordIndex]        = offset;
         g_LightGridRW[wordIndex + 1u]   = kept;
         s_arrClusterCount[startCluster] = offset;
@@ -224,8 +224,8 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
     GroupMemoryBarrierWithGroupSync();
 
     // 3) 채우기 — 상한 밖 자리는 쓰지 않는다(위에서 잘린 개수 밖이다).
-    const uint indexWord = view.gridBase + kIndexBase;
-    for ( uint fillLight = thread; fillLight < view.lightCount; fillLight += SW_LIGHT_GRID_GPU_THREAD_COUNT )
+    const uint indexWord = view._gridBase + kIndexBase;
+    for ( uint fillLight = thread; fillLight < view._lightCount; fillLight += SW_LIGHT_GRID_GPU_THREAD_COUNT )
     {
         uint3      minimum;
         uint3      maximum;

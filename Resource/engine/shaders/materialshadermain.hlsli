@@ -26,7 +26,7 @@
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
 void VertexContext::readMaterial()
 {
-    material = SW_MATERIAL( instance.materialIndex );
+    _material = SW_MATERIAL( _instance._materialIndex );
 }
 #else
 void VertexContext::readMaterial()
@@ -55,9 +55,9 @@ float4 VertexContext::computeClipPosition( inout float4 inoutWorldPosition )
 {
     inoutWorldPosition          = applyWorldPositionOffset( inoutWorldPosition );
     const OutlineOffset outline = computeMaterialOutline( this );
-    inoutWorldPosition.xyz += outline.worldOffset;
+    inoutWorldPosition.xyz += outline._worldOffset;
     float4 clipPosition = Transform::computeClipPosition( inoutWorldPosition, View::getViewProjection() );
-    clipPosition.xy += outline.clipOffset;
+    clipPosition.xy += outline._clipOffset;
     return clipPosition;
 }
 #else
@@ -102,8 +102,8 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 /** @brief 탄젠트는 표면을 따라가는 방향이라 노멀(여인수 행렬)과 달리 월드 행렬 그대로 곱한다. 스킨 · 모프 메시는 컴퓨트가 돌린 탄젠트다. */
 void MaterialInterpolants::storeTangent( VertexContext context )
 {
-    const float4 localTangent = MorphPool::loadTangent( context.instance.meshBatchIndex, context.vertexId, context.input.tangent );
-    tangent                   = float4( mul( float4( localTangent.xyz, 0.0f ), context.instance.world ).xyz, localTangent.w );
+    const float4 localTangent = MorphPool::loadTangent( context._instance._meshBatchIndex, context._vertexId, context._input._tangent );
+    _tangent                  = float4( mul( float4( localTangent.xyz, 0.0f ), context._instance._world ).xyz, localTangent.w );
 }
     #else
 void MaterialInterpolants::storeTangent( VertexContext context )
@@ -114,7 +114,7 @@ void MaterialInterpolants::storeTangent( VertexContext context )
     #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
 void MaterialInterpolants::storeMaterialIndex( VertexContext context )
 {
-    materialIndex = context.instance.materialIndex;
+    _materialIndex = context._instance._materialIndex;
 }
     #else
 void MaterialInterpolants::storeMaterialIndex( VertexContext context )
@@ -126,8 +126,8 @@ void MaterialInterpolants::storeMaterialIndex( VertexContext context )
     #if defined( SW_MATERIAL_CUSTOM_VARYINGS )
 void MaterialInterpolants::storeUserVaryings( VertexContext context, float4 vertexClipPosition )
 {
-    context.clipPosition = vertexClipPosition;
-    user                 = computeMaterialVaryings( context );
+    context._clipPosition = vertexClipPosition;
+    _user                 = computeMaterialVaryings( context );
 }
     #else
 void MaterialInterpolants::storeUserVaryings( VertexContext context, float4 vertexClipPosition )
@@ -137,11 +137,11 @@ void MaterialInterpolants::storeUserVaryings( VertexContext context, float4 vert
 
 void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWorldPosition, float4 vertexClipPosition )
 {
-    worldPosition = vertexWorldPosition.xyz;
-    color         = context.input.color;
+    _worldPosition = vertexWorldPosition.xyz;
+    _color         = context._input._color;
     // UV 는 정점 속성이다. 위치로 지어내면(`position.xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙는다.
-    uv     = context.input.uv;
-    normal = context.worldNormal;
+    _uv     = context._input._uv;
+    _normal = context._worldNormal;
     storeTangent( context );
     storeMaterialIndex( context );
     storeUserVaryings( context, vertexClipPosition );
@@ -152,23 +152,23 @@ MaterialInterpolants VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
-    context.input    = input;
-    context.vertexId = vertexId;
+    context._input    = input;
+    context._vertexId = vertexId;
     // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
-    context.instance = InstanceData::load( input.instanceSlot );
+    context._instance = InstanceData::load( input._instanceSlot );
     // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-    context.instance.loadAnimatedVertex( vertexId, input.position, input.normal, context.localPosition, context.localNormal );
+    context._instance.loadAnimatedVertex( vertexId, input._position, input._normal, context._localPosition, context._localNormal );
     // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
-    float4 worldPosition  = Transform::computeWorldPosition( context.localPosition, context.instance.world );
-    context.worldPosition = worldPosition.xyz;
+    float4 worldPosition   = Transform::computeWorldPosition( context._localPosition, context._instance._world );
+    context._worldPosition = worldPosition.xyz;
     // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli Transform::computeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
-    context.worldNormal  = Transform::computeWorldNormal( context.localNormal, context.instance.world );
-    context.clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    context._worldNormal  = Transform::computeWorldNormal( context._localNormal, context._instance._world );
+    context._clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     context.readMaterial();
     const float4 clipPosition = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
-    output.position           = clipPosition;
+    output._position          = clipPosition;
     output.storeVaryings( context, worldPosition, clipPosition );
-    SW_APPEARANCE_WRITE( output, context.instance )
+    SW_APPEARANCE_WRITE( output, context._instance )
     return output;
 }
 
@@ -192,7 +192,7 @@ static float3 PixelContext::faceNormal( float3 normal, bool bFrontFace )
     #if defined( SW_MATERIAL_USES_TANGENT )
 void PixelContext::copyTangent( MaterialInterpolants input )
 {
-    tangent = input.tangent;
+    _tangent = input._tangent;
 }
     #else
 void PixelContext::copyTangent( MaterialInterpolants input )
@@ -204,7 +204,7 @@ void PixelContext::copyTangent( MaterialInterpolants input )
 /** @brief 머티리얼은 인스턴스의 materialIndex 로 버퍼에서 읽는다 — 드로우별 바인딩 없음. 픽셀 단계에서만 읽는다(binding.hlsli 9 절). */
 void PixelContext::readMaterial( MaterialInterpolants input )
 {
-    material = SW_MATERIAL( input.materialIndex );
+    _material = SW_MATERIAL( input._materialIndex );
 }
     #else
 void PixelContext::readMaterial( MaterialInterpolants input )
@@ -217,13 +217,13 @@ void PixelContext::readMaterial( MaterialInterpolants input )
 static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontFace )
 {
     PixelContext context;
-    context.position      = input.position;
-    context.color         = input.color;
-    context.uv            = input.uv;
-    context.normal        = PixelContext::faceNormal( normalize( input.normal ), bFrontFace );
-    context.worldPosition = input.worldPosition;
+    context._position      = input._position;
+    context._color         = input._color;
+    context._uv            = input._uv;
+    context._normal        = PixelContext::faceNormal( normalize( input._normal ), bFrontFace );
+    context._worldPosition = input._worldPosition;
     context.copyTangent( input );
-    context.user = input.user;
+    context._user = input._user;
     context.readMaterial( input );
     return context;
 }
@@ -237,20 +237,20 @@ float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
     #elif defined( SW_MATERIAL_UNLIT )
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
-    return surface.albedo;
+    return surface._albedo;
 }
     #elif SW_VIEWMODE_SKIPS_LIGHTING
 /** @brief 보기 모드 Unlit 등 — 조명 · 그림자를 컴파일 아웃하고 알베도 그대로. */
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
-    return surface.albedo;
+    return surface._albedo;
 }
     #else
 /** @brief 기본 PBR — 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다. */
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
-    const float shadow = Shadow::sampleAtWorld( worldPosition, surface.normal );
-    return float4( Lighting::shadeLights( surface.albedo.rgb, worldPosition, surface.normal, shadow, surface.roughness, surface.metallic ), surface.albedo.a );
+    const float shadow = Shadow::sampleAtWorld( _worldPosition, surface._normal );
+    return float4( Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic ), surface._albedo.a );
 }
     #endif
 #endif // !SW_MATERIAL_DEPTH_ONLY
@@ -259,7 +259,7 @@ float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 /** @brief 알파 컷오프 머티리얼 — 깊이 패스와 본 패스가 같은 표면 훅의 같은 알파 · 컷오프로 오려 같은 자리를 버린다. */
 void MaterialSurface::applyAlphaCutoff()
 {
-    clip( albedo.a - alphaCutoff );
+    clip( _albedo.a - _alphaCutoff );
 }
 #else
 void MaterialSurface::applyAlphaCutoff()
@@ -301,19 +301,19 @@ void PSMain( MaterialInterpolants input )
     #if defined( SW_PASS_GBUFFER )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface.albedo, surface.normal, worldPosition, surface.roughness, surface.metallic );
+    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
 }
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( computeSelectedLighting( surface ), surface.albedo, surface.normal, worldPosition, surface.roughness, surface.metallic );
+    return SurfaceOutput::store( computeSelectedLighting( surface ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
 }
     #else
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     float4 lit = computeSelectedLighting( surface );
     lit.a      = 1.0f;
-    return SurfaceOutput::store( lit, surface.albedo, surface.normal, worldPosition, surface.roughness, surface.metallic );
+    return SurfaceOutput::store( lit, surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
 }
     #endif
 

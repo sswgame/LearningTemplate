@@ -19,10 +19,10 @@ static const float kSurfaceMetallic  = 0.0f;
 MaterialSurface computeMaterialSurface( PixelContext context )
 {
     MaterialSurface surface;
-    surface.albedo    = context.color;
-    surface.normal    = context.normal;
-    surface.roughness = kSurfaceRoughness;
-    surface.metallic  = kSurfaceMetallic;
+    surface._albedo    = context._color;
+    surface._normal    = context._normal;
+    surface._roughness = kSurfaceRoughness;
+    surface._metallic  = kSurfaceMetallic;
     return surface;
 }
 

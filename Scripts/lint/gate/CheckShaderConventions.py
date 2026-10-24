@@ -14,10 +14,13 @@ Scripts/lint/gate/CheckShaderConventions.py
   파일 수준의 맨 함수 정의는 위반이다. 한 파일(`.hlsl`)의 함수는 맨 함수여도 된다. `sw` 접두는 어디서도 쓰지 않는다.
   약어는 한 단어(`RW` → `Rw`), 줄임말은 풀어 쓴다(`Tex` → `Texture`, `Cmp` → `Comparison`).
 - 타입(`struct`)은 `PascalCase`, `_t` 꼬리 · `Sw` 접두 없음.
-- 필드 · 지역 변수 · 매개변수는 `camelCase`. 한 글자 · `i` `j` `k` · 불투명한 줄임말 · HLSL 키워드 금지.
+- 구조체 필드는 `_camelCase`(C++ 순수 데이터 구조체와 같다 — 거울 필드는 C++ 멤버와 이름이 같다). 지역 변수 · 매개변수는 `camelCase`.
+  한 글자 · `i` `j` `k` · 불투명한 줄임말 · HLSL 키워드 금지.
   `out` · `inout` 매개변수는 그 접두어로 시작한다. 고정 배열 지역 변수는 `arr` + 단수 명사, `groupshared` 는 `s_`(배열은 `s_arr`).
 - 파일 수준 `static const` 는 `kPascalCase`, `#define` 은 `SW_` + 대문자, 공유 헤더의 include 가드는 `SW_<도메인>_<파일>_HLSLI`.
 - 전역 리소스 · cbuffer 멤버는 `g_` + `PascalCase` — C++ 가 문자열로 묶는 이름이라 **고치지 않고**, 컨테이너 · 단수 · 줄임말 규칙에서도 뺀다.
+- 패스 · 기능 스위치는 함수 본문 안의 `#if` 가 아니라 파일 수준 `#if` 가 정의를 고른다. 본문 안의 `#if` 는 백엔드 매크로(`backend_macro`)만 받는다.
+  구조체 본문 바로 안(필드 · 멤버 선언의 유무)의 `#if` 는 본문 분기가 아니라서 본다.
 
 **정규식으로 본다.** HLSL 파서를 두지 않는다 — 셰이더 문법은 작고, 이 게이트가 보는 것은 선언의 이름뿐이다. 먼저 주석 · 문자열을
 지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 중괄호가
@@ -49,8 +52,12 @@ kStringBoundName = {
 }
 
 #: 불투명한 줄임말 — 이름을 camelCase 단어로 쪼갰을 때 이 단어가 하나라도 있으면 위반이다(`rules/CheckShaderConventions.toml`).
-_kRuleSchema = {"opaque_word": kKindTextList}
-kOpaqueWord: frozenset[str] = frozenset(LintGate.readRules("CheckShaderConventions", _kRuleSchema, requiredKeys=("opaque_word",))["opaque_word"])
+_kRuleSchema = {"opaque_word": kKindTextList, "backend_macro": kKindTextList}
+_kRule = LintGate.readRules("CheckShaderConventions", _kRuleSchema, requiredKeys=("opaque_word", "backend_macro"))
+kOpaqueWord: frozenset[str] = frozenset(_kRule["opaque_word"])
+
+#: 함수 본문 안의 `#if` 조건에 써도 되는 백엔드 매크로 — 이 단어가 조건에 들어 있으면 받는다(`rules/CheckShaderConventions.toml`).
+kBackendMacroRe = re.compile(r"\b(?:" + "|".join(re.escape(name) for name in _kRule["backend_macro"]) + r")\b")
 
 #: 이름으로 쓰면 안 되는 HLSL 키워드 · 예약어(컴파일러가 받아 주는 자리도 있지만 읽는 사람이 헷갈린다).
 kHlslKeyword = {
@@ -106,6 +113,7 @@ kDefineRe = re.compile(r"^[ \t]*#[ \t]*define[ \t]+(?P<name>[A-Za-z_]\w*)", re.M
 kDirectiveRe = re.compile(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*", re.MULTILINE)
 kDeclareMacroRe = re.compile(r"\b(?P<macro>SW_DECLARE_\w+)\s*\((?P<args>[^()]*(?:\([^()]*\)[^()]*)*)\)")
 kGuardRe = re.compile(r"^[ \t]*#[ \t]*ifndef[ \t]+(?P<name>\w+)[ \t]*\n[ \t]*#[ \t]*define[ \t]+(?P=name)\b", re.MULTILINE)
+kConditionalRe = re.compile(r"^[ \t]*#[ \t]*(?:if|ifdef|ifndef|elif)\b(?P<condition>[^\n]*)", re.MULTILINE)
 kStructBodyRe = re.compile(r"\bstruct\s+\w+\s*\{|\bSW_MATERIAL_BEGIN\s*\{")
 kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([^()]*\)\s*\{|\bSW_ROOT_CONSTANTS_BEGIN\s*\{")
 
@@ -205,6 +213,13 @@ def findNameProblemInternal(name: str) -> str | None:
     if listOpaque:
         return f"불투명한 줄임말 '{listOpaque[0]}' — 풀어 씁니다"
     return None
+
+
+def findFieldProblemInternal(name: str) -> str | None:
+    """구조체 필드 하나의 규칙 — `_` 접두어 + camelCase. 머티리얼 구조체의 필드도 같다(`.material` 의 프로퍼티 이름이 이 철자다)."""
+    if not name.startswith("_"):
+        return "구조체 필드는 _ 접두어(_camelCase)"
+    return findNameProblemInternal(name[1:])
 
 
 def findArrayProblemInternal(name: str) -> str | None:
@@ -342,7 +357,7 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
                     report(declaratorOffset, f"cbuffer 멤버 '{name}' 는 g_ + PascalCase 여야 합니다")
                 continue
             if isInsideSpanInternal(declaratorOffset, listStructSpan) and not isInsideSpanInternal(declaratorOffset, listMemberBodySpan):
-                problem = findNameProblemInternal(name)   # 필드는 C++ 멤버를 비춘다 — 배열 접두어는 강제하지 않는다
+                problem = findFieldProblemInternal(name)   # 필드는 C++ 멤버를 비춘다 — 배열 접두어는 강제하지 않는다
                 if problem:
                     report(declaratorOffset, f"필드 '{name}': {problem}")
                 continue
@@ -352,6 +367,17 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
                 problem = findArrayProblemInternal(name)
             if problem:
                 report(declaratorOffset, f"지역 변수 '{name}': {problem}")
+
+    # 함수 본문 안의 `#if` — 패스 · 기능 스위치는 파일 수준 `#if` 가 정의를 고른다. 구조체 본문 바로 안(depth 1)은 필드 · 멤버 선언의 유무라 본다.
+    for match in kConditionalRe.finditer(code):
+        offset = match.start()
+        if listDepth[offset] == 0 or isInsideSpanInternal(offset, listCbufferSpan):
+            continue
+        if listDepth[offset] == 1 and isInsideSpanInternal(offset, listStructSpan):
+            continue
+        condition = match.group("condition").strip()
+        if kBackendMacroRe.search(condition) is None:
+            report(offset, f"함수 본문 안의 #if '{condition}': 패스 · 기능 스위치는 파일 수준 #if 로 정의를 고릅니다(본문에서는 백엔드 매크로만 가른다)")
 
     # 매크로 · include 가드
     for match in kDefineRe.finditer(code):
@@ -394,7 +420,7 @@ class CheckShaderConventionsGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "HLSL 명명 규칙 위반"
     hint = ("  docs/agents/NamingScripts.md '### HLSL': 함수 camelCase(공유 헤더는 구조체의 멤버 · static 멤버, sw 접두 없음, 진입점 VSMain/PSMain/CSMain 예외),\n"
-            "  타입 PascalCase(Sw 접두 없음), 필드 · 지역 · 매개변수 camelCase(한 글자 · 줄임말 · 키워드 금지, out/inout 접두어, 배열 arr), static const\n"
+            "  타입 PascalCase(Sw 접두 없음), 필드 _camelCase, 지역 · 매개변수 camelCase(한 글자 · 줄임말 · 키워드 금지, out/inout 접두어, 배열 arr), static const\n"
             "  kPascalCase, #define SW_, groupshared s_, 전역 · cbuffer 멤버 g_Pascal(문자열로 묶인 이름이라 바꾸지 않는다).")
     # 조각마다 그 규칙 하나만 걸리게 짓는다 — 다른 위반이 섞이면 노리는 규칙이 죽어도 이 테스트는 통과한다.
     selfTestCases = [
@@ -404,11 +430,13 @@ class CheckShaderConventionsGate(LintGate):
         {"name": "약어 연속 대문자", "expectedViolation": "Resource/engine/shaders/probe.hlsli:7 함수 'loadRWTexture': 약어는 한 단어로 씁니다(RW → Rw, ID → Id)", "files": {kProbeHeader: wrapHeaderInternal("struct Probe\n{\n    static float loadRWTexture( uint slotIndex );\n};\nstatic float Probe::loadRWTexture( uint slotIndex ) { return 0; }\n")}},
         {"name": "멤버 함수 이름의 줄임말", "expectedViolation": "Resource/engine/shaders/probe.hlsli:5 함수 'sampleShadowCmp': 불투명한 줄임말 'Cmp'", "files": {kProbeHeader: wrapHeaderInternal("struct Probe\n{\n    float sampleShadowCmp( float depth );\n};\n")}},
         {"name": "속성 뒤 진입점의 매개변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 함수 'CSMain' 의 매개변수 'dtid': 불투명한 줄임말 'dtid'", "files": {kProbeSource: "[numthreads( 1, 1, 1 )] void CSMain( uint3 dtid : SV_DispatchThreadID ) { }\n"}},
-        {"name": "_t 타입", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 타입 'Material_t' 는 PascalCase 여야 합니다(_t 꼬리 없음)", "files": {kProbeSource: "struct Material_t { float4 color; };\n"}},
+        {"name": "_t 타입", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 타입 'Material_t' 는 PascalCase 여야 합니다(_t 꼬리 없음)", "files": {kProbeSource: "struct Material_t { float4 _color; };\n"}},
         {"name": "매크로 본문의 _t 타입", "expectedViolation": "Resource/engine/shaders/probe.hlsli:3 타입 'Probe_t' 는 PascalCase 여야 합니다(_t 꼬리 없음)", "files": {kProbeHeader: wrapHeaderInternal("#define SW_PROBE_BEGIN struct Probe_t\n")}},
-        {"name": "공유 헤더 타입에 Sw 접두", "expectedViolation": "Resource/engine/shaders/probe.hlsli:3 타입 'SwMaterialData' 에 Sw 접두를 쓰지 않습니다", "files": {kProbeHeader: wrapHeaderInternal("struct SwMaterialData { float4 color; };\n")}},
-        {"name": "한 파일 타입에 Sw 접두", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 타입 'SwLocalData' 에 Sw 접두를 쓰지 않습니다", "files": {kProbeSource: "struct SwLocalData { float4 color; };\n"}},
-        {"name": "줄임말 필드", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 필드 'pos': 불투명한 줄임말 'pos'", "files": {kProbeSource: "struct PSInput\n{\n    float4 pos : SV_Position;\n};\n"}},
+        {"name": "공유 헤더 타입에 Sw 접두", "expectedViolation": "Resource/engine/shaders/probe.hlsli:3 타입 'SwMaterialData' 에 Sw 접두를 쓰지 않습니다", "files": {kProbeHeader: wrapHeaderInternal("struct SwMaterialData { float4 _color; };\n")}},
+        {"name": "한 파일 타입에 Sw 접두", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 타입 'SwLocalData' 에 Sw 접두를 쓰지 않습니다", "files": {kProbeSource: "struct SwLocalData { float4 _color; };\n"}},
+        {"name": "줄임말 필드", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 필드 '_pos': 불투명한 줄임말 'pos'", "files": {kProbeSource: "struct PSInput\n{\n    float4 _pos : SV_Position;\n};\n"}},
+        {"name": "_ 접두어 없는 필드", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 필드 'position': 구조체 필드는 _ 접두어(_camelCase)", "files": {kProbeSource: "struct PSInput\n{\n    float4 position : SV_Position;\n};\n"}},
+        {"name": "머티리얼 구조체의 접두어 없는 필드", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 필드 'albedoMap': 구조체 필드는 _ 접두어(_camelCase)", "files": {kProbeSource: "SW_MATERIAL_BEGIN\n{\n    uint albedoMap;\n}\nSW_MATERIAL_END\n"}},
         {"name": "한 글자 지역 변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'n': 한 글자 이름", "files": {kProbeSource: "float4 shadeIt( float4 color ) {\n    float3 n = color.xyz;\n    return color;\n}\n"}},
         {"name": "여럿 선언의 두 번째 이름", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'c': 한 글자 이름", "files": {kProbeSource: "float spinIt( float angle ) {\n    float sine, c;\n    sincos( angle, sine, c );\n    return sine;\n}\n"}},
         {"name": "지역 변수 이름의 줄임말", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'texColor': 불투명한 줄임말 'tex'", "files": {kProbeSource: "float4 shadeIt( float4 color ) {\n    float4 texColor = color;\n    return texColor;\n}\n"}},
@@ -416,12 +444,14 @@ class CheckShaderConventionsGate(LintGate):
         {"name": "루프 변수 i", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'i': 한 글자 이름", "files": {kProbeSource: "float sumIt( float value ) {\n    for ( uint i = 0; i < 4; ++i ) value += 1;\n    return value;\n}\n"}},
         {"name": "out 접두어 없는 out 매개변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 함수 'splitIt' 의 매개변수 'normal': out 매개변수는 out 접두어", "files": {kProbeSource: "void splitIt( float4 value, out float3 normal ) { normal = value.xyz; }\n"}},
         {"name": "밖에 둔 멤버 정의의 매개변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:5 함수 'splitIt' 의 매개변수 'normal': out 매개변수는 out 접두어", "files": {kProbeSource: "struct Probe\n{\n    static void splitIt( float4 value, out float3 outNormal );\n};\nstatic void Probe::splitIt( float4 value, out float3 normal ) { normal = value.xyz; }\n"}},
-        {"name": "구조체 안 멤버 함수의 지역 변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:6 지역 변수 'n': 한 글자 이름", "files": {kProbeSource: "struct Probe\n{\n    float value;\n    float sumIt()\n    {\n        float n = value;\n        return n;\n    }\n};\n"}},
+        {"name": "구조체 안 멤버 함수의 지역 변수", "expectedViolation": "Resource/engine/shaders/probe.hlsl:6 지역 변수 'n': 한 글자 이름", "files": {kProbeSource: "struct Probe\n{\n    float _value;\n    float sumIt()\n    {\n        float n = _value;\n        return n;\n    }\n};\n"}},
         {"name": "arr 없는 고정 배열", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'offset': 고정 배열은 arr 접두어", "files": {kProbeSource: "float sumIt( float value ) {\n    float2 offset[4] = { 0, 0, 0, 0 };\n    return value;\n}\n"}},
         {"name": "복수형 고정 배열", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 지역 변수 'arrOffsets': arr 뒤는 단수 명사", "files": {kProbeSource: "float sumIt( float value ) {\n    float2 arrOffsets[4] = { 0, 0, 0, 0 };\n    return value;\n}\n"}},
         {"name": "groupshared 배열 접두어", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 groupshared 배열 's_sortKey' 는 s_arr 접두어입니다", "files": {kProbeSource: "groupshared uint s_sortKey[64];\n"}},
         {"name": "대문자 static const", "expectedViolation": "Resource/engine/shaders/probe.hlsli:3 파일 수준 상수 'SW_INVALID' 는 kPascalCase 여야 합니다", "files": {kProbeHeader: wrapHeaderInternal("static const uint SW_INVALID = 0xffffffff;\n")}},
         {"name": "SW_ 아닌 매크로", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 매크로 'GET_BUFFER' 는 SW_ + 대문자여야 합니다", "files": {kProbeSource: "#define GET_BUFFER( x ) x\n"}},
+        {"name": "함수 본문 안의 패스 스위치", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 함수 본문 안의 #if 'defined( SW_PASS_GBUFFER )'", "files": {kProbeSource: "float4 shadeIt( float4 color ) {\n#if defined( SW_PASS_GBUFFER )\n    color *= 2;\n#endif\n    return color;\n}\n"}},
+        {"name": "구조체 멤버 함수 본문 안의 기능 스위치", "expectedViolation": "Resource/engine/shaders/probe.hlsl:6 함수 본문 안의 #if 'MATERIAL_ALPHA_CUTOFF'", "files": {kProbeSource: "struct Probe\n{\n    float _value;\n    float sumIt()\n    {\n#if MATERIAL_ALPHA_CUTOFF\n        return _value;\n#endif\n        return 0.0f;\n    }\n};\n"}},
         {"name": "g_ 아닌 전역", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 전역 · 루트 상수 'instanceIds' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "StructuredBuffer<uint> instanceIds : register( t0 );\n"}},
         {"name": "g_ 아닌 매크로 선언 리소스", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 전역 리소스 'instanceIds' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_DECLARE_STRUCTURED_BUFFER( uint, instanceIds, 0 );\n"}},
         {"name": "g_ 아닌 cbuffer 멤버", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 cbuffer 멤버 'tintColor' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_DECLARE_CBUFFER( ProbeParams, 0 )\n{\n    float4 tintColor;\n};\n"}},

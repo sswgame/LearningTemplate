@@ -152,16 +152,16 @@ static const float kInvPi  = 0.31830988618379067154f;
 // 그래서 정점을 받는 셰이더는 전부(풀스크린 패스도) 이 구조체 하나를 쓴다 — 빼먹을 자리가 없다.
 struct VertexInput
 {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-    float2 uv : TEXCOORD0;
-    float4 color : COLOR;
+    float3 _position : POSITION;
+    float3 _normal : NORMAL;
+    float2 _uv : TEXCOORD0;
+    float4 _color : COLOR;
     // xyz 탄젠트 · w 바이탄젠트 부호(±1) — 바이탄젠트 = cross( normal, tangent.xyz ) * tangent.w (glTF · MikkTSpace 규약, C++ RHIVertex::_arrTangent).
-    float4 tangent : TANGENT;
+    float4 _tangent : TANGENT;
     // 슬롯 1(인스턴스 스텝)의 uint 하나 — 이 드로우 인스턴스의 **전역 자리**(가시 목록 슬롯). 씬 드로우만 건다.
     // SV_InstanceID 에 배치 시작을 루트 상수로 더하던 것을 대신한다 — 그래서 같은 PSO 의 배치들이 멀티 드로우 하나로
     // 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
-    uint instanceSlot : SW_INSTANCESLOT;
+    uint _instanceSlot : SW_INSTANCESLOT;
 };
 // 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
 // col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약

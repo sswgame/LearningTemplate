@@ -4,17 +4,17 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
@@ -26,11 +26,11 @@ float4 PSMain( PSInput input ) : SV_TARGET
     float3     color;
     SW_BRANCH if ( bPointUpscale )
     {
-        color = PassTexture::sampleSourcePoint( input.uv ).rgb;
+        color = PassTexture::sampleSourcePoint( input._uv ).rgb;
     }
     else
     {
-        color = PassTexture::sampleSource( input.uv ).rgb;
+        color = PassTexture::sampleSource( input._uv ).rgb;
     }
     return float4( color, 1.0f );
 }

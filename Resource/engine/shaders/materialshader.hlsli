@@ -30,7 +30,7 @@
  *
  * 셰이더 안의 기능 스위치(외부 define 이 아니다 — 쿠킹 퍼뮤테이션 수가 늘지 않는다)
  *   SW_MATERIAL_READ_IN_VERTEX   머티리얼을 정점에서 읽는다
- *   SW_MATERIAL_USES_TANGENT     정점 탄젠트를 월드로 옮겨 `PixelContext.tangent` 로 넘긴다(노멀 맵)
+ *   SW_MATERIAL_USES_TANGENT     정점 탄젠트를 월드로 옮겨 `PixelContext._tangent` 로 넘긴다(노멀 맵)
  *   SW_MATERIAL_NONE             머티리얼이 없는 사용자(gbuffer · shadowdepth — 머티리얼 없는 배치의 패스 셰이더). 머티리얼 구조체 · 읽기 · 위치 오프셋 훅이 없고,
  *                                알파 컷오프(MATERIAL_ALPHA_CUTOFF)는 쓸 수 없다. 깊이 패스에서는 이 셰이더가 같은 자리를 못 만드는 배치를 뼈대가 빼 준다
  *                                (깊이 프리패스의 MATERIAL_VERTEX_DEFORM · 그림자의 MATERIAL_SHADOW_CAST_OFF).
@@ -105,16 +105,16 @@ struct MaterialVaryings
 // ------------------------------------------------------------------------------
 struct VertexContext
 {
-    VertexInput  input; ///< 입력 스트림 그대로(색 · UV · 탄젠트)
-    InstanceData instance;
-    uint         vertexId;
-    float3       localPosition; ///< 모프 · 스킨 · VAT 가 적용된 로컬 위치
-    float3       localNormal;
-    float3       worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
-    float3       worldNormal;
-    float4       clipPosition; ///< 월드 위치 오프셋 · 외곽선이 반영된 최종 클립 위치. **사용자 보간 칸 훅에서만 채워진다**(다른 훅에서는 0). 읽기만 한다 — 위치는 뼈대가 만든다
+    VertexInput  _input; ///< 입력 스트림 그대로(색 · UV · 탄젠트)
+    InstanceData _instance;
+    uint         _vertexId;
+    float3       _localPosition; ///< 모프 · 스킨 · VAT 가 적용된 로컬 위치
+    float3       _localNormal;
+    float3       _worldPosition; ///< 뼈대가 만든 월드 위치(월드 위치 오프셋을 더하기 전)
+    float3       _worldNormal;
+    float4       _clipPosition; ///< 월드 위치 오프셋 · 외곽선이 반영된 최종 클립 위치. **사용자 보간 칸 훅에서만 채워진다**(다른 훅에서는 0). 읽기만 한다 — 위치는 뼈대가 만든다
 #if defined( SW_MATERIAL_READ_IN_VERTEX )
-    MaterialData material; ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
+    MaterialData _material; ///< 머티리얼을 정점에서 읽는 셰이더에만 있다
 #endif
 
     // 정점 진입점의 단계(materialshadermain.hlsli). 패스 · 기능 스위치마다 다른 정의를 파일 수준 `#if` 가 고른다 — 진입점 본문에는 `#if` 가 없다.
@@ -128,27 +128,27 @@ struct VertexContext
 /** @brief 외곽선 훅의 결과 — 월드 위치에 더할 오프셋과, 클립 위치를 만든 뒤 xy 에 더할 오프셋(화면 두께). 훅은 위치를 직접 만들지 못하고 오프셋만 준다. */
 struct OutlineOffset
 {
-    float3 worldOffset;
-    float2 clipOffset;
+    float3 _worldOffset;
+    float2 _clipOffset;
 };
 #endif
 
 /** @brief 정점 → 픽셀 보간 칸. 모든 패스가 같은 칸을 쓴다(훅이 패스마다 다른 문맥을 받지 않게). 위치는 뼈대 한 곳이 만든다. */
 struct MaterialInterpolants
 {
-    float4 position : SV_POSITION;
+    float4 _position : SV_POSITION;
 #if !defined( SW_MATERIAL_DEPTH_ONLY )
-    float4 color : COLOR;
-    float2 uv : TEXCOORD0;
-    float3 normal : TEXCOORD1;
-    float3 worldPosition : TEXCOORD2;
+    float4 _color : COLOR;
+    float2 _uv : TEXCOORD0;
+    float3 _normal : TEXCOORD1;
+    float3 _worldPosition : TEXCOORD2;
     #if defined( SW_MATERIAL_USES_TANGENT )
-    float4 tangent : TEXCOORD3; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
+    float4 _tangent : TEXCOORD3; // xyz 월드 탄젠트 · w 바이탄젠트 부호(정점 탄젠트 그대로)
     #endif
     #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-    nointerpolation uint materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
+    nointerpolation uint _materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
     #endif
-    MaterialVaryings user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
+    MaterialVaryings _user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
 #endif
     SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
 
@@ -168,31 +168,44 @@ struct MaterialInterpolants
  */
 struct MaterialSurface
 {
-    float4 albedo;
-    float3 normal;
-    float  roughness;
-    float  metallic;
+    float4 _albedo;
+    float3 _normal;
+    float  _roughness;
+    float  _metallic;
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    float alphaCutoff;
+    float _alphaCutoff;
 #endif
 
-    void applyAlphaCutoff(); // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
+    void setAlphaCutoff( float cutoff ); // 알파 컷오프 머티리얼만 컷오프를 싣는다(아니면 아무것도 하지 않는다)
+    void applyAlphaCutoff();             // 알파 컷오프 머티리얼만 오린다(아니면 아무것도 하지 않는다)
 };
+
+#if defined( MATERIAL_ALPHA_CUTOFF )
+/** @brief 알파 컷오프 머티리얼 — 표면 훅이 컷오프를 싣는다. */
+void MaterialSurface::setAlphaCutoff( float cutoff )
+{
+    _alphaCutoff = cutoff;
+}
+#else
+void MaterialSurface::setAlphaCutoff( float cutoff )
+{
+}
+#endif
 
 /** @brief 픽셀 문맥 — 보간된 값과 머티리얼. 양면 머티리얼(MATERIAL_TWO_SIDED)의 뒷면은 `normal` 이 이미 뒤집혀 있다. */
 struct PixelContext
 {
-    float4 position; ///< SV_POSITION(화면 픽셀 좌표 · 깊이)
-    float4 color;    ///< 정점 색
-    float2 uv;
-    float3 normal; ///< 정규화한 월드 노멀
-    float3 worldPosition;
+    float4 _position; ///< SV_POSITION(화면 픽셀 좌표 · 깊이)
+    float4 _color;    ///< 정점 색
+    float2 _uv;
+    float3 _normal; ///< 정규화한 월드 노멀
+    float3 _worldPosition;
 #if defined( SW_MATERIAL_USES_TANGENT )
-    float4 tangent;
+    float4 _tangent;
 #endif
-    MaterialVaryings user;
+    MaterialVaryings _user;
 #if !defined( SW_MATERIAL_READ_IN_VERTEX ) && !defined( SW_MATERIAL_NONE )
-    MaterialData material; ///< 머티리얼을 픽셀에서 읽는 셰이더에만 있다
+    MaterialData _material; ///< 머티리얼을 픽셀에서 읽는 셰이더에만 있다
 #endif
 
     static PixelContext make( MaterialInterpolants input, bool bFrontFace );

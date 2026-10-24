@@ -14,21 +14,21 @@ SW_ROOT_CONSTANTS_END
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
+    float4 _position : SV_POSITION;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position            = input.position;
+    input._position           = input._position;
     const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
-    output.position           = float4( clipPosition, 0.0f, 1.0f );
+    output._position          = float4( clipPosition, 0.0f, 1.0f );
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const int3 texel = int3( int2( input.position.xy ), 0 );
+    const int3 texel = int3( int2( input._position.xy ), 0 );
 #if defined( SW_NATIVE_BINDLESS )
     const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
 #else

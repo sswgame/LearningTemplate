@@ -20,20 +20,20 @@ static const float kBodyRoughness = 1.0f;
 // water.material 의 프로퍼티와 같은 이름 · 타입이다.
 SW_MATERIAL_BEGIN
 {
-    float4 wave0;
-    float4 wave1;
-    float4 wave2;
-    float4 wave3;
-    float4 waterParams; // x = 파도 시간, y = 깊은 색이 다 차는 깊이, z = 거품 폭, w = 잔물결 세기
-    float4 shallowColor;
-    float4 deepColor;
-    float4 skyColor;
-    float4 waveParams; // x = 파도 분산의 중력(m/s²) — 컴포넌트가 설정된 물리 중력을 싣는다
+    float4 _wave0;
+    float4 _wave1;
+    float4 _wave2;
+    float4 _wave3;
+    float4 _waterParams; // x = 파도 시간, y = 깊은 색이 다 차는 깊이, z = 거품 폭, w = 잔물결 세기
+    float4 _shallowColor;
+    float4 _deepColor;
+    float4 _skyColor;
+    float4 _waveParams; // x = 파도 분산의 중력(m/s²) — 컴포넌트가 설정된 물리 중력을 싣는다
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "water.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "water.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값은 사용자 보간 칸으로 넘긴다. 조명(몸통 + 프레넬 + 주광 반사 + 거품)은 직접 정의한다.
@@ -42,57 +42,57 @@ SW_MATERIAL_END
 #define SW_MATERIAL_CUSTOM_VARYINGS
 struct MaterialVaryings
 {
-    float4 waterColor : TEXCOORD8; // rgb = 깊이로 섞은 물 색, a = 불투명도
-    float3 toView : TEXCOORD9;     // 표면에서 카메라 쪽(정규화 전)
-    float4 shading : TEXCOORD10;   // x = 거품, y = 파도 시간, z = 잔물결 세기, w = 깊이(m)
-    float3 skyColor : TEXCOORD11;
-    float2 flow : TEXCOORD12;
-    float3 waveNormal : TEXCOORD13; // 거스트너 파도의 노멀(정규화 전 — 메시 노멀이 아니다)
+    float4 _waterColor : TEXCOORD8; // rgb = 깊이로 섞은 물 색, a = 불투명도
+    float3 _toView : TEXCOORD9;     // 표면에서 카메라 쪽(정규화 전)
+    float4 _shading : TEXCOORD10;   // x = 거품, y = 파도 시간, z = 잔물결 세기, w = 깊이(m)
+    float3 _skyColor : TEXCOORD11;
+    float2 _flow : TEXCOORD12;
+    float3 _waveNormal : TEXCOORD13; // 거스트너 파도의 노멀(정규화 전 — 메시 노멀이 아니다)
 };
 #include "materialshader.hlsli"
 
 /** @brief 거스트너 파도 넷(머티리얼 프로퍼티)입니다. */
 void loadWaves( MaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_COUNT] )
 {
-    outArrWave[0] = material.wave0;
-    outArrWave[1] = material.wave1;
-    outArrWave[2] = material.wave2;
-    outArrWave[3] = material.wave3;
+    outArrWave[0] = material._wave0;
+    outArrWave[1] = material._wave1;
+    outArrWave[2] = material._wave2;
+    outArrWave[3] = material._wave3;
 }
 
 /** @brief 월드 위치 오프셋 — 파도 변위. 파도는 월드 (x, z) 의 함수다(CPU 질의 WaterWaveMath 가 같은 원점으로 같은 값을 낸다). */
 float3 computeWorldPositionOffset( VertexContext context )
 {
     float4 arrWave[SW_GERSTNER_WAVE_COUNT];
-    loadWaves( context.material, arrWave );
-    return Gerstner::computeDisplacement( context.worldPosition.xz, context.material.waterParams.x, context.material.waveParams.x, arrWave );
+    loadWaves( context._material, arrWave );
+    return Gerstner::computeDisplacement( context._worldPosition.xz, context._material._waterParams.x, context._material._waveParams.x, arrWave );
 }
 
 MaterialVaryings computeMaterialVaryings( VertexContext context )
 {
-    const MaterialData material = context.material;
+    const MaterialData material = context._material;
     float4             arrWave[SW_GERSTNER_WAVE_COUNT];
     loadWaves( material, arrWave );
-    const float time = material.waterParams.x;
+    const float time = material._waterParams.x;
 
     MaterialVaryings varyings;
     // 파도는 월드 (x, z) 의 함수다 — 변위를 더하기 전의 원점으로 노멀을 구한다.
-    varyings.waveNormal = Gerstner::computeNormal( context.worldPosition.xz, time, material.waveParams.x, arrWave );
+    varyings._waveNormal = Gerstner::computeNormal( context._worldPosition.xz, time, material._waveParams.x, arrWave );
 
-    const float depth       = max( context.input.color.a, 0.0f );
-    const float depthFactor = saturate( depth / max( material.waterParams.y, 1e-3f ) );
-    varyings.waterColor     = lerp( material.shallowColor, material.deepColor, depthFactor );
-    const float foamWidth   = material.waterParams.z;
+    const float depth       = max( context._input._color.a, 0.0f );
+    const float depthFactor = saturate( depth / max( material._waterParams.y, 1e-3f ) );
+    varyings._waterColor    = lerp( material._shallowColor, material._deepColor, depthFactor );
+    const float foamWidth   = material._waterParams.z;
     const float foam        = ( foamWidth > 0.0f ) ? saturate( 1.0f - depth / foamWidth ) : 0.0f;
-    varyings.shading        = float4( foam, time, material.waterParams.w, depth );
-    varyings.skyColor       = material.skyColor.rgb;
-    varyings.flow           = context.input.color.rg;
+    varyings._shading       = float4( foam, time, material._waterParams.w, depth );
+    varyings._skyColor      = material._skyColor.rgb;
+    varyings._flow          = context._input._color.rg;
 
     // 카메라 쪽 방향: 이 정점의 화면 자리를 가까운 면과 먼 면으로 되돌려 그 차를 쓴다 — 원근 · 직교 모두 맞다. 화면 자리는 뼈대가 만든 최종 클립 위치다.
-    const float2 ndc       = context.clipPosition.xy / max( context.clipPosition.w, 1e-5f );
+    const float2 ndc       = context._clipPosition.xy / max( context._clipPosition.w, 1e-5f );
     const float4 nearPoint = mul( float4( ndc, 0.0f, 1.0f ), g_InvViewProj );
     const float4 farPoint  = mul( float4( ndc, 1.0f, 1.0f ), g_InvViewProj );
-    varyings.toView        = nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w;
+    varyings._toView       = nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w;
     return varyings;
 }
 
@@ -108,44 +108,54 @@ float3 computeRippleNormal( float2 position, float time, float2 flow )
 
 MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    const float3 rippleNormal = computeRippleNormal( context.worldPosition.xz, context.user.shading.y, context.user.flow );
+    const float3 rippleNormal = computeRippleNormal( context._worldPosition.xz, context._user._shading.y, context._user._flow );
 
     MaterialSurface surface;
-    surface.albedo    = float4( context.user.waterColor.rgb, 1.0f );
-    surface.normal    = normalize( lerp( context.user.waveNormal, normalize( context.user.waveNormal + rippleNormal - float3( 0.0f, 1.0f, 0.0f ) ), context.user.shading.z ) );
-    surface.roughness = kSurfaceRoughness;
-    surface.metallic  = kSurfaceMetallic;
+    surface._albedo    = float4( context._user._waterColor.rgb, 1.0f );
+    surface._normal    = normalize( lerp( context._user._waveNormal, normalize( context._user._waveNormal + rippleNormal - float3( 0.0f, 1.0f, 0.0f ) ), context._user._shading.z ) );
+    surface._roughness = kSurfaceRoughness;
+    surface._metallic  = kSurfaceMetallic;
     return surface;
 }
 
+#if SW_VIEWMODE_SKIPS_LIGHTING
+void computeWaterLighting( PixelContext context, float3 normal, float3 toView, out float3 outBody, out float outSpecular )
+{
+    // 보기 모드 Unlit — 물 색 그대로, 주광 반사 없음(하늘 반사 · 거품은 조명이 아니라 표면 색이라 남긴다).
+    outBody     = context._user._waterColor.rgb;
+    outSpecular = 0.0f;
+}
+#else
+void computeWaterLighting( PixelContext context, float3 normal, float3 toView, out float3 outBody, out float outSpecular )
+{
+    const float shadow = Shadow::sampleAtWorld( context._worldPosition, normal );
+    outBody            = Lighting::shadeLights( context._user._waterColor.rgb, context._worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
+
+    // 주광의 반사(블린-퐁) — 물은 매끈하다.
+    const float3 toLight = normalize( -g_KeyLightDirIntensity.xyz );
+    const float3 halfway = normalize( toLight + toView );
+    outSpecular          = pow( saturate( dot( normal, halfway ) ), 180.0f ) * g_KeyLightDirIntensity.w * shadow;
+}
+#endif
+
 float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
-    const float3 normal = surface.normal;
-    const float3 toView = normalize( context.user.toView );
+    const float3 normal = surface._normal;
+    const float3 toView = normalize( context._user._toView );
 
     // 프레넬(슐릭, 물 F0 = 0.02) — 비스듬히 볼수록 하늘이 비친다.
     const float facing  = saturate( dot( normal, toView ) );
     const float fresnel = 0.02f + 0.98f * pow( 1.0f - facing, 5.0f );
-#if SW_VIEWMODE_SKIPS_LIGHTING
-    // 보기 모드 Unlit — 물 색 그대로, 주광 반사 없음(하늘 반사 · 거품은 조명이 아니라 표면 색이라 남긴다).
-    const float3 body     = context.user.waterColor.rgb;
-    const float  specular = 0.0f;
-#else
-    const float  shadow = Shadow::sampleAtWorld( context.worldPosition, normal );
-    const float3 body   = Lighting::shadeLights( context.user.waterColor.rgb, context.worldPosition, normal, shadow, kBodyRoughness, kSurfaceMetallic );
+    float3      body;
+    float       specular;
+    computeWaterLighting( context, normal, toView, body, specular );
 
-    // 주광의 반사(블린-퐁) — 물은 매끈하다.
-    const float3 toLight  = normalize( -g_KeyLightDirIntensity.xyz );
-    const float3 halfway  = normalize( toLight + toView );
-    const float  specular = pow( saturate( dot( normal, halfway ) ), 180.0f ) * g_KeyLightDirIntensity.w * shadow;
-#endif
-
-    float3 color = lerp( body, context.user.skyColor, fresnel ) + specular * g_KeyLightColor.rgb;
-    float  alpha = saturate( max( context.user.waterColor.a, fresnel ) + specular );
+    float3 color = lerp( body, context._user._skyColor, fresnel ) + specular * g_KeyLightColor.rgb;
+    float  alpha = saturate( max( context._user._waterColor.a, fresnel ) + specular );
 
     // 물가 거품 — 얕을수록 희다. 잔물결 무늬로 끊어 띠가 아니라 거품처럼 보이게 한다.
-    const float foamPattern = saturate( 0.5f + 0.5f * sin( context.worldPosition.x * 7.0f + context.worldPosition.z * 5.0f + context.user.shading.y * 1.5f ) );
-    const float foam        = context.user.shading.x * ( 0.55f + 0.45f * foamPattern );
+    const float foamPattern = saturate( 0.5f + 0.5f * sin( context._worldPosition.x * 7.0f + context._worldPosition.z * 5.0f + context._user._shading.y * 1.5f ) );
+    const float foam        = context._user._shading.x * ( 0.55f + 0.45f * foamPattern );
     color                   = lerp( color, float3( 0.92f, 0.95f, 0.97f ), foam );
     alpha                   = max( alpha, foam );
     return float4( color, alpha );

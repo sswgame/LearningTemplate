@@ -14,8 +14,8 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 static const uint  kTapCount      = 16u;
@@ -25,10 +25,10 @@ static const float kInnerRadius   = 0.5f;
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
@@ -64,8 +64,8 @@ float computeBlurRadius( float viewDepth )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float3 source      = PassTexture::sampleSourcePoint( input.uv ).rgb;
-    const float  centerDepth = computeViewDepth( input.uv );
+    const float3 source      = PassTexture::sampleSourcePoint( input._uv ).rgb;
+    const float  centerDepth = computeViewDepth( input._uv );
     const float  centerBlur  = computeBlurRadius( centerDepth );
 
     float3 colorSum  = source;
@@ -73,7 +73,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     SW_UNROLL for ( uint tapIndex = 0u; tapIndex < kTapCount; ++tapIndex )
     {
         const float2 offsetPixels = computeTapOffset( tapIndex ) * centerBlur;
-        const float2 tapUv        = input.uv + offsetPixels * g_SourceTexel.xy;
+        const float2 tapUv        = input._uv + offsetPixels * g_SourceTexel.xy;
         const float  tapDepth     = computeViewDepth( tapUv );
         const float  tapBlur      = computeBlurRadius( tapDepth );
         // 앞의 탭은 자기 착란원이 이 픽셀까지 닿는 만큼만 센다(1 px 에 걸쳐 부드럽게). 뒤의 탭은 이 픽셀의 착란원 안이므로 다 센다.

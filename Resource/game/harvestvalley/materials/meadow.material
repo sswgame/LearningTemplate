@@ -2,10 +2,10 @@
 <!-- 농장 풀밭 — 기본 머티리얼에 풀밭 색을 기본값으로 둔 것이다. -->
 <MaterialDesc formatVersion="0" name="HarvestValleyMeadow" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
-		<item name="color" type="Color" shaderType="Float4" defaultValue="0.42 0.62 0.30 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.42 0.62 0.30 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

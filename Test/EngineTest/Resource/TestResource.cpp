@@ -177,7 +177,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     const utf8* kCurrent = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDesc formatVersion="0" name="CurrentMat" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
-		<item name="color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
 	</_properties>
 </MaterialDesc>
 )";

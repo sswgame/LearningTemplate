@@ -2,13 +2,13 @@
 <!-- 꾸미기 스키마. 캐릭터(Adventurer · Skeleton)와 아이템(Blaster)이 같은 형식이다.
      Slider → Drive(Morph · BoneProportion · MaterialScalar), Color → Drive(MaterialColor · DyeChannel · PaletteSwap), Choice → Option(visual · variant ·
      materialVariant), Attachment → Option(prefab · sprite) 를 주인의 socket 에 단다. category 는 부분 프리셋(머리만 · 얼굴만 · 염색만)이 고르는 묶음,
-     Condition 은 앞에 선언한 매개변수에만 걸 수 있다. KayKit 몸은 아틀라스 한 장이라 염색은 머티리얼의 color 를 곱하는 MaterialColor 다. -->
+     Condition 은 앞에 선언한 매개변수에만 걸 수 있다. KayKit 몸은 아틀라스 한 장이라 염색은 머티리얼의 _color 를 곱하는 MaterialColor 다. -->
 <CustomizationSchemaCatalog>
   <Schema id="Adventurer">
-    <Color name="OutfitDye" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="color"/></Color>
+    <Color name="OutfitDye" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
   </Schema>
   <Schema id="Skeleton">
-    <Color name="BoneTint" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="color"/></Color>
+    <Color name="BoneTint" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
     <Choice name="Hood" category="Head" default="Bare">
       <Option name="Bare"/>
       <Option name="Hooded" visual="hood_skeleton"/>

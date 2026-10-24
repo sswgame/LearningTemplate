@@ -12,16 +12,16 @@ static const float kSurfaceMetallic  = 0.0f;
 
 SW_MATERIAL_BEGIN
 {
-    float4 color;
-    float4 uvRect;
-    uint   albedoMap;
-    uint   pointFilter;
-    uint   premultipliedTexture;
+    float4 _color;
+    float4 _uvRect;
+    uint   _albedoMap;
+    uint   _pointFilter;
+    uint   _premultipliedTexture;
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "sprite2d.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "sprite2d.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 // 훅 선택(materialshader.hlsli) — 조명 없음. 정점이 만든 UV(아틀라스 프레임) · 색(인스턴스 색)을 사용자 보간 칸으로 넘긴다. 머티리얼은 픽셀에서만 읽는다.
@@ -29,8 +29,8 @@ SW_MATERIAL_END
 #define SW_MATERIAL_CUSTOM_VARYINGS
 struct MaterialVaryings
 {
-    float2 frameUv : TEXCOORD8; // 인스턴스의 UV 사각형(아틀라스 프레임)이 들어간 UV
-    float4 tinted : TEXCOORD9;  // 정점 색 × 인스턴스 색
+    float2 _frameUv : TEXCOORD8; // 인스턴스의 UV 사각형(아틀라스 프레임)이 들어간 UV
+    float4 _tinted : TEXCOORD9;  // 정점 색 × 인스턴스 색
 };
 #include "materialshader.hlsli"
 
@@ -41,10 +41,10 @@ struct MaterialVaryings
 float3 computeWorldPositionOffset( VertexContext context )
 {
     float3 offset = float3( 0.0f, 0.0f, 0.0f );
-    if ( context.instance.pixelSnap > 0.0f )
+    if ( context._instance._pixelSnap > 0.0f )
     {
-        const float2 origin  = mul( float4( 0.0f, 0.0f, 0.0f, 1.0f ), context.instance.world ).xy;
-        const float2 snapped = floor( origin / context.instance.pixelSnap + 0.5f ) * context.instance.pixelSnap;
+        const float2 origin  = mul( float4( 0.0f, 0.0f, 0.0f, 1.0f ), context._instance._world ).xy;
+        const float2 snapped = floor( origin / context._instance._pixelSnap + 0.5f ) * context._instance._pixelSnap;
         offset.xy            = snapped - origin;
     }
     return offset;
@@ -58,33 +58,33 @@ MaterialVaryings computeMaterialVaryings( VertexContext context )
     // (binding.hlsli SW_MATERIAL: 두 단계가 읽으면 GL 이 링크를 거절한다). 둘 다 아핀이라 정점에서 한 것과 픽셀에서 한 것이 같다.
     // 합성은 "머티리얼 사각형 안의 인스턴스 사각형" 이다.
     // 인스턴스 색은 정점 색에 곱해 넘긴다 — 프레임 · 색은 머티리얼 인스턴스가 아니라 인스턴스에 실려, 같은 텍스처의 스프라이트가 한 배치로 남는다.
-    const float4     frame = context.instance.computeUvRect();
+    const float4     frame = context._instance.computeUvRect();
     MaterialVaryings varyings;
-    varyings.frameUv = context.input.uv * frame.zw + frame.xy;
-    varyings.tinted  = context.input.color * context.instance.computeTint();
+    varyings._frameUv = context._input._uv * frame.zw + frame.xy;
+    varyings._tinted  = context._input._color * context._instance.computeTint();
     return varyings;
 }
 
 MaterialSurface computeMaterialSurface( PixelContext context )
 {
-    const MaterialData material = context.material;
+    const MaterialData material = context._material;
     // 머티리얼 uvRect (x=u, y=v, z=폭, w=높이) — 인스턴스 사각형이 이미 들어간 UV 위에 얹는다
-    const float2 uv           = context.user.frameUv * material.uvRect.zw + material.uvRect.xy;
+    const float2 uv           = context._user._frameUv * material._uvRect.zw + material._uvRect.xy;
     float4       textureColor = float4( 1.0f, 1.0f, 1.0f, 1.0f );
-    if ( material.albedoMap != kInvalidIndex )
+    if ( material._albedoMap != kInvalidIndex )
     {
         // 점 필터(픽셀 아트)면 텍셀 중심에 붙여 읽는다 — 확대해도 텍셀 경계가 번지지 않는다(유니티 Filter Mode Point · Godot TEXTURE_FILTER_NEAREST).
-        textureColor = ( material.pointFilter != 0u ) ? MaterialTexture::samplePoint( material.albedoMap, uv ) : MaterialTexture::sampleIndex( material.albedoMap, uv );
+        textureColor = ( material._pointFilter != 0u ) ? MaterialTexture::samplePoint( material._albedoMap, uv ) : MaterialTexture::sampleIndex( material._albedoMap, uv );
         // 프리멀티플라이 텍스처(월드 공간 UI 의 렌더 텍스처 — 캔버스가 프리멀티플라이로 그린다)는 곧은 알파로 되돌린다 — 투명 블렌드가 SrcAlpha 를 다시 곱한다.
-        if ( material.premultipliedTexture != 0u && textureColor.a > 0.0f )
+        if ( material._premultipliedTexture != 0u && textureColor.a > 0.0f )
             textureColor.rgb /= textureColor.a;
     }
 
     MaterialSurface surface;
-    surface.albedo    = textureColor * material.color * context.user.tinted;
-    surface.normal    = context.normal;
-    surface.roughness = kSurfaceRoughness;
-    surface.metallic  = kSurfaceMetallic;
+    surface._albedo    = textureColor * material._color * context._user._tinted;
+    surface._normal    = context._normal;
+    surface._roughness = kSurfaceRoughness;
+    surface._metallic  = kSurfaceMetallic;
     return surface;
 }
 

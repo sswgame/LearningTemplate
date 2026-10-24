@@ -243,7 +243,7 @@ namespace
             }
             _material = sw::Material::create();
             if ( _material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
-                 _material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.5 0.25 1.0" ) == false )
+                 _material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.5 0.25 1.0" ) == false )
                 return false;
             _mesh = sw::MeshUtil::createUnitCube();
             if ( _mesh == nullptr )
@@ -354,7 +354,7 @@ namespace
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
-                 material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                 material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
         }
@@ -496,7 +496,7 @@ namespace
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
-                 material->setParameter( nullptr, sw::hashed_string( "color" ), "0.9 0.5 0.25 1.0" ) == false )
+                 material->setParameter( nullptr, sw::hashed_string( "_color" ), "0.9 0.5 0.25 1.0" ) == false )
                 material.reset();
             return material;
         }
@@ -509,13 +509,13 @@ namespace
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             const bool                   bLoaded  = material->loadFromFile( "engine/materials/toon.material" );
-            const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "0.9 0.5 0.25 1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "shadingToony" ), "1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "outlineColor" ), "0.0 0.0 0.0 1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "outlineWidth" ), "0.01" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "outlineWidthMode" ), "1.0" ) &&
-                              material->setParameter( nullptr, sw::hashed_string( "outlineLightingMix" ), "0.0" );
+            const bool                   bSet     = bLoaded && material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "0.9 0.5 0.25 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_shadeColor" ), "0.35 0.2 0.3 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_shadingToony" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_outlineColor" ), "0.0 0.0 0.0 1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_outlineWidth" ), "0.01" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_outlineWidthMode" ), "1.0" ) &&
+                              material->setParameter( nullptr, sw::hashed_string( "_outlineLightingMix" ), "0.0" );
             if ( bSet == false )
                 material.reset();
             else
@@ -1959,7 +1959,7 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
             // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
-                 material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+                 material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
                 material.reset();
             return material;
         };
@@ -4017,7 +4017,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
             SW_EXPECT_EQUAL( after, material->getMaterialTextureSrvs()[0] );
             if ( device->supportsNativeBindlessSampling() )
             {
-                const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "albedoMap" ) );
+                const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "_albedoMap" ) );
                 SW_ASSERT_NOT_NULL( pAlbedo );
                 uint32 packed{ 0 };
                 SW_ASSERT_TRUE( pAlbedo->_offset + sizeof( packed ) <= material->getBuffer().size() );
@@ -4088,7 +4088,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             SW_ASSERT_TRUE( parent->getBuffer().size() > firstSize );
 
             // 파라미터를 건드려 인스턴스를 더럽힌다 — 이것이 실제로 겹치는 조합이다.
-            instance->setScalarParameter( sw::hashed_string( "roughness" ), 0.75f );
+            instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.75f );
             SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
 
             SW_EXPECT_TRUE_MSG( instance->getBuffer().size() > firstSize,
@@ -4116,10 +4116,10 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<MaterialDesc formatVersion=\"0\" name=\"DefaultMaterial\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\">"
         "  <_properties>"
-        "    <item name=\"roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\" min=\"0.0\" max=\"1.0\"/>"
-        "    <item name=\"color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"0 0 0 1\"/>"
-        "    <item name=\"albedoMap\" type=\"Texture2D\"/>"
-        "    <item name=\"metallic\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.0\" min=\"0.0\" max=\"1.0\"/>"
+        "    <item name=\"_roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\" min=\"0.0\" max=\"1.0\"/>"
+        "    <item name=\"_color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"0 0 0 1\"/>"
+        "    <item name=\"_albedoMap\" type=\"Texture2D\"/>"
+        "    <item name=\"_metallic\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.0\" min=\"0.0\" max=\"1.0\"/>"
         "  </_properties>"
         "</MaterialDesc>";
     const auto readFloat = []( const sw::vector<uint8>& bytes, size_t offset )
@@ -4152,7 +4152,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
             SW_EXPECT_NEAR_EQUAL( 0.0f, readFloat( instance->getBuffer(), 0 ), 1e-6f );  // color.x
 
             // 부모 값만 바꾼다(인스턴스 오버라이드 없음) — 인스턴스가 따라와야 한다.
-            SW_ASSERT_TRUE( parent->setParameter( device.get(), sw::hashed_string( "roughness" ), "0.125" ) );
+            SW_ASSERT_TRUE( parent->setParameter( device.get(), sw::hashed_string( "_roughness" ), "0.125" ) );
             SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
             SW_EXPECT_NEAR_EQUAL( 0.125f, readFloat( instance->getBuffer(), 16 ), 1e-6f );
 
@@ -4372,7 +4372,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
             bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
-                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+                  material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         constexpr uint32         kCubeCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];
@@ -4659,9 +4659,9 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
             SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/benchtextured.material" ) );
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
-            instance->setScalarParameter( sw::hashed_string( "roughness" ), 0.125f );
-            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), kOverrideTexture );
-            SW_EXPECT_TRUE( instance->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == kOverrideTexture );
+            instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.125f );
+            instance->setTextureParameter( sw::hashed_string( "_albedoMap" ), kOverrideTexture );
+            SW_EXPECT_TRUE( instance->getTextureParameter( sw::hashed_string( "_albedoMap" ) ) == kOverrideTexture );
 
             sw::Scene                scene( "InstanceOverrideScene" );
             sw::shared_ptr<sw::Mesh> cube    = sw::MeshUtil::createUnitCube();
@@ -4696,7 +4696,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             auto expectTextureReachesShader = [&]( sw::RHIDescriptorIndex expectedSrv, const utf8* pWhen )
             {
                 if ( bNativeBindless )
-                    SW_EXPECT_TRUE_MSG( readPackedUint( "albedoMap" ) == expectedSrv, ( label + pWhen + " — 인스턴스 바이트의 albedoMap 이 덮어쓴 텍스처가 아닙니다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( readPackedUint( "_albedoMap" ) == expectedSrv, ( label + pWhen + " — 인스턴스 바이트의 albedoMap 이 덮어쓴 텍스처가 아닙니다" ).c_str() );
                 else
                     SW_EXPECT_TRUE_MSG( rtScene.getOpaqueBatches()[0]._arrMaterialTexSrv[0] == expectedSrv,
                                         ( label + pWhen + " — 배치 슬롯 0 이 덮어쓴 텍스처가 아닙니다" ).c_str() );
@@ -4707,7 +4707,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             SW_ASSERT_TRUE_MSG( pOverride != nullptr, ( label + "인스턴스가 덮어쓴 텍스처를 빌리지 않았습니다" ).c_str() );
             SW_ASSERT_TRUE_MSG( instance->getBuffer().empty() == false, ( label + "인스턴스 바이트가 만들어지지 않았습니다 — 합친 배치의 인스턴스를 아무도 올리지 않습니다" ).c_str() );
             float32                     roughness{ 0.0f };
-            const sw::MaterialProperty* pRoughness = parent->findProperty( sw::hashed_string( "roughness" ) );
+            const sw::MaterialProperty* pRoughness = parent->findProperty( sw::hashed_string( "_roughness" ) );
             SW_ASSERT_NOT_NULL( pRoughness );
             sw::Memory::copy( &roughness, instance->getBuffer().data() + pRoughness->_offset, sizeof( roughness ) );
             SW_EXPECT_NEAR_EQUAL( 0.125f, roughness, 1e-6f );
@@ -4719,7 +4719,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             expectTextureReachesShader( pOverride->getSrv(), "다시 올린 뒤" );
 
             // 지우면 부모 텍스처로 돌아가고, 빌린 것을 돌려준다(아무도 안 쓰면 캐시에서 빠진다).
-            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), "" );
+            instance->setTextureParameter( sw::hashed_string( "_albedoMap" ), "" );
             SW_ASSERT_TRUE( rtScene.upload( device.get() ) );
             SW_EXPECT_TRUE_MSG( textures.find( kOverrideTexture ) == nullptr, ( label + "지운 덮어쓰기의 텍스처를 돌려주지 않았습니다" ).c_str() );
             expectTextureReachesShader( parent->getMaterialTextureSrvs()[0], "지운 뒤" );
@@ -4766,7 +4766,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
 
         const sw::Texture2D* pChecker = textures.find( missingTexture );
         SW_ASSERT_TRUE_MSG( pChecker != nullptr, ( label + "못 읽은 텍스처 대신 누락 텍스처를 빌리지 않았습니다" ).c_str() );
-        const uint32 slot = material->findTextureSlot( sw::hashed_string( "albedoMap" ) );
+        const uint32 slot = material->findTextureSlot( sw::hashed_string( "_albedoMap" ) );
         SW_ASSERT_TRUE_MSG( slot < material->getMaterialTextureSrvs().size(), ( label + "albedoMap 이 슬롯 목록에 없습니다 — 흰색으로 샘플합니다" ).c_str() );
         SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs()[slot] == pChecker->getSrv(), ( label + "albedoMap 슬롯이 누락 텍스처가 아닙니다" ).c_str() );
 
@@ -5037,8 +5037,8 @@ SW_TEST_CASE( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth )
 
             const sw::shared_ptr<sw::Material> material       = sw::Material::create();
             const bool                         bMaterialReady = material->loadFromFile( "engine/materials/toon.material" ) &&
-                                        material->setParameter( nullptr, sw::hashed_string( "baseColor" ), "1.0 1.0 1.0 0.2" ) &&
-                                        material->setParameter( nullptr, sw::hashed_string( "alphaCutoff" ), "0.5" );
+                                        material->setParameter( nullptr, sw::hashed_string( "_baseColor" ), "1.0 1.0 1.0 0.2" ) &&
+                                        material->setParameter( nullptr, sw::hashed_string( "_alphaCutoff" ), "0.5" );
             SW_ASSERT_TRUE( bMaterialReady );
             material->setStaticSwitch( sw::hashed_string( "AlphaCutoff" ), bCutoff );
             const sw::shared_ptr<sw::Mesh> mesh  = sw::MeshUtil::createUnitCube();
@@ -5188,7 +5188,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
             for ( uint32 caseIndex = 0; caseIndex < 2u && bOk; ++caseIndex )
             {
                 LitCubeScene cube;
-                bOk = cube.populate() && cube._material->setParameter( nullptr, sw::hashed_string( "metallic" ), caseIndex == 0u ? "0.0" : "1.0" );
+                bOk = cube.populate() && cube._material->setParameter( nullptr, sw::hashed_string( "_metallic" ), caseIndex == 0u ? "0.0" : "1.0" );
                 if ( bOk )
                 {
                     cube._scene.getObjectManager()->flushSceneTransforms();
@@ -5873,7 +5873,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( bOk )
             bOk = material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) &&
-                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+                  material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
 
         // 큐브 셋(화면 안) + 왼쪽 가장자리를 넘어가는 긴 막대 하나(오른쪽 가장자리는 배경이다).
         constexpr uint32 kBoxCount = 4;
@@ -6745,7 +6745,7 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
         sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
         bOk                                          = checker != nullptr;
         if ( bOk )
-            checker->setTextureParameter( sw::hashed_string( "albedoMap" ), "engine/textures/test/checker.dds" );
+            checker->setTextureParameter( sw::hashed_string( "_albedoMap" ), "engine/textures/test/checker.dds" );
         test::RHITestImage arrImage[2];
         for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
         {
@@ -7243,9 +7243,9 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
             outGlass                = sw::Material::create();
             outTint                 = sw::Material::create();
             const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
-                                      outGlass->setParameter( nullptr, sw::hashed_string( "color" ), "0.2 0.9 0.3 0.55" ) == false ||
+                                      outGlass->setParameter( nullptr, sw::hashed_string( "_color" ), "0.2 0.9 0.3 0.55" ) == false ||
                                       outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
-                                      outTint->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.1 0.1 0.6" ) == false;
+                                      outTint->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.1 0.1 0.6" ) == false;
             if ( bSetupFailed )
                 return false;
             for ( uint32 cubeIndex = 0; cubeIndex < 7; ++cubeIndex )
@@ -7466,12 +7466,12 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
             sw::FrameRenderer renderer;
             LitCubeScene      stage;
             bOk = renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && stage.populate();
-            bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" );
+            bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.02 0.02 1.0" );
             for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
             {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
-            bOk                          = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
+            bOk                          = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "_color" ), "0.02 0.02 1.0 1.0" );
             sw::CameraComponent* pCamera = stage._scene.getActiveGameCamera();
             bOk                          = bOk && pCamera != nullptr;
             if ( bOk && bCut )
@@ -7603,14 +7603,14 @@ SW_TEST_CASE( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut )
             post._autoExposureSpeedDown       = 1.0e-4f;
             pCamera->setPostProcess( post );
             const utf8* pFirstColor = bAuto ? "0.02 0.02 0.02 1.0" : "1.0 0.5 0.25 1.0";
-            bOk                     = stage._material->setParameter( nullptr, sw::hashed_string( "color" ), pFirstColor );
+            bOk                     = stage._material->setParameter( nullptr, sw::hashed_string( "_color" ), pFirstColor );
             for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
             {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene );
             }
             if ( bAuto )
             {
-                bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+                bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 1.0 1.0 1.0" );
                 if ( bOk && caseIndex == 1 )
                     pCamera->markCut();
                 bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
@@ -7712,7 +7712,7 @@ SW_TEST_CASE( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth )
             sw::shared_ptr<sw::Material> blue  = sw::Material::create();
             const utf8*                  pPath = ::test::getEngineDefaultAssets()._defaultMaterial.c_str();
             bOk                                = bOk && cube != nullptr && red->loadFromFile( pPath ) && blue->loadFromFile( pPath ) &&
-                  red->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" ) && blue->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
+                  red->setParameter( nullptr, sw::hashed_string( "_color" ), "1.0 0.02 0.02 1.0" ) && blue->setParameter( nullptr, sw::hashed_string( "_color" ), "0.02 0.02 1.0 1.0" );
             sw::MeshComponent* pCube = nullptr;
             sw::MeshComponent* pWall = nullptr;
             if ( bOk )
@@ -8162,7 +8162,7 @@ SW_TEST_CASE( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed )
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
         // water.hlsl 의 MaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
         SW_EXPECT_EQUAL( 144u, water->getElementStride() );
-        const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "wave1" ) );
+        const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "_wave1" ) );
         SW_ASSERT_NOT_NULL( pWave );
         SW_EXPECT_EQUAL( 16u, pWave->_offset );
         ++checkedCount;
@@ -9074,8 +9074,8 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
         if ( bOk )
         {
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( sprite.get() );
-            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), kTargetPath );
-            instance->setParameter( sw::hashed_string( "premultipliedTexture" ), "1" );
+            instance->setTextureParameter( sw::hashed_string( "_albedoMap" ), kTargetPath );
+            instance->setParameter( sw::hashed_string( "_premultipliedTexture" ), "1" );
             sw::GameObject*    pQuad = stage._scene.getObjectManager()->createGameObject( sw::hashed_string( "WidgetQuad" ) );
             sw::MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<sw::MeshComponent>() : nullptr;
             bOk                      = pMesh != nullptr;

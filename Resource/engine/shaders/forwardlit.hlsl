@@ -14,15 +14,15 @@
 // 금속도 · 거칠기는 PBR 조명 식(lighting.hlsli Lighting::shadeLights)과 G버퍼 머티리얼 칸(SurfaceOutput::store)이 읽는다.
 SW_MATERIAL_BEGIN
 {
-    float4 color;
-    float  roughness;
-    float  metallic;
-    uint   albedoMap;
+    float4 _color;
+    float  _roughness;
+    float  _metallic;
+    uint   _albedoMap;
 }
 SW_MATERIAL_END
 
 #if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "forwardlit.hlsl has no alpha cutoff property (MaterialSurface.alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
+    #error "forwardlit.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
 #define SW_MATERIAL_CUSTOM_LIGHTING
@@ -45,38 +45,46 @@ float4 sampleWorldTriplanar( uint textureIndex, float3 worldPosition, float3 wor
     const float4 alongZ = MaterialTexture::sampleIndex( textureIndex, float2( scaledPosition.x, -scaledPosition.y ) );
     return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
 }
+
+float4 sampleSurfaceTexture( PixelContext context )
+{
+    return sampleWorldTriplanar( context._material._albedoMap, context._worldPosition, context._normal );
+}
+#else
+float4 sampleSurfaceTexture( PixelContext context )
+{
+    return MaterialTexture::sampleIndex( context._material._albedoMap, context._uv );
+}
 #endif
 
 MaterialSurface computeMaterialSurface( PixelContext context )
 {
     // 정점 색 x 머티리얼 색 x 알베도 텍스처. 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
     // 자세한 이유는 binding.hlsli 의 MaterialTexture::sampleIndex 주석 참고.
-#if defined( MATERIAL_WORLD_UV )
-    const float4 surfaceTexture = sampleWorldTriplanar( context.material.albedoMap, context.worldPosition, context.normal );
-#else
-    const float4 surfaceTexture = MaterialTexture::sampleIndex( context.material.albedoMap, context.uv );
-#endif
+    const float4    surfaceTexture = sampleSurfaceTexture( context );
     MaterialSurface surface;
-    surface.albedo    = context.color * context.material.color * surfaceTexture;
-    surface.normal    = context.normal;
-    surface.roughness = context.material.roughness;
-    surface.metallic  = context.material.metallic;
+    surface._albedo    = context._color * context._material._color * surfaceTexture;
+    surface._normal    = context._normal;
+    surface._roughness = context._material._roughness;
+    surface._metallic  = context._material._metallic;
     return surface;
 }
 
+#if SW_VIEWMODE_SKIPS_LIGHTING
 float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
-    float3 lit;
-#if SW_VIEWMODE_SKIPS_LIGHTING
     // 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
-    lit = surface.albedo.rgb;
-#else
-    // 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
-    const float shadow = Shadow::sampleAtWorld( context.worldPosition, surface.normal );
-    lit                = Lighting::shadeLights( surface.albedo.rgb, context.worldPosition, surface.normal, shadow, surface.roughness, surface.metallic );
-    lit += Lighting::computeRimLight( surface.normal );
-#endif
-    return float4( lit, surface.albedo.a );
+    return surface._albedo;
 }
+#else
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
+{
+    // 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
+    const float shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
+    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, context._worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
+    lit += Lighting::computeRimLight( surface._normal );
+    return float4( lit, surface._albedo.a );
+}
+#endif
 
 #include "materialshadermain.hlsli"

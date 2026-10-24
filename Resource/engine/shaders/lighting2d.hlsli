@@ -58,13 +58,13 @@ static bool Lighting2d::isShadowed( float2 pixel, float2 lightPosition, uint lig
     for ( uint casterIndex = 0u; casterIndex < lightCount; ++casterIndex )
     {
         const LightData caster = g_SwLights[casterIndex];
-        if ( (uint)( caster.directionType.w + 0.5f ) != SW_LIGHT_TYPE_SHADOW2D )
+        if ( (uint)( caster._directionType.w + 0.5f ) != SW_LIGHT_TYPE_SHADOW2D )
             continue;
-        const float2 segmentStart = caster.positionRadius.xy;
-        const float2 segmentEnd   = caster.positionRadius.zw;
+        const float2 segmentStart = caster._positionRadius.xy;
+        const float2 segmentEnd   = caster._positionRadius.zw;
         // 빛을 등진 토막만 가린다 — 바깥쪽 방향이 빛을 보면 그 토막은 가림막의 "빛 쪽 얼굴" 이라 그 안쪽 픽셀을 가리면 안 된다.
         const float2 middle = ( segmentStart + segmentEnd ) * 0.5f;
-        if ( dot( caster.colorIntensity.xy, lightPosition - middle ) > 0.0f )
+        if ( dot( caster._colorIntensity.xy, lightPosition - middle ) > 0.0f )
             continue;
         if ( Lighting2d::segmentsCross( pixel, lightPosition, segmentStart, segmentEnd ) )
             return true;
@@ -78,19 +78,19 @@ static bool Lighting2d::isShadowed( float2 pixel, float2 lightPosition, uint lig
  */
 float LightData::computeLight2dAttenuation( float2 pixel )
 {
-    const float2 delta    = pixel - positionRadius.xy;
+    const float2 delta    = pixel - _positionRadius.xy;
     const float  distance = length( delta );
-    const float  outer    = max( positionRadius.w, 1e-4f );
-    const float  inner    = clamp( directionType.z, 0.0f, outer );
+    const float  outer    = max( _positionRadius.w, 1e-4f );
+    const float  inner    = clamp( _directionType.z, 0.0f, outer );
     if ( distance >= outer )
         return 0.0f;
     const float ramp        = saturate( ( outer - distance ) / max( outer - inner, 1e-4f ) );
-    float       attenuation = pow( ramp, max( params.w, 1e-3f ) );
-    const float cosOuter    = params.y;
+    float       attenuation = pow( ramp, max( _params.w, 1e-3f ) );
+    const float cosOuter    = _params.y;
     if ( cosOuter > -0.9999f && distance > 1e-4f )
     {
-        const float cosAngle = dot( delta / distance, directionType.xy );
-        const float cone     = saturate( ( cosAngle - cosOuter ) / max( params.z - cosOuter, 1e-4f ) );
+        const float cosAngle = dot( delta / distance, _directionType.xy );
+        const float cone     = saturate( ( cosAngle - cosOuter ) / max( _params.z - cosOuter, 1e-4f ) );
         attenuation *= cone;
     }
     return attenuation;
@@ -102,7 +102,7 @@ float LightData::computeLight2dAttenuation( float2 pixel )
  */
 float LightData::computeFreeformLight2dAttenuation( uint lightIndex, uint lightCount, float2 pixel )
 {
-    const uint edgeCount = min( (uint)( extra.z + 0.5f ), SW_LIGHT2D_MAX_FREEFORM_EDGES );
+    const uint edgeCount = min( (uint)( _extra.z + 0.5f ), SW_LIGHT2D_MAX_FREEFORM_EDGES );
     bool       bInside   = false;
     float      distance  = 3.402823466e+38f;
     for ( uint edgeIndex = 0u; edgeIndex < edgeCount; ++edgeIndex )
@@ -111,8 +111,8 @@ float LightData::computeFreeformLight2dAttenuation( uint lightIndex, uint lightC
         if ( element >= lightCount )
             break;
         const LightData edge     = g_SwLights[element];
-        const float2    start    = edge.positionRadius.xy;
-        const float2    end      = edge.positionRadius.zw;
+        const float2    start    = edge._positionRadius.xy;
+        const float2    end      = edge._positionRadius.zw;
         const float2    side     = end - start;
         const float     lengthSq = dot( side, side );
         const float     along    = ( lengthSq > 1e-12f ) ? saturate( dot( pixel - start, side ) / lengthSq ) : 0.0f;
@@ -125,8 +125,8 @@ float LightData::computeFreeformLight2dAttenuation( uint lightIndex, uint lightC
         return 0.0f;
     if ( bInside )
         return 1.0f;
-    const float ramp = saturate( 1.0f - distance / max( directionType.z, 1e-4f ) );
-    return pow( ramp, max( params.w, 1e-3f ) );
+    const float ramp = saturate( 1.0f - distance / max( _directionType.z, 1e-4f ) );
+    return pow( ramp, max( _params.w, 1e-3f ) );
 }
 
 /**
@@ -157,12 +157,12 @@ static float Lighting2d::computeShadow( float2 pixel, float2 lightPosition, floa
  */
 float3 LightData::sampleLight2dCookie( float2 pixel )
 {
-    const int cell = (int)floor( extra.w + 0.5f );
+    const int cell = (int)floor( _extra.w + 0.5f );
     if ( cell < 0 || g_Light2DCookieAtlasIndex == kInvalidIndex )
         return float3( 1.0f, 1.0f, 1.0f );
-    const float2 delta   = pixel - positionRadius.xy;
-    const float  outer   = max( positionRadius.w, 1e-4f );
-    const float2 along   = directionType.xy;
+    const float2 delta   = pixel - _positionRadius.xy;
+    const float  outer   = max( _positionRadius.w, 1e-4f );
+    const float2 along   = _directionType.xy;
     const float2 across  = float2( -along.y, along.x );
     const float2 local   = float2( dot( delta, along ), dot( delta, across ) ) / outer; // [-1, 1] 이 바깥 반경
     const float2 cellUv  = saturate( float2( local.x * 0.5f + 0.5f, 0.5f - local.y * 0.5f ) );
@@ -192,12 +192,12 @@ static float3 Lighting2d::shadeLights( float3 albedo, float2 pixel, float3 norma
     for ( uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex )
     {
         const LightData record = g_SwLights[lightIndex];
-        const uint      type   = (uint)( record.directionType.w + 0.5f );
+        const uint      type   = (uint)( record._directionType.w + 0.5f );
         if ( type == SW_LIGHT_TYPE_GLOBAL2D )
         {
             bAny2D    = true;
             bAnyAdded = true;
-            added += record.colorIntensity.rgb * record.colorIntensity.a;
+            added += record._colorIntensity.rgb * record._colorIntensity.a;
             continue;
         }
         const bool bPoint    = type == SW_LIGHT_TYPE_POINT2D;
@@ -205,21 +205,21 @@ static float3 Lighting2d::shadeLights( float3 albedo, float2 pixel, float3 norma
         if ( bPoint == false && bFreeform == false )
             continue;
         bAny2D            = true;
-        bAnyAdded         = bAnyAdded || ( (uint)( record.extra.y + 0.5f ) != SW_LIGHT2D_BLEND_MULTIPLY );
+        bAnyAdded         = bAnyAdded || ( (uint)( record._extra.y + 0.5f ) != SW_LIGHT2D_BLEND_MULTIPLY );
         float attenuation = bPoint ? record.computeLight2dAttenuation( pixel ) : record.computeFreeformLight2dAttenuation( lightIndex, lightCount, pixel );
         if ( attenuation <= 0.0f )
             continue;
         if ( bHasNormal )
         {
             // 빛은 스프라이트 평면에서 카메라 쪽(-Z)으로 높이만큼 떠 있다(자유 모양은 컴포넌트 원점).
-            const float3 toLight = normalize( float3( record.positionRadius.xy - pixel, -max( record.positionRadius.z, 1e-3f ) ) );
+            const float3 toLight = normalize( float3( record._positionRadius.xy - pixel, -max( record._positionRadius.z, 1e-3f ) ) );
             attenuation *= saturate( dot( normal, toLight ) );
         }
-        if ( record.params.x > 0.5f )
-            attenuation *= Lighting2d::computeShadow( pixel, record.positionRadius.xy, record.extra.x, lightCount );
+        if ( record._params.x > 0.5f )
+            attenuation *= Lighting2d::computeShadow( pixel, record._positionRadius.xy, record._extra.x, lightCount );
         const float3 cookie     = bPoint ? record.sampleLight2dCookie( pixel ) : float3( 1.0f, 1.0f, 1.0f );
-        const float3 radiance   = record.colorIntensity.rgb * record.colorIntensity.a * cookie;
-        const uint   blendStyle = (uint)( record.extra.y + 0.5f );
+        const float3 radiance   = record._colorIntensity.rgb * record._colorIntensity.a * cookie;
+        const uint   blendStyle = (uint)( record._extra.y + 0.5f );
         if ( blendStyle == SW_LIGHT2D_BLEND_MULTIPLY )
             multiplied *= lerp( float3( 1.0f, 1.0f, 1.0f ), radiance, attenuation );
         else

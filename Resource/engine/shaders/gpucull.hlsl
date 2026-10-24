@@ -31,10 +31,10 @@
 // startInstanceLocation 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
 struct RHIDrawIndirectCommand
 {
-    uint vertexCount;
-    uint instanceCount;
-    uint startVertexLocation;
-    uint startInstanceLocation;
+    uint _vertexCount;
+    uint _instanceCount;
+    uint _startVertexLocation;
+    uint _startInstanceLocation;
 };
 
 /**
@@ -125,26 +125,26 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
         return;
 
     const InstanceData instance   = g_Instances[instanceId];
-    const uint         batchIndex = instance.meshBatchIndex;
+    const uint         batchIndex = instance._meshBatchIndex;
     if ( batchIndex >= g_BatchCount )
         return;
 
     // 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanimation 도
     // 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
-    if ( isVisible( instance.boundsCenter, instance.boundsRadius ) == false )
+    if ( isVisible( instance._boundsCenter, instance._boundsRadius ) == false )
         return;
 
     // sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instanceId 가 곧 자기 자리다 —
     // 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
     // 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
-    if ( g_BatchInfo[batchIndex].sortMode == 1u )
+    if ( g_BatchInfo[batchIndex]._sortMode == 1u )
     {
         g_VisibleInstanceIDs[instanceId] = instanceId;
         return;
     }
 
     // 지난 프레임 장면 깊이 뒤에 숨은 인스턴스는 그리지 않는다(위 압축 포기 배치는 개수가 CPU 값이라 거르지 않는다).
-    if ( isOccluded( instance.boundsCenter, instance.boundsRadius ) )
+    if ( isOccluded( instance._boundsCenter, instance._boundsRadius ) )
         return;
 
     // 자리 하나를 예약하고 그 자리에 자기 번호를 적는다. slot 은 배치 안에서의 순서라 배치 시작
@@ -153,7 +153,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 #if defined( DX11 )
     // SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
     // (DX11 은 간접 인자 제약으로 컬링 자체를 돌리지 않으므로 이 경로는 실제로 쓰이지 않는다.)
-    InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, 1u, slot );
+    InterlockedAdd( g_IndirectArgs[batchIndex]._instanceCount, 1u, slot );
 #else
     // 웨이브 안에서 먼저 모으고 **웨이브당 한 번만** 원자 연산을 한다. 같은 배치에 인스턴스가 많을수록
     // (인스턴스드 렌더링에서는 그게 정상이다) 같은 주소에 대한 경합이 스레드 수만큼 쌓이기 때문이다.
@@ -169,17 +169,17 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
         const uint laneRank  = WavePrefixCountBits( true );
         uint       waveBase  = 0;
         if ( WaveIsFirstLane() )
-            InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, laneCount, waveBase );
+            InterlockedAdd( g_IndirectArgs[batchIndex]._instanceCount, laneCount, waveBase );
         slot = WaveReadLaneFirst( waveBase ) + laneRank;
     }
     else
     {
         // 첫 레인과 배치가 다른 레인들 — 드문 경우라 그냥 각자 원자 연산을 한다.
-        InterlockedAdd( g_IndirectArgs[batchIndex].instanceCount, 1u, slot );
+        InterlockedAdd( g_IndirectArgs[batchIndex]._instanceCount, 1u, slot );
     }
 #endif
 
-    const uint writeAt = g_BatchInfo[batchIndex].instanceBase + slot;
+    const uint writeAt = g_BatchInfo[batchIndex]._instanceBase + slot;
     if ( writeAt < g_InstanceCount )
         g_VisibleInstanceIDs[writeAt] = instanceId;
 }

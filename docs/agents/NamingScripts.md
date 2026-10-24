@@ -57,13 +57,22 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - **A pass or feature switch picks a definition, not a branch inside a body.** A step that a switch changes is a
   member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty
   definition), so the calling body reads the same in every permutation — the material skeleton's entry points
-  have no `#if` (`surface.applyAlphaCutoff()`, `context.storeSurface( surface )` in `materialshadermain.hlsli`).
-  Write new switches this way; the backend branches inside `binding.hlsli` texture functions predate the rule.
+  have no `#if` (`surface.applyAlphaCutoff()`, `context.storeSurface( surface )` in `materialshadermain.hlsli`;
+  a view-mode switch is `ViewMode::overrideLightingAlbedo()` or one `computeMaterialLighting` per case).
+  The gate flags a `#if` inside a function body unless its condition names a backend macro (`backend_macro` in
+  `Scripts/lint/rules/CheckShaderConventions.toml`: `DX11`, `DX12`, `__spirv__`, `SW_NATIVE_BINDLESS`) — the backends
+  differ in syntax and resources (FXC literal branches, SPIR-V attributes, bindless emulation), so one definition
+  cannot cover them. A `#if` directly inside a struct body (a field that exists only in some permutations) is a
+  declaration, not a body branch.
 - **Types** are `PascalCase` with no `_t` suffix and no `Sw` prefix (`InstanceData`, `PixelContext`, `PSInput`).
   A struct that mirrors a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
-- **Fields** are `camelCase`. A field that mirrors a C++ member is that member without the leading `_`
-  (`_startVertexLocation` → `startVertexLocation`). No opaque abbreviations: `position`, `normal`, `color`,
-  `worldPosition`, `vertexId` — not `pos`, `nrm`, `col`, `wpos`, `vid`.
+- **Struct fields** are `_camelCase`, as in a C++ plain-data struct (`PSInput::_position`, `context._worldPosition`).
+  A field that mirrors a C++ member has the same name (`_startVertexLocation`), so no conversion rule exists. A
+  member function reads its own fields by bare name (`_position`). No opaque abbreviations: `_position`, `_normal`,
+  `_color`, `_worldPosition`, `_vertexId` — not `_pos`, `_nrm`, `_col`, `_wpos`, `_vid`. Material struct fields
+  (`SW_MATERIAL_BEGIN`) follow the same rule, and they are string-bound: a `.material` property `name` and a C++
+  parameter name (`setVectorParameter( hashed_string( "_color" ), … )`) are the field name with its `_`, so renaming
+  a field changes the shader, the assets and the C++ in one commit.
 - **Locals and parameters** are `camelCase` and descriptive — no single letters, no `i` / `j` / `k`, no
   `idx` / `inst` / `ao` / `dtid`. `out` / `inout` parameters start with `out` / `inout` (`outPosition`).
   A fixed-size local array takes `arr` + a singular noun (`arrOffset[4]`). `groupshared` variables take `s_`
@@ -78,7 +87,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   so they are not renamed for style and the container, plural and abbreviation rules do not apply to them.
   The same holds for every other string-bound name: cbuffer names (`PassCB`, `CullParams`, `SwRootConstants`),
   semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), the macros in `bindingslots.hlsli`
-  (C++ includes that file), material struct fields (`.material` files bind them) and shader file names.
+  (C++ includes that file) and shader file names.
   An exemption from the rules above is a named entry with its reason in the gate (`kStringBoundName`).
 - **Formatting**: `clang-format` formats shaders as it does C++ (`Resource/.clang-format` inherits the root file;
   the commit hook checks staged shaders, `FormatModified.py` fixes them). A compute entry point takes

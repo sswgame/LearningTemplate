@@ -70,7 +70,7 @@ SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial
     sw::MaterialInstance* pInstance = pSprite->getRawMaterialInstance();
     SW_ASSERT_NOT_NULL( pInstance );
     SW_EXPECT_TRUE( pInstance->getParent() == pSprite->getMaterial() );
-    SW_EXPECT_STREQ( kTextureA, pInstance->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
+    SW_EXPECT_STREQ( kTextureA, pInstance->getTextureParameter( sw::hashed_string( "_albedoMap" ) ).c_str() );
 }
 
 /**
@@ -170,7 +170,7 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
     pSprite->setClipPath( ::test::makeTempResourceID( clipPath ) );
     SW_ASSERT_NOT_NULL( pSprite->getClip() );
     SW_ASSERT_NOT_NULL( pSprite->getRawMaterialInstance() );
-    SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
+    SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "_albedoMap" ) ).c_str() );
 
     pSprite->setClipFrame( 1 );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
@@ -180,7 +180,7 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
 
     // 텍스처 칸이 아틀라스를 이긴다.
     pSprite->setTextureName( kTextureA );
-    SW_EXPECT_STREQ( kTextureA, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
+    SW_EXPECT_STREQ( kTextureA, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "_albedoMap" ) ).c_str() );
 
     // 읽을 수 없는 클립: 알리고 UV 사각형으로 그린다.
     {
@@ -248,7 +248,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     pSprite->onPropertyChanged( sw::hashed_string( "_clipPath" ) ); // 값은 같다
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
     SW_ASSERT_NOT_NULL( pSprite->getRawMaterialInstance() );
-    SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "albedoMap" ) ).c_str() );
+    SW_EXPECT_STREQ( kTextureB, pSprite->getRawMaterialInstance()->getTextureParameter( sw::hashed_string( "_albedoMap" ) ).c_str() );
 
     // 아무도 쓰지 않는 경로는 다시 읽을 것이 없다(다음 `acquire` 가 새 내용을 읽는다).
     SW_EXPECT_FALSE( sw::SharedAssetCache<sw::SpriteClipAsset>::reloadShared( test::makeTempPath( "nobody_holds.sprite.xml" ) ) );

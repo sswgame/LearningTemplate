@@ -18,18 +18,18 @@ static const uint kCanvasFlagMultiChannelGlyph = 2u; // 글리프 아틀라스 �
 
 struct CanvasQuad
 {
-    float4 rect;         // x, y(변환 전 왼쪽 위의 화면 위치) · 너비, 높이(픽셀)
-    float4 uvRect;       // u0, v0, u1, v1
-    float4 color;        // 곧은 RGBA
-    float4 borderColor;  // Rect: 테두리 색 · Glyph: 외곽선 색
-    float4 cornerRadius; // 왼위 · 오위 · 오아 · 왼아(픽셀)
-    float4 clipRect;     // 둥근 자르기 x0, y0, x1, y1(픽셀)
-    float4 axis;         // 2×2 변환 — 축 X = xy · 축 Y = zw
-    float4 params;       // Rect: x 테두리 · Glyph: x 거리 배율 · y 외곽선 · z 굵게 · Shadow: y 흐림 · w 둥근 자르기 반지름
-    uint   kind;
-    uint   textureSlot; // 일괄 텍스처 번호(0..3), 없음 = kInvalidIndex
-    uint   flags;
-    uint   anchor; // 화면 앵커 번호, 없음 = kInvalidIndex — 앵커는 버퍼 맨 앞 원소들이고 rect 가 (x, y, 배율, -) 다(C++ CanvasAnchor)
+    float4 _rect;         // x, y(변환 전 왼쪽 위의 화면 위치) · 너비, 높이(픽셀)
+    float4 _uvRect;       // u0, v0, u1, v1
+    float4 _color;        // 곧은 RGBA
+    float4 _borderColor;  // Rect: 테두리 색 · Glyph: 외곽선 색
+    float4 _cornerRadius; // 왼위 · 오위 · 오아 · 왼아(픽셀)
+    float4 _clipRect;     // 둥근 자르기 x0, y0, x1, y1(픽셀)
+    float4 _axis;         // 2×2 변환 — 축 X = xy · 축 Y = zw
+    float4 _params;       // Rect: x 테두리 · Glyph: x 거리 배율 · y 외곽선 · z 굵게 · Shadow: y 흐림 · w 둥근 자르기 반지름
+    uint   _kind;
+    uint   _textureSlot; // 일괄 텍스처 번호(0..3), 없음 = kInvalidIndex
+    uint   _flags;
+    uint   _anchor; // 화면 앵커 번호, 없음 = kInvalidIndex — 앵커는 버퍼 맨 앞 원소들이고 rect 가 (x, y, 배율, -) 다(C++ CanvasAnchor)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_PASS_SRV );
@@ -49,11 +49,11 @@ SW_ROOT_CONSTANTS_END
 
 struct PSInput
 {
-    float4               position : SV_POSITION;
-    float2               local : TEXCOORD0; // 사각형 안 픽셀(0..너비, 0..높이) — 넓힌 가장자리는 밖
-    float2               uv : TEXCOORD1;
-    float2               screen : TEXCOORD2; // 대상 픽셀(둥근 자르기)
-    nointerpolation uint quadIndex : TEXCOORD3;
+    float4               _position : SV_POSITION;
+    float2               _local : TEXCOORD0; // 사각형 안 픽셀(0..너비, 0..높이) — 넓힌 가장자리는 밖
+    float2               _uv : TEXCOORD1;
+    float2               _screen : TEXCOORD2; // 대상 픽셀(둥근 자르기)
+    nointerpolation uint _quadIndex : TEXCOORD3;
 };
 
 static const float2 kCornerTable[6] = { float2( 0.0f, 0.0f ), float2( 1.0f, 0.0f ), float2( 0.0f, 1.0f ),
@@ -83,81 +83,81 @@ uint selectTexture( uint slot )
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
 {
     PSInput output;
-    input.position             = input.position;
+    input._position            = input._position;
     const uint       quadIndex = SW_ROOT( g_SwCanvasQuadBase ) + instanceId;
     const CanvasQuad quad      = g_SwCanvasQuads[quadIndex];
     const float2     corner    = kCornerTable[vertexId % 6u];
     // 모양을 셰이더가 깎는 종류(사각형 · 그림자)는 가장자리 계단 없애기 1 px · 흐림만큼 넓힌다. 텍스처 종류는 UV 가 밖으로 새지 않게 넓히지 않는다.
     float expand = 0.0f;
-    if ( quad.kind == kCanvasQuadRect )
+    if ( quad._kind == kCanvasQuadRect )
         expand = 1.0f;
-    else if ( quad.kind == kCanvasQuadShadow )
-        expand = quad.params.y * 2.0f + 1.0f;
-    const float2 local  = lerp( float2( -expand, -expand ), quad.rect.zw + expand, corner );
-    float2       screen = quad.rect.xy + local.x * quad.axis.xy + local.y * quad.axis.zw;
+    else if ( quad._kind == kCanvasQuadShadow )
+        expand = quad._params.y * 2.0f + 1.0f;
+    const float2 local  = lerp( float2( -expand, -expand ), quad._rect.zw + expand, corner );
+    float2       screen = quad._rect.xy + local.x * quad._axis.xy + local.y * quad._axis.zw;
     // 화면 마커 — 사각형은 앵커 점 기준으로 칠했다. 앵커가 움직여도 사각형 버퍼는 그대로다(앵커 원소만 올린다).
-    if ( quad.anchor != kInvalidIndex )
+    if ( quad._anchor != kInvalidIndex )
     {
-        const float4 anchor = g_SwCanvasQuads[quad.anchor].rect;
+        const float4 anchor = g_SwCanvasQuads[quad._anchor]._rect;
         screen              = anchor.xy + screen * anchor.z;
     }
-    output.position  = float4( screen.x / SW_ROOT( g_SwCanvasTargetWidth ) * 2.0f - 1.0f, 1.0f - screen.y / SW_ROOT( g_SwCanvasTargetHeight ) * 2.0f, 0.0f, 1.0f );
-    output.local     = local;
-    output.uv        = lerp( quad.uvRect.xy, quad.uvRect.zw, local / max( quad.rect.zw, float2( 1e-5f, 1e-5f ) ) );
-    output.screen    = screen;
-    output.quadIndex = quadIndex;
+    output._position  = float4( screen.x / SW_ROOT( g_SwCanvasTargetWidth ) * 2.0f - 1.0f, 1.0f - screen.y / SW_ROOT( g_SwCanvasTargetHeight ) * 2.0f, 0.0f, 1.0f );
+    output._local     = local;
+    output._uv        = lerp( quad._uvRect.xy, quad._uvRect.zw, local / max( quad._rect.zw, float2( 1e-5f, 1e-5f ) ) );
+    output._screen    = screen;
+    output._quadIndex = quadIndex;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const CanvasQuad quad     = g_SwCanvasQuads[input.quadIndex];
-    const float2     halfSize = quad.rect.zw * 0.5f;
-    float4           color    = quad.color;
+    const CanvasQuad quad     = g_SwCanvasQuads[input._quadIndex];
+    const float2     halfSize = quad._rect.zw * 0.5f;
+    float4           color    = quad._color;
     float            coverage = 1.0f;
 
-    if ( quad.kind == kCanvasQuadRect )
+    if ( quad._kind == kCanvasQuadRect )
     {
-        const float distance       = computeRoundedBoxDistance( input.local - halfSize, halfSize, quad.cornerRadius );
+        const float distance       = computeRoundedBoxDistance( input._local - halfSize, halfSize, quad._cornerRadius );
         const float fillCoverage   = saturate( 0.5f - distance );
-        const float borderCoverage = ( quad.params.x > 0.0f ) ? saturate( 0.5f + distance + quad.params.x ) : 0.0f;
+        const float borderCoverage = ( quad._params.x > 0.0f ) ? saturate( 0.5f + distance + quad._params.x ) : 0.0f;
         // 테두리 띠는 테두리 색, 안쪽은 채움 색 — 둘 다 곧은 색이라 여기서 섞고 아래에서 한 번 프리멀티플라이한다.
-        color    = lerp( quad.color, quad.borderColor, borderCoverage );
+        color    = lerp( quad._color, quad._borderColor, borderCoverage );
         coverage = fillCoverage;
     }
-    else if ( quad.kind == kCanvasQuadImage )
+    else if ( quad._kind == kCanvasQuadImage )
     {
-        color *= MaterialTexture::sampleIndex( selectTexture( quad.textureSlot ), input.uv );
-        if ( any( quad.cornerRadius > 0.0f ) )
-            coverage = saturate( 0.5f - computeRoundedBoxDistance( input.local - halfSize, halfSize, quad.cornerRadius ) );
+        color *= MaterialTexture::sampleIndex( selectTexture( quad._textureSlot ), input._uv );
+        if ( any( quad._cornerRadius > 0.0f ) )
+            coverage = saturate( 0.5f - computeRoundedBoxDistance( input._local - halfSize, halfSize, quad._cornerRadius ) );
     }
-    else if ( quad.kind == kCanvasQuadGlyph )
+    else if ( quad._kind == kCanvasQuadGlyph )
     {
         // 아틀라스 값 0..1 → 윤곽까지의 화면 픽셀 거리(안쪽 +). params.x = 2 × spread × (화면 px / 래스터 px).
-        const float4 atlasSample = MaterialTexture::sampleIndex( selectTexture( quad.textureSlot ), input.uv );
+        const float4 atlasSample = MaterialTexture::sampleIndex( selectTexture( quad._textureSlot ), input._uv );
         // MSDF 는 세 채널의 중앙값이 안팎을 정한다 — 쌍선형 보간해도 모서리가 둥글어지지 않는다. SDF 는 R 채널 하나다.
-        const float sdfValue = ( ( quad.flags & kCanvasFlagMultiChannelGlyph ) != 0u )
+        const float sdfValue = ( ( quad._flags & kCanvasFlagMultiChannelGlyph ) != 0u )
                                  ? max( min( atlasSample.r, atlasSample.g ), min( max( atlasSample.r, atlasSample.g ), atlasSample.b ) )
                                  : atlasSample.r;
-        const float distance = ( sdfValue - 0.5f ) * quad.params.x + quad.params.z;
+        const float distance = ( sdfValue - 0.5f ) * quad._params.x + quad._params.z;
         const float fill     = saturate( distance + 0.5f );
-        const float outline  = ( quad.params.y > 0.0f ) ? saturate( distance + quad.params.y + 0.5f ) : fill;
-        color                = lerp( quad.borderColor, quad.color, ( outline > 0.0f ) ? fill / outline : 0.0f );
+        const float outline  = ( quad._params.y > 0.0f ) ? saturate( distance + quad._params.y + 0.5f ) : fill;
+        color                = lerp( quad._borderColor, quad._color, ( outline > 0.0f ) ? fill / outline : 0.0f );
         coverage             = outline;
     }
     else
     {
         // 흐린 둥근 상자 그림자 — 부호 거리를 흐림 폭으로 부드럽게(가우시안 적분의 근사).
-        const float distance = computeRoundedBoxDistance( input.local - halfSize, halfSize, quad.cornerRadius );
-        const float blur     = max( quad.params.y, 0.5f );
+        const float distance = computeRoundedBoxDistance( input._local - halfSize, halfSize, quad._cornerRadius );
+        const float blur     = max( quad._params.y, 0.5f );
         coverage             = 1.0f - smoothstep( -blur, blur, distance );
     }
 
-    if ( ( quad.flags & kCanvasFlagRoundedClip ) != 0u )
+    if ( ( quad._flags & kCanvasFlagRoundedClip ) != 0u )
     {
-        const float2 clipHalf   = ( quad.clipRect.zw - quad.clipRect.xy ) * 0.5f;
-        const float2 clipCenter = ( quad.clipRect.zw + quad.clipRect.xy ) * 0.5f;
-        coverage *= saturate( 0.5f - computeRoundedBoxDistance( input.screen - clipCenter, clipHalf, quad.params.wwww ) );
+        const float2 clipHalf   = ( quad._clipRect.zw - quad._clipRect.xy ) * 0.5f;
+        const float2 clipCenter = ( quad._clipRect.zw + quad._clipRect.xy ) * 0.5f;
+        coverage *= saturate( 0.5f - computeRoundedBoxDistance( input._screen - clipCenter, clipHalf, quad._params.wwww ) );
     }
     const float  alpha     = color.a * coverage;
     const float3 corrected = ColorVision::applyCorrection( color.rgb, SW_ROOT( g_SwCanvasColorVision ) );
