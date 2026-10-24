@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 G(브랜치 14 개)가 main 에 들어가 push 됐다(Debug 빌드 경고 0 · lint 통과). 테스트(`nogpu` · 바뀐 영역) · Release 쿠킹 · GPU 확인이 남았다(`## 00000`). 다음 묶음은 `staticgate` · `poseaudit` · `staticleft` 다.
+> 결론: main 은 통합 G 와 그 검증(Debug `nogpu` · `lint` · `race` 통과, Release 쿠킹 통과)까지 끝났고 GPU 확인에서 글자 깨짐 · `_roughness` Error · 에디터 시나리오 위젯 미표시 같은 결함이 나왔다. 그 수정과 정리 브랜치 열 개가 아직 main 에 안 들어갔다(`## 000000`, 병합 순서 포함). 그다음이 아키텍처 이음매와 리팩토링 트랙([ArchitectureSeams](ArchitectureSeams.md))이다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -15,6 +15,45 @@
 | 작업 방식 · 검증 | [작업 방식](../11_Workflow.md), [검증과 측정](../08_Verification.md) |
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
+
+## 000000. 2026-10-25 통합 H 대기 — 수정 · 정리 브랜치 열이 main 에 안 들어감 (이것부터 읽는다)
+
+**상태**: main 은 `00a6fc842` 이고 push 했다. 아래 브랜치는 모두 `D:/w/<이름>` 워크트리에 커밋만 있고(린트 통과, 빌드 · 테스트 · 실행 안 함) 병합 전이다. 작업자 보고는 각 브랜치의 `git log main..wt/<이름>` 과 커밋 메시지가 원본이다.
+
+| 브랜치 | 내용 | 통합이 볼 것 |
+|---|---|---|
+| `wt/glyphbudget` | 글자 깨짐의 근본 원인: 프로파일러가 꺼진 기본 설정에서 `FrameProfiler::getFrameCount()` 가 늘 0 이라 글리프 래스터 예산이 프레임마다 되살아나지 않았다. 프레임 시계를 `GlyphCache` 가 쥐고 `Engine::updateFrameServices` 가 올린다. 탐침 `UI.DeferredGlyphs`, `uidemo` 시나리오가 글리프가 다 채워지길 기다린다 | 컴파일(`WidgetProbes.cpp`), `WaitUntil` 시한 초과가 종료 14 가 아니라 실패인지, Shooter3D HUD 프레임 3 · 300 |
+| `wt/roughnessparam` | `MaterialScalar` 드라이브가 스칼라 파라미터에 float4 글을 써서 `_roughness` Error 299 회. `MaterialInstance` 가 모양이 어긋나면 `Material.ParameterShapeMismatch` 로 거절 | Water · Terrain · Foliage · Environment 에서 새 Error 가 없는지 |
+| `wt/editorscen` | 에디터 시나리오 위젯 표식: 입력 상태를 서브시스템이 쥐게 한 변경 뒤 `setEnabled` 가 주인 없이 버려졌다. 상태를 `EditorStateStore` 로, `ContentWatchFence` 비교를 전체 경로로, `editor.meshmodifiers` 한 프레임 겹침 분리 | 에디터 시나리오 8 개 단독, `EditorScenariosPassOn<백엔드>` 체인 |
+| `wt/scenfixes` | `X11DevConsoleTest` 빈 스위트, `nilecity.pause`(가상 커서가 마우스 오른쪽으로 새던 것 — `UIInputConsumption::isSlotConsumed`), HUD 이름 불일치. **`shooter3d.crowd` 는 시나리오 단언만 `WaitUntil` 로 바꿨고 근본 원인은 못 찾았다** | `nilecity` pause · control · gamepadcursor, crowd 의 `WaitUntil` 시한 |
+| `wt/scenlogs` | 시나리오 Warning/Error 강제: 종료 코드 15 `UnhandledLog`, 허용 목록 `allowedlogs.json`(id · 범위 · 사유 · 계획 필수), 래칫, `py -3 -m Scripts scenario-logs`. `KnownLog` 계열 삭제 | 컴파일(`HostLogJudge`), `hostgpu` 로 15 가 서는지, `--regen` 은 `--dry-run` 먼저 |
+| `wt/logids` | `countContaining` 약 120 곳을 로그 id 로, 로그 소스 약 50 개 파일에 `SW_LOG_*_ID`, 후속 커밋으로 뭉뚱그린 기본 id 분리 | **`scenlogs` 와 충돌**: 둘 다 `KnownLog` 를 고쳤다 — `scenlogs` 기준(허용 목록)으로 풀고 `logids` 의 `KnownLog` 변경은 버린다. `registrylogs` 를 먼저 병합(`Registration.*` id) |
+| `wt/registrylogs` | `RegistrationList::addLogged` · `NameRegistry::addLogged`, 손 로그 18 곳 통일, `add` 에 `[[nodiscard]]`, `addOrReplace` 빈 이름 거절 | `nodiscard` 경고가 남은 호출처, `getList()` 로 받는 호출 |
+| `wt/apptestfeature` | `AppTestUtil` 이 필요 기능을 표로 확인, 구성 · 플랫폼 차이를 `SW_TEST_SKIP` 하던 22 곳을 `SW_TEST_REQUIRES_FEATURE` 로, `BuildFeature` 일곱 개 추가 | `TestCatalog.cpp` 컴파일(매크로 보임). **`scenfixes` 와 `TestCase.h` 열거형 끝 · `TestCatalog.cpp` 표 끝에서 충돌** — 둘 다 남긴다 |
+| `wt/lowlevelgaps` | `SW_LOG_ASSERT` 가 멈추기 전에 stderr 에 쓰고, 싱크 없을 때 줄을 버리지 않는다. 후속(`registerGlobalListener` 빈 핸들 등)이 돌고 있었다 — 워크트리 `git log` 로 확인 | stderr 테스트 유무 |
+| `wt/lowtier` | Core 낮은 티어를 `Core_low_objects` + `pchLow.h` 로 분리해 pch 로 새는 위 티어 선언을 컴파일 오류로. 규칙 4 의 `_ID` 변형 구멍을 고침. CMake 가 `CheckCoreLayers.toml` 의 티어를 직접 읽는다 | Debug · Release · Debug-Cold · 정적 Shipping · CI-Debug-STL 링크, `PoolAllocator.cpp` 에 `SW_LOG_ERROR` 임시로 넣어 실패 확인, 유니티 빌드 |
+| `wt/gputhresholds` | (진행 중이었다) `sky` · `vfxgpulights` 등 문턱을 측정값으로, GL 의 GPU 라이트, `useroptions` dx12 차이, 골든 8 어두워짐 판정. 커밋이 없으면 처음부터 | 아래 "GPU 확인에서 나온 값" |
+| `wt/staticgate` · `wt/poseaudit` · `wt/staticleft` | 이전 묶음. 아래 "다음 묶음" 그대로 | `staticgate` 병합 뒤 `CheckMutableStatics --regen-baseline` |
+
+**병합 순서**: ① `registrylogs` → ② `scenlogs` → ③ `logids`(`KnownLog` 충돌은 ② 기준) → ④ `apptestfeature` + `scenfixes`(열거형 · 표 충돌은 둘 다 남김) → ⑤ `lowlevelgaps` · `lowtier` → ⑥ `glyphbudget` · `roughnessparam` · `editorscen` · `gputhresholds` → ⑦ `staticgate` · `poseaudit` · `staticleft`. 통합은 새 main 위에 워크트리를 만들고 `-k 0` 빌드로 오류를 한 번에 모은 뒤 고친다. 빌드 · 검증 · 측정은 각각 한 번.
+
+**GPU 확인에서 나온 것(main `00a6fc842`, Release · Shipping, 네 백엔드, `gpu-verifier` 보고)**
+- 글자 깨짐은 재현 · 확정(위 `glyphbudget`). 자간은 정상(글자가 다 그려진 상태에서 SDF · MSDF · 백엔드 네 조합의 글자 시작 위치가 화소 단위로 같다). 사용자가 본 자간 이상은 글리프 누락이었다.
+- CCTV 줄무늬는 결함이 아니다: `cctvmonitor.material` 의 `_scanlineCount=90`(UV 기준) 가로 주사선이 셰이더 의도대로 그려진다. 불만이면 줄 수 · 세기(데이터)를 바꾼다.
+- 석궁은 Shooter3D 에 없다(소총 · 산탄총 · 권총뿐, 활은 다른 게임 영역). 3 인칭 카메라가 뒤라 무기를 못 봤다 — 측면 카메라 캡처가 필요하다. 사용자가 본 위치 이상이 어느 장면인지 다시 물을 것.
+- 졌던 것: `ShippingSceneMatchesGoldenImage`(dx12, 중앙 상자 옆면이 균일하게 8 어두워짐 — 의도면 골든 갱신), `vfxgpulights`(문턱 틀림 + gl 은 GPU 라이트가 사실상 안 그려짐), `sky`(문턱 어림값 틀림), `useroptions` 의 `distance`(dx12 만 0.3073, 나머지 0.665), 에디터 시나리오 · 체인, `_roughness` Error, `crowd`(`Animation.CrowdSharedUnits >= 2, got 1`), `nilecity.pause`.
+- 종료 코드 14(Unconfirmed) 14 개와 측정값은 `gputhresholds` 가 문턱으로 옮긴다(보고에 `metric` 값 표가 있었다).
+- 지형 여덟 레이어 · 지오모프 전용 시나리오는 저장소에 없다 — 시나리오로 만든다.
+
+**아직 못 고친 것**: `editor.charactereditor` 체인(`charactereditor.slider.last` 가 창 밖 — `CharacterEditorPanel.cpp` 의 첫 슬라이더에 `note`), `startAfter="Immediately"` 시나리오가 `ContentWatchFence` 를 못 막는 것(`AutomationRunner::onFrameBegin` 이 시작 차단을 무시), `shooter3d.crowd` 근본 원인, `scenlogs` 가 15 로 끝나게 만드는 **id 없는 `SW_LOG_WARNING/ERROR` 약 3,500 곳**(`scenario-logs --regen` 의 "id 없음" 표를 영역별로 나눠 소스에 `_ID` 를 붙인다 — 병렬 작업자), 한영 숫자 혼합에서 중립 문자가 앞 런의 글꼴을 이어받는 동작(의도로 정할지), 가짜 굵게가 레이아웃 폭을 안 바꿈, 한글 · 숫자 자간 측정, MSDF 베어링 단언, HarfBuzz 경로의 `.ttc` face index 0 고정(복합 문자 빌드를 켜면 문제).
+
+**다음 세션에서 할 일(순서)**
+1. 위 병합 순서대로 통합(`integrator`), 컴파일 → `nogpu` · `lint` · `race` → Release 쿠킹 → GPU 확인(`gpu-verifier`, 건너뜀 규칙과 "Warning/Error 는 통과가 아니다" 규칙을 지시문에 적는다).
+2. [ArchitectureSeams](ArchitectureSeams.md)의 0 단계(측정, 통합 혼자)와 1a · 1b · 2a · 3 · 4(병렬 가능) 착수. 리팩토링 트랙은 같은 문서 3 절(중복 기능 통합 · 불필요한 래핑 걷기).
+3. 후보로 올린 것: ① **`half` · `half2~4` 저장 전용 압축 타입**(+ `unorm` · `snorm` · 옥타헤드럴 법선 · `RGB10A2`, 이식 가능한 비트 연산 구현, 산술은 `float` 로 풀어서, 월드 좌표 · 큰 시간값에는 쓰지 않음을 문서화. 단위: Core/Math 타입과 테스트 → 직렬화 · 리플렉션 → 정점 · 인스턴스 데이터 적용. 결정 기록에 한 줄). ② **시나리오 단계 인자를 리플렉션 구조체로 선언**해 스키마를 자동으로 만들고 린트에서 시나리오 XML 을 검증, 탐침을 `Probe` 속성이 달린 프로퍼티에서 노출(속성을 단 것만 공개 계약). 단계 인자가 이미 스키마를 갖는지 먼저 코드로 확인한다. ③ `scenario-logs` 래칫을 `suite` 항목에도.
+4. 사용자 결정은 [ArchitectureSeams](ArchitectureSeams.md) 4 절의 둘(GPU CI 자동화, 작업자 빌드 금지 규칙 재검토)뿐이다.
+
+**교훈(이번 세션)**: ① 기본 설정에서만 깨지는 결함(프로파일러 꺼짐)은 단위 테스트가 프레임 번호를 직접 넣어 못 본다 — 기본 구성으로 도는 시나리오가 잡아야 한다. ② 종료 코드 0 · 14 만 보면 Error 가 있는 시나리오가 초록이었다(`scenlogs` 가 막는다). ③ 작업자가 단언을 완화하는 쪽(`crowd` 의 `WaitUntil`)으로 풀면 근본 원인이 남는다 — 보고에서 "원인을 못 찾았다" 를 놓치지 말 것. ④ 워크트리에는 `graphify-out/graph.json` 이 없다: MCP 에 `project_path="D:/Projects/Personal/LearningTemplate"` 를 넘기고, `add` 같은 흔한 이름은 그래프가 섞이니 grep 으로 보강. ⑤ 이 세션의 셸은 PATH 등록 전에 시작해 `graphify` 를 못 찾았다(사용자 PATH 에 `...\Python314\Scripts` 를 등록했으니 새 터미널부터 된다).
 
 ## 00000. 2026-10-25 통합 G — 브랜치 14 개가 main 에 들어감(push), 테스트 · 쿠킹 · GPU 대기 (이것부터 읽는다)
 
