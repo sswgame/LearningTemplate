@@ -14,15 +14,22 @@ namespace sw
             /** @brief 창 닫기에 OS 가 주는 시간(약 5 초)보다 짧게 기다린다 — 넘기면 OS 가 정리 도중에 프로세스를 끝낸다. */
             static constexpr DWORD kCloseWaitMilliseconds = 4500;
 
-            static inline HANDLE         s_hShutdownComplete{ nullptr };
             static inline bool           s_bInstalled{ false };
             static inline atomic<uint32> s_serviceMode{ 0 };
             static inline atomic<uint32> s_interruptCount{ 0 };
 
+            /** @brief 종료 완료 사건 — 첫 호출이 만든다. 함수 안 정적 변수라 여러 스레드가 동시에 처음 불러도 한 번만 만든다(실패하면 nullptr). */
+            static HANDLE completeEvent()
+            {
+                static const HANDLE s_hComplete = CreateEventW( nullptr, TRUE, FALSE, nullptr );
+                return s_hComplete;
+            }
+
             static void waitForShutdownComplete()
             {
-                if ( s_hShutdownComplete != nullptr )
-                    (void)WaitForSingleObject( s_hShutdownComplete, kCloseWaitMilliseconds );
+                const HANDLE hComplete = completeEvent();
+                if ( hComplete != nullptr )
+                    (void)WaitForSingleObject( hComplete, kCloseWaitMilliseconds );
             }
 
             /** @brief 콘솔 제어 처리기 — OS 가 새 스레드에서 부른다. TRUE 를 돌려주면 다음 처리기(기본 = 즉시 종료)로 넘기지 않는다. */
@@ -65,12 +72,6 @@ namespace sw
                     }
                 }
             }
-
-            static void ensureCompleteEvent()
-            {
-                if ( s_hShutdownComplete == nullptr )
-                    s_hShutdownComplete = CreateEventW( nullptr, TRUE, FALSE, nullptr );
-            }
         };
     } // namespace
 
@@ -78,10 +79,9 @@ namespace sw
     {
         if ( WindowsShutdownSignalInternal::s_bInstalled )
             return true;
-        WindowsShutdownSignalInternal::ensureCompleteEvent();
         const bool bInstalled                       = SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, TRUE ) != FALSE;
         WindowsShutdownSignalInternal::s_bInstalled = bInstalled;
-        return bInstalled && WindowsShutdownSignalInternal::s_hShutdownComplete != nullptr;
+        return bInstalled && WindowsShutdownSignalInternal::completeEvent() != nullptr;
     }
 
     void ShutdownSignal::uninstall()
@@ -94,8 +94,9 @@ namespace sw
 
     void ShutdownSignal::notifyShutdownComplete()
     {
-        if ( WindowsShutdownSignalInternal::s_hShutdownComplete != nullptr )
-            (void)SetEvent( WindowsShutdownSignalInternal::s_hShutdownComplete );
+        const HANDLE hComplete = WindowsShutdownSignalInternal::completeEvent();
+        if ( hComplete != nullptr )
+            (void)SetEvent( hComplete );
     }
 
     void ShutdownSignal::setServiceMode( bool bServiceMode )
@@ -107,13 +108,13 @@ namespace sw
     {
         _s_requestedCause.store( static_cast<uint8>( ShutdownCause::None ), std::memory_order_release );
         WindowsShutdownSignalInternal::s_interruptCount.store( 0, std::memory_order_relaxed );
-        if ( WindowsShutdownSignalInternal::s_hShutdownComplete != nullptr )
-            (void)ResetEvent( WindowsShutdownSignalInternal::s_hShutdownComplete );
+        const HANDLE hComplete = WindowsShutdownSignalInternal::completeEvent();
+        if ( hComplete != nullptr )
+            (void)ResetEvent( hComplete );
     }
 
     bool ShutdownSignal::dispatchConsoleControlForTest( uint32 controlType )
     {
-        WindowsShutdownSignalInternal::ensureCompleteEvent();
         return WindowsShutdownSignalInternal::onConsoleControl( static_cast<DWORD>( controlType ) ) != FALSE;
     }
 } // namespace sw
