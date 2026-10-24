@@ -116,6 +116,82 @@ namespace sw
                 }
                 return listEntry;
             }
+
+            /**
+             * @brief 패치를 만들 입력(폴더 · 빌드 이름)을 검사하고, 이전 빌드 기록을 읽습니다.
+             * @return 입력이 모자라거나, 기록을 읽지 못하거나, 패치 없는 빌드이거나, 새 빌드가 이전 빌드와 같으면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool readPreviousRecord( const PackPatchBuildParams& params, PackBuildRecord& outPrevious )
+            {
+                const bool bMissingParam = params._packsDirectory.empty() || params._previousRecordPath.empty() || params._outputDirectory.empty();
+                if ( bMissingParam )
+                {
+                    SW_LOG_ERROR( "Making a patch needs the new pack folder, the previous build record and an output folder" );
+                    return false;
+                }
+                if ( PackPatchBuilder::isValidBuildName( params._newBuild ) == false )
+                {
+                    SW_LOG_ERROR( "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", params._newBuild );
+                    return false;
+                }
+                string previousText;
+                if ( FileUtil::readTextFile( params._previousRecordPath, previousText ) == false )
+                {
+                    SW_LOG_ERROR( "Previous build record '%#' could not be read", params._previousRecordPath );
+                    return false;
+                }
+                if ( PackPatchUtil::parseBuildRecord( previousText, params._previousRecordPath, outPrevious ) == false )
+                    return false;
+                if ( outPrevious._patching == PackPatching::None )
+                {
+                    SW_LOG_ERROR( "Previous build record '%#' says patching=\"none\" - a build that takes no patches has no content list to patch from", params._previousRecordPath );
+                    return false;
+                }
+                if ( outPrevious._build == params._newBuild )
+                {
+                    SW_LOG_ERROR( "The new build '%#' is the same as the previous build - a patch goes from one build to another", params._newBuild );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 바뀐 파일을 새 빌드의 팩에서 읽어 전체 경로로 @p inoutWriter 에 담습니다. 팩을 열지 못하거나 파일을 읽지 못하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool addChangedFiles( const PackPatchBuildParams& params, const vector<string>& listPackPath, const vector<Source>& listSource, const PackDelta& delta,
+                                                       ResourcePakWriter& inoutWriter )
+            {
+                unordered_map<string, size_t> mapFullPathToSource;
+                for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
+                {
+                    mapFullPathToSource.emplace( listSource[sourceIndex]._fullPath, sourceIndex );
+                }
+                vector<ResourcePakReader> listReader( listPackPath.size() );
+                for ( size_t packIndex = 0; packIndex < listPackPath.size(); ++packIndex )
+                {
+                    if ( listReader[packIndex].open( listPackPath[packIndex] ) == false )
+                    {
+                        SW_LOG_ERROR( "Pack '%#' could not be opened", listPackPath[packIndex] );
+                        return false;
+                    }
+                }
+                for ( const string& changedPath : delta._listChangedPath )
+                {
+                    const auto sourceIt = mapFullPathToSource.find( changedPath );
+                    if ( sourceIt == mapFullPathToSource.end() )
+                    {
+                        SW_LOG_ERROR( "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
+                        return false;
+                    }
+                    const Source& source = listSource[sourceIt->second];
+                    vector<uint8> bytes;
+                    if ( listReader[source._packIndex].readFile( source._pathInPack, bytes ) == false )
+                    {
+                        SW_LOG_ERROR( "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
+                        return false;
+                    }
+                    inoutWriter.addBytes( changedPath, std::move( bytes ) );
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -192,37 +268,10 @@ namespace sw
 
     bool PackPatchBuilder::makePatch( const PackPatchBuildParams& params )
     {
-        using Internal           = PackPatchBuilderInternal;
-        const bool bMissingParam = params._packsDirectory.empty() || params._previousRecordPath.empty() || params._outputDirectory.empty();
-        if ( bMissingParam )
-        {
-            SW_LOG_ERROR( "Making a patch needs the new pack folder, the previous build record and an output folder" );
-            return false;
-        }
-        if ( isValidBuildName( params._newBuild ) == false )
-        {
-            SW_LOG_ERROR( "Build name '%#' is not usable - use letters, digits, '.', '_' and '-'", params._newBuild );
-            return false;
-        }
-        string          previousText;
+        using Internal = PackPatchBuilderInternal;
         PackBuildRecord previous;
-        if ( FileUtil::readTextFile( params._previousRecordPath, previousText ) == false )
-        {
-            SW_LOG_ERROR( "Previous build record '%#' could not be read", params._previousRecordPath );
+        if ( Internal::readPreviousRecord( params, previous ) == false )
             return false;
-        }
-        if ( PackPatchUtil::parseBuildRecord( previousText, params._previousRecordPath, previous ) == false )
-            return false;
-        if ( previous._patching == PackPatching::None )
-        {
-            SW_LOG_ERROR( "Previous build record '%#' says patching=\"none\" - a build that takes no patches has no content list to patch from", params._previousRecordPath );
-            return false;
-        }
-        if ( previous._build == params._newBuild )
-        {
-            SW_LOG_ERROR( "The new build '%#' is the same as the previous build - a patch goes from one build to another", params._newBuild );
-            return false;
-        }
 
         vector<string>           listPackPath;
         vector<Internal::Source> listSource;
@@ -240,39 +289,9 @@ namespace sw
             return false;
         }
 
-        // 바뀐 파일은 새 빌드의 팩에서 읽어 전체 경로로 담는다.
-        unordered_map<string, size_t> mapFullPathToSource;
-        for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
-        {
-            mapFullPathToSource.emplace( listSource[sourceIndex]._fullPath, sourceIndex );
-        }
-        vector<ResourcePakReader> listReader( listPackPath.size() );
-        for ( size_t packIndex = 0; packIndex < listPackPath.size(); ++packIndex )
-        {
-            if ( listReader[packIndex].open( listPackPath[packIndex] ) == false )
-            {
-                SW_LOG_ERROR( "Pack '%#' could not be opened", listPackPath[packIndex] );
-                return false;
-            }
-        }
         ResourcePakWriter writer( params._writerDesc );
-        for ( const string& changedPath : delta._listChangedPath )
-        {
-            const auto sourceIt = mapFullPathToSource.find( changedPath );
-            if ( sourceIt == mapFullPathToSource.end() )
-            {
-                SW_LOG_ERROR( "Changed path '%#' is not in the packs of '%#' (internal mismatch)", changedPath, params._packsDirectory );
-                return false;
-            }
-            const Internal::Source& source = listSource[sourceIt->second];
-            vector<uint8>           bytes;
-            if ( listReader[source._packIndex].readFile( source._pathInPack, bytes ) == false )
-            {
-                SW_LOG_ERROR( "Pack '%#' could not read '%#'", listPackPath[source._packIndex], source._pathInPack );
-                return false;
-            }
-            writer.addBytes( changedPath, std::move( bytes ) );
-        }
+        if ( Internal::addChangedFiles( params, listPackPath, listSource, delta, writer ) == false )
+            return false;
 
         PackPatchManifest manifest;
         manifest._fromBuild       = previous._build;
