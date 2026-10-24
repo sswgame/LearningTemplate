@@ -20,7 +20,7 @@
 - **공간 처리는 `MeshModifier::apply` 한 곳이다.** 모디파이어 공간(로컬 또는 기준 오브젝트의 월드 변환)으로 옮겨 변형하고 되돌린다. 개별 모디파이어는 공간을 모른다.
 - **외부 입력은 `IMeshModifierInputs` 로 받는다**: 오브젝트 월드 행렬, 곡선 길이와 표본, 다른 메시 삼각형, 텍스처 표본. 세션이 씬에서 구현하고 테스트는 가짜를 넘긴다.
 - **병렬 적용**: 4096 정점 덩어리로 나눠 `TaskManager::runParallel` 에 태운다. 덩어리 일은 정점 배열을 생 포인터로만 만진다 — `vector` 비const 인덱싱은 Debug 레이스 검출기가
-  쓰기로 세어 워커 둘이 겹치면 멈춘다(`MeshModifierParallelTest`). 작업 관리자는 `setMeshModifierTaskManager` 로 세션이 걸고, 없으면 현재 스레드가 한 번에 돈다.
+  쓰기로 세어 워커 둘이 겹치면 멈춘다(`MeshModifierParallelTest`). 작업 관리자는 세션이 평가(`MeshModifierEvaluation::_pTaskManager`)에 실어 넘기고, 없으면 현재 스레드가 한 번에 돈다(전역 설정 함수는 없다).
   엔진 내부 전용인 `engine::runParallel` 은 확장 모듈이 include 할 수 없다. SIMD · prefetch 는 쓰지 않는다.
 
 ## 모디파이어를 하나 더하는 법

@@ -50,9 +50,10 @@ namespace sw::editor
             return;
         // 하위 스택에게는 워프 공간(이 모디파이어의 공간 = 워프 오브젝트)이 메시 로컬이다 — `DeformableModifier` 와 같다.
         MeshModifierEvaluation subEvaluation{};
-        subEvaluation._meshToWorld = context._modifierToWorld;
-        subEvaluation._pInputs     = context.getInputs();
-        subEvaluation._time        = context.getTime();
+        subEvaluation._meshToWorld  = context._modifierToWorld;
+        subEvaluation._pInputs      = context.getInputs();
+        subEvaluation._time         = context.getTime();
+        subEvaluation._pTaskManager = context.getTaskManager();
         pWarp->apply( inoutMesh, subEvaluation );
     }
 

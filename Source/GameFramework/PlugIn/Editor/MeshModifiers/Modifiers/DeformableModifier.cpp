@@ -51,9 +51,10 @@ namespace sw::editor
             return;
         // 하위 스택에게는 이 모디파이어 공간이 메시 로컬이다 — 로컬 → 월드 행렬을 모디파이어 → 월드로 바꿔 넘긴다
         MeshModifierEvaluation subEvaluation{};
-        subEvaluation._meshToWorld = context._modifierToWorld;
-        subEvaluation._pInputs     = context.getInputs();
-        subEvaluation._time        = context.getTime();
+        subEvaluation._meshToWorld  = context._modifierToWorld;
+        subEvaluation._pInputs      = context.getInputs();
+        subEvaluation._time         = context.getTime();
+        subEvaluation._pTaskManager = context.getTaskManager();
         _stack.apply( inoutMesh, subEvaluation );
     }
 
