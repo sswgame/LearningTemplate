@@ -45,3 +45,6 @@ Prefer a shape that cannot race over a rule; the two gates below exist only for 
   `std::call_once` — never a bare `static bool s_bTried` checked by an `if`. Two threads making the first call both pass the
   `if` (this raced in the shader reflection loader). `CheckLazyInitStaticFlag` counts bare `static bool` in `Source/` against a
   baseline ratchet; `static bool` is a standard word, so a type cannot forbid it.
+  It also counts check-then-fill of a static or file-scope variable in one block (`static T* s_p = nullptr; if ( s_p == nullptr ) s_p = make();`,
+  `unique_ptr`/`optional`/container `empty()` then fill, a global `bool` flag) under the `lazyFill` baseline; locks, `call_once`, atomics and
+  `thread_local` are not counted. A main-thread-only site stays in the baseline with its reason in `rules/CheckLazyInitStaticFlag.toml`.

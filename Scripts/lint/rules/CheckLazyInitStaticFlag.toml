@@ -1,6 +1,16 @@
 # CheckLazyInitStaticFlag 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckLazyInitStaticFlag.py, 규칙은 docs/agents/Parallel.md "Lazy initialization".
 
-# 전체 훑기의 기준선 — 지금 있는 맨 `static bool` 플래그 수다. 늘면 실패하고, 고쳐서 줄면 낮춘다(래칫). 커밋 훅은 추가한 줄만 본다.
+# 전체 훑기의 기준선이다. 늘면 실패하고, 고쳐서 줄면 낮춘다(래칫). 커밋 훅은 추가한 줄만 본다.
+#   total    : 맨 `static bool` 플래그 수.
+#   lazyFill : 정적 · 전역 변수를 `if` 로 검사하고 같은 블록에서 채우는 곳(`static T* s_p = nullptr; if ( s_p == nullptr ) s_p = ...;`).
 [baseline]
 # 남은 하나는 ShaderReflectionDx.cpp 의 dxcompiler 로더다. 셰이더 쿠킹 병렬화 커밋(88cd7020c)이 함수 안 정적 변수로 고치므로, 그것을 병합한 뒤 0 으로 낮춘다.
 total = 1
+# 남은 여섯은 모두 메인 스레드(창 · 입력 · 에디터 UI 초기화) 전용이라 동시 첫 호출이 없다 — 근거:
+#   - Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp:201 s_MainDisplay : ImGui 렌더러 백엔드 init 안(메인 스레드, GLX 컨텍스트가 그 스레드에 묶임).
+#   - Source/Engine/Input/Linux/InputManagerX11.cpp:86, 91 s_pInputContext · s_pInputMethod : X11 입력기(XIM/XIC) 재생성. 입력 폴링은 창을 만든 메인 스레드에서만 돈다.
+#   - Source/Engine/Input/Linux/InputManagerX11.cpp:241 s_pCursorDisplay : 같은 파일의 커서 캐시. 커서 설정은 메인 스레드의 입력 처리다.
+#   - Source/Engine/Input/Windows/InputManagerWin32.cpp:319 s_bTrackingLeave : WM_MOUSEMOVE 처리 — 창 메시지 펌프(메인 스레드) 안.
+#   - Source/Engine/Input/Windows/InputManagerWin32.cpp:554 s_bDisabled : 접근성 단축키 끄기. Source 안 호출처가 없는 입력 설정 API 이고 InputManager 의 다른 메서드처럼 메인 스레드 전용이다.
+# 소유 밖(다른 작업자 영역)이라 남긴 위반은 없다.
+lazyFill = 6
