@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 
 #include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
@@ -16,6 +17,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -43,6 +45,17 @@ namespace sw
             {
                 return part._owner == owner && part._partName == partName && part._asset == asset;
             }
+
+            /** @brief 합친 메시에서 부품이 든 구간의 이름입니다 — 주인(슬롯)과 부품 이름을 이어 차림 안에서 겹치지 않게 한다(몸은 주인이 비어 부품 이름 그대로). */
+            static hashed_string makeSectionName( const ResolvedPart& part )
+            {
+                if ( part._owner.empty() )
+                    return part._partName;
+                return hashed_string( ( string( part._owner.c_str() ) + "." + part._partName.c_str() ).c_str() );
+            }
+
+            /** @brief 병합한 메시를 같은 차림끼리 나누는 캐시 키에 섞는 값입니다(구운 메시와 키가 겹치지 않게). */
+            static constexpr uint64 kMergedMeshKeySalt = 0x4D45524745ull; // "MERGE"
 
             /** @brief 보고에 한 줄을 덧붙입니다. */
             template <typename... Args>
@@ -85,6 +98,16 @@ namespace sw
                 if ( pAppearance == nullptr )
                     return false;
                 outValue.setText( pAppearance->getResolvedAppearance()._presetID.c_str() );
+                return true;
+            }
+
+            /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품). 합치지 않았으면 0 입니다. */
+            [[nodiscard]] static bool readMergedSections( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                const CharacterAppearanceComponent* pAppearance = findProbeTarget( query, outValue );
+                if ( pAppearance == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pAppearance->getMergedSectionCount() ) );
                 return true;
             }
 
@@ -180,6 +203,8 @@ namespace sw
     CharacterAppearanceComponent::CharacterAppearanceComponent()
         : _presetID{}
         , _seed{ 0 }
+        , _bMergeParts{ SW_FALSE }
+        , _reservedProperty{ 0 }
         , _socketTask{ *this }
         , _proportionTask{ *this }
         , _bodyProportion{}
@@ -214,7 +239,9 @@ namespace sw
         , _bMeshAssemblyPending{ SW_FALSE }
         , _bMeshAssembled{ SW_FALSE }
         , _bProportionTask{ SW_FALSE }
+        , _bMeshMerged{ SW_FALSE }
         , _reserved{ 0 }
+        , _mergedBodySection{}
     {
     }
 
@@ -384,7 +411,9 @@ namespace sw
             for ( const SpawnedPart& part : _listSpawnedPart )
             {
                 GameObject* pObject = pManager->resolveGameObject( part._object );
-                if ( pObject != nullptr )
+                if ( part._bMerged == SW_TRUE )
+                    retireMergedPart( *pManager, part );
+                else if ( pObject != nullptr )
                     retirePart( *pManager, *pObject, part, bPool );
             }
         }
@@ -405,6 +434,53 @@ namespace sw
                 return;
         }
         manager.destroyObject( &object );
+    }
+
+    void CharacterAppearanceComponent::retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const
+    {
+        MeshSectionComponent* pSection   = manager.resolveComponent( spawned._section );
+        GameObject*           pOwner     = getOwner();
+        const bool            bRemovable = pSection != nullptr && pOwner != nullptr;
+        if ( bRemovable && pOwner->removeComponent( pSection ) == false )
+            SW_LOG_WARNING( "Appearance '%#' could not remove the section component of a merged part", _presetID.c_str() );
+    }
+
+    template <typename Func>
+    void CharacterAppearanceComponent::forEachPartMesh( GameObjectManager& manager, const SpawnedPart& spawned, Func&& func ) const
+    {
+        if ( spawned._bMerged == SW_TRUE )
+        {
+            MeshSectionComponent* pSection = manager.resolveComponent( spawned._section );
+            if ( pSection != nullptr )
+                func( *pSection ); // 아직 합친 메시를 걸기 전이면 구간 컴포넌트가 없다
+            return;
+        }
+        GameObject* pObject = manager.resolveGameObject( spawned._object );
+        if ( pObject != nullptr )
+            CharacterAppearanceComponentInternal::forEachMesh( *pObject, func );
+    }
+
+    bool CharacterAppearanceComponent::isMergedPart( const ResolvedPart& part, int32 partIndex ) const
+    {
+        const bool bBodyPartKnown = _bodyPart >= 0 && static_cast<size_t>( _bodyPart ) < _state.getResolved()._listPart.size();
+        const bool bOwnsRig       = part._rig.empty() == false;
+        const bool bFollowsBody   = part._kind == AppearancePartKind::Skinned && bOwnsRig == false && partIndex != _bodyPart;
+        const bool bMergeable     = _bMergeParts == SW_TRUE && bBodyPartKnown;
+        if ( bMergeable == false || bFollowsBody == false )
+            return false;
+        // 몸과 같은 스켈레톤(적지 않으면 몸의 것)만 한 유닛이 스키닝한다.
+        const ResolvedPart& body = _state.getResolved()._listPart[static_cast<size_t>( _bodyPart )];
+        return part._skeleton.empty() || part._skeleton == body._skeleton;
+    }
+
+    bool CharacterAppearanceComponent::hasMergedParts() const
+    {
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( spawned._bMerged == SW_TRUE )
+                return true;
+        }
+        return false;
     }
 
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
@@ -437,7 +513,8 @@ namespace sw
         outListObject.clear();
         for ( const SpawnedPart& part : _listSpawnedPart )
         {
-            outListObject.push_back( part._object );
+            if ( part._bMerged == SW_FALSE ) // 합친 부품은 오브젝트가 없다(몸 오브젝트의 구간으로 그린다)
+                outListObject.push_back( part._object );
         }
     }
 
@@ -643,17 +720,24 @@ namespace sw
             int32 matched = -1;
             for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
             {
-                const bool bCandidate = listPartCovered[partIndex] == SW_FALSE && static_cast<int32>( partIndex ) != bodyPart;
-                if ( bCandidate && Internal::isSamePart( _state.getResolved()._listPart[partIndex], spawned._owner, spawned._partName, spawned._asset ) )
+                const ResolvedPart& candidate  = _state.getResolved()._listPart[partIndex];
+                const bool          bCandidate = listPartCovered[partIndex] == SW_FALSE && static_cast<int32>( partIndex ) != bodyPart;
+                // 합친 부품이었는지도 같아야 같은 부품이다 — 병합을 켜거나 끄면 오브젝트로 두던 부품과 구간으로 두던 부품이 바뀐다.
+                const bool bSameMode = ( spawned._bMerged == SW_TRUE ) == isMergedPart( candidate, static_cast<int32>( partIndex ) );
+                const bool bSamePart = bSameMode && Internal::isSamePart( candidate, spawned._owner, spawned._partName, spawned._asset );
+                if ( bCandidate && bSamePart )
                 {
                     matched = static_cast<int32>( partIndex );
                     break;
                 }
             }
             GameObject* pObject = manager.resolveGameObject( spawned._object );
-            if ( matched < 0 || pObject == nullptr )
+            const bool  bAlive  = spawned._bMerged == SW_TRUE || pObject != nullptr;
+            if ( matched < 0 || bAlive == false )
             {
-                if ( pObject != nullptr && releaseDetachedPart( *pObject, spawned, listDetachEvent ) == false )
+                if ( spawned._bMerged == SW_TRUE )
+                    retireMergedPart( manager, spawned );
+                else if ( pObject != nullptr && releaseDetachedPart( *pObject, spawned, listDetachEvent ) == false )
                     retirePart( manager, *pObject, spawned, true ); // 바꾼 무기는 쉬게 해 두고 다른 캐릭터가 꺼내 쓴다
                 continue;
             }
@@ -679,6 +763,14 @@ namespace sw
             spawned._partName  = part._partName;
             spawned._asset     = part._asset;
             spawned._partIndex = static_cast<uint32>( partIndex );
+            if ( isMergedPart( part, static_cast<int32>( partIndex ) ) )
+            {
+                // 몸 메시에 합칠 부품은 오브젝트를 만들지 않는다 — 구간 컴포넌트는 합친 메시를 건 뒤에 생긴다(`applyMergedMeshes`).
+                spawned._bMerged     = SW_TRUE;
+                spawned._bSocketPart = SW_FALSE;
+                _listSpawnedPart.push_back( spawned );
+                continue;
+            }
             if ( part._kind == AppearancePartKind::SocketPrefab )
             {
                 pObject = manager.getSubsystem<SocketPartPool>().takePart( part._asset );
@@ -813,10 +905,9 @@ namespace sw
                 Internal::applyParameter( body, value );
             for ( const SpawnedPart& spawned : _listSpawnedPart )
             {
-                const bool  bOwned  = spawned._owner == value._owner && ( value._part.empty() || spawned._partName == value._part );
-                GameObject* pObject = bOwned ? manager.resolveGameObject( spawned._object ) : nullptr;
-                if ( pObject != nullptr )
-                    Internal::forEachMesh( *pObject, [&value]( MeshComponent& mesh )
+                const bool bOwned = spawned._owner == value._owner && ( value._part.empty() || spawned._partName == value._part );
+                if ( bOwned )
+                    forEachPartMesh( manager, spawned, [&value]( MeshComponent& mesh )
                     { Internal::applyParameter( mesh, value ); } );
             }
         }
@@ -831,13 +922,10 @@ namespace sw
             { mesh.setVisible( _bPartsVisible ); } );
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
-            GameObject* pObject = manager.resolveGameObject( spawned._object );
-            if ( pObject == nullptr )
-                continue;
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
             const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
             const bool           bVisible = _bPartsVisible && ( owner.empty() || AppearanceXMLUtil::containsName( _listHiddenSlot, owner ) == false );
-            Internal::forEachMesh( *pObject, [bVisible]( MeshComponent& mesh )
+            forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh )
             { mesh.setVisible( bVisible ); } );
         }
     }
@@ -871,7 +959,7 @@ namespace sw
         const ResolvedAppearance& resolved       = _state.getResolved();
         const ResolvedPart*       pBodyPart      = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
         const bool                bHasTables     = pBodyPart != nullptr && pBodyPart->_fitTables.empty() == false;
-        const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false || _listShapeMorph.empty() == false;
+        const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false || _listShapeMorph.empty() == false || hasMergedParts() || _bMeshMerged == SW_TRUE;
         const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 베이크하지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
         if ( pBodyPart == nullptr || bNothingToBake )
             return;
@@ -1004,14 +1092,33 @@ namespace sw
             SW_LOG_ERROR( "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), report.c_str() );
             listBaked.assign( listPart.size(), nullptr );
         }
-        bool bAnyBaked = false;
+        // 합치는 부품이 있으면 몸과 합친 부품의 메시를 하나로 합쳐 몸 유닛에 건다. 합치지 못하면 오류를 남기고(몸 원본만 그려진다) 아래 부품별 길로 간다.
+        SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
+        const bool             bMerged   = hasMergedParts() && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, listSource, listBaked, bakeKey );
+        bool                   bAnyBaked = bMerged;
         for ( size_t index = 0; index < _listMeshAssemblyLoad.size(); ++index )
         {
-            SkeletalMeshComponent* pUnit = findSkinnedUnit( *pManager, _listMeshAssemblyLoad[index]._partIndex );
+            const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
+            // 합쳐진 부품(몸 포함)은 위에서 걸었다.
+            bool bInMerge = bMerged && static_cast<int32>( partIndex ) == _bodyPart;
+            for ( const SpawnedPart& spawned : _listSpawnedPart )
+            {
+                bInMerge = bInMerge || ( bMerged && spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
+            }
+            if ( bInMerge )
+                continue;
+            SkeletalMeshComponent* pUnit = findSkinnedUnit( *pManager, partIndex );
             shared_ptr<Mesh>       mesh  = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
             bAnyBaked                    = bAnyBaked || listBaked[index] != nullptr;
+            // 합쳤던 몸이 합치지 않게 되면 구간 이름을 풀고 원본(또는 베이크한 사본)으로 되돌린다.
+            const bool bUnmerge = pUnit != nullptr && pUnit == pBodyUnit && _bMeshMerged == SW_TRUE;
+            if ( bUnmerge )
+            {
+                pUnit->setSectionName( hashed_string{} );
+                _bMeshMerged = SW_FALSE;
+            }
             // 지난번에도 원본이었고 이번에도 원본이면 건드리지 않는다(사본 · 군중 묶음을 다시 만들지 않게).
-            const bool bUnchanged = listBaked[index] == nullptr && _bMeshAssembled == SW_FALSE;
+            const bool bUnchanged = listBaked[index] == nullptr && _bMeshAssembled == SW_FALSE && bUnmerge == false;
             const bool bApplies   = pUnit != nullptr && mesh != nullptr;
             if ( bApplies && bUnchanged == false )
                 pUnit->setSkinSourceMesh( std::move( mesh ) );
@@ -1023,6 +1130,92 @@ namespace sw
         }
         _bMeshAssembled = bAnyBaked ? SW_TRUE : SW_FALSE;
         applyVisibility( *pManager );
+    }
+
+    bool CharacterAppearanceComponent::applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const vector<shared_ptr<Mesh>>& listSource,
+                                                          const vector<shared_ptr<Mesh>>& listBaked, uint64 bakeKey )
+    {
+        using Internal                     = CharacterAppearanceComponentInternal;
+        const ResolvedAppearance& resolved = _state.getResolved();
+        GameObject*               pOwner   = getOwner();
+        // 몸이 먼저, 그 뒤 합치는 부품(로드 순서). 읽지 못한 메시가 있으면 합치지 않는다 — 읽기 오류는 이미 알렸다.
+        vector<MeshMergePart> listMergePart;
+        for ( size_t index = 0; index < _listMeshAssemblyLoad.size() && pOwner != nullptr; ++index )
+        {
+            const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
+            bool         bMember   = static_cast<int32>( partIndex ) == _bodyPart;
+            for ( const SpawnedPart& spawned : _listSpawnedPart )
+            {
+                bMember = bMember || ( spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
+            }
+            if ( bMember == false )
+                continue;
+            const shared_ptr<Mesh>& mesh = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
+            if ( mesh == nullptr )
+            {
+                SW_LOG_ERROR( "Appearance '%#' cannot merge parts - part '%#' has no mesh", _presetID.c_str(), resolved._listPart[partIndex]._partName.c_str() );
+                return false;
+            }
+            const ResolvedPart& part = resolved._listPart[partIndex];
+            listMergePart.push_back( MeshMergePart{ Internal::makeSectionName( part ), part._material, mesh.get() } );
+        }
+        if ( listMergePart.empty() )
+            return false;
+
+        // 같은 차림이면 합친 메시도 나눈다(구운 메시와 같은 키에 값을 섞은 키).
+        const uint64             mergedKey = HashUtil::combine( bakeKey, Internal::kMergedMeshKeySalt );
+        vector<shared_ptr<Mesh>> listCached;
+        shared_ptr<Mesh>         merged;
+        const bool               bCached = AppearanceBakedMeshCache::tryGet( mergedKey, listCached ) && listCached.size() == 1;
+        if ( bCached && listCached[0] != nullptr )
+        {
+            merged = listCached[0];
+        }
+        else
+        {
+            MeshMergeResult result;
+            string          error;
+            if ( CharacterMeshUtil::mergeMeshes( listMergePart, nullptr, result, &error ) == false )
+            {
+                SW_LOG_ERROR( "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
+                return false;
+            }
+            merged = result._mesh;
+            AppearanceBakedMeshCache::store( mergedKey, { merged } );
+        }
+
+        // 몸 유닛에 합친 메시를 걸고, 몸은 자기 구간만 그린다. 옛 구간 이름은 새 메시에 없을 수 있어 먼저 푼다(없는 이름 오류를 남기지 않게).
+        body.setSectionName( hashed_string{} );
+        body.setSkinSourceMesh( merged );
+        body.setSectionName( listMergePart[0]._name );
+        _mergedBodySection = listMergePart[0]._name;
+        _bMeshMerged       = SW_TRUE;
+
+        // 합친 부품마다 몸 오브젝트에 구간 컴포넌트를 둔다(있으면 그대로 두고 이름 · 머티리얼만 맞춘다).
+        for ( SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( spawned._bMerged == SW_FALSE )
+                continue;
+            const ResolvedPart&   part     = resolved._listPart[spawned._partIndex];
+            MeshSectionComponent* pSection = manager.resolveComponent( spawned._section );
+            if ( pSection == nullptr )
+            {
+                pSection = pOwner->addComponent<MeshSectionComponent>();
+                if ( pSection == nullptr )
+                {
+                    SW_LOG_ERROR( "Appearance '%#' part '%#' could not get a section component", _presetID.c_str(), part._partName.c_str() );
+                    continue;
+                }
+                spawned._section = TComponentHandle<MeshSectionComponent>{ pSection };
+            }
+            pSection->setSectionName( Internal::makeSectionName( part ) );
+            if ( part._material.empty() == false )
+                pSection->setMaterialPath( part._material.c_str() );
+            pSection->followSourceMesh();
+        }
+        // 구간 컴포넌트가 이제 생겼으니 염색을 부품마다 다시 입힌다.
+        applyMaterialValues( manager, body );
+        return true;
     }
 
     bool CharacterAppearanceComponent::isMeshAssemblyStale() const
@@ -1094,9 +1287,22 @@ namespace sw
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             if ( spawned._partIndex == partIndex )
-                return manager.resolveGameObject( spawned._object );
+                return spawned._bMerged == SW_TRUE ? getOwner() : manager.resolveGameObject( spawned._object ); // 합친 부품은 몸 유닛이 그린다
         }
         return nullptr;
+    }
+
+    uint32 CharacterAppearanceComponent::getMergedSectionCount() const
+    {
+        if ( _bMeshMerged == SW_FALSE )
+            return 0;
+        uint32 count = 1; // 몸의 구간
+        for ( const SpawnedPart& spawned : _listSpawnedPart )
+        {
+            if ( spawned._bMerged == SW_TRUE )
+                ++count;
+        }
+        return count;
     }
 
     GameObjectManager* CharacterAppearanceComponent::findManager() const
@@ -1110,6 +1316,9 @@ namespace sw
 {
     SW_AUTOMATION_QUERY_PROBE( appearancePreset, "Appearance.Preset", "Preset id the object's CharacterAppearanceComponent last assembled",
                                &CharacterAppearanceComponentInternal::readPreset, true, false );
+    SW_AUTOMATION_QUERY_PROBE( appearanceMergedSections, "Appearance.MergedSections",
+                               "Sections of the merged body mesh (the body's own plus one per merged part); 0 when the parts are not merged",
+                               &CharacterAppearanceComponentInternal::readMergedSections, true, false );
     SW_AUTOMATION_QUERY_PROBE( appearanceSlotItem, "Appearance.SlotItem", "Item the assembled appearance wears in the slot named by key ('(empty)' when the slot is empty)",
                                &CharacterAppearanceComponentInternal::readSlotItem, true, true );
 } // namespace sw
