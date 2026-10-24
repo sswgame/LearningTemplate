@@ -748,6 +748,7 @@ SW_TEST_CASE( RigAssetTest, ScaleBoneCollapsesDescendantsBySlot )
  */
 SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
     SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.xml" ) );

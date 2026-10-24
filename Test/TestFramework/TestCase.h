@@ -65,6 +65,7 @@ namespace test
         DebugAsserts,     /**< `SW_ASSERT` 가 살아 있는 구성(Debug). */
         DebugLog,         /**< `SW_LOG_*` 가 컴파일되는 구성(Debug). */
         MemoryTagScopes,  /**< 메모리 태그 범위(`sw::kMemoryTagScopesEnabled`). */
+        SourceResources,  /**< `Resource/` 의 원본 파일(XML · 모든 게임 팩의 데이터 · 셰이더 리플렉션)과 게임 모듈의 컴포넌트를 읽는 구성(Shipping 은 구운 팩의 활성 게임만 본다). */
         Count,
     };
 

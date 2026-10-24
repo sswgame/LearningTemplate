@@ -287,6 +287,7 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonXMLRoundTripsAndValidates )
  */
 SW_TEST_CASE( SkeletalAnimationTest, RepositorySkeletonResavesByteForByte )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     const utf8* const arrSkeletonPath[] = {
         "game/empty/models/testhead/testhead.skeleton.xml",
         "game/shooter3d/rigs/knight_cape.skeleton.xml",

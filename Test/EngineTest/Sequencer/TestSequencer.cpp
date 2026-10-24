@@ -1070,6 +1070,7 @@ SW_TEST_CASE( SequencerTest, RigSlotTrackSamplesClampedWeight )
  */
 SW_TEST_CASE( SequencerTest, SpawnItemSpawnsInactiveBeforeTheSpanThenShowsAndRemovesIt )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string prefabDisk = test::makeTempPath( "seqspawn/crate.prefab.xml" );
     {

@@ -516,6 +516,7 @@ SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchTheirMeshes )
  */
 SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string resourceRoot = sw::ResourcePaths::getRootFolderPath();
     const sw::string knightPath   = sw::FileUtil::joinPath( resourceRoot, "game/shooter3d/models_raw/kaykit/knight.glb" );

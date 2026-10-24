@@ -790,6 +790,7 @@ namespace
  */
 SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNames )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string& resourceRoot = sw::ResourcePaths::getRootFolderPath();
     SW_ASSERT_FALSE( resourceRoot.empty() );

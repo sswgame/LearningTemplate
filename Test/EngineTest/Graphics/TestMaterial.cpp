@@ -1098,6 +1098,7 @@ SW_TEST_CASE( MaterialTest, EveryRepositoryMaterialMatchesItsShaderStruct )
  */
 SW_TEST_CASE( MaterialTest, GameDomainShaderMaterialMatchesItsStruct )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string materialDiskPath = sw::ResourcePaths::findLooseFile( "game/shooter3d/materials/cctvmonitor.material" ).getDiskPath();
     SW_ASSERT_TRUE_MSG( materialDiskPath.empty() == false, "game/shooter3d/materials/cctvmonitor.material not found" );

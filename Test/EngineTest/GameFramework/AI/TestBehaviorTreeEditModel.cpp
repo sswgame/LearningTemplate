@@ -81,6 +81,7 @@ SW_TEST_CASE( BehaviorTreeEditModelTest, RoundTripsAndTheLoaderReadsTheSameTree 
  */
 SW_TEST_CASE( BehaviorTreeEditModelTest, CommanderTreeFileSurvivesAnEditRound )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     string fileText;
     SW_ASSERT_TRUE( ResourceIO::readTextResource( "game/starskirmish/data/commander.bt.xml", fileText ) );
     BehaviorTreeEditModel model;
