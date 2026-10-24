@@ -46,6 +46,77 @@ namespace sw::editor
                     return kGameObjectBadge;
                 return EditorThemeUtil::getAssetTypeColor( item._kind );
             }
+
+            /** @brief 검색어가 비면 모두, 아니면 제목 · 설명 · 종류 중 하나에 검색어가 든 항목만 @p outListFiltered 에 담습니다(대소문자 무시). */
+            static void filterItems( const vector<QuickLauncherItem>& listAllItem, const fixed_string<constant::kMaxBuffer128>& search, vector<const QuickLauncherItem*>& outListFiltered )
+            {
+                outListFiltered.reserve( listAllItem.size() );
+                for ( const QuickLauncherItem& item : listAllItem )
+                {
+                    if ( search.empty() )
+                    {
+                        outListFiltered.push_back( &item );
+                        continue;
+                    }
+
+                    const bool bMatchesSearchText = StringUtil::stristr( item._title.c_str(), search.c_str() ) != nullptr || StringUtil::stristr( item._detail.c_str(), search.c_str() ) != nullptr ||
+                                                    StringUtil::stristr( item._category.c_str(), search.c_str() ) != nullptr;
+                    if ( bMatchesSearchText )
+                        outListFiltered.push_back( &item );
+                }
+            }
+
+            /** @brief 이번 목록의 가장 넓은 종류 표시의 너비입니다. 종류는 몇 가지뿐이라 바뀔 때만 측정한다. */
+            static float32 measureWidestBadge( const vector<const QuickLauncherItem*>& listFiltered )
+            {
+                float32       widestBadgeWidth{ 0.0f };
+                const string* pMeasuredCategory{ nullptr };
+                for ( const QuickLauncherItem* pItem : listFiltered )
+                {
+                    if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
+                        continue;
+                    pMeasuredCategory = &pItem->_category;
+                    fixed_string<constant::kMaxBuffer32> badge;
+                    formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
+                    widestBadgeWidth = MathUtil::max( widestBadgeWidth, ImGui::CalcTextSize( badge.c_str() ).x );
+                }
+                return widestBadgeWidth;
+            }
+
+            /**
+             * @brief 결과 줄 하나를 그립니다 — 선택 배경, 종류 배지, 제목, 설명. 긴 이름은 경로 열 앞에서, 긴 경로는 줄 끝에서 자른다.
+             * @return 줄을 눌렀으면 true 입니다.
+             */
+            static bool drawRow( const QuickLauncherItem& item, bool bSelected, const QuickLauncherRowLayout& layout )
+            {
+                ImVec2        cursor    = ImGui::GetCursorScreenPos();
+                ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
+                const float32 availW    = ImGui::GetContentRegionAvail().x;
+                const float32 itemH     = layout._rowHeight;
+                const float32 textY     = cursor.y + layout._textOffsetY;
+
+                if ( bSelected )
+                {
+                    pDrawList->AddRectFilled( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ), EditorColorUtil::toImU32( kSelectedRowBg ), 4.0f );
+                    pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ), EditorColorUtil::toImU32( kSelectedRowBorder ), 4.0f );
+                }
+
+                const Color                          categoryColor = getCategoryColor( item );
+                fixed_string<constant::kMaxBuffer32> badge;
+                formatstring( badge.data(), badge.capacity(), "[%s]", item._category.c_str() );
+
+                pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), EditorColorUtil::toImU32( categoryColor ), badge.c_str() );
+
+                pDrawList->PushClipRect( ImVec2( cursor.x + layout._titleX, cursor.y ), ImVec2( cursor.x + layout._titleClipRight, cursor.y + itemH ), true );
+                pDrawList->AddText( ImVec2( cursor.x + layout._titleX, textY ), EditorColorUtil::toImU32( kTitleText ), item._title.c_str() );
+                pDrawList->PopClipRect();
+
+                pDrawList->PushClipRect( ImVec2( cursor.x + layout._detailX, cursor.y ), ImVec2( cursor.x + availW, cursor.y + itemH ), true );
+                pDrawList->AddText( ImVec2( cursor.x + layout._detailX, textY ), EditorColorUtil::toImU32( kDetailText ), item._detail.c_str() );
+                pDrawList->PopClipRect();
+
+                return ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -179,6 +250,67 @@ namespace sw::editor
         EditorAssetCommands::focusPath( item._path );
     }
 
+    bool QuickLauncherPopup::drawResults( const vector<const QuickLauncherItem*>& listFiltered, bool bIndexOutstanding )
+    {
+        using Internal                          = QuickLauncherPopupInternal;
+        const int32               filteredCount = static_cast<int32>( listFiltered.size() );
+        bool                      bClicked      = false;
+        editor::EditorSectionDesc resultsDesc{};
+        resultsDesc._pID  = "##qlResults";
+        resultsDesc._kind = editor::EditorSectionKind::Child;
+        if ( EditorChrome::beginSection( resultsDesc ) )
+        {
+            // 열 위치는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다).
+            const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, Internal::measureWidestBadge( listFiltered ),
+                                                                                          ImGui::GetFrameHeight(), ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
+
+            for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
+            {
+                const bool bSelected = ( itemIndex == _selectedIndex );
+
+                ImGui::PushID( itemIndex );
+                if ( Internal::drawRow( *listFiltered[static_cast<size_t>( itemIndex )], bSelected, layout ) )
+                {
+                    _selectedIndex = itemIndex;
+                    bClicked       = true;
+                }
+
+                if ( bSelected )
+                    ImGui::SetScrollHereY( 0.5f );
+
+                ImGui::PopID();
+            }
+
+            if ( filteredCount == 0 )
+            {
+                if ( bIndexOutstanding )
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenIndexing" ) );
+                else
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenNoMatches" ) );
+            }
+        }
+        EditorChrome::endSection();
+        return bClicked;
+    }
+
+    bool QuickLauncherPopup::resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute )
+    {
+        // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
+        // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
+        const bool bEnterPressed         = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
+        const bool bExecuteAfterIndexing = bEnterPressed && filteredCount == 0 && bIndexOutstanding;
+        if ( bExecuteAfterIndexing )
+            _bExecuteWhenIndexed = true;
+        if ( _bExecuteWhenIndexed && filteredCount > 0 )
+        {
+            _bExecuteWhenIndexed = false;
+            bExecute             = true;
+        }
+        if ( _bExecuteWhenIndexed && bIndexOutstanding == false )
+            _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
+        return bExecute;
+    }
+
     void QuickLauncherPopup::drawContent()
     {
         // 파일 목록이 아직 안 왔는지는 꺼내기 **전에** 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
@@ -203,121 +335,19 @@ namespace sw::editor
                                         SW_LOCKEY( "EdCommon", "QuickOpenHint" ), -1.0f, true );
 
         vector<const QuickLauncherItem*> listFiltered;
-        listFiltered.reserve( _listAllItem.size() );
-
-        for ( const QuickLauncherItem& item : _listAllItem )
-        {
-            if ( _searchBuffer.empty() )
-            {
-                listFiltered.push_back( &item );
-                continue;
-            }
-
-            const bool bMatchesSearchText = StringUtil::stristr( item._title.c_str(), _searchBuffer.c_str() ) != nullptr ||
-                                            StringUtil::stristr( item._detail.c_str(), _searchBuffer.c_str() ) != nullptr ||
-                                            StringUtil::stristr( item._category.c_str(), _searchBuffer.c_str() ) != nullptr;
-            if ( bMatchesSearchText )
-                listFiltered.push_back( &item );
-        }
+        QuickLauncherPopupInternal::filterItems( _listAllItem, _searchBuffer, listFiltered );
 
         const int32 filteredCount = static_cast<int32>( listFiltered.size() );
         bool        bExecute      = EditorWidgets::updateListSelection( _selectedIndex, filteredCount, false );
 
         ImGui::Separator();
 
-        editor::EditorSectionDesc resultsDesc{};
-        resultsDesc._pID  = "##qlResults";
-        resultsDesc._kind = editor::EditorSectionKind::Child;
-        if ( EditorChrome::beginSection( resultsDesc ) )
-        {
-            // 열 위치는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 측정한다.
-            float32       widestBadgeWidth{ 0.0f };
-            const string* pMeasuredCategory{ nullptr };
-            for ( const QuickLauncherItem* pItem : listFiltered )
-            {
-                if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
-                    continue;
-                pMeasuredCategory = &pItem->_category;
-                fixed_string<constant::kMaxBuffer32> badge;
-                formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
-                widestBadgeWidth = MathUtil::max( widestBadgeWidth, ImGui::CalcTextSize( badge.c_str() ).x );
-            }
-            const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, widestBadgeWidth, ImGui::GetFrameHeight(),
-                                                                                          ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
-
-            for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
-            {
-                const QuickLauncherItem* pItem     = listFiltered[static_cast<size_t>( itemIndex )];
-                const bool               bSelected = ( itemIndex == _selectedIndex );
-
-                ImGui::PushID( itemIndex );
-
-                ImVec2        cursor    = ImGui::GetCursorScreenPos();
-                ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
-                const float32 availW    = ImGui::GetContentRegionAvail().x;
-                const float32 itemH     = layout._rowHeight;
-                const float32 textY     = cursor.y + layout._textOffsetY;
-
-                if ( bSelected )
-                {
-                    pDrawList->AddRectFilled( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-                                              EditorColorUtil::toImU32( QuickLauncherPopupInternal::kSelectedRowBg ), 4.0f );
-                    pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-                                        EditorColorUtil::toImU32( QuickLauncherPopupInternal::kSelectedRowBorder ), 4.0f );
-                }
-
-                const Color                          categoryColor = QuickLauncherPopupInternal::getCategoryColor( *pItem );
-                fixed_string<constant::kMaxBuffer32> badge;
-                formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
-
-                pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), EditorColorUtil::toImU32( categoryColor ), badge.c_str() );
-
-                // 긴 이름은 경로 열 앞에서, 긴 경로는 줄 끝에서 자른다.
-                pDrawList->PushClipRect( ImVec2( cursor.x + layout._titleX, cursor.y ), ImVec2( cursor.x + layout._titleClipRight, cursor.y + itemH ), true );
-                pDrawList->AddText( ImVec2( cursor.x + layout._titleX, textY ), EditorColorUtil::toImU32( QuickLauncherPopupInternal::kTitleText ), pItem->_title.c_str() );
-                pDrawList->PopClipRect();
-
-                pDrawList->PushClipRect( ImVec2( cursor.x + layout._detailX, cursor.y ), ImVec2( cursor.x + availW, cursor.y + itemH ), true );
-                pDrawList->AddText( ImVec2( cursor.x + layout._detailX, textY ), EditorColorUtil::toImU32( QuickLauncherPopupInternal::kDetailText ), pItem->_detail.c_str() );
-                pDrawList->PopClipRect();
-
-                if ( ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) ) )
-                {
-                    _selectedIndex = itemIndex;
-                    bExecute       = true;
-                }
-
-                if ( bSelected )
-                    ImGui::SetScrollHereY( 0.5f );
-
-                ImGui::PopID();
-            }
-
-            if ( filteredCount == 0 )
-            {
-                if ( bIndexOutstanding )
-                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenIndexing" ) );
-                else
-                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenNoMatches" ) );
-            }
-        }
-        EditorChrome::endSection();
+        if ( drawResults( listFiltered, bIndexOutstanding ) )
+            bExecute = true;
 
         EditorChrome::endSearchOverlay();
 
-        // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
-        // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
-        const bool bEnterPressed         = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
-        const bool bExecuteAfterIndexing = bEnterPressed && filteredCount == 0 && bIndexOutstanding;
-        if ( bExecuteAfterIndexing )
-            _bExecuteWhenIndexed = true;
-        if ( _bExecuteWhenIndexed && filteredCount > 0 )
-        {
-            _bExecuteWhenIndexed = false;
-            bExecute             = true;
-        }
-        if ( _bExecuteWhenIndexed && bIndexOutstanding == false )
-            _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
+        bExecute                        = resolvePendingExecute( filteredCount, bIndexOutstanding, bExecute );
         const bool bExecuteSelectedItem = bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount;
         if ( bExecuteSelectedItem )
         {
