@@ -34,6 +34,16 @@ C-41 의 순서는 결정 기록 5-12 `C-41` 행입니다. 네 단계 가운데 
 
 V2 는 판단이 거의 없어 `mech-worker` 에 맡길 수 있습니다. V3 은 V2 가 초록인 뒤라야 의미가 있다 — 보고 전용 단계에 지는 케이스를 더하면 V2 의 "연속 세 번 초록" 이 늦어진다.
 
+### 2.1 배포본(Shipping) 검증의 건너뜀 선언 (`wt/shipscen`, 빌드 대기)
+
+GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를 구조로 막았다. 코드는 들어갔고 **Debug 빌드 · 테스트는 아직 돌리지 않았다**(동시 빌드 칸이 차 있었다). 병합 뒤 Shipping 으로 다시 확인한다.
+
+- `AppScenarioTest`: 시나리오의 `<Launch variable="gv_…">`(파서가 `gv_` 만 허용) 또는 호출자의 `-gv_` 인자가 있는데 개발 빌드가 아니면 `AppTestUtil::runScenarioArgument` 가 App 을 띄우지 않고 `Skipped` 로 돌려준다. 테스트 틀의 `test::skipPartIfFeatureMissing` 이 케이스 보고에 `[ PARTSKIP ] <시나리오>: <이유> - needs DevelopmentBuild, not in this build (Shipping)` 줄과 요약의 "Skipped parts inside cases … DevelopmentBuild N" 을 남긴다. 확인: Shipping `AppTest.exe` 의 `AppScenarioTest` 출력에 이 줄과 개수가 나오고 `LOAD ERROR` 종료 11 이 없다.
+- 원본 리소스를 읽는 케이스 21개(EngineTest 20 · EditorTest 1)는 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한다(Shipping 에서 건너뜀, Debug · Release 에서는 그대로 돈다). 확인: Shipping 의 `EngineTest.exe --host_suites=exclude` · `EditorTest.exe` 가 실패 0, 요약에 `SourceResources 21`.
+- `GlobalVariableTest.MultithreadedStringReadWriteThreadSafety`: 종료 조건을 쓴 횟수 상한에서 "겹친 읽기 100 이상"으로 바꿨다.
+
+새 케이스가 `Resource/game/<게임>/` 원본이나 게임 컴포넌트를 읽으면 같은 선언을 붙여야 한다. 빠뜨리면 Shipping `ctest -L nogpu` 가 그 케이스를 실패로 보고한다(조용한 통과는 없다).
+
 ## 3. 사용자 결정
 
 없습니다.
