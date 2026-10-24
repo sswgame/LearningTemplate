@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 
@@ -50,6 +51,49 @@ SW_TEST_CASE( EditorReferenceIndexTest, ExtractKeepsOnlyExistingResourceIDs )
     SW_EXPECT_STREQ( "engine/models/cube.mesh", listReference[0]._targetPath.c_str() );
     SW_EXPECT_STREQ( "game/empty/maps/a.scene.xml", listReference[0]._referrerPath.c_str() );
     SW_EXPECT_EQUAL( 1u, listReference[0]._line );
+}
+
+/**
+ * @brief [EditorReferenceIndexTest] 파일 단위 병렬 스캔의 결과는 직렬 스캔과 같다
+ * @details 파일 수를 직렬 임계값(8) 위로 두고 워커 4개로 훑는다. 참조 목록의 순서 · 줄 번호 · 스캔한 파일 수가 모두 같아야 한다.
+ */
+SW_TEST_CASE( EditorReferenceIndexTest, ParallelScanMatchesSerialScan )
+{
+    const ScopedResourceRoot root{ "sw_editor_reference_index_parallel" };
+    constexpr uint32         kFileCount = 64;
+    SW_ASSERT_TRUE( root.write( "game/test/models/target_a.mesh", "binary" ) );
+    SW_ASSERT_TRUE( root.write( "game/test/models/target_b.mesh", "binary" ) );
+    for ( uint32 fileIndex = 0; fileIndex < kFileCount; ++fileIndex )
+    {
+        string text = "<Scene>\n  <Mesh path=\"game/test/models/target_a.mesh\"/>\n  <Mesh path=\"game/test/models/target_b.mesh\"/>\n";
+        if ( fileIndex % 2 == 0 )
+            text += "  <Mesh path=\"game/test/models/target_a.mesh\"/>\n";
+        text += "</Scene>\n";
+        string resourceID = "game/test/maps/map_";
+        resourceID += std::to_string( fileIndex ).c_str();
+        resourceID += ".scene.xml";
+        SW_ASSERT_TRUE( root.write( resourceID, text ) );
+    }
+
+    EditorReferenceIndexData serial{};
+    EditorReferenceIndex::scan( root._path, serial, nullptr );
+
+    TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( 4 ) );
+    EditorReferenceIndexData parallel{};
+    EditorReferenceIndex::scan( root._path, parallel, &manager );
+    manager.shutdown();
+
+    SW_ASSERT_EQUAL( kFileCount, serial._scannedFileCount );
+    SW_ASSERT_EQUAL( serial._scannedFileCount, parallel._scannedFileCount );
+    SW_ASSERT_EQUAL( serial._listReference.size(), parallel._listReference.size() );
+    SW_ASSERT_TRUE( serial._listKnownID == parallel._listKnownID );
+    for ( size_t index = 0; index < serial._listReference.size(); ++index )
+    {
+        SW_EXPECT_STREQ( serial._listReference[index]._targetPath.c_str(), parallel._listReference[index]._targetPath.c_str() );
+        SW_EXPECT_STREQ( serial._listReference[index]._referrerPath.c_str(), parallel._listReference[index]._referrerPath.c_str() );
+        SW_EXPECT_EQUAL( serial._listReference[index]._line, parallel._listReference[index]._line );
+    }
 }
 
 /**
