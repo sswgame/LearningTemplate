@@ -25,6 +25,7 @@ target_compile_options(sw_compiler_gcc INTERFACE
 	# 경고
 	-Wall # 기본 표준 경고 활성화
 	-Wextra # 추가 정밀 경고 활성화
+	-Wundef # 정의되지 않은 매크로를 #if 에서 읽으면 경고(Clang.cmake 와 같은 규칙, 서드파티는 SYSTEM include 라 제외)
 	-Werror=unused-result # [[nodiscard]] 결과를 버리면 빌드가 선다(Clang.cmake 와 같은 규칙)
 	-Werror=switch # 모든 열거자를 다룬 switch 는 default: 없이 쓰고, 빠진 열거자는 빌드를 세운다(Clang.cmake 와 같은 규칙)
 	>
