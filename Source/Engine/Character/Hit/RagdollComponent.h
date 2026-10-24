@@ -54,8 +54,9 @@ namespace sw
     public:
         explicit RagdollAnimationBinding( RagdollComponent& owner );
 
-        bool                isAnimationActive() const override;
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        bool isAnimationActive() const override;
+        /// @brief 래그돌이 깨어 있을 때(죽음 · 부분 · 일어서기 · 맞음 반응 · 움찔)만 포즈를 쓴다. 평소의 키네마틱 히트박스는 포즈를 읽기만 하므로 군중 묶음을 나눌 수 있다.
+        AnimationPoseAccess getPoseAccess() const override { return isAnimationActive() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly; }
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;

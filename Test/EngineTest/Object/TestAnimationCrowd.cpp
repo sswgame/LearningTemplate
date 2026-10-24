@@ -148,6 +148,22 @@ namespace
             (void)context;
         }
     };
+
+    /** @brief 깨어 있는 동안만 포즈를 쓰는 작업입니다(래그돌과 같은 모양). */
+    class CrowdSometimesWriterTask final : public IAnimationPhaseTask
+    {
+    public:
+        bool                isAnimationActive() const override { return _bActive; }
+        AnimationPoseAccess getPoseAccess() const override { return _bActive ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly; }
+        void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+        {
+            (void)phase;
+            (void)unit;
+            (void)context;
+        }
+
+        bool _bActive{ false };
+    };
 } // namespace
 
 /**
@@ -506,6 +522,38 @@ SW_TEST_CASE( AnimationCrowdTest, ReaderTasksAndLeaderFollowersShareBuckets )
     SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared );
     SW_EXPECT_TRUE( pPart->getCrowdMode() == AnimationCrowdMode::Solo );
     SW_EXPECT_NULL( pPart->findCrowdBucket() );
+}
+
+/**
+ * @brief [AnimationCrowdTest] 어떤 때만 포즈를 쓰는 작업(래그돌)은 깨어 있는 동안만 묶음을 막는다 — 쉬면 읽기 작업이라 몸이 묶음을 나눈다
+ * @details Shooter3D 스켈레톤은 래그돌을 받은 뒤 늘 쓰기 작업이 둘이라 군중 공유가 0 이었다(`IAnimationPhaseTask::getPoseAccess` 는 프레임마다 읽는다).
+ */
+SW_TEST_CASE( AnimationCrowdTest, TaskThatWritesOnlyWhileActiveBlocksSharingOnlyThen )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
+    const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
+    const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
+    SW_ASSERT_FALSE( folder.empty() );
+
+    CrowdSometimesWriterTask sometimesWriter;
+    GameObjectManager        manager;
+    AnimationSystem&         system = manager.getSubsystem<AnimationSystem>();
+    system.setCrowdSettings( AnimationCrowdSettings{} );
+    SkeletalMeshComponent* pBody = TestAnimationCrowdInternal::createCharacter( manager, "Body", skeleton, mesh, folder, "Wave", 0.27f );
+    SW_ASSERT_NOT_NULL( pBody );
+    pBody->registerAnimationPhaseTask( &sometimesWriter );
+
+    system.evaluate( 0.0f );
+    SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared ); // 쉬는 동안은 포즈를 읽기만 한다
+
+    sometimesWriter._bActive = true;
+    system.evaluate( 0.05f );
+    SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Solo ); // 깨어 쓰는 동안은 애니메이터와 둘이라 혼자 평가한다
+
+    sometimesWriter._bActive = false;
+    system.evaluate( 0.05f );
+    SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared ); // 다시 쉬면 묶음으로 돌아온다
 }
 
 /**
