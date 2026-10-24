@@ -68,7 +68,7 @@
 - **Deformable** 은 하위 스택을 품는다. 묶음을 고르면 패널 아래에 "Nested Stack" 이 열린다 — 하위 목록(켜짐 · 위아래 · 삭제 · 추가), ">" 로 중첩 묶음에 들어가고 "Up" 으로 나오며,
   고른 하위 모디파이어의 기즈모 · 매개변수를 같은 입력칸으로 편집한다(되돌리기는 바깥 스택 문서째). 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장되고 두 단계 중첩도 왕복한다. UI 가 들고 다닐 "고른 모디파이어" 는 번호 목록 경로로 가리키고(`DeformableModifier::findByPath` · `findOwningStack` - 담은 스택에 추가 · 삭제 · 위아래를 건다), `DeformableNestingTest` 가 고정한다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
-- **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
+- **Displace 계열** 은 세션의 `trySampleTexture` 가 세션이 든 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler` 인스턴스 — 캐시와 잠금을 표본기가 소유해 에디터마다 따로이고 세션과 함께 사라진다)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
   이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고, 캐시 합이 512 MB 를 넘으면 1 초 넘게 안 쓴 이미지부터 내린다(한 적용이 번갈아 쓰는 이미지는 남긴다). 웹캠은 정적 프레임으로 대체한다.
 - **Rolled** 는 한 바퀴를 넘으면 겹이 같은 반경에 겹친다. 값 노이즈 해시는 `Stack/MeshModifierNoise.h` 한 곳이다(VertexAnim 만 해시 식이 달라 `hashToUnit` · `valueNoise1D` 로 따로 둔다).
 - **뷰포트 편집**(`MeshModifiersVisualizer` + 순수 계산 `Stack/ModifierGizmoLogic`): 기즈모 이동 화살표 · 회전 고리, 범위 표시(반경 · 한계 · 중심 · 방향 — 힌트 다음 이름 규칙),

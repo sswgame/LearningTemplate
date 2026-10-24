@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
@@ -110,77 +111,56 @@ namespace sw::editor
                 return other._symmetry == param._symmetry && other._kind == param._kind;
             }
 
-            /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). */
-            struct Published
+            /** @brief 탐침이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
+            [[nodiscard]] static bool readPublished( uint32 CharacterEditorPanel::Published::* pField, float64& outValue )
             {
-                uint32 _boneCount{ 0 };
-                uint32 _socketCount{ 0 };
-                uint32 _equippedSlotCount{ 0 };
-                uint32 _traceCount{ 0 };
-                uint32 _presetCount{ 0 };
-                uint32 _exportCount{ 0 };          ///< 이 실행에서 데이터 프리셋으로 내보낸 수
-                uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
-                uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
-                uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
-                uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
-            };
+                const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();
+                const CharacterEditorPanel* pPanel   = pManager != nullptr ? pManager->findPanel<CharacterEditorPanel>() : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPublished().*pField );
+                return true;
+            }
 
             [[nodiscard]] static bool readBoneGizmoPlaced( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._boneGizmoPlaced );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_boneGizmoPlaced, outValue );
             }
-
             [[nodiscard]] static bool readPenetrationMarkCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._penetrationMarkCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_penetrationMarkCount, outValue );
             }
-            static Published& getPublished()
-            {
-                static Published s_published;
-                return s_published;
-            }
-
             [[nodiscard]] static bool readBoneCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._boneCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_boneCount, outValue );
             }
             [[nodiscard]] static bool readSocketCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._socketCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_socketCount, outValue );
             }
             [[nodiscard]] static bool readEquippedSlotCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._equippedSlotCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_equippedSlotCount, outValue );
             }
             [[nodiscard]] static bool readTraceCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._traceCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_traceCount, outValue );
             }
             [[nodiscard]] static bool readExportCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._exportCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_exportCount, outValue );
             }
             [[nodiscard]] static bool readPresetCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._presetCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_presetCount, outValue );
             }
             [[nodiscard]] static bool readPreviewAssembleCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._previewAssembleCount );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_previewAssembleCount, outValue );
             }
             [[nodiscard]] static bool readClipPlaying( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._clipPlaying );
-                return true;
+                return readPublished( &CharacterEditorPanel::Published::_clipPlaying, outValue );
             }
         };
     } // namespace
@@ -263,6 +243,7 @@ namespace sw::editor
         , _rigPath{}
         , _bRigPreview{ false }
         , _packDataState{ PackDataState::Unread }
+        , _published{}
     {
         _presetStore.setDatabase( &_database );
     }
@@ -307,11 +288,11 @@ namespace sw::editor
         }
         ImGui::Separator();
 
-        CharacterEditorPanelInternal::Published& published = CharacterEditorPanelInternal::getPublished();
-        published._boneCount                               = _pose.getSkeleton().getBoneCount();
-        published._socketCount                             = static_cast<uint32>( _sockets.getSockets().getSockets().size() );
-        published._presetCount                             = static_cast<uint32>( _presetStore.getPresets().size() );
-        uint32 equipped                                    = 0;
+        Published& published   = _published;
+        published._boneCount   = _pose.getSkeleton().getBoneCount();
+        published._socketCount = static_cast<uint32>( _sockets.getSockets().getSockets().size() );
+        published._presetCount = static_cast<uint32>( _presetStore.getPresets().size() );
+        uint32 equipped        = 0;
         for ( const AppearanceSlotRequest& request : _appearance.getSelection()._listSlot )
         {
             if ( request._itemID.empty() == false )
@@ -480,9 +461,9 @@ namespace sw::editor
         const AppearanceSelection& selection = _appearance.getSelection();
         ImGui::TextDisabled( "Wearing %s on base preset '%s' (assembled %u times)", selection._listSlot.empty() ? "no slot items" : "the selection",
                              selection._basePresetID.empty() ? _previewPresetID.c_str() : selection._basePresetID.c_str(), pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u );
-        CharacterEditorPanelInternal::getPublished()._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
-        const float2  available                                            = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
-        const float32 minHeight                                            = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
+        _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
+        const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
+        const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
         syncBoneGizmo();
         drawPreviewViewport( float2{ available._x, available._y > minHeight ? available._y : minHeight }, _gizmo.hasMouse() );
         _gizmo.draw( *this );
@@ -517,9 +498,9 @@ namespace sw::editor
         {
             if ( pTarget != nullptr )
                 pManager->destroyObject( pTarget );
-            _boneGizmoTarget                                              = GameObjectHandle{};
-            _bBoneGizmoPlaced                                             = false;
-            CharacterEditorPanelInternal::getPublished()._boneGizmoPlaced = 0;
+            _boneGizmoTarget            = GameObjectHandle{};
+            _bBoneGizmoPlaced           = false;
+            _published._boneGizmoPlaced = 0;
             return;
         }
         // 덮어쓴 값을 얹은 모델 변환 — 부모까지 줄을 올라가 루트부터 곱한다(행벡터: 자식 × 부모).
@@ -589,8 +570,8 @@ namespace sw::editor
         {
             _placedBoneWorld = currentWorld; // 다음 그리기는 모델 값으로 다시 놓는다(위 `bMoved == false` 경로가 desired 로 맞춘다)
         }
-        _bBoneGizmoPlaced                                             = true;
-        CharacterEditorPanelInternal::getPublished()._boneGizmoPlaced = 1;
+        _bBoneGizmoPlaced           = true;
+        _published._boneGizmoPlaced = 1;
     }
 
     void CharacterEditorPanel::drawPenetrationPoints( const GameObject& body )
@@ -621,7 +602,7 @@ namespace sw::editor
                 renderer.drawLine( center - float3{ 0.0f, 0.0f, arm }, center + float3{ 0.0f, 0.0f, arm }, color );
             }
         }
-        CharacterEditorPanelInternal::getPublished()._penetrationMarkCount = renderer.getDrawnSegmentCount() / 3;
+        _published._penetrationMarkCount = renderer.getDrawnSegmentCount() / 3;
     }
 
     void CharacterEditorPanel::syncRigPreview( GameObject& body )
@@ -820,8 +801,8 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Stop##PreviewClip" ) )
             animator.stop();
-        const bool bPlaying                                       = animator.getCurrentStateName() == _selectedClip && _selectedClip.empty() == false && animator.isAnimationActive();
-        CharacterEditorPanelInternal::getPublished()._clipPlaying = bPlaying ? 1u : 0u;
+        const bool bPlaying     = animator.getCurrentStateName() == _selectedClip && _selectedClip.empty() == false && animator.isAnimationActive();
+        _published._clipPlaying = bPlaying ? 1u : 0u;
     }
 
     GameObjectManager* CharacterEditorPanel::findPreviewManager() const
@@ -1424,8 +1405,8 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawExplanation()
     {
-        CharacterEditorPanelInternal::Published& published = CharacterEditorPanelInternal::getPublished();
-        published._traceCount                              = 0;
+        Published& published  = _published;
+        published._traceCount = 0;
         if ( ImGui::CollapsingHeader( "Why does it look like this? (rules)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
         if ( _bDatabaseLoaded == false )
@@ -1613,7 +1594,7 @@ namespace sw::editor
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
             return;
         }
-        ++CharacterEditorPanelInternal::getPublished()._exportCount;
+        ++_published._exportCount;
         _status.clear();
         SW_LOG_INFO( "Exported appearance preset '%#' to '%#'", presetID.c_str(), resourceID.c_str() );
     }

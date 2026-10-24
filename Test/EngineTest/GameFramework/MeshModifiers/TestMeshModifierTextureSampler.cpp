@@ -48,62 +48,62 @@ namespace
 
 SW_TEST_CASE( MeshModifierTextureSamplerTest, TexelCentersBilinearAndRepeat )
 {
-    MeshModifierTextureSampler::clearCache();
-    const string path = test::makeTempDirectory( "meshmodifier_texture_sampler" ) + "/primary.tga";
+    MeshModifierTextureSampler sampler; // 캐시는 표본기 인스턴스의 것이라 테스트마다 비어 시작한다
+    const string               path = test::makeTempDirectory( "meshmodifier_texture_sampler" ) + "/primary.tga";
     SW_EXPECT_TRUE( TextureSamplerTestInternal::writeTga2x2( path, TextureSamplerTestInternal::kListPrimary ) );
 
     float4 color{};
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.25f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.25f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 1.0f, 0.0f, 0.0f, 1.0f }, color );
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.75f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.75f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.0f, 1.0f, 0.0f, 1.0f }, color );
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.25f, 0.75f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.25f, 0.75f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, color );
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.75f, 0.75f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.75f, 0.75f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 1.0f, 1.0f, 1.0f, 1.0f }, color );
 
     // 빨강과 초록 사이 한가운데.
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.5f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.5f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.5f, 0.5f, 0.0f, 1.0f }, color );
     // 네 텍셀의 가운데.
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.5f, 0.5f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.5f, 0.5f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.5f, 0.5f, 0.5f, 1.0f }, color );
 
     // 반복: 한 바퀴 밖은 같은 텍셀, 가장자리 u = 0 은 반대쪽 끝 텍셀과 섞인다.
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 1.25f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 1.25f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 1.0f, 0.0f, 0.0f, 1.0f }, color );
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ -0.25f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ -0.25f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.0f, 1.0f, 0.0f, 1.0f }, color );
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.0f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.0f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 0.5f, 0.5f, 0.0f, 1.0f }, color );
 }
 
 SW_TEST_CASE( MeshModifierTextureSamplerTest, MissingFileAndEmptyPathAreFalse )
 {
-    MeshModifierTextureSampler::clearCache();
-    const float4 untouched{ 0.1f, 0.2f, 0.3f, 0.4f };
-    float4       color = untouched;
-    SW_EXPECT_FALSE( MeshModifierTextureSampler::trySample( "", float2{ 0.5f, 0.5f }, color ) );
+    MeshModifierTextureSampler sampler; // 캐시는 표본기 인스턴스의 것이라 테스트마다 비어 시작한다
+    const float4               untouched{ 0.1f, 0.2f, 0.3f, 0.4f };
+    float4                     color = untouched;
+    SW_EXPECT_FALSE( sampler.trySample( "", float2{ 0.5f, 0.5f }, color ) );
     const string missing = test::makeTempDirectory( "meshmodifier_texture_missing" ) + "/missing.tga";
-    SW_EXPECT_FALSE( MeshModifierTextureSampler::trySample( missing, float2{ 0.5f, 0.5f }, color ) );
+    SW_EXPECT_FALSE( sampler.trySample( missing, float2{ 0.5f, 0.5f }, color ) );
     // 두 번째 호출은 캐시된 실패를 쓴다 — 결과는 같다.
-    SW_EXPECT_FALSE( MeshModifierTextureSampler::trySample( missing, float2{ 0.5f, 0.5f }, color ) );
+    SW_EXPECT_FALSE( sampler.trySample( missing, float2{ 0.5f, 0.5f }, color ) );
     TextureSamplerTestInternal::expectColor( untouched, color );
 }
 
 SW_TEST_CASE( MeshModifierTextureSamplerTest, ClearCacheRereadsChangedFile )
 {
-    MeshModifierTextureSampler::clearCache();
-    const string path = test::makeTempDirectory( "meshmodifier_texture_reload" ) + "/reload.tga";
+    MeshModifierTextureSampler sampler; // 캐시는 표본기 인스턴스의 것이라 테스트마다 비어 시작한다
+    const string               path = test::makeTempDirectory( "meshmodifier_texture_reload" ) + "/reload.tga";
     SW_EXPECT_TRUE( TextureSamplerTestInternal::writeTga2x2( path, TextureSamplerTestInternal::kListPrimary ) );
 
     float4 color{};
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.25f, 0.25f }, color ) );
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.25f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 1.0f, 0.0f, 0.0f, 1.0f }, color );
 
     constexpr uint8 kListGray[16] = { 128, 128, 128, 255, 128, 128, 128, 255, 128, 128, 128, 255, 128, 128, 128, 255 };
     SW_EXPECT_TRUE( TextureSamplerTestInternal::writeTga2x2( path, kListGray ) );
-    MeshModifierTextureSampler::clearCache();
-    SW_EXPECT_TRUE( MeshModifierTextureSampler::trySample( path, float2{ 0.25f, 0.25f }, color ) );
+    sampler.clearCache();
+    SW_EXPECT_TRUE( sampler.trySample( path, float2{ 0.25f, 0.25f }, color ) );
     TextureSamplerTestInternal::expectColor( float4{ 128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f }, color );
 }

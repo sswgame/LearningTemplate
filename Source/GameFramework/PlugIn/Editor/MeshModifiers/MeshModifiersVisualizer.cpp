@@ -17,7 +17,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportMouseClaim.h"
@@ -116,11 +118,8 @@ namespace sw::editor
                 bool isValid() const { return _pLattice != nullptr || _pFFD2D != nullptr; }
             };
 
-            static DragState& getDragState()
-            {
-                static DragState s_state;
-                return s_state;
-            }
+            /** @brief 끌기 상태입니다. 이 확장이 기여한 서브시스템(`MeshModifiersVisualizerState`)이 소유한다 — 정의는 아래 서브시스템 옆에 있다. */
+            static DragState& getDragState();
 
             /** @brief 뷰포트 마우스 양보의 주인 식별자입니다(주소만 쓴다). */
             static const void* getMouseClaimOwner()
@@ -803,7 +802,27 @@ namespace sw::editor
                 drawSegments( args, *pListStagePoint, kStageColor );
             }
         };
+
+        /**
+         * @class MeshModifiersVisualizerState
+         * @brief 뷰포트 끌기 상태의 주인입니다(확장이 기여하는 에디터 서브시스템 — `SW_EDITOR_SUBSYSTEM`). 에디터 범위마다 하나이고 모듈이 내려가면 함께 사라집니다.
+         */
+        class MeshModifiersVisualizerState final : public EditorSubsystem
+        {
+        public:
+            static constexpr const utf8* kSubsystemName = "MeshModifiersVisualizerState";
+            const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+            MeshModifiersVisualizerInternal::DragState _drag{};
+        };
+
+        MeshModifiersVisualizerInternal::DragState& MeshModifiersVisualizerInternal::getDragState()
+        {
+            return getSubsystem<MeshModifiersVisualizerState>()._drag;
+        }
     } // namespace
+
+    SW_EDITOR_SUBSYSTEM( MeshModifiersVisualizerState, 9500 );
 
     SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, editoricon::kCube, "Modifiers",
                           "메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기", true, &MeshModifiersVisualizerInternal::draw );

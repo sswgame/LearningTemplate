@@ -11,16 +11,23 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw::editor
 {
     /**
      * @class MeshModifierTextureSampler
-     * @brief 경로 키로 디코드한 이미지를 캐시하고 UV 로 표본하는 정적 도우미입니다. 여러 작업 스레드에서 동시에 불러도 안전합니다.
+     * @brief 경로 키로 디코드한 이미지를 캐시하고 UV 로 표본합니다. 캐시는 인스턴스가 소유합니다(`MeshModifierSession` 이 하나를 들고, 에디터 범위와 함께 사라진다).
+     *        여러 작업 스레드에서 동시에 불러도 안전합니다.
      */
     class MeshModifierTextureSampler
     {
     public:
+        MeshModifierTextureSampler();
+        ~MeshModifierTextureSampler();
+        MeshModifierTextureSampler( const MeshModifierTextureSampler& )            = delete;
+        MeshModifierTextureSampler& operator=( const MeshModifierTextureSampler& ) = delete;
+
         /**
          * @brief 이미지 파일을 UV 로 표본합니다.
          * @param assetPath 리소스 id 또는 작업 폴더 상대 경로(이미지 파일). 절대 경로도 받습니다.
@@ -29,9 +36,14 @@ namespace sw::editor
          * @return 경로가 비었거나 파일을 못 찾거나 디코드에 실패하면 false 이고 outRGBA 는 건드리지 않습니다.
          * @note 파일 수정 시각은 경로마다 일정 간격으로만 다시 봅니다. 바뀌었으면 다시 디코드합니다.
          */
-        [[nodiscard]] static bool trySample( string_view assetPath, float2 uv, float4& outRGBA );
+        [[nodiscard]] bool trySample( string_view assetPath, float2 uv, float4& outRGBA ) const;
 
         /** @brief 캐시를 모두 비웁니다(다음 표본에서 다시 디코드합니다). */
-        static void clearCache();
+        void clearCache();
+
+    private:
+        /** @brief 캐시와 그 잠금입니다(정의는 .cpp). 표본은 캐시를 채우지만 표본기의 겉 상태는 바꾸지 않으므로 `trySample` 은 const 입니다. */
+        struct State;
+        unique_ptr<State> _pState;
     };
 } // namespace sw::editor

@@ -19,6 +19,7 @@
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierStack.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
 namespace sw
 {
@@ -198,6 +199,7 @@ namespace sw::editor
         string                     _meshPath;
         MeshModifierBounds         _sourceBounds;
         GameObjectHandle           _target;
+        MeshModifierTextureSampler _textureSampler; ///< 텍스처 모디파이어가 읽는 이미지 캐시(`trySampleTexture`). 세션이 소유해 에디터마다 따로이고 세션과 함께 사라진다
         float32                    _previewTime;
         int32                      _selectedIndex;
         MeshModifierBounds         _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`, 앞부분 캐시에서 센다)
