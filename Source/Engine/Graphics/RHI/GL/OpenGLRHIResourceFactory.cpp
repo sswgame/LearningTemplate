@@ -368,13 +368,20 @@ namespace sw
         glBindBuffer( GL_COPY_READ_BUFFER, name );
         GLint bufferBytes{ 0 };
         glGetBufferParameteriv( GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &bufferBytes );
-        const bool bFits = static_cast<int64>( sizeBytes ) <= static_cast<int64>( bufferBytes );
-        if ( bFits )
+        // 읽기 버퍼만 GL_STREAM_READ 로 만든다(createReadbackBuffer). 다른 용도의 버퍼는 읽기 버퍼가 아니다. 네 백엔드가 같이 거절한다.
+        GLint bufferUsage{ 0 };
+        glGetBufferParameteriv( GL_COPY_READ_BUFFER, GL_BUFFER_USAGE, &bufferUsage );
+        const bool bIsReadback = bufferUsage == static_cast<GLint>( GL_STREAM_READ );
+        const bool bFits       = static_cast<int64>( sizeBytes ) <= static_cast<int64>( bufferBytes );
+        const bool bReadable   = bIsReadback && bFits;
+        if ( bReadable )
             glGetBufferSubData( GL_COPY_READ_BUFFER, 0, static_cast<GLsizeiptr>( sizeBytes ), pDestination );
+        else if ( bIsReadback == false )
+            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
         else
             SW_LOG_ERROR( "readReadbackBuffer: %# bytes is past the end of the %#-byte readback buffer", sizeBytes, static_cast<int64>( bufferBytes ) );
         glBindBuffer( GL_COPY_READ_BUFFER, 0 );
-        return bFits;
+        return bReadable;
     }
 
     bool OpenGLRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )

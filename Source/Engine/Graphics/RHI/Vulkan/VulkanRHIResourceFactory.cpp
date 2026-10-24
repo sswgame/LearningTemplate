@@ -762,6 +762,13 @@ namespace sw
         const bool                           bUnreadable = pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pDestination == nullptr || sizeBytes == 0 || sizeBytes > pRecord->_sizeBytes;
         if ( bUnreadable )
             return false;
+        // 읽기 버퍼는 복사 도착지 용도 하나로만 만든다(createReadbackBuffer). 다른 용도의 버퍼는 매핑되더라도 읽기 버퍼가 아니다. 네 백엔드가 같이 거절한다.
+        const bool bNotReadback = pRecord->_usage != VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        if ( bNotReadback )
+        {
+            SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer", readback );
+            return false;
+        }
         // 프레임 펜스를 기다린 뒤(해제 콜백)라 GPU 쓰기가 호스트에 보인다.
         void* pMapped{ nullptr };
         if ( vkMapMemory( _pDevice->_device, pRecord->_memory, 0, sizeBytes, 0, &pMapped ) != VK_SUCCESS || pMapped == nullptr )
