@@ -57,6 +57,18 @@ namespace sw::editor
                 return s_published;
             }
 
+            /**
+             * @brief 접을 수 있는 구역 머리글입니다(처음에는 열려 있다). 열렸으면 true 입니다.
+             * @details 머리글마다 표식 `retarget.section.<제목>` 을 남긴다 — 구역이 쌓여 창 아래 위젯이 보이는 영역 밖으로 밀리면 시나리오가 위 구역을 눌러 접고 닿게 한다.
+             */
+            [[nodiscard]] static bool drawSection( const utf8* pTitle )
+            {
+                const bool bOpen = ImGui::CollapsingHeader( pTitle, ImGuiTreeNodeFlags_DefaultOpen );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "retarget.section." ) + pTitle ).c_str() );
+                return bOpen;
+            }
+
             [[nodiscard]] static bool readTargetPoseCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( getPublished()._targetPoseCount );
@@ -178,21 +190,22 @@ namespace sw::editor
             return;
         }
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
-        if ( ImGui::CollapsingHeader( "Skeletons", ImGuiTreeNodeFlags_DefaultOpen ) )
+        using Internal = RetargetPanelInternal;
+        if ( Internal::drawSection( "Skeletons" ) )
             drawSkeletonRows();
-        if ( ImGui::CollapsingHeader( "Preview", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Preview" ) )
             drawPreviewSection();
-        if ( ImGui::CollapsingHeader( "Root and pelvis", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Root and pelvis" ) )
             drawRootAndPelvisRows();
-        if ( ImGui::CollapsingHeader( "Options", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Options" ) )
             drawOptionRows();
-        if ( ImGui::CollapsingHeader( "Chains", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Chains" ) )
             drawChainRows();
-        if ( ImGui::CollapsingHeader( "Retarget pose", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Retarget pose" ) )
             drawTargetPoseRows();
-        if ( ImGui::CollapsingHeader( "Bone map", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Bone map" ) )
             drawBonePairRows();
-        if ( ImGui::CollapsingHeader( "Check", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( Internal::drawSection( "Check" ) )
             drawInspection();
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }
