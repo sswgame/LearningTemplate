@@ -33,3 +33,10 @@
 결정(사용자, 2026-10-23): DX11 은 당분간 지원한다(접는 안은 묻지 않는다) — FXC 경로가 남으므로 `SW_ROOT` 같은 백엔드 차이 매크로는 지금 못 없앤다. 함수 안 `#if` 는 정의로 몰아 호출 쪽 본문에서 없앤다(`surface.applyAlphaCutoff()` · `surface.store( context )` 꼴 — 설계 예시이고 컴파일하지 않았다). `IndentPPDirectives: BeforeHash` 는 바꾸지 않는다(C++ · 셰이더 같은 모양 유지; `None` 은 C++ 400 개 중 61 개를 바꾸고 `Leave` 는 고정판 20.1.8 이 못 읽으며 `PPIndentWidth: 2` 는 3중첩에서 `#` 줄이 코드와 겹친다). `#endif` 주석 자동 달기는 폐기했다.
 
 ## 조건부
+
+### R8TextureSampling
+제목: R8 텍스처를 네 백엔드에서 샘플링
+옛번호: G-12
+왜 필요한가: `App --import-textures` 가 1 채널 `R8_UNORM` DDS 를 내고 로더가 읽지만(결정 기록 5절 "텍스처 임포트의 형식 이름은"), 실제 샘플링은 네 백엔드에서 본 적이 없습니다.
+착수 조건 / 남은 것: 규칙 표의 `Mask_Textures`(`*_mask.*`)에 맞는 원본이 생기면 그 게임의 시나리오가 봅니다.
+왜 지금 못 하는가: 맞는 원본이 아직 없습니다. 확인 대기: 매니페스트 id `r8-texture-sampling`.

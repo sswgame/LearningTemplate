@@ -229,6 +229,7 @@
   쓸 수 있는 예는 Kenney, KayKit, VRoid 의 CC0 샘플입니다. Quaternius 는 쓰지 않습니다(5-12). 게임별 CC0 리소스 배치와 MechArena 는 "안정화된 뒤" 로 보류했습니다([후보 문서](plans/Candidates-project.md) `H-1`).
 - **문서는 사람이 읽는 순서로, 한국 개발자가 쓰는 말로 씁니다**(2026-10-07, 사용자 결정). 모듈 README 는 무엇이고 왜 있나, 머릿속 그림, 따라 해 보기, 작동 원리, 확장하는 법, 함정과 주의, 더 볼 곳 순서이고 폴더 트리와 클래스 표는 쓰지 않습니다.
   업계 용어(버전, 빌드, 베이크, 테이블, 슬롯, 레지스트리, 엔드포인트)를 그대로 쓰고 순우리말 조어를 만들지 않습니다. 전문은 [문서 쓰기 지침](10_WritingDocs.md)이고 코드 주석과 커밋 메시지에도 같은 기준을 씁니다.
+- **다음 이름 점검의 결론**(2026-10-24, 접미어 규칙은 위 "클래스 접미어" 항목). `Context` 타입 약 50 개는 호출 · 패스 · 프레임 하나 동안 넘기는 환경이거나 그래픽스 API 용어라 두고, 매니저가 들고 있는 상태만 `Record` 로 바꿨습니다(`LiveReloadManager::ModuleRecord`). 같은 이름의 타입이 따로 있는 `*Util` 일곱(`EditorViewTargetUtil` · `FrameRendererUtil` · `InspectorBuiltinValueUtil` · `MeshModifierUtil` · `ReflectUnitUtil` · `SceneNavigationUtil` · `ServiceRecordUtil`)은 그 타입의 인스턴스를 받는 함수가 아니라 기능에 딸린 상태 없는 도우미라 메서드로 옮기지 않습니다(옮기면 헤더 의존만 늘어납니다). `Unit` 의 세 뜻(게임 플레이 유닛 · `AnimationSystem` 의 스켈레탈 메시 컴포넌트 · 측정 단위)은 같은 파일에서 섞이지 않아 이름을 두고 `NamingCpp.md` 에 적었습니다. 단독 `value` 는 약 650 곳 중 이름이 곧 뜻인 곳(비트 · 해시 도우미 인자, `Wrapper<T>::_value`, `key=value` 의 오른쪽)은 두고 뜻이 다른 이름으로 드러나는 열세 곳만 바꿨습니다.
 
 ### 5-2. 빌드, 스크립트, CI
 
@@ -296,12 +297,12 @@
 - **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다(Godot 도 빌드 정의로 준다).
   헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
-- **규칙 예외 감사에서 정한 넷**(2026-10-07, 적용 상태는 [RuleExceptionAudit](plans/RuleExceptionAudit.md)): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다). 적용함(2026-10-24): `Clang.cmake` 가 clang-cl 에 `-clang:-Wall -clang:-Wextra` 를 넘겨 GCC 와 같은 집합이 됩니다. 2026-10-25: 두 집합에 `-Wundef` 를 더했다 — 정의하는 헤더를 빠뜨려 정의되지 않은 매크로를 `#if` 로 읽는 파일(AuthorityGhost 사례)을 잡는다. 서드파티는 SYSTEM include 라 범위 밖이다.
+- **규칙 예외 감사에서 정한 넷**(2026-10-07): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다). 적용함(2026-10-24): `Clang.cmake` 가 clang-cl 에 `-clang:-Wall -clang:-Wextra` 를 넘겨 GCC 와 같은 집합이 됩니다. 2026-10-25: 두 집합에 `-Wundef` 를 더했다 — 정의하는 헤더를 빠뜨려 정의되지 않은 매크로를 `#if` 로 읽는 파일(AuthorityGhost 사례)을 잡는다. 서드파티는 SYSTEM include 라 범위 밖이다.
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
 - **게이트와 짝 픽서 · 보고서가 나눠 쓰는 판정은 린트 틀 층(`Scripts/lint/*Rules.py`)에 둡니다**(2026-10-24). 게이트의 변환 · 판정을 픽서가 부르면 층 2 끼리 import 하지 못하는 규칙(`CheckScriptLayers`)에 예외 줄이 늘었습니다.
   `LoopBraceRules` · `IncludeOrderRules` · `NamespaceBlockRules` · `DiscardReasonRules` 로 옮겨 네 줄을 지웠고, 셀프테스트가 자기 게이트를 부르는 둘은 게이트 내부를 검사하는 일이라 남깁니다.
-- **로그 · assert 문자열의 한글은 게이트 `CheckLogLanguage` 가 막습니다**(2026-10-24). 규칙(AGENTS.md)만 있고 게이트가 없어 약 270 곳으로 늘었습니다. 기존 줄은 폴더 단위 예외로 받아 폴더마다 영어로 옮겼고, 예외 표는 전부 지웠습니다. 호출 인자 밖에서 만든 한글(상수에 담아 넘기는 글)은 게이트가 보지 못하므로 로그로 나가는 글은 호출 안에 리터럴로 적습니다([KoreanLogStrings](plans/KoreanLogStrings.md)).
+- **로그 · assert 문자열의 한글은 게이트 `CheckLogLanguage` 가 막습니다**(2026-10-24). 규칙(AGENTS.md)만 있고 게이트가 없어 약 270 곳으로 늘었습니다. 기존 줄은 폴더 단위 예외로 받아 폴더마다 영어로 옮겼고, 예외 표는 전부 지웠습니다. 호출 인자 밖에서 만든 한글(상수에 담아 넘기는 글)은 게이트가 보지 못하므로 로그로 나가는 글은 호출 안에 리터럴로 적습니다.
 - **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 의 `.clang-tidy`, 언리얼의 `.ini` 처럼 코드 밖에 두는 것입니다.
   형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고 YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어,
   쓰는 문법만 아는 부분 집합 읽기를 같이 두고 `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).

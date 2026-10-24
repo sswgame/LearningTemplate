@@ -6,7 +6,7 @@
 적은 줄과 한 번에 찾지 못한다. 대상은 `SW_LOG_ERROR` · `SW_LOG_WARNING` · `SW_LOG_INFO` · `SW_LOG_TRACE` · `SW_LOG_ASSERT` · `SW_ASSERT`(및 `SW_ASSERT_*`)의 인자다.
 호출은 `;` 까지 한 덩어리로 본다(여러 줄 호출 포함). 주석 안의 한글은 이 규칙 밖이다.
 
-예외는 없다(기존 한글 줄은 [KoreanLogStrings](../../../docs/plans/KoreanLogStrings.md) 에서 모두 영어로 옮겼다). 호출 인자 밖에서 만든 글(변수에 담아 넘기는
+예외는 없다(기존 한글 줄은 모두 영어로 옮겼다). 호출 인자 밖에서 만든 글(변수에 담아 넘기는
 한글 상수)은 이 게이트가 보지 못한다 — 로그로 나가는 글은 호출 안에 리터럴로 적는다.
 
   python Scripts/lint/gate/CheckLogLanguage.py [--root <repo>] [--files a.cpp b.h]
@@ -66,7 +66,7 @@ class CheckLogLanguageGate(LintGate):
     violationHeader = "한글이 든 로그 · assert 문자열"
     hint = (
         "  로그와 assert 문자열은 영어로 씁니다: SW_LOG_WARNING( \"Failed to load '{}'\", path );\n"
-        "  이 규칙에는 예외가 없습니다(docs/plans/KoreanLogStrings.md)."
+        "  이 규칙에는 예외가 없습니다."
     )
     selfTestCases = [
         {
