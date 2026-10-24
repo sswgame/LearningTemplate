@@ -1,5 +1,9 @@
 #include "pch.h"
 
+#include "Core/Container/formatString.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/String/fixed_string.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
@@ -97,4 +101,81 @@ SW_TEST_CASE( NetObjectTableTest, SpawnedIDsAreAssignedByTheServerAndBoundByClie
     clientTable.unregisterSpawned( *pClientArrow );
     SW_EXPECT_EQUAL( 0u, clientTable.findID( *pClientArrow ) );
     SW_EXPECT_NULL( clientTable.findObject( arrowID ) );
+}
+
+/**
+ * @brief [NetObjectTableTest] 씬 오브젝트 1 만 개를 두 번에 나눠 잡아도 번호는 이름 해시이고, 번호 순서로 모이며, 이미 생성 번호가 있는 오브젝트는 씬 번호를 받지 않는다
+ * @details 한 번에 모아 끼우는 구현이 하나씩 끼우던 결과와 같아야 한다: 번호가 겹친 오브젝트(31 비트 해시 충돌)는 번호가 없고, 나머지는 `computeSceneID` 가 곧 번호다.
+ *          `collectObjects` 는 씬 번호 오름차순 다음에 생성 번호 오름차순이다. 두 번째 호출은 이미 잡은 오브젝트를 다시 잡지 않는다.
+ */
+SW_TEST_CASE( NetObjectTableTest, CapturingManySceneObjectsInTwoPassesKeepsNameHashIDsAndOrder )
+{
+    constexpr uint32 kObjectCount     = 10000;
+    constexpr uint32 kFirstPassCount  = 6000;
+    constexpr uint32 kSpawnedInSecond = 3;
+
+    GameObjectManager   manager;
+    NetObjectTable&     table = manager.getSubsystem<NetObjectTable>();
+    vector<GameObject*> listObject;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        fixed_string<constant::kMaxBuffer32> nameBuf{};
+        formatstring( nameBuf.data(), nameBuf.capacity(), "NetObject%#", objectIndex );
+        GameObject* pObject = manager.createGameObject( hashed_string( nameBuf.c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        listObject.push_back( pObject );
+        if ( objectIndex + 1 == kFirstPassCount )
+            table.captureSceneObjects();
+    }
+    // 둘째 호출 전에 몇 개는 생성 번호를 받는다 — 씬 번호를 받으면 안 된다.
+    vector<GameObject*> listSpawned;
+    for ( uint32 spawnedIndex = 0; spawnedIndex < kSpawnedInSecond; ++spawnedIndex )
+    {
+        GameObject* pSpawned = listObject[kFirstPassCount + spawnedIndex];
+        SW_ASSERT_TRUE( ( table.registerSpawned( *pSpawned ) & NetObjectTable::kSpawnedBit ) != 0 );
+        listSpawned.push_back( pSpawned );
+    }
+    table.captureSceneObjects();
+    table.captureSceneObjects(); // 한 번 더 불러도 같다
+
+    unordered_map<uint32, uint32> mapSceneIDCount;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        const bool bSpawned = kFirstPassCount <= objectIndex && objectIndex < kFirstPassCount + kSpawnedInSecond;
+        if ( bSpawned == false )
+            ++mapSceneIDCount[NetObjectTable::computeSceneID( *listObject[objectIndex] )];
+    }
+    bool   bIDsMatch     = true;
+    uint32 numberedScene = 0;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        const bool bSpawned = kFirstPassCount <= objectIndex && objectIndex < kFirstPassCount + kSpawnedInSecond;
+        if ( bSpawned )
+        {
+            bIDsMatch = bIDsMatch && ( table.findID( *listObject[objectIndex] ) & NetObjectTable::kSpawnedBit ) != 0;
+            continue;
+        }
+        const uint32 sceneID  = NetObjectTable::computeSceneID( *listObject[objectIndex] );
+        const bool   bUnique  = mapSceneIDCount[sceneID] == 1;
+        const uint32 expected = bUnique ? sceneID : 0u;
+        numberedScene += bUnique ? 1u : 0u;
+        bIDsMatch = bIDsMatch && table.findID( *listObject[objectIndex] ) == expected;
+        bIDsMatch = bIDsMatch && ( bUnique ? table.findObject( sceneID ) == listObject[objectIndex] : table.findObject( sceneID ) == nullptr );
+    }
+    SW_EXPECT_TRUE( bIDsMatch );
+
+    // 씬 번호 오름차순, 그 다음 생성 번호.
+    vector<GameObject*> listCollected;
+    table.collectObjects( listCollected );
+    SW_ASSERT_EQUAL( numberedScene + kSpawnedInSecond, static_cast<uint32>( listCollected.size() ) );
+    bool bOrdered = true;
+    for ( uint32 collectedIndex = 1; collectedIndex < static_cast<uint32>( listCollected.size() ); ++collectedIndex )
+    {
+        bOrdered = bOrdered && table.findID( *listCollected[collectedIndex - 1] ) < table.findID( *listCollected[collectedIndex] );
+    }
+    SW_EXPECT_TRUE( bOrdered );
+    for ( uint32 spawnedIndex = 0; spawnedIndex < kSpawnedInSecond; ++spawnedIndex )
+    {
+        SW_EXPECT_TRUE( listCollected[numberedScene + spawnedIndex] == listSpawned[spawnedIndex] );
+    }
 }
