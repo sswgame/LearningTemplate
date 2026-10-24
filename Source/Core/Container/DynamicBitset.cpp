@@ -81,7 +81,7 @@ namespace sw
     {
         if ( _bitCount == std::numeric_limits<uint32>::max() )
         {
-            SW_LOW_LEVEL_ASSERT( false, "DynamicBitset", "Bitset size overflow" );
+            SW_LOW_LEVEL_ASSERT( false, "Bitset size overflow" );
             return;
         }
 
@@ -95,7 +95,7 @@ namespace sw
 
     void DynamicBitset::reportOutOfRange( [[maybe_unused]] const uint32 bitPosition, [[maybe_unused]] const uint32 bitCount )
     {
-        SW_LOW_LEVEL_ASSERT( false, "DynamicBitset", "Bit position out of range (%u of %u)", bitPosition, bitCount );
+        SW_LOW_LEVEL_ASSERT( false, "Bit position out of range (%u of %u)", bitPosition, bitCount );
     }
 
     DynamicBitset& DynamicBitset::set()
@@ -188,7 +188,7 @@ namespace sw
 
     uint64 DynamicBitset::to_ullong() const
     {
-        SW_LOW_LEVEL_ASSERT( _bitCount <= 64, "DynamicBitset", "Bitset too large for uint64" );
+        SW_LOW_LEVEL_ASSERT( _bitCount <= 64, "Bitset too large for uint64" );
 
         if ( _listBlock.empty() )
             return 0;
@@ -198,7 +198,7 @@ namespace sw
 
     uint32 DynamicBitset::to_ulong() const
     {
-        SW_LOW_LEVEL_ASSERT( _bitCount <= sizeof( uint32 ) * 8, "DynamicBitset", "Bitset too large for uint32" );
+        SW_LOW_LEVEL_ASSERT( _bitCount <= sizeof( uint32 ) * 8, "Bitset too large for uint32" );
         return static_cast<uint32>( to_ullong() );
     }
 
@@ -220,7 +220,7 @@ namespace sw
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
-            SW_LOW_LEVEL_ASSERT( false, "DynamicBitset", "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
+            SW_LOW_LEVEL_ASSERT( false, "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
             return *this;
         }
 
@@ -240,7 +240,7 @@ namespace sw
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
-            SW_LOW_LEVEL_ASSERT( false, "DynamicBitset", "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
+            SW_LOW_LEVEL_ASSERT( false, "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
             return *this;
         }
 
@@ -260,7 +260,7 @@ namespace sw
         // `_listBlock` 의 범위 밖을 읽는다. 계약 위반이 메모리 오류로 번지는 것이다.
         if ( _bitCount != other._bitCount )
         {
-            SW_LOW_LEVEL_ASSERT( false, "DynamicBitset", "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
+            SW_LOW_LEVEL_ASSERT( false, "Bitset sizes must match (%u vs %u)", _bitCount, other._bitCount );
             return *this;
         }
 

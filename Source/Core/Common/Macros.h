@@ -73,7 +73,7 @@
  *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
- * 로그보다 아래 티어(메모리 · 수학 · 컨테이너 등)는 `SW_LOG_ASSERT` · `SW_LOG_*` 를 쓸 수 없으므로 아래 10) 의 `SW_LOW_LEVEL_ASSERT` · `SW_LOW_LEVEL_REPORT` 를 씁니다.
+ * 로그보다 아래 티어(메모리 · 수학 · 컨테이너 등)는 `SW_LOG_ASSERT` · `SW_LOG_*` 를 쓸 수 없으므로 아래 10) 의 `SW_LOW_LEVEL_ASSERT` · `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` 을 씁니다.
  */
 #if defined( SW_DEBUG )
 namespace sw::internal
@@ -205,9 +205,22 @@ namespace sw::internal
 
 // ------------------------------------------------------------------------------
 // 10) 로그보다 아래 티어의 보고. `Core/Log` 는 컨테이너 · 메모리 · 수학보다 위라서 그 아래 티어는 `SW_LOG_*` 를 쓸 수 없다(`CheckCoreLayers`).
-//     아래 티어는 이 창구로 보고한다: 로그가 설치한 보고자(`setLowLevelReporter`, `Logger.cpp` 가 기동 때 건다)가 있으면 그리로 로그 줄이 되고,
-//     없으면(로거 이전 · 로거 없는 도구) stderr 에 한 줄 남는다. 정의는 `Core/Common/Macros.cpp` 에 있다.
+//     아래 티어는 `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` · `SW_LOW_LEVEL_ASSERT` 로 보고한다(`SW_LOG_*` 와 같은 호출 구조: 수준은 이름에,
+//     호출하는 쪽의 이름은 인자가 아니라 파일에서 자동으로 정해진다). 구조는 Godot 의 `_err_print_error` + `add_error_handler` 와 같다 —
+//     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 등록하는 보고자(`setLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
+//     **Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤** 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
+//     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 싱크 없음) stderr 에 남는다.
+//     stderr 로 가는 경로는 `Core/Common/Macros.cpp` 한 곳이다.
+//
+//     **서식은 `printf` 문법이다(`snprintf`). 엔진 `formatstring` 의 `%#` 가 아니다.** 어긋남은 `SW_PRINTF_FORMAT` 이 컴파일러(`-Wformat`)에게 맡긴다.
 // ------------------------------------------------------------------------------
+#if defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
+    /** @brief `printf` 식 서식 인자를 컴파일러가 검사하게 합니다(`-Wformat`). @p formatIndex 는 서식 문자열, @p firstArgIndex 는 첫 가변 인자의 위치(1부터)입니다. */
+    #define SW_PRINTF_FORMAT( formatIndex, firstArgIndex ) __attribute__( ( format( printf, formatIndex, firstArgIndex ) ) )
+#else
+    #define SW_PRINTF_FORMAT( formatIndex, firstArgIndex )
+#endif
+
 namespace sw::internal
 {
     /** @brief 아래 티어 보고의 심각도입니다. 로그 수준 `Warning` · `Error` 와 같은 뜻입니다. */
@@ -217,58 +230,72 @@ namespace sw::internal
         Error,
     };
 
-    /** @brief 보고자 함수입니다. @p pCaller 는 보고하는 쪽의 이름(로그 줄의 Caller)이고 @p pMessage 는 끝난 글입니다. */
-    using LowLevelReporterFunc = void ( * )( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept;
+    /** @brief 한 보고의 글 버퍼 크기(널 포함)입니다. 넘치면 끝이 잘리고 `...[truncated]` 가 붙습니다. */
+    static constexpr size_t kLowLevelMessageCapacity = 512;
 
-    /** @brief 보고자를 설치합니다. nullptr 이면 해제하며, 이후 보고는 stderr 로 갑니다. */
-    SW_API void setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
-    /** @brief 한 줄을 보고합니다. 보고자가 있으면 그리로, 없으면 stderr 로 갑니다. */
-    SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept;
+    /**
+     * @brief 보고자 함수입니다. @p pFile · @p line 은 보고한 위치(`__FILE__` · `__LINE__`)이고 @p pMessage 는 끝난 글입니다.
+     * @return 로그가 받았으면 true(수준 필터로 버려진 것도 받은 것). 받지 못했으면(싱크 없음) false 이고, 그러면 `Warning` 은 stderr 로 갑니다.
+     */
+    using LowLevelReporterFunc = bool ( * )( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
+
+    /** @brief 보고자를 설치하고 전에 등록돼 있던 보고자를 돌려줍니다. nullptr 이면 해제하며, 이후 보고는 stderr 로 갑니다. */
+    SW_API LowLevelReporterFunc setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
+    /** @brief @p pFormat(`printf` 문법)을 @p pBuffer 에 씁니다. @p capacity 를 넘기면 끝을 `...[truncated]` 로 바꿔 잘렸음을 드러냅니다. */
+    SW_API void formatLowLevelMessage( utf8* pBuffer, size_t capacity, const utf8* pFormat, ... ) noexcept SW_PRINTF_FORMAT( 3, 4 );
+    /** @brief 한 줄을 보고합니다. `Error` 는 stderr 에 먼저 쓰고 보고자에게 넘기며, `Warning` 은 보고자가 받지 못할 때만 stderr 로 갑니다. */
+    SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
     /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글). */
-    SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
+    SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
 } // namespace sw::internal
 
 /**
- * @brief 로그보다 아래 티어가 한 줄을 보고합니다(`SW_LOG_ERROR` · `SW_LOG_WARNING` 의 자리). 첫 인자는 `Warning` 또는 `Error`, 둘째는 보고하는 쪽의 이름이고
- *        나머지는 `printf` 식 서식과 인자입니다(512 자까지).
+ * @brief 로그보다 아래 티어가 한 줄을 보고합니다(`SW_LOG_ERROR` · `SW_LOG_WARNING` 에 해당). 인자는 `printf` 문법의 서식과 값입니다(512 자까지).
+ * @note 서식은 `snprintf` 문법입니다. 엔진 `formatstring` 의 `%#` 를 쓰면 `-Wformat` 이 막습니다(`SW_PRINTF_FORMAT`).
  */
-#define SW_LOW_LEVEL_REPORT( level, pCaller, ... )                                                                 \
-    do                                                                                                             \
-    {                                                                                                              \
-        utf8 arrLowLevelMessage[512];                                                                              \
-        std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                            \
-        ::sw::internal::reportLowLevel( ::sw::internal::LowLevelReportLevel::level, pCaller, arrLowLevelMessage ); \
+#define SW_LOW_LEVEL_INTERNAL( level, ... )                                                                                 \
+    do                                                                                                                      \
+    {                                                                                                                       \
+        utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
+        ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
+        ::sw::internal::reportLowLevel( level, __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage );              \
     } while ( false )
+
+/** @brief 로그보다 아래 티어의 `SW_LOG_ERROR` 입니다. stderr 에 먼저 동기로 쓰고 로그로도 남깁니다. 서식은 `printf` 문법입니다. */
+#define SW_LOW_LEVEL_ERROR( ... ) SW_LOW_LEVEL_INTERNAL( ::sw::internal::LowLevelReportLevel::Error, __VA_ARGS__ )
+
+/** @brief 로그보다 아래 티어의 `SW_LOG_WARNING` 입니다. 서식은 `printf` 문법입니다. */
+#define SW_LOW_LEVEL_WARNING( ... ) SW_LOW_LEVEL_INTERNAL( ::sw::internal::LowLevelReportLevel::Warning, __VA_ARGS__ )
 
 #if defined( SW_DEBUG )
     /**
-     * @brief 로그보다 아래 티어의 `SW_LOG_ASSERT` 입니다. 거짓이면 보고하고 Debug 에서는 멈춥니다(가로채기 · 대화상자는 `SW_ASSERT` 와 같다).
-     *        메시지는 `printf` 식 서식입니다(512 자까지).
+     * @brief 로그보다 아래 티어의 `SW_LOG_ASSERT` 입니다. 거짓이면 stderr 에 먼저 쓰고 로그로도 남긴 뒤 Debug 에서는 멈춥니다(가로채기 · 대화상자는 `SW_ASSERT` 와 같다).
+     *        메시지는 `printf` 문법의 서식입니다(512 자까지).
      */
-    #define SW_LOW_LEVEL_ASSERT( expr, pCaller, ... )                                                                                 \
-        do                                                                                                                            \
-        {                                                                                                                             \
-            if ( !( expr ) )                                                                                                          \
-            {                                                                                                                         \
-                utf8 arrLowLevelMessage[512];                                                                                         \
-                std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                                       \
-                ::sw::internal::reportLowLevelAssert( #expr, pCaller, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ); \
-                if ( ::sw::internal::tryCaptureAssert() == false &&                                                                   \
-                     ::sw::internal::shouldBreakOnAssert( #expr, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ) )     \
-                    SW_DEBUG_BREAK();                                                                                                 \
-            }                                                                                                                         \
+    #define SW_LOW_LEVEL_ASSERT( expr, ... )                                                                                        \
+        do                                                                                                                          \
+        {                                                                                                                           \
+            if ( !( expr ) )                                                                                                        \
+            {                                                                                                                       \
+                utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
+                ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
+                ::sw::internal::reportLowLevelAssert( #expr, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) );        \
+                if ( ::sw::internal::tryCaptureAssert() == false &&                                                                 \
+                     ::sw::internal::shouldBreakOnAssert( #expr, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ) )   \
+                    SW_DEBUG_BREAK();                                                                                               \
+            }                                                                                                                       \
         } while ( false )
 #else
     /** @brief Debug 가 아니면 멈추지 않고 보고만 합니다(`SW_LOG_ASSERT` 와 같다 — 배포본에서도 계약이 깨진 순간을 남긴다). */
-    #define SW_LOW_LEVEL_ASSERT( expr, pCaller, ... )                                                                                 \
-        do                                                                                                                            \
-        {                                                                                                                             \
-            if ( !( expr ) )                                                                                                          \
-            {                                                                                                                         \
-                utf8 arrLowLevelMessage[512];                                                                                         \
-                std::snprintf( arrLowLevelMessage, sizeof( arrLowLevelMessage ), __VA_ARGS__ );                                       \
-                ::sw::internal::reportLowLevelAssert( #expr, pCaller, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) ); \
-            }                                                                                                                         \
+    #define SW_LOW_LEVEL_ASSERT( expr, ... )                                                                                        \
+        do                                                                                                                          \
+        {                                                                                                                           \
+            if ( !( expr ) )                                                                                                        \
+            {                                                                                                                       \
+                utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
+                ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
+                ::sw::internal::reportLowLevelAssert( #expr, arrLowLevelMessage, __FILE__, static_cast<int32>( __LINE__ ) );        \
+            }                                                                                                                       \
         } while ( false )
 #endif
 
