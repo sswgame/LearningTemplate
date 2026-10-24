@@ -1165,7 +1165,7 @@ SW_TEST_CASE( ArchitectureTest, NoBuiltImageHasDelayLoadedImports )
     }
     SW_EXPECT_TRUE( checkedCount > 0u );
     #else
-    SW_TEST_SKIP( "delay-load imports are a PE (Windows) feature" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // delay-load imports are a PE (Windows) feature
     #endif
 }
 
@@ -1212,7 +1212,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleWithDelayImportsIsRefused )
     }
     (void)sw::FileUtil::tryRemoveFile( probePath ); // 남아도 다음 configure 의 옛 산출물 정리가 지운다
     #else
-    SW_TEST_SKIP( "delay-load imports are a PE (Windows) feature" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // delay-load imports are a PE (Windows) feature
     #endif
 }
 

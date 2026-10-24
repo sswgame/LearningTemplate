@@ -260,7 +260,7 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
 SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 {
 #if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
-    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+    SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself
 #endif
 
     struct CrashCase
@@ -330,7 +330,7 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 {
 #if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
-    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+    SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself
 #endif
 
     const sw::string folder = test::makeTempPath( "SwCrashChild_stuck" );
@@ -371,9 +371,9 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
 {
 #if !defined( SW_DEBUG )
-    SW_TEST_SKIP( "SW_ASSERT exists only in Debug builds" );
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts ); // SW_ASSERT exists only in Debug builds
 #elif defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
-    SW_TEST_SKIP( "AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself" );
+    SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself
 #else
     const sw::string folder = test::makeTempPath( "SwCrashChild_assert" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );

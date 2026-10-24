@@ -397,7 +397,7 @@ SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
     SW_EXPECT_TRUE_MSG( bExitedInTime, "WM_CLOSE 뒤 15 초 안에 App 이 끝나지 않았습니다" );
     SW_EXPECT_EQUAL( 0, exitCode );
 #else
-    SW_TEST_SKIP( "엔진 창을 찾아 닫는 경로가 Win32 전용입니다" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // 엔진 창을 찾아 닫는 경로가 Win32 전용입니다
 #endif
 }
 
@@ -1150,7 +1150,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
 SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
 {
 #if defined( SW_SHIPPING ) == false
-    SW_TEST_SKIP( "this case compares the Shipping build; Debug/Release compare the bench frame (BenchFrameMatchesGoldenImage)" );
+    SW_TEST_REQUIRES_FEATURE( ShippingBuild ); // this case compares the Shipping build; Debug/Release compare the bench frame (BenchFrameMatchesGoldenImage)
 #else
     constexpr uint32      kChannelTolerance = 2;
     constexpr const utf8* kScenarioPath     = "game/empty/automation/shippingframe.scenario.xml";

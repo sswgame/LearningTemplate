@@ -210,7 +210,7 @@ SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
 
     window->destroy();
 #else
-    SW_TEST_SKIP( "최소화 요청 경로가 플랫폼마다 달라 Win32 에서만 봅니다" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // 최소화 요청 경로가 플랫폼마다 달라 Win32 에서만 봅니다
 #endif
 }
 
@@ -420,6 +420,7 @@ SW_TEST_CASE( WindowTest, X11ClipboardRoundTripsBetweenWindowsIncludingIncr )
     firstBase->destroy();
     secondBase->destroy();
 #else
-    SW_TEST_SKIP( "the X11 clipboard exists only in Linux client builds" );
+    SW_TEST_REQUIRES_FEATURE( LinuxPlatform );
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // the X11 clipboard exists only in Linux client builds
 #endif
 }

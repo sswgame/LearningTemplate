@@ -61,11 +61,18 @@ namespace test
      */
     enum class BuildFeature : uint8
     {
-        DevelopmentBuild, /**< Shipping 이 아닌 구성(개발 명령 · 핫 리로드 · 에디터 · 메타데이터). */
-        DebugAsserts,     /**< `SW_ASSERT` 가 살아 있는 구성(Debug). */
-        DebugLog,         /**< `SW_LOG_*` 가 컴파일되는 구성(Debug). */
-        MemoryTagScopes,  /**< 메모리 태그 범위(`sw::kMemoryTagScopesEnabled`). */
-        SourceResources,  /**< `Resource/` 의 원본 파일(XML · 모든 게임 팩의 데이터 · 셰이더 리플렉션)과 게임 모듈의 컴포넌트를 읽는 구성(Shipping 은 구운 팩의 활성 게임만 본다). */
+        DevelopmentBuild,    /**< Shipping 이 아닌 구성(개발 명령 · 핫 리로드 · 에디터 · 메타데이터). */
+        DebugAsserts,        /**< `SW_ASSERT` 가 살아 있는 구성(Debug). */
+        DebugLog,            /**< `SW_LOG_*` 가 컴파일되는 구성(Debug). */
+        MemoryTagScopes,     /**< 메모리 태그 범위(`sw::kMemoryTagScopesEnabled`). */
+        SourceResources,     /**< `Resource/` 의 원본 파일(XML · 모든 게임 팩의 데이터 · 셰이더 리플렉션)과 게임 모듈의 컴포넌트를 읽는 구성(Shipping 은 구운 팩의 활성 게임만 본다). */
+        ShippingBuild,       /**< 배포본(Shipping)만 있는 구성(배포본 골든 이미지 비교). */
+        WindowsPlatform,     /**< `SW_PLATFORM_WINDOWS` 빌드. */
+        LinuxPlatform,       /**< `SW_PLATFORM_LINUX` 빌드. */
+        ClientCode,          /**< 클라이언트 코드(창 · 오디오 · 입력)를 링크한 빌드(`SW_WITH_CLIENT_CODE`). */
+        AudioAssets,         /**< 오디오 에셋이 든 구성(배포 서버 팩은 오디오를 뺀다: Shipping 이 아니거나 클라이언트 코드가 있다). */
+        FatalSignalHandling, /**< 치명 신호를 자체 크래시 핸들러가 받는 구성(AddressSanitizer · ThreadSanitizer 는 신호를 가로챈다). */
+        SwContainerTags,     /**< 컨테이너가 메모리 프로파일러에 보이는 구성(STL 컨테이너 빌드 `SW_ENABLE_STL_CONTAINER` 는 `std::allocator` 를 써 안 보인다). */
         Count,
     };
 

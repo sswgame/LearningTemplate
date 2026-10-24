@@ -7494,7 +7494,7 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
             SW_EXPECT_FALSE_MSG( hardware->isRunningOnSoftwareAdapter(), "the device stayed on the software adapter after the switch went off" );
     }
 #else
-    SW_TEST_SKIP( "WARP is a Windows adapter" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // WARP is a Windows adapter
 #endif
 }
 
@@ -8089,7 +8089,7 @@ SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSource
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the partial structured buffer upload test" );
 #else
-    SW_TEST_SKIP( "Guard pages are set up with the Windows memory API" );
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // Guard pages are set up with the Windows memory API
 #endif
 }
 
