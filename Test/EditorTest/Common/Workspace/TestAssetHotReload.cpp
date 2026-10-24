@@ -160,6 +160,12 @@ SW_TEST_CASE( AssetHotReloadTest, TreeChangesAreTrackedPerFileAndFoldersForceAFu
     SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) );
     SW_EXPECT_TRUE( listPath.empty() );
 
+    // 실제 감시자가 주는 모양: 디렉터리는 감시 루트이고 파일 이름은 그 아래 상대 경로다(`IFileWatcher::pushChange`). 이름만 견주던 때는 이 표지가 바뀐 파일로 샜다.
+    reload.onResourceTreeChanged( sw::FileChangeEvent{ sw::FileWatcherAction::RenamedNewName, root, "scratch\\contentfence.tmp" } );
+    SW_EXPECT_EQUAL( uint64{ 5 }, reload.getContentChangeSerial() );
+    SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) );
+    SW_EXPECT_TRUE( listPath.empty() );
+
     // 폴더가 생기면 안의 파일을 모른다.
     reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Modified, "game/empty/data", "items.xml" ) );
     reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Added, "game/empty", "newfolder" ) );

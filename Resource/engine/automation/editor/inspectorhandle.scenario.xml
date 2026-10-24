@@ -63,6 +63,8 @@
 	<At frame="350"><CaptureEditorUI file="inspectorhandle/menu.png"/></At>
 	<At frame="355"><EditorClick mark="inspector.menu.pasteValue"/></At>
 	<At frame="375"><Expect probe="Editor.SelectedHandle" is="(none)"/></At>
+	<!-- 비활성 항목을 눌러도 메뉴는 닫히지 않고, 열린 메뉴가 아래 인자 콤보를 덮어 다음 클릭이 메뉴 항목에 떨어진다 — 먼저 닫는다 -->
+	<At frame="380"><EditorKey key="Escape"/></At>
 
 	<!-- ⑥ CallInEditor 인자 선택기: 메서드 Assign Target 의 인자 콤보가 프로퍼티와 같은 선택기다 — 고르고 Invoke 하면 _target 에 들어간다 -->
 	<At frame="385"><EditorClick mark="inspector.method.arg.assignTarget.0"/></At>

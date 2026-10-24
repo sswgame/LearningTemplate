@@ -46,8 +46,11 @@ namespace sw::editor
         static void noteRect( const utf8* pKey, const float2& min, const float2& max );
         /** @brief 기록된 레이블을 찾습니다. 이번 프레임이나 지난 프레임에 기록된 것만 반환합니다. 없으면 false 입니다. */
         static bool find( string_view key, EditorSelfTestMark& outMark );
-        /** @brief 실행기가 테스트를 켜고 끌 때 호출합니다. 끄면 레이블과 남은 입력을 비웁니다. */
-        static void setEnabled( bool bEnabled );
+        /**
+         * @brief 실행기가 테스트를 켜고 끌 때 호출합니다. 끄면 레이블과 남은 입력을 비웁니다.
+         * @return 에디터 컨텍스트가 없어 기록할 곳이 없으면 false 입니다(켠 것으로 치지 않는다 — 부른 쪽이 오류로 알린다).
+         */
+        [[nodiscard]] static bool setEnabled( bool bEnabled );
         /** @brief 레이블을 기록하는 중이면 true 입니다. 레이블 문자열을 만드는 데 비용이 드는 곳(항목마다 다른 레이블)이 먼저 확인합니다. */
         static bool isEnabled();
     };

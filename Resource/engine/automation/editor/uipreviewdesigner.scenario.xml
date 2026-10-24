@@ -40,6 +40,8 @@
 	<At frame="245"><EditorText value="save_probe.ui.xml"/></At>
 	<At frame="260"><EditorKey key="Enter"/></At>
 	<At frame="270"><WaitUntil probe="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/></At>
+	<!-- 1) 에서 고치고 되돌린 문서는 되돌려도 고친 표시(dirty)가 남는다 — 다른 문서를 열면 버린다고 알리는 경고가 의도한 출력이다 -->
+	<At frame="271"><ExpectLog contains="unsaved edits of" atLeast="1"/></At>
 	<At frame="280"><EditorClick mark="uipreview.palette.filter"/></At>
 	<At frame="290"><EditorText value="TextWidget"/></At>
 	<At frame="305"><EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/></At>

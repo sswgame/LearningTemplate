@@ -95,7 +95,7 @@ namespace sw::editor
             /** @brief 창과 도크 사각형을 비교할 때의 픽셀 허용치입니다. */
             static constexpr float32 kPixelTolerance = 1.0f;
 
-            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 검사합니다. 위젯 레이블 기록을 시작합니다. 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다. */
+            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 검사합니다. 순수 검사입니다(기록을 켜는 일은 `prepareMarks`). */
             static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
             {
                 if ( step.hasOnlyAttributes( listAllowed, outError ) == false )
@@ -105,8 +105,20 @@ namespace sw::editor
                     outError = step.describe() + ": needs " + pRequired + "=\"…\"";
                     return false;
                 }
-                EditorSelfTestMarks::setEnabled( true );
                 return true;
+            }
+
+            /**
+             * @brief 위젯 레이블 기록을 시작합니다(모든 에디터 단계의 준비 함수). 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다.
+             * @details 시나리오는 첫 에디터 프레임 앞에 시작하므로 켜는 곳(`EditorStateStore`)은 컨텍스트와 함께 이미 있어야 하고, 없으면(에디터가 꺼진 실행) 켠 척하지 않고 오류로 멈춘다.
+             *          예전에는 검사 함수가 켜면서 결과를 버려, 켜는 곳이 아직 없던 때의 호출이 조용히 사라져 모든 클릭이 "no editor widget is marked" 로 졌다.
+             */
+            static bool prepareMarks( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
+            {
+                if ( EditorSelfTestMarks::setEnabled( true ) )
+                    return true;
+                outError = step.describe() + ": needs the editor (no editor context to record widget marks - run with -EnableEditor)";
+                return false;
             }
 
             /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 아래 단계 인자 구조체의 초기값). 형식이 틀리면 false 이고 값은 그대로입니다. */
@@ -257,9 +269,12 @@ namespace sw::editor
              * @brief 단계가 누를 레이블(`mark` · `toMark`)이 아직 그려지지 않았으면 시나리오 시계를 붙잡고 기다립니다(최대 `kMarkWaitFrames`). 넘기면 단계가 돌며 "no editor widget" 실패를 적습니다.
              * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(옛 A-3 이던 것).
              *          언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다.
+             *          기록을 쓰는 단계가 직접 다시 켠다. 백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 새로 만들면 새 저장소는 꺼져 있고, 시나리오 준비는 한 번뿐이라 다시 오지 않는다.
              */
             static AutomationStepHold holdUntilMarked( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
+                if ( EditorSelfTestMarks::setEnabled( true ) == false )
+                    return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
                 constexpr uint32   kMarkWaitFrames = 60;
                 const string*      pMark           = step.findAttribute( "mark" );
                 const string*      pToMark         = step.findAttribute( "toMark" );
@@ -1938,18 +1953,20 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, nullptr,
-                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag, nullptr,
-                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover, nullptr,
-                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText, false );
-    SW_AUTOMATION_STEP( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey, false );
-    SW_AUTOMATION_STEP( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
-                        &EditorScenarioStepsInternal::validateExpectObject, false );
-    SW_AUTOMATION_STEP( editorExpectDockLayout, "EditorExpectDockLayout", &EditorScenarioStepsInternal::runDockLayout,
-                        &EditorScenarioStepsInternal::validateDockLayout, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick,
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag,
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover,
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText,
+                                   &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey,
+                                   &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
+                                   &EditorScenarioStepsInternal::validateExpectObject, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, "EditorExpectDockLayout", &EditorScenarioStepsInternal::runDockLayout,
+                                   &EditorScenarioStepsInternal::validateDockLayout, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
 
     SW_AUTOMATION_PROBE( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &EditorScenarioStepsInternal::readPlayState );
     SW_AUTOMATION_PROBE( editorPlaySimulating, "Editor.PlaySimulating", "While a session runs: 1 simulating (ejected or Simulate), 0 the player is possessed",

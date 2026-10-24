@@ -238,7 +238,7 @@ namespace sw::editor
             state._bStarted = true;
             // 테스트가 도는 동안 패널이 누를 위젯의 레이블을 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
             state._bMarksWereEnabled = EditorSelfTestMarks::isEnabled();
-            EditorSelfTestMarks::setEnabled( true );
+            (void)EditorSelfTestMarks::setEnabled( true ); // 세션이 있으니 에디터 컨텍스트도 있다
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
                 if ( matchesPattern( Registry::getAt( index )._pID, state._pattern ) )
@@ -267,7 +267,7 @@ namespace sw::editor
 
         // 모두 끝났다. 하나도 맞지 않은 패턴은 실패다 — 이름을 잘못 적은 실행이 초록으로 보이면 안 된다.
         state._bActive = false;
-        EditorSelfTestMarks::setEnabled( state._bMarksWereEnabled );
+        (void)EditorSelfTestMarks::setEnabled( state._bMarksWereEnabled ); // 세션이 있으니 에디터 컨텍스트도 있다
         if ( state._listSelectedIndex.empty() )
             ++state._failedCount;
         string doneLine{ "EditorSelfTest|DONE|" };
