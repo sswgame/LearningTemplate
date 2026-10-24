@@ -1,8 +1,8 @@
 name: CI (Windows · Linux | clang-cl & Clang)
 
 # 문서만 바뀐 push · PR 도 린트 잡은 돈다(문서 경로 게이트 CheckDocPaths · 설정 참조 게이트가 .md 를 본다). 빌드 잡만 건너뛴다 —
-# 린트 잡의 `changes` 단계가 바뀐 파일이 문서 · 편집기 설정뿐인지 보고 `code` 를 낸다.
-# 이 파일은 push · PR 마다 도는 단계만 둔다(린트 → 구성 열 개의 빌드 + `-L nogpu`). 매일 · 야간 단계는 header-self-contained.yml · fuzz.yml · load.yml 이고,
+# `changes` 잡이 바뀐 파일이 문서 · 편집기 설정뿐인지 보고 `code` 를 낸다. 린트와 빌드는 동시에 시작한다(린트가 지면 빌드를 취소 — non-main).
+# 이 파일은 push · PR 마다 도는 단계만 둔다(린트 ∥ 구성 열 개의 빌드 + `-L nogpu`). 매일 · 야간 단계는 header-self-contained.yml · fuzz.yml · load.yml 이고,
 # 단계 분류표와 새 검사를 어디 둘지의 기준은 docs/08_Verification.md 4절이다. GPU · 창이 필요한 테스트(hostgpu · race)는 러너에 없어 로컬이 돌린다.
 on:
   push:
@@ -31,6 +31,45 @@ jobs:
     needs: runners
     runs-on: ${{ fromJSON(needs.runners.outputs.map).linux }}
     timeout-minutes: 30
+    # 린트가 지면 같은 실행의 진행 중 빌드를 취소한다(아래 마지막 단계).
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 1
+
+    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자). 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다(빌드 잡마다 돈다).
+    # 시간 표는 lint-timing 아티팩트로 올린다.
+    - name: Run all lints (gates + self-tests) with timings
+      run: |
+        python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
+
+    - name: Upload lint timings
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: lint-timing
+        path: lint-timing.json
+
+    # 린트와 빌드는 동시에 시작하므로, 린트가 지면 이미 도는 빌드 열 개를 이 실행째 취소해 러너를 아낀다. main 은 제외한다 —
+    # main 은 돌던 실행을 끝까지 돌리는 규칙(위 concurrency)이고, 취소된 실행은 세션 가드(ListCiJobs)가 실패로 세지 않아 main 의 린트 실패가 가려진다.
+    # 취소는 실행 전체에 걸리므로 이 잡도 `cancelled` 로 끝날 수 있다(린트 단계 자체는 failure 로 남는다).
+    - name: Cancel the run (builds are pointless after a lint failure)
+      if: failure() && github.ref != 'refs/heads/main'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: gh run cancel "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY"
+
+  # 바뀐 파일 판정만 하는 가벼운 잡 — 린트와 무관해서 린트와 빌드가 동시에 시작한다.
+  changes:
+    name: Detect code changes
+    needs: runners
+    runs-on: ${{ fromJSON(needs.runners.outputs.map).linux }}
+    timeout-minutes: 5
     outputs:
       code: ${{ steps.changes.outputs.code }}
 
@@ -59,23 +98,10 @@ jobs:
         echo "code=$code" >> "$GITHUB_OUTPUT"
         echo "build jobs: $code"
 
-    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자). 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다(빌드 잡마다 돈다).
-    # 시간 표는 lint-timing 아티팩트로 올린다.
-    - name: Run all lints (gates + self-tests) with timings
-      run: |
-        python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
-
-    - name: Upload lint timings
-      if: always()
-      uses: actions/upload-artifact@v7
-      with:
-        name: lint-timing
-        path: lint-timing.json
-
   build:
     name: ${{ matrix.name }}
-    needs: [ runners, lint ]
-    if: needs.lint.outputs.code == 'true'
+    needs: [ runners, changes ]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ fromJSON(needs.runners.outputs.map)[matrix.os] }}
     # vcpkg 를 처음부터 지으면 Windows 에서 한 시간이 넘으므로 한도는 그보다 길게 둔다.
     timeout-minutes: 180
@@ -228,10 +254,12 @@ jobs:
     # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
     # `-FS SWTestBinaries`: 위 Build 단계가 빌드 프리셋(`with-tests`)으로 `all` 과 `AllTests` 를 이미 지었다. 셋업 항목 `BuildTestBinaries` 를 돌리면 ninja 를
     # 한 번 더 불러 CMake 를 다시 돌리고 테스트 실행 파일을 다시 링크하다 Windows 에서 파일 잠금(`OnlineLoadBot.exe` · z-applocal)으로 졌다. 건너뛰면 두 번째 링크가 없다.
+    # `-j` 는 러너 코어 수다(Windows 는 NUMBER_OF_PROCESSORS, 리눅스는 nproc) — 공개 저장소의 호스티드 러너는 4 코어라 값은 같고, 러너가 바뀌면 따라간다.
+    # 병렬이 깨지는 테스트(포트 · 고정 파일)는 CTest 자원 잠금이 직렬로 만든다(Test/TestPolicy.json) — 로컬 `ctest -j`(값 없이)도 같은 길이다.
     - name: Test
       id: test
       run: |
-        ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure -FS SWTestBinaries
+        ctest --test-dir build/${{ matrix.preset }} -L nogpu -j "${NUMBER_OF_PROCESSORS:-$(nproc)}" --output-on-failure -FS SWTestBinaries
 
     # 소프트웨어 렌더러 묶음(`swrender`, C-41 4단계 · 결정 기록 5-12) — GPU 가 없는 러너에서 호스트 케이스 일부(Test/TestPolicy.json 의
     # softwareRenderCases)를 소프트웨어 래스터라이저로 돈다: Windows 는 WARP(DX11 · DX12), 리눅스는 mesa lavapipe(Vulkan) · llvmpipe(OpenGL) + xvfb.

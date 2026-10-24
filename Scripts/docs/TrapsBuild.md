@@ -56,7 +56,7 @@
   커밋 뒤 그 경로를 빼고 `--amend` 한다(셰이더 소스가 없는 amend 는 훅이 다시 굽지 않는다).
 - **문서의 경로는 `CheckDocPaths` 가 본다** — 상대 링크 · 제목 앵커 · 백틱 안 저장소 경로 · 코드 블록의 `#include` · `py -3 Scripts/…`,
   모든 README · `docs/*.md` 가 `docs/02_DocumentMap.md` 에 있는지, 규칙 문서 맨 위에 `> 질문:` · `> 독자:` · `> 결론:` 세 줄이 있는지, 규칙 문서끼리 한글 문장이 복사됐는지(`docs/10_WritingDocs.md` 0절). 파일을 옮기거나 지우는 커밋은 .md 를 건드리지 않아 훅이 이 게이트를 돌리지 않으므로
-  `ctest -L lint` 가 잡는다. CI 는 문서만 바뀐 push 에도 린트 잡을 돌리고 빌드 잡만 건너뛴다(`ci.yml` 린트 잡의 `changes` 단계).
+  `ctest -L lint` 가 잡는다. CI 는 문서만 바뀐 push 에도 린트 잡을 돌리고 빌드 잡만 건너뛴다(`ci.yml` 의 `changes` 잡).
   자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 계획 문서에만 적는다(계획 문서는 링크만 본다).
 - **`#!` 스크립트는 git 모드 100755 로 커밋한다**(`CheckExecutableBits`) — Windows 에서 만든 파일은 100644 로 들어가 리눅스에서만 `Permission denied` 가 난다
   (오버레이 포트 `openssl/unix/configure` 가 리눅스 CI 다섯 잡을 Configure 에서 세웠다). 새 스크립트는 `git update-index --chmod=+x <경로>`.
