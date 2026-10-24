@@ -109,6 +109,10 @@ ILockObserver* pObserver = mutex::getLockObserver();   // 검출기가 initializ
 ThreadCrashStack::initializeCurrentThread();
 ```
 
+`Log` 보다 아래 폴더(`CheckCoreLayers.toml` 의 `[tier]`)의 `.cpp` 는 `Logger.h` · File · String 이 없는 전용 pch(`pchLow.h`)로 컴파일됩니다.
+그래서 `SW_LOG_*` · `StringBuilder` 처럼 pch 가 몰래 넣어 주던 위 티어 선언을 쓰면 컴파일이 실패합니다. 보고는 `SW_LOW_LEVEL_*` 로 합니다.
+낮은 티어 **헤더**는 위 티어 pch 로 컴파일되는 TU 가 포함하므로 컴파일이 못 막고 `CheckCoreLayers.py` 의 로그 매크로 규칙이 막습니다.
+
 ```cpp
 class Foo
 {

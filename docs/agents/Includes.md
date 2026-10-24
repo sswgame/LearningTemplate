@@ -34,6 +34,10 @@
   reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`, `RaceDetectContext::setReportFunction`).
   Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`, which also computes the tiers from the include graph and
   fails when the table differs (a table value above the computed one needs a reason in `[tierReason]`).
+  Tiers below `Log` also get **no `Logger.h`**: their `.cpp` files build as `Core_low_objects` with `Core/pchLow.h` (no Logger, File or String), so
+  `SW_LOG_*`, `StringBuilder`, `FileUtil` … that the full pch used to hand over silently fail to compile — report with `SW_LOW_LEVEL_*` and include what you use.
+  Headers of those tiers are still compiled under the full pch by other TUs, so the compile cannot see them; `CheckCoreLayers.py` bans `SW_LOG_*` there, and
+  keeps `pchLow.h` equal to `CoreMinimal.h` minus the `Log`-and-above headers.
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.

@@ -3,6 +3,8 @@
 # 폴더 → 티어. 숫자가 큰 쪽이 위다. Scripts/lint/report/RunCoreLayerGraph.py 의 Kahn 티어와 같아야 한다 — 게이트가 include 그래프에서 직접 계산해 맞춰 본다.
 # 일부러 계산값보다 높게 두려면 `[tierReason]` 표를 만들어 폴더 → 이유를 적는다(이유 없는 상향 · 계산값과 같아진 이유 줄은 실패). 지금은 없다.
 # 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 실패다).
+# 이 표는 빌드도 읽는다 — `Source/Core/CMakeLists.txt` 가 `Log` 보다 낮은 폴더의 `.cpp` 를 `Core_low_objects` 로 따로 지어 `Logger.h` 없는 `pchLow.h` 를 쓴다.
+# 그러니 줄 모양(`폴더 = 숫자`)을 바꾸지 않는다.
 [tier]
 Common = 0
 Predefined = 0      # 인자 · 이름 표(.xxx) — 아무것도 include 하지 않는다
