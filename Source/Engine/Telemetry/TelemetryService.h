@@ -19,13 +19,13 @@
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/Telemetry/TelemetryUploader.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw
 {
     struct UserSettingEvent;
 
-    class ITelemetryUploader;
     class TelemetryEvent;
     class UserSettingsManager;
 
@@ -165,8 +165,11 @@ namespace sw
         bool hasConsent() const;
         /** @brief 사용자 설정 `kConsentSettingID` 를 동의로 씁니다 — 지금 값을 읽고, 적용 · 되돌리기 · 로드 통보마다 다시 읽습니다. */
         void bindConsentSetting( UserSettingsManager& settings );
-        /** @brief 업로더(빌림)입니다. nullptr 이면 `NullTelemetryUploader` 입니다. */
-        void setUploader( ITelemetryUploader* pUploader );
+        /**
+         * @brief 업로더(빌림)를 바꿉니다. 처음에는 서비스가 값으로 든 `NullTelemetryUploader`(보내지 않는다)가 꽂혀 있어 포인터가 비는 때가 없습니다.
+         * @details 참조로 받아 "없음" 을 넘길 수 없습니다 — 업로더는 항상 하나이고, 호출부는 따로 널 검사 · 기본값 처리를 하지 않습니다.
+         */
+        void setUploader( ITelemetryUploader& uploader );
 
         TelemetryRecordResult record( const TelemetryEvent& event );
         /** @brief 세션 시계를 흘리고 flush 시간이 되면 씁니다(게임 스레드). */
@@ -218,7 +221,8 @@ namespace sw
         string                  _currentFile;
         string                  _currentScene;
         UserSettingsManager*    _pSettings;
-        ITelemetryUploader*     _pUploader;
+        NullTelemetryUploader   _nullUploader; ///< 기본 업로더(값) — 아무 데도 보내지 않는다
+        ITelemetryUploader*     _pUploader;    ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
         float64                 _sessionSeconds;
         float32                 _flushTimer;
         uint64                  _currentFileBytes;

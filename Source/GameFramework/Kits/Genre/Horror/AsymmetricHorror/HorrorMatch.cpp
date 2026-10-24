@@ -9,6 +9,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/AIPerception.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
@@ -63,10 +64,15 @@ namespace sw
 
     bool HorrorMatch::initialize( const HorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog )
     {
-        _settings            = settings;
-        _settings._fixedStep = MathUtil::max( 1.0e-3f, _settings._fixedStep );
-        _pCatalog            = pCatalog;
-        _killer              = HorrorKiller{};
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "HorrorMatch: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        _settings = settings;
+        _pCatalog = pCatalog;
+        _killer   = HorrorKiller{};
         _listSurvivor.clear();
         _listGenerator.clear();
         _listGate.clear();
@@ -128,8 +134,10 @@ namespace sw
         heal._maxParticipants      = rules._heal._maxHealers;
 
         HorrorSurvivor survivor;
-        survivor._vitality.initialize( vitality );
-        survivor._healing.initialize( heal, &_pCatalog->getJudge(), _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kHealSeedMix ) );
+        if ( survivor._vitality.initialize( vitality ) == false )
+            return -1;
+        if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kHealSeedMix ) ) == false )
+            return -1;
         survivor._position = float3{ position._x, 0.0f, position._z };
         _listSurvivor.push_back( survivor );
         return index;
@@ -148,7 +156,11 @@ namespace sw
         generator._position = float3{ position._x, 0.0f, position._z };
         _listGenerator.push_back( generator );
         const int32 index = static_cast<int32>( _listGenerator.size() ) - 1;
-        configureGenerator( index, false );
+        if ( configureGenerator( index, false ) == false )
+        {
+            _listGenerator.pop_back(); // 수리 규칙이 범위 밖이면 발전기를 세우지 않는다
+            return -1;
+        }
         return index;
     }
 

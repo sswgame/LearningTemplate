@@ -229,7 +229,7 @@ namespace sw
             const uint32 count = pMesh->getVertexCount();
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
             {
-                SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 스킨드 메시는 바인드 포즈로 그립니다.", kMaxPoolVertices );
+                SW_LOG_WARNING( "The morph pool is full (%# vertices) - the remaining skinned meshes are drawn in the bind pose.", kMaxPoolVertices );
                 continue;
             }
             GPUSkinInstanceRow row{};
@@ -273,7 +273,7 @@ namespace sw
 
         // UAV 를 못 받으면(백엔드 · 드라이버가 거절) 모프는 조용히 꺼진다. 그리기는 레스트 포즈로 살아 있다.
         if ( _morph._uav == kInvalidDescriptorIndex )
-            SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
+            SW_LOG_WARNING( "Failed to bind a UAV to the morph result buffer - morphing is off on this backend." );
     }
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
@@ -427,7 +427,7 @@ namespace sw
                     entry._slot = kInvalidBase;
                 }
                 if ( bWarnedFull == false )
-                    SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 메시는 레스트 포즈로 그립니다.", kMaxPoolVertices );
+                    SW_LOG_WARNING( "The morph pool is full (%# vertices) - the remaining meshes are drawn in the rest pose.", kMaxPoolVertices );
                 bWarnedFull = true;
                 continue;
             }

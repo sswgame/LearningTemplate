@@ -83,7 +83,7 @@ namespace sw
 {
     /**
      * @brief 세트 고르기 조건입니다(`<Select>`). 여러 에셋 가운데 시작할 것을 고를 때(처형 · 잡기 세트), 그 역할 루트가 앵커 루트에서 보이는 자리가 맞아야 합니다.
-     * @details 방위각은 앵커 앞(+Z)에서 잰 수평 각(라디안, `atan2( x, z )`, 오른쪽 +X 가 양수)이고 거리는 수평 거리입니다. `_minBearingRadians > _maxBearingRadians` 면
+     * @details 방위각은 앵커 앞(+Z)에서 측정한 수평 각(라디안, `atan2( x, z )`, 오른쪽 +X 가 양수)이고 거리는 수평 거리입니다. `_minBearingRadians > _maxBearingRadians` 면
      *          ±180° 를 지나는 구간(뒤쪽)입니다.
      */
     struct PairedAnimationSelectDef

@@ -102,7 +102,7 @@ namespace sw
     {
         /**
          * @brief `bindGraphics` 의 단계들입니다. 드로우마다 불리므로 이름 intern · 힙 할당을 하지 않습니다(레이아웃이 미리 계산해 둔 키만 읽는다).
-         * @details bindless 인덱스 검사(`BindlessIndexValidator`)는 배포 구성에서 사라진다 — `checkIndex` 하나가 그 갈래를 가진다.
+         * @details bindless 인덱스 검사(`BindlessIndexValidator`)는 배포 구성에서 사라진다 — `checkIndex` 하나가 그 분기를 가진다.
          */
         struct ShaderParameterBinderInternal
         {

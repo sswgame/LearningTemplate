@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Common/EngineServices.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "ResourceDataKind" );
@@ -26,16 +28,48 @@ namespace sw
 
 namespace sw
 {
-    ResourceDataKindRegistry& ResourceDataKindRegistry::get()
-    {
-        static ResourceDataKindRegistry s_registry;
-        return s_registry;
-    }
-
     ResourceDataKindRegistry::ResourceDataKindRegistry()
         : _mutex{}
         , _registration{ "ResourceDataKindRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
+        , _mapModuleKind{}
     {
+    }
+
+    uint32 ResourceDataKindRegistry::registerModuleKinds( string_view moduleName, const ResourceDataKindRegistrar* pHead )
+    {
+        // 목록은 나중에 만든 것이 앞이다 — 모아서 뒤에서부터 올리면 정적 초기화 순서(= 등록 순서)가 된다.
+        vector<const ResourceDataKind*> listKind;
+        for ( const ResourceDataKindRegistrar* pRegistrar = pHead; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
+        {
+            listKind.push_back( pRegistrar->_pKind );
+        }
+        uint32 registeredCount = 0;
+        for ( size_t index = listKind.size(); index > 0; --index )
+        {
+            const ResourceDataKind* pKind = listKind[index - 1];
+            if ( registerKind( pKind ) == false )
+                continue;
+            std::scoped_lock<mutex> lock{ _mutex };
+            _mapModuleKind[string{ moduleName }].push_back( pKind );
+            ++registeredCount;
+        }
+        return registeredCount;
+    }
+
+    uint32 ResourceDataKindRegistry::unregisterModuleKinds( string_view moduleName )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        const auto              iter = _mapModuleKind.find( string{ moduleName } );
+        if ( iter == _mapModuleKind.end() )
+            return 0;
+        uint32 removedCount = 0;
+        for ( const ResourceDataKind* pKind : iter->second )
+        {
+            if ( _registration.remove( pKind ) )
+                ++removedCount;
+        }
+        _mapModuleKind.erase( iter );
+        return removedCount;
     }
 
     bool ResourceDataKindRegistry::registerKind( const ResourceDataKind* pKind )
@@ -98,16 +132,36 @@ namespace sw
 
 namespace sw
 {
-    ResourceDataKindRegistrar::ResourceDataKindRegistrar( const ResourceDataKind* pKind )
-        : _pKind{ pKind }
-        , _bRegistered{ false }
+    ResourceDataKindRegistrar*& ResourceDataKindRegistrar::getHead()
     {
-        _bRegistered = ResourceDataKindRegistry::get().registerKind( pKind );
+        static ResourceDataKindRegistrar* s_pHead = nullptr;
+        return s_pHead;
     }
 
-    ResourceDataKindRegistrar::~ResourceDataKindRegistrar()
+    ResourceDataKindRegistrar::ResourceDataKindRegistrar( const ResourceDataKind* pKind )
+        : _pKind{ pKind }
+        , _pNext{ getHead() }
     {
-        if ( _bRegistered )
-            ResourceDataKindRegistry::get().unregisterKind( _pKind );
+        getHead() = this;
+    }
+} // namespace sw
+
+namespace sw
+{
+    const ResourceDataKind* ResourceDataKindUtil::findByLabel( string_view label )
+    {
+        const ResourceDataKindRegistry* pRegistry = engine::findSubsystem<ResourceDataKindRegistry>();
+        if ( pRegistry == nullptr )
+            return nullptr;
+        return pRegistry->findByLabel( label );
+    }
+
+    void ResourceDataKindUtil::collectMatches( string_view resourceID, vector<const ResourceDataKind*>& outListKind )
+    {
+        outListKind.clear();
+        const ResourceDataKindRegistry* pRegistry = engine::findSubsystem<ResourceDataKindRegistry>();
+        if ( pRegistry == nullptr )
+            return;
+        pRegistry->collectMatches( resourceID, outListKind );
     }
 } // namespace sw

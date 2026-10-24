@@ -136,18 +136,28 @@ namespace sw
     {
     }
 
-    void HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs,
+    bool HorrorSession::initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs,
                                     GridInventory& inventory, Inventory& itemBox )
     {
-        _pCatalog                       = pCatalog;
-        _pAreaGraph                     = pAreaGraph;
-        const SurvivalHorrorRules rules = pCatalog != nullptr ? pCatalog->getRules() : SurvivalHorrorRules{};
-        _pInventory                     = &inventory;
-        _pItemBox                       = &itemBox;
-        _pFlags                         = refs._pFlags;
-        _pInventory->initialize( pCatalog != nullptr ? pCatalog->makeShapeLookup() : GridInventory::ShapeDelegate{}, rules._gridWidth, rules._gridHeight );
-        _sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) );
-        _battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) );
+        if ( pCatalog == nullptr )
+        {
+            SW_LOG_ERROR( "HorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
+            return false;
+        }
+        const SurvivalHorrorRules& rules = pCatalog->getRules();
+        // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
+        ResourceGauge sanity;
+        ResourceGauge battery;
+        if ( sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) ) == false || battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) ) == false )
+            return false;
+        _pCatalog   = pCatalog;
+        _pAreaGraph = pAreaGraph;
+        _pInventory = &inventory;
+        _pItemBox   = &itemBox;
+        _pFlags     = refs._pFlags;
+        _pInventory->initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight );
+        _sanity  = sanity;
+        _battery = battery;
         _uniqueSeenMonster.clear();
         _uniqueReadDocument.clear();
         _uniqueClue.clear();
@@ -164,6 +174,7 @@ namespace sw
         _currentArea         = startArea;
         if ( _pAreaGraph != nullptr && startArea.empty() == false )
             (void)_pAreaGraph->enterArea( startArea );
+        return true;
     }
 
     void HorrorSession::update( float32 deltaTime, bool bInDarkness )

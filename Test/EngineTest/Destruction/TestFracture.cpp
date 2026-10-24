@@ -232,7 +232,7 @@ SW_TEST_CASE( FractureTest, ClusteredPatternMakesSmallerPiecesNearTheImpact )
 }
 
 /**
- * @brief [FractureTest] 묶음 레벨은 뿌리 → 묶음 → 잎으로 이어지고, 노드마다 잎 구간이 이어지며, 묶음 하나는 연결로 이어진 덩어리다
+ * @brief [FractureTest] 묶음 레벨은 루트 → 묶음 → 잎으로 이어지고, 노드마다 잎 구간이 이어지며, 묶음 하나는 연결로 이어진 덩어리다
  */
 SW_TEST_CASE( FractureTest, ClusterLevelsNestAndStayConnected )
 {

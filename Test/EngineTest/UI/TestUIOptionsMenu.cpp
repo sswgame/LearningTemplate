@@ -434,7 +434,7 @@ SW_TEST_CASE( UIOptionsMenuTest, HeldPauseKeyDoesNotCloseThePauseMenu )
  * @brief [UIOptionsMenuTest] 일시정지 메뉴의 "타이틀로" · "끝내기" 단추 — 전역 명령 표에 같은 이름이 등록돼 있는 동안만 보이고, 누르면 메뉴를 닫고 등록한 함수를 부르며,
  *        등록한 처리 함수로만 거둘 수 있다
  * @details 변이: `PauseMenuScreen::onTick` 이 표를 보지 않고 늘 보이면 처음 접힘 단언이 진다. 전역 표로 넘기지 않으면 호출 수가 0 이고, 메뉴를 닫지 않으면 화면이 남는다.
- *          `unregisterCommand` 가 처리 함수를 견주지 않으면 옛 주인이 거둘 때 등록이 사라져 진다.
+ *          `unregisterCommand` 가 처리 함수를 비교하지 않으면 옛 주인이 거둘 때 등록이 사라져 진다.
  */
 SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
 {

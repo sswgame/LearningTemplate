@@ -68,7 +68,7 @@ namespace sw
         /** @brief @p objectID 를 @p ownerObjectID 인스턴스의 부품으로 기록합니다(@p partKey 는 `PrefabNestedPart::_partKey`). 이미 있으면 바꿉니다. */
         void registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath, string_view partKey );
         /**
-         * @brief 앞서 찍어 둔 기록 @p part 를 그대로(기록 순서 포함) @p objectID 에 되살립니다. 이미 있으면 바꿉니다.
+         * @brief 앞서 찍어 둔 기록 @p part 를 그대로(기록 순서 포함) @p objectID 에 복원합니다. 이미 있으면 바꿉니다.
          * @details 같은 id 로 오브젝트를 다시 만드는 쪽(되돌리기 · 플레이 종료 복원)이 부른다. 순서를 새로 주면 프리팹으로 저장할 때 부품 순서가 바뀐다.
          */
         void restoreNestedPart( uint64 objectID, const PrefabNestedPart& part );

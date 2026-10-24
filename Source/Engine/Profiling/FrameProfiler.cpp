@@ -108,7 +108,7 @@ namespace sw
             // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다. 여러 스레드가 함께 넘칠 수 있어 원자로 한 번을 고른다.
             static atomic<bool> s_bWarned{ false };
             if ( s_bWarned.exchange( true, std::memory_order_relaxed ) == false )
-                SW_LOG_WARNING( "FrameProfiler: 구간이 %#개를 넘었습니다 — '%#' 이후는 무시합니다(kMaxScope 를 올린다).", kMaxScope, pName );
+                SW_LOG_WARNING( "FrameProfiler: more than %# scopes - ignoring '%#' and later ones (raise kMaxScope).", kMaxScope, pName );
             return kInvalidSlot;
         }
 
@@ -260,7 +260,7 @@ namespace sw
         const uint64 frames = _frameCount.load( std::memory_order_relaxed );
         if ( frames == 0 )
         {
-            SW_LOG_INFO( "[Profile] %# — 수집된 프레임이 없습니다.", pTitle != nullptr ? pTitle : "" );
+            SW_LOG_INFO( "[Profile] %# - no frames were collected.", pTitle != nullptr ? pTitle : "" );
             return;
         }
 

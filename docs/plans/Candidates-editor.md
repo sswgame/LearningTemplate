@@ -35,6 +35,12 @@ Tracy 0.14.1 뷰어 연결(주소 `localhost:8086` 을 직접 입력해 연결�
 - 감시 지연 · 스캔 비용은 [ContentBrowserWatchAndScan](ContentBrowserWatchAndScan.md) 로 옮겼다.
 착수 조건: 폴더 목록 단언이 한 번이라도 지거나, 에디터 체인 시간이 시한에 닿을 때.
 
+### PopupWindowCapture
+제목: 팝업 창을 캡처 시나리오가 찍도록 캡처 영역을 플랫폼 창 합집합으로 넓히기
+옛번호: 없음
+왜 필요한가: 뷰포트 옵션 팝업은 `ViewportsEnable` 때문에 OS 창이 되는데 `CaptureWindow`(`AutomationWindowSteps.cpp`)는 주 창 클라이언트 사각형만 BitBlt 해서 팝업이 잘려 보인다. 팝업은 의도된 동작이라(Decisions 5-11) 캡처 도구의 빈틈이다.
+착수 조건: 팝업을 캡처로 확인하는 시나리오가 생길 때.
+
 ## 기능
 
 ### ScenarioRecorderAndInspectorGaps

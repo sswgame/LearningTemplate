@@ -268,7 +268,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
 }
 
 /**
- * @brief [AutomationScenarioTest] ExpectVariable 은 전역 변수 값을 타입대로 견주고(실수는 tolerance), 틀린 값은 실패, 없는 변수 · 모르는 속성 · 타입에 안 맞는 값은 읽기 오류다
+ * @brief [AutomationScenarioTest] ExpectVariable 은 전역 변수 값을 타입대로 비교하고(실수는 tolerance), 틀린 값은 실패, 없는 변수 · 모르는 속성 · 타입에 안 맞는 값은 읽기 오류다
  * @details 테스트용 변수 `gv_testBool` · `gv_testInt` · `gv_testFloat` · `gv_testString`(TestGlobalVariableMacro.cpp)의 값을 바꿔 쓰고 끝에 되돌린다.
  */
 SW_TEST_CASE( AutomationScenarioTest, ExpectVariableComparesGlobalVariables )

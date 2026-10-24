@@ -255,7 +255,8 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
     string folder;
     SW_ASSERT_TRUE( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, folder ) );
     SW_EXPECT_TRUE( folder == reportsFolder );
-    SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, NullCrashReportUploader::get() ) );
+    NullCrashReportUploader nullUploader;
+    SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, nullUploader ) );
     const JSONDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
     SW_EXPECT_TRUE( manifest.getRoot().get( "state" ).asString() == "queued" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).read<uint64>().value() ) );
@@ -289,7 +290,8 @@ SW_TEST_CASE( CrashBundleTest, HTTPUploaderSendsMultipartMinidump )
     SW_EXPECT_TRUE( request._body.find( "crash.breadcrumbs.txt" ) != string::npos );
     SW_EXPECT_TRUE( StringUtil::endsWith( request._body, string( "--" ) + HTTPCrashReportUploader::kBoundary + "--\r\n" ) );
 
-    HTTPCrashReportUploader offline( NullHTTPClient::get(), "https://crash.invalid/api/minidump" );
+    NullHTTPClient          nullClient;
+    HTTPCrashReportUploader offline( nullClient, "https://crash.invalid/api/minidump" );
     CrashReportUploadBundle bundle;
     SW_EXPECT_TRUE( offline.upload( bundle ) == CrashReportUploadResult::Failed );
 }

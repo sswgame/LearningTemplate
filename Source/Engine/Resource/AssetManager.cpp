@@ -133,14 +133,14 @@ namespace sw
         // 어느 경로로 채웠는지 같이 적는다. 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
         if ( registered > 0 )
         {
-            SW_LOG_INFO( "에셋 레지스트리 %# 항목 (팩 assetregistry.txt)", registered );
+            SW_LOG_INFO( "Asset registry: %# entries (pack assetregistry.txt)", registered );
         }
         else if ( getPackManager().isAllowLooseFiles() == false )
         {
             // 팩 전용 구성은 디스크의 .meta 를 훑지 않는다(배포본은 .meta 를 싣지 않고, 훑으면 낱개 파일 금지를 지나간다). 레지스트리가 빠진 팩은
             // 쿠킹이 막는다(`PackCooker` — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
             // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
-            SW_LOG_INFO( "에셋 레지스트리 0 항목 (팩에 assetregistry.txt 없음 - .meta 없는 콘텐츠)" );
+            SW_LOG_INFO( "Asset registry: 0 entries (no assetregistry.txt in the pack - content without .meta)" );
         }
         else if ( ResourcePaths::getRootFolderPath().empty() == false )
         {
@@ -150,7 +150,7 @@ namespace sw
                 if ( domain.empty() == false )
                     registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), domain ) );
             }
-            SW_LOG_INFO( "에셋 레지스트리 %# 항목 (.meta 스캔)", registered );
+            SW_LOG_INFO( "Asset registry: %# entries (.meta scan)", registered );
         }
         return registered;
     }
@@ -240,8 +240,8 @@ namespace sw
                 continue;
 
             // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
-            SW_LOG_WARNING( "에셋 캐시 '%#' 가 등록된 채로 남아 있습니다 — 올린 쪽(모듈)이 내려가기 전에 "
-                            "unregisterAssetCache 를 불러야 합니다. 그대로 두면 다음 비우기가 죽은 코드로 뜁니다.",
+            SW_LOG_WARNING( "Asset cache '%#' is still registered - the registering side (module) must call "
+                            "unregisterAssetCache before it goes down. Otherwise the next clear jumps into dead code.",
                             _registeredAssetCache.getNameAt( index ).c_str() );
         }
     }

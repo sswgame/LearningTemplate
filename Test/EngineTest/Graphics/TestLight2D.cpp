@@ -18,7 +18,7 @@
 
 /**
  * @brief [Light2DTest] 감쇠는 안 반경 안에서 1, 바깥 반경에서 0, 사이는 ((바깥 − 거리) / (바깥 − 안))^지수다
- * @details 셰이더 `LightData::computeLight2dAttenuation` 과 같은 식이다 — RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 견준다.
+ * @details 셰이더 `LightData::computeLight2dAttenuation` 과 같은 식이다 — RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 비교한다.
  */
 SW_TEST_CASE( Light2DTest, AttenuationFollowsInnerOuterAndExponent )
 {

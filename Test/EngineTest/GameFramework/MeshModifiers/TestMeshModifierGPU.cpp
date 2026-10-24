@@ -22,7 +22,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// MeshModifierGPUTest.ProgramMatchesCPU — 모디파이어 스택의 GPU 실행(meshmorph.hlsl + meshmodifier.hlsli)이 CPU 정본과 같은 그림을 내는지 네 백엔드에서 본다.
+// MeshModifierGPUTest.ProgramMatchesCPU — 모디파이어 스택의 GPU 실행(meshmorph.hlsl + meshmodifier.hlsli)이 CPU 기준과 같은 그림을 내는지 네 백엔드에서 본다.
 // GPU 버퍼를 CPU 로 되읽는 API 가 없어 그림으로 비교한다: CPU 가 변형한 정점을 올린 정적 메시 vs 레스트 메시 + 변형 프로그램(모프 풀).
 // ------------------------------------------------------------------------------
 
@@ -200,7 +200,7 @@ namespace
             return result;
         }
 
-        /** @brief 기본 방향광 하나를 씬에 더합니다. 두 씬이 같은 빛을 받아야 그림을 견줄 수 있습니다. */
+        /** @brief 기본 방향광 하나를 씬에 더합니다. 두 씬이 같은 빛을 받아야 그림을 비교할 수 있습니다. */
         static bool addKeyLight( Scene& scene )
         {
             GameObject* pObject = scene.getObjectManager()->createGameObject( hashed_string( "KeyLight" ) );
@@ -266,7 +266,7 @@ SW_TEST_CASE( MeshModifierGPUTest, ProgramMatchesCPU )
         listLabel.push_back( "chain twist-bend-taper-noise-spherify" );
     }
 
-    // CPU 정본 결과와 GPU 프로그램은 백엔드와 무관하다 - 한 번만 만든다
+    // CPU 기준 결과와 GPU 프로그램은 백엔드와 무관하다 - 한 번만 만든다
     vector<vector<RHIVertex>> listCPUVertex;
     vector<vector<float4>>    listProgram;
     for ( size_t stackIndex = 0; stackIndex < listStack.size(); ++stackIndex )

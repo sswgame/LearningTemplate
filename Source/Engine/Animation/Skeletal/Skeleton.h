@@ -68,7 +68,7 @@ namespace sw
     /**
      * @class Skeleton
      * @brief 본 배열입니다(부모가 자식보다 앞에 옵니다). 런타임 포즈 계산(`Pose`)과 스킨 팔레트가 이것을 읽습니다.
-     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 정본이고
+     * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 기준이고
      *          모두 필수다(`PROPERTY( Required )`) — 빠진 키 · 모르는 키 · 읽지 못한 값은 오류다. 벡터 · 쿼터니언 · 행렬은 쉼표로 이은 숫자 글이다.
      *          `_parentIndex` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 행렬은 행 우선 16 개다. 읽은 뒤 부모 순서와 부착 본 이름을 따로 본다.
      */

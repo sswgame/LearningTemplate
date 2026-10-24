@@ -78,7 +78,7 @@ namespace sw
         static void makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath );
 
     private:
-        /** @brief 뿌리 객체를 읽습니다. */
+        /** @brief 루트 객체를 읽습니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
         vector<SkeletonBoneLODLevel> _listLevel;

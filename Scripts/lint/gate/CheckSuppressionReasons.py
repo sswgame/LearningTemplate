@@ -9,8 +9,8 @@
   3) CMake 의 경고 끄기(`-Wno-…` · `/wd…`)는 같은 줄에 `#` 이유를 든다(`cmake/Modules/Compiler/`).
 
 억제를 지우는 것보다 남기는 것이 쉬운 쪽으로 기울면 한 번 맞았던 이유가 낡은 채 남는다 — `RHIDxgiFormat.h` 의 `-Wswitch-enum` pragma 는
-CMake 가 이미 전역으로 끈 경고를 다시 끄고 있었다. 이유를 적게 하면 다음 사람이 이유가 아직 맞는지 볼 수 있다. clang-cl 의 `-Wall` 은
-`-Weverything` 이라 Windows 에서 끄는 경고가 리눅스(GNU 드라이버)에서는 애초에 켜져 있지 않을 수 있다 — pragma 를 더하기 전에 `Clang.cmake` 를 본다.
+CMake 가 이미 전역으로 끈 경고를 다시 끄고 있었다. 이유를 적게 하면 다음 사람이 이유가 아직 맞는지 볼 수 있다. 두 플랫폼은 같은 경고 집합(`-Wall -Wextra`,
+clang-cl 에는 `-clang:` 으로 넘긴다)을 쓴다 — pragma 를 더하기 전에 `Clang.cmake` 로 그 경고가 켜져 있는지 본다.
 
   python Scripts/lint/gate/CheckSuppressionReasons.py [--root <repo>] [--files a.cpp b.cmake]
 """

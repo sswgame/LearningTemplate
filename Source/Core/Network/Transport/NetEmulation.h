@@ -78,7 +78,7 @@ namespace sw
         uint64  _sentPacketCount{ 0 };        ///< 흉내가 안쪽 전송에 넘긴 패킷
         uint64  _droppedPacketCount{ 0 };     ///< 흉내가 버린 패킷(보내는 쪽 손실 · 큐 넘침 · 끊김과 받는 쪽 손실)
         uint64  _resentMessageCount{ 0 };     ///< 연결들이 다시 보낸 신뢰 메시지의 합(`NetConnectionStats::_resentMessageCount`)
-        float32 _measuredLossPercent{ 0.0f }; ///< 연결들이 잰 손실 중 가장 큰 값(%) — 확인이 안 온 패킷으로 추정한 값이다
+        float32 _measuredLossPercent{ 0.0f }; ///< 연결들이 측정한 손실 중 가장 큰 값(%) — 확인이 안 온 패킷으로 추정한 값이다
         float32 _rttMilliseconds{ 0.0f };     ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
         int32   _connectionCount{ 0 };        ///< 붙어 있는 연결 수
 

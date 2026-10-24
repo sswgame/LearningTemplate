@@ -315,7 +315,7 @@ namespace sw
         for ( const string& pendingName : listPendingName )
         {
             if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
-                SW_LOG_WARNING( "%#: 그런 전역 변수가 없습니다. 무시됩니다", pendingName.c_str() );
+                SW_LOG_WARNING( "%#: no such global variable. Ignored", pendingName.c_str() );
         }
     }
 
@@ -500,7 +500,7 @@ namespace sw
             _engine.update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
             _moduleHost->endEditorFrame();
 
-            // 클라이언트는 씬이 이번 프레임을 마친 뒤 서버가 알린 틱 번호로 해시를 남긴다 — 서버 이력과 같은 틱끼리 견준다(같은 틱은 한 번만 남는다).
+            // 클라이언트는 씬이 이번 프레임을 마친 뒤 서버가 알린 틱 번호로 해시를 남긴다 — 서버 이력과 같은 틱끼리 비교한다(같은 틱은 한 번만 남는다).
             // 클라이언트 쪽 상태 해시 이력(서버 디버깅 S7)은 `-gv_stateHashHistory=N` 일 때만 켜진다(서비스가 설 때 용량을 정한다).
             StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             uint64            serverTick        = 0;

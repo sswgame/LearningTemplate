@@ -13,7 +13,7 @@
 남은 것:
 - `HalfResolutionBloomMeasurement`(옛 D2-9) · `TerrainWaterVegetationRemainders`(옛 D2-5 ⑹ · ⑺, Debug 값을 Release 로) · `RuntimeQualityAdjust` ②(옛 C-29, 13 ~ 20 ms 프레임의 Tracy) · `BuildSpeed` 5 단계(옛 C-2, 공유 설치가 조용할 때).
 - `UdpSocketLayerScaling`(옛 B-10): Windows 서버 스레드 % 는 다른 빌드의 CPU 부하가 섞여 무효로 표시했다. 다른 빌드가 없을 때 다시 잰다.
-- 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([리플렉션 형식 계획](ReflectionFormats.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
+- 부하 기준선(`Test/Load/Baselines.json` 의 connect · replication · soak 은 커밋 `14c775c55`, 2026-10-15)은 온라인 B([고정 배치형 코덱 계약](../../Source/Engine/Serialization/Fixed/README.md)) 이전 값이다. B 가 들어간 뒤 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 다시 뜬다(옛 C-29 ⑤).
 지금 못 하는 까닭: 전부 Release 빌드와 GPU · 서버를 혼자 쓰는 측정이다(작업자는 빌드 · 실행을 하지 않고, 다른 빌드가 도는 동안은 값이 섞여 무효다). 풀리는 조건: 통합이 끝나 빌드가 조용할 때 항목별 후보 절의 순서대로(부하 기준선은 온라인 B 가 들어간 뒤).
 함정: 항목이 이름 체계로 옮겨지는 중이라 옛 번호는 `py -3 -m Scripts plans --find` 로 새 이름을 먼저 찾는다.
 
@@ -32,7 +32,7 @@
 옛번호: C-76
 왜 필요한가: 다른 항목에 속하지 않고 확인만 남은 이월 조각입니다.
 남은 것:
-- 리플렉션 크기: 값은 `ReflectionFormats.md` 3.1 절 표에 옮겼다. 단계 1 의 Release `App.exe` · 모듈 DLL 전후 값만 아직 없다(Debug 값은 있다). 두 커밋을 Release 로 지어 재야 하므로 측정 때 한다.
+- 리플렉션 크기: 값은 `Source/Engine/Serialization/Fixed/README.md` 3.1 절에 옮겼다. 단계 1 의 Release `App.exe` · 모듈 DLL 전후 값만 아직 없다(Debug 값은 있다). 두 커밋을 Release 로 지어 재야 하므로 측정 때 한다.
 - 셰이더 bindless 입문: `shaderdoc` 결과를 받은 뒤 분기를 숨기는 진입 함수 구조 변경을 따로 결정한다.
 - 겹침 도구: 항목마다 "건드릴 파일 · 겹침 주의"를 적고 겹치지 않는 묶음을 뽑는 도구. 이전 세션에서 사용자가 시킨 일로 기억되나 지시를 찾지 못했다, 사용자에게 확인.
 - 리눅스 CI 뒤: 리눅스 CI 가 초록이 된 뒤 `E-1` `E-4` `E-10` `C-29 ⑤` 관찰 항목과 `B-5` `B-7` 을 본다.

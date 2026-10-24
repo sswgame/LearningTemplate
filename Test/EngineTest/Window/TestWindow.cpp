@@ -143,7 +143,7 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
     const uint32 heightBefore = window->getHeight();
     SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
 
-    SW_ASSERT_TRUE_MSG( window->recreate(), "창을 다시 만들지 못했습니다" );
+    SW_ASSERT_TRUE_MSG( window->recreate(), "Failed to recreate the window" );
 
     // 엔진의 계약은 **의도**다 — "보이기로 한 창은 다시 만든 뒤에도 보이기로 한 상태다".
     // 이것은 모든 플랫폼에서 즉시 답할 수 있고, `recreate()` 가 판단에 쓰는 값도 이것이다.

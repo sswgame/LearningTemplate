@@ -195,7 +195,7 @@ namespace sw
             {
                 entry._base = kInvalidBase;
                 if ( bWarnedFull == false )
-                    SW_LOG_WARNING( "정점 풀이 가득 찼습니다(%# 정점) — 남은 메시는 자기 정점 버퍼로 그립니다(멀티 드로우에 못 묶인다).", kMaxPoolVertices );
+                    SW_LOG_WARNING( "The vertex pool is full (%# vertices) - the remaining meshes are drawn with their own vertex buffers (they cannot join multi-draw).", kMaxPoolVertices );
                 bWarnedFull = true;
                 continue;
             }
@@ -212,7 +212,7 @@ namespace sw
         _lastUploadBytes   = bytes;
         if ( _vertexBuffer == 0 )
         {
-            SW_LOG_ERROR( "정점 풀 버퍼를 만들지 못했습니다(%# 정점) — 배치는 자기 정점 버퍼로 그립니다.", capacity );
+            SW_LOG_ERROR( "Failed to create the vertex pool buffer (%# vertices) - the batch is drawn with its own vertex buffer.", capacity );
             for ( auto& [pMesh, entry] : _mapEntry )
             {
                 entry._base = kInvalidBase;

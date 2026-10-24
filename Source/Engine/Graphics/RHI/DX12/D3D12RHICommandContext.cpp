@@ -359,7 +359,7 @@ namespace sw
                 if ( _pDevice->_bBlitMismatchLogged == SW_FALSE )
                 {
                     _pDevice->_bBlitMismatchLogged = SW_TRUE;
-                    SW_LOG_ERROR( "blitTexture: CopyResource 불가 — src(fmt=%# %#×%#) dst(fmt=%# %#×%#). 복사를 건너뜁니다.",
+                    SW_LOG_ERROR( "blitTexture: CopyResource not possible - src(fmt=%# %#x%#) dst(fmt=%# %#x%#). Skipping the copy.",
                                   static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
                                   static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );
                 }
@@ -581,7 +581,7 @@ namespace sw
         // 상수버퍼는 디스크립터 테이블이 아니라 루트 CBV(GPU 주소)다. 힙에 쓸 일이 없고 슬롯 b# 이 곧 루트 파라미터다.
         if ( slot >= shaderslot::kConstantBufferSlotCount )
         {
-            SW_LOG_TRACE( "bindConstantBuffer: 슬롯 b%# 는 루트 시그니처의 CBV 수(%#)를 넘습니다.", slot, shaderslot::kConstantBufferSlotCount );
+            SW_LOG_TRACE( "bindConstantBuffer: slot b%# exceeds the root signature CBV count (%#).", slot, shaderslot::kConstantBufferSlotCount );
             return;
         }
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr )

@@ -80,6 +80,7 @@ namespace sw
         , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeUnitCount{ 0 }
         , _poseEvaluatedUnitCount{ 0 }
+        , _arrCrowdModeCount{}
         , _bOrderDirty{ SW_FALSE }
         , _bCycle{ SW_FALSE }
         , _bLODViewsSet{ SW_FALSE }
@@ -115,6 +116,10 @@ namespace sw
 
     void AnimationSystem::updateCrowd()
     {
+        for ( uint32& count : _arrCrowdModeCount )
+        {
+            count = 0;
+        }
         bool bAnyShared = false;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
         {
@@ -136,17 +141,16 @@ namespace sw
         if ( _bCrowdSettingsFailed == SW_TRUE )
             return;
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
-        uint32 arrModeCount[4] = { 0, 0, 0, 0 };
         for ( SkeletalMeshComponent* pUnit : _listActive )
         {
             if ( pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own )
                 pUnit->updateCrowdMembership( _crowd );
-            ++arrModeCount[static_cast<uint32>( pUnit->getCrowdMode() )];
+            ++_arrCrowdModeCount[static_cast<uint32>( pUnit->getCrowdMode() )];
         }
         _crowd.evaluateBuckets();
-        SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Shared )] );
-        SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::Solo )] );
-        SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", arrModeCount[static_cast<uint32>( AnimationCrowdMode::VertexAnimation )] );
+        SW_PROFILE_COUNT( "GT.Animation.crowdSharedUnits", getCrowdModeCount( AnimationCrowdMode::Shared ) );
+        SW_PROFILE_COUNT( "GT.Animation.crowdSoloUnits", getCrowdModeCount( AnimationCrowdMode::Solo ) );
+        SW_PROFILE_COUNT( "GT.Animation.crowdVertexAnimationUnits", getCrowdModeCount( AnimationCrowdMode::VertexAnimation ) );
         SW_PROFILE_COUNT( "GT.Animation.crowdBucketCount", static_cast<uint32>( _crowd.getBuckets().size() ) );
         SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }
@@ -432,7 +436,11 @@ namespace sw
             return;
         }
 
-        runPhase( AnimationPhase::Time );
+        // 단계마다 프로파일 구간을 둔다 — 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseTime" );
+            runPhase( AnimationPhase::Time );
+        }
         synchronizeGroups();
         updateCrowd();
 
@@ -443,21 +451,20 @@ namespace sw
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
         }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
-        // 단계마다 구간을 따로 둔다 — 합성 리그 벤치가 보인 이상(본 150 → 300 의 2.5 배, 후처리 리그 p99 3 배)이 어느 단계의 몫인지 프로파일이 가른다.
         {
-            SW_PROFILE_SCOPE( "GT.Animation.basePose" );
+            SW_PROFILE_SCOPE( "GT.Animation.phaseBasePose" );
             runPhase( AnimationPhase::BasePose );
         }
         {
-            SW_PROFILE_SCOPE( "GT.Animation.attachment" );
+            SW_PROFILE_SCOPE( "GT.Animation.phaseAttachment" );
             runPhase( AnimationPhase::Attachment );
         }
         {
-            SW_PROFILE_SCOPE( "GT.Animation.postProcess" );
+            SW_PROFILE_SCOPE( "GT.Animation.phasePostProcess" );
             runPhase( AnimationPhase::PostProcess );
         }
         {
-            SW_PROFILE_SCOPE( "GT.Animation.skinPalette" );
+            SW_PROFILE_SCOPE( "GT.Animation.phaseSkinPalette" );
             runPhase( AnimationPhase::SkinPalette );
         }
         _poseEvaluatedUnitCount = poseUnitCount;
@@ -537,7 +544,7 @@ namespace sw
             AnimationSystemInternal::PhaseJob job{};
             job._ppUnit = _listActive.data() + start;
             job._phase  = phase;
-            // 유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다(캐릭터 20 개는 직렬이, 100 개 이상은 병렬이 이긴다) — 잰 비용으로 고른다.
+            // 유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다(캐릭터 20 개는 직렬이, 100 개 이상은 병렬이 이긴다) — 측정한 비용으로 고른다.
             engine::runParallelByCost( end - start, SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::PhaseJob::runRange, &job ) );
         }
     }

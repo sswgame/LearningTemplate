@@ -136,7 +136,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
         if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, pInitData, buffer.GetAddressOf() ) ) )
         {
-            SW_LOG_ERROR( "createBuffer: 인다이렉트 인자 버퍼 생성 실패 (%# bytes)", sizeBytes );
+            SW_LOG_ERROR( "createBuffer: failed to create the indirect argument buffer (%# bytes)", sizeBytes );
             return 0;
         }
 

@@ -323,9 +323,9 @@ namespace sw
                 for ( uint32 frameIndex = 0; frameIndex < source._frameCount; ++frameIndex )
                 {
                     gain += step;
-                    const float32 value = pSource[frameIndex] * gain;
-                    pLeft[frameIndex] += value * leftWeight;
-                    pRight[frameIndex] += value * rightWeight;
+                    const float32 scaledSample = pSource[frameIndex] * gain;
+                    pLeft[frameIndex] += scaledSample * leftWeight;
+                    pRight[frameIndex] += scaledSample * rightWeight;
                 }
             }
             return;

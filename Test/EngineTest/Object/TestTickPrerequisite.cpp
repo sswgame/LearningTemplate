@@ -446,7 +446,7 @@ SW_TEST_CASE( TickPrerequisiteTest, FollowerChurnKeepsOrderUnderIncrementalStage
 /**
  * @brief [TickPrerequisiteTest] 증분으로 끼운 스테이지 배치가 전체 재구축이 만든 배치와 같다(스테이지 안의 순서까지)
  * @details 결과값(틱 횟수 · 관측값)만 보면 증분 경로가 스테이지를 다른 자리에 넣어도 드러나지 않는다. 같은 오브젝트 집합에서 `markTickStagesDirty` 로 전체 재구축을 세워
- *          두 배치를 견준다. 스테이지 안의 순서가 다르면 같은 씬이 길에 따라 다른 순서로 돌아 결정성이 깨지므로 (그룹, 레벨, 오브젝트 id 차례)를 스테이지마다 견준다.
+ *          두 배치를 비교한다. 스테이지 안의 순서가 다르면 같은 씬이 길에 따라 다른 순서로 돌아 결정성이 깨지므로 (그룹, 레벨, 오브젝트 id 차례)를 스테이지마다 비교한다.
  *          예전 오브젝트를 껐다 켜서 새 id 가 아닌 항목이 스테이지 중간에 끼는 경우를 만든다.
  */
 SW_TEST_CASE( TickPrerequisiteTest, IncrementalStageLayoutMatchesFullRebuild )

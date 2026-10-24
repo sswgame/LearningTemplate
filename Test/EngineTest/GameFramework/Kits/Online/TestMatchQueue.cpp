@@ -590,7 +590,7 @@ SW_TEST_CASE( MatchmakingProtocolTest, MessagesAndRecordsRoundTrip )
 /**
  * @brief [MatchmakingProtocolTest] 가장 큰 버스 메시지(`MatchFormed`)를 실제 상한으로 채워도 A 가 버스 메시지 상한 안이다
  * @details 실제 상한은 팀 수 × 팀 인원(`MatchmakingLimit`)이고 티켓의 멤버 합계도 그만큼이다. `MaxCount` 를 모두 곱한 값(티켓 256 개 × 멤버 256 명)은
- *          B 로도 60 KiB 를 넘으므로 상한이 아니다(docs/plans/ServerBusFormat.md 6절). 측정할 때 이 크기를 검증 문서에 적는다.
+ *          B 로도 60 KiB 를 넘으므로 상한이 아니다(docs/09_Decisions.md 5-9 서버 버스 테스트). 측정할 때 이 크기를 검증 문서에 적는다.
  */
 SW_TEST_CASE( MatchmakingProtocolTest, LargestBusMessageFitsTheBusLimit )
 {

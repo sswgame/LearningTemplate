@@ -47,13 +47,13 @@ namespace sw
 
         /**
          * @brief 장애물마다 생기거나 사라졌거나 @p moveThreshold 넘게 움직였거나 돌았으면 내비메시에 알립니다.
-         * @details 다시 굽기 종류에는 옛 · 새 자리를 장애물 영역으로 알리고(다음 영역 처리가 그 종류에만 타일을 줄에 넣는다), 장애물 캐시 종류에는
+         * @details 다시 베이크 종류에는 옛 · 새 자리를 장애물 영역으로 알리고(다음 영역 처리가 그 종류에만 타일을 줄에 넣는다), 장애물 캐시 종류에는
          *          캐시 장애물을 빼고 새 자세로 다시 넣는다(`NavObstacleMode` — 종류마다 다를 수 있다).
          */
         void updateObstacles( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle, float32 moveThreshold );
-        /** @brief 사라지는 장애물을 내비메시에서 뺍니다(다시 굽기 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다). */
+        /** @brief 사라지는 장애물을 내비메시에서 뺍니다(다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다). */
         void forgetObstacle( NavMeshObstacleComponent& obstacle, const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
-        /** @brief 장애물 캐시 종류마다 쌓인 장애물 요청을 처리합니다(끝난 굽기 끼우기와 같은 자리 — 질의가 없는 동안). */
+        /** @brief 장애물 캐시 종류마다 쌓인 장애물 요청을 처리합니다(끝난 베이크 끼우기와 같은 자리 — 질의가 없는 동안). */
         static void updateObstacleCaches( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, float32 deltaSeconds );
         /** @brief 새 캐시 종류에 지금 뚫고 있는 장애물을 모두 넣습니다(런타임을 처음 만들 때). */
         static void addCarvedObstaclesToCache( NavMeshRuntime& runtime, const vector<NavMeshObstacleComponent*>& listObstacle );
@@ -74,11 +74,11 @@ namespace sw
         static void collectObstacleVolumes( const vector<NavMeshObstacleComponent*>& listObstacle, vector<NavConvexVolume>& outListVolume );
 
     private:
-        /** @brief 장애물이 바꾼 자리를 알립니다 — 다시 굽기 종류에만 닿는다(캐시 종류는 캐시 장애물로 받는다). 게임 스레드에서만 부릅니다. */
+        /** @brief 장애물이 바꾼 자리를 알립니다 — 다시 베이크 종류에만 닿는다(캐시 종류는 캐시 장애물로 받는다). 게임 스레드에서만 부릅니다. */
         void invalidateObstacleArea( const AABB& bounds );
 
         vector<AABB>     _listDirtyArea;    ///< `_dirtyLock` 아래
-        vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 굽기 종류에만 닿는다)
+        vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 베이크 종류에만 닿는다)
         uint32           _rebakedTileCount;
         mutable SpinLock _dirtyLock;      ///< `invalidateArea` 가 아무 스레드에서 온다
         bool             _bGeometryDirty; ///< `_dirtyLock` 아래

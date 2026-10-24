@@ -26,7 +26,7 @@ namespace sw
     /** @brief 로딩 화면의 겉모습과 시간 설정입니다. `GameInstanceBase` 가 gamesettings 로 채웁니다. */
     struct LoadingScreenSettings
     {
-        DataPath       _documentPath{};                      ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`). 정본은 gamesettings 의 `_loadingScreen` 이고, 칸이 없으면(`isSet()` 거짓) 로딩 화면을 띄우지 않는다
+        DataPath       _documentPath{};                      ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`). 기준은 gamesettings 의 `_loadingScreen` 이고, 칸이 없으면(`isSet()` 거짓) 로딩 화면을 띄우지 않는다
         vector<string> _listTip{};                           ///< 팁 글의 현지화 키(원문). 열 때마다 하나를 고른다. 비면 팁 영역을 접는다
         float32        _minimumSeconds{ 0.5f };              ///< 최소 표시 시간(초). 빠른 로드에서 한 프레임만 깜박이지 않게 한다
         float32        _fadeInSeconds{ 0.35f };              ///< 닫은 뒤 검은 화면에서 씬으로 돌아오는 페이드 인(초)

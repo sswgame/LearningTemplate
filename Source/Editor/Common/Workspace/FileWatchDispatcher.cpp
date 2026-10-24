@@ -322,7 +322,7 @@ namespace sw
                 ++found;
             }
         }
-        SW_LOG_INFO( "파일 변경이 한꺼번에 몰려 워처가 개별 알림을 잃었습니다 — 감시 트리를 대조해 %# 개를 되찾았습니다.", found );
+        SW_LOG_INFO( "A burst of file changes made the watcher drop individual notifications - recovered %# by diffing the watch tree.", found );
     }
 
     void FileWatchDispatcher::pollMtimeFallback( vector<FileChangeEvent>& outListEvent )

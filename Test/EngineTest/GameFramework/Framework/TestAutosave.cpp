@@ -27,14 +27,14 @@ namespace
 
         void initialize( const AutosaveSettings& settings )
         {
-            _manager.initialize( settings, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( string_view path )
+            const bool bInitialized = _manager.initialize( settings, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( string_view path )
             {
                 ++_saveCalls;
                 if ( _bFailSaves )
                     return false;
                 return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, to_string( _saveCalls ) );
             } ),
-                                 SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( string_view path )
+                                                           SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( string_view path )
             {
                 string text;
                 if ( FileUtil::readTextFile( path, text ) == false )
@@ -42,6 +42,7 @@ namespace
                 _lastLoaded = text;
                 return true;
             } ) );
+            SW_EXPECT_TRUE( bInitialized );
         }
     };
 

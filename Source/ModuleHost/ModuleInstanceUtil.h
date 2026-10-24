@@ -51,14 +51,14 @@ namespace sw
                 reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
             if ( pfnVersion == nullptr || pfnVersion() != kModuleAbiVersion )
             {
-                SW_LOG_ERROR( "%# 모듈 ABI 버전이 다릅니다 (기대 %#) — 엔진과 모듈을 함께 다시 빌드하세요.", symbols._pModuleLabel, kModuleAbiVersion );
+                SW_LOG_ERROR( "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleAbiVersion );
                 return false;
             }
 
             const PFN_GetModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
             if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleAbiStamp ) == false )
             {
-                SW_LOG_ERROR( "%# 모듈 ABI 스탬프가 다릅니다 (기대 '%#') — 엔진과 모듈을 함께 다시 빌드하세요.", symbols._pModuleLabel, kModuleAbiStamp );
+                SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleAbiStamp );
                 return false;
             }
             return true;

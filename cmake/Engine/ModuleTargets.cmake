@@ -267,6 +267,7 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		FOLDER "Source/GameFramework/Kits"
 		SOURCES ${listKitSource}
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
+		UNITY_BATCH ${SW_UNITY_BATCH_KIT}
 		REFLECTION_EXCLUDE "/Editor/"
 	)
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")

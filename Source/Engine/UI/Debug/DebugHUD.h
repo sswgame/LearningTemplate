@@ -49,7 +49,7 @@ namespace sw
     class SW_API DebugHUD
     {
     public:
-        // 설정 스키마(Dev 기동이 엔진과 게임 스키마 뒤에 덧붙인다)와 섹션 체크 상자 창 문서는 엔진 기본 에셋 표가 정본이다
+        // 설정 스키마(Dev 기동이 엔진과 게임 스키마 뒤에 덧붙인다)와 섹션 체크 상자 창 문서는 엔진 기본 에셋 표가 기준이다
         // (`EngineDefaultAssets::_debugHUDSettingsSchema` · `_uiDebugHUD`, 창은 `UISystem::getEngineDocuments()._debugHUD`).
         /** @brief 셸 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
         static constexpr const utf8* kToggleActionName = "DebugHUDToggle";

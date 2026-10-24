@@ -2,7 +2,7 @@
  * @file ServerBusTestTypes.h
  * @brief 서버 버스 혼합 빌드 테스트의 본문 타입입니다(EngineTest 리플렉션 단계가 코드젠합니다).
  * @details A 스트림에는 타입 FQN 이 없고 필드를 이름 해시로 짝지으므로, 필드 이름이 겹치는 두 타입으로 쓰고 읽으면 옛 빌드와 새 빌드 사이를 흉내 냅니다
- *          (docs/plans/ServerBusFormat.md 6절). 중첩 타입은 두 빌드가 같은 것을 씁니다(기록 타입 해시가 그 이름입니다).
+ *          (docs/09_Decisions.md 5-9 서버 버스 테스트). 중첩 타입은 두 빌드가 같은 것을 씁니다(기록 타입 해시가 그 이름입니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -104,7 +104,7 @@ namespace sw
     struct SW_KIT_API MatchTicket
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
         PROPERTY( MaxCount = 256 )
         vector<MatchMember> _listMember{}; ///< 상한은 팀 수 상한 곱하기 팀 인원 상한(`MatchmakingLimit`)이다
         PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
@@ -142,7 +142,7 @@ namespace sw
     struct SW_KIT_API MatchFormed
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamCount )
         vector<MatchFormedTeam> _listTeam{}; ///< 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
         PROPERTY( MaxCount = 256 )
@@ -169,7 +169,7 @@ namespace sw
     struct SW_KIT_API MatchBackfillRequest
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = 16 )
         vector<int32> _listOpenSlot{}; ///< 팀마다 빈 슬롯 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
         PROPERTY( MaxCount = 32 )
@@ -231,7 +231,7 @@ namespace sw
     struct SW_KIT_API PartySnapshot
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         /// 첫 항목이 파티장이다. 상한은 `PartyLobbyLimit::kMaxPartySize` 와 같다.
         PROPERTY( MaxCount = PartyLobbyLimit::kMaxPartySize )
         vector<AccountID> _listMemberID{};
@@ -299,7 +299,7 @@ namespace sw
     struct SW_KIT_API LobbySnapshot
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbySize )
         vector<LobbyMember> _listMember{}; ///< 첫 항목이 방장이다
         PROPERTY( MaxCount = PartyLobbyLimit::kMaxLobbySetting )
@@ -366,7 +366,7 @@ namespace sw
     struct SW_KIT_API MatchAssignment
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = 16 )
         vector<AccountID> _listTeammate{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
         PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )

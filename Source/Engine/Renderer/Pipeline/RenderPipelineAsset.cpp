@@ -83,35 +83,35 @@ namespace sw
                     RHIFormat                   parsed{};
                     if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
+                        SW_LOG_ERROR( "[%#] attachment '%#': unknown format '%#'", sourcePath, attachment._name, attachment._format );
                         ++issueCount;
                     }
                     else if ( isRHIFormatRenderable( parsed ) == false )
                     {
                         // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
-                        SW_LOG_ERROR( "[%#] attachment '%#': 포맷 '%#' 은 렌더 타깃이 될 수 없습니다", sourcePath, attachment._name, attachment._format );
+                        SW_LOG_ERROR( "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, attachment._format );
                         ++issueCount;
                     }
                     for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
                     {
                         if ( desc._listAttachment[otherIndex]._name == attachment._name )
                         {
-                            SW_LOG_ERROR( "[%#] attachment '%#' 이름이 중복됐습니다", sourcePath, attachment._name );
+                            SW_LOG_ERROR( "[%#] attachment '%#' name is duplicated", sourcePath, attachment._name );
                             ++issueCount;
                             break;
                         }
                     }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# — 1 · 2 · 4 만 받습니다", sourcePath, attachment._name, attachment._resolutionDivisor );
+                        SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# - only 1, 2 and 4 are accepted", sourcePath, attachment._name, attachment._resolutionDivisor );
                         ++issueCount;
                     }
                     // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
                     RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · GBufferMaterial · "
-                                      "ShadowMap · AmbientOcclusion · BloomBright 중 하나입니다",
+                        SW_LOG_ERROR( "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
+                                      "ShadowMap, AmbientOcclusion, BloomBright",
                                       sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }
@@ -129,7 +129,7 @@ namespace sw
                     {
                         if ( desc._listPass[earlierIndex]._name == desc._listPass[passIndex]._name )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#' 가 두 번 선언됐습니다 — 이름은 패스의 열쇠라 뒤의 것은 버려집니다", sourcePath,
+                            SW_LOG_ERROR( "[%#] pass '%#' is declared twice - the name is the pass key, so the later one is dropped", sourcePath,
                                           desc._listPass[passIndex]._name );
                             ++issueCount;
                             break;
@@ -177,7 +177,7 @@ namespace sw
                 uint32 issueCount{ 0 };
                 if ( isPipelinePassType( pass._resolvedType ) == false )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': 알 수 없는 타입 '%#' — RenderPassType 에 없는 표기입니다",
+                    SW_LOG_ERROR( "[%#] pass '%#': unknown type '%#' - not a RenderPassType spelling",
                                   sourcePath, pass._name, pass._type );
                     ++issueCount;
                 }
@@ -185,19 +185,19 @@ namespace sw
                 const bool bModulePass = pass._resolvedType == RenderPassType::Module;
                 if ( bModulePass && ( pass._modulePass.empty() || pass._shaderPath.empty() ) )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': Module 패스는 _modulePass 와 _shaderPath 가 필요합니다", sourcePath, pass._name );
+                    SW_LOG_ERROR( "[%#] pass '%#': a Module pass needs _modulePass and _shaderPath", sourcePath, pass._name );
                     ++issueCount;
                 }
                 if ( bModulePass == false && pass._modulePass.empty() == false )
                 {
-                    SW_LOG_ERROR( "[%#] pass '%#': _modulePass 는 Module 타입 패스에만 씁니다(타입 '%#')", sourcePath, pass._name, pass._type );
+                    SW_LOG_ERROR( "[%#] pass '%#': _modulePass is only for Module type passes (type '%#')", sourcePath, pass._name, pass._type );
                     ++issueCount;
                 }
                 for ( const string& inputName : pass._listInput )
                 {
                     if ( findAttachment( desc, inputName ) == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': 입력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, inputName );
+                        SW_LOG_ERROR( "[%#] pass '%#': input '%#' is not in _attachments", sourcePath, pass._name, inputName );
                         ++issueCount;
                     }
                 }
@@ -208,7 +208,7 @@ namespace sw
                         continue;
                     if ( findAttachment( desc, outputName ) == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#' 이 _attachments 에 없습니다", sourcePath, pass._name, outputName );
+                        SW_LOG_ERROR( "[%#] pass '%#': output '%#' is not in _attachments", sourcePath, pass._name, outputName );
                         ++issueCount;
                     }
                 }
@@ -227,13 +227,13 @@ namespace sw
                     const RenderPassAttachment* pDepthAttachment = findAttachment( desc, pass._depthAttachment );
                     if ( pDepthAttachment == nullptr )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 이 _attachments 에 없습니다",
+                        SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' is not in _attachments",
                                       sourcePath, pass._name, pass._depthAttachment );
                         ++issueCount;
                     }
                     else if ( isDepthAttachment( pDepthAttachment ) == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
+                        SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' has format '%#' - it must be a depth format",
                                       sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
                         ++issueCount;
                     }
@@ -243,8 +243,8 @@ namespace sw
                 {
                     if ( isDepthAttachment( findAttachment( desc, outputName ) ) == false )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 을 출력으로 선언했는데 _depthAttachment 가 비어 "
-                                  "있습니다 — 이대로면 뎁스 없이 그립니다",
+                    SW_LOG_ERROR( "[%#] pass '%#': depth attachment '%#' is declared as an output but _depthAttachment is empty "
+                                  "- as is, it draws without depth",
                                   sourcePath, pass._name, outputName );
                     ++issueCount;
                 }
@@ -277,7 +277,7 @@ namespace sw
                     {
                         if ( desc._listPass[earlierIndex]._modulePass == pass._modulePass )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#': 모듈 패스 '%#' 가 이미 앞 패스에 있습니다 — 모듈 패스 이름은 파이프라인에서 하나뿐이어야 합니다", sourcePath, pass._name,
+                            SW_LOG_ERROR( "[%#] pass '%#': module pass '%#' already exists in an earlier pass - a module pass name must be unique in the pipeline", sourcePath, pass._name,
                                           pass._modulePass );
                             ++issueCount;
                             break;
@@ -305,7 +305,7 @@ namespace sw
                     }
                     if ( colorCount > kMaxColorAttachments )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': 컬러 출력이 %#개로 한계(%#)를 넘습니다",
+                        SW_LOG_ERROR( "[%#] pass '%#': %# color outputs exceed the limit (%#)",
                                       sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
                         ++issueCount;
                     }
@@ -335,7 +335,7 @@ namespace sw
                         }
                         if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
                             return;
-                        SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#'(나눗수 %#) 과 '%#'(나눗수 %#) 의 크기가 다릅니다 — 한 패스의 출력은 같은 크기여야 합니다",
+                        SW_LOG_ERROR( "[%#] pass '%#': outputs '%#' (divisor %#) and '%#' (divisor %#) differ in size - all outputs of one pass must have the same size",
                                       sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
                         ++issueCount;
                     };
@@ -366,7 +366,7 @@ namespace sw
                                              getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 없습니다 — 이 패스는 _listOutput 에 선언한 컬러 첨부에 그립니다",
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): no color output - this pass draws to the color attachments declared in _listOutput",
                                       sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }
@@ -374,7 +374,7 @@ namespace sw
                                                          pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
                     if ( bSkipGBufferOutputCheck )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 · 머티리얼 %#개를 한 MRT 패스로 씁니다",
+                    SW_LOG_ERROR( "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal and material (%#) in one MRT pass",
                                   sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
@@ -402,13 +402,13 @@ namespace sw
                             ++sourceColorCount;
                         if ( pContract->reads( role ) )
                             continue;
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 입력 '%#'(역할 %#) 은 이 패스 타입이 읽지 않습니다 — 선언만 있고 바인딩되지 않는 입력입니다",
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",
                                       sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
                         ++issueCount;
                     }
                     if ( sourceColorCount > 1 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 가공할 컬러 입력(SourceColor 역할)이 %#개입니다 — 셰이더는 하나만 읽습니다",
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): %# color inputs to process (SourceColor role) - the shader reads only one",
                                       sourcePath, pass._name, pass._type, sourceColorCount );
                         ++issueCount;
                     }
@@ -420,7 +420,7 @@ namespace sw
                                          { return static_cast<RenderPassInputRole>( input._role ) == required; } );
                         if ( bFound )
                             continue;
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): 필수 입력(역할 %#)이 선언되지 않았습니다 — 셰이더가 kInvalidIndex 를 읽습니다",
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): required input (role %#) is not declared - the shader reads kInvalidIndex",
                                       sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
                         ++issueCount;
                     }
@@ -444,7 +444,7 @@ namespace sw
                     {
                         if ( bWritesSwapchain == false )
                         {
-                            SW_LOG_ERROR( "[%#] pass '%#'(Canvas): 출력이 Swapchain 이 아닙니다 — Canvas 는 주 출력에 그립니다", sourcePath, pass._name );
+                            SW_LOG_ERROR( "[%#] pass '%#' (Canvas): the output is not the Swapchain - Canvas draws to the main output", sourcePath, pass._name );
                             ++issueCount;
                         }
                         pCanvas = &pass;
@@ -452,7 +452,7 @@ namespace sw
                     }
                     if ( pCanvas != nullptr && bWritesSwapchain )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': Canvas '%#' 뒤에서 Swapchain 을 씁니다 — Canvas 는 Swapchain 을 쓰는 마지막 패스여야 합니다(UI 가 덮인다)",
+                        SW_LOG_ERROR( "[%#] pass '%#': writes the Swapchain after Canvas '%#' - Canvas must be the last pass that writes the Swapchain (the UI would be covered)",
                                       sourcePath, pass._name, pCanvas->_name );
                         ++issueCount;
                     }
@@ -461,7 +461,7 @@ namespace sw
                 {
                     if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
                         continue;
-                    SW_LOG_ERROR( "[%#] pass '%#'(Sky): _depthAttachment 가 비어 있습니다 — 하늘은 깊이 테스트로 아무것도 그리지 않은 곳만 칠합니다", sourcePath, pass._name );
+                    SW_LOG_ERROR( "[%#] pass '%#' (Sky): _depthAttachment is empty - the sky paints only where nothing was drawn, using the depth test", sourcePath, pass._name );
                     ++issueCount;
                 }
                 return issueCount;
@@ -479,12 +479,12 @@ namespace sw
                     const bool bSkippable = getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess );
                     if ( pass._minPostQuality < 0 )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#': _minPostQuality %# — 0 이상이어야 합니다", sourcePath, pass._name, pass._minPostQuality );
+                        SW_LOG_ERROR( "[%#] pass '%#': _minPostQuality %# - must be 0 or greater", sourcePath, pass._name, pass._minPostQuality );
                         ++issueCount;
                     }
                     else if ( pass._minPostQuality > 0 && bSkippable == false )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#'(%#): _minPostQuality 는 후처리를 건너뛸 수 있는 타입(SSAO · Bloom · Outline · MotionBlur)만 받습니다", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): _minPostQuality is accepted only for types whose post-processing can be skipped (SSAO, Bloom, Outline, MotionBlur)", sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }
                 }
@@ -508,7 +508,7 @@ namespace sw
         issueCount += Internal::checkCanvasAndSky( _desc, sourcePath );
         issueCount += Internal::checkMinPostQuality( _desc, sourcePath );
         if ( issueCount > 0 )
-            SW_LOG_ERROR( "[%#] 파이프라인 검증에서 %#건의 문제를 찾았습니다 — 렌더 결과가 어긋나거나 GPU 가 죽을 수 있습니다",
+            SW_LOG_ERROR( "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                           sourcePath, issueCount );
         return issueCount;
     }

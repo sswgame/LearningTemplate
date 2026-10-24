@@ -1143,7 +1143,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
 
 /**
  * @brief [ReflectionSerializationTest] 이름을 바꾼 열거자는 텍스트(XML · JSON)도 바이너리와 같은 리다이렉트 표로 읽는다
- * @details 옛 빌드가 쓴 글에는 옛 이름(`Green`, 플래그 `C`)이 있다. 다음 빌드가 `ValueAlias` 로 옛 이름을 남겼으면 새 열거자로 읽는다(docs/plans/RenameRedirects.md 4 절).
+ * @details 옛 빌드가 쓴 글에는 옛 이름(`Green`, 플래그 `C`)이 있다. 다음 빌드가 `ValueAlias` 로 옛 이름을 남겼으면 새 열거자로 읽는다(docs/09_Decisions.md 5-4 이름 변경 리다이렉트).
  */
 SW_TEST_CASE( ReflectionSerializationTest, RenamedEnumeratorReadsFromTextThroughTheSameRedirect )
 {
@@ -3536,7 +3536,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, sw::ObjectAddress{ &target }, context ).c_str() );
     SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, sw::ObjectAddress{ &target }, context ).c_str() );
 
-    // 컨테이너는 원소째 옮기고 견준다.
+    // 컨테이너는 원소째 옮기고 비교한다.
     const sw::TypeInfo* pNested = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_NOT_NULL( pNested );
     const sw::PropertyInfo* pGrid = pNested->findPropertyInHierarchy( sw::hashed_string( "_grid" ) );
@@ -4000,7 +4000,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UncarriedValueTypeFailsTheReadAndTheW
 
 /**
  * @brief [ReflectionSerializationTest] 모르는 이름만 건너뛰는 읽기는 **모든 깊이에서** 같다 — 중첩 원소에 필드가 하나 더 있어도 메시지 전체를 거절하지 않는다
- * @details 혼합 빌드 사이의 메시지(서버 버스, 캐시 레코드)의 정책이다(docs/plans/ServerBusFormat.md 3.3 ⓐ). 중첩 구조체는 언제나 엄격 읽기로 읽히므로,
+ * @details 혼합 빌드 사이의 메시지(서버 버스, 캐시 레코드)의 정책이다(docs/09_Decisions.md 5-9 서버 버스 읽기 정책 ⓐ). 중첩 구조체는 언제나 엄격 읽기로 읽히므로,
  *          최상위의 orphan 정책만 바꾸면 목록 원소에 필드 하나를 더한 새 빌드의 메시지를 옛 빌드가 통째로 버린다. 플래그가 컨텍스트에 있고 컨텍스트가
  *          중첩까지 내려가므로 깊이와 상관없이 같은 정책이다. 두 빌드는 이름이 같은 중첩 타입을 서로 다른 레지스트리에 둔다.
  */
@@ -4046,7 +4046,7 @@ SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadSkipsAnUnknownNameAtEve
 /**
  * @brief [ReflectionSerializationTest] 혼합 빌드 읽기는 중첩 원소 안의 모르는 열거자도 거절한다 — 두 플래그를 함께 켠 옛 정책은 그 필드를 기본값으로 남기고 성공했다
  * @details 옛 빌드는 새 빌드가 더한 열거자를 모른다. 버스 메시지에서 그 값을 기본값(`None` 같은 것)으로 받으면 폴백이다(계정 해지 사유). 읽지 못한 아는 필드는
- *          깊이와 상관없이 읽기 전체의 실패다(docs/plans/ServerBusFormat.md 3.3 의 3).
+ *          깊이와 상관없이 읽기 전체의 실패다(docs/09_Decisions.md 5-9 서버 버스 읽기 정책 의 3).
  */
 SW_TEST_CASE( ReflectionSerializationTest, MixedBuildReadRejectsAnUnknownEnumeratorAtEveryDepth )
 {
@@ -4106,7 +4106,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnreadableFieldKeepsItsValueBeforeThe
     ColorListHolder lenient;
     lenient._listColor = { WireShiftColor::Blue };
     SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &lenient, holderType, bytes.data(), bytes.size(), oldBuild.makeContext( true, true ) ) );
-    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( lenient._listColor.size() == size_t( 1 ), "A half-read list remains (the leading element was written)" );
     SW_EXPECT_TRUE( lenient._listColor[0] == WireShiftColor::Blue );
     SW_EXPECT_EQUAL( 9, lenient._after );
 
@@ -4143,7 +4143,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONSoftReadKeepsUnreadableFieldValue
     soft._listValue = { 7 };
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &soft, holderType, text, &listOrphan, nullptr ) == sw::SoftReadResult::Read );
     SW_EXPECT_EQUAL( size_t( 1 ), listOrphan.size() );
-    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(앞 원소가 써진 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "A half-read list remains (the leading element was written)" );
     SW_EXPECT_EQUAL( 7, soft._listValue[0] );
     SW_EXPECT_EQUAL( 9, soft._after );
 
@@ -4166,7 +4166,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
     // 둘째 원소를 int32 로 읽지 못하게 고친다
     const sw::string_view readableItem = "<item>2</item>";
     const size_t          itemPosition = text.find( readableItem.data(), 0, readableItem.size() );
-    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "XML 글의 모양이 짐작과 다릅니다" );
+    SW_ASSERT_TRUE_MSG( itemPosition != sw::string::npos, "The XML text is not shaped as expected" );
     text.replace( itemPosition, readableItem.size(), "<item>x</item>" );
 
     test::ScopedLogSuppressor suppressor; // 읽지 못한 원소 경고
@@ -4178,7 +4178,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
     SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
     SW_EXPECT_TRUE( listOrphan[0]._name == sw::hashed_string( "_listValue" ) );
     SW_EXPECT_TRUE( listOrphan[0]._text.find( "<item>1</item>" ) != sw::string::npos );
-    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "읽다 만 목록(읽힌 원소만 남은 채)이 남았습니다" );
+    SW_ASSERT_TRUE_MSG( soft._listValue.size() == size_t( 1 ), "A half-read list remains (only the read elements are kept)" );
     SW_EXPECT_EQUAL( 7, soft._listValue[0] );
     SW_EXPECT_EQUAL( 9, soft._after );
 
@@ -4188,7 +4188,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLSoftReadKeepsUnreadableFieldValueB
 
 /**
  * @brief [ReflectionSerializationTest] 소프트 읽기는 기록 타입이 다르고 변환이 안 되는 필드를 제 타입으로 "읽힌 만큼" 받지 않고 orphan 으로 남긴다
- * @details 예전에는 `int32` 0 으로 기록된 필드를 `vector<int32>` 로 읽으면 그 4 바이트를 원소 수 0 으로 읽어 빈 목록으로 성공했다(docs/plans/ServerBusFormat.md 3.3 ⓒ).
+ * @details 예전에는 `int32` 0 으로 기록된 필드를 `vector<int32>` 로 읽으면 그 4 바이트를 원소 수 0 으로 읽어 빈 목록으로 성공했다(docs/09_Decisions.md 5-9 서버 버스 읽기 정책 ⓒ).
  *          버전 붙은 바이너리 읽기는 orphan 을 이관 없이 거절하므로 이제 실패가 드러난다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, SoftReadKeepsAFieldOfAnotherShapeAsAnOrphan )
@@ -4285,7 +4285,7 @@ SW_TEST_CASE( ReflectionSerializationTest, SoftReadRejectsAPayloadWithTrailingBy
 /**
  * @brief [ReflectionSerializationTest] 정확한 버전 읽기는 버전이 다르면 거절하고, 같으면 컨텍스트의 정책으로 엄격하게 읽는다
  * @details 혼합 빌드 사이의 메시지가 쓰는 읽기다(`BinarySerializer::deserializeExactVersion`). 의미 버전이 다르면 섞인 동안 버리는 것이 계약이다.
- *          그래서 레코드의 버전 수열과 묶이지 않는다(docs/plans/ServerBusFormat.md 3.4).
+ *          그래서 레코드의 버전 수열과 묶이지 않는다(docs/09_Decisions.md 5-9 서버 버스 의미 버전).
  */
 SW_TEST_CASE( ReflectionSerializationTest, ExactVersionReadRejectsAnotherVersion )
 {

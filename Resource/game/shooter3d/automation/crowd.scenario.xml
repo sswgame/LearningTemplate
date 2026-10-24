@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 적 군중 공유(AnimationLodAndCrowd C1 · C2 · C3 확인) — 자동 플레이로 스켈레톤 적이 몰려오는 동안 적(skeleton.prefab.xml 의 _bShareCrowdPose)이 군중 묶음을 나누는지 본다.
+  탐침 Animation.CrowdSharedUnits(묶음의 포즈를 나눈 유닛 수)·Animation.CrowdSoloUnits(공유를 켰지만 이번 상태는 못 나눠 혼자 평가한 수 — 휘두름 · 움찔 같은 반복하지 않는 클립)는
+  프로파일 카운터 GT.Animation.crowdSharedUnits · crowdSoloUnits 와 같은 값이다. 쫓는 동안(걷기 반복 클립)에는 나눈 수가 적 수만큼이고, 칼을 휘두르는 순간에는 혼자로 내려간다.
+  눈으로 볼 것(스크린샷): 적의 무기 · 방패(소켓 부품)가 손을 따라가고 몸과 같은 위상으로 도는지, 섞기 묶음이 끝나고 들어간 클립의 묶음으로 갈 때 위상이 튀지 않는지.
+  기록(Record)한 값은 보고에 적히고 네 백엔드가 같아야 한다(CPU 에서만 정해진다).
+  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/crowd.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="1"/></At>
+	<!-- 첫 10 초에 스켈레톤은 넷쯤 온다 — 적이 둘 이상 서면 나눈 유닛이 그만큼이다. -->
+	<At frame="360">
+		<Expect probe="Animation.CrowdSharedUnits" atLeast="2"/>
+		<Record probe="Animation.CrowdSharedUnits"/>
+		<Record probe="Animation.CrowdSoloUnits"/>
+		<Record probe="Animation.ActiveUnits"/>
+		<Screenshot file="shooter3d/crowd_chase.ppm"/>
+	</At>
+	<At frame="600">
+		<Record probe="Animation.CrowdSharedUnits"/>
+		<Record probe="Animation.CrowdSoloUnits"/>
+		<Screenshot file="shooter3d/crowd_fight.ppm"/>
+	</At>
+	<At frame="900">
+		<Record probe="Animation.CrowdSharedUnits"/>
+		<Record probe="Animation.CrowdSoloUnits"/>
+		<Pass/>
+	</At>
+</Scenario>

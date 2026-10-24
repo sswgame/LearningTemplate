@@ -126,7 +126,7 @@ namespace sw
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
-        /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 견준다). */
+        /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
         void                  addRecordLine( string line );
         const vector<string>& getRecordLines() const { return _reportWriter.getRecordLines(); }
 
@@ -149,7 +149,7 @@ namespace sw
 
         /**
          * @struct RememberedValue
-         * @brief `<Remember as="이름">` 이 남긴 탐침 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 견줍니다.
+         * @brief `<Remember as="이름">` 이 남긴 탐침 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
          * @details 실행기는 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
          */
         struct RememberedValue

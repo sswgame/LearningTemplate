@@ -187,7 +187,7 @@ namespace sw
         const RHIDescriptorIndex            index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )
         {
-            SW_LOG_ERROR( "RW 텍스처 배열(%#)이 가득 찼습니다.", _pDevice->kBindlessStorageImageCount );
+            SW_LOG_ERROR( "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
             releaseFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, index, RHIBufferHandle{ 0 } );
             return kInvalidDescriptorIndex;
         }

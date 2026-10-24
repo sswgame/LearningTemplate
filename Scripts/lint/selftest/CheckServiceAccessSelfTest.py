@@ -50,7 +50,20 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
     ("헤더의 정적 T& get() — 선언과 인라인 정의",
      {"Source/Probe/T.h": "class Foo\n{\npublic:\n    static Foo& get();\n};\nstruct Bar\n{\n    static Bar& get()\n    {\n        static Bar s;\n        return s;\n    }\n};\n"},
      (0, 2)),
+    ("이름을 바꾼 단일체 — instance · shared · 비정적 자유 함수 · 클래스 안 인라인 정의",
+     {"Source/Probe/V.h": ("class Foo\n{\npublic:\n    static Foo& instance();\n};\n"
+                           "struct Bar\n{\n    [[nodiscard]] static Bar& shared()\n    {\n        static Bar s;\n        return s;\n    }\n};\n"
+                           "struct Baz;\ninline Baz& global()\n{\n    static Baz* p_baz = new Baz();\n    return *p_baz;\n}\n"
+                           "template <typename T>\nstruct Qux\n{\n    static Qux<T>& current();\n};\n")},
+     (0, 4)),
     # --- 어기지 않은 조각 ---
+    ("읽기 전용 참조 · 포인터의 참조 · 상수 지역 · 인자 있는 함수 · 값 반환은 이름이 무엇이든 단일체가 아니다",
+     {"Source/Probe/W.h": ("class Foo\n{\npublic:\n    static const Foo& instance();\n    static Foo*& head();\n    static Foo make();\n    static Foo& pick( int id );\n    Foo& self();\n};\n"
+                           "inline const Table& names()\n{\n    static const Table s_names{};\n    return s_names;\n}\n"
+                           "struct Ops;\nstruct Box\n{\n    static const Ops& ops()\n    {\n        static constexpr Ops s_ops{};\n        return s_ops;\n    }\n};\n"
+                           "Foo& wrapper( int id )\n{\n    static Foo s;\n    return s;\n}\n"
+                           "Foo& local()\n{\n    Foo s;\n    static int counter = 0;\n    return s;\n}\n")},
+     (0, 0)),
     ("T& get() 이어도 예외 표의 타입 · 인자 있는 get · 포인터 get · cpp 는 보지 않는다",
      {"Source/Probe/U.h": "class DevCommandRegistry\n{\npublic:\n    static DevCommandRegistry& get();\n};\nstruct Cfg\n{\n    static Cfg& get( int id );\n    static Cfg* get();\n};\n",
       "Source/Probe/U.cpp": "namespace\n{\n    struct Table\n    {\n        static Table& get()\n        {\n            static Table s;\n            return s;\n        }\n    };\n}\n"},
@@ -108,6 +121,13 @@ class CheckServiceAccessSelfTestGate(LintGate):
                     listError.append(f"{name}: (RetiredWindow, Singleton, ActiveWindow) 기대 {expectedFull}, 실제 {found}")
         finally:
             shutil.rmtree(tempRoot, ignore_errors=True)
+        # 예외의 이유는 종류 표의 키여야 한다 — 자유 글은 걸리고, 저장소의 예외 표는 모두 통과한다.
+        mapKind = CheckServiceAccess.getExemptionKinds()
+        if CheckServiceAccess.findUnknownExemptionKinds({"Foo": "서비스가 아니라 공용 인스턴스다"}, mapKind) != ["Foo = '서비스가 아니라 공용 인스턴스다'"]:
+            listError.append("예외 종류 검사: 종류 표 밖의 자유 글 이유를 잡지 못합니다")
+        listRepositoryUnknown = CheckServiceAccess.findUnknownExemptionKinds(CheckServiceAccess.CheckServiceAccessGate.mapExemption, mapKind)
+        if listRepositoryUnknown:
+            listError.append(f"예외 종류 검사: 저장소의 예외 표에 종류 표 밖의 값이 있습니다 — {', '.join(listRepositoryUnknown)}")
         return GateResult(listViolation=listError, summary=f"{len(_kListCase)} cases")
 
 

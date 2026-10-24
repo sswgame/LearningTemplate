@@ -99,6 +99,62 @@ namespace sw
             uint32 _miscFlags2;
         };
 #pragma pack( pop )
+
+        struct DDSLoaderInternal
+        {
+            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷입니다. */
+            struct FourCcRow
+            {
+                uint32 _fourCC;
+                uint32 _dxgiFormat;
+            };
+
+            static constexpr FourCcRow kArrFourCcRow[] = {
+                {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
+                {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
+                {         kFourCC_DXT3,          kDxgiFormatBC2Unorm},
+                {         kFourCC_DXT4,          kDxgiFormatBC3Unorm},
+                {         kFourCC_DXT5,          kDxgiFormatBC3Unorm},
+                {         kFourCC_ATI1,          kDxgiFormatBC4Unorm},
+                {         kFourCC_BC4U,          kDxgiFormatBC4Unorm},
+                {         kFourCC_ATI2,          kDxgiFormatBC5Unorm},
+                {         kFourCC_BC5U,          kDxgiFormatBC5Unorm},
+                {         kD3dFmt_R16F,          kDxgiFormatR16Float},
+                {      kD3dFmt_G16R16F,       kDxgiFormatR16G16Float},
+                {kD3dFmt_A16B16G16R16F, kDxgiFormatR16G16B16A16Float},
+                {         kD3dFmt_R32F,          kDxgiFormatR32Float},
+                {      kD3dFmt_G32R32F,       kDxgiFormatR32G32Float},
+                {kD3dFmt_A32B32G32R32F, kDxgiFormatR32G32B32A32Float},
+            };
+
+            /** @brief 압축 계열 FourCC 와 D3DFMT 정수 코드를 DXGI 포맷으로 바꿉니다. 모르는 코드는 `kDxgiFormatUnknown`(호출한 쪽의 포맷 검사가 실패로 끝낸다)입니다. */
+            static uint32 findDxgiFormatOfFourCc( uint32 fourCC )
+            {
+                for ( const FourCcRow& row : kArrFourCcRow )
+                {
+                    if ( row._fourCC == fourCC )
+                        return row._dxgiFormat;
+                }
+                return kDxgiFormatUnknown;
+            }
+
+            /**
+             * @brief 32비트 RGB 마스크를 DXGI 포맷으로 바꿉니다. 모르는 모양은 `kDxgiFormatUnknown` 입니다.
+             * @details BGRA 계열이면 호출한 쪽이 포맷으로 `_bIsBgra` 를 켠다(`bBgraFormat`) — 여기서 따로 정하지 않는다.
+             */
+            static uint32 findDxgiFormatOfRgbMasks( const DDSPixelFormatHeader& pixelFormat )
+            {
+                if ( pixelFormat._rgbBitCount != 32 )
+                    return kDxgiFormatUnknown;
+                const bool bRgbaMask  = pixelFormat._rBitMask == 0x000000FF && pixelFormat._gBitMask == 0x0000FF00 && pixelFormat._bBitMask == 0x00FF0000;
+                const bool bBgraMasks = pixelFormat._rBitMask == 0x00FF0000 && pixelFormat._gBitMask == 0x0000FF00 && pixelFormat._bBitMask == 0x000000FF;
+                if ( bBgraMasks )
+                    return ( pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
+                if ( bRgbaMask )
+                    return kDxgiFormatR8G8B8A8Unorm;
+                return kDxgiFormatUnknown;
+            }
+        };
     } // namespace
 
     SW_LOG_CALLER( "DDSLoader" );
@@ -183,93 +239,12 @@ namespace sw
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 )
         {
-            switch ( pHeader->_pixelFormat._fourCC )
-            {
-                case kFourCC_DXT1:
-                {
-                    image._dxgiFormat = kDxgiFormatBC1Unorm;
-                    break;
-                }
-                case kFourCC_DXT2:
-                case kFourCC_DXT3:
-                {
-                    image._dxgiFormat = kDxgiFormatBC2Unorm;
-                    break;
-                }
-                case kFourCC_DXT4:
-                case kFourCC_DXT5:
-                {
-                    image._dxgiFormat = kDxgiFormatBC3Unorm;
-                    break;
-                }
-                case kFourCC_ATI1:
-                case kFourCC_BC4U:
-                {
-                    image._dxgiFormat = kDxgiFormatBC4Unorm;
-                    break;
-                }
-                case kFourCC_ATI2:
-                case kFourCC_BC5U:
-                {
-                    image._dxgiFormat = kDxgiFormatBC5Unorm;
-                    break;
-                }
-                case kD3dFmt_R16F:
-                {
-                    image._dxgiFormat = kDxgiFormatR16Float;
-                    break;
-                }
-                case kD3dFmt_G16R16F:
-                {
-                    image._dxgiFormat = kDxgiFormatR16G16Float;
-                    break;
-                }
-                case kD3dFmt_A16B16G16R16F:
-                {
-                    image._dxgiFormat = kDxgiFormatR16G16B16A16Float;
-                    break;
-                }
-                case kD3dFmt_R32F:
-                {
-                    image._dxgiFormat = kDxgiFormatR32Float;
-                    break;
-                }
-                case kD3dFmt_G32R32F:
-                {
-                    image._dxgiFormat = kDxgiFormatR32G32Float;
-                    break;
-                }
-                case kD3dFmt_A32B32G32R32F:
-                {
-                    image._dxgiFormat = kDxgiFormatR32G32B32A32Float;
-                    break;
-                }
-                default:
-                {
-                    // 포맷을 정하지 않고 빠진다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
-                    break;
-                }
-            }
+            // 모르는 코드는 포맷을 정하지 않는다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
+            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfFourCc( pHeader->_pixelFormat._fourCC );
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRgbFlag ) != 0 )
         {
-            if ( pHeader->_pixelFormat._rgbBitCount == 32 )
-            {
-                const bool bRgbaMask = pHeader->_pixelFormat._rBitMask == 0x000000FF && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
-                                       pHeader->_pixelFormat._bBitMask == 0x00FF0000;
-                const bool bBgraMasks = pHeader->_pixelFormat._rBitMask == 0x00FF0000 && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
-                                        pHeader->_pixelFormat._bBitMask == 0x000000FF;
-                if ( bBgraMasks )
-                {
-                    image._dxgiFormat = ( pHeader->_pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
-                    image._bIsBgra    = SW_TRUE;
-                }
-                else if ( bRgbaMask )
-                {
-                    image._dxgiFormat = kDxgiFormatR8G8B8A8Unorm;
-                    image._bIsBgra    = SW_FALSE;
-                }
-            }
+            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfRgbMasks( pHeader->_pixelFormat );
         }
 
         const bool bIsBc1To5 = ( 70 <= image._dxgiFormat && image._dxgiFormat <= 84 );

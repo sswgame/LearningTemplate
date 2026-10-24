@@ -124,7 +124,7 @@ SW_TEST_CASE( CookJobTest, RecordIsFreshOnlyWhileInputsAndVersionHold )
     SW_EXPECT_TRUE( readBack._listInput[0] == record._listInput[0] );
 
     SW_EXPECT_TRUE( readBack.isFresh( TestCookJobInternal::makeDesc( 1 ) ) );
-    SW_EXPECT_FALSE( readBack.isFresh( TestCookJobInternal::makeDesc( 2 ) ) ); // 쿠커 버전을 올리면 다시 굽는다
+    SW_EXPECT_FALSE( readBack.isFresh( TestCookJobInternal::makeDesc( 2 ) ) ); // 쿠커 버전을 올리면 다시 베이크한다
     TestCookJobInternal::writeText( input, "recorded, then edited" );
     SW_EXPECT_FALSE( readBack.isFresh( TestCookJobInternal::makeDesc( 1 ) ) );
 
@@ -144,9 +144,9 @@ SW_TEST_CASE( CookJobTest, RecordIsFreshOnlyWhileInputsAndVersionHold )
 }
 
 /**
- * @brief [CookJobTest] 레지스트리 쿠킹은 도메인마다 기록을 남긴다 — `.meta` 를 고치거나 더하면 그 도메인만 다시 굽고, 쿠커 버전을 올리면 기록이 낡는다
+ * @brief [CookJobTest] 레지스트리 쿠킹은 도메인마다 기록을 남긴다 — `.meta` 를 고치거나 더하면 그 도메인만 다시 베이크하고, 쿠커 버전을 올리면 기록이 낡는다
  * @details 레지스트리는 폴더를 훑어 정해지므로 읽은 `.meta` 만으로는 새 `.meta` 를 알 수 없다 — `.meta` 목록이 입력(`CookInputKind::Listing`)이다.
- *          DDC 와 기록을 지우고 다시 구워도 같은 바이트다.
+ *          DDC 와 기록을 지우고 다시 베이크해도 같은 바이트다.
  */
 SW_TEST_CASE( CookJobTest, RegistryCookFollowsTheMetaListing )
 {
@@ -172,12 +172,12 @@ SW_TEST_CASE( CookJobTest, RegistryCookFollowsTheMetaListing )
     SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 2u, store.getTally()._reusedCount );
 
-    // 새 .meta 하나 — 읽은 파일은 그대로지만 목록이 바뀌어 그 도메인만 다시 굽는다.
+    // 새 .meta 하나 — 읽은 파일은 그대로지만 목록이 바뀌어 그 도메인만 다시 베이크한다.
     writeMeta( sw::FileUtil::joinPath( root, "game/demo/prefabs/c.prefab.xml.meta" ) );
     SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 3u, store.getTally()._cookedCount );
     SW_EXPECT_EQUAL( 3u, store.getTally()._reusedCount );
-    // 있던 .meta 를 고쳐도 그 도메인만 다시 굽는다.
+    // 있던 .meta 를 고쳐도 그 도메인만 다시 베이크한다.
     writeMeta( sw::FileUtil::joinPath( root, "engine/materials/a.material.meta" ) );
     SW_EXPECT_EQUAL( 2u, sw::AssetDatabase::writeRegistryFiles( root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 4u, store.getTally()._cookedCount );

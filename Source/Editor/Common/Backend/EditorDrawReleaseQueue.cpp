@@ -38,8 +38,8 @@ namespace sw::editor
 
         vector<RHIResourceReleaseDelegate> listReady;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            _listEntry.extractReady( renderedSnapshotSequence, listReady );
+            std::unique_lock<mutex> lock{ _mutex };
+            _listEntry.extractReadyReserving( lock, renderedSnapshotSequence, listReady );
         }
 
         for ( const RHIResourceReleaseDelegate& releaseDelegate : listReady )

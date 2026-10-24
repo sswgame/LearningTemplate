@@ -27,7 +27,7 @@ namespace sw
 
     bool UIClipboardService::tryGetText( string& outText ) const
     {
-        // 운영체제 연결이 있으면 그쪽이 정본이다 — 비었으면(다른 프로그램이 비웠다) 엔진 안의 옛 글을 대신 내지 않는다.
+        // 운영체제 연결이 있으면 그쪽이 기준이다 — 비었으면(다른 프로그램이 비웠다) 엔진 안의 옛 글을 대신 내지 않는다.
         if ( _api._pRead != nullptr )
         {
             string fromSystem{};

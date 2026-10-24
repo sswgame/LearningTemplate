@@ -110,7 +110,7 @@ namespace sw
                     return true;
                 }
                 vector<string> listGameFolder;
-                (void)FileUtil::collectFolders( gameRoot, listGameFolder, false ); // 게임 폴더가 없으면 공용 팩만 굽는다
+                (void)FileUtil::collectFolders( gameRoot, listGameFolder, false ); // 게임 폴더가 없으면 공용 팩만 베이크한다
                 std::sort( listGameFolder.begin(), listGameFolder.end() );
                 for ( const string& gameFolder : listGameFolder )
                 {
@@ -133,8 +133,8 @@ namespace sw
 
             /**
              * @brief 파일 하나를 읽어 팩에 담고 그 내용을 작업의 입력으로 기록합니다.
-             * @details 쿠커는 `ResourceIO` 가 아니라 디스크를 읽는다(스테이징은 리소스 루트 밖이고, 팩은 마운트된 팩이 아니라 느슨한 트리에서 굽는다) —
-             *          그래서 입력을 손으로 기록한다. 기록하지 않으면 그 파일이 바뀌어도 팩을 다시 굽지 않는다.
+             * @details 쿠커는 `ResourceIO` 가 아니라 디스크를 읽는다(스테이징은 리소스 루트 밖이고, 팩은 마운트된 팩이 아니라 느슨한 트리에서 베이크한다) —
+             *          그래서 입력을 손으로 기록한다. 기록하지 않으면 그 파일이 바뀌어도 팩을 다시 베이크하지 않는다.
              */
             static bool addFile( ResourcePakWriter& writer, string_view relativePath, const string& absPath )
             {
@@ -162,7 +162,7 @@ namespace sw
                 writerDesc._compressionLevel = config._compression._level;
                 ResourcePakWriter writer( writerDesc );
 
-                // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 굽는다(`CookJob::collectFiles` 가 기록한다).
+                // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).
                 vector<string> listSourceFile;
                 CookJob::collectFiles( domainDir, "", listSourceFile );
                 vector<string> listStale;
@@ -309,7 +309,7 @@ namespace sw
         {
             const string packName   = makePackFileName( domain );
             const string outputPath = FileUtil::joinPath( params._packOutputDir, packName );
-            // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 구워도 서로의 기록을 덮지 않는다.
+            // 기록은 타깃 · 백엔드마다 따로 둔다 — 같은 팩 이름을 다른 설정으로 번갈아 베이크해도 서로의 기록을 덮지 않는다.
             const string      outputID = FileUtil::joinPath( FileUtil::joinPath( "packs", desc._target ), packName );
             const CookOutcome outcome  = store.cookFile( desc, outputID, outputPath, [&]()
              { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath ); } );

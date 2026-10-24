@@ -184,7 +184,7 @@ SW_TEST_CASE( TelemetryTest, ConsentGatesCollectionWritingAndUpload )
         TelemetryService telemetry;
         SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
         telemetry.initialize( folder, Internal::makeContext() );
-        telemetry.setUploader( &uploader );
+        telemetry.setUploader( uploader );
         SW_EXPECT_FALSE( telemetry.hasConsent() );
 
         // 꺼짐(기본): 묶음 상한을 넘겨도 파일이 없고 업로더는 불리지 않는다. 빵부스러기는 기계 안에만 남는다.
@@ -228,7 +228,7 @@ SW_TEST_CASE( TelemetryTest, ConsentGatesCollectionWritingAndUpload )
         TelemetryService telemetry;
         SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
         telemetry.initialize( folder, Internal::makeContext( "nextsession" ) );
-        telemetry.setUploader( &uploader );
+        telemetry.setUploader( uploader );
         vector<string> listFile;
         telemetry.collectSpoolFiles( listFile );
         SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
@@ -284,7 +284,7 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     TelemetryService telemetry;
     SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
     telemetry.initialize( folder, Internal::makeContext() );
-    telemetry.setUploader( &uploader );
+    telemetry.setUploader( uploader );
     telemetry.setConsent( true ); // session.start 가 묶음의 첫 줄
 
     // 묶음 4: 셋째 사건까지는 쓰이지 않고 넷째(session.start 포함)에서 쓰인다.
@@ -530,9 +530,11 @@ SW_TEST_CASE( TelemetryTest, HTTPUploaderBuildsTheRequestAndNeverTouchesTheNetwo
     client._status = 503;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Failed );
 
-    HTTPTelemetryUploader offline( NullHTTPClient::get(), "https://telemetry.invalid/v1/events", "" );
+    NullHTTPClient        nullClient;
+    HTTPTelemetryUploader offline( nullClient, "https://telemetry.invalid/v1/events", "" );
     SW_EXPECT_TRUE( offline.upload( batch ) == TelemetryUploadResult::Failed );
-    SW_EXPECT_TRUE( NullTelemetryUploader::get().upload( batch ) == TelemetryUploadResult::Kept );
+    NullTelemetryUploader nullUploader;
+    SW_EXPECT_TRUE( nullUploader.upload( batch ) == TelemetryUploadResult::Kept );
 }
 
 /**

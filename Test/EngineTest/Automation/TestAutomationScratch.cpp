@@ -9,7 +9,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 시나리오 사본 폴더(`<Scratch>`) — 시나리오가 `Resource/` 원본에 쓰지 않게 실행마다 사본을 새로 만든다(docs/plans/ScenarioWritesSourceTree.md).
+// 시나리오 사본 폴더(`<Scratch>`) — 시나리오가 `Resource/` 원본에 쓰지 않게 실행마다 사본을 새로 만든다(docs/09_Decisions.md 5-11 시나리오 사본 폴더).
 
 /**
  * @brief [AutomationScratchTest] 원본 id 는 id 경계에서만 사본 id 로 바뀐다 — 더 긴 id 의 가운데는 그대로다

@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class TownWalkerViewComponent
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 자리와 같은 오브젝트의 `SpriteAnimatorComponent` 에만 씁니다.
-     * @details 애니메이션 이름은 `<idle|walk>_<down|left|right|up>` 이고, 스프라이트 클립(`.sprite.xml`)의 구간 이름이 그 정본이다 — 클립에 없는 이름은
+     * @details 애니메이션 이름은 `<idle|walk>_<down|left|right|up>` 이고, 스프라이트 클립(`.sprite.xml`)의 구간 이름이 그 기준이다 — 클립에 없는 이름은
      *          애니메이터가 알린다. 같은 이름이면 다시 틀지 않아(처음부터 다시 재생하지 않아) 칸을 이어 걸어도 걸음 동작이 끊기지 않는다.
      *          앞뒤 정렬은 깊이(Z)다: 직교 카메라의 투명 정렬(`engine/data/render2d.xml` 의 Auto = 시선 축)이 Z 가 큰 것을 먼저 그리므로,
      *          화면 위쪽(월드 Y 가 큰) 캐릭터가 뒤에 그려지도록 Z = 발 Y × `_depthPerUnitY` 로 둔다(유니티 Custom Axis (0, 1, 0) 와 같은 결과).

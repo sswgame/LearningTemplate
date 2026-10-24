@@ -182,7 +182,7 @@ namespace sw::editor
                 return s_path;
             }
 
-            /** @brief @p path 가 @p folder 와 같거나 그 아래인지입니다. 둘 다 `normalizePath` 를 거친 뒤 대소문자 없이 견줍니다. */
+            /** @brief @p path 가 @p folder 와 같거나 그 아래인지입니다. 둘 다 `normalizePath` 를 거친 뒤 대소문자 없이 비교합니다. */
             [[nodiscard]] static bool isUnderFolder( const string& path, const string& folder )
             {
                 if ( folder.empty() || StringUtil::startsWith( path, folder, true ) == false )

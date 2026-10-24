@@ -312,7 +312,8 @@ namespace sw
         pCoaster->_pTrack                   = make_unique<CoasterTrack>( builder.makeTrack( true ) );
         pCoaster->_placementIndex           = placementIndex;
         outStats                            = CoasterRideAnalyzer::analyze( *pCoaster->_pTrack, CoasterPhysicsParams{} );
-        pCoaster->_train.initialize( pCoaster->_pTrack.get(), CoasterPhysicsParams{}, 0.0f );
+        if ( pCoaster->_train.initialize( pCoaster->_pTrack.get(), CoasterPhysicsParams{}, 0.0f ) == false )
+            return nullptr;
         return pCoaster;
     }
 

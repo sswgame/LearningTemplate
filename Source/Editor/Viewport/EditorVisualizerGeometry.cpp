@@ -18,12 +18,6 @@ namespace sw::editor
         ScopeOwned<vector<DebugLine>> s_debugLineOwner;
     } // namespace
 
-    EditorDebugDrawStats& EditorDebugDrawStats::get()
-    {
-        static EditorDebugDrawStats s_stats;
-        return s_stats;
-    }
-
     void EditorVisualizerGeometryUtil::computeColliderCorners( const BoxCollider2DComponent& collider, float3 ( &outArrCorner )[4] )
     {
         AABB box{};

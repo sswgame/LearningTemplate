@@ -16,6 +16,21 @@ namespace sw
             static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 선 것이다
             static constexpr uint8   kDrivenFlags   = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
 
+            /** @brief 매개변수가 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(자르지 않는다). 적분 간격은 1/2000..1/30 초여야 한 프레임이 수천 번의 적분이 되지 않고 적분이 거칠어지지 않는다. */
+            [[nodiscard]] static bool acceptParams( const CoasterPhysicsParams& params )
+            {
+                const float32 minFixedStep = 1.0f / 2000.0f;
+                const float32 maxFixedStep = 1.0f / 30.0f;
+                const bool    bStepValid   = minFixedStep <= params._fixedStep && params._fixedStep <= maxFixedStep;
+                const bool    bNonNegative = 0.0f <= params._gravity && 0.0f <= params._rollingResistance && 0.0f <= params._dragCoefficient && 0.0f <= params._liftSpeed &&
+                                          0.0f <= params._stationSpeed && 0.0f <= params._boosterSpeed && 0.0f <= params._boosterAcceleration && 0.0f <= params._brakeSpeed &&
+                                          0.0f <= params._brakeDeceleration && 0.0f <= params._stallSpeed && 0.0f <= params._stallSeconds && 0.0f <= params._gForceWarmupSeconds;
+                if ( bStepValid && bNonNegative )
+                    return true;
+                SW_LOG_ERROR( "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
+                return false;
+            }
+
             /** @brief 낙하 세기입니다. 꼭대기에서 `kDropThreshold` 넘게 내려가기 시작해 바닥을 찍고 `kDropRecovery` 올라오면 하나로 셉니다. */
             struct DropTracker
             {
@@ -84,11 +99,12 @@ namespace sw
     {
     }
 
-    void CoasterTrain::initialize( const CoasterTrack* pTrack, const CoasterPhysicsParams& params, float32 startDistance )
+    bool CoasterTrain::initialize( const CoasterTrack* pTrack, const CoasterPhysicsParams& params, float32 startDistance )
     {
+        if ( CoasterTrainInternal::acceptParams( params ) == false )
+            return false;
         _pTrack               = pTrack;
         _params               = params;
-        _params._fixedStep    = MathUtil::clamp( params._fixedStep, 1.0f / 2000.0f, 1.0f / 30.0f );
         _gForce               = CoasterGForce{};
         _previousVelocity     = float3{};
         _speed                = 0.0f;
@@ -97,6 +113,7 @@ namespace sw
         _lapCount             = 0;
         _bHasPreviousVelocity = SW_FALSE;
         setDistance( startDistance );
+        return true;
     }
 
     void CoasterTrain::step( float32 deltaTime )
@@ -210,8 +227,9 @@ namespace sw
             return stats;
 
         CoasterTrain train;
-        train.initialize( &track, params, 0.0f );
-        const float32 deltaTime = MathUtil::clamp( params._fixedStep, 1.0f / 2000.0f, 1.0f / 30.0f ); // `initialize` 와 같은 값으로 자른다. 한 번에 한 번만 적분한다
+        if ( train.initialize( &track, params, 0.0f ) == false )
+            return stats;                            // 매개변수가 거절되면 분석하지 않는다(`_bCompleted` 가 꺼진 채다 — 이유는 initialize 가 남겼다)
+        const float32 deltaTime = params._fixedStep; // initialize 가 범위 안임을 봤다. 한 번에 한 번만 적분한다
 
         float32                           travelled = 0.0f;
         float32                           stillTime = 0.0f;

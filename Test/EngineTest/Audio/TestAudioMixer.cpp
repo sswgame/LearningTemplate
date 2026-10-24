@@ -295,7 +295,7 @@ SW_TEST_CASE( AudioMixerTest, SurroundLayoutAcceptsEffectsAndTheEngine )
         SW_EXPECT_EQUAL( sw::AudioChannelLayoutUtil::getChannelCount( layout ), sw::AudioChannelLayoutUtil::getChannelCount( engine.getChannelLayout() ) );
     }
 
-    // 선언한 레이아웃 밖은 거절한다(표의 칸이 정본이다).
+    // 선언한 레이아웃 밖은 거절한다(표의 칸이 기준이다).
     sw::AudioEffectTypeInfo stereoOnly;
     stereoOnly._supportedLayoutMask = sw::AudioEffectTypeInfo::makeLayoutBit( sw::AudioChannelLayout::Stereo );
     SW_EXPECT_TRUE( stereoOnly.supportsLayout( sw::AudioChannelLayout::Stereo ) );

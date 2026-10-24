@@ -129,7 +129,7 @@ namespace sw::editor
     {
         if ( desc._id.empty() )
         {
-            SW_LOG_WARNING( "EditorCommandRegistry: id 가 빈 커맨드는 등록하지 않습니다 (label=%#)", desc._label.c_str() );
+            SW_LOG_WARNING( "EditorCommandRegistry: not registering a command with an empty id (label=%#)", desc._label.c_str() );
             return;
         }
 
@@ -205,7 +205,7 @@ namespace sw::editor
 
     bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc )
     {
-        // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(굽기) 중이면 꺼진다.
+        // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(베이크) 중이면 꺼진다.
         if ( desc._edit == EditorCommandEdit::Scene && EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( desc._enabledPredicate.isBound() == false )

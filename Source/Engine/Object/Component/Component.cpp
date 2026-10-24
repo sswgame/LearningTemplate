@@ -40,7 +40,7 @@ namespace sw
         // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다.
         //
         // 기반 타입 노드(`<SceneComponent>` 같은)도 기본값을 가질 수 있으므로, 상속 체인을
-        // 뿌리 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
+        // 루트 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
     }
 
     void Component::setDefaultGameSettingsPath( string_view path )

@@ -375,7 +375,7 @@ namespace sw
         if ( event._message == NativeWindowEvent::kMessageWayland && event._lParam != 0 )
         {
             const WaylandInputEvent& input = *reinterpret_cast<const WaylandInputEvent*>( event._lParam );
-            // X11 갈래와 같은 규칙이다 — 장치 상태는 바꾸지 않고 큐에만 넣는다. 키는 xkb keysym(= X11 KeySym)이라 같은 키 표를 쓴다.
+            // X11 분기와 같은 규칙이다 — 장치 상태는 바꾸지 않고 큐에만 넣는다. 키는 xkb keysym(= X11 KeySym)이라 같은 키 표를 쓴다.
             switch ( input._kind )
             {
                 case WaylandInputKind::KeyDown:

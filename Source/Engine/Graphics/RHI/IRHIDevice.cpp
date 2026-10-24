@@ -91,9 +91,9 @@ namespace sw
         static std::atomic<uint32> s_reported{ 0 };
         if ( s_reported.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
-        SW_LOG_TRACE( "%# 가 병렬 기록 중에 배리어를 냈습니다 — 레벨 프롤로그가 이 자원을 "
-                      "선행 전이하지 못했다는 뜻입니다(파이프라인 선언 누락 가능). "
-                      "동작은 안전합니다: 상태 전이는 락으로 보호됩니다.",
+        SW_LOG_TRACE( "%# issued a barrier during parallel recording - the level prologue did not "
+                      "transition this resource beforehand (a pipeline declaration may be missing). "
+                      "Behavior is safe: state transitions are protected by a lock.",
                       pWhat );
 #endif
     }
@@ -103,10 +103,10 @@ namespace sw
         // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를
         // 읽는다" 는 뜻이라 개발자가 그 자리에서 알아채야 하므로 디버거를 세운다.
         SW_LOG_ASSERT( _bParallelRecording == false,
-                       "%# 이(가) 병렬 패스 기록 중에 리소스 테이블을 바꾸려 합니다. 생성/등록/해제는 "
-                       "그래프 셋업 단계에서 끝내야 합니다 — 기록 중 resize 가 일어나면 드로우가 잡아 둔 "
-                       "디스크립터 참조가 dangling 이 되고 GPU 가 PageFault 로 죽습니다 "
-                       "(IRHIDevice::setParallelRecording 참고).",
+                       "%# tries to change the resource table during parallel pass recording. Creation/registration/release must "
+                       "finish in the graph setup phase - a resize during recording leaves the descriptor "
+                       "references held by draws dangling and the GPU dies with a PageFault "
+                       "(see IRHIDevice::setParallelRecording).",
                        pWhat );
     }
 
@@ -339,7 +339,7 @@ namespace sw
                 SW_LOG_WARNING( "RHI %# ignored the software adapter request (gv_rhiSoftwareAdapter) - it runs on the hardware adapter", getBackendName() );
         }
         // 요청과 채택이 다를 수 있다(Vulkan 서피스 협상). 백버퍼 PSO 는 채택값으로 만들어진다. 어느 쪽인지 로그로 남긴다.
-        SW_LOG_INFO( "백버퍼 포맷: 요청 %# → 채택 %# (getBackBufferFormat)",
+        SW_LOG_INFO( "Back buffer format: requested %# -> adopted %# (getBackBufferFormat)",
                      static_cast<uint32>( swapChainDesc._format ), static_cast<uint32>( getBackBufferFormat() ) );
         return true;
     }

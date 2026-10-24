@@ -591,27 +591,22 @@ namespace
 } // namespace
 
 /**
- * @brief [MemoryTest] `sw_new` 로 만든 과정렬 타입은 제 정렬로 잡히고, `sw_delete` 는 같은 힙 계열로 푼다.
- * @details `sw_new` 에 정렬 오버로드가 없으면 64 바이트 정렬 타입(`ParallelGroup` 등)이 16 바이트 정렬로 잡힌다. 잡기와 풀기가 다른 힙 계열이면
- *          (16 바이트 정렬 타입은 MSVC 의 `max_align_t` 가 8 이라 해제만 정렬 해제 `_aligned_free` 가 되는 식) 힙이 깨진다.
+ * @brief [MemoryTest] `make_unique` 로 만든 과정렬 타입은 제 정렬로 잡히고, 소유자가 같은 힙 계열로 푼다.
+ * @details 잡기와 풀기가 다른 힙 계열이면 힙이 깨진다(16 바이트 정렬 타입은 MSVC 의 `max_align_t` 가 8 이라 해제만 정렬 해제 `_aligned_free` 가 되는 식).
+ *          64 바이트 정렬 타입(`ParallelGroup` 등)이 16 바이트 정렬로 잡히는 일도 이 반복이 잡는다.
  */
-SW_TEST_CASE( MemoryTest, SwNewHonoursOverAlignmentAndMatchesSwDelete )
+SW_TEST_CASE( MemoryTest, MakeUniqueHonoursOverAlignmentAndFreesWithTheSameHeap )
 {
     for ( uint32 repeat = 0; repeat < 32; ++repeat )
     {
-        CacheLineAlignedInternal* pLine = sw_new CacheLineAlignedInternal();
-        SW_ASSERT_NOT_NULL( pLine );
-        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pLine ) % 64 ) );
+        sw::unique_ptr<CacheLineAlignedInternal> pLine = sw::make_unique<CacheLineAlignedInternal>();
+        SW_ASSERT_NOT_NULL( pLine.get() );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pLine.get() ) % 64 ) );
         SW_EXPECT_EQUAL( 7u, static_cast<uint32>( pLine->_value ) );
-        sw_delete( pLine );
 
-        SixteenAlignedInternal* pSixteen = sw_new SixteenAlignedInternal();
-        SW_ASSERT_NOT_NULL( pSixteen );
-        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pSixteen ) % 16 ) );
-        sw_delete( pSixteen );
-
-        sw::unique_ptr<CacheLineAlignedInternal> pOwned = sw::make_unique<CacheLineAlignedInternal>();
-        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pOwned.get() ) % 64 ) );
+        sw::unique_ptr<SixteenAlignedInternal> pSixteen = sw::make_unique<SixteenAlignedInternal>();
+        SW_ASSERT_NOT_NULL( pSixteen.get() );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pSixteen.get() ) % 16 ) );
     }
 
     // 컨테이너(`sw::Allocator`)도 원소 정렬을 지킨다.
@@ -621,18 +616,18 @@ SW_TEST_CASE( MemoryTest, SwNewHonoursOverAlignmentAndMatchesSwDelete )
 }
 
 /**
- * @brief [MemoryTest] `sw_new_array` 는 원소를 값 초기화하고 정렬을 지키며, `make_unique<T[]>` 도 같은 경로로 잡는다
+ * @brief [MemoryTest] `makeFixedCountArray` 는 원소를 값 초기화하고 정렬을 지키며, `make_unique<T[]>` 도 같은 경로로 잡는다
  */
 SW_TEST_CASE( MemoryTest, NewArrayValueInitializesAndKeepsAlignment )
 {
-    CacheLineAlignedInternal* pAligned = sw_new_array<CacheLineAlignedInternal>( 5 );
-    SW_ASSERT_NOT_NULL( pAligned );
+    sw::FixedCountArray<CacheLineAlignedInternal, 5> arrAligned = sw::makeFixedCountArray<CacheLineAlignedInternal, 5>();
+    SW_ASSERT_NOT_NULL( arrAligned.get() );
     for ( uint32 index = 0; index < 5; ++index )
     {
-        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pAligned + index ) % 64 ) );
-        SW_EXPECT_EQUAL( 7u, static_cast<uint32>( pAligned[index]._value ) );
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( arrAligned.get() + index ) % 64 ) );
+        SW_EXPECT_EQUAL( 7u, static_cast<uint32>( arrAligned.get()[index]._value ) );
     }
-    sw_delete_array( pAligned, 5 );
+    arrAligned.reset();
 
     sw::unique_ptr<uint64[]> arrWord = sw::make_unique<uint64[]>( 33 );
     SW_ASSERT_NOT_NULL( arrWord.get() );

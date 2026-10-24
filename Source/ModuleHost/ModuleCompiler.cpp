@@ -213,8 +213,8 @@ namespace sw
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             if ( _bBlockedByLoadedBinary.load( std::memory_order_relaxed ) != 0 )
             {
-                SW_LOG_ERROR( "Compilation failed (target: %#): 이미 실행 중이라 교체할 수 없는 바이너리가 있습니다. "
-                              "핫리로드는 플러그인 모듈만 바꿀 수 있고, 엔진 자체가 다시 링크돼야 하는 변경이면 재시작해야 합니다.",
+                SW_LOG_ERROR( "Compilation failed (target: %#): a binary cannot be replaced because it is already running. "
+                              "Hot reload can only replace plugin modules; a change that requires relinking the engine itself needs a restart.",
                               targetDisplayName.c_str() );
             }
             else

@@ -8,6 +8,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 
@@ -15,10 +17,17 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 규칙 설정입니다. */
-    struct KlondikeSettings
+    /**
+     * @brief 규칙 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `KlondikeGame::initialize*` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API KlondikeSettings
     {
-        int32 _drawCount{ 1 };   ///< 스톡에서 한 번에 뒤집는 장수이다(1 또는 3)
+        REFLECT_BODY();
+        PROPERTY( Min = 1, Max = 3 )
+        int32 _drawCount{ 1 }; ///< 스톡에서 한 번에 뒤집는 장수이다(규칙은 1 또는 3)
+        PROPERTY( Min = -1 )
         int32 _maxRecycle{ -1 }; ///< 웨이스트를 스톡으로 되돌릴 수 있는 횟수이다(-1 이면 제한이 없다)
     };
 } // namespace sw
@@ -57,11 +66,12 @@ namespace sw
 
         KlondikeGame();
 
-        void initialize( const KlondikeSettings& settings, uint32 seed );
+        /** @brief 섞은 덱으로 새 판을 엽니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 판은 그대로입니다. 아래 두 함수도 같습니다. */
+        [[nodiscard]] bool initialize( const KlondikeSettings& settings, uint32 seed );
         /** @brief 주어진 덱(맨 위부터)을 한 줄씩 나눕니다. 열 c 에 c + 1 장을 놓고 맨 위만 앞면으로 하며, 나머지는 스톡이 됩니다. */
-        void initializeWithDeck( const KlondikeSettings& settings, const CardPile& deck );
+        [[nodiscard]] bool initializeWithDeck( const KlondikeSettings& settings, const CardPile& deck );
         /** @brief 판 상태를 그대로 설정합니다(테스트와 이어 하기용). */
-        void initializeFromState( const KlondikeSettings& settings, const KlondikeState& state );
+        [[nodiscard]] bool initializeFromState( const KlondikeSettings& settings, const KlondikeState& state );
 
         /** @brief 스톡에서 뒤집습니다. 스톡이 비었으면 웨이스트를 스톡으로 되돌립니다. 둘 다 비었거나 되돌리기 횟수를 다 썼으면 false 를 반환합니다. */
         [[nodiscard]] bool drawStock();

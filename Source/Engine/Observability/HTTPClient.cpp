@@ -24,10 +24,4 @@ namespace sw
         response._error  = "network disabled";
         return response;
     }
-
-    NullHTTPClient& NullHTTPClient::get()
-    {
-        static NullHTTPClient s_client;
-        return s_client;
-    }
 } // namespace sw

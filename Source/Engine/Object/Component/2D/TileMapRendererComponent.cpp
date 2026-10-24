@@ -236,7 +236,7 @@ namespace sw
         unique_ptr<SpriteInstanceBatch> batch = make_unique<SpriteInstanceBatch>();
         batch->setSorting( _sortingLayer, _orderInLayer );
         batch->setOwnerComponent( this );
-        // 칸이 비면 엔진 기본 타일맵 머티리얼(픽셀 아트 스프라이트)이다(값의 정본은 엔진 기본 에셋 표).
+        // 칸이 비면 엔진 기본 타일맵 머티리얼(픽셀 아트 스프라이트)이다(값의 기준은 엔진 기본 에셋 표).
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._tileMapMaterial.get() : _materialPath;
         if ( batch->initialize( *pManager, _tileSet.getAtlasPath(), count, materialPath, _tileSet.getNormalAtlasPath() ) == false )
             return false;

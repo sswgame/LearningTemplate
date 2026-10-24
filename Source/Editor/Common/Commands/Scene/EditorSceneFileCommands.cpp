@@ -115,7 +115,7 @@ namespace sw::editor
         {
             // 여기서 알린다. 호출하는 쪽이 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 선택했는데 아무 일도
             // 일어나지 않고 로그에도 남지 않는다.
-            SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
+            SW_LOG_ERROR( "Open Scene: load request failed - %#", loadPath );
             EditorContext* pFailContext = EditorContext::get();
             if ( pFailContext != nullptr )
             {

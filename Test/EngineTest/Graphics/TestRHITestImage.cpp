@@ -108,12 +108,12 @@ SW_TEST_CASE( RHITestImageTest, DefaultClearBackgroundAndColorDistance )
 }
 
 /**
- * @brief [RHITestImageTest] 두 이미지를 화소마다 견준다 — 기준 거리 이상만 다르다고 세고, 밝아진 화소를 따로 세며, 크기 · 사각형이 어긋나면 견주지 않는다
+ * @brief [RHITestImageTest] 두 이미지를 화소마다 비교한다 — 기준 거리 이상만 다르다고 세고, 밝아진 화소를 따로 세며, 크기 · 사각형이 어긋나면 비교하지 않는다
  * @details GPU 케이스가 두 판을 평균 색 대신 이 결과로 판정한다. 셈이 틀리면 "다른 화소 0" 을 기대하는 케이스가 모두 함께 틀린다.
  */
 SW_TEST_CASE( RHITestImageTest, CompareCountsDifferingAndBrighterPixels )
 {
-    // 2 x 2 RGBA8. 기준과 견줘 (0,0) 같음 · (1,0) 거리 3(기준 미만) · (0,1) 밝아짐 30 · (1,1) 어두워짐 60.
+    // 2 x 2 RGBA8. 기준과 비교해 (0,0) 같음 · (1,0) 거리 3(기준 미만) · (0,1) 밝아짐 30 · (1,1) 어두워짐 60.
     const sw::vector<uint8> bytesBase  = { 10, 10, 10, 255, 50, 50, 50, 255, 100, 100, 100, 255, 200, 200, 200, 255 };
     const sw::vector<uint8> bytesOther = { 10, 10, 10, 255, 51, 51, 51, 255, 110, 110, 110, 255, 180, 180, 180, 255 };
     test::RHITestImage      base;
@@ -136,7 +136,7 @@ SW_TEST_CASE( RHITestImageTest, CompareCountsDifferingAndBrighterPixels )
     SW_EXPECT_EQUAL( 0u, topRow._differingCount );
     SW_EXPECT_EQUAL( 3u, topRow._maxDistance );
 
-    // 사각형이 이미지 밖이거나 크기가 다르면 견주지 않는다(통과로 읽히지 않게 `isDifferingAtMost` 도 거짓).
+    // 사각형이 이미지 밖이거나 크기가 다르면 비교하지 않는다(통과로 읽히지 않게 `isDifferingAtMost` 도 거짓).
     SW_EXPECT_FALSE( test::RHITestImage::compareRegion( base, other, 6, 0, 0, 3, 1 ).isCompared() );
     test::RHITestImage wide;
     wide.assign( sw::vector<uint8>( 16, 0 ), makeLayout( 4, 1, 4 ), sw::RHIFormat::R8G8B8A8_UNORM );

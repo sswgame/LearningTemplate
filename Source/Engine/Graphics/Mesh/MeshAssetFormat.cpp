@@ -37,7 +37,7 @@ namespace sw
             static constexpr uint8 kArrLODChunk[4] = { 'L', 'O', 'D', 'S' };
 
             /**
-             * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 정본(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
+             * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 기준(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
              * @details LOD 단계는 단계마다 따로 부른다 — 탄젠트를 묶는 이웃은 같은 단계의 삼각형뿐이다.
              */
             static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource )

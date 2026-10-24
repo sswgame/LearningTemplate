@@ -380,7 +380,8 @@ namespace sw
         const int32 deckIndex = outPilot._deckIndex;
         outPilot._deckIndex   = outPilot._deathSlot >= 0 ? outPilot._deathSlot : deckIndex;
         const MechDef* pMech  = outPilot.getMech();
-        equipMech( outPilot, pilotIndex );
+        if ( equipMech( outPilot, pilotIndex ) == false )
+            return false;
         outPilot._deckIndex      = deckIndex;
         outPilot._bWasOverheated = bWasOverheated;
         outPilot._mode           = mode;

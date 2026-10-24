@@ -43,7 +43,7 @@ namespace
         floorDesc._listShape.push_back( floorShape );
         floorDesc._position = sw::float2{ 0.0f, -0.5f };
         floorDesc._type     = sw::PhysicsBodyType::Static;
-        (void)pScene->createBody( floorDesc ); // 바닥 핸들은 다시 쓰지 않는다 — 만들지 못하면 더미가 떨어져 잰 값만 달라진다
+        (void)pScene->createBody( floorDesc ); // 바닥 핸들은 다시 쓰지 않는다 — 만들지 못하면 더미가 떨어져 측정한 값만 달라진다
 
         sw::vector<sw::PhysicsBodyDesc2D> listDesc;
         listDesc.reserve( kBox2DBodyCount );
@@ -78,8 +78,8 @@ namespace
 
 /**
  * @brief [PhysicsBenchTest] Box2D 스텝 시간 — 동적 바디 3000 개가 쌓인 더미를 일꾼 수 1 · 2 · 4 · 8 로(`PhysicsSettings::_workerCount2D`)
- * @details 전용 워커(`Box2DWorkerPool`)의 효과를 재는 벤치다. 같은 장면을 일꾼 수만 바꿔 따로 만들므로 서로의 상태를 나눠 쓰지 않는다.
- *          더미가 자리 잡은 뒤(데우기 스텝)의 스텝만 잰다. 값은 Release 로 읽는다 — 일꾼 수가 늘수록 p50 이 줄면 이득이다.
+ * @details 전용 워커(`Box2DWorkerPool`)의 효과를 측정하는 벤치다. 같은 장면을 일꾼 수만 바꿔 따로 만들므로 서로의 상태를 나눠 쓰지 않는다.
+ *          더미가 자리 잡은 뒤(데우기 스텝)의 스텝만 측정한다. 값은 Release 로 읽는다 — 일꾼 수가 늘수록 p50 이 줄면 이득이다.
  */
 SW_TEST_CASE( PhysicsBenchTest, Box2DStepByWorkerCount )
 {
@@ -120,7 +120,7 @@ SW_TEST_CASE( PhysicsBenchTest, JoltStepWithAndWithoutCloth )
         floorDesc._listShape.push_back( floorShape );
         floorDesc._position = sw::float3{ 0.0f, -0.5f, 0.0f };
         floorDesc._type     = sw::PhysicsBodyType::Static;
-        (void)pScene->createBody( floorDesc ); // 바닥 핸들은 다시 쓰지 않는다 — 만들지 못하면 상자가 떨어져 잰 값만 달라진다
+        (void)pScene->createBody( floorDesc ); // 바닥 핸들은 다시 쓰지 않는다 — 만들지 못하면 상자가 떨어져 측정한 값만 달라진다
         for ( uint32 boxIndex = 0; boxIndex < kBoxCount; ++boxIndex )
         {
             sw::PhysicsBodyDesc3D  desc;

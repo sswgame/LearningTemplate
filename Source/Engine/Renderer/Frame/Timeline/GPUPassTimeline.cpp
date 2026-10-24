@@ -70,7 +70,7 @@ namespace sw
     void GPUPassTimeline::readAndReport( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const vector<RenderGraphPassDesc>& listPass )
     {
 #if SW_PROFILE_COMPILED
-        // 타임스탬프 능력이 없는 디바이스(테스트 목)는 잴 것이 없다.
+        // 타임스탬프 능력이 없는 디바이스(테스트 목)는 측정할 것이 없다.
         IRHITimestampProvider* pTimestamps = pDevice != nullptr ? pDevice->findTimestampProvider() : nullptr;
         if ( pTimestamps == nullptr )
             return;

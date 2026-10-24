@@ -18,7 +18,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/IPhysicsBodyScene.h"
+#include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
 namespace sw

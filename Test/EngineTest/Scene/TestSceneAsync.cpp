@@ -607,7 +607,7 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
 /**
  * @brief [SceneAsyncTest] 씬을 짓는 동안 모듈 타입이 올라오면 그 씬을 다시 짓는다 — 새 모듈의 컴포넌트가 빠지지 않는다
  * @details 에디터가 시작 씬을 여는 동안 키트 · SWGame 이 올라오면, 워커는 그때의 타입 표로 씬을 지어 그 모듈의 컴포넌트를 만들지 못한다.
- *          그 씬을 그대로 쓰면 저장할 때 컴포넌트가 사라진다. 로드를 띄울 때와 끝날 때 타입 표 세대(`TypeRegistry::getGeneration`)를 견준다.
+ *          그 씬을 그대로 쓰면 저장할 때 컴포넌트가 사라진다. 로드를 띄울 때와 끝날 때 타입 표 세대(`TypeRegistry::getGeneration`)를 비교한다.
  */
 SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 {
@@ -638,7 +638,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 
 /**
  * @brief [SceneAsyncTest] 같은 씬이 대기열에 있어도, 짓는 동안 모듈 타입이 올라오면 다시 짓는다 — 두 요청자 모두 새 씬을 받는다
- * @details 같은 경로가 대기열에 있으면 그 결과를 그대로 활성으로 쓰는 길이 따로 있다. 그 길에서도 세대를 견줘야 새 모듈의 컴포넌트가 빠진
+ * @details 같은 경로가 대기열에 있으면 그 결과를 그대로 활성으로 쓰는 길이 따로 있다. 그 길에서도 세대를 비교해야 새 모듈의 컴포넌트가 빠진
  *          씬이 남지 않는다 — 에디터가 시작 씬을 두 번 여는 흔한 순서다.
  */
 SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQueued )

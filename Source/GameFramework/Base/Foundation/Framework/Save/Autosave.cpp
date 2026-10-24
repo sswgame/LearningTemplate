@@ -107,12 +107,18 @@ namespace sw
     {
     }
 
-    void AutosaveManager::initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad )
+    bool AutosaveManager::initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
-        _settings            = settings;
-        _settings._slotCount = MathUtil::clamp( _settings._slotCount, 1, AutosaveInternal::kMaxSlotCount );
-        _onSave              = onSave;
-        _onLoad              = onLoad;
+        const bool bSettingsValid = 1 <= settings._slotCount && settings._slotCount <= AutosaveInternal::kMaxSlotCount && 0.0f <= settings._interval && 0.0f <= settings._minimumGap;
+        if ( bSettingsValid == false )
+        {
+            SW_LOG_ERROR( "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more)", settings._slotCount,
+                          AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap );
+            return false;
+        }
+        _settings = settings;
+        _onSave   = onSave;
+        _onLoad   = onLoad;
         _listBlockReason.clear();
         _pendingLabel     = hashed_string{};
         _lastCheckpointID = hashed_string{};
@@ -123,6 +129,7 @@ namespace sw
         _bPending         = SW_FALSE;
         _bSaving          = SW_FALSE;
         scanSlots();
+        return true;
     }
 
     void AutosaveManager::update( float32 deltaTime )

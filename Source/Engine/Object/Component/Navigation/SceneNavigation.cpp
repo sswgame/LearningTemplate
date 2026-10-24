@@ -178,7 +178,7 @@ namespace sw
         const bool bNotRegisteredObstacle = pObstacle == nullptr || pObstacle->_navIndex >= _listObstacle.size() || _listObstacle[pObstacle->_navIndex] != pObstacle;
         if ( bNotRegisteredObstacle )
             return;
-        _tileRebaker.forgetObstacle( *pObstacle, _listRuntime ); // 다시 굽기 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다
+        _tileRebaker.forgetObstacle( *pObstacle, _listRuntime ); // 다시 베이크 종류는 그 자리를 알리고, 캐시 종류는 캐시 장애물을 뺀다
         NavMeshObstacleComponent* pMoved    = _listObstacle.back();
         _listObstacle[pObstacle->_navIndex] = pMoved;
         pMoved->_navIndex                   = pObstacle->_navIndex;
@@ -344,7 +344,7 @@ namespace sw
 
         shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
         NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), *pGeometry );
-        // 장애물은 종류의 방식(`_obstacleMode`)대로 — 다시 굽기는 덧칠 부피로 타일에 굽고, 캐시는 굽지 않고 끼운 뒤 캐시 장애물로 넣는다.
+        // 장애물은 종류의 방식(`_obstacleMode`)대로 — 다시 베이크는 덧칠 부피로 타일에 베이크하고, 캐시는 베이크하지 않고 끼운 뒤 캐시 장애물로 넣는다.
         const bool                          bObstacleCache = pType->_obstacleMode == NavObstacleMode::TileCache;
         shared_ptr<vector<NavConvexVolume>> pVolume        = make_shared<vector<NavConvexVolume>>();
         if ( bObstacleCache == false )
@@ -383,7 +383,7 @@ namespace sw
             SW_LOG_INFO( "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
                          pRuntime->_bakeStats._tileCount, pRuntime->_bakeStats._polygonCount, pGeometry->getTriangleCount(), pRuntime->_bakeStats._milliseconds );
         }
-        // 캐시 종류 — 지금 뚫고 있는 장애물을 캐시에 넣는다(쿠킹본 · 런타임 굽기 모두 장애물 없는 층이다). 다음 갱신이 닿은 타일을 층에서 짓는다.
+        // 캐시 종류 — 지금 뚫고 있는 장애물을 캐시에 넣는다(쿠킹본 · 런타임 베이크 모두 장애물 없는 층이다). 다음 갱신이 닿은 타일을 층에서 짓는다.
         if ( bObstacleCache )
             NavTileRebaker::addCarvedObstaclesToCache( *pRuntime, _listObstacle );
         // 막힌 링크(닫힌 문)는 새 내비메시에도 막는다.

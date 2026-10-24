@@ -503,7 +503,7 @@ namespace sw::editor
 
         /**
          * @brief 컴포넌트 핸들의 위젯입니다. 대상 타입이 있는 핸들(`TComponentHandle<T>`)은 선택기만 그리고, 없는 핸들은 `ValueProperty` 와 같이 그립니다.
-         * @details 선택기가 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 타입이 틀린 값이 들어갈 수 없다(`docs/plans/TypedComponents.md` 3.8).
+         * @details 선택기가 쓰는 값은 **열거한 컴포넌트의 `getHandle()`** 뿐이라 타입이 틀린 값이 들어갈 수 없다(`docs/09_Decisions.md` 5-6 타입 핸들 인스펙터).
          *          대상 타입, 레지스트리, 편집 대상의 씬 중 하나라도 없으면 선택기를 그리지 않고 오류 글과 한 번의 로그로 멈춘다. 활성 씬이나 모든 컴포넌트로
          *          넓히는 것은 폴백이다.
          */

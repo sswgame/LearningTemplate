@@ -249,7 +249,7 @@ namespace sw
         outScore.setValue( pRule->_category, value );
     }
 
-    void HorrorMatch::configureGenerator( int32 generator, bool bRegressing )
+    bool HorrorMatch::configureGenerator( int32 generator, bool bRegressing )
     {
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         InteractionConfig            config;
@@ -265,12 +265,14 @@ namespace sw
         // 다시 설정해도 진행량은 남긴다(걷어차기 퇴행을 켜고 끄는 데 쓴다).
         HorrorGenerator& target   = _listGenerator[static_cast<size_t>( generator )];
         const float32    progress = target._progress.getProgress();
-        target._progress.initialize( config, &_pCatalog->getJudge(),
-                                     _settings._seed ^ ( static_cast<uint32>( generator + 1 ) * HorrorMatchRulesInternal::kGeneratorSeedMix ) ^ _tick );
+        if ( target._progress.initialize( config, &_pCatalog->getJudge(),
+                                          _settings._seed ^ ( static_cast<uint32>( generator + 1 ) * HorrorMatchRulesInternal::kGeneratorSeedMix ) ^ _tick ) == false )
+            return false;
         target._progress.setProgress( progress );
         _listInteractionScratch.clear();
         target._progress.drainEvents( _listInteractionScratch );
         target._bKicked = bRegressing ? SW_TRUE : SW_FALSE;
+        return true;
     }
 
     void HorrorMatch::makeNoise( int32 survivor, float32 radius, const float3& position )

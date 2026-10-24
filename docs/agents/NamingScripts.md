@@ -1,3 +1,7 @@
+> 질문: CMake · Python · HLSL · 리소스 에셋의 이름과 모양은?
+> 독자: CMake, 파이썬, 셰이더를 쓰거나 리소스 에셋을 더하는 사람.
+> 결론: CMake 옵션은 `SW_*`, 함수는 `sw_camelCase` 다. 파이썬 · HLSL · 리소스 에셋은 아래 절의 규칙을 따른다(리소스 이름은 소문자).
+
 ## Naming — CMake · Python · HLSL · Resource Assets
 
 ### CMake

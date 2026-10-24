@@ -3,7 +3,7 @@
  * @brief 리플렉션 `ENUM()` 열거자의 이름을 로그 · 진단 · 화면 표시용으로 읽습니다.
  * @details 열거형마다 이름 배열과 `toString` 을 손으로 두지 않습니다. `ENUM()` 을 붙이면 코드 생성기가 이름을 등록하고, 이 함수가 그 이름을 돌려줍니다.
  *          언리얼 `UEnum::GetValueAsString`, Godot 의 `VARIANT_ENUM_CAST` + ClassDB 열거 상수와 같은 자리입니다.
- *          철자가 열거자 이름과 다른 와이어 · 데이터 문자열(`AdminRole` 의 `"viewer"`, 지표 라벨)은 이 함수가 아니라 그 형식의 이름 표가 정본입니다.
+ *          철자가 열거자 이름과 다른 와이어 · 데이터 문자열(`AdminRole` 의 `"viewer"`, 지표 라벨)은 이 함수가 아니라 그 형식의 이름 표가 기준입니다.
  *          레지스트리는 엔진 범위의 `TypeRegistry` 이므로 Engine 밖(GameFramework · Editor · 게임)에서도 범위를 몰라도 씁니다.
  *
  *          템플릿 `getEnumName<E>` 는 찾은 `EnumInfo` 를 열거형마다 함수 지역 캐시(`EnumNameCache`)에 둡니다. 호출마다 잠금과 해시 맵 조회를 하지 않습니다.

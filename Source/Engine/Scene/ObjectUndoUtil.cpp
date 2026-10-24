@@ -98,7 +98,7 @@ namespace sw
                 }
                 loadSnapshot( pCreated, snapshot );
                 target._pScene->setEntityPrefabPath( pCreated->getObjectID(), prefabPath );
-                // 중첩 프리팹 부품이었으면 표시도 같은 id 로 되살린다 — 레지스트리는 놓인 오브젝트의 표시를 거두므로 명령이 값으로 들고 있다.
+                // 중첩 프리팹 부품이었으면 표시도 같은 id 로 복원한다 — 레지스트리는 놓인 오브젝트의 표시를 거두므로 명령이 값으로 들고 있다.
                 if ( pNestedPart != nullptr )
                     target._pManager->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pCreated->getObjectID(), *pNestedPart );
                 pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pCreated->getObjectID(), ObjectEditKind::Recreated } );

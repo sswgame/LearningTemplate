@@ -34,7 +34,7 @@ SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
  */
 SW_TEST_CASE( BuildInfoTest, TargetNameMatchesTheCodeMacros )
 {
-    // 분기 없이 견준다 — 이름이 컴파일 시간 상수라 if 사슬은 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
+    // 분기 없이 비교한다 — 이름이 컴파일 시간 상수라 if 사슬은 쓰지 않는 분기가 "닿지 않는 코드" 경고가 된다.
     const sw::string_view targetName{ sw::build::kTargetName };
     SW_EXPECT_TRUE_MSG( targetName == "Game" || targetName == "Client" || targetName == "Server", sw::build::kTargetName );
     SW_EXPECT_EQUAL( targetName != "Server", sw::build::kWithClientCode );

@@ -66,7 +66,7 @@ namespace sw
 
         /**
          * @brief @p path 의 표를 읽습니다. 실패 이유는 로그에 남기고 false 입니다(그때 표는 비어 있습니다).
-         * @details 엔진 팩의 표 경로는 엔진 기본 에셋 표(`EngineDefaultAssets::_netEmulationPresets`)가 정본이다 — 코드에 경로를 두지 않는다.
+         * @details 엔진 팩의 표 경로는 엔진 기본 에셋 표(`EngineDefaultAssets::_netEmulationPresets`)가 기준이다 — 코드에 경로를 두지 않는다.
          */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 이름(대소문자 무시)으로 프리셋을 찾습니다. 없으면 nullptr 입니다. */

@@ -2,7 +2,7 @@
  * @file WaylandInputEvent.h
  * @brief Wayland 창(`WaylandWindow`)이 입력 하나를 엔진에 넘기는 값입니다 — `NativeWindowEvent::kMessageWayland` 의 `_lParam` 이 가리킵니다.
  * @details X11 은 `XEvent` 를 그대로 넘기지만 Wayland 는 장치마다 콜백이라 넘길 한 덩어리가 없다. 창이 콜백을 이 값 하나로 모아 넘기고, 입력 관리자
- *          (`InputManagerX11.cpp` 의 Wayland 갈래)가 읽는다. 라이브러리 타입이 없어 Wayland 헤더 없이도 읽힌다.
+ *          (`InputManagerX11.cpp` 의 Wayland 분기)가 읽는다. 라이브러리 타입이 없어 Wayland 헤더 없이도 읽힌다.
  *          키는 xkbcommon 의 keysym 이다 — X11 KeySym 과 같은 번호라 키 표(`InputKeyTable::mapX11KeySym`)를 함께 쓴다.
  */
 #pragma once

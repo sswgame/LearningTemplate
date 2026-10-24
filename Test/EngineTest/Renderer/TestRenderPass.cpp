@@ -568,7 +568,7 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
 }
 
 /**
- * @brief [RenderPassTest] 톤맵하는 패스는 Tonemap 이거나 `SW_POST_TONEMAP` 을 켠 Present(후처리 체인)다 — 자동 노출이 그 패스 앞에서 잰다
+ * @brief [RenderPassTest] 톤맵하는 패스는 Tonemap 이거나 `SW_POST_TONEMAP` 을 켠 Present(후처리 체인)다 — 자동 노출이 그 패스 앞에서 측정한다
  * @details 디퍼드는 Tonemap 뒤 Present 가 그냥 블릿이고, 포워드는 Present 가 톤맵까지 한다. 둘 다 톤맵하는 패스가 정확히 하나여야 노출 기록이 프레임에 한 번 넘어간다.
  */
 SW_TEST_CASE( RenderPassTest, TonemapPassIsTonemapOrPostChainPresent )

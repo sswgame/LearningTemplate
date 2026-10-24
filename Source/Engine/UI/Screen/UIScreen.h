@@ -17,6 +17,7 @@
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
+#include "Engine/UI/Screen/UILayer.h"
 
 namespace sw
 {
@@ -27,18 +28,6 @@ namespace sw
     class UIThemeController;
     class UIViewModel;
     class Widget;
-
-    /** @brief 화면 레이어입니다. 위 레이어가 아래 레이어 위에 그려지고 입력을 먼저 받습니다(CommonUI 의 레이어, Godot 의 CanvasLayer). */
-    ENUM()
-    enum class UILayer : uint8
-    {
-        HUD,      ///< 게임 HUD 입니다. 포커스를 받지 않습니다(마커, 체력, 조준선).
-        GameMenu, ///< 게임 안 메뉴(가방, 지도)입니다. 게임은 멈추지 않습니다.
-        Menu,     ///< 일시정지와 옵션 메뉴입니다.
-        Modal,    ///< 확인 창("유지할까요? N 초")입니다. 아래를 모두 막습니다.
-        Overlay,  ///< 알림과 토스트입니다. 입력을 받지 않습니다.
-        Loading   ///< 로딩 화면입니다. 맨 위에서 입력을 막습니다.
-    };
 
     /** @brief 화면을 가리키는 번호입니다. 다시 쓰지 않습니다(0 이면 없음). */
     using UIScreenHandle = uint32;
@@ -102,8 +91,10 @@ namespace sw
         UISystem*           getUISystem() const { return _pUISystem; }
         /** @brief 포커스와 UI 액션을 받는 화면이면 true 입니다. 성질이 그렇고 HUD 나 오버레이 레이어가 아니어야 합니다. */
         bool takesFocus() const;
-        /** @brief 포인터 이벤트를 받는 화면이면 true 입니다. 오버레이 레이어(알림)는 받지 않습니다. */
-        bool receivesPointer() const { return _desc._layer != UILayer::Overlay; }
+        /** @brief 포인터 이벤트를 받는 화면이면 true 입니다. 오버레이 레이어(알림)와 레이어 가시성 요청으로 숨긴 화면은 받지 않습니다. */
+        bool receivesPointer() const { return _desc._layer != UILayer::Overlay && _bHiddenByLayer == SW_FALSE; }
+        /** @brief 레이어 가시성 요청(`UISystem::addLayerHideRequest`)이 이 화면의 레이어를 숨기고 있으면 true 입니다. 숨긴 화면은 그리지 않고 포인터를 받지 않습니다(상태·포커스는 그대로). */
+        bool isHiddenByLayer() const { return _bHiddenByLayer == SW_TRUE; }
         /** @brief 아래 화면과 게임의 입력을 막는 화면이면 true 입니다. 모달이거나 로딩 레이어입니다. */
         bool blocksLowerInput() const { return _desc._bModal || _desc._layer == UILayer::Loading; }
         /** @brief 닫기를 요청했는지 나타냅니다(이번 입력 처리가 끝나면 지워집니다). */
@@ -190,6 +181,7 @@ namespace sw
         WidgetID                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯입니다. 다시 활성이 되면 돌려줍니다.
         uint32                                                                   _pushOrder;   ///< 같은 레이어 안의 쌓인 순서입니다(클수록 위).
         uint8                                                                    _bClosing;
+        uint8                                                                    _bHiddenByLayer;            ///< 레이어 가시성 요청이 숨기는 중이다(`UISystem` 이 적는다)
         uint8                                                                    _bReportsUnhandledCommands; ///< 처리하지 않은 명령을 경고로 남긴다(`setReportsUnhandledCommands`)
     };
 } // namespace sw

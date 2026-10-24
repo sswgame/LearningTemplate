@@ -74,6 +74,7 @@ namespace sw
         , _reconciledTick{ 0 }
         , _controllerID{ -1 }
         , _role{ Role::None }
+        , _bJumpPending{ SW_FALSE }
     {
         setCanEverTick( true );
     }
@@ -157,6 +158,9 @@ namespace sw
         const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || deltaTime <= 0.0f;
         if ( bIdle )
             return;
+        // 점프 눌림은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 눌림이 사라지지 않게 매 프레임 쌓는다.
+        if ( _role == Role::Client && pMovement->makeInput()._bJump == SW_TRUE )
+            _bJumpPending = SW_TRUE;
         _accumulator += deltaTime;
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
@@ -230,7 +234,12 @@ namespace sw
         const std::optional<int64> serverTickOffset = _client.findServerTickOffset();
         if ( serverTickOffset.has_value() )
             ShooterNetPawnComponentInternal::alignTickedMovers( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
-        const ShooterMoveInput input = movement.makeInput();
+        ShooterMoveInput input = movement.makeInput();
+        if ( _bJumpPending == SW_TRUE )
+        {
+            input._bJump  = SW_TRUE; // 이 틱 전에 쌓인 눌림을 이 입력 틱에 싣고 비운다
+            _bJumpPending = SW_FALSE;
+        }
         writeInput( input, _bytesScratch );
         if ( _client.sendInput( _tick, _bytesScratch ) == false )
             SW_LOG_WARNING( "Shooter net pawn: input of tick %# was not sent (too large)", _tick );

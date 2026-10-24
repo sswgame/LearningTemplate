@@ -127,7 +127,7 @@ namespace sw
         constexpr int64 kSerialBudgetNanos = 16000;
         /**
          * @brief 이 수 이상이면 비용을 재지 않고 바로 나눈다. 가장 가벼운 항목(~10 ns)이라도 이만큼이면 직렬이 `kSerialBudgetNanos` 를 넘는다.
-         *        큰 씬에서는 직렬로 재는 약 3 us 가 병렬 시작을 늦추기만 한다(무버 8000 의 틱 90 us 대 98 us).
+         *        큰 씬에서는 직렬로 측정하는 약 3 us 가 병렬 시작을 늦추기만 한다(무버 8000 의 틱 90 us 대 98 us).
          */
         constexpr uint32 kObviouslyParallelCount = 4096;
 

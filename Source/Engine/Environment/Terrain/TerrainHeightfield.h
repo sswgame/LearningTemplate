@@ -78,7 +78,7 @@ namespace sw
          */
         [[nodiscard]] bool writeHoleCells( const vector<uint8>& listHole, const TerrainSampleRect& cellRect );
         /**
-         * @brief 해상도를 바꿉니다. 원점 · 넓이 · 스플랫은 그대로이고 셀 크기만 다시 구합니다(크기 바꾸기 · 그 되돌리기 · 상태 되살리기의 길).
+         * @brief 해상도를 바꿉니다. 원점 · 넓이 · 스플랫은 그대로이고 셀 크기만 다시 구합니다(크기 바꾸기 · 그 되돌리기 · 상태 복원하기의 길).
          * @param listHeight 월드 높이 @p resolution² 개(행 우선)
          * @param listHole 구멍 마스크 (@p resolution − 1)² 개, 비면 구멍 없음
          * @return 해상도가 2 보다 작거나 크기가 맞지 않으면 false 이고 아무것도 바꾸지 않습니다.

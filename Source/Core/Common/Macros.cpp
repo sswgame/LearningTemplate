@@ -7,6 +7,40 @@
 #include <cstring>
 #include <mutex>
 
+namespace sw::internal
+{
+    namespace
+    {
+        /** @brief 로그가 설치한 보고자입니다. 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
+        std::atomic<LowLevelReporterFunc> s_pfnLowLevelReporter{ nullptr };
+    } // namespace
+
+    void setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
+    {
+        s_pfnLowLevelReporter.store( pfnReporter, std::memory_order_release );
+    }
+
+    void reportLowLevel( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept
+    {
+        const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
+        if ( pfnReporter != nullptr )
+        {
+            pfnReporter( level, pCaller, pMessage );
+            return;
+        }
+        // 로거가 서기 전이거나 로거가 없는 도구다 — 보고를 잃지 않게 stderr 에 남긴다.
+        std::fprintf( stderr, "[%s] %s: %s\n", level == LowLevelReportLevel::Error ? "Error" : "Warning", pCaller, pMessage );
+        std::fflush( stderr );
+    }
+
+    void reportLowLevelAssert( const utf8* pExpression, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
+    {
+        utf8 arrText[1024];
+        std::snprintf( arrText, sizeof( arrText ), "ASSERT failed\nExpression : %s\nMessage    : %s\nFileName   : %s\nLine       : %d", pExpression, pMessage, pFile, line );
+        reportLowLevel( LowLevelReportLevel::Error, pCaller, arrText );
+    }
+} // namespace sw::internal
+
 #if defined( SW_DEBUG )
 namespace sw::internal
 {
@@ -41,7 +75,7 @@ namespace sw::internal
             return s_state;
         }
 
-        /** @brief 같은 자리인가 — 파일 리터럴 주소는 번역 단위마다 다를 수 있어 글로 견준다. */
+        /** @brief 같은 자리인가 — 파일 리터럴 주소는 번역 단위마다 다를 수 있어 글로 비교한다. */
         bool isSameSite( const IgnoredAssertSite& site, const utf8* pFile, int32 line )
         {
             return site._line == line && site._pFile != nullptr && pFile != nullptr && std::strcmp( site._pFile, pFile ) == 0;

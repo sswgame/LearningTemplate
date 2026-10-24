@@ -22,7 +22,7 @@
 #include "TestFramework/TestFramework.h"
 
 // FractureComponentTest — 온전할 때는 메시 하나 · 강체 하나, 첫 파괴에 조각(정적 · 동적 바디 + 스킨드 메시 둘)으로 바뀌고, 떨어진 것은 떨어지고,
-// 쉬면 바디를 빼고 정적 그림으로 구워지며, 같은 사건이면 다른 매니저에서도 같은 상태다.
+// 쉬면 바디를 빼고 정적 그림으로 베이크해지며, 같은 사건이면 다른 매니저에서도 같은 상태다.
 
 namespace
 {
@@ -87,7 +87,7 @@ namespace
             pBody->setLocalPosition( sw::float3{ 0.0f, -0.5f, 0.0f } );
         }
 
-        /** @brief 벽 오브젝트 — 뿌리 강체(정적 상자, 오브젝트 자세를 맡는다) · 그리는 메시 · 파괴 컴포넌트(바닥 앵커). */
+        /** @brief 벽 오브젝트 — 루트 강체(정적 상자, 오브젝트 자세를 맡는다) · 그리는 메시 · 파괴 컴포넌트(바닥 앵커). */
         static sw::FractureComponent* spawnWall( sw::GameObjectManager& manager, const sw::string& fracturePath, const sw::string& profilePath,
                                                  const sw::float3& position = sw::float3{} )
         {
@@ -124,7 +124,7 @@ namespace
 
 /**
  * @brief [FractureComponentTest] 온전한 벽은 바디 · 그림을 들지 않고, 폭발에 조각으로 바뀌어(메시 숨김 · 강체 끔 · 스킨드 메시 둘 · 붙은 조각은 정적 바디)
- *        떨어진 덩어리는 폭발에 날아가고 붙은 조각은 제자리이고, 시간이 지나면 잠든 바디를 빼고 정적 그림으로 구워진다
+ *        떨어진 덩어리는 폭발에 날아가고 붙은 조각은 제자리이고, 시간이 지나면 잠든 바디를 빼고 정적 그림으로 베이크된다
  */
 SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
 {
@@ -178,7 +178,7 @@ SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
     }
     SW_EXPECT_TRUE( maxMove > 0.5f );
 
-    // 쉬면 작은 파편은 바디를 빼거나 사라지고, 움직임이 멈추면 정적 그림으로 굽는다.
+    // 쉬면 작은 파편은 바디를 빼거나 사라지고, 움직임이 멈추면 정적 그림으로 베이크한다.
     test::updateFrames( manager, 600 );
     SW_EXPECT_EQUAL( 0u, pFracture->getDynamicBodyCount() );
     SW_EXPECT_TRUE( pFracture->isBaked() );

@@ -40,6 +40,7 @@
 #include "Engine/Physics/IPhysicsCharacterScene.h"
 #include "Engine/Physics/IPhysicsJointScene.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
+#include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Physics/IPhysicsSoftBodyScene.h"
 #include "Engine/Physics/IPhysicsVehicleScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
@@ -96,7 +97,4 @@ namespace sw
         /** @brief 바디마다 셰이프를 선으로 냅니다(`PhysicsDebugDrawUtil`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
     };
-
-    using IPhysicsScene3D = IPhysicsScene<PhysicsDimension3D>;
-    using IPhysicsScene2D = IPhysicsScene<PhysicsDimension2D>;
 } // namespace sw

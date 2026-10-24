@@ -278,7 +278,7 @@ SW_TEST_CASE( UIBindingTest, ConverterByName )
                         pScreen4->getBindingSet().getErrors()[0].c_str() );
 }
 
-/** @brief [UIBindingTest] 갈래가 맞지 않고 변환기도 없으면 걸 때 오류다 — 조용히 0 이 되지 않는다(글 → 숫자, 색 → 숫자) */
+/** @brief [UIBindingTest] 분기가 맞지 않고 변환기도 없으면 걸 때 오류다 — 조용히 0 이 되지 않는다(글 → 숫자, 색 → 숫자) */
 SW_TEST_CASE( UIBindingTest, TypeMismatchWithoutConverterIsError )
 {
     UIBindingFixture fixture;
@@ -357,7 +357,7 @@ SW_TEST_CASE( UIBindingTest, ManyNotifiesInOneFrameUpdateOnce )
     SW_EXPECT_EQUAL( writesBefore + 1, pScreen->getBindingSet().getWriteCount() );
 }
 
-/** @brief [UIBindingTest] 폴링 바인딩은 알림 없이 바뀐 값을 매 프레임 견줘 잡는다(개발 편의 — 견준 수를 센다) */
+/** @brief [UIBindingTest] 폴링 바인딩은 알림 없이 바뀐 값을 매 프레임 비교해 잡는다(개발 편의 — 비교한 수를 센다) */
 SW_TEST_CASE( UIBindingTest, PollBindingDetectsChange )
 {
     UIBindingFixture fixture;

@@ -7,6 +7,7 @@
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitPartData.h"
+#include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
@@ -21,6 +22,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -152,10 +154,38 @@ namespace sw
 
 namespace sw
 {
+    CharacterAppearanceProportionTask::CharacterAppearanceProportionTask( CharacterAppearanceComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    void CharacterAppearanceProportionTask::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+    {
+        (void)context;
+        const BoneProportion& proportion = _owner.getBodyProportion();
+        if ( phase != AnimationPhase::Attachment || proportion.getEntries().empty() )
+            return;
+        proportion.applyToPose( unit.getSkeleton(), unit.getLocalPose() );
+    }
+
+    void CharacterAppearanceProportionTask::onAnimationUnitDetached( SkeletalMeshComponent& unit )
+    {
+        (void)unit;
+        _owner._bProportionTask = SW_FALSE;
+    }
+} // namespace sw
+
+namespace sw
+{
     CharacterAppearanceComponent::CharacterAppearanceComponent()
         : _presetID{}
         , _seed{ 0 }
         , _socketTask{ *this }
+        , _proportionTask{ *this }
+        , _bodyProportion{}
+        , _listShapeMorph{}
+        , _bodyShapeSet{}
+        , _seenShapeReloadCount{ 0 }
         , _rig{}
         , _socketCache{}
         , _state{}
@@ -173,6 +203,8 @@ namespace sw
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
         , _fitTablesLoad{}
+        , _lastFitResult{}
+        , _fitResultRevision{ 0 }
         , _assembleCount{ 0 }
         , _seenFitReloadStamp{ 0 }
         , _bodyPart{ -1 }
@@ -181,6 +213,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bMeshAssemblyPending{ SW_FALSE }
         , _bMeshAssembled{ SW_FALSE }
+        , _bProportionTask{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -219,7 +252,7 @@ namespace sw
             return;
         }
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
-        // 구운 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
+        // 베이크한 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
         const bool bSocketsStale = _socketCache.isStale();
         if ( bSocketsStale == false && isMeshAssemblyStale() == false )
             return;
@@ -471,6 +504,7 @@ namespace sw
         _state.takeDetachEvents( listDetachEvent );
 
         _bodyPart = applyBodyPart( *pBody );
+        applyBodyShapes( *pBody );
         CharacterPoseUtil::makeBindBones( pBody->getSkeleton(), _bodyBindBones );
         _bodyBones = _bodyBindBones;
         (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 계산한다
@@ -534,6 +568,51 @@ namespace sw
         return -1;
     }
 
+    void CharacterAppearanceComponent::applyBodyShapes( SkeletalMeshComponent& body )
+    {
+        const ResolvedAppearance& resolved = _state.getResolved();
+        _bodyProportion.clear();
+        _listShapeMorph.clear();
+        _bodyShapeSet = nullptr;
+        vector<BodyShapeValue> listValue;
+        for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
+        {
+            if ( proportion._owner.empty() ) // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
+                listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );
+        }
+        const ResolvedPart* pBodyPart = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
+        if ( pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false )
+        {
+            _bodyShapeSet         = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
+            _seenShapeReloadCount = SharedAssetCache<BodyShapeSet>::getReloadCount();
+            if ( _bodyShapeSet == nullptr )
+                SW_LOG_ERROR( "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
+        }
+        else if ( listValue.empty() == false )
+        {
+            SW_LOG_ERROR( "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
+        }
+        if ( _bodyShapeSet != nullptr )
+        {
+            string error;
+            if ( _bodyShapeSet->evaluate( vector_reference<const BodyShapeValue>( listValue.data(), listValue.size() ), _listShapeMorph, _bodyProportion, &error ) == false )
+                SW_LOG_ERROR( "Appearance '%#' body shape axes: %#", _presetID.c_str(), error.c_str() );
+        }
+        // 본 비율이 있을 때만 단계 작업을 등록한다 — 포즈를 쓰는 작업이 둘이면 몸의 군중 공유가 꺼지므로, 비율이 없는 몸은 공유를 지킨다.
+        const bool bWantsTask = _bodyProportion.getEntries().empty() == false;
+        if ( bWantsTask && _bProportionTask == SW_FALSE )
+        {
+            body.registerAnimationPhaseTask( &_proportionTask );
+            _bProportionTask = SW_TRUE;
+        }
+        else if ( bWantsTask == false && _bProportionTask == SW_TRUE )
+        {
+            body.unregisterAnimationPhaseTask( &_proportionTask );
+            _bProportionTask = SW_FALSE;
+        }
+        body.markPoseDirty(); // 비율이 바뀌면 쉬는 몸도 포즈를 다시 만든다
+    }
+
     bool CharacterAppearanceComponent::releaseDetachedPart( GameObject& object, const SpawnedPart& spawned, const vector<AppearanceDetachEvent>& listDetachEvent ) const
     {
         if ( spawned._bSocketPart == SW_FALSE )
@@ -557,6 +636,8 @@ namespace sw
                                                   const vector<AppearanceDetachEvent>& listDetachEvent )
     {
         using Internal = CharacterAppearanceComponentInternal;
+        // 부품을 스폰하는 비용(풀 전 · 후 비교는 `-gv_socketPartPool=0`, 계획 ShooterCharacterIntegration S6)이 이 구간에 든다.
+        SW_PROFILE_SCOPE( "GT.Appearance.syncParts" );
         // 남길 것을 고르고 없어진 것은 지운다. 같은 부품(주인, 이름, 에셋)은 그 오브젝트를 그대로 쓴다. 그래서 무기를 바꿔도 투구는 그대로 남는다.
         vector<SpawnedPart> listKeep;
         vector<uint8>       listPartCovered( _state.getResolved()._listPart.size(), SW_FALSE );
@@ -621,7 +702,7 @@ namespace sw
                     pSkinned->setMaterialPath( part._material.c_str() );
                 if ( part._rig.empty() )
                 {
-                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 정본은 몸 프리팹이다.
+                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.
                     pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
                     pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
                 }
@@ -783,7 +864,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 구운 메시(체형 · 피팅)
+    // 베이크한 메시(체형 · 피팅)
     // ------------------------------------------------------------------------------
     void CharacterAppearanceComponent::requestMeshAssembly( GameObjectManager& manager )
     {
@@ -793,8 +874,8 @@ namespace sw
         const ResolvedAppearance& resolved       = _state.getResolved();
         const ResolvedPart*       pBodyPart      = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
         const bool                bHasTables     = pBodyPart != nullptr && pBodyPart->_fitTables.empty() == false;
-        const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false;
-        const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 굽지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
+        const bool                bBakes         = bHasTables || resolved._listMorph.empty() == false || _listShapeMorph.empty() == false;
+        const bool                bNothingToBake = bBakes == false && _bMeshAssembled == SW_FALSE; // 베이크하지도 않고 되돌릴 것도 없다(대부분의 캐릭터)
         if ( pBodyPart == nullptr || bNothingToBake )
             return;
 
@@ -821,7 +902,7 @@ namespace sw
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;
-        // 새로 입은 피팅 부품은 구운 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 구운 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
+        // 새로 입은 피팅 부품은 베이크한 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 베이크한 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             GameObject* pObject    = manager.resolveGameObject( spawned._object );
@@ -867,11 +948,22 @@ namespace sw
         const bool         bNothingToApply = _listMeshAssemblyLoad.empty() || bSuperseded;
         if ( pManager == nullptr || bNothingToApply )
             return;
-        const ResolvedAppearance&  resolved = _state.getResolved();
+        // 체형 축이 정한 몸 모프(주인이 빈 모프)를 해석의 모프에 더해 굽는다. 같은 이름이 해석에 있으면 해석의 것이 이긴다(데이터가 직접 정한 값).
+        ResolvedAppearance resolved = _state.getResolved();
+        for ( const BodyMorphWeight& shapeMorph : _listShapeMorph )
+        {
+            bool bDeclared = false;
+            for ( const ResolvedMorph& morph : resolved._listMorph )
+            {
+                bDeclared = bDeclared || ( morph._owner.empty() && morph._name == shapeMorph._morph );
+            }
+            if ( bDeclared == false )
+                resolved._listMorph.push_back( ResolvedMorph{ hashed_string{}, shapeMorph._morph, shapeMorph._weight } );
+        }
         vector<AppearanceMeshPart> listPart;
         vector<shared_ptr<Mesh>>   listSource;
         string                     report;
-        // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(구운 것과 원본이 섞인 차림을 만들지 않는다).
+        // 읽기 실패는 데이터 오류다 — 어느 것인지 알리고 원본을 그린다(베이크한 것과 원본이 섞인 차림을 만들지 않는다).
         if ( _fitTablesLoad.hasFailed() )
             CharacterAppearanceComponentInternal::appendReport( report, "fit tables: %#", _fitTablesLoad.getError().c_str() );
         for ( MeshAssemblyLoad& load : _listMeshAssemblyLoad )
@@ -885,7 +977,7 @@ namespace sw
             listSource.push_back( std::move( mesh ) );
         }
         _seenFitReloadStamp = computeFitReloadStamp();
-        // 같은 차림이면 이미 구운 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
+        // 같은 차림이면 이미 베이크한 것을 나눈다 — 키는 메시에 들어가는 해석(메시 해시) · 부품 · 원본 내용 · 데이터 판이다.
         uint64 bakeKey = HashUtil::combine( resolved._meshHash, _seenFitReloadStamp );
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
@@ -894,10 +986,21 @@ namespace sw
         vector<shared_ptr<Mesh>> listBaked;
         const bool               bRead   = report.empty();
         const FitTables*         pTables = _fitTablesLoad.isValid() ? _fitTablesLoad.get().get() : nullptr;
-        if ( bRead && AppearanceBakedMeshCache::tryGet( bakeKey, listBaked ) == false )
+        // 미리보기 입히기는 피팅 결과를 창에 보이므로 구운 메시 캐시를 건너뛰고 늘 푼다(같은 차림이 캐시된 메시를 나누면 푼 결과가 없다).
+        const bool bPreview = _pPreviewDatabase != nullptr;
+        if ( bRead && ( bPreview || AppearanceBakedMeshCache::tryGet( bakeKey, listBaked ) == false ) )
         {
-            if ( AppearanceMeshAssembly::assemble( resolved, listPart, pTables, _bodyBindBones, listBaked, report ) )
-                AppearanceBakedMeshCache::store( bakeKey, listBaked );
+            FitResult fitResult;
+            if ( AppearanceMeshAssembly::assemble( resolved, listPart, pTables, _bodyBindBones, listBaked, report, bPreview ? &fitResult : nullptr ) )
+            {
+                if ( bPreview )
+                {
+                    _lastFitResult = make_shared<FitResult>( std::move( fitResult ) );
+                    ++_fitResultRevision;
+                }
+                else
+                    AppearanceBakedMeshCache::store( bakeKey, listBaked );
+            }
         }
         if ( listBaked.size() != listPart.size() )
         {
@@ -927,6 +1030,9 @@ namespace sw
 
     bool CharacterAppearanceComponent::isMeshAssemblyStale() const
     {
+        // 체형 축 데이터를 고치면 본 비율 · 모프를 다시 풀어야 한다(굽지 않는 몸도 해당).
+        if ( _bodyShapeSet != nullptr && _seenShapeReloadCount != SharedAssetCache<BodyShapeSet>::getReloadCount() )
+            return true;
         if ( _listMeshAssemblyLoad.empty() )
             return false;
         if ( _seenFitReloadStamp != computeFitReloadStamp() )
@@ -975,7 +1081,12 @@ namespace sw
         SkeletalMeshComponent* pUnit    = pManager != nullptr ? pManager->resolveComponent( _taskUnit ) : nullptr;
         _taskUnit                       = TComponentHandle<SkeletalMeshComponent>{};
         if ( pUnit != nullptr )
+        {
             pUnit->unregisterAnimationPhaseTask( &_socketTask );
+            if ( _bProportionTask == SW_TRUE )
+                pUnit->unregisterAnimationPhaseTask( &_proportionTask );
+        }
+        _bProportionTask = SW_FALSE;
     }
 
     GameObject* CharacterAppearanceComponent::findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const

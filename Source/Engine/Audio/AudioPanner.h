@@ -47,7 +47,7 @@ namespace sw
 {
     /**
      * @struct AudioPanner
-     * @brief 방향과 레이아웃으로 채널별 게인을 구하는 순수 함수입니다. 상태가 없어 테스트가 방위마다 바로 잽니다.
+     * @brief 방향과 레이아웃으로 채널별 게인을 구하는 순수 함수입니다. 상태가 없어 테스트가 방위마다 바로 측정합니다.
      */
     struct SW_API AudioPanner
     {

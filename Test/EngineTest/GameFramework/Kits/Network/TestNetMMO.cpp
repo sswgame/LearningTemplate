@@ -500,7 +500,7 @@ SW_TEST_CASE( NetMMOTest, EntersShareOneReliableMessagePerTick )
 }
 
 /**
- * @brief [NetMMOTest] 연결 상한을 낮추면 MMO 갱신 예산이 따라 준다 — 모두 매 틱 바뀌는 이웃 스물을 기본 상한과 6 KB/s(60 Hz 몫 50 B)에서 120 틱 보내 보낸 갱신 수를 견준다
+ * @brief [NetMMOTest] 연결 상한을 낮추면 MMO 갱신 예산이 따라 준다 — 모두 매 틱 바뀌는 이웃 스물을 기본 상한과 6 KB/s(60 Hz 몫 50 B)에서 120 틱 보내 보낸 갱신 수를 비교한다
  */
 SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
 {

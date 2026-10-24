@@ -54,8 +54,19 @@ namespace sw
         /** @brief @p assetPath 의 쉬는 부품 수입니다(진단과 테스트용, 지워진 것은 세지 않는다). */
         uint32 getRestingCount( const hashed_string& assetPath ) const;
 
+        /**
+         * @brief 이 씬에서 `takePart` 가 쉬는 부품을 내준 수 / 내주지 못한 수 / `storePart` 가 받은 수입니다(누적). 풀의 효과를 재는 값입니다 —
+         *        비교는 `-gv_socketPartPool=0`(풀 끔)과 하고, 시간은 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다)로 읽습니다.
+         */
+        uint32 getTakeHitCount() const { return _takeHitCount; }
+        uint32 getTakeMissCount() const { return _takeMissCount; }
+        uint32 getStoredCount() const { return _storedCount; }
+
     private:
         GameObjectManager*                                     _pManager;
         unordered_map<hashed_string, vector<GameObjectHandle>> _mapResting; ///< 에셋 경로마다 쉬는 부품이다
+        uint32                                                 _takeHitCount;
+        uint32                                                 _takeMissCount;
+        uint32                                                 _storedCount;
     };
 } // namespace sw

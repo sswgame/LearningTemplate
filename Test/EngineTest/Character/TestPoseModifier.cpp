@@ -257,7 +257,7 @@ SW_TEST_CASE( PoseModifierTest, SocketTargetsResolveOnOwnAndOtherUnits )
     SW_EXPECT_TRUE( pModifier->isTargetBound( "Grip" ) );
 
     manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
-    // 뿌리가 가슴 소켓(노드가 돌 때의 본 1 (0, 1, 0) + 소켓 로컬 (0, 0, 0.2))으로 갔다.
+    // 루트가 가슴 소켓(노드가 돌 때의 본 1 (0, 1, 0) + 소켓 로컬 (0, 0, 0.2))으로 갔다.
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 1.0f, 0.2f }, TestPoseModifierInternal::getBoneModel( *pBody, 0 ), 1e-4f ) );
     // 무기 손잡이 = 무기 유닛 본 2 (월드 2, 2, 0) + (0.1, 0, 0) — 몸 유닛 모델 공간 그대로(몸은 원점).
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 2.1f, 2.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pBody, 2 ), 1e-4f ) );
@@ -454,7 +454,7 @@ SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
         {
             manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
         }
-        // 머리 구: 머리 본(y 1.0) + (0, 0.15, 0), 반지름 0.15. 꼬리 끝(본 4)은 꼬리 뿌리(y 1.5)에서 0.4 아래로 매달려 그 안을 지난다.
+        // 머리 구: 머리 본(y 1.0) + (0, 0.15, 0), 반지름 0.15. 꼬리 끝(본 4)은 꼬리 루트(y 1.5)에서 0.4 아래로 매달려 그 안을 지난다.
         arrClearance[bShared] = ( TestPoseModifierInternal::getBoneModel( *pUnit, 4 ) - float3{ 0.0f, 1.15f, 0.0f } ).getLength();
     }
     SW_EXPECT_TRUE( arrClearance[0] < 0.15f );

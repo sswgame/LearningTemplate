@@ -60,7 +60,7 @@ namespace sw
         /// @brief `DifferingFraction` 이 "다른 화소" 로 치는 색 거리의 하한 — 같은 경로의 반올림 흔들림(1~2)을 넘는다(GPU 테스트의 `RHITestImage::compare` 와 같은 값).
         static constexpr uint32 kDifferingMinDistance = 6;
 
-        /** @brief 이 지표가 기준 이미지(`reference`)를 견주는가 — `DifferentFrom` · `DifferingFraction`. */
+        /** @brief 이 지표가 기준 이미지(`reference`)를 비교하는가 — `DifferentFrom` · `DifferingFraction`. */
         static bool usesReference( AutomationImageMetricKind kind );
         /** @brief PPM(P6, 최대값 255) 파일을 읽습니다. 실패면 false 와 이유입니다. */
         [[nodiscard]] static bool loadPpm( string_view path, AutomationImage& outImage, string& outError );
@@ -71,7 +71,7 @@ namespace sw
         /** @brief `x0,y0,x1,y1`(0..1, x0<x1, y0<y1)을 읽습니다. */
         [[nodiscard]] static bool tryParseRegion( string_view text, AutomationImageRegion& outRegion );
         /**
-         * @brief @p region 의 지표 값을 구합니다. 영역이 픽셀 하나도 덮지 않거나 기준을 견주는 지표(`usesReference`)의 기준이 없거나 크기가 다르면 false 를 반환하고 이유를 남깁니다.
+         * @brief @p region 의 지표 값을 구합니다. 영역이 픽셀 하나도 덮지 않거나 기준을 비교하는 지표(`usesReference`)의 기준이 없거나 크기가 다르면 false 를 반환하고 이유를 남깁니다.
          * @param darkRatio `DarkFraction` 의 임계값(중앙값에 곱하는 수)
          */
         [[nodiscard]] static bool measure( const AutomationImage& image, const AutomationImageRegion& region, AutomationImageMetricKind kind, float32 darkRatio,

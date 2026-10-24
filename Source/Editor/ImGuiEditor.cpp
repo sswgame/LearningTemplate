@@ -692,9 +692,9 @@ namespace sw::editor
         const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
         if ( startupScene.empty() == false && bResumedSession == false )
         {
-            SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
+            SW_LOG_INFO( "Opening the startup scene: %#", startupScene.c_str() );
             if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
-                SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
+                SW_LOG_ERROR( "Failed to open the startup scene: %#", startupScene.c_str() );
         }
         return SubsystemInitResult::Succeeded;
     }

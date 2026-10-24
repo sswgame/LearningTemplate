@@ -541,7 +541,7 @@ namespace sw
         // 엔트리의 원본 크기는 파일에서 온 값이다. 압축 바이트로 나올 수 없는 크기면 resize 전에 끊는다(B-5).
         if ( uncompressedSize > pCodec->decompressBound( srcSize ) )
         {
-            SW_LOG_ERROR( "%# 엔트리의 원본 크기가 압축 크기로 나올 수 있는 상한을 넘습니다 (%# > %#, 압축 %#)", pCodec->getCodecName(),
+            SW_LOG_ERROR( "The original size of a %# entry exceeds the upper bound for its compressed size (%# > %#, compressed %#)", pCodec->getCodecName(),
                           static_cast<uint64>( uncompressedSize ), static_cast<uint64>( pCodec->decompressBound( srcSize ) ), static_cast<uint64>( srcSize ) );
             return false;
         }
@@ -554,7 +554,7 @@ namespace sw
         // 엔트리 헤더가 말한 원본 크기와 실제로 푼 크기가 달라지면 그대로 쓰면 안 된다.
         if ( decompressedSize != uncompressedSize )
         {
-            SW_LOG_ERROR( "%# 해제 크기가 엔트리와 다릅니다 (%# != %#)", pCodec->getCodecName(),
+            SW_LOG_ERROR( "The %# decompressed size differs from the entry (%# != %#)", pCodec->getCodecName(),
                           static_cast<uint64>( decompressedSize ), static_cast<uint64>( uncompressedSize ) );
             return false;
         }

@@ -148,7 +148,7 @@ namespace sw
      * @class DialogueGraphAsset
      * @brief 대화 그래프 XML 입니다. 노드 text 는 로컬라이즈 키로 해석합니다.
      * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 모르는 노드 종류 · 빠진 필수 칸은 오류).
-     *          키는 PROPERTY 이름(`_listNode`, `_listLink`)이 정본이다. 읽은 뒤 id 가 1 이상이고 겹치지 않는지, 링크의 핀이 있는지만 따로 본다.
+     *          키는 PROPERTY 이름(`_listNode`, `_listLink`)이 기준이다. 읽은 뒤 id 가 1 이상이고 겹치지 않는지, 링크의 핀이 있는지만 따로 본다.
      */
     REFLECT()
     class SW_API DialogueGraphAsset

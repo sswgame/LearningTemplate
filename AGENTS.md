@@ -1,5 +1,9 @@
 # SW Engine Project Instructions
 
+> 질문: 코드를 고칠 때 지킬 공통 규칙은 무엇이고, 세부 규칙은 어느 파일에 있는가?
+> 독자: C++ · CMake · Python · HLSL 을 고치는 에이전트와 사람(본문은 영어, 이 머리말만 한국어).
+> 결론: 아래 아키텍처와 빌드 명령을 공통으로 따르고, 세부 규칙은 맨 아래 표에서 일에 맞는 `docs/agents/` 파일 하나만 읽는다.
+
 These instructions apply to all work in this repository. Preserve existing
 project conventions unless the user explicitly requests otherwise.
 
@@ -38,7 +42,8 @@ project conventions unless the user explicitly requests otherwise.
 py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/setup/SetupVcpkg.py --install
 cmake --preset Ninja-Debug
-cmake --build --preset Ninja-Debug
+cmake --build --preset Ninja-Debug                        # App, Server, modules
+cmake --build --preset Ninja-Debug --target all AllTests  # + tests
 ```
 
 - Build outputs are in `build/Ninja-Debug/Bin`.
@@ -52,8 +57,8 @@ cmake --build --preset Ninja-Debug
 ## Rule files — read only the ones your task needs
 
 The rules are split by topic under `docs/agents/`. Do not read all of them: open the file that matches the work, and
-name that file in any instruction you hand to another agent. Section names and anchors are unchanged from the former
-single `AGENTS.md`.
+name that file in any instruction you hand to another agent. Korean examples for these rules are in
+[docs/04_CodingGuidelines.md](docs/04_CodingGuidelines.md); the rule files win when the two disagree.
 
 | File | What it holds | Read it when |
 | --- | --- | --- |

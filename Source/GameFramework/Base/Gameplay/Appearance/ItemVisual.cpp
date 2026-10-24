@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kArrVisualAttribute[]          = { "id", "occupancy", "customization", "tags", "defaultState" };
             static constexpr const utf8* kArrPartAttribute[]            = { "name", "kind", "mesh", "prefab", "sprite", "material", "skeleton", "sockets", "rig",
-                                                                            "fit", "fitTables", "socket", "offset", "rotation", "deforms", "layer", "breakable", "breakStage", "impulse" };
+                                                                            "fit", "fitTables", "bodyShapes", "socket", "offset", "rotation", "deforms", "layer", "breakable", "breakStage", "impulse" };
             static constexpr const utf8* kArrVariantAttribute[]         = { "name", "mesh", "prefab", "sprite", "material" };
             static constexpr const utf8* kArrMaterialVariantAttribute[] = { "name", "material" };
             static constexpr const utf8* kArrMorphAttribute[]           = { "name", "weight" };
@@ -174,6 +174,10 @@ namespace sw
                 const bool bFitOnRigidPart = ( part._fit.empty() == false || part._fitTables.empty() == false ) && part._kind != AppearancePartKind::Skinned;
                 if ( bFitOnRigidPart )
                     report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
+                                     part._name.c_str(), getEnumName( part._kind ) );
+                part._bodyShapes = AppearanceXMLUtil::readName( node, "bodyShapes" );
+                if ( part._bodyShapes.empty() == false && part._kind != AppearancePartKind::Skinned )
+                    report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
                                      part._name.c_str(), getEnumName( part._kind ) );
                 // 적지 않으면 스킨 파츠만 변형하고, 부서지는 단계를 적은 파츠만 떨어진다(이 파츠의 데이터에서 온 값).
                 part._bDeforms   = part._kind == AppearancePartKind::Skinned ? SW_TRUE : SW_FALSE;

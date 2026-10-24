@@ -163,7 +163,7 @@ namespace sw
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
         /**
          * @brief 프로퍼티 값 하나(그 프로퍼티 값 전부)를 바이너리 페이로드로 @p outBytes 끝에 덧붙입니다. 짝은 `applyPropertyBinary` 입니다. 비트필드는 `bool` 로 씁니다.
-         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`PropertyReadRollback`)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 갈래를 한 벌로 둔다.
+         * @details 태그 스트림 쓰기, 값 복사, 읽기 실패 되돌리기(`PropertyReadRollback`)가 함께 쓴다. 비트필드 · 컨테이너 · 값 세 분기를 한 벌로 둔다.
          * @return 그 값이나 안의 값에 바이너리 · 열거형 · 구조체 · 텍스트 처리기가 없으면 false 이고, 그때 @p outBytes 는 쓰면 안 됩니다.
          */
         [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );

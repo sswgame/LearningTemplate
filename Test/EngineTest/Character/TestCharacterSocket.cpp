@@ -39,7 +39,7 @@ namespace
             return sockets;
         }
 
-        /** @brief 본 하나(뿌리)짜리 강체 부품의 본 배열 — 본 없는 부품의 암묵 스켈레톤. */
+        /** @brief 본 하나(루트)짜리 강체 부품의 본 배열 — 본 없는 부품의 암묵 스켈레톤. */
         static CharacterBoneArray makeRootOnlyBones()
         {
             CharacterBoneArray bones;
@@ -80,7 +80,7 @@ SW_TEST_CASE( SocketSetTest, LoadsSocketsAndComputesTransforms )
     SW_ASSERT_TRUE( sockets.computeSocketTransform( *sockets.findSocket( hashed_string( "Aim" ) ), bones, transform ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 0.5f, 0.0f ), transform.getTranslation(), 1.0e-5f ) ); // 두 본 사이 반
     SW_ASSERT_TRUE( sockets.computeSocketTransform( *sockets.findSocket( hashed_string( "Feet" ) ), bones, transform ) );
-    SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, -0.1f, 0.0f ), transform.getTranslation(), 1.0e-5f ) ); // 부모가 비면 뿌리
+    SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, -0.1f, 0.0f ), transform.getTranslation(), 1.0e-5f ) ); // 부모가 비면 루트
 }
 
 /**
@@ -312,9 +312,9 @@ SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
 
     CharacterBoneArray applied = bones;
     pose.apply( applied );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, applied._listLocal[0].getTranslation()._y, 1.0e-6f ); // 스케일만 적은 뿌리는 위치를 지킨다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, applied._listLocal[0].getTranslation()._y, 1.0e-6f ); // 스케일만 적은 루트는 위치를 지킨다
     SW_EXPECT_NEAR_EQUAL( 1.1f, applied._listLocal[0].getScale()._x, 1.0e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.25f * 1.1f, applied._listModel[2].getTranslation()._x, 1.0e-5f ); // 뿌리 스케일이 자식 자리를 옮긴다
+    SW_EXPECT_NEAR_EQUAL( 0.25f * 1.1f, applied._listModel[2].getTranslation()._x, 1.0e-5f ); // 루트 스케일이 자식 자리를 옮긴다
 
     ReferencePoseOverride reloaded;
     SW_ASSERT_TRUE( reloaded.loadFromXMLText( pose.saveToXMLText(), "saved.refpose.xml", &bones ) );

@@ -35,7 +35,7 @@
 
 ## 5. 단계
 
-티어 테이블 수정이 든 ① 은 [LayerTierGate](LayerTierGate.md) 와 규칙 파일(`CheckEngineLayers.toml`)을 같이 만지므로 순서를 정한다(Roadmap).
+티어 테이블 수정이 든 ① 은 층 게이트([결정 기록](../09_Decisions.md) 5-2)와 규칙 파일(`CheckEngineLayers.toml`)을 같이 만지므로 순서를 정한다(Roadmap).
 
 | 단계 | 내용 | 읽을 문서 | 고칠 문서 | 검증 | 상태 |
 |---|---|---|---|---|---|

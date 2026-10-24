@@ -3,6 +3,7 @@
 #include "Engine/Text/GlyphCache.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -21,10 +22,13 @@ namespace sw
         , _mapGlyph{}
         , _rasterParams{}
         , _scratchBitmap{}
+        , _rasterBudgetNanoseconds{ 0 }
+        , _spentNanoseconds{ 0 }
+        , _budgetFrameIndex{ invalid_index::kUint64 }
     {
     }
 
-    const CachedGlyph* GlyphCache::findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
+    GlyphLookup GlyphCache::findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
     {
         const uint64 key  = makeKey( face, glyphIndex );
         const auto   iter = _mapGlyph.find( key );
@@ -32,8 +36,27 @@ namespace sw
         {
             if ( iter->second._rect._width > 0 )
                 _atlas.markPageUsed( iter->second._rect._page, frameIndex );
-            return &iter->second;
+            return GlyphLookup{ &iter->second, GlyphLookupStatus::Ready };
         }
+
+        if ( frameIndex != _budgetFrameIndex )
+        {
+            _budgetFrameIndex = frameIndex;
+            _spentNanoseconds = 0;
+        }
+        if ( _rasterBudgetNanoseconds > 0 && _spentNanoseconds >= _rasterBudgetNanoseconds )
+            return GlyphLookup{ nullptr, GlyphLookupStatus::Deferred };
+
+        const Stopwatch    stopwatch;
+        const CachedGlyph* pGlyph  = rasterizeAndAdd( face, glyphIndex, frameIndex );
+        const int64        elapsed = stopwatch.getElapsedNanoseconds();
+        _spentNanoseconds += elapsed > 0 ? elapsed : 1; // 시계 해상도보다 빨라도 센다 — 예산이 프레임 안에서 늘 닳는다
+        return pGlyph != nullptr ? GlyphLookup{ pGlyph, GlyphLookupStatus::Ready } : GlyphLookup{};
+    }
+
+    const CachedGlyph* GlyphCache::rasterizeAndAdd( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
+    {
+        const uint64 key = makeKey( face, glyphIndex );
 
         const bool bRasterized = _atlas.getFieldKind() == GlyphFieldKind::Msdf ? _rasterizer.rasterizeMsdf( face, glyphIndex, _rasterParams, _scratchBitmap )
                                                                                : _rasterizer.rasterizeSdf( face, glyphIndex, _rasterParams, _scratchBitmap );

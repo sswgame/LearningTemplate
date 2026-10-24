@@ -664,7 +664,7 @@ namespace sw::editor
         if ( pContext == nullptr )
         {
             // 조용히 반환하면 메뉴가 통째로 비고 단축키가 동작하지 않는다. 실제 기동 검증이 이 줄을 잡는다.
-            SW_LOG_ERROR( "커맨드를 등록할 EditorContext 가 없습니다 — 메뉴와 단축키가 비어 있게 됩니다" );
+            SW_LOG_ERROR( "No EditorContext to register commands in - menus and shortcuts will be empty" );
             return 0;
         }
 
@@ -701,7 +701,7 @@ namespace sw::editor
 
         string report;
         if ( registry.validate( report ) == false )
-            SW_LOG_ERROR( "에디터 커맨드 표가 어긋났습니다:\n%#", report.c_str() );
+            SW_LOG_ERROR( "The editor command table is inconsistent:\n%#", report.c_str() );
         // 코드가 그리는 메뉴 경로에 테이블의 항목이 하나도 없으면 그 메뉴(툴바 팝업)가 비어 있는 채로 뜬다.
         for ( const utf8* pHostedPath : commandmenu::kArrHostedMenuPath )
         {

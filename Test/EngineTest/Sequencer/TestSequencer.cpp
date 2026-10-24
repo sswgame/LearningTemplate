@@ -465,7 +465,7 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 
 /**
  * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 열거자 이름, 키 트랙은 채널마다 키 배열), 모르는 종류 이름은 읽기 오류다
- * @details 아래 문서는 `toXML` 출력이다. 종류는 리플렉션 열거자 이름이 정본이다 — 모르는 이름(새 버전의 종류, 옛 정수)을 읽어 두고
+ * @details 아래 문서는 `toXML` 출력이다. 종류는 리플렉션 열거자 이름이 기준이다 — 모르는 이름(새 버전의 종류, 옛 정수)을 읽어 두고
  *          적용만 하지 않던 예전 규칙은 없앴다(출시한 데이터가 없어 별칭 · 호환을 두지 않는다).
  */
 SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsKindNames )

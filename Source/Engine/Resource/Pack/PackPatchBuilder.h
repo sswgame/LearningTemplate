@@ -2,7 +2,7 @@
  * @file PackPatchBuilder.h
  * @brief 두 빌드의 팩에서 패치(바뀐 파일만 담은 팩 + 패치 목록)를 만들고, 빌드의 내용 목록(`base.packbuild.xml`)을 남깁니다.
  * @details 패치 형식과 적용 규칙은 `PackPatch.h` · `ResourcePakManager::scanAndMountPacks` 이고, 이 파일은 만드는 쪽이다. 설계는 docs/plans/PatchDeltaDelivery.md 이다.
- *          - 내용 목록은 소스 트리가 아니라 **구운 팩**에서 센다. 팩이 배포되는 바이트라 쿠킹 증분 기록(팩을 다시 쓰지 않은 경우)과 상관없이 같은 값이 나온다.
+ *          - 내용 목록은 소스 트리가 아니라 **베이크한 팩**에서 센다. 팩이 배포되는 바이트라 쿠킹 증분 기록(팩을 다시 쓰지 않은 경우)과 상관없이 같은 값이 나온다.
  *          - 항목의 경로는 전체 가상 경로(`engine/ui/a.xml`, `game/empty/maps/a.scene.xml`)다. 팩 안에는 도메인을 뗀 경로로 들어 있고(`engine.pack` 의 `ui/a.xml`),
  *            패치 팩은 전체 경로로 담는다 — 리더가 전체 경로 해시를 먼저 찾으므로 아래 도메인 팩의 같은 파일을 덮는다.
  *          - 폴더에 패치 목록이 있으면 기본 팩의 폴더가 아니다 — 거절한다(이미 패치된 폴더에서 다음 빌드를 만들지 않는다).
@@ -49,6 +49,8 @@ namespace sw
 
         /** @brief @p packsDirectory 의 팩 내용 목록을 빌드 @p build 의 기록으로 @p recordPath 에 씁니다(기본 팩 폴더에는 `PackPatchUtil::kBuildRecordFileName`). */
         [[nodiscard]] static bool writeBuildRecord( string_view packsDirectory, string_view build, string_view recordPath );
+        /** @brief 패치를 쓰지 않는 빌드의 기록(`patching="none"`, 번호 · 내용 목록 없음)을 @p recordPath 에 씁니다. 빌드 번호를 주지 않은 쿠킹이 쓴다 — 기록이 없는 것으로 대신하지 않는다. */
+        [[nodiscard]] static bool writeNoPatchingRecord( string_view recordPath );
 
         /**
          * @brief 이전 빌드 기록과 새 팩의 차이로 패치 팩 · 패치 목록 · 새 빌드의 내용 목록을 `_outputDirectory` 에 씁니다.

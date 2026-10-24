@@ -1,6 +1,9 @@
 # 설정 — 어떤 값을 어디에 두나
 
-새 설정 값을 만들거나 기존 값을 바꾸려 할 때, 그 값을 어느 파일에 두어야 하는지 설명하는 문서입니다.
+> 질문: 설정 값을 어느 파일에 두고, 여러 곳에서 정하면 무엇이 이기는가?
+> 독자: 새 설정을 만들거나 기존 설정을 바꾸는 사람.
+> 결론: 1절 표에서 값의 종류로 파일을 고른다. 여러 곳에서 정하면 뒤에 오는 쪽이 이기고, 틀린 설정은 오류로 멈추며, 파일에는 기본값과 다른 값만 적는다.
+
 설정 파일마다의 필드 표(이름, 타입, 기본값, 범위, 설명)는 이 문서에 없고, 생성 문서 [`docs/Config/`](Config/README.md)에 있습니다.
 생성 문서는 코드에서 만듭니다. 설정 구조체의 `PROPERTY`, 손으로 읽는 설정의 `ConfigKeyDoc` 표, 전역 변수, `ArgumentList.xxx`, CMake 옵션이 원본입니다.
 코드와 생성 문서가 어긋나면 `CheckConfigReference` 게이트가 실패합니다.
@@ -34,7 +37,8 @@
   `<Engine>` 요소(`PackEngineSettings`, 엔진 소유)에, 시작 씬 · 입력 맵 · 다국어 같은 게임 흐름은 나머지 표준 칸(`GameSettings`, GameFramework 소유)에 둡니다. 요소마다 읽는 계층이 하나입니다.
   키트 데이터는 키트 자신의 데이터 파일에 둡니다.
 - **옵션 메뉴 값**은 스키마(`UserSettingsSchema`)가 팩에 실리고, 플레이어가 고른 값은 플레이어 PC의 `usersettings.json` 에 저장됩니다.
-- **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
+- **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.
+- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
 - **전용 서버 운영 값**(`ServerConfig`)은 주소, 포트, 틱, 저장소, TLS입니다. 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다.
 - **비밀**은 DB 비밀번호, 캐시 AUTH, 키 암호입니다. 설정 파일에는 그 환경 변수의 이름만 적습니다(`_secretEnvironment` 필드).
 - **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. Dev 에서 돌릴 게임은 실행 인자 `-game=<게임>` 으로 고르고(`Ninja-Debug` 가 게임 전부를 짓는다), `SW_ACTIVE_GAME` 은 기본 게임 · Shipping 이 굽는 게임입니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.
@@ -87,8 +91,8 @@
 **파일에는 기본값과 다른 값만 적습니다.** 언리얼의 `Default*.ini` 와 같은 방식입니다. 기본값은 생성 문서에서 볼 수 있습니다.
 기본값을 파일에 다시 적어 두면, 나중에 코드의 기본값을 바꿔도 그 파일은 예전 값을 계속 씁니다. 그래서 `ConfigFileSchemaTest` 가 이런 줄을 막습니다. 앱이 통째로 쓰는 상태(`Saved/Editor`)는 예외입니다.
 
-**바탕 층 파일은 모든 키를 적습니다.** `Config/Engine/EngineConfig.json` 은 언리얼 `BaseEngine.ini` 처럼 값의 정본이고, `EngineConfig.h` 는 형식(타입 · 범위)만 정합니다(`REFLECT( Meta = "ConfigBaseLayer" )`).
-빠진 키는 `ConfigFileSchemaTest` 가 막고, 파일도 구운 사본도 없으면 형식(0)이 범위 검사에서 져 기동이 멈춥니다. 프로젝트 설정 창은 이 파일을 모든 키로 저장합니다. 예외는 `_window._defaultRHI` 하나로, 정본이 쿠킹 표 `default_rhi_backend` 입니다.
+**바탕 층 파일은 모든 키를 적습니다.** `Config/Engine/EngineConfig.json` 은 언리얼 `BaseEngine.ini` 처럼 값의 원본이고, `EngineConfig.h` 는 형식(타입 · 범위)만 정합니다(`REFLECT( Meta = "ConfigBaseLayer" )`).
+빠진 키는 `ConfigFileSchemaTest` 가 막고, 파일도 구운 사본도 없으면 형식(0)이 범위 검사에서 져 기동이 멈춥니다. 프로젝트 설정 창은 이 파일을 모든 키로 저장합니다. 예외는 `_window._defaultRHI` 하나로, 원본이 쿠킹 표 `default_rhi_backend` 입니다.
 
 **키 이름은 코드에서 정합니다.** 리플렉션으로 읽는 설정은 멤버 이름 그대로(`_width`) 쓰고, 파이썬이 원본인 계약과 손으로 읽는 임포트 설정은 `snake_case` 로 씁니다.
 

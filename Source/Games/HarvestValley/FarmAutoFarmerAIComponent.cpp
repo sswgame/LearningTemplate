@@ -82,6 +82,99 @@ namespace sw
                 }
                 return "Harvest";
             }
+
+            /** @brief 이번 계절에 자라는 씨앗의 순번입니다(가진 것 먼저). 없으면 -1 입니다. */
+            static int32 findSeasonalSeed( const CropCatalog& catalog, const Inventory& bag, const vector<hashed_string>& listSeed, const hashed_string& season )
+            {
+                int32 seasonalSeed = -1;
+                for ( int32 seedIndex = 0; seedIndex < static_cast<int32>( listSeed.size() ); ++seedIndex )
+                {
+                    const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seedIndex )] );
+                    if ( pCrop == nullptr || pCrop->growsIn( season ) == false )
+                        continue;
+                    if ( seasonalSeed < 0 || bag.getItemCount( pCrop->_seedItem ) > 0 )
+                        seasonalSeed = seedIndex;
+                    if ( bag.getItemCount( pCrop->_seedItem ) > 0 )
+                        break;
+                }
+                return seasonalSeed;
+            }
+
+            /** @brief 가방에 든 수확물의 수입니다. */
+            static int32 countProduce( const CropCatalog& catalog, const Inventory& bag )
+            {
+                int32 produceCount = 0;
+                for ( const CropDef& crop : catalog.getCrops() )
+                {
+                    produceCount += bag.getItemCount( crop._produceItem );
+                }
+                return produceCount;
+            }
+
+            /** @brief 출하 할 일입니다(출하함 옆자리). */
+            static Task makeShipTask( const FarmDirectorComponent& director )
+            {
+                Task task;
+                task._kind          = TaskKind::Ship;
+                task._standPosition = director.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
+                return task;
+            }
+
+            /**
+             * @brief 칸 순서로 훑어 첫 할 일(수확 5 > 물 4 > 심기 3 > 갈기 2)을 @p inoutTask 에 담고 그 우선순위를 돌려줍니다. 우선순위가 같은 칸이면 앞 칸입니다. 할 일이 없으면 0 입니다.
+             * @param cultivateLimit 갈아 둘 칸의 상한입니다.
+             */
+            static int32 chooseTileTask( const FarmField& field, int32 cultivateLimit, int32 seasonalSeed, bool bHasSeed, Task& inoutTask )
+            {
+                int32 cultivatedCount = 0;
+                for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
+                {
+                    for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                    {
+                        cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
+                    }
+                }
+                int32 bestPriority = 0;
+                for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
+                {
+                    for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                    {
+                        const FarmTile* pTile         = field.findTile( x, y );
+                        int32           priority      = 0;
+                        FarmTool        tool          = FarmTool::Hand;
+                        const bool      bCanSow       = pTile->_bTilled != SW_FALSE && pTile->hasCrop() == false && bHasSeed;
+                        const bool      bCanCultivate = pTile->_bTilled == SW_FALSE && cultivatedCount < cultivateLimit && seasonalSeed >= 0;
+                        if ( pTile->_bReady != SW_FALSE || pTile->_bWithered != SW_FALSE )
+                        {
+                            priority = 5;
+                            tool     = FarmTool::Hand;
+                        }
+                        else if ( pTile->hasCrop() && pTile->_bWatered == SW_FALSE )
+                        {
+                            priority = 4;
+                            tool     = FarmTool::WateringCan;
+                        }
+                        else if ( bCanSow )
+                        {
+                            priority = 3;
+                            tool     = FarmTool::Seeds;
+                        }
+                        else if ( bCanCultivate )
+                        {
+                            priority = 2;
+                            tool     = FarmTool::Hoe;
+                        }
+                        if ( priority > bestPriority )
+                        {
+                            bestPriority             = priority;
+                            inoutTask._kind          = TaskKind::Tile;
+                            inoutTask._tool          = tool;
+                            inoutTask._standPosition = FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f };
+                        }
+                    }
+                }
+                return bestPriority;
+            }
         };
     } // namespace
 } // namespace sw
@@ -167,85 +260,23 @@ namespace sw
         _buyRemaining = 0;
 
         // 이번 계절 씨앗(가진 것 먼저) — 디렉터의 고른 씨앗이 다르면 다음 씨앗을 누른다(틱마다 한 칸).
-        int32 seasonalSeed = -1;
-        for ( int32 seedIndex = 0; seedIndex < static_cast<int32>( listSeed.size() ); ++seedIndex )
-        {
-            const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seedIndex )] );
-            if ( pCrop == nullptr || pCrop->growsIn( season ) == false )
-                continue;
-            if ( seasonalSeed < 0 || bag.getItemCount( pCrop->_seedItem ) > 0 )
-                seasonalSeed = seedIndex;
-            if ( bag.getItemCount( pCrop->_seedItem ) > 0 )
-                break;
-        }
-        const bool bSeedSelected = seasonalSeed < 0 || director.getSelectedSeedIndex() == seasonalSeed;
+        const int32 seasonalSeed  = Internal::findSeasonalSeed( catalog, bag, listSeed, season );
+        const bool  bSeedSelected = seasonalSeed < 0 || director.getSelectedSeedIndex() == seasonalSeed;
         if ( bSeedSelected == false )
             pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::SeedNext ) ) );
         const bool bHasSeed = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
 
         // 할 일 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기.
-        const bool bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < pState->getClock().getDay();
-        int32      produceCount = 0;
-        for ( const CropDef& crop : catalog.getCrops() )
-        {
-            produceCount += bag.getItemCount( crop._produceItem );
-        }
+        const bool     bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < pState->getClock().getDay();
+        const int32    produceCount = Internal::countProduce( catalog, bag );
         Internal::Task task;
         if ( produceCount > 0 && ( bTired || produceCount >= 6 ) )
         {
-            task._kind          = Internal::TaskKind::Ship;
-            task._standPosition = director.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
+            task = Internal::makeShipTask( director );
         }
         else if ( bTired == false )
         {
-            int32 cultivatedCount = 0;
-            for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
-            {
-                for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
-                {
-                    cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
-                }
-            }
-            // 칸 순서로 훑어 첫 할 일. 우선순위가 같은 칸이면 앞 칸.
-            int32 bestPriority = 0;
-            for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
-            {
-                for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
-                {
-                    const FarmTile* pTile         = field.findTile( x, y );
-                    int32           priority      = 0;
-                    FarmTool        tool          = FarmTool::Hand;
-                    const bool      bCanSow       = pTile->_bTilled != SW_FALSE && pTile->hasCrop() == false && bHasSeed;
-                    const bool      bCanCultivate = pTile->_bTilled == SW_FALSE && cultivatedCount < _cultivateLimit && seasonalSeed >= 0;
-                    if ( pTile->_bReady != SW_FALSE || pTile->_bWithered != SW_FALSE )
-                    {
-                        priority = 5;
-                        tool     = FarmTool::Hand;
-                    }
-                    else if ( pTile->hasCrop() && pTile->_bWatered == SW_FALSE )
-                    {
-                        priority = 4;
-                        tool     = FarmTool::WateringCan;
-                    }
-                    else if ( bCanSow )
-                    {
-                        priority = 3;
-                        tool     = FarmTool::Seeds;
-                    }
-                    else if ( bCanCultivate )
-                    {
-                        priority = 2;
-                        tool     = FarmTool::Hoe;
-                    }
-                    if ( priority > bestPriority )
-                    {
-                        bestPriority        = priority;
-                        task._kind          = Internal::TaskKind::Tile;
-                        task._tool          = tool;
-                        task._standPosition = FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f };
-                    }
-                }
-            }
+            const int32 bestPriority = Internal::chooseTileTask( field, _cultivateLimit, seasonalSeed, bHasSeed, task );
             // 심을 칸이 있는데 씨앗이 없으면 산다.
             const bool bNeedsSeedPurchase = bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0;
             if ( bNeedsSeedPurchase )
@@ -260,10 +291,7 @@ namespace sw
         }
         // 밭에 할 일이 없으면 남은 수확물을 넣고, 그것도 없으면 잔다.
         if ( task._kind == Internal::TaskKind::None && produceCount > 0 )
-        {
-            task._kind          = Internal::TaskKind::Ship;
-            task._standPosition = director.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
-        }
+            task = Internal::makeShipTask( director );
         setStateName( hashed_string( Internal::getStateName( task ) ) );
         getBlackboard().setInt( "Stamina", director.getStamina() );
         if ( task._kind == Internal::TaskKind::None )

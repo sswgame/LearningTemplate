@@ -141,7 +141,7 @@ SW_TEST_CASE( GlyphAtlasTest, FullAtlasEvictsOldestUnusedPage )
     SW_EXPECT_FALSE( atlas.evictLeastRecentlyUsedPage( 20, evictedPage ) );
 }
 
-/** @brief [GlyphAtlasTest] 캐시가 페이지를 비우면 그 페이지에 있던 글리프는 다음 조회에서 다시 래스터화된다 — 공백은 사각형 없이 들고, 있는 글리프는 다시 굽지 않는다 */
+/** @brief [GlyphAtlasTest] 캐시가 페이지를 비우면 그 페이지에 있던 글리프는 다음 조회에서 다시 래스터화된다 — 공백은 사각형 없이 들고, 있는 글리프는 다시 베이크하지 않는다 */
 SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
 {
     sw::test::FakeFontRasterizer rasterizer;
@@ -151,29 +151,59 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
 
     for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )
     {
-        const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A' + index, index + 1 );
+        const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A' + index, index + 1 )._pGlyph;
         SW_ASSERT_NOT_NULL( pGlyph );
         SW_EXPECT_EQUAL( index, static_cast<uint32>( pGlyph->_rect._page ) );
     }
     SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
-    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A' + 1, 9 ) ); // 있는 글리프 — 다시 굽지 않고 페이지 1 을 프레임 9 에 썼다고 적는다
+    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A' + 1, 9 )._pGlyph ); // 있는 글리프 — 다시 베이크하지 않고 페이지 1 을 프레임 9 에 썼다고 적는다
     SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, rasterizer.getRasterizeCount() );
 
     // 아홉째 글리프 — 프레임 9 에 안 쓴 가장 오래된 페이지 0('A')을 비우고 그 자리에 들어간다.
-    const sw::CachedGlyph* pNinth = cache.findOrAddGlyph( face, 'Z', 9 );
+    const sw::CachedGlyph* pNinth = cache.findOrAddGlyph( face, 'Z', 9 )._pGlyph;
     SW_ASSERT_NOT_NULL( pNinth );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pNinth->_rect._page ) );
     SW_EXPECT_EQUAL( 1u, pNinth->_atlasGeneration );
     SW_EXPECT_EQUAL( sw::GlyphAtlas::kMaxPageCount, cache.getGlyphCount() ); // 'A' 는 표에서 빠졌다
 
     const uint32 rasterizedBefore = rasterizer.getRasterizeCount();
-    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A', 10 ) );
+    SW_EXPECT_NOT_NULL( cache.findOrAddGlyph( face, 'A', 10 )._pGlyph );
     SW_EXPECT_EQUAL( rasterizedBefore + 1, rasterizer.getRasterizeCount() );
 
-    const sw::CachedGlyph* pSpace = cache.findOrAddGlyph( face, ' ', 10 );
+    const sw::CachedGlyph* pSpace = cache.findOrAddGlyph( face, ' ', 10 )._pGlyph;
     SW_ASSERT_NOT_NULL( pSpace );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pSpace->_rect._width ) );
     SW_EXPECT_TRUE( pSpace->_advancePx > 0.0f );
+}
+
+/**
+ * @brief [GlyphAtlasTest] 프레임당 래스터화 시간 예산이 차면 새 글리프는 `Deferred` 로 미루고 이미 있는 글리프는 그대로 준다 — 프레임마다 하나는 나아가고 다음 프레임에 예산이 되살아난다
+ * @details 예산 1 ns 는 첫 글리프가 반드시 넘기는 값이다(경과가 시계 해상도보다 짧아도 1 ns 로 센다). 0 은 제한 없음이다.
+ */
+SW_TEST_CASE( GlyphAtlasTest, GlyphCacheDefersNewGlyphsOverTheFrameBudget )
+{
+    sw::test::FakeFontRasterizer rasterizer;
+    const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Sdf );
+
+    for ( uint32 index = 0; index < 4; ++index ) // 예산 0 = 제한 없음
+    {
+        SW_EXPECT_TRUE( cache.findOrAddGlyph( face, 'A' + index, 1 )._status == sw::GlyphLookupStatus::Ready );
+    }
+    SW_EXPECT_EQUAL( 4u, rasterizer.getRasterizeCount() );
+
+    cache.setRasterBudgetNanoseconds( 1 );
+    const sw::GlyphLookup first = cache.findOrAddGlyph( face, 'a', 2 ); // 프레임의 첫 새 글리프는 만든다
+    SW_EXPECT_TRUE( first._status == sw::GlyphLookupStatus::Ready );
+    SW_EXPECT_NOT_NULL( first._pGlyph );
+    const sw::GlyphLookup second = cache.findOrAddGlyph( face, 'b', 2 ); // 예산이 찼다
+    SW_EXPECT_TRUE( second._status == sw::GlyphLookupStatus::Deferred );
+    SW_EXPECT_NULL( second._pGlyph );
+    SW_EXPECT_EQUAL( 5u, rasterizer.getRasterizeCount() );
+
+    SW_EXPECT_TRUE( cache.findOrAddGlyph( face, 'a', 2 )._status == sw::GlyphLookupStatus::Ready ); // 있는 글리프는 예산과 무관하다
+    SW_EXPECT_TRUE( cache.findOrAddGlyph( face, 'b', 3 )._status == sw::GlyphLookupStatus::Ready ); // 다음 프레임에 예산이 되살아나 미룬 글리프가 만들어진다
+    SW_EXPECT_EQUAL( 6u, rasterizer.getRasterizeCount() );
 }
 
 /** @brief [GlyphAtlasTest] MSDF 아틀라스는 텍셀당 4 바이트다 — 페이지 바이트가 네 배이고, 쓴 구간의 업로드는 행마다 너비 × 4 바이트로 나가며 텍셀당 바이트가 업로드에 실린다 */
@@ -206,14 +236,14 @@ SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( listUpload[0]._bytesPerTexel ) );
 }
 
-/** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 굽는다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
+/** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 베이크한다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
 SW_TEST_CASE( GlyphAtlasTest, MsdfCacheUsesTheMsdfRasterizer )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
     sw::GlyphCache               cache( rasterizer, sw::GlyphFieldKind::Msdf );
     SW_EXPECT_TRUE( cache.getFieldKind() == sw::GlyphFieldKind::Msdf );
-    const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A', 1 );
+    const sw::CachedGlyph* pGlyph = cache.findOrAddGlyph( face, 'A', 1 )._pGlyph;
     SW_ASSERT_NOT_NULL( pGlyph );
     const sw::GlyphAtlasRect& rect = pGlyph->_rect;
     SW_ASSERT_TRUE( rect._width > 0 );

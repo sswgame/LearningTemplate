@@ -17,7 +17,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 고정 배치형(B) 코덱을 봅니다. 생성된 쓰기 · 읽기 · 비교가 왕복하고, 다른 스키마 · 잘린 스트림 · 범위 밖 값을 거절해야 합니다.
-// 명세는 docs/plans/ReflectionFormats.md 6 절입니다. 표본 타입은 TestFixedLayoutTypes.h 에 있고 손 코덱 · 비교 함수가 없습니다.
+// 명세는 Source/Engine/Serialization/Fixed/README.md 6 절입니다. 표본 타입은 TestFixedLayoutTypes.h 에 있고 손 코덱 · 비교 함수가 없습니다.
 
 namespace
 {
@@ -270,7 +270,7 @@ SW_TEST_CASE( FixedLayoutTest, SchemaChangesAreRejected )
 
 /**
  * @brief [FixedLayoutTest] 이름 변경 리다이렉트(타입 · 열거형 Alias, 프로퍼티 Alias, ValueAlias, Removed)는 스키마 해시를 바꾸지 않습니다
- * @details 리다이렉트는 옛 데이터를 읽기 위한 선언이고 바이트 배치와 무관합니다(docs/plans/RenameRedirects.md 2 절 규칙 5). 선언만 다른 짝의 정규 문자열에서
+ * @details 리다이렉트는 옛 데이터를 읽기 위한 선언이고 바이트 배치와 무관합니다(docs/09_Decisions.md 5-4 이름 변경 리다이렉트). 선언만 다른 짝의 정규 문자열에서
  *          이름(`Declared` → `Plain`)만 맞추면 글자까지 같고, 그 해시가 선언 없는 쪽의 해시와 같아야 합니다.
  */
 SW_TEST_CASE( FixedLayoutTest, RenameRedirectsDoNotChangeTheSchemaHash )

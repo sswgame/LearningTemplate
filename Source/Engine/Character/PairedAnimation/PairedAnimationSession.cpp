@@ -639,7 +639,7 @@ namespace sw
         if ( loseVanishedRoles( manager ) )
             return;
 
-        // 2) 시계 — 앵커 시각이 정본이다. 지난 갱신의 예측과 다르면 누가 속도 · 시각을 바꾼 것이다.
+        // 2) 시계 — 앵커 시각이 기준이다. 지난 갱신의 예측과 다르면 누가 속도 · 시각을 바꾼 것이다.
         const SkeletalAnimatorComponent* pAnchor    = resolveAnimator( manager, _listRole[anchorIndex] );
         float32                          anchorTime = 0.0f;
         if ( pAnchor == nullptr || tryGetClipTime( *pAnchor, _listRole[anchorIndex], anchorTime ) == false )

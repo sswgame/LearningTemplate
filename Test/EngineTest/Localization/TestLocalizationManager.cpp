@@ -457,7 +457,7 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
 
 /**
  * @brief [LocalizationManagerTest] 출시 문화권(`stagedCultures`) 밖의 번역 테이블만 팩 제외 목록에 든다(언리얼 Cultures to Stage)
- * @details 팩 쿠커(`PackCookParams::_listExcludedSourceFile`)가 이 목록을 받는다. 프로젝트를 읽지 못하면 실패다 — 어느 테이블이 출시 문화권인지 모른 채 굽지 않는다.
+ * @details 팩 쿠커(`PackCookParams::_listExcludedSourceFile`)가 이 목록을 받는다. 프로젝트를 읽지 못하면 실패다 — 어느 테이블이 출시 문화권인지 모른 채 베이크하지 않는다.
  */
 SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPackExclusion )
 {

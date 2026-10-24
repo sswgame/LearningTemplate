@@ -60,7 +60,7 @@ namespace sw
     /** @brief 쪼개기 설정입니다. 모델 임포트 규칙 `fracture` 가 채웁니다. */
     struct SW_API FractureSettings
     {
-        vector<uint32>  _listLevelCount;  ///< 클러스터 레벨마다 클러스터 수다(위에서 아래로). 비면 뿌리 하나다.
+        vector<uint32>  _listLevelCount;  ///< 클러스터 레벨마다 클러스터 수다(위에서 아래로). 비면 루트 하나다.
         float4          _interiorColor;   ///< 안쪽 면의 정점 색이다.
         float3          _impactPoint;     ///< Clustered 에서 맞은 지점이다(메시 공간).
         float32         _clusterRadius;   ///< Clustered 에서 시드가 몰리는 반경이다(미터).

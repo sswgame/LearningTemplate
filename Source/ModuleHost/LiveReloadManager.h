@@ -24,17 +24,11 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleHost/DeferredImageUnloadQueue.h"
 #include "ModuleHost/ModuleDependencyGraph.h"
 #include "ModuleHost/ModuleShadowCopy.h"
-
-namespace sw
-{
-    struct EnumRegistrar;
-    struct GlobalVariableRegistrar;
-    struct TypeRegistrar;
-} // namespace sw
 
 namespace sw
 {
@@ -212,35 +206,31 @@ namespace sw
         uint32 getDeferredUnloadImageCount() const { return _deferredUnloadQueue.getImageCount(); }
 
     private:
-        struct ModuleContext;
+        struct ModuleRecord;
 
         struct PreparedShadow
         {
-            void*                    _pHandle{ nullptr };
-            string                   _tempPath;
-            uint64                   _sourceMtime{ 0 };
-            TypeRegistrar*           _pTypeHead{ nullptr };
-            EnumRegistrar*           _pEnumHead{ nullptr };
-            GlobalVariableRegistrar* _pVariableHead{ nullptr };
-            TypeRegistrar*           _pPreviousTypeHead{ nullptr };
-            EnumRegistrar*           _pPreviousEnumHead{ nullptr };
-            GlobalVariableRegistrar* _pPreviousVariableHead{ nullptr };
+            void*                        _pHandle{ nullptr };
+            string                       _tempPath;
+            uint64                       _sourceMtime{ 0 };
+            engine::ModuleRegistrarHeads _heads;         ///< 로드한 이미지의 정적 등록자 머리(커밋 때 올린다)
+            engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
         };
 
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */
-        [[nodiscard]] bool loadShadowCopyModule( ModuleContext& context );
+        [[nodiscard]] bool loadShadowCopyModule( ModuleRecord& context );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
-        bool prepareShadowCopy( ModuleContext& context, PreparedShadow& outShadow );
+        bool prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow );
         /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */
-        bool commitShadowCopy( ModuleContext& context, PreparedShadow& prepared );
+        bool commitShadowCopy( ModuleRecord& context, PreparedShadow& prepared );
         /** @brief @p context 의 리로드 직후 콜백을 `ModuleCallGuard` 안에서 부릅니다. 결함이 나면 그래프를 막고 결함 콜백을 부릅니다. */
-        void invokeAfterReload( ModuleContext& context );
+        void invokeAfterReload( ModuleRecord& context );
         /** @brief prepare 가 실패하면 새 이미지를 버리고, 바꿔 둔 SONAME 을 commit 된 이름으로 되돌립니다. */
-        void abortShadowCopy( ModuleContext& context, PreparedShadow& prepared );
+        void abortShadowCopy( ModuleRecord& context, PreparedShadow& prepared );
         /** @brief @p context 의 섀도 복사본을 쓰는 데 필요한 입력(의존 모듈과 등록된 모듈의 이미지 이름)을 채웁니다. */
-        void populateShadowCopyParams( const ModuleContext& context, ShadowCopyParams& outParams ) const;
+        void populateShadowCopyParams( const ModuleRecord& context, ShadowCopyParams& outParams ) const;
         /** @brief 모듈 핸들을 언로드합니다. */
-        void unloadModule( ModuleContext& context );
+        void unloadModule( ModuleRecord& context );
         /**
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
@@ -249,12 +239,12 @@ namespace sw
         /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
         /** @brief @p moduleName 의 컨텍스트를 돌려줍니다. 없으면 만들고 의존 그래프에도 이름을 넣습니다(둘의 이름 집합을 같게 둡니다). */
-        ModuleContext& getOrCreateContext( string_view moduleName );
-        /** @brief 모든 모듈 컨텍스트와 의존 그래프를 비웁니다. */
-        void clearContexts();
+        ModuleRecord& getOrCreateRecord( string_view moduleName );
+        /** @brief 모든 모듈 기록과 의존 그래프를 비웁니다. */
+        void clearRecords();
 
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 리로드 예약). 의존 목록은 `_dependencyGraph` 에 있습니다.
-        struct ModuleContext
+        struct ModuleRecord
         {
             OnBeforeReloadDelegate  _onBeforeReload;
             OnAfterReloadDelegate   _onAfterReload;
@@ -274,9 +264,9 @@ namespace sw
 
             /**
              * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule`(주소 고정 맵)이 한 번 만든 자리에서 산다.
-             *        연쇄 리로드가 `ModuleContext*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
+             *        연쇄 리로드가 `ModuleRecord*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
              */
-            ModuleContext() noexcept;
+            ModuleRecord() noexcept;
         };
 
         static constexpr int32 kMtimeDebounceMs = 300;
@@ -293,20 +283,20 @@ namespace sw
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildNotice();
 
-        stable_unordered_map<string, ModuleContext> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateContext` · `clearContexts`). 컨텍스트 주소가 고정이다
-        ModuleDependencyGraph                       _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
-        vector<string>                              _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
-        unique_ptr<IFileWatcher>                    _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
-        string                                      _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
-        FileStamp                                   _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
-        mutable mutex                               _buildMutex;
-        BuildNotice                                 _buildNotice;
-        OnBeforeCommitBatchDelegate                 _onBeforeCommitBatch;
-        DrainWorkersDelegate                        _drainWorkers;
-        DeferredImageUnloadQueue                    _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
-        uint32                                      _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
-        uint8                                       _bReloadGraphBroken : 1;
-        uint8                                       _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
-        [[maybe_unused]] uint8                      _reserved           : 6;
+        stable_unordered_map<string, ModuleRecord> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
+        ModuleDependencyGraph                      _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
+        vector<string>                             _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
+        unique_ptr<IFileWatcher>                   _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
+        string                                     _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
+        FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
+        mutable mutex                              _buildMutex;
+        BuildNotice                                _buildNotice;
+        OnBeforeCommitBatchDelegate                _onBeforeCommitBatch;
+        DrainWorkersDelegate                       _drainWorkers;
+        DeferredImageUnloadQueue                   _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
+        uint32                                     _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        uint8                                      _bReloadGraphBroken : 1;
+        uint8                                      _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
+        [[maybe_unused]] uint8                     _reserved           : 6;
     };
 } // namespace sw

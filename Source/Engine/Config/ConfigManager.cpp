@@ -20,7 +20,7 @@
 #include "sw/config/ShippingHostDefaults.h"
 
 #if defined( SW_SHIPPING )
-    #include "sw/config/ShippingGameDefaults.h" // 구운 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
+    #include "sw/config/ShippingGameDefaults.h" // 베이크한 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
 #endif
 
 namespace sw
@@ -250,7 +250,7 @@ namespace sw
             SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
             return SubsystemInitResult::Failed;
         }
-        // Shipping 은 디스크의 Config/ 를 보지 않고 구운 JSON 만 읽는다. 그 밖은 디스크 파일이 필수다 — 없으면 구운 사본이나 `T{}` 로 서지 않고 멈춘다.
+        // Shipping 은 디스크의 Config/ 를 보지 않고 베이크한 JSON 만 읽는다. 그 밖은 디스크 파일이 필수다 — 없으면 베이크한 사본이나 `T{}` 로 서지 않고 멈춘다.
         const ConfigSource engineSource = ConfigSource::baked( shipping_host::kEngineConfigJSON );
         const ConfigSource gameSource   = ConfigSource::baked( shipping_host::kGameConfigJSON );
 #else

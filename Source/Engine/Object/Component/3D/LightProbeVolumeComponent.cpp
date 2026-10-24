@@ -78,7 +78,7 @@ namespace sw
     {
         if ( _probeData._listProbe.empty() )
             return nullptr;
-        // 볼륨을 옮기거나 크기를 바꾸고 다시 굽지 않았으면 옛 격자의 빛이다 — 쓰지 않는다.
+        // 볼륨을 옮기거나 크기를 바꾸고 다시 베이크하지 않았으면 옛 격자의 빛이다 — 쓰지 않는다.
         if ( _probeData._layout.matches( computeLayout(), LightProbeVolumeComponentInternal::kLayoutTolerance ) == false )
             return nullptr;
         return &_probeData;

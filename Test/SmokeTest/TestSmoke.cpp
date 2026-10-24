@@ -356,7 +356,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOutsideBuildWaitsForStamp )
         ++reloadCount;
     } ) );
 
-    // 모듈 mtime 은 초 단위로 견주므로 2 초 미래로 옮긴다.
+    // 모듈 mtime 은 초 단위로 비교하므로 2 초 미래로 옮긴다.
     SW_EXPECT_TRUE( sw::FileUtil::setFileWriteTime( dllPath, originalDllTicks + 2 * sw::FileUtil::kFileTimeTicksPerSecond ) );
     constexpr int64     kQuietMilliseconds  = 1000;
     constexpr int64     kReloadMilliseconds = 10000;
@@ -1173,7 +1173,7 @@ SW_TEST_CASE( ArchitectureTest, NoBuiltImageHasDelayLoadedImports )
  * @brief [ArchitectureTest] 지연 import 가 있는 모듈 이미지는 올리지 않는다 — 원인을 남기고 등록이 실패한다(Debug 는 단언)
  * @details 이 저장소는 지연 로드를 쓰지 않지만(`CheckNoDelayLoad`), 규칙을 어긴 이미지가 들어오면 그 첫 float 인자 호출이 조용히 쓰레기를 받는다.
  *          그래서 `LiveReloadManager` 가 정적 초기화가 돌기 **전에** 파일 바이트에서 지연 import 표를 보고 거절한다. 실제 키트의 바이트에
- *          지연 import 디렉터리를 하나 붙인 사본으로 그 길을 지난다(엔진 ABI 도장은 그대로라 앞 검사는 통과한다).
+ *          지연 import 디렉터리를 하나 붙인 사본으로 그 길을 지난다(엔진 ABI 스탬프는 그대로라 앞 검사는 통과한다).
  */
 SW_TEST_CASE( ArchitectureTest, ModuleWithDelayImportsIsRefused )
 {
@@ -2051,9 +2051,9 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
 
 /**
  * @brief [ArchitectureTest] 에디터 모듈을 올리고 다시 올리고 내려도 모든 `RegistrationList` 에 같은 항목이 둘 오르지 않고, 내리면 항목 수가 올리기 전으로 돌아온다
- * @details 정적 등록자가 모듈 로드 때 항목을 올리고 언로드 때 뺀다. 리로드 중에는 새 이미지의 등록이 같은 이름을 대체한다(`RegistrationReloadScope`). 리로드 뒤에는 옛 이미지의 목록이 함께 살아 있어 합을 견주지 않고 중복만 본다.
+ * @details 정적 등록자가 모듈 로드 때 항목을 올리고 언로드 때 뺀다. 리로드 중에는 새 이미지의 등록이 같은 이름을 대체한다(`RegistrationReloadScope`). 리로드 뒤에는 옛 이미지의 목록이 함께 살아 있어 합을 비교하지 않고 중복만 본다.
  *          목록은 `RegistrationListBase::collect` 로 이름 · 항목 수를 한곳에서 열거한다 — 같은 이름의 목록이 여럿
- *          (씬마다 하나)이면 항목 수를 합쳐 견준다.
+ *          (씬마다 하나)이면 항목 수를 합쳐 비교한다.
  */
 SW_TEST_CASE( ArchitectureTest, RegistrationListsFollowTheEditorModuleLoadReloadAndUnload )
 {

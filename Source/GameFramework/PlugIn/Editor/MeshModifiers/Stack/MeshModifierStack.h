@@ -26,7 +26,7 @@ namespace sw::editor
         static constexpr uint32 kVersion = 1;
         /** @brief 사이드카 문서의 확장자입니다(`<메시 이름>.modifiers.json`). */
         static constexpr string_view kSidecarExtension = ".modifiers.json";
-        /** @brief 굽기 결과 메시 이름에 붙는 접미입니다(`<메시 이름>_modified.mesh`). */
+        /** @brief 베이크 결과 메시 이름에 붙는 접미입니다(`<메시 이름>_modified.mesh`). */
         static constexpr string_view kBakedSuffix = "_modified";
 
         MeshModifierStack();
@@ -73,7 +73,7 @@ namespace sw::editor
 
         /** @brief 메시 경로(`.../x.mesh`)에 맞는 사이드카 경로(`.../x.modifiers.json`)입니다. */
         static string makeSidecarPath( string_view meshPath );
-        /** @brief 메시 경로에 맞는 굽기 결과 경로(`.../x_modified.mesh`)입니다. */
+        /** @brief 메시 경로에 맞는 베이크 결과 경로(`.../x_modified.mesh`)입니다. */
         static string makeBakedMeshPath( string_view meshPath );
 
         int32               getModifierCount() const { return static_cast<int32>( _listModifier.size() ); }

@@ -19,7 +19,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 배치 파일의 선분(놀이기구 영역 · 입구 · 트랙)과 놀이기구 이름표를 그립니다. 이름표 색은 테마 토큰 `_viewportLabel` 입니다. */
+        /** @brief 배치 파일의 선분(놀이기구 영역 · 입구 · 트랙)과 놀이기구 이름을 그립니다. 이름 색은 테마 토큰 `_viewportLabel` 입니다. */
         void drawParkLayout( const EditorViewportVisualizerArgs& args )
         {
             ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
