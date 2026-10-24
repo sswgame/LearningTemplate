@@ -135,6 +135,43 @@ SW_TEST_CASE( RenderTargetImageFileTest, UnpacksBgraAndHalfToRgba8 )
 }
 
 /**
+ * @brief [RenderTargetImageFileTest] `halfToUnorm8` 은 half 통합 전의 손 해독과 65536 개 비트 패턴 모두에서 같은 값을 낸다
+ * @details 옛 함수를 사본으로 두고 비교한다. 음수 · -0 · 음의 NaN 은 0, 양의 Inf · NaN 은 255, 그 사이는 value*255+0.5 의 버림이다.
+ */
+SW_TEST_CASE( RenderTargetImageFileTest, HalfToUnorm8MatchesLegacyDecode )
+{
+    const auto legacy = []( uint16 bits ) -> uint8
+    {
+        const uint32 sign     = static_cast<uint32>( bits >> 15 );
+        const int32  exponent = static_cast<int32>( ( bits >> 10 ) & 0x1Fu );
+        const uint32 mantissa = static_cast<uint32>( bits & 0x3FFu );
+        if ( sign != 0 )
+            return 0;
+        if ( exponent == 0x1F )
+            return 255;
+        float32 value = 0.0f;
+        if ( exponent == 0 )
+            value = static_cast<float32>( mantissa ) * ( 1.0f / 16777216.0f );
+        else
+            value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * sw::MathUtil::pow( 2.0f, static_cast<float32>( exponent - 15 ) );
+        if ( value <= 0.0f )
+            return 0;
+        if ( value >= 1.0f )
+            return 255;
+        return static_cast<uint8>( value * 255.0f + 0.5f );
+    };
+    uint32 mismatchCount = 0;
+    for ( uint32 bits = 0; bits <= 0xFFFFu; ++bits )
+    {
+        if ( sw::FrameRendererUtil::halfToUnorm8( static_cast<uint16>( bits ) ) != legacy( static_cast<uint16>( bits ) ) )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( mismatchCount, static_cast<uint32>( 0 ) );
+    SW_EXPECT_EQUAL( sw::FrameRendererUtil::halfToUnorm8( 0x7E00 ), static_cast<uint8>( 255 ) ); // 양의 NaN
+    SW_EXPECT_EQUAL( sw::FrameRendererUtil::halfToUnorm8( 0xFE00 ), static_cast<uint8>( 0 ) );   // 음의 NaN
+}
+
+/**
  * @brief [RenderTargetImageFileTest] 깊이 읽기 배치(R32_FLOAT 0..1)와 R8 은 회색으로 풀린다 — `-gv_screenshotAttachment=ShadowMap` 의 길
  * @details 깊이 첨부를 선언 포맷(D24S8)으로 풀면 float 바이트가 색이 된다. 읽기는 `kRHIDepthReadbackFormat` 배치로 오고 [0,1] 밖은 자른다.
  */

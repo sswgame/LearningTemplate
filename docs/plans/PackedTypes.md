@@ -1,10 +1,10 @@
 # 저장 전용 압축 타입
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 1/6
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 2/6
 
 > 질문: 정점 · 인스턴스 · 버퍼의 크기를 줄이는 압축 타입을 엔진이 어떻게 갖고, 어디부터 어떤 규칙으로 적용하는가?
 > 독자: 정점 포맷 · G버퍼 · 리플렉션을 고치는 작업자와 통합 담당.
-> 결론: 타입은 `Core/Math` 에 들어갔다(P1). 다음은 중복 해독 코드 통합(P2), 리플렉션 연결(P3), 첫 적용처 셋(G버퍼 법선 P4, 메시 정점 P5, VAT 위치 P6) 순서다. 새 포맷은 아래 2절 규칙을 따른다.
+> 결론: 타입은 `Core/Math` 에 들어갔고(P1) half 해독 복사본은 통합했다(P2). 다음은 리플렉션 연결(P3), 첫 적용처 셋(G버퍼 법선 P4, 메시 정점 P5, VAT 위치 P6) 순서다. 새 포맷은 아래 2절 규칙을 따른다.
 
 ## 1. 들어간 것 (P1)
 
@@ -41,10 +41,19 @@
 
 ## 3. 단위
 
-### P2 half 해독 복사본 통합
+### P2 half 해독 복사본 통합 (끝)
 
 같은 `half` → `float32` 풀이가 세 곳에 따로 있습니다. `Editor/Panels/RenderTarget/RenderTargetViewUtil.cpp` 의 `halfToFloat`, `Engine/Renderer/Capture/ReflectionProbeBaker.cpp` 의 `decodeHalf`, `Engine/Renderer/Frame/FrameRendererUtil.h` 의 `halfToUnorm8` 입니다.
 `half::fromBits( bits ).toFloat()` 와 `unorm8::fromFloat` 로 바꾸고 복사본을 지웁니다. 렌더 타깃 뷰와 캡처 파일(`RenderTargetImageFile.cpp`)의 기존 테스트가 같은 값을 내는지 봅니다.
+결과: `halfToFloat` 는 `half::toFloat` 로 바뀌었고 복사본은 지웠습니다. 나머지 둘은 옛 동작을 보존하는 얇은 함수만 남았습니다.
+
+| 복사본 | 옛 동작 | `half::toFloat` 와 | 처리 |
+|---|---|---|---|
+| `RenderTargetViewUtil` `halfToFloat` | 부호 · 비정규수 · Inf · NaN 을 IEEE 대로 | 모든 비트 패턴에서 같음(NaN 은 페이로드만 다름) | 복사본 삭제, 호출처가 `half::fromBits( bits ).toFloat()` |
+| `ReflectionProbeBaker` `decodeHalf` | Inf · NaN 은 부호 있는 `kMaxFloat`(거르기가 NaN 을 퍼뜨리지 않게) | 유한값은 같고 Inf · NaN 이 다름 | 유한값만 `toFloat`, 비유한은 옛 규칙 유지(숨은 동작 변경 없음) |
+| `FrameRendererUtil` `halfToUnorm8` | 음수 · -0 · 음의 NaN 은 0, 양의 Inf · NaN 은 255, 그 외 `value*255+0.5` 버림 | `unorm8::fromFloat` 와 반올림 규칙이 같다. 다만 NaN 은 0 이 됨 | 부호 · 비유한 분기만 남기고 나머지는 `toFloat` + `unorm8::fromFloat` |
+
+테스트는 두 곳에 옛 함수 사본과 65536 개 비트 패턴을 전부 견주는 단언을 더했습니다(`ReadPixelHalfMatchesLegacyDecode`, `HalfToUnorm8MatchesLegacyDecode`). `decodeHalf` 는 파일 안 비공개라 직접 테스트가 없습니다.
 읽을 문서: 이 문서 1절. 고칠 문서: 이 문서 단위 절과 `진행`.
 
 ### P3 직렬화 · 리플렉션 연결
