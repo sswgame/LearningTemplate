@@ -56,6 +56,8 @@
   끝 줄에 게이트마다 `checkSourceFile` 이 쓴 초(프로세스 합)를 찍는다. 게이트 하나만 볼 때는 그 게이트를 그대로 돌린다(같은 훑기를 게이트 하나로).
   옮기지 않은 것: 바이트 그대로(줄 끝 변환 없이) · `utf-8-sig` 로 읽는 게이트(`CheckNamespaceBlocks` · `CheckIncludeOrder` — 픽서와 판정을 나눠 쓴다),
   파일 집합이 둘인 게이트(`CheckThirdPartyIsolation` · `CheckSuppressionReasons` — C++ 와 CMake), 저장소 전체의 다른 자원을 함께 보는 게이트.
+  Python · CMake · 문서 · 텍스트를 읽는 비소스 게이트(열둘, 단독 합 15.2 s)는 공유 훑기로 옮기지 않았다 — 값이 파일 읽기가 아니라 게이트 자신의 AST 순회 · 파일 열기라 전부 공유해도 3~4 s 다(`docs/09_Decisions.md` 3절).
+  린트 시간은 `lint-suite`(동시 실행)가 아니라 **단독 순차**로 재야 한다 — 동시에는 경합으로 같은 게이트가 30 배까지 부푼다(`CheckCmakeConventions` 0.43 → 12.5 s).
 - **린트 시간은 `RunLintSuite` 가 측정한다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
   넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
   절반 경고가 먼저 울리게.
