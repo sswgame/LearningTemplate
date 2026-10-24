@@ -286,10 +286,11 @@ namespace sw
         // 재생 중에 움직임 줄이기를 켜면 남은 것은 모두 끝으로 간다(반복도 이번 바퀴에서 끝).
         const bool    bReduceMotion = gv_uiReduceMotion;
         const float32 step          = bReduceMotion ? 0.0f : MathUtil::max( 0.0f, deltaSeconds );
-        for ( size_t index = 0; index < _listActive.size(); )
+        // 끝난 것은 표시만 해 두고 목록에서는 한 번에 지운다(한 프레임에 여럿이 끝나도 뒤 원소를 한 번만 옮긴다). 남은 원소의 순서는 지킨다 —
+        // 같은 속성을 쓰는 애니메이션은 목록 순서대로 써서 뒤의 것이 이기기 때문이다.
+        for ( ActiveAnimation& active : _listActive )
         {
-            ActiveAnimation& active = _listActive[index];
-            bool             bFinished{ true };
+            bool bFinished{ true };
             if ( active._bPaused && bReduceMotion == false )
             {
                 bFinished = false; // 멈춘 애니메이션(시간 막대)은 시간이 가지 않고 값만 유지한다
@@ -305,15 +306,13 @@ namespace sw
                 bFinished = advance( active, step );
             }
             applyAnimation( active );
-            if ( bFinished )
-                _listActive.erase( _listActive.begin() + static_cast<ptrdiff_t>( index ) );
-            else
-                ++index;
+            active._bFinished = bFinished;
         }
-        for ( size_t index = 0; index < _listTween.size(); )
+        VectorUtil::removeIf( _listActive, []( const ActiveAnimation& active )
+        { return active._bFinished; } );
+        for ( ActiveTween& tween : _listTween )
         {
-            ActiveTween& tween   = _listTween[index];
-            Widget*      pWidget = _pTree->findWidgetByID( tween._widget );
+            Widget* pWidget = _pTree->findWidgetByID( tween._widget );
             tween._elapsed += step;
             const bool bFinished = pWidget == nullptr || bReduceMotion || tween._elapsed >= tween._duration;
             if ( pWidget != nullptr )
@@ -322,11 +321,10 @@ namespace sw
                 // false 는 값이 같거나 경로가 사라진 경우이므로 쓸 것이 없다
                 (void)tween._property.writeValue( *pWidget, UIAnimatedValue::blend( tween._from, tween._to, weight, tween._property._componentCount ) );
             }
-            if ( bFinished )
-                _listTween.erase( _listTween.begin() + static_cast<ptrdiff_t>( index ) );
-            else
-                ++index;
+            tween._bFinished = bFinished;
         }
+        VectorUtil::removeIf( _listTween, []( const ActiveTween& tween )
+        { return tween._bFinished; } );
         // 이벤트는 진행이 끝난 뒤 보낸다. 명령 처리가 애니메이션을 재생하거나 화면을 닫아도 위 목록을 건드리지 않게 하기 위해서다.
         dispatchPendingEvents();
     }

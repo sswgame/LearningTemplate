@@ -143,6 +143,34 @@ SW_TEST_CASE( UINotificationTest, ExpiresAfterDuration )
     SW_EXPECT_TRUE( fixture.notes().getScreen() == sw::kInvalidUIScreenHandle );
 }
 
+/** @brief [UINotificationTest] 한 프레임에 여럿이 끝나면 함께 내려가고, 남은 알림의 자리 · 글은 그대로이며 위젯은 페이드가 끝나면 모두 지워진다 */
+SW_TEST_CASE( UINotificationTest, SeveralExpireInOneFrame )
+{
+    using Util = UINotificationTestUtil;
+    UINotificationFixture fixture;
+    fixture.notes().post( Util::make( "first", 1.0f ) );
+    fixture.notes().post( Util::make( "keep", 5.0f ) );
+    fixture.notes().post( Util::make( "third", 1.0f ) );
+    fixture.runFrame();
+    SW_ASSERT_EQUAL( 3u, fixture.notes().getVisibleCount() );
+
+    fixture.runFrame( 1.1f ); // 첫째와 셋째가 같은 프레임에 끝난다
+    SW_ASSERT_EQUAL( 1u, fixture.notes().getVisibleCount() );
+    SW_EXPECT_STREQ( "keep", fixture.notes().getVisibleText( 0 ).c_str() );
+    SW_EXPECT_EQUAL( 2u, fixture.notes().getFadingCount() );
+    const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );
+    SW_ASSERT_NOT_NULL( pScreen );
+    const sw::PanelWidget* pStack = pScreen->getTree().findWidget<sw::PanelWidget>( "Stack" );
+    SW_ASSERT_NOT_NULL( pStack );
+    SW_EXPECT_EQUAL( 3u, pStack->getChildCount() ); // 내린 둘의 위젯은 페이드가 끝날 때까지 남는다
+
+    fixture.runFrame( 0.25f ); // 두 페이드가 같은 프레임에 끝나 함께 지운다
+    SW_EXPECT_EQUAL( 0u, fixture.notes().getFadingCount() );
+    SW_EXPECT_EQUAL( 1u, pStack->getChildCount() );
+    SW_EXPECT_EQUAL( 1u, fixture.notes().getVisibleCount() );
+    SW_EXPECT_STREQ( "keep", fixture.notes().getVisibleText( 0 ).c_str() );
+}
+
 /** @brief [UINotificationTest] 알림은 오버레이 층 — 메뉴가 떠 있어도 활성 화면 · 포커스 · 게임 입력 막기가 그대로다 */
 SW_TEST_CASE( UINotificationTest, NeverTakesFocusOrInput )
 {

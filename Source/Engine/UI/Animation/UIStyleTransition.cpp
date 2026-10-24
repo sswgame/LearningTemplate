@@ -243,6 +243,12 @@ namespace sw
                 }
             }
 
+            /** @brief 채널이 지연과 길이를 모두 지났는지 봅니다(`update` 가 채널을 쓰고, 지우는 판정도 같은 식으로 합니다). */
+            [[nodiscard]] static bool isFinished( const UIStyleTransitionState::Channel& channel )
+            {
+                return channel._elapsed >= channel._delay + channel._duration;
+            }
+
             /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutSpec 에 더합니다. */
             [[nodiscard]] static bool parseEntry( string_view item, UIStyleTransitionSpec& inoutSpec, string& outError )
             {
@@ -450,8 +456,8 @@ namespace sw
             state._shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
-        if ( pTree != nullptr && VectorUtil::contains( pTree->_listStyleTransition, widget.getID() ) == false )
-            pTree->_listStyleTransition.push_back( widget.getID() );
+        if ( pTree != nullptr )
+            pTree->_uniqueStyleTransition.insert( widget.getID() ); // 이미 있으면 넣지 않는다 — 같은 위젯이 두 번 들어오지 않는다
     }
 
     bool UIStyleTransition::makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
@@ -551,48 +557,44 @@ namespace sw
     uint32 UIStyleTransition::update( WidgetTree& tree, float32 deltaSeconds )
     {
         using Internal = UIStyleTransitionInternal;
-        if ( tree._listStyleTransition.empty() )
+        if ( tree._uniqueStyleTransition.empty() )
             return 0;
         const bool    bReduceMotion = gv_uiReduceMotion;
         const float32 step          = MathUtil::max( 0.0f, deltaSeconds );
         uint32        updatedCount  = 0;
-        for ( size_t index = 0; index < tree._listStyleTransition.size(); )
+        // 집합은 지우면 맨 뒤 원소가 그 자리로 와서(순서는 상관없다) 지운 뒤에는 이터레이터를 나아가지 않고 같은 자리를 다시 본다.
+        for ( auto iter = tree._uniqueStyleTransition.begin(); iter != tree._uniqueStyleTransition.end(); )
         {
-            Widget* pWidget = tree.findWidgetByID( tree._listStyleTransition[index] );
+            Widget* pWidget = tree.findWidgetByID( *iter );
             if ( pWidget == nullptr || pWidget->_styleTransition == nullptr )
             {
-                tree._listStyleTransition.erase( tree._listStyleTransition.begin() + static_cast<ptrdiff_t>( index ) );
+                iter = tree._uniqueStyleTransition.erase( iter );
                 continue;
             }
             UIStyleTransitionState& state         = *pWidget->_styleTransition;
             uint32                  changedFields = 0;
-            for ( size_t channelIndex = 0; channelIndex < state._listChannel.size(); )
+            for ( UIStyleTransitionState::Channel& channel : state._listChannel )
             {
-                UIStyleTransitionState::Channel& channel = state._listChannel[channelIndex];
-                channel._elapsed                         = bReduceMotion ? channel._delay + channel._duration : channel._elapsed + step;
-                const bool bFinished                     = channel._elapsed >= channel._delay + channel._duration;
-                float32    arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-                if ( bFinished )
+                channel._elapsed = bReduceMotion ? channel._delay + channel._duration : channel._elapsed + step;
+                float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+                if ( Internal::isFinished( channel ) )
                     std::copy( std::begin( channel._arrTo ), std::end( channel._arrTo ), std::begin( arrValue ) );
                 else
                     Internal::evaluateChannel( channel, arrValue );
                 Internal::writeField( state._shown._value, channel._field, arrValue );
                 changedFields |= UIStyleFieldTable::makeBit( channel._field );
-                if ( bFinished )
-                    state._listChannel.erase( state._listChannel.begin() + static_cast<ptrdiff_t>( channelIndex ) );
-                else
-                    ++channelIndex;
             }
+            VectorUtil::removeIf( state._listChannel, Internal::isFinished ); // 끝난 채널은 한 번에 지운다(남은 순서는 그대로)
             ++updatedCount;
             pWidget->invalidate( UIStylePass::makeDirtyReason( changedFields ) );
             if ( state._listChannel.empty() )
             {
                 // 끝: 보이는 값이 목표와 같으므로 위젯은 다시 (공유하는) 계산된 스타일을 읽는다.
                 pWidget->_styleTransition.reset();
-                tree._listStyleTransition.erase( tree._listStyleTransition.begin() + static_cast<ptrdiff_t>( index ) );
+                iter = tree._uniqueStyleTransition.erase( iter );
                 continue;
             }
-            ++index;
+            ++iter;
         }
         return updatedCount;
     }

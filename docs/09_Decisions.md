@@ -547,6 +547,10 @@
 - 여러 스레드가 함께 더하는 카운터(활성 태스크 수 · 메모리 태그 통계)는 `ShardedCounter` · `ShardArray`(스레드 칸 16, 읽는 쪽이 합침)로 둔다(2026-10-18, 언리얼 LLM 스레드별 상태 · 리눅스 `percpu_counter` 와 같은 구조). "0 이 됐나" 를 보는 카운터는 같은 칸에서 올리고 내린다. 메모리 태그 최고치는 합을 읽을 때(프레임 · 패널) 본 값의 최고치다 — 측정(`docs/plans/StructuralOptimization.md`)에서 이득이 없으면 단위 커밋을 되돌린다.
 - **`sw::make_unique` 는 함수 객체(변수 템플릿 `MakeUniqueFunction<T>`)입니다**(2026-10-22). 함수 템플릿이면 std 타입 인자가 ADL 로 `std::make_unique` 를 끌어와 STL 컨테이너 구성에서 호출이 모호해졌다. 일반 탐색이 객체를 찾으면 ADL 이 없다 — C++20 표준 라이브러리의 niebloid 와 같은 방식이다. `make_shared` 는 STL 구성에서 `using std::make_shared` 로 둔다(해제자가 같아서).
 
+- **반복문 안 `erase( begin() + index )` 와 `contains` 뒤 `push_back` 으로 중복 거르기는 새 코드가 못 쓴다**(2026-10-25). 숫자를 재지 않는 이유: "빨라질 것 같은 최적화" 가 아니라 한 프레임에 T 개가 한꺼번에 끝나면 이동이 O(T²) 로 느는 모양을 없애는 구조 정리라서 "성능 주장은 Release 숫자로만" 의 대상이 아니다.
+  지우기는 `VectorUtil::removeIf`(순서 보존 · 한 번 훑기, 언리얼 `RemoveAll`), 중복 거르기는 집합이다. UI 의 재생 · 트윈 · 알림 · 전환 채널을 고쳤다. 같은 속성을 쓰는 애니메이션은 목록 순서대로 써서 마지막이 이기므로 swap-pop 은 아니다.
+  전환 중 위젯 목록(`WidgetTree::_uniqueStyleTransition`)은 `unordered_set` 이다 — `sparse_set` 은 위젯 번호(프로세스 전체 증가 카운터)의 최댓값만큼 sparse 배열이 자라 맞지 않았다. 형식으로 못 막는 틈(표준 vector 멤버 호출)에만 게이트 `CheckIndexLoopErase` 를 기준선 래칫으로 둔다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.

@@ -446,3 +446,57 @@ SW_TEST_CASE( UIAnimationTest, DocumentRejectsBadAnimations )
     SW_EXPECT_FALSE( parse( "\t<_listAnimation><UIAnimation _name=\"A\" _speed=\"2\" /></_listAnimation>\n", error ) );
     SW_EXPECT_TRUE( error.find( "test/bad.ui.xml:2" ) != sw::string::npos );
 }
+
+/** @brief [UIAnimationTest] 한 프레임에 여럿이 끝나도 남은 재생은 그대로 이어 가고 순서를 지킨다 — 같은 속성은 목록 순서대로 써서 마지막이 이긴다 */
+SW_TEST_CASE( UIAnimationTest, FinishingTogetherKeepsSurvivorsInOrder )
+{
+    using Util = UIAnimationTestUtil;
+    UIAnimationLayoutFixture    fixture;
+    sw::vector<sw::UIAnimation> listAnimation;
+    listAnimation.push_back( Util::makeAnimation( "First", "a", "_opacity", "0.1", "0.1", 0.2f ) );
+    listAnimation.push_back( Util::makeAnimation( "Second", "a", "_opacity", "0.4", "0.4", 1.0f ) );
+    listAnimation.push_back( Util::makeAnimation( "Third", "a", "_opacity", "0.9", "0.9", 0.2f ) );
+    fixture._player.setAnimations( std::move( listAnimation ) );
+    SW_ASSERT_TRUE( fixture._player.play( "First" ) );
+    SW_ASSERT_TRUE( fixture._player.play( "Second" ) );
+    SW_ASSERT_TRUE( fixture._player.play( "Third" ) );
+
+    fixture._player.update( 0.5f ); // 첫째와 셋째가 같은 프레임에 끝난다 — 끝난 프레임에도 끝 값을 쓰고 마지막(셋째)이 이긴다
+    SW_EXPECT_FALSE( fixture._player.isPlaying( "First" ) );
+    SW_EXPECT_TRUE( fixture._player.isPlaying( "Second" ) );
+    SW_EXPECT_FALSE( fixture._player.isPlaying( "Third" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.9f, fixture._pWidget->getOpacity(), Util::kTolerance );
+
+    fixture._player.update( 0.1f ); // 남은 둘째만 쓴다
+    SW_EXPECT_TRUE( fixture._player.isPlaying( "Second" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, fixture._pWidget->getOpacity(), Util::kTolerance );
+    fixture._player.update( 1.0f );
+    SW_EXPECT_FALSE( fixture._player.isAnyPlaying() );
+}
+
+/** @brief [UIAnimationTest] 한 프레임에 끝난 트윈들만 한꺼번에 빠지고, 남은 트윈은 이어서 움직인다 */
+SW_TEST_CASE( UIAnimationTest, FinishedTweensLeaveTogetherAndSurvivorContinues )
+{
+    using Util = UIAnimationTestUtil;
+    UIAnimationScreenFixture fixture;
+    sw::UIScreen*            pScreen = fixture._ui.findScreen( fixture.open( "test/tweens.ui.xml", "" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    fixture.runFrame( 0.0f );
+
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_opacity", "0", 0.2f, sw::BlendCurve::Linear ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_renderTransform._translation", "100,0", 1.0f, sw::BlendCurve::Linear ) );
+    SW_ASSERT_EQUAL( 2u, pScreen->getAnimationPlayer().getTweenCount() );
+
+    fixture.runFrame( 0.3f ); // 앞의 트윈만 끝난다
+    SW_EXPECT_EQUAL( 1u, pScreen->getAnimationPlayer().getTweenCount() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pBox->getOpacity(), Util::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 30.0f, pBox->getRenderTransform()._translation._x, Util::kTolerance );
+    fixture.runFrame( 0.3f );
+    SW_EXPECT_EQUAL( 1u, pScreen->getAnimationPlayer().getTweenCount() );
+    SW_EXPECT_NEAR_EQUAL( 60.0f, pBox->getRenderTransform()._translation._x, Util::kTolerance );
+    fixture.runFrame( 0.5f );
+    SW_EXPECT_EQUAL( 0u, pScreen->getAnimationPlayer().getTweenCount() );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pBox->getRenderTransform()._translation._x, Util::kTolerance );
+}
