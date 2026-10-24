@@ -7,7 +7,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/NormalizedInt.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -190,25 +192,14 @@ namespace sw
          * @details HDR 첨부를 PPM 으로 덤프할 때만 쓴다. 톤매핑하지 않고 그냥 자른다. 이 덤프는
          *          이미지를 예쁘게 보려는 것이 아니라 그 단계에 **무엇이 들어 있나** 를 보려는 것이다.
          */
-        static uint8 halfToUnorm8( uint16 half )
+        static uint8 halfToUnorm8( uint16 bits )
         {
-            const uint32 sign     = static_cast<uint32>( half >> 15 );
-            const int32  exponent = static_cast<int32>( ( half >> 10 ) & 0x1Fu );
-            const uint32 mantissa = static_cast<uint32>( half & 0x3FFu );
-            if ( sign != 0 )
-                return 0; // 음수는 0으로 자른다.
-            if ( exponent == 0x1F )
-                return 255; // Inf 나 NaN 은 눈에 띄게 흰색으로 둔다.
-            float32 value = 0.0f;
-            if ( exponent == 0 )
-                value = static_cast<float32>( mantissa ) * ( 1.0f / 16777216.0f ); // 서브노멀: 2^-24 단위
-            else
-                value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * MathUtil::pow( 2.0f, static_cast<float32>( exponent - 15 ) );
-            if ( value <= 0.0f )
-                return 0;
-            if ( value >= 1.0f )
-                return 255;
-            return static_cast<uint8>( value * 255.0f + 0.5f );
+            const half value = half::fromBits( bits );
+            if ( ( bits & 0x8000u ) != 0u )
+                return 0; // 음수(-0 · 음의 NaN 포함)는 0으로 자른다.
+            if ( value.isFinite() == false )
+                return 255; // Inf 나 NaN 은 눈에 띄게 흰색으로 둔다. unorm8::fromFloat 는 NaN 을 0 으로 만들어 따로 가른다.
+            return unorm8::fromFloat( value.toFloat() ).getRaw();
         }
 
         /**

@@ -150,6 +150,46 @@ SW_TEST_CASE( RenderTargetViewUtilTest, ReadPixelDecodesFormats )
 }
 
 /**
+ * @brief [RenderTargetViewUtilTest] half 픽셀은 통합 전의 손 해독과 65536 개 비트 패턴 모두에서 같은 float 로 풀린다(NaN 은 NaN 끼리)
+ * @details 옛 함수를 사본으로 두고 비교한다. 0 · -0 · 비정규수 · 65504 · Inf · NaN 이 모두 이 안에 있다.
+ */
+SW_TEST_CASE( RenderTargetViewUtilTest, ReadPixelHalfMatchesLegacyDecode )
+{
+    using namespace sw;
+    using editor::RenderTargetViewUtil;
+
+    const auto legacy = []( uint16 bits ) -> float32
+    {
+        const uint32 sign     = static_cast<uint32>( bits >> 15 );
+        const int32  exponent = static_cast<int32>( ( bits >> 10 ) & 0x1Fu );
+        const uint32 mantissa = static_cast<uint32>( bits & 0x3FFu );
+        float32      value    = 0.0f;
+        if ( exponent == 0 )
+            value = static_cast<float32>( mantissa ) * MathUtil::pow( 2.0f, -24.0f );
+        else if ( exponent == 0x1F )
+            value = mantissa == 0 ? std::numeric_limits<float32>::infinity() : std::numeric_limits<float32>::quiet_NaN();
+        else
+            value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * MathUtil::pow( 2.0f, static_cast<float32>( exponent - 15 ) );
+        return sign != 0 ? -value : value;
+    };
+    uint32 mismatchCount = 0;
+    for ( uint32 bits = 0; bits <= 0xFFFFu; ++bits )
+    {
+        const uint16  arrHalf[4]{ static_cast<uint16>( bits ), 0, 0, 0 };
+        vector<uint8> listHalf( sizeof( arrHalf ) );
+        Memory::copy( listHalf.data(), arrHalf, sizeof( arrHalf ) );
+        float4 value{};
+        SW_ASSERT_TRUE( RenderTargetViewUtil::readPixel( listHalf, makeLayout( RHIFormat::R16G16B16A16_FLOAT, 1, 1 ), RHIFormat::R16G16B16A16_FLOAT, false, 0,
+                                                         0, value ) );
+        const float32 expected = legacy( static_cast<uint16>( bits ) );
+        const bool    bSame    = std::isnan( expected ) ? std::isnan( value._x ) : ( value._x == expected && std::signbit( value._x ) == std::signbit( expected ) );
+        if ( bSame == false )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( mismatchCount, static_cast<uint32>( 0 ) );
+}
+
+/**
  * @brief [RenderTargetViewUtilTest] D24 텍셀의 아래 24비트가 깊이이고 위 8비트(스텐실)는 버린다 — 네 백엔드 읽기가 이 배치로 바꾼다
  */
 SW_TEST_CASE( RenderTargetViewUtilTest, Depth24UnpacksLowBits )

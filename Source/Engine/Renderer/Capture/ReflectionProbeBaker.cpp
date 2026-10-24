@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Capture/ReflectionProbeBaker.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -55,24 +56,10 @@ namespace sw
             /** @brief IEEE 반정밀도 하나를 float32 로 폅니다(RGBA16F 첨부 읽기). */
             static float32 decodeHalf( uint16 bits )
             {
-                const uint32 sign     = static_cast<uint32>( bits & 0x8000u ) << 16;
-                const uint32 exponent = ( bits >> 10 ) & 0x1Fu;
-                const uint32 mantissa = bits & 0x3FFu;
-                float32      value    = 0.0f;
-                if ( exponent == 0u )
-                {
-                    value = static_cast<float32>( mantissa ) * ( 1.0f / 16777216.0f ); // 비정규수: 가수 × 2^-24
-                }
-                else if ( exponent == 31u )
-                {
-                    value = MathUtil::kMaxFloat; // 무한대 · NaN 은 가장 큰 값으로 — 거르기가 NaN 을 퍼뜨리지 않게
-                }
-                else
-                {
-                    const uint32 floatBits = ( ( exponent + 112u ) << 23 ) | ( mantissa << 13 );
-                    Memory::copy( &value, &floatBits, sizeof( value ) );
-                }
-                return sign != 0u ? -value : value;
+                const half value = half::fromBits( bits );
+                if ( value.isFinite() == false )
+                    return ( bits & 0x8000u ) != 0u ? -MathUtil::kMaxFloat : MathUtil::kMaxFloat; // 무한대 · NaN 은 가장 큰 값으로 — 거르기가 NaN 을 퍼뜨리지 않게
+                return value.toFloat();
             }
 
             static void setError( string* pOutError, const utf8* pMessage )

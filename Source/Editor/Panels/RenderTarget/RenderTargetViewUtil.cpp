@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/RenderTarget/RenderTargetViewUtil.h"
 
+#include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -11,22 +12,6 @@ namespace sw::editor
     {
         struct RenderTargetViewUtilInternal
         {
-            /** @brief IEEE half(16비트) 하나를 float32 로 풉니다(부호 · 서브노멀 · Inf/NaN 포함). */
-            static float32 halfToFloat( uint16 half )
-            {
-                const uint32 sign     = static_cast<uint32>( half >> 15 );
-                const int32  exponent = static_cast<int32>( ( half >> 10 ) & 0x1Fu );
-                const uint32 mantissa = static_cast<uint32>( half & 0x3FFu );
-                float32      value    = 0.0f;
-                if ( exponent == 0 )
-                    value = static_cast<float32>( mantissa ) * MathUtil::pow( 2.0f, -24.0f ); // 서브노멀: 2^-24 단위
-                else if ( exponent == 0x1F )
-                    value = mantissa == 0 ? std::numeric_limits<float32>::infinity() : std::numeric_limits<float32>::quiet_NaN();
-                else
-                    value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * MathUtil::pow( 2.0f, static_cast<float32>( exponent - 15 ) );
-                return sign != 0 ? -value : value;
-            }
-
             static float32 readFloat( const uint8* pByte )
             {
                 float32 value = 0.0f;
@@ -151,8 +136,8 @@ namespace sw::editor
             {
                 uint16 arrHalf[4]{};
                 Memory::copy( arrHalf, pPixel, sizeof( arrHalf ) );
-                outValue = float4{ RenderTargetViewUtilInternal::halfToFloat( arrHalf[0] ), RenderTargetViewUtilInternal::halfToFloat( arrHalf[1] ),
-                                   RenderTargetViewUtilInternal::halfToFloat( arrHalf[2] ), RenderTargetViewUtilInternal::halfToFloat( arrHalf[3] ) };
+                outValue = float4{ half::fromBits( arrHalf[0] ).toFloat(), half::fromBits( arrHalf[1] ).toFloat(), half::fromBits( arrHalf[2] ).toFloat(),
+                                   half::fromBits( arrHalf[3] ).toFloat() };
                 break;
             }
             case RHIFormat::R32G32B32_FLOAT:
