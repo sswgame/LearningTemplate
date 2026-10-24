@@ -19,6 +19,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -67,6 +68,7 @@ namespace sw
             , _mapTable{}
             , _listRetired{}
             , _reloadCount{ 0 }
+            , _stats{ CacheStats::getOrCreate( pKindName ) } // 캐시는 엔진 수명 범위가 소유해 다시 만들어질 수 있다 — 같은 이름의 칸을 이어 쓴다
         {
             GameDataCacheRegistry::registerCache( this );
         }
@@ -86,7 +88,11 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             const auto              iter = _mapTable.find( key );
             if ( iter != _mapTable.end() )
+            {
+                _stats.recordHit(); // 읽지 못한 경로를 기억한 빈 항목도 적중이다(같은 오류를 다시 읽지 않는다)
                 return iter->second.get();
+            }
+            _stats.recordMiss();
             unique_ptr<TableType> table = make_unique<TableType>();
             if ( table->loadFromResource( path ) == false )
                 table.reset();
@@ -156,6 +162,7 @@ namespace sw
                     _listRetired.push_back( std::move( table ) );
             }
             _mapTable.clear();
+            _stats.recordClear();
         }
 
     private:
@@ -167,5 +174,6 @@ namespace sw
         unordered_map<string, unique_ptr<TableType>> _mapTable;
         vector<unique_ptr<TableType>>                _listRetired; ///< 다시 읽거나 비우기 전의 테이블. 원시 포인터로 참조하는 쪽이 있을 수 있어 캐시와 함께 산다
         atomic<uint32>                               _reloadCount;
+        CacheStatsHandle                             _stats; ///< 이 종류의 계측 칸(`CacheStats`)
     };
 } // namespace sw

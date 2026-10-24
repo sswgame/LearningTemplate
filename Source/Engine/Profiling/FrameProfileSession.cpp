@@ -6,6 +6,7 @@
 
 #include "Engine/Profiling/FrameProfileSession.h"
 
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -96,6 +97,7 @@ namespace sw
             _measureStartMicro = MonotonicClock::nowMicroseconds();
             _lastFrameEndMicro = _measureStartMicro;
             profiler.reset();
+            CacheStats::markWindowStart(); // 캐시 적중 · 실패는 워밍업(첫 로드가 모두 실패)을 빼고 센다
             SW_LOG_INFO( "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
                          _frameTarget );
 #if SW_PROFILER_TRACE_ENABLED

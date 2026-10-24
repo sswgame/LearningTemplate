@@ -89,6 +89,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/Cache/CacheStatsUtil.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -745,6 +746,9 @@ namespace sw
         const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
         if ( bReportedNow && bHasDevice )
             _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
+        // 캐시 적중 · 실패 표도 같은 자리에서 잇는다. 보고 세션은 Profiling 층이라 에셋 매니저(Resource)를 볼 수 없다.
+        if ( bReportedNow )
+            CacheStatsUtil::logReport( "profile window" );
 
         if ( _pMemoryBudget != nullptr )
             _pMemoryBudget->onFrameEnd();

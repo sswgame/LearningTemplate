@@ -126,6 +126,9 @@ cd build/Ninja-Debug/Bin
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
   p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
+- **캐시 적중률은 측정 창 끝의 `[CacheStats]` 줄로 본다**(`-gv_profileFrames`). 캐시마다 한 줄 — 이름 · `items`(항목 수) · `hit` · `miss` · `rate`(적중률) · `clear`(통째로 비운 횟수)이고,
+  hit / miss / clear 는 워밍업 뒤 측정 창 시작부터의 값이다. `no counters` 는 조회가 없어 세지 않는 캐시(오디오 · 현지화 어댑터)다. 캐시를 늘리거나 상한을 정할 때 이 줄의 숫자를 근거로 쓴다
+  (규칙: [결정 기록](09_Decisions.md) "캐시는 `CacheStats` 레지스트리에…"). 센 값은 `Core/Diagnostics/CacheStats.h` 의 이름별 원자 카운터이고 `IAssetCache` 는 그대로다.
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
   `Engine::update` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.

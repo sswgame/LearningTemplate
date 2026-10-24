@@ -4,6 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/UUID/UUID.h"
@@ -35,6 +36,13 @@ namespace sw
     {
         struct PrefabAssetInternal
         {
+            /** @brief 프리팹 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
+            static const CacheStatsHandle& getCacheStats()
+            {
+                static const CacheStatsHandle s_stats = CacheStats::registerCache( PrefabCache::kAssetKindName );
+                return s_stats;
+            }
+
             /**
              * @brief 스폰 중인 프리팹 경로 스택(순환 참조 검사)이 힙 없이 담는 깊이입니다.
              * @details 스레드 지역 스택이라 힙에 잡으면 처음 스폰한 자리의 태그(Scene)로 스레드가 끝날 때까지 남는다 — 종료 보고
@@ -1078,6 +1086,7 @@ namespace sw
         _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
         _mapLoading.clear();
         _mapCache.clear();
+        PrefabAssetInternal::getCacheStats().recordClear();
     }
 
     PrefabCache::PrefabCache()
@@ -1158,7 +1167,10 @@ namespace sw
             if ( loadingIt != _mapLoading.end() )
                 pBlock = loadingIt->second.lock();
             if ( pBlock != nullptr )
+            {
+                PrefabAssetInternal::getCacheStats().recordHit();
                 return PrefabHandle{ std::move( pBlock ) };
+            }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
             pBlock             = sw::make_shared<PrefabLoadBlock>( this, resolvedPath, cacheKey );
@@ -1167,9 +1179,11 @@ namespace sw
             {
                 pBlock->_pAsset = cacheIt->second;
                 pBlock->markReadyWithoutLoad();
+                PrefabAssetInternal::getCacheStats().recordHit();
                 return PrefabHandle{ std::move( pBlock ) };
             }
             _mapLoading[cacheKey] = pBlock;
+            PrefabAssetInternal::getCacheStats().recordMiss();
         }
         AssetLoadBlock::startLoad( pBlock, start );
         return PrefabHandle{ std::move( pBlock ) };

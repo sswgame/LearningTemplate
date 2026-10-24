@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/IAssetCache.h"
@@ -32,11 +33,22 @@ namespace sw
         explicit WeakInternCache( const utf8* pKindName )
             : _pKindName{ pKindName }
             , _table{}
+            , _stats{ CacheStats::getOrCreate( pKindName ) } // 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 캐시도 다시 만들어진다 — 같은 칸을 이어 쓴다
         {
         }
 
         /** @brief 그 키의 값을 나눠 받습니다. 처음이면 @p create 로 짓습니다. 워커에서 불러도 됩니다(잠급니다). */
-        shared_ptr<ValueType> acquire( const KeyType& key, CreateFunction create ) { return _table.acquire( key, create ); }
+        shared_ptr<ValueType> acquire( const KeyType& key, CreateFunction create )
+        {
+            shared_ptr<ValueType> live = _table.findLive( key );
+            if ( live != nullptr )
+            {
+                _stats.recordHit();
+                return live;
+            }
+            _stats.recordMiss();
+            return _table.acquire( key, create ); // 표가 한 번 더 찾는다(둘이 같은 키를 지으면 먼저 넣은 쪽을 받는다)
+        }
 
         const utf8* getAssetKindName() const override { return _pKindName; }
         /** @brief 키가 리소스 경로가 아니라 늘 false 입니다. */
@@ -54,10 +66,15 @@ namespace sw
         /** @brief 지금 누가 쥔 값의 수입니다. */
         size_t getCachedCount() const override { return _table.countLive(); }
         /** @brief 표를 비웁니다. 쥔 쪽의 값은 그대로이고, 다음 요청은 새로 짓습니다. */
-        void clear() override { _table.clear(); }
+        void clear() override
+        {
+            _table.clear();
+            _stats.recordClear();
+        }
 
     private:
         const utf8*                                  _pKindName;
         WeakInternTable<KeyType, ValueType, KeyHash> _table;
+        CacheStatsHandle                             _stats; ///< 이 종류의 계측 칸(`CacheStats`)
     };
 } // namespace sw
