@@ -20,22 +20,18 @@ namespace sw
     {
         struct PhysicsMeshShapeCacheInternal
         {
-            /** @brief 프로세스에 하나인 표입니다(Engine.dll 안). 경로 → 기하, 그리고 읽지 못한 경로. */
+            /** @brief 프로세스에 하나인 표입니다(Engine.dll 안). 경로 → 기하, 읽지 못한 경로, 그리고 `.mesh` 를 읽는 함수. */
             struct Table
             {
                 mutex                                                         _mutex;
                 unordered_map<string, shared_ptr<const PhysicsMeshShapeData>> _mapPathToData;
                 unordered_set<string>                                         _uniqueFailedPath;
+                /** @brief 삼각형 목록을 읽는 함수입니다(`setLoadFunction`). 표와 함께 엔진 수명 범위가 소유한다 — 메시 캐시가 서면 다시 건다. */
+                atomic<PhysicsMeshShapeCache::LoadTriangleListFunction> _pfnLoad{ nullptr };
             };
 
             /** @brief 표는 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 찾을 때 만들어진다). */
             inline static ScopeOwned<Table> s_table{};
-
-            static atomic<PhysicsMeshShapeCache::LoadTriangleListFunction>& getLoadFunction()
-            {
-                static atomic<PhysicsMeshShapeCache::LoadTriangleListFunction> s_pfnLoad{ nullptr };
-                return s_pfnLoad;
-            }
 
             /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 다른 철자도 같은 칸에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
@@ -47,12 +43,16 @@ namespace sw
 {
     void PhysicsMeshShapeCache::setLoadFunction( LoadTriangleListFunction pfnLoad )
     {
-        PhysicsMeshShapeCacheInternal::getLoadFunction().store( pfnLoad, std::memory_order_release );
+        PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.getOrCreate();
+        // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다) — 읽는 함수를 맡길 표가 없다.
+        if ( pTable != nullptr )
+            pTable->_pfnLoad.store( pfnLoad, std::memory_order_release );
     }
 
     PhysicsMeshShapeCache::LoadTriangleListFunction PhysicsMeshShapeCache::getLoadFunction()
     {
-        return PhysicsMeshShapeCacheInternal::getLoadFunction().load( std::memory_order_acquire );
+        const PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
+        return pTable != nullptr ? pTable->_pfnLoad.load( std::memory_order_acquire ) : nullptr; // 표가 없으면 아무도 함수를 걸지 않았다
     }
 
     shared_ptr<const PhysicsMeshShapeData> PhysicsMeshShapeCache::acquire( string_view path )
@@ -77,7 +77,7 @@ namespace sw
         }
 
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        const LoadTriangleListFunction pfnLoad = PhysicsMeshShapeCacheInternal::getLoadFunction().load( std::memory_order_acquire );
+        const LoadTriangleListFunction pfnLoad = table._pfnLoad.load( std::memory_order_acquire );
         vector<float3>                 listPosition;
         const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( path, listPosition ) && listPosition.size() >= 3;
         if ( bLoaded == false )

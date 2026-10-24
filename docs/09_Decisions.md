@@ -478,6 +478,22 @@
   ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
   (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
   (`Engine/Common/EngineScope.h`). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
+- **`.cpp` 안에서 함수 안 `static` 지역을 참조로 돌려주는 가변 상태 접근자(`static T& getXxx() { static T s; return s; }`)는 소유 구조로 옮긴다**(2026-10-25, Engine · Core · App · GameFramework).
+  `CheckServiceAccess` 는 헤더만 훑어서 `.cpp` 의 익명 · `…Internal` 이름공간에 있던 같은 모양이 숨은 전역 가변 상태로 남아 있었다. 근본 원인은 "숨은 상태를 낳는 모양을 쓸 수 있다" 였으므로 접근자를 없애고 상태마다 소유자를 정했다.
+  소유자는 모양으로 고른다. ① **소유 객체가 있으면 그 멤버**: 시나리오 시작 백엔드는 `RHIBackendSwitcher`, enum 글 파서는 `GlobalVariableManager`(변수가 `_pEnumTextParser` 로 자기 매니저의 파서를 가리킨다).
+  ② **새 엔진 서비스**: 스크린샷 요청 우편함 `ScreenshotMailbox`(선택 행 — 전용 서버에는 없다. `RenderThread::requestScreenshot` 같은 정적 창구는 서비스를 찾아 부르고, 없으면 요청을 오류로 알리고 버린다).
+  ③ **엔진 수명 범위(`ScopeOwned<T>`)**: 정적 함수가 부르는 캐시 · 표 — 메시 캐시 상태(공유 표 · 읽는 중인 로드 · 경고한 경로를 한 `State` 로), 물리 메시 셰이프의 읽기 함수, 공유 에셋 표(`SharedAssetCache<T>` 종류마다),
+  내장 도형 · 9-슬라이스 · 스프라이트 텍스처 인스턴스 캐시, 셰이더 리플렉션 매니페스트(잠금 · 표 · 세대를 한 `ManifestState` 로), 게임 데이터 캐시(상호작용 · 원소 규칙)와 그 레지스트리, 일정 시스템 목록, "memory" 저장소 데이터.
+  엔진이 내려가면 저장소째 사라지고 엔진을 다시 세우면 빈 채로 시작한다. 범위가 닫힌 뒤의 접근은 `getOrCreate` 가 단언하고, 읽는 쪽은 nullptr 을 그 자리에서 정한 뜻(없음 · 0)으로 받는다.
+  ④ **"한 번만 알림" + 횟수**: 서버 버스 · 푸시 릴레이의 거절은 `LogOnce`(종류 `BusMessageRejected` · `PushRelayRejected`)의 `tryClaim` 한 호출이 세고(`getAttemptCount`) 한 번만 알린다 — 잠금 · 집합 · 카운터를 곳곳에 두지 않는다.
+  ⑤ **링크 때 등록 표**: `TickBatchRegistry` 는 등록 줄(`Entry`)을 등록 객체(`TickBatchRegistration<T>`)의 멤버로 두고 침입 연결 목록으로 잇는다(할당 없음, 머리는 상수 초기화). 엔진 범위가 서기 전에 올라가고 엔진을 다시 세워도 남아야 해서 `ScopeOwned` 로는 옮길 수 없다.
+  ⑥ **호출 사슬 상태는 스레드가 소유**: 프리팹 펼치기의 순환 검사 스택 셋은 한 `PrefabThreadChain`(`thread_local` 한 변수)으로 모았다.
+  ⑦ **Core 의 아래 층 · 핫 경로 칸은 상수 초기화되는 이름공간 변수 하나**(접근자 없음): 단언 대화상자 상태(`Macros.cpp`), 모듈 위치 바꾸기(`ModuleImageUtil`), 네트워크 흐름 링(`NetFlowLog`), 시나리오 사본 횟수(`AutomationScratch`), 고른 게임 이름(`GameSelection`).
+  서비스 범위가 서기 전에도 서고 범위 없이 도는 도구 · 테스트가 부르는 정적 함수의 칸이라 범위에 맡길 수 없다.
+  **옮기지 않은 곳과 이유**: `RHIRenderResource` 의 살아 있는 리소스 표(소유자가 리소스 객체 자신이고 정적 객체로 엔진보다 오래 사는 리소스가 있어 어느 범위보다 오래 살아야 한다 — 잠금과 목록을 한 객체로 모아 접근자를 둘에서 하나로 줄였다),
+  링크 때 등록 표(`AssetTypeRegistry` · `DevCommandRegistry` · `DebugHUDRegistry` · `BehaviorTaskRegistry` 와 `RegistrationList` · `ServiceFactoryList` 계열은 등록 목록 통합 작업의 몫), 크래시 경로 저장소(`CrashContext`),
+  카메라 흔들림 구독 델리게이트(`AnimationNotifyHandlerUtil::getCameraShakeRequested`), 범위가 닫힌 뒤에 빈 값을 내주는 폴백 정적(`Render2DSettings` · `ReflectionValidation`).
+  `CheckServiceAccess` 의 모양 검사는 아직 헤더만 본다 — `.cpp` 로 넓히면 에디터 · 게임 영역에 남은 같은 모양이 모두 실패해 그 영역을 옮긴 뒤에 넓힌다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의

@@ -2,7 +2,7 @@
  * @file GameDataCache.h
  * @brief 게임 데이터 테이블(상호작용 테이블, 원소 규칙 테이블)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 등록하는 목록을 정의합니다.
  * @details 표는 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓴다.
- *          캐시는 GameFramework 모듈의 정적 객체이다.
+ *          캐시는 GameFramework 모듈의 객체이고 엔진 수명 범위(`ScopeOwned`)가 소유한다 — 엔진 종료 때나 모듈이 내려갈 때 사라진다.
  *          게임 서비스가 묶이면(`game::bindGameService`, 서비스에 `AssetManager` 가 있을 때) 레지스트리에 오르고, 풀리면(`unbindGameService`) 내려간다.
  *          그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽을 수 있고(`reload`), 종료할 때의 비우기와 진단도 엔진 캐시와 같은 길을 탄다.
  *          모듈이 해제하지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 정리한다.

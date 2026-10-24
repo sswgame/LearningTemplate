@@ -39,13 +39,6 @@ namespace sw
             }
 
             static inline std::shared_mutex s_stringVarMutex;
-
-            /** @brief enum 글 값 파서 슬롯입니다(`GlobalVariableManager::setEnumTextParser`). */
-            static GlobalVariableEnumTextParser& getEnumTextParser()
-            {
-                static GlobalVariableEnumTextParser s_parser;
-                return s_parser;
-            }
         };
 
         /**
@@ -189,8 +182,9 @@ namespace sw
                 bool  bParsed = StringUtil::parseInt( text, value );
                 if ( bParsed == false )
                 {
-                    const GlobalVariableEnumTextParser& parser = GlobalVariableInternal::getEnumTextParser();
-                    bParsed                                    = parser.isBound() && parser( info._enumType, text, value );
+                    // 파서는 이 변수를 등록한 매니저의 것이다. 매니저에 등록하지 않은 변수는 숫자만 받는다.
+                    const GlobalVariableEnumTextParser* pParser = info._pEnumTextParser;
+                    bParsed                                     = pParser != nullptr && pParser->isBound() && ( *pParser )( info._enumType, text, value );
                 }
                 if ( bParsed == false )
                     return false;
@@ -512,6 +506,7 @@ namespace sw
         pInfo->_moduleName                   = string{ moduleName };
         pInfo->_typeSize                     = typeSize;
         pInfo->_bTestOnly                    = bTestOnly;
+        pInfo->_pEnumTextParser              = type == GlobalVariableType::Enum ? &_enumTextParser : nullptr;
 
         const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
 
@@ -639,7 +634,7 @@ namespace sw
      */
     void GlobalVariableManager::setEnumTextParser( const GlobalVariableEnumTextParser& parser )
     {
-        GlobalVariableInternal::getEnumTextParser() = parser;
+        _enumTextParser = parser;
     }
 
     bool GlobalVariableManager::applyPendingEnumText()

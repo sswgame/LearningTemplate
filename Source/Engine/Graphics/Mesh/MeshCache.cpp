@@ -32,16 +32,6 @@ namespace sw
                 unordered_set<string> _uniquePath;
             };
 
-            /** @brief 프로세스에 하나인 공유 테이블입니다(Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않습니다). 경로를 키로 약한 참조를 보관합니다. */
-            static WeakInternTable<string, Mesh>& getSharedTable()
-            {
-                static WeakInternTable<string, Mesh> s_table;
-                return s_table;
-            }
-
-            /** @brief 경고한 경로 집합입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 경고할 때 만들어진다). */
-            inline static ScopeOwned<WarnedPathSet> s_warnedPathSet{};
-
             /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
             struct InFlightTable
             {
@@ -49,30 +39,41 @@ namespace sw
                 unordered_map<string, weak_ptr<MeshLoadBlock>> _mapKeyToBlock;
             };
 
-            static InFlightTable& getInFlightTable()
+            /**
+             * @brief 메시 캐시의 상태 전부입니다 — 공유 테이블(경로 → 약한 참조), 읽는 중인 로드, 경고한 경로.
+             * @details 캐시 함수(`request` · `acquire` · `reloadShared`)가 정적이라 부르는 쪽이 범위를 들고 있지 않다. 그래서 엔진 수명 범위(`LifetimeScope`)가 소유하고
+             *          엔진 종료 때 저장소째 사라진다(처음 쓸 때 만들어진다). 함수 안 정적 지역으로 두면 종료 누수 보고 뒤까지 남고 엔진을 다시 세워도 비지 않는다.
+             *          Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않는다.
+             */
+            struct State
             {
-                static InFlightTable s_table;
-                return s_table;
+                WeakInternTable<string, Mesh> _sharedTable{};
+                InFlightTable                 _inFlight{};
+                WarnedPathSet                 _warned{};
+            };
+
+            inline static ScopeOwned<State> s_state{};
+
+            /** @brief 상태입니다. 엔진 수명 범위가 닫힌 뒤의 접근은 부른 쪽의 잘못이라 단언합니다(캐시를 쓸 엔진이 없다). */
+            static State& getState()
+            {
+                State* const pState = s_state.getOrCreate();
+                SW_ASSERT( pState != nullptr );
+                return *pState;
             }
 
             /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
 
             /** @brief 그 경로를 지금 보관 중인 메시입니다. 없으면 nullptr 입니다. */
-            static shared_ptr<Mesh> findLive( string_view path ) { return getSharedTable().findLive( makeKey( path ) ); }
+            static shared_ptr<Mesh> findLive( string_view path ) { return getState()._sharedTable.findLive( makeKey( path ) ); }
 
             /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
             static void warnLoadFailureOnce( string_view path )
             {
-                WarnedPathSet* const pWarned = s_warnedPathSet.getOrCreate();
-                // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 한 번만 거를 집합이 없으니 매번 알린다.
-                if ( pWarned == nullptr )
-                {
-                    SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
-                    return;
-                }
-                std::scoped_lock<mutex> lock{ pWarned->_mutex };
-                if ( pWarned->_uniquePath.insert( makeKey( path ) ).second )
+                WarnedPathSet&          warned = getState()._warned;
+                std::scoped_lock<mutex> lock{ warned._mutex };
+                if ( warned._uniquePath.insert( makeKey( path ) ).second )
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
@@ -126,13 +127,13 @@ namespace sw
             if ( bLoaded )
             {
                 loadScope.setSucceeded();
-                _pMesh = MeshCacheInternal::getSharedTable().insertOrGetLive( key, std::move( loaded ) );
+                _pMesh = MeshCacheInternal::getState()._sharedTable.insertOrGetLive( key, std::move( loaded ) );
             }
         }
 
         // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 블록이나 캐시 둘 중 하나를 반드시 본다.
         {
-            MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getInFlightTable();
+            MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
             std::scoped_lock<mutex>           lock{ inFlight._mutex };
             inFlight._mapKeyToBlock.erase( key );
         }
@@ -168,7 +169,7 @@ namespace sw
         }
 
         const string                      key      = MeshCacheInternal::makeKey( path );
-        MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getInFlightTable();
+        MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
         shared_ptr<MeshLoadBlock>         pBlock;
         {
             std::scoped_lock<mutex> lock{ inFlight._mutex };
@@ -180,7 +181,7 @@ namespace sw
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
             pBlock                = sw::make_shared<MeshLoadBlock>( path );
-            shared_ptr<Mesh> live = MeshCacheInternal::getSharedTable().findLive( key );
+            shared_ptr<Mesh> live = MeshCacheInternal::getState()._sharedTable.findLive( key );
             if ( live != nullptr )
             {
                 pBlock->_pMesh = std::move( live );
@@ -236,7 +237,7 @@ namespace sw
 
     size_t MeshCache::getCachedCount() const
     {
-        return MeshCacheInternal::getSharedTable().countLive();
+        return MeshCacheInternal::getState()._sharedTable.countLive();
     }
 
     shared_ptr<const void> MeshCache::pinAsset( string_view relativePath )
@@ -248,13 +249,14 @@ namespace sw
 
     void MeshCache::clear()
     {
-        MeshCacheInternal::getSharedTable().clear();
-        // 다시 읽으면 다시 알리도록 경고 기록을 잊는다. 종료 때의 반납은 집합을 소유한 엔진 수명 범위가 한다.
-        MeshCacheInternal::WarnedPathSet* const pWarned = MeshCacheInternal::s_warnedPathSet.find();
-        if ( pWarned != nullptr )
+        // 상태를 만들지 않고 찾는다 — 아직 아무것도 읽지 않았으면 비울 것이 없다. 종료 때의 반납은 상태를 소유한 엔진 수명 범위가 한다.
+        MeshCacheInternal::State* const pState = MeshCacheInternal::s_state.find();
+        if ( pState != nullptr )
         {
-            std::scoped_lock<mutex> lock{ pWarned->_mutex };
-            pWarned->_uniquePath = unordered_set<string>{};
+            pState->_sharedTable.clear();
+            // 다시 읽으면 다시 알리도록 경고 기록을 잊는다.
+            std::scoped_lock<mutex> lock{ pState->_warned._mutex };
+            pState->_warned._uniquePath = unordered_set<string>{};
         }
         PhysicsMeshShapeCache::clear();
     }

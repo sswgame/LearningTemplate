@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -146,11 +147,21 @@ namespace sw
                 return mesh;
             }
 
+            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
+            struct SlicedMeshCacheHolder
+            {
+                SlicedMeshCache _cache{ "SlicedSpriteMesh" };
+            };
+
+            /** @brief 9-슬라이스와 타일 메시 캐시의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). */
+            inline static ScopeOwned<SlicedMeshCacheHolder> s_slicedMeshCache{};
+
             /** @brief 9-슬라이스와 타일 메시 캐시입니다. 사라진 항목은 새 항목을 넣을 때 정리한다. 크기를 끌어 바꾸는 편집은 크기마다 항목을 남기기 때문이다. */
             static SlicedMeshCache& getSlicedMeshCache()
             {
-                static SlicedMeshCache s_cache{ "SlicedSpriteMesh" };
-                return s_cache;
+                SlicedMeshCacheHolder* const pHolder = s_slicedMeshCache.getOrCreate();
+                SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
+                return pHolder->_cache;
             }
         };
     } // namespace

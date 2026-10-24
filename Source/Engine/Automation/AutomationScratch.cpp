@@ -18,12 +18,12 @@ namespace sw
     {
         struct AutomationScratchInternal
         {
-            /** @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount`). */
-            static atomic<uint64>& getPrepareCounter()
-            {
-                static atomic<uint64> counter{ 0 };
-                return counter;
-            }
+            /**
+             * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount`).
+             * @details 읽는 쪽(에디터 감시 울타리)이 서비스 범위를 거치지 않고 정적 창구로 읽으므로 범위에 맡기지 않는다. 원자 변수 하나라 상수 초기화되고,
+             *          지연 생성하는 접근자를 두지 않는다. 프로세스가 도는 동안 오르기만 한다.
+             */
+            static inline atomic<uint64> s_prepareCount{ 0 };
 
             /** @brief 리소스 id 에 들어가는 글자인지입니다(id 경계 판정). */
             static bool isIDCharacter( utf8 character )
@@ -163,12 +163,12 @@ namespace sw
                 return false;
             }
         }
-        (void)AutomationScratchInternal::getPrepareCounter().fetch_add( 1 );
+        (void)AutomationScratchInternal::s_prepareCount.fetch_add( 1 );
         return true;
     }
 
     uint64 AutomationScratch::getPrepareCount()
     {
-        return AutomationScratchInternal::getPrepareCounter().load();
+        return AutomationScratchInternal::s_prepareCount.load();
     }
 } // namespace sw

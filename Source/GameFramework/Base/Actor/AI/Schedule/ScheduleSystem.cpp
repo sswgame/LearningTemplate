@@ -7,6 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
@@ -53,13 +54,14 @@ namespace sw
         {
             std::mutex                    _mutex;
             vector<const ScheduleSystem*> _listSystem;
-
-            static ScheduleSystemRegistry& get()
-            {
-                static ScheduleSystemRegistry registry;
-                return registry;
-            }
         };
+
+        /**
+         * @brief 목록의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(첫 일정 시스템이 만들어질 때 만들어진다).
+         * @details 일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 서고 사라진다. 그래서 자기 생성자에서 오르고 소멸자에서 빠지되,
+         *          목록이 먼저 사라졌으면(엔진 종료 뒤) 뺄 것이 없다.
+         */
+        ScopeOwned<ScheduleSystemRegistry> s_scheduleSystemRegistry;
     } // namespace
 } // namespace sw
 
@@ -109,9 +111,14 @@ namespace sw
 
     void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
     {
-        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
-        std::lock_guard<std::mutex> lock( registry._mutex );
-        outListSystem = registry._listSystem;
+        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
+        if ( pRegistry == nullptr )
+        {
+            outListSystem.clear(); // 아직 일정 시스템이 하나도 서지 않았다
+            return;
+        }
+        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        outListSystem = pRegistry->_listSystem;
     }
 
     ScheduleSystem::ScheduleSystem()
@@ -138,21 +145,25 @@ namespace sw
         , _bConditionsDirty{ SW_FALSE }
         , _bSuppressEvents{ SW_FALSE }
     {
-        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
-        std::lock_guard<std::mutex> lock( registry._mutex );
-        registry._listSystem.push_back( this );
+        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.getOrCreate();
+        if ( pRegistry == nullptr )
+            return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 올릴 목록이 없다
+        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        pRegistry->_listSystem.push_back( this );
     }
 
     ScheduleSystem::~ScheduleSystem()
     {
         shutdown();
-        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
-        std::lock_guard<std::mutex> lock( registry._mutex );
-        for ( size_t systemIndex = 0; systemIndex < registry._listSystem.size(); ++systemIndex )
+        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
+        if ( pRegistry == nullptr )
+            return; // 목록이 먼저 사라졌다(엔진 종료 · 프로세스 끝) — 뺄 것이 없다
+        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        for ( size_t systemIndex = 0; systemIndex < pRegistry->_listSystem.size(); ++systemIndex )
         {
-            if ( registry._listSystem[systemIndex] != this )
+            if ( pRegistry->_listSystem[systemIndex] != this )
                 continue;
-            registry._listSystem.erase( registry._listSystem.begin() + static_cast<ptrdiff_t>( systemIndex ) );
+            pRegistry->_listSystem.erase( pRegistry->_listSystem.begin() + static_cast<ptrdiff_t>( systemIndex ) );
             break;
         }
     }

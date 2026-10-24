@@ -205,16 +205,13 @@ SW_TEST_CASE( GlobalVariableTest, EnumTakesEnumeratorNamesFromTheCommandLine )
     manager.updateFromCommandLine( &cmd );
     SW_EXPECT_EQUAL( 0, namedValue ); // 파서가 걸리기 전에는 이름을 적용하지 않는다
 
-    sw::GlobalVariableManager::setEnumTextParser( SW_DELEGATE_LAMBDA( sw::GlobalVariableEnumTextParser, []( sw::string_view enumType, sw::string_view text, int32& outValue ) -> bool
+    // 파서는 이 매니저의 것이라 되돌릴 일이 없다(매니저가 사라지면 함께 사라진다).
+    manager.setEnumTextParser( SW_DELEGATE_LAMBDA( sw::GlobalVariableEnumTextParser, []( sw::string_view enumType, sw::string_view text, int32& outValue ) -> bool
     {
         if ( enumType != "TestMode" || text != "Second" )
             return false;
         outValue = 2;
         return true;
-    } ) );
-    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []()
-    {
-        sw::GlobalVariableManager::setEnumTextParser( sw::GlobalVariableEnumTextParser{} );
     } ) );
 
     SW_EXPECT_FALSE( manager.applyPendingEnumText() ); // Bogus

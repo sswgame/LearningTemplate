@@ -19,20 +19,24 @@ namespace sw
          *          (`~RHIRenderResource` 가 빈 표를 대입) 돌아갑니다.
          * @note 리눅스는 공유 라이브러리와 실행 파일의 정적 소멸이 한 목록에서 섞여 돌아 이 순서가 드러나고, Windows 는 DLL 마다 따로 돌아 드러나지 않습니다.
          */
-        unordered_set<RHIRenderResource*>& registryInternal()
+        struct RenderResourceRegistry
         {
-            using Registry = unordered_set<RHIRenderResource*>;
-            alignas( Registry ) static uint8 s_arrStorage[sizeof( Registry )];
-            static Registry&                 s_registry = *sw_placement_new( s_arrStorage ) Registry();
-            return s_registry;
-        }
+            /** @brief 목록을 지킵니다. 목록과 같은 까닭으로 소멸자를 부르지 않습니다. */
+            mutex                             _mutex;
+            unordered_set<RHIRenderResource*> _uniqueSetResource;
+        };
 
-        /** @brief 레지스트리 잠금입니다. 목록과 같은 까닭으로 소멸자를 부르지 않습니다. */
-        mutex& registryMutexInternal()
+        /**
+         * @brief 레지스트리 하나(잠금과 목록을 한 객체로)를 돌려줍니다.
+         * @details 서비스 범위나 엔진 수명 범위(`ScopeOwned`)의 소유로 옮기지 않는 까닭: 소유자는 리소스 객체들 자신이다. 리소스는 생성자에서 오르고 소멸자에서 빠지며, 엔진을 다시 세워도
+         *          정적 객체로 살아남는 리소스(기본 에셋)와 엔진 정리 뒤에 늦게 소멸하는 리소스가 있어, 이 표는 어느 범위보다 오래 살아야 한다(범위가 먼저 사라지면 살아남은 리소스가
+         *          장치 해제 통보를 영영 받지 못한다). 그래서 잠금과 목록을 한 객체로 모아 함수가 둘이던 숨은 상태를 하나로 줄이고, 그 객체를 소멸하지 않는 저장소에 둔다.
+         */
+        RenderResourceRegistry& getRegistryInternal()
         {
-            alignas( mutex ) static uint8 s_arrStorage[sizeof( mutex )];
-            static mutex&                 s_mutex = *sw_placement_new( s_arrStorage ) mutex();
-            return s_mutex;
+            alignas( RenderResourceRegistry ) static uint8 s_arrStorage[sizeof( RenderResourceRegistry )];
+            static RenderResourceRegistry&                 s_registry = *sw_placement_new( s_arrStorage ) RenderResourceRegistry();
+            return s_registry;
         }
 
         /**
@@ -47,9 +51,9 @@ namespace sw
         {
             vector<RHIRenderResource*> listResource;
             {
-                std::scoped_lock<mutex> lock{ registryMutexInternal() };
-                listResource.reserve( registryInternal().size() );
-                for ( RHIRenderResource* pResource : registryInternal() )
+                std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+                listResource.reserve( getRegistryInternal()._uniqueSetResource.size() );
+                for ( RHIRenderResource* pResource : getRegistryInternal()._uniqueSetResource )
                 {
                     listResource.push_back( pResource );
                 }
@@ -60,9 +64,9 @@ namespace sw
                 if ( pResource == nullptr )
                     continue;
                 {
-                    std::scoped_lock<mutex> lock{ registryMutexInternal() };
+                    std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
                     // 앞선 통보를 처리하다 사라졌다. 사본에 남은 주소는 이미 남의 것이거나 없는 것이다.
-                    if ( registryInternal().count( pResource ) == 0 )
+                    if ( getRegistryInternal()._uniqueSetResource.count( pResource ) == 0 )
                         continue;
                 }
                 notify( pResource );
@@ -72,14 +76,14 @@ namespace sw
 
     RHIRenderResource::RHIRenderResource()
     {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        registryInternal().insert( this );
+        std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+        getRegistryInternal()._uniqueSetResource.insert( this );
     }
 
     RHIRenderResource::~RHIRenderResource()
     {
-        std::scoped_lock<mutex>            lock{ registryMutexInternal() };
-        unordered_set<RHIRenderResource*>& registry = registryInternal();
+        std::scoped_lock<mutex>            lock{ getRegistryInternal()._mutex };
+        unordered_set<RHIRenderResource*>& registry = getRegistryInternal()._uniqueSetResource;
         registry.erase( this );
         // 마지막 리소스가 사라지면 버킷도 놓는다 — 기동 뒤 자란 표가 종료 누수 보고에 남지 않는다. 엔진 기본 에셋이 사는 동안은 비지 않으므로 실행 중에는 일어나지 않는다.
         if ( registry.empty() )
@@ -94,8 +98,8 @@ namespace sw
 
     uint32 RHIRenderResource::getRegisteredCount()
     {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        return static_cast<uint32>( registryInternal().size() );
+        std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+        return static_cast<uint32>( getRegistryInternal()._uniqueSetResource.size() );
     }
 
     void RHIRenderResource::releaseAllFor( IRHIDevice* pDevice )

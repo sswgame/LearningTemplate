@@ -3,10 +3,8 @@
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/unordered_set.h"
-#include "Core/Memory/LifetimeScope.h"
+#include "Core/Log/LogOnce.h"
 
 namespace sw
 {
@@ -24,28 +22,13 @@ namespace sw
                 return s_list;
             }
 
-            static atomic<uint64>& getRejectedCounter()
-            {
-                static atomic<uint64> s_rejectedCount{ 0 };
-                return s_rejectedCount;
-            }
-
-            /** @brief 이미 로그를 남긴 (열거형, 열거자, 이유) 키 집합의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<unordered_set<uint64>> s_loggedKeysOwner{};
-
-            /** @brief 거절을 세고, (열거형, 열거자, 이유)마다 한 번 로그를 남깁니다. */
+            /** @brief 거절을 세고, (열거형, 열거자, 이유)마다 한 번 로그를 남깁니다. 세는 것과 "한 번만" 은 `LogOnce` 의 한 호출이다 — 부른 횟수가 곧 거절 수(`getRejectedCount`)다. */
             static void noteRejected( const OnlinePushRelay& relay, const utf8* pReason )
             {
-                getRejectedCounter().fetch_add( 1, std::memory_order_relaxed );
-                static mutex s_mutex; // 잠금 하나는 힙을 쥐지 않는다 — 집합(힙)만 범위가 소유한다
                 const uint64 key = ( HashUtil::computeStringHash64( relay._pushEnum.data(), relay._pushEnum.size() ) * 31u ) ^
                                    HashUtil::computeStringHash64( relay._pushName.data(), relay._pushName.size() ) ^ HashUtil::computeStringHash64( pReason, StringUtil::strlen( pReason ) );
-                {
-                    std::lock_guard<mutex>       lock( s_mutex );
-                    unordered_set<uint64>* const pLoggedKeys = s_loggedKeysOwner.getOrCreate();
-                    if ( pLoggedKeys == nullptr || pLoggedKeys->insert( key ).second == false )
-                        return;
-                }
+                if ( LogOnce::tryClaim( LogOnceKind::PushRelayRejected, key ) == false )
+                    return;
                 SW_LOG_ERROR( "Dropped a relayed push %#::%# (body %#): %# - logged once per push and reason", relay._pushEnum.c_str(), relay._pushName.c_str(), relay._bodyType.c_str(), pReason );
             }
         };
@@ -119,7 +102,7 @@ namespace sw
 
     uint64 OnlinePushRelayRegistry::getRejectedCount()
     {
-        return OnlinePushRelayInternal::getRejectedCounter().load( std::memory_order_relaxed );
+        return LogOnce::getAttemptCount( LogOnceKind::PushRelayRejected );
     }
 
     void OnlinePushRelayRegistry::registerEntry( OnlinePushRelayEntry* pEntry )

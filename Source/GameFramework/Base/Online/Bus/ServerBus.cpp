@@ -2,9 +2,7 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_set.h"
-#include "Core/Memory/LifetimeScope.h"
+#include "Core/Log/LogOnce.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
@@ -15,43 +13,23 @@ namespace sw
 
     namespace
     {
-        struct ServerBusInternal
+        const utf8* describeReadResult( const ServerBusReadResult result )
         {
-            static mutex& getMutex()
+            switch ( result )
             {
-                static mutex s_mutex;
-                return s_mutex;
+                case ServerBusReadResult::Read:
+                    return "read";
+                case ServerBusReadResult::OtherTopic:
+                    return "other topic";
+                case ServerBusReadResult::VersionMismatch:
+                    return "semantic version differs";
+                case ServerBusReadResult::Unreadable:
+                    return "a known field could not be read (unknown enumerator, changed type) or the bytes are broken";
+                case ServerBusReadResult::OutOfRange:
+                    return "a value is outside its declared range";
             }
-
-            /** @brief 이미 로그를 남긴 키 집합의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<unordered_set<uint64>> s_loggedKeysOwner{};
-
-            static unordered_set<uint64>& getLoggedKeys() { return *s_loggedKeysOwner.getOrCreate(); }
-
-            static atomic<uint64>& getRejectedCounter()
-            {
-                static atomic<uint64> s_rejectedCount{ 0 };
-                return s_rejectedCount;
-            }
-
-            static const utf8* toString( const ServerBusReadResult result )
-            {
-                switch ( result )
-                {
-                    case ServerBusReadResult::Read:
-                        return "read";
-                    case ServerBusReadResult::OtherTopic:
-                        return "other topic";
-                    case ServerBusReadResult::VersionMismatch:
-                        return "semantic version differs";
-                    case ServerBusReadResult::Unreadable:
-                        return "a known field could not be read (unknown enumerator, changed type) or the bytes are broken";
-                    case ServerBusReadResult::OutOfRange:
-                        return "a value is outside its declared range";
-                }
-                return "unknown";
-            }
-        };
+            return "unknown";
+        }
     } // namespace
 } // namespace sw
 
@@ -89,15 +67,12 @@ namespace sw
 
     void ServerBusReadLog::noteRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion )
     {
-        ServerBusInternal::getRejectedCounter().fetch_add( 1, std::memory_order_relaxed );
+        // 거절을 세는 것과 "한 번만" 알리는 것은 `LogOnce` 의 한 호출이다 — 부른 횟수가 곧 거절 수(`getRejectedCount`)다.
         const uint64 key = ( static_cast<uint64>( typeFqn.getHash() ) << 32 ) ^ ( static_cast<uint64>( result ) << 24 ) ^ readVersion;
-        {
-            std::lock_guard<mutex> lock( ServerBusInternal::getMutex() );
-            if ( ServerBusInternal::getLoggedKeys().insert( key ).second == false )
-                return;
-        }
+        if ( LogOnce::tryClaim( LogOnceKind::BusMessageRejected, key ) == false )
+            return;
         SW_LOG_ERROR( "Dropped a bus message on '%#' (%#, read version %#): %# - logged once per type, result and version", topic, typeFqn.c_str(), readVersion,
-                      ServerBusInternal::toString( result ) );
+                      describeReadResult( result ) );
     }
 
     void ServerBusReadLog::noteTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount )
@@ -107,6 +82,6 @@ namespace sw
 
     uint64 ServerBusReadLog::getRejectedCount()
     {
-        return ServerBusInternal::getRejectedCounter().load( std::memory_order_relaxed );
+        return LogOnce::getAttemptCount( LogOnceKind::BusMessageRejected );
     }
 } // namespace sw

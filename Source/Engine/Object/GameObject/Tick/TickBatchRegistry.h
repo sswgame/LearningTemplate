@@ -40,10 +40,22 @@ namespace sw
         /** @brief 타입의 `StaticType` 입니다. 주소가 모듈 재적재로 바뀔 수 있어 조회할 때마다 부릅니다. */
         using StaticTypeFunction = const TypeInfo* (*)();
 
-        /** @brief 타입 하나의 일괄 틱 함수를 등록합니다. 같은 함수를 두 번 등록하면 앞의 것을 바꿉니다. 세대를 올립니다. */
-        static void registerType( StaticTypeFunction pStaticType, TickBatchFunction pFunction );
-        /** @brief 등록을 지웁니다(모듈 해제). 없으면 아무것도 하지 않습니다. 세대를 올립니다. */
-        static void unregisterType( TickBatchFunction pFunction );
+        /**
+         * @struct Entry
+         * @brief 등록 줄 하나입니다. 등록하는 객체(`TickBatchRegistration<T>`)가 멤버로 들고, 레지스트리가 `_pNext` 로 침입 연결 목록을 잇습니다(등록에 할당이 없다).
+         * @details 줄이 레지스트리에 있는 동안 살아 있고 옮겨지지 않아야 합니다 — 등록 객체가 정적 객체(모듈의 수명)이거나 테스트의 지역 객체입니다.
+         */
+        struct Entry
+        {
+            StaticTypeFunction _pStaticType; ///< 타입의 `StaticType`
+            TickBatchFunction  _pFunction;   ///< 그 타입의 일괄 틱 함수
+            Entry*             _pNext;       ///< 레지스트리의 연결 고리(레지스트리만 쓴다)
+        };
+
+        /** @brief 줄 하나를 등록합니다. 세대를 올립니다. 같은 함수의 줄이 둘 오를 수 있으며(정적 등록자와 테스트의 지역 객체), 각자 자기 줄만 지웁니다. */
+        static void registerType( Entry& entry );
+        /** @brief 자기 줄의 등록을 지웁니다(모듈 해제). 오르지 않은 줄이면 아무것도 하지 않습니다. 세대를 올립니다. */
+        static void unregisterType( Entry& entry );
         /** @brief 정확히 @p pType 인 컴포넌트의 일괄 틱 함수입니다. 등록이 없으면 nullptr 입니다. */
         static TickBatchFunction findFunction( const TypeInfo* pType );
         /** @brief 등록 · 해제마다 오르는 세대입니다. `TickRegistry` 가 바뀐 것을 보고 항목을 다시 짓습니다. */
@@ -89,11 +101,18 @@ namespace sw
     class TickBatchRegistration
     {
     public:
-        TickBatchRegistration() { TickBatchRegistry::registerType( &TComponent::StaticType, &TickBatchOf<TComponent>::tickRange ); }
-        ~TickBatchRegistration() { TickBatchRegistry::unregisterType( &TickBatchOf<TComponent>::tickRange ); }
+        TickBatchRegistration()
+            : _entry{ &TComponent::StaticType, &TickBatchOf<TComponent>::tickRange, nullptr }
+        {
+            TickBatchRegistry::registerType( _entry );
+        }
+        ~TickBatchRegistration() { TickBatchRegistry::unregisterType( _entry ); }
 
         TickBatchRegistration( const TickBatchRegistration& )            = delete;
         TickBatchRegistration& operator=( const TickBatchRegistration& ) = delete;
+
+    private:
+        TickBatchRegistry::Entry _entry; ///< 레지스트리의 연결 목록에 오르는 줄 — 이 객체가 사는 동안 오른다
     };
 } // namespace sw
 
@@ -101,7 +120,7 @@ namespace sw
  * @brief 컴포넌트 타입을 일괄 틱 경로에 올립니다. 그 타입의 `.cpp` 에서 `onTick` 정의 뒤, `namespace sw` 안에 `SW_REGISTER_TICK_BATCH( 타입 );` 로 한 번 씁니다.
  * @details 정적 등록 객체가 모듈 적재 때 등록하고 해제 때 지웁니다. 테스트처럼 범위 안에서만 올리려면 `TickBatchRegistration<타입>` 지역 객체를 씁니다.
  */
-#define SW_REGISTER_TICK_BATCH( Type )                                           \
-    static const ::sw::TickBatchRegistration<Type> s_tickBatchRegistration##Type \
-    {                                                                            \
+#define SW_REGISTER_TICK_BATCH( Type )                                     \
+    static ::sw::TickBatchRegistration<Type> s_tickBatchRegistration##Type \
+    {                                                                      \
     }

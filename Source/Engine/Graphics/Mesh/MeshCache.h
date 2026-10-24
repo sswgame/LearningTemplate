@@ -46,7 +46,7 @@ namespace sw
     /**
      * @class MeshCache
      * @brief 메시 에셋을 경로로 공유하고, 에셋 캐시 레지스트리(`AssetManager`)에 등록되어 핫 리로드, 종료, 진단이 다른 캐시와 같은 경로를 탑니다.
-     * @details 캐시는 프로세스에 하나이고(Engine.dll 안) 약한 참조입니다. `MeshUtil::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
+     * @details 캐시는 프로세스에 하나이고(Engine.dll 안에 있고 엔진 수명 범위가 소유합니다) 약한 참조입니다. `MeshUtil::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 종료될 때 이 캐시가 보관하는 GPU 자원이 남지 않습니다. 같은 경로는 같은 `Mesh` 이므로
      *          배치 키(메시 포인터)가 갈라지지 않습니다. 씬 로드 워커에서 불러도 됩니다(내부에서 잠급니다).
      *

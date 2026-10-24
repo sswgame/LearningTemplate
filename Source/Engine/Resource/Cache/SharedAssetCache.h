@@ -2,7 +2,7 @@
  * @file SharedAssetCache.h
  * @brief 경로로 읽는 에셋 종류 하나를 나눠 주고 에셋 캐시 레지스트리에 보이는 캐시 템플릿입니다(스켈레톤 · 클립 · 본 LOD · 리그 · 스프라이트 클립 ·
  *        파쇄 · 소켓 · 알림 표 · 페어드 애니메이션 · 물리 에셋).
- * @details 표(`SharedAssetTable`)는 종류마다 프로세스에 하나이고 Engine.dll 안의 함수 정적 객체입니다. 그래서 멤버 정의는 이 헤더에 두지 않고
+ * @details 표(`SharedAssetTable`)는 종류마다 프로세스에 하나이고 Engine.dll 안에 있으며 엔진 수명 범위(`ScopeOwned`)가 소유합니다. 그래서 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
  *          `extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<에셋>;` 만 둡니다 — 모듈(게임 · 키트 · 에디터)이 표를 자기 이미지에 따로 만들 수
  *          없습니다. 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
@@ -91,7 +91,7 @@ namespace sw
     private:
         friend class SharedAssetLoadBlock<AssetType>;
 
-        /** @brief 프로세스에 하나인 표입니다(Engine.dll 안에 있어 모듈 핫 리로드에도 사라지지 않습니다). */
+        /** @brief 프로세스에 하나인 표입니다(Engine.dll 안에 있어 모듈 핫 리로드에도 사라지지 않고, 엔진 수명 범위가 소유해 엔진 종료 때 사라집니다). */
         static SharedAssetTable<AssetType>& getTable();
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         static SharedAssetHandle<AssetType> requestWith( string_view path, AssetLoadStart start );

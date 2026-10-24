@@ -113,6 +113,12 @@ namespace sw
          */
         bool _bTestOnly{ false };
 
+        /**
+         * @brief enum 변수의 글 값(열거자 이름)을 읽는 파서입니다. 이 변수를 등록한 `GlobalVariableManager` 의 것을 가리킵니다(매니저가 소유하고, 변수보다 오래 삽니다).
+         * @details enum 이 아니거나 매니저에 등록하지 않은 변수는 nullptr 이고, 그때 `setValueFromString` 은 숫자만 받습니다.
+         */
+        const GlobalVariableEnumTextParser* _pEnumTextParser{ nullptr };
+
         GlobalVariableChangedDelegate _onValueChanged;
 
         /** @brief Boolean 이면 *_pData 를, 아니면 false 를 반환합니다. */
@@ -183,9 +189,9 @@ namespace sw
         /**
          * @brief enum 변수의 문자열 값(열거자 이름)을 정수로 바꾸는 파서를 등록합니다. 빈 델리게이트를 주면 해제합니다.
          * @details Core 는 리플렉션을 모르므로 enum 테이블을 가진 쪽(Engine 의 `engine::bindGlobalVariableEnumNames`)이 등록한다. 등록하기 전에는 enum
-         *          변수가 숫자만 받는다. 프로세스에 하나이고 기동과 종료 단계에서만 바꾼다.
+         *          변수가 숫자만 받는다. 이 매니저의 변수에만 닿고(변수가 `_pEnumTextParser` 로 가리킨다), 기동과 종료 단계에서만 바꾼다.
          */
-        static void setEnumTextParser( const GlobalVariableEnumTextParser& parser );
+        void setEnumTextParser( const GlobalVariableEnumTextParser& parser );
 
         /**
          * @brief 명령줄에서 숫자가 아닌 글로 받아 둔 enum 변수 값을 지금 적용합니다. 파서를 건 뒤에 부릅니다.
@@ -241,6 +247,8 @@ namespace sw
         class CommandLineManager* _pCmdLineManager{ nullptr };
         /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */
         unordered_map<string, string> _mapPendingEnumText;
+        /** @brief enum 변수의 글 값 파서입니다(`setEnumTextParser`). 등록한 enum 변수가 이 주소를 가리키므로 매니저는 옮겨지지 않습니다(복사 금지). */
+        GlobalVariableEnumTextParser _enumTextParser;
     };
 } // namespace sw
 

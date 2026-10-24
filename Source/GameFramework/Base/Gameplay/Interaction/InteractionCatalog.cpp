@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -108,11 +109,21 @@ namespace sw
             }
         };
 
-        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. GameFramework 모듈의 정적 변수이고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
+        /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
+        struct InteractionCatalogCacheHolder
+        {
+            GameDataCache<InteractionCatalog> _cache{ "InteractionCatalog" };
+        };
+
+        /** @brief 공유 카탈로그 캐시의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때(또는 이 모듈이 내려갈 때) 사라지고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
+        ScopeOwned<InteractionCatalogCacheHolder> s_sharedCatalogCache;
+
+        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. */
         GameDataCache<InteractionCatalog>& getSharedCatalogCache()
         {
-            static GameDataCache<InteractionCatalog> s_cache{ "InteractionCatalog" };
-            return s_cache;
+            InteractionCatalogCacheHolder* const pHolder = s_sharedCatalogCache.getOrCreate();
+            SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 카탈로그를 읽을 엔진이 없다
+            return pHolder->_cache;
         }
     } // namespace
 } // namespace sw

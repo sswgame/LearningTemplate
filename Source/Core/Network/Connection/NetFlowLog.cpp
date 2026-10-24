@@ -27,11 +27,11 @@ namespace sw
             atomic<uint32> _arrKindPhase[kCapacity]{}; ///< 종류(아래 8 비트) · 받음(9 번째 비트)
         };
 
-        NetFlowRing& getRing()
-        {
-            static NetFlowRing s_ring;
-            return s_ring;
-        }
+        /**
+         * @brief 프로세스에 하나인 흐름 링입니다. 연결(`NetConnection`)이 보낼 때마다 잠금 없이 기록하는 핫 경로라 서비스 범위를 찾지 않는다(Core 의 아래 층이기도 하다).
+         * @details 원자 변수뿐이라 상수 초기화되므로 지연 생성하는 접근자를 두지 않고 이 변수 하나가 소유한다. 기록하는 쪽이 없으면(`_recorderCount` 0) 쓰지 않는다.
+         */
+        NetFlowRing s_ring;
 
         constexpr uint32 kReceiveBit = 0x100u;
     } // namespace
@@ -52,17 +52,17 @@ namespace sw
 
     void NetFlowLog::addRecorder()
     {
-        getRing()._recorderCount.fetch_add( 1, std::memory_order_relaxed );
+        s_ring._recorderCount.fetch_add( 1, std::memory_order_relaxed );
     }
 
     void NetFlowLog::removeRecorder()
     {
-        getRing()._recorderCount.fetch_sub( 1, std::memory_order_relaxed );
+        s_ring._recorderCount.fetch_sub( 1, std::memory_order_relaxed );
     }
 
     void NetFlowLog::record( uint64 id, uint8 kind, bool bReceive )
     {
-        NetFlowRing& ring = getRing();
+        NetFlowRing& ring = s_ring;
         if ( ring._recorderCount.load( std::memory_order_relaxed ) == 0 )
             return;
         const uint64 writeIndex = ring._writeCount.fetch_add( 1, std::memory_order_relaxed );
@@ -78,7 +78,7 @@ namespace sw
     void NetFlowLog::collect( uint64 beginNanos, uint64 endNanos, vector<NetFlowEvent>& outListFlow )
     {
         outListFlow.clear();
-        const NetFlowRing& ring    = getRing();
+        const NetFlowRing& ring    = s_ring;
         const uint64       written = ring._writeCount.load( std::memory_order_acquire );
         const uint64       first   = written > NetFlowRing::kCapacity ? written - NetFlowRing::kCapacity : 0;
         for ( uint64 flowIndex = first; flowIndex < written; ++flowIndex )
