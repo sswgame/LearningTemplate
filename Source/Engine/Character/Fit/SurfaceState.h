@@ -90,6 +90,8 @@ namespace sw
         uint16 getResolution() const { return _resolution; }
         /** @brief 셀 값들을 반환합니다(행 우선, v 가 행). 텍스처로 올릴 때 읽습니다. */
         const vector<float32>& getTexels() const { return _listTexel; }
+        /** @brief 셀 값이 바뀔 때마다 오르는 번호입니다(스탬프가 셀을 올렸거나 감쇠가 셀을 내렸을 때). 텍스처로 다시 올릴지 이 값으로 가른다. */
+        uint32 getRevision() const { return _revision; }
         /**
          * @brief @p geometry 에서 다 찢긴 삼각형(세 정점 UV 와 무게중심 UV 의 마스크 값이 모두 @p threshold 이상)을 표시합니다(비우고 채움).
          * @return 표시한 수입니다. 형상에 UV 가 없으면 0 입니다.
@@ -98,6 +100,7 @@ namespace sw
 
     private:
         vector<float32> _listTexel;
+        uint32          _revision;
         uint16          _resolution;
     };
 } // namespace sw
@@ -130,6 +133,14 @@ namespace sw
 
         /** @brief 시간을 흘립니다. 채널마다 초당 감쇠만큼 영역 값과 마스크를 내립니다(감쇠가 0 인 채널, 즉 찢김은 그대로 둡니다). */
         void update( float32 deltaSeconds );
+        /** @brief 영역 값이나 마스크 셀이 바뀔 때마다 오르는 번호입니다. 머티리얼에 다시 올릴지 이 값으로 가른다(바뀐 것이 없는 프레임은 올리지 않는다). */
+        uint64 getRevision() const { return _revision; }
+        /** @brief 채널 정의입니다(순서는 `getRegionParameters` 의 값 순서와 같다). */
+        const vector<SurfaceChannelDef>& getChannels() const { return _listChannel; }
+        /** @brief 영역 수입니다. */
+        uint32 getRegionCount() const { return _regionCount; }
+        /** @brief 부품 수입니다. */
+        uint32 getPartCount() const { return _partCount; }
 
     private:
         vector<SurfaceChannelDef> _listChannel;
@@ -137,5 +148,6 @@ namespace sw
         vector<SurfaceMask>       _listMask;        /**< 부품 × 채널 마스크다(행은 부품). 마스크가 없는 채널은 해상도가 0 이다. */
         uint32                    _regionCount{ 0 };
         uint32                    _partCount{ 0 };
+        uint64                    _revision{ 0 };
     };
 } // namespace sw

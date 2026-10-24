@@ -49,6 +49,10 @@ SW_TEST_CASE( GamePackDataTest, CharacterEditorDataNeedsEveryField )
     SW_EXPECT_STREQ( "a.skeleton.xml", data._skeletonPath.c_str() );
     SW_EXPECT_STREQ( "a.refpose.xml", data._refPosePath.c_str() );
     SW_EXPECT_STREQ( "Adventurer", data._previewPresetID.c_str() );
+    SW_EXPECT_TRUE( data._rigPath.empty() ); // 리그 칸은 선택이다 — 없으면 미리볼 리그가 없다
+    SW_ASSERT_TRUE( data.loadFromXMLText(
+        R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.xml" items="items.xml" appearance="appearance" clipFolder="clips" previewPreset="Adventurer" rig="a.rig.xml"/>)", "withRig" ) );
+    SW_EXPECT_STREQ( "a.rig.xml", data._rigPath.c_str() );
     SW_EXPECT_FALSE(
         data.loadFromXMLText( R"(<CharacterEditor sockets="a.sockets.xml" skeleton="a.skeleton.xml" appearance="appearance" clipFolder="clips" previewPreset="Adventurer"/>)", "noItems" ) );
     SW_EXPECT_TRUE( data._socketPath.empty() );

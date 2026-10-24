@@ -31,12 +31,10 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [RuntimeQualityAdjust](docs/plans/RuntimeQualityAdjust.md) — 부하 검증의 남은 것과 자동 품질 조정 | 구현대기 | 0/4 | 없음 | quality | C-29 |
 | - | [SourceScanGates](docs/plans/SourceScanGates.md) — 공유 훑기로 못 옮긴 소스 게이트와 픽서 | 구현대기 | 0/4 | 없음 | quality | C-48 |
 | - | [VfxGpuLights](docs/plans/VfxGpuLights.md) — GPU 로 시뮬레이션하는 방출기의 파티클 라이트 (2026-10-24) | 구현대기 | 0/5 | ClusteredLighting | graphics | 없음 |
-| - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 구현중 | 3/4 | 없음 | gameplay | D4-6 |
-| - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
+| - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 5/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 2/3 | 없음 | engine | G-5 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
-| - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현중 | 5/6 | 없음 | gameplay | D4-8 |
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/3 | 없음 | quality | C-41, E-8 |
 | - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 4/5 | 없음 | ui | G-10 |
@@ -51,6 +49,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [WildWestHorseMount](docs/plans/WildWestHorseMount.md) — WildWest 승마의 말 모델 | 구현중 | 2/3 | 없음 | gameplay | D4-15 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 측정대기 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 측정대기 | 4/4 | 없음 | gameplay | D4-16 |
+| - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 측정대기 | 4/4 | 없음 | gameplay | D4-6 |
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 측정대기 | 7/7 | 없음 | engine | 없음 |
 | - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 측정대기 | 7/7 | 없음 | engine | 없음 |
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
@@ -60,6 +59,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 측정대기 | 5/5 | 없음 | editor | D3-1.2 |
 | - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 측정대기 | 6/6 | 없음 | editor | D3-13 |
 | - | [DiskPathVsResourceId](docs/plans/DiskPathVsResourceId.md) — 디스크 경로와 리소스 id 의 입구 나누기 (2026-10-21) | 측정대기 | 3/3 | 없음 | engine | C-70 |
+| - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 측정대기 | 6/6 | 없음 | gameplay | D4-8 |
 | - | [EditorFeatureGaps](docs/plans/EditorFeatureGaps.md) — 에디터 기능 후보의 남은 것 | 측정대기 | 10/10 | 없음 | editor | D3-1, D3-3, D3-4 |
 | - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 측정대기 | 6/6 | 없음 | editor | D3-7 |
 | - | [EngineCleanups](docs/plans/EngineCleanups.md) — 엔진 정리 묶음 (2026-10-24) | 측정대기 | 7/7 | 없음 | engine | C-49, C-63, C-64, C-47, C-34 |

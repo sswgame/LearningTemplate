@@ -46,6 +46,7 @@ namespace sw::editor
             row._partB       = findPartName( result, penetration._partB );
             row._vertexCount = penetration._vertexCount;
             row._maxDepth    = penetration._maxDepth;
+            row._listPoint   = penetration._listPoint;
             summary._listPenetration.push_back( row );
             summary._penetrationVertexCount += penetration._vertexCount;
             if ( penetration._maxDepth > summary._maxPenetrationDepth )

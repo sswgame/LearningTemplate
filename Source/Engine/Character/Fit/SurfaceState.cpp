@@ -109,12 +109,14 @@ namespace sw
 {
     SurfaceMask::SurfaceMask()
         : _listTexel{}
+        , _revision{ 0 }
         , _resolution{ 0 }
     {
     }
 
     void SurfaceMask::initialize( uint16 resolution )
     {
+        ++_revision;
         _resolution = resolution;
         _listTexel.assign( static_cast<size_t>( resolution ) * resolution, 0.0f );
     }
@@ -151,6 +153,8 @@ namespace sw
                 ++changedCount;
             }
         }
+        if ( changedCount > 0 )
+            ++_revision;
         return changedCount;
     }
 
@@ -168,10 +172,14 @@ namespace sw
     {
         if ( amount <= 0.0f )
             return;
+        bool bChanged = false;
         for ( float32& texel : _listTexel )
         {
-            texel = MathUtil::max( 0.0f, texel - amount );
+            bChanged = bChanged || texel > 0.0f;
+            texel    = MathUtil::max( 0.0f, texel - amount );
         }
+        if ( bChanged )
+            ++_revision;
     }
 } // namespace sw
 
@@ -179,6 +187,7 @@ namespace sw
 {
     void CharacterSurfaceState::initialize( const SurfaceChannelTable& channels, uint32 regionCount, uint32 partCount )
     {
+        ++_revision;
         _listChannel = channels.getChannels();
         _regionCount = regionCount;
         _partCount   = partCount;
@@ -200,7 +209,11 @@ namespace sw
         {
             if ( _listChannel[channelIndex]._name != channel || region >= _regionCount )
                 continue;
-            _listRegionValue[region * _listChannel.size() + channelIndex] = MathUtil::clamp( value, 0.0f, _listChannel[channelIndex]._maxValue );
+            float32&      slot    = _listRegionValue[region * _listChannel.size() + channelIndex];
+            const float32 clamped = MathUtil::clamp( value, 0.0f, _listChannel[channelIndex]._maxValue );
+            if ( slot != clamped )
+                ++_revision;
+            slot = clamped;
             return true;
         }
         return false;
@@ -241,7 +254,8 @@ namespace sw
             if ( _listChannel[channelIndex]._name != channel )
                 continue;
             const float32 clamped = MathUtil::clamp( value, 0.0f, _listChannel[channelIndex]._maxValue );
-            (void)_listMask[part * _listChannel.size() + channelIndex].stampCircle( uvCenter, uvRadius, clamped );
+            if ( _listMask[part * _listChannel.size() + channelIndex].stampCircle( uvCenter, uvRadius, clamped ) > 0 )
+                ++_revision;
             if ( region != CharacterGeometryConstant::kNoGroup )
                 (void)addRegionValue( region, channel, clamped );
             return true;
@@ -274,11 +288,17 @@ namespace sw
             for ( uint32 region = 0; region < _regionCount; ++region )
             {
                 float32& value = _listRegionValue[region * channelCount + channelIndex];
-                value          = MathUtil::max( 0.0f, value - amount );
+                if ( value > 0.0f )
+                    ++_revision;
+                value = MathUtil::max( 0.0f, value - amount );
             }
             for ( uint32 part = 0; part < _partCount; ++part )
             {
-                _listMask[part * channelCount + channelIndex].decay( amount );
+                SurfaceMask& mask           = _listMask[part * channelCount + channelIndex];
+                const uint32 revisionBefore = mask.getRevision();
+                mask.decay( amount );
+                if ( mask.getRevision() != revisionBefore )
+                    ++_revision;
             }
         }
     }

@@ -398,7 +398,7 @@ SW_TEST_CASE( MeshAssetTest, SkinStreamRoundTripsAndRejectsOutOfRangeJoints )
     SW_ASSERT_TRUE( read.hasSkin() );
     SW_EXPECT_EQUAL( 3u, read._skinBoneCount );
     SW_EXPECT_EQUAL( uint16( 1 ), read._listSkinVertex[1]._arrJoint[0] );
-    SW_EXPECT_EQUAL( uint16( 2 ), read._listSkinVertex[4]._arrJoint[1] );
+    SW_EXPECT_EQUAL( static_cast<uint16>( 2 ), read._listSkinVertex[4]._arrJoint[1] );
     SW_EXPECT_NEAR_EQUAL( 0.25f, read._listSkinVertex[4]._arrWeight[1], 0.0f );
 
     const sw::string path = test::makeTempPath( "skinned.mesh" );
@@ -599,6 +599,61 @@ SW_TEST_CASE( MeshAssetTest, LODLevelsRoundTripAndFollowLODZero )
         sw::MeshSection{ sw::hashed_string( "Body" ), 0, 9, sw::MeshPersonVisibility::Both }
     } ) );
     SW_EXPECT_FALSE( rebuilt->setLODs( TestMeshLODInternal::makeLODData()._listLOD ) );
+}
+
+/**
+ * @brief [MeshAssetTest] 스킨드 메시의 LOD 는 단계마다 스킨 가중치를 가지고(`LSKN` 덩어리) `.mesh` 를 오가며, 스킨 사본(`createSkinInstance`)도 LOD 를 이어받는다.
+ *        단계의 스킨 수가 정점 수와 다르거나 본 번호가 본 수를 넘으면 거절한다(계획 AnimationLodAndCrowd C4)
+ */
+SW_TEST_CASE( MeshAssetTest, SkinnedLODLevelsRoundTripAndSkinInstanceKeepsThem )
+{
+    constexpr uint32  kBoneCount = 3;
+    sw::MeshAssetData data       = TestMeshLODInternal::makeLODData();
+    data._skinBoneCount          = kBoneCount;
+    data._listSkinVertex.assign( data._listVertex.size(), sw::MeshSkinVertex{} );
+    for ( sw::MeshLODLevel& level : data._listLOD )
+    {
+        level._listSkinVertex.assign( level._listVertex.size(), sw::MeshSkinVertex{} );
+        level._listSkinVertex.back()._arrJoint[0] = 2; // 마지막 정점이 본 2 를 쓴다 — 읽고 쓸 때 단계마다 따로 보존되어야 한다
+    }
+
+    const sw::string path = test::makeTempPath( "skinnedlod.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, data ) );
+    const sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( ::test::makeTempResourceID( path ) );
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    SW_EXPECT_TRUE( mesh->hasSkin() );
+    SW_EXPECT_EQUAL( 3u, mesh->getLODCount() );
+    SW_EXPECT_EQUAL( size_t( 9 ), mesh->getLODSkinVertices().size() ); // 6 + 3
+    SW_EXPECT_EQUAL( static_cast<uint16>( 2 ), mesh->getLODSkinVertices()[5]._arrJoint[0] );
+    SW_EXPECT_EQUAL( static_cast<uint16>( 2 ), mesh->getLODSkinVertices()[8]._arrJoint[0] );
+    SW_EXPECT_EQUAL( static_cast<uint16>( 0 ), mesh->getLODSkinVertices()[0]._arrJoint[0] );
+
+    const sw::shared_ptr<sw::Mesh> instance = sw::Mesh::createSkinInstance( *mesh );
+    SW_ASSERT_NOT_NULL( instance.get() );
+    SW_EXPECT_EQUAL( 3u, instance->getLODCount() );
+    SW_EXPECT_EQUAL( mesh->getDrawVertexCount(), instance->getDrawVertexCount() );
+    SW_EXPECT_EQUAL( mesh->getLODSkinVertices().size(), instance->getLODSkinVertices().size() );
+
+    // 스킨을 다시 정하면 옛 스킨으로 만든 단계는 맞지 않아 떨어진다.
+    const sw::shared_ptr<sw::Mesh> rebuilt = sw::Mesh::create();
+    rebuilt->setVertices( data._listVertex );
+    rebuilt->setSkin( data._listSkinVertex, kBoneCount );
+    SW_ASSERT_TRUE( rebuilt->setLODs( data._listLOD ) );
+    SW_EXPECT_EQUAL( 3u, rebuilt->getLODCount() );
+    rebuilt->setSkin( data._listSkinVertex, kBoneCount );
+    SW_EXPECT_EQUAL( 1u, rebuilt->getLODCount() );
+
+    test::ScopedDefensiveTestLog expected( "skinned LOD levels with a mismatched skin are rejected" );
+    sw::vector<sw::MeshLODLevel> listShort = data._listLOD;
+    listShort[0]._listSkinVertex.pop_back();
+    SW_EXPECT_FALSE( rebuilt->setLODs( listShort ) );
+    sw::vector<sw::MeshLODLevel> listBadJoint       = data._listLOD;
+    listBadJoint[1]._listSkinVertex[0]._arrJoint[0] = static_cast<uint16>( kBoneCount );
+    SW_EXPECT_FALSE( rebuilt->setLODs( listBadJoint ) );
+    sw::vector<sw::MeshLODLevel> listNoSkin = data._listLOD;
+    listNoSkin[0]._listSkinVertex.clear();
+    SW_EXPECT_FALSE( rebuilt->setLODs( listNoSkin ) );
+    SW_EXPECT_EQUAL( 1u, rebuilt->getLODCount() );
 }
 
 /**

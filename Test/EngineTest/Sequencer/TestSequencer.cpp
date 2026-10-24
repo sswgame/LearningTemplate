@@ -656,6 +656,57 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
 }
 
 /**
+ * @brief [SequencerTest] 외형 항목은 시작 프레임을 지날 때 이벤트로 알리고(엔진은 외형을 모른다), 대상과 프리셋 이름이 비면 읽기 오류다(계획 CharacterAppearanceIntegration E5)
+ */
+SW_TEST_CASE( SequencerTest, AppearanceItemFiresOnCrossAndNeedsTargetAndPreset )
+{
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    sw::SequenceTrackItem cue{};
+    cue._name         = "Armor";
+    cue._targetObject = "Hero";
+    cue._preset       = "HeroArmored";
+    cue._kind         = sw::SequenceItemKind::Appearance;
+    cue._start        = 12;
+    cue._end          = 12;
+    asset._listItem.push_back( cue );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pHero = manager.createGameObject( sw::hashed_string{ "Hero" } );
+    SW_ASSERT_NOT_NULL( pHero );
+    manager.mergePendingAdds();
+
+    // 시작 프레임 전에는 알리지 않고, 지나는 프레임에 한 번 알린다. 대상은 건드리지 않는다(활성 상태 그대로).
+    sw::vector<const sw::SequenceTrackItem*> listCrossed;
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 10, 5, &listCrossed );
+    SW_EXPECT_TRUE( listCrossed.empty() );
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 14, 10, &listCrossed );
+    SW_ASSERT_EQUAL( size_t( 1 ), listCrossed.size() );
+    SW_EXPECT_TRUE( listCrossed[0]->_kind == sw::SequenceItemKind::Appearance );
+    SW_EXPECT_EQUAL( "HeroArmored", listCrossed[0]->_preset );
+    SW_EXPECT_TRUE( pHero->isActive() );
+    SW_EXPECT_STREQ( "Appearance", sw::engine::getSubsystem<sw::TypeRegistry>().enumToString( sw::SequenceItemKind::Appearance ) );
+
+    // 파일을 왕복해도 종류와 프리셋이 남는다.
+    sw::SequenceAsset restored;
+    SW_ASSERT_TRUE( restored.parseXML( asset.toXML() ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), restored._listItem.size() );
+    SW_EXPECT_TRUE( restored._listItem[0]._kind == sw::SequenceItemKind::Appearance );
+    SW_EXPECT_EQUAL( "HeroArmored", restored._listItem[0]._preset );
+
+    // 프리셋이나 대상이 비면 읽을 수 없다 — 재생할 때 조용히 아무것도 안 하는 항목을 만들지 않는다.
+    SW_TEST_DEFENSIVE_SCOPE( "an appearance item without a preset or target is a load error" );
+    sw::SequenceAsset noPreset = asset;
+    noPreset._listItem[0]._preset.clear();
+    sw::SequenceAsset reread;
+    SW_EXPECT_FALSE( reread.parseXML( noPreset.toXML() ) );
+    sw::SequenceAsset noTarget = asset;
+    noTarget._listItem[0]._targetObject.clear();
+    SW_EXPECT_FALSE( reread.parseXML( noTarget.toXML() ) );
+}
+
+/**
  * @brief [SequencerTest] 상태를 읽어 들인 플레이어 컴포넌트는 플레이 전에도 그 시퀀스를 든다
  * @details 상태 읽기는 프로퍼티를 직접 쓰고 `onPostLoad` 만 부른다(onBeginPlay 는 월드가 플레이 중일 때만). 시퀀스를 onBeginPlay 에서만 열면
  *          에디터에서 읽은 컴포넌트의 Play(CallInEditor)가 빈 플레이어를 돌린다.

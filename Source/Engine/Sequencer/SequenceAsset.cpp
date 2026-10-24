@@ -161,6 +161,11 @@ namespace sw
                 SW_LOG_ERROR( "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
                 bValid = false;
             }
+            else if ( pKindInfo->_bNeedsPreset && ( item._preset.empty() || item._targetObject.empty() ) )
+            {
+                SW_LOG_ERROR( "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
+                bValid = false;
+            }
         }
         for ( const SequenceKeyTrack& track : _listTrack )
         {

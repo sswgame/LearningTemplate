@@ -662,7 +662,7 @@ namespace sw::editor
         }
     }
 
-    bool ModelImportUtil::makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, vector<MeshLODLevel>& outListLevel )
+    bool ModelImportUtil::makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, uint32 skinBoneCount, vector<MeshLODLevel>& outListLevel )
     {
         outListLevel.clear();
         if ( rule._listLOD.empty() )
@@ -691,10 +691,11 @@ namespace sw::editor
             simplified._listIndex.resize( indexCount );
             optimizeTriangleRange( simplified, 0, indexCount / 3 );
             MeshAssetData expanded{};
-            expandTrianglesInOrder( simplified, 0, expanded );
+            expandTrianglesInOrder( simplified, skinBoneCount, expanded );
             MeshLODLevel level{};
-            level._listVertex = std::move( expanded._listVertex );
-            level._screenSize = lodRule._screenSize;
+            level._listVertex     = std::move( expanded._listVertex );
+            level._listSkinVertex = std::move( expanded._listSkinVertex );
+            level._screenSize     = lodRule._screenSize;
             SW_LOG_INFO( "glTF '%#': LOD %# has %# of %# triangles (error %#)", sourcePath, lodIndex + 1, indexCount / 3, sourceIndexCount / 3, resultError );
             outListLevel.push_back( std::move( level ) );
         }

@@ -330,6 +330,8 @@ namespace sw
                         continue;
                     ++inoutPenetration._vertexCount;
                     inoutPenetration._maxDepth = MathUtil::max( inoutPenetration._maxDepth, -signedDistance );
+                    if ( inoutPenetration._listPoint.size() < FitPenetration::kMaxPointCount )
+                        inoutPenetration._listPoint.push_back( position );
                 }
             }
         };

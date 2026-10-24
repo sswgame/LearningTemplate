@@ -89,6 +89,8 @@ namespace sw
     {
         vector<RHIVertex> _listVertex;
         float32           _screenSize{ 0.0f };
+        /// @brief 스킨드 메시의 단계면 정점마다의 본 영향(`_listVertex` 와 길이가 같다). 스킨 없는 메시의 단계는 비어 있다. `.mesh` 의 `LSKN` 덩어리에 싣는다.
+        vector<MeshSkinVertex> _listSkinVertex{};
     };
 } // namespace sw
 
@@ -263,8 +265,10 @@ namespace sw
         const vector<MeshSection>& getSections() const { return _listSection; }
         /**
          * @brief 낮은 상세 단계(LOD 1 이상)를 설정합니다. 정점은 탄젠트가 든 값이어야 합니다(`.mesh` 를 읽은 값 — 쓰기가 단계마다 `computeTangents` 로 구했다).
-         * @details 단계마다 정점 수가 0 이 아닌 3 의 배수이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 스킨 · 모프 타깃 · 구간 · 정점 애니메이션이 있는 메시는
-         *          LOD 를 받지 않는다(본 LOD 와 묶는 일은 계획 AnimationLodAndCrowd L4). 어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
+         * @details 단계마다 정점 수가 0 이 아닌 3 의 배수이고, 임계값은 (0, 1) 안에서 단계가 낮아질수록 작아야 한다. 모프 타깃 · 구간 · 정점 애니메이션이 있는 메시는
+         *          LOD 를 받지 않는다. 스킨드 메시는 받는다 — 단계마다 스킨 정점(`MeshLODLevel::_listSkinVertex`)이 정점과 같은 길이로 오고 뼈 번호가 `getSkinBoneCount` 안이어야 하며,
+         *          스킨 없는 메시의 단계는 스킨이 없어야 한다(그래서 **스킨을 먼저 설정**한다 — `setSkin` 은 LOD 를 뗀다). GPU 스키닝은 LOD 0 뒤의 낮은 단계 정점도 변형한다.
+         *          어기면 오류를 남기고 LOD 를 비운 채 false 입니다. 빈 목록은 LOD 를 뗀다.
          *          CPU 정점(`getVertices`)은 LOD 0 그대로다 — 물리 · 내비 · 피킹은 LOD 를 보지 않는다. 내용 번호가 바뀐다(정점 풀이 다시 올린다).
          */
         [[nodiscard]] bool setLODs( vector<MeshLODLevel> listLevel );
@@ -274,6 +278,8 @@ namespace sw
         uint32 getLODCount() const { return 1u + static_cast<uint32>( _listLOD.size() ); }
         /** @brief LOD 1 이상의 정점을 단계 순서로 이은 것입니다. GPU 업로드가 LOD 0 뒤에 붙입니다. */
         const vector<RHIVertex>& getLODVertices() const { return _listLODVertex; }
+        /** @brief LOD 1 이상 정점의 본 영향을 `getLODVertices` 와 같은 순서로 이은 것입니다. 스킨드 메시만 가지며 아니면 비어 있습니다. GPU 스키닝이 LOD 0 의 스킨 뒤에 붙입니다. */
+        const vector<MeshSkinVertex>& getLODSkinVertices() const { return _listLODSkinVertex; }
         /** @brief 그릴 정점 흐름의 길이입니다(LOD 0 + 낮은 단계). 정점 풀 · 정점 버퍼가 이만큼 올린다. */
         uint32 getDrawVertexCount() const { return static_cast<uint32>( _listVertex.size() + _listLODVertex.size() ); }
         /** @brief 화면 크기 @p screenSize 에 맞는 LOD 단계입니다 — 임계값이 화면 크기보다 큰 단계의 수(0 이면 LOD 0)입니다. */
@@ -348,8 +354,9 @@ namespace sw
         /// @brief setSections 를 참고하세요.
         vector<MeshSection> _listSection;
         /// @brief setLODs 를 참고하세요. LOD 1 이상의 범위(그릴 정점 흐름 기준)와 그 정점입니다.
-        vector<MeshLOD>   _listLOD;
-        vector<RHIVertex> _listLODVertex;
+        vector<MeshLOD>        _listLOD;
+        vector<RHIVertex>      _listLODVertex;
+        vector<MeshSkinVertex> _listLODSkinVertex;
         /// @brief `createSkinInstance` 사본이 공유하는 원본의 스킨 데이터 번호입니다. 0이면 자기 내용 번호를 씁니다(정점이나 스킨을 바꾸면 0으로 돌아갑니다).
         uint64 _sharedSkinDataID{ 0 };
         /// @brief setVertexAnimation 을 참고하세요.

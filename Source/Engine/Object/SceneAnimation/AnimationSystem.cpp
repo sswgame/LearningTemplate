@@ -10,6 +10,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/AnimationPlayer.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -258,8 +259,14 @@ namespace sw
                     screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( _pendingLODView, center, radius ) );
                 bVisible = screenSize > 0.0f;
             }
-            AnimationLODState& state = _listScratchLODState[clientIndex];
-            state                    = AnimationLODUtil::makeState( _lodSettings, screenSize, bVisible, pClient->findBoneLOD() );
+            AnimationLODState&     state    = _listScratchLODState[clientIndex];
+            const SkeletonBoneLOD* pBoneLOD = pClient->findBoneLOD();
+            state                           = AnimationLODUtil::makeState( _lodSettings, screenSize, bVisible, pBoneLOD );
+            // 메시가 LOD 를 가지면 본 LOD 는 그 메시 단계를 따른다(화면 크기 임계값의 정본이 메시 단계 하나 — 본은 안 보이는 단계에서 먼저 빠지지 않는다).
+            const int32 meshLODIndex   = pClient->findMeshLODIndex();
+            const bool  bHasBoneLevels = pBoneLOD != nullptr && pBoneLOD->getLevelCount() > 0;
+            if ( bHasBoneLevels && meshLODIndex >= 0 )
+                state._boneLODLevel = static_cast<uint8>( MathUtil::min( static_cast<uint32>( meshLODIndex ), pBoneLOD->getLevelCount() - 1 ) );
             // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );

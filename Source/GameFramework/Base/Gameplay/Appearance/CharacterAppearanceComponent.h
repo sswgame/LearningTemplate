@@ -16,6 +16,7 @@
 
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
@@ -26,6 +27,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceState.h"
+#include "GameFramework/Base/Gameplay/Appearance/CharacterSurfaceBinding.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -39,6 +41,7 @@ namespace sw
     class FitPartData;
     class FitTables;
     class GameObjectManager;
+    class MeshSectionComponent;
     class SkeletalMeshComponent;
 
     /**
@@ -103,6 +106,9 @@ namespace sw
      *          - **체형 · 피팅**: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 베이크한 메시 사본으로 그린다
      *            (`AppearanceMeshAssembly` — 덮인 삼각형 · 숨김 영역을 빼고 델타와 모프를 레스트에 베이크한다). 원본 메시 · 데이터는 비동기로 읽고, 다 읽힌 틱 뒤에 유닛의
      *            스킨 원본을 바꾼다(`SkeletalMeshComponent::setSkinSourceMesh`). 그동안 피팅하는 부품은 숨긴다. 원본 메시 · 표 · 피팅 데이터가 다시 읽히면 다시 조립한다.
+     *          - **병합**(`_bMergeParts`): 켜면 몸을 따르는 스킨드 부품(자기 리그 · 다른 스켈레톤이 아닌 것)은 오브젝트를 따로 두지 않는다. 몸과 그 부품들의 메시(베이크한 사본이거나 원본)를
+     *            구간이 있는 메시 하나로 합쳐(`CharacterMeshUtil::mergeMeshes`) 몸 유닛이 한 번에 스키닝하고, 부품마다 몸 오브젝트의 구간 컴포넌트(`MeshSectionComponent`)가 자기 머티리얼로 그린다.
+     *            병합한 메시가 준비되기 전에는 몸 원본만 보인다. 합친 메시는 낮은 상세 단계(LOD)를 갖지 못한다(구간과 LOD 는 함께 쓰지 못한다 — LOD 0 만 가진다).
      *          - **염색**: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
      *          - **장비**: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
      *            장비 · 데이터 · 입력의 버전이 그대로이면 다시 해석하지 않는다. 지난 해석에 붙어 있다가 떨어져 나간 소켓 부품은 지우지 않고 물리로 뗀다
@@ -135,6 +141,10 @@ namespace sw
 
         /** @brief 프리셋과 시드를 바꾸고 다시 조립합니다. 슬롯 덮어쓰기는 그대로 둡니다. */
         void setPreset( const hashed_string& presetID, uint32 seed );
+        /** @brief 지금 입히려는 프리셋 id 입니다(`setPreset` 이나 프로퍼티가 정한 값 — 조립이 끝났는지와 상관없다). */
+        const string& getPresetID() const { return _presetID; }
+        /** @brief 프리셋의 무작위 선택 시드입니다. */
+        int32 getSeed() const { return _seed; }
         /** @brief 슬롯의 아이템을 덮어쓰고 다시 조립합니다. 빈 아이템이면 슬롯을 비웁니다. 같은 값이면 아무것도 하지 않습니다. */
         void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
         /**
@@ -179,8 +189,18 @@ namespace sw
         const ResolvedAppearance& getResolvedAppearance() const { return _state.getResolved(); }
         /** @brief 소켓 테이블입니다. */
         const AppearanceSocketRig& getSocketRig() const { return _rig; }
+        /**
+         * @brief 몸 표면 상태입니다(젖음 · 흙 · 피 · 찢김). 게임플레이가 영역 값을 정하고 맞은 위치에 스탬프를 찍는다(`CharacterSurfaceState`) — 틱이 감쇠시키고 바뀐 프레임에 머티리얼로 올린다.
+         *        `_surfaceChannelsPath` 가 비어 있으면 채널이 없는 빈 상태입니다(`hasSurfaceState` 가 false).
+         */
+        CharacterSurfaceState&       getSurfaceState() { return _surface; }
+        const CharacterSurfaceState& getSurfaceState() const { return _surface; }
+        /** @brief 표면 상태가 채널을 가지고 있으면 true 입니다. */
+        bool hasSurfaceState() const { return _surface.getChannels().empty() == false; }
         /** @brief 조립한 횟수입니다. 진단과 테스트에 씁니다. */
         uint32 getAssembleCount() const { return _assembleCount; }
+        /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품 하나씩). 합치지 않았으면 0 입니다. 진단과 탐침에 씁니다. */
+        uint32 getMergedSectionCount() const;
         /**
          * @brief 지난 조립이 푼 피팅 결과입니다(캐릭터 편집 창의 피팅 확인 표시). 미리보기 입히기(`previewSelection`)만 남깁니다 — 게임의 조립은 같은 차림이 구운 메시를 나누므로
          *        (`AppearanceBakedMeshCache`) 풀지 않을 때가 있어 결과를 두지 않는다. 풀어 본 적이 없으면 nullptr 입니다.
@@ -197,14 +217,16 @@ namespace sw
         /** @brief 스폰한 부품 하나입니다. */
         struct SpawnedPart
         {
-            GameObjectHandle _object{};
-            hashed_string    _owner{};
-            hashed_string    _partName{};
-            hashed_string    _asset{};
-            uint32           _partIndex{ 0 };
-            uint32           _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
-            uint8            _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
-            uint8            _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
+            GameObjectHandle                       _object{};
+            hashed_string                          _owner{};
+            hashed_string                          _partName{};
+            hashed_string                          _asset{};
+            uint32                                 _partIndex{ 0 };
+            uint32                                 _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
+            uint8                                  _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
+            uint8                                  _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
+            uint8                                  _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_section` 은 병합한 메시를 건 뒤에 생긴다
+            TComponentHandle<MeshSectionComponent> _section{};                                  ///< 병합한 부품의 구간 컴포넌트(몸 오브젝트에 붙는다)
         };
 
         /** @brief 슬롯 덮어쓰기 하나입니다. */
@@ -287,14 +309,43 @@ namespace sw
         bool isMeshAssemblyStale() const;
         /** @brief 부품 번호의 스킨드 유닛입니다(몸이면 이 오브젝트의 유닛). 없으면 nullptr 입니다. */
         SkeletalMeshComponent* findSkinnedUnit( GameObjectManager& manager, uint32 partIndex ) const;
+        /** @brief 병합이 켜져 있고 이 부품이 몸 메시에 합칠 수 있으면(몸이 아닌 스킨드 부품, 자기 리그 없음, 몸과 같은 스켈레톤) true 입니다. */
+        bool isMergedPart( const ResolvedPart& part, int32 partIndex ) const;
+        /** @brief 합친 부품이 하나라도 있으면 true 입니다. */
+        bool hasMergedParts() const;
+        /**
+         * @brief 몸과 합친 부품의 메시(@p listSource 원본 · @p listBaked 베이크한 사본, 로드 순서)를 하나로 합쳐 몸 유닛에 걸고 부품마다 구간 컴포넌트를 둡니다.
+         * @details 같은 차림이 합친 메시를 나누도록 @p bakeKey 로 `AppearanceBakedMeshCache` 에 둔다. 합치지 못하면 오류를 남기고 false 입니다(몸 원본만 그려진다).
+         */
+        [[nodiscard]] bool applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const vector<shared_ptr<Mesh>>& listSource,
+                                              const vector<shared_ptr<Mesh>>& listBaked, uint64 bakeKey );
+        /** @brief 합친 부품의 구간 컴포넌트를 몸 오브젝트에서 뗍니다. */
+        void retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const;
+        /** @brief 부품 하나가 그리는 메시 컴포넌트마다 @p func 를 부릅니다 — 합친 부품은 구간 컴포넌트 하나, 아니면 부품 오브젝트의 메시 전부입니다. */
+        template <typename Func>
+        void forEachPartMesh( GameObjectManager& manager, const SpawnedPart& spawned, Func&& func ) const;
         /** @brief 피팅 표 · 피팅 데이터 캐시의 다시 읽은 횟수 합입니다(오르기만 한다). */
         static uint32 computeFitReloadStamp();
+        /**
+         * @brief 표면 상태를 채널 파일(`_surfaceChannelsPath`)과 영역 수로 맞춥니다. 파일이 비면 상태를 끄고, 같은 파일 · 같은 영역 수면 값을 지키며, 바뀌면 처음부터 다시 만듭니다.
+         *        읽지 못하면 오류를 남기고 상태를 끕니다(말없이 다른 채널을 쓰지 않는다).
+         */
+        void rebuildSurfaceState( uint32 regionCount );
+        /** @brief 표면 상태를 부품의 머티리얼에 올립니다(채널 스칼라 · 영역 벡터 · 마스크 텍스처). 상태 번호가 그대로면 @p bForce 가 아닌 한 올리지 않습니다. */
+        void applySurface( GameObjectManager& manager, bool bForce );
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
         string _presetID;
         PROPERTY( Category = "Appearance", DisplayName = "Seed", Tooltip = "Seed for the preset's random choices (lists, ranges, colour lists)" )
         int32 _seed;
+        PROPERTY( Category = "Appearance", DisplayName = "Surface Channels",
+                  Tooltip = "Surface channel table (*.surfacechannels.xml): wetness, dirt, blood, tears... Empty keeps the body surface state off" )
+        string _surfaceChannelsPath;
+        PROPERTY( Category = "Appearance", DisplayName = "Merge Parts",
+                  Tooltip = "Merge the body and the skinned parts that follow it into one sectioned mesh: one skinning unit and one pose, each part still drawn with its own material" )
+        uint8                  _bMergeParts      : 1;
+        [[maybe_unused]] uint8 _reservedProperty : 7;
 
         CharacterAppearanceSocketTask           _socketTask;
         CharacterAppearanceProportionTask       _proportionTask;
@@ -330,6 +381,13 @@ namespace sw
         uint8                                   _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(틱이 기다린다)
         uint8                                   _bMeshAssembled       : 1; ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
         uint8                                   _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
-        [[maybe_unused]] uint8                  _reserved             : 3;
+        uint8                                   _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다
+        [[maybe_unused]] uint8                  _reserved             : 2;
+        hashed_string                           _mergedBodySection;      ///< 합친 메시에서 몸이 그리는 구간 이름(몸 부품 이름)
+        CharacterSurfaceState                   _surface;                ///< 표면 상태(`_surfaceChannelsPath` 가 있을 때만 채널을 가진다)
+        CharacterSurfaceBinding                 _surfaceBinding;         ///< 표면 상태를 부품 머티리얼에 올리고 마스크 텍스처를 쥔다
+        string                                  _loadedSurfaceChannels;  ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
+        uint64                                  _surfaceAppliedRevision; ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
+        uint32                                  _surfaceRegionCount;     ///< 상태가 가진 영역 수(피팅 표의 영역 수)
     };
 } // namespace sw

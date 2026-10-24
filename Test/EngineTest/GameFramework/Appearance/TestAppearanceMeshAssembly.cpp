@@ -7,6 +7,7 @@
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Fit/MeshMerger.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 #include "EngineTest/CharacterTestUtil.h"
@@ -22,6 +23,20 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 장갑 · 소매는 "Cloth" 아틀라스로, 몸은 자기 그룹("Skin")으로 보낸다. 아틀라스 안에서는 UV 를 반으로 줄여 오른쪽 위로 옮긴다. */
+    class MergeTestHooks final : public IMeshMergeHooks
+    {
+    public:
+        hashed_string getMaterialGroup( const MeshMergeSource& source ) const override
+        {
+            return source._name == hashed_string( "Body" ) ? hashed_string( "Skin" ) : hashed_string( "Cloth" );
+        }
+        float2 remapUv( const MeshMergeSource& source, const float2& uv ) const override
+        {
+            return source._name == hashed_string( "Body" ) ? uv : float2{ 0.5f + uv._x * 0.5f, uv._y * 0.5f };
+        }
+    };
+
     struct AppearanceMeshAssemblyTestInternal
     {
         static constexpr const utf8* kTablesXML = "<FitTables>"
@@ -235,6 +250,115 @@ SW_TEST_CASE( CharacterMeshUtilTest, BodySurfaceTransfersSkinAndMorphsToAGarment
     // 몸에서 너무 먼 장비 — 묶이지 않은 수를 알린다.
     shared_ptr<Mesh> far = Internal::makeMesh( sleeve, 0 );
     SW_EXPECT_EQUAL( far->getVertexCount(), CharacterMeshUtil::transferBodySurface( *body, *far, 0.001f ) );
+}
+
+/**
+ * @brief [CharacterMeshUtilTest] 병합 — 부품이 구간 하나씩 들어가 입력 순서로 이어지고, 스킨 · 모프 타깃(이름으로 합치고 없는 부품은 0)이 정점 번호를 따라 옮겨 간다.
+ *        스킨 유무 · 본 수가 섞이거나 이미 구간이 있는 부품은 거절하고, 정점이 없는 부품은 빈 구간으로 남는다(계획 CharacterAppearanceIntegration E2)
+ */
+SW_TEST_CASE( CharacterMeshUtilTest, MergeKeepsPartsAsSectionsWithSkinAndMorphs )
+{
+    using Internal                    = AppearanceMeshAssemblyTestInternal;
+    const CharacterBoneArray bones    = test::CharacterTestUtil::makeArmBones();
+    const shared_ptr<Mesh>   body     = Internal::makeMesh( Internal::makeArm( 0.04f, 0.0f, 1.0f, 4 ), bones.getBoneCount() );
+    const shared_ptr<Mesh>   sleeve   = Internal::makeMesh( Internal::makeArm( 0.06f, 0.0f, 0.5f, 2 ), bones.getBoneCount() );
+    const shared_ptr<Mesh>   emptyCap = Internal::makeMesh( AppearanceGeometry{}, bones.getBoneCount() );
+    vector<MeshMorphTarget>  listTarget( 1 );
+    listTarget[0]._name = hashed_string( "Heavy" );
+    MeshMorphDelta heavyDelta{};
+    heavyDelta._vertexIndex = 1;
+    heavyDelta._position    = float3{ 0.25f, 0.0f, 0.0f };
+    listTarget[0]._listDelta.push_back( heavyDelta );
+    sleeve->setMorphTargets( std::move( listTarget ) );
+
+    const MeshMergePart arrPart[] = {
+        MeshMergePart{  hashed_string( "Body" ),   hashed_string( "m/body" ),     body.get()},
+        MeshMergePart{hashed_string( "Sleeve" ), hashed_string( "m/sleeve" ),   sleeve.get()},
+        MeshMergePart{   hashed_string( "Cap" ),    hashed_string( "m/cap" ), emptyCap.get()},
+    };
+    MeshMergeResult result;
+    string          error;
+    SW_ASSERT_TRUE_MSG( CharacterMeshUtil::mergeMeshes( arrPart, nullptr, result, &error ), error.c_str() );
+    SW_ASSERT_NOT_NULL( result._mesh.get() );
+    const Mesh& merged = *result._mesh;
+    SW_EXPECT_EQUAL( body->getVertexCount() + sleeve->getVertexCount(), merged.getVertexCount() );
+    SW_EXPECT_TRUE( merged.hasSkin() );
+    SW_EXPECT_EQUAL( bones.getBoneCount(), merged.getSkinBoneCount() );
+    SW_ASSERT_EQUAL( size_t( 3 ), merged.getSections().size() );
+    SW_EXPECT_EQUAL( 0u, merged.getSections()[0]._firstVertex );
+    SW_EXPECT_EQUAL( body->getVertexCount(), merged.getSections()[0]._vertexCount );
+    SW_EXPECT_EQUAL( body->getVertexCount(), merged.getSections()[1]._firstVertex );
+    SW_EXPECT_EQUAL( sleeve->getVertexCount(), merged.getSections()[1]._vertexCount );
+    SW_EXPECT_EQUAL( 0u, merged.getSections()[2]._vertexCount ); // 정점이 없는 부품은 이름만 남은 빈 구간이다
+    SW_ASSERT_EQUAL( size_t( 3 ), result._listPartSection.size() );
+    SW_EXPECT_TRUE( result._listPartSection[1] == hashed_string( "Sleeve" ) );
+    // 모프는 소매 정점 번호에 몸의 정점 수만큼 더해 옮겨 간다.
+    const int32 heavyIndex = merged.findMorphTargetIndex( "Heavy" );
+    SW_ASSERT_TRUE( heavyIndex >= 0 );
+    SW_ASSERT_EQUAL( size_t( 1 ), merged.getMorphTargets()[static_cast<size_t>( heavyIndex )]._listDelta.size() );
+    SW_EXPECT_EQUAL( body->getVertexCount() + 1u, merged.getMorphTargets()[static_cast<size_t>( heavyIndex )]._listDelta[0]._vertexIndex );
+    // 스킨은 부품 순서 그대로다.
+    SW_EXPECT_EQUAL( body->getSkinVertices()[3]._arrJoint[0], merged.getSkinVertices()[3]._arrJoint[0] );
+    SW_EXPECT_EQUAL( sleeve->getSkinVertices()[2]._arrJoint[0], merged.getSkinVertices()[body->getVertexCount() + 2]._arrJoint[0] );
+
+    // 정점이 모두 없으면 그릴 것이 없다. 본 수가 다르거나 스킨이 섞인 부품 · 이미 구간이 있는 부품은 거절한다.
+    SW_TEST_DEFENSIVE_SCOPE( "merge refuses empty, mixed-skin and already sectioned parts" );
+    const MeshMergePart arrOnlyEmpty[] = {
+        MeshMergePart{ hashed_string( "Cap" ), hashed_string{}, emptyCap.get() },
+    };
+    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( arrOnlyEmpty, nullptr, result, &error ) );
+    const shared_ptr<Mesh> otherSkeleton   = Internal::makeMesh( Internal::makeArm( 0.04f, 0.0f, 1.0f, 2 ), bones.getBoneCount() + 1 );
+    const MeshMergePart    arrMixedBones[] = {
+        MeshMergePart{ hashed_string( "Body" ), hashed_string{},          body.get()},
+        MeshMergePart{hashed_string( "Other" ), hashed_string{}, otherSkeleton.get()},
+    };
+    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( arrMixedBones, nullptr, result, &error ) );
+    SW_EXPECT_TRUE( error.find( "bone count" ) != string::npos );
+    const shared_ptr<Mesh> quad           = Internal::makeQuad(); // 구간이 이미 있다 · 스킨이 없다
+    const MeshMergePart    arrSectioned[] = {
+        MeshMergePart{ hashed_string( "Quad" ), hashed_string{}, quad.get() },
+    };
+    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( arrSectioned, nullptr, result, &error ) );
+    SW_EXPECT_TRUE( error.find( "sections" ) != string::npos );
+    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( vector_reference<const MeshMergePart>{}, nullptr, result, &error ) );
+}
+
+/**
+ * @brief [CharacterMeshUtilTest] 병합 훅 — 같은 그룹을 고른 부품은 한 구간으로 이어 붙고, 훅이 옮긴 UV 가 정점에 들어간다(아틀라스 굽기의 자리)
+ */
+SW_TEST_CASE( CharacterMeshUtilTest, MergeGroupsPartsAndRemapsUvThroughHooks )
+{
+    using Internal                 = AppearanceMeshAssemblyTestInternal;
+    const CharacterBoneArray bones = test::CharacterTestUtil::makeArmBones();
+    const shared_ptr<Mesh>   body  = Internal::makeMesh( Internal::makeArm( 0.04f, 0.0f, 1.0f, 2 ), bones.getBoneCount() );
+    const shared_ptr<Mesh>   cuff  = Internal::makeMesh( Internal::makeArm( 0.05f, 0.0f, 0.2f, 1 ), bones.getBoneCount() );
+    const shared_ptr<Mesh>   glove = Internal::makeMesh( Internal::makeArm( 0.05f, 0.8f, 1.0f, 1 ), bones.getBoneCount() );
+
+    const MergeTestHooks hooks;
+    const MeshMergePart  arrPart[] = {
+        MeshMergePart{ hashed_string( "Cuff" ), hashed_string{},  cuff.get()},
+        MeshMergePart{ hashed_string( "Body" ), hashed_string{},  body.get()},
+        MeshMergePart{hashed_string( "Glove" ), hashed_string{}, glove.get()},
+    };
+    MeshMergeResult result;
+    string          error;
+    SW_ASSERT_TRUE_MSG( CharacterMeshUtil::mergeMeshes( arrPart, &hooks, result, &error ), error.c_str() );
+    const Mesh& merged = *result._mesh;
+    // 구간은 처음 나온 그룹 순서(Cloth, Skin)이고, Cloth 안은 입력 순서(소매, 장갑)다.
+    SW_ASSERT_EQUAL( size_t( 2 ), merged.getSections().size() );
+    SW_EXPECT_TRUE( merged.getSections()[0]._name == hashed_string( "Cloth" ) );
+    SW_EXPECT_EQUAL( cuff->getVertexCount() + glove->getVertexCount(), merged.getSections()[0]._vertexCount );
+    SW_EXPECT_TRUE( merged.getSections()[1]._name == hashed_string( "Skin" ) );
+    SW_EXPECT_EQUAL( body->getVertexCount(), merged.getSections()[1]._vertexCount );
+    SW_EXPECT_TRUE( result._listPartSection[0] == hashed_string( "Cloth" ) );
+    SW_EXPECT_TRUE( result._listPartSection[1] == hashed_string( "Skin" ) );
+    SW_EXPECT_TRUE( result._listPartSection[2] == hashed_string( "Cloth" ) );
+    // 소매의 UV 는 오른쪽 위 사분면(u ≥ 0.5, v ≤ 0.5)에 들어가고, 몸의 UV 는 그대로다.
+    const float2 cuffUv{ cuff->getVertices()[0]._arrUv[0], cuff->getVertices()[0]._arrUv[1] };
+    SW_EXPECT_NEAR_EQUAL( 0.5f + cuffUv._x * 0.5f, merged.getVertices()[0]._arrUv[0], 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( cuffUv._y * 0.5f, merged.getVertices()[0]._arrUv[1], 1.0e-6f );
+    const uint32 bodyFirst = merged.getSections()[1]._firstVertex;
+    SW_EXPECT_NEAR_EQUAL( body->getVertices()[0]._arrUv[0], merged.getVertices()[bodyFirst]._arrUv[0], 1.0e-6f );
 }
 
 /**

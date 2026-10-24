@@ -283,9 +283,9 @@ namespace sw
         if ( _sectionName.empty() )
         {
             // LOD 는 구간 없는 메시에만 있다(`Mesh::setLODs`). 메시가 제자리에서 다시 읽혀 단계가 줄었으면 가장 낮은 단계를 그린다.
-            // GPU 변형 메시(모프 풀)는 LOD 0 정점만 변형하므로 원본을 그린다 — 낮은 단계 범위는 변형 결과에 없다.
+            // 스킨드 메시의 GPU 스키닝(모프 풀의 스킨 구간)은 LOD 0 뒤의 낮은 단계 정점까지 변형하므로(`GPUMeshMorphPool::rebuildSkinSources`) 같은 범위로 그린다.
             const size_t lodCount       = _mesh != nullptr ? _mesh->getLODs().size() : 0u;
-            const bool   bDrawsLowerLOD = _lodIndex > 0 && lodCount > 0 && _mesh->isGPUMorphEnabled() == false;
+            const bool   bDrawsLowerLOD = _lodIndex > 0 && lodCount > 0;
             if ( bDrawsLowerLOD )
             {
                 const MeshLOD& lod = _mesh->getLODs()[MathUtil::min( static_cast<size_t>( _lodIndex ), lodCount ) - 1];
