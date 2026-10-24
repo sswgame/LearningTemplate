@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 E 가 main 에 들어갔다(미푸시). 다음 세션은 GPU 확인(Shipping · hostgpu · 네 백엔드)을 돌리고 초록이면 push 한다.
+> 결론: 통합 E · F 가 main 에 들어갔다(미푸시). 다음 세션은 GPU 확인(Shipping · hostgpu · 네 백엔드)을 돌리고 초록이면 push 한다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,14 +16,14 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 0000. 2026-10-24 통합 E — main 에 들어감, GPU 확인 대기
+## 0000. 2026-10-25 통합 E · F — main 에 들어감, GPU 확인 대기
 
 ### 상태
 
-- **main 에 들어감(미푸시)**: 통합 워크트리 `integE` 가 `wt/integD`(앞 통합이 모은 lambda* · kitshelpers · servicelist · verifyleak · scnpixel · singletonget · thumbheadless · plansweep · leakwin · ownership · cand* · measurebatch · judgeapply · planproject · plannet · leftovers · docsweep · planengine · plangameplay · planui · plananim · plangfxq)와 `wt/plangfx2` 를 합쳤고, main 을 fast-forward 했다. **push 는 하지 않았다** — 로컬 main 이 `origin/main` 보다 앞서 있다.
-- **검증(Debug)**: `full-build` 경고 0 · 오류 0(증거 남음), `lint-suite` 46/46, `ctest -L nogpu|lint|race` 통과(AppTest_Race 는 GPU 로 돈다 — PassCB 가 768 을 넘은 것을 여기서 잡아 고쳤다). **GPU 확인 대기** — Shipping 빌드 · `-L hostgpu` · 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity)은 돌리지 않았다.
-- **통합이 고친 것**(커밋 메시지가 정본): 리플렉션 생성 둘, 컴파일 · 링크(프로파일 매크로가 엔진 전용 헤더 없이 쓰이게 `FrameProfiler::registerEngineScopeSite`, `make_unique<T>.createWith` 로 friend private 생성자, `sw::basic_string::substr` 형식), 셰이더 패치 다섯 적용 · 네 백엔드 쿠킹(옛 퍼뮤테이션 바이너리 376 개 삭제), 린트 다섯 갈래, nogpu 실패(자식 프로세스 띄우기의 상속 핸들 배열 수명, 뗀 뒤 새 누름까지 먹던 UI 소비, 고도 0 하늘의 땅 판정, 테스트 기대값).
-- **병합하지 않은 것**: `shaderfmt3`(다른 작업자가 쓰는 중). 이 통합이 `probeupdate.hlsl` · `sky.hlsl` · `binding.hlsli` 를 바꿨으므로 그 브랜치는 main 을 받아 다시 맞춘다. `plangfx2` 워크트리의 커밋하지 않은 변경 39 개(지형 지오모프 · 레이어 · 배치 규칙, 패치 `05-EnvironmentRemainders-E3E4-Terrain.patch`)는 병합하지 않았다 — 작업자가 커밋해야 한다. `lambdaser` · `singletonget` 의 커밋하지 않은 변경은 공유 stash(`stash@{0}` 망가진 정규식, `stash@{1}` 중복 줄)에 있다.
+- **main 에 들어감(미푸시)**: 통합 E(`wt/integD` 의 34 브랜치 + `wt/plangfx2`)와 통합 F(`wt/plangfx2` 의 지형 레이어 여덟 · 지오모프 d9e050414, `wt/shaderfmt3` 의 셰이더 필드 `_camelCase` 6c1416635)를 합쳐 main 을 fast-forward 했다. **push 는 하지 않았다.**
+- **검증(Debug)**: `full-build` 경고 0 · 오류 0(증거 남음), `lint-suite` 46/46, `ctest -L nogpu|lint` 통과(CheckTextureFolders 는 동시 부하에서만 시한을 넘고 혼자 통과). 요청받은 GPU 장치 테스트 — `RenderPassGPUTest` · `MaterialTest` · `ShaderBindingValidatorTest` · `QaGoldenImages` · `AppTest_Race` 통과. 셰이더는 새로 빌드한 **Release App** 으로 구웠고 다시 구워도 커밋과 같다(`--verify-shaders` 통과). **GPU 확인 대기** — Shipping · `-L hostgpu` 전체 · 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity) · 새 시나리오(fog · sky · realtimegi · vfxgpulights · modulepass · 지형 여덟 레이어)는 돌리지 않았다.
+- **통합이 고친 것**(커밋 메시지가 정본): E — 리플렉션 · 컴파일 · 링크(프로파일 매크로 창구, `make_unique<T>.createWith`, `basic_string::substr`), 셰이더 패치 01~04 적용 · 쿠킹, 린트, 자식 프로세스 상속 핸들 수명, 뗀 뒤 새 누름 소비, 고도 0 하늘, PassCB 768 넘침(슬롯 1024 · 넘치면 오류). F — shaderfmt3 규칙을 새 셰이더 · 지형(패치 05 포함) · 머티리얼 · C++ 이름에 입힘, `App -help`(표에서 만든 인자 목록을 찍고 끝냄 + AppHelpTest), Vulkan 구조 버퍼의 TRANSFER_SRC(차폐 컬링 되읽기), avatarsample_d 임포트 스탬프.
+- **병합하지 않은 것**: `plangfx2` 워크트리에 남은 커밋하지 않은 변경(셰이더 원본 — 이미 패치로 들어간 것의 사본)은 버려도 된다. `lambdaser` · `singletonget` 의 커밋하지 않은 변경은 공유 stash(`stash@{0}` 망가진 정규식, `stash@{1}` 중복 줄)에 있다.
 
 ### 다음 세션이 처음에 할 일
 
