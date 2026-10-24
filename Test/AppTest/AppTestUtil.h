@@ -44,6 +44,7 @@ namespace test
          *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다).
          */
         static sw::string makeAppCommand( sw::string_view arguments );
+        // 이 구성에 없는 기능이 필요한 인자(`-EnableEditor` · `-game=`)는 케이스가 `SW_TEST_REQUIRES_FEATURE` 로 먼저 선언해야 한다 — 선언이 빠졌으면 실패를 기록하고 빈 명령을 돌려준다.
 
         /**
          * @brief App 을 `arguments` 로 한 판 돌리고 줄마다 @p onLine( process, line ) 을 부릅니다. 못 찾거나 못 띄우면 `_bLaunched` 가 false 다.
@@ -80,6 +81,7 @@ namespace test
 
         /** @brief 이 빌드가 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)의 이름입니다(이름순). 없으면 비어 있다(Shipping · `SW_GAMES` 비움). */
         static sw::vector<sw::string> collectBuiltGamePacks();
+        // `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한 케이스만 부른다 — Shipping 에서 부르면 실패를 기록한다.
 
         /** @brief 시나리오가 아닌 App 한 판(스모크 · 쿠킹)의 프로세스 시한(초) — 멈춘 App 이 CTest 시한까지 붙잡지 않게 넉넉히 잡은 그물이다. */
         static constexpr uint32 kAppRunTimeoutSeconds = 600;
