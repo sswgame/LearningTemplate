@@ -146,6 +146,12 @@ namespace sw
         bool isArgumentProvided( CommandLineArgument argument ) const;
 
         /**
+         * @brief 받는 인자의 목록(`-help` 가 찍는 글)을 만듭니다 — 줄마다 표(ArgumentList.xxx)의 철자와 값 모양(`-key` · `-key=<int>` …)입니다.
+         * @details 목록은 표에서 만든다(손으로 쓴 도움말이 표와 어긋나지 않는다). 사람이 읽는 설명은 표의 주석이 원본인 생성 문서 `docs/Config/CommandLine.md` 를 가리킨다.
+         */
+        string makeUsageText() const;
+
+        /**
          * @brief 인자를 추가합니다.
          * @tparam T 저장 타입. **값을 반드시 적어야 하는지도 이것으로 정해집니다.** `bool` 이면 `-key` 만 적을 수 있고(그때
          *         true), 나머지는 `-key=value` 를 요구합니다(`ArgumentInfo::isFlagArgument`).
@@ -186,6 +192,9 @@ namespace sw
 
         /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. */
         static void setValue( ArgumentInfo& argument, string_view key, string_view newValue );
+
+        /** @brief 도움말 한 줄(철자들과 값 모양)을 @p inoutText 에 붙입니다. */
+        static void appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument );
 
         /**
          * @brief 파싱된 값(없으면 기본값)을 요청한 타입으로 꺼냅니다.

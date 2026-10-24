@@ -24,6 +24,9 @@
  *          주지 않았는지 알고 싶으면 isArgumentProvided 를 씁니다.
  */
 
+// 받는 인자 목록(철자와 값 모양)을 표준 출력에 찍고 끝낸다 — 창 · 렌더러를 세우지 않는 헤드리스 작업이다. 설명은 이 문서다
+SW_REGISTER_ARGUMENT( HELP, false, false, "help" )
+
 // 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다
 SW_REGISTER_ARGUMENT( WIDTH, 0, false, "W" )
 SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )

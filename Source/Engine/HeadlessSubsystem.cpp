@@ -3,6 +3,7 @@
 #include "Engine/HeadlessSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/string_splitter.h"
 
@@ -226,6 +227,20 @@ namespace sw
                 return false;
             }
 
+            /** @brief `-help` — 받는 인자 목록을 표준 출력에 찍고 끝낸다(창 · 렌더러를 세우지 않는다). 작업을 돌렸으면 true 입니다. */
+            [[nodiscard]] static bool runHelpTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                bool bHelp = false;
+                if ( commandLine.getArgument( CommandLineArgument::HELP, bHelp ) == false || bHelp == false )
+                    return false;
+                inoutState.enterHeadless();
+                // 로거를 거치지 않는다 — 도움말은 로그 줄(시각 · 범주 머리)이 아니라 그대로 읽을 글이고, 로그 수준을 낮춘 실행에서도 나와야 한다.
+                const string usage = commandLine.makeUsageText();
+                std::fputs( usage.c_str(), stdout );
+                std::fflush( stdout );
+                return true;
+            }
+
             /** @brief 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 전용 서버는 위에서 거절했다. 작업을 돌렸으면 true 입니다. */
             [[nodiscard]] static bool runCookShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
@@ -428,8 +443,9 @@ namespace sw
         using Internal                  = HeadlessSubsystemInternal;
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
         // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 작업 하나가 돌았으면 뒤 작업과 이 단계의 나머지는 건너뛴다.
-        // 작업 순서가 곧 우선순위다: 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
-        const bool bTaskRan = Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) || Internal::runCookShadersTask( commandLine, _state ) ||
+        // 작업 순서가 곧 우선순위다: 도움말 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
+        const bool bTaskRan = Internal::runHelpTask( commandLine, _state ) || Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) ||
+                              Internal::runCookShadersTask( commandLine, _state ) ||
                               Internal::runReflectionDocsTask( commandLine, _state ) || Internal::runBakeRetargetTask( commandLine, _state ) ||
                               Internal::runVerifyShadersTask( commandLine, _state ) || Internal::runMakePatchTask( commandLine, _state ) ||
                               Internal::runCookTask( commandLine, _bDedicatedServer, _state ) || Internal::runImportLipSyncTask( commandLine, _state ) ||

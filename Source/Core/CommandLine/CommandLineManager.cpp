@@ -37,6 +37,38 @@ namespace sw
 #undef SW_REGISTER_ARGUMENT
     }
 
+    string CommandLineManager::makeUsageText() const
+    {
+        string text{ "Usage: <executable> [-argument | -argument=value] ...\n" };
+#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) \
+    appendUsageLine( text, { __VA_ARGS__ }, _listArgument[static_cast<size_t>( CommandLineArgument::name )] );
+#include "Core/Predefined/ArgumentList.xxx"
+
+#undef SW_REGISTER_ARGUMENT
+        text += "  -gv_<name>=<value>  (global variable - docs/Config/GlobalVariables.md)\n";
+        text += "Descriptions: docs/Config/CommandLine.md\n";
+        return text;
+    }
+
+    void CommandLineManager::appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument )
+    {
+        const utf8* pValueShape = "";
+        if ( std::holds_alternative<int32>( argument._defaultValue ) )
+            pValueShape = "=<int>";
+        else if ( std::holds_alternative<float32>( argument._defaultValue ) )
+            pValueShape = "=<number>";
+        else if ( std::holds_alternative<string>( argument._defaultValue ) )
+            pValueShape = "=<text>";
+        inoutText += " ";
+        for ( const string_view alias : listAlias )
+        {
+            inoutText += " -";
+            inoutText += alias;
+            inoutText += pValueShape;
+        }
+        inoutText += "\n";
+    }
+
     // ============================================================================
     // parse (UTF-8)
     // 표준 C++ · Linux 의 UTF-8 argv 배열을 한 번만 훑으며 파싱한다.

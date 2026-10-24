@@ -4727,6 +4727,14 @@
  ],
  "arguments": [
   {
+   "name": "HELP",
+   "spellings": [
+    "help"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "받는 인자 목록(철자와 값 모양)을 표준 출력에 찍고 끝낸다 — 창 · 렌더러를 세우지 않는 헤드리스 작업이다. 설명은 이 문서다"
+  },
+  {
    "name": "WIDTH",
    "spellings": [
     "W"
