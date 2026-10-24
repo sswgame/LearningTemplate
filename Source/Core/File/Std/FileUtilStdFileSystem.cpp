@@ -190,7 +190,9 @@ namespace sw
 
         std::error_code errorCode;
         std::filesystem::create_directories( FileUtilStdInternal::toPath( directoryPath ), errorCode );
-        if ( errorCode || isDirectory( directoryPath ) == false )
+        // 성공은 오류 코드가 아니라 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 libstdc++ · libc++ 의 `create_directories` 는
+        // 다른 스레드가 먼저 만든 경쟁에서 오류 코드를 줄 수 있다(MSVC STL 은 주지 않는다). 폴더가 이미 있으면 성공이고, 같은 이름의 파일이 막고 있으면 여전히 실패다.
+        if ( isDirectory( directoryPath ) == false )
         {
             SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", directoryPath, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "a file is in the way" );
             return false;
