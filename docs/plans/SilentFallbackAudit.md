@@ -28,6 +28,8 @@
 
 ## 2. 남은 단위
 
+남은 셋은 코드를 못 쓰는 일이 아니라 화면으로만 맞는지 알 수 있는 렌더러 · 셰이더 일이다(2026-10-24 판단). `RenderTargetFormat` 은 어느 패스 종류가 RGBA8 길로 PSO 를 얻는지 네 백엔드 GPU 로 먼저 헤아려야 오류로 바꿀 수 있고, `EmulatedSlotTable` 은 셰이더를 건드려 셰이더 패치와 DX11 · GL 화면이 한 묶음이다. `ClientCodeGuard` 는 [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) 의 단위다.
+
 ### SilentFallbackAudit.RenderTargetFormat
 `FrameRenderer::fillPassRenderTargetFormats` 는 고정 포맷도 출력 선언도 없으면 RGBA8 이다. 엔진 PSO 를 패스 종류 표로 모두 만들기 때문에(`FrameRenderer` 의 PSO 등록), 파이프라인에 없는 패스 종류도 이 길로 PSO 를 얻는다.
 오류로 바꾸려면 파이프라인에 없는 패스 종류의 PSO 를 만들지 않아야 한다(`kRequiresPassDesc` 를 그래픽스 패스 전체로). Present · Canvas 의 기본 PSO, Tonemap 대체(`_psoFallbackType`)가 그 PSO 를 쓰는지 먼저 본다.
