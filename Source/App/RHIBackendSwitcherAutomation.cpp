@@ -16,7 +16,8 @@
     #include "Core/Container/StringUtil.h"
 
     #include "Engine/Probe/AutomationProbe.h"
-    #include "Engine/Automation/AutomationRunner.h"
+    #include "Engine/Automation/AutomationScenario.h"
+    #include "Engine/Automation/AutomationStepContext.h"
     #include "Engine/Automation/AutomationStepRegistry.h"
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Config/RHIBackendType.h"
@@ -92,7 +93,7 @@ namespace sw
                 return s_backend;
             }
 
-            static bool prepareSwapBackend( AutomationRunner& /*runner*/, const AutomationStep& /*step*/, string& outError )
+            static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
             {
                 const RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 if ( pSwitcher == nullptr || pSwitcher->findCommittedBackend( getStartBackend() ) == false )
@@ -104,7 +105,7 @@ namespace sw
             }
 
             /** @brief 교체를 요청합니다. 이미 그 백엔드이고 대기 중인 교체도 없으면 아무것도 하지 않습니다. 끝은 `RHI.SwapPending` 이 0 이 되는 것으로 봅니다. */
-            static bool runSwapBackend( AutomationRunner& runner, const AutomationStep& step )
+            static bool runSwapBackend( AutomationStepContext& runner, const AutomationStep& step )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 RHIBackend          committed{};

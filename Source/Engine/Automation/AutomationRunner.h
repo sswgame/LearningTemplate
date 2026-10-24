@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Probe/AutomationProbe.h"
 
@@ -45,11 +46,11 @@ namespace sw
      *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
      *          로그 수집은 `AutomationLogCapture`, 보고 경로 · 지표 줄 · 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다.
      */
-    class SW_API AutomationRunner
+    class SW_API AutomationRunner final : public AutomationStepContext
     {
     public:
         AutomationRunner();
-        ~AutomationRunner();
+        ~AutomationRunner() override;
 
         AutomationRunner( const AutomationRunner& )            = delete;
         AutomationRunner& operator=( const AutomationRunner& ) = delete;
@@ -81,14 +82,33 @@ namespace sw
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
         const vector<string>& getMetricLines() const { return _reportWriter.getMetricLines(); }
 
+        // --- 단계 문맥(`AutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
+
         /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
-        void recordFailure( const AutomationStep& step, string_view message );
+        void recordFailure( const AutomationStep& step, string_view message ) override;
         /**
          * @brief 단계 차례 함수(`AutomationStepHoldFunction`)가 기다리는 대상이 아직이면(@p bReady 가 false) 시나리오 시계를 한 프레임 붙잡습니다.
          * @details `WaitUntil` 과 같다 — 붙잡은 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 민다. 준비되면 붙잡은 프레임 수를 로그로 남긴다.
          * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
          */
-        AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames );
+        AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) override;
+        /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 종료 코드(`Passed` · `Failed` · `Skipped`)로 번역해 `finish` 를 부릅니다. */
+        void endScenario( AutomationStepEnd end, string_view reason ) override;
+        /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
+        const string& getOutputDirectory() const override { return _outputDirectory; }
+        /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
+        string resolveOutputPath( string_view file ) const override;
+        /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
+        uint32 getFrameIndex() const override { return _frameIndex; }
+        /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */
+        uint32 convertSecondsToFrames( float32 seconds ) const override;
+        /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
+        GameObjectManager* findActiveObjectManager() const override;
+        /** @brief 입력 단계가 이벤트를 넣는 가상 입력 원천입니다. 다른 모듈의 입력 단계(액션 단계)도 준비 함수에서 씁니다. */
+        VirtualInputScript& getInputScript() override { return _inputScript; }
+        /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). 액션 단계가 입력 맵의 바인딩을 읽습니다. */
+        InputManager* getInputManager() const override { return _pInputManager; }
+
         /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
         void finish( AutomationResult result, string_view reason );
 
@@ -98,28 +118,14 @@ namespace sw
          * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
          *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
          */
-        bool             hasEnded() const { return _bEnded == SW_TRUE; }
-        AutomationResult getResult() const { return _result; }
-        /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
-        uint32                    getFrameIndex() const { return _frameIndex; }
+        bool                      hasEnded() const { return _bEnded == SW_TRUE; }
+        AutomationResult          getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
         const vector<string>&     getFailures() const { return _listFailure; }
         const string&             getFinishReason() const { return _finishReason; }
-        /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
-        const string& getOutputDirectory() const { return _outputDirectory; }
-        /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
-        string resolveOutputPath( string_view file ) const;
-        /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
-        GameObjectManager* findActiveObjectManager() const;
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
-        /** @brief 입력 단계가 이벤트를 넣는 가상 입력 원천입니다. 다른 모듈의 입력 단계(액션 단계)도 준비 함수에서 씁니다. */
-        VirtualInputScript& getInputScript() { return _inputScript; }
-        /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). 액션 단계가 입력 맵의 바인딩을 읽습니다. */
-        InputManager* getInputManager() const { return _pInputManager; }
-        /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */
-        uint32 convertSecondsToFrames( float32 seconds ) const;
         /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 견준다). */
         void                  addRecordLine( string line );
         const vector<string>& getRecordLines() const { return _reportWriter.getRecordLines(); }

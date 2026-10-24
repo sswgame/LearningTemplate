@@ -19,7 +19,7 @@ namespace
     {
         static inline uint32 s_markCount = 0;
 
-        static bool runMark( sw::AutomationRunner& /*runner*/, const sw::AutomationStep& /*step*/ )
+        static bool runMark( sw::AutomationStepContext& /*runner*/, const sw::AutomationStep& /*step*/ )
         {
             ++s_markCount;
             return true;

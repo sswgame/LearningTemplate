@@ -16,8 +16,8 @@
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 
 namespace sw::editor
@@ -74,7 +74,7 @@ namespace sw::editor
             }
 
             /** @brief 처음 차례가 오면 캡처를 요청하고, 결과가 나올 때까지 붙잡습니다. */
-            static AutomationStepHold holdCapture( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdCapture( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 if ( pCapture == nullptr )
@@ -89,7 +89,7 @@ namespace sw::editor
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
             }
 
-            static void expectAtMost( AutomationRunner& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail )
+            static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail )
             {
                 const string* pLimit = step.findAttribute( attributeName );
                 float32       limit{ 0.0f };
@@ -114,7 +114,7 @@ namespace sw::editor
                 runner.recordFailure( step, message );
             }
 
-            static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
+            static bool runCapture( AutomationStepContext& runner, const AutomationStep& step )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 PendingCapture* const  pPending = findPending( step );

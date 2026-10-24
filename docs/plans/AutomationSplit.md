@@ -40,7 +40,7 @@
 | 단계 | 내용 | 읽을 문서 | 고칠 문서 | 검증 | 상태 |
 |---|---|---|---|---|---|
 | ① 탐침 | 탐침 레지스트리를 티어 9.5 로 내리고, Terrain · Character 탐침을 기능 폴더로 옮긴다(기능이 자기 탐침을 등록) | Automation README, `CheckEngineLayers.toml` | 이 문서, Automation README, 티어 테이블 | 층 게이트 4종, 시나리오 네 백엔드 회귀 | 완료 |
-| ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스를 받게 한다 | 이 문서 3절 | 이 문서, Automation README | 등록자(UI · GameFramework · Editor · App)가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 남음 |
+| ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스를 받게 한다 | 이 문서 3절 | 이 문서, Automation README | 등록자(UI · GameFramework · Editor · App)가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — `AutomationStepContext` 도입, 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현한다. 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
 | ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 이 문서 1절 · 3절 | 이 문서, Automation README, 새 `Engine/Scenario` README | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 남음 |
 | ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 결정 기록 5-3 과 부딪히고, GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 결정 기록 5-3, [GpuVerification](GpuVerification.md) | 결정 기록 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
 

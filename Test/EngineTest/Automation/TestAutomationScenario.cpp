@@ -62,7 +62,7 @@ namespace
         }
 
         /** @brief 등록 단계 — 입력 재생 전에 돈다(행동 층 주입 자리). 프레임을 적어 둔다. */
-        static bool runMark( sw::AutomationRunner& runner, const sw::AutomationStep& /*step*/ )
+        static bool runMark( sw::AutomationStepContext& runner, const sw::AutomationStep& /*step*/ )
         {
             ++s_beforeInputRunCount;
             s_beforeInputFrame = runner.getFrameIndex();
@@ -70,13 +70,13 @@ namespace
         }
 
         /** @brief 늦게 그려지는 위젯을 누르는 단계를 흉내 낸다 — 대상은 실제 프레임이 `s_readyAtRunFrame` 에 닿아야 있다. 차례 함수가 그때까지 시계를 붙잡는다. */
-        static sw::AutomationStepHold holdLate( sw::AutomationRunner& runner, const sw::AutomationStep& step, sw::InputManager& input )
+        static sw::AutomationStepHold holdLate( sw::AutomationStepContext& runner, const sw::AutomationStep& step, sw::InputManager& input )
         {
             constexpr uint32 kLateWaitFrames = 30;
             return runner.holdUntilReady( step, input, s_runFrameCount >= s_readyAtRunFrame, kLateWaitFrames );
         }
 
-        static bool runLate( sw::AutomationRunner& runner, const sw::AutomationStep& step )
+        static bool runLate( sw::AutomationStepContext& runner, const sw::AutomationStep& step )
         {
             if ( s_runFrameCount < s_readyAtRunFrame )
                 runner.recordFailure( step, "the late target is not there yet" );

@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/UI/Base/UIFocusManager.h"
@@ -41,7 +41,7 @@ namespace sw
                 return pScreen->getDocumentPath();
             }
 
-            static bool runExpectUI( AutomationRunner& runner, const AutomationStep& step )
+            static bool runExpectUI( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const UISystem& ui = engine::getSubsystem<UISystem>();
                 string          failure;
@@ -60,7 +60,7 @@ namespace sw
             }
 
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
-            static bool runLayoutDump( AutomationRunner& runner, const AutomationStep& step )
+            static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const string& file = *step.findAttribute( "file" );
                 const string  path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );

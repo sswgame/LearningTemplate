@@ -46,7 +46,8 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -243,7 +244,7 @@ namespace sw::editor
              * @brief @p mark 가 그린 창의 보이는 영역 밖(스크롤 아래 · 접힌 위)이면 실패로 알리고 true 를 반환합니다.
              * @details 잘린 위젯의 사각형을 누르면 그 위치에 보이는 다른 위젯이나 빈 곳이 받아, 단계는 성공하고 뒤의 기대만 엉뚱하게 진다.
              */
-            static bool reportClippedMark( AutomationRunner& runner, const AutomationStep& step, const string& mark )
+            static bool reportClippedMark( AutomationStepContext& runner, const AutomationStep& step, const string& mark )
             {
                 EditorSelfTestMark found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false || found._bClipped == false )
@@ -257,7 +258,7 @@ namespace sw::editor
              * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(옛 A-3 이던 것).
              *          언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다.
              */
-            static AutomationStepHold holdUntilMarked( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilMarked( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 constexpr uint32   kMarkWaitFrames = 60;
                 const string*      pMark           = step.findAttribute( "mark" );
@@ -269,7 +270,7 @@ namespace sw::editor
             }
 
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
-            static bool runClick( AutomationRunner& runner, const AutomationStep& step )
+            static bool runClick( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const string& mark = *step.findAttribute( "mark" );
                 ClickArgs     args;
@@ -378,7 +379,7 @@ namespace sw::editor
              * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
              * @details 누름, 절반 이동, 끝 이동, 놓기를 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 놓은 뒤에 해제한다.
              */
-            static bool runDrag( AutomationRunner& runner, const AutomationStep& step )
+            static bool runDrag( AutomationStepContext& runner, const AutomationStep& step )
             {
                 const string&      mark = *step.findAttribute( "mark" );
                 EditorSelfTestMark found{};
@@ -460,7 +461,7 @@ namespace sw::editor
              * @brief 버튼을 누르지 않고 커서를 레이블 위치(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 가 나올 때까지 프레임마다 그 위치를 다시 넣으며,
              *        넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다. 레이블이 없으면 실패를 기록합니다.
              */
-            static bool runHover( AutomationRunner& runner, const AutomationStep& step )
+            static bool runHover( AutomationStepContext& runner, const AutomationStep& step )
             {
                 if ( step.findAttribute( "release" ) != nullptr )
                 {
@@ -479,7 +480,7 @@ namespace sw::editor
                 return true;
             }
 
-            static bool runText( AutomationRunner& /*runner*/, const AutomationStep& step )
+            static bool runText( AutomationStepContext& /*runner*/, const AutomationStep& step )
             {
                 EditorSelfTestInput::typeText( *step.findAttribute( "value" ) );
                 return true;
@@ -538,7 +539,7 @@ namespace sw::editor
             }
 
             /** @brief 수정자를 누르고 키를 눌렀다 놓은 뒤 수정자를 거꾸로 해제합니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
-            static bool runKey( AutomationRunner& runner, const AutomationStep& step )
+            static bool runKey( AutomationStepContext& runner, const AutomationStep& step )
             {
                 KeyArgs args;
                 string  error;
@@ -602,7 +603,7 @@ namespace sw::editor
                 return true;
             }
 
-            static bool runExpectObject( AutomationRunner& runner, const AutomationStep& step )
+            static bool runExpectObject( AutomationStepContext& runner, const AutomationStep& step )
             {
                 ExpectObjectArgs args;
                 string           error;
@@ -695,7 +696,7 @@ namespace sw::editor
                 return true;
             }
 
-            static bool runDockLayout( AutomationRunner& runner, const AutomationStep& step )
+            static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
                 uint32 minNodeSide = 0; // 적지 않으면 아래의 기본 최소 변
                 if ( readCount( step, "minNodeSize", minNodeSide ) == false )
