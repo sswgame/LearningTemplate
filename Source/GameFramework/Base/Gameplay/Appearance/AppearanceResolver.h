@@ -70,10 +70,18 @@ namespace sw
         PaletteSwap    ///< 스프라이트 팔레트 슬롯
     };
 
+    /** @brief 머티리얼 매개변수에 쓰는 값의 모양입니다. 값을 만든 쪽이 정하며, 적용은 이 모양 그대로 쓴다(float4 글로 바꿔 스칼라에 쓰지 않는다). */
+    enum class ResolvedMaterialShape : uint8
+    {
+        Scalar = 0, ///< float 하나(`_value._x`). 머티리얼의 Float · Range 매개변수에 쓴다.
+        Vector      ///< float4. 머티리얼의 Float2 · Float3 · Float4 · Color 매개변수에 쓴다.
+    };
+
     /** @brief 머티리얼 값 하나입니다. `_part` 가 비어 있으면 주인의 모든 부품에 적용합니다. */
     struct ResolvedMaterialValue
     {
         float4                 _value{};
+        ResolvedMaterialShape  _shape{ ResolvedMaterialShape::Vector };
         hashed_string          _owner{};
         hashed_string          _part{};
         hashed_string          _name{};

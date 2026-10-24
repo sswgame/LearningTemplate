@@ -54,6 +54,28 @@ namespace sw
                 return false;
             }
 
+            /**
+             * @brief 부모의 매개변수 모양(셰이더 타입)이 쓰려는 값의 모양과 맞는지 봅니다. 어긋나면 로그 id 와 함께 false 입니다.
+             * @details float4 글("0.5 0 0 0")을 스칼라(Float/Range)에 쓰면 패킹이 못 읽는 글로 거절하므로 쓰는 시점에 막는다. 부모에 없는 이름은
+             *          다른 변형이 쓸 수 있어 통과시킨다.
+             */
+            [[nodiscard]] static bool acceptsShape( const Material* pParent, hashed_string name, bool bScalar )
+            {
+                const MaterialProperty* pProp = pParent != nullptr ? pParent->findProperty( name ) : nullptr;
+                if ( pProp == nullptr )
+                    return true;
+                const MaterialPropertyType shaderType = pProp->_shaderType;
+                const bool                 bIsScalar  = shaderType == MaterialPropertyType::Float;
+                const bool                 bIsVector  = shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4;
+                if ( ( bScalar && bIsVector ) || ( bScalar == false && bIsScalar ) )
+                {
+                    SW_LOG_ERROR_ID( "Material.ParameterShapeMismatch", "Material parameter '%#' is %# and cannot take a %# value", pProp->_name, MaterialUtil::typeToString( shaderType ),
+                                     bScalar ? "scalar" : "vector" );
+                    return false;
+                }
+                return true;
+            }
+
             template <typename T>
             static void insertOrAssign( vector<pair<hashed_string, T>>& listPair, hashed_string key, const T& val )
             {
@@ -464,6 +486,8 @@ namespace sw
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
     {
+        if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, true ) == false )
+            return;
         std::scoped_lock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listScalarOverride, name, value );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( value ) );
@@ -472,6 +496,8 @@ namespace sw
 
     void MaterialInstance::setVectorParameter( hashed_string name, const float4& value )
     {
+        if ( MaterialInstanceInternal::acceptsShape( _pParentMaterial, name, false ) == false )
+            return;
         std::scoped_lock<mutex> lock{ _overrideMutex };
         const array<float32, 4> val = { value._x, value._y, value._z, value._w };
         MaterialInstanceInternal::insertOrAssign( _listVectorOverride, name, val );
