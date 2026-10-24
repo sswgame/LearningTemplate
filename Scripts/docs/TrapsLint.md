@@ -75,3 +75,4 @@
   대상 파일 고르기는 `common.Search.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
   (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
+- **큰 이어 붙인 글에 `\b` 로 시작하는 정규식을 항목마다 반복해 돌리지 않는다**(`VerifyManifest.findTestCaseInternal` 이 169 번 × `Test/` 전체로 52 s) — 글을 한 번 훑어 사전 · 집합으로 색인하고 조회는 거기서 한다.

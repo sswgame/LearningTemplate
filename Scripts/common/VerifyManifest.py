@@ -60,6 +60,9 @@ _kBacktickIdRe = re.compile(r"`([a-z0-9][a-z0-9-]*)`")
 _kIdListRe = re.compile(r"매니페스트 id\s*((?:`[a-z0-9][a-z0-9-]*`\s*[,·]?\s*)+)")
 _kFenceRe = re.compile(r"^\s*(```|~~~)")
 _kSuiteCaseRe = re.compile(r"^([A-Za-z]\w*)\.([\w*]+)$")
+_kWordRe = re.compile(r"\w+")
+# 뒤따르는 낱말은 먼저 보기(lookahead)로만 읽어, `a, b, c` 에서 (a,b) 와 (b,c) 가 둘 다 잡힌다.
+_kWordCommaRe = re.compile(r"\b(\w+)\s*,\s*(?=(\w+))")
 
 _kCommonKeys: tuple[str, ...] = ("id", "title", "kind", "config", "platform", "gpu", "source", "result_doc", "pending")
 _kMapKindKeys: dict[str, tuple[str, ...]] = {
@@ -519,20 +522,35 @@ def findManifestProblems(repositoryRoot: Path, manifest: VerifyManifest) -> list
 
 
 def findTestCaseInternal(repositoryRoot: Path, name: str) -> bool:
-    """`Suite.Case`(`*` 허용) 에 맞는 테스트 케이스 선언이 Test/ 의 .cpp 에 있는가. 모양이 아니면(전체를 뜻하는 `*` 등) 있다고 본다."""
+    """`Suite.Case`(`*` 허용) 에 맞는 테스트 케이스 선언이 Test/ 의 .cpp 에 있는가. 모양이 아니면(전체를 뜻하는 `*` 등) 있다고 본다.
+
+    뜻은 옛 정규식 `\bSuite\s*,\s*Case\b`(`Case=*` 이면 `\bSuite\b`)와 같다. 본문은 `readTestIndexInternal` 이 한 번만 훑어 색인한다.
+    """
     match = _kSuiteCaseRe.match(name)
     if match is None:
         return True
     suite, case = match.groups()
-    casePattern = re.escape(case).replace(r"\*", r"\w*")
-    declaration = re.compile(rf"\b{re.escape(suite)}\s*,\s*{casePattern}\b" if case != "*" else rf"\b{re.escape(suite)}\b")
-    return declaration.search(readTestSourcesInternal(repositoryRoot)) is not None
+    setWord, mapSuiteCase = readTestIndexInternal(repositoryRoot)
+    if case == "*":
+        return suite in setWord
+    setCase = mapSuiteCase.get(suite, ())
+    if "*" not in case:
+        return case in setCase
+    caseRe = re.compile(re.escape(case).replace(r"\*", r"\w*"))
+    return any(caseRe.fullmatch(word) for word in setCase)
 
 
 @lru_cache(maxsize=4)
-def readTestSourcesInternal(repositoryRoot: Path) -> str:
-    """Test/ 의 모든 .cpp 를 한 글로 — 케이스 이름마다 훑지 않게 한 번만 읽는다."""
-    return "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in sorted((repositoryRoot / "Test").rglob("*.cpp")))
+def readTestIndexInternal(repositoryRoot: Path) -> tuple[frozenset[str], dict[str, frozenset[str]]]:
+    """Test/ 의 모든 .cpp 를 한 글로 이어 한 번만 훑어 (낱말 집합, 낱말 -> 그 뒤 `,` 로 이어진 낱말 집합) 을 만든다.
+
+    프로세스 수명 동안만 유효하다(게이트 · 일회성 도구 전용 — 파일이 바뀌는 상주 호출자가 생기면 `cache_clear()`).
+    """
+    text = "\n".join(path.read_text(encoding="utf-8", errors="replace") for path in sorted((repositoryRoot / "Test").rglob("*.cpp")))
+    mapSuiteCase: dict[str, set[str]] = {}
+    for found in _kWordCommaRe.finditer(text):
+        mapSuiteCase.setdefault(found.group(1), set()).add(found.group(2))
+    return frozenset(_kWordRe.findall(text)), {suite: frozenset(setCase) for suite, setCase in mapSuiteCase.items()}
 
 
 # ------------------------------------------------------------------------------
