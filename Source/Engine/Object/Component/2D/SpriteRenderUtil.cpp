@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -49,11 +50,21 @@ namespace sw
                 return instance;
             }
 
+            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
+            struct TextureInstanceCacheHolder
+            {
+                TextureInstanceCache _cache{ "SpriteTextureInstance" };
+            };
+
+            /** @brief (머티리얼, 텍스처) 인스턴스 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). */
+            inline static ScopeOwned<TextureInstanceCacheHolder> s_textureInstanceCache{};
+
             /** @brief (머티리얼, 텍스처) 인스턴스 표입니다. */
             static TextureInstanceCache& getTextureInstanceCache()
             {
-                static TextureInstanceCache s_cache{ "SpriteTextureInstance" };
-                return s_cache;
+                TextureInstanceCacheHolder* const pHolder = s_textureInstanceCache.getOrCreate();
+                SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
+                return pHolder->_cache;
             }
         };
     } // namespace

@@ -41,7 +41,7 @@ namespace sw
              *          (`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`)는 스레드보다 먼저 온다. 더 깊게 중첩하면 그때만 힙을 쓴다.
              */
             static constexpr size_t kInlineSpawnDepth = 8;
-            /** @brief 로드 검증에서 순환이 없다는 값입니다(`getCycleFloor`). */
+            /** @brief 로드 검증에서 순환이 없다는 값입니다(`PrefabThreadChain::_cycleFloor`). */
             static constexpr size_t kNoCycle = static_cast<size_t>( invalid_index::kUint64 );
 
             /** @brief 지금 펼치는 중인 프리팹 경로의 스택입니다(순환 검사). */
@@ -64,30 +64,6 @@ namespace sw
                 PathStackScope( const PathStackScope& )            = delete;
                 PathStackScope& operator=( const PathStackScope& ) = delete;
             };
-
-            /**
-             * @brief 이 스레드가 스폰 중인 프리팹 경로입니다. 스폰 · 중첩 스폰 · 펼치기가 같이 씁니다.
-             * @details 컴포넌트가 로드 뒤 같은 프리팹을 스폰하는 순환(`PrefabTest.CircularReferenceSpawnProtection`)과, 로드한 뒤 원본을 고쳐 생긴 중첩 순환을 막는다.
-             */
-            static PrefabPathStack& getSpawnStack()
-            {
-                thread_local PrefabPathStack t_listSpawnStack;
-                return t_listSpawnStack;
-            }
-
-            /** @brief 이 스레드가 중첩 인스턴스를 검증하며 로드 중인 프리팹 경로입니다(`PrefabCache::validateNestedInstances`). 스폰 스택과 따로 둔다 — 런타임 스폰이 로드를 실패시키지 않게. */
-            static PrefabPathStack& getLoadStack()
-            {
-                thread_local PrefabPathStack t_listLoadStack;
-                return t_listLoadStack;
-            }
-
-            /** @brief 로드 스택에서 찾은 순환의 시작 깊이입니다. 순환에 든 프리팹(그 깊이 이상)은 로드에 실패하고, 시작 깊이의 프리팹이 끝날 때 지운다. */
-            static size_t& getCycleFloor()
-            {
-                thread_local size_t t_cycleFloor = kNoCycle;
-                return t_cycleFloor;
-            }
 
             static bool isOnStack( const PrefabPathStack& stack, const hashed_string& key )
             {
@@ -587,6 +563,24 @@ namespace sw
                 }
             }
         };
+
+        /**
+         * @brief 한 스레드가 프리팹을 펼치는 호출 사슬의 상태입니다 — 소유자는 그 스레드입니다.
+         * @details 재진입하는 호출 사슬(컴포넌트가 로드 뒤 같은 프리팹을 스폰한다 · 원본을 로드하다 중첩 원본을 로드한다)의 순환을 막는 기록이라, 공유 상태가 아니라
+         *          사슬을 도는 스레드의 상태다. 씬을 읽는 워커와 게임 스레드가 동시에 펼치므로 스레드마다 하나이고, 한 이름공간 변수(함수 안 정적 지역 셋이 아니다)에 모았다.
+         */
+        struct PrefabThreadChain
+        {
+            /** @brief 이 스레드가 스폰 중인 프리팹 경로입니다. 스폰 · 중첩 스폰 · 펼치기가 같이 씁니다.
+             *         컴포넌트가 로드 뒤 같은 프리팹을 스폰하는 순환(`PrefabTest.CircularReferenceSpawnProtection`)과, 로드한 뒤 원본을 고쳐 생긴 중첩 순환을 막는다. */
+            PrefabAssetInternal::PrefabPathStack _spawnStack;
+            /** @brief 이 스레드가 중첩 인스턴스를 검증하며 로드 중인 프리팹 경로입니다(`PrefabCache::validateNestedInstances`). 스폰 스택과 따로 둔다 — 런타임 스폰이 로드를 실패시키지 않게. */
+            PrefabAssetInternal::PrefabPathStack _loadStack;
+            /** @brief 로드 스택에서 찾은 순환의 시작 깊이입니다. 순환에 든 프리팹(그 깊이 이상)은 로드에 실패하고, 시작 깊이의 프리팹이 끝날 때 지운다. */
+            size_t _cycleFloor{ PrefabAssetInternal::kNoCycle };
+        };
+
+        thread_local PrefabThreadChain t_prefabChain;
     } // namespace
 } // namespace sw
 
@@ -1263,8 +1257,8 @@ namespace sw
         if ( bHasSourceNode == false )
             return true;
 
-        PrefabAssetInternal::PrefabPathStack& stack      = PrefabAssetInternal::getLoadStack();
-        size_t&                               cycleFloor = PrefabAssetInternal::getCycleFloor();
+        PrefabAssetInternal::PrefabPathStack& stack      = t_prefabChain._loadStack;
+        size_t&                               cycleFloor = t_prefabChain._cycleFloor;
         const size_t                          depth      = stack.size();
         {
             const PrefabAssetInternal::PathStackScope scope{ stack, PrefabAssetInternal::makePathKey( cacheKey ) };
@@ -1373,7 +1367,7 @@ namespace sw
         const string        resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
         const hashed_string pathKey      = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( resolvedPath ) );
 
-        PrefabAssetInternal::PrefabPathStack& spawnStack = PrefabAssetInternal::getSpawnStack();
+        PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
         if ( PrefabAssetInternal::isOnStack( spawnStack, pathKey ) )
         {
             SW_LOG_ERROR( "Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
@@ -1404,7 +1398,7 @@ namespace sw
             pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectID, resolvedPath, instanceName, pathKey]()
             {
                 // 미룬 자리에서도 이 프리팹을 펼치는 중이라고 적는다 — 중첩 스폰의 순환 검사가 이 경로를 본다.
-                const PrefabAssetInternal::PathStackScope laterScope{ PrefabAssetInternal::getSpawnStack(), pathKey };
+                const PrefabAssetInternal::PathStackScope laterScope{ t_prefabChain._spawnStack, pathKey };
                 GameObject*                               pSpawned      = pGameObjectManager->findGameObjectByID( objectID );
                 const shared_ptr<const PrefabAsset>       pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
                 const bool                                bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName );
@@ -1497,7 +1491,7 @@ namespace sw
         SW_MEMORY_SCOPE( Scene );
 
         PrefabInstanceRegistry&               registry   = pManager->getSubsystem<PrefabInstanceRegistry>();
-        PrefabAssetInternal::PrefabPathStack& spawnStack = PrefabAssetInternal::getSpawnStack();
+        PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
         vector<GameObject*>                   listCreated( listNode.size(), nullptr );
         uint32                                createdCount = 0;
         for ( size_t index = 0; index < listNode.size(); ++index )
@@ -1634,7 +1628,7 @@ namespace sw
     {
         const vector<PrefabInstanceNode>&     listNode = asset.getNestedInstances();
         vector<int32>                         listFlatIndex( listNode.size(), -1 );
-        PrefabAssetInternal::PrefabPathStack& spawnStack = PrefabAssetInternal::getSpawnStack();
+        PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
         for ( size_t index = 0; index < listNode.size(); ++index )
         {
             const PrefabInstanceNode& node       = listNode[index];
