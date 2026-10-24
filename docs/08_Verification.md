@@ -94,6 +94,7 @@ cd build/Ninja-Debug/Bin
   `Bin/` 에 남은 옛 자리 산출물(테스트 exe · 모듈 DLL · PDB)과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`) — 실행 중이라 못 지운 것은 경고로 남는다.
 - 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다. 빌드는 HLSL 을 다시 쿠킹하지 않는다 — `App.exe --cook-shaders` 뒤에 재고 비교한다.
   Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`App --cook-all --verify-shaders`).
+- GPU 확인은 이미 통과가 증명된 항목을 다시 돌리지 않는다. 통과 증거(`verify-batch` 결과 · 증거 파일 · `NEXT.md` 의 통과 기록)가 있고, 그 증거 커밋 이후 항목이 쓰는 코드 · 셰이더 · 에셋 · 시나리오가 안 바뀌었음(`git diff <증거커밋>..HEAD -- <관련 경로>` 가 빔)을 둘 다 보였을 때만 건너뛴다. 증거가 모호하거나, 고쳐진 항목이거나, GPU 에서 처음 도는 항목이면 돌린다. 보고에는 건너뜀 표(항목 · 증거 커밋 · 바뀐 경로 없음)를 따로 둔다.
 - 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면
   `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).
 - 직접 실행으로 통과해도 CTest 에서 질 수 있다(병렬 부하 · 시한). 끝내기 전 검증은 CTest 로 한다. 멈추면 `LastTest.log` 의 마지막 `[ RUN ]` 을 본다.
