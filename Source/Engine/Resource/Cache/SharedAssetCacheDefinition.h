@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -105,11 +106,20 @@ namespace sw
         getTable().clear();
     }
 
+    /**
+     * @brief 에셋 종류마다 하나인 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 표째 사라집니다(처음 쓸 때 만들어진다).
+     * @details 이 헤더는 Engine 의 .cpp 만 포함하므로 모든 사본이 Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않습니다. 함수 안 정적 지역으로 두면
+     *          종료 누수 보고 뒤까지 남고 엔진을 다시 세워도 비지 않는다.
+     */
+    template <typename AssetType>
+    inline ScopeOwned<SharedAssetTable<AssetType>> s_sharedAssetTableOwner{};
+
     template <typename AssetType>
     SharedAssetTable<AssetType>& SharedAssetCache<AssetType>::getTable()
     {
-        static SharedAssetTable<AssetType> s_table;
-        return s_table;
+        SharedAssetTable<AssetType>* const pTable = s_sharedAssetTableOwner<AssetType>.getOrCreate();
+        SW_ASSERT( pTable != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
+        return *pTable;
     }
 } // namespace sw
 

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -257,11 +258,21 @@ namespace sw
             /** @brief 기준 이름(`canonicalPrimitiveIDVal`)으로 흰색 도형을 짓습니다. */
             static shared_ptr<Mesh> createSharedPrimitive( const hashed_string& canonicalID ) { return MeshUtil::createPrimitive( canonicalID.c_str() ); }
 
-            /** @brief 내장 도형 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). */
+            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
+            struct PrimitiveCacheHolder
+            {
+                PrimitiveCache _cache{ "PrimitiveMesh" };
+            };
+
+            /** @brief 내장 도형 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). Engine.dll 안이라 모듈 핫 리로드에 사라지지 않는다. */
+            inline static ScopeOwned<PrimitiveCacheHolder> s_primitiveCache{};
+
+            /** @brief 내장 도형 표입니다. */
             static PrimitiveCache& getPrimitiveCache()
             {
-                static PrimitiveCache s_cache{ "PrimitiveMesh" };
-                return s_cache;
+                PrimitiveCacheHolder* const pHolder = s_primitiveCache.getOrCreate();
+                SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
+                return pHolder->_cache;
             }
         };
     } // namespace

@@ -7,7 +7,6 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
@@ -24,6 +23,7 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/ScreenshotMailbox.h"
 
 namespace sw
 {
@@ -38,33 +38,11 @@ namespace sw
             /** @brief `-gv_screenshotSettledFrames` 가 화면이 자리 잡기를 기다리는 벽시계 시한(초)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
             static constexpr float64 kSettleTimeoutSeconds = 120.0;
 
-            /** @brief `requestScreenshot` 의 엔진 전역 우편함입니다. 게임 스레드, 개발 명령, 에디터가 넣고 렌더 스레드가 꺼냅니다. */
-            struct ScreenshotMailbox
-            {
-                mutex            _mutex;
-                string           _pendingPath;
-                string           _lastPath;
-                RHITextureHandle _pendingTexture{ 0 };
-                RHIFormat        _pendingFormat{ RHIFormat::R8G8B8A8_UNORM };
-                atomic<uint32>   _completedSerial{ 0 };
-                /// @brief `-gv_screenshotQuit` 의 장부입니다(`RenderThread::CaptureKind` 비트). 요청한 종류가 모두 끝났는지, 그중 쓰지 못한 것이 있는지 봅니다.
-                atomic<uint32> _expectedCaptureMask{ 0 };
-                atomic<uint32> _finishedCaptureMask{ 0 };
-                atomic<uint32> _failedCaptureMask{ 0 };
-            };
-
-            /** @brief 우편함 본체입니다. 엔진 수명 범위가 닫히면(엔진 종료) 마지막 경로와 함께 소멸합니다. */
-            static inline ScopeOwned<ScreenshotMailbox> s_screenshotMailbox;
-
-            static ScreenshotMailbox& getMailbox()
-            {
-                ScreenshotMailbox* const pMailbox = s_screenshotMailbox.getOrCreate();
-                if ( pMailbox != nullptr )
-                    return *pMailbox;
-                // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 요청을 받지 않은 빈 우편함으로 답한다.
-                static ScreenshotMailbox s_closedFallback;
-                return s_closedFallback;
-            }
+            /**
+             * @brief 스크린샷 우편함 서비스입니다. 렌더러를 짓지 않는 호스트(전용 서버)와 서비스 범위가 서지 않은 곳에는 없어 nullptr 입니다.
+             * @details 없으면 요청을 받을 곳이 없다 — 정적 창구는 요청을 오류로 알리고 버리며, 읽는 창구는 "아직 아무것도 처리하지 않았다" 로 답한다.
+             */
+            static ScreenshotMailbox* findMailbox() { return engine::findSubsystem<ScreenshotMailbox>(); }
 
             /** @brief 컨텍스트가 스레드에 묶이는 디바이스(DX11, GL)면 이 스레드에서 컨텍스트를 뗍니다. 그 능력이 없는 디바이스는 할 일이 없습니다. */
             static void unbindGraphicsContext( const IRHIDevice* pDevice )
@@ -663,62 +641,71 @@ namespace sw
 
     void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
-        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
-        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
-        mailbox._pendingPath    = string{ filePath };
-        mailbox._pendingTexture = sourceTexture;
-        mailbox._pendingFormat  = sourceFormat;
+        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        if ( pMailbox == nullptr )
+        {
+            SW_LOG_ERROR( "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
+            return;
+        }
+        pMailbox->put( filePath, sourceTexture, sourceFormat );
     }
 
     uint32 RenderThread::getCompletedScreenshotSerial()
     {
-        return RenderThreadInternal::getMailbox()._completedSerial.load( std::memory_order_acquire );
+        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        return pMailbox != nullptr ? pMailbox->getCompletedSerial() : 0u; // 우편함이 없으면 처리한 요청이 없다
     }
 
     void RenderThread::expectCapture( CaptureKind kind )
     {
-        (void)RenderThreadInternal::getMailbox()._expectedCaptureMask.fetch_or( static_cast<uint32>( kind ) );
+        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        if ( pMailbox == nullptr )
+        {
+            SW_LOG_ERROR( "A capture was announced but this host has no screenshot mailbox (no renderer)" );
+            return;
+        }
+        pMailbox->expectCapture( static_cast<uint32>( kind ) );
     }
 
     void RenderThread::reportCaptureFinished( CaptureKind kind, bool bWritten )
     {
-        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
-        if ( bWritten == false )
-            (void)mailbox._failedCaptureMask.fetch_or( static_cast<uint32>( kind ) );
-        (void)mailbox._finishedCaptureMask.fetch_or( static_cast<uint32>( kind ) ); // 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다
+        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        if ( pMailbox == nullptr )
+        {
+            SW_LOG_ERROR( "A capture finished but this host has no screenshot mailbox (no renderer)" );
+            return;
+        }
+        pMailbox->reportCaptureFinished( static_cast<uint32>( kind ), bWritten );
     }
 
     int32 RenderThread::getCaptureExitCode()
     {
         if ( gv_screenshotQuit == false )
             return kNoCaptureExitCode;
-        const RenderThreadInternal::ScreenshotMailbox& mailbox  = RenderThreadInternal::getMailbox();
-        const uint32                                   expected = mailbox._expectedCaptureMask.load();
-        const bool                                     bAllDone = expected != 0u && ( mailbox._finishedCaptureMask.load() & expected ) == expected;
-        if ( bAllDone == false )
-            return kNoCaptureExitCode;
-        return mailbox._failedCaptureMask.load() != 0u ? kCaptureWriteFailedExitCode : 0;
+        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        bool                           bFailed  = false;
+        if ( pMailbox == nullptr || pMailbox->findAllCapturesFinished( bFailed ) == false )
+            return kNoCaptureExitCode; // 우편함이 없으면 요청한 사진이 하나도 없다
+        return bFailed ? kCaptureWriteFailedExitCode : 0;
     }
 
     string RenderThread::getLastScreenshotPath()
     {
-        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
-        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
-        return mailbox._lastPath;
+        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        return pMailbox != nullptr ? pMailbox->getLastPath() : string{}; // 우편함이 없으면 쓴 사진이 없다
     }
 
     void RenderThread::takeScreenshotRequest()
     {
         if ( _requestedScreenshotPath.empty() == false )
             return;
-        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
-        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
-        if ( mailbox._pendingPath.empty() )
+        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequest        request;
+        if ( pMailbox == nullptr || pMailbox->take( request ) == false )
             return;
-        _requestedScreenshotPath.swap( mailbox._pendingPath );
-        mailbox._pendingPath.clear();
-        _requestedScreenshotTexture = mailbox._pendingTexture;
-        _requestedScreenshotFormat  = mailbox._pendingFormat;
+        _requestedScreenshotPath.swap( request._path );
+        _requestedScreenshotTexture = request._texture;
+        _requestedScreenshotFormat  = request._format;
         // 렌더 타깃은 이번 프레임에 그려지므로 기다리지 않는다. Present 캡처는 켠 뒤 한 프레임을 더 그린다.
         _requestedScreenshotWaitFrames = _requestedScreenshotTexture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
     }
@@ -742,12 +729,9 @@ namespace sw
         else
             SW_LOG_WARNING( "Screenshot was not written: %#", _requestedScreenshotPath.c_str() );
 
-        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
-        {
-            const std::scoped_lock<mutex> lock{ mailbox._mutex };
-            mailbox._lastPath = bWritten ? _requestedScreenshotPath : string{};
-        }
-        mailbox._completedSerial.fetch_add( 1, std::memory_order_acq_rel );
+        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        if ( pMailbox != nullptr )
+            pMailbox->reportCompleted( bWritten, _requestedScreenshotPath ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
         _requestedScreenshotPath.clear();
         _requestedScreenshotTexture = 0;
     }

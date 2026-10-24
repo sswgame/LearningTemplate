@@ -92,7 +92,7 @@ namespace sw
          * @details @p sourceTexture 가 0이면 화면에 나간 이미지(Present 결과이며, 에디터면 주 출력으로 게임 뷰가 보이면 게임 뷰, 아니면 씬 뷰)를 읽고,
          *          아니면 그 렌더 타깃(포맷 @p sourceFormat)을 읽습니다. 주 출력이 아닌 에디터 씬 뷰가 그 경우입니다.
          *          Present 캡처는 켠 프레임에 아직 비어 있을 수 있어서, 캡처를 켜고 한 프레임을 더 그린 뒤 `endFrame` 다음에 읽습니다.
-         *          요청은 렌더 스레드 하나가 받습니다(엔진 전역 우편함). 앞 요청이 아직 남아 있으면 덮어씁니다.
+         *          요청은 렌더 스레드 하나가 받습니다(엔진 범위의 우편함 서비스 `ScreenshotMailbox` — 우편함이 없는 호스트에서는 오류로 알리고 버립니다). 앞 요청이 아직 남아 있으면 덮어씁니다.
          */
         static void requestScreenshot( string_view filePath, RHITextureHandle sourceTexture = 0, RHIFormat sourceFormat = RHIFormat::R8G8B8A8_UNORM );
         /** @brief `requestScreenshot` 요청을 처리한 수입니다(성공과 실패 모두 셉니다). 값이 바뀌면 `getLastScreenshotPath` 가 그 결과를 가리킵니다. */

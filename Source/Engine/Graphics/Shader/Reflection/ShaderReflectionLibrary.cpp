@@ -176,21 +176,18 @@ namespace sw
             return StringUtil::toLower( stem.c_str() );
         }
 
-        mutex& manifestMutexInternal()
+        /// @brief 매니페스트 캐시의 상태 전부입니다 — 잠금, 매니페스트 경로 → 항목, 세대.
+        struct ManifestState
         {
-            static mutex s_mutex;
-            return s_mutex;
-        }
+            mutex _mutex;
+            /// @brief 매니페스트 경로 → 항목입니다. 없는 파일도 빈 채로 캐시해 매번 다시 열지 않습니다.
+            unordered_map<string, ShaderReflectionLibrary::EntryMap> _mapManifest;
+            /// @brief clearCache 횟수입니다 — 머티리얼이 맞춘 레이아웃이 낡았는지 본다.
+            atomic<uint32> _generation{ 0 };
+        };
 
-        /// @brief 매니페스트 경로 → 항목입니다. 없는 파일도 빈 채로 캐시해 매번 다시 열지 않습니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다.
-        ScopeOwned<unordered_map<string, ShaderReflectionLibrary::EntryMap>> s_mapManifestCache;
-
-        /// @brief clearCache 횟수입니다 — 머티리얼이 맞춘 레이아웃이 낡았는지 본다.
-        atomic<uint32>& cacheGenerationInternal()
-        {
-            static atomic<uint32> s_generation{ 0 };
-            return s_generation;
-        }
+        /// @brief 매니페스트 캐시의 소유자입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 쓸 때 만들어진다).
+        ScopeOwned<ManifestState> s_manifestState;
 
         /**
          * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
@@ -331,12 +328,12 @@ namespace sw
         }
 #endif
 
-        std::scoped_lock<mutex>                                         lock{ manifestMutexInternal() };
-        unordered_map<string, ShaderReflectionLibrary::EntryMap>* const pMapManifest = s_mapManifestCache.getOrCreate();
+        ManifestState* const pState = s_manifestState.getOrCreate();
         // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다). 매니페스트를 들 곳이 없으니 찾지 못한 것으로 답한다.
-        if ( pMapManifest == nullptr )
+        if ( pState == nullptr )
             return false;
-        unordered_map<string, ShaderReflectionLibrary::EntryMap>& mapManifest = *pMapManifest;
+        std::scoped_lock<mutex>                                   lock{ pState->_mutex };
+        unordered_map<string, ShaderReflectionLibrary::EntryMap>& mapManifest = pState->_mapManifest;
 
         auto manifestIter = mapManifest.find( binDirRel );
         if ( manifestIter == mapManifest.end() )
@@ -402,23 +399,27 @@ namespace sw
 
     void ShaderReflectionLibrary::clearCache()
     {
-        std::scoped_lock<mutex> lock{ manifestMutexInternal() };
         // 재컴파일 · 쿠킹이 낡은 매니페스트를 버린다. 종료 때의 반납은 캐시를 소유한 엔진 수명 범위가 한다.
-        unordered_map<string, EntryMap>* const pMapManifest = s_mapManifestCache.find();
-        if ( pMapManifest != nullptr )
-            pMapManifest->clear();
-        cacheGenerationInternal().fetch_add( 1u, std::memory_order_acq_rel );
+        ManifestState* const pState = s_manifestState.getOrCreate();
+        if ( pState == nullptr )
+            return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 버릴 캐시가 없다
+        std::scoped_lock<mutex> lock{ pState->_mutex };
+        pState->_mapManifest.clear();
+        pState->_generation.fetch_add( 1u, std::memory_order_acq_rel );
     }
 
     uint32 ShaderReflectionLibrary::getCachedManifestCount()
     {
-        std::scoped_lock<mutex>                      lock{ manifestMutexInternal() };
-        const unordered_map<string, EntryMap>* const pMapManifest = s_mapManifestCache.find();
-        return pMapManifest == nullptr ? 0u : static_cast<uint32>( pMapManifest->size() );
+        ManifestState* const pState = s_manifestState.find();
+        if ( pState == nullptr )
+            return 0u; // 아직 아무 매니페스트도 읽지 않았다
+        std::scoped_lock<mutex> lock{ pState->_mutex };
+        return static_cast<uint32>( pState->_mapManifest.size() );
     }
 
     uint32 ShaderReflectionLibrary::getCacheGeneration()
     {
-        return cacheGenerationInternal().load( std::memory_order_acquire );
+        const ManifestState* const pState = s_manifestState.find();
+        return pState == nullptr ? 0u : pState->_generation.load( std::memory_order_acquire ); // 상태가 없으면 비운 적이 없다
     }
 } // namespace sw
