@@ -488,6 +488,10 @@ namespace sw
         , _stageItemCount{ 0 }
         , _stageBuildCount{ 0 }
         , _stageDeltaCount{ 0 }
+        , _stageCompactCount{ 0 }
+        , _stageEditOrder{ 0 }
+        , _listStageRemoval{}
+        , _listStageInsertion{}
         , _stageGeneration{ 1 }
         , _builtStageGeneration{ 0 }
         , _listDependentObjectID{}
@@ -553,8 +557,11 @@ namespace sw
             removeEmptyBatchLists();
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
+        // 다시 지으면 쌓인 편집은 버려진다(`rebuildStages`). 아니면 이번 `refresh` 의 편집을 스테이지에 한 번에 적용한다.
         if ( _builtStageGeneration != _stageGeneration )
             rebuildStages( manager );
+        else
+            flushStageEdits();
         return bRefreshedAny;
     }
 
@@ -658,28 +665,91 @@ namespace sw
         }
     }
 
-    void TickRegistry::removeStageItems( uint64 objectID )
+    void TickRegistry::queueStageRemoval( uint64 objectID )
     {
-        for ( TickStage& stage : _listStage )
+        StageRemoval removal{};
+        removal._objectID = objectID;
+        removal._order    = _stageEditOrder++;
+        _listStageRemoval.push_back( removal );
+    }
+
+    void TickRegistry::flushStageEdits()
+    {
+        if ( _listStageRemoval.empty() && _listStageInsertion.empty() )
+            return;
+
+        // 오브젝트마다 마지막 제거 요청 하나만 남기고 id 순으로 둔다(스테이지를 훑을 때 이분 탐색한다).
+        vector<StageRemoval>& listRemoval = _listStageRemoval;
+        std::sort( listRemoval.begin(), listRemoval.end(), []( const StageRemoval& left, const StageRemoval& right )
         {
-            for ( size_t index = 0; index < stage._listItemObjectID.size(); )
+            if ( left._objectID != right._objectID )
+                return left._objectID < right._objectID;
+            return left._order < right._order;
+        } );
+        size_t keptRemoval = 0;
+        for ( size_t index = 0; index < listRemoval.size(); ++index )
+        {
+            const bool bSupersededByLater = index + 1 < listRemoval.size() && listRemoval[index + 1]._objectID == listRemoval[index]._objectID;
+            if ( bSupersededByLater == false )
+                listRemoval[keptRemoval++] = listRemoval[index];
+        }
+        listRemoval.erase( listRemoval.begin() + static_cast<ptrdiff_t>( keptRemoval ), listRemoval.end() );
+        const auto findRemoval = [&listRemoval]( uint64 objectID )
+        {
+            return std::lower_bound( listRemoval.begin(), listRemoval.end(), objectID, []( const StageRemoval& removal, uint64 id )
+            { return removal._objectID < id; } );
+        };
+
+        // 제거: 스테이지마다 한 번 훑으며 요청된 오브젝트의 항목을 걷어 낸다. 남은 항목의 순서는 그대로다.
+        if ( listRemoval.empty() == false )
+        {
+            ++_stageCompactCount;
+            for ( TickStage& stage : _listStage )
             {
-                if ( stage._listItemObjectID[index] != objectID )
+                size_t keptCount = 0;
+                for ( size_t index = 0; index < stage._listItemObjectID.size(); ++index )
                 {
-                    ++index;
-                    continue;
+                    const auto position = findRemoval( stage._listItemObjectID[index] );
+                    const bool bRemoved = position != listRemoval.end() && position->_objectID == stage._listItemObjectID[index];
+                    if ( bRemoved )
+                    {
+                        --_stageItemCount;
+                        continue;
+                    }
+                    if ( keptCount != index )
+                    {
+                        stage._listItem[keptCount]         = stage._listItem[index];
+                        stage._listItemObjectID[keptCount] = stage._listItemObjectID[index];
+                    }
+                    ++keptCount;
                 }
-                stage._listItem.erase( stage._listItem.begin() + static_cast<ptrdiff_t>( index ) );
-                stage._listItemObjectID.erase( stage._listItemObjectID.begin() + static_cast<ptrdiff_t>( index ) );
-                --_stageItemCount;
+                stage._listItem.resize( keptCount );
+                stage._listItemObjectID.resize( keptCount );
             }
         }
+
+        // 끼움: 쌓인 순서대로 넣는다. 뒤에 같은 오브젝트의 제거 요청이 있었으면 그 요청 앞의 끼움은 낡았다.
+        for ( const StageInsertion& insertion : _listStageInsertion )
+        {
+            const auto position    = findRemoval( insertion._objectID );
+            const bool bSuperseded = position != listRemoval.end() && position->_objectID == insertion._objectID && position->_order > insertion._order;
+            if ( bSuperseded )
+                continue;
+            const uint8  group      = insertion._item._group;
+            const size_t stageIndex = TickRegistryInternal::findOrCreateLevelZeroStage( _listStage, group, insertion._slot );
+            TickRegistryInternal::insertIntoStage( _listStage[stageIndex], insertion._item, insertion._objectID );
+            ++_stageItemCount;
+            if ( insertion._bMarkApplyBefore == SW_TRUE )
+                TickRegistryInternal::markApplyBefore( _listStage, group );
+        }
+        _listStageRemoval.clear();
+        _listStageInsertion.clear();
     }
 
     bool TickRegistry::applyStageDelta( GameObjectManager& manager, GameObject* pObj )
     {
         const uint64 objectID = pObj->getObjectID();
-        removeStageItems( objectID );
+        queueStageRemoval( objectID );
         if ( pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
             return true;
 
@@ -721,7 +791,7 @@ namespace sw
             return left._item._orderKey < right._item._orderKey;
         } );
 
-        // 그룹마다 같은 오브젝트의 항목을 레벨 0 의 0 번 스테이지부터 차례로 넣는다(전체 재구축의 `splitByObject` 와 같은 규칙).
+        // 그룹마다 같은 오브젝트의 항목을 레벨 0 의 0 번 스테이지부터 차례로 넣는다(전체 재구축의 `splitByObject` 와 같은 규칙). 넣는 일은 `flushStageEdits` 가 한다.
         size_t cursor = 0;
         while ( cursor < listNew.size() )
         {
@@ -729,15 +799,18 @@ namespace sw
             bool        bWaits = false;
             for ( uint32 slot = 0; cursor < listNew.size() && listNew[cursor]._item._group == group; ++cursor, ++slot )
             {
-                const NewItem& entry    = listNew[cursor];
-                bWaits                  = bWaits || ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup &&
+                const NewItem& entry        = listNew[cursor];
+                bWaits                      = bWaits || ( entry._externalGroup != TickRegistryInternal::kNoExternalGroup &&
                                      entry._externalGroup >= TickRegistryInternal::getPhaseFirstGroup( group ) );
-                const size_t stageIndex = TickRegistryInternal::findOrCreateLevelZeroStage( _listStage, group, slot );
-                TickRegistryInternal::insertIntoStage( _listStage[stageIndex], entry._item, objectID );
-                ++_stageItemCount;
+                const bool     bLastOfGroup = cursor + 1 == listNew.size() || listNew[cursor + 1]._item._group != group;
+                StageInsertion insertion{};
+                insertion._item             = entry._item;
+                insertion._objectID         = objectID;
+                insertion._order            = _stageEditOrder++;
+                insertion._slot             = slot;
+                insertion._bMarkApplyBefore = ( bLastOfGroup && bWaits ) ? SW_TRUE : SW_FALSE;
+                _listStageInsertion.push_back( insertion );
             }
-            if ( bWaits )
-                TickRegistryInternal::markApplyBefore( _listStage, group );
         }
         return true;
     }
@@ -861,7 +934,7 @@ namespace sw
         if ( std::binary_search( _listReferencedObjectID.begin(), _listReferencedObjectID.end(), objectID ) )
             ++_stageGeneration;
         else if ( bWasDependent && _builtStageGeneration == _stageGeneration )
-            removeStageItems( objectID ); // 아무도 기다리지 않으니 자기 항목만 뺀다(스폰이 잦은 팔로워가 전체 재구축을 부르지 않게)
+            queueStageRemoval( objectID ); // 아무도 기다리지 않으니 자기 항목만 뺀다(스폰이 잦은 팔로워가 전체 재구축을 부르지 않게). 다음 `refresh` 가 한 번에 뺀다
         _prerequisiteCount -= pObj->_tickPrerequisiteCount;
         pObj->_tickPrerequisiteCount = 0;
         pObj->_listTickItem.clear();
@@ -886,6 +959,8 @@ namespace sw
         _listDependentObjectID.clear();
         _listReferencedObjectID.clear();
         _listStage.clear();
+        _listStageRemoval.clear();
+        _listStageInsertion.clear();
         _stageItemCount = 0;
         ++_stageGeneration;
         _bAllDirty.store( SW_TRUE, std::memory_order_release );
@@ -896,6 +971,8 @@ namespace sw
         _builtStageGeneration = _stageGeneration;
         ++_stageBuildCount;
         _listStage.clear();
+        _listStageRemoval.clear(); // 처음부터 다시 짓는다 — 쌓인 편집은 필요 없다
+        _listStageInsertion.clear();
         _listReferencedObjectID.clear();
         _stageItemCount = 0;
         if ( _listDependentObjectID.empty() )
