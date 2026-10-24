@@ -159,7 +159,7 @@ namespace sw
                     if ( face.IsDegenerate() )
                     {
                         SW_LOG_ERROR( "Soft body triangle %# repeats a vertex", index / 3 );
-                        return nullptr;
+                        return JPH::Ref<JPH::SoftBodySharedSettings>{};
                     }
                     pShared->AddFace( face );
                 }
@@ -184,7 +184,7 @@ namespace sw
         if ( Internal::validateDesc( desc ) == false )
             return PhysicsSoftBodyHandle{};
         JPH::Ref<JPH::SoftBodySharedSettings> pShared = Internal::makeSharedSettings( desc );
-        if ( pShared == nullptr )
+        if ( pShared.GetPtr() == nullptr )
             return PhysicsSoftBodyHandle{};
 
         JPH::SoftBodyCreationSettings settings{ pShared, JoltUtil::toJolt( desc._position ), JoltUtil::toJolt( desc._rotation ), JoltLayerUtil::makeObjectLayer( desc._layer, true ) };
