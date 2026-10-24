@@ -149,6 +149,7 @@ def checkRoadmap(repositoryRoot: Path) -> list[str]:
     listViolation += checkFinishedPlanLinksInternal(text, readPlans(repositoryRoot))
     listViolation += checkAllUnitsDoneStatus(readPlans(repositoryRoot))
     listViolation += checkFinishedStatusProgressInternal(readPlans(repositoryRoot))
+    listViolation += checkFinishedPlanRemainsInternal(readPlans(repositoryRoot))
     mapAnchorCache: dict[Path, set[str]] = {}
     bFence = False
     for lineNumber, line in enumerate(text.splitlines(), start=1):
@@ -212,6 +213,12 @@ def checkFinishedStatusProgressInternal(listPlan: list[PlanDoc]) -> list[str]:
         if plan.status == "끝" and match is not None and match.group(1) != match.group(2):
             listViolation.append(f"{kPlansRelDir}/{plan.fileName}: 상태가 `끝` 인데 진행이 {plan.progress} 입니다 — 남은 단위를 끝내거나(실행 확인만 남았으면 상태를 `측정대기`)")
     return listViolation
+
+
+def checkFinishedPlanRemainsInternal(listPlan: list[PlanDoc]) -> list[str]:
+    """상태가 `끝` 인 계획 문서가 남아 있으면 위반으로 모은다(docs/11_Workflow.md 6절). 끝난 문서는 지운다 — 남기면 낡은 문서가 쌓여 다시 읽힌다."""
+    return [f"{kPlansRelDir}/{plan.fileName}: 상태가 `끝` 인 계획 문서는 지웁니다 — 교훈을 코드 헤더 주석 · 09_Decisions.md · 08_Verification.md 로 옮기고, 가리키는 링크를 고치고, Roadmap 에서 지운 뒤 `git rm` (docs/11_Workflow.md 6절)"
+            for plan in listPlan if plan.status == "끝"]
 
 
 def splitAtMarkers(text: str, fileName: str) -> tuple[str, str, str]:
