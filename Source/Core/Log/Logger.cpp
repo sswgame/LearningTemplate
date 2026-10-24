@@ -9,6 +9,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include <cstdio>
+
 namespace sw
 {
     namespace
@@ -209,11 +211,25 @@ namespace sw
         return s_globalSink.load( std::memory_order_acquire );
     }
 
+    void Logger::printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
+    {
+        std::fprintf( stderr, "\n[SW_LOG_ASSERT] %s\n  %s\n  at %s:%d\n  in %s\n", pExpression, pMessage, pFile, line, pFunction );
+        std::fflush( stderr );
+    }
+
     void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink == nullptr )
+        {
+            // 싱크가 없으면(기동 초기, 로거 없는 도구) 줄을 잃지 않게 stderr 에 남긴다. 상세도는 부르는 쪽이 이미 걸렀다.
+            const utf8* pLevelName = level == LogLevel::Error ? "Error" : level == LogLevel::Warning ? "Warning"
+                                                                    : level == LogLevel::Info        ? "Info"
+                                                                                                     : "Trace";
+            std::fprintf( stderr, "[%s][%s] %s:%d: %s\n", pLevelName, pTag != nullptr ? pTag : "", pFile != nullptr ? pFile : "", line, pMessage != nullptr ? pMessage : "" );
+            std::fflush( stderr );
             return;
+        }
 
         const bool bCallerDropped = s_droppedCallerCount.load( std::memory_order_relaxed ) > 0;
         if ( bCallerDropped && s_bCallerOverflowReported.exchange( true ) == false )
