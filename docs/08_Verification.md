@@ -155,6 +155,9 @@ cd build/Ninja-Debug/Bin
   텍스처의 띠 압축은 그 안에서 중첩된다(기다리는 스레드가 남의 일을 돕는다). 해시 계산 · 대조 · 임포트는 한 파일의 일이고, 요약의 문제 목록 · 카운터와 `import.stamp` 는 파일 순서대로 직렬로 합쳐 직렬로 돌 때와 같다
   (`AssetImportParallelTest.ParallelImportMatchesSerialImport`). 몸 메시를 읽는 장비 메시(`body_surface`)는 의존 없는 모델이 끝난 뒤 직렬로 임포트한다. 임포터 로그의 줄 순서는 파일 사이에서 섞인다.
   재는 법: 스탬프를 비우고 `App --import-textures` · `--import-models` 를 돌려 전체 시간(텍스처 약 1,080 · 모델 175)을 병렬 전후로 견주고, 끝난 뒤 `git status` 에 바이트 변화가 없어야 한다(병렬 전후의 측정값은 아직 없다).
+  에디터 핫 리로드의 원본 임포트는 같은 임포트를 **백그라운드 잡에서 바뀐 원본만** 돌린다(2026-10-25, 결정 기록 5-11). 시나리오가 `Resource/` 의 모델 · 텍스처 · 높이장 원본을 쓴 뒤 결과를 읽으려면
+  임포트가 끝난 것을 알아야 하므로 탐침 `Editor.AssetImportBusy`(0 이 될 때까지)와 `Editor.AssetImportFinishedCount`(시작 값보다 커질 때까지)를 `WaitUntil` 로 기다린다. 사본 폴더를 새로 만든 시나리오의 시작은
+  감시 울타리가 사본이 일으킨 임포트까지 기다려 막는다. 검증: `EditorTest --test_filter=AssetHotReloadImportTest.*`(범위 임포트 · 워커 · 취소 · 재요청 · 에디터 스레드 적용).
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.

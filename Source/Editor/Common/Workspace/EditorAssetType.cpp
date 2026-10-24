@@ -128,46 +128,47 @@ namespace sw::editor
             MatchMode               _mode;
             const string_view*      _pSuffix; ///< `EndsWith` · `Extension` 의 접미사. 그 밖의 방식은 nullptr
             uint32                  _suffixCount;
-            string_view             _engineTypeName;  ///< `EngineType` 의 엔진 에셋 종류 이름(`X::kAssetType._name`). 그 밖의 방식은 빈 글. 접미사는 이 종류의 정의에서 온다
-            const utf8*             _pCacheKindName;  ///< 이 규칙의 파일을 가진 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니다
-            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 임포트하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
+            string_view             _engineTypeName;                            ///< `EngineType` 의 엔진 에셋 종류 이름(`X::kAssetType._name`). 그 밖의 방식은 빈 글. 접미사는 이 종류의 정의에서 온다
+            const utf8*             _pCacheKindName;                            ///< 이 규칙의 파일을 가진 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니다
+            AssetSourceImporterFunc _pfnImportSource;                           ///< 캐시가 읽기 전에 소스를 임포트하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
+            AssetImportThread       _importThread{ AssetImportThread::Editor }; ///< 임포터가 도는 스레드. 긴 임포트만 `Worker` 로 적는다
         };
 
         // 규칙 순서가 곧 판정 우선순위다. 처음 맞는 규칙이 이긴다(`findKind`, `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
-            {         EditorAssetType::Scene, MatchMode::CookableSource,               nullptr,                                    0,                                    {},                                nullptr,                                              nullptr},
-            {        EditorAssetType::Prefab, MatchMode::CookableSource,               nullptr,                                    0,                                    {},                               "Prefab",                                              nullptr},
-            {   EditorAssetType::Heightfield, MatchMode::RawHeightfield, kArrHeightfieldRawExt, SW_COUNT_OF( kArrHeightfieldRawExt ),                                    {},                                nullptr, &HeightfieldImporter::importChangedSourceHeightfield},
-            {       EditorAssetType::Texture,      MatchMode::Extension,  kArrTextureSourceExt,  SW_COUNT_OF( kArrTextureSourceExt ),                                    {},                              "Texture",           &TextureImporter::importChangedSourceImage},
-            {       EditorAssetType::Texture,     MatchMode::EngineType,               nullptr,                                    0,           Texture2D::kAssetType._name,                              "Texture",           &TextureImporter::importChangedSourceImage},
-            {        EditorAssetType::Shader,      MatchMode::Extension,         kArrShaderExt,         SW_COUNT_OF( kArrShaderExt ),                                    {},                                nullptr,                                              nullptr},
-            {      EditorAssetType::Material,     MatchMode::EngineType,               nullptr,                                    0,            Material::kAssetType._name,                             "Material",                                              nullptr},
-            {         EditorAssetType::Audio,     MatchMode::EngineType,               nullptr,                                    0,       AudioClipData::kAssetType._name,                                nullptr,                                              nullptr},
-            {         EditorAssetType::Audio,     MatchMode::EngineType,               nullptr,                                    0,       AudioGraphDef::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr}, // 소리 그래프다. 클립 캐시가 읽어 둔 것을 오디오 서비스가 다시 굳힌다(엔진 캐시 `AudioData`)
-            {EditorAssetType::AnimationGraph,     MatchMode::EngineType,               nullptr,                                    0, AnimationGraphAsset::kAssetType._name,                                nullptr,                                              nullptr},
-            { EditorAssetType::DialogueGraph,     MatchMode::EngineType,               nullptr,                                    0,  DialogueGraphAsset::kAssetType._name,                                nullptr,                                              nullptr},
-            {    EditorAssetType::SpriteClip,     MatchMode::EngineType,               nullptr,                                    0,     SpriteClipAsset::kAssetType._name,                           "SpriteClip",                                              nullptr},
-            {    EditorAssetType::SpriteClip,      MatchMode::Extension,    kArrSpriteImageExt,    SW_COUNT_OF( kArrSpriteImageExt ),                                    {},                                nullptr,                                              nullptr},
-            {       EditorAssetType::TileMap,     MatchMode::EngineType,               nullptr,                                    0,      TileMapXMLData::kAssetType._name,                                nullptr,                                              nullptr},
-            {      EditorAssetType::Sequence,     MatchMode::EngineType,               nullptr,                                    0,       SequenceAsset::kAssetType._name,                                nullptr,                                              nullptr},
-            {          EditorAssetType::Mesh,     MatchMode::EngineType,               nullptr,                                    0,     MeshAssetFormat::kAssetType._name,                                 "Mesh",                                              nullptr},
-            {          EditorAssetType::Mesh,      MatchMode::Extension,    kArrModelSourceExt,    SW_COUNT_OF( kArrModelSourceExt ),                                    {},                                 "Mesh",             &ModelImporter::importChangedSourceModel},
-            {      EditorAssetType::Skeleton,     MatchMode::EngineType,               nullptr,                                    0,            Skeleton::kAssetType._name,                             "Skeleton",                                              nullptr},
-            {           EditorAssetType::Rig,     MatchMode::EngineType,               nullptr,                                    0,            RigAsset::kAssetType._name,                                  "Rig",                                              nullptr},
-            { EditorAssetType::AnimationClip,     MatchMode::EngineType,               nullptr,                                    0,       AnimationClip::kAssetType._name,                        "AnimationClip",                                              nullptr},
-            {      EditorAssetType::Fracture,     MatchMode::EngineType,               nullptr,                                    0,       FractureAsset::kAssetType._name,                             "Fracture",                                              nullptr},
-            {   EditorAssetType::Heightfield,     MatchMode::EngineType,               nullptr,                                    0,     HeightfieldData::kAssetType._name,                                nullptr,                                              nullptr},
-            {  EditorAssetType::LayerWeights,     MatchMode::EngineType,               nullptr,                                    0,    LayerWeightsData::kAssetType._name,                                nullptr,                                              nullptr}, // 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`)
-            {          EditorAssetType::Data,       MatchMode::EndsWith,  kArrThemeTokenSuffix,  SW_COUNT_OF( kArrThemeTokenSuffix ),                                    {},                                nullptr,                 &EditorTheme::importChangedTokenFile},
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0,   SourceStringTable::kAssetType._name,                          "StringTable",                                              nullptr}, // 로드한 프로젝트를 다시 읽는다(`LocalizationManager`)
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0,    TranslationTable::kAssetType._name,                          "StringTable",                                              nullptr},
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0, LocalizationProject::kAssetType._name,                          "StringTable",                                              nullptr},
-            {    EditorAssetType::UIDocument,     MatchMode::EngineType,               nullptr,                                    0,     UIDocumentAsset::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr}, // UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0,   UIStyleSheetAsset::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr}, // UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
-            {          EditorAssetType::Data,       MatchMode::EndsWith,  kArrModuleDataSuffix,  SW_COUNT_OF( kArrModuleDataSuffix ),                                    {}, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0,      AudioMixerDesc::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr}, // 오디오 서비스가 쓰는 믹서 그래프 · 이벤트 라이브러리다(엔진 캐시 `AudioData` 가 지금 쓰는 파일만 다시 읽는다)
-            {          EditorAssetType::Data,     MatchMode::EngineType,               nullptr,                                    0,   AudioEventLibrary::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
-            {          EditorAssetType::Data,      MatchMode::Extension,           kArrDataExt,           SW_COUNT_OF( kArrDataExt ),                                    {},                                nullptr,                                              nullptr},
+            { EditorAssetType::Scene, MatchMode::CookableSource, nullptr, 0, {}, nullptr, nullptr },
+            { EditorAssetType::Prefab, MatchMode::CookableSource, nullptr, 0, {}, "Prefab", nullptr },
+            { EditorAssetType::Heightfield, MatchMode::RawHeightfield, kArrHeightfieldRawExt, SW_COUNT_OF( kArrHeightfieldRawExt ), {}, nullptr, &HeightfieldImporter::importChangedSourceHeightfield, AssetImportThread::Worker },
+            { EditorAssetType::Texture, MatchMode::Extension, kArrTextureSourceExt, SW_COUNT_OF( kArrTextureSourceExt ), {}, "Texture", &TextureImporter::importChangedSourceImage, AssetImportThread::Worker },
+            { EditorAssetType::Texture, MatchMode::EngineType, nullptr, 0, Texture2D::kAssetType._name, "Texture", nullptr },
+            { EditorAssetType::Shader, MatchMode::Extension, kArrShaderExt, SW_COUNT_OF( kArrShaderExt ), {}, nullptr, nullptr },
+            { EditorAssetType::Material, MatchMode::EngineType, nullptr, 0, Material::kAssetType._name, "Material", nullptr },
+            { EditorAssetType::Audio, MatchMode::EngineType, nullptr, 0, AudioClipData::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::Audio, MatchMode::EngineType, nullptr, 0, AudioGraphDef::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath, nullptr }, // 소리 그래프다. 클립 캐시가 읽어 둔 것을 오디오 서비스가 다시 굳힌다(엔진 캐시 `AudioData`)
+            { EditorAssetType::AnimationGraph, MatchMode::EngineType, nullptr, 0, AnimationGraphAsset::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::DialogueGraph, MatchMode::EngineType, nullptr, 0, DialogueGraphAsset::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::SpriteClip, MatchMode::EngineType, nullptr, 0, SpriteClipAsset::kAssetType._name, "SpriteClip", nullptr },
+            { EditorAssetType::SpriteClip, MatchMode::Extension, kArrSpriteImageExt, SW_COUNT_OF( kArrSpriteImageExt ), {}, nullptr, nullptr },
+            { EditorAssetType::TileMap, MatchMode::EngineType, nullptr, 0, TileMapXMLData::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::Sequence, MatchMode::EngineType, nullptr, 0, SequenceAsset::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::Mesh, MatchMode::EngineType, nullptr, 0, MeshAssetFormat::kAssetType._name, "Mesh", nullptr },
+            { EditorAssetType::Mesh, MatchMode::Extension, kArrModelSourceExt, SW_COUNT_OF( kArrModelSourceExt ), {}, "Mesh", &ModelImporter::importChangedSourceModel, AssetImportThread::Worker },
+            { EditorAssetType::Skeleton, MatchMode::EngineType, nullptr, 0, Skeleton::kAssetType._name, "Skeleton", nullptr },
+            { EditorAssetType::Rig, MatchMode::EngineType, nullptr, 0, RigAsset::kAssetType._name, "Rig", nullptr },
+            { EditorAssetType::AnimationClip, MatchMode::EngineType, nullptr, 0, AnimationClip::kAssetType._name, "AnimationClip", nullptr },
+            { EditorAssetType::Fracture, MatchMode::EngineType, nullptr, 0, FractureAsset::kAssetType._name, "Fracture", nullptr },
+            { EditorAssetType::Heightfield, MatchMode::EngineType, nullptr, 0, HeightfieldData::kAssetType._name, nullptr, nullptr },
+            { EditorAssetType::LayerWeights, MatchMode::EngineType, nullptr, 0, LayerWeightsData::kAssetType._name, nullptr, nullptr }, // 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`)
+            { EditorAssetType::Data, MatchMode::EndsWith, kArrThemeTokenSuffix, SW_COUNT_OF( kArrThemeTokenSuffix ), {}, nullptr, &EditorTheme::importChangedTokenFile },
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, SourceStringTable::kAssetType._name, "StringTable", nullptr }, // 로드한 프로젝트를 다시 읽는다(`LocalizationManager`)
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, TranslationTable::kAssetType._name, "StringTable", nullptr },
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, LocalizationProject::kAssetType._name, "StringTable", nullptr },
+            { EditorAssetType::UIDocument, MatchMode::EngineType, nullptr, 0, UIDocumentAsset::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath, nullptr }, // UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, UIStyleSheetAsset::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath, nullptr }, // UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
+            { EditorAssetType::Data, MatchMode::EndsWith, kArrModuleDataSuffix, SW_COUNT_OF( kArrModuleDataSuffix ), {}, AssetReloadRoute::kAnyCacheHoldingPath, nullptr },
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, AudioMixerDesc::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath, nullptr }, // 오디오 서비스가 쓰는 믹서 그래프 · 이벤트 라이브러리다(엔진 캐시 `AudioData` 가 지금 쓰는 파일만 다시 읽는다)
+            { EditorAssetType::Data, MatchMode::EngineType, nullptr, 0, AudioEventLibrary::kAssetType._name, AssetReloadRoute::kAnyCacheHoldingPath, nullptr },
+            { EditorAssetType::Data, MatchMode::Extension, kArrDataExt, SW_COUNT_OF( kArrDataExt ), {}, nullptr, nullptr },
         };
 
         // 종류마다 항목 하나다. 항목 순서가 곧 브라우저 필터, 도구 패널, 리소스 카탈로그의 표시 순서다.
@@ -609,6 +610,7 @@ namespace sw::editor
                 continue;
             route._pCacheKindName  = row._pCacheKindName;
             route._pfnImportSource = row._pfnImportSource;
+            route._importThread    = row._importThread;
             return route;
         }
         return route;

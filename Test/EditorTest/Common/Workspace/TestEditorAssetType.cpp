@@ -262,7 +262,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
 /**
  * @brief [EditorAssetTypeTest] 핫 리로드 경로는 표가 정한다 — 파일 종류마다 다시 읽을 엔진 캐시와(있으면) 먼저 돌릴 임포터
  * @details `AssetHotReload` 에는 종류별 코드가 없으므로, 종류를 더하거나 빼는 일은 이 표의 한 줄로 끝나야 한다.
- *          이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 가서 임포트하는 임포터를 탄다. `.dds` 는 임포터가 넘기고 캐시가 다시 읽는다.
+ *          이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 가서 임포트하는 임포터를 탄다. `.dds` 는 임포터 없이 캐시가 다시 읽는다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
 {
@@ -272,8 +272,10 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     const AssetReloadRoute texture = EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures/hero.dds" );
     SW_ASSERT_NOT_NULL( texture._pCacheKindName );
     SW_EXPECT_STREQ( "Texture", texture._pCacheKindName );
-    SW_EXPECT_TRUE( texture._pfnImportSource == &sw::editor::TextureImporter::importChangedSourceImage );
-    SW_EXPECT_FALSE( texture._pfnImportSource( "game/empty/textures/hero.dds" ) ); // 임포트된 결과는 캐시가 다시 읽는다
+    SW_EXPECT_NULL( texture._pfnImportSource ); // 임포트된 결과는 임포터 없이 캐시가 다시 읽는다 — 표가 고른다(임포터를 불러 보고 거절당하는 길은 워커 왕복이다)
+    const AssetReloadRoute textureSource = EditorAssetTypeRegistry::findReloadRoute( "game/empty/textures_raw/hero.png" );
+    SW_EXPECT_TRUE( textureSource._pfnImportSource == &sw::editor::TextureImporter::importChangedSourceImage );
+    SW_EXPECT_TRUE( textureSource._importThread == sw::editor::AssetImportThread::Worker ); // 긴 임포트는 에디터 스레드에서 동기로 돌지 않는다
 
     const AssetReloadRoute spriteImage = EditorAssetTypeRegistry::findReloadRoute( "game/empty/sprites/hero.png" );
     SW_ASSERT_NOT_NULL( spriteImage._pCacheKindName );

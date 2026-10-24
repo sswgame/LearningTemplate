@@ -26,6 +26,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorAssetFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorBackgroundIO.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorExternalToolJob.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorFolderListing.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorReferenceIndex.cpp"
