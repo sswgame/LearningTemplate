@@ -12,8 +12,12 @@ Core 폴더 층 검사 — `Source/Core/` 바로 아래 폴더가 곧 층이고,
      `.cpp` 도 센다 — Core 를 여러 라이브러리로 나눌 때 링크 간선이 되기 때문이다.
   2) 폴더 파일은 루트 모음 헤더(`Core/CoreMinimal.h` · `Core/pch.h`)를 include 하지 않는다(폴더 하나가 Core 전체를 끌어온다).
   3) 티어 표에 없는 폴더는 실패다 — 새 폴더는 티어를 정하고 넣는다(`RunCoreLayerGraph.py` 가 계산해 준다).
-  4) `Log` 보다 낮은 티어의 파일은 로그 매크로(`SW_LOG_*`)를 쓰지 않는다 — `.cpp` 는 pch 로 `Logger.h` 를 include 없이 받으므로
-     include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 예외 표에 이유와 함께 적는다(줄일 대상).
+  4) `Log` 보다 낮은 티어의 파일은 로그 매크로(`SW_LOG_*` 전부 — `_ID` 변형 포함)를 쓰지 않는다. **낮은 티어 `.cpp` 는 컴파일이 이미 막는다** —
+     `Source/Core/CMakeLists.txt` 가 낮은 티어를 `Core_low_objects` 로 따로 지어 `Logger.h` 가 없는 `pchLow.h` 를 쓴다. 이 규칙은 컴파일이 못 막는 곳을
+     맡는다: 낮은 티어 **헤더**(위 티어 pch 로 컴파일되는 TU 가 포함하므로 거기서는 `Logger.h` 가 보인다)와 pch 를 끈 구성, 그리고 빌드 전 빠른 피드백.
+     이미 있는 것은 예외 표에 이유와 함께 적는다(줄일 대상).
+  5) (전체 훑기) `pchLow.h` 는 `CoreMinimal.h` 에서 티어가 `Log` 이상인 폴더의 헤더만 뺀 것이어야 한다 — 두 묶음이 갈리면 낮은 티어 pch 가 모자라거나
+     위 티어 선언을 다시 들여온다. 낮은 티어 폴더 집합 자체는 CMake 가 이 티어 표(`[tier]`)를 읽어 정하므로 따로 맞출 목록이 없다.
   `Core/Network` 내부 방향은 `CheckCoreNetworkLayers.py` 가 따로 본다.
 
 전체를 훑을 때(`--files` 없이)는 include 그래프에서 티어를 직접 계산해 표와 맞춘다(`lint/LayerGraph.py`): 순환(SCC)은 실패, 표 < 계산값은 실패,
@@ -49,10 +53,14 @@ _kCoreTier: dict[str, int] = _kCoreRuleData["tier"]
 #: 표가 그래프 계산값보다 높은 폴더 → 이유(`[tierReason]`). 이유 없는 상향은 `finishSourceScan` 의 "표 = 계산값" 검사가 실패시킨다.
 _kCoreTierReason: dict[str, str] = _kCoreRuleData["tierReason"]
 
-_kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h")
+_kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h", "Core/pchLow.h")
+#: 낮은 티어 pch(`Source/Core/pchLow.h`)와 그것이 줄여 만든 원본 — 규칙 5 가 비교한다.
+_kLowPchRelative = "Source/Core/pchLow.h"
+_kFullAggregateRelative = "Source/Core/CoreMinimal.h"
 
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")
-_kLogUseRe = re.compile(r"\bSW_LOG_(?:ERROR|WARNING|INFO|TRACE|ASSERT|CALLER)\b|\bLogger::")
+#: 로그 매크로 · 창구 — `SW_LOG_` 로 시작하는 이름 전부(`SW_LOG_ERROR_ID` · `SW_LOG_WRITE` · `SW_LOG_TAG` …)가 `Logger.h` 에서 온다.
+_kLogUseRe = re.compile(r"\bSW_LOG_\w+|\bLogger::")
 
 
 def findViolationsInFile(relative: str, text: str) -> list[str]:
@@ -91,10 +99,39 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
 
 
 def findViolationsInSource(source: SourceFile) -> FileFindings | None:
-    """`Source/Core/` 파일 하나 — 센 파일은 `value`(폴더 간 엣지 목록, 비어 있어도 None 이 아니다)가 있다."""
+    """
+    `Source/Core/` 파일 하나 — 센 파일은 `value`(비어 있어도 None 이 아니다)가 있다.
+    `value` = (폴더 간 엣지 목록, 규칙 5 가 비교할 모음 헤더의 (경로, `Core/…` include 목록) 또는 None).
+    """
     if source.relative.startswith(_kSourceCorePrefix) is False:
         return None
-    return FileFindings(listViolation=findViolationsInFile(source.relative, source.text), value=findEdgesInFile(source.relative, source.text))
+    aggregate = None
+    if source.relative in (_kFullAggregateRelative, _kLowPchRelative):
+        aggregate = (source.relative, [normalizePath(rawInclude) for _, rawInclude in iterIncludes(source.text, bQuotedOnly=True)
+                                       if rawInclude.startswith(_kCorePrefix)])
+    return FileFindings(listViolation=findViolationsInFile(source.relative, source.text), value=(findEdgesInFile(source.relative, source.text), aggregate))
+
+
+def findLowPchProblems(mapAggregate: dict[str, list[str]]) -> list[str]:
+    """규칙 5 — `pchLow.h` 의 include 집합이 `CoreMinimal.h` 에서 티어가 `Log` 이상인 폴더의 헤더만 뺀 것과 같은가."""
+    listProblem = [f"{relative}: 규칙 5 가 비교할 모음 헤더를 찾지 못했다 — 파일이 사라졌거나 옮겨졌다"
+                   for relative in (_kFullAggregateRelative, _kLowPchRelative) if relative not in mapAggregate]
+    if listProblem:
+        return listProblem
+    logTier = _kCoreTier["Log"]
+    setExpected: set[str] = set()
+    for includePath in mapAggregate[_kFullAggregateRelative]:
+        includeTier = _kCoreTier.get(firstFolderAfter(includePath, _kCorePrefix))
+        if includeTier is None:
+            listProblem.append(f"{_kFullAggregateRelative}: <{includePath}> -> 티어 표에 없는 폴더입니다")
+        elif includeTier < logTier:
+            setExpected.add(includePath)
+    setActual = set(mapAggregate[_kLowPchRelative])
+    listMissing = sorted(setExpected - setActual)
+    listExtra = sorted(setActual - setExpected)
+    if listMissing or listExtra:
+        listProblem.append(f"{_kLowPchRelative}: CoreMinimal.h 의 낮은 티어(Log 미만) 헤더 묶음과 다릅니다 — 빠진 것: {listMissing or '없음'}, 넘치는 것: {listExtra or '없음'}")
+    return listProblem
 
 
 def findEdgesInFile(relative: str, text: str) -> list[tuple[str, str]]:
@@ -163,6 +200,27 @@ class CheckCoreLayersGate(LintGate):
             "expectedViolation": "Source/Core/Memory/Probe.cpp: 티어 2('Memory')가 로그 매크로를 씁니다",
             "files": {"Source/Core/Memory/Probe.cpp": "#include \"pch.h\"\nvoid probe() { SW_LOG_ERROR( \"x\" ); }\n"},
         },
+        {
+            "name": "Log 아래 층이 _ID 변형 로그 매크로를 쓴다 (예전 정규식은 `\\b` 때문에 놓쳤다)",
+            "expectedViolation": "Source/Core/Memory/Probe.cpp: 티어 2('Memory')가 로그 매크로를 씁니다",
+            "files": {"Source/Core/Memory/Probe.cpp": "#include \"pch.h\"\nvoid probe() { SW_LOG_ERROR_ID( \"memory.probe\", \"x\" ); }\n"},
+        },
+        {
+            "name": "pchLow.h 가 Log 이상 티어의 헤더를 들여온다 (CoreMinimal.h 와 묶음이 다르다)",
+            "expectedViolation": "Source/Core/pchLow.h: CoreMinimal.h 의 낮은 티어(Log 미만) 헤더 묶음과 다릅니다 — 빠진 것: 없음, 넘치는 것: ['Core/Log/Logger.h']",
+            "files": {
+                "Source/Core/CoreMinimal.h": "#pragma once\n#include \"Core/Memory/Memory.h\"\n#include \"Core/Log/Logger.h\"\n",
+                "Source/Core/pchLow.h": "#pragma once\n#include \"Core/Memory/Memory.h\"\n#include \"Core/Log/Logger.h\"\n",
+            },
+        },
+        {
+            "name": "pchLow.h 에 낮은 티어 헤더가 빠졌다",
+            "expectedViolation": "Source/Core/pchLow.h: CoreMinimal.h 의 낮은 티어(Log 미만) 헤더 묶음과 다릅니다 — 빠진 것: ['Core/Math/Math.h'], 넘치는 것: 없음",
+            "files": {
+                "Source/Core/CoreMinimal.h": "#pragma once\n#include \"Core/Math/Math.h\"\n#include \"Core/Memory/Memory.h\"\n#include \"Core/Log/Logger.h\"\n",
+                "Source/Core/pchLow.h": "#pragma once\n#include \"Core/Memory/Memory.h\"\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -179,12 +237,17 @@ class CheckCoreLayersGate(LintGate):
             # 일부 파일만 보면 그래프가 일부라 티어를 계산할 수 없다 — 표 = 계산값 검사는 전체 훑기(린트 묶음 · CI)가 한다.
             return GateResult(listViolation=listViolation, summary=summary + " (--files: 표 = 계산값 검사는 전체 훑기에서)")
         mapEdge = newEdgeMap()
+        mapAggregate: dict[str, list[str]] = {}
         for findings in result.listFindings:
-            for sourceLayer, destLayer in findings.value or ():
+            listEdge, aggregate = findings.value or ((), None)
+            for sourceLayer, destLayer in listEdge:
                 mapEdge[sourceLayer][destLayer].append(None)
+            if aggregate is not None:
+                mapAggregate[aggregate[0]] = aggregate[1]
         listViolation += [f"티어 표: {problem}" for problem in findTierTableProblems(
             mapEdge, _kCoreTier, _kCoreTierReason, tableLabel="rules/CheckCoreLayers.toml [tier]", reasonLabel="[tierReason]")]
-        return GateResult(listViolation=listViolation, summary=f"{summary}, {len(mapEdge)} 폴더의 티어를 그래프 계산값과 맞춰 봄")
+        listViolation += findLowPchProblems(mapAggregate)
+        return GateResult(listViolation=listViolation, summary=f"{summary}, {len(mapEdge)} 폴더의 티어를 그래프 계산값과 맞춰 보고 pchLow.h 를 CoreMinimal.h 와 맞춰 봄")
 
 
 main = CheckCoreLayersGate.run

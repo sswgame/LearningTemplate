@@ -177,8 +177,13 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   직접 쓰면 오류 변수를 안 읽거나 오류 뒤에 기본값을 넣는 모양이 되풀이됐다. 선택 읽기에는 기본값 인자가 없다(없음 = 변수 미정의, 없을 때의 뜻은 부르는 쪽이 적는다).
   필수 도구(doxygen — `SW_BUILD_DOCS=ON` 일 때 · LLD · 리눅스 X11/xcb/GL/Vulkan · Windows 아카이버/mt)는 못 찾으면 구성을 세운다 — 경고만 남기고 링크에서 서지 않는다.
 - **`sw_addVcpkgPackage` 는 못 찾으면 구성을 세운다(REQUIRED)** — 설정 파일이 없는 헤더 전용 포트는 `sw_addVcpkgHeaderOnly`(PROBE 헤더 확인). 서드파티 폴더 목록은 없다(폴더 훑기).
-  OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
+  OBJECT 라이브러리(`Core_objects` · `Core_low_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
   (`.gitattributes` 의 `*.patch -text`).
+- **Core 는 OBJECT 둘이다** — 티어 표(`Scripts/lint/rules/CheckCoreLayers.toml`)에서 `Log` 보다 아래인 폴더의 `.cpp` 는 `Core_low_objects`, 나머지는 `Core_objects`.
+  `Source/Core/CMakeLists.txt` 가 표를 직접 읽어 가르고(표에 없는 폴더는 구성이 선다), 낮은 쪽은 `Logger.h` · File · String 이 없는 `pchLow.h` 로 컴파일되어 `SW_LOG_*` · `StringBuilder`
+  같은 위 티어 선언을 pch 로 몰래 받던 `.cpp` 가 컴파일 오류가 된다. 두 타깃은 `sw_addCoreObjects` 하나로 같은 설정을 받고 pch 진입 헤더 폴더(`core` · `corelow`)만 달라 소스의
+  `#include "pch.h"` 는 그대로다. `Core` STATIC 의 `SW_CORE_OBJECTS` 속성이 OBJECT 목록이고 Engine 이 그것을 읽어 가져가므로 하나를 더하면 거기만 고친다.
+  낮은 쪽만 `SW_LOG_TAG` 가 없다. 낮은 티어 **헤더**는 위 티어 pch 로 컴파일되는 TU 가 포함하므로 로그 매크로 금지는 린트 규칙 4(`CheckCoreLayers.py`)가 계속 맡는다.
 - **Shipping 정적 링크는 열거형만 든 `.gen.cpp` 를 버린다**(증상: `findEnum` 이 null, enum 2 개) — `sw_linkWholeArchive` 가 링커별 whole-archive 를 고른다.
 - **PCH 를 나눠 쓸 때 clang-cl 은 PCH 헤더보다 앞에 강제 포함(`/FI`)한 파일을 건너뛴다** — CMake 는 PCH 플래그를 명령줄 맨 끝에 두므로 타깃 고유 정의 헤더가
   조용히 사라진다. 그리고 `REUSE_PRECOMPILE_HEADERS_FROM` 속성만 세우면 CMake 4.4 는 아무것도 붙이지 않는다(`target_precompile_headers( REUSE_FROM )` 이어야 한다) —

@@ -60,7 +60,7 @@ endforeach()
 sw_findEngineCompressionLibraries(listEngineCompressionLib)
 
 # ------------------------------------------------------------------------------
-# 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core_objects 재사용 · 내보내기
+# 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
 # Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
 # Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
@@ -94,8 +94,15 @@ target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
-target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
-add_dependencies(Engine Core_objects)
+# Core 의 OBJECT 들(높은 티어 `Core_objects` · 낮은 티어 `Core_low_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
+get_target_property(listCoreObjects Core SW_CORE_OBJECTS)
+if(NOT listCoreObjects)
+	message(FATAL_ERROR "[Engine] Core 의 SW_CORE_OBJECTS 속성이 비었다 — Source/Core 를 먼저 add_subdirectory 해야 한다")
+endif()
+foreach(coreObjects IN LISTS listCoreObjects)
+	target_sources(Engine PRIVATE $<TARGET_OBJECTS:${coreObjects}>)
+	add_dependencies(Engine ${coreObjects})
+endforeach()
 
 sw_configureDllExports(Engine ${coreLibType} ENGINE)
 sw_keepImportLibraryIfUnchanged(Engine)
