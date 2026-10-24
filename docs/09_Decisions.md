@@ -575,6 +575,7 @@
 
 - 여러 스레드가 함께 더하는 카운터(활성 태스크 수 · 메모리 태그 통계)는 `ShardedCounter` · `ShardArray`(스레드 칸 16, 읽는 쪽이 합침)로 둔다(2026-10-18, 언리얼 LLM 스레드별 상태 · 리눅스 `percpu_counter` 와 같은 구조). "0 이 됐나" 를 보는 카운터는 같은 칸에서 올리고 내린다. 메모리 태그 최고치는 합을 읽을 때(프레임 · 패널) 본 값의 최고치다 — 측정(`docs/plans/StructuralOptimization.md`)에서 이득이 없으면 단위 커밋을 되돌린다.
 - **`sw::make_unique` 는 함수 객체(변수 템플릿 `MakeUniqueFunction<T>`)입니다**(2026-10-22). 함수 템플릿이면 std 타입 인자가 ADL 로 `std::make_unique` 를 끌어와 STL 컨테이너 구성에서 호출이 모호해졌다. 일반 탐색이 객체를 찾으면 ADL 이 없다 — C++20 표준 라이브러리의 niebloid 와 같은 방식이다. `make_shared` 는 STL 구성에서 `using std::make_shared` 로 둔다(해제자가 같아서).
+- **락을 쥔 채 로그 · 콜백 · 장치 · 외부 호출을 하지 않는다. 락은 잎 락이다**(2026-10-25). `mutex` 는 재진입 불가인데 로그는 싱크로 되돌아오므로, 락 안에서 남긴 로그가 같은 락을 다시 잡아 같은 스레드가 영구 정지한다(`AsyncLogSink::initialize` 가 락을 쥔 채 `FileLogOutput::open` 을 불러, 로그 폴더를 못 만들면 기동이 멈췄다. `addOutput` 의 거절 경고도 같은 모양). 모양으로 막는다 — 락 안에서는 포인터 복사(`snapshotOutputs`)와 상태 변경만 하고 호출은 락 밖에서 하며, 오류는 값으로 모아 두었다가 락을 놓은 뒤 남긴다(`ResourcePaths::mountDiskDomain` 도 같다). 장치가 자기 락을 쥐고 `write` 안에서 남기는 로그는 형식으로 막지 못해, `write` 깊이를 센 스레드 로컬이 stderr 로 돌린다(버리지 않는다). 리눅스 커널의 "락 안에서 printk" 규칙과 같은 방향이고, 언리얼은 로그 장치가 재진입을 스스로 막는다.
 
 - **저장 전용 압축 타입(`half` · `unorm8/16` · `snorm8/16` · `OctahedralNormal` · `RGB10A2`)은 산술 연산자도 암시적 변환도 주지 않습니다**(2026-10-25, `Core/Math`). 계산은 `toFloat` 로 푼 `float32` 로 하고 결과를 `fromFloat` 로 담습니다.
   변환은 비트 연산을 직접 써서(F16C · NEON · `_Float16` 에 기대지 않음) 모든 플랫폼에서 같은 입력이 같은 비트이고 `constexpr` 입니다. 반올림은 가장 가까운 값(가운데는 짝수), 정규화 정수는 NaN 을 0 으로 자르고 snorm 은 정수 최솟값을 만들지 않습니다(D3D 규칙).

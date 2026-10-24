@@ -500,6 +500,10 @@ namespace sw
             SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the resource root (packs-only builds would read loose assets)", domainName, diskFolder );
             return false;
         }
+        // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
+        // 이 락과 얽히지 않게 한다).
+        string conflictFolder;
+        bool   bConflict{ false };
         {
             std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_diskDomainMutex );
             for ( const ResourcePathsInternal::MountedDiskDomain& mounted : ResourcePathsInternal::_s_listDiskDomain )
@@ -508,10 +512,17 @@ namespace sw
                     continue;
                 if ( FileUtil::normalizePath( mounted._folder ) == FileUtil::normalizePath( folder ) )
                     return true;
-                SW_LOG_ERROR( "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, mounted._folder );
-                return false;
+                conflictFolder = mounted._folder;
+                bConflict      = true;
+                break;
             }
-            ResourcePathsInternal::_s_listDiskDomain.push_back( ResourcePathsInternal::MountedDiskDomain{ domain, folder } );
+            if ( bConflict == false )
+                ResourcePathsInternal::_s_listDiskDomain.push_back( ResourcePathsInternal::MountedDiskDomain{ domain, folder } );
+        }
+        if ( bConflict )
+        {
+            SW_LOG_ERROR( "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, conflictFolder );
+            return false;
         }
         clearPathCache();
         return true;
