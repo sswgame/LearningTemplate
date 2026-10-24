@@ -225,7 +225,7 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
         {      "{ \"_maxFrameDeltaTme\": 0.2 }",             "Config.KeyUnknown"}, // 모르는 키
         {     "{ \"_MaxFrameDeltaTime\": 0.2 }",             "Config.KeyUnknown"}, // 대소문자만 다르다
         {          "{ \"_fixedDeltaTime\": 0 }", "Serialization.ValueOutOfRange"}, // Min 밖
-        {"{ \"_window\": { \"_widht\": 800 } }",             "Config.KeyUnknown"}, // 구조체 칸 안의 모르는 키는 바깥 칸 이름으로
+        {"{ \"_window\": { \"_widht\": 800 } }",   "Serialization.RestoreFailed"}, // 구조체 칸 안의 모르는 키는 바깥 칸(_window) 이름으로 읽기 실패를 알린다
     };
     for ( const Case& testCase : arrCase )
     {

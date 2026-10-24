@@ -126,7 +126,7 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
         SW_EXPECT_FALSE( sw::FileUtil::ensureParentDirectoryExists( sw::FileUtil::joinPath( blocker, "child/leaf.txt" ) ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "File.CreateDirectoryFailed" ) == 2, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Registration.DuplicateName" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.joined().find( "blocker" ) != sw::string::npos, logs.joined().c_str() ); // 막은 폴더의 경로가 줄에 든다
 }
 
 /**

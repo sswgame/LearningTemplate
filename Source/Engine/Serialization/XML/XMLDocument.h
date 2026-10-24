@@ -356,7 +356,7 @@ namespace sw
     private:
         struct Impl;
         unique_ptr<Impl> _impl;
-        string           _lastError; /**< 마지막 parse 나 load 의 실패 이유(`getLastError`) */
-        bool             _bLastErrorNotFound{ false };
+        string           _lastError;          /**< 마지막 parse 나 load 의 실패 이유(`getLastError`) */
+        bool             _bLastErrorNotFound; /**< 마지막 실패가 "파일 없음" 이었는가(`isLastErrorNotFound`) — 초기값은 생성자가 정한다 */
     };
 } // namespace sw

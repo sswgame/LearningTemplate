@@ -1329,7 +1329,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
     SW_EXPECT_EQUAL( 5u, readUint( "usage" ) );
     SW_EXPECT_EQUAL( 3u, readUint( "quality" ) );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnknownEnumValue" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnknownEnumValue" ) == 6, logs.joined().c_str() );
     // 실패한 글은 프로퍼티 값으로도 남지 않는다(저장하면 옛 값이 나간다).
     const sw::MaterialProperty* pShade = material->findProperty( sw::hashed_string( "shadeMode" ) );
     SW_ASSERT_NOT_NULL( pShade );

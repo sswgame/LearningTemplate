@@ -749,9 +749,11 @@ SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported )
 {
     test::ScopedAssertCapture capture;
     sw::DelegateHandle        handle;
+    sw::ILogSink*             pOldSink = sw::Logger::getGlobalSink();
     {
-        test::ScopedLogSuppressor noSink;
+        sw::Logger::setGlobalSink( nullptr ); // 억제용 싱크(ScopedLogSuppressor)는 리스너를 받으므로 싱크 자체를 비운다
         handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, []( const sw::LogEntry& ) {} ) );
+        sw::Logger::setGlobalSink( pOldSink );
     }
     SW_EXPECT_FALSE( handle.isValid() );
     if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )

@@ -544,6 +544,7 @@ namespace sw
 
     XMLDocument::XMLDocument()
         : _impl{ make_unique<Impl>() }
+        , _bLastErrorNotFound{ false }
     {
     }
 

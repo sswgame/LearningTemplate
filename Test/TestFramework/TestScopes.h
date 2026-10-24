@@ -62,31 +62,6 @@ namespace test
 
 namespace test
 {
-    /** @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼 */
-    class ScopedLogSuppressor
-    {
-    public:
-        ScopedLogSuppressor()
-            : _pOldSink{ sw::Logger::getGlobalSink() }
-        {
-            sw::Logger::setGlobalSink( nullptr );
-        }
-
-        ~ScopedLogSuppressor()
-        {
-            sw::Logger::setGlobalSink( _pOldSink );
-        }
-
-        ScopedLogSuppressor( const ScopedLogSuppressor& )            = delete;
-        ScopedLogSuppressor& operator=( const ScopedLogSuppressor& ) = delete;
-
-    private:
-        sw::ILogSink* _pOldSink;
-    };
-} // namespace test
-
-namespace test
-{
     /** @brief 스코프 내에서 Error/Warning 로그에 [Expected Defensive Test] 표기를 부착하는 테스트용 싱크 프록시 */
     class DefensiveTestLogSink final : public sw::ILogSink
     {
@@ -158,6 +133,34 @@ namespace test
     private:
         sw::ILogSink* _pWrappedSink{ nullptr };
         sw::string    _reason;
+    };
+} // namespace test
+
+namespace test
+{
+    /**
+     * @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼
+     * @details 전역 싱크를 비우지 않고 줄을 버리는 싱크로 바꾼다. 싱크가 비면 `Logger::registerGlobalListener` 가 순서 위반으로 멈추는데(시나리오 로그 포착이
+     *          억제 구간에서 리스너를 붙인다), 버리는 싱크는 리스너 붙임을 받아 빈 핸들을 돌려준다.
+     */
+    class ScopedLogSuppressor
+    {
+    public:
+        ScopedLogSuppressor()
+            : _pOldSink{ sw::Logger::getGlobalSink() }
+            , _discardSink{ nullptr }
+        {
+            sw::Logger::setGlobalSink( &_discardSink );
+        }
+
+        ~ScopedLogSuppressor() { sw::Logger::setGlobalSink( _pOldSink ); }
+
+        ScopedLogSuppressor( const ScopedLogSuppressor& )            = delete;
+        ScopedLogSuppressor& operator=( const ScopedLogSuppressor& ) = delete;
+
+    private:
+        sw::ILogSink*        _pOldSink;
+        DefensiveTestLogSink _discardSink; ///< 감싼 싱크가 없어 모든 줄을 버린다
     };
 } // namespace test
 

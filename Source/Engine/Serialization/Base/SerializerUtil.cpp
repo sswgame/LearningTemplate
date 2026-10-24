@@ -1240,8 +1240,8 @@ namespace sw
         // 이 빌드가 방금 쓴 바이트라 되읽지 못하면 코덱의 결함이다 — 읽다 만 값을 받지 않고 멈춘다.
         if ( SerializerUtil::applyPropertyBinary( *_pProperty, instance, _bytes.data(), _bytes.size(), context ) == FieldReadResult::Read )
             return true;
-        SW_LOG_ERROR( "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
-                      _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
+        SW_LOG_ERROR_ID( "Serialization.RestoreFailed", "%#::%# (%#): the value before the failed read could not be put back - the object is not read", _pOwnerType->_name.c_str(),
+                         _pProperty->_name.c_str(), _pProperty->_typeName.c_str() );
         return false;
     }
 } // namespace sw
