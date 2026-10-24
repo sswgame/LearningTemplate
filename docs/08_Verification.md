@@ -525,8 +525,8 @@ push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4�
 
 | 단계 | 언제 | 무엇 | 파일 | 예산 |
 |---|---|---|---|---|
-| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부(훅이 건너뛰는 트리 전체 게이트 포함 — 아래 "커밋 훅과 린트 잡의 나눔"), 바뀐 파일이 문서뿐이면 빌드 잡을 건너뛰게 `code` 를 낸다 | `ci.yml` `lint` | 약 1 분 |
-| 빌드 · `nogpu` | push · PR, 린트 뒤 | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분(가장 긴 잡이 전체 시간) |
+| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부(훅이 건너뛰는 트리 전체 게이트 포함 — 아래 "커밋 훅과 린트 잡의 나눔"), 린트가 지면 non-main 은 같은 실행의 빌드를 취소한다 | `ci.yml` `lint` | 약 1 분 |
+| 빌드 · `nogpu` | push · PR, 린트와 동시에 시작(바뀐 파일이 문서뿐이면 `changes` 잡이 건너뛰게 한다) | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분(가장 긴 잡이 전체 시간) |
 | 매일 컴파일 검사 | 03:00 KST · 수동 | 헤더 단독 컴파일, `SW_ENABLE_DEADLOCK_DETECTION` 구성 컴파일 | `header-self-contained.yml` | 약 30 분 |
 | 매일 퍼징 | 03:00 KST · 수동 | 로더 퍼저(ASan) | `fuzz.yml` | 최대 2 시간 |
 | 야간 부하 | 04:00 KST · 수동 | Release 부하 스위트 · 봇 · 클러스터 | `load.yml` | 최대 2.5 시간 |
