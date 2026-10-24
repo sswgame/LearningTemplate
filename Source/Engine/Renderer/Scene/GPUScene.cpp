@@ -467,78 +467,75 @@ namespace sw
         std::swap( _snapshot, snapshot );
     }
 
-    void GPUScene::uploadMaterialGroups( IRHIDevice* pDevice )
+    uint32 GPUScene::computeMaterialGroupStride( IRHIDevice* pDevice, const GPUMaterialGroup& group )
     {
-        SW_PROFILE_SCOPE( "RT.GPUScene.uploadMaterials" );
-        if ( pDevice == nullptr )
+        // 원소 stride 는 셰이더 리플렉션이 준 구조버퍼 원소 크기다(Material::getElementStride, 백엔드의 리플렉션 값).
+        // 같은 셰이더의 머티리얼은 같은 stride 를 가진다. 다르면 가장 큰 것을 쓴다.
+        uint32 stride{ 0 };
+        for ( const auto& entry : group._listEntry )
+        {
+            Material* pMaterial = entry._material.get();
+            if ( pMaterial == nullptr )
+                continue;
+            // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
+            // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRHI 가 이미 맞췄다).
+            // 실패(오류는 이미 남았다)하면 바이트가 비어 stride 에 끼지 않고 원소는 복사되지 않는다. 레거시 MaterialCB 는 stride 0 으로 false 지만 바이트가 있다.
+            if ( pMaterial->ensureShaderLayout( pDevice ) == false && pMaterial->getBuffer().empty() )
+                continue;
+            uint32 entryStride = pMaterial->getElementStride();
+            if ( entryStride == 0 )
+                entryStride = static_cast<uint32>( pMaterial->getBuffer().size() );
+            stride = MathUtil::max( stride, entryStride );
+        }
+        return stride;
+    }
+
+    void GPUScene::uploadMaterialGroup( IRHIDevice* pDevice, const GPUMaterialGroup& group )
+    {
+        // stride 는 셰이더가 선언한 원소 크기 그대로다. DX11 은 SRV 의 구조 stride 가 셰이더 선언(24 등)과 다르면 디버그 레이어가
+        // 오류로 잡고, 네 백엔드가 DX 패킹(-fvk-use-dx-layout)으로 같은 stride 를 쓴다. 16 정렬로 키우면 DX11 이 "32 vs 24" 를 낸다.
+        const uint32 stride = computeMaterialGroupStride( pDevice, group );
+        if ( stride == 0 )
             return;
 
-        for ( const GPUMaterialGroup& group : _snapshot._listMaterialGroup )
+        const uint32 elementCount = static_cast<uint32>( group._listEntry.size() );
+        const uint32 needBytes    = stride * elementCount;
+        _listMaterialScratch.assign( needBytes, 0 );
+        for ( uint32 element = 0; element < elementCount; ++element )
         {
-            if ( group._listEntry.empty() )
+            const Material*         pMaterial = group._listEntry[element]._material.get();
+            const MaterialInstance* pInstance = group._listEntry[element]._instance.get();
+            if ( pMaterial == nullptr )
                 continue;
-
-            // 원소 stride 는 셰이더 리플렉션이 준 구조버퍼 원소 크기다(Material::getElementStride, 백엔드의 리플렉션 값).
-            // 같은 셰이더의 머티리얼은 같은 stride 를 가진다. 다르면 가장 큰 것을 쓴다.
-            uint32 stride{ 0 };
-            for ( const auto& entry : group._listEntry )
-            {
-                Material* pMaterial = entry._material.get();
-                if ( pMaterial == nullptr )
-                    continue;
-                // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
-                // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRHI 가 이미 맞췄다).
-                // 실패(오류는 이미 남았다)하면 바이트가 비어 stride 에 끼지 않고 원소는 복사되지 않는다. 레거시 MaterialCB 는 stride 0 으로 false 지만 바이트가 있다.
-                if ( pMaterial->ensureShaderLayout( pDevice ) == false && pMaterial->getBuffer().empty() )
-                    continue;
-                uint32 entryStride = pMaterial->getElementStride();
-                if ( entryStride == 0 )
-                    entryStride = static_cast<uint32>( pMaterial->getBuffer().size() );
-                stride = MathUtil::max( stride, entryStride );
-            }
-            // stride 는 셰이더가 선언한 원소 크기 그대로다. DX11 은 SRV 의 구조 stride 가 셰이더 선언(24 등)과 다르면 디버그 레이어가
-            // 오류로 잡고, 네 백엔드가 DX 패킹(-fvk-use-dx-layout)으로 같은 stride 를 쓴다. 16 정렬로 키우면 DX11 이 "32 vs 24" 를 낸다.
-            if ( stride == 0 )
-                continue;
-
-            const uint32 elementCount = static_cast<uint32>( group._listEntry.size() );
-            const uint32 needBytes    = stride * elementCount;
-            _listMaterialScratch.assign( needBytes, 0 );
-            for ( uint32 element = 0; element < elementCount; ++element )
-            {
-                const Material*         pMaterial = group._listEntry[element]._material.get();
-                const MaterialInstance* pInstance = group._listEntry[element]._instance.get();
-                if ( pMaterial == nullptr )
-                    continue;
-                const vector<uint8>& bytes = ( pInstance != nullptr && pInstance->getBuffer().empty() == false ) ? pInstance->getBuffer() : pMaterial->getBuffer();
-                const uint32         copy  = MathUtil::min( stride, static_cast<uint32>( bytes.size() ) );
-                if ( copy > 0 )
-                    Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );
-            }
-
-            GPUMaterialGroupBuffer& gpu = _mapMaterialGroupBuffer[group._shaderPath];
-            // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
-            // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
-            // 셰이더 선언과 달라지면 안 된다.
-            const bool   bFits            = ( gpu._slot._buffer != 0 ) && ( gpu._slot._elementSize == stride ) && ( gpu._slot._capacityElements >= elementCount );
-            const uint32 capacityElements = bFits ? gpu._slot._capacityElements : MathUtil::max( elementCount * 2u, 16u );
-            const bool   bRecreate        = ( bFits == false );
-            if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements,
-                                           RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
-            {
-                SW_LOG_ERROR( "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
-                continue;
-            }
-            // 값이 지난 업로드와 같으면 올리지 않는다. 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만큼으로 준다.
-            const bool bChanged = bRecreate || gpu._lastBytes.size() != needBytes ||
-                                  Memory::compare( gpu._lastBytes.data(), _listMaterialScratch.data(), needBytes ) != 0;
-            if ( bChanged )
-            {
-                gpu._slot.upload( pDevice, _listMaterialScratch.data(), needBytes );
-                gpu._lastBytes.assign( _listMaterialScratch.begin(), _listMaterialScratch.begin() + needBytes );
-            }
+            const vector<uint8>& bytes = ( pInstance != nullptr && pInstance->getBuffer().empty() == false ) ? pInstance->getBuffer() : pMaterial->getBuffer();
+            const uint32         copy  = MathUtil::min( stride, static_cast<uint32>( bytes.size() ) );
+            if ( copy > 0 )
+                Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );
         }
 
+        GPUMaterialGroupBuffer& gpu = _mapMaterialGroupBuffer[group._shaderPath];
+        // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
+        // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
+        // 셰이더 선언과 달라지면 안 된다.
+        const bool   bFits            = ( gpu._slot._buffer != 0 ) && ( gpu._slot._elementSize == stride ) && ( gpu._slot._capacityElements >= elementCount );
+        const uint32 capacityElements = bFits ? gpu._slot._capacityElements : MathUtil::max( elementCount * 2u, 16u );
+        const bool   bRecreate        = ( bFits == false );
+        if ( gpu._slot.ensureCapacity( pDevice, stride, capacityElements, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
+        {
+            SW_LOG_ERROR( "Failed to create the material data buffer (%#, stride %#, %# elements).", group._shaderPath.c_str(), stride, elementCount );
+            return;
+        }
+        // 값이 지난 업로드와 같으면 올리지 않는다. 머티리얼 수에 비례하던 프레임당 업로드가 바뀐 그룹만큼으로 준다.
+        const bool bChanged = bRecreate || gpu._lastBytes.size() != needBytes || Memory::compare( gpu._lastBytes.data(), _listMaterialScratch.data(), needBytes ) != 0;
+        if ( bChanged )
+        {
+            gpu._slot.upload( pDevice, _listMaterialScratch.data(), needBytes );
+            gpu._lastBytes.assign( _listMaterialScratch.begin(), _listMaterialScratch.begin() + needBytes );
+        }
+    }
+
+    void GPUScene::bindBatchMaterials()
+    {
         // **그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.**
         // 배치마다 셰이더 **경로 문자열**로 해시 조회를 하면 그룹은 한둘인데 배치는 수백이라 같은 답을 배치 수만큼
         // 다시 구한다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
@@ -569,5 +566,20 @@ namespace sw
             batch._materialSrv            = resolved._srv;
             batch._materialCount          = resolved._elementCount;
         }
+    }
+
+    void GPUScene::uploadMaterialGroups( IRHIDevice* pDevice )
+    {
+        SW_PROFILE_SCOPE( "RT.GPUScene.uploadMaterials" );
+        if ( pDevice == nullptr )
+            return;
+
+        for ( const GPUMaterialGroup& group : _snapshot._listMaterialGroup )
+        {
+            if ( group._listEntry.empty() )
+                continue;
+            uploadMaterialGroup( pDevice, group );
+        }
+        bindBatchMaterials();
     }
 } // namespace sw
