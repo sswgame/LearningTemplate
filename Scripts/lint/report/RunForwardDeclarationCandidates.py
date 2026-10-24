@@ -211,6 +211,9 @@ def findCandidates(listHeader: list[Path], cache: dict[Path, HeaderDefinitions])
     for header in listHeader:
         raw = header.read_text(encoding="utf-8", errors="replace")
         text = stripCode(raw)
+        # 헤더 본문에서 include 줄은 뺀다. 본문과 낱말 집합은 include 와 무관해 헤더당 한 번만 만든다.
+        body = _kInclude.sub("", text)
+        setBodyWord = set(re.findall(r"\w+", body))
         # 스스로 정의하는 것이 없는 헤더(CoreMinimal · pch 같은 우산)의 include 는 다시 내보내는 것이 목적이다.
         if header not in cache:
             cache[header] = parseDefinitions(header)
@@ -228,10 +231,8 @@ def findCandidates(listHeader: list[Path], cache: dict[Path, HeaderDefinitions])
             defs = cache[included]
             if defs.definesAnything() is False:
                 continue  # 우산 헤더
-            # 헤더 본문에서 include 줄은 뺀다
-            body = _kInclude.sub("", text)
-            usesOther = any(re.search(r"\b" + re.escape(n) + r"\b", body) for n in defs.setOther | defs.setTemplate)
-            if usesOther:
+            # 정의된 이름은 모두 `[A-Za-z_]\w*` 라 `\b이름\b` 일치는 낱말 집합의 원소 일치와 같다(이름 수천 개 x 본문 훑기를 없앤다).
+            if not (defs.setOther | defs.setTemplate).isdisjoint(setBodyWord):
                 continue
             listName: list[tuple[str, str, bool]] = []
             allPointer = True

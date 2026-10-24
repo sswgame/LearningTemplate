@@ -75,3 +75,5 @@
   대상 파일 고르기는 `common.Search.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
   (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
+- **`\b이름\b` 를 이름마다 본문에 돌리면 이름 수 x 본문 길이다** — 이름이 모두 `[A-Za-z_]\w*` 이면 `set(re.findall(r"\w+", 본문))` 한 번과 `isdisjoint` 로 같은 뜻이다(`RunForwardDeclarationCandidates` 34.6 → 5.4 s).
+  다만 1 s 미만이면 두고, 이름에 `\w` 밖 문자가 끼면 정규식을 쓴다. 캐시는 프로세스 수명 한정이며 상주 도구가 부르지 않는다(수동 리포트).
