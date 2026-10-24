@@ -130,8 +130,7 @@
 "Source/Engine/Graphics/RHI/Support/RHIDrawDiagnostics.cpp" = 2
 "Source/Engine/Graphics/Shader/Binding/ShaderBindingValidator.cpp" = 6
 "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp" = 4
-"Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp" = 3
-"Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp" = 3
+"Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp" = 2
 "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp" = 1
 # Source/Engine/Input — 이전 대기
 "Source/Engine/Input/Linux/InputManagerX11.cpp" = 14

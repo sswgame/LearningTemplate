@@ -269,7 +269,12 @@ namespace sw
                     if ( bInside == false )
                         continue;
                     const string relative = canonical.substr( root._lowerDir.size() + 1 );
-                    return root._domain.empty() ? relative : root._domain + ":" + relative;
+                    if ( root._domain.empty() )
+                        return relative;
+                    string keyed = root._domain;
+                    keyed += ":";
+                    keyed += relative;
+                    return keyed;
                 }
                 return string{};
             }

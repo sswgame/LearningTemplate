@@ -272,7 +272,10 @@ namespace sw
                     if ( result._listIncludedFile.empty() == false )
                     {
                         unordered_set<string>& uniqueHeader = ioState._mapIncludedByDir[task._outDir][task._normPath];
-                        uniqueHeader.insert( result._listIncludedFile.begin(), result._listIncludedFile.end() );
+                        for ( const string& header : result._listIncludedFile )
+                        {
+                            uniqueHeader.insert( header );
+                        }
                     }
                     if ( result._bCompileFailed )
                     {
