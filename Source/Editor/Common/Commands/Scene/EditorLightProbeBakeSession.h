@@ -1,12 +1,12 @@
 /**
  * @file EditorLightProbeBakeSession.h
  * @brief 라이트 프로브 베이크를 에디터 프레임에 나눠 진행하는 세션입니다(IndirectLighting.md P6). 커맨드 `lighting.bakeProbes` 가 시작합니다.
- * @details 세션은 프레임마다 정해진 시간(`kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorLightProbeBakeStatus.cpp`)이
+ * @details 세션은 프레임마다 정해진 시간(`EditorBakeRunState::kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorLightProbeBakeStatus.cpp`)이
  *          진행과 Cancel 단추를 보인다. 에디터는 베이크하는 동안 멈추지 않는다.
  *          레이는 볼륨마다 씬의 정적 콜라이더로 새로 세운 가림 씬(`_pOccluders`, `LightProbeBaker::collectInput`)에 쏜다 — 편집 중에는 플레이 물리 씬이 없다.
  *          베이크하는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 인스펙터 · 기즈모 · Undo 가 잠긴다). 베이크하는 볼륨과 결과를 받을 오브젝트가 그대로여야 하고,
  *          세운 뒤의 편집은 가림 씬에 들지 않기 때문이다. 가림 씬은 베이크의 사본이라 게임 스레드가 갱신하지 않는다(작업 스레드로 옮기는 일은 남음 — IndirectLighting P6).
- *          씬이 바뀌거나(세대) 플레이가 시작되면 베이크하던 볼륨을 버리고 멈춘다. 볼륨마다 끝나면 파일을 쓰고 볼륨에 넘긴다(앞서 끝난 볼륨은 취소해도 남는다).
+ *          씬이 바뀌거나(세대) 플레이가 시작되면 베이크하던 볼륨을 버리고 멈춘다(`EditorBakeRunState` — 반사 프로브 세션과 같은 규칙). 볼륨마다 끝나면 파일을 쓰고 볼륨에 넘긴다(앞서 끝난 볼륨은 취소해도 남는다).
  *          결과 파일은 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.probes` 이고 볼륨의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
  */
 #pragma once
@@ -14,6 +14,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
 #include "Editor/Common/EditorSubsystem.h"
 
 #include "Engine/Renderer/Light/LightProbeBaker.h"
@@ -36,12 +37,7 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName = "EditorLightProbeBakeSession";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
-        /// @brief 한 프레임에 베이크에 쓰는 시간(ms)입니다. 프레임 하나(16 ms)의 절반이라 에디터가 30 fps 밑으로 떨어지지 않는다.
-        static constexpr int64 kFrameBudgetMilliseconds = 8;
-
         EditorLightProbeBakeSession();
-        /** @brief 베이크하는 중에 사라지면 편집 잠금을 풉니다. */
-        ~EditorLightProbeBakeSession() override;
 
         EditorLightProbeBakeSession( const EditorLightProbeBakeSession& )            = delete;
         EditorLightProbeBakeSession& operator=( const EditorLightProbeBakeSession& ) = delete;
@@ -53,7 +49,7 @@ namespace sw::editor
         /** @brief 이번 프레임의 몫을 베이크합니다(프레임 단계가 부른다). */
         void update();
 
-        bool isRunning() const { return _bRunning; }
+        bool isRunning() const { return _run.isRunning(); }
         /** @brief 이번 베이크의 볼륨 수입니다. */
         uint32 getVolumeCount() const { return static_cast<uint32>( _listObjectID.size() ); }
         /** @brief 지금 베이크하는 볼륨의 번호(0 부터)입니다. */
@@ -61,10 +57,9 @@ namespace sw::editor
         /** @brief 지금 베이크하는 볼륨의 진행(0 ~ 1)입니다. */
         float32 getVolumeProgress() const;
         /**
-         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(탐침 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다.
-         * @details 세션은 에디터와 함께 살아 시나리오 체인(`-scenario=a,b`)을 넘어 남는다 — 앞 시나리오의 베이크가 뒤 시나리오의 수에 섞이지 않게 씬마다 센다.
+         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(탐침 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`).
          */
-        uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return sceneGeneration == _finishedRunSceneGeneration ? _finishedRunCount : 0u; }
+        uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 
     private:
         /** @brief 다음 볼륨을 찾아 작업을 시작합니다. 볼륨이 사라졌거나 입력이 모자라면 오류를 남기고 false 입니다. 남은 볼륨이 없으면 끝냅니다. */
@@ -79,13 +74,9 @@ namespace sw::editor
         unique_ptr<IPhysicsScene3D> _pOccluders;   ///< 베이크하는 볼륨의 가림 씬 — `_job` 이 빌리므로 `_job` 보다 앞에 둔다(뒤에 사라진다)
         LightProbeBakeJob           _job;
         string                      _lastError;
-        uint64                      _sceneGeneration; ///< 시작할 때의 씬 세대 — 바뀌면 멈춘다
-        uint32                      _heldEditCount;   ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
+        EditorBakeRunState          _run; ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (반사 프로브 세션과 같은 틀)
         uint32                      _nextVolumeIndex;
         uint32                      _bakedCount;
-        uint64                      _finishedRunSceneGeneration; ///< `_finishedRunCount` 를 센 씬 세대
-        uint32                      _finishedRunCount;
-        bool                        _bRunning;
         bool                        _bJobActive;
     };
 } // namespace sw::editor
