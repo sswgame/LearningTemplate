@@ -31,6 +31,11 @@ namespace sw
     {
     }
 
+    AnimationPoseAccess LocomotionWarpingBinding::getPoseAccess() const
+    {
+        return _owner.isOrientingPose() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
+    }
+
     void LocomotionWarpingBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         if ( phase == AnimationPhase::Time )
@@ -159,7 +164,7 @@ namespace sw
 
     void LocomotionWarpingComponent::applyOrientation( SkeletalMeshComponent& unit ) const
     {
-        if ( _bOrientationWarping == false || _orientationAngle == 0.0f )
+        if ( isOrientingPose() == false )
             return;
         const Skeleton&         skeleton  = unit.getSkeleton();
         const vector<float4x4>& listModel = unit.getModelSpaceTransforms();

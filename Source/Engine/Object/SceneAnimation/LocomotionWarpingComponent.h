@@ -45,8 +45,8 @@ namespace sw
         explicit LocomotionWarpingBinding( LocomotionWarpingComponent& owner );
 
         bool isAnimationActive() const override { return false; }
-        /** @brief 후처리 단계에서 몸 방향 본을 돌린다. */
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        /** @brief 후처리 단계에서 몸 방향 본을 돌릴 때(`isOrientingPose`)만 포즈를 쓴다. 서 있거나 방향 보정이 없으면 읽기만 하므로 군중 묶음을 나눌 수 있다. */
+        AnimationPoseAccess getPoseAccess() const override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
@@ -79,6 +79,11 @@ namespace sw
         float32 getStrideScale() const { return _strideScale; }
         /** @brief 마지막으로 측정한 수평 속도(월드, m/s)입니다. */
         const float3& getMeasuredVelocity() const { return _measuredVelocity; }
+        /**
+         * @brief 이번 프레임 후처리가 뼈를 돌릴지 반환합니다(방향 보정이 켜졌고 각이 0 이 아니며 뼈가 있다). 포즈 접근 선언과 `applyOrientation` 이 같은 판정을 쓴다.
+         * @details 각은 지난 프레임의 마무리(`finishAnimationFrame`)에서 정해져 이번 프레임 안에서는 바뀌지 않으므로 군중 공유가 시간 단계 뒤에 읽어도 후처리와 같다.
+         */
+        bool isOrientingPose() const { return _bOrientationWarping && _orientationAngle != 0.0f && _listOrientationBone.empty() == false; }
         /** @brief 뼈 목록을 정합니다(코드 · 테스트). */
         void setOrientationBones( const vector<LocomotionOrientationBone>& listBone ) { _listOrientationBone = listBone; }
         /**
