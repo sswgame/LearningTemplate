@@ -35,13 +35,27 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 설치 빌드가 패치를 받는 방식입니다. 빌드 기록(`base.packbuild.xml`)에 `patching="chain|none"` 으로 늘 적히고, 빠져 있으면 읽기가 거절한다(빈 값을 `none` 으로 보지 않는다).
+     * @details 기록이 팩 안이 아니라 팩 폴더 옆 파일인 것이 이 결정의 핵심이다 — 팩을 마운트하기 전에 읽어야 하기 때문이다(결정 기록 5-9).
+     */
+    enum class PackPatching : uint8
+    {
+        Chain = 0, ///< 목록 파일의 사슬로 패치를 얹는다(스팀 밖 채널 · 콘텐츠 핫픽스)
+        None       ///< 패치를 쓰지 않는다. 스토어가 새 빌드를 통째로 준다(스팀). 이 폴더에 패치 목록이 있으면 오류다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 빌드 하나의 내용 목록 파일(`<PackBuild build="…"><Entry path="…" hash="…"/></PackBuild>`)입니다.
      * @details 기본 팩을 구울 때 팩 폴더에 `PackPatchUtil::kBuildRecordFileName` 으로 남기고(설치된 빌드의 출처), 다음 빌드의 패치를 만들 때 이전 빌드의 목록으로 읽는다.
      */
     struct PackBuildRecord
     {
-        string                   _build{};     ///< 빌드 번호(글 그대로 비교한다)
-        vector<PackContentEntry> _listEntry{}; ///< 전체 가상 경로 + 내용 해시(경로 사전순)
+        string                   _build{};                         ///< 빌드 번호(글 그대로 비교한다). `None` 이면 비어 있다
+        vector<PackContentEntry> _listEntry{};                     ///< 전체 가상 경로 + 내용 해시(경로 사전순). `None` 이면 비어 있다
+        PackPatching             _patching{ PackPatching::Chain }; ///< 이 빌드가 패치 사슬을 쓰는가. 파일에는 늘 명시한다
     };
 } // namespace sw
 

@@ -100,6 +100,16 @@ namespace sw
             float32       _intensity{ 0.0f };
         };
 
+        // `update` 의 단계들 — 잠금을 잡은 채로 부른다.
+        /** @brief 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬). 지난 프레임에 켰는데 이번에 없는 칸은 끈다. */
+        void updateListeners( AudioEngine& audioEngine, float32 deltaSeconds, const CameraComponent* pCamera );
+        /** @brief 에미터 자리 · 속도를 엔진에 넣고 가림 측정이 돌 사본 목록을 만듭니다. */
+        void updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds );
+        /** @brief 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다). */
+        void updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D );
+        /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
+        void updateReverbZones( AudioEngine& audioEngine );
+
         RegistrationList<AudioListenerComponent>   _listener;                /**< 리스너 컴포넌트입니다. */
         RegistrationList<AudioEmitterComponent>    _emitter;                 /**< 에미터 컴포넌트입니다. */
         RegistrationList<AudioReverbZoneComponent> _zone;                    /**< 리버브 존입니다. */

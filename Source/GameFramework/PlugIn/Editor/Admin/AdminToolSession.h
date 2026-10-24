@@ -13,6 +13,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 
 #include "GameFramework/PlugIn/Editor/Admin/AdminCommandProvider.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolConnection.h"
 
 namespace sw::editor
 {
@@ -43,6 +44,17 @@ namespace sw::editor
         void                   useLiveClient( AdminClient* pClient );
         IAdminCommandProvider& getProvider() { return *_pActive; }
         FakeAdminProvider&     getFakeProvider() { return _fake; }
+
+        /**
+         * @brief 서버의 GM 포트(`host:port`)에 연결을 걸고 실제 클라이언트로 보냅니다. 실패하면 메모리 제공자로 돌아가고 @p outError 에 이유가 있습니다.
+         * @details 로그인은 `getConnection().setLoginHook` 으로 끼운 쪽이 한다(에디터 확장은 계정 키트를 모른다). 연결이 닫혀 있는 동안은 `Unavailable` 응답입니다.
+         */
+        [[nodiscard]] bool connectLive( string_view address, string_view gameBuild, string& outError );
+        /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */
+        void disconnectLive();
+        /** @brief 연결을 한 걸음 돌립니다(패널이 프레임마다 부른다). 연결이 없으면 아무것도 하지 않습니다. */
+        void                 updateConnection();
+        AdminToolConnection& getConnection() { return _connection; }
 
         // ------------------------------------------------------------------------------
         // 2) 명령. 응답은 제공자가 정한 때에 결과 칸에 들어온다
@@ -96,6 +108,7 @@ namespace sw::editor
         FakeAdminProvider      _fake;
         AdminClientProvider    _live;
         IAdminCommandProvider* _pActive;
+        AdminToolConnection    _connection;
         AdminReply             _lookup;
         AdminReply             _lookupAudit;
         AdminReply             _reports;

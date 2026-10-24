@@ -16,6 +16,6 @@
 
 ## 남은 것
 
-- C1 화면 확인: `gpu-verifier` 로 네 백엔드 캡처 — 앞면 · 뒷면이 모두 보이는지(감김), 접힌 곳 음영(노멀), 커튼이 구에 걸치는지(충돌).
+- C1 화면 확인: `gpu-verifier` 로 네 백엔드 캡처 — 앞면 · 뒷면이 모두 보이는지(감김), 접힌 곳 음영(노멀), 커튼이 구에 걸치는지(충돌). 시나리오 `game/empty/automation/clothshowcase.scenario.xml` 을 만들어 뒀다(천이 움직였는지는 두 장면의 차로 단언, 나머지는 캡처를 눈으로). 매니페스트 id `cloth-four-backend-captures`(C2 의 `RT.GPUScene.vertexPool` · 풀 재채움 수는 `cloth-vertex-pool-time` — 같은 시나리오로 잰다).
 - C2 확인: 천 쇼케이스에서 `RT.GPUScene.vertexPool` 시간과 풀 다시 채우기 수(`_repackCount`) — 프레임마다 구간을 받고 돌려주므로 조각나 다시 채우기가 잦아지는지 본다. 잦으면 동적 메시 전용 고정 구간(크기가 같으면 같은 자리)을 둔다. "프레임마다 새 `Mesh`" 는 그대로다 — 게임 스레드가 렌더 스냅숏이 쥔 메시의 정점을 바꾸면 경합한다.
 - C3 확인: 스킨 망토를 단 캐릭터 씬으로 Jolt 행렬 방향(엔진 행-벡터 → Jolt 열-벡터, `JoltPhysicsSceneSoftBodyInternal::toJoltMatrix`)과 질량 중심 기준 뼈 행렬이 맞는지 본다 — 윗변이 뼈에서 벗어나면 둘 중 하나가 틀렸다. 뼈 자세는 마지막 애니메이션 평가의 것이라 한 프레임 늦을 수 있다(애니메이션 · 물리 순서). 정점마다 최대 거리(옷이 몸에서 조금 떠도 되는 자리)와 되받침(backstop)은 쓰는 에셋이 생기면 데이터로 연다.

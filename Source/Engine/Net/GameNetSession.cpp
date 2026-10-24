@@ -20,6 +20,8 @@
 #include "Engine/Observability/ServerServiceRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
+#include <algorithm>
+
 namespace sw
 {
     SW_LOG_CALLER( "GameNetSession" );
@@ -329,6 +331,7 @@ namespace sw
         , _tickWriter{}
         , _connectFuture{}
         , _listEventScratch{}
+        , _listReplicaStat{}
         , _serverAddress{}
         , _credentials{}
         , _latestServerTick{ 0 }
@@ -810,7 +813,39 @@ namespace sw
         NetMessageKindTallyTable sentTally;
         _peers.addSentKindTally( sentTally );
         report.populateKinds( _router.getKindTally(), sentTally );
+        report._listReplicaEntry = _listReplicaStat;
+        std::sort( report._listReplicaEntry.begin(), report._listReplicaEntry.end(), []( const NetStatsReplicaEntry& left, const NetStatsReplicaEntry& right )
+        {
+            return left._byteCount != right._byteCount ? left._byteCount > right._byteCount : left._name < right._name;
+        } );
+        if ( report._listReplicaEntry.size() > static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ) )
+            report._listReplicaEntry.resize( static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ) );
         return report;
+    }
+
+    bool GameNetSession::setReplicaStats( string_view name, uint64 updateCount, uint64 byteCount )
+    {
+        if ( NetStatsReport::isValidReplicaName( name ) == false )
+        {
+            SW_LOG_WARNING( "Net session: replica stats name '%#' is not [a-z0-9_.-] - the entry is not reported", name );
+            return false;
+        }
+        for ( NetStatsReplicaEntry& entry : _listReplicaStat )
+        {
+            if ( entry._name == name )
+            {
+                entry._updateCount = updateCount;
+                entry._byteCount   = byteCount;
+                return true;
+            }
+        }
+        if ( _listReplicaStat.size() >= kMaxReplicaSources )
+        {
+            SW_LOG_WARNING( "Net session: more than %# replica stats names - '%#' is not reported", static_cast<int32>( kMaxReplicaSources ), name );
+            return false;
+        }
+        _listReplicaStat.push_back( NetStatsReplicaEntry{ string( name ), updateCount, byteCount } );
+        return true;
     }
 
     void GameNetSession::reportConnectResult()

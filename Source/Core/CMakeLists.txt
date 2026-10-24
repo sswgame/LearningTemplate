@@ -37,6 +37,9 @@ endif()
 
 target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
 sw_configurePch(Core_objects "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
+if(SW_UNITY_BATCH_CORE)
+	sw_setUnityBuild(Core_objects BATCH_SIZE ${SW_UNITY_BATCH_CORE})
+endif()
 target_link_libraries(Core_objects PRIVATE sw_global_options)
 # 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다).

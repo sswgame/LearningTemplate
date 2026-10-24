@@ -87,6 +87,112 @@ namespace sw
         return hash;
     }
 
+    void SceneStateHash::collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        manager.forEachGameObject( [&outListObject]( GameObject* pObject )
+        {
+            if ( pObject->getName().empty() )
+                return;
+            SceneObjectHash& object        = outListObject.emplace_back();
+            object._name                   = pObject->getName().c_str();
+            const uint8           bActive  = pObject->isActive() ? 1 : 0;
+            const SceneComponent* pRoot    = pObject->getComponent<SceneComponent>();
+            const float3          position = pRoot != nullptr ? pRoot->getWorldPosition() : float3{};
+            uint64                hash     = HashUtil::kFnvOffset64;
+            hash                           = HashUtil::appendBytes64( hash, object._name.data(), object._name.size() );
+            hash                           = HashUtil::appendBytes64( hash, &bActive, sizeof( bActive ) );
+            SceneStateHashInternal::foldFloat( hash, position._x );
+            SceneStateHashInternal::foldFloat( hash, position._y );
+            SceneStateHashInternal::foldFloat( hash, position._z );
+            object._hash = hash;
+        } );
+        std::sort( outListObject.begin(), outListObject.end(), []( const SceneObjectHash& left, const SceneObjectHash& right )
+        {
+            return left._name != right._name ? left._name < right._name : left._hash < right._hash;
+        } );
+    }
+
+    void SceneStateHash::writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText )
+    {
+        constexpr const utf8* kHexDigit = "0123456789abcdef";
+        for ( const SceneObjectHash& object : listObject )
+        {
+            for ( int32 nibble = 15; nibble >= 0; --nibble )
+            {
+                outText += kHexDigit[( object._hash >> ( nibble * 4 ) ) & 0xF];
+            }
+            outText += ' ';
+            outText += object._name;
+            outText += '\n';
+        }
+    }
+
+    bool SceneStateHash::parseObjectReport( string_view text, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        size_t lineStart = 0;
+        while ( lineStart < text.size() )
+        {
+            size_t lineEnd = text.find( '\n', lineStart );
+            if ( lineEnd == string_view::npos )
+                lineEnd = text.size();
+            string_view line = text.substr( lineStart, lineEnd - lineStart );
+            lineStart        = lineEnd + 1;
+            while ( line.empty() == false && ( line.back() == '\r' ) )
+            {
+                line.remove_suffix( 1 );
+            }
+            if ( line.empty() )
+                continue;
+            SceneObjectHash object;
+            const bool      bHasHash = line.size() > 17 && line[16] == ' ' && StringUtil::parseUint64( line.substr( 0, 16 ), object._hash, 16 );
+            if ( bHasHash == false )
+            {
+                outListObject.clear();
+                return false;
+            }
+            object._name = string( line.substr( 17 ) );
+            outListObject.push_back( object );
+        }
+        return true;
+    }
+
+    bool SceneStateHash::findDifferingObjects( const vector<SceneObjectHash>& listLeft, const vector<SceneObjectHash>& listRight, vector<string>& outListName )
+    {
+        outListName.clear();
+        const auto less = []( const SceneObjectHash& first, const SceneObjectHash& second )
+        {
+            return first._name != second._name ? first._name < second._name : first._hash < second._hash;
+        };
+        vector<SceneObjectHash> listSortedLeft  = listLeft;
+        vector<SceneObjectHash> listSortedRight = listRight;
+        std::sort( listSortedLeft.begin(), listSortedLeft.end(), less );
+        std::sort( listSortedRight.begin(), listSortedRight.end(), less );
+        size_t leftIndex  = 0;
+        size_t rightIndex = 0;
+        while ( leftIndex < listSortedLeft.size() || rightIndex < listSortedRight.size() )
+        {
+            const bool bLeftOnly  = rightIndex >= listSortedRight.size() || ( leftIndex < listSortedLeft.size() && less( listSortedLeft[leftIndex], listSortedRight[rightIndex] ) );
+            const bool bRightOnly = leftIndex >= listSortedLeft.size() || ( rightIndex < listSortedRight.size() && less( listSortedRight[rightIndex], listSortedLeft[leftIndex] ) );
+            if ( bLeftOnly )
+            {
+                outListName.push_back( listSortedLeft[leftIndex++]._name );
+            }
+            else if ( bRightOnly )
+            {
+                outListName.push_back( listSortedRight[rightIndex++]._name );
+            }
+            else
+            {
+                ++leftIndex;
+                ++rightIndex;
+            }
+        }
+        outListName.erase( std::unique( outListName.begin(), outListName.end() ), outListName.end() );
+        return outListName.empty() == false;
+    }
+
     SubsystemInitResult StateHashHistory::initializeSubsystem()
     {
         if ( gv_stateHashHistory > 0 )
