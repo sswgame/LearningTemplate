@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -23,11 +24,21 @@ namespace sw
             static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
         };
 
-        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. GameFramework 모듈의 정적 변수이고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
+        /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
+        struct ElementRuleTableCacheHolder
+        {
+            GameDataCache<ElementRuleTable> _cache{ "ElementRuleTable" };
+        };
+
+        /** @brief 공유 테이블 캐시의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때(또는 이 모듈이 내려갈 때) 사라지고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
+        ScopeOwned<ElementRuleTableCacheHolder> s_sharedTableCache;
+
+        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. */
         GameDataCache<ElementRuleTable>& getSharedTableCache()
         {
-            static GameDataCache<ElementRuleTable> s_cache{ "ElementRuleTable" };
-            return s_cache;
+            ElementRuleTableCacheHolder* const pHolder = s_sharedTableCache.getOrCreate();
+            SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 테이블을 읽을 엔진이 없다
+            return pHolder->_cache;
         }
     } // namespace
 } // namespace sw
