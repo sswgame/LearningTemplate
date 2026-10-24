@@ -47,17 +47,8 @@ namespace sw::editor
             /** @brief 디코드한 텍셀 캐시의 상한(바이트)입니다. 넘으면 가장 오래 안 쓴 이미지부터 내린다(방금 읽은 것은 남긴다). 4096² 두 장이 들어간다. */
             static constexpr size_t kMaxCacheBytes = constant::kBytesPerGigabyte / 2;
 
-            static std::shared_mutex& getMutex()
-            {
-                static std::shared_mutex s_mutex;
-                return s_mutex;
-            }
-
-            static unordered_map<string, std::shared_ptr<DecodedTexture>>& getCache()
-            {
-                static unordered_map<string, std::shared_ptr<DecodedTexture>> s_cache;
-                return s_cache;
-            }
+            /** @brief 경로 키로 디코드한 이미지를 담는 캐시입니다. 표본기 인스턴스가 잠금과 함께 소유한다(`MeshModifierTextureSampler::State`). */
+            using TextureCache = unordered_map<string, std::shared_ptr<DecodedTexture>>;
 
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::kMicrosecondsPerMillisecond; }
 
@@ -113,13 +104,13 @@ namespace sw::editor
             }
 
             /** @brief 캐시에서 찾고, 없거나 낡았으면 단일 잠금 아래에서 한 번만 디코드합니다. */
-            static std::shared_ptr<DecodedTexture> acquire( string_view assetPath )
+            static std::shared_ptr<DecodedTexture> acquire( std::shared_mutex& mutex, TextureCache& cache, string_view assetPath )
             {
                 std::shared_ptr<DecodedTexture> pTexture;
                 {
-                    std::shared_lock<std::shared_mutex> lock( getMutex() );
-                    auto                                iter = getCache().find( assetPath );
-                    if ( iter != getCache().end() )
+                    std::shared_lock<std::shared_mutex> lock( mutex );
+                    auto                                iter = cache.find( assetPath );
+                    if ( iter != cache.end() )
                         pTexture = iter->second;
                 }
 
@@ -129,18 +120,18 @@ namespace sw::editor
 
                 if ( bReload )
                 {
-                    std::unique_lock<std::shared_mutex> lock( getMutex() );
-                    auto                                iter = getCache().find( assetPath );
+                    std::unique_lock<std::shared_mutex> lock( mutex );
+                    auto                                iter = cache.find( assetPath );
                     // 다른 스레드가 잠금을 먼저 잡아 새로 읽었으면 그것을 쓴다.
-                    if ( iter != getCache().end() && iter->second != pTexture )
+                    if ( iter != cache.end() && iter->second != pTexture )
                     {
                         pTexture = iter->second;
                     }
                     else
                     {
-                        pTexture                        = decodeFile( assetPath );
-                        getCache()[string( assetPath )] = pTexture;
-                        evictOverBudget( *pTexture );
+                        pTexture                   = decodeFile( assetPath );
+                        cache[string( assetPath )] = pTexture;
+                        evictOverBudget( cache, *pTexture );
                     }
                 }
                 touch( *pTexture );
@@ -160,10 +151,9 @@ namespace sw::editor
              * @details 지금 적용이 번갈아 쓰는 이미지는 내리지 않는다 — 내리면 정점마다 다시 디코드한다. 그래서 한 적용이 상한보다 많이 쓰면 그 동안은 상한을 넘는다.
              *          표본 중인 쪽은 shared_ptr 로 들고 있어 내려도 안전하다.
              */
-            static void evictOverBudget( const DecodedTexture& keep )
+            static void evictOverBudget( TextureCache& cache, const DecodedTexture& keep )
             {
-                unordered_map<string, std::shared_ptr<DecodedTexture>>& cache = getCache();
-                size_t                                                  total = 0;
+                size_t total = 0;
                 for ( const auto& [path, pTexture] : cache )
                 {
                     total += pTexture->getByteSize();
@@ -232,12 +222,26 @@ namespace sw::editor
         };
     } // namespace
 
-    bool MeshModifierTextureSampler::trySample( string_view assetPath, float2 uv, float4& outRGBA )
+    /** @brief 표본기가 소유하는 캐시와 그 잠금입니다. 여러 작업 스레드가 같이 부르므로 잠금이 캐시를 지킨다. */
+    struct MeshModifierTextureSampler::State
+    {
+        std::shared_mutex                                _mutex;
+        MeshModifierTextureSamplerInternal::TextureCache _cache;
+    };
+
+    MeshModifierTextureSampler::MeshModifierTextureSampler()
+        : _pState{ make_unique<State>() }
+    {
+    }
+
+    MeshModifierTextureSampler::~MeshModifierTextureSampler() = default;
+
+    bool MeshModifierTextureSampler::trySample( string_view assetPath, float2 uv, float4& outRGBA ) const
     {
         bool bSampled = false;
         if ( assetPath.empty() == false )
         {
-            const std::shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( assetPath );
+            const std::shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( _pState->_mutex, _pState->_cache, assetPath );
             if ( pTexture != nullptr && pTexture->isValid() )
             {
                 outRGBA  = MeshModifierTextureSamplerInternal::sampleBilinear( *pTexture, uv );
@@ -249,7 +253,7 @@ namespace sw::editor
 
     void MeshModifierTextureSampler::clearCache()
     {
-        std::unique_lock<std::shared_mutex> lock( MeshModifierTextureSamplerInternal::getMutex() );
-        MeshModifierTextureSamplerInternal::getCache().clear();
+        std::unique_lock<std::shared_mutex> lock( _pState->_mutex );
+        _pState->_cache.clear();
     }
 } // namespace sw::editor

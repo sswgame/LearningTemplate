@@ -45,6 +45,7 @@ namespace sw::editor
         EditorPropertyGrid                _grid;
         const EditorSettingsRegistration* _pSelected;
         int64                             _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
+        uint32                            _visibleSectionCount;    ///< 지난 프레임 목록에 보인 섹션 수(`getVisibleSectionCount`)
         bool                              _bModifiedOnly;
     };
 } // namespace sw::editor

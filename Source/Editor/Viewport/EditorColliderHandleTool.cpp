@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleMath.h"
@@ -53,11 +54,8 @@ namespace sw::editor
                 uint32           _drawnHandleCount{ 0 };
             };
 
-            static State& getState()
-            {
-                static State s_state;
-                return s_state;
-            }
+            /** @brief 도구의 끌기 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            static State& getState() { return getEditorState<State>(); }
 
             /** @brief 끌기를 정리합니다. 셰이프가 바뀌었고 오브젝트가 아직 있으면 끌기 전 상태로 되돌리기를 남깁니다. */
             static void endDrag( State& state, bool bCommit )

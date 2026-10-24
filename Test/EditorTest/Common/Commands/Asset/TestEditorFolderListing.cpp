@@ -4,6 +4,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -73,8 +75,9 @@ SW_TEST_CASE( EditorFolderListingTest, ChildFoldersCountEachDiskScan )
 {
     const string folder = TestEditorFolderListingInternal::makeFixtureFolder();
 
-    const uint64   scanCountBefore = EditorFolderListing::getChildFolderScanCount();
-    vector<string> listChild;
+    const ScopedEditorStateService stateService; // 읽은 횟수는 에디터 범위의 상태라 이 테스트 몫의 저장소를 건다
+    const uint64                   scanCountBefore = EditorFolderListing::getChildFolderScanCount();
+    vector<string>                 listChild;
     EditorFolderListing::collectChildFolders( folder, listChild );
     SW_EXPECT_EQUAL( scanCountBefore + 1, EditorFolderListing::getChildFolderScanCount() );
     SW_ASSERT_EQUAL( size_t{ 1 }, listChild.size() );

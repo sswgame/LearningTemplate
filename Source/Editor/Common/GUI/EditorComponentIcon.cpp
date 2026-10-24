@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -77,12 +78,6 @@ namespace sw::editor
                 uint32                                                 _generation{ invalid_index::kUint32 };
             };
 
-            static RowCache& getRowCache()
-            {
-                static RowCache s_cache;
-                return s_cache;
-            }
-
             static Color findColor( string_view colorName )
             {
                 for ( const NamedColor& namedColor : kArrNamedColor )
@@ -123,11 +118,13 @@ namespace sw::editor
 
     EditorComponentIconRow EditorComponentIcon::findRow( const TypeInfo* pType )
     {
-        const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pType == nullptr || pRegistry == nullptr )
+        const TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>();
+        EditorStateStore*   pStore     = editor::findSubsystem<EditorStateStore>();
+        const bool          bCacheable = pType != nullptr && pRegistry != nullptr && pStore != nullptr; // 캐시는 줄을 바꾸지 않는다 — 놓을 저장소가 없으면 캐시 없이 찾는다
+        if ( bCacheable == false )
             return EditorComponentIconInternal::findRowUncached( pType );
         // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 테이블 세대가 바뀌면 캐시를 비운다.
-        EditorComponentIconInternal::RowCache& cache      = EditorComponentIconInternal::getRowCache();
+        EditorComponentIconInternal::RowCache& cache      = pStore->get<EditorComponentIconInternal::RowCache>();
         const uint32                           generation = pRegistry->getGeneration();
         if ( cache._generation != generation )
         {

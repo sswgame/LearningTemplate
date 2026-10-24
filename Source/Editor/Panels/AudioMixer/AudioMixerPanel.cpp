@@ -15,6 +15,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -49,11 +50,8 @@ namespace sw::editor
                 float32 _probedBusVolume{ -1.0f };
             };
 
-            static ProbeState& getProbeState()
-            {
-                static ProbeState s_state;
-                return s_state;
-            }
+            /** @brief 탐침이 읽는 지난 프레임의 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            static ProbeState& getProbeState() { return getEditorState<ProbeState>(); }
 
             /** @brief 선형 피크를 dB 로 바꿉니다. 0 이면 바닥 값입니다. */
             static float32 toDecibel( float32 linear )

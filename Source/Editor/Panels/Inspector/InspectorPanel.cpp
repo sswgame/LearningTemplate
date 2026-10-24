@@ -82,6 +82,7 @@ namespace sw::editor
         , _pPendingMoveComponent{ nullptr }
         , _pendingMoveDirection{ 0 }
         , _addComponentSearch{}
+        , _presetNameBuffer{}
         , _bComponentPresetDirty{ SW_TRUE }
         , _bFavoritesLoaded{ SW_FALSE }
         , _reserved{ 0 }
@@ -586,20 +587,19 @@ namespace sw::editor
     {
         if ( ImGui::BeginMenu( "Presets" ) )
         {
-            static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
-            ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), s_presetNameBuf.data(),
-                                      s_presetNameBuf.capacity() );
+            ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(),
+                                      _presetNameBuffer.capacity() );
             ImGui::SameLine();
-            if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
+            if ( ImGui::Button( "Save" ) && _presetNameBuffer.empty() == false )
             {
-                if ( EditorTransformCommands::saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
+                if ( EditorTransformCommands::saveComponentPreset( pComp, _presetNameBuffer.c_str() ) )
                 {
-                    s_presetNameBuf.clear();
+                    _presetNameBuffer.clear();
                     _bComponentPresetDirty = SW_TRUE;
                 }
                 else
                 {
-                    SW_LOG_ERROR( "Could not save component preset '%#'", s_presetNameBuf.c_str() );
+                    SW_LOG_ERROR( "Could not save component preset '%#'", _presetNameBuffer.c_str() );
                 }
             }
             ImGui::Separator();

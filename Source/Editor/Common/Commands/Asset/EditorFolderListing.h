@@ -1,6 +1,7 @@
 /**
  * @file EditorFolderListing.h
- * @brief 콘텐츠 브라우저가 그리는 폴더 목록을 디스크에서 읽습니다(ImGui · 에디터 문맥 없음).
+ * @brief 콘텐츠 브라우저가 그리는 폴더 목록을 디스크에서 읽습니다(ImGui · 에디터 컨텍스트 없음).
+ * @details 하위 폴더를 읽은 횟수(`getChildFolderScanCount`)는 에디터 범위의 상태 저장소(`EditorStateStore`)가 센다 — 에디터 범위(또는 테스트가 건 저장소)가 있어야 `collectChildFolders` 를 부를 수 있다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -33,7 +34,7 @@ namespace sw::editor
         static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
-        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. 프로세스 누계이며, 자체 테스트가 "그릴 때마다 디스크를 읽지 않는다" 를 확인할 때 씁니다. */
+        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. 에디터 범위의 누계이며, 자체 테스트가 "그릴 때마다 디스크를 읽지 않는다" 를 확인할 때 씁니다. */
         static uint64 getChildFolderScanCount();
     };
 } // namespace sw::editor

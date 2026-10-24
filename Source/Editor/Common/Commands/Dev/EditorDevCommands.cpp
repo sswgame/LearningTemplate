@@ -24,6 +24,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Automation/AutomationScratch.h"
@@ -175,12 +176,11 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 마지막으로 `asset.open` 한 임시 에셋의 절대 경로입니다. 탐침 `Editor.TempAssetExists` 가 읽습니다. */
-            static string& getLastTempAssetPath()
+            /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 탐침 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct TempAssetState
             {
-                static string s_path;
-                return s_path;
-            }
+                string _lastPath{}; ///< 마지막으로 연 임시 에셋의 절대 경로. 연 적이 없으면 비어 있다
+            };
 
             /** @brief @p path 가 @p folder 와 같거나 그 아래인지입니다. 둘 다 `normalizePath` 를 거친 뒤 대소문자 없이 비교합니다. */
             [[nodiscard]] static bool isUnderFolder( const string& path, const string& folder )
@@ -238,8 +238,8 @@ namespace sw::editor
                     outReply = "no editor opens '" + absolutePath + "'";
                     return false;
                 }
-                getLastTempAssetPath() = absolutePath;
-                outReply               = "opening " + absolutePath;
+                getEditorState<TempAssetState>()._lastPath = absolutePath;
+                outReply                                   = "opening " + absolutePath;
                 return true;
             }
 
@@ -352,7 +352,7 @@ namespace sw::editor
             /** @brief 마지막 `asset.open` 의 파일이 디스크에 있으면 1 입니다. 연 적이 없으면 0 입니다. */
             [[nodiscard]] static bool readTempAssetExists( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const string& path = getLastTempAssetPath();
+                const string& path = getEditorState<TempAssetState>()._lastPath;
                 outValue           = ( path.empty() == false && FileUtil::exists( path ) ) ? 1.0 : 0.0;
                 return true;
             }

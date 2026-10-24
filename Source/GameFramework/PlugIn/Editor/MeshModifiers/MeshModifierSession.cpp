@@ -27,7 +27,6 @@
 #include "GameFramework/Base/World/Spline/SplinePath.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"
-#include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
 namespace sw::editor
 {
@@ -218,6 +217,7 @@ namespace sw::editor
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
+        , _textureSampler{}
         , _previewTime{ 0.0f }
         , _selectedIndex{ -1 }
         , _inputBounds{}
@@ -689,7 +689,7 @@ namespace sw::editor
     bool MeshModifierSession::trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const
     {
         // CPU 표본기가 이미지를 읽어 캐시한다(파일 시간으로 갱신하므로 여기서 캐시를 비우지 않는다). 못 읽으면 false 라 모디파이어가 항등이 된다
-        return MeshModifierTextureSampler::trySample( assetPath, uv, outColor );
+        return _textureSampler.trySample( assetPath, uv, outColor );
     }
 
     void MeshModifierSession::makeSourceMesh( MeshModifierMesh& outMesh ) const

@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
@@ -21,12 +22,11 @@ namespace sw::editor
     {
         struct EditorNavigationBakeCommandInternal
         {
-            /** @brief 이 에디터 세션에서 `navigation.bake` 가 끝난 횟수입니다(탐침 `Editor.NavigationBakeCount`). */
-            static uint32& getBakeRunCount()
+            /** @brief 이 에디터 세션에서 `navigation.bake` 가 끝난 횟수(탐침 `Editor.NavigationBakeCount`)의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct BakeRunState
             {
-                static uint32 s_count{ 0 };
-                return s_count;
-            }
+                uint32 _count{ 0 };
+            };
 
             static void runBake()
             {
@@ -35,7 +35,7 @@ namespace sw::editor
                     return;
                 const uint32   bakedCount = EditorNavigationCommands::bakeAll( *pManager );
                 EditorContext* pContext   = EditorContext::get();
-                ++getBakeRunCount();
+                ++getEditorState<BakeRunState>()._count;
                 if ( pContext == nullptr )
                     return;
                 if ( bakedCount == 0 )
@@ -52,7 +52,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getBakeRunCount() );
+                outValue = static_cast<float64>( getEditorState<BakeRunState>()._count );
                 return true;
             }
 

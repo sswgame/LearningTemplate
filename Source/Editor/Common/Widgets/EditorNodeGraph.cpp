@@ -7,6 +7,7 @@
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -20,12 +21,11 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). */
-        uint32& getDrawnNodeCountSlot()
+        /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). 에디터 범위의 상태 저장소가 소유한다. */
+        struct EditorNodeGraphDrawnState
         {
-            static uint32 s_nodeCount{ 0 };
-            return s_nodeCount;
-        }
+            uint32 _nodeCount{ 0 };
+        };
     } // namespace
 
     EditorNodeGraph::EditorNodeGraph()
@@ -248,12 +248,12 @@ namespace sw::editor
 
     void EditorNodeGraph::noteDrawnNodeCount( uint32 nodeCount )
     {
-        getDrawnNodeCountSlot() = nodeCount;
+        getEditorState<EditorNodeGraphDrawnState>()._nodeCount = nodeCount;
     }
 
     uint32 EditorNodeGraph::getDrawnNodeCount()
     {
-        return getDrawnNodeCountSlot();
+        return getEditorState<EditorNodeGraphDrawnState>()._nodeCount;
     }
 
     bool EditorNodeGraph::bind() const

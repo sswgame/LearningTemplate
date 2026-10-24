@@ -50,6 +50,15 @@ namespace sw::editor
         /** @brief 지난 점검이 실패한 까닭입니다. 묶였으면 비어 있습니다. */
         const string& getInspectionError() const { return _inspectionError; }
 
+        /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
+        struct Published
+        {
+            uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
+            uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
+            uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
+        };
+        const Published& getPublished() const { return _published; }
+
     private:
         /** @brief 사슬 한 줄의 편집 글(쉼표로 나눈 본 이름)입니다. 프로필과 같은 순서입니다. */
         struct ChainText
@@ -101,6 +110,7 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer64> _newPairSource;
         fixed_string<constant::kMaxBuffer64> _newPairTarget;
         fixed_string<constant::kMaxBuffer64> _newPoseBone;
+        Published                            _published; ///< 탐침이 읽는 게시 값
         uint8                                _bPreviewSourceReady : 1;
         uint8                                _bPreviewTargetReady : 1;
         uint8                                _bFramePending       : 1; ///< 스켈레톤을 새로 읽었다 — 다음 그리기에서 카메라를 담는다

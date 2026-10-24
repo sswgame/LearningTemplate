@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -32,8 +33,14 @@ namespace sw::editor
             /// @brief 메뉴 커맨드가 쓰는 출력 경로입니다.
             static constexpr const utf8* kDefaultOutputPath = "Saved/Automation/Recorded/recorded.scenario.xml";
 
-            static inline ScenarioRecorder s_recorder{};
-            static inline string           s_outputPath{};
+            /** @brief 녹화가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct RecordState
+            {
+                ScenarioRecorder _recorder{};
+                string           _outputPath{}; ///< 녹화가 끝나면 쓸 경로
+            };
+
+            static RecordState& getState() { return getEditorState<RecordState>(); }
 
             [[nodiscard]] static bool startRecording( const string& path, string& outReply )
             {
@@ -42,32 +49,32 @@ namespace sw::editor
                     outReply = "output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '" + path + "'";
                     return false;
                 }
-                s_recorder.start();
-                s_outputPath = path;
-                outReply     = "recording input to " + path;
+                getState()._recorder.start();
+                getState()._outputPath = path;
+                outReply               = "recording input to " + path;
                 return true;
             }
 
             [[nodiscard]] static bool stopRecording( string& outReply )
             {
-                if ( s_recorder.isRecording() == false )
+                if ( getState()._recorder.isRecording() == false )
                 {
                     outReply = "not recording";
                     return false;
                 }
                 ScenarioRecordSettings settings;
-                settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( s_outputPath ) ) ); // a.scenario.xml → a
+                settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( getState()._outputPath ) ) ); // a.scenario.xml → a
                 const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
                 const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 settings._clientWidth                  = pWindow != nullptr ? pWindow->getWidth() : 0;
                 settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
-                const ScenarioRecordOutput output      = s_recorder.stop( settings );
-                if ( FileUtil::ensureParentDirectoryExists( s_outputPath ) == false || FileUtil::writeTextFile( s_outputPath, output._xmlText ) == false )
+                const ScenarioRecordOutput output      = getState()._recorder.stop( settings );
+                if ( FileUtil::ensureParentDirectoryExists( getState()._outputPath ) == false || FileUtil::writeTextFile( getState()._outputPath, output._xmlText ) == false )
                 {
-                    outReply = "could not write '" + s_outputPath + "'";
+                    outReply = "could not write '" + getState()._outputPath + "'";
                     return false;
                 }
-                outReply = "wrote " + s_outputPath + " (" + to_string( output._writtenStepCount ) + " steps, " + to_string( output._skippedEventCount ) + " events skipped)";
+                outReply = "wrote " + getState()._outputPath + " (" + to_string( output._writtenStepCount ) + " steps, " + to_string( output._skippedEventCount ) + " events skipped)";
                 return true;
             }
 
@@ -84,7 +91,7 @@ namespace sw::editor
             static void runToggle()
             {
                 string     reply;
-                const bool bOk = s_recorder.isRecording() ? stopRecording( reply ) : startRecording( kDefaultOutputPath, reply );
+                const bool bOk = getState()._recorder.isRecording() ? stopRecording( reply ) : startRecording( kDefaultOutputPath, reply );
                 if ( bOk )
                     SW_LOG_INFO( "%#", reply.c_str() );
                 else
@@ -94,11 +101,11 @@ namespace sw::editor
             /** @brief 프레임 단계 — 녹화 중이면 이번 입력 프레임의 이벤트를 엔진 프레임의 실제 경과(재생과 같은 시계)와 함께 넘깁니다. */
             static void runFrame( EditorContext& /*context*/ )
             {
-                if ( s_recorder.isRecording() == false )
+                if ( getState()._recorder.isRecording() == false )
                     return;
                 InputManager* pInput = findSubsystem<InputManager>();
                 if ( pInput != nullptr )
-                    s_recorder.update( *pInput, GameTimeScale::getUnscaledDeltaTime() );
+                    getState()._recorder.update( *pInput, GameTimeScale::getUnscaledDeltaTime() );
             }
         };
     } // namespace

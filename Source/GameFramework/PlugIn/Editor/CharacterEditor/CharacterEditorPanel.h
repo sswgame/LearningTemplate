@@ -71,6 +71,22 @@ namespace sw::editor
         /** @brief 푼 피팅 결과를 확인 표시에 올립니다. 풀어서 넘기는 쪽(미리보기 씬, 슬라이더를 놓을 때 한 번)이 부릅니다. */
         void setFitResult( const FitResult& result );
 
+        /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
+        struct Published
+        {
+            uint32 _boneCount{ 0 };
+            uint32 _socketCount{ 0 };
+            uint32 _equippedSlotCount{ 0 };
+            uint32 _traceCount{ 0 };
+            uint32 _presetCount{ 0 };
+            uint32 _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
+            uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
+            uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
+            uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
+            uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
+        };
+        const Published& getPublished() const { return _published; }
+
     private:
         /**
          * @brief 소켓 · 포즈 모델의 미저장 상태를 패널의 dirty 로 옮깁니다(닫기 확인 · 종료 확인 · 제목 표시가 이 값을 본다).
@@ -220,5 +236,6 @@ namespace sw::editor
         fixed_string<constant::kMaxPathSize>  _rigPath;                 ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
         bool                                  _bRigPreview;             ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`)
         PackDataState                         _packDataState;
+        Published                             _published; ///< 탐침이 읽는 게시 값
     };
 } // namespace sw::editor

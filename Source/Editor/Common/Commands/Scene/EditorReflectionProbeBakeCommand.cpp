@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Graphics/Lighting/ReflectionProbeData.h"
@@ -36,12 +37,11 @@ namespace sw::editor
     {
         struct EditorReflectionProbeBakeCommandInternal
         {
-            /** @brief 이 에디터 세션에서 `lighting.bakeReflectionProbes` 가 끝난 횟수입니다(탐침 `Editor.ReflectionProbeBakeCount`). */
-            static uint32& getBakeRunCount()
+            /** @brief 이 에디터 세션에서 `lighting.bakeReflectionProbes` 가 끝난 횟수(탐침 `Editor.ReflectionProbeBakeCount`)의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct BakeRunState
             {
-                static uint32 s_count{ 0 };
-                return s_count;
-            }
+                uint32 _count{ 0 };
+            };
 
             /** @brief 굽을 프로브 — 선택한 오브젝트의 프로브, 선택에 프로브가 없으면 씬의 모든 프로브입니다. */
             static void collectProbes( GameObjectManager& manager, vector<ReflectionProbeComponent*>& outListProbe )
@@ -106,7 +106,7 @@ namespace sw::editor
                 EditorNotificationManager& notification = pContext->getSubsystem<EditorNotificationManager>();
                 if ( listProbe.empty() )
                 {
-                    ++getBakeRunCount();
+                    ++getEditorState<BakeRunState>()._count;
                     notification.push( "Bake Reflection Probes", "Nothing to bake - add a Reflection Probe", NotificationType::Warning );
                     return;
                 }
@@ -136,7 +136,7 @@ namespace sw::editor
                 }
                 if ( bBaked == false )
                     SW_LOG_ERROR( "Reflection probe bake failed: %#", lastError.c_str() );
-                ++getBakeRunCount();
+                ++getEditorState<BakeRunState>()._count;
                 if ( storedCount > 0 )
                     pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
                 const uint32 probeCount = static_cast<uint32>( listProbe.size() );
@@ -158,7 +158,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getBakeRunCount() );
+                outValue = static_cast<float64>( getEditorState<BakeRunState>()._count );
                 return true;
             }
 

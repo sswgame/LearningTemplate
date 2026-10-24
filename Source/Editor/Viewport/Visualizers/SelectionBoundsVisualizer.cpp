@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
@@ -29,18 +30,14 @@ namespace sw::editor
     {
         struct SelectionBoundsVisualizerInternal
         {
-            /** @brief 지난 프레임에 그린 선택 상자 수입니다(탐침 `Editor.SelectionOutlineBoxes`). */
-            static uint32& getDrawnBoxCount()
+            /** @brief 선택 상자의 그리기 기록입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct DrawState
             {
-                static uint32 s_count{ 0 };
-                return s_count;
-            }
+                uint32 _drawnBoxCount{ 0 };   ///< 지난 프레임에 그린 선택 상자 수(탐침 `Editor.SelectionOutlineBoxes`)
+                uint64 _hoveredObjectID{ 0 }; ///< 호버 중인 오브젝트(0 이면 없음)
+            };
 
-            static uint64& getHoveredSlot()
-            {
-                static uint64 s_hoveredObjectID{ 0 };
-                return s_hoveredObjectID;
-            }
+            static DrawState& getDrawState() { return getEditorState<DrawState>(); }
 
             /** @brief 상자 하나의 12 모서리를 그립니다. */
             static void drawBox( const EditorViewportVisualizerArgs& args, const AABB& box, ImU32 color, float32 thickness )
@@ -104,9 +101,9 @@ namespace sw::editor
 
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                uint32& drawnCount      = getDrawnBoxCount();
-                drawnCount              = 0;
-                EditorContext* pContext = EditorContext::get();
+                DrawState& drawState     = getDrawState();
+                drawState._drawnBoxCount = 0;
+                EditorContext* pContext  = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
                 vector<GameObject*> listSelected;
@@ -120,10 +117,10 @@ namespace sw::editor
                     if ( bNoObjectBox )
                         continue;
                     drawBox( args, box, color, 2.0f );
-                    ++drawnCount;
+                    ++drawState._drawnBoxCount;
                 }
                 // 호버는 선택보다 약하게 — 테마의 호버 색 · 얇은 선. 이미 고른 오브젝트는 건너뛴다(선택 상자가 이미 있다).
-                const uint64 hoveredID = getHoveredSlot();
+                const uint64 hoveredID = drawState._hoveredObjectID;
                 if ( hoveredID == 0 )
                     return;
                 for ( const GameObject* pObject : listSelected )
@@ -143,17 +140,17 @@ namespace sw::editor
 
     void EditorSelectionBounds::setHoveredObjectID( uint64 objectID )
     {
-        SelectionBoundsVisualizerInternal::getHoveredSlot() = objectID;
+        SelectionBoundsVisualizerInternal::getDrawState()._hoveredObjectID = objectID;
     }
 
     uint64 EditorSelectionBounds::getHoveredObjectID()
     {
-        return SelectionBoundsVisualizerInternal::getHoveredSlot();
+        return SelectionBoundsVisualizerInternal::getDrawState()._hoveredObjectID;
     }
 
     uint32 EditorSelectionBounds::getDrawnBoxCount()
     {
-        return SelectionBoundsVisualizerInternal::getDrawnBoxCount();
+        return SelectionBoundsVisualizerInternal::getDrawState()._drawnBoxCount;
     }
 
     SW_EDITOR_VISUALIZER( SelectionBounds, "selection_bounds", 40, editoricon::kCube, "Sel", "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다", true,

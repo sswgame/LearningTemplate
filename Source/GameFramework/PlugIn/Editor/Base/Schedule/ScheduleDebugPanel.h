@@ -28,12 +28,23 @@ namespace sw::editor
     class ScheduleDebugPanel final : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "npc_schedule";
+
         ScheduleDebugPanel();
 
         const utf8* getPanelTitle() const override { return "NPC Schedule"; }
         bool        isToolPanel() const override { return true; }
         float2      getInitialPanelSize() const override { return float2{ 900.0f, 620.0f }; }
         void        drawContent() override;
+
+        /** @brief 자동화 탐침이 읽는 값입니다. 창이 그릴 때마다 게시합니다(게임 스레드). 창이 닫히면 마지막 값이 남습니다. 값은 이 패널 인스턴스의 것이라 에디터마다 따로입니다. */
+        struct Published
+        {
+            uint32 _npcCount{ 0 };         ///< 고른 일정 시스템의 NPC 수
+            uint32 _timelineRowCount{ 0 }; ///< 고른 NPC 의 오늘 타임라인 줄 수(고른 NPC 가 없으면 0)
+        };
+        const Published& getPublished() const { return _published; }
 
     private:
         void drawNpcList( const ScheduleSystem& system );
@@ -46,5 +57,6 @@ namespace sw::editor
         int32                       _systemIndex;
         int32                       _previewMinute;
         bool                        _bFollowClock;
+        Published                   _published; ///< 탐침이 읽는 게시 값
     };
 } // namespace sw::editor

@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
@@ -44,33 +45,28 @@ namespace sw::editor
             static constexpr float4 kTargetReferenceColor{ 0.6f, 0.6f, 0.6f, 0.6f };
             static constexpr float4 kTargetPoseColor{ 1.0f, 0.55f, 0.2f, 1.0f };
 
-            /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). */
-            struct Published
+            /** @brief 탐침이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
+            [[nodiscard]] static bool readPublished( uint32 RetargetPanel::Published::* pField, float64& outValue )
             {
-                uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
-                uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
-                uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
-            };
-            static Published& getPublished()
-            {
-                static Published s_published;
-                return s_published;
+                const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+                const RetargetPanel*      pPanel   = pManager != nullptr ? pManager->findPanel<RetargetPanel>() : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPublished().*pField );
+                return true;
             }
 
             [[nodiscard]] static bool readTargetPoseCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._targetPoseCount );
-                return true;
+                return readPublished( &RetargetPanel::Published::_targetPoseCount, outValue );
             }
             [[nodiscard]] static bool readPreviewSegmentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._previewSegmentCount );
-                return true;
+                return readPublished( &RetargetPanel::Published::_previewSegmentCount, outValue );
             }
             [[nodiscard]] static bool readChainCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getPublished()._chainCount );
-                return true;
+                return readPublished( &RetargetPanel::Published::_chainCount, outValue );
             }
 
             /** @brief 쉼표 · 빈칸으로 나눈 본 이름 목록입니다. */
@@ -156,6 +152,7 @@ namespace sw::editor
         , _newPairSource{}
         , _newPairTarget{}
         , _newPoseBone{}
+        , _published{}
         , _bPreviewSourceReady{ SW_FALSE }
         , _bPreviewTargetReady{ SW_FALSE }
         , _bFramePending{ SW_FALSE }
@@ -169,9 +166,8 @@ namespace sw::editor
         ensureDocumentLoaded();
         drawNewDocumentRow();
         drawDocumentOpenBar( "retarget" );
-        RetargetPanelInternal::Published& published = RetargetPanelInternal::getPublished();
-        published._targetPoseCount                  = static_cast<uint32>( _profile.getTargetPose().size() );
-        published._chainCount                       = static_cast<uint32>( _profile.getChains().size() );
+        _published._targetPoseCount = static_cast<uint32>( _profile.getTargetPose().size() );
+        _published._chainCount      = static_cast<uint32>( _profile.getChains().size() );
         if ( getLoadedAssetPath().empty() )
         {
             EditorWidgets::drawEmptyHint( "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind." );
@@ -401,7 +397,7 @@ namespace sw::editor
                 Internal::drawBones( renderer, _previewTarget, _listTargetReferencePosition, Internal::kTargetReferenceColor );
             Internal::drawBones( renderer, _previewTarget, _listTargetPosePosition, Internal::kTargetPoseColor );
         }
-        Internal::getPublished()._previewSegmentCount = renderer.getDrawnSegmentCount();
+        _published._previewSegmentCount = renderer.getDrawnSegmentCount();
     }
 
     void RetargetPanel::drawRootAndPelvisRows()

@@ -10,6 +10,7 @@
 
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
@@ -107,11 +108,8 @@ namespace sw::editor
                 uint32                     _strokeCount{ 0 };
             };
 
-            static State& getState()
-            {
-                static State s_state;
-                return s_state;
-            }
+            /** @brief 브러시 도구의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            static State& getState() { return getEditorState<State>(); }
 
             /** @brief 레이 위 점 @p t 가 지형 위로 얼마나 떠 있는지 봅니다. 지형 밖이면 false 입니다. */
             static bool findSignedHeight( const GameObjectManager& manager, const EditorPickRay& ray, float32 t, float32& outAbove )

@@ -29,10 +29,9 @@ namespace sw::editor
             (void)preview.refresh(); // 바뀌었을 때만 다시 읽는다. 읽기 실패는 refresh 가 알린다
             if ( preview.isLoaded() == false )
                 return;
-            static vector<EditorWorldSegment> s_listSegment; // 프레임마다 다시 채우는 재사용 버퍼
-            s_listSegment.clear();
-            preview.appendSegments( s_listSegment );
-            for ( const EditorWorldSegment& segment : s_listSegment )
+            vector<EditorWorldSegment> listSegment; // 프레임마다 지역으로 채운다(재사용 버퍼를 함수 정적으로 두면 모듈 언로드 뒤까지 남는다)
+            preview.appendSegments( listSegment );
+            for ( const EditorWorldSegment& segment : listSegment )
             {
                 ImVec2 screenFrom;
                 ImVec2 screenTo;

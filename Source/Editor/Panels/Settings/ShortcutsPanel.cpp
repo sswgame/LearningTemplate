@@ -10,6 +10,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -23,12 +24,6 @@ namespace sw::editor
         struct ShortcutsPanelInternal
         {
             static constexpr Color kConflictRowBg{ 0.55f, 0.12f, 0.12f, 0.6f };
-
-            static uint32& getPendingConflictCount()
-            {
-                static uint32 s_pendingConflictCount{ 0 };
-                return s_pendingConflictCount;
-            }
 
             /** @brief 그 커맨드 줄의 이름입니다(`shortcuts.<동작>.<커맨드 id>`). */
             static fixed_string<constant::kMaxBuffer128> makeMark( const utf8* pAction, const string& commandID )
@@ -60,7 +55,6 @@ namespace sw::editor
         EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
 
         pollShortcutCapture( registry );
-        ShortcutsPanelInternal::getPendingConflictCount() = _conflictCommandID.empty() ? 0u : 1u;
 
         // 단추를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
         if ( ImGui::Button( "Reset All" ) )
@@ -222,7 +216,9 @@ namespace sw::editor
 
     uint32 ShortcutsPanel::getPendingConflictCount()
     {
-        return ShortcutsPanelInternal::getPendingConflictCount();
+        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
+        const ShortcutsPanel*     pPanel   = pManager != nullptr ? pManager->findPanel<ShortcutsPanel>() : nullptr;
+        return ( pPanel != nullptr && pPanel->_conflictCommandID.empty() == false ) ? 1u : 0u; // 패널이 없으면 묻는 충돌도 없다
     }
 
     void ShortcutsPanel::finishCapture()
