@@ -422,6 +422,115 @@ namespace sw::editor
                 }
                 return bValid;
             }
+
+            /** @brief cgltf 가 읽은 데이터의 소유자입니다 — 어느 반환 경로에서도 `cgltf_free` 가 불립니다(반환마다 손으로 풀면 새 경로에서 빠뜨린다). */
+            struct GltfData
+            {
+                cgltf_data* _pData{ nullptr };
+
+                GltfData()                             = default;
+                GltfData( const GltfData& )            = delete;
+                GltfData& operator=( const GltfData& ) = delete;
+                ~GltfData() { cgltf_free( _pData ); }
+            };
+
+            /**
+             * @brief 파일을 읽어 cgltf 로 파싱 · 버퍼 로드 · 검증합니다. 옳지 않은 부모를 가진 장면 루트는 최상위 조상으로 바꿉니다.
+             * @param inoutBytes 파일 바이트입니다. cgltf 는 GLB 의 JSON 청크와 BIN 청크를 이 안에서 가리키므로 @p outData 보다 오래 살아야 한다.
+             */
+            [[nodiscard]] static bool parseGltf( string_view sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
+            {
+                if ( FileUtil::readFile( sourcePath, inoutBytes ) == false || inoutBytes.empty() )
+                {
+                    SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+                    return false;
+                }
+                const uint32 promotedCount = promoteSceneRootsToTopAncestor( inoutBytes );
+                if ( promotedCount > 0 )
+                    SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath, promotedCount );
+
+                const string        path    = string( sourcePath );
+                const cgltf_options options = makeOptions();
+                cgltf_result        result  = cgltf_parse( &options, inoutBytes.data(), inoutBytes.size(), &outData._pData );
+                if ( result == cgltf_result_success )
+                    result = cgltf_load_buffers( &options, outData._pData, path.c_str() );
+                if ( result == cgltf_result_success )
+                    result = cgltf_validate( outData._pData );
+                if ( result != cgltf_result_success )
+                {
+                    SW_LOG_ERROR( "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 스킨이 있는 모델을 읽습니다. 규칙의 이동 · 재중심이나 LOD 는 스킨드 모델에 맞지 않아 거절합니다. 읽었으면 아바타에 없는 본을 경고합니다. */
+            [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
+                                                        string_view sourcePath, ModelImportResult& outResult )
+            {
+                const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
+                if ( bMoves )
+                {
+                    SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
+                    return false;
+                }
+                if ( rule._listLOD.empty() == false )
+                {
+                    SW_LOG_ERROR( "glTF '%#' is skinned - import rule '%#' asks for mesh LODs, which only static meshes take", sourcePath, rule._name.c_str() );
+                    return false;
+                }
+                if ( readSkinnedModel( data, listRoot, rule, sourcePath, listToon, outResult ) == false )
+                    return false;
+                warnMissingAvatarBones( outResult, sourcePath );
+                return true;
+            }
+
+            /** @brief 스킨 없는 정적 모델을 읽습니다 — 장면 루트마다 메시를 합치고 규칙을 적용해 구간(VRM) 또는 LOD 단계를 만든다. */
+            [[nodiscard]] static bool readStaticModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<ToonMaterialDesc>& listToon, const ModelImportRule& rule,
+                                                       string_view sourcePath, ModelImportResult& outResult )
+            {
+                MergedMesh merged;
+                merged._bBakeMaterialColor = listToon.empty();
+                for ( const cgltf_node* pRoot : listRoot )
+                {
+                    if ( appendNode( *pRoot, merged ) == false )
+                    {
+                        SW_LOG_ERROR( "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, makeNodeName( data, *pRoot ).c_str() );
+                        return false;
+                    }
+                }
+                if ( data.animations_count > 0 )
+                    SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, data.animations_count );
+
+                if ( merged._listIndex.empty() )
+                {
+                    SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
+                    return false;
+                }
+                if ( merged._baseColorTextureUri.empty() == false && listToon.empty() )
+                    SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
+
+                applyRule( rule, merged );
+                // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
+                const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
+                if ( bLODUnsupported )
+                {
+                    SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
+                                  rule._name.c_str() );
+                    return false;
+                }
+                if ( listToon.empty() == false )
+                {
+                    populateMaterialSections( merged, data, listToon, outResult );
+                    if ( collectSectionTextures( data, sourcePath, outResult ) == false )
+                        return false;
+                    expandTrianglesInOrder( merged, 0, outResult._mesh );
+                    outResult._mesh._listSection = makeMeshSections( outResult._listSection );
+                    return true;
+                }
+                expandTriangles( merged, 0, outResult._mesh );
+                return makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
+            }
         };
 
         /**
@@ -474,116 +583,22 @@ namespace sw::editor
 
     bool ModelImporter::readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
     {
-        outResult = ModelImportResult{};
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
-        {
-            SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+        using Internal = ModelImporterInternal;
+        outResult      = ModelImportResult{};
+        vector<uint8>      bytes; // 소유자(`holder`)보다 오래 산다
+        Internal::GltfData holder;
+        if ( Internal::parseGltf( sourcePath, bytes, holder ) == false )
             return false;
-        }
-        const uint32 promotedCount = ModelImporterInternal::promoteSceneRootsToTopAncestor( bytes );
-        if ( promotedCount > 0 )
-            SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath,
-                            promotedCount );
-
-        // cgltf 는 GLB 의 JSON 청크와 BIN 청크를 @p bytes 안에서 가리킨다. cgltf_free 까지 bytes 가 살아 있어야 한다.
-        const string        path    = string( sourcePath );
-        const cgltf_options options = ModelImporterInternal::makeOptions();
-        cgltf_data*         pData   = nullptr;
-        cgltf_result        result  = cgltf_parse( &options, bytes.data(), bytes.size(), &pData );
-        if ( result == cgltf_result_success )
-            result = cgltf_load_buffers( &options, pData, path.c_str() );
-        if ( result == cgltf_result_success )
-            result = cgltf_validate( pData );
-        if ( result != cgltf_result_success )
-        {
-            SW_LOG_ERROR( "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
-            cgltf_free( pData );
-            return false;
-        }
+        const cgltf_data& data = *holder._pData;
 
         vector<const cgltf_node*> listRoot;
-        ModelImporterInternal::collectSceneRoots( *pData, listRoot );
+        Internal::collectSceneRoots( data, listRoot );
         vector<ToonMaterialDesc> listToon;
-        if ( ModelImporterInternal::readToonMaterials( *pData, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false ||
-             ModelImporterInternal::readVrmAvatar( *pData, sourcePath, outResult ) == false )
-        {
-            cgltf_free( pData );
+        if ( Internal::readToonMaterials( data, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false || Internal::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
-        }
-        bool bRead = true;
-        if ( pData->skins_count > 0 )
-        {
-            const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
-            if ( bMoves )
-            {
-                SW_LOG_ERROR( "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
-                bRead = false;
-            }
-            else if ( rule._listLOD.empty() == false )
-            {
-                SW_LOG_ERROR( "glTF '%#' is skinned - import rule '%#' asks for mesh LODs, which only static meshes take", sourcePath, rule._name.c_str() );
-                bRead = false;
-            }
-            else
-            {
-                bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
-            }
-            cgltf_free( pData );
-            if ( bRead )
-                ModelImporterInternal::warnMissingAvatarBones( outResult, sourcePath );
-            return bRead;
-        }
-
-        ModelImporterInternal::MergedMesh merged;
-        merged._bBakeMaterialColor = listToon.empty();
-        for ( const cgltf_node* pRoot : listRoot )
-        {
-            if ( ModelImporterInternal::appendNode( *pRoot, merged ) == false )
-            {
-                SW_LOG_ERROR( "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, ModelImporterInternal::makeNodeName( *pData, *pRoot ).c_str() );
-                cgltf_free( pData );
-                return false;
-            }
-        }
-        if ( pData->animations_count > 0 )
-            SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, pData->animations_count );
-
-        if ( merged._listIndex.empty() )
-        {
-            SW_LOG_ERROR( "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
-            cgltf_free( pData );
-            return false;
-        }
-        if ( merged._baseColorTextureUri.empty() == false && listToon.empty() )
-            SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
-
-        ModelImporterInternal::applyRule( rule, merged );
-        // LOD 는 구간 · 모프 없는 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
-        const bool bLODUnsupported = rule._listLOD.empty() == false && ( listToon.empty() == false || merged._listMorphName.empty() == false );
-        if ( bLODUnsupported )
-        {
-            SW_LOG_ERROR( "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
-                          rule._name.c_str() );
-            cgltf_free( pData );
-            return false;
-        }
-        if ( listToon.empty() == false )
-        {
-            ModelImporterInternal::populateMaterialSections( merged, *pData, listToon, outResult );
-            if ( ModelImporterInternal::collectSectionTextures( *pData, sourcePath, outResult ) == false )
-            {
-                cgltf_free( pData );
-                return false;
-            }
-            cgltf_free( pData );
-            ModelImporterInternal::expandTrianglesInOrder( merged, 0, outResult._mesh );
-            outResult._mesh._listSection = ModelImporterInternal::makeMeshSections( outResult._listSection );
-            return true;
-        }
-        cgltf_free( pData );
-        ModelImporterInternal::expandTriangles( merged, 0, outResult._mesh );
-        return ModelImporterInternal::makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
+        if ( data.skins_count > 0 )
+            return Internal::readSkinnedAsset( data, listRoot, listToon, rule, sourcePath, outResult );
+        return Internal::readStaticModel( data, listRoot, listToon, rule, sourcePath, outResult );
     }
 
     bool ModelImporter::transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh )
