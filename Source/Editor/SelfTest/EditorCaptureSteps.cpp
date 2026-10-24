@@ -10,10 +10,11 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
+#include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/AutomationScenario.h"
@@ -36,14 +37,31 @@ namespace sw::editor
                 uint32                _ticket{ 0 };
             };
 
-            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<PendingCapture>> s_pendingOwner{};
+            /**
+             * @class Session
+             * @brief 위 목록의 소유자입니다. 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다(`SW_EDITOR_SUBSYSTEM`, 아래 별칭 `EditorCaptureStepsSession`).
+             * @details 단계 함수는 상태를 받지 못하는 함수 포인터라 `findSubsystem` 으로 찾는다. 정적 변수에 두면 서비스 접근 게이트가 못 보고, 컨텍스트가 바뀌어도 이전 요청 번호가 남는다.
+             *          이 형은 이 파일 밖에서 찾을 수 없다(익명 이름공간).
+             */
+            class Session final : public EditorSubsystem
+            {
+            public:
+                static constexpr const utf8* kSubsystemName = "EditorCaptureStepsSession";
 
-            static vector<PendingCapture>& pendingCaptures() { return *s_pendingOwner.getOrCreate(); }
+                vector<PendingCapture> _listPending;
+
+                const utf8* getSubsystemName() const override { return kSubsystemName; }
+            };
+
+            /** @brief 지금 에디터 범위의 세션입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
+            static Session* findSession() { return editor::findSubsystem<Session>(); }
 
             static PendingCapture* findPending( const AutomationStep& step )
             {
-                for ( PendingCapture& pending : pendingCaptures() )
+                Session* pSession = findSession();
+                if ( pSession == nullptr )
+                    return nullptr;
+                for ( PendingCapture& pending : pSession->_listPending )
                 {
                     if ( pending._pStep == &step )
                         return &pending;
@@ -77,13 +95,14 @@ namespace sw::editor
             static AutomationStepHold holdCapture( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
-                if ( pCapture == nullptr )
+                Session* const         pSession = findSession();
+                if ( pCapture == nullptr || pSession == nullptr )
                     return AutomationStepHold::Run; // 단계가 돌며 실패를 적는다
                 PendingCapture* pPending = findPending( step );
                 if ( pPending == nullptr )
                 {
-                    pendingCaptures().push_back( PendingCapture{ &step, pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) ) } );
-                    pPending = &pendingCaptures().back();
+                    pSession->_listPending.push_back( PendingCapture{ &step, pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) ) } );
+                    pPending = &pSession->_listPending.back();
                 }
                 EditorUICaptureResult result{};
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
@@ -121,7 +140,10 @@ namespace sw::editor
                 EditorUICaptureResult  result{};
                 const bool             bHasResult = pCapture != nullptr && pPending != nullptr && pCapture->findResult( pPending->_ticket, result );
                 if ( pPending != nullptr )
-                    pendingCaptures().erase( pendingCaptures().begin() + ( pPending - pendingCaptures().data() ) );
+                {
+                    vector<PendingCapture>& listPending = findSession()->_listPending; // 항목을 찾았으므로 세션이 있다
+                    listPending.erase( listPending.begin() + ( pPending - listPending.data() ) );
+                }
 
                 if ( bHasResult == false || result._bWritten == SW_FALSE )
                 {
@@ -133,11 +155,15 @@ namespace sw::editor
                 return true;
             }
         };
+
+        /** @brief `SW_EDITOR_SUBSYSTEM` 이 형 이름을 식별자에 이어 붙이므로 중첩 형에 짧은 이름을 준다. */
+        using EditorCaptureStepsSession = EditorCaptureStepsInternal::Session;
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_SUBSYSTEM( EditorCaptureStepsSession, 9520 );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorCaptureUI, "CaptureEditorUI", &EditorCaptureStepsInternal::runCapture, &EditorCaptureStepsInternal::validateCapture, nullptr,
                                    &EditorCaptureStepsInternal::holdCapture, false );
 } // namespace sw::editor

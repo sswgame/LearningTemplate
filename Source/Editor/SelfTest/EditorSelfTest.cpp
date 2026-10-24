@@ -6,6 +6,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -16,14 +18,19 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorSelfTestInternal
+        /**
+         * @class EditorSelfTestSession
+         * @brief 에디터 자체 테스트 실행기의 상태 소유자입니다. 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다(`SW_EDITOR_SUBSYSTEM`).
+         * @details 실행기(`EditorSelfTestRunner`)의 정적 함수는 이 서브시스템을 `findSubsystem` 으로 찾아 쓴다. 함수 정적 지역에 상태를 두면 서비스 접근 게이트가 못 보고,
+         *          모듈을 다시 올릴 때와 컨텍스트를 새로 만들 때 이전 실행의 값이 남는다. 여기 두면 컨텍스트가 사라질 때 실행 상태와 테스트의 프로브 상태가 함께 사라진다.
+         *          이 형은 이 파일 밖에서 찾을 수 없다(익명 이름공간).
+         */
+        class EditorSelfTestSession final : public EditorSubsystem
         {
-            /** @brief 테스트를 시작하기 전에 기다리는 에디터 프레임 수입니다. 패널이 한 번씩 그려지고 기본 도킹이 적용될 때까지입니다. */
-            static constexpr uint32 kWarmupFrameCount = 5;
-            /** @brief 테스트 하나가 쓸 수 있는 최대 단계(프레임) 수입니다. 넘으면 실패로 적고 다음 테스트로 갑니다. */
-            static constexpr uint32 kMaxStepCount = 300;
+        public:
+            static constexpr const utf8* kSubsystemName = "EditorSelfTestSession";
 
-            /** @brief 실행기 상태입니다. 모듈이 다시 올라오면 새로 시작합니다. */
+            /** @brief 한 번의 실행 상태입니다. 새 실행을 요청하면 비웁니다. */
             struct RunState
             {
                 EditorSelfTestContext        _context;
@@ -38,15 +45,26 @@ namespace sw::editor
                 bool                         _bActive{ false }; ///< 실행이 있다(시작 전 워밍업 포함)
                 bool                         _bStarted{ false };
                 bool                         _bQuitWhenDone{ false };
-                bool                         _bCommandLineConsumed{ false }; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다
-                bool                         _bMarksWereEnabled{ false };    ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
+                bool                         _bMarksWereEnabled{ false }; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
             };
 
-            static RunState& getState()
-            {
-                static RunState s_state;
-                return s_state;
-            }
+            RunState _run;
+            bool     _bCommandLineConsumed{ false }; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다. 실행을 비워도 남는다
+
+            const utf8* getSubsystemName() const override { return kSubsystemName; }
+        };
+
+        struct EditorSelfTestInternal
+        {
+            using RunState = EditorSelfTestSession::RunState;
+
+            /** @brief 테스트를 시작하기 전에 기다리는 에디터 프레임 수입니다. 패널이 한 번씩 그려지고 기본 도킹이 적용될 때까지입니다. */
+            static constexpr uint32 kWarmupFrameCount = 5;
+            /** @brief 테스트 하나가 쓸 수 있는 최대 단계(프레임) 수입니다. 넘으면 실패로 적고 다음 테스트로 갑니다. */
+            static constexpr uint32 kMaxStepCount = 300;
+
+            /** @brief 지금 에디터 범위의 세션입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
+            static EditorSelfTestSession* findSession() { return editor::findSubsystem<EditorSelfTestSession>(); }
 
             /** @brief 글자열 @p text 가 `*` 를 포함한 패턴 @p pattern 하나에 맞는지 봅니다. */
             static bool matchesGlob( string_view text, string_view pattern )
@@ -107,6 +125,8 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorSelfTest" );
 
+    SW_EDITOR_SUBSYSTEM( EditorSelfTestSession, 9500 );
+
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
     /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 테스트를 돌리고 앱을 닫습니다(`*` 와 쉼표). */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 테스트를 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
@@ -156,15 +176,15 @@ namespace sw::editor
 
     bool EditorSelfTestRunner::requestRun( string_view pattern, bool bQuitWhenDone )
     {
-        EditorSelfTestInternal::RunState& state = EditorSelfTestInternal::getState();
-        if ( state._bActive || pattern.empty() )
+        EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        const bool             bBusy    = pSession == nullptr || pSession->_run._bActive; // 세션이 없거나 도는 실행이 있다
+        if ( bBusy || pattern.empty() )
             return false;
-        const bool bCommandLineConsumed = state._bCommandLineConsumed;
-        state                           = EditorSelfTestInternal::RunState{};
-        state._bCommandLineConsumed     = bCommandLineConsumed;
-        state._pattern                  = string( pattern );
-        state._bQuitWhenDone            = bQuitWhenDone;
-        state._bActive                  = true;
+        EditorSelfTestInternal::RunState& state = pSession->_run;
+        state                                   = EditorSelfTestInternal::RunState{};
+        state._pattern                          = string( pattern );
+        state._bQuitWhenDone                    = bQuitWhenDone;
+        state._bActive                          = true;
         // 창에서 누른 실행은 패널이 이미 다 그려져 있다 — 워밍업은 명령줄 기동 때만.
         if ( bQuitWhenDone == false )
             state._warmupFrameCount = EditorSelfTestInternal::kWarmupFrameCount;
@@ -173,20 +193,34 @@ namespace sw::editor
 
     bool EditorSelfTestRunner::isRunning()
     {
-        return EditorSelfTestInternal::getState()._bActive;
+        const EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        return pSession != nullptr && pSession->_run._bActive;
     }
 
-    const vector<EditorSelfTestResult>& EditorSelfTestRunner::getResults()
+    vector_reference<const EditorSelfTestResult> EditorSelfTestRunner::getResults()
     {
-        return EditorSelfTestInternal::getState()._listResult;
+        const EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        if ( pSession == nullptr )
+            return {};
+        return pSession->_run._listResult;
+    }
+
+    EditorSelfTestContext* EditorSelfTestRunner::findRunningContext()
+    {
+        EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        const bool             bRunning = pSession != nullptr && pSession->_run._bActive && pSession->_run._bStarted;
+        return bRunning ? &pSession->_run._context : nullptr;
     }
 
     void EditorSelfTestRunner::runFrame()
     {
-        EditorSelfTestInternal::RunState& state = EditorSelfTestInternal::getState();
-        if ( state._bCommandLineConsumed == false )
+        EditorSelfTestSession* pSession = EditorSelfTestInternal::findSession();
+        if ( pSession == nullptr )
+            return; // 에디터 컨텍스트가 없다 — 돌릴 실행도 없다
+        EditorSelfTestInternal::RunState& state = pSession->_run;
+        if ( pSession->_bCommandLineConsumed == false )
         {
-            state._bCommandLineConsumed = true;
+            pSession->_bCommandLineConsumed = true;
             if ( gv_editorSelfTest.empty() == false )
                 (void)requestRun( gv_editorSelfTest, true ); // 기동 직후라 도는 실행이 없다
         }

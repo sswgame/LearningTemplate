@@ -84,15 +84,8 @@ namespace sw::editor
                 return string{ text.c_str() };
             }
 
-            static TypingProbe& getTypingProbe()
+            static void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager, const TypingProbe& probe )
             {
-                static TypingProbe s_probe;
-                return s_probe;
-            }
-
-            static void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager )
-            {
-                TypingProbe& probe = getTypingProbe();
                 ImGui::ClearActiveID(); // 검색 입력란의 입력 상태를 놓는다. 다음 테스트의 키가 이리 오지 않게 한다
                 if ( pHierarchy != nullptr )
                     pHierarchy->setFilterText( "" );
@@ -102,7 +95,6 @@ namespace sw::editor
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                probe = TypingProbe{};
                 moveMouseAway();
             }
 
@@ -117,9 +109,7 @@ namespace sw::editor
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
 
-                TypingProbe& probe = getTypingProbe();
-                if ( context.getStepIndex() == 0 )
-                    probe = TypingProbe{};
+                TypingProbe& probe = context.getTestState<TypingProbe>();
                 switch ( probe._phase )
                 {
                     case 0:
@@ -139,7 +129,7 @@ namespace sw::editor
                         // 검색 입력란을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 입력란을 다시 잡는다.
                         if ( context.expect( pressOnMark( "hierarchy.filter", true ), "the hierarchy search field left no mark" ) == false )
                         {
-                            finishTyping( pHierarchy, pManager );
+                            finishTyping( pHierarchy, pManager, probe );
                             return EditorSelfTestStep::Done;
                         }
                         ++probe._phase;
@@ -201,7 +191,7 @@ namespace sw::editor
                         (void)context.expect( pHierarchy->getFilterText() == "zzSelfTestNoSuchObject", "the second typing did not reach the search field" );
                         (void)context.expect( pHierarchy->getVisibleRootCount() == 0, "a name that matches nothing still shows roots" );
                         (void)context.expect( EditorWidgets::getNoSearchResultHintCount() > probe._hintCountBefore, "zero matches did not draw the no-result hint" );
-                        finishTyping( pHierarchy, pManager );
+                        finishTyping( pHierarchy, pManager, probe );
                         return EditorSelfTestStep::Done;
                     }
                 }
@@ -294,12 +284,6 @@ namespace sw::editor
                 bool              _bConfigExisted{ false };
             };
 
-            static SwatchProbe& getSwatchProbe()
-            {
-                static SwatchProbe s_probe;
-                return s_probe;
-            }
-
             static string getEditorConfigPath() { return EditorPreferencesStore::getDefaultFilePath(); }
 
             static EditorSelfTestStep runThemeSwatch( EditorSelfTestContext& context )
@@ -309,7 +293,7 @@ namespace sw::editor
                 {
                     case 0:
                     {
-                        SwatchProbe& probe = getSwatchProbe();
+                        SwatchProbe& probe = context.getTestState<SwatchProbe>();
                         probe._theme       = EditorThemeUtil::getActiveTheme();
                         // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
                         const string configPath = getEditorConfigPath();
@@ -353,7 +337,7 @@ namespace sw::editor
                     }
                 }
                 // 되돌린다. 사용자의 에디터 설정에 테스트의 테마가 남지 않게 하기 위해서다. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로 되돌린다. 저장기가 줄 끝과 마지막 줄바꿈을 바꾸기 때문이다.
-                SwatchProbe& probe = getSwatchProbe();
+                SwatchProbe& probe = context.getTestState<SwatchProbe>();
                 EditorMenuBar::closeThemeDialog();
                 EditorThemeUtil::applyTheme( probe._theme );
                 EditorThemeUtil::saveToConfig();
@@ -362,7 +346,6 @@ namespace sw::editor
                 // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
                 if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
                     (void)context.expect( false, "could not remove the editor config file the test created" );
-                probe = SwatchProbe{};
                 moveMouseAway();
                 return EditorSelfTestStep::Done;
             }
@@ -370,11 +353,11 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             // hierarchy.visibilityToggleFits: Hierarchy 가시성 토글이 아이콘을 담을 수 있다. 폭이 글꼴과 DPI 배율을 따른다
             // --------------------------------------------------------------------------------------------------
-            static uint64& getToggleProbeObjectID()
+            /** @brief 이 테스트가 만든 오브젝트입니다. */
+            struct ToggleProbe
             {
-                static uint64 s_objectID = 0;
-                return s_objectID;
-            }
+                uint64 _objectID{ 0 };
+            };
 
             static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
             {
@@ -384,7 +367,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
                 HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                uint64&         objectID   = getToggleProbeObjectID();
+                uint64&         objectID   = context.getTestState<ToggleProbe>()._objectID;
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -422,18 +405,17 @@ namespace sw::editor
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                objectID = 0;
                 return EditorSelfTestStep::Done;
             }
 
             // --------------------------------------------------------------------------------------------------
             // hierarchy.selectedRowLeavesTheToggleVisible: 선택한 행의 선택 배경과 클릭 영역이 가시성 토글을 덮지 않는다
             // --------------------------------------------------------------------------------------------------
-            static uint64& getRowProbeObjectID()
+            /** @brief 이 테스트가 만든 오브젝트입니다. */
+            struct RowProbe
             {
-                static uint64 s_objectID = 0;
-                return s_objectID;
-            }
+                uint64 _objectID{ 0 };
+            };
 
             static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
             {
@@ -445,7 +427,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
                 HierarchyPanel* pHierarchy = pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                uint64&         objectID   = getRowProbeObjectID();
+                uint64&         objectID   = context.getTestState<RowProbe>()._objectID;
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -475,7 +457,6 @@ namespace sw::editor
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                objectID = 0;
                 return EditorSelfTestStep::Done;
             }
         };

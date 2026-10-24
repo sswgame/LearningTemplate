@@ -57,12 +57,6 @@ namespace sw::editor
                 uint32 _phaseStartStep{ 0 };
             };
 
-            static ContentBrowserProbe& getContentBrowserProbe()
-            {
-                static ContentBrowserProbe s_probe;
-                return s_probe;
-            }
-
             /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다. 도킹 탭이 가려져 있으면 그리기가 실행되지 않습니다. */
             static ContentBrowserPanel* findVisibleContentBrowser( EditorSelfTestContext& context )
             {
@@ -118,7 +112,7 @@ namespace sw::editor
                 constexpr const utf8* kDeletedFileName  = "probe.txt";
                 constexpr const utf8* kAddedFileName    = "added.txt";
 
-                ContentBrowserProbe& probe     = getContentBrowserProbe();
+                ContentBrowserProbe& probe     = context.getTestState<ContentBrowserProbe>();
                 const uint32         stepIndex = context.getStepIndex();
                 ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
                 if ( pPanel == nullptr )
@@ -205,7 +199,7 @@ namespace sw::editor
                 constexpr uint32      kPhaseWaitListing = 1;
                 constexpr const utf8* kFileName         = "probe.txt";
 
-                ContentBrowserProbe& probe     = getContentBrowserProbe();
+                ContentBrowserProbe& probe     = context.getTestState<ContentBrowserProbe>();
                 const uint32         stepIndex = context.getStepIndex();
                 ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
                 if ( pPanel == nullptr )
@@ -249,12 +243,6 @@ namespace sw::editor
                 uint32 _phaseStartStep{ 0 };
             };
 
-            static FolderTreeProbe& getFolderTreeProbe()
-            {
-                static FolderTreeProbe s_probe;
-                return s_probe;
-            }
-
             static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
             {
                 constexpr uint32 kPhaseSettle       = 0; ///< `Resource/` 변경 번호가 멈추기를 기다린다
@@ -265,18 +253,15 @@ namespace sw::editor
                 constexpr uint32 kSteadyStepCount   = 10;
                 constexpr uint32 kMaxTotalStepCount = 600;
 
-                FolderTreeProbe&     probe     = getFolderTreeProbe();
+                FolderTreeProbe&     probe     = context.getTestState<FolderTreeProbe>();
                 const uint32         stepIndex = context.getStepIndex();
                 ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
                 EditorContext*       pContext  = EditorContext::get();
                 if ( pPanel == nullptr || pContext == nullptr )
                     return EditorSelfTestStep::Done;
-                if ( stepIndex == 0 )
-                    probe = FolderTreeProbe{};
                 if ( stepIndex > kMaxTotalStepCount )
                 {
                     (void)context.expect( false, "the resource folder kept changing - could not measure the folder tree" );
-                    probe = FolderTreeProbe{};
                     return EditorSelfTestStep::Done;
                 }
 
@@ -309,10 +294,7 @@ namespace sw::editor
                             return EditorSelfTestStep::Continue;
                         probe._scanCountAfterWarmUp = EditorFolderListing::getChildFolderScanCount();
                         if ( context.expect( probe._scanCountAfterWarmUp > probe._scanCountAtStart, "the content browser folder tree was not drawn" ) == false )
-                        {
-                            probe = FolderTreeProbe{};
                             return EditorSelfTestStep::Done;
-                        }
                         probe._phase          = kPhaseSteady;
                         probe._phaseStartStep = stepIndex;
                         return EditorSelfTestStep::Continue;
@@ -323,7 +305,6 @@ namespace sw::editor
                             return EditorSelfTestStep::Continue;
                         (void)context.expect( EditorFolderListing::getChildFolderScanCount() == probe._scanCountAfterWarmUp,
                                               "the folder tree read the disk again on later frames" );
-                        probe = FolderTreeProbe{};
                         return EditorSelfTestStep::Done;
                     }
                 }
@@ -332,11 +313,11 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // contentBrowser.showsActivePackOnly: 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나이고, All packs 를 켜면 game/ 의 팩마다 하나다
             // ------------------------------------------------------------------------------
-            static bool& wasShowingAllPacks()
+            /** @brief 테스트 앞의 "All packs" 스위치 상태입니다. 끝나면 되돌립니다. */
+            struct ActivePackProbe
             {
-                static bool s_bWasShowingAllPacks = false;
-                return s_bWasShowingAllPacks;
-            }
+                bool _bWasShowingAllPacks{ false };
+            };
 
             static EditorSelfTestStep runShowsActivePackOnly( EditorSelfTestContext& context )
             {
@@ -348,7 +329,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( stepIndex == 0 )
                 {
-                    wasShowingAllPacks() = pPanel->isShowingAllPacks();
+                    context.getTestState<ActivePackProbe>()._bWasShowingAllPacks = pPanel->isShowingAllPacks();
                     pPanel->setShowAllPacks( false );
                     return EditorSelfTestStep::Continue;
                 }
@@ -369,7 +350,7 @@ namespace sw::editor
                 (void)FileUtil::collectFolders( ResourcePaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // 없으면 아래 기대가 실패한다
                 (void)context.expect( listPackFolder.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackFolder.size() ),
                                       "All packs does not list every game pack" );
-                pPanel->setShowAllPacks( wasShowingAllPacks() );
+                pPanel->setShowAllPacks( context.getTestState<ActivePackProbe>()._bWasShowingAllPacks );
                 return EditorSelfTestStep::Done;
             }
 
@@ -382,12 +363,6 @@ namespace sw::editor
                 uint64 _previousSelectionID{ 0 };
             };
 
-            static MapCheckProbe& getMapCheckProbe()
-            {
-                static MapCheckProbe s_probe;
-                return s_probe;
-            }
-
             static EditorSelfTestStep runMapCheckSelectsIssueObject( EditorSelfTestContext& context )
             {
                 constexpr uint32      kSettleStepCount = 2; ///< 패널이 열리고 줄을 다시 만드는 프레임
@@ -395,7 +370,7 @@ namespace sw::editor
 
                 EditorContext*     pContext  = EditorContext::get();
                 GameObjectManager* pManager  = editor::getActiveObjectManager();
-                MapCheckProbe&     probe     = getMapCheckProbe();
+                MapCheckProbe&     probe     = context.getTestState<MapCheckProbe>();
                 const uint32       stepIndex = context.getStepIndex();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -440,7 +415,6 @@ namespace sw::editor
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, false );
-                probe = MapCheckProbe{};
                 return EditorSelfTestStep::Done;
             }
 
@@ -539,12 +513,6 @@ namespace sw::editor
                 bool   _bWasOpen{ false };
             };
 
-            static ToolWindowProbe& getToolWindowProbe()
-            {
-                static ToolWindowProbe s_probe;
-                return s_probe;
-            }
-
             static EditorSelfTestStep runToolWindowsOpenAtAUsableSize( EditorSelfTestContext& context )
             {
                 constexpr uint32  kPanelCount      = static_cast<uint32>( sizeof( kArrFloatingToolPanelID ) / sizeof( kArrFloatingToolPanelID[0] ) );
@@ -554,7 +522,7 @@ namespace sw::editor
                 constexpr float32 kViewportRatio   = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
                 constexpr float32 kEdgeTolerancePx = 1.0f;
 
-                ToolWindowProbe&     probe     = getToolWindowProbe();
+                ToolWindowProbe&     probe     = context.getTestState<ToolWindowProbe>();
                 EditorContext*       pContext  = EditorContext::get();
                 const ImGuiViewport* pViewport = ImGui::GetMainViewport();
                 if ( context.expect( pContext != nullptr && pViewport != nullptr, "no editor context or main viewport" ) == false )
@@ -564,7 +532,6 @@ namespace sw::editor
 
                 if ( stepIndex == 0 )
                 {
-                    probe = ToolWindowProbe{};
                     // 처음 열림은 레지스트리가 만드는 새 인스턴스로 판단한다. 실행 중인 패널은 앞 테스트나 사용자가 열었을 수 있다.
                     for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
@@ -579,10 +546,7 @@ namespace sw::editor
                 }
 
                 if ( probe._panelIndex >= kPanelCount )
-                {
-                    probe = ToolWindowProbe{};
                     return EditorSelfTestStep::Done;
-                }
 
                 const utf8*   pPanelID = kArrFloatingToolPanelID[probe._panelIndex];
                 IEditorPanel* pPanel   = panelManager.findPanelByID( pPanelID );
