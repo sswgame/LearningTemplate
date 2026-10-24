@@ -165,6 +165,58 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 스킨마다 관절 번호 → 본 번호 표를 만듭니다. */
+            static vector<SkinBinding> makeSkinBindings( const cgltf_data& data, unordered_map<const cgltf_node*, int32>& inoutMapJointBone )
+            {
+                vector<SkinBinding> listBinding( data.skins_count );
+                for ( cgltf_size skinIndex = 0; skinIndex < data.skins_count; ++skinIndex )
+                {
+                    const cgltf_skin& skin    = data.skins[skinIndex];
+                    SkinBinding&      binding = listBinding[skinIndex];
+                    binding._pSkin            = &skin;
+                    binding._listJointToBone.resize( skin.joints_count, -1 );
+                    for ( cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex )
+                    {
+                        binding._listJointToBone[jointIndex] = inoutMapJointBone[skin.joints[jointIndex]];
+                    }
+                }
+                return listBinding;
+            }
+
+            /**
+             * @brief 관절 아래의 스킨 없는 메시를 부착으로 읽어 결과에 더합니다. 부착은 메시가 노드 로컬 공간에 있고, 변환은 가장 가까운 관절을 기준으로 한다. 사이의 비관절 노드는 곱해서 합친다.
+             * @return 메시를 읽지 못하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool readAttachment( const cgltf_data& data, const cgltf_node& node, const cgltf_node& joint, unordered_map<const cgltf_node*, int32>& inoutMapJointBone,
+                                                      unordered_map<string, uint32>& inoutMapStemUse, string_view sourcePath, ModelImportResult& inoutResult )
+            {
+                float32               arrIdentity[16]{ 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+                ModelImportAttachment attachment{};
+                attachment._name       = makeNodeName( data, node );
+                attachment._parentBone = inoutResult._skeleton.getBone( static_cast<uint32>( inoutMapJointBone[&joint] ) )._name;
+                float4x4 local         = float4x4::Identity;
+                for ( const cgltf_node* pStep = &node; pStep != nullptr && pStep != &joint; pStep = pStep->parent )
+                {
+                    float32 arrLocal[16]{};
+                    cgltf_node_transform_local( pStep, arrLocal );
+                    local = local * convertMatrixToEngineSpace( arrLocal );
+                }
+                attachment._localTransform = BoneTransform::makeFromMatrix( local );
+                const string baseStem      = makeFileStem( attachment._name );
+                const uint32 useCount      = inoutMapStemUse[baseStem]++;
+                attachment._fileStem       = makeNumberedStem( baseStem, useCount );
+                MergedMesh part;
+                for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
+                {
+                    if ( appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrIdentity, nullptr, part ) == false )
+                        return reportUnreadableMesh( sourcePath, node, data );
+                }
+                expandTriangles( part, 0, attachment._mesh );
+                if ( attachment._mesh._listVertex.empty() == false )
+                    inoutResult._listAttachment.push_back( std::move( attachment ) );
+                return true;
+            }
+
             /**
              * @brief 스킨드 모델을 읽습니다. 모든 스킨이 한 스켈레톤을 쓰며, 관절 노드가 같으면 한 본입니다.
              * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다. 본 메시를 머티리얼 구간으로도 나눕니다.
@@ -178,18 +230,7 @@ namespace sw::editor
                     return false;
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
 
-                vector<SkinBinding> listBinding( data.skins_count );
-                for ( cgltf_size skinIndex = 0; skinIndex < data.skins_count; ++skinIndex )
-                {
-                    const cgltf_skin& skin    = data.skins[skinIndex];
-                    SkinBinding&      binding = listBinding[skinIndex];
-                    binding._pSkin            = &skin;
-                    binding._listJointToBone.resize( skin.joints_count, -1 );
-                    for ( cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex )
-                    {
-                        binding._listJointToBone[jointIndex] = mapJointBone[skin.joints[jointIndex]];
-                    }
-                }
+                const vector<SkinBinding> listBinding = makeSkinBindings( data, mapJointBone );
                 // 스킨 없는 메시를 몸에 합칠 때 쓰는 고정 본 매핑이다. 루트 본 0 에 가중치 1 을 준다.
                 SkinBinding rigidBinding{};
 
@@ -233,31 +274,8 @@ namespace sw::editor
                         }
                         continue;
                     }
-
-                    // 부착은 메시가 노드 로컬 공간에 있고, 변환은 가장 가까운 관절을 기준으로 한다. 사이의 비관절 노드는 곱해서 합친다.
-                    ModelImportAttachment attachment{};
-                    attachment._name       = makeNodeName( data, *pNode );
-                    attachment._parentBone = outResult._skeleton.getBone( static_cast<uint32>( mapJointBone[pJoint] ) )._name;
-                    float4x4 local         = float4x4::Identity;
-                    for ( const cgltf_node* pStep = pNode; pStep != nullptr && pStep != pJoint; pStep = pStep->parent )
-                    {
-                        float32 arrLocal[16]{};
-                        cgltf_node_transform_local( pStep, arrLocal );
-                        local = local * convertMatrixToEngineSpace( arrLocal );
-                    }
-                    attachment._localTransform = BoneTransform::makeFromMatrix( local );
-                    const string baseStem      = makeFileStem( attachment._name );
-                    const uint32 useCount      = mapStemUse[baseStem]++;
-                    attachment._fileStem       = makeNumberedStem( baseStem, useCount );
-                    MergedMesh part;
-                    for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                    {
-                        if ( appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, nullptr, part ) == false )
-                            return reportUnreadableMesh( sourcePath, *pNode, data );
-                    }
-                    expandTriangles( part, 0, attachment._mesh );
-                    if ( attachment._mesh._listVertex.empty() == false )
-                        outResult._listAttachment.push_back( std::move( attachment ) );
+                    if ( readAttachment( data, *pNode, *pJoint, mapJointBone, mapStemUse, sourcePath, outResult ) == false )
+                        return false;
                 }
                 if ( body._listIndex.empty() )
                 {
