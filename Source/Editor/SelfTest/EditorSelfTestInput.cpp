@@ -4,6 +4,10 @@
 
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -36,7 +40,7 @@ namespace sw::editor
                 EditorSelfTestMark _mark;
             };
 
-            /** @brief 테스트가 돈다(레이블을 적는다)는 표시와 큐 · 레이블입니다. 에디터 모듈 안의 정적이라 핫 리로드면 비워진다 — 테스트 중에는 리로드하지 않는다. */
+            /** @brief 테스트가 돈다(레이블을 적는다)는 표시와 큐 · 레이블입니다. */
             struct State
             {
                 vector<PendingEvent> _listEvent;
@@ -47,25 +51,55 @@ namespace sw::editor
                 bool                 _bEnabled{ false };
             };
 
-            static State& getState()
+            /**
+             * @class Session
+             * @brief 입력 큐와 레이블의 소유자입니다. 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다(`SW_EDITOR_SUBSYSTEM`, 아래 별칭 `EditorSelfTestInputSession`).
+             * @details 패널이 부르는 `EditorSelfTestMarks::note` 같은 정적 함수는 이 서브시스템을 `findSubsystem` 으로 찾는다. 함수 정적 지역에 두면 서비스 접근 게이트가 못 보고,
+             *          컨텍스트를 새로 만들어도 이전 레이블과 큐가 남는다. 에디터 컨텍스트가 없으면 찾지 못하고, 그때는 기록할 곳도 넣을 곳도 없으니 아무 일도 하지 않는다.
+             *          이 형은 이 파일 밖에서 찾을 수 없다(익명 이름공간).
+             */
+            class Session final : public EditorSubsystem
             {
-                static State s_state;
-                return s_state;
+            public:
+                static constexpr const utf8* kSubsystemName = "EditorSelfTestInputSession";
+
+                State _state;
+
+                const utf8* getSubsystemName() const override { return kSubsystemName; }
+            };
+
+            /** @brief 지금 에디터 범위의 입력 상태입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
+            static State* findState()
+            {
+                Session* pSession = editor::findSubsystem<Session>();
+                return pSession != nullptr ? &pSession->_state : nullptr;
             }
 
-            static void push( PendingEvent&& event ) { getState()._listEvent.push_back( std::move( event ) ); }
+            static void push( PendingEvent&& event )
+            {
+                State* pState = findState();
+                if ( pState != nullptr )
+                    pState->_listEvent.push_back( std::move( event ) );
+            }
         };
+
+        /** @brief `SW_EDITOR_SUBSYSTEM` 이 형 이름을 식별자에 이어 붙이므로 중첩 형에 짧은 이름을 준다. */
+        using EditorSelfTestInputSession = EditorSelfTestInputInternal::Session;
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_SUBSYSTEM( EditorSelfTestInputSession, 9510 );
+
     void EditorSelfTestMarks::note( const utf8* pKey )
     {
-        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
-        if ( state._bEnabled == false || pKey == nullptr )
+        EditorSelfTestInputInternal::State* pState     = EditorSelfTestInputInternal::findState();
+        const bool                          bRecording = pState != nullptr && pState->_bEnabled;
+        if ( bRecording == false || pKey == nullptr )
             return;
-        EditorSelfTestMark mark;
+        EditorSelfTestInputInternal::State& state = *pState;
+        EditorSelfTestMark                  mark;
         mark._itemID     = ImGui::GetItemID();
         mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
         mark._min        = float2{ ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y };
@@ -85,10 +119,12 @@ namespace sw::editor
 
     void EditorSelfTestMarks::noteRect( const utf8* pKey, const float2& min, const float2& max )
     {
-        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
-        if ( state._bEnabled == false || pKey == nullptr )
+        EditorSelfTestInputInternal::State* pState     = EditorSelfTestInputInternal::findState();
+        const bool                          bRecording = pState != nullptr && pState->_bEnabled;
+        if ( bRecording == false || pKey == nullptr )
             return;
-        EditorSelfTestMark mark;
+        EditorSelfTestInputInternal::State& state = *pState;
+        EditorSelfTestMark                  mark;
         mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
         mark._min        = min;
         mark._max        = max;
@@ -106,8 +142,11 @@ namespace sw::editor
 
     bool EditorSelfTestMarks::find( string_view key, EditorSelfTestMark& outMark )
     {
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr )
+            return false;
         const uint32 frame = static_cast<uint32>( ImGui::GetFrameCount() );
-        for ( const EditorSelfTestInputInternal::NamedMark& named : EditorSelfTestInputInternal::getState()._listMark )
+        for ( const EditorSelfTestInputInternal::NamedMark& named : pState->_listMark )
         {
             if ( named._key == key && named._mark._frame + 1 >= frame )
             {
@@ -120,19 +159,22 @@ namespace sw::editor
 
     void EditorSelfTestMarks::setEnabled( bool bEnabled )
     {
-        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
-        state._bEnabled                           = bEnabled;
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr )
+            return; // 에디터 컨텍스트가 없다 — 기록할 곳도 없다
+        pState->_bEnabled = bEnabled;
         if ( bEnabled == false )
         {
-            state._listMark.clear();
-            state._listEvent.clear();
-            state._bHoldMouse = false;
+            pState->_listMark.clear();
+            pState->_listEvent.clear();
+            pState->_bHoldMouse = false;
         }
     }
 
     bool EditorSelfTestMarks::isEnabled()
     {
-        return EditorSelfTestInputInternal::getState()._bEnabled;
+        const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        return pState != nullptr && pState->_bEnabled;
     }
 
     void EditorSelfTestInput::moveMouse( const float2& position, uint32 viewportID )
@@ -222,7 +264,10 @@ namespace sw::editor
         EditorSelfTestMark mark;
         if ( EditorSelfTestMarks::find( key, mark ) == false )
             return false;
-        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr )
+            return false;
+        EditorSelfTestInputInternal::State& state = *pState;
         state._heldMousePosition                  = float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
         state._heldMouseViewportID                = mark._viewportID;
         state._bHoldMouse                         = true;
@@ -231,12 +276,17 @@ namespace sw::editor
 
     void EditorSelfTestInput::releaseMouseHold()
     {
-        EditorSelfTestInputInternal::getState()._bHoldMouse = false;
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState != nullptr )
+            pState->_bHoldMouse = false;
     }
 
     void EditorSelfTestInput::flushIntoImGui()
     {
-        EditorSelfTestInputInternal::State&                state     = EditorSelfTestInputInternal::getState();
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState == nullptr )
+            return;
+        EditorSelfTestInputInternal::State&                state     = *pState;
         vector<EditorSelfTestInputInternal::PendingEvent>& listEvent = state._listEvent;
         if ( state._bHoldMouse )
         {

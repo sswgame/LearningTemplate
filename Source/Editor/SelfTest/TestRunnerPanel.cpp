@@ -167,7 +167,7 @@ namespace sw::editor
         else
             ImGui::TextDisabled( "%u tests", Registry::getCount() );
 
-        const vector<EditorSelfTestResult>& listResult = EditorSelfTestRunner::getResults();
+        const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
         if ( ImGui::BeginChild( "##SelfTestList", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
         {
             string_view openGroup;
