@@ -32,6 +32,8 @@ namespace test
             _bSkipped       = true;
             _missingFeature = feature;
         }
+        /** @brief 케이스는 계속 돌되 일부를 "구성에 @p feature 가 없다" 로 건너뛰었다고 적습니다(`test::skipPartIfFeatureMissing`). */
+        void addSkippedPart( BuildFeature feature, const sw::string& subject ) { _listSkippedPart.push_back( { feature, subject } ); }
         void deferCleanup( sw::Delegate<void()> cleanup );
         void runCleanup();
         /** @brief 이 케이스가 `test::makeTempPath` 를 썼다고 표시합니다 — 끝나면 프레임워크가 그 접두어의 경로를 지운다. */
@@ -46,10 +48,12 @@ namespace test
         bool                           isTempPathUsed() const { return _bTempPathUsed; }
         bool                           isSeedUsed() const { return _bSeedUsed; }
         BuildFeature                   getMissingFeature() const { return _missingFeature; }
+        const sw::vector<SkippedPart>& getListSkippedPart() const { return _listSkippedPart; }
 
     private:
         sw::string                       _testName;
         sw::vector<TestFailure>          _listFailure;
+        sw::vector<SkippedPart>          _listSkippedPart;
         sw::vector<sw::Delegate<void()>> _listCleanup;
         BuildFeature                     _missingFeature{ BuildFeature::Count };
         bool                             _bSkipped{ false };

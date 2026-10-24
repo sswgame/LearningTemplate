@@ -24,7 +24,7 @@ SW_TEST_REQUIRES_HOST( AppScenarioTest, "launches App.exe per automation scenari
 //
 // 시나리오 파일을 놓기만 하면 돈다(파일 목록을 CMake 에 적지 않는다). 게임은 프리셋마다 하나(`SW_ACTIVE_GAME`)이므로 그 프리셋의
 // `AppTest_HostOnly` 가 **엔진 시나리오 + 그 게임 팩의 시나리오**를 돈다. 에디터 시나리오(`engine/automation/editor/`)는 `-EnableEditor` 로 돈다.
-// 판정은 `AppTestUtil::runScenario` 가 한다 — 13(시나리오의 건너뜀 — 전경 창을 못 얻음 등)과 요구하지 않은 백엔드의 77 은 건너뛰고, 요구 백엔드(`--required_backends=`)의 77 은 실패다. 언리얼 Gauntlet 이 프로세스를 띄워 결과 코드 · 로그를 모으는 것과 같은 자리다.
+// 판정은 `AppTestUtil::runScenario` 가 한다 — 배포본에서 `<Launch>` 의 `gv_` 개발 변수가 필요한 시나리오는 띄우지 않고 건너뛴다(보고에 `[ PARTSKIP ]` 줄과 요약 개수가 남는다), 13(시나리오의 건너뜀 — 전경 창을 못 얻음 등)과 요구하지 않은 백엔드의 77 은 건너뛰고, 요구 백엔드(`--required_backends=`)의 77 은 실패다. 언리얼 Gauntlet 이 프로세스를 띄워 결과 코드 · 로그를 모으는 것과 같은 자리다.
 // ------------------------------------------------------------------------------
 
 namespace

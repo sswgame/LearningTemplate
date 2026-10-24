@@ -72,6 +72,16 @@ namespace test
     bool isBuildFeatureAvailable( BuildFeature feature );
     /** @brief 기능의 이름(영문 — 요약 · 건너뜀 사유에 찍힌다). */
     const utf8* getBuildFeatureName( BuildFeature feature );
+
+    /**
+     * @brief 케이스가 끝까지 돌면서 일부(시나리오 하나 · 백엔드 하나)만 "이 구성에 기능이 없다" 로 건너뛴 기록(`test::skipPartIfFeatureMissing`).
+     * @details 케이스 전체를 건너뛰는 `SW_TEST_REQUIRES_FEATURE` 와 달리 케이스는 통과로 남는다. 조용히 지나가지 않도록 보고기가 항목마다 한 줄과 요약의 기능별 개수를 찍는다.
+     */
+    struct SkippedPart
+    {
+        BuildFeature _feature;
+        sw::string   _subject; ///< 건너뛴 대상(시나리오 경로 등)과 이유
+    };
 } // namespace test
 
 namespace test

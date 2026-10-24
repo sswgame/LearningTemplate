@@ -20,13 +20,14 @@ namespace test
     /** @brief 케이스 한 번(한 회차)의 기록. */
     struct CaseRecord
     {
-        const TestCaseInfo*    _pTestInfo{ nullptr };
-        sw::vector<sw::string> _listTrace; ///< 진 단언들이 남긴 추적(`test::ScopedTrace`) — 중복 없이
-        float64                _elapsedMs{ 0.0 };
-        uint32                 _iteration{ 0 }; ///< 0 부터
-        CaseResult             _result{ CaseResult::Passed };
-        BuildFeature           _missingFeature{ BuildFeature::Count }; ///< 구성 기능이 없어 건너뛰었으면 그 기능(아니면 `Count`)
-        bool                   _bSeedUsed{ false };                    ///< 케이스가 `test::getRandomSeed()` 를 읽었다
+        const TestCaseInfo*     _pTestInfo{ nullptr };
+        sw::vector<sw::string>  _listTrace; ///< 진 단언들이 남긴 추적(`test::ScopedTrace`) — 중복 없이
+        float64                 _elapsedMs{ 0.0 };
+        uint32                  _iteration{ 0 }; ///< 0 부터
+        CaseResult              _result{ CaseResult::Passed };
+        BuildFeature            _missingFeature{ BuildFeature::Count }; ///< 구성 기능이 없어 건너뛰었으면 그 기능(아니면 `Count`)
+        sw::vector<SkippedPart> _listSkippedPart;                       ///< 케이스는 돌았지만 구성 기능이 없어 건너뛴 일부(`test::skipPartIfFeatureMissing`)
+        bool                    _bSeedUsed{ false };                    ///< 케이스가 `test::getRandomSeed()` 를 읽었다
     };
 } // namespace test
 
