@@ -4,7 +4,8 @@
   결정적: 무대 maps/interactionhighlight(카메라 고정), 고정 프레임 시간. 하는 쪽(Player 빈 오브젝트)만 순간이동으로 옮겨 같은 그림틀에서 강조만 켜고 끈다 —
   먼 곳(base) → PickCube 1.2 m 앞(outline) → HideCube 앞, 사이에 벽(sense).
   지표는 영역 안에서 기준 사진과 색이 다른 화소의 비율이다. 대상 둘레의 영역은 카메라 (0,1.6,-6)·시야 0.7 rad 로 계산한 값이다 — PickCube 는 화면 (0.34, 0.51), HideCube 는 (0.69, 0.48).
-  문턱 0.005 는 영역(전체의 약 4 %) 대비 외곽선 띠(대상 둘레 몇 화소)가 이만큼은 바뀐다는 **측정 전 추정**이다 — 네 백엔드 첫 캡처(GPU 확인 대기)로 정한다.
+  문턱 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842, 네 백엔드 차이 4e-5 이하) — 외곽선 영역의 다른 화소 비율 0.0352, 감각 모드 영역 0.6942, 상대 영역은 모두 0 이다.
+  켜진 쪽의 하한은 잰 값의 70 % 아래(외곽선 0.025 · 감각 0.50)이고 꺼진 쪽의 상한은 0.001 이다.
   실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/interactionhighlight.scene.xml -scenario=game/empty/automation/interactionhighlight.scenario.xml
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다)
 -->
@@ -21,10 +22,10 @@
 	<At frame="100"><Screenshot file="sense.ppm" waitForSettle="false"/></At>
 
 	<At frame="110">
-		<ExpectImage file="outline.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atLeast="0.005" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
-		<ExpectImage file="outline.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atMost="0.001" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
-		<ExpectImage file="sense.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atLeast="0.005" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
-		<ExpectImage file="sense.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atMost="0.001" provisional="측정 전 추정 - 외곽선 띠 화소 비율(GPU 확인 대기)"/>
+		<ExpectImage file="outline.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atLeast="0.025" measured="2026-10-25 dx11:0.03522 dx12:0.03519 vk:0.03519 gl:0.03522"/>
+		<ExpectImage file="outline.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atMost="0.001" measured="2026-10-25 all:0"/>
+		<ExpectImage file="sense.ppm" region="0.62,0.37,0.76,0.60" metric="differingFraction" reference="base.ppm" atLeast="0.50" measured="2026-10-25 dx11:0.69418 dx12:0.69421 vk:0.69421 gl:0.69418"/>
+		<ExpectImage file="sense.ppm" region="0.26,0.38,0.42,0.64" metric="differingFraction" reference="base.ppm" atMost="0.001" measured="2026-10-25 all:0"/>
 		<Pass/>
 	</At>
 </Scenario>

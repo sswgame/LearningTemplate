@@ -11,9 +11,10 @@
 	<At frame="30"><Screenshot file="cloth_early.ppm"/></At>
 	<At frame="180"><Screenshot file="cloth_settled.ppm"/></At>
 
-	<!-- 첫 프레임들은 천이 펴진 채 떨어지는 중이고 180 에는 걸리고 처졌다 — 두 그림은 달라야 한다(천이 얼어붙었거나 그려지지 않으면 같다). -->
+	<!-- 첫 프레임들은 천이 펴진 채 떨어지는 중이고 180 에는 걸리고 처졌다 — 두 그림은 달라야 한다(천이 얼어붙었거나 그려지지 않으면 같다).
+	     첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842)은 다른 화소 비율 0.085762 ~ 0.085763 이고 문턱은 그 70 % 아래(0.06)다. -->
 	<At frame="181">
-		<ExpectImage file="cloth_settled.ppm" metric="differingFraction" reference="cloth_early.ppm" atLeast="0.002" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="cloth_settled.ppm" metric="differingFraction" reference="cloth_early.ppm" atLeast="0.06" measured="2026-10-25 dx11:0.085763 dx12:0.085762 vk:0.085762 gl:0.085763"/>
 		<Pass/>
 	</At>
 </Scenario>

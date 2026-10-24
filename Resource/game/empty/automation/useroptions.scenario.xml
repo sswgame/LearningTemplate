@@ -3,8 +3,10 @@
   사용자 설정이 화면에 닿는지 — 렌더 스케일 · 시야 거리 · 후처리 품질 · 색각 보정을 한 무대(maps/rendertest3d, 디퍼드)에서 하나씩 바꿔 사진을 찍고 기준과 견준다(UserSettingsConsumers U4).
   변수는 옵션 메뉴가 쓰는 gv_* 와 같다(UserSettingsVariables.h). 결정적: 애니메이션 없는 무대, 고정 프레임 시간, 카메라는 움직이지 않는다.
   견주는 영역은 큐브가 놓인 가운데 아래쪽이고, 지표는 기준과 색이 다른 화소의 비율이다.
-  문턱은 모두 **측정 전 추정**이다(렌더 스케일 0.5 는 가장자리 전체가 흐려지고, 시야 거리 0.05 는 먼 큐브가 통째로 사라지고, 색각 보정은 주황 큐브의 색이 바뀐다) — 네 백엔드 첫 캡처(GPU 확인 대기)로 맞춘다.
-  후처리 품질은 SSAO · 블룸만 빠져 차이가 작으므로 문턱을 낮게 둔다.
+  문턱 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842) — 렌더 스케일 0.5 는 0.089(가장자리 전체가 흐려진다), 시야 거리 0.05 는 0.665(먼 큐브와 바닥이 잘린다),
+  후처리 품질 0 은 0.573(처음에는 SSAO · 블룸만 빠져 작다고 보았으나 장면 전체가 달라진다), 색각 보정 1 은 0.249(주황 큐브의 색이 바뀐다). 문턱은 잰 값의 70 % 아래다.
+  시야 거리의 dx12 값 0.307 은 결함의 값이라 기록하지 않았다 — DX12 의 PSO 가 깊이 클립을 꺼 둔 채라 먼 평면 밖 기하가 남았다(D3D12RHIResourceFactoryPipeline: DepthClipEnable).
+  고친 뒤 dx12 도 다른 백엔드와 같아야 하며, 다시 재서 dx12 값을 `measured` 에 더한다.
   UI 는 그대로인지 · 렌더 텍스처 모니터가 색각 보정을 두 번 받지 않는지 · 텍스처 품질(재시작) · 이펙트 품질은 이 무대로 볼 수 없어 눈 확인 항목(usersettings-visual-review)이 맡는다.
   실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_deferred=1 -scenario=game/empty/automation/useroptions.scenario.xml
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다)
@@ -35,10 +37,10 @@
 	<At frame="205"><Variable name="gv_colorVisionMode" value="0"/></At>
 
 	<At frame="215">
-		<ExpectImage file="scale.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05" provisional="측정 전 추정(GPU 확인 대기)"/>
-		<ExpectImage file="distance.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.1" provisional="측정 전 추정(GPU 확인 대기)"/>
-		<ExpectImage file="postlow.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.002" provisional="측정 전 추정(GPU 확인 대기)"/>
-		<ExpectImage file="colorvision.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.05" provisional="측정 전 추정(GPU 확인 대기)"/>
+		<ExpectImage file="scale.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.06" measured="2026-10-25 dx11:0.08862 dx12:0.08920 vk:0.08920 gl:0.08892"/>
+		<ExpectImage file="distance.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.45" measured="2026-10-25 dx11:0.66493 vk:0.66511 gl:0.66493"/>
+		<ExpectImage file="postlow.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.40" measured="2026-10-25 dx11:0.57275 dx12:0.57244 vk:0.57266 gl:0.57275"/>
+		<ExpectImage file="colorvision.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="base.ppm" atLeast="0.17" measured="2026-10-25 dx11:0.24893 dx12:0.24996 vk:0.24997 gl:0.24992"/>
 		<Pass/>
 	</At>
 </Scenario>

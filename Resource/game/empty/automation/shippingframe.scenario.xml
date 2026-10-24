@@ -3,12 +3,13 @@
   Empty 게임 시나리오 — 첫 씬을 고정 틱으로 30 프레임 돌린 그림을 남긴다. 배포본(Shipping)의 그림 비교가 이 그림을 골든과 견준다
   (AppSmokeTest.ShippingSceneMatchesGoldenImage, 골든은 Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z — SW_UPDATE_GOLDEN=1 로 뜬다).
   배포본에는 벤치 스위치 · 개발 명령이 없으므로 구운 팩의 첫 씬과 시나리오 실행기만 쓴다. 다른 구성에서는 게임 팩 시나리오로 돌며 밝기 하한만 본다.
+  밝기 하한의 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842)의 평균 휘도는 네 백엔드 모두 0.16349 이고 문턱은 그 70 % 아래(0.11)다.
   실행: App.exe -scenario=game/empty/automation/shippingframe.scenario.xml -dx12   (산출물: Bin/Saved/Automation/game.empty.shippingframe/)
 -->
 <Scenario name="game.empty.shippingframe" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="30"><Screenshot file="shippingframe.ppm"/></At>
 	<At frame="31">
-		<ExpectImage file="shippingframe.ppm" metric="meanLuma" atLeast="0.01" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="shippingframe.ppm" metric="meanLuma" atLeast="0.11" measured="2026-10-25 all:0.16349"/>
 		<Pass/>
 	</At>
 </Scenario>

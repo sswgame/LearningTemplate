@@ -3,7 +3,8 @@
   높이 · 거리 지수 안개(FogComponent, RealtimeGlobalIllumination R1) — 먼 바닥은 안개 색으로 올라가고 가까운 바닥은 그대로다. 안개 패스(fog.hlsl)를 본다.
   무대(maps/fogshowcase)의 바닥은 어둡고 안개 색은 밝다: 지평선 아래 먼 띠의 평균 밝기가 안개가 없을 때(어두운 바닥) 보다 훨씬 높아야 하고, 화면 아래쪽 가까운 바닥은 어둡게 남는다.
   결정적: 애니메이션 없는 무대, 고정 프레임 시간.
-  문턱(atLeast · atMost)은 첫 측정 전의 어림값이다(GPU 확인 대기) — 통합이 네 백엔드에서 처음 돌린 값으로 정한다.
+  문턱 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842, 네 백엔드 차이 1e-5 이하) — 먼 띠 평균 휘도 0.4721, 가까운 바닥 띠 0.1261. 문턱은 먼 띠를 잰 값의 4분의 3 아래(0.35),
+  가까운 띠를 잰 값의 1.5 배(0.19)에 둔다 — 안개가 없으면 먼 띠도 어두운 바닥이라 0.35 를 못 넘는다.
   실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/fogshowcase.scene.xml -scenario=game/empty/automation/fog.scenario.xml
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
 -->
@@ -11,8 +12,8 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/fogshowcase.scene.xml"/>
 	<At frame="30"><Screenshot file="fog.ppm"/></At>
 	<At frame="40">
-		<ExpectImage file="fog.ppm" region="0.2,0.3,0.8,0.4" metric="meanLuma" atLeast="0.30" provisional="첫 측정 전 어림값(GPU 확인 대기)"/>
-		<ExpectImage file="fog.ppm" region="0.2,0.9,0.8,0.98" metric="meanLuma" atMost="0.25" provisional="첫 측정 전 어림값(GPU 확인 대기)"/>
+		<ExpectImage file="fog.ppm" region="0.2,0.3,0.8,0.4" metric="meanLuma" atLeast="0.35" measured="2026-10-25 dx11:0.47206 dx12:0.47207 vk:0.47207 gl:0.47206"/>
+		<ExpectImage file="fog.ppm" region="0.2,0.9,0.8,0.98" metric="meanLuma" atMost="0.19" measured="2026-10-25 all:0.12611"/>
 		<Pass/>
 	</At>
 </Scenario>

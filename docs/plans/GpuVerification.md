@@ -51,19 +51,58 @@ GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를
 - **형식:** 모든 `ExpectImage` 는 `measured="YYYY-MM-DD 백엔드:값 …"`(잰 값) 또는 `provisional="이유"`(어림값) 가운데 정확히 하나를 가져야 합니다. 없거나 형식이 틀리면 시나리오 읽기 오류입니다(`AutomationThresholdBasis`). 옛 형식 리더는 두지 않았고 시나리오 데이터를 다시 썼습니다.
 - **어림값의 취급:** 어림값 문턱은 틀리면 그대로 실패이고, 맞으면 통과(0)가 아니라 미확정(14, `AutomationResult::Unconfirmed`)으로 끝납니다. 보고 JSON 의 `unconfirmed[]` 와 `[Scenario] UNCONFIRMED` 줄이 목록입니다. `AppScenarioTest` 는 실패로 세지 않고 `[AppTestUtil] UNCONFIRMED` 로그로 알립니다.
 - **확정하는 법:** GPU 실행의 `metrics` 줄(`metric(영역) 파일 = 값`)을 보고 `provisional` 을 `measured="날짜 all:값"` 으로 바꿉니다. 문턱 숫자도 그 값에 맞춰 정합니다.
-- **지금 어림값(`provisional`):** 아래 목록이 확정 대기입니다. `sky` 2개 · `vfxgpulights` 1개는 `wt/gfxfix` 가 고친 무대 · 캡처 프레임 기준의 어림값으로 통합 G 에서 달았습니다.
+- **문턱을 정하는 규칙(잰 값 기준):** 켜져 있어야 하는 쪽의 하한(`atLeast`)은 잰 값의 70 % 아래, 꺼져 있어야 하는 쪽의 상한(`atMost`)은 잰 값의 1.5 배 위(0 이 기준이면 0.001), 부호가 있는 값(`meanRedMinusBlue`)은 0 과 잰 값 사이 절반쯤에 둡니다.
+  백엔드 사이 차이는 1e-3 아래라 여유가 그것을 먹지 않습니다. 근거는 `measured` 속성(날짜 · 백엔드별 값)과 시나리오 머리 주석(측정 커밋 · 구성)에 둡니다.
+  **결함의 값은 `measured` 에 넣지 않습니다** — 한 백엔드만 다른 값이면(예: `useroptions` 시야 거리의 dx12 0.307, `vfxgpulights` 의 gl 4.6e-05) 그 값은 결함의 증거이므로 적지 않고, 고친 뒤 다시 재서 더합니다.
+- **지금 어림값(`provisional`):** 아래 목록이 확정 대기입니다.
 
 | 시나리오 | 단언 수 | 근거 |
 |---|---|---|
-| `fog` · `realtimegi` · `modulepass` | 2 · 1 · 1 | 첫 측정 전 어림값 |
-| `interactionhighlight` · `useroptions` · `killcam` | 4 · 4 · 1 | 측정 전 추정 |
 | `editor/screenrectview` | 3 | Release 캡처로 어림한 값, 문턱 미측정 |
-| `motionblur` | 1 | 멈춘 쪽 다른 화소 비율 기록 없음 |
-| 에디터 · 엔진 `debughud` `emptyscene` `flowterrain` `loadingscreen` `meshmodifiers` `sceneviewgameview` `screen` `terrainbrush` `viewmodes` `terrainedits` `runner` `uidemo`, 게임 `clothshowcase` `shippingframe` | 35 | GPU 통과만 확인, 잰 값 기록 없음 |
-| `sky` · `vfxgpulights` | 3 | 첫 측정 전 어림값(`wt/gfxfix` 의 해 46° · 밝은 바닥 뒤) |
+| 에디터 · 엔진 `debughud` `emptyscene` `flowterrain` `loadingscreen` `meshmodifiers` `sceneviewgameview` `screen` `terrainbrush` `viewmodes` `terrainedits` `runner` `uidemo` | 33 | GPU 통과만 확인, 잰 값 기록 없음 |
 
-잰 값(`measured`)으로 옮긴 것은 `ditherappear` 5 · `light2dcookie` 6 · `motionblur` 1 · `themepark/shadow` 5 입니다(기존 주석의 첫 측정 값).
+잰 값(`measured`)으로 옮긴 것은 아래와 같습니다. 2026-10-25 열은 GPU 확인(Release, 측정 커밋 `00a6fc842`, 네 백엔드 dx11 · dx12 · vk · gl)의 `metrics` 줄이고, 문턱은 위 규칙으로 정했습니다.
+
+| 시나리오 | 지표(영역) | 잰 값(백엔드 사이 차이) | 문턱 |
+|---|---|---|---|
+| `sky` | `meanRedMinusBlue`(전체) | -0.008603 (1e-6) | atMost -0.004 (처음 어림값 -0.02 는 흰 구름이 평균을 끌어올려 틀렸다) |
+| `sky` | `meanLuma`(전체) | 0.59539 (1e-6) | atLeast 0.40 |
+| `vfxgpulights` | `differingFraction`(바닥) | dx11 0.01258 · dx12 0.01251 · vk 0.01245 · **gl 4.6e-05(결함, 기록 안 함)** | atLeast 0.009 (처음 0.02 는 틀렸다) |
+| `useroptions` | `differingFraction` 렌더 스케일 · 시야 거리 · 후처리 0 · 색각 | 0.0886~0.0892 · 0.6649~0.6651(**dx12 0.3073 은 DX12 깊이 클립이 꺼진 결함의 값이라 기록 안 함, 고침**) · 0.5724~0.5728 · 0.2489~0.2500 | atLeast 0.06 · 0.45 · 0.40 · 0.17 |
+| `fog` | `meanLuma` 먼 띠 · 가까운 띠 | 0.47206~0.47207 · 0.12611 | atLeast 0.35 · atMost 0.19 |
+| `realtimegi` | `meanLuma`(큐브 옆면) | 0.10303 (1e-7) | atLeast 0.07 |
+| `modulepass` | `meanRedMinusBlue`(전체) | 0.21575~0.21576 | atLeast 0.15 |
+| `killcam` | `meanLuma`(전체) | 0.42197~0.42203 | atLeast 0.30 |
+| `motionblur` | `differingFraction` 움직인 켬 · 멈춘 켬 | 0.14398~0.14403 · 0(네 백엔드) | atLeast 0.07 · atMost 0.001 |
+| `clothshowcase` | `differingFraction`(천이 움직였는가) | 0.085762~0.085763 | atLeast 0.06 |
+| `shippingframe` | `meanLuma`(전체) | 0.16349 (정확히 같다) | atLeast 0.11 |
+| `interactionhighlight` | `differingFraction` 외곽선 · 감각 · 반대 영역 둘 | 0.03519~0.03522 · 0.69418~0.69421 · 0 · 0 | atLeast 0.025 · 0.50 · atMost 0.001 · 0.001 |
+
+이전에 잰 값으로 옮긴 것은 `ditherappear` 5 · `light2dcookie` 6 · `themepark/shadow` 5 입니다(기존 주석의 첫 측정 값).
 탐침 단언(`Expect probe=… equals/atLeast`)은 상태 값이라 이 형식 밖입니다. 개수처럼 코드에서 정해지는 값을 손으로 적던 틈(`editorstartup` 의 패널 수)은 `wt/editorsc` 가 대표 패널 id 질의(`Editor.HasPanel`)로 바꿨습니다.
+
+### 3.1 같은 GPU 확인에서 진 것 넷 (2026-10-25, 측정 커밋 `00a6fc842`)
+
+- **`useroptions` 시야 거리의 dx12(0.307, 나머지 0.665) — 원인을 찾아 고쳤다(매니페스트 id `usersettings-scenario`).** DX12 의 PSO 서술(`D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{}`)이 0 으로 시작해 `RasterizerState.DepthClipEnable` 이 FALSE 였다. DX11 은 TRUE 로 적고
+  Vulkan(`depthClampEnable` 끔) · GL(`GL_DEPTH_CLAMP` 끔)은 기본이 자르기라, DX12 만 가까운 · 먼 평면 밖 기하를 지우지 않고 깊이 1 로 눌러 그렸다. `gv_viewDistanceScale` 0.05 가 먼 평면을 100 m → 5 m 로 당겨도 DX12 에서만 먼 바닥이 남아 바뀐 화소가 절반이었다.
+  `D3D12RHIResourceFactoryPipeline.cpp` 에서 `DepthClipEnable = TRUE` 로 고쳤다. 확인: `useroptions` 시나리오가 네 백엔드 모두 distance 0.665 근처로 나오고(문턱 0.45), 고친 뒤 dx12 값을 `measured` 에 더한다.
+  같은 모양: 0 으로 시작하는 D3D12 서술의 다른 칸은 DX11 이 적는 칸(`FillMode` · `CullMode` · 깊이 바이어스)을 모두 적고 있었다. 컴퓨트 PSO 는 래스터라이저가 없다. 이 틈은 형식으로 막지 못했다(D3D12 서술이 0 시작) — 래스터라이저 칸을 한 함수가 한 번에 정하게 하는 정리가 남았다.
+- **`ShippingSceneMatchesGoldenImage`(dx12, 32565 화소 초과) — 의도된 변경이고 골든이 낡았다. 골든을 다시 뜨면 된다.** 근거는 아래 넷이다.
+  (1) 골든 `shippingframe_dx12.ppm.z` 는 2026-10-22 08:23(`f38748169`) 한 번만 떴고 그 뒤 고친 기록이 없다. 그날 08:22 의 Shipping 캡처와 중앙 상자 앞면 값이 같다((88, 77, 63)).
+  (2) `f81daa9ff`(2026-10-23, H7)가 **포워드 림을 pow2 × 0.15 에서 pow3 × 0.12 로 약하게** 바꿨다. 커밋 글이 "포워드 화면의 림이 약해져 벤치 골든(opaque · transparent × 네 백엔드)을 다시 떴다" 라고 적고 Shipping 첫 화면 골든은 뜨지 않았다(Shipping 에서만 도는 케이스라 그 자리에서 안 돌았다).
+  (3) 이 장면은 포워드이고 방향광 하나(`_intensity` 1.35 · `_ambient` 0.28)뿐이다. 림은 `키 라이트 색 × 림` 을 알베도 없이 더하고(`Lighting::computeRimLight`), 카메라 쪽으로 향한 앞면과 윗면은 둘 다 림 인수가 1 이라 바뀐 몫이 0.03 × 키 색이다. 실제로 앞면이 (88, 77, 63) → (80, 70, 56) 로 어두워졌고(R 이 G · B 보다 더 줄어 키 색 방향이다), 밝은 윗면은 톤 매핑이 눌러 (188, 178, 162) → (187, 177, 161) 로 1 만 변했다.
+  달라진 화소는 모두 상자 하나(550~729 × 511~718, 37074 화소)이고 그 밖(배경 · 스프라이트)은 채널 차이가 0 이다(골든과 이번 캡처를 직접 견줬다).
+  (4) 네 백엔드의 이번 캡처는 평균 휘도가 17 자리까지 같다(0.16348558525975887) — DX12 만의 결함이 아니라 공유 조명 식의 변화다.
+  판정: 코드를 고칠 일이 없다. 절차(매니페스트 id `shipping-golden-dx12`, 통합이 Shipping 한 번에): `build/Ninja-Shipping/Bin` 에서 `SW_UPDATE_GOLDEN=1` 로 `AppTest.exe --test_filter=AppSmokeTest.ShippingSceneMatchesGoldenImage` 를 돌려 `Test/AppTest/Golden/shippingframe_dx12.ppm.z` 를 뜨고, 같은 환경변수 없이 한 번 더 돌려 통과를 확인한다.
+  뜬 뒤 그림을 PNG 로 바꿔 눈으로 본다(상자 앞면이 어둡고 윗면이 밝으며 하늘색 배경이 그대로여야 한다). 다른 백엔드의 Shipping 골든은 저장소에 없다(`dx12` 만 있다) — 그 구성을 돌리려면 같은 절차로 `shippingframe_<백엔드>.ppm.z` 를 더 뜬다.
+- **`vfxgpulights` 의 gl(차이 비율 4.6e-05, 나머지 0.0125) — 원인을 아직 못 찾았다(매니페스트 id `vfx-gpu-lights-scenario`).** 이 시나리오는 gl 에서 진다(문턱 완화로 가리지 않았다). 코드로 가린 것:
+  쿠킹된 `vfxsimulate_cs.spv` 를 직접 읽어 GL 판과 Vulkan 판을 견줬다 — 라이트 버퍼(u3)의 원소 배치(stride 80 · 오프셋 0/16/32/48/64)와 저장 수(1)가 같고 GL 바인딩은 SSBO 19(= 16 + 3)로 계약과 맞다.
+  GL 실행 로그에는 GL 오류 · 경고가 없고, 불똥은 그려진다(캡처에 60 여 개의 점) — 시뮬레이션은 돈다. 라이트만 없다. 그래서 `Vfx.md` 의 후보 "R32 실수 RW 텍스처 읽기"는 주원인으로 보기 어렵다: 깊이를 못 읽어 충돌을 놓쳐도 불똥은 바닥 위에서 첫 0.5 초 동안 빛을 내야 하는데 gl 은 0 이다.
+  남은 후보와 가리는 법(통합, GPU): ① 시뮬레이션 직후 라이트 버퍼의 GPU 구간을 비동기 되읽기(`AsyncBufferReadback`)로 읽어 반경 · 세기가 써졌는지 본다(써졌으면 그리드 · 조명 쪽, 안 써졌으면 컴퓨트 쪽이다).
+  ② `-gv_lightCulling 1`(CPU 생산자)은 GPU 구간을 거절하고 오류를 남기므로 쓸 수 없다. ③ 같은 SPIR-V 가 Vulkan 에서 맞으므로 드라이버 컴파일 차이(NVIDIA GL SPIR-V 경로)라면 `resolveDepthCollision` 의 이른 반환 일곱 개를 한 출구로 바꾼 판(이 저장소가 이미 `evaluateCurve` 로 한 우회)을 패치로 시험한다.
+  (낡은 바이너리 탓은 아니다 — 같은 실행의 dx11 · dx12 · vk 가 같은 소스의 새 바이너리로 맞는 값을 냈다. 이 판단은 그 세 값이 맞다는 데서 나온 추론이다.)
+- **R32F 이미지 형식 불일치(발견, 영향 미확인).** 쿠킹된 컴퓨트 SPIR-V 의 RW 이미지는 모두 `Rgba32f` 로 선언되는데(`RWTexture2D<float4>`), 깊이 히스토리는 R32F 텍스처이고 GL 은 `glBindImageTexture` 에 `GL_R32F` 를 준다. GL 명세는 이 불일치의 읽기 값을 정하지 않는다(같은 불일치로 RGBA8 텍스처에 쓰는 `RHIDeviceTest.ComputeTextureUavWriteIsReadable` 가 GL 에서 통과하는지는 이번에 확인하지 못했다).
+  이 틈이 가림 타일 · 깊이 충돌을 GL 에서 틀리게 만드는지는 GPU 로 가린다 — 고치려면 슬롯마다 `[[vk::image_format]]` 을 다르게 줘야 하는데 셰이더 소스라 패치로 넘긴다.
 
 ## 4. 시나리오의 종료 코드와 처리하지 않은 로그 (2026-10-25)
 
