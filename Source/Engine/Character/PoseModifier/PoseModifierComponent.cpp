@@ -88,6 +88,12 @@ namespace sw
         return _owner._bRigEnabled == SW_TRUE && _owner._instance.isInitialized();
     }
 
+    AnimationPoseAccess PoseModifierBinding::getPoseAccess() const
+    {
+        const bool bWritesPose = isAnimationActive() && _owner._instance.canWritePose();
+        return bWritesPose ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
+    }
+
     void PoseModifierBinding::prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         _owner.prepareFrame( unit, context );

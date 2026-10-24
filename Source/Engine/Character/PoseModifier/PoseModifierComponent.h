@@ -41,8 +41,9 @@ namespace sw
     public:
         explicit PoseModifierBinding( PoseModifierComponent& owner );
 
-        bool                isAnimationActive() const override;
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        bool isAnimationActive() const override;
+        /** @brief 켜져 있고 평가할 노드(켜짐 · 가중치 > 0 · LOD 로 꺼지지 않음)가 있을 때만 포즈를 쓴다 — `RigInstance::canWritePose`, 평가가 같은 판정으로 건너뛴다. */
+        AnimationPoseAccess getPoseAccess() const override;
         void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;

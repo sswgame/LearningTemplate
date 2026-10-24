@@ -104,6 +104,12 @@ namespace sw
         float32 getSlotWeight( const hashed_string& slotName ) const;
         /** @brief 노드의 이번 프레임 가중치입니다(0..1). */
         float32 computeNodeWeight( uint32 nodeIndex ) const;
+        /**
+         * @brief 이번 프레임 평가가 포즈를 바꿀 수 있는 노드가 하나라도 있는지 반환합니다(마지막 `prepare` 기준, 게임 스레드에서 정해진 값만 본다).
+         * @details 화면 크기 LOD 로 꺼졌거나 꺼진 노드, 가중치(곱하기 슬롯 가중치)가 0 인 노드는 평가가 건너뛴다. 커브로 가중치를 움직이는 노드는 커브 값이 기본 포즈 단계에서야
+         *          정해지므로 0 으로 확정할 수 없어 "바꿀 수 있다" 로 센다. 거짓이면 `evaluate` 는 포즈를 건드리지 않는다 — 호스트는 이 값으로 포즈 접근(`AnimationPoseAccess`)을 선언한다.
+         */
+        bool canWritePose() const;
 
         // --- 노드 ---
         uint32         getNodeCount() const { return static_cast<uint32>( _listNode.size() ); }
@@ -143,6 +149,9 @@ namespace sw
     private:
         static constexpr int32 kExternalBone    = -1; ///< `_listTargetBone` 에 해당하며, 호스트가 값을 넣는 대상이다.
         static constexpr int32 kModelOriginBone = -2; ///< `_listTargetBone` 에 해당하며, 유닛 루트(모델 원점) 기준 소켓이다.
+
+        /** @brief `computeNodeWeight` 의 본체입니다 — 커브 가중치가 있는 노드에는 @p curveFactor 를 곱한다. 커브 값을 아직 모르는 `canWritePose` 도 같은 곱셈을 쓴다. */
+        float32 computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const;
 
         struct SlotWeight
         {
