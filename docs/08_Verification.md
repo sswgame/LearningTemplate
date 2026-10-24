@@ -99,6 +99,8 @@ cd build/Ninja-Debug/Bin
   `Bin/` 에 남은 옛 자리 산출물(테스트 exe · 모듈 DLL · PDB)과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`) — 실행 중이라 못 지운 것은 경고로 남는다.
 - 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다. 빌드는 HLSL 을 다시 쿠킹하지 않는다 — `App.exe --cook-shaders` 뒤에 재고 비교한다.
   Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`App --cook-all --verify-shaders`).
+  쿠킹(`ShaderCookDriver::cookRequests`)은 요청 × 포맷의 컴파일 · 리플렉션을 엔진 워커(`engine::runParallel`)로 나눠 돌리고 합치기는 요청 순서대로 직렬로 한다 — 바이너리 · `reflection.manifest` · `cook.stamp` 는 직렬로 돌 때와 바이트까지 같다.
+  끝줄의 `compile` · `reflection` 시간은 작업마다 잰 것의 합이라 병렬이면 `total` 보다 길다(쿠킹 속도를 재는 값). 쿠킹은 최신 바이너리도 매번 읽어 리플렉션을 다시 뽑는다 — 이전 매니페스트에서 가져오지 않는 이유는 결정 기록 5-5.
 - GPU 확인은 이미 통과가 증명된 항목을 다시 돌리지 않는다. 통과 증거(`verify-batch` 결과 · 증거 파일 · `NEXT.md` 의 통과 기록)가 있고, 그 증거 커밋 이후 항목이 쓰는 코드 · 셰이더 · 에셋 · 시나리오가 안 바뀌었음(`git diff <증거커밋>..HEAD -- <관련 경로>` 가 빔)을 둘 다 보였을 때만 건너뛴다. 증거가 모호하거나, 고쳐진 항목이거나, GPU 에서 처음 도는 항목이면 돌린다. 보고에는 건너뜀 표(항목 · 증거 커밋 · 바뀐 경로 없음)를 따로 둔다.
 - 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면
   `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).

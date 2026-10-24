@@ -29,6 +29,9 @@ namespace sw
         uint32 _failedCount{ 0 };            ///< 쿠킹하지 못한 것의 수. 컴파일 실패(그 소스는 스탬프에서 빠져 다음 쿠킹이 다시 시도한다), 소스 없는 요청, 쓰지 못한 매니페스트 · 스탬프, 지우지 못한 옛 바이너리를 센다
         uint32 _contractViolationCount{ 0 }; ///< 바인딩 계약 위반 수
         uint32 _removedCount{ 0 };           ///< 매니페스트에 없어 지운 옛 바이너리 수
+        uint32 _compileMs{ 0 };              ///< 최신 판정과 컴파일에 쓴 시간(ms). 작업마다 잰 것의 합이라 병렬로 돌면 `_totalMs` 보다 길 수 있다(계측용)
+        uint32 _reflectMs{ 0 };              ///< 바이너리 읽기 · 리플렉션 · 계약 검사에 쓴 시간(ms). 작업마다 잰 것의 합이다(계측용)
+        uint32 _totalMs{ 0 };                ///< 쿠킹 전체의 벽시계 시간(ms). 요청 풀기 · 병렬 구간 · 매니페스트와 스탬프 쓰기를 모두 센다(계측용)
         /** @brief 실패도 위반도 없으면 true 입니다. */
         bool isClean() const { return _failedCount == 0 && _contractViolationCount == 0; }
     };
@@ -57,6 +60,10 @@ namespace sw
          * @param listPriority 도메인 발견의 기준인 우선순위 설정(`ResourcePaths::getSearchPriority()`). 테스트는 임시 트리와 자기 우선순위를 넘긴다
          * @details **소스가 없거나 `shaders` 폴더 밖인 요청도 실패로 셉니다.** 조용히 건너뛰면 요청이 어긋난 채 종료 코드 0 으로 끝난다.
          *          요청이 만들지 않는 바이너리는 지웁니다 — 요청 규칙이 바뀌면(퍼뮤테이션 해시 · 셰이더 삭제) 옛 파일이 매니페스트 밖에 남아 `--verify-shaders` 를 지게 한다.
+         *          요청 × 포맷의 컴파일 · 리플렉션은 엔진의 병렬 for(`engine::runParallel`)로 나눠 돌린다. 산출물(바이너리 · 매니페스트 · 스탬프)은 직렬로 돌 때와 바이트 단위로 같다 —
+         *          작업마다 자기 결과 칸에만 쓰고, 매니페스트 합치기 · 카운터 합산 · 실패 소스 기록 · 매니페스트와 스탬프 쓰기는 요청 순서대로 직렬로 한다.
+         *          같은 바이너리 파일을 만드는 요청이 여럿이면 그 요청들은 한 작업 사슬로 순서대로 돈다(두 스레드가 같은 파일을 쓰지 않는다).
+         *          엔진 서비스가 묶이지 않았거나 워커가 없으면 이 스레드가 요청 순서대로 모두 돈다.
          */
         static ShaderCookSummary cookRequests( string_view                      resourceRoot,
                                                const vector<string>&            listPriority,

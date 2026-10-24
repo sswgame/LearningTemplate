@@ -351,24 +351,25 @@ namespace sw
             }
 
     #if defined( SW_HAS_DXC_API )
+            /** @brief `dxcompiler.dll` 을 불러 생성 함수를 찾습니다. 못 찾으면 nullptr 입니다(라이브러리는 프로세스 끝까지 쥔다). */
+            static DxcCreateInstanceProc findDxcCreateInstance()
+            {
+                HMODULE hDll = LoadLibraryW( L"dxcompiler.dll" );
+                if ( hDll == nullptr )
+                    return nullptr; // 호출한 `reflectDxil` 이 "찾을 수 없다" 경고를 남긴다
+                DxcCreateInstanceProc fnDxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( GetProcAddress( hDll, "DxcCreateInstance" ) );
+                if ( fnDxcCreateInstance == nullptr )
+                    SW_LOG_WARNING( "dxcompiler.dll loaded but DxcCreateInstance not found." );
+                return fnDxcCreateInstance;
+            }
+
+            /**
+             * @brief 처음 부를 때 한 번만 찾은 생성 함수입니다. 함수 안 정적 변수의 초기화는 스레드 안전해서, 병렬 쿠킹의 첫 DXIL 리플렉션들이 동시에 불러도 한 번만 찾는다.
+             * @details 예전에는 `s_bTried` 같은 맨 플래그로 한 번만 찾았다 — 두 스레드가 동시에 처음 부르면 하나가 아직 채워지지 않은 nullptr 을 받아 그 셰이더의 리플렉션이 빈 채로 매니페스트에 들어갔다.
+             */
             static DxcCreateInstanceProc loadDxcCreateInstance()
             {
-                static void*                 s_pDxCompiler{ nullptr };
-                static DxcCreateInstanceProc s_fnDxcCreateInstance{ nullptr };
-                static bool                  s_bTried{ false };
-                if ( s_bTried == false )
-                {
-                    s_bTried      = true;
-                    HMODULE hDll  = LoadLibraryW( L"dxcompiler.dll" );
-                    s_pDxCompiler = static_cast<void*>( hDll );
-                    if ( s_pDxCompiler != nullptr )
-                    {
-                        s_fnDxcCreateInstance = reinterpret_cast<DxcCreateInstanceProc>(
-                            GetProcAddress( hDll, "DxcCreateInstance" ) );
-                    }
-                    if ( s_fnDxcCreateInstance == nullptr )
-                        SW_LOG_WARNING( "dxcompiler.dll loaded but DxcCreateInstance not found." );
-                }
+                static const DxcCreateInstanceProc s_fnDxcCreateInstance = findDxcCreateInstance();
                 return s_fnDxcCreateInstance;
             }
 

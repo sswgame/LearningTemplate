@@ -122,3 +122,84 @@ SW_TEST_CASE( ShaderDomainCompileTest, RecookRemovesBinariesOfAChangedPermutatio
     sw::ShaderCooker::verifyCookedShaders( root, test::makeShaderConfigPriority(), "dx12", listProblem );
     SW_EXPECT_TRUE_MSG( listProblem.empty(), listProblem.empty() ? "" : listProblem.front().c_str() );
 }
+
+/**
+ * @brief [ShaderDomainCompileTest] 요청이 여럿이면 병렬로 쿠킹해도 네 백엔드의 바이너리와 매니페스트가 요청 × 포맷과 같고, 모두 최신인 두 번째 쿠킹은 매니페스트 바이트를 바꾸지 않는다
+ * @details 컴파일 · 리플렉션은 병렬이고 합치기는 요청 순서대로 직렬이다(`ShaderCookDriver::cookRequests`). 같은 요청이 두 번 들어 있어도(같은 바이너리를 만드는 요청은 한 사슬) 같은 파일을 두 스레드가 쓰지 않는다.
+ */
+SW_TEST_CASE( ShaderDomainCompileTest, ManyRequestsCookInParallelToTheSameManifest )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const test::ScopedTempResourceRoot resourceRoot;
+    const sw::string&                  root = resourceRoot.getRootFolderPath();
+    SW_ASSERT_TRUE( resourceRoot.writeTextFile( "game/domaintest/shaders/probe.hlsl",
+                                                "cbuffer ProbeCB : register(b0) { float4 gTint; };\n"
+                                                "float4 PSMain() : SV_Target { return gTint; }\n" ) );
+    const sw::string shaderPath = resourceRoot.makePath( "game/domaintest/shaders/probe.hlsl" );
+
+    constexpr uint32                  kRequestCount = 6;
+    sw::vector<sw::ShaderCookRequest> listRequest;
+    for ( uint32 permutationIndex = 0; permutationIndex < kRequestCount; ++permutationIndex )
+    {
+        sw::ShaderCookRequest request{};
+        request._shaderPath      = shaderPath;
+        request._entryPoint      = "PSMain";
+        request._stage           = sw::ShaderStage::Pixel;
+        request._listPermutation = { "SW_PROBE_" + sw::to_string( permutationIndex ) };
+        request._permutationHash = sw::ShaderCooker::computePermutationHash( request._listPermutation );
+        listRequest.push_back( std::move( request ) );
+    }
+    listRequest.push_back( listRequest.front() ); // 같은 바이너리를 만드는 요청이 또 있다
+
+    const sw::ShaderTargetFormat arrFormat[] = { sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12,
+                                                 sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+
+    const sw::ShaderCookSummary first      = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), listRequest, sw::ShaderTargetFormat::Count, false );
+    const sw::string            dxilBinary = sw::FileUtil::joinPath( resourceRoot.makePath( "game/domaintest/shaders/bin/dx12" ),
+                                                                     sw::ShaderCooker::computeBinaryFileName( "probe", sw::ShaderStage::Pixel, "PSMain", listRequest.front()._permutationHash, ".dxil" ) );
+    if ( first._failedCount > 0 && sw::FileUtil::exists( dxilBinary ) == false )
+        SW_TEST_SKIP( "No DXC compiler in this environment" );
+    SW_ASSERT_TRUE( first.isClean() );
+    SW_EXPECT_TRUE( first._cookedCount >= kRequestCount * static_cast<uint32>( std::size( arrFormat ) ) );
+    SW_EXPECT_EQUAL( 0u, first._removedCount );
+
+    sw::vector<sw::vector<uint8>> listFirstManifest;
+    for ( const sw::ShaderTargetFormat format : arrFormat )
+    {
+        const sw::string  binDir = resourceRoot.makePath( ( sw::string( "game/domaintest/shaders/bin/" ) + sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) ).c_str() );
+        sw::vector<uint8> manifestBytes;
+        SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( sw::FileUtil::joinPath( binDir, "reflection.manifest" ), manifestBytes ), binDir.c_str() );
+        const sw::string_view manifest{ reinterpret_cast<const utf8*>( manifestBytes.data() ), manifestBytes.size() };
+        for ( uint32 requestIndex = 0; requestIndex < kRequestCount; ++requestIndex )
+        {
+            const sw::string fileName = sw::ShaderCooker::computeBinaryFileName( "probe", listRequest[requestIndex]._stage, listRequest[requestIndex]._entryPoint,
+                                                                                 listRequest[requestIndex]._permutationHash, sw::ShaderCooker::getExtensionForFormat( format ) );
+            SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, fileName ) ), fileName.c_str() );
+            SW_EXPECT_TRUE_MSG( manifest.find( fileName ) != sw::string_view::npos, fileName.c_str() );
+        }
+        listFirstManifest.push_back( std::move( manifestBytes ) );
+    }
+
+    // 모두 최신이다 — 다시 쿠킹하면 컴파일은 없고(리플렉션만 병렬로 다시 뽑는다) 매니페스트는 바이트까지 같다.
+    sw::ShaderCooker::invalidateSharedHeaderCache(); // 방금 쓴 스탬프를 읽게 한다
+    const sw::ShaderCookSummary second = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), listRequest, sw::ShaderTargetFormat::Count, false );
+    SW_EXPECT_TRUE( second.isClean() );
+    SW_EXPECT_EQUAL( 0u, second._cookedCount );
+    SW_EXPECT_EQUAL( 0u, second._removedCount );
+    for ( size_t formatIndex = 0; formatIndex < std::size( arrFormat ); ++formatIndex )
+    {
+        const sw::string  binDir = resourceRoot.makePath( ( sw::string( "game/domaintest/shaders/bin/" ) + sw::string( sw::ShaderCooker::getSubfolderForFormat( arrFormat[formatIndex] ) ) ).c_str() );
+        sw::vector<uint8> manifestBytes;
+        SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( sw::FileUtil::joinPath( binDir, "reflection.manifest" ), manifestBytes ), binDir.c_str() );
+        SW_EXPECT_TRUE_MSG( manifestBytes == listFirstManifest[formatIndex], binDir.c_str() );
+    }
+
+    sw::ShaderCooker::invalidateSharedHeaderCache();
+    sw::vector<sw::string> listProblem;
+    for ( const sw::ShaderTargetFormat format : arrFormat )
+    {
+        sw::ShaderCooker::verifyCookedShaders( root, test::makeShaderConfigPriority(), sw::ShaderCooker::getSubfolderForFormat( format ), listProblem );
+    }
+    SW_EXPECT_TRUE_MSG( listProblem.empty(), listProblem.empty() ? "" : listProblem.front().c_str() );
+}
