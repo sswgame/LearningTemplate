@@ -56,7 +56,14 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
                            "struct Baz;\ninline Baz& global()\n{\n    static Baz* p_baz = new Baz();\n    return *p_baz;\n}\n"
                            "template <typename T>\nstruct Qux\n{\n    static Qux<T>& current();\n};\n")},
      (0, 4)),
+    ("이름을 바꾼 단일체 — 포인터 · 스마트 포인터로 내주는 instance · shared",
+     {"Source/Probe/X.h": ("class Foo\n{\npublic:\n    static Foo* instance();\n    static std::shared_ptr<Foo> shared();\n"
+                           "    static Foo*  global( );\n};\n")},
+     (0, 3)),
     # --- 어기지 않은 조각 ---
+    ("포인터를 돌려주어도 팩토리 · 목록 머리 · 인자 있는 함수는 단일체가 아니다",
+     {"Source/Probe/Y.h": "class Foo\n{\npublic:\n    static Foo* create();\n    static Foo*& head();\n    static Foo* instance( int id );\n};\n"},
+     (0, 0)),
     ("읽기 전용 참조 · 포인터의 참조 · 상수 지역 · 인자 있는 함수 · 값 반환은 이름이 무엇이든 단일체가 아니다",
      {"Source/Probe/W.h": ("class Foo\n{\npublic:\n    static const Foo& instance();\n    static Foo*& head();\n    static Foo make();\n    static Foo& pick( int id );\n    Foo& self();\n};\n"
                            "inline const Table& names()\n{\n    static const Table s_names{};\n    return s_names;\n}\n"
