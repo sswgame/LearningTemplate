@@ -38,7 +38,7 @@ namespace sw
 
     void RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
-        _registry.addOrReplace( typeName, factory );
+        _registry.addOrReplace( typeName, factory, "Rig node type" );
     }
 
     unique_ptr<RigNode> RigNodeRegistry::createNode( const hashed_string& typeName ) const

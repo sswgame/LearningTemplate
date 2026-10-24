@@ -95,8 +95,8 @@ namespace sw
                 , _fileBackend{ LocalStoreFactory::kFileBackendName, &LocalStoreFactoryInternal::createFileStorage }
                 , _memoryBackend{ LocalStoreFactory::kMemoryBackendName, &LocalStoreFactoryInternal::createMemoryStorage }
             {
-                (void)_registeredBackend.add( &_fileBackend, _fileBackend._pName );
-                (void)_registeredBackend.add( &_memoryBackend, _memoryBackend._pName );
+                (void)_registeredBackend.addLogged( &_fileBackend, "Local store backend", _fileBackend._pName );
+                (void)_registeredBackend.addLogged( &_memoryBackend, "Local store backend", _memoryBackend._pName );
             }
 
             mutable mutex                             _mutex;

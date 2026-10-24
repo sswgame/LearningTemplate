@@ -87,7 +87,7 @@ namespace sw
     void SceneAudio::addListener( AudioListenerComponent* pListener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_listener.add( pListener );
+        (void)_listener.addLogged( pListener, "Audio listener" );
     }
 
     void SceneAudio::removeListener( AudioListenerComponent* pListener )
@@ -99,7 +99,7 @@ namespace sw
     void SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_emitter.add( pEmitter );
+        (void)_emitter.addLogged( pEmitter, "Audio emitter" );
     }
 
     void SceneAudio::removeEmitter( AudioEmitterComponent* pEmitter )
@@ -116,7 +116,7 @@ namespace sw
     void SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_zone.add( pZone );
+        (void)_zone.addLogged( pZone, "Audio reverb zone" );
     }
 
     void SceneAudio::removeReverbZone( AudioReverbZoneComponent* pZone )

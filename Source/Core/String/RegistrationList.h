@@ -172,11 +172,11 @@ namespace sw
         ~RegistrationList() { unlink(); }
 
         /**
-         * @brief 항목을 올립니다. 이름은 지금 복사합니다.
+         * @brief 항목을 올립니다. 이름은 지금 복사합니다. 결과를 버릴 수 없습니다(`[[nodiscard]]`) — 거절을 로그로 남기기만 하려면 `addLogged` 를 씁니다.
          * @param name 찾기 · 중복 판정 · 정렬에 쓰는 이름입니다. 비어 있으면 이름으로 찾을 수 없고 이름 중복도 보지 않습니다.
          * @param order `ByOrderThenName` 목록에서 앞뒤를 정하는 값입니다(작을수록 앞).
          */
-        RegistrationResult add( T* pItem, string_view name = {}, int32 order = 0 )
+        [[nodiscard]] RegistrationResult add( T* pItem, string_view name = {}, int32 order = 0 )
         {
             SW_MEMORY_SCOPE( EngineMisc );
             if ( pItem == nullptr )
@@ -435,7 +435,7 @@ namespace sw
         }
 
         /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
-        bool add( const hashed_string& name, T value )
+        [[nodiscard]] bool add( const hashed_string& name, T value )
         {
             if ( name.empty() || findIndex( name ) != kNotFound )
                 return false;
@@ -453,11 +453,14 @@ namespace sw
             return false;
         }
 
-        /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 무시합니다. */
-        void addOrReplace( const hashed_string& name, T value )
+        /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 공용 오류 로그(`Registration.EmptyName`)를 남기고 올리지 않습니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
+        void addOrReplace( const hashed_string& name, T value, const utf8* pWhat )
         {
             if ( name.empty() )
+            {
+                reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
                 return;
+            }
             const size_t index = findIndex( name );
             if ( index != kNotFound )
             {

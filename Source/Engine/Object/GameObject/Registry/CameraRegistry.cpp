@@ -18,7 +18,7 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         // nullptr · 이미 등록된 카메라는 목록이 거절한다(멱등).
-        (void)_registeredCamera.add( pCamera );
+        (void)_registeredCamera.addLogged( pCamera, "Camera" );
     }
 
     void CameraRegistry::remove( CameraComponent* pCamera )

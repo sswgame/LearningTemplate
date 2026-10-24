@@ -32,7 +32,7 @@ namespace sw
 
     void UIGlobalCommandRegistry::registerCommand( const hashed_string& command, const UICommandDelegate& handler )
     {
-        _registry.addOrReplace( command, handler );
+        _registry.addOrReplace( command, handler, "UI global command" );
     }
 
     void UIGlobalCommandRegistry::unregisterCommand( const hashed_string& command, const UICommandDelegate& handler )
@@ -41,7 +41,7 @@ namespace sw
         // 이름 표에는 이름으로 빼는 길이 없어 빈 처리 함수로 바꾼다(`hasCommand` · `tryExecute` 는 묶이지 않은 함수를 없는 것으로 본다).
         const UICommandDelegate* pHandler = _registry.find( command );
         if ( pHandler != nullptr && *pHandler == handler )
-            _registry.addOrReplace( command, UICommandDelegate{} );
+            _registry.addOrReplace( command, UICommandDelegate{}, "UI global command" );
     }
 
     bool UIGlobalCommandRegistry::hasCommand( const hashed_string& command ) const

@@ -187,7 +187,7 @@ namespace sw
     void SceneNavigation::registerGeometrySource( INavGeometrySource* pSource )
     {
         // nullptr · 이미 등록한 소스는 목록이 거절한다(같은 소스가 두 번 들면 빼기가 하나만 지워 죽은 포인터가 남는다).
-        (void)_listGeometrySource.add( pSource );
+        (void)_listGeometrySource.addLogged( pSource, "Navigation geometry source" );
     }
 
     void SceneNavigation::unregisterGeometrySource( INavGeometrySource* pSource )

@@ -857,7 +857,7 @@ namespace sw::editor
 
     void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
     {
-        _registry.addOrReplace( hashed_string( typeName ), std::move( pProperty ) );
+        _registry.addOrReplace( hashed_string( typeName ), std::move( pProperty ), "Inspector property type" );
     }
 
     IInspectorProperty* InspectorPropertyManager::find( string_view typeName ) const

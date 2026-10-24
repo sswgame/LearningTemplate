@@ -264,7 +264,7 @@ namespace sw
     {
         if ( name.empty() || handler == nullptr )
             return;
-        _registry.addOrReplace( name, std::move( handler ) );
+        _registry.addOrReplace( name, std::move( handler ), "Animation notify handler" );
     }
 
     const IAnimationNotifyHandler* AnimationNotifyHandlerRegistry::findHandler( const hashed_string& name ) const
