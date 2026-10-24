@@ -1,0 +1,5 @@
+# CheckGateFileWalk 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckGateFileWalk.py, 규칙은 docs/agents/Parallel.md "Lint gates".
+
+# 전체 훑기의 기준선 — 지금 있는 게이트의 직접 걷기(`rglob` · `glob`) 수다. 늘면 실패하고, 공유 훑기로 옮겨 줄면 낮춘다(래칫). 커밋 훅은 추가한 줄만 본다.
+[baseline]
+total = 8
