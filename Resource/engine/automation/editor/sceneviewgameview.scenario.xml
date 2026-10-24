@@ -44,8 +44,8 @@
 		<Screenshot file="gameview.ppm"/>
 	</At>
 	<At frame="145">
-		<ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02"/>
-		<ExpectImage file="gameview.ppm" metric="differingFraction" reference="sceneview.ppm" atLeast="0.1"/>
+		<ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="gameview.ppm" metric="differingFraction" reference="sceneview.ppm" atLeast="0.1" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 	</At>
 
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->

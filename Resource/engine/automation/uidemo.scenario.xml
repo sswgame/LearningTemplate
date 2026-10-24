@@ -12,7 +12,7 @@
 		<Screenshot file="uidemo.ppm"/>
 	</At>
 	<At frame="21">
-		<ExpectImage file="uidemo.ppm" metric="meanLuma" atLeast="0.01"/>
+		<ExpectImage file="uidemo.ppm" metric="meanLuma" atLeast="0.01" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 		<Pass/>
 	</At>
 </Scenario>

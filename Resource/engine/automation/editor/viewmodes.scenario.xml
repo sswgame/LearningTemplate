@@ -63,12 +63,12 @@
 		<Screenshot file="viewmodes_scene_normals.ppm"/>
 	</At>
 	<At frame="365">
-		<ExpectImage file="viewmodes_scene_unlit.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.013"/>
-		<ExpectImage file="viewmodes_scene_wireframe.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.04"/>
-		<ExpectImage file="viewmodes_scene_depth.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5"/>
-		<ExpectImage file="viewmodes_scene_overdraw.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5"/>
-		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5"/>
-		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differingFraction" reference="viewmodes_scene_depth.ppm" atLeast="0.018"/>
+		<ExpectImage file="viewmodes_scene_unlit.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.013" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_scene_wireframe.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.04" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_scene_depth.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_scene_overdraw.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differingFraction" reference="viewmodes_scene_lit.ppm" atLeast="0.5" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differingFraction" reference="viewmodes_scene_depth.ppm" atLeast="0.018" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 	</At>
 
 	<!-- ③ 씬 뷰가 Normals 여도 게임 뷰는 Lit 그대로 -->
@@ -80,8 +80,8 @@
 		<Screenshot file="viewmodes_game_after.ppm"/>
 	</At>
 	<At frame="405">
-		<ExpectImage file="viewmodes_game_after.ppm" metric="differingFraction" reference="viewmodes_game_lit.ppm" atMost="0.001"/>
-		<ExpectImage file="viewmodes_game_after.ppm" metric="differingFraction" reference="viewmodes_scene_normals.ppm" atLeast="0.5"/>
+		<ExpectImage file="viewmodes_game_after.ppm" metric="differingFraction" reference="viewmodes_game_lit.ppm" atMost="0.001" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="viewmodes_game_after.ppm" metric="differingFraction" reference="viewmodes_scene_normals.ppm" atLeast="0.5" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 	</At>
 	<At frame="410"><DevCommand line="panel.focus scene_view"/></At>
 	<At frame="420"><Pass/></At>

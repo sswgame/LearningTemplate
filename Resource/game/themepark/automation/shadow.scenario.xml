@@ -15,11 +15,11 @@
 	<!-- 첫 실행(2026-10-06, Debug, 네 백엔드 같은 값): 위 0.0705 · 왼쪽 0.0675 · 가운데 0.0100 · 오른쪽 위 나무 0.1527 · 아래 나무 줄 0.1087.
 	     문턱은 그 절반 — 그림자가 화면 어느 띠에서 통째로 사라지면 진다. 아래 · 오른쪽 띠는 지도 밖 빈 곳(어두운 배경)이 커서 쓰지 않는다. -->
 	<At frame="181">
-		<ExpectImage file="park.ppm" region="0.0,0.0,1.0,0.12" metric="darkFraction" atLeast="0.035"/>
-		<ExpectImage file="park.ppm" region="0.0,0.0,0.12,1.0" metric="darkFraction" atLeast="0.033"/>
-		<ExpectImage file="park.ppm" region="0.3,0.3,0.7,0.7" metric="darkFraction" atLeast="0.005"/>
-		<ExpectImage file="park.ppm" region="0.75,0.0,1.0,0.25" metric="darkFraction" atLeast="0.075"/>
-		<ExpectImage file="park.ppm" region="0.3,0.8,0.6,1.0" metric="darkFraction" atLeast="0.05"/>
+		<ExpectImage file="park.ppm" region="0.0,0.0,1.0,0.12" metric="darkFraction" atLeast="0.035" measured="2026-10-06 all:0.0705"/>
+		<ExpectImage file="park.ppm" region="0.0,0.0,0.12,1.0" metric="darkFraction" atLeast="0.033" measured="2026-10-06 all:0.0675"/>
+		<ExpectImage file="park.ppm" region="0.3,0.3,0.7,0.7" metric="darkFraction" atLeast="0.005" measured="2026-10-06 all:0.0100"/>
+		<ExpectImage file="park.ppm" region="0.75,0.0,1.0,0.25" metric="darkFraction" atLeast="0.075" measured="2026-10-06 all:0.1527"/>
+		<ExpectImage file="park.ppm" region="0.3,0.8,0.6,1.0" metric="darkFraction" atLeast="0.05" measured="2026-10-06 all:0.1087"/>
 		<Pass/>
 	</At>
 </Scenario>

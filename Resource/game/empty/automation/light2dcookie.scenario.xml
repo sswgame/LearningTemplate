@@ -14,12 +14,12 @@
 	<At frame="42"><Screenshot file="cookie_right.ppm"/></At>
 	<!-- 첫 측정(2026-10-22, Release, 네 백엔드): 맞바꾼 사진의 평균 차 0.095 · 다른 화소 비율 0.498(양쪽, 문턱 atLeast 0.25 는 비율의 절반, 기존 캡처로 정함 — GPU 확인 대기), 쿠키 빛 안쪽의 어두운 픽셀(중앙값 × 0.7 아래 — 창살) 0.162, 쿠키 없는 원광 0. 문턱은 그 절반 근처. -->
 	<At frame="43">
-		<ExpectImage file="cookie_left.ppm" region="0.05,0.1,0.45,0.9" metric="differingFraction" reference="cookie_right.ppm" atLeast="0.25"/>
-		<ExpectImage file="cookie_left.ppm" region="0.55,0.1,0.95,0.9" metric="differingFraction" reference="cookie_right.ppm" atLeast="0.25"/>
-		<ExpectImage file="cookie_left.ppm" region="0.15,0.3,0.34,0.7" metric="darkFraction" ratio="0.7" atLeast="0.08"/>
-		<ExpectImage file="cookie_left.ppm" region="0.66,0.3,0.85,0.7" metric="darkFraction" ratio="0.7" atMost="0.01"/>
-		<ExpectImage file="cookie_right.ppm" region="0.15,0.3,0.34,0.7" metric="darkFraction" ratio="0.7" atMost="0.01"/>
-		<ExpectImage file="cookie_right.ppm" region="0.66,0.3,0.85,0.7" metric="darkFraction" ratio="0.7" atLeast="0.08"/>
+		<ExpectImage file="cookie_left.ppm" region="0.05,0.1,0.45,0.9" metric="differingFraction" reference="cookie_right.ppm" atLeast="0.25" measured="2026-10-22 all:0.498"/>
+		<ExpectImage file="cookie_left.ppm" region="0.55,0.1,0.95,0.9" metric="differingFraction" reference="cookie_right.ppm" atLeast="0.25" measured="2026-10-22 all:0.498"/>
+		<ExpectImage file="cookie_left.ppm" region="0.15,0.3,0.34,0.7" metric="darkFraction" ratio="0.7" atLeast="0.08" measured="2026-10-22 all:0.162"/>
+		<ExpectImage file="cookie_left.ppm" region="0.66,0.3,0.85,0.7" metric="darkFraction" ratio="0.7" atMost="0.01" measured="2026-10-22 all:0"/>
+		<ExpectImage file="cookie_right.ppm" region="0.15,0.3,0.34,0.7" metric="darkFraction" ratio="0.7" atMost="0.01" measured="2026-10-22 all:0"/>
+		<ExpectImage file="cookie_right.ppm" region="0.66,0.3,0.85,0.7" metric="darkFraction" ratio="0.7" atLeast="0.08" measured="2026-10-22 all:0.162"/>
 		<Pass/>
 	</At>
 </Scenario>

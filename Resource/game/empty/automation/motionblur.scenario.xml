@@ -25,8 +25,8 @@
 
 	<!-- 첫 측정(2026-10-22, Release, 네 백엔드 같은 값, 상자 영역): 움직인 켬 · 끔 평균 차 0.0067 · 다른 화소 비율 0.144, 멈춘 켬 · 끔 평균 차 0.00003. 문턱은 움직인 비율의 절반(atLeast 0.07, 기존 캡처로 정함 — GPU 확인 대기)과 멈춘 쪽의 0.001. -->
 	<At frame="190">
-		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="moving_off.ppm" atLeast="0.07"/>
-		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="still_off.ppm" atMost="0.001"/>
+		<ExpectImage file="moving_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="moving_off.ppm" atLeast="0.07" measured="2026-10-22 all:0.144"/>
+		<ExpectImage file="still_on.ppm" region="0.05,0.15,0.95,0.75" metric="differingFraction" reference="still_off.ppm" atMost="0.001" provisional="멈춘 쪽 다른 화소 비율은 기록이 없다(평균 차 0.00003 만 기록)"/>
 		<Variable name="gv_motionBlur" value="1"/>
 		<Pass/>
 	</At>

@@ -180,7 +180,7 @@ namespace sw
         if ( _pChain->isChain() )
         {
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
-            if ( result == AutomationResult::Passed )
+            if ( result == AutomationResult::Passed || result == AutomationResult::Unconfirmed )
                 SW_LOG_INFO( "[Scenario] %#", line.c_str() );
             else
                 SW_LOG_ERROR( "[Scenario] %#", line.c_str() );

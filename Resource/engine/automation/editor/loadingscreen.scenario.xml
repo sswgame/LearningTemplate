@@ -6,6 +6,6 @@
 -->
 <Scenario name="editor.loadingscreen" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<At frame="90"><Screenshot file="stopped.ppm"/></At>
-	<At frame="91"><ExpectImage file="stopped.ppm" metric="meanLuma" region="0.3,0.3,0.9,0.9" atLeast="0.08"/></At>
+	<At frame="91"><ExpectImage file="stopped.ppm" metric="meanLuma" region="0.3,0.3,0.9,0.9" atLeast="0.08" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/></At>
 	<At frame="95"><Pass/></At>
 </Scenario>

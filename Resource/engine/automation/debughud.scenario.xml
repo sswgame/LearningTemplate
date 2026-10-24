@@ -26,7 +26,7 @@
 		<Screenshot file="debughud.ppm"/>
 	</At>
 	<!-- 왼위에 패널 · 글 · 프레임 그래프가 실제로 그려졌다 -->
-	<At frame="31"><ExpectImage file="debughud.ppm" metric="meanLuma" region="0,0,0.3,0.45" atLeast="0.05"/></At>
+	<At frame="31"><ExpectImage file="debughud.ppm" metric="meanLuma" region="0,0,0.3,0.45" atLeast="0.05" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/></At>
 	<!-- 섹션 켜기 · 모서리 -->
 	<At frame="32"><DevCommand line="hud physics on"/></At>
 	<At frame="40"><Expect probe="DebugHUD.SectionShown" equals="1"/></At>

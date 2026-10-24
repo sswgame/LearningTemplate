@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
@@ -214,12 +215,18 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<Expect probe="Test.SwitchCount" equals="1" atMost="2"/>)",
         R"(<Variable name="gv_noSuchVariable" value="1"/>)",
         R"(<TestMark extra="1"/>)",
-        R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0"/>)",
-        R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0"/>)",
-        R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
-        R"(<ExpectImage file="a.ppm" metric="differentFrom" reference="b.ppm" atLeast="0.1"/>)",
-        R"(<ExpectImage file="a.ppm" metric="differingFraction" atMost="0.1"/>)",
-        R"(<ExpectImage file="a.ppm" metric="meanLuma" reference="b.ppm" atMost="0.1"/>)",
+        R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differentFrom" reference="b.ppm" atLeast="0.1" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differingFraction" atMost="0.1" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" reference="b.ppm" atMost="0.1" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" measured="2026-10-22 all:0.5" provisional="t"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" provisional=" "/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" measured="0.5"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" measured="2026-10-22 metal:0.5"/>)",
+        R"(<ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" measured="2026-10-22"/>)",
         R"(<MousePosition x="1.5" y="0.5"/>)",
         R"(<MousePosition x="0.5"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1" timeoutFrames="-1"/>)",
@@ -875,6 +882,51 @@ SW_TEST_CASE( AutomationScenarioTest, ImageMetricsReadAPpm )
 }
 
 /**
+ * @brief [AutomationScenarioTest] 어림값 문턱(`provisional`)이 맞은 ExpectImage 는 통과(0)가 아니라 미확정(14)으로 끝나고, 잰 값 문턱(`measured`)이 맞으면 통과다
+ * @details 틀리면 근거와 상관없이 실패다. 미확정은 보고의 `unconfirmed` 와 `getUnconfirmed` 에 남는다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ProvisionalThresholdEndsUnconfirmed )
+{
+    using Internal             = TestAutomationScenarioInternal;
+    const sw::string folder    = test::makeTempDirectory( "ThresholdBasis" );
+    const sw::string imagePath = folder + "/flat.ppm";
+    sw::string       ppm       = "P6\n2 2\n255\n";
+    for ( uint32 index = 0; index < 4 * 3; ++index )
+    {
+        ppm.push_back( static_cast<utf8>( 255 ) );
+    }
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( imagePath, ppm ) );
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    struct Case
+    {
+        const utf8*          _pBasis;
+        const utf8*          _pRule;
+        sw::AutomationResult _expected;
+    };
+    static constexpr Case kArrCase[] = {
+        {        R"(provisional="guess")", R"(atLeast="0.5")", sw::AutomationResult::Unconfirmed},
+        {R"(measured="2026-10-22 all:1")", R"(atLeast="0.5")",      sw::AutomationResult::Passed},
+        {        R"(provisional="guess")",  R"(atMost="0.5")",      sw::AutomationResult::Failed},
+        {R"(measured="2026-10-22 all:1")",  R"(atMost="0.5")",      sw::AutomationResult::Failed},
+    };
+    SW_TEST_DEFENSIVE_SCOPE( "a wrong threshold fails whatever its basis" );
+    for ( const Case& testCase : kArrCase )
+    {
+        sw::AutomationRunner runner;
+        const sw::string     text = sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><ExpectImage file=")" ) + imagePath + R"(" metric="meanLuma" )" +
+                                testCase._pRule + " " + testCase._pBasis + "/><Pass/></At></Scenario>";
+        SW_ASSERT_TRUE( runner.startFromText( text ) );
+        const sw::AutomationResult result = Internal::run( runner, input, 20 );
+        SW_EXPECT_TRUE_MSG( result == testCase._expected, text.c_str() );
+        const bool bProvisionalHeld = testCase._expected == sw::AutomationResult::Unconfirmed;
+        SW_EXPECT_EQUAL( bProvisionalHeld ? 1u : 0u, static_cast<uint32>( runner.getUnconfirmed().size() ) );
+    }
+    input.shutdown();
+}
+
+/**
  * @brief [AutomationScenarioTest] 렌더러가 없으면 ExpectImage 는 스크린샷을 기다리다 실패로 적는다(조용히 통과하지 않는다)
  */
 SW_TEST_CASE( AutomationScenarioTest, ExpectImageWithoutRendererFails )
@@ -885,7 +937,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectImageWithoutRendererFails )
     sw::AutomationRunner runner;
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
         <At frame="1"><Screenshot file="a.ppm"/></At>
-        <At frame="2"><ExpectImage file="a.ppm" metric="meanLuma" atLeast="0"/><Pass/></At>
+        <At frame="2"><ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" provisional="t"/><Pass/></At>
       </Scenario>)" ) );
     SW_TEST_DEFENSIVE_SCOPE( "no renderer takes the screenshot" );
     sw::string                 pendingPath;

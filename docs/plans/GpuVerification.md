@@ -44,6 +44,27 @@ GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를
 
 새 케이스가 `Resource/game/<게임>/` 원본이나 게임 컴포넌트를 읽으면 같은 선언을 붙여야 한다. 빠뜨리면 Shipping `ctest -L nogpu` 가 그 케이스를 실패로 보고한다(조용한 통과는 없다).
 
-## 3. 사용자 결정
+## 3. 시나리오 문턱의 근거 (2026-10-25)
+
+사진 지표를 단언하는 시나리오(`<ExpectImage>`)의 문턱이 첫 측정 전의 어림값인 채 커밋되어, 어림값과 잰 값이 데이터에서 구분되지 않았습니다(`sky` · `vfxgpulights` 의 어림값, 에디터 시작 시나리오의 틀린 개수). 근본 원인은 측정 전에 숫자를 시나리오에 적는 흐름이 있고 그 숫자의 출처가 형식에 없는 것입니다.
+
+- **형식:** 모든 `ExpectImage` 는 `measured="YYYY-MM-DD 백엔드:값 …"`(잰 값) 또는 `provisional="이유"`(어림값) 가운데 정확히 하나를 가져야 합니다. 없거나 형식이 틀리면 시나리오 읽기 오류입니다(`AutomationThresholdBasis`). 옛 형식 리더는 두지 않았고 시나리오 데이터를 다시 썼습니다.
+- **어림값의 취급:** 어림값 문턱은 틀리면 그대로 실패이고, 맞으면 통과(0)가 아니라 미확정(14, `AutomationResult::Unconfirmed`)으로 끝납니다. 보고 JSON 의 `unconfirmed[]` 와 `[Scenario] UNCONFIRMED` 줄이 목록입니다. `AppScenarioTest` 는 실패로 세지 않고 `[AppTestUtil] UNCONFIRMED` 로그로 알립니다.
+- **확정하는 법:** GPU 실행의 `metrics` 줄(`metric(영역) 파일 = 값`)을 보고 `provisional` 을 `measured="날짜 all:값"` 으로 바꿉니다. 문턱 숫자도 그 값에 맞춰 정합니다.
+- **지금 어림값(`provisional`):** 아래 목록이 확정 대기입니다. `sky` 2개 · `vfxgpulights` 1개는 `wt/gfxfix` 가 고치는 중이라 이 변경에서 옮기지 않았습니다(병합하면 근거 속성을 달아야 읽힙니다).
+
+| 시나리오 | 단언 수 | 근거 |
+|---|---|---|
+| `fog` · `realtimegi` · `modulepass` | 2 · 1 · 1 | 첫 측정 전 어림값 |
+| `interactionhighlight` · `useroptions` · `killcam` | 4 · 4 · 1 | 측정 전 추정 |
+| `editor/screenrectview` | 3 | Release 캡처로 어림한 값, 문턱 미측정 |
+| `motionblur` | 1 | 멈춘 쪽 다른 화소 비율 기록 없음 |
+| 에디터 · 엔진 `debughud` `emptyscene` `flowterrain` `loadingscreen` `meshmodifiers` `sceneviewgameview` `screen` `terrainbrush` `viewmodes` `terrainedits` `runner` `uidemo`, 게임 `clothshowcase` `shippingframe` | 35 | GPU 통과만 확인, 잰 값 기록 없음 |
+| `sky` · `vfxgpulights` | 3 | 어림값, `wt/gfxfix` 소관(미이관) |
+
+잰 값(`measured`)으로 옮긴 것은 `ditherappear` 5 · `light2dcookie` 6 · `motionblur` 1 · `themepark/shadow` 5 입니다(기존 주석의 첫 측정 값).
+탐침 단언(`Expect probe=… equals/atLeast`)은 상태 값이라 이 형식 밖입니다. 개수처럼 코드에서 정해지는 값을 손으로 적는 틈(`Editor.PanelCount`)은 형식으로 막지 못해 그 시나리오 작업자가 센 값으로 고칩니다.
+
+## 4. 사용자 결정
 
 없습니다.

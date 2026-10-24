@@ -13,7 +13,7 @@
 
 	<!-- 첫 프레임들은 천이 펴진 채 떨어지는 중이고 180 에는 걸리고 처졌다 — 두 그림은 달라야 한다(천이 얼어붙었거나 그려지지 않으면 같다). -->
 	<At frame="181">
-		<ExpectImage file="cloth_settled.ppm" metric="differingFraction" reference="cloth_early.ppm" atLeast="0.002"/>
+		<ExpectImage file="cloth_settled.ppm" metric="differingFraction" reference="cloth_early.ppm" atLeast="0.002" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 		<Pass/>
 	</At>
 </Scenario>

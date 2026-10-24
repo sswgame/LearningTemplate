@@ -11,7 +11,7 @@
 	<Launch variable="gv_firstScene" value="game/empty/maps/realtimegi.scene.xml"/>
 	<At frame="120"><Screenshot file="realtimegi.ppm"/></At>
 	<At frame="130">
-		<ExpectImage file="realtimegi.ppm" region="0.4,0.4,0.6,0.55" metric="meanLuma" atLeast="0.04"/>
+		<ExpectImage file="realtimegi.ppm" region="0.4,0.4,0.6,0.55" metric="meanLuma" atLeast="0.04" provisional="첫 측정 전 어림값(GPU 확인 대기)"/>
 		<Pass/>
 	</At>
 </Scenario>

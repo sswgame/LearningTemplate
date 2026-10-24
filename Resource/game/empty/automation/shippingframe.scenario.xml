@@ -8,7 +8,7 @@
 <Scenario name="game.empty.shippingframe" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="30"><Screenshot file="shippingframe.ppm"/></At>
 	<At frame="31">
-		<ExpectImage file="shippingframe.ppm" metric="meanLuma" atLeast="0.01"/>
+		<ExpectImage file="shippingframe.ppm" metric="meanLuma" atLeast="0.01" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
 		<Pass/>
 	</At>
 </Scenario>

@@ -28,6 +28,8 @@ namespace test
         {
             /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
             static constexpr int32 kSkippedExitCode = 13;
+            /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다(`AutomationResult::Unconfirmed`). 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
+            static constexpr int32 kUnconfirmedExitCode = 14;
             /** @brief 시나리오는 통과했지만 출력에 허용하지 않은 Warning · Error 가 있다(`AutomationResult::Failed` 와 같은 값). */
             static constexpr int32 kUnexpectedLogExitCode = 10;
 
@@ -259,7 +261,7 @@ namespace test
         } );
         if ( result._bLaunched )
             (void)sw::FileUtil::writeTextFile( outputBase + ".log", result._output ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
-        const bool bExitedCleanly = result._bLaunched && result._bTimedOut == false && result._exitCode == 0;
+        const bool bExitedCleanly = result._bLaunched && result._bTimedOut == false && ( result._exitCode == 0 || result._exitCode == AppTestUtilInternal::kUnconfirmedExitCode );
         if ( bExitedCleanly )
         {
             const sw::vector<sw::string> listUnexpected = collectUnexpectedLogLines( result._output, scenarioArgument );
@@ -285,6 +287,12 @@ namespace test
         label += "\n" + detail;
         if ( run._bTimedOut == false && run._exitCode == 0 )
             return AppRunOutcome::Passed;
+        if ( run._bTimedOut == false && run._exitCode == AppTestUtilInternal::kUnconfirmedExitCode )
+        {
+            // 단언은 맞았다. 어림값 문턱(`provisional`)이 들어 있어 확정이 아님을 로그로 남긴다 — 잰 값을 `measured` 로 옮기는 것이 할 일이다.
+            SW_LOG_INFO( "[AppTestUtil] UNCONFIRMED (provisional thresholds held, not measured yet): %#", label.c_str() );
+            return AppRunOutcome::Passed;
+        }
         if ( run._bTimedOut == false && run._exitCode == AppTestUtilInternal::kSkippedExitCode )
         {
             SW_LOG_INFO( "[AppTestUtil] skipped by the scenario: %#", label.c_str() );

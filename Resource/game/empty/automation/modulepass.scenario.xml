@@ -12,7 +12,7 @@
 	<At frame="40"><Screenshot file="modulepass.ppm"/></At>
 	<!-- 문턱은 가늠한 값이다(첫 GPU 실행 전 — 모듈 패스가 돌지 않으면 푸른 배경이라 음수다). 첫 측정으로 정한다. -->
 	<At frame="42">
-		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.02"/>
+		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.02" provisional="가늠한 값(첫 GPU 실행 전)"/>
 		<Pass/>
 	</At>
 </Scenario>

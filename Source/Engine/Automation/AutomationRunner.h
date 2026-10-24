@@ -26,12 +26,13 @@ namespace sw
     /** @brief 시나리오가 끝난 까닭 = App 종료 코드입니다. */
     enum class AutomationResult : int32
     {
-        Running   = -1,
-        Passed    = 0,
-        Failed    = 10,
-        LoadError = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
-        TimedOut  = 12,
-        Skipped   = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
+        Running     = -1,
+        Passed      = 0,
+        Failed      = 10,
+        LoadError   = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
+        TimedOut    = 12,
+        Skipped     = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
+        Unconfirmed = 14, ///< 단언은 모두 맞았지만 아직 재지 않은 어림값 문턱(`provisional`)이 들어 있습니다. 통과(0)로 세지 않고 잰 값을 `measured` 로 옮길 때까지 미확정으로 보고합니다.
     };
 } // namespace sw
 
@@ -122,7 +123,9 @@ namespace sw
         AutomationResult          getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
         const vector<string>&     getFailures() const { return _listFailure; }
-        const string&             getFinishReason() const { return _finishReason; }
+        /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
+        const vector<string>& getUnconfirmed() const { return _listUnconfirmed; }
+        const string&         getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
@@ -211,6 +214,7 @@ namespace sw
         AutomationLogPolicy     _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
         AutomationReportWriter  _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
         vector<string>          _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>          _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
         vector<string>          _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
         vector<ProbeWatch>      _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
         vector<RememberedValue> _listRemembered;        ///< `<Remember>` 가 남긴 값
