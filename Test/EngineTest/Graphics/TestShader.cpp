@@ -322,12 +322,96 @@ SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
 
     const sw::unordered_set<sw::string> uniqueFailedSource{ brokenPath };
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, &uniqueFailedSource ); // 다른 include 루트도 이 임시 루트에서만 보고, 우선순위도 전역이 아니라 넘긴 것만 본다
-    SW_ASSERT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "cook.stamp" ) ) );                // 스탬프를 못 썼으면 여기서 멈춘다 — 아래 판정의 false 와 구별한다
-    sw::ShaderCooker::invalidateSharedHeaderCache();                                                         // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, &uniqueFailedSource ) ); // 다른 include 루트도 이 임시 루트에서만 보고, 우선순위도 전역이 아니라 넘긴 것만 본다
+    SW_ASSERT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "cook.stamp" ) ) );                                  // 스탬프를 못 썼으면 여기서 멈춘다 — 아래 판정의 false 와 구별한다
+    sw::ShaderCooker::invalidateSharedHeaderCache();                                                                           // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
 
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, goodPath ) );
     SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, brokenPath ) );
+}
+
+/**
+ * @brief [ShaderCookerTest] `removeUnlistedBinaries` 는 목록에 없는 셰이더 바이너리만 지운다 — 스탬프 · 매니페스트 · 다른 파일은 그대로다
+ * @details 퍼뮤테이션 해시가 바뀌어 다시 구우면 옛 바이너리가 매니페스트 밖에 남아 `--verify-shaders` 가 졌다(통합이 손으로 지웠다).
+ */
+SW_TEST_CASE( ShaderCookerTest, RemoveUnlistedBinariesKeepsOnlyListedOnes )
+{
+    const sw::string binDir    = test::makeTempDirectory( "cook_prune" );
+    const utf8*      arrName[] = { "keep_ps.dxil", "old_ps_0badcafe.dxil", "old_ps_0badcafe.dxbc", "old_vs_00000001.spv", "cook.stamp", "reflection.manifest", "notes.txt" };
+    for ( const utf8* pName : arrName )
+    {
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( binDir, pName ), "x" ) );
+    }
+
+    uint32 removedCount{ 99 };
+    SW_ASSERT_TRUE( sw::ShaderCooker::removeUnlistedBinaries( binDir, sw::unordered_set<sw::string>{ "keep_ps.dxil" }, removedCount ) );
+    SW_EXPECT_EQUAL( 3u, removedCount );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "keep_ps.dxil" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "old_ps_0badcafe.dxil" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "old_ps_0badcafe.dxbc" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "old_vs_00000001.spv" ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "cook.stamp" ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "reflection.manifest" ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( binDir, "notes.txt" ) ) );
+}
+
+/**
+ * @brief [ShaderCookDriverTest] 컴파일에 실패하는 요청이 있으면 쿠킹은 실패로 끝나고, 매니페스트에 없는 옛 바이너리는 치워진다
+ * @details `App --cook-shaders` 의 종료 코드는 `ShaderCookSummary::isClean` 이 정한다. 실패한 쿠킹이 깨끗하다고 답하면 종료 코드 0 으로 낡은 산출물이 배포된다.
+ *          컴파일러가 없는 환경에서도 같은 결과(실패)라 컴파일러 유무와 상관없이 돈다.
+ */
+SW_TEST_CASE( ShaderCookDriverTest, FailingRequestFailsTheCookAndStaleBinaryIsRemoved )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const sw::string root       = test::makeTempDirectory( "cook_driver_fail" );
+    const sw::string shadersDir = sw::FileUtil::joinPath( root, "shaders" );
+    const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
+    const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
+    const sw::string staleBinary = sw::FileUtil::joinPath( binDir, "broken_ps_0badcafe.dxil" ); // 옛 퍼뮤테이션 해시로 구운 바이너리
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( staleBinary, "stale" ) );
+
+    sw::ShaderCookRequest request{};
+    request._shaderPath = brokenPath;
+    request._entryPoint = "main";
+    request._stage      = sw::ShaderStage::Pixel;
+
+    const sw::ShaderCookSummary summary = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), { request }, sw::ShaderTargetFormat::DXIL_D3D12, false );
+    SW_EXPECT_FALSE( summary.isClean() );
+    SW_EXPECT_EQUAL( 1u, summary._failedCount );
+    SW_EXPECT_EQUAL( 0u, summary._cookedCount );
+    SW_EXPECT_EQUAL( 1u, summary._removedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( staleBinary ) );
+}
+
+/**
+ * @brief [ShaderCookDriverTest] 소스가 없거나 `shaders` 폴더 밖인 요청은 건너뛰지 않고 실패로 센다
+ * @details 조용히 건너뛰면 요청과 소스가 어긋난 채 쿠킹이 깨끗하다고 답해 종료 코드 0 이 된다.
+ */
+SW_TEST_CASE( ShaderCookDriverTest, RequestWithoutUsableSourceIsAFailure )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const sw::string root        = test::makeTempDirectory( "cook_driver_source" );
+    const sw::string outsidePath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( root, "elsewhere.hlsl" ) ); // 'shaders' 폴더 밖
+    const sw::string missingPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( sw::FileUtil::joinPath( root, "shaders" ), "missing.hlsl" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( outsidePath, "float4 main() : SV_Target { return 1; }\n" ) );
+
+    sw::vector<sw::ShaderCookRequest> listRequest( 2 );
+    listRequest[0]._shaderPath = outsidePath;
+    listRequest[1]._shaderPath = missingPath;
+    for ( sw::ShaderCookRequest& request : listRequest )
+    {
+        request._entryPoint = "main";
+        request._stage      = sw::ShaderStage::Pixel;
+    }
+
+    const sw::ShaderCookSummary summary = sw::ShaderCookDriver::cookRequests( root, test::makeShaderConfigPriority(), listRequest, sw::ShaderTargetFormat::DXIL_D3D12, false );
+    SW_EXPECT_FALSE( summary.isClean() );
+    SW_EXPECT_EQUAL( 2u, summary._failedCount );
+    SW_EXPECT_EQUAL( 0u, summary._cookedCount );
 }
 
 /**
@@ -634,7 +718,7 @@ SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
     const sw::string binDir      = resourceRoot.makePath( "engine/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr );
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) );
     sw::ShaderCooker::invalidateSharedHeaderCache(); // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, shaderPath ) );
 
@@ -677,7 +761,7 @@ SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
     const sw::string binDir     = resourceRoot.makePath( "common/shaders/bin/dx12" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
 
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr );
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
     SW_ASSERT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( root, test::makeShaderConfigPriority(), binDir, shaderPath ) );
 
@@ -729,7 +813,7 @@ SW_TEST_CASE( ShaderCookStampTest, VerifyCatchesEveryStaleShape )
     SW_EXPECT_EQUAL( size_t( 1 ), listProblem.size() );
 
     // 2) 스탬프만 있고 바이너리 · 매니페스트가 없으면 문제다.
-    sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr );
+    SW_ASSERT_TRUE( sw::ShaderCooker::writeCookStamp( root, test::makeShaderConfigPriority(), binDir, nullptr ) );
     sw::ShaderCooker::invalidateSharedHeaderCache();
     listProblem.clear();
     sw::ShaderCooker::verifyCookedShaders( root, test::makeShaderConfigPriority(), "dx12", listProblem );
