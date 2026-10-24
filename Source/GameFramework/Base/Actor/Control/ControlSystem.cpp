@@ -78,7 +78,9 @@ namespace sw
             return *pSystem;
         unique_ptr<ControlSystem> pNew = make_unique<ControlSystem>();
         pSystem                        = pNew.get();
-        (void)manager.addFrameSystem( ControlSystemInternal::getFrameSystemKey(), std::move( pNew ) );
+        const bool bAdded              = manager.addFrameSystem( ControlSystemInternal::getFrameSystemKey(), std::move( pNew ) );
+        SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았다. 거절되면 접근 선언과 붙인 순서가 어긋난 것이고(오류 로그), 시스템은 이미 지워졌다
+        (void)bAdded;
         return *pSystem;
     }
 
@@ -132,6 +134,15 @@ namespace sw
         QueuedPossess& queued = _listQueuedPossess.emplace_back();
         queued._controller    = controller;
         queued._pawn          = pawn;
+    }
+
+    SceneFrameAccess ControlSystem::getFrameAccess() const
+    {
+        SceneFrameAccess access{};
+        access._writes        = { SceneDataKind::ControlIntent, SceneDataKind::Navigation, SceneDataKind::Structure };
+        access._reads         = { SceneDataKind::ControlIntent };
+        access._readsPrevious = { SceneDataKind::Navigation, SceneDataKind::Structure, SceneDataKind::Transform };
+        return access;
     }
 
     void ControlSystem::runBeforeTick( GameObjectManager& manager, float32 deltaTime )

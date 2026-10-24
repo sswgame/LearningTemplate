@@ -77,6 +77,8 @@ namespace sw
         static void release( GameObjectManager& manager );
 
         void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        /** @brief 프레임 번호를 올리고 보관 밖의 기록을 버립니다(`HitRecord` 쓰기). 씬 데이터는 읽지 않습니다. 스윕 기록(`record`)은 틱에서 부르므로 이 선언 밖입니다. */
+        SceneFrameAccess getFrameAccess() const override;
 
         /** @brief 지금 프레임 번호입니다. 갱신마다 하나 오릅니다. 주장의 `_frame` 이 이 번호를 쓴다. */
         uint32 getFrame() const { return _frame; }

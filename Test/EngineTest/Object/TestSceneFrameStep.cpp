@@ -91,6 +91,9 @@ namespace
                 manager.removeFrameSystem( _removeKey );
         }
 
+        /** @brief 씬 데이터를 건드리지 않는 시스템입니다. */
+        sw::SceneFrameAccess getFrameAccess() const override { return sw::SceneFrameAccess{}; }
+
         sw::SceneFrameStep getCallStep() const { return _callStep; }
 
     private:

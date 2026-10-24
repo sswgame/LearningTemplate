@@ -1,0 +1,20 @@
+/**
+ * @file Engine/Object/GameObject/Tick/SceneDataKindList.xxx
+ * @brief 프레임 시스템(`ISceneFrameSystem`)이 읽고 쓰는 씬 데이터의 종류 단일 표입니다(X-macro). `SceneFrameAccess.h` 가 읽습니다.
+ * @details include 하기 전에 `SW_SCENE_DATA_KIND( Name )` 를 정의합니다(#pragma once 없음).
+ *
+ * - **시스템 사이의 의존을 말해 주는 거친 단위**입니다. 필드 하나가 아니라 "이 데이터를 쓰는 시스템이 먼저 돌아야 읽는 시스템이 맞는 값을 본다" 가 말이 되는 덩어리로 자릅니다.
+ *   컴포넌트 안에서만 쓰는 값(정의 에셋 · 자기 상태)은 종류가 아닙니다. 엔진 밖의 입력(`InputManager` · `UISystem`)도 씬 데이터가 아니라 적지 않습니다.
+ * - 새 종류는 줄 하나입니다. 집합이 32 비트라 33 번째 줄은 `SceneFrameAccess.h` 의 `static_assert` 가 막습니다. 새 종류는 아무 시스템도 건드리지 않는 것으로 시작하므로,
+ *   그 종류를 읽거나 쓰는 기존 시스템의 `getFrameAccess` 를 고치는 것은 줄을 더한 사람의 몫입니다.
+ * - 언리얼 Mass 프로세서의 fragment 읽기 · 쓰기 요구, 유니티 잡 시스템의 읽기 전용 · 읽기 쓰기 접근과 같은 자리입니다.
+ */
+
+//                    종류               // 담는 것
+SW_SCENE_DATA_KIND( Structure )        // 오브젝트 · 컴포넌트의 생성 · 파괴와 등록부(`ComponentRegistry`) — 만들고 지우거나 목록을 훑는 일
+SW_SCENE_DATA_KIND( Transform )        // 씬 컴포넌트의 로컬 · 월드 자리(읽기 · `setWorldTransform` 같은 쓰기)
+SW_SCENE_DATA_KIND( AnimatorState )    // 애니메이터의 재생 상태(재생할 클립 · 속도 · 시각 · 워프 목표 · 외부 알림 입력). 포즈 자체는 `Animation` 단계가 만든다
+SW_SCENE_DATA_KIND( ControlIntent )    // 폰의 이번 틱 의도 · 조종 회전 · 빙의 관계
+SW_SCENE_DATA_KIND( Navigation )       // 내비게이션 에이전트의 목적지 · 이동 상태 · 속도
+SW_SCENE_DATA_KIND( InteractionIndex ) // 상호작용 대상의 공간 격자(`InteractionSpatialIndex`)
+SW_SCENE_DATA_KIND( HitRecord )        // 서버 근접 스윕 기록 장부(`MeleeHitLedger`)

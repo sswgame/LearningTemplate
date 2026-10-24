@@ -66,6 +66,15 @@ namespace sw
         }
     }
 
+    SceneFrameAccess PairedAnimationSystem::getFrameAccess() const
+    {
+        SceneFrameAccess access{};
+        access._writes        = { SceneDataKind::AnimatorState, SceneDataKind::Transform };
+        access._reads         = { SceneDataKind::AnimatorState, SceneDataKind::Transform };
+        access._readsPrevious = { SceneDataKind::Structure };
+        return access;
+    }
+
     PairedAnimationStartResult PairedAnimationSystem::startSession( GameObjectManager& manager, shared_ptr<const PairedAnimationDef> def, const vector<PairedAnimationBinding>& listBinding,
                                                                     uint32& outSessionID )
     {
