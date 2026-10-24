@@ -10,18 +10,12 @@ namespace sw
 
     bool ModuleRenderPassRegistry::registerPass( const hashed_string& modulePass )
     {
-        if ( modulePass.empty() )
-        {
-            SW_LOG_ERROR( "Module render pass needs a name" );
-            return false;
-        }
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _mapPass.find( modulePass ) != _mapPass.end() )
+        if ( _registryPass.add( modulePass, vector<Constant>{} ) == false )
         {
-            SW_LOG_ERROR( "Module render pass '%#' is already registered by another module", modulePass.c_str() );
+            SW_LOG_ERROR( "Module render pass '%#' cannot be registered: the name is empty or already registered by another module", modulePass.c_str() );
             return false;
         }
-        _mapPass.emplace( modulePass, vector<Constant>{} );
         _uniqueMissingLogged.erase( modulePass );
         return true;
     }
@@ -29,16 +23,16 @@ namespace sw
     void ModuleRenderPassRegistry::unregisterPass( const hashed_string& modulePass )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapPass.erase( modulePass );
+        (void)_registryPass.remove( modulePass ); // 없는 이름이면 할 일이 없다(등록하지 못한 객체가 풀 때도 있다)
     }
 
     bool ModuleRenderPassRegistry::setConstant( const hashed_string& modulePass, const hashed_string& name, const float4& value )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              it = _mapPass.find( modulePass );
-        if ( it == _mapPass.end() || name.empty() )
+        vector<Constant>*       pListConstant = _registryPass.find( modulePass );
+        if ( pListConstant == nullptr || name.empty() )
             return false;
-        for ( Constant& constant : it->second )
+        for ( Constant& constant : *pListConstant )
         {
             if ( constant._name == name )
             {
@@ -46,29 +40,29 @@ namespace sw
                 return true;
             }
         }
-        if ( it->second.size() >= kMaxConstantCount )
+        if ( pListConstant->size() >= kMaxConstantCount )
         {
             SW_LOG_ERROR( "Module render pass '%#' already has %# constants; '%#' is rejected", modulePass.c_str(), static_cast<uint32>( kMaxConstantCount ), name.c_str() );
             return false;
         }
-        it->second.push_back( Constant{ name, value } );
+        pListConstant->push_back( Constant{ name, value } );
         return true;
     }
 
     bool ModuleRenderPassRegistry::isRegistered( const hashed_string& modulePass ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _mapPass.find( modulePass ) != _mapPass.end();
+        return _registryPass.find( modulePass ) != nullptr;
     }
 
     bool ModuleRenderPassRegistry::copyConstants( const hashed_string& modulePass, vector<Constant>& outListConstant ) const
     {
         outListConstant.clear();
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              it = _mapPass.find( modulePass );
-        if ( it == _mapPass.end() )
+        const vector<Constant>* pListConstant = _registryPass.find( modulePass );
+        if ( pListConstant == nullptr )
             return false;
-        outListConstant = it->second;
+        outListConstant = *pListConstant;
         return true;
     }
 

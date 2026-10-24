@@ -289,7 +289,7 @@ namespace sw
         , _completionBuffer{}
         , _ticketAuthority{}
         , _settings{}
-        , _listPlatformProvider{}
+        , _registeredPlatformProvider{ "LoginServicePlatformProvider", RegistrationOrder::Insertion, true }
         , _listPendingVerification{}
         , _listVerificationScratch{}
         , _listRevocationScratch{}
@@ -327,7 +327,7 @@ namespace sw
         _mapNameKeyToAccount.clear();
         _listPendingVerification.clear();
         _listPendingRevocation.clear();
-        _listPlatformProvider.clear();
+        _registeredPlatformProvider.clear();
         _eventBuffer.clear();
         _remoteRevokeBuffer.clear();
         _pStore                  = nullptr;
@@ -344,18 +344,17 @@ namespace sw
             SW_LOG_ERROR( "platform login provider has no valid name" );
             return false;
         }
-        if ( findPlatformProvider( pProvider->getName() ) != nullptr )
+        if ( _registeredPlatformProvider.add( pProvider, pProvider->getName() ) != RegistrationResult::Added )
         {
             SW_LOG_ERROR( "platform login provider '%#' is already registered", pProvider->getName() );
             return false;
         }
-        _listPlatformProvider.push_back( pProvider );
         return true;
     }
 
     void LoginService::update( int64 nowMs )
     {
-        for ( IPlatformLoginProvider* pProvider : _listPlatformProvider )
+        for ( IPlatformLoginProvider* pProvider : _registeredPlatformProvider.getItems() )
         {
             pProvider->update( nowMs );
             _listVerificationScratch.clear();
@@ -381,7 +380,7 @@ namespace sw
     void LoginService::updateRevocations( int64 nowMs )
     {
         bool bAnyRevoker = false;
-        for ( IPlatformLoginProvider* pProvider : _listPlatformProvider )
+        for ( IPlatformLoginProvider* pProvider : _registeredPlatformProvider.getItems() )
         {
             if ( pProvider->supportsRevocation() == false )
                 continue;
@@ -423,7 +422,7 @@ namespace sw
             return; // 저장소에 문제가 있으므로 다음 주기에 다시 읽는다
         for ( LoginRevocationEntry& entry : listEntry )
         {
-            IPlatformLoginProvider* pProvider = findPlatformProvider( entry._provider );
+            IPlatformLoginProvider* pProvider = _registeredPlatformProvider.findByName( entry._provider );
             if ( pProvider == nullptr || pProvider->supportsRevocation() == false )
             {
                 SW_LOG_WARNING( "login revoke queue holds a secret of provider '%#' that is not configured here - it stays in the queue", entry._provider.c_str() );
@@ -799,20 +798,10 @@ namespace sw
         return LoginResult::Ok;
     }
 
-    IPlatformLoginProvider* LoginService::findPlatformProvider( string_view provider ) const
-    {
-        for ( IPlatformLoginProvider* pProvider : _listPlatformProvider )
-        {
-            if ( provider == pProvider->getName() )
-                return pProvider;
-        }
-        return nullptr;
-    }
-
     void LoginService::beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
                                           const LoginGrant& buildGrant, int64 nowMs, uint64 requestTag )
     {
-        IPlatformLoginProvider* pProvider = findPlatformProvider( provider );
+        IPlatformLoginProvider* pProvider = _registeredPlatformProvider.findByName( provider );
         if ( pProvider == nullptr )
         {
             pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} );

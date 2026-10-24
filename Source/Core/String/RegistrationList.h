@@ -471,6 +471,17 @@ namespace sw
             return removedCount;
         }
 
+        /** @brief 이름의 값을 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 없는 이름이면 false 입니다. */
+        [[nodiscard]] bool remove( const hashed_string& name )
+        {
+            const size_t index = findIndex( name );
+            if ( index == kNotFound )
+                return false;
+            _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index ) );
+            return true;
+        }
+
         /** @brief 모두 제거합니다. */
         void clear()
         {

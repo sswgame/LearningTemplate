@@ -12,10 +12,10 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -65,9 +65,9 @@ namespace sw
         bool noteMissingOnce( const hashed_string& modulePass );
 
     private:
-        mutable mutex                                  _mutex;
-        unordered_map<hashed_string, vector<Constant>> _mapPass;
-        unordered_set<hashed_string>                   _uniqueMissingLogged;
+        mutable mutex                  _mutex;
+        NameRegistry<vector<Constant>> _registryPass; ///< 패스 이름 → 상수 목록. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
+        unordered_set<hashed_string>   _uniqueMissingLogged;
     };
 } // namespace sw
 

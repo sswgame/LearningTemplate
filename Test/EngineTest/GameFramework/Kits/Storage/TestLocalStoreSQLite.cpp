@@ -82,7 +82,7 @@ SW_TEST_CASE( LocalStoreSQLiteTest, BackendIsDroppedWhenItsImageIsReleased )
 {
     // 핫 리로드는 이미지를 내리기 전에 그 범위의 코드를 뗀다(`ModuleImageUtil::releaseModuleCode`). 정적 등록 객체는 언로드가 미뤄져 나중에 소멸하므로
     // 바닥 표가 리스너로서 스스로 지워야 한다. 범위를 만들기 함수 한 바이트로 좁혀 이 테스트의 바닥만 뗀다.
-    LocalStoreBackendRegistration registration{ "unit-released", &LocalStoreSQLiteTestInternal::createFailingStorage };
+    LocalStoreBackendRegistration registration{ "unit-released", LocalStoreSQLiteTestInternal::createFailingStorage };
     test::LocalStoreTestKey       key;
     LocalStoreConfig              settings;
     settings._backend = "unit-released";

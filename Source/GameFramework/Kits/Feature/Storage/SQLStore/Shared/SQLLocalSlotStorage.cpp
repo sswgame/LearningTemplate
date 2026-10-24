@@ -116,5 +116,5 @@ namespace sw
 namespace sw
 {
     // 모듈이 로드되면 "sqlite" 바닥을 기반 공장에 올리고, 언로드되면 내린다.
-    const LocalStoreBackendRegistration s_sqliteLocalStoreBackendRegistration{ SQLLocalSlotStorage::kBackendName, &SQLLocalSlotStorage::createForRoot };
+    const LocalStoreBackendRegistration s_sqliteLocalStoreBackendRegistration{ SQLLocalSlotStorage::kBackendName, SQLLocalSlotStorage::createForRoot };
 } // namespace sw

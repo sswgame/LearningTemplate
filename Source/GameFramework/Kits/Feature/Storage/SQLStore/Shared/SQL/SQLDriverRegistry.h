@@ -31,9 +31,9 @@ namespace sw
 
     private:
         /** @brief 드라이버를 올립니다. 같은 이름이 이미 있으면 오류다(앞 것을 덮지 않는다). */
-        static void registerDriver( ISQLDriver* pDriver );
-        /** @brief @p pDriver 를 내립니다. 언로드 리스너가 이미 지웠으면 할 일이 없다. */
-        static void unregisterDriver( ISQLDriver* pDriver );
+        static void registerDriver( ISQLDriver& driver );
+        /** @brief @p driver 를 내립니다. 언로드 리스너가 이미 지웠으면 할 일이 없다. */
+        static void unregisterDriver( ISQLDriver& driver );
     };
 } // namespace sw
 
@@ -48,16 +48,16 @@ namespace sw
     {
     public:
         explicit SQLDriverRegistration( ISQLDriver& driver )
-            : _pDriver{ &driver }
+            : _driver{ driver }
         {
-            SQLDriverRegistry::registerDriver( _pDriver );
+            SQLDriverRegistry::registerDriver( _driver );
         }
-        ~SQLDriverRegistration() { SQLDriverRegistry::unregisterDriver( _pDriver ); }
+        ~SQLDriverRegistration() { SQLDriverRegistry::unregisterDriver( _driver ); }
 
         SQLDriverRegistration( const SQLDriverRegistration& )            = delete;
         SQLDriverRegistration& operator=( const SQLDriverRegistration& ) = delete;
 
     private:
-        ISQLDriver* _pDriver;
+        ISQLDriver& _driver;
     };
 } // namespace sw
