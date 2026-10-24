@@ -21,13 +21,18 @@ namespace sw
     {
         struct BehaviorTreeAssetInternal
         {
-            /// @brief 중첩 깊이 상한입니다. 손으로 쓴 트리가 이보다 깊을 일이 없다 - 깨진 파일이 스택을 먹지 않게 한다.
-            static constexpr uint32 kMaxDepth = 32;
-
             static constexpr const utf8* kArrNodeTypeName[] = { "Selector", "Sequence", "Inverter", "ForceSuccess", "Repeat", "Cooldown",
                                                                 "TimeLimit", "BlackboardCondition", "Action", "Condition", "Wait", "MoveTo" };
             static constexpr const utf8* kArrCompareName[]  = { "IsSet", "IsNotSet", "Equal", "NotEqual", "Less", "LessOrEqual", "Greater", "GreaterOrEqual" };
             static constexpr const utf8* kArrAbortName[]    = { "None", "Self", "LowerPriority", "Both" };
+
+            static constexpr const utf8* kArrSelectorAttr[]            = { "name", "reactive" };
+            static constexpr const utf8* kArrNameAttr[]                = { "name" };
+            static constexpr const utf8* kArrCountAttr[]               = { "count" };
+            static constexpr const utf8* kArrSecondsAttr[]             = { "seconds" };
+            static constexpr const utf8* kArrBlackboardConditionAttr[] = { "key", "compare", "value", "abort" };
+            static constexpr const utf8* kArrTaskAttr[]                = { "task", "name" };
+            static constexpr const utf8* kArrMoveToAttr[]              = { "key", "repathDistance" };
 
             static constexpr EnumNameTable<BehaviorNodeType>  kNodeTypeTable{ kArrNodeTypeName };
             static constexpr EnumNameTable<BlackboardCompare> kCompareTable{ kArrCompareName };
@@ -57,10 +62,11 @@ namespace sw
             [[nodiscard]] bool readNode( const XMLNode& node, int32 parent, uint32 depth );
 
         private:
-            /** @brief 표에 없는 속성마다 오류를 남깁니다. */
-            bool checkAttributes( const XMLNode& node, std::initializer_list<const utf8*> listKnown ) const
+            /** @brief 노드 종류의 속성 표(`BehaviorTreeNames::getAttributeNames`)에 없는 속성마다 오류를 남깁니다. */
+            [[nodiscard]] bool checkAttributes( const XMLNode& node, BehaviorNodeType type ) const
             {
-                return XMLNameCheck::reportUnknownAttributes( node, listKnown.begin(), static_cast<uint32>( listKnown.size() ), _sourceName, LogLevel::Error );
+                const BehaviorTreeNames::AttributeList list = BehaviorTreeNames::getAttributeNames( type );
+                return XMLNameCheck::reportUnknownAttributes( node, list._ppName, list._count, _sourceName, LogLevel::Error );
             }
             /** @brief 선택 속성 `name` 입니다(없으면 노드 종류 이름). */
             [[nodiscard]] bool readName( const XMLNode& node, string& outName ) const
@@ -117,9 +123,9 @@ namespace sw
         bool BehaviorTreeReader::readNode( const XMLNode& node, int32 parent, uint32 depth )
         {
             using Internal = BehaviorTreeAssetInternal;
-            if ( depth > Internal::kMaxDepth )
+            if ( depth > BehaviorTreeNames::kMaxDepth )
             {
-                SW_LOG_ERROR( "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), Internal::kMaxDepth );
+                SW_LOG_ERROR( "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), BehaviorTreeNames::kMaxDepth );
                 return false;
             }
             BehaviorNodeType type{};
@@ -136,7 +142,7 @@ namespace sw
             {
                 case BehaviorNodeType::Selector:
                 {
-                    bValid = checkAttributes( node, { "name", "reactive" } );
+                    bValid = checkAttributes( node, type );
                     bValid = readName( node, name ) && bValid;
                     std::optional<bool> bReactive;
                     bValid = node.readOptionalAttribute<bool>( "reactive", bReactive ) && bValid;
@@ -145,26 +151,26 @@ namespace sw
                 }
                 case BehaviorNodeType::Sequence:
                 {
-                    bValid = checkAttributes( node, { "name" } );
+                    bValid = checkAttributes( node, type );
                     bValid = readName( node, name ) && bValid;
                     index  = _tree.addSequence( parent, name.c_str() );
                     break;
                 }
                 case BehaviorNodeType::Inverter:
                 {
-                    bValid = checkAttributes( node, {} );
+                    bValid = checkAttributes( node, type );
                     index  = _tree.addInverter( parent );
                     break;
                 }
                 case BehaviorNodeType::ForceSuccess:
                 {
-                    bValid = checkAttributes( node, {} );
+                    bValid = checkAttributes( node, type );
                     index  = _tree.addForceSuccess( parent );
                     break;
                 }
                 case BehaviorNodeType::Repeat:
                 {
-                    bValid                                = checkAttributes( node, { "count" } );
+                    bValid                                = checkAttributes( node, type );
                     const std::optional<int32> countValue = node.readRequiredAttribute<int32>( "count" );
                     bValid                                = countValue.has_value() && bValid;
                     if ( countValue.has_value() && *countValue < 0 )
@@ -178,7 +184,7 @@ namespace sw
                 case BehaviorNodeType::Cooldown:
                 {
                     float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = checkAttributes( node, type );
                     bValid = readSeconds( node, "seconds", seconds ) && bValid;
                     index  = _tree.addCooldown( parent, seconds );
                     break;
@@ -186,14 +192,14 @@ namespace sw
                 case BehaviorNodeType::TimeLimit:
                 {
                     float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = checkAttributes( node, type );
                     bValid = readSeconds( node, "seconds", seconds ) && bValid;
                     index  = _tree.addTimeLimit( parent, seconds );
                     break;
                 }
                 case BehaviorNodeType::BlackboardCondition:
                 {
-                    bValid                                = checkAttributes( node, { "key", "compare", "value", "abort" } );
+                    bValid                                = checkAttributes( node, type );
                     const std::optional<string> key       = node.readRequiredAttribute<string>( "key" );
                     BlackboardCompare           compare   = BlackboardCompare::IsSet;
                     BehaviorAbortMode           abortMode = BehaviorAbortMode::None;
@@ -208,7 +214,7 @@ namespace sw
                 case BehaviorNodeType::Action:
                 case BehaviorNodeType::Condition:
                 {
-                    bValid                              = checkAttributes( node, { "task", "name" } );
+                    bValid                              = checkAttributes( node, type );
                     const BehaviorTaskFunction function = readTask( node );
                     bValid                              = function != nullptr && bValid;
                     bValid                              = readName( node, name ) && bValid;
@@ -220,14 +226,14 @@ namespace sw
                 case BehaviorNodeType::Wait:
                 {
                     float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, { "seconds" } );
+                    bValid = checkAttributes( node, type );
                     bValid = readSeconds( node, "seconds", seconds ) && bValid;
                     index  = _tree.addWait( parent, seconds );
                     break;
                 }
                 case BehaviorNodeType::MoveTo:
                 {
-                    bValid                          = checkAttributes( node, { "key", "repathDistance" } );
+                    bValid                          = checkAttributes( node, type );
                     const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
                     std::optional<float32>      repathDistance;
                     bValid = key.has_value() && bValid;
@@ -302,6 +308,35 @@ namespace sw
     bool BehaviorTreeNames::isLeaf( BehaviorNodeType type )
     {
         return BehaviorTreeAssetInternal::isLeaf( type );
+    }
+
+    BehaviorTreeNames::AttributeList BehaviorTreeNames::getAttributeNames( BehaviorNodeType type )
+    {
+        using Internal = BehaviorTreeAssetInternal;
+        switch ( type )
+        {
+            case BehaviorNodeType::Selector:
+                return { Internal::kArrSelectorAttr, 2 };
+            case BehaviorNodeType::Sequence:
+                return { Internal::kArrNameAttr, 1 };
+            case BehaviorNodeType::Inverter:
+            case BehaviorNodeType::ForceSuccess:
+                return {};
+            case BehaviorNodeType::Repeat:
+                return { Internal::kArrCountAttr, 1 };
+            case BehaviorNodeType::Cooldown:
+            case BehaviorNodeType::TimeLimit:
+            case BehaviorNodeType::Wait:
+                return { Internal::kArrSecondsAttr, 1 };
+            case BehaviorNodeType::BlackboardCondition:
+                return { Internal::kArrBlackboardConditionAttr, 4 };
+            case BehaviorNodeType::Action:
+            case BehaviorNodeType::Condition:
+                return { Internal::kArrTaskAttr, 2 };
+            case BehaviorNodeType::MoveTo:
+                return { Internal::kArrMoveToAttr, 2 };
+        }
+        return {};
     }
 
     bool BehaviorTreeNames::isDecorator( BehaviorNodeType type )

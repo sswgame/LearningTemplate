@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
@@ -49,6 +50,8 @@ namespace sw
         BehaviorTaskFunction findTask( string_view name ) const;
         /** @brief 등록된 모든 이름을 ", " 로 이은 글입니다(모르는 이름 오류에 보인다). */
         string joinNames() const;
+        /** @brief 등록된 모든 이름을 등록 순서대로 @p outListName 뒤에 붙입니다(편집기의 작업 고르기 목록). */
+        void collectNames( vector<string>& outListName ) const;
         /** @brief 등록된 함수 수입니다. */
         uint32 getCount() const;
 

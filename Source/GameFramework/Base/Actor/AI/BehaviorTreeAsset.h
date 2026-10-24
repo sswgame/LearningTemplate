@@ -34,6 +34,15 @@ namespace sw
         static bool isLeaf( BehaviorNodeType type );
         /** @brief 자식이 정확히 하나인 종류(반전 · 성공 강제 · 반복 · 쿨다운 · 시간 제한 · 블랙보드 조건)입니다. */
         static bool isDecorator( BehaviorNodeType type );
+        /** @brief 중첩 깊이 상한입니다. 손으로 쓴 트리가 이보다 깊을 일이 없다 - 깨진 파일이 스택을 먹지 않게 한다(편집기도 이 깊이까지만 더한다). */
+        static constexpr uint32 kMaxDepth = 32;
+        /** @brief 노드 종류가 받는 속성 이름표입니다. 로더의 "모르는 속성" 검사와 편집기의 읽기가 같은 표를 쓴다. 속성이 없는 종류는 `_count` 가 0 입니다. */
+        struct AttributeList
+        {
+            const utf8* const* _ppName{ nullptr };
+            uint32             _count{ 0 };
+        };
+        static AttributeList getAttributeNames( BehaviorNodeType type );
     };
 } // namespace sw
 

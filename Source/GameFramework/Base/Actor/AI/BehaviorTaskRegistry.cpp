@@ -65,6 +65,15 @@ namespace sw
         return joined;
     }
 
+    void BehaviorTaskRegistry::collectNames( vector<string>& outListName ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( const BehaviorTaskEntry* pEntry : _registration.getItems() )
+        {
+            outListName.push_back( string{ pEntry->_pName } );
+        }
+    }
+
     uint32 BehaviorTaskRegistry::getCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
