@@ -69,5 +69,6 @@ name that file in any instruction you hand to another agent. Korean examples for
 | [docs/agents/Helpers.md](docs/agents/Helpers.md) | `Helpers: Util vs Internal`, one anonymous namespace per file | you add a helper function or a TU-private type |
 | [docs/agents/CppStyle.md](docs/agents/CppStyle.md) | `C++ style` | you write C++ bodies: branches, loops, types, thread use |
 | [docs/agents/EditingTraps.md](docs/agents/EditingTraps.md) | `Editing traps` | you edit files with a script (heredoc ban, line endings) |
+| [docs/agents/Parallel.md](docs/agents/Parallel.md) | `Parallel-friendly rules`: tests, lint gates, importers, workers, lazy init | you write a test, a gate, an importer, a job or a lazy initializer |
 
 `Project architecture`, `Build workflow` and `Writing` stay in this file.
