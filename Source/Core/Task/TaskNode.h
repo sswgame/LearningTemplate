@@ -267,6 +267,29 @@ namespace sw
             return true;
         }
 
+        /**
+         * @brief 지금 붙어 있는 후속을 @p outList 뒤에 덧붙입니다(목록은 닫지 않고 바꾸지 않는다).
+         * @details 사이클 검사(`TaskHandle::runBefore`)가 후속을 따라가려고 씁니다. 잠금은 복사하는 동안만 잡고 놓으므로,
+         *          부르는 쪽이 다른 노드의 잠금을 겹쳐 잡지 않습니다. 후속 노드는 이 목록이 참조를 잡고 있어 이 노드가 살아 있는 동안 유효합니다.
+         */
+        void appendTo( vector<TaskNode*>& outList ) const
+        {
+            lock();
+            const uint32 inlineCount = _count < kInlineCapacity ? _count : kInlineCapacity;
+            for ( uint32 index = 0; index < inlineCount; ++index )
+            {
+                outList.push_back( _arrInlineNode[index] );
+            }
+            if ( _pOverflow != nullptr )
+            {
+                for ( TaskNode* pNode : *_pOverflow )
+                {
+                    outList.push_back( pNode );
+                }
+            }
+            unlock();
+        }
+
         /** @brief 목록을 닫고(이후 `tryPushBack` 은 false) 닫기 전에 붙은 후속마다 func 를 부릅니다. 완료 경로가 한 번 부릅니다. */
         template <typename Func>
         void closeAndForEach( Func&& func )

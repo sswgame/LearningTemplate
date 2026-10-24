@@ -16,6 +16,7 @@ namespace sw
         , _groupPool{}
         , _detachedReferenceCount{ 0 }
         , _bDetached{ false }
+        , _dependencyMutex{}
     {
     }
 

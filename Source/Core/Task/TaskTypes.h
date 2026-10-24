@@ -407,27 +407,46 @@ namespace sw
         /**
          * @brief 이 태스크가 targetTask 보다 반드시 **먼저** 끝나도록 DAG 선후 의존성을 겁니다.
          * @param targetTask 이 태스크가 끝난 뒤 실행될 후속 태스크
+         * @return 의존이 성립했으면 true(이 태스크가 이미 끝나 바로 채워진 경우 포함). 새 간선이 **사이클**을 만들거나(자기 자신 포함)
+         *         빈 핸들이 있으면 false 이고 아무것도 걸지 않습니다. 사이클은 `Task.DependencyCycle` Error 로그도 남깁니다 — 걸었다면
+         *         후속의 의존 수가 영영 0 이 되지 않아 `waitAll` 이 멈춥니다. 검사는 Release 에서도 합니다.
+         * @details 사이클 검사는 후속(`targetTask`)에서 후속 목록을 따라 이 태스크에 닿는지 봅니다. 비용은 후속 아래로 아직 안 끝난
+         *          노드 수에 비례합니다(방문 집합이 있어 노드마다 한 번). 방금 만든 후속에는 후속이 없어 거의 공짜입니다. 검사와 걸기는
+         *          한 잠금(풀마다 하나) 안에서 하므로 서로 반대 방향으로 동시에 거는 두 스레드도 둘 다 통과하지 못합니다.
+         *          끝난 노드는 따라가지 않습니다(끝난 쪽은 새 간선이 기다림을 만들지 못합니다).
+         * @note 알려진 빈틈: `whenAny` 가 내부에서 쓰는 트리거 → 후속 연결과, 본문 안에서 만든 자식 → 부모 완료 기다림은 후속 목록의
+         *       간선이 아니라서 검사가 보지 못합니다(예: 자식을 부모의 후속으로 거는 일).
          */
-        TaskHandle& runBefore( const TaskHandle& targetTask );
+        [[nodiscard]] bool runBefore( const TaskHandle& targetTask );
 
         /**
          * @brief dependencyTask 가 반드시 **먼저** 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
          * @param dependencyTask 이 태스크보다 먼저 끝나야 하는 선행 태스크
+         * @return `runBefore` 와 같습니다(사이클이나 빈 핸들이면 false 이고 걸지 않습니다).
          */
-        TaskHandle& runAfter( TaskHandle dependencyTask );
+        [[nodiscard]] bool runAfter( TaskHandle dependencyTask );
 
         /**
          * @brief 이 태스크가 끝나면 자동으로 실행될 후속 태스크(continuation)를 만들어 연결합니다.
          * @param nextTaskDelegate 이어서 실행할 델리게이트
          * @param affinity 후속 태스크를 실행할 스레드
-         * @return 새로 만든 후속 태스크의 핸들
+         * @return 새로 만든 후속 태스크의 핸들. 매니저가 멈추는 중이면 빈 핸들입니다. 후속은 새로 만든 노드라 사이클이 될 수 없습니다.
+         * @note 후속 본문은 선행이 **취소**돼도 돕니다(`cancel` 참고). 선행이 취소됐는지는 후속이 `isCancelled` 로 물어야 합니다.
          */
         TaskHandle then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
-        /** @brief 태스크를 취소합니다. 아직 실행 중이 아니면 본문을 건너뜁니다. */
+        /**
+         * @brief 태스크를 취소합니다. 아직 실행 중이 아니면 본문을 건너뜁니다.
+         * @details **취소는 전파되지 않습니다.** 취소된 태스크도 실행 차례가 오면 본문만 건너뛰고 평소처럼 **끝난 것으로 처리**되어
+         *          후속(`runBefore` · `then` · `whenAll`)의 선행 하나가 풀립니다. 그래서 취소가 후속의 `waitAll` 을 영영 막지
+         *          않습니다(만들기만 하고 버린 선행도 같은 길로 끝납니다). 후속까지 멈추려면 후속도 `cancel` 하거나, 후속 본문에서
+         *          선행의 `isCancelled` 로 물어 일을 건너뜁니다(선행 핸들을 캡처해 둡니다).
+         *          이미 실행 중인 본문은 끊지 않습니다. 협력 취소가 필요하면 `CancellationToken` 을 씁니다.
+         *          태스크 본문에서 예외를 던지면 안 됩니다 — 잡는 곳이 없고 실패는 반환값 · 로그로 다룹니다(결정 기록 참고).
+         */
         bool cancel();
 
-        /** @brief 태스크가 취소됐는지 반환합니다. */
+        /** @brief 태스크가 취소됐는지 반환합니다. 후속 본문이 선행의 취소를 알려면 선행 핸들로 이것을 부릅니다(핸들이 노드를 붙들어 둡니다). */
         bool isCancelled() const;
 
         /**

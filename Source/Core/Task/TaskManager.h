@@ -216,6 +216,7 @@ namespace sw
          * @param continuation 모두 끝나면 실행할 델리게이트
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
+         * @note 후속은 새로 만든 노드라 사이클이 될 수 없습니다. 선행 중 **취소**된 것도 끝난 것으로 세어 후속이 돕니다(`TaskHandle::cancel`).
          */
         TaskHandle whenAll( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
@@ -225,6 +226,7 @@ namespace sw
          * @param continuation 처음으로 끝난 태스크가 나오면 실행할 델리게이트
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
+         * @note 반환된 후속이 `listTask` 의 태스크보다 먼저 끝나도록 거는 사이클(`후속.runBefore( 태스크 )`)은 검사가 보지 못합니다 — 트리거 → 후속 연결이 후속 목록의 간선이 아닙니다.
          */
         TaskHandle whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
