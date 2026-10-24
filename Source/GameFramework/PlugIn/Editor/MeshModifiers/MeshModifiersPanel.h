@@ -89,6 +89,8 @@ namespace sw::editor
         void drawCurveListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
         /** @brief NumberList 를 행 × 열 표로 그립니다(열 선언이 맞으면 이름 · 종류별 입력칸, 아니면 일반 숫자 열). */
         void drawNumberListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
+        /** @brief NumberList 의 칸 하나를 열 종류(실수 · 정수 · 콤보 · 벡터3)에 맞는 입력칸으로 그립니다. 값이 바뀌었으면 true 입니다. */
+        [[nodiscard]] bool drawNumberCell( MeshModifierSession& session, const MeshModifierParamDef& def, bool bHasColumns, uint32 column, float32* pValue );
         /** @brief 씬 오브젝트 고르기 콤보와 "선택 사용" 단추를 그립니다. */
         void drawReferenceParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
         /** @brief 참조 목록을 항목마다 고르기 칸 + 위 · 아래 · 복제 · 삭제 단추로 그리고, 끝에 추가 단추를 둡니다. */
