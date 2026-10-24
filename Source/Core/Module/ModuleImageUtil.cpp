@@ -20,25 +20,26 @@ namespace sw
 {
     namespace
     {
+        /** @brief `setModuleSubdirectory` 가 옮긴 모듈 하나 — 고정 배열이라 정적 소멸 · 할당자 순서와 엮이지 않는다. */
+        struct ModuleSubdirectory
+        {
+            utf8 _arrBaseName[64]{};
+            utf8 _arrDirectory[constant::kMaxPathSize]{};
+        };
+
+        /**
+         * @brief 옮긴 모듈 하나입니다(`setModuleSubdirectory` 만 쓴다). 기동 스레드가 한 번 적고 그 뒤에 읽는다.
+         * @details Core 의 정적 함수 묶음이 읽는 칸이라 서비스 범위에 맡길 수 없다 — 읽는 곳(`findModuleLibraryPath`)을 서비스 범위 없이 도는 도구 · 테스트 · 모듈 호스트도
+         *          부른다. 고정 배열이라 상수 초기화되므로 지연 생성하는 접근자를 두지 않고 이 변수 하나가 소유한다.
+         */
+        ModuleSubdirectory s_moduleSubdirectory;
+
         struct ModuleImageUtilInternal
         {
-            /** @brief `setModuleSubdirectory` 가 옮긴 모듈 하나 — 고정 배열이라 정적 소멸 · 할당자 순서와 엮이지 않는다. */
-            struct ModuleSubdirectory
-            {
-                utf8 _arrBaseName[64]{};
-                utf8 _arrDirectory[constant::kMaxPathSize]{};
-            };
-
-            static ModuleSubdirectory& getModuleSubdirectory()
-            {
-                static ModuleSubdirectory s_moduleSubdirectory;
-                return s_moduleSubdirectory;
-            }
-
             /** @brief @p baseName 이 옮긴 모듈이면 그 `Bin` 상대 폴더를, 아니면 빈 뷰를 돌려줍니다. */
             static string_view findModuleSubdirectory( string_view baseName )
             {
-                const ModuleSubdirectory& entry = getModuleSubdirectory();
+                const ModuleSubdirectory& entry = s_moduleSubdirectory;
                 if ( entry._arrDirectory[0] == '\0' || baseName != string_view{ entry._arrBaseName } )
                     return {};
                 return string_view{ entry._arrDirectory };
@@ -160,7 +161,7 @@ namespace sw
         FileUtil::getFileNamePart( besideLibrary, fileName );
         string symbolDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder );
         // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
-        const ModuleImageUtilInternal::ModuleSubdirectory& moved = ModuleImageUtilInternal::getModuleSubdirectory();
+        const ModuleSubdirectory& moved = s_moduleSubdirectory;
         if ( moved._arrDirectory[0] != '\0' )
         {
             const string movedDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), moved._arrDirectory );
@@ -180,8 +181,8 @@ namespace sw
 
     void ModuleImageUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
     {
-        ModuleImageUtilInternal::ModuleSubdirectory& entry = ModuleImageUtilInternal::getModuleSubdirectory();
-        entry                                              = ModuleImageUtilInternal::ModuleSubdirectory{};
+        ModuleSubdirectory& entry = s_moduleSubdirectory;
+        entry                     = ModuleSubdirectory{};
         if ( binRelativeDirectory.empty() )
             return;
         if ( baseName.size() >= std::size( entry._arrBaseName ) || binRelativeDirectory.size() >= std::size( entry._arrDirectory ) )
@@ -195,7 +196,7 @@ namespace sw
 
     bool ModuleImageUtil::getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory )
     {
-        const ModuleImageUtilInternal::ModuleSubdirectory& entry = ModuleImageUtilInternal::getModuleSubdirectory();
+        const ModuleSubdirectory& entry = s_moduleSubdirectory;
         if ( entry._arrDirectory[0] == '\0' )
             return false;
         outBaseName             = entry._arrBaseName;

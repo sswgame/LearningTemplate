@@ -146,13 +146,17 @@ namespace sw
 
         bool bindGlobalVariableEnumNames()
         {
-            GlobalVariableManager::setEnumTextParser( SW_DELEGATE_FUNCTION( GlobalVariableEnumTextParser, parseGlobalVariableEnumText ) );
-            return getSubsystem<GlobalVariableManager>().applyPendingEnumText();
+            GlobalVariableManager& variables = getSubsystem<GlobalVariableManager>();
+            variables.setEnumTextParser( SW_DELEGATE_FUNCTION( GlobalVariableEnumTextParser, parseGlobalVariableEnumText ) );
+            return variables.applyPendingEnumText();
         }
 
         void unbindGlobalVariableEnumNames()
         {
-            GlobalVariableManager::setEnumTextParser( GlobalVariableEnumTextParser{} );
+            // 파서는 매니저의 멤버다 — 매니저가 이미 내려갔으면 뗄 것도 함께 사라졌다.
+            GlobalVariableManager* const pVariables = findSubsystem<GlobalVariableManager>();
+            if ( pVariables != nullptr )
+                pVariables->setEnumTextParser( GlobalVariableEnumTextParser{} );
         }
 
 #if !defined( SW_SHIPPING )

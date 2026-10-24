@@ -17,9 +17,11 @@ namespace sw
      */
     enum class LogOnceKind : uint8
     {
-        SkippedField,      ///< 바이너리 엄격 읽기가 타입에 없는 필드를 건너뜀(타입 × 필드 이름 해시)
-        UnreadableField,   ///< 바이너리 엄격 읽기가 읽지 못한 필드를 건너뜀(타입 × 필드)
-        UnknownEnumerator, ///< 저장된 열거자 이름을 모름(열거형 × 열거자 이름 해시)
+        SkippedField,       ///< 바이너리 엄격 읽기가 타입에 없는 필드를 건너뜀(타입 × 필드 이름 해시)
+        UnreadableField,    ///< 바이너리 엄격 읽기가 읽지 못한 필드를 건너뜀(타입 × 필드)
+        UnknownEnumerator,  ///< 저장된 열거자 이름을 모름(열거형 × 열거자 이름 해시)
+        BusMessageRejected, ///< 서버 버스가 받은 메시지를 읽지 못해 버림(타입 × 결과 × 받은 버전)
+        PushRelayRejected,  ///< 릴레이한 푸시를 이 빌드가 변환하지 못해 버림(열거형 × 열거자 × 이유)
         Count
     };
 
@@ -29,8 +31,13 @@ namespace sw
      */
     struct SW_API LogOnce
     {
-        /** @brief 이번 범위에서 @p kind 의 @p key 를 처음 알리는 것이면 true 이고, 그 키를 알린 것으로 적습니다. */
+        /** @brief 이번 범위에서 @p kind 의 @p key 를 처음 알리는 것이면 true 이고, 그 키를 알린 것으로 적습니다. 부른 횟수는 `getAttemptCount` 가 센다. */
         [[nodiscard]] static bool tryClaim( LogOnceKind kind, uint64 key );
+        /**
+         * @brief `tryClaim` 을 @p kind 로 부른 횟수입니다(처음이 아니라 알리지 않은 것도 셉니다). 거절 · 버림을 세는 지표로 씁니다.
+         * @details 프로세스(엔진 수명 범위)가 사는 동안 쌓이고 `beginScope` 가 지우지 않는다 — 범위를 새로 열어도 센 횟수는 남는다.
+         */
+        [[nodiscard]] static uint64 getAttemptCount( LogOnceKind kind );
         /** @brief 새 범위를 엽니다 — 모든 종류의 알린 키를 잊습니다. 테스트 하니스가 케이스마다 부릅니다. */
         static void beginScope();
     };

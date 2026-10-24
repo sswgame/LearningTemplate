@@ -69,11 +69,12 @@ namespace sw::internal
             std::atomic<AssertDialogFunc>                       _pfnDialog{ nullptr };
         };
 
-        AssertDialogState& getAssertDialogState()
-        {
-            static AssertDialogState s_state;
-            return s_state;
-        }
+        /**
+         * @brief 단언 대화상자의 설치 칸과 "항상 무시" 자리입니다. 프로세스에 하나이고 `setAssertDialog` 가 설치 · 해제(nullptr)합니다.
+         * @details 단언은 서비스 범위보다 아래 층이라 범위에 맡길 수 없고, 단언 안에서 할당하면 안 되어 지연 생성도 못 한다. 그래서 위의 `s_pfnLowLevelReporter` 와
+         *          같은 모양 — 이름공간의 이 한 변수(상수 초기화라 정적 초기화 순서를 타지 않는다)가 소유자이고, 접근자 함수를 두지 않는다.
+         */
+        AssertDialogState s_dialogState;
 
         /** @brief 같은 자리인가 — 파일 리터럴 주소는 번역 단위마다 다를 수 있어 글로 비교한다. */
         bool isSameSite( const IgnoredAssertSite& site, const utf8* pFile, int32 line )
@@ -107,7 +108,7 @@ namespace sw::internal
 
     void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept
     {
-        AssertDialogState&                state = getAssertDialogState();
+        AssertDialogState&                state = s_dialogState;
         const std::lock_guard<std::mutex> lock{ state._mutex };
         state._pfnDialog.store( pfnDialog, std::memory_order_release );
         state._ignoredSiteCount = 0;
@@ -115,12 +116,12 @@ namespace sw::internal
 
     bool hasAssertDialog() noexcept
     {
-        return getAssertDialogState()._pfnDialog.load( std::memory_order_acquire ) != nullptr;
+        return s_dialogState._pfnDialog.load( std::memory_order_acquire ) != nullptr;
     }
 
     bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
     {
-        AssertDialogState&                state = getAssertDialogState();
+        AssertDialogState&                state = s_dialogState;
         const std::lock_guard<std::mutex> lock{ state._mutex };
         const AssertDialogFunc            pfnDialog = state._pfnDialog.load( std::memory_order_acquire );
         if ( pfnDialog == nullptr )
