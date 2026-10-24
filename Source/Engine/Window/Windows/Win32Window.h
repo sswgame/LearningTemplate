@@ -75,6 +75,10 @@ namespace sw
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
+        /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 재진입한 메시지는 크기만 적고 콜백을 건너뜁니다. */
+        void onSizeMessage( WPARAM wParam, LPARAM lParam );
+        /** @brief `WM_GETMINMAXINFO` 의 최소 추적 크기를 `setMinimumClientSize` 로 채웁니다. 창 모드가 아니거나 하한이 없으면 false 입니다(기본 처리로 간다). */
+        bool fillMinimumTrackSize( LPARAM lParam ) const;
 
     private:
         HWND                    _hWnd;

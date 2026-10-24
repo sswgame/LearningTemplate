@@ -199,6 +199,58 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
+    void Win32Window::onSizeMessage( WPARAM wParam, LPARAM lParam )
+    {
+        // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
+        // 0x0 짜리 WM_SIZE 로 온다. 그 값을 `_width`/`_height` 에 적어 두면 창이
+        // 크기 0 이 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
+        // 이 경로로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
+        // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 이지 "크기가 0 이다" 가 아니다.
+        const uint32 clientWidth   = LOWORD( lParam );
+        const uint32 clientHeight  = HIWORD( lParam );
+        const bool   bIgnoreResize = wParam == SIZE_MINIMIZED || clientWidth == 0 || clientHeight == 0;
+        if ( bIgnoreResize )
+            return;
+
+        _width  = clientWidth;
+        _height = clientHeight;
+        // DPI 변경 등으로 ShowWindow/SetForegroundWindow 를 처리하는 중에 OS 가 GetSystemMetricsForDpi
+        // 등을 거쳐 SendMessageW 로 같은 스레드에 WM_SIZE 를 재진입시킬 수 있다. 재진입 가드
+        // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 다시 만드는 중인 렌더 타깃을
+        // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
+        const bool bCanNotifyResize = _bRecreating == SW_FALSE && _bResizing == SW_FALSE && _onResize.isBound();
+        if ( bCanNotifyResize == false )
+            return;
+        // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
+        // 더** 부른다. 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
+        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 제한한다.
+        _bResizing           = SW_TRUE;
+        uint32 resizedWidth  = 0;
+        uint32 resizedHeight = 0;
+        for ( int32 round = 0; round < 4 && ( _width != resizedWidth || _height != resizedHeight ); ++round )
+        {
+            resizedWidth  = _width;
+            resizedHeight = _height;
+            _onResize( resizedWidth, resizedHeight );
+        }
+        _bResizing = SW_FALSE;
+    }
+
+    bool Win32Window::fillMinimumTrackSize( LPARAM lParam ) const
+    {
+        // 창 모드에서 사용자가 줄일 수 있는 하한(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리와 제목 줄을 더해 창 크기로 넘긴다
+        // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
+        const bool bNoMinimumSize = _displayMode != WindowDisplayMode::Windowed || _minClientWidth == 0 || _minClientHeight == 0;
+        if ( bNoMinimumSize )
+            return false;
+        RECT frameRect = { 0, 0, static_cast<LONG>( _minClientWidth ), static_cast<LONG>( _minClientHeight ) };
+        AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+        MINMAXINFO* pInfo       = reinterpret_cast<MINMAXINFO*>( lParam );
+        pInfo->ptMinTrackSize.x = frameRect.right - frameRect.left;
+        pInfo->ptMinTrackSize.y = frameRect.bottom - frameRect.top;
+        return true;
+    }
+
     LRESULT CALLBACK Win32Window::wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     {
         Win32Window* pThis{ nullptr };
@@ -237,40 +289,7 @@ namespace sw
                 }
                 case WM_SIZE:
                 {
-                    // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
-                    // 0x0 짜리 WM_SIZE 로 온다. 그 값을 `_width`/`_height` 에 적어 두면 창이
-                    // 크기 0 이 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
-                    // 이 경로로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
-                    // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 이지 "크기가 0 이다" 가 아니다.
-                    const uint32 clientWidth   = LOWORD( lParam );
-                    const uint32 clientHeight  = HIWORD( lParam );
-                    const bool   bIgnoreResize = wParam == SIZE_MINIMIZED || clientWidth == 0 || clientHeight == 0;
-                    if ( bIgnoreResize )
-                        return 0;
-
-                    pThis->_width  = clientWidth;
-                    pThis->_height = clientHeight;
-                    // DPI 변경 등으로 ShowWindow/SetForegroundWindow 를 처리하는 중에 OS 가 GetSystemMetricsForDpi
-                    // 등을 거쳐 SendMessageW 로 같은 스레드에 WM_SIZE 를 재진입시킬 수 있다. 재진입 가드
-                    // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 다시 만드는 중인 렌더 타깃을
-                    // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
-                    const bool bCanNotifyResize = pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound();
-                    if ( bCanNotifyResize )
-                    {
-                        // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
-                        // 더** 부른다. 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
-                        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 제한한다.
-                        pThis->_bResizing    = SW_TRUE;
-                        uint32 resizedWidth  = 0;
-                        uint32 resizedHeight = 0;
-                        for ( int32 round = 0; round < 4 && ( pThis->_width != resizedWidth || pThis->_height != resizedHeight ); ++round )
-                        {
-                            resizedWidth  = pThis->_width;
-                            resizedHeight = pThis->_height;
-                            pThis->_onResize( resizedWidth, resizedHeight );
-                        }
-                        pThis->_bResizing = SW_FALSE;
-                    }
+                    pThis->onSizeMessage( wParam, lParam );
                     return 0;
                 }
 
@@ -289,18 +308,10 @@ namespace sw
 
                 case WM_GETMINMAXINFO:
                 {
-                    // 창 모드에서 사용자가 줄일 수 있는 하한(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리와 제목 줄을 더해 창 크기로 넘긴다
-                    // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
                     // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다. 그때는 pThis 가 없어 기본 처리로 간다.
-                    const bool bNoMinimumSize = pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0;
-                    if ( bNoMinimumSize )
-                        break;
-                    RECT frameRect = { 0, 0, static_cast<LONG>( pThis->_minClientWidth ), static_cast<LONG>( pThis->_minClientHeight ) };
-                    AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
-                    MINMAXINFO* pInfo       = reinterpret_cast<MINMAXINFO*>( lParam );
-                    pInfo->ptMinTrackSize.x = frameRect.right - frameRect.left;
-                    pInfo->ptMinTrackSize.y = frameRect.bottom - frameRect.top;
-                    return 0;
+                    if ( pThis->fillMinimumTrackSize( lParam ) )
+                        return 0;
+                    break;
                 }
 
                 case WM_CLOSE:
