@@ -488,8 +488,10 @@ namespace sw
         {
             if ( task.isValid() )
             {
+                // 후속은 방금 만든 노드라 사이클이 될 수 없다. 걸리지 않는 경우는 후속이 비었을 때(매니저가 멈추는 중 — 위에서 이미 알렸다)뿐이다.
                 TaskHandle mutTask = task;
-                mutTask.runBefore( nextTask );
+                const bool bLinked = mutTask.runBefore( nextTask );
+                SW_LOG_ASSERT( bLinked || nextTask.isValid() == false, "whenAll: a fresh continuation cannot form a dependency cycle." );
             }
         }
         return nextTask;
@@ -530,7 +532,9 @@ namespace sw
 
                 TaskHandle triggerTask = emplaceTask( "whenAny_Trigger", triggerDelegate );
                 TaskHandle mutTask     = task;
-                mutTask.runBefore( triggerTask );
+                // 트리거는 방금 만든 노드라 사이클이 될 수 없다. 걸리지 않는 경우는 트리거가 비었을 때(매니저가 멈추는 중)뿐이다.
+                const bool bLinked = mutTask.runBefore( triggerTask );
+                SW_LOG_ASSERT( bLinked || triggerTask.isValid() == false, "whenAny: a fresh trigger cannot form a dependency cycle." );
                 triggerTask.submit();
             }
         }

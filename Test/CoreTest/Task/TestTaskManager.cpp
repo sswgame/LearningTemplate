@@ -28,6 +28,15 @@ namespace
     /** @brief 워커 수를 고정해 둔다 — 코어 수에 따라 답이 갈리면 안 되는 것만 본다. */
     constexpr uint32 kWorkerCount = 4;
 
+    /** @brief 돌 때 `sequence` 의 다음 번호를 `outOrder` 에 적는 태스크를 만듭니다(순서를 번호로 본다). */
+    sw::TaskHandle makeOrderedTask( sw::TaskManager& manager, const utf8* pName, sw::atomic<int32>& sequence, sw::atomic<int32>& outOrder )
+    {
+        return manager.emplaceTask( pName, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&sequence, &outOrder]()
+        {
+            outOrder.store( sequence.fetch_add( 1 ) + 1, std::memory_order_release );
+        } ) );
+    }
+
     /** @brief 누수 탐침이 한 번에 붙드는 스테이지 수. 풀이 재사용하지 못하게 전부 동시에 쥔다. */
     constexpr uint32 kLeakProbeStageCount = 32;
 
@@ -153,7 +162,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
         bSecondRan.store( true, std::memory_order_release );
     } ) );
 
-    first.runBefore( second );
+    SW_ASSERT_TRUE( first.runBefore( second ) );
     first.submit();
     second.submit();
 
@@ -198,7 +207,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
     }
 
     sw::TaskHandle early = manager.emplaceTask( "Early", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
-    early.runBefore( late );
+    SW_ASSERT_TRUE( early.runBefore( late ) );
     early.submit();
 
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
@@ -877,7 +886,7 @@ SW_TEST_CASE( TaskManagerTest, SuccessorAddedAfterCompletionStillRuns )
        {
         ranCount.fetch_add( 1 );
     } ) );
-    first.runBefore( late );
+    SW_ASSERT_TRUE( first.runBefore( late ) );
     late.submit();
 
     sw::vector<sw::TaskHandle> listDone{ first };
@@ -924,7 +933,7 @@ SW_TEST_CASE( TaskManagerTest, AbandonedTasksDoNotBlockWaitAll )
          {
             ranCount.fetch_add( 1 );
         } ) );
-        abandoned.runBefore( follower );
+        SW_ASSERT_TRUE( abandoned.runBefore( follower ) );
         follower.submit();
     }
 
@@ -957,7 +966,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel 
             earlyChunkCount.fetch_add( 1 );
         chunkCount.fetch_add( 1 );
     } ) );
-    group.runAfter( prerequisite );
+    SW_ASSERT_TRUE( group.runAfter( prerequisite ) );
     group.submit();
     prerequisite.submit();
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
@@ -973,6 +982,274 @@ SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel 
     cancelled.submit();
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
     SW_EXPECT_EQUAL( 0, cancelledChunkCount.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 사이클을 만드는 의존(직접 · 간접 · 자기 자신)은 걸리지 않고 오류로 알리며, `waitAll` 은 멈추지 않는다.
+ * @details 사이클이 걸리면 후속의 의존 수가 영영 0 이 되지 않아 `waitAll` 이 멈춘다. 거부된 뒤에도 이미 걸린 의존(A→B→C)은 순서대로 돈다.
+ */
+SW_TEST_CASE( TaskManagerTest, DependencyCycleIsRejectedAndDoesNotHangWaitAll )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> sequence{ 0 };
+    sw::atomic<int32> orderA{ 0 };
+    sw::atomic<int32> orderB{ 0 };
+    sw::atomic<int32> orderC{ 0 };
+    sw::TaskHandle    taskA = makeOrderedTask( manager, "A", sequence, orderA );
+    sw::TaskHandle    taskB = makeOrderedTask( manager, "B", sequence, orderB );
+    sw::TaskHandle    taskC = makeOrderedTask( manager, "C", sequence, orderC );
+
+    test::ScopedLogCollector logs;
+    SW_ASSERT_TRUE( taskA.runBefore( taskB ) );
+    SW_ASSERT_TRUE( taskB.runBefore( taskC ) );
+    SW_EXPECT_EQUAL( 0u, logs.countWithID( "Task.DependencyCycle" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "dependency cycles must be rejected" );
+        SW_EXPECT_FALSE( taskB.runBefore( taskA ) ); // 직접: A→B→A
+        SW_EXPECT_FALSE( taskC.runBefore( taskA ) ); // 간접: A→B→C→A
+        SW_EXPECT_FALSE( taskA.runAfter( taskC ) );  // runAfter 도 같다
+        SW_EXPECT_FALSE( taskA.runBefore( taskA ) ); // 자기 자신
+    }
+    SW_EXPECT_EQUAL( 4u, logs.countWithID( "Task.DependencyCycle" ) );
+
+    taskC.submit();
+    taskB.submit();
+    taskA.submit();
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "거부된 사이클 간선이 waitAll 을 막았습니다" );
+    SW_EXPECT_TRUE( 0 < orderA.load() );
+    SW_EXPECT_TRUE( orderA.load() < orderB.load() );
+    SW_EXPECT_TRUE( orderB.load() < orderC.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 다이아몬드(A→B,C→D)는 사이클이 아니고, 사이클을 거부한 뒤에도 정상 그래프는 순서대로 돈다.
+ */
+SW_TEST_CASE( TaskManagerTest, DiamondIsNotACycleAndSurvivesARejectedEdge )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> sequence{ 0 };
+    sw::atomic<int32> orderA{ 0 };
+    sw::atomic<int32> orderB{ 0 };
+    sw::atomic<int32> orderC{ 0 };
+    sw::atomic<int32> orderD{ 0 };
+    sw::TaskHandle    taskA = makeOrderedTask( manager, "A", sequence, orderA );
+    sw::TaskHandle    taskB = makeOrderedTask( manager, "B", sequence, orderB );
+    sw::TaskHandle    taskC = makeOrderedTask( manager, "C", sequence, orderC );
+    sw::TaskHandle    taskD = makeOrderedTask( manager, "D", sequence, orderD );
+
+    test::ScopedLogCollector logs;
+    SW_ASSERT_TRUE( taskA.runBefore( taskB ) );
+    SW_ASSERT_TRUE( taskA.runBefore( taskC ) );
+    SW_ASSERT_TRUE( taskB.runBefore( taskD ) );
+    SW_ASSERT_TRUE( taskC.runBefore( taskD ) );
+    SW_EXPECT_EQUAL( 0u, logs.countWithID( "Task.DependencyCycle" ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a back edge of the diamond must be rejected" );
+        SW_EXPECT_FALSE( taskD.runBefore( taskA ) );
+    }
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Task.DependencyCycle" ) );
+
+    taskD.submit();
+    taskC.submit();
+    taskB.submit();
+    taskA.submit();
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_TRUE( orderA.load() < orderB.load() );
+    SW_EXPECT_TRUE( orderA.load() < orderC.load() );
+    SW_EXPECT_TRUE( orderB.load() < orderD.load() );
+    SW_EXPECT_TRUE( orderC.load() < orderD.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 겹치는 다이아몬드가 깊어도 사이클 검사는 노드마다 한 번만 본다(방문 집합).
+ * @details 방문 집합이 없으면 40 단 사다리의 경로 수가 2^40 이라 검사가 끝나지 않는다. 사이클이 없는 간선(새 태스크 → 사다리 맨 앞)을
+ *          걸어 사다리를 끝까지 훑게 한다.
+ */
+SW_TEST_CASE( TaskManagerTest, CycleCheckVisitsEachNodeOnceOnOverlappingDiamonds )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    constexpr int32 kLadderSteps = 40;
+
+    sw::atomic<int32>          ranCount{ 0 };
+    sw::vector<sw::TaskHandle> listTask;
+    const sw::TaskDelegate     countRun = SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&ranCount]()
+        {
+        ranCount.fetch_add( 1 );
+    } );
+
+    sw::TaskHandle head = manager.emplaceTask( "Head", countRun );
+    listTask.push_back( head );
+    sw::TaskHandle joint = head;
+    for ( int32 step = 0; step < kLadderSteps; ++step )
+    {
+        sw::TaskHandle left      = manager.emplaceTask( "Left", countRun );
+        sw::TaskHandle right     = manager.emplaceTask( "Right", countRun );
+        sw::TaskHandle nextJoint = manager.emplaceTask( "Joint", countRun );
+        SW_ASSERT_TRUE( joint.runBefore( left ) );
+        SW_ASSERT_TRUE( joint.runBefore( right ) );
+        SW_ASSERT_TRUE( left.runBefore( nextJoint ) );
+        SW_ASSERT_TRUE( right.runBefore( nextJoint ) );
+        listTask.push_back( left );
+        listTask.push_back( right );
+        listTask.push_back( nextJoint );
+        joint = nextJoint;
+    }
+
+    // 새 태스크 → 사다리 맨 앞. 사다리 전체(경로 2^40)를 훑어도 새 태스크에는 닿지 않으므로 사이클이 아니다.
+    sw::TaskHandle before = manager.emplaceTask( "BeforeHead", countRun );
+    listTask.push_back( before );
+    const sw::Deadline checkDeadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
+    SW_ASSERT_TRUE( before.runBefore( head ) );
+    SW_EXPECT_FALSE_MSG( checkDeadline.isExpired(), "겹치는 다이아몬드에서 사이클 검사가 노드를 되풀이해 훑었습니다" );
+
+    for ( sw::TaskHandle& task : listTask )
+    {
+        task.submit();
+    }
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( listTask.size() ), ranCount.load() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 이미 끝난 선행에 걸기, 끝난 쪽이 낀 간선, 빈 핸들은 사이클이 아니다.
+ */
+SW_TEST_CASE( TaskManagerTest, DependencyOnCompletedTaskIsNotACycle )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> sequence{ 0 };
+    sw::atomic<int32> orderA{ 0 };
+    sw::atomic<int32> orderB{ 0 };
+    sw::TaskHandle    taskA = makeOrderedTask( manager, "A", sequence, orderA );
+    sw::TaskHandle    taskB = makeOrderedTask( manager, "B", sequence, orderB );
+    SW_ASSERT_TRUE( taskA.runBefore( taskB ) );
+    taskB.submit();
+    taskA.submit();
+    SW_ASSERT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    SW_ASSERT_TRUE( taskA.isCompleted() );
+    SW_ASSERT_TRUE( taskB.isCompleted() );
+
+    test::ScopedLogCollector logs;
+
+    // 끝난 선행에 새 후속을 건다 — 의존은 이미 채워져 후속은 바로 돈다.
+    sw::atomic<int32> orderLate{ 0 };
+    sw::TaskHandle    taskLate = makeOrderedTask( manager, "Late", sequence, orderLate );
+    SW_EXPECT_TRUE( taskA.runBefore( taskLate ) );
+    taskLate.submit();
+
+    // 둘 다 끝난 쪽끼리는 반대 방향 간선을 걸어도 아무도 기다리지 않는다 — 사이클로 막지 않는다.
+    SW_EXPECT_TRUE( taskB.runBefore( taskA ) );
+
+    // 빈 핸들은 걸 의존이 없다. 사이클 오류가 아니다.
+    SW_EXPECT_FALSE( taskA.runBefore( sw::TaskHandle{} ) );
+    SW_EXPECT_FALSE( sw::TaskHandle{}.runBefore( taskA ) );
+
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "끝난 선행에 건 후속이 풀리지 않았습니다" );
+    SW_EXPECT_TRUE( 0 < orderLate.load() );
+    SW_EXPECT_EQUAL( 0u, logs.countWithID( "Task.DependencyCycle" ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 서로 반대 방향의 간선을 동시에 걸어도 하나만 걸리고 하나는 사이클로 거부된다.
+ * @details 검사와 걸기가 한 잠금 안에 있지 않으면 두 스레드가 서로의 간선을 못 보고 둘 다 통과해 `waitAll` 이 멈춘다.
+ */
+SW_TEST_CASE( TaskManagerTest, OppositeEdgesAddedConcurrentlyNeverBothSucceed )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    constexpr int32 kRoundCount = 64;
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "opposite edges race; exactly one is rejected" );
+        for ( int32 round = 0; round < kRoundCount; ++round )
+        {
+            sw::TaskHandle taskA = manager.emplaceTask( "A", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+            sw::TaskHandle taskB = manager.emplaceTask( "B", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+
+            sw::atomic<bool>  bGo{ false };
+            sw::atomic<int32> linkedCount{ 0 };
+            std::thread       otherSide( [&]()
+            {
+                while ( bGo.load( std::memory_order_acquire ) == false )
+                {
+                    std::this_thread::yield();
+                }
+                if ( taskB.runBefore( taskA ) )
+                    linkedCount.fetch_add( 1 );
+            } );
+            bGo.store( true, std::memory_order_release );
+            if ( taskA.runBefore( taskB ) )
+                linkedCount.fetch_add( 1 );
+            otherSide.join();
+
+            SW_EXPECT_EQUAL( 1, linkedCount.load() );
+            taskA.submit();
+            taskB.submit();
+        }
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( kRoundCount ), logs.countWithID( "Task.DependencyCycle" ) );
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "동시에 건 반대 방향 간선이 둘 다 통과해 waitAll 이 멈췄습니다" );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 취소는 후속에 전파되지 않는다 — 취소된 선행은 본문만 건너뛰고 후속은 돌며, 후속은 `isCancelled` 로 선행의 취소를 안다.
+ */
+SW_TEST_CASE( TaskManagerTest, CancelledPrerequisiteStillReleasesItsSuccessor )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<bool> bPrerequisiteBodyRan{ false };
+    sw::atomic<bool> bSuccessorRan{ false };
+    sw::atomic<bool> bSuccessorSawCancel{ false };
+    sw::atomic<bool> bChainedRan{ false };
+
+    sw::TaskHandle prerequisite = manager.emplaceTask( "Prerequisite", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bPrerequisiteBodyRan]()
+    {
+        bPrerequisiteBodyRan.store( true );
+    } ) );
+    sw::TaskHandle successor    = manager.emplaceTask( "Successor", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bSuccessorRan, &bSuccessorSawCancel, prerequisite]()
+       {
+        bSuccessorSawCancel.store( prerequisite.isCancelled() );
+        bSuccessorRan.store( true );
+    } ) );
+    sw::TaskHandle chained      = prerequisite.then( SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bChainedRan]()
+         {
+        bChainedRan.store( true );
+    } ) );
+    SW_ASSERT_TRUE( prerequisite.runBefore( successor ) );
+
+    prerequisite.cancel();
+    successor.submit();
+    chained.submit();
+    prerequisite.submit();
+
+    SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "취소된 선행이 후속을 붙들었습니다" );
+    SW_EXPECT_FALSE( bPrerequisiteBodyRan.load() );
+    SW_EXPECT_TRUE( bSuccessorRan.load() );
+    SW_EXPECT_TRUE( bSuccessorSawCancel.load() );
+    SW_EXPECT_TRUE( bChainedRan.load() );
 
     manager.shutdown();
 }

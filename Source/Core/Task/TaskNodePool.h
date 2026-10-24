@@ -60,6 +60,15 @@ namespace sw
          */
         [[nodiscard]] bool detachOwner();
 
+        /**
+         * @brief 의존 간선을 거는 일(사이클 검사 + 후속 목록에 붙이기)을 한 번에 하나씩만 하게 하는 잠금입니다.
+         * @details 두 스레드가 `A→B` 와 `B→A` 를 동시에 걸면 각자 검사할 때 상대 간선이 아직 없어 둘 다 통과합니다. 검사와 붙이기를
+         *          같은 잠금 안에 두어야 사이클 검사가 정확합니다. 간선을 거는 일은 드물어(만드는 단계) 경합 비용은 무시할 만합니다.
+         *          풀마다 하나라서 전역 상태가 아니고, 매니저가 사라진 뒤에도(핸들이 노드를 쥔 동안) 풀과 함께 삽니다.
+         *          잠금 안에서는 후속 목록의 스핀락을 한 번에 하나만 잡습니다(그 반대로 이 잠금을 잡는 곳은 없다 — 순서 역전 없음).
+         */
+        mutex& getDependencyMutex() { return _dependencyMutex; }
+
     private:
         /** @brief 매니저가 사라진 뒤 노드 · 스테이지 하나가 돌아왔습니다. 마지막이면 풀을 소멸시킵니다. */
         void returnDetachedReference();
@@ -83,5 +92,6 @@ namespace sw
         ParallelGroupPool             _groupPool;
         atomic<uint32>                _detachedReferenceCount; ///< `detachOwner` 뒤에도 참조가 남은 노드 · 스테이지 수
         atomic<bool>                  _bDetached;              ///< `detachOwner` 가 남은 참조를 보고 풀을 그것들에 넘겼다
+        mutex                         _dependencyMutex;        ///< 의존 간선 검사 + 붙이기를 직렬화한다(`getDependencyMutex`)
     };
 } // namespace sw

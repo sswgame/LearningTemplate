@@ -110,8 +110,8 @@ SW_TEST_CASE( TaskTest, GeneralTaskDAG )
     sw::TaskHandle handleB = taskMgr.emplaceTask( "TaskB", delB );
     sw::TaskHandle handleC = taskMgr.emplaceTask( "TaskC", delC );
 
-    handleA.runBefore( handleB );
-    handleB.runBefore( handleC );
+    SW_ASSERT_TRUE( handleA.runBefore( handleB ) );
+    SW_ASSERT_TRUE( handleB.runBefore( handleC ) );
 
     handleA.submit();
     handleB.submit();
