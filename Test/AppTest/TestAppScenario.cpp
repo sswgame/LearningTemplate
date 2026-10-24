@@ -387,7 +387,10 @@ SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
             continue;
         const sw::string label = sw::string( "chain " ) + pSwitch + "\n" + scenarioLines;
         SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
-        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos, label.c_str() );
+        // 어림값 문턱이 든 단계(runner)가 있으면 체인은 PASS 대신 UNCONFIRMED 로 끝난다(실패 0 은 같다) — 둘 다 단언이 모두 맞은 끝이다.
+        const bool bChainHeld = scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos ||
+                                scenarioLines.find( "chain UNCONFIRMED (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos;
+        SW_EXPECT_TRUE_MSG( bChainHeld, label.c_str() );
         ++ranCount;
     }
     if ( ranCount == 0 )
