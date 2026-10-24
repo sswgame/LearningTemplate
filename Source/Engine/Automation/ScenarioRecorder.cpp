@@ -298,20 +298,89 @@ namespace sw
                 ++outResult._writtenStepCount;
             }
 
+            /** @brief 프레임 안에서 이벤트를 모아 프레임 끝에 한 단계로 쓰는 값(마우스 위치 · 휠 · 이동량)입니다. */
+            struct FrameAccumulator
+            {
+                int32   _positionX{ 0 };
+                int32   _positionY{ 0 };
+                float32 _deltaX{ 0.0f };
+                float32 _deltaY{ 0.0f };
+                float32 _wheelX{ 0.0f };
+                float32 _wheelY{ 0.0f };
+                bool    _bHasPosition{ false };
+                bool    _bHasDelta{ false };
+                bool    _bHasWheel{ false };
+            };
+
+            /** @brief 액션 스틱이 아닌 패드 축 이벤트를 `GamepadAxis` 단계로 씁니다. */
+            static void appendGamepadAxisStep( string& outBody, const RawInputEvent& event, ScenarioRecordOutput& outResult )
+            {
+                outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
+                appendFloat( outBody, event._payload._gamepadData._axisValue );
+                outBody += "\"";
+                if ( event._deviceIndex != 0 )
+                    outBody += " pad=\"" + to_string( static_cast<uint32>( event._deviceIndex ) ) + "\"";
+                outBody += "/>";
+                ++outResult._writtenStepCount;
+            }
+
+            /** @brief 글자 입력 이벤트를 `Text` 단계로 씁니다. */
+            static void appendTextStep( string& outBody, const RawInputEvent& event, ScenarioRecordOutput& outResult )
+            {
+                const utf8* pText  = event._payload._textData._arrUtf8;
+                size_t      length = 0;
+                while ( length < constant::kMaxBuffer32 && pText[length] != '\0' )
+                {
+                    ++length;
+                }
+                outBody += "<Text value=\"";
+                appendEscaped( outBody, string_view{ pText, length } );
+                outBody += "\"/>";
+                ++outResult._writtenStepCount;
+            }
+
+            /** @brief 위치와 이동량은 프레임 끝의 값 하나로 씁니다. 눌림보다 뒤에 오지만 같은 프레임이라 실행기는 한 번에 적용한다. */
+            static void appendAccumulatedSteps( string& outBody, const FrameAccumulator& accumulator, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult )
+            {
+                if ( accumulator._bHasPosition )
+                {
+                    outBody += "<MousePosition x=\"";
+                    appendFloat( outBody, toFraction( accumulator._positionX, settings._clientWidth ) );
+                    outBody += "\" y=\"";
+                    appendFloat( outBody, toFraction( accumulator._positionY, settings._clientHeight ) );
+                    outBody += "\"/>";
+                    ++outResult._writtenStepCount;
+                }
+                if ( accumulator._bHasWheel )
+                {
+                    outBody += "<Wheel";
+                    if ( accumulator._wheelX != 0.0f )
+                    {
+                        outBody += " x=\"";
+                        appendFloat( outBody, accumulator._wheelX );
+                        outBody += "\"";
+                    }
+                    outBody += " y=\"";
+                    appendFloat( outBody, accumulator._wheelY );
+                    outBody += "\"/>";
+                    ++outResult._writtenStepCount;
+                }
+                if ( accumulator._bHasDelta )
+                {
+                    outBody += "<MouseDelta x=\"";
+                    appendFloat( outBody, accumulator._deltaX );
+                    outBody += "\" y=\"";
+                    appendFloat( outBody, accumulator._deltaY );
+                    outBody += "\"/>";
+                    ++outResult._writtenStepCount;
+                }
+            }
+
             /** @brief 한 프레임의 이벤트를 단계 글로 씁니다. 쓴 단계 수를 더하고, 못 쓴 이벤트를 셉니다. */
             static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
                                           ScenarioRecordOutput& outResult )
             {
-                bool    bHasPosition = false;
-                int32   positionX    = 0;
-                int32   positionY    = 0;
-                bool    bHasDelta    = false;
-                float32 deltaX       = 0.0f;
-                float32 deltaY       = 0.0f;
-                bool    bHasWheel    = false;
-                float32 wheelX       = 0.0f;
-                float32 wheelY       = 0.0f;
-
+                FrameAccumulator accumulator{};
                 for ( const RawInputEvent& event : frame._listRawEvent )
                 {
                     if ( event._bSynthetic != SW_FALSE && settings._bIncludeSynthetic == false )
@@ -361,56 +430,40 @@ namespace sw
                                 ++outResult._skippedEventCount;
                                 break;
                             }
-                            bHasPosition = true;
-                            positionX    = event._payload._mouseData._x;
-                            positionY    = event._payload._mouseData._y;
+                            accumulator._bHasPosition = true;
+                            accumulator._positionX    = event._payload._mouseData._x;
+                            accumulator._positionY    = event._payload._mouseData._y;
                             break;
                         }
                         case RawInputEventType::MouseRawDelta:
                         {
-                            bHasDelta = true;
-                            deltaX += event._payload._mouseData._rawDelta._x;
-                            deltaY += event._payload._mouseData._rawDelta._y;
+                            accumulator._bHasDelta = true;
+                            accumulator._deltaX += event._payload._mouseData._rawDelta._x;
+                            accumulator._deltaY += event._payload._mouseData._rawDelta._y;
                             break;
                         }
                         case RawInputEventType::MouseWheel:
                         {
-                            bHasWheel = true;
-                            wheelY += event._payload._mouseData._wheelDelta;
+                            accumulator._bHasWheel = true;
+                            accumulator._wheelY += event._payload._mouseData._wheelDelta;
                             break;
                         }
                         case RawInputEventType::MouseWheelHorizontal:
                         {
-                            bHasWheel = true;
-                            wheelX += event._payload._mouseData._wheelDelta;
+                            accumulator._bHasWheel = true;
+                            accumulator._wheelX += event._payload._mouseData._wheelDelta;
                             break;
                         }
                         case RawInputEventType::GamepadAxis:
                         {
                             // 액션의 스틱이면 값 구간을 ActionAxis 로 쓴다(advanceStickRuns) — 스틱 배치를 바꿔도 녹화가 산다.
-                            if ( trackStickAxis( event, settings, inoutListTrack ) )
-                                break;
-                            outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
-                            appendFloat( outBody, event._payload._gamepadData._axisValue );
-                            outBody += "\"";
-                            if ( event._deviceIndex != 0 )
-                                outBody += " pad=\"" + to_string( static_cast<uint32>( event._deviceIndex ) ) + "\"";
-                            outBody += "/>";
-                            ++outResult._writtenStepCount;
+                            if ( trackStickAxis( event, settings, inoutListTrack ) == false )
+                                appendGamepadAxisStep( outBody, event, outResult );
                             break;
                         }
                         case RawInputEventType::TextInput:
                         {
-                            const utf8* pText  = event._payload._textData._arrUtf8;
-                            size_t      length = 0;
-                            while ( length < constant::kMaxBuffer32 && pText[length] != '\0' )
-                            {
-                                ++length;
-                            }
-                            outBody += "<Text value=\"";
-                            appendEscaped( outBody, string_view{ pText, length } );
-                            outBody += "\"/>";
-                            ++outResult._writtenStepCount;
+                            appendTextStep( outBody, event, outResult );
                             break;
                         }
                         case RawInputEventType::None:
@@ -428,40 +481,7 @@ namespace sw
                         }
                     }
                 }
-
-                // 위치와 이동량은 프레임 끝의 값 하나로 쓴다. 눌림보다 뒤에 오지만 같은 프레임이라 실행기는 한 번에 적용한다.
-                if ( bHasPosition )
-                {
-                    outBody += "<MousePosition x=\"";
-                    appendFloat( outBody, toFraction( positionX, settings._clientWidth ) );
-                    outBody += "\" y=\"";
-                    appendFloat( outBody, toFraction( positionY, settings._clientHeight ) );
-                    outBody += "\"/>";
-                    ++outResult._writtenStepCount;
-                }
-                if ( bHasWheel )
-                {
-                    outBody += "<Wheel";
-                    if ( wheelX != 0.0f )
-                    {
-                        outBody += " x=\"";
-                        appendFloat( outBody, wheelX );
-                        outBody += "\"";
-                    }
-                    outBody += " y=\"";
-                    appendFloat( outBody, wheelY );
-                    outBody += "\"/>";
-                    ++outResult._writtenStepCount;
-                }
-                if ( bHasDelta )
-                {
-                    outBody += "<MouseDelta x=\"";
-                    appendFloat( outBody, deltaX );
-                    outBody += "\" y=\"";
-                    appendFloat( outBody, deltaY );
-                    outBody += "\"/>";
-                    ++outResult._writtenStepCount;
-                }
+                appendAccumulatedSteps( outBody, accumulator, settings, outResult );
             }
         };
     } // namespace
