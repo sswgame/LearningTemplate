@@ -186,7 +186,7 @@ namespace sw
         if ( FixedLayoutInternal::isQuantizedRangeValid( minValue, maxValue, step ) == false )
             return false;
         // 칸 수가 32 비트를 넘으면 정수 변환이 넘칩니다. 칸 수 계산(반올림)은 `BitWriter::writeQuantizedFloat` 와 같지만 범위 밖 값의 규칙은 다릅니다.
-        // 여기서는 유한한 범위 밖 값을 경계로 자릅니다(`Step` 실수는 경계로 자른다는 설계, `docs/plans/ReflectionFormats.md` 3.4). 범위는 선언의 `Min` · `Max` 라
+        // 여기서는 유한한 범위 밖 값을 경계로 자릅니다(`Step` 실수는 경계로 자른다는 설계, `Source/Engine/Serialization/Fixed/README.md` 3.4). 범위는 선언의 `Min` · `Max` 라
         // 스키마 해시에 들어가고, 자른 값도 같은 해시의 받는 쪽이 같은 뜻으로 읽습니다. 손 코덱의 `BitWriter` 는 범위를 호출부가 손으로 정하므로 범위 밖을 거절합니다.
         const float64 indexCount = ( static_cast<float64>( maxValue ) - static_cast<float64>( minValue ) ) / static_cast<float64>( step );
         if ( indexCount >= static_cast<float64>( std::numeric_limits<uint32>::max() ) )
@@ -409,7 +409,7 @@ namespace sw
             return FixedReadResult::Truncated;
         if ( schemaHash != codec._pComputeSchemaHash() )
         {
-            // 변환 레지스트리를 볼 자리입니다. 키는 (기록된 해시, 대상 타입)이고 값은 옛 바이트를 새 객체로 바꾸는 함수입니다(ReflectionFormats.md 3.14).
+            // 변환 레지스트리를 볼 자리입니다. 키는 (기록된 해시, 대상 타입)이고 값은 옛 바이트를 새 객체로 바꾸는 함수입니다(Source/Engine/Serialization/Fixed/README.md 3.14).
             // 변환할 옛 B 데이터가 없어 레지스트리가 아직 없으므로 거절합니다.
             return FixedReadResult::SchemaMismatch;
         }

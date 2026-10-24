@@ -195,6 +195,24 @@ namespace sw
                 return true;
             }
 
+            /** @brief `state.objects` — 이름 있는 오브젝트마다 해시(`<16자리 16진 해시> <이름>`)를 답합니다. 어긋난 틱 근처에서 두 프로세스의 답을 견주면 어느 오브젝트가 다른지 나옵니다(`SceneStateHash::findDifferingObjects`). */
+            static bool runStateObjects( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                vector<SceneObjectHash> listObject;
+                SceneStateHash::collectObjects( *pManager, listObject );
+                outReply.clear();
+                SceneStateHash::writeObjectReport( listObject, outReply );
+                return true;
+            }
+
             static bool runStateHashes( const vector<string>& listArgument, string& outReply )
             {
                 uint64     fromTick  = 0;
@@ -241,6 +259,8 @@ namespace sw
                     &SceneInspectCommandsInternal::runObjectDump );
     SW_DEV_COMMAND( ScenePoses, "scene.poses", "scene.poses", "Print the world position of every named object that has a transform (name x y z)", &SceneInspectCommandsInternal::runPoses );
     SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
+    SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
+                    &SceneInspectCommandsInternal::runStateObjects );
     SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count>", "Print the recorded per-tick state hashes (needs -gv_stateHashHistory)",
                     &SceneInspectCommandsInternal::runStateHashes );
     SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count>", "Print the latest <count> recorded state hashes on one line (the editor Sync tab reads client histories this way)",

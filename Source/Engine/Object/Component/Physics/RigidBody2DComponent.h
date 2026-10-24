@@ -46,7 +46,7 @@ namespace sw
         RigidBody2DComponent();
         ~RigidBody2DComponent() override = default;
 
-        /** @brief 바디 핸들입니다(시작 전 · 꺼짐이면 무효). 질의 결과 · 이벤트의 바디와 견줍니다. */
+        /** @brief 바디 핸들입니다(시작 전 · 꺼짐이면 무효). 질의 결과 · 이벤트의 바디와 비교합니다. */
         PhysicsBodyHandle getBodyHandle() const { return _body; }
         /** @brief 바디가 사는 2D 씬입니다(없으면 nullptr). */
         IPhysicsBodyScene2D* findScene() const;

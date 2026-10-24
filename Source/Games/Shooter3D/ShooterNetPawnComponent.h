@@ -7,7 +7,7 @@
  *            (`ReplicationServer::popInput`, 늦으면 지난 입력을 되풀이) `ShooterBodyMovementComponent::simulate` 로 움직이고, 상태를 소유자 상태(그 입력 틱과 한 쌍)와
  *            엔티티로 싣는다. 엔티티 자리는 관심 영역 정책(`InterestReplicationPolicy`)에 알린다.
  *          - 클라이언트: 틱마다 폰 의도를 입력으로 만들어 보내고(`ReplicationClient::sendInput`) 바로 같은 함수로 예측한다(`ClientPrediction::record`).
- *            새 소유자 상태가 오면 그 입력 틱의 기록과 견줘(`reconcile`) 다르면 남은 입력을 다시 시뮬레이션하고, 보정 전후 자리 차이를 `PredictionSmoother` 로 녹인다.
+ *            새 소유자 상태가 오면 그 입력 틱의 기록과 비교해(`reconcile`) 다르면 남은 입력을 다시 시뮬레이션하고, 보정 전후 자리 차이를 `PredictionSmoother` 로 녹인다.
  *          점프 버튼은 그 프레임에 틱이 없으면 놓친다(눌림 판정은 프레임마다다) — 고정 틱 입력 모으기는 남은 일이다.
  */
 #pragma once
@@ -103,5 +103,6 @@ namespace sw
         uint32                                               _reconciledTick; ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         int32                                                _controllerID;   ///< 서버 — 이 몸을 조종하는 연결(-1 이면 없다)
         Role                                                 _role;
+        uint8                                                _bJumpPending; ///< 클라이언트 — 틱이 없던 프레임에 눌린 점프를 다음 입력 틱까지 쌓아 둔다(눌림은 한 프레임만 참이라 놓치기 쉽다)
     };
 } // namespace sw

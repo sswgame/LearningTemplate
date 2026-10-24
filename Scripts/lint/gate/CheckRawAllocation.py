@@ -7,7 +7,7 @@
 이 게이트는 그 형식으로 못 바꾸는 틈만 목록으로 남긴다: 외부 라이브러리가 할당 · 해제 콜백을 요구하는 자리(`pugi::set_memory_management_functions` 등),
 락 없이 읽는 표에 올리는 블록, 리플렉션이 만든 형식 소거 인스턴스. 이 자리는 소유 형식으로 감쌀 수 없어서(콜백은 `void*` 를 돌려준다) 형식이 막지 못한다.
 
-맨 `sw_new` 는 `Style/RawNew`(`CheckCodeConventions`) 가 같은 이유로 막는다.
+맨 `new` 는 `Style/RawNew`(`CheckCodeConventions`) 가 같은 이유로 막는다(`sw_new` 매크로는 없앴으므로 맨 포인터를 돌려주는 sw 할당 표기가 없다).
 
 `Source/Core/Memory/` 는 할당자 자신이라 보지 않는다. 주석 · 문자열 안의 언급과 테스트(`Test/`)도 보지 않는다.
 예외는 `Scripts/lint/rules/CheckRawAllocation.toml` 의 `[exemption]` 한 곳이다. 예외 파일이 더는 맨 할당을 쓰지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).

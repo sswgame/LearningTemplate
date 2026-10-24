@@ -44,7 +44,9 @@ cd build/Ninja-Debug/Bin
 - **말 AI**(`BessieAI` · `ShadowAI`)는 시작할 때 말을 쥐고(`_possessAtStart`) 기수를 주인으로 따라갑니다. 기수가 타면 빙의를 내주고, 내리면 다시 쥡니다.
 - **목장**(`Ranch`)의 `WildWestDirectorComponent` 가 서부극 카탈로그를 읽고(`_westernDataPath`), 카메라 디렉터(`CameraDirectorComponent` + 프리셋 `data/prairie.cameras.xml`)의 초점을 기수에 두고(`setFocusPoint`), 휘파람을 말 AI 에 전하고, 같은 오브젝트의 HUD 에 한 줄을 씁니다.
   HUD 는 게임의 `WildWestHUDViewModel`(탑승 상태 글 `_rideStatus` · 말 스태미나 `_stamina` · `_staminaRatio`)을 `HUDControllerComponent` 에 걸어 씁니다(`ui/hud.ui.xml`).
-- 말과 기수는 큐브와 캡슐을 쌓은 자리 표시입니다. 말 모델과 걸음새 애니메이션은 아직 없습니다.
+- 말은 상자로 만든 스킨드 자리 표시 모델(`models/horse_placeholder.mesh`, 생성기 `GeneratePlaceholderHorse.py`)이고, 그래프 `data/horse.animgraph.xml` 의 블렌드 스페이스가 `MountMovementComponent` 가 쓰는 Float `Gait` 로 걸음새 클립 넷(Walk · Trot · Canter · Gallop)을 섞습니다.
+  기수는 캡슐을 쌓은 자리 표시이고 `VehicleSeatComponent::_seatOffset` 이 안장 뼈 높이입니다(좌석 소켓은 외형 컴포넌트의 소켓이라 외형이 없는 말은 오프셋을 씁니다).
+  서 있는 클립(Idle)이 없어 Gait 0 에서도 Walk 가 돕니다 — 진짜 말 모델이 들어오면 그래프에 한 줄을 더합니다.
 
 ## 더 볼 곳
 

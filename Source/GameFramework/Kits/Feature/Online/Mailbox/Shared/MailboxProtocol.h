@@ -155,7 +155,7 @@ namespace sw
     struct SW_KIT_API MailboxNewMail
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/plans/ServerBusFormat.md 3.4)
+        static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = 256 )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
         PROPERTY( MaxCount = 128 )

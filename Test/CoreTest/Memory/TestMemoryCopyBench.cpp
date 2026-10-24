@@ -2,7 +2,7 @@
  * @file TestMemoryCopyBench.cpp
  * @brief `Memory::copy` · `Memory::compare` 한 번의 비용 — 8 · 16 · 64 · 256 · 4096 바이트.
  * @details 숫자를 **찍기만** 한다. Release 로 읽는다. 구조 최적화 B ⑤(헤더 inline — DLL 경계를 넘는 호출을 없애 작은 크기를 내장 복사로)의 전/후를
- *          잰다(표는 `docs/plans/StructuralOptimization.md`).
+ *          측정한다(표는 `docs/plans/StructuralOptimization.md`).
  */
 #include "pch.h"
 
@@ -61,5 +61,5 @@ SW_TEST_CASE( MemoryCopyBenchTest, CopyAndCompareBySize )
         SW_LOG_INFO( "[Bench] Memory::copy %# B: %#.%# ns, Memory::compare %# B: %#.%# ns", size, copyDeciNanos / 10, copyDeciNanos % 10, size,
                      compareDeciNanos / 10, compareDeciNanos % 10 );
     }
-    SW_EXPECT_TRUE( differenceSum != 0 ); // 마지막 바이트를 바꿔 가며 견주므로 다른 판이 반드시 있다
+    SW_EXPECT_TRUE( differenceSum != 0 ); // 마지막 바이트를 바꿔 가며 비교하므로 다른 판이 반드시 있다
 }

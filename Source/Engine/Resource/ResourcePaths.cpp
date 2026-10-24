@@ -83,7 +83,7 @@ namespace sw
             inline static std::once_flag _s_initOnce{};
 
             /**
-             * @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
+             * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
              * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다).
              */
             static vector<string> readBasePriority()
@@ -279,7 +279,7 @@ namespace sw
                 currentPath = parent;
             }
 
-            SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder를 찾지 못했습니다" );
+            SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder not found" );
             if ( rootPath.empty() )
                 return; // 플래그를 켜지 않는다. initialize() 가 false 를 반환한다.
 
@@ -609,7 +609,7 @@ namespace sw
 
     const vector<string>& ResourcePaths::getDefaultSearchPriority()
     {
-        // 값의 출처는 `Config/Engine/EngineConfig.json` 하나다. 기동의 이 시점에는 설정을 아직 읽지 않았으므로 구성 때 구운 같은 파일의 사본에서
+        // 값의 출처는 `Config/Engine/EngineConfig.json` 하나다. 기동의 이 시점에는 설정을 아직 읽지 않았으므로 구성 때 베이크한 같은 파일의 사본에서
         // 이 칸만 읽는다(리플렉션이 서기 전이라 JSON 문서로). 실행 중 값은 설정을 읽은 뒤 `AssetManager::mountContent` 가 다시 넣는다.
         static const vector<string> s_listDefaultPriority = ResourcePathsInternal::readBasePriority();
         return s_listDefaultPriority;

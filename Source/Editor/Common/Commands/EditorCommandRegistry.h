@@ -152,13 +152,13 @@ namespace sw::editor
 {
     /**
      * @brief 커맨드가 씬을 바꾸는지입니다. 모든 커맨드가 정한다(테이블 줄 · `SW_EDITOR_COMMAND` 의 필수 칸 — 빠뜨리면 컴파일되지 않는다).
-     * @details `Scene` 이면 레지스트리가 커맨드 자신의 켜짐 조건과 함께 편집 허용 답(`EditorPlaySession::areSceneEditsAllowed` — 플레이 중 · 굽기처럼 편집을
+     * @details `Scene` 이면 레지스트리가 커맨드 자신의 켜짐 조건과 함께 편집 허용 답(`EditorPlaySession::areSceneEditsAllowed` — 플레이 중 · 베이크처럼 편집을
      *          막는 작업 중이면 false)을 묻는다(`EditorCommandRegistry::isEnabled`). 커맨드마다 그 답을 기억해 묻지 않게 하는 한 창구다.
      */
     enum class EditorCommandEdit : uint8
     {
         NoScene, ///< 씬을 바꾸지 않는다(창 열기 · 저장 · 빌드 · 플레이 조작)
-        Scene,   ///< 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 굽기 · Undo)
+        Scene,   ///< 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 베이크 · Undo)
     };
 } // namespace sw::editor
 

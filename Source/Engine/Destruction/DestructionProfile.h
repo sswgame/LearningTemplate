@@ -4,7 +4,7 @@
  * @details 같은 `.fracture` 를 콘크리트나 나무로 다르게 부수려면 테이블만 바꾸면 된다(다시 쿠킹하지 않는다). 모르는 원소나 속성, 숫자가 아닌 값은 로드 오류다.
  * @code
  *     <DestructionProfile density="2000" physicsMaterial="Default">
- *       <Strain thresholds="60 90 40"/>              <!-- 깊이 0(뿌리), 1, 2 순서이고, 더 깊으면 마지막 값을 쓴다 -->
+ *       <Strain thresholds="60 90 40"/>              <!-- 깊이 0(루트), 1, 2 순서이고, 더 깊으면 마지막 값을 쓴다 -->
  *       <Links strength="400" supportStrength="30000"/>
  *       <Impact impulseToStrain="0.4" minImpulse="40" radius="0.35"/>
  *       <Debris lifetime="10" maxBodies="96" smallVolume="0.002" fadeTime="0.5" sleepRemoveTime="1.5" keepCollisionVolume="0.05" hullShrink="0.01"/>

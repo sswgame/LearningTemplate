@@ -531,7 +531,7 @@ namespace sw
                 // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
                 if ( iter->second->setValueFromString( pendingValue ) == false )
                 {
-                    SW_LOG_WARNING( "-%#=%# : 값이 변수 타입과 맞지 않습니다. 무시됩니다",
+                    SW_LOG_WARNING( "-%#=%# : the value does not match the variable type. Ignored",
                                     strName.c_str(), pendingValue.c_str() );
                 }
             }

@@ -44,7 +44,7 @@ namespace sw
         };
         /**
          * @brief 로컬 값 하나를 가리키는 비트입니다. 세터, 틱 대기 표시(`_arrPendingMask`), 쓰기 건(`SceneTransformWrite`)이 같은 비트를 씁니다.
-         * @details 세 값을 다루는 곳(세터 세 개, 틱 대기, 쓰기 큐 합치기, 배치 적용, 대기 적용)은 세 갈래로 분기하지 않고 이 비트로 고른다.
+         * @details 세 값을 다루는 곳(세터 세 개, 틱 대기, 쓰기 큐 합치기, 배치 적용, 대기 적용)은 세 분기로 분기하지 않고 이 비트로 고른다.
          */
         enum LocalValueBit : uint8
         {

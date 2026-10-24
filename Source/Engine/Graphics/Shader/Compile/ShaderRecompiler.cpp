@@ -131,7 +131,7 @@ namespace sw
             ShaderReflectionLibrary::clearCache();
         }
 
-        SW_LOG_INFO( "Shader reload: %# 개 확인, %# 개 갱신, %# 개 실패.",
+        SW_LOG_INFO( "Shader reload: %# checked, %# updated, %# failed.",
                      static_cast<uint32>( listToCompile.size() ), changed, failed );
     }
 

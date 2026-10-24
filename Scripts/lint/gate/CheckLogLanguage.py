@@ -6,8 +6,8 @@
 적은 줄과 한 번에 찾지 못한다. 대상은 `SW_LOG_ERROR` · `SW_LOG_WARNING` · `SW_LOG_INFO` · `SW_LOG_TRACE` · `SW_LOG_ASSERT` · `SW_ASSERT`(및 `SW_ASSERT_*`)의 인자다.
 호출은 `;` 까지 한 덩어리로 본다(여러 줄 호출 포함). 주석 안의 한글은 이 규칙 밖이다.
 
-기존 한글 줄은 폴더 단위로 예외(`Scripts/lint/rules/CheckLogLanguage.toml` 의 `[exemption]`, fnmatch 패턴)에 두고, 폴더를 영어로 고치면 그 줄은 낡은 예외로
-실패하므로 지워야 한다([KoreanLogStrings](../../../docs/plans/KoreanLogStrings.md)). 새 폴더에는 한글 로그를 들일 수 없다.
+예외는 없다(기존 한글 줄은 [KoreanLogStrings](../../../docs/plans/KoreanLogStrings.md) 에서 모두 영어로 옮겼다). 호출 인자 밖에서 만든 글(변수에 담아 넘기는
+한글 상수)은 이 게이트가 보지 못한다 — 로그로 나가는 글은 호출 안에 리터럴로 적는다.
 
   python Scripts/lint/gate/CheckLogLanguage.py [--root <repo>] [--files a.cpp b.h]
 """
@@ -21,10 +21,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from lint.LintGate import LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
-_kListScanRoot = ("Source", "Test")
+_kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 
 #: 로그 · assert 호출의 시작. 인자는 `;` 까지다.
@@ -46,15 +47,8 @@ def findHangulCalls(source: SourceFile) -> list[tuple[int, str]]:
 
 
 def findLogLanguageViolations(source: SourceFile) -> list[str]:
-    """예외 폴더 밖의 한글 로그 줄을 위반 문자열로 돌려줍니다. 예외에 맞는 파일은 보면 `see`, 한글이 있으면 `use` 로 적습니다."""
-    gate = CheckLogLanguageGate
+    """한글이 든 로그 · assert 호출을 위반 문자열로 돌려줍니다."""
     listFound = findHangulCalls(source) if _kHangulRe.search(source.noComment) is not None else []
-    key = gate.findExemptionKey(source.relative)
-    if key is not None:
-        gate.seeExemption(key)
-        if listFound:
-            gate.useExemption(key)
-        return []
     return [f"{source.relative}:{lineNumber}: {name} 에 한글  | {source.listLine[lineNumber - 1].strip()}" for lineNumber, name in listFound]
 
 
@@ -72,7 +66,7 @@ class CheckLogLanguageGate(LintGate):
     violationHeader = "한글이 든 로그 · assert 문자열"
     hint = (
         "  로그와 assert 문자열은 영어로 씁니다: SW_LOG_WARNING( \"Failed to load '{}'\", path );\n"
-        "  이미 있는 폴더의 한글 줄은 Scripts/lint/rules/CheckLogLanguage.toml 의 [exemption] 폴더 줄이 받고 있습니다(docs/plans/KoreanLogStrings.md)."
+        "  이 규칙에는 예외가 없습니다(docs/plans/KoreanLogStrings.md)."
     )
     selfTestCases = [
         {
@@ -84,11 +78,6 @@ class CheckLogLanguageGate(LintGate):
             "name": "여러 줄 호출의 한글 assert",
             "expectedViolation": "Test/Probe/B.cpp:3: SW_ASSERT 에 한글",
             "files": {"Test/Probe/B.cpp": "void f()\n{\n    SW_ASSERT( pValue != nullptr\n               && \"값이 필요합니다\" );\n}\n"},
-        },
-        {
-            "name": "더는 한글이 없는 예외 폴더(낡은 예외)",
-            "expectedViolation": "[낡은 예외] 'Source/Core/CommandLine/*'",
-            "files": {"Source/Core/CommandLine/D.cpp": "void f()\n{\n    SW_LOG_ERROR( \"Load failed\" );\n}\n"},
         },
     ]
 

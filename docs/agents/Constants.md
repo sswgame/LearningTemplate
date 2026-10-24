@@ -1,3 +1,7 @@
+> 질문: 상수는 어디에 두고 어떻게 이름 붙이는가?
+> 독자: 상수나 튜닝 값을 더하거나 옮기는 사람.
+> 결론: 한 의미는 한 곳에만 정의한다. 한 `.cpp` 면 그 파일의 `XxxInternal`, 한 모듈이면 소유 타입, 모듈 사이 계약이면 계약 헤더에 둔다. 게임플레이 튜닝 값은 상수가 아니라 데이터다.
+
 ## Constants — where a constant lives
 
 One meaning, one definition. A second copy of a value compiles, passes tests, and drifts the day one side changes.

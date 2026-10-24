@@ -21,7 +21,7 @@
 namespace sw
 {
     /**
-     * @brief `-gv_tickCostDispatch=1`: 씬 틱의 병렬 분배를 앞 항목을 직접 돌아 잰 비용으로 고릅니다(`TaskManager::runParallelByCost`). 기동 때 정하는 값입니다.
+     * @brief `-gv_tickCostDispatch=1`: 씬 틱의 병렬 분배를 앞 항목을 직접 돌아 측정한 비용으로 고릅니다(`TaskManager::runParallelByCost`). 기동 때 정하는 값입니다.
      * @details 기본(0)은 옛 방식(항목 16 개 이상이면 늘 나눈다)이다. 실제 게임 여덟 개에서 이득은 한 곳뿐이고 일곱 곳은 같거나 느렸다
      *          (결정 기록 5-6). 상용 엔진도 틱 분배는 정적 그레인 크기를 쓴다. 프레임 사이에 비용을 기억하는 방식을 재 보기 위해 남긴 스위치다.
      */
@@ -34,7 +34,7 @@ namespace sw
             /** @brief 옛 방식의 임계값입니다: 항목이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다(`gv_tickCostDispatch` 가 0 일 때만). */
             static constexpr uint32 kLegacyParallelThreshold = 16;
 
-            /** @brief [0, count) 를 병렬 분배합니다. 스위치가 켜지면 잰 비용으로, 기본(꺼짐)은 옛 고정 임계값으로 고릅니다. */
+            /** @brief [0, count) 를 병렬 분배합니다. 스위치가 켜지면 측정한 비용으로, 기본(꺼짐)은 옛 고정 임계값으로 고릅니다. */
             static void dispatch( uint32 count, const ParallelBlockDelegate& body )
             {
                 if ( gv_tickCostDispatch )
@@ -123,7 +123,7 @@ namespace sw
 
                 void tickRange( uint32 start, uint32 end )
                 {
-                    // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 견주면 병렬 효율이 보인다.
+                    // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 비교하면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
                     TickThreadState& threadState = beginRange( *_pHierarchy );
                     const uint32     entryEnd    = MathUtil::min( end, _entryCount );

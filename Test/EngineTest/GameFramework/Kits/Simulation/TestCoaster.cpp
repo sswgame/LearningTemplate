@@ -115,7 +115,7 @@ SW_TEST_CASE( CoasterTest, FrictionlessDropConservesEnergy )
     params._rollingResistance = 0.0f;
     params._dragCoefficient   = 0.0f;
     CoasterTrain train;
-    train.initialize( &track, params, 0.0f );
+    SW_EXPECT_TRUE( train.initialize( &track, params, 0.0f ) );
     train.setSpeed( 1.0f );
     while ( train.getDistance() < 60.0f && train.getElapsedTime() < 30.0f )
     {
@@ -135,7 +135,7 @@ SW_TEST_CASE( CoasterTest, LiftBrakesAndStationDriveTheTrain )
     const CoasterTrack   track = buildTestCircuit( false, 20.0f );
     CoasterPhysicsParams params;
     CoasterTrain         train;
-    train.initialize( &track, params, 0.0f );
+    SW_EXPECT_TRUE( train.initialize( &track, params, 0.0f ) );
 
     bool    bSawLift        = false;
     bool    bLiftAtSpeed    = true;

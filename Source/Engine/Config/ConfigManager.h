@@ -37,8 +37,8 @@ namespace sw
     };
 
     /**
-     * @brief 호스트 설정 하나를 어디서 읽는지입니다. `disk`(파일 경로)와 `baked`(configure 때 구운 JSON) 두 값뿐입니다.
-     * @details 출처를 호출 서명에 둔다. "디스크에 없으면 구운 JSON" 같은 연결은 만들 수 없다 — 부르는 쪽(빌드 구성)이 하나를 고른다.
+     * @brief 호스트 설정 하나를 어디서 읽는지입니다. `disk`(파일 경로)와 `baked`(configure 때 베이크한 JSON) 두 값뿐입니다.
+     * @details 출처를 호출 서명에 둔다. "디스크에 없으면 베이크한 JSON" 같은 연결은 만들 수 없다 — 부르는 쪽(빌드 구성)이 하나를 고른다.
      */
     class ConfigSource
     {
@@ -168,7 +168,7 @@ namespace sw
 
         /**
          * @brief 선택 설정 하나를 @p source 에서 읽어 등록합니다. 없는 것을 `Missing` 으로 돌려주고 로그는 남기지 않습니다.
-         * @details `disk` 는 `loadConfigFile` 과 같다. `baked` 는 구운 JSON 을 읽으며 없음이 없다(읽으면 `Loaded`, 틀리면 `Invalid`).
+         * @details `disk` 는 `loadConfigFile` 과 같다. `baked` 는 베이크한 JSON 을 읽으며 없음이 없다(읽으면 `Loaded`, 틀리면 `Invalid`).
          *          없어도 되는 설정만 쓴다 — 없을 때 무엇을 할지는 부르는 쪽이 정하되 `T{}` 를 대신 만들어 쓰지 않는다.
          */
         template <typename T>
@@ -181,7 +181,7 @@ namespace sw
 
         /**
          * @brief 필수 호스트 설정 하나를 @p source 에서 읽어 등록하고 포인터를 반환합니다. 없거나 틀리면 nullptr 이고, 부르는 쪽이 기동을 멈춥니다.
-         * @details 파일이 없는 것도 오류다(경로와 함께 남긴다). 구운 JSON · `T{}` 로 조용히 대신하지 않는다 — 고친 값이 무시되거나 틀린 상태로 서는 것을 아무도 모른다.
+         * @details 파일이 없는 것도 오류다(경로와 함께 남긴다). 베이크한 JSON · `T{}` 로 조용히 대신하지 않는다 — 고친 값이 무시되거나 틀린 상태로 서는 것을 아무도 모른다.
          *          틀린 파일(모르는 키, 읽지 못한 값, 범위 밖)의 오류는 키 이름과 함께 이미 남았다. 출처는 빌드 구성이 고른다(Shipping 은 `baked`, 그 밖은 `disk`).
          */
         template <typename T>

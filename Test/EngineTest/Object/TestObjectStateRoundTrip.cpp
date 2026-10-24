@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
@@ -245,7 +246,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
     sw::MaterialCache&    cache = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>();
-    SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 테스트가 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
+    SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "Another test holds this material - the reference check is empty" );
 
     sw::GameObjectManager manager;
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Painted" ) );
@@ -974,7 +975,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
     {
         const EnumShiftComponent*   pRenamedEnum = pRenamedObject->getComponent<EnumShiftComponent>();
         const SchemaShiftComponent* pRenamedNext = pRenamedObject->getComponent<SchemaShiftComponent>();
-        SW_ASSERT_TRUE_MSG( pRenamedEnum != nullptr && pRenamedNext != nullptr, "읽지 못한 enum 칸 하나에 컴포넌트가 사라졌습니다" );
+        SW_ASSERT_TRUE_MSG( pRenamedEnum != nullptr && pRenamedNext != nullptr, "One unreadable enum field made the component disappear" );
         SW_EXPECT_TRUE_MSG( pRenamedEnum->_color == StateShiftColor::Red, "지운 열거자가 그 값의 다른 열거자(Lime)로 읽혔습니다" );
         SW_EXPECT_EQUAL( 5, pRenamedEnum->_after );
         SW_EXPECT_EQUAL( 7, pRenamedNext->_kept );

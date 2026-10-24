@@ -13,8 +13,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -37,17 +39,26 @@ namespace sw
 
 namespace sw
 {
+    struct ResourceDataKindRegistrar;
+
     /**
      * @class ResourceDataKindRegistry
-     * @brief 데이터 파일 종류의 레지스트리입니다(Engine 이미지에 하나 있으며, 엔진 · 키트 · 게임 모듈이 등록하고 모듈을 내리면 그 종류가 빠집니다).
-     * @details 등록 · 해제는 이미지 로더 스레드(정적 초기화)에서, 조회는 테스트 · 에디터에서 오므로 목록은 잠금 하나로 지킵니다. 종류의 로더는 잠금 밖에서 부릅니다
+     * @brief 데이터 파일 종류의 레지스트리입니다. 서비스 범위의 서브시스템이라 엔진 범위보다 먼저 서고 나중에 사라지며, 엔진 · 키트 · 게임 모듈이 등록하고
+     *        모듈을 내리면 그 종류가 빠집니다(`engine::getSubsystem<ResourceDataKindRegistry>()`).
+     * @details **등록 경로.** 이미지의 정적 등록자(`SW_RESOURCE_DATA_KIND`)는 레지스트리를 모르고 링크 때 목록에만 달린다(`ResourceDataKindRegistrar::getHead`).
+     *          모듈을 올린 쪽이 그 목록을 걷어 모듈 이름과 함께 올리고(`engine::registerModuleTypes` → `registerModuleKinds`), 모듈을 내리기 전에 같은 이름으로 뺀다
+     *          (`engine::unregisterModuleTypes` → `unregisterModuleKinds`). 타입 · 전역 변수 등록자와 같은 길이라 핫 리로드의 내림 처리가 따로 없다.
+     *          등록 · 해제는 모듈을 올리고 내리는 스레드에서, 조회는 테스트 · 에디터에서 오므로 목록은 잠금 하나로 지킵니다. 종류의 로더는 잠금 밖에서 부릅니다
      *          (찾은 등록 줄은 그 모듈이 내려가기 전까지 삽니다). 프레임마다 도는 경로가 아닙니다.
      */
-    class SW_API ResourceDataKindRegistry
+    class SW_API ResourceDataKindRegistry final : public ISubsystem
     {
     public:
-        /** @brief 프로세스에 하나인 레지스트리입니다(Engine 이미지의 함수 정적). */
-        static ResourceDataKindRegistry& get();
+        static constexpr const utf8* kSubsystemName = "ResourceDataKindRegistry";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         ResourceDataKindRegistry();
 
@@ -55,6 +66,13 @@ namespace sw
         bool registerKind( const ResourceDataKind* pKind );
         /** @brief 종류를 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterKind( const ResourceDataKind* pKind );
+        /**
+         * @brief 방금 올린 이미지의 정적 등록자 목록 @p pHead 를 걷어 @p moduleName 의 종류로 올립니다. 올린 순서(정적 초기화 순서)를 지킵니다.
+         * @return 올라간 종류 수입니다(이름이 겹치는 등록은 오류를 남기고 세지 않습니다).
+         */
+        uint32 registerModuleKinds( string_view moduleName, const ResourceDataKindRegistrar* pHead );
+        /** @brief @p moduleName 이 올린 종류를 모두 뺍니다(모듈 이미지를 내리기 전에). 뺀 수를 반환합니다. */
+        uint32 unregisterModuleKinds( string_view moduleName );
         /** @brief 이름(대소문자 무시)으로 종류를 찾습니다. */
         const ResourceDataKind* findByLabel( string_view label ) const;
         /** @brief @p resourceID 에 맞는 종류를 모두 모읍니다. 정상이면 0 개(카탈로그가 아닌 파일)나 1 개입니다. */
@@ -65,23 +83,31 @@ namespace sw
         uint32 getCount() const;
 
     private:
-        mutable mutex                            _mutex;        ///< 등록 목록을 지킨다(로더 실행은 잠금 밖)
-        RegistrationList<const ResourceDataKind> _registration; ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
+        mutable mutex                                          _mutex;         ///< 등록 목록을 지킨다(로더 실행은 잠금 밖)
+        RegistrationList<const ResourceDataKind>               _registration;  ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
+        unordered_map<string, vector<const ResourceDataKind*>> _mapModuleKind; ///< 모듈 이름 → 그 모듈이 `registerModuleKinds` 로 올린 종류(내릴 때 뺀다)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief `SW_RESOURCE_DATA_KIND` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
+    /**
+     * @struct ResourceDataKindRegistrar
+     * @brief `SW_RESOURCE_DATA_KIND` 가 두는 정적 등록자입니다 — 만들 때 링크 때 목록(`getHead`)에 달리기만 합니다. 레지스트리에는 모듈을 올린 쪽이 걷어 올립니다.
+     * @details 모듈 이미지가 사라지면 등록자도 함께 사라지므로, 걷지 않은 채 이미지를 내리면 목록에 죽은 등록자가 남는다.
+     *          모듈을 올리는 길(`engine::registerModuleTypes`, 핫 리로드의 `ModuleRegistrarHeads`)이 올릴 때마다 목록을 비운다 — 타입 등록자(`TypeRegistrar`)와 같은 규칙이다.
+     */
     struct SW_API ResourceDataKindRegistrar
     {
+        const ResourceDataKind*          _pKind;
+        const ResourceDataKindRegistrar* _pNext; ///< 목록의 다음(먼저 만든 쪽). 목록은 나중에 만든 것이 앞이다.
+
+        /** @brief 아직 아무도 걷어 가지 않은 등록자들의 목록 머리입니다(Engine 이미지가 가집니다). 걷어 간 쪽이 nullptr 로 비웁니다. */
+        static ResourceDataKindRegistrar*& getHead();
+
         explicit ResourceDataKindRegistrar( const ResourceDataKind* pKind );
-        ~ResourceDataKindRegistrar();
         ResourceDataKindRegistrar( const ResourceDataKindRegistrar& )            = delete;
         ResourceDataKindRegistrar& operator=( const ResourceDataKindRegistrar& ) = delete;
-
-        const ResourceDataKind* _pKind;
-        bool                    _bRegistered;
     };
 } // namespace sw
 
@@ -93,6 +119,14 @@ namespace sw
      */
     struct ResourceDataKindUtil
     {
+        /**
+         * @brief 엔진 서비스의 레지스트리에서 이름으로 종류를 찾습니다. 로더 함수(`ResourceDataLoadFunc`)처럼 서비스 범위를 받지 못하는 모듈 코드가 씁니다.
+         * @return 종류입니다. 없거나 엔진 범위가 서 있지 않으면 nullptr 입니다(부르는 쪽이 "등록되지 않은 종류" 오류로 다룬다).
+         */
+        [[nodiscard]] static const ResourceDataKind* findByLabel( string_view label );
+        /** @brief `findByLabel` 의 `collectMatches` 판입니다. 엔진 범위가 서 있지 않으면 목록을 비웁니다. */
+        static void collectMatches( string_view resourceID, vector<const ResourceDataKind*>& outListKind );
+
         /** @brief `XMLCatalog` 를 물려받은 카탈로그를 `loadFromResource` 로 읽는 로더입니다. 등록 줄에 `&ResourceDataKindUtil::loadCatalog<CropCatalog>` 로 씁니다. */
         template <typename TCatalog>
         [[nodiscard]] static bool loadCatalog( const string& resourceID )

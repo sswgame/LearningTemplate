@@ -39,20 +39,14 @@
 제목: 저장소 소유 정리의 잰 뒤에 정할 것
 옛번호: 없음
 왜 필요한가: 종료 전용 해제 함수는 모두 없앴습니다(규칙은 `Core/Memory/LifetimeScope.h` 머리 주석). 아래는 재 봐야 고칠지 정해지는 것입니다.
-못 하는 이유: (1) · (2) 는 기준선 측정(종료 보고 · 버퍼 성장)이 먼저라 지금 정할 수 없습니다. (3) 은 `getDefault` 호출 순서를 읽어 봐야 합니다.
-남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다. (3) `GimmickNodeRegistry::getDefault` 의 기동 단계 등록(`ded0a6fd6`)을 `ScopeOwned` 로 바꿀 수 있는지 본다.
+못 하는 이유: (1) · (2) 는 기준선 측정(종료 보고 · 버퍼 성장)이 먼저라 지금 정할 수 없습니다 — 자라지 않으면 아무것도 바꾸지 않는 것이 답입니다.
+끝낸 것: (3) `GimmickNodeRegistry::getDefault` 는 `ScopeOwned<DefaultRegistryHolder>` 로 바꿨습니다. 처음 쓰는 쪽이 기준선 뒤에 세워도 엔진 종료가 범위를 닫을 때 종료 보고 전에 사라지므로, 기동 단계(`ModuleTypes`)에서 미리 세우던 `TypeRegistrar`(`ded0a6fd6`)는 지웠습니다. 확인은 종료 누수 테스트(`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`, 보통 · 에디터 실행) 통과입니다.
+남은 것: (1) `BinarySerializer` 의 `thread_local` 버퍼 넷 · `ShaderParameterBinder` 의 `s_cbBytes` — 기준선 뒤에 자라는지 먼저 잰다(자라면 스레드 슬롯 · 바인더가 소유). (2) `LiveReloadManager::clearContexts` · `ModuleDependencyGraph::clear` 의 표 용량 — 소유자 소멸이 종료 보고 뒤인지 본다.
 함정: `SceneTransformStorage::get` · `ResourcePaths` 경로 캐시는 엔진 수명 범위가 닫힌 뒤 쓰면 멈추거나(트랜스폼) 캐시하지 않는다(Debug 단언). 한 프로세스에서 엔진을 두 번 세우는 테스트 호스트가 생기면 이 계약이 먼저 걸린다.
 
 ## 정리
 
 설계 판단이나 측정이 먼저인 정리 후보(StableAddressMap · VectorAliasLoops · StlContainerConfig · 이름 읽기 전수 · 에디터 명령 id 형식 · AnimationUpdateAnomalies)는 [EngineCleanups](EngineCleanups.md) 의 단위가 되었습니다.
-
-### PreludeAndFwdCleanup
-제목: 작은 정리 후보
-옛번호: C-22
-왜 필요한가: 2026-10-13 병합 검토에서 모은 것입니다.
-남은 것: `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일, 프렐류드 예외 제거(184 파일).
-함정: Core → Log 예외는 티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않습니다.
 
 ### FunctorLambdaCommonization
 제목: 함수 객체 · 람다 공통화 2단계
@@ -68,13 +62,13 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 이름 붙은 지역 람다 Engine/Graphics 끝(2026-10-24, `wt/lambdagfx`): 해제 큐 장부 해제 `RHIReleaseQueue::enqueueLedgerRelease` 계열, 메시 정점 생성기, 바인딩 계약 표, Vulkan 로드 · 저장 동작 변환을 함수로 뺐다. 캡처가 본질인 5줄 안쪽 람다(`recycleCb`, `waitForQuery`, `setRootDescriptor`, `nextUnit`, `uploadOne`)는 남겼다.
 이름 붙은 지역 람다(Engine Renderer · Destruction · Animation · Automation 외, 2026-10-24 `wt/lambdaeng`): 검증 실패 보고 `fail` 2곳은 `FractureGraphUtil::reportInvalid`, 패킷 쓰기 `pushUint32` · `pushString`, 장면 팔레트 `appendPalette`, 시나리오 `appendSlot`, `RenderGraph` 의 `request` · `touch` 는 함수로 뺐습니다. 캡처가 본질인 짧은 것(Water `vertexAt`, Profiler `findThread` · `findSlot`, FacialRig, RenderPipelineAsset 등)과 형식이 다른 `addIfInside` 2곳은 남겼습니다.
 이름 붙은 지역 람다 Kits 끝(2026-10-23, wt/lambdakits): 유닛 · 손님 id 목록 읽기 · 쓰기, 조우 후보 순회, 0 채우기, 단계 비교자 5 군을 파일 익명 namespace 정적 함수로 옮겼다. 카탈로그 `is`(이름 비교) 11 곳은 공용 위치가 `GameDataXML`(Base)이라 남겼다. → 2026-10-24 `wt/kitshelpers`: 11 곳을 `GameDataXML::isElement` 로, ID 목록 읽기 · 쓰기를 `StateArchiveUtil::writeIDList` · `readIDList` 로 합쳤다(RTS 는 `uint64` 묶은 id 목록).
-
-### SingletonGetToServices
-제목: `static T& get()` 전역 단일체 `ResourceDataKindRegistry` 를 서비스로 옮기기
-옛번호: 없음
-왜 필요한가: `CheckServiceAccess` 게이트가 `get` 도 잡게 되면서(`wt/singletonget`) 헤더 14 곳을 예외 표에 올렸고, 그중 5 곳을 서비스로 옮기기로 했습니다. `GameConnectSecurity`(세션 `GameNetSession` 의 멤버), `AuthorityGhost` · `StateHashHistory` · `AssetLoadProfiler`(서비스 범위의 서브시스템)는 옮겼습니다.
-남은 것: `ResourceDataKindRegistry` 는 `SW_RESOURCE_DATA_KIND` 의 정적 등록자가 엔진 범위가 서기 전(Engine · GameFramework · 키트 이미지의 정적 초기화)에 올리고 모듈을 내릴 때 빼서, 지금은 함수 정적으로 둡니다(예외 표에 이유를 적었습니다). 서비스로 옮기려면 등록자가 링크 때 연결 목록(`TypeRegistrar::getHead` 방식)에만 달리고, 서비스가 기동과 모듈 올림 · 내림에서 그 목록을 거두도록 등록 경로를 바꿔야 합니다 — 핫 리로드의 모듈 내림 처리와 함께 설계합니다. 게이트는 여전히 이름(`getInstance` · `get`)으로 판단해 `instance()` · `shared()` 는 못 봅니다 — 이름과 무관하게 막으려면 타입 · API 를 바꿔야 합니다.
 이름 붙은 지역 람다 Serialization·Reflection·Object 끝(2026-10-24, wt/lambdaser): 쌍 처리기와 도우미는 함수로 뺐고, 캡처가 본질인 짧은 것만 남겼다.
+
+### ValidationIssueLogWorldOwned
+제목: `ValidationIssueLog` 를 엔진 수명 범위의 창구에서 월드(게임 오브젝트 매니저) 소유로 옮기기
+옛번호: 없음
+왜 필요한가: `ValidationIssueLog::get()` 은 `ScopeOwned` 로 엔진 수명 범위가 소유하는 표의 편의 창구라서 단일체 예외 표에 `ScopeOwnedHotPath` 로 남았습니다(2026-10-24 판정 — 유지). 그러나 이 표의 내용은 "출처(오브젝트)마다의 검증 결과" 라 월드가 둘이면(에디터 미리보기 창 · 씬 둘) 결과가 한 표에 섞입니다. 언리얼 Map Check 는 월드별 메시지 로그입니다.
+남은 것: 표를 `GameObjectManager` 의 서브시스템(또는 `Scene` 이 든 값)으로 옮기고, 파괴 경로(`GameObject` 소멸자)는 자기 매니저의 표를 직접 부릅니다. 맵 검사 패널은 활성 씬의 표를 읽습니다. `find()` 의 "엔진 범위가 닫혔으면 nullptr" 는 사라지고 `get()` 호출 9 곳(`MapCheckPanel` · `ObjectValidation` · `EditorSelfTestPanelCases`)이 소유자를 받는 모양이 됩니다. 옮긴 뒤 `CheckServiceAccess.toml` 의 `ValidationIssueLog` 줄을 지웁니다.
 
 ### ReflectedInstanceOwner
 제목: 리플렉션이 만든 형식 소거 인스턴스의 소유 형식

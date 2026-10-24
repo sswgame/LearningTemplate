@@ -9,7 +9,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 서버 버스의 혼합 빌드 읽기(docs/plans/ServerBusFormat.md 3.3, 6절). 옛 빌드와 새 빌드는 필드 이름이 겹치는 두 타입으로 흉내 낸다.
+// 서버 버스의 혼합 빌드 읽기(docs/09_Decisions.md 5-9 서버 버스 읽기 정책, 6절). 옛 빌드와 새 빌드는 필드 이름이 겹치는 두 타입으로 흉내 낸다.
 // 메시지는 받은 바이트 그대로 만든다(`ServerBusMessage` 생성자) — 전송은 바이트를 바꾸지 않는다(`ServerBusTest`).
 
 using namespace sw;

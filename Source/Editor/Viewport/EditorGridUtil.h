@@ -32,7 +32,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 프로브(`Editor.Grid*`)가 읽습니다.
+     * @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 프로브(`Editor.Grid*`)가 읽습니다. 값은 격자를 그리는 오버레이(`EditorViewportCanvasOverlay`)가 듭니다.
      * @details 굵은 선 판정이 카메라를 따라 미끄러지면 `_misplacedMajorCount` 가 0 이 아니다. 그린 선의 월드 좌표로 다시 센다.
      */
     struct EditorGridStats
@@ -42,9 +42,6 @@ namespace sw::editor
         uint32  _majorLineCount{ 0 };
         uint32  _misplacedMajorCount{ 0 };
         int32   _frame{ -1 };
-
-        /** @brief 에디터 모듈 하나가 가진 값입니다. */
-        static EditorGridStats& get();
     };
 } // namespace sw::editor
 

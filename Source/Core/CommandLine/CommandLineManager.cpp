@@ -28,9 +28,9 @@ namespace sw
         _mapArgument.clear();
         _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
 
-#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                      \
-    SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),  \
-                   "인자 등록 순서가 CommandLineArgument 열거값과 어긋났습니다: %#", #name ); \
+#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                                   \
+    SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),               \
+                   "Argument registration order does not match the CommandLineArgument enum: %#", #name ); \
     addArgument( { __VA_ARGS__ }, defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
@@ -128,7 +128,7 @@ namespace sw
                 return;
             }
 
-            SW_LOG_WARNING( "%#에 해당하는 Argument는 없습니다. 무시됩니다", string( rawKey ).c_str() );
+            SW_LOG_WARNING( "No Argument matches %#. Ignored", string( rawKey ).c_str() );
             return;
         }
 
@@ -139,7 +139,7 @@ namespace sw
         // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
-            SW_LOG_WARNING( "Value가 입력되지 않았습니다 : %#. 무시됩니다", string( rawKey ).c_str() );
+            SW_LOG_WARNING( "No value was given for %#. Ignored", string( rawKey ).c_str() );
             return;
         }
 
@@ -154,7 +154,7 @@ namespace sw
 
     const CommandLineManager::ArgumentInfo* CommandLineManager::findArgument( string_view key ) const
     {
-        SW_LOG_ASSERT( key.empty() == false, "들어온 값이 비어있으면 안됩니다" );
+        SW_LOG_ASSERT( key.empty() == false, "The given value must not be empty" );
 
         const auto iter = _mapArgument.find( key );
         if ( iter == _mapArgument.end() )
@@ -228,21 +228,21 @@ namespace sw
         {
             bool bParsed = false;
             if ( StringUtil::tryParseBool( newValue, bParsed ) == false )
-                SW_LOG_WARNING( "%#: 불리언이 아닙니다 (%#). false 로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+                SW_LOG_WARNING( "%#: not a boolean (%#). Using false", string( key ).c_str(), string( newValue ).c_str() );
             argument._value = bParsed;
         }
         else if ( std::holds_alternative<int32>( argument._defaultValue ) )
         {
             int32 parsedValue{ 0 };
             if ( StringUtil::parseInt( newValue, parsedValue ) == false )
-                SW_LOG_WARNING( "%#: 정수가 아닙니다 (%#). 0 으로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+                SW_LOG_WARNING( "%#: not an integer (%#). Using 0", string( key ).c_str(), string( newValue ).c_str() );
             argument._value = parsedValue;
         }
         else if ( std::holds_alternative<float32>( argument._defaultValue ) )
         {
             float32 parsedValue{ 0.0f };
             if ( StringUtil::parseFloat( newValue, parsedValue ) == false )
-                SW_LOG_WARNING( "%#: 실수가 아닙니다 (%#). 0 으로 둡니다", string( key ).c_str(), string( newValue ).c_str() );
+                SW_LOG_WARNING( "%#: not a real number (%#). Using 0", string( key ).c_str(), string( newValue ).c_str() );
             argument._value = parsedValue;
         }
         else

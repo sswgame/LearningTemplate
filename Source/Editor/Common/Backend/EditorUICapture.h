@@ -33,7 +33,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @struct EditorUICaptureJob @brief UI 스레드가 렌더 스레드로 넘기는 캡처 한 건입니다. 잘림 지표는 UI 스레드가 ImGui 를 닫을 때 잰 값입니다. */
+    /** @struct EditorUICaptureJob @brief UI 스레드가 렌더 스레드로 넘기는 캡처 한 건입니다. 잘림 지표는 UI 스레드가 ImGui 를 닫을 때 측정한 값입니다. */
     struct EditorUICaptureJob
     {
         string _path{};                        ///< 쓸 파일(.png)

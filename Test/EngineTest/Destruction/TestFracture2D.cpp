@@ -32,7 +32,7 @@ namespace
             return total;
         }
 
-        /** @brief 뿌리 정적 2D 강체(4 × 3 상자) + 2D 파괴 컴포넌트(바닥 앵커, 조각 20, 레벨 [4])입니다. */
+        /** @brief 루트 정적 2D 강체(4 × 3 상자) + 2D 파괴 컴포넌트(바닥 앵커, 조각 20, 레벨 [4])입니다. */
         static sw::Fracture2DComponent* spawnWall2D( sw::GameObjectManager& manager, const utf8* pName, const sw::string& profilePath )
         {
             sw::GameObject*           pWall = manager.createGameObject( sw::hashed_string( pName ) );

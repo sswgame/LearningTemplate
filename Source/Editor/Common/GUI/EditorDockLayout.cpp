@@ -262,7 +262,7 @@ namespace sw::editor
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
             }
-            SW_LOG_INFO( "gv_editorOpenPanel=all: 등록된 패널을 전부 열었습니다 (windows.json 복원 건너뜀)." );
+            SW_LOG_INFO( "gv_editorOpenPanel=all: opened every registered panel (windows.json restore skipped)." );
             return;
         }
 
@@ -286,9 +286,9 @@ namespace sw::editor
                 bFound = bFound || bMatch;
             }
             if ( bFound )
-                SW_LOG_INFO( "gv_editorOpenPanel: '%#' 패널만 열었습니다.", gv_editorOpenPanel.c_str() );
+                SW_LOG_INFO( "gv_editorOpenPanel: opened only the '%#' panel.", gv_editorOpenPanel.c_str() );
             else
-                SW_LOG_WARNING( "gv_editorOpenPanel: '%#' 라는 패널이 없습니다 — 전부 닫힌 채로 뜹니다.", gv_editorOpenPanel.c_str() );
+                SW_LOG_WARNING( "gv_editorOpenPanel: no panel named '%#' - everything starts closed.", gv_editorOpenPanel.c_str() );
             return;
         }
 

@@ -109,7 +109,7 @@ namespace sw
             return false;
         if ( _pDevice->getResourceFactory()->readbackTexture2D( _texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackPresent: readbackTexture2D 실패." );
+            SW_LOG_ERROR( "readbackPresent: readbackTexture2D failed." );
             return false;
         }
         return outLayout._width != 0 && outLayout._height != 0;
@@ -134,7 +134,7 @@ namespace sw
         const RHITextureHandle texture = _mainPool.findTexture( attachmentName );
         if ( texture == 0 )
         {
-            SW_LOG_ERROR( "readbackTransient: 트랜지언트 '%#' 를 찾지 못했습니다.", string( attachmentName ).c_str() );
+            SW_LOG_ERROR( "readbackTransient: transient '%#' not found.", string( attachmentName ).c_str() );
             return false;
         }
         outFormat = RHIFormat::R8G8B8A8_UNORM;
@@ -148,7 +148,7 @@ namespace sw
         }
         if ( _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackTransient: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
+            SW_LOG_ERROR( "readbackTransient: readbackTexture2D failed ('%#').", string( attachmentName ).c_str() );
             return false;
         }
         // 깊이 첨부는 네 백엔드 모두 텍셀마다 0..1 float32 하나로 읽힌다(스텐실 없음). 선언 포맷(D24S8)을 그대로 넘기면 바이트를 색으로 잘못 푼다.

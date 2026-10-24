@@ -157,8 +157,8 @@ namespace sw
         outListSolid.assign( listBrushIndex.size(), 0 );
         for ( size_t cellIndex = 0; cellIndex < listBrushIndex.size(); ++cellIndex )
         {
-            const uint16 value       = listBrushIndex[cellIndex];
-            const bool   bSolidBrush = value != 0 && value <= listBrush.size() && listBrush[value - 1u]._bSolid != SW_FALSE;
+            const uint16 brushNumber = listBrushIndex[cellIndex];
+            const bool   bSolidBrush = brushNumber != 0 && brushNumber <= listBrush.size() && listBrush[brushNumber - 1u]._bSolid != SW_FALSE;
             if ( bSolidBrush )
                 outListSolid[cellIndex] = 1;
         }
@@ -171,10 +171,10 @@ namespace sw
         outListCost.assign( listBrushIndex.size(), emptyCost );
         for ( size_t cellIndex = 0; cellIndex < listBrushIndex.size(); ++cellIndex )
         {
-            const uint16 value = listBrushIndex[cellIndex];
-            if ( value == 0 || value > listBrush.size() )
+            const uint16 brushNumber = listBrushIndex[cellIndex];
+            if ( brushNumber == 0 || brushNumber > listBrush.size() )
                 continue;
-            const TileBrush& brush = listBrush[value - 1u];
+            const TileBrush& brush = listBrush[brushNumber - 1u];
             outListCost[cellIndex] = ( brush._bSolid != SW_FALSE ) ? kBlocked : brush._navCost;
         }
     }

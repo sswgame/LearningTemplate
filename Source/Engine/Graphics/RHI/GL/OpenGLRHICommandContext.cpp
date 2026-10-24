@@ -396,7 +396,7 @@ namespace sw
 
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredUAV.size() ) )
         {
-            SW_LOG_WARNING( "bindComputeUav: 인덱스 %# 는 등록된 UAV 가 아닙니다.", index );
+            SW_LOG_WARNING( "bindComputeUav: index %# is not a registered UAV.", index );
             return;
         }
 
@@ -407,7 +407,7 @@ namespace sw
             // RW 텍스처. u4..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
             if ( slot < shaderslot::kComputeTextureUav0 || slot >= shaderslot::kComputeTextureUav0 + shaderslot::kComputeTextureUavSlotCount )
             {
-                SW_LOG_WARNING( "bindComputeUav: RW 텍스처를 버퍼 슬롯(u%#)에 걸려 했습니다.", slot );
+                SW_LOG_WARNING( "bindComputeUav: tried to bind an RW texture to a buffer slot (u%#).", slot );
                 return;
             }
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( record._texture );
@@ -420,7 +420,7 @@ namespace sw
 
         if ( record._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindComputeUav: 인덱스 %# 의 UAV 레코드가 비어 있습니다.", index );
+            SW_LOG_WARNING( "bindComputeUav: the UAV record at index %# is empty.", index );
             return;
         }
 
@@ -446,7 +446,7 @@ namespace sw
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredTexture.size() ) ||
              _pDevice->_listRegisteredTexture[index]._texture == 0 )
         {
-            SW_LOG_WARNING( "bindShaderResource: 인덱스 %# 는 등록된 텍스처가 아닙니다 — 버퍼라면 bindStructuredBuffer 를 쓰십시오.", index );
+            SW_LOG_WARNING( "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index );
             return;
         }
 
@@ -647,7 +647,7 @@ namespace sw
         if ( index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) ||
              _pDevice->_listRegisteredBindless[index]._buffer == 0 )
         {
-            SW_LOG_WARNING( "bindStructuredBuffer: 인덱스 %# 는 등록된 버퍼가 아닙니다 — 텍스처라면 bindShaderResource 를 쓰십시오.", index );
+            SW_LOG_WARNING( "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index );
             return;
         }
 

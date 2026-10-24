@@ -4,7 +4,7 @@
  * @details 클립은 1 · 2 채널로 재생한다(`AudioClipData`). 그보다 많은 채널은 읽을 때(통째로 푼 클립) 또는 프레임마다(스트리밍) 이 행렬로 줄인다.
  *          계수는 ITU-R BS.775 의 스테레오 다운믹스다. 왼쪽 = FL + 0.707·FC + 0.707·(BL, SL), 오른쪽 = FR + 0.707·FC + 0.707·(BR, SR),
  *          BC 는 양쪽 0.5, LFE 는 버린다. FLC · FRC 는 같은 쪽 1 이다. 높이 채널(TOP_*)은 다루지 않고 오류로 멈춘다.
- *          채널 배치는 WAV 채널 마스크가 정본이다. 마스크가 없는 WAV(`WAVEFORMATEX`)는 마스크 비트 순서로 아래부터 채운다(Microsoft 의 규칙).
+ *          채널 배치는 WAV 채널 마스크가 기준이다. 마스크가 없는 WAV(`WAVEFORMATEX`)는 마스크 비트 순서로 아래부터 채운다(Microsoft 의 규칙).
  *          Vorbis 는 명세(Vorbis I 4.3.9)가 채널 수마다 정한 순서를 쓴다(`getVorbisSpeakers`).
  */
 #pragma once

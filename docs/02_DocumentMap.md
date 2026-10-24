@@ -1,17 +1,19 @@
 # 문서 지도
 
-어떤 사실을 어느 문서가 갖는지와, 저장소의 README 목록입니다. **한 사실은 한 곳에 적고 나머지는 그곳을 링크합니다.**
-같은 내용이 두 문서에 있으면 한쪽만 고쳐지고 다른 쪽이 조용히 낡습니다.
+> 질문: 어느 문서가 어떤 사실을 갖고, README 는 어디에 있는가?
+> 독자: 문서를 찾는 사람, 문서를 새로 쓰는 사람.
+> 결론: 한 사실은 한 문서에만 쓰고 나머지는 링크한다. 새 README 를 만들면 아래 목록에 한 줄을 더한다(`CheckDocPaths` 가 잡는다).
 
-엔진 구조를 설명하는 문서(`ARCHITECTURE.md`, `Source/Engine` · `Core` · `GameFramework` · `Editor` · `ModuleHost` · `App` · `Server` · `RuntimeAPI` 의 README,
-시작하기 · 핫 리로드 · RHI 프레임 계약)는 지웠습니다. 엔진이 계속 바뀌어 낡기 쉬우므로, 구조가 굳은 뒤에 필요한 것만 다시 씁니다.
-그때까지 설계 사실의 원본은 헤더 주석과 [결정 기록](09_Decisions.md), 규칙의 원본은 [AGENTS.md](../AGENTS.md) 입니다.
+같은 내용이 두 문서에 있으면 한쪽만 고쳐지고 다른 쪽이 조용히 낡습니다. 그래서 아래 표의 문서가 각자 정해진 사실만 갖습니다.
+
+엔진 구조 설명 문서(`ARCHITECTURE.md`, `Source/Engine` · `Core` · `GameFramework` · `Editor` · `ModuleHost` · `App` · `Server` · `RuntimeAPI` 의 README, 시작하기 · 핫 리로드 · RHI 프레임 계약)는 없습니다.
+엔진이 계속 바뀌어 낡기 쉬우므로 구조가 굳은 뒤에 필요한 것만 씁니다. 그때까지 설계 사실의 원본은 헤더 주석과 [결정 기록](09_Decisions.md), 규칙의 원본은 [AGENTS.md](../AGENTS.md) 입니다.
 
 ## 어느 문서가 무엇만 가지는가
 
 | 문서 | 가지는 것 |
 |---|---|
-| [CLAUDE.md](../CLAUDE.md) | 에이전트의 입구, 해결 원칙, 도구 안내 |
+| [CLAUDE.md](../CLAUDE.md) | 에이전트의 입구, 원칙 넷, 도구 안내 |
 | [AGENTS.md](../AGENTS.md) | 코딩 규칙의 목차와 공통 규칙 |
 | [docs/agents/](agents/NamingCpp.md) | 코딩 규칙의 본문 — [NamingCpp](agents/NamingCpp.md) · [NamingScripts](agents/NamingScripts.md) · [Includes](agents/Includes.md) · [Constants](agents/Constants.md) · [Helpers](agents/Helpers.md) · [CppStyle](agents/CppStyle.md) · [EditingTraps](agents/EditingTraps.md) |
 | [04 코딩 규칙 예시](04_CodingGuidelines.md) | `docs/agents/` 규칙의 예시 |
@@ -48,8 +50,8 @@
 | [08 검증과 측정](08_Verification.md) | 작업을 끝내기 전에 돌릴 것, 측정값 읽는 법과 기준선, 검증할 때의 함정, CI 실패 읽기 |
 | [09 결정 기록](09_Decisions.md) | 정한 방향, 하지 않기로 한 것, 측정으로 기각한 안, 바뀐 이름 |
 | [10 문서 쓰기 지침](10_WritingDocs.md) | 문서 종류와 층, README의 틀, 문장 규칙, 용어 대조표 |
-| [11 작업 방식](11_Workflow.md) | 워크트리와 적용 담당, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지 |
-| [12 에이전트와 토큰](12_Agents.md) | 일과 에이전트 · 모델 · effort 표, 토큰 규칙, 측정값, 일을 쪼개는 기준 |
+| [11 작업 방식](11_Workflow.md) | 작업자와 통합 담당의 역할, 워크트리, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지 |
+| [12 에이전트와 토큰](12_Agents.md) | 일과 에이전트 · 모델 · effort 표, 토큰 규칙, 일을 쪼개는 기준, 훅, 토큰 측정값 |
 | [13 보조 도구 설치](13_LocalTools.md) | graphify · ponytail 설치 (새 PC 에서만) |
 | [14 함정](14_Pitfalls.md) | 빌드 · 환경 · 워크트리 · 코드의 자주 밟는 함정 |
 | [로드맵](plans/Roadmap.md) | 앞으로 할 일의 순서(순서의 원본) |
@@ -63,6 +65,7 @@
 
 ### 엔진 모듈
 - [Automation](../Source/Engine/Automation/README.md) — 자동화 시나리오 형식, 단계와 탐침, 대상 고르기 규칙, 결정적 재생과 녹화
+- [고정 배치형(B) 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) — 같은 빌드끼리 읽는 바이트의 인코딩, 스키마 해시, 호환 정책
 - [Schedule](../Source/GameFramework/Base/Actor/AI/Schedule/README.md) — NPC 하루 일정 런타임, 칸 고르기 · 일찍 나서기 · 끼어들기 · 경로 제공자
 
 ### 게임

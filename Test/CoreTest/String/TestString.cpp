@@ -661,7 +661,7 @@ SW_TEST_CASE( StringTest, FixedStringModernFeatures )
 
     // 대소문자는 구분한다 — operator== 와 같다.
     SW_EXPECT_NOT_EQUAL( hasher( sw::fixed_string<32>( "moderncpp" ) ), hasher( fs ) );
-    // sw::string 의 기본 해시와 같다(이종 조회가 같은 버킷을 본다). 두 구성 모두 `DefaultHash<sw::string>` 이 정본이다.
+    // sw::string 의 기본 해시와 같다(이종 조회가 같은 버킷을 본다). 두 구성 모두 `DefaultHash<sw::string>` 이 기준이다.
     SW_EXPECT_EQUAL( sw::DefaultHash<sw::string>{}( sw::string( "ModernCpp" ) ), hasher( fs ) );
 }
 

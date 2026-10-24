@@ -96,7 +96,7 @@ namespace sw
         runtimeSettings._pTransport       = pTransport;
         runtimeSettings._gamePort         = Internal::kGameServerPort;
         runtimeSettings._bTLS             = SW_FALSE; // 봇과 테스트는 평문 루프백이다
-        runtimeSettings._bManualCacheTime = SW_TRUE;  // 캐시 만료를 `tick` 의 서비스 시각으로 잰다(가짜 시계)
+        runtimeSettings._bManualCacheTime = SW_TRUE;  // 캐시 만료를 `tick` 의 서비스 시각으로 측정한다(가짜 시계)
         const int64 startMs               = settings._startMs != 0 ? settings._startMs : WallClock::nowUnixMilliseconds();
         return _runtime->initialize( std::move( runtimeSettings ), startMs, outError );
     }

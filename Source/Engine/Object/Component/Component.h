@@ -13,8 +13,8 @@
 
 #include "Engine/Common/AnimationNotifyPhase.h"
 #include "Engine/Common/PhysicsHandle.h"
-#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {

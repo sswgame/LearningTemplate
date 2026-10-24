@@ -70,12 +70,12 @@ namespace sw
 {
     /**
      * @struct RigIKSolver
-     * @brief IK 풀이 함수 모음입니다. 본 번호는 작업 포즈의 번호이고, 사슬은 뿌리에서 끝으로 가는 순서입니다(각 본이 다음 본의 조상입니다).
+     * @brief IK 풀이 함수 모음입니다. 본 번호는 작업 포즈의 번호이고, 사슬은 루트에서 끝으로 가는 순서입니다(각 본이 다음 본의 조상입니다).
      */
     struct SW_API RigIKSolver
     {
         /**
-         * @brief 2 본 IK(해석해)입니다. 뿌리, 가운데, 끝 관절이 목표에 닿도록 뿌리와 가운데를 돌립니다. 닿지 않으면 목표 쪽으로 곧게 뻗습니다.
+         * @brief 2 본 IK(해석해)입니다. 루트, 가운데, 끝 관절이 목표에 닿도록 루트와 가운데를 돌립니다. 닿지 않으면 목표 쪽으로 곧게 뻗습니다.
          * @param pPole 굽힘 쪽을 가리키는 점(모델 공간)입니다. nullptr 이면 현재 굽은 쪽을 유지합니다.
          * @return 목표에 닿았으면(길이 안) true 를 반환합니다.
          */
@@ -84,7 +84,7 @@ namespace sw
         /** @brief FABRIK 입니다. 위치를 앞뒤로 번갈아 맞춘 뒤 회전으로 옮깁니다. 제한이 있으면 반복마다 회전을 제한하고 위치를 다시 읽습니다. */
         static bool solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                  const RigChainSettings& settings, const RigSolveSpace& space );
-        /** @brief CCD 입니다. 끝에서 뿌리 방향으로 관절마다 끝을 목표 쪽으로 돌립니다(관절마다 제한을 바로 적용합니다). */
+        /** @brief CCD 입니다. 끝에서 루트 방향으로 관절마다 끝을 목표 쪽으로 돌립니다(관절마다 제한을 바로 적용합니다). */
         static bool solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                               const RigChainSettings& settings, const RigSolveSpace& space );
         /**

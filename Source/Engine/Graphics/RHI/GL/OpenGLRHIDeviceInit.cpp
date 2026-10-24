@@ -96,17 +96,17 @@ namespace sw
                 glGetIntegerv( GL_CLIP_DEPTH_MODE, &clipDepth );
                 if ( clipOrigin != GL_UPPER_LEFT || clipDepth != GL_ZERO_TO_ONE )
                 {
-                    SW_LOG_ERROR( "glClipControl 이 적용되지 않았습니다 (origin %#, depth %#) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다.",
+                    SW_LOG_ERROR( "glClipControl was not applied (origin %#, depth %#) - the screen is flipped vertically and depth precision is halved.",
                                   static_cast<uint32>( clipOrigin ), static_cast<uint32>( clipDepth ) );
                 }
                 else
                 {
-                    SW_LOG_INFO( "OpenGL glClipControl 사용 가능 — 깊이 [0,1] 고정. 클립 원점은 대상마다 정한다(오프스크린 UPPER_LEFT / 기본 프레임버퍼 LOWER_LEFT)." );
+                    SW_LOG_INFO( "OpenGL glClipControl available - depth fixed to [0,1]. The clip origin is chosen per target (offscreen UPPER_LEFT / default framebuffer LOWER_LEFT)." );
                 }
             }
             else
             {
-                SW_LOG_ERROR( "glClipControl 을 쓸 수 없습니다 (GL 4.5 / ARB_clip_control 필요) — 화면이 상하 반전되고 깊이 정밀도가 절반이 됩니다." );
+                SW_LOG_ERROR( "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
             }
 
 #if !defined( SW_SHIPPING )
@@ -118,10 +118,10 @@ namespace sw
                 glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
                 glDebugMessageCallback( &onOpenGLDebugMessage, nullptr );
                 glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE );
-                SW_LOG_INFO( "OpenGL KHR_debug 출력을 켰습니다 — GL 오류가 오류 로그로 나옵니다 (스모크의 오류 수에 잡힌다)." );
+                SW_LOG_INFO( "OpenGL KHR_debug output enabled - GL errors appear as error logs (counted in the smoke error count)." );
             }
             else
-                SW_LOG_WARNING( "glDebugMessageCallback 을 쓸 수 없습니다 (GL 4.3 / KHR_debug 필요) — GL 오류가 로그에 나오지 않습니다." );
+                SW_LOG_WARNING( "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
 #endif
 
             // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
@@ -131,7 +131,7 @@ namespace sw
             if ( glad_glProvokingVertex != nullptr )
                 glProvokingVertex( GL_FIRST_VERTEX_CONVENTION );
             else
-                SW_LOG_WARNING( "glProvokingVertex 를 쓸 수 없습니다 — nointerpolation 값이 DX·Vulkan 과 다른 정점에서 옵니다." );
+                SW_LOG_WARNING( "glProvokingVertex is unavailable - nointerpolation values come from a different vertex than on DX/Vulkan." );
 
             // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGPUMemoryBudgetInternal).
             _bNvxMemoryInfo = OpenGLRHIDeviceInternal::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
@@ -147,11 +147,11 @@ namespace sw
             glGetIntegerv( GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &maxVertexSsbo );
             glGetIntegerv( GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &maxComputeSsbo );
             glGetIntegerv( GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSsbo );
-            SW_LOG_INFO( "OpenGL SSBO 한도: 정점 %#, 프래그먼트 %#, 컴퓨트 %#", static_cast<int32>( maxVertexSsbo ),
+            SW_LOG_INFO( "OpenGL SSBO limits: vertex %#, fragment %#, compute %#", static_cast<int32>( maxVertexSsbo ),
                          static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
             if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSrvSlotCount ) )
             {
-                SW_LOG_WARNING( "정점 스테이지 SSBO 한도(%#)가 SRV 슬롯 수(%#)보다 작습니다 — 큰 번호의 슬롯은 읽기가 어긋날 수 있습니다.",
+                SW_LOG_WARNING( "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
                                 static_cast<int32>( maxVertexSsbo ), shaderslot::kSrvSlotCount );
             }
             // 머티리얼 텍스처는 텍스처 유닛 16..31 이다(bindingslots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
@@ -160,7 +160,7 @@ namespace sw
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
             if ( maxFragmentTextureUnit < requiredTextureUnit )
             {
-                SW_LOG_WARNING( "OpenGL 백엔드를 쓸 수 없습니다 — 프래그먼트 텍스처 유닛 %# 개, 머티리얼 텍스처 슬롯은 %# 개가 필요합니다.",
+                SW_LOG_WARNING( "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
                                 static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
@@ -168,7 +168,7 @@ namespace sw
         }
         else
         {
-            SW_LOG_WARNING( "gladLoadGL이 0을 반환함, OpenGL 디바이스 초기화 실패" );
+            SW_LOG_WARNING( "gladLoadGL returned 0, OpenGL device initialization failed" );
             return false;
         }
 
@@ -179,7 +179,7 @@ namespace sw
         // WSL 의 Mesa 드라이버(llvmpipe/d3d12)가 이 확장을 노출하지 않아 실제로 걸린다.
         if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
         {
-            SW_LOG_WARNING( "OpenGL 백엔드를 쓸 수 없습니다 — GL_ARB_gl_spirv 없음(glShaderBinary/glSpecializeShader null)." );
+            SW_LOG_WARNING( "The OpenGL backend is unusable - GL_ARB_gl_spirv is missing (glShaderBinary/glSpecializeShader are null)." );
             _initResult = RHIInitResult::DriverUnsupported;
             return false;
         }

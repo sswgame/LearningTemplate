@@ -106,7 +106,7 @@ namespace sw
     struct ObjectLoadContext
     {
         /**
-         * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 되살릴 때),
+         * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 복원할 때),
          *        @p pBatch 를 주면 그 배치에 기록하며, @p savedID 는 이 상태가 저장될 때의 id 입니다.
          */
         explicit ObjectLoadContext( SerializePurpose purpose, const ObjectIdentity* pIdentity = nullptr, ObjectStateBatch* pBatch = nullptr, uint64 savedID = 0 )

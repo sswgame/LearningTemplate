@@ -55,7 +55,7 @@ namespace sw
                 }
             }
 
-            /** @brief 풀어 낸 위치로 사슬을 돌리고(뿌리부터) 제한을 적용합니다. */
+            /** @brief 풀어 낸 위치로 사슬을 돌리고(루트부터) 제한을 적용합니다. */
             static void applyChain( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3* pPosition, span<const RigJointLimit> listLimit )
             {
                 const uint32 count = static_cast<uint32>( listChainBone.size() );
@@ -165,14 +165,14 @@ namespace sw
 
         for ( uint32 iteration = 0; iteration < settings._iterationCount; ++iteration )
         {
-            // 뒤로: 끝을 목표에 두고 뿌리 쪽으로 길이를 맞춘다.
+            // 뒤로: 끝을 목표에 두고 루트 쪽으로 길이를 맞춘다.
             arrPosition[count - 1] = goal;
             for ( uint32 index = count - 1; index > 0; --index )
             {
                 const float3 direction = space.projectVector( arrPosition[index - 1] - arrPosition[index] ).normalize();
                 arrPosition[index - 1] = arrPosition[index] + direction * arrLength[index - 1];
             }
-            // 앞으로: 뿌리를 제자리에 두고 끝 쪽으로 길이를 맞춘다.
+            // 앞으로: 루트를 제자리에 두고 끝 쪽으로 길이를 맞춘다.
             arrPosition[0] = root;
             for ( uint32 index = 1; index < count; ++index )
             {

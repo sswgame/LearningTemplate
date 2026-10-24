@@ -47,7 +47,7 @@ namespace sw
                     SW_LOG_ERROR( "%# '%#' is registered twice - the second registration is ignored", pListName, pNode->_pName );
                     return false;
                 }
-                // 교체 이미지의 등록이다. 옛 노드는 목록에서 빼 그림자 사슬로 옮긴다(옛 이미지가 내려가며 빼거나, 이 노드가 취소되면 되살린다).
+                // 교체 이미지의 등록이다. 옛 노드는 목록에서 빼 그림자 사슬로 옮긴다(옛 이미지가 내려가며 빼거나, 이 노드가 취소되면 복원한다).
                 *ppLink           = pExisting->_pNext;
                 pExisting->_pNext = _pShadowHead;
                 _pShadowHead      = pExisting;

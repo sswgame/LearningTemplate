@@ -28,7 +28,8 @@ namespace sw
                 string reporterFolder;
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
                     return TaskResult::NotRequested;
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
+                NullCrashReportUploader       uploader;
+                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, uploader );
                 SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return TaskResult::Finished;
             }

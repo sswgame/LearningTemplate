@@ -19,7 +19,7 @@ namespace sw
     {
         struct NileCityPlannerInternal
         {
-            /** @brief 동쪽 사막이 시작하는 x(실수)입니다 — 모래 언덕처럼 굽는다. */
+            /** @brief 동쪽 사막이 시작하는 x(실수)입니다 — 모래 언덕처럼 베이크한다. */
             static float32 computeDesertEdge( const NileCityLayout& layout, int32 y )
             {
                 return static_cast<float32>( layout._desertStartX ) + layout._desertDuneHeight * MathUtil::sin( static_cast<float32>( y ) * layout._desertDuneRate );

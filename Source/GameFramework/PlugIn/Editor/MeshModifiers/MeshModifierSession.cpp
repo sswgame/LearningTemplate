@@ -1,6 +1,6 @@
 /**
  * @file MeshModifierSession.cpp
- * @brief 메시 모디파이어 편집 세션을 구현합니다 — 대상 읽기, 되돌리기, CPU 미리보기, 사이드카 저장, 굽기, 씬 입력.
+ * @brief 메시 모디파이어 편집 세션을 구현합니다 — 대상 읽기, 되돌리기, CPU 미리보기, 사이드카 저장, 베이크, 씬 입력.
  */
 #include "pch.h"
 
@@ -48,7 +48,7 @@ namespace sw::editor
                 return pScene != nullptr ? pScene->getWorldMatrix() : float4x4{};
             }
 
-            /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(굽기와 CPU 미리보기가 같이 쓴다). */
+            /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(베이크와 CPU 미리보기가 같이 쓴다). */
             static vector<RHIVertex> makeVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
             {
                 vector<RHIVertex> listVertex = listSource;
@@ -233,7 +233,7 @@ namespace sw::editor
 
     bool MeshModifierSession::setTarget( GameObject* pObject )
     {
-        setMeshModifierTaskManager( editor::findSubsystem<TaskManager>() ); // 변형 적용(미리보기 · 굽기)을 병렬로 돌린다
+        setMeshModifierTaskManager( editor::findSubsystem<TaskManager>() ); // 변형 적용(미리보기 · 베이크)을 병렬로 돌린다
         clearTarget();
         if ( pObject == nullptr )
             return false;

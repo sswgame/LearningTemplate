@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 적의 쓰러짐(ShooterCharacterIntegration S1 · S2 · S4) — 자동 플레이로 스켈레톤 적을 쓰러뜨리며 사진으로 본다.
+  ① 쓰러질 때 래그돌로 넘어져 바닥에 눕는다(키네마틱 바디가 포즈를 따르다가 물리로 넘어간다).
+  ② 적의 무기 · 방패(강체가 있는 소켓 부품)가 떨어져 바닥(정적 강체)에 눕는다 — 층 Debris 라 캐릭터와 부딪히지 않는다.
+  ③ 시체가 걷힐 때 떨어진 무기가 시체와 함께 사라지는지(감독이 적을 걷을 때 부품 풀이 거둔다).
+  ④ 휘두름 피해는 알림 Impact → 이벤트 AttackHit 로 들어온다: 임포트 결과가 Impact 알림을 가지지 않으면 적의 휘두름이 맞지 않는다(PlayerAlive 가 오래 1 이다).
+  숫자로는 EnemyHitCount 가 오르는 것(히트박스 레이어 Ragdoll 질의)만 단언하고, 나머지는 사진을 본다. 머리 ×2 · 엄폐물 뒤 적은 안 맞는 것은 로그([Shooter] hit …)로 본다.
+  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/enemydeath.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.enemydeath" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="orbit"/>
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="1"/></At>
+	<At frame="420"><Expect probe="Shooter3D.EnemyHitCount" atLeast="2"/><Screenshot file="shooter3d/death_a.ppm"/></At>
+	<At frame="600"><Screenshot file="shooter3d/death_b.ppm"/></At>
+	<At frame="900"><Screenshot file="shooter3d/death_c.ppm"/></At>
+	<At frame="1500"><Expect probe="Shooter3D.ShotCount" atLeast="6"/><Screenshot file="shooter3d/death_d.ppm"/></At>
+	<At frame="2100"><Screenshot file="shooter3d/death_e.ppm"/><Pass/></At>
+</Scenario>

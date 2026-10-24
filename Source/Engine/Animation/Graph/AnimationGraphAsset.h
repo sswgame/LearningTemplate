@@ -260,6 +260,14 @@ namespace sw
     private:
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
+        /** @brief "nodes" 의 노드를 읽어 목록에 더합니다. 깨진 노드는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
+        [[nodiscard]] bool parseNodes( const XMLNode& root, string_view sourceLabel );
+        /** @brief "links" 의 링크를 읽어 목록에 더합니다. 깨진 링크는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
+        [[nodiscard]] bool parseLinks( const XMLNode& root, string_view sourceLabel );
+        /** @brief "bone_masks" 를 읽어 목록에 더합니다. 이름이 비거나 겹치거나 본문이 깨졌으면 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
+        [[nodiscard]] bool parseBoneMasks( const XMLNode& root );
+        /** @brief "layers" 를 읽어 목록에 더합니다(`parseBoneMasks` 뒤에 부른다 — 마스크 이름을 확인한다). 깨진 레이어는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
+        [[nodiscard]] bool parseLayerDefs( const XMLNode& root );
         /** @brief 노드의 "blend_space" 객체를 읽습니다. 잘못되었으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parseBlendSpace( const XMLNode& blendSpaceXML, AnimationGraphNode& inoutNode );
         /** @brief 노드의 "pose_node" 객체를 읽습니다. 모르는 종류이거나 종류가 요구하는 값이 없으면 오류를 남기고 false 입니다. */

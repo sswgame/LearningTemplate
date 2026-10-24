@@ -218,12 +218,20 @@ namespace sw::editor
     {
         if ( gv_editorPreviewScreenshot.empty() || _submittedFrameCount < EditorPreviewViewportInternal::kScreenshotWarmupFrames )
             return;
-        const uint64 renderTarget = getRenderTarget();
-        if ( renderTarget == 0 )
+        if ( requestImageFile( string_view( gv_editorPreviewScreenshot.c_str() ) ) == false )
             return;
         SW_LOG_INFO( "Preview viewport screenshot (scene key %#) -> %#", _sceneKey, gv_editorPreviewScreenshot.c_str() );
-        RenderThread::requestScreenshot( gv_editorPreviewScreenshot, renderTarget, RHIFormat::R8G8B8A8_UNORM );
         gv_editorPreviewScreenshot = string{}; // 한 번만
+    }
+
+    bool EditorPreviewViewport::requestImageFile( string_view path )
+    {
+        const uint64 renderTarget = getRenderTarget();
+        const bool   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
+        if ( path.empty() || bNotDrawn )
+            return false;
+        RenderThread::requestScreenshot( path, renderTarget, RHIFormat::R8G8B8A8_UNORM );
+        return true;
     }
 
     uint32 EditorPreviewViewport::spawnEnvironment( Scene& scene, const EditorPreviewEnvironment& environment )

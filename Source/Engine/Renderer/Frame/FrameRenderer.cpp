@@ -594,7 +594,7 @@ namespace sw
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
         // 주 시점 뷰-투영은 하나다. 그림자 맞춤과 그리기가 같은 행렬을 쓰고, 비율은 패킷 경로(`RenderPacketBuilder`)와 같은 규칙(출력 × 사각형)이다.
-        // 둘을 따로 재면 출력 설정의 비율과 풀의 비율이 어긋나 그림자 볼륨이 그리는 절두체를 덮지 못한다.
+        // 둘을 따로 측정하면 출력 설정의 비율과 풀의 비율이 어긋나 그림자 볼륨이 그리는 절두체를 덮지 못한다.
         const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _outputWidth, _outputHeight ) );
         // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,

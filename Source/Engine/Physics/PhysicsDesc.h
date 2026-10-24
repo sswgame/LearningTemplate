@@ -92,7 +92,7 @@ namespace sw
         bool               _bTrigger{ false }; ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor).
         /**
          * @brief 막지 않고 겹침만 낸다(Box2D 센서)는 표시입니다. `_bTrigger` 와 달리 이벤트 · 질의에서 트리거로 치지 않습니다.
-         * @details 막는 콜라이더도 겹침만 재는 2D 콜라이더(`BoxCollider2DComponent`)가 쓴다 — 막는 것과 트리거가 모두 센서여야 키네마틱끼리도 겹침이 난다.
+         * @details 막는 콜라이더도 겹침만 측정하는 2D 콜라이더(`BoxCollider2DComponent`)가 쓴다 — 막는 것과 트리거가 모두 센서여야 키네마틱끼리도 겹침이 난다.
          *          이 쌍의 이벤트는 겹침(`PhysicsContactEvent::isOverlap`)이고, 트리거를 빼는 질의(`PhysicsQueryFilter::_bIncludeTriggers`)에도 보인다.
          *          Jolt 는 센서로 만들지만 이벤트에 트리거로 알린다(3D 에서 쓰는 곳이 없다).
          */

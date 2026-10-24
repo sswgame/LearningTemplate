@@ -371,7 +371,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
 }
 
 /**
- * @brief [LocalizationBinaryTableTest] 매니저가 프로젝트에서 화면에 나오는 글만 굽고(낡은 번역 제외), 저작 파일 없이 그 바이트만으로 같은 글을 낸다
+ * @brief [LocalizationBinaryTableTest] 매니저가 프로젝트에서 화면에 나오는 글만 베이크하고(낡은 번역 제외), 저작 파일 없이 그 바이트만으로 같은 글을 낸다
  */
 SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringFiles )
 {
@@ -392,7 +392,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     SW_ASSERT_TRUE( runtime.loadBinaryTable( bytes.data(), bytes.size() ) );
     SW_ASSERT_TRUE( runtime.setCurrentLanguage( "ko" ) );
     SW_EXPECT_STREQ( "시작", runtime.getString( sw::hashed_string( "ui.start" ) ) );
-    SW_EXPECT_STREQ( "none", runtime.getStringByText( "ui.quit", "none" ) ); // 낡은 번역은 구워지지 않았다
+    SW_EXPECT_STREQ( "none", runtime.getStringByText( "ui.quit", "none" ) ); // 낡은 번역은 베이크해지지 않았다
 
     // 깨진 표는 거절하고 이미 있는 글을 바꾸지 않는다
     test::ScopedLogCollector logs;

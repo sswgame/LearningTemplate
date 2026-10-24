@@ -123,7 +123,7 @@ namespace sw
                 return bValid;
             }
 
-            /** @brief 버스 하나를 검사합니다(이름, 중복, 부모, 이펙트, 덕킹 · 센드). 뿌리 버스면 @p inoutRootCount 를 올립니다. */
+            /** @brief 버스 하나를 검사합니다(이름, 중복, 부모, 이펙트, 덕킹 · 센드). 루트 버스면 @p inoutRootCount 를 올립니다. */
             [[nodiscard]] static bool validateBus( const AudioMixerDesc& mixer, size_t busIndex, string_view sourceName, uint32& inoutRootCount )
             {
                 const AudioBusDesc& bus = mixer._listBus[busIndex];

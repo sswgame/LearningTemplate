@@ -18,8 +18,8 @@
 
 ## 남은 것
 
-- 확인: Shooter3D 전용 서버 + 클라이언트(`Server -game=Shooter3D` · `App -game=Shooter3D -gv_netConnectAddress=127.0.0.1:7777`)에 `-gv_netEmuPreset=lte` 를 걸고 움직여 보정 횟수(`getCorrectionCount`)와 화면이 튀지 않는지 본다.
+- 확인 대기: 매니페스트 id `shooter-net-jump-lte`. Shooter3D 전용 서버 + 클라이언트(`Server -game=Shooter3D` · `App -game=Shooter3D -gv_netConnectAddress=127.0.0.1:7777`)에 `-gv_netEmuPreset=lte` 를 걸고 움직여 보정 횟수(`getCorrectionCount`)와 화면이 튀지 않는지 본다.
 - 서버의 조종 연결이 하나다(아레나에 플레이어 몸이 하나) — 연결마다 몸을 스폰하는 일은 Shooter3D 멀티플레이 판 설계와 함께 한다.
-- 점프 눌림은 틱이 없는 프레임에서 놓칠 수 있다 — 고정 틱 입력 모으기(눌림을 다음 틱까지 쌓기).
+- 점프 눌림 쌓기는 들어갔다(2026-10-24, `wt/plannet`, 빌드 전): `ShooterNetPawnComponent::_bJumpPending` 이 틱이 없던 프레임의 눌림을 다음 입력 틱까지 쌓아 싣고 비운다. 확인: 위 `lte` 실행에서 짧게 눌러도 점프가 매번 나가는지.
 
 함정: 월드 전체 롤백은 `NetworkExtensionIdeas`([후보](Candidates-network.md)) 쪽이다. 규모 방향은 `UdpSocketLayerScaling` 이다.

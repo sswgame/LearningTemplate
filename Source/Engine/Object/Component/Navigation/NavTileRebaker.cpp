@@ -192,7 +192,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Navigation.invalidate" );
         if ( _bObstacleVolumeDirty )
         {
-            // 덧칠 부피는 다시 굽기 종류만 든다 — 캐시 종류는 장애물을 캐시로 받고 덧칠 부피를 받지 않는다(`INavMesh::bakeTile`).
+            // 덧칠 부피는 다시 베이크 종류만 든다 — 캐시 종류는 장애물을 캐시로 받고 덧칠 부피를 받지 않는다(`INavMesh::bakeTile`).
             shared_ptr<vector<NavConvexVolume>> pVolume = make_shared<vector<NavConvexVolume>>();
             collectObstacleVolumes( listObstacle, *pVolume );
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )

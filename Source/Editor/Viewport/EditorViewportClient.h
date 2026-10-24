@@ -10,6 +10,7 @@
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportPicker.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/EditorVisualizerStats.h"
 
 namespace sw
 {
@@ -46,6 +47,10 @@ namespace sw::editor
         const EditorViewportOverlays& getOverlays() const { return _overlays; }
         /** @brief 씬 뷰 HUD 박스를 반환합니다. 프로브가 읽습니다. */
         const EditorDebugHUDView& getHUDView() const { return _hudView; }
+        /** @brief 격자가 마지막으로 그린 결과입니다. 프로브 `Editor.Grid*` 와 자체 테스트가 읽습니다. */
+        const EditorGridStats& getGridStats() const { return _canvasOverlay.getGridStats(); }
+        /** @brief 시각화(`debug_draw` · 물리 셰이프 · 내비메시)가 마지막으로 그린 양입니다. 프로브와 자체 테스트가 읽습니다. */
+        const EditorVisualizerStats& getVisualizerStats() const { return _visualizerStats; }
 
         /** @brief 뷰 행렬을 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const { _camera.getViewMatrix( pOutMatrix ); }
@@ -89,12 +94,13 @@ namespace sw::editor
 
     private:
         ViewportToolbarSettings     _toolbarSettings;
-        EditorViewportCamera        _camera;        ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
-        EditorViewportPicker        _picker;        ///< 클릭 선택과 호버
-        EditorViewportGizmo         _gizmo;         ///< 트랜스폼 기즈모와 그 되돌리기
-        EditorViewportCanvasOverlay _canvasOverlay; ///< 격자, 자, 방향 큐브
-        EditorViewportOverlays      _overlays;      ///< 씬 뷰 위의 오버레이 바 목록
-        EditorDebugHUDView          _hudView;       ///< 오른쪽 위의 HUD 박스
+        EditorViewportCamera        _camera;          ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
+        EditorViewportPicker        _picker;          ///< 클릭 선택과 호버
+        EditorViewportGizmo         _gizmo;           ///< 트랜스폼 기즈모와 그 되돌리기
+        EditorViewportCanvasOverlay _canvasOverlay;   ///< 격자, 자, 방향 큐브
+        EditorViewportOverlays      _overlays;        ///< 씬 뷰 위의 오버레이 바 목록
+        EditorDebugHUDView          _hudView;         ///< 오른쪽 위의 HUD 박스
+        EditorVisualizerStats       _visualizerStats; ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
         /**
          * @brief 이 프레임의 오브젝트 스냅샷입니다. 용량을 재사용하며, 시각화와 통계 오버레이가 함께 읽습니다.
          * @details 값을 반환하는 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당하고 복사한다. 그래서 통계 오버레이와

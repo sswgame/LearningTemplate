@@ -188,7 +188,7 @@ namespace sw
         const RenderViewMode sceneViewMode = pFrameRenderer != nullptr ? pFrameRenderer->getSceneViewMode() : RenderViewMode::Lit;
         packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( pFrameRenderer != nullptr ? pFrameRenderer->getViewMode() : RenderViewMode::Lit );
         // 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)는 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
-        // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 잰다.
+        // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.
         ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr,
                                         FrameRenderer::getShadowMapResolution(), _listShadowLightIndex, packet._listLight, packet._shadow );
         // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.

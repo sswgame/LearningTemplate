@@ -18,6 +18,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Gimmick/ElementGrid.h"
 #include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -35,15 +37,26 @@ namespace sw
         Ice
     };
 
-    /** @brief 화학 설정입니다. */
-    struct AdventureElementSettings
+    /**
+     * @brief 화학 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `AdventureElementGrid::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API AdventureElementSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.001 )
         float32 _stepTime{ 0.25f };
-        int32   _grassBurnSteps{ 4 };
-        int32   _woodBurnSteps{ 12 };
-        int32   _spreadDelaySteps{ 1 }; ///< 불이 붙은 뒤 이 스텝부터 옆으로 옮겨 붙는다
-        int32   _chargeSteps{ 2 };
-        uint8   _bCrosswindSpread{ SW_FALSE };
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _grassBurnSteps{ 4 };
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _woodBurnSteps{ 12 };
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _spreadDelaySteps{ 1 }; ///< 불이 붙은 뒤 이 스텝부터 옆으로 옮겨 붙는다
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _chargeSteps{ 2 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bCrosswindSpread{ SW_FALSE };
     };
 } // namespace sw
 
@@ -87,7 +100,8 @@ namespace sw
         AdventureElementGrid( const AdventureElementGrid& other );
         AdventureElementGrid& operator=( const AdventureElementGrid& other );
 
-        void initialize( int32 width, int32 height, const AdventureElementSettings& settings );
+        /** @brief 격자 크기와 설정으로 처음 상태를 엽니다. 크기가 1 보다 작거나 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 상태는 그대로입니다(1 로 올려 받지 않는다). */
+        [[nodiscard]] bool initialize( int32 width, int32 height, const AdventureElementSettings& settings );
 
         void              setMaterial( const int2& cell, AdventureMaterial material );
         AdventureMaterial getMaterial( const int2& cell ) const;

@@ -1,9 +1,9 @@
 /**
  * @file EditorReflectionProbeBakeCommand.cpp
- * @brief 에디터 커맨드 "Bake Reflection Probes"(`lighting.bakeReflectionProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 반사 프로브를 GPU 로 굽습니다(IndirectLighting.md P4).
- * @details 선택한 오브젝트 중 반사 프로브가 있으면 그것만, 없으면 씬의 모든 반사 프로브를 굽는다(`lighting.bakeProbes` 와 같은 나눔). 결과는 씬 파일 옆
+ * @brief 에디터 커맨드 "Bake Reflection Probes"(`lighting.bakeReflectionProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 반사 프로브를 GPU 로 베이크합니다(IndirectLighting.md P4).
+ * @details 선택한 오브젝트 중 반사 프로브가 있으면 그것만, 없으면 씬의 모든 반사 프로브를 베이크한다(`lighting.bakeProbes` 와 같은 나눔). 결과는 씬 파일 옆
  *          `<씬 이름>.<오브젝트 이름(소문자)>.reflprobe` 에 쓰고 프로브의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
- *          굽기는 동기다 — 렌더 스레드를 비우고 이 스레드가 그래픽스 컨텍스트를 잡아 면 여섯을 그린다(`ReflectionProbeBaker::bakeProbes`). 끝난 뒤 알림 하나가 뜬다.
+ *          베이크는 동기다 — 렌더 스레드를 비우고 이 스레드가 그래픽스 컨텍스트를 잡아 면 여섯을 그린다(`ReflectionProbeBaker::bakeProbes`). 끝난 뒤 알림 하나가 뜬다.
  */
 #include "pch.h"
 
@@ -67,7 +67,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 구운 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
+            /** @brief 베이크한 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
             static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeData&& data, string& outError )
             {
                 const string resourcePath = probe.getOwner() != nullptr ? makeSceneBakeResourcePath( scene, *probe.getOwner(), ReflectionProbeData::kExtension ) : string{};

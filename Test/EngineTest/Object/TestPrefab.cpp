@@ -137,7 +137,7 @@ namespace sw
 
         /**
          * @brief 노드 둘이 같은 내용이면 true 입니다. GUID 는 데이터베이스가 정하므로 보지 않습니다.
-         * @details 오버라이드는 XML 을 다시 쓰며 공백이 바뀔 수 있어 글 전체가 아니라 덮어쓴 값(바퀴 위치)이 실렸는지만 견준다.
+         * @details 오버라이드는 XML 을 다시 쓰며 공백이 바뀔 수 있어 글 전체가 아니라 덮어쓴 값(바퀴 위치)이 실렸는지만 비교한다.
          */
         bool isSameNode( const sw::PrefabInstanceNode& left, const sw::PrefabInstanceNode& right )
         {
@@ -625,7 +625,7 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
 /**
  * @brief [PrefabTest] 쿠커가 만든 쿠킹본으로 읽은 프리팹은 그 소스(XML · JSON)로 읽은 프리팹과 같다
  * @details 개발 구성은 소스만, 배포 구성은 쿠킹본만 읽는다(`PrefabCache::loadPrefab`). 둘이 갈라지면 Shipping 에서만 다른 프리팹이 스폰되고
- *          개발 빌드의 테스트는 그것을 보지 못한다. 이름 · 위치 몇 개가 아니라, 둘을 같은 형식(JSON)으로 다시 써서 글 전체를 견준다.
+ *          개발 빌드의 테스트는 그것을 보지 못한다. 이름 · 위치 몇 개가 아니라, 둘을 같은 형식(JSON)으로 다시 써서 글 전체를 비교한다.
  */
 SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
 {
@@ -661,7 +661,7 @@ SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
         SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( ::test::makeTempResourceID( cookedRoot + pair._pCooked ) ), pair._pCooked );
         SW_EXPECT_EQUAL( fromSource.getName(), fromCooked.getName() );
 
-        // 같은 형식으로 다시 써서 글 전체를 견준다. 형식마다 다른 읽은 상태의 표현은 여기서 지워진다.
+        // 같은 형식으로 다시 써서 글 전체를 비교한다. 형식마다 다른 읽은 상태의 표현은 여기서 지워진다.
         const sw::string sourceJSONPath = test::makeTempPath( "equiv_from_source.prefab.json" );
         const sw::string cookedJSONPath = test::makeTempPath( "equiv_from_cooked.prefab.json" );
         SW_ASSERT_TRUE( fromSource.saveToJSONFile( sourceJSONPath ) );
@@ -845,8 +845,8 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
 }
 
 /**
- * @brief [PrefabTest] 부품 표시의 수명은 오브젝트의 수명이다 — 놓인 부품의 표시는 거두고, 되돌리기가 같은 id 로 되살릴 때 명령이 든 표시를 기록 순서째 되돌린다
- * @details 표시를 씬을 비울 때까지 남기면 지운 부품이 쌓이고, 되살릴 때 새 순서를 주면 프리팹으로 저장할 때 부품 순서가 바뀐다(결정 기록 5-12 `D1-5.3`).
+ * @brief [PrefabTest] 부품 표시의 수명은 오브젝트의 수명이다 — 놓인 부품의 표시는 거두고, 되돌리기가 같은 id 로 복원할 때 명령이 든 표시를 기록 순서째 되돌린다
+ * @details 표시를 씬을 비울 때까지 남기면 지운 부품이 쌓이고, 복원할 때 새 순서를 주면 프리팹으로 저장할 때 부품 순서가 바뀐다(결정 기록 5-12 `D1-5.3`).
  */
 SW_TEST_CASE( PrefabTest, NestedPartRecordFollowsTheObjectAndComesBackWithUndo )
 {
@@ -1085,7 +1085,7 @@ SW_TEST_CASE( PrefabTest, ApplyToOuterPrefabKeepsEditsOfPartsInsideParts )
     SW_ASSERT_TRUE( pCheckRight != nullptr && pCheckRight->getPrimarySceneComponent() != nullptr );
     SW_EXPECT_TRUE( pCheckRight->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 0.0f, 0.0f, 5.0f ) );
 
-    // 쿠킹 펼치기도 같은 자리에 굽는다(바퀴 노드의 펼친 상태).
+    // 쿠킹 펼치기도 같은 자리에 베이크한다(바퀴 노드의 펼친 상태).
     sw::PrefabAsset flattened = applied;
     SW_ASSERT_TRUE( prefabs.flattenNestedInstances( flattened ) );
     SW_ASSERT_EQUAL( size_t( 3 ), flattened.getNestedInstances().size() );

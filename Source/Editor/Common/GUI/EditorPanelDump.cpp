@@ -119,7 +119,7 @@ namespace sw::editor
         uint32 windowCount = 0;
         uint32 blankCount  = 0;
 
-        SW_LOG_INFO( "===== ImGui 창 덤프 (frame %#) — 패널 변경 전후로 이 블록을 비교한다 =====", frameCount );
+        SW_LOG_INFO( "===== ImGui window dump (frame %#) - compare this block before and after a panel change =====", frameCount );
         for ( const ImGuiWindow* pWindow : pContext->Windows )
         {
             if ( EditorPanelDumpInternal::isReportableWindow( pWindow ) == false )
@@ -151,11 +151,11 @@ namespace sw::editor
                          bBlank ? "<== BLANK" : "" );
         }
 
-        SW_LOG_INFO( "===== 창 %#개, 내용 없는 패널 %#개 =====", windowCount, blankCount );
+        SW_LOG_INFO( "===== %# windows, %# panels with no content =====", windowCount, blankCount );
         if ( blankCount > 0 )
         {
-            SW_LOG_WARNING( "보이는데 아무것도 그리지 않은 패널이 %#개 있습니다. 컨테이너·오버레이는 빼고 센 숫자이므로, "
-                            "패널 변경이 화면을 비웠을 가능성이 높습니다.",
+            SW_LOG_WARNING( "%# visible panels drew nothing. Containers and overlays are excluded from the count, so "
+                            "a panel change probably blanked the screen.",
                             blankCount );
         }
     }

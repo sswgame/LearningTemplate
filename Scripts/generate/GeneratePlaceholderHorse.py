@@ -4,7 +4,8 @@
     뼈: Root · Body · Neck · Head · LegFL · LegFR · LegBL · LegBR · Saddle(기수 소켓 — 형상 없음). 앞은 +Z, 위는 +Y, 단위는 미터입니다.
   - 클립: Walk(4박 — 왼뒤 · 왼앞 · 오뒤 · 오앞) · Trot(대각 두 쌍) · Canter(3박) · Gallop(4박, 빠르게). 다리는 엉덩이 · 어깨 관절에서 X 축으로 흔들리고
     몸통은 걸음마다 위아래로 조금 흔들립니다. `MountMovementComponent::_gaitParameter`(애니메이터 Float, 0 Idle · 1 Walk · 2 Trot · 3 Canter · 4 Gallop)가
-    이 클립들을 고르는 그래프를 몰고, 좌석(`VehicleSeatComponent::_socketName`)은 `Saddle` 소켓을 씁니다.
+    이 클립들을 고르는 그래프(`data/horse.animgraph.xml`)를 몰고, 좌석(`VehicleSeatComponent::_seatOffset`)은 `Saddle` 뼈의 바인드 자리(0, 1.72, -0.05)입니다.
+    (좌석 소켓 `_socketName` 은 외형 컴포넌트의 소켓이라 외형이 없는 말은 쓰지 않습니다.)
 
 진짜 말 모델(CC0 걸음새 클립이 있는 것)이 들어오면 이 파일을 지우고 그 모델로 바꿉니다 — 크기 · 뼈 이름 · 클립 이름을 같게 두면 씬 · 그래프를 다시 쓰지 않습니다.
 같은 입력이면 바이트까지 같은 파일이 나옵니다(버퍼는 base64 데이터 URI 로 파일 안에 둡니다).

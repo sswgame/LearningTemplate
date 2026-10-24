@@ -336,7 +336,7 @@ namespace sw
         PairedAnimationSystem&        system   = PairedAnimationSystem::getOrCreate( *_pManager );
         const PairedAnimationSession* pPlaying = system.findSession( state._snapshot._sessionID );
         if ( pPlaying != nullptr && pPlaying->isPlaying() )
-            system.abortSession( *_pManager, state._snapshot._sessionID ); // 서버 상태가 정본이다 — 보정 · 롤백은 옛 세션을 놓고 다시 받는다
+            system.abortSession( *_pManager, state._snapshot._sessionID ); // 서버 상태가 기준이다 — 보정 · 롤백은 옛 세션을 놓고 다시 받는다
         const PairedAnimationStartResult result = system.restoreSession( *_pManager, def, listBinding, state._snapshot );
         if ( result == PairedAnimationStartResult::Started )
         {

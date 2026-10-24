@@ -75,7 +75,7 @@ namespace sw
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
         // 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신 여기서 크게 알린다.
         if ( caps._bIndirectDraw == SW_FALSE )
-            SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
+            SW_LOG_ERROR( "This backend does not support indirect draws - scene meshes cannot be drawn." );
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         createOutputPSOVariants();
@@ -230,7 +230,7 @@ namespace sw
             {
                 // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
                 // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
-                SW_LOG_ERROR( "PSO %# 의 머티리얼 버퍼 원소 stride 가 0 입니다 — 리플렉션이 g_SwMaterials 원소 레이아웃을 주지 않았습니다.", pso );
+                SW_LOG_ERROR( "The material buffer element stride of PSO %# is 0 - reflection did not provide the g_SwMaterials element layout.", pso );
                 continue;
             }
 
@@ -250,7 +250,7 @@ namespace sw
                 RHIStructuredBufferSlot buffer{};
                 if ( buffer.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, bytes.data() ) == false )
                 {
-                    SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
+                    SW_LOG_ERROR( "Failed to create the material fallback buffer (stride %#).", stride );
                     continue;
                 }
                 buffer.upload( _pDevice, bytes.data(), stride );

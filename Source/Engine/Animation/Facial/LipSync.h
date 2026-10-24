@@ -2,7 +2,7 @@
  * @file LipSync.h
  * @brief 립싱크입니다. 음성 클립을 진폭과 주파수 대역 에너지로 나눠 비즘(viseme) 가중치 트랙으로 분석합니다(오프라인 임포트). 트랙이 없으면 진폭만 사용합니다(런타임).
  * @details 언리얼 립싱크 플러그인(OVR LipSync, 진폭 기반)에 해당한다. 단어 단위 음소 인식(음향 모델)은 하지 않는다. 대역 에너지 형태를 데이터의 비즘 대역 테이블과
- *          비교하고, 유성 프레임은 선형 예측으로 잰 두 포먼트를 모음 비즘의 포먼트(`LipSyncViseme::_formantHz`)와 견줘 모음을 가른다.
+ *          비교하고, 유성 프레임은 선형 예측으로 측정한 두 포먼트를 모음 비즘의 포먼트(`LipSyncViseme::_formantHz`)와 비교해 모음을 가른다.
  *          비즘에서 모프 타깃으로 가는 연결은 얼굴 리그(`FacialRig`)가 데이터로 정한다.
  */
 #pragma once
@@ -57,7 +57,7 @@ namespace sw
     /**
      * @struct LipSyncSettings
      * @brief 분석 표(데이터, `engine/animation/lipsync.xml`)입니다. 첫 비즘은 무음(sil)으로 씁니다.
-     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
      *          대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
      */
     REFLECT()
@@ -161,7 +161,7 @@ namespace sw
         /** @brief RMS 를 입 벌림 [0, 1] 로 바꿉니다(무음 아래 0, full 위 1). */
         static float32 computeOpenness( float32 rms, const LipSyncSettings& settings );
         /**
-         * @brief 표본 한 창의 첫째 · 둘째 포먼트(Hz)를 잽니다 — 선형 예측(LPC) 포락선의 처음 두 봉우리입니다. 봉우리가 둘 없으면 false 입니다.
+         * @brief 표본 한 창의 첫째 · 둘째 포먼트(Hz)를 측정합니다 — 선형 예측(LPC) 포락선의 처음 두 봉우리입니다. 봉우리가 둘 없으면 false 입니다.
          * @details 높은 표본율은 약 16 kHz 로 평균 솎아 내고(포먼트는 4 kHz 아래다), 프리엠퍼시스 · 해밍 창 · 자기상관 · Levinson-Durbin 을 거친다(Praat 의 Burg 대신 자기상관법).
          */
         [[nodiscard]] static bool tryComputeFormants( const float32* pSample, size_t sampleCount, uint32 sampleRate, float2& outFormantHz );

@@ -45,6 +45,7 @@ namespace sw
             addPreloadPath( part._socketSet, inoutListPath );
             addPreloadPath( part._fit, inoutListPath );
             addPreloadPath( part._fitTables, inoutListPath );
+            addPreloadPath( part._bodyShapes, inoutListPath );
         }
         for ( const ResolvedAttachment& attachment : resolved._listAttachment )
         {

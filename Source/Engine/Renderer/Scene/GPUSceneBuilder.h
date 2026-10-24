@@ -167,7 +167,7 @@ namespace sw
         };
         /** @brief 더티 슬롯만 제자리에서 다시 채웁니다. 실릴지가 바뀌는 등 조건이 어긋나면 되돌리고 `_bPartialDone == false` 입니다. */
         [[nodiscard]] MeshCollectResult collectDirtyCandidatesInPlace( const MeshCollectInput& input );
-        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 슬롯마다 견준 뒤 앞으로 당깁니다. */
+        /** @brief 모든 슬롯을 다시 채우고(임계값을 넘으면 병렬) 지난 프레임과 슬롯마다 비교한 뒤 앞으로 당깁니다. */
         [[nodiscard]] MeshCollectResult collectAllCandidates( const MeshCollectInput& input );
         /** @brief 전체 수집이 남긴 슬롯 표시로 실린 후보를 앞으로 당기고, 지난 프레임과 같은지를 하나로 줄입니다(직렬 구간). */
         [[nodiscard]] MeshCollectResult compactCollectedCandidates( uint32 primitiveCount, bool bPrevAligned );
@@ -212,7 +212,7 @@ namespace sw
         /**
          * @brief 씬의 `VfxComponent` 가 낸 입자로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
          * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
-         *          메시 투명 배치(발행된 꼬리)와 견줘 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
+         *          메시 투명 배치(발행된 꼬리)와 비교해 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
          */
         void populateParticleBatches( const GameObjectManager& objects, const float3& cameraPos );
         /**

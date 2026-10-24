@@ -232,7 +232,7 @@ SW_TEST_CASE( EditorSelectionScopeTest, PreviewClickPicksIntoTheWindowSelection 
 
 /**
  * @brief [EditorSelectionScopeTest] 인스펙터의 구조 편집(컴포넌트 제거)도 미리보기 씬이면 창의 스택에 남고 메인 씬은 dirty 가 아니다
- * @details 인스펙터의 미리보기 갈래는 메인과 같은 명령(`EditorSceneCommands::destroyComponent`)을 부른다 — 기록의 스택은 오브젝트의 씬이 고른다.
+ * @details 인스펙터의 미리보기 분기는 메인과 같은 명령(`EditorSceneCommands::destroyComponent`)을 부른다 — 기록의 스택은 오브젝트의 씬이 고른다.
  */
 SW_TEST_CASE( EditorSelectionScopeTest, RemovingAPreviewComponentStaysInThePreviewStack )
 {

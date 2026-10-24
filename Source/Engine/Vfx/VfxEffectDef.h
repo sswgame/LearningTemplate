@@ -66,7 +66,7 @@ namespace sw
     enum class VfxCollisionMethod : uint8
     {
         PhysicsRaycast, ///< 물리 씬(3D)에 한 단계의 선분을 쏜다 — CPU 전용(게임 스레드의 물리 씬)
-        SceneDepth,     ///< 주 시점의 지난 프레임 깊이와 견준다 — GPU 전용. 화면 밖 · 가려진 면은 못 본다(`VfxCollisionDef` 설명)
+        SceneDepth,     ///< 주 시점의 지난 프레임 깊이와 비교한다 — GPU 전용. 화면 밖 · 가려진 면은 못 본다(`VfxCollisionDef` 설명)
     };
 } // namespace sw
 

@@ -23,7 +23,7 @@ using namespace sw;
 namespace
 {
     /**
-     * @brief 바탕 층 파일(구성 때 구운 `EngineConfig.json` 사본)에서 창 크기만 바꾼 JSON 을 만듭니다.
+     * @brief 바탕 층 파일(구성 때 베이크한 `EngineConfig.json` 사본)에서 창 크기만 바꾼 JSON 을 만듭니다.
      * @details `EngineConfig` 는 값이 파일에만 있어 일부 키만 적은 JSON 은 범위 검사에서 진다 — 테스트도 온전한 파일에서 시작한다.
      */
     string makeEngineConfigJSON( uint32 width, uint32 height )
@@ -113,7 +113,7 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 }
 
 /**
- * @brief [ConfigManagerTest] 필수 설정 파일이 없으면 실패하고, 구운 JSON · C++ 기본값으로 대신하지 않는다
+ * @brief [ConfigManagerTest] 필수 설정 파일이 없으면 실패하고, 베이크한 JSON · C++ 기본값으로 대신하지 않는다
  * @details 설정이 없는데 서는 것은 값이 어디서 왔는지 아무도 모르는 상태다. 선택 설정(`loadOptionalConfig`)만 없음(`Missing`)을 돌려준다.
  */
 SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
@@ -142,7 +142,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingRequiredFileFails )
         SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
     }
 
-    // 3) 구운 JSON 은 출처를 명시한 때만 읽는다(Shipping 의 길).
+    // 3) 베이크한 JSON 은 출처를 명시한 때만 읽는다(Shipping 의 길).
     {
         ConfigManager manager;
         const string  baked         = makeEngineConfigJSON( 640, 480 );
@@ -205,7 +205,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 
 /**
  * @brief [ConfigManagerTest] 틀린 설정 파일은 기본값으로 떨어지지 않고 nullptr — 모르는 키 · 대소문자만 다른 키 · 범위 밖 값을 이름으로 알린다
- * @details 구운 사본으로 조용히 떨어지면 고친 값이 무시된 것을 아무도 모른다. 파일이 없을 때도 같다(`MissingRequiredFileFails`).
+ * @details 베이크한 사본으로 조용히 떨어지면 고친 값이 무시된 것을 아무도 모른다. 파일이 없을 때도 같다(`MissingRequiredFileFails`).
  */
 SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 {

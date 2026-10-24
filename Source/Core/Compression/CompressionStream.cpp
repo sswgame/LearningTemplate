@@ -53,7 +53,7 @@ namespace sw
              * @details 헤더의 `_uncompressedSize` 는 그대로 할당 크기가 됩니다. `kMaxUncompressedSize` 만으로는 81 바이트짜리 입력이
              *          620 MB 를 요구해도 통과했고, 그만큼 할당 · 0 채우기 · 비우기를 한 뒤에야 페이로드가 비었다는 것을 알았습니다
              *          (야간 퍼저 `Compression` 대상 10 초 타임아웃). 압축 크기에서 나올 수 있는 최대치는 코덱이 알므로
-             *          (`ICompressionCodec::decompressBound`) 할당 **전에** 그것과 견줍니다. 두 해제 경로가 모두 여기를 지납니다.
+             *          (`ICompressionCodec::decompressBound`) 할당 **전에** 그것과 비교합니다. 두 해제 경로가 모두 여기를 지납니다.
              */
             static ICompressionCodec* findCodecForHeader( const CompressionHeader& header, const CompressionCodecRegistry* pRegistry )
             {
@@ -180,7 +180,7 @@ namespace sw
         if ( header._uncompressedSize == 0 )
             return true;
 
-        // 할당 전에 코덱의 상한과 견준다(아래 resize 가 헤더 값을 그대로 쓴다).
+        // 할당 전에 코덱의 상한과 비교한다(아래 resize 가 헤더 값을 그대로 쓴다).
         if ( CompressionStreamInternal::findCodecForHeader( header, pRegistry ) == nullptr )
             return false;
 

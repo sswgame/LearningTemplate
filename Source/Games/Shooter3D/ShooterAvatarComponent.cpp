@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
@@ -25,26 +26,63 @@ namespace sw
 
     namespace
     {
-        /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
-        float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
+        struct ShooterAvatarComponentInternal
         {
-            switch ( direction )
+            /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
+            static float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
             {
-                case LocomotionDirection::Idle:
-                    return ShooterAnimationParameter::kMoveIdle;
-                case LocomotionDirection::Forward:
-                    return forwardSpeed >= runThreshold ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
-                case LocomotionDirection::Backward:
-                    return ShooterAnimationParameter::kMoveBackward;
-                case LocomotionDirection::Left:
-                    return ShooterAnimationParameter::kMoveLeft;
-                case LocomotionDirection::Right:
-                    return ShooterAnimationParameter::kMoveRight;
-                case LocomotionDirection::Airborne:
-                    return ShooterAnimationParameter::kMoveAir;
+                switch ( direction )
+                {
+                    case LocomotionDirection::Idle:
+                        return ShooterAnimationParameter::kMoveIdle;
+                    case LocomotionDirection::Forward:
+                        return forwardSpeed >= runThreshold ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
+                    case LocomotionDirection::Backward:
+                        return ShooterAnimationParameter::kMoveBackward;
+                    case LocomotionDirection::Left:
+                        return ShooterAnimationParameter::kMoveLeft;
+                    case LocomotionDirection::Right:
+                        return ShooterAnimationParameter::kMoveRight;
+                    case LocomotionDirection::Airborne:
+                        return ShooterAnimationParameter::kMoveAir;
+                }
+                return ShooterAnimationParameter::kMoveIdle;
             }
-            return ShooterAnimationParameter::kMoveIdle;
-        }
+
+            /** @brief 시나리오 프로브가 보는 첫 몸입니다(드물게 불리므로 씬을 훑습니다). */
+            static const ShooterAvatarComponent* findFirstAvatar( const GameObjectManager* pManager )
+            {
+                const ShooterAvatarComponent* pFound = nullptr;
+                if ( pManager == nullptr )
+                    return pFound;
+                pManager->forEachComponentOfType<ShooterAvatarComponent>( [&pFound]( ShooterAvatarComponent* pAvatar )
+                {
+                    if ( pFound == nullptr )
+                        pFound = pAvatar;
+                } );
+                return pFound;
+            }
+
+            /** @brief 첫 몸이 보폭 워핑 노드에 마지막으로 넣은 배율입니다. 리그가 아직 묶이지 않았으면 프로브가 없는 것으로 보고합니다. */
+            [[nodiscard]] static bool readStrideScale( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterAvatarComponent* pAvatar = findFirstAvatar( pManager );
+                if ( pAvatar == nullptr || pAvatar->getStrideAppliedCount() == 0 )
+                    return false;
+                outValue = static_cast<float64>( pAvatar->getLastStrideScale() );
+                return true;
+            }
+
+            /** @brief 첫 몸이 리그 준비 뒤 보폭 워핑 값을 넣은 프레임 수입니다. */
+            [[nodiscard]] static bool readStrideAppliedCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterAvatarComponent* pAvatar = findFirstAvatar( pManager );
+                if ( pAvatar == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pAvatar->getStrideAppliedCount() );
+                return true;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -71,6 +109,8 @@ namespace sw
         , _shootWeight{ 0.0f }
         , _hitTimer{ 0.0f }
         , _bodyYaw{ 0.0f }
+        , _lastStrideScale{ 1.0f }
+        , _strideAppliedCount{ 0 }
         , _lastHitReaction{ 0 }
         , _bYawReady{ SW_FALSE }
         , _bStrideErrorShown{ SW_FALSE }
@@ -133,7 +173,7 @@ namespace sw
         auto found = _mapClipFootSpeed.find( pClip );
         if ( found == _mapClipFootSpeed.end() )
         {
-            // 클립마다 한 번만 잰다(표본 수만큼 디코드한다). 상태가 처음 바뀌는 프레임에만 든다.
+            // 클립마다 한 번만 측정한다(표본 수만큼 디코드한다). 상태가 처음 바뀌는 프레임에만 든다.
             const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( *pClip, pUnit->getSkeleton(), hashed_string( _leftFootBone ), hashed_string( _rightFootBone ),
                                                                              LocomotionSpeedUtil::kDefaultSampleCount );
             found                   = _mapClipFootSpeed.emplace( pClip, footSpeed ).first;
@@ -154,6 +194,8 @@ namespace sw
         const bool          bScale     = pModifier->setNodeControl( node, hashed_string( "stride_scale" ), strideScale );
         const bool          bDirection = pModifier->setNodeControl( node, hashed_string( "direction_x" ), localVelocity._y ) && pModifier->setNodeControl( node, hashed_string( "direction_z" ), localVelocity._x );
         const bool          bMissing   = bScale == false || bDirection == false;
+        _lastStrideScale               = strideScale;
+        ++_strideAppliedCount;
         if ( bMissing && _bStrideErrorShown == SW_FALSE )
         {
             _bStrideErrorShown = SW_TRUE;
@@ -201,7 +243,7 @@ namespace sw
                                                                                 pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction     = _locomotion.update( candidate, step );
         const float2              localVelocity = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw );
-        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), computeMoveCode( direction, localVelocity._x, _runThreshold ) );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), ShooterAvatarComponentInternal::computeMoveCode( direction, localVelocity._x, _runThreshold ) );
         parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), bAlive == false );
         // 발 미끄러짐 — 이동 클립의 발 속도에 실제 수평 속도를 맞추고(언리얼 재생 속도 매칭), 범위에 막힌 몫은 보폭 워핑이 맡는다. 쓰러지면 클립 그대로.
         const float3& velocity    = pPlayer->getMoveVelocity();
@@ -222,4 +264,12 @@ namespace sw
         parameters.setFloat( hashed_string( ShooterAnimationParameter::kAimWeight ), _aimWeight );
         parameters.setFloat( hashed_string( ShooterAnimationParameter::kShootWeight ), _shootWeight );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( shooterStrideScale, "Shooter3D.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound",
+                         &ShooterAvatarComponentInternal::readStrideScale );
+    SW_AUTOMATION_PROBE( shooterStrideAppliedCount, "Shooter3D.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)",
+                         &ShooterAvatarComponentInternal::readStrideAppliedCount );
 } // namespace sw

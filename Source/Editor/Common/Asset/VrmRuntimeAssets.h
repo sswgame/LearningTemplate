@@ -63,8 +63,8 @@ namespace sw::editor
         static bool hasSpringRig( const VrmAvatarDef& def, const Skeleton& skeleton );
         /**
          * @brief 후처리 리그 XML(`RigAsset` 형식, `SpringChain` 노드만)을 만듭니다.
-         * @details 사슬은 스켈레톤 부모를 따라 끊는다 — 0.x 는 뿌리 본 아래 자손 전부를 깊이 우선 순서로 담아 가지가 있으면 한 줄이 아니다. 관절의 부모가 앞 관절이
-         *          아니면 그 부모에서 새 사슬을 시작한다(부모 본이 고정된 뿌리다). 두 본 미만의 사슬과 스켈레톤에 없는 본은 넣지 않고 무시 목록에 남긴다.
+         * @details 사슬은 스켈레톤 부모를 따라 끊는다 — 0.x 는 루트 본 아래 자손 전부를 깊이 우선 순서로 담아 가지가 있으면 한 줄이 아니다. 관절의 부모가 앞 관절이
+         *          아니면 그 부모에서 새 사슬을 시작한다(부모 본이 고정된 루트다). 두 본 미만의 사슬과 스켈레톤에 없는 본은 넣지 않고 무시 목록에 남긴다.
          *          충돌체는 그 스프링의 충돌체 묶음 전부다(구는 offset, 캡슐은 offset → tail).
          */
         static string makeSpringRigXML( const VrmAvatarDef& def, const Skeleton& skeleton, vector<string>* pOutListIgnored );

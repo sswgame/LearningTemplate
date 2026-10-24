@@ -36,7 +36,7 @@ SW_TEST_CASE( ProfilerCallTreeTest, FoldsPathsAndComputesSelfTime )
         addCallEventInternal( game, 3, base + 50, base + 150, 2 );
         addCallEventInternal( game, 2, base + 300, base + 900, 1 );
     }
-    addCallEventInternal( listThread[1], 5, 0, 400, 0 ); // 다른 스레드는 자기 뿌리
+    addCallEventInternal( listThread[1], 5, 0, 400, 0 ); // 다른 스레드는 자기 루트
 
     sw::vector<sw::editor::ProfilerCallNode> listNode;
     sw::editor::ProfilerCallTree::compute( listThread, listNode );

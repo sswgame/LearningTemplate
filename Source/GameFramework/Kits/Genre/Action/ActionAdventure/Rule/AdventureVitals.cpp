@@ -6,6 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+
 namespace sw
 {
     AdventureVitals::AdventureVitals()
@@ -17,37 +19,57 @@ namespace sw
         , _heartPieceCount{ 0 }
         , _bMagicUpgraded{ SW_FALSE }
     {
-        initialize( AdventureVitalsSettings{} );
+        // 기본 설정은 선언된 범위 안이다(테스트 `AdventureVitalsRefusesOutOfRangeSettingsInsteadOfClamping` 이 지킨다).
+        const bool bDefaultsAccepted = initialize( AdventureVitalsSettings{} );
+        SW_ASSERT( bDefaultsAccepted );
+        (void)bDefaultsAccepted;
     }
 
-    void AdventureVitals::initialize( const AdventureVitalsSettings& settings )
+    bool AdventureVitals::initialize( const AdventureVitalsSettings& settings )
     {
-        _settings                 = settings;
-        _settings._maxHeartCount  = MathUtil::max( 1, _settings._maxHeartCount );
-        _settings._piecesPerHeart = MathUtil::max( 1, _settings._piecesPerHeart );
-        _heartCount               = MathUtil::clamp( _settings._startHeartCount, 1, _settings._maxHeartCount );
-        _heartPieceCount          = 0;
-        _bMagicUpgraded           = SW_FALSE;
-        resetHealth();
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "AdventureVitals: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
 
-        ResourceGaugeSettings magic;
-        magic._max       = MathUtil::max( 1.0f, _settings._magicMax );
-        magic._regenRate = 0.0f; // 마법은 저절로 차지 않는다(항아리나 물약으로 채운다)
-        _magic.initialize( magic );
+        // 따로 만들어 모두 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
+        VitalitySettings healthSettings;
+        healthSettings._maxHealth = static_cast<float32>( settings._startHeartCount * kQuartersPerHeart );
+        ResourceGaugeSettings magicSettings;
+        magicSettings._max       = settings._magicMax;
+        magicSettings._regenRate = 0.0f; // 마법은 저절로 차지 않는다(항아리나 물약으로 채운다)
+        ResourceGaugeSettings staminaSettings;
+        staminaSettings._max              = settings._staminaMax;
+        staminaSettings._regenRate        = settings._staminaRegenRate;
+        staminaSettings._regenDelay       = settings._staminaRegenDelay;
+        staminaSettings._exhaustThreshold = settings._staminaRecoverLevel;
+        Vitality      health;
+        ResourceGauge magic;
+        ResourceGauge stamina;
+        const bool    bHealthAccepted  = health.initialize( healthSettings );
+        const bool    bMagicAccepted   = magic.initialize( magicSettings );
+        const bool    bStaminaAccepted = stamina.initialize( staminaSettings );
+        const bool    bAllAccepted     = bHealthAccepted && bMagicAccepted && bStaminaAccepted;
+        if ( bAllAccepted == false )
+            return false;
 
-        ResourceGaugeSettings stamina;
-        stamina._max              = MathUtil::max( 1.0f, _settings._staminaMax );
-        stamina._regenRate        = _settings._staminaRegenRate;
-        stamina._regenDelay       = _settings._staminaRegenDelay;
-        stamina._exhaustThreshold = MathUtil::clamp( _settings._staminaRecoverLevel, 0.001f, stamina._max );
-        _stamina.initialize( stamina );
+        _settings        = settings;
+        _heartCount      = settings._startHeartCount;
+        _heartPieceCount = 0;
+        _bMagicUpgraded  = SW_FALSE;
+        _health          = health;
+        _magic           = magic;
+        _stamina         = stamina;
+        return true;
     }
 
-    void AdventureVitals::resetHealth()
+    bool AdventureVitals::resetHealth()
     {
         VitalitySettings health;
         health._maxHealth = static_cast<float32>( _heartCount * kQuartersPerHeart );
-        _health.initialize( health );
+        return _health.initialize( health );
     }
 
     bool AdventureVitals::applyDamage( int32 quarters )
@@ -182,7 +204,8 @@ namespace sw
                                 restored._heartPieceCount < _settings._piecesPerHeart && restored._bMagicUpgraded <= SW_TRUE;
         if ( bHeadValid == false )
             return false;
-        restored.resetHealth(); // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
+        if ( restored.resetHealth() == false ) // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
+            return false;
         const bool bBodyRead = restored._health.readState( archive ) && restored._magic.readState( archive ) && restored._stamina.readState( archive );
         if ( bBodyRead == false )
             return false;

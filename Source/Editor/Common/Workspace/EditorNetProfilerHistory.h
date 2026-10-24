@@ -27,7 +27,7 @@ namespace sw::editor
         ReceivedPacketsPerSecond, ///< 두 보고 사이에 받은 패킷 / 초
         ResentMessagesPerSecond,  ///< 두 보고 사이에 다시 보낸 신뢰 메시지 / 초
         RttMilliseconds,          ///< 연결들의 평활 RTT 중 가장 큰 값
-        LossPercent,              ///< 연결들이 잰 손실 중 가장 큰 값
+        LossPercent,              ///< 연결들이 측정한 손실 중 가장 큰 값
         Count
     };
 } // namespace sw::editor

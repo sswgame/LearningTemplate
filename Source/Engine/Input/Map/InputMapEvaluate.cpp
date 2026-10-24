@@ -136,7 +136,7 @@ namespace sw
             accum._bAnyTriggered = true;
         if ( state._holdDuration > accum._maxHold )
             accum._maxHold = state._holdDuration;
-        // 뗀 순간 Completed/Canceled 판정은 바인딩마다 시간(`getEffectiveTriggerTime`)으로 본다. 맵 값과 견주면 짧은 차지가 Canceled 로 나온다.
+        // 뗀 순간 Completed/Canceled 판정은 바인딩마다 시간(`getEffectiveTriggerTime`)으로 본다. 맵 값과 비교하면 짧은 차지가 Canceled 로 나온다.
         if ( state._holdDuration >= holdTime )
             accum._bAnyHoldReached = true;
 

@@ -152,7 +152,7 @@ namespace sw
             // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
             // 없다. 배포본은 SW_RHI_TARGET_* 로 고른 백엔드 **하나만** 링크하므로, 무엇이 있는지
             // 같이 알려 준다.
-            SW_LOG_ERROR( "%# 백엔드는 이 빌드에 없습니다. 사용 가능: %#",
+            SW_LOG_ERROR( "The %# backend is not in this build. Available: %#",
                           RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );
             return nullptr;
         }

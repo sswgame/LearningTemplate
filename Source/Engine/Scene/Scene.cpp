@@ -188,6 +188,95 @@ namespace sw
                         inoutMapPartOverride[objectID] = std::move( listPartOverride );
                 }
             }
+
+            /**
+             * @brief 엔티티 하나의 오브젝트를 만듭니다. 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 만든다(@p outPrefabInstanceState). 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼과 유니티의
+             *        프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이라 원형을 만들지 않는다(원형은 버려지고, 만드는 동안 컴포넌트가 한 벌 더 생긴다) — 프리팹이 있는지만 본다.
+             * @return 만든 오브젝트입니다. 프리팹을 찾지 못하면 nullptr 이고, 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값과 프리팹 GUID 까지).
+             *         문서 그대로 @p inoutListUnresolved 에 보관했다가 저장할 때 다시 써 넣는다(유니티의 "Missing Prefab" 과 같다). 스트리밍 셀의 엔티티는 보관하지 않는다.
+             */
+            static GameObject* createEntityObject( GameObjectManager& objects, AssetManager* pAssetManager, unordered_map<string, string>& inoutMapBaseState,
+                                                   const SceneDocument::SceneObjectNode& entity, bool bStreamingCell, vector<SceneDocument::SceneObjectNode>& inoutListUnresolved,
+                                                   string& outPrefabInstanceState )
+            {
+                if ( entity._prefab.empty() )
+                    return objects.createGameObject( hashed_string( entity._name.c_str() ) );
+
+                const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXML.empty() == false;
+                // 에셋 매니저가 없으면 프리팹을 찾을 곳이 없다 — 둘 다 건너뛰어 아래의 "Missing Prefab" 으로 보관한다.
+                const bool bHasPrefabCache = pAssetManager != nullptr;
+                bool       bStateMade      = false;
+                if ( bHasPrefabCache && bHasSavedState )
+                {
+                    bStateMade = pAssetManager->getAssetCache<PrefabCache>().loadPrefab( entity._prefab ) != nullptr;
+                }
+                else if ( bHasPrefabCache )
+                {
+                    const string* pBaseState = findPrefabBaseState( *pAssetManager, inoutMapBaseState, entity._prefab );
+                    bStateMade               = pBaseState != nullptr && PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXML, entity._name, outPrefabInstanceState );
+                }
+                GameObject* pGo = bStateMade ? objects.createGameObject( hashed_string( entity._name.c_str() ) ) : nullptr;
+                if ( pGo == nullptr )
+                {
+                    SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
+                                    entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
+                    if ( bStreamingCell == false )
+                        inoutListUnresolved.push_back( entity );
+                }
+                return pGo;
+            }
+
+            /**
+             * @brief 엔티티의 상태를 오브젝트에 얹습니다. **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
+             *        상태가 없으면 빈 엔티티라 다른 엔티티가 파일 id 로 가리킬 수 있게 배치에 기록만 한다.
+             */
+            static void applyEntityState( GameObject* pGo, const SceneDocument::SceneObjectNode& entity, const string& prefabInstanceState, ObjectStateBatch& batch )
+            {
+                ObjectLoadContext context{ SerializePurpose::Authoring };
+                context._pBatch  = &batch;
+                context._savedID = entity._fileID;
+                if ( entity._embeddedStateBytes.empty() == false )
+                {
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
+                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
+                }
+                else if ( entity._embeddedXML.empty() == false )
+                {
+                    if ( ObjectStateSerializer::loadFromXMLString( pGo, entity._embeddedXML, context ) == false )
+                        SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
+                }
+                else if ( prefabInstanceState.empty() == false )
+                {
+                    // 원형은 다른 오브젝트로의 부착과 핸들을 싣지 않는다(`PrefabOverrides::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
+                    // 덮어쓴 값이라 파일 id 로 들어 있고, 배치가 모두 읽은 뒤 연결한다.
+                    if ( ObjectStateSerializer::loadFromXMLString( pGo, prefabInstanceState, context ) == false )
+                        SW_LOG_WARNING( "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );
+                }
+                else
+                {
+                    batch.add( pGo, entity._fileID, hashed_string( entity._name.c_str() ), false );
+                }
+            }
+
+            /**
+             * @brief 프리팹의 중첩 인스턴스를 부품으로 다시 스폰합니다. 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다).
+             * @details 엔티티를 모두 만든 **뒤에** 스폰한다. 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 앞에서 이미 읽어 캐시에 있다.
+             *          씬에서 부품을 고친 것은 엔티티의 덮어쓴 것 안 `<Part>` 로 실려 스폰하는 부품에 얹는다(유니티 nested override).
+             */
+            static void spawnNestedInstances( AssetManager& assetManager, const vector<PrefabEntity>& listPrefabEntity )
+            {
+                PrefabCache&               prefabs = assetManager.getAssetCache<PrefabCache>();
+                vector<PrefabPartOverride> listPartOverride;
+                for ( const PrefabEntity& prefabEntity : listPrefabEntity )
+                {
+                    const shared_ptr<const PrefabAsset> pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
+                    if ( pPrefab == nullptr )
+                        continue;
+                    if ( PrefabOverrides::collectPartOverrides( *prefabEntity._pOverrideXML, listPartOverride ) == false )
+                        SW_LOG_ERROR( "Nested part overrides of '%#' could not be read - its parts are spawned as the prefab has them", prefabEntity._pObject->getName().c_str() );
+                    (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -311,85 +400,20 @@ namespace sw
         for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
             SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
-            GameObject* pGo{ nullptr };
             string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
+            GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, mapPrefabBaseState, entity, bStreamingCell, _listUnresolvedEntity, prefabInstanceState );
+            if ( pGo == nullptr )
+                continue;
+
+            if ( pOutListObjectID != nullptr )
+                pOutListObjectID->push_back( pGo->getObjectID() );
             if ( entity._prefab.empty() == false )
-            {
-                // 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 만든다. 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼과 유니티의
-                // 프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이다. 프리팹을 찾지 못하면 아래의 "Missing Prefab" 경로를 탄다.
-                // 전체 상태가 실린 엔티티는 원형을 만들지 않는다. 그 상태가 기준이라 원형은 버려지고, 만드는 동안 컴포넌트가 한 벌 더 생긴다.
-                // 프리팹이 있는지만 본다(없으면 "Missing Prefab").
-                const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXML.empty() == false;
-                // 에셋 매니저가 없으면 프리팹을 찾을 곳이 없다 — 둘 다 건너뛰어 아래의 "Missing Prefab" 으로 보관한다.
-                const bool bHasPrefabCache = _services._pAssetManager != nullptr;
-                bool       bStateMade      = false;
-                if ( bHasPrefabCache && bHasSavedState )
-                {
-                    bStateMade = _services._pAssetManager->getAssetCache<PrefabCache>().loadPrefab( entity._prefab ) != nullptr;
-                }
-                else if ( bHasPrefabCache )
-                {
-                    const string* pBaseState = SceneInternal::findPrefabBaseState( *_services._pAssetManager, mapPrefabBaseState, entity._prefab );
-                    bStateMade               = pBaseState != nullptr &&
-                                 PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXML, entity._name, prefabInstanceState );
-                }
-                if ( bStateMade )
-                    pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
-                if ( pGo == nullptr )
-                {
-                    // 버리지 않는다. 버리면 다음 저장이 파일에서 지운다(덮어쓴 값과 프리팹 GUID 까지). 문서 그대로 보관했다가 저장할 때
-                    // 다시 써 넣는다(유니티의 "Missing Prefab" 과 같다).
-                    SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
-                                    entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
-                    if ( bStreamingCell == false )
-                        _listUnresolvedEntity.push_back( entity );
-                }
-            }
-            else
-            {
-                pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
-            }
-
-            if ( pGo != nullptr )
-            {
-                if ( pOutListObjectID != nullptr )
-                    pOutListObjectID->push_back( pGo->getObjectID() );
-                if ( entity._prefab.empty() == false )
-                    _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
-                if ( entity._fileID != 0 )
-                    _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
-
-                ObjectLoadContext context{ SerializePurpose::Authoring };
-                context._pBatch  = &batch;
-                context._savedID = entity._fileID;
-                // **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
-                // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
-                if ( entity._embeddedStateBytes.empty() == false )
-                {
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
-                        SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
-                }
-                else if ( entity._embeddedXML.empty() == false )
-                {
-                    if ( ObjectStateSerializer::loadFromXMLString( pGo, entity._embeddedXML, context ) == false )
-                        SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
-                }
-                else if ( prefabInstanceState.empty() == false )
-                {
-                    // 원형은 다른 오브젝트로의 부착과 핸들을 싣지 않는다(`PrefabOverrides::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
-                    // 덮어쓴 값이라 파일 id 로 들어 있고, 배치가 모두 읽은 뒤 연결한다.
-                    if ( ObjectStateSerializer::loadFromXMLString( pGo, prefabInstanceState, context ) == false )
-                        SW_LOG_WARNING( "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );
-                }
-                else
-                {
-                    // 상태 없이 만든 빈 엔티티다. 다른 엔티티가 파일 id 로 가리킬 수 있으니 배치에 기록한다.
-                    batch.add( pGo, entity._fileID, hashed_string( entity._name.c_str() ), false );
-                }
-
-                if ( entity._prefab.empty() == false )
-                    listPrefabEntity.push_back( SceneInternal::PrefabEntity{ pGo, &entity._prefab, &entity._prefabOverrideXML } );
-            }
+                _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
+            if ( entity._fileID != 0 )
+                _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
+            SceneInternal::applyEntityState( pGo, entity, prefabInstanceState, batch );
+            if ( entity._prefab.empty() == false )
+                listPrefabEntity.push_back( SceneInternal::PrefabEntity{ pGo, &entity._prefab, &entity._prefabOverrideXML } );
         }
 
         // 옮기지 못한 핸들 PROPERTY 가 있으면 로드 오류다(배치가 필드를 적어 오류를 남겼다). 비우고 이어 가면 값이 조용히 사라진다.
@@ -399,23 +423,8 @@ namespace sw
             return false;
         }
 
-        // 프리팹의 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다). 엔티티를 모두 만든 **뒤에** 스폰한다.
-        // 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 위에서 이미 읽어 캐시에 있다.
-        // 씬에서 부품을 고친 것은 엔티티의 덮어쓴 것 안 `<Part>` 로 실려 스폰하는 부품에 얹는다(유니티 nested override).
         if ( _services._pAssetManager != nullptr )
-        {
-            PrefabCache&               prefabs = _services._pAssetManager->getAssetCache<PrefabCache>();
-            vector<PrefabPartOverride> listPartOverride;
-            for ( const SceneInternal::PrefabEntity& prefabEntity : listPrefabEntity )
-            {
-                const shared_ptr<const PrefabAsset> pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
-                if ( pPrefab == nullptr )
-                    continue;
-                if ( PrefabOverrides::collectPartOverrides( *prefabEntity._pOverrideXML, listPartOverride ) == false )
-                    SW_LOG_ERROR( "Nested part overrides of '%#' could not be read - its parts are spawned as the prefab has them", prefabEntity._pObject->getName().c_str() );
-                (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab, listPartOverride ); // 건너뛴 노드는 노드마다 경고했다
-            }
-        }
+            SceneInternal::spawnNestedInstances( *_services._pAssetManager, listPrefabEntity );
 
         _objectManager->mergePendingAdds();
         _objectManager->flushSceneTransforms();

@@ -1,6 +1,6 @@
 /**
  * @file TickBatchRegistry.h
- * @brief 타입별 일괄 틱의 등록부입니다 — 한 타입의 `onTick` 을 가상 호출 없이 연속 배열로 묶어 도는 함수(`TickBatchFunction`)를 타입마다 하나 둡니다.
+ * @brief 타입별 일괄 틱의 레지스트리입니다 — 한 타입의 `onTick` 을 가상 호출 없이 연속 배열로 묶어 도는 함수(`TickBatchFunction`)를 타입마다 하나 둡니다.
  *
  * [왜 필요한가]
  * 기본 틱 경로는 오브젝트 칸 목록(`TickObjectEntry`, 40 B)을 돌며 칸마다 컴포넌트 포인터를 따라가 `onTick` 을 가상 호출합니다. 같은 타입의 컴포넌트가
@@ -31,7 +31,7 @@ namespace sw
 
     /**
      * @class TickBatchRegistry
-     * @brief 타입 → 일괄 틱 함수의 프로세스 전역 등록부입니다. 파일 머리말 참고.
+     * @brief 타입 → 일괄 틱 함수의 프로세스 전역 레지스트리입니다. 파일 머리말 참고.
      * @note 조회(`findFunction`)는 게임 스레드에서 틱 밖(`TickRegistry::refresh`)에만 합니다. 등록 · 해제는 모듈의 정적 초기화 · 소멸에서 옵니다.
      */
     class SW_API TickBatchRegistry
@@ -58,7 +58,7 @@ namespace sw
     /**
      * @brief 타입 @p TComponent 의 일괄 틱 함수입니다. `SW_REGISTER_TICK_BATCH` 가 그 타입의 `.cpp` 에서 인스턴스화합니다(`onTick` 이 인라인될 수 있게).
      * @details 원소마다 기본 경로(`runTickItemIfLive`)와 같은 검사(삭제 대기 · 자기 활성 · 주 틱 참여)를 하고 `TComponent::onTick` 을 한정 이름으로
-     *          부릅니다. 등록부가 정확한 타입만 넣으므로 가상 호출과 같은 함수입니다.
+     *          부릅니다. 레지스트리가 정확한 타입만 넣으므로 가상 호출과 같은 함수입니다.
      */
     template <typename TComponent>
     struct TickBatchOf

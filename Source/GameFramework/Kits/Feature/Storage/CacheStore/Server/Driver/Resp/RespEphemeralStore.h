@@ -42,8 +42,8 @@ namespace sw
 {
     /**
      * @class IRespClock
-     * @brief RESP 저장소가 요청 시한과 다시 연결 백오프를 재는 시계입니다. 저장소가 실제 시계를 직접 읽지 않고 이것을 받아, 테스트가 손으로 미는 시계를 줄 수 있습니다.
-     * @details 운영은 `RespMonotonicClock` 을 줍니다. 구독 확인을 기다리는 루프(`waitForSubscriptionAck`)는 I/O 진행을 기다리는 것이라 이 시계를 쓰지 않고 실제 시간으로 잰다.
+     * @brief RESP 저장소가 요청 시한과 다시 연결 백오프를 측정하는 시계입니다. 저장소가 실제 시계를 직접 읽지 않고 이것을 받아, 테스트가 손으로 미는 시계를 줄 수 있습니다.
+     * @details 운영은 `RespMonotonicClock` 을 줍니다. 구독 확인을 기다리는 루프(`waitForSubscriptionAck`)는 I/O 진행을 기다리는 것이라 이 시계를 쓰지 않고 실제 시간으로 측정한다.
      */
     class IRespClock
     {
@@ -78,7 +78,7 @@ namespace sw
     class SW_KIT_SERVER_API RespEphemeralStore final : public IEphemeralStore, private IStreamHandler
     {
     public:
-        /** @param clock 시한과 백오프를 재는 시계이다. 저장소보다 오래 살아야 한다(참조만 들고 있다). */
+        /** @param clock 시한과 백오프를 측정하는 시계이다. 저장소보다 오래 살아야 한다(참조만 들고 있다). */
         explicit RespEphemeralStore( const IRespClock& clock );
         ~RespEphemeralStore() override;
 

@@ -64,7 +64,7 @@ namespace sw
      *          (Container 는 Log 아래 티어라 로그를 쓰지 않습니다).
      *
      *          가드를 부르는 쪽마다 손으로 적지 않고 여기 한 곳에 두어, 지금 쓰는 곳과 앞으로 쓸 곳이 같이 막히게 합니다.
-     * @note `T` 는 `clearValue` 와 `==` 로 견줄 수 있어야 합니다. "비었다" 를 알아야 하기 때문입니다.
+     * @note `T` 는 `clearValue` 와 `==` 로 비교할 수 있어야 합니다. "비었다" 를 알아야 하기 때문입니다.
      */
     template <typename T>
     T releaseFreeListIndex( vector<T>& listRegistered, vector<uint32>& listFree, uint32 index, T clearValue = T{} )

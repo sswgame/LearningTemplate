@@ -7,6 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include <mutex>
+
 namespace sw
 {
     /**
@@ -45,6 +47,26 @@ namespace sw
                 outListItem.push_back( iter->_item );
             }
             _listEntry.erase( partitionIter, _listEntry.end() );
+        }
+
+        /**
+         * @brief `extractReady` 를 잠금 아래에서 할당하지 않고 합니다. 두 지연 해제 큐(`RHIReleaseQueue`, `EditorDrawReleaseQueue`)가 같은 순서로 쓴다.
+         * @details 꺼낼 개수를 먼저 세고, @p outListItem 의 용량이 모자라면 잠금을 놓고 늘린 뒤 다시 센다(그사이 항목이 늘 수 있다).
+         * @param lock 이 목록을 지키는 잠금입니다. 이미 잠겨 있어야 하며, 돌아올 때도 잠겨 있습니다.
+         */
+        template <typename TLock>
+        void extractReadyReserving( std::unique_lock<TLock>& lock, uint64 threshold, vector<TItem>& outListItem )
+        {
+            for ( ;; )
+            {
+                const size_t neededCapacity = outListItem.size() + countReady( threshold );
+                if ( neededCapacity <= outListItem.capacity() )
+                    break;
+                lock.unlock();
+                outListItem.reserve( neededCapacity );
+                lock.lock();
+            }
+            extractReady( threshold, outListItem );
         }
 
         /** @brief 키와 상관없이 모든 항목을 넣은 순서대로 @p outListItem 뒤에 붙이고 비웁니다(종료 때 남은 해제를 모두 실행할 때). */

@@ -162,7 +162,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndT
     settings._timeoutMs            = 100;
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, settings ) );
 
-    // 시한은 가짜 서버의 시계로 잰다 — 시계를 10 ms 씩 밀어 시한(100 ms)을 넘기면 실제 시간과 상관없이 Unavailable 이 된다.
+    // 시한은 가짜 서버의 시계로 측정한다 — 시계를 10 ms 씩 밀어 시한(100 ms)을 넘기면 실제 시간과 상관없이 Unavailable 이 된다.
     server.setHoldReplies( true );
     const int64            startNanoseconds = server.nowNanoseconds();
     const uint64           requestID        = store.submit( EphemeralRequest::makeIncrement( "n", 1, 0 ) );
@@ -255,7 +255,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, SubscriptionComesBackAfterTheCon
     vector<EphemeralMessage> listMessage;
     while ( server.getSubscriberCount( "t1:news" ) == 0 && deadline.isExpired() == false )
     {
-        server.advanceTimeMs( 100 );                  // 다시 연결의 백오프도 가짜 시계로 잰다
+        server.advanceTimeMs( 100 );                  // 다시 연결의 백오프도 가짜 시계로 측정한다
         (void)subscriber.pollMessages( listMessage ); // 끊긴 것을 보고 다시 연결해 다시 구독한다
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }

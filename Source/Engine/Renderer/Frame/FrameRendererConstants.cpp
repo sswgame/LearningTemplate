@@ -26,7 +26,7 @@ namespace sw
 
     void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
     {
-        // 셰이더 상수 배치는 SkyGradient 머리 주석이 정본이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
+        // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
         _bHasFrameSky = bHasSky ? SW_TRUE : SW_FALSE;
         if ( bHasSky == false )
         {
@@ -144,7 +144,7 @@ namespace sw
         float4                         bloomParams{ kDefaultBloomParams };
         bloomParams._y *= MathUtil::max( 0.0f, post._bloomScale );
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
-        // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 재는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
+        // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
         float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
         prepareAutoExposure( exposureScale );
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),

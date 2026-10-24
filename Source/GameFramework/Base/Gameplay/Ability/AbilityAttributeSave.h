@@ -1,9 +1,9 @@
 /**
  * @file AbilityAttributeSave.h
- * @brief 어빌리티 시스템의 어트리뷰트 base 값을 게임 세이브(`SaveGame`)에 싣고 되살리는 도우미입니다.
+ * @brief 어빌리티 시스템의 어트리뷰트 base 값을 게임 세이브(`SaveGame`)에 싣고 복원하는 도우미입니다.
  * @details 컴포넌트는 런타임 상태를 저장하지 않는다(플레이 시작에 세트에서 다시 만든다, `AbilitySystemComponent.h` 머리말). 레벨 업으로 오른 최대 체력처럼
  *          남겨야 하는 값은 게임의 `SaveGame` 이 이 도우미로 담는다. current 가 아니라 base 를 담는다 — current 는 걸린 이펙트가 다시 만든다.
- *          바이트 형식은 리플렉션 JSON(`SavedAttributeFile`)이다(텍스트 세이브는 역할마다 형식 하나 — StructureSimplification TX). 되살릴 때 세이브의 어트리뷰트가
+ *          바이트 형식은 리플렉션 JSON(`SavedAttributeFile`)이다(텍스트 세이브는 역할마다 형식 하나 — StructureSimplification TX). 복원할 때 세이브의 어트리뷰트가
  *          컴포넌트에 없으면 오류다(조용히 건너뛰지 않는다).
  */
 #pragma once

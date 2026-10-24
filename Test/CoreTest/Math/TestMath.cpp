@@ -588,7 +588,7 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
  * @brief [MathTest] 회전이 없는 `makeTrs` 지름길은 단위 사원수를 거친 값과 **같다**
  * @details 오일러 오버로드는 세 각이 모두 0 이면 사원수를 만들지 않고 대각선에 스케일만 놓는다(움직이는 컴포넌트마다 지나는
  *          자리라 삼각 함수 여섯 번이 아깝다). 지름길이 틀리면 회전 없는 물체만 조용히 틀어지므로, 원래 경로(단위 사원수 오버로드)와
- *          성분마다 정확히 견준다. 음수 스케일과 -0 각도도 섞는다 — 둘 다 "0 인가" 판정과 부호가 엇갈리기 쉬운 자리다.
+ *          성분마다 정확히 비교한다. 음수 스케일과 -0 각도도 섞는다 — 둘 다 "0 인가" 판정과 부호가 엇갈리기 쉬운 자리다.
  */
 SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
 {
@@ -723,7 +723,7 @@ SW_TEST_CASE( MathTest, SplitMix64NextMatchesTheRecordedValues )
 }
 
 /**
- * @brief [MathTest] 수평 거리는 높이(y)를 보지 않고 XZ 평면에서만 잰다
+ * @brief [MathTest] 수평 거리는 높이(y)를 보지 않고 XZ 평면에서만 측정한다
  */
 SW_TEST_CASE( MathTest, HorizontalDistanceIgnoresHeight )
 {

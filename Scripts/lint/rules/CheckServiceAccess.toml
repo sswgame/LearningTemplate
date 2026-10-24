@@ -10,34 +10,37 @@ allowed_engine_function = [
     "getEngineAbiStamp",
 ]
 
-# 헤더에서 `static … getInstance()` 나 정적 활성 창구 `static T* findActive…()` · `getActive…()` 를 가져도 되는 타입 → 이유.
+# 예외의 종류 → 뜻. 아래 `[exemption]` 의 값은 자유 글이 아니라 이 표의 키 중 하나여야 한다(표 밖 키는 게이트가 거절한다).
+# 새 종류가 필요하면 그 이유가 이 표의 한 줄이 된다 — 종류가 늘어나는 것이 곧 "서브시스템으로 못 만드는 경우" 가 늘어나는 것이다.
+[exemption_kind]
+LinkTimeRegistry = "링크 때 정적 등록자가 채우는 표 — 엔진 범위가 서기 전에 올라가고 모듈을 내릴 때 빠진다(Core 층은 엔진 범위를 모른다)"
+CrashPath = "크래시 핸들러 · 전역 할당 훅이 읽는 저장소 — 범위가 서기 전 · 사라진 뒤 · 시그널 안에서도 잠금 없이 읽어야 한다(Core 층)"
+ScopeOwnedHotPath = "범위(엔진 · 게임)가 소유한 저장소의 창구 — 핫 패스나 Core 층이 범위 조회 없이 잠금 없이 읽는다"
+Stateless = "상태 없는 함수 묶음 — 서비스가 아니라 순수 함수 · 드라이버다"
+ScopeRoot = "소유 범위의 뿌리 — 값(`ScopeOwned<T>`)이 자기를 어디에 등록할지 정하는 칸이라 엔진 범위(서브시스템)보다 먼저 서야 한다(Core 층)"
+
+# 헤더에서 `static … getInstance()` 나 정적 활성 창구 `static T* findActive…()` · `getActive…()` 를 가져도 되는 타입 → 예외 종류.
 # 새 서비스는 서브시스템으로 만들어 범위에 넣고, "지금 도는 것" 은 소유자가 범위에 빌려 건다(`SubsystemScope::bind`).
 [exemption]
-RawAnimationCodec = "상태 없는 코덱 — 서비스가 아니라 순수 함수 묶음이다"
-ACLAnimationCodec = "상태 없는 코덱 — 서비스가 아니라 순수 함수 묶음이다"
-SQLiteDriver = "상태 없는 드라이버 — 결정 기록 5-8"
-PostgresDriver = "상태 없는 드라이버 — 결정 기록 5-8"
-TestRegistry = "테스트 프레임워크의 링크 때 등록 표 — 엔진 범위가 서 있기 전에 채워진다"
-RigNodeRegistry = "링크 때 등록 표 — 엔진 범위가 서 있기 전에 채워진다"
-EditorSettingsInstance = "설정 페이지 등록 줄의 인스턴스 함수 표 — 등록 항목이 함수 포인터로 든다"
-EditorSettingsPageNone = "설정 페이지 등록 줄의 인스턴스 함수 표 — 그리기 함수 방식의 빈 자리"
-MemoryProfiler = "활성 창구 — 전역 operator new/delete 훅이 엔진 범위가 서기 전 · 사라진 뒤에도 잠금 없이 읽는다(Core 층이라 범위를 모른다)"
-CompressionCodecRegistry = "활성 창구 — Core 의 CompressionStream 이 레지스트리를 받지 않았을 때 읽는 Core 층의 칸이다(Core 는 엔진 범위를 모른다)"
-ProfilerBackend = "활성 창구 — 프로파일 구간이 렌더 · 작업 스레드에서 잠금 없이 읽는다(범위 조회는 선형 검색이라 핫 패스에 못 둔다)"
-IWindow = "활성 창구 — Engine 가 만든 창을 App 에 넘기는 소유권 전달 칸이자 입력 · RHI 가 읽는 관찰 포인터다. 범위로 옮기는 일은 계획 문서 `AppStructure` 의 A7"
-# --- `static T& get()` 모양 단일체. 이름이 `getInstance` 가 아니라 한동안 게이트가 못 봤다. 아래는 판단을 마친 것이다 ---
-EditorDebugDrawStats = "에디터 모듈 하나가 가진 프레임 통계 — 서비스가 아니라 모듈 지역 계측 값이다"
-EditorShapeVisualizerStats = "에디터 모듈 하나가 가진 프레임 통계 — 서비스가 아니라 모듈 지역 계측 값이다"
-EditorGridStats = "에디터 모듈 하나가 가진 프레임 통계 — 서비스가 아니라 모듈 지역 계측 값이다"
-DevCommandRegistry = "Core 층의 링크 때 등록 표 — Core 는 엔진 범위를 모르고, 등록은 범위가 서기 전에 일어난다"
-DebugHUDRegistry = "Core 층의 링크 때 등록 표 — Core 는 엔진 범위를 모르고, 등록은 범위가 서기 전에 일어난다"
-CrashContextStore = "크래시 핸들러가 읽는 저장소 — 범위가 서기 전 · 사라진 뒤 · 시그널 안에서도 잠금 없이 읽어야 한다(Core 층)"
-CrashBreadcrumbStore = "크래시 핸들러가 읽는 저장소 — 범위가 서기 전 · 사라진 뒤 · 시그널 안에서도 잠금 없이 읽어야 한다(Core 층)"
-NullHTTPClient = "상태 없는 널 객체 — 서비스가 아니라 기본 구현의 공용 인스턴스다"
-NullTelemetryUploader = "상태 없는 널 객체 — 서비스가 아니라 기본 구현의 공용 인스턴스다"
-NullCrashReportUploader = "상태 없는 널 객체 — 서비스가 아니라 기본 구현의 공용 인스턴스다"
-SceneTransformStorage = "엔진 수명 범위가 소유하는 저장소의 편의 창구 — 변환 컴포넌트가 핫 패스에서 범위 조회 없이 읽는다"
-ValidationIssueLog = "ScopeOwned 로 범위가 소유하는 표의 편의 창구 — 파괴 경로도 부르므로 범위 조회를 거치지 않는다"
-ResourceDataKindRegistry = "링크 때 등록 표 — 엔진 · 키트 모듈 이미지의 정적 등록자(`SW_RESOURCE_DATA_KIND`)가 엔진 범위가 서기 전에 올리고 모듈을 내릴 때 뺀다(RigNodeRegistry 와 같은 까닭)"
-GameInstanceBase ="활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다"
-GameAutoplay = "활성 창구 아님 — findActive 는 링크 때 등록 표(RegistrationList)의 마지막 줄을 읽고 정적 포인터를 들지 않는다"
+RawAnimationCodec = "Stateless"
+ACLAnimationCodec = "Stateless"
+SQLiteDriver = "Stateless"          # 결정 기록 5-8
+PostgresDriver = "Stateless"        # 결정 기록 5-8
+TestRegistry = "LinkTimeRegistry"   # 테스트 프레임워크의 등록 표
+RigNodeRegistry = "LinkTimeRegistry"
+DevCommandRegistry = "LinkTimeRegistry"
+DebugHUDRegistry = "LinkTimeRegistry"
+EditorSettingsInstance = "LinkTimeRegistry" # 설정 페이지 등록 줄의 인스턴스 함수 표 — 등록 항목이 함수 포인터로 든다
+EditorSettingsPageNone = "LinkTimeRegistry" # 같은 표의 빈 자리(그리기 함수 방식)
+GameAutoplay = "LinkTimeRegistry"   # 활성 창구 아님 — findActive 는 링크 때 등록 표(RegistrationList)의 마지막 줄을 읽고 정적 포인터를 들지 않는다
+LifetimeScope = "ScopeRoot"
+EditorExtensionRegistry = "LinkTimeRegistry" # 에디터 확장 종류별 목록은 EditorModule 이 소유하고, 이 템플릿은 DLL 마다 그 목록을 한 번 찾아 두는 캐시다
+MemoryProfiler = "CrashPath"        # 전역 operator new/delete 훅이 읽는다
+CrashContextStore = "CrashPath"
+CrashBreadcrumbStore = "CrashPath"
+CompressionCodecRegistry = "ScopeOwnedHotPath" # Core 의 CompressionStream 이 레지스트리를 받지 않았을 때 읽는 칸(엔진 초기화가 연결한다)
+ProfilerBackend = "ScopeOwnedHotPath" # 프로파일 구간이 렌더 · 작업 스레드에서 읽는다(범위 조회는 선형 검색이라 핫 패스에 못 둔다)
+IWindow = "ScopeOwnedHotPath"       # Engine 이 만든 창을 App 에 넘기는 소유권 전달 칸이자 입력 · RHI 가 읽는 관찰 포인터. 범위로 옮기는 일은 계획 문서 `AppStructure` 의 A7
+SceneTransformStorage = "ScopeOwnedHotPath" # 엔진 수명 범위가 소유하는 저장소 — 변환 컴포넌트가 핫 패스에서 읽는다
+ValidationIssueLog = "ScopeOwnedHotPath"    # 범위가 소유하는 표 — 파괴 경로도 부르므로 범위 조회를 거치지 않는다. 월드 소유로 옮기는 일은 Candidates-engine 의 ValidationIssueLogWorldOwned
+GameInstanceBase = "Stateless"      # 활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다

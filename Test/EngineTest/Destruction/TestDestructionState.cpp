@@ -14,7 +14,7 @@ namespace
     {
         /**
          * @brief 가로 @p columnCount × 세로 @p rowCount 잎 격자(부피 1, 이웃끼리 넓이 1 로 연결)입니다. 잎 번호는 행 우선(아래 행부터).
-         * @param listLevelCount 묶음 레벨(비면 뿌리 하나).
+         * @param listLevelCount 묶음 레벨(비면 루트 하나).
          */
         static sw::FractureGraph makeGrid( uint32 columnCount, uint32 rowCount, sw::vector<uint32> listLevelCount = {} )
         {
@@ -103,7 +103,7 @@ SW_TEST_CASE( DestructionStateTest, PartCutFromTheAnchorsFalls )
 
     const uint32 lower = Internal::findLeafAt( graph, 0.5f, 1.5f );
     const uint32 upper = Internal::findLeafAt( graph, 0.5f, 2.5f );
-    // 뿌리가 갈라지지 않았으면 그 안의 연결은 끊을 수 없다(한 몸).
+    // 루트가 갈라지지 않았으면 그 안의 연결은 끊을 수 없다(한 몸).
     sw::DestructionChange change;
     SW_EXPECT_FALSE( state.breakLink( Internal::findLink( graph, lower, upper ), change ) );
     SW_ASSERT_TRUE( state.breakNode( graph.getRootNode(), change ) );
@@ -127,7 +127,7 @@ SW_TEST_CASE( DestructionStateTest, PartCutFromTheAnchorsFalls )
 }
 
 /**
- * @brief [DestructionStateTest] 묶음 레벨은 차례로 갈라진다 — 뿌리를 가르면 묶음이, 묶음을 가르면 잎이 활성이 되고, 잎을 떼면 그 잎만 떨어진다
+ * @brief [DestructionStateTest] 묶음 레벨은 차례로 갈라진다 — 루트를 가르면 묶음이, 묶음을 가르면 잎이 활성이 되고, 잎을 떼면 그 잎만 떨어진다
  */
 SW_TEST_CASE( DestructionStateTest, ClusterLevelsOpenProgressivelyAndLeafDetaches )
 {

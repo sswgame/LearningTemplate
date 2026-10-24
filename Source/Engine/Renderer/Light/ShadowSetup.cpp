@@ -281,7 +281,7 @@ namespace sw
 
         if ( pShadowLight != nullptr )
         {
-            // 볼륨 맞춤 · 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 잰다.
+            // 볼륨 맞춤 · 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.
             const uint32                      tileResolution = outFrame._layout.getCascadeTileResolution();
             const DirectionalShadowProjection projection =
                 pMainViewProj != nullptr ? pShadowLight->computeShadowProjectionForView( *pMainViewProj, tileResolution, outFrame._layout.getCascadeCount() )

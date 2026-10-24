@@ -157,7 +157,7 @@ SW_TEST_CASE( ReflectionValidationTest, DestroyedObjectLeavesTheIssueLog )
         manager.destroyObject( pDestroyed );
         manager.processDeferredDestruction();
         sw::ValidationIssueLog::get().collectIssues( listIssue );
-        SW_ASSERT_TRUE_MSG( listIssue.size() == 1, "파괴한 오브젝트의 결과가 표에 남았습니다" );
+        SW_ASSERT_TRUE_MSG( listIssue.size() == 1, "The result of the destroyed object remains in the table" );
         SW_EXPECT_EQUAL( keptID, listIssue[0]._sourceID );
     }
     SW_EXPECT_TRUE_MSG( sw::ValidationIssueLog::get().getIssueCount() == 0, "매니저가 내려간 뒤에도 그 오브젝트의 결과가 표에 남았습니다" );

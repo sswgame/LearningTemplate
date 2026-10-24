@@ -97,7 +97,7 @@ namespace sw
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         vector<int2>                              _listDirtyTile;
         vector<unique_ptr<NavTileBakeJob>>        _listJob;
-        vector<NavCacheObstacleEntry>             _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 굽기 모드는 `_pVolume` 이다)
+        vector<NavCacheObstacleEntry>             _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 베이크 모드는 `_pVolume` 이다)
         NavQueryFilter                            _filter{};
         NavMeshBakeStats                          _bakeStats{};
         AABB                                      _bounds{};
@@ -116,7 +116,7 @@ namespace sw
             }
         }
 
-        /** @brief 장애물을 장애물 캐시로 다루면 true 입니다(덧칠 부피 없이 굽는다). */
+        /** @brief 장애물을 장애물 캐시로 다루면 true 입니다(덧칠 부피 없이 베이크한다). */
         bool usesObstacleCache() const { return _pNavMesh != nullptr && _pNavMesh->getObstacleMode() == NavObstacleMode::TileCache; }
 
         /** @brief 장애물 하나의 캐시 장애물을 뺍니다(없으면 할 일이 없다). */

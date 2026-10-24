@@ -17,7 +17,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 씬 · 프리팹 쿠킹이 작업마다 입력을 기록하고(`CookJob`), 기록이 새것이면 DDC 의 출력을 다시 쓰는지 본다(계획 문서 IncrementalCook K2).
+// 씬 · 프리팹 쿠킹이 작업마다 입력을 기록하고(`CookJob`), 기록이 새것이면 DDC 의 출력을 다시 쓰는지 본다(docs/09_Decisions.md 5-2 증분 쿠킹).
 
 namespace
 {
@@ -69,7 +69,7 @@ namespace
 } // namespace
 
 /**
- * @brief [SceneCookTest] 프리팹 하나를 고치면 그 프리팹을 쓰는 씬만 다시 굽는다 · 쿠커 버전을 올리면 기록이 낡는다 · DDC 를 지우고 다시 구워도 같은 바이트다
+ * @brief [SceneCookTest] 프리팹 하나를 고치면 그 프리팹을 쓰는 씬만 다시 베이크한다 · 쿠커 버전을 올리면 기록이 낡는다 · DDC 를 지우고 다시 베이크해도 같은 바이트다
  * @details 씬 작업의 입력은 씬이 지어지며 읽은 모든 것이다(씬, 프리팹). 작업은 빈 에셋 캐시로 시작하므로 앞 씬이 읽어 캐시에 둔 프리팹도 다시 읽혀 기록된다.
  */
 SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
@@ -102,14 +102,14 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
     SW_EXPECT_EQUAL( 3u, store.getTally()._cookedCount );
     SW_EXPECT_EQUAL( 3u, store.getTally()._reusedCount );
 
-    // 프리팹 a 를 고치면 그것을 쓰는 씬 하나만 다시 굽는다.
+    // 프리팹 a 를 고치면 그것을 쓰는 씬 하나만 다시 베이크한다.
     Internal::writePrefab( prefabA, 5.0f );
     SW_EXPECT_EQUAL( 3u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_EQUAL( 4u, store.getTally()._cookedCount );
     SW_EXPECT_EQUAL( 5u, store.getTally()._reusedCount );
 
-    // 쿠커 버전을 올리면 기록이 낡는다 — 모든 씬이 다시 구워진다.
+    // 쿠커 버전을 올리면 기록이 낡는다 — 모든 씬이 다시 베이크된다.
     sw::CookRecord   record;
     const sw::string usesBOutput = "game/demo/maps/usesb.scene.bin";
     SW_ASSERT_TRUE( sw::CookRecord::read( store.makeRecordPath( usesBOutput ), record ) );
@@ -128,7 +128,7 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
     SW_EXPECT_TRUE( bReadsPrefabB );
     SW_EXPECT_FALSE( bReadsPrefabA );
 
-    // DDC 와 기록을 지우고 다시 구워도 같은 바이트다(쿠킹은 결정적이다 — DDC 의 키로 다시 쓰는 것이 옳다).
+    // DDC 와 기록을 지우고 다시 베이크해도 같은 바이트다(쿠킹은 결정적이다 — DDC 의 키로 다시 쓰는 것이 옳다).
     sw::vector<sw::vector<uint8>> listBefore;
     for ( const utf8* pOutput : { "game/demo/maps/usesa.scene.bin", "game/demo/maps/usesb.scene.bin", "game/demo/maps/plain.scene.bin" } )
     {
@@ -148,7 +148,7 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
 }
 
 /**
- * @brief [SceneCookTest] 프리팹 쿠킹도 프리팹마다 기록을 남긴다 — 바뀐 프리팹만 다시 굽고, 나머지는 DDC 에서 다시 쓴다
+ * @brief [SceneCookTest] 프리팹 쿠킹도 프리팹마다 기록을 남긴다 — 바뀐 프리팹만 다시 베이크하고, 나머지는 DDC 에서 다시 쓴다
  */
 SW_TEST_CASE( SceneCookTest, PrefabCookReusesUnchangedPrefabs )
 {

@@ -556,7 +556,7 @@ namespace sw
             if ( pDef->_parent.empty() == false && findPreset( pDef->_parent ) == nullptr )
                 return false; // 알 수 없는 부모
         }
-        // 뿌리에서 잎 방향으로 처리한다.
+        // 루트에서 잎 방향으로 처리한다.
         std::reverse( outListChain.begin(), outListChain.end() );
         return outListChain.empty() == false;
     }

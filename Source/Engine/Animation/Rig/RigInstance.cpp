@@ -99,7 +99,7 @@ namespace sw
             }
             if ( boneName.empty() && target._kind == RigTargetKind::Socket )
             {
-                // 부모가 빈 소켓은 유닛 뿌리(모델 원점) 기준이다.
+                // 부모가 빈 소켓은 유닛 루트(모델 원점) 기준이다.
                 _listTargetBone[targetIndex]   = kModelOriginBone;
                 _listTargetOffset[targetIndex] = offset;
                 continue;

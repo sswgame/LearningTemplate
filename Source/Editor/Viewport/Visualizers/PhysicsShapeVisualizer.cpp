@@ -56,7 +56,7 @@ namespace sw::editor
 
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                EditorShapeVisualizerStats& stats = EditorShapeVisualizerStats::get();
+                EditorShapeVisualizerStats& stats = args._pStats->_shape;
                 stats._physicsSegmentCount        = 0;
                 if ( args._pListObject == nullptr || args._pViewProj == nullptr )
                     return;

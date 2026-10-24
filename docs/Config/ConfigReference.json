@@ -957,7 +957,7 @@
        "min": "1",
        "max": "16",
        "units": "",
-       "description": "2D 씬 하나가 스텝에 쓰는 일꾼 수(스텝 스레드 포함)입니다. 1 이면 한 스레드이고, 2 이상이면 씬마다 전용 워커를 그만큼 하나 적게 띄웁니다(`Box2DWorkerPool`). 바디가 수천일 때만 이득이다 — 재는 법은 `PhysicsBenchTest.Box2DStepByWorkerCount`. 결과는 워커 수와 관계없이 같다."
+       "description": "2D 씬 하나가 스텝에 쓰는 일꾼 수(스텝 스레드 포함)입니다. 1 이면 한 스레드이고, 2 이상이면 씬마다 전용 워커를 그만큼 하나 적게 띄웁니다(`Box2DWorkerPool`). 바디가 수천일 때만 이득이다 — 측정하는 법은 `PhysicsBenchTest.Box2DStepByWorkerCount`. 결과는 워커 수와 관계없이 같다."
       },
       {
        "name": "_listLayer",
@@ -1637,7 +1637,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 정본은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음"
+       "description": "씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 기준은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음"
       },
       {
        "name": "_audioEvents",
@@ -4330,6 +4330,14 @@
    "source": "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp"
   },
   {
+   "name": "gv_socketPartPool",
+   "type": "int32",
+   "default": "1",
+   "kind": "테스트",
+   "description": "Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison)",
+   "source": "Source/Engine/Character/Socket/SocketPartPool.cpp"
+  },
+  {
    "name": "gv_standardInputCommands",
    "type": "int32",
    "default": "0",
@@ -4472,6 +4480,14 @@
    "kind": "테스트 · 배포본에도",
    "description": "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
    "source": "Source/Engine/UI/Debug/UIDemoScreen.cpp"
+  },
+  {
+   "name": "gv_uiGlyphRasterBudgetMicros",
+   "type": "int32",
+   "default": "4000",
+   "kind": "일반",
+   "description": "프레임당 새 글리프 래스터화 시간 예산(마이크로초, 0=제한 없음) — 넘으면 글리프가 다음 프레임에 나타난다",
+   "source": "Source/Engine/UI/UISystem.cpp"
   },
   {
    "name": "gv_uiOptionsMenu",
@@ -4777,7 +4793,7 @@
     "pack-build"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "`-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 목록을 남기지 않는다(패치를 적용할 수 없는 빌드). `-make-patch` 에서는 새 빌드 번호다"
+   "description": "`-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching=\"none\"` 기록을 남긴다(패치를 쓰지 않는 빌드). `-make-patch` 에서는 새 빌드 번호다"
   },
   {
    "name": "MAKE_PATCH",
@@ -5287,6 +5303,22 @@
     "WSL-Debug-Server",
     "WSL-Shipping-Server"
    ]
+  },
+  {
+   "name": "SW_UNITY_BATCH_CORE",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "Core_objects 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
+  },
+  {
+   "name": "SW_UNITY_BATCH_KIT",
+   "type": "STRING",
+   "default": "0",
+   "choices": [],
+   "description": "GameFramework 키트 유니티 묶음 크기(0=묶지 않음)",
+   "presets": []
   },
   {
    "name": "SW_USE_VCPKG",

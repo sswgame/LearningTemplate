@@ -609,7 +609,7 @@ SW_TEST_CASE( GimmickTest, StateMatchesNodesByID )
 
 /**
  * @brief [GimmickTest] 상태 상한 — 회로 · 종류 등록이 상태가 담을 수 있는 수(`kMaxNodeCount` · `kMaxSlotCount`)를 넘는 것을 오류로 막는다
- * @details 상한의 정본은 그 상수이고 `PROPERTY( MaxCount = kMaxSlotCount )` 가 이름으로 가리키므로, 코덱의 상한과 어긋나는지는 대조하지 않는다.
+ * @details 상한의 기준은 그 상수이고 `PROPERTY( MaxCount = kMaxSlotCount )` 가 이름으로 가리키므로, 코덱의 상한과 어긋나는지는 대조하지 않는다.
  */
 SW_TEST_CASE( GimmickTest, StateLimitsRejectOversizedCircuitAndKind )
 {

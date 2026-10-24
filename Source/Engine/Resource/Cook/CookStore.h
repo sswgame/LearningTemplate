@@ -1,7 +1,7 @@
 /**
  * @file CookStore.h
- * @brief 쿠킹 출력 하나를 기록(`.cookrec`)과 DDC 를 거쳐 만듭니다. 기록이 새것이면 DDC 의 출력을 다시 쓰고, 아니면 굽고 기록과 DDC 를 새로 씁니다.
- * @details 쿠커(씬 · 프리팹 · 레지스트리 · VAT · 내비메시)는 출력 하나마다 `cookFile` 을 부르고, 굽는 일은 함수로 넘긴다. 그 함수는 작업 범위(`CookJob`) 안에서
+ * @brief 쿠킹 출력 하나를 기록(`.cookrec`)과 DDC 를 거쳐 만듭니다. 기록이 새것이면 DDC 의 출력을 다시 쓰고, 아니면 베이크하고 기록과 DDC 를 새로 씁니다.
+ * @details 쿠커(씬 · 프리팹 · 레지스트리 · VAT · 내비메시)는 출력 하나마다 `cookFile` 을 부르고, 베이크하는 일은 함수로 넘긴다. 그 함수는 작업 범위(`CookJob`) 안에서
  *          돌므로 읽은 리소스가 모두 입력으로 기록된다.
  *          - 작업은 **빈 에셋 캐시로 시작한다**(`AssetManager::clearAssetCaches`). 앞 작업이 읽어 캐시에 둔 프리팹 · 머티리얼을 쓰면 그 읽기가 이 작업의
  *            입력에서 빠진다 — 캐시마다 기록을 다시 남기게 하는 대신, 캐시가 비어 있다는 것을 작업의 시작 조건으로 둔다.
@@ -19,12 +19,12 @@
 
 namespace sw
 {
-    /** @brief 굽는 함수가 알리는 결과입니다. */
+    /** @brief 베이크하는 함수가 알리는 결과입니다. */
     enum class CookStep : uint8
     {
         Written, ///< 출력 파일을 썼다
         Skipped, ///< 이 출력은 만들지 않는다(쿠킹 대상이 아님). 기록을 남기지 않는다
-        Failed,  ///< 굽지 못했다(이유는 함수가 오류로 남긴다)
+        Failed,  ///< 베이크하지 못했다(이유는 함수가 오류로 남긴다)
     };
 
     /** @brief `cookFile` 의 결과입니다. */
@@ -32,8 +32,8 @@ namespace sw
     {
         Reused,  ///< 기록이 새것이라 DDC 의 출력을 다시 썼다
         Cooked,  ///< 구웠고 기록과 DDC 를 새로 썼다
-        Skipped, ///< 굽는 함수가 건너뛰었다
-        Failed,  ///< 굽지 못했다
+        Skipped, ///< 베이크하는 함수가 건너뛰었다
+        Failed,  ///< 베이크하지 못했다
     };
 
     /** @struct CookTally @brief 쿠킹 결과 수입니다(로그 요약 · 테스트). */
@@ -50,7 +50,7 @@ namespace sw
             _cookedCount += outcome == CookOutcome::Cooked ? 1u : 0u;
             _failedCount += outcome == CookOutcome::Failed ? 1u : 0u;
         }
-        /** @brief 쓴 출력(다시 쓰기 · 굽기) 수입니다. */
+        /** @brief 쓴 출력(다시 쓰기 · 베이크) 수입니다. */
         uint32 getWrittenCount() const { return _reusedCount + _cookedCount; }
     };
 } // namespace sw

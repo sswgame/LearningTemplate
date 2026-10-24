@@ -144,6 +144,12 @@ SW_TEST_CASE( PartyArenaTest, TimedBouncesBuildComboUpToTheCap )
     TrampolineArena arena;
     SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 1, 0.0f, 0, 1u ) );
     SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 5, 0.0f, 0, 1u ) );
+    // 범위 밖 설정과 음수 제한은 맞춰 받지 않고 거절한다.
+    TrampolineSettings tinyRadius;
+    tinyRadius._arenaRadius = 0.5f;
+    SW_EXPECT_FALSE( arena.initialize( tinyRadius, 2, 0.0f, 0, 1u ) );
+    SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, -1.0f, 0, 1u ) );
+    SW_EXPECT_FALSE( arena.initialize( TrampolineSettings{}, 2, 0.0f, -3, 1u ) );
     SW_ASSERT_TRUE( beginArena( arena ) );
     SW_EXPECT_NEAR_EQUAL( arena.computeBounceHeight( 2 ), 2.0f + 1.5f, 0.001f );
     SW_EXPECT_NEAR_EQUAL( arena.computeBounceHeight( 9 ), 2.0f + 3.0f, 0.001f ); // 상한 4

@@ -168,7 +168,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     MeshComponent*      pPieceMesh = pPiece->getComponent<MeshComponent>();
     SW_ASSERT_TRUE( pPieceBody != nullptr && pPieceMesh != nullptr && pPieceMesh->getMesh() != nullptr );
     SW_EXPECT_TRUE( pPieceMesh->getMesh()->getVertexCount() > 0 );
-    SW_EXPECT_FALSE( pPieceMesh->getMesh()->hasSkin() );                                               // 지금 포즈로 구운 정적 메시
+    SW_EXPECT_FALSE( pPieceMesh->getMesh()->hasSkin() );                                               // 지금 포즈로 베이크한 정적 메시
     SW_EXPECT_TRUE( vertexCountAfter + pPieceMesh->getMesh()->getVertexCount() >= vertexCountBefore ); // 잘린 삼각형은 조각으로 갔다(+ 자른 자리가 있으면 캡)
     const float32 startY = pPieceBody->getWorldPosition()._y;
     SW_EXPECT_TRUE( startY > 1.0f ); // 머리 높이에서 시작한다

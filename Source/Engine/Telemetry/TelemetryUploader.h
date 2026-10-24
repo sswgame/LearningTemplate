@@ -62,9 +62,6 @@ namespace sw
     {
     public:
         TelemetryUploadResult upload( const TelemetryUploadBatch& batch ) override;
-
-        /** @brief 이 프로세스의 공용 인스턴스입니다(상태가 없다). */
-        static NullTelemetryUploader& get();
     };
 } // namespace sw
 

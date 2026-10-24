@@ -48,7 +48,8 @@ Profiler 탭(시간축 그래프 · 메시지 종류별 비중, `net.stats` 질�
   그래서 선 형식에 칸을 더하지 않았다(Dev 와 Shipping 의 선 형식이 갈라지지 않는다).
   확인은 CoreTest `NetworkTest.EveryChannelPairsItsSendAndReceiveFlows`(네 채널 · 두 방향) · `ProfilerTimelineTest.NetFlowIDMatchesOnBothEndsAndSeparatesDirections` · `NetFlowsAreKeptOnlyWhileATimelineRecords`, EngineTest `NetFlowsAreWrittenAsBoundFlowEvents` 이다.
   남은 것: 실제 두 프로세스 합친 트레이스에서 화살표를 눈으로 보는 확인(`netplay.scenario.xml` + `-gv_traceSaveOnExit`).
-- 스냅숏 크기 · 오브젝트별 복제 빈도: 공통 원천이 없다(복제 키트마다 따로 센다 — 예 `DestructionReplicationStats`). 키트가 셈을 `NetStatsReport` 에 싣는 창구를 정한 뒤 그래프를 더한다.
+- 스냅숏 크기 · 오브젝트별 복제 빈도(2026-10-24, `wt/plannet`, 빌드 전): 창구를 정했다 — 키트가 `GameNetSession::setReplicaStats( 이름, 갱신 수, 바이트 )` 로 누적 셈을 올리면 `net.stats` 줄의 `replicas=<이름>:<수>:<바이트>,…`(바이트가 큰 8 개)로 실린다. 이름은 `[a-z0-9_.-]` 만이고 올릴 이름은 32 개까지다(형식 밖 · 초과는 경고를 남기고 올리지 않는다). 확인 대기: 매니페스트 id `net-stats-replicas-tests`.
+  남은 것: (1) 복제 키트(`ReplicationServer` · 파괴 복제 · MMO)가 틱마다 자기 합을 올리는 한 줄씩(셈이 이미 있는 `DestructionReplicationStats` 부터), (2) Profiler 탭이 `replicas=` 를 두 보고의 차로 비율을 내 그래프로 보이기.
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 세션 프레임 단계에서 늘 묻게 하면 창을 닫아도 남지만 자식 로그에 2 Hz 줄이 늘 쌓인다.
 - 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오(지금 확인은 `net.traffic` 부하의 `netprofiler.scenario.xml`).
 
@@ -78,7 +79,7 @@ App 클라이언트는 `-gv_stateHashHistory=N` 이면 씬이 프레임을 마�
 Sync 탭의 클라이언트 원천(2026-10-22): 칸마다 세션 클라이언트 단추가 그 프로세스의 표준 입력에 `state.hashline 512` 를 묻고, 세션이 자식 로그에서 이력 한 줄(`StateHashHistory::kReportLinePrefix`)을 거둬 칸에 담는다.
 
 - 키트별 해시: 파괴 해시 비교 · 롤백 세션 상태 바이트를 같은 이력에 다른 이름으로 더한다(지금은 씬 트랜스폼뿐).
-- 어긋난 오브젝트 짚기: 지금은 틱만 나온다. 해시를 오브젝트별로 나눠 보관하거나, 어긋난 틱에서 `object.dump` 두 벌을 비교하는 길이 필요하다.
+- 어긋난 오브젝트 짚기(2026-10-24, `wt/plannet`, 빌드 전): 이력에 오브젝트별 해시를 쌓지 않고(틱 × 오브젝트라 크다) 어긋난 틱 근처에서 두 프로세스의 현재 값을 견준다. 개발 명령 `state.objects`(`<16자리 해시> <이름>` 줄)와 `SceneStateHash::collectObjects` · `parseObjectReport` · `findDifferingObjects` 가 들어갔다. 서버를 `pause` 한 채(결정적 키트는 같은 틱에서 멈춘 두 프로세스) 두 답을 견주면 다른 오브젝트 이름이 나온다. 확인 대기: 매니페스트 id `state-object-hash-tests`. 남은 것: Sync 탭의 단추(두 칸의 답을 받아 견줘 목록으로 보이기).
 - 되감기: 의도 기록(`.swintent`)으로 그 틱까지 서버를 다시 돌려 한 틱씩 진행.
 
 ### S8 한 프로세스 가상 서버를 에디터에서

@@ -89,7 +89,7 @@ namespace
             uint32 _total{ 0 };
         };
 
-        /** @brief 비트맵을 배율 `kScale` 로 보간해 문턱 0.5 로 그린 모양이 해석적 다각형과 어긋나는 표본 수를 셉니다(MSDF = RGB 중앙값, SDF = 알파). */
+        /** @brief 비트맵을 배율 `kScale` 로 보간해 임계값 0.5 로 그린 모양이 해석적 다각형과 어긋나는 표본 수를 셉니다(MSDF = RGB 중앙값, SDF = 알파). */
         static Mismatch countMismatch( const sw::vector<uint8>& bytes, const sw::vector<sw::float2>& listPoint )
         {
             Mismatch result{};

@@ -109,7 +109,7 @@ namespace sw
                 { return component._key == key && isSameText( component._node.getName(), pTypeName ); } );
             }
 
-            /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 견준다. */
+            /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 비교한다. */
             static bool isRootOnlyField( const utf8* pName )
             {
                 return isSameText( pName, sw::kSchemaVersionKey ) || isSameText( pName, kObjectName ) || isSameText( pName, kComponentList );

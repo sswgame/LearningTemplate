@@ -6,7 +6,7 @@
  *   - 일반 타입: REFLECT() + PROPERTY() / FUNCTION()
  *   - 이름 변경 창구: REFLECT(Alias=…) · ENUM(Alias=…) / ENUM(ValueAlias="Old:New, …") / ENUM(Removed="Old:Replacement") / PROPERTY(Alias="hp, HitPoints")
  *     실제 게임 데이터가 생긴 뒤 이름을 바꾸거나 지울 때만 씁니다. 그 전에는 이름을 바꾸고 데이터를 새 이름으로 다시 씁니다(엔진 · 게임 코드에 별칭이 없습니다).
- *     옛 이름은 읽기 호환용이라 고정 배치형 스키마 해시에 들어가지 않고, 선언 없이 지우거나 바꾼 이름은 읽기가 실패합니다(docs/plans/RenameRedirects.md).
+ *     옛 이름은 읽기 호환용이라 고정 배치형 스키마 해시에 들어가지 않고, 선언 없이 지우거나 바꾼 이름은 읽기가 실패합니다(docs/09_Decisions.md 5-4 이름 변경 리다이렉트).
  *   - ENUM(Flags): 비트 연산자를 켭니다. ENUM(Invalid=…, Count=…): TypeRegistry::enumToString 센티널
  *   - 직접 만든 컨테이너: 타입에 REFLECT_CONTAINER(...) 한 번 → 필드는 PROPERTY() 만
  *   - StaticType 필요: REFLECT_BODY()

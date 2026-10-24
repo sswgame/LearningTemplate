@@ -62,8 +62,11 @@ namespace sw
         /** @brief 휘두름 클립의 맞는 알림(`_attackHitEvent`)을 받습니다(게임 스레드, 애니메이션 평가 뒤). 휘두르는 중이면 다음 틱이 맞힘을 처리합니다. */
         void onAnimationNotify( const AnimationNotifyInfo& notify ) override;
 
-        /** @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드). */
-        void launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
+        /**
+         * @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드).
+         * @return 체력이 범위 밖(1 보다 작음)이라 거절되면 false 이다. 거절하면 아무것도 바꾸지 않으므로 부르는 쪽이 오브젝트를 정리한다(체력을 올려 대신 서지 않는다).
+         */
+        [[nodiscard]] bool launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isAlive() const { return _bLaunched == SW_TRUE && _vitality.isAlive(); }

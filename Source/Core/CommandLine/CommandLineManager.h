@@ -265,7 +265,7 @@ namespace sw
         {
             if ( _mapArgument.find( alias ) != _mapArgument.end() )
             {
-                SW_LOG_ASSERT( false, "%#은 이미 사용 중입니다", alias );
+                SW_LOG_ASSERT( false, "%# is already in use", alias );
                 return;
             }
         }

@@ -37,7 +37,7 @@ namespace sw
     class SW_API OptionsMenuScreen : public UIScreen
     {
     public:
-        // 확인 창 · 키 바인딩 창 · 행 견본 문서는 엔진 기본 에셋 표가 정본이다(`UISystem::getEngineDocuments`).
+        // 확인 창 · 키 바인딩 창 · 행 견본 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments`).
         OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
         ~OptionsMenuScreen() override;
 

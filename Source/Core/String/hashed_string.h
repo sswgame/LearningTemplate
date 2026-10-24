@@ -685,7 +685,7 @@ namespace sw
         const uint32 newIndex = info._entryCount.load( std::memory_order_relaxed );
         if ( newIndex >= kMaxChunks * kChunkSize )
         {
-            SW_LOG_ASSERT( false, "hashed_string 풀 용량(1,048,576개)을 초과했습니다!" );
+            SW_LOG_ASSERT( false, "hashed_string pool capacity (1,048,576 entries) exceeded!" );
             return {};
         }
 

@@ -48,7 +48,7 @@ namespace sw
         [[nodiscard]] static bool readToken( string_view markup, size_t& inoutOffset, MarkupToken& outToken );
         /** @brief 태그 열입니다(순서대로, 여는 태그는 `이름`, 닫는 태그는 `/이름` — 값은 뺀다). @p outListTag 는 앞을 비운다. */
         static void collectTagSequence( string_view markup, vector<string>& outListTag );
-        /** @brief 두 글의 태그 열(이름 · 순서)이 같은지 봅니다 — 번역 검사가 원문과 번역을 견준다. */
+        /** @brief 두 글의 태그 열(이름 · 순서)이 같은지 봅니다 — 번역 검사가 원문과 번역을 비교한다. */
         static bool hasSameTags( string_view sourceMarkup, string_view translatedMarkup );
         /** @brief 태그나 `[[` 가 하나라도 있는지 봅니다. */
         static bool hasMarkup( string_view markup );

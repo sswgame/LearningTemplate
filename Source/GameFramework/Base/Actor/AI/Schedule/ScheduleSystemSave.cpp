@@ -1,7 +1,7 @@
 /**
  * @file ScheduleSystemSave.cpp
  * @brief `ScheduleSystem` 의 저장 · 복제 부분입니다.
- * @details 저장 상태 채우기 · 되살리기, 네트워크 요약 만들기 · 바이트 인코딩 · 디코딩, 결정성 확인용 상태 해시를 맡습니다.
+ * @details 저장 상태 채우기 · 복원하기, 네트워크 요약 만들기 · 바이트 인코딩 · 디코딩, 결정성 확인용 상태 해시를 맡습니다.
  */
 #include "pch.h"
 

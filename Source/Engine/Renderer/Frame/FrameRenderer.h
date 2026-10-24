@@ -420,7 +420,7 @@ namespace sw
             RHIDescriptorIndex _arrAutoExposureSrv[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
             /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
             float4  _autoExposureParams{};
-            float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 잰 렌더러 시각(초, `getAnimationTime`)
+            float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 측정한 렌더러 시각(초, `getAnimationTime`)
             /**
              * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
              * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.
@@ -446,8 +446,8 @@ namespace sw
              */
             uint8 _bHistoryReset{ SW_TRUE };
             uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
-            uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 잰다(`prepareAutoExposure`)
-            uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 잰 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
+            uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
+            uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
             uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
         };
 
@@ -562,7 +562,7 @@ namespace sw
         void prepareAutoExposure( float32& inoutExposureScale );
         /**
          * @brief 톤맵하는 패스(`findTonemapPass`) 앞에서 자동 노출 측정 · 적응 풀스크린을 같은 리스트에 기록하고, 그 패스가 읽을 이번 EV 를 `AutoExposure` 이름으로 겁니다(autoexposure.hlsl).
-         * @details @p passDesc 가 톤맵하는 패스가 아니거나 이번 프레임에 재지 않는 뷰면 아무것도 하지 않는다. 재는 원본은 그 패스의 SourceColor 입력이다.
+         * @details @p passDesc 가 톤맵하는 패스가 아니거나 이번 프레임에 재지 않는 뷰면 아무것도 하지 않는다. 측정하는 원본은 그 패스의 SourceColor 입력이다.
          */
         void recordAutoExposure( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /**
@@ -952,7 +952,7 @@ namespace sw
         /**
          * @brief 입자 그리기가 있는 프레임에 입자 PSO 를 **기록 시작 전에** 만들어 둡니다(머티리얼 변형 캐시에 둔다 — 해제 순서가 같다).
          * @details 투명 패스 PSO 의 렌더 상태(블렌드 · 깊이 테스트 · RT 포맷)를 물려받고 셰이더만 `EngineDefaultAssets::_shaderParticle` 로 바꾼다. 컬링은 끄고
-         *          깊이 쓰기도 끄며, 블렌드는 프리멀티플라이로 고정한다(더하기는 셰이더가 알파 0 으로 낸다). define 은 비운다 — 쿠커가 VSMain · PSMain 을 define 없이 굽는다.
+         *          깊이 쓰기도 끄며, 블렌드는 프리멀티플라이로 고정한다(더하기는 셰이더가 알파 0 으로 낸다). define 은 비운다 — 쿠커가 VSMain · PSMain 을 define 없이 베이크한다.
          */
         void ensureParticlePSO();
         /** @brief 입자 PSO 입니다. 투명 패스 PSO 가 없거나 만들지 못했으면 0 입니다(`ensureParticlePSO` 가 이번 프레임에 만들었어야 한다). */
