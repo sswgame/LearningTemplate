@@ -151,6 +151,99 @@ namespace
         sw::vector<sw::string> _listFormatted;
     };
 
+    /**
+     * @class BlockedFolderLogOutput
+     * @brief 열 때 폴더를 만드는 장치입니다. 길을 파일이 막고 있으면 `FileUtil` 이 **열다가** 오류 로그를 남깁니다(`FileLogOutput` 이 로그 폴더를 못 만들 때와 같은 모양).
+     */
+    class BlockedFolderLogOutput final : public sw::ILogOutput
+    {
+    public:
+        explicit BlockedFolderLogOutput( sw::string blockedFolder )
+            : _blockedFolder{ std::move( blockedFolder ) }
+            , _listFormatted{}
+            , _bFolderReady{ true }
+        {
+        }
+
+        [[nodiscard]] bool open() override
+        {
+            _bFolderReady = sw::FileUtil::ensureDirectoryExists( _blockedFolder );
+            return _bFolderReady;
+        }
+        void close() override {}
+        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+
+        sw::string             _blockedFolder;
+        sw::vector<sw::string> _listFormatted;
+        bool                   _bFolderReady;
+    };
+
+    /**
+     * @class SelfLoggingLogOutput
+     * @brief `open` 이나 첫 `write` 안에서 로그를 남기는 장치입니다 — 장치가 부르는 쪽으로 로그를 되돌리는 모양을 만듭니다.
+     */
+    class SelfLoggingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        SelfLoggingLogOutput( bool bLogInOpen, bool bLogInWrite )
+            : _openCount{ 0 }
+            , _writeCount{ 0 }
+            , _bLogInOpen{ bLogInOpen }
+            , _bLogInWrite{ bLogInWrite }
+        {
+        }
+
+        [[nodiscard]] bool open() override
+        {
+            ++_openCount;
+            if ( _bLogInOpen )
+                SW_LOG_WARNING( "[Probe] a log written while the device is opening" );
+            return true;
+        }
+        void close() override {}
+        void write( const sw::LogRecord& ) override
+        {
+            ++_writeCount;
+            if ( _bLogInWrite && _writeCount == 1 )
+                SW_LOG_WARNING( "[Probe] a log written from inside write" );
+        }
+
+        uint32 _openCount;
+        uint32 _writeCount;
+        bool   _bLogInOpen;
+        bool   _bLogInWrite;
+    };
+
+    /** @brief 스코프 동안 전역 싱크를 @p pSink 로 바꿉니다 — `SW_LOG_*` 가 그 싱크로 들어가게 해, 싱크가 자기 로그를 받는 경로를 만든다. 싱크보다 **나중에** 만들어야 한다(소멸이 거꾸로). */
+    class GlobalSinkSwap
+    {
+    public:
+        explicit GlobalSinkSwap( sw::ILogSink* pSink )
+            : _pPrevious{ sw::Logger::getGlobalSink() }
+        {
+            sw::Logger::setGlobalSink( pSink );
+        }
+        ~GlobalSinkSwap() { sw::Logger::setGlobalSink( _pPrevious ); }
+
+        GlobalSinkSwap( const GlobalSinkSwap& )            = delete;
+        GlobalSinkSwap& operator=( const GlobalSinkSwap& ) = delete;
+
+    private:
+        sw::ILogSink* _pPrevious;
+    };
+
+    /** @brief 자식 프로세스가 돌릴 교착 시나리오 이름을 담는 환경 변수. */
+    constexpr const utf8* kDeadlockChildEnvironment = "SW_TEST_LOG_DEADLOCK_CHILD";
+
+    /** @brief 시나리오 하나를 자식 프로세스로 돌린다 — 교착이면 시한에 자식이 죽고 `_bTimedOut` 이 선다(같은 프로세스에서 돌면 테스트 전체가 멈춘다). */
+    test::ProcessRunResult runDeadlockScenario( const utf8* pScenario )
+    {
+        const test::ChildEnvironmentVariable arrEnvironment[] = {
+            { kDeadlockChildEnvironment, pScenario }
+        };
+        return test::runThisExecutableAsChild( "LogTest.DeadlockChildRoleRunsAScenario", arrEnvironment, 30 );
+    }
+
     /** @brief 이 날짜 · 시각의 레코드 하나. 연도를 먼 미래로 두어 실제 로그 파일과 이름이 겹치지 않게 한다. */
     sw::LogRecord makeProbeRecord( int32 hour, sw::LogLevel level, const utf8* pText )
     {
@@ -544,6 +637,130 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
     SW_EXPECT_TRUE_MSG( attachedCount > 0, "달린 장치가 한 줄도 받지 못했다" );
     SW_EXPECT_TRUE_MSG( silentCount == 0,
                         "받아 놓고 한 줄도 주지 않은 출력 장치가 있다 — 상한을 넘겼으면 거절했어야 한다" );
+}
+
+/**
+ * @brief [LogTest] 자식 역할: 교착 시나리오 하나를 돌린다(환경 변수가 이름을 준다). 그냥 실행하면 건너뛴다.
+ * @details 로거의 락을 쥔 채 로그를 부르면 그 로그가 같은 락으로 되돌아와 같은 스레드가 영구 정지한다. 그래서 이 케이스는 부모가 시한을 걸고 띄운다.
+ *          시나리오마다 싱크를 **전역 싱크로** 만들어 `SW_LOG_*` 가 그 싱크 자신으로 들어오게 한다(전역 싱크가 따로 있으면 되돌아오는 길이 없다).
+ */
+SW_TEST_CASE( LogTest, DeadlockChildRoleRunsAScenario )
+{
+    const utf8* pScenario = std::getenv( kDeadlockChildEnvironment );
+    if ( pScenario == nullptr )
+        SW_TEST_SKIP( "child only — the Deadlock tests launch it" );
+    const sw::string_view scenario{ pScenario };
+
+    sw::AsyncLogSink logger;
+    GlobalSinkSwap   globalSinkSwap{ &logger };
+
+    if ( scenario == "initialize" )
+    {
+        // 길을 파일이 막은 폴더를 여는 장치 — 열다가 `FileUtil` 이 오류 로그를 남긴다. 장치를 락 안에서 열면 그 로그가 `initialize` 를 멈춘다.
+        const sw::string root    = test::makeTempDirectory( "SwLogDeadlockInitialize" );
+        const sw::string blocker = sw::FileUtil::joinPath( root, "blocker" );
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( blocker, "a file, not a folder" ) );
+
+        sw::unique_ptr<BlockedFolderLogOutput> output   = sw::make_unique<BlockedFolderLogOutput>( sw::FileUtil::joinPath( blocker, "Logs" ) );
+        BlockedFolderLogOutput*                pBlocked = output.get();
+        SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) ); // 아직 초기화 전이라 여기서는 열지 않는다
+
+        logger.initialize();
+
+        SW_EXPECT_FALSE( pBlocked->_bFolderReady );
+        uint32 createFailedCount = 0;
+        uint32 openFailedCount   = 0;
+        for ( const sw::string& line : pBlocked->_listFormatted )
+        {
+            if ( sw::StringUtil::contains( line, "Could not create directory" ) )
+                ++createFailedCount;
+            if ( sw::StringUtil::contains( line, "could not be opened" ) )
+                ++openFailedCount;
+        }
+        SW_EXPECT_EQUAL( 1u, createFailedCount ); // 열다가 남긴 오류가 장치까지 왔다
+        SW_EXPECT_EQUAL( 1u, openFailedCount );   // 열지 못한 장치가 있다고 싱크가 알렸다
+        logger.shutdown();
+    }
+    else if ( scenario == "addOutput" )
+    {
+        logger.initialize();
+        uint32                   limitWarningCount = 0;
+        const sw::DelegateHandle handle            = logger.registerLogWrittenListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&limitWarningCount]( const sw::LogEntry& entry )
+                   {
+            if ( sw::StringUtil::contains( entry._message, "At most" ) )
+                ++limitWarningCount;
+        } ) );
+
+        // 이미 초기화된 뒤라 `addOutput` 이 장치를 바로 연다 — 열다가 남긴 로그도 락 밖이어야 한다.
+        sw::unique_ptr<SelfLoggingLogOutput> logging  = sw::make_unique<SelfLoggingLogOutput>( true, false );
+        SelfLoggingLogOutput*                pLogging = logging.get();
+        SW_ASSERT_TRUE( logger.addOutput( std::move( logging ) ) );
+        SW_EXPECT_EQUAL( 1u, pLogging->_openCount );
+
+        // 상한을 넘기면 거절 경고가 **리스너가 있는 채로** 남는다 — 락 안에서 남기면 방송이 같은 락을 잡는다.
+        bool bRejected = false;
+        for ( uint32 attempt = 0; attempt < 16 && bRejected == false; ++attempt )
+        {
+            bRejected = logger.addOutput( sw::make_unique<CountingLogOutput>() ) == false;
+        }
+        SW_EXPECT_TRUE( bRejected );
+        SW_EXPECT_EQUAL( 1u, limitWarningCount );
+
+        logger.unregisterLogWrittenListener( handle );
+        logger.shutdown();
+    }
+    else if ( scenario == "writeLogsBack" )
+    {
+        // 장치가 `write` 안에서 로그를 남기면(자기 락을 쥔 채라고 보면) 그 로그는 장치로 되돌아오지 않고 stderr 로 간다 — 버려지지도, 멈추지도 않는다.
+        logger.initialize();
+        sw::unique_ptr<SelfLoggingLogOutput> logging  = sw::make_unique<SelfLoggingLogOutput>( false, true );
+        SelfLoggingLogOutput*                pLogging = logging.get();
+        SW_ASSERT_TRUE( logger.addOutput( std::move( logging ) ) );
+
+        logger.writeLog( sw::LogLevel::Error, "Test", "Reentry", "한 줄", __FILE__, __LINE__ );
+        logger.shutdown();
+
+        SW_EXPECT_EQUAL( 1u, pLogging->_writeCount );
+    }
+    else
+    {
+        SW_EXPECT_TRUE_MSG( false, "unknown deadlock scenario" );
+    }
+}
+
+/**
+ * @brief [LogTest] 로그 폴더를 만들 수 없어 장치가 열다가 오류를 남겨도 `initialize` 는 멈추지 않고 오류를 알리고 끝난다
+ * @details 전에는 `initialize` 가 `_mutex` 를 쥔 채 장치를 열었고, 그 로그가 같은 `_mutex` 를 다시 잡아 기동이 영구 정지했다.
+ */
+SW_TEST_CASE( LogTest, InitializeDoesNotDeadlockWhenAnOutputLogsWhileOpening )
+{
+    const test::ProcessRunResult child = runDeadlockScenario( "initialize" );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, "initialize hung — the sink opened an output while holding its lock" );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail().c_str() );
+}
+
+/**
+ * @brief [LogTest] `addOutput` 이 장치를 열다가 남긴 로그와 상한 거절 경고는 리스너가 있어도 교착 없이 방송된다
+ */
+SW_TEST_CASE( LogTest, AddOutputDoesNotDeadlockWhenItLogs )
+{
+    const test::ProcessRunResult child = runDeadlockScenario( "addOutput" );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, "addOutput hung — it logged while holding the sink lock" );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail().c_str() );
+}
+
+/**
+ * @brief [LogTest] 장치가 `write` 안에서 남긴 로그는 되돌아와 멈추지 않고 stderr 로 나간다(버려지지 않는다)
+ */
+SW_TEST_CASE( LogTest, LogFromInsideAnOutputWriteGoesToStderr )
+{
+    const test::ProcessRunResult child = runDeadlockScenario( "writeLogsBack" );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, "the sink hung on a log written from inside an output" );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail().c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "a log written from inside write" ), child.getOutputTail().c_str() );
 }
 
 /**

@@ -25,6 +25,15 @@ namespace sw
         thread_local uint32 t_broadcastDepth{ 0 };
 
         /**
+         * @brief 이 스레드가 지금 출력 장치의 `write` 를 부르는 중인 깊이입니다(`dispatchToOutputs`).
+         * @details 안전망입니다. 이 싱크의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 **자기 락을 쥔 채** `write` 하고
+         *          그 안에서 남기는 로그를 싱크가 막을 형식이 없습니다. 그 로그가 같은 장치의 `write` 로 되돌아오면 장치 락에서 영구 정지하거나(재진입 불가)
+         *          끝없이 되풀이합니다. 그래서 이 깊이가 0 이 아닐 때 들어온 로그는 큐에 넣지 않고 stderr 로 바로 씁니다(버리지 않는다).
+         *          `open` · `close` 에는 걸지 않습니다 — 그 안의 로그는 정상 경로로 가야 하고, 장치가 락을 쥐지 않는 것이 계약입니다(`ILogOutput::open`).
+         */
+        thread_local uint32 t_deviceWriteDepth{ 0 };
+
+        /**
          * @struct GlobalLogListenerUnloadListener
          * @brief 전역 로그 리스너(`Logger::registerGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
          */
@@ -176,15 +185,20 @@ namespace sw
         if ( _bInitialized )
             return;
 
+        // 장치는 `_mutex` **밖에서** 연다. 열다가 남기는 로그(로그 폴더를 못 만든 오류 등)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡는다 —
+        // 락을 쥔 채 열면 같은 스레드가 영구 정지한다(재진입 불가).
+        ILogOutput*  arrDevice[_s_kMaxOutput]{};
+        const uint32 deviceCount = snapshotOutputs( arrDevice );
+
+        uint32 failedCount{ 0 };
+        for ( uint32 index = 0; index < deviceCount; ++index )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            for ( unique_ptr<ILogOutput>& output : _listOutput )
-            {
-                // 열지 못한 출력은 쓰기를 무시한다 — 로거에는 자기 실패를 남길 곳이 없다.
-                if ( output != nullptr )
-                    (void)output->open(); // 열지 못한 출력은 쓰기를 무시한다 — 남길 곳이 없다
-            }
+            // 열지 못한 장치는 쓰기를 무시한다. 장치가 이유를 이미 남겼으므로(락 밖이라 남길 수 있다) 여기서는 몇 개인지만 알린다.
+            if ( arrDevice[index]->open() == false )
+                ++failedCount;
         }
+        if ( failedCount > 0 )
+            SW_LOG_WARNING( "%# of %# log outputs could not be opened - they drop every line", failedCount, deviceCount );
 
         _bIsRunning.store( true, std::memory_order_release );
         _workerThread = sw::thread( &AsyncLogSink::workerLoop, this );
@@ -207,14 +221,19 @@ namespace sw
 
         flushQueue();
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        for ( unique_ptr<ILogOutput>& output : _listOutput )
+        // 장치는 `_mutex` 밖에서 닫는다(`initialize` 와 같은 이유 — 장치가 닫다가 남기는 로그가 이 싱크의 `_mutex` 로 되돌아온다).
+        ILogOutput*  arrDevice[_s_kMaxOutput]{};
+        const uint32 deviceCount = snapshotOutputs( arrDevice );
+        for ( uint32 index = 0; index < deviceCount; ++index )
         {
-            if ( output != nullptr )
-                output->close();
+            arrDevice[index]->close();
         }
-        _onLogWritten.removeAll();
-        rebuildListenerSnapshot();
+
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _onLogWritten.removeAll();
+            rebuildListenerSnapshot();
+        }
         _bInitialized = false;
     }
 
@@ -334,23 +353,35 @@ namespace sw
         if ( output == nullptr )
             return false;
 
+        // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`broadcastToListeners` ·
+        // `dispatchToOutputs`), 리스너가 있으면 방송까지 하므로 락 밖에서 남긴다.
+        // 상한을 **여기서** 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
+        // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
+        bool bRejected{ false };
         {
-            // 상한을 **여기서** 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
-            // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
             std::scoped_lock<mutex> lock{ _mutex };
-            if ( _listOutput.size() >= _s_kMaxOutput )
-            {
-                SW_LOG_WARNING( "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
-                return false;
-            }
+            bRejected = _listOutput.size() >= _s_kMaxOutput;
         }
 
-        const bool bNeedsOpen = _bInitialized;
-        if ( bNeedsOpen )
-            (void)output->open(); // 위와 같다 — 열지 못한 출력은 쓰기를 무시한다
+        if ( bRejected == false )
+        {
+            // 열기도 락 밖이다 — 장치가 열다가 남기는 로그가 되돌아온다.
+            const bool bNeedsOpen = _bInitialized;
+            if ( bNeedsOpen )
+                (void)output->open(); // 열지 못한 출력은 쓰기를 무시한다 — 장치가 이유를 남긴다
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        _listOutput.push_back( std::move( output ) );
+            // 열기 사이에 다른 스레드가 자리를 채웠을 수 있어 같은 락 안에서 다시 확인하고 넣는다.
+            std::scoped_lock<mutex> lock{ _mutex };
+            bRejected = _listOutput.size() >= _s_kMaxOutput;
+            if ( bRejected == false )
+                _listOutput.push_back( std::move( output ) );
+        }
+
+        if ( bRejected )
+        {
+            SW_LOG_WARNING( "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
+            return false;
+        }
         return true;
     }
 
@@ -405,21 +436,29 @@ namespace sw
     {
         // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다. 장치마다 자기 락이 있고, 느린 파일 I/O 가 콘솔을 막지 않게 하는
         // 것이 이렇게 나눈 목적이다.
-        ILogOutput* arrDevice[_s_kMaxOutput]{};
-        uint32      deviceCount{ 0 };
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            for ( unique_ptr<ILogOutput>& output : _listOutput )
-            {
-                if ( output != nullptr && deviceCount < SW_COUNT_OF( arrDevice ) )
-                    arrDevice[deviceCount++] = output.get();
-            }
-        }
+        ILogOutput*  arrDevice[_s_kMaxOutput]{};
+        const uint32 deviceCount = snapshotOutputs( arrDevice );
 
+        ++t_deviceWriteDepth;
         for ( uint32 index = 0; index < deviceCount; ++index )
         {
             arrDevice[index]->write( record );
         }
+        --t_deviceWriteDepth;
+    }
+
+    uint32 AsyncLogSink::snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] )
+    {
+        // `_mutex` 는 **잎 락**이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 싱크로
+        // 되돌아와 같은 `_mutex` 를 잡는다(재진입 불가 → 같은 스레드가 영구 정지). 장치 포인터를 복사해 락 밖에서 부르는 것이 그 규칙의 모양이다.
+        uint32                  deviceCount{ 0 };
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( unique_ptr<ILogOutput>& output : _listOutput )
+        {
+            if ( output != nullptr && deviceCount < _s_kMaxOutput )
+                outArrDevice[deviceCount++] = output.get();
+        }
+        return deviceCount;
     }
 
     void AsyncLogSink::broadcastToListeners( const LogEntry& entry )
@@ -481,6 +520,20 @@ namespace sw
     void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         using Internal = AsyncLogSinkInternal;
+        if ( t_deviceWriteDepth > 0 )
+        {
+            // 출력 장치가 `write` 안에서 로그를 남겼다 — 장치의 락과 이 줄이 되돌아갈 `write` 가 맞물려 멈추므로 장치를 거치지 않고 stderr 로 바로 쓴다.
+            utf8 arrLine[constant::kMaxBuffer32]{};
+            formatstring( arrLine, sizeof( arrLine ), "%#", line );
+            std::fputs( "[Logger] Log written from inside a log output, redirected to stderr: ", stderr );
+            std::fputs( pMessage != nullptr ? pMessage : "", stderr );
+            std::fputs( " -> ", stderr );
+            std::fputs( pFile != nullptr ? pFile : "", stderr );
+            std::fputs( ":", stderr );
+            std::fputs( arrLine, stderr );
+            std::fputs( "\n", stderr );
+            return;
+        }
         // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
         SW_MEMORY_SCOPE( EngineMisc );
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)

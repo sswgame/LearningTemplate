@@ -28,15 +28,26 @@ namespace sw
 
     bool FileLogOutput::open()
     {
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            if ( _bOpened )
+                return true;
+        }
+
+        // 폴더를 알아내고 만드는 호출(`getCurrentPath` · `ensureDirectoryExists`)은 실패하면 로그를 남기고, 그 로그는 싱크를 거쳐 이 장치의 `write` 로 들어온다.
+        // `write` 가 `_mutex` 를 잡으므로 `_mutex` 를 쥔 채 부르면 같은 스레드가 영구 정지한다 — 락 밖에서 하고, 결과만 락 안에서 넣는다.
+        const string execPath      = FileUtil::getExecutablePath();
+        const string baseDir       = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
+        const string logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
+        const bool   bFolderReady  = FileUtil::ensureDirectoryExists( logFolderPath );
+
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _bOpened )
             return true;
 
-        const string execPath = FileUtil::getExecutablePath();
-        const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
-
-        _logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
-        FileUtil::ensureDirectoryExists( _logFolderPath );
+        _logFolderPath = logFolderPath;
+        if ( bFolderReady == false )
+            return false; // 오류는 `ensureDirectoryExists` 가 남겼다. 열린 것이 아니므로 `write` 는 줄을 버린다
         // 크래시 덤프와 리포트도 같은 폴더에 둔다. 사용자가 폴더 하나만 보내면 되도록.
         setCrashReportFolder( _logFolderPath );
 

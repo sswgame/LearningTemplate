@@ -114,6 +114,14 @@ namespace sw
          */
         static constexpr uint32 _s_kMaxOutput = 8;
 
+        /**
+         * @brief 달려 있는 출력 장치의 포인터를 @p outArrDevice 에 복사하고 개수를 돌려줍니다. 장치를 부르는 일(`open` · `close` · `write`)은 모두 이 복사본으로 **락 밖에서** 합니다.
+         * @details `_mutex` 는 잎 락입니다 — 락을 쥔 채 로그 · 장치 · 리스너를 부르지 않습니다. 그 호출이 남기는 로그가 이 싱크로 되돌아와 같은 `_mutex` 를 잡으면
+         *          재진입 불가라 같은 스레드가 영구 정지합니다(예: 로그 폴더를 못 만들어 남긴 오류가 `initialize` 를 멈춤). 장치는 `addOutput` 으로 붙기만 하고
+         *          떼지 않으므로(싱크가 소유) 복사한 포인터는 싱크 수명 동안 유효합니다.
+         */
+        uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
+
         LogWrittenMulticast              _onLogWritten;
         vector<unique_ptr<ILogOutput>>   _listOutput;
         FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
