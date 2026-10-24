@@ -40,7 +40,7 @@ namespace sw::editor
             _wmDelete   = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
             _timer.resetTimer();
             _timer.startTimer();
-            _s_active = this;
+            ImGui::GetIO().BackendPlatformUserData = this; // 활성 백엔드의 주인은 ImGui 컨텍스트다(thunk 가 거기서 찾는다) - 프로세스 정적 포인터를 두지 않는다
 
             ImGuiIO& io            = ImGui::GetIO();
             io.BackendPlatformName = "imgui_impl_x11";
@@ -81,10 +81,10 @@ namespace sw::editor
                 IM_DELETE( static_cast<ViewportData*>( pMainViewport->PlatformUserData ) );
                 pMainViewport->PlatformUserData = nullptr;
             }
-            _pDisplay   = nullptr;
-            _mainWindow = 0;
-            _wmDelete   = 0;
-            _s_active   = nullptr;
+            _pDisplay                              = nullptr;
+            _mainWindow                            = 0;
+            _wmDelete                              = 0;
+            ImGui::GetIO().BackendPlatformUserData = nullptr;
         }
 
         void newFrame() override
@@ -210,58 +210,61 @@ namespace sw::editor
             bool   _bOwned{ false };
         };
 
+        /** @brief 지금 ImGui 컨텍스트에 걸린 이 백엔드입니다(`initialize` 가 `BackendPlatformUserData` 에 건다). 걸려 있지 않으면 nullptr 입니다. */
+        static ImGuiX11PlatformBackend* getActive() { return static_cast<ImGuiX11PlatformBackend*>( ImGui::GetIO().BackendPlatformUserData ); }
+
         static void createWindowThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active != nullptr )
-                _s_active->createWindow( pViewport );
+            if ( getActive() != nullptr )
+                getActive()->createWindow( pViewport );
         }
         static void destroyWindowThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active != nullptr )
-                _s_active->destroyWindow( pViewport );
+            if ( getActive() != nullptr )
+                getActive()->destroyWindow( pViewport );
         }
         static void showWindowThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active != nullptr )
-                _s_active->showWindow( pViewport );
+            if ( getActive() != nullptr )
+                getActive()->showWindow( pViewport );
         }
         static void setWindowPosThunk( ImGuiViewport* pViewport, ImVec2 pos )
         {
-            if ( _s_active != nullptr )
-                _s_active->setWindowPos( pViewport, pos );
+            if ( getActive() != nullptr )
+                getActive()->setWindowPos( pViewport, pos );
         }
         static ImVec2 getWindowPosThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active == nullptr )
+            if ( getActive() == nullptr )
                 return ImVec2( 0, 0 );
-            return _s_active->getWindowPos( pViewport );
+            return getActive()->getWindowPos( pViewport );
         }
         static void setWindowSizeThunk( ImGuiViewport* pViewport, ImVec2 size )
         {
-            if ( _s_active != nullptr )
-                _s_active->setWindowSize( pViewport, size );
+            if ( getActive() != nullptr )
+                getActive()->setWindowSize( pViewport, size );
         }
         static ImVec2 getWindowSizeThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active == nullptr )
+            if ( getActive() == nullptr )
                 return ImVec2( 0, 0 );
-            return _s_active->getWindowSize( pViewport );
+            return getActive()->getWindowSize( pViewport );
         }
         static void setWindowTitleThunk( ImGuiViewport* pViewport, const utf8* pTitle )
         {
-            if ( _s_active != nullptr )
-                _s_active->setWindowTitle( pViewport, pTitle );
+            if ( getActive() != nullptr )
+                getActive()->setWindowTitle( pViewport, pTitle );
         }
         static void setWindowFocusThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active != nullptr )
-                _s_active->setWindowFocus( pViewport );
+            if ( getActive() != nullptr )
+                getActive()->setWindowFocus( pViewport );
         }
         static bool getWindowFocusThunk( ImGuiViewport* pViewport )
         {
-            if ( _s_active == nullptr )
+            if ( getActive() == nullptr )
                 return false;
-            return _s_active->getWindowFocus( pViewport );
+            return getActive()->getWindowFocus( pViewport );
         }
         static bool getWindowMinimizedThunk( ImGuiViewport* pViewport )
         {
@@ -463,11 +466,7 @@ namespace sw::editor
         Window    _mainWindow;
         Atom      _wmDelete;
         GameTimer _timer;
-
-        static ImGuiX11PlatformBackend* _s_active;
     };
-
-    ImGuiX11PlatformBackend* ImGuiX11PlatformBackend::_s_active{ nullptr };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()
     {

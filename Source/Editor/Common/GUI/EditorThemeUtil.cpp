@@ -718,12 +718,15 @@ namespace sw::editor
         pDrawList->AddText( pFont, fontSize, position, EditorColorUtil::toImU32( color ), pGlyph );
     }
 
-    const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
+    EditorIconLabel::EditorIconLabel( const utf8* pIcon, const utf8* pLabel )
+        : _arrText{}
     {
-        // UI 스레드 하나가 호출하지만 자체 테스트 스레드에서도 호출할 수 있으므로 스레드마다 버퍼를 둔다.
-        thread_local fixed_string<constant::kMaxBuffer256> s_label;
-        formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
-        return s_label.c_str();
+        formatstring( _arrText, constant::kMaxBuffer256, "%#  %#", pIcon, pLabel );
+    }
+
+    EditorIconLabel EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
+    {
+        return EditorIconLabel{ pIcon, pLabel };
     }
 } // namespace sw::editor
 
