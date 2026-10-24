@@ -969,6 +969,12 @@ namespace sw::editor
                     formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
                 const GameObject* pEditOwner = getEditOwner();
                 InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex], parameter, pEditOwner != nullptr ? pEditOwner->getManager() : nullptr );
+                if ( EditorSelfTestMarks::isEnabled() )
+                {
+                    // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다).
+                    const string argMark = string( "inspector.method.arg." ) + method._name.c_str() + "." + to_string( paramIndex );
+                    EditorSelfTestMarks::note( argMark.c_str() );
+                }
                 ImGui::PopID();
             }
 
@@ -982,9 +988,16 @@ namespace sw::editor
                 ImGui::EndDisabled();
                 ImGui::TextDisabled( "Unsupported FUNCTION args - invoke skipped." );
             }
-            else if ( ImGui::Button( "Invoke" ) )
+            else
             {
-                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
+                const bool bInvoke = ImGui::Button( "Invoke" );
+                if ( EditorSelfTestMarks::isEnabled() )
+                {
+                    const string invokeMark = string( "inspector.method.invoke." ) + method._name.c_str();
+                    EditorSelfTestMarks::note( invokeMark.c_str() );
+                }
+                if ( bInvoke )
+                    invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
             }
 
             ImGui::PopID();

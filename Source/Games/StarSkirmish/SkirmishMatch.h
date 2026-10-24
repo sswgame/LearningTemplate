@@ -77,6 +77,8 @@ namespace sw
         SkirmishAIStyle _rushAI{};
         SkirmishAIStyle _macroAI{};
         SkirmishAIStyle _opponentAI{};
+        // 컴퓨터 상대의 행동 트리 — 데이터(`commander.bt.xml`)에서 읽은 것을 디렉터가 가리킨다. 판이 도는 동안 살아 있어야 하고, AI 는 시작할 때 복사해 쥔다. 컴퓨터 상대가 있으면 필수다.
+        const BehaviorTree* _pCommanderTree{ nullptr };
     };
 } // namespace sw
 

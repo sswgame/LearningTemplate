@@ -61,6 +61,8 @@ namespace sw::editor
         /** @brief @p groupName 테이블의 끝에 행을 더합니다. 열은 그 테이블의 열을 따르고 `id` · `name` 은 "new" 로 채웁니다. 테이블이 없으면 속성 없는 행(`id="new"` 하나)을 더합니다. */
         [[nodiscard]] bool addRow( string_view groupName );
         [[nodiscard]] bool removeRow( int32 elementIndex );
+        /** @brief 어느 깊이의 원소든 @p parentIndex 의 마지막 자식으로 `<name a="…" />` 를 더합니다(곡선 키처럼 중첩된 원소를 고치는 길). 부모가 없으면 false 입니다. */
+        [[nodiscard]] bool addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute );
         /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 테이블은 비어 보입니다). 되돌리기 항목은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
         void replaceText( string_view text, bool bPushUndo );
 

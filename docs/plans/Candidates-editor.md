@@ -49,3 +49,28 @@ Tracy 0.14.1 뷰어 연결(주소 `localhost:8086` 을 직접 입력해 연결�
 왜 못 하는가: 원시 DoubleClick 이벤트를 읽는 코드가 아직 없다.
 남은 것: 더블클릭은 두 번째 `Press` 로 기록하고 재생은 원시 Down 을 두 번 낸다. 지금 원시 DoubleClick 이벤트를 읽는 쪽이 없다(입력 관리자는 Down, 입력 맵과 ImGui 는 간격으로 판정).
 풀리는 조건: 그 이벤트를 읽는 코드가 생기면 `VirtualInputScript` 에 `DoubleClick` 단계를 더한다. 합성 축(키 · D 패드)은 키 단계로 남는다 — 재생의 `ActionAxis` 가 합성 축은 키를 누르기만 하므로 키 단계와 같다.
+
+### PreviewWindowsRemaining
+제목: 미리보기 씬 틀(EditorPreviewPanel)을 쓰는 나머지 툴 창
+옛번호: D3-7
+왜 필요한가: 다중 월드 틀은 단계 1 ~ 5 로 끝났고 머티리얼 · 프리팹 · VFX · 캐릭터 · 페어드 애니메이션 창이 그 위에 올랐다. 틀이 정한 모양(문서 패널 + 미리보기 씬 + 창 Undo)에 얹을 수 있는 창이 더 남았다: 메시/모델(LOD 단계별 비교) · 애니메이션 클립 · 카메라 프리셋 · 래그돌 · 장르 도구. 창마다 독립이라 하나씩 계획 문서로 옮겨 착수한다.
+착수 조건: 그 창의 편집 대상(예: `.mesh` 의 LOD 단계 확인, `meadow.cameras.xml` 프리셋 보기)이 디자이너의 일이 되어 지금 길(인스펙터 · 콘텐츠 브라우저 썸네일)로 모자랄 때.
+남은 것: 창마다 `EditorPreviewPanel` 파생 + 자산 종류 등록(`EditorAssetType` 표의 제목) + 미리보기 씬 스폰 + 시나리오 하나. `VfxPreviewPanel`(보기 전용, 약 230 줄)이 가장 작은 본보기다.
+함정: 같은 파일을 두 편집기가 쥐지 않는다(카탈로그 편집기가 쥔 종류는 보기 전용). 닫기 확인 · 창 Undo 는 틀이 맡으므로 파생이 따로 만들지 않는다.
+
+### MeshModifierCpuPreviewCost
+제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
+옛번호: D3-10
+왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 줄이지 못해 더하지 않았다([MeshModifierPreviewCost](MeshModifierPreviewCost.md) 2절).
+착수 조건: 매니페스트 `mesh-modifier-preview-cost` 의 값에서 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때.
+남은 것: `Editor.MeshModifiers.Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표에 올린다(`MeshModifierGPUProgram`). `Editor.MeshModifiers.CpuMesh` 가 크면 미리보기 메시의 탄젠트 재계산을 건너뛰는 옵션을 본다(`Mesh::setVerticesWithTangents` 에 위치만 바뀐 탄젠트를 넘기는 길 포함).
+함정: 메시를 제자리에서 바꾸지 않는다 - 렌더 스냅샷이 옛 메시를 쥔다.
+
+### BehaviorTreeLiveCommander
+제목: 행동 트리 창에서 지휘관 AI 의 활성 노드 보기
+옛번호: 없음
+왜 필요한가: 행동 트리 창([DesignerDataToolsAudit](DesignerDataToolsAudit.md) D2)은 선택한 오브젝트의 `AIControllerComponent` 실행기만 읽어 활성 노드를 보인다. RTS 지휘관 AI(`RTSCommanderAI`)는 컴포넌트가 아니라 경기 상태(`SkirmishMatch`)가 쥐는 일반 클래스라 창이 닿지 못한다.
+착수 조건: 지휘관 AI 나 같은 모양(컴포넌트에 안 붙은 행동 트리 실행기)을 쓰는 게임이 둘 이상이 되어, 트리를 고치며 활성 노드를 봐야 하는 일이 반복될 때.
+남은 것: 실행기를 내놓는 작은 인터페이스(`IBehaviorTreeDebugSource`: 실행기 목록과 이름)를 GameFramework 에 두고, 지휘관을 가진 컴포넌트(`SkirmishDirectorComponent`)가 구현해 창이 선택한 오브젝트에서 찾는다.
+함정: 실행기 노드 번호는 깊이 우선 번호이므로 창에 연 파일과 실행기가 쥔 트리가 같은 파일일 때만 맞다 - 파일 경로를 인터페이스가 같이 내놓아 다르면 표시하지 않게 한다.
+

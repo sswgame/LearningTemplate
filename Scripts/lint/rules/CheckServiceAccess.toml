@@ -42,4 +42,5 @@ CompressionCodecRegistry = "ScopeOwnedHotPath" # Core 의 CompressionStream 이 
 ProfilerBackend = "ScopeOwnedHotPath" # 프로파일 구간이 렌더 · 작업 스레드에서 읽는다(범위 조회는 선형 검색이라 핫 패스에 못 둔다)
 SceneTransformStorage = "ScopeOwnedHotPath" # 엔진 수명 범위가 소유하는 저장소 — 변환 컴포넌트가 핫 패스에서 읽는다
 ValidationIssueLog = "ScopeOwnedHotPath"    # 범위가 소유하는 표 — 파괴 경로도 부르므로 범위 조회를 거치지 않는다. 월드 소유로 옮기는 일은 Candidates-engine 의 ValidationIssueLogWorldOwned
+BehaviorTaskRegistry = "LinkTimeRegistry" # 게임 · 키트 모듈 이미지의 정적 등록자(`SW_BEHAVIOR_TASK`)가 채우는 작업 이름 표
 GameInstanceBase = "Stateless"      # 활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다

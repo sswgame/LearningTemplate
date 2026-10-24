@@ -38,10 +38,12 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/UI/UISystem.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -313,7 +315,7 @@ namespace sw::editor
 
                 const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
-                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
+                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( HierarchyPanel::kPanelTitle );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
@@ -506,7 +508,7 @@ namespace sw::editor
             /** @brief 이번 프레임 "Game" 창의 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 찾지 못하면 false 입니다. */
             static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
-                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( "Game" );
+                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( GameViewPanel::kPanelTitle );
                 const bool         bGameWindowNotDrawn = pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount();
                 if ( bGameWindowNotDrawn )
                     return false;
@@ -571,6 +573,45 @@ namespace sw::editor
                 ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // gameView.pointerOriginReachesTheGame: 게임 뷰 이미지의 창 안 자리가 패널 창 안에 있고, 런타임 UI 의 포인터 원점과 입력의 게임 화면 원점에 같이 닿는다
+            // (UiInputRemaining I3 — 창 픽셀 포인터를 게임 뷰 픽셀로 옮기는 값이 에디터 → 엔진으로 어긋나지 않고 가는지)
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runGameViewPointerOriginReachesTheGame( EditorSelfTestContext& context )
+            {
+                constexpr uint32     kSettleFrameCount = 3; // 탭이 앞으로 오고 이미지 자리가 엔진 프레임에 한 번 닿는 데 걸리는 프레임 수
+                const GameViewPanel* pPanel            = openGameView( context );
+                EditorContext*       pContext          = EditorContext::get();
+                const UISystem*      pUI               = findSubsystem<UISystem>();
+                const InputManager*  pInput            = findSubsystem<InputManager>();
+                const bool           bMissingContext   = pPanel == nullptr || pContext == nullptr || context.expect( pUI != nullptr && pInput != nullptr, "no UI system or input manager" ) == false;
+                if ( bMissingContext )
+                    return EditorSelfTestStep::Done;
+                const uint32 stepIndex = context.getStepIndex();
+                const bool   bDrawn    = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
+                if ( ( bDrawn == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
+                    return EditorSelfTestStep::Continue;
+                (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
+
+                const EditorViewTarget& view    = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
+                const ImGuiWindow*      pWindow = ImGui::FindWindowByName( GameViewPanel::kPanelTitle );
+                if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
+                    return EditorSelfTestStep::Done;
+                // 이미지는 패널 창 안에 놓인다(주 창 클라이언트 픽셀). 주 뷰포트 자리를 빼지 않았거나 패널 밖 값이면 여기서 어긋난다.
+                const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+                const float32        left          = pWindow->Pos.x - pMainViewport->Pos.x;
+                const float32        top           = pWindow->Pos.y - pMainViewport->Pos.y;
+                const bool           bInsideWindow = static_cast<float32>( view._windowX ) >= left - 1.0f && static_cast<float32>( view._windowX ) <= left + pWindow->Size.x &&
+                                           static_cast<float32>( view._windowY ) >= top - 1.0f && static_cast<float32>( view._windowY ) <= top + pWindow->Size.y;
+                (void)context.expect( bInsideWindow, "the game view image position is outside the Game window" );
+                // 같은 값이 런타임 UI 와 입력에 닿는다(`Engine::update`).
+                const UIViewport& uiViewport = pUI->getViewport();
+                (void)context.expect( uiViewport._pointerOrigin == int2{ view._windowX, view._windowY }, "the UI pointer origin differs from the game view image position" );
+                (void)context.expect( pInput->getGameViewRect()._origin == int2{ view._windowX, view._windowY }, "the input game view origin differs from the game view image position" );
+                ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
@@ -588,4 +629,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( SceneViewGizmo, "sceneView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::runGizmoMovesTheSelection );
     SW_EDITOR_SELF_TEST( SceneViewGridAndGizmo, "sceneView.gridAndGizmoDraw", 765, &EditorSelfTestDevToolsInternal::runGridAndGizmoDraw );
     SW_EDITOR_SELF_TEST( GameViewNoOverlays, "gameView.hidesEditorOverlays", 770, &EditorSelfTestDevToolsInternal::runGameViewHidesEditorOverlays );
+    SW_EDITOR_SELF_TEST( GameViewPointerOrigin, "gameView.pointerOriginReachesTheGame", 772, &EditorSelfTestDevToolsInternal::runGameViewPointerOriginReachesTheGame );
 } // namespace sw::editor

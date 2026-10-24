@@ -147,5 +147,18 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="8" name="OrchardSite">
+			<GameObject _schemaVersion="0" _name="OrchardSite" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="9,0,1.5"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachComponent="None" />
+					<!-- 부탁(meadow_request)의 목표 자리 — 과수원 서식지가 열린 동안만 화면 마커가 뜬다(받으면 뜨고 끝나면 사라진다). -->
+					<QuestObjectiveMarkerComponent _quest="meadow_request" _kind="Habitat" _target="orchard" />
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

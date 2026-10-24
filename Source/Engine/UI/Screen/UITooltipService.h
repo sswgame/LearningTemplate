@@ -43,6 +43,13 @@ namespace sw
         /** @brief 툴팁을 닫고 머문 시간을 지웁니다(`UISystem::shutdown`). */
         void clear();
 
+        /**
+         * @brief 툴팁 왼쪽 위 자리를 구합니다. 포인터 오른쪽 아래(`kPointerOffset`)가 기본이고, 화면 오른쪽 · 아래를 넘으면 포인터 왼쪽 · 위로 뒤집으며, 그래도 화면 밖이면 화면 안으로 민다.
+         * @param pointer     UI 단위 포인터 자리
+         * @param tooltipSize 툴팁 크기(UI 단위, 아직 배치 전이면 0)
+         * @param screenSize  UI 뷰포트 크기(UI 단위)
+         */
+        static float2 computePlacement( const float2& pointer, const float2& tooltipSize, const float2& screenSize );
         /** @brief 호버 경로 @p path(@p tree 안)의 커서 모양입니다. 잎에서 올라가 처음 만난 `Inherit` 가 아닌 값, 없으면 `Arrow` 입니다. */
         static UICursorShape resolveCursorShape( const WidgetTree& tree, const UIWidgetPath& path );
         /** @brief 풀린 UI 커서 모양(`Inherit` 가 아님)을 OS 커서 모양으로 바꿉니다. `Inherit` 를 넘기면 어설트하고 `Arrow` 입니다. */

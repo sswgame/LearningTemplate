@@ -129,3 +129,52 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
     SW_EXPECT_EQUAL( 1u, sw::editor::AssetHotReload::notifyAssetUsers( manager, spelledDifferently ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
 }
+
+/**
+ * @brief [AssetHotReloadTest] 변경 이벤트는 바뀐 파일의 리소스 id 로 모이고(중복 없이 소문자), 폴더가 생기거나 사라지면 · 한도를 넘으면 개별 파일을 모르는 것이 되어 전체를 다시 읽게 한다
+ * @details 폴더의 내용 변경(Modified)은 안의 파일 사건이 따로 오므로 버린다. 울타리 표지 파일은 번호만 올리고 바뀐 파일로 세지 않는다. 꺼내면 기억이 비워진다.
+ *          변이: 폴더 추가를 파일처럼 기록하면 안의 파일이 목록에 없는 채 증분 갱신이 통과해 낡은 색인이 남는다.
+ */
+SW_TEST_CASE( AssetHotReloadTest, TreeChangesAreTrackedPerFileAndFoldersForceAFullRescan )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string&          root = sw::ResourcePaths::getRootFolderPath();
+    sw::editor::AssetHotReload reload;
+    const auto                 makeEvent = [&root]( sw::FileWatcherAction action, const utf8* pDirectory, const utf8* pFileName )
+    { return sw::FileChangeEvent{ action, sw::FileUtil::joinPath( root, pDirectory ), pFileName }; };
+
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Modified, "game/empty/data", "Items.xml" ) );
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::RenamedNewName, "game/empty/data", "items.xml" ) ); // 저장은 새 이름으로 온다 — 같은 파일이다
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Modified, "game/empty", "data" ) );                 // 폴더의 내용 변경은 버린다
+    SW_EXPECT_EQUAL( uint64{ 3 }, reload.getContentChangeSerial() );
+    sw::vector<sw::string> listPath;
+    SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listPath.size() );
+    SW_EXPECT_STREQ( "game/empty/data/items.xml", listPath[0].c_str() );
+    SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) ); // 꺼내면 비워진다
+    SW_EXPECT_TRUE( listPath.empty() );
+
+    // 울타리 표지는 번호만 올린다.
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Added, "scratch", "contentfence.tmp" ) );
+    SW_EXPECT_EQUAL( uint64{ 4 }, reload.getContentChangeSerial() );
+    SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) );
+    SW_EXPECT_TRUE( listPath.empty() );
+
+    // 폴더가 생기면 안의 파일을 모른다.
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Modified, "game/empty/data", "items.xml" ) );
+    reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Added, "game/empty", "newfolder" ) );
+    SW_EXPECT_FALSE( reload.takeChangedPaths( listPath ) );
+    SW_EXPECT_TRUE( listPath.empty() );
+    SW_ASSERT_TRUE( reload.takeChangedPaths( listPath ) ); // 알 수 없음은 한 번 꺼내면 풀린다
+
+    // 한도를 넘으면 모른다.
+    for ( size_t index = 0; index <= sw::editor::AssetHotReload::kMaxTrackedChangedPaths; ++index )
+    {
+        const sw::string fileName = "file" + sw::to_string( index ) + ".xml";
+        reload.onResourceTreeChanged( makeEvent( sw::FileWatcherAction::Modified, "game/empty/data", fileName.c_str() ) );
+    }
+    SW_EXPECT_FALSE( reload.takeChangedPaths( listPath ) );
+
+    // 감시를 켜지 않았으면 울타리는 막지 않는다.
+    SW_EXPECT_FALSE( reload.pollContentWatchFence() );
+}

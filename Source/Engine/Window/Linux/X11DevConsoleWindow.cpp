@@ -1,6 +1,6 @@
 /**
  * @file X11DevConsoleWindow.cpp
- * @brief 개발 콘솔의 X11 창입니다. 게임 창의 자식 창에 기본 글꼴로 줄을 그립니다.
+ * @brief 개발 콘솔의 X11 창입니다. 게임 창의 자식 창에 iso10646-1 코어 글꼴로 UTF-8 줄을 그립니다(`XDrawString16`, 기본 다국어 평면).
  */
 #include "pch.h"
 
@@ -23,6 +23,56 @@ namespace sw
         {
             static constexpr int32 kLineHeight = 16;
             static constexpr int32 kPadding    = 6;
+            /// 코어 X 글꼴 후보입니다(앞에서부터 처음 열리는 것). 모두 UCS-2(iso10646-1) 글꼴이라 로캘(`setlocale` 을 아무도 부르지 않는다)과 무관하게 UTF-8 글을 그릴 수 있다.
+            static constexpr const utf8* kArrFontPattern[] = { "-*-*-medium-r-normal--16-*-*-*-*-*-iso10646-1", "-*-*-medium-r-*--14-*-*-*-*-*-iso10646-1", "-*-*-*-*-*--*-*-*-*-*-*-iso10646-1" };
+
+            /**
+             * @brief UTF-8 글을 UCS-2(`XDrawString16` 의 글자)로 바꿉니다. 기본 다국어 평면 밖(이모지 등)과 잘못된 바이트는 U+FFFD 한 글자가 된다.
+             * @details `XDrawString` 은 Latin-1 이라 한글 · 일본어가 깨진다. 글자 모양은 X 서버의 iso10646-1 글꼴이 그 글자를 가진 만큼만 나온다.
+             */
+            static void decodeUtf8( const string& text, vector<XChar2b>& outListChar )
+            {
+                outListChar.clear();
+                const size_t size = text.size();
+                size_t       at   = 0;
+                while ( at < size )
+                {
+                    const uint32 lead   = static_cast<uint8>( text[at] );
+                    uint32       length = 1;
+                    uint32       point  = 0xFFFD;
+                    if ( lead < 0x80 )
+                        point = lead;
+                    else if ( lead >= 0xC2 && lead < 0xE0 )
+                    {
+                        length = 2;
+                        point  = lead & 0x1F;
+                    }
+                    else if ( lead >= 0xE0 && lead < 0xF0 )
+                    {
+                        length = 3;
+                        point  = lead & 0x0F;
+                    }
+                    else if ( lead >= 0xF0 && lead < 0xF5 )
+                    {
+                        length = 4;
+                        point  = lead & 0x07;
+                    }
+                    bool bValid = length == 1 ? lead < 0x80 : at + length <= size;
+                    for ( uint32 index = 1; bValid && index < length; ++index )
+                    {
+                        const uint32 next = static_cast<uint8>( text[at + index] );
+                        bValid            = ( next & 0xC0 ) == 0x80;
+                        point             = ( point << 6 ) | ( next & 0x3F );
+                    }
+                    if ( bValid == false || point > 0xFFFF )
+                        point = 0xFFFD;
+                    XChar2b character{};
+                    character.byte1 = static_cast<uint8>( point >> 8 );
+                    character.byte2 = static_cast<uint8>( point & 0xFF );
+                    outListChar.push_back( character );
+                    at += bValid ? length : 1;
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -41,6 +91,7 @@ namespace sw
             , _ownerWindow{ ownerWindow }
             , _window{ 0 }
             , _gc{ nullptr }
+            , _pFont{ nullptr }
             , _listLine{}
             , _listErrorFlag{}
         {
@@ -48,6 +99,8 @@ namespace sw
 
         ~X11DevConsoleWindow() override
         {
+            if ( _pFont != nullptr )
+                XFreeFont( _pDisplay, _pFont );
             if ( _gc != nullptr )
                 XFreeGC( _pDisplay, _gc );
             if ( _window != 0 )
@@ -65,7 +118,19 @@ namespace sw
             if ( _window == 0 )
                 return false;
             _gc = XCreateGC( _pDisplay, _window, 0, nullptr );
-            return _gc != nullptr;
+            if ( _gc == nullptr )
+                return false;
+            // 글꼴이 없으면 콘솔을 세우지 않는다(Latin-1 로 깨뜨려 그리지 않는다). 호출한 쪽이 경고를 남긴다.
+            for ( const utf8* pPattern : X11DevConsoleWindowInternal::kArrFontPattern )
+            {
+                _pFont = XLoadQueryFont( _pDisplay, pPattern );
+                if ( _pFont != nullptr )
+                    break;
+            }
+            if ( _pFont == nullptr )
+                return false;
+            XSetFont( _pDisplay, _gc, _pFont->fid );
+            return true;
         }
 
         void setVisible( bool bVisible ) override
@@ -109,19 +174,22 @@ namespace sw
             for ( size_t index = 0; index < _listLine.size(); ++index )
             {
                 XSetForeground( _pDisplay, _gc, WhitePixel( _pDisplay, screen ) );
-                XDrawString( _pDisplay, _window, _gc, X11DevConsoleWindowInternal::kPadding, lineY, _listLine[index].c_str(), static_cast<int32>( _listLine[index].size() ) );
+                X11DevConsoleWindowInternal::decodeUtf8( _listLine[index], _listChar );
+                XDrawString16( _pDisplay, _window, _gc, X11DevConsoleWindowInternal::kPadding, lineY, _listChar.data(), static_cast<int32>( _listChar.size() ) );
                 lineY += X11DevConsoleWindowInternal::kLineHeight;
             }
             XFlush( _pDisplay );
         }
 
     private:
-        Display*       _pDisplay;
-        ::Window       _ownerWindow;
-        ::Window       _window;
-        GC             _gc;
-        vector<string> _listLine;
-        vector<uint8>  _listErrorFlag;
+        Display*        _pDisplay;
+        ::Window        _ownerWindow;
+        ::Window        _window;
+        GC              _gc;
+        XFontStruct*    _pFont;
+        vector<XChar2b> _listChar; ///< 한 줄을 UCS-2 로 바꾼 글자(그릴 때마다 다시 쓴다)
+        vector<string>  _listLine;
+        vector<uint8>   _listErrorFlag;
     };
 } // namespace sw
 
@@ -138,7 +206,7 @@ namespace sw
         unique_ptr<X11DevConsoleWindow> pWindow = make_unique<X11DevConsoleWindow>( pDisplay, ownerWindow );
         if ( pWindow->initialize() == false )
         {
-            SW_LOG_WARNING( "Dev console: could not create the console window" );
+            SW_LOG_WARNING( "Dev console: could not create the console window (no X window, GC or iso10646-1 font)" );
             return nullptr;
         }
         return pWindow;

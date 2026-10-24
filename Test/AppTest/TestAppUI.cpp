@@ -63,6 +63,8 @@ namespace
         static constexpr float64     kMaxDifferingFraction = 0.001;
         static constexpr float32     kEdgeTolerance        = 0.02f; ///< 백엔드 사이 가장자리 수 차(비율)
         static constexpr float32     kEdgeThreshold        = 0.12f; ///< 이웃 휘도 차가 이보다 크면 가장자리 픽셀
+        static constexpr float32     kMsdfLumaTolerance    = 0.1f;  ///< MSDF 와 SDF 패널 평균 휘도의 상대 차 상한(글자가 사라지거나 번지면 벌어진다)
+        static constexpr float32     kMsdfEdgeTolerance    = 0.15f; ///< MSDF 와 SDF 패널 가장자리 수의 상대 차 상한
         static constexpr const utf8* kArrRegionName[]      = { "DemoPanel", "Start", "RoundBox", "ClipBox", "NineSlice", "RtlSample" };
 
         /**
@@ -204,6 +206,31 @@ namespace
             return iter != capture._mapRectByName.end() ? &iter->second : nullptr;
         }
 
+        /**
+         * @brief 방금 돈 견본 시나리오의 산출물(스크린샷 · 레이아웃 덤프)을 @p outCapture 로 읽고 눈으로 볼 사본을 `uidemo<이름 덧붙임>_<백엔드>.*` 로 남깁니다.
+         * @details 실패하면 단언을 기록하고 돌아온다(`_mapRectByName` 이 빈 채로 남는다).
+         */
+        static void loadCapture( const utf8* pSwitch, const utf8* pCopySuffix, AppUICapture& outCapture )
+        {
+            outCapture._backend         = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+            const sw::string imagePath  = sw::FileUtil::joinPath( kOutputFolder, "uidemo.ppm" );
+            const sw::string layoutPath = sw::FileUtil::joinPath( kOutputFolder, "uidemo.layout.txt" );
+            sw::string       error;
+            sw::string       layout;
+            SW_ASSERT_TRUE_MSG( sw::AutomationImageMetric::loadPpm( imagePath, outCapture._image, error ), error.c_str() );
+            SW_ASSERT_TRUE_MSG( sw::FileUtil::readTextFile( layoutPath, layout ), layoutPath.c_str() );
+            SW_ASSERT_TRUE_MSG( parseDemoRects( layout, outCapture._image._width, outCapture._image._height, outCapture._mapRectByName ),
+                                ( outCapture._backend + ": no demo screen in the layout dump" ).c_str() );
+            // 다음 실행이 덮어쓰기 전에 이름을 붙여 남긴다(실패를 눈으로 볼 때).
+            const sw::string  copyStem = sw::string( "uidemo" ) + pCopySuffix + "_" + outCapture._backend;
+            sw::vector<uint8> bytes;
+            if ( sw::FileUtil::readFile( imagePath, bytes ) )
+                // 눈으로 볼 사본 — 실패는 writeFile 이 오류로 남긴다
+                (void)sw::FileUtil::writeFile( sw::FileUtil::joinPath( kOutputFolder, copyStem + ".ppm" ), bytes.data(), bytes.size() );
+            // 눈으로 볼 사본 — 실패는 writeTextFile 이 오류로 남긴다
+            (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( kOutputFolder, copyStem + ".layout.txt" ), layout );
+        }
+
         /** @brief 견본의 알려진 영역을 단언합니다(백엔드 하나). */
         static void expectKnownRegions( const AppUICapture& capture )
         {
@@ -295,22 +322,7 @@ SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
         if ( outcome != test::AppRunOutcome::Passed )
             continue; // 실패는 runScenario 가 기록했다
         AppUICapture capture{};
-        capture._backend            = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
-        const sw::string imagePath  = sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo.ppm" );
-        const sw::string layoutPath = sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo.layout.txt" );
-        sw::string       error;
-        sw::string       layout;
-        SW_ASSERT_TRUE_MSG( sw::AutomationImageMetric::loadPpm( imagePath, capture._image, error ), error.c_str() );
-        SW_ASSERT_TRUE_MSG( sw::FileUtil::readTextFile( layoutPath, layout ), layoutPath.c_str() );
-        SW_ASSERT_TRUE_MSG( Internal::parseDemoRects( layout, capture._image._width, capture._image._height, capture._mapRectByName ),
-                            ( capture._backend + ": no demo screen in the layout dump" ).c_str() );
-        // 다음 백엔드가 덮어쓰기 전에 백엔드 이름으로 남긴다(실패를 눈으로 볼 때).
-        sw::vector<uint8> bytes;
-        if ( sw::FileUtil::readFile( imagePath, bytes ) )
-            // 눈으로 볼 사본 — 실패는 writeFile 이 오류로 남긴다
-            (void)sw::FileUtil::writeFile( sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo_" + capture._backend + ".ppm" ), bytes.data(), bytes.size() );
-        // 눈으로 볼 사본 — 실패는 writeTextFile 이 오류로 남긴다
-        (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( Internal::kOutputFolder, "uidemo_" + capture._backend + ".layout.txt" ), layout );
+        Internal::loadCapture( pSwitch, "", capture );
         Internal::expectKnownRegions( capture );
         listCapture.push_back( std::move( capture ) );
     }
@@ -320,4 +332,50 @@ SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
     {
         Internal::expectMatchesReference( listCapture[0], listCapture[index] );
     }
+}
+
+/**
+ * @brief [AppUITest] 글리프 아틀라스를 MSDF 로 켜(`-gv_fontMsdfGlyphs=1`) 견본 화면을 그려도 SDF 와 같은 모양이다 — 알려진 영역 단언과 패널의 평균 휘도 · 가장자리 수가 SDF 와 가깝다
+ * @details MsdfGlyphs 계획 M5. 글자가 안 그려지거나(R 채널만 읽는 틀린 경로) 모서리가 크게 뭉개지면 휘도 · 가장자리 수가 SDF 와 벌어진다. 큰 글자 모서리가 날카로운지는
+ *          눈으로 본다(`uidemo_msdf_<백엔드>.ppm` 을 `uidemo_<백엔드>.ppm` 과 견준다). 백엔드 하나(처음 돌아간 것)만 본다.
+ */
+SW_TEST_CASE( AppUITest, MsdfGlyphsMatchSdfDemoScreen )
+{
+    using Internal = AppUITestInternal;
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "gv_fontMsdfGlyphs is a Release-only test switch" );
+#else
+    #define SW_APP_UI_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
+    constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_UI_BACKEND_SWITCH ) };
+    #undef SW_APP_UI_BACKEND_SWITCH
+    for ( const utf8* pSwitch : kArrBackendSwitch )
+    {
+        sw::string                sdfLines;
+        const test::AppRunOutcome sdfOutcome = test::AppTestUtil::runScenario( Internal::kScenarioPath, pSwitch, sdfLines );
+        if ( sdfOutcome != test::AppRunOutcome::Passed )
+            continue; // 이 백엔드는 이 머신에서 못 돈다 — 실패는 runScenario 가 기록했다
+        AppUICapture sdf{};
+        Internal::loadCapture( pSwitch, "", sdf );
+        sw::string                msdfLines;
+        const test::AppRunOutcome msdfOutcome = test::AppTestUtil::runScenario( Internal::kScenarioPath, pSwitch, msdfLines, "-gv_fontMsdfGlyphs=1" );
+        SW_ASSERT_TRUE_MSG( msdfOutcome == test::AppRunOutcome::Passed, "the UI demo scenario failed with MSDF glyphs" );
+        AppUICapture msdf{};
+        Internal::loadCapture( pSwitch, "_msdf", msdf );
+        Internal::expectKnownRegions( msdf );
+        const AppUITestRect* pSdfPanel  = Internal::findRect( sdf, "DemoPanel" );
+        const AppUITestRect* pMsdfPanel = Internal::findRect( msdf, "DemoPanel" );
+        SW_ASSERT_TRUE_MSG( pSdfPanel != nullptr && pMsdfPanel != nullptr, "DemoPanel missing from the layout dump" );
+        const float32 sdfLuma  = Internal::computeLuma( Internal::computeMean( sdf._image, *pSdfPanel ) );
+        const float32 msdfLuma = Internal::computeLuma( Internal::computeMean( msdf._image, *pMsdfPanel ) );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( msdfLuma - sdfLuma ) <= Internal::kMsdfLumaTolerance * sw::MathUtil::max( sdfLuma, 0.01f ),
+                            ( "panel mean luma SDF " + sw::to_string( sdfLuma ) + " vs MSDF " + sw::to_string( msdfLuma ) ).c_str() );
+        const uint32  sdfEdges  = Internal::countEdges( sdf._image, *pSdfPanel );
+        const uint32  msdfEdges = Internal::countEdges( msdf._image, *pMsdfPanel );
+        const float32 edgeDifference =
+            sw::MathUtil::abs( static_cast<float32>( msdfEdges ) - static_cast<float32>( sdfEdges ) ) / sw::MathUtil::max( 1.0f, static_cast<float32>( sdfEdges ) );
+        SW_EXPECT_TRUE_MSG( edgeDifference <= Internal::kMsdfEdgeTolerance, ( "panel edges SDF " + sw::to_string( sdfEdges ) + " vs MSDF " + sw::to_string( msdfEdges ) ).c_str() );
+        return;
+    }
+    SW_TEST_SKIP( "no backend could run the UI demo scenario on this machine" );
+#endif
 }

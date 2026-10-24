@@ -4,6 +4,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,6 +17,7 @@
 
 #include "EngineTest/UI/UITestWidgets.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
 
 // WidgetComponentTest — 오브젝트에 붙는 UI: 화면 마커 투영 · 카메라 뒤 · 최대 거리 · 거리 배율 · UI 시스템 마커 화면의 자리. 디바이스 없음(nogpu).
@@ -45,6 +47,23 @@ namespace
         static sw::WidgetMarkerPlacement place( const sw::WidgetComponent& component, const sw::float3& worldPosition )
         {
             return component.computeMarkerPlacement( makeViewProjection(), sw::float3{}, worldPosition, sw::float2{ kWidth, kHeight } );
+        }
+
+        /** @brief 광선 · 카메라 시선을 막는 정적 상자 바디를 만듭니다(물리 씬은 `manager.beginPlay()` 뒤에 몇 프레임 돌아야 바디를 가진다). */
+        static sw::RigidBodyComponent* spawnWall( sw::GameObjectManager& manager, const sw::float3& position, const sw::float3& halfExtents )
+        {
+            sw::GameObject* pObject = manager.createGameObject( sw::hashed_string( "Wall" ) );
+            if ( pObject == nullptr )
+                return nullptr;
+            sw::RigidBodyComponent* pBody = pObject->addComponent<sw::RigidBodyComponent>();
+            if ( pBody == nullptr )
+                return nullptr;
+            sw::PhysicsShapeDesc3D box;
+            box._halfExtents = halfExtents;
+            pBody->setShape( box );
+            pBody->setBodyType( sw::PhysicsBodyType::Static );
+            pBody->setLocalPosition( position );
+            return pBody;
         }
     };
 } // namespace
@@ -353,4 +372,147 @@ SW_TEST_CASE( WidgetComponentTest, WorldInputClicksWidgetUnderRay )
     event._kind = sw::UIPointerEventKind::Down;
     SW_EXPECT_FALSE( ui.routeWorldPointer( outside, event ) );
     pWidget->bindUISystem( nullptr );
+}
+
+/**
+ * @brief [WidgetComponentTest] 칠할 것이 없는 World 위젯은 프레임마다 칠하기 · 목록 견주기를 건너뛴다 — 처음 칠한 뒤 가만히 있으면 번호가 그대로이고 건너뛴 수만 오르며,
+ *        내용이 바뀐 프레임에는 다시 칠해 번호가 오른다
+ * @details 변이: `updateWorldCanvas` 의 `canReuseOutput` 건너뛰기를 빼면 건너뛴 수가 0 이라 진다. 건너뛰기가 무효화를 놓치면(항상 건너뜀) 바뀐 내용의 번호가 안 올라 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, CleanWorldWidgetSkipsRepaint )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::WidgetComponent component;
+    component.setSpace( sw::WidgetSpace::World );
+    component.setDrawSize( sw::float2{ 64.0f, 32.0f } );
+    sw::unique_ptr<sw::ImageWidget> image  = sw::make_unique<sw::ImageWidget>();
+    sw::ImageWidget*                pImage = image.get();
+    pImage->setBrush( sw::UIBrush::makeSolid( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    component.setContent( std::move( image ) );
+    component.bindUISystem( &ui );
+
+    ui.update( 1.0f / 60.0f, viewport ); // 처음 칠하기
+    const uint64 firstRevision = component.getWorldCanvasRevision();
+    SW_EXPECT_EQUAL( uint64{ 0 }, component.getWorldCleanSkipCount() );
+    for ( uint32 frame = 0; frame < 5; ++frame )
+    {
+        ui.update( 1.0f / 60.0f, viewport );
+    }
+    SW_EXPECT_EQUAL( firstRevision, component.getWorldCanvasRevision() );
+    SW_EXPECT_EQUAL( uint64{ 5 }, component.getWorldCleanSkipCount() );
+
+    pImage->setBrush( sw::UIBrush::makeSolid( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( firstRevision + 1, component.getWorldCanvasRevision() );
+    SW_EXPECT_EQUAL( uint64{ 5 }, component.getWorldCleanSkipCount() ); // 바뀐 프레임은 건너뛰지 않았다
+    component.bindUISystem( nullptr );
+}
+
+/**
+ * @brief [WidgetComponentTest] 가림을 켠 World 위젯은 물리 바디가 광선을 사각형보다 가까이에서 막으면 입력을 받지 않고, 벽을 비껴 겨누면 받는다
+ * @details 가림을 끄면(기본) 같은 벽 뒤의 위젯도 받는다. 변이: `pickWorld` 가 `_bOccludedByPhysics` 를 보지 않으면 가림을 켠 뒤에도 호버가 남아 진다.
+ *          벽은 폭 1 m(반 0.5), 두께 0.5 m 로 z 2.5 에 서고 위젯은 z 5 에 선다 — 가운데 광선은 벽 앞면(2.25)에서 막힌다.
+ */
+SW_TEST_CASE( WidgetComponentTest, PhysicsBodyBlocksWorldInputWhenOccluded )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::GameObjectManager manager;
+    SW_ASSERT_NOT_NULL( WidgetComponentTestUtil::spawnWall( manager, sw::float3{ 0.0f, 0.0f, 2.5f }, sw::float3{ 0.5f, 2.0f, 0.25f } ) );
+    sw::GameObject* pPanel = manager.createGameObject( sw::hashed_string( "Panel" ) );
+    SW_ASSERT_NOT_NULL( pPanel );
+    sw::SceneComponent* pRoot = pPanel->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 5.0f } );
+    sw::WidgetComponent* pWidget = pPanel->addComponent<sw::WidgetComponent>();
+    SW_ASSERT_NOT_NULL( pWidget );
+    pWidget->setSpace( sw::WidgetSpace::World );
+    pWidget->setDrawSize( sw::float2{ 100.0f, 50.0f } );
+    pWidget->setWorldSize( sw::float2{ 2.0f, 1.0f } );
+    pWidget->setAcceptsInput( true );
+    sw::unique_ptr<sw::ButtonWidget> button  = sw::make_unique<sw::ButtonWidget>();
+    sw::ButtonWidget*                pButton = button.get();
+    pWidget->setContent( std::move( button ) );
+    manager.beginPlay();
+    test::updateFrames( manager, 2 ); // 물리 씬이 벽 바디를 만든다
+    pWidget->bindUISystem( &ui );
+    manager.flushSceneTransforms();
+    ui.update( 1.0f / 60.0f, viewport );
+
+    const sw::WorldWidgetRay center = WidgetComponentTestUtil::makeRay( sw::float3{}, sw::float3{ 0.0f, 0.0f, 1.0f } );
+    // 벽 옆(x 3 → 0.5)으로 비껴 지나는 광선: 벽 자리(z 2.25 ~ 2.75)에서 x 가 1.6 이상이라 벽 폭 0.5 밖이다.
+    const sw::WorldWidgetRay aside = WidgetComponentTestUtil::makeRay( sw::float3{ 3.0f, 0.0f, 0.0f }, sw::float3{ -2.5f, 0.0f, 5.0f } );
+    sw::UIPointerEvent       event{};
+    event._kind = sw::UIPointerEventKind::Move;
+
+    SW_EXPECT_FALSE( pWidget->isOccludedByPhysics() );
+    (void)ui.routeWorldPointer( center, event );
+    SW_EXPECT_TRUE( pButton->isHovered() ); // 가림을 끄면 벽 뒤 위젯도 받는다
+
+    pWidget->setOccludedByPhysics( true );
+    (void)ui.routeWorldPointer( center, event );
+    SW_EXPECT_TRUE( pButton->isHovered() == false ); // 벽이 광선을 막는다
+    event._kind = sw::UIPointerEventKind::Down;
+    SW_EXPECT_FALSE( ui.routeWorldPointer( center, event ) );
+
+    event._kind = sw::UIPointerEventKind::Move;
+    (void)ui.routeWorldPointer( aside, event );
+    SW_EXPECT_TRUE( pButton->isHovered() ); // 벽을 비껴 겨누면 받는다
+    pWidget->bindUISystem( nullptr );
+    manager.endPlay();
+}
+
+/**
+ * @brief [WidgetComponentTest] 가림을 켠 화면 마커는 카메라와 마커 점 사이에 물리 바디가 서면 숨고, 벽을 비낀 자리에서는 보인다
+ * @details 가림을 끄면(기본) 벽 뒤에서도 보인다. 변이: `updateScreenMarker` 가 `isRayBlockedByPhysics` 를 빼면 가림을 켠 뒤에도 마커가 보여 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, PhysicsBodyHidesOccludedScreenMarker )
+{
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::GameObjectManager manager;
+    sw::GameObject*       pCameraObject = manager.createGameObject( sw::hashed_string( "Camera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<sw::CameraComponent>() );
+    SW_ASSERT_NOT_NULL( WidgetComponentTestUtil::spawnWall( manager, sw::float3{ 0.0f, 0.0f, 2.5f }, sw::float3{ 1.0f, 2.0f, 0.25f } ) );
+    sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string( "Target" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    sw::SceneComponent* pRoot = pTarget->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pRoot );
+    pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 5.0f } );
+    sw::WidgetComponent* pMarker = pTarget->addComponent<sw::WidgetComponent>();
+    SW_ASSERT_NOT_NULL( pMarker );
+    manager.flushSceneTransforms();
+    manager.beginPlay();
+    test::updateFrames( manager, 2 ); // 물리 씬이 벽 바디를 만든다
+    pMarker->setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "tag" ) );
+    pMarker->bindUISystem( &ui );
+
+    const auto updateMarker = [&]()
+    {
+        sw::WidgetMarkerView view{};
+        pMarker->updateScreenMarker( viewport, view );
+    };
+    updateMarker();
+    SW_ASSERT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE ); // 가림을 끄면 벽 뒤에서도 보인다
+
+    pMarker->setOccludedByPhysics( true );
+    updateMarker();
+    SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_FALSE ); // 벽이 시선을 막는다
+    SW_EXPECT_TRUE( pMarker->getContent()->getVisibility() == sw::WidgetVisibility::Collapsed );
+
+    // 벽 폭(반 1) 밖으로 비낀 자리(x 2.5): 벽 자리(z 2.5)에서 시선이 x 1.25 라 막히지 않는다.
+    pRoot->setLocalPosition( sw::float3{ 2.5f, 0.0f, 5.0f } );
+    manager.flushSceneTransforms();
+    updateMarker();
+    SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
+    pMarker->bindUISystem( nullptr );
+    manager.endPlay();
 }

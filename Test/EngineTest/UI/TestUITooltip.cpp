@@ -43,3 +43,36 @@ SW_TEST_CASE( UITooltipTest, HoverPathPicksTheNearestCursorAndTooltip )
     pRoot->setTooltip( "" );
     SW_EXPECT_TRUE( sw::UITooltipService::findTooltipOwner( tree, plainPath ) == nullptr );
 }
+
+/**
+ * @brief [UITooltipTest] 툴팁 자리는 포인터 오른쪽 아래가 기본이고, 화면 오른쪽 · 아래를 넘으면 포인터 왼쪽 · 위로 뒤집히며, 화면보다 크면 왼쪽 위 변에 붙는다 — 배치 전(크기 0)에는 기본 자리
+ * @details 변이: 뒤집기를 빼면 오른쪽 변 근처 툴팁이 화면 밖으로 잘려 진다. 클램프를 빼면 화면보다 큰 툴팁이 음수 자리에 놓여 진다.
+ */
+SW_TEST_CASE( UITooltipTest, PlacementFlipsAtScreenEdgesAndClamps )
+{
+    const sw::float2 screen{ 800.0f, 600.0f };
+    const sw::float2 size{ 200.0f, 40.0f };
+    const sw::float2 normal = sw::UITooltipService::computePlacement( sw::float2{ 100.0f, 100.0f }, size, screen );
+    SW_EXPECT_NEAR_EQUAL( 100.0f + sw::UITooltipService::kPointerOffsetX, normal._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f + sw::UITooltipService::kPointerOffsetY, normal._y, 1e-4f );
+
+    const sw::float2 nearRight = sw::UITooltipService::computePlacement( sw::float2{ 700.0f, 100.0f }, size, screen );
+    SW_EXPECT_NEAR_EQUAL( 700.0f - sw::UITooltipService::kPointerOffsetX - 200.0f, nearRight._x, 1e-4f ); // 포인터 왼쪽
+    SW_EXPECT_NEAR_EQUAL( 100.0f + sw::UITooltipService::kPointerOffsetY, nearRight._y, 1e-4f );
+
+    const sw::float2 nearBottom = sw::UITooltipService::computePlacement( sw::float2{ 100.0f, 580.0f }, size, screen );
+    SW_EXPECT_NEAR_EQUAL( 100.0f + sw::UITooltipService::kPointerOffsetX, nearBottom._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 580.0f - sw::UITooltipService::kPointerOffsetY - 40.0f, nearBottom._y, 1e-4f ); // 포인터 위
+
+    const sw::float2 corner = sw::UITooltipService::computePlacement( sw::float2{ 790.0f, 595.0f }, size, screen );
+    SW_EXPECT_TRUE( corner._x + size._x <= screen._x && corner._y + size._y <= screen._y );
+    SW_EXPECT_TRUE( corner._x >= 0.0f && corner._y >= 0.0f );
+
+    const sw::float2 huge = sw::UITooltipService::computePlacement( sw::float2{ 50.0f, 50.0f }, sw::float2{ 900.0f, 700.0f }, screen );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, huge._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, huge._y, 1e-4f );
+
+    const sw::float2 beforeLayout = sw::UITooltipService::computePlacement( sw::float2{ 100.0f, 100.0f }, sw::float2{}, screen );
+    SW_EXPECT_NEAR_EQUAL( normal._x, beforeLayout._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( normal._y, beforeLayout._y, 1e-4f );
+}

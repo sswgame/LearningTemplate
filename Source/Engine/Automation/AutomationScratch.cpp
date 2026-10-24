@@ -3,6 +3,7 @@
 #include "Engine/Automation/AutomationScratch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -17,6 +18,13 @@ namespace sw
     {
         struct AutomationScratchInternal
         {
+            /** @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount`). */
+            static atomic<uint64>& getPrepareCounter()
+            {
+                static atomic<uint64> counter{ 0 };
+                return counter;
+            }
+
             /** @brief 리소스 id 에 들어가는 글자인지입니다(id 경계 판정). */
             static bool isIDCharacter( utf8 character )
             {
@@ -155,6 +163,12 @@ namespace sw
                 return false;
             }
         }
+        (void)AutomationScratchInternal::getPrepareCounter().fetch_add( 1 );
         return true;
+    }
+
+    uint64 AutomationScratch::getPrepareCount()
+    {
+        return AutomationScratchInternal::getPrepareCounter().load();
     }
 } // namespace sw

@@ -181,6 +181,24 @@ namespace sw::editor
         return applyEdit( edited );
     }
 
+    bool CatalogDocument::addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute )
+    {
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || parentIndex < 0 || static_cast<size_t>( parentIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
+        {
+            _error = "the document is not parsed";
+            return false;
+        }
+        string edited;
+        string error;
+        if ( CatalogXMLText::appendChildElement( _text, _parsed.getElement( parentIndex ), _parsed.getElements(), name, listAttribute, edited, error ) == false )
+        {
+            _error = error;
+            return false;
+        }
+        return applyEdit( edited );
+    }
+
     bool CatalogDocument::removeRow( int32 elementIndex )
     {
         const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();

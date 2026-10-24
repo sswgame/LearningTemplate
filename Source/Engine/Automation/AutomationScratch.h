@@ -36,6 +36,11 @@ namespace sw
          * @return 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 false 와 이유입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).
          */
         [[nodiscard]] static bool prepare( const AutomationScratchFolder& folder, string& outError );
+        /**
+         * @brief 사본 폴더를 끝까지 만든 횟수입니다(`prepare` 성공마다 하나 오른다). 사본을 만든 뒤 OS 파일 감시가 그 쓰기를 알려야 한다 — 에디터가 이 번호가 바뀌면
+         *        감시 울타리를 다시 세운다(`AssetHotReload` 의 시작 차단 조건).
+         */
+        [[nodiscard]] static uint64 getPrepareCount();
         /** @brief 글 @p text 안의 @p fromID 를 @p toID 로 바꿉니다. id 경계(앞이 id 글자가 아닌 곳)에서만 바꿉니다. */
         static string rebaseText( string_view text, string_view fromID, string_view toID );
     };

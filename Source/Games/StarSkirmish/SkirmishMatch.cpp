@@ -96,7 +96,10 @@ namespace sw
             const SkirmishAIStyle& style = bHumanPlayer ? _settings._opponentAI : player == 0 ? _settings._rushAI
                                                                                               : _settings._macroAI;
             if ( bAI )
-                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ) );
+            {
+                SW_ASSERT( _settings._pCommanderTree != nullptr && "the director must read the commander behavior tree before starting a match with a computer opponent" );
+                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), *_settings._pCommanderTree );
+            }
         }
         SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
         return true;

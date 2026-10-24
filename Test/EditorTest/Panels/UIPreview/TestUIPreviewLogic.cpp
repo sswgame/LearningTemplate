@@ -361,6 +361,33 @@ SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetKeepsTheWidgetInPlace )
 }
 
 /**
+ * @brief [UIPreviewLogicTest] 슬롯에 안쪽 여백이 있어도 앵커 프리셋을 고른 직후 위젯 사각형이 그대로다 — 슬롯 사각형(앵커 × 부모 + 오프셋)에서 여백을 뺀 것이 원래 위젯 사각형이다
+ * @details UIPreview.U2 의 "부모 여백에서 밀리는지" 확인을 계산으로 본다. 변이: `applyAnchorPreset` 이 여백을 더하지 않으면 모든 프리셋에서 위젯이 여백만큼 밀리고 줄어 진다.
+ */
+SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetKeepsTheWidgetInPlaceWithSlotPadding )
+{
+    using sw::editor::UIPreviewAnchorPreset;
+    using sw::editor::UIPreviewLogic;
+    const sw::UIRect rect{ 100.0f, 50.0f, 300.0f, 90.0f }; // 위젯의 지금 사각형(여백이 이미 들어간 자리)
+    const sw::float2 parentSize{ 1000.0f, 500.0f };
+    for ( uint32 index = 0; index < static_cast<uint32>( UIPreviewAnchorPreset::Count ); ++index )
+    {
+        sw::WidgetLayoutSlot slot{};
+        slot._padding = sw::float4{ 10.0f, 20.0f, 30.0f, 40.0f };                                                       // 왼쪽, 위, 오른쪽, 아래
+        (void)UIPreviewLogic::applyAnchorPreset( slot, static_cast<UIPreviewAnchorPreset>( index ), rect, parentSize ); // 바뀌었는지가 아니라 슬롯 사각형이 맞는지를 본다
+        const float32 slotLeft   = slot._anchorMin._x * parentSize._x + slot._offsetMin._x;
+        const float32 slotTop    = slot._anchorMin._y * parentSize._y + slot._offsetMin._y;
+        const float32 slotRight  = slot._anchorMax._x * parentSize._x + slot._offsetMax._x;
+        const float32 slotBottom = slot._anchorMax._y * parentSize._y + slot._offsetMax._y;
+        // CanvasPanel 이 슬롯 사각형을 만들고 `UILayoutPass::applySlot` 이 여백만큼 안쪽에 위젯을 놓는다.
+        SW_EXPECT_NEAR_EQUAL( rect._left, slotLeft + 10.0f, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( rect._top, slotTop + 20.0f, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( rect._right, slotRight - 30.0f, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( rect._bottom, slotBottom - 40.0f, 1e-3f );
+    }
+}
+
+/**
  * @brief [UIPreviewLogicTest] 상자 순서 손잡이 — 놓은 점보다 가운데가 앞인 자식 수가 사이 자리이고, 자기 뒤로 옮기면 떼어 낸 만큼 번호를 하나 당긴다
  */
 SW_TEST_CASE( UIPreviewLogicTest, BoxReorderIndexFromDropPoint )

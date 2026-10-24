@@ -155,13 +155,17 @@ namespace sw
         float2 getWorldTextureSize() const;
         /**
          * @brief World 위젯 트리를 배치하고 칠해 렌더 텍스처 목록을 갱신합니다(`UISystem::update` 가 부르며, 배율 1, 뷰포트는 텍스처 크기).
-         * @details 내용이 지난번과 같으면 번호를 올리지 않으므로 렌더러가 텍스처를 다시 그리지 않는다.
+         * @details 내용이 지난번과 같으면 번호를 올리지 않으므로 렌더러가 텍스처를 다시 그리지 않는다. 트리에 다시 잴 위젯도 무효화도 없으면(`UIPaintPass::canReuseOutput`)
+         *          칠하기 · 목록 견주기 자체를 건너뛴다 — 카메라에 안 보이는 위젯도 멈춰 있으면 비용이 없다. 안 보이는 위젯을 절두체로 거르지는 않는다: 보는 뷰(게임 카메라 · 에디터 씬 뷰 ·
+         *          다른 렌더 텍스처 카메라)를 게임 스레드가 다 알지 못해, 거르면 다른 뷰에서 비어 보이는 텍스처가 생긴다.
          */
         void updateWorldCanvas( const UILayoutContext& baseLayout, const UIPaintContext& basePaint );
         /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UISystem::collectWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않습니다. */
         void appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const;
         /** @brief World 목록의 내용 번호입니다(테스트용). */
         uint64 getWorldCanvasRevision() const { return _worldRevision; }
+        /** @brief 트리가 그대로라 칠하기 · 견주기를 건너뛴 `updateWorldCanvas` 호출 수입니다(테스트용). */
+        uint64 getWorldCleanSkipCount() const { return _worldCleanSkipCount; }
         /** @brief World 사각형 오브젝트입니다(없으면 무효이며, 시작할 때 오브젝트 아래에 만듭니다). */
         GameObjectHandle getWorldQuad() const { return _worldQuad; }
 
@@ -169,6 +173,9 @@ namespace sw
         /** @brief 광선으로 이 위젯에 포인터를 보낼 수 있는지 나타냅니다(World 이고 입력을 켰고 트리가 있을 때). */
         bool acceptsWorldInput() const { return _space == WidgetSpace::World && _bAcceptsInput && _worldTree != nullptr; }
         void setAcceptsInput( bool bAccepts ) { _bAcceptsInput = bAccepts; }
+        /** @brief 물리 바디가 광선(World 입력) · 카메라와 마커 점 사이(Screen 마커)를 막으면 입력을 받지 않거나 마커를 숨깁니다. */
+        void setOccludedByPhysics( bool bOccluded ) { _bOccludedByPhysics = bOccluded; }
+        bool isOccludedByPhysics() const { return _bOccludedByPhysics; }
         /**
          * @brief 광선이 이 위젯의 사각형을 맞히는 자리를 위젯 좌표로 구합니다. 사각형은 오브젝트의 주 씬 컴포넌트 월드 행렬에 `_worldSize` 를 곱한 것입니다(`createWorldQuad` 와 같다).
          * @param bRequireInside false 면 사각형 밖의 평면 점도 돌려줍니다(포인터를 잡은 위젯의 끌기).
@@ -209,14 +216,15 @@ namespace sw
         unique_ptr<Widget>     _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯입니다.
         WidgetID               _markerWidget;   ///< 마커 화면에 붙인 위젯입니다(없으면 무효).
         WidgetMarkerPlacement  _lastPlacement;
-        UIPointerState         _worldPointer;  ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
-        UISystem*              _pUISystem;     ///< 등록한 UI 시스템입니다(없으면 nullptr).
-        unique_ptr<WidgetTree> _worldTree;     ///< World 위젯 트리입니다(루트는 콘텐츠).
-        CanvasDrawList         _worldCanvas;   ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
-        CanvasDrawList         _worldScratch;  ///< World 의 칠하는 중인 목록입니다.
-        uint64                 _worldRevision; ///< World 의 `_worldCanvas` 내용 번호입니다.
-        GameObjectHandle       _worldQuad;     ///< World 의 사각형 자식 오브젝트입니다.
-        uint8                  _bHidden;       ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
+        UIPointerState         _worldPointer;        ///< World 위젯 트리의 호버와 포인터 잡기 상태입니다(광선 입력).
+        UISystem*              _pUISystem;           ///< 등록한 UI 시스템입니다(없으면 nullptr).
+        unique_ptr<WidgetTree> _worldTree;           ///< World 위젯 트리입니다(루트는 콘텐츠).
+        CanvasDrawList         _worldCanvas;         ///< World 의 마지막 그리기 목록입니다(텍스처 픽셀).
+        CanvasDrawList         _worldScratch;        ///< World 의 칠하는 중인 목록입니다.
+        uint64                 _worldRevision;       ///< World 의 `_worldCanvas` 내용 번호입니다.
+        uint64                 _worldCleanSkipCount; ///< 트리가 그대로라 건너뛴 `updateWorldCanvas` 수입니다(테스트용).
+        GameObjectHandle       _worldQuad;           ///< World 의 사각형 자식 오브젝트입니다.
+        uint8                  _bHidden;             ///< 코드가 숨겼는지 나타냅니다(`setHidden`, 저장하지 않습니다).
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
         string _documentPath;
         PROPERTY( DisplayName = "Space" )

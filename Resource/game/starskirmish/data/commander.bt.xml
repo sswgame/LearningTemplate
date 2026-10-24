@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  StarSkirmish 컴퓨터 상대의 행동 트리(데이터 종류 behaviortree) - 키트 RTSCommanderAI 의 작업(rts.*)을 순서 · 중단 규칙으로 엮는다.
+  반응형 셀렉터라 위쪽 가지를 먼저 본다. 공격받으면(Threat 이 정해지면) 경제 가지가 돌던 중에도 멈추고 막으러 간다(LowerPriority).
+  경제 가지의 작업은 모두 ForceSuccess 라 하나가 못 해도 다음 작업으로 넘어간다. 작업 이름은 RTSCommanderAI.cpp 끝의 SW_BEHAVIOR_TASK 줄이 정본이다.
+-->
+<BehaviorTree>
+	<Selector name="Root" reactive="true">
+		<BlackboardCondition key="Threat" compare="IsSet" abort="LowerPriority">
+			<Action name="Defend" task="rts.defend"/>
+		</BlackboardCondition>
+		<Sequence name="Economy">
+			<ForceSuccess><Action name="GatherIdle" task="rts.gatherIdle"/></ForceSuccess>
+			<ForceSuccess><Action name="TrainWorkers" task="rts.trainWorkers"/></ForceSuccess>
+			<ForceSuccess><Action name="BuildSupply" task="rts.buildSupply"/></ForceSuccess>
+			<ForceSuccess><Action name="BuildProduction" task="rts.buildProduction"/></ForceSuccess>
+			<ForceSuccess><Action name="TrainArmy" task="rts.trainArmy"/></ForceSuccess>
+			<ForceSuccess><Action name="Attack" task="rts.attack"/></ForceSuccess>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

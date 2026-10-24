@@ -4,8 +4,6 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Animation/AnimationJSONUtil.h"
-#include "Engine/Animation/Facial/FacialRig.h"
-#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -18,34 +16,24 @@
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
-#include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
-#include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
-#include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TranslationMemory.h"
-#include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
-#include "Engine/Object/SceneAnimation/AnimationLOD.h"
-#include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Resource/ResourceDataKind.h"
@@ -56,21 +44,19 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Telemetry/TelemetrySchema.h"
-#include "Engine/Text/FontCatalog.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
-#include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
-#include "Engine/UI/Style/UITheme.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
+
+#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
@@ -103,10 +89,8 @@ namespace
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.xml" ); }
         static bool isDialogueGraph( sw::string_view resourceID ) { return endsWith( resourceID, sw::DialogueGraphAsset::kExtension ); }
-        static bool isTelemetrySchema( sw::string_view resourceID ) { return endsWith( resourceID, ".telemetry.xml" ); }
+        static bool isBehaviorTree( sw::string_view resourceID ) { return endsWith( resourceID, sw::BehaviorTreeAsset::kExtension ); }
         static bool isUserSettingsSchema( sw::string_view resourceID ) { return endsWith( resourceID, ".settings.xml" ); }
-        static bool isPhysicsSettings( sw::string_view resourceID ) { return endsWith( resourceID, "physicssettings.xml" ); }
-        static bool isNavMeshSettings( sw::string_view resourceID ) { return endsWith( resourceID, "navmeshsettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceID ) { return endsWith( resourceID, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceID ) { return endsWith( resourceID, sw::Skeleton::kExtension ); }
         static bool isAnimationGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.xml" ); }
@@ -125,12 +109,8 @@ namespace
         }
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
-        static bool isRender2DSettings( sw::string_view resourceID ) { return endsWith( resourceID, "/data/render2d.xml" ); }
-        static bool isFontCatalog( sw::string_view resourceID ) { return endsWith( resourceID, "fontcatalog.xml" ); }
-        static bool isUIScale( sw::string_view resourceID ) { return endsWith( resourceID, "uiscale.xml" ); }
         static bool isUIDocument( sw::string_view resourceID ) { return endsWith( resourceID, sw::UIDocumentAsset::kExtension ); }
         static bool isUIStyleSheet( sw::string_view resourceID ) { return endsWith( resourceID, sw::UIStyleSheetAsset::kExtension ); }
-        static bool isUIThemes( sw::string_view resourceID ) { return endsWith( resourceID, "uithemes.xml" ); }
 
         /** @brief 스타일 시트를 읽습니다(모르는 칸 · 변수 · 선택자 문법 · 읽지 못한 값). */
         [[nodiscard]] static bool loadUIStyleSheet( const sw::string& resourceID )
@@ -225,6 +205,13 @@ namespace
             return bLoaded;
         }
 
+        /** @brief 행동 트리 - 모르는 노드 · 속성 · 비교 · 중단 이름과 등록되지 않은 작업 이름은 로드 오류다. 전용 편집기가 있어 레지스트리에 올리지 않고 이 표에 둔다. */
+        [[nodiscard]] static bool loadBehaviorTree( const sw::string& resourceID )
+        {
+            sw::BehaviorTreeAsset asset;
+            return asset.loadFromResource( resourceID );
+        }
+
         [[nodiscard]] static bool loadInputMap( const sw::string& resourceID )
         {
             sw::InputMap map;
@@ -252,12 +239,6 @@ namespace
             return settings.loadSchema( resourceID );
         }
 
-        [[nodiscard]] static bool loadPhysicsSettings( const sw::string& resourceID )
-        {
-            sw::PhysicsSettings settings;
-            return settings.loadFromResource( resourceID );
-        }
-
         [[nodiscard]] static bool loadPhysicsAsset( const sw::string& resourceID )
         {
             sw::PhysicsAsset asset;
@@ -281,12 +262,6 @@ namespace
         {
             sw::TileSetAsset tileSet;
             return tileSet.loadFromResource( resourceID );
-        }
-
-        [[nodiscard]] static bool loadRender2DSettings( const sw::string& resourceID )
-        {
-            sw::Render2DSettings settings;
-            return settings.loadFromResource( resourceID );
         }
 
         /** @brief 로컬라이제이션 XML 문서(`loadFromXMLText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
@@ -334,14 +309,9 @@ namespace
         // 캐릭터 데이터 — 소켓은 엔진 기본 종류 표에, 부품 피팅은 엔진 기본 피팅 표에 대조한다(모르는 이름은 로드 오류).
         static constexpr const utf8* kDefaultSocketKinds = "engine/character/default.socketkinds.xml";
         static constexpr const utf8* kDefaultFitTables   = "engine/character/default.fit.xml";
-        static bool                  isSocketKinds( sw::string_view resourceID ) { return endsWith( resourceID, ".socketkinds.xml" ); }
         static bool                  isSockets( sw::string_view resourceID ) { return endsWith( resourceID, ".sockets.xml" ); }
-        static bool                  isReferencePose( sw::string_view resourceID ) { return endsWith( resourceID, ".refpose.xml" ); }
-        static bool                  isBodyShape( sw::string_view resourceID ) { return endsWith( resourceID, ".bodyshape.xml" ); }
         static bool                  isFitTables( sw::string_view resourceID ) { return endsWith( resourceID, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceID ) { return endsWith( resourceID, ".partfit.xml" ); }
-        static bool                  isSurfaceChannels( sw::string_view resourceID ) { return endsWith( resourceID, ".surfacechannels.xml" ); }
-        static bool                  isDestructionProfile( sw::string_view resourceID ) { return endsWith( resourceID, ".destruction.xml" ); }
         static bool                  isNotifyTable( sw::string_view resourceID ) { return endsWith( resourceID, ".notifies.xml" ); }
         static bool                  isClipData( sw::string_view resourceID ) { return endsWith( resourceID, ".clips.json" ); }
         /** @brief 페어드 애니메이션(역할 · 정렬 · 공유 알림) — 모르는 속성 · 유한하지 않은 수 · 앵커 규칙 위반은 읽기 오류다. 클립은 세션 시작에서 본다. */
@@ -492,16 +462,6 @@ namespace
             return boneLOD.loadFromResource( resourceID ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.computeMasks( skeleton, listMask, resourceID );
         }
 
-        /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
-        static bool isAnimationLOD( sw::string_view resourceID ) { return resourceID == sw::AnimationLODSettings::kResourcePath; }
-        /** @brief 군중 공유 표(변형 칸 수 · 묶음 유지 · VAT 프레임율). */
-        static bool isAnimationCrowd( sw::string_view resourceID ) { return resourceID == sw::AnimationCrowdSettings::kResourcePath; }
-        /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
-        static bool isVertexAnimationList( sw::string_view resourceID ) { return endsWith( resourceID, sw::VertexAnimationCookList::kExtension ); }
-        /** @brief 립싱크 분석 표 · 비즘 트랙 · 얼굴 리그 — 모르는 키는 읽기 오류다(리그의 타깃 · 본 이름은 메시를 묶을 때 본다). */
-        static bool isLipSync( sw::string_view resourceID ) { return resourceID == sw::LipSyncSettings::kResourcePath; }
-        static bool isVisemeTrack( sw::string_view resourceID ) { return endsWith( resourceID, sw::VisemeTrack::kExtension ); }
-        static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
         static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.xml" ); }
         /** @brief Live Link Face 패킷 배치 표(`livelinkface.xml`)와 머리마다의 연결 표(`<머리>.livelinkface.xml`) — 연결 표는 가리키는 배치 표까지 읽어야 성공한다. */
         static bool               isLiveLinkFaceLayout( sw::string_view resourceID ) { return resourceID == "livelinkface.xml" || endsWith( resourceID, "/livelinkface.xml" ); }
@@ -528,14 +488,14 @@ namespace
             return root.isValid() && root.findAttribute( "_version", false ) != nullptr && root.findChild( "_mapHumanBone", false ).isValid();
         }
 
-        // 엔진 카탈로그(`XMLCatalog`) 로더입니다. 게임 데이터(키트 · 기반 카탈로그)는 각자의 `*DataKind.cpp` 가 `SW_RESOURCE_DATA_KIND` 로 올린 종류를 `ResourceDataKindRegistry` 에서 찾습니다.
-        template <typename TCatalog>
-        [[nodiscard]] static bool loadCatalog( const sw::string& resourceID )
-        {
-            return sw::ResourceDataKindUtil::loadCatalog<TCatalog>( resourceID );
-        }
-
-        /** @brief 엔진 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. 게임 데이터 카탈로그는 이 표가 아니라 `ResourceDataKindRegistry` 에 있습니다. */
+        /**
+         * @brief 이 표에 남은 엔진 데이터 종류입니다. 앞의 줄이 먼저 맞습니다. 카탈로그 종류(`SW_RESOURCE_DATA_KIND`)는 이 표가 아니라 `ResourceDataKindRegistry` 에 있습니다.
+         * @details 레지스트리로 옮기지 않은 줄의 까닭은 넷 중 하나다(`DataKindRegistry` DK5 결정).
+         *          (1) 로더가 테스트 전용 판단을 든다(씬 만들기 · 위젯 트리 짓기 · 빈 그래프 거절 · 트랙 검사 · 다른 파일과 교차 확인).
+         *          (2) 전용 편집기가 있다 — 레지스트리는 카탈로그 편집기의 파일 목록이라, 올리면 같은 파일을 두 편집기가 쥔다(타일 · 다이얼로그 · 애니메이션 그래프 · 시퀀스 · 리그 · 입력 맵 · 머티리얼 · 스프라이트 · 페어드 애니메이션 …).
+         *          (3) XML 카탈로그가 아니다(JSON · 임포트 산출물 · 출처 목록 · 자동화 시나리오).
+         *          (4) 읽는 데 다른 표가 먼저 필요하다(소켓 · 피팅 · 알림 · 리타깃 · 본 LOD).
+         */
         static constexpr DataKind kArrDataKind[] = {
             {              "scene",               &isScene,                                         &loadScene},
             {             "prefab",              &isPrefab,                                        &loadPrefab},
@@ -548,31 +508,20 @@ namespace
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
             {      "dialoguegraph",       &isDialogueGraph,                                 &loadDialogueGraph},
+            {       "behaviortree",        &isBehaviorTree,                                  &loadBehaviorTree},
             {           "sequence",            &isSequence,                                      &loadSequence},
-            {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
             {            "tileset",             &isTileSet,                                       &loadTileSet},
             {            "tilemap",             &isTileMap,                                       &loadTileMap},
-            {    "physicssettings",     &isPhysicsSettings,                               &loadPhysicsSettings},
-            {    "navmeshsettings",     &isNavMeshSettings,                  &loadCatalog<sw::NavMeshSettings>},
             {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
-            {    "telemetryschema",     &isTelemetrySchema,                  &loadCatalog<sw::TelemetrySchema>},
             {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},
-            {        "socketkinds",         &isSocketKinds,                  &loadCatalog<sw::SocketKindTable>},
             {            "sockets",             &isSockets,                                       &loadSockets},
-            {      "referencepose",       &isReferencePose,            &loadCatalog<sw::ReferencePoseOverride>},
-            {          "bodyshape",           &isBodyShape,                     &loadCatalog<sw::BodyShapeSet>},
             {          "fittables",           &isFitTables,                                     &loadFitTables},
             {            "partfit",             &isPartFit,                                       &loadPartFit},
-            {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
-            {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
             {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
             {           "bonemask",            &isBoneMask,                                      &loadBoneMask},
-            {        "fontcatalog",         &isFontCatalog,                  &loadCatalog<sw::FontCatalogDesc>},
-            {            "uiscale",             &isUIScale,                  &loadCatalog<sw::UIScaleSettings>},
             {         "uidocument",          &isUIDocument,                                    &loadUIDocument},
             {       "uistylesheet",        &isUIStyleSheet,                                  &loadUIStyleSheet},
-            {           "uithemes",            &isUIThemes,                   &loadCatalog<sw::UIThemeCatalog>},
             {       "culturetable",        &isCultureTable,        &loadLocalizationDocument<sw::CultureTable>},
             {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
@@ -585,12 +534,6 @@ namespace
             {           "clipdata",            &isClipData,                                      &loadClipData},
             {     "sourcemanifest",      &isSourceManifest,                                &loadSourceManifest},
             {            "bonelod",             &isBoneLOD,                                       &loadBoneLOD},
-            {       "animationlod",        &isAnimationLOD,             &loadCatalog<sw::AnimationLODSettings>},
-            {     "animationcrowd",      &isAnimationCrowd,           &loadCatalog<sw::AnimationCrowdSettings>},
-            {    "vertexanimation", &isVertexAnimationList,          &loadCatalog<sw::VertexAnimationCookList>},
-            {            "lipsync",             &isLipSync,                  &loadCatalog<sw::LipSyncSettings>},
-            {            "visemes",         &isVisemeTrack,                      &loadCatalog<sw::VisemeTrack>},
-            {             "facial",           &isFacialRig,                        &loadCatalog<sw::FacialRig>},
             {          "vrmavatar",           &isVrmAvatar,                                     &loadVrmAvatar},
             { "livelinkfacelayout",  &isLiveLinkFaceLayout,                            &loadLiveLinkFaceLayout},
             {"livelinkfacemapping", &isLiveLinkFaceMapping,                           &loadLiveLinkFaceMapping},

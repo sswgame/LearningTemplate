@@ -21,6 +21,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 자동화 시나리오 `game/meadowvillage/automation/day.scenario.xml` 이 공유 시계를 날 단위로 감아(`AdvanceGameTime`) 밭이 번 돈으로 부탁(`meadow_request`)이 끝나는지 봅니다(`Session.Money` · `Quest.Status`).
+`questmarker.scenario.xml` 은 같은 흐름에서 목표 자리 오브젝트 `OrchardSite`(`QuestObjectiveMarkerComponent`)의 화면 마커가 부탁을 받으면 뜨고 끝나면 사라지는지 봅니다(`UI.MarkerVisible`).
 같은 흐름을 EngineTest 의 `KitCompositionTest` 가 모의 디렉터로 확인하고,
 SmokeTest 의 `ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly` 가 키트 하나만 다시 로드해도 게임만 함께 다시 로드되는지 봅니다.
 

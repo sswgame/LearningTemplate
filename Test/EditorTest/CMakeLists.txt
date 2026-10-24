@@ -70,6 +70,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorNodeGraphRules.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogXMLText.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogDocument.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogCurveModel.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Console/ConsoleLogRows.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowser/ContentBrowserFileActions.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowser/ContentBrowserImportQueue.cpp"

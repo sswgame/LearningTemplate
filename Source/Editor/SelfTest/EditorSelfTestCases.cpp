@@ -340,7 +340,7 @@ namespace sw::editor
             static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )
             {
                 constexpr float32  kPixelTolerance       = 1.0f;
-                const ImGuiWindow* pSceneView            = ImGui::FindWindowByName( "Scene" );
+                const ImGuiWindow* pSceneView            = ImGui::FindWindowByName( SceneViewPanel::kPanelTitle );
                 const ImGuiWindow* pBar                  = ImGui::FindWindowByName( "##EditorTransformBar" );
                 const bool         bTransformBarNotDrawn = pSceneView == nullptr || pBar == nullptr || pBar->Active == false;
                 if ( bTransformBarNotDrawn )
@@ -449,7 +449,7 @@ namespace sw::editor
                     (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
                     (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == probe._xmlBefore, "drawing the inspector changed the object" );
                 }
-                const ImGuiWindow* pInspector = ImGui::FindWindowByName( "Inspector" );
+                const ImGuiWindow* pInspector = ImGui::FindWindowByName( InspectorPanel::kPanelTitle );
                 (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
                 destroyProbeObject( probe._objectID );
                 probe = InspectorProbe{};

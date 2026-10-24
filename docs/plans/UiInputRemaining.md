@@ -1,25 +1,16 @@
 # 런타임 UI 입력의 남은 것
 
-> 상태: 구현중 · 선행: 없음 · 영역: ui · 옛번호: D6-2 · 진행: 2/3
+> 상태: 측정대기 · 선행: 없음 · 영역: ui · 옛번호: D6-2 · 진행: 3/3
 
-런타임 UI 입력 중 둘이 남아 있었다. 에디터 게임 뷰(Game 패널) 안의 포인터 좌표와 리눅스의 운영체제 클립보드다. 둘 다 코드가 들어갔고(I1 · I2) Windows 빌드 · 단위 테스트는 끝났다. 실기 확인과 리눅스 빌드가 남았다.
-단위가 끝나면 그 절을 지운다.
+**남은 확인(통합에서 확인):** 매니페스트 id `ui-input-real-device`, 매니페스트 id `panel-id-literals-p3`(`Test/QA/VerifyBatch.json`). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+
+런타임 UI 입력 중 둘이 남아 있었다. 에디터 게임 뷰(Game 패널) 안의 포인터 좌표와 리눅스의 운영체제 클립보드다. 코드(I1 · I2)와 Windows 빌드 · 단위 테스트는 끝났고, I3 에서 사람 손으로 보려던 확인을 테스트로 바꿨다.
 
 ## 1. 단위
 
-| 단위 | 내용 | 선행 |
+| 단위 | 내용 | 상태 |
 |---|---|---|
-| I3 | 리눅스 빌드와 실기 확인(확인 대기: 매니페스트 id `ui-input-real-device`) | 없음 |
-
-### I3 리눅스 빌드와 실기 확인
-
-Windows 빌드 · 단위 테스트는 끝났다(2026-10-23, `wt/uibuild`). `EditorAPI` 표의 모양이 바뀌어 `kModuleAbiVersion` 이 8 이므로 `full-build`(Debug, `all AllTests` — App · EditorModule · 모든 게임 모듈)로 함께 지었고 경고 0 · 오류 0 이다.
-`EngineTest --test_filter=UIInputTest.PointerPositionSubtractsViewportOrigin:UIInputTest.PointerPositionIsInUIUnits` 2/2, `EditorUITest --test_filter=ImGuiKeyForwardTest.*` 3/3 통과. 남은 것은 아래다.
-
-- 리눅스 클라이언트 빌드(`X11Window.cpp` · `X11Clipboard.cpp`): WSL 클론에서 짓는다. 아직 짓지 못했다.
-- 게임 뷰 포인터(Windows 에디터): `-EnableEditor` 로 메뉴가 있는 게임(Shooter3D 일시정지 메뉴)을 Play 하고 게임 뷰 단추를 눌러 반응하는지 본다. 도크 가운데 · 레터박스(종횡비 고정) · 패널을 떼어 다른 OS 창에 둔 경우 셋을 본다.
-- 리눅스 클립보드: 글 입력 칸에서 복사한 글을 다른 프로그램(터미널 · 편집기)에 붙여넣고, 반대로도 한다. 한글이 깨지지 않는지, 수 MB 글(INCR)을 받는 쪽 · 보내는 쪽 모두 되는지 본다(보내는 쪽 INCR 은 상대가 조각을 지울 때마다 다음 조각을 적는 `X11Window::handleIncrPropertyEvent`).
-- 떼어 낸 게임 뷰 창의 키보드(Windows 에디터): 패널을 다른 OS 창으로 떼어 포커스를 준 채 이동 키 · 글자를 눌러 게임이 받는지, 키를 누른 채 창을 바꿔도 키가 눌린 채 남지 않는지 본다.
+| I3 | 실기 확인을 테스트로: (1) 에디터 게임 뷰의 포인터 — 이미지 자리가 패널 창 안에 있고 런타임 UI 의 포인터 원점 · 입력의 게임 화면 원점에 같이 닿는지 에디터 자체 테스트 `gameView.pointerOriginReachesTheGame`, 원점 · 배율을 뺀 포인터가 화면 위젯 · 월드 단추를 맞히는지 `UIInputTest.PointerPositionSubtractsViewportOrigin` · `MouseClickOnWorldWidgetThroughCameraRay`. (2) 리눅스 클립보드 — 두 X11 창(각자 디스플레이 연결)이 한글 · 일본어 글과 X 요청 한 번보다 큰 글(INCR)을 두 방향으로 주고받는 `WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr`(CI 리눅스 xvfb 의 swrender 묶음). 리눅스 빌드는 CI 가 짓는다([작업 방식](../11_Workflow.md) 8절). 떼어 낸 창의 키보드는 [Candidates-ui](Candidates-ui.md) `DetachedGameViewKeyboard` | 끝남(빌드 미확인) |
 
 ## 2. 끝난 단위의 확인 목록
 
@@ -31,4 +22,4 @@ Windows 빌드 · 단위 테스트는 끝났다(2026-10-23, `wt/uibuild`). `Edit
 - I2 리눅스 클립보드: 선택 소유 · `SelectionRequest`(TARGETS · UTF8_STRING) · `SelectionClear` 는 `X11Window` 가 맡고, 주인인지는 표시 없이 서버에 묻는다(`XGetSelectionOwner`). 읽기는 `XConvertSelection` 뒤 `SelectionNotify` 만 골라 최대 200 ms 기다린다.
   큰 글은 INCR(ICCCM 2.7.2)로 받는다 — 창이 PropertyChangeMask 를 늘 받고, 조각마다 PropertyNotify(새 값)를 기다려 읽고 지우며, 길이 0 조각이 끝이다. 내줄 때도 X 요청 한 번(`XExtendedMaxRequestSize`)보다 큰 글은 INCR 로 보낸다:
   요청에 INCR 표지(예상 길이)를 적고 상대 창의 PropertyChangeMask 를 받아 두었다가(`beginClipboardIncr`), 상대가 속성을 지울 때마다(`PropertyNotify` 삭제) 다음 조각(요청 한계의 절반)을 적고 길이 0 조각으로 끝낸다. 건마다 글 사본을 쥐어 보내는 도중에 새로 복사해도 처음 글이 끝까지 가고,
-  상대가 10 초 동안 다음 조각을 청하지 않으면 건을 버린다(`expireClipboardIncr`). 이 코드는 리눅스에서만 빌드되어 이 PC 에서 짓지 못했다. Wayland 는 옛번호 `D1-6` 이다.
+  상대가 10 초 동안 다음 조각을 청하지 않으면 건을 버린다(`expireClipboardIncr`). Wayland 는 옛번호 `D1-6` 이다.

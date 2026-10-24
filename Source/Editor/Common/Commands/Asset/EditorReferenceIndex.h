@@ -62,6 +62,8 @@ namespace sw::editor
         /** @brief @p targetPath 를 적은 서로 다른 파일 수를 반환합니다. */
         uint32 countReferrerFiles( string_view targetPath ) const;
 
+        /** @brief 트리의 파일로 아는 리소스 id(소문자)이면 true 입니다. 파일 하나만 다시 읽어도 되는지(있던 파일의 내용 변경) 가르는 데 씁니다. */
+        bool containsFile( string_view resourceID ) const;
         /** @brief 한 번이라도 결과를 넣었으면 true 입니다. */
         bool isReady() const { return _bReady == SW_TRUE; }
         /** @brief 마지막으로 스캔한 텍스트 에셋 수를 반환합니다. */

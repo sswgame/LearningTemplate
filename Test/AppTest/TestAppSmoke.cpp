@@ -785,6 +785,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|sceneView.gizmoMovesTheSelection",
         "EditorSelfTest|PASS|sceneView.gridAndGizmoDraw",
         "EditorSelfTest|PASS|gameView.hidesEditorOverlays",
+        "EditorSelfTest|PASS|gameView.pointerOriginReachesTheGame",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
         "EditorSelfTest|PASS|dpi.monitorScaleFollows",
         "EditorSelfTest|PASS|input.hierarchySearchTyping",

@@ -2,8 +2,10 @@
 
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -55,7 +57,13 @@ namespace sw::editor
 namespace sw::editor
 {
     CatalogTableEditor::CatalogTableEditor()
-        : _editText{}
+        : _listCurve{}
+        , _listGradient{}
+        , _listProbeCurve{}
+        , _listSample{}
+        , _curveOwner{ -1 }
+        , _bOpenCurvePopup{ false }
+        , _editText{}
         , _pendingColumn{}
         , _pendingText{}
         , _lastActionText{}
@@ -70,9 +78,11 @@ namespace sw::editor
         _editText.clear();
         _pendingColumn.clear();
         _pendingText.clear();
-        _editID         = 0;
-        _pendingElement = -1;
-        _pendingKind    = PendingKind::None;
+        _editID          = 0;
+        _pendingElement  = -1;
+        _pendingKind     = PendingKind::None;
+        _curveOwner      = -1;
+        _bOpenCurvePopup = false;
     }
 
     bool CatalogTableEditor::draw( CatalogDocument& inoutDocument )
@@ -83,8 +93,9 @@ namespace sw::editor
             return false;
         }
 
-        const float32 dpiScale   = EditorThemeUtil::getDpiScale();
-        bool          bFirstCell = true;
+        const float32 dpiScale          = EditorThemeUtil::getDpiScale();
+        bool          bFirstCell        = true;
+        bool          bFirstCurveButton = true;
         for ( const CatalogDocument::Group& group : inoutDocument.getGroups() )
         {
             ImGui::PushID( group._name.c_str() );
@@ -129,7 +140,24 @@ namespace sw::editor
                             ImGui::TextDisabled( "-" );
                         else
                             ImGui::Text( "%d", static_cast<int32>( element._listChild.size() ) );
-                        if ( element._listChild.empty() == false && ImGui::IsItemHovered() )
+                        const bool bHovered = element._listChild.empty() == false && ImGui::IsItemHovered();
+                        if ( element._listChild.empty() == false )
+                        {
+                            CatalogCurveModel::collectCurves( inoutDocument.getParsed(), elementIndex, _listProbeCurve );
+                            if ( _listProbeCurve.empty() == false )
+                            {
+                                ImGui::SameLine();
+                                if ( ImGui::SmallButton( "Curves" ) )
+                                {
+                                    _curveOwner      = elementIndex;
+                                    _bOpenCurvePopup = true;
+                                }
+                                if ( bFirstCurveButton )
+                                    EditorSelfTestMarks::note( "catalog.curves.open" );
+                                bFirstCurveButton = false;
+                            }
+                        }
+                        if ( bHovered )
                         {
                             ImGui::BeginTooltip();
                             for ( const int32 childIndex : element._listChild )
@@ -167,6 +195,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( "catalog.addrow.first" );
             ImGui::PopID();
         }
+        drawCurvePopup( inoutDocument );
         return applyPending( inoutDocument );
     }
 
@@ -227,7 +256,7 @@ namespace sw::editor
         _pendingKind = PendingKind::None;
 
         string     groupName;
-        const bool bRowScopedEdit = kind == PendingKind::SetCell || kind == PendingKind::UnsetCell || kind == PendingKind::RemoveRow;
+        const bool bRowScopedEdit = kind == PendingKind::SetCell || kind == PendingKind::UnsetCell || kind == PendingKind::RemoveRow || kind == PendingKind::AddCurveKey;
         if ( bRowScopedEdit )
         {
             if ( _pendingElement >= 0 && static_cast<size_t>( _pendingElement ) < inoutDocument.getParsed().getElements().size() )
@@ -265,11 +294,147 @@ namespace sw::editor
                 _lastActionText = CatalogTableEditorInternal::describe( "Removed row from", groupName, string_view() );
                 break;
             }
+            case PendingKind::AddCurveKey:
+            {
+                bChanged        = CatalogCurveModel::addKey( inoutDocument, _pendingElement );
+                _lastActionText = CatalogTableEditorInternal::describe( "Added a key to", groupName, string_view() );
+                break;
+            }
         }
         if ( bChanged == false )
             _lastActionText = inoutDocument.getError();
         else
             SW_LOG_INFO( "Catalog %#", _lastActionText.c_str() );
         return bChanged;
+    }
+
+    void CatalogTableEditor::drawGradientBar( const CatalogGradient& gradient ) const
+    {
+        constexpr uint32 kSegmentCount = 32;
+        const float32    width         = ImGui::GetContentRegionAvail().x;
+        const float32    height        = ImGui::GetFrameHeight();
+        const ImVec2     origin        = ImGui::GetCursorScreenPos();
+        ImGui::Dummy( ImVec2{ width, height } );
+        const CatalogCurve& red          = _listCurve[static_cast<size_t>( gradient._red )];
+        const CatalogCurve& green        = _listCurve[static_cast<size_t>( gradient._green )];
+        const CatalogCurve& blue         = _listCurve[static_cast<size_t>( gradient._blue )];
+        const CatalogCurve& alpha        = _listCurve[static_cast<size_t>( gradient._alpha )];
+        const float32       redGreenEnd  = MathUtil::max( CatalogCurveModel::computeEndTime( red ), CatalogCurveModel::computeEndTime( green ) );
+        const float32       blueAlphaEnd = MathUtil::max( CatalogCurveModel::computeEndTime( blue ), CatalogCurveModel::computeEndTime( alpha ) );
+        const float32       endTime      = MathUtil::max( redGreenEnd, blueAlphaEnd );
+        vector<float32>     listRed;
+        vector<float32>     listGreen;
+        vector<float32>     listBlue;
+        vector<float32>     listAlpha;
+        const bool          bRedGreen  = CatalogCurveModel::sample( red, endTime, kSegmentCount + 1, listRed ) && CatalogCurveModel::sample( green, endTime, kSegmentCount + 1, listGreen );
+        const bool          bBlueAlpha = CatalogCurveModel::sample( blue, endTime, kSegmentCount + 1, listBlue ) && CatalogCurveModel::sample( alpha, endTime, kSegmentCount + 1, listAlpha );
+        ImDrawList*         pDrawList  = ImGui::GetWindowDrawList();
+        const ImU32         frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( EditorThemeUtil::getBorderColor() ) );
+        if ( bRedGreen == false || bBlueAlpha == false )
+        {
+            pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor ); // 네 채널 중 키가 없는 것이 있다 - 띠 대신 빈 틀만 보인다
+            return;
+        }
+        const auto clamp01 = []( float32 value )
+        { return value < 0.0f ? 0.0f : ( value > 1.0f ? 1.0f : value ); };
+        const auto toColor = [&]( uint32 index )
+        { return ImGui::ColorConvertFloat4ToU32( ImVec4{ clamp01( listRed[index] ), clamp01( listGreen[index] ), clamp01( listBlue[index] ), clamp01( listAlpha[index] ) } ); };
+        for ( uint32 segment = 0; segment < kSegmentCount; ++segment )
+        {
+            const float32 left  = origin.x + width * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
+            const float32 right = origin.x + width * static_cast<float32>( segment + 1 ) / static_cast<float32>( kSegmentCount );
+            const ImU32   from  = toColor( segment );
+            const ImU32   to    = toColor( segment + 1 );
+            pDrawList->AddRectFilledMultiColor( ImVec2{ left, origin.y }, ImVec2{ right, origin.y + height }, from, to, to, from );
+        }
+        pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor );
+    }
+
+    void CatalogTableEditor::drawCurveBlock( const CatalogDocument& document, const CatalogCurve& curve )
+    {
+        ImGui::PushID( curve._elementIndex );
+        ImGui::TextUnformatted( curve._label.c_str() );
+        if ( CatalogCurveModel::sample( curve, CatalogCurveModel::computeEndTime( curve ), 48, _listSample ) )
+            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, 56.0f } );
+        else
+            ImGui::TextDisabled( "No keys yet" );
+        for ( const CatalogCurveKey& key : curve._listKey )
+        {
+            ImGui::PushID( key._elementIndex );
+            ImGui::PushItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
+            drawCell( document, key._elementIndex, "_time", false );
+            ImGui::SameLine();
+            drawCell( document, key._elementIndex, "_value", false );
+            ImGui::SameLine();
+            drawCell( document, key._elementIndex, "_interpolation", false );
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Remove" ) )
+            {
+                _pendingKind    = PendingKind::RemoveRow;
+                _pendingElement = key._elementIndex;
+                _pendingColumn.clear();
+                _pendingText.clear();
+            }
+            if ( key._bValid == false )
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled( "(time or value is not a number)" );
+            }
+            ImGui::PopID();
+        }
+        if ( ImGui::SmallButton( "Add key" ) )
+        {
+            _pendingKind    = PendingKind::AddCurveKey;
+            _pendingElement = curve._elementIndex;
+            _pendingColumn.clear();
+            _pendingText.clear();
+        }
+        EditorSelfTestMarks::note( "catalog.curves.addkey" );
+        ImGui::Separator();
+        ImGui::PopID();
+    }
+
+    void CatalogTableEditor::drawCurvePopup( const CatalogDocument& document )
+    {
+        constexpr const utf8* kPopupName = "Curves##catalogCurves";
+        if ( _bOpenCurvePopup )
+        {
+            ImGui::OpenPopup( kPopupName );
+            _bOpenCurvePopup = false;
+        }
+        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        ImGui::SetNextWindowSize( ImVec2{ 560.0f * dpiScale, 520.0f * dpiScale }, ImGuiCond_Appearing );
+        bool bOpen = true;
+        if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
+            return;
+        CatalogCurveModel::collectCurves( document.getParsed(), _curveOwner, _listCurve );
+        CatalogCurveModel::collectGradients( _listCurve, _listGradient );
+        if ( _listCurve.empty() )
+        {
+            ImGui::TextDisabled( "No curves under this row" );
+        }
+        else
+        {
+            ImGui::TextDisabled( "Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview." );
+            for ( const CatalogGradient& gradient : _listGradient )
+            {
+                ImGui::TextUnformatted( gradient._label.c_str() );
+                drawGradientBar( gradient );
+            }
+            ImGui::Separator();
+            ImGui::BeginChild( "##curveList", ImVec2{ 0.0f, -ImGui::GetFrameHeightWithSpacing() } );
+            for ( const CatalogCurve& curve : _listCurve )
+            {
+                drawCurveBlock( document, curve );
+            }
+            ImGui::EndChild();
+        }
+        if ( ImGui::Button( "Close" ) || bOpen == false )
+        {
+            _curveOwner = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 } // namespace sw::editor

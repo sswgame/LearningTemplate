@@ -25,8 +25,6 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | 8 | [ModuleRenderPass](docs/plans/ModuleRenderPass.md) — 모듈이 렌더 패스를 등록하는 창구 | 구현중 | 2/3 | 없음 | engine | G-1 |
 | 9 | [BuildSpeed](docs/plans/BuildSpeed.md) — 빌드 속도 계획 | 구현대기 | 6/13 | 다른 작업이 모두 끝난 뒤 혼자 | quality | C-2 |
 | 10 | [AutomationSplit](docs/plans/AutomationSplit.md) — Automation 분리 | 구현중 | 0/4 | 없음 | engine | 없음 |
-| - | [ContentBrowserWatchAndScan](docs/plans/ContentBrowserWatchAndScan.md) — 콘텐츠 브라우저 감시 지연과 스캔 비용 | 구현대기 | 0/2 | 없음 | editor | 없음 |
-| - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 구현대기 | 1/6 | 없음 | editor | D3-13 |
 | - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현대기 | 0/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
 | - | [ImportRuleOverlap](docs/plans/ImportRuleOverlap.md) — 임포트 규칙의 겹침 막기 | 구현대기 | 0/3 | 없음 | editor | C-44 |
 | - | [RealtimeGlobalIllumination](docs/plans/RealtimeGlobalIllumination.md) — 실시간 전역 조명과 볼륨 표현 (2026-10-24) | 구현대기 | 0/7 | ClusteredLighting | graphics | D2-14, D2-5.2 |
@@ -37,29 +35,20 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 3/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 2/3 | 없음 | engine | G-5 |
-| - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 구현중 | 1/5 | 없음 | editor | D3-1.2 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
 | - | [EditorCharacterEditor](docs/plans/EditorCharacterEditor.md) — 캐릭터 편집 창 구현 계획 (D4-8 ⑥) | 구현중 | 5/6 | 없음 | gameplay | D4-8 |
-| - | [EditorFeatureGaps](docs/plans/EditorFeatureGaps.md) — 에디터 기능 후보의 남은 것 | 구현중 | 7/10 | 없음 | editor | D3-1, D3-3, D3-4 |
-| - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 구현중 | 5/6 | 없음 | editor | D3-7 |
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/3 | 없음 | quality | C-41, E-8 |
 | - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
-| - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 3/5 | 없음 | ui | G-10 |
+| - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 4/5 | 없음 | ui | G-10 |
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 29/34 | 없음 | network | D7-5 |
-| - | [PanelIDLiterals](docs/plans/PanelIDLiterals.md) — 패널을 id 글자로 여는 남은 호출 | 구현중 | 2/3 | 없음 | editor | 없음 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 10/11 | 없음 | gameplay | D4-7 |
-| - | [ScreenReaderSupport](docs/plans/ScreenReaderSupport.md) — 스크린 리더 | 구현중 | 5/7 | 없음 | ui | G-9 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 6/7 | 없음 | gameplay | D4-10 |
 | - | [SilentFallbackAudit](docs/plans/SilentFallbackAudit.md) — 조용한 폴백과 남은 같은 결함 감사 (2026-10-22) | 구현중 | 10/14 | 없음 | engine | 없음 |
 | - | [TerrainEditCost](docs/plans/TerrainEditCost.md) — 지형 LOD 교체 · 지형 쓰기 · 식생 다시 계산의 비용 (2026-10-21) | 구현중 | 3/4 | 없음 | graphics | D2-5.6, D2-5.7 |
 | - | [ThirdPartyGaps](docs/plans/ThirdPartyGaps.md) — 서드파티 빈자리 | 구현중 | 5/7 | 없음 | project | G-11 |
-| - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 구현중 | 2/3 | 없음 | ui | D6-2 |
-| - | [UiNotificationRemaining](docs/plans/UiNotificationRemaining.md) — 알림 · 힌트 · 목표 마커의 남은 것 | 구현중 | 1/2 | 없음 | ui | D6-5 |
-| - | [UiTooltipAndCursor](docs/plans/UiTooltipAndCursor.md) — 런타임 UI 툴팁과 커서 모양 | 구현중 | 3/4 | 없음 | ui | 없음 |
 | - | [WaylandWindowLayer](docs/plans/WaylandWindowLayer.md) — Wayland 창 계층 | 구현중 | 1/3 | 없음 | engine | D1-6 |
 | - | [WildWestHorseMount](docs/plans/WildWestHorseMount.md) — WildWest 승마의 말 모델 | 구현중 | 2/3 | 없음 | gameplay | D4-15 |
-| - | [WorldWidgetInput](docs/plans/WorldWidgetInput.md) — 월드 공간 위젯의 입력 · 가려짐 | 구현중 | 2/4 | 없음 | ui | G-3 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 측정대기 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 측정대기 | 4/4 | 없음 | gameplay | D4-16 |
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 측정대기 | 7/7 | 없음 | engine | 없음 |
@@ -67,7 +56,12 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [AudioChannelLayout](docs/plans/AudioChannelLayout.md) — 오디오 채널 레이아웃 계획 (2026-10-20) | 측정대기 | 5/5 | 없음 | audio-ai-localization | D5-1 |
 | - | [AudioEngineExtensions](docs/plans/AudioEngineExtensions.md) — 오디오 엔진 확장 계획 (2026-10-21) | 측정대기 | 8/8 | AudioChannelLayout | audio-ai-localization | D5-1 |
 | - | [ClothFollowups](docs/plans/ClothFollowups.md) — 천(`ClothComponent`)의 남은 것 | 측정대기 | 3/3 | 없음 | engine | D1-4 |
+| - | [ContentBrowserWatchAndScan](docs/plans/ContentBrowserWatchAndScan.md) — 콘텐츠 브라우저 감시 지연과 스캔 비용 | 측정대기 | 2/2 | 없음 | editor | 없음 |
+| - | [DataKindRegistry](docs/plans/DataKindRegistry.md) — 엔진 데이터 종류의 레지스트리 이전 | 측정대기 | 5/5 | 없음 | editor | D3-1.2 |
+| - | [DesignerDataToolsAudit](docs/plans/DesignerDataToolsAudit.md) — 디자이너용 데이터 도구 점검 | 측정대기 | 6/6 | 없음 | editor | D3-13 |
 | - | [DiskPathVsResourceId](docs/plans/DiskPathVsResourceId.md) — 디스크 경로와 리소스 id 의 입구 나누기 (2026-10-21) | 측정대기 | 3/3 | 없음 | engine | C-70 |
+| - | [EditorFeatureGaps](docs/plans/EditorFeatureGaps.md) — 에디터 기능 후보의 남은 것 | 측정대기 | 10/10 | 없음 | editor | D3-1, D3-3, D3-4 |
+| - | [EditorMultiWorld](docs/plans/EditorMultiWorld.md) — 다중 월드 · 에디터 툴 창 구현 계획 (D3-7) | 측정대기 | 6/6 | 없음 | editor | D3-7 |
 | - | [EngineCleanups](docs/plans/EngineCleanups.md) — 엔진 정리 묶음 (2026-10-24) | 측정대기 | 7/7 | 없음 | engine | C-49, C-63, C-64, C-47, C-34 |
 | - | [EnginePartition](docs/plans/EnginePartition.md) — 엔진 분할 계획 | 측정대기 | 6/6 | 없음 | engine | C-1 |
 | - | [FacialAnimation](docs/plans/FacialAnimation.md) — 얼굴 애니메이션의 남은 것 | 측정대기 | 5/5 | 없음 | gameplay | D4-6 |
@@ -83,25 +77,31 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [KayKitMaterials](docs/plans/KayKitMaterials.md) — KayKit 캐릭터 텍스처를 머티리얼로 | 측정대기 | 2/2 | 없음 | gameplay | D4-6 |
 | - | [KitCompositionGames](docs/plans/KitCompositionGames.md) — 키트 조립의 두 번째 테스트 게임과 땅 쓰기 | 측정대기 | 2/2 | 없음 | gameplay | D4-4 |
 | - | [MeleeHitUnify](docs/plans/MeleeHitUnify.md) — 근접 판정 한 길로 | 측정대기 | 3/3 | 없음 | gameplay | 없음 |
-| - | [MeshModifierPreviewCost](docs/plans/MeshModifierPreviewCost.md) — 메시 모디파이어 미리보기 비용 | 측정대기 | 0/3 | 없음 | editor | D3-10 |
+| - | [MeshModifierPreviewCost](docs/plans/MeshModifierPreviewCost.md) — 메시 모디파이어 미리보기 비용 | 측정대기 | 3/3 | 없음 | editor | D3-10 |
 | - | [MovingGroundFollowUps](docs/plans/MovingGroundFollowUps.md) — 움직이는 바닥 위 캐릭터의 남은 일 | 측정대기 | 4/4 | 없음 | gameplay | 없음 |
 | - | [NetChannelSchemaHashHandshake](docs/plans/NetChannelSchemaHashHandshake.md) — 넷 채널 등록 API 로 스키마 해시를 핸드셰이크 버전에 섞기 | 측정대기 | 2/2 | 없음 | network | D7-7 |
 | - | [PairedAnimation](docs/plans/PairedAnimation.md) — 페어드 애니메이션(여러 개체가 한 타임라인으로 도는 애니메이션) | 측정대기 | 6/6 | 없음 | gameplay | D4-6 |
+| - | [PanelIDLiterals](docs/plans/PanelIDLiterals.md) — 패널을 id 글자로 여는 남은 호출 | 측정대기 | 3/3 | 없음 | editor | 없음 |
 | - | [PatchDeltaDelivery](docs/plans/PatchDeltaDelivery.md) — 패치 · 델타 업데이트 배포 구조 | 측정대기 | 7/7 | 없음 | network | G-16 |
 | - | [PersistentRecordUnknownFields](docs/plans/PersistentRecordUnknownFields.md) — 영속 레코드의 모르는 필드 보관 | 측정대기 | 2/2 | 없음 | network | F-3 |
 | - | [PhysicsExtensions](docs/plans/PhysicsExtensions.md) — 물리 확장 — 부력 · 파워드 래그돌 · 천과 캐릭터 · 결정성 | 측정대기 | 5/5 | 없음 | engine | D1-8 |
 | - | [ReflectionFormats](docs/plans/ReflectionFormats.md) — 리플렉션 직렬화 형식 계획 (2026-10-17) | 측정대기 | 12/13 | 없음 | engine | 없음 |
 | - | [RigEditing](docs/plans/RigEditing.md) — 후처리 리그 편집 저장과 기즈모 | 측정대기 | 3/3 | 없음 | gameplay | D4-6 |
 | - | [RollbackPrediction](docs/plans/RollbackPrediction.md) — 클라이언트 예측 · 롤백과 관심 영역 복제 | 측정대기 | 4/4 | 없음 | network | D7-8 |
+| - | [ScreenReaderSupport](docs/plans/ScreenReaderSupport.md) — 스크린 리더 | 측정대기 | 6/6 | 없음 | ui | G-9 |
 | - | [ShooterStrideWarping](docs/plans/ShooterStrideWarping.md) — Shooter3D 발 미끄러짐 연결 | 측정대기 | 2/2 | 없음 | gameplay | D4-6 |
 | - | [StructuralOptimization](docs/plans/StructuralOptimization.md) — 구조 최적화 측정 표 (A · B) | 측정대기 | 해당없음 | 없음 | engine | 없음 |
 | - | [TilemapCellDataLayers](docs/plans/TilemapCellDataLayers.md) — 타일맵 칸 데이터를 일반 레이어로 | 측정대기 | 3/3 | 없음 | gameplay | G-6 |
 | - | [UiDrawPerformance](docs/plans/UiDrawPerformance.md) — 런타임 UI 그리기 성능의 남은 것 | 측정대기 | 0/2 | 없음 | ui | D6-6 |
+| - | [UiInputRemaining](docs/plans/UiInputRemaining.md) — 런타임 UI 입력의 남은 것 | 측정대기 | 3/3 | 없음 | ui | D6-2 |
+| - | [UiNotificationRemaining](docs/plans/UiNotificationRemaining.md) — 알림 · 힌트 · 목표 마커의 남은 것 | 측정대기 | 2/2 | 없음 | ui | D6-5 |
+| - | [UiTooltipAndCursor](docs/plans/UiTooltipAndCursor.md) — 런타임 UI 툴팁과 커서 모양 | 측정대기 | 4/4 | 없음 | ui | 없음 |
 | - | [UserSettingsConsumers](docs/plans/UserSettingsConsumers.md) — 사용자 설정 값을 읽는 쪽 잇기 | 측정대기 | 4/4 | 없음 | gameplay | D4-2 |
 | - | [WorldStreaming](docs/plans/WorldStreaming.md) — 월드 스트리밍(D1-7) — 설계와 구현 단위 | 측정대기 | 7/7 | 없음 | engine | D1-7 |
+| - | [WorldWidgetInput](docs/plans/WorldWidgetInput.md) — 월드 공간 위젯의 입력 · 가려짐 | 측정대기 | 4/4 | 없음 | ui | G-3 |
 | - | [MotionMatching](docs/plans/MotionMatching.md) — 모션 매칭 (보류) | 보류 | 해당없음 | 없음 | gameplay | D4-16 |
 
-후보 문서 9개 · 후보 절 47개
+후보 문서 9개 · 후보 절 53개
 <!-- status-board:end -->
 
 이 저장소에서 볼 수 있는 것은 다음과 같습니다.

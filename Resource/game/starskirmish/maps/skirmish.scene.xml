@@ -102,6 +102,7 @@
 					<SkirmishDirectorComponent _componentName="SkirmishDirectorComponent"
 					                           _bActive="true"
 					                           _unitDataPath="game/starskirmish/data/units.xml"
+					                           _commanderTreePath="game/starskirmish/data/commander.bt.xml"
 					                           _cliffPrefab="game/starskirmish/prefabs/cliff.prefab.xml"
 					                           _unitPrefab="game/starskirmish/prefabs/unit.prefab.xml"
 					                           _cameraRig="1"

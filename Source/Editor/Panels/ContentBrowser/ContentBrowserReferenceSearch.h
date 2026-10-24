@@ -12,6 +12,8 @@
 
 namespace sw::editor
 {
+    class AssetHotReload;
+
     /**
      * @class ContentBrowserReferenceSearch
      * @brief 참조 역색인과 마지막 질의의 결과입니다. 언리얼 Content Browser 의 Reference Viewer 를 테이블 하나로 줄인 것입니다.
@@ -22,6 +24,11 @@ namespace sw::editor
      *          그 사이에는 `isCurrent` 가 false 다. 답이 맞아야 하는 쪽(옮기기 · 이름 바꾸기, 자동화 탐침, 시계 잡기 조건)은 `isCurrent` 를 본다.
      *          남는 틈: 에디터 밖의 쓰기(`<Scratch>` 복사 · 탐색기)는 OS 파일 감시가 알려야 변경 번호가 오른다. 그 알림이 오기 전에는 `isCurrent` 가 낡은 색인을 맞다고 본다
      *          (보통 몇 ms — 스캔 하나(Release 수 초, Debug 수십 초)보다 짧다). 에디터 자신의 이동은 `EditorAssetFileCommands::moveAsset` 이 색인을 그 자리에서 고친다.
+     *          시나리오의 사본 쓰기는 시작 차단 조건(`AssetHotReload::pollContentWatchFence`)이 감시 사건을 기다려 막는다.
+     *
+     *          **증분 갱신**: 색인이 있고 스캔이 돌지 않을 때 변경 번호가 오르면, 바뀐 파일의 목록(`AssetHotReload::takeChangedPaths`)이 모두 "있던 파일의 내용 변경"이면
+     *          그 파일들만 다시 읽는다(`EditorReferenceIndex::refreshFile`). 파일이 생기거나 사라지거나(색인이 아는 파일 목록이 달라진다) 폴더가 바뀌었거나 목록을 모르면 전체를 다시 스캔한다 —
+     *          없던 파일이 생기면 다른 파일의 참조가 "있는 파일" 로 바뀌므로 한 파일만 읽어서는 맞지 않다.
      */
     class ContentBrowserReferenceSearch
     {
@@ -33,7 +40,7 @@ namespace sw::editor
          * @brief 워커가 끝낸 스캔이 있으면 역색인에 넣고, 처음이거나 @p contentChangeSerial 이 마지막 스캔 때와 다르면 스캔을 요청합니다. 스캔 중이면 끝날 때까지 미룹니다.
          * @details 결과 꺼내기와 다시 요청할지의 판단은 같은 `take` 결과 하나로 한다 — 따로 다시 읽으면 그 사이 끝난 결과를 버린다.
          */
-        void update( uint64 contentChangeSerial );
+        void update( uint64 contentChangeSerial, AssetHotReload* pChangeSource );
         /**
          * @brief 진행 중이거나 끝났지만 아직 넣지 않은 스캔이 있으면 버리고 새로 요청합니다. 이동이 고친 색인을 이전 스캔 결과가 덮어쓰지 않게 합니다.
          * @details 버리기만 하면 그 스캔이 담은 다른 변경(에디터 밖의 쓰기)도 함께 사라진다. 그래서 새 스캔으로 다시 읽고, 끝날 때까지 `isCurrent` 는 false 다.
@@ -67,11 +74,16 @@ namespace sw::editor
     private:
         /** @brief @p contentChangeSerial 시점의 트리를 읽는 스캔을 요청합니다. 그 결과를 넣을 때까지 `isCurrent` 는 false 입니다. */
         void requestScan( uint64 contentChangeSerial );
+        /**
+         * @brief 바뀐 파일 @p listChangedPath 가 모두 색인이 아는 파일의 내용 변경이면 그 파일들만 다시 읽고 true 입니다. 파일이 생기거나 사라졌으면 아무것도 하지 않고 false 입니다(전체를 다시 스캔한다).
+         */
+        [[nodiscard]] bool tryRefreshChangedFiles( const vector<string>& listChangedPath );
 
     private:
         EditorReferenceIndex         _index;
         EditorReferenceIndexJob      _job;
-        string                       _queryID; ///< 마지막 질의의 대상 리소스 id
+        AssetHotReload*              _pChangeSource; ///< 바뀐 파일을 알려 주는 쪽(`update` 가 받아 둔다). 없으면 늘 전체를 스캔한다
+        string                       _queryID;       ///< 마지막 질의의 대상 리소스 id
         vector<EditorAssetReference> _listResult;
         uint64                       _scanSerial;           ///< 마지막으로 요청한 스캔이 시작할 때의 `AssetHotReload::getContentChangeSerial` 값
         uint8                        _bScanRequested   : 1; ///< 스캔을 한 번이라도 요청했다

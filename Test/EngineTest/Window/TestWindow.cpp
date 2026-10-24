@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -10,6 +12,9 @@
 
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
+
+#include <chrono>
+#include <thread>
 
 // 플랫폼 창 — 실제 OS 창을 띄우고 리사이즈 콜백과 메시지 훅을 본다.
 //
@@ -331,3 +336,90 @@ SW_TEST_CASE( WindowTest, TitleReachesTheOsAsUtf16 )
     window->destroy();
 }
 #endif
+
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+namespace
+{
+    /** @brief 클립보드 주인 창의 사건을 계속 받아 다른 창(다른 프로그램 역할)의 `SelectionRequest` 에 답하는 스레드입니다. 주인 창의 디스플레이 연결은 이 스레드만 쓴다. */
+    class X11ClipboardOwnerPump
+    {
+    public:
+        explicit X11ClipboardOwnerPump( sw::X11Window& owner )
+            : _owner{ owner }
+            , _bStop{ false }
+            , _worker{ [this]()
+        {
+            while ( _bStop.load() == false )
+            {
+                (void)_owner.processMessages();
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+        } }
+        {
+        }
+
+        ~X11ClipboardOwnerPump()
+        {
+            _bStop.store( true );
+            _worker.join();
+        }
+
+        X11ClipboardOwnerPump( const X11ClipboardOwnerPump& )            = delete;
+        X11ClipboardOwnerPump& operator=( const X11ClipboardOwnerPump& ) = delete;
+
+    private:
+        sw::X11Window&   _owner;
+        sw::atomic<bool> _bStop;
+        sw::thread       _worker;
+    };
+
+    /** @brief @p owner 가 CLIPBOARD 를 쥐고 @p reader 가 읽은 글이 @p text 와 같은지 봅니다(둘은 서로 다른 디스플레이 연결이라 다른 프로그램처럼 서로 요청한다). */
+    void expectClipboardRoundTrip( sw::X11Window& owner, sw::X11Window& reader, const sw::string& text, const utf8* pLabel )
+    {
+        SW_ASSERT_TRUE_MSG( owner.writeClipboardText( text ), pLabel );
+        sw::string read;
+        {
+            X11ClipboardOwnerPump pump( owner ); // 주인이 SelectionRequest(큰 글이면 INCR 조각의 PropertyNotify)에 답하는 동안 읽는다
+            SW_EXPECT_TRUE_MSG( reader.readClipboardText( read ), pLabel );
+        }
+        SW_EXPECT_TRUE_MSG( read == text, pLabel );
+    }
+} // namespace
+#endif
+
+/**
+ * @brief [WindowTest] 리눅스 클립보드: 한 창이 복사한 글(한글 포함)을 다른 창이 읽고, 반대로도 되며, X 요청 한 번보다 큰 글(INCR)도 두 방향으로 온전히 간다
+ * @details 두 창은 각자 디스플레이 연결을 가져 서로 다른 프로그램처럼 요청한다(`XConvertSelection` → `SelectionNotify`). UiInputRemaining I3 의 "다른 프로그램과 주고받기" 를 xvfb 위에서 본다.
+ *          변이: `X11Window::beginClipboardIncr` 를 건너뛰면 큰 글이 요청 한계에서 잘리거나 거절되어 진다. X 서버가 없으면 건너뛰고, 리눅스 클라이언트가 아니어도 건너뛴다.
+ */
+SW_TEST_CASE( WindowTest, X11ClipboardRoundTripsBetweenWindowsIncludingIncr )
+{
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+    sw::unique_ptr<sw::IWindow> firstBase  = sw::IWindow::createPlatformWindow();
+    sw::unique_ptr<sw::IWindow> secondBase = sw::IWindow::createPlatformWindow();
+    SW_ASSERT_TRUE( firstBase != nullptr && secondBase != nullptr );
+    if ( firstBase->initializeWindow( "ClipboardFirst", 200, 100 ) == false || secondBase->initializeWindow( "ClipboardSecond", 200, 100 ) == false )
+        SW_TEST_SKIP( "no X server to open windows on" );
+    sw::X11Window& first  = static_cast<sw::X11Window&>( *firstBase );
+    sw::X11Window& second = static_cast<sw::X11Window&>( *secondBase );
+
+    const sw::string small = "복사 → paste 한글 日本語 end";
+    expectClipboardRoundTrip( first, second, small, "small text first -> second" );
+    expectClipboardRoundTrip( second, first, small, "small text second -> first" );
+
+    // X 요청 한 번(BIG-REQUESTS 포함)보다 큰 글 — INCR 로 가야 한다. 마지막 조각 경계의 글자가 깨지지 않게 여러 바이트 글자를 섞는다.
+    sw::string big;
+    big.reserve( 40u * 1024u * 1024u );
+    while ( big.size() < 40u * 1024u * 1024u )
+    {
+        big += "가나다abc라마바\n";
+    }
+    expectClipboardRoundTrip( first, second, big, "INCR first -> second" );
+    expectClipboardRoundTrip( second, first, big, "INCR second -> first" );
+
+    firstBase->destroy();
+    secondBase->destroy();
+#else
+    SW_TEST_SKIP( "the X11 clipboard exists only in Linux client builds" );
+#endif
+}

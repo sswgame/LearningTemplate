@@ -36,10 +36,12 @@ namespace sw::editor
     public:
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */
         static constexpr const utf8* kPanelID = "gimmick_graph";
+        /** @brief 창 제목입니다(ImGui 창 이름 — 자체 테스트가 창을 찾을 때 이 상수를 쓴다). */
+        static constexpr const utf8* kPanelTitle = "Gimmick Graph";
 
         GimmickGraphPanel();
 
-        const utf8* getPanelTitle() const override { return "Gimmick Graph"; }
+        const utf8* getPanelTitle() const override { return kPanelTitle; }
         bool        isToolPanel() const override { return true; }
         float2      getInitialPanelSize() const override { return float2{ 1100.0f, 700.0f }; }
         void        drawContent() override;

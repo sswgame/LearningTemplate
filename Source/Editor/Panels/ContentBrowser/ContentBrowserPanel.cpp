@@ -540,7 +540,10 @@ namespace sw::editor
     {
         uint64 serial{ 0 };
         if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
-            _referenceSearch.update( serial );
+        {
+            EditorContext* pContext = EditorContext::get();
+            _referenceSearch.update( serial, pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr );
+        }
     }
 
     bool ContentBrowserPanel::isReferenceIndexCurrent() const
