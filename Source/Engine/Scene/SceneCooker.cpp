@@ -178,6 +178,92 @@ namespace sw
             }
 
             /**
+             * @brief 지어 둔 오브젝트마다 셀 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
+             * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
+             */
+            static bool collectCellRecords( const SceneDocument& doc, const WorldCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
+                                            string_view scenePath, vector<WorldCellObjectRecord>& outListRecord, vector<WorldCellReference>& outListReference )
+            {
+                outListRecord.reserve( doc._listSceneObjectNode.size() );
+                vector<uint64> listReferencedID;
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+                {
+                    const auto objectIt = mapObjectByFileID.find( entity._fileID );
+                    if ( objectIt == mapObjectByFileID.end() )
+                    {
+                        SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
+                        return false;
+                    }
+                    const GameObject*     pObject    = objectIt->second;
+                    const GameObject*     pRoot      = findPlacementRoot( pObject );
+                    const SceneComponent* pRootScene = pRoot->getPrimarySceneComponent();
+                    WorldCellObjectRecord record{};
+                    record._objectID      = entity._fileID;
+                    record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
+                    record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : WorldCellCoord{};
+                    outListRecord.push_back( record );
+
+                    listReferencedID.clear();
+                    ObjectSaveOptions options{ SerializePurpose::Authoring };
+                    options._pSavedIDMap          = &mapSavedID;
+                    options._pOutListReferencedID = &listReferencedID;
+                    vector<uint8> stateBytes;
+                    (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
+                    for ( const uint64 referencedObjectID : listReferencedID )
+                    {
+                        const auto targetIt = mapSavedID.find( referencedObjectID );
+                        // 파일에 없는 대상(중첩 프리팹 부품)은 그 주인 엔티티와 함께 지어진다 — 엔티티 사이의 참조만 본다. 자기 자신도 뺀다.
+                        if ( targetIt == mapSavedID.end() || targetIt->second == entity._fileID )
+                            continue;
+                        outListReference.push_back( WorldCellReference{ entity._fileID, targetIt->second } );
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 셀을 넘는 참조마다 오류를 남깁니다. */
+            static void reportCrossCellViolations( const vector<WorldCellReference>& listViolation, const unordered_map<uint64, GameObject*>& mapObjectByFileID, string_view scenePath )
+            {
+                for ( const WorldCellReference& violation : listViolation )
+                {
+                    const auto fromIt = mapObjectByFileID.find( violation._fromObjectID );
+                    const auto toIt   = mapObjectByFileID.find( violation._toObjectID );
+                    SW_LOG_ERROR( "Scene cook: '%#' - entity '%#' (id %#) refers to '%#' (id %#) in another cell; mark the target always loaded or move it", scenePath,
+                                  fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
+                                  toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
+                }
+            }
+
+            /** @brief 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮깁니다. 셀은 z, x 오름차순, 셀 안의 엔티티는 문서 순서다(결정적). */
+            static void splitIntoCells( SceneDocument& inoutDoc, const vector<WorldCellObjectRecord>& listRecord )
+            {
+                vector<SceneDocument::SceneObjectNode> listBase;
+                vector<SceneDocument::StreamingCell>   listCell;
+                for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
+                {
+                    SceneDocument::SceneObjectNode& entity = inoutDoc._listSceneObjectNode[entityIndex];
+                    const WorldCellObjectRecord&    record = listRecord[entityIndex];
+                    if ( record._bAlwaysLoaded )
+                    {
+                        listBase.push_back( std::move( entity ) );
+                        continue;
+                    }
+                    auto cellIt = std::find_if( listCell.begin(), listCell.end(), [&record]( const SceneDocument::StreamingCell& cell )
+                    { return cell._cell == record._cell; } );
+                    if ( cellIt == listCell.end() )
+                    {
+                        listCell.push_back( SceneDocument::StreamingCell{ record._cell, {} } );
+                        cellIt = listCell.end() - 1;
+                    }
+                    cellIt->_listSceneObjectNode.push_back( std::move( entity ) );
+                }
+                std::sort( listCell.begin(), listCell.end(), []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
+                { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );
+                inoutDoc._listSceneObjectNode = std::move( listBase );
+                inoutDoc._listStreamingCell   = std::move( listCell );
+            }
+
+            /**
              * @brief 스트리밍하는 씬의 엔티티를 셀로 나눕니다. 늘 올라 있는 엔티티는 `_listSceneObjectNode` 에 남고 나머지는 `_listStreamingCell` 로 갑니다.
              * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`WorldCellGrid::findCrossCellReferences`)나
              *          프리팹을 찾지 못한 엔티티가 있으면 오류를 남기고 false 다 — 런타임에 조용히 끊기는 참조 · 빠지는 엔티티를 쿠킹본에 싣지 않는다.
@@ -206,57 +292,19 @@ namespace sw
                 ObjectSavedIDMap mapSavedID;
                 placement.collectSavedIDMap( mapSavedID );
 
-                // 엔티티마다 셀 · 플래그, 그리고 그 엔티티가 가리키는 다른 엔티티(파일 id).
                 vector<WorldCellObjectRecord> listRecord;
                 vector<WorldCellReference>    listReference;
-                listRecord.reserve( inoutDoc._listSceneObjectNode.size() );
-                vector<uint64> listReferencedID;
-                for ( const SceneDocument::SceneObjectNode& entity : inoutDoc._listSceneObjectNode )
+                if ( collectCellRecords( inoutDoc, grid, mapObjectByFileID, mapSavedID, scenePath, listRecord, listReference ) == false )
                 {
-                    const auto objectIt = mapObjectByFileID.find( entity._fileID );
-                    if ( objectIt == mapObjectByFileID.end() )
-                    {
-                        SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' was not built - it cannot be placed in a cell", entity._name, scenePath );
-                        placement.shutdown();
-                        return false;
-                    }
-                    const GameObject*     pObject    = objectIt->second;
-                    const GameObject*     pRoot      = findPlacementRoot( pObject );
-                    const SceneComponent* pRootScene = pRoot->getPrimarySceneComponent();
-                    WorldCellObjectRecord record{};
-                    record._objectID      = entity._fileID;
-                    record._bAlwaysLoaded = pObject->isAlwaysLoaded() || pRoot->isAlwaysLoaded() || pRootScene == nullptr;
-                    record._cell          = pRootScene != nullptr ? grid.computeCell( pRootScene->getWorldPosition() ) : WorldCellCoord{};
-                    listRecord.push_back( record );
-
-                    listReferencedID.clear();
-                    ObjectSaveOptions options{ SerializePurpose::Authoring };
-                    options._pSavedIDMap          = &mapSavedID;
-                    options._pOutListReferencedID = &listReferencedID;
-                    vector<uint8> stateBytes;
-                    (void)ObjectStateSerializer::saveToBinaryBuffer( pObject, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
-                    for ( const uint64 referencedObjectID : listReferencedID )
-                    {
-                        const auto targetIt = mapSavedID.find( referencedObjectID );
-                        // 파일에 없는 대상(중첩 프리팹 부품)은 그 주인 엔티티와 함께 지어진다 — 엔티티 사이의 참조만 본다. 자기 자신도 뺀다.
-                        if ( targetIt == mapSavedID.end() || targetIt->second == entity._fileID )
-                            continue;
-                        listReference.push_back( WorldCellReference{ entity._fileID, targetIt->second } );
-                    }
+                    placement.shutdown();
+                    return false;
                 }
 
                 vector<WorldCellReference> listViolation;
                 WorldCellGrid::findCrossCellReferences( listRecord, listReference, listViolation );
                 if ( listViolation.empty() == false )
                 {
-                    for ( const WorldCellReference& violation : listViolation )
-                    {
-                        const auto fromIt = mapObjectByFileID.find( violation._fromObjectID );
-                        const auto toIt   = mapObjectByFileID.find( violation._toObjectID );
-                        SW_LOG_ERROR( "Scene cook: '%#' - entity '%#' (id %#) refers to '%#' (id %#) in another cell; mark the target always loaded or move it",
-                                      scenePath, fromIt != mapObjectByFileID.end() ? fromIt->second->getName().c_str() : "?", violation._fromObjectID,
-                                      toIt != mapObjectByFileID.end() ? toIt->second->getName().c_str() : "?", violation._toObjectID );
-                    }
+                    reportCrossCellViolations( listViolation, mapObjectByFileID, scenePath );
                     if ( pOutListViolation != nullptr )
                         *pOutListViolation = std::move( listViolation );
                     placement.shutdown();
@@ -264,31 +312,7 @@ namespace sw
                 }
                 placement.shutdown();
 
-                // 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮긴다. 셀은 z, x 오름차순, 셀 안의 엔티티는 문서 순서다(결정적).
-                vector<SceneDocument::SceneObjectNode> listBase;
-                vector<SceneDocument::StreamingCell>   listCell;
-                for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
-                {
-                    SceneDocument::SceneObjectNode& entity = inoutDoc._listSceneObjectNode[entityIndex];
-                    const WorldCellObjectRecord&    record = listRecord[entityIndex];
-                    if ( record._bAlwaysLoaded )
-                    {
-                        listBase.push_back( std::move( entity ) );
-                        continue;
-                    }
-                    auto cellIt = std::find_if( listCell.begin(), listCell.end(), [&record]( const SceneDocument::StreamingCell& cell )
-                    { return cell._cell == record._cell; } );
-                    if ( cellIt == listCell.end() )
-                    {
-                        listCell.push_back( SceneDocument::StreamingCell{ record._cell, {} } );
-                        cellIt = listCell.end() - 1;
-                    }
-                    cellIt->_listSceneObjectNode.push_back( std::move( entity ) );
-                }
-                std::sort( listCell.begin(), listCell.end(), []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
-                { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );
-                inoutDoc._listSceneObjectNode = std::move( listBase );
-                inoutDoc._listStreamingCell   = std::move( listCell );
+                splitIntoCells( inoutDoc, listRecord );
                 SW_LOG_INFO( "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
                              static_cast<uint32>( inoutDoc._listSceneObjectNode.size() ) );
                 return true;
