@@ -134,7 +134,11 @@ namespace sw
             static void applyParameter( MeshComponent& mesh, const ResolvedMaterialValue& value )
             {
                 MaterialInstance* pInstance = CharacterSurfaceBinding::acquireInstance( mesh ); // 표면 상태와 같은 인스턴스를 나눈다
-                if ( pInstance != nullptr )
+                if ( pInstance == nullptr )
+                    return;
+                if ( value._shape == ResolvedMaterialShape::Scalar )
+                    pInstance->setScalarParameter( value._name, value._value._x ); // 스칼라 매개변수에 float4 글을 쓰지 않는다
+                else
                     pInstance->setVectorParameter( value._name, value._value );
             }
         };

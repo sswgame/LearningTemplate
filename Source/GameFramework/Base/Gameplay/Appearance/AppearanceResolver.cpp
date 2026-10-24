@@ -122,9 +122,10 @@ namespace sw
             }
 
             static void addMaterialValue( ResolvedAppearance& out, const hashed_string& owner, const hashed_string& part, const hashed_string& name, const float4& value,
-                                          ResolvedMaterialTarget target, int32 channel )
+                                          ResolvedMaterialTarget target, int32 channel, ResolvedMaterialShape shape = ResolvedMaterialShape::Vector )
             {
                 ResolvedMaterialValue entry;
+                entry._shape   = shape;
                 entry._owner   = owner;
                 entry._part    = part;
                 entry._name    = name;
@@ -194,7 +195,8 @@ namespace sw
                                     }
                                     case CustomizationDriveKind::MaterialScalar:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, drive._target, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0 );
+                                        addMaterialValue( out, owner, hashed_string{}, drive._target, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
+                                                          ResolvedMaterialShape::Scalar );
                                         break;
                                     }
                                     case CustomizationDriveKind::MaterialColor:

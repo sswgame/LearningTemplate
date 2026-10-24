@@ -944,6 +944,42 @@ SW_TEST_CASE( MaterialTest, UnreadableNumberFailsTheLoad )
 }
 
 /**
+ * @brief [MaterialTest] 스칼라 매개변수에 벡터 값을, 벡터 매개변수에 스칼라 값을 쓰면 로그 id 로 거절한다
+ * @details 꾸미기의 MaterialScalar 드라이브가 `_roughness`(Range · Float)에 float4 글 "0.5 0 0 0" 을 써 패킹이 매번 오류를 내던 결함의 회귀 테스트다.
+ */
+SW_TEST_CASE( MaterialTest, InstanceRejectsParameterShapeMismatch )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"ShapeProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_properties>"
+        "    <item name=\"_roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"0.5\" min=\"0\" max=\"1\"/>"
+        "    <item name=\"_tint\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 1 1 1\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
+    sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+
+    test::ScopedLogCollector logs;
+    instance->setScalarParameter( sw::hashed_string( "_roughness" ), 0.25f );
+    instance->setVectorParameter( sw::hashed_string( "_tint" ), sw::float4{ 0.1f, 0.2f, 0.3f, 0.4f } );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "cannot take a" ) == 0, logs.joined().c_str() );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "_roughness" ) ) );
+    SW_EXPECT_TRUE( instance->isParameterOverridden( sw::hashed_string( "_tint" ) ) );
+
+    instance->clearOverrides();
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "parameter shape mismatch" );
+        instance->setVectorParameter( sw::hashed_string( "_roughness" ), sw::float4{ 0.5f, 0.0f, 0.0f, 0.0f } );
+        instance->setScalarParameter( sw::hashed_string( "_tint" ), 0.5f );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "cannot take a" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_FALSE( instance->isParameterOverridden( sw::hashed_string( "_roughness" ) ) );
+    SW_EXPECT_FALSE( instance->isParameterOverridden( sw::hashed_string( "_tint" ) ) );
+}
+
+/**
  * @brief [MaterialTest] 셰이더 구조체에 있는데 머티리얼이 적지 않은 필드는 동기화 오류다 — 0 으로 두지 않는다
  * @details 텍스처 인덱스 필드의 0 은 Vulkan 의 첫 실제 텍스처라, 적지 않은 필드를 0 으로 두면 엉뚱한 텍스처를 읽는다.
  */
