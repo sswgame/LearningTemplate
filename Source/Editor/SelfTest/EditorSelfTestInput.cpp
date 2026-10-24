@@ -4,9 +4,8 @@
 
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include <imgui.h>
 
@@ -52,27 +51,15 @@ namespace sw::editor
             };
 
             /**
-             * @class Session
-             * @brief 입력 큐와 레이블의 소유자입니다. 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다(`SW_EDITOR_SUBSYSTEM`, 아래 별칭 `EditorSelfTestInputSession`).
-             * @details 패널이 부르는 `EditorSelfTestMarks::note` 같은 정적 함수는 이 서브시스템을 `findSubsystem` 으로 찾는다. 함수 정적 지역에 두면 서비스 접근 게이트가 못 보고,
-             *          컨텍스트를 새로 만들어도 이전 레이블과 큐가 남는다. 에디터 컨텍스트가 없으면 찾지 못하고, 그때는 기록할 곳도 넣을 곳도 없으니 아무 일도 하지 않는다.
-             *          이 형은 이 파일 밖에서 찾을 수 없다(익명 이름공간).
+             * @brief 지금 에디터 범위의 입력 상태입니다. 에디터 컨텍스트가 없으면 nullptr 입니다.
+             * @details 상태의 주인은 `EditorStateStore` 다 — 컨텍스트가 `initialize` 에서 맨 먼저 만드는 내장 서브시스템이라 컨텍스트가 있는 순간부터 있다.
+             *          시나리오는 첫 에디터 프레임 앞(런타임 `prepare`)에 `setEnabled( true )` 를 부른다. `SW_EDITOR_SUBSYSTEM` 서브시스템은 첫 프레임 앞의
+             *          `syncExtensionRegistrations` 에서야 만들어져 그때 켜는 일이 조용히 사라졌고, 위젯 레이블이 한 번도 기록되지 않았다.
              */
-            class Session final : public EditorSubsystem
-            {
-            public:
-                static constexpr const utf8* kSubsystemName = "EditorSelfTestInputSession";
-
-                State _state;
-
-                const utf8* getSubsystemName() const override { return kSubsystemName; }
-            };
-
-            /** @brief 지금 에디터 범위의 입력 상태입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
             static State* findState()
             {
-                Session* pSession = editor::findSubsystem<Session>();
-                return pSession != nullptr ? &pSession->_state : nullptr;
+                EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
+                return pStore != nullptr ? &pStore->get<State>() : nullptr;
             }
 
             static void push( PendingEvent&& event )
@@ -82,16 +69,11 @@ namespace sw::editor
                     pState->_listEvent.push_back( std::move( event ) );
             }
         };
-
-        /** @brief `SW_EDITOR_SUBSYSTEM` 이 형 이름을 식별자에 이어 붙이므로 중첩 형에 짧은 이름을 준다. */
-        using EditorSelfTestInputSession = EditorSelfTestInputInternal::Session;
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_SUBSYSTEM( EditorSelfTestInputSession, 9510 );
-
     void EditorSelfTestMarks::note( const utf8* pKey )
     {
         EditorSelfTestInputInternal::State* pState     = EditorSelfTestInputInternal::findState();
@@ -177,11 +159,11 @@ namespace sw::editor
         return false;
     }
 
-    void EditorSelfTestMarks::setEnabled( bool bEnabled )
+    bool EditorSelfTestMarks::setEnabled( bool bEnabled )
     {
         EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         if ( pState == nullptr )
-            return; // 에디터 컨텍스트가 없다 — 기록할 곳도 없다
+            return false; // 에디터 컨텍스트가 없다 — 기록할 곳이 없으니 켠 척하지 않고 알린다
         pState->_bEnabled = bEnabled;
         if ( bEnabled == false )
         {
@@ -189,6 +171,7 @@ namespace sw::editor
             pState->_listEvent.clear();
             pState->_bHoldMouse = false;
         }
+        return true;
     }
 
     bool EditorSelfTestMarks::isEnabled()

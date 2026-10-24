@@ -13,9 +13,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
-#include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
@@ -38,23 +37,23 @@ namespace sw::editor
             };
 
             /**
-             * @class Session
-             * @brief 위 목록의 소유자입니다. 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다(`SW_EDITOR_SUBSYSTEM`, 아래 별칭 `EditorCaptureStepsSession`).
-             * @details 단계 함수는 상태를 받지 못하는 함수 포인터라 `findSubsystem` 으로 찾는다. 정적 변수에 두면 서비스 접근 게이트가 못 보고, 컨텍스트가 바뀌어도 이전 요청 번호가 남는다.
+             * @struct Session
+             * @brief 위 목록의 값입니다. 주인은 `EditorStateStore` 라 컨텍스트와 함께 생기고 사라진다.
+             * @details 단계 함수는 상태를 받지 못하는 함수 포인터라 `findSubsystem` 으로 저장소를 찾는다. 정적 변수에 두면 서비스 접근 게이트가 못 보고, 컨텍스트가 바뀌어도 이전 요청 번호가 남는다.
+             *          저장소는 컨텍스트와 함께 이미 있다 — `SW_EDITOR_SUBSYSTEM` 은 첫 에디터 프레임 앞에야 생겨 시나리오의 첫 프레임 단계가 못 찾았다.
              *          이 형은 이 파일 밖에서 찾을 수 없다(익명 이름공간).
              */
-            class Session final : public EditorSubsystem
+            struct Session
             {
-            public:
-                static constexpr const utf8* kSubsystemName = "EditorCaptureStepsSession";
-
                 vector<PendingCapture> _listPending;
-
-                const utf8* getSubsystemName() const override { return kSubsystemName; }
             };
 
             /** @brief 지금 에디터 범위의 세션입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
-            static Session* findSession() { return editor::findSubsystem<Session>(); }
+            static Session* findSession()
+            {
+                EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
+                return pStore != nullptr ? &pStore->get<Session>() : nullptr;
+            }
 
             static PendingCapture* findPending( const AutomationStep& step )
             {
@@ -155,15 +154,11 @@ namespace sw::editor
                 return true;
             }
         };
-
-        /** @brief `SW_EDITOR_SUBSYSTEM` 이 형 이름을 식별자에 이어 붙이므로 중첩 형에 짧은 이름을 준다. */
-        using EditorCaptureStepsSession = EditorCaptureStepsInternal::Session;
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_SUBSYSTEM( EditorCaptureStepsSession, 9520 );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorCaptureUI, "CaptureEditorUI", &EditorCaptureStepsInternal::runCapture, &EditorCaptureStepsInternal::validateCapture, nullptr,
                                    &EditorCaptureStepsInternal::holdCapture, false );
 } // namespace sw::editor
