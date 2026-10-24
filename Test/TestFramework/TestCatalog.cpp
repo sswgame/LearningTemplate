@@ -78,9 +78,9 @@ namespace test
         _mapEnvironmentSuite[pSuiteName] = { pEnvironmentName, pReason };
     }
 
-    void TestCatalog::addKnownLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason )
+    void TestCatalog::addKnownLog( const utf8* pSuiteName, const utf8* pID, const utf8* pReason )
     {
-        _listKnownLog.push_back( { pSuiteName, pSubstring, pReason, 0 } );
+        _listKnownLog.push_back( { pSuiteName, pID, pReason, 0 } );
     }
 
     void TestCatalog::addTimeBudget( const utf8* pSuiteName, float64 maxCaseMilliseconds, const utf8* pReason )
@@ -164,9 +164,9 @@ namespace test
         TestRegistry::getInstance().getCatalog().addEnvironmentSuite( pSuiteName, pEnvironmentName, pReason );
     }
 
-    KnownLogRegistrar::KnownLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason )
+    KnownLogRegistrar::KnownLogRegistrar( const utf8* pSuiteName, const utf8* pID, const utf8* pReason )
     {
-        TestRegistry::getInstance().getCatalog().addKnownLog( pSuiteName, pSubstring, pReason );
+        TestRegistry::getInstance().getCatalog().addKnownLog( pSuiteName, pID, pReason );
     }
 
     TimeBudgetRegistrar::TimeBudgetRegistrar( const utf8* pSuiteName, float64 maxCaseMilliseconds, const utf8* pReason )

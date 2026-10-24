@@ -39,7 +39,7 @@ namespace sw
             if ( pCollider != nullptr )
                 pCollider->setContinuous( true );
             else
-                SW_LOG_WARNING( "Projectile '%#' has no BoxCollider2DComponent on its object - it moves but can never hit anything", pOwner->getName().c_str() );
+                SW_LOG_WARNING_ID( "Action.ProjectileWithoutCollider", "Projectile '%#' has no BoxCollider2DComponent on its object - it moves but can never hit anything", pOwner->getName().c_str() );
         }
 
         // 흐른 수명은 처음으로 되돌리지 않는다. 날던 중에 상태를 다시 읽은 투사체(플레이 중 되돌리기, 핫 리로드)가 수명을 다시 시작하지 않게 하기 위해서다.

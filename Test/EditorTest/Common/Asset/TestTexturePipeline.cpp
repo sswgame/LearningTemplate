@@ -493,7 +493,7 @@ namespace sw::editor
             SW_EXPECT_FALSE_MSG( config.loadFromJSONString( json ), sw::string( json ) );
             SW_EXPECT_TRUE( config.getPresets().empty() );
             SW_EXPECT_TRUE( config.getRules().empty() );
-            SW_EXPECT_TRUE_MSG( logs.countContaining( "inherits" ) >= 1u, sw::string( json ) + logs.joined() );
+            SW_EXPECT_TRUE_MSG( logs.countWithID( "Texture.ImportPresetInheritsUnknown" ) >= 1u, sw::string( json ) + logs.joined() );
         }
     }
 

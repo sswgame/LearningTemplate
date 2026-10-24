@@ -13,13 +13,22 @@ namespace sw
 
     namespace
     {
-        /** @brief 모르는 이름 한 줄을 남깁니다(@p pWhat 은 `attribute 'x'` · `element <x>` 꼴로 이미 지은 글). Error 가 아니면 Warning 이다. */
-        void logUnknown( LogLevel level, string_view sourceName, const utf8* pOwnerName, const string& what )
+        /** @brief 모르는 속성 이름 한 줄을 남깁니다. Error 가 아니면 Warning 이다(id 는 둘 다 `Xml.UnknownAttribute`). */
+        void logUnknownAttribute( LogLevel level, string_view sourceName, const utf8* pOwnerName, const utf8* pName )
         {
             if ( level == LogLevel::Error )
-                SW_LOG_ERROR( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
+                SW_LOG_ERROR_ID( "Xml.UnknownAttribute", "%#: <%#> has unknown attribute '%#'", sourceName, pOwnerName, pName );
             else
-                SW_LOG_WARNING( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
+                SW_LOG_WARNING_ID( "Xml.UnknownAttribute", "%#: <%#> has unknown attribute '%#'", sourceName, pOwnerName, pName );
+        }
+
+        /** @brief 모르는 자식 원소 이름 한 줄을 남깁니다(id `Xml.UnknownElement`). */
+        void logUnknownElement( LogLevel level, string_view sourceName, const utf8* pOwnerName, const utf8* pName )
+        {
+            if ( level == LogLevel::Error )
+                SW_LOG_ERROR_ID( "Xml.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, pOwnerName, pName );
+            else
+                SW_LOG_WARNING_ID( "Xml.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, pOwnerName, pName );
         }
     } // namespace
 } // namespace sw
@@ -73,7 +82,7 @@ namespace sw
             return true;
         for ( const utf8* pName : listName )
         {
-            logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
+            logUnknownAttribute( level, sourceName, node.getName(), pName );
         }
         return false;
     }
@@ -85,7 +94,7 @@ namespace sw
             return true;
         for ( const utf8* pName : listName )
         {
-            logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
+            logUnknownElement( level, sourceName, node.getName(), pName );
         }
         return false;
     }

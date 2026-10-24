@@ -164,18 +164,18 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
     struct BadCase
     {
         const utf8* _pXML;
-        const utf8* _pMessage;
+        const utf8* _pID;
     };
     const BadCase arrBad[] = {
-        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",     "speed=...> is not a field"},
-        {                                                            "<AIDirector><Phase id=\"A\"/><Wave id=\"x\"/></AIDirector>",        "unknown element <Wave>"},
-        {                                                     "<AIDirector><Phase id=\"A\"><Exit to=\"B\"/></Phase></AIDirector>", "exits to an unknown phase 'B'"},
-        {               "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"often\"><Encounter id=\"e\"/></Pool></AIDirector>",       "unknown trigger 'often'"},
-        {                    "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" pacing=\"Z\"><Encounter id=\"e\"/></Pool></AIDirector>",      "unknown pacing phase 'Z'"},
-        {"<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"budget\" need=\"ammo\"><Encounter id=\"e\"/></Pool></AIDirector>",         "unknown signal 'ammo'"},
-        {                    "<AIDirector><Intensity><Signal id=\"s\" kind=\"pulse\"/></Intensity><Phase id=\"A\"/></AIDirector>",          "unknown kind 'pulse'"},
-        {                                                           "<AIDirector startPhase=\"Z\"><Phase id=\"A\"/></AIDirector>",               "start phase 'Z'"},
-        {                                                                                                         "<AIDirector/>",                    "no <Phase>"},
+        {                                                                "<AIDirector><Phase id=\"A\" speed=\"2\"/></AIDirector>",         "GameData.UnknownField"},
+        {                                                            "<AIDirector><Phase id=\"A\"/><Wave id=\"x\"/></AIDirector>",            "Xml.UnknownElement"},
+        {                                                     "<AIDirector><Phase id=\"A\"><Exit to=\"B\"/></Phase></AIDirector>",   "AI.DirectorExitPhaseUnknown"},
+        {               "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"often\"><Encounter id=\"e\"/></Pool></AIDirector>", "AI.DirectorPoolTriggerUnknown"},
+        {                    "<AIDirector><Phase id=\"A\"/><Pool id=\"p\" pacing=\"Z\"><Encounter id=\"e\"/></Pool></AIDirector>", "AI.DirectorPacingPhaseUnknown"},
+        {"<AIDirector><Phase id=\"A\"/><Pool id=\"p\" trigger=\"budget\" need=\"ammo\"><Encounter id=\"e\"/></Pool></AIDirector>",  "AI.DirectorPoolSignalUnknown"},
+        {                    "<AIDirector><Intensity><Signal id=\"s\" kind=\"pulse\"/></Intensity><Phase id=\"A\"/></AIDirector>",  "AI.DirectorSignalKindUnknown"},
+        {                                                           "<AIDirector startPhase=\"Z\"><Phase id=\"A\"/></AIDirector>",  "AI.DirectorStartPhaseUnknown"},
+        {                                                                                                         "<AIDirector/>",            "AI.DirectorNoPhase"},
     };
     for ( const BadCase& bad : arrBad )
     {
@@ -185,7 +185,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
             SW_TEST_DEFENSIVE_SCOPE( "broken director profile" );
             SW_EXPECT_FALSE( broken.loadFromXMLText( bad._pXML, "Broken" ) );
         }
-        SW_EXPECT_TRUE_MSG( logs.countContaining( bad._pMessage ) >= 1, ( string( bad._pMessage ) + " not reported:" + logs.joined() ).c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( bad._pID ) >= 1, ( string( bad._pID ) + " not reported:" + logs.joined() ).c_str() );
         SW_EXPECT_TRUE( broken.getPhases().empty() );
     }
 }

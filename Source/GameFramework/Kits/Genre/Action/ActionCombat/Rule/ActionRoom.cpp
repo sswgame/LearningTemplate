@@ -243,7 +243,7 @@ namespace sw
         const MonsterDef* pFound = pCatalog->findMonster( monsterID );
         if ( pFound == nullptr )
         {
-            SW_LOG_ERROR( "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
+            SW_LOG_ERROR_ID( "Action.RoomMonsterNotInCatalog", "Monster '%#' is not in the monster catalog - the action room does not spawn it", monsterID.c_str() );
             return -1;
         }
         _listMonsterDef.push_back( *pFound );

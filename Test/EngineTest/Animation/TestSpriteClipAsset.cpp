@@ -123,7 +123,7 @@ SW_TEST_CASE( SpriteClipAssetTest, NamedAnimationsRoundTripAndOutOfRangeIsClampe
         test::ScopedDefensiveTestLog expected( "an animation range past the last frame is clamped and reported" );
         SW_ASSERT_TRUE( clip.parseXML( kClip ) );
     }
-    SW_EXPECT_EQUAL( 1u, logs.countContaining( "clamped or dropped" ) );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Animation.SpriteClipRangeClamped" ) );
     SW_EXPECT_EQUAL( 0, clip._listFrame[0]._durationMs );
 
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( clip._listAnimation.size() ) );

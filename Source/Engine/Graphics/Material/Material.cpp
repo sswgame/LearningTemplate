@@ -509,8 +509,8 @@ namespace sw
         // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
         {
-            SW_LOG_ERROR( "The shader of material '%#' has no material schema ('%#') - declare SW_MATERIAL_BEGIN/END or MaterialCB.",
-                          _desc._name.c_str(), _desc._shaderPath.c_str() );
+            SW_LOG_ERROR_ID( "Material.NoSchema", "The shader of material '%#' has no material schema ('%#') - declare SW_MATERIAL_BEGIN/END or MaterialCB.",
+                             _desc._name.c_str(), _desc._shaderPath.c_str() );
             discardBytesAfterLayoutError();
             return false;
         }
@@ -594,8 +594,8 @@ namespace sw
             }
             if ( pVar == nullptr )
             {
-                SW_LOG_ERROR( "Material '%#' lists property '%#' that the shader struct does not have - remove it from the .material file (%#)",
-                              _desc._name.c_str(), prop._name.c_str(), _desc._shaderPath.c_str() );
+                SW_LOG_ERROR_ID( "Material.PropertyNotInShader", "Material '%#' lists property '%#' that the shader struct does not have - remove it from the .material file (%#)",
+                                 _desc._name.c_str(), prop._name.c_str(), _desc._shaderPath.c_str() );
                 bAllPacked = false;
                 continue;
             }
@@ -634,7 +634,7 @@ namespace sw
             }
             if ( bListed == false )
             {
-                SW_LOG_ERROR( "Material '%#' does not list shader field '%#' - add it to the .material file (%#)", _desc._name.c_str(), var._name.c_str(), _desc._shaderPath.c_str() );
+                SW_LOG_ERROR_ID( "Material.ShaderFieldNotListed", "Material '%#' does not list shader field '%#' - add it to the .material file (%#)", _desc._name.c_str(), var._name.c_str(), _desc._shaderPath.c_str() );
                 bAllPacked = false;
             }
         }

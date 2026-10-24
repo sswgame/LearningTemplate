@@ -189,23 +189,23 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
         test::ScopedDefensiveTestLog expected( "schedule data with unknown names" );
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kBadXML, "bad" ) );
     }
-    const utf8* const arrExpected[] = { "unknown element <Bogus>",
-                                        "unknown attribute 'color'",
-                                        "unknown season 'Winter'",
-                                        "unknown day 'Funday'",
-                                        "needs start < end",
-                                        "unknown activity 'Dance'",
-                                        "unknown place 'nowhere'",
-                                        "invalid start time '25:00'",
-                                        "overlapping blocks",
-                                        "without a place",
-                                        "without an objectKind",
-                                        "unknown weather 'snow'",
-                                        "invalid flags expression",
-                                        "parent cycle" };
-    for ( const utf8* pExpected : arrExpected )
+    const utf8* const arrExpectedID[] = { "Schedule.UnknownElement",
+                                          "Xml.UnknownAttribute",
+                                          "Schedule.ConditionNameUnknown",
+                                          "Schedule.ConditionNameUnknown",
+                                          "Schedule.BlockTimeOrder",
+                                          "Schedule.BlockActivityUnknown",
+                                          "Schedule.BlockPlaceUnknown",
+                                          "Schedule.TimeInvalid",
+                                          "Schedule.BlocksOverlap",
+                                          "Schedule.BlockWithoutPlace",
+                                          "Schedule.BlockWithoutObjectKind",
+                                          "Schedule.ConditionNameUnknown",
+                                          "Schedule.FlagsInvalid",
+                                          "Schedule.ArchetypeParentCycle" };
+    for ( const utf8* pExpected : arrExpectedID )
     {
-        SW_EXPECT_TRUE_MSG( logs.countContaining( pExpected ) >= 1, ( string( "missing warning: " ) + pExpected + logs.joined() ).c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countWithID( pExpected ) >= 1, ( string( "missing warning id: " ) + pExpected + logs.joined() ).c_str() );
     }
     const ScheduleNpcDef* pNpc = catalog.findNpc( "x" );
     SW_ASSERT_NOT_NULL( pNpc );

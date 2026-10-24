@@ -4544,7 +4544,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
             test::ScopedLogCollector collector;
             test::RHITestImage       brokenImage;
             (void)renderPresentCaptureOf( device.get(), cube._scene, test::makeTempResourceID( brokenPath ).c_str(), brokenImage );
-            SW_EXPECT_TRUE_MSG( collector.countContaining( "no color output" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
+            SW_EXPECT_TRUE_MSG( collector.countWithID( "Renderer.PassNoColorOutput" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
     }
 

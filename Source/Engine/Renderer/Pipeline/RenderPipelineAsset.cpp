@@ -366,8 +366,8 @@ namespace sw
                                              getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
                     {
-                        SW_LOG_ERROR( "[%#] pass '%#' (%#): no color output - this pass draws to the color attachments declared in _listOutput",
-                                      sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "Renderer.PassNoColorOutput", "[%#] pass '%#' (%#): no color output - this pass draws to the color attachments declared in _listOutput",
+                                         sourcePath, pass._name, pass._type );
                         ++issueCount;
                     }
                     const bool bSkipGBufferOutputCheck = pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||

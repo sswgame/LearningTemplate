@@ -252,7 +252,7 @@ namespace sw
                     }
                     if ( bRead == false )
                     {
-                        SW_LOG_ERROR( "Material value '%#' has an unreadable number '%#'", value, tokens[wordIndex] );
+                        SW_LOG_ERROR_ID( "Material.UnreadableNumber", "Material value '%#' has an unreadable number '%#'", value, tokens[wordIndex] );
                         return false;
                     }
                 }
@@ -282,7 +282,7 @@ namespace sw
                 int64 enumVal{ 0 };
                 if ( tryParseEnumOrFlags( prop, prop._value, bFlags, enumVal ) == false )
                 {
-                    SW_LOG_WARNING( "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
+                    SW_LOG_WARNING_ID( "Material.UnknownEnumValue", "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
                     return false;
                 }
                 if ( bFlags == false && shaderType == MaterialPropertyType::Int )
@@ -339,7 +339,7 @@ namespace sw
                 float32 floatVal{ 0.0f };
                 if ( StringUtil::parseFloat( prop._value, floatVal ) == false )
                 {
-                    SW_LOG_ERROR( "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
+                    SW_LOG_ERROR_ID( "Material.UnreadableNumber", "Material parameter '%#' has an unreadable number '%#'", prop._name, prop._value );
                     return false;
                 }
                 if ( prop._min < prop._max )
@@ -498,7 +498,7 @@ namespace sw
         bool value{ false };
         if ( StringUtil::trim( token ).empty() || StringUtil::tryParseBool( token, value ) == false )
         {
-            SW_LOG_ERROR( "Material value '%#' has an unreadable boolean '%#'", name, token );
+            SW_LOG_ERROR_ID( "Material.UnreadableBoolean", "Material value '%#' has an unreadable boolean '%#'", name, token );
             return false;
         }
         outValue = value;

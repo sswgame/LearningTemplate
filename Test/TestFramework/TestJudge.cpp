@@ -74,7 +74,7 @@ namespace test
             const std::lock_guard<std::mutex> lock( pState->_mutex );
             for ( KnownLog* pKnown : pState->_listKnownLog )
             {
-                if ( message.find( sw::string_view{ pKnown->_substring.c_str(), pKnown->_substring.size() } ) == sw::string_view::npos )
+                if ( entry._pID == nullptr || pKnown->_id != entry._pID )
                     continue;
                 ++pKnown->_hitCount;
                 return;

@@ -697,7 +697,7 @@ namespace sw
             {
                 for ( const TextGatherIssue& issue : memoryReport._listIssue )
                 {
-                    SW_LOG_ERROR( "[ExportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
+                    SW_LOG_ERROR_ID( "Localization.ExportPoMemoryUnreadable", "[ExportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
                 }
                 bAllWritten = false;
                 continue;

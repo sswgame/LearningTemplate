@@ -148,8 +148,8 @@ namespace sw
         if ( size > getMaxMessageSize( channel ) )
         {
             // 부른 쪽의 실수다(키트 예산이나 상한 상수). 조용히 버리면 받는 쪽은 영영 모른다.
-            SW_LOG_ERROR( "NetConnection: a %# byte message exceeds the %# byte limit of channel %# - not sent", size, getMaxMessageSize( channel ),
-                          static_cast<int32>( channel ) );
+            SW_LOG_ERROR_ID( "Net.MessageTooLarge", "NetConnection: a %# byte message exceeds the %# byte limit of channel %# - not sent", size, getMaxMessageSize( channel ),
+                             static_cast<int32>( channel ) );
             return false;
         }
         switch ( channel )

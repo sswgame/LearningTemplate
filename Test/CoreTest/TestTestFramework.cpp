@@ -56,7 +56,7 @@ namespace
     /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 남깁니다. */
     void logProbeError()
     {
-        SW_LOG_ERROR( "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
+        SW_LOG_ERROR_ID( "Test.ProbeError", "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
     }
 
     /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Warning 을 하나 남깁니다. */
@@ -411,26 +411,26 @@ SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
 
 /**
  * @brief [TestFrameworkTest] 알려진 Error 선언은 그 스위트 · 그 문구만 견딘다
- * @details `SW_TEST_KNOWN_LOG` 는 원인이 엔진에 있고 아직 못 고친 Error 를 그 스위트에서만 빼 준다. 다른 문구나 다른 스위트까지
+ * @details `SW_TEST_KNOWN_LOG` 는 원인이 엔진에 있고 아직 못 고친 Error 를 그 스위트에서만 빼 준다. 다른 id 나 다른 스위트까지
  *          빼 주면 호스트 스위트의 Error 판정이 다시 구멍이 된다.
  */
-SW_TEST_CASE( TestFrameworkTest, KnownLogIsToleratedOnlyForItsSuiteAndText )
+SW_TEST_CASE( TestFrameworkTest, KnownLogIsToleratedOnlyForItsSuiteAndID )
 {
     test::TestRegistry knownRegistry;
     knownRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    knownRegistry.getCatalog().addKnownLog( "GpuProbeTest", "Deliberate probe error", "probe" );
+    knownRegistry.getCatalog().addKnownLog( "GpuProbeTest", "Test.ProbeError", "probe" );
     knownRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "a declared known error must be tolerated" );
 
     test::TestRegistry otherTextRegistry;
     otherTextRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    otherTextRegistry.getCatalog().addKnownLog( "GpuProbeTest", "some other text", "probe" );
+    otherTextRegistry.getCatalog().addKnownLog( "GpuProbeTest", "Test.OtherID", "probe" );
     otherTextRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
-    SW_EXPECT_TRUE_MSG( otherTextRegistry.runAllTests() == 1, "a known error must not tolerate a different text" );
+    SW_EXPECT_TRUE_MSG( otherTextRegistry.runAllTests() == 1, "a known error must not tolerate a different id" );
 
     test::TestRegistry otherSuiteRegistry;
     otherSuiteRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
-    otherSuiteRegistry.getCatalog().addKnownLog( "OtherProbeTest", "Deliberate probe error", "probe" );
+    otherSuiteRegistry.getCatalog().addKnownLog( "OtherProbeTest", "Test.ProbeError", "probe" );
     otherSuiteRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "a known error must not tolerate another suite" );
 }

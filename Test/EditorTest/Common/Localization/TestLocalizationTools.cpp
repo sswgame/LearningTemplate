@@ -301,7 +301,7 @@ SW_TEST_CASE( TranslationExchangeTest, ExportWithBrokenMemoryFailsAndWritesNothi
     SW_EXPECT_FALSE( bExported );
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
     SW_EXPECT_FALSE( sw::FileUtil::exists( listResult[0]._path ) );
-    SW_EXPECT_TRUE_MSG( collector.countContaining( "ko.tm.xml" ) > 0, collector.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( collector.countWithID( "Localization.ExportPoMemoryUnreadable" ) > 0, collector.joined().c_str() );
 }
 
 /**

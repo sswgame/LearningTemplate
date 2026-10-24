@@ -19,7 +19,7 @@ namespace test
         /** @brief 스위트가 바깥 환경을 요구하며 환경 변수 @p pEnvironmentName 이 그 주소를 준다고 선언합니다(`SW_TEST_REQUIRES_ENVIRONMENT`). */
         void addEnvironmentSuite( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason );
         /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 더합니다(`SW_TEST_KNOWN_LOG`). */
-        void addKnownLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
+        void addKnownLog( const utf8* pSuiteName, const utf8* pID, const utf8* pReason );
         /** @brief 스위트의 케이스 하나가 넘지 말아야 할 시간을 선언합니다(`SW_TEST_TIME_BUDGET`). */
         void addTimeBudget( const utf8* pSuiteName, float64 maxCaseMilliseconds, const utf8* pReason );
 
@@ -89,7 +89,7 @@ namespace test
     class KnownLogRegistrar
     {
     public:
-        KnownLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
+        KnownLogRegistrar( const utf8* pSuiteName, const utf8* pID, const utf8* pReason );
     };
 } // namespace test
 
@@ -140,14 +140,14 @@ namespace test
 /**
  * @brief 호스트 스위트가 남기는 Error 로그 가운데 **아직 고치지 못한 것** 하나를 견딥니다.
  * @param SuiteName 그 스위트(`SW_TEST_REQUIRES_HOST` 로 선언한 것).
- * @param substring 그 Error 줄에 든 고정 문구(영문 원문).
+ * @param id 그 Error 줄의 로그 id(`SW_LOG_ERROR_ID`) — 문구가 아니라 사건으로 찾는다. id 가 없는 줄이면 소스에서 id 를 붙인다.
  * @param reason    왜 견디는지 · 어디서 고칠지(영문 — 실행 요약에 찍힌다).
  * @details 호스트 스위트의 케이스는 예상 밖 Error 로그 하나로 진다(검증 레이어 · 드라이버 오류가 단언 없이 지나가지 않게).
  *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 테스트 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
  *          실행 요약이 견딘 줄 수를 찍고, 한 번도 나오지 않았으면 "지워도 된다" 고 알린다. 고쳤으면 이 줄을 지운다.
  */
-#define SW_TEST_KNOWN_LOG( SuiteName, substring, reason ) \
-    static test::KnownLogRegistrar SW_CONCAT( knownLog_##SuiteName##_, __LINE__ )( #SuiteName, substring, reason )
+#define SW_TEST_KNOWN_LOG( SuiteName, id, reason ) \
+    static test::KnownLogRegistrar SW_CONCAT( knownLog_##SuiteName##_, __LINE__ )( #SuiteName, id, reason )
 
 /**
  * @brief 스위트의 케이스 하나가 @p milliseconds 를 넘지 말아야 한다고 선언합니다(시간 예산 — `TimeBudget`).

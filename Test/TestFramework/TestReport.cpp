@@ -177,10 +177,10 @@ namespace test
             for ( const KnownLog& known : catalog.getListKnownLog() )
             {
                 if ( known._hitCount > 0 )
-                    std::fprintf( stdout, "   %s: tolerated %u line(s) containing '%s' - %s\n", known._suiteName.c_str(), known._hitCount, known._substring.c_str(),
+                    std::fprintf( stdout, "   %s: tolerated %u line(s) with log id '%s' - %s\n", known._suiteName.c_str(), known._hitCount, known._id.c_str(),
                                   known._reason.c_str() );
                 else
-                    std::fprintf( stdout, "   %s: '%s' did not appear in this run - delete the declaration if it is fixed\n", known._suiteName.c_str(), known._substring.c_str() );
+                    std::fprintf( stdout, "   %s: '%s' did not appear in this run - delete the declaration if it is fixed\n", known._suiteName.c_str(), known._id.c_str() );
             }
         }
 

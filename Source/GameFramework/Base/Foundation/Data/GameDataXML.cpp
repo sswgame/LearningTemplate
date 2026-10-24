@@ -202,7 +202,7 @@ namespace sw
             }
             if ( pFound == nullptr )
             {
-                SW_LOG_ERROR( "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() );
+                SW_LOG_ERROR_ID( "GameData.UnknownField", "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() );
                 bOk = false;
                 continue;
             }

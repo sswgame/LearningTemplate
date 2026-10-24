@@ -66,7 +66,7 @@ namespace sw
                     const bool bInvalidDayRange = bValid == false || first < 1 || last < first || maxDay < last;
                     if ( bInvalidDayRange )
                     {
-                        SW_LOG_WARNING( "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
+                        SW_LOG_WARNING_ID( "Schedule.DayListInvalid", "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
                         return;
                     }
                     for ( int32 day = first; day <= last; ++day )
@@ -97,7 +97,7 @@ namespace sw
                 const bool bInvalidSeasonDate = seasonName.empty() || StringUtil::parseInt( dayText, day ) == false || day < 1;
                 if ( bInvalidSeasonDate )
                 {
-                    SW_LOG_WARNING( "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
+                    SW_LOG_WARNING_ID( "Schedule.DateInvalid", "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
                     return false;
                 }
                 outSeason = hashed_string( seasonName );
@@ -115,7 +115,7 @@ namespace sw
                 for ( const hashed_string& name : listName )
                 {
                     if ( VectorUtil::contains( listKnown, name ) == false )
-                        SW_LOG_WARNING( "%#: '%#' has an unknown %# '%#'", sourceName, ownerName, pKind, name.c_str() );
+                        SW_LOG_WARNING_ID( "Schedule.ConditionNameUnknown", "%#: '%#' has an unknown %# '%#'", sourceName, ownerName, pKind, name.c_str() );
                 }
             }
 
@@ -249,7 +249,7 @@ namespace sw
             _maxAffinity = *maxAffinity;
         if ( _minAffinity > _maxAffinity )
         {
-            SW_LOG_ERROR( "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
+            SW_LOG_ERROR_ID( "Schedule.AffinityRangeEmpty", "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
             bValid = false;
         }
 
@@ -274,7 +274,7 @@ namespace sw
             bool            bIgnored = false;
             if ( GameFlags::parseCondition( _flags, noFlags, bIgnored ) == false )
             {
-                SW_LOG_ERROR( "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
+                SW_LOG_ERROR_ID( "Schedule.FlagsInvalid", "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
                 bValid = false;
             }
         }

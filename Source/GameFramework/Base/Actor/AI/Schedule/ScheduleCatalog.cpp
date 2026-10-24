@@ -75,7 +75,7 @@ namespace sw
                 int32 minutes = 0;
                 if ( ScheduleCatalog::parseClockMinutes( pText, minutes ) )
                     return minutes;
-                SW_LOG_WARNING( "%#: '%#' has an invalid %# time '%#' (expected H:MM in 0:00..24:00)", sourceName, ownerName, pName, pText );
+                SW_LOG_WARNING_ID( "Schedule.TimeInvalid", "%#: '%#' has an invalid %# time '%#' (expected H:MM in 0:00..24:00)", sourceName, ownerName, pName, pText );
                 inoutbValid = false;
                 return fallback;
             }
@@ -186,7 +186,7 @@ namespace sw
                 const utf8* pName       = node.getName();
                 const int32 elementPass = Internal::findElementPass( pName );
                 if ( elementPass < 0 && pass == 0 )
-                    SW_LOG_WARNING( "%#: unknown element <%#>", sourceName, pName );
+                    SW_LOG_WARNING_ID( "Schedule.UnknownElement", "%#: unknown element <%#>", sourceName, pName );
                 if ( elementPass == pass )
                     loadedCount += loadElement( node, sourceName );
             }
@@ -276,7 +276,7 @@ namespace sw
             }
             if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
             {
-                SW_LOG_ERROR( "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
+                SW_LOG_ERROR_ID( "Schedule.AppointmentTimeOrder", "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
                 bValid = false;
             }
             if ( bValid )
@@ -438,12 +438,12 @@ namespace sw
         const ScheduleActivityDef* pActivity = getActivityRegistry().findActivity( outBlock._activity );
         if ( pActivity == nullptr )
         {
-            SW_LOG_WARNING( "%#: '%#' has a block with an unknown activity '%#' - skipped", sourceName, ownerName, outBlock._activity.c_str() );
+            SW_LOG_WARNING_ID( "Schedule.BlockActivityUnknown", "%#: '%#' has a block with an unknown activity '%#' - skipped", sourceName, ownerName, outBlock._activity.c_str() );
             return false;
         }
         if ( outBlock._place.empty() == false && findPlace( outBlock._place ) == nullptr )
         {
-            SW_LOG_WARNING( "%#: '%#' has a block with an unknown place '%#' - skipped", sourceName, ownerName, outBlock._place.c_str() );
+            SW_LOG_WARNING_ID( "Schedule.BlockPlaceUnknown", "%#: '%#' has a block with an unknown place '%#' - skipped", sourceName, ownerName, outBlock._place.c_str() );
             return false;
         }
 
@@ -455,7 +455,7 @@ namespace sw
             {
                 if ( outBlock._place.empty() )
                 {
-                    SW_LOG_WARNING( "%#: '%#' has a %# block without a place - skipped", sourceName, ownerName, outBlock._activity.c_str() );
+                    SW_LOG_WARNING_ID( "Schedule.BlockWithoutPlace", "%#: '%#' has a %# block without a place - skipped", sourceName, ownerName, outBlock._activity.c_str() );
                     return false;
                 }
                 break;
@@ -464,7 +464,7 @@ namespace sw
             {
                 if ( outBlock._objectKind.empty() )
                 {
-                    SW_LOG_WARNING( "%#: '%#' has a %# block without an objectKind - skipped", sourceName, ownerName, outBlock._activity.c_str() );
+                    SW_LOG_WARNING_ID( "Schedule.BlockWithoutObjectKind", "%#: '%#' has a %# block without an objectKind - skipped", sourceName, ownerName, outBlock._activity.c_str() );
                     return false;
                 }
                 break;
@@ -505,7 +505,7 @@ namespace sw
         }
         if ( bValid && ( outBlock._startMinute < 0 || outBlock._endMinute <= outBlock._startMinute ) )
         {
-            SW_LOG_WARNING( "%#: '%#' has a %# block that needs start < end - skipped", sourceName, ownerName, outBlock._activity.c_str() );
+            SW_LOG_WARNING_ID( "Schedule.BlockTimeOrder", "%#: '%#' has a %# block that needs start < end - skipped", sourceName, ownerName, outBlock._activity.c_str() );
             bValid = false;
         }
         return bValid;
@@ -528,7 +528,7 @@ namespace sw
             const ScheduleBlockDef& previous = listBlock[static_cast<size_t>( listOrder[orderIndex - 1] )];
             const ScheduleBlockDef& current  = listBlock[static_cast<size_t>( listOrder[orderIndex] )];
             if ( current._startMinute < previous._endMinute )
-                SW_LOG_WARNING( "%#: '%#' has overlapping blocks (%# and %#)", sourceName, ownerName, previous._activity.c_str(), current._activity.c_str() );
+                SW_LOG_WARNING_ID( "Schedule.BlocksOverlap", "%#: '%#' has overlapping blocks (%# and %#)", sourceName, ownerName, previous._activity.c_str(), current._activity.c_str() );
         }
     }
 
@@ -554,7 +554,7 @@ namespace sw
             const bool bCycle = current.empty() == false && ( current == archetype._id || step > archetypeCount );
             if ( bCycle )
             {
-                SW_LOG_WARNING( "%#: archetype '%#' is part of a parent cycle - parent dropped", sourceName, archetype._id.c_str() );
+                SW_LOG_WARNING_ID( "Schedule.ArchetypeParentCycle", "%#: archetype '%#' is part of a parent cycle - parent dropped", sourceName, archetype._id.c_str() );
                 archetype._parent = hashed_string{};
                 (void)_archetypeCatalog.add( archetype );
             }

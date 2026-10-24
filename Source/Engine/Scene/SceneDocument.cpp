@@ -395,8 +395,8 @@ namespace sw
         arch >> version;
         if ( version != SceneDocumentInternal::kBinVersion )
         {
-            SW_LOG_ERROR( "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                          SceneDocumentInternal::kBinVersion );
+            SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
+                             SceneDocumentInternal::kBinVersion );
             return false;
         }
 

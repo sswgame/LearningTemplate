@@ -1392,7 +1392,7 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
                 if ( std::find( s_listCheckedBackend.begin(), s_listCheckedBackend.end(), backend ) == s_listCheckedBackend.end() )
                 {
                     s_listCheckedBackend.push_back( backend );
-                    SW_EXPECT_TRUE_MSG( collector.countContaining( "its vertex buffer" ) > 0,
+                    SW_EXPECT_TRUE_MSG( collector.countWithID( "RHI.DrawSkippedVertexBufferDestroyed" ) > 0,
                                         ( backend + ": 버린 드로우를 알리지 않았습니다 — " + collector.joined() ).c_str() );
                 }
             }

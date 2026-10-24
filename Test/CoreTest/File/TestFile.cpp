@@ -126,7 +126,7 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
         SW_EXPECT_FALSE( sw::FileUtil::ensureParentDirectoryExists( sw::FileUtil::joinPath( blocker, "child/leaf.txt" ) ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "File.CreateDirectoryFailed" ) == 2, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "blocker" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Registration.DuplicateName" ) == 2, logs.joined().c_str() );
 }
 
 /**

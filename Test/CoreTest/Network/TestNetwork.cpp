@@ -1911,7 +1911,7 @@ SW_TEST_CASE( NetworkTest, OversizedMessagesAreRefusedLoudlyAndAFullWindowQuietl
         SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
         SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::UnreliableSequenced, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
         SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::Unreliable, unfragmented.data(), static_cast<int32>( unfragmented.size() ) ) );
-        SW_EXPECT_EQUAL( 3u, log.countContaining( "exceeds the" ) );
+        SW_EXPECT_EQUAL( 3u, log.countWithID( "Net.MessageTooLarge" ) );
     }
     SW_EXPECT_EQUAL( 0, connection.getPendingReliableCount() ); // 거절한 것은 조각 하나도 남기지 않는다
     SW_EXPECT_FALSE( connection.hasDataToSend( 0.0 ) );

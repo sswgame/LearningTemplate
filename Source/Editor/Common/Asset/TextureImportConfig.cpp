@@ -181,7 +181,7 @@ namespace sw::editor
         if ( itParent == _mapPreset.end() )
         {
             // 찾기는 그 시점까지 파싱된 프리셋만 본다 — 부모를 아래쪽에 적어도 여기로 온다.
-            SW_LOG_ERROR( "TextureImportConfig: inherits '%#' is not a preset defined above (typo, or the parent is written below)", inheritName.c_str() );
+            SW_LOG_ERROR_ID( "Texture.ImportPresetInheritsUnknown", "TextureImportConfig: inherits '%#' is not a preset defined above (typo, or the parent is written below)", inheritName.c_str() );
             return false;
         }
 

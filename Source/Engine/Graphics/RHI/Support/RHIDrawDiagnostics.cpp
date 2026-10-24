@@ -33,6 +33,6 @@ namespace sw
     {
         const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
         if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR( "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 } // namespace sw
