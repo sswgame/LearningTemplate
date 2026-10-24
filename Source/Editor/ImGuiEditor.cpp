@@ -534,7 +534,7 @@ namespace sw::editor
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
         // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
-        EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
+        _dockLayout.setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
         _dockLayout.initializePersistencePaths();
         _dockLayout.applyIniFilename();
 

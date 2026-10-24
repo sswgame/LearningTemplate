@@ -11,6 +11,7 @@
 
 namespace sw
 {
+    struct DebugLine;
     struct float4x4;
 
     class BoxCollider2DComponent;
@@ -50,9 +51,10 @@ namespace sw::editor
          * @brief 디버그 큐가 확정한(`getVisible*`) 선과 구를 월드 선분으로 이어 붙입니다. 구는 대원 세 개이며 각각 `DebugDrawQueue::kSphereCircleSegmentCount` 개의 선분입니다(펼치기는 `DebugDrawQueue::appendVisibleSegments`).
          * @param bFlat2D 2D 뷰(직교 카메라가 Z 축을 본다)이면 true 입니다. 구는 XY 평면의 원 하나만 만듭니다. 다른 두 대원은 그 뷰에서 중심을 지나는
          *                선으로 겹쳐 보일 뿐입니다.
+         * @param listScratchLine 큐의 선분을 펼치는 중간 버퍼입니다. 부르는 쪽이 소유하고 재사용한다(이 함수는 비우고 쓴다) — 함수 정적 버퍼를 두지 않는다.
          * @details @p outListSegment 를 비우지 않고 뒤에 붙인다. 호출하는 쪽이 프레임마다 재사용 버퍼를 비운다.
          */
-        static void appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<EditorWorldSegment>& outListSegment );
+        static void appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<DebugLine>& listScratchLine, vector<EditorWorldSegment>& outListSegment );
         /**
          * @brief 이 뷰가 2D(직교 투영이고 시선이 월드 Z 축과 나란하다)인지 판단합니다.
          * @param bOrthographic 카메라가 직교 투영이면 true 입니다.

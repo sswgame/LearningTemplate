@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Console/ConsolePanel.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"

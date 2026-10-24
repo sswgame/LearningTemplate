@@ -514,8 +514,16 @@
   주인이 따로 없으므로 **에디터 범위의 상태 저장소** `EditorStateStore` 가 소유한다 — `getEditorState<T>()` 가 타입마다 값 하나를 처음 물을 때 `T{}` 로 만든다. 저장소는 `EditorContext` 가 맨 먼저 만들어
   컨텍스트와 함께 사라지고, 테스트는 `ScopedEditorStateService` 로 자기 몫을 건다. **EditorModule 안의 코드만 쓴다** — 확장 모듈 코드는 모듈이 내려갈 때 vtable 이 사라지므로 패널 멤버나
   `SW_EDITOR_SUBSYSTEM`(내려가기 전에 종료한다)을 쓴다. 상태 타입은 그 번역 단위의 `XxxInternal` 안에 둔다(타입 해시 열쇠라 이름이 겹치는 익명 타입 둘을 크기로 잡는다).
-  `EditorUIContext::getCurrent()` 는 값을 따로 들지 않고 ImGui · ImPlot 의 현재 컨텍스트를 묻는다(주인이 ImGui 자신이다). 남은 것: 등록 줄이 가리키는 설정 인스턴스(`EditorSettingsInstance<T>`)는 등록한
-  DLL 의 함수 정적이 설계다(`hasSectionWithin` 이 언로드 훅과 짝) — 따로 주인을 두는 설계가 필요하다.
+  `EditorUIContext::getCurrent()` 는 값을 따로 들지 않고 ImGui · ImPlot 의 현재 컨텍스트를 묻는다(주인이 ImGui 자신이다). 같은 규칙을 이어서 적용했다(2026-10-25):
+  (가) 환경설정 섹션 값은 등록자 `EditorSettingsRegistrar<T>` 가 멤버로 든다 — 등록 항목이 값 포인터와 '파일 값 입힘' 표시를 가지므로 모듈이 내려가면 값과 표시가 함께 사라지고 다시 올라오면 새로 생긴다
+  (함수 정적 인스턴스 · 입힘 주소 목록 · `forgetSectionsWithin` 을 지웠다). 등록되지 않은 섹션을 읽으면 기본값으로 대신하지 않고 멈춘다(`getSettingsRegistration`), 고칠 때는 `editPreferences<T>()`.
+  (나) `ScopeOwned` 로 프로세스에 하나씩 둔 에디터 · 플러그인의 재사용 버퍼는 소유 상태 구조체로 옮겼다(상태 저장소, 메시 모디파이어는 확장 서브시스템 `MeshModifiersVisualizerState`). 저장소 없이 도는 테스트가 있는
+  기하 유틸은 중간 버퍼를 인자로 받는다. 메시 모디파이어의 작업 관리자는 전역 설정 함수 대신 평가(`MeshModifierEvaluation::_pTaskManager`)가 싣는다.
+  (다) `thread_local` 이 소유자인 상태는 짝을 맞출 대상이 스레드가 아니면 옮긴다 — `EditorChrome` begin/end 스택은 상태 저장소로, `makeIconLabel` 은 자기 버퍼를 든 값(`EditorIconLabel`)으로 돌려준다. X11 백엔드의 활성 포인터는 ImGui 가
+  백엔드용으로 둔 `BackendPlatformUserData` 에 건다. 콜백에 사용자 포인터가 없는 ImGui 렌더러 가로채기의 원래 함수 포인터는 상태 저장소에서 찾는다.
+  (라) Internal 의 가변 `inline static` 은 쓰는 객체의 멤버(`EditorDockLayout`)나 번역 단위 `State` 로 옮겼다. 옮기지 않은 것은 프로세스 단위가 성질인 값이다 — 엔진 · 코어의 ID 발급기와 파일 열기 계수기
+  (`GameSound` · `AppearanceDatabase` · `PlatformFileUtil`), 디스크 마운트 · 경로 캐시(`ResourcePaths`), 쿠커의 해시 · 스탬프 캐시(`ShaderCookStamp` · `ContentHash` · `CookJob`), RenderDoc API 핸들, 모듈 리로드 세대(`ModuleShadowCopy`),
+  엔진 수명 범위가 소유하는 `ScopeOwned` 캐시들. 에디터 범위가 소유할 값이 아니다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의

@@ -13,16 +13,14 @@ namespace sw::editor
 {
     namespace
     {
-        TaskManager* s_pTaskManager = nullptr;
-
         struct MeshModifierInternal
         {
             /** @brief [0, count) 를 작업 관리자로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다(`engine::runParallel` 과 같은 규칙). */
-            static void runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
+            static void runBlocks( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
             {
-                if ( s_pTaskManager != nullptr )
+                if ( pTaskManager != nullptr )
                 {
-                    s_pTaskManager->runParallel( count, serialThreshold, body );
+                    pTaskManager->runParallel( count, serialThreshold, body );
                     return;
                 }
                 if ( count > 0 && body.isBound() )
@@ -143,7 +141,7 @@ namespace sw::editor
                 }
             };
 
-            static void transformMesh( MeshModifierMesh& inoutMesh, const float4x4& pointMatrix, const float4x4& normalMatrix )
+            static void transformMesh( TaskManager* pTaskManager, MeshModifierMesh& inoutMesh, const float4x4& pointMatrix, const float4x4& normalMatrix )
             {
                 TransformJob job{};
                 job._pPosition    = inoutMesh._listPosition.data();
@@ -151,7 +149,7 @@ namespace sw::editor
                 job._pointMatrix  = pointMatrix;
                 job._normalMatrix = normalMatrix;
                 job._vertexCount  = inoutMesh.getVertexCount();
-                runBlocks( MeshModifierUtil::computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
+                runBlocks( pTaskManager, MeshModifierUtil::computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
             }
 
             static bool isScalarKind( MeshModifierParamKind kind )
@@ -305,12 +303,12 @@ namespace sw::editor
             context._pListOriginalPosition = &listOriginalPosition;
         }
 
-        MeshModifierInternal::transformMesh( inoutMesh, localToModifier, localToModifierNormal );
+        MeshModifierInternal::transformMesh( evaluation._pTaskManager, inoutMesh, localToModifier, localToModifierNormal );
         context._bounds = MeshModifierBounds::makeFromPoints( inoutMesh._listPosition );
         if ( evaluation._pListInputBounds != nullptr )
             evaluation._pListInputBounds->push_back( context._bounds );
         applyToMesh( inoutMesh, context );
-        MeshModifierInternal::transformMesh( inoutMesh, modifierToLocal, modifierToLocalNormal );
+        MeshModifierInternal::transformMesh( evaluation._pTaskManager, inoutMesh, modifierToLocal, modifierToLocalNormal );
     }
 
     float3 MeshModifier::deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const
@@ -332,13 +330,8 @@ namespace sw::editor
         job._pOriginalPosition = context._pListOriginalPosition != nullptr ? context._pListOriginalPosition->data() : nullptr;
         job._vertexCount       = inoutMesh.getVertexCount();
         job._step              = MeshModifierUtil::computeJacobianStep( context._bounds );
-        MeshModifierInternal::runBlocks( MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() ), 2,
+        MeshModifierInternal::runBlocks( context.getTaskManager(), MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() ), 2,
                                          SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
-    }
-
-    void setMeshModifierTaskManager( TaskManager* pTaskManager )
-    {
-        s_pTaskManager = pTaskManager;
     }
 
     void MeshModifier::fitToBounds( const MeshModifierBounds& localBounds )
@@ -596,9 +589,9 @@ namespace sw::editor
         return static_cast<uint32>( ( vertexCount + kChunkVertexCount - 1 ) / kChunkVertexCount );
     }
 
-    void MeshModifierUtil::runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
+    void MeshModifierUtil::runBlocks( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
     {
-        MeshModifierInternal::runBlocks( count, serialThreshold, body );
+        MeshModifierInternal::runBlocks( pTaskManager, count, serialThreshold, body );
     }
 
     float32 MeshModifierUtil::computeJacobianStep( const MeshModifierBounds& bounds )

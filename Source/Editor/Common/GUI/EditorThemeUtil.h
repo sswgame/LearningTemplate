@@ -3,6 +3,7 @@
  * @brief 에디터의 Look & Feel 테마 설정과 실시간 스타일 적용을 담당하는 유틸리티입니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
@@ -19,6 +20,26 @@ namespace sw
 namespace sw::editor
 {
     enum class EditorAssetType : uint8;
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorIconLabel
+     * @brief "아이콘 + 공백 두 개 + 라벨" 문자열 값입니다(`EditorThemeUtil::makeIconLabel` 이 만듭니다). 자기 버퍼를 들고 `const utf8*` 로 바뀝니다.
+     * @details 호출마다 따로 만들어지는 값이라 한 호출에 두 개를 넘겨도 서로 덮어쓰지 않고, 호출 스레드마다 정적 버퍼를 둘 필요가 없다.
+     *          변환한 포인터는 이 값이 사라질 때(그 식이 끝날 때)까지만 유효하다 - ImGui 호출 인자로 바로 넘기고 변수에 담지 않는다.
+     */
+    class SW_EDITOR_API EditorIconLabel
+    {
+    public:
+        EditorIconLabel( const utf8* pIcon, const utf8* pLabel );
+
+        operator const utf8*() const { return _arrText; }
+
+    private:
+        utf8 _arrText[constant::kMaxBuffer256];
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -147,10 +168,9 @@ namespace sw::editor
 
         /**
          * @brief "아이콘 + 공백 두 개 + 라벨" 문자열을 만듭니다. ImGui 라벨 앞에 아이콘을 붙일 때 씁니다.
-         * @details 반환값은 호출한 스레드의 고정 버퍼이므로 다음 호출 전까지만 유효하다. ImGui 호출 인자로 바로 넘긴다. 한 호출에 두 번 넘기면
-         *          두 번째가 첫 번째를 덮어쓴다. 그런 경우에는 지역 fixed_string 을 쓴다.
+         * @details 반환값은 자기 버퍼를 든 값이다(`EditorIconLabel`). ImGui 호출 인자로 바로 넘긴다. 한 호출에 두 번 넘겨도 된다.
          */
-        static const utf8* makeIconLabel( const utf8* pIcon, const utf8* pLabel );
+        static EditorIconLabel makeIconLabel( const utf8* pIcon, const utf8* pLabel );
 
         /**
          * @brief 아이콘 글리프 하나를 사각형 가운데에 그립니다. 글리프 높이는 사각형 짧은 변의 @p sizeRatio 배입니다.

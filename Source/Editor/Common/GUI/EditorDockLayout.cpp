@@ -26,9 +26,6 @@ namespace sw::editor
             /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이므로 겹치지 않습니다. */
             static constexpr const utf8* kOpenAllPanels = "all";
 
-            /** @brief 셸이 요청한 레이아웃 덮어쓰기입니다. 자체 테스트를 실행할 때 쓰며 `setPanelOverrideRequested` 가 설정합니다. */
-            inline static bool _s_bPanelOverrideRequested = false;
-
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없기 때문입니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
@@ -109,14 +106,14 @@ namespace sw::editor
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 
-    bool EditorDockLayout::isPanelOverrideActive()
+    bool EditorDockLayout::isPanelOverrideActive() const
     {
-        return gv_editorOpenPanel.empty() == false || EditorDockLayoutInternal::_s_bPanelOverrideRequested;
+        return gv_editorOpenPanel.empty() == false || _bPanelOverrideRequested == SW_TRUE;
     }
 
     void EditorDockLayout::setPanelOverrideRequested( bool bRequested )
     {
-        EditorDockLayoutInternal::_s_bPanelOverrideRequested = bRequested;
+        _bPanelOverrideRequested = bRequested ? SW_TRUE : SW_FALSE;
     }
 
     bool EditorDockLayout::isOpeningAllPanels()
@@ -136,6 +133,7 @@ namespace sw::editor
         , _bApplied{ SW_FALSE }
         , _bResetDefault{ SW_FALSE }
         , _bFrontTabPending{ SW_FALSE }
+        , _bPanelOverrideRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

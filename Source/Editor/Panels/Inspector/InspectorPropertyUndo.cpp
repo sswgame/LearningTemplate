@@ -2,12 +2,11 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Core/Memory/LifetimeScope.h"
-
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
@@ -29,22 +28,23 @@ namespace sw::editor
             EditorSelection*         _pPreviewSelection{ nullptr }; ///< 미리보기 창의 선택을 고쳤으면 그 선택(기록은 그 창의 스택). 메인이면 nullptr
         };
 
-        /** @brief 편집 중인 위젯 표의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-        ScopeOwned<unordered_map<ImGuiID, PendingEdit>> s_pendingEditsOwner;
+        /** @brief 인스펙터 되돌리기 추적의 상태입니다. 에디터 범위의 상태 저장소가 소유한다 — 에디터가 사라지면 붙잡은 스냅샷도 함께 사라진다. */
+        struct InspectorPropertyUndoState
+        {
+            unordered_map<ImGuiID, PendingEdit> _mapPending;   ///< 편집 중인 위젯 표
+            vector<PendingEdit>                 _listFinished; ///< 위젯이 풀린 편집
+        };
 
         /** @brief 편집 중인 위젯 표입니다. trackPod 와 trackString 이 **같은 테이블을 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다). */
         unordered_map<ImGuiID, PendingEdit>& getPendingEdits()
         {
-            return *s_pendingEditsOwner.getOrCreate();
+            return getEditorState<InspectorPropertyUndoState>()._mapPending;
         }
-
-        /** @brief 위젯이 풀린 편집 목록의 소유자입니다(엔진 수명 범위). */
-        ScopeOwned<vector<PendingEdit>> s_finishedEditsOwner;
 
         /** @brief 위젯이 풀린 편집입니다. 기록은 같은 프레임의 편집 통지(다중 선택의 나머지에 값 입히기)가 끝난 뒤 `commitFinishedEdits` 가 한다. */
         vector<PendingEdit>& getFinishedEdits()
         {
-            return *s_finishedEditsOwner.getOrCreate();
+            return getEditorState<InspectorPropertyUndoState>()._listFinished;
         }
 
         /** @brief 선택한 오브젝트 전부의 "편집 전" 스냅샷을 찍습니다. @p pLabel 이 널이면 "Property" 입니다. */
@@ -79,25 +79,24 @@ namespace sw::editor
          */
         void trackActiveItemEdit( const utf8* pLabel )
         {
-            unordered_map<ImGuiID, PendingEdit>& s_mapPending = getPendingEdits();
-
             EditorContext* pContext = EditorContext::get();
             if ( pContext == nullptr )
                 return;
+            unordered_map<ImGuiID, PendingEdit>& mapPending = getPendingEdits();
 
             const ImGuiID id = ImGui::GetItemID();
             if ( ImGui::IsItemActivated() )
-                s_mapPending[id] = captureSelectionBeforeEdit( *pContext, pLabel );
+                mapPending[id] = captureSelectionBeforeEdit( *pContext, pLabel );
 
             if ( ImGui::IsItemDeactivatedAfterEdit() == false )
                 return;
 
-            const auto iter = s_mapPending.find( id );
-            if ( iter == s_mapPending.end() )
+            const auto iter = mapPending.find( id );
+            if ( iter == mapPending.end() )
                 return;
 
             getFinishedEdits().push_back( std::move( iter->second ) );
-            s_mapPending.erase( iter );
+            mapPending.erase( iter );
         }
     } // namespace
 

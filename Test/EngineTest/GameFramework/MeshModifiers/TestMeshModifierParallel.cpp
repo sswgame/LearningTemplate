@@ -45,15 +45,14 @@ SW_TEST_CASE( MeshModifierParallelTest, DeformJobMatchesSerialUnderTaskManager )
         test::MeshModifierTestUtil::fillParams( *stack.findModifier( index ), salt++ );
     }
 
-    const MeshModifierEvaluation evaluation{};
+    const MeshModifierEvaluation serialEvaluation{};
     MeshModifierMesh             serialMesh = source;
-    setMeshModifierTaskManager( nullptr );
-    stack.apply( serialMesh, evaluation );
+    stack.apply( serialMesh, serialEvaluation );
 
-    MeshModifierMesh parallelMesh = source;
-    setMeshModifierTaskManager( &taskManager );
-    stack.apply( parallelMesh, evaluation );
-    setMeshModifierTaskManager( nullptr );
+    MeshModifierEvaluation parallelEvaluation{};
+    parallelEvaluation._pTaskManager = &taskManager;
+    MeshModifierMesh parallelMesh    = source;
+    stack.apply( parallelMesh, parallelEvaluation );
     taskManager.shutdown();
 
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( serialMesh._listPosition, parallelMesh._listPosition ) );

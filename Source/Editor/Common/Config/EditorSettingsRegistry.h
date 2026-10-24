@@ -25,7 +25,8 @@ namespace sw::editor
      * @struct EditorSettingsRegistration
      * @brief 환경설정 섹션 하나(리플렉션 구조체 하나)의 등록 항목입니다. 그 구조체의 .cpp 가 `SW_EDITOR_SETTINGS` 로 둡니다.
      * @details id 는 저장 파일의 키(`"viewport"`)이고, 라벨은 창 왼쪽 목록에 보이는 이름(`"Editor/Viewport"`)이다. '/' 앞이 그룹이다.
-     *          인스턴스와 기본값 인스턴스는 그 섹션 파일의 함수 정적 변수다. 확장 모듈도 섹션을 등록할 수 있다.
+     *          값(`_pInstance`)과 기본값(`_pDefault`)은 이 항목의 소유자인 `EditorSettingsRegistrar<T>` 가 든다 — 등록하는 DLL 안에 있고 등록과 함께 생기고 사라진다.
+     *          확장 모듈도 섹션을 등록할 수 있다.
      */
     struct EditorSettingsRegistration : EditorExtensionRegistration
     {
@@ -33,44 +34,62 @@ namespace sw::editor
 
         const utf8* _pLabel;
         const TypeInfo* ( *_pfnGetType )();
-        void* ( *_pfnGetInstance )();
-        const void* ( *_pfnGetDefault )();
+        void*       _pInstance;    ///< 지금 값. 소유자(`EditorSettingsRegistrar`)의 멤버다. 페이지 방식(`SW_EDITOR_SETTINGS_PAGE`)은 nullptr 이다
+        const void* _pDefault;     ///< 기본값. 위와 같이 소유자의 멤버이고 페이지 방식은 nullptr 이다
         void ( *_pfnOnChanged )(); ///< 값이 바뀐 뒤에 호출한다. 창에서 고쳤거나, 파일을 다시 읽었거나, 섹션을 되돌렸을 때다. nullptr 이면 호출하지 않는다
         /**
          * @brief 리플렉션 구조체가 아닌 페이지를 그리는 함수입니다(`SW_EDITOR_SETTINGS_PAGE`). 이 페이지는 타입이 없어(`_pfnGetType` 이 nullptr) 이 파일에 저장하지 않습니다.
          *        값의 주인이 따로 있기 때문입니다. 예를 들어 디버그 HUD 는 엔진 사용자 설정이 주인입니다. nullptr 이면 리플렉션 그리드를 그립니다.
          */
         void ( *_pfnDrawPage )();
+        /**
+         * @brief 이 항목이 올라온 뒤 파일 값을 입혔으면 SW_TRUE 입니다(`EditorPreferencesStore` 가 씁니다. 메인 스레드만).
+         * @details 항목은 DLL 이 올라올 때 새로 생기고 내려갈 때 사라지므로, 다시 올라온 모듈의 섹션은 저절로 SW_FALSE 로 돌아가 파일에서 다시 읽는다.
+         *          '입힌 인스턴스 주소 목록'을 따로 두고 언로드 훅이 지우던 방식을 대신한다.
+         */
+        mutable uint8 _bFileValueApplied;
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 그리기 함수 방식(`SW_EDITOR_SETTINGS_PAGE`)의 타입과 인스턴스 함수입니다. 모두 nullptr 을 반환합니다. */
+    /** @brief 그리기 함수 방식(`SW_EDITOR_SETTINGS_PAGE`)의 타입 함수입니다. nullptr 을 반환합니다 — 값이 없는 페이지입니다. */
     struct EditorSettingsPageNone
     {
         static const TypeInfo* getType() { return nullptr; }
-        static void*           getInstance() { return nullptr; }
-        static const void*     getDefault() { return nullptr; }
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 등록 항목이 가리키는 인스턴스 함수입니다. 함수 정적 변수이므로 등록한 DLL 안에 하나만 있습니다. */
+    /**
+     * @class EditorSettingsRegistrar
+     * @brief 환경설정 섹션 하나의 소유자입니다. 값과 기본값을 멤버로 들고, 그 값을 가리키는 등록 항목을 레지스트리에 올립니다(`SW_EDITOR_SETTINGS` 가 파일 범위에 둡니다).
+     * @details 값의 수명은 등록의 수명과 같다 — 등록자가 만들어질 때 값이 생기고(등록 전에), 소멸할 때 등록이 먼저 빠지고 값이 사라진다.
+     *          그래서 확장 모듈을 내리면 그 섹션의 값도 같이 사라지고(언로드 훅이 내리기 전에 저장한다), 다시 올라오면 항목이 새로 생겨 파일 값을 다시 읽는다.
+     *          전에는 함수 정적 변수(`EditorSettingsInstance<T>`)라 등록과 별개의 숨은 전역이었고, 등록되지 않은 섹션을 읽으면 조용히 기본값을 돌려줬다.
+     */
     template <typename TSettings>
-    struct EditorSettingsInstance
+    class EditorSettingsRegistrar
     {
-        static void* getInstance()
-        {
-            static TSettings s_instance{};
-            return &s_instance;
+    public:
+        EditorSettingsRegistrar( const utf8* pID, const utf8* pLabel, int32 order, void ( *pfnOnChanged )() )
+            : _instance{
         }
-        static const void* getDefault()
+            , _default{}
+            , _registrar{ EditorSettingsRegistration{ { pID, order }, pLabel, &TSettings::StaticType, &_instance, &_default, pfnOnChanged, nullptr, SW_FALSE } }
         {
-            static const TSettings s_default{};
-            return &s_default;
         }
+
+        EditorSettingsRegistrar( const EditorSettingsRegistrar& )            = delete;
+        EditorSettingsRegistrar& operator=( const EditorSettingsRegistrar& ) = delete;
+
+        const EditorSettingsRegistration& getRegistration() const { return _registrar.getRegistration(); }
+
+    private:
+        TSettings                                            _instance;
+        const TSettings                                      _default;
+        EditorExtensionRegistrar<EditorSettingsRegistration> _registrar; ///< 값 다음에 선언한다 — 소멸은 역순이라 등록이 먼저 빠진다
     };
 } // namespace sw::editor
 
@@ -92,8 +111,8 @@ namespace sw::editor
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
         [[nodiscard]] static bool saveAll( string_view filePath );
         /**
-         * @brief 인스턴스 함수가 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 이미지가 가진 섹션).
-         * @details 그 섹션의 값은 그 이미지의 함수 정적이라 이미지를 내리면 사라진다. 언로드 훅이 이것으로 묻고 내리기 전에 `saveAll` 한다.
+         * @brief 값(`_pInstance`)이 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 이미지가 가진 섹션).
+         * @details 그 섹션의 값은 그 이미지의 소유자(`EditorSettingsRegistrar`) 멤버라 이미지를 내리면 사라진다. 언로드 훅이 이것으로 묻고 내리기 전에 `saveAll` 한다.
          */
         [[nodiscard]] static bool hasSectionWithin( const void* pBegin, const void* pEnd );
         /**
@@ -103,8 +122,6 @@ namespace sw::editor
         static uint32 loadNewSections( string_view filePath );
         /** @brief 파일 값을 아직 입히지 않은 섹션이 있으면 true 입니다. 할당하지 않으므로 프레임마다 물어도 됩니다. */
         [[nodiscard]] static bool hasNewSections();
-        /** @brief 인스턴스가 [@p pBegin, @p pEnd) 안에 있는 섹션을 '입힘' 기록에서 뺍니다. 이미지가 같은 주소로 다시 올라와도 다시 읽게 언로드 훅이 부릅니다. */
-        static void forgetSectionsWithin( const void* pBegin, const void* pEnd );
         /** @brief @p pCurrent 가 @p pDefault 와 다른 프로퍼티만 담은 JSON 오브젝트 문자열을 만듭니다. */
         static string makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault );
         /** @brief JSON 오브젝트 문자열을 인스턴스에 적용합니다. 없는 키는 그대로 둡니다. 모르는 키는 @p outListUnknownKey 에 담습니다. 형식이 틀리면 false 입니다. */
@@ -124,20 +141,24 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 그 타입으로 등록된 섹션을 찾습니다. 없으면 nullptr 입니다. */
-    SW_EDITOR_API const EditorSettingsRegistration* findSettingsRegistration( const TypeInfo* pType );
+    /** @brief 그 타입으로 등록된 값 있는 섹션의 항목입니다. 등록되지 않았으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다(조용히 기본값으로 가지 않는다). */
+    SW_EDITOR_API const EditorSettingsRegistration& getSettingsRegistration( const TypeInfo* pType );
 
     /**
-     * @brief 섹션 `TSettings` 의 현재 값을 반환합니다. 등록되지 않았으면 기본값입니다.
-     * @details 확장 모듈이 다른 모듈의 섹션을 읽을 때도 이 함수를 쓴다. 인스턴스는 등록한 DLL 의 것이다.
+     * @brief 섹션 `TSettings` 의 현재 값을 반환합니다. 그 섹션이 등록되어 있어야 합니다.
+     * @details 확장 모듈이 다른 모듈의 섹션을 읽을 때도 이 함수를 쓴다. 값은 등록한 DLL 의 소유자(`EditorSettingsRegistrar`)가 든다 — 그 모듈이 내려가면 사라지므로 참조를 오래 들지 않는다.
      */
     template <typename TSettings>
     const TSettings& getPreferences()
     {
-        const EditorSettingsRegistration* pRegistration = findSettingsRegistration( TSettings::StaticType() );
-        if ( pRegistration == nullptr )
-            return *static_cast<const TSettings*>( EditorSettingsInstance<TSettings>::getDefault() );
-        return *static_cast<const TSettings*>( pRegistration->_pfnGetInstance() );
+        return *static_cast<const TSettings*>( getSettingsRegistration( TSettings::StaticType() )._pInstance );
+    }
+
+    /** @brief 섹션 `TSettings` 의 값을 고칠 수 있게 반환합니다. 고친 뒤 저장은 부른 쪽이 합니다(`EditorPreferencesStore::saveAll`). */
+    template <typename TSettings>
+    TSettings& editPreferences()
+    {
+        return *static_cast<TSettings*>( getSettingsRegistration( TSettings::StaticType() )._pInstance );
     }
 } // namespace sw::editor
 
@@ -145,15 +166,16 @@ namespace sw::editor
  * @brief 환경설정 섹션 하나를 등록합니다. 예: `SW_EDITOR_SETTINGS( EditorViewportPreferences, "viewport", "Editor/Viewport", 300, nullptr );`
  * @param TSettings 리플렉션 구조체(`REFLECT()`, `PROPERTY()`)입니다. 기본 생성자가 만든 값이 기본값입니다.
  */
-#define SW_EDITOR_SETTINGS( TSettings, pID, pLabel, order, pfnOnChanged )                                                               \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##TSettings, { pID, order }, pLabel, &TSettings::StaticType, \
-                        &::sw::editor::EditorSettingsInstance<TSettings>::getInstance, &::sw::editor::EditorSettingsInstance<TSettings>::getDefault, pfnOnChanged, nullptr )
+#define SW_EDITOR_SETTINGS( TSettings, pID, pLabel, order, pfnOnChanged )                 \
+    static ::sw::editor::EditorSettingsRegistrar<TSettings> sw_editorSettings_##TSettings \
+    {                                                                                     \
+        pID, pLabel, order, pfnOnChanged                                                  \
+    }
 
 /**
  * @brief 그리기 함수 하나로 된 환경설정 페이지를 등록합니다. 값의 주인이 에디터 환경설정 파일 밖에 있을 때 씁니다.
  * @code SW_EDITOR_SETTINGS_PAGE( DebugHUD, "debug_hud", "Editor/Debug HUD", 360, &draw ); @endcode
  */
-#define SW_EDITOR_SETTINGS_PAGE( name, pID, pLabel, order, pfnDraw )                                                        \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##name, { pID, order }, pLabel,                  \
-                        &::sw::editor::EditorSettingsPageNone::getType, &::sw::editor::EditorSettingsPageNone::getInstance, \
-                        &::sw::editor::EditorSettingsPageNone::getDefault, nullptr, pfnDraw )
+#define SW_EDITOR_SETTINGS_PAGE( name, pID, pLabel, order, pfnDraw )                                       \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##name, { pID, order }, pLabel, \
+                        &::sw::editor::EditorSettingsPageNone::getType, nullptr, nullptr, nullptr, pfnDraw, SW_FALSE )

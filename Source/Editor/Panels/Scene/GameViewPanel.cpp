@@ -250,7 +250,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             // 유니티 게임 뷰의 Maximize On Play 에 해당 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
-            EditorPlayPreferences& playPreferences = *static_cast<EditorPlayPreferences*>( EditorSettingsInstance<EditorPlayPreferences>::getInstance() );
+            EditorPlayPreferences& playPreferences = editPreferences<EditorPlayPreferences>();
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_WARNING( "Editor preferences could not be saved" );
             EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );

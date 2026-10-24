@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/LifetimeScope.h"
+#include "Core/Log/Logger.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
@@ -56,35 +56,18 @@ namespace sw::editor
             }
 
             /**
-             * @brief 파일 값을 이미 입힌 섹션의 인스턴스 주소입니다. 메인 스레드만 씁니다.
-             * @details 확장 모듈이 다시 올라오면 그 섹션 인스턴스는 기본값이다. 여기 없는 섹션만 `loadNewSections` 가 읽어, 사용자가 바꾼 값을 두 번 덮지 않는다.
+             * @brief 파일 값을 입힌 섹션인지입니다. 기록은 항목 자신(`_bFileValueApplied`)이 든다 — 항목은 모듈이 올라올 때 새로 생겨 저절로 거짓이다. 메인 스레드만 씁니다.
+             * @details 확장 모듈이 다시 올라오면 그 섹션의 값은 기본값이다. 아직 입히지 않은 섹션만 `loadNewSections` 가 읽어, 사용자가 바꾼 값을 두 번 덮지 않는다.
              */
-            /** @brief 위 목록의 소유자입니다 — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<const void*>> s_loadedInstanceOwner{};
+            static bool isLoaded( const EditorSettingsRegistration& registration ) { return registration._bFileValueApplied == SW_TRUE; }
 
-            static vector<const void*>& getLoadedInstances() { return *s_loadedInstanceOwner.getOrCreate(); }
-
-            static bool isLoaded( const void* pInstance )
-            {
-                for ( const void* pLoaded : getLoadedInstances() )
-                {
-                    if ( pLoaded == pInstance )
-                        return true;
-                }
-                return false;
-            }
-
-            static void markLoaded( const void* pInstance )
-            {
-                if ( isLoaded( pInstance ) == false )
-                    getLoadedInstances().push_back( pInstance );
-            }
+            static void markLoaded( const EditorSettingsRegistration& registration ) { registration._bFileValueApplied = SW_TRUE; }
 
             /** @brief 섹션 하나에 파일 루트의 값을 입히고 `_pfnOnChanged` 를 부릅니다. */
             static void applySection( const JSONValue& root, const string& sectionID, const EditorSettingsRegistration& registration )
             {
                 vector<string> listUnknownKey;
-                applyObject( root.get( sectionID ), *registration._pfnGetType(), registration._pfnGetInstance(), listUnknownKey );
+                applyObject( root.get( sectionID ), *registration._pfnGetType(), registration._pInstance, listUnknownKey );
                 for ( const string& key : listUnknownKey )
                 {
                     SW_LOG_WARNING( "Editor preferences: unknown key '%#.%#' skipped", sectionID.c_str(), key.c_str() );
@@ -105,7 +88,7 @@ namespace sw::editor
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
             if ( registration._pfnGetType() != nullptr )
-                EditorSettingsRegistryInternal::markLoaded( registration._pfnGetInstance() );
+                EditorSettingsRegistryInternal::markLoaded( registration );
         }
         if ( FileUtil::isRegularFile( filePath ) == false )
             return EditorUserFileResult::Missing;
@@ -138,9 +121,9 @@ namespace sw::editor
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() == nullptr || EditorSettingsRegistryInternal::isLoaded( registration._pfnGetInstance() ) )
+            if ( registration._pfnGetType() == nullptr || EditorSettingsRegistryInternal::isLoaded( registration ) )
                 continue;
-            EditorSettingsRegistryInternal::markLoaded( registration._pfnGetInstance() );
+            EditorSettingsRegistryInternal::markLoaded( registration );
             listPending.push_back( &registration );
         }
         if ( listPending.empty() || FileUtil::isRegularFile( filePath ) == false )
@@ -171,20 +154,10 @@ namespace sw::editor
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() != nullptr && EditorSettingsRegistryInternal::isLoaded( registration._pfnGetInstance() ) == false )
+            if ( registration._pfnGetType() != nullptr && EditorSettingsRegistryInternal::isLoaded( registration ) == false )
                 return true;
         }
         return false;
-    }
-
-    void EditorPreferencesStore::forgetSectionsWithin( const void* pBegin, const void* pEnd )
-    {
-        vector<const void*>& listLoaded = EditorSettingsRegistryInternal::getLoadedInstances();
-        for ( size_t index = listLoaded.size(); index > 0; --index )
-        {
-            if ( IModuleUnloadListener::isAddressWithin( listLoaded[index - 1], pBegin, pEnd ) )
-                VectorUtil::removeAtSwap( listLoaded, index - 1 ); // 순서는 뜻이 없다
-        }
     }
 
     bool EditorPreferencesStore::saveAll( string_view filePath )
@@ -203,7 +176,7 @@ namespace sw::editor
                 continue;
             JSONDocument    sectionDocument;
             const JSONValue section      = sectionDocument.makeObject();
-            const uint32    writtenCount = EditorSettingsRegistryInternal::writeDifference( section, *pType, registration._pfnGetInstance(), registration._pfnGetDefault() );
+            const uint32    writtenCount = EditorSettingsRegistryInternal::writeDifference( section, *pType, registration._pInstance, registration._pDefault );
             if ( writtenCount == 0 )
                 continue;
             root.set( registration._pID ).assignFrom( section );
@@ -225,7 +198,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() != nullptr && IModuleUnloadListener::isAddressWithin( reinterpret_cast<const void*>( registration._pfnGetInstance ), pBegin, pEnd ) )
+            if ( registration._pfnGetType() != nullptr && IModuleUnloadListener::isAddressWithin( registration._pInstance, pBegin, pEnd ) )
                 return true;
         }
         return false;
@@ -259,8 +232,8 @@ namespace sw::editor
         const TypeInfo* pType = registration._pfnGetType();
         if ( pType == nullptr )
             return;
-        void*                   pInstance = registration._pfnGetInstance();
-        const void*             pDefault  = registration._pfnGetDefault();
+        void*                   pInstance = registration._pInstance;
+        const void*             pDefault  = registration._pDefault;
         const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
         {
@@ -290,15 +263,18 @@ namespace sw::editor
         return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
-    const EditorSettingsRegistration* findSettingsRegistration( const TypeInfo* pType )
+    const EditorSettingsRegistration& getSettingsRegistration( const TypeInfo* pType )
     {
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() == pType )
-                return &registration;
+            if ( pType != nullptr && registration._pfnGetType() == pType )
+                return registration;
         }
-        return nullptr;
+        // 등록되지 않은 섹션을 읽었다 - 그 모듈이 꺼져 있거나 SW_EDITOR_SETTINGS 가 빠졌다. 기본값으로 대신하지 않고 모든 구성에서 이유를 남기고 멈춘다.
+        SW_LOG_ERROR( "Editor preferences section for type '%#' is not registered (its module is off, or SW_EDITOR_SETTINGS is missing)", pType != nullptr ? pType->_name.c_str() : "(null)" );
+        Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
+        std::abort();
     }
 } // namespace sw::editor

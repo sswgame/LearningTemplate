@@ -52,9 +52,9 @@ namespace sw::editor
          * @brief `-gv_editorOpenPanel` 이 시작할 때 열 패널을 정하고 있거나 셸이 덮어쓰기를 요청했으면 true 입니다. 값은 `all` 이거나 패널 id 입니다.
          * @details 그동안은 저장된 레이아웃을 읽지도 쓰지도 않는다. 한 번 준 스위치가 다음 실행의 레이아웃으로 굳지 않게 하기 위해서다.
          */
-        static bool isPanelOverrideActive();
-        /** @brief 셸이 저장된 레이아웃을 쓰지 않도록 요청합니다. 자체 테스트를 실행할 때 씁니다. 도킹은 자체 테스트를 모르므로 셸이 시작할 때 알립니다. */
-        static void setPanelOverrideRequested( bool bRequested );
+        bool isPanelOverrideActive() const;
+        /** @brief 셸이 저장된 레이아웃을 쓰지 않도록 요청합니다. 자체 테스트를 실행할 때 씁니다. 도킹은 자체 테스트를 모르므로 셸이 시작할 때 알립니다. 요청은 이 도킹 객체가 든다. */
+        void setPanelOverrideRequested( bool bRequested );
         /** @brief `-gv_editorOpenPanel=all` 로 등록된 패널을 전부 떠 있는 창으로 여는 중이면 true 입니다. */
         static bool isOpeningAllPanels();
 
@@ -74,10 +74,11 @@ namespace sw::editor
         float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기다. 0 이면 다음 프레임이 저장된 크기에서 시작한다
         float32                _lastDockspaceHeight; ///< 위와 같다(세로)
         uint8                  _frontTabFrameCount;  ///< 기본 배치 뒤에 Scene 탭을 앞으로 가져오려고 포커스를 준 프레임 수
-        uint8                  _bLayoutPending   : 1;
-        uint8                  _bApplied         : 1;
-        uint8                  _bResetDefault    : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 만든다(Reset Default Layout)
-        uint8                  _bFrontTabPending : 1; ///< 기본 배치를 만들었고 Scene 탭이 아직 선택되지 않았다(`updateDefaultTabSelection`)
-        [[maybe_unused]] uint8 _reserved         : 4;
+        uint8                  _bLayoutPending          : 1;
+        uint8                  _bApplied                : 1;
+        uint8                  _bResetDefault           : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 만든다(Reset Default Layout)
+        uint8                  _bFrontTabPending        : 1; ///< 기본 배치를 만들었고 Scene 탭이 아직 선택되지 않았다(`updateDefaultTabSelection`)
+        uint8                  _bPanelOverrideRequested : 1; ///< 셸이 요청한 레이아웃 덮어쓰기(`setPanelOverrideRequested`)
+        [[maybe_unused]] uint8 _reserved                : 3;
     };
 } // namespace sw::editor

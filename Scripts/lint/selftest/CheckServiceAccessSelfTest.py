@@ -95,7 +95,7 @@ _kListCase: list[tuple[str, dict[str, str], tuple[int, ...]]] = [
       "Source/Probe/S.cpp": "Cfg* Cfg::findActive()\n{\n    static Cfg* s_p = nullptr;\n    return s_p;\n}\n"},
      (0, 0, 0)),
     ("예외 표의 템플릿 구조체",
-     {"Source/Probe/P.h": "template <typename T>\nstruct EditorSettingsInstance\n{\n    static void* getInstance()\n    {\n        return nullptr;\n    }\n};\n"},
+     {"Source/Probe/P.h": "template <typename T>\nstruct EditorExtensionRegistry\n{\n    static void* getInstance()\n    {\n        return nullptr;\n    }\n};\n"},
      (0, 0)),
 ]
 

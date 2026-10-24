@@ -97,10 +97,11 @@ namespace
             return conform;
         }
 
-        static void applyWith( const MeshModifier& modifier, MeshModifierMesh& inoutMesh, const IMeshModifierInputs& inputs )
+        static void applyWith( const MeshModifier& modifier, MeshModifierMesh& inoutMesh, const IMeshModifierInputs& inputs, TaskManager* pTaskManager )
         {
             MeshModifierEvaluation evaluation{};
-            evaluation._pInputs = &inputs;
+            evaluation._pInputs      = &inputs;
+            evaluation._pTaskManager = pTaskManager;
             modifier.apply( inoutMesh, evaluation );
         }
     };
@@ -118,11 +119,8 @@ SW_TEST_CASE( ConformSurfaceTest, ParallelQueriesMatchSerialResult )
         unique_ptr<MeshModifier> serialConform   = ConformSurfaceTestInternal::makeConform( mode );
         unique_ptr<MeshModifier> parallelConform = ConformSurfaceTestInternal::makeConform( mode );
 
-        setMeshModifierTaskManager( nullptr );
-        ConformSurfaceTestInternal::applyWith( *serialConform, serialMesh, inputs );
-        setMeshModifierTaskManager( &taskManager );
-        ConformSurfaceTestInternal::applyWith( *parallelConform, parallelMesh, inputs );
-        setMeshModifierTaskManager( nullptr );
+        ConformSurfaceTestInternal::applyWith( *serialConform, serialMesh, inputs, nullptr );
+        ConformSurfaceTestInternal::applyWith( *parallelConform, parallelMesh, inputs, &taskManager );
 
         SW_ASSERT_EQUAL( serialMesh._listPosition.size(), parallelMesh._listPosition.size() );
         uint32 movedCount = 0;

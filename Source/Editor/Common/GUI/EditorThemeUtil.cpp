@@ -32,7 +32,7 @@ namespace sw::editor
              * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_SETTINGS`)이 가리키는 그 인스턴스 하나다 —
              *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorConfig>()` 다.
              */
-            static EditorConfig& editAppearance() { return *static_cast<EditorConfig*>( EditorSettingsInstance<EditorConfig>::getInstance() ); }
+            static EditorConfig& editAppearance() { return editPreferences<EditorConfig>(); }
 
             /**
              * @brief 환경설정 섹션 Appearance 의 값이 바뀌었을 때(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌림) 테마를 다시 적용합니다.
@@ -718,12 +718,15 @@ namespace sw::editor
         pDrawList->AddText( pFont, fontSize, position, EditorColorUtil::toImU32( color ), pGlyph );
     }
 
-    const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
+    EditorIconLabel::EditorIconLabel( const utf8* pIcon, const utf8* pLabel )
+        : _arrText{}
     {
-        // UI 스레드 하나가 호출하지만 자체 테스트 스레드에서도 호출할 수 있으므로 스레드마다 버퍼를 둔다.
-        thread_local fixed_string<constant::kMaxBuffer256> s_label;
-        formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
-        return s_label.c_str();
+        formatstring( _arrText, constant::kMaxBuffer256, "%#  %#", pIcon, pLabel );
+    }
+
+    EditorIconLabel EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
+    {
+        return EditorIconLabel{ pIcon, pLabel };
     }
 } // namespace sw::editor
 

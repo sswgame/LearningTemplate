@@ -442,7 +442,7 @@ namespace sw::editor
             job._offset      = offset;
             job._maxDistance = maxDistance;
             job._amount      = amount;
-            MeshModifierUtil::runBlocks( chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ConformJob::run, &job ) );
+            MeshModifierUtil::runBlocks( context.getTaskManager(), chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ConformJob::run, &job ) );
 
             bool bMoved = false;
             for ( const uint8 chunkMoved : listChunkMoved )

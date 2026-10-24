@@ -234,7 +234,6 @@ namespace sw::editor
 
     bool MeshModifierSession::setTarget( GameObject* pObject )
     {
-        setMeshModifierTaskManager( editor::findSubsystem<TaskManager>() ); // 변형 적용(미리보기 · 베이크)을 병렬로 돌린다
         clearTarget();
         if ( pObject == nullptr )
             return false;
@@ -376,9 +375,10 @@ namespace sw::editor
     MeshModifierEvaluation MeshModifierSession::makeEvaluation() const
     {
         MeshModifierEvaluation evaluation{};
-        evaluation._meshToWorld = computeMeshToWorld();
-        evaluation._pInputs     = this;
-        evaluation._time        = _previewTime;
+        evaluation._meshToWorld  = computeMeshToWorld();
+        evaluation._pInputs      = this;
+        evaluation._time         = _previewTime;
+        evaluation._pTaskManager = editor::findSubsystem<TaskManager>(); // 변형 적용(미리보기 · 베이크)을 병렬로 돌린다
         // 나눠 걸어도 스택 입력은 원본 위치다(`MeshModifierStack::apply` 가 복사해 넘기는 것과 같은 값)
         if ( _stack.needsStackInputPosition() )
             evaluation._pListStackInputPosition = &_listSourcePosition;
@@ -591,9 +591,10 @@ namespace sw::editor
         MeshModifierMesh mesh{};
         makeSourceMesh( mesh );
         MeshModifierEvaluation evaluation{};
-        evaluation._meshToWorld = computeMeshToWorld();
-        evaluation._pInputs     = this;
-        evaluation._time        = _previewTime;
+        evaluation._meshToWorld  = computeMeshToWorld();
+        evaluation._pInputs      = this;
+        evaluation._time         = _previewTime;
+        evaluation._pTaskManager = editor::findSubsystem<TaskManager>();
         _stack.apply( mesh, evaluation );
 
         MeshAssetData baked{};

@@ -34,13 +34,6 @@ namespace sw
 namespace sw::editor
 {
     /**
-     * @brief 모디파이어 적용을 병렬로 돌릴 작업 관리자를 정합니다. nullptr 이면 현재 스레드가 한 번에 돕니다(테스트 · 서비스 연결 전).
-     * @details 엔진 내부 전용 도우미(`engine::runParallel`)는 확장 모듈이 쓸 수 없어서, 세션이 에디터 서비스에서 얻은 관리자를 여기에 건다.
-     *          게임 스레드에서만 부른다. 저장 칸이 이 모듈의 정적 변수라 모듈이 내려가면 함께 사라진다.
-     */
-    void setMeshModifierTaskManager( TaskManager* pTaskManager );
-
-    /**
      * @struct MeshModifierMesh
      * @brief 모디파이어가 변형하는 메시 정점입니다(메시 로컬 공간, 인덱스 없는 삼각형 목록 — 정점 3 개가 삼각형 하나).
      * @details 위치 밖의 배열은 비었거나 위치와 같은 길이다. 비었으면 그 채널이 없는 것이다(모디파이어는 건너뛴다).
@@ -252,7 +245,13 @@ namespace sw::editor
     {
         float4x4                   _meshToWorld{};      ///< 메시 로컬 → 월드(월드 공간 모디파이어 · 외부 입력의 좌표 변환)
         const IMeshModifierInputs* _pInputs{ nullptr }; ///< 없으면 외부 입력을 쓰는 모디파이어는 항등입니다
-        float32                    _time{ 0.0f };       ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
+        /**
+         * @brief 모디파이어 적용을 병렬로 돌릴 작업 관리자입니다. nullptr 이면 현재 스레드가 한 번에 돕니다(테스트 · 서비스 연결 전의 직렬 실행이며 결과는 같다).
+         * @details 엔진 내부 전용 도우미(`engine::runParallel`)는 확장 모듈이 쓸 수 없어서, 세션이 에디터 서비스에서 얻은 관리자를 평가마다 싣는다.
+         *          전에는 이 모듈의 전역 설정 함수(`setMeshModifierTaskManager`)로 건 정적 포인터였다 - 평가가 소유자를 정하므로 호출마다 명시되고 테스트끼리 섞이지 않는다.
+         */
+        TaskManager* _pTaskManager{ nullptr };
+        float32      _time{ 0.0f }; ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
         /** @brief 스택에 들어온 변형 전 정점 위치(메시 로컬)입니다. 스택이 채우고, 없거나 정점 수가 다르면 각 모디파이어의 입력 위치를 대신 씁니다. */
         const vector<float3>* _pListStackInputPosition{ nullptr };
         /**
@@ -292,6 +291,7 @@ namespace sw::editor
         const vector<float3>*         _pListOriginalPosition{ nullptr }; ///< 변형 전 원본 위치(모디파이어 공간). `needsOriginalPosition` 일 때만 채운다
 
         float32                    getTime() const { return _pEvaluation != nullptr ? _pEvaluation->_time : 0.0f; }
+        TaskManager*               getTaskManager() const { return _pEvaluation != nullptr ? _pEvaluation->_pTaskManager : nullptr; }
         const IMeshModifierInputs* getInputs() const { return _pEvaluation != nullptr ? _pEvaluation->_pInputs : nullptr; }
     };
 } // namespace sw::editor
@@ -432,10 +432,10 @@ namespace sw::editor
         /** @brief 정점 수를 `kChunkVertexCount` 로 나눈 덩어리 수입니다. */
         static uint32 computeChunkCount( size_t vertexCount );
         /**
-         * @brief [0, count) 덩어리 번호를 작업 관리자(`setMeshModifierTaskManager`)로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다.
+         * @brief [0, count) 덩어리 번호를 작업 관리자 @p pTaskManager(평가의 `_pTaskManager`)로 나눠 돌립니다. nullptr 이면 현재 스레드가 한 번에 돕니다.
          * @details 본문은 자기 덩어리의 정점만 쓰고, 스크래치는 본문 안에서 가져야 한다(덩어리마다 다른 스레드일 수 있다).
          */
-        static void runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
+        static void runBlocks( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
         /** @brief 성분 번호(0 · 1 · 2)로 값을 읽습니다. */
         static float32 getComponent( const float3& value, uint32 axisIndex );
         /** @brief 성분 번호로 값을 씁니다. */

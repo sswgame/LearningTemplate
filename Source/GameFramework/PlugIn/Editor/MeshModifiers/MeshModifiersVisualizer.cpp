@@ -15,7 +15,6 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -118,15 +117,22 @@ namespace sw::editor
                 bool isValid() const { return _pLattice != nullptr || _pFFD2D != nullptr; }
             };
 
-            /** @brief 끌기 상태입니다. 이 확장이 기여한 서브시스템(`MeshModifiersVisualizerState`)이 소유한다 — 정의는 아래 서브시스템 옆에 있다. */
-            static DragState& getDragState();
-
-            /** @brief 뷰포트 마우스 양보의 주인 식별자입니다(주소만 쓴다). */
-            static const void* getMouseClaimOwner()
+            /**
+             * @brief 이 확장의 에디터 범위 상태입니다(UI 스레드 하나만 쓴다). 이 확장이 기여한 서브시스템(`MeshModifiersVisualizerState`)이 소유한다 — 정의는 아래 서브시스템 옆에 있다.
+             * @details 끌기 상태와, 프레임마다 다시 채우는 재사용 버퍼들이다. 전에는 버퍼마다 프로세스 정적 소유자(`ScopeOwned`)가 따로 있었다.
+             */
+            struct State
             {
-                static const uint8 s_owner = 0;
-                return &s_owner;
-            }
+                DragState      _drag{};
+                vector<Handle> _listHandle;       ///< 이번 프레임에 집을 수 있는 손잡이
+                vector<float3> _listSegmentPoint; ///< 변형 결과 미리보기 선분 끝점
+                vector<float3> _listStagePoint;   ///< 고른 모디파이어까지의 결과 선분 끝점
+                PointSet       _pointSet;         ///< 제어점 월드 목록
+            };
+            static State& getState();
+
+            /** @brief 뷰포트 마우스 양보의 주인 식별자입니다(주소만 쓴다). 상태 객체의 주소다 — 에디터 범위마다 다르다. */
+            static const void* getMouseClaimOwner() { return &getState(); }
 
             /** @brief 끌기를 끝냅니다. 핸들을 집고 있었으면 뷰포트 마우스 양보도 돌려준다(놓기 · 취소 모두). */
             static void endDrag( DragState& state )
@@ -135,12 +141,6 @@ namespace sw::editor
                     EditorViewportMouseClaim::release( getMouseClaimOwner() );
                 state = DragState{};
             }
-
-            // 프레임마다 다시 채우는 재사용 버퍼의 소유자들입니다(UI 스레드 하나만 쓴다) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다).
-            inline static ScopeOwned<vector<Handle>> s_handleBufferOwner{};
-            inline static ScopeOwned<vector<float3>> s_segmentPointBufferOwner{};
-            inline static ScopeOwned<vector<float3>> s_stagePointBufferOwner{};
-            inline static ScopeOwned<PointSet>       s_pointSetOwner{};
 
             static void drawSegment( const EditorViewportVisualizerArgs& args, const float3& from, const float3& to, ImU32 color, float32 thickness )
             {
@@ -655,7 +655,7 @@ namespace sw::editor
             /** @brief 손잡이 · 제어점을 그리고 마우스로 고르고 끕니다. */
             static void processEditing( const EditorViewportVisualizerArgs& args, MeshModifierSession& session, const Frame& frame, PointSet& set )
             {
-                DragState&  state         = getDragState();
+                DragState&  state         = getState()._drag;
                 const int32 modifierIndex = session.getSelectedIndex();
                 if ( state._bDragging && state._modifierIndex != modifierIndex )
                     endDrag( state ); // 끄는 중에 다른 모디파이어로 바뀌었다
@@ -667,10 +667,7 @@ namespace sw::editor
                     session.setSelectedControlPoint( selectedPoint );
                 }
 
-                vector<Handle>* const pListHandle = s_handleBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
-                if ( pListHandle == nullptr )
-                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-                vector<Handle>& listHandle = *pListHandle;
+                vector<Handle>& listHandle = getState()._listHandle; // 프레임마다 다시 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
                 listHandle.clear();
                 if ( set.isValid() )
                     collectPointHandles( frame, set, selectedPoint, listHandle );
@@ -754,23 +751,21 @@ namespace sw::editor
                 const bool           bNoDragTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
                 if ( bNoDragTarget )
                 {
-                    endDrag( getDragState() );
+                    endDrag( getState()._drag );
                     return;
                 }
                 MeshModifierSession& session = *pSession;
                 session.refreshPreview();
 
-                vector<float3>* const pListSegmentPoint = s_segmentPointBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼
-                if ( pListSegmentPoint == nullptr )
-                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-                session.makePreviewSegments( *pListSegmentPoint );
-                drawSegments( args, *pListSegmentPoint, kPreviewColor );
+                vector<float3>& listSegmentPoint = getState()._listSegmentPoint; // 프레임마다 다시 채우는 재사용 버퍼
+                session.makePreviewSegments( listSegmentPoint );
+                drawSegments( args, listSegmentPoint, kPreviewColor );
 
                 MeshModifier* pModifier = session.getStack().findModifier( session.getSelectedIndex() );
                 Frame         frame{};
                 if ( pModifier == nullptr || makeFrame( session, *pModifier, frame ) == false )
                 {
-                    endDrag( getDragState() );
+                    endDrag( getState()._drag );
                     return;
                 }
 
@@ -781,12 +776,10 @@ namespace sw::editor
                 drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, kAxisColor, 1.0f );
                 drawRanges( args, frame );
 
-                PointSet* const pPointSet = s_pointSetOwner.getOrCreate(); // 제어점 월드 목록을 프레임마다 다시 채운다
-                if ( pPointSet == nullptr )
-                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-                *pPointSet = PointSet{};
-                (void)makePointSet( frame, *pPointSet ); // 격자 · ffd2d 가 아니면 빈 채로 둔다
-                processEditing( args, session, frame, *pPointSet );
+                PointSet& pointSet = getState()._pointSet; // 제어점 월드 목록을 프레임마다 다시 채운다
+                pointSet           = PointSet{};
+                (void)makePointSet( frame, pointSet ); // 격자 · ffd2d 가 아니면 빈 채로 둔다
+                processEditing( args, session, frame, pointSet );
             }
 
             static void drawStage( const EditorViewportVisualizerArgs& args )
@@ -795,17 +788,15 @@ namespace sw::editor
                 const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
                 if ( bNoActiveTarget )
                     return;
-                vector<float3>* const pListStagePoint = s_stagePointBufferOwner.getOrCreate(); // 프레임마다 다시 채우는 재사용 버퍼
-                if ( pListStagePoint == nullptr )
-                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-                pSession->makeStagePreviewSegments( *pListStagePoint );
-                drawSegments( args, *pListStagePoint, kStageColor );
+                vector<float3>& listStagePoint = getState()._listStagePoint; // 프레임마다 다시 채우는 재사용 버퍼
+                pSession->makeStagePreviewSegments( listStagePoint );
+                drawSegments( args, listStagePoint, kStageColor );
             }
         };
 
         /**
          * @class MeshModifiersVisualizerState
-         * @brief 뷰포트 끌기 상태의 주인입니다(확장이 기여하는 에디터 서브시스템 — `SW_EDITOR_SUBSYSTEM`). 에디터 범위마다 하나이고 모듈이 내려가면 함께 사라집니다.
+         * @brief 뷰포트 끌기 상태와 프레임 재사용 버퍼의 주인입니다(확장이 기여하는 에디터 서브시스템 — `SW_EDITOR_SUBSYSTEM`). 에디터 범위마다 하나이고 모듈이 내려가면 함께 사라집니다.
          */
         class MeshModifiersVisualizerState final : public EditorSubsystem
         {
@@ -813,12 +804,12 @@ namespace sw::editor
             static constexpr const utf8* kSubsystemName = "MeshModifiersVisualizerState";
             const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
-            MeshModifiersVisualizerInternal::DragState _drag{};
+            MeshModifiersVisualizerInternal::State _state{};
         };
 
-        MeshModifiersVisualizerInternal::DragState& MeshModifiersVisualizerInternal::getDragState()
+        MeshModifiersVisualizerInternal::State& MeshModifiersVisualizerInternal::getState()
         {
-            return getSubsystem<MeshModifiersVisualizerState>()._drag;
+            return getSubsystem<MeshModifiersVisualizerState>()._state;
         }
     } // namespace
 

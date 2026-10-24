@@ -4,6 +4,9 @@
 # 키는 "<저장소 기준 파일 경로>:<변수 이름>". 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 올린다(예: 범위가 서기 전 · 시그널 안에서도
 # 읽는 크래시 경로의 잠금 없는 저장소). 변수가 더는 위반이 아니면 낡은 예외로 실패한다. 상수(`static const` · `static constexpr`)는 애초에 대상이 아니다.
 [exemption]
+"Test/CoreTest/Common/TestLowLevelReport.cpp:_s_received" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
+"Test/CoreTest/Common/TestLowLevelReport.cpp:_s_pCapture" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
+"Test/CoreTest/Common/TestLowLevelReport.cpp:_s_bHandled" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
 
 # [pending] — 이전 대기 표(래칫). 신규 위반부터 막고 기존 위반은 영역별로 소유자 있는 객체로 옮기며 줄여 간다(사용자 결정, 2026-10-25).
 # 키는 파일 경로, 값은 그 파일의 위반 **총수** 상한(범주별이 아니다 — Local 을 Namespace/Member 로 옮기는 우회도 총수라 막힌다).
@@ -12,8 +15,6 @@
 # 줄이는 법: 위반을 옮긴 뒤 `py -3 -m Scripts gate CheckMutableStatics --regen-baseline` — 상한을 지금 수로 낮추고 0 인 줄을 지운다(늘리는 방향은 거부한다).
 [pending]
 
-# Source/App — 이전 대기
-"Source/App/RHIBackendSwitcherAutomation.cpp" = 1
 # Source/Core/Common — 이전 대기
 "Source/Core/Common/Macros.cpp" = 4
 # Source/Core/Compression — 이전 대기
@@ -42,7 +43,7 @@
 "Source/Core/File/FileUtil.cpp" = 4
 "Source/Core/File/PlatformFileUtil.cpp" = 3
 # Source/Core/GlobalVariable — 이전 대기
-"Source/Core/GlobalVariable/GlobalVariableManager.cpp" = 3
+"Source/Core/GlobalVariable/GlobalVariableManager.cpp" = 2
 # Source/Core/Log — 이전 대기
 "Source/Core/Log/LogContext.cpp" = 1
 "Source/Core/Log/LogOnce.cpp" = 1
@@ -77,65 +78,17 @@
 # Source/Core/UUID — 이전 대기
 "Source/Core/UUID/UUID.cpp" = 1
 # Source/Editor/Common — 이전 대기
-"Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp" = 1
 "Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp" = 3
-"Source/Editor/Common/Commands/Asset/EditorFolderListing.cpp" = 1
-"Source/Editor/Common/Commands/Dev/EditorDevCommands.cpp" = 1
-"Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp" = 2
-"Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp" = 2
-"Source/Editor/Common/Commands/Scene/EditorNavigationBakeCommand.cpp" = 1
-"Source/Editor/Common/Commands/Scene/EditorReflectionProbeBakeCommand.cpp" = 1
 "Source/Editor/Common/Commands/Scene/EditorViewportPreview.cpp" = 1
-"Source/Editor/Common/Config/EditorSettingsRegistry.cpp" = 1
-"Source/Editor/Common/Config/EditorSettingsRegistry.h" = 1
-"Source/Editor/Common/GUI/EditorChrome.cpp" = 7
-"Source/Editor/Common/GUI/EditorCommandGUI.cpp" = 3
-"Source/Editor/Common/GUI/EditorComponentIcon.cpp" = 1
-"Source/Editor/Common/GUI/EditorDockLayout.cpp" = 1
-"Source/Editor/Common/GUI/EditorMenuBar.cpp" = 4
-"Source/Editor/Common/GUI/EditorPanelDump.cpp" = 1
-"Source/Editor/Common/GUI/EditorPlayToolbar.cpp" = 5
-"Source/Editor/Common/GUI/EditorThemeUtil.cpp" = 2
-"Source/Editor/Common/GUI/EditorUIContext.cpp" = 1
-"Source/Editor/Common/Widgets/EditorNodeGraph.cpp" = 1
-"Source/Editor/Common/Widgets/EditorWidgets.cpp" = 2
 "Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.h" = 1
 "Source/Editor/Common/Workspace/EditorService.cpp" = 6
 # Source/Editor/Panels — 이전 대기
-"Source/Editor/Panels/Animation/RigDebugPanel.cpp" = 1
-"Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp" = 1
 "Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
-"Source/Editor/Panels/Inspector/InspectorPanel.cpp" = 1
-"Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp" = 2
-"Source/Editor/Panels/Inspector/InspectorPropertyUndo.cpp" = 2
-"Source/Editor/Panels/MapCheck/MapCheckPanel.cpp" = 4
-"Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp" = 1
-"Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp" = 1
-"Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp" = 1
-"Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp" = 1
-"Source/Editor/Panels/Scene/HierarchyPanel.cpp" = 2
-"Source/Editor/Panels/Settings/ModulesPanel.cpp" = 1
-"Source/Editor/Panels/Settings/PreferencesPanel.cpp" = 1
-"Source/Editor/Panels/Settings/ShortcutsPanel.cpp" = 1
-# Source/Editor/SelfTest — 이전 대기
-"Source/Editor/SelfTest/EditorCaptureSteps.cpp" = 1
-"Source/Editor/SelfTest/EditorSelfTest.cpp" = 1
-"Source/Editor/SelfTest/EditorSelfTestCases.cpp" = 5
-"Source/Editor/SelfTest/EditorSelfTestDevTools.cpp" = 3
-"Source/Editor/SelfTest/EditorSelfTestInput.cpp" = 1
-"Source/Editor/SelfTest/EditorSelfTestInputCases.cpp" = 4
-"Source/Editor/SelfTest/EditorSelfTestPanelCases.cpp" = 5
 # Source/Editor/Viewport — 이전 대기
-"Source/Editor/Viewport/EditorColliderHandleTool.cpp" = 2
-"Source/Editor/Viewport/EditorViewportBillboard.cpp" = 1
 "Source/Editor/Viewport/EditorViewportMouseClaim.cpp" = 3
-"Source/Editor/Viewport/EditorVisualizerGeometry.cpp" = 1
-"Source/Editor/Viewport/TerrainBrushTool.cpp" = 1
 "Source/Editor/Viewport/ViewportInputOverlay.cpp" = 1
-"Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp" = 1
-"Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp" = 2
 # Source/Engine/Animation — 이전 대기
 "Source/Engine/Animation/Rig/RigAsset.cpp" = 2
 "Source/Engine/Animation/Skeletal/SkeletonBoneLOD.cpp" = 1
@@ -167,19 +120,19 @@
 "Source/Engine/Graphics/Canvas/DebugDrawCanvas.cpp" = 1
 "Source/Engine/Graphics/Material/MaterialPermutation.cpp" = 1
 "Source/Engine/Graphics/Mesh/Mesh.cpp" = 1
-"Source/Engine/Graphics/Mesh/MeshCache.cpp" = 3
+"Source/Engine/Graphics/Mesh/MeshCache.cpp" = 1
 "Source/Engine/Graphics/Mesh/MeshUtil.cpp" = 1
 "Source/Engine/Graphics/RHI/GL/Platform/GlxPlatformContext.cpp" = 2
 "Source/Engine/Graphics/RHI/GL/Platform/WglPlatformContext.cpp" = 1
 "Source/Engine/Graphics/RHI/IRHIDevice.cpp" = 1
-"Source/Engine/Graphics/RHI/RHIRenderResource.cpp" = 4
+"Source/Engine/Graphics/RHI/RHIRenderResource.cpp" = 2
 "Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp" = 3
 "Source/Engine/Graphics/RHI/Support/RHIDrawDiagnostics.cpp" = 2
 "Source/Engine/Graphics/Shader/Binding/ShaderBindingValidator.cpp" = 6
 "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp" = 4
 "Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp" = 3
 "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp" = 3
-"Source/Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp" = 3
+"Source/Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp" = 1
 # Source/Engine/Input — 이전 대기
 "Source/Engine/Input/Linux/InputManagerX11.cpp" = 14
 "Source/Engine/Input/Windows/InputManagerWin32.cpp" = 5
@@ -202,11 +155,11 @@
 "Source/Engine/Object/GameObject/Service/ISceneService.cpp" = 1
 "Source/Engine/Object/GameObject/Tick/StructuralChangeBuffer.cpp" = 1
 "Source/Engine/Object/GameObject/Tick/TickBatchRegistry.cpp" = 1
-"Source/Engine/Object/Prefab/PrefabAsset.cpp" = 3
+"Source/Engine/Object/Prefab/PrefabAsset.cpp" = 1
 # Source/Engine/Observability — 이전 대기
 "Source/Engine/Observability/ServerServiceRegistry.cpp" = 2
 # Source/Engine/Physics — 이전 대기
-"Source/Engine/Physics/Collision/PhysicsMeshShapeCache.cpp" = 2
+"Source/Engine/Physics/Collision/PhysicsMeshShapeCache.cpp" = 1
 "Source/Engine/Physics/Jolt/JoltJobSystem.cpp" = 1
 "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp" = 4
 # Source/Engine/Probe — 이전 대기
@@ -226,10 +179,8 @@
 "Source/Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp" = 2
 "Source/Engine/Renderer/Frame/Timeline/GPUPassTimeline.cpp" = 2
 "Source/Engine/Renderer/Graph/RenderGraph.cpp" = 1
-"Source/Engine/Renderer/RenderThread.cpp" = 2
 # Source/Engine/Resource — 이전 대기
 "Source/Engine/Resource/Cache/BuiltInAssetCache.cpp" = 1
-"Source/Engine/Resource/Cache/SharedAssetCacheDefinition.h" = 1
 "Source/Engine/Resource/Cook/ContentHash.cpp" = 2
 "Source/Engine/Resource/Cook/CookJob.cpp" = 2
 "Source/Engine/Resource/Pack/ResourcePakCompressionUtil.cpp" = 1
@@ -258,8 +209,7 @@
 "Source/GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.cpp" = 1
 "Source/GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.cpp" = 1
 "Source/GameFramework/Base/Gameplay/Interaction/InteractionCatalog.cpp" = 1
-"Source/GameFramework/Base/Online/Bus/ServerBus.cpp" = 3
-"Source/GameFramework/Base/Online/Identity/OnlinePushRelay.cpp" = 4
+"Source/GameFramework/Base/Online/Identity/OnlinePushRelay.cpp" = 1
 "Source/GameFramework/Base/Online/Local/LocalStoreFactory.cpp" = 1
 "Source/GameFramework/Base/Online/Security/NetSecurity.cpp" = 1
 "Source/GameFramework/Base/Online/Server/OnlineServerKit.cpp" = 1
@@ -274,15 +224,8 @@
 "Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.cpp" = 1
 "Source/GameFramework/Kits/Feature/World/Overworld/ZoneTracker.cpp" = 1
 # Source/GameFramework/PlugIn — 이전 대기
-"Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp" = 1
-"Source/GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.cpp" = 1
-"Source/GameFramework/PlugIn/Editor/CharacterEditor/RetargetPanel.cpp" = 1
-"Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersVisualizer.cpp" = 5
-"Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.cpp" = 1
 "Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.cpp" = 1
-"Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.cpp" = 2
 "Source/GameFramework/PlugIn/Editor/NetSimulation/EditorNetSimSession.cpp" = 1
-"Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutVisualizer.cpp" = 1
 # Source/ModuleHost — 이전 대기
 "Source/ModuleHost/ModuleCallGuard.cpp" = 4
 "Source/ModuleHost/ModuleShadowCopy.cpp" = 2

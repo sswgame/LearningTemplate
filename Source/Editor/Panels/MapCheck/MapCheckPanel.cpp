@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -41,25 +42,29 @@ namespace sw::editor
             /** @brief 오브젝트를 화면에 담는 기본 반지름(m)입니다 — 더블클릭 초점. */
             static constexpr float32 kFocusRadius = 2.0f;
 
-            /** @brief 상태줄 맵 검사 수 — 결과 번호가 바뀔 때만 다시 센다. */
-            inline static MapCheckCounts _s_statusCounts{};
-            inline static uint32         _s_statusRevision = 0;
-            inline static bool           _s_bStatusCounted = false;
-            /** @brief 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬입니다(이름이 바뀌면 새 씬이다). */
-            inline static uint64 _s_toastSceneGeneration = 0;
+            /** @brief 상태줄 항목이 프레임 사이에 기억하는 값입니다. 패널이 닫혀도 상태줄은 그려지므로 패널 멤버가 아니라 에디터 범위의 상태 저장소가 소유한다. */
+            struct State
+            {
+                MapCheckCounts _statusCounts{}; ///< 상태줄 맵 검사 수 - 결과 번호가 바뀔 때만 다시 센다
+                uint32         _statusRevision{ 0 };
+                bool           _bStatusCounted{ false };
+                uint64         _toastSceneGeneration{ 0 }; ///< 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬이다(이름이 바뀌면 새 씬이다)
+            };
+
+            static State& getState() { return getEditorState<State>(); }
 
             /** @brief 결과 번호가 바뀌었으면 무게별 수를 다시 셉니다. */
             static const MapCheckCounts& syncStatusCounts()
             {
                 const uint32 revision = ValidationIssueLog::get().getRevision();
-                if ( _s_bStatusCounted && revision == _s_statusRevision )
-                    return _s_statusCounts;
+                if ( getState()._bStatusCounted && revision == getState()._statusRevision )
+                    return getState()._statusCounts;
                 vector<ValidationIssue> listIssue;
                 ValidationIssueLog::get().collectIssues( listIssue );
-                _s_statusCounts   = MapCheckRows::countIssues( listIssue );
-                _s_statusRevision = revision;
-                _s_bStatusCounted = true;
-                return _s_statusCounts;
+                getState()._statusCounts   = MapCheckRows::countIssues( listIssue );
+                getState()._statusRevision = revision;
+                getState()._bStatusCounted = true;
+                return getState()._statusCounts;
             }
 
             /** @brief 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄웁니다(언리얼은 맵을 열 때 Map Check 를 띄운다). */
@@ -69,9 +74,9 @@ namespace sw::editor
                 if ( pSceneManager == nullptr )
                     return;
                 const uint64 generation = pSceneManager->getSceneGeneration();
-                if ( generation == _s_toastSceneGeneration )
+                if ( generation == getState()._toastSceneGeneration )
                     return;
-                _s_toastSceneGeneration = generation;
+                getState()._toastSceneGeneration = generation;
                 if ( counts._errorCount == 0 )
                     return;
                 const string message = SW_LOCKEYFORMAT( "EditorMapCheck", "SceneIssuesToast", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );

@@ -4,10 +4,9 @@
  */
 #include "pch.h"
 
-#include "Core/Memory/LifetimeScope.h"
-
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
@@ -25,8 +24,12 @@ namespace sw::editor
             /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게). */
             static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
 
-            /** @brief 선분을 펼치는 재사용 버퍼의 소유자입니다(에디터 UI 는 게임 스레드 하나) — 엔진 수명 범위가 소유한다(함수 정적이면 종료 누수 보고 뒤까지 남는다). */
-            inline static ScopeOwned<vector<EditorWorldSegment>> s_segmentBufferOwner{};
+            /** @brief 선분을 펼치는 재사용 버퍼들입니다(에디터 UI 는 게임 스레드 하나). 에디터 범위의 상태 저장소가 소유한다. */
+            struct Scratch
+            {
+                vector<DebugLine>          _listLine;
+                vector<EditorWorldSegment> _listSegment;
+            };
 
             static ImU32 toColor( const float4& color )
             {
@@ -47,12 +50,10 @@ namespace sw::editor
                 if ( args._pDebugDrawQueue == nullptr )
                     return;
 
-                vector<EditorWorldSegment>* const pListSegment = DebugDrawVisualizerInternal::s_segmentBufferOwner.getOrCreate();
-                if ( pListSegment == nullptr )
-                    return; // 엔진 수명 범위가 닫힌 뒤(종료 중)다
-                pListSegment->clear();
-                EditorVisualizerGeometryUtil::appendDebugDrawSegments( *args._pDebugDrawQueue, args._bFlat2D, *pListSegment );
-                for ( const EditorWorldSegment& segment : *pListSegment )
+                Scratch& scratch = getEditorState<Scratch>();
+                scratch._listSegment.clear();
+                EditorVisualizerGeometryUtil::appendDebugDrawSegments( *args._pDebugDrawQueue, args._bFlat2D, scratch._listLine, scratch._listSegment );
+                for ( const EditorWorldSegment& segment : scratch._listSegment )
                 {
                     ImVec2 screenFrom;
                     ImVec2 screenTo;
