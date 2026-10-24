@@ -27,8 +27,9 @@ namespace sw
     public:
         explicit PoseRetargetBinding( PoseRetargetComponent& owner );
 
-        bool                isAnimationActive() const override;
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        bool isAnimationActive() const override;
+        /** @brief 원본을 옮겨 쓸 때(프로필이 준비되고 원본이 있다)만 포즈를 쓴다. 원본이 없거나 프로필이 없으면 이 유닛은 읽기만 하는 작업만 남는다. */
+        AnimationPoseAccess getPoseAccess() const override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
 
@@ -77,6 +78,8 @@ namespace sw
         void bindToUnit();
         /** @brief 원본 유닛입니다(없으면 nullptr). */
         SkeletalMeshComponent* findSource() const;
+        /** @brief 이번 기본 포즈 단계가 원본을 옮겨 쓸지 반환합니다(프로필이 준비되고 원본을 찾을 수 있다). 포즈 접근 선언과 `populateBasePose` 가 같은 판정을 쓴다. */
+        bool isRetargeting() const;
         /** @brief 기본 포즈 단계입니다(워커). */
         void populateBasePose( SkeletalMeshComponent& unit );
 

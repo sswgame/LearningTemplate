@@ -23,6 +23,11 @@ namespace sw
         return _owner._bProfileReady == SW_TRUE && _owner._source.isValid();
     }
 
+    AnimationPoseAccess PoseRetargetBinding::getPoseAccess() const
+    {
+        return _owner.isRetargeting() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
+    }
+
     void PoseRetargetBinding::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         (void)context;
@@ -145,10 +150,15 @@ namespace sw
             _pUnit->registerAnimationPhaseTask( &_binding );
     }
 
+    bool PoseRetargetComponent::isRetargeting() const
+    {
+        return _bProfileReady == SW_TRUE && findSource() != nullptr;
+    }
+
     void PoseRetargetComponent::populateBasePose( SkeletalMeshComponent& unit )
     {
-        const SkeletalMeshComponent* pSource = findSource();
-        if ( pSource == nullptr || _bProfileReady == SW_FALSE )
+        const SkeletalMeshComponent* pSource = isRetargeting() ? findSource() : nullptr;
+        if ( pSource == nullptr )
             return;
         const Skeleton& sourceSkeleton = pSource->getSkeleton();
         const Skeleton& targetSkeleton = unit.getSkeleton();

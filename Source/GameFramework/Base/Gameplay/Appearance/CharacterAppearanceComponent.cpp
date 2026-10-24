@@ -178,13 +178,17 @@ namespace sw
     {
     }
 
+    AnimationPoseAccess CharacterAppearanceProportionTask::getPoseAccess() const
+    {
+        return _owner.getBodyProportion().getEntries().empty() ? AnimationPoseAccess::ReadsOnly : AnimationPoseAccess::Writes;
+    }
+
     void CharacterAppearanceProportionTask::runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         (void)context;
-        const BoneProportion& proportion = _owner.getBodyProportion();
-        if ( phase != AnimationPhase::Attachment || proportion.getEntries().empty() )
+        if ( phase != AnimationPhase::Attachment || getPoseAccess() == AnimationPoseAccess::ReadsOnly )
             return;
-        proportion.applyToPose( unit.getSkeleton(), unit.getLocalPose() );
+        _owner.getBodyProportion().applyToPose( unit.getSkeleton(), unit.getLocalPose() );
     }
 
     void CharacterAppearanceProportionTask::onAnimationUnitDetached( SkeletalMeshComponent& unit )

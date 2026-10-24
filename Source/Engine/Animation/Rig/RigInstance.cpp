@@ -251,17 +251,43 @@ namespace sw
         return 1.0f;
     }
 
-    float32 RigInstance::computeNodeWeight( uint32 nodeIndex ) const
+    float32 RigInstance::computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const
     {
         const RigNode& node = *_listNode[nodeIndex];
         if ( node.isEnabled() == false )
             return 0.0f;
         float32 weight = node.getWeight();
         if ( node.getWeightCurve().empty() == false )
-            weight *= ( _pCurveSource != nullptr ) ? _pCurveSource->getCurveValue( node.getWeightCurve() ) : 0.0f;
+            weight *= curveFactor;
         if ( node.getWeightSlot().empty() == false )
             weight *= getSlotWeight( node.getWeightSlot() );
         return MathUtil::saturate( weight );
+    }
+
+    float32 RigInstance::computeNodeWeight( uint32 nodeIndex ) const
+    {
+        const hashed_string& curve       = _listNode[nodeIndex]->getWeightCurve();
+        float32              curveFactor = 1.0f;
+        if ( curve.empty() == false )
+            curveFactor = ( _pCurveSource != nullptr ) ? _pCurveSource->getCurveValue( curve ) : 0.0f;
+        return computeNodeWeightWithCurve( nodeIndex, curveFactor );
+    }
+
+    bool RigInstance::canWritePose() const
+    {
+        if ( isInitialized() == false )
+            return false;
+        for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
+        {
+            if ( _listNodeLODOff[nodeIndex] == SW_TRUE )
+                continue;
+            // 커브 값은 아직 모른다 — 커브 출처가 있으면 1 로 보고, 없으면 평가가 0 으로 읽는 대로 0 이다.
+            const bool    bCurveUnreadable = _listNode[nodeIndex]->getWeightCurve().empty() == false && _pCurveSource == nullptr;
+            const float32 weight           = computeNodeWeightWithCurve( nodeIndex, bCurveUnreadable ? 0.0f : 1.0f );
+            if ( weight > 0.0f )
+                return true;
+        }
+        return false;
     }
 
     RigNode* RigInstance::findNode( const hashed_string& name ) const
@@ -313,11 +339,17 @@ namespace sw
     {
         if ( isInitialized() == false )
             return;
-        _pose.initialize( inoutLocalPose, listParent );
         for ( RigMorphWeight& morph : _listMorphWeight )
         {
             morph._weight = 0.0f; // 이름 목록은 유지한다. 프레임마다 다시 할당하지 않게 하려는 것이다.
         }
+        // 평가할 노드가 없으면 포즈를 건드리지 않는다 — 호스트가 `canWritePose` 로 읽기만 하는 작업이라 선언했을 수 있다(그 선언을 평가가 깨지 않게 같은 판정을 쓴다).
+        if ( canWritePose() == false )
+        {
+            _pendingDeltaSeconds = 0.0f;
+            return;
+        }
+        _pose.initialize( inoutLocalPose, listParent );
 
         RigEvaluateContext context{};
         context._pPose          = &_pose;

@@ -49,6 +49,18 @@ namespace sw
                 mixed ^= mixed >> 29;
                 return static_cast<uint32>( mixed & 0xFFFFu );
             }
+
+#if defined( SW_DEBUG )
+            /** @brief 로컬 포즈와 모프 가중치의 바이트 지문입니다 — `ReadsOnly` 를 선언한 작업이 단계 뒤에도 이 값을 그대로 두었는지 `runTasks` 가 본다. */
+            static uint64 fingerprintPose( const Pose& pose, const vector<float32>& listMorphWeight )
+            {
+                uint64 hash = HashUtil::kFnvOffset64;
+                hash        = HashUtil::appendBytes64( hash, pose.getTranslations().data(), pose.getTranslations().size() * sizeof( float3 ) );
+                hash        = HashUtil::appendBytes64( hash, pose.getRotations().data(), pose.getRotations().size() * sizeof( quaternion ) );
+                hash        = HashUtil::appendBytes64( hash, pose.getScales().data(), pose.getScales().size() * sizeof( float3 ) );
+                return HashUtil::appendBytes64( hash, listMorphWeight.data(), listMorphWeight.size() * sizeof( float32 ) );
+            }
+#endif
         };
     } // namespace
 } // namespace sw
@@ -764,7 +776,18 @@ namespace sw
     {
         for ( IAnimationPhaseTask* pTask : _listTask )
         {
+#if defined( SW_DEBUG )
+            // 포즈 접근 선언은 군중 공유가 믿는 계약이다 — 읽기만 한다고 선언한 작업이 포즈나 모프 가중치를 쓰면 묶음의 포즈를 덮거나(공유 유닛은 이 단계를 돌지 않아
+            // 쓰기가 사라지거나) 한다. 반대 방향(쓴다고 선언하고 안 쓴다)은 값이 같은 쓰기가 있을 수 있어 단언할 수 없으므로 작업마다 선언과 쓰기가 같은 판정을 쓰게 하고 테스트로 막는다.
+            const bool   bDeclaredReadsOnly = pTask->getPoseAccess() == AnimationPoseAccess::ReadsOnly;
+            const uint64 before             = bDeclaredReadsOnly ? SkeletalMeshComponentInternal::fingerprintPose( _localPose, _listMorphWeight ) : 0ull;
+#endif
             pTask->runAnimationPhase( phase, *this, _frameContext );
+#if defined( SW_DEBUG )
+            if ( bDeclaredReadsOnly )
+                SW_LOG_ASSERT( before == SkeletalMeshComponentInternal::fingerprintPose( _localPose, _listMorphWeight ),
+                               "An animation phase task declared AnimationPoseAccess::ReadsOnly changed the pose or morph weights (phase %#)", static_cast<uint32>( phase ) );
+#endif
         }
     }
 
