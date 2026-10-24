@@ -34,8 +34,9 @@ namespace sw
     public:
         explicit FacialAnimationBinding( FacialAnimationComponent& owner );
 
-        bool                isAnimationActive() const override;
-        AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+        bool isAnimationActive() const override;
+        /** @brief 이번 프레임에 모프 가중치나 눈 본을 쓸 일이 있을 때(`FacialAnimationComponent::isDrivingFace`)만 포즈를 쓴다. 표정 · 말하기 · 깜빡임 · 시선이 모두 쉬는 얼굴은 읽기만 한다. */
+        AnimationPoseAccess getPoseAccess() const override;
         void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                finishAnimationFrame( SkeletalMeshComponent& unit ) override;
@@ -133,6 +134,16 @@ namespace sw
         float32 nextRandom();
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
         void advanceTime( float32 deltaSeconds );
+        /** @brief 같은 오브젝트의 애니메이터(표정 커브의 출처)입니다. 찾을 수 없으면 nullptr 입니다. */
+        const SkeletalAnimatorComponent* findAnimator( const SkeletalMeshComponent* pUnit ) const;
+        /** @brief 표정 하나의 이번 프레임 가중치입니다(명시 + 실시간 입력 + 애니메이터 커브). */
+        float32 computeExpressionWeight( size_t poseIndex, const SkeletalAnimatorComponent* pAnimator ) const;
+        /**
+         * @brief 이번 프레임 얼굴이 모프 가중치나 눈 본을 쓸지 반환합니다(시간 단계 뒤에 읽는다 — 깜빡임 정도 · 말하기 · 애니메이터 커브가 그 단계에서 정해진다).
+         * @details 포즈 접근 선언(`FacialAnimationBinding::getPoseAccess`)과 `applyFace` 가 같은 판정을 쓴다. 타깃 번호 표(`refreshBindings`)는 첫 후처리에서야 짓기 때문에
+         *          리그 데이터만 본다 — 번호가 안 맞아 실제로는 아무것도 안 쓰는 경우도 쓴다고 센다(공유만 놓칠 뿐 쓰기를 놓치지는 않는다).
+         */
+        bool isDrivingFace() const;
         /** @brief 후처리 단계 — 모프 가중치 · 눈 본을 겁니다. */
         void applyFace( SkeletalMeshComponent& unit );
         /** @brief 포즈 하나(표정 · 비즘)를 가중치만큼 유닛에 더합니다. */

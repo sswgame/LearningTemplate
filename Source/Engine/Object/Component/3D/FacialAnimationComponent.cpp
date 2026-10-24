@@ -63,6 +63,11 @@ namespace sw
                rig.getGaze()._listEyeBone.empty() == false;
     }
 
+    AnimationPoseAccess FacialAnimationBinding::getPoseAccess() const
+    {
+        return _owner.isDrivingFace() ? AnimationPoseAccess::Writes : AnimationPoseAccess::ReadsOnly;
+    }
+
     void FacialAnimationBinding::prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
     {
         (void)unit;
@@ -478,24 +483,49 @@ namespace sw
         }
     }
 
+    const SkeletalAnimatorComponent* FacialAnimationComponent::findAnimator( const SkeletalMeshComponent* pUnit ) const
+    {
+        const GameObject* pOwner      = ( pUnit != nullptr ) ? pUnit->getOwner() : nullptr;
+        const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getManager() != nullptr;
+        return bResolvable ? pOwner->getManager()->resolveComponent( _animator ) : nullptr;
+    }
+
+    float32 FacialAnimationComponent::computeExpressionWeight( size_t poseIndex, const SkeletalAnimatorComponent* pAnimator ) const
+    {
+        float32 weight = _listExpressionWeight[poseIndex];
+        if ( poseIndex < _listLiveWeight.size() )
+            weight += _listLiveWeight[poseIndex]; // 실시간 입력(게임 스레드가 옮겨 둔 값)
+        if ( pAnimator != nullptr )
+            weight += pAnimator->getCurveValue( _rig.getExpressions()[poseIndex]._name );
+        return weight;
+    }
+
+    bool FacialAnimationComponent::isDrivingFace() const
+    {
+        const SkeletalAnimatorComponent* pAnimator = findAnimator( _pUnit );
+        for ( size_t poseIndex = 0; poseIndex < _rig.getExpressions().size(); ++poseIndex )
+        {
+            if ( computeExpressionWeight( poseIndex, pAnimator ) != 0.0f )
+                return true;
+        }
+        const bool bSpeakingVisemes = _bSpeaking == SW_TRUE && _rig.getVisemes().empty() == false;
+        const bool bBlinking        = _blinkAmount > 0.0f && _rig.getBlink()._listTarget.empty() == false;
+        const bool bGazing          = _bLookAt == SW_TRUE && _bLookAtModelReady == SW_TRUE && _rig.getGaze()._listEyeBone.empty() == false;
+        return bSpeakingVisemes || bBlinking || bGazing;
+    }
+
     void FacialAnimationComponent::applyFace( SkeletalMeshComponent& unit )
     {
         refreshBindings( unit );
+        if ( isDrivingFace() == false )
+            return;
 
         // 표정 — 명시 가중치 + 같은 오브젝트 애니메이터의 같은 이름 커브(애니메이터의 시간 단계가 이미 이번 프레임 커브를 냈다).
-        const SkeletalAnimatorComponent* pAnimator           = nullptr;
-        const bool                       bAnimatorResolvable = _animator.isValid() && unit.getOwner() != nullptr && unit.getOwner()->getManager() != nullptr;
-        if ( bAnimatorResolvable )
-            pAnimator = unit.getOwner()->getManager()->resolveComponent( _animator );
-        const vector<FacialPose>& listExpression = _rig.getExpressions();
+        const SkeletalAnimatorComponent* pAnimator      = findAnimator( &unit );
+        const vector<FacialPose>&        listExpression = _rig.getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {
-            float32 weight = _listExpressionWeight[poseIndex];
-            if ( poseIndex < _listLiveWeight.size() )
-                weight += _listLiveWeight[poseIndex]; // 실시간 입력(게임 스레드가 옮겨 둔 값)
-            if ( pAnimator != nullptr )
-                weight += pAnimator->getCurveValue( listExpression[poseIndex]._name );
-            addPose( unit, _listExpressionTarget[poseIndex], listExpression[poseIndex], weight );
+            addPose( unit, _listExpressionTarget[poseIndex], listExpression[poseIndex], computeExpressionWeight( poseIndex, pAnimator ) );
         }
 
         // 립싱크 — 트랙이면 그 프레임의 비즘 가중치, 아니면 진폭이 대체 비즘을 연다.
