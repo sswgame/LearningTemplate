@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
+#include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 
 namespace sw
@@ -149,6 +150,14 @@ namespace sw
                 // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.
                 thread_local vector<uint8> s_cbBytes;
                 const uint32               alignedSize = MathUtil::align( layout.getEngineCbSize(), 16u );
+                // 슬롯은 PassConstantRing::kSlotBytes 로 만들었다 — 레이아웃이 더 크면 슬롯 뒤를 쓰게 되므로 올리지 않고 알린다(GL 은 GL_INVALID_VALUE, 다른 백엔드는 조용히 넘쳤다).
+                if ( alignedSize > PassConstantRing::kSlotBytes )
+                {
+                    static atomic<bool> s_bReported{ false };
+                    if ( s_bReported.exchange( true ) == false )
+                        SW_LOG_ERROR( "The engine PassCB layout is %# bytes but a pass constant slot holds %# - raise PassConstantRing::kSlotBytes", alignedSize, PassConstantRing::kSlotBytes );
+                    return;
+                }
                 s_cbBytes.assign( alignedSize, 0 );
 
                 for ( const ShaderEngineCbMember& member : layout.getEngineCbMembers() )

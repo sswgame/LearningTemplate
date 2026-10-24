@@ -32,8 +32,9 @@ namespace sw
         static constexpr uint32 kInitialSlotCount = 64;
         /// @brief 슬롯 상한입니다. 넘으면 에러를 남기고 마지막 슬롯을 공유합니다(그 프레임은 배치 상수가 섞입니다).
         static constexpr uint32 kMaxSlotCount = 4096;
-        /// @brief 슬롯 하나의 바이트 수입니다. 엔진 PassCB 레이아웃(리플렉션, 지금 약 700 바이트)이 이 안에 들어야 합니다. DX12 상수 버퍼 뷰는 256 바이트 배수여야 합니다.
-        static constexpr uint32 kSlotBytes = 768;
+        /// @brief 슬롯 하나의 바이트 수입니다. 엔진 PassCB 레이아웃(리플렉션 — 하늘 대기 · 안개 행이 들어와 768 을 넘었다)이 이 안에 들어야 합니다. DX12 상수 버퍼 뷰는 256 바이트 배수여야 합니다.
+        ///        넘는 레이아웃은 `ShaderParameterBinder` 가 올리지 않고 오류로 알린다(작은 슬롯 뒤를 쓰지 않는다).
+        static constexpr uint32 kSlotBytes = 1024;
 
         PassConstantRing();
         ~PassConstantRing() = default;

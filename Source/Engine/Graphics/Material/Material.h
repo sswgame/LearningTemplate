@@ -277,6 +277,12 @@ namespace sw
         [[nodiscard]] bool matchPropertiesToSchema( const ShaderBufferInfo& schema );
         /** @brief 레이아웃 오류 뒤 바이트와 stride 를 비운다 — 틀린 바이트(적지 않은 칸의 0)가 GPU 에 올라가지 않게 한다. */
         void discardBytesAfterLayoutError();
+        /**
+         * @brief `_data._bytes` 를 상수 버퍼에 올립니다. 바이트가 버퍼보다 커졌으면(레이아웃 맞추기가 셰이더 스키마 크기로 늘렸다) 버퍼와 bindless 뷰를 다시 만든다.
+         * @details 버퍼는 처음에 .material 순서로 쌓은 크기로 만들고, 셰이더 레이아웃을 맞추면 스키마 크기로 커질 수 있다 — 올리는 곳마다 바이트 크기를 그대로
+         *          넘겼더니 작은 버퍼 뒤를 썼다(GL 은 GL_INVALID_VALUE 로 알렸다). 올리기는 이 함수 하나로만 한다.
+         */
+        void uploadConstantBytes( IRHIDevice* pRHI );
 
         /// @brief 비동기 파일 로드가 머티리얼이 아직 살아 있는지 확인하는 상태입니다. 소멸자가 포인터를 끊습니다.
         struct AsyncLoadState
@@ -299,6 +305,7 @@ namespace sw
         MaterialDesc               _desc;
         MaterialData               _data;
         RHIBufferHandle            _constantBuffer;
+        uint32                     _constantBufferBytes; /**< `_constantBuffer` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(`uploadConstantBytes`). */
         RHIDescriptorIndex         _descriptorIndex;
         uint32                     _elementStride;               /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
         uint32                     _bufferGeneration;            /**< `_data._bytes` 가 바뀔 때마다 오른다. 인스턴스가 복사본이 낡았는지 확인한다. */

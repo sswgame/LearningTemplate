@@ -58,6 +58,7 @@ namespace sw
         , _desc{}
         , _data{}
         , _constantBuffer{ 0 }
+        , _constantBufferBytes{ 0 }
         , _descriptorIndex{ kInvalidDescriptorIndex }
         , _elementStride{ 0 }
         , _bufferGeneration{ 0 }
@@ -124,6 +125,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to create Constant Buffer!" );
             return false;
         }
+        _constantBufferBytes = bufferSize;
 
         pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
         _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
@@ -350,9 +352,10 @@ namespace sw
         releaseTextureAssets( nullptr );
 
         // 디바이스가 이미 없다. GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 를 부르면 해제 후 사용이다).
-        _constantBuffer  = 0;
-        _descriptorIndex = kInvalidDescriptorIndex;
-        _pRHIDevice      = nullptr;
+        _constantBuffer      = 0;
+        _constantBufferBytes = 0;
+        _descriptorIndex     = kInvalidDescriptorIndex;
+        _pRHIDevice          = nullptr;
     }
 
     void Material::releaseRHI( IRHIDevice* pRHI )
@@ -371,9 +374,34 @@ namespace sw
             if ( _constantBuffer != 0 )
                 pRHI->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
         }
-        _constantBuffer  = 0;
-        _descriptorIndex = kInvalidDescriptorIndex;
-        _pRHIDevice      = nullptr;
+        _constantBuffer      = 0;
+        _constantBufferBytes = 0;
+        _descriptorIndex     = kInvalidDescriptorIndex;
+        _pRHIDevice          = nullptr;
+    }
+
+    void Material::uploadConstantBytes( IRHIDevice* pRHI )
+    {
+        if ( pRHI == nullptr || _constantBuffer == 0 )
+            return;
+        const uint32 byteSize = static_cast<uint32>( _data._bytes.size() );
+        if ( byteSize > _constantBufferBytes )
+        {
+            // 쓰던 버퍼 · 뷰는 렌더 스레드가 아직 읽을 수 있다 — 반환은 디바이스가 그 프레임 뒤로 미룬다(releaseRHI 와 같다).
+            if ( _descriptorIndex != kInvalidDescriptorIndex )
+                pRHI->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
+            pRHI->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
+            _descriptorIndex     = kInvalidDescriptorIndex;
+            _constantBuffer      = pRHI->getResourceFactory()->createConstantBuffer( byteSize );
+            _constantBufferBytes = _constantBuffer != 0 ? byteSize : 0;
+            if ( _constantBuffer == 0 )
+            {
+                SW_LOG_ERROR( "Material '%#': could not grow the constant buffer to %# bytes", _desc._name.c_str(), byteSize );
+                return;
+            }
+            _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
+        }
+        pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), byteSize );
     }
 
     bool Material::ensureShaderLayout( IRHIDevice* pDevice )
@@ -772,8 +800,7 @@ namespace sw
             return false;
         }
         ++_bufferGeneration;
-        if ( pRHI != nullptr && _constantBuffer != 0 )
-            pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+        uploadConstantBytes( pRHI );
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
@@ -795,8 +822,7 @@ namespace sw
             if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
-            if ( pRHI != nullptr && _constantBuffer != 0 )
-                pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+            uploadConstantBytes( pRHI );
             _desc._listProperty = _data._listProperty;
             return true;
         }
@@ -876,8 +902,7 @@ namespace sw
             if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
-            if ( pRHI != nullptr && _constantBuffer != 0 )
-                pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+            uploadConstantBytes( pRHI );
             return true;
         }
         return false;
