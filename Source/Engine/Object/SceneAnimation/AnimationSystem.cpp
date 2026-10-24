@@ -383,35 +383,8 @@ namespace sw
         }
     }
 
-    void AnimationSystem::evaluate( float32 deltaSeconds )
+    void AnimationSystem::collectActiveUnits( float32 deltaSeconds )
     {
-        SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
-#if SW_ANIMATION_REWIND_ENABLED
-        // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
-        _rewind.syncWithRequest();
-        if ( _rewind.isScrubbing() )
-        {
-            applyRewindScrub();
-            return;
-        }
-        if ( _bRewindApplied == SW_TRUE )
-        {
-            // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
-            _bRewindApplied = SW_FALSE;
-            for ( SkeletalMeshComponent* pUnit : _listUnit )
-            {
-                pUnit->markPoseDirty();
-            }
-        }
-#endif
-        updateLOD();
-        if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _listUnit.empty() == false ) )
-            rebuildLevels();
-        ++_frameIndex;
-        _deltaSeconds = deltaSeconds;
-        _crowd.beginFrame( deltaSeconds );
-
-        // 이번 프레임에 일하는 유닛만 레벨 순서로 모은다 — 쉬는 유닛은 여기서 빠져 단계를 돌지 않는다.
         _listActive.clear();
         _listLevelStart.clear();
         for ( const vector<SkeletalMeshComponent*>& level : _listLevel )
@@ -426,24 +399,10 @@ namespace sw
         _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
         _activeUnitCount        = static_cast<uint32>( _listActive.size() );
         _poseEvaluatedUnitCount = 0;
-        if ( _listActive.empty() )
-        {
-            _crowd.endFrame();
-#if SW_ANIMATION_REWIND_ENABLED
-            recordRewindFrame();
-            _rewind.endFrame( deltaSeconds );
-#endif
-            return;
-        }
+    }
 
-        // 단계마다 프로파일 구간을 둔다 — 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다.
-        {
-            SW_PROFILE_SCOPE( "GT.Animation.phaseTime" );
-            runPhase( AnimationPhase::Time );
-        }
-        synchronizeGroups();
-        updateCrowd();
-
+    void AnimationSystem::runPosePhases()
+    {
         // 포즈 단계의 벽시계 시간을 측정한다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 측정해서 나눈다).
         uint32 poseUnitCount = 0;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
@@ -475,16 +434,68 @@ namespace sw
             const float32 sample           = static_cast<float32>( MonotonicClock::nowNanoseconds() - poseStart ) * 0.001f / static_cast<float32>( poseUnitCount );
             _averageEvaluationMicroseconds = ( _averageEvaluationMicroseconds <= 0.0f ) ? sample : ( _averageEvaluationMicroseconds * 0.9f + sample * 0.1f );
         }
+    }
+
+    void AnimationSystem::endEvaluationFrame( float32 deltaSeconds )
+    {
+        _crowd.endFrame();
+#if SW_ANIMATION_REWIND_ENABLED
+        recordRewindFrame();
+        _rewind.endFrame( deltaSeconds );
+#else
+        (void)deltaSeconds;
+#endif
+    }
+
+    void AnimationSystem::evaluate( float32 deltaSeconds )
+    {
+        SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
+#if SW_ANIMATION_REWIND_ENABLED
+        // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
+        _rewind.syncWithRequest();
+        if ( _rewind.isScrubbing() )
+        {
+            applyRewindScrub();
+            return;
+        }
+        if ( _bRewindApplied == SW_TRUE )
+        {
+            // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
+            _bRewindApplied = SW_FALSE;
+            for ( SkeletalMeshComponent* pUnit : _listUnit )
+            {
+                pUnit->markPoseDirty();
+            }
+        }
+#endif
+        updateLOD();
+        if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _listUnit.empty() == false ) )
+            rebuildLevels();
+        ++_frameIndex;
+        _deltaSeconds = deltaSeconds;
+        _crowd.beginFrame( deltaSeconds );
+
+        collectActiveUnits( deltaSeconds );
+        if ( _listActive.empty() )
+        {
+            endEvaluationFrame( deltaSeconds );
+            return;
+        }
+
+        // 단계마다 프로파일 구간을 둔다 — 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다.
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.phaseTime" );
+            runPhase( AnimationPhase::Time );
+        }
+        synchronizeGroups();
+        updateCrowd();
+        runPosePhases();
 
         for ( SkeletalMeshComponent* pUnit : _listActive )
         {
             pUnit->finishAnimationFrame();
         }
-        _crowd.endFrame();
-#if SW_ANIMATION_REWIND_ENABLED
-        recordRewindFrame();
-        _rewind.endFrame( deltaSeconds );
-#endif
+        endEvaluationFrame( deltaSeconds );
     }
 
 #if SW_ANIMATION_REWIND_ENABLED
