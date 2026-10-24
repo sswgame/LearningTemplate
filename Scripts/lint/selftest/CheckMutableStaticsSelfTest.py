@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from lint.gate import CheckMutableStatics  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 _kViolationRe = re.compile(r"\[MutableStatic/(Local|Namespace|Member)\] (\w+) —")
@@ -130,6 +130,60 @@ _kListCase: list[tuple[str, dict[str, str], list[str]]] = [
 ]
 
 
+_kTwoStatics = "void f()\n{\n    static int s_a = 0;\n    static int s_b = 0;\n}\n"
+
+# 이전 대기 표(래칫) — (이름, 파일 -> 내용, 표, 위반 줄에 들어 있어야 하는 글 — 비면 위반이 하나도 없어야 한다)
+_kListRatchetCase: list[tuple[str, dict[str, str], dict[str, int], list[str]]] = [
+    ("상한과 위반 총수가 같으면 통과", {"Source/Probe/X.cpp": _kTwoStatics}, {"Source/Probe/X.cpp": 2}, []),
+    ("표에 없는 파일의 위반은 실패 — 신규 파일", {"Source/Probe/Y.cpp": _kTwoStatics}, {"Source/Probe/X.cpp": 2}, ["Source/Probe/Y.cpp: 정적 가변 변수 2건", "표에 없는 파일"]),
+    ("깨끗한 파일은 표에 없어도 통과(표에 없는 파일의 상한은 0)", {"Source/Probe/Y.cpp": "void f() {}\n"}, {}, []),
+    ("상한을 넘으면 실패 — 늘리지 못한다", {"Source/Probe/X.cpp": _kTwoStatics}, {"Source/Probe/X.cpp": 1}, ["상한 1 을 넘었습니다", "늘릴 수 없습니다"]),
+    ("상한보다 줄었는데 표가 그대로면 실패 — 표를 줄여라",
+     {"Source/Probe/X.cpp": "void f()\n{\n    static int s_a = 0;\n}\n"}, {"Source/Probe/X.cpp": 2}, ["1건으로 줄었습니다(상한 2)", "--regen-baseline"]),
+    ("위반이 0 이 되었는데 표에 남았으면 실패", {"Source/Probe/X.cpp": "void f() {}\n"}, {"Source/Probe/X.cpp": 2}, ["0건으로 줄었습니다(상한 2)"]),
+    ("자리만 옮기는 우회(Local -> Namespace)는 총수가 같아 표 안에서 통과하지만 하나 더하면 실패",
+     {"Source/Probe/X.cpp": "namespace\n{\n    int s_a = 0;\n}\nvoid f()\n{\n    static int s_b = 0;\n}\n"}, {"Source/Probe/X.cpp": 1}, ["상한 1 을 넘었습니다"]),
+]
+
+
+def checkRatchet() -> list[str]:
+    """이전 대기 표 규칙(신규 파일 · 상한 초과 · 줄었는데 표 그대로)과 표 갱신(늘리면 거부, 줄이면 영역 주석까지 정리)을 본다."""
+    listError: list[str] = []
+    tempRoot = Path(tempfile.mkdtemp(prefix="swMutableStaticsRatchet"))
+    try:
+        for caseIndex, (name, mapFile, mapPending, listExpectedPart) in enumerate(_kListRatchetCase):
+            caseRoot = tempRoot / f"case{caseIndex}"
+            for relative, content in mapFile.items():
+                path = caseRoot / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8", newline="\n")
+            joined = "\n".join(CheckMutableStatics.findMutableStaticViolationsInTree(caseRoot, None, mapPending))
+            if not listExpectedPart:
+                if joined:
+                    listError.append(f"{name}: 위반이 없어야 합니다 — {joined[:200]}")
+            elif any(part not in joined for part in listExpectedPart):
+                listError.append(f"{name}: 기대한 글 {listExpectedPart} 이 없습니다 — {joined[:300]}")
+    finally:
+        shutil.rmtree(tempRoot, ignore_errors=True)
+    # 표 갱신: 늘리는 방향은 거부, 줄이는 방향은 0 인 줄과 비는 영역 주석을 지우고 상한만 낮춘다.
+    text = '[pending]\n# Source/A — 이전 대기\n"Source/A/One.cpp" = 3\n"Source/A/Two.cpp" = 1\n# Source/B — 이전 대기\n"Source/B/Three.cpp" = 2\n'
+    mapPending = {"Source/A/One.cpp": 3, "Source/A/Two.cpp": 1, "Source/B/Three.cpp": 2}
+    try:
+        CheckMutableStatics.regenPendingText(text, {"Source/A/One.cpp": 4, "Source/A/Two.cpp": 1}, mapPending)
+        listError.append("표 갱신: 상한을 넘는 위반(늘리는 방향)을 거부하지 않았습니다")
+    except GateError:
+        pass
+    try:
+        CheckMutableStatics.regenPendingText(text, {"Source/New/Other.cpp": 1}, mapPending)
+        listError.append("표 갱신: 표에 없는 파일의 위반을 거부하지 않았습니다")
+    except GateError:
+        pass
+    shrunk = CheckMutableStatics.regenPendingText(text, {"Source/A/One.cpp": 2, "Source/A/Two.cpp": 1}, mapPending)
+    if shrunk != '[pending]\n# Source/A — 이전 대기\n"Source/A/One.cpp" = 2\n"Source/A/Two.cpp" = 1\n':
+        listError.append(f"표 갱신: 줄인 결과가 기대와 다릅니다 — {shrunk!r}")
+    return listError
+
+
 def violationNames(listViolation: list[str]) -> list[str]:
     """위반 줄에서 걸린 `범주글자:변수 이름` 만 뽑습니다."""
     listName: list[str] = []
@@ -162,7 +216,8 @@ class CheckMutableStaticsSelfTestGate(LintGate):
                     listError.append(f"{name}: 기대 {sorted(listExpected)}, 실제 {sorted(listFound)}")
         finally:
             shutil.rmtree(tempRoot, ignore_errors=True)
-        return GateResult(listViolation=listError, summary=f"{len(_kListCase)} cases")
+        listError.extend(checkRatchet())
+        return GateResult(listViolation=listError, summary=f"{len(_kListCase)} cases · {len(_kListRatchetCase)} ratchet cases")
 
 
 main = CheckMutableStaticsSelfTestGate.run

@@ -29,8 +29,13 @@
 
 여는 중괄호가 무엇을 여는지(함수 본문 · 람다 · 네임스페이스 · 클래스)는 보고서 `RunFunctionSize` 가 쓰는 머리 읽기(`lint/CppScope.py`)를 그대로 쓴다.
 
-예외는 `Scripts/lint/rules/CheckMutableStatics.toml` 의 `[exemption]`(`<파일>:<변수 이름>` → 이유) 하나다. 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 이유와 함께 올린다
+**영구 예외**는 `Scripts/lint/rules/CheckMutableStatics.toml` 의 `[exemption]`(`<파일>:<변수 이름>` → 이유)이다. 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 이유와 함께 올린다
 (크래시 경로의 잠금 없는 저장소처럼). 그 변수가 더는 위반이 아니면 낡은 예외로 실패한다.
+
+**이전 대기 표(래칫)** `[pending]` — 신규 위반부터 막고 기존 위반은 영역별로 옮겨 가며 줄인다(사용자 결정, 2026-10-25). 파일 → 그 파일의 위반 **총수** 상한이고, 파일마다 총수가 상한과 같아야 통과다:
+표에 없는 파일의 위반은 실패(신규 파일 · 깨끗했던 파일), 상한 초과는 실패(늘리지 못한다 — 범주별이 아니라 총수라 `Local` → `Namespace`/`Member` 로 자리만 옮기는 우회도 막힌다),
+상한보다 줄었거나 0 이 되면 실패(표가 낡아 신규를 숨기지 않게 `--regen-baseline` 으로 표를 줄인다), 전체 훑기에서 표의 파일이 없어져도 실패한다.
+`--regen-baseline` 은 상한을 지금 수로 **낮추기만** 한다 — 상한을 넘거나 표에 없는 파일에 위반이 있으면 표를 쓰지 않고 오류(종료 2)다.
 **형식으로 막지 못하는 틈이라 게이트를 둔다** — 정적 저장 기간 변수는 언어가 늘 허락하고, 소유자를 정하는 것은 쓰는 쪽이다.
 
 대상은 `Source/` · `Test/` · `Tools/ReflectionParser/` · `Tools/OnlineLoadBot/` 의 `.h` · `.cpp` · `.inl` 이다(생성 `.gen.cpp` 와 ThirdParty 제외).
@@ -50,12 +55,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import blankMatch  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
+from common.RuleData import getRuleFilePath, kKindInteger  # noqa: E402
 from lint.CppScope import blankPreprocessor, classifyHead, isLambdaOpen  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
-from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, joinFindings, scanSourceGates  # noqa: E402
+from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, scanSourceGates  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".cpp", ".inl")
+
+#: 이전 대기 표 — 파일 → 그 파일의 위반 총수 상한(`rules/CheckMutableStatics.toml` 의 `[pending]`).
+_kRuleSchema = {"pending": kKindInteger}
+_kMapPending: dict[str, int] = LintGate.readRules("CheckMutableStatics", _kRuleSchema)["pending"]
+_kPendingSectionRe = re.compile(r"^\s*\[(\w+)\]\s*$")
+_kPendingEntryRe = re.compile(r'^(\s*)"([^"]+)"(\s*=\s*)(\d+)(.*)$')
+_kRegenCommand = "py -3 -m Scripts gate CheckMutableStatics --regen-baseline"
 
 _kCategoryLocal = "MutableStatic/Local"
 _kCategoryNamespace = "MutableStatic/Namespace"
@@ -253,10 +266,71 @@ def findMutableStaticViolations(source: SourceFile) -> list[str]:
     return listViolation
 
 
-def findMutableStaticViolationsInTree(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """`repositoryRoot`(셀프테스트의 조각 트리)를 이 게이트 하나로 훑은 위반 — 게이트와 같은 훑기다."""
+def judgePending(mapCount: dict[str, int], mapLine: dict[str, list[str]], mapPending: dict[str, int], bFullScan: bool) -> list[str]:
+    """
+    이전 대기 표(래칫)로 파일마다 판정한다 — 파일의 위반 총수가 상한과 같아야 통과다.
+      ① 표에 없는 파일(상한 0)에 위반이 있으면 실패 — 신규 파일 · 이미 깨끗한 파일의 신규 위반.
+      ② 상한을 넘으면 실패 — 늘리지 못한다. 상한은 범주별이 아니라 총수라 `Local` → `Namespace`/`Member` 로 자리만 옮기는 우회도 막힌다.
+      ③ 상한보다 줄었으면(0 포함) 실패 — 표가 낡아 신규를 숨기지 않게 `--regen-baseline` 으로 표를 줄인다.
+      ④ 전체 훑기에서 표의 파일이 없으면 실패 — 옮기거나 지운 파일의 줄이 남지 않게.
+    """
+    listViolation: list[str] = []
+    for relative in sorted(mapCount):
+        count = mapCount[relative]
+        cap = mapPending.get(relative, 0)
+        if count > cap:
+            where = ("이전 대기 표에 없는 파일이라 하나도 둘 수 없습니다" if cap == 0 else f"이전 대기 상한 {cap} 을 넘었습니다 — 늘릴 수 없습니다")
+            listViolation.append(f"{relative}: 정적 가변 변수 {count}건 — {where}. 소유자가 든 객체로 옮기십시오(표에 줄을 더하거나 상한을 올리지 않는다)")
+            listViolation.extend(mapLine.get(relative, []))
+        elif count < cap:
+            listViolation.append(f"{relative}: 정적 가변 변수가 {count}건으로 줄었습니다(상한 {cap}) — 표를 줄이십시오: {_kRegenCommand}")
+    if bFullScan:
+        for relative in sorted(set(mapPending) - set(mapCount)):
+            listViolation.append(f"{relative}: 이전 대기 표의 파일이 없습니다(옮겼거나 지웠다) — 표를 줄이십시오: {_kRegenCommand}")
+    return listViolation
+
+
+def regenPendingText(text: str, mapCount: dict[str, int], mapPending: dict[str, int]) -> str:
+    """
+    `[pending]` 의 상한을 지금의 위반 총수로 **줄인다** — 0 이거나 파일이 없으면 줄을 지우고, 비는 영역 주석도 지운다.
+    늘리는 방향(상한 초과 · 표에 없는 파일의 위반)은 `GateError` 다 — 표는 줄이는 도구이지 위반을 숨기는 도구가 아니다.
+    """
+    listGrow = [f"{relative} {mapCount[relative]}건 > 상한 {mapPending.get(relative, 0)}" for relative in sorted(mapCount) if mapCount[relative] > mapPending.get(relative, 0)]
+    if listGrow:
+        raise GateError("표를 늘리는 방향은 거부합니다 — 먼저 위반을 줄이십시오: " + " · ".join(listGrow))
+    newline = "\r\n" if "\r\n" in text else "\n"
+    listOut: list[str] = []
+    section = ""
+    for line in text.split(newline):
+        sectionMatch = _kPendingSectionRe.match(line)
+        if sectionMatch is not None:
+            section = sectionMatch.group(1)
+        entry = _kPendingEntryRe.match(line) if section == "pending" else None
+        if entry is None:
+            listOut.append(line)
+            continue
+        count = mapCount.get(entry.group(2), 0)
+        if count > 0:
+            listOut.append(f"{entry.group(1)}\"{entry.group(2)}\"{entry.group(3)}{count}{entry.group(5)}")
+    # 항목이 모두 빠진 영역 주석 — 다음 줄이 또 주석이거나 파일 끝이면 지운다.
+    section = ""
+    listKept: list[str] = []
+    for index, line in enumerate(listOut):
+        sectionMatch = _kPendingSectionRe.match(line)
+        if sectionMatch is not None:
+            section = sectionMatch.group(1)
+        following = next((later for later in listOut[index + 1:] if later.strip()), None)
+        if section == "pending" and line.startswith("#") and (following is None or following.startswith("#")):
+            continue
+        listKept.append(line)
+    return newline.join(listKept)
+
+
+def findMutableStaticViolationsInTree(repositoryRoot: Path, listTargetFile: list[str] | None, mapPending: dict[str, int] | None = None) -> list[str]:
+    """`repositoryRoot`(셀프테스트의 조각 트리)를 이 게이트 하나로 훑은 위반 — 게이트와 같은 훑기다. `mapPending` 이 있으면 그 표로 판정한다(없으면 빈 표)."""
     gate = CheckMutableStaticsGate()
-    args = argparse.Namespace(files=listTargetFile)
+    gate.mapPending = {} if mapPending is None else mapPending
+    args = argparse.Namespace(files=listTargetFile, regen_baseline=False)
     return gate.finishSourceScan(repositoryRoot, args, scanSourceGates(repositoryRoot, [(gate, args)])[0]).listViolation
 
 
@@ -266,10 +340,8 @@ class CheckMutableStaticsGate(LintGate):
     description = "정적 저장 기간의 가변 변수(함수 안 static · 네임스페이스 수준 · 클래스 static 멤버 · thread_local)가 없는지 검사 — 이름이 아니라 모양으로"
     buildComment = "Checking mutable variables with static storage duration..."
     timeoutSeconds = 60
-    # 아래 두 줄이 이 게이트를 CTest · 커밋 훅에서 뺀다. main 의 위반이 소유자 있는 객체로 다 옮겨진 뒤(staticeditor · staticselftest · staticengine 병합 뒤 위반 0)
-    # 두 줄을 지우면 켜진다. 직접 실행(`py -3 -m Scripts gate CheckMutableStatics`)은 지금도 같다.
-    ctestSkipReason = "main 에 남은 정적 가변 변수가 소유자 있는 객체로 옮겨지는 동안 켜지 않는다 — 위반 0 이 되면 이 줄과 preCommitSkipReason 을 지운다"
-    preCommitSkipReason = "ctestSkipReason 과 같다 — 위반이 0 이 되면 켠다"
+    ruleSchema = _kRuleSchema
+    mapPending: dict[str, int] = _kMapPending   # 이전 대기 표 — 셀프테스트가 조각 표로 바꿔 본다
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
     sourceScanRoots = _kListScanRoot
@@ -279,7 +351,8 @@ class CheckMutableStaticsGate(LintGate):
         "  정적 변수는 수명과 순서가 숨고 병렬 테스트 · 둘째 인스턴스가 같은 칸을 나눠 씁니다. 소유자를 정합니다:\n"
         "      서비스 · 캐시 · 카운터 · 버퍼 -> 서브시스템이나 그것을 쓰는 객체의 멤버(ScopeOwned 로 감싼 전역 칸도 같은 모양입니다)\n"
         "      한 번만 하는 일 -> 소유자가 든 깃발     상수 표 · 이름표 -> static const / static constexpr (허용)\n"
-        "  정말 못 옮기는 까닭이 있으면 Scripts/lint/rules/CheckMutableStatics.toml 의 [exemption] 에 \"<파일>:<변수 이름>\" 과 이유를 적습니다."
+        "  정말 못 옮기는 까닭이 있으면 Scripts/lint/rules/CheckMutableStatics.toml 의 [exemption] 에 \"<파일>:<변수 이름>\" 과 이유를 적습니다.\n"
+        "  이전 대기 표([pending])는 파일마다 위반 총수의 상한이다 — 늘리지 못하고, 줄었으면 표를 줄입니다: " + _kRegenCommand
     )
     selfTestCases = [
         {
@@ -335,15 +408,42 @@ class CheckMutableStaticsGate(LintGate):
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools 전체)")
+        parser.add_argument("--regen-baseline", action="store_true",
+                            help="이전 대기 표([pending])의 상한을 지금의 위반 총수로 줄인다(늘리는 방향은 거부). 전체 훑기에서만")
 
     def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
-        return FileFindings(listViolation=findMutableStaticViolations(source))
+        listViolation = findMutableStaticViolations(source)
+        return FileFindings(listViolation=listViolation, value=(source.relative, len(listViolation)))
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
-        listViolation, _ = joinFindings(result.listFindings)
-        listCount = [sum(1 for line in listViolation if f"[{category}]" in line) for category in _kListCategory]
+        mapCount: dict[str, int] = {}
+        mapLine: dict[str, list[str]] = {}
+        for findings in result.listFindings:
+            if findings.value is not None:
+                relative, count = findings.value
+                mapCount[relative] = count
+                mapLine[relative] = findings.listViolation
+        bFullScan = not getattr(args, "files", None)
+        if getattr(args, "regen_baseline", False):
+            return self.regenerateBaseline(args, mapCount, bFullScan)
+        bRealRepository = (repositoryRoot / ".git").exists()
+        listViolation = judgePending(mapCount, mapLine, self.mapPending, bFullScan and bRealRepository)
+        listCount = [sum(1 for lines in mapLine.values() for line in lines if f"[{category}]" in line) for category in _kListCategory]
         summary = " · ".join(f"{category} {count}" for category, count in zip(_kListCategory, listCount))
-        return GateResult(listViolation=listViolation, summary=f"{' · '.join(_kListScanRoot)} — {summary}")
+        return GateResult(listViolation=listViolation,
+                          summary=f"{' · '.join(_kListScanRoot)} — {summary} · 이전 대기 {len(self.mapPending)}개 파일 · 상한 합 {sum(self.mapPending.values())}")
+
+    def regenerateBaseline(self, args: argparse.Namespace, mapCount: dict[str, int], bFullScan: bool) -> GateResult:
+        """`--regen-baseline` — 표의 상한을 지금의 위반 총수로 줄여 쓴다. 파일 일부만 훑었거나 늘리는 방향이면 `GateError`(표를 쓰지 않는다)."""
+        if not bFullScan:
+            raise GateError("--regen-baseline 은 전체 훑기에서만 쓴다(--files 와 함께 쓰지 않는다)")
+        path = getRuleFilePath(self.name)
+        text = path.read_bytes().decode("utf-8")
+        newText = regenPendingText(text, mapCount, self.mapPending)
+        path.write_bytes(newText.encode("utf-8"))
+        total = sum(count for relative, count in mapCount.items() if relative in self.mapPending)
+        return GateResult(summary=f"표를 줄였다 — 파일 {len(self.mapPending)}개 -> {sum(1 for relative in self.mapPending if mapCount.get(relative, 0) > 0)}개 · "
+                                  f"상한 합 {sum(self.mapPending.values())} -> {total}")
 
 
 main = CheckMutableStaticsGate.run
