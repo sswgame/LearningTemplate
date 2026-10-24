@@ -127,8 +127,12 @@ namespace sw::editor
                 }
             }
 
-            /** @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 호출한 것과 같은 바이트입니다. */
-            [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, DirectX::ScratchImage& outImage )
+            /**
+             * @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 호출한 것과 같은 바이트입니다.
+             * @param pTaskManager 띠를 나눠 돌릴 작업 시스템입니다. nullptr 이면(테스트 하니스 · 서비스 연결 전) 현재 스레드가 띠를 차례로 압축합니다.
+             *                     워커에서도 불리므로 이 안에서 에디터 서비스를 찾지 않고 부른 쪽이 제출 시점에 찾은 것을 받습니다.
+             */
+            [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, TaskManager* pTaskManager, DirectX::ScratchImage& outImage )
             {
                 const DirectX::TexMetadata& metadata           = mipChain.GetMetadata();
                 const bool                  bNotPlainTexture2D = metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D || metadata.arraySize != 1 || metadata.depth != 1;
@@ -165,9 +169,8 @@ namespace sw::editor
                 job._pBand  = listBand.data();
                 job._format = format;
                 // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
-                const uint32                bandCount    = static_cast<uint32>( listBand.size() );
-                TaskManager*                pTaskManager = editor::findSubsystem<TaskManager>();
-                const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJob::run, &job );
+                const uint32                bandCount = static_cast<uint32>( listBand.size() );
+                const ParallelBlockDelegate body      = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJob::run, &job );
                 if ( pTaskManager != nullptr )
                     pTaskManager->runParallel( bandCount, 2, body );
                 else
@@ -229,7 +232,7 @@ namespace sw::editor
          *          스탬프에 기록하므로, 어디서 임포트하든 같은 바이트가 나오는 DirectXTex 자체 필터만 씁니다. 실패하면 단계와 HRESULT 를 남기고 false 입니다.
          */
         [[nodiscard]] bool encodeTextureMipsInternal( const DirectX::Image& baseImage, bool bGenerateMips, DXGI_FORMAT targetFormat, string_view sourcePath,
-                                                      DirectX::ScratchImage& outFinalImage )
+                                                      TaskManager* pTaskManager, DirectX::ScratchImage& outFinalImage )
         {
             constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
 
@@ -244,7 +247,7 @@ namespace sw::editor
 
             if ( DirectX::IsCompressed( targetFormat ) )
             {
-                hr = BandCompressJob::compress( mipChain, targetFormat, outFinalImage );
+                hr = BandCompressJob::compress( mipChain, targetFormat, pTaskManager, outFinalImage );
                 if ( FAILED( hr ) )
                 {
                     SW_LOG_ERROR( "DirectX::Compress failed (hr=0x%#) for format %# (%#)", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ),
@@ -275,7 +278,8 @@ namespace sw::editor
          * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
          * @details 규칙의 포맷이 다른 것(8비트)이면 실패로 알린다. 1 을 넘는 값을 자르지 않기 위해서다. 밉은 선형 값 그대로 섞으며 sRGB 가 아니다.
          */
-        [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
+        [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TaskManager* pTaskManager,
+                                                     TextureImportResult* pOutResult )
         {
             const DXGI_FORMAT targetFormat = resolveFormatInternal( rule._format, false );
             if ( targetFormat != DXGI_FORMAT_BC6H_UF16 && targetFormat != DXGI_FORMAT_R16G16B16A16_FLOAT )
@@ -294,7 +298,7 @@ namespace sw::editor
                 return false;
             }
             DirectX::ScratchImage finalImage;
-            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, finalImage ) == false )
+            if ( encodeTextureMipsInternal( *sourceImage.GetImage( 0, 0, 0 ), rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, pTaskManager, finalImage ) == false )
                 return false;
             // Radiance RGBE 는 알파 없는 RGB 세 채널이다.
             constexpr uint32 kHdrSourceChannelCount = 3;
@@ -372,12 +376,14 @@ namespace sw::editor
         /**
          * @class TextureRawImporter
          * @brief 텍스처 원본이 일괄 임포트에 제공하는 함수들입니다. 원본마다 임포트 설정에서 규칙을 고릅니다.
+         * @details `importSource` 는 워커에서 불린다. 밴드 압축에 쓸 작업 시스템은 만든 쪽(`importAllTextures`, 호출 스레드)이 찾아 넘기고, 여기서는 에디터 서비스를 찾지 않는다.
          */
         class TextureRawImporter final : public IRawAssetImporter
         {
         public:
-            explicit TextureRawImporter( const TextureImportConfig& config )
+            TextureRawImporter( const TextureImportConfig& config, TaskManager* pTaskManager )
                 : _config{ config }
+                , _pTaskManager{ pTaskManager }
             {
             }
 
@@ -397,7 +403,7 @@ namespace sw::editor
             }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
-                return TextureImporter::importTexture( sourcePath, importedPath, findRule( resourcePath ) );
+                return TextureImporter::importTexture( sourcePath, importedPath, findRule( resourcePath ), nullptr, _pTaskManager );
             }
 
         private:
@@ -411,12 +417,13 @@ namespace sw::editor
             }
 
             const TextureImportConfig& _config;
+            TaskManager* const         _pTaskManager; ///< 밴드 압축을 나눠 돌릴 작업 시스템(빌림). nullptr 이면 호출한 스레드가 차례로 압축한다
         };
     } // namespace
 
     SW_LOG_CALLER( "TextureImporter" );
 
-    bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
+    bool TextureImporter::importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult, TaskManager* pTaskManager )
     {
         if ( pOutResult != nullptr )
         {
@@ -428,7 +435,7 @@ namespace sw::editor
 
         // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
         if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
-            return importHdrTextureInternal( sourcePath, outputPath, rule, pOutResult );
+            return importHdrTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
 
         // 1) ImageUtil 로 소스 이미지를 디코딩한다
         RawImageData rawImage;
@@ -459,7 +466,7 @@ namespace sw::editor
 
         // 3) 밉맵(켜져 있으면)과 4) 압축 또는 포맷 변환
         DirectX::ScratchImage finalImage;
-        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, finalImage ) == false )
+        if ( encodeTextureMipsInternal( baseImage, rule._bGenerateMips == SW_TRUE, targetFormat, sourcePath, pTaskManager, finalImage ) == false )
             return false;
 
         // 5) DDS 파일로 저장한다
@@ -530,7 +537,8 @@ namespace sw::editor
 
     AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
-        const TextureRawImporter importer{ config };
+        // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
+        const TextureRawImporter importer{ config, editor::findSubsystem<TaskManager>() };
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
     }
 
