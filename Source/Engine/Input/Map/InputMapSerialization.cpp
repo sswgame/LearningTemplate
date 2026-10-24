@@ -776,7 +776,10 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR_ID( "Input.BindingSourceUnknown", "The source of a single-slot binding is missing or unknown (action=%#, source=%#) - skipping this binding.", pAction, ( pSourceStr != nullptr ) ? pSourceStr : "" );
+                    if ( pSourceStr == nullptr )
+                        SW_LOG_ERROR_ID( "Input.BindingSourceMissing", "The source of a single-slot binding is missing (action=%#) - skipping this binding.", pAction );
+                    else
+                        SW_LOG_ERROR_ID( "Input.BindingSourceUnknown", "The source of a single-slot binding is unknown (action=%#, source=%#) - skipping this binding.", pAction, pSourceStr );
                 }
             }
 
@@ -1391,8 +1394,10 @@ namespace sw
             const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
             if ( parsedKind == BindingKind::Count )
             {
-                SW_LOG_ERROR_ID( "Input.BindingKindUnknown", "The binding kind is missing or unknown (action=%#, kind=%#) - skipping this binding.", pAction,
-                                 ( pKindStr != nullptr ) ? pKindStr : "" );
+                if ( pKindStr == nullptr )
+                    SW_LOG_ERROR_ID( "Input.BindingKindMissing", "The binding kind is missing (action=%#) - skipping this binding.", pAction );
+                else
+                    SW_LOG_ERROR_ID( "Input.BindingKindUnknown", "The binding kind is unknown (action=%#, kind=%#) - skipping this binding.", pAction, pKindStr );
                 continue;
             }
 

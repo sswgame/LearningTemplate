@@ -150,7 +150,8 @@ SW_TEST_CASE( XMLDocumentTest, UnreadableBooleanIsAReadFailure )
         SW_EXPECT_FALSE( root.readOptionalAttribute( "empty", value ) );
         SW_EXPECT_FALSE( root.readOptionalChild( "flag", value ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.ValueTypeMismatch" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.AttributeTypeMismatch" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.ChildTypeMismatch" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -200,7 +201,7 @@ SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
         SW_EXPECT_FALSE( node.readOptionalAttributeInRange( "huge", 0, 255, value ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.AttributeOutOfRange" ) == 2, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.ValueTypeMismatch" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Xml.AttributeTypeMismatch" ) == 2, logs.joined().c_str() );
 }
 
 /**

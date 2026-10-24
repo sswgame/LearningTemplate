@@ -907,7 +907,8 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanFailsTheLoad )
         SW_EXPECT_FALSE( material->loadFromXML( fieldXML ) );
         SW_EXPECT_FALSE( material->loadFromXML( valueXML ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnreadableBoolean" ) >= 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.BooleanFieldUnreadable" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.BooleanValueUnreadable" ) == 1, logs.joined().c_str() );
 }
 
 /**
@@ -938,7 +939,8 @@ SW_TEST_CASE( MaterialTest, UnreadableNumberFailsTheLoad )
         SW_EXPECT_FALSE( material->loadFromXML( rangeXML ) );
         SW_EXPECT_FALSE( material->loadFromXML( vectorXML ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.UnreadableNumber" ) == 2, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.ParameterNumberUnreadable" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Material.VectorNumberUnreadable" ) == 1, logs.joined().c_str() );
 }
 
 /**

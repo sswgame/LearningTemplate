@@ -5640,7 +5640,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
                     device->waitIdle();
                 }
                 ++checkedCount;
-                const uint32 hazardCount = logs.countWithID( "RHI.ValidationMessage" );
+                const uint32 hazardCount = logs.countWithID( "RHI.ValidationHazard" );
                 SW_EXPECT_TRUE_MSG( hazardCount == 0,
                                     ( label + "깊이를 첨부로 걸 때 SRV 로도 걸려 있었다 (해저드 " + sw::to_string( hazardCount ) + " 줄)" + logs.joined() ).c_str() );
             }

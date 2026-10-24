@@ -985,8 +985,9 @@ SW_TEST_CASE( InputMapTest, UserBindingsReadOnlyTheSavedShape )
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "UnknownKind" ) == false, "모르는 kind 를 단일 슬롯으로 읽었습니다" );
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "CodeForKey" ) == false, "source=key 의 code 특성(저장하지 않는 모양)을 읽었습니다" );
     SW_EXPECT_TRUE_MSG( inputMap.hasAction( "NoSource" ) == false, "source 없는 단일 슬롯을 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingKindUnknown" ) == 2, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingSourceUnknown" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingKindMissing" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingKindUnknown" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "Input.BindingSourceMissing" ) == 1, logs.joined().c_str() );
 }
 
 /**

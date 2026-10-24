@@ -191,8 +191,8 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
     }
     const utf8* const arrExpectedID[] = { "Schedule.UnknownElement",
                                           "Xml.UnknownAttribute",
-                                          "Schedule.ConditionNameUnknown",
-                                          "Schedule.ConditionNameUnknown",
+                                          "Schedule.SeasonUnknown",
+                                          "Schedule.DayUnknown",
                                           "Schedule.BlockTimeOrder",
                                           "Schedule.BlockActivityUnknown",
                                           "Schedule.BlockPlaceUnknown",
@@ -200,7 +200,7 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
                                           "Schedule.BlocksOverlap",
                                           "Schedule.BlockWithoutPlace",
                                           "Schedule.BlockWithoutObjectKind",
-                                          "Schedule.ConditionNameUnknown",
+                                          "Schedule.WeatherUnknown",
                                           "Schedule.FlagsInvalid",
                                           "Schedule.ArchetypeParentCycle" };
     for ( const utf8* pExpected : arrExpectedID )

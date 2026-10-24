@@ -978,7 +978,7 @@ namespace sw
                 if ( prop._shaderKeyword.empty() )
                     continue;
                 bool bKeywordOn{ false };
-                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
+                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
             }
 
