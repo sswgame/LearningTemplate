@@ -1,7 +1,6 @@
 <TranslationMemory culture="ko">
 	<entries>
 		<entry source="/" text="/" />
-		<entry source="Assault Blaster" text="돌격 블래스터" />
 		<entry source="Assault Rifle" text="돌격 소총" />
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
@@ -25,8 +24,6 @@
 		<entry source="Recon Vest" text="정찰 조끼" />
 		<entry source="Round Shield" text="둥근 방패" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
-		<entry source="Scatter Blaster" text="산탄 블래스터" />
-		<entry source="Sidearm Blaster" text="보조 블래스터" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="Travel Cape" text="여행 망토" />
 	</entries>

@@ -9,20 +9,21 @@
 -->
 <Scenario name="shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="1"/></At>
-	<!-- 첫 10 초에 스켈레톤은 넷쯤 온다 — 적이 둘 이상 서면 나눈 유닛이 그만큼이다. -->
-	<At frame="360">
+	<!-- 적이 몇 마리 서 있는 때는 디렉터의 페이싱과 자동 플레이의 사격이 정한다(고정 프레임에 보면 한 마리만 남은 순간을 볼 수 있다). 둘 이상 나눌 때까지 기다린 바로 다음 프레임에 본다. -->
+	<At frame="300"><WaitUntil probe="Animation.CrowdSharedUnits" atLeast="2" timeoutSeconds="60"/></At>
+	<At after="1">
 		<Expect probe="Animation.CrowdSharedUnits" atLeast="2"/>
 		<Record probe="Animation.CrowdSharedUnits"/>
 		<Record probe="Animation.CrowdSoloUnits"/>
 		<Record probe="Animation.ActiveUnits"/>
 		<Screenshot file="shooter3d/crowd_chase.ppm"/>
 	</At>
-	<At frame="600">
+	<At after="240">
 		<Record probe="Animation.CrowdSharedUnits"/>
 		<Record probe="Animation.CrowdSoloUnits"/>
 		<Screenshot file="shooter3d/crowd_fight.ppm"/>
 	</At>
-	<At frame="900">
+	<At after="300">
 		<Record probe="Animation.CrowdSharedUnits"/>
 		<Record probe="Animation.CrowdSoloUnits"/>
 		<Pass/>

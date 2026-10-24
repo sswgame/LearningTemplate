@@ -50,6 +50,11 @@ namespace sw
         bool isActionConsumed( const InputMap& inputMap, const InputManager& input, const hashed_string& action ) const;
         /** @brief 슬롯 @p slot 이 소비된 입력이면 true 입니다. */
         bool isSlotConsumed( const InputSlot& slot ) const;
+        /**
+         * @brief 슬롯 @p slot 이 소비된 입력이거나, 가상 커서가 패드 버튼에서 바꾼 마우스 왼쪽 · 오른쪽 버튼인데 그 패드 버튼이 소비된 것이면 true 입니다.
+         * @details 가상 커서가 켜져 있으면 패드 B 한 번이 UI 의 뒤로(패드 슬롯)와 마우스 오른쪽(게임의 허물기)으로 함께 나온다. 패드 슬롯만 소비로 치면 메뉴를 닫는 B 가 게임으로 샌다.
+         */
+        bool isSlotConsumed( const InputSlot& slot, const InputManager& input ) const;
         /** @brief 소비된 입력이 하나라도 있으면 true 입니다. */
         bool hasConsumedInput() const { return _listConsumedSlot.empty() == false || _consumedStickMask != 0; }
         /** @brief 모두 해제합니다. */

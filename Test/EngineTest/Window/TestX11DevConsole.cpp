@@ -20,6 +20,7 @@ SW_TEST_REQUIRES_HOST( X11DevConsoleTest, "creates a real X window; headless CI 
  */
 SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
 {
+    SW_TEST_REQUIRES_FEATURE( X11ConsoleOverlay ); // 구성에 없음은 의도라 빈 스위트로 지지 않는다
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
@@ -69,7 +70,5 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
 
     console.reset();
     window->destroy();
-#else
-    SW_TEST_SKIP( "the X11 console overlay exists only in Linux client builds with dev commands" );
 #endif
 }

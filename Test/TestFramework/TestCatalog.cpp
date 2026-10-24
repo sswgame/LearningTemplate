@@ -31,13 +31,20 @@ namespace test
 #else
             static constexpr bool kDebugBuild = false;
 #endif
+            // 리눅스 개발 콘솔 오버레이(X11DevConsoleWindow)는 이 조건의 빌드에만 있다 — TestX11DevConsole.cpp 의 본문 조건과 같다.
+#if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+            static constexpr bool kX11ConsoleOverlay = true;
+#else
+            static constexpr bool kX11ConsoleOverlay = false;
+#endif
             /** @brief `BuildFeature` 와 같은 순서 — 기능 하나에 한 줄. */
             static constexpr BuildFeatureRow kArrBuildFeature[] = {
-                {"DevelopmentBuild",           kDevelopmentBuild},
-                {    "DebugAsserts",                 kDebugBuild},
-                {        "DebugLog",                 kDebugBuild},
-                { "MemoryTagScopes", sw::kMemoryTagScopesEnabled},
-                { "SourceResources",           kDevelopmentBuild},
+                { "DevelopmentBuild",           kDevelopmentBuild},
+                {     "DebugAsserts",                 kDebugBuild},
+                {         "DebugLog",                 kDebugBuild},
+                {  "MemoryTagScopes", sw::kMemoryTagScopesEnabled},
+                {  "SourceResources",           kDevelopmentBuild},
+                {"X11ConsoleOverlay",          kX11ConsoleOverlay},
             };
             static_assert( sizeof( kArrBuildFeature ) / sizeof( kArrBuildFeature[0] ) == static_cast<size_t>( BuildFeature::Count ),
                            "every BuildFeature needs a row in kArrBuildFeature" );

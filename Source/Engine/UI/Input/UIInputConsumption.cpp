@@ -189,7 +189,7 @@ namespace sw
             {
                 const InputSlot& slot = pBinding->_arrSlot[arrIndex[slotIndex]];
                 // 소비된 슬롯은 뗀 프레임까지 "소비된 쪽" 으로 센다. 소비되지 않은 슬롯은 눌려 있을 때만 "보이는 쪽" 으로 센다.
-                if ( isSlotConsumed( slot ) )
+                if ( isSlotConsumed( slot, input ) )
                     bSawConsumed = true;
                 else if ( UIInputConsumptionInternal::isSlotDown( input, slot ) )
                     bSawFree = true;
@@ -201,6 +201,21 @@ namespace sw
     bool UIInputConsumption::isSlotConsumed( const InputSlot& slot ) const
     {
         return VectorUtil::containsBy<&ConsumedSlot::_slot>( _listConsumedSlot, slot );
+    }
+
+    bool UIInputConsumption::isSlotConsumed( const InputSlot& slot, const InputManager& input ) const
+    {
+        if ( isSlotConsumed( slot ) )
+            return true;
+        const VirtualCursor& cursor = input.getVirtualCursor();
+        if ( cursor.isEnabled() == false || slot._deviceKind != InputDeviceKind::Mouse )
+            return false;
+        const VirtualCursorSettings& settings = cursor.getSettings();
+        if ( slot._controlIndex == static_cast<uint16>( MouseButton::Left ) )
+            return isSlotConsumed( InputSlot::fromGamepadButton( settings._primaryButton, settings._padIndex ) );
+        if ( slot._controlIndex == static_cast<uint16>( MouseButton::Right ) )
+            return isSlotConsumed( InputSlot::fromGamepadButton( settings._secondaryButton, settings._padIndex ) );
+        return false;
     }
 
     void UIInputConsumption::clear()
