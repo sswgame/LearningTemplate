@@ -14,7 +14,12 @@
     전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
     이름만 보면 `instance()` · `shared()` 로 우회하므로 모양을 본다: (가) 클래스 안의 `static T& anything()`(자기 타입의 읽고 쓰는 참조를 돌려주는 인자 없는 정적 멤버),
     (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역을 두어 그 이름을 돌려주는 정의(`T& anything() { static T s; return s; }`, 클래스 밖 자유 함수도).
+    (다) 포인터 · 스마트 포인터를 돌려주는 정적 멤버는 팩토리(`static T* create()`)와 모양이 같아 모양으로 못 가른다 — 이 틈에만 **이름**
+    (`instance` · `shared` · `global` · `singleton` …)을 본다.
     읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`)는 섞인 상태를 내주는 창구가 아니라 상수 표 · 링크 때 목록 머리라 세지 않는다.
+    **보지 않는 곳**: `.cpp` — 익명 · `…Internal` 이름공간의 함수 안 정적 지역 접근자(`getList` · `getMutex` …)는 그 번역 단위 안에서만 보이는 도우미라 창구가
+    아니다(헤더가 이름을 내놓은 적이 없다는 것을 2026-10-25 에 확인했다). 헤더가 `T& anything();` 로 선언만 하고 본문을 `.cpp` 에 두는 바깥 연결 자유 함수는
+    선언만으로 단일체인지 알 수 없어 놓친다 — 새로 생기면 이 게이트가 아니라 리뷰에서 걸러야 하는 틈이다.
   - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
@@ -76,6 +81,10 @@ _kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*
 #   (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역(`static T s; … return s;`)을 두는 정의 — 클래스 안 · 밖 · 정적 여부와 무관하다.
 _kStaticOwnReferenceRe = re.compile(r"\bstatic\b([^;{}()=]*?)&\s*(\w+)\s*\(\s*\)")
 _kReferenceAccessorBodyRe = re.compile(r"&\s*(\w+)\s*\(\s*\)\s*(?:noexcept\s*)?\{")
+# (다) 포인터 · 스마트 포인터로 내주는 단일체 창구. 반환형이 `T*` 인 정적 멤버는 팩토리(`static T* create()`)와 모양이 같아서 모양으로 가를 수 없다 —
+#     **구조로 막지 못하는 틈이라 이름을 본다**(`instance` · `shared` … 가 붙은 인자 없는 정적 멤버가 `*` 나 `*_ptr<` 를 돌려주는 것). 참조 반환은 위 (가) 가 이미 센다.
+_kStaticPointerNamedRe = re.compile(
+    r"\bstatic\b([^;{}()=]*?(?:\*|\b\w*_ptr\s*<)[^;{}()=]*?)\b(instance|shared|global|singleton|sharedInstance|defaultInstance|getShared|getGlobal|getSingleton)\s*\(\s*\)")
 _kStaticLocalStatementRe = re.compile(r"\bstatic\s+(?!assert\b)([^;]*);")
 _kStaticLocalNameRe = re.compile(r"(\w+)\s*(?:=|\{|\(|\[|$)")
 _kClassHeadRe = re.compile(r"\b(?:class|struct)\s+(?:(?:\w*API|alignas\s*\([^)]*\))\s+)*(\w+)")
@@ -174,6 +183,12 @@ def findShapeSingletons(code: str) -> list[tuple[int, str, str, str]]:
         # 읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`, 링크 때 목록의 머리)는 섞인 상태를 내주는 창구가 아니라 값 · 목록 머리다.
         if className != "" and typeWords and typeWords[-1] == className and "const" not in typeWords and "*" not in typeText:
             listHit.append((match.start(2), className, functionName, "자기 타입의 참조를 돌려주는 정적 멤버"))
+    for match in _kStaticPointerNamedRe.finditer(code):
+        if "&" in match.group(1):
+            continue   # `T*&` 는 링크 때 목록 머리이고, 참조 반환은 (가) 의 몫이다
+        className = classNameAtInternal(code, match.start())
+        if className != "":
+            listHit.append((match.start(2), className, match.group(2), "이름이 단일체 창구인 정적 멤버(포인터 · 스마트 포인터 반환)"))
     setSeen = {offset for offset, _, _, _ in listHit}
     for match in _kReferenceAccessorBodyRe.finditer(code):
         openOffset = match.end() - 1
