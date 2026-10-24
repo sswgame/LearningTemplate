@@ -21,6 +21,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -122,8 +123,14 @@ namespace sw
          * @details 배치는 소유하지 않는다. 배치가 먼저 사라지면 자기 소멸자에서 빠지고, 레지스트리가 먼저 사라지면 배치의 포인터를 비운다.
          */
         void addInstanceBatch( ScenePrimitiveBatch* pBatch );
-        /** @brief 인스턴스 배치를 제거합니다. 항목 구간을 지우고 뒤 배치의 위치를 당깁니다. 집합 세대가 오릅니다. */
+        /** @brief 인스턴스 배치를 제거합니다. 항목 구간을 지우고 뒤 배치의 위치를 당깁니다. 집합 세대가 오릅니다. `removeInstanceBatches` 의 배치 하나짜리 호출입니다. */
         void removeInstanceBatch( ScenePrimitiveBatch* pBatch );
+        /**
+         * @brief 인스턴스 배치 여럿을 한 번에 제거합니다. 항목 목록을 한 번만 접고 남은 배치의 자리를 한 번만 당깁니다(집합 세대는 한 번 오릅니다).
+         * @details 하나씩 지우면 배치마다 항목 목록 뒤쪽을 옮기고 남은 배치를 모두 훑어 M 개에 O(M·(항목 + 배치)) 입니다 — 한 컴포넌트가 배치를 수백 개 들었다가 씬을 내릴 때
+         *          (잔디 칸, 지형 청크) 이것으로 모아 지웁니다. 이 레지스트리에 들지 않은 배치 · 널 · 두 번 넘긴 배치는 건너뜁니다. 지운 배치는 등록 전 상태가 됩니다.
+         */
+        void removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const> listBatch );
         /** @brief 배치의 항목 하나를 더티로 표시합니다. 그 항목의 프리미티브 번호에 플래그를 켭니다. */
         void markInstanceDirty( ScenePrimitiveBatch* pBatch, uint32 index );
         /** @brief 인스턴스 배치의 항목 목록입니다. 메시 컴포넌트 목록 뒤에 이어지는 프리미티브들입니다. */

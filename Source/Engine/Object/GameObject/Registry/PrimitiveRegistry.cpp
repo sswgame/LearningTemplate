@@ -8,6 +8,8 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 
+#include <algorithm>
+
 namespace sw
 {
     void PrimitiveRegistry::add( ScenePrimitive* pComp )
@@ -242,31 +244,79 @@ namespace sw
 
     void PrimitiveRegistry::removeInstanceBatch( ScenePrimitiveBatch* pBatch )
     {
-        if ( pBatch == nullptr )
+        removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( &pBatch, 1 ) );
+    }
+
+    void PrimitiveRegistry::removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const> listBatch )
+    {
+        if ( listBatch.empty() )
             return;
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( pBatch->_pRegistry != this )
+        // 이 레지스트리에 든 배치만 모은다(널 · 다른 레지스트리 · 미등록 · 두 번 넘긴 배치는 건너뛴다). 모으면서 `_pRegistry` 를 비워 "빠질 배치" 표시로 쓴다.
+        vector<ScenePrimitiveBatch*> listRemoved;
+        listRemoved.reserve( listBatch.size() );
+        for ( ScenePrimitiveBatch* pBatch : listBatch )
+        {
+            if ( pBatch == nullptr || pBatch->_pRegistry != this )
+                continue;
+            pBatch->_pRegistry = nullptr;
+            listRemoved.push_back( pBatch );
+        }
+        if ( listRemoved.empty() )
             return;
         clearDirtyLocked();
-        const uint32 first = pBatch->_firstEntry;
-        const uint32 count = pBatch->getCount();
-        if ( first <= _listInstanceEntry.size() && first + count <= _listInstanceEntry.size() )
-            _listInstanceEntry.erase( _listInstanceEntry.begin() + first, _listInstanceEntry.begin() + first + count );
-        for ( size_t batchIndex = 0; batchIndex < _listInstanceBatch.size(); ++batchIndex )
+
+        // 항목 구간을 자리 순으로 놓고 목록을 한 번만 접는다. 구간은 서로 겹치지 않는다(배치마다 자기 구간).
+        // 정렬 키는 (첫 항목 자리 << 32 | listRemoved 안의 번호)다 — 자리가 같은(항목 0 개) 배치는 번호 순이다.
+        vector<uint64> listOrderKey;
+        listOrderKey.reserve( listRemoved.size() );
+        for ( size_t removedIndex = 0; removedIndex < listRemoved.size(); ++removedIndex )
         {
-            ScenePrimitiveBatch* pOther = _listInstanceBatch[batchIndex];
-            if ( pOther == pBatch )
-            {
-                VectorUtil::removeAtSwap( _listInstanceBatch, batchIndex );
-                --batchIndex;
-                continue;
-            }
-            // 뒤에 있던 배치의 항목이 앞으로 당겨졌다.
-            if ( pOther != nullptr && pOther->_firstEntry > first )
-                pOther->_firstEntry -= count;
+            listOrderKey.push_back( ( static_cast<uint64>( listRemoved[removedIndex]->_firstEntry ) << 32 ) | static_cast<uint64>( removedIndex ) );
         }
-        pBatch->_pRegistry  = nullptr;
-        pBatch->_firstEntry = 0;
+        std::sort( listOrderKey.begin(), listOrderKey.end() );
+        const uint32   entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
+        uint32         readIndex  = 0;
+        uint32         writeIndex = 0;
+        vector<uint32> listRemovedFirst;
+        vector<uint32> listRemovedPrefix; // 앞 구간들이 빠진 항목 수의 누적(자기 구간 포함)
+        listRemovedFirst.reserve( listRemoved.size() );
+        listRemovedPrefix.reserve( listRemoved.size() );
+        for ( const uint64 orderKey : listOrderKey )
+        {
+            const ScenePrimitiveBatch* pBatch          = listRemoved[static_cast<uint32>( orderKey )];
+            const uint32               first           = pBatch->_firstEntry;
+            const uint32               count           = pBatch->getCount();
+            const bool                 bOutsideEntries = first > entryTotal || count > entryTotal - first;
+            if ( bOutsideEntries || first < readIndex )
+                continue; // 항목 목록과 어긋난 배치 — 항목은 건드리지 않는다(옛 단건 제거와 같다)
+            if ( writeIndex != readIndex )
+                std::copy( _listInstanceEntry.begin() + readIndex, _listInstanceEntry.begin() + first, _listInstanceEntry.begin() + writeIndex );
+            writeIndex += first - readIndex;
+            readIndex = first + count;
+            listRemovedFirst.push_back( first );
+            listRemovedPrefix.push_back( ( listRemovedPrefix.empty() ? 0u : listRemovedPrefix.back() ) + count );
+        }
+        if ( writeIndex != readIndex )
+            std::copy( _listInstanceEntry.begin() + readIndex, _listInstanceEntry.end(), _listInstanceEntry.begin() + writeIndex );
+        _listInstanceEntry.resize( writeIndex + ( entryTotal - readIndex ) );
+
+        // 남은 배치는 자기보다 앞에서 빠진 항목 수만큼 앞으로 당겨진다. 빠진 배치는 목록에서 뺀다(남은 배치의 순서는 그대로).
+        size_t keepCount = 0;
+        for ( ScenePrimitiveBatch* pOther : _listInstanceBatch )
+        {
+            if ( pOther == nullptr || pOther->_pRegistry != this )
+                continue;
+            const size_t removedBefore = static_cast<size_t>( std::lower_bound( listRemovedFirst.begin(), listRemovedFirst.end(), pOther->_firstEntry ) - listRemovedFirst.begin() );
+            if ( removedBefore > 0 )
+                pOther->_firstEntry -= listRemovedPrefix[removedBefore - 1];
+            _listInstanceBatch[keepCount++] = pOther;
+        }
+        _listInstanceBatch.resize( keepCount );
+        for ( ScenePrimitiveBatch* pBatch : listRemoved )
+        {
+            pBatch->_firstEntry = 0;
+        }
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
