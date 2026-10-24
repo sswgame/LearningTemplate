@@ -551,3 +551,192 @@ SW_TEST_CASE( TickPrerequisiteTest, FirstFollowerAddedIncrementallyAppliesTransf
     SW_EXPECT_EQUAL( 0u, manager.getTickRegistry().getStageItemCount() );
     SW_EXPECT_EQUAL( buildBefore, manager.getTickRegistry().getStageBuildCount() );
 }
+
+/**
+ * @brief [TickPrerequisiteTest] 팔로워 1 만 개를 한 프레임에 지우고, 끄고, 선행 조건을 바꿔도 스테이지를 한 번만 훑고 배치는 전체 재구축과 같다
+ * @details 예전에는 오브젝트 하나를 뺄 때마다 모든 스테이지를 훑어 K 개를 빼면 O(K · S) 였다. 이제 빼 달라는 요청을 쌓아 두었다가 `refresh` 끝에서 한 번에 처리한다.
+ *          K 가 얼마든 한 프레임의 훑기 횟수(`getStageCompactCount`)가 1 이고, 스테이지 안 항목의 순서(오브젝트 id 오름차순)와 틱 결과가 전체 재구축과 같아야 한다.
+ *          1 단계는 파괴만(`unregisterObject` 길), 2 단계는 파괴 · 끄기 · 선행 조건 바꾸기 · 새 팔로워(`applyStageDelta` 길), 3 단계는 껐던 것을 다시 켜 중간에 끼운다.
+ */
+SW_TEST_CASE( TickPrerequisiteTest, BulkFollowerRemovalCompactsStagesOnceAndMatchesFullRebuild )
+{
+    constexpr uint32 kFollowerCount = 10000;
+
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+    const sw::TickRegistry& registry = manager.getTickRegistry();
+
+    sw::SubTickHandle              earlyTick{};
+    sw::SubTickHandle              lateTick{};
+    sw::MockSubTickMoverComponent* pEarlyLeader = createMover( manager, "EarlyLeader", sw::float3{ 3.0f, 0.0f, 0.0f }, nullptr, earlyTick );
+    sw::MockSubTickMoverComponent* pLateLeader  = createMover( manager, "LateLeader", sw::float3{ 0.0f, 0.0f, 7.0f }, nullptr, lateTick, sw::TickGroup::PostPhysics );
+
+    struct Follower
+    {
+        sw::MockSubTickMoverComponent* _pMover{ nullptr };
+        uint32                         _expectedCount{ 0 };
+        bool                           _bLate{ false }; ///< 뒤 그룹(PostPhysics) 리더를 기다린다
+        bool                           _bActive{ true };
+        bool                           _bAlive{ true };
+    };
+    sw::vector<Follower> listFollower;
+
+    const auto spawn = [&]( bool bLate )
+    {
+        sw::SubTickHandle handle{};
+        Follower          follower{};
+        follower._pMover = createMover( manager, "Follower", sw::float3{ 0.0f, 1.0f, 0.0f }, bLate ? pLateLeader : pEarlyLeader, handle );
+        follower._bLate  = bLate;
+        SW_ASSERT_TRUE( follower._pMover->addSubTickPrerequisite( kMove, bLate ? lateTick : earlyTick ) );
+        listFollower.push_back( follower );
+    };
+
+    // 비어 있지 않은 스테이지마다 (그룹, 레벨, 안의 오브젝트 id 차례)다.
+    const auto captureLayout = [&manager]()
+    {
+        sw::vector<sw::vector<uint64>> listLayout;
+        for ( const sw::TickStage& stage : manager.getTickRegistry().getStages() )
+        {
+            if ( stage._listItemObjectID.empty() )
+                continue;
+            sw::vector<uint64> listStage{ static_cast<uint64>( stage._group ), static_cast<uint64>( stage._level ) };
+            listStage.insert( listStage.end(), stage._listItemObjectID.begin(), stage._listItemObjectID.end() );
+            listLayout.push_back( std::move( listStage ) );
+        }
+        return listLayout;
+    };
+
+    const auto advanceFrame = [&]()
+    {
+        manager.update( 0.016f );
+        for ( Follower& follower : listFollower )
+        {
+            if ( follower._bAlive && follower._bActive )
+                ++follower._expectedCount;
+        }
+    };
+
+    // 켜진 팔로워는 프레임마다 한 번 돌고 자기 리더의 같은 프레임 값을 읽고, 스테이지는 켜진 팔로워만 오브젝트 id 오름차순으로 든다(같은 순서 키).
+    const auto verify = [&]()
+    {
+        uint32 activeCount = 0;
+        uint32 wrongCount  = 0;
+        for ( const Follower& follower : listFollower )
+        {
+            if ( follower._bAlive == false )
+                continue;
+            if ( follower._pMover->_subTickCount != follower._expectedCount )
+                ++wrongCount;
+            if ( follower._bActive == false )
+                continue;
+            ++activeCount;
+            const sw::float3 expected = follower._bLate ? sw::float3{ 0.0f, 0.0f, 7.0f } : sw::float3{ 3.0f, 0.0f, 0.0f };
+            if ( isNear( follower._pMover->_observedLocal, expected ) == false )
+                ++wrongCount;
+        }
+        uint32 listedCount   = 0;
+        uint32 unsortedCount = 0;
+        for ( const sw::TickStage& stage : registry.getStages() )
+        {
+            SW_EXPECT_EQUAL( stage._listItem.size(), stage._listItemObjectID.size() );
+            listedCount += static_cast<uint32>( stage._listItemObjectID.size() );
+            for ( size_t index = 1; index < stage._listItemObjectID.size(); ++index )
+            {
+                if ( stage._listItemObjectID[index - 1] >= stage._listItemObjectID[index] )
+                    ++unsortedCount;
+            }
+        }
+        SW_EXPECT_EQUAL( 0u, wrongCount );
+        SW_EXPECT_EQUAL( 0u, unsortedCount );
+        SW_EXPECT_EQUAL( activeCount, listedCount );
+        SW_EXPECT_EQUAL( activeCount, registry.getStageItemCount() );
+    };
+
+    // 같은 오브젝트 집합을 전체 재구축으로 다시 지어 증분 배치와 견준다.
+    const auto expectLayoutMatchesRebuild = [&]()
+    {
+        const auto incremental = captureLayout();
+        manager.markTickStagesDirty();
+        advanceFrame();
+        verify();
+        SW_EXPECT_TRUE( captureLayout() == incremental );
+    };
+
+    for ( uint32 index = 0; index < kFollowerCount; ++index )
+    {
+        spawn( index % 2 == 1 );
+    }
+    advanceFrame();
+    verify();
+    SW_ASSERT_EQUAL( kFollowerCount, registry.getStageItemCount() );
+
+    // (1) 파괴만 — 3 분의 1 을 한 프레임에 지운다. 다시 짓지 않고 스테이지를 한 번만 훑는다.
+    uint32 buildCount   = registry.getStageBuildCount();
+    uint32 compactCount = registry.getStageCompactCount();
+    for ( uint32 index = 0; index < kFollowerCount; index += 3 )
+    {
+        manager.destroyObject( listFollower[index]._pMover->getOwner() );
+        listFollower[index]._bAlive = false;
+    }
+    advanceFrame();
+    verify();
+    SW_EXPECT_EQUAL( buildCount, registry.getStageBuildCount() );
+    SW_EXPECT_EQUAL( compactCount + 1, registry.getStageCompactCount() );
+    expectLayoutMatchesRebuild();
+
+    // (2) 파괴 · 끄기 · 선행 조건 바꾸기를 살아 있는 팔로워에 돌아가며 하고, 새 팔로워도 더한다.
+    buildCount            = registry.getStageBuildCount();
+    compactCount          = registry.getStageCompactCount();
+    const uint32 deltaOld = registry.getStageDeltaCount();
+    uint32       ordinal  = 0;
+    for ( Follower& follower : listFollower )
+    {
+        if ( follower._bAlive == false )
+            continue;
+        const uint32 kind = ordinal++ % 4;
+        if ( kind == 0 )
+        {
+            manager.destroyObject( follower._pMover->getOwner() );
+            follower._bAlive = false;
+        }
+        else if ( kind == 1 )
+        {
+            follower._pMover->getOwner()->setActive( false );
+            follower._bActive = false;
+        }
+        else if ( kind == 2 )
+        {
+            SW_ASSERT_TRUE( follower._pMover->removeSubTickPrerequisite( kMove, follower._bLate ? lateTick : earlyTick ) );
+            SW_ASSERT_TRUE( follower._pMover->addSubTickPrerequisite( kMove, follower._bLate ? earlyTick : lateTick ) );
+            follower._pMover->_pWatched = follower._bLate ? pEarlyLeader : pLateLeader;
+            follower._bLate             = follower._bLate == false;
+        }
+    }
+    for ( uint32 index = 0; index < 100; ++index )
+    {
+        spawn( index % 2 == 0 );
+    }
+    advanceFrame();
+    verify();
+    SW_EXPECT_EQUAL( buildCount, registry.getStageBuildCount() );
+    SW_EXPECT_EQUAL( compactCount + 1, registry.getStageCompactCount() );
+    SW_EXPECT_TRUE( registry.getStageDeltaCount() > deltaOld );
+    expectLayoutMatchesRebuild();
+
+    // (3) 껐던 팔로워를 다시 켠다 — 항목이 스테이지 끝이 아닌 중간에 끼어야 한다.
+    buildCount   = registry.getStageBuildCount();
+    compactCount = registry.getStageCompactCount();
+    for ( Follower& follower : listFollower )
+    {
+        if ( follower._bAlive && follower._bActive == false )
+        {
+            follower._pMover->getOwner()->setActive( true );
+            follower._bActive = true;
+        }
+    }
+    advanceFrame();
+    verify();
+    SW_EXPECT_EQUAL( buildCount, registry.getStageBuildCount() );
+    SW_EXPECT_EQUAL( compactCount + 1, registry.getStageCompactCount() );
+    expectLayoutMatchesRebuild();
+}

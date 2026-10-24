@@ -186,7 +186,11 @@ namespace sw
         const vector<TickBatchList>& getBatchLists( uint32 group ) const { return _arrListBatch[group]; }
         /** @brief 선행 조건이 등록된 서브틱이 하나라도 있으면 true 입니다. */
         bool hasPrerequisites() const { return _prerequisiteCount > 0; }
-        /** @brief 선행 조건을 가진 항목의 스테이지 목록입니다(그룹 순). 매니저가 그룹마다 기본 경로 뒤에 그 그룹의 스테이지를 실행합니다. */
+        /**
+         * @brief 선행 조건을 가진 항목의 스테이지 목록입니다(그룹 순). 매니저가 그룹마다 기본 경로 뒤에 그 그룹의 스테이지를 실행합니다.
+         * @note `refresh` 가 끝난 뒤에만 맞습니다. `unregisterObject` 와 `refresh` 사이에는 파괴된 오브젝트의 항목이 남아 있을 수 있어(`getStageItemCount` 도 같다)
+         *       틱 디스패치처럼 `refresh` 직후에만 읽습니다.
+         */
         const vector<TickStage>& getStages() const { return _listStage; }
         /** @brief 스테이지가 처리하는 항목 수입니다(선행 조건을 가진 켜진 항목). 나머지는 모두 기본 경로입니다. */
         uint32 getStageItemCount() const { return _stageItemCount; }
@@ -194,8 +198,26 @@ namespace sw
         uint32 getStageBuildCount() const { return _stageBuildCount; }
         /** @brief 스테이지를 다시 만들지 않고 말단 오브젝트의 항목만 끼우거나 뺀 횟수(누적)입니다. 진단과 회귀 테스트용입니다. */
         uint32 getStageDeltaCount() const { return _stageDeltaCount; }
+        /** @brief 스테이지를 훑어 파괴 · 변경된 오브젝트의 항목을 걷어 낸 횟수(누적)입니다. 한 `refresh` 에 오브젝트가 몇 개 빠져도 한 번만 오른다. 진단과 회귀 테스트용입니다. */
+        uint32 getStageCompactCount() const { return _stageCompactCount; }
 
     private:
+        /** @brief 스테이지에서 한 오브젝트의 항목을 빼 달라는 대기 요청입니다. */
+        struct StageRemoval
+        {
+            uint64 _objectID{ 0 };
+            uint64 _order{ 0 }; ///< `_stageEditOrder` 순번
+        };
+        /** @brief 레벨 0 스테이지에 끼울 대기 항목입니다. 어느 스테이지인지는 (그룹, 오브젝트 안의 순번)으로 적용할 때 정합니다. */
+        struct StageInsertion
+        {
+            TickItem _item{};
+            uint64   _objectID{ 0 };
+            uint64   _order{ 0 };                   ///< `_stageEditOrder` 순번
+            uint32   _slot{ 0 };                    ///< 같은 오브젝트의 같은 그룹 안에서 몇 번째 항목인가(레벨 0 의 몇 번째 스테이지인가)
+            uint8    _bMarkApplyBefore{ SW_FALSE }; ///< 이 그룹의 오브젝트 항목이 끝났고 기다리는 항목이 있었다 — 그룹 레벨 0 의 첫 스테이지에 적용 먼저를 켠다
+        };
+
         /**
          * @brief 선행 조건을 가진 항목으로 스테이지 목록을 만듭니다. 그룹 순서대로 만들고, 스테이지 안은 병렬로 처리합니다.
          * @details 먼저 선행 조건이 뒤쪽 그룹에 있는 항목을 그 그룹으로 옮긴다(체인을 따라가며, 언리얼의 `ActualStartTickGroup` 에 해당한다). 기본 경로에서 도는
@@ -212,10 +234,21 @@ namespace sw
          * @details 말단의 조건은 새 항목의 선행 조건이 모두 의존 오브젝트 밖(보통 길)을 가리키는 것이다. 그러면 후보 사이의 간선이 없어 레벨 0 에 들고,
          *          뒤에 오는 항목의 순서는 달라지지 않는다. 오브젝트 id 로 이전 항목을 빼고(아무도 기다리지 않으니 늘 안전하다) 새 항목을 그룹의 레벨 0 스테이지에
          *          순서 키 자리로 넣는다. 말단이 아니면 false 를 돌려, 부른 쪽이 전체 재구축을 세운다.
+         *          스테이지는 바로 고치지 않고 제거와 끼움을 요청으로 쌓는다(`flushStageEdits`가 `refresh` 끝에서 한 번에 적용한다).
          */
         [[nodiscard]] bool applyStageDelta( GameObjectManager& manager, GameObject* pObj );
-        /** @brief 스테이지에서 이 오브젝트의 항목을 모두 뺍니다. */
-        void removeStageItems( uint64 objectID );
+        /**
+         * @brief 스테이지에서 이 오브젝트의 항목을 모두 빼 달라고 기록만 합니다(O(1)). 실제로 빼는 일은 `flushStageEdits` 가 모아서 한 번에 합니다.
+         * @details 오브젝트마다 스테이지를 훑어 지우면 K 개를 지우는 데 O(K · S)(S 는 스테이지의 항목 수)가 든다. 요청을 순번과 함께 쌓아 두고 스테이지를 한 번만 훑는다.
+         */
+        void queueStageRemoval( uint64 objectID );
+        /**
+         * @brief 쌓인 스테이지 편집(제거 요청, 끼움 요청)을 요청 순서대로 한 번에 적용합니다. 스테이지 안 항목의 순서는 하나씩 적용했을 때와 같습니다.
+         * @details 제거는 스테이지마다 한 번 훑으며 요청된 오브젝트의 항목을 걷어 내고(남은 항목의 순서는 그대로), 그다음 끼움 요청을 쌓인 순서대로
+         *          `insertIntoStage` 로 넣는다. 끼움 요청 뒤에 같은 오브젝트의 제거 요청이 또 있었으면(낡은 요청) 건너뛴다. `refresh` 가 끝에서 부르고
+         *          `rebuildStages` 는 쌓인 편집을 버린다.
+         */
+        void flushStageEdits();
         /**
          * @brief 그룹 목록(오브젝트 칸 또는 타입별 일괄 목록)에 넣거나 뺍니다. 오브젝트가 자기 위치(`_arrTickIndex`)를 가지고 있어 O(1) 입니다(일괄 목록은 타입 수만큼 본다).
          * @details @p pBatchFunction 이 있으면 그 타입의 일괄 목록에, 없으면 오브젝트 칸 목록에 @p entry 로 넣는다. 이미 같은 목록에 있으면 그 자리에 쓰고,
@@ -242,6 +275,10 @@ namespace sw
         uint32                  _stageItemCount;            ///< 스테이지가 도는 항목 수
         uint32                  _stageBuildCount;           ///< 스테이지를 다시 만든 횟수(진단)
         uint32                  _stageDeltaCount;           ///< 말단 오브젝트의 항목만 끼우거나 뺀 횟수(진단)
+        uint32                  _stageCompactCount;         ///< 스테이지를 훑어 항목을 걷어 낸 횟수(진단) — 제거 요청 수가 아니라 `flushStageEdits` 횟수다
+        uint64                  _stageEditOrder;            ///< 스테이지 편집 요청마다 오르는 순번이다(제거와 끼움의 선후를 가린다)
+        vector<StageRemoval>    _listStageRemoval;          ///< 스테이지에서 빼 달라는 대기 요청이다. `flushStageEdits` 가 적용한다
+        vector<StageInsertion>  _listStageInsertion;        ///< 레벨 0 스테이지에 끼울 대기 항목이다(요청 순서)
         uint64                  _stageGeneration;           ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오른다
         uint64                  _builtStageGeneration;      ///< `_listStage` 를 만든 세대
         vector<uint64>          _listDependentObjectID;     ///< 선행 조건을 가진 항목이 있는 오브젝트 id(정렬됨 — 스테이지가 늘 같은 순서로 지어진다)
