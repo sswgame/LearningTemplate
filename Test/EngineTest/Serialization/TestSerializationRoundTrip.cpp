@@ -184,10 +184,10 @@ SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSam
  */
 SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 환경 건너뜀보다 먼저 — 배포 구성에서 스위트가 "아무것도 검증 안 함" 으로 판정되지 않게 한다
     const utf8* pDumpDir = std::getenv( "SW_SERIALIZATION_DUMP_DIR" );
     if ( pDumpDir == nullptr || pDumpDir[0] == 0 )
         SW_TEST_SKIP( "SW_SERIALIZATION_DUMP_DIR is not set" );
-    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     test::ScopedLogSuppressor suppressor;
