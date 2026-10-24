@@ -112,8 +112,12 @@ def makeLintTarget(script: LintScript) -> LintTarget:
 
 
 def discoverSourceGateScripts() -> list[LintScript]:
-    """`gate/` 의 소스 게이트(`LintGate.sourceScanRoots` 를 채운 것) — `RunSourceGates.py` 가 한 번의 훑기로 함께 돌린다."""
-    return [script for script in discoverLintScripts("gate") if script.gateClass is not None and script.gateClass.isSourceGate()]
+    """
+    `gate/` 의 소스 게이트(`LintGate.sourceScanRoots` 를 채운 것) — `RunSourceGates.py` 가 한 번의 훑기로 함께 돌린다.
+    `ctestSkipReason` 을 든 게이트는 뺀다(`discoverLintTargets` 와 같다 — 소스 게이트도 CTest · CI 에서 빠진다). 직접 실행은 그대로다.
+    """
+    return [script for script in discoverLintScripts("gate")
+            if script.gateClass is not None and script.gateClass.isSourceGate() and not script.gateClass.ctestSkipReason]
 
 
 #: 소스 게이트 전부를 한 프로세스로 돌리는 실행 단위(`RunSourceGates.py`). 게이트를 더해도 타깃은 이것 하나다.

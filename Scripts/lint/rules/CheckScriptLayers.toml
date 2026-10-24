@@ -39,3 +39,4 @@
 "Scripts/lint/PreCommitLint.py|lint.fixer.FormatForwardDeclarations" = "커밋 훅이 staged 파일에 픽서 둘을 돌린다(훅은 게이트 · 픽서를 부르는 조립 명령)"
 "Scripts/lint/selftest/CheckCodeConventionsSelfTest.py|lint.gate.CheckCodeConventions" = "셀프테스트가 자기 게이트를 부른다"
 "Scripts/lint/selftest/CheckServiceAccessSelfTest.py|lint.gate.CheckServiceAccess" = "셀프테스트가 자기 게이트를 부른다"
+"Scripts/lint/selftest/CheckMutableStaticsSelfTest.py|lint.gate.CheckMutableStatics" = "셀프테스트가 자기 게이트를 부른다"

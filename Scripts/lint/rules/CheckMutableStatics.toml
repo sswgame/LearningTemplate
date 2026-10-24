@@ -1,0 +1,367 @@
+# CheckMutableStatics 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckMutableStatics.py.
+
+# [exemption] — 정적 저장 기간의 가변 변수(함수 안 static · 네임스페이스 수준 · 클래스 static 멤버 · thread_local)를 영구히 가져도 되는 자리 → 이유.
+# 키는 "<저장소 기준 파일 경로>:<변수 이름>". 소유자가 든 객체로 못 옮기는 까닭이 있는 자리만 올린다(예: 범위가 서기 전 · 시그널 안에서도
+# 읽는 크래시 경로의 잠금 없는 저장소). 변수가 더는 위반이 아니면 낡은 예외로 실패한다. 상수(`static const` · `static constexpr`)는 애초에 대상이 아니다.
+[exemption]
+
+# [pending] — 이전 대기 표(래칫). 신규 위반부터 막고 기존 위반은 영역별로 소유자 있는 객체로 옮기며 줄여 간다(사용자 결정, 2026-10-25).
+# 키는 파일 경로, 값은 그 파일의 위반 **총수** 상한(범주별이 아니다 — Local 을 Namespace/Member 로 옮기는 우회도 총수라 막힌다).
+# 이유는 모두 같다: "이전 대기" — 영역별 주석으로 묶는다. 규칙:
+#   표에 없는 파일의 위반은 실패 · 상한을 넘으면 실패(늘리지 못한다) · 상한보다 줄었거나 0 이 되면 실패(표를 줄여라).
+# 줄이는 법: 위반을 옮긴 뒤 `py -3 -m Scripts gate CheckMutableStatics --regen-baseline` — 상한을 지금 수로 낮추고 0 인 줄을 지운다(늘리는 방향은 거부한다).
+[pending]
+
+# Source/App — 이전 대기
+"Source/App/RHIBackendSwitcherAutomation.cpp" = 1
+# Source/Core/Common — 이전 대기
+"Source/Core/Common/Macros.cpp" = 4
+# Source/Core/Compression — 이전 대기
+"Source/Core/Compression/CompressionCodecRegistry.cpp" = 1
+"Source/Core/Compression/CompressionStream.cpp" = 2
+# Source/Core/Concurrency — 이전 대기
+"Source/Core/Concurrency/DataRaceDetector.cpp" = 1
+"Source/Core/Concurrency/Futex.cpp" = 1
+"Source/Core/Concurrency/ShardedCounter.cpp" = 2
+"Source/Core/Concurrency/mutex.cpp" = 1
+"Source/Core/Concurrency/mutex.h" = 1
+# Source/Core/Console — 이전 대기
+"Source/Core/Console/DebugHUDRegistry.cpp" = 1
+"Source/Core/Console/DevCommandRegistry.cpp" = 1
+# Source/Core/Delegate — 이전 대기
+"Source/Core/Delegate/Delegate.cpp" = 1
+# Source/Core/Diagnostics — 이전 대기
+"Source/Core/Diagnostics/CrashContext.cpp" = 7
+"Source/Core/Diagnostics/MemoryProfiler.cpp" = 5
+"Source/Core/Diagnostics/Posix/PosixCallStackCapture.cpp" = 2
+"Source/Core/Diagnostics/Posix/PosixCrashHandler.cpp" = 3
+"Source/Core/Diagnostics/ProfilerTimeline.cpp" = 2
+"Source/Core/Diagnostics/Windows/WindowsCallStackCapture.cpp" = 2
+"Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp" = 16
+# Source/Core/File — 이전 대기
+"Source/Core/File/FileUtil.cpp" = 4
+"Source/Core/File/PlatformFileUtil.cpp" = 3
+# Source/Core/GlobalVariable — 이전 대기
+"Source/Core/GlobalVariable/GlobalVariableManager.cpp" = 3
+# Source/Core/Log — 이전 대기
+"Source/Core/Log/LogContext.cpp" = 1
+"Source/Core/Log/LogOnce.cpp" = 1
+"Source/Core/Log/Logger.cpp" = 8
+# Source/Core/LogSink — 이전 대기
+"Source/Core/LogSink/AsyncLogSink.cpp" = 3
+"Source/Core/LogSink/ConsoleLogOutput.cpp" = 1
+# Source/Core/Math — 이전 대기
+"Source/Core/Math/MathUtil.cpp" = 1
+# Source/Core/Memory — 이전 대기
+"Source/Core/Memory/LifetimeScope.cpp" = 1
+"Source/Core/Memory/Memory.cpp" = 5
+# Source/Core/Module — 이전 대기
+"Source/Core/Module/ModuleImageUtil.cpp" = 1
+"Source/Core/Module/ModuleUnloadListener.cpp" = 1
+# Source/Core/Network — 이전 대기
+"Source/Core/Network/Connection/NetFlowLog.cpp" = 1
+# Source/Core/Process — 이전 대기
+"Source/Core/Process/Posix/PosixShutdownSignal.cpp" = 4
+"Source/Core/Process/Posix/PosixThreadCrashStack.cpp" = 1
+"Source/Core/Process/ShutdownSignal.h" = 1
+"Source/Core/Process/Windows/WindowsShutdownSignal.cpp" = 4
+# Source/Core/String — 이전 대기
+"Source/Core/String/RegistrationList.cpp" = 2
+"Source/Core/String/TagID.cpp" = 2
+"Source/Core/String/fixed_string.cpp" = 1
+"Source/Core/String/hashed_string.cpp" = 3
+# Source/Core/Task — 이전 대기
+"Source/Core/Task/TaskManager.cpp" = 6
+# Source/Core/Time — 이전 대기
+"Source/Core/Time/MonotonicClock.cpp" = 1
+# Source/Core/UUID — 이전 대기
+"Source/Core/UUID/UUID.cpp" = 1
+# Source/Editor/Common — 이전 대기
+"Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp" = 1
+"Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp" = 3
+"Source/Editor/Common/Commands/Asset/EditorFolderListing.cpp" = 1
+"Source/Editor/Common/Commands/Dev/EditorDevCommands.cpp" = 1
+"Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp" = 2
+"Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp" = 2
+"Source/Editor/Common/Commands/Scene/EditorNavigationBakeCommand.cpp" = 1
+"Source/Editor/Common/Commands/Scene/EditorReflectionProbeBakeCommand.cpp" = 1
+"Source/Editor/Common/Commands/Scene/EditorViewportPreview.cpp" = 1
+"Source/Editor/Common/Config/EditorSettingsRegistry.cpp" = 1
+"Source/Editor/Common/Config/EditorSettingsRegistry.h" = 1
+"Source/Editor/Common/GUI/EditorChrome.cpp" = 7
+"Source/Editor/Common/GUI/EditorCommandGUI.cpp" = 3
+"Source/Editor/Common/GUI/EditorComponentIcon.cpp" = 1
+"Source/Editor/Common/GUI/EditorDockLayout.cpp" = 1
+"Source/Editor/Common/GUI/EditorMenuBar.cpp" = 4
+"Source/Editor/Common/GUI/EditorPanelDump.cpp" = 1
+"Source/Editor/Common/GUI/EditorPlayToolbar.cpp" = 5
+"Source/Editor/Common/GUI/EditorThemeUtil.cpp" = 2
+"Source/Editor/Common/GUI/EditorUIContext.cpp" = 1
+"Source/Editor/Common/Widgets/EditorNodeGraph.cpp" = 1
+"Source/Editor/Common/Widgets/EditorWidgets.cpp" = 2
+"Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1
+"Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp" = 1
+"Source/Editor/Common/Workspace/EditorExtensionRegistry.h" = 1
+"Source/Editor/Common/Workspace/EditorService.cpp" = 6
+# Source/Editor/Panels — 이전 대기
+"Source/Editor/Panels/Animation/RigDebugPanel.cpp" = 1
+"Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp" = 1
+"Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
+"Source/Editor/Panels/Inspector/InspectorPanel.cpp" = 1
+"Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp" = 2
+"Source/Editor/Panels/Inspector/InspectorPropertyUndo.cpp" = 2
+"Source/Editor/Panels/MapCheck/MapCheckPanel.cpp" = 4
+"Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp" = 1
+"Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp" = 1
+"Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp" = 1
+"Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp" = 1
+"Source/Editor/Panels/Scene/HierarchyPanel.cpp" = 2
+"Source/Editor/Panels/Settings/ModulesPanel.cpp" = 1
+"Source/Editor/Panels/Settings/PreferencesPanel.cpp" = 1
+"Source/Editor/Panels/Settings/ShortcutsPanel.cpp" = 1
+# Source/Editor/SelfTest — 이전 대기
+"Source/Editor/SelfTest/EditorCaptureSteps.cpp" = 1
+"Source/Editor/SelfTest/EditorSelfTest.cpp" = 1
+"Source/Editor/SelfTest/EditorSelfTestCases.cpp" = 5
+"Source/Editor/SelfTest/EditorSelfTestDevTools.cpp" = 3
+"Source/Editor/SelfTest/EditorSelfTestInput.cpp" = 1
+"Source/Editor/SelfTest/EditorSelfTestInputCases.cpp" = 4
+"Source/Editor/SelfTest/EditorSelfTestPanelCases.cpp" = 5
+# Source/Editor/Viewport — 이전 대기
+"Source/Editor/Viewport/EditorColliderHandleTool.cpp" = 2
+"Source/Editor/Viewport/EditorViewportBillboard.cpp" = 1
+"Source/Editor/Viewport/EditorViewportMouseClaim.cpp" = 3
+"Source/Editor/Viewport/EditorVisualizerGeometry.cpp" = 1
+"Source/Editor/Viewport/TerrainBrushTool.cpp" = 1
+"Source/Editor/Viewport/ViewportInputOverlay.cpp" = 1
+"Source/Editor/Viewport/Visualizers/DebugDrawVisualizer.cpp" = 1
+"Source/Editor/Viewport/Visualizers/SelectionBoundsVisualizer.cpp" = 2
+# Source/Engine/Animation — 이전 대기
+"Source/Engine/Animation/Rig/RigAsset.cpp" = 2
+"Source/Engine/Animation/Skeletal/SkeletonBoneLOD.cpp" = 1
+# Source/Engine/Automation — 이전 대기
+"Source/Engine/Automation/AutomationScratch.cpp" = 1
+"Source/Engine/Automation/AutomationStepRegistry.cpp" = 2
+# Source/Engine/Character — 이전 대기
+"Source/Engine/Character/AnimationNotify/AnimationNotifyHandlers.cpp" = 1
+"Source/Engine/Character/AnimationNotify/AnimationNotifyTable.cpp" = 1
+"Source/Engine/Character/CharacterDataCache.cpp" = 1
+# Source/Engine/Common — 이전 대기
+"Source/Engine/Common/AssetTypeRegistry.cpp" = 1
+"Source/Engine/Common/EngineServices.cpp" = 3
+"Source/Engine/Common/RenderTargetDeclaration.cpp" = 1
+# Source/Engine/Config — 이전 대기
+"Source/Engine/Config/ConfigManager.cpp" = 1
+"Source/Engine/Config/EngineConfig.cpp" = 1
+"Source/Engine/Config/GameAutoplay.cpp" = 1
+"Source/Engine/Config/GameConfig.cpp" = 1
+"Source/Engine/Config/GameSelection.cpp" = 1
+"Source/Engine/Config/GameTimeScale.cpp" = 2
+# Source/Engine/Destruction — 이전 대기
+"Source/Engine/Destruction/FractureComponentBase.cpp" = 1
+# Source/Engine/Environment — 이전 대기
+"Source/Engine/Environment/Terrain/TerrainComponent.cpp" = 1
+# Source/Engine/Graphics — 이전 대기
+"Source/Engine/Graphics/2D/Render2DSettings.cpp" = 2
+"Source/Engine/Graphics/2D/SpriteMeshBuilder.cpp" = 1
+"Source/Engine/Graphics/Canvas/DebugDrawCanvas.cpp" = 1
+"Source/Engine/Graphics/Material/MaterialPermutation.cpp" = 1
+"Source/Engine/Graphics/Mesh/Mesh.cpp" = 1
+"Source/Engine/Graphics/Mesh/MeshCache.cpp" = 3
+"Source/Engine/Graphics/Mesh/MeshUtil.cpp" = 1
+"Source/Engine/Graphics/RHI/GL/Platform/GlxPlatformContext.cpp" = 2
+"Source/Engine/Graphics/RHI/GL/Platform/WglPlatformContext.cpp" = 1
+"Source/Engine/Graphics/RHI/IRHIDevice.cpp" = 1
+"Source/Engine/Graphics/RHI/RHIRenderResource.cpp" = 4
+"Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp" = 3
+"Source/Engine/Graphics/RHI/Support/RHIDrawDiagnostics.cpp" = 2
+"Source/Engine/Graphics/Shader/Binding/ShaderBindingValidator.cpp" = 6
+"Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp" = 4
+"Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp" = 3
+"Source/Engine/Graphics/Shader/Reflection/ShaderReflectionDx.cpp" = 3
+"Source/Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp" = 3
+# Source/Engine/Input — 이전 대기
+"Source/Engine/Input/Linux/InputManagerX11.cpp" = 14
+"Source/Engine/Input/Windows/InputManagerWin32.cpp" = 5
+"Source/Engine/Input/Windows/XInputGamepadDevice.cpp" = 8
+# Source/Engine/Localization — 이전 대기
+"Source/Engine/Localization/StringTable.cpp" = 1
+# Source/Engine/Module — 이전 대기
+"Source/Engine/Module/ModuleTypeRegistry.cpp" = 1
+# Source/Engine/Object — 이전 대기
+"Source/Engine/Object/Component/2D/SpriteRenderUtil.cpp" = 1
+"Source/Engine/Object/Component/Component.h" = 1
+"Source/Engine/Object/Component/Navigation/NavGeometryContributor.cpp" = 1
+"Source/Engine/Object/Component/SceneTransformHierarchy.cpp" = 1
+"Source/Engine/Object/Component/SceneTransformStorage.cpp" = 1
+"Source/Engine/Object/GameObject/GameObject.cpp" = 1
+"Source/Engine/Object/GameObject/GameObjectManager.cpp" = 1
+"Source/Engine/Object/GameObject/GameObjectStore.cpp" = 2
+"Source/Engine/Object/GameObject/GameObjectStore.h" = 1
+"Source/Engine/Object/GameObject/Serialization/ObjectCopyBuffer.cpp" = 1
+"Source/Engine/Object/GameObject/Service/ISceneService.cpp" = 1
+"Source/Engine/Object/GameObject/Tick/StructuralChangeBuffer.cpp" = 1
+"Source/Engine/Object/GameObject/Tick/TickBatchRegistry.cpp" = 1
+"Source/Engine/Object/Prefab/PrefabAsset.cpp" = 3
+# Source/Engine/Observability — 이전 대기
+"Source/Engine/Observability/ServerServiceRegistry.cpp" = 2
+# Source/Engine/Physics — 이전 대기
+"Source/Engine/Physics/Collision/PhysicsMeshShapeCache.cpp" = 2
+"Source/Engine/Physics/Jolt/JoltJobSystem.cpp" = 1
+"Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp" = 4
+# Source/Engine/Probe — 이전 대기
+"Source/Engine/Probe/AutomationProbe.cpp" = 1
+# Source/Engine/Profiling — 이전 대기
+"Source/Engine/Profiling/FrameProfiler.cpp" = 2
+"Source/Engine/Profiling/FrameStall.cpp" = 1
+"Source/Engine/Profiling/ProfilerBackend.cpp" = 8
+"Source/Engine/Profiling/ProfilerTraceExport.cpp" = 2
+# Source/Engine/Reflection — 이전 대기
+"Source/Engine/Reflection/ReflectionCore.cpp" = 4
+"Source/Engine/Reflection/ReflectionValidation.cpp" = 2
+# Source/Engine/Renderer — 이전 대기
+"Source/Engine/Renderer/Capture/RenderDocCapture.cpp" = 2
+"Source/Engine/Renderer/Frame/FrameRenderer.cpp" = 1
+"Source/Engine/Renderer/Frame/FrameRendererFog.cpp" = 1
+"Source/Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp" = 2
+"Source/Engine/Renderer/Frame/Timeline/GPUPassTimeline.cpp" = 2
+"Source/Engine/Renderer/Graph/RenderGraph.cpp" = 1
+"Source/Engine/Renderer/RenderThread.cpp" = 2
+# Source/Engine/Resource — 이전 대기
+"Source/Engine/Resource/Cache/BuiltInAssetCache.cpp" = 1
+"Source/Engine/Resource/Cache/SharedAssetCacheDefinition.h" = 1
+"Source/Engine/Resource/Cook/ContentHash.cpp" = 2
+"Source/Engine/Resource/Cook/CookJob.cpp" = 2
+"Source/Engine/Resource/Pack/ResourcePakCompressionUtil.cpp" = 1
+"Source/Engine/Resource/ResourceDataKind.cpp" = 1
+"Source/Engine/Resource/ResourcePaths.cpp" = 5
+"Source/Engine/Resource/ResourcePaths.h" = 6
+# Source/Engine/Serialization — 이전 대기
+"Source/Engine/Serialization/Fixed/FixedLayout.h" = 1
+# Source/Engine/Text — 이전 대기
+"Source/Engine/Text/SystemFontLocator.cpp" = 1
+# Source/Engine/UI — 이전 대기
+"Source/Engine/UI/Base/Widget.cpp" = 1
+"Source/Engine/UI/Layout/UILayoutPass.cpp" = 2
+"Source/Engine/UI/Screen/UIScreenSwitch.cpp" = 1
+# Source/Engine/Vfx — 이전 대기
+"Source/Engine/Vfx/VfxGPUEmitter.cpp" = 1
+# Source/GameFramework/Base — 이전 대기
+"Source/GameFramework/Base/Actor/AI/BehaviorTaskRegistry.cpp" = 1
+"Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp" = 1
+"Source/GameFramework/Base/Foundation/Data/GameDataCache.cpp" = 1
+"Source/GameFramework/Base/Foundation/Framework/GameService.cpp" = 1
+"Source/GameFramework/Base/Foundation/Framework/Presentation/GameSound.cpp" = 1
+"Source/GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.cpp" = 1
+"Source/GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.cpp" = 1
+"Source/GameFramework/Base/Gameplay/Appearance/AppearanceMeshAssembly.cpp" = 1
+"Source/GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.cpp" = 1
+"Source/GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.cpp" = 1
+"Source/GameFramework/Base/Gameplay/Interaction/InteractionCatalog.cpp" = 1
+"Source/GameFramework/Base/Online/Bus/ServerBus.cpp" = 3
+"Source/GameFramework/Base/Online/Identity/OnlinePushRelay.cpp" = 4
+"Source/GameFramework/Base/Online/Local/LocalStoreFactory.cpp" = 1
+"Source/GameFramework/Base/Online/Security/NetSecurity.cpp" = 1
+"Source/GameFramework/Base/Online/Server/OnlineServerKit.cpp" = 1
+"Source/GameFramework/Base/Online/Server/OnlineStoreDriverTable.cpp" = 2
+"Source/GameFramework/Base/Online/Service/OnlineProtocolRegistry.cpp" = 1
+# Source/GameFramework/Kits — 이전 대기
+"Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.cpp" = 1
+"Source/GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.cpp" = 1
+"Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.cpp" = 1
+"Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/ServiceStoreFactory.cpp" = 1
+"Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/Driver/SQLite/SQLiteDriver.cpp" = 1
+"Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.cpp" = 1
+"Source/GameFramework/Kits/Feature/World/Overworld/ZoneTracker.cpp" = 1
+# Source/GameFramework/PlugIn — 이전 대기
+"Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/CharacterEditor/RetargetPanel.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersVisualizer.cpp" = 5
+"Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.cpp" = 2
+"Source/GameFramework/PlugIn/Editor/NetSimulation/EditorNetSimSession.cpp" = 1
+"Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutVisualizer.cpp" = 1
+# Source/ModuleHost — 이전 대기
+"Source/ModuleHost/ModuleCallGuard.cpp" = 4
+"Source/ModuleHost/ModuleShadowCopy.cpp" = 2
+# Source/Server/Windows — 이전 대기
+"Source/Server/Windows/WindowsServiceHost.cpp" = 5
+# Test/AppTest — 이전 대기
+"Test/AppTest/TestAppSmoke.cpp" = 1
+# Test/CoreTest — 이전 대기
+"Test/CoreTest/Common/TestAssertDialog.cpp" = 1
+"Test/CoreTest/Container/TestContainerBench.cpp" = 1
+"Test/CoreTest/Container/TestDataStructure.cpp" = 1
+"Test/CoreTest/Container/TestDynamicBitsetBench.cpp" = 1
+"Test/CoreTest/Container/TestPagedArray.cpp" = 2
+"Test/CoreTest/Container/TestVector.cpp" = 1
+"Test/CoreTest/Delegate/TestDelegate.cpp" = 2
+"Test/CoreTest/Event/TestEvent.cpp" = 9
+"Test/CoreTest/Log/TestLogSinkBench.cpp" = 1
+"Test/CoreTest/Memory/TestLifetimeScope.cpp" = 4
+"Test/CoreTest/Memory/TestMemory.cpp" = 4
+"Test/CoreTest/Memory/TestMemoryCopyBench.cpp" = 2
+"Test/CoreTest/String/TestFixedStringBench.cpp" = 5
+"Test/CoreTest/String/TestString.cpp" = 1
+"Test/CoreTest/Task/TestTaskManager.cpp" = 2
+"Test/CoreTest/Task/TestTaskManagerBench.cpp" = 5
+"Test/CoreTest/TestTestFramework.cpp" = 2
+# Test/EditorTest — 이전 대기
+"Test/EditorTest/Common/Commands/TestEditorCommandRegistry.cpp" = 2
+"Test/EditorTest/Common/Workspace/TestEditorExtensionSubsystems.cpp" = 1
+"Test/EditorTest/Panels/ContentBrowser/TestContentBrowserLogic.cpp" = 1
+# Test/EngineTest — 이전 대기
+"Test/EngineTest/Automation/TestAutomationGameplaySteps.cpp" = 3
+"Test/EngineTest/Automation/TestAutomationScenario.cpp" = 8
+"Test/EngineTest/Automation/TestAutomationSession.cpp" = 1
+"Test/EngineTest/Common/TestTask.cpp" = 24
+"Test/EngineTest/Config/TestGameAutoplay.cpp" = 2
+"Test/EngineTest/GameFramework/Control/TestControl.cpp" = 1
+"Test/EngineTest/GameFramework/Framework/TestGameFramework.cpp" = 2
+"Test/EngineTest/GameFramework/Kits/Network/TestNetSimSampleGame.cpp" = 2
+"Test/EngineTest/GameFramework/Kits/Simulation/TestKitComposition.cpp" = 2
+"Test/EngineTest/GameFramework/Online/TestOnlineServerRuntime.cpp" = 1
+"Test/EngineTest/GameFramework/UI/TestHUDController.cpp" = 1
+"Test/EngineTest/Graphics/TestRHIDevice.cpp" = 1
+"Test/EngineTest/Input/TestInput.cpp" = 2
+"Test/EngineTest/Input/TestInputMap.cpp" = 1
+"Test/EngineTest/Localization/TestLocalizationFormats.cpp" = 1
+"Test/EngineTest/Localization/TestTextFormatter.cpp" = 1
+"Test/EngineTest/Localization/TestTextGatherer.cpp" = 2
+"Test/EngineTest/Module/TestModuleUnloadListener.cpp" = 1
+"Test/EngineTest/Object/TestGameObjectManager.cpp" = 3
+"Test/EngineTest/Object/TestObjectStateRoundTrip.cpp" = 2
+"Test/EngineTest/Object/TestTypedComponentBench.cpp" = 4
+"Test/EngineTest/Observability/TestServerServiceManager.cpp" = 1
+"Test/EngineTest/Resource/TestAssetStreaming.cpp" = 3
+"Test/EngineTest/Resource/TestLoaderFuzz.cpp" = 1
+"Test/EngineTest/Resource/TestPackReadBench.cpp" = 2
+"Test/EngineTest/Scene/TestCommandStack.cpp" = 1
+"Test/EngineTest/Scene/TestSceneAsync.cpp" = 4
+"Test/EngineTest/Serialization/TestArchive.cpp" = 1
+"Test/EngineTest/TestEngineInitSequence.cpp" = 1
+"Test/EngineTest/TestGameObjectMocks.cpp" = 2
+"Test/EngineTest/TestGameObjectMocks.h" = 8
+"Test/EngineTest/UI/TestUIBinding.cpp" = 1
+"Test/EngineTest/UI/TestUIScreenSwitch.cpp" = 3
+"Test/EngineTest/UI/TestUITextInput.cpp" = 1
+"Test/EngineTest/UserSettings/TestUserSettings.cpp" = 1
+"Test/EngineTest/Window/TestWindowEvents.cpp" = 3
+# Test/FuzzTest — 이전 대기
+"Test/FuzzTest/LoaderFuzzer.cpp" = 2
+# Test/ReflectionTest — 이전 대기
+"Test/ReflectionTest/TestReflectionFixtures.cpp" = 3
+"Test/ReflectionTest/TestReflectionParser.cpp" = 1
+"Test/ReflectionTest/TestReflectionTypeInfo.cpp" = 1
+"Test/ReflectionTest/TestSampleActor.h" = 1
+# Test/SmokeTest — 이전 대기
+"Test/SmokeTest/Dev/TestModuleCallGuard.cpp" = 2
+"Test/SmokeTest/TestAppHeadlessTasks.cpp" = 1
+"Test/SmokeTest/TestModuleHost.cpp" = 8
+"Test/SmokeTest/TestSmoke.cpp" = 2
+# Test/TestFramework — 이전 대기
+"Test/TestFramework/TestRegistry.cpp" = 4
+# Tools — 이전 대기
+"Tools/ReflectionParser/AstVisitor.cpp" = 2

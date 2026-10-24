@@ -484,6 +484,9 @@
   ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
   (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
   (`Engine/Common/EngineScope.h`). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
+  ④ 이름 검사의 틈(`.cpp` 익명 접근자, 네임스페이스 수준 변수, `static inline` 멤버, `thread_local`, `ScopeOwned` 로 감싼 전역 칸)은 모양으로 막는다: `CheckMutableStatics` 가 정적 저장 기간의 가변 변수(상수 아닌 것)를
+  장소와 이름에 상관없이 위반으로 본다(예외는 `rules/CheckMutableStatics.toml` 에 `<파일>:<변수>` 와 이유). 소유자는 칸을 감싼 형식이 아니라 칸을 든 객체다.
+  신규 위반부터 막고 기존은 이전 대기 표(`[pending]`, 파일별 위반 총수 상한)로 줄여 간다(사용자 결정, 2026-10-25) — 표는 늘지 못하고 줄었으면 `--regen-baseline` 으로 줄여야 통과한다.
   **단일체 게이트는 이름이 아니라 모양을 본다**(2026-10-25, `ResourceDataKindRegistry` 는 서비스로 옮겨 `SW_ENGINE_SERVICE` 목록에 있다): 참조를 돌려주는 인자 없는 정적 접근자와
   함수 안 정적 지역을 돌려주는 정의는 이름이 `instance()` · `shared()` 여도 잡는다. 이름을 보는 건 모양이 팩토리와 같아 못 가르는 포인터 · 스마트 포인터 반환뿐이다.
   `.cpp` 안 익명 · `…Internal` 이름공간의 정적 지역 접근자와, 헤더 선언만 있고 본문이 `.cpp` 에 있는 바깥 연결 자유 함수는 게이트가 보지 못하는 틈이다(현재 0건).
