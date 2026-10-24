@@ -207,6 +207,24 @@ namespace sw::editor
         /** @brief `unpackFloats` 의 선택 속성판입니다. 접근자가 없으면 빈 배열로 true(부르는 쪽이 뜻을 정한다), 원소가 @p elementCount 보다 적으면 오류입니다. */
         [[nodiscard]] static bool unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue );
 
+        /** @brief 프리미티브의 속성 접근자입니다. UV · 색 · 관절 · 가중치는 첫 번째 세트만 읽습니다. 없는 속성은 nullptr 입니다. */
+        struct PrimitiveAccessors
+        {
+            const cgltf_accessor* _pPosition{ nullptr };
+            const cgltf_accessor* _pNormal{ nullptr };
+            const cgltf_accessor* _pUv{ nullptr };
+            const cgltf_accessor* _pColor{ nullptr };
+            const cgltf_accessor* _pJoint{ nullptr };
+            const cgltf_accessor* _pWeight{ nullptr };
+        };
+        /** @brief 프리미티브의 속성 접근자를 종류별로 찾습니다. */
+        static PrimitiveAccessors findPrimitiveAccessors( const cgltf_primitive& primitive );
+        /** @brief 프리미티브 머티리얼의 기본색(색 굽기가 켜졌을 때)을 읽습니다. 기본색 텍스처의 이름이 처음 보이면 @p inoutMesh 에 적습니다. */
+        static float4 readPrimitiveBaseColor( const cgltf_primitive& primitive, MergedMesh& inoutMesh );
+        /** @brief 프리미티브의 정점을 속성 접근자 단위로 통째로 읽어 월드 · 좌표계 변환을 적용해 @p inoutMesh 에 더합니다. 못 읽은 접근자가 있으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool appendPrimitiveVertices( const cgltf_primitive& primitive, const PrimitiveAccessors& accessors, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                                           MergedMesh& inoutMesh );
+
         /**
          * @brief 프리미티브 하나를 월드 변환과 좌표계 변환을 적용해 @p inoutMesh 에 더합니다.
          * @param pSkin 스킨드 메시를 만드는 중일 때의 본 매핑입니다. 스킨드 프리미티브는 JOINTS_0, WEIGHTS_0 을 쓰고, 아니면 고정 본에 가중치 1 을 줍니다. nullptr 이면 스킨을 보지 않습니다.
