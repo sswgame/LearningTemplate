@@ -102,11 +102,12 @@ float3 computeAtmosphere( float3 direction, float3 toSun, float3 groundAlbedo )
     float        atmosphereFar;
     const bool   bInAtmosphere = intersectSphere( origin, direction, topRadius, atmosphereNear, atmosphereFar );
 
-    float       planetNear;
-    float       planetFar;
-    const bool  bPlanetOverlap = intersectSphere( origin, direction, planetRadius, planetNear, planetFar );
-    const bool  bHitsGround    = bPlanetOverlap && planetNear > 0.0f;
-    const float segmentEnd     = bHitsGround ? min( atmosphereFar, planetNear ) : atmosphereFar;
+    float      planetNear;
+    float      planetFar;
+    const bool bPlanetOverlap = intersectSphere( origin, direction, planetRadius, planetNear, planetFar );
+    // 고도 0 의 눈은 아래 시선의 가까운 교점이 0 근처라 먼 교점으로 땅을 판정한다(C++ SkyAtmosphere::evaluateScattering 과 같다).
+    const bool  bHitsGround = bPlanetOverlap && planetFar > kSurfaceEpsilonKm;
+    const float segmentEnd  = bHitsGround ? min( atmosphereFar, max( planetNear, 0.0f ) ) : atmosphereFar;
 
     const float3 betaRayleigh      = g_SkyAtmosphereRayleigh.rgb;
     const float  betaMie           = g_SkyAtmosphereMie.x;

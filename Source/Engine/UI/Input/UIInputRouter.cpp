@@ -257,13 +257,13 @@ namespace sw
             {
                 event._kind = UIPointerEventKind::Down;
                 if ( dispatchPointerEvent( listScreen, event ) )
-                    _consumption.consumeMouseButton( button );
+                    _consumption.consumeMouseButton( event );
             }
             if ( pMouse->wasButtonReleased( button ) )
             {
                 event._kind = UIPointerEventKind::Up;
                 if ( dispatchPointerEvent( listScreen, event ) )
-                    _consumption.consumeMouseButton( button );
+                    _consumption.consumeMouseButton( event );
             }
         }
         const float32 wheel = pMouse->getMouseWheel();

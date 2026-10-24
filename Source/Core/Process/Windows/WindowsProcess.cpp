@@ -103,29 +103,48 @@ namespace sw
             }
 
             /**
-             * @brief **자식이 물려받는 핸들을 이 파이프 하나로 못박는** 속성 목록을 만듭니다. `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
+             * @brief **자식이 물려받는 핸들을 이 파이프 하나로 못박는** 속성 목록입니다. `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
              *        전부* 가 넘어간다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 파이프 쓰기 끝을 물려받고, 그러면 한쪽의 읽기는 자기 자식이
              *        끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
-             * @return 만들지 못하면 false 입니다(목록은 정리된 상태). 성공하면 호출한 쪽이 `DeleteProcThreadAttributeList` 로 지운다.
+             * @details 속성 목록은 핸들 배열을 복사하지 않고 **가리킨다** — 배열이 `CreateProcessW` 까지 살아 있어야 한다. 그래서 배열과 목록을 한 객체가
+             *          함께 들고 복사 · 이동을 막는다(배열을 만든 함수의 지역 변수로 두었더니 함수가 끝난 뒤 목록이 사라진 배열을 가리켜 모든 자식 띄우기가 졌다).
              */
-            static bool restrictInheritedHandles( const StdPipes& pipes, vector<uint8>& outAttributeBytes, LPPROC_THREAD_ATTRIBUTE_LIST& outAttributePointer )
+            struct InheritedHandleList
             {
-                SIZE_T attributeListSize = 0;
-                InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
-                outAttributeBytes.resize( attributeListSize );
-                outAttributePointer               = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( outAttributeBytes.data() );
-                HANDLE      arrInheritedHandle[2] = { pipes._hOutWrite, pipes._hInRead };
-                const DWORD inheritedHandleSize   = static_cast<DWORD>( sizeof( HANDLE ) * ( pipes._hInRead != nullptr ? 2 : 1 ) );
-                const bool  bAttributeReady       = InitializeProcThreadAttributeList( outAttributePointer, 1, 0, &attributeListSize ) != FALSE;
-                if ( bAttributeReady == false ||
-                     UpdateProcThreadAttribute( outAttributePointer, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, arrInheritedHandle, inheritedHandleSize, nullptr, nullptr ) == FALSE )
+                HANDLE                       _arrHandle[2]{ nullptr, nullptr };
+                vector<uint8>                _attributeBytes;
+                LPPROC_THREAD_ATTRIBUTE_LIST _pAttributeList{ nullptr };
+
+                InheritedHandleList()                                        = default;
+                InheritedHandleList( const InheritedHandleList& )            = delete;
+                InheritedHandleList& operator=( const InheritedHandleList& ) = delete;
+                ~InheritedHandleList()
                 {
-                    if ( bAttributeReady )
-                        DeleteProcThreadAttributeList( outAttributePointer );
-                    return false;
+                    if ( _pAttributeList != nullptr )
+                        DeleteProcThreadAttributeList( _pAttributeList );
                 }
-                return true;
-            }
+
+                /** @brief @p pipes 의 자식 쪽 끝만 물려주는 목록을 만듭니다. 만들지 못하면 false 이고 목록은 비어 있습니다. */
+                [[nodiscard]] bool initialize( const StdPipes& pipes )
+                {
+                    _arrHandle[0]                   = pipes._hOutWrite;
+                    _arrHandle[1]                   = pipes._hInRead;
+                    const DWORD inheritedHandleSize = static_cast<DWORD>( sizeof( HANDLE ) * ( pipes._hInRead != nullptr ? 2 : 1 ) );
+                    SIZE_T      attributeListSize   = 0;
+                    InitializeProcThreadAttributeList( nullptr, 1, 0, &attributeListSize );
+                    _attributeBytes.resize( attributeListSize );
+                    LPPROC_THREAD_ATTRIBUTE_LIST pList = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>( _attributeBytes.data() );
+                    if ( InitializeProcThreadAttributeList( pList, 1, 0, &attributeListSize ) == FALSE )
+                        return false;
+                    if ( UpdateProcThreadAttribute( pList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, _arrHandle, inheritedHandleSize, nullptr, nullptr ) == FALSE )
+                    {
+                        DeleteProcThreadAttributeList( pList );
+                        return false;
+                    }
+                    _pAttributeList = pList;
+                    return true;
+                }
+            };
         };
     } // namespace
 
@@ -167,9 +186,8 @@ namespace sw
         wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
-        vector<uint8>                attributeListBytes;
-        LPPROC_THREAD_ATTRIBUTE_LIST pAttributeList = nullptr;
-        if ( Internal::restrictInheritedHandles( pipes, attributeListBytes, pAttributeList ) == false )
+        Internal::InheritedHandleList inheritedHandles;
+        if ( inheritedHandles.initialize( pipes ) == false )
         {
             pipes.closeAll();
             SW_LOG_ERROR( "Failed to restrict inherited handles for: %#", cmdStr.c_str() );
@@ -182,7 +200,7 @@ namespace sw
         startupInfo.StartupInfo.hStdOutput = pipes._hOutWrite;
         startupInfo.StartupInfo.hStdInput  = pipes._hInRead;
         startupInfo.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
-        startupInfo.lpAttributeList = pAttributeList;
+        startupInfo.lpAttributeList = inheritedHandles._pAttributeList;
 
         // 정상 종료 요청(`requestStop` — 콘솔 그룹에 Ctrl+Break)을 받을 자식은 이 프로세스의 콘솔을 나눠 써야 한다. CREATE_NO_WINDOW 는 숨은 새 콘솔을
         // 만들어 이벤트가 닿지 않는다. 이 프로세스에 콘솔이 없으면(서비스 · 창 앱) 나눠 쓸 것이 없으니 그대로 숨긴다 — 새 콘솔 창이 뜨지 않게.
@@ -204,7 +222,6 @@ namespace sw
             &startupInfo.StartupInfo,
             &pi );
 
-        DeleteProcThreadAttributeList( pAttributeList );
         pipes.closeChildEnds();
 
         if ( bCreated == FALSE )

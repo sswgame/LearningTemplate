@@ -1979,7 +1979,7 @@
   },
   {
    "page": "LiveLinkFaceMapping",
-   "path": "Resource/game/*/models/*.livelinkface.xml",
+   "path": "Resource/game/*/data/*.livelinkface.xml",
    "layer": "팩 데이터",
    "type": "LiveLinkFaceMapping",
    "types": [

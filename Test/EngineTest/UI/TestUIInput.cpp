@@ -447,7 +447,7 @@ SW_TEST_CASE( UIInputTest, MouseClickOnWorldWidgetThroughCameraRay )
         }
         const int32 centerX = bEditorGameView ? 1560 : 960; // 화면 가운데의 창 픽셀
         const int32 centerY = bEditorGameView ? 940 : 540;
-        fixture.openMenu( 1 ); // 화면 위젯이 가운데에 없다 — 누름이 World 위젯까지 온다
+        // 화면 위젯을 열지 않는다 — 화면 루트는 레이아웃이 뷰포트 전체에 놓아 어느 점이든 화면 위젯 위가 된다(그러면 누름이 World 위젯까지 오지 않는다).
 
         sw::GameObjectManager manager;
         sw::GameObject*       pCameraObject = manager.createGameObject( sw::hashed_string( "Camera" ) );

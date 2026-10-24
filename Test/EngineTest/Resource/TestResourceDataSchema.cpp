@@ -80,7 +80,23 @@ namespace
 
         static bool isScene( sw::string_view resourceID ) { return endsWith( resourceID, ".scene.xml" ); }
         static bool isPrefab( sw::string_view resourceID ) { return endsWith( resourceID, ".prefab.xml" ) || endsWith( resourceID, ".prefab.json" ); }
-        static bool isPipeline( sw::string_view resourceID ) { return startsWith( resourceID, "engine/pipeline/" ) && endsWith( resourceID, ".xml" ); }
+        /** @brief 도메인 바로 아래 폴더 @p folder 에 든 파일인지 봅니다 — 엔진은 `engine/<폴더>/`, 게임은 `game/<게임>/<폴더>/` 이다. */
+        static bool isInDomainFolder( sw::string_view resourceID, sw::string_view folder )
+        {
+            size_t domainEnd = sw::string_view::npos;
+            if ( startsWith( resourceID, "engine/" ) )
+                domainEnd = sw::string_view( "engine/" ).size();
+            else if ( startsWith( resourceID, "game/" ) )
+            {
+                const size_t gameEnd = resourceID.find( '/', sw::string_view( "game/" ).size() );
+                domainEnd            = gameEnd == sw::string_view::npos ? sw::string_view::npos : gameEnd + 1;
+            }
+            if ( domainEnd == sw::string_view::npos )
+                return false;
+            const sw::string_view rest = resourceID.substr( domainEnd );
+            return rest.size() > folder.size() && startsWith( rest, folder ) && rest[folder.size()] == '/';
+        }
+        static bool isPipeline( sw::string_view resourceID ) { return isInDomainFolder( resourceID, "pipeline" ) && endsWith( resourceID, ".xml" ); }
         static bool isRenderPass( sw::string_view resourceID ) { return startsWith( resourceID, "engine/renderpass/" ) && endsWith( resourceID, ".xml" ); }
         static bool isEngineDefaultAssets( sw::string_view resourceID ) { return endsWith( resourceID, "enginedefaultassets.xml" ); }
         static bool isInputMap( sw::string_view resourceID ) { return endsWith( resourceID, ".input.xml" ); }

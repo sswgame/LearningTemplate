@@ -105,11 +105,10 @@ class LintGateRuleDataTest(unittest.TestCase):
         self.assertEqual(_NoRuleFileGate._ruleDataError, "")
 
     def testExemptionComesFromRuleFile(self) -> None:
-        class CheckCoreLayersGate(LintGate):   # noqa: N801 — 이름이 데이터 파일을 고른다
+        class CheckStdThreadGate(LintGate):   # noqa: N801 — 이름이 데이터 파일을 고른다(예외 표가 늘 있는 규칙 파일)
             selfTestSkipReason = "테스트용"
-            ruleSchema = {"tier": kKindInteger}
 
-        self.assertIn("Source/Core/Math/VectorMath.cpp", CheckCoreLayersGate.mapExemption)
+        self.assertIn("Source/Core/Concurrency/thread.h", CheckStdThreadGate.mapExemption)
 
     def testBrokenRuleFileStopsTheGate(self) -> None:
         with unittest.mock.patch.object(LintGate, "readRules", side_effect=RuleDataError("probe: 깨진 파일")):

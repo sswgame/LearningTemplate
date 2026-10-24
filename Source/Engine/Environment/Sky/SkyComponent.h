@@ -70,7 +70,7 @@ namespace sw
         float32 _sunIntensity;
         PROPERTY( Category = "Atmosphere", DisplayName = "Observer Altitude", Min = 0.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Eye altitude above the planet surface in kilometres (0.1 = 100 m)" )
         float32 _observerAltitudeKm;
-        PROPERTY( Category = "Atmosphere", DisplayName = "Sun Disc Angle", Min = 0.0, Max = 0.2, EditCondition = "_mode == Atmosphere", Tooltip = "Angular radius of the sun disc in radians; 0 hides the disc" )
+        PROPERTY( Category = "Atmosphere", DisplayName = "Sun Disc Angle", Min = 0.0, Max = 0.2, Units = rad, EditCondition = "_mode == Atmosphere", Tooltip = "Angular radius of the sun disc in radians; 0 hides the disc" )
         float32 _sunDiscAngle;
         PROPERTY( Category = "Atmosphere", DisplayName = "Planet Radius", Min = 100.0, Units = km, EditCondition = "_mode == Atmosphere", Tooltip = "Planet radius in kilometres" )
         float32 _planetRadiusKm;

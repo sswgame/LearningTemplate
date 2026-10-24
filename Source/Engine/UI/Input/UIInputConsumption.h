@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    struct UIPointerEvent;
+
     class InputManager;
     class InputMap;
 
@@ -36,8 +38,12 @@ namespace sw
         void update( const InputManager& input );
         /** @brief @p inputMap 의 액션 @p action 이 지금 쓰는 물리 입력을 소비합니다. */
         void consumeAction( const InputMap& inputMap, const InputManager& input, const hashed_string& action );
-        /** @brief 마우스 버튼 @p button 을 소비합니다(위젯이 그 클릭을 처리했습니다). */
-        void consumeMouseButton( MouseButton button );
+        /**
+         * @brief 위젯이 처리한 마우스 누름 · 뗌 @p event 의 버튼을 소비합니다.
+         * @details 뗌(Up)이면 이미 뗀 것으로 적어 이번 프레임만 막고 다음 `update` 에서 뺀다 — 버튼만 받아 누름처럼 적었더니 뗀 바로 다음 프레임의 새 누름까지
+         *          먹어 게임이 받지 못했다. 이벤트를 받으므로 부르는 쪽이 누름 · 뗌을 따로 고를 수 없다.
+         */
+        void consumeMouseButton( const UIPointerEvent& event );
         /** @brief 슬롯 @p slot 을 소비합니다(액션이 아닌 원시 입력을 받은 쪽, 곧 키 바인딩 창이 씁니다). 뗄 때까지 게임이 보지 못합니다. */
         void consumeSlot( const InputSlot& slot );
         /** @brief @p inputMap 의 액션 @p action 을 지금 누르는 물리 입력이 모두 UI 에 소비된 것이면 true 입니다. */

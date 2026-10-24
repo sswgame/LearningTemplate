@@ -128,6 +128,7 @@ def makeRepositoryInternal(root: Path) -> None:
     writePlansInternal(root, {"Vfx.md": kGoodText, "Hold.md": kHoldText, "Ref.md": kRefText, "Candidates-engine.md": kCandidateText,
                               "Roadmap.md": kRoadmapText})
     (root / "README.md").write_text(kReadmeText, encoding="utf-8")
+    (root / "docs" / "09_Decisions.md").write_text("# 결정\n", encoding="utf-8")  # 로드맵이 링크하는 계획 밖 문서 — 링크 점검이 있는 파일로 본다
 
 
 def runBoardInternal(root: str, listArg: list[str]) -> tuple[int, str, str]:

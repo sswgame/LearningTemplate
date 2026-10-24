@@ -187,7 +187,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         typeName="FacialRig", header="Source/Engine/Animation/Facial/FacialRig.h", keyStyle=kKeyStyleXmlMember,
         note="메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`)"),
     ConfigFileEntry(
-        page="LiveLinkFaceMapping", pathPattern="Resource/game/*/models/*.livelinkface.xml", layer=kLayerPackData, fileFormat="xml",
+        page="LiveLinkFaceMapping", pathPattern="Resource/game/*/data/*.livelinkface.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`)", readWhen="컴포넌트 시작",
         shipping="게임 팩에 실림", bCommitted=True,
         typeName="LiveLinkFaceMapping", header="Source/Engine/Animation/Facial/LiveLinkFace.h", keyStyle=kKeyStyleXmlMember,

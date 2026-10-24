@@ -47,7 +47,7 @@
 | `Resource/game/*/data/*.settings.xml` | `UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`) — 기동. 엔진 스키마에 덧붙는 게임 설정 | 게임 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 | `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 |  |
 | `Resource/game/*/models/*.facial.xml` | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) — 컴포넌트 시작 · 경로를 바꿀 때. 메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`) | 게임 팩에 실림 | 한다 | [FacialRig](FacialRig.md) |
-| `Resource/game/*/models/*.livelinkface.xml` | `LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`) — 컴포넌트 시작. 패킷 채널 → 얼굴 리그 표정 연결. 배치 표(`livelinkface.xml`)에 없는 채널은 오류 | 게임 팩에 실림 | 한다 | [LiveLinkFaceMapping](LiveLinkFaceMapping.md) |
+| `Resource/game/*/data/*.livelinkface.xml` | `LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`) — 컴포넌트 시작. 패킷 채널 → 얼굴 리그 표정 연결. 배치 표(`livelinkface.xml`)에 없는 채널은 오류 | 게임 팩에 실림 | 한다 | [LiveLinkFaceMapping](LiveLinkFaceMapping.md) |
 
 ## 사용자 설정
 

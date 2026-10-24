@@ -50,9 +50,9 @@ SW_TEST_CASE( FogTest, UniformFogOpticalDepthIsDensityTimesLength )
     fog._heightFalloff = 0.0f;
     fog._maxOpacity    = 0.8f;
     const float3 eye{ 0.0f, 2.0f, 0.0f };
-    const float3 point{ 30.0f, 2.0f, 40.0f }; // 길이 50
-    SW_EXPECT_NEAR_EQUAL( 0.05f * 50.0f, fog.computeOpticalDepth( eye, point ), 1.0e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f - MathUtil::exp( -2.5f ), fog.computeOpacity( eye, point ), 1.0e-4f );
+    const float3 point{ 6.0f, 2.0f, 8.0f }; // 길이 10 - 불투명도(약 0.39)가 최대 불투명도 0.8 아래라 잘리지 않는다
+    SW_EXPECT_NEAR_EQUAL( 0.05f * 10.0f, fog.computeOpticalDepth( eye, point ), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f - MathUtil::exp( -0.5f ), fog.computeOpacity( eye, point ), 1.0e-4f );
     // 아주 먼 점은 최대 불투명도에서 멈춘다.
     SW_EXPECT_NEAR_EQUAL( 0.8f, fog.computeOpacity( eye, float3{ 0.0f, 2.0f, 5000.0f } ), 1.0e-6f );
     // 눈과 같은 점은 두께가 없다.

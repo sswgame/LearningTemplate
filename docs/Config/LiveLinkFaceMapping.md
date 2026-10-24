@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 파일 | `Resource/game/*/models/*.livelinkface.xml` |
+| 파일 | `Resource/game/*/data/*.livelinkface.xml` |
 | 층 | 팩 데이터 |
 | 읽는 곳 | `LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`) |
 | 언제 | 컴포넌트 시작 |

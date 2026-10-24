@@ -705,7 +705,7 @@ SW_TEST_CASE( FacialAnimationTest, AvatarSampleLiveLinkMappingNamesOnlyExpressio
     SW_ASSERT_TRUE( rig.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.facial.xml" ) );
     LiveLinkFaceMapping mapping;
     LiveLinkFaceLayout  layout;
-    SW_ASSERT_TRUE( mapping.loadFromResource( "game/empty/models/avatarsample_d/avatarsample_d.livelinkface.xml", layout ) );
+    SW_ASSERT_TRUE( mapping.loadFromResource( "game/empty/data/avatarsample_d.livelinkface.xml", layout ) );
     SW_EXPECT_FALSE( mapping._listExpression.empty() );
     for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
     {
@@ -736,7 +736,7 @@ SW_TEST_CASE( FacialAnimationTest, LiveLinkFaceComponentDrivesExpressionsFromUDP
     SW_ASSERT_NOT_NULL( pFace );
     LiveLinkFaceComponent* pLink = pFace->getOwner()->addComponent<LiveLinkFaceComponent>();
     SW_ASSERT_NOT_NULL( pLink );
-    pLink->setMappingPath( "game/empty/models/testhead.livelinkface.xml" );
+    pLink->setMappingPath( "game/empty/data/testhead.livelinkface.xml" );
     pLink->setPort( 0 );
     pLink->setLoopbackOnly( true );
     pLink->dispatchBeginPlay();

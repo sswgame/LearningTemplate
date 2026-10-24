@@ -124,7 +124,7 @@ namespace sw
         PROPERTY( Category = "Light Probe Bake", DisplayName = "Bounce Albedo", Min = 0.0, Max = 1.0, Tooltip = "Reflectance assumed for every surface a bake ray hits" )
         float32 _bounceAlbedo;
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Realtime", Tooltip = "Update the probes on the GPU every frame instead of using a bake (static opaque meshes occlude)" )
-        uint8 _bRealtime;
+        uint8 _bRealtime : 1; ///< 비트 필드라 리플렉션이 불리언으로 읽는다(맨 uint8 은 숫자라 씬의 "true" 를 읽지 못했다)
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Voxel Size", Min = 0.1, Tooltip = "Target voxel edge of the scene occupancy grid the realtime update traces", Units = m )
         float32 _voxelSize;
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Rays Per Update", Min = 8, Max = 1024, Tooltip = "Rays a probe casts each time it is refreshed" )

@@ -65,7 +65,7 @@ SW_TEST_CASE( HTTP2Test, HpackRefusesWhatItCannotReadInsteadOfGuessing )
     SW_EXPECT_FALSE( decoder.decode( arrZero, sizeof( arrZero ), listHeader, error ) );
     const uint8 arrCut[] = { 0x40, 0x0a, 0x63, 0x75 }; // 이름이 길이보다 짧다
     SW_EXPECT_FALSE( decoder.decode( arrCut, sizeof( arrCut ), listHeader, error ) );
-    const uint8 arrBigUpdate[] = { 0x3f, 0xe1, 0x1f }; // 표 크기 4097
+    const uint8 arrBigUpdate[] = { 0x3f, 0xe2, 0x1f }; // 표 크기 4097 = 31 + 98 + 31 * 128 (상한 4096 을 하나 넘는다)
     SW_EXPECT_FALSE( decoder.decode( arrBigUpdate, sizeof( arrBigUpdate ), listHeader, error ) );
 }
 

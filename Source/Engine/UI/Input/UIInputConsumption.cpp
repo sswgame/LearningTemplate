@@ -7,6 +7,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/UI/Base/UIEvents.h"
 
 namespace sw
 {
@@ -149,9 +150,17 @@ namespace sw
         }
     }
 
-    void UIInputConsumption::consumeMouseButton( MouseButton button )
+    void UIInputConsumption::consumeMouseButton( const UIPointerEvent& event )
     {
-        consumeSlot( InputSlot::fromMouseButton( button ) );
+        const InputSlot slot = InputSlot::fromMouseButton( event._button );
+        consumeSlot( slot );
+        if ( event._kind != UIPointerEventKind::Up )
+            return;
+        for ( ConsumedSlot& entry : _listConsumedSlot )
+        {
+            if ( entry._slot == slot )
+                entry._bReleased = SW_TRUE; // 뗀 프레임 — 다음 update 에서 빠진다
+        }
     }
 
     bool UIInputConsumption::isActionConsumed( const InputMap& inputMap, const InputManager& input, const hashed_string& action ) const

@@ -17,7 +17,6 @@ SWCOOK 4
 30ffb83e7b02076d sprite2d.hlsl
 42209325466dc7e5 sprite2dlit.hlsl
 484d593ea826558b motionblur.hlsl
-4bc65df3ac589422 sky.hlsl
 4d419ce851029c74 common.hlsli
 5213aadb0c0bf399 fullscreentriangle.hlsl
 5a0efc064b5ab496 fullscreenblit.hlsl
@@ -38,6 +37,7 @@ SWCOOK 4
 933974aadb06a806 colorvision.hlsli
 950fb88d8f14e420 fogcommon.hlsli
 95462f5436586d85 depthoffield.hlsl
+9887ddf8d4bc5fc2 sky.hlsl
 ab37247694eea95c bindingslots.hlsli
 ae7838f71fabb907 volumetricfog.hlsl
 ae9c7713b79fdec4 probeupdate.hlsl

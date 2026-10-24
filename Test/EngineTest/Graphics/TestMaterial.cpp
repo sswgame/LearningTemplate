@@ -1052,7 +1052,7 @@ SW_TEST_CASE( MaterialTest, ReflectionWithoutMaterialSchemaFailsTheSync )
         SW_TEST_DEFENSIVE_SCOPE( "reflection without material schema" );
         SW_EXPECT_FALSE( material->syncPropertiesFromReflection( reflection ) );
     }
-    SW_EXPECT_TRUE_MSG( logs.countContaining( "머티리얼 스키마가 없습니다" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "has no material schema" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE( material->getBuffer().empty() );
 }
 

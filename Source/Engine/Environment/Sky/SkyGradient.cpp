@@ -84,12 +84,15 @@ namespace sw
             return float3{};
 
         // 시선은 대기 끝까지, 행성 표면을 먼저 만나면 거기까지다.
-        float32    segmentEnd = atmosphereFar;
-        float32    planetNear{ 0.0f };
-        float32    planetFar{ 0.0f };
-        const bool bHitsGround = Internal::intersectSphere( origin, direction, planetRadius, planetNear, planetFar ) && planetNear > 0.0f;
+        float32 segmentEnd = atmosphereFar;
+        float32 planetNear{ 0.0f };
+        float32 planetFar{ 0.0f };
+        // 눈이 표면 위(고도 0)에 있으면 아래 시선의 가까운 교점이 0 근처(부동소수 오차로 음수일 수 있다)라 먼 교점으로 판정한다 — 가까운 교점만 보면
+        // 아래를 봐도 땅이 없고 시선이 행성을 뚫고 반대편 대기까지 쌓였다. 시선은 눈 뒤로 가지 않는다(max 0). sky.hlsl 과 같은 판정이다.
+        const bool bHitsGround =
+            Internal::intersectSphere( origin, direction, planetRadius, planetNear, planetFar ) && planetFar > Internal::kSurfaceEpsilonKm;
         if ( bHitsGround )
-            segmentEnd = MathUtil::min( segmentEnd, planetNear );
+            segmentEnd = MathUtil::min( segmentEnd, MathUtil::max( planetNear, 0.0f ) );
 
         const float3  betaRayleigh      = computeRayleighBeta();
         const float32 betaMie           = computeMieBeta();

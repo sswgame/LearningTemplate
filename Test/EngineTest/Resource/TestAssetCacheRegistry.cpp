@@ -61,7 +61,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
 {
     sw::AssetManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 21 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 22 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
@@ -78,6 +78,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "PhysicsAsset" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "FitTables" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "FitPartData" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "BodyShapeSet" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SkeletonBoneLOD" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Fracture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "PrimitiveMesh" ) );
