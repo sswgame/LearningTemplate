@@ -160,8 +160,9 @@ namespace sw
         /** @brief 셰이프 하나를 바디에 붙입니다. 셰이프 id(체인이면 선분들)를 기록에 더합니다. */
         [[nodiscard]] bool attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle );
         /** @brief 체인 셰이프(점 4 개 이상)를 바디에 붙이고 선분들을 기록에 더합니다. */
-        [[nodiscard]] bool        attachChain( BodyRecord& record, const PhysicsShapeDesc2D& shape, const PhysicsMaterialDef& material, PhysicsBodyHandle handle );
-        const PhysicsMaterialDef& resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
+        [[nodiscard]] bool attachChain( BodyRecord& record, const PhysicsShapeDesc2D& shape, const PhysicsMaterialDef& material, PhysicsBodyHandle handle );
+        /** @brief 재질 이름을 풉니다. 이름을 적지 않았으면 첫 재질이고, 적은 이름이 설정에 없으면 오류를 남기고 nullptr 입니다(다른 재질로 만들지 않는다). */
+        [[nodiscard]] const PhysicsMaterialDef* resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
         /** @brief 재질 이름의 설정 테이블 번호를 반환합니다(셰이프의 `userMaterialId` 이며, 질의가 이름으로 되돌립니다). 없으면 0 입니다. */
         int32 findMaterialIndex( const hashed_string& name ) const;
         /** @brief 설정 테이블 번호의 재질 이름을 반환합니다. 범위 밖이면 빈 이름입니다. */

@@ -108,6 +108,19 @@ SW_TEST_CASE( PhysicsScene2DTest, BoxComesToRestOnFloor )
 }
 
 /**
+ * @brief [PhysicsScene2DTest] 재질 이름을 적지 않으면 첫 재질이고, 적은 이름이 설정에 없으면 다른 재질로 만들지 않고 바디를 거절한다
+ */
+SW_TEST_CASE( PhysicsScene2DTest, UnknownMaterialNameRejectsTheBody )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    SW_EXPECT_TRUE( addBody( *pScene, makeBox( sw::float2{ 1.0f, 1.0f } ), sw::float2{}, sw::PhysicsBodyType::Dynamic, 0, "" ).isValid() );
+    SW_EXPECT_TRUE( addBody( *pScene, makeBox( sw::float2{ 1.0f, 1.0f } ), sw::float2{}, sw::PhysicsBodyType::Dynamic, 0, "Bouncy" ).isValid() );
+    SW_TEST_DEFENSIVE_SCOPE( "a body names a physics material the settings do not declare" );
+    SW_EXPECT_FALSE( addBody( *pScene, makeBox( sw::float2{ 1.0f, 1.0f } ), sw::float2{}, sw::PhysicsBodyType::Dynamic, 0, "NoSuchMaterial" ).isValid() );
+}
+
+/**
  * @brief [PhysicsScene2DTest] 반발이 큰 재질은 튀어 오르고, 기본 재질(반발 0)은 튀지 않는다
  */
 SW_TEST_CASE( PhysicsScene2DTest, RestitutionBouncesByMaterial )

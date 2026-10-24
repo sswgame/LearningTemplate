@@ -17,12 +17,6 @@ namespace sw
     {
         struct NavMeshSettingsInternal
         {
-            static const hashed_string& getDefaultName()
-            {
-                static const hashed_string s_defaultName{ "Default" };
-                return s_defaultName;
-            }
-
             static uint64 mixFloat( uint64 hash, float32 value )
             {
                 return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &value ), sizeof( value ), false, hash );
@@ -57,7 +51,6 @@ namespace sw
             SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", resourcePath );
             return false;
         }
-        ensureDefaults();
         return validate();
     }
 
@@ -69,7 +62,6 @@ namespace sw
             SW_LOG_ERROR( "Navigation settings text could not be read or holds unknown keys" );
             return false;
         }
-        ensureDefaults();
         return validate();
     }
 
@@ -77,6 +69,12 @@ namespace sw
     {
         using Internal = NavMeshSettingsInternal;
         bool bValid    = true;
+        // 영역과 에이전트 종류는 데이터가 선언한다 — 비었다고 코드가 "Default" 를 지어 채우지 않는다.
+        if ( _listArea.empty() || _listAgentType.empty() )
+        {
+            SW_LOG_ERROR( "Navigation settings need at least one area and one agent type (%# areas, %# agent types declared)", _listArea.size(), _listAgentType.size() );
+            bValid = false;
+        }
         if ( _listArea.size() > NavigationConstant::kMaxAreaCount )
         {
             SW_LOG_ERROR( "Navigation settings declare %# areas - at most %# are supported", _listArea.size(), NavigationConstant::kMaxAreaCount );
@@ -133,22 +131,6 @@ namespace sw
             bValid = false;
         }
         return bValid;
-    }
-
-    void NavMeshSettings::ensureDefaults()
-    {
-        if ( _listArea.empty() )
-        {
-            NavAreaDef area;
-            area._name = NavMeshSettingsInternal::getDefaultName();
-            _listArea.push_back( area );
-        }
-        if ( _listAgentType.empty() )
-        {
-            NavAgentTypeDef agentType;
-            agentType._name = NavMeshSettingsInternal::getDefaultName();
-            _listAgentType.push_back( agentType );
-        }
     }
 
     const NavAgentTypeDef* NavMeshSettings::findAgentType( const hashed_string& name ) const

@@ -668,6 +668,41 @@
       "id": "wayland-ci-job", "title": "CI 리눅스 Wayland 잡(Build Linux Debug Wayland) 첫 실행 — 구성 · 빌드 · weston headless 스모크", "kind": "build", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
       "need_command": "push 뒤 CI 리눅스 잡이 돈다(py -3 -m Scripts ci-jobs --summary) — 로컬 WSL 빌드는 하지 않는다(결정 기록 5-12)",
       "source": "docs/plans/WaylandWindowLayer.md W2", "result_doc": "docs/plans/WaylandWindowLayer.md"
+    },
+    {
+      "id": "engine-partition-e3-tests", "title": "GPUSceneTest 필터(MeshComponent 의 리플렉션 부모가 ScenePrimitive 로 바뀐 뒤 인스턴스 배치)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "GPUSceneTest.*",
+      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4"
+    },
+    {
+      "id": "engine-partition-e3-reflection-tests", "title": "ReflectionComponentTest 필터(부모 사슬과 상속 프로퍼티)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "ReflectionComponentTest.*",
+      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4"
+    },
+    {
+      "id": "engine-partition-e3-memorytag-tests", "title": "MemoryTagTest 필터(인스턴스 배치 · 메모리 태그)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "MemoryTagTest.*",
+      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4"
+    },
+    {
+      "id": "engine-partition-e3-cube-bench", "title": "큐브 20,000 개 벤치의 GT.Frame p50 · p99 전후 비교(E3 의 ScenePrimitive 기반, Release · VSync 끔 · 3 ~ 5 판)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "큐브 2만 개 벤치를 도는 perf-compare 케이스가 없고, 전(E3 이전 커밋)과 후를 같은 기계에서 번갈아 빌드해 비교해야 한다",
+      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4 · docs/08_Verification.md"
+    },
+    {
+      "id": "physics-unknown-material-3d-test", "title": "PhysicsScene3DTest.UnknownMaterialNameRejectsTheBody(적은 재질 이름이 틀리면 다른 재질로 만들지 않고 바디 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "PhysicsScene3DTest.UnknownMaterialNameRejectsTheBody",
+      "source": "docs/plans/DataDriven.md 5절", "result_doc": "docs/plans/DataDriven.md"
+    },
+    {
+      "id": "physics-unknown-material-2d-test", "title": "PhysicsScene2DTest.UnknownMaterialNameRejectsTheBody(2D 도 같다)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "PhysicsScene2DTest.UnknownMaterialNameRejectsTheBody",
+      "source": "docs/plans/DataDriven.md 5절", "result_doc": "docs/plans/DataDriven.md"
+    },
+    {
+      "id": "nav-settings-required-test", "title": "NavMeshBakeTest.SettingsTableValidatesNamesAndRanges(영역 · 에이전트 종류를 선언하지 않은 표는 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "NavMeshBakeTest.SettingsTableValidatesNamesAndRanges",
+      "source": "docs/plans/DataDriven.md 5절", "result_doc": "docs/plans/DataDriven.md"
     }
   ]
 }

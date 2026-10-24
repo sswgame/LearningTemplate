@@ -323,9 +323,9 @@ namespace sw
         JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
         /** @brief 셰이프 하나를 로컬 위치와 회전 없이 만듭니다. */
         JPH::RefConst<JPH::Shape> createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
-        /** @brief 재질 이름을 풉니다. 없으면 오류를 남기고 첫 재질입니다. */
-        const PhysicsMaterialDef&   resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
-        const JPH::PhysicsMaterial* findJoltMaterial( const hashed_string& name ) const;
+        /** @brief 재질 이름을 풉니다. 이름을 적지 않았으면 첫 재질이고, 적은 이름이 설정에 없으면 오류를 남기고 nullptr 입니다(다른 재질로 만들지 않는다). */
+        [[nodiscard]] const PhysicsMaterialDef* resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
+        const JPH::PhysicsMaterial*             findJoltMaterial( const hashed_string& name ) const;
         /** @brief 바디 하나를 Jolt 에 만들기만 합니다(넣지 않는다). 실패하면 무효 핸들입니다. */
         PhysicsBodyHandle createBodyUnadded( const PhysicsBodyDesc3D& desc );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
