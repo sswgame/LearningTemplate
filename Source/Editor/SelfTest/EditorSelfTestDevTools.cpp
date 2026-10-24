@@ -195,15 +195,9 @@ namespace sw::editor
                 unique_ptr<GameAutoplayRegistrar> _pRegistrar;
             };
 
-            static AutoplayProbe& getAutoplayProbe()
-            {
-                static AutoplayProbe s_probe;
-                return s_probe;
-            }
-
             static EditorSelfTestStep runAutoplayButton( EditorSelfTestContext& context )
             {
-                AutoplayProbe& probe     = getAutoplayProbe();
+                AutoplayProbe& probe     = context.getTestState<AutoplayProbe>();
                 const uint32   stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -336,15 +330,8 @@ namespace sw::editor
                 bool   _bWasUsing{ false };
             };
 
-            static GizmoProbe& getGizmoProbe()
+            static void finishGizmo( GameObjectManager* pManager, const GizmoProbe& probe )
             {
-                static GizmoProbe s_probe;
-                return s_probe;
-            }
-
-            static void finishGizmo( GameObjectManager* pManager )
-            {
-                GizmoProbe& probe = getGizmoProbe();
                 EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } );
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
@@ -352,7 +339,6 @@ namespace sw::editor
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                probe = GizmoProbe{};
             }
 
             static EditorSelfTestStep runGizmoMovesTheSelection( EditorSelfTestContext& context )
@@ -363,7 +349,7 @@ namespace sw::editor
                 Scene*             pScene         = editor::getActiveScene();
                 if ( openSceneView( context ) == nullptr || context.expect( pManager != nullptr && pScene != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                GizmoProbe&      probe     = getGizmoProbe();
+                GizmoProbe&      probe     = context.getTestState<GizmoProbe>();
                 const uint32     stepIndex = context.getStepIndex();
                 CameraComponent* pCamera   = EditorCamera::find( pScene );
                 if ( context.expect( pCamera != nullptr, "no editor camera" ) == false )
@@ -384,7 +370,7 @@ namespace sw::editor
                 GameObject* pObj = pManager->findGameObjectByID( probe._objectID );
                 if ( context.expect( pObj != nullptr, "the probe object vanished" ) == false )
                 {
-                    finishGizmo( pManager );
+                    finishGizmo( pManager, probe );
                     return EditorSelfTestStep::Done;
                 }
                 if ( stepIndex < 3 )
@@ -395,7 +381,7 @@ namespace sw::editor
                     EditorSelfTestMark canvas{};
                     if ( context.expect( EditorSelfTestMarks::find( "sceneView.canvas", canvas ), "the scene view canvas left no mark" ) == false )
                     {
-                        finishGizmo( pManager );
+                        finishGizmo( pManager, probe );
                         return EditorSelfTestStep::Done;
                     }
                     const float2   canvasPos{ canvas._min._x, canvas._min._y };
@@ -405,7 +391,7 @@ namespace sw::editor
                     if ( context.expect( EditorViewportProjectionUtil::projectPoint( viewProj, probe._startPosition, canvasPos, canvasSize, screen ),
                                          "the probe object is behind the camera" ) == false )
                     {
-                        finishGizmo( pManager );
+                        finishGizmo( pManager, probe );
                         return EditorSelfTestStep::Done;
                     }
                     probe._pressAt    = float2{ screen.x, screen.y };
@@ -439,7 +425,7 @@ namespace sw::editor
                 what += probe._bWasOver ? "yes" : "no";
                 what += probe._bWasUsing ? ", dragging: yes)" : ", dragging: no)";
                 (void)context.expect( moved.getLength() > 0.01f, what.c_str() );
-                finishGizmo( pManager );
+                finishGizmo( pManager, probe );
                 return EditorSelfTestStep::Done;
             }
 
@@ -468,7 +454,11 @@ namespace sw::editor
                     pManager->destroyObject( pObj );
             }
 
-            inline static uint64 _s_overlayProbeObjectID = 0;
+            /** @brief 격자 · 기즈모 · 게임 뷰 오버레이 테스트가 만든 선택 오브젝트입니다. */
+            struct OverlayProbe
+            {
+                uint64 _objectID{ 0 };
+            };
 
             static EditorSelfTestStep runGridAndGizmoDraw( EditorSelfTestContext& context )
             {
@@ -480,11 +470,12 @@ namespace sw::editor
                                                   context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                 if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
-                const uint32 stepIndex = context.getStepIndex();
+                OverlayProbe& probe     = context.getTestState<OverlayProbe>();
+                const uint32  stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
+                    probe._objectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( probe._objectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const int32                 frame     = ImGui::GetFrameCount();
@@ -498,8 +489,7 @@ namespace sw::editor
                 (void)context.expect( bSceneRan, "the scene view was not drawn while its tab was in front" );
                 (void)context.expect( bGrid, "the scene view did not draw the grid" );
                 (void)context.expect( bGizmo, "the scene view did not draw the gizmo of the selection" );
-                destroyProbe( pManager, _s_overlayProbeObjectID );
-                _s_overlayProbeObjectID = 0;
+                destroyProbe( pManager, probe._objectID );
                 return EditorSelfTestStep::Done;
             }
 
@@ -541,12 +531,13 @@ namespace sw::editor
                                                   context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                 if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
-                const uint32 stepIndex = context.getStepIndex();
+                OverlayProbe& probe     = context.getTestState<OverlayProbe>();
+                const uint32  stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
                     // 선택이 있어야 "기즈모를 그리지 않는다" 는 검사가 의미가 있다.
-                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
+                    probe._objectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( probe._objectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const EditorViewTarget& view        = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
@@ -568,8 +559,7 @@ namespace sw::editor
                     what += " indices)";
                     (void)context.expect( vertexCount == 0, what.c_str() );
                 }
-                destroyProbe( pManager, _s_overlayProbeObjectID );
-                _s_overlayProbeObjectID = 0;
+                destroyProbe( pManager, probe._objectID );
                 // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
                 ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle );
                 return EditorSelfTestStep::Done;
