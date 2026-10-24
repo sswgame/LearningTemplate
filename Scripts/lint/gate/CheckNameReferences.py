@@ -40,7 +40,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
-from common.Search import collectSourceFiles  # noqa: E402
+from common.Search import collectRepositoryFiles, collectSourceFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.
@@ -144,7 +144,7 @@ def collectDataNames(repositoryRoot: Path, kind: CodeNameKind) -> tuple[set[str]
     resourceRoot = repositoryRoot / "Resource"
     uniqueShared: set[str] = set()
     mapPackName: dict[str, set[str]] = collections.defaultdict(set)
-    for path in sorted(resourceRoot.rglob(kind.dataGlob)):
+    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(kind.dataGlob[1:])):
         try:
             root = ElementTree.parse(path).getroot()
         except ElementTree.ParseError as error:
@@ -257,7 +257,7 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     listViolation: list[str] = []
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
-    for path in sorted(resourceRoot.rglob("*.scenario.xml")):
+    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             root = ElementTree.parse(path).getroot()

@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import IncludeResolver, iterIncludes  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kTargetWords = ("Client", "Server")
@@ -107,7 +108,7 @@ def readManifests(repositoryRoot: Path) -> tuple[list[TargetOwner], dict[str, li
     sourceRoot = repositoryRoot / "Source"
     if sourceRoot.is_dir() is False:
         return listOwner, mapOwnerByName, listDependencyRow, listViolation
-    for path in sorted(sourceRoot.rglob(f"*{_kManifestSuffix}")):
+    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Source",), suffixes=(".json",)) if path.name.endswith(_kManifestSuffix)):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             data = json.loads(path.read_text(encoding="utf-8"))

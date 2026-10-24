@@ -46,6 +46,7 @@ from urllib.parse import unquote
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.ConfigCatalog import kListConfigFile  # noqa: E402
 from common.MarkdownAnchor import collectAnchors  # noqa: E402
@@ -296,7 +297,7 @@ class CheckDocPathsGate(LintGate):
         # 규칙 6 — 규칙 문서끼리 한글 문장 복사. 커밋 훅(--files)에서도 비교 상대를 디스크에서 모두 읽는다.
         if listRuleDoc:
             mapShingle: dict[str, set[str]] = {}
-            for candidate in sorted(repositoryRoot.glob("*.md")) + sorted((repositoryRoot / "docs").rglob("*.md")):
+            for candidate in sorted(path for path in repositoryRoot.iterdir() if path.suffix == ".md" and path.is_file()) + collectRepositoryFiles(repositoryRoot, ("docs",), suffixes=(".md",)):
                 relCandidate = candidate.relative_to(repositoryRoot).as_posix()
                 if _kRuleDocRe.match(relCandidate) is None:
                     continue

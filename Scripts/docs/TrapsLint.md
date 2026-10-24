@@ -80,3 +80,5 @@
 - **`\b이름\b` 를 이름마다 본문에 돌리면 이름 수 x 본문 길이다** — 이름이 모두 `[A-Za-z_]\w*` 이면 `set(re.findall(r"\w+", 본문))` 한 번과 `isdisjoint` 로 같은 뜻이다(`RunForwardDeclarationCandidates` 34.6 → 5.4 s).
   다만 1 s 미만이면 두고, 이름에 `\w` 밖 문자가 끼면 정규식을 쓴다. 캐시는 프로세스 수명 한정이며 상주 도구가 부르지 않는다(수동 리포트).
 - **큰 이어 붙인 글에 `\b` 로 시작하는 정규식을 항목마다 반복해 돌리지 않는다**(`VerifyManifest.findTestCaseInternal` 이 169 번 × `Test/` 전체로 52 s) — 글을 한 번 훑어 사전 · 집합으로 색인하고 조회는 거기서 한다.
+- **저장소 전체를 `rglob("*")` 로 걸은 뒤 거르지 않는다** — 걷는 중에 가지를 치는 `collectRepositoryFiles` 를 쓴다. 게이트 여섯의 직접 걷기 여덟을 옮겨 `CheckGateFileWalk` 기준선을 0 으로 낮췄다. 복합 확장자(`.scenario.xml`)는 마지막 확장자로 모은 뒤 `name.endswith` 로 거른다(모음은 `splitext` 라 `.xml` 만 본다).
+  `RunBuildScriptInventory` 는 `rglob("*")` 가 빌드 트리까지 20만 파일을 걸어 14 ~ 22 s 였고 0.3 s 가 됐다. "정의 이름마다 글 전체에 정규식" 도 글마다 한 번 훑는 색인으로 바꿨다(약 1 s 절약, 결과 같음). 큰 이어 붙인 글에 `\b` 정규식을 반복하는 모양은 `VerifyManifest.findTestCaseInternal` 에서 났다.
