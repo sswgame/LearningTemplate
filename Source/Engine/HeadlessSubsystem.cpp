@@ -193,6 +193,224 @@ namespace sw
                 params._writerDesc._compressionLevel = packConfig._compression._level;
                 return PackPatchBuilder::makePatch( params );
             }
+
+            /**
+             * @brief 전용 서버가 하는 헤드리스 작업은 씬 · 팩 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 판정 · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
+             * @return 서버에 주어진 클라이언트 전용 작업이 있어 실패로 막았으면 true 입니다.
+             */
+            [[nodiscard]] static bool rejectClientOnlyTask( CommandLineManager& commandLine, bool bDedicatedServer, HeadlessTaskState& inoutState )
+            {
+                if ( bDedicatedServer == false )
+                    return false;
+                static constexpr CommandLineArgument kArrClientOnlyTask[] = {
+                    CommandLineArgument::COOK_SHADERS,
+                    CommandLineArgument::VERIFY_SHADERS,
+                    CommandLineArgument::IMPORT_TEXTURES,
+                    CommandLineArgument::CHECK_TEXTURES,
+                    CommandLineArgument::IMPORT_MODELS,
+                    CommandLineArgument::CHECK_MODELS,
+                    CommandLineArgument::IMPORT_HEIGHTFIELDS,
+                    CommandLineArgument::CHECK_HEIGHTFIELDS,
+                };
+                for ( const CommandLineArgument argument : kArrClientOnlyTask )
+                {
+                    bool bGiven = false;
+                    if ( commandLine.getArgument( argument, bGiven ) && bGiven )
+                    {
+                        SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
+                        inoutState.enterHeadless();
+                        inoutState._bFailed = true;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            /** @brief 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 전용 서버는 위에서 거절했다. 작업을 돌렸으면 true 입니다. */
+            [[nodiscard]] static bool runCookShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+#if defined( SW_WITH_CLIENT_CODE )
+                bool bCookShaders = false;
+                if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
+                {
+                    inoutState.enterHeadless();
+                    SW_LOG_INFO( "Starting Headless (CookShaders)..." );
+                    const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
+                    inoutState._bFailed             = summary.isClean() == false;
+                    return true;
+                }
+#else
+                (void)commandLine;
+                (void)inoutState;
+#endif
+                return false;
+            }
+
+            /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다. */
+            [[nodiscard]] static bool runReflectionDocsTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                string reflectionDocsDir;
+                if ( commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) == false || reflectionDocsDir.empty() )
+                    return false;
+                inoutState.enterHeadless();
+                inoutState._bFailed = ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) == 0;
+                return true;
+            }
+
+            /** @brief 리타깃 베이크(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다. */
+            [[nodiscard]] static bool runBakeRetargetTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                string bakeRetarget;
+                if ( commandLine.getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) == false || bakeRetarget.empty() )
+                    return false;
+                inoutState.enterHeadless();
+                const string_splitter      parts( bakeRetarget, { "," } );
+                const vector<string_view>& listArgument = parts.getSplitList();
+                const bool                 bWellFormed  = listArgument.size() == 3;
+                if ( bWellFormed == false )
+                    SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
+                inoutState._bFailed = bWellFormed == false ||
+                                      RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
+                return true;
+            }
+
+            /** @brief 쿠킹 인자(씬 · 팩 · 전부) 중 하나라도 주어졌는지입니다. */
+            static bool isAnyCookRequested( CommandLineManager& commandLine )
+            {
+                bool bCookScenes = false;
+                bool bCookPacks  = false;
+                bool bCookAll    = false;
+                commandLine.getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
+                commandLine.getArgument( CommandLineArgument::COOK_PACKS, bCookPacks );
+                commandLine.getArgument( CommandLineArgument::COOK_ALL, bCookAll );
+                return bCookScenes || bCookPacks || bCookAll;
+            }
+
+            /** @brief 셰이더 판정만(커밋 훅) — 쿠킹 표의 모든 백엔드를 본다. 고치지 않는다. 쿠킹과 함께 주어지면 쿠킹이 먼저다. */
+            [[nodiscard]] static bool runVerifyShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                bool bVerifyShaders = false;
+                commandLine.getArgument( CommandLineArgument::VERIFY_SHADERS, bVerifyShaders );
+                if ( bVerifyShaders == false || isAnyCookRequested( commandLine ) )
+                    return false;
+                inoutState.enterHeadless();
+                bool bAllCurrent = true;
+                for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
+                {
+                    bAllCurrent = verifyShaderFolder( ShaderCooker::getSubfolderForFormat( info._shaderTarget ) ) && bAllCurrent;
+                }
+                if ( bAllCurrent )
+                    SW_LOG_INFO( "Committed shader binaries match their sources for every backend" );
+                inoutState._bFailed = bAllCurrent == false;
+                return true;
+            }
+
+            /** @brief 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다. */
+            [[nodiscard]] static bool runMakePatchTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                bool bMakePatch = false;
+                if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) == false || bMakePatch == false )
+                    return false;
+                inoutState.enterHeadless();
+                SW_LOG_INFO( "Starting Headless (MakePatch)..." );
+                inoutState._bFailed = makePatchStage( commandLine ) == false;
+                return true;
+            }
+
+            /** @brief 씬 · 팩 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고 그것은 엔진 안에만 있다. 팩은 그 산출물을 함께 담는다. */
+            [[nodiscard]] static bool runCookTask( CommandLineManager& commandLine, bool bDedicatedServer, HeadlessTaskState& inoutState )
+            {
+                bool bCookScenes = false;
+                bool bCookPacks  = false;
+                bool bCookAll    = false;
+                commandLine.getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
+                commandLine.getArgument( CommandLineArgument::COOK_PACKS, bCookPacks );
+                commandLine.getArgument( CommandLineArgument::COOK_ALL, bCookAll );
+                const bool bAnyCook = bCookScenes || bCookPacks || bCookAll;
+                if ( bAnyCook == false )
+                    return false;
+                inoutState.enterHeadless();
+                string cookedDir;
+                commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+                if ( cookedDir.empty() )
+                {
+                    SW_LOG_ERROR( "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
+                    inoutState._bFailed = true;
+                    return true;
+                }
+                SW_LOG_INFO( "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
+                AnimationCrowdSettings crowdSettings{};
+                const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+                const CookStore        cookStore            = CookStore::makeLocal();
+                // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
+                const CookSession cookSession;
+                bool              bSucceeded = true;
+                if ( bCookScenes || bCookAll )
+                    bSucceeded = cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );
+                // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
+                if ( bSucceeded && ( bCookPacks || bCookAll ) )
+                    bSucceeded = cookPackStage( commandLine, bDedicatedServer, cookedDir, cookStore );
+                inoutState._bFailed = bSucceeded == false;
+                return true;
+            }
+
+            /** @brief 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다. */
+            [[nodiscard]] static bool runImportLipSyncTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                bool bImportLipSync = false;
+                if ( commandLine.getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) == false || bImportLipSync == false )
+                    return false;
+                inoutState.enterHeadless();
+                SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
+                LipSyncSettings         lipSyncSettings{};
+                uint32                  lipSyncFailedCount = 0;
+                [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
+                if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
+                    lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                else
+                    ++lipSyncFailedCount;
+                SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
+                inoutState._bFailed = lipSyncFailedCount > 0;
+                return true;
+            }
+
+            /**
+             * @brief 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
+             *        여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHost::runLocalizationWithEditorModule` ·
+             *        `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
+             * @return 그런 인자가 주어져 헤드리스로 세웠으면 true 입니다.
+             */
+            [[nodiscard]] static bool enterEditorToolTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+                bool   bGatherText = false;
+                bool   bCheckText  = false;
+                bool   bExportPo   = false;
+                string importPoPath;
+                commandLine.getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
+                commandLine.getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
+                commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
+                commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
+                const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
+
+                bool bImportTextures     = false;
+                bool bCheckTextures      = false;
+                bool bImportModels       = false;
+                bool bCheckModels        = false;
+                bool bImportHeightfields = false;
+                bool bCheckHeightfields  = false;
+                commandLine.getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
+                commandLine.getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
+                commandLine.getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
+                commandLine.getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
+                commandLine.getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
+                commandLine.getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
+                const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
+                if ( bAnyLocalization == false && bAnyImport == false )
+                    return false;
+                inoutState.enterHeadless();
+                SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -207,184 +425,16 @@ namespace sw
 
     SubsystemInitResult HeadlessSubsystem::initializeSubsystem()
     {
+        using Internal                  = HeadlessSubsystemInternal;
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-        // 전용 서버가 하는 헤드리스 작업은 씬 · 팩 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 판정 · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
-        if ( _bDedicatedServer )
-        {
-            static constexpr CommandLineArgument kArrClientOnlyTask[] = {
-                CommandLineArgument::COOK_SHADERS,
-                CommandLineArgument::VERIFY_SHADERS,
-                CommandLineArgument::IMPORT_TEXTURES,
-                CommandLineArgument::CHECK_TEXTURES,
-                CommandLineArgument::IMPORT_MODELS,
-                CommandLineArgument::CHECK_MODELS,
-                CommandLineArgument::IMPORT_HEIGHTFIELDS,
-                CommandLineArgument::CHECK_HEIGHTFIELDS,
-            };
-            for ( const CommandLineArgument argument : kArrClientOnlyTask )
-            {
-                bool bGiven = false;
-                if ( commandLine.getArgument( argument, bGiven ) && bGiven )
-                {
-                    SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
-                    _state.enterHeadless();
-                    _state._bFailed = true;
-                    return SubsystemInitResult::SkipDependents;
-                }
-            }
-        }
-
-        // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 —
-        // Server 타깃은 그 폴더를 짓지 않고, 위에서 전용 서버가 거절했다.
-#if defined( SW_WITH_CLIENT_CODE )
-        bool bCookShaders = false;
-        if ( commandLine.getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
-        {
-            _state.enterHeadless();
-            SW_LOG_INFO( "Starting Headless (CookShaders)..." );
-            const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
-            _state._bFailed                 = summary.isClean() == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-#endif
-
-        // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
-        string reflectionDocsDir;
-        if ( commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
-        {
-            _state.enterHeadless();
-            _state._bFailed = ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) == 0;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 리타깃 베이크(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
-        string bakeRetarget;
-        if ( commandLine.getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
-        {
-            _state.enterHeadless();
-            const string_splitter      parts( bakeRetarget, { "," } );
-            const vector<string_view>& listArgument = parts.getSplitList();
-            const bool                 bWellFormed  = listArgument.size() == 3;
-            if ( bWellFormed == false )
-                SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
-            _state._bFailed = bWellFormed == false ||
-                              RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 셰이더 판정만(커밋 훅) — 쿠킹 표의 모든 백엔드를 본다. 고치지 않는다.
-        bool bVerifyShaders = false;
-        bool bCookScenes    = false;
-        bool bCookPacks     = false;
-        bool bCookAll       = false;
-        commandLine.getArgument( CommandLineArgument::VERIFY_SHADERS, bVerifyShaders );
-        commandLine.getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
-        commandLine.getArgument( CommandLineArgument::COOK_PACKS, bCookPacks );
-        commandLine.getArgument( CommandLineArgument::COOK_ALL, bCookAll );
-        const bool bAnyCook = bCookScenes || bCookPacks || bCookAll;
-        if ( bVerifyShaders && bAnyCook == false )
-        {
-            _state.enterHeadless();
-            bool bAllCurrent = true;
-            for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
-            {
-                bAllCurrent = HeadlessSubsystemInternal::verifyShaderFolder( ShaderCooker::getSubfolderForFormat( info._shaderTarget ) ) && bAllCurrent;
-            }
-            if ( bAllCurrent )
-                SW_LOG_INFO( "Committed shader binaries match their sources for every backend" );
-            _state._bFailed = bAllCurrent == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다.
-        bool bMakePatch = false;
-        if ( commandLine.getArgument( CommandLineArgument::MAKE_PATCH, bMakePatch ) && bMakePatch )
-        {
-            _state.enterHeadless();
-            SW_LOG_INFO( "Starting Headless (MakePatch)..." );
-            _state._bFailed = HeadlessSubsystemInternal::makePatchStage( commandLine ) == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 씬 · 팩 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고 그것은 엔진 안에만 있다. 팩은 그 산출물을 함께 담는다.
-        if ( bAnyCook )
-        {
-            _state.enterHeadless();
-            string cookedDir;
-            commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-            if ( cookedDir.empty() )
-            {
-                SW_LOG_ERROR( "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
-                _state._bFailed = true;
-                return SubsystemInitResult::SkipDependents;
-            }
-            SW_LOG_INFO( "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
-            AnimationCrowdSettings crowdSettings{};
-            const bool             bCrowdSettingsLoaded = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
-            const CookStore        cookStore            = CookStore::makeLocal();
-            // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
-            const CookSession cookSession;
-            bool              bSucceeded = true;
-            if ( bCookScenes || bCookAll )
-                bSucceeded = HeadlessSubsystemInternal::cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );
-            // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
-            if ( bSucceeded && ( bCookPacks || bCookAll ) )
-                bSucceeded = HeadlessSubsystemInternal::cookPackStage( commandLine, _bDedicatedServer, cookedDir, cookStore );
-            _state._bFailed = bSucceeded == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
-        bool bImportLipSync = false;
-        if ( commandLine.getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
-        {
-            _state.enterHeadless();
-            SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
-            LipSyncSettings         lipSyncSettings{};
-            uint32                  lipSyncFailedCount = 0;
-            [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-            if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
-                lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
-            else
-                ++lipSyncFailedCount;
-            SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
-            _state._bFailed = lipSyncFailedCount > 0;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
-        // 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHost::runLocalizationWithEditorModule` ·
-        // `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
-        bool   bGatherText = false;
-        bool   bCheckText  = false;
-        bool   bExportPo   = false;
-        string importPoPath;
-        commandLine.getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
-        commandLine.getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
-        commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
-        commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-        const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
-
-        bool bImportTextures     = false;
-        bool bCheckTextures      = false;
-        bool bImportModels       = false;
-        bool bCheckModels        = false;
-        bool bImportHeightfields = false;
-        bool bCheckHeightfields  = false;
-        commandLine.getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
-        commandLine.getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-        commandLine.getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
-        commandLine.getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-        commandLine.getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
-        commandLine.getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
-        const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
-        if ( bAnyLocalization || bAnyImport )
-        {
-            _state.enterHeadless();
-            SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
-            return SubsystemInitResult::SkipDependents;
-        }
-        return SubsystemInitResult::Succeeded;
+        // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 작업 하나가 돌았으면 뒤 작업과 이 단계의 나머지는 건너뛴다.
+        // 작업 순서가 곧 우선순위다: 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
+        const bool bTaskRan = Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) || Internal::runCookShadersTask( commandLine, _state ) ||
+                              Internal::runReflectionDocsTask( commandLine, _state ) || Internal::runBakeRetargetTask( commandLine, _state ) ||
+                              Internal::runVerifyShadersTask( commandLine, _state ) || Internal::runMakePatchTask( commandLine, _state ) ||
+                              Internal::runCookTask( commandLine, _bDedicatedServer, _state ) || Internal::runImportLipSyncTask( commandLine, _state ) ||
+                              Internal::enterEditorToolTask( commandLine, _state );
+        return bTaskRan ? SubsystemInitResult::SkipDependents : SubsystemInitResult::Succeeded;
     }
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const
