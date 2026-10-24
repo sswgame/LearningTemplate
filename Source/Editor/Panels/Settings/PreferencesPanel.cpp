@@ -117,13 +117,13 @@ namespace sw::editor
             return;
         }
         const TypeInfo&       type      = *_pSelected->_pfnGetType();
-        void*                 pInstance = _pSelected->_pfnGetInstance();
+        void*                 pInstance = _pSelected->_pInstance;
         vector<hashed_string> listHidden;
         if ( _bModifiedOnly )
         {
             for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
             {
-                if ( EditorPreferencesStore::isPropertyModified( prop, ObjectAddress{ pInstance }, ObjectAddress{ _pSelected->_pfnGetDefault() } ) == false )
+                if ( EditorPreferencesStore::isPropertyModified( prop, ObjectAddress{ pInstance }, ObjectAddress{ _pSelected->_pDefault } ) == false )
                     listHidden.push_back( prop._name );
             }
         }

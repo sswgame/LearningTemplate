@@ -32,7 +32,7 @@ namespace sw::editor
              * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_SETTINGS`)이 가리키는 그 인스턴스 하나다 —
              *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorConfig>()` 다.
              */
-            static EditorConfig& editAppearance() { return *static_cast<EditorConfig*>( EditorSettingsInstance<EditorConfig>::getInstance() ); }
+            static EditorConfig& editAppearance() { return editPreferences<EditorConfig>(); }
 
             /**
              * @brief 환경설정 섹션 Appearance 의 값이 바뀌었을 때(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌림) 테마를 다시 적용합니다.

@@ -47,12 +47,10 @@ SW_TEST_CASE( EditorPreferencesStoreTest, ApplyKeepsMissingKeysAndReportsUnknown
  */
 SW_TEST_CASE( EditorPreferencesStoreTest, RoundTripThroughTheFile )
 {
-    const EditorExtensionRegistrar<EditorSettingsRegistration> registrar{
-        EditorSettingsRegistration{ { "probe", 0 }, "Test/Probe", &EditorPreferencesProbe::StaticType, &EditorSettingsInstance<EditorPreferencesProbe>::getInstance, &EditorSettingsInstance<EditorPreferencesProbe>::getDefault, nullptr, nullptr }
-    };
-    EditorPreferencesProbe& probe = *static_cast<EditorPreferencesProbe*>( EditorSettingsInstance<EditorPreferencesProbe>::getInstance() );
-    probe._speed                  = 7.0f;
-    const string filePath         = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_round_trip" ), EditorPreferencesStore::kFileName );
+    const EditorSettingsRegistrar<EditorPreferencesProbe> registrar{ "probe", "Test/Probe", 0, nullptr };
+    EditorPreferencesProbe&                               probe = editPreferences<EditorPreferencesProbe>();
+    probe._speed                                                = 7.0f;
+    const string filePath                                       = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_round_trip" ), EditorPreferencesStore::kFileName );
     SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
     SW_EXPECT_EQUAL( 1u, EditorPreferencesStore::countSavedKeys( filePath ) );
     probe._speed = 5.0f;
@@ -68,19 +66,17 @@ SW_TEST_CASE( EditorPreferencesStoreTest, RoundTripThroughTheFile )
  */
 SW_TEST_CASE( EditorPreferencesStoreTest, ReloadedSectionReadsTheFileOnce )
 {
-    const EditorExtensionRegistrar<EditorSettingsRegistration> registrar{
-        EditorSettingsRegistration{ { "probe", 0 }, "Test/Probe", &EditorPreferencesProbe::StaticType, &EditorSettingsInstance<EditorPreferencesProbe>::getInstance, &EditorSettingsInstance<EditorPreferencesProbe>::getDefault, nullptr, nullptr }
-    };
-    EditorPreferencesProbe& probe    = *static_cast<EditorPreferencesProbe*>( EditorSettingsInstance<EditorPreferencesProbe>::getInstance() );
-    const string            filePath = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_reload" ), EditorPreferencesStore::kFileName );
+    unique_ptr<EditorSettingsRegistrar<EditorPreferencesProbe>> pRegistrar = make_unique<EditorSettingsRegistrar<EditorPreferencesProbe>>( "probe", "Test/Probe", 0, nullptr );
+    const string                                                filePath   = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_reload" ), EditorPreferencesStore::kFileName );
     SW_ASSERT_TRUE( EditorPreferencesStore::loadAll( filePath ) == EditorUserFileResult::Missing ); // 파일이 아직 없다 — 섹션을 '입힘' 으로 적어 둔다
-    probe._speed = 7.0f;
+    editPreferences<EditorPreferencesProbe>()._speed = 7.0f;
     SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
 
-    // 모듈 리로드: 언로드 훅이 잊고, 새 이미지의 인스턴스는 기본값이다.
-    const utf8* pInstanceBytes = static_cast<const utf8*>( static_cast<const void*>( &probe ) );
-    EditorPreferencesStore::forgetSectionsWithin( pInstanceBytes, pInstanceBytes + sizeof( probe ) );
-    probe = EditorPreferencesProbe{};
+    // 모듈 리로드: 소유자(등록자)가 사라지면 값도 '입힘' 표시도 같이 사라지고, 새 이미지의 소유자는 기본값으로 새로 생긴다.
+    pRegistrar.reset(); // 같은 id 의 두 번째 등록은 거절되므로 옛 이미지가 먼저 사라진다
+    pRegistrar                    = make_unique<EditorSettingsRegistrar<EditorPreferencesProbe>>( "probe", "Test/Probe", 0, nullptr );
+    EditorPreferencesProbe& probe = editPreferences<EditorPreferencesProbe>();
+    SW_EXPECT_NEAR_EQUAL( EditorPreferencesProbe{}._speed, probe._speed, 1e-6f );
     SW_EXPECT_TRUE( EditorPreferencesStore::hasNewSections() );
 
     // 다른 패널의 저장이 먼저 와도 파일 값을 지우지 않는다.
@@ -93,7 +89,23 @@ SW_TEST_CASE( EditorPreferencesStoreTest, ReloadedSectionReadsTheFileOnce )
     probe._speed = 3.0f;
     SW_EXPECT_EQUAL( 0u, EditorPreferencesStore::loadNewSections( filePath ) );
     SW_EXPECT_NEAR_EQUAL( 3.0f, probe._speed, 1e-6f );
-    EditorPreferencesStore::resetSection( registrar.getRegistration() );
+    EditorPreferencesStore::resetSection( pRegistrar->getRegistration() );
+}
+
+/**
+ * @brief [EditorPreferencesStoreTest] 등록되지 않은 섹션은 기본값으로 대신하지 않고 등록을 찾지 못한다 — 등록자가 사라지면 항목도 사라진다
+ */
+SW_TEST_CASE( EditorPreferencesStoreTest, SectionExistsOnlyWhileItsOwnerLives )
+{
+    const utf8* pBegin = nullptr;
+    {
+        const EditorSettingsRegistrar<EditorPreferencesProbe> registrar{ "probe", "Test/Probe", 0, nullptr };
+        const EditorSettingsRegistration&                     registration = registrar.getRegistration();
+        pBegin                                                             = static_cast<const utf8*>( registration._pInstance );
+        SW_EXPECT_TRUE( &getSettingsRegistration( EditorPreferencesProbe::StaticType() ) == &registration );
+        SW_EXPECT_TRUE( EditorPreferencesStore::hasSectionWithin( pBegin, pBegin + sizeof( EditorPreferencesProbe ) ) );
+    }
+    SW_EXPECT_FALSE( EditorPreferencesStore::hasSectionWithin( pBegin, pBegin + sizeof( EditorPreferencesProbe ) ) );
 }
 
 /**
