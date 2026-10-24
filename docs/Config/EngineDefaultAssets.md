@@ -60,6 +60,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XMLSerializer
 | `_tileMapMaterial` | `DataPath` | — |  |  | 타일맵 렌더러(`TileMapRendererComponent`) — 픽셀 아트 스프라이트 머티리얼 |
 | `_foliageMaterial` | `DataPath` | — |  |  | 풀 · 나무 층(`FoliageComponent`) |
 | `_terrainMaterial` | `DataPath` | — |  |  | 지형(`TerrainComponent`) |
+| `_terrainGeomorphMaterial` | `DataPath` | — |  |  | 지오모프를 켠 지형 - terrain.hlsl 에 정점 변형(MATERIAL_VERTEX_DEFORM)을 켠 같은 머티리얼 |
 | `_waterMaterial` | `DataPath` | — |  |  | 물(`WaterBodyComponent`) |
 | `_defaultForwardPipeline` | `DataPath` | — |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `DataPath` | — |  |  | 디퍼드 렌더 파이프라인 |

@@ -37,7 +37,7 @@ namespace sw
      * @brief 높이장을 월드에 놓은 것입니다. 샘플 (0, 0) 이 `_origin` 이고 x 와 z 방향으로 `_size` 만큼 펼쳐집니다(회전과 크기 변환은 없습니다).
      * @details 셀 하나는 대각선 (x, z)-(x+1, z+1) 로 나눈 삼각형 둘이고, 높이 질의는 **렌더 메시(LOD 0)와 같은 삼각형**으로 보간한다.
      *          그래서 물리와 배치가 보는 땅과 그려진 땅이 같다. 노멀은 샘플마다 중앙 차분이고 질의는 그것을 쌍선형으로 섞는다(메시 정점 노멀과 같은 값이다).
-     *          레이어 가중치는 스플랫 맵(RGBA8)을 쌍선형으로 읽어 합이 1 이 되게 나눈다. 셰이더(`terrain.hlsl`)와 같은 규칙이다.
+     *          레이어 가중치는 스플랫 맵(텍셀마다 레이어 여덟, RGBA8 두 장으로 GPU 에 올라간다)을 쌍선형으로 읽어 합이 1 이 되게 나눈다. 셰이더(`terrain.hlsl`)와 같은 규칙이다.
      *          스레드: 질의는 읽기만 한다(병렬 틱과 배치 계산이 동시에 읽는다). 쓰기(`write*`, `replaceSamples`, `setSplat`, `initialize`)는 읽는 쪽이 없는 때(틱 밖)에만 부른다 — 락이 없다.
      */
     class SW_API TerrainHeightfield
@@ -53,10 +53,10 @@ namespace sw
         /** @brief 비웁니다. */
         void shutdown();
         /**
-         * @brief 레이어 가중치 맵(RGBA8, 행 우선이며 텍스처의 v 가 지형 z)을 지정합니다. 비우면 레이어 0 이 가득입니다.
+         * @brief 레이어 가중치 맵(텍셀마다 레이어 여덟 바이트 `SurfaceLayerWeights::kLayerCount`, 행 우선이며 텍스처의 v 가 지형 z)을 지정합니다. 비우면 레이어 0 이 가득입니다.
          * @details 텍셀 중심이 지형 가장자리에 맞는다. 지형 u ∈ [0, 1] 이 텍셀 좌표 u × (너비 - 1) 이다.
          */
-        void setSplat( uint32 width, uint32 height, const vector<uint8>& rgbaBytes );
+        void setSplat( uint32 width, uint32 height, const vector<uint8>& layerBytes );
 
         /**
          * @brief 높이 샘플 전부(N × N, `getHeightSamples` 와 같은 배치)에서 @p rect 의 샘플만 복사합니다. 에디터 브러시가 사본을 고쳐 바뀐 범위만 넘기는 길입니다.
@@ -67,9 +67,17 @@ namespace sw
          * @brief 스플랫 가중치 전부(너비 × 높이, `readSplatWeights` 와 같은 배치)에서 @p rect(텍셀 좌표)의 텍셀만 RGBA8 로 양자화해 씁니다.
          * @return 스플랫이 없거나 크기가 틀리거나 @p rect 가 비었거나 벗어나면 false 이고 아무것도 바꾸지 않습니다.
          */
-        [[nodiscard]] bool writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
+        [[nodiscard]] bool writeSplatWeights( const vector<SurfaceLayerWeights>& listWeight, const TerrainSampleRect& rect );
         /** @brief 스플랫 텍셀 전부를 가중치(합 1)로 풉니다. 스플랫이 없으면 false 입니다. */
-        [[nodiscard]] bool readSplatWeights( vector<float4>& outListWeight ) const;
+        [[nodiscard]] bool readSplatWeights( vector<SurfaceLayerWeights>& outListWeight ) const;
+        /**
+         * @brief 스플랫 평면 @p plane(0 = 레이어 0..3, 1 = 레이어 4..7)의 사각형 @p rect(텍셀 좌표)를 RGBA8 로 뽑습니다 - GPU 스플랫 텍스처 한 장의 내용입니다.
+         * @param outRgbaBytes (너비 × 높이 × 4) 바이트, 사각형 안에서 행 우선
+         * @return 스플랫이 없거나 평면 번호가 `SurfaceLayerWeights::kPlaneCount` 이상이거나 @p rect 가 비었거나 벗어나면 false 이고 @p outRgbaBytes 는 비어 있습니다.
+         */
+        [[nodiscard]] bool makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRgbaBytes ) const;
+        /** @brief 스플랫 평면 @p plane 전체를 RGBA8 로 뽑습니다(`makeSplatPlane` 의 전체 사각형). */
+        [[nodiscard]] bool makeFullSplatPlane( uint32 plane, vector<uint8>& outRgbaBytes ) const;
         /** @brief 셀 구멍 마스크 전부((N-1)², 행 우선, 0 이 아니면 구멍)를 채웁니다. 마스크가 비었으면 모두 0 입니다. 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool readHoleCells( vector<uint8>& outListHole ) const;
         /**
@@ -109,7 +117,7 @@ namespace sw
         uint32 getSplatWidth() const { return _splatWidth; }
         /** @brief CPU 로 읽은 스플랫 맵의 높이입니다. 없으면 0 입니다. */
         uint32 getSplatHeight() const { return _splatHeight; }
-        /** @brief 스플랫 맵 바이트(RGBA8, 행 우선)입니다. */
+        /** @brief 스플랫 맵 바이트(텍셀마다 레이어 여덟, 행 우선)입니다. GPU 텍스처는 평면별로 뽑는다(`makeSplatPlane`). */
         const vector<uint8>& getSplatBytes() const { return _splatBytes; }
         /** @brief 셀 구멍 마스크((N-1)², 비었으면 구멍 없음)입니다. */
         const vector<uint8>& getHoleCells() const { return _listHoleCell; }
@@ -130,12 +138,9 @@ namespace sw
         /** @brief 월드 (x, z) 가 구멍 셀이면 true 를 반환합니다(지형 밖은 false 입니다). */
         bool isHoleAt( float32 worldX, float32 worldZ ) const;
         /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. 스플랫이 없거나 지형 밖이면 레이어 0 이 1 입니다. */
-        float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const;
+        SurfaceLayerWeights computeLayerWeightsAt( float32 worldX, float32 worldZ ) const;
         /** @brief 지형의 정규 좌표 (u, v) ∈ [0, 1]² 의 가중치(합 1)입니다. */
-        float4 computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const;
-
-        /** @brief 가중치 넷을 합 1 로 나눕니다. 합이 0 이면 레이어 0 이 1 입니다. 셰이더 `normalizeWeights` 와 같은 식입니다. */
-        static float4 normalizeWeights( const float4& weight );
+        SurfaceLayerWeights computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const;
 
     private:
         /** @brief 월드 (x, z) 를 샘플 공간 연속 좌표로 옮깁니다. 지형 밖이면 false 입니다. */

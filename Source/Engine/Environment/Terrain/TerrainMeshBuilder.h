@@ -68,11 +68,35 @@ namespace sw
         static uint32 selectLOD( float32 distance, float32 lodDistance, uint32 maxLOD );
 
         /**
+         * @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율입니다. 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게 합니다(컴포넌트 틱이 쓴다).
+         * @details 지오모프의 섞기 끝(`kMorphEndRatio`)이 이 값에서 나온다 - 청크가 거친 LOD 로 바뀌는 순간 섞기가 이미 끝나 있어야 한다.
+         */
+        static constexpr float32 kLODHysteresis = 0.1f;
+        /// @brief 지오모프가 섞기 시작하는 거리 / LOD 교체 임계값입니다. 이보다 가까우면 자기 LOD 의 정점 그대로다.
+        static constexpr float32 kMorphStartRatio = 0.6f;
+        /// @brief 지오모프가 섞기를 끝내는 거리 / LOD 교체 임계값입니다. 거친 LOD 로 바뀌는 가장 가까운 거리(임계값 × (1 - 히스테리시스))에서 끝난다.
+        static constexpr float32 kMorphEndRatio = 1.0f - kLODHysteresis;
+        static_assert( kMorphStartRatio < kMorphEndRatio, "섞기 구간이 비면 안 된다" );
+
+        /**
          * @brief 청크 (x, z) 를 LOD @p lod 로 만듭니다. @p arrNeighborLOD 는 `TerrainChunkSide` 순서의 이웃 LOD 이고, 지형 가장자리 변은
          *        자기 LOD 를 넣습니다. 구멍 셀을 덮는 사각형은 만들지 않습니다.
          * @details 정점은 위치(청크 이동 기준), 노멀(샘플 중앙 차분), UV(지형 정규 좌표 u = 샘플 x / (N-1)), 색(흰색)을 가진다. 삼각형 목록(인덱스 없음)이다.
          */
         static void makeChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
                                        const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
+
+        /**
+         * @brief 지오모프 값을 정점의 색 · 탄젠트 칸에 씁니다(E4). `makeChunkVertices` 로 만든 정점 배열 @p inoutListVertex 를 그대로 받는다 - 정점의 UV 가 샘플 좌표를 되돌려 준다.
+         * @details 정점 셰이더(`terrain.hlsl` 의 `computeWorldPositionOffset`)가 카메라와 청크 사이 거리로 섞는 비율을 구해 높이를 한 걸음 거친 LOD 의 높이로 옮긴다.
+         *          청크가 거친 LOD 로 바뀌는 순간 정점이 이미 그 모양이라 튐이 없다. 거리는 컴포넌트가 LOD 를 고르는 거리(`computeChunkDistance` - 청크 상자까지의 평면 거리와 중앙 샘플 높이 차)와 같은 식이다.
+         *          칸 배치(월드 값): 색 = (거친 LOD 높이 - 지금 높이, 섞기 시작 거리, 섞기 끝 거리, 청크 최소 x), 탄젠트 = (청크 최소 z, 청크 최대 x, 청크 최대 z, 중앙 샘플 높이).
+         *          섞기 구간은 이 LOD 의 교체 임계값(@p lodDistance × 2^@p lod)의 `kMorphStartRatio` ~ `kMorphEndRatio` 배다. 더 거친 LOD 가 없는 청크(`_maxLOD`)는 섞이지 않는다.
+         *          거친 LOD 가 삼각형을 나누는 대각선((x, z)-(x+1, z+1))이 같아서 거친 메시의 높이와 정확히 같다. 이 칸들은 지오모프를 쓰는 머티리얼만 읽는다 -
+         *          메시는 `Mesh::setVerticesWithTangents` 로 넣어 탄젠트를 다시 구하지 않게 한다.
+         * @param lodDistance 컴포넌트의 LOD 거리(`selectLOD` 의 첫 임계값)
+         */
+        static void applyGeomorph( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod, float32 lodDistance,
+                                   vector<RHIVertex>& inoutListVertex );
     };
 } // namespace sw

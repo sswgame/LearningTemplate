@@ -70,6 +70,35 @@ namespace sw
                 return vertex;
             }
 
+            /// 섞을 곳이 없는 청크(더 거친 LOD 가 없다)의 섞기 거리입니다 - 어떤 거리도 이 값에 닿지 않아 섞는 비율이 늘 0 이다.
+            static constexpr float32 kNoMorphDistance = 1.0e30f;
+
+            /**
+             * @brief 샘플 (sampleX, sampleZ) 의 높이를 한 걸음 거친 LOD(간격 2 × @p step)의 메시가 보이는 높이로 바꿨을 때의 변화량입니다.
+             * @details 거친 격자 위의 정점은 0 이다. 한 축만 거친 격자 사이에 있으면 거친 변의 중점(두 이웃의 평균)이고, 두 축이 모두 사이에 있으면 거친 셀의 중심이라
+             *          거친 메시가 삼각형을 나누는 대각선((x, z)-(x+1, z+1)) 위의 점이다 - 대각선 두 끝의 평균이다.
+             */
+            static float32 computeCoarseHeightDelta( const TerrainHeightfield& heightfield, uint32 sampleX, uint32 sampleZ, uint32 step )
+            {
+                const uint32 coarseStep = step * 2;
+                const bool   bBetweenX  = sampleX % coarseStep != 0;
+                const bool   bBetweenZ  = sampleZ % coarseStep != 0;
+                if ( bBetweenX == false && bBetweenZ == false )
+                    return 0.0f;
+                const int32   x      = static_cast<int32>( sampleX );
+                const int32   z      = static_cast<int32>( sampleZ );
+                const int32   offset = static_cast<int32>( step );
+                const float32 fine   = heightfield.getSampleHeight( x, z );
+                float32       coarse = 0.0f;
+                if ( bBetweenX && bBetweenZ )
+                    coarse = 0.5f * ( heightfield.getSampleHeight( x - offset, z - offset ) + heightfield.getSampleHeight( x + offset, z + offset ) );
+                else if ( bBetweenX )
+                    coarse = 0.5f * ( heightfield.getSampleHeight( x - offset, z ) + heightfield.getSampleHeight( x + offset, z ) );
+                else
+                    coarse = 0.5f * ( heightfield.getSampleHeight( x, z - offset ) + heightfield.getSampleHeight( x, z + offset ) );
+                return coarse - fine;
+            }
+
             /** @brief 기본 셀 [x0, x0+step) × [z0, z0+step) 에 구멍이 하나라도 있으면 true 를 반환합니다. */
             static bool hasHole( const TerrainHeightfield& heightfield, uint32 cellX0, uint32 cellZ0, uint32 step )
             {
@@ -194,6 +223,46 @@ namespace sw
                     }
                 }
             }
+        }
+    }
+
+    void TerrainMeshBuilder::applyGeomorph( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod, float32 lodDistance,
+                                            vector<RHIVertex>& inoutListVertex )
+    {
+        using Internal = TerrainMeshBuilderInternal;
+        if ( heightfield.isValid() == false || layout._chunkCells == 0 )
+            return;
+        lod                       = MathUtil::min( lod, layout._maxLOD );
+        const uint32  step        = 1u << lod;
+        const uint32  cells       = layout._chunkCells;
+        const uint32  baseX       = chunkX * cells;
+        const uint32  baseZ       = chunkZ * cells;
+        const float32 last        = static_cast<float32>( heightfield.getResolution() - 1 );
+        const float3  origin      = heightfield.getOrigin();
+        const float2  cellSize    = heightfield.getCellSize();
+        const bool    bHasCoarser = lod < layout._maxLOD && lodDistance > 0.0f;
+        // 이 LOD 를 쓰는 거리는 교체 임계값(selectLOD) 아래다 - 섞기는 그 임계값에 가까워질 때 일어난다.
+        const float32 switchDistance = lodDistance * static_cast<float32>( step );
+        const float32 morphStart     = bHasCoarser ? switchDistance * kMorphStartRatio : Internal::kNoMorphDistance;
+        const float32 morphEnd       = bHasCoarser ? switchDistance * kMorphEndRatio : Internal::kNoMorphDistance;
+        const float32 minX           = origin._x + static_cast<float32>( baseX ) * cellSize._x;
+        const float32 maxX           = origin._x + static_cast<float32>( baseX + cells ) * cellSize._x;
+        const float32 minZ           = origin._z + static_cast<float32>( baseZ ) * cellSize._y;
+        const float32 maxZ           = origin._z + static_cast<float32>( baseZ + cells ) * cellSize._y;
+        const float32 groundHeight   = heightfield.getSampleHeight( static_cast<int32>( baseX + cells / 2 ), static_cast<int32>( baseZ + cells / 2 ) );
+        for ( RHIVertex& vertex : inoutListVertex )
+        {
+            const uint32  sampleX = static_cast<uint32>( MathUtil::round( vertex._arrUv[0] * last ) );
+            const uint32  sampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUv[1] * last ) );
+            const float32 delta   = bHasCoarser ? Internal::computeCoarseHeightDelta( heightfield, sampleX, sampleZ, step ) : 0.0f;
+            vertex._arrColor[0]   = delta;
+            vertex._arrColor[1]   = morphStart;
+            vertex._arrColor[2]   = morphEnd;
+            vertex._arrColor[3]   = minX;
+            vertex._arrTangent[0] = minZ;
+            vertex._arrTangent[1] = maxX;
+            vertex._arrTangent[2] = maxZ;
+            vertex._arrTangent[3] = groundHeight;
         }
     }
 } // namespace sw

@@ -36,10 +36,11 @@ namespace sw
 
     bool PlacementTileSurface::sampleSurface( const float2& planePosition, PlacementSurfaceSample& outSample ) const
     {
-        const uint8 tile       = getTileAt( planePosition );
-        outSample              = PlacementSurfaceSample{};
-        outSample._layerWeight = float4{ tile == 0 ? 1.0f : 0.0f, tile == 1 ? 1.0f : 0.0f, tile == 2 ? 1.0f : 0.0f, tile == 3 ? 1.0f : 0.0f };
-        outSample._bValid      = tile < 4 ? SW_TRUE : SW_FALSE;
+        const uint8 tile             = getTileAt( planePosition );
+        outSample                    = PlacementSurfaceSample{};
+        outSample._layerWeight._low  = float4{ tile == 0 ? 1.0f : 0.0f, tile == 1 ? 1.0f : 0.0f, tile == 2 ? 1.0f : 0.0f, tile == 3 ? 1.0f : 0.0f };
+        outSample._layerWeight._high = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
+        outSample._bValid            = tile < 4 ? SW_TRUE : SW_FALSE;
         return tile != kBlockedTile;
     }
 } // namespace sw

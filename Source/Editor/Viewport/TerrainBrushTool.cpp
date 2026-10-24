@@ -51,15 +51,15 @@ namespace sw::editor
              */
             struct EditRecord
             {
-                GameObjectHandle   _object{};
-                TerrainSampleRect  _rect{};
-                vector<float32>    _listHeightBefore;
-                vector<float32>    _listHeightAfter;
-                vector<float4>     _listWeightBefore;
-                vector<float4>     _listWeightAfter;
-                vector<uint8>      _listHoleBefore;
-                vector<uint8>      _listHoleAfter;
-                TerrainBrushTarget _target{ TerrainBrushTarget::Height };
+                GameObjectHandle            _object{};
+                TerrainSampleRect           _rect{};
+                vector<float32>             _listHeightBefore;
+                vector<float32>             _listHeightAfter;
+                vector<SurfaceLayerWeights> _listWeightBefore;
+                vector<SurfaceLayerWeights> _listWeightAfter;
+                vector<uint8>               _listHoleBefore;
+                vector<uint8>               _listHoleAfter;
+                TerrainBrushTarget          _target{ TerrainBrushTarget::Height };
             };
 
             /**
@@ -80,16 +80,16 @@ namespace sw::editor
             /** @brief 진행 중인 드래그입니다. 사본은 지형 전체이고 `_rect` 는 드래그가 지금까지 닿은 사각형입니다(구멍은 셀 좌표). */
             struct Stroke
             {
-                GameObjectHandle   _object{};
-                TerrainSampleRect  _rect{};
-                vector<float32>    _listHeightBefore;
-                vector<float32>    _listHeight;
-                vector<float4>     _listWeightBefore;
-                vector<float4>     _listWeight;
-                vector<uint8>      _listHoleBefore;
-                vector<uint8>      _listHole;
-                float32            _flattenHeight{ 0.0f };
-                TerrainBrushTarget _target{ TerrainBrushTarget::Height };
+                GameObjectHandle            _object{};
+                TerrainSampleRect           _rect{};
+                vector<float32>             _listHeightBefore;
+                vector<float32>             _listHeight;
+                vector<SurfaceLayerWeights> _listWeightBefore;
+                vector<SurfaceLayerWeights> _listWeight;
+                vector<uint8>               _listHoleBefore;
+                vector<uint8>               _listHole;
+                float32                     _flattenHeight{ 0.0f };
+                TerrainBrushTarget          _target{ TerrainBrushTarget::Height };
             };
 
             struct State
@@ -263,7 +263,7 @@ namespace sw::editor
                 {
                     case TerrainBrushTarget::LayerWeight:
                     {
-                        vector<float4> listWeight;
+                        vector<SurfaceLayerWeights> listWeight;
                         bWritten = heightfield.readSplatWeights( listWeight ) &&
                                    pasteRect( bAfter ? record._listWeightAfter : record._listWeightBefore, heightfield.getSplatWidth(), record._rect, listWeight ) &&
                                    pTerrain->writeLayerWeights( listWeight, record._rect );

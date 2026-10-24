@@ -1,0 +1,182 @@
+diff --git a/Resource/engine/shaders/terrain.hlsl b/Resource/engine/shaders/terrain.hlsl
+index db6833874..ffab46f1e 100644
+--- a/Resource/engine/shaders/terrain.hlsl
++++ b/Resource/engine/shaders/terrain.hlsl
+@@ -1,20 +1,30 @@
+ /**
+- * terrain.hlsl — 지형(TerrainComponent). 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어 넷을 섞는다.
++ * terrain.hlsl — 지형(TerrainComponent). 스플랫 맵 둘(RGBA 한 장에 레이어 넷 — splatMap 은 레이어 0..3, splatMap1 은 4..7)로 레이어 여덟을 섞는다.
+  *
+  * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 표면 훅만 정의한다 — 조명(기본 PBR) · 보기 모드 ·
+  * G버퍼 서명 · 정점 변환은 뼈대가 한다.
+  *
+  * 레이어 하나 = 색(layerNColor) × 디테일 맵의 자기 채널(타일링 무늬, 0.5 가 중립). 디테일은 위에서 내려 찍거나(평면), 세 축에서 찍어
+- * 노멀로 섞는다(3 축 — 절벽에서 늘어지지 않는다, layerTriplanar 가 레이어마다 고른다). 가파른 면은 절벽 레이어가 덮는다(terrainParams.zw).
+- * 가중치 합을 1 로 나누는 식은 CPU `TerrainHeightfield::normalizeWeights` 와 같다 — 배치의 레이어 필터가 그려진 것과 같은 값을 본다
++ * 노멀로 섞는다(3 축 — 절벽에서 늘어지지 않는다, layerTriplanar · layerTriplanar1 이 레이어마다 고른다). 레이어 4..7 은 레이어 0..3 의 디테일 채널을
++ * 다른 배율(kHighLayerDetailScale)로 다시 찍어 쓴다(디테일 맵 한 장으로 여덟 레이어 — 같은 무늬가 겹쳐 보이지 않게 배율을 어긋낸다).
++ * 가파른 면은 절벽 레이어가 덮는다(terrainParams.zw).
++ * 가중치 합을 1 로 나누는 식은 CPU `SurfaceLayerWeights::computeNormalized` 와 같다(여덟 레이어 전체의 합) — 배치의 레이어 필터가 그려진 것과 같은 값을 본다
+  * (절벽 덮기는 그림에만 있다 — 배치는 경사 필터로 가린다).
+  * 정점 UV 는 지형 정규 좌표(0..1)다. 스플랫 텍셀 중심을 지형 가장자리에 맞추려고 너비로 반 텍셀 옮긴다(CPU 와 같은 규칙).
++ *
++ * 지오모프(E4) — 지오모프 머티리얼(terrain_geomorph.material)만 MATERIAL_VERTEX_DEFORM 을 가져 `computeWorldPositionOffset` 이 불린다. 청크가 거친 LOD 로 바뀔 때의 튐을
++ * 없애려고 높이를 한 걸음 거친 LOD 메시의 높이로 옮긴다. 섞는 값은 정점 색 · 탄젠트 칸에 CPU(`TerrainMeshBuilder::applyGeomorph`)가 구워 둔다:
++ * 색 = (거친 높이 - 지금 높이, 섞기 시작 거리, 섞기 끝 거리, 청크 최소 x), 탄젠트 = (청크 최소 z, 청크 최대 x, 청크 최대 z, 청크 중앙 샘플 높이) - 월드 값이다.
++ * 카메라와 청크 사이 거리는 컴포넌트가 LOD 를 고르는 식(청크 상자까지의 평면 거리와 중앙 샘플 높이 차)이고, 섞는 비율은 시작~끝 거리 사이의 0..1 이다.
++ * 카메라 위치는 g_InvViewProj 로 구한다 - (0, 0, 1, 0) 의 역투영이 눈의 동차 좌표(원근)다. 직교 카메라와 그림자 패스(빛 행렬)는 눈이 없어 섞지 않는다.
+  */
+ #include "lighting.hlsli"
+ 
+ // 보기 모드 Roughness · Metallic 이 보이는 값 — 지형은 거친 유전체다(PBR 칸이 없다).
+ static const float kSurfaceRoughness = 1.0f;
+ static const float kSurfaceMetallic  = 0.0f;
++// 레이어 4..7 의 디테일을 찍는 배율(레이어 0..3 의 무늬와 겹쳐 보이지 않게 어긋낸 값).
++static const float kHighLayerDetailScale = 1.37f;
+ 
+ // terrain.material 의 프로퍼티와 같은 이름 · 타입이다.
+ SW_MATERIAL_BEGIN
+@@ -23,10 +33,17 @@ SW_MATERIAL_BEGIN
+     float4 layer1Color;
+     float4 layer2Color;
+     float4 layer3Color;
+-    float4 layerDetail;    // 레이어마다 디테일 세기(0..1)
+-    float4 layerTriplanar; // 레이어마다 1 이면 3 축 투영
+-    float4 terrainParams;  // x = 스플랫 너비(텍셀), y = 디테일 반복(1/m), z = 절벽 문턱(노멀 y), w = 절벽 레이어(−1 = 끔)
+-    uint   splatMap;
++    float4 layer4Color;
++    float4 layer5Color;
++    float4 layer6Color;
++    float4 layer7Color;
++    float4 layerDetail;     // 레이어 0..3 의 디테일 세기(0..1)
++    float4 layerTriplanar;  // 레이어 0..3 마다 1 이면 3 축 투영
++    float4 layerDetail1;    // 레이어 4..7 의 디테일 세기(0..1)
++    float4 layerTriplanar1; // 레이어 4..7 마다 1 이면 3 축 투영
++    float4 terrainParams;   // x = 스플랫 너비(텍셀), y = 디테일 반복(1/m), z = 절벽 문턱(노멀 y), w = 절벽 레이어(−1 = 끔)
++    uint   splatMap;        // 레이어 0..3 가중치(RGBA)
++    uint   splatMap1;       // 레이어 4..7 가중치(RGBA)
+     uint   detailMap;
+ }
+ SW_MATERIAL_END
+@@ -40,11 +57,38 @@ SW_MATERIAL_END
+ #define SW_MATERIAL_DEFAULT_VARYINGS
+ #include "materialshader.hlsli"
+ 
+-/** @brief 가중치 넷을 합 1 로 나눈다. 합이 0 이면 레이어 0 이다(C++ TerrainHeightfield::normalizeWeights 와 같다). */
+-float4 normalizeWeights( float4 weight )
++/** @brief 가중치 여덟(낮은 넷 · 높은 넷)을 여덟 전체의 합 1 로 나눈다. 합이 0 이면 레이어 0 이다(C++ SurfaceLayerWeights::computeNormalized 와 같다). */
++void normalizeWeights( inout float4 low, inout float4 high )
++{
++    const float total = low.x + low.y + low.z + low.w + high.x + high.y + high.z + high.w;
++    if ( total <= 1e-5f )
++    {
++        low  = float4( 1.0f, 0.0f, 0.0f, 0.0f );
++        high = float4( 0.0f, 0.0f, 0.0f, 0.0f );
++        return;
++    }
++    low /= total;
++    high /= total;
++}
++
++/** @brief 레이어 @p layer 가 @p firstLayer .. +3 의 어느 칸인지 원-핫 넷으로 돌려준다(절벽 레이어 덮기). */
++float4 oneHotLayer( float layer, float firstLayer )
+ {
+-    const float total = weight.x + weight.y + weight.z + weight.w;
+-    return ( total <= 1e-5f ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : weight / total;
++    const float offset = layer - firstLayer;
++    return float4( abs( offset ) < 0.5f ? 1.0f : 0.0f, abs( offset - 1.0f ) < 0.5f ? 1.0f : 0.0f, abs( offset - 2.0f ) < 0.5f ? 1.0f : 0.0f, abs( offset - 3.0f ) < 0.5f ? 1.0f : 0.0f );
++}
++
++/**
++ * @brief 디테일 맵의 레이어 채널 넷을 찍는다 - 평면(위에서) 하나와 3 축 셋을 @p triplanar 마스크로 섞는다. 평면 표본은 3 축의 xz 면과 같다.
++ * @param scale 월드 좌표에 곱하는 배율(레이어 0..3 은 1, 4..7 은 kHighLayerDetailScale)
++ */
++float4 sampleLayerDetail( uint detailMap, float3 worldPosition, float3 axisWeight, float tiling, float scale, float4 triplanar )
++{
++    const float4 detailTop       = MaterialTexture::sampleIndex( detailMap, worldPosition.xz * tiling * scale );
++    const float4 detailFront     = MaterialTexture::sampleIndex( detailMap, worldPosition.xy * tiling * scale );
++    const float4 detailSide      = MaterialTexture::sampleIndex( detailMap, worldPosition.zy * tiling * scale );
++    const float4 detailTriplanar = detailSide * axisWeight.x + detailTop * axisWeight.y + detailFront * axisWeight.z;
++    return lerp( detailTop, detailTriplanar, triplanar );
+ }
+ 
+ MaterialSurface computeMaterialSurface( PixelContext context )
+@@ -55,33 +99,32 @@ MaterialSurface computeMaterialSurface( PixelContext context )
+     // 스플랫 — 텍셀 중심을 지형 가장자리에 맞춘다.
+     const float  splatWidth = material.terrainParams.x;
+     const float2 splatUv    = ( splatWidth > 1.0f ) ? context.uv * ( ( splatWidth - 1.0f ) / splatWidth ) + 0.5f / splatWidth : context.uv;
+-    float4       weight     = ( material.splatMap == kInvalidIndex ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : MaterialTexture::sampleIndex( material.splatMap, splatUv );
+-    weight                  = normalizeWeights( weight );
++    float4       weightLow  = ( material.splatMap == kInvalidIndex ) ? float4( 1.0f, 0.0f, 0.0f, 0.0f ) : MaterialTexture::sampleIndex( material.splatMap, splatUv );
++    float4       weightHigh = ( material.splatMap1 == kInvalidIndex ) ? float4( 0.0f, 0.0f, 0.0f, 0.0f ) : MaterialTexture::sampleIndex( material.splatMap1, splatUv );
++    normalizeWeights( weightLow, weightHigh );
+ 
+     // 절벽 — 노멀 y 가 문턱 아래로 내려갈수록 절벽 레이어가 덮는다.
+     const float cliffLayer = material.terrainParams.w;
+     if ( cliffLayer >= 0.0f )
+     {
+-        const float  cliff     = saturate( ( material.terrainParams.z - normal.y ) / 0.12f );
+-        const float4 onlyCliff = float4( cliffLayer < 0.5f ? 1.0f : 0.0f, ( cliffLayer >= 0.5f && cliffLayer < 1.5f ) ? 1.0f : 0.0f,
+-                                         ( cliffLayer >= 1.5f && cliffLayer < 2.5f ) ? 1.0f : 0.0f, cliffLayer >= 2.5f ? 1.0f : 0.0f );
+-        weight = lerp( weight, onlyCliff, cliff );
++        const float cliff = saturate( ( material.terrainParams.z - normal.y ) / 0.12f );
++        weightLow         = lerp( weightLow, oneHotLayer( cliffLayer, 0.0f ), cliff );
++        weightHigh        = lerp( weightHigh, oneHotLayer( cliffLayer, 4.0f ), cliff );
+     }
+ 
+     // 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
+-    const float  tiling      = material.terrainParams.y;
+-    const float4 detailTop   = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xz * tiling );
+-    const float4 detailFront = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xy * tiling );
+-    const float4 detailSide  = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.zy * tiling );
+-    float3       axisWeight  = pow( abs( normal ), 4.0f );
++    const float tiling     = material.terrainParams.y;
++    float3      axisWeight = pow( abs( normal ), 4.0f );
+     axisWeight /= max( axisWeight.x + axisWeight.y + axisWeight.z, 1e-5f );
+-    const float4 detailTriplanar = detailSide * axisWeight.x + detailTop * axisWeight.y + detailFront * axisWeight.z;
+-    const float4 detail          = lerp( detailTop, detailTriplanar, material.layerTriplanar );
++    const float4 detailLow  = sampleLayerDetail( material.detailMap, context.worldPosition, axisWeight, tiling, 1.0f, material.layerTriplanar );
++    const float4 detailHigh = sampleLayerDetail( material.detailMap, context.worldPosition, axisWeight, tiling, kHighLayerDetailScale, material.layerTriplanar1 );
+     // 0.5 가 중립 — 디테일 세기만큼 색을 0..2 배로 흔든다.
+-    const float4 shade = lerp( float4( 1.0f, 1.0f, 1.0f, 1.0f ), detail * 2.0f, material.layerDetail );
++    const float4 shadeLow  = lerp( float4( 1.0f, 1.0f, 1.0f, 1.0f ), detailLow * 2.0f, material.layerDetail );
++    const float4 shadeHigh = lerp( float4( 1.0f, 1.0f, 1.0f, 1.0f ), detailHigh * 2.0f, material.layerDetail1 );
+ 
+-    float3 albedo = material.layer0Color.rgb * shade.x * weight.x + material.layer1Color.rgb * shade.y * weight.y + material.layer2Color.rgb * shade.z * weight.z +
+-                    material.layer3Color.rgb * shade.w * weight.w;
++    float3 albedo = material.layer0Color.rgb * shadeLow.x * weightLow.x + material.layer1Color.rgb * shadeLow.y * weightLow.y + material.layer2Color.rgb * shadeLow.z * weightLow.z +
++                    material.layer3Color.rgb * shadeLow.w * weightLow.w + material.layer4Color.rgb * shadeHigh.x * weightHigh.x + material.layer5Color.rgb * shadeHigh.y * weightHigh.y +
++                    material.layer6Color.rgb * shadeHigh.z * weightHigh.z + material.layer7Color.rgb * shadeHigh.w * weightHigh.w;
+     // 큰 무늬 — 같은 디테일 맵을 훨씬 넓게 찍어 타일 반복을 깬다.
+     const float macro = MaterialTexture::sampleIndex( material.detailMap, context.worldPosition.xz * tiling * 0.071f ).x;
+     albedo *= lerp( 0.85f, 1.12f, macro );
+@@ -94,4 +137,29 @@ MaterialSurface computeMaterialSurface( PixelContext context )
+     return surface;
+ }
+ 
++#if defined( MATERIAL_VERTEX_DEFORM )
++/**
++ * @brief 지오모프 — 정점 높이를 거친 LOD 높이로 옮기는 월드 위치 오프셋(y 만)입니다. 값의 배치는 파일 머리 주석. 이른 반환 없이 출구가 하나다.
++ */
++float3 computeWorldPositionOffset( VertexContext context )
++{
++    float morph = 0.0f;
++    #if !defined( SW_PASS_SHADOW )
++    const float4 eyeHomogeneous = mul( float4( 0.0f, 0.0f, 1.0f, 0.0f ), g_InvViewProj );
++    if ( abs( eyeHomogeneous.w ) > 1.0e-6f )
++    {
++        const float3 eye      = eyeHomogeneous.xyz / eyeHomogeneous.w;
++        const float4 bake     = context.input.color;
++        const float4 bounds   = context.input.tangent;
++        const float  deltaX   = max( max( bake.w - eye.x, eye.x - bounds.y ), 0.0f );
++        const float  deltaZ   = max( max( bounds.x - eye.z, eye.z - bounds.z ), 0.0f );
++        const float  deltaY   = eye.y - bounds.w;
++        const float  distance = sqrt( deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ );
++        morph                 = saturate( ( distance - bake.y ) / max( bake.z - bake.y, 1.0e-3f ) );
++    }
++    #endif
++    return float3( 0.0f, context.input.color.x * morph, 0.0f );
++}
++#endif
++
+ #include "materialshadermain.hlsli"

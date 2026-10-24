@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/BitUtil.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -69,6 +70,20 @@ namespace
                 data._bytes[texel * LayerWeightsData::kLayerCount + layer] = 255u;
             }
             return data;
+        }
+
+        /** @brief 텍셀마다 레이어 여덟 바이트인 가중치에서 평면 @p plane(0 = 레이어 0..3, 1 = 4..7)의 RGBA8 을 뽑습니다 - GPU 스플랫 텍스처 한 장의 내용입니다. */
+        static vector<uint8> planeBytes( const vector<uint8>& layerBytes, uint32 plane )
+        {
+            vector<uint8> listRgba;
+            for ( size_t texel = 0; texel * LayerWeightsData::kLayerCount < layerBytes.size(); ++texel )
+            {
+                for ( uint32 channel = 0; channel < 4; ++channel )
+                {
+                    listRgba.push_back( layerBytes[texel * LayerWeightsData::kLayerCount + plane * 4 + channel] );
+                }
+            }
+            return listRgba;
         }
 
         /** @brief 높이장 하나와 가중치 맵 하나를 쓰는 32 m 지형을 @p manager 에 만듭니다(읽기 `reloadTerrain` 은 부르는 쪽이 합니다). */
@@ -269,28 +284,32 @@ SW_TEST_CASE( TerrainTest, HolesAreQueryableAndCutFromTheMesh )
  */
 SW_TEST_CASE( TerrainTest, SplatWeightsNormalize )
 {
-    const float4 zero = TerrainHeightfield::normalizeWeights( float4{ 0.0f, 0.0f, 0.0f, 0.0f } );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, zero._x, 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, zero._y + zero._z + zero._w, 1.0e-6f );
+    const SurfaceLayerWeights zero = SurfaceLayerWeights{
+        float4{0.0f, 0.0f, 0.0f, 0.0f},
+        float4{0.0f, 0.0f, 0.0f, 0.0f}
+    }
+                                         .computeNormalized();
+    SW_EXPECT_NEAR_EQUAL( 1.0f, zero._low._x, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, zero._low._y + zero._low._z + zero._low._w + zero._high._x + zero._high._y + zero._high._z + zero._high._w, 1.0e-6f );
 
     TerrainHeightfield field = TerrainTestUtil::makeWaveField( 17 );
     // 3 × 2 스플랫: 아무 값(합이 1 이 아님) · 모두 0 칸 하나.
-    const vector<uint8> rgbaBytes = { 200, 40, 0, 0, 10, 10, 10, 10, 0, 0, 0, 0, 0, 255, 255, 0, 90, 0, 30, 120, 7, 3, 1, 250 };
-    field.setSplat( 3, 2, rgbaBytes );
+    const vector<uint8> layerBytes = { 200, 40, 0, 0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0, 0, 90, 0, 30, 120, 60, 0, 0, 0, 7, 3, 1, 250, 0, 0, 0, 5 };
+    field.setSplat( 3, 2, layerBytes );
     float32 worstSum{ 0.0f };
     for ( uint32 probe = 0; probe < 64; ++probe )
     {
-        const float4  weight = field.computeLayerWeightsAt( static_cast<float32>( probe % 8 ) * 2.1f, static_cast<float32>( probe / 8 ) * 2.05f );
-        const float32 sum    = weight._x + weight._y + weight._z + weight._w;
-        worstSum             = MathUtil::max( worstSum, MathUtil::abs( sum - 1.0f ) );
+        const SurfaceLayerWeights weight = field.computeLayerWeightsAt( static_cast<float32>( probe % 8 ) * 2.1f, static_cast<float32>( probe / 8 ) * 2.05f );
+        const float32             sum    = weight.getSum();
+        worstSum                         = MathUtil::max( worstSum, MathUtil::abs( sum - 1.0f ) );
     }
     SW_EXPECT_TRUE( worstSum < 1.0e-5f );
     // 모서리 (0, 0) 는 첫 텍셀 그대로(200, 40) → (0.833, 0.167).
-    const float4 corner = field.computeLayerWeightsAtUv( 0.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 200.0f / 240.0f, corner._x, 1.0e-5f );
+    const SurfaceLayerWeights corner = field.computeLayerWeightsAtUv( 0.0f, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 200.0f / 240.0f, corner._low._x, 1.0e-5f );
     // 셋째 텍셀(u = 1, v = 0)은 모두 0 → 레이어 0.
-    const float4 empty = field.computeLayerWeightsAtUv( 1.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, empty._x, 1.0e-5f );
+    const SurfaceLayerWeights empty = field.computeLayerWeightsAtUv( 1.0f, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, empty._low._x, 1.0e-5f );
 }
 
 /**
@@ -540,9 +559,12 @@ SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
     TerrainSampleRect heightRect;
     heightRect.include( 6, 5 );
     SW_ASSERT_TRUE( edited.writeHeights( listHeight, heightRect ) );
-    vector<float4> listWeight;
+    vector<SurfaceLayerWeights> listWeight;
     SW_ASSERT_TRUE( edited.getHeightfield().readSplatWeights( listWeight ) );
-    listWeight[2 * kSplatSize + 3] = float4{ 0.0f, 0.25f, 0.75f, 0.0f };
+    listWeight[2 * kSplatSize + 3] = SurfaceLayerWeights{
+        float4{0.0f, 0.25f,  0.0f, 0.0f},
+        float4{0.0f,  0.0f, 0.75f, 0.0f}
+    }; // 레이어 1 과 6
     TerrainSampleRect splatRect;
     splatRect.include( 3, 2 );
     SW_ASSERT_TRUE( edited.writeLayerWeights( listWeight, splatRect ) );
@@ -779,34 +801,40 @@ SW_TEST_CASE( TerrainTest, LargeHeightWriteSpreadsChunkRebuilds )
  */
 SW_TEST_CASE( TerrainTest, WriteLayerWeightsUpdatesSplat )
 {
-    TerrainHeightfield field = TerrainTestUtil::makeWaveField( 5 );
-    vector<float4>     listWeight;
+    TerrainHeightfield          field = TerrainTestUtil::makeWaveField( 5 );
+    vector<SurfaceLayerWeights> listWeight;
     SW_EXPECT_FALSE( field.readSplatWeights( listWeight ) );
     SW_EXPECT_FALSE( field.writeSplatWeights( listWeight, TerrainSampleRect{ 0, 0, 1, 1 } ) );
 
-    vector<uint8> bytes( 4 * 4 * 4, 0u );
+    vector<uint8> bytes( 4 * 4 * SurfaceLayerWeights::kLayerCount, 0u );
     for ( size_t texel = 0; texel < 16; ++texel )
     {
-        bytes[texel * 4] = 255u; // 전부 레이어 0
+        bytes[texel * SurfaceLayerWeights::kLayerCount] = 255u; // 전부 레이어 0
     }
     field.setSplat( 4, 4, bytes );
     SW_ASSERT_TRUE( field.readSplatWeights( listWeight ) );
     SW_ASSERT_EQUAL( 16u, static_cast<uint32>( listWeight.size() ) );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[0]._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[0]._low._x, 1.0e-5f );
 
-    listWeight[1 * 4 + 1] = float4{ 0.0f, 0.25f, 0.75f, 0.0f };
-    listWeight[0]         = float4{ 0.0f, 1.0f, 0.0f, 0.0f }; // 사각형 밖 — 쓰이지 않는다
+    listWeight[1 * 4 + 1] = SurfaceLayerWeights{
+        float4{0.0f, 0.25f,  0.0f, 0.0f},
+        float4{0.0f,  0.0f, 0.75f, 0.0f}
+    }; // 레이어 1 과 6
+    listWeight[0] = SurfaceLayerWeights{
+        float4{ 0.0f, 1.0f, 0.0f, 0.0f },
+        float4{}
+    }; // 사각형 밖 — 쓰이지 않는다
     TerrainSampleRect rect;
     rect.include( 1, 1 );
     SW_ASSERT_TRUE( field.writeSplatWeights( listWeight, rect ) );
-    vector<float4> listRead;
+    vector<SurfaceLayerWeights> listRead;
     SW_ASSERT_TRUE( field.readSplatWeights( listRead ) );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, listRead[1 * 4 + 1]._y, 1.0f / 255.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, listRead[1 * 4 + 1]._z, 1.0f / 255.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[0]._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, listRead[1 * 4 + 1].get( 1 ), 1.0f / 255.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, listRead[1 * 4 + 1].get( 6 ), 1.0f / 255.0f ); // 높은 레이어도 양자화해 쓰고 읽는다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[0]._low._x, 1.0e-5f );
 
     SW_TEST_DEFENSIVE_SCOPE( "wrong size or out-of-grid rectangles are rejected" );
-    vector<float4> listShort( 3 );
+    vector<SurfaceLayerWeights> listShort( 3 );
     SW_EXPECT_FALSE( field.writeSplatWeights( listShort, rect ) );
     TerrainSampleRect outside;
     outside.include( 3, 3 );
@@ -845,8 +873,9 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     TextureCache&     textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
     (void)textures.flushRegionUpdates( nullptr ); // 앞선 테스트가 남긴 구간을 비운다
 
-    const string ownPath   = painted.getCPUSplatPath();
-    const string otherPath = other.getCPUSplatPath();
+    const string ownPath   = painted.getCPUSplatPath( 0 );
+    const string ownHigh   = painted.getCPUSplatPath( 1 );
+    const string otherPath = other.getCPUSplatPath( 0 );
     SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( ownPath ) );
     SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( otherPath ) );
     SW_EXPECT_NOT_EQUAL( ownPath, otherPath );
@@ -854,33 +883,42 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     const Texture2D* pOtherTexture = textures.find( otherPath );
     SW_ASSERT_NOT_NULL( pTexture );
     SW_ASSERT_NOT_NULL( pOtherTexture );
-    SW_EXPECT_TRUE( pTexture->getCPUBytes() == splatBytes );
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() == TerrainTestUtil::planeBytes( splatBytes, 0 ) );
 
-    vector<float4> listWeight;
+    vector<SurfaceLayerWeights> listWeight;
     SW_ASSERT_TRUE( painted.getHeightfield().readSplatWeights( listWeight ) );
-    listWeight[3 * kSplatSize + 2] = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+    listWeight[3 * kSplatSize + 2] = SurfaceLayerWeights{
+        float4{ 0.0f, 1.0f, 0.0f, 0.0f },
+        float4{}
+    };
     TerrainSampleRect first;
     first.include( 2, 3 );
     SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, first ) );
-    listWeight[5 * kSplatSize + 5] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
+    listWeight[5 * kSplatSize + 5] = SurfaceLayerWeights{
+        float4{},
+        float4{ 0.0f, 0.0f, 1.0f, 0.0f }
+    }; // 레이어 6 - 높은 평면 텍스처가 따라가야 한다
     TerrainSampleRect second;
     second.include( 5, 5 );
     SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, second ) );
-    SW_EXPECT_EQUAL( ownPath, painted.getCPUSplatPath() );
+    SW_EXPECT_EQUAL( ownPath, painted.getCPUSplatPath( 0 ) );
 
     // 쓰기마다 구간 하나가 같은 텍스처로 간다. GPU 가 없어도 원본은 따라간다.
-    SW_EXPECT_EQUAL( 2u, textures.flushRegionUpdates( nullptr ) );
-    SW_EXPECT_TRUE( pTexture->getCPUBytes() == painted.getHeightfield().getSplatBytes() );
-    SW_EXPECT_TRUE( pTexture->getCPUBytes() != splatBytes );
+    SW_EXPECT_EQUAL( 4u, textures.flushRegionUpdates( nullptr ) ); // 쓰기 둘 × 평면 둘
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() == TerrainTestUtil::planeBytes( painted.getHeightfield().getSplatBytes(), 0 ) );
+    const Texture2D* pHighTexture = textures.find( ownHigh );
+    SW_ASSERT_NOT_NULL( pHighTexture );
+    SW_EXPECT_TRUE( pHighTexture->getCPUBytes() == TerrainTestUtil::planeBytes( painted.getHeightfield().getSplatBytes(), 1 ) );
+    SW_EXPECT_TRUE( pHighTexture->getCPUBytes() != TerrainTestUtil::planeBytes( splatBytes, 1 ) );
     SW_EXPECT_TRUE( other.getHeightfield().getSplatBytes() == splatBytes );
-    SW_EXPECT_TRUE( pOtherTexture->getCPUBytes() == splatBytes );
+    SW_EXPECT_TRUE( pOtherTexture->getCPUBytes() == TerrainTestUtil::planeBytes( splatBytes, 0 ) );
 
     // 다시 읽으면 디스크 가중치로 돌아가고, 옛 텍스처는 캐시에서 빠지고 새 텍스처를 만든다(빌린 머티리얼이 없다).
     SW_ASSERT_TRUE( painted.reloadTerrain() );
     SW_EXPECT_FALSE( textures.isCached( ownPath ) );
-    const Texture2D* pReloaded = textures.find( painted.getCPUSplatPath() );
+    const Texture2D* pReloaded = textures.find( painted.getCPUSplatPath( 0 ) );
     SW_ASSERT_NOT_NULL( pReloaded );
-    SW_EXPECT_TRUE( pReloaded->getCPUBytes() == splatBytes );
+    SW_EXPECT_TRUE( pReloaded->getCPUBytes() == TerrainTestUtil::planeBytes( splatBytes, 0 ) );
 }
 
 /**
@@ -922,6 +960,38 @@ SW_TEST_CASE( TerrainTest, LayerWeightsFormatRoundTrips )
 }
 
 /**
+ * @brief [TerrainTest] 레이어 넷 시절의 가중치 파일(버전 1)은 읽을 때 레이어 4..7 을 0 으로 채워 이관하고, 다시 쓰면 현재 버전이다 · 버전과 레이어 수가 맞지 않으면 거절한다
+ * @details 변이: 이관이 텍셀 사이 간격을 넷으로 두면(복사 폭 오류) 둘째 텍셀의 값이 어긋나 바이트 비교가 진다.
+ */
+SW_TEST_CASE( TerrainTest, LayerWeightsLegacyVersionIsMigrated )
+{
+    vector<uint8> legacy;
+    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kMagic );
+    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kLegacyVersion );
+    LittleEndianUtil::appendUint32( legacy, 2u ); // 너비
+    LittleEndianUtil::appendUint32( legacy, 1u ); // 높이
+    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kLegacyLayerCount );
+    const vector<uint8> weights = { 10, 20, 30, 40, 50, 60, 70, 80 };
+    legacy.insert( legacy.end(), weights.begin(), weights.end() );
+
+    LayerWeightsData loaded;
+    SW_ASSERT_TRUE( loaded.loadFromMemory( legacy, "legacy" ) );
+    const vector<uint8> expected = { 10, 20, 30, 40, 0, 0, 0, 0, 50, 60, 70, 80, 0, 0, 0, 0 };
+    SW_EXPECT_TRUE( loaded._bytes == expected );
+    SW_EXPECT_TRUE( loaded.isValid() );
+
+    vector<uint8> rewritten;
+    loaded.saveToMemory( rewritten );
+    SW_EXPECT_EQUAL( LayerWeightsData::kVersion, LittleEndianUtil::readUint32( rewritten.data() + 4 ) );
+    SW_EXPECT_EQUAL( LayerWeightsData::kLayerCount, LittleEndianUtil::readUint32( rewritten.data() + 16 ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a legacy version with the current layer count is rejected" );
+    vector<uint8> mismatched = legacy;
+    mismatched[16]           = static_cast<uint8>( LayerWeightsData::kLayerCount );
+    SW_EXPECT_FALSE( loaded.loadFromMemory( mismatched, "mismatch" ) );
+}
+
+/**
  * @brief [TerrainTest] 전용 서버 호스트(`ResourcePaths::setHostTarget( "Server" )`)도 가중치 에셋을 읽어 레이어 질의에 정확히 답한다 — 레이어 0 이 아니다 ·
  *        가중치를 못 읽으면(서버가 읽지 않는 텍스처 경로, 없는 파일) 레이어 0 으로 두지 않고 지형을 읽지 않는다
  * @details 변이: 가중치를 서버가 빼는 종류(텍스처)로 두면 서버에서 읽기가 조용히 실패해 첫 단언이 지고(F-1 의 옛 동작), 읽지 못한 가중치를 레이어 0 으로 두면
@@ -940,13 +1010,13 @@ SW_TEST_CASE( TerrainTest, DedicatedServerAnswersLayerQueries )
     TerrainComponent*      pTerrain = TerrainTestUtil::makeTerrain( manager, "ServerTerrain", ::test::makeTempResourceID( heightfieldPath ), ::test::makeTempResourceID( weightsPath ) );
     SW_ASSERT_NOT_NULL( pTerrain );
     SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
-    const float4 weight = pTerrain->computeLayerWeightsAt( 16.0f, 16.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, weight._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, weight._z, 1e-4f );
+    const SurfaceLayerWeights weight = pTerrain->computeLayerWeightsAt( 16.0f, 16.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, weight._low._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, weight._low._z, 1e-4f );
 
     SW_TEST_DEFENSIVE_SCOPE( "layer weights the server cannot read stop the terrain instead of answering layer 0" );
     const string ddsPath = test::makeTempPath( "server_splat.dds" );
-    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( ddsPath, TerrainTestUtil::makeUniformWeights( 8, 2 )._bytes, 8, 8 ) );
+    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( ddsPath, vector<uint8>( 8 * 8 * 4, 0u ), 8, 8 ) );
     pTerrain->setLayerWeightsPath( ::test::makeTempResourceID( ddsPath ) );
     SW_EXPECT_FALSE( pTerrain->reloadTerrain() );
     SW_EXPECT_FALSE( pTerrain->getHeightfield().isValid() );

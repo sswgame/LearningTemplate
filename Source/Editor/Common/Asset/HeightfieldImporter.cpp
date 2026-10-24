@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
@@ -29,13 +30,18 @@ namespace sw::editor
             static constexpr string_view kImportStampHeader = "SWHEIGHTFIELDIMPORT 1";
             static constexpr string_view kHoleSuffix        = "_holes";
             static constexpr string_view kSplatSuffix       = "_splat";
+            /// 레이어 4..7 의 곁 파일 접미사(`x_splat.png` 옆의 `x_splat1.png`). 없으면 레이어 4..7 은 0 이다.
+            static constexpr string_view kSplatHighSuffix = "_splat1";
             /** @brief 임포트 동작을 바꾸면 올립니다. 모든 스탬프가 어긋나 한 번 다시 임포트합니다. */
             static constexpr uint32 kImporterVersion = 1;
             /** @brief 스플랫 임포트 동작을 바꾸면 올립니다. 스플랫 원본의 스탬프만 어긋납니다. */
-            static constexpr uint32 kSplatImporterVersion = 1;
+            static constexpr uint32 kSplatImporterVersion = 2;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
             static string makeHolePath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + string( kHoleSuffix ) + ".png"; }
+
+            /** @brief 스플랫 원본 옆의 레이어 4..7 파일 경로(`x_splat.png` → `x_splat1.png`)입니다. */
+            static string makeHighSplatPath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + "1.png"; }
 
             [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
             {
@@ -52,6 +58,26 @@ namespace sw::editor
                 for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
                 {
                     outData._listHeight[sampleIndex] = static_cast<uint16>( bytes[sampleIndex * 2] | ( bytes[sampleIndex * 2 + 1] << 8 ) );
+                }
+                return true;
+            }
+
+            /** @brief 스플랫 PNG 한 장(RGBA - 채널마다 레이어 하나)을 읽습니다. 디코더는 알파가 없는 원본도 255 로 채워 RGBA 로 펼치므로 원본 채널 수로 가립니다. */
+            [[nodiscard]] static bool readSplatImage( string_view path, RawImageData& outImage )
+            {
+                vector<uint8> bytes;
+                if ( FileUtil::readFile( path, bytes ) == false || bytes.empty() )
+                {
+                    SW_LOG_ERROR( "Failed to read splat source '%#'", path );
+                    return false;
+                }
+                if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), outImage ) == false )
+                    return false;
+                if ( outImage._sourceChannelCount != RawImageData::kChannelCount )
+                {
+                    SW_LOG_ERROR( "Splat source '%#' has %# channels, not RGBA - each channel is one layer weight, so the alpha channel (a layer) is required", path,
+                                  outImage._sourceChannelCount );
+                    return false;
                 }
                 return true;
             }
@@ -152,7 +178,8 @@ namespace sw::editor
         if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
             return false;
         const string stem = FileUtil::removeExtension( path );
-        return StringUtil::endsWith( stem, Internal::kHoleSuffix, true ) == false && StringUtil::endsWith( stem, Internal::kSplatSuffix, true ) == false;
+        return StringUtil::endsWith( stem, Internal::kHoleSuffix, true ) == false && StringUtil::endsWith( stem, Internal::kSplatSuffix, true ) == false &&
+               StringUtil::endsWith( stem, Internal::kSplatHighSuffix, true ) == false;
     }
 
     bool HeightfieldImporter::isSourceLayerWeights( string_view path )
@@ -174,29 +201,45 @@ namespace sw::editor
 
     bool HeightfieldImporter::readLayerWeights( string_view sourcePath, LayerWeightsData& outData )
     {
-        outData = LayerWeightsData{};
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        using Internal = HeightfieldImporterInternal;
+        outData        = LayerWeightsData{};
+        // 레이어 0..3 은 `x_splat.png`, 레이어 4..7 은 곁 파일 `x_splat1.png`(없으면 0)다. 둘은 같은 크기여야 한다.
+        RawImageData lowImage;
+        if ( Internal::readSplatImage( sourcePath, lowImage ) == false )
+            return false;
+        RawImageData highImage;
+        const string highPath = Internal::makeHighSplatPath( sourcePath );
+        const bool   bHasHigh = FileUtil::exists( highPath );
+        if ( bHasHigh )
         {
-            SW_LOG_ERROR( "Failed to read splat source '%#'", sourcePath );
+            if ( Internal::readSplatImage( highPath, highImage ) == false )
+                return false;
+            if ( highImage._width != lowImage._width || highImage._height != lowImage._height )
+            {
+                SW_LOG_ERROR( "Splat source '%#' is %#x%# but '%#' is %#x%# - both layer groups must have the same size", sourcePath, lowImage._width, lowImage._height,
+                              highPath.c_str(), highImage._width, highImage._height );
+                return false;
+            }
+        }
+        outData._width  = static_cast<uint32>( lowImage._width );
+        outData._height = static_cast<uint32>( lowImage._height );
+        if ( outData._width > LayerWeightsData::kMaxResolution || outData._height > LayerWeightsData::kMaxResolution )
+        {
+            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsData::kMaxResolution );
+            outData = LayerWeightsData{};
             return false;
         }
-        RawImageData image;
-        if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), image ) == false )
-            return false;
-        // 디코더는 알파가 없는 원본도 255 로 채워 RGBA 로 펼치므로, 원본 채널 수로 가린다.
-        if ( image._sourceChannelCount != RawImageData::kChannelCount )
+        const size_t texelCount = static_cast<size_t>( outData._width ) * outData._height;
+        outData._bytes.assign( texelCount * LayerWeightsData::kLayerCount, 0u );
+        for ( size_t texel = 0; texel < texelCount; ++texel )
         {
-            SW_LOG_ERROR( "Splat source '%#' has %# channels, not RGBA - each channel is one layer weight, so the alpha channel (layer 3) is required", sourcePath,
-                          image._sourceChannelCount );
-            return false;
+            Memory::copy( outData._bytes.data() + texel * LayerWeightsData::kLayerCount, lowImage._bytes.data() + texel * 4, 4 );
+            if ( bHasHigh )
+                Memory::copy( outData._bytes.data() + texel * LayerWeightsData::kLayerCount + 4, highImage._bytes.data() + texel * 4, 4 );
         }
-        outData._width  = static_cast<uint32>( image._width );
-        outData._height = static_cast<uint32>( image._height );
-        outData._bytes  = std::move( image._bytes );
         if ( outData.isValid() == false )
         {
-            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, image._width, image._height, LayerWeightsData::kMaxResolution );
+            SW_LOG_ERROR( "Splat source '%#' is %#x%# - at most %# per side", sourcePath, lowImage._width, lowImage._height, LayerWeightsData::kMaxResolution );
             outData = LayerWeightsData{};
             return false;
         }
@@ -241,7 +284,12 @@ namespace sw::editor
         if ( isSourceLayerWeights( sourcePath ) )
         {
             versionText.appendFormat( "splat=%#;format=%#", Internal::kSplatImporterVersion, LayerWeightsData::kVersion );
-            return HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
+            hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
+            // 옆에 둔 레이어 4..7 파일(`x_splat1.png`)도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
+            vector<uint8> highBytes;
+            if ( FileUtil::readFile( Internal::makeHighSplatPath( sourcePath ), highBytes ) && highBytes.empty() == false )
+                hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( highBytes.data() ), highBytes.size(), false, hash );
+            return hash;
         }
         versionText.appendFormat( "importer=%#;format=%#", Internal::kImporterVersion, HeightfieldData::kVersion );
         hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );

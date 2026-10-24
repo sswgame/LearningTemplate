@@ -3,12 +3,27 @@
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "TerrainHeightfield" );
+
+    namespace
+    {
+        /** @brief 스플랫 텍셀 하나(레이어 여덟 바이트)를 가중치(0..255 그대로, 합으로 나누기 전)로 읽습니다. */
+        SurfaceLayerWeights loadTexel( const uint8* pTexel )
+        {
+            SurfaceLayerWeights result{};
+            for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
+            {
+                result.set( layer, static_cast<float32>( pTexel[layer] ) );
+            }
+            return result;
+        }
+    } // namespace
 
     void TerrainSampleRect::include( uint32 sampleX, uint32 sampleZ )
     {
@@ -67,12 +82,14 @@ namespace sw
         _resolution = 0;
     }
 
-    void TerrainHeightfield::setSplat( uint32 width, uint32 height, const vector<uint8>& rgbaBytes )
+    void TerrainHeightfield::setSplat( uint32 width, uint32 height, const vector<uint8>& layerBytes )
     {
-        const bool bMatches = width > 0 && height > 0 && static_cast<size_t>( width ) * height * 4 <= rgbaBytes.size();
-        _splatWidth         = bMatches ? width : 0u;
-        _splatHeight        = bMatches ? height : 0u;
-        _splatBytes.assign( rgbaBytes.begin(), bMatches ? rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4 ) : rgbaBytes.begin() );
+        constexpr size_t kTexelBytes = SurfaceLayerWeights::kLayerCount;
+        const size_t     usedBytes   = static_cast<size_t>( width ) * height * kTexelBytes;
+        const bool       bMatches    = width > 0 && height > 0 && usedBytes <= layerBytes.size();
+        _splatWidth                  = bMatches ? width : 0u;
+        _splatHeight                 = bMatches ? height : 0u;
+        _splatBytes.assign( layerBytes.begin(), bMatches ? layerBytes.begin() + static_cast<ptrdiff_t>( usedBytes ) : layerBytes.begin() );
     }
 
     bool TerrainHeightfield::writeHeightSamples( const vector<float32>& listHeight, const TerrainSampleRect& rect )
@@ -90,7 +107,7 @@ namespace sw
         return true;
     }
 
-    bool TerrainHeightfield::readSplatWeights( vector<float4>& outListWeight ) const
+    bool TerrainHeightfield::readSplatWeights( vector<SurfaceLayerWeights>& outListWeight ) const
     {
         outListWeight.clear();
         if ( _splatWidth == 0 || _splatHeight == 0 )
@@ -99,11 +116,44 @@ namespace sw
         outListWeight.resize( texelCount );
         for ( size_t texel = 0; texel < texelCount; ++texel )
         {
-            const uint8* pTexel  = &_splatBytes[texel * 4];
-            outListWeight[texel] = normalizeWeights( float4{ static_cast<float32>( pTexel[0] ), static_cast<float32>( pTexel[1] ), static_cast<float32>( pTexel[2] ),
-                                                             static_cast<float32>( pTexel[3] ) } );
+            outListWeight[texel] = loadTexel( &_splatBytes[texel * SurfaceLayerWeights::kLayerCount] ).computeNormalized();
         }
         return true;
+    }
+
+    bool TerrainHeightfield::makeSplatPlane( uint32 plane, const TerrainSampleRect& rect, vector<uint8>& outRgbaBytes ) const
+    {
+        outRgbaBytes.clear();
+        const bool bCanRead    = _splatWidth > 0 && _splatHeight > 0 && plane < SurfaceLayerWeights::kPlaneCount;
+        const bool bRectInside = rect.isEmpty() == false && rect._maxX < _splatWidth && rect._maxZ < _splatHeight;
+        if ( bCanRead == false || bRectInside == false )
+            return false;
+        const uint32 width  = rect._maxX - rect._minX + 1;
+        const uint32 height = rect._maxZ - rect._minZ + 1;
+        outRgbaBytes.resize( static_cast<size_t>( width ) * height * 4 );
+        for ( uint32 row = 0; row < height; ++row )
+        {
+            for ( uint32 column = 0; column < width; ++column )
+            {
+                const size_t source = ( static_cast<size_t>( rect._minZ + row ) * _splatWidth + rect._minX + column ) * SurfaceLayerWeights::kLayerCount + static_cast<size_t>( plane ) * 4;
+                const size_t target = ( static_cast<size_t>( row ) * width + column ) * 4;
+                Memory::copy( outRgbaBytes.data() + target, _splatBytes.data() + source, 4 );
+            }
+        }
+        return true;
+    }
+
+    bool TerrainHeightfield::makeFullSplatPlane( uint32 plane, vector<uint8>& outRgbaBytes ) const
+    {
+        if ( _splatWidth == 0 || _splatHeight == 0 )
+        {
+            outRgbaBytes.clear();
+            return false;
+        }
+        TerrainSampleRect all{};
+        all.include( 0, 0 );
+        all.include( _splatWidth - 1, _splatHeight - 1 );
+        return makeSplatPlane( plane, all, outRgbaBytes );
     }
 
     bool TerrainHeightfield::readHoleCells( vector<uint8>& outListHole ) const
@@ -210,7 +260,7 @@ namespace sw
         return true;
     }
 
-    bool TerrainHeightfield::writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
+    bool TerrainHeightfield::writeSplatWeights( const vector<SurfaceLayerWeights>& listWeight, const TerrainSampleRect& rect )
     {
         const bool bHasSplat    = _splatWidth > 0 && _splatHeight > 0;
         const bool bSizeMatches = listWeight.size() == static_cast<size_t>( _splatWidth ) * _splatHeight;
@@ -222,12 +272,11 @@ namespace sw
         {
             for ( uint32 texelX = rect._minX; texelX <= rect._maxX; ++texelX )
             {
-                const size_t  texel        = static_cast<size_t>( texelZ ) * _splatWidth + texelX;
-                const float4& weight       = listWeight[texel];
-                const float32 arrWeight[4] = { weight._x, weight._y, weight._z, weight._w };
-                for ( uint32 channel = 0; channel < 4; ++channel )
+                const size_t texel = static_cast<size_t>( texelZ ) * _splatWidth + texelX;
+                for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
                 {
-                    _splatBytes[texel * 4 + channel] = static_cast<uint8>( MathUtil::clamp( MathUtil::round( arrWeight[channel] * 255.0f ), 0.0f, 255.0f ) );
+                    _splatBytes[texel * SurfaceLayerWeights::kLayerCount + layer] =
+                        static_cast<uint8>( MathUtil::clamp( MathUtil::round( listWeight[texel].get( layer ) * 255.0f ), 0.0f, 255.0f ) );
                 }
             }
         }
@@ -349,45 +398,37 @@ namespace sw
         return isHoleCell( MathUtil::min( static_cast<uint32>( sampleX ), _resolution - 2 ), MathUtil::min( static_cast<uint32>( sampleZ ), _resolution - 2 ) );
     }
 
-    float4 TerrainHeightfield::normalizeWeights( const float4& weight )
-    {
-        const float32 total = weight._x + weight._y + weight._z + weight._w;
-        if ( total <= 1.0e-5f )
-            return float4{ 1.0f, 0.0f, 0.0f, 0.0f };
-        const float32 inverse = 1.0f / total;
-        return float4{ weight._x * inverse, weight._y * inverse, weight._z * inverse, weight._w * inverse };
-    }
-
-    float4 TerrainHeightfield::computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const
+    SurfaceLayerWeights TerrainHeightfield::computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const
     {
         if ( _splatWidth == 0 || _splatHeight == 0 )
-            return float4{ 1.0f, 0.0f, 0.0f, 0.0f };
-        const float32 texelX = MathUtil::saturate( terrainU ) * static_cast<float32>( _splatWidth - 1 );
-        const float32 texelY = MathUtil::saturate( terrainV ) * static_cast<float32>( _splatHeight - 1 );
-        const uint32  x0     = MathUtil::min( static_cast<uint32>( texelX ), _splatWidth - 1 );
-        const uint32  y0     = MathUtil::min( static_cast<uint32>( texelY ), _splatHeight - 1 );
-        const uint32  x1     = MathUtil::min( x0 + 1, _splatWidth - 1 );
-        const uint32  y1     = MathUtil::min( y0 + 1, _splatHeight - 1 );
-        const float32 fracX  = texelX - static_cast<float32>( x0 );
-        const float32 fracY  = texelY - static_cast<float32>( y0 );
-        float32       arrWeight[4]{};
-        for ( uint32 channel = 0; channel < 4; ++channel )
+            return SurfaceLayerWeights{};
+        const float32       texelX      = MathUtil::saturate( terrainU ) * static_cast<float32>( _splatWidth - 1 );
+        const float32       texelY      = MathUtil::saturate( terrainV ) * static_cast<float32>( _splatHeight - 1 );
+        const uint32        x0          = MathUtil::min( static_cast<uint32>( texelX ), _splatWidth - 1 );
+        const uint32        y0          = MathUtil::min( static_cast<uint32>( texelY ), _splatHeight - 1 );
+        const uint32        x1          = MathUtil::min( x0 + 1, _splatWidth - 1 );
+        const uint32        y1          = MathUtil::min( y0 + 1, _splatHeight - 1 );
+        const float32       fracX       = texelX - static_cast<float32>( x0 );
+        const float32       fracY       = texelY - static_cast<float32>( y0 );
+        constexpr size_t    kTexelBytes = SurfaceLayerWeights::kLayerCount;
+        SurfaceLayerWeights result{};
+        for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
         {
-            const float32 c00   = _splatBytes[( static_cast<size_t>( y0 ) * _splatWidth + x0 ) * 4 + channel];
-            const float32 c10   = _splatBytes[( static_cast<size_t>( y0 ) * _splatWidth + x1 ) * 4 + channel];
-            const float32 c01   = _splatBytes[( static_cast<size_t>( y1 ) * _splatWidth + x0 ) * 4 + channel];
-            const float32 c11   = _splatBytes[( static_cast<size_t>( y1 ) * _splatWidth + x1 ) * 4 + channel];
+            const float32 c00   = _splatBytes[( static_cast<size_t>( y0 ) * _splatWidth + x0 ) * kTexelBytes + layer];
+            const float32 c10   = _splatBytes[( static_cast<size_t>( y0 ) * _splatWidth + x1 ) * kTexelBytes + layer];
+            const float32 c01   = _splatBytes[( static_cast<size_t>( y1 ) * _splatWidth + x0 ) * kTexelBytes + layer];
+            const float32 c11   = _splatBytes[( static_cast<size_t>( y1 ) * _splatWidth + x1 ) * kTexelBytes + layer];
             const float32 lower = c00 + ( c10 - c00 ) * fracX;
             const float32 upper = c01 + ( c11 - c01 ) * fracX;
-            arrWeight[channel]  = ( lower + ( upper - lower ) * fracY ) * ( 1.0f / 255.0f );
+            result.set( layer, ( lower + ( upper - lower ) * fracY ) * ( 1.0f / 255.0f ) );
         }
-        return normalizeWeights( float4{ arrWeight[0], arrWeight[1], arrWeight[2], arrWeight[3] } );
+        return result.computeNormalized();
     }
 
-    float4 TerrainHeightfield::computeLayerWeightsAt( float32 worldX, float32 worldZ ) const
+    SurfaceLayerWeights TerrainHeightfield::computeLayerWeightsAt( float32 worldX, float32 worldZ ) const
     {
         if ( isValid() == false )
-            return float4{ 1.0f, 0.0f, 0.0f, 0.0f };
+            return SurfaceLayerWeights{};
         return computeLayerWeightsAtUv( ( worldX - _origin._x ) / _size._x, ( worldZ - _origin._z ) / _size._y );
     }
 } // namespace sw

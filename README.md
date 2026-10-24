@@ -32,7 +32,7 @@ C++17로 만든 학습용 게임 엔진과 에디터입니다. 상용 엔진이 
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 2/3 | 없음 | engine | G-5 |
 | - | [DedicatedServerNoRenderer](docs/plans/DedicatedServerNoRenderer.md) — 전용 서버 타깃에서 렌더러 빼기와 리눅스 확인 | 구현중 | 1/3 | 없음 | network | D7-2 |
-| - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현중 | 1/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
+| - | [EnvironmentRemainders](docs/plans/EnvironmentRemainders.md) — 환경(지형 · 식생 · 물)의 남은 것 (2026-10-24) | 구현중 | 3/4 | 없음 | graphics | D2-5, D2-5.2, D2-5.5 |
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/3 | 없음 | quality | C-41, E-8 |
 | - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 4/5 | 없음 | ui | G-10 |

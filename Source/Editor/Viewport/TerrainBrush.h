@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Environment/Placement/SurfaceLayerWeights.h"
+
 namespace sw::editor
 {
     /** @brief 브러시가 하는 일입니다. */
@@ -40,7 +42,7 @@ namespace sw::editor
         float32          _radius{ 4.0f };   ///< 월드 반경(m)
         float32          _strength{ 1.0f }; ///< 초당 변화량(높이는 m/s, 가중치는 1/s)
         float32          _falloff{ 0.5f };  ///< 0 = 가장자리까지 가득, 1 = 중심에서부터 줄어든다
-        uint32           _layerIndex{ 0 };  ///< `PaintLayer` 가 올리는 레이어(0..3)
+        uint32           _layerIndex{ 0 };  ///< `PaintLayer` 가 올리는 레이어(0..7)
     };
 } // namespace sw::editor
 
@@ -99,7 +101,7 @@ namespace sw::editor
          * @brief 샘플별 레이어 가중치(합 1) 배열에 `PaintLayer` 한 프레임을 적용합니다. 칠한 샘플은 합이 1 로 다시 맞춰집니다.
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
-        [[nodiscard]] static bool applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
+        [[nodiscard]] static bool applyLayerWeight( vector<SurfaceLayerWeights>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                                     const TerrainBrushSettings& settings, float32 deltaTime );
 
         /**

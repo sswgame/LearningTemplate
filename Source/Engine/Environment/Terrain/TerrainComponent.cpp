@@ -29,8 +29,6 @@ namespace sw
     {
         struct TerrainComponentInternal
         {
-            /** @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율입니다. 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게 합니다. */
-            static constexpr float32 kLODHysteresis = 0.1f;
             /**
              * @brief 높이 쓰기로 낡은 청크 메시를 한 프레임(쓰기 한 번 또는 틱 한 번)에 다시 만드는 최대 수입니다. 브러시 한 번이 닿는 청크(넷 이하)는 바로 끝난다.
              * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`), 257 샘플 전체(청크 64)는 288 ms 였다(정점 만들기를 워커로
@@ -42,7 +40,7 @@ namespace sw
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
             static constexpr uint32 kEditedAreaMarginCells = 2;
             /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
-            static constexpr uint32 kStateVersion = 2; ///< 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
+            static constexpr uint32 kStateVersion = 3; ///< 3: 스플랫이 텍셀마다 레이어 여덟 바이트다. 2: 구멍 마스크를 더했고, 높이의 해상도가 다시 읽은 것과 달라도 복원한다(크기 바꾸기)
 
             /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
             static string makeCPUSplatPath()
@@ -53,8 +51,9 @@ namespace sw
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
-                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "layer0Color" ), hashed_string( "layer1Color" ),
-                                                                                           hashed_string( "layer2Color" ), hashed_string( "layer3Color" ) };
+                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "layer0Color" ), hashed_string( "layer1Color" ), hashed_string( "layer2Color" ),
+                                                                                           hashed_string( "layer3Color" ), hashed_string( "layer4Color" ), hashed_string( "layer5Color" ),
+                                                                                           hashed_string( "layer6Color" ), hashed_string( "layer7Color" ) };
                 return s_arrName[layerIndex];
             }
 
@@ -103,6 +102,7 @@ namespace sw
                 const TerrainChunkLayout* _pLayout{ nullptr };
                 const ChunkMeshRequest*   _pRequest{ nullptr };
                 vector<RHIVertex>*        _pListVertex{ nullptr };
+                float32                   _geomorphLODDistance{ 0.0f }; ///< 0 보다 크면 정점에 지오모프 값을 쓴다(`TerrainMeshBuilder::applyGeomorph`)
 
                 void run( uint32 start, uint32 end )
                 {
@@ -112,6 +112,8 @@ namespace sw
                         const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
                         const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
                         TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, _pListVertex[index] );
+                        if ( _geomorphLODDistance > 0.0f )
+                            TerrainMeshBuilder::applyGeomorph( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, _geomorphLODDistance, _pListVertex[index] );
                     }
                 }
             };
@@ -135,6 +137,7 @@ namespace sw
         , _cliffLayer{ -1 }
         , _chunkCells{ 32 }
         , _lodDistance{ 40.0f }
+        , _bGeomorph{ SW_FALSE }
         , _heightfield{}
         , _layout{}
         , _listChunk{}
@@ -451,28 +454,28 @@ namespace sw
         return replaceHeightfield( resolution, listHeight, listHole );
     }
 
-    bool TerrainComponent::writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
+    bool TerrainComponent::writeLayerWeights( const vector<SurfaceLayerWeights>& listWeight, const TerrainSampleRect& rect )
     {
         if ( _heightfield.writeSplatWeights( listWeight, rect ) == false )
             return false;
         ++_splatRevision;
         markSplatChunks( rect );
         // 엔진 서비스가 없으면(CPU 테스트) 텍스처가 없고 CPU 값만 바뀐다.
-        if ( _cpuSplatPath.empty() )
+        if ( _arrCPUSplatPath[0].empty() )
             return true;
-        TextureCache&        textures   = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-        const uint32         splatWidth = _heightfield.getSplatWidth();
-        const vector<uint8>& listByte   = _heightfield.getSplatBytes();
-        // 바뀐 사각형만 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다).
-        const uint32  width  = rect._maxX - rect._minX + 1;
-        const uint32  height = rect._maxZ - rect._minZ + 1;
-        vector<uint8> rgbaBytes( static_cast<size_t>( width ) * height * 4 );
-        for ( uint32 row = 0; row < height; ++row )
+        // 바뀐 사각형만 평면마다 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다).
+        TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        const uint32  width    = rect._maxX - rect._minX + 1;
+        const uint32  height   = rect._maxZ - rect._minZ + 1;
+        for ( uint32 plane = 0; plane < SurfaceLayerWeights::kPlaneCount; ++plane )
         {
-            const size_t source = ( static_cast<size_t>( rect._minZ + row ) * splatWidth + rect._minX ) * 4;
-            Memory::copy( rgbaBytes.data() + static_cast<size_t>( row ) * width * 4, listByte.data() + source, static_cast<size_t>( width ) * 4 );
+            vector<uint8> rgbaBytes;
+            const bool    bPlaneMade = _heightfield.makeSplatPlane( plane, rect, rgbaBytes );
+            SW_ASSERT( bPlaneMade ); // 쓰기가 막 성공했으므로 사각형은 스플랫 안이다
+            if ( bPlaneMade == false )
+                continue;
+            textures.requestRegionUpdate( _arrCPUSplatPath[plane], rect._minX, rect._minZ, width, height, std::move( rgbaBytes ) );
         }
-        textures.requestRegionUpdate( _cpuSplatPath, rect._minX, rect._minZ, width, height, std::move( rgbaBytes ) );
         return true;
     }
 
@@ -536,11 +539,14 @@ namespace sw
 
     void TerrainComponent::releaseCPUSplat()
     {
-        if ( _cpuSplatPath.empty() )
-            return;
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseCPUTexture( _cpuSplatPath );
-        _cpuSplatPath.clear();
+        for ( string& path : _arrCPUSplatPath )
+        {
+            if ( path.empty() )
+                continue;
+            if ( engine::areEngineServicesBound() )
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseCPUTexture( path );
+            path.clear();
+        }
     }
 
     bool TerrainComponent::saveHeightfield( string_view filePath ) const
@@ -673,18 +679,20 @@ namespace sw
         archive >> width >> height >> splatBytes;
         const size_t texelCount = static_cast<size_t>( width ) * height;
         const bool   bFits      = archive.isOk() && texelCount > 0 && width == _heightfield.getSplatWidth() && height == _heightfield.getSplatHeight();
-        if ( bFits == false || splatBytes.size() != texelCount * 4 )
+        if ( bFits == false || splatBytes.size() != texelCount * SurfaceLayerWeights::kLayerCount )
         {
             SW_LOG_WARNING( "Terrain '%#': unsaved splat edits (%#x%#) do not fit the reloaded splat - keeping the asset values", _heightfieldPath.c_str(), width, height );
             return;
         }
         // 바이트를 그대로 되돌리도록 가중치는 정규화하지 않는다(`writeLayerWeights` 는 x 255 를 반올림한다).
-        vector<float4> listWeight( texelCount );
+        vector<SurfaceLayerWeights> listWeight( texelCount );
         for ( size_t texel = 0; texel < texelCount; ++texel )
         {
-            const uint8* pTexel = &splatBytes[texel * 4];
-            listWeight[texel]   = float4{ static_cast<float32>( pTexel[0] ) / 255.0f, static_cast<float32>( pTexel[1] ) / 255.0f, static_cast<float32>( pTexel[2] ) / 255.0f,
-                                        static_cast<float32>( pTexel[3] ) / 255.0f };
+            const uint8* pTexel = &splatBytes[texel * SurfaceLayerWeights::kLayerCount];
+            for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
+            {
+                listWeight[texel].set( layer, static_cast<float32>( pTexel[layer] ) / 255.0f );
+            }
         }
         TerrainSampleRect all{};
         all.include( 0, 0 );
@@ -710,21 +718,31 @@ namespace sw
         // 그리는 호스트는 이 바이트로 자기 GPU 텍스처를 만든다(칠하기도 이 텍스처를 고친다). 엔진 서비스가 없으면(CPU 테스트) CPU 값만 둔다.
         if ( engine::areEngineServicesBound() == false )
             return true;
-        string path = TerrainComponentInternal::makeCPUSplatPath();
-        if ( engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().createCPUTexture( path, data._width, data._height, std::move( data._bytes ) ) == false )
+        // RGBA8 한 장에 레이어 넷이다 - 평면마다 텍스처 하나를 만든다.
+        TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        for ( uint32 plane = 0; plane < SurfaceLayerWeights::kPlaneCount; ++plane )
         {
-            SW_LOG_ERROR( "Terrain '%#': could not create the splat texture for '%#' (%#x%#)", _heightfieldPath.c_str(), _layerWeightsPath.c_str(), data._width, data._height );
-            return false;
+            vector<uint8> rgbaBytes;
+            string        path  = TerrainComponentInternal::makeCPUSplatPath();
+            const bool    bMade = _heightfield.makeFullSplatPlane( plane, rgbaBytes ) && textures.createCPUTexture( path, data._width, data._height, std::move( rgbaBytes ) );
+            if ( bMade == false )
+            {
+                SW_LOG_ERROR( "Terrain '%#': could not create splat texture %# for '%#' (%#x%#)", _heightfieldPath.c_str(), plane, _layerWeightsPath.c_str(), data._width, data._height );
+                releaseCPUSplat(); // 만든 평면이 있으면 놓는다 - 반쪽 스플랫으로 그리지 않는다
+                return false;
+            }
+            _arrCPUSplatPath[plane] = std::move( path );
         }
-        _cpuSplatPath = std::move( path );
         return true;
     }
 
     void TerrainComponent::acquireMaterial()
     {
         using Internal = TerrainComponentInternal;
-        // 칸이 비면 엔진 기본 지형 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
-        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._terrainMaterial.get() : _materialPath;
+        // 칸이 비면 엔진 기본 지형 머티리얼이다 - 지오모프를 켰으면 정점 변형을 켠 쌍둥이 머티리얼이다(둘 다 값의 기준은 엔진 기본 에셋 표).
+        const EngineDefaultAssets& defaults     = engine::getSubsystem<EngineDefaultAssets>();
+        const string&              defaultPath  = _bGeomorph == SW_TRUE ? defaults._terrainGeomorphMaterial.get() : defaults._terrainMaterial.get();
+        const string&              materialPath = _materialPath.empty() ? defaultPath : _materialPath;
         if ( _material.acquire( materialPath ) == false )
             return;
         for ( uint32 layerIndex = 0; layerIndex < kMaxLayerCount; ++layerIndex )
@@ -739,12 +757,16 @@ namespace sw
             arrDetail[layerIndex]    = _listLayer[layerIndex]._detailStrength;
             arrTriplanar[layerIndex] = _listLayer[layerIndex]._bTriplanar ? 1.0f : 0.0f;
         }
+        // 레이어 넷마다 벡터 하나 - 평면 0 은 레이어 0..3 (layerDetail · layerTriplanar), 평면 1 은 레이어 4..7 (layerDetail1 · layerTriplanar1).
         _material.setVector( hashed_string( "layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
         _material.setVector( hashed_string( "layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
+        _material.setVector( hashed_string( "layerDetail1" ), float4{ arrDetail[4], arrDetail[5], arrDetail[6], arrDetail[7] } );
+        _material.setVector( hashed_string( "layerTriplanar1" ), float4{ arrTriplanar[4], arrTriplanar[5], arrTriplanar[6], arrTriplanar[7] } );
         // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 절벽 임계값(노멀 y), w 는 절벽 레이어(-1 이면 끔)다.
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
         _material.setVector( hashed_string( "terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
-        _material.setTexture( hashed_string( "splatMap" ), _cpuSplatPath );
+        _material.setTexture( hashed_string( "splatMap" ), _arrCPUSplatPath[0] );
+        _material.setTexture( hashed_string( "splatMap1" ), _arrCPUSplatPath[1] );
         _material.setTexture( hashed_string( "detailMap" ), _detailTexturePath );
     }
 
@@ -807,10 +829,11 @@ namespace sw
             }
         }
         Internal::ChunkVertexJob job{};
-        job._pHeightfield = &_heightfield;
-        job._pLayout      = &_layout;
-        job._pRequest     = listRequest.data();
-        job._pListVertex  = listChunkVertex.data();
+        job._pHeightfield        = &_heightfield;
+        job._pLayout             = &_layout;
+        job._pRequest            = listRequest.data();
+        job._pListVertex         = listChunkVertex.data();
+        job._geomorphLODDistance = _bGeomorph == SW_TRUE ? _lodDistance : 0.0f;
         engine::runParallel( rebuildCount, Internal::kParallelChunkMeshCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::ChunkVertexJob::run, &job ) );
 
         // 메시 생성과 배치 교체는 레지스트리 더티 표시를 건드리므로 이 스레드에서 한다.
@@ -820,7 +843,11 @@ namespace sw
             chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
-            mesh->setVertices( std::move( listChunkVertex[index] ) );
+            // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담았다 - 탄젠트를 다시 구하면 지운다.
+            if ( _bGeomorph == SW_TRUE && _lodDistance > 0.0f )
+                mesh->setVerticesWithTangents( std::move( listChunkVertex[index] ) );
+            else
+                mesh->setVertices( std::move( listChunkVertex[index] ) );
             chunk._batch->setMesh( std::move( mesh ) );
         }
     }
@@ -849,7 +876,7 @@ namespace sw
             // 임계값 근처에서 흔들리지 않게 한다. 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
             if ( wantedLOD != currentLOD )
             {
-                const float32 margin = wantedLOD > currentLOD ? ( 1.0f - Internal::kLODHysteresis ) : ( 1.0f + Internal::kLODHysteresis );
+                const float32 margin = wantedLOD > currentLOD ? ( 1.0f - TerrainMeshBuilder::kLODHysteresis ) : ( 1.0f + TerrainMeshBuilder::kLODHysteresis );
                 if ( TerrainMeshBuilder::selectLOD( distance * margin, _lodDistance, _layout._maxLOD ) != wantedLOD )
                     wantedLOD = currentLOD;
             }

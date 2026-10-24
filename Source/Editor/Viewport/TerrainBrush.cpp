@@ -8,25 +8,6 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        /** @brief 레이어 @p index 성분의 주소입니다(0..3 밖이면 마지막 성분). */
-        float32& getComponent( float4& value, uint32 index )
-        {
-            switch ( index )
-            {
-                case 0:
-                    return value._x;
-                case 1:
-                    return value._y;
-                case 2:
-                    return value._z;
-                default:
-                    return value._w;
-            }
-        }
-    } // namespace
-
     TerrainBrushTarget TerrainBrush::getTarget( TerrainBrushMode mode )
     {
         switch ( mode )
@@ -185,10 +166,10 @@ namespace sw::editor
         return bChanged;
     }
 
-    bool TerrainBrush::applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
+    bool TerrainBrush::applyLayerWeight( vector<SurfaceLayerWeights>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                          const TerrainBrushSettings& settings, float32 deltaTime )
     {
-        const bool bCannotPaintLayer = settings._mode != TerrainBrushMode::PaintLayer || settings._layerIndex > 3 ||
+        const bool bCannotPaintLayer = settings._mode != TerrainBrushMode::PaintLayer || settings._layerIndex >= SurfaceLayerWeights::kLayerCount ||
                                        inOutListWeight.size() != static_cast<size_t>( resolution ) * resolution;
         if ( bCannotPaintLayer )
             return false;
@@ -197,18 +178,17 @@ namespace sw::editor
         {
             if ( sample._sampleX >= resolution || sample._sampleZ >= resolution )
                 continue;
-            float4&       weight = inOutListWeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
-            const float32 amount = MathUtil::saturate( settings._strength * sample._weight * deltaTime );
-            float32&      target = getComponent( weight, settings._layerIndex );
+            SurfaceLayerWeights& weight = inOutListWeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
+            const float32        amount = MathUtil::saturate( settings._strength * sample._weight * deltaTime );
+            const float32        target = weight.get( settings._layerIndex );
             if ( amount <= 0.0f || target >= 1.0f )
                 continue;
             // 목표 레이어를 1 쪽으로 amount 만큼 당기고, 나머지 레이어는 같은 비율로 줄여 합 1 을 지킨다.
             const float32 others = 1.0f - target;
             const float32 scale  = others > 0.0f ? ( 1.0f - ( target + ( 1.0f - target ) * amount ) ) / others : 0.0f;
-            for ( uint32 layer = 0; layer < 4; ++layer )
+            for ( uint32 layer = 0; layer < SurfaceLayerWeights::kLayerCount; ++layer )
             {
-                float32& component = getComponent( weight, layer );
-                component          = layer == settings._layerIndex ? target + ( 1.0f - target ) * amount : component * scale;
+                weight.set( layer, layer == settings._layerIndex ? target + ( 1.0f - target ) * amount : weight.get( layer ) * scale );
             }
             bChanged = true;
         }

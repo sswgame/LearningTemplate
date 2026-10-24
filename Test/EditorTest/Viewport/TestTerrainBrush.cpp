@@ -117,9 +117,9 @@ SW_TEST_CASE( TerrainBrushTest, SmoothPullsTowardNeighborAverage )
  */
 SW_TEST_CASE( TerrainBrushTest, PaintLayerKeepsSumOne )
 {
-    const uint32               resolution = 2;
-    vector<float4>             listWeight( resolution * resolution, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-    vector<TerrainBrushSample> listSample{
+    const uint32                resolution = 2;
+    vector<SurfaceLayerWeights> listWeight( resolution * resolution, SurfaceLayerWeights{} );
+    vector<TerrainBrushSample>  listSample{
         TerrainBrushSample{ 0, 0, 1.0f }
     };
 
@@ -128,11 +128,20 @@ SW_TEST_CASE( TerrainBrushTest, PaintLayerKeepsSumOne )
     settings._layerIndex = 2;
     settings._strength   = 0.5f;
     SW_EXPECT_TRUE( TerrainBrush::applyLayerWeight( listWeight, resolution, listSample, settings, 1.0f ) );
-    const float4& weight = listWeight[0];
-    SW_EXPECT_NEAR_EQUAL( 0.5f, weight._z, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, weight._x, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, weight._x + weight._y + weight._z + weight._w, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[1]._x, 1e-6f );
+    const SurfaceLayerWeights& weight = listWeight[0];
+    SW_EXPECT_NEAR_EQUAL( 0.5f, weight.get( 2 ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, weight.get( 0 ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, weight.getSum(), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[1].get( 0 ), 1e-6f );
+
+    // 높은 평면의 레이어(4..7)도 칠한다 - 합은 여덟 레이어 전체에서 1 이다. 레이어 8 이상은 거절한다.
+    settings._layerIndex = 6;
+    SW_EXPECT_TRUE( TerrainBrush::applyLayerWeight( listWeight, resolution, listSample, settings, 1.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, weight.get( 6 ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, weight.get( 2 ), 1e-6f ); // 앞 칠하기의 0.5 가 반으로 줄었다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, weight.getSum(), 1e-6f );
+    settings._layerIndex = SurfaceLayerWeights::kLayerCount;
+    SW_EXPECT_FALSE( TerrainBrush::applyLayerWeight( listWeight, resolution, listSample, settings, 1.0f ) );
 }
 
 /**

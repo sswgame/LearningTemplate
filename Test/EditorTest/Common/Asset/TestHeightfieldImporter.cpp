@@ -139,13 +139,33 @@ SW_TEST_CASE( HeightfieldImporterTest, ImportsSplatSourceAsLayerWeights )
     SW_ASSERT_TRUE( data.loadFromMemory( bytes, imported ) );
     SW_EXPECT_EQUAL( 2u, data._width );
     SW_EXPECT_EQUAL( 2u, data._height );
-    const uint8 arrExpected[] = { 255, 0, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 10, 20, 30, 195 };
+    // 텍셀마다 레이어 여덟 바이트 - 레이어 4..7 은 곁 파일(`_splat1.png`)이 없으면 0 이다.
+    const uint8 arrExpected[] = { 255, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 0, 0, 10, 20, 30, 195, 0, 0, 0, 0 };
     SW_ASSERT_EQUAL( sizeof( arrExpected ), data._bytes.size() );
     for ( size_t index = 0; index < sizeof( arrExpected ); ++index )
     {
         SW_EXPECT_EQUAL( arrExpected[index], data._bytes[index] );
     }
     SW_EXPECT_TRUE( sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::CheckOnly ).isClean() );
+
+    // 레이어 4..7 은 곁 파일 `hill_splat1.png` 에 둔다 - 스플랫 원본이 아니고 높이장도 아니지만(자기 스탬프가 없다) 그것만 고쳐도 어긋남이다.
+    const sw::string highSource = sw::FileUtil::joinPath( rawFolder, "hill_splat1.png" );
+    SW_ASSERT_TRUE( Internal::writeBytes( highSource, Internal::kArrSplatRgbaPng, sizeof( Internal::kArrSplatRgbaPng ) ) );
+    SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::isSourceLayerWeights( highSource ) );
+    SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::isSourceHeightfield( highSource ) );
+    SW_EXPECT_FALSE( sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::CheckOnly ).isClean() );
+    summary = sw::editor::HeightfieldImporter::importAllHeightfields( resourceRoot, sw::editor::AssetImportMode::ImportStale );
+    SW_EXPECT_TRUE( summary.isClean() );
+    SW_EXPECT_EQUAL( 1u, summary._importedCount );
+    sw::vector<uint8> highBytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( imported, highBytes ) );
+    SW_ASSERT_TRUE( data.loadFromMemory( highBytes, imported ) );
+    const uint8 arrHighExpected[] = { 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0, 0, 0, 255, 0, 10, 20, 30, 195, 10, 20, 30, 195 };
+    SW_ASSERT_EQUAL( sizeof( arrHighExpected ), data._bytes.size() );
+    for ( size_t index = 0; index < sizeof( arrHighExpected ); ++index )
+    {
+        SW_EXPECT_EQUAL( arrHighExpected[index], data._bytes[index] );
+    }
 
     // 알파 없는 스플랫은 읽지 않는다(디코더가 알파를 255 로 채우면 레이어 3 이 말없이 가득 찬다). 원본이 바뀌었으니 어긋남이고 임포트는 실패한다.
     SW_ASSERT_TRUE( Internal::writeBytes( splatSource, Internal::kArrSplatRgbPng, sizeof( Internal::kArrSplatRgbPng ) ) );

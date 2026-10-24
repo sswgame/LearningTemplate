@@ -37,6 +37,7 @@
                      _tileMapMaterial="engine/materials/sprite2dpixel.material"
                      _foliageMaterial="engine/materials/foliage.material"
                      _terrainMaterial="engine/materials/terrain.material"
+                     _terrainGeomorphMaterial="engine/materials/terrain_geomorph.material"
                      _waterMaterial="engine/materials/water.material"
                      _defaultForwardPipeline="engine/pipeline/forwardpipeline.xml"
                      _defaultDeferredPipeline="engine/pipeline/deferredpipeline.xml"
