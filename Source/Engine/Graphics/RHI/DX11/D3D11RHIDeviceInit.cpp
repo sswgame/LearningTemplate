@@ -108,6 +108,23 @@ namespace sw
             }
         }
 
+        // GPU 완료를 확인하는 이벤트 쿼리(waitIdle 용 하나, 프레임마다 내는 링)를 지금 만든다. 없으면 `waitIdle` 과 `enqueueGPURelease` 가 "GPU 가 끝난 뒤" 를
+        // 지킬 수 없으므로 폴백 없이 초기화를 실패시킨다.
+        {
+            D3D11_QUERY_DESC eventDesc{};
+            eventDesc.Query              = D3D11_QUERY_EVENT;
+            bool bCompletionQueriesReady = SUCCEEDED( _device->CreateQuery( &eventDesc, _idleQuery.GetAddressOf() ) );
+            for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )
+            {
+                bCompletionQueriesReady = bCompletionQueriesReady && SUCCEEDED( _device->CreateQuery( &eventDesc, frameDoneQuery.GetAddressOf() ) );
+            }
+            if ( bCompletionQueriesReady == false )
+            {
+                SW_LOG_ERROR( "Failed to create the D3D11 event queries that confirm GPU completion" );
+                return false;
+            }
+        }
+
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
         _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
 
@@ -213,6 +230,13 @@ namespace sw
         _listUavSourceBuffer.clear();
         _listUavFree.clear();
         _recordingState = D3D11RecordingState{};
+        _idleQuery.Reset();
+        for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )
+        {
+            frameDoneQuery.Reset();
+        }
+        _frameSerial          = 0;
+        _completedFrameSerial = 0;
         _deviceContext.Reset();
         _memoryAdapter.Reset();
         _device.Reset();

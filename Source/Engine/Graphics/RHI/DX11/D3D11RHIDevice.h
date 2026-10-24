@@ -141,7 +141,7 @@ namespace sw
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 프레임 지연(`kGPUReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. D3D11 은 펜스 대신 endFrame 횟수로 셉니다. */
+        /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. D3D11 은 펜스 대신 프레임 끝마다 내는 이벤트 쿼리(`_arrFrameDoneQuery`)로 확인합니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
@@ -214,6 +214,12 @@ namespace sw
         void ensureTimestampResources();
         /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
         void collectTimestampsForSlot();
+        /**
+         * @brief 방금 끝낸 프레임에 완료 쿼리를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
+         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
+         *          기다리지 않으면 Present 를 하지 않는 반복(오프스크린)에서 GPU 가 얼마든지 뒤처져 "GPU 가 끝난 뒤" 라는 콜백의 약속이 깨진다.
+         */
+        void retireFrameOnGPU();
 
         /// @brief 버퍼와 그 SRV 입니다. SRV 는 셰이더가 버퍼로 읽는 것(구조 버퍼와 인다이렉트 인자 버퍼)에만 있습니다.
         struct BufferRecord
@@ -403,8 +409,12 @@ namespace sw
          * @details disjoint 로 감싸지 않는다. 프레임의 disjoint 가 열려 있는 동안 불리고, 주파수는 마지막 프레임의 disjoint 값을 쓴다.
          */
         Microsoft::WRL::ComPtr<ID3D11Query> _clockQuery;
-        /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 처음 기다릴 때 만듭니다.
+        /// @brief `waitIdleInternal` 이 GPU 가 앞선 일을 모두 끝냈는지 묻는 이벤트 쿼리입니다. 디바이스를 세울 때 만들고, 못 만들면 초기화가 실패합니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
+        /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 입니다. 디바이스를 세울 때 만듭니다.
+        Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[constant::kMaxFrameCountInFlight];
+        uint64                              _frameSerial;            ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
+        uint64                              _completedFrameSerial;   ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         vector<RHIBufferHandle> _listRegisteredBindless;
