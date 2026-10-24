@@ -231,6 +231,8 @@
   업계 용어(버전, 빌드, 베이크, 테이블, 슬롯, 레지스트리, 엔드포인트)를 그대로 쓰고 순우리말 조어를 만들지 않습니다. 전문은 [문서 쓰기 지침](10_WritingDocs.md)이고 코드 주석과 커밋 메시지에도 같은 기준을 씁니다.
 - **다음 이름 점검의 결론**(2026-10-24, 접미어 규칙은 위 "클래스 접미어" 항목). `Context` 타입 약 50 개는 호출 · 패스 · 프레임 하나 동안 넘기는 환경이거나 그래픽스 API 용어라 두고, 매니저가 들고 있는 상태만 `Record` 로 바꿨습니다(`LiveReloadManager::ModuleRecord`). 같은 이름의 타입이 따로 있는 `*Util` 일곱(`EditorViewTargetUtil` · `FrameRendererUtil` · `InspectorBuiltinValueUtil` · `MeshModifierUtil` · `ReflectUnitUtil` · `SceneNavigationUtil` · `ServiceRecordUtil`)은 그 타입의 인스턴스를 받는 함수가 아니라 기능에 딸린 상태 없는 도우미라 메서드로 옮기지 않습니다(옮기면 헤더 의존만 늘어납니다). `Unit` 의 세 뜻(게임 플레이 유닛 · `AnimationSystem` 의 스켈레탈 메시 컴포넌트 · 측정 단위)은 같은 파일에서 섞이지 않아 이름을 두고 `NamingCpp.md` 에 적었습니다. 단독 `value` 는 약 650 곳 중 이름이 곧 뜻인 곳(비트 · 해시 도우미 인자, `Wrapper<T>::_value`, `key=value` 의 오른쪽)은 두고 뜻이 다른 이름으로 드러나는 열세 곳만 바꿨습니다.
 
+- **작업자 보고에는 "같은 결함 후보" 절을 필수로 둔다**(사용자 결정 2026-10-25 — 위치 · 모양 · 확인 수준 · 네 칸 분류 · 읽지 않은 범위). 고칠 수 있는 같은 모양은 작업자가 같은 브랜치에서 고치고, 큰 것은 통합 담당이 `NEXT.md` 로 모았다가 `Candidates-<영역>.md` 로 내린다. 보고 끝에 흘려 쓴 "다른 곳에도 있을 수 있다"는 인계되지 않아 사라졌다. 틀은 `plans/WorkerRules.md` 5절.
+
 ### 5-2. 빌드, 스크립트, CI
 
 - **GPU 잠금은 공유(두 프로세스)와 독점으로 나눈다 — 기능 확인 실행은 공유로 병렬, 측정 · 장치 제거 실험은 독점**(2026-10-15, `shared-lock acquire gpu --shared`). 결정적 시나리오와 hostgpu 는 서로의 수치를 오염시키지 않아
