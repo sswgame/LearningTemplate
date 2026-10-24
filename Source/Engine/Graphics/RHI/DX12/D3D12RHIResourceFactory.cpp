@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
+#include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -711,6 +712,44 @@ namespace sw
         }
 
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
+    }
+
+    RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    {
+        uint32     totalBytes{ 0 };
+        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        if ( bInvalidReadbackRequest )
+            return 0;
+        const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
+        Microsoft::WRL::ComPtr<ID3D12Resource> readback;
+        if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                                 IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
+            return 0;
+        // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`_mapStructuredBufferState`)에 올리지 않는다.
+        return _pDevice->storeBuffer( readback );
+    }
+
+    bool D3D12RHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    {
+        ID3D12Resource* pResource   = _pDevice->resolveBuffer( readback );
+        const bool      bUnreadable = pResource == nullptr || pDestination == nullptr || sizeBytes == 0;
+        if ( bUnreadable )
+            return false;
+        const bool bTooLarge = static_cast<uint64>( sizeBytes ) > pResource->GetDesc().Width;
+        if ( bTooLarge )
+        {
+            SW_LOG_ERROR( "readReadbackBuffer: %# bytes is past the end of the readback buffer", sizeBytes );
+            return false;
+        }
+        void*             pMapped{ nullptr };
+        const D3D12_RANGE readRange{ 0, sizeBytes };
+        if ( FAILED( pResource->Map( 0, &readRange, &pMapped ) ) || pMapped == nullptr )
+            return false;
+        Memory::copy( pDestination, pMapped, sizeBytes );
+        const D3D12_RANGE noWrite{ 0, 0 };
+        pResource->Unmap( 0, &noWrite );
+        return true;
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.

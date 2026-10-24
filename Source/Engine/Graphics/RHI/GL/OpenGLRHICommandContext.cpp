@@ -372,6 +372,7 @@ namespace sw
                 break;
             }
             case RHIBufferState::CopyDest:
+            case RHIBufferState::CopySource:
             {
                 glMemoryBarrier( GL_BUFFER_UPDATE_BARRIER_BIT );
                 break;
@@ -381,6 +382,22 @@ namespace sw
                 break;
             }
         }
+    }
+
+    void OpenGLRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE || sizeBytes == 0 )
+            return;
+        const GLuint sourceName = _pDevice->resolveGlBuffer( source );
+        const GLuint targetName = _pDevice->resolveGlBuffer( readback );
+        if ( sourceName == 0 || targetName == 0 )
+            return;
+        // 복사용 바인딩 지점을 쓴다 — SSBO · 인다이렉트 바인딩을 건드리지 않는다.
+        glBindBuffer( GL_COPY_READ_BUFFER, sourceName );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, targetName );
+        glCopyBufferSubData( GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, static_cast<GLsizeiptr>( sizeBytes ) );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
     void OpenGLRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )

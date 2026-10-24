@@ -198,6 +198,14 @@ namespace sw
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                 = 0;
         /**
+         * @brief 버퍼 앞쪽 @p sizeBytes 를 읽기 버퍼(`IRHIResourceFactory::createReadbackBuffer`)로 복사합니다. GPU 가 끝낸 뒤 CPU 가 읽는 비동기 되읽기의 기록 쪽입니다.
+         * @param source    복사할 버퍼. 부르기 전에 `transitionBuffer( source, RHIBufferState::CopySource )` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다).
+         * @param readback  `createReadbackBuffer` 가 만든 버퍼. 원본보다 작지 않아야 한다.
+         * @details 복사는 이 리스트의 GPU 순서에 들어간다. 끝났는지는 `IRHIDevice::enqueueGPURelease` 콜백이 알려 주고, 그 콜백 안에서 `readReadbackBuffer` 로 읽는다.
+         *          렌더 패스 밖에서 불러야 한다(Vulkan 은 열린 패스를 닫는다).
+         */
+        virtual void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;
+        /**
          * @brief 앞선 디스패치의 UAV 쓰기가 끝난 뒤에 다음 디스패치가 읽도록 막습니다.
          * @details 상태가 바뀌지 않는 전이(UAV → UAV)는 `transitionBuffer` 가 아무것도 하지 않는다.
          *          그런데 컴퓨트 두 개가 **같은 버퍼를 이어서** 쓰고 읽으면 그 사이에 장벽이 필요하다.

@@ -338,6 +338,45 @@ namespace sw
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 
+    RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    {
+        uint32     totalBytes{ 0 };
+        const bool bInvalidReadbackRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 || RHIBufferSize::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
+        if ( bInvalidReadbackRequest )
+            return 0;
+        ScopedOpenGLContext contextScope( _pDevice );
+        GLuint              name{ 0 };
+        glGenBuffers( 1, &name );
+        if ( name == 0 )
+            return 0;
+        // GL_STREAM_READ: GPU 가 쓰고 CPU 가 읽는 용도 힌트. 대상은 GL_COPY_WRITE_BUFFER 라 다른 바인딩을 건드리지 않는다.
+        glBindBuffer( GL_COPY_WRITE_BUFFER, name );
+        glBufferData( GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>( totalBytes ), nullptr, GL_STREAM_READ );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+        return _pDevice->storeGlBuffer( name, totalBytes );
+    }
+
+    bool OpenGLRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    {
+        const bool bInvalidRead = _pDevice->_bInitialized == SW_FALSE || pDestination == nullptr || sizeBytes == 0;
+        if ( bInvalidRead )
+            return false;
+        const GLuint name = _pDevice->resolveGlBuffer( readback );
+        if ( name == 0 )
+            return false;
+        ScopedOpenGLContext contextScope( _pDevice );
+        glBindBuffer( GL_COPY_READ_BUFFER, name );
+        GLint bufferBytes{ 0 };
+        glGetBufferParameteriv( GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &bufferBytes );
+        const bool bFits = static_cast<int64>( sizeBytes ) <= static_cast<int64>( bufferBytes );
+        if ( bFits )
+            glGetBufferSubData( GL_COPY_READ_BUFFER, 0, static_cast<GLsizeiptr>( sizeBytes ), pDestination );
+        else
+            SW_LOG_ERROR( "readReadbackBuffer: %# bytes is past the end of the %#-byte readback buffer", sizeBytes, static_cast<int64>( bufferBytes ) );
+        glBindBuffer( GL_COPY_READ_BUFFER, 0 );
+        return bFits;
+    }
+
     bool OpenGLRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord               = _pDevice->resolveTexture( texture );

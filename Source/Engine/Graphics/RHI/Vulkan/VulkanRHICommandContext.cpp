@@ -66,6 +66,12 @@ namespace sw
                     stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
                     break;
                 }
+                case RHIBufferState::CopySource:
+                {
+                    access = VK_ACCESS_TRANSFER_READ_BIT;
+                    stage  = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                    break;
+                }
                 case RHIBufferState::VertexOrConstant:
                 {
                     access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
@@ -564,6 +570,25 @@ namespace sw
 
         vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
         pRecord->_state = newState;
+    }
+
+    void VulkanRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
+    {
+        VkCommandBuffer                      cmd            = commandBuffer();
+        VulkanRHIDevice::VulkanBufferRecord* pSource        = _pDevice->resolveAllocatedBuffer( source );
+        VulkanRHIDevice::VulkanBufferRecord* pTarget        = _pDevice->resolveAllocatedBuffer( readback );
+        const bool                           bNothingToCopy = cmd == VK_NULL_HANDLE || pSource == nullptr || pTarget == nullptr || pSource->_buffer == VK_NULL_HANDLE || pTarget->_buffer == VK_NULL_HANDLE || sizeBytes == 0;
+        if ( bNothingToCopy )
+            return;
+        // 복사는 렌더 패스 밖에서만 기록한다.
+        if ( _pState->_bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( cmd );
+            _pState->_bRenderPassActive = SW_FALSE;
+        }
+        VkBufferCopy region{};
+        region.size = sizeBytes;
+        vkCmdCopyBuffer( cmd, pSource->_buffer, pTarget->_buffer, 1, &region );
     }
 
     void VulkanRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
