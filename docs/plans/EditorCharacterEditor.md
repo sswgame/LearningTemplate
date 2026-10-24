@@ -1,6 +1,6 @@
 # 캐릭터 편집 창 구현 계획 (D4-8 ⑥)
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 5/6
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 6/6
 
 캐릭터 외형 편집 창의 설계 근거입니다(외형 통합 쪽은 [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md)). 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
@@ -110,8 +110,11 @@ Engine 은 GameFramework 를 모르므로, 창은 **에디터 쪽에서 GameFram
     창은 세대가 바뀔 때 `setFitResult` 로 올려 요약(잘린 면 · 조임 강도 · 관통 수 · 깊이)을 보인다.
   - 단계 6 썸네일: `EditorPreviewViewport::requestImageFile`(렌더 타깃 한 장을 파일로, `RenderThread::requestScreenshot`)을 더했다. "Save thumbnail" 이 같은 이름의 프리셋 옆에 `<프리셋 파일>.<이름>.png` 를 쓰고
     `UserAppearancePresetStore::setThumbnailPath` 로 잇는다(프리셋을 먼저 저장해야 하고, 현재 선택으로 다시 저장한다).
-- 남은 것:
-  - 단계 5 의 관통 점 표시: `FitPenetration` 은 부품 짝 · 점 수 · 깊이만 들고 위치가 없어 뷰포트에 점을 찍을 수 없다 — 풀이기(`FitSolver`)가 관통 점 위치를 내게 넓히는 일이 먼저다(요약 표는 있다).
-  - 슬라이더의 대칭 그룹(`_symmetry`) 동시 편집: 편집 모델(`AppearanceEditModel`)이 스키마를 몰라 지금은 매개변수 하나씩 바뀐다.
-  - 뷰포트 기즈모 포즈 편집 · 제약 리그 미리보기 · 편집 중(저장 전) 소켓을 미리보기에 바로 보이기(지금은 조립한 소켓 파일의 자리) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만).
-  - 확인(통합에서 확인): 매니페스트 id `editor-charactereditor-scenario`(슬라이더 사진 포함).
+- **남았던 것이 들어갔다(2026-10-24, 빌드 미확인)**:
+  - 단계 5 의 관통 점 표시: 풀이기(`FitOperator::countInside`)가 관통 점의 바인드 공간 위치를 `FitPenetration::_listPoint` 에 모으고(상한 `kMaxPointCount`), 요약(`FitPenetrationSummary::_listPoint`)이 받아, 미리보기 탭이 몸의 월드 변환으로 옮겨 빨간 십자로 긋는다(`drawPenetrationPoints`, 탐침 `Editor.CharacterEditorPenetrationMarks`).
+  - 뷰포트 기즈모 포즈 편집: 스켈레톤 탭에서 고른 본 자리에 표시 오브젝트를 놓고 창 선택에 올려 기즈모가 잡는다(`syncBoneGizmo`, 탐침 `Editor.CharacterEditorBoneGizmoPlaced`). 옮기면 부모 월드의 역으로 본의 로컬을 구해 레퍼런스 포즈 덮어쓰기에 넣는다(끄는 동안은 되돌리기 한 단계).
+  - 슬라이더의 대칭 그룹(`_symmetry`) 동시 편집: 슬라이더 · 색을 바꾸면 같은 대칭 그룹의 같은 종류 짝을 같은 값으로(자기 범위로 잘라) 함께 바꾼다(`drawCustomizationSliders` — 모델이 아니라 스키마를 아는 패널이 한다).
+  - 편집 중(저장 전) 소켓을 미리보기에 바로 보이기: 소켓 축을 조립한 소켓 파일이 아니라 편집 중인 소켓 정의로 구한다(`ResolvedSocketTable` 에 풀어 몸의 지금 포즈에 얹는다). 모르는 부모 본 같은 편집 오류는 상태 줄에 나오고 축은 그리지 않는다.
+  - 핫 리로드 결과를 모델에 다시 반영: 고치지 않은 창은 바뀐 소켓 파일을 바로 다시 읽는다. 고친 것이 있으면 "Reload from disk (discard edits)" 단추로 사람이 정한다(말없이 덮지 않는다).
+  - 제약 리그 미리보기: 팩 데이터의 선택 칸 `rig`(`CharacterEditorPackData::_rigPath`, 비면 단추가 없다)가 있으면 미리보기 탭에 "Preview constraint rig" 가 생기고, 켜면 미리보기 몸에 `PoseModifierComponent` 를 얹어 그 리그(스트라이드 워핑 · 양손 IK)를 돌린다. Shooter3D · Empty 데이터가 플레이어 몸 리그를 가리킨다.
+- 확인(통합에서 확인): 매니페스트 id `editor-charactereditor-scenario`(슬라이더 · 기즈모 표식 · 리그 사진 포함 — 관통 점은 피팅 데이터가 겹치는 차림에서만 찍혀 시나리오 기본 차림에서는 0 이다), 매니페스트 id `fit-check-summary-test`(`FitCheckSummaryTest` — 관통 점이 요약까지 온다), 매니페스트 id `game-pack-data-test`(`GamePackDataTest` — 선택 칸 `rig` 읽기).

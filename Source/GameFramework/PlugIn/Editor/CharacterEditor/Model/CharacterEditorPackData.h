@@ -18,7 +18,7 @@ namespace sw::editor
 {
     /**
      * @struct CharacterEditorPackData
-     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" clipFolder="…" previewPreset="…"/>` 한 줄입니다. 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
+     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" clipFolder="…" previewPreset="…" [rig="…"]/>` 한 줄입니다(`rig` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
      */
     struct CharacterEditorPackData
     {
@@ -36,6 +36,11 @@ namespace sw::editor
          * @details 몸은 프리팹이 아니라 외형 조립(`CharacterAppearanceComponent::previewSelection`)으로 세운다 — 몸 메시 · 스켈레톤 · 소켓은 프리셋의 몸 아이템이 정한다.
          */
         string _previewPresetID{};
+        /**
+         * @brief 미리보기 몸에 얹어 볼 제약 리그(`*.rig.xml` — 스트라이드 워핑 · 양손 IK 같은 후처리)의 경로입니다. **선택 칸**: 비면 게임에 미리볼 리그가 없다는 뜻이고 창은 리그 단추를 그리지 않는다.
+         * @details 여섯 칸이 필수인 것은 없으면 창이 일하지 못하기 때문이고, 리그는 없어도 창이 일하므로 선택이다(없다고 다른 게임의 리그를 쓰지 않는다).
+         */
+        string _rigPath{};
 
         /** @brief 리소스 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */
         [[nodiscard]] bool loadFromResource( string_view path );

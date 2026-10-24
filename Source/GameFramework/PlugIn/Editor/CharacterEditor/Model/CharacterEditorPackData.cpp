@@ -86,7 +86,7 @@ namespace sw::editor
         {
             const utf8* pName  = attribute.getName();
             const bool  bKnown = StringUtil::equals( pName, "sockets" ) || StringUtil::equals( pName, "skeleton" ) || StringUtil::equals( pName, "items" ) || StringUtil::equals( pName, "appearance" ) ||
-                                StringUtil::equals( pName, "clipFolder" ) || StringUtil::equals( pName, "previewPreset" );
+                                StringUtil::equals( pName, "clipFolder" ) || StringUtil::equals( pName, "previewPreset" ) || StringUtil::equals( pName, "rig" );
             if ( bKnown == false )
             {
                 SW_LOG_ERROR( "%#: unknown attribute '%#' on <%#>", sourceName, pName, Internal::kRootName );
@@ -98,12 +98,13 @@ namespace sw::editor
             SW_LOG_ERROR( "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
             bOk = false;
         }
-        bOk = Internal::readRequired( root, "sockets", _socketPath, sourceName ) && bOk;
-        bOk = Internal::readRequired( root, "skeleton", _skeletonPath, sourceName ) && bOk;
-        bOk = Internal::readRequired( root, "items", _itemsPath, sourceName ) && bOk;
-        bOk = Internal::readRequired( root, "appearance", _appearanceFolder, sourceName ) && bOk;
-        bOk = Internal::readRequired( root, "clipFolder", _clipFolder, sourceName ) && bOk;
-        bOk = Internal::readRequired( root, "previewPreset", _previewPresetID, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "sockets", _socketPath, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "skeleton", _skeletonPath, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "items", _itemsPath, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "appearance", _appearanceFolder, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "clipFolder", _clipFolder, sourceName ) && bOk;
+        bOk      = Internal::readRequired( root, "previewPreset", _previewPresetID, sourceName ) && bOk;
+        _rigPath = string( root.getAttributeText( "rig" ) ); // 선택 칸 — 비면 게임에 미리볼 제약 리그가 없다(창에 리그 단추가 없다)
         if ( _skeletonPath.empty() == false )
             bOk = Internal::makeRefPosePath( _skeletonPath, _refPosePath, sourceName ) && bOk;
         return bOk;

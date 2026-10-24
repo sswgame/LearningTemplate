@@ -108,6 +108,11 @@ namespace sw::editor
         void syncBoneGizmo();
         /** @brief 피팅이 찾은 관통 점(`FitPenetration::_listPoint`, 바인드 공간)을 몸의 월드 변환으로 옮겨 빨간 십자로 긋습니다. 관통이 없으면 아무것도 긋지 않습니다. */
         void drawPenetrationPoints( const GameObject& body );
+        /**
+         * @brief 제약 리그 미리보기를 몸에 맞춥니다 — 켜 두었으면 몸 오브젝트에 후처리 리그(`PoseModifierComponent`)를 얹어 팩 데이터의 리그를 돌리고(스트라이드 워핑 · 양손 IK 같은 것이 클립 위에 걸린다),
+         *        껐으면 리그를 끈다. 리그 경로가 없는 게임(`_rigPath` 가 빔)에서는 아무것도 하지 않는다.
+         */
+        void syncRigPreview( GameObject& body );
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
         /** @brief 소켓 파일을 경로 칸(`_path`)에서 읽습니다. 성공하면 true 이고 선택 · 외부 변경 표시를 비웁니다. */
@@ -212,6 +217,8 @@ namespace sw::editor
         GameObjectHandle                      _boneGizmoTarget;         ///< 기즈모가 잡는 미리보기 씬의 표시 오브젝트 — 고른 본의 월드 자리에 놓는다
         float4x4                              _placedBoneWorld;         ///< 지난 그리기에 표시 오브젝트를 놓은 월드 변환 — 달라졌으면 기즈모가 옮긴 것이다
         bool                                  _bBoneGizmoPlaced;        ///< `_placedBoneWorld` 가 유효하다
+        fixed_string<constant::kMaxPathSize>  _rigPath;                 ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
+        bool                                  _bRigPreview;             ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`)
         PackDataState                         _packDataState;
     };
 } // namespace sw::editor
