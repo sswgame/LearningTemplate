@@ -57,8 +57,10 @@ namespace sw
         , _listDependency{}
         , _listInitialized{}
         , _listStopped{}
+        , _listInitTiming{}
         , _error{}
         , _bSorted{ false }
+        , _pInitClockNanos{ nullptr }
     {
     }
 
@@ -118,6 +120,7 @@ namespace sw
     {
         _listInitialized.clear();
         _listStopped.clear();
+        _listInitTiming.clear();
         if ( _bSorted == false )
             (void)sort(); // 오류는 바로 아래에서 돌려준다
         if ( _error.empty() == false )
@@ -145,7 +148,10 @@ namespace sw
                 continue;
             }
 
-            const SubsystemInitResult result = initializeAt( index );
+            const int64               startNanos = _pInitClockNanos != nullptr ? _pInitClockNanos() : 0;
+            const SubsystemInitResult result     = initializeAt( index );
+            if ( _pInitClockNanos != nullptr )
+                _listInitTiming.push_back( { _listEntry[index]._pSubsystem->getSubsystemName(), ( _pInitClockNanos() - startNanos ) / 1000 } );
             if ( result == SubsystemInitResult::Failed )
             {
                 _error = string( "Subsystem '" ) + _listEntry[index]._pSubsystem->getSubsystemName() + "' failed to initialize";

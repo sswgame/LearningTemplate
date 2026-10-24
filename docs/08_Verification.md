@@ -128,6 +128,18 @@ cd build/Ninja-Debug/Bin
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
   `Engine::update` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
+- **대기 지점 스코프**(측정만 한다 — 이 값이 크면 그 대기를 비동기로 바꾸는 근거가 된다). 이름은 `<스레드>.<영역>.<동작>` 이다.
+
+  | 스코프 | 위치 | 재는 것 |
+  | --- | --- | --- |
+  | `GT.Material.waitIdle` | `Engine::submitRenderPacket` | 새 머티리얼 첫 사용 때 GT 가 `RenderThread::waitIdle`(RT + GPU)을 기다린 시간 |
+  | `RT.Upload.waitIdle` | `VulkanOneShotCommands::endSubmitAndWait` | Vulkan 업로드 · 리드백의 제출 락 + `vkQueueWaitIdle`(스레드는 호출한 쪽) |
+  | `RT.Upload.flush` | `D3D12RHIDevice::flushPendingUploads` | DX12 복사 리스트 닫기 · 제출(위와 견주는 값 — 기다리지는 않는다) |
+  | `RT.PSO.create` | `FrameRendererPSO.cpp` 의 `createPipelineStateTimed` | 패스 · 머티리얼 변형 · 파티클 PSO 의 동기 생성(셰이더 컴파일 포함) |
+  | `GT.Load.sync` | `AssetLoadBlock::startLoad` 의 `OnCallingThread` 분기 | 프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더 동기 로드(호출 스레드가 GT 가 아니면 이름과 달리 그 스레드 몫) |
+  | `GT.Settings.save` | `UserSettingsManager::saveUserFile` | 사용자 설정 쓰기(교체 재시도 sleep 포함, 서비스 묶이기 전에는 재지 않는다) |
+
+  시동은 로그 한 줄 `Startup phases: hostScope · engine · window · modules · finalize+show · total | subsystems: 이름=ms …`(서브시스템은 1 ms 이상만, 오래 걸린 순)로 본다. `Test/Load/Baselines.json` 의 `startup_ms` 와는 별개다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
 - **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
   "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. GPU 줄도 쿼리는 한 벌이다

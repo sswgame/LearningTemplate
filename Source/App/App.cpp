@@ -120,6 +120,8 @@ namespace sw
         //    (이 App 의 `loadModuleImages`), `ModuleImages` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
         if ( initializeHostScope() == false )
             return false;
+        // 시동 단계별 시간(측정만 한다 — 시동 요약 로그의 재료). 각 값은 그 단계가 끝난 시각의 `_initializeStartMicro` 기준 경과이다.
+        [[maybe_unused]] const int64 hostScopeEndMicro = MonotonicClock::nowMicroseconds();
 
         // 1. 코어 매니저는 모두 Engine 가 초기화한다(헤드리스 작업 처리 포함).
         if ( _engine.initialize( argc, pArgv, EngineHostRole::Client, &_host ) == false )
@@ -127,6 +129,7 @@ namespace sw
             SW_LOG_ERROR( "Engine initialization failed." );
             return false;
         }
+        [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `MakePackage.py` 가
@@ -174,6 +177,7 @@ namespace sw
             splash.dismiss();
             return false;
         }
+        [[maybe_unused]] const int64 windowEndMicro = MonotonicClock::nowMicroseconds();
 
         // 3. ModuleHost(에디터와 게임의 수명 주기)를 연결한다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
@@ -182,6 +186,7 @@ namespace sw
             splash.dismiss();
             return false;
         }
+        [[maybe_unused]] const int64 modulesEndMicro = MonotonicClock::nowMicroseconds();
 
         warnUnknownGlobalOverrides();
 
@@ -207,6 +212,16 @@ namespace sw
         // 준비가 끝났다. 스플래시 창을 닫고 메인 창을 화면에 띄운다.
         splash.dismiss();
         _pWindow->showWindow( true );
+
+        // 시동 요약 한 줄 — 단계별 ms 와 오래 걸린 서브시스템(`Test/Load/Baselines.json` 의 `startup_ms` 와 별개의 진단 값이다).
+        {
+            [[maybe_unused]] const int64     showEndMicro = MonotonicClock::nowMicroseconds();
+            [[maybe_unused]] constexpr int64 kMs          = constant::kMicrosecondsPerMillisecond;
+            SW_LOG_INFO( "Startup phases: hostScope %# ms, engine %# ms, window %# ms, modules %# ms, finalize+show %# ms, total %# ms | subsystems: %#",
+                         ( hostScopeEndMicro - _initializeStartMicro ) / kMs, ( engineEndMicro - hostScopeEndMicro ) / kMs, ( windowEndMicro - engineEndMicro ) / kMs,
+                         ( modulesEndMicro - windowEndMicro ) / kMs, ( showEndMicro - modulesEndMicro ) / kMs, ( showEndMicro - _initializeStartMicro ) / kMs,
+                         _engine.describeSubsystemInitTimings().c_str() );
+        }
 
         return true;
     }

@@ -165,7 +165,12 @@ namespace sw
         CommandLineManager* getCommandLineManager() const;
         RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
-        bool                isHeadless() const { return _headlessState.isHeadless(); }
+        /**
+         * @brief 서비스 · 기동 범위의 서브시스템 초기화 시간을 오래 걸린 것부터 "이름=ms" 로 이은 글입니다(1 ms 미만은 뺀다). 시동 요약 로그의 재료입니다.
+         * @details `SubsystemCollection::getInitTimings` 를 모은 것이라 `initialize` 가 끝난 뒤에만 뜻이 있습니다.
+         */
+        [[nodiscard]] string describeSubsystemInitTimings() const;
+        bool                 isHeadless() const { return _headlessState.isHeadless(); }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
         EngineHostRole getHostRole() const { return _hostRole; }
         /**

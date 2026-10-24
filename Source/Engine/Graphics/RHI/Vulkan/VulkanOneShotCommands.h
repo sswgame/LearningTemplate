@@ -7,6 +7,8 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Profiling/FrameProfiler.h"
+
 #include <vulkan/vulkan.h>
 
 namespace sw
@@ -78,6 +80,8 @@ namespace sw
             if ( isValid() == false )
                 return false;
 
+            // 로드 · 리드백 업로드가 큐를 통째로 기다리는 지점이다(비동기 전환의 근거 계측). 제출 락 대기와 큐 비움 대기를 함께 잰다.
+            SW_PROFILE_SCOPE( "RT.Upload.waitIdle" );
             vkEndCommandBuffer( _commandBuffer );
 
             VkSubmitInfo submitInfo{};
