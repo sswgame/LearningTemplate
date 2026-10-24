@@ -75,3 +75,5 @@
   대상 파일 고르기는 `common.Search.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
   (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
+- **저장소 전체를 `rglob("*")` 로 걸은 뒤 거르지 않는다** — 걷는 중에 가지를 치는 `collectRepositoryFiles` 를 쓴다. 게이트 여섯의 직접 걷기 여덟을 옮겨 `CheckGateFileWalk` 기준선을 0 으로 낮췄다. 복합 확장자(`.scenario.xml`)는 마지막 확장자로 모은 뒤 `name.endswith` 로 거른다(모음은 `splitext` 라 `.xml` 만 본다).
+  `RunBuildScriptInventory` 는 `rglob("*")` 가 빌드 트리까지 20만 파일을 걸어 14 ~ 22 s 였고 0.3 s 가 됐다. "정의 이름마다 글 전체에 정규식" 도 글마다 한 번 훑는 색인으로 바꿨다(약 1 s 절약, 결과 같음). 큰 이어 붙인 글에 `\b` 정규식을 반복하는 모양은 `VerifyManifest.findTestCaseInternal` 에서 났다.

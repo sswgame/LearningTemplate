@@ -37,9 +37,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kNotOurDirNames  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "BuildScriptInventory"
+_kCmakeCallWordRe = re.compile(r"(?<![A-Za-z_0-9])([A-Za-z_0-9]+)\s*\(")
 _kCmakeDefinitionRe = re.compile(r"^\s*(function|macro)\s*\(\s*([A-Za-z_0-9]+)", re.MULTILINE | re.IGNORECASE)
 _kCmakeHandListRe = re.compile(r'"\$\{CMAKE_CURRENT_SOURCE_DIR\}/[^"]+\.(cpp|c)"')
 _kCmakeDirectLibraryRe = re.compile(r"^\s*add_library\(\s*\S+\s+(SHARED|MODULE)\b", re.MULTILINE)
@@ -57,15 +59,9 @@ _kBypassPattern: dict[str, re.Pattern[str]] = {
 
 
 def listTrackedFilesInternal(repositoryRoot: Path, suffixes: tuple[str, ...], fileNames: tuple[str, ...] = ()) -> list[Path]:
-    listPath: list[Path] = []
-    for path in repositoryRoot.rglob("*"):
-        if not path.is_file() or not (path.suffix in suffixes or path.name in fileNames):
-            continue
-        listPart = path.relative_to(repositoryRoot).parts
-        if any(part in kNotOurDirNames or part == "vcpkg-port" for part in listPart[:-1]):
-            continue
-        listPath.append(path)
-    return sorted(listPath)
+    # 저장소 전체를 rglob 으로 걸은 뒤 거르면 빌드 트리 · 내려받은 도구(20만 파일)까지 걷는다 — 걷는 중에 가지를 친다.
+    return collectRepositoryFiles(repositoryRoot, suffixes=suffixes, fileNames=fileNames,
+                                  excludedDirNames=kNotOurDirNames | {"vcpkg-port"})
 
 
 def blankCmakeStringsAndCommentsInternal(text: str) -> str:
@@ -114,9 +110,11 @@ def inventoryCmake(repositoryRoot: Path) -> dict[str, Any]:
             mapDefinition[match.group(2)] = relPath
 
     mapCallCount: Counter[str] = Counter()
+    # 글마다 "낱말 + 여는 괄호" 를 한 번만 훑어 세고 정의 이름은 사전에서 찾는다 — 이름마다 글 전체에 정규식을 돌리면 이름 수 × 글 크기다.
     for text in mapCode.values():
+        mapCallInText = Counter(match.group(1).lower() for match in _kCmakeCallWordRe.finditer(text))
         for name in mapDefinition:
-            mapCallCount[name] += len(re.findall(rf"(?<![A-Za-z_0-9]){re.escape(name)}\s*\(", text, re.IGNORECASE))
+            mapCallCount[name] += mapCallInText[name.lower()]
 
     return {
         "functions": {name: {"file": relPath, "calls": mapCallCount[name]} for name, relPath in sorted(mapDefinition.items())},
