@@ -17,9 +17,9 @@
 
 struct GPUParticle
 {
-    float4 positionSize;
-    float4 color;
-    float4 rotationLife;
+    float4 _positionSize;
+    float4 _color;
+    float4 _rotationLife;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VfxParams, 0 );
@@ -77,26 +77,26 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     if ( poolIndex < loadArgsWord( SW_VFX_ARGS_WORD_ALIVE ) )
     {
         const GPUParticle particle = g_VfxParticles[poolIndex];
-        const float       size     = particle.positionSize.w;
-        const float3      local    = particle.positionSize.xyz;
+        const float       size     = particle._positionSize.w;
+        const float3      local    = particle._positionSize.xyz;
         // 크기 × 이동 × 방출기 행렬(행벡터 규약) — 0~2 행은 축에 크기를 곱한 것, 3 행은 입자 위치를 옮긴 점이다.
-        instance.world[0]     = world0 * size;
-        instance.world[1]     = world1 * size;
-        instance.world[2]     = world2 * size;
-        instance.world[3]     = local.x * world0 + local.y * world1 + local.z * world2 + world3;
-        instance.boundsCenter = instance.world[3].xyz;
-        instance.boundsRadius = asfloat( header.z ) * size * asfloat( header.w );
-        instance.tint         = packColor( particle.color );
+        instance._world[0]     = world0 * size;
+        instance._world[1]     = world1 * size;
+        instance._world[2]     = world2 * size;
+        instance._world[3]     = local.x * world0 + local.y * world1 + local.z * world2 + world3;
+        instance._boundsCenter = instance._world[3].xyz;
+        instance._boundsRadius = asfloat( header.z ) * size * asfloat( header.w );
+        instance._tint         = packColor( particle._color );
     }
     else
     {
         // 죽은 자리 — 크기 0 행렬(CPU 경로와 같다).
-        instance.world[0]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-        instance.world[1]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-        instance.world[2]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-        instance.world[3]     = world3;
-        instance.boundsCenter = world3.xyz;
-        instance.boundsRadius = 0.0f;
+        instance._world[0]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        instance._world[1]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        instance._world[2]     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        instance._world[3]     = world3;
+        instance._boundsCenter = world3.xyz;
+        instance._boundsRadius = 0.0f;
     }
     g_VfxInstancesRW[slot] = instance;
 }

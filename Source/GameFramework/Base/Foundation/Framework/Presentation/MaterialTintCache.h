@@ -16,14 +16,14 @@ namespace sw
     class MaterialInstance;
     class MeshComponent;
 
-    /** @brief 색을 바꾸는 머티리얼 벡터 매개변수 이름입니다(셰이더 머티리얼 구조체의 `color` 와 묶인 문자열). 내보낸 클래스의 정적 멤버로 두면 지연 로드하는 게임 모듈이 데이터 import 를 못 한다. */
-    inline constexpr string_view kMaterialColorParameter = "color";
+    /** @brief 색을 바꾸는 머티리얼 벡터 매개변수 이름입니다(셰이더 머티리얼 구조체의 `_color` 와 묶인 문자열). 내보낸 클래스의 정적 멤버로 두면 지연 로드하는 게임 모듈이 데이터 import 를 못 한다. */
+    inline constexpr string_view kMaterialColorParameter = "_color";
 
     /**
      * @class MaterialTintCache
      * @brief (부모 머티리얼 · 색) 하나에 인스턴스 하나입니다. 같은 색은 같은 인스턴스를 나눠 써서 배치 키가 갈라지지 않습니다.
      * @details 색만 다른 머티리얼 에셋을 두면 그 에셋은 처음 스폰할 때 게임 스레드에서 올라가고 마지막 것이 사라질 때 내려가 렌더 스레드의 병렬
-     *          기록과 겹친다(`Source/Games/README.md`). 인스턴스는 `"color"` 벡터 매개변수 하나를 바꿉니다. 게임 스레드에서만 씁니다.
+     *          기록과 겹친다(`Source/Games/README.md`). 인스턴스는 `"_color"` 벡터 매개변수 하나를 바꿉니다. 게임 스레드에서만 씁니다.
      */
     class SW_GF_API MaterialTintCache
     {

@@ -39,15 +39,15 @@ static const float kRcasLimit = 0.25f - ( 1.0f / 16.0f );
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
+    float4 _position : SV_POSITION;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position            = input.position;
+    input._position           = input._position;
     const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
-    output.position           = float4( clipPosition, 0.0f, 1.0f );
+    output._position          = float4( clipPosition, 0.0f, 1.0f );
     return output;
 }
 
@@ -294,12 +294,15 @@ float3 computeRcas( int2 pixel )
     return ( lobe * colorB + lobe * colorD + lobe * colorH + lobe * colorF + colorE ) * resolveScale;
 }
 
+#if defined( SW_PASS_FSR_RCAS )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-#if defined( SW_PASS_FSR_RCAS )
-    const int2 pixel = int2( floor( input.position.xy - float2( SW_ROOT( g_FsrViewportX ), SW_ROOT( g_FsrViewportY ) ) ) );
+    const int2 pixel = int2( floor( input._position.xy - float2( SW_ROOT( g_FsrViewportX ), SW_ROOT( g_FsrViewportY ) ) ) );
     return float4( computeRcas( pixel ), 1.0f );
-#else
-    return float4( computeEasu( uint2( input.position.xy ) ), 1.0f );
-#endif
 }
+#else
+float4 PSMain( PSInput input ) : SV_TARGET
+{
+    return float4( computeEasu( uint2( input._position.xy ) ), 1.0f );
+}
+#endif

@@ -43,9 +43,9 @@ namespace sw
             static shared_ptr<MaterialInstance> createTextureInstance( const TextureInstanceKey& key )
             {
                 shared_ptr<MaterialInstance> instance = MaterialInstance::create( key._pParent );
-                instance->setTextureParameter( hashed_string( "albedoMap" ), key._texture.c_str() );
+                instance->setTextureParameter( hashed_string( "_albedoMap" ), key._texture.c_str() );
                 if ( key._normalMap.empty() == false )
-                    instance->setTextureParameter( hashed_string( "normalMap" ), key._normalMap.c_str() );
+                    instance->setTextureParameter( hashed_string( "_normalMap" ), key._normalMap.c_str() );
                 return instance;
             }
 

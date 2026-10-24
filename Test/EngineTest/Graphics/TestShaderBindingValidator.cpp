@@ -500,8 +500,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
             bool bHasAlbedo{ false };
             for ( const sw::ShaderVariableInfo& var : pRef->listElement )
             {
-                bHasColor |= ( var._name == "color" && var._size == 16 && var._offset == 0 );
-                bHasAlbedo |= ( var._name == "albedoMap" && var._size == 4 );
+                bHasColor |= ( var._name == "_color" && var._size == 16 && var._offset == 0 );
+                bHasAlbedo |= ( var._name == "_albedoMap" && var._size == 4 );
             }
             SW_EXPECT_TRUE( bHasColor && bHasAlbedo );
             SW_EXPECT_TRUE( pRef->stride > 0 );
@@ -537,11 +537,11 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
 SW_TEST_CASE( ShaderBindingValidatorTest, MaterialFallbackElementMarksOnlyTextureIndexFields )
 {
     sw::vector<sw::ShaderVariableInfo> listMember;
-    listMember.push_back( { "color", "Float4", 0, 16 } );
-    listMember.push_back( { "albedoMap", "Uint", 16, 4 } );
-    listMember.push_back( { "pointFilter", "Uint", 20, 4 } );
-    listMember.push_back( { "premultipliedTexture", "Uint", 24, 4 } );
-    listMember.push_back( { "roughnessMap", "Float", 28, 4 } ); // 이름은 맞지만 uint 가 아니다 — 텍스처 인덱스가 아니다
+    listMember.push_back( { "_color", "Float4", 0, 16 } );
+    listMember.push_back( { "_albedoMap", "Uint", 16, 4 } );
+    listMember.push_back( { "_pointFilter", "Uint", 20, 4 } );
+    listMember.push_back( { "_premultipliedTexture", "Uint", 24, 4 } );
+    listMember.push_back( { "_roughnessMap", "Float", 28, 4 } ); // 이름은 맞지만 uint 가 아니다 — 텍스처 인덱스가 아니다
     const sw::vector<uint8> bytes = sw::MaterialUtil::makeFallbackElement( listMember, 32 );
     SW_ASSERT_EQUAL( size_t{ 32 }, bytes.size() );
     auto readUint = [&bytes]( uint32 offset )
@@ -602,7 +602,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, MaterialTextureIndexFieldsAreRecognize
                 for ( const sw::ShaderVariableInfo& var : element._listVariable )
                 {
                     const bool bTexture = sw::MaterialUtil::isTextureIndexMember( var._name, var._type, var._size );
-                    if ( var._name == "albedoMap" )
+                    if ( var._name == "_albedoMap" )
                     {
                         bHasAlbedo = true;
                         SW_EXPECT_TRUE_MSG( bTexture, ( label + "albedoMap 을 텍스처 인덱스로 읽지 못했다 (타입 " + var._type + ")" ).c_str() );
@@ -611,7 +611,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, MaterialTextureIndexFieldsAreRecognize
                             sw::Memory::copy( &value, bytes.data() + var._offset, sizeof( value ) );
                         SW_EXPECT_EQUAL( static_cast<uint32>( sw::kInvalidDescriptorIndex ), value );
                     }
-                    if ( var._name == "pointFilter" )
+                    if ( var._name == "_pointFilter" )
                         SW_EXPECT_FALSE_MSG( bTexture, ( label + "pointFilter 를 텍스처 인덱스로 읽었다" ).c_str() );
                 }
                 SW_EXPECT_TRUE_MSG( bHasAlbedo, ( label + "머티리얼 원소에 albedoMap 이 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
@@ -655,22 +655,22 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
         const utf8* _pName;
         uint32      _offset;
     };
-    // HLSL `InstanceData`(binding.hlsli) ↔ C++ `GPUInstance`(GPUScene.h). 이름은 셰이더 쪽 표기다.
+    // HLSL `InstanceData`(binding.hlsli) ↔ C++ `GPUInstance`(GPUScene.h). 셰이더 필드 이름은 C++ 멤버 이름과 같다(`_camelCase`).
     const ExpectedField arrExpected[] = {
-        { "world", static_cast<uint32>( offsetof( sw::GPUInstance, _world ) ) },
-        { "boundsCenter", static_cast<uint32>( offsetof( sw::GPUInstance, _boundsCenter ) ) },
-        { "boundsRadius", static_cast<uint32>( offsetof( sw::GPUInstance, _boundsRadius ) ) },
-        { "meshBatchIndex", static_cast<uint32>( offsetof( sw::GPUInstance, _meshBatchIndex ) ) },
-        { "materialIndex", static_cast<uint32>( offsetof( sw::GPUInstance, _materialIndex ) ) },
-        { "blendMode", static_cast<uint32>( offsetof( sw::GPUInstance, _blendMode ) ) },
-        { "spinSeed", static_cast<uint32>( offsetof( sw::GPUInstance, _spinSeed ) ) },
-        { "uvStart", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _uvStart ) ) },
-        { "uvEnd", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _uvEnd ) ) },
-        { "tint", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _tint ) ) },
-        { "pixelSnap", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _pixelSnap ) ) },
-        { "vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GPUInstance, _vertexAnimationPhase ) ) },
-        { "highlight", static_cast<uint32>( offsetof( sw::GPUInstance, _highlight ) ) },
-        { "appearance", static_cast<uint32>( offsetof( sw::GPUInstance, _appearance ) ) },
+        { "_world", static_cast<uint32>( offsetof( sw::GPUInstance, _world ) ) },
+        { "_boundsCenter", static_cast<uint32>( offsetof( sw::GPUInstance, _boundsCenter ) ) },
+        { "_boundsRadius", static_cast<uint32>( offsetof( sw::GPUInstance, _boundsRadius ) ) },
+        { "_meshBatchIndex", static_cast<uint32>( offsetof( sw::GPUInstance, _meshBatchIndex ) ) },
+        { "_materialIndex", static_cast<uint32>( offsetof( sw::GPUInstance, _materialIndex ) ) },
+        { "_blendMode", static_cast<uint32>( offsetof( sw::GPUInstance, _blendMode ) ) },
+        { "_spinSeed", static_cast<uint32>( offsetof( sw::GPUInstance, _spinSeed ) ) },
+        { "_uvStart", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _uvStart ) ) },
+        { "_uvEnd", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _uvEnd ) ) },
+        { "_tint", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _tint ) ) },
+        { "_pixelSnap", static_cast<uint32>( offsetof( sw::GPUInstance, _sprite ) + offsetof( sw::GPUSpriteInstanceData, _pixelSnap ) ) },
+        { "_vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GPUInstance, _vertexAnimationPhase ) ) },
+        { "_highlight", static_cast<uint32>( offsetof( sw::GPUInstance, _highlight ) ) },
+        { "_appearance", static_cast<uint32>( offsetof( sw::GPUInstance, _appearance ) ) },
     };
     // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).
     const utf8* arrInstanceBufferName[] = { sw::shaderslot::resname::kInstances, "g_Instances", "g_InstancesRW" };
@@ -765,11 +765,11 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LightElementLayoutMatchesCPUStruct )
         uint32      _offset;
     };
     const ExpectedField arrExpected[] = {
-        {"positionRadius", static_cast<uint32>( offsetof( sw::GPULight, _positionRadius ) )},
-        {"colorIntensity", static_cast<uint32>( offsetof( sw::GPULight, _colorIntensity ) )},
-        { "directionType", static_cast<uint32>( offsetof( sw::GPULight,  _directionType ) )},
-        {        "params", static_cast<uint32>( offsetof( sw::GPULight,         _params ) )},
-        {         "extra", static_cast<uint32>( offsetof( sw::GPULight,          _extra ) )},
+        {"_positionRadius", static_cast<uint32>( offsetof( sw::GPULight, _positionRadius ) )},
+        {"_colorIntensity", static_cast<uint32>( offsetof( sw::GPULight, _colorIntensity ) )},
+        { "_directionType", static_cast<uint32>( offsetof( sw::GPULight,  _directionType ) )},
+        {        "_params", static_cast<uint32>( offsetof( sw::GPULight,         _params ) )},
+        {         "_extra", static_cast<uint32>( offsetof( sw::GPULight,          _extra ) )},
     };
     const utf8* arrLightBufferName[] = { "g_SwLights", "g_LightGridLights" };
     uint32      arrCheckedPerName[2] = {};

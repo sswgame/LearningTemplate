@@ -21,7 +21,7 @@
  *
  * 최소 예 — 텍스처 하나 샘플
  *   float4 color  = Bindless::sampleIndex( g_SourceColorIndex, uv );                                // 엔진 텍스처(패스 입력)
- *   float4 albedo = MaterialTexture::sampleIndex( SW_MATERIAL( materialIndex ).albedoMap, uv );  // 머티리얼 텍스처
+ *   float4 albedo = MaterialTexture::sampleIndex( SW_MATERIAL( materialIndex )._albedoMap, uv );  // 머티리얼 텍스처
  *
  * 셰이더 작성자는 이 함수만 쓴다 — 네 백엔드에서 뜻이 같고, 무효 인덱스를 스스로 거른다
  *   엔진 텍스처  Bindless::sampleIndex · sampleIndexWith(샘플러 고르기) · sampleShadowComparison
@@ -67,8 +67,8 @@
  * - 엔진(C++ ShaderParameterBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - GPUScene(언리얼 방식): 드로우별 데이터는 바인딩이 아니라 버퍼에서 읽는다.
- *     VS: `InstanceData instance = InstanceData::load( input.instanceSlot )` → instance.world / instance.materialIndex
- *     PS: `SW_MATERIAL( materialIndex ).color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
+ *     VS: `InstanceData instance = InstanceData::load( input._instanceSlot )` → instance._world / instance._materialIndex
+ *     PS: `SW_MATERIAL( materialIndex )._color`  — VS 가 materialIndex 를 nointerpolation 으로 넘긴다.
  *   머티리얼 구조체는 셰이더가 SW_MATERIAL_BEGIN/END 로 선언하고, 엔진이 그 셰이더 타입의 머티리얼 데이터를
  *   StructuredBuffer(g_SwMaterials, t5)에 원소로 쌓아 인스턴스에 materialIndex 를 매긴다.
  */
@@ -168,6 +168,7 @@ struct PassTexture
 struct MaterialTexture
 {
     static float4 sampleIndex( uint index, float2 uv );
+    static float4 sampleIndexTexture( uint index, float2 uv ); // 텍스처를 읽는다(보기 모드 Mipmaps 가 아닐 때의 sampleIndex)
     static float4 samplePoint( uint index, float2 uv );
     static float4 sampleLevelZero( uint index, float2 uv );
     static float2 computeSize( uint index );
@@ -180,6 +181,8 @@ struct ViewMode
     static float4 computeMipColor( float lod );
     static float3 computeLightComplexityColor( uint visitCount );
     static float4 computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
+    static float3 overrideLightingAlbedo( float3 albedo ); // LightingOnly 만 표면 색을 회색으로 바꾼다
+    static void applyToSurface( inout float4 inoutLitColor, inout float4 inoutAlbedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
 };
 
 // ------------------------------------------------------------------------------
@@ -274,7 +277,7 @@ SW_ROOT_CONSTANTS_BEGIN
 {
     // 이 드로우 그룹의 머티리얼 데이터 버퍼(g_SwMaterials) 원소 수 — SW_MATERIAL 이 클램프한다. 그룹(같은 PSO·머티리얼 버퍼) 안에서
     // 같다. 배치마다 다른 값(인스턴스 시작·모프 풀 시작·정점 풀 시작)은 루트 상수가 아니라 배치 표(g_SwBatches)에 있고, 정점은
-    // 인스턴스 슬롯 스트림(VertexInput.instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
+    // 인스턴스 슬롯 스트림(VertexInput._instanceSlot)으로 자기 인스턴스를, 인스턴스로 자기 배치를 찾는다 — 그래서 같은 PSO 의
     // 배치들이 루트 상수를 바꾸지 않고 멀티 드로우 하나로 나간다.
     uint g_SwMaterialCount;
 };
@@ -326,15 +329,15 @@ SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
 static BatchData BatchData::load( uint batchIndex )
 {
     BatchData batch;
-    batch.instanceBase        = 0u;
-    batch.instanceCount       = 0u;
-    batch.sortMode            = 0u;
-    batch.morphVertexBase     = kInvalidIndex;
-    batch.firstVertex         = 0u;
-    batch.vertexAnimationBase = kInvalidIndex;
-    batch.sectionVertexOffset = 0u;
-    batch.pad2                = 0u;
-    const bool bValid         = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
+    batch._instanceBase        = 0u;
+    batch._instanceCount       = 0u;
+    batch._sortMode            = 0u;
+    batch._morphVertexBase     = kInvalidIndex;
+    batch._firstVertex         = 0u;
+    batch._vertexAnimationBase = kInvalidIndex;
+    batch._sectionVertexOffset = 0u;
+    batch._pad2                = 0u;
+    const bool bValid          = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
     if ( bValid )
         batch = g_SwBatches[batchIndex];
     return batch;
@@ -373,9 +376,9 @@ static uint MorphPool::computeElement( uint batchIndex, uint vertexId )
 #if defined( DX11 ) || defined( DX12 )
     const uint local = vertexId;
 #else
-    const uint local = vertexId - batch.firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
+    const uint local = vertexId - batch._firstVertex; // 풀 밖 메시는 firstVertex 가 0 이라 그대로다
 #endif
-    const uint base    = batch.morphVertexBase;
+    const uint base    = batch._morphVertexBase;
     const uint element = base + local;
     // 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
     const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
@@ -411,7 +414,7 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint vertexId, float4 res
 
 // ------------------------------------------------------------------------------
 // 6) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 베이크한 프레임 × 정점 테이블(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
-//    먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 테이블을 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
+//    먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 테이블을 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance._vertexAnimationPhase)으로 읽는다.
 //    원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
 //    텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 경로).
 // ------------------------------------------------------------------------------
@@ -438,22 +441,22 @@ static float3 VertexAnimation::unpackNormal( float packed )
  */
 void InstanceData::computeVertexAnimationElements( uint vertexId, out bool outValid, out uint outFirstElement, out uint outSecondElement, out float outAlpha )
 {
-    const BatchData batch = BatchData::load( meshBatchIndex );
+    const BatchData batch = BatchData::load( _meshBatchIndex );
 #if defined( DX11 ) || defined( DX12 )
     const uint local = vertexId;
 #else
-    const uint local = vertexId - batch.firstVertex;
+    const uint local = vertexId - batch._firstVertex;
 #endif
     // VAT 표는 메시 전체의 정점 순서다 — 구간 배치는 배치 안 번호에 구간의 첫 정점을 더해 메시 안 번호로 돌린다(모프 풀은 시작에 이미 더해 두었다).
-    const uint   meshLocal     = local + batch.sectionVertexOffset;
-    const uint   base          = batch.vertexAnimationBase;
+    const uint   meshLocal     = local + batch._sectionVertexOffset;
+    const uint   base          = batch._vertexAnimationBase;
     const bool   bTable        = ( base != kInvalidIndex ) && ( g_SwVertexAnimationIndex != kInvalidIndex ) && ( base < g_SwVertexAnimationCount );
     const float4 header        = bTable ? g_SwVertexAnimation[base] : float4( 0.0f, 0.0f, 0.0f, 0.0f );
     const uint   frameCount    = max( (uint)header.x, 1u );
     const uint   vertexCount   = (uint)header.z;
     const bool   bLoop         = header.w > 0.5f;
     const float  frameTotal    = (float)frameCount;
-    const float  framePosition = max( g_SwVertexAnimationTime + vertexAnimationPhase, 0.0f ) * header.y;
+    const float  framePosition = max( g_SwVertexAnimationTime + _vertexAnimationPhase, 0.0f ) * header.y;
     const float  wrapped       = bLoop ? ( framePosition - floor( framePosition / frameTotal ) * frameTotal ) : min( framePosition, frameTotal - 1.0f );
     const uint   frame         = min( (uint)wrapped, frameCount - 1u );
     const uint   nextFrame     = bLoop ? ( ( frame + 1u ) % frameCount ) : min( frame + 1u, frameCount - 1u );
@@ -478,7 +481,7 @@ static float3 VertexAnimation::computePosition( uint firstElement, uint secondEl
  */
 void InstanceData::loadAnimatedVertex( uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
 {
-    MorphPool::loadVertex( meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
+    MorphPool::loadVertex( _meshBatchIndex, vertexId, restPosition, restNormal, outPosition, outNormal );
     bool  bAnimated;
     uint  firstElement;
     uint  secondElement;
@@ -571,27 +574,27 @@ static InstanceData InstanceData::load( uint instanceSlot )
     if ( g_SwInstancesIndex != kInvalidIndex && element < g_SwInstanceCount )
         return g_SwInstances[element];
     InstanceData instance;
-    instance.world                = g_World;
-    instance.boundsCenter         = float3( 0, 0, 0 );
-    instance.boundsRadius         = 0;
-    instance.meshBatchIndex       = 0;
-    instance.materialIndex        = 0;
-    instance.blendMode            = 0;
-    instance.spinSeed             = 0;
-    instance.uvStart              = 0u;          // (0, 0)
-    instance.uvEnd                = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
-    instance.tint                 = 0xFFFFFFFFu; // 흰색 불투명
-    instance.pixelSnap            = 0.0f;        // 스냅 없음
-    instance.vertexAnimationPhase = 0.0f;
-    instance.highlight            = 0u;   // 강조 없음
-    instance.appearance           = 1.0f; // 다 보인다
-    instance.reserved1            = 0u;
+    instance._world                = g_World;
+    instance._boundsCenter         = float3( 0, 0, 0 );
+    instance._boundsRadius         = 0;
+    instance._meshBatchIndex       = 0;
+    instance._materialIndex        = 0;
+    instance._blendMode            = 0;
+    instance._spinSeed             = 0;
+    instance._uvStart              = 0u;          // (0, 0)
+    instance._uvEnd                = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
+    instance._tint                 = 0xFFFFFFFFu; // 흰색 불투명
+    instance._pixelSnap            = 0.0f;        // 스냅 없음
+    instance._vertexAnimationPhase = 0.0f;
+    instance._highlight            = 0u;   // 강조 없음
+    instance._appearance           = 1.0f; // 다 보인다
+    instance._reserved1            = 0u;
     return instance;
 }
 
 static float4x4 InstanceData::loadWorld( uint instanceSlot )
 {
-    return InstanceData::load( instanceSlot ).world;
+    return InstanceData::load( instanceSlot )._world;
 }
 
 // ------------------------------------------------------------------------------
@@ -621,9 +624,9 @@ static void Appearance::clipDither( float appearance, float2 pixelPosition )
 }
 
 #if defined( SW_APPEARANCE_DITHER )
-    #define SW_APPEARANCE_VARYING                   nointerpolation float appearance : TEXCOORD15;
-    #define SW_APPEARANCE_WRITE( output, instance ) ( output ).appearance = ( instance ).appearance;
-    #define SW_APPEARANCE_CLIP( input )             Appearance::clipDither( ( input ).appearance, ( input ).position.xy );
+    #define SW_APPEARANCE_VARYING                   nointerpolation float _appearance : TEXCOORD15;
+    #define SW_APPEARANCE_WRITE( output, instance ) ( output )._appearance = ( instance )._appearance;
+    #define SW_APPEARANCE_CLIP( input )             Appearance::clipDither( ( input )._appearance, ( input )._position.xy );
 #else
     #define SW_APPEARANCE_VARYING
     #define SW_APPEARANCE_WRITE( output, instance )
@@ -632,8 +635,8 @@ static void Appearance::clipDither( float appearance, float2 pixelPosition )
 
 // ------------------------------------------------------------------------------
 // 9) 머티리얼 데이터 — 셰이더가 구조체를 선언하면 엔진이 그 타입의 머티리얼들을 StructuredBuffer 원소로 쌓는다.
-//      SW_MATERIAL_BEGIN { float4 color; uint albedoMap; } SW_MATERIAL_END
-//      ... SW_MATERIAL( instance.materialIndex ).color
+//      SW_MATERIAL_BEGIN { float4 _color; uint _albedoMap; } SW_MATERIAL_END
+//      ... SW_MATERIAL( instance._materialIndex )._color
 //      리플렉션 이름 g_SwMaterials(t5) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
 //      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 쿠킹하고
 //      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 쿠킹된 바이너리로 확인한다.
@@ -1173,22 +1176,16 @@ static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
     #endif
 
     #if defined( SW_NATIVE_BINDLESS )
-static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
+static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
-        #if defined( SW_VIEWMODE_MIPMAPS )
-    return MaterialTexture::sampleMipColor( index, uv );
-        #endif
     // 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
     if ( index == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
     return Bindless::sampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
 }
     #else
-static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
+static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
 {
-        #if defined( SW_VIEWMODE_MIPMAPS )
-    return MaterialTexture::sampleMipColor( index, uv );
-        #endif
     // 에뮬 백엔드: index 는 전역 인덱스가 아니라 **머티리얼 텍스처 서수**(0..15)다.
     // 엔진이 그 서수 순서대로 t16..t31 에 바인딩해 둔다. SM5.0 은 리소스 배열 동적 인덱싱이 안 되므로
     // (그건 SM5.1 = D3D12) 리터럴 분기로 고른다 — 칸 수가 16 이라 분기도 16 개다.
@@ -1265,6 +1262,19 @@ static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
         default:
             return float4( 1, 1, 1, 1 );
     }
+}
+    #endif
+
+    // 보기 모드 Mipmaps 는 텍스처 색 대신 밉 단계 색을 낸다 — 케이스마다 정의 하나다(백엔드 정의는 sampleIndexTexture).
+    #if defined( SW_VIEWMODE_MIPMAPS )
+static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
+{
+    return MaterialTexture::sampleMipColor( index, uv );
+}
+    #else
+static float4 MaterialTexture::sampleIndex( uint index, float2 uv )
+{
+    return MaterialTexture::sampleIndexTexture( index, uv );
 }
     #endif
 
@@ -1505,14 +1515,15 @@ static float PassTexture::sampleAmbientOcclusion( float2 uv )
 struct SurfaceOutput
 {
 #if defined( SW_PASS_GBUFFER )
-    float4 albedo : SV_TARGET0;
-    float4 normal : SV_TARGET1;
-    float4 material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
+    float4 _albedo : SV_TARGET0;
+    float4 _normal : SV_TARGET1;
+    float4 _material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
 #else
-    float4 color : SV_TARGET0;
+    float4 _color : SV_TARGET0;
 #endif
 
     static SurfaceOutput store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
+    static SurfaceOutput pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic ); // 패스의 출력 서명대로 담는다
     static float4 encodeGbufferMaterial( float roughness, float metallic );
 };
 
@@ -1596,6 +1607,18 @@ static uint LightGrid::computeVisitCount( float3 worldPosition )
 // 디퍼드는 G버퍼 알베도 칸(SurfaceOutput::store)이 바꾼다 — 디퍼드 조명 패스는 보기 모드 변형이 없으므로 G버퍼에서 바꿔야 한다.
 #define SW_VIEWMODE_LIGHTINGONLY_ALBEDO float3( 0.5f, 0.5f, 0.5f )
 
+#if defined( SW_VIEWMODE_LIGHTINGONLY )
+static float3 ViewMode::overrideLightingAlbedo( float3 albedo )
+{
+    return SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
+}
+#else
+static float3 ViewMode::overrideLightingAlbedo( float3 albedo )
+{
+    return albedo;
+}
+#endif
+
 static const float  kViewModeDepthRange         = 100.0f;                        // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
 static const float  kViewModeOverdrawStep       = 0.08f;                         // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
 static const float  kViewModeLightComplexityMax = 16.0f;                         // Light Complexity 보기: 이 라이트 수부터 빨강
@@ -1616,30 +1639,65 @@ static float3 ViewMode::computeLightComplexityColor( uint visitCount )
  * @details Overdraw 는 알파 0 을 낸다 — PSO 가 프리멀티플라이 블렌드(색 One / InvSrcAlpha)라 알파 0 이 더하기가 된다.
  *          Depth 는 클립 w(원근 카메라의 뷰 공간 깊이)다. 직교 카메라는 w 가 1 이라 한 색이다.
  */
+#if defined( SW_VIEWMODE_ROUGHNESS )
 static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
-#if defined( SW_VIEWMODE_ROUGHNESS )
     return float4( saturate( roughness ).xxx, 1.0f );
+}
 #elif defined( SW_VIEWMODE_METALLIC )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     return float4( saturate( metallic ).xxx, 1.0f );
+}
 #elif defined( SW_VIEWMODE_NORMALS )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
+}
 #elif defined( SW_VIEWMODE_DEPTH )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     const float viewDepth = Transform::computeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
     return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
+}
 #elif defined( SW_VIEWMODE_OVERDRAW )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+}
 #elif defined( SW_VIEWMODE_WIREOVERLAY )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     // ShadedWireframe 의 두 번째 드로우 — PSO 가 삼각형을 선으로 그리므로 단색이면 외곽선이다.
     return float4( kViewModeWireOverlayColor, 1.0f );
+}
 #elif defined( SW_VIEWMODE_LIGHTCOMPLEXITY )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     // 조명 식이 이 위치에서 도는 라이트 수 — 커서(LightCursor::begin)와 같은 그리드를 읽는다. 표면에서 세므로 디퍼드도 G버퍼가 색을 넘긴다.
     return float4( ViewMode::computeLightComplexityColor( LightGrid::computeVisitCount( worldPosition ) ), 1.0f );
+}
 #else
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
     // Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
     return float4( albedo.rgb, shadedColor.a );
-#endif
 }
+#endif
+
+/** @brief 보기 모드가 표면의 색을 바꾼다 — 색을 덮는 모드(SW_VIEWMODE_SKIPS_LIGHTING)는 최종 색과 알베도를 그 모드의 색으로, LightingOnly 는 알베도만 회색으로. */
+#if SW_VIEWMODE_SKIPS_LIGHTING
+static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 inoutAlbedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
+    inoutLitColor = ViewMode::computeColor( inoutLitColor, inoutAlbedo, worldNormal, worldPosition, roughness, metallic );
+    inoutAlbedo   = float4( inoutLitColor.rgb, inoutAlbedo.a );
+}
+#else
+static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 inoutAlbedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
+    inoutAlbedo = float4( ViewMode::overrideLightingAlbedo( inoutAlbedo.rgb ), inoutAlbedo.a );
+}
+#endif
 
 // G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferredlighting 이 읽는다).
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
@@ -1670,23 +1728,26 @@ static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metal
  */
 static SurfaceOutput SurfaceOutput::store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
-#if SW_VIEWMODE_SKIPS_LIGHTING
-    litColor = ViewMode::computeColor( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
-    albedo   = float4( litColor.rgb, albedo.a );
-#elif defined( SW_VIEWMODE_LIGHTINGONLY )
-    albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );
-#endif
-#if defined( SW_PASS_GBUFFER )
-    SurfaceOutput output;
-    output.albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
-    output.normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
-    output.material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
-    return output;
-#else
-    SurfaceOutput output;
-    output.color = litColor;
-    return output;
-#endif
+    ViewMode::applyToSurface( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
+    return SurfaceOutput::pack( litColor, albedo, worldNormal, roughness, metallic );
 }
+
+#if defined( SW_PASS_GBUFFER )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
+    output._normal   = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
+    output._material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
+    return output;
+}
+#else
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._color = litColor;
+    return output;
+}
+#endif
 
 #endif // SW_ENGINE_BINDING_HLSLI

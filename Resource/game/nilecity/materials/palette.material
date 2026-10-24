@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kenney City Kit (Suburban) 모델의 팔레트 머티리얼 — albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 도로 · 건물 모델이 이 하나를 나눠 쓰고, 건물 종류 색은 디렉터가 만든 인스턴스가 곱한다. -->
+<!-- Kenney City Kit (Suburban) 모델의 팔레트 머티리얼 — _albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 도로 · 건물 모델이 이 하나를 나눠 쓰고, 건물 종류 색은 디렉터가 만든 인스턴스가 곱한다. -->
 <MaterialDesc formatVersion="0" name="NileCityPalette" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
-		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="albedoMap" type="Texture2D" assetPath="game/nilecity/textures/suburban_colormap.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_albedoMap" type="Texture2D" assetPath="game/nilecity/textures/suburban_colormap.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

@@ -32,8 +32,8 @@ namespace sw
 
             static const hashed_string& getWaveName( uint32 waveIndex )
             {
-                static const hashed_string s_arrName[shaderslot::kGerstnerWaveCount] = { hashed_string( "wave0" ), hashed_string( "wave1" ), hashed_string( "wave2" ),
-                                                                                         hashed_string( "wave3" ) };
+                static const hashed_string s_arrName[shaderslot::kGerstnerWaveCount] = { hashed_string( "_wave0" ), hashed_string( "_wave1" ), hashed_string( "_wave2" ),
+                                                                                         hashed_string( "_wave3" ) };
                 return s_arrName[waveIndex];
             }
 
@@ -282,12 +282,12 @@ namespace sw
             _material.setVector( Internal::getWaveName( waveIndex ), arrWave[waveIndex] );
         }
         // x = 파도 시간, y = 깊은 물 깊이, z = 거품 폭, w = 잔물결 세기
-        _material.setVector( hashed_string( "waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
-        _material.setVector( hashed_string( "shallowColor" ), _shallowColor );
-        _material.setVector( hashed_string( "deepColor" ), _deepColor );
-        _material.setVector( hashed_string( "skyColor" ), _skyColor );
+        _material.setVector( hashed_string( "_waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
+        _material.setVector( hashed_string( "_shallowColor" ), _shallowColor );
+        _material.setVector( hashed_string( "_deepColor" ), _deepColor );
+        _material.setVector( hashed_string( "_skyColor" ), _skyColor );
         // 파도 분산의 중력이다. CPU 수면 질의(WaterWaveMath)와 같은, 설정된 물리 중력 하나를 쓴다.
-        _material.setVector( hashed_string( "waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
+        _material.setVector( hashed_string( "_waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
     void WaterBodyComponent::rebuildSurface()

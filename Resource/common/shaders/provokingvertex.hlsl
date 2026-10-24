@@ -7,25 +7,25 @@
 // 같아서 그림으로는 확인할 수 없다.
 struct PSInput
 {
-    float4               position : SV_POSITION;
-    nointerpolation uint vertexId : TEXCOORD1;
+    float4               _position : SV_POSITION;
+    nointerpolation uint _vertexId : TEXCOORD1;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     float2  clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position      = float4( clipPosition, 0.0f, 1.0f );
-    output.vertexId      = vertexId;
+    output._position     = float4( clipPosition, 0.0f, 1.0f );
+    output._vertexId     = vertexId;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     // 정점 0 = 빨강, 1 = 초록, 2 = 파랑. FIRST 면 화면 전체가 빨강, LAST 면 파랑이다.
-    if ( input.vertexId == 0 )
+    if ( input._vertexId == 0 )
         return float4( 1.0f, 0.0f, 0.0f, 1.0f );
-    if ( input.vertexId == 1 )
+    if ( input._vertexId == 1 )
         return float4( 0.0f, 1.0f, 0.0f, 1.0f );
     return float4( 0.0f, 0.0f, 1.0f, 1.0f );
 }

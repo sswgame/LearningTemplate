@@ -20,8 +20,8 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_FogVolume, SW_SLOT_PASS_SRV );
@@ -29,10 +29,10 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_FogVolume, SW_SLOT_PASS_SRV );
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
@@ -71,8 +71,8 @@ float4 sampleFogVolume( float2 uv, float distance, float farDistance )
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float  deviceDepth = PassTexture::sampleDepthPoint( input.uv ).r;
-    const float2 ndcXy       = input.uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float  deviceDepth = PassTexture::sampleDepthPoint( input._uv ).r;
+    const float2 ndcXy       = input._uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
 
     // 시선 — 원근은 눈에서, 직교는 화면 점의 가까운 면 점에서 쏜다.
     const float4 nearHomogeneous    = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
@@ -98,7 +98,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     float4 volumeValue = float4( 0.0f, 0.0f, 0.0f, 1.0f );
     SW_BRANCH if ( bVolume )
     {
-        volumeValue = sampleFogVolume( input.uv, min( distanceToSurface, farDistance ), farDistance );
+        volumeValue = sampleFogVolume( input._uv, min( distanceToSurface, farDistance ), farDistance );
     }
     const float  restStart      = bVolume ? max( startDistance, farDistance ) : startDistance;
     const float  restDepth      = FogMath::computeOpticalDepth( g_FogColorDensity, g_FogHeightParams, origin, direction, restStart, distanceToSurface );

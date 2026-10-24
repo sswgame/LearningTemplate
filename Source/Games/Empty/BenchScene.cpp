@@ -1332,7 +1332,7 @@ namespace sw
         else
         {
             const float32 roughness = static_cast<float32>( nextChurnRandom() & 0xFFFFu ) / 65535.0f;
-            pInstance->setScalarParameter( hashed_string( "roughness" ), roughness );
+            pInstance->setScalarParameter( hashed_string( "_roughness" ), roughness );
         }
     }
 

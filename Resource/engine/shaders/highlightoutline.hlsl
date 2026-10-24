@@ -22,26 +22,26 @@ static const uint kHighlightPassStyle = kHighlightStyleOutline;
 
 struct PSInput
 {
-    float4                 position : SV_POSITION;
-    nointerpolation float3 color : COLOR;
+    float4                 _position : SV_POSITION;
+    nointerpolation float3 _color : COLOR;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput      output;
-    InstanceData instance = InstanceData::load( input.instanceSlot );
-    output.color          = instance.getHighlightColor();
+    InstanceData instance = InstanceData::load( input._instanceSlot );
+    output._color         = instance.getHighlightColor();
     // 이 패스의 방식이 아닌 인스턴스(강조 없음 포함)는 그리지 않는다 — 드로우는 그대로 나가지만 래스터가 없다.
     if ( instance.getHighlightStyle() != kHighlightPassStyle )
     {
-        output.position = float4( 0.0f, 0.0f, -1.0f, 1.0f );
+        output._position = float4( 0.0f, 0.0f, -1.0f, 1.0f );
         return output;
     }
     float3 localPosition;
     float3 localNormal;
-    MorphPool::loadVertex( instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal );
-    const float4 worldPosition = Transform::computeWorldPosition( localPosition, instance.world );
-    const float3 worldNormal   = Transform::computeWorldNormal( localNormal, instance.world );
+    MorphPool::loadVertex( instance._meshBatchIndex, vertexId, input._position, input._normal, localPosition, localNormal );
+    const float4 worldPosition = Transform::computeWorldPosition( localPosition, instance._world );
+    const float3 worldNormal   = Transform::computeWorldNormal( localNormal, instance._world );
     float4       clipPosition  = Transform::computeClipPosition( worldPosition, g_ViewProj );
     // 화면 공간 두께: 노멀을 클립 공간에 투영해 그 방향으로 민다. xy 에 w 를 곱해 더하므로 나눗셈 뒤 두께가 거리와 무관하다.
     // 가로세로 비를 맞춰야 위아래 · 좌우 두께가 같다(g_OutlineParams.y = 1/W, .z = 1/H — FrameRendererConstants).
@@ -50,11 +50,11 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
     const float2 direction  = ( normalLen > 1e-6f ) ? clipNormal / normalLen : float2( 0.0f, 0.0f );
     const float  aspect     = g_OutlineParams.y / max( g_OutlineParams.z, 1e-6f );
     clipPosition.xy += direction * float2( aspect, 1.0f ) * ( SW_HIGHLIGHT_WIDTH * 2.0f * clipPosition.w );
-    output.position = clipPosition;
+    output._position = clipPosition;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    return float4( input.color, 1.0f );
+    return float4( input._color, 1.0f );
 }

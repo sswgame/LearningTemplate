@@ -5,20 +5,20 @@
 // 진입점만 슬롯 1 을 빠뜨려도 드러나지 않았다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 이 셰이더로 잡는다).
 struct PSInput
 {
-    float4               position : SV_POSITION;
-    nointerpolation uint slot : TEXCOORD1;
+    float4               _position : SV_POSITION;
+    nointerpolation uint _slot : TEXCOORD1;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
     float2  clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position      = float4( clipPosition, 0.0f, 1.0f );
-    output.slot          = input.instanceSlot;
+    output._position     = float4( clipPosition, 0.0f, 1.0f );
+    output._slot         = input._instanceSlot;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    return ( input.slot == 7u ) ? float4( 0.0f, 1.0f, 0.0f, 1.0f ) : float4( 1.0f, 0.0f, 0.0f, 1.0f );
+    return ( input._slot == 7u ) ? float4( 0.0f, 1.0f, 0.0f, 1.0f ) : float4( 1.0f, 0.0f, 0.0f, 1.0f );
 }

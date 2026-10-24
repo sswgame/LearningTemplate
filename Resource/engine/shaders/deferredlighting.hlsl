@@ -12,37 +12,37 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float4 albedoSample = PassTexture::sampleAlbedo( input.uv );
-    const float4 normalSample = PassTexture::sampleNormal( input.uv );
+    const float4 albedoSample = PassTexture::sampleAlbedo( input._uv );
+    const float4 normalSample = PassTexture::sampleNormal( input._uv );
     float3       albedo       = albedoSample.rgb;
     float3       normal       = normalize( normalSample.xyz * 2.0f - 1.0f );
     if ( length( normal ) < 0.1f )
         normal = float3( 0.0f, 0.85f, 0.5f );
 
-    float  depth         = PassTexture::sampleDepth( input.uv ).r;
-    float3 worldPosition = Transform::computeWorldPositionFromDepth( input.uv, depth );
+    float  depth         = PassTexture::sampleDepth( input._uv ).r;
+    float3 worldPosition = Transform::computeWorldPositionFromDepth( input._uv, depth );
 
     // 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).
     // 금속도 · 거칠기는 G버퍼 머티리얼 칸이다(binding.hlsli SurfaceOutput::encodeGbufferMaterial 이 적는다).
     float roughness;
     float metallic;
-    PassTexture::loadGbufferMaterial( input.uv, roughness, metallic );
+    PassTexture::loadGbufferMaterial( input._uv, roughness, metallic );
 
     float  shadow = Shadow::sampleAtWorld( worldPosition, normal );
     float3 lit    = Lighting::shadeLights( albedo, worldPosition, normal, shadow, roughness, metallic );

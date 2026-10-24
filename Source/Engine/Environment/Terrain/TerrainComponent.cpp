@@ -51,9 +51,9 @@ namespace sw
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
-                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "layer0Color" ), hashed_string( "layer1Color" ), hashed_string( "layer2Color" ),
-                                                                                           hashed_string( "layer3Color" ), hashed_string( "layer4Color" ), hashed_string( "layer5Color" ),
-                                                                                           hashed_string( "layer6Color" ), hashed_string( "layer7Color" ) };
+                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "_layer0Color" ), hashed_string( "_layer1Color" ), hashed_string( "_layer2Color" ),
+                                                                                           hashed_string( "_layer3Color" ), hashed_string( "_layer4Color" ), hashed_string( "_layer5Color" ),
+                                                                                           hashed_string( "_layer6Color" ), hashed_string( "_layer7Color" ) };
                 return s_arrName[layerIndex];
             }
 
@@ -758,16 +758,16 @@ namespace sw
             arrTriplanar[layerIndex] = _listLayer[layerIndex]._bTriplanar ? 1.0f : 0.0f;
         }
         // 레이어 넷마다 벡터 하나 - 평면 0 은 레이어 0..3 (layerDetail · layerTriplanar), 평면 1 은 레이어 4..7 (layerDetail1 · layerTriplanar1).
-        _material.setVector( hashed_string( "layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
-        _material.setVector( hashed_string( "layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
-        _material.setVector( hashed_string( "layerDetail1" ), float4{ arrDetail[4], arrDetail[5], arrDetail[6], arrDetail[7] } );
-        _material.setVector( hashed_string( "layerTriplanar1" ), float4{ arrTriplanar[4], arrTriplanar[5], arrTriplanar[6], arrTriplanar[7] } );
+        _material.setVector( hashed_string( "_layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
+        _material.setVector( hashed_string( "_layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
+        _material.setVector( hashed_string( "_layerDetail1" ), float4{ arrDetail[4], arrDetail[5], arrDetail[6], arrDetail[7] } );
+        _material.setVector( hashed_string( "_layerTriplanar1" ), float4{ arrTriplanar[4], arrTriplanar[5], arrTriplanar[6], arrTriplanar[7] } );
         // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 절벽 임계값(노멀 y), w 는 절벽 레이어(-1 이면 끔)다.
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
-        _material.setVector( hashed_string( "terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
-        _material.setTexture( hashed_string( "splatMap" ), _arrCPUSplatPath[0] );
-        _material.setTexture( hashed_string( "splatMap1" ), _arrCPUSplatPath[1] );
-        _material.setTexture( hashed_string( "detailMap" ), _detailTexturePath );
+        _material.setVector( hashed_string( "_terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
+        _material.setTexture( hashed_string( "_splatMap" ), _arrCPUSplatPath[0] );
+        _material.setTexture( hashed_string( "_splatMap1" ), _arrCPUSplatPath[1] );
+        _material.setTexture( hashed_string( "_detailMap" ), _detailTexturePath );
     }
 
     void TerrainComponent::releaseChunks()

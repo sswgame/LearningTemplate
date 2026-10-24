@@ -167,8 +167,8 @@ static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
  */
 float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
 {
-    const uint   lightType = (uint)( directionType.w + 0.5f );
-    const float3 fromLight = worldPosition - positionRadius.xyz;
+    const uint   lightType = (uint)( _directionType.w + 0.5f );
+    const float3 fromLight = worldPosition - _positionRadius.xyz;
     const float3 axis      = abs( fromLight );
     uint         faceIndex = 0u;
     if ( lightType == SW_LIGHT_TYPE_POINT )
@@ -180,21 +180,21 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
         else
             faceIndex = ( fromLight.z >= 0.0f ) ? 4u : 5u;
     }
-    const uint      element    = g_SwLightCount + (uint)( params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
+    const uint      element    = g_SwLightCount + (uint)( _params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
     const LightData matrixRows = g_SwLights[element];
     const LightData info       = g_SwLights[element + 1u];
-    const float4x4  viewProj   = float4x4( matrixRows.positionRadius, matrixRows.colorIntensity, matrixRows.directionType, matrixRows.params );
+    const float4x4  viewProj   = float4x4( matrixRows._positionRadius, matrixRows._colorIntensity, matrixRows._directionType, matrixRows._params );
 
     const float  distance       = length( fromLight );
     const float3 toLight        = -fromLight / max( distance, 1e-4f );
-    const float3 samplePosition = worldPosition + worldNormal * ( info.colorIntensity.x * distance ) + toLight * ( info.colorIntensity.y * distance );
+    const float3 samplePosition = worldPosition + worldNormal * ( info._colorIntensity.x * distance ) + toLight * ( info._colorIntensity.y * distance );
     const float4 lightClip      = mul( float4( samplePosition, 1.0f ), viewProj );
     const float3 ndc            = lightClip.xyz / lightClip.w;
     const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
-    const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info.positionRadius.x && uv.x <= info.positionRadius.z &&
-                         uv.y >= info.positionRadius.y && uv.y <= info.positionRadius.w;
-    const float lit = bInside ? Shadow::filterAtlas( uv, ndc.z, info.colorIntensity.z, true, info.positionRadius.xy, info.positionRadius.zw ) : 1.0f;
-    return lerp( 1.0f - info.colorIntensity.w, 1.0f, saturate( lit ) );
+    const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info._positionRadius.x && uv.x <= info._positionRadius.z &&
+                         uv.y >= info._positionRadius.y && uv.y <= info._positionRadius.w;
+    const float lit = bInside ? Shadow::filterAtlas( uv, ndc.z, info._colorIntensity.z, true, info._positionRadius.xy, info._positionRadius.zw ) : 1.0f;
+    return lerp( 1.0f - info._colorIntensity.w, 1.0f, saturate( lit ) );
 }
 
 /**
@@ -203,9 +203,9 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
  */
 float LightData::computeShadow( float3 worldPosition, float3 worldNormal, float directionalShadow )
 {
-    const uint lightType = (uint)( directionType.w + 0.5f );
+    const uint lightType = (uint)( _directionType.w + 0.5f );
     float      shadow    = 1.0f;
-    if ( params.x > 0.5f )
+    if ( _params.x > 0.5f )
         shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : sampleLocalShadow( worldPosition, worldNormal );
     return shadow;
 }
@@ -232,18 +232,18 @@ static float3 Transform::computeWorldPositionFromDepth( float2 uv, float deviceD
  */
 bool LightData::computeIncidence( float3 worldPosition, out float3 outToLight, out float outAttenuation )
 {
-    const uint lightType = (uint)( directionType.w + 0.5f );
+    const uint lightType = (uint)( _directionType.w + 0.5f );
     // 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
     const bool bLight3d    = ( lightType <= SW_LIGHT_TYPE_SPOT );
-    float3     toLight     = -directionType.xyz;
+    float3     toLight     = -_directionType.xyz;
     float      attenuation = 1.0f;
     if ( bLight3d && lightType != SW_LIGHT_TYPE_DIRECTIONAL )
     {
         // 점광과 스폿은 거리 감쇠가 같다 — 스폿은 거기에 원뿔을 곱할 뿐이다.
-        const float3 delta    = positionRadius.xyz - worldPosition;
+        const float3 delta    = _positionRadius.xyz - worldPosition;
         const float  distance = length( delta );
         // 반경이 0 이면 나눗셈이 터진다. 반경 밖은 0 이 되어 그 빛이 계산에서 빠진다.
-        const float radius = max( positionRadius.w, 1e-4f );
+        const float radius = max( _positionRadius.w, 1e-4f );
         toLight            = delta / max( distance, 1e-4f );
         // 역제곱을 반경에서 자른 형태 — 언리얼의 `InverseSquaredFalloff` 와 같은 모양이다.
         // 물리적으로 정확한 역제곱만 쓰면 빛이 영원히 닿아 타일 컬링이 의미를 잃는다.
@@ -254,9 +254,9 @@ bool LightData::computeIncidence( float3 worldPosition, out float3 outToLight, o
         {
             // 원뿔 감쇠. `dot(빛이 나아가는 방향, 빛에서 표면으로 가는 방향)` 이 1 에 가까울수록
             // 원뿔 중심이다. 안쪽 각 안은 1, 바깥 각 밖은 0, 사이는 부드럽게 떨어진다.
-            const float cosAngle = dot( directionType.xyz, -toLight );
-            const float cosOuter = params.y;
-            const float cosInner = params.z;
+            const float cosAngle = dot( _directionType.xyz, -toLight );
+            const float cosOuter = _params.y;
+            const float cosInner = _params.z;
             // 안쪽과 바깥쪽이 같으면 0 으로 나눈다 — 그 경우 경계가 칼같이 끊긴다.
             const float cone = saturate( ( cosAngle - cosOuter ) / max( cosInner - cosOuter, 1e-4f ) );
             attenuation *= cone * cone;
@@ -305,10 +305,10 @@ static float3 LightProbe::evaluateSphericalHarmonics( uint probeIndex, float3 no
  */
 float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
 {
-    const float3 origin    = colorIntensity.xyz;
-    const float3 spacing   = max( directionType.xyz, 1e-4f );
-    const uint3  count     = uint3( params.xyz + 0.5f );
-    const uint   probeBase = (uint)( params.w + 0.5f );
+    const float3 origin    = _colorIntensity.xyz;
+    const float3 spacing   = max( _directionType.xyz, 1e-4f );
+    const uint3  count     = uint3( _params.xyz + 0.5f );
+    const uint   probeBase = (uint)( _params.w + 0.5f );
     const float3 lastCell  = float3( max( count, 1u ) - 1u );
     const float3 local     = ( worldPosition - origin ) / spacing;
     // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
@@ -371,13 +371,13 @@ static float3 ReflectionProbe::sampleLevel( uint firstTexel, uint resolution, ui
  */
 float4 LightData::sampleReflectionProbe( float3 worldPosition, float3 reflectDirection, float roughness )
 {
-    const float3 halfExtent = colorIntensity.xyz;
-    const float  blendWidth = max( colorIntensity.w, 1e-3f );
-    const float3 inside     = halfExtent - abs( worldPosition - positionRadius.xyz ); // 축마다 경계까지 남은 거리(음수면 밖)
+    const float3 halfExtent = _colorIntensity.xyz;
+    const float  blendWidth = max( _colorIntensity.w, 1e-3f );
+    const float3 inside     = halfExtent - abs( worldPosition - _positionRadius.xyz ); // 축마다 경계까지 남은 거리(음수면 밖)
     const float  weight     = saturate( min( inside.x, min( inside.y, inside.z ) ) / blendWidth );
-    const uint   resolution = (uint)( params.x + 0.5f );
-    const uint   levelCount = (uint)( params.y + 0.5f );
-    const uint   firstTexel = (uint)( params.z + 0.5f );
+    const uint   resolution = (uint)( _params.x + 0.5f );
+    const uint   levelCount = (uint)( _params.y + 0.5f );
+    const uint   firstTexel = (uint)( _params.z + 0.5f );
     const bool   bUsable    = weight > 0.0f && resolution > 0u && levelCount > 1u && g_SwLightProbesIndex != kInvalidIndex;
     float3       radiance   = float3( 0.0f, 0.0f, 0.0f );
     if ( bUsable )
@@ -404,11 +404,11 @@ float4 LightData::sampleReflectionProbe( float3 worldPosition, float3 reflectDir
  */
 struct LightCursor
 {
-    uint position;        // 첫 구간의 다음 항목. 그리드가 없으면 라이트 번호, 있으면 전역 구간(방향광)의 그리드 단어 번호다
-    uint end;             // 첫 구간의 끝
-    uint clusterPosition; // 둘째 구간(이 위치의 클러스터 목록)의 다음 그리드 단어 번호. 그리드가 없으면 빈 구간이다
-    uint clusterEnd;      // 둘째 구간의 끝
-    uint bGrid;           // 1 이면 두 구간의 항목이 그리드 단어이고 라이트 번호는 그 단어에 있다
+    uint _position;        // 첫 구간의 다음 항목. 그리드가 없으면 라이트 번호, 있으면 전역 구간(방향광)의 그리드 단어 번호다
+    uint _end;             // 첫 구간의 끝
+    uint _clusterPosition; // 둘째 구간(이 위치의 클러스터 목록)의 다음 그리드 단어 번호. 그리드가 없으면 빈 구간이다
+    uint _clusterEnd;      // 둘째 구간의 끝
+    uint _bGrid;           // 1 이면 두 구간의 항목이 그리드 단어이고 라이트 번호는 그 단어에 있다
 
     static LightCursor begin( float3 worldPosition );
     bool next( out LightData outLight ); // 커서를 한 칸 옮긴다(멤버를 고친다)
@@ -421,21 +421,21 @@ struct LightCursor
 static LightCursor LightCursor::begin( float3 worldPosition )
 {
     LightCursor cursor;
-    cursor.position        = 0u;
-    cursor.end             = LightGrid::computeLightCount();
-    cursor.clusterPosition = 0u;
-    cursor.clusterEnd      = 0u;
-    cursor.bGrid           = 0u;
-    if ( cursor.end > 0u && LightGrid::hasGrid() )
+    cursor._position        = 0u;
+    cursor._end             = LightGrid::computeLightCount();
+    cursor._clusterPosition = 0u;
+    cursor._clusterEnd      = 0u;
+    cursor._bGrid           = 0u;
+    if ( cursor._end > 0u && LightGrid::hasGrid() )
     {
-        const uint cluster     = LightGrid::computeCluster( worldPosition );
-        const uint indexBase   = LightGrid::loadWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
-        const uint clusterWord = LightGrid::loadWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + cluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
-        cursor.position        = indexBase;
-        cursor.end             = indexBase + LightGrid::loadWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT );
-        cursor.clusterPosition = indexBase + LightGrid::loadWord( clusterWord );
-        cursor.clusterEnd      = cursor.clusterPosition + LightGrid::loadWord( clusterWord + 1u );
-        cursor.bGrid           = 1u;
+        const uint cluster      = LightGrid::computeCluster( worldPosition );
+        const uint indexBase    = LightGrid::loadWord( SW_LIGHT_GRID_WORD_INDEX_BASE );
+        const uint clusterWord  = LightGrid::loadWord( SW_LIGHT_GRID_WORD_CLUSTER_BASE ) + cluster * SW_LIGHT_GRID_WORDS_PER_CLUSTER;
+        cursor._position        = indexBase;
+        cursor._end             = indexBase + LightGrid::loadWord( SW_LIGHT_GRID_WORD_GLOBAL_COUNT );
+        cursor._clusterPosition = indexBase + LightGrid::loadWord( clusterWord );
+        cursor._clusterEnd      = cursor._clusterPosition + LightGrid::loadWord( clusterWord + 1u );
+        cursor._bGrid           = 1u;
     }
     return cursor;
 }
@@ -448,22 +448,22 @@ static LightCursor LightCursor::begin( float3 worldPosition )
  */
 bool LightCursor::next( out LightData outLight )
 {
-    const bool bFirst     = position < end;
-    const bool bSecond    = ( bFirst == false ) && ( clusterPosition < clusterEnd );
+    const bool bFirst     = _position < _end;
+    const bool bSecond    = ( bFirst == false ) && ( _clusterPosition < _clusterEnd );
     const bool bHasLight  = bFirst || bSecond;
-    const uint entry      = bFirst ? position : clusterPosition;
+    const uint entry      = bFirst ? _position : _clusterPosition;
     uint       lightIndex = entry;
-    if ( bHasLight && bGrid != 0u )
+    if ( bHasLight && _bGrid != 0u )
         lightIndex = LightGrid::loadWord( entry );
-    outLight.positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    outLight.colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    outLight.directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
-    outLight.params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    outLight.extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight._positionRadius = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight._colorIntensity = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight._directionType  = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_SHADOW2D );
+    outLight._params         = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outLight._extra          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     if ( bHasLight && lightIndex < g_SwLightCount )
         outLight = g_SwLights[lightIndex];
-    position += bFirst ? 1u : 0u;
-    clusterPosition += bSecond ? 1u : 0u;
+    _position += bFirst ? 1u : 0u;
+    _clusterPosition += bSecond ? 1u : 0u;
     return bHasLight;
 }
 
@@ -478,10 +478,10 @@ static const float kMinRoughness       = 0.045f; // 거칠기 0 의 GGX 는 점 
 /** @brief PBR 표면 — 금속도가 기본 색을 확산색과 F0 로 나눈다(언리얼 DiffuseColor · SpecularColor). */
 struct SurfacePbr
 {
-    float3 diffuseColor;
-    float3 specularColor; // F0
-    float  roughness;     // 지각 거칠기(하한을 건 값)
-    float  alpha;         // GGX α = 거칠기²
+    float3 _diffuseColor;
+    float3 _specularColor; // F0
+    float  _roughness;     // 지각 거칠기(하한을 건 값)
+    float  _alpha;         // GGX α = 거칠기²
 
     static SurfacePbr make( float3 baseColor, float roughness, float metallic );
     float3 evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight );
@@ -492,10 +492,10 @@ static SurfacePbr SurfacePbr::make( float3 baseColor, float roughness, float met
 {
     const float clampedMetallic = saturate( metallic );
     SurfacePbr  surface;
-    surface.diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
-    surface.specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
-    surface.roughness     = max( saturate( roughness ), kMinRoughness );
-    surface.alpha         = surface.roughness * surface.roughness;
+    surface._diffuseColor  = baseColor * ( 1.0f - clampedMetallic );
+    surface._specularColor = lerp( float3( kDielectricSpecular, kDielectricSpecular, kDielectricSpecular ), baseColor, clampedMetallic );
+    surface._roughness     = max( saturate( roughness ), kMinRoughness );
+    surface._alpha         = surface._roughness * surface._roughness;
     return surface;
 }
 
@@ -519,15 +519,15 @@ float3 SurfacePbr::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
     const float  normalDotHalf = saturate( dot( normal, halfway ) );
     const float  normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
     const float  viewDotHalf   = saturate( dot( toView, halfway ) );
-    const float  alphaSquared  = alpha * alpha;
+    const float  alphaSquared  = _alpha * _alpha;
     const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
     // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
     const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
-    const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - alpha ) + alpha ) +
-                                                       normalDotView * ( normalDotLight * ( 1.0f - alpha ) + alpha ),
+    const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - _alpha ) + _alpha ) +
+                                                       normalDotView * ( normalDotLight * ( 1.0f - _alpha ) + _alpha ),
                                                    1e-5f );
     const float  fresnelWeight       = pow( 1.0f - viewDotHalf, 5.0f );
-    const float3 fresnel             = specularColor + ( 1.0f - specularColor ) * fresnelWeight;
+    const float3 fresnel             = _specularColor + ( 1.0f - _specularColor ) * fresnelWeight;
     return distributionTimesPi * visibility * fresnel * normalDotLight;
 }
 
@@ -539,10 +539,10 @@ float3 SurfacePbr::computeEnvironmentSpecular( float normalDotView )
 {
     const float4 c0        = float4( -1.0f, -0.0275f, -0.572f, 0.022f );
     const float4 c1        = float4( 1.0f, 0.0425f, 1.04f, -0.04f );
-    const float4 fitted    = roughness * c0 + c1;
+    const float4 fitted    = _roughness * c0 + c1;
     const float  a004      = min( fitted.x * fitted.x, exp2( -9.28f * normalDotView ) ) * fitted.x + fitted.y;
     const float2 scaleBias = float2( -1.04f, 1.04f ) * a004 + fitted.zw;
-    return specularColor * scaleBias.x + scaleBias.y;
+    return _specularColor * scaleBias.x + scaleBias.y;
 }
 
 /**
@@ -570,10 +570,8 @@ static float3 Lighting::computeRimLight( float3 normal )
  */
 static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
 {
-#if defined( SW_VIEWMODE_LIGHTINGONLY )
-    // 보기 모드 LightingOnly — 포워드 셰이더의 표면 색을 회색으로 바꾼다(binding.hlsli 의 SW_VIEWMODE_LIGHTINGONLY_ALBEDO).
-    albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
-#endif
+    // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
+    albedo                         = ViewMode::overrideLightingAlbedo( albedo );
     const SurfacePbr surface       = SurfacePbr::make( albedo, roughness, metallic );
     const float3     toView        = View::computeToView( worldPosition );
     const float      normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
@@ -581,7 +579,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
     const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
     const float3 environmentSpecular = surface.computeEnvironmentSpecular( normalDotView );
     const float3 reflectDirection    = reflect( -toView, normal );
-    float3       lit                 = ( surface.diffuseColor + environmentSpecular ) * ambient;
+    float3       lit                 = ( surface._diffuseColor + environmentSpecular ) * ambient;
     float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
     float        probeWeight         = 0.0f;
     float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
@@ -591,7 +589,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
     LightData   light;
     while ( cursor.next( light ) )
     {
-        const uint lightType = (uint)( light.directionType.w + 0.5f );
+        const uint lightType = (uint)( light._directionType.w + 0.5f );
         if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
         {
             const float4 probe = light.sampleProbeVolume( worldPosition, normal );
@@ -601,7 +599,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         }
         if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
         {
-            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, surface.roughness );
+            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, surface._roughness );
             reflectionSum += reflection.rgb * reflection.a;
             reflectionWeight += reflection.a;
             continue;
@@ -616,12 +614,12 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
             continue;
 
         const float  shadowTerm = light.computeShadow( worldPosition, normal, shadow );
-        const float3 response   = surface.diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight );
-        lit += response * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
+        const float3 response   = surface._diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight );
+        lit += response * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
     if ( probeWeight > 0.0f )
-        lit += surface.diffuseColor * ( probeSum / probeWeight - ambient );
+        lit += surface._diffuseColor * ( probeSum / probeWeight - ambient );
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )

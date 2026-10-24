@@ -80,7 +80,7 @@ SW_TEST_CASE( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
     sw::BindlessIndexValidator::clearReports();
 
     const sw::hashed_string material{ "GlassMaterial" };
-    const sw::hashed_string field{ "albedoMap" };
+    const sw::hashed_string field{ "_albedoMap" };
     SW_EXPECT_TRUE( sw::BindlessIndexValidator::noteAbsent( material, field, 0 ) );
     SW_EXPECT_FALSE( sw::BindlessIndexValidator::noteAbsent( material, field, 0 ) );
     SW_EXPECT_EQUAL( 1u, sw::BindlessIndexValidator::getAbsentNoteCount() );

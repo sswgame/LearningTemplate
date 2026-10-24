@@ -4,16 +4,16 @@
      MATERIAL_VERTEX_DEFORM 은 깊이 프리패스에서 빠지게 한다(shadowdepth.hlsl) — 흔들린 정점이 프리패스 깊이와 어긋나지 않게. -->
 <MaterialDesc formatVersion="0" name="Grass" shaderPath="engine/shaders/foliage.hlsl" blendMode="Opaque">
 	<_properties>
-		<item name="tint" type="Vector4" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint" group="Foliage"/>
-		<item name="windParams" type="Vector4" shaderType="Float4" defaultValue="1.0 0.0 0.35 0.0" displayName="Wind Direction XZ, Strength, Time" group="Wind"/>
-		<item name="windWave" type="Vector4" shaderType="Float4" defaultValue="1.2 0.25 0.25 1.0" displayName="Sway Hz, Gust, Gust Hz, Sway Height" group="Wind"/>
-		<item name="viewParams" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 1.0" displayName="Camera Position, Bend Strength" group="Foliage"/>
-		<item name="fadeParams" type="Vector4" shaderType="Float4" defaultValue="60.0 80.0 0.0 0.0" displayName="Fade Start, Fade End" group="Foliage"/>
-		<item name="influencer0" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 0" group="Interaction"/>
-		<item name="influencer1" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 1" group="Interaction"/>
-		<item name="influencer2" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 2" group="Interaction"/>
-		<item name="influencer3" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 3" group="Interaction"/>
-		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Foliage" bSrgb="1"/>
+		<item name="_tint" type="Vector4" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint" group="Foliage"/>
+		<item name="_windParams" type="Vector4" shaderType="Float4" defaultValue="1.0 0.0 0.35 0.0" displayName="Wind Direction XZ, Strength, Time" group="Wind"/>
+		<item name="_windWave" type="Vector4" shaderType="Float4" defaultValue="1.2 0.25 0.25 1.0" displayName="Sway Hz, Gust, Gust Hz, Sway Height" group="Wind"/>
+		<item name="_viewParams" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 1.0" displayName="Camera Position, Bend Strength" group="Foliage"/>
+		<item name="_fadeParams" type="Vector4" shaderType="Float4" defaultValue="60.0 80.0 0.0 0.0" displayName="Fade Start, Fade End" group="Foliage"/>
+		<item name="_influencer0" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 0" group="Interaction"/>
+		<item name="_influencer1" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 1" group="Interaction"/>
+		<item name="_influencer2" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 2" group="Interaction"/>
+		<item name="_influencer3" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 3" group="Interaction"/>
+		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Foliage" bSrgb="1"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

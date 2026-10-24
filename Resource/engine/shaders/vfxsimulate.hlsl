@@ -34,16 +34,16 @@
 /** @brief 입자 하나의 시뮬레이션 상태입니다(float4 SW_VFX_STATE_FLOAT4_COUNT 개 — C++ 는 크기만 안다). */
 struct VfxParticleState
 {
-    float4 positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
-    float4 velocityLifetime; // xyz 속도, w 수명(초)
-    uint4  particleIndex;    // xy 입자 번호(64 비트, x 가 아래), zw 빈칸
+    float4 _positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
+    float4 _velocityLifetime; // xyz 속도, w 수명(초)
+    uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), zw 빈칸
 };
 
 struct GPUParticle
 {
-    float4 positionSize;
-    float4 color;
-    float4 rotationLife;
+    float4 _positionSize;
+    float4 _color;
+    float4 _rotationLife;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( uint4, g_VfxParams, 0 );
@@ -219,12 +219,12 @@ VfxParticleState makeParticle( uint2 particleIndex )
     uint2        state       = combineUint64( seedRow.xy, particleIndex, seedRow.zw );
 
     VfxParticleState particle;
-    particle.velocityLifetime.w = lerpFloat( velocityMin.w, velocityMax.w, nextUnitFloat( state, seedRow.zw ) );
-    particle.velocityLifetime.x = lerpFloat( velocityMin.x, velocityMax.x, nextUnitFloat( state, seedRow.zw ) );
-    particle.velocityLifetime.y = lerpFloat( velocityMin.y, velocityMax.y, nextUnitFloat( state, seedRow.zw ) );
-    particle.velocityLifetime.z = lerpFloat( velocityMin.z, velocityMax.z, nextUnitFloat( state, seedRow.zw ) );
-    particle.positionAge        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    particle.particleIndex      = uint4( particleIndex, 0u, 0u );
+    particle._velocityLifetime.w = lerpFloat( velocityMin.w, velocityMax.w, nextUnitFloat( state, seedRow.zw ) );
+    particle._velocityLifetime.x = lerpFloat( velocityMin.x, velocityMax.x, nextUnitFloat( state, seedRow.zw ) );
+    particle._velocityLifetime.y = lerpFloat( velocityMin.y, velocityMax.y, nextUnitFloat( state, seedRow.zw ) );
+    particle._velocityLifetime.z = lerpFloat( velocityMin.z, velocityMax.z, nextUnitFloat( state, seedRow.zw ) );
+    particle._positionAge        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    particle._particleIndex      = uint4( particleIndex, 0u, 0u );
     return particle;
 }
 
@@ -248,7 +248,7 @@ float3 computeDepthWorldPoint( int2 texel, float2 size, uint historyIndex )
 void resolveDepthCollision( inout VfxParticleState inoutParticle, uint flags, out bool outKilled )
 {
     outKilled          = false;
-    const float3 world = transformPoint4( SW_VFX_PARAM_ROW_WORLD, inoutParticle.positionAge.xyz ).xyz;
+    const float3 world = transformPoint4( SW_VFX_PARAM_ROW_WORLD, inoutParticle._positionAge.xyz ).xyz;
     const float4 clip  = transformPoint4( SW_VFX_PARAM_ROW_DEPTH_VIEW_PROJ, world );
     if ( clip.w <= 1e-4f )
         return; // 카메라 뒤
@@ -289,16 +289,16 @@ void resolveDepthCollision( inout VfxParticleState inoutParticle, uint flags, ou
     if ( dot( normal, eyeRow.xyz - surface ) < 0.0f )
         normal = -normal;
 
-    float3      velocity    = transformVector( SW_VFX_PARAM_ROW_WORLD, inoutParticle.velocityLifetime.xyz );
+    float3      velocity    = transformVector( SW_VFX_PARAM_ROW_WORLD, inoutParticle._velocityLifetime.xyz );
     const float normalSpeed = dot( velocity, normal );
     if ( normalSpeed >= 0.0f )
         return; // 이미 면에서 멀어진다
-    const float3 normalPart            = normal * normalSpeed;
-    const float3 tangentPart           = velocity - normalPart;
-    velocity                           = tangentPart * ( 1.0f - collision.y ) - normalPart * collision.x;
-    const float3 bouncedWorld          = surface + normal * collision.z;
-    inoutParticle.positionAge.xyz      = transformPoint4( SW_VFX_PARAM_ROW_INVERSE_WORLD, bouncedWorld ).xyz;
-    inoutParticle.velocityLifetime.xyz = transformVector( SW_VFX_PARAM_ROW_INVERSE_WORLD, velocity );
+    const float3 normalPart             = normal * normalSpeed;
+    const float3 tangentPart            = velocity - normalPart;
+    velocity                            = tangentPart * ( 1.0f - collision.y ) - normalPart * collision.x;
+    const float3 bouncedWorld           = surface + normal * collision.z;
+    inoutParticle._positionAge.xyz      = transformPoint4( SW_VFX_PARAM_ROW_INVERSE_WORLD, bouncedWorld ).xyz;
+    inoutParticle._velocityLifetime.xyz = transformVector( SW_VFX_PARAM_ROW_INVERSE_WORLD, velocity );
 }
 
 SW_NUMTHREADS( SW_VFX_SIMULATE_THREAD_COUNT, 1, 1 )
@@ -347,19 +347,19 @@ void CSMain( uint3 groupThreadId : SV_GroupThreadID )
             const uint       slot   = chunkFirst + thread;
             bool             bAlive = false;
             VfxParticleState particle;
-            particle.positionAge      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-            particle.velocityLifetime = float4( 0.0f, 0.0f, 0.0f, 1.0f );
-            particle.particleIndex    = uint4( 0u, 0u, 0u, 0u );
+            particle._positionAge      = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+            particle._velocityLifetime = float4( 0.0f, 0.0f, 0.0f, 1.0f );
+            particle._particleIndex    = uint4( 0u, 0u, 0u, 0u );
             if ( slot < totalCount )
             {
                 particle = g_VfxStateRW[sourceBase + slot];
-                particle.velocityLifetime.xyz += gravity.xyz * gravity.w;
-                particle.positionAge.xyz += particle.velocityLifetime.xyz * gravity.w;
-                particle.positionAge.w += gravity.w;
+                particle._velocityLifetime.xyz += gravity.xyz * gravity.w;
+                particle._positionAge.xyz += particle._velocityLifetime.xyz * gravity.w;
+                particle._positionAge.w += gravity.w;
                 bool bKilled = false;
                 if ( bCollideDepth )
                     resolveDepthCollision( particle, flags, bKilled );
-                bAlive = particle.positionAge.w < particle.velocityLifetime.w && bKilled == false;
+                bAlive = particle._positionAge.w < particle._velocityLifetime.w && bKilled == false;
             }
             // 포함 접두사 합(Hillis-Steele). 읽기와 쓰기 사이에 동기화를 둔다.
             s_arrScan[thread] = bAlive ? 1u : 0u;
@@ -394,27 +394,27 @@ void CSMain( uint3 groupThreadId : SV_GroupThreadID )
     {
         const bool  bAlive = outputIndex < aliveCount;
         GPUParticle output;
-        output.positionSize = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-        output.color        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-        output.rotationLife = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        output._positionSize = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        output._color        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        output._rotationLife = float4( 0.0f, 0.0f, 0.0f, 0.0f );
         if ( bAlive )
         {
             const VfxParticleState particle  = g_VfxStateRW[currentBase + outputIndex];
-            const float            lifeRatio = particle.positionAge.w / particle.velocityLifetime.w;
-            output.positionSize              = float4( particle.positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
-            output.color                     = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
+            const float            lifeRatio = particle._positionAge.w / particle._velocityLifetime.w;
+            output._positionSize             = float4( particle._positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
+            output._color                    = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
                                                        evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) );
-            output.rotationLife              = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
+            output._rotationLife             = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
             g_VfxParticlesRW[outputIndex]    = output;
         }
         if ( outputIndex < lightCount )
         {
             LightData light;
-            light.positionRadius                    = float4( transformPoint4( SW_VFX_PARAM_ROW_WORLD, output.positionSize.xyz ).xyz, bAlive ? asfloat( lightRow.z ) : 0.0f );
-            light.colorIntensity                    = float4( output.color.rgb, asfloat( lightRow.w ) * output.color.a );
-            light.directionType                     = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_POINT );
-            light.params                            = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-            light.extra                             = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+            light._positionRadius                   = float4( transformPoint4( SW_VFX_PARAM_ROW_WORLD, output._positionSize.xyz ).xyz, bAlive ? asfloat( lightRow.z ) : 0.0f );
+            light._colorIntensity                   = float4( output._color.rgb, asfloat( lightRow.w ) * output._color.a );
+            light._directionType                    = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_POINT );
+            light._params                           = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+            light._extra                            = float4( 0.0f, 0.0f, 0.0f, 0.0f );
             g_VfxLightsRW[lightRow.x + outputIndex] = light;
         }
     }

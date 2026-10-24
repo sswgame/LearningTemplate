@@ -819,7 +819,7 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     bool bDyed = false;
     for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
     {
-        bDyed = bDyed || ( value._owner.empty() && value._name == hashed_string( "color" ) && value._value._z > value._value._x );
+        bDyed = bDyed || ( value._owner.empty() && value._name == hashed_string( "_color" ) && value._value._z > value._value._x );
     }
     SW_EXPECT_TRUE( bDyed );
 

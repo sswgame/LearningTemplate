@@ -35,10 +35,10 @@
 // startInstanceLocation 는 배치의 인스턴스 시작(인스턴스 슬롯 스트림의 원소를 그만큼 건너뛴다).
 struct RHIDrawIndirectCommand
 {
-    uint vertexCount;
-    uint instanceCount;
-    uint startVertexLocation;
-    uint startInstanceLocation;
+    uint _vertexCount;
+    uint _instanceCount;
+    uint _startVertexLocation;
+    uint _startInstanceLocation;
 };
 
 // 배치 표 원소는 binding.hlsli 와 같은 BatchData(batchdata.hlsli) 다.
@@ -69,11 +69,11 @@ void CSMain( uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID 
         return;
 
     const BatchData info = g_BatchInfo[batchIndex];
-    if ( info.sortMode != 2u ) // 이 배치는 여기서 정렬하지 않는다
+    if ( info._sortMode != 2u ) // 이 배치는 여기서 정렬하지 않는다
         return;
 
-    const uint count = min( g_IndirectArgs[batchIndex].instanceCount, (uint)SW_SORT_MAX_ELEMENTS );
-    const uint base  = info.instanceBase;
+    const uint count = min( g_IndirectArgs[batchIndex]._instanceCount, (uint)SW_SORT_MAX_ELEMENTS );
+    const uint base  = info._instanceBase;
 
     // **실제 개수의 다음 2의 거듭제곱까지만 일한다.** 늘 512 칸을 채우고 비교하면 인스턴스가 열 개인 배치도 512 칸
     // 분량이고, 작은 씬에서 컬링·정렬 프리패스 비용의 대부분이 이 패딩이 된다.

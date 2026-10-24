@@ -9,23 +9,23 @@ static const float kHistoryWeight = 0.9f; // 기록 비율 — 화면이 그대�
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float3 current = PassTexture::sampleSourcePoint( input.uv ).rgb;
+    const float3 current = PassTexture::sampleSourcePoint( input._uv ).rgb;
 
     // 이웃 범위 — 기록이 이번 그림에 없는 색(앞 그림 · 움직인 물체)이면 이 안으로 잘린다.
     float3 neighborMin = current;
@@ -34,15 +34,15 @@ float4 PSMain( PSInput input ) : SV_TARGET
     {
         SW_UNROLL for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
-            const float3 neighbor = PassTexture::sampleSourcePoint( input.uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
+            const float3 neighbor = PassTexture::sampleSourcePoint( input._uv + float2( offsetX, offsetY ) * g_SourceTexel.xy ).rgb;
             neighborMin           = min( neighborMin, neighbor );
             neighborMax           = max( neighborMax, neighbor );
         }
     }
 
     // 재투영 — 이 픽셀이 지난 프레임에 있던 화면 자리.
-    const float  depth     = PassTexture::sampleDepthPoint( input.uv ).r;
-    const float2 ndcXy     = input.uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float  depth     = PassTexture::sampleDepthPoint( input._uv ).r;
+    const float2 ndcXy     = input._uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
     const float4 world     = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
     const float4 prevClip  = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
     const float2 prevNdc   = prevClip.xy / max( abs( prevClip.w ), 1e-5f ) * sign( prevClip.w );

@@ -10,9 +10,9 @@
 
 struct GPUParticle
 {
-    float4 positionSize; // xyz = 방출기 로컬 위치, w = 크기(월드 변 길이 — 방출기 배율이 곱해진다)
-    float4 color;        // 선형 RGBA
-    float4 rotationLife; // x = 회전(라디안), y = 수명 비율, zw = 비어 있음
+    float4 _positionSize; // xyz = 방출기 로컬 위치, w = 크기(월드 변 길이 — 방출기 배율이 곱해진다)
+    float4 _color;        // 선형 RGBA
+    float4 _rotationLife; // x = 회전(라디안), y = 수명 비율, zw = 비어 있음
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( GPUParticle, g_SwParticles, SW_SLOT_PASS_SRV );
@@ -44,9 +44,9 @@ static const uint kParticleFlagRibbon   = 2u; // 띠 — 인스턴스가 이웃 
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float4 color : COLOR0;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float4 _color : COLOR0;
+    float2 _uv : TEXCOORD0;
 };
 
 static const float2 kCornerTable[6] = { float2( -0.5f, 0.5f ), float2( 0.5f, 0.5f ), float2( -0.5f, -0.5f ),
@@ -78,14 +78,14 @@ PSInput ribbonVertex( uint vertexId, uint instanceId )
     const uint        endIndex  = corner.x < 0.0f ? 0u : 1u;
     const GPUParticle particle  = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId + endIndex];
     const GPUParticle neighbour = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId + 1u - endIndex];
-    const float3      center    = toWorld( particle.positionSize.xyz );
-    const float3      other     = toWorld( neighbour.positionSize.xyz );
+    const float3      center    = toWorld( particle._positionSize.xyz );
+    const float3      other     = toWorld( neighbour._positionSize.xyz );
     const float4      clip      = mul( float4( center, 1.0f ), g_ViewProj );
-    output.color                = particle.color;
-    output.uv                   = float2( particle.rotationLife.y, 0.5f - corner.y );
+    output._color               = particle._color;
+    output._uv                  = float2( particle._rotationLife.y, 0.5f - corner.y );
     if ( clip.w <= 1e-4f )
     {
-        output.position = float4( 2.0f, 2.0f, 2.0f, 1.0f );
+        output._position = float4( 2.0f, 2.0f, 2.0f, 1.0f );
         return output;
     }
     // 시선: 같은 화면 점의 다른 깊이로 되돌린 점과의 차(원근 · 직교 모두 같은 식). 마디 방향과의 외적이 폭 방향이다.
@@ -98,8 +98,8 @@ PSInput ribbonVertex( uint vertexId, uint instanceId )
     const float  sideSize = length( side );
     // 마디가 시선과 나란하면 폭 방향이 없다 — 화면 x 축으로 편다(넓이가 0 이 되지 않게).
     side             = sideSize > 1e-6f ? side / sideSize : normalize( unprojectNdc( ndc + float2( kAxisProbeNdc, 0.0f ), depth ) - origin );
-    const float size = particle.positionSize.w * SW_ROOT( g_SwParticleSizeScale );
-    output.position  = mul( float4( center + side * ( corner.y * size ), 1.0f ), g_ViewProj );
+    const float size = particle._positionSize.w * SW_ROOT( g_SwParticleSizeScale );
+    output._position = mul( float4( center + side * ( corner.y * size ), 1.0f ), g_ViewProj );
     return output;
 }
 
@@ -107,15 +107,15 @@ PSInput billboardVertex( uint vertexId, uint instanceId )
 {
     PSInput           output;
     const GPUParticle particle   = g_SwParticles[SW_ROOT( g_SwParticleBase ) + instanceId];
-    const float3      center     = toWorld( particle.positionSize.xyz );
+    const float3      center     = toWorld( particle._positionSize.xyz );
     const float4      centerClip = mul( float4( center, 1.0f ), g_ViewProj );
     const float2      corner     = kCornerTable[vertexId % 6u];
-    output.uv                    = float2( corner.x + 0.5f, 0.5f - corner.y );
-    output.color                 = particle.color;
+    output._uv                   = float2( corner.x + 0.5f, 0.5f - corner.y );
+    output._color                = particle._color;
     // 카메라 뒤(또는 눈 위)의 입자는 그리지 않는다 — 넓이 0 인 삼각형을 클립 밖에 둔다.
     if ( centerClip.w <= 1e-4f )
     {
-        output.position = float4( 2.0f, 2.0f, 2.0f, 1.0f );
+        output._position = float4( 2.0f, 2.0f, 2.0f, 1.0f );
         return output;
     }
     const float2 centerNdc   = centerClip.xy / centerClip.w;
@@ -123,17 +123,17 @@ PSInput billboardVertex( uint vertexId, uint instanceId )
     const float3 origin      = unprojectNdc( centerNdc, centerDepth );
     const float3 right       = normalize( unprojectNdc( centerNdc + float2( kAxisProbeNdc, 0.0f ), centerDepth ) - origin );
     const float3 up          = normalize( unprojectNdc( centerNdc + float2( 0.0f, kAxisProbeNdc ), centerDepth ) - origin );
-    const float  angle       = particle.rotationLife.x;
+    const float  angle       = particle._rotationLife.x;
     const float2 rotated     = float2( corner.x * cos( angle ) - corner.y * sin( angle ), corner.x * sin( angle ) + corner.y * cos( angle ) );
-    const float  size        = particle.positionSize.w * SW_ROOT( g_SwParticleSizeScale );
+    const float  size        = particle._positionSize.w * SW_ROOT( g_SwParticleSizeScale );
     const float3 world       = center + ( right * rotated.x + up * rotated.y ) * size;
-    output.position          = mul( float4( world, 1.0f ), g_ViewProj );
+    output._position         = mul( float4( world, 1.0f ), g_ViewProj );
     return output;
 }
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID )
 {
-    input.position = input.position;
+    input._position = input._position;
     if ( ( SW_ROOT( g_SwParticleFlags ) & kParticleFlagRibbon ) != 0u )
         return ribbonVertex( vertexId, instanceId );
     return billboardVertex( vertexId, instanceId );
@@ -141,7 +141,7 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId 
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float4 color = input.color * MaterialTexture::sampleIndex( SW_ROOT( g_SwParticleTexture ), input.uv );
+    const float4 color = input._color * MaterialTexture::sampleIndex( SW_ROOT( g_SwParticleTexture ), input._uv );
     const float  alpha = ( ( SW_ROOT( g_SwParticleFlags ) & kParticleFlagAdditive ) != 0u ) ? 0.0f : color.a;
     return float4( color.rgb * color.a, alpha );
 }

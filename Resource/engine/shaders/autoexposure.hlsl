@@ -23,15 +23,15 @@ static const float kMinLuminance     = 1.0e-4f; // 검은 텍셀의 log2 가 -�
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
+    float4 _position : SV_POSITION;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position            = input.position;
+    input._position           = input._position;
     const float2 clipPosition = float2( ( vertexId == 1u ) ? 3.0f : -1.0f, ( vertexId == 2u ) ? 3.0f : -1.0f );
-    output.position           = float4( clipPosition, 0.0f, 1.0f );
+    output._position          = float4( clipPosition, 0.0f, 1.0f );
     return output;
 }
 

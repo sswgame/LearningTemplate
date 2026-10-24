@@ -60,19 +60,19 @@ uint computeFogCluster( float3 worldPosition, uint gridBase, float4x4 viewProj )
  */
 float3 computeFogLocalLight( LightData light, float3 worldPosition, float3 viewDirection, float anisotropy )
 {
-    const uint   lightType  = (uint)( light.directionType.w + 0.5f );
+    const uint   lightType  = (uint)( light._directionType.w + 0.5f );
     const bool   bLocal     = lightType == SW_LIGHT_TYPE_POINT || lightType == SW_LIGHT_TYPE_SPOT;
-    const float3 delta      = light.positionRadius.xyz - worldPosition;
+    const float3 delta      = light._positionRadius.xyz - worldPosition;
     const float  distance   = length( delta );
-    const float  radius     = max( light.positionRadius.w, 1.0e-4f );
+    const float  radius     = max( light._positionRadius.w, 1.0e-4f );
     const float3 toLight    = delta / max( distance, 1.0e-4f );
     const float  normalized = saturate( 1.0f - distance / radius );
-    const float  cosAngle   = dot( light.directionType.xyz, -toLight );
-    const float  cone       = saturate( ( cosAngle - light.params.y ) / max( light.params.z - light.params.y, 1.0e-4f ) );
+    const float  cosAngle   = dot( light._directionType.xyz, -toLight );
+    const float  cone       = saturate( ( cosAngle - light._params.y ) / max( light._params.z - light._params.y, 1.0e-4f ) );
     const float  spot       = lightType == SW_LIGHT_TYPE_SPOT ? cone * cone : 1.0f;
     const float  phase      = FogMath::computePhase( dot( viewDirection, toLight ), anisotropy );
-    const float  weight     = bLocal ? normalized * normalized * spot * phase * light.colorIntensity.a : 0.0f;
-    return light.colorIntensity.rgb * weight;
+    const float  weight     = bLocal ? normalized * normalized * spot * phase * light._colorIntensity.a : 0.0f;
+    return light._colorIntensity.rgb * weight;
 }
 
 SW_NUMTHREADS( 8, 8, 1 )

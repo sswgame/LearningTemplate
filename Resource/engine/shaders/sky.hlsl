@@ -14,8 +14,8 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 clipXy : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _clipXy : TEXCOORD0;
 };
 
 static const uint  kAtmosphereViewSteps   = 16u;     // C++ SkyAtmosphere::kViewStepCount
@@ -32,11 +32,11 @@ static const uint  kCloudOctaveCount      = 4u;
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     const float2 clipXy = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
     // z = w 라 깊이가 1 이다(네 백엔드 모두 0~1 깊이 — GL 은 glClipControl ZERO_TO_ONE).
-    output.position = float4( clipXy, 1.0f, 1.0f );
-    output.clipXy   = clipXy;
+    output._position = float4( clipXy, 1.0f, 1.0f );
+    output._clipXy   = clipXy;
     return output;
 }
 
@@ -236,8 +236,8 @@ float4 evaluateClouds( float3 direction, float3 toSun, float3 sunRadiance, float
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     // 이 픽셀을 지나는 시선 — 가까운 면과 먼 면의 월드 점을 잇는다(행벡터 규약, lighting.hlsli Transform::computeWorldPositionFromDepth 와 같은 순서). 직교 카메라도 같다.
-    const float4 nearPoint = mul( float4( input.clipXy, 0.0f, 1.0f ), g_InvViewProj );
-    const float4 farPoint  = mul( float4( input.clipXy, 1.0f, 1.0f ), g_InvViewProj );
+    const float4 nearPoint = mul( float4( input._clipXy, 0.0f, 1.0f ), g_InvViewProj );
+    const float4 farPoint  = mul( float4( input._clipXy, 1.0f, 1.0f ), g_InvViewProj );
     const float3 direction = normalize( farPoint.xyz / farPoint.w - nearPoint.xyz / nearPoint.w );
 
     const bool   bAtmosphere  = g_SkyAtmosphereRayleigh.w > 0.5f;

@@ -6,23 +6,23 @@
 
 struct PSInput
 {
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD0;
+    float4 _position : SV_POSITION;
+    float2 _uv : TEXCOORD0;
 };
 
 PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
 {
     PSInput output;
-    input.position      = input.position;
+    input._position     = input._position;
     float2 clipPosition = float2( ( vertexId == 1 ) ? 3.0f : -1.0f, ( vertexId == 2 ) ? 3.0f : -1.0f );
-    output.position     = float4( clipPosition, 0.0f, 1.0f );
-    output.uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
+    output._position    = float4( clipPosition, 0.0f, 1.0f );
+    output._uv          = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
     return output;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const float3 source = PassTexture::sampleSourcePoint( input.uv ).rgb;
+    const float3 source = PassTexture::sampleSourcePoint( input._uv ).rgb;
     const float3 tinted = source * g_OutlineColor.rgb;
     return float4( lerp( source, tinted, saturate( g_OutlineColor.a ) ), 1.0f );
 }

@@ -112,7 +112,7 @@ namespace sw::editor
     MaterialPreviewInputs MaterialPreviewShading::readInputs( const vector<MaterialProperty>& listProperty )
     {
         MaterialPreviewInputs   inputs{};
-        const MaterialProperty* pBase = MaterialPreviewShadingInternal::findByNames( listProperty, { "color", "baseColor", "albedo", "albedoColor" } );
+        const MaterialProperty* pBase = MaterialPreviewShadingInternal::findByNames( listProperty, { "_color", "_baseColor", "_albedo", "_albedoColor" } );
         if ( pBase == nullptr )
         {
             for ( const MaterialProperty& prop : listProperty )
@@ -126,11 +126,11 @@ namespace sw::editor
         }
         if ( pBase != nullptr )
             MaterialPreviewShadingInternal::readColor( *pBase, inputs._baseColor );
-        if ( const MaterialProperty* pEmissive = MaterialPreviewShadingInternal::findByNames( listProperty, { "emissive", "emission", "emissiveColor" } ) )
+        if ( const MaterialProperty* pEmissive = MaterialPreviewShadingInternal::findByNames( listProperty, { "_emissive", "_emission", "_emissiveColor" } ) )
             MaterialPreviewShadingInternal::readColor( *pEmissive, inputs._emissive );
-        if ( const MaterialProperty* pRoughness = MaterialPreviewShadingInternal::findByNames( listProperty, { "roughness" } ) )
+        if ( const MaterialProperty* pRoughness = MaterialPreviewShadingInternal::findByNames( listProperty, { "_roughness" } ) )
             MaterialPreviewShadingInternal::readUnitScalar( *pRoughness, inputs._roughness );
-        if ( const MaterialProperty* pMetallic = MaterialPreviewShadingInternal::findByNames( listProperty, { "metallic", "metalness" } ) )
+        if ( const MaterialProperty* pMetallic = MaterialPreviewShadingInternal::findByNames( listProperty, { "_metallic", "_metalness" } ) )
             MaterialPreviewShadingInternal::readUnitScalar( *pMetallic, inputs._metallic );
         return inputs;
     }

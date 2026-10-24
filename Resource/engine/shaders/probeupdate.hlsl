@@ -58,10 +58,10 @@ static const float kPackSquare = 0.1365685538f; // kSquare * 1/4
 
 struct VoxelGrid
 {
-    float3 origin;
-    float  cellSize;
-    uint3  dim;
-    uint   wordOffset;
+    float3 _origin;
+    float  _cellSize;
+    uint3  _dimension;
+    uint   _wordOffset;
 };
 
 uint hashUint( uint value )
@@ -82,10 +82,10 @@ float hashToUnit( uint value )
 
 bool isVoxelOccupied( VoxelGrid grid, int3 cell )
 {
-    if ( any( cell < int3( 0, 0, 0 ) ) || any( cell >= (int3)grid.dim ) )
+    if ( any( cell < int3( 0, 0, 0 ) ) || any( cell >= (int3)grid._dimension ) )
         return false;
-    const uint index = ( (uint)cell.z * grid.dim.y + (uint)cell.y ) * grid.dim.x + (uint)cell.x;
-    return ( ( g_ProbeVoxels[grid.wordOffset + ( index >> 5u )] >> ( index & 31u ) ) & 1u ) != 0u;
+    const uint index = ( (uint)cell.z * grid._dimension.y + (uint)cell.y ) * grid._dimension.x + (uint)cell.x;
+    return ( ( g_ProbeVoxels[grid._wordOffset + ( index >> 5u )] >> ( index & 31u ) ) & 1u ) != 0u;
 }
 
 /** @brief 광선이 처음 만나는 켜진 칸입니다. C++ SceneVoxelGrid::traceRay 와 같은 식이다(식을 고치면 두 곳을 함께 고친다). */
@@ -93,8 +93,8 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
 {
     outHitDistance         = 0.0f;
     outHitNormal           = float3( 0.0f, 1.0f, 0.0f );
-    const float3 local     = origin - grid.origin;
-    const float3 extent    = (float3)grid.dim * grid.cellSize;
+    const float3 local     = origin - grid._origin;
+    const float3 extent    = (float3)grid._dimension * grid._cellSize;
     float        tNear     = 0.0f;
     float        tFar      = maxDistance;
     int          entryAxis = -1;
@@ -131,7 +131,7 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
         }
     }
 
-    int3 cell = (int3)clamp( floor( ( local + direction * tNear ) / grid.cellSize ), float3( 0.0f, 0.0f, 0.0f ), (float3)grid.dim - 1.0f );
+    int3 cell = (int3)clamp( floor( ( local + direction * tNear ) / grid._cellSize ), float3( 0.0f, 0.0f, 0.0f ), (float3)grid._dimension - 1.0f );
     if ( isVoxelOccupied( grid, cell ) )
     {
         int normalAxis = entryAxis;
@@ -155,13 +155,13 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
         if ( abs( component ) >= kParallelEpsilon )
         {
             const bool  bForward    = component > 0.0f;
-            const float boundary    = (float)( bForward ? cell[stepAxis] + 1 : cell[stepAxis] ) * grid.cellSize;
+            const float boundary    = (float)( bForward ? cell[stepAxis] + 1 : cell[stepAxis] ) * grid._cellSize;
             stepDirection[stepAxis] = bForward ? 1 : -1;
             tMax[stepAxis]          = ( boundary - local[stepAxis] ) / component;
-            tDelta[stepAxis]        = grid.cellSize / abs( component );
+            tDelta[stepAxis]        = grid._cellSize / abs( component );
         }
     }
-    const uint maxStepCount = grid.dim.x + grid.dim.y + grid.dim.z + 3u;
+    const uint maxStepCount = grid._dimension.x + grid._dimension.y + grid._dimension.z + 3u;
     // 고를 축은 축 마스크로 고르고 루프 가운데서 return 하지 않고 break 한다(하나의 출구 — 위 펼친 루프의 continue 와 같은 까닭으로 FXC 가 바깥 루프를 펼치지 않게).
     bool bHit = false;
     SW_LOOP for ( uint stepIndex = 0u; stepIndex < maxStepCount; ++stepIndex )
@@ -173,7 +173,7 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
         if ( enterDistance > tFar )
             break;
         cell += stepDirection * axisMask;
-        if ( any( cell < int3( 0, 0, 0 ) ) || any( cell >= (int3)grid.dim ) )
+        if ( any( cell < int3( 0, 0, 0 ) ) || any( cell >= (int3)grid._dimension ) )
             break;
         tMax += tDelta * (float3)axisMask;
         if ( isVoxelOccupied( grid, cell ) )
@@ -224,24 +224,24 @@ float3 evaluateSkyRadiance( float3 direction )
  */
 bool computeIncidence( LightData light, float3 position, out float3 outToLight, out float outAttenuation, out float outDistance )
 {
-    const uint lightType = (uint)( light.directionType.w + 0.5f );
-    outToLight           = -light.directionType.xyz;
+    const uint lightType = (uint)( light._directionType.w + 0.5f );
+    outToLight           = -light._directionType.xyz;
     outAttenuation       = 1.0f;
     outDistance          = -1.0f;
     if ( lightType == SW_LIGHT_TYPE_DIRECTIONAL )
         return true;
     if ( lightType != SW_LIGHT_TYPE_POINT && lightType != SW_LIGHT_TYPE_SPOT )
         return false;
-    const float3 delta     = light.positionRadius.xyz - position;
+    const float3 delta     = light._positionRadius.xyz - position;
     outDistance            = length( delta );
-    const float radius     = max( light.positionRadius.w, 1.0e-4f );
+    const float radius     = max( light._positionRadius.w, 1.0e-4f );
     outToLight             = delta / max( outDistance, 1.0e-4f );
     const float normalized = saturate( 1.0f - outDistance / radius );
     outAttenuation         = normalized * normalized;
     if ( lightType == SW_LIGHT_TYPE_SPOT )
     {
-        const float cosAngle = dot( light.directionType.xyz, -outToLight );
-        const float cone     = saturate( ( cosAngle - light.params.y ) / max( light.params.z - light.params.y, 1.0e-4f ) );
+        const float cosAngle = dot( light._directionType.xyz, -outToLight );
+        const float cone     = saturate( ( cosAngle - light._params.y ) / max( light._params.z - light._params.y, 1.0e-4f ) );
         outAttenuation *= cone * cone;
     }
     return true;
@@ -260,15 +260,15 @@ float3 computeDirectLight( VoxelGrid grid, uint lightCount, float3 position, flo
         float           distance;
         if ( computeIncidence( light, position, toLight, attenuation, distance ) == false )
             continue;
-        const float strength = max( dot( normal, toLight ), 0.0f ) * attenuation * light.colorIntensity.a;
+        const float strength = max( dot( normal, toLight ), 0.0f ) * attenuation * light._colorIntensity.a;
         if ( strength <= 0.0f )
             continue;
-        const float maxDistance = distance < 0.0f ? length( (float3)grid.dim * grid.cellSize ) : max( distance - grid.cellSize * kSurfaceOffset, 0.0f );
+        const float maxDistance = distance < 0.0f ? length( (float3)grid._dimension * grid._cellSize ) : max( distance - grid._cellSize * kSurfaceOffset, 0.0f );
         float       blockerDistance;
         float3      blockerNormal;
         if ( maxDistance > 0.0f && traceVoxelRay( grid, position, toLight, maxDistance, blockerDistance, blockerNormal ) )
             continue;
-        result += light.colorIntensity.rgb * strength;
+        result += light._colorIntensity.rgb * strength;
     }
     return result;
 }
@@ -338,10 +338,10 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
     if ( bRefresh )
     {
         VoxelGrid grid;
-        grid.origin     = voxelOrigin.xyz;
-        grid.cellSize   = voxelOrigin.w;
-        grid.dim        = voxelDim.xyz;
-        grid.wordOffset = voxelDim.w;
+        grid._origin     = voxelOrigin.xyz;
+        grid._cellSize   = voxelOrigin.w;
+        grid._dimension  = voxelDim.xyz;
+        grid._wordOffset = voxelDim.w;
 
         const uint   probeX   = probe % counts.x;
         const uint   probeY   = ( probe / counts.x ) % counts.y;
@@ -373,7 +373,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
             float3 hitNormal;
             if ( traceVoxelRay( grid, position, direction, kFarDistance, hitDistance, hitNormal ) )
             {
-                const float3 surface = position + direction * hitDistance + hitNormal * ( grid.cellSize * kSurfaceOffset );
+                const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );
                 radiance             = computeDirectLight( grid, lightCount, surface, hitNormal ) * albedo;
             }
             else

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 못 읽은 머티리얼 대신 쓰는 마젠타 체커(EngineDefaultAssets._missingMaterial). 기본 머티리얼과 같고 albedoMap 만 누락 텍스처다. -->
+<!-- 못 읽은 머티리얼 대신 쓰는 마젠타 체커(EngineDefaultAssets._missingMaterial). 기본 머티리얼과 같고 _albedoMap 만 누락 텍스처다. -->
 <MaterialDesc formatVersion="0" name="MissingMaterial" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
-		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="albedoMap" type="Texture2D" assetPath="engine/textures/missing.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_albedoMap" type="Texture2D" assetPath="engine/textures/missing.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

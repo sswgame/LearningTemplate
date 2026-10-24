@@ -34,7 +34,7 @@ namespace sw
             static const hashed_string& getInfluencerName( uint32 slot )
             {
                 static const hashed_string s_arrName[FoliageInfluencerComponent::kMaxInfluencerCount] = {
-                    hashed_string( "influencer0" ), hashed_string( "influencer1" ), hashed_string( "influencer2" ), hashed_string( "influencer3" ) };
+                    hashed_string( "_influencer0" ), hashed_string( "_influencer1" ), hashed_string( "_influencer2" ), hashed_string( "_influencer3" ) };
                 return s_arrName[slot];
             }
 
@@ -385,7 +385,7 @@ namespace sw
             // 칸이 비면 엔진 기본 풀 · 나무 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
             const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath;
             (void)material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
-            material.setVector( hashed_string( "tint" ), layer._tint );
+            material.setVector( hashed_string( "_tint" ), layer._tint );
 
             computeLayerInstances( layerIndex, pTerrain, nullptr, listInstance );
             applyLayerInstances( layerIndex, listInstance );
@@ -534,12 +534,12 @@ namespace sw
             const FoliageLayer&  layer    = _listLayer[layerIndex];
             EnvironmentMaterial& material = *_listLayerMaterial[layerIndex];
             // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응, w 는 시간이다.
-            material.setVector( hashed_string( "windParams" ), float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
+            material.setVector( hashed_string( "_windParams" ), float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
             // x = 흔들림 주파수, y = 돌풍 세기 × 반응, z = 돌풍 주파수, w = 흔들림이 다 차는 높이
-            material.setVector( hashed_string( "windWave" ), float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );
+            material.setVector( hashed_string( "_windWave" ), float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );
             // xyz = 카메라, w = 휘게 하는 세기
-            material.setVector( hashed_string( "viewParams" ), float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
-            material.setVector( hashed_string( "fadeParams" ), float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
+            material.setVector( hashed_string( "_viewParams" ), float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
+            material.setVector( hashed_string( "_fadeParams" ), float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
             for ( uint32 slot = 0; slot < FoliageInfluencerComponent::kMaxInfluencerCount; ++slot )
             {
                 material.setVector( Internal::getInfluencerName( slot ), arrSphere[slot] );

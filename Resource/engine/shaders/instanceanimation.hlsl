@@ -56,10 +56,10 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
         return;
 
     InstanceData instance = g_InstancesRW[instanceIndex];
-    if ( instance.spinSeed == 0 )
+    if ( instance._spinSeed == 0 )
         return; // GPU 회전을 요청하지 않은 인스턴스는 CPU 가 올린 트랜스폼 그대로 둔다
 
-    const uint  hash = hashSeed( instance.spinSeed );
+    const uint  hash = hashSeed( instance._spinSeed );
     const float unit = hashToUnit( hash );
 
     // 속도는 기준 ± 폭. 시드의 최하위 비트로 **방향**도 가른다 — 속도만 다르면 전부 같은 쪽으로 돌아
@@ -73,20 +73,20 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 
     // CPU 가 올린 월드는 스케일 x 이동으로 본다(회전은 GPU 몫). 행벡터 규약(mul(v, M))이라 0~2행이
     // 축이고 3행이 이동이다. 축의 길이가 곧 스케일이므로 길이를 뽑아 회전을 새로 조립한다.
-    const float3 scale       = float3( length( instance.world[0].xyz ), length( instance.world[1].xyz ), length( instance.world[2].xyz ) );
-    const float3 translation = instance.world[3].xyz;
+    const float3 scale       = float3( length( instance._world[0].xyz ), length( instance._world[1].xyz ), length( instance._world[2].xyz ) );
+    const float3 translation = instance._world[3].xyz;
 
     float sine, cosine;
     sincos( angle, sine, cosine );
 
     // world = Scale * RotY * Translate (행벡터 규약이라 왼쪽부터 적용된다).
-    instance.world[0] = float4( scale.x * cosine, 0.0f, scale.x * -sine, 0.0f );
-    instance.world[1] = float4( 0.0f, scale.y, 0.0f, 0.0f );
-    instance.world[2] = float4( scale.z * sine, 0.0f, scale.z * cosine, 0.0f );
-    instance.world[3] = float4( translation, 1.0f );
+    instance._world[0] = float4( scale.x * cosine, 0.0f, scale.x * -sine, 0.0f );
+    instance._world[1] = float4( 0.0f, scale.y, 0.0f, 0.0f );
+    instance._world[2] = float4( scale.z * sine, 0.0f, scale.z * cosine, 0.0f );
+    instance._world[3] = float4( translation, 1.0f );
 
     // 바운드 중심은 이동 성분이다 — 회전만 바꿨으므로 그대로지만, 컬링이 읽는 값이라 맞춰 둔다.
-    instance.boundsCenter = translation;
+    instance._boundsCenter = translation;
 
     g_InstancesRW[instanceIndex] = instance;
 }

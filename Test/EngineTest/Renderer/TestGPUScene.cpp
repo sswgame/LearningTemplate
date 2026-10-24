@@ -948,7 +948,7 @@ SW_TEST_CASE( GPUSceneTest, PerBatchMaterialElementsAreDistinct )
         // 반환 대상을 하나로 둔다 — nullptr 과 material 을 섞어 돌려주면 NRVO 가 걸리지 않는다.
         sw::shared_ptr<sw::Material> material = sw::Material::create();
         if ( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) == false ||
-             material->setParameter( nullptr, sw::hashed_string( "color" ), pColor ) == false )
+             material->setParameter( nullptr, sw::hashed_string( "_color" ), pColor ) == false )
             material.reset();
         return material;
     };

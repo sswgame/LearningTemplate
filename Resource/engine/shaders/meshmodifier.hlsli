@@ -65,12 +65,12 @@ static const float kDegToRad = kPi / 180.0f;
 
 struct ModifierContext
 {
-    float3 boundsMin;
-    float3 boundsMax;
-    float  boundsValid; // 1 이면 유효
-    uint   axis;
-    float  time;
-    uint   paramBase; // g_DeformPrograms 안 매개변수 시작 원소
+    float3 _boundsMin;
+    float3 _boundsMax;
+    float  _boundsValid; // 1 이면 유효
+    uint   _axis;
+    float  _time;
+    uint   _paramBase; // g_DeformPrograms 안 매개변수 시작 원소
 
     float param( uint index );
     float3 param3( uint index );
@@ -127,12 +127,12 @@ struct MeshDeform
 
 float ModifierContext::param( uint index )
 {
-    return g_DeformPrograms[paramBase + index].x;
+    return g_DeformPrograms[_paramBase + index].x;
 }
 
 float3 ModifierContext::param3( uint index )
 {
-    return g_DeformPrograms[paramBase + index].xyz;
+    return g_DeformPrograms[_paramBase + index].xyz;
 }
 
 /** MeshModifier::getInt — floor(x + 0.5) */
@@ -167,14 +167,14 @@ static float3 MeshDeform::normalizeOr( float3 value, float3 fallback )
 /** MeshModifierUtil::getAxisLength */
 float ModifierContext::axisLength()
 {
-    const float length = MeshDeform::get( boundsMax - boundsMin, axis );
+    const float length = MeshDeform::get( _boundsMax - _boundsMin, _axis );
     return length > kModifierEpsilon ? length : 1.0f;
 }
 
 /** MeshModifierUtil::getAxisFraction — 자르지 않는다 */
 static float MeshDeform::axisFraction( float3 position, ModifierContext context )
 {
-    return ( MeshDeform::get( position, context.axis ) - MeshDeform::get( context.boundsMin, context.axis ) ) / context.axisLength();
+    return ( MeshDeform::get( position, context._axis ) - MeshDeform::get( context._boundsMin, context._axis ) ) / context.axisLength();
 }
 
 // ------------------------------------------------------------------------------
@@ -237,11 +237,11 @@ static float MeshDeform::valueNoise3D( float3 position, uint seed )
 // ------------------------------------------------------------------------------
 static float3 MeshDeform::bendLike( float3 location, ModifierContext context, float angle, float direction, float lowerParam, float upperParam )
 {
-    const uint  axis         = context.axis;
+    const uint  axis         = context._axis;
     const uint  axisU        = ( axis + 1u ) % 3u;
     const uint  axisV        = ( axis + 2u ) % 3u;
     const float length       = context.axisLength();
-    const float lowerBound   = MeshDeform::get( context.boundsMin, axis );
+    const float lowerBound   = MeshDeform::get( context._boundsMin, axis );
     const float lower        = lowerBound + min( lowerParam, upperParam ) * length;
     const float upper        = lowerBound + max( lowerParam, upperParam ) * length;
     const float cosDirection = cos( direction );
@@ -280,11 +280,11 @@ static float3 MeshDeform::twist( float3 location, ModifierContext context )
     float3      result = location;
     if ( abs( angle ) >= kModifierEpsilon )
     {
-        const uint  axis       = context.axis;
+        const uint  axis       = context._axis;
         const uint  axisU      = ( axis + 1u ) % 3u;
         const uint  axisV      = ( axis + 2u ) % 3u;
         const float length     = context.axisLength();
-        const float lowerBound = MeshDeform::get( context.boundsMin, axis );
+        const float lowerBound = MeshDeform::get( context._boundsMin, axis );
         const float lower      = lowerBound + min( context.param( 1u ), context.param( 2u ) ) * length;
         const float upper      = lowerBound + max( context.param( 1u ), context.param( 2u ) ) * length;
         const float height     = clamp( MeshDeform::get( location, axis ), lower, upper );
@@ -307,7 +307,7 @@ static float3 MeshDeform::taper( float3 location, ModifierContext context )
     {
         const float fraction = saturate( MeshDeform::axisFraction( location, context ) );
         const float scale    = 1.0f + amount * pow( fraction, context.param( 1u ) );
-        result               = MeshDeform::set( location * scale, context.axis, MeshDeform::get( location, context.axis ) );
+        result               = MeshDeform::set( location * scale, context._axis, MeshDeform::get( location, context._axis ) );
     }
     return result;
 }
@@ -316,7 +316,7 @@ static float3 MeshDeform::stretch( float3 location, ModifierContext context )
 {
     const float alongScale = 1.0f + context.param( 0u );
     const float sideScale  = pow( alongScale, -0.5f * context.param( 1u ) );
-    return MeshDeform::set( location * sideScale, context.axis, MeshDeform::get( location, context.axis ) * alongScale );
+    return MeshDeform::set( location * sideScale, context._axis, MeshDeform::get( location, context._axis ) * alongScale );
 }
 
 static float3 MeshDeform::wave( float3 location, ModifierContext context, bool bRadial )
@@ -325,11 +325,11 @@ static float3 MeshDeform::wave( float3 location, ModifierContext context, bool b
     float3      result    = location;
     if ( abs( amplitude ) >= kModifierEpsilon )
     {
-        const uint  axis       = context.axis;
+        const uint  axis       = context._axis;
         const float componentU = MeshDeform::get( location, ( axis + 1u ) % 3u );
         const float componentV = MeshDeform::get( location, ( axis + 2u ) % 3u );
         const float distance   = bRadial ? sqrt( componentU * componentU + componentV * componentV ) : componentU;
-        const float phase      = ( context.param( 2u ) + context.param( 4u ) * context.time ) * kDegToRad;
+        const float phase      = ( context.param( 2u ) + context.param( 4u ) * context._time ) * kDegToRad;
         const float angle      = kTwoPi * distance / context.param( 1u ) + phase;
         const float offset     = amplitude * sin( angle ) * exp( -context.param( 3u ) * abs( distance ) );
         result                 = MeshDeform::set( location, axis, MeshDeform::get( location, axis ) + offset );
@@ -344,7 +344,7 @@ static float3 MeshDeform::noise( float3 location, ModifierContext context )
     if ( amplitude >= kModifierEpsilon )
     {
         const uint   seed        = (uint)context.paramInt( 2u );
-        const float  drift       = context.param( 4u ) * context.time;
+        const float  drift       = context.param( 4u ) * context._time;
         const float3 samplePoint = location * context.param( 1u ) + float3( drift, drift, drift );
         const float3 strength    = context.param3( 3u );
         const float3 offset      = float3( MeshDeform::valueNoise3D( samplePoint, seed ) * strength.x, MeshDeform::valueNoise3D( samplePoint + float3( 31.416f, 0.0f, 0.0f ), seed ) * strength.y,
@@ -360,8 +360,8 @@ static float3 MeshDeform::melt( float3 location, ModifierContext context )
     float3      result = location;
     if ( amount >= kModifierEpsilon )
     {
-        const uint  axis        = context.axis;
-        const float floorHeight = MeshDeform::get( context.boundsMin, axis );
+        const uint  axis        = context._axis;
+        const float floorHeight = MeshDeform::get( context._boundsMin, axis );
         const float height      = MeshDeform::get( location, axis );
         const float fraction    = saturate( MeshDeform::axisFraction( location, context ) );
         const float spread      = 1.0f + context.param( 1u ) * amount * ( 1.0f - fraction );
@@ -380,7 +380,7 @@ static float3 MeshDeform::poke( float3 location, ModifierContext context )
     {
         const float ratio  = distance / radius;
         const float weight = pow( 1.0f - ratio * ratio, context.param( 2u ) );
-        result             = MeshDeform::set( location, context.axis, MeshDeform::get( location, context.axis ) + amount * weight );
+        result             = MeshDeform::set( location, context._axis, MeshDeform::get( location, context._axis ) + amount * weight );
     }
     return result;
 }
@@ -391,7 +391,7 @@ static float3 MeshDeform::displace( float3 location, float3 surfaceNormal, Modif
     float3      result = location;
     if ( abs( amount ) >= kModifierEpsilon )
     {
-        const uint  axis       = context.axis;
+        const uint  axis       = context._axis;
         const float componentU = MeshDeform::get( location, ( axis + 1u ) % 3u );
         const float componentV = MeshDeform::get( location, ( axis + 2u ) % 3u );
         const float frequency  = kTwoPi * context.param( 1u );
@@ -432,7 +432,7 @@ static float3 MeshDeform::bulge( float3 location, ModifierContext context )
         const float ratio   = ( fraction - lower ) / ( upper - lower );
         const float profile = 1.0f - pow( abs( 2.0f * ratio - 1.0f ), context.param( 1u ) );
         const float scale   = max( 1.0f + amount * profile, 0.0f );
-        result              = MeshDeform::set( location * scale, context.axis, MeshDeform::get( location, context.axis ) );
+        result              = MeshDeform::set( location * scale, context._axis, MeshDeform::get( location, context._axis ) );
     }
     return result;
 }
@@ -441,14 +441,14 @@ static float3 MeshDeform::bulge( float3 location, ModifierContext context )
 static float3 MeshDeform::toRadius( float3 location, ModifierContext context, bool bCylinder )
 {
     const float  percent  = context.param( 0u );
-    const float3 radial   = bCylinder ? MeshDeform::set( location, context.axis, 0.0f ) : location;
+    const float3 radial   = bCylinder ? MeshDeform::set( location, context._axis, 0.0f ) : location;
     const float  distance = length( radial );
     float3       result   = location;
     if ( percent >= kModifierEpsilon && distance >= kModifierEpsilon )
     {
         const float target = distance + ( context.param( 1u ) - distance ) * percent;
         result             = radial * ( target / distance );
-        result             = bCylinder ? MeshDeform::set( result, context.axis, MeshDeform::get( location, context.axis ) ) : result;
+        result             = bCylinder ? MeshDeform::set( result, context._axis, MeshDeform::get( location, context._axis ) ) : result;
     }
     return result;
 }
@@ -460,9 +460,9 @@ static float3 MeshDeform::hump( float3 location, ModifierContext context )
     float3      result = location;
     if ( abs( height ) >= kModifierEpsilon && radius >= kModifierEpsilon )
     {
-        const float3 offset = MeshDeform::set( location - context.param3( 2u ), context.axis, 0.0f );
+        const float3 offset = MeshDeform::set( location - context.param3( 2u ), context._axis, 0.0f );
         const float  ratio  = length( offset ) / radius;
-        result              = MeshDeform::set( location, context.axis, MeshDeform::get( location, context.axis ) + height * exp( -ratio * ratio ) );
+        result              = MeshDeform::set( location, context._axis, MeshDeform::get( location, context._axis ) + height * exp( -ratio * ratio ) );
     }
     return result;
 }
@@ -470,14 +470,14 @@ static float3 MeshDeform::hump( float3 location, ModifierContext context )
 static float3 MeshDeform::radialSkew( float3 location, ModifierContext context )
 {
     const float  angle    = context.param( 0u ) * kDegToRad;
-    const float3 radial   = MeshDeform::set( location, context.axis, 0.0f );
+    const float3 radial   = MeshDeform::set( location, context._axis, 0.0f );
     const float  distance = length( radial );
     float3       result   = location;
     if ( abs( angle ) >= kModifierEpsilon && distance >= kModifierEpsilon )
     {
-        const float height = MeshDeform::get( location, context.axis ) - MeshDeform::get( context.boundsMin, context.axis );
+        const float height = MeshDeform::get( location, context._axis ) - MeshDeform::get( context._boundsMin, context._axis );
         const float target = max( distance + tan( angle ) * height, 0.0f );
-        result             = MeshDeform::set( radial * ( target / distance ), context.axis, MeshDeform::get( location, context.axis ) );
+        result             = MeshDeform::set( radial * ( target / distance ), context._axis, MeshDeform::get( location, context._axis ) );
     }
     return result;
 }
@@ -485,8 +485,8 @@ static float3 MeshDeform::radialSkew( float3 location, ModifierContext context )
 /** Skew · Sinus Curve 의 옆 밀기 */
 static float3 MeshDeform::shiftSide( float3 location, ModifierContext context, float shift, float direction )
 {
-    const uint axisU  = ( context.axis + 1u ) % 3u;
-    const uint axisV  = ( context.axis + 2u ) % 3u;
+    const uint axisU  = ( context._axis + 1u ) % 3u;
+    const uint axisV  = ( context._axis + 2u ) % 3u;
     float3     result = MeshDeform::set( location, axisU, MeshDeform::get( location, axisU ) + shift * cos( direction ) );
     return MeshDeform::set( result, axisV, MeshDeform::get( result, axisV ) + shift * sin( direction ) );
 }
@@ -509,12 +509,12 @@ static float3 MeshDeform::skew( float3 location, ModifierContext context )
 static float3 MeshDeform::spherify( float3 location, ModifierContext context )
 {
     const float  percent  = context.param( 0u );
-    const float3 size     = context.boundsMax - context.boundsMin;
+    const float3 size     = context._boundsMax - context._boundsMin;
     const float  radius   = 0.5f * max( size.x, max( size.y, size.z ) );
-    const float3 center   = ( context.boundsMin + context.boundsMax ) * 0.5f;
+    const float3 center   = ( context._boundsMin + context._boundsMax ) * 0.5f;
     const float3 offset   = location - center;
     const float  distance = length( offset );
-    const bool   bActive  = percent >= kModifierEpsilon && context.boundsValid > 0.5f && radius >= kModifierEpsilon && distance >= kModifierEpsilon;
+    const bool   bActive  = percent >= kModifierEpsilon && context._boundsValid > 0.5f && radius >= kModifierEpsilon && distance >= kModifierEpsilon;
     float3       result   = location;
     if ( bActive )
     {
@@ -532,7 +532,7 @@ static float3 MeshDeform::squeeze( float3 location, ModifierContext context )
     {
         const float axisScale   = max( 1.0f - amount, 0.1f );
         const float radialScale = 1.0f + context.param( 1u ) * ( 1.0f / sqrt( axisScale ) - 1.0f );
-        result                  = MeshDeform::set( location * radialScale, context.axis, MeshDeform::get( location, context.axis ) * axisScale );
+        result                  = MeshDeform::set( location * radialScale, context._axis, MeshDeform::get( location, context._axis ) * axisScale );
     }
     return result;
 }
@@ -554,8 +554,8 @@ static float3 MeshDeform::rolled( float3 location, ModifierContext context )
 {
     const float radius = context.param( 0u );
     const float turns  = context.param( 2u );
-    const uint  axis   = context.axis;
-    const float start  = MeshDeform::get( context.boundsMin, axis ) + context.param( 1u ) * context.axisLength();
+    const uint  axis   = context._axis;
+    const float start  = MeshDeform::get( context._boundsMin, axis ) + context.param( 1u ) * context.axisLength();
     const float height = MeshDeform::get( location, axis );
     float3      result = location;
     if ( radius >= kModifierEpsilon && turns >= kModifierEpsilon && height > start )
@@ -605,8 +605,8 @@ static float3 MeshDeform::crumple( float3 location, float3 surfaceNormal, Modifi
 static float3 MeshDeform::dynamicRipple( float3 location, ModifierContext context )
 {
     const float amplitude  = context.param( 0u );
-    const float time       = max( context.time, 0.0f );
-    const uint  axis       = context.axis;
+    const float time       = max( context._time, 0.0f );
+    const uint  axis       = context._axis;
     const float componentU = MeshDeform::get( location, ( axis + 1u ) % 3u );
     const float componentV = MeshDeform::get( location, ( axis + 2u ) % 3u );
     const float radius     = sqrt( componentU * componentU + componentV * componentV );
@@ -626,16 +626,16 @@ static float3 MeshDeform::dynamicRipple( float3 location, ModifierContext contex
 static float3 MeshDeform::pageFlip( float3 location, ModifierContext context )
 {
     const float progress = context.param( 0u );
-    const uint  liftAxis = context.axis;
+    const uint  liftAxis = context._axis;
     const uint  pickAxis = context.paramAxis( 2u );
     const uint  flipAxis = pickAxis == liftAxis ? ( liftAxis + 1u ) % 3u : pickAxis;
-    const float minU     = MeshDeform::get( context.boundsMin, flipAxis );
-    const float maxU     = MeshDeform::get( context.boundsMax, flipAxis );
+    const float minU     = MeshDeform::get( context._boundsMin, flipAxis );
+    const float maxU     = MeshDeform::get( context._boundsMax, flipAxis );
     const float width    = maxU - minU;
     const float radius   = max( context.param( 1u ), 0.001f );
     const float curl     = maxU - saturate( progress ) * width;
     const float arc      = MeshDeform::get( location, flipAxis ) - curl;
-    const bool  bActive  = progress >= kModifierEpsilon && context.boundsValid > 0.5f && width >= kModifierEpsilon && arc > 0.0f;
+    const bool  bActive  = progress >= kModifierEpsilon && context._boundsValid > 0.5f && width >= kModifierEpsilon && arc > 0.0f;
     float3      result   = location;
     if ( bActive )
     {
@@ -654,17 +654,17 @@ static float3 MeshDeform::pageFlip( float3 location, ModifierContext context )
 static float3 MeshDeform::treeBend( float3 location, ModifierContext context )
 {
     const float  strength   = context.param( 0u );
-    const uint   axis       = context.axis;
+    const uint   axis       = context._axis;
     const float3 wind       = MeshDeform::set( context.param3( 1u ), axis, 0.0f );
     const float  windLength = length( wind );
-    const float  root       = MeshDeform::get( context.boundsMin, axis ) + context.param( 4u );
+    const float  root       = MeshDeform::get( context._boundsMin, axis ) + context.param( 4u );
     const float  height     = MeshDeform::get( location, axis ) - root;
-    const bool   bActive    = abs( strength ) >= kModifierEpsilon && context.boundsValid > 0.5f && windLength >= kModifierEpsilon && height > 0.0f;
+    const bool   bActive    = abs( strength ) >= kModifierEpsilon && context._boundsValid > 0.5f && windLength >= kModifierEpsilon && height > 0.0f;
     float3       result     = location;
     if ( bActive )
     {
         const float ratio = height / context.axisLength();
-        const float sway  = 1.0f + context.param( 2u ) * sin( kTwoPi * context.param( 3u ) * context.time );
+        const float sway  = 1.0f + context.param( 2u ) * sin( kTwoPi * context.param( 3u ) * context._time );
         result            = location + wind * ( 1.0f / windLength ) * ( strength * sway * ratio * ratio );
     }
     return result;
@@ -677,7 +677,7 @@ static float3 MeshDeform::vertNoise( float3 location, float3 surfaceNormal, Modi
     if ( abs( amplitude ) >= kModifierEpsilon )
     {
         const uint   seed        = (uint)context.paramInt( 2u );
-        const float  drift       = context.param( 3u ) * context.time;
+        const float  drift       = context.param( 3u ) * context._time;
         const float3 samplePoint = location * context.param( 1u ) + float3( drift, drift * 0.5f, drift * 0.25f );
         result                   = location + surfaceNormal * ( MeshDeform::valueNoise3D( samplePoint, seed ) * amplitude );
     }
@@ -703,16 +703,16 @@ static float3 MeshDeform::waving( float3 location, ModifierContext context )
 {
     const float amplitude = context.param( 0u );
     const uint  fixedAxis = context.paramAxis( 3u );
-    const uint  moveAxis  = context.axis == fixedAxis ? ( fixedAxis + 1u ) % 3u : context.axis;
-    const float start     = MeshDeform::get( context.boundsMin, fixedAxis ) + context.param( 4u );
+    const uint  moveAxis  = context._axis == fixedAxis ? ( fixedAxis + 1u ) % 3u : context._axis;
+    const float start     = MeshDeform::get( context._boundsMin, fixedAxis ) + context.param( 4u );
     const float distance  = MeshDeform::get( location, fixedAxis ) - start;
-    const bool  bActive   = abs( amplitude ) >= kModifierEpsilon && context.boundsValid > 0.5f && distance > 0.0f;
+    const bool  bActive   = abs( amplitude ) >= kModifierEpsilon && context._boundsValid > 0.5f && distance > 0.0f;
     float3      result    = location;
     if ( bActive )
     {
-        const float span   = MeshDeform::get( context.boundsMax - context.boundsMin, fixedAxis );
+        const float span   = MeshDeform::get( context._boundsMax - context._boundsMin, fixedAxis );
         const float ratio  = distance / ( span > kModifierEpsilon ? span : 1.0f );
-        const float phase  = distance / max( context.param( 1u ), 0.001f ) - context.param( 2u ) * context.time;
+        const float phase  = distance / max( context.param( 1u ), 0.001f ) - context.param( 2u ) * context._time;
         const float offset = amplitude * ratio * sin( kTwoPi * phase );
         result             = MeshDeform::set( location, moveAxis, MeshDeform::get( location, moveAxis ) + offset );
     }
@@ -868,14 +868,14 @@ static void MeshDeform::applyProgram( uint programBase, inout float3 inoutPositi
         const float4    record    = g_DeformPrograms[cursor];
         const float4    boundsMin = g_DeformPrograms[cursor + 1u];
         ModifierContext context;
-        context.boundsMin   = boundsMin.xyz;
-        context.boundsValid = boundsMin.w;
-        context.boundsMax   = g_DeformPrograms[cursor + 2u].xyz;
-        context.axis        = (uint)record.z;
-        context.time        = header.y;
-        context.paramBase   = cursor + SW_MODIFIER_RECORD_FLOAT4;
-        const uint  kind    = (uint)record.x;
-        const float step    = record.w;
+        context._boundsMin   = boundsMin.xyz;
+        context._boundsValid = boundsMin.w;
+        context._boundsMax   = g_DeformPrograms[cursor + 2u].xyz;
+        context._axis        = (uint)record.z;
+        context._time        = header.y;
+        context._paramBase   = cursor + SW_MODIFIER_RECORD_FLOAT4;
+        const uint  kind     = (uint)record.x;
+        const float step     = record.w;
 
         const float3 location      = MeshDeform::transformPoint( inoutPosition, cursor + 3u );
         const float3 surfaceNormal = MeshDeform::normalizeOr( MeshDeform::transformVector( inoutNormal, cursor + 11u ), float3( 0.0f, 1.0f, 0.0f ) );
