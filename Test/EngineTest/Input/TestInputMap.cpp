@@ -761,6 +761,7 @@ SW_TEST_CASE( InputMapTest, GamepadStickAxisFeedsOneDimensionalAction )
  */
 SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     for ( const sw::string_view resourceID : { "engine/input/default.input.xml", "engine/input/ui.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
                                                "game/harvestvalley/data/farm.input.xml", "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml",
                                                "game/themepark/data/park.input.xml", "game/voxelcraft/data/voxel.input.xml" } )
@@ -781,6 +782,7 @@ SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
  */
 SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     struct GameInputMap
     {
         const utf8*                        _pResourceID;
@@ -2024,6 +2026,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsAndRebindRejectTheVirtualCursorInputs )
  */
 SW_TEST_CASE( InputMapTest, CommandGamesPutTheCursorOnTheLeftStickAndTheCameraOnTheRight )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     for ( const sw::string_view resourceID : { "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml" } )
     {
         sw::InputMap inputMap;

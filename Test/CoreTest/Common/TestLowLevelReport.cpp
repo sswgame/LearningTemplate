@@ -6,6 +6,8 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <io.h>
+#else
+    #include <unistd.h> // dup · dup2 · close
 #endif
 
 // 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`, `Core/Common/Macros.h` 10 절). 테스트가 보고자로 함수를 등록하고 stderr 를 임시 파일로 돌려,

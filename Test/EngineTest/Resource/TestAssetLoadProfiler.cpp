@@ -120,6 +120,7 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
  */
 SW_TEST_CASE( AssetLoadProfilerTest, MeshCacheLoadsLeaveRecords )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     AssetLoadProfiler& profiler = getProfiler();
     profiler.reset();

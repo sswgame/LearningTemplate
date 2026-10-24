@@ -334,6 +334,7 @@ SW_TEST_CASE( ShooterTest, LocomotionDirectionFollowsTheFacing )
  */
 SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();
@@ -415,6 +416,7 @@ SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
  */
 SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     InputMap& inputMap = input.getInputMap();

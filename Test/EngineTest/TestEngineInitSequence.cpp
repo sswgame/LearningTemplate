@@ -403,7 +403,8 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
  */
 SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
 {
-    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // 전용 서버 빌드는 창 · RHI · 렌더러 단계를 짓지 않는다(Source/Engine/EngineSubsystemSet.cpp)
+    StartupRecorder     recorder;           // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Headless";
@@ -441,7 +442,8 @@ SW_TEST_CASE( EngineInitSequenceTest, DestroyBeforeInitializeDoesNothing )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies )
 {
-    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // 전용 서버 빌드는 창 · RHI · 렌더러 단계를 짓지 않는다(Source/Engine/EngineSubsystemSet.cpp)
+    StartupRecorder     recorder;           // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
@@ -468,7 +470,8 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
  */
 SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 {
-    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // 전용 서버 빌드는 창 · RHI · 렌더러 단계를 짓지 않는다(Source/Engine/EngineSubsystemSet.cpp)
+    StartupRecorder     recorder;           // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
@@ -496,6 +499,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
 {
     SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // 전용 서버 빌드는 창 · RHI · 렌더러 단계를 짓지 않는다(Source/Engine/EngineSubsystemSet.cpp)
 
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
@@ -526,7 +530,8 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
 {
-    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SW_TEST_REQUIRES_FEATURE( ClientCode ); // 전용 서버 빌드는 창 · RHI · 렌더러 단계를 짓지 않는다(Source/Engine/EngineSubsystemSet.cpp)
+    StartupRecorder     recorder;           // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kServer ) );

@@ -38,7 +38,7 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
 
     Display* pDisplay = static_cast<Display*>( window->getNativeDisplay() );
     SW_ASSERT_NOT_NULL( pDisplay );
-    XSync( pDisplay, False );
+    XSync( pDisplay, 0 ); // X11MacroUndef.h 가 매크로 False 를 지운다 — 값 0
     const ::Window owner = static_cast<::Window>( reinterpret_cast<uintptr_t>( window->getNativeHandle() ) );
     ::Window       rootWindow{ 0 };
     ::Window       parentWindow{ 0 };

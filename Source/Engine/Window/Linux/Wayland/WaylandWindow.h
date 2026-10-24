@@ -55,8 +55,11 @@ namespace sw
         /** @brief `xdg_toplevel_set_title` 입니다. */
         void applyTitle() override;
 
-    private:
+    public:
+        /** @brief 라이브러리 객체 · 리스너가 쌓은 입력입니다(.cpp 에만 정의가 있다). 리스너 묶음(.cpp 의 익명 구조체)이 이름을 쓰도록 공개 선언만 둔다. */
         struct State;
+
+    private:
         unique_ptr<State> _pState; ///< 라이브러리 객체 · 리스너가 쌓은 입력(.cpp 에만 있다)
     };
 } // namespace sw
