@@ -518,6 +518,66 @@
       "filter": "Automation*Test.*",
       "source": "docs/plans/AutomationSplit.md 단계 2", "result_doc": "docs/plans/AutomationSplit.md"
     },
+    {
+      "id": "shader-patches-cook", "title": "docs/plans/ShaderPatches 의 패치를 번호 순으로 적용하고 네 백엔드로 셰이더 쿠킹(소스와 바이너리를 함께 커밋)", "kind": "cook", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "git apply 로 패치를 쌓는 일과 충돌 해결이 먼저고, 적용한 뒤 빌드 → App --cook-shaders 를 한 명령으로 묶은 것이 없다",
+      "source": "docs/plans/ShaderPatches/README.md", "result_doc": "docs/plans/ShaderPatches/README.md 의 패치 파일을 지운다"
+    },
+    {
+      "id": "spline-river-path-tests", "title": "스플라인 강 경로 어댑터 테스트(SplineRiverPathTest · WaterTest)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "SplineRiverPathTest.*,WaterTest.*,SplineTest.*",
+      "source": "docs/plans/EnvironmentRemainders.md E1", "result_doc": "docs/plans/EnvironmentRemainders.md E1"
+    },
+    {
+      "id": "fog-tests", "title": "안개 테스트(광학 두께 식 · 컴포넌트 찾기 · 물속 덮어쓰기 · 패스 종류 표)와 렌더 패스 형식 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "FogTest.*,RenderPassTest.*",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R1 R2", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R1 R2"
+    },
+    {
+      "id": "fog-scenario", "title": "fog 시나리오(네 백엔드 — 먼 바닥이 안개색으로 올라가고 가까운 바닥은 어둡다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/fog.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R1", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R1"
+    },
+    {
+      "id": "sky-tests", "title": "하늘 테스트(그러데이션 식 · 대기 산란의 낮 파랑 · 노을 빨강 · 행성 그림자 · 땅 반사 · 방향광에서 해 찾기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "SkyTest.*",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R3 R4", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R3 R4"
+    },
+    {
+      "id": "sky-scenario", "title": "sky 시나리오(네 백엔드 — 대기 산란 낮 하늘이 파랗다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/sky.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R3 R4", "result_doc": "docs/plans/RealtimeGlobalIllumination.md R3 R4"
+    },
+    {
+      "id": "realtime-probe-tests", "title": "실시간 프로브 테스트(점유 복셀 형식 · 삼각형 칠하기 · DDA 광선 · 메시 복셀화 · 입력 행 배치 · 실시간 볼륨 수집)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "SceneVoxelGridTest.*,SceneVoxelizerTest.*,RealtimeProbeTest.*,SceneLightTest.*,RenderPassTest.*",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R5 R6", "result_doc": "docs/plans/RealtimeGlobalIllumination.md 4절"
+    },
+    {
+      "id": "realtimegi-scenario", "title": "realtimegi 시나리오(네 백엔드 — 직접광이 닿지 않는 큐브 옆면이 프로브의 간접광으로 밝아진다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/realtimegi.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R6", "result_doc": "docs/plans/RealtimeGlobalIllumination.md 4절"
+    },
+    {
+      "id": "realtime-probe-measure", "title": "실시간 프로브 갱신 컴퓨트 GPU 시간(RT.Probe.Update) — 프로브 수 · 광선 수 · 갱신 주기별", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "프로브 수 · 광선 수를 바꿔 RT.Probe.Update 를 재는 perf-compare 케이스가 없다(realtimegi 씬을 볼륨 값별로 돌리는 케이스를 더하는 일)",
+      "source": "docs/plans/RealtimeGlobalIllumination.md R6", "result_doc": "docs/plans/RealtimeGlobalIllumination.md 4절"
+    },
+    {
+      "id": "vfx-gpu-lights-tests", "title": "GPU 파티클 라이트 테스트(생산자 규칙 · 슬롯 나누기 · 깊이 충돌 + 라이트 로드 · CPU 라이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "GPULightBufferTest.*,VfxGPUSimulationTest.*,VfxEffectDefTest.*,VfxComponentTest.*",
+      "source": "docs/plans/VfxGpuLights.md 3절 L4", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"
+    },
+    {
+      "id": "vfx-gpu-lights-scenario", "title": "vfxgpulights 시나리오(네 백엔드 — 바닥 밝기가 효과를 멀리 보내면 달라진다, 문턱을 실측으로 정한다)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["game/empty/automation/vfxgpulights.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/VfxGpuLights.md 3절 L5", "result_doc": "docs/plans/VfxGpuLights.md 상태를 끝으로"
+    },
+    {
+      "id": "vfx-gpu-lights-measure", "title": "GPU 파티클 라이트 슬롯 32 · 128 · 256 에서 컴퓨트 프리패스 GPU 시간(RT.Vfx.Simulate)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "슬롯 수를 바꾸는 perf-compare 케이스가 없다(vfxgpulights 씬을 슬롯별 효과 파일로 돌리는 케이스를 더하는 일)",
+      "source": "docs/plans/VfxGpuLights.md 4절", "result_doc": "docs/plans/VfxGpuLights.md 4절"
+    },
     {"id": "retarget-test", "title": "RetargetTest 필터(리타깃 포즈 target_pose)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "RetargetTest.*", "source": "docs/plans/AnimationAdvancedFeatures.md A4", "result_doc": "docs/plans/AnimationAdvancedFeatures.md 상태를 끝으로"},
     {"id": "facial-animation-test", "title": "FacialAnimationTest 필터(아바타 연결 표)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "FacialAnimationTest.*", "source": "docs/plans/FacialAnimation.md F4", "result_doc": "docs/plans/FacialAnimation.md 상태를 끝으로"},
     {"id": "appearance-preload-test", "title": "AppearancePreloadTest 필터(체형 축 bodyShapes)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "AppearancePreloadTest.*", "source": "docs/plans/CharacterAppearanceIntegration.md 남은 것", "result_doc": "docs/plans/CharacterAppearanceIntegration.md 남은 것"},

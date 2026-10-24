@@ -181,6 +181,23 @@
 				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
+		<!-- 높이 · 거리 지수 안개(FogComponent · 물속) — 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 프리멀티플라이로 블렌드한다(색을 읽지 않는다). 씬에 안개가 없으면 돌지 않는다. 하늘 픽셀은 건드리지 않는다. -->
+		<RenderGraphPassDesc _name="Fog"
+		                     _type="Fog"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _bEnableBlend="true">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<!-- 피사계 심도 — forwardpipeline.xml 과 같다(후처리 체인 앞, 조리개 0 이면 원본). -->
 		<RenderGraphPassDesc _name="DepthOfField"
 		                     _type="DepthOfField"

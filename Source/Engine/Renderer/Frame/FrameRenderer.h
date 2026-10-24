@@ -30,6 +30,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Light/Light2DCookieAtlas.h"
+#include "Engine/Renderer/Light/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -41,6 +42,7 @@
 
 namespace sw
 {
+    struct FogSettings;
     struct RenderFramePacket;
     struct RenderPassTypeInfo;
     struct ShaderCompileResult;
@@ -717,9 +719,47 @@ namespace sw
             float4 _zenithExponent{};  ///< rgb 천정 색, w 지평선 지수
             float4 _horizon{};         ///< rgb 지평선 색
             float4 _groundIntensity{}; ///< rgb 땅 색, w 세기
+            // 대기 산란 모드(`SkyMode::Atmosphere`)와 구름 층의 상수다. 배치는 `SkyAtmosphere` · `SkyClouds` 머리 주석과 sky.hlsl 머리 주석.
+            float4 _atmosphereRayleigh{}; ///< rgb 레일리 산란 계수(1/km), w 대기 모드면 1 · 그러데이션이면 0
+            float4 _atmosphereMie{};      ///< x 미 산란 계수(1/km), y 미 규모 높이(km), z 미 이방성, w 해 복사휘도 배율(해 색에 곱한다)
+            float4 _atmosphereGeometry{}; ///< x 행성 반지름(km), y 대기 두께(km), z 눈 고도(km), w 해 원반 각 반지름(라디안)
+            float4 _cloudShape{};         ///< x 덮는 비율, y 층 고도(km), z 노이즈 배율(1/km), w 최대 불투명도
+            float4 _cloudWind{};          ///< xy 바람 방향 단위 벡터(xz 평면), z 바람 속도(km/s), w 경계 부드러움
+            float4 _cloudColor{};         ///< rgb 구름 색, w 구름을 그리면 1
         };
         /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );
+        /**
+         * @brief 이번 프레임의 안개를 셰이더 상수 모양으로 둔 것입니다(`g_FogColorDensity` · `g_FogHeightParams` · `g_FogInscatter` · `g_FogVolumeParams`, 배치는 `FogSettings` 머리 주석).
+         * @details 씬에 안개(`FogComponent` · 물속)가 없으면 `_bHasFrameFog` 가 0 이고 안개 패스가 그리지 않는다. 볼륨 안개 값(`_volumeParams`)은 주 시점에서 볼륨이 실제로 계산된 프레임에만
+         *          x=1 로 켜진다(`executeFogPass` 가 뷰마다 덮는다 — 추가 뷰는 볼륨을 계산하지 않는다).
+         */
+        struct FrameFogState
+        {
+            float4 _colorDensity{};          ///< rgb 안개 색, w 밀도
+            float4 _heightParams{};          ///< x 높이 감쇠, y 기준 높이, z 시작 거리, w 최대 불투명도
+            float4 _inscatter{};             ///< rgb 방향광 산란 색 × 세기, w 지수
+            float4 _volumeParams{};          ///< x 볼륨 안개를 켠 1 · 끈 0, y 볼륨 거리, z 산란 배율, w 이방성
+            uint8  _bVolumetric{ SW_FALSE }; ///< 설정이 볼륨 안개를 켰다(컴퓨트가 돌지는 `_bFogVolumeActive`)
+        };
+        /** @brief 이번 프레임의 안개(`_frameFog` · `_bHasFrameFog`)를 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
+        void applyFrameFog( bool bHasFog, const FogSettings& fog );
+        /**
+         * @brief 볼륨 안개의 버퍼(froxel 출력, 갱신 입력)를 갖추고 주 시점의 입력을 올립니다. **기록 전에** 부릅니다(라이트 그리드와 주 시점이 정해진 뒤 — `uploadSceneAndSubmit`).
+         * @details 설정이 볼륨 안개를 켰고 컴퓨트 PSO · 라이트 버퍼가 있을 때만 켠다(`_bFogVolumeActive`). 못 만들면 오류를 한 번 남기고 볼륨 없이 평범한 안개로 그린다 — 다른 갈래가 아니라 같은 패스의 꺼진 상태다.
+         */
+        void prepareVolumetricFog( IRHIDevice* pDevice );
+        /** @brief 볼륨 안개 컴퓨트를 기록합니다(라이트 그리드 디스패치 뒤). `_bFogVolumeActive` 일 때만 돕니다. */
+        void dispatchVolumetricFog();
+        /**
+         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
+         * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).
+         */
+        void prepareRealtimeProbes( IRHIDevice* pDevice );
+        /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다(라이트 그리드 · 볼륨 안개 뒤, 조명 패스 앞). `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
+        void dispatchRealtimeProbes();
+        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다. */
+        void executeFogPass( const PassExecuteInput& input );
         /**
          * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
@@ -1093,11 +1133,18 @@ namespace sw
         /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
         GPULightBuffer   _lightBuffer;
         vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
+        /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
+        vector<VfxGPULightRange> _listScratchGPULightRange;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
         /// @brief 씬 직접 경로에서 라이트 프로브 SH9 원소를 모으는 버퍼입니다(`collectSceneLights`). 프레임마다 재사용합니다.
         vector<float4>         _listScratchLightProbe;
         vector<GPULightCookie> _listScratchLightCookie; ///< 직접 경로의 쿠키 목록(`collectSceneLights`)
+        /// @brief 실시간 프로브 갱신 요청입니다 - 직접 경로가 모으는 임시 버퍼(`_listScratchRealtimeProbe`)와, 이번 프레임 기록이 읽는 사본(`_listFrameRealtimeProbe` - 패킷 경로도 여기에 받는다).
+        vector<RealtimeProbeRequest> _listScratchRealtimeProbe;
+        vector<RealtimeProbeRequest> _listFrameRealtimeProbe;
+        RealtimeProbeUpdater         _probeUpdater;   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`prepareRealtimeProbes` · `dispatchRealtimeProbes`)
+        SkyGradient                  _frameSkySource; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
@@ -1244,6 +1291,12 @@ namespace sw
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
         FrameSkyState   _frameSky;   ///< float4 셋(48바이트)이다. `_bHasFrameSky` 가 0 이면 쓰지 않는다.
+        FrameFogState   _frameFog;   ///< 안개 상수 float4 넷이다. `_bHasFrameFog` 가 0 이면 쓰지 않는다.
+        /// @brief 볼륨 안개의 froxel 출력(구조 버퍼 float4 — 산란 rgb, 투과율 a)입니다. 컴퓨트가 쓰고 안개 패스가 t11 로 읽습니다(`volumetricfog.hlsl`).
+        RHIStructuredBufferSlot _fogVolumeBuffer;
+        /// @brief 볼륨 안개 컴퓨트의 입력(float4 행, `SW_FOG_VOLUME_PARAM_FLOAT4_COUNT` 개)입니다. 프레임마다 올립니다.
+        RHIStructuredBufferSlot _fogVolumeParamBuffer;
+        vector<float4>          _listScratchFogVolumeParam; ///< 그 행의 업로드 임시 버퍼(프레임마다 다시 쓴다)
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;
@@ -1259,14 +1312,15 @@ namespace sw
          * @details 드로우가 가시 목록을 바인딩할지 정하는 값이다. 목록을 바인딩했는데 컬링이 돌지 않았다면 셰이더가
          *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그린다.
          */
-        uint8                  _bGPUCullingActive;
-        FrameRendererStatus    _status;
-        uint8                  _bCallbacksBound            : 1;
-        uint8                  _bPassResourcesReady        : 1;
-        uint8                  _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        uint8                  _bHasFrameSky               : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
-        uint8                  _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
-        [[maybe_unused]] uint8 _reservedFlags              : 2;
+        uint8               _bGPUCullingActive;
+        FrameRendererStatus _status;
+        uint8               _bCallbacksBound            : 1;
+        uint8               _bPassResourcesReady        : 1;
+        uint8               _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        uint8               _bHasFrameSky               : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
+        uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
+        uint8               _bHasFrameFog               : 1; ///< 이번 프레임에 안개(`FogComponent` · 물속)가 있다(`_frameFog`). 기록 전에 정하고 패스 콜백은 읽기만 한다
+        uint8               _bFogVolumeActive           : 1; ///< 이번 프레임에 볼륨 안개 컴퓨트가 돈다(`prepareVolumetricFog` 가 정한다) — 안개 패스가 주 시점에서 볼륨을 읽는다
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.

@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
@@ -150,7 +151,7 @@ namespace sw
 
         // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
         // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
-        collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex, &packet._listLightProbe, &packet._listLightCookie );
+        collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex, &packet._listLightProbe, &packet._listLightCookie, &packet._listRealtimeProbe );
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = pActiveScene->getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && SkyComponent::findSky( *pActiveObjects, packet._sky ) ) ? SW_TRUE : SW_FALSE;
@@ -171,6 +172,8 @@ namespace sw
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
             packet._mainView = RenderViewCollector::makeMainSettings( pCam );
             packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
+            // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
+            packet._bHasFog = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, pCam->getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
             // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
             _gpuSceneBuilder->setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
             _bMissingCameraReported = false;
@@ -309,6 +312,7 @@ namespace sw
             collectSceneLights( pScene, preview._listLight, &_listShadowLightIndex, &preview._listLightProbe );
             const GameObjectManager* pPreviewObjects = pScene->getObjectManager();
             preview._bHasSky                         = ( pPreviewObjects != nullptr && SkyComponent::findSky( *pPreviewObjects, preview._sky ) ) ? SW_TRUE : SW_FALSE;
+            preview._bHasFog                         = ( pPreviewObjects != nullptr && FogComponent::findFog( *pPreviewObjects, preview._cameraPos, preview._fog ) ) ? SW_TRUE : SW_FALSE;
             ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, FrameRenderer::getShadowMapResolution(), _listShadowLightIndex,
                                             preview._listLight, preview._shadow );
 

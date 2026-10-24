@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/Vfx/VfxEffectDef.h"
 
@@ -136,14 +137,45 @@ namespace sw
         , _listBatchDrawSource{}
         , _listParamWord{}
         , _listScratchStaleRunID{}
+        , _listLightRange{}
         , _frameInput{}
         , _paramBuffer{}
         , _bPipelineMissingLogged{ false }
         , _bMeshPipelineMissingLogged{ false }
+        , _bLightOverflowLogged{ false }
     {
     }
 
     VfxGPUSimulation::~VfxGPUSimulation() = default;
+
+    VfxGPULightAssignment VfxGPUSimulation::assignLightRanges( const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
+                                                               vector<VfxGPULightRange>& outListRange )
+    {
+        const size_t batchCount = listBatch.size();
+        outListRange.assign( batchCount + listMeshEmitter.size(), VfxGPULightRange{} );
+        VfxGPULightAssignment assignment{};
+        for ( size_t rangeIndex = 0; rangeIndex < outListRange.size(); ++rangeIndex )
+        {
+            const bool                  bBatch   = rangeIndex < batchCount;
+            const VfxGPUEmitterRequest* pRequest = bBatch ? listBatch[rangeIndex].findGPURequest() : &listMeshEmitter[rangeIndex - batchCount]._request;
+            // 메시 방출기는 인스턴스 칸이 있어야 시뮬레이션이 돈다(prepareFrame). 돌지 않는 방출기가 슬롯을 받으면 죽은 슬롯으로 남는다.
+            const bool bDrawn      = bBatch || listMeshEmitter[rangeIndex - batchCount]._pListInstanceSlot != nullptr;
+            const bool bHasRequest = pRequest != nullptr && pRequest->_pDef != nullptr;
+            if ( bHasRequest == false || bDrawn == false )
+                continue;
+            const uint32 maxLights = pRequest->_pDef->_light._maxLights;
+            if ( maxLights == 0 )
+                continue;
+            if ( assignment._slotCount + maxLights > GPULightBuffer::kMaxGPULight )
+            {
+                ++assignment._overflowEmitterCount;
+                continue;
+            }
+            outListRange[rangeIndex] = VfxGPULightRange{ assignment._slotCount, maxLights };
+            assignment._slotCount += maxLights;
+        }
+        return assignment;
+    }
 
     void VfxGPUSimulation::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
                                          const VfxSimulationFrameInput& input )
@@ -173,6 +205,26 @@ namespace sw
             _bPipelineMissingLogged = true;
         }
 
+        // 파티클 라이트 — 라이트 버퍼가 GPU 구간을 받은 프레임에만 쓴다. 범위는 렌더러가 구간 크기를 정할 때와 같은 함수로 얻는다(어긋나면 쓰지 않는다).
+        _listLightRange.clear();
+        const bool bLightsReady = input._lightSlotCount > 0 && input._lightUav != kInvalidDescriptorIndex && input._lightBuffer != 0;
+        if ( bLightsReady )
+        {
+            const VfxGPULightAssignment assignment = assignLightRanges( listBatch, listMeshEmitter, _listLightRange );
+            if ( assignment._slotCount != input._lightSlotCount )
+            {
+                SW_LOG_ERROR( "VFX particle light slots (%#) differ from the light buffer's GPU section (%#) - particle lights are not drawn", assignment._slotCount,
+                              input._lightSlotCount );
+                _listLightRange.clear();
+            }
+            else if ( assignment._overflowEmitterCount > 0 && _bLightOverflowLogged == false )
+            {
+                _bLightOverflowLogged = true;
+                SW_LOG_ERROR( "%# VFX emitters asked for more particle light slots than the GPU section holds (%#) - they have no lights", assignment._overflowEmitterCount,
+                              GPULightBuffer::kMaxGPULight );
+            }
+        }
+
         if ( input._bSimulationPipelineReady )
         {
             SW_PROFILE_SCOPE( "RT.Vfx.SimulationPrepare" );
@@ -185,7 +237,8 @@ namespace sw
                 EmitterState* pState = prepareEmitterState( device, *pRequest );
                 if ( pState == nullptr )
                     continue;
-                appendSimulation( *pState, *pRequest, batch._world, batch._bRibbon == SW_TRUE );
+                const VfxGPULightRange lightRange = batchIndex < _listLightRange.size() ? _listLightRange[batchIndex] : VfxGPULightRange{};
+                appendSimulation( *pState, *pRequest, batch._world, batch._bRibbon == SW_TRUE, lightRange );
                 _listBatchDrawSource[batchIndex] = &pState->_drawSource;
             }
 
@@ -197,15 +250,18 @@ namespace sw
                 SW_LOG_ERROR( "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
                 _bMeshPipelineMissingLogged = true;
             }
-            for ( const GPUVfxMeshEmitter& emitter : listMeshEmitter )
+            for ( size_t meshIndex = 0; meshIndex < listMeshEmitter.size(); ++meshIndex )
             {
-                const bool bEmitterReady = emitter._request._pDef != nullptr && emitter._pListInstanceSlot != nullptr;
+                const GPUVfxMeshEmitter& emitter       = listMeshEmitter[meshIndex];
+                const bool               bEmitterReady = emitter._request._pDef != nullptr && emitter._pListInstanceSlot != nullptr;
                 if ( bMeshReady == false || bEmitterReady == false )
                     continue;
                 EmitterState* pState = prepareEmitterState( device, emitter._request );
                 if ( pState == nullptr )
                     continue;
-                appendSimulation( *pState, emitter._request, emitter._world, false );
+                const size_t           rangeIndex = listBatch.size() + meshIndex;
+                const VfxGPULightRange lightRange = rangeIndex < _listLightRange.size() ? _listLightRange[rangeIndex] : VfxGPULightRange{};
+                appendSimulation( *pState, emitter._request, emitter._world, false, lightRange );
                 appendMeshInstance( *pState, emitter );
             }
         }
@@ -276,13 +332,16 @@ namespace sw
         return &state;
     }
 
-    void VfxGPUSimulation::appendSimulation( EmitterState& state, const VfxGPUEmitterRequest& request, const float4x4& world, bool bRibbon )
+    void VfxGPUSimulation::appendSimulation( EmitterState& state, const VfxGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VfxGPULightRange& lightRange )
     {
         using Internal         = VfxGPUSimulationInternal;
         const uint32 paramRow  = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
-        const uint32 stepCount = appendParams( state, request._seed, request._stepCount, world, bRibbon );
+        const uint32 stepCount = appendParams( state, request._seed, request._stepCount, world, bRibbon, lightRange );
         // 밀린 단계가 없고 이미 한 번 돌았으면 렌더 입력과 인자가 그대로다 — 디스패치하지 않는다(매개변수 구간은 버린다).
-        if ( stepCount == 0 && state._bNeedsReset == false )
+        // 파티클 라이트가 있으면 그래도 돈다: 라이트는 월드 좌표로 쓰이고 구간의 위치(CPU 라이트 수)도 프레임마다 바뀌어 매 프레임 다시 써야 한다.
+        const bool bLights   = lightRange._count > 0;
+        const bool bUpToDate = stepCount == 0 && state._bNeedsReset == false;
+        if ( bUpToDate && bLights == false )
         {
             _listParamWord.resize( static_cast<size_t>( paramRow ) * Internal::kWordsPerRow );
             return;
@@ -290,10 +349,11 @@ namespace sw
         Dispatch& dispatch = _listDispatch.emplace_back();
         dispatch._pState   = &state;
         dispatch._paramRow = paramRow;
+        dispatch._bLights  = bLights;
         state._bNeedsReset = false;
     }
 
-    uint32 VfxGPUSimulation::appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon )
+    uint32 VfxGPUSimulation::appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VfxGPULightRange& lightRange )
     {
         using Internal                             = VfxGPUSimulationInternal;
         const VfxEmitterDef&        def            = state._clock.getDef();
@@ -332,7 +392,18 @@ namespace sw
         Internal::appendMatrixRows( _listParamWord, world.invert() );
         Internal::appendMatrixRows( _listParamWord, depth._viewProj );
         Internal::appendMatrixRows( _listParamWord, depth._viewProj.invert() );
-        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 28u, "the header rows above must match vfxsimulate.hlsli" );
+        // 파티클 라이트 — 구간의 첫 라이트 번호(절대) · 슬롯 수 · 반경(방출기 배율을 곱한 월드 반경) · 세기. 슬롯 수 0 이면 셰이더가 쓰지 않는다.
+        if ( lightRange._count > 0 )
+        {
+            const VfxLightDef& light = def._light;
+            Internal::appendRow( _listParamWord, _frameInput._lightBase + lightRange._first, lightRange._count, Internal::toBits( light._radius * world.getMaximumAxisScale() ),
+                                 Internal::toBits( light._intensity ) );
+        }
+        else
+        {
+            Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
+        }
+        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfxsimulate.hlsli" );
 
         // 일정 — 게임 스레드와 같은 시계를 같은 단계 수만큼 돌린다.
         for ( uint32 stepIndex = 0; stepIndex < steps; ++stepIndex )
@@ -400,6 +471,15 @@ namespace sw
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
         if ( bBindDepth )
             cmd.prepareTextureForUnorderedAccess( depth._texture );
+        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다(u3). 쓰기 전에 UAV 로 옮기고, 끝나면 그리드 생산자(lightgrid.hlsl)와 조명 패스가 읽도록 SRV 로 되돌린다.
+        const bool bLightBufferReady = _frameInput._lightUav != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
+        bool       bAnyLights        = false;
+        for ( const Dispatch& dispatch : _listDispatch )
+        {
+            bAnyLights = bAnyLights || ( dispatch._bLights && bLightBufferReady );
+        }
+        if ( bAnyLights )
+            cmd.transitionBuffer( _frameInput._lightBuffer, RHIBufferState::UnorderedAccess );
         for ( const Dispatch& dispatch : _listDispatch )
         {
             const EmitterState& state = *dispatch._pState;
@@ -413,14 +493,22 @@ namespace sw
             cmd.bindComputeUav( state._stateBuffer._uav, 0 );
             cmd.bindComputeUav( state._particleBuffer._uav, 1 );
             cmd.bindComputeUav( state._argsBuffer._uav, 2 );
+            // 라이트 버퍼(u3) — 라이트를 쓰는 방출기만 건다. 매개변수의 라이트 행이 슬롯 수 0 이면 셰이더는 읽지도 쓰지도 않는다.
+            const bool bWritesLights = dispatch._bLights && bLightBufferReady;
+            if ( bWritesLights )
+                cmd.bindComputeUav( _frameInput._lightUav, 3 );
             if ( bBindDepth )
                 cmd.bindComputeUav( depth._uav, shaderslot::kComputeTextureUav0 );
             cmd.setComputeRootConstants( 0, 1, &dispatch._paramRow );
             cmd.dispatchCompute( 1, 1, 1 );
+            if ( bWritesLights )
+                cmd.uavBarrier( _frameInput._lightBuffer ); // 다음 방출기가 같은 버퍼의 다른 슬롯 범위를 쓴다 — 범위가 겹치지 않아도 상태 추적을 맞춘다
             // 투명 패스가 t11 로 읽고 간접 인자로 그린다. 상태 버퍼는 다음 디스패치만 읽으므로 UAV 로 둔다.
             cmd.transitionBuffer( state._particleBuffer._buffer, RHIBufferState::ShaderResource );
             cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::IndirectArgument );
         }
+        if ( bAnyLights )
+            cmd.transitionBuffer( _frameInput._lightBuffer, RHIBufferState::ShaderResource );
 
         // 메시 입자 — 렌더 입력을 인스턴스 칸으로 옮긴다. 인스턴스 애니메이션 · 컬링이 이어서 이 버퍼를 읽는다.
         const bool bMeshWrites = _listMeshDispatch.empty() == false && meshInstancePSO != 0 && _frameInput._instanceUav != kInvalidDescriptorIndex;

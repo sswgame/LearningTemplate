@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GPU 방출기의 파티클 라이트 — 빛나는 불똥(engine/vfx/gpusparklights, 깊이 충돌 + _light)이 어두운 바닥을 비추는지 본다(VfxGpuLights.md L5).
+  빛은 vfxsimulate.hlsl 이 라이트 버퍼의 GPU 구간에 쓰고 GPU 라이트 그리드(lightgrid.hlsl)가 받는다. 불똥 그림은 아주 작아 바닥의 밝기 차이가 거의 빛이다.
+  비교: 효과가 바닥 위에서 돌 때(lit)와 순간이동으로 멀리 보낸 뒤(away)의 바닥 영역 — 빛이 있으면 둘이 다르다. GPU 구간은 GPU 생산자(gv_lightCulling 2, 기본)에서만 그려진다.
+  결정적: 고정 프레임 시간, 효과 시드 고정. 첫 사진이 자리 잡기를 기다린 뒤로는 찍는 프레임이 정해져야 하므로 기다리지 않는다(waitForSettle="false").
+  문턱(atLeast)은 첫 측정 전의 어림값이다(GPU 확인 대기) — 통합이 네 백엔드에서 처음 돌린 값으로 정한다.
+  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/vfxgpulights.scene.xml -scenario=game/empty/automation/vfxgpulights.scenario.xml
+        (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
+-->
+<Scenario name="game.empty.vfxgpulights" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/vfxgpulights.scene.xml"/>
+	<At frame="60"><Screenshot file="settled.ppm"/></At>
+	<At frame="150"><Screenshot file="lit.ppm" waitForSettle="false"/></At>
+	<At frame="152"><DevCommand line="teleport Effect 0 -200 2"/></At>
+	<At frame="230"><Screenshot file="away.ppm" waitForSettle="false"/></At>
+	<At frame="240">
+		<ExpectImage file="lit.ppm" region="0.1,0.45,0.9,0.95" metric="differingFraction" reference="away.ppm" atLeast="0.02"/>
+		<Pass/>
+	</At>
+</Scenario>

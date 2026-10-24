@@ -46,9 +46,33 @@ namespace sw
         VfxDepthHistoryInput _depth{};
         RHIBufferHandle      _instanceBuffer{ 0 }; ///< GPUScene 인스턴스 버퍼(메시 입자가 쓴다)
         RHIDescriptorIndex   _instanceUav{ kInvalidDescriptorIndex };
-        bool                 _bSimulationPipelineReady{ false }; ///< vfxsimulate.hlsl PSO 가 있다
-        bool                 _bMeshPipelineReady{ false };       ///< vfxmeshinstance.hlsl PSO 가 있다
-        bool                 _bNativeBindless{ false };          ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다)
+        RHIBufferHandle      _lightBuffer{ 0 };                    ///< 라이트 버퍼(`GPULightBuffer`) — 파티클 라이트가 GPU 구간에 쓴다
+        RHIDescriptorIndex   _lightUav{ kInvalidDescriptorIndex }; ///< 라이트 버퍼의 UAV. GPU 구간이 없는 프레임은 invalid 다
+        uint32               _lightBase{ 0 };                      ///< GPU 구간의 첫 라이트 번호(`GPULightBuffer::getGpuLightBase`)
+        uint32               _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
+        bool                 _bSimulationPipelineReady{ false };   ///< vfxsimulate.hlsl PSO 가 있다
+        bool                 _bMeshPipelineReady{ false };         ///< vfxmeshinstance.hlsl PSO 가 있다
+        bool                 _bNativeBindless{ false };            ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 방출기 하나가 파티클 라이트에 받은 GPU 구간의 슬롯 범위입니다(구간 안의 상대 번호). `_count` 가 0 이면 라이트를 쓰지 않는다. */
+    struct VfxGPULightRange
+    {
+        uint32 _first{ 0 };
+        uint32 _count{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `VfxGPUSimulation::assignLightRanges` 의 결과 요약입니다. */
+    struct VfxGPULightAssignment
+    {
+        uint32 _slotCount{ 0 };            ///< 나눈 슬롯의 합 — GPU 구간이 받아야 할 크기
+        uint32 _overflowEmitterCount{ 0 }; ///< 구간 상한에 들지 못해 라이트를 받지 못한 방출기 수
     };
 } // namespace sw
 
@@ -81,8 +105,19 @@ namespace sw
         VfxGPUSimulation& operator=( const VfxGPUSimulation& ) = delete;
 
         /**
+         * @brief GPU 방출기마다 파티클 라이트 슬롯(`VfxLightDef::_maxLights`)을 라이트 버퍼의 GPU 구간에 차례로 나눕니다. 렌더러가 라이트 버퍼를 올리기 전에 슬롯 합을 알고(`FrameRenderer::updateLightBuffer`),
+         *        시뮬레이션이 같은 목록으로 자기 범위를 얻습니다(`prepareFrame`) — 두 곳이 같은 입력에 이 함수 하나를 부르므로 범위가 어긋나지 않습니다.
+         * @details 순서는 GPU 배치(목록 순서), 그 뒤 GPU 메시 방출기입니다. 상한(`GPULightBuffer::kMaxGpuLight`)에 들지 않는 방출기는 라이트가 없습니다(`_overflowEmitterCount`, 부르는 쪽이 알린다).
+         *          그릴 수 없는 방출기(요청이 비었다 · 메시 인스턴스 칸이 없다)는 슬롯을 받지 않는다 — 받으면 디스패치되지 않아 죽은 슬롯으로 남는다.
+         * @param outListRange 지우고 채웁니다. 크기는 배치 수 + 메시 방출기 수이고, 번호는 배치가 `batchIndex`, 메시 방출기가 `listBatch.size() + meshIndex` 입니다.
+         */
+        static VfxGPULightAssignment assignLightRanges( const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
+                                                        vector<VfxGPULightRange>& outListRange );
+
+        /**
          * @brief 이번 프레임의 GPU 배치 · GPU 메시 방출기마다 상태를 갖추고 매개변수를 올립니다. **기록 시작 전에**(GPUScene 을 올린 뒤) 부릅니다.
          * @details PSO 가 없으면 한 번 오류를 남기고 그 방출기를 그리지 않는다 — CPU 로 바꿔 그리지 않는다(대상은 데이터가 정했다).
+         *          파티클 라이트가 있는 방출기는 밀린 단계가 없어도 매 프레임 디스패치한다 — 라이트 구간의 위치(CPU 라이트 수)와 월드 변환이 프레임마다 바뀌므로 다시 쓴다.
          */
         void prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVfxMeshEmitter>& listMeshEmitter,
                            const VfxSimulationFrameInput& input );
@@ -117,6 +152,7 @@ namespace sw
         {
             const EmitterState* _pState{ nullptr }; ///< 이번 프레임 안에서만 빌린다(`_mapState` 가 소유)
             uint32              _paramRow{ 0 };
+            bool                _bLights{ false }; ///< 파티클 라이트를 GPU 구간에 쓴다(u3 에 라이트 버퍼를 건다)
         };
 
         /** @brief 이번 프레임의 메시 인스턴스 쓰기 하나입니다. */
@@ -130,9 +166,9 @@ namespace sw
         /** @brief 요청의 상태를 찾거나 만들고 버퍼를 갖춥니다. 버퍼를 만들지 못했으면 오류를 남기고 nullptr 입니다. */
         EmitterState* prepareEmitterState( IRHIDevice& device, const VfxGPUEmitterRequest& request );
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */
-        void appendSimulation( EmitterState& state, const VfxGPUEmitterRequest& request, const float4x4& world, bool bRibbon );
+        void appendSimulation( EmitterState& state, const VfxGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VfxGPULightRange& lightRange );
         /** @brief @p state 의 이번 프레임 매개변수 구간을 `_listParamWord` 끝에 붙이고 디스패치할 단계 수를 돌려줍니다. */
-        uint32 appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon );
+        uint32 appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VfxGPULightRange& lightRange );
         /** @brief 메시 방출기 @p emitter 의 인스턴스 쓰기 구간을 붙입니다. */
         void appendMeshInstance( const EmitterState& state, const GPUVfxMeshEmitter& emitter );
 
@@ -142,9 +178,11 @@ namespace sw
         vector<const DrawSource*>                       _listBatchDrawSource; ///< 배치마다(GPU 배치가 아니면 nullptr) — 이번 프레임 안에서만 쓴다
         vector<uint32>                                  _listParamWord;       ///< 매개변수 행(uint4)을 단어로 이어 붙인 사본
         vector<uint64>                                  _listScratchStaleRunID;
-        VfxSimulationFrameInput                         _frameInput; ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼를 건다)
+        vector<VfxGPULightRange>                        _listLightRange; ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
+        VfxSimulationFrameInput                         _frameInput;     ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBufferSlot                         _paramBuffer;
         bool                                            _bPipelineMissingLogged;
         bool                                            _bMeshPipelineMissingLogged;
+        bool                                            _bLightOverflowLogged;
     };
 } // namespace sw

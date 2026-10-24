@@ -432,6 +432,11 @@ namespace sw
         input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         input._instanceBuffer           = _gpuScene.getInstanceBuffer();
         input._instanceUav              = _gpuScene.getInstanceUav();
+        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다. 구간이 없는 프레임(요청 없음 · 생산자가 GPU 가 아님)은 슬롯 수 0 이라 쓰지 않는다.
+        input._lightBuffer    = _lightBuffer.getBuffer()._buffer;
+        input._lightUav       = _lightBuffer.getGPULightUav();
+        input._lightBase      = _lightBuffer.getGPULightBase();
+        input._lightSlotCount = _lightBuffer.getGPULightCount();
         // 깊이 충돌은 주 시점의 지난 깊이만 본다(VfxCollisionDef 설명의 한계). 옮길 수 없는 프레임(첫 프레임 · 크기가 바뀐 프레임)은 히스토리가 없다.
         if ( canCopyDepthHistory( _mainView ) )
         {

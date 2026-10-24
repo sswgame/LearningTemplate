@@ -1,0 +1,70 @@
+<Scene formatVersion="2" name="SkyShowcase">
+	<!-- 대기 산란 하늘 + 구름 시나리오(automation/sky)의 무대 — 하늘만 보는 카메라. 해(방향광)가 머리 위에서 비스듬히 비춘다.
+	     구름은 바람으로 흐르지만(머티리얼 시계) 시나리오는 고정 프레임 시간이라 같은 프레임이 같은 무늬다. -->
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,0"
+					                 _localRotation="-0.9,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="1.2,0.5,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1"
+					                           _ambient="0.2"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sky">
+			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
+				<_listComponent>
+					<SkyComponent _intensity="1"
+					              _groundColor="0.3,0.27,0.24"
+					              _mode="Atmosphere"
+					              _rayleighScale="1"
+					              _mieScale="1"
+					              _mieAnisotropy="0.76"
+					              _sunIntensity="20"
+					              _observerAltitudeKm="0"
+					              _sunDiscAngle="0.03"
+					              _planetRadiusKm="6360"
+					              _atmosphereHeightKm="60"
+					              _bClouds="true"
+					              _cloudCoverage="0.5"
+					              _cloudAltitudeKm="2"
+					              _cloudScale="0.4"
+					              _cloudOpacity="0.9"
+					              _cloudWindDirection="0"
+					              _cloudWindSpeedKmPerSecond="0.01"
+					              _cloudSoftness="0.15"
+					              _cloudColor="1,1,1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -56,7 +56,8 @@ namespace sw
      *          질의도 그 시간을 쓴다(`getWaveTime`).
      *          수면 아래 깊이는 메시를 만들 때 지형(`TerrainComponent`)을 읽어 정점 색 알파에 베이크한다. 반투명 패스에는 장면 깊이 입력이 없어
      *          화면 공간에서 두께를 측정할 수 없기 때문이다. 지형이 없으면 깊은 물이다. 강은 정점 색 rg 에 흐름 방향을 싣는다(물결이 흐른다).
-     *          강 경로는 현재 점 목록이다. 스플라인 컴포넌트가 생기면 그것을 경로로 받도록 바꾼다.
+     *          강 경로는 점 목록이다. 같은 오브젝트에 스플라인 어댑터(GameFramework `SplineRiverPathComponent`)가 있으면 어댑터가 점을 만들어 넘기고(`setRiverPathFromSource`)
+     *          점 목록은 읽기 전용이 된다 — Engine 이 GameFramework 의 스플라인을 읽을 수 없어(층 방향) 어댑터가 쪽에서 밀어 넣는다.
      *          스레드: 질의는 읽기만 한다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 호출한다.
      */
     REFLECT( Category = "Environment", DisplayName = "Water Body", Tooltip = "Lake or river surface with Gerstner waves and surface queries", Meta = "Icon=Water, IconColor=Environment" )
@@ -105,7 +106,7 @@ namespace sw
 
         /**
          * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
-         * @details 하늘, 시간, 높이 안개를 맡을 다음 작업이 이 값을 읽어 안개 패스에 적용한다(현재 렌더러에는 안개 패스가 없다).
+         * @details `FogComponent::findFog` 가 이 값을 읽어 안개 패스(`RenderPassType::Fog`)의 값을 덮는다 — 균일 안개, 볼륨 없음.
          */
         [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog );
         /** @brief @p manager 의 물 가운데 월드 (x, z) 를 덮는 첫 물입니다. 빌린 포인터입니다. */
@@ -115,7 +116,20 @@ namespace sw
         void setSize( const float2& size ) { _size = size; }
         void setWaves( const vector<GerstnerWave>& listWave ) { _listWave = listWave; }
         void setRiverPath( const vector<float3>& listPoint, float32 width );
-        void setMaterialPath( string_view path ) { _materialPath = path; }
+        /**
+         * @brief 강 경로를 다른 곳(스플라인 어댑터, GameFramework `SplineRiverPathComponent`)이 정한 값으로 덮고 수면을 다시 만듭니다.
+         * @details 경로의 정본이 그 어댑터 하나가 되도록 `_bRiverPathDriven` 을 켠다 — 직렬화된 점 목록 `_listRiverPoint` 는 인스펙터가 막고 어댑터가 읽을 때마다 덮는다.
+         *          Engine 은 GameFramework 의 스플라인을 읽을 수 없어(층 방향) 어댑터가 점을 만들어 이 함수로 넘긴다. 수면 다시 만들기는 틱 밖으로 미룬다.
+         * @param listLocalPoint 이 물의 오너 위치 기준 점(월드 위치 − 오너 월드 위치, 회전 없음 — `_listRiverPoint` 와 같은 좌표). y 가 수면 높이다.
+         */
+        void setRiverPathFromSource( const vector<float3>& listLocalPoint );
+        /** @brief 어댑터가 없어졌을 때 부릅니다 — 경로를 다시 손으로 고칠 수 있게 되고(점 목록은 마지막 값 그대로) 수면은 그대로 둡니다. */
+        void clearRiverPathSource();
+        /** @brief 강 경로를 어댑터가 정하는가? */
+        bool                  isRiverPathDriven() const { return _bRiverPathDriven; }
+        const vector<float3>& getRiverPoints() const { return _listRiverPoint; }
+        float32               getRiverWidth() const { return _riverWidth; }
+        void                  setMaterialPath( string_view path ) { _materialPath = path; }
 
     private:
         /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 경로 거리를 찾습니다. 띠 밖이면 false 를 반환합니다. */
@@ -138,10 +152,13 @@ namespace sw
         float2 _size;
         PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Units = m, Tooltip = "Surface grid spacing (waves need vertices)" )
         float32 _cellSize;
-        PROPERTY( Category = "Water", DisplayName = "River Points", Units = m, Tooltip = "River centerline relative to the owner; y is the surface height" )
+        PROPERTY( Category = "Water", DisplayName = "River Points", Units = m, EditCondition = "!_bRiverPathDriven",
+                  Tooltip = "River centerline relative to the owner; y is the surface height (a path adapter on the same object overwrites it)" )
         vector<float3> _listRiverPoint;
         PROPERTY( Category = "Water", DisplayName = "River Width", Min = 0.1, Units = m )
         float32 _riverWidth;
+        PROPERTY( Category = "Water", DisplayName = "River Path Driven", ReadOnly, Tooltip = "A path adapter (spline) on the same object decides the river points; the list above is read-only" )
+        bool _bRiverPathDriven;
         PROPERTY( Category = "Waves", DisplayName = "Waves", Tooltip = "Up to four Gerstner waves" )
         vector<GerstnerWave> _listWave;
         PROPERTY( Category = "Shading", DisplayName = "Shallow Color", Tooltip = "Linear RGB; alpha = opacity at the shore" )

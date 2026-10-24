@@ -1,6 +1,6 @@
 # 실시간 전역 조명과 볼륨 표현 (2026-10-24)
 
-> 상태: 구현대기 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-14, D2-5.2 · 진행: 0/7
+> 상태: 측정대기 · 선행: ClusteredLighting · 영역: graphics · 옛번호: D2-14, D2-5.2 · 진행: 7/7
 
 후보 `RealtimeGlobalIllumination` 과 `TerrainWaterVegetationRemainders` 의 안개 항목(옛 D2-5.2)을 합쳐 계획으로 올린 문서입니다.
 이 엔진에는 안개가 없고(물속 안개 값 `WaterBodyComponent::findUnderwaterFog` 만 있고 읽는 패스가 없다), 하늘은 3색 그러데이션(`sky.hlsl`)이며, 간접 조명은 베이크한 라이트 프로브(SH9)와 반사 프로브([IndirectLighting](IndirectLighting.md) P0 ~ P6)뿐입니다.
@@ -23,13 +23,42 @@
 
 | 단위 | 내용 | 선행 |
 |---|---|---|
-| R0 | 사용자 결정: 위 권장안(프로브 갱신 + 볼륨 표현 선행)을 받을지, 범위(라이트맵 제외 · 구름 포함 여부) | 없음 |
-| R1 | 높이 · 거리 지수 안개 — `FogComponent`(씬에 하나), 깊이로 거리를 구해 장면 색에 섞는 후처리 패스 하나(`RenderPassType::Fog`). 물속 안개(`findUnderwaterFog`)가 카메라가 물속일 때 이 패스의 값을 덮는다 | 없음 |
-| R2 | 볼륨 안개(froxel) — 라이트 그리드와 같은 클러스터 좌표(`SW_LIGHT_GRID_DIM_*`)를 재사용해 라이트 산란을 주입하고 누적 | R1, ClusteredLighting S3 |
-| R3 | 대기 산란 하늘 — `sky.hlsl` 의 그러데이션을 레일리 · 미 산란으로(시간대는 방향광 방향이 정한다). `SkyGradient::evaluateRadiance`(프로브 베이크가 쓰는 C++ 식)도 같은 식으로 맞춘다 | R1 |
-| R4 | 구름(레이마치 또는 평면 노이즈) | R3 |
-| R5 | GPU 프로브 갱신의 장면 표현 결정 — 복셀 · 깊이 큐브맵 · 소프트웨어 SDF 중 하나(설계 문서 절을 이 문서에 쓴다) | R0 |
-| R6 | 프로브 갱신 컴퓨트 — 프레임마다 프로브 일부를 갱신(시간 분산), 볼륨 컴포넌트의 `_bRealtime` 칸 | R5 |
+| R0 | **들어감** — 결정 기록 5-5 "실시간 전역 조명은 프로브 갱신": 권장안을 받고(프로브 갱신 + 볼륨 표현 선행), 라이트맵 제외 · 구름 포함(평면 노이즈 층) | 없음 |
+| R1 | **들어감** — 높이 · 거리 지수 안개. `FogComponent`(씬에 하나) + 값 형식 `FogSettings`(C++ 식이 셰이더와 같다) + 안개 패스 `RenderPassType::Fog`(fog.hlsl). 패스는 **장면 깊이만 읽고** 이미 칠한 색 위에 프리멀티플라이 블렌드한다(복사 첨부 없음 — 전용 실행 `executeFogPass`가 안개 없음 · 표면 값 보기에서는 아무것도 하지 않는다). 다섯 파이프라인(디퍼드 · 포워드 넷)의 HighlightSense 뒤에 들어 있다. 물속이면 물의 안개(`findUnderwaterFog`)가 컴포넌트의 값을 덮는다(`FogComponent::findFog`, 균일 · 볼륨 없음). 테스트 `FogTest`, 시나리오 `game/empty/automation/fog` | 없음 |
+| R2 | **들어감** — 볼륨 안개(froxel). 라이트 그리드의 클러스터 목록을 froxel 위치마다 읽어 점광 · 스폿 산란을 넣고(방향광은 키 라이트 하나를 위상 함수로) 시선 방향으로 누적하는 컴퓨트(volumetricfog.hlsl, `RenderPassType::VolumetricFog`)와, 안개 패스가 그 구조 버퍼를 t11 로 읽는 경로. 화면 칸 80 × 45 × 거리 조각 32(`bindingslots.hlsli` 11절). 한계: 그림자 없음 · 시간 누적 없음 · 주 시점만 | R1, ClusteredLighting S3 |
+| R3 | **들어감** — 대기 산란 하늘. `SkyComponent::_mode`(Gradient · Atmosphere)와 대기 값(`SkyAtmosphere` — 레일리 · 미 계수 배율, 미 이방성, 해 세기, 행성 반지름 · 대기 두께, 눈 고도, 해 원반). 눈에서 대기 끝(또는 행성 표면)까지 16 구간, 구간마다 해 쪽 8 구간의 단일 산란이고 행성 그림자와 땅 반사(알베도 = 땅 색)를 센다. 시간대는 씬의 첫 활성 방향광이 정한다(`SkyComponent::findSky` → `SkyGradient::setSun`, 셰이더는 키 라이트 상수) — 방향광이 없으면 하늘이 어둡다. C++ `SkyAtmosphere::evaluateScattering` 와 `sky.hlsl` `computeAtmosphere` 가 같은 식 · 같은 상수이고 프로브 베이크가 C++ 쪽을 부른다(해 원반은 셰이더만). 테스트 `SkyTest` 대기 갈래(낮 파랑 · 노을 빨강 · 행성 그림자 · 땅 반사 · 해 찾기) | R1 |
+| R4 | **들어감** — 구름. 평면 노이즈 층(레이마치 안 함): 눈 위 `_cloudAltitudeKm` 평면에 정수 해시 값 노이즈 fbm(네 옥타브)을 `_cloudCoverage` 문턱으로 잘라 바람으로 흘린다(시간 = `g_SwMaterialTime`). 해 쪽으로 한 걸음 옮긴 밀도로 그늘을 어림하고 지평선 근처는 지운다. 구름은 하늘 색 위에 얹히고 프로브 베이크에는 보이지 않는다. 한계: 카메라를 따라온다(하늘 상자처럼) · 그림자를 드리우지 않는다 | R3 |
+| R5 | **들어감** — 장면 표현은 **정적 메시의 1 비트 점유 복셀**(3절). `SceneVoxelGrid`(복셀 형식 · 삼각형 칠하기 · DDA 광선 · CPU 에서 테스트) + 렌더러의 `SceneVoxelizer`(프리미티브 레지스트리의 불투명 · 보이는 · 스킨 없는 메시를 칠함) | R0 |
+| R6 | **들어감** — 프로브 갱신 컴퓨트. `LightProbeVolumeComponent::_bRealtime`(+ 복셀 크기 · 광선 수 · 갱신 주기 · 섞는 비율) → 수집이 0 으로 채운 프로브 자리와 갱신 요청(`RealtimeProbeRequest`)을 만들고, 렌더 스레드의 `RealtimeProbeUpdater` 가 복셀 · 기록 · 입력 행 버퍼를 갖춰 컴퓨트 `probeupdate.hlsl`(`RenderPassType::ProbeUpdate`)을 라이트 업로드 뒤 · 조명 전에 한 번 돈다. 프로브마다 갱신 조(번호 % 주기)가 프레임마다 광선을 쏘아 SH9 기록을 섞고, 모든 프로브를 소비 셰이더의 프로브 원소 배치로 프로브 버퍼(t13)에 쓴다(소비 셰이더는 바뀐 것이 없다). 테스트 `SceneVoxelGridTest` · `SceneVoxelizerTest` · `RealtimeProbeTest`, 시나리오 `game/empty/automation/realtimegi` | R5 |
 
-단위 R1 ~ R4 는 셰이더 소스를 바꾸므로 워크트리에서 커밋하지 못하고 패치로 넘긴다(`CheckShaderStamps`). C++ 쪽(컴포넌트 · 패스 타입 · 입력 서명)은 같은 브랜치에 커밋한다.
+단위 R1 ~ R4 · R6 은 셰이더 소스를 바꾸므로 워크트리에서 커밋하지 못하고 [패치 파일](ShaderPatches/README.md)로 넘긴다(`CheckShaderStamps` — 커밋 훅이 빌드된 App 으로 쿠킹을 요구한다). C++ 쪽(컴포넌트 · 패스 타입 · 입력 서명)은 같은 브랜치에 커밋한다.
+새 셰이더 경로(`fog.hlsl` · `volumetricfog.hlsl` · `probeupdate.hlsl`)가 엔진 기본 에셋 표(`enginedefaultassets.xml`)에 들어 있으므로 **C++ 와 패치를 함께** 적용해야 앱이 뜬다.
+
 R1 의 입력은 [EnvironmentRemainders](EnvironmentRemainders.md) 가 말하는 "안개 패스" 와 같은 것이다 — 이 문서가 정본이다.
+
+## 3. R5 설계: 프로브 갱신의 장면 표현
+
+프로브를 GPU 에서 다시 쏘려면 컴퓨트가 읽을 장면 표현이 필요하다. 세 후보를 이 엔진의 자리와 견줘 **정적 메시의 1 비트 점유 복셀**로 정했다.
+
+| 후보 | 장점 | 이 엔진에서의 비용 | 판단 |
+|---|---|---|---|
+| 복셀 점유 격자 | 광선이 칸을 따라 걷는 DDA 한 가지로 끝난다. 메시 정점(CPU 사본)만 있으면 만들 수 있다. 볼륨 하나당 최대 128³ 비트(256 KiB) | 칸 크기만큼 거칠다(0.5 m 기본). 면의 노멀이 축 정렬이다. 움직이는 물체는 빠진다 | **채택** |
+| 깊이 큐브맵(프로브마다) | 화면 렌더러가 이미 깊이를 그린다 | 프로브마다 여섯 면을 다시 그려야 해 갱신 비용이 프로브 수에 비례한다. 프로브 수천 개에는 맞지 않는다 | 제외 |
+| 소프트웨어 SDF | 부드러운 거리장 — 소프트 그림자 · 거친 반사도 가능 | SDF 생성(JFA 또는 메시 → SDF 베이크) · 저장 · 갱신이 모두 새 시설이다 | 제외(규모) |
+
+**규칙.** 복셀 상자는 볼륨 상자에 간격 + 2 m 의 여유를 더한 것이다(가장자리 프로브 곁의 벽이 빠지지 않게). 칸 수가 축마다 128 을 넘으면 칸 크기를 키운다. 칸은 삼각형-상자 분리축 판정으로 켜므로 얇은 면도 빠지지 않는다(보수적). 광선이 격자 밖으로 나가면 하늘 SH 를 읽는다.
+**한계(알려진 것).** (1) 불투명 · 보이는 · 스킨 없는 메시만 들어간다 — 반투명 · 스킨 메시 · 지형 · 식생은 빛을 가리지 않는다. (2) 복셀은 메시가 등록 · 해제될 때(프리미티브 집합 세대)와 볼륨의 상자 · 칸 크기가 바뀔 때만 다시 만든다 — 정적 메시를 **옮기면** 반영되지 않는다. (3) 닿은 면의 밝기는 베이커와 같은 규칙(볼륨의 반사율 × 직접광 한 번 튐 + 하늘)이고, 직접광은 라이트 버퍼의 앞 8 개(방향광이 먼저)를 복셀 가림으로 본다 — 방향광의 그림자 맵은 쓰지 않는다. (4) 하늘은 SH9 로 투영해(64 방향) 읽으므로 해 원반은 보이지 않는다(방향광이 따로 비춘다).
+**왜 다음 길이 아닌가.** 프로브를 베이크 대신 GPU 에서 매 프레임 조금씩 다시 쏘는 것(DDGI 계열)이라 장면 표현만 새로 만들면 된다 — 소비 셰이더 · 프로브 격자 · 볼륨 컴포넌트는 그대로다. Lumen 계열의 표면 캐시 · 화면 공간 추적은 규모가 달라 하지 않는다(R0).
+
+## 4. 확인 대기
+
+셰이더 소스는 패치 파일이라 통합이 `02 → 03 → 04` 순으로 적용하고 쿠킹한 뒤 아래를 확인한다. 문턱은 모두 첫 측정 전의 어림값이다.
+
+- 매니페스트 id `shader-patches-cook` — 패치 `02-RealtimeGI-R1R2-Fog.patch` · `03-RealtimeGI-R3R4-Sky.patch` · `04-RealtimeGI-R6-ProbeUpdate.patch` 를 번호 순으로 적용하고 네 백엔드로 쿠킹(소스와 바이너리를 함께 커밋).
+- 매니페스트 id `fog-tests` — R1 · R2 안개 테스트.
+- 매니페스트 id `fog-scenario` — 시나리오 `fog`(네 백엔드).
+- 매니페스트 id `sky-tests` — R3 · R4 하늘 테스트.
+- 매니페스트 id `sky-scenario` — 시나리오 `sky`(네 백엔드).
+- 매니페스트 id `realtime-probe-tests` — R5 · R6 테스트(복셀 형식 · 복셀화 · 입력 행 배치 · 수집).
+- 매니페스트 id `realtimegi-scenario` — 시나리오 `realtimegi`(네 백엔드 — 직접광이 닿지 않는 면이 바닥에서 튕긴 빛으로 밝아진다). 컴퓨트 `probeupdate.hlsl` 의 SH 투영 · 복셀 DDA 가 C++ 쪽과 같은 결과인지는 이 시나리오의 밝기와 `SceneVoxelGridTest` 의 DDA 값을 견줘 본다.
+- 매니페스트 id `realtime-probe-measure` — 프로브 수 · 광선 수에 따른 컴퓨트 GPU 시간(`RT.Probe.Update`)과 갱신 주기별 수렴 속도.

@@ -161,6 +161,9 @@ namespace sw
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
+        _fogVolumeBuffer.release( _pDevice );
+        _fogVolumeParamBuffer.release( _pDevice );
+        _probeUpdater.release( _pDevice );
         _cookieAtlas.release( _pDevice );
         for ( MaterialFallback& fallback : _listMaterialFallback )
         {

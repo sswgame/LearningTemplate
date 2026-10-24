@@ -783,6 +783,33 @@
        "description": "하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형"
       },
       {
+       "name": "_shaderFog",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다"
+      },
+      {
+       "name": "_shaderVolumetricFog",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다"
+      },
+      {
+       "name": "_shaderProbeUpdate",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다"
+      },
+      {
        "name": "_shaderToon",
        "type": "DataPath",
        "default": "",

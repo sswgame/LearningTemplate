@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Environment/Fog/FogComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -23,6 +24,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
+#include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 
@@ -121,6 +123,7 @@ namespace sw
         , _graphContext{}
         , _frameLight{}
         , _frameSky{}
+        , _frameFog{}
         , _outputWidth{ 0 }
         , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
@@ -134,7 +137,8 @@ namespace sw
         , _bScenePreview{ SW_FALSE }
         , _bHasFrameSky{ SW_FALSE }
         , _bLightGridPSOMissingLogged{ SW_FALSE }
-        , _reservedFlags{ 0 }
+        , _bHasFrameFog{ SW_FALSE }
+        , _bFogVolumeActive{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bOutputPSOMissingLogged{ 0 }
@@ -453,6 +457,10 @@ namespace sw
         dispatchCullAndSort( animationInstanceCount );
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
+        // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
+        dispatchVolumetricFog();
+        // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
+        dispatchRealtimeProbes();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -559,7 +567,7 @@ namespace sw
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie );
+        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie, &_listScratchRealtimeProbe );
         // 주 광원(그림자 배치, 앰비언트)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
@@ -580,6 +588,10 @@ namespace sw
         SkyGradient sceneSky;
         const bool  bSceneSky = scene.getObjectManager() != nullptr && SkyComponent::findSky( *scene.getObjectManager(), sceneSky );
         applyFrameSky( bSceneSky, sceneSky );
+        // 안개도 같다 — 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
+        FogSettings sceneFog;
+        const bool  bSceneFog = scene.getObjectManager() != nullptr && FogComponent::findFog( *scene.getObjectManager(), pMainCamera->getCameraPosition(), sceneFog );
+        applyFrameFog( bSceneFog, sceneFog );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -592,7 +604,8 @@ namespace sw
         applyFrameShadow();
         // 쿠키를 쓰는 2D 빛에 아틀라스 칸을 나눠 원소에 적는다(업로드 전). 칸에 그리는 것은 기록 중 프리패스(drawLight2DCookieAtlas)다.
         _cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
-        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe );
+        _listFrameRealtimeProbe = _listScratchRealtimeProbe;
+        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe, _listFrameRealtimeProbe.empty() == false );
         resetPassCbRing();
         setIdentityWorld( _frameContext );
         updatePassConstants( _frameContext, mainCameraViewProj );
@@ -681,13 +694,15 @@ namespace sw
         }
         // 하늘도 패킷으로만 온다.
         applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
+        applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _frameShadow, packet._shadow );
         applyFrameShadow();
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
         _cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
-        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe );
+        _listFrameRealtimeProbe = packet._listRealtimeProbe;
+        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe, _listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
@@ -728,7 +743,10 @@ namespace sw
                 _listScratchGridViewProj.push_back( pView->_cullInput._viewProj );
             }
         }
-        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer );
+        // GPU 방출기의 파티클 라이트 — 방출기가 요청한 슬롯의 합이 라이트 버퍼의 GPU 구간 크기다(GPU 생산자가 아니면 버퍼가 거절하고 오류를 남긴다).
+        // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
+        const VfxGPULightAssignment lightAssignment = VfxGPUSimulation::assignLightRanges( _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), _listScratchGPULightRange );
+        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
     }
 
     LightGridProducer FrameRenderer::selectLightGridProducer()
@@ -774,6 +792,10 @@ namespace sw
         _gpuScene.upload( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
+        // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
+        prepareVolumetricFog( pDevice );
+        // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
+        prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {

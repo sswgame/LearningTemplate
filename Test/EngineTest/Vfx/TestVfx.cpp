@@ -16,6 +16,7 @@
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Vfx/VfxCPUSimulation.h"
@@ -40,6 +41,17 @@ namespace sw
         shared_ptr<const VfxEmitterDef> shareDef( const VfxEmitterDef& def )
         {
             return make_shared<const VfxEmitterDef>( def );
+        }
+
+        /** @brief GPU 시뮬레이션 요청을 실은 입자 그리기 하나입니다(`runID` 는 재생 한 번의 정체성). */
+        GPUParticleBatch makeGPUBatch( const VfxEmitterDef& def, uint64 runID )
+        {
+            VfxGPUEmitterRequest request;
+            request._pDef  = shareDef( def );
+            request._runID = runID;
+            GPUParticleBatch batch;
+            batch._source = request;
+            return batch;
         }
 
         /**
@@ -757,6 +769,10 @@ SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
  */
 SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
 {
+    // 라이트 방출기도 GPU 로 돌 수 있다(VfxLightDef) — 이 테스트는 CPU 방출기의 라이트(씬 라이트 목록)를 본다. GPU 방출기의 빛은 라이트 버퍼의 GPU 구간이 맡는다.
+    const sw::ScopedVfxSimulationTarget cpuTarget( "CPU" );
+    if ( cpuTarget.isApplied() == false )
+        SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::Scene scene( "VfxTrail" );
     SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "Trail" ) )->addComponent<sw::VfxComponent>();
@@ -828,16 +844,31 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     SW_EXPECT_TRUE( depth.computeSupportedTargets().has( kGPU ) );
     SW_EXPECT_TRUE( depth.validate( "test" ) );
 
+    // 라이트는 CPU(씬 라이트 목록) · GPU(라이트 버퍼의 GPU 구간) 어디서나 돈다 — VfxGpuLights.md L4.
     sw::VfxEmitterDef light = billboard;
     light._light._maxLights = 2;
     light._light._radius    = 1.0f;
     light._light._intensity = 1.0f;
-    SW_EXPECT_FALSE( light.computeSupportedTargets().has( kGPU ) );
-    SW_EXPECT_STREQ( "_light", light.findModuleExcluding( kGPU ) );
+    SW_EXPECT_TRUE( light.computeSupportedTargets().has( kCPU ) && light.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( light.findModuleExcluding( kGPU ) == nullptr );
+    SW_EXPECT_TRUE( light.validate( "test" ) );
 
-    // 깊이 충돌(GPU 전용) + 라이트(CPU 전용) — 어느 곳에서도 돌 수 없어 로드가 실패한다.
-    sw::VfxEmitterDef impossible = depth;
-    impossible._light            = light._light;
+    // 깊이 충돌(GPU 전용) + 라이트 — 옛 규칙(라이트는 CPU 전용)에서는 어느 곳에서도 돌 수 없었다. 이제 GPU 에서 돌고 로드가 성공한다.
+    sw::VfxEmitterDef depthLight = depth;
+    depthLight._light            = light._light;
+    SW_EXPECT_FALSE( depthLight.computeSupportedTargets().has( kCPU ) );
+    SW_EXPECT_TRUE( depthLight.computeSupportedTargets().has( kGPU ) );
+    SW_EXPECT_TRUE( depthLight.validate( "test" ) );
+
+    // 물리 충돌(CPU 전용) + 라이트 — CPU 에서 돈다.
+    sw::VfxEmitterDef raycastLight = raycast;
+    raycastLight._light            = light._light;
+    SW_EXPECT_TRUE( raycastLight.computeSupportedTargets().has( kCPU ) );
+    SW_EXPECT_FALSE( raycastLight.computeSupportedTargets().has( kGPU ) );
+
+    // 모듈이 허락한 곳의 교집합이 비면 로드가 실패한다 — 충돌 방법이 알 수 없는 값이면(읽기가 거절하는 값) 어느 곳도 허락하지 않는다.
+    sw::VfxEmitterDef impossible  = depth;
+    impossible._collision._method = static_cast<sw::VfxCollisionMethod>( 99 );
     SW_EXPECT_TRUE( impossible.computeSupportedTargets().isEmpty() );
     {
         test::ScopedLogCollector collector;
@@ -853,6 +884,59 @@ SW_TEST_CASE( VfxEffectDefTest, ModuleTargetsIntersect )
     }
     // 수명을 늘리는 모듈은 없다 — GPU 방출기의 "끝났다" 가 일정에서 구해지는 근거다.
     SW_EXPECT_TRUE( billboard.isLifetimeBoundedByMax() );
+}
+
+/**
+ * @brief [GPULightBufferTest] GPU 구간(파티클 라이트)은 GPU 생산자만 받는다 — CPU 생산자와 그리드 끔은 0 이고 조용히 GPU 로 바꾸지 않으며, 요청이 상한을 넘으면 상한까지다
+ */
+SW_TEST_CASE( GPULightBufferTest, GPULightSectionIsGrantedOnlyToTheGPUProducer )
+{
+    constexpr uint32 kRequested = 40;
+    SW_EXPECT_EQUAL( kRequested, sw::GPULightBuffer::selectGPULightSlotCount( sw::LightGridProducer::GPU, kRequested ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), sw::GPULightBuffer::selectGPULightSlotCount( sw::LightGridProducer::CPU, kRequested ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), sw::GPULightBuffer::selectGPULightSlotCount( sw::LightGridProducer::None, kRequested ) );
+    SW_EXPECT_EQUAL( sw::GPULightBuffer::kMaxGPULight, sw::GPULightBuffer::selectGPULightSlotCount( sw::LightGridProducer::GPU, sw::GPULightBuffer::kMaxGPULight + 1 ) );
+    // CPU 라이트와 GPU 구간이 프레임 라이트 상한을 나눠 쓴다.
+    SW_EXPECT_TRUE( sw::GPULightBuffer::kMaxGPULight < sw::shaderslot::kMaxFrameLight );
+}
+
+/**
+ * @brief [VfxGPUSimulationTest] 파티클 라이트 슬롯은 GPU 방출기에 차례로 나뉜다 — CPU 방출기와 라이트가 없는 방출기는 받지 않고, 상한을 넘는 방출기는 라이트가 없다
+ */
+SW_TEST_CASE( VfxGPUSimulationTest, LightRangesAreAssignedInOrderWithinTheGPUSection )
+{
+    sw::VfxEmitterDef lit   = sw::makeValidEmitter( "Lit" );
+    lit._light._maxLights   = 100;
+    lit._light._radius      = 1.0f;
+    lit._light._intensity   = 1.0f;
+    sw::VfxEmitterDef unlit = sw::makeValidEmitter( "Unlit" );
+    sw::VfxEmitterDef big   = lit;
+    big._light._maxLights   = 200;
+
+    sw::vector<sw::GPUParticleBatch> listBatch;
+    listBatch.push_back( sw::makeGPUBatch( lit, 1 ) );   // 0..99
+    listBatch.push_back( sw::makeGPUBatch( unlit, 2 ) ); // 라이트 없음
+    listBatch.push_back( sw::makeGPUBatch( lit, 3 ) );   // 100..199
+    listBatch.push_back( sw::makeGPUBatch( big, 4 ) );   // 200 + 200 > 상한 256 — 라이트 없음
+    sw::GPUParticleBatch cpuBatch;
+    cpuBatch._source = sw::make_shared<const sw::vector<sw::GPUParticle>>();
+    listBatch.push_back( cpuBatch ); // CPU 방출기는 GPU 구간을 쓰지 않는다
+    const sw::vector<sw::GPUVfxMeshEmitter> listMesh;
+
+    sw::vector<sw::VfxGPULightRange> listRange;
+    const sw::VfxGPULightAssignment  assignment = sw::VfxGPUSimulation::assignLightRanges( listBatch, listMesh, listRange );
+    SW_ASSERT_EQUAL( listBatch.size(), listRange.size() );
+    SW_EXPECT_EQUAL( uint32( 200 ), assignment._slotCount );
+    SW_EXPECT_EQUAL( uint32( 1 ), assignment._overflowEmitterCount );
+    SW_EXPECT_EQUAL( uint32( 0 ), listRange[0]._first );
+    SW_EXPECT_EQUAL( uint32( 100 ), listRange[0]._count );
+    SW_EXPECT_EQUAL( uint32( 0 ), listRange[1]._count );
+    SW_EXPECT_EQUAL( uint32( 100 ), listRange[2]._first );
+    SW_EXPECT_EQUAL( uint32( 100 ), listRange[2]._count );
+    SW_EXPECT_EQUAL( uint32( 0 ), listRange[3]._count );
+    SW_EXPECT_EQUAL( uint32( 0 ), listRange[4]._count );
+    // 구간 합이 상한 안이라 라이트 버퍼가 그대로 받는다.
+    SW_EXPECT_TRUE( assignment._slotCount <= sw::GPULightBuffer::kMaxGPULight );
 }
 
 /**
