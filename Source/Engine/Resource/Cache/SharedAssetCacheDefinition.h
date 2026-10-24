@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
@@ -31,6 +32,17 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 에셋 종류 하나의 계측 칸입니다(`CacheStats`, 종류 이름으로 한 번 올린다). 센 값은 이 칸에 있고 `IAssetCache` 는 고치지 않는다.
+     * @details 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 새로 서지만, 칸은 프로세스 끝까지 살아 함수 정적 핸들이 그대로 유효하다.
+     */
+    template <typename AssetType>
+    const CacheStatsHandle& getSharedAssetCacheStats()
+    {
+        static const CacheStatsHandle s_stats = CacheStats::registerCache( SharedAssetCacheTraits<AssetType>::kKindName );
+        return s_stats;
+    }
+
     template <typename AssetType>
     SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::request( string_view path )
     {
@@ -48,6 +60,14 @@ namespace sw
     {
         bool                                        bStartLoad = false;
         shared_ptr<SharedAssetLoadBlock<AssetType>> pBlock     = getTable().request( path, SharedAssetCacheTraits<AssetType>::kKindName, bStartLoad );
+        // 새 로드를 시작해야 하면 실패, 준비된 블록이나 읽는 중인 블록을 받았으면 적중이다. 빈 경로는 조회가 아니다.
+        if ( path.empty() == false )
+        {
+            if ( bStartLoad )
+                getSharedAssetCacheStats<AssetType>().recordMiss();
+            else
+                getSharedAssetCacheStats<AssetType>().recordHit();
+        }
         if ( bStartLoad )
             AssetLoadBlock::startLoad( pBlock, start );
         return SharedAssetHandle<AssetType>{ std::move( pBlock ) };
@@ -104,6 +124,7 @@ namespace sw
     void SharedAssetCache<AssetType>::clear()
     {
         getTable().clear();
+        getSharedAssetCacheStats<AssetType>().recordClear();
     }
 
     /**

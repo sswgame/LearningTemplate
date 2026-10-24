@@ -7,6 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -29,6 +30,13 @@ namespace sw
 
             void operator()( const Material* /*pMaterial*/ ) const { _pCache->release( _key ); }
         };
+
+        /** @brief 머티리얼 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
+        const CacheStatsHandle& getMaterialCacheStats()
+        {
+            static const CacheStatsHandle s_stats = CacheStats::registerCache( MaterialCache::kAssetKindName );
+            return s_stats;
+        }
     } // namespace
 
     struct MaterialCache::Impl
@@ -82,6 +90,11 @@ namespace sw
             entry._path     = key;
             // 씬이 쓰는 머티리얼이다 — 텍스처를 워커가 읽는 동안 로드 중 텍스처를 그린다(렌더 스레드가 기다리지 않게).
             entry._material->setTextureLoadStart( AssetLoadStart::Async );
+            getMaterialCacheStats().recordMiss();
+        }
+        else
+        {
+            getMaterialCacheStats().recordHit();
         }
         ++entry._refCount;
 
@@ -288,6 +301,7 @@ namespace sw
             _impl->_mapEntry.clear();
             _impl->_listPSOWarmKey.clear();
             _impl->_psoWarmCount.store( 0, std::memory_order_release );
+            getMaterialCacheStats().recordClear();
         }
     }
 } // namespace sw

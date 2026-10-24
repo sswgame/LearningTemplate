@@ -8,7 +8,6 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
@@ -16,6 +15,7 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/RichTextParser.h"
+#include "Engine/Text/TextMeasureCache.h"
 #include "Engine/Text/TextTypes.h"
 
 namespace sw
@@ -151,11 +151,17 @@ namespace sw
         void layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult, const vector<RichTextSpan>* pListSpan = nullptr );
         /**
          * @brief 크기만 측정합니다(레이아웃의 measure 단계). `layout(...)._size` 와 같습니다.
-         * @details (텍스트, 스타일, 너비, 지금 면 연쇄)로 캐시한다. 문화권이 바뀌어 연쇄가 달라지면 캐시도 달라진다. 캐시가 차면 통째로 비운다.
+         * @details (텍스트, 스타일, 너비, 지금 면 연쇄)로 캐시한다. 문화권이 바뀌어 연쇄가 달라지면 키도 달라져 낡은 항목은 조회되지 않는다. 캐시는 두 세대이고
+         *          (`TextMeasureCache`) 상한(세대당 `kMeasureCacheGenerationCapacity`, 항목은 그 두 배까지)을 넘으면 오래된 세대만 버린다 — 전체를 비우지 않는다.
          */
         float2 measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan = nullptr );
-        /** @brief 측정 캐시를 비웁니다. */
-        void clearMeasureCache() { _mapMeasure.clear(); }
+        /**
+         * @brief 측정 캐시를 비웁니다. 지금 부르는 곳은 없습니다.
+         * @details 폰트 교체 · 문화권 변경에 연결하지 않는 까닭: 키가 면 연쇄(면 번호는 `FontService` 가 처음 여는 순서로 매기고 다시 쓰지 않는다)를 담고, 문화권의 대체 폰트는
+         *          연쇄를 바꾸므로(`UISystem::updateBindings` 가 `invalidateFaceChains` 를 부르면 다음 측정은 새 연쇄로 키를 만든다) 낡은 항목은 부딪히지 않고 세대 교대로 사라진다.
+         *          배치가 폰트 메트릭과 연쇄 말고 문화권을 읽지도 않는다(셰이퍼에 언어 인자가 없다). 면의 메트릭이 같은 번호로 바뀌는 길이 생기면 그 알림에서 이것을 부른다.
+         */
+        void clearMeasureCache() { _measureCache.clear(); }
 
     private:
         /** @brief 셰이핑, 줄 바꿈 기회, 글리프 폭, 크기, 색, 가짜 굵게와 기울임을 스크래치에 채웁니다. */
@@ -165,21 +171,21 @@ namespace sw
         /** @brief 텍스트의 양방향 수준을 정해 글리프마다 옮깁니다(`TextBidi`). 모든 수준이 0 이면 false 이며, 줄 안 재배열을 건너뜁니다. */
         bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
-        FontService&                  _fontService;
-        unique_ptr<ITextShaper>       _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)
-        vector<ShapingRun>            _listRunScratch;        ///< 런 나누기 결과입니다.
-        vector<ShapedGlyph>           _listShapedScratch;     ///< 셰이핑 결과(논리 순서)
-        vector<uint8>                 _listBreakScratch;      ///< 글리프마다 뒤의 줄 바꿈 기회(TextLayout.cpp 의 BreakKind)
-        vector<float32>               _listWidthScratch;      ///< 글리프마다 폭(UI 단위, 자간 포함)
-        vector<float32>               _listSizeScratch;       ///< 글리프마다의 폰트 크기입니다(리치 텍스트 크기 배율 포함).
-        vector<uint32>                _listColorScratch;      ///< 글리프마다 색(0xFFFFFFFF = 위젯 색)
-        vector<uint8>                 _listFauxScratch;       ///< 글리프마다의 가짜 굵게(비트 0)와 기울임(비트 1)입니다.
-        vector<uint32>                _listCodepointScratch;  ///< 텍스트의 코드 포인트입니다(양방향 수준을 정하는 데 쓰며 폭 없는 방향 제어도 포함합니다).
-        vector<uint8>                 _listLevelScratch;      ///< 코드 포인트마다의 양방향 수준입니다.
-        vector<uint8>                 _listGlyphLevelScratch; ///< 글리프마다의 양방향 수준입니다.
-        vector<uint8>                 _listLineLevelScratch;  ///< 한 줄의 수준입니다(줄 끝 공백은 문단 수준이고 줄임표도 포함합니다).
-        vector<uint32>                _listVisualScratch;     ///< 한 줄의 눈에 보이는 순서(줄 안 논리 번호)
-        unordered_map<uint64, float2> _mapMeasure;            ///< 측정 캐시입니다.
-        TextLayoutResult              _measureScratch;        ///< 측정이 쓰는 배치 결과(재사용)
+        FontService&            _fontService;
+        unique_ptr<ITextShaper> _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)
+        vector<ShapingRun>      _listRunScratch;        ///< 런 나누기 결과입니다.
+        vector<ShapedGlyph>     _listShapedScratch;     ///< 셰이핑 결과(논리 순서)
+        vector<uint8>           _listBreakScratch;      ///< 글리프마다 뒤의 줄 바꿈 기회(TextLayout.cpp 의 BreakKind)
+        vector<float32>         _listWidthScratch;      ///< 글리프마다 폭(UI 단위, 자간 포함)
+        vector<float32>         _listSizeScratch;       ///< 글리프마다의 폰트 크기입니다(리치 텍스트 크기 배율 포함).
+        vector<uint32>          _listColorScratch;      ///< 글리프마다 색(0xFFFFFFFF = 위젯 색)
+        vector<uint8>           _listFauxScratch;       ///< 글리프마다의 가짜 굵게(비트 0)와 기울임(비트 1)입니다.
+        vector<uint32>          _listCodepointScratch;  ///< 텍스트의 코드 포인트입니다(양방향 수준을 정하는 데 쓰며 폭 없는 방향 제어도 포함합니다).
+        vector<uint8>           _listLevelScratch;      ///< 코드 포인트마다의 양방향 수준입니다.
+        vector<uint8>           _listGlyphLevelScratch; ///< 글리프마다의 양방향 수준입니다.
+        vector<uint8>           _listLineLevelScratch;  ///< 한 줄의 수준입니다(줄 끝 공백은 문단 수준이고 줄임표도 포함합니다).
+        vector<uint32>          _listVisualScratch;     ///< 한 줄의 눈에 보이는 순서(줄 안 논리 번호)
+        TextMeasureCache        _measureCache;          ///< 측정 캐시입니다(두 세대, 파일 `TextMeasureCache.h`).
+        TextLayoutResult        _measureScratch;        ///< 측정이 쓰는 배치 결과(재사용)
     };
 } // namespace sw

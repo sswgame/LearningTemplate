@@ -459,6 +459,14 @@
   있는 서비스" 에 들지 않는 값 저장소다. 수명은 `AssetManager`(소유 캐시) · 소유한 시스템(UI 문서 · 게임 데이터 캐시의 등록/해제)이 정한다. 언리얼도
   자산 캐시(`FStreamableManager` · 셰이더 맵 캐시)를 서브시스템으로 두지 않는 것으로 알고 있다.
   그래서 `Source/Engine/Resource/AssetManager.cpp` 의 배선 예외가 없어졌습니다. 모듈(게임 · 키트)의 캐시는 이 표가 아니라 `registerAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로).
+- **캐시는 `CacheStats` 레지스트리에 이름으로 올려 적중 · 실패 · 비우기 · 항목 수를 세고, 새 캐시는 상한과 넘칠 때의 동작을 선언합니다**(2026-10-25, 캐시 계측). 숫자 없이 캐시를 더하거나 키우지 않으려는 것이다
+  (측정 없이 최적화하지 않는 원칙의 캐시 판). 규칙: ① 상한(개수나 바이트)과 **넘칠 때의 동작**을 코드 주석에 선언하고 전체 비우기는 쓰지 않는다(오래된 세대만 버리는 두 세대 교대나 LRU) — 경계에서 쓰이던 항목이 한꺼번에 다시 계산되는 thrash 를 막으려는 것이다.
+  ② 무효화 사유를 열거한다(키가 담는 입력이 바뀌어 키가 달라지는지, 알림으로 비우는지). ③ `Core/Diagnostics/CacheStats.h` 에 이름으로 올리고 조회 자리에서 `recordHit` · `recordMiss`, 비울 때 `recordClear` 를 부른다. 같은 이름을 두 번 올리면 거절하고 오류를 남긴다.
+  **`IAssetCache` 를 고치지 않고 별도 레지스트리를 둔 까닭**: `IAssetCache` 는 게임 모듈이 상속하는 ABI 라 가상 함수나 데이터 멤버를 더하면 이미 빌드된 모듈의 vtable · 레이아웃이 어긋난다. 또 `IAssetCache` 가 아닌 캐시(텍스트 측정 · 물리 셰이프)도 같은 길로 세려면
+  캐시 인터페이스 밖의 레지스트리가 필요하다. 카운터는 `relaxed` 원자 증가 하나(락 · 할당 없음, Shipping 에도 남는다)이고 칸은 정적 고정 배열이라 함수 정적 핸들이 엔진을 다시 세워도 유효하다. 보고는 `-gv_profileFrames` 측정 창 끝의 `[CacheStats]` 줄(캐시마다 한 줄, 창 시작 뒤의 값)이다.
+  세지 못하는 캐시: 조회가 없는 어댑터(`AudioReloadCache` · `LocalizationReloadCache`)는 보고에 `no counters` 로 보이고, `ResourcePaths` 의 캐시는 이 변경의 범위 밖이다.
+  텍스트 측정 캐시(`TextMeasureCache`)는 옛 "4096 개가 차면 전체 비우기" 를 세대 용량 4096 의 두 세대 교대로 바꿨다(항목은 최대 8192, 자주 쓰는 항목은 승격으로 남는다). 키는 면 연쇄를 담아 문화권 · 폰트 교체를 이미 따르므로 변경 알림에 연결하지 않는다(해시 단독 키라는 한계는 파일 머리말에 적었다).
+  물리 셰이프 캐시(`PhysicsMeshShapeCache`)는 상한을 두지 않는다 — 경로가 콘텐츠의 메시 파일 수로 닫혀 있고 씬 교체 때 비우면 재방문마다 다시 읽기 때문이다(항목 수는 `[CacheStats]` 로 본다).
 - **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `onSceneCleared` 를 부르며, 찾는 창구는 `getSubsystem<T>()` 입니다(`Object/GameObject/Service/ISceneService.h`).
   씬 서비스는 서브시스템이고 매니저의 씬 범위(`SubsystemScope`, 부모는 엔진 범위)가 소유한다(2026-10-14, C-27 ①) — 선언한 의존으로 세우고 같은 단계의 갱신도 그 순서다.
   언리얼 `UWorldSubsystem` · `UTickableWorldSubsystem` 과 같은 자리로 알고 있다. 프레임 단계 갱신(`update`)은 서브시스템 계약 밖의 씬 서비스 몫이다 —

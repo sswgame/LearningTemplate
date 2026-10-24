@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -37,6 +38,13 @@ namespace sw
             if ( engine::areEngineServicesBound() == false )
                 return;
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
+        }
+
+        /** @brief 텍스처 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
+        const CacheStatsHandle& getTextureCacheStats()
+        {
+            static const CacheStatsHandle s_stats = CacheStats::registerCache( TextureCache::kAssetKindName );
+            return s_stats;
         }
 
         /**
@@ -267,6 +275,7 @@ namespace sw
                 {
                     // 기다린 쪽이 완료를 이 디바이스로 실행한다 — 앞선 요청의 디바이스는 내려갔을 수 있다(펌프 없는 테스트의 디바이스 차례).
                     pInFlight->_pDevice.store( pDevice, std::memory_order_release );
+                    getTextureCacheStats().recordHit();
                     return TextureHandle{ std::move( pInFlight ) };
                 }
                 // 로드 블록이 아닌 길(`reload` · `resizeRenderTarget`, 디바이스 스레드)이 올리는 중이다 — 짧게 기다린다.
@@ -280,6 +289,7 @@ namespace sw
                 shared_ptr<TextureLoadBlock> pReady = sw::make_shared<TextureLoadBlock>( key, pDevice, TextureLoadBlock::Source::File, entry._texture.get(), _impl );
                 pReady->_bHoldsReference            = true;
                 pReady->markReadyWithoutLoad();
+                getTextureCacheStats().recordHit();
                 return TextureHandle{ std::move( pReady ) };
             }
             // 들고는 있지만 GPU 자원이 없다(리로드 실패 · CPU 텍스처의 참조가 0 이 되어 내린 뒤) — 같은 객체에 다시 올린다.
@@ -288,6 +298,8 @@ namespace sw
             break;
         }
 
+        // 여기까지 왔으면 새로 읽거나 올려야 한다(없던 항목이거나 GPU 자원이 내려간 항목) — 실패다.
+        getTextureCacheStats().recordMiss();
         // 렌더 텍스처는 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다. CPU 텍스처는 자기 원본을 올린다.
         if ( isRenderTargetPath( key ) )
             source = TextureLoadBlock::Source::RenderTarget;
@@ -788,6 +800,7 @@ namespace sw
         }
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
+        getTextureCacheStats().recordClear();
     }
 } // namespace sw
 

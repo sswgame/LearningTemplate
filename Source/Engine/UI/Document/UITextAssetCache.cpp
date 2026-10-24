@@ -19,6 +19,7 @@ namespace sw
         , _pAssetKindName{ pAssetKindName }
         , _pAssetLabel{ pAssetLabel }
         , _pParse{ pParse }
+        , _stats{ CacheStats::getOrCreate( pAssetKindName ) }
         , _parseCount{ 0 }
     {
     }
@@ -33,9 +34,11 @@ namespace sw
         if ( iter != _mapPathToAsset.end() )
         {
             asset = iter->second;
+            _stats.recordHit();
             return asset;
         }
 
+        _stats.recordMiss();
         string text;
         if ( readText( key, path, text ) == false )
         {
@@ -88,6 +91,7 @@ namespace sw
     {
         _mapPathToAsset.clear();
         _mapPathToMemoryText.clear();
+        _stats.recordClear();
     }
 
     bool UITextAssetCache::readText( const string& key, string_view path, string& outText ) const

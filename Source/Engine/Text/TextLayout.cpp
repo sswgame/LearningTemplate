@@ -18,8 +18,15 @@ namespace sw
     {
         struct TextLayoutInternal
         {
-            /** @brief 측정 캐시가 이만큼 차면 통째로 비웁니다(문화권과 텍스트가 바뀌며 쌓이는 낡은 항목을 오래 가지고 있지 않게 합니다). */
-            static constexpr size_t kMaxMeasureCacheEntryCount = 4096;
+            /**
+             * @brief 측정 캐시 한 세대가 담는 항목 수입니다. 캐시는 두 세대라 항목은 이 값의 두 배까지 들고, 넘치면 오래된 세대만 버립니다(`TextMeasureCache`).
+             * @details 4096 은 옛 구현의 전체 상한이던 값입니다. 화면 하나의 글 수(위젯 수백 + 목록 항목)가 한 세대에 들어 한 프레임에 현재로 모이는 크기이고, 항목은
+             *          float2 하나라 두 세대여도 해시 표 오버헤드 포함 수백 KB 안입니다(대략 8192 × 약 40 B). 숫자로 정한 값이 아니라 옛 값을 이었으며, 적중률은 `[CacheStats]
+             *          TextMeasure` 줄(`-gv_profileFrames`)로 본다.
+             */
+            static constexpr size_t kMeasureCacheGenerationCapacity = 4096;
+            /** @brief 측정 캐시의 계측 칸 이름입니다(`CacheStats`). 엔진의 모든 `TextLayoutEngine` 이 한 칸에 합쳐집니다. */
+            static constexpr const utf8* kMeasureCacheStatsName = "TextMeasure";
             /** @brief 너비 비교의 여유(UI 단위)입니다. 글리프 폭 합의 부동소수 오차로 딱 맞는 줄이 넘치지 않게 합니다. */
             static constexpr float32 kWidthTolerance = 1e-3f;
             /** @brief 줄임표 문자(…)입니다. 연쇄에 없으면 마침표 셋을 씁니다. */
@@ -512,7 +519,7 @@ namespace sw
         , _listGlyphLevelScratch{}
         , _listLineLevelScratch{}
         , _listVisualScratch{}
-        , _mapMeasure{}
+        , _measureCache{ TextLayoutInternal::kMeasureCacheGenerationCapacity, TextLayoutInternal::kMeasureCacheStatsName }
         , _measureScratch{}
     {
     }
@@ -721,13 +728,11 @@ namespace sw
                 key = HashUtil::combine( key, ( static_cast<uint64>( span._bBold ) << 1 ) | span._bItalic );
             }
         }
-        const auto iter = _mapMeasure.find( key );
-        if ( iter != _mapMeasure.end() )
-            return iter->second;
+        const float2* pCached = _measureCache.find( key );
+        if ( pCached != nullptr )
+            return *pCached;
         layout( text, style, maxWidth, _measureScratch, pListSpan );
-        if ( _mapMeasure.size() >= Internal::kMaxMeasureCacheEntryCount )
-            _mapMeasure.clear();
-        _mapMeasure.emplace( key, _measureScratch._size );
+        _measureCache.insert( key, _measureScratch._size );
         return _measureScratch._size;
     }
 } // namespace sw

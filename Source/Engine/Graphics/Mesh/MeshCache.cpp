@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
@@ -60,6 +61,13 @@ namespace sw
                 State* const pState = s_state.getOrCreate();
                 SW_ASSERT( pState != nullptr );
                 return *pState;
+            }
+
+            /** @brief 메시 캐시의 계측 칸입니다(`CacheStats`). 상태가 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */
+            static const CacheStatsHandle& getStats()
+            {
+                static const CacheStatsHandle s_stats = CacheStats::registerCache( MeshCache::kAssetKindName );
+                return s_stats;
             }
 
             /** @brief 테이블의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 항목에 닿습니다. */
@@ -177,7 +185,10 @@ namespace sw
             if ( it != inFlight._mapKeyToBlock.end() )
                 pBlock = it->second.lock();
             if ( pBlock != nullptr )
+            {
+                MeshCacheInternal::getStats().recordHit();
                 return MeshHandle{ std::move( pBlock ) };
+            }
 
             // 진행 중 표를 잡은 채 캐시를 본다 — 로드는 캐시에 넣은 뒤 표에서 빼므로, 여기서 둘 다 없으면 정말 아무도 읽지 않았다.
             pBlock                = sw::make_shared<MeshLoadBlock>( path );
@@ -186,9 +197,11 @@ namespace sw
             {
                 pBlock->_pMesh = std::move( live );
                 pBlock->markReadyWithoutLoad();
+                MeshCacheInternal::getStats().recordHit();
                 return MeshHandle{ std::move( pBlock ) };
             }
             inFlight._mapKeyToBlock[key] = pBlock;
+            MeshCacheInternal::getStats().recordMiss();
         }
         AssetLoadBlock::startLoad( pBlock, start );
         return MeshHandle{ std::move( pBlock ) };
@@ -258,6 +271,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ pState->_warned._mutex };
             pState->_warned._uniquePath = unordered_set<string>{};
         }
+        MeshCacheInternal::getStats().recordClear();
         PhysicsMeshShapeCache::clear();
     }
 } // namespace sw
