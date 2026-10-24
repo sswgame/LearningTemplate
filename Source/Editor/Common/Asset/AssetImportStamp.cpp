@@ -330,7 +330,7 @@ namespace sw::editor
              *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
              */
             static void importRawFolder( const string& rootDir, const string& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
-                                         AssetImportSummary& inoutSummary )
+                                         const unordered_set<string>* pScope, AssetImportSummary& inoutSummary )
             {
                 const string            stampPath = FileUtil::joinPath( rawFolder, kImportStampFileName );
                 map<string, StampEntry> mapStamped;
@@ -351,6 +351,8 @@ namespace sw::editor
 
                     file._relativePath = file._sourcePath.substr( rawFolder.size() + 1 );
                     file._resourcePath = file._sourcePath.substr( rootDir.size() + 1 );
+                    if ( pScope != nullptr && pScope->find( makeScopeKey( file._resourcePath ) ) == pScope->end() )
+                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
                     file._importedPath = importer.makeImportedPath( file._sourcePath );
                     listFile.push_back( std::move( file ) );
                 }
@@ -397,6 +399,21 @@ namespace sw::editor
                         ++inoutSummary._importedCount;
                 }
 
+                // 범위를 정한 임포트는 범위 밖 원본의 줄을 그대로 둔다. 지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다.
+                if ( pScope != nullptr )
+                {
+                    unordered_set<string> setInScope;
+                    for ( const SourceFile& file : listFile )
+                    {
+                        setInScope.insert( file._relativePath );
+                    }
+                    for ( const auto& [relativePath, entry] : mapStamped )
+                    {
+                        if ( setInScope.find( relativePath ) == setInScope.end() )
+                            mapCurrent.emplace( relativePath, entry );
+                    }
+                }
+
                 // 원본이 사라진 줄. 임포트된 결과는 다른 것이 참조할 수 있어 지우지 않는다 — 줄만 지운다.
                 for ( const auto& [relativePath, entry] : mapStamped )
                 {
@@ -413,6 +430,44 @@ namespace sw::editor
                     return;
                 writeStampIfChanged( stampPath, importer.getStampHeader(), mapCurrent, inoutSummary );
             }
+
+            /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
+            static string makeScopeKey( string_view resourcePath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( resourcePath ).c_str() ); }
+
+            /** @brief @p pScope 에 @p resourceFolder 아래 원본이 하나라도 있으면 true 입니다. 원본이 없는 폴더는 훑지 않는다. */
+            static bool hasScopeUnder( const unordered_set<string>& uniqueScope, string_view resourceFolder )
+            {
+                const string prefix = makeScopeKey( resourceFolder ) + "/";
+                return std::any_of( uniqueScope.begin(), uniqueScope.end(), [&prefix]( const string& key )
+                { return StringUtil::startsWith( key, prefix ); } );
+            }
+
+            /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
+            static AssetImportSummary importFolders( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope )
+            {
+                AssetImportSummary summary;
+                const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+
+                vector<string> listFolder;
+                if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
+                {
+                    summary._listProblem.push_back( "리소스 루트를 훑지 못했습니다: " + rootDir );
+                    return summary;
+                }
+
+                std::sort( listFolder.begin(), listFolder.end() );
+                for ( const string& folder : listFolder )
+                {
+                    const string normalizedFolder = FileUtil::normalizeSeparators( folder );
+                    if ( FileUtil::getFileNamePart( normalizedFolder ) != importer.getRawFolderName() )
+                        continue;
+                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.size() <= rootDir.size() + 1 || hasScopeUnder( *pScope, string_view( normalizedFolder ).substr( rootDir.size() + 1 ) ) == false );
+                    if ( bOutOfScope )
+                        continue;
+                    importRawFolder( rootDir, normalizedFolder, importer, mode, pScope, summary );
+                }
+                return summary;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -426,24 +481,17 @@ namespace sw::editor
 
     AssetImportSummary AssetImportStampUtil::importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode )
     {
-        AssetImportSummary summary;
-        const string       rootDir = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr );
+    }
 
-        vector<string> listFolder;
-        if ( rootDir.empty() || FileUtil::collectFolders( rootDir, listFolder, true ) == false )
+    AssetImportSummary AssetImportStampUtil::importSources( string_view resourceRoot, const IRawAssetImporter& importer, const vector<string>& listResourcePath )
+    {
+        unordered_set<string> uniqueScope;
+        for ( const string& resourcePath : listResourcePath )
         {
-            summary._listProblem.push_back( "리소스 루트를 훑지 못했습니다: " + rootDir );
-            return summary;
+            uniqueScope.insert( AssetImportStampInternal::makeScopeKey( resourcePath ) );
         }
-
-        std::sort( listFolder.begin(), listFolder.end() );
-        for ( const string& folder : listFolder )
-        {
-            const string normalizedFolder = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( normalizedFolder ) == importer.getRawFolderName() )
-                AssetImportStampInternal::importRawFolder( rootDir, normalizedFolder, importer, mode, summary );
-        }
-        return summary;
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope );
     }
 
     string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )

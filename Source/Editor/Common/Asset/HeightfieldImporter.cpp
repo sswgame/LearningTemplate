@@ -43,6 +43,31 @@ namespace sw::editor
             /** @brief 스플랫 원본 옆의 레이어 4..7 파일 경로(`x_splat.png` → `x_splat1.png`)입니다. */
             static string makeHighSplatPath( string_view sourcePath ) { return FileUtil::removeExtension( sourcePath ) + "1.png"; }
 
+            /**
+             * @brief 바뀐 파일(리소스 루트 기준)이 영향을 주는 원본의 경로 후보를 반환합니다. 곁 파일은 그것을 쓰는 원본으로 옮기고(원본 해시에 들어간다), 그 밖에는 그 파일 자신입니다.
+             * @details 후보 중 폴더에 없는 것은 일괄 임포트의 범위가 무시한다. 구멍 마스크의 원본은 `.png` 일 수도 `.r16` 일 수도 있어 둘 다 담는다.
+             */
+            static vector<string> findAffectedSources( string_view relativePath )
+            {
+                const string   stem = FileUtil::removeExtension( relativePath );
+                vector<string> listSource;
+                if ( StringUtil::endsWith( stem, kHoleSuffix, true ) )
+                {
+                    const string base = stem.substr( 0, stem.size() - kHoleSuffix.size() );
+                    listSource.push_back( base + ".png" );
+                    listSource.push_back( base + ".r16" );
+                }
+                else if ( StringUtil::endsWith( stem, kSplatHighSuffix, true ) )
+                {
+                    listSource.push_back( stem.substr( 0, stem.size() - 1 ) + ".png" ); // `x_splat1` → `x_splat`
+                }
+                else
+                {
+                    listSource.push_back( string( relativePath ) );
+                }
+                return listSource;
+            }
+
             [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
             {
                 const size_t sampleCount          = bytes.size() / 2;
@@ -257,8 +282,9 @@ namespace sw::editor
     {
         if ( isRawHeightfieldPath( relativePath ) == false )
             return false;
-        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트한다. 스탬프를 적는 경로가 하나여야 명령줄 임포트와 같은 판정을 받는다. 구멍 마스크도 원본 해시에 들어간다.
-        const AssetImportSummary summary = importAllHeightfields( ResourcePaths::getRootFolderPath(), AssetImportMode::ImportStale );
+        // 바뀐 파일이 영향을 주는 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 적는 길은 명령줄 임포트와 같은 한 곳이다. 구멍 마스크 · 곁 스플랫도 원본 해시에 들어간다.
+        const HeightfieldRawImporter importer;
+        const AssetImportSummary     summary = AssetImportStampUtil::importSources( ResourcePaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ) );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );

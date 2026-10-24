@@ -792,12 +792,14 @@ namespace sw::editor
         ModelImportConfig config{};
         if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
             return true;
-        const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
+        // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
+        const ModelRawImporter   importer{ config };
+        const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) } );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Model import failed: %#", problem.c_str() );
         }
-        SW_LOG_INFO( "Model batch import: %# changed -> %# imported", relativePath, summary._importedCount );
+        SW_LOG_INFO( "Model import: %# changed -> %# imported", relativePath, summary._importedCount );
         return true;
     }
 
