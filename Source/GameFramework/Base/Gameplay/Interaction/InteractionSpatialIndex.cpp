@@ -65,6 +65,14 @@ namespace sw
         outPlaneY = space == InteractionSpace::Space2D ? position._y : position._z;
     }
 
+    SceneFrameAccess InteractionSpatialIndex::getFrameAccess() const
+    {
+        SceneFrameAccess access{};
+        access._writes        = { SceneDataKind::InteractionIndex };
+        access._readsPrevious = { SceneDataKind::Structure, SceneDataKind::Transform };
+        return access;
+    }
+
     void InteractionSpatialIndex::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
     {
         (void)deltaTime;

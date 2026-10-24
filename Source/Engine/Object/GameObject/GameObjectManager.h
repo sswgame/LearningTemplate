@@ -204,6 +204,8 @@ namespace sw
         /**
          * @brief 프레임 시스템을 붙입니다(소유). 같은 이름이 있거나 nullptr 이면 거절하고 false 입니다. 붙인 순서가 `FrameSystems` 단계의 실행 순서입니다.
          * @details 게임 스레드, 틱 밖에서 부릅니다. 단계가 도는 중에 붙인 것은 다음 프레임부터 돕니다.
+         *          접근 선언(`ISceneFrameSystem::getFrameAccess`)이 순서와 모순이어도 거절하고 오류를 남깁니다 — 이미 붙은 시스템이 이번 프레임의 값을 보아야 하는
+         *          종류(`SceneFrameAccess::_reads`)를 새 시스템이 쓰면, 쓰는 쪽이 읽는 쪽 뒤에 서므로 붙이지 않습니다. 부르는 쪽은 결과를 확인합니다(`SW_ASSERT`).
          */
         [[nodiscard]] bool addFrameSystem( const hashed_string& key, unique_ptr<ISceneFrameSystem> pSystem );
         /** @brief 프레임 시스템을 떼어 놓습니다(없으면 할 일이 없다). 단계가 도는 중이면 그 단계가 끝난 뒤 놓습니다 — 도는 시스템이 자신을 떼어도 된다. */

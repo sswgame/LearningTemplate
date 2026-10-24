@@ -53,6 +53,12 @@ namespace sw
         static void releaseIfUnused( GameObjectManager& manager );
 
         void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        /**
+         * @brief 조종자의 판단이 하는 일입니다. 폰의 의도 · 시선 · 빙의를 쓰고(`ControlIntent`), 자동 빙의가 조종자 오브젝트를 만들며(`Structure`),
+         *        AI 가 내비게이션 에이전트에 목적지를 건네고 멈추게 합니다(`Navigation`). 폰 자리(AI 의 이동 방향)와 에이전트의 이동 상태는 지난 프레임의 값을 읽습니다.
+         *        AI 의 `think` 는 게임이 채우는 훅이라 읽는 것이 더 있을 수 있으나, 쓰기는 이 선언 밖에서 하지 않는 약속입니다.
+         */
+        SceneFrameAccess getFrameAccess() const override;
 
         /** @brief 플레이어 조종자가 읽을 입력을 바꿉니다. 테스트와 서버가 씁니다. nullptr 이면 게임 서비스의 입력 관리자를 씁니다. */
         void setInputManager( InputManager* pInput ) { _pInputOverride = pInput; }

@@ -48,6 +48,10 @@ namespace sw
         static void unregisterInteractor( GameObjectManager& manager, InteractionSpace space );
 
         void runBeforeTick( GameObjectManager& manager, float32 deltaTime ) override;
+        /**
+         * @brief 격자를 맞추는 일입니다. 대상의 월드 자리와 등록부를 읽고(한 프레임 늦어도 된다 — 파일 머리말의 "위치는 물리 앞의 값"), 격자(`InteractionIndex`)를 씁니다.
+         */
+        SceneFrameAccess getFrameAccess() const override;
 
         /** @brief 이번 프레임에 @p space 의 격자를 맞췄는지 반환합니다. false 면 부르는 쪽이 목록을 돕니다. */
         bool hasGrid( InteractionSpace space ) const;

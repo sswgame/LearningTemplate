@@ -178,6 +178,19 @@ namespace sw
     {
         if ( pSystem == nullptr || findFrameSystem( key ) != nullptr )
             return false;
+        // 붙인 순서가 실행 순서다 — 이미 붙은 시스템이 이번 프레임의 값을 보아야 하는 종류를 새 시스템이 쓰면, 쓰는 쪽이 읽는 쪽 뒤에 서게 되므로 붙이지 않는다.
+        const SceneDataKindSet newWrites = pSystem->getFrameAccess()._writes;
+        for ( const FrameSystemEntry& entry : _listFrameSystem )
+        {
+            if ( entry._pSystem == nullptr )
+                continue;
+            const SceneDataKind conflictKind = entry._pSystem->getFrameAccess()._reads.intersect( newWrites ).getFirstKind();
+            if ( conflictKind == SceneDataKind::Count )
+                continue;
+            SW_LOG_ERROR_ID( "FrameSystem.AccessOrder", "Frame system '%#' is rejected: it writes %# but the attached system '%#' reads it and would run first (attach the writer before the reader)",
+                             key.c_str(), getSceneDataKindName( conflictKind ), entry._key.c_str() );
+            return false;
+        }
         _listFrameSystem.push_back( FrameSystemEntry{ key, std::move( pSystem ) } );
         return true;
     }

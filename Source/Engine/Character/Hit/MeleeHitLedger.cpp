@@ -76,6 +76,13 @@ namespace sw
             _listRecord.erase( _listRecord.begin(), _listRecord.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
     }
 
+    SceneFrameAccess MeleeHitLedger::getFrameAccess() const
+    {
+        SceneFrameAccess access{};
+        access._writes = { SceneDataKind::HitRecord };
+        return access;
+    }
+
     void MeleeHitLedger::record( uint64 attackerID, const MeleeHitParams& params, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent )
     {
         SweepRecord& entry = _listRecord.emplace_back();
