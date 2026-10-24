@@ -519,11 +519,6 @@
       "source": "docs/plans/AutomationSplit.md 단계 2", "result_doc": "docs/plans/AutomationSplit.md"
     },
     {
-      "id": "shader-patches-cook", "title": "docs/plans/ShaderPatches 의 패치를 번호 순으로 적용하고 네 백엔드로 셰이더 쿠킹(소스와 바이너리를 함께 커밋)", "kind": "cook", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true,
-      "need_command": "git apply 로 패치를 쌓는 일과 충돌 해결이 먼저고, 적용한 뒤 빌드 → App --cook-shaders 를 한 명령으로 묶은 것이 없다",
-      "source": "docs/plans/ShaderPatches/README.md", "result_doc": "docs/plans/ShaderPatches/README.md 의 패치 파일을 지운다"
-    },
-    {
       "id": "spline-river-path-tests", "title": "스플라인 강 경로 어댑터 테스트(SplineRiverPathTest · WaterTest)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "SplineRiverPathTest.*,WaterTest.*,SplineTest.*",
       "source": "docs/plans/EnvironmentRemainders.md E1", "result_doc": "docs/plans/EnvironmentRemainders.md E1"

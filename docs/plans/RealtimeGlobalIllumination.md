@@ -52,9 +52,8 @@ R1 의 입력은 [EnvironmentRemainders](EnvironmentRemainders.md) 가 말하는
 
 ## 4. 확인 대기
 
-셰이더 소스는 패치 파일이라 통합이 `02 → 03 → 04` 순으로 적용하고 쿠킹한 뒤 아래를 확인한다. 문턱은 모두 첫 측정 전의 어림값이다.
+셰이더 소스는 통합(integE)이 패치를 `02 → 03 → 04` 순으로 적용하고 네 백엔드로 구웠다. `common.hlsli` 의 `kPi` 와 겹친 정의를 지웠고, `traceVoxelRay` 의 펼친 루프에서 `continue` 를 빼 FXC(DX11)의 X3531 을 풀었다. 아래를 확인한다. 문턱은 모두 첫 측정 전의 어림값이다.
 
-- 매니페스트 id `shader-patches-cook` — 패치 `02-RealtimeGI-R1R2-Fog.patch` · `03-RealtimeGI-R3R4-Sky.patch` · `04-RealtimeGI-R6-ProbeUpdate.patch` 를 번호 순으로 적용하고 네 백엔드로 쿠킹(소스와 바이너리를 함께 커밋).
 - 매니페스트 id `fog-tests` — R1 · R2 안개 테스트.
 - 매니페스트 id `fog-scenario` — 시나리오 `fog`(네 백엔드).
 - 매니페스트 id `sky-tests` — R3 · R4 하늘 테스트.

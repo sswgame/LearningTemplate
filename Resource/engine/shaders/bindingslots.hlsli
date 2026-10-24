@@ -375,4 +375,16 @@
 // [0..3] 뷰-투영 행 넷(행벡터 규약, 셰이더의 g_ViewProj 와 같다) · [4] (가까운 면 w, 조각 배율, 원근 1/직교 0, 0) · [5] asuint (라이트 수, 그리드 첫 단어, 0, 0).
 #define SW_LIGHT_GRID_VIEW_FLOAT4_COUNT 6u
 
+// ------------------------------------------------------------------------------
+// 11) 볼륨 안개 — 주 시점의 froxel 격자(안개 패스 fog.hlsl 이 읽고 컴퓨트 volumetricfog.hlsl 이 쓴다). 화면 칸 X × Y, 시선 거리의 로그 조각 Z 개다.
+//     칸 번호는 (조각 × Y + y) × X + x, 원소는 float4(누적 산란 rgb, 누적 투과율). 조각 경계 거리는 fogcommon.hlsli 가 정의한다(가까운 거리 SW_FOG_VOLUME_NEAR 에서 먼 거리까지).
+//     컴퓨트 입력(StructuredBuffer<float4> g_FogParams)은 float4 SW_FOG_VOLUME_PARAM_FLOAT4_COUNT 개이고 행 배치는 volumetricfog.hlsl 머리 주석이다.
+// ------------------------------------------------------------------------------
+#define SW_FOG_VOLUME_DIM_X              80u
+#define SW_FOG_VOLUME_DIM_Y              45u
+#define SW_FOG_VOLUME_DIM_Z              32u
+#define SW_FOG_VOLUME_NEAR               0.3f
+#define SW_FOG_VOLUME_PARAM_FLOAT4_COUNT 15u
+#define SW_FOG_VOLUME_GROUP_SIZE         8u
+
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

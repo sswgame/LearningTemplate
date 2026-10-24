@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모듈 렌더 패스(ModuleRenderPass M2) — 게임 모듈(EmptyGame)이 등록한 패스 `Empty.ModulePassDemo` 가 넘긴 상수(g_OutlineColor = 붉은 틴트)를 파이프라인의 `_type="Module"` 패스
+  (셰이더 modulepassdemo.hlsl)가 원본 색에 곱한다. 틴트가 없는 그림은 배경이 푸르스름해 빨강 평균이 파랑 평균보다 낮다(meanRedMinusBlue < 0) — 모듈 패스가 돌았다면 파랑이 1/4 로 줄어 양수가 된다.
+  패스 상수는 그 패스 안에서만 산다(렌더러가 그린 뒤 되돌린다) — Present 의 외곽선 칸이 붉게 새면 UI 글자 색이 아니라 외곽선이 달라지므로 이 시나리오는 그것을 따로 보지 않고, 패스 상수 복원은 EngineTest 가 본다.
+  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_renderPipeline=game/empty/pipeline/modulepasspipeline.xml
+        -scenario=game/empty/automation/modulepass.scenario.xml   (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. 네 백엔드로 돈다)
+-->
+<Scenario name="game.empty.modulepass" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/modulepasspipeline.xml"/>
+	<At frame="40"><Screenshot file="modulepass.ppm"/></At>
+	<!-- 문턱은 가늠한 값이다(첫 GPU 실행 전 — 모듈 패스가 돌지 않으면 푸른 배경이라 음수다). 첫 측정으로 정한다. -->
+	<At frame="42">
+		<ExpectImage file="modulepass.ppm" metric="meanRedMinusBlue" atLeast="0.02"/>
+		<Pass/>
+	</At>
+</Scenario>

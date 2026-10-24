@@ -217,6 +217,21 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_SkyZenith;
     float4 g_SkyHorizon;
     float4 g_SkyGround;
+    // 대기 산란 하늘(스카이 패스 sky.hlsl, C++ SkyAtmosphere) — (레일리 산란 계수 rgb 1/km, 대기 모드 1 · 그러데이션 0) · (미 산란 계수 1/km, 미 규모 높이 km, 미 이방성, 해 복사휘도 배율) ·
+    // (행성 반지름 km, 대기 두께 km, 눈 고도 km, 해 원반 각 반지름 rad). 해 방향 · 색은 키 라이트 상수(g_KeyLightDirIntensity · g_KeyLightColor)에서 읽는다.
+    float4 g_SkyAtmosphereRayleigh;
+    float4 g_SkyAtmosphereMie;
+    float4 g_SkyAtmosphereGeometry;
+    // 구름 층(sky.hlsl, C++ SkyClouds) — (덮는 비율, 층 고도 km, 노이즈 배율 1/km, 최대 불투명도) · (바람 방향 xz 단위 벡터, 바람 속도 km/s, 경계 부드러움) · (구름 색 rgb, 그리면 1).
+    float4 g_SkyCloudShape;
+    float4 g_SkyCloudWind;
+    float4 g_SkyCloudColor;
+    // 높이 · 거리 지수 안개(안개 패스 fog.hlsl, C++ FogSettings) — (안개 색 rgb, 밀도) · (높이 감쇠, 기준 높이, 시작 거리, 최대 불투명도) · (방향광 산란 색 × 세기 rgb, 지수) ·
+    // (볼륨 안개 켬 1, 볼륨 거리, 산란 배율, 이방성). 씬에 안개가 없으면 안개 패스가 돌지 않는다. 볼륨 켬은 주 시점에서 컴퓨트가 돈 프레임만 1 이다(FrameRenderer::executeFogPass).
+    float4 g_FogColorDensity;
+    float4 g_FogHeightParams;
+    float4 g_FogInscatter;
+    float4 g_FogVolumeParams;
     uint   g_ShadowMapIndex;
     uint   g_GBufferAlbedoIndex;
     uint   g_GBufferNormalIndex;

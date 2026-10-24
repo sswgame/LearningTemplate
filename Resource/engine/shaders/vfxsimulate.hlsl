@@ -1,4 +1,5 @@
 #include "binding.hlsli"
+#include "lightdata.hlsli"
 #include "vfxsimulate.hlsli"
 
 /**
@@ -19,8 +20,12 @@
  * DX11: 간접 인자 버퍼는 구조 버퍼가 될 수 없어(DRAWINDIRECT_ARGS 와 BUFFER_STRUCTURED 를 함께 못 건다) RAW UAV 다 — 그래서 인자를 바이트 주소로 쓴다.
  * 나머지 백엔드는 uint 구조 버퍼다. 입자 상태와 렌더 입력은 따로 둔 구조 버퍼라 복사 단계가 필요 없다.
  *
- * 바인딩 계약: 읽기 t0 매개변수(g_VfxParams), 쓰기 u0 입자 상태(풀 크기 × 2 — 두 반쪽), u1 렌더 입력(풀 크기), u2 간접 인자, 깊이 히스토리는 RW 텍스처
- * 슬롯 0(SW_SLOT_COMPUTE_TEXUAV0, 네이티브는 bindless 번호). 루트 상수 g_VfxParamBase. C++: VfxGPUSimulation::recordDispatches — 방출기마다 dispatchCompute( 1, 1, 1 ).
+ * 파티클 라이트(VfxLightDef, VfxGpuLights.md L3): 렌더 입력을 쓸 때 같은 입자로 라이트 버퍼(씬 라이트 목록과 같은 버퍼 — 라이트 그리드 생산자 lightgrid.hlsl 이 이어서 읽는다)의
+ * GPU 구간에 점광을 쓴다. 방출기가 받은 슬롯 범위(SW_VFX_PARAM_ROW_LIGHT)의 슬롯 i 는 살아 있는 입자 i 의 빛이고(앞의 슬롯 수 개 — CPU 방출기와 같은 규칙), 입자가 모자란 슬롯은
+ * 반경 0 의 죽은 점광을 쓴다(그리드에 들지 않는다 — 지난 프레임의 빛이 남지 않는다). 색은 입자 색(rgb), 세기는 방출기 세기 × 입자 알파, 반경은 C++ 가 방출기 배율을 곱해 올린다.
+ *
+ * 바인딩 계약: 읽기 t0 매개변수(g_VfxParams), 쓰기 u0 입자 상태(풀 크기 × 2 — 두 반쪽), u1 렌더 입력(풀 크기), u2 간접 인자, u3 라이트 버퍼(라이트를 쓰는 방출기만 건다),
+ * 깊이 히스토리는 RW 텍스처 슬롯 0(SW_SLOT_COMPUTE_TEXUAV0, 네이티브는 bindless 번호). 루트 상수 g_VfxParamBase. C++: VfxGPUSimulation::recordDispatches — 방출기마다 dispatchCompute( 1, 1, 1 ).
  *
  * 병렬도 한계: 그룹 하나(256 스레드)가 방출기 하나를 돈다 — 풀이 수만 개면 한 그룹이 덩어리를 차례로 돌아 느리다. 여러 그룹 압축(그룹마다 개수 → 접두사 합 →
  * 쓰기, 디스패치 셋)은 계획 문서 `Vfx` 의 후속 설계로 두고 측정 뒤 정한다.
@@ -49,6 +54,7 @@ SW_DECLARE_RW_BYTE_ADDRESS_BUFFER( g_VfxArgsRW, 2 );
 #else
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VfxArgsRW, 2 );
 #endif
+SW_DECLARE_RW_STRUCTURED_BUFFER( LightData, g_VfxLightsRW, 3 );
 
 SW_ROOT_CONSTANTS_BEGIN
 {
@@ -380,16 +386,37 @@ void CSMain( uint3 groupThreadId : SV_GroupThreadID )
     const uint4 curveGreenBlue = loadParamRow( SW_VFX_PARAM_ROW_CURVE_GREEN_BLUE );
     const uint4 curveAlpha     = loadParamRow( SW_VFX_PARAM_ROW_CURVE_ALPHA );
     const uint  currentBase    = currentHalf * poolSize;
-    for ( uint outputIndex = thread; outputIndex < aliveCount; outputIndex += SW_VFX_SIMULATE_THREAD_COUNT )
+    // 파티클 라이트 — 슬롯 i 는 입자 i 의 빛이라 같은 반복에서 쓴다(슬롯 수가 살아 있는 수보다 크면 남는 슬롯은 죽은 빛). 슬롯 수 0 이면 반복 범위가 살아 있는 수 그대로다.
+    const uint4 lightRow    = loadParamRow( SW_VFX_PARAM_ROW_LIGHT );
+    const uint  lightCount  = lightRow.y;
+    const uint  outputCount = max( aliveCount, lightCount );
+    for ( uint outputIndex = thread; outputIndex < outputCount; outputIndex += SW_VFX_SIMULATE_THREAD_COUNT )
     {
-        const VfxParticleState particle  = g_VfxStateRW[currentBase + outputIndex];
-        const float            lifeRatio = particle.positionAge.w / particle.velocityLifetime.w;
-        GPUParticle            output;
-        output.positionSize           = float4( particle.positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
-        output.color                  = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
-                                                evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) );
-        output.rotationLife           = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
-        g_VfxParticlesRW[outputIndex] = output;
+        const bool  bAlive = outputIndex < aliveCount;
+        GPUParticle output;
+        output.positionSize = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        output.color        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        output.rotationLife = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+        if ( bAlive )
+        {
+            const VfxParticleState particle  = g_VfxStateRW[currentBase + outputIndex];
+            const float            lifeRatio = particle.positionAge.w / particle.velocityLifetime.w;
+            output.positionSize              = float4( particle.positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
+            output.color                     = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
+                                                       evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) );
+            output.rotationLife              = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
+            g_VfxParticlesRW[outputIndex]    = output;
+        }
+        if ( outputIndex < lightCount )
+        {
+            LightData light;
+            light.positionRadius                    = float4( transformPoint4( SW_VFX_PARAM_ROW_WORLD, output.positionSize.xyz ).xyz, bAlive ? asfloat( lightRow.z ) : 0.0f );
+            light.colorIntensity                    = float4( output.color.rgb, asfloat( lightRow.w ) * output.color.a );
+            light.directionType                     = float4( 0.0f, 0.0f, 0.0f, (float)SW_LIGHT_TYPE_POINT );
+            light.params                            = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+            light.extra                             = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+            g_VfxLightsRW[lightRow.x + outputIndex] = light;
+        }
     }
 
     if ( thread == 0u )

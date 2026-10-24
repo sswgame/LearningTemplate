@@ -6,6 +6,8 @@
  * 행렬은 행벡터 규약의 행 넷(C++ float4x4 의 _11.._14 가 첫 행)이다 — 점은 x·행0 + y·행1 + z·행2 + 행3.
  * 간접 인자 버퍼(g_VfxArgsRW, u2)는 32 비트 단어 SW_VFX_ARGS_WORD_COUNT 개다 — [0..3] RHIDrawIndirectCommand, 그 뒤 살아 있는 수 · 지금 반쪽(다음 디스패치가 읽는다) ·
  * 풀이 차서 버린 입자의 누적 수.
+ * 파티클 라이트(VfxLightDef)는 라이트 버퍼(g_VfxLightsRW, u3 — 씬 라이트 목록과 같은 버퍼)의 GPU 구간에 쓴다. 방출기가 받은 슬롯 범위는 SW_VFX_PARAM_ROW_LIGHT 행이 알려 주고,
+ * 슬롯 하나가 살아 있는 입자 하나다(앞의 슬롯 수 개 — CPU 방출기와 같은 규칙). 입자가 모자란 슬롯은 반경 0 의 죽은 점광으로 덮어쓴다(그리드에 들지 않는다).
  */
 
 #ifndef SW_ENGINE_VFXSIMULATE_HLSLI
@@ -36,7 +38,8 @@
 #define SW_VFX_PARAM_ROW_INVERSE_WORLD           16u // 방출기 행렬의 역 행 넷(16..19)
 #define SW_VFX_PARAM_ROW_DEPTH_VIEW_PROJ         20u // 히스토리 시점의 뷰-투영 행 넷(20..23)
 #define SW_VFX_PARAM_ROW_DEPTH_INVERSE_VIEW_PROJ 24u // 그 역 행 넷(24..27)
-#define SW_VFX_PARAM_ROW_FIRST_STEP              28u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
+#define SW_VFX_PARAM_ROW_LIGHT                   28u // 파티클 라이트 (라이트 버퍼 안의 첫 슬롯 번호, 슬롯 수 — 0 이면 빛 없음, 월드 반경 실수, 세기 실수)
+#define SW_VFX_PARAM_ROW_FIRST_STEP              29u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
 // 커브 키 하나의 행 수 — (시각, 값, 들어오는 접선, 나가는 접선), (상수면 1, 직선이면 1, 0, 0). 둘 다 0 이면 에르미트다(FloatCurve 와 같은 식).
 #define SW_VFX_PARAM_ROWS_PER_KEY 2u
 
