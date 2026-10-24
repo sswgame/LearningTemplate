@@ -73,6 +73,7 @@ namespace test
         AudioAssets,         /**< 오디오 에셋이 든 구성(배포 서버 팩은 오디오를 뺀다: Shipping 이 아니거나 클라이언트 코드가 있다). */
         FatalSignalHandling, /**< 치명 신호를 자체 크래시 핸들러가 받는 구성(AddressSanitizer · ThreadSanitizer 는 신호를 가로챈다). */
         SwContainerTags,     /**< 컨테이너가 메모리 프로파일러에 보이는 구성(STL 컨테이너 빌드 `SW_ENABLE_STL_CONTAINER` 는 `std::allocator` 를 써 안 보인다). */
+        X11ConsoleOverlay,   /**< 리눅스 클라이언트의 개발 콘솔 오버레이(`X11DevConsoleWindow`). Windows · Shipping 에는 없다. */
         Count,
     };
 

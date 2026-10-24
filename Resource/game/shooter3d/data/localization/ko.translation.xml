@@ -1,7 +1,6 @@
 <TranslationTable culture="ko">
 	<entries>
 		<entry key="/" text="/" sourceHash="af63a24c860189fe" />
-		<entry key="Assault Blaster" text="돌격 블래스터" sourceHash="9064a88c950f19f1" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
@@ -12,8 +11,6 @@
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
-		<entry key="Scatter Blaster" text="산탄 블래스터" sourceHash="39e9e7704ab22440" />
-		<entry key="Sidearm Blaster" text="보조 블래스터" sourceHash="7a752ad1e408f25d" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
 		<entry key="settings.gameplay.difficulty" text="난이도" sourceHash="c43eabc5a66b8450" />

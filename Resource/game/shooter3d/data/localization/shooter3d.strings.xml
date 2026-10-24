@@ -5,13 +5,9 @@
 				<item>game/shooter3d/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Assault Blaster" source="Assault Blaster" context="Item name">
-			<origins>
-				<item>game/shooter3d/data/items.xml</item>
-			</origins>
-		</entry>
 		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
 			<origins>
+				<item>game/shooter3d/data/items.xml</item>
 				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
@@ -42,11 +38,13 @@
 		</entry>
 		<entry key="Pistol" source="Pistol" context="Weapon name">
 			<origins>
+				<item>game/shooter3d/data/items.xml</item>
 				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
 			<origins>
+				<item>game/shooter3d/data/items.xml</item>
 				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
@@ -56,16 +54,6 @@
 			</origins>
 		</entry>
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
-			<origins>
-				<item>game/shooter3d/data/items.xml</item>
-			</origins>
-		</entry>
-		<entry key="Scatter Blaster" source="Scatter Blaster" context="Item name">
-			<origins>
-				<item>game/shooter3d/data/items.xml</item>
-			</origins>
-		</entry>
-		<entry key="Sidearm Blaster" source="Sidearm Blaster" context="Item name">
 			<origins>
 				<item>game/shooter3d/data/items.xml</item>
 			</origins>

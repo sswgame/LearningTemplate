@@ -8,13 +8,8 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
-#. Context: Item name
-#: game/shooter3d/data/items.xml
-msgctxt "Assault Blaster"
-msgid "Assault Blaster"
-msgstr "돌격 블래스터"
-
 #. Context: Weapon name
+#: game/shooter3d/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Assault Rifle"
 msgid "Assault Rifle"
@@ -45,12 +40,14 @@ msgid "Notched Blade"
 msgstr "이 빠진 칼"
 
 #. Context: Weapon name
+#: game/shooter3d/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Pistol"
 msgid "Pistol"
 msgstr "권총"
 
 #. Context: Weapon name
+#: game/shooter3d/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
@@ -67,18 +64,6 @@ msgstr "둥근 방패"
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
-
-#. Context: Item name
-#: game/shooter3d/data/items.xml
-msgctxt "Scatter Blaster"
-msgid "Scatter Blaster"
-msgstr "산탄 블래스터"
-
-#. Context: Item name
-#: game/shooter3d/data/items.xml
-msgctxt "Sidearm Blaster"
-msgid "Sidearm Blaster"
-msgstr "보조 블래스터"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml

@@ -26,7 +26,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 `control.scenario.xml` 은 커서를 화면 가운데(`MousePosition`, 카메라 디렉터의 초점 셀)에 두고 마우스 왼쪽(`Nile.Place`)으로 도로를 깐 뒤 오른쪽(`Nile.Demolish`)으로 같은 셀을 허뭅니다.
-로그에 `[Nile] demolished` 가 한 번 나오면 통과입니다. 패드 A · B 는 입력 맵의 가상 커서(`virtualCursor`)가 마우스 버튼으로 바꾸므로 액션에 따로 묶지 않습니다. 시나리오(가상 입력) 동안 가상 커서는 쉬어 패드 길은 이 시나리오가 보지 않습니다.
+로그에 `[Nile] demolished` 가 한 번 나오면 통과입니다. 패드 A · B 는 입력 맵의 가상 커서(`virtualCursor`)가 마우스 버튼으로 바꾸므로 액션에 따로 묶지 않습니다. 시나리오(배타 가상 입력)에서도 가상 커서는 돌아 패드 B 가 마우스 오른쪽을 냅니다. 일시정지 메뉴가 먹은 패드 B 는 그 오른쪽까지 소비로 칩니다(`nilecity.pause`).
 
 ## 조작
 
