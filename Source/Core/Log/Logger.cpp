@@ -69,19 +69,43 @@ namespace sw
         constexpr uint64 kClockNumberMask = kClockFrameBit - 1;
 
         /**
-         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_REPORT`)를 로그 줄로 넘깁니다. 싱크가 아직 없으면 `SW_LOG_*` 처럼 버리지 않고 stderr 에 남깁니다.
+         * @brief 경로의 파일 이름에서 확장자를 뺀 글을 @p arrStem 에 담습니다(`.../LinearAllocator.cpp` → `LinearAllocator`).
          */
-        void forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept
+        void copyFileStem( const utf8* pFile, utf8 ( &arrStem )[constant::kMaxBuffer64] )
         {
-            const LogLevel logLevel = level == internal::LowLevelReportLevel::Error ? LogLevel::Error : LogLevel::Warning;
+            const string_view path{ pFile };
+            const size_t      separator = path.find_last_of( "/\\" );
+            const size_t      nameBegin = separator == string_view::npos ? 0 : separator + 1;
+            const size_t      dot       = path.find_last_of( '.' );
+            const size_t      nameEnd   = dot == string_view::npos || dot < nameBegin ? path.size() : dot;
+            const size_t      length    = MathUtil::min( nameEnd - nameBegin, sizeof( arrStem ) - 1 );
+            Memory::copy( arrStem, path.data() + nameBegin, length );
+            arrStem[length] = '\0';
+        }
+
+        /**
+         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`)를 로그 줄로 넘깁니다. 싱크가 아직 없으면 false 를 돌려주어 stderr 로 가게 합니다(`reportLowLevel`).
+         * @details Caller 는 `SW_LOG_*` 와 같은 방식으로 **보고한 파일**에서 정해집니다. 그 파일이 `SW_LOG_CALLER` 를 등록했으면 그 이름이고, 낮은 층 파일은
+         *          `Logger.h` 를 쓸 수 없어 등록하지 못하므로 파일 이름(확장자 뺀)이 Caller 가 됩니다. 태그(`SW_LOG_TAG`)는 이 파일(Core)의 것, 곧 Engine 입니다.
+         */
+        bool forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+        {
             if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
-            {
-                std::fprintf( stderr, "[%s] %s: %s\n", logLevel == LogLevel::Error ? "Error" : "Warning", pCaller, pMessage );
-                std::fflush( stderr );
-                return;
-            }
+                return false;
+
+            const LogLevel logLevel = level == internal::LowLevelReportLevel::Error ? LogLevel::Error : LogLevel::Warning;
             if ( Logger::shouldLog( logLevel ) )
-                Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, __FILE__, __LINE__ );
+            {
+                utf8        arrStem[constant::kMaxBuffer64];
+                const utf8* pCaller = Logger::getCaller( pFile );
+                if ( pCaller == nullptr )
+                {
+                    copyFileStem( pFile, arrStem );
+                    pCaller = arrStem;
+                }
+                Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, pFile, line );
+            }
+            return true;
         }
 
         /// @brief 기동 때 보고자를 건다. 포인터 하나를 상수 초기화된 원자에 넣을 뿐이라 정적 초기화 순서를 타지 않는다.

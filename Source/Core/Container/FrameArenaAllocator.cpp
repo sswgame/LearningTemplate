@@ -91,7 +91,7 @@ namespace sw
         MemoryBlock buffer    = MemoryBlock::allocate( chunkSize );
         if ( buffer.isValid() == false )
         {
-            SW_LOW_LEVEL_REPORT( Error, "FrameArenaAllocator", "Failed to allocate a %zu byte frame arena chunk.", chunkSize );
+            SW_LOW_LEVEL_ERROR( "Failed to allocate a %zu byte frame arena chunk.", chunkSize );
             return false;
         }
 

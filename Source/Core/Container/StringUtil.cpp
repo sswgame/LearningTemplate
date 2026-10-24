@@ -484,7 +484,7 @@ namespace sw
         }
 
         if ( bHadInvalidSequence )
-            SW_LOW_LEVEL_REPORT( Warning, "StringUtil", "utf8ToUtf16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
+            SW_LOW_LEVEL_WARNING( "utf8ToUtf16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
         return result;
     }
 
@@ -535,7 +535,7 @@ namespace sw
             ++pos;
         }
 
-        SW_LOW_LEVEL_ASSERT( isValidUtf8( result.c_str() ), "StringUtil", "Not a UTF-8 string" );
+        SW_LOW_LEVEL_ASSERT( isValidUtf8( result.c_str() ), "Not a UTF-8 string" );
         return result;
     }
 

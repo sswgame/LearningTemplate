@@ -13,31 +13,63 @@ namespace sw::internal
     {
         /** @brief 로그가 설치한 보고자입니다. 상수 초기화라 정적 초기화 순서를 타지 않습니다. */
         std::atomic<LowLevelReporterFunc> s_pfnLowLevelReporter{ nullptr };
+
+        struct LowLevelReportInternal
+        {
+            /** @brief 글이 버퍼를 넘쳤을 때 끝에 붙이는 표시입니다(널 포함 크기가 곧 차지하는 칸 수). */
+            static constexpr utf8 kTruncatedSuffix[] = "...[truncated]";
+            /** @brief 단언 보고 글의 버퍼 크기입니다 — 식 · 메시지(`kLowLevelMessageCapacity`) · 파일 · 줄을 담는다. */
+            static constexpr size_t kAssertTextCapacity = 1024;
+
+            /** @brief stderr 에 한 줄을 쓰고 비웁니다. 낮은 층 보고가 stderr 로 가는 유일한 위치입니다. */
+            static void writeStderr( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+            {
+                std::fprintf( stderr, "[%s] %s:%d: %s\n", level == LowLevelReportLevel::Error ? "Error" : "Warning", pFile, line, pMessage );
+                std::fflush( stderr );
+            }
+        };
     } // namespace
 
-    void setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
+    LowLevelReporterFunc setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
     {
-        s_pfnLowLevelReporter.store( pfnReporter, std::memory_order_release );
+        return s_pfnLowLevelReporter.exchange( pfnReporter, std::memory_order_acq_rel );
     }
 
-    void reportLowLevel( LowLevelReportLevel level, const utf8* pCaller, const utf8* pMessage ) noexcept
+    void formatLowLevelMessage( utf8* pBuffer, size_t capacity, const utf8* pFormat, ... ) noexcept
     {
-        const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
-        if ( pfnReporter != nullptr )
+        va_list arguments;
+        va_start( arguments, pFormat );
+        const int32 written = static_cast<int32>( std::vsnprintf( pBuffer, capacity, pFormat, arguments ) );
+        va_end( arguments );
+
+        if ( written < 0 )
         {
-            pfnReporter( level, pCaller, pMessage );
+            // 서식 자체가 어긋났다(인코딩 오류 등) — 빈 글로 두면 보고가 의미 없어지므로 사실을 남긴다.
+            std::snprintf( pBuffer, capacity, "(low-level message could not be formatted)" );
             return;
         }
-        // 로거가 서기 전이거나 로거가 없는 도구다 — 보고를 잃지 않게 stderr 에 남긴다.
-        std::fprintf( stderr, "[%s] %s: %s\n", level == LowLevelReportLevel::Error ? "Error" : "Warning", pCaller, pMessage );
-        std::fflush( stderr );
+        if ( static_cast<size_t>( written ) >= capacity && capacity >= sizeof( LowLevelReportInternal::kTruncatedSuffix ) )
+            std::memcpy( pBuffer + capacity - sizeof( LowLevelReportInternal::kTruncatedSuffix ), LowLevelReportInternal::kTruncatedSuffix, sizeof( LowLevelReportInternal::kTruncatedSuffix ) );
     }
 
-    void reportLowLevelAssert( const utf8* pExpression, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
+    void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
     {
-        utf8 arrText[1024];
+        // Error 는 보고자가 있어도 먼저 동기로 쓴다 — 비동기 로거의 큐는 크래시 직전 메시지를 잃는다(SW_ASSERT 가 멈추기 전에 쓰는 것과 같다).
+        if ( level == LowLevelReportLevel::Error )
+            LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
+
+        const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
+        const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage );
+        // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error 는 위에서 이미 썼다).
+        if ( bReported == false && level != LowLevelReportLevel::Error )
+            LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
+    }
+
+    void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
+    {
+        utf8 arrText[LowLevelReportInternal::kAssertTextCapacity];
         std::snprintf( arrText, sizeof( arrText ), "ASSERT failed\nExpression : %s\nMessage    : %s\nFileName   : %s\nLine       : %d", pExpression, pMessage, pFile, line );
-        reportLowLevel( LowLevelReportLevel::Error, pCaller, arrText );
+        reportLowLevel( LowLevelReportLevel::Error, pFile, line, arrText );
     }
 } // namespace sw::internal
 
