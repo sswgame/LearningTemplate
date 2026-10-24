@@ -531,6 +531,85 @@ namespace sw::editor
                 expandTriangles( merged, 0, outResult._mesh );
                 return makeLODLevels( merged, rule, sourcePath, outResult._mesh._listLOD );
             }
+
+            /**
+             * @brief 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지웁니다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
+             * @return 스킨드 모델에 파쇄 규칙이 걸렸거나 쓰기 · 지우기에 실패하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeFractureAsset( const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, string_view outputPath )
+            {
+                const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+                if ( rule._bFracture != SW_TRUE )
+                {
+                    if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+                        return false;
+                    }
+                    return true;
+                }
+                if ( result._bSkinned == SW_TRUE )
+                {
+                    SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                    return false;
+                }
+                FractureAsset fracture;
+                string        error;
+                if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+                {
+                    SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                    return false;
+                }
+                if ( fracture.saveToFile( fracturePath ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                    return false;
+                }
+                SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                             fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+                return true;
+            }
+
+            /** @brief 부착 메시를 옆 폴더에 쓰고 스켈레톤에 부착으로 올립니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeAttachments( ModelImportResult& inoutResult, const string& sideFolder )
+            {
+                for ( const ModelImportAttachment& attachment : inoutResult._listAttachment )
+                {
+                    const string partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
+                    if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
+                        return false;
+                    }
+                    SkeletonAttachment entry{};
+                    entry._name           = attachment._name;
+                    entry._meshPath       = ResourcePaths::toResourceID( partPath );
+                    entry._parentBone     = attachment._parentBone;
+                    entry._localTransform = attachment._localTransform;
+                    inoutResult._skeleton.addAttachment( entry );
+                }
+                return true;
+            }
+
+            /** @brief 클립을 옆 폴더에 쓰고 원본 · 압축 바이트 합을 더합니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeClips( const ModelImportResult& result, const ModelImportRule& rule, const string& sideFolder, uint64& inoutRawByteTotal, uint64& inoutCompressedByteTotal )
+            {
+                for ( const ModelImportClip& imported : result._listClip )
+                {
+                    const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
+                    if ( imported._clip.saveToFile( clipPath ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
+                        return false;
+                    }
+                    inoutRawByteTotal += imported._stats._rawByteCount;
+                    inoutCompressedByteTotal += imported._stats._compressedByteCount;
+                    SW_LOG_INFO( "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
+                                 imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
+                                 imported._stats._maxError * 1000.0f );
+                }
+                return true;
+            }
         };
 
         /**
@@ -629,6 +708,7 @@ namespace sw::editor
 
     bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
     {
+        using Internal = ModelImporterInternal;
         ModelImportResult result{};
         if ( readModelAsset( sourcePath, rule, result ) == false )
             return false;
@@ -648,58 +728,18 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
             return false;
         }
-        if ( ModelImporterInternal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
+        if ( Internal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
             return false;
-        // 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지운다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
-        const string fracturePath = FractureAsset::makePathForMesh( outputPath );
-        if ( rule._bFracture == SW_TRUE )
-        {
-            if ( result._bSkinned == SW_TRUE )
-            {
-                SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
-                return false;
-            }
-            FractureAsset fracture;
-            string        error;
-            if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
-            {
-                SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
-                return false;
-            }
-            if ( fracture.saveToFile( fracturePath ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
-                return false;
-            }
-            SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
-                         fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
-        }
-        else if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
-        {
-            SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+        if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;
-        }
         if ( result._bSkinned == SW_FALSE )
         {
             SW_LOG_INFO( "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
             return true;
         }
 
-        for ( const ModelImportAttachment& attachment : result._listAttachment )
-        {
-            const string partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
-            if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
-                return false;
-            }
-            SkeletonAttachment entry{};
-            entry._name           = attachment._name;
-            entry._meshPath       = ResourcePaths::toResourceID( partPath );
-            entry._parentBone     = attachment._parentBone;
-            entry._localTransform = attachment._localTransform;
-            result._skeleton.addAttachment( entry );
-        }
+        if ( Internal::writeAttachments( result, sideFolder ) == false )
+            return false;
         const string stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
         const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
         if ( result._skeleton.saveToFile( skeletonPath ) == false )
@@ -707,26 +747,14 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        if ( ModelImporterInternal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+        if ( Internal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
             return false;
-        if ( ModelImporterInternal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
+        if ( Internal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;
-        for ( const ModelImportClip& imported : result._listClip )
-        {
-            const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
-            if ( imported._clip.saveToFile( clipPath ) == false )
-            {
-                SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
-                return false;
-            }
-            rawByteTotal += imported._stats._rawByteCount;
-            compressedByteTotal += imported._stats._compressedByteCount;
-            SW_LOG_INFO( "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
-                         imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
-                         imported._stats._maxError * 1000.0f );
-        }
+        if ( Internal::writeClips( result, rule, sideFolder, rawByteTotal, compressedByteTotal ) == false )
+            return false;
         SW_LOG_INFO( "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
                      result._mesh._listVertex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
                      compressedByteTotal );
