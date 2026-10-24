@@ -68,10 +68,11 @@ namespace test
         }
 
         CaseRecord record;
-        record._pTestInfo = &testInfo;
-        record._elapsedMs = elapsedMs;
-        record._iteration = iteration;
-        record._bSeedUsed = _currentContext.isSeedUsed();
+        record._pTestInfo       = &testInfo;
+        record._elapsedMs       = elapsedMs;
+        record._iteration       = iteration;
+        record._bSeedUsed       = _currentContext.isSeedUsed();
+        record._listSkippedPart = _currentContext.getListSkippedPart();
         if ( _currentContext.hasFailed() )
         {
             record._result = CaseResult::Failed;

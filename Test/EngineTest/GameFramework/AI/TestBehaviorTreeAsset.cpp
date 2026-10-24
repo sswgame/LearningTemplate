@@ -167,6 +167,7 @@ SW_TEST_CASE( BehaviorTreeAssetTest, TaskRegistryFindsByNameAndRejectsDuplicates
  */
 SW_TEST_CASE( BehaviorTreeAssetTest, StarSkirmishCommanderTreeMatchesTheKitTasks )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     BehaviorTreeAsset asset;
     SW_ASSERT_TRUE( asset.loadFromResource( "game/starskirmish/data/commander.bt.xml" ) );
     const BehaviorTree& tree = asset.getTree();

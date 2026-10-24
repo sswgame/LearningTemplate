@@ -94,6 +94,15 @@ namespace test
         return isBackendInThisBuild( backend ) && TestRegistry::getInstance().getOptions().isBackendSelected( backend );
     }
 
+    bool skipPartIfFeatureMissing( BuildFeature feature, const sw::string& subject )
+    {
+        if ( isBuildFeatureAvailable( feature ) )
+            return false;
+        const std::lock_guard<std::mutex> lock( TestRegistryInternal::getRecordMutex() );
+        TestRegistry::getInstance().getCurrentContext()->addSkippedPart( feature, subject );
+        return true;
+    }
+
     TestRegistry::TestRegistry()
         : TestRegistry( "(nested) " )
     {

@@ -19,7 +19,7 @@ namespace test
         Passed,          ///< 종료 코드 0(시나리오는 허용하지 않은 로그 줄도 없다)
         Failed,          ///< 실패를 기록했다 — 0 이 아닌 종료, 시한 초과, 못 띄움, 요구 백엔드(`--required_backends=`)가 서지 못함
         BackendUnusable, ///< 요구하지 않은 백엔드가 이 기계에서 서지 못했다(종료 코드 77) — 그 판을 건너뛴다
-        Skipped,         ///< 시나리오가 스스로 건너뛰었다(종료 코드 13 — 전경 창을 못 얻음 · 배포본에 없는 개발 명령). 백엔드와 무관한 환경 탓이다
+        Skipped,         ///< 건너뛰었다 — 시나리오가 스스로(종료 코드 13: 전경 창을 못 얻음 · 배포본에 없는 개발 명령), 또는 배포본에서 개발 변수(`gv_`)가 필요한 실행(띄우지 않고 `[ PARTSKIP ]` 로 보고). 백엔드와 무관한 환경 탓이다
     };
 
     /** @brief 그 판이 이 기계에서 실제로 돌았으면(통과든 실패든) true 입니다. 모든 판이 false 일 때만 케이스가 `SW_TEST_SKIP` 으로 남는다. */
@@ -95,6 +95,8 @@ namespace test
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 판정합니다(`runAppOnBackend` 와 같은 정책).
          * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
          *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`). 실패 메시지와 건너뜀 로그에는 시나리오 · 백엔드 · 종료 코드 · `[Scenario]` 줄이 든다.
+         *          시나리오가 `<Launch>` 로 `gv_` 개발 변수를 선언했거나 @p extraArguments 에 `-gv_` 가 있는데 이 빌드가 배포본이면 App 을 띄우지 않고
+         *          `Skipped` 로 돌려준다(`test::skipPartIfFeatureMissing` 가 케이스 보고에 시나리오와 이유를 남긴다).
          */
         [[nodiscard]] static AppRunOutcome runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines,
                                                         sw::string_view extraArguments = {} );

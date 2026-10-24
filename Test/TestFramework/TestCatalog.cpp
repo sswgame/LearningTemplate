@@ -37,6 +37,7 @@ namespace test
                 {    "DebugAsserts",                 kDebugBuild},
                 {        "DebugLog",                 kDebugBuild},
                 { "MemoryTagScopes", sw::kMemoryTagScopesEnabled},
+                { "SourceResources",           kDevelopmentBuild},
             };
             static_assert( sizeof( kArrBuildFeature ) / sizeof( kArrBuildFeature[0] ) == static_cast<size_t>( BuildFeature::Count ),
                            "every BuildFeature needs a row in kArrBuildFeature" );

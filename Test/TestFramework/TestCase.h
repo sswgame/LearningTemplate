@@ -65,6 +65,7 @@ namespace test
         DebugAsserts,     /**< `SW_ASSERT` 가 살아 있는 구성(Debug). */
         DebugLog,         /**< `SW_LOG_*` 가 컴파일되는 구성(Debug). */
         MemoryTagScopes,  /**< 메모리 태그 범위(`sw::kMemoryTagScopesEnabled`). */
+        SourceResources,  /**< `Resource/` 의 원본 파일(XML · 모든 게임 팩의 데이터 · 셰이더 리플렉션)과 게임 모듈의 컴포넌트를 읽는 구성(Shipping 은 구운 팩의 활성 게임만 본다). */
         Count,
     };
 
@@ -72,6 +73,16 @@ namespace test
     bool isBuildFeatureAvailable( BuildFeature feature );
     /** @brief 기능의 이름(영문 — 요약 · 건너뜀 사유에 찍힌다). */
     const utf8* getBuildFeatureName( BuildFeature feature );
+
+    /**
+     * @brief 케이스가 끝까지 돌면서 일부(시나리오 하나 · 백엔드 하나)만 "이 구성에 기능이 없다" 로 건너뛴 기록(`test::skipPartIfFeatureMissing`).
+     * @details 케이스 전체를 건너뛰는 `SW_TEST_REQUIRES_FEATURE` 와 달리 케이스는 통과로 남는다. 조용히 지나가지 않도록 보고기가 항목마다 한 줄과 요약의 기능별 개수를 찍는다.
+     */
+    struct SkippedPart
+    {
+        BuildFeature _feature;
+        sw::string   _subject; ///< 건너뛴 대상(시나리오 경로 등)과 이유
+    };
 } // namespace test
 
 namespace test

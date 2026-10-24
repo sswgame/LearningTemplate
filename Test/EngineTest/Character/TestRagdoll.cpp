@@ -100,6 +100,7 @@ namespace
  */
 SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
@@ -127,6 +128,7 @@ SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
  */
 SW_TEST_CASE( RagdollTest, WeaponTraceResolvesHitZone )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     RagdollComponent* pTarget  = TestRagdollInternal::spawnSkeleton( manager, "Target", float3{ 0.0f, 0.0f, 0.0f }, false );
@@ -180,6 +182,7 @@ SW_TEST_CASE( RagdollTest, MakeHitInfoCopiesTheRayHitAndNormalizesDirection )
  */
 SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
@@ -229,6 +232,7 @@ SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
  */
 SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
@@ -273,6 +277,7 @@ SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
  */
 SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string pathDisk = test::makeTempPath( "dummy.physics.xml" );
     const string path     = test::makeTempResourceID( pathDisk );

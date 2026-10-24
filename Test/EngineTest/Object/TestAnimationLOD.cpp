@@ -528,6 +528,7 @@ SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
  */
 SW_TEST_CASE( AnimationLODTest, BoneLODLoadsBesideSkeletonPath )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager      manager;
     GameObject*            pObject = manager.createGameObject( hashed_string( "Knight" ) );

@@ -111,6 +111,12 @@ namespace test
                 break;
             }
         }
+        // 케이스는 돌았지만 구성 기능이 없어 건너뛴 일부 — 결과 줄 뒤에 항목마다 한 줄(조용히 지나가지 않게). 결과 줄 머리 계약(`[  SKIPPED ]` …)과 겹치지 않는 머리다.
+        for ( const SkippedPart& part : record._listSkippedPart )
+        {
+            std::fprintf( stdout, "%s  [ PARTSKIP ] %s - needs %s, not in this build (%s)\n", _pLinePrefix, part._subject.c_str(), getBuildFeatureName( part._feature ),
+                          sw::build::kConfigName );
+        }
         std::fflush( stdout );
     }
 
@@ -244,14 +250,35 @@ namespace test
             ++arrSkipCount[static_cast<size_t>( record._missingFeature )];
             bAnySkip = true;
         }
-        if ( bAnySkip == false )
-            return;
+        if ( bAnySkip )
+        {
+            std::fprintf( stdout, " Skipped because this build (%s) lacks a feature:", sw::build::kConfigName );
+            for ( size_t featureIndex = 0; featureIndex < static_cast<size_t>( BuildFeature::Count ); ++featureIndex )
+            {
+                if ( arrSkipCount[featureIndex] > 0 )
+                    std::fprintf( stdout, " %s %u", getBuildFeatureName( static_cast<BuildFeature>( featureIndex ) ), arrSkipCount[featureIndex] );
+            }
+            std::fprintf( stdout, "\n" );
+        }
 
-        std::fprintf( stdout, " Skipped because this build (%s) lacks a feature:", sw::build::kConfigName );
+        // 케이스는 통과했지만 일부를 건너뛴 것(`[ PARTSKIP ]` 줄)의 기능별 개수 — 케이스 수와 따로 센다.
+        uint32 arrPartCount[static_cast<size_t>( BuildFeature::Count )]{};
+        bool   bAnyPart{ false };
+        for ( const CaseRecord& record : summary._listRecord )
+        {
+            for ( const SkippedPart& part : record._listSkippedPart )
+            {
+                ++arrPartCount[static_cast<size_t>( part._feature )];
+                bAnyPart = true;
+            }
+        }
+        if ( bAnyPart == false )
+            return;
+        std::fprintf( stdout, " Skipped parts inside cases because this build (%s) lacks a feature:", sw::build::kConfigName );
         for ( size_t featureIndex = 0; featureIndex < static_cast<size_t>( BuildFeature::Count ); ++featureIndex )
         {
-            if ( arrSkipCount[featureIndex] > 0 )
-                std::fprintf( stdout, " %s %u", getBuildFeatureName( static_cast<BuildFeature>( featureIndex ) ), arrSkipCount[featureIndex] );
+            if ( arrPartCount[featureIndex] > 0 )
+                std::fprintf( stdout, " %s %u", getBuildFeatureName( static_cast<BuildFeature>( featureIndex ) ), arrPartCount[featureIndex] );
         }
         std::fprintf( stdout, "\n" );
     }

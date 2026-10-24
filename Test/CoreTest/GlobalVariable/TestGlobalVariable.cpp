@@ -274,13 +274,19 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
     }
     const uint32 readBeforeWrite = readCount.load();
 
-    // 쓰는 동안 겹친 읽기가 충분해야 한다 — 1000 번을 쓰고도 모자라면 더 쓴다(상한이 있다).
-    constexpr uint32 kMinOverlappedRead = 100;
-    for ( uint32 iter = 0; iter < 200000; ++iter )
+    // 쓰는 동안 겹친 읽기가 충분해야 한다 — 1000 번을 쓰고도 모자라면 읽기가 채워질 때까지 더 쓴다.
+    // 끝나는 조건은 쓴 횟수가 아니라 읽기의 진행이다(횟수 상한이면 -j 부하에서 읽는 스레드가 못 돌 때 쓰기가 먼저 바닥나 읽기가 0 이었다).
+    // 읽는 스레드가 CPU 를 얻도록 쓸 때마다 양보하고, 멈춘 읽기를 잡는 그물은 시각 상한(실패로 보고)이다.
+    constexpr uint32   kMinOverlappedRead = 100;
+    const sw::Deadline overlapDeadline    = sw::Deadline::afterMilliseconds( 60000 );
+    for ( uint32 iter = 0;; ++iter )
     {
-        if ( iter >= 1000 && readCount.load() - readBeforeWrite >= kMinOverlappedRead )
+        const bool bEnoughWrites = iter >= 1000;
+        const bool bEnoughReads  = readCount.load() - readBeforeWrite >= kMinOverlappedRead;
+        if ( bEnoughWrites && ( bEnoughReads || overlapDeadline.isExpired() ) )
             break;
         fixture._manager.setValueFromString( "gv_testString", sw::string( "Value_" ) + sw::to_string( iter ) );
+        std::this_thread::yield();
     }
     const uint32 overlappedRead = readCount.load() - readBeforeWrite;
     bWriterDone.store( true, std::memory_order_release );

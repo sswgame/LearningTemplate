@@ -9,6 +9,7 @@ namespace test
         _testName = testName;
         _listFailure.clear();
         _listCleanup.clear();
+        _listSkippedPart.clear();
         _missingFeature = BuildFeature::Count;
         _bSkipped       = false;
         _bTempPathUsed  = false;

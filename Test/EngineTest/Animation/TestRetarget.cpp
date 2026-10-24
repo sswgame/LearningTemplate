@@ -127,6 +127,7 @@ namespace
  */
 SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     RetargetProfile profile;
     SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
@@ -173,6 +174,7 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
  */
 SW_TEST_CASE( RetargetTest, ProfileWritesBackAndInspectsAgainstSkeletons )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     RetargetProfile profile;
     SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
@@ -485,6 +487,7 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
  */
 SW_TEST_CASE( RetargetTest, KnightWalkOnProportionedMinion )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
     Skeleton minion;
@@ -597,6 +600,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
  */
 SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string outPath = FileUtil::joinPath( test::makeTempPath( "retargetbake" ), "walking_a_minion.animclip" );
     SW_ASSERT_TRUE( RetargetBakeUtil::bakeClipFile( TestRetargetInternal::kProfile, TestRetargetInternal::kKnightWalk, outPath ) );

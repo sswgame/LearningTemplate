@@ -794,6 +794,7 @@ SW_TEST_CASE( AppearanceTest, StateRecognizesItsDatabaseByInstanceID )
  */
 SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     ItemCatalog items;
     SW_ASSERT_TRUE( items.loadFromResource( "game/shooter3d/data/items.xml" ) );

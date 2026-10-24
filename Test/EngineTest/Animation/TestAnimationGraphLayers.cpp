@@ -188,6 +188,7 @@ SW_TEST_CASE( AnimationGraphLayersTest, LayersAndBoneMasksRoundTripThroughXML )
  */
 SW_TEST_CASE( AnimationGraphLayersTest, Shooter3DPlayerGraphCarriesTheUpperBodyLayers )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     AnimationGraphAsset graph;
     SW_ASSERT_TRUE( graph.loadFromFile( "game/shooter3d/data/anim/adventurer.animgraph.xml" ) );
     const AnimationBoneMaskDef* pMask = graph.findBoneMask( "UpperBody" );

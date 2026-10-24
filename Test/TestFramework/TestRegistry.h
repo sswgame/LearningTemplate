@@ -125,6 +125,12 @@ namespace test
      * @details `RHITestDevice` 가 이 답으로 백엔드를 거른다. 백엔드를 직접 만드는 케이스도 같은 답을 따른다.
      */
     bool isBackendUnderTest( sw::RHIBackend backend );
+    /**
+     * @brief 이 빌드에 @p feature 가 없으면 현재 케이스의 일부(@p subject — 시나리오 경로와 이유)를 건너뛴 것으로 적고 true 를 돌려줍니다. 있으면 아무것도 하지 않고 false 입니다.
+     * @details 케이스를 통째로 건너뛰는 `SW_TEST_REQUIRES_FEATURE` 의 부분판이다. 케이스는 통과로 남지만 보고기가 항목마다 `[ PARTSKIP ]` 줄과 요약의 기능별 개수를 찍어
+     *          "조용한 통과" 가 되지 않는다. 부른 쪽은 true 면 그 대상을 돌리지 않는다.
+     */
+    bool skipPartIfFeatureMissing( BuildFeature feature, const sw::string& subject );
 } // namespace test
 
 /** @brief 현재 테스트를 사유와 함께 건너뜁니다 — 환경 탓(파일 · 장치 · 서버가 없음)일 때. 스위트가 전부 이것으로 건너뛰면 "아무것도 검증하지 않은 스위트" 로 진다. */

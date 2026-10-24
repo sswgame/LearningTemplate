@@ -106,6 +106,7 @@ namespace
  */
 SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources );
     using Internal = TestDismembermentRuntimeInternal;
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager   manager;

@@ -67,6 +67,33 @@ namespace test
 #endif
             }
 
+            /**
+             * @brief 개발 빌드만 아는 `gv_` 전역 변수를 쓰는 실행이면 그 이유를 돌려줍니다. 아니면 빈 글입니다.
+             * @details 배포본은 `gv_` 개발 변수를 몰라 명령줄에서 만나면 읽기 오류(11)로 끝난다. 쓰는 곳은 둘이다 — 시나리오의 `<Launch variable="gv_…">`
+             *          (파서가 `gv_` 가 아니면 거절하므로 선언이 있으면 곧 개발 변수다)와 호출자가 붙인 추가 인자의 `-gv_`.
+             *          판정이 데이터(선언)에서 나오므로 시나리오를 새로 써도 "개발 변수 필요" 표시를 따로 빠뜨릴 수 없다.
+             */
+            static sw::string findDevelopmentVariableReason( const sw::string& scenarioArgument, sw::string_view extraArguments )
+            {
+                sw::string reason;
+                if ( extraArguments.find( "-gv_" ) != sw::string_view::npos )
+                    reason = "the command line passes a -gv_ development variable";
+                if ( sw::ResourcePaths::initialize() == false )
+                    return reason;
+                sw::StringUtil::forEachToken( scenarioArgument, ",", [&reason]( sw::string_view scenarioPath )
+                {
+                    sw::AutomationScenario scenario;
+                    sw::string             error;
+                    if ( reason.empty() == false )
+                        return;
+                    const bool bDeclares = scenario.loadFromPath( scenarioPath, error ) && scenario.getLaunchVariables().empty() == false;
+                    if ( bDeclares == false )
+                        return; // 못 읽은 시나리오는 App 이 읽기 오류(11)로 끝내 제 실행에서 진다
+                    reason = sw::string( "<Launch> declares the development variable " ) + scenario.getLaunchVariables().front()._name;
+                } );
+                return reason;
+            }
+
             /** @brief 시나리오 이름 조각(`weaponswitch`)입니다 — 로그 · 보고 파일 이름에 쓴다. */
             static sw::string getScenarioStem( sw::string_view path )
             {
@@ -205,6 +232,11 @@ namespace test
     AppRunOutcome AppTestUtil::runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch,
                                                     sw::string& outScenarioLines, sw::string_view extraArguments, uint32 timeoutSeconds )
     {
+        // 개발 변수(`gv_`)가 필요한 실행은 배포본에서 띄우지 않는다 — 건너뜀을 보고(`[ PARTSKIP ]` + 요약 개수)에 남기고 `Skipped` 로 돌려준다(이 입구 하나라 호출자가 빠뜨릴 수 없다).
+        const sw::string developmentReason = AppTestUtilInternal::findDevelopmentVariableReason( scenarioArgument, extraArguments );
+        if ( developmentReason.empty() == false && skipPartIfFeatureMissing( BuildFeature::DevelopmentBuild, scenarioArgument + ": " + developmentReason ) )
+            return AppRunOutcome::Skipped;
+
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
         (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
