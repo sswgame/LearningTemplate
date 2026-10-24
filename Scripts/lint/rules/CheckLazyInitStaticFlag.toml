@@ -2,4 +2,5 @@
 
 # 전체 훑기의 기준선 — 지금 있는 맨 `static bool` 플래그 수다. 늘면 실패하고, 고쳐서 줄면 낮춘다(래칫). 커밋 훅은 추가한 줄만 본다.
 [baseline]
-total = 7
+# 남은 하나는 ShaderReflectionDx.cpp 의 dxcompiler 로더다. 셰이더 쿠킹 병렬화 커밋(88cd7020c)이 함수 안 정적 변수로 고치므로, 그것을 병합한 뒤 0 으로 낮춘다.
+total = 1
