@@ -18,6 +18,7 @@ namespace sw
     CookStore::CookStore( string recordRootPath, string ddcRootPath )
         : _recordRootPath{ std::move( recordRootPath ) }
         , _derivedDataCache{ std::move( ddcRootPath ) }
+        , _outputHashNanos{ 0 }
     {
     }
 

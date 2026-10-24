@@ -124,8 +124,8 @@ namespace sw
 
         string                        _recordRootPath;
         DerivedDataCache              _derivedDataCache;
-        mutable CookTally             _tally;                ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
-        mutable unordered_set<string> _setRequestedID;       ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
-        mutable int64                 _outputHashNanos{ 0 }; ///< `hashOutput` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
+        mutable CookTally             _tally;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
+        mutable unordered_set<string> _setRequestedID;  ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
+        mutable int64                 _outputHashNanos; ///< `hashOutput` 에 쓴 시간(ns) — `_tally` 처럼 `cookFile` 을 부르는 스레드에서만 바뀐다
     };
 } // namespace sw

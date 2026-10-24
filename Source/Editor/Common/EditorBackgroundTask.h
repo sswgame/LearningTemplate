@@ -15,9 +15,16 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 namespace sw::editor
 {
+    /**
+     * @brief 잡 본문을 TaskManager 워커에 제출합니다. TaskManager 가 없으면(테스트 · 초기화 전) 같은 스레드에서 바로 돌립니다.
+     * @details 작업 시스템은 부르는 스레드(에디터 서비스 범위를 등록한 스레드)에서 찾는다 — 워커 본문은 범위를 찾지 않는다(`findEditorScope`).
+     */
+    void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
+
     /** @brief 입력이 없는 잡을 위한 빈 입력입니다. */
     struct EditorBackgroundNoInput
     {

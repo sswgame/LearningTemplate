@@ -2,30 +2,6 @@
 
 #include "Editor/Common/Workspace/EditorAssetImportJob.h"
 
-#include "Core/Task/TaskManager.h"
-
-#include "Editor/Common/Workspace/EditorService.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        /** @brief TaskManager 가 없으면(테스트 · 초기화 전) 같은 스레드에서 바로 돌립니다. `EditorBackgroundIO.cpp` 의 같은 이름과 같다(위 층이라 include 하지 못한다). */
-        void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
-        {
-            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
-            if ( pTaskManager == nullptr )
-            {
-                delegate( args );
-                return;
-            }
-
-            TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
-            handle.submit();
-        }
-    } // namespace
-} // namespace sw::editor
-
 namespace sw::editor
 {
     // ======================================================================
@@ -48,9 +24,9 @@ namespace sw::editor
         _pCancel        = sw::make_shared<atomic<bool>>( false );
 
         const uint32 generation = beginRequest( std::move( input ) );
-        submitOrRun( "EditorAssetImport",
-                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetImportJob::runJob ),
-                     MakeTaskArgs( _pState, generation, _pCancel ) );
+        submitEditorBackgroundJob( "EditorAssetImport",
+                                   SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetImportJob::runJob ),
+                                   MakeTaskArgs( _pState, generation, _pCancel ) );
         return true;
     }
 
