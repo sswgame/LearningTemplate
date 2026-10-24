@@ -1711,13 +1711,28 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 달라지면 줄어듭니다. */
-            [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            /**
+             * @brief 패널 id(`key`)의 패널을 패널 매니저가 가지면 1, 아니면 0 입니다. 등록 목록이 DLL 마다 갈라지면 그 이미지의 패널이 0 이 됩니다.
+             * @details 패널 수를 숫자 하나로 박으면 패널을 더할 때마다 시나리오를 손으로 고쳐야 한다. 이미지마다 대표 패널의 id 로 묻는다.
+             */
+            [[nodiscard]] static bool readHasPanel( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
+                {
+                    outValue.setText( "no editor context" );
                     return false;
-                outValue = static_cast<float64>( pContext->getSubsystem<EditorPanelManager>().getPanels().size() );
+                }
+                bool bFound = false;
+                for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+                {
+                    if ( string_view{ entry._id } == query._key )
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                outValue.setNumber( bFound ? 1.0 : 0.0 );
                 return true;
             }
 
@@ -2066,8 +2081,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readShortcutOverrideCount );
     SW_AUTOMATION_PROBE( editorModulePreviewNewlyInactive, "Editor.ModulePreviewNewlyInactive", "Modules the Modules window's preview would turn off (0 when not asking)",
                          &EditorScenarioStepsInternal::readModulePreviewNewlyInactive );
-    SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
-                         &EditorScenarioStepsInternal::readPanelCount );
+    SW_AUTOMATION_QUERY_PROBE( editorHasPanel, "Editor.HasPanel", "1 when the panel manager holds a panel whose id is the key, else 0",
+                               &EditorScenarioStepsInternal::readHasPanel, false, true );
     SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity",
                          &EditorScenarioStepsInternal::readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",

@@ -37,6 +37,11 @@ namespace sw::editor
     {
         /** @brief 바로 앞에 그린 위젯(ImGui "last item")을 @p pKey 로 기록합니다. 테스트가 꺼져 있으면 아무것도 하지 않습니다. */
         static void note( const utf8* pKey );
+        /**
+         * @brief `note` 와 같되, 바로 앞 위젯이 입력 칸 + 오른쪽 레이블 글이면 사각형을 입력 칸(`ImGui::CalcItemWidth()`)까지만 남깁니다.
+         * @details 레이블이 붙은 위젯의 "last item" 은 레이블 글까지 덮어, 좁은 창에서 그 가운데가 레이블 글(눌러도 열리지 않는 곳) 위에 놓인다.
+         */
+        static void noteInputFrame( const utf8* pKey );
         /** @brief 화면 픽셀 사각형(@p min 에서 @p max)을 @p pKey 로 기록합니다. 좌표를 변환해 그리는 캔버스(노드 그래프) 안의 위젯이 화면 좌표로 바꿔서 넘깁니다. */
         static void noteRect( const utf8* pKey, const float2& min, const float2& max );
         /** @brief 기록된 레이블을 찾습니다. 이번 프레임이나 지난 프레임에 기록된 것만 반환합니다. 없으면 false 입니다. */

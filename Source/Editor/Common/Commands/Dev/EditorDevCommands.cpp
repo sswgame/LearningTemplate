@@ -273,6 +273,24 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 임시 폴더(`Saved/Automation/` 아래)를 만듭니다. 이미 있으면 성공입니다.
+             * @details 에디터 저장은 없는 폴더를 만들지 않고 오류로 멈춘다(`FileUtil::writeTextFile`). 패널이 문서를 열지 않고 쓸 곳을 먼저 마련해야 하는 시나리오(타일맵 저장 왕복)가 쓴다.
+             */
+            static bool runMakeTempFolder( const vector<string>& listArgument, string& outReply )
+            {
+                string folderPath;
+                if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], folderPath, outReply ) == false )
+                    return false;
+                if ( FileUtil::ensureDirectoryExists( folderPath ) == false )
+                {
+                    outReply = "could not create '" + folderPath + "'";
+                    return false;
+                }
+                outReply = "ready " + folderPath;
+                return true;
+            }
+
             /** @brief 시나리오가 끝날 때 임시 에셋 파일을 지웁니다. 파일이 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveTempAsset( const vector<string>& listArgument, string& outReply )
             {
@@ -529,6 +547,8 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenScratchAsset, "asset.openScratch", "asset.openScratch <scratch/...resource id>",
                     "Open an asset of a scenario's <Scratch> copy in its editor panel by resource id (Quick Open matches by file name and can pick the original)",
                     &EditorDevCommandsInternal::runOpenScratchAsset );
+    SW_DEV_COMMAND( MakeTempFolder, "asset.makeTempFolder", "asset.makeTempFolder <folder>", "Create a temp folder under Saved/Automation/ (editor saves do not create missing folders)",
+                    &EditorDevCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
                     &EditorDevCommandsInternal::runRemoveTempAsset );
     SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <editor/automationtemp/...folder>",
