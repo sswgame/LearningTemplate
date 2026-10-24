@@ -150,6 +150,13 @@ namespace sw
             else if ( cull == "Front" || cull == "front" )
                 desc._cullMode = RHICullMode::Front;
         }
+
+        /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
+        [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
+        {
+            SW_PROFILE_SCOPE( "RT.PSO.create" );
+            return device.getResourceFactory()->createPipelineState( desc );
+        }
     } // namespace
 
     RHIPipelineStateHandle FrameRenderer::createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride )
@@ -203,7 +210,7 @@ namespace sw
             desc._pixelShaderPath.clear();
             desc._pixelEntryPoint.clear();
         }
-        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         registerPSOLayout( handle, desc );
         return handle;
     }
@@ -319,7 +326,7 @@ namespace sw
         if ( bChanged == false )
             return entry;
 
-        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
         {
             // 컴파일 실패다. 패스 PSO(다른 셰이더 · 다른 보기 모드)로 그리면 틀린 그림이 통과하므로 이 조합은 그리지 않고 오류를 남긴다.
@@ -530,7 +537,7 @@ namespace sw
         desc._bEnableBlend                  = 1;
         desc._bPremultipliedAlpha           = SW_TRUE;
         desc._bEnableDepthWrite             = 0;
-        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
             SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
         registerPSOLayout( handle, desc );

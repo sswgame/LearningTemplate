@@ -6,6 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/Cook/CookJob.h"
 
 namespace sw
@@ -87,6 +88,14 @@ namespace sw
             return; // 캐시 적중 · 틀린 요청으로 이미 끝난 블록이다
         if ( start == AssetLoadStart::OnCallingThread || canLoadOnWorker() == false )
         {
+            // 동기 로드 공용 진입점이다(프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더의 `OnCallingThread` 요청이 모두 여기를 지난다).
+            // 서비스가 묶이기 전(도구 · 테스트)에는 프로파일러가 없어 계측 없이 읽는다.
+            if ( engine::areEngineServicesBound() )
+            {
+                SW_PROFILE_SCOPE( "GT.Load.sync" );
+                pBlock->runLoadIfUnclaimed();
+                return;
+            }
             pBlock->runLoadIfUnclaimed();
             return;
         }

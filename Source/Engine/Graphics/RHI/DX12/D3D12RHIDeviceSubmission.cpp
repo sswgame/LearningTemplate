@@ -165,6 +165,7 @@ namespace sw
     {
         if ( _commandQueue == nullptr )
             return;
+        SW_PROFILE_SCOPE( "RT.Upload.flush" ); // Vulkan 의 `RT.Upload.waitIdle` 과 견주는 자리(여기는 기다리지 않고 제출만 한다)
         for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
         {
             if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )

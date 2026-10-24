@@ -102,6 +102,19 @@ namespace sw
         const vector<uint32>& getInitializeOrder() const { return _listOrder; }
         /** @brief 지금 초기화돼 있는 서브시스템(자리, 초기화한 순서)입니다. */
         const vector<uint32>& getInitializedIndices() const { return _listInitialized; }
+        /** @brief `initializeAll` 이 잰 서브시스템 하나의 초기화 시간입니다(시동 요약 로그의 재료). */
+        struct InitTiming
+        {
+            const utf8* _pName;  ///< `getSubsystemName()` — 서브시스템이 사는 동안 유효한 상수 글
+            int64       _micros; ///< `initializeSubsystem` 의 벽시계 마이크로초
+        };
+        /** @brief 마지막 `initializeAll` 에서 초기화를 부른 서브시스템의 시간입니다(위상 순서). 건너뛴 것은 없습니다. */
+        const vector<InitTiming>& getInitTimings() const { return _listInitTiming; }
+        /**
+         * @brief 초기화 시간을 재는 단조 시계(나노초)를 정합니다. 없으면(기본) 재지 않습니다.
+         * @details Subsystem 층은 Time 층을 include 할 수 없어(`CheckCoreLayers`) 위 층이 함수로 건넨다. `MonotonicClock::nowNanoseconds` 를 넘긴다.
+         */
+        void setInitClock( int64 ( *pClockNanos )() noexcept ) { _pInitClockNanos = pClockNanos; }
         /** @brief `shutdownDependentsOf` 가 내리고 아직 다시 세우지 않은 서브시스템(자리, 초기화 순서)입니다. */
         const vector<uint32>& getStoppedIndices() const { return _listStopped; }
         /** @brief 정렬 오류 · 초기화 실패입니다. 없으면 빈 글입니다. */
@@ -137,7 +150,9 @@ namespace sw
         vector<vector<uint32>> _listDependency;  ///< 자리마다 먼저 서야 하는 자리
         vector<uint32>         _listInitialized; ///< 초기화한 자리(종료가 역순으로 돈다)
         vector<uint32>         _listStopped;     ///< `shutdownDependentsOf` 가 내린 자리(초기화 순서)
+        vector<InitTiming>     _listInitTiming;  ///< `initializeAll` 이 잰 초기화 시간(`getInitTimings`)
         string                 _error;           ///< 정렬 오류 · 초기화 실패
         bool                   _bSorted;         ///< 마지막 추가 뒤에 정렬했는가
+        int64 ( *_pInitClockNanos )() noexcept;  ///< `setInitClock` 의 시계. nullptr 이면 초기화 시간을 재지 않는다
     };
 } // namespace sw

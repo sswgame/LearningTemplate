@@ -14,9 +14,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
@@ -236,6 +238,7 @@ namespace sw
             serviceSetup._bEditorServices = kEditorServices;
             serviceSetup._bAuthorityGhost = true;
             _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
+            _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {
                 SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
@@ -283,6 +286,7 @@ namespace sw
         TelemetryService& telemetryService = *startupParts._pTelemetry;
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
+        _startup.getCollection().setInitClock( &MonotonicClock::nowNanoseconds );
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
 #if defined( SW_WITH_CLIENT_CODE )
@@ -336,6 +340,33 @@ namespace sw
         MemoryProfiler::captureMemoryLeakBaseline();
 
         return true;
+    }
+
+    string Engine::describeSubsystemInitTimings() const
+    {
+        vector<SubsystemCollection::InitTiming> listTiming;
+        for ( const SubsystemCollection::InitTiming& timing : _services.getCollection().getInitTimings() )
+        {
+            listTiming.push_back( timing );
+        }
+        for ( const SubsystemCollection::InitTiming& timing : _startup.getCollection().getInitTimings() )
+        {
+            listTiming.push_back( timing );
+        }
+        std::sort( listTiming.begin(), listTiming.end(), []( const SubsystemCollection::InitTiming& lhs, const SubsystemCollection::InitTiming& rhs )
+        { return lhs._micros > rhs._micros; } );
+
+        StringBuilder text;
+        for ( const SubsystemCollection::InitTiming& timing : listTiming )
+        {
+            const int64 millis = timing._micros / constant::kMicrosecondsPerMillisecond;
+            if ( millis < 1 )
+                break; // 오래 걸린 순이라 뒤는 모두 1 ms 미만이다
+            if ( text.size() > 0 )
+                text.append( ", " );
+            text.append( timing._pName ).append( '=' ).append( millis );
+        }
+        return string{ text.view() };
     }
 
     void Engine::shutdown()
@@ -616,7 +647,10 @@ namespace sw
         {
             MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
             if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
+            {
+                SW_PROFILE_SCOPE( "GT.Material.waitIdle" ); // 처음 쓰는 머티리얼 때문에 GT 가 RT · GPU 를 통째로 기다리는 시간
                 _pRenderThread->waitIdle();
+            }
             materials.initializePending( &_pRHI->getDevice() );
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );

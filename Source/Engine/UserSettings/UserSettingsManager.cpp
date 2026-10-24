@@ -18,6 +18,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
@@ -272,7 +273,15 @@ namespace sw
             SW_LOG_WARNING( "Cannot create the folder for user settings '%#'", filePath );
             return false;
         }
-        if ( FileUtil::writeTextFile( filePath, makeUserJSON() ) == false )
+        // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
+        const bool bWritten = [&]()
+        {
+            if ( engine::areEngineServicesBound() == false )
+                return FileUtil::writeTextFile( filePath, makeUserJSON() );
+            SW_PROFILE_SCOPE( "GT.Settings.save" );
+            return FileUtil::writeTextFile( filePath, makeUserJSON() );
+        }();
+        if ( bWritten == false )
         {
             SW_LOG_WARNING( "Failed to write user settings '%#'", filePath );
             return false;
