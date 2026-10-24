@@ -93,9 +93,9 @@ namespace sw::editor
         {
             if ( named._key == pKey )
             {
-                const float32 frameRight = named._mark._min.x + ImGui::CalcItemWidth();
-                if ( frameRight < named._mark._max.x )
-                    named._mark._max.x = frameRight;
+                const float32 frameRight = named._mark._min._x + ImGui::CalcItemWidth();
+                if ( frameRight < named._mark._max._x )
+                    named._mark._max._x = frameRight;
                 return;
             }
         }

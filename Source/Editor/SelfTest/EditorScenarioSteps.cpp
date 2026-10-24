@@ -1726,7 +1726,7 @@ namespace sw::editor
                 bool bFound = false;
                 for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
-                    if ( entry._id == query._key )
+                    if ( string_view{ entry._id } == query._key )
                     {
                         bFound = true;
                         break;
