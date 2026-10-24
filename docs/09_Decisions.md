@@ -179,6 +179,14 @@
   하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다. 더 내리려면 한 프로세스가 읽고 여럿이 훑는 구조가 필요한데 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
   파일마다 보는 소스 게이트는 그 구조로 옮겼습니다(2026-10-17, `SourceScan` — 트리를 한 번 걷고 파일을 코어 수만큼 프로세스에 나눠 읽고 가린 뒤 게이트 전부가 훑는다).
   트리 전체 대조 게이트 중 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 커밋 훅에서 빼 CI 린트 잡으로 넘겼습니다([검증과 측정](08_Verification.md) 4절). [측정: 기계 미상 · 단독 실행 5 회 중앙값 · 2026-10-11 · 7a5fe1016(문서 이동 커밋 — 값을 처음 적은 커밋은 미상)]
+- **비소스 린트 게이트(Python · CMake · 문서 · 텍스트)의 공유 훑기**(2026-10-25): 읽기가 값이 아니다. 단독 순차 실행 46 린트 합 161.7 s 중 파일을 읽는 비소스 게이트 열둘(`CheckPythonConventions` 1.95 ·
+  `CheckPythonMinimumVersion` 3.02 · `CheckScriptLayers` 1.0 · `CheckScriptLayout` 0.46 · `CheckScriptEntryPoints` 1.53 · `CheckScriptCommonHelpers` 0.41 · `CheckCmakeConventions` 0.43 · `CheckCmakeReadme` 0.34 ·
+  `CheckTextFilesAreText` 1.5 · `CheckExecutableBits` 3.49 · `CheckDocPaths` 0.77 · `CheckStatusBoard` 0.30 s)의 합이 15.2 s, 이 가운데 프로세스 기동 바닥(가장 빠른 린트 0.18 s)이 2.2 s 다. 저장소 전체 걷기 0.4 s ·
+  파이썬 303 개 읽기 0.03 s · 파이썬 `ast.parse` 0.54 s · 문서와 CMake 404 개 읽기 0.21 s 라, 전부 공유해도 줄어드는 것은 CPU 합 3~4 s(동시 실행 벽시계로는 1 s 안쪽)다. 남는 값은 게이트 자신의 일이다 —
+  `ast.walk` 두 번(`CheckPythonConventions` · `CheckPythonMinimumVersion`), 파일 23,500 개의 머리 바이트 열기(`CheckExecutableBits`), 파일 6,300 개의 NUL 바이트 읽기(`CheckTextFilesAreText`) — 파일 집합이 서로 달라 공유할 수도 없다.
+  동시 실행(`lint-suite`, 코어의 절반 8 개)에서 게이트가 5~60 s 로 보이는 것은 경합이다(같은 `CheckCmakeConventions` 가 단독 0.43 s, 동시 12.5 s). 덩어리는 다른 곳이다 — `CheckVerifyPending` 단독 52 s
+  (`VerifyManifest.findTestCaseInternal` 이 테스트 케이스 169 개마다 `Test/` 전체를 이은 글에 `\b…\s*,\s*…\b` 정규식을 돌린다, 프로파일에서 24.4 s 가 `re.search`) 하나가 합의 3분의 1이다. 구현하지 않고
+  그 정규식을 먼저 본다. [측정: 이 PC · 단독 순차 1 회 · 다른 작업자와 겹침 · 2026-10-25 · 233d5ef35]
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
