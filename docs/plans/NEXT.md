@@ -16,7 +16,21 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 000000. 2026-10-25 통합 H — 브랜치 16 개가 main 에 들어감(push), GPU 확인 대기 (이것부터 읽는다)
+## 0000000. 병렬 · 비동기 · 구조 정리 트랙 — 작업자 브랜치 열아홉 개 대기 (이것부터 읽는다)
+
+**1. 커밋이 끝난 브랜치**(빌드 · 테스트 · 실행 안 함, 린트 통과). 보고는 `git log main..wt/<이름>` 과 커밋 메시지가 원본이다. `cookfast` · `cookdeps` 는 통합 H 에서 병합했다. 나머지: `ciflow`(3cd00ea78), `refindexpar`(f1ae5a483), `binisolate`(c74ca44f2, 계획 문서 `HostGpuIsolation.md` 만), `parrules`(c8899c38e, `docs/agents/Parallel.md` + 게이트 `CheckLazyInitStaticFlag` · `CheckGateFileWalk`), `verifypar`(a47d7a685), `lintscan`(a09526f16, 문서만 — 이득이 작아 구현 안 함), `framesysaccess`(a945d250c), `importpar`(5d9ac8210), `packfast`(b8e5d4b9c), `verifyscan`(10d7cb0e9), `profscopes`(5281abdbc), `samefix2`(eb345a306 · fa646797c, 기준 `parrules`), `containers3`(cf74b3310, 기준 `framesysaccess`). 아직 돌고 있어 커밋이 없을 수 있는 것: `editorasync`, `packedtypes`, `rhiasyncplan`(계획 문서), `containers1`, `containers2`, `hotreloadq`(기준 `importpar`), `samefix1`(기준 `parrules`), `taskdeps`, `logdeadlock`, `editorscope`(기준 `importpar`).
+
+**2. 병합 순서 제약**: `framesysaccess` → `containers3`; `importpar` → `hotreloadq` · `editorscope`; `parrules` → `samefix1` · `samefix2`(· `CheckLazyInitStaticFlag` 기준선); `verifypar` 와 `verifyscan` 은 파일이 겹치지 않는다. 충돌 예상: `docs/09_Decisions.md`, `docs/08_Verification.md`, README 진행 표(`status-board --write README.md` 로 다시 만든다), `Test/QA/VerifyBatch.json`(`packfast` 가 항목을 더함), `TestShader.cpp`.
+
+**3. 통합이 볼 것**: 컴파일 위험은 각 브랜치 보고에 있다(`SW_DELEGATE_METHOD` 에 private · 익명 중첩 타입, `TaskManager::initialize(4)` 테스트, `ISceneFrameAccess` 의 constexpr 로컬 배열, `VulkanOneShotCommands.h` 가 `FrameProfiler.h` 를 include 하는 순환). 프로파일 스코프 `GT.Material.waitIdle` · `RT.Upload.waitIdle` · `RT.PSO.create` · `GT.Load.sync` · `GT.Settings.save` 는 서비스 바인딩 전에 닿으면 멈출 수 있다(시동 때 확인). `ctest-python` 으로 `verifypar` 의 새 테스트를 확인하고, `--jobs 2` 에서 `nogpu` · `race` 가 겹쳐 시간 제한이면 `--jobs 1`. 속도 실측(쿠킹 compile · reflect · total ms, 팩 압축 wall/cpu, 임포트 전체, 참조 색인 스캔, 린트 `CheckVerifyPending` 43 → 2 s)을 이번 통합에서 한 번 재서 문서에 남긴다. 통합 H 실측: 쿠킹 전체 다시 굽기 272 s(합 컴파일 3790 s), 최신 확인 1.96 s.
+
+**4. 사용자 결정 대기**: ① `verifypar` 작업자가 실수로 띄운 `python -` 프로세스 둘(PID 13924 · 15132, CPU 점유)을 권한 거부로 종료하지 못했다 — 사용자가 종료. ② `ciflow`: 린트 실패 시 `gh run cancel` 로 린트 잡이 cancelled 로 끝나는 것이 브랜치 보호의 필수 확인과 충돌하는지 GitHub 설정에서 확인. ③ push 를 GPU 확인 앞으로 당기는 정책(`11_Workflow.md` "검증 전 push 금지" 는 사용자 지시)을 바꿀지. ④ [ArchitectureSeams](ArchitectureSeams.md) 4 절의 둘(GPU CI 자동화, 작업자 빌드 금지 규칙 재검토).
+
+**5. 아직 안 한 것(후보, 순서)**: 애니메이션 유닛 사슬(`AnimationSystem` 레벨 5L 번 전체 대기를 의존으로 — `containers1` 병합 뒤, 유닛 단위가 아니라 레벨 청크 단위로 비교 설계; `09_Decisions.md` 103 행과 충돌 주의, 먼저 측정), `TaskManager` 의존 API 의 프로덕션 첫 사용처(`taskdeps` 가 사이클 검출을 채움), 모델 한 개 안 LOD · 클립 병렬(`importpar` 뒤, 이득 작음), Detour 군중(측정 먼저: `GT.Scene.tick.navigation`), G 버퍼 법선 RGBA16F → RG16 옥타헤드럴(`packedtypes` 뒤, `RHIFormat` 추가 · 셰이더 재쿠킹), 메시 정점 64 → 28 B(`.mesh` 버전 4, `PreloadAndLod` 와), 캐시 계약(`IAssetCache` 계측, `ResourcePaths` 음성 결과 · 세대, 측정 캐시 전체 비우기 → LRU), RHI 업로드 비동기(`rhiasyncplan` 문서의 단위), `hostgpu` 격리 H1~H4(`binisolate` 문서), 락 쥔 채 로그 금지 규칙, `ResourcePaths` 락 없는 전역(병렬 단계 중 쓰기 금지), 중첩 `runParallel` 스택 깊이 상한, 순서가 주석에만 있는 목록 3종(`SceneFrameStepList` · `SW_SCENE_SERVICE` · 컴포넌트 틱 그룹), `RunLintSuite` · `ci-jobs` 의 `ConflictSchedule` 적용, `Test/` 의 static 카운터 경쟁 후보, 같은 정규식 모양 4곳(`RunForwardDeclarationCandidates.py` 170 · 233, `CheckServiceAccess.py` 165, `FileScan.py` 121). 컴파일 캐시는 sccache 를 PCH 때문에 기각했으니 다시 제안하지 않는다(`bd5b28125` 계열 기록).
+
+**6. 그다음** [ArchitectureSeams](ArchitectureSeams.md) 0 단계(측정, 통합 혼자)와 1a · 1b · 2a · 3 · 4. 위 5 의 "아키텍처와 같이" 로 분류된 것은 해당 단계에 끼운다.
+
+## 000000. 2026-10-25 통합 H — 브랜치 16 개가 main 에 들어감(push), GPU 확인 대기 (위 절 다음에 읽는다)
 
 **상태**: 수정 · 정리 브랜치 14 개(`registrylogs` → `scenlogs` → `logids` → `apptestfeature` · `scenfixes` → `lowlevelgaps` · `lowtier` → `glyphbudget` · `roughnessparam` · `editorscen` · `gputhresholds` → `staticgate` · `poseaudit` · `staticleft`)와 셰이더 쿠킹 `cookfast` · `cookdeps` 가 main 에 들어갔다. 검증은 Debug `full-build`(경고 0 · 오류 0) · `ctest -L nogpu` 69 · `lint` · `race` 통과, `lint-suite` 47/47, Shipping 전체 빌드 + `nogpu` 64 통과, Shipping-Server 전체 빌드 + `nogpu` 66 통과, Release `--cook-shaders`(12740 개 다시 굽기 272 s, 두 번째는 0 binaries generated 1958 ms) · `--verify-shaders` 통과(바이너리 바이트 변경 없음 — 스탬프 12 개만 새 판). 커밋 메시지가 정본이다.
 
