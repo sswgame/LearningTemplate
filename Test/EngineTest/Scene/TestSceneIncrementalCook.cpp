@@ -14,6 +14,7 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/ScenePreloadList.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -144,6 +145,54 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
         SW_EXPECT_TRUE_MSG( Internal::readBytes( sw::FileUtil::joinPath( cooked, pOutput ) ) == listBefore[outputIndex], pOutput );
         ++outputIndex;
     }
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneCookTest] 소스가 사라진 씬의 옛 쿠킹본은 다음 쿠킹이 지운다(쿠킹 폴더의 파일은 모두 팩에 들어간다) — 기록이 없는 파일과 요청한 씬의 쿠킹본은 남는다
+ * @details 쿠킹 프로세스가 끝나면 요청 목록이 사라지므로 두 번째 쿠킹은 새 저장소(같은 기록 폴더)로 한다.
+ */
+SW_TEST_CASE( SceneCookTest, CookRemovesOutputsOfVanishedSources )
+{
+    using Internal = TestSceneIncrementalCookInternal;
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    const sw::string root      = test::makeTempDirectory( "stale_cook_root" );
+    const sw::string cooked    = test::makeTempDirectory( "stale_cook_out" );
+    const sw::string recordDir = test::makeTempDirectory( "stale_cook_record" );
+    const sw::string ddcDir    = test::makeTempDirectory( "stale_cook_ddc" );
+
+    const sw::string keepSource = sw::FileUtil::joinPath( root, "game/demo/maps/keep.scene.xml" );
+    const sw::string goneSource = sw::FileUtil::joinPath( root, "game/demo/maps/gone.scene.xml" );
+    Internal::writeScene( keepSource, {} );
+    Internal::writeScene( goneSource, {} );
+    const sw::SceneEngineServices services    = sw::SceneEngineServices::makeFromBoundEngine();
+    uint32                        failedCount = 0;
+    {
+        const sw::CookStore store( recordDir, ddcDir );
+        SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
+        SW_EXPECT_EQUAL( 0u, failedCount );
+    }
+    const sw::string keepOutput  = sw::FileUtil::joinPath( cooked, "game/demo/maps/keep.scene.bin" );
+    const sw::string goneOutput  = sw::FileUtil::joinPath( cooked, "game/demo/maps/gone.scene.bin" );
+    const sw::string gonePreload = sw::ScenePreloadList::makeListPath( goneOutput );
+    const sw::string strayFile   = sw::FileUtil::joinPath( cooked, "game/demo/maps/note.txt" ); // 쿠커가 만든 적 없는 파일
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( strayFile, "keep me" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::isRegularFile( goneOutput ) );
+    SW_ASSERT_TRUE( sw::FileUtil::isRegularFile( gonePreload ) );
+
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( goneSource ) );
+    const sw::CookStore store( recordDir, ddcDir );
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( services, root, cooked, store, failedCount ) );
+    SW_EXPECT_EQUAL( 0u, failedCount );
+    uint32 removeFailedCount = 0;
+    SW_EXPECT_EQUAL( 2u, store.removeUnrequestedOutputs( cooked, removeFailedCount ) ); // 사라진 씬의 쿠킹본과 프리로드 목록
+    SW_EXPECT_EQUAL( 0u, removeFailedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( goneOutput ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isRegularFile( gonePreload ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( keepOutput ) );
+    SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( strayFile ) );
+    SW_EXPECT_EQUAL( 0u, store.removeUnrequestedOutputs( cooked, removeFailedCount ) ); // 한 번 치웠으면 더 지울 것이 없다
     manager.shutdown();
 }
 

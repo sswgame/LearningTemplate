@@ -221,9 +221,9 @@ namespace sw
     /**
      * @brief 로그 한 줄을 기록합니다(writeLogInternal 로 넘깁니다).
      */
-    void AsyncLogSink::writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+    void AsyncLogSink::writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
-        writeLogInternal( level, pTag, pCaller, pMessage, pFile, line );
+        writeLogInternal( level, pTag, pCaller, pMessage, pFile, line, pID );
     }
 
     /**
@@ -478,7 +478,7 @@ namespace sw
             flushQueue();
     }
 
-    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         using Internal = AsyncLogSinkInternal;
         // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
@@ -523,6 +523,7 @@ namespace sw
             entry._message   = pEffectiveMsg;
             entry._file      = pEffectiveFile;
             entry._line      = line;
+            entry._pID       = pID;
             entry._timeStamp = stamp._text.c_str();
             entry._context   = context;
             broadcastToListeners( entry );

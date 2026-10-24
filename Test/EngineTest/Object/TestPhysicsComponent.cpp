@@ -123,13 +123,14 @@ namespace
     public:
         void initialize() override {}
         void shutdown() override {}
-        void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
+        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
         {
             (void)pTag;
             (void)pCaller;
             (void)pMessage;
             (void)pFile;
             (void)line;
+            (void)pID;
             if ( level == sw::LogLevel::Error )
                 ++_errorCount;
         }

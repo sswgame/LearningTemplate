@@ -32,10 +32,12 @@ endif()
 # clang-cl 은 GNU 철자 `-Wall` 을 `-Weverything` 으로 받는다(`clang-cl -### -Wall` 의 출력, LLVM 20.1.8 에서 확인). 두 플랫폼이 같은
 # 경고 집합(`-Wall -Wextra`, GCC.cmake 와 같다)을 쓰도록 clang-cl 에는 `-clang:` 으로 clang 드라이버의 철자를 그대로 넘긴다.
 if(MSVC)
-	set(swWarningBase -clang:-Wall -clang:-Wextra)
+	set(swWarningBase -clang:-Wall -clang:-Wextra -clang:-Wundef)
 else()
-	set(swWarningBase -Wall -Wextra)
+	set(swWarningBase -Wall -Wextra -Wundef)
 endif()
+# -Wundef — 정의되지 않은 매크로를 #if 에서 읽으면 조용히 0 이 된다(include 를 빠뜨리면 기능이 꺼진 채 컴파일된다). 켜는 매크로는 늘 정의된 값(0 · 1)으로 쓴다.
+# 서드파티는 이 범위 밖이다 — ThirdParty · vcpkg 헤더는 아래 /external:I(clang-cl) · SYSTEM include 로 들어와 시스템 헤더로 보므로 경고가 나지 않는다.
 
 target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 활성화

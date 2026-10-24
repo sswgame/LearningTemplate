@@ -6,6 +6,7 @@
  *          - 작업은 **빈 에셋 캐시로 시작한다**(`AssetManager::clearAssetCaches`). 앞 작업이 읽어 캐시에 둔 프리팹 · 머티리얼을 쓰면 그 읽기가 이 작업의
  *            입력에서 빠진다 — 캐시마다 기록을 다시 남기게 하는 대신, 캐시가 비어 있다는 것을 작업의 시작 조건으로 둔다.
  *          - 기록은 쿠킹 폴더가 아니라 `<기록 루트>/<출력 id>.cookrec` 에 둔다. 쿠킹 폴더의 파일은 모두 팩에 들어간다(`PackCooker`).
+ *          - 요청에서 빠진 옛 출력은 쿠킹이 스스로 지운다(`removeUnrequestedOutputs`) — 쿠킹 폴더의 파일은 모두 팩에 들어가서, 사라진 소스의 옛 출력이 남으면 배포본에 실린다.
  *          - 입력을 하나도 기록하지 않은 작업은 실패다. 그 기록은 무엇이 바뀌어도 늘 새것이 된다(쿠커가 `ResourceIO` 를 거치지 않고 읽었다는 뜻이다).
  *          - 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다. 출력 형식이나 출력을 바꾸는 코드(기본값, 알고리즘)를 바꾸면 올린다.
  */
@@ -13,6 +14,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 
 #include "Engine/Resource/Cook/CookJob.h"
 #include "Engine/Resource/Cook/CookRecord.h"
@@ -80,17 +82,24 @@ namespace sw
         [[nodiscard]] CookOutcome cookFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
         {
             if ( reuseFreshOutput( desc, outputID, outputPath ) )
-            {
-                _tally.add( CookOutcome::Reused );
-                return CookOutcome::Reused;
-            }
+                return record( outputID, CookOutcome::Reused );
             clearAssetCachesForJob();
-            CookJob           job( desc );
-            const CookStep    step    = cook();
-            const CookOutcome outcome = finishCook( job, step, outputID, outputPath );
-            _tally.add( outcome );
-            return outcome;
+            CookJob        job( desc );
+            const CookStep step = cook();
+            return record( outputID, finishCook( job, step, outputID, outputPath ) );
         }
+
+        /**
+         * @brief 이번 저장소가 요청받지 않은 옛 출력(소스가 사라져 이번 쿠킹이 만들지 않는 것)을 @p cookedDir 에서 지웁니다.
+         * @param cookedDir 출력 루트(절대 경로). 출력 파일은 `<cookedDir>/<출력 id>` 입니다.
+         * @param outFailedCount 지우지 못한 파일 수입니다(0 으로 시작해 센다).
+         * @return 지운 파일 수입니다.
+         * @details 쿠킹 폴더의 파일은 모두 팩에 들어가므로(`PackCooker`) 사라진 씬의 낡은 `.scene.bin` 이 남으면 배포본에 실린다. **지우는 것은 기록(`.cookrec`)이 있는
+         *          출력뿐**이다 — 이 저장소가 한 번이라도 만든 파일이라, 기록이 없는 파일(소스 트리에 섞인 저작물)은 건드리지 않는다. 건너뛴 출력(`Skipped`)은 요청한
+         *          것으로 세지 않아 옛 파일이 지워진다. 실패한 출력은 요청한 것으로 세어 지우지 않는다.
+         *          **모든 쿠커를 돌린 뒤, 실패가 없을 때만 부른다** — 돌지 않은 쿠커의 출력도 요청에 없는 것으로 보인다. 기록은 남긴다(소스가 돌아오면 DDC 로 다시 쓴다).
+         */
+        [[nodiscard]] uint32 removeUnrequestedOutputs( string_view cookedDir, uint32& outFailedCount ) const;
 
         /** @brief 출력 @p outputID 의 기록 파일 경로입니다. */
         string                  makeRecordPath( string_view outputID ) const;
@@ -105,9 +114,12 @@ namespace sw
         [[nodiscard]] CookOutcome finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const;
         /** @brief 에셋 캐시를 모두 비웁니다(작업의 시작 조건 — 파일 머리말). */
         static void clearAssetCachesForJob();
+        /** @brief 결과 하나를 세고, 요청받은 출력 id 로 적어 둡니다(`Skipped` 는 요청이 아니다). `cookFile` 의 모든 반환이 이것을 지난다 — 한 갈래가 빠지면 멀쩡한 출력이 지워진다. */
+        CookOutcome record( string_view outputID, CookOutcome outcome ) const;
 
-        string            _recordRootPath;
-        DerivedDataCache  _derivedDataCache;
-        mutable CookTally _tally; ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
+        string                        _recordRootPath;
+        DerivedDataCache              _derivedDataCache;
+        mutable CookTally             _tally;          ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
+        mutable unordered_set<string> _setRequestedID; ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)
     };
 } // namespace sw

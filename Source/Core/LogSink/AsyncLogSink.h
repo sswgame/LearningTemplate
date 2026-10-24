@@ -52,7 +52,7 @@ namespace sw
         void shutdown() override;
 
         /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
-        void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override;
+        void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
         DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
         /** @brief 핸들로 리스너를 뗍니다. */
@@ -84,7 +84,7 @@ namespace sw
         /** @brief 큐에 남은 로그를 모두 비우고 기록합니다. */
         void flushQueue();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
-        void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
+        void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
         /** @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)에게 한 줄을 알립니다. 락 밖에서 부르며 그 세대 칸에 "부르는 중" 을 올려 둡니다. */
         void broadcastToListeners( const LogEntry& entry );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */

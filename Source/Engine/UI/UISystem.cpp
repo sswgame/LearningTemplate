@@ -768,7 +768,7 @@ namespace sw
             if ( UISystemInternal::usesCodeWithin( *_listScreen[index - 1], pBegin, pEnd ) == false )
                 continue;
             const UIScreen& screen = *_listScreen[index - 1];
-            SW_LOG_WARNING( "[UI] Screen %# closed for module reload - it holds widget code from the unloading module", screen._handle );
+            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds widget code from the unloading module", screen._handle );
             // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈의 것이면 다시 열 수 없다.
             const bool bScreenClassInModule = IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( &screen ), pBegin, pEnd );
             if ( screen._documentPath.empty() == false && bScreenClassInModule == false )

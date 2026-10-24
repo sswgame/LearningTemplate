@@ -209,7 +209,7 @@ namespace sw
         return s_globalSink.load( std::memory_order_acquire );
     }
 
-    void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
+    void Logger::writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink == nullptr )
@@ -219,7 +219,7 @@ namespace sw
         if ( bCallerDropped && s_bCallerOverflowReported.exchange( true ) == false )
             pSink->writeLog( LogLevel::Error, "Log", nullptr, "The log caller table is full - SW_LOG_CALLER registrations were dropped (raise kMaxCallerEntries)",
                              __FILE__, __LINE__ );
-        pSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
+        pSink->writeLogWithID( level, pTag, pCaller, pMessage, pFile, line, pID );
     }
 
     DelegateHandle Logger::registerGlobalListener( const LogWrittenDelegate& listener )

@@ -178,7 +178,7 @@ namespace sw
         const auto iter = _mapNameToWidget.find( widget._name );
         if ( iter != _mapNameToWidget.end() && iter->second != &widget )
         {
-            SW_LOG_WARNING( "[UI] Widget name '%#' is used twice in one tree - findWidget returns the first one", widget._name.c_str() );
+            SW_LOG_WARNING_ID( "UI.WidgetNameDuplicate", "[UI] Widget name '%#' is used twice in one tree - findWidget returns the first one", widget._name.c_str() );
             return;
         }
         _mapNameToWidget[widget._name] = &widget;

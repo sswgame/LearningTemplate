@@ -41,3 +41,5 @@
 
 층 규칙은 걸림돌이 아닙니다(레지스트리는 티어 5). 에디터 영역 패널의 자리 — 엔진 영역은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`, 키트 영역은 `GF_EditorPlugIn_<이름>`.
 에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않습니다.
+`ResourceDataSchemaTest` 의 표(`kArrDataKind`)는 위 DK5 의 넷에 드는 줄만 남아 등록표의 사본이 아니다 — 같은 파일이 표와 등록표에 모두 맞으면 테스트가 진다(`findKind`). 남은 사본은 게임 모듈의 등록 줄을
+`Source/Games` 의 .cpp 에서 글로 읽어 모으는 `collectGameModuleDataKindSuffixes` 하나다. EngineTest 가 게임 모듈을 올리지 않아서이고, 없애려면 테스트가 게임 모듈을 올려 등록표를 읽어야 한다(미룸).

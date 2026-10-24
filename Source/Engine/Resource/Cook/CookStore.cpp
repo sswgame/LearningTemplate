@@ -94,6 +94,53 @@ namespace sw
         return CookOutcome::Cooked;
     }
 
+    CookOutcome CookStore::record( string_view outputID, CookOutcome outcome ) const
+    {
+        _tally.add( outcome );
+        if ( outcome != CookOutcome::Skipped )
+            _setRequestedID.insert( string( outputID ) );
+        return outcome;
+    }
+
+    uint32 CookStore::removeUnrequestedOutputs( string_view cookedDir, uint32& outFailedCount ) const
+    {
+        outFailedCount = 0;
+        if ( cookedDir.empty() )
+        {
+            SW_LOG_ERROR( "Cook: removing unrequested outputs needs the cooked directory" );
+            ++outFailedCount;
+            return 0;
+        }
+        constexpr string_view kRecordSuffix = ".cookrec";
+        const string          recordRoot    = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath ) );
+        vector<string>        listRecord;
+        FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ); // 기록 폴더가 아직 없으면 지울 옛 출력도 없다
+        uint32 removedCount = 0;
+        for ( const string& recordPath : listRecord )
+        {
+            const string normalized = FileUtil::normalizeSeparators( recordPath );
+            if ( normalized.size() <= recordRoot.size() + 1 + kRecordSuffix.size() )
+                continue;
+            const string outputID = normalized.substr( recordRoot.size() + 1, normalized.size() - recordRoot.size() - 1 - kRecordSuffix.size() );
+            if ( _setRequestedID.contains( outputID ) )
+                continue;
+            const string outputPath = FileUtil::joinPath( cookedDir, outputID );
+            if ( FileUtil::isRegularFile( outputPath ) == false ) // 팩 기록처럼 쿠킹 폴더에 출력이 없는 것은 이 정리의 몫이 아니다
+                continue;
+            if ( FileUtil::removeFile( outputPath ) )
+            {
+                SW_LOG_INFO( "Cook: removed '%#' - no cooker requested it this run (its source is gone or is no longer cooked)", outputID );
+                ++removedCount;
+            }
+            else
+            {
+                SW_LOG_ERROR( "Cook: could not remove the unrequested output '%#'", outputPath );
+                ++outFailedCount;
+            }
+        }
+        return removedCount;
+    }
+
     void CookStore::clearAssetCachesForJob()
     {
         engine::getSubsystem<AssetManager>().clearAssetCaches();

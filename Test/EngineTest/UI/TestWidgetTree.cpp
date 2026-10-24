@@ -43,7 +43,7 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
     {
         test::ScopedLogCollector logs;
         sw::Widget* const        pSecond = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
-        SW_EXPECT_EQUAL( 1u, logs.countContaining( "used twice" ) );
+        SW_EXPECT_EQUAL( 1u, logs.countWithID( "UI.WidgetNameDuplicate" ) );
         SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == pA );
         SW_EXPECT_TRUE( tree.findWidgetByID( pSecond->getID() ) == pSecond );
     }
