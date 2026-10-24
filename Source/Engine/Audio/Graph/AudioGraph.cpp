@@ -320,13 +320,9 @@ namespace sw
         }
     }
 
-    void AudioGraphInstance::renderBlock( float32* pOut, uint32 frameCount )
+    void AudioGraphInstance::updateBlockParameters()
     {
-        using Internal                             = AudioGraphInternal;
-        const vector<AudioGraph::Node>& listNode   = _pGraph->getNodes();
-        const float32                   sampleRate = static_cast<float32>( audio::kSampleRate );
-
-        // 이번 블록 값: 상수에 게임 파라미터 곡선을 덮고 종류 표의 범위로 묶는다.
+        const vector<AudioGraph::Node>& listNode = _pGraph->getNodes();
         for ( uint32 nodeIndex = 0; nodeIndex < listNode.size(); ++nodeIndex )
         {
             Memory::copy( getBlockParameters( nodeIndex ), listNode[nodeIndex]._arrParameter, sizeof( listNode[nodeIndex]._arrParameter ) );
@@ -338,6 +334,75 @@ namespace sw
             const float32                  value                              = AudioCurvePoint::evaluate( binding._listPoint, _listParameterValue[binding._inputIndex], info._defaultValue );
             getBlockParameters( binding._nodeIndex )[binding._parameterIndex] = MathUtil::clamp( value, info._minValue, info._maxValue );
         }
+    }
+
+    void AudioGraphInstance::renderOscillator( const AudioGraph::Node& node, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount )
+    {
+        using Internal          = AudioGraphInternal;
+        const float64 step      = static_cast<float64>( pParameter[Internal::kOscillatorFrequency] ) / static_cast<float64>( audio::kSampleRate );
+        const float32 amplitude = pParameter[Internal::kOscillatorAmplitude];
+        float64       phase     = inoutState._phase;
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            pOut[frameIndex] = amplitude * Internal::computeOscillator( node._type, phase, step );
+            phase += step;
+            if ( phase >= 1.0 )
+                phase -= MathUtil::floor( phase );
+        }
+        inoutState._phase = phase;
+    }
+
+    void AudioGraphInstance::renderEnvelope( uint32 nodeIndex, const float32* pParameter, float32* pOut, uint32 frameCount )
+    {
+        sumInputs( nodeIndex, pOut, frameCount );
+        const float32 sampleRate      = static_cast<float32>( audio::kSampleRate );
+        const float32 durationSeconds = static_cast<float32>( _pGraph->getFrameCount() ) / sampleRate;
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            const float32 seconds = static_cast<float32>( _frame + frameIndex ) / sampleRate;
+            pOut[frameIndex] *= AudioGraphInternal::computeEnvelope( pParameter, seconds, durationSeconds );
+        }
+    }
+
+    void AudioGraphInstance::renderFilter( uint32 nodeIndex, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount )
+    {
+        using Internal = AudioGraphInternal;
+        sumInputs( nodeIndex, pOut, frameCount );
+        const float32 frequencyHz      = pParameter[Internal::kFilterFrequency];
+        const float32 q                = pParameter[Internal::kFilterQ];
+        const bool    bCoefficientsOld = inoutState._filterHz != frequencyHz || inoutState._filterQ != q;
+        if ( bCoefficientsOld )
+        {
+            inoutState._filter._coefficients = AudioBiquadCoefficients::make( Internal::getBiquadType( _pGraph->getNodes()[nodeIndex]._type ), frequencyHz, q, 0.0f, static_cast<float32>( audio::kSampleRate ) );
+            inoutState._filterHz             = frequencyHz;
+            inoutState._filterQ              = q;
+        }
+        AudioBlockView view;
+        view._pData        = pOut;
+        view._channelCount = 1;
+        view._frameCount   = frameCount;
+        inoutState._filter.process( view );
+    }
+
+    void AudioGraphInstance::renderGain( uint32 nodeIndex, NodeState& inoutState, const float32* pParameter, float32* pOut, uint32 frameCount )
+    {
+        sumInputs( nodeIndex, pOut, frameCount );
+        const float32 targetGain = AudioMath::dbToLinear( pParameter[AudioGraphInternal::kGainVolume] );
+        const float32 startGain  = inoutState._bFirstBlock ? targetGain : inoutState._gain;
+        const float32 step       = ( targetGain - startGain ) / static_cast<float32>( frameCount );
+        float32       gain       = startGain;
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            gain += step;
+            pOut[frameIndex] *= gain;
+        }
+        inoutState._gain = targetGain;
+    }
+
+    void AudioGraphInstance::renderBlock( float32* pOut, uint32 frameCount )
+    {
+        const vector<AudioGraph::Node>& listNode = _pGraph->getNodes();
+        updateBlockParameters();
 
         for ( uint32 nodeIndex = 0; nodeIndex < listNode.size(); ++nodeIndex )
         {
@@ -352,22 +417,12 @@ namespace sw
                 case AudioGraphNodeType::Square:
                 case AudioGraphNodeType::Triangle:
                 {
-                    const float64 step      = static_cast<float64>( pParameter[Internal::kOscillatorFrequency] ) / static_cast<float64>( audio::kSampleRate );
-                    const float32 amplitude = pParameter[Internal::kOscillatorAmplitude];
-                    float64       phase     = state._phase;
-                    for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-                    {
-                        pBuffer[frameIndex] = amplitude * Internal::computeOscillator( node._type, phase, step );
-                        phase += step;
-                        if ( phase >= 1.0 )
-                            phase -= MathUtil::floor( phase );
-                    }
-                    state._phase = phase;
+                    renderOscillator( node, state, pParameter, pBuffer, frameCount );
                     break;
                 }
                 case AudioGraphNodeType::Noise:
                 {
-                    const float32 amplitude = pParameter[Internal::kNoiseAmplitude];
+                    const float32 amplitude = pParameter[AudioGraphInternal::kNoiseAmplitude];
                     for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
                     {
                         pBuffer[frameIndex] = amplitude * ( _random.nextUnit() * 2.0f - 1.0f );
@@ -381,49 +436,19 @@ namespace sw
                 }
                 case AudioGraphNodeType::Envelope:
                 {
-                    sumInputs( nodeIndex, pBuffer, frameCount );
-                    const float32 durationSeconds = static_cast<float32>( _pGraph->getFrameCount() ) / sampleRate;
-                    for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-                    {
-                        const float32 seconds = static_cast<float32>( _frame + frameIndex ) / sampleRate;
-                        pBuffer[frameIndex] *= Internal::computeEnvelope( pParameter, seconds, durationSeconds );
-                    }
+                    renderEnvelope( nodeIndex, pParameter, pBuffer, frameCount );
                     break;
                 }
                 case AudioGraphNodeType::LowPass:
                 case AudioGraphNodeType::HighPass:
                 case AudioGraphNodeType::BandPass:
                 {
-                    sumInputs( nodeIndex, pBuffer, frameCount );
-                    const float32 frequencyHz      = pParameter[Internal::kFilterFrequency];
-                    const float32 q                = pParameter[Internal::kFilterQ];
-                    const bool    bCoefficientsOld = state._filterHz != frequencyHz || state._filterQ != q;
-                    if ( bCoefficientsOld )
-                    {
-                        state._filter._coefficients = AudioBiquadCoefficients::make( Internal::getBiquadType( node._type ), frequencyHz, q, 0.0f, sampleRate );
-                        state._filterHz             = frequencyHz;
-                        state._filterQ              = q;
-                    }
-                    AudioBlockView view;
-                    view._pData        = pBuffer;
-                    view._channelCount = 1;
-                    view._frameCount   = frameCount;
-                    state._filter.process( view );
+                    renderFilter( nodeIndex, state, pParameter, pBuffer, frameCount );
                     break;
                 }
                 case AudioGraphNodeType::Gain:
                 {
-                    sumInputs( nodeIndex, pBuffer, frameCount );
-                    const float32 targetGain = AudioMath::dbToLinear( pParameter[Internal::kGainVolume] );
-                    const float32 startGain  = state._bFirstBlock ? targetGain : state._gain;
-                    const float32 step       = ( targetGain - startGain ) / static_cast<float32>( frameCount );
-                    float32       gain       = startGain;
-                    for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-                    {
-                        gain += step;
-                        pBuffer[frameIndex] *= gain;
-                    }
-                    state._gain = targetGain;
+                    renderGain( nodeIndex, state, pParameter, pBuffer, frameCount );
                     break;
                 }
             }
