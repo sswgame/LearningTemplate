@@ -30,8 +30,8 @@ namespace sw
 
             void add( ISQLDriver& driver )
             {
-                std::scoped_lock<mutex>  lock{ _mutex };
-                const RegistrationResult result = _registeredDriver.addLogged( &driver, "SQL driver", driver.getName() );
+                std::scoped_lock<mutex>                   lock{ _mutex };
+                [[maybe_unused]] const RegistrationResult result = _registeredDriver.addLogged( &driver, "SQL driver", driver.getName() );
                 SW_ASSERT( result == RegistrationResult::Added );
             }
 

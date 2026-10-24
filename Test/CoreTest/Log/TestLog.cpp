@@ -701,8 +701,8 @@ SW_TEST_CASE( LogTest, StderrChildRoleWritesMarkers )
     }
     else
     {
-        test::ScopedAssertCapture capture;
-        const bool                bLogAssertProbeHolds = false;
+        [[maybe_unused]] test::ScopedAssertCapture capture;
+        const bool                                 bLogAssertProbeHolds = false;
         SW_LOG_ASSERT( bLogAssertProbeHolds, "SW_ASSERT_PROBE message" );
     }
 }

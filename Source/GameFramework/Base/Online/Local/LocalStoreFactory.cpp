@@ -50,8 +50,8 @@ namespace sw
 
             void add( const LocalStoreBackend& backend )
             {
-                std::scoped_lock<mutex>  lock{ _mutex };
-                const RegistrationResult result = _registeredBackend.addLogged( &backend, "Local store backend", backend._pName );
+                std::scoped_lock<mutex>                   lock{ _mutex };
+                [[maybe_unused]] const RegistrationResult result = _registeredBackend.addLogged( &backend, "Local store backend", backend._pName );
                 SW_ASSERT( result == RegistrationResult::Added );
             }
 
