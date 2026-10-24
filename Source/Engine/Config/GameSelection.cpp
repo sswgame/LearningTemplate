@@ -20,12 +20,12 @@ namespace sw
         {
             static constexpr uint32 kNameCapacity = 64;
 
-            /** @brief 고른 게임 이름 — 고정 배열이라 정적 소멸 · 할당자 순서와 엮이지 않는다(`ModuleImageUtil` 의 옮긴 모듈과 같다). */
-            static utf8* getNameBuffer()
-            {
-                static utf8 s_arrName[kNameCapacity]{};
-                return s_arrName;
-            }
+            /**
+             * @brief 고른 게임 이름 — 고정 배열이라 상수 초기화되고 정적 소멸 · 할당자 순서와 엮이지 않는다(`ModuleImageUtil` 의 옮긴 모듈과 같다).
+             * @details 부트스트랩 범위의 `CrashHandlerSubsystem` 이 기동 스레드에서 한 번 적고 그 뒤에 읽는다. 읽는 쪽(모듈 · 설정 경로를 찾는 정적 함수)이 서비스 범위가 서기 전에도 묻고
+             *          테스트도 범위 없이 묻는다(고르기 전이면 기본 게임) — 그래서 범위에 맡기지 않고 이 변수 하나가 소유한다. 지연 생성하는 접근자를 두지 않는다.
+             */
+            static inline utf8 s_arrName[kNameCapacity]{};
 
             /** @brief 고르지 않았을 때의 게임 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 베이크한 게임입니다. 없으면 빈 문자열입니다. */
             static string readDefaultName()
@@ -43,7 +43,7 @@ namespace sw
 
             static void storeName( string_view name )
             {
-                StringUtil::strncpy( getNameBuffer(), string{ name }.c_str(), kNameCapacity );
+                StringUtil::strncpy( s_arrName, string{ name }.c_str(), kNameCapacity );
             }
         };
     } // namespace
@@ -95,7 +95,7 @@ namespace sw
 
     string GameSelection::getName()
     {
-        const utf8* pName = GameSelectionInternal::getNameBuffer();
+        const utf8* pName = GameSelectionInternal::s_arrName;
         if ( pName[0] != '\0' )
             return string{ pName };
         return GameSelectionInternal::readDefaultName();
