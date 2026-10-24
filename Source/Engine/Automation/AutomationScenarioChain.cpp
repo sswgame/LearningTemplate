@@ -68,7 +68,11 @@ namespace sw
         if ( isActive() == false )
             return false;
         const bool bHasNext = _stageIndex + 1 < _listPath.size();
-        if ( _bKeepGoing && result == AutomationResult::Skipped )
+        if ( result == AutomationResult::Unconfirmed )
+        {
+            ++_unconfirmedResultCount; // 단언은 맞았고 어림값 문턱이 들었을 뿐이다 — 실패가 아니고 뒤 단계는 돈다
+        }
+        else if ( _bKeepGoing && result == AutomationResult::Skipped )
         {
             ++_skippedResultCount; // 이 단계만 못 돈 것이다 — 실패가 아니고 뒤 단계는 돈다
         }
@@ -91,9 +95,10 @@ namespace sw
             return true;
         }
         _bFinished = true;
-        // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다).
+        // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다). 미확정 단계가 하나라도 있으면 체인도 미확정이다.
         _finalResult = _firstNonPassResult != AutomationResult::Passed ? _firstNonPassResult
                      : _skippedResultCount == _listPath.size()         ? AutomationResult::Skipped
+                     : _unconfirmedResultCount > 0                     ? AutomationResult::Unconfirmed
                                                                        : AutomationResult::Passed;
         return false;
     }

@@ -14,6 +14,7 @@
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Automation/AutomationThresholdBasis.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -178,6 +179,7 @@ namespace sw
             struct ExpectImageArgs
             {
                 NumberComparison          _comparison{};
+                AutomationThresholdBasis  _basis{}; ///< 문턱이 잰 값(`measured`)인지 어림값(`provisional`)인지
                 AutomationImageRegion     _region{};
                 float32                   _ratio{ kDefaultDarkRatio };
                 AutomationImageMetricKind _metric{ AutomationImageMetricKind::MeanLuma };
@@ -288,6 +290,12 @@ namespace sw
                 if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, outArgs._region ) == false )
                 {
                     outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
+                    return false;
+                }
+                // 문턱 숫자가 잰 것인지 어림인지는 단언 옆에 형식으로 남는다 — 적지 않은 단언은 읽기 오류다.
+                if ( AutomationThresholdBasis::tryParse( step.findAttribute( "measured" ), step.findAttribute( "provisional" ), outArgs._basis, outError ) == false )
+                {
+                    outError = step.describe() + ": " + outError;
                     return false;
                 }
                 return readFloat( step, "ratio", outArgs._ratio, outError ) && parseNumberComparison( step, kImageNearTolerance, outArgs._comparison, outError );
@@ -595,7 +603,8 @@ namespace sw
 
             static bool validateExpectImage( const AutomationStep& step, string& outError )
             {
-                if ( step.hasOnlyAttributes( { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false ||
+                if ( step.hasOnlyAttributes( { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost", "measured", "provisional" },
+                                             outError ) == false ||
                      step.requireAttribute( "file", outError ) == nullptr )
                     return false;
                 if ( countComparisons( step, { "equals", "near", "atLeast", "atMost" } ) == false )
@@ -1190,6 +1199,7 @@ namespace sw
         , _logPolicy{}
         , _reportWriter{}
         , _listFailure{}
+        , _listUnconfirmed{}
         , _listPendingScreenshot{}
         , _listWatch{}
         , _listRemembered{}
@@ -1502,6 +1512,8 @@ namespace sw
                 return "TIMEOUT";
             case AutomationResult::Skipped:
                 return "SKIP";
+            case AutomationResult::Unconfirmed:
+                return "UNCONFIRMED";
         }
         return "UNKNOWN";
     }
@@ -1914,7 +1926,18 @@ namespace sw
         string     rule;
         const bool bOk = Internal::matchesNumber( args._comparison, value, rule );
         if ( bOk == false )
+        {
             recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
+            return;
+        }
+        if ( args._basis._kind == AutomationThresholdBasisKind::Provisional )
+        {
+            // 어림값 문턱이 맞았다 — 통과로 세지 않는다. 위 지표 줄의 잰 값을 `measured` 로 옮기면 확정이다.
+            string unconfirmed = step.describe() + ": " + *step.findAttribute( "metric" ) + " " + rule + " held with " + Internal::formatNumber( value ) +
+                                 " on a provisional threshold (" + args._basis._text + ")";
+            SW_LOG_INFO( "[Scenario] unconfirmed %#", unconfirmed.c_str() );
+            _listUnconfirmed.push_back( std::move( unconfirmed ) );
+        }
     }
 
     string AutomationRunner::resolveOutputPath( string_view file ) const
@@ -1966,9 +1989,16 @@ namespace sw
         _logCapture.stop();
         if ( _result == AutomationResult::Passed )
             applyLogGate();
+        if ( _result == AutomationResult::Passed && _listUnconfirmed.empty() == false )
+            _result = AutomationResult::Unconfirmed;
         if ( _result == AutomationResult::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _frameIndex );
+        }
+        else if ( _result == AutomationResult::Unconfirmed )
+        {
+            SW_LOG_INFO( "[Scenario] UNCONFIRMED %# (%# frame(s)): every assertion held, but %# threshold(s) are provisional - move the measured values into measured=\"...\"",
+                         _scenario.getName().c_str(), _frameIndex, static_cast<uint32>( _listUnconfirmed.size() ) );
         }
         else if ( _result == AutomationResult::Skipped )
         {
@@ -1985,12 +2015,13 @@ namespace sw
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getResultName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
         AutomationReportParams report{};
-        report._scenarioName = _scenario.getName();
-        report._pResultName  = getResultName( _result );
-        report._exitCode     = static_cast<int32>( _result );
-        report._frameCount   = _frameIndex;
-        report._reason       = _finishReason;
-        report._pListFailure = &_listFailure;
+        report._scenarioName     = _scenario.getName();
+        report._pResultName      = getResultName( _result );
+        report._exitCode         = static_cast<int32>( _result );
+        report._frameCount       = _frameIndex;
+        report._reason           = _finishReason;
+        report._pListFailure     = &_listFailure;
+        report._pListUnconfirmed = &_listUnconfirmed;
         _reportWriter.write( report );
     }
 } // namespace sw

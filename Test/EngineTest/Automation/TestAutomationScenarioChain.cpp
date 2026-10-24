@@ -58,6 +58,26 @@ SW_TEST_CASE( AutomationScenarioChainTest, AllStagesMustPass )
 }
 
 /**
+ * @brief [AutomationScenarioChainTest] 미확정(어림값 문턱) 단계는 실패가 아니라 뒤 단계가 돌고, 실패가 없으면 체인의 결과가 미확정이다 — 실패가 있으면 그 실패가 이긴다
+ */
+SW_TEST_CASE( AutomationScenarioChainTest, UnconfirmedStageDoesNotStopTheChain )
+{
+    sw::AutomationScenarioChain chain;
+    chain.begin( { "a.xml", "b.xml", "c.xml" } );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Unconfirmed ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Passed ) );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Unconfirmed );
+    SW_EXPECT_EQUAL( size_t{ 1 }, chain.getUnconfirmedResultCount() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, chain.getFailedStageCount() );
+
+    chain.begin( { "a.xml", "b.xml" } );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Unconfirmed ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Failed ) );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Failed );
+}
+
+/**
  * @brief [AutomationScenarioChainTest] 통과하지 못한 단계에서 멈춘다 — 나머지는 돌리지 않고, 결과는 처음 통과하지 못한 단계의 것이며, 그 단계가 어디였는지 보고에 남는다
  */
 SW_TEST_CASE( AutomationScenarioChainTest, FirstNonPassingStageStopsTheChain )

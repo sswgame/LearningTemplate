@@ -64,14 +64,16 @@ namespace sw
         if ( _reportPath.empty() )
             return;
         using Internal = AutomationReportWriterInternal;
-        const vector<string> listNoFailure;
+        const vector<string> listEmpty;
         string               json = "{\n  \"name\": \"" + Internal::escapeJSON( params._scenarioName ) + "\",\n";
         json += "  \"result\": \"" + string( params._pResultName ) + "\",\n";
         json += "  \"exitCode\": " + to_string( params._exitCode ) + ",\n";
         json += "  \"frames\": " + to_string( params._frameCount ) + ",\n";
         json += "  \"reason\": \"" + Internal::escapeJSON( params._reason ) + "\",\n";
         json += "  \"failures\": ";
-        Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listNoFailure );
+        Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
+        json += ",\n  \"unconfirmed\": ";
+        Internal::appendStringArray( json, params._pListUnconfirmed != nullptr ? *params._pListUnconfirmed : listEmpty );
         json += ",\n  \"metrics\": ";
         Internal::appendStringArray( json, _listMetricLine );
         json += ",\n  \"records\": ";

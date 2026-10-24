@@ -4,7 +4,7 @@
 
 자동화 시나리오는 실제 `App.exe` 를 띄운 채 프레임마다 입력을 넣고 게임 상태를 단언하는 XML 파일입니다(`Resource/<영역>/automation/*.scenario.xml`).
 사람이 화면을 보고 확인하던 일, 예를 들어 "점프하고 앞으로 달린다", "10 시에 상점 주인이 가게에 있다", "자동 농부가 갈고 심고 물을 준다" 를 파일로 남겨 네 백엔드에서 반복합니다.
-종료 코드가 결과입니다(0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀). `AppScenarioTest` 가 시나리오 파일을 찾아 백엔드마다 돌립니다.
+종료 코드가 결과입니다(0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 14 미확정 — 단언은 맞았지만 어림값 문턱이 들어 있다). `AppScenarioTest` 가 시나리오 파일을 찾아 백엔드마다 돌립니다.
 
 언리얼의 Automation Test 와 Functional Test, 프로세스를 띄워 결과를 모으는 Gauntlet 에 해당하고, 유니티의 Input Test Fixture(장치 입력 흉내)와 Test Framework 의 PlayMode 테스트에 해당합니다.
 그들과 다른 점은 시나리오가 코드가 아니라 데이터라는 것입니다. 단계와 탐침은 레지스트리에 한 줄로 등록하고, 게임은 기반(판 상태, 일정 시스템, AI 조종자, 폰)을 쓰기만 하면 시나리오에서 그 상태를 물을 수 있습니다.
@@ -158,6 +158,8 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
   `Editor.SelectedNames` 를 함께 두면 어느 쪽이 달라졌는지 바로 나오고, 씬 내용이 다르면 `-gv_automationHashDump=1` 의 `[Scenario] scene hash item` 줄로 오브젝트를 찾습니다.
 - **`backend="other"` 로 건넌 뒤에는 그림을 견주지 않습니다.** 백엔드마다 그림이 조금씩 다르므로, 스크린샷 비교는 `backend="start"` 로 돌아온 뒤에 합니다.
   그림이 "같다" 는 단언은 편집 크기보다 훨씬 작은 문턱(예: 편집이 0.015 면 0.002)으로 둡니다. 문턱이 편집 크기에 가까우면 편집이 사라져도 통과합니다.
+- **`ExpectImage` 의 문턱은 근거 속성이 있어야 읽힙니다.** `measured="2026-10-22 dx12:0.095 vk:0.095"`(날짜와 백엔드별 잰 값, 모두 같으면 `all:0.095`) 또는 `provisional="이유"` 중 정확히 하나입니다. 숫자를 측정 전에 적어야 하면 `provisional` 로 적습니다.
+  어림값 문턱이 맞은 시나리오는 통과(0)가 아니라 미확정(14)으로 끝나고 보고 JSON 의 `unconfirmed` 에 줄이 남습니다(틀리면 근거와 무관하게 실패). 지표 값은 늘 `metrics` 에 적히니 그 값을 `measured` 로 옮기면 확정입니다. 확인은 `AutomationThresholdBasis`.
 - **글 값 탐침을 수로 비교하면 실패로 적힙니다.** `AI.State` 같은 글 탐침은 `is` 로만 비교합니다. 수 탐침은 `is` 로도 비교할 수 있으며, 끝의 0 을 정리한 글(`1`, `0.5`)과 비교합니다.
 - **리소스에 쓰는 시나리오는 원본 폴더에 쓰지 않습니다.** 루트 아래 `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 쓰는 폴더를 선언하면 실행기가 시작할 때 `Resource/scratch/…`(저장소에 넣지 않음)를 지우고 원본을 복사합니다(글 파일의 원본 id 는 사본 id 로, `.meta` 의 guid 는 새로). 단계는 사본 id 를 씁니다. 중단된 실행이 남긴 파일도 다음 시작이 지웁니다(`AutomationScratch`). 사본의 에셋을 여는 길은 Quick Open(이름으로 찾아 원본이 걸릴 수 있다)이 아니라 `asset.openScratch <사본 id>` 다. 쿠커의 도메인 목록(`engine` · `common` · `game/*`)에 `scratch` 가 없어 사본은 팩에 들지 않는다.
 - **한 틱에 끝나는 작업만 있는 행동 트리는 도는 잎이 없습니다.** `AI.BehaviorTask` 와 `Skirmish.AITask` 는 그때 그 틱에 마지막으로 성공한 작업을 보이므로, 늘 성공하는 작업(노는 일꾼 보내기)이 대부분의 프레임을 차지합니다.
