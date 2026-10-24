@@ -4,6 +4,8 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Editor/Common/Workspace/EditorStateStore.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
@@ -30,12 +32,18 @@ namespace sw::editor
     {
         struct ImGuiVulkanRendererBackendInternal
         {
-            inline static void ( *s_originalVkCreateWindow )( ImGuiViewport* )          = nullptr;
-            inline static void ( *s_originalVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+            /** @brief 가로챈 ImGui 렌더러 콜백의 원래 함수입니다. 콜백에는 사용자 포인터가 없어 에디터 범위의 상태 저장소가 소유한다(thunk 는 에디터 프레임 안에서만 불린다). */
+            struct State
+            {
+                void ( *_originalVkCreateWindow )( ImGuiViewport* )          = nullptr;
+                void ( *_originalVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+            };
+
+            static State& getState() { return getEditorState<State>(); }
 
             static void GuardedVkCreateWindow( ImGuiViewport* pViewport )
             {
-                if ( pViewport == nullptr || s_originalVkCreateWindow == nullptr )
+                if ( pViewport == nullptr || getState()._originalVkCreateWindow == nullptr )
                     return;
 
                 if ( pViewport->Size.x < 1.0f )
@@ -43,18 +51,18 @@ namespace sw::editor
                 if ( pViewport->Size.y < 1.0f )
                     pViewport->Size.y = 1.0f;
 
-                s_originalVkCreateWindow( pViewport );
+                getState()._originalVkCreateWindow( pViewport );
             }
 
             static void GuardedVkSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
             {
-                if ( pViewport == nullptr || s_originalVkSetWindowSize == nullptr )
+                if ( pViewport == nullptr || getState()._originalVkSetWindowSize == nullptr )
                     return;
 
                 if ( size.x < 1.0f || size.y < 1.0f )
                     return;
 
-                s_originalVkSetWindowSize( pViewport, size );
+                getState()._originalVkSetWindowSize( pViewport, size );
             }
 
             static void installVulkanViewportGuards()
@@ -62,13 +70,13 @@ namespace sw::editor
                 ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
                 if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedVkCreateWindow )
                 {
-                    s_originalVkCreateWindow         = platformIO.Renderer_CreateWindow;
-                    platformIO.Renderer_CreateWindow = &GuardedVkCreateWindow;
+                    getState()._originalVkCreateWindow = platformIO.Renderer_CreateWindow;
+                    platformIO.Renderer_CreateWindow   = &GuardedVkCreateWindow;
                 }
                 if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedVkSetWindowSize )
                 {
-                    s_originalVkSetWindowSize         = platformIO.Renderer_SetWindowSize;
-                    platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
+                    getState()._originalVkSetWindowSize = platformIO.Renderer_SetWindowSize;
+                    platformIO.Renderer_SetWindowSize   = &GuardedVkSetWindowSize;
                 }
             }
 

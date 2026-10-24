@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -42,11 +43,17 @@ namespace sw::editor
 
             static constexpr const utf8* kUnsavedPopupID = "##UnsavedScenePlay";
 
-            inline static int32          _s_stepFrameCount      = 10; ///< "Step N" 이 진행할 프레임 수
-            inline static PendingSession _s_pendingSession      = PendingSession::Play;
-            inline static bool           _s_bConfirmUnsavedPlay = false;
-            inline static bool           _s_bStartAtCamera      = false; ///< Play 를 에디터 카메라 위치에서 시작한다
-            inline static bool           _s_bAutoplayDrawn      = false; ///< 마지막 프레임에 자동 플레이 단추를 그렸다
+            /** @brief 도구줄이 프레임 사이에 기억하는 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct State
+            {
+                int32          _stepFrameCount{ 10 }; ///< "Step N" 이 진행할 프레임 수
+                PendingSession _pendingSession{ PendingSession::Play };
+                bool           _bConfirmUnsavedPlay{ false };
+                bool           _bStartAtCamera{ false }; ///< Play 를 에디터 카메라 위치에서 시작한다
+                bool           _bAutoplayDrawn{ false }; ///< 마지막 프레임에 자동 플레이 단추를 그렸다
+            };
+
+            static State& getState() { return getEditorState<State>(); }
 
             /** @brief 세션을 시작합니다. 카메라에서 시작이 켜져 있으면 에디터 카메라 위치를 시작 위치로 넘깁니다. */
             static void startSession( PendingSession session )
@@ -56,7 +63,7 @@ namespace sw::editor
                 if ( pData != nullptr && EditorPlaySession::isStopped() )
                 {
                     const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
-                    if ( _s_bStartAtCamera && pEditorCamera != nullptr )
+                    if ( getState()._bStartAtCamera && pEditorCamera != nullptr )
                         EditorPlaySession::setStartPosition( *pData, pEditorCamera->getWorldPosition() );
                     else
                         EditorPlaySession::clearStartPosition( *pData );
@@ -70,9 +77,9 @@ namespace sw::editor
             /** @brief 미저장 씬이면 확인 모달을 열고, 아니면 바로 시작합니다. */
             static void requestSession( PendingSession session, bool bSceneDirty )
             {
-                _s_pendingSession = session;
+                getState()._pendingSession = session;
                 if ( bSceneDirty && EditorPlaySession::isStopped() )
-                    _s_bConfirmUnsavedPlay = true;
+                    getState()._bConfirmUnsavedPlay = true;
                 else
                     startSession( session );
             }
@@ -175,12 +182,12 @@ namespace sw::editor
 
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
-                ImGui::InputInt( "##StepFrameCount", &_s_stepFrameCount, 0, 0 );
-                _s_stepFrameCount = MathUtil::clamp( _s_stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
+                ImGui::InputInt( "##StepFrameCount", &getState()._stepFrameCount, 0, 0 );
+                getState()._stepFrameCount = MathUtil::clamp( getState()._stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrameCount" ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step N" ) ) )
-                    EditorPlaySession::stepFrames( static_cast<uint32>( _s_stepFrameCount ) );
+                    EditorPlaySession::stepFrames( static_cast<uint32>( getState()._stepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrames" ) );
 
                 ImGui::SameLine();
@@ -198,7 +205,7 @@ namespace sw::editor
             /** @brief 카메라에서 시작 · 시간 배율을 그립니다. */
             static void drawSessionOptions()
             {
-                ImGui::Checkbox( "Cam", &_s_bStartAtCamera );
+                ImGui::Checkbox( "Cam", &getState()._bStartAtCamera );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) );
 
                 ImGui::SameLine();
@@ -214,7 +221,7 @@ namespace sw::editor
             /** @brief 게임이 자동 플레이를 등록했으면(`SW_GAME_AUTOPLAY`) 켜고 끄는 단추를 그립니다. */
             static void drawAutoplayButton()
             {
-                _s_bAutoplayDrawn                       = false;
+                getState()._bAutoplayDrawn              = false;
                 const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
                 if ( pActive == nullptr )
                     return;
@@ -224,7 +231,7 @@ namespace sw::editor
                     (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
                 const string tooltip = SW_LOCKEYFORMAT( "EdCommon", "AutoplayToggle", TextArgumentList().addText( "game", pActive->_pGameName ).addText( "description", pActive->_pDescription ).addText( "variable", pActive->_pVariableName ) );
                 EditorWidgets::drawTooltip( tooltip.c_str() );
-                _s_bAutoplayDrawn = true;
+                getState()._bAutoplayDrawn = true;
             }
 
             /**
@@ -251,17 +258,17 @@ namespace sw::editor
             /** @brief 미저장 씬에서 Play 를 눌렀을 때의 확인 모달입니다. */
             static void drawUnsavedPlayPopup()
             {
-                if ( _s_bConfirmUnsavedPlay )
+                if ( getState()._bConfirmUnsavedPlay )
                 {
                     ImGui::OpenPopup( kUnsavedPopupID );
-                    _s_bConfirmUnsavedPlay = false;
+                    getState()._bConfirmUnsavedPlay = false;
                 }
                 if ( EditorWidgets::beginCenteredModal( kUnsavedPopupID ) == false )
                     return;
                 ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
                 if ( ImGui::Button( "Play" ) )
                 {
-                    startSession( _s_pendingSession );
+                    startSession( getState()._pendingSession );
                     ImGui::CloseCurrentPopup();
                 }
                 EditorSelfTestMarks::note( "toolbar.playAnyway" );
@@ -302,6 +309,6 @@ namespace sw::editor
 
     bool EditorPlayToolbar::wasAutoplayButtonDrawn()
     {
-        return EditorPlayToolbarInternal::_s_bAutoplayDrawn;
+        return EditorPlayToolbarInternal::getState()._bAutoplayDrawn;
     }
 } // namespace sw::editor

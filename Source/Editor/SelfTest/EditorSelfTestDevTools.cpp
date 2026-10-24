@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Console/ConsolePanel.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -468,7 +469,13 @@ namespace sw::editor
                     pManager->destroyObject( pObj );
             }
 
-            inline static uint64 _s_overlayProbeObjectID = 0;
+            /** @brief 여러 프레임에 걸친 단계가 기억하는 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct State
+            {
+                uint64 _overlayProbeObjectID{ 0 };
+            };
+
+            static State& getState() { return getEditorState<State>(); }
 
             static EditorSelfTestStep runGridAndGizmoDraw( EditorSelfTestContext& context )
             {
@@ -483,8 +490,8 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
+                    getState()._overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( getState()._overlayProbeObjectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const int32                 frame     = ImGui::GetFrameCount();
@@ -498,8 +505,8 @@ namespace sw::editor
                 (void)context.expect( bSceneRan, "the scene view was not drawn while its tab was in front" );
                 (void)context.expect( bGrid, "the scene view did not draw the grid" );
                 (void)context.expect( bGizmo, "the scene view did not draw the gizmo of the selection" );
-                destroyProbe( pManager, _s_overlayProbeObjectID );
-                _s_overlayProbeObjectID = 0;
+                destroyProbe( pManager, getState()._overlayProbeObjectID );
+                getState()._overlayProbeObjectID = 0;
                 return EditorSelfTestStep::Done;
             }
 
@@ -545,8 +552,8 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     // 선택이 있어야 "기즈모를 그리지 않는다" 는 검사가 의미가 있다.
-                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
+                    getState()._overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( getState()._overlayProbeObjectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const EditorViewTarget& view        = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
@@ -568,8 +575,8 @@ namespace sw::editor
                     what += " indices)";
                     (void)context.expect( vertexCount == 0, what.c_str() );
                 }
-                destroyProbe( pManager, _s_overlayProbeObjectID );
-                _s_overlayProbeObjectID = 0;
+                destroyProbe( pManager, getState()._overlayProbeObjectID );
+                getState()._overlayProbeObjectID = 0;
                 // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
                 ImGui::SetWindowFocus( SceneViewPanel::kPanelTitle );
                 return EditorSelfTestStep::Done;
