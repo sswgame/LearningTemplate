@@ -583,6 +583,10 @@
   언리얼은 `FFloat16` · `FPackedNormal` · 옥타헤드럴 법선을, 유니티는 `half` 와 `SNorm16` 정점 속성을 같은 목적(정점 · 인스턴스 크기 절감)으로 씁니다. 다른 점은 이 저장소가 `float32` 로의 암시적 변환까지 막아 `half + half` 를 실수로 쓰지 못하게 한 것입니다.
   적용 순서와 포맷 규칙은 [PackedTypes](plans/PackedTypes.md)입니다.
 
+- **반복문 안 `erase( begin() + index )` 와 `contains` 뒤 `push_back` 으로 중복 거르기는 새 코드가 못 쓴다**(2026-10-25). 숫자를 재지 않는 이유: "빨라질 것 같은 최적화" 가 아니라 한 프레임에 T 개가 한꺼번에 끝나면 이동이 O(T²) 로 느는 모양을 없애는 구조 정리라서 "성능 주장은 Release 숫자로만" 의 대상이 아니다.
+  지우기는 `VectorUtil::removeIf`(순서 보존 · 한 번 훑기, 언리얼 `RemoveAll`), 중복 거르기는 집합이다. UI 의 재생 · 트윈 · 알림 · 전환 채널을 고쳤다. 같은 속성을 쓰는 애니메이션은 목록 순서대로 써서 마지막이 이기므로 swap-pop 은 아니다.
+  전환 중 위젯 목록(`WidgetTree::_uniqueStyleTransition`)은 `unordered_set` 이다 — `sparse_set` 은 위젯 번호(프로세스 전체 증가 카운터)의 최댓값만큼 sparse 배열이 자라 맞지 않았다. 형식으로 못 막는 틈(표준 vector 멤버 호출)에만 게이트 `CheckIndexLoopErase` 를 기준선 래칫으로 둔다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.

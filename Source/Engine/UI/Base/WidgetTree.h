@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -106,9 +107,9 @@ namespace sw
         vector<WidgetID>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 위치입니다(레이아웃 경계, 루트).
         vector<WidgetID>                                               _listPaintDirty;
         vector<WidgetID>                                               _listStyleDirty;
-        vector<WidgetID>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다)
-        UIFocusManager*                                                _pFocusManager;       ///< 지금 이 트리에 포커스를 둔 관리자입니다(없으면 nullptr 이며, 트리가 지워질 때 알립니다).
-        UIScreen*                                                      _pScreen;             ///< 소유한 화면입니다(UIScreen 생성자가 적습니다).
+        unordered_set<WidgetID>                                        _uniqueStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다). 집합이라 같은 위젯이 두 번 들어오지 않고 순서는 상관없다.
+        UIFocusManager*                                                _pFocusManager;         ///< 지금 이 트리에 포커스를 둔 관리자입니다(없으면 nullptr 이며, 트리가 지워질 때 알립니다).
+        UIScreen*                                                      _pScreen;               ///< 소유한 화면입니다(UIScreen 생성자가 적습니다).
         WidgetID                                                       _focusedWidget;
         float32                                                        _layoutUIScale;        ///< 지난 레이아웃 순회의 UI 배율입니다(바뀌면 전체를 다시 처리합니다. UILayoutPass).
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 순회의 글자 배율입니다.

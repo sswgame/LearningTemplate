@@ -103,25 +103,27 @@ namespace sw
     void UINotificationService::update( float32 deltaSeconds )
     {
         // 0) 사라지는 중인 항목: 페이드가 끝나면 위젯을 지운다.
-        for ( size_t index = _listFading.size(); index > 0; --index )
+        // 시간을 더하고 끝난 것의 뒤처리를 한 번 돈 뒤, 지우는 것은 `removeIf` 한 번이다(한 프레임에 여럿이 끝나도 뒤 원소를 한 번만 옮긴다).
+        // 위젯을 지우거나 페이드를 거는 호출은 두 목록을 건드리지 않는다. 남은 순서는 그대로다(보이는 알림의 쌓는 순서).
+        const auto isFadeDone = []( const FadingEntry& fading )
+        { return ( fading._remainingSeconds > 0.0f ) == false; };
+        for ( FadingEntry& fading : _listFading )
         {
-            FadingEntry& fading = _listFading[index - 1];
             fading._remainingSeconds -= deltaSeconds;
-            if ( fading._remainingSeconds > 0.0f )
-                continue;
-            removeEntryWidget( fading._widget );
-            _listFading.erase( _listFading.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+            if ( isFadeDone( fading ) )
+                removeEntryWidget( fading._widget );
         }
+        VectorUtil::removeIf( _listFading, isFadeDone );
         // 1) 보이는 알림의 시간: 끝난 것을 내린다(자리는 바로 비고, 위젯은 페이드 뒤에 지운다).
-        for ( size_t index = _listVisible.size(); index > 0; --index )
+        const auto isTimeUp = []( const Entry& entry )
+        { return ( entry._ageSeconds < entry._desc._durationSeconds ) == false; };
+        for ( Entry& entry : _listVisible )
         {
-            Entry& entry = _listVisible[index - 1];
             entry._ageSeconds += deltaSeconds;
-            if ( entry._ageSeconds < entry._desc._durationSeconds )
-                continue;
-            startFadeOut( entry );
-            _listVisible.erase( _listVisible.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+            if ( isTimeUp( entry ) )
+                startFadeOut( entry ); // 페이드 목록에 더한다(위 순회는 이미 끝났다)
         }
+        VectorUtil::removeIf( _listVisible, isTimeUp );
         // 2) 자리가 나면 기다리는 알림을 올린다. 우선순위가 큰 것이 먼저이고, 같으면 먼저 온 것이 먼저다.
         while ( _listVisible.size() < kMaxVisible && _listQueued.empty() == false )
         {

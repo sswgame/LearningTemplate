@@ -90,6 +90,12 @@ namespace
     constexpr utf8 kTransitionBody[]  = "\t<CanvasPanel>\n"
                                         "\t\t<BorderPanel _name=\"Box\" _styleClass=\"a\" />\n"
                                         "\t</CanvasPanel>\n";
+    /** @brief 같은 전환 시트를 쓰는 위젯 셋 — 여러 위젯이 한꺼번에 전환에 들어가고 끝나는 모양을 본다. */
+    constexpr utf8 kThreeBoxBody[] = "\t<CanvasPanel>\n"
+                                     "\t\t<BorderPanel _name=\"Box0\" _styleClass=\"a\" />\n"
+                                     "\t\t<BorderPanel _name=\"Box1\" _styleClass=\"a\" />\n"
+                                     "\t\t<BorderPanel _name=\"Box2\" _styleClass=\"a\" />\n"
+                                     "\t</CanvasPanel>\n";
 
     /** @brief 위젯 자기 겉모습 ↔ 시트 값 전환의 시트 — 클래스 b 만 배경색을 정한다(클래스 없는 상태는 위젯이 자기 브러시로 그린다). */
     constexpr utf8 kOwnValueSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
@@ -502,6 +508,38 @@ SW_TEST_CASE( UIStyleTest, RetargetFromCurrentValue )
     SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
     Util::runFrame( fixture._input, fixture._ui, 0.5f ); // 보라 → 빨강의 반
     SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.75f, 0.0f, 0.25f, 1.0f }, Util::findBackground( pBox ) ) );
+}
+
+/** @brief [UIStyleTest] 여러 위젯이 한 프레임에 함께 끝나도 남은 위젯의 전환은 이어 가고(집합에서 빠져도 건너뛰지 않는다), 같은 위젯을 다시 올려도 두 번 진행하지 않는다 */
+SW_TEST_CASE( UIStyleTest, WidgetsFinishTransitionsTogetherAndSurvivorContinues )
+{
+    using Util = UIStyleTestUtil;
+    UIStyleFixture fixture;
+    sw::UIScreen*  pScreen = fixture.open( kTransitionSheet, kThreeBoxBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* arrBox[3]{ pScreen->getTree().findWidgetByName( "Box0" ), pScreen->getTree().findWidgetByName( "Box1" ), pScreen->getTree().findWidgetByName( "Box2" ) };
+    for ( sw::Widget* pBox : arrBox )
+    {
+        SW_ASSERT_NOT_NULL( pBox );
+        pBox->setStyleClass( "b" );
+    }
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    for ( sw::Widget* pBox : arrBox )
+    {
+        SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    }
+
+    arrBox[1]->setStyleClass( "a" ); // 전환 중인 위젯 하나만 되돌린다 — 이미 집합에 있는 위젯을 다시 올린다
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    Util::runFrame( fixture._input, fixture._ui, 0.6f ); // 둘은 끝나고 가운데는 지금 값(보라)에서 빨강으로 0.6 만큼
+    SW_EXPECT_TRUE( Util::findBackground( arrBox[0] ) == Util::kBlue );
+    SW_EXPECT_TRUE( Util::findBackground( arrBox[2] ) == Util::kBlue );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.8f, 0.0f, 0.2f, 1.0f }, Util::findBackground( arrBox[1] ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::findBackground( arrBox[1] ) == Util::kRed );
+    SW_EXPECT_TRUE( Util::findBackground( arrBox[0] ) == Util::kBlue );
+    SW_EXPECT_TRUE( Util::findBackground( arrBox[2] ) == Util::kBlue );
 }
 
 /** @brief [UIStyleTest] 전환에 적지 않은 칸(글 색)은 같은 변화에서도 바로 바뀐다 */

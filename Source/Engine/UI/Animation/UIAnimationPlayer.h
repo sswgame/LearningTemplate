@@ -104,7 +104,8 @@ namespace sw
             float32               _speed{ 1.0f };
             uint32                _remainingLoops{ 1 }; ///< 0 이면 끝없이 반복합니다.
             bool                  _bReverse{ false };
-            bool                  _bPaused{ false }; ///< 멈춘 동안은 시간이 가지 않고 값만 씁니다(`seek`).
+            bool                  _bPaused{ false };   ///< 멈춘 동안은 시간이 가지 않고 값만 씁니다(`seek`).
+            bool                  _bFinished{ false }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다.
         };
 
         /** @brief 코드 트윈 하나입니다. */
@@ -118,6 +119,7 @@ namespace sw
             float32            _duration{ 0.0f };
             WidgetID           _widget{ kInvalidWidgetID };
             BlendCurve         _curve{ BlendCurve::EaseOut };
+            bool               _bFinished{ false }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다.
         };
 
         /** @brief 보낼 이벤트 하나입니다(진행이 끝난 뒤 보냅니다). */

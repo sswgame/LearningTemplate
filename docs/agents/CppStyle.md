@@ -77,3 +77,4 @@
 - A static registration table is a `RegistrationList`. On the user-configuration side the name is `Handler`.
 - A registry keyed by name does not reject empty or duplicate names with its own `if`: borrowed pointers go in a `RegistrationList` (`bRequireName`), owned values in a `NameRegistry`, and the caller only reports the result of `add`.
 - A boolean in text (`true` / `1` / `on` ...) is read with `StringUtil::tryParseBool`, never with a hand-written spelling list.
+- Do not erase from a vector one element at a time inside a loop (`erase( begin() + index )` — it moves the tail every time, O(T²) when T elements finish in one frame). Do the per-element work first (mark finished elements), then erase once with `VectorUtil::removeIf` (order kept) or `VectorUtil::removeAtSwap` (order free). Dedupe with a set (`unordered_set`), not `contains` before `push_back`. `CheckIndexLoopErase.py` checks the lines a commit adds (the whole tree is held to a baseline count).
