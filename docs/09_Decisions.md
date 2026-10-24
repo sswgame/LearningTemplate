@@ -697,6 +697,10 @@
 
 ### 5-5. 그래픽스와 RHI
 
+- **RHI 의 완료 · 동기화 계약은 `IRHIDevice` 머리말의 한 표로 두고, 네 백엔드가 같은 테스트로 지킨다**(2026-10-25, 백엔드 감사). `waitIdle` 은 앞서 제출한 모든 GPU 작업이 끝난 뒤 돌아오고, `enqueueGPURelease` 콜백은 그 프레임의 GPU 작업이 끝난 뒤에만 불리며, GPU 는 `kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못하고, `readReadbackBuffer` 는 읽기 버퍼가 아닌 핸들을 거절한다.
+  GPU 확인에서 DX11 비동기 되읽기가 진 원인은 `waitIdle` 이 `Flush` 만 한 것이었고, 점검에서 같은 모양의 약한 구현이 둘 더 나왔다 — DX11 · GL 의 `enqueueGPURelease` 가 프레임 수만 세던 것(Present 없는 반복에서 GPU 가 뒤처진 채 콜백이 돈다), `readReadbackBuffer` 의 읽기 버퍼 검사가 DX11 에만 있던 것.
+  고친 방식: DX11 은 프레임 끝 이벤트 쿼리 링, GL 은 프레임 끝 `glFenceSync` 링으로 DX12 · Vulkan 의 펜스와 같은 모양을 만들었고(링이 차면 가장 오래된 프레임을 기다린다), 완료 확인용 쿼리는 디바이스를 세울 때 만들어 못 만들면 초기화를 실패시킨다(폴백 없음).
+  언리얼은 RHI 의 `FRHIGPUFence`/`RHIBlockUntilGPUIdle` 이 백엔드마다 같은 뜻이고 DX11 도 이벤트 쿼리로 구현하는 것으로 알고 있다(기억에 의존). 장치 제거 뒤의 `waitIdle` 테스트는 Vulkan 에만 있다(`VulkanLostDeviceStopsWaitingOnTheGPU`) — DX12 의 제거 경로(`debugRemoveDevice`)는 같은 테스트로 걸지 못했다.
 - **DX12 셰이더 가시 힙은 524288 칸(bindless 32768 + 온라인 블록 960 × 512)으로 둔다**(2026-10-23). 65536 칸(온라인 블록 64)은 미리보기 월드 넷을 그리는 한 프로세스 재생(`editor.netsim`)에서 바닥났다. 언리얼의 온라인 힙 기본도 수십만 칸(`D3D12.OnlineDescriptorHeapSize`)이고, 힙 메모리(16 MB)는 작다.
 - **RHI 디바이스 안은 서브시스템으로 만들지 않는다 — 부품은 타입 있는 멤버로 명시 소유하고, 종료 순서는 `IRHIDevice::shutdown` 의 네 단계가 정한다**(2026-10-14, 백로그 C-26 을 닫음).
   언리얼 RHI 도 내부 레지스트리 없이 디바이스가 부품을 명시로 들고 소멸 순서로 정하는 것으로 알고 있다. 해제 큐 · 장부 · 프레임 링 · 타임스탬프는 이미 공용 클래스이고

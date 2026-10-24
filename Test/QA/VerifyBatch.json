@@ -882,6 +882,12 @@
       "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
     },
     {
+      "id": "rhi-completion-contract-gpu", "title": "RHI 완료 · 동기화 계약(waitIdle 완료 · 해제 콜백의 GPU 완료 순서 · 읽기 버퍼 거절, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 30,
+      "filter": "RHIDeviceTest.WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend,RHIDeviceTest.EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone,RHIDeviceTest.ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer,RHIDeviceTest.EnqueuedGPUReleaseRunsOnceAfterItsFrame",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/09_Decisions.md 5-5", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
+    },
+    {
       "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "OcclusionTileQueryTest.*,OcclusionTileMailboxTest.*,RenderViewCollectorTest.*",
       "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
