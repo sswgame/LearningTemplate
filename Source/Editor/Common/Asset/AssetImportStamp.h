@@ -49,6 +49,13 @@ namespace sw::editor
     /**
      * @class IRawAssetImporter
      * @brief 원본 종류 하나가 일괄 임포트(`AssetImportStampUtil::importAll`)에 제공하는 함수들입니다.
+     * @details **임포터 규칙(일괄 임포트는 원본 파일을 병렬로 임포트한다).**
+     *          - 모든 `const` 함수는 여러 스레드에서 동시에 불립니다. 임포터는 무상태여야 합니다. 원본 하나의 결과는 반환값으로만 돌려주고(공유 가변 상태 · 함수 밖 static 금지),
+     *            로그는 마음대로 남깁니다(로거는 스레드 안전입니다).
+     *          - 원본 하나의 임포트는 **자기 결과 경로**(`makeImportedPath` 에서 확장자를 뗀 경로와 그 아래 옆 폴더)에만 쓰고 지웁니다. 같은 경로(또는 그 아래)를 쓰는 원본들은 일괄 임포트가
+     *            한 사슬로 묶어 한 스레드가 파일 순서대로 임포트합니다.
+     *          - **다른 원본의 임포트 결과를 읽는 순서 의존**(장비 메시가 몸 메시를 읽는다)은 `hasOrderDependency` 로 드러냅니다. 그 원본은 의존이 없는 원본이 모두 끝난 뒤 이 스레드에서 직렬로 임포트합니다.
+     *            의존 대상 자신은 의존이 없어야 합니다(의존끼리의 순서는 파일 순서일 뿐입니다).
      */
     class IRawAssetImporter
     {
@@ -79,7 +86,12 @@ namespace sw::editor
         virtual uint64 computeImportedHash( string_view importedPath ) const;
         /** @brief 임포트하지 않는 원본이면 그 이유를 반환하고, 아니면 nullptr 입니다. */
         virtual const utf8* findUnsupportedReason( string_view sourcePath ) const = 0;
-        /** @brief 원본 하나를 결과 경로로 임포트합니다. */
+        /**
+         * @brief 이 원본의 임포트가 다른 원본의 임포트 결과를 읽으면 true 입니다(기본은 false). 클래스 설명의 임포터 규칙을 보십시오.
+         * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
+         */
+        virtual bool hasOrderDependency( [[maybe_unused]] string_view resourcePath ) const { return false; }
+        /** @brief 원본 하나를 결과 경로로 임포트합니다. 병렬로 불리므로 이 임포터의 공유 상태를 바꾸지 않습니다. */
         [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const = 0;
     };
 } // namespace sw::editor
@@ -99,6 +111,11 @@ namespace sw::editor
          *          바꿔도 어긋남이고, 결과 해시 덕분에 결과를 손댄 경우도 잡힌다. 판정은 파일 시간이 아니라 내용으로 한다. 원본과 결과를 둘 다 커밋하므로
          *          `git` 이 시간 순서를 임의로 뒤집기 때문이다. 원본이 사라진 스탬프 줄도 어긋남이다. ImportStale 은 줄만 지우고 결과는 두므로,
          *          남은 결과는 사람이 정리한다. 스탬프는 내용이 바뀔 때만 쓴다.
+         *
+         *          **원본 파일은 병렬로 임포트하고 합치기는 직렬로 한다.** 원본 폴더마다 파일 목록과 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 만든 뒤 사슬 단위로 작업 시스템(`editor::findSubsystem<TaskManager>()`)과
+         *          나눠 돌고(해시 계산 · 대조 · 임포트가 한 파일의 일이다), `IRawAssetImporter::hasOrderDependency` 인 원본이 든 사슬은 그 뒤에 이 스레드에서 직렬로 돈다.
+         *          파일마다 결과가 자기 칸에 담기고 요약(`_listProblem` 의 순서 · 카운터)과 스탬프 표는 파일 순서대로 합치므로, 결과 바이트 · 스탬프 · 요약은 직렬로 돌 때와 같다.
+         *          작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 이 스레드가 사슬을 파일 순서대로 돈다. 임포터 로그의 줄 순서만 병렬로 돌 때 파일 사이에서 섞인다.
          * @param resourceRoot `Resource/` 의 절대 경로
          */
         [[nodiscard]] static AssetImportSummary importAll( string_view resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode );

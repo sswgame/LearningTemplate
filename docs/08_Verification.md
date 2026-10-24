@@ -160,6 +160,10 @@ cd build/Ninja-Debug/Bin
   BC3 2048² 밉 12 단(`f00_001_body_00`) 70~72 → 9~10 ms, 원본 39 장 전체 3 분 35 초 → 40 초. 결과 DDS 는 스탬프 해시까지 바이트가 같다(스탬프를 비우고 전부 다시 임포트해
   `git status` 와 `import.stamp` 대조). 측정하는 법: 그 원본의 스탬프 줄만 지우고 `App --import-textures` — 로그 `Compressed WxH (… bands on N workers): T ms`.
   띠를 64 → 16 줄로 잘게 나눠도 그대로였다(BC7 512² 8.2~8.4 s). BC7 은 BC1 · BC3 보다 수천 배 느리다 — 무거운 것은 BC7 원본 수다.
+  그 위에서 일괄 임포트(`AssetImportStampUtil::importAll`)가 **원본 파일도 워커와 나눠 임포트한다**(2026-10-25, 텍스처 · 모델 · 지형). 원본 폴더마다 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 원자 카운터로 가져가는 동적 분배이고,
+  텍스처의 띠 압축은 그 안에서 중첩된다(기다리는 스레드가 남의 일을 돕는다). 해시 계산 · 대조 · 임포트는 한 파일의 일이고, 요약의 문제 목록 · 카운터와 `import.stamp` 는 파일 순서대로 직렬로 합쳐 직렬로 돌 때와 같다
+  (`AssetImportParallelTest.ParallelImportMatchesSerialImport`). 몸 메시를 읽는 장비 메시(`body_surface`)는 의존 없는 모델이 끝난 뒤 직렬로 임포트한다. 임포터 로그의 줄 순서는 파일 사이에서 섞인다.
+  재는 법: 스탬프를 비우고 `App --import-textures` · `--import-models` 를 돌려 전체 시간(텍스처 약 1,080 · 모델 175)을 병렬 전후로 견주고, 끝난 뒤 `git status` 에 바이트 변화가 없어야 한다(병렬 전후의 측정값은 아직 없다).
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
