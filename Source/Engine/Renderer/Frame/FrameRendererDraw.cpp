@@ -280,6 +280,57 @@ namespace sw
         return _gpuScene.getParticleSlots();
     }
 
+    uint32 FrameRenderer::countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const
+    {
+        const uint32 batchCount = static_cast<uint32>( state._batches.size() );
+        const uint32 batchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex] : orderIndex;
+        uint32       groupCount = 1;
+        if ( state._bMerge == false )
+            return groupCount;
+        const GPUMeshBatch& head = state._batches[batchIndex];
+        while ( orderIndex + groupCount < batchCount )
+        {
+            const uint32 nextBatchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
+            // 다음 입자의 자리가 묶음 안에 들면 멀티 드로우 묶음을 그 자리에서 끊는다.
+            const bool bParticleInside = bDrawsParticles && state._particleSlotCursor < state._listParticleSlot.size() &&
+                                         state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
+            const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
+            if ( bGroupEnds || isSameDrawGroup( state._pso, state._passType, drawMode, head, state._batches[nextBatchIndex] ) == false )
+                break;
+            ++groupCount;
+        }
+        return groupCount;
+    }
+
+    void FrameRenderer::drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles )
+    {
+        const uint32 batchCount = static_cast<uint32>( inoutState._batches.size() );
+        uint32       orderIndex{ 0 };
+        while ( orderIndex < batchCount )
+        {
+            if ( bDrawsParticles && drawParticleRun( context, inoutState._listParticleSlot, inoutState._particleSlotCursor, orderIndex, inoutState._slotStream ) )
+            {
+                inoutState._boundPSO          = 0;
+                inoutState._boundVertexBuffer = 0;
+            }
+            const uint32        batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
+            const GPUMeshBatch& head             = inoutState._batches[batchIndex];
+            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( inoutState._passType, head ) == false;
+            if ( bHeadNotDrawable )
+            {
+                ++orderIndex;
+                continue;
+            }
+            const uint32 groupCount = countDrawGroup( inoutState, drawMode, orderIndex, bDrawsParticles );
+            // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
+            // 화면 안으로 그림자를 드리우는 물체가 사라진다.
+            if ( drawBatchGroup( context, inoutState._pso, drawMode, head, inoutState._boundPSO, inoutState._boundVertexBuffer, inoutState._argsBuffer, inoutState._batchOffset + batchIndex,
+                                 groupCount ) )
+                ++inoutState._drawCallCount;
+            orderIndex += groupCount;
+        }
+    }
+
     void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass,
                                         const vector<GPUTransparentParticleSlot>* pParticleSlot )
     {
@@ -295,104 +346,60 @@ namespace sw
         setIdentityWorld( context );
         commitBindlessTextureBindings( context );
 
-        // 지금 커맨드 리스트에 걸려 있는 PSO. 배치마다 퍼뮤테이션이 다를 수 있으므로 **바뀔 때만** 다시 건다.
-        RHIPipelineStateHandle boundPSO = pso;
-
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )
             registerInstanceBuffer( context );
 
-        const vector_reference<const GPUMeshBatch> batches =
-            bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
+        BatchDrawState state{};
+        state._pso      = pso;
+        state._boundPSO = pso;
+        state._batches  = bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
-        SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
+        SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", state._batches.size() );
 
         // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
-        const uint32 batchOffset = bTransparentPass ? static_cast<uint32>( _gpuScene.getOpaqueBatches().size() ) : 0u;
+        state._batchOffset = bTransparentPass ? static_cast<uint32>( _gpuScene.getOpaqueBatches().size() ) : 0u;
 
         // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
         // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
-        const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
+        state._bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
         // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
-        const RenderPassType passType = context._passType;
+        state._passType = context._passType;
 
-        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
+        state._argsBuffer = _gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
         // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
-        const bool            bExtraView = isRenderingExtraView();
-        const vector<uint32>* pOrder =
-            ( bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == batches.size() ) ? &_pActiveView->_listTransparentBatchOrder : nullptr;
+        const bool bExtraView     = isRenderingExtraView();
+        const bool bUsesViewOrder = bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == state._batches.size();
+        if ( bUsesViewOrder )
+            state._pOrder = &_pActiveView->_listTransparentBatchOrder;
         // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
-        const RHIBufferHandle slotStream =
-            ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
-        if ( slotStream != 0 )
-            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
+        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
+        if ( state._slotStream != 0 )
+            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, state._slotStream, constant::kInstanceSlotStreamStride, 0 );
+        // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
+        // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
+        if ( pParticleSlot != nullptr )
+            state._listParticleSlot = vector_reference<const GPUTransparentParticleSlot>( *pParticleSlot );
+
         // 겹침 모드(ShadedWireframe)는 배치를 두 번 그린다 — Lit PSO 로 한 번, 그 모드의 PSO(선 · 깊이 바이어스)로 한 번. 입자는 첫 번째에만 끼운다.
         // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 ShadedWireframe 이고 게임 뷰는 Lit 일 수 있다).
         const RenderViewMode viewMode       = _pActiveView->_settings._viewMode;
-        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && FrameRendererUtil::appliesViewMode( passType );
+        const bool           bOverlayDraw   = getRenderViewModeInfo( viewMode )._bOverlay && FrameRendererUtil::appliesViewMode( state._passType );
         const RenderViewMode arrDrawMode[]  = { bOverlayDraw ? RenderViewMode::Lit : viewMode, viewMode };
         const uint32         drawRoundCount = bOverlayDraw ? 2u : 1u;
-        RHIBufferHandle      boundVertexBuffer{ 0 };
-        uint32               drawCallCount{ 0 };
-        const uint32         batchCount = static_cast<uint32>( batches.size() );
-
-        // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
-        // 메시로 돌아올 때 PSO · 정점 버퍼를 다시 건다(`drawParticleRun` 이 슬롯 스트림과 에뮬 텍스처 슬롯을, bindForDraw 가 PSO 가 바뀐 바인딩을 다시 건다).
-        const vector_reference<const GPUTransparentParticleSlot> listParticleSlot =
-            ( pParticleSlot != nullptr ) ? vector_reference<const GPUTransparentParticleSlot>( *pParticleSlot ) : vector_reference<const GPUTransparentParticleSlot>{};
-        uint32 particleSlotCursor{ 0 };
-
         for ( uint32 drawRound = 0; drawRound < drawRoundCount; ++drawRound )
         {
-            const RenderViewMode drawMode        = arrDrawMode[drawRound];
-            const bool           bDrawsParticles = drawRound == 0;
-            uint32               orderIndex{ 0 };
-            while ( orderIndex < batchCount )
-            {
-                if ( bDrawsParticles && drawParticleRun( context, listParticleSlot, particleSlotCursor, orderIndex, slotStream ) )
-                {
-                    boundPSO          = 0;
-                    boundVertexBuffer = 0;
-                }
-                const uint32        batchIndex       = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
-                const GPUMeshBatch& head             = batches[batchIndex];
-                const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false;
-                if ( bHeadNotDrawable )
-                {
-                    ++orderIndex;
-                    continue;
-                }
-                uint32 groupCount = 1;
-                if ( bMerge )
-                {
-                    while ( orderIndex + groupCount < batchCount )
-                    {
-                        const uint32 nextBatchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex + groupCount] : orderIndex + groupCount;
-                        // 다음 입자의 자리가 묶음 안에 들면 멀티 드로우 묶음을 그 자리에서 끊는다.
-                        const bool bParticleInside = bDrawsParticles && particleSlotCursor < listParticleSlot.size() &&
-                                                     listParticleSlot[particleSlotCursor]._drawPosition <= orderIndex + groupCount;
-                        const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-                        if ( bGroupEnds || isSameDrawGroup( pso, passType, drawMode, head, batches[nextBatchIndex] ) == false )
-                            break;
-                        ++groupCount;
-                    }
-                }
-                // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
-                // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-                if ( drawBatchGroup( context, pso, drawMode, head, boundPSO, boundVertexBuffer, argsBuffer, batchOffset + batchIndex, groupCount ) )
-                    ++drawCallCount;
-                orderIndex += groupCount;
-            }
+            drawBatchRound( context, state, arrDrawMode[drawRound], drawRound == 0 );
         }
         // 모든 배치보다 가까운 입자(자리 = 배치 수)를 마저 그린다.
-        (void)drawParticleRun( context, listParticleSlot, particleSlotCursor, MathUtil::kMaxUInt32, slotStream );
-        SW_PROFILE_COUNT( "RT.Draw.indirectCalls", drawCallCount );
-        _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
+        (void)drawParticleRun( context, state._listParticleSlot, state._particleSlotCursor, MathUtil::kMaxUInt32, state._slotStream );
+        SW_PROFILE_COUNT( "RT.Draw.indirectCalls", state._drawCallCount );
+        _indirectDrawCallCount.fetch_add( state._drawCallCount, std::memory_order_relaxed );
     }
 
     bool FrameRenderer::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const

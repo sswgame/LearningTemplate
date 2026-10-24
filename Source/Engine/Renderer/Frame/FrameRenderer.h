@@ -753,6 +753,27 @@ namespace sw
          *                      남은 입자는 모든 배치 뒤에 그린다. 투명 큐가 아닌 패스(외곽선 · 그림자 등)는 nullptr 이다.
          */
         void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass, const vector<GPUTransparentParticleSlot>* pParticleSlot );
+        /** @brief `drawGPUBatches` 가 한 패스 동안 들고 가는 값입니다 — 그릴 배치 · 입자 자리, 지금 걸린 PSO · 정점 버퍼, 입자 커서, 그린 호출 수. */
+        struct BatchDrawState
+        {
+            vector_reference<const GPUMeshBatch>               _batches{};
+            vector_reference<const GPUTransparentParticleSlot> _listParticleSlot{};
+            const vector<uint32>*                              _pOrder{ nullptr }; ///< 추가 뷰의 투명 패스가 도는 배치 순서(없으면 배치 번호 순서)
+            RHIPipelineStateHandle                             _pso{ 0 };
+            RHIPipelineStateHandle                             _boundPSO{ 0 }; ///< 지금 커맨드 리스트에 걸린 PSO(배치마다 다를 수 있어 바뀔 때만 다시 건다)
+            RHIBufferHandle                                    _boundVertexBuffer{ 0 };
+            RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
+            RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
+            RenderPassType                                     _passType{};
+            uint32                                             _batchOffset{ 0 }; ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
+            uint32                                             _particleSlotCursor{ 0 };
+            uint32                                             _drawCallCount{ 0 };
+            bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지
+        };
+        /** @brief 보기 모드 한 바퀴를 그립니다. 첫 바퀴(@p bDrawsParticles)만 배치 순서의 자기 자리에 입자를 끼웁니다. */
+        void drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles );
+        /** @brief @p orderIndex 의 배치와 한 멀티 드로우 묶음이 되는 연속 배치 수를 셉니다(묶지 않으면 1, 다음 입자 자리가 묶음 안에 들면 그 자리에서 끊는다). */
+        uint32 countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const;
         /** @brief 그 PSO 의 레이아웃이 머티리얼 CB 슬롯을 거는지입니다. 거는 셰이더에서만 머티리얼 CB 가 멀티 드로우 병합 키다. */
         bool layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const;
         /** @brief @p other 가 @p head 와 같은 멀티 드로우 묶음에 들 수 있는지입니다(그릴 수 있고 정점 버퍼 · PSO · 머티리얼 바인딩이 같다). */
