@@ -846,6 +846,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
  */
 SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임(-game=)은 구운 팩에 없다
     const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -dx12 -game=ThemeParkTycoon -gv_editorSelfTest=themepark.*", "EditorSelfTest|" );
     if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
