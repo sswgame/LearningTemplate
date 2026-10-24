@@ -126,6 +126,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportMaterial.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportVrm.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImporter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/OutfitAtlasBaker.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmAvatarImporter.cpp"

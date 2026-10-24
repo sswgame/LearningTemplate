@@ -104,9 +104,9 @@ namespace
             return _lastName;
         }
 
-    private:
-        ~UiaFocusRecorder() = default;
+        ~UiaFocusRecorder() = default; ///< 참조 수가 0 이 되면 `Release` 가 푼다(만드는 쪽은 `make_unique` 뒤 `release()`)
 
+    private:
         LONG              _refCount{ 1 };
         mutable sw::mutex _mutex;
         sw::string        _lastName;
@@ -301,10 +301,10 @@ SW_TEST_CASE( UiaClientTest, ClientReadsAndDrivesTheMenuThroughTheRealWindow )
     SW_ASSERT_TRUE( ui.getInputRouter().getFocusManager().setFocus( pScreen->getTree(), pSlider->getID() ) );
     ui.update( 1.0f / 60.0f, viewport );
 
-    UiaFocusRecorder* pRecorder = sw_new UiaFocusRecorder();
-    UiaClientObservation                 observed{};
-    sw::atomic<bool>                     bClientDone{ false };
-    sw::thread                           client( [&]()
+    UiaFocusRecorder*    pRecorder = sw::make_unique<UiaFocusRecorder>().release(); // COM 참조 수로 사는 객체다 — 마지막 `Release()` 가 푼다
+    UiaClientObservation observed{};
+    sw::atomic<bool>     bClientDone{ false };
+    sw::thread           client( [&]()
     {
         runUiaClient( static_cast<HWND>( window->getNativeHandle() ), pRecorder, &observed );
         bClientDone.store( true );

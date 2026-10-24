@@ -49,6 +49,8 @@ SW_ENGINE_SERVICE( class, CommandStack, Optional, HostOnly )
 SW_ENGINE_SERVICE( class, EditSessionState, Optional, HostOnly )
 SW_ENGINE_SERVICE( struct, DebugOverlayState, Required, GameVisible )
 SW_ENGINE_SERVICE( class, DebugDrawQueue, Required, GameVisible )
+// 시각 로그 — 프레임마다 기록을 넘기고(`Engine` 이 endFrame) 개발 명령 vlog.* 가 읽는다. DebugDrawQueue 와 같이 서비스 범위가 늘 넣는다.
+SW_ENGINE_SERVICE( class, VisualLogger, Required, GameVisible )
 SW_ENGINE_SERVICE( class, RHIBackendRegistry, Required, HostOnly )
 SW_ENGINE_SERVICE( class, CompressionCodecRegistry, Required, GameVisible )
 SW_ENGINE_SERVICE( class, ShaderCache, Required, GameVisible )

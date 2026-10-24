@@ -207,7 +207,7 @@ SW_TEST_CASE( SplineRiverPathTest, AdapterDrivesTheRiverPathFromTheSpline )
     test::updateFrames( manager, 2 );
     SW_EXPECT_NEAR_EQUAL( 4.0f, pWater->getRiverPoints().back()._x, 1.0e-3f );
 
-    pObject->removeComponent( pAdapter );
+    SW_EXPECT_TRUE( pObject->removeComponent( pAdapter ) );
     test::updateFrames( manager, 1 );
     SW_EXPECT_FALSE( pWater->isRiverPathDriven() );
 }

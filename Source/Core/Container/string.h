@@ -619,6 +619,16 @@ namespace sw
             SW_SCOPED_RACE_READ();
             return Base::find( ch, pos );
         }
+
+        /**
+         * @brief pos 부터 count 문자를 새 문자열로 돌려줍니다.
+         * @details 이 형식을 돌려준다 — Base 의 것을 그대로 두면 `std::basic_string` 이 나와 `b ? str : str.substr(…)` 같은 식의 두 갈래 형식이 갈렸다.
+         */
+        basic_string substr( size_type pos = 0, size_type count = npos ) const
+        {
+            SW_SCOPED_RACE_READ();
+            return basic_string( Base::substr( pos, count ) );
+        }
     };
 } // namespace sw
 

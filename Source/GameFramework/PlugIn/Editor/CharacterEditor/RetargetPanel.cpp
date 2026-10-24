@@ -159,7 +159,6 @@ namespace sw::editor
         , _bPreviewSourceReady{ SW_FALSE }
         , _bPreviewTargetReady{ SW_FALSE }
         , _bFramePending{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 

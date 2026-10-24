@@ -38,13 +38,13 @@ namespace sw
             static constexpr uint32 kRowLightGrid       = 14;
             static_assert( kRowLightGrid + 1 == SW_FOG_VOLUME_PARAM_FLOAT4_COUNT, "the parameter rows must fill the buffer exactly (volumetricfog.hlsl)" );
 
-            /// 행렬의 행 넷을 float4 로 붙입니다(행벡터 규약 — 셰이더가 float4x4( 행 넷 ) 으로 다시 짓는다).
-            static void appendMatrixRows( vector<float4>& inoutListRow, const float4x4& matrix )
+            /// 행렬의 행 넷을 @p firstRow 부터 float4 넷으로 씁니다(행벡터 규약 — 셰이더가 float4x4( 행 넷 ) 으로 다시 짓는다).
+            static void writeMatrixRows( vector<float4>& inoutListRow, uint32 firstRow, const float4x4& matrix )
             {
-                inoutListRow.push_back( float4{ matrix._11, matrix._12, matrix._13, matrix._14 } );
-                inoutListRow.push_back( float4{ matrix._21, matrix._22, matrix._23, matrix._24 } );
-                inoutListRow.push_back( float4{ matrix._31, matrix._32, matrix._33, matrix._34 } );
-                inoutListRow.push_back( float4{ matrix._41, matrix._42, matrix._43, matrix._44 } );
+                inoutListRow[firstRow + 0] = float4{ matrix._11, matrix._12, matrix._13, matrix._14 };
+                inoutListRow[firstRow + 1] = float4{ matrix._21, matrix._22, matrix._23, matrix._24 };
+                inoutListRow[firstRow + 2] = float4{ matrix._31, matrix._32, matrix._33, matrix._34 };
+                inoutListRow[firstRow + 3] = float4{ matrix._41, matrix._42, matrix._43, matrix._44 };
             }
 
             /// 정수 셋을 float4 의 비트로 싣습니다(셰이더는 asuint 로 읽는다).
@@ -130,27 +130,28 @@ namespace sw
         const float4x4    inverse  = mainView._viewProj.invert();
         // (0, 0, 1, 0) 의 역투영 동차 좌표 w 가 0 이면 직교다(fog.hlsl 과 같은 판정). 원근은 눈에서, 직교는 화면 점의 가까운 면 점에서 쏜다.
         const bool bPerspective = MathUtil::abs( inverse._34 ) > 1.0e-6f;
-        _listScratchFogVolumeParam.clear();
-        Internal::appendMatrixRows( _listScratchFogVolumeParam, inverse );
-        Internal::appendMatrixRows( _listScratchFogVolumeParam, mainView._viewProj );
-        _listScratchFogVolumeParam.push_back( float4{ mainView._position._x, mainView._position._y, mainView._position._z, SW_FOG_VOLUME_NEAR } );
-        _listScratchFogVolumeParam.push_back( float4{ _frameFog._volumeParams._y, static_cast<float32>( SW_FOG_VOLUME_DIM_Z ), static_cast<float32>( SW_FOG_VOLUME_DIM_X ),
-                                                      static_cast<float32>( SW_FOG_VOLUME_DIM_Y ) } );
-        _listScratchFogVolumeParam.push_back( _frameFog._colorDensity );
-        _listScratchFogVolumeParam.push_back( float4{ _frameFog._heightParams._x, _frameFog._heightParams._y, _frameFog._heightParams._z, _frameFog._volumeParams._w } );
+        // 행은 이름 붙은 번호(kRow*)로 쓴다 — 넣는 순서가 셰이더의 행 번호와 어긋날 수 없다.
+        vector<float4>& listRow = _listScratchFogVolumeParam;
+        listRow.assign( SW_FOG_VOLUME_PARAM_FLOAT4_COUNT, float4{} );
+        Internal::writeMatrixRows( listRow, Internal::kRowInverseViewProj, inverse );
+        Internal::writeMatrixRows( listRow, Internal::kRowViewProj, mainView._viewProj );
+        listRow[Internal::kRowEyeNear]         = float4{ mainView._position._x, mainView._position._y, mainView._position._z, SW_FOG_VOLUME_NEAR };
+        listRow[Internal::kRowFarSlices]       = float4{ _frameFog._volumeParams._y, static_cast<float32>( SW_FOG_VOLUME_DIM_Z ), static_cast<float32>( SW_FOG_VOLUME_DIM_X ),
+                                                   static_cast<float32>( SW_FOG_VOLUME_DIM_Y ) };
+        listRow[Internal::kRowFogColorDensity] = _frameFog._colorDensity;
+        listRow[Internal::kRowFogHeight]       = float4{ _frameFog._heightParams._x, _frameFog._heightParams._y, _frameFog._heightParams._z, _frameFog._volumeParams._w };
         // 해: 키 라이트의 진행 방향의 반대가 해 쪽이다. 키 라이트가 없으면 세기 0 이라 방향은 무엇이든 기여가 없다.
-        const float3  lightTravel  = float3{ _frameLight._dirIntensity._x, _frameLight._dirIntensity._y, _frameLight._dirIntensity._z };
-        const float32 travelLength = lightTravel.getLength();
-        const float3  toSun        = travelLength > MathUtil::kEpsilon ? lightTravel * ( -1.0f / travelLength ) : float3{ 0.0f, 1.0f, 0.0f };
-        const float32 sunIntensity = _frameLight._dirIntensity._w;
-        _listScratchFogVolumeParam.push_back( float4{ toSun._x, toSun._y, toSun._z, _frameFog._volumeParams._z } );
-        _listScratchFogVolumeParam.push_back( float4{ _frameLight._colorAmbient._x * sunIntensity, _frameLight._colorAmbient._y * sunIntensity, _frameLight._colorAmbient._z * sunIntensity,
-                                                      bPerspective ? 1.0f : 0.0f } );
-        const bool   bLights  = _lightBuffer.isBindable();
-        const uint32 gridBase = ( bLights && _mainView._lightGridIndex != invalid_index::kUint32 ) ? _lightBuffer.getGridBase( _mainView._lightGridIndex ) : invalid_index::kUint32;
-        const bool   bGrid    = gridBase != invalid_index::kUint32 && _lightBuffer.findGridBuffer() != nullptr;
-        _listScratchFogVolumeParam.push_back( Internal::packBits( bLights ? _lightBuffer.getCount() : 0u, bGrid ? gridBase : 0u, bGrid ? 1u : 0u, 0u ) );
-        SW_ASSERT( _listScratchFogVolumeParam.size() == SW_FOG_VOLUME_PARAM_FLOAT4_COUNT );
+        const float3  lightTravel           = float3{ _frameLight._dirIntensity._x, _frameLight._dirIntensity._y, _frameLight._dirIntensity._z };
+        const float32 travelLength          = lightTravel.getLength();
+        const float3  toSun                 = travelLength > MathUtil::kEpsilon ? lightTravel * ( -1.0f / travelLength ) : float3{ 0.0f, 1.0f, 0.0f };
+        const float32 sunIntensity          = _frameLight._dirIntensity._w;
+        listRow[Internal::kRowSunDirection] = float4{ toSun._x, toSun._y, toSun._z, _frameFog._volumeParams._z };
+        listRow[Internal::kRowSunRadiance]  = float4{ _frameLight._colorAmbient._x * sunIntensity, _frameLight._colorAmbient._y * sunIntensity, _frameLight._colorAmbient._z * sunIntensity,
+                                                     bPerspective ? 1.0f : 0.0f };
+        const bool   bLights                = _lightBuffer.isBindable();
+        const uint32 gridBase               = ( bLights && _mainView._lightGridIndex != invalid_index::kUint32 ) ? _lightBuffer.getGridBase( _mainView._lightGridIndex ) : invalid_index::kUint32;
+        const bool   bGrid                  = gridBase != invalid_index::kUint32 && _lightBuffer.findGridBuffer() != nullptr;
+        listRow[Internal::kRowLightGrid]    = Internal::packBits( bLights ? _lightBuffer.getCount() : 0u, bGrid ? gridBase : 0u, bGrid ? 1u : 0u, 0u );
 
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );
         if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, _listScratchFogVolumeParam.data() ) == false )

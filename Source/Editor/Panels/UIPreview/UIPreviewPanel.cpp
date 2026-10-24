@@ -1137,7 +1137,7 @@ namespace sw::editor
         }
         UIPreviewPanelInternal::noteMark( "uipreview", "animationtime" );
         ImGui::SameLine();
-        ImGui::TextDisabled( "%s", UIPreviewLogic::makeTimeLabel( bActive ? time : value, duration ).c_str() );
+        ImGui::TextDisabled( "%s", UIPreviewLogic::makeTimeLabel( bActive ? time : scrubSeconds, duration ).c_str() );
     }
 
     void UIPreviewPanel::acceptPaletteDrop( UIScreen& screen, Widget* pTarget )

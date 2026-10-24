@@ -135,7 +135,6 @@ namespace sw
 
     bool TileSetAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        using Internal = TileSetAssetInternal;
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {

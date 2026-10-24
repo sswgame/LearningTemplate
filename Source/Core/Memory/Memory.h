@@ -383,26 +383,40 @@ namespace sw
             }
             else
             {
-                void* pMem{ nullptr };
+                return createWith( [&]( void* pMem )
+                { return sw_placement_new( pMem ) T( std::forward<Args>( args )... ); } );
+            }
+        }
+
+        /**
+         * @brief 블록을 잡고 @p construct( 블록 ) 이 그 자리에 만든 값을 소유로 돌려줍니다. @p construct 는 `sw_placement_new( pMem ) T( … )` 를 돌려줍니다.
+         * @details 생성자가 private 인 타입을 friend 문맥에서 만들 때 씁니다 — 람다 몸체의 접근 검사는 그 람다를 쓴 함수의 문맥이라
+         *          `friend class ScopeOwned<T>` 같은 선언이 그대로 뜻을 가진다(`make_unique<T>()` 는 이 함수 객체 안에서 생성자를 불러 friend 가 닿지 않는다).
+         */
+        template <typename Construct>
+        unique_ptr<T> createWith( Construct&& construct ) const
+        {
+            static_assert( std::is_array_v<T> == false, "createWith builds one object - use make_unique<T[]>( count ) for arrays" );
+            void* pMem{ nullptr };
+            if constexpr ( kUsesAlignedAllocation<T> )
+                pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
+            else
+                pMem = Memory::allocate( sizeof( T ) );
+            if ( pMem == nullptr )
+                throw std::bad_alloc();
+            try
+            {
+                T* pValue = construct( pMem );
+                return unique_ptr<T>( pValue );
+            }
+            catch ( ... )
+            {
+                // 생성자가 던지면 소유자가 아직 없다 — 블록을 여기서 풀고 다시 던진다(옛 `sw_new` 의 짝 operator delete 가 하던 일).
                 if constexpr ( kUsesAlignedAllocation<T> )
-                    pMem = Memory::allocateAligned( sizeof( T ), alignof( T ) );
+                    Memory::freeAligned( pMem );
                 else
-                    pMem = Memory::allocate( sizeof( T ) );
-                if ( pMem == nullptr )
-                    throw std::bad_alloc();
-                try
-                {
-                    return unique_ptr<T>( sw_placement_new( pMem ) T( std::forward<Args>( args )... ) );
-                }
-                catch ( ... )
-                {
-                    // 생성자가 던지면 소유자가 아직 없다 — 블록을 여기서 풀고 다시 던진다(옛 `sw_new` 의 짝 operator delete 가 하던 일).
-                    if constexpr ( kUsesAlignedAllocation<T> )
-                        Memory::freeAligned( pMem );
-                    else
-                        Memory::free( pMem );
-                    throw;
-                }
+                    Memory::free( pMem );
+                throw;
             }
         }
     };

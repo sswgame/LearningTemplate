@@ -117,7 +117,7 @@ namespace sw
      * @struct ResourceDataKindUtil
      * @brief 등록 줄에 쓰는 로더 모양입니다.
      */
-    struct ResourceDataKindUtil
+    struct SW_API ResourceDataKindUtil
     {
         /**
          * @brief 엔진 서비스의 레지스트리에서 이름으로 종류를 찾습니다. 로더 함수(`ResourceDataLoadFunc`)처럼 서비스 범위를 받지 못하는 모듈 코드가 씁니다.

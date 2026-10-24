@@ -564,7 +564,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     Archive written;
     encounter.writeState( written );
     HorrorEncounter restored;
-    SW_EXPECT_TRUE( restored.initialize( *pZombie, listInvestigator, 1u ) );
+    restored.initialize( *pZombie, listInvestigator, 1u );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -601,7 +601,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     Archive otherReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( otherReader ) );
     HorrorEncounter truncated;
-    SW_EXPECT_TRUE( truncated.initialize( *pZombie, listInvestigator, 1u ) );
+    truncated.initialize( *pZombie, listInvestigator, 1u );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getTurnCount() );

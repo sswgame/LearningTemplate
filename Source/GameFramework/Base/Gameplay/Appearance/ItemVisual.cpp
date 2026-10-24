@@ -175,7 +175,7 @@ namespace sw
                 if ( bFitOnRigidPart )
                     report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
                                      part._name.c_str(), getEnumName( part._kind ) );
-                part._bodyShapes = AppearanceXMLUtil::readName( node, "bodyShapes" );
+                part._bodyShapes = AppearanceXMLUtil::readOptionalName( node, "bodyShapes" );
                 if ( part._bodyShapes.empty() == false && part._kind != AppearancePartKind::Skinned )
                     report.addError( "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
                                      part._name.c_str(), getEnumName( part._kind ) );

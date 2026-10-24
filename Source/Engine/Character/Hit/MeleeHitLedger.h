@@ -30,7 +30,7 @@ namespace sw
     class GameObjectManager;
 
     /** @brief 클라이언트가 예측으로 본 맞음 하나의 주장입니다. 때린 쪽은 연결의 폰이라 싣지 않고, 표적은 게임이 정한 번호로 보냅니다. */
-    struct MeleeHitClaim
+    struct SW_API MeleeHitClaim
     {
         uint32 _frame{ 0 };    ///< 이 휘두름 입력을 서버가 처리한 서버 프레임(`MeleeHitLedger::getFrame` 와 같은 번호)
         uint64 _targetID{ 0 }; ///< 게임이 정한 표적 번호(네트워크 엔티티 번호 등). 서버가 오브젝트로 옮긴다

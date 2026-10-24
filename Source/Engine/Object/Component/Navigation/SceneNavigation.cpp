@@ -107,10 +107,7 @@ namespace sw
         {
             _bSettingsLoaded = true;
             if ( ResourceIO::hasResource( NavMeshSettings::kResourcePath ) == false || _settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
-            {
-                _settings = NavMeshSettings{};
-                _settings.ensureDefaults();
-            }
+                _settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표는 굽기 전에 validate 가 거절한다(DataDriven)
         }
         return _settings;
     }

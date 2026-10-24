@@ -53,9 +53,7 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
 #include "Engine/Resource/ResourceDataKind.h"
-#if SW_DEV_COMMANDS_ENABLED
-    #include "Engine/Scene/AuthorityGhost.h"
-#endif
+#include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"

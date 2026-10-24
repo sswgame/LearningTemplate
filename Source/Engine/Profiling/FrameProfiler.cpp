@@ -129,6 +129,21 @@ namespace sw
         return scopeID;
     }
 
+    ProfileScopeID FrameProfiler::registerEngineScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
+    {
+        return engine::getSubsystem<FrameProfiler>().registerScopeSite( pName, pFunction, pFile, line );
+    }
+
+    uint32 FrameProfiler::registerEngineCounter( const utf8* pName )
+    {
+        return engine::getSubsystem<FrameProfiler>().registerScope( pName );
+    }
+
+    void FrameProfiler::addEngineCount( uint32 slot, uint64 count )
+    {
+        engine::getSubsystem<FrameProfiler>().addCount( slot, count );
+    }
+
     uint32 FrameProfiler::getScopeCount() const
     {
         return MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );

@@ -51,7 +51,7 @@ namespace sw
      * @brief 패스 타입 하나가 읽는 역할 목록입니다. 필수가 빠지면 검증 오류이고, 목록에 없는 역할을 선언해도 오류입니다.
      * @details 패스 타입마다의 계약은 `RenderPassTypeInfo::_inputContract` 에 있습니다.
      */
-    struct RenderPassInputSignature
+    struct SW_API RenderPassInputSignature
     {
         static constexpr uint32 kMaxRole = 4;
 

@@ -20,8 +20,7 @@ namespace sw
             {
                 NavMeshSettings settings;
                 if ( ResourceIO::hasResource( NavMeshSettings::kResourcePath ) == false || settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
-                    settings = NavMeshSettings{};
-                settings.ensureDefaults();
+                    settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표면 모든 영역 이름이 오류로 보인다
                 return settings;
             }
 

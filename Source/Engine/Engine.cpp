@@ -96,9 +96,7 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-    #include "Engine/Scene/AuthorityGhost.h"
-#endif
+#include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"

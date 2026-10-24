@@ -203,7 +203,8 @@ namespace sw
         HorrorGate gate;
         gate._position    = float3{ position._x, 0.0f, position._z };
         const int32 index = static_cast<int32>( _listGate.size() );
-        gate._progress.initialize( config, nullptr, _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kGateSeedMix ) );
+        if ( gate._progress.initialize( config, nullptr, _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kGateSeedMix ) ) == false )
+            return -1; // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
         _listGate.push_back( gate );
         return index;
     }

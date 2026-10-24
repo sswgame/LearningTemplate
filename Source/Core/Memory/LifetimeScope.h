@@ -152,7 +152,10 @@ namespace sw
             if ( bAttached == false )
                 return nullptr;
             // 락 없이 읽는 슬롯(`_pValue`)에 올리는 자리에서만 소유를 놓는다. 값은 `destroyValue` · 소멸자가 `sw_delete` 로 푼다.
-            pValue = make_unique<T>().release();
+            // private 생성자를 이 클래스(friend) 문맥의 람다에서 부른다 — `make_unique<T>()` 는 생성자를 자기 안에서 불러 friend 가 닿지 않는다.
+            pValue = make_unique<T>.createWith( []( void* pMem )
+            { return sw_placement_new( pMem ) T(); } )
+                         .release();
             _pValue.store( pValue, std::memory_order_release );
             return pValue;
         }

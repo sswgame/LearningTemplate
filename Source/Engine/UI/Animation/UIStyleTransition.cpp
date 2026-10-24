@@ -545,7 +545,7 @@ namespace sw
             state.reset();
             return;
         }
-        Internal::refreshShownStyle( widget, *state, *pNew );
+        refreshShownStyle( widget, *state, *pNew );
     }
 
     uint32 UIStyleTransition::update( WidgetTree& tree, float32 deltaSeconds )

@@ -104,6 +104,5 @@ namespace sw::editor
         uint8                                _bPreviewSourceReady : 1;
         uint8                                _bPreviewTargetReady : 1;
         uint8                                _bFramePending       : 1; ///< 스켈레톤을 새로 읽었다 — 다음 그리기에서 카메라를 담는다
-        uint8                                _reserved            : 5;
     };
 } // namespace sw::editor

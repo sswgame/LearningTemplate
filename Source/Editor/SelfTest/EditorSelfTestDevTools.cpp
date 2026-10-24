@@ -26,6 +26,7 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Scene/GameViewPanel.h"
+#include "Editor/Panels/Scene/HierarchyPanel.h"
 #include "Editor/Panels/Scene/HistoryPanel.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"

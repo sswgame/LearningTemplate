@@ -62,6 +62,7 @@ namespace test
         void drawIndirect( sw::RHIBufferHandle, uint32, uint32, sw::RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( sw::RHIBufferHandle, uint32 ) override {}
         void transitionBuffer( sw::RHIBufferHandle, sw::RHIBufferState ) override {}
+        void copyBufferToReadback( sw::RHIBufferHandle, sw::RHIBufferHandle, uint32 ) override {}
         void uavBarrier( sw::RHIBufferHandle ) override {}
         void drawIndexedIndirect( sw::RHIBufferHandle, uint32 ) override {}
         void beginEventMarker( const utf8* ) override {}
