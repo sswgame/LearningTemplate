@@ -296,6 +296,121 @@ namespace sw::editor
     {
     }
 
+    void RigDebugPanel::drawNodeTable( uint64 objectID, RigInstance& instance, const SkeletalMeshComponent* pUnit, int32 tableFlags, vector<uint32>& outListSelectedBone )
+    {
+        if ( ImGui::BeginTable( "##rig_nodes", 6, tableFlags ) == false )
+            return;
+        ImGui::TableSetupColumn( "Node" );
+        ImGui::TableSetupColumn( "Type" );
+        ImGui::TableSetupColumn( "Bones" );
+        ImGui::TableSetupColumn( "Weight" );
+        ImGui::TableSetupColumn( "Effective" );
+        ImGui::TableSetupColumn( "On" );
+        ImGui::TableHeadersRow();
+        vector<uint32> listBone;
+        const uint32   count = instance.getNodeCount();
+        for ( uint32 nodeIndex = 0; nodeIndex < count; ++nodeIndex )
+        {
+            RigNode& node = instance.getNode( nodeIndex );
+            listBone.clear();
+            node.collectWrittenBones( listBone );
+            ImGui::PushID( static_cast<int32>( nodeIndex ) );
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            const bool bSelected = _selectedNode == static_cast<int32>( nodeIndex );
+            if ( ImGui::Selectable( node.getName().empty() ? "(unnamed)" : node.getName().c_str(), bSelected ) )
+                _selectedNode = bSelected ? -1 : static_cast<int32>( nodeIndex );
+            if ( bSelected )
+                outListSelectedBone = listBone;
+
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted( node.getTypeName() );
+
+            ImGui::TableNextColumn();
+            const string bones = pUnit != nullptr ? RigDebugPanelInternal::describeBones( pUnit->getSkeleton(), listBone ) : string{ "?" };
+            ImGui::TextUnformatted( bones.c_str() );
+
+            ImGui::TableNextColumn();
+            float32 weight = node.getWeight();
+            ImGui::SetNextItemWidth( -1.0f );
+            if ( ImGui::SliderFloat( "##weight", &weight, 0.0f, 1.0f, "%.2f" ) )
+                node.setWeight( weight );
+            if ( ImGui::IsItemActivated() )
+                _weightBeforeEdit = node.getWeight();
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                RigDebugPanelInternal::recordWeight( objectID, nodeIndex, _weightBeforeEdit, node.getWeight() );
+
+            ImGui::TableNextColumn();
+            // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
+            const float32 effective = instance.isNodeLODOff( nodeIndex ) ? 0.0f : instance.computeNodeWeight( nodeIndex );
+            ImGui::Text( "%.2f", static_cast<float64>( effective ) );
+            if ( node.getWeightSlot().empty() == false )
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled( "[%s]", node.getWeightSlot().c_str() );
+            }
+
+            ImGui::TableNextColumn();
+            bool bEnabled = node.isEnabled();
+            if ( ImGui::Checkbox( "##on", &bEnabled ) )
+            {
+                node.setEnabled( bEnabled );
+                RigDebugPanelInternal::recordEnabled( objectID, nodeIndex, bEnabled );
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    void RigDebugPanel::drawTargetTable( uint64 objectID, const PoseModifierComponent& modifier, RigInstance& instance, int32 tableFlags )
+    {
+        RigDebugPanelInternal::TargetEdit& targetEdit = RigDebugPanelInternal::getTargetEdit();
+        // 대상 — 자기 유닛 대상(본 · 소켓)을 고르면 뷰포트에 기즈모가 뜬다(시각화 "Rig Target"). 끌기를 놓으면 그 대상의 오프셋을 리그 파일에 되써 넣는다.
+        // 바깥 대상(다른 유닛 · 오브젝트)은 부모 공간이 호스트 쪽에 있어 여기서 옮기지 않는다.
+        const uint32 targetCount = instance.getTargetCount();
+        if ( targetCount > 0 && ImGui::BeginTable( "##rig_targets", 3, tableFlags ) )
+        {
+            ImGui::TableSetupColumn( "Target" );
+            ImGui::TableSetupColumn( "Translation" );
+            ImGui::TableSetupColumn( "Gizmo" );
+            ImGui::TableHeadersRow();
+            for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
+            {
+                const RigTargetDef&  def  = instance.getTargetDef( targetIndex );
+                int32                bone = -1;
+                BoneTransform        combined{};
+                const bool           bOwnUnit     = instance.tryGetOwnTargetBinding( targetIndex, bone, combined );
+                const bool           bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == static_cast<int32>( targetIndex );
+                const BoneTransform& shownOffset  = bEditingThis && targetEdit._bPending == SW_TRUE ? targetEdit._pending : def._offset;
+                ImGui::PushID( static_cast<int32>( targetIndex ) );
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( def._name.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.3f, %.3f, %.3f", static_cast<float64>( shownOffset._translation._x ), static_cast<float64>( shownOffset._translation._y ),
+                             static_cast<float64>( shownOffset._translation._z ) );
+                ImGui::TableNextColumn();
+                ImGui::BeginDisabled( bOwnUnit == false || modifier.getRigPath().empty() );
+                bool bEdit = bEditingThis;
+                if ( ImGui::Checkbox( "##gizmo", &bEdit ) )
+                {
+                    targetEdit              = RigDebugPanelInternal::TargetEdit{};
+                    targetEdit._objectID    = bEdit ? objectID : 0;
+                    targetEdit._targetIndex = bEdit ? static_cast<int32>( targetIndex ) : -1;
+                }
+                ImGui::EndDisabled();
+                if ( bOwnUnit == false )
+                    EditorWidgets::drawTooltip( "Targets on other units or objects are placed by the host - move that object instead" );
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        EditorSelfTestMarks::note( "rigdebug.targets" );
+        if ( targetEdit._status.empty() == false )
+            ImGui::TextDisabled( "Target: %s", targetEdit._status.c_str() );
+    }
+
     void RigDebugPanel::drawContent()
     {
         EditorContext*                     pContext   = EditorContext::get();
@@ -334,116 +449,10 @@ namespace sw::editor
 
         GameObject*                  pObject = pModifier->getOwner();
         const SkeletalMeshComponent* pUnit   = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
-        const uint32                 count   = instance.getNodeCount();
-        vector<uint32>               listBone;
         vector<uint32>               listSelectedBone;
         const ImGuiTableFlags        flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##rig_nodes", 6, flags ) )
-        {
-            ImGui::TableSetupColumn( "Node" );
-            ImGui::TableSetupColumn( "Type" );
-            ImGui::TableSetupColumn( "Bones" );
-            ImGui::TableSetupColumn( "Weight" );
-            ImGui::TableSetupColumn( "Effective" );
-            ImGui::TableSetupColumn( "On" );
-            ImGui::TableHeadersRow();
-            for ( uint32 nodeIndex = 0; nodeIndex < count; ++nodeIndex )
-            {
-                RigNode& node = instance.getNode( nodeIndex );
-                listBone.clear();
-                node.collectWrittenBones( listBone );
-                ImGui::PushID( static_cast<int32>( nodeIndex ) );
-                ImGui::TableNextRow();
-
-                ImGui::TableNextColumn();
-                const bool bSelected = _selectedNode == static_cast<int32>( nodeIndex );
-                if ( ImGui::Selectable( node.getName().empty() ? "(unnamed)" : node.getName().c_str(), bSelected ) )
-                    _selectedNode = bSelected ? -1 : static_cast<int32>( nodeIndex );
-                if ( bSelected )
-                    listSelectedBone = listBone;
-
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted( node.getTypeName() );
-
-                ImGui::TableNextColumn();
-                const string bones = pUnit != nullptr ? RigDebugPanelInternal::describeBones( pUnit->getSkeleton(), listBone ) : string{ "?" };
-                ImGui::TextUnformatted( bones.c_str() );
-
-                ImGui::TableNextColumn();
-                float32 weight = node.getWeight();
-                ImGui::SetNextItemWidth( -1.0f );
-                if ( ImGui::SliderFloat( "##weight", &weight, 0.0f, 1.0f, "%.2f" ) )
-                    node.setWeight( weight );
-                if ( ImGui::IsItemActivated() )
-                    _weightBeforeEdit = node.getWeight();
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    RigDebugPanelInternal::recordWeight( objectID, nodeIndex, _weightBeforeEdit, node.getWeight() );
-
-                ImGui::TableNextColumn();
-                // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
-                const float32 effective = instance.isNodeLODOff( nodeIndex ) ? 0.0f : instance.computeNodeWeight( nodeIndex );
-                ImGui::Text( "%.2f", static_cast<float64>( effective ) );
-                if ( node.getWeightSlot().empty() == false )
-                {
-                    ImGui::SameLine();
-                    ImGui::TextDisabled( "[%s]", node.getWeightSlot().c_str() );
-                }
-
-                ImGui::TableNextColumn();
-                bool bEnabled = node.isEnabled();
-                if ( ImGui::Checkbox( "##on", &bEnabled ) )
-                {
-                    node.setEnabled( bEnabled );
-                    RigDebugPanelInternal::recordEnabled( objectID, nodeIndex, bEnabled );
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndTable();
-        }
-
-        // 대상 — 자기 유닛 대상(본 · 소켓)을 고르면 뷰포트에 기즈모가 뜬다(시각화 "Rig Target"). 끌기를 놓으면 그 대상의 오프셋을 리그 파일에 되써 넣는다.
-        // 바깥 대상(다른 유닛 · 오브젝트)은 부모 공간이 호스트 쪽에 있어 여기서 옮기지 않는다.
-        const uint32 targetCount = instance.getTargetCount();
-        if ( targetCount > 0 && ImGui::BeginTable( "##rig_targets", 3, flags ) )
-        {
-            ImGui::TableSetupColumn( "Target" );
-            ImGui::TableSetupColumn( "Translation" );
-            ImGui::TableSetupColumn( "Gizmo" );
-            ImGui::TableHeadersRow();
-            for ( uint32 targetIndex = 0; targetIndex < targetCount; ++targetIndex )
-            {
-                const RigTargetDef&  def  = instance.getTargetDef( targetIndex );
-                int32                bone = -1;
-                BoneTransform        combined{};
-                const bool           bOwnUnit     = instance.tryGetOwnTargetBinding( targetIndex, bone, combined );
-                const bool           bEditingThis = targetEdit._objectID == objectID && targetEdit._targetIndex == static_cast<int32>( targetIndex );
-                const BoneTransform& shownOffset  = bEditingThis && targetEdit._bPending == SW_TRUE ? targetEdit._pending : def._offset;
-                ImGui::PushID( static_cast<int32>( targetIndex ) );
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted( def._name.c_str() );
-                ImGui::TableNextColumn();
-                ImGui::Text( "%.3f, %.3f, %.3f", static_cast<float64>( shownOffset._translation._x ), static_cast<float64>( shownOffset._translation._y ),
-                             static_cast<float64>( shownOffset._translation._z ) );
-                ImGui::TableNextColumn();
-                ImGui::BeginDisabled( bOwnUnit == false || pModifier->getRigPath().empty() );
-                bool bEdit = bEditingThis;
-                if ( ImGui::Checkbox( "##gizmo", &bEdit ) )
-                {
-                    targetEdit              = RigDebugPanelInternal::TargetEdit{};
-                    targetEdit._objectID    = bEdit ? objectID : 0;
-                    targetEdit._targetIndex = bEdit ? static_cast<int32>( targetIndex ) : -1;
-                }
-                ImGui::EndDisabled();
-                if ( bOwnUnit == false )
-                    EditorWidgets::drawTooltip( "Targets on other units or objects are placed by the host - move that object instead" );
-                ImGui::PopID();
-            }
-            ImGui::EndTable();
-        }
-        EditorSelfTestMarks::note( "rigdebug.targets" );
-        if ( targetEdit._status.empty() == false )
-            ImGui::TextDisabled( "Target: %s", targetEdit._status.c_str() );
+        drawNodeTable( objectID, instance, pUnit, flags, listSelectedBone );
+        drawTargetTable( objectID, *pModifier, instance, flags );
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
         DebugDrawQueue* pQueue              = findSubsystem<DebugDrawQueue>();

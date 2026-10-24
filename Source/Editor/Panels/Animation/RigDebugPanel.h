@@ -11,8 +11,16 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
+
+namespace sw
+{
+    class PoseModifierComponent;
+    class RigInstance;
+    class SkeletalMeshComponent;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -31,6 +39,11 @@ namespace sw::editor
         bool        isToolPanel() const override { return true; }
 
     private:
+        /** @brief 노드 표를 그립니다(이름 · 종류 · 본 · 가중치 · 이번 프레임 값 · 켜짐). 고른 노드가 쓰는 본을 @p outListSelectedBone 에 담습니다. @p tableFlags 는 ImGuiTableFlags 입니다. */
+        void drawNodeTable( uint64 objectID, RigInstance& instance, const SkeletalMeshComponent* pUnit, int32 tableFlags, vector<uint32>& outListSelectedBone );
+        /** @brief 대상 표를 그립니다(이름 · 오프셋 · 기즈모). 자기 유닛 대상의 "Gizmo" 를 켜면 뷰포트 시각화가 그 대상에 기즈모를 놓습니다. */
+        void drawTargetTable( uint64 objectID, const PoseModifierComponent& modifier, RigInstance& instance, int32 tableFlags );
+
         string                 _status;           ///< 저장 결과 줄
         uint64                 _selectedObjectID; ///< 고른 노드가 속한 오브젝트다(오브젝트가 바뀌면 노드 선택을 푼다)
         int32                  _selectedNode;     ///< 고른 노드 번호다(-1 이면 없음)
