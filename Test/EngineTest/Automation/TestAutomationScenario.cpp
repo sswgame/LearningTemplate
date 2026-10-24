@@ -245,7 +245,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<Scenario name="t" fixedDelta="0"/>)",
         R"(<Scenario name="t" input="sometimes"/>)",
         R"(<Scenario name="t" timeOut="3"/>)",
-        R"(<Scenario name="t" editor="yes"/>)",
+        R"(<Scenario name="t" editor="maybe"/>)",
         R"(<Scenario name="t"><Tap slot="Key.E"/></Scenario>)",
         R"(<Scenario name="t"><At><Pass/></At></Scenario>)",
         R"(<Scenario><At frame="0"><Pass/></At></Scenario>)",
@@ -420,7 +420,7 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     SW_EXPECT_FALSE( scenario.requiresForeground() );
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" requireForeground="true"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
     SW_EXPECT_TRUE( scenario.requiresForeground() );
-    SW_EXPECT_FALSE( scenario.parse( R"(<Scenario name="t" requireForeground="yes"><At frame="0"><Pass/></At></Scenario>)", "", error ) );
+    SW_EXPECT_FALSE( scenario.parse( R"(<Scenario name="t" requireForeground="maybe"><At frame="0"><Pass/></At></Scenario>)", "", error ) );
 
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );

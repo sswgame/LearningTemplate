@@ -572,14 +572,21 @@ namespace sw
             {
                 if ( step.hasOnlyAttributes( { "file", "waitForSettle" }, outError ) == false || step.requireAttribute( "file", outError ) == nullptr )
                     return false;
-                const string* pWait         = step.findAttribute( "waitForSettle" );
-                const bool    bUnknownValue = pWait != nullptr && *pWait != "true" && *pWait != "false";
-                if ( bUnknownValue )
+                bool bWait = true;
+                if ( readWaitForSettle( step, bWait ) == false )
                 {
-                    outError = step.describe() + ": waitForSettle must be true or false, got '" + *pWait + "'";
+                    outError = step.describe() + ": waitForSettle must be a boolean (true or false), got '" + *step.findAttribute( "waitForSettle" ) + "'";
                     return false;
                 }
                 return true;
+            }
+
+            /** @brief `waitForSettle` 속성을 읽습니다. 적지 않았으면 true(자리 잡기를 기다린다)이고, 불리언으로 읽지 못하면 false 입니다. 검증과 실행이 같은 철자 표(`StringUtil::tryParseBool`)를 씁니다. */
+            [[nodiscard]] static bool readWaitForSettle( const AutomationStep& step, bool& outWait )
+            {
+                outWait             = true;
+                const string* pWait = step.findAttribute( "waitForSettle" );
+                return pWait == nullptr || StringUtil::tryParseBool( *pWait, outWait );
             }
 
             /**
@@ -589,8 +596,9 @@ namespace sw
              */
             [[nodiscard]] static bool capturesWithoutSettling( const AutomationStep& step )
             {
-                const string* pWait = step.findAttribute( "waitForSettle" );
-                return pWait != nullptr && *pWait == "false";
+                bool       bWait = true;
+                const bool bRead = readWaitForSettle( step, bWait ); // 읽지 못한 값은 validateScreenshot 이 이미 거절했다
+                return bRead && bWait == false;
             }
 
             static bool validateExpectImage( const AutomationStep& step, string& outError )

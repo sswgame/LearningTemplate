@@ -46,11 +46,10 @@ namespace sw
                 }
                 if ( name == "tls" )
                 {
-                    const bool bOn  = value == "1";
-                    const bool bOff = value == "0";
-                    if ( bOn == false && bOff == false )
+                    bool bOn = false;
+                    if ( StringUtil::tryParseBool( value, bOn ) == false )
                     {
-                        outError = "cache endpoint: tls must be 0 or 1";
+                        outError = "cache endpoint: tls must be a boolean (0, 1, true or false)";
                         return false;
                     }
                     outEndpoint._bTLS = bOn ? SW_TRUE : SW_FALSE;

@@ -50,14 +50,13 @@ namespace sw
                 return true;
             }
 
-            /** @brief `true` / `false` 속성을 읽습니다. 그 밖의 글이면 false 와 이유(값은 false 로 둔다). */
+            /** @brief 불리언 속성을 읽습니다(철자 표는 `StringUtil::tryParseBool`). 읽지 못하면 false 와 이유(값은 false 로 둔다). */
             [[nodiscard]] static bool readBool( const utf8* pName, const utf8* pValue, bool& outValue, string& outReason )
             {
-                const string_view value = pValue;
-                const bool        bOk   = value == "true" || value == "false";
-                outValue                = value == "true";
+                outValue       = false;
+                const bool bOk = StringUtil::tryParseBool( string_view{ pValue }, outValue );
                 if ( bOk == false )
-                    outReason = string( pName ) + " must be true or false, got '" + pValue + "'";
+                    outReason = string( pName ) + " must be a boolean (true or false), got '" + pValue + "'";
                 return bOk;
             }
 

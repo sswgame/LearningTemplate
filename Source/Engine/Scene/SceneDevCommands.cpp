@@ -131,9 +131,8 @@ namespace sw
                     return false;
                 if ( listArgument.size() == 1 )
                 {
-                    const bool bOn  = StringUtil::equals( listArgument[0], "on", true ) || listArgument[0] == "1";
-                    const bool bOff = StringUtil::equals( listArgument[0], "off", true ) || listArgument[0] == "0";
-                    if ( bOn == bOff )
+                    bool bOn = false;
+                    if ( StringUtil::tryParseBool( listArgument[0], bOn ) == false )
                         return false;
                     AnimationRewindRecorder::setRecordingRequested( bOn );
                 }
