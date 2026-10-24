@@ -4,6 +4,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+namespace sw
+{
+    class TaskManager;
+} // namespace sw
+
 namespace sw::editor
 {
     enum class AssetImportMode : uint8;
@@ -64,9 +69,12 @@ namespace sw::editor
          * @param outputPath 출력 DDS 경로입니다.
          * @param rule 적용할 임포트 규칙입니다.
          * @param pOutResult 임포트 결과의 세부 정보입니다. 생략할 수 있습니다.
+         * @param pTaskManager 밴드 압축을 나눠 돌릴 작업 시스템입니다. 생략하면(nullptr) 부른 스레드가 차례로 압축하며 결과 바이트는 같습니다.
+         * @details 일괄 임포트는 이 함수를 워커에서 부른다. 워커는 에디터 서비스 범위를 읽을 수 없으므로(`findEditorScope`) 작업 시스템은 안에서 찾지 않고 인자로 받는다.
          * @return 성공하면 true 입니다.
          */
-        [[nodiscard]] static bool importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult = nullptr );
+        [[nodiscard]] static bool importTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult = nullptr,
+                                                 TaskManager* pTaskManager = nullptr );
 
         /** @brief 스위즐이나 그린 채널 반전 같은 채널 조작을 적용합니다. */
         static void applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels );

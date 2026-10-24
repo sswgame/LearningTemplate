@@ -10,6 +10,8 @@
  */
 #include "pch.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -101,6 +103,13 @@ namespace sw::editor
 
     void EditorContext::shutdown()
     {
+        // 범위를 허물기 전에 진행 중인 워커 일(임포트 · 색인 스캔 · 백그라운드 잡)이 끝나기를 기다린다. 워커가 이 범위의 서비스를 쥔 채 범위가 사라지면 해제된 메모리를 쓴다.
+        // 워커 본문은 범위를 직접 찾지 않지만(`findEditorScope`), 제출 시점에 값으로 받은 서비스 포인터는 이 범위가 소유한다.
+        constexpr uint32   kWorkerDrainTimeoutMilliseconds = 10000;
+        TaskManager* const pTaskManager                    = editor::findSubsystem<TaskManager>();
+        if ( pTaskManager != nullptr && pTaskManager->waitAll( kWorkerDrainTimeoutMilliseconds ) == false )
+            SW_LOG_ERROR( "Worker tasks are still running %# ms after the editor shutdown began - editor services may be used after they are destroyed", kWorkerDrainTimeoutMilliseconds );
+
         if ( findEditorScope() == &_scope )
             setActive( nullptr );
 

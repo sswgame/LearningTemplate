@@ -19,9 +19,27 @@ namespace
     /** @brief 가짜 임포터가 동시에 몇 개나 돌았는지 재는 상자입니다. 임포터는 이 포인터로만 쓴다(임포터 자신은 무상태다). */
     struct TestImportProbe
     {
-        sw::atomic<int32> _running{ 0 };
-        sw::atomic<int32> _maxRunning{ 0 };
-        bool              _bWaitForOverlap{ false }; ///< 켜면 임포트 하나가 다른 임포트가 겹칠 때까지(최대 `kOverlapWaitMs`) 기다린다
+        static constexpr int32 kOverlapWaitMs = 300;
+
+        sw::atomic<int32>  _running{ 0 };
+        sw::atomic<int32>  _maxRunning{ 0 };
+        sw::atomic<uint32> _serviceUseCount{ 0 };     ///< 값으로 받은 서비스를 쓴 임포트 수(`TestHandoffRawImporter`)
+        bool               _bWaitForOverlap{ false }; ///< 켜면 임포트 하나가 다른 임포트가 겹칠 때까지(최대 `kOverlapWaitMs`) 기다린다
+
+        /** @brief 동시 실행 수를 올리고, 켜져 있으면 다른 임포트가 겹칠 때까지 기다립니다(직렬이면 시간 제한까지 기다리다 지나간다). */
+        void enter()
+        {
+            const int32 running = _running.fetch_add( 1 ) + 1;
+            _maxRunning.fetch_max( running );
+            if ( _bWaitForOverlap == false )
+                return;
+            for ( int32 waitedMs = 0; waitedMs < kOverlapWaitMs && _maxRunning.load() < 2; ++waitedMs )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+        }
+
+        void leave() { _running.fetch_sub( 1 ); }
     };
 
     /**
@@ -35,8 +53,6 @@ namespace
     class TestFakeRawImporter final : public sw::editor::IRawAssetImporter
     {
     public:
-        static constexpr int32 kOverlapWaitMs = 300;
-
         explicit TestFakeRawImporter( TestImportProbe* pProbe )
             : _pProbe{ pProbe }
         {
@@ -65,7 +81,7 @@ namespace
             if ( sw::StringUtil::startsWith( name, "fail" ) )
                 return false;
 
-            enterProbe();
+            _pProbe->enter();
             sw::string source;
             bool       bImported = sw::FileUtil::readTextFile( sourcePath, source );
             sw::string payload;
@@ -88,26 +104,55 @@ namespace
                 payload = existing + source;
             }
             bImported = bImported && sw::FileUtil::ensureParentDirectoryExists( importedPath ) && sw::FileUtil::writeTextFile( importedPath, payload );
-            leaveProbe();
+            _pProbe->leave();
             return bImported;
         }
 
     private:
-        /** @brief 동시 실행 수를 올리고, 켜져 있으면 다른 임포트가 겹칠 때까지 기다립니다(직렬이면 시간 제한까지 기다리다 지나간다). */
-        void enterProbe() const
+        TestImportProbe* _pProbe;
+    };
+
+    /**
+     * @class TestHandoffRawImporter
+     * @brief 제출 시점(테스트 스레드)에 찾은 작업 시스템을 값으로 받아 워커에서 쓰는 가짜 임포터입니다. `fake_raw` 의 `.dat` 를 `fake` 의 `.out` 으로 그대로 옮긴다.
+     * @details 워커 본문(`importSource`)은 에디터 서비스 범위를 읽지 않는다 — 서비스는 생성자 인자로만 받는다(`TextureImporter` 가 밴드 압축의 작업 시스템을 받는 방식과 같다).
+     */
+    class TestHandoffRawImporter final : public sw::editor::IRawAssetImporter
+    {
+    public:
+        TestHandoffRawImporter( sw::TaskManager* pTaskManager, TestImportProbe* pProbe )
+            : _pTaskManager{ pTaskManager }
+            , _pProbe{ pProbe }
         {
-            const int32 running = _pProbe->_running.fetch_add( 1 ) + 1;
-            _pProbe->_maxRunning.fetch_max( running );
-            if ( _pProbe->_bWaitForOverlap == false )
-                return;
-            for ( int32 waitedMs = 0; waitedMs < kOverlapWaitMs && _pProbe->_maxRunning.load() < 2; ++waitedMs )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
         }
 
-        void leaveProbe() const { _pProbe->_running.fetch_sub( 1 ); }
+        sw::string_view getRawFolderName() const override { return "fake_raw"; }
+        sw::string_view getStampHeader() const override { return "HANDOFFIMPORT 1"; }
+        sw::string_view getImportedLabel() const override { return "OUT"; }
+        bool            isSourceFile( sw::string_view path ) const override { return sw::FileUtil::hasExtension( path, ".dat" ); }
+        sw::string      makeImportedPath( sw::string_view sourcePath ) const override
+        {
+            return sw::editor::AssetImportStampUtil::makeImportedPath( sourcePath, "fake_raw", "fake", ".out" );
+        }
+        uint64 computeSourceHash( sw::string_view sourcePath, [[maybe_unused]] sw::string_view resourcePath ) const override
+        {
+            return sw::editor::AssetImportStampUtil::computeFileHash( sourcePath );
+        }
+        const utf8*        findUnsupportedReason( [[maybe_unused]] sw::string_view sourcePath ) const override { return nullptr; }
+        [[nodiscard]] bool importSource( sw::string_view sourcePath, sw::string_view importedPath, [[maybe_unused]] sw::string_view resourcePath ) const override
+        {
+            _pProbe->enter();
+            if ( _pTaskManager != nullptr && _pTaskManager->getWorkerCount() > 0 )
+                _pProbe->_serviceUseCount.fetch_add( 1 );
+            sw::string source;
+            bool       bImported = sw::FileUtil::readTextFile( sourcePath, source );
+            bImported            = bImported && sw::FileUtil::ensureParentDirectoryExists( importedPath ) && sw::FileUtil::writeTextFile( importedPath, source );
+            _pProbe->leave();
+            return bImported;
+        }
 
+    private:
+        sw::TaskManager* _pTaskManager; ///< 제출 시점에 찾은 서비스(빌림)
         TestImportProbe* _pProbe;
     };
 
@@ -201,6 +246,9 @@ namespace
             return joined;
         }
 
+        /** @brief 이 스레드에서 지금 에디터 범위를 묻습니다(워커 본문이 하면 안 되는 일을 워커 대신 해 보는 스레드 함수). */
+        static void lookupScopeOnThisThread( sw::SubsystemScope** ppOutScope ) { *ppOutScope = sw::editor::findEditorScope(); }
+
         static void runScenario( const sw::string& root, TestImportProbe* pProbe, TestImportScenarioResult& outResult )
         {
             SW_ASSERT_TRUE( writeFixture( root ) );
@@ -264,4 +312,74 @@ SW_TEST_CASE( AssetImportParallelTest, ParallelImportMatchesSerialImport )
     // 병렬 쪽에서 실제로 둘 이상이 동시에 돌았다. 직렬 쪽은 하나씩만 돌았다.
     SW_EXPECT_TRUE( parallelProbe._maxRunning.load() >= 2 );
     SW_EXPECT_EQUAL( 1, serialProbe._maxRunning.load() );
+}
+
+/**
+ * @brief [AssetImportParallelTest] 워커에서 도는 임포트 본문이 서비스를 값으로 받아 쓰고, 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다
+ * @details 작업 시스템은 제출 시점(범위를 등록한 테스트 스레드)에 한 번 찾아 임포터에 넘긴다. 임포트 하나가 다른 임포트가 겹칠 때까지 기다리므로 워커가 실제로 임포터를 불렀음이 보이고,
+ *          Debug 에서는 워커가 범위를 읽으면 단언이 울리므로(`findEditorScope`) 단언 수가 0 이어야 한다.
+ */
+SW_TEST_CASE( AssetImportParallelTest, WorkerBodyUsesServiceHandedByValueWithoutReadingEditorScope )
+{
+    using Internal = TestAssetImportParallelInternal;
+
+    const sw::string root = test::makeTempDirectory( "import_handoff" );
+    for ( uint32 index = 0; index < Internal::kPlainSourceCount; ++index )
+    {
+        sw::StringBuilder<sw::constant::kMaxBuffer32> name;
+        name.appendFormat( "h%#%#.dat", index / 10, index % 10 );
+        SW_ASSERT_TRUE( Internal::writeSource( root, sw::string_view( name.c_str(), name.size() ), "payload;" ) );
+    }
+
+    TestImportProbe probe;
+    probe._bWaitForOverlap = true;
+    sw::editor::AssetImportSummary summary;
+    test::ScopedAssertCapture      assertCapture;
+    {
+        TestScopedImportTaskManager taskManager{ 4 };
+        SW_ASSERT_TRUE( taskManager.isReady() );
+        // 제출 시점(이 스레드)에 서비스를 찾아 값으로 넘긴다. 임포터의 본문은 범위를 찾지 않는다.
+        const TestHandoffRawImporter importer{ sw::editor::findSubsystem<sw::TaskManager>(), &probe };
+        summary = sw::editor::AssetImportStampUtil::importAll( root, importer, sw::editor::AssetImportMode::ImportStale );
+    }
+
+    SW_EXPECT_EQUAL( Internal::kPlainSourceCount, summary._sourceCount );
+    SW_EXPECT_EQUAL( Internal::kPlainSourceCount, summary._importedCount );
+    SW_EXPECT_TRUE( summary._listProblem.empty() );
+    SW_EXPECT_EQUAL( Internal::kPlainSourceCount, probe._serviceUseCount.load() ); // 모든 임포트가 넘겨받은 서비스를 썼다
+    SW_EXPECT_TRUE( probe._maxRunning.load() >= 2 );                               // 워커가 실제로 임포터를 불렀다
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+}
+
+/**
+ * @brief [AssetImportParallelTest] 범위를 등록한 스레드가 아닌 스레드가 `findEditorScope` 를 부르면 Debug 에서 단언이 울린다
+ * @details 워커가 락 없는 범위 포인터를 읽다가 종료가 범위를 허물면 해제된 메모리를 본다. 그래서 등록한 스레드만 읽게 하고 어기면 그 자리에서 잡는다.
+ *          등록한 스레드에서는 울리지 않는다. 범위가 없을 때는 어느 스레드든 읽을 수 있다(범위가 허물어진 뒤 호스트 서비스만 찾는 종료 경로).
+ */
+SW_TEST_CASE( AssetImportParallelTest, EditorScopeLookupFromAnotherThreadIsRejected )
+{
+    using Internal = TestAssetImportParallelInternal;
+
+    sw::SubsystemScope*       pSeenByWorker = nullptr;
+    test::ScopedAssertCapture assertCapture;
+    {
+        sw::SubsystemScope            scope;
+        sw::editor::ScopedEditorScope activeScope{ scope };
+
+        SW_EXPECT_TRUE( sw::editor::findEditorScope() == &scope ); // 등록한 스레드에서는 통과한다
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+
+        std::thread worker( &Internal::lookupScopeOnThisThread, &pSeenByWorker );
+        worker.join();
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+
+    // 범위를 걷은 뒤에는 다른 스레드도 읽을 수 있다 — 단언이 더 늘지 않는다.
+    const uint32        afterScopeCount   = assertCapture.getCount();
+    sw::SubsystemScope* pSeenWithoutScope = nullptr;
+    std::thread         workerWithoutScope( &Internal::lookupScopeOnThisThread, &pSeenWithoutScope );
+    workerWithoutScope.join();
+    SW_EXPECT_EQUAL( afterScopeCount, assertCapture.getCount() );
 }
