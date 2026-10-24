@@ -85,7 +85,7 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     resourceRoot = repositoryRoot / "Resource"
 
     listGame = sorted(path.name for path in gamesRoot.iterdir() if (path / "CMakeLists.txt").is_file()) if gamesRoot.is_dir() else []
-    listPreset = sorted(path.stem for path in presetRoot.glob("*.json")) if presetRoot.is_dir() else []
+    listPreset = sorted(path.stem for path in presetRoot.iterdir() if path.suffix == ".json") if presetRoot.is_dir() else []
 
     for game in listGame:
         if game not in listPreset:

@@ -139,7 +139,7 @@ class CheckCmakeReadmeGate(LintGate):
 
         # 1) 트리에 적힌 파일이 실재하는가.
         listTreeEntry = collectTreeFileInternal(readmeText)
-        setPresentName = {path.name for path in cmakeRoot.rglob("*") if path.is_file()}
+        setPresentName = {path.name for path in collectRepositoryFiles(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), bAnySuffix=True)}
         for lineNumber, fileName in listTreeEntry:
             if fileName not in setPresentName:
                 listViolation.append(

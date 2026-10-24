@@ -200,7 +200,7 @@ def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) 
     labels = set(policy.get("labels", {}))
     rows: dict = policy.get("executables", {})
     declared: dict[str, str] = {}
-    for cmakePath in sorted((rootDir / _kTestRoot).rglob("CMakeLists.txt")):
+    for cmakePath in collectRepositoryFiles(rootDir, (_kTestRoot,), fileNames=("CMakeLists.txt",)):
         relPath = cmakePath.relative_to(rootDir).as_posix()
         code = "\n".join(line.split("#", 1)[0] for line in cmakePath.read_text(encoding="utf-8", errors="ignore").splitlines())
         for match in _kAddExecutableRe.finditer(code):
@@ -275,9 +275,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
     if folder.is_dir() is False:
         return []
     errors: list[str] = []
-    for path in sorted(folder.rglob("*")):
-        if path.suffix not in (".cpp", ".h"):
-            continue
+    for path in collectRepositoryFiles(rootDir, (_kCoreTestFolder,), suffixes=(".cpp", ".h")):
         relPath = path.relative_to(rootDir).as_posix()
         code = blankComments(path.read_text(encoding="utf-8", errors="ignore"))
         for match in _kCoreTestForbiddenIncludeRe.finditer(code):
