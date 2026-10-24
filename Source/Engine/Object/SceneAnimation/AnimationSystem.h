@@ -301,6 +301,12 @@ namespace sw
         void rebuildLevels();
         /** @brief 단계 하나를 레벨 순서로 처리합니다. */
         void runPhase( AnimationPhase phase );
+        /** @brief 이번 프레임에 일하는 유닛만 레벨 순서로 `_listActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 각 레벨의 시작 번호는 `_listLevelStart` 에 남깁니다. */
+        void collectActiveUnits( float32 deltaSeconds );
+        /** @brief 포즈 단계들(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 돌고 포즈 단계의 벽시계 평균(`_averageEvaluationMicroseconds`)을 갱신합니다. */
+        void runPosePhases();
+        /** @brief 프레임을 마칩니다 — 군중을 닫고 되감기 기록을 남깁니다. */
+        void endEvaluationFrame( float32 deltaSeconds );
         /** @brief 같은 이름의 동기 그룹끼리 위상을 맞춥니다. */
         void synchronizeGroups();
         /** @brief 군중 공유를 켠 유닛의 묶음, 사본, VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
