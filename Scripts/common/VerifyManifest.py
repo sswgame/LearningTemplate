@@ -405,7 +405,7 @@ class ItemResult:
     seconds: float
     logPath: str
     finishedAt: str
-    startedAt: str = ""   # 초 단위 ISO(`2026-10-26T00:50:13`). 돌지 않은 항목은 빈 글
+    startedAt: str = ""   # 초 단위 ISO(`2026-10-26T00:50:13`). 돌지 않은 항목(건너뜀 · 막힘 · 명령을 못 만든 실패)은 빈 글, 덮개 항목은 덮개 대상의 시각
 
 
 #: 결과 상태 — 통과 · 실패 · 건너뜀(돌리지 않았다: 명령이 없다 · wsl · 도구가 건너뜀) · 막힘(돌 수 없었다: 빌드 실패 · 잠금 시한 넘김).
@@ -413,6 +413,8 @@ kStatusPassed = "통과"
 kStatusFailed = "실패"
 kStatusSkipped = "건너뜀"
 kStatusBlocked = "막힘"
+#: 표의 `시작` 칸 — 시도한 시각이 없는 결과(건너뜀 · 막힘 · 안 돈 덮개). 값이 없는 `-` 와 구분한다.
+kNotStartedText = "—(안 돎)"
 #: 표의 `값` 칸에 줄여 싣는 `[Bench]` 줄 수.
 kBenchSummaryRowCount = 3
 
@@ -455,7 +457,9 @@ def resolveCoveredResult(item: VerifyItem, mapResult: dict[str, ItemResult], fin
         return makeResult(item.itemId, kStatusSkipped, f"덮개 항목 `{item.coveredBy}` 를 고르지 않음", finishedAt)
     status = cover.status
     detail = {kStatusPassed: f"`{item.coveredBy}` 에 포함", kStatusFailed: f"`{item.coveredBy}` 가 졌다 — 이 항목이 졌는지는 그 로그로 본다"}.get(status, f"`{item.coveredBy}` 가 {status}")
-    return makeResult(item.itemId, status, detail, finishedAt, logPath=cover.logPath)
+    result = makeResult(item.itemId, status, detail, finishedAt, logPath=cover.logPath)
+    result.startedAt = cover.startedAt   # 덮개 항목이 돈 시각이 이 항목이 포함된 판의 시각이다(안 돌았으면 빈 글 그대로)
+    return result
 
 
 def countStatus(listResult: list[ItemResult]) -> dict[str, int]:
@@ -492,7 +496,7 @@ def formatResultTable(manifest: VerifyManifest, listResult: list[ItemResult], en
         status = f"{result.status}({result.detail})" if result.detail else result.status
         listLine.append("| " + " | ".join(escapeCellInternal(cell) for cell in (
             f"`{item.itemId}` {item.title}", result.valueText, formatLimitText(item), status, f"{environment} · {item.config} · gpu {item.gpu}",
-            result.startedAt[11:] or "-", result.finishedAt, item.resultDoc)) + " |")
+            result.startedAt[11:] or kNotStartedText, result.finishedAt, item.resultDoc)) + " |")
     return "\n".join(listLine)
 
 

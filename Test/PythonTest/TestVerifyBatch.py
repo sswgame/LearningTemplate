@@ -7,6 +7,8 @@ from __future__ import annotations
 import contextlib
 import copy
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -20,6 +22,8 @@ kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
 
 from common.ConflictSchedule import runConflictSchedule  # noqa: E402
+from common import Timeline  # noqa: E402
+from common.AppBinary import runHeadlessTask  # noqa: E402
 from common.AppRun import runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Timeline import kTimelineEnvName, kTimelineItemEnvName, summarizeAppArguments  # noqa: E402
@@ -207,6 +211,9 @@ class OutcomeTest(unittest.TestCase):
         blocked = makeResult("scenario-run", kStatusBlocked, "x", "d")
         self.assertEqual(kStatusBlocked, resolveCoveredResult(covered, {"scenario-run": blocked}, "d").status)
         self.assertEqual(kStatusSkipped, resolveCoveredResult(covered, {}, "d").status)
+        passed.startedAt = "2026-10-26T00:50:13"
+        self.assertEqual("2026-10-26T00:50:13", resolveCoveredResult(covered, {"scenario-run": passed}, "d").startedAt)   # 덮개 항목은 덮개 대상의 시작 시각을 잇는다
+        self.assertEqual("", resolveCoveredResult(covered, {"scenario-run": blocked}, "d").startedAt)
         notRun = makeNotRunResult(manifest.findItem("not-yet"), "d")
         self.assertEqual((kStatusSkipped, "명령 없음: 케이스가 아직 없다"), (notRun.status, notRun.detail))
 
@@ -217,7 +224,7 @@ class OutcomeTest(unittest.TestCase):
         self.assertEqual(3, len(listRow))
         self.assertIn("PC X · Release · gpu exclusive", listRow[2])
         self.assertIn("p50 ≤ 100 us", listRow[2])
-        self.assertIn("| - | 2026-10-24 10:00 |", listRow[2])   # 시작 열: 돌지 않은 항목은 `-`
+        self.assertIn("| —(안 돎) | 2026-10-24 10:00 |", listRow[2])   # 시작 열: 시도한 시각이 없는 항목은 `-` 가 아니라 "안 돎"
         listResult[0].startedAt = "2026-10-24T00:50:13"
         self.assertIn("| 00:50:13 | 2026-10-24 10:00 |", formatResultTable(self.manifest, listResult, "PC X").splitlines()[2])
 
@@ -227,17 +234,52 @@ class TimelineTest(unittest.TestCase):
         listArgument = ["-game=Foo", "-dx12", "-scenario=a.xml", "-gv_benchMeshes=8000", "-vsync=0", "--cooked-dir=x"]
         self.assertEqual("-game=Foo -dx12 -scenario=a.xml -gv_benchMeshes=8000", summarizeAppArguments(listArgument, frozenset({"-dx12"})))
 
-    def testRunAppAppendsStartAndEndLinesOnlyWhenEnvIsSet(self) -> None:
+    def testRunAppAppendsStartAndEndLinesToEnvFile(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "timeline.log"
-            runApp(Path(sys.executable), ["-c", "pass"])   # 환경 변수 없음: 쓰지 않는다
-            self.assertFalse(path.exists())
             with mock.patch.dict("os.environ", {kTimelineEnvName: str(path), kTimelineItemEnvName: "perf-x"}):
                 runApp(Path(sys.executable), ["-c", "pass"])
             listLine = path.read_text(encoding="utf-8").splitlines()
             self.assertEqual(2, len(listLine))
             self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 앱시작 perf-x pid=\d+ ")
             self.assertRegex(listLine[1], r"^\d\d:\d\d:\d\d 앱끝 perf-x pid=\d+ 종료 0 ")
+
+    def testStandaloneRunWritesTimelineUnderBuildFolderWithItemDash(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            env = {key: value for key, value in os.environ.items() if key not in (kTimelineEnvName, kTimelineItemEnvName)}
+            with mock.patch.dict("os.environ", env, clear=True), mock.patch.object(Timeline, "getProjectRoot", return_value=Path(folder)), \
+                    mock.patch.object(Timeline, "_standalonePath", None):
+                runApp(Path(sys.executable), ["-c", "pass"])
+                runApp(Path(sys.executable), ["-c", "pass"])   # 같은 프로세스의 실행은 같은 파일에 쌓인다
+            listFile = list((Path(folder) / Timeline.kStandaloneRelDir).glob("*.log"))
+            self.assertEqual(1, len(listFile))
+            listLine = listFile[0].read_text(encoding="utf-8").splitlines()
+            self.assertEqual(4, len(listLine))
+            self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 앱시작 - pid=\d+ ")
+
+    def testRunAppClosesStdoutPipe(self) -> None:
+        listStdout: list[object] = []
+        realPopen = subprocess.Popen
+
+        def spy(*args: object, **kwargs: object) -> subprocess.Popen:
+            process = realPopen(*args, **kwargs)
+            listStdout.append(process.stdout)
+            return process
+
+        with tempfile.TemporaryDirectory() as folder, mock.patch.object(subprocess, "Popen", spy), \
+                mock.patch.dict("os.environ", {kTimelineEnvName: str(Path(folder) / "t.log")}):
+            runApp(Path(sys.executable), ["-c", "pass"])
+        self.assertTrue(listStdout[0].closed)   # 안 닫으면 가비지 수집 때 ResourceWarning 이 난다
+
+    def testHeadlessTaskLeavesTimelineLinesAndKeepsCapture(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "timeline.log"
+            with mock.patch.dict("os.environ", {kTimelineEnvName: str(path)}):
+                completed = runHeadlessTask(Path(sys.executable), ["-c", "import sys; print('out'); print('err', file=sys.stderr)"], bCapture=True)
+            self.assertEqual((0, "out", "err"), (completed.returncode, completed.stdout.strip(), completed.stderr.strip()))
+            listLine = path.read_text(encoding="utf-8").splitlines()
+            self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 앱시작 - pid=\d+ ")
+            self.assertRegex(listLine[1], r"^\d\d:\d\d:\d\d 앱끝 - pid=\d+ 종료 0 ")
 
     def testRunItemWritesStartEndLinesAndStartedAt(self) -> None:
         item = parseManifest(makeData(makeItem("some-test", "test", "Debug", "none", filter="X.*"))).listItem[0]

@@ -27,7 +27,7 @@ from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
 from .Paths import getProjectRoot
 from .ProcessLimits import ProcessLimits
-from .Timeline import appendTimelineLineFromEnv, summarizeAppArguments
+from .Timeline import appendAppEndLine, appendAppStartLine, summarizeAppArguments
 
 #: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
 kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
@@ -233,8 +233,7 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
         result.listErrorLine.append(f"cannot launch {appPath}: {error}")
         return result
     result.bLaunched = True
-    appendTimelineLineFromEnv("앱시작", f"pid={process.pid} {Path(appPath).parent.parent.name}/{Path(appPath).name} "
-                              + summarizeAppArguments(listArgument, _kBackendSwitchSet))
+    appendAppStartLine(process.pid, appPath, summarizeAppArguments(listArgument, _kBackendSwitchSet))
 
     def readOutputInternal() -> None:
         assert process.stdout is not None
@@ -261,10 +260,12 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
         time.sleep(0.05 if sampleIntervalSeconds <= 0.0 else min(0.25, sampleIntervalSeconds))
     process.wait()
     reader.join(timeout=10.0)
+    if not reader.is_alive():   # 읽는 중에 닫으면 막힌다(손자 프로세스가 파이프를 쥔 경우)
+        process.stdout.close()   # 안 닫으면 ResourceWarning(파이프 핸들이 가비지 수집까지 남는다)
     result.exitCode = process.returncode
     result.seconds = time.monotonic() - startSeconds
     result.bBackendUnusable = result.exitCode == kAppRhiUnusableExitCode
-    appendTimelineLineFromEnv("앱끝", f"pid={process.pid} 종료 {result.exitCode}{' 시간초과' if result.bTimedOut else ''} {result.seconds:.0f}초")
+    appendAppEndLine(process.pid, result.exitCode, result.seconds, result.bTimedOut)
     for line in result.listLine:
         if "[Error]" in line:
             result.listErrorLine.append(line)

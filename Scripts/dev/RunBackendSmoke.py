@@ -25,8 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec  # noqa: E402
-from common.Process import runProcess  # noqa: E402
-from common.AppRun import kBackendSwitch  # noqa: E402
+from common.AppRun import kBackendSwitch, runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
@@ -78,13 +77,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             ppmPath = outDir / f"{kind}_{name}.ppm"
             logPath = outDir / f"{kind}_{name}.log"
             ppmPath.unlink(missing_ok=True)
-            command = [str(appPath), switch, *listExtra, f"-gv_benchMeshes={args.meshes}", f"-gv_profileFrames={frames}", f"-gv_screenshot={ppmPath}"]
-            result = runProcess(command, cwd=binDir, timeoutSeconds=180, stdoutPath=logPath)
-            errorCount = logPath.read_bytes().count(b"[Error]") if logPath.is_file() else 0
+            listArgument = [switch, *listExtra, f"-gv_benchMeshes={args.meshes}", f"-gv_profileFrames={frames}", f"-gv_screenshot={ppmPath}"]
+            # runApp 이 시각표(timeline.log)에 pid · 인자를 남긴다 — 본 화면을 실행과 맞추려면 App 을 띄우는 길이 하나여야 한다.
+            result = runApp(appPath, listArgument, cwd=binDir, timeoutSeconds=180)
+            logPath.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
             stats = readPpmStatsInternal(ppmPath) if ppmPath.is_file() else None
-            bOk = result.bSucceeded and stats is not None and stats[1] > 0
+            bOk = result.bLaunched and not result.bTimedOut and result.exitCode == 0 and stats is not None and stats[1] > 0
             bFailed |= not bOk
-            listResult.append((kind, name, result.returnCode, errorCount, stats))
+            listResult.append((kind, name, result.exitCode if result.exitCode is not None else -1, len(result.listErrorLine), stats))
 
     print("%-7s %-10s %5s %7s %-20s %s" % ("path", "backend", "exit", "errors", "mean RGB", "non-bg px"))
     for kind, name, returnCode, errorCount, stats in listResult:

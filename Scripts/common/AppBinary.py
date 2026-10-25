@@ -15,9 +15,11 @@ CI 프리셋 폴더도 있다 — `App.exe` 만 찾으면 리눅스 CI 가 씬 �
 from __future__ import annotations
 
 import subprocess
+import time
 from pathlib import Path
 
 from .BuildTree import BuildTree
+from .Timeline import appendAppEndLine, appendAppStartLine
 
 #: 쿠커가 셰이더 컴파일 실패를 알릴 때 쓰는 문구. 이 줄이 있으면 종료 코드와 무관하게 실패다.
 kShaderCompileFailureMark = "Failed to compile shader"
@@ -69,14 +71,14 @@ def runHeadlessTask(
     bCapture: bool = False,
 ) -> subprocess.CompletedProcess:
     """App.exe 를 헤드리스 작업 인자로 돌립니다 (셰이더 · 씬 쿠킹과 텍스처 임포트가 같은 모양이라 한 자리에 둡니다)."""
-    return subprocess.run(
-        [str(appExe), *arguments],
-        cwd=str(cwd) if cwd else None,
-        capture_output=bCapture,
-        text=bCapture,
-        encoding="utf-8" if bCapture else None,
-        errors="replace" if bCapture else None,
-    )
+    pipe = subprocess.PIPE if bCapture else None
+    startSeconds = time.monotonic()
+    with subprocess.Popen([str(appExe), *arguments], cwd=str(cwd) if cwd else None, stdout=pipe, stderr=pipe, text=bCapture,
+                          encoding="utf-8" if bCapture else None, errors="replace" if bCapture else None) as process:
+        appendAppStartLine(process.pid, appExe, " ".join(arguments))   # 시각표: 사용자가 본 화면과 pid · 인자를 맞춘다
+        stdout, stderr = process.communicate()
+        appendAppEndLine(process.pid, process.returncode, time.monotonic() - startSeconds)
+    return subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
 
 
 def findShaderCompileFailures(cookOutput: str) -> list[str]:
