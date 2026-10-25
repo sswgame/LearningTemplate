@@ -3,6 +3,7 @@
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/EngineMinimal.h"
@@ -153,6 +154,23 @@ namespace sw
          * @return 요청대로 되었으면(`Released` 는 항상) true, 못 했으면 false 입니다.
          */
         [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) { return lock == WindowPointerLock::Released; }
+        /**
+         * @brief 창이 운영체제 글 클립보드를 스스로 잇는지입니다(X11 은 CLIPBOARD 선택의 주인, Wayland 는 `wl_data_device` 선택 — 데이터 장치가 있어야 한다).
+         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다.
+         */
+        [[nodiscard]] virtual bool supportsClipboard() const { return false; }
+        /** @brief 클립보드의 글을 @p outText 에 담습니다. 글이 없거나 시간 안에 답이 없거나 `supportsClipboard` 가 아니면 false 입니다. */
+        [[nodiscard]] virtual bool readClipboardText( string& outText )
+        {
+            (void)outText;
+            return false;
+        }
+        /** @brief 클립보드에 글을 씁니다. 못 쓰면(선택 주인이 못 되거나 컴포지터가 일련번호를 거절) false 입니다. */
+        [[nodiscard]] virtual bool writeClipboardText( string_view text )
+        {
+            (void)text;
+            return false;
+        }
         /** @brief 커서를 숨기거나 보입니다. 창이 스스로 하지 않으면 false 입니다. */
         [[nodiscard]] virtual bool setCursorVisible( bool bVisible )
         {

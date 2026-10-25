@@ -123,6 +123,7 @@
 		       text="この表示設定を維持しますか?"
 		       sourceHash="0048bd736e33dcdf" />
 		<entry key="Loading" text="読み込み中" sourceHash="b59d68ed12d46377" />
+		<entry key="Notification.ClipboardWriteFailed" text="クリップボードにコピーできませんでした。" sourceHash="0dda6cd8320699c2" />
 		<entry key="Notification.GameSaved" text="ゲームを保存しました" sourceHash="820b2b70b4c9f0c4" />
 		<entry key="Notification.RestartRequired"
 		       text="一部の変更は再起動後に反映されます。"

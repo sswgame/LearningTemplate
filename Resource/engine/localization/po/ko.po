@@ -477,6 +477,11 @@ msgctxt "Loading"
 msgid "Loading"
 msgstr "로딩 중"
 
+#: Source/Engine/UI/Widgets/TextInputWidget.cpp
+msgctxt "Notification.ClipboardWriteFailed"
+msgid "Could not copy to the clipboard."
+msgstr "클립보드에 복사하지 못했습니다."
+
 #: Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp
 msgctxt "Notification.GameSaved"
 msgid "Game saved"

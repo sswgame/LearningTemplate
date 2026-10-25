@@ -82,12 +82,14 @@ namespace sw
          * @brief 이 창을 CLIPBOARD 선택의 주인으로 두고 @p text 를 들고 있습니다. 다른 프로그램의 요청(`SelectionRequest`)은 `processMessages` 가 답합니다.
          * @return 주인이 되지 못하면(창이 없거나 서버가 거절) false 입니다.
          */
-        [[nodiscard]] bool writeClipboardText( string_view text );
+        [[nodiscard]] bool writeClipboardText( string_view text ) override;
+        /** @brief X11 창은 항상 CLIPBOARD 선택을 잇는다. */
+        [[nodiscard]] bool supportsClipboard() const override { return true; }
         /**
          * @brief CLIPBOARD 선택의 글(UTF8_STRING)을 읽습니다. 주인이 이 창이면 들고 있는 글이고, 아니면 주인에게 변환을 청해 짧게 기다립니다. 큰 글은 INCR 조각으로 받습니다.
          * @return 주인이 없거나, UTF-8 글을 주지 않거나, 시간 안에 답하지 않으면 false 입니다.
          */
-        [[nodiscard]] bool readClipboardText( string& outText );
+        [[nodiscard]] bool readClipboardText( string& outText ) override;
 #endif
 
     protected:

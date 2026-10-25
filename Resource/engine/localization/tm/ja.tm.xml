@@ -34,6 +34,7 @@
 		<entry source="Controls" text="操作" />
 		<entry source="Cooldown" text="クールダウン" />
 		<entry source="Corner" text="位置" />
+		<entry source="Could not copy to the clipboard." text="クリップボードにコピーできませんでした。" />
 		<entry source="Count" text="数" />
 		<entry source="Crash Reports" text="クラッシュレポート" />
 		<entry source="Crouch" text="しゃがみ" />

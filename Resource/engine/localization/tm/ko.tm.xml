@@ -40,6 +40,7 @@
 		<entry source="Controls" text="조작" />
 		<entry source="Cooldown" text="쿨다운" />
 		<entry source="Corner" text="모서리" />
+		<entry source="Could not copy to the clipboard." text="클립보드에 복사하지 못했습니다." />
 		<entry source="Count" text="개수" />
 		<entry source="Crash Reports" text="크래시 보고" />
 		<entry source="Crouch" text="앉기" />

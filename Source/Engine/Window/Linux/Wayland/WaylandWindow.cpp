@@ -1237,6 +1237,11 @@ namespace sw
         return true;
     }
 
+    bool WaylandWindow::supportsClipboard() const
+    {
+        return _pState->_pDataDevice != nullptr;
+    }
+
     bool WaylandWindow::readClipboardText( string& outText )
     {
         using Internal = WaylandWindowInternal;
@@ -1455,6 +1460,11 @@ namespace sw
     bool WaylandWindow::setPointerLock( WindowPointerLock lock )
     {
         return lock == WindowPointerLock::Released;
+    }
+
+    bool WaylandWindow::supportsClipboard() const
+    {
+        return false;
     }
 
     bool WaylandWindow::readClipboardText( string& outText )

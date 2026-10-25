@@ -631,6 +631,8 @@ namespace sw
         {
             // X11 이 아닌 창은 포인터를 스스로 묶는다 — 클라이언트가 포인터를 옮길 수 없는 Wayland 는 가두기(ConfinedToWindow) · 잠그기(LockedInCenter)를 zwp_pointer_constraints 로 컴포지터에 청한다.
             // 잠긴 포인터는 가운데로 되돌릴 필요가 없다(제자리에 서 있고 상대 이동만 온다). 못 걸면 잠그지 않은 채로 한 번 오류로 알린다.
+            // "X11 연결 전"과 헷갈리지 않는다: 창은 `initializeWindow` 가 성공한 뒤에야 `MainWindowSubsystem` 에 들어오고(`App.cpp` adopt), 다시 만들기(`recreate`)는 같은 스레드에서 끝나므로 여기 온 X11 창은 항상 연결이 있다.
+            // 그래서 이 갈래는 X11 이 아닌 창뿐이다. 실패해도 상태가 바뀌지 않아 다음 동기화가 다시 청한다(포인터 장치가 늦게 생긴 경우).
             const MouseLockMode     mode = _pMouse->getLockMode();
             const WindowPointerLock lock = mode == MouseLockMode::LockedInCenter ? WindowPointerLock::Locked : ( mode == MouseLockMode::ConfinedToWindow ? WindowPointerLock::Confined : WindowPointerLock::Released );
             if ( pWindow->setPointerLock( lock ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedPointerLockBit ) )

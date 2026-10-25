@@ -5,8 +5,7 @@
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
-    #include "Engine/Window/Linux/X11Window.h"
+    #include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -15,20 +14,13 @@ namespace sw
     namespace
     {
         /**
-         * @brief 클립보드를 이을 창(활성 창)입니다. 활성 창의 종류별 캐스트(`tryCast`)로만 읽는다 — 종류가 다른 창을 다른 클래스로 읽지 않는다.
-         * @details 리눅스 클라이언트의 창은 X11 과 Wayland 두 가지다(`IWindow::createPlatformWindow`). 둘 다 아니면(창 없음) 둘 다 nullptr 이다.
+         * @brief 클립보드를 잇는 활성 창입니다. 창 종류를 가르지 않고 창의 능력 질의(`IWindow::supportsClipboard`)로만 고른다. 창이 없거나 잇지 못하면 nullptr 입니다.
          */
-        struct ClipboardWindow
-        {
-            X11Window*     _pX11{ nullptr };
-            WaylandWindow* _pWayland{ nullptr };
-        };
-
-        ClipboardWindow findOwnerWindow()
+        IWindow* findClipboardWindow()
         {
             const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-            return ClipboardWindow{ X11Window::tryCast( pWindow ), WaylandWindow::tryCast( pWindow ) };
+            return pWindow != nullptr && pWindow->supportsClipboard() ? pWindow : nullptr;
         }
     } // namespace
 
@@ -36,36 +28,26 @@ namespace sw
     // Wayland: `wl_data_device` 선택을 창이 든다(`WaylandWindow::writeClipboardText` · `readClipboardText`). 호스트는 창을 만든 뒤에 부른다.
     bool PlatformClipboard::isAvailable()
     {
-        const ClipboardWindow window = findOwnerWindow();
-        return window._pX11 != nullptr || window._pWayland != nullptr;
+        return findClipboardWindow() != nullptr;
     }
 
     bool PlatformClipboard::readText( string& outText )
     {
-        const ClipboardWindow window = findOwnerWindow();
-        if ( window._pWayland != nullptr )
-            return window._pWayland->readClipboardText( outText );
-        return window._pX11 != nullptr && window._pX11->readClipboardText( outText );
+        IWindow* const pWindow = findClipboardWindow();
+        return pWindow != nullptr && pWindow->readClipboardText( outText );
     }
 
     bool PlatformClipboard::writeText( string_view text )
     {
-        const ClipboardWindow window = findOwnerWindow();
-        if ( window._pWayland != nullptr )
+        IWindow* const pWindow = findClipboardWindow();
+        if ( pWindow == nullptr )
         {
-            const bool bWritten = window._pWayland->writeClipboardText( text );
-            if ( bWritten == false )
-                SW_LOG_WARNING( "Wayland clipboard selection could not be set (no data device, or no key/button input yet to take a serial from) - not written" );
-            return bWritten;
-        }
-        if ( window._pX11 == nullptr )
-        {
-            SW_LOG_WARNING( "Clipboard write needs an active X11 or Wayland window to own the selection (none) - not written" );
+            SW_LOG_WARNING( "Clipboard write needs an active window that supports the clipboard (X11, or Wayland with a data device) to own the selection (none) - not written" );
             return false;
         }
-        const bool bWritten = window._pX11->writeClipboardText( text );
+        const bool bWritten = pWindow->writeClipboardText( text );
         if ( bWritten == false )
-            SW_LOG_WARNING( "Clipboard selection could not be owned - not written" );
+            SW_LOG_WARNING( "Clipboard selection could not be set (X11: the server refused ownership; Wayland: no key/button input yet to take a serial from) - not written" );
         return bWritten;
     }
 } // namespace sw
