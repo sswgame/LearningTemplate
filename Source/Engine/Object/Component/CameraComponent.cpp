@@ -111,9 +111,35 @@ namespace sw
         declareRenderTexture();
     }
 
+    void CameraComponent::setRole( CameraRole role )
+    {
+        if ( _role == role )
+            return;
+        _role = role;
+        noteSelectionInputChanged();
+    }
+
+    void CameraComponent::setPriority( int32 priority )
+    {
+        if ( _priority == priority )
+            return;
+        _priority = priority;
+        noteSelectionInputChanged();
+    }
+
+    void CameraComponent::noteSelectionInputChanged() const
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr && pOwner->getManager() != nullptr )
+            pOwner->getManager()->getCameraRegistry().noteChanged();
+    }
+
     void CameraComponent::setRenderOutput( const CameraRenderOutput& output )
     {
-        _renderOutput = output;
+        const bool bTargetChanged = _renderOutput._target != output._target;
+        _renderOutput             = output;
+        if ( bTargetChanged )
+            noteSelectionInputChanged();
         declareRenderTexture();
     }
 
