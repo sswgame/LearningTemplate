@@ -86,6 +86,23 @@ namespace sw
             _batch->setSortKey( _sortKey );
     }
 
+    void SpriteInstanceBatch::shutdownAll( GameObjectManager& manager, vector<unique_ptr<SpriteInstanceBatch>>& listBatch )
+    {
+        vector<ScenePrimitiveBatch*> listPrimitive;
+        listPrimitive.reserve( listBatch.size() );
+        for ( const unique_ptr<SpriteInstanceBatch>& pBatch : listBatch )
+        {
+            if ( pBatch != nullptr && pBatch->_batch != nullptr )
+                listPrimitive.push_back( pBatch->_batch.get() );
+        }
+        manager.getPrimitiveRegistry().removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listPrimitive.data(), listPrimitive.size() ) );
+        for ( const unique_ptr<SpriteInstanceBatch>& pBatch : listBatch )
+        {
+            if ( pBatch != nullptr )
+                pBatch->shutdown(); // 이미 빠진 배치의 소멸자는 레지스트리를 건드리지 않는다
+        }
+    }
+
     void SpriteInstanceBatch::shutdown()
     {
         // 배치의 소멸자가 레지스트리에서 뺀다. 머티리얼은 배치가 놓인 **뒤에** 놓는다 — 놓는 순간 캐시가 지울 수 있다.

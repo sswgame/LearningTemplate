@@ -133,6 +133,18 @@ namespace sw
 
         struct FractureComponentBaseInternal
         {
+            /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
+            template <class TList>
+            static auto* findSortedRuntime( TList& list, uint32 groupID )
+            {
+                SW_ASSERT( std::is_sorted( list.begin(), list.end(), []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
+                { return lhs._groupID < rhs._groupID; } ) );
+                const auto it = std::lower_bound( list.begin(), list.end(), groupID, []( const FractureGroupRuntime& runtime, uint32 id )
+                { return runtime._groupID < id; } );
+                using Runtime = std::remove_reference_t<decltype( *it )>;
+                return ( it != list.end() && it->_groupID == groupID ) ? &*it : static_cast<Runtime*>( nullptr );
+            }
+
             static constexpr uint32  kBakeAfterStillFrames = 30;
             static constexpr float32 kMoveEpsilon          = 1.0e-4f;
             static constexpr uint32  kMaxPolygonPoint2D    = 8;
@@ -1492,12 +1504,12 @@ namespace sw
 
     FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )
     {
-        return VectorUtil::findBy<&FractureGroupRuntime::_groupID>( _listRuntime, groupID );
+        return FractureComponentBaseInternal::findSortedRuntime( _listRuntime, groupID );
     }
 
     const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID ) const
     {
-        return VectorUtil::findBy<&FractureGroupRuntime::_groupID>( _listRuntime, groupID );
+        return FractureComponentBaseInternal::findSortedRuntime( _listRuntime, groupID );
     }
 
     uint32 FractureComponentBase::getDynamicBodyCount() const
@@ -1725,6 +1737,13 @@ namespace sw
                 _physics->destroyShape( runtime._shape );
         }
         _listRuntime.clear();
+        // 그룹마다 자세를 선형으로 찾지 않도록 번호로 한 번 색인한다(같은 번호가 겹치면 뒤의 것이 이긴다 — 옛 선형 탐색과 같다).
+        unordered_map<uint32, const FractureGroupPose*> mapPoseOfGroup;
+        mapPoseOfGroup.reserve( listPose.size() );
+        for ( const FractureGroupPose& pose : listPose )
+        {
+            mapPoseOfGroup[pose._groupID] = &pose;
+        }
         for ( const DestructionGroup& group : listGroup )
         {
             FractureGroupRuntime runtime;
@@ -1734,12 +1753,8 @@ namespace sw
             runtime._bAnchored = group._bAnchored;
             if ( runtime._bAnchored == SW_FALSE )
             {
-                const FractureGroupPose* pPose = nullptr;
-                for ( const FractureGroupPose& pose : listPose )
-                {
-                    if ( pose._groupID == group._id )
-                        pPose = &pose;
-                }
+                const auto               itPose = mapPoseOfGroup.find( group._id );
+                const FractureGroupPose* pPose  = itPose != mapPoseOfGroup.end() ? itPose->second : nullptr;
                 if ( pPose != nullptr && pPose->_bGone == SW_TRUE )
                 {
                     runtime._bGone = SW_TRUE;
