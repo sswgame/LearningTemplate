@@ -205,7 +205,9 @@ SW_TEST_CASE( DevConsoleTest, LogLineIsCappedIncludingTheHead )
     const string fullLen = to_string( static_cast<uint64>( head.size() + longReply.size() ) );
     SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
     SW_EXPECT_TRUE( line.compare( 0, head.size(), head ) == 0 );
-    SW_EXPECT_EQUAL( line.substr( line.size() - ( string( DebugReplyLine::kTruncatedMarker ).size() + fullLen.size() ) ), string( DebugReplyLine::kTruncatedMarker ) + fullLen );
+    const string marker = string( DebugReplyLine::kTruncatedMarker ) + fullLen;
+    const string tail   = line.substr( line.size() - marker.size() );
+    SW_EXPECT_EQUAL( tail, marker );
 
     // 명령이 길어도 머리까지 포함해 상한 안이다(POSIX 읽기 여유를 명령 길이가 먹지 못한다).
     const string longCommand( DebugReplyLine::kMaxBytes * 2, 'c' );
@@ -225,7 +227,8 @@ SW_TEST_CASE( DevConsoleTest, OverlongReplyKeepsTheFullTextInTheOutputLines )
     SW_EXPECT_TRUE( console.submit( "test.echo " + word ) == DevConsoleResult::Ok );
     const vector<DevConsoleLine>& listOutput = console.getOutput();
     SW_ASSERT_TRUE( listOutput.size() >= 2 );
-    SW_EXPECT_EQUAL( listOutput.back()._text, "[" + word + "]" );
+    const string expected = "[" + word + "]";
+    SW_EXPECT_EQUAL( listOutput.back()._text, expected );
 }
 
 /**

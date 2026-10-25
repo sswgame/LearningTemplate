@@ -8,6 +8,7 @@
 
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
 
+    #include "Core/Container/Utf8Util.h"
     #include "Core/Log/Logger.h"
 
     #include "Engine/Window/IWindow.h"
@@ -61,7 +62,7 @@ namespace sw
                     for ( uint32 index = 1; bValid && index < length; ++index )
                     {
                         const uint32 next = static_cast<uint8>( text[at + index] );
-                        bValid            = ( next & 0xC0 ) == 0x80;
+                        bValid            = Utf8Util::isContinuation( next );
                         point             = ( point << 6 ) | ( next & 0x3F );
                     }
                     if ( bValid == false || point > 0xFFFF )

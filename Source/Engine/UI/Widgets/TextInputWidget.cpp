@@ -48,22 +48,12 @@ namespace sw
                 return count;
             }
 
-            /** @brief 이어지는 바이트(10xxxxxx)이면 true 입니다. */
-            static bool isContinuationByte( utf8 value )
-            {
-                return ( static_cast<uint8>( value ) & 0xC0u ) == 0x80u;
-            }
-
             /** @brief @p byte 를 글 길이로 자르고 코드 포인트 시작 바이트까지 물립니다. */
             static uint32 snapToBoundary( string_view text, uint32 byte )
             {
                 if ( byte >= text.size() )
                     return static_cast<uint32>( text.size() );
-                while ( byte > 0 && isContinuationByte( text[byte] ) )
-                {
-                    --byte;
-                }
-                return byte;
+                return static_cast<uint32>( StringUtil::floorToUtf8Boundary( text, byte ) );
             }
 
             /** @brief @p byte 앞 코드 포인트의 시작 바이트입니다(0 이면 0). */

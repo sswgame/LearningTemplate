@@ -149,7 +149,7 @@ namespace sw::editor
                     vector<SceneObjectHash> listServer;
                     bDone = compare.readObjectsFromChannel( 0, serverTick, listServer ) && compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
                 }
-                outReply = bDone ? "netplay sync objects tick " + to_string( compare.getObjectTick() ) + ": " + to_string( compare.getDifferingObjects().size() ) + " differing object(s)"
+                outReply = bDone ? string( "netplay sync objects tick " + to_string( compare.getObjectTick() ) + ": " + to_string( compare.getDifferingObjects().size() ) + " differing object(s)" )
                                  : compare.getLastError();
                 return true;
             }

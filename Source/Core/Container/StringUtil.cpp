@@ -129,7 +129,7 @@ namespace sw
                     for ( size_t byteIndex = 1; byteIndex < lead._sequenceLength; ++byteIndex )
                     {
                         const uint8 continuationByte = pData[pos + byteIndex];
-                        if ( ( continuationByte & 0xC0 ) != 0x80 )
+                        if ( Utf8Util::isContinuation( continuationByte ) == false )
                             return false;
                         codepoint = ( codepoint << 6 ) | ( continuationByte & 0x3F );
                     }
@@ -175,7 +175,7 @@ namespace sw
                 {
                     // 잘렸거나 연속 바이트가 아니면 거기까지를 한 글자로 치고, 그 바이트부터 다시 읽는다(삼키지 않는다).
                     const bool bTruncated = byteIndex >= remaining;
-                    if ( bTruncated || ( static_cast<uint8>( pData[byteIndex] ) & 0xC0 ) != 0x80 )
+                    if ( bTruncated || Utf8Util::isContinuation( pData[byteIndex] ) == false )
                         return { kReplacementCodepoint, byteIndex, false };
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
@@ -1172,7 +1172,7 @@ namespace sw
                 ++line;
                 column = 1;
             }
-            else if ( ( byte & 0xC0 ) != 0x80 ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
+            else if ( Utf8Util::isContinuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
             {
                 ++column;
             }

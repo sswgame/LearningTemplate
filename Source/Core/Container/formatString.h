@@ -8,6 +8,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/Utf8Util.h"
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -647,12 +648,7 @@ namespace sw
             // 잘리는 위치가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다. 바이트 단위로 자르면 버퍼 끝에 걸친
             // 한글 한 글자가 깨진 바이트로 남는다(로그, 경로 표시).
             if ( copyLength < str.length() )
-            {
-                while ( copyLength > 0 && ( static_cast<uint8>( str[copyLength] ) & 0xC0 ) == 0x80 )
-                {
-                    --copyLength;
-                }
-            }
+                copyLength = static_cast<uint32>( Utf8Util::backOffToCharacterStart( str.data(), copyLength ) );
             if ( copyLength > 0 )
                 Memory::copy( pBuffer + pos, str.data(), copyLength );
             return pos + copyLength;

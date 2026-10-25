@@ -38,6 +38,44 @@ namespace sw
                 uint8  _bActive{ 0 };
                 float3 _position{};
             };
+
+            static constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
+
+            /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
+            static bool needsEscape( utf8 ch )
+            {
+                return ch == '%' || ch == ',' || ch == ':' || static_cast<uint8>( ch ) <= 0x20 || static_cast<uint8>( ch ) == 0x7F;
+            }
+
+            static int32 hexValue( utf8 ch )
+            {
+                if ( '0' <= ch && ch <= '9' )
+                    return ch - '0';
+                if ( 'A' <= ch && ch <= 'F' )
+                    return ch - 'A' + 10;
+                return -1;
+            }
+
+            /** @brief `%XX` 를 푼 이름입니다. 잘못된 `%` 이면 false 입니다. */
+            static bool unescapeName( string_view escaped, string& outName )
+            {
+                outName.clear();
+                for ( size_t index = 0; index < escaped.size(); ++index )
+                {
+                    if ( escaped[index] != '%' )
+                    {
+                        outName += escaped[index];
+                        continue;
+                    }
+                    const int32 high = index + 2 < escaped.size() ? hexValue( escaped[index + 1] ) : -1;
+                    const int32 low  = index + 2 < escaped.size() ? hexValue( escaped[index + 2] ) : -1;
+                    if ( high < 0 || low < 0 )
+                        return false;
+                    outName += static_cast<utf8>( high * 16 + low );
+                    index += 2;
+                }
+                return true;
+            }
         };
     } // namespace
 
@@ -191,47 +229,6 @@ namespace sw
         outTick = tick;
         return true;
     }
-
-    namespace SceneStateHashInternal
-    {
-        constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
-
-        /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
-        bool needsEscape( utf8 ch )
-        {
-            return ch == '%' || ch == ',' || ch == ':' || static_cast<uint8>( ch ) <= 0x20 || static_cast<uint8>( ch ) == 0x7F;
-        }
-
-        int32 hexValue( utf8 ch )
-        {
-            if ( '0' <= ch && ch <= '9' )
-                return ch - '0';
-            if ( 'A' <= ch && ch <= 'F' )
-                return ch - 'A' + 10;
-            return -1;
-        }
-
-        /** @brief `%XX` 를 푼 이름입니다. 잘못된 `%` 이면 false 입니다. */
-        bool unescapeName( string_view escaped, string& outName )
-        {
-            outName.clear();
-            for ( size_t index = 0; index < escaped.size(); ++index )
-            {
-                if ( escaped[index] != '%' )
-                {
-                    outName += escaped[index];
-                    continue;
-                }
-                const int32 high = index + 2 < escaped.size() ? hexValue( escaped[index + 1] ) : -1;
-                const int32 low  = index + 2 < escaped.size() ? hexValue( escaped[index + 2] ) : -1;
-                if ( high < 0 || low < 0 )
-                    return false;
-                outName += static_cast<utf8>( high * 16 + low );
-                index += 2;
-            }
-            return true;
-        }
-    } // namespace SceneStateHashInternal
 
     bool SceneStateHash::writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine )
     {

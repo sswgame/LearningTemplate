@@ -9,6 +9,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/Utf8Util.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -97,11 +98,7 @@ namespace sw
         {
             if ( cut >= text.size() )
                 return text.size();
-            for ( int32 step = 0; step < 3 && cut > 0 && ( static_cast<uint8>( text[cut] ) & 0xC0 ) == 0x80; ++step )
-            {
-                --cut;
-            }
-            return cut;
+            return Utf8Util::backOffToCharacterStart( text.data(), cut );
         }
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUtf8( string& inoutText, uint32 codepoint );
