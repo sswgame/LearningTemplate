@@ -274,7 +274,7 @@ namespace sw::editor
     void ProfilerPanel::drawContent()
     {
         // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         if ( pProfiler != nullptr )
         {
             if ( _bCollect == SW_TRUE && pProfiler->isEnabled() == false )
@@ -282,6 +282,8 @@ namespace sw::editor
             if ( _bCapturePaused == SW_FALSE && _scopeHistory.capture( *pProfiler ) )
                 pauseOnSpike();
         }
+        else
+            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the panel cannot collect frames" );
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
@@ -359,9 +361,11 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Collect", &bCollect ) )
         {
             _bCollect                = bCollect ? SW_TRUE : SW_FALSE;
-            FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+            FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
             if ( pProfiler != nullptr )
                 pProfiler->setEnabled( bCollect );
+            else
+                SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the Collect toggle has no effect" );
         }
         ImGui::SameLine();
         const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );

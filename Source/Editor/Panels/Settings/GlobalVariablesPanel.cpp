@@ -218,6 +218,8 @@ namespace sw::editor
         GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm != nullptr )
             pGvm->resetAllToDefault();
+        else
+            SW_LOG_ERROR( "[GlobalVariables] GlobalVariableManager is missing - the revert did nothing" ); // 필수 서비스: 없으면 버그
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -228,8 +230,11 @@ namespace sw::editor
     void GlobalVariablesPanel::drawContent()
     {
         GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
-        if ( pGvm == nullptr )
+        if ( pGvm == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[GlobalVariables] GlobalVariableManager is missing - the panel cannot draw" );
             return;
+        }
 
         drawVariableToolbar( *pGvm );
 

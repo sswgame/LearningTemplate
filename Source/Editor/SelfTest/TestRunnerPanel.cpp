@@ -59,8 +59,13 @@ namespace sw::editor
             static string makeBackendArgument()
             {
                 const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-                if ( pRenderer == nullptr || pRenderer->getDevice() == nullptr )
+                if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
+                {
+                    SW_LOG_ERROR( "[TestRunner] FrameRenderer is missing - the backend flag of the relaunch is left empty" );
                     return string{};
+                }
+                if ( pRenderer->getDevice() == nullptr )
+                    return string{}; // 장치가 아직 없으면 플래그를 모른다
                 const utf8* pFlag = BugItReport::findBackendFlag( pRenderer->getDevice()->getBackendName() );
                 return pFlag[0] != '\0' ? string( " -" ) + pFlag : string{};
             }

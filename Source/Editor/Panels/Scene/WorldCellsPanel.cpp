@@ -115,8 +115,13 @@ namespace sw::editor
         _bHasPreview                = SW_FALSE;
         Scene*        pScene        = editor::getActiveScene();
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-        if ( pScene == nullptr || pSceneManager == nullptr )
+        if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그. 활성 씬이 없는 것(아래)은 실제로 있을 수 있다.
+        {
+            SW_LOG_ERROR( "[WorldCells] SceneManager is missing - the streaming preview cannot be built" );
             return false;
+        }
+        if ( pScene == nullptr )
+            return false; // 활성 씬이 없을 수 있다 — 패널이 빈 안내를 그린다
         const bool bSplit = SceneCooker::previewStreamingCells( *pScene, _preview );
         _bLastFailed      = bSplit ? SW_FALSE : SW_TRUE;
         if ( bSplit == false )

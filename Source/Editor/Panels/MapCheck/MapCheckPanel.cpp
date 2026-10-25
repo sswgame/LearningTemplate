@@ -71,8 +71,11 @@ namespace sw::editor
             static void notifyOnSceneChange( EditorContext& context, const MapCheckCounts& counts )
             {
                 SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager == nullptr )
+                if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
+                {
+                    SW_LOG_ERROR( "[MapCheck] SceneManager is missing - the scene-change toast is skipped" );
                     return;
+                }
                 const uint64 generation = pSceneManager->getSceneGeneration();
                 if ( generation == getState()._toastSceneGeneration )
                     return;

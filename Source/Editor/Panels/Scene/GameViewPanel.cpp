@@ -85,8 +85,11 @@ namespace sw::editor
     void GameViewPanel::forwardDetachedKeyboard()
     {
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[GameView] InputManager is missing - detached keyboard input is not forwarded" );
             return;
+        }
         const bool bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
         const bool bForward  = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         if ( bForward == false )
@@ -117,8 +120,11 @@ namespace sw::editor
     void GameViewPanel::forwardDetachedPointer()
     {
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[GameView] InputManager is missing - detached pointer input is not forwarded" );
             return;
+        }
         const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
         const bool           bHovered      = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );

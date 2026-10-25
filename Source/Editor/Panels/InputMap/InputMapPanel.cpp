@@ -166,7 +166,9 @@ namespace sw::editor
         }
 
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput != nullptr && _inputMap.getInputManager() != pInput )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the input map is not attached to it" );
+        else if ( _inputMap.getInputManager() != pInput )
             _inputMap.setInputManager( pInput );
 
         // ActionPhase 상태 머신, 커맨드 히스토리, 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
@@ -716,8 +718,11 @@ namespace sw::editor
     void InputMapPanel::drawKeyboardMonitor()
     {
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the keyboard monitor is not drawn" );
             return;
+        }
 
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Keyboard Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -749,8 +754,11 @@ namespace sw::editor
     void InputMapPanel::drawMouseMonitor()
     {
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the mouse monitor is not drawn" );
             return;
+        }
 
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -789,8 +797,11 @@ namespace sw::editor
     void InputMapPanel::drawGamepadMonitor()
     {
         InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr )
+        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the gamepad monitor is not drawn" );
             return;
+        }
 
         // 4) 게임패드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Gamepad 0 Status", ImGuiTreeNodeFlags_DefaultOpen ) )
