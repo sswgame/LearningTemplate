@@ -32,6 +32,8 @@ namespace sw::editor
     {
         /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
         SW_EDITOR_API const ISubsystemLocator* findHostServices();
+        /** @brief 필수 서비스가 없을 때 오류 로그를 남기고 `SW_ASSERT` 로 멈춥니다(`getSubsystem<T>` 가 부릅니다). @p pLookup 은 어느 조회였는지 알리는 문자열입니다. */
+        SW_EDITOR_API void reportMissingRequiredService( const utf8* pLookup );
     } // namespace internal
 
     /**
@@ -64,7 +66,7 @@ namespace sw::editor
      * @brief 지금 에디터 범위입니다. 에디터 컨텍스트가 활성이 아니고 테스트가 건 범위도 없으면 nullptr 입니다.
      * @details **범위를 등록한 스레드(에디터 UI 스레드)에서만 부릅니다.** 범위는 락 없이 읽고 쓰므로, 워커가 읽는 동안 종료가 범위를 허물면 해제된 범위를 본다.
      *          그래서 `findSubsystem<T>()` · `EditorContext::get()` 도 워커 본문에서 부르지 않는다. 일을 낼 때(호출 스레드) 필요한 서비스를 찾아 값(포인터 · 인자)으로 넘긴다
-     *          (`TextureImporter::importTexture` 의 작업 시스템 인자). Debug 에서는 다른 스레드의 호출을 `SW_ASSERT` 가 잡는다.
+     *          (`TextureImporter::importTexture` 의 작업 시스템 인자). 다른 스레드의 호출은 모든 구성에서 오류 로그를 남기고 멈춘다.
      */
     SW_EDITOR_API SubsystemScope* findEditorScope();
     /** @brief 지금 에디터 범위를 등록합니다(nullptr 이면 해제합니다). 에디터 컨텍스트가 활성이 될 때(`EditorContext::setActive`) 부릅니다. */
@@ -85,12 +87,17 @@ namespace sw::editor
         return locateSubsystem<T>( internal::findHostServices() );
     }
 
-    /** @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다. */
+    /**
+     * @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 오류 로그와 `SW_ASSERT` 로 멈춥니다.
+     * @details 에디터가 떠 있으면 늘 있는 서비스(워크스페이스, 씬 관리자, 알림 관리자…)는 `findSubsystem` 으로 받아 nullptr 에서 조용히 돌아가지 말고 이것으로 받는다.
+     *          테스트나 도구에서 정말 없을 수 있는 것만 `findSubsystem` 으로 받고, 그 자리에 왜 선택인지 한 줄 적는다.
+     */
     template <typename T>
     T& getSubsystem()
     {
         T* pFound = findSubsystem<T>();
-        SW_ASSERT( pFound != nullptr );
+        if ( pFound == nullptr )
+            internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return *pFound;
     }
 

@@ -34,9 +34,7 @@ namespace sw::editor
              */
             static void setWorldPlaying( bool bPlaying )
             {
-                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager != nullptr )
-                    pSceneManager->setWorldPlaying( bPlaying );
+                editor::getSubsystem<SceneManager>().setWorldPlaying( bPlaying ); // 플레이는 에디터가 떠 있을 때만 시작한다 - SceneManager 는 필수
             }
 
             static void capturePlaySnapshot( PlaySessionData& data )
@@ -44,15 +42,15 @@ namespace sw::editor
                 data._listSnapshot.clear();
                 data._bHasSnapshot = SW_FALSE;
 
+                // 선택: 씬이 없는 상태에서도 플레이를 누를 수 있다. 되돌릴 것이 없으므로 스냅샷 없이 시작한다(`_bHasSnapshot` 이 false).
                 Scene* pScene = editor::getActiveScene();
                 if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return;
 
                 // Stop 할 때 활성 씬이 이 씬인지 알아보려고 세대를 기록하고, 아니면 다시 만들려고 이름과 소스 경로를 기록한다.
-                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                data._sceneGeneration       = pSceneManager != nullptr ? pSceneManager->getSceneGeneration() : 0;
-                data._sceneName             = pScene->getName();
-                data._sceneSourcePath       = pScene->getSourcePath();
+                data._sceneGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                data._sceneName       = pScene->getName();
+                data._sceneSourcePath = pScene->getSourcePath();
 
                 GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
@@ -159,11 +157,11 @@ namespace sw::editor
                 // 그대로 되돌리면 두 씬의 오브젝트가 섞이고, 활성 씬이 플레이 중에 연 씬의 소스 경로를 가진 채라 저장하면 그 씬 파일을
                 // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 만들고(이름과 소스 경로 복원) 거기에 되돌린다. 로드가 아직 진행 중이면 끝나면서 씬을 다시
                 // 바꾸므로 먼저 취소한다. 오브젝트는 원래 id 로 복원되므로 프리팹 연결도 id 로 다시 연결한다(아래 2).
-                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager != nullptr && pSceneManager->getSceneGeneration() != data._sceneGeneration )
+                SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+                if ( sceneManager.getSceneGeneration() != data._sceneGeneration )
                 {
-                    pSceneManager->cancelPendingAsyncLoads();
-                    Scene* pRebuilt = pSceneManager->createEmptyActiveScene( data._sceneName );
+                    sceneManager.cancelPendingAsyncLoads();
+                    Scene* pRebuilt = sceneManager.createEmptyActiveScene( data._sceneName );
                     if ( pRebuilt != nullptr )
                         pRebuilt->setSourcePath( data._sceneSourcePath );
                     SW_LOG_INFO( "The active scene changed during play - restoring the edited scene '%#'.", data._sceneName.c_str() );
@@ -277,7 +275,7 @@ namespace sw::editor
 
             /**
              * @brief 에디터 범위가 보관한 플레이 상태를 반환합니다. 에디터 범위가 없으면 nullptr 입니다.
-             * @details 에디터 셸이 아직 만들어지지 않았거나 이미 종료된 시점에도 이 파사드가 호출될 수 있다(패널 정리 경로). 그때는
+             * @details 선택 조회(필수 아님): 에디터 셸이 아직 만들어지지 않았거나 이미 종료된 시점에도 이 파사드가 호출될 수 있다(패널 정리 경로). 그때는
              *          "정지" 로 응답해야 한다.
              */
             static PlaySessionData* data()
@@ -322,6 +320,31 @@ namespace sw::editor
     bool EditorPlaySession::areSceneEditsAllowed()
     {
         return EditorSessionPolicy::areSceneEditsAllowed( isStopped(), areSceneEditsHeld() );
+    }
+
+    bool EditorPlaySession::refuseSceneEdit( const utf8* pAction )
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( areSceneEditsAllowed() )
+        {
+            if ( pData != nullptr )
+                pData->_lastRefusedAction.clear(); // 다시 허용되면 다음 거절은 새로 남긴다
+            return false;
+        }
+        // 서비스가 없으면 "정지" 이고 막는 작업도 없어 위에서 허용으로 반환했다. 여기에 오면 거절 상태(플레이 중이거나 막는 작업)가 있으니 서비스가 있다.
+        SW_ASSERT( pData != nullptr );
+        if ( pData == nullptr )
+            return true;
+        const bool bHeld = areSceneEditsHeld();
+        // 매 프레임 부르는 경로(기즈모 드래그 등)가 줄마다 경고를 쏟지 않게, 같은 편집이 같은 이유로 연속 거절되면 첫 한 번만 남긴다.
+        const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold != 0 ) == bHeld;
+        if ( bSameAsLast )
+            return true;
+        pData->_lastRefusedAction  = pAction;
+        pData->_bLastRefusedByHold = bHeld ? SW_TRUE : SW_FALSE;
+        const utf8* pReason        = bHeld ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
+        SW_LOG_WARNING_ID( "Editor.SceneEditRefused", "%# refused: scene edits are not allowed - %#", pAction, pReason );
+        return true;
     }
 
     void EditorPlaySession::holdSceneEdits()
@@ -509,8 +532,7 @@ namespace sw::editor
         }
         if ( data._bStartQueued == SW_FALSE )
             return;
-        const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-        if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
+        if ( editor::getSubsystem<SceneManager>().isTransitioning() )
             return;
         data._bStartQueued = SW_FALSE;
         setState( data, data._queuedState );
@@ -528,8 +550,7 @@ namespace sw::editor
         // 스냅샷은 곧 언로드될 씬을 찍고, 플레이 중에 로드가 끝나 씬이 바뀐다. 그러면 Stop 이 되돌릴 씬이 사용자가 막 연 씬이 아니게 된다.
         if ( data._state == PlaySessionState::Stopped )
         {
-            const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-            if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
+            if ( editor::getSubsystem<SceneManager>().isTransitioning() )
             {
                 if ( data._bStartQueued == SW_FALSE )
                     SW_LOG_INFO( "Opening the scene - play starts when loading finishes." );
@@ -544,9 +565,11 @@ namespace sw::editor
         pData->_pendingStepCount        = 0;
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;
+        pData->_lastRefusedAction.clear(); // 상태가 바뀌면 거절 기록을 비운다. Stop 뒤 다음 플레이의 첫 같은 거절도 로그로 남아야 한다
 
         // 편집 내역은 Play 동안 맡겨 두고 Stop 뒤에 되찾는다(아래 분기). 플레이 중의 편집은 Stop 이 스냅샷으로 되돌리므로 그동안의 기록은 버린다.
         // 플레이와 일시정지 사이에서는 비우기만 한다.
+        // 선택 조회(②): 이 상태 전환은 에디터 컨텍스트 없이 테스트하므로 스택이 없을 수 있다. 스택이 없으면 맡길 편집 내역도 없다.
         CommandStack* pCommandStack            = editor::findSubsystem<CommandStack>();
         const bool    bShouldClearCommandStack = pCommandStack != nullptr && previous != PlaySessionState::Stopped && state != PlaySessionState::Stopped;
         if ( bShouldClearCommandStack )

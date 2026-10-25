@@ -31,7 +31,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
@@ -54,7 +54,10 @@ namespace sw::editor
         PrefabAsset asset;
         asset.setFromGameObject( pObj );
         if ( asset.saveToFile( prefabPath ) == false )
+        {
+            SW_LOG_ERROR( "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;
+        }
         string newFileText;
         (void)FileUtil::readTextFile( filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
@@ -91,8 +94,8 @@ namespace sw::editor
             {
                 if ( FileUtil::writeTextFile( filePath, text ) == false )
                     SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
-                if ( AssetManager* pAssets = editor::findSubsystem<AssetManager>() )
-                    pAssets->getAssetCache<PrefabCache>().reload( savedPath, nullptr );
+                // 이 되돌리기 · 다시 하기는 위에서 에셋 관리자가 있을 때(`pPrefabCache`)만 등록된다 - 여기서는 필수다.
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( savedPath, nullptr );
             };
             EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePrefabFile, oldFileText]()
             { writePrefabFile( oldFileText ); } ),
@@ -120,14 +123,17 @@ namespace sw::editor
 
     bool EditorInspectorCommands::revertToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Revert to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
         AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
+        {
+            SW_LOG_ERROR( "Revert to prefab refused: no AssetManager (prefab cache) for '%#'", string{ prefabPath }.c_str() );
             return false;
+        }
 
         // 되돌리기는 엔진이 한다. 형식(XML, JSON)과 인스턴스의 배치(부모, 이름, 루트 위치, 회전)를 프리팹 쪽이 알고 있다.
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
@@ -138,18 +144,14 @@ namespace sw::editor
         return true;
     }
 
-    void EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
+    bool EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
-            return;
+        if ( EditorPlaySession::refuseSceneEdit( "Unlink prefab" ) )
+            return false;
         if ( pObj == nullptr )
-            return;
+            return false;
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-
-        EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>(); // 필수 - 에디터 명령이다
         // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다. 부품만 연결을 끊으면 다음 로드에 같은 부품이 하나 더 생긴다. 유니티도 중첩 자식만 따로 풀지 못한다.
         // 그래서 맨 바깥에 놓인 인스턴스를 한 단계 푼다(유니티 Unpack Prefab). 그 바로 아래 부품은 씬이 자기 프리팹의 인스턴스로 기록한다.
         GameObject* pTarget = pObj;
@@ -160,12 +162,13 @@ namespace sw::editor
         if ( pTarget == nullptr || workspace.getPlacedPrefabPath( *pTarget ).empty() )
         {
             SW_LOG_WARNING( "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
-            return;
+            return false;
         }
         if ( pTarget != pObj )
             SW_LOG_INFO( "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
         workspace.setPlacedPrefabPath( *pTarget, "" );
         workspace.markSceneDirty();
+        return true;
     }
 
     GameObject* EditorInspectorCommands::findOuterInstance( const GameObject* pPart )
@@ -181,11 +184,13 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToOuterPrefab( GameObject* pPart )
     {
-        EditorContext* pContext = EditorContext::get();
-        GameObject*    pOuter   = findOuterInstance( pPart );
-        if ( pContext == nullptr || pOuter == nullptr )
+        GameObject* pOuter = findOuterInstance( pPart );
+        if ( pOuter == nullptr )
+        {
+            SW_LOG_WARNING( "Apply to outer prefab refused: '%#' has no attached outer instance", pPart != nullptr ? pPart->getName().c_str() : "(null)" );
             return false;
-        const string outerPath{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pOuter ) };
+        }
+        const string outerPath{ editor::getSubsystem<EditorWorkspace>().findPrefabPath( pOuter ) };
         if ( outerPath.empty() )
         {
             SW_LOG_WARNING( "The outer instance '%#' of '%#' has no prefab - nothing to apply to", pOuter->getName().c_str(), pPart->getName().c_str() );
@@ -197,21 +202,18 @@ namespace sw::editor
     EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
     {
         // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
-        GameObjectManager* pManager       = pRoot != nullptr ? pRoot->getManager() : nullptr;
-        EditorWorkspace*   pWorkspace     = editor::findSubsystem<EditorWorkspace>();
-        const Scene*       pScene         = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
-        SceneManager*      pSceneManager  = editor::findSubsystem<SceneManager>();
-        const bool         bMissingObject = pManager == nullptr || pScene == nullptr;
-        const bool         bMissingSystem = pWorkspace == nullptr || pSceneManager == nullptr;
-        if ( bMissingObject || bMissingSystem )
+        GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        const Scene*       pScene   = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
+        if ( pManager == nullptr || pScene == nullptr )
         {
             AdoptResult rejected;
-            rejected._rejectReason = "cannot check scene object references: the object, its scene, the scene manager or the editor workspace is missing";
+            rejected._rejectReason = "cannot check scene object references: the object or its scene is missing";
             SW_LOG_WARNING( "Prefab creation refused: %#", rejected._rejectReason.c_str() );
             return rejected;
         }
-        EditorWorkspace&        workspace = *pWorkspace;
-        PrefabInstanceRegistry& registry  = pManager->getSubsystem<PrefabInstanceRegistry>();
+        EditorWorkspace&        workspace    = editor::getSubsystem<EditorWorkspace>(); // 필수 서비스 - 없으면 버그라 멈춘다(대상 확인 뒤에 조회: 대상 없는 호출은 위에서 거절)
+        SceneManager&           sceneManager = editor::getSubsystem<SceneManager>();
+        PrefabInstanceRegistry& registry     = pManager->getSubsystem<PrefabInstanceRegistry>();
 
         // 부모를 먼저 기록한다. 프리팹 쓰기는 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있다고 가정한다.
         // 먼저 옮길 오브젝트를 모두 모으고(아직 아무것도 바꾸지 않는다), 씬 파일을 넘는 참조가 가리키는 것이 있으면 거절한다.
@@ -238,7 +240,7 @@ namespace sw::editor
         for ( const GameObject* pChild : listAdopt )
         {
             string holder;
-            if ( SceneObjectReferenceUtil::findReferenceTo( *pSceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
+            if ( SceneObjectReferenceUtil::findReferenceTo( sceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
                 continue;
             result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
             SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );

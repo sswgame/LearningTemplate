@@ -96,7 +96,7 @@ namespace sw::editor
 
         GameObjectManager* pManager = editor::getActiveObjectManager();
         if ( pManager == nullptr )
-            return;
+            return; // 선택(②): 미리보기는 씬이 없는 에디터에서도 열 수 있다. 재생할 대상이 없다
         const vector<GameObject*> listObject = pManager->getAllGameObjects();
         for ( GameObject* pObject : listObject )
         {
@@ -123,11 +123,7 @@ namespace sw::editor
             {
                 GameObject* pSpeaker = pManager->findGameObjectByName( hashed_string{ speaker } );
                 if ( pSpeaker != nullptr )
-                {
-                    EditorContext* pContext = EditorContext::get();
-                    if ( pContext != nullptr )
-                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pSpeaker );
-                }
+                    editor::getSubsystem<EditorWorkspace>().selectGameObject( pSpeaker ); // 필수
             }
 
             const vector<GameObject*> listObject = pManager->getAllGameObjects();
@@ -183,8 +179,7 @@ namespace sw::editor
         string previousAcquiredPath;
         if ( assetPath.empty() == false )
         {
-            AssetManager* pResources = editor::findSubsystem<AssetManager>();
-            if ( pResources != nullptr )
+            AssetManager* pResources = &editor::getSubsystem<AssetManager>(); // 필수 - 머티리얼 캐시가 없으면 미리보기가 참조를 못 쥔다
             {
                 // 같은 경로를 다시 걸 때는 이미 보관하고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
                 // 그 머티리얼은 캐시에서 영영 지워지지 않는다.
@@ -224,11 +219,7 @@ namespace sw::editor
         // 옛 참조는 **새 것을 건 뒤에** 놓는다. 먼저 놓으면 참조가 0 이 되어 캐시가 지우는데,
         // 메시가 아직 그 포인터를 보관하고 있을 수 있다.
         if ( previousAcquiredPath.empty() == false )
-        {
-            AssetManager* pResources = editor::findSubsystem<AssetManager>();
-            if ( pResources != nullptr )
-                pResources->getAssetCache<MaterialCache>().release( previousAcquiredPath );
-        }
+            editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( previousAcquiredPath ); // 필수 - 놓지 못하면 참조가 샌다
 
         if ( pPrimary == nullptr )
             return;

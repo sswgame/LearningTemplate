@@ -97,7 +97,7 @@ namespace sw::editor
     bool EditorSiblingOrder::moveBeside( GameObjectManager& manager, GameObject* pDragged, GameObject* pTarget, bool bAfter, const GameObject* pSkip )
     {
         using Internal = EditorSiblingOrderInternal;
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Move beside" ) )
             return false;
         const bool bInvalidDragTarget = pDragged == nullptr || pTarget == nullptr || pDragged == pTarget;
         if ( bInvalidDragTarget )
@@ -167,7 +167,7 @@ namespace sw::editor
 
     GameObject* EditorSiblingOrder::createFolder( GameObjectManager& manager, GameObject* pParent )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Create folder" ) )
             return nullptr;
         EditorTransaction::beginTransaction( "Create Folder" );
         GameObject* pFolder = EditorSceneCommands::create( &manager, pParent );

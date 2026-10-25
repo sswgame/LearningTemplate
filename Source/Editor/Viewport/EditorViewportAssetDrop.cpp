@@ -27,8 +27,8 @@ namespace sw::editor
             return;
         if ( pView == nullptr || pProj == nullptr )
             return;
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
-            return;
+        if ( EditorPlaySession::refuseSceneEdit( "Viewport asset drop" ) )
+            return; // 드롭을 받은 순간에만 닿는다 - 거절 이유가 경고 로그로 남는다
 
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )

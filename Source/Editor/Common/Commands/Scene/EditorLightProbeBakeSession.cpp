@@ -67,24 +67,19 @@ namespace sw::editor
 
             static void runFrame( EditorContext& /*context*/ )
             {
-                EditorLightProbeBakeSession* pSession = editor::findSubsystem<EditorLightProbeBakeSession>();
-                if ( pSession != nullptr )
-                    pSession->update();
+                editor::getSubsystem<EditorLightProbeBakeSession>().update(); // 필수 - 에디터 서브시스템이다
             }
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorLightProbeBakeSession* pSession      = editor::findSubsystem<EditorLightProbeBakeSession>();
-                const SceneManager*                pSceneManager = editor::findSubsystem<SceneManager>();
-                const bool                         bReadable     = pSession != nullptr && pSceneManager != nullptr;
-                outValue                                         = static_cast<float64>( bReadable ? pSession->getFinishedRunCount( pSceneManager->getSceneGeneration() ) : 0u );
+                const EditorLightProbeBakeSession& session = editor::getSubsystem<EditorLightProbeBakeSession>();
+                outValue                                   = static_cast<float64>( session.getFinishedRunCount( editor::getSubsystem<SceneManager>().getSceneGeneration() ) );
                 return true;
             }
 
             [[nodiscard]] static bool readBakeRunning( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorLightProbeBakeSession* pSession = editor::findSubsystem<EditorLightProbeBakeSession>();
-                outValue                                    = ( pSession != nullptr && pSession->isRunning() ) ? 1.0 : 0.0;
+                outValue = editor::getSubsystem<EditorLightProbeBakeSession>().isRunning() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -130,12 +125,16 @@ namespace sw::editor
 
     void EditorLightProbeBakeSession::start()
     {
-        Scene*             pScene        = editor::getActiveScene();
-        GameObjectManager* pManager      = editor::getActiveObjectManager();
-        SceneManager*      pSceneManager = editor::findSubsystem<SceneManager>();
-        const bool         bNoScene      = pScene == nullptr || pManager == nullptr || pSceneManager == nullptr;
-        if ( bNoScene || _run.isRunning() )
+        Scene*             pScene       = editor::getActiveScene();
+        GameObjectManager* pManager     = editor::getActiveObjectManager();
+        SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
+        if ( pScene == nullptr || pManager == nullptr )
+        {
+            SW_LOG_WARNING( "Light probe bake refused: there is no active scene" );
             return;
+        }
+        if ( _run.isRunning() )
+            return; // 이미 도는 중 - 명령이 꺼져 있어야 하는 경우라 조용히 둔다
         vector<LightProbeVolumeComponent*> listVolume;
         EditorLightProbeBakeSessionInternal::collectVolumes( *pManager, listVolume );
         _listObjectID.clear();
@@ -148,7 +147,7 @@ namespace sw::editor
         _bakedCount      = 0;
         _lastError.clear();
         _bJobActive = false;
-        _run.begin( pSceneManager->getSceneGeneration() );
+        _run.begin( sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
     }

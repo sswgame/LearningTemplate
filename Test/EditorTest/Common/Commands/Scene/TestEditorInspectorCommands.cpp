@@ -57,6 +57,25 @@ namespace
 } // namespace
 
 /**
+ * @brief [EditorInspectorCommandsTest] 씬 편집이 막힌 동안 프리팹 명령은 이유를 경고로 남기고 거절한다
+ * @details 막힘은 플레이 중이나 베이크 중 같다(`holdSceneEdits`). 조용히 반환하지 않고 `Editor.SceneEditRefused` 줄이 명령마다 하나 남는다.
+ */
+SW_TEST_CASE( EditorInspectorCommandsTest, PrefabCommandsRefuseWithAReasonWhileSceneEditsAreHeld )
+{
+    AdoptScene               fixture;
+    ScopedPlaySessionService scopedPlaySession;
+    EditorPlaySession::holdSceneEdits();
+    SW_ASSERT_FALSE( EditorPlaySession::areSceneEditsAllowed() );
+
+    test::ScopedLogCollector logs;
+    SW_EXPECT_FALSE( EditorInspectorCommands::applyToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
+    SW_EXPECT_FALSE( EditorInspectorCommands::revertToPrefab( fixture._pLamp, "game/prefabs/lamp.prefab.xml" ) );
+    SW_EXPECT_FALSE( EditorInspectorCommands::unlinkPrefab( fixture._pLamp ) );
+    SW_EXPECT_EQUAL( uint32( 3 ), logs.countWithID( "Editor.SceneEditRefused" ) );
+    SW_EXPECT_FALSE( fixture._workspace.getPlacedPrefabPath( *fixture._pLamp ).empty() ); // 연결이 그대로다
+}
+
+/**
  * @brief [EditorInspectorCommandsTest] 참조 검사에 필요한 오브젝트를 얻지 못하면 검사를 건너뛰지 않고 거절한다
  */
 SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRejectsWhenReferenceCheckIsImpossible )

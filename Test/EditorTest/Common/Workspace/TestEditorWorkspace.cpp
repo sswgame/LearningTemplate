@@ -159,3 +159,22 @@ SW_TEST_CASE( EditorWorkspaceTest, PreviewSelectionResolvesInItsSceneAndBecomesT
     SW_EXPECT_FALSE( previewSelection.isPreviewScope() );
     SW_EXPECT_EQUAL( size_t( 0 ), previewSelection.getSelectedObjectCount() );
 }
+
+/**
+ * @brief [EditorServiceTest] 필수 조회 `getSubsystem<T>()` 는 있으면 참조를 돌려주고, 없으면 오류 로그와 단언으로 멈춘다
+ * @details 없을 때의 `getSubsystem` 은 단언 뒤 참조를 돌려줘야 하므로(null 역참조) 직접 부르지 않고, 없을 때 `getSubsystem` 이 부르는 보고 함수를 검사한다.
+ */
+SW_TEST_CASE( EditorServiceTest, RequiredLookupReturnsServiceAndReportsWhenMissing )
+{
+    SceneManager sceneManager;
+    {
+        ScopedSceneManagerService scopedScene{ sceneManager };
+        SW_EXPECT_TRUE( &getSubsystem<SceneManager>() == &sceneManager );
+    }
+
+    SW_TEST_DEFENSIVE_SCOPE( "a required editor service is missing" );
+    test::ScopedAssertCapture assertCapture;
+    internal::reportMissingRequiredService( "test lookup" );
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+}

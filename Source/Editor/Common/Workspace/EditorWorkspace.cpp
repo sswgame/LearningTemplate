@@ -213,7 +213,10 @@ namespace sw::editor
     {
         Scene* pScene = editor::findSceneOf( object.getManager() );
         if ( pScene == nullptr )
+        {
+            SW_LOG_ERROR( "Prefab path of '%#' is not recorded: its scene is neither the active scene nor an open preview scene", object.getName().c_str() );
             return;
+        }
         pScene->setEntityPrefabPath( object.getObjectID(), prefabPath );
     }
 

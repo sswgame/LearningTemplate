@@ -7,6 +7,7 @@
  *          파일들을 한 번역 단위로 합칠 때 재정의가 됩니다.
  */
 #pragma once
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -104,6 +105,28 @@ namespace sw::editor
 
     private:
         SubsystemScope    _scope;       ///< 이 서비스만 든 범위
+        ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 스코프 동안 빈 플레이 세션 상태(`EditorPlaySessionState`, 정지)를 지금 에디터 범위로 걸어 둡니다 — `EditorPlaySession::holdSceneEdits` 같은 상태 변경이 닿습니다. */
+    class ScopedPlaySessionService
+    {
+    public:
+        ScopedPlaySessionService()
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.addSubsystem( make_unique<EditorPlaySessionState>() );
+        }
+
+        ScopedPlaySessionService( const ScopedPlaySessionService& )            = delete;
+        ScopedPlaySessionService& operator=( const ScopedPlaySessionService& ) = delete;
+
+    private:
+        SubsystemScope    _scope;       ///< 상태만 든 범위
         ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
     };
 } // namespace sw::editor

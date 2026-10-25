@@ -12,6 +12,7 @@ namespace sw::editor
 {
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
     {
+        // 선택 조회(②): 작업 시스템 없이 도는 도구 · 테스트는 호출 스레드에서 바로 실행한다(결과는 같고 비동기만 빠진다).
         TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pTaskManager == nullptr )
         {
