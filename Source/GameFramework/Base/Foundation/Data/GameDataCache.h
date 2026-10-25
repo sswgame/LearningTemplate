@@ -16,6 +16,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -136,7 +137,7 @@ namespace sw
             slot = std::move( fresh );
             _reloadCount.store( generation, std::memory_order_release );
             // 세대가 충분히 지난 옛 표만 놓는다 — 쓰는 쪽은 세대가 바뀌면 정의를 다시 찾으므로 그 사이 한 프레임이면 옛 포인터를 버린다.
-            std::erase_if( _listRetired, [generation]( const RetiredTable& retired )
+            VectorUtil::removeIf( _listRetired, [generation]( const RetiredTable& retired )
             { return generation - retired._generation >= kRetainGenerations; } );
         }
 
