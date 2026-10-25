@@ -334,10 +334,9 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
-        const HRESULT removedReason = _pDevice->_device->GetDeviceRemovedReason();
-        if ( FAILED( removedReason ) )
+        if ( _pDevice->isDeviceLost() )
         {
-            SW_LOG_ERROR( "submitTextureUpload: the device was removed hr=0x%#", static_cast<uint32>( removedReason ) );
+            SW_LOG_ERROR( "submitTextureUpload: the device was lost" );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepth != SW_FALSE )
@@ -411,10 +410,9 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
         // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
-        const HRESULT removedReason = _pDevice->_device->GetDeviceRemovedReason();
-        if ( FAILED( removedReason ) )
+        if ( _pDevice->isDeviceLost() )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: the device was removed hr=0x%#", static_cast<uint32>( removedReason ) );
+            SW_LOG_ERROR( "submitTextureRegionUpload: the device was lost" );
             return RHITransferSubmit::rejected();
         }
 
@@ -521,9 +519,9 @@ namespace sw
     {
         D3D11RHIDevice::TextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_immediateContext.isValid() == false;
-        if ( bTextureNotReadable )
+        if ( bTextureNotReadable || _pDevice->isDeviceLost() ) // 장치를 잃었으면 진입에서 Rejected 다(계약 2)
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
 

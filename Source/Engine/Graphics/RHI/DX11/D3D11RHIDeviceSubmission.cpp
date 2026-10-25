@@ -34,29 +34,71 @@ namespace sw
             static constexpr uint32 kClockReadTimeoutMilliseconds = 500;
             /** @brief `waitIdle` 과 프레임 링 대기가 GPU 를 기다리는 상한입니다. 넘으면 오류를 남기고 이어간다(끝나지 않은 일이 있다는 뜻이라 조용히 넘기지 않는다). */
             static constexpr uint32 kIdleWaitTimeoutMilliseconds = 10000;
-
-            /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 묻지 못하면(장치 제거) true 입니다. */
-            static bool isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags )
-            {
-                BOOL          bDone = FALSE;
-                const HRESULT hr    = context->GetData( pQuery, &bDone, sizeof( bDone ), getDataFlags );
-                return hr != S_FALSE && ( FAILED( hr ) || bDone != FALSE );
-            }
-
-            /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났으면 true, 넘기면 false 입니다. */
-            static bool waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds )
-            {
-                const Deadline deadline = Deadline::afterMilliseconds( timeoutMilliseconds );
-                while ( isEventQueryDone( context, pQuery, 0 ) == false )
-                {
-                    if ( deadline.isExpired() )
-                        return false;
-                    std::this_thread::yield();
-                }
-                return true;
-            }
         };
     } // namespace
+
+    void D3D11RHIDevice::markDeviceLost( const utf8* pCause, HRESULT hr )
+    {
+        if ( _transferSerials.markLost() )
+            SW_LOG_ERROR( "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
+    }
+
+    bool D3D11RHIDevice::isDeviceRemoved()
+    {
+        if ( _device == nullptr )
+            return false;
+        const HRESULT removedReason = _device->GetDeviceRemovedReason();
+        if ( SUCCEEDED( removedReason ) )
+            return false;
+        markDeviceLost( "GetDeviceRemovedReason", removedReason );
+        return true;
+    }
+
+    bool D3D11RHIDevice::isDeviceLost()
+    {
+        return _transferSerials.isLost() || isDeviceRemoved();
+    }
+
+    bool D3D11RHIDevice::debugRemoveDevice()
+    {
+        if ( _device == nullptr )
+            return false;
+        SW_LOG_WARNING( "Marking the D3D11 device lost on request (rhi.removeDevice) - D3D11 cannot remove a device, so this is the state after the first "
+                        "DXGI_ERROR_DEVICE_REMOVED: later transfer submits are rejected" );
+        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        return true;
+    }
+
+    void D3D11RHIDevice::reportQueryFailure( HRESULT hr, const utf8* pStage )
+    {
+        if ( isDeviceRemoved() == false )
+            markDeviceLost( pStage, hr );
+    }
+
+    bool D3D11RHIDevice::isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags )
+    {
+        BOOL          bDone = FALSE;
+        const HRESULT hr    = context->GetData( pQuery, &bDone, sizeof( bDone ), getDataFlags );
+        if ( FAILED( hr ) )
+        {
+            // 쿼리를 읽지 못한다 = 장치를 잃었다. 표시하고 "끝남" 으로 돌려 대기 루프가 끝나게 한다(GPU 가 더 진행하지 않는다).
+            reportQueryFailure( hr, "event query GetData" );
+            return true;
+        }
+        return hr != S_FALSE && bDone != FALSE;
+    }
+
+    bool D3D11RHIDevice::waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds )
+    {
+        const Deadline deadline = Deadline::afterMilliseconds( timeoutMilliseconds );
+        while ( isEventQueryDone( context, pQuery, 0 ) == false )
+        {
+            if ( deadline.isExpired() )
+                return false;
+            std::this_thread::yield();
+        }
+        return true;
+    }
 
     uint32 D3D11RHIDevice::getTimestampSlotCount() const
     {
@@ -94,8 +136,13 @@ namespace sw
         context->Flush();
         const Deadline deadline = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
         uint64         tick{ 0 };
-        while ( context->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ) != S_OK )
+        for ( HRESULT hr = context->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ); hr != S_OK; hr = context->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ) )
         {
+            if ( FAILED( hr ) )
+            {
+                reportQueryFailure( hr, "readGPUClockNanos GetData" ); // 시한까지 돌지 않고 장치 손실로 표시한다
+                return false;
+            }
             if ( deadline.isExpired() )
                 return false;
             std::this_thread::yield();
@@ -161,10 +208,15 @@ namespace sw
         // 상한(kClockReadTimeoutMilliseconds)까지 기다려 읽는다 — DX12 · Vulkan 이 묶음을 다시 쓰기 전에 펜스를 기다리는 것과 같은 자리다.
         // 프로파일러가 켜졌을 때만 오는 경로다(`_bTimestampEnabled`).
         const Deadline deadline     = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
-        auto           waitForQuery = [&context, &deadline]( ID3D11Query* pQuery, void* pData, uint32 byteSize ) -> bool
+        auto           waitForQuery = [this, &context, &deadline]( ID3D11Query* pQuery, void* pData, uint32 byteSize ) -> bool
         {
-            while ( context->GetData( pQuery, pData, byteSize, 0 ) != S_OK )
+            for ( HRESULT hr = context->GetData( pQuery, pData, byteSize, 0 ); hr != S_OK; hr = context->GetData( pQuery, pData, byteSize, 0 ) )
             {
+                if ( FAILED( hr ) )
+                {
+                    reportQueryFailure( hr, "timestamp GetData" ); // 시한까지 돌지 않고 장치 손실로 표시한다
+                    return false;
+                }
                 if ( deadline.isExpired() )
                     return false;
                 std::this_thread::yield();
@@ -273,7 +325,14 @@ namespace sw
         {
             const HRESULT hr = _swapChain.present( vsync );
             if ( FAILED( hr ) )
+            {
                 SW_LOG_ERROR( "Present failed hr=%#", static_cast<uint32>( hr ) );
+                // 장치 제거 · 리셋으로 실패했으면 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
+                if ( hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET )
+                    markDeviceLost( "Present", hr );
+                else
+                    (void)isDeviceRemoved(); // 다른 실패 코드여도 제거 이유가 실패면 표시한다(DEVICE_HUNG 등)
+            }
         }
 
         retireFrameOnGPU();
@@ -290,8 +349,7 @@ namespace sw
             // 기다리는 동안 다른 스레드의 즉시 컨텍스트 호출도 멈춘다 — 쿼리 뒤에 새 전송이 끼면 아래 `retireAll` 이 끝나지 않은 전송을 끝났다고 본다.
             context->End( _idleQuery.Get() );
             context->Flush();
-            if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( context, _idleQuery.Get(),
-                                                                      D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
+            if ( waitForEventQuery( context, _idleQuery.Get(), D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
                 SW_LOG_ERROR( "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
             _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
             // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다(업로드 스테이징은 항목과 함께 놓인다).
@@ -314,8 +372,7 @@ namespace sw
             const bool bRingFull = serial - _completedFrameSerial > constant::kMaxFrameCountInFlight;
             if ( bRingFull )
             {
-                if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(),
-                                                                          D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
+                if ( waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(), D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
                     SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::kMaxFrameCountInFlight,
                                   D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
                 _completedFrameSerial = serial - constant::kMaxFrameCountInFlight;
@@ -328,7 +385,7 @@ namespace sw
             {
                 const uint64       next      = _completedFrameSerial + 1;
                 ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::kMaxFrameCountInFlight].Get();
-                if ( D3D11RHIDeviceSubmissionInternal::isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
+                if ( isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
                     break;
                 _completedFrameSerial = next;
             }
@@ -375,8 +432,7 @@ namespace sw
             const HRESULT hr    = context->GetData( probe._query.Get(), &bDone, sizeof( bDone ), 0 );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "pollTransfer: GetData on the transfer query failed hr=0x%# (device removed?)", static_cast<uint32>( hr ) );
-                _transferSerials.markLost();
+                reportQueryFailure( hr, "pollTransfer GetData on the transfer query" );
                 return false;
             }
             return hr != S_FALSE && bDone != FALSE;
