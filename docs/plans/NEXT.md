@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: main 은 통합 I(브랜치 27 개)에 이어 통합 J(결함 수정 `fixa`~`fixh` 8 개 + 통합이 찾아 고친 결함 넷 — 에디터가 기동하자마자 멈추던 것 둘 포함)와 그 검증까지 끝났고 **push 하지 않았다**(사용자 확인 대기). 남은 것은 push 뒤 CI, GPU 확인(`## 000000` 목록 + 통합 I 의 "실행해서 봐야 하는 것"), 그다음 아키텍처 이음매([ArchitectureSeams](ArchitectureSeams.md))다.
+> 결론: main 은 통합 I(브랜치 27 개)에 이어 통합 J(결함 수정 `fixa`~`fixh` 8 개 + 통합이 찾아 고친 결함 넷 — 에디터가 기동하자마자 멈추던 것 둘 포함)와 통합 K(CI 실행 40147477351 의 실패 둘 — `cifixui` · `cifixcook`)까지 검증했고 **push 하지 않았다**(사용자 확인 대기). 남은 것은 push 뒤 CI(리눅스 쿠킹 수정은 CI 만 확인한다), GPU 확인(`## 000000` 목록 + 통합 I 의 "실행해서 봐야 하는 것"), 그다음 아키텍처 이음매([ArchitectureSeams](ArchitectureSeams.md))다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,7 +16,15 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 00000000. 2026-10-25 통합 J — 결함 수정 브랜치 8 개가 main 에 들어감(push 안 함) (이것부터 읽는다)
+## 000000000. 2026-10-25 통합 K — CI 실패 수정 2 개가 main 에 들어감(push 안 함) (이것부터 읽는다)
+
+**상태**: `cifixui`(UI 결정성 고정물이 글리프 캐시 프레임 시계를 올린다) · `cifixcook`(Linux 에서 소문자 id 를 붙인 디스크 도메인의 실제 표기로 푼다 — `FileUtil::findPathIgnoringCase`)를 `D:/w/integk` 에서 병합해 main 에 fast-forward 로 넣었다. 충돌 없음. **push 하지 않았다**. 워크트리 · 브랜치는 지웠다. 통합이 같은 모양 하나를 고쳤다: 엔진 없이 UISystem + 가짜 글꼴을 돌리는 `TestUIAccessibility` · `TestUILocalization` · `TestUITextInput` 의 프레임 함수도 시계를 안 올렸다 — `FakeFontServiceFixture::beginFrame` 도우미로 네 테스트가 같은 순서를 쓴다.
+
+**검증**: Debug `full-build` 경고 0 + `ctest -L nogpu|lint|race` 122/122. Debug 직접: `UIDeterminismTest` 6/6(원래 Windows Debug 가 지던 것) · UI 셋 21/21 · `CookJobTest` 4/4 · `SceneCookTest` 3/3 · `FileTest` 24/24. Shipping 전체 빌드 경고 0 + `nogpu` 64/64 + `hostgpu` 9/9(QaGoldenImages 건너뜀) + 같은 케이스 58/58. `Ninja-Debug-ASAN` EngineTest 같은 케이스 34/34. 네 백엔드 시나리오는 건너뛰었다 — Windows 런타임에 닿는 변경이 없다(엔진 쪽은 `SW_PLATFORM_LINUX` 안과, Windows 가 부르지 않는 새 함수 하나).
+
+**남은 일**: push 뒤 CI 리눅스 잡에서 `CookJobTest.RegistryCookFollowsTheMetaListing` · `SceneCookTest.*` · Wayland 의 `UIDeterminismTest.*` 를 본다. 같은 결함 후보(리눅스): 아직 없는 파일의 소문자 id 를 `makeAbsolutePath` 가 소문자 그대로 이어 붙여 쓰기 경로(`saved/...`)가 대소문자가 다른 새 폴더를 만들 수 있다 — 쓰기 호출처(약 50 곳)를 CI 로그로 먼저 본다. 팩 쿠킹의 제외 목록 · 설정 해시는 양쪽 다 소문자 비교 키라 디스크로 풀지 않아 해당 없음.
+
+## 00000000. 2026-10-25 통합 J — 결함 수정 브랜치 8 개가 main 에 들어감(push 안 함) (위 절 다음에 읽는다)
 
 **상태**: `fixa` · `fixb` · `fixc` · `fixd` → `fixe`(fixa 위) · `fixf`(fixc 위) · `fixg`(fixb 위) · `fixh`(fixd 위) 순서로 `D:/w/integj`(`wt/integj`)에서 병합해 main 에 fast-forward 로 넣었다. **push 하지 않았다**(사용자 확인 대기). 병합한 `fix*` 와 `integj` 워크트리 · 브랜치는 지웠다. 커밋 메시지가 정본이다.
 
