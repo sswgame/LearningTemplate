@@ -555,7 +555,7 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
 
-        /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 `Map( DO_NOT_WAIT )` 로 읽습니다).
+        /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 쿼리가 지난 뒤 기다리는 `Map` 으로 읽습니다).
         struct TextureReadbackRecord
         {
             Microsoft::WRL::ComPtr<ID3D11Texture2D> _staging;

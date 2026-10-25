@@ -471,14 +471,15 @@ namespace sw
             return false;
         }
 
-        // 이벤트 쿼리가 복사 뒤를 지났으므로 기다리지 않고 읽는다(DO_NOT_WAIT). 여기서 아직이라고 하면 쿼리 순서가 어긋난 것이라 오류다.
-        // 잠금은 Map 과 Unmap 호출에만 잡는다. Map 이 준 포인터는 Unmap 까지 어느 스레드에서 읽어도 되는 CPU 메모리이고, 이 스테이징은 표에서 꺼낸
+        // 이벤트 쿼리가 복사 뒤를 지났으므로 GPU 는 끝났다. 그래도 `D3D11_MAP_FLAG_DO_NOT_WAIT` 는 쓰지 않는다 — 런타임 · 드라이버의 자원 사용 추적이
+        // 쿼리 완료보다 늦게 풀려, 끝난 복사인데도 `DXGI_ERROR_WAS_STILL_DRAWING` 이 나온다(Release · Debug 의 면 되읽기에서 열 번에 몇 번).
+        // 기다리는 Map 은 그 추적만 맞추고 곧 돌아온다. 잠금은 Map 과 Unmap 호출에만 잡는다. Map 이 준 포인터는 Unmap 까지 어느 스레드에서 읽어도 되는 CPU 메모리이고, 이 스테이징은 표에서 꺼낸
         // 이 읽기만 가지므로 사이에 다른 스레드가 내는 즉시 컨텍스트 명령이 건드리지 않는다. 행 복사(4K RGBA16F 면 60 MiB 남짓)가 잠금 밖이라
         // 렌더 스레드의 ExecuteCommandList · Present 가 그 복사를 기다리지 않는다.
         D3D11_MAPPED_SUBRESOURCE mapped{};
         {
             const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-            const HRESULT                           hr      = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
+            const HRESULT                           hr      = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, 0, &mapped );
             if ( FAILED( hr ) || mapped.pData == nullptr )
             {
                 SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
@@ -549,7 +550,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        // 밉 하나 크기의 스테이징 텍스처로 복사하고, 이벤트 쿼리가 그 복사 뒤를 지나면 가져갈 수 있다(`takeTextureReadback` 이 DO_NOT_WAIT 로 Map 한다).
+        // 밉 하나 크기의 스테이징 텍스처로 복사하고, 이벤트 쿼리가 그 복사 뒤를 지나면 가져갈 수 있다(`takeTextureReadback` 이 기다리는 Map 으로 읽는다).
         D3D11_TEXTURE2D_DESC stagingDesc = texDesc;
         stagingDesc.Width                = outLayout._width;
         stagingDesc.Height               = outLayout._height;
