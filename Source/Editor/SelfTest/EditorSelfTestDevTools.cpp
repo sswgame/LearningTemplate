@@ -69,7 +69,7 @@ namespace sw::editor
             /** @brief 그리기 확장 등록 항목이 프로퍼티 매니저에 등록되고 내장 위젯은 그대로 남습니다. */
             static EditorSelfTestStep runPropertyDrawerRegistered( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 pContext->getSubsystem<InspectorPropertyManager>().syncWithRegistry();
@@ -92,7 +92,7 @@ namespace sw::editor
              */
             static IEditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelID )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
@@ -157,7 +157,7 @@ namespace sw::editor
             static EditorSelfTestStep runConsoleTagFilter( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kProbeMessage = "console tag filter probe";
-                EditorContext*        pContext      = EditorContext::get();
+                EditorContext*        pContext      = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
@@ -222,7 +222,7 @@ namespace sw::editor
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kEcho    = "> timescale 0.75 : time scale = 0.75";
-                EditorContext*        pContext = EditorContext::get();
+                EditorContext*        pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
@@ -251,7 +251,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSelectAllWithTag( EditorSelfTestContext& context )
             {
-                EditorContext*     pContext = EditorContext::get();
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -282,7 +282,7 @@ namespace sw::editor
             {
                 constexpr const utf8* kPanelID    = HistoryPanel::kPanelID;
                 constexpr const utf8* kLayoutName = "selftest";
-                EditorContext*        pContext    = EditorContext::get();
+                EditorContext*        pContext    = editor::findSubsystem<EditorContext>();
                 EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
                 if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
                     return EditorSelfTestStep::Done;
@@ -334,9 +334,8 @@ namespace sw::editor
             static void finishGizmo( GameObjectManager* pManager, const GizmoProbe& probe )
             {
                 EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } );
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -447,9 +446,8 @@ namespace sw::editor
             /** @brief 테스트 오브젝트를 지우고 선택을 비웁니다. */
             static void destroyProbe( GameObjectManager* pManager, uint64 objectID )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -466,8 +464,8 @@ namespace sw::editor
                 GameObjectManager*    pManager             = editor::getActiveObjectManager();
                 const SceneViewPanel* pPanel               = openSceneView( context );
                 CameraComponent*      pCamera              = EditorCamera::find( editor::getActiveScene() );
-                EditorContext*        pContext             = EditorContext::get();
-                const bool            bMissingSceneContext = pPanel == nullptr || pContext == nullptr ||
+                EditorContext&        editorContext        = editor::getSubsystem<EditorContext>();
+                const bool            bMissingSceneContext = pPanel == nullptr ||
                                                   context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                 if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
@@ -484,7 +482,7 @@ namespace sw::editor
                 const EditorGridStats&      grid      = client.getGridStats();
                 const bool                  bGrid     = grid._frame == frame;
                 const bool                  bGizmo    = client.getLastGizmoFrame() == frame && client.getLastGizmoObjectCount() >= 1;
-                const bool                  bSceneRan = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
+                const bool                  bSceneRan = editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
                 if ( ( bGrid == false || bGizmo == false || bSceneRan == false ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bSceneRan, "the scene view was not drawn while its tab was in front" );
@@ -527,8 +525,8 @@ namespace sw::editor
                 GameObjectManager*   pManager             = editor::getActiveObjectManager();
                 const GameViewPanel* pPanel               = openGameView( context );
                 CameraComponent*     pCamera              = EditorCamera::find( editor::getActiveScene() );
-                EditorContext*       pContext             = EditorContext::get();
-                const bool           bMissingSceneContext = pPanel == nullptr || pContext == nullptr ||
+                EditorContext&       editorContext        = editor::getSubsystem<EditorContext>();
+                const bool           bMissingSceneContext = pPanel == nullptr ||
                                                   context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
                 if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
@@ -541,15 +539,15 @@ namespace sw::editor
                     (void)context.expect( probe._objectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
-                const EditorViewTarget& view        = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
+                const EditorViewTarget& view        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
                 int32                   vertexCount = 0;
                 const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
                 if ( ( bImage == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
-                (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
-                (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
-                const SceneViewPanel* pSceneView    = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
+                (void)context.expect( editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
+                (void)context.expect( editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
+                const SceneViewPanel* pSceneView    = editorContext.getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
                 const bool            bGridDrawnNow = pSceneView != nullptr && pSceneView->getViewportClient().getGridStats()._frame == ImGui::GetFrameCount();
                 (void)context.expect( bGridDrawnNow == false, "the grid was drawn while only the game view was visible" );
                 // 카메라 없음 안내가 없으면 이미지 뒤에 그린 것이 하나도 없어야 한다. 격자, 기즈모, 시각화, 통계, 방향 큐브는 씬 뷰가 그린다.
@@ -574,19 +572,19 @@ namespace sw::editor
             {
                 constexpr uint32     kSettleFrameCount = 3; // 탭이 앞으로 오고 이미지 자리가 엔진 프레임에 한 번 닿는 데 걸리는 프레임 수
                 const GameViewPanel* pPanel            = openGameView( context );
-                EditorContext*       pContext          = EditorContext::get();
+                EditorContext&       editorContext     = editor::getSubsystem<EditorContext>();
                 const UISystem*      pUI               = findSubsystem<UISystem>();
                 const InputManager*  pInput            = findSubsystem<InputManager>();
-                const bool           bMissingContext   = pPanel == nullptr || pContext == nullptr || context.expect( pUI != nullptr && pInput != nullptr, "no UI system or input manager" ) == false;
+                const bool           bMissingContext   = pPanel == nullptr || context.expect( pUI != nullptr && pInput != nullptr, "no UI system or input manager" ) == false;
                 if ( bMissingContext )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
-                const bool   bDrawn    = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
+                const bool   bDrawn    = editorContext.getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
                 if ( ( bDrawn == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 
-                const EditorViewTarget& view    = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
+                const EditorViewTarget& view    = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
                 const ImGuiWindow*      pWindow = ImGui::FindWindowByName( GameViewPanel::kPanelTitle );
                 if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
                     return EditorSelfTestStep::Done;

@@ -78,10 +78,9 @@ namespace sw::editor
             /** @brief 테스트가 만든 오브젝트를 지우고 선택을 비웁니다. */
             static void destroyProbeObject( uint64 objectID )
             {
-                EditorContext*     pContext = EditorContext::get();
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                GameObjectManager* pManager      = editor::getActiveObjectManager();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -220,7 +219,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -404,7 +403,7 @@ namespace sw::editor
             static EditorSelfTestStep runInspectorDrawLeavesTheObjectAlone( EditorSelfTestContext& context )
             {
                 InspectorProbe& probe    = context.getTestState<InspectorProbe>();
-                EditorContext*  pContext = EditorContext::get();
+                EditorContext*  pContext = editor::findSubsystem<EditorContext>();
                 if ( context.getStepIndex() == 0 )
                 {
                     GameObjectManager* pManager = getActiveManager( context );
@@ -490,7 +489,7 @@ namespace sw::editor
                 constexpr uint32 kCaseCount = static_cast<uint32>( sizeof( kArrFilterCase ) / sizeof( kArrFilterCase[0] ) );
 
                 HierarchyProbe& probe    = context.getTestState<HierarchyProbe>();
-                EditorContext*  pContext = EditorContext::get();
+                EditorContext*  pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
@@ -558,7 +557,7 @@ namespace sw::editor
                 constexpr uint32 kRootCount = 300;
 
                 OffscreenRowProbe& probe    = context.getTestState<OffscreenRowProbe>();
-                EditorContext*     pContext = EditorContext::get();
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
@@ -649,7 +648,7 @@ namespace sw::editor
                 constexpr const utf8* kSceneViewPanelID = SceneViewPanel::kPanelID;
                 constexpr uint32      kResizeFrameCount = 90;
 
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -728,7 +727,7 @@ namespace sw::editor
                 constexpr const utf8* kProfilerPanelID = ProfilerPanel::kPanelID;
                 constexpr uint32      kMaxStepCount    = 30;
 
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr, "no editor context or RHI device" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -853,7 +852,7 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
                     HWND           hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
                     RECT           client{};
-                    EditorContext* pContext              = EditorContext::get();
+                    EditorContext* pContext              = editor::findSubsystem<EditorContext>();
                     const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
                     if ( bCanProbeWindowGrowth )
                     {
@@ -882,7 +881,7 @@ namespace sw::editor
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kPanelID  = UserSettingsPanel::kPanelID;
-                EditorContext*        pContext  = EditorContext::get();
+                EditorContext*        pContext  = editor::findSubsystem<EditorContext>();
                 UserSettingsManager*  pSettings = editor::findSubsystem<UserSettingsManager>();
                 const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;
                 if ( context.expect( bReady, "no editor context or no user settings categories" ) == false )

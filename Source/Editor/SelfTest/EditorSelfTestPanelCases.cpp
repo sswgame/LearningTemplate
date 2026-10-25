@@ -60,7 +60,7 @@ namespace sw::editor
             /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다. 도킹 탭이 가려져 있으면 그리기가 실행되지 않습니다. */
             static ContentBrowserPanel* findVisibleContentBrowser( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kContentBrowserPanelID, true );
@@ -253,11 +253,11 @@ namespace sw::editor
                 constexpr uint32 kSteadyStepCount   = 10;
                 constexpr uint32 kMaxTotalStepCount = 600;
 
-                FolderTreeProbe&     probe     = context.getTestState<FolderTreeProbe>();
-                const uint32         stepIndex = context.getStepIndex();
-                ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
-                EditorContext*       pContext  = EditorContext::get();
-                if ( pPanel == nullptr || pContext == nullptr )
+                FolderTreeProbe&     probe         = context.getTestState<FolderTreeProbe>();
+                const uint32         stepIndex     = context.getStepIndex();
+                ContentBrowserPanel* pPanel        = findVisibleContentBrowser( context );
+                EditorContext&       editorContext = editor::getSubsystem<EditorContext>();
+                if ( pPanel == nullptr )
                     return EditorSelfTestStep::Done;
                 if ( stepIndex > kMaxTotalStepCount )
                 {
@@ -266,7 +266,7 @@ namespace sw::editor
                 }
 
                 // 변경 번호가 바뀌면 패널이 캐시를 비우므로 처음부터 다시 측정한다.
-                const uint64 contentSerial = pContext->getSubsystem<AssetHotReload>().getContentChangeSerial();
+                const uint64 contentSerial = editorContext.getSubsystem<AssetHotReload>().getContentChangeSerial();
                 if ( stepIndex == 0 || contentSerial != probe._contentSerial )
                 {
                     probe._contentSerial  = contentSerial;
@@ -368,7 +368,7 @@ namespace sw::editor
                 constexpr uint32      kSettleStepCount = 2; ///< 패널이 열리고 줄을 다시 만드는 프레임
                 constexpr const utf8* kObjectName      = "MapCheckSelfTestObject";
 
-                EditorContext*     pContext  = EditorContext::get();
+                EditorContext*     pContext  = editor::findSubsystem<EditorContext>();
                 GameObjectManager* pManager  = editor::getActiveObjectManager();
                 MapCheckProbe&     probe     = context.getTestState<MapCheckProbe>();
                 const uint32       stepIndex = context.getStepIndex();
@@ -426,7 +426,7 @@ namespace sw::editor
             {
                 constexpr const utf8* kFocusedMaterialPath = "engine/materials/defaultmaterial.material";
 
-                EditorContext*     pContext = EditorContext::get();
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -460,7 +460,7 @@ namespace sw::editor
                 constexpr const utf8* kPanelID      = GlobalVariablesPanel::kPanelID;
                 constexpr uint32      kMaxStepCount = 30;
 
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
@@ -523,7 +523,7 @@ namespace sw::editor
                 constexpr float32 kEdgeTolerancePx = 1.0f;
 
                 ToolWindowProbe&     probe     = context.getTestState<ToolWindowProbe>();
-                EditorContext*       pContext  = EditorContext::get();
+                EditorContext*       pContext  = editor::findSubsystem<EditorContext>();
                 const ImGuiViewport* pViewport = ImGui::GetMainViewport();
                 if ( context.expect( pContext != nullptr && pViewport != nullptr, "no editor context or main viewport" ) == false )
                     return EditorSelfTestStep::Done;
@@ -623,7 +623,7 @@ namespace sw::editor
                 constexpr uint32      kMaxStepCount    = 30;
                 constexpr float32     kRectTolerancePx = 1.0f;
 
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();

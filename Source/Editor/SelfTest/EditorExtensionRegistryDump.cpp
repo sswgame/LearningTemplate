@@ -61,12 +61,10 @@ namespace sw::editor
         if ( gv_editorRegistryDump == false )
             return;
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 패널은 등록 줄이 아니라 매니저가 만든 인스턴스를 본다 — 메뉴에 보이는 제목까지 같이 남긴다.
-        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+        for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
             SW_LOG_INFO( "EditorExtensionRegistry|panel|%#|%#|%#", entry._id.c_str(), EditorExtensionRegistryDumpInternal::getCategoryName( entry._category ),
                          entry._title.c_str() );
@@ -78,7 +76,7 @@ namespace sw::editor
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorMultiplayerTabRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorFrameStepRegistration>();
 
-        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         for ( const EditorMenu& menu : registry.getMenus() )
         {
             string itemText;
