@@ -108,6 +108,22 @@ namespace test
         _listCase.push_back( { pSuiteName, pTestName, func } );
     }
 
+    void TestCatalog::addCaseGenerator( CaseGenerator generator )
+    {
+        _listGenerator.push_back( generator );
+    }
+
+    void TestCatalog::expandCaseGenerators()
+    {
+        if ( _bGeneratorsExpanded )
+            return;
+        _bGeneratorsExpanded = true;
+        for ( const CaseGenerator generator : _listGenerator )
+        {
+            generator( *this );
+        }
+    }
+
     void TestCatalog::addSuiteKind( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason )
     {
         _arrMapSuiteKindReason[static_cast<size_t>( kind )][pSuiteName] = pReason;
@@ -187,6 +203,11 @@ namespace test
     TestRegistrar::TestRegistrar( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
     {
         TestRegistry::getInstance().getCatalog().addCase( pSuiteName, pTestName, func );
+    }
+
+    CaseGeneratorRegistrar::CaseGeneratorRegistrar( TestCatalog::CaseGenerator generator )
+    {
+        TestRegistry::getInstance().getCatalog().addCaseGenerator( generator );
     }
 
     SuiteKindRegistrar::SuiteKindRegistrar( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason )

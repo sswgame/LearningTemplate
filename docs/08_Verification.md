@@ -483,6 +483,11 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
   App 의 종료 코드는 `Engine::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
 - **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
+  엔진 · 활성 게임의 시나리오는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>`(백엔드 `dx11` · `dx12` · `vk` · `gl`, 배포본 `default`)다.
+  실행 시작에 폴더를 훑어 만들므로(`SW_TEST_CASE_GENERATOR`) 파일을 두면 케이스가 생기고 목록을 적지 않는다. 한 시나리오는 `--test_filter=AppScenarioTest.vfxgpulights.*`,
+  한 백엔드는 `--test_filter=AppScenarioTest.*.gl` 로 돌리고, 하나가 져도 나머지는 돈다. 실패 메시지에는 시나리오 · 백엔드 · 종료 코드와 그 뜻(10 단언 실패 · 15 처리하지 않은 Warning/Error 줄 · 12 시간 초과 …)과
+  보고의 `failures[]` · `unhandledLogs[]` 줄이 든다. 같은 이름의 시나리오가 둘이면 폴더까지 넣은 이름(`game_empty_automation_foo`)을 쓴다.
+  `<Record>` 를 가진 시나리오의 백엔드끼리 기록 비교는 `AppScenarioTest.RecordsMatchAcrossBackends` 가 한 번 더 모든 백엔드로 돌아 본다. 게임 팩 시나리오(`EveryGamePackScenarioPassesOnEveryBackend`)와 에디터 시나리오 체인은 아직 한 케이스다.
   손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
   "다르다 · 같다" 는 기준 캡처를 같은 시나리오에서 찍어 `differingFraction`(화소 비율)으로 쓴다 — `differentFrom`(평균 차)은 `near` 만 받는다.

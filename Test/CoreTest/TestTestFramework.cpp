@@ -357,7 +357,27 @@ SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
 }
 
 /**
- * @brief [TestFrameworkTest] `--test_filter` 는 gtest 와 같은 모양을 읽는다 — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 빼는 패턴이다
+ * @brief [TestFrameworkTest] 케이스 생성기는 실행 시작에 한 번 케이스를 더하고, 만든 이름은 필터로 고를 수 있다
+ * @details 시나리오 폴더 같은 목록이 `Suite.<이름>.<백엔드>` 케이스가 된다. 두 번 돌려도 같은 케이스가 겹쳐 늘지 않아야 한다.
+ */
+SW_TEST_CASE( TestFrameworkTest, CaseGeneratorAddsCasesOnceAndTheyAreFilterable )
+{
+    test::TestRegistry registry;
+    registry.getCatalog().addCaseGenerator( []( test::TestCatalog& catalog )
+    {
+        catalog.addCase( "GeneratedProbeTest", "alpha.dx12", {} );
+        catalog.addCase( "GeneratedProbeTest", "alpha.gl", {} );
+        catalog.addCase( "GeneratedProbeTest", "beta.gl", {} );
+    } );
+    registry.getOptions().setFilter( "GeneratedProbeTest.alpha.*" );
+    SW_EXPECT_EQUAL( 0, registry.runAllTests() );
+    SW_EXPECT_EQUAL( 0, registry.runAllTests() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, registry.getCatalog().getListCase().size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, registry.makeRunOrder( 0 ).size() );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--test_filter` 는 gtest 와 같은 모양을 읽는다— 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 빼는 패턴이다
  * @details gtest 습관대로 `A.*:B.*` 를 적으면 둘 다 골라야 한다. `:` 를 몰라 패턴 하나로 읽으면 아무것도 고르지 않는다.
  */
 SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )

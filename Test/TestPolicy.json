@@ -70,7 +70,6 @@
         "AppScenarioTest.EditorScenariosPassOnDirectX12": 395,
         "AppScenarioTest.EditorScenariosPassOnDirectX11": 321,
         "AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend": 286,
-        "AppScenarioTest.EveryScenarioPassesOnEveryBackend": 98,
         "AppSmokeTest.BenchFrameMatchesGoldenImage": 26,
         "AppSmokeTest.BackendSwapRebuildsGameBeforeEditor": 25,
         "AppScenarioTest.RecordedPlayReplaysOnEveryBackend": 24,

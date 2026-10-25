@@ -13,8 +13,18 @@ namespace test
     class TestCatalog
     {
     public:
-        /** @brief 스위트 · 이름 · 함수로 케이스를 더합니다. */
+        /** @brief 실행 시작에 케이스를 더하는 함수 — `SW_TEST_CASE_GENERATOR` 가 등록합니다. 받은 목록에 `addCase` 로 더합니다. */
+        using CaseGenerator = void ( * )( TestCatalog& catalog );
+
+        /** @brief 스위트 · 이름 · 함수로 케이스를 더합니다. 이름 글은 복사하므로 동적으로 만든 이름도 된다. */
         void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
+        /** @brief 생성기를 더합니다. 부르는 때는 정적 초기화이고, 생성기는 `expandCaseGenerators` 가 실행 시작에 한 번 부릅니다. */
+        void addCaseGenerator( CaseGenerator generator );
+        /**
+         * @brief 생성기를 불러 케이스를 더합니다. 두 번째부터는 아무것도 하지 않습니다(`runAllTests` 가 맨 먼저 부른다 — `--test_list` 도 같다).
+         * @details 시나리오 폴더처럼 엔진이 선 뒤에야 알 수 있는 목록으로 케이스를 만들 자리다. 모든 샤드가 같은 폴더를 보므로 같은 표를 얻는다.
+         */
+        void expandCaseGenerators();
         /** @brief 스위트에 종류 표식(@p kind)을 붙입니다 — 호스트 자원(`SW_TEST_REQUIRES_HOST`) · 부하 검증(`SW_TEST_LOAD_SUITE`). */
         void addSuiteKind( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason );
         /** @brief 스위트가 바깥 환경을 요구하며 환경 변수 @p pEnvironmentName 이 그 주소를 준다고 선언합니다(`SW_TEST_REQUIRES_ENVIRONMENT`). */
@@ -43,6 +53,8 @@ namespace test
 
     private:
         sw::vector<TestCaseInfo>              _listCase;
+        sw::vector<CaseGenerator>             _listGenerator;
+        bool                                  _bGeneratorsExpanded{ false };
         sw::map<sw::string, sw::string>       _arrMapSuiteKindReason[static_cast<size_t>( SuiteKind::Count )];
         sw::map<sw::string, EnvironmentSuite> _mapEnvironmentSuite;
         sw::map<sw::string, TimeBudget>       _mapTimeBudget;
@@ -56,6 +68,16 @@ namespace test
     {
     public:
         TestRegistrar( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
+    };
+} // namespace test
+
+namespace test
+{
+    /** @brief 정적 초기화로 케이스 생성기를 프로세스 레지스트리에 붙입니다(`SW_TEST_CASE_GENERATOR`). */
+    class CaseGeneratorRegistrar
+    {
+    public:
+        explicit CaseGeneratorRegistrar( TestCatalog::CaseGenerator generator );
     };
 } // namespace test
 
@@ -99,7 +121,15 @@ namespace test
     void                       test_##SuiteName##_##TestName()
 
 /**
- * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다 — GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.
+ * @brief 실행 시작에 케이스를 만드는 함수 @p generatorFunc( `void ( test::TestCatalog& )` )를 등록합니다 — 폴더를 훑어 만든 목록이 케이스가 되게 한다.
+ * @param SuiteName 만드는 케이스의 스위트(등록자 이름을 붙이는 데만 쓴다). **이 파일에 사는 스위트**여야 하고 `SW_TEST_CASE` 가 하나라도 있어야 한다(`CheckTestSuites`).
+ * @details 케이스 이름은 `catalog.addCase( 스위트, 이름, 함수 )` 로 더하고, 이름이 `--test_filter` · `--test_list` · 샤드 비용표에 그대로 쓰인다. 생성기는 엔진이 선 뒤
+ *          (`runAllTests` 시작)에 불리므로 리소스 폴더를 읽어도 된다. 함수는 일반 함수나 캡처 없는 람다다(함수 포인터). 목록이 비면 케이스도 없으니, 비는 것이 오류이면 따로 단언하는 케이스를 둔다.
+ */
+#define SW_TEST_CASE_GENERATOR( SuiteName, generatorFunc ) static test::CaseGeneratorRegistrar generatorRegistrar_##SuiteName( generatorFunc )
+
+/**
+ * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다— GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.
  * @param SuiteName 그 스위트. **이 파일에 사는 스위트**여야 하고, 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
  * @param reason    왜 CI 가 못 돌리는지(영문 — `--test_list` 와 실행 요약에 찍힌다).
  * @details 선언이 곧 분류다. `Test/TestPolicy.json` 에서 `hostSplit` 인 실행 파일은 `<타깃>_NoGPU`(`--host_suites=exclude`,

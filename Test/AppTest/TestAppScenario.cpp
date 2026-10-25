@@ -22,7 +22,7 @@ SW_TEST_REQUIRES_HOST( AppScenarioTest, "launches App.exe per automation scenari
 // ------------------------------------------------------------------------------
 // AppScenarioTest — 자동화 시나리오(`Resource/<영역>/automation/*.scenario.xml`)를 백엔드마다 돌려 종료 코드를 본다
 //
-// 시나리오 파일을 놓기만 하면 돈다(파일 목록을 CMake 에 적지 않는다). 게임은 프리셋마다 하나(`SW_ACTIVE_GAME`)이므로 그 프리셋의
+// 시나리오 파일을 놓기만 하면 돈다(파일 목록을 CMake 에 적지 않는다 — 실행 시작에 폴더를 훑어 케이스를 만든다). 게임은 프리셋마다 하나(`SW_ACTIVE_GAME`)이므로 그 프리셋의
 // `AppTest_HostOnly` 가 **엔진 시나리오 + 그 게임 팩의 시나리오**를 돈다. 에디터 시나리오(`engine/automation/editor/`)는 `-EnableEditor` 로 돈다.
 // 판정은 `AppTestUtil::runScenario` 가 한다 — 배포본에서 `<Launch>` 의 `gv_` 개발 변수가 필요한 시나리오는 띄우지 않고 건너뛴다(보고에 `[ PARTSKIP ]` 줄과 요약 개수가 남는다), 13(시나리오의 건너뜀 — 전경 창을 못 얻음 등)과 요구하지 않은 백엔드의 77 은 건너뛰고, 요구 백엔드(`--required_backends=`)의 77 은 실패다. 언리얼 Gauntlet 이 프로세스를 띄워 결과 코드 · 로그를 모으는 것과 같은 자리다.
 // ------------------------------------------------------------------------------
@@ -76,6 +76,37 @@ namespace
 #endif
         }
 
+        /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞 — `vfxgpulights`)입니다. 케이스 이름과 에디터 묶음 이름에 쓴다. */
+        static sw::string getGroupName( const sw::string& scenarioPath )
+        {
+            sw::string   fileName = sw::FileUtil::getFileNamePart( scenarioPath );
+            const size_t dot      = fileName.find( '.' );
+            if ( dot != sw::string::npos )
+                fileName.resize( dot );
+            return fileName;
+        }
+
+        /** @brief 백엔드 스위치(`-gl`)의 이름(`gl`)입니다. 스위치가 없는 배포본은 `default` 입니다. */
+        static sw::string getBackendName( const utf8* pSwitch )
+        {
+            return pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+        }
+
+        /** @brief 시나리오가 `<Record>` 단계를 가졌으면 true 입니다(백엔드끼리 기록 줄을 견주는 시나리오). 못 읽으면 false — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
+        static bool declaresRecord( const sw::string& scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            if ( scenario.loadFromPath( scenarioPath, error ) == false )
+                return false;
+            for ( const sw::AutomationStep& step : scenario.getSteps() )
+            {
+                if ( step._kind == "Record" )
+                    return true;
+            }
+            return false;
+        }
+
         /** @brief 시나리오가 루트에 `editor="true"` 를 적었으면 true 입니다. 못 읽으면 false — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
         static bool requiresEditor( const sw::string& scenarioPath )
         {
@@ -105,7 +136,73 @@ namespace
             return "-EnableEditor -gv_editorStateDir=" + stateFolder;
         }
 
-        /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언합니다. 루트에 `editor="true"` 를 적은 시나리오는 에디터를 켜고 돕니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
+        /**
+         * @brief 시나리오 하나를 백엔드 하나(@p pSwitch)로 돌려 판정합니다 — 케이스 하나의 본문입니다. 실패는 `runScenario` 가 시나리오 · 백엔드 · 종료 코드와 뜻 · 보고의
+         *        `failures[]` · `unhandledLogs[]` 줄과 함께 기록한다. 루트에 `editor="true"` 를 적은 시나리오는 에디터를 켜고 돕니다.
+         */
+        static test::AppRunOutcome runScenarioOnBackend( const sw::string& scenarioPath, const utf8* pSwitch, sw::string_view extraArguments )
+        {
+            sw::string       scenarioArguments{ extraArguments };
+            const sw::string launchArguments = readLaunchArguments( scenarioPath );
+            if ( launchArguments.empty() == false )
+                scenarioArguments += " " + launchArguments;
+            if ( requiresEditor( scenarioPath ) )
+                scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
+            sw::string scenarioLines;
+            return test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
+        }
+
+        /** @brief 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 의 본문입니다. 이 기계에서 돌지 못했으면(건너뜀 · 요구하지 않은 백엔드가 못 섬) 케이스를 건너뜁니다. */
+        static void runScenarioCase( const sw::string& scenarioPath, const utf8* pSwitch )
+        {
+            const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, {} );
+            if ( test::hasRunHere( outcome ) == false )
+                SW_TEST_SKIP( outcome == test::AppRunOutcome::BackendUnusable ? "the backend cannot stand up on this machine and is not required (--required_backends)" : "the scenario skipped itself or needs a development build" );
+        }
+
+        /**
+         * @brief 케이스 이름에 쓰는 시나리오 이름입니다 — 묶음 이름(`vfxgpulights`). 활성 게임과 엔진의 시나리오 가운데 같은 이름이 또 있으면 폴더까지 넣어 `_` 로 잇습니다
+         *        (`game_empty_automation_vfxgpulights`) — 이름이 겹치면 두 케이스가 한 필터에 같이 걸린다.
+         */
+        static sw::string makeCaseLabel( const sw::string& scenarioPath, const sw::vector<sw::string>& listScenario )
+        {
+            sw::string label = getGroupName( scenarioPath );
+            size_t     count = 0;
+            for ( const sw::string& other : listScenario )
+            {
+                count += getGroupName( other ) == label ? 1 : 0;
+            }
+            if ( count > 1 )
+            {
+                label = scenarioPath.substr( 0, scenarioPath.size() - sw::string( ".scenario.xml" ).size() );
+                std::replace( label.begin(), label.end(), '/', '_' );
+            }
+            return label;
+        }
+
+        /**
+         * @brief 엔진 · 활성 게임 팩의 시나리오마다 백엔드마다 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 를 더합니다(`SW_TEST_CASE_GENERATOR`).
+         * @details 시나리오 폴더를 훑어 만들므로 파일을 두면 케이스가 자동으로 생긴다. 케이스는 서로 독립이라 하나가 져도 나머지는 돌고(`--test_filter=AppScenarioTest.vfxgpulights.*` 로 하나만도),
+         *          시간은 케이스마다 보고된다. 백엔드 이름은 `dx11` · `dx12` · `vk` · `gl`(배포본은 `default`).
+         */
+        static void generateScenarioCases( test::TestCatalog& catalog )
+        {
+            const sw::vector<sw::string>  listScenario      = collectGameScenarioPaths();
+            const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
+            for ( const sw::string& scenarioPath : listScenario )
+            {
+                const sw::string label = makeCaseLabel( scenarioPath, listScenario );
+                for ( const utf8* pSwitch : listBackendSwitch )
+                {
+                    catalog.addCase( "AppScenarioTest", ( label + "." + getBackendName( pSwitch ) ).c_str(), [scenarioPath, pSwitch]()
+                    {
+                        runScenarioCase( scenarioPath, pSwitch );
+                    } );
+                }
+            }
+        }
+
+        /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언하고 기록 줄(`<Record>`)을 백엔드끼리 견줍니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
         static uint32 runEveryBackend( const sw::vector<sw::string>& listScenario, sw::string_view extraArguments )
         {
             const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
@@ -113,18 +210,10 @@ namespace
             for ( const sw::string& scenarioPath : listScenario )
             {
                 sw::vector<sw::string> listFirstRecord;
-                const utf8*            pFirstSwitch    = nullptr;
-                const bool             bRequiresEditor = requiresEditor( scenarioPath );
-                const sw::string       launchArguments = readLaunchArguments( scenarioPath );
+                const utf8*            pFirstSwitch = nullptr;
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
-                    sw::string scenarioArguments{ extraArguments };
-                    if ( launchArguments.empty() == false )
-                        scenarioArguments += " " + launchArguments;
-                    if ( bRequiresEditor )
-                        scenarioArguments += " " + makeEditorArguments( scenarioPath, pSwitch );
-                    sw::string                scenarioLines;
-                    const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
+                    const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, extraArguments );
                     if ( test::hasRunHere( outcome ) == false )
                         continue;
                     ++ranCount;
@@ -168,16 +257,6 @@ namespace
         // 다음 실행이 읽는 "저장된 상태" 분기를 그렇게 확인한다. 묶음 이름이 없는 파일은 혼자 한 묶음이다.
         /** @brief 체인에서 시나리오 몇 개마다 모듈 리로드를 끼우는지입니다. */
         static constexpr uint32 kReloadEvery = 6;
-
-        /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞)입니다. */
-        static sw::string getGroupName( const sw::string& scenarioPath )
-        {
-            sw::string   fileName = sw::FileUtil::getFileNamePart( scenarioPath );
-            const size_t dot      = fileName.find( '.' );
-            if ( dot != sw::string::npos )
-                fileName.resize( dot );
-            return fileName;
-        }
 
         /** @brief 묶음마다 빈 상태 폴더를 만들어 묶음의 시나리오를 백엔드 @p pSwitch(`-dx12` …)로 차례로 돌립니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
         static uint32 runEditorGroups( const sw::vector<sw::string>& listScenario, const utf8* pSwitch )
@@ -295,16 +374,34 @@ namespace
     };
 } // namespace
 
+// 엔진 · 활성 게임의 시나리오는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 다(`generateScenarioCases` — 폴더를 훑어 실행 시작에 만든다).
+// 하나가 져도 나머지는 돌고, `--test_filter=AppScenarioTest.vfxgpulights.*` 로 한 시나리오만 돌릴 수 있다. 종료 코드 0 이 통과이고 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀이다.
+// 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log`.
+SW_TEST_CASE_GENERATOR( AppScenarioTest, AppScenarioTestInternal::generateScenarioCases );
+
 /**
- * @brief [AppScenarioTest] 엔진 · 활성 게임의 시나리오가 모든 백엔드에서 통과한다(종료 코드 0 — 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀)
- * @details 사례가 하나라 실패 메시지에 시나리오 · 백엔드가 같이 나온다. 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log`.
+ * @brief [AppScenarioTest] 엔진 · 활성 게임의 시나리오 목록이 비지 않는다 — 목록이 비면 시나리오별 케이스가 하나도 생기지 않아 아무것도 안 돌고 초록이 된다
  */
-SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
+SW_TEST_CASE( AppScenarioTest, ScenarioListIsNotEmpty )
 {
-    const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectGameScenarioPaths();
-    if ( listScenario.empty() )
-        SW_TEST_SKIP( "no automation scenario for the engine or this game" );
-    if ( AppScenarioTestInternal::runEveryBackend( listScenario, {} ) == 0 )
+    SW_EXPECT_TRUE_MSG( AppScenarioTestInternal::collectGameScenarioPaths().empty() == false, "no automation scenario in engine/automation or the active game pack (is the Resource folder found?)" );
+}
+
+/**
+ * @brief [AppScenarioTest] `<Record>` 를 가진 엔진 · 활성 게임의 시나리오는 모든 백엔드가 같은 기록 줄을 낸다
+ * @details 시나리오별 케이스는 백엔드 하나씩이라 백엔드끼리 견주지 못한다. 견줌이 필요한 시나리오만 여기서 한 번 더 모든 백엔드로 돈다(종료 코드 판정은 중복이다). 그런 시나리오가 없으면 건너뛴다.
+ */
+SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
+{
+    sw::vector<sw::string> listRecordScenario;
+    for ( const sw::string& scenarioPath : AppScenarioTestInternal::collectGameScenarioPaths() )
+    {
+        if ( AppScenarioTestInternal::declaresRecord( scenarioPath ) )
+            listRecordScenario.push_back( scenarioPath );
+    }
+    if ( listRecordScenario.empty() )
+        SW_TEST_SKIP( "no scenario of the engine or this game declares <Record>" );
+    if ( AppScenarioTestInternal::runEveryBackend( listRecordScenario, {} ) == 0 )
         SW_TEST_SKIP( "no scenario could run on this machine" );
 }
 

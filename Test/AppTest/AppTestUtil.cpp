@@ -220,34 +220,68 @@ namespace test
 
     sw::vector<sw::string> AppTestUtil::readReportRecords( const sw::string& reportPath )
     {
-        sw::vector<sw::string> listRecord;
+        return readReportStrings( reportPath, "records" );
+    }
+
+    sw::vector<sw::string> AppTestUtil::readReportStrings( const sw::string& reportPath, const utf8* pKey )
+    {
+        sw::vector<sw::string> listLine;
         sw::string             json;
         if ( sw::FileUtil::readTextFile( reportPath, json ) == false )
-            return listRecord;
-        const size_t key = json.find( "\"records\"" );
-        if ( key == sw::string::npos )
-            return listRecord;
-        const size_t end = json.find( ']', key );
-        size_t       at  = json.find( '[', key );
-        // 줄은 `"…"` 이고 안의 `\"` · `\\` 만 풀면 된다(보고 작성기가 그 둘과 줄바꿈만 바꾼다).
-        while ( at != sw::string::npos && at < end )
+            return listLine;
+        const size_t keyAt = json.find( sw::string( "\"" ) + pKey + "\"" );
+        size_t       at    = keyAt == sw::string::npos ? sw::string::npos : json.find( '[', keyAt );
+        if ( at == sw::string::npos )
+            return listLine;
+        // 줄은 `"…"` 이고 안의 `\"` · `\\` · `\n` 만 풀면 된다(보고 작성기가 그 셋만 바꾼다). 줄 안의 `]` 는 배열 끝이 아니므로 따옴표 밖의 `]` 에서 끝낸다.
+        ++at;
+        while ( at < json.size() )
         {
-            const size_t open = json.find( '"', at + 1 );
-            if ( open == sw::string::npos || open > end )
+            while ( at < json.size() && ( json[at] == ' ' || json[at] == ',' || json[at] == '\n' || json[at] == '\r' ) )
+            {
+                ++at;
+            }
+            if ( at >= json.size() || json[at] != '"' )
                 break;
             sw::string line;
-            size_t     cursor = open + 1;
+            size_t     cursor = at + 1;
             while ( cursor < json.size() && json[cursor] != '"' )
             {
                 if ( json[cursor] == '\\' && cursor + 1 < json.size() )
+                {
                     ++cursor;
-                line.push_back( json[cursor] );
+                    line.push_back( json[cursor] == 'n' ? '\n' : json[cursor] );
+                }
+                else
+                {
+                    line.push_back( json[cursor] );
+                }
                 ++cursor;
             }
-            listRecord.push_back( std::move( line ) );
-            at = cursor;
+            listLine.push_back( std::move( line ) );
+            at = cursor + 1;
         }
-        return listRecord;
+        return listLine;
+    }
+
+    sw::string AppTestUtil::describeExitCode( int32 exitCode )
+    {
+        sw::string text = exitCode == sw::kRHIUnusableHereExitCode ? "RHI UNUSABLE HERE: the backend could not stand up on this machine"
+                                                                   : "not a scenario exit code (crash, kill or startup failure)";
+        for ( const sw::AutomationOutcome outcome : { sw::AutomationOutcome::Passed, sw::AutomationOutcome::Failed, sw::AutomationOutcome::LoadError, sw::AutomationOutcome::TimedOut,
+                                                      sw::AutomationOutcome::Skipped, sw::AutomationOutcome::Unconfirmed, sw::AutomationOutcome::UnhandledLog } )
+        {
+            if ( sw::getAutomationExitCode( outcome ) != exitCode )
+                continue;
+            text = sw::getAutomationOutcomeName( outcome );
+            // 10 과 15 는 원인을 찾을 자리가 다르다 — 이름만으로는 헷갈리므로 뜻을 덧붙인다.
+            if ( outcome == sw::AutomationOutcome::UnhandledLog )
+                text += ": the scenario's checks held but the output has Warning/Error lines that no allow-list entry or <ExpectLog> covers";
+            else if ( outcome == sw::AutomationOutcome::Failed )
+                text += ": a scenario check failed";
+            break;
+        }
+        return text;
     }
 
     AppRunOutcome AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
@@ -275,6 +309,7 @@ namespace test
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
         (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
+        (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다
         sw::string arguments = "-scenario=" + scenarioArgument + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
@@ -305,7 +340,19 @@ namespace test
             if ( listUnexpected.empty() == false )
                 result._exitCode = AppTestUtilInternal::kUnhandledLogExitCode;
         }
-        return judgeRun( result, arguments, "log: " + outputBase + ".log\n" + outScenarioLines );
+        sw::string detail = "scenario " + scenarioArgument + " on backend " + backend + "\nlog: " + outputBase + ".log\n" + outScenarioLines;
+        if ( result._bLaunched && ( result._bTimedOut || result._exitCode != 0 ) )
+        {
+            // 보고에 적힌 실패 이유와 처리하지 않은 로그 줄 — 로그 파일을 열지 않고도 무엇이 졌는지 보이게 한다.
+            for ( const utf8* pKey : { "failures", "unhandledLogs" } )
+            {
+                for ( const sw::string& line : readReportStrings( outputBase + ".json", pKey ) )
+                {
+                    detail += sw::string( "report " ) + pKey + ": " + line + "\n";
+                }
+            }
+        }
+        return judgeRun( result, arguments, detail );
     }
 
     AppRunOutcome AppTestUtil::judgeRun( const ProcessRunResult& run, sw::string_view arguments, const sw::string& detail )
@@ -316,7 +363,7 @@ namespace test
             reportFailure( "App is launched", __FILE__, __LINE__, label + " -> not launched (is App in the working folder Bin or next to the test binary?)" );
             return AppRunOutcome::Failed;
         }
-        label += run._bTimedOut ? sw::string( " -> timed out and killed" ) : " -> exit " + sw::to_string( run._exitCode );
+        label += run._bTimedOut ? sw::string( " -> timed out and killed" ) : " -> exit " + sw::to_string( run._exitCode ) + " (" + describeExitCode( run._exitCode ) + ")";
         label += "\n" + detail;
         if ( run._bTimedOut == false && run._exitCode == 0 )
             return AppRunOutcome::Passed;
