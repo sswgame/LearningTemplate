@@ -6,7 +6,7 @@
   3) Pause on spike 의 문턱을 250 ms 로 두고 개발 명령 profile.stall 로 한 프레임을 400 ms 붙잡으면 그 프레임에서 담기가 멈춘다.
      스파이크는 명령이 만든다. 에디터 프레임 비용에 기대면 구성마다 달라진다(Release 의 GT.Frame 은 0.1 ms 안팎이다).
   4) Call Tree 탭에서 Record 를 누르면 녹화가 호출 트리로 접힌다(Editor.ProfilerCallTreeNodes).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/profilercapture.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario profilercapture
 -->
 <Scenario name="editor.profilercapture" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>

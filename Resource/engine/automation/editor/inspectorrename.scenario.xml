@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 인스펙터 이름 칸은 Enter 없이 떠나도(다른 곳을 누름) 친 이름을 적용한다(panel-audit D10, 유니티 · 언리얼과 같다).
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/inspectorrename.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario inspectorrename
 -->
 <Scenario name="editor.inspectorrename" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="60"><DevCommand line="editor scene.new"/></At>

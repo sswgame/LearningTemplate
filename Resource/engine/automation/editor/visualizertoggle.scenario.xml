@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 씬 뷰 툴바의 시각화 체크박스를 누르면 그 시각화만 바뀐다(확장 지점 C2: 켬/끔은 등록 순서의 비트가 아니라 id 로 보관한다).
   Cam(camera_frustum, 기본 켬)을 눌러 끄고, Col(box_collider_2d, 기본 켬)은 그대로인지, 다시 누르면 켜지는지 본다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/visualizertoggle.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario visualizertoggle
 -->
 <Scenario name="editor.visualizertoggle" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

@@ -6,7 +6,7 @@
   Save Trace 단추(profiler.timeline.saveTrace)는 보이는 프레임을 Saved/Traces/trace_<시각>.trace.json(Chrome Trace Event)으로 저장하고 로그에 "Timeline trace: saved" 를 남긴다.
   시작 상태: 타임라인 기록은 패널이 아니라 엔진 서비스(FrameProfiler 의 ProfilerTimeline)가 프로세스 동안 들고 있다 — 녹화를 멈춰도 남은 사건이 보이고
   체인 초기화는 엔진 서비스를 비우지 않는다. 그래서 같은 프레임에 `profile.trace on`(기록을 비우고 켠다)과 `off` 를 이어 불러, 앞 실행의 기록을 지우고 녹화 전 스레드 수 0 에서 시작한다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
+  실행: py -3 -m Scripts scenario profilertimeline
 -->
 <Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<At frame="3"><DevCommand line="profile.trace on"/><DevCommand line="profile.trace off"/></At>

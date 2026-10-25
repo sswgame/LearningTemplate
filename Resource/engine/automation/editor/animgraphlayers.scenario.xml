@@ -5,7 +5,7 @@
   (탐침 Editor.AnimationGraphLayerCount · Editor.AnimationGraphBoneMaskCount). 저장한 뒤 레이어를 지워도 Load 가 저장한 레이어 둘 · 마스크 둘을 되읽는다 —
   패널이 노드와 링크만 들고 있던 때는 저장이 레이어와 마스크를 버렸다.
   사본에만 쓰므로 추적 중인 원본은 바뀌지 않는다(끝에서 더한 레이어와 마스크를 지우고 저장하는 것은 저장 왕복 확인의 일부다).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphlayers.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario animgraphlayers
 -->
 <Scenario name="editor.animgraphlayers" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Scratch from="engine/automation/editor/animgraphlayers" as="scratch/animgraphlayers"/>

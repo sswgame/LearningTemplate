@@ -4,7 +4,7 @@
   오브젝트 Prober 에 달아 본다. 값은 탐침 Editor.SelectedSceneReference 가 `<씬 파일> / <오브젝트>` 로 읽는다.
   ① 컴포넌트를 달면 값이 (none) 이다. ② 콤보를 열어 올라와 있는 씬의 TestMesh 를 고르면 값이 바뀌고 되돌리기 하나가 쌓인다(고르는 순간 그 오브젝트에 파일 id 가 생긴다).
   ③ Ctrl+Z 로 비운다. ④ 다시 고른 뒤 `(none)` 을 고르면 비워진다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/scenereference.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario scenereference
 -->
 <Scenario name="editor.scenereference" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

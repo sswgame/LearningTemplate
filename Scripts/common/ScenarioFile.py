@@ -25,8 +25,25 @@ _kLaunchForbiddenCharacters = " \t\"'"
 kGamePackPrefix = "game/"
 
 
-class ScenarioFileError(Exception):
-    """시나리오를 찾지 못했거나 선언이 틀려 기동 인자를 만들 수 없다 — 이유가 문장에 든다."""
+class ScenarioFileError(ValueError):
+    """시나리오를 찾지 못했거나 선언이 틀려 기동 인자를 만들 수 없다 — 이유가 문장에 든다. `ValueError` 라서 선언을 읽는 다른 도구(`qa/Load.py`)도 같은 잡이로 받는다."""
+
+
+@dataclass(frozen=True)
+class LoadSpec:
+    """부하 선언(`<Load>` 한 줄)의 값 — C++ `AutomationLoad` 와 같은 칸. 읽는 자리는 `readLoadSpec` 하나다(`scenario` 와 `load` 가 같은 규칙을 본다)."""
+
+    durationSeconds: float
+    rampUpSeconds: float
+    clientCount: int
+    meshCount: int
+    moverCount: int
+    network: str
+
+
+#: `<Load>` 속성 → `LoadSpec` 칸. 모르는 속성은 오류다(C++ `AutomationScenario::parseLoad`).
+_kLoadAttributeFields: dict[str, str] = {"clients": "clientCount", "meshes": "meshCount", "movers": "moverCount", "durationSeconds": "durationSeconds",
+                                         "rampUpSeconds": "rampUpSeconds", "network": "network"}
 
 
 @dataclass(frozen=True)
@@ -128,6 +145,26 @@ def readScenarioDeclaration(resourceRoot: Path, resourceId: str) -> ScenarioDecl
                                bEditor=readBoolInternal(resourceId, root, "editor") or resourceId.startswith(kEditorFolderId),
                                bForeground=readBoolInternal(resourceId, root, "requireForeground"),
                                bLoad=any(child.tag == "Load" for child in root))
+
+
+def readLoadSpec(label: str, root: ElementTree.Element) -> LoadSpec:
+    """루트 아래 `<Load>` 하나의 값을 읽는다. 하나가 아니거나 모르는 속성이거나 `durationSeconds` 가 0 이하면 `ScenarioFileError`. `label` 은 오류 문장 머리(파일 경로)."""
+    listLoad = root.findall("Load")
+    if len(listLoad) != 1:
+        raise ScenarioFileError(f"{label}: needs exactly one <Load>")
+    mapValue: dict[str, object] = {"durationSeconds": 0.0, "rampUpSeconds": 0.0, "clientCount": 0, "meshCount": 0, "moverCount": 0, "network": ""}
+    for key, value in listLoad[0].attrib.items():
+        if key not in _kLoadAttributeFields:
+            raise ScenarioFileError(f"{label}: <Load> unknown attribute '{key}'")
+        field = _kLoadAttributeFields[key]
+        try:
+            mapValue[field] = value if isinstance(mapValue[field], str) else type(mapValue[field])(float(value))
+        except ValueError as error:
+            raise ScenarioFileError(f"{label}: <Load> {key} is not a number: '{value}'") from error
+    spec = LoadSpec(**mapValue)  # type: ignore[arg-type]
+    if spec.durationSeconds <= 0:
+        raise ScenarioFileError(f"{label}: <Load> needs durationSeconds > 0")
+    return spec
 
 
 def readBoolInternal(resourceId: str, root: ElementTree.Element, attributeName: str) -> bool:

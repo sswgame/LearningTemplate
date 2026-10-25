@@ -25,7 +25,6 @@ import argparse
 import json
 import shutil
 import sys
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -168,6 +167,8 @@ def resolveGameName(resourceRoot: Path, declaration: ScenarioDeclaration) -> str
     raise ScenarioRunError(f"{declaration.resourceId}: 팩 {declaration.packFolder} 를 팩으로 가진 게임이 {presetFolder.as_posix()} 에 없다 — 어느 게임으로 띄울지 정할 수 없다")
 
 
+# 결정: `<Launch>` 가 없는 시나리오는 "기동 변수가 필요 없다" 는 선언이다(시나리오 187 개 중 168 개가 그렇다) — 거절하지 않고 변수 없이 돌린다.
+# 근거: `AppScenarioTest` 가 같은 시나리오를 변수 없이 돈다. 거절하면 대부분의 시나리오를 못 돌려 이 명령이 쓸모없어진다.
 def checkRunnable(declaration: ScenarioDeclaration, tree: BuildTree, gameName: str) -> None:
     """선언을 인자로 풀 수 없는 시나리오는 이유와 함께 멈춘다(폴백 없음)."""
     if declaration.bLoad:
@@ -212,14 +213,26 @@ def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
 # ------------------------------------------------------------------------------
 # 돌리기
 # ------------------------------------------------------------------------------
-def copyScreenshots(plan: RunPlan, backend: Backend, destination: Path, startWallSeconds: float) -> list[Path]:
-    """이번 판이 쓴 산출물(`Saved/Automation/<name>/`에서 시작 이후 바뀐 파일)을 `<destination>/<백엔드>/` 로 복사한다. 복사한 파일 목록."""
-    source = plan.binDir / kAutomationFolder / plan.declaration.name
-    if not plan.declaration.name or not source.is_dir():
+def makeOutputFolder(plan: RunPlan) -> Path | None:
+    """실행기가 사진 · 산출물을 쓰는 폴더(`Saved/Automation/<시나리오 name>`, `AutomationRunner::_outputDirectory`). name 이 없으면 None."""
+    return plan.binDir / kAutomationFolder / plan.declaration.name if plan.declaration.name else None
+
+
+def clearOutputFolder(plan: RunPlan) -> None:
+    """실행 전에 이 시나리오의 산출물 폴더를 비운다 — 실행기는 이 폴더를 비우지 않아(`Source/Engine/Automation` 에 지우는 코드가 없다) 지난 판 사진이 이번 판과 섞인다."""
+    folder = makeOutputFolder(plan)
+    if folder is not None:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+def copyScreenshots(plan: RunPlan, backend: Backend, destination: Path) -> list[Path]:
+    """이번 판이 쓴 산출물(`Saved/Automation/<name>/` 전부 — 실행 전에 비웠다)을 `<destination>/<백엔드>/` 로 복사한다. 복사한 파일 목록."""
+    source = makeOutputFolder(plan)
+    if source is None or not source.is_dir():
         return []
     listCopied: list[Path] = []
     for path in sorted(source.rglob("*")):
-        if path.is_file() and path.stat().st_mtime >= startWallSeconds - 2.0:
+        if path.is_file():
             target = destination / backend.name / path.relative_to(source)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, target)
@@ -249,7 +262,7 @@ def judgeRun(plan: RunPlan, backend: Backend, listArgument: list[str], mapCode: 
         if lockCode != 0:
             result.meaning = f"GPU {'독점' if bExclusive else '공유'} 칸을 잡지 못함(종료 코드 {lockCode}) — 돌지 않았다"
             return result
-        startWallSeconds = time.time()
+        clearOutputFolder(plan)   # 잠금을 잡은 뒤에 비운다 — 같은 시나리오를 도는 다른 판의 산출물을 지우지 않게
         run = runApp(plan.appPath, listArgument, cwd=plan.binDir, timeoutSeconds=float(plan.timeoutSeconds))
     result.seconds = run.seconds
     result.exitCode = run.exitCode
@@ -264,7 +277,7 @@ def judgeRun(plan: RunPlan, backend: Backend, listArgument: list[str], mapCode: 
     if result.report is None and not result.bPassed:
         result.listNote.append("App 출력의 끝: " + " / ".join(run.listLine[-kTailLineCount:]))
     if destination is not None:
-        result.listCopied = copyScreenshots(plan, backend, destination, startWallSeconds)
+        result.listCopied = copyScreenshots(plan, backend, destination)
     return result
 
 

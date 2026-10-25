@@ -4,7 +4,7 @@
   루트의 editor="true" 로 AppScenarioTest 가 이 게임 팩 시나리오를 -EnableEditor 로 돌린다.
   ① 플레이를 시작해 일정 시스템을 띄우고 ② 창을 열어 NPC 목록이 찼는지 본다. ③ pierre 를 골라 오늘 타임라인 줄이 나오는지 보고 에디터 UI 를 찍는다.
   ④ 10 시로 감아도 창이 따라온다(타임라인 줄 수는 그대로). 플레이를 멈춘다.
-  실행: App.exe -game=HarvestValley -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=game/harvestvalley/automation/scheduleeditor.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario scheduleeditor
 -->
 <Scenario name="harvestvalley.scheduleeditor" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive" editor="true">
 	<At frame="1"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>

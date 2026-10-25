@@ -3,7 +3,7 @@
   에디터 시나리오 — 에디터 UI 캡처(`CaptureEditorUI`)가 네 백엔드에서 에디터 창 전체(패널 + 플로팅 창)를 PNG 로 쓰고,
   빠진 텍스처 · 디버그 색(마젠타)이 UI 에 섞이지 않는지 본다. 테마 토큰 벌 셋(다크 · 라이트 · 고대비)을 차례로 찍는다.
   `-gv_screenshot` 의 `<Screenshot>` 은 주 출력(게임 · 씬 뷰)만 담는다. 이 단계는 그 위의 ImGui 까지 다시 그려 담는다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/uicapture.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+  실행: py -3 -m Scripts scenario uicapture   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
 -->
 <Scenario name="editor.uicapture" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="90"><ResizeWindow width="1600" height="900"/></At>

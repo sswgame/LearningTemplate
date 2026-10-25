@@ -3,7 +3,7 @@
   에디터 시나리오 — 무인 실행 중 창이 포커스를 잃어도(다른 프로세스의 창이 전경을 가져가는 것과 같은 WM_KILLFOCUS) 누르고 있는 자동화 입력이 끊기지 않는다.
   오른쪽 단추 + D 로 날리는 도중에 포커스를 잃었다가 얻어도 카메라가 끝까지 3 m 넘게 간다(배타 시나리오는 사람의 장치 입력과 같이 포커스 사건도 ImGui 에 넣지 않는다 —
   넣으면 ImGui 가 눌린 단추 · 키를 모두 놓은 것으로 처리해 비행이 1.5 m 에서 멈췄다. GL 체인에서 `bugit` · `viewportgrid` 가 간헐적으로 졌던 원인).
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/focusloss.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
+  실행: py -3 -m Scripts scenario focusloss
 -->
 <Scenario name="editor.focusloss" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>

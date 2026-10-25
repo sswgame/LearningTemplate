@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — Output Log(N5): 같은 경고 줄을 열 번 남기는 개발 명령(log.repeat)을 넣고, 검색 칸으로 그 줄만 남긴다(Info 를 꺼서 명령 메아리 줄도 숨긴다).
   접기 전에는 열 줄, Collapse 를 켜면 한 줄, Clear 를 누르면 0 줄이다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/outputlog.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario outputlog
 -->
 <Scenario name="editor.outputlog" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

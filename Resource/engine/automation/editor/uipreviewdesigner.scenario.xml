@@ -4,7 +4,7 @@
   1) 슬롯 손잡이 — pause 문서의 Window(캔버스의 자식)를 고르고 가운데 손잡이를 끌면 슬롯의 _offsetMin._x 가 늘고(Editor.UIPreviewSelectedOffsetMinX) 되돌리기 하나가 쌓이며 Undo 로 돌아온다.
   2) 팔레트 — 작은 문서(uipreview/save_probe.ui.xml, 위젯 하나)에서 팔레트를 TextWidget 으로 거르고 그 항목을 트리의 루트 줄에 끌어 놓으면 위젯이 하나 늘고, Delete 가 지우고,
      Undo 가 지운 위젯을 같은 자리에 되돌리고, Undo 가 추가를 되돌린다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/uipreviewdesigner.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario uipreviewdesigner
 -->
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

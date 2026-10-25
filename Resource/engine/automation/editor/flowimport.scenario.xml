@@ -5,7 +5,7 @@
   가져온 에셋은 리소스 id 가 있어야 씬이 쓴다 — 그래서 대상은 리소스 트리 안의 임시 폴더 editor/automationtemp/ 뿐이다(.gitignore 가 무시).
   시나리오는 처음과 끝에 그 폴더를 지운다(asset.removeImportFolder) — 남은 파일이 있으면 같은 이름이 새 이름을 받아 단계가 어긋난다.
   ① 프리팹 원본 하나를 임시 폴더로 가져온다. ② 가져온 리소스 id 로 스폰한다(점광이 붙은 FlickerLight). ③ 씬을 저장하고 새 씬 → 다시 열기 뒤에도 그 인스턴스가 있다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowimport.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowimport
 -->
 <Scenario name="editor.flowimport" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

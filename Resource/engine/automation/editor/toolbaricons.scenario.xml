@@ -3,7 +3,7 @@
   에디터 시나리오 — 재생 · 기즈모 · 뷰포트 툴바 아이콘(R5): 창을 960 px 로 줄여도 상단 툴바의 Play(toolbar.play)가 보이고 눌리며(Editor.PlayState 1),
   멈춘 뒤 오브젝트를 고르면 떠 있는 변환 막대의 기즈모 아이콘 단추(gizmo.rotate · gizmo.scale)가 보이고 눌린다(Editor.GizmoOperation).
   버튼이 잘려 숨겨지면 이름표가 없어 시나리오가 진다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/toolbaricons.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario toolbaricons
 -->
 <Scenario name="editor.toolbaricons" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="960" height="720"/><Variable name="gv_editorUiScale" value="1"/></At>

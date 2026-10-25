@@ -2,7 +2,7 @@
 <!--
   KayKit 전투 벤치의 아틀라스 색 — 전투 연출(-gv_benchCombat=1)의 스켈레톤 적(_combatEnemyMaterial)과 칼(_combatSwordMaterial)이 KayKit 머티리얼로 그려지는지 눈으로 본다.
   사진 한 장은 서 있는 적(맞기 전), 한 장은 쓰러진 뒤(180 프레임에 치명적인 피격 → 래그돌, 칼 떨어뜨리기)다.
-  실행: App.exe -game=Empty -dx12 -gv_benchCombat=1 -scenario=game/empty/automation/kaykitcombat.scenario.xml (Shipping 은 벤치 변수가 없어 건너뛴다)
+  실행: py -3 -m Scripts scenario kaykitcombat (Shipping 은 벤치 변수가 없어 건너뛴다)
 -->
 <Scenario name="game.empty.kaykitcombat" fixedDelta="0.0166667" timeoutFrames="500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_benchCombat" value="1"/>

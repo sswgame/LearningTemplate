@@ -5,7 +5,7 @@
   2) (3 · 4 뒤에) 다시 플레이해 7 로 바꾸고 Play > Keep Simulation Changes 를 쓰면 Stop 뒤에도 7 이고, 그 남김은 되돌리기 하나다(Ctrl+Z 로 0).
   3) F8 은 조종을 놓고(Simulate, 씬 뷰) 다시 F8 이 조종으로 돌아온다(Editor.PlaySimulating).
   4) 게임 뷰 툴바의 Max(Maximize On Play)를 켜고 플레이하면 인스펙터가 닫히고(Editor.PanelOpen), Stop 하면 배치가 돌아온다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/playedit.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario playedit
 -->
 <Scenario name="editor.playedit" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

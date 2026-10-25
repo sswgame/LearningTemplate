@@ -5,7 +5,7 @@
   netplay.waitResent 1 30 은 모든 프로세스에 net.emulation stats 를 거듭 물으며, 재전송 합이 1 이상이 되거나 30 초가 지날 때까지 그 프레임을 붙잡는다.
   재전송은 연결의 벽시계 시한으로 일어나므로 프레임 수로 기다리지 않는다(Release 는 수십 프레임이 1 초도 걸리지 않는다). 탐침이 그 답을 읽어
   흉내가 버린 패킷(Editor.NetPlayEmulationDroppedPackets)과 연결이 다시 보낸 신뢰 메시지(Editor.NetPlayResentMessages)를 보고한다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/netconditions.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario netconditions
 -->
 <Scenario name="editor.netconditions" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="20">

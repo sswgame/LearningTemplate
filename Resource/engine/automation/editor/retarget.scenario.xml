@@ -4,7 +4,7 @@
   새 프로필: 경로 칸에 없는 리소스 id 를 적고 New 를 누르면 빈 문서로 열린다(사슬 0). 저장은 스켈레톤 · 뿌리와 골반이 묶이기 전에는 막힌다(저장하지 않고 닫는다).
   기존 프로필: knight_to_minion 을 열면 사슬이 채워지고, 미리보기가 두 스켈레톤을 선으로 긋는다(탐침 Editor.RetargetPreviewSegments). 대상 본 upperarm.l 을 더하면 리타깃 포즈 줄이 하나가 되고
   미리보기의 대상(주황)과 레퍼런스(회색)가 갈린다 — 눈으로 볼 사진을 찍는다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/retarget.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario retarget
 -->
 <Scenario name="editor.retarget" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="10"><DevCommand line="layout.reset"/></At>

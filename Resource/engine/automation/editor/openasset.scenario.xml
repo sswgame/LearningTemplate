@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 도구 문서 열기(N7): Quick Open(Ctrl+P)에 타일맵 이름을 치고 Enter 를 누르면 콘텐츠 브라우저 더블클릭처럼 Tile Map Tool 이 열린다.
   패널을 닫은 뒤 같은 에셋을 다시 골라도(포커스가 그대로여도) 패널이 다시 열린다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/openasset.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario openasset
 -->
 <Scenario name="editor.openasset" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
 	<At frame="20"><Variable name="gv_editorProbePanel" value="tile_map"/></At>

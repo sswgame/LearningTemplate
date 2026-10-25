@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — Test Runner 창(panel test_runner)의 Editor Self Tests 탭에서 자체 테스트 하나(hierarchy.tagFilter)를 골라 Run Selected 를 누르면
   그 자리에서 돌고(앱은 그대로) 결과가 PASS 로 찬다(Editor.TestRunnerPassCount 1). 시나리오 · 단위 테스트 탭은 새 프로세스를 띄우므로 여기서 돌리지 않는다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/testrunner.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
+  실행: py -3 -m Scripts scenario testrunner
 -->
 <Scenario name="editor.testrunner" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>

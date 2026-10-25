@@ -4,7 +4,7 @@
   실제 TDR 은 되풀이하면 어댑터가 망가지므로 DirectX 12 는 ID3D12Device5::RemoveDevice 로 흉내 내고, Vulkan 은 장치를 VK_ERROR_DEVICE_LOST 를 처음 본 뒤의 상태로 둔다.
   DirectX 11 · OpenGL 은 제거할 수 없어서 AppScenarioTest 가 줍지 않는 이 하위 폴더에 둔다.
   통과는 종료 코드 0 과 제한 시간 안의 종료다(멈추면 바깥 시한이 죽인다). 제거 뒤의 [Error] 로그는 예상된 것이다.
-  실행: App.exe -dx12(또는 -vk) -scenario=engine/automation/rhiswap/removedevice.scenario.xml (-EnableEditor 를 붙이면 에디터 렌더러도 지난다)
+  실행: py -3 -m Scripts scenario removedevice (백엔드 vk 도 같다. 에디터 렌더러까지 지나려면 App.exe 에 -EnableEditor 를 직접 붙인다)
 -->
 <Scenario name="rhiswap.removedevice" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="30"><DevCommand line="rhi.removeDevice"/></At>

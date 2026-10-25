@@ -6,7 +6,7 @@
   ③ lamp 를 하나 더 스폰해 LampTop 으로 이름을 바꾸고 반경을 7 로 고쳐 Apply Overrides 한다.
   ④ Post 아래의 부품 Lamp 도 반경 7 이 된다(PrefabInstanceRegistry 의 부품도 같은 프리팹의 인스턴스다). 되돌리기 한 번이면 원래 값으로 돌아온다.
   ⑤ 씬을 저장하고 새 씬 → 다시 열기 — 부품은 씬에 엔티티로 저장되지 않고 Post 가 새 lamp 로 다시 스폰한다(Lamp 는 하나, 반경 7).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowprefabnested.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowprefabnested
 -->
 <Scenario name="editor.flowprefabnested" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

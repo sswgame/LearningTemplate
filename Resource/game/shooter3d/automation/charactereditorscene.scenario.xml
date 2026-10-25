@@ -7,7 +7,7 @@
   ③ 오브젝트에 스켈레탈 메시 · 외형 컴포넌트를 달고 인스펙터로 프리셋을 EditorKnight 로 적는다.
   ④ 플레이하면 그 프리셋으로 조립한다 — 머리 칸에 세트의 투구(helmet_knight)가 있다(기준 프리셋에는 없다).
   루트의 editor="true" 로 AppScenarioTest 가 -game=Shooter3D -EnableEditor 로 돌린다.
-  실행: App.exe -game=Shooter3D -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=game/shooter3d/automation/charactereditorscene.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario charactereditorscene
 -->
 <Scenario name="shooter3d.charactereditorscene" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive" editor="true">
 	<At frame="1"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>

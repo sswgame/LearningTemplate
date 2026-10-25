@@ -4,7 +4,7 @@
   ① 플레이 인 → 플레이 아웃 ② 다른 백엔드로 갔다가 시작 백엔드로 돌아온다. 경계마다 편집이 남아 있고(Terrain.WrittenEditCount, 그림),
   되돌리기 스택이 같으며(Editor.UndoState), 마지막에 Ctrl+Z 한 번이 그 붓질을 되돌려 그림이 편집 전으로 돌아온다.
   처음에 한 번 건너는 것은 도킹 배치를 안정시키기 위해서다(rhiswap/terrainedits 와 같은 까닭 — 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowterrain.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowterrain
 -->
 <Scenario name="editor.flowterrain" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<At frame="1"><Variable name="gv_environmentAnimate" value="0"/></At>

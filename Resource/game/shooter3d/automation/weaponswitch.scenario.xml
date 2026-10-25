@@ -2,7 +2,7 @@
 <!--
   Shooter3D 무기 교체 — 입력 층(가상 키보드)으로 E/Q 를 짧게 · 길게 · 같은 프레임에 눌러 무기 번호가 정확히 한 칸씩 바뀌는지 본다.
   input-trigger 결함(axis1d 가 trigger 를 버려 누르는 동안 매 프레임 바뀜)과 합성 바인딩 같은 프레임 탭 결함의 회귀 그물. 무기: 0 소총 · 1 산탄총 · 2 권총(3 칸 순환).
-  실행: App.exe -scenario=game/shooter3d/automation/weaponswitch.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario weaponswitch
 -->
 <Scenario name="shooter3d.weaponswitch" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0">

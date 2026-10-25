@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 노드 그래프 찾아 넣기(T3): Dialogue Graph 캔버스 빈 곳을 오른쪽 클릭하면 검색 팝업이 열리고, 글자를 치고 Enter 를 누르면
   맨 위 줄의 노드가 그 자리에 하나 생긴다(탐침 Editor.GraphNodeCount). 같은 것을 Animation Graph 로 한 번 더 한다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/graphaddnode.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario graphaddnode
 -->
 <Scenario name="editor.graphaddnode" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

@@ -5,7 +5,7 @@
   ① 오브젝트 Prober 에 그 컴포넌트를 달면 값이 (none) 이다. ② 콤보를 열어 TestMesh 의 메시 컴포넌트를 고르면 값이 바뀌고 되돌리기 하나가 쌓인다.
   ③ Ctrl+Z 로 비운다. ④ 다시 고른 뒤 `(none)` 을 고르면 비워진다. ⑤ 이름 글을 오른쪽 클릭한 행 메뉴에서 Paste Value 는 비활성이다(글로 붙이면 타입 확인이 빠진다).
   ⑥ CallInEditor 메서드 Assign Target 의 인자 콤보(프로퍼티와 같은 선택기)로 고르고 Invoke 하면 같은 값이 들어간다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inspectorhandle.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario inspectorhandle
 -->
 <Scenario name="editor.inspectorhandle" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

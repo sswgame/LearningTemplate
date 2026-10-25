@@ -72,6 +72,7 @@ class FakeApp:
         self.mapExitCode = mapExitCode or {}
         self.mapReport = mapReport or {}
         self.bTimedOut = bTimedOut
+        self.outputFile: Path | None = None   # 이 판이 쓰는 산출물(있으면 매 부름마다 쓴다)
         self.listCall: list[tuple[Path, list[str], Path | None, float]] = []
 
     def __call__(self, appPath: Path, listArgument: list[str], *, cwd: Path | None = None, timeoutSeconds: float = 300.0, **_: object) -> AppRunResult:
@@ -81,6 +82,8 @@ class FakeApp:
         if backend in self.mapReport:
             assert cwd is not None
             writeText(cwd / reportRel, json.dumps(self.mapReport[backend]))
+        if self.outputFile is not None:
+            writeText(self.outputFile, backend)
         return AppRunResult(exitCode=self.mapExitCode.get(backend, 0), listLine=["[Info] fake app"], bLaunched=True, bTimedOut=self.bTimedOut, seconds=1.5)
 
 
@@ -157,6 +160,17 @@ class ArgumentAssemblyTest(ScenarioRunCase):
         self.assertEqual(1, out.count("| 백엔드 | 종료 코드 | 결과 | 시간 |"))
         self.assertIn("[Warning] [Caller] (id=Area.Event) 줄 그대로 | 막대 포함", out)
         self.assertNoLockLeft()
+
+    def testScreenshotDirGetsOnlyThisRunsFiles(self) -> None:
+        """실행기는 산출물 폴더를 비우지 않으므로 지난 판 사진이 섞이지 않게 `scenario` 가 실행 전에 비운다."""
+        outputFolder = self.appPath.parent / "Saved/Automation/game.empty.motionblur"
+        writeText(outputFolder / "old.ppm", "stale")
+        fake = FakeApp()
+        fake.outputFile = outputFolder / "new.ppm"
+        shotFolder = self.root / "shots"
+        code, _, _ = self.runMain(["motionblur", "--screenshot-dir", str(shotFolder)], fake)
+        self.assertEqual(ExitCode.Passed, code)
+        self.assertEqual(["new.ppm"], sorted(path.name for path in (shotFolder / "dx12").iterdir()))
 
     def testDryRunPrintsCommandAndDoesNotRun(self) -> None:
         fake = FakeApp()

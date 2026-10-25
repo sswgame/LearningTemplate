@@ -4,7 +4,7 @@
   서 있으면 배율 1(포즈가 바뀌지 않는다)이다. 이동 중 배율(이동 속도 / 재생한 발 속도)은 노드가 min_scale 0.6 ~ max_scale 1.6 으로 자르므로 프로브 값은 그 범위 밖일 수 있다 —
   값 자체는 클립의 발 속도에 달렸으니 화면으로 본다 — 서 있는 사진과 뒷걸음 달리기 사진을 견줘 발이 덜 미끄러지는지(연속 사진은 -gv_shooterMotionTrace).
   자동 플레이를 끄고 걷는다(시작 (0, -16) 에서 +Z 를 본다. 뒷걸음은 -Z 쪽 한 걸음 거리).
-  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/stridewarping.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario stridewarping
 -->
 <Scenario name="shooter3d.stridewarping" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>

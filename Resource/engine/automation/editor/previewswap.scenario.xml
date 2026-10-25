@@ -11,7 +11,7 @@
   교체 뒤 살아 있는 미리보기 렌더러 수(탐침 Editor.ScenePreviewRenderers)가 교체 앞과 같아야 한다 - 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 수가 다르다.
   그림이 맞는지(빨간 구 + 바닥, 빈 타깃이 아님)는 저장한 PPM 을 눈으로 본다 — 평균 색의 문턱값은 GPU 로 돌려 보기 전에는 맞출 수 없어 자동 단언을 두지 않았다. 파일: Saved/Automation/previewswap_<before|after1|after2>.ppm.
   어느 백엔드로 시작해도 된다(other 는 DX12 가 아니면 DX12, DX12 면 DX11). 백엔드 교체가 없는 환경에서는 SwapBackend 가 준비 단계에서 거절해 진다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/previewswap.scenario.xml -dx12 (-vk · -gl 로 시작해도 같다)
+  실행: py -3 -m Scripts scenario previewswap (백엔드 vk · gl 로 시작해도 같다)
 -->
 <Scenario name="editor.previewswap" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

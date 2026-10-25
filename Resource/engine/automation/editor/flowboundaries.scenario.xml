@@ -5,7 +5,7 @@
   ① 플레이 인 → 플레이 아웃 ② 이름 붙인 레이아웃 저장 → 초기화 → 불러오기 ③ 게임 모듈 리로드 ④ 백엔드 교체(다른 백엔드로 갔다 시작 백엔드로 돌아온다)
   ⑤ 에디터 모듈 리로드. 경계마다 되돌리기 · 다시 실행이 아직 같은 명령을 가리키는지(Editor.UndoState)도 본다 — 되돌리기 스택이 비거나 명령이 빠지면 실패한다.
   실패 줄의 값이 다르면 Editor.SceneHash · Editor.SelectedNames · Editor.UndoState 가 어느 쪽이 달라졌는지 말한다(씬 내용은 -gv_automationHashDump=1 로 오브젝트별 로그).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowboundaries.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowboundaries
 -->
 <Scenario name="editor.flowboundaries" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

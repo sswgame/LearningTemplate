@@ -5,7 +5,7 @@
   (Editor.TempAssetExists) 더러움이 걷힌다.
   문서: Saved/Automation/editor.dialoguegraphsave/temp.dialogue.xml — 작업 폴더 아래 임시 경로라 저장소 리소스를 바꾸지 않는다
   (asset.open 은 Saved/Automation/ 밖과 리소스 트리를 거절한다). 끝에서 asset.removeTemp 로 지운다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/dialoguegraphsave.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario dialoguegraphsave
 -->
 <Scenario name="editor.dialoguegraphsave" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

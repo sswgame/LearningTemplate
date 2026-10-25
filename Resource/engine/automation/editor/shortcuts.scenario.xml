@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 단축키 편집기(P3): Undo 줄의 Set 을 누르고 Ctrl+U 를 보내면 Undo 가 Ctrl+U 가 된다. 오브젝트를 만들고 Ctrl+U 로 되돌린다.
   Redo 에 같은 Ctrl+U 를 받으면 충돌을 묻는다(Cancel). 끝에 Reset All 로 덮어쓰기를 지운다. 저장 파일은 빈 상태 폴더의 Shortcuts.json 이다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/shortcuts.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario shortcuts
 -->
 <Scenario name="editor.shortcuts" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
