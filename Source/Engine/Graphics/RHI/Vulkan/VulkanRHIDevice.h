@@ -549,7 +549,8 @@ namespace sw
         uint32                   _graphicsQueueFamilyIndex;
         /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
         ///        이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있습니다(`_swapChain.getImageIndex()`).
-        uint32 _currentFrame;
+        ///        렌더 스레드만 넘기고(`endFrame`), 다른 스레드의 `updateConstantBuffer` 도 칸을 고르려 읽으므로 atomic 입니다.
+        atomic<uint32> _currentFrame;
 
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
