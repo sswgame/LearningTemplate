@@ -135,9 +135,10 @@ namespace sw
             return false;
         }
         listExtension.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
+        _wsiKind = VulkanWsiKind::Win32;
 #elif defined( SW_PLATFORM_LINUX )
         // WSLg · gfxstream 은 흔히 xcb 만 내놓고 xlib 는 없다.
-        _linuxWsi = 0;
+        _wsiKind = VulkanWsiKind::None;
         if ( _surfaceKind == NativeSurfaceKind::Win32 )
         {
             // 아래 X11 길로 떨어지면 HWND 를 창 ID 로 읽게 된다 — 대신하지 않고 멈춘다.
@@ -153,19 +154,19 @@ namespace sw
                 return false;
             }
             listExtension.push_back( "VK_KHR_wayland_surface" );
-            _linuxWsi = 3;
+            _wsiKind = VulkanWsiKind::Wayland;
             SW_LOG_TRACE( "Vulkan WSI: VK_KHR_wayland_surface" );
         }
         else if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
-            _linuxWsi = 1;
+            _wsiKind = VulkanWsiKind::Xlib;
             SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
         }
         else if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
         {
             listExtension.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
-            _linuxWsi = 2;
+            _wsiKind = VulkanWsiKind::Xcb;
             SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
         }
         else
@@ -628,7 +629,7 @@ namespace sw
         _swapChain.destroySemaphores( _device );
         _swapChain.destroy( _device );
         _swapChain.destroySurface( _instance );
-        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
+        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
             return false;
         // 새 서피스를 이 큐가 프레젠트할 수 있는지 — 고를 때(pickPhysicalDevice) 본 것은 옛 서피스다.
         VkBool32 bPresentSupported = VK_FALSE;

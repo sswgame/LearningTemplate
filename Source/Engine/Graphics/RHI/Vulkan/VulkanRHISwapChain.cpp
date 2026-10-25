@@ -39,112 +39,143 @@ namespace sw
         }
     } // namespace
 
-    bool VulkanRHISwapChain::createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, uint32 linuxWsi )
+    bool VulkanRHISwapChain::createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, VulkanWsiKind wsiKind )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         (void)pDisplayHandle;
-        (void)linuxWsi;
 
-        VkWin32SurfaceCreateInfoKHR createInfo{};
-        createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-        createInfo.hwnd      = static_cast<HWND>( pWindowHandle );
-        createInfo.hinstance = GetModuleHandleW( nullptr );
-
-        if ( vkCreateWin32SurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+        switch ( wsiKind )
         {
-            SW_LOG_ERROR( "Failed to create window surface!" );
-            return false;
+            case VulkanWsiKind::Win32:
+            {
+                VkWin32SurfaceCreateInfoKHR createInfo{};
+                createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+                createInfo.hwnd      = static_cast<HWND>( pWindowHandle );
+                createInfo.hinstance = GetModuleHandleW( nullptr );
+
+                if ( vkCreateWin32SurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+                {
+                    SW_LOG_ERROR( "Failed to create window surface!" );
+                    return false;
+                }
+                return true;
+            }
+            case VulkanWsiKind::None:
+            case VulkanWsiKind::Xlib:
+            case VulkanWsiKind::Xcb:
+            case VulkanWsiKind::Wayland:
+            {
+                SW_LOG_ERROR( "Vulkan WSI kind %# cannot create a surface on Windows (only Win32 can).", static_cast<uint32>( wsiKind ) );
+                return false;
+            }
         }
-        return true;
+        SW_LOG_ERROR( "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
+        return false;
 #elif defined( SW_PLATFORM_LINUX )
-        if ( linuxWsi == 3 )
+        // 아래 둘은 X11 길(xlib · xcb)만 읽는다. Wayland 는 핸들의 뜻이 달라 자기 길에서 따로 검사한다.
+        Display*   pDisplay          = static_cast<Display*>( pDisplayHandle );
+        Window     window            = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindowHandle ) );
+        const bool bInvalidX11Handle = pDisplay == nullptr || window == 0;
+
+        switch ( wsiKind )
         {
-            // Wayland — 핸들은 wl_surface*, 디스플레이는 wl_display* 다(`WaylandWindow`). 구조체의 두 포인터는 불완전 타입이라 Wayland 헤더가 없어도 된다.
-            PFN_vkCreateWaylandSurfaceKHR pCreateFn     = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>( vkGetInstanceProcAddr( instance, "vkCreateWaylandSurfaceKHR" ) );
-            const bool                    bCannotCreate = pCreateFn == nullptr || pDisplayHandle == nullptr || pWindowHandle == nullptr;
-            if ( bCannotCreate )
+            case VulkanWsiKind::Wayland:
             {
-                SW_LOG_ERROR( "Cannot create a Wayland Vulkan surface (loader entry %#, display %#, surface %#)", pCreateFn != nullptr ? 1 : 0,
-                              pDisplayHandle != nullptr ? 1 : 0, pWindowHandle != nullptr ? 1 : 0 );
+                // Wayland — 핸들은 wl_surface*, 디스플레이는 wl_display* 다(`WaylandWindow`). 구조체의 두 포인터는 불완전 타입이라 Wayland 헤더가 없어도 된다.
+                PFN_vkCreateWaylandSurfaceKHR pCreateFn     = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>( vkGetInstanceProcAddr( instance, "vkCreateWaylandSurfaceKHR" ) );
+                const bool                    bCannotCreate = pCreateFn == nullptr || pDisplayHandle == nullptr || pWindowHandle == nullptr;
+                if ( bCannotCreate )
+                {
+                    SW_LOG_ERROR( "Cannot create a Wayland Vulkan surface (loader entry %#, display %#, surface %#)", pCreateFn != nullptr ? 1 : 0,
+                                  pDisplayHandle != nullptr ? 1 : 0, pWindowHandle != nullptr ? 1 : 0 );
+                    return false;
+                }
+                VkWaylandSurfaceCreateInfoKHR createInfo{};
+                createInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+                createInfo.display = static_cast<struct wl_display*>( pDisplayHandle );
+                createInfo.surface = static_cast<struct wl_surface*>( pWindowHandle );
+                if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+                {
+                    SW_LOG_ERROR( "Failed to create Wayland Vulkan surface!" );
+                    return false;
+                }
+                return true;
+            }
+            case VulkanWsiKind::Xlib:
+            {
+                if ( bInvalidX11Handle )
+                {
+                    SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
+                    return false;
+                }
+
+                PFN_vkCreateXlibSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
+                    vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
+                if ( pCreateFn == nullptr )
+                {
+                    SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
+                    return false;
+                }
+
+                VkXlibSurfaceCreateInfoKHR createInfo{};
+                createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+                createInfo.dpy    = pDisplay;
+                createInfo.window = window;
+                if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+                {
+                    SW_LOG_ERROR( "Failed to create Xlib Vulkan surface!" );
+                    return false;
+                }
+                return true;
+            }
+            case VulkanWsiKind::Xcb:
+            {
+                if ( bInvalidX11Handle )
+                {
+                    SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
+                    return false;
+                }
+
+                PFN_vkCreateXcbSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
+                    vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
+                if ( pCreateFn == nullptr )
+                {
+                    SW_LOG_ERROR( "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
+                    return false;
+                }
+
+                xcb_connection_t* pConnection = XGetXCBConnection( pDisplay );
+                if ( pConnection == nullptr )
+                {
+                    SW_LOG_ERROR( "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
+                    return false;
+                }
+
+                VkXcbSurfaceCreateInfoKHR createInfo{};
+                createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+                createInfo.connection = pConnection;
+                createInfo.window     = static_cast<xcb_window_t>( window );
+                if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
+                {
+                    SW_LOG_ERROR( "Failed to create XCB Vulkan surface!" );
+                    return false;
+                }
+                return true;
+            }
+            case VulkanWsiKind::None:
+            case VulkanWsiKind::Win32:
+            {
+                SW_LOG_ERROR( "Vulkan WSI kind %# cannot create a surface on Linux (instance creation picks Xlib, Xcb or Wayland).", static_cast<uint32>( wsiKind ) );
                 return false;
             }
-            VkWaylandSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-            createInfo.display = static_cast<struct wl_display*>( pDisplayHandle );
-            createInfo.surface = static_cast<struct wl_surface*>( pWindowHandle );
-            if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-            {
-                SW_LOG_ERROR( "Failed to create Wayland Vulkan surface!" );
-                return false;
-            }
-            return true;
         }
-        Display* pDisplay = static_cast<Display*>( pDisplayHandle );
-        Window   window   = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindowHandle ) );
-        if ( pDisplay == nullptr || window == 0 )
-        {
-            SW_LOG_ERROR( "Invalid X11 display/window for Vulkan surface." );
-            return false;
-        }
-
-        if ( linuxWsi == 1 )
-        {
-            PFN_vkCreateXlibSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
-                vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
-            if ( pCreateFn == nullptr )
-            {
-                SW_LOG_ERROR( "vkCreateXlibSurfaceKHR not available from Vulkan loader!" );
-                return false;
-            }
-
-            VkXlibSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-            createInfo.dpy    = pDisplay;
-            createInfo.window = window;
-            if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-            {
-                SW_LOG_ERROR( "Failed to create Xlib Vulkan surface!" );
-                return false;
-            }
-            return true;
-        }
-
-        if ( linuxWsi == 2 )
-        {
-            PFN_vkCreateXcbSurfaceKHR pCreateFn = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
-                vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
-            if ( pCreateFn == nullptr )
-            {
-                SW_LOG_ERROR( "vkCreateXcbSurfaceKHR not available from Vulkan loader!" );
-                return false;
-            }
-
-            xcb_connection_t* pConnection = XGetXCBConnection( pDisplay );
-            if ( pConnection == nullptr )
-            {
-                SW_LOG_ERROR( "XGetXCBConnection failed — cannot create Vulkan xcb surface." );
-                return false;
-            }
-
-            VkXcbSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-            createInfo.connection = pConnection;
-            createInfo.window     = static_cast<xcb_window_t>( window );
-            if ( pCreateFn( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-            {
-                SW_LOG_ERROR( "Failed to create XCB Vulkan surface!" );
-                return false;
-            }
-            return true;
-        }
-
-        SW_LOG_ERROR( "No Linux Vulkan WSI selected during instance creation." );
+        SW_LOG_ERROR( "Unknown Vulkan WSI kind %#.", static_cast<uint32>( wsiKind ) );
         return false;
 #else
         (void)instance;
         (void)pWindowHandle;
         (void)pDisplayHandle;
-        (void)linuxWsi;
+        (void)wsiKind;
         return false;
 #endif
     }

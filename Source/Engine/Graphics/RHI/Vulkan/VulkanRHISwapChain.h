@@ -29,6 +29,19 @@ namespace sw
     };
 
     /**
+     * @enum VulkanWsiKind
+     * @brief 인스턴스 확장으로 고른, 서피스를 만드는 길입니다. `NativeSurfaceKind` 와 달리 같은 X11 창에서도 xlib 와 xcb 를 가릅니다.
+     */
+    enum class VulkanWsiKind : uint8
+    {
+        None,    ///< 아직 고르지 않았다(인스턴스 전)
+        Win32,   ///< VK_KHR_win32_surface — HWND
+        Xlib,    ///< VK_KHR_xlib_surface — Display* 와 X11 Window
+        Xcb,     ///< VK_KHR_xcb_surface — Display* 에서 얻은 xcb 연결과 X11 Window
+        Wayland, ///< VK_KHR_wayland_surface — wl_display* 와 wl_surface*
+    };
+
+    /**
      * @class VulkanRHISwapChain
      * @brief 창 하나의 서피스, 스왑체인, 백버퍼 이미지입니다. **만들고, 다시 만들고, 다음 이미지를 받고, 표시합니다.**
      * @details Vulkan 은 다른 API 와 달리 백버퍼에 딸린 것이 많습니다. 이미지, 이미지 뷰, 프레임버퍼,
@@ -53,9 +66,9 @@ namespace sw
          * @brief 창에 붙는 서피스를 만듭니다. **논리 디바이스보다 먼저** 있어야 합니다.
          * @details 물리 디바이스를 고를 때 "이 큐 패밀리가 이 서피스에 present 할 수 있는가"를 묻기
          *          때문입니다. 그래서 서피스만 인스턴스 단계에서 먼저 만들어 둡니다.
-         * @param linuxWsi 0=없음, 1=xlib, 2=xcb (인스턴스 확장 가용성으로 정해진 값)
+         * @param wsiKind 인스턴스를 만들 때 고른 서피스 확장입니다. 이 플랫폼에서 만들 수 없는 종류(`None` 포함)는 대신하지 않고 false 입니다.
          */
-        [[nodiscard]] bool createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, uint32 linuxWsi );
+        [[nodiscard]] bool createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, VulkanWsiKind wsiKind );
 
         /** @brief 서피스를 파괴합니다. 스왑체인을 먼저 파괴한 뒤에 불러야 합니다. */
         void destroySurface( VkInstance instance );
