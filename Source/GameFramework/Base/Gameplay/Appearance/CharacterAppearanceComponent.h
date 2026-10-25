@@ -42,6 +42,7 @@ namespace sw
     class FitTables;
     class GameObjectManager;
     class MeshSectionComponent;
+    class SceneComponent;
     class SkeletalMeshComponent;
 
     /**
