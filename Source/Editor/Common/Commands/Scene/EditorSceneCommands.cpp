@@ -33,11 +33,6 @@ namespace sw::editor
     {
         struct EditorSceneCommandsInternal
         {
-            static bool canMutateScene()
-            {
-                return EditorPlaySession::areSceneEditsAllowed();
-            }
-
             /** @brief 서브트리를 **자식부터**(후위 순서) 모읍니다. 마지막이 pObj 입니다. */
             static void collectSubtreeChildFirst( GameObject* pObj, vector<GameObject*>& outListObject )
             {
@@ -72,7 +67,7 @@ namespace sw::editor
 {
     GameObject* EditorSceneCommands::create( GameObjectManager* pManager, GameObject* pParent )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Create GameObject" ) )
             return nullptr;
         if ( pManager == nullptr )
             return nullptr;
@@ -92,7 +87,7 @@ namespace sw::editor
 
     GameObject* EditorSceneCommands::duplicate( GameObjectManager* pManager, GameObject* pSrc )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Duplicate GameObject" ) )
             return nullptr;
         if ( pManager == nullptr || pSrc == nullptr )
             return nullptr;
@@ -171,7 +166,7 @@ namespace sw::editor
 
     bool EditorSceneCommands::reparent( GameObject* pChild, GameObject* pNewParent, string_view undoLabel )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Reparent GameObject" ) )
             return false;
         const bool bInvalidReparentTarget = pChild == nullptr || pNewParent == nullptr || pChild == pNewParent;
         if ( bInvalidReparentTarget )
@@ -192,7 +187,7 @@ namespace sw::editor
 
     bool EditorSceneCommands::unparent( GameObject* pObj, string_view undoLabel )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Unparent GameObject" ) )
             return false;
         if ( pObj == nullptr || pObj->getParent() == nullptr )
             return false;
@@ -207,7 +202,7 @@ namespace sw::editor
 
     uint32 EditorSceneCommands::destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr )
+        if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObjects" ) || pManager == nullptr )
             return 0;
         // 고른 조상이 있으면 건너뛴다. 조상을 지우면 자식도 지워지므로, 먼저 지운 자식을 다시 지우지 않는다.
         vector<GameObject*> listRoot;
@@ -255,7 +250,7 @@ namespace sw::editor
     void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const bool bNothingToDuplicate = EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listObject.empty();
+        const bool bNothingToDuplicate = EditorPlaySession::refuseSceneEdit( "Duplicate GameObjects" ) || pManager == nullptr || listObject.empty();
         if ( bNothingToDuplicate )
             return;
         EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
@@ -270,7 +265,7 @@ namespace sw::editor
 
     bool EditorSceneCommands::destroy( GameObjectManager* pManager, GameObject* pObj )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Destroy GameObject" ) )
             return false;
         if ( pManager == nullptr || pObj == nullptr )
             return false;
@@ -304,7 +299,7 @@ namespace sw::editor
 
     bool EditorSceneCommands::rename( GameObject* pObj, const utf8* pNewName )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) )
             return false;
         if ( pObj == nullptr || StringUtil::isNullOrEmpty( pNewName ) )
             return false;
@@ -320,8 +315,9 @@ namespace sw::editor
     {
         if ( pObj == nullptr || pObj->isActive() == bActive )
             return;
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
+            // 의도한 우회다: 플레이 중에는 기록 없이 켜고 끈다(실행 중 객체 확인용). 거절이 아니므로 로그를 남기지 않는다.
             pObj->setActive( bActive );
             return;
         }
@@ -332,7 +328,7 @@ namespace sw::editor
 
     Component* EditorSceneCommands::addComponent( GameObject* pObj, const hashed_string& typeName )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Add component" ) )
             return nullptr;
         const bool bInvalidComponentTarget = pObj == nullptr || pObj->getManager() == nullptr || typeName.empty();
         if ( bInvalidComponentTarget )
@@ -349,7 +345,7 @@ namespace sw::editor
 
     bool EditorSceneCommands::destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Remove component" ) )
             return false;
         const bool bInvalidRemoveArguments = pManager == nullptr || pObj == nullptr || pComp == nullptr;
         if ( bInvalidRemoveArguments )
@@ -445,7 +441,7 @@ namespace sw::editor
     void EditorSceneCommands::applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
                                                    const float3& scale )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Apply local transform" ) )
             return;
         if ( pObj == nullptr )
             return;
@@ -461,7 +457,7 @@ namespace sw::editor
 
     void EditorSceneCommands::applyWorldTransform( GameObject* pObj, const float4x4& worldMatrix )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Apply world transform" ) )
             return;
         if ( pObj == nullptr )
             return;
@@ -525,7 +521,7 @@ namespace sw::editor
 
     void EditorSceneCommands::commitModify( GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel )
     {
-        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Commit modify" ) )
             return;
         if ( pObj == nullptr || before._xml.empty() )
             return;
@@ -644,7 +640,7 @@ namespace sw::editor
     {
         outListCreated.clear();
         const vector<ObjectCopyEntry>& listCopied      = ObjectCopyBuffer::getEntries();
-        const bool                     bNothingToPaste = EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty();
+        const bool                     bNothingToPaste = EditorPlaySession::refuseSceneEdit( "Paste GameObjects" ) || pManager == nullptr || listCopied.empty();
         if ( bNothingToPaste )
             return;
         // 복제와 같은 경로다. 배치가 **복사할 때의 id** 로 사본끼리 연결한다. 루트는 씬의 루트로 둔다. 다른 씬에는 원래 부모가 없기 때문이다.

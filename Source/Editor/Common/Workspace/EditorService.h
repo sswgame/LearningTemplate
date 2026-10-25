@@ -66,7 +66,7 @@ namespace sw::editor
      * @brief 지금 에디터 범위입니다. 에디터 컨텍스트가 활성이 아니고 테스트가 건 범위도 없으면 nullptr 입니다.
      * @details **범위를 등록한 스레드(에디터 UI 스레드)에서만 부릅니다.** 범위는 락 없이 읽고 쓰므로, 워커가 읽는 동안 종료가 범위를 허물면 해제된 범위를 본다.
      *          그래서 `findSubsystem<T>()` · `EditorContext::get()` 도 워커 본문에서 부르지 않는다. 일을 낼 때(호출 스레드) 필요한 서비스를 찾아 값(포인터 · 인자)으로 넘긴다
-     *          (`TextureImporter::importTexture` 의 작업 시스템 인자). Debug 에서는 다른 스레드의 호출을 `SW_ASSERT` 가 잡는다.
+     *          (`TextureImporter::importTexture` 의 작업 시스템 인자). 다른 스레드의 호출은 모든 구성에서 오류 로그를 남기고 멈춘다.
      */
     SW_EDITOR_API SubsystemScope* findEditorScope();
     /** @brief 지금 에디터 범위를 등록합니다(nullptr 이면 해제합니다). 에디터 컨텍스트가 활성이 될 때(`EditorContext::setActive`) 부릅니다. */

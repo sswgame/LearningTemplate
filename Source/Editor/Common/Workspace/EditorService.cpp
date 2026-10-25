@@ -26,10 +26,8 @@ namespace sw::editor
         struct EditorScopeSlot
         {
             SubsystemScope* _pScope{ nullptr }; ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
-#if defined( SW_DEBUG )
             /// 지금 범위를 등록한 스레드(에디터 UI 가 도는 스레드)입니다. 범위가 없으면 기본값입니다. 읽는 쪽이 다른 스레드일 수 있어 atomic 입니다.
             std::atomic<std::thread::id> _ownerThreadID{};
-#endif
         };
 
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
@@ -40,16 +38,20 @@ namespace sw::editor
         vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
 
         /**
-         * @brief 에디터 상태(범위 · 포커스 · 미리보기 선택)를 만지는 스레드가 범위를 등록한 스레드인지 Debug 에서 확인합니다.
+         * @brief 에디터 상태(범위 · 포커스 · 미리보기 선택)를 만지는 스레드가 범위를 등록한 스레드인지 모든 구성에서 확인합니다.
          * @details 이 상태는 락 없이 읽고 쓴다 — 워커가 읽는 동안 종료가 범위를 허물면 해제된 메모리를 본다. 워커 본문은 에디터 상태를 직접 찾지 않고,
          *          제출 시점(범위를 등록한 스레드)에 서비스를 찾아 값으로 받는다. 어기면 여기서 멈춘다. 범위가 없으면 어느 스레드든 통과한다.
+         *          Release 에서도 확인하는 이유: 비용이 원자 읽기 한 번과 스레드 번호 비교뿐이고, 어긴 호출은 Debug 가 돌지 않은 경로에서만 드러나
+         *          종료 경합(해제된 범위 읽기)으로 나타나기 때문이다.
          */
         void assertEditorThread()
         {
-#if defined( SW_DEBUG )
-            const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load();
-            SW_ASSERT( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() );
-#endif
+            const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load( std::memory_order_relaxed );
+            if ( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() )
+                return;
+            SW_LOG_ERROR( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
+            Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
+            std::abort();
         }
 
         /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */
@@ -87,9 +89,7 @@ namespace sw::editor
 
     void setEditorScope( SubsystemScope* pScope )
     {
-#if defined( SW_DEBUG )
         s_editorScope._ownerThreadID.store( pScope != nullptr ? std::this_thread::get_id() : std::thread::id{} );
-#endif
         s_editorScope._pScope = pScope;
     }
 
