@@ -134,7 +134,7 @@ namespace sw
         CameraRole getRole() const { return _role; }
 
         /** @brief 수직 시야각(라디안)을 설정합니다. */
-        void setFieldOfViewY( float32 fovRadians ) { _fovY = fovRadians; }
+        void setFieldOfViewY( float32 fovRadians );
         /** @brief 수직 시야각(라디안)을 반환합니다. */
         float32 getFieldOfViewY() const { return _fovY; }
 

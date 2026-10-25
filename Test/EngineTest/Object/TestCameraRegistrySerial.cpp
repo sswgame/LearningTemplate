@@ -46,14 +46,26 @@ SW_TEST_CASE( CameraRegistrySerialTest, RegisterUnregisterAndSettersBumpOnlyOnRe
     const uint32 afterPriority = registry.getRegistrySerial();
     SW_EXPECT_TRUE( afterPriority != afterRole );
 
+    // 시야각: 바뀔 때만 오르고, 직교 값은 오르지 않는다(벤치 맞춤이 읽지 않는다).
+    const uint32 beforeFov = registry.getRegistrySerial();
+    pCamera->setFieldOfViewY( pCamera->getFieldOfViewY() );
+    SW_EXPECT_EQUAL( beforeFov, registry.getRegistrySerial() );
+    pCamera->setOrthographic( !pCamera->isOrthographic() );
+    pCamera->setOrthoHeight( pCamera->getOrthoHeight() + 1.0f );
+    SW_EXPECT_EQUAL( beforeFov, registry.getRegistrySerial() );
+    pCamera->setFieldOfViewY( pCamera->getFieldOfViewY() + 0.1f );
+    SW_EXPECT_TRUE( registry.getRegistrySerial() != beforeFov );
+
+    const uint32 afterFov = registry.getRegistrySerial();
+
     // 출력 대상: 대상이 같으면 다른 필드가 바뀌어도 오르지 않는다.
     CameraRenderOutput output = pCamera->getRenderOutput();
     output._screenRect        = float4{ 0.0f, 0.0f, 0.5f, 1.0f };
     pCamera->setRenderOutput( output );
-    SW_EXPECT_EQUAL( afterPriority, registry.getRegistrySerial() );
+    SW_EXPECT_EQUAL( afterFov, registry.getRegistrySerial() );
     output._target = ( output._target == CameraOutputTarget::MainView ) ? CameraOutputTarget::ScreenRect : CameraOutputTarget::MainView;
     pCamera->setRenderOutput( output );
-    SW_EXPECT_TRUE( registry.getRegistrySerial() != afterPriority );
+    SW_EXPECT_TRUE( registry.getRegistrySerial() != afterFov );
 
     // 해제도 오르고, 이미 없는 카메라를 또 빼도 오르지 않는다.
     const uint32 beforeRemove = registry.getRegistrySerial();

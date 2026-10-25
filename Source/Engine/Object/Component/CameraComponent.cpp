@@ -119,6 +119,14 @@ namespace sw
         noteSelectionInputChanged();
     }
 
+    void CameraComponent::setFieldOfViewY( float32 fovRadians )
+    {
+        if ( _fovY == fovRadians )
+            return;
+        _fovY = fovRadians;
+        noteSelectionInputChanged();
+    }
+
     void CameraComponent::setPriority( int32 priority )
     {
         if ( _priority == priority )

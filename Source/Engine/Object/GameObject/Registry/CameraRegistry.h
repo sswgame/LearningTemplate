@@ -47,12 +47,12 @@ namespace sw
         /** @brief 등록된 카메라 목록(등록 순서)입니다. 소유하지 않습니다. 활성 판정은 부르는 쪽이 합니다. */
         const vector<CameraComponent*>& getAll() const { return _registeredCamera.getItems(); }
         /**
-         * @brief 등록 · 해제 · 선택 입력(역할 · 우선순위 · 출력 대상) 변경 때마다 오르는 변경 일련번호입니다(`GameObjectManager::getUpdateSerial` 과 같은 방식). 읽는 쪽이 마지막 값과 비교해 카메라 집합이 바뀌었는지 압니다.
+         * @brief 등록 · 해제 · 선택 · 맞춤 입력(역할 · 우선순위 · 출력 대상 · 시야각) 변경 때마다 오르는 변경 일련번호입니다(`GameObjectManager::getUpdateSerial` 과 같은 방식). 읽는 쪽이 마지막 값과 비교해 카메라 집합이 바뀌었는지 압니다.
          * @details 한 프레임에 하나가 빠지고 다른 하나가 들어오는 교체도 번호가 올라 수 비교가 놓치는 경우를 잡습니다. 오름은 락 안에서, 읽기는 락 없이(어느 스레드든) 합니다. 넘치면 돌아갑니다.
-         * @note 올리지 않는 것: `setCutCamera`(게임 카메라 고르기만 바꾸고 집합 · 선택 입력은 그대로), 뷰포트 크기 · 픽셀 스냅 단위(집합과 무관), 켜짐 전환(`isUsableCamera` 는 조회할 때마다 평가하고 캐시가 없다).
+         * @note 올리지 않는 것: `setCutCamera`(게임 카메라 고르기만 바꾸고 집합 · 선택 입력은 그대로), 뷰포트 크기 · 픽셀 스냅 단위(집합과 무관), 직교 전환 · 직교 높이 · 종횡비 · 근 · 원 평면(벤치 맞춤은 시야각만 읽는다. 직교 높이는 에디터 직교 뷰의 줌마다 바뀌어 번호에 넣으면 사용자 조작을 벤치가 덮고, 원 평면은 맞춤이 스스로 키운다), 켜짐 전환(`isUsableCamera` 는 조회할 때마다 평가하고 캐시가 없다).
          */
         uint32 getRegistrySerial() const { return _registrySerial.load( std::memory_order_relaxed ); }
-        /** @brief 선택 규칙의 입력(역할 · 우선순위 · 출력 대상)이 바뀌었음을 알려 번호를 올립니다. 카메라 컴포넌트의 세터가 값이 실제로 바뀔 때만 부릅니다. */
+        /** @brief 선택 규칙과 맞춤의 입력(역할 · 우선순위 · 출력 대상 · 시야각)이 바뀌었음을 알려 번호를 올립니다. 카메라 컴포넌트의 세터가 값이 실제로 바뀔 때만 부릅니다. */
         void noteChanged() { _registrySerial.fetch_add( 1, std::memory_order_relaxed ); }
 
         /**
