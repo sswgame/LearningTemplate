@@ -26,6 +26,7 @@ namespace
 
         static void runFrame( sw::InputManager& input, sw::UISystem& ui )
         {
+            sw::test::FakeFontServiceFixture::beginFrame( ui.getFontService() );
             input.beginFrame( kFrameSeconds );
             ui.processInput( kFrameSeconds );
             ui.update( kFrameSeconds, sw::UIViewport{

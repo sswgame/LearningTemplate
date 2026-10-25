@@ -66,6 +66,7 @@ namespace
 
         void runFrame()
         {
+            sw::test::FakeFontServiceFixture::beginFrame( _ui.getFontService() );
             _input.beginFrame( 1.0f / 60.0f );
             _ui.processInput( 1.0f / 60.0f );
             _ui.update( 1.0f / 60.0f, _viewport );

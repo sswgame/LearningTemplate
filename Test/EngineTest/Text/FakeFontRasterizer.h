@@ -217,6 +217,17 @@ namespace sw::test
             return _fontService->initializeFromCatalog( catalog );
         }
 
+        /**
+         * @brief 엔진 프레임 루프(`Engine::updateFrameServices`)처럼 글리프 캐시의 프레임 시계를 올립니다.
+         * @details 엔진 없이 UISystem 을 돌리는 테스트는 `update` 앞에서 프레임마다 부릅니다. 시계가 멈추면 글리프 래스터화 예산이
+         *          되살아나지 않아, 느린 빌드(Debug · ASan)에서 첫 예산 뒤의 글리프가 빠집니다. 글꼴이 없으면(`nullptr`) 아무 일도 없습니다.
+         */
+        static void beginFrame( FontService* pFontService )
+        {
+            if ( pFontService != nullptr )
+                pFontService->getGlyphCache().beginFrame();
+        }
+
         /** @brief 저장소 가족 하나(면 하나)를 카탈로그에 더합니다. */
         static void addFamily( FontCatalogDesc& inoutCatalog, const string& name, const string& path, FontWeight weight = FontWeight::Regular )
         {

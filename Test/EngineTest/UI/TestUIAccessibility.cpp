@@ -105,6 +105,7 @@ namespace
             sw::UIViewport viewport{};
             viewport._size         = sw::float2{ 1280.0f, 720.0f };
             viewport._physicalSize = viewport._size;
+            sw::test::FakeFontServiceFixture::beginFrame( _ui.getFontService() );
             _input.beginFrame( deltaSeconds );
             _ui.processInput( deltaSeconds );
             _ui.update( deltaSeconds, viewport );
@@ -180,6 +181,7 @@ namespace
         {
             for ( uint32 frame = 0; frame < count; ++frame )
             {
+                sw::test::FakeFontServiceFixture::beginFrame( _ui.getFontService() );
                 _input.beginFrame( UIAccessibilityFixture::kFrameSeconds );
                 _ui.processInput( UIAccessibilityFixture::kFrameSeconds );
                 _ui.update( UIAccessibilityFixture::kFrameSeconds, _viewport );

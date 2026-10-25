@@ -222,7 +222,7 @@ namespace
 
         void runFrame()
         {
-            _fonts._fontService->getGlyphCache().beginFrame(); // 엔진이 없으니 프레임 시계를 직접 올린다 — 안 올리면 글리프 래스터화 예산이 되살아나지 않는다
+            sw::test::FakeFontServiceFixture::beginFrame( _ui.getFontService() ); // 엔진이 없으니 프레임 시계를 직접 올린다
             _input.beginFrame( UIDeterminismTestUtil::kFrameSeconds );
             _ui.processInput( UIDeterminismTestUtil::kFrameSeconds );
             _ui.update( UIDeterminismTestUtil::kFrameSeconds, _viewport );
