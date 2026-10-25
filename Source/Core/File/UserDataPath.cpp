@@ -7,8 +7,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-
-#include <cstdlib>
+#include "Core/Process/ProcessEnvironment.h"
 
 namespace sw
 {
@@ -23,14 +22,15 @@ namespace sw
             /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
             static string makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
             {
-                const utf8* pRoot = std::getenv( pRootEnvironment );
-                if ( StringUtil::isNullOrEmpty( pRoot ) == false )
-                    return FileUtil::joinPath( FileUtil::joinPath( pRoot, pVendor ), makeFolderName( gameName ) );
+                string root;
+                if ( ProcessEnvironment::tryReadNonEmpty( pRootEnvironment, root ) )
+                    return FileUtil::joinPath( FileUtil::joinPath( root, pVendor ), makeFolderName( gameName ) );
                 if ( pHomeRelative == nullptr )
                     return string{};
-                const utf8* pHome = std::getenv( "HOME" );
-                if ( StringUtil::isNullOrEmpty( pHome ) )
+                string home;
+                if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) == false )
                     return string{};
+                const utf8* pHome = home.c_str();
                 return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) );
             }
 
