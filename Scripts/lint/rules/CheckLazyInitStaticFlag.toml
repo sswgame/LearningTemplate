@@ -6,7 +6,7 @@
 [baseline]
 # 게이트가 잠금으로 읽던 부분 문자열(`lock`)이 `bLockWanted` · `getLockMode`(마우스 잠금)까지 잠금 구문으로 보고 위반을 가렸다. 낱말 경계의 잠금 형식 이름만 보도록 고쳐
 # InputManagerX11.cpp 의 `s_bWaylandLockReported` 가 잡혔고, 그 칸은 `atomic<bool>::exchange` 한 번으로 바꿔 모양이 사라졌다(기준선 그대로). `inline static` 순서의 선언도 본다.
-# 이 게이트가 아직 못 보는 모양(후보): 검사가 `if ( x ) return;` 이고 채움이 `if` 밖인 조기 반환형(`RenderDocCapture.cpp` 의 `_s_bTried`, `PosixShutdownSignal.cpp` 의 `s_bInstalled`).
+# 조기 반환형(`if ( Internal::x ) return;` 뒤에 채움)은 한정한 이름(`Internal::x`)을 조건에서 못 읽어 빠졌다. 한정 이름과 닫는 괄호까지 읽도록 고쳐 `RenderDocCapture` 의 `_s_bTried` · `PosixShutdownSignal` 의 `s_bInstalled` 가 잡혔고, 둘 다 `atomic<bool>::exchange` 로 바꿔 기준선은 그대로다.
 # 마지막 하나(ShaderReflectionDx.cpp 의 dxcompiler 로더)는 셰이더 쿠킹 병렬화(cookfast)가 함수 안 정적 변수로 고쳐 0 이다.
 total = 0
 # 남은 다섯은 모두 메인 스레드(창 메시지 · 입력 설정) 전용이라 동시 첫 호출이 없다. 호출처를 끝까지 따라가 확인했고, 근거를 코드의 Debug 단언

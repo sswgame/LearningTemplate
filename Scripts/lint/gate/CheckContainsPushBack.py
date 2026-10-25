@@ -16,8 +16,8 @@ Scripts/lint/gate/CheckContainsPushBack.py
 (포인터 목록은 `IndexedPtrList` 로 형식이 막는다). 그래서 이 모양이 새로 늘지 않게만 게이트가 맡는다.
 
 판정(보수적으로 — 놓치는 쪽으로 틀린다): 주석 · 문자열을 가린 글에서
-  - `VectorUtil::contains( X, …` 나 `std::find( X.begin(), …` 의 첫 인자 글 X 를 읽고,
-  - 그 호출 뒤 같은 줄부터 `kWindowLines` 줄 안에 `X.push_back(` · `X.emplace_back(`(`->` 도) 가 있으면 센다.
+  - `VectorUtil::contains|containsIf|containsBy|findIf|findIndex*|findBy( X, …`, `std::find|find_if|any_of|none_of|count*( X.begin(), …`, `std::ranges::find|find_if|any_of|none_of|contains( X, …` 의 첫 인자 글 X 를 읽고,
+  - 그 호출 뒤 같은 줄부터 `kWindowLines` 줄 안, 또는 검사가 든 블록이 끝날 때까지(최대 `kMaxBlockLines` 줄) `X.push_back(` · `X.emplace_back(`(`->` 도) 가 있으면 센다.
   떨어진 모양(검사와 넣기 사이에 몇 줄이 낀 것)과 괄호로 감싼 모양도 이 창 안이면 잡는다.
   반복이 작은 목록(필드 몇 개, 종류 몇 개)이면 두어도 된다 — 그 근거는 `rules/CheckContainsPushBack.toml` 의 기준선 표에 적는다.
 기준선은 `rules/CheckContainsPushBack.toml` 의 `[baseline] total`. 늘면 실패하고 커밋 훅은 추가한 줄만 본다.
@@ -39,24 +39,50 @@ from lint.SourceScan import SourceFile  # noqa: E402
 _kScanRoot = ("Source",)
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
-#: 검사 호출 뒤 이 줄 수 안에서 같은 목록의 넣기를 찾는다.
+#: 검사 호출 뒤 이 줄 수 안에서 같은 목록의 넣기를 찾는다(최소 창).
 _kWindowLines = 8
+#: 검사가 든 블록이 끝날 때까지 더 보되 이 줄 수를 넘기지 않는다(`for` 몸통에서 검사하고 한참 뒤에 넣는 모양).
+_kMaxBlockLines = 40
 
-_kContainsRe = re.compile(r"\bVectorUtil::contains\s*\(\s*(?P<arg>[^,()]+?)\s*,")
-_kFindRe = re.compile(r"\bstd::find\s*\(\s*(?P<arg>[^,()]+?)\s*\.\s*begin\s*\(\s*\)\s*,")
+# 검사 호출 — 첫 인자 글(`arg`)이 검사받는 목록이다. `VectorUtil` 의 찾기 · 포함 도우미, `std::` 알고리즘(`X.begin()` 짝), `std::ranges::` 알고리즘(`X` 통째).
+_kCheckRes = (
+    re.compile(r"\bVectorUtil::(?:contains|containsIf|containsBy|findIf|findIndex|findIndexBy|findBy)\s*\(\s*(?P<arg>[^,()]+?)\s*,"),
+    re.compile(r"\bstd::(?:find|find_if|find_if_not|any_of|none_of|count|count_if)\s*\(\s*(?P<arg>[^,()]+?)\s*\.\s*c?begin\s*\(\s*\)\s*,"),
+    re.compile(r"\bstd::ranges::(?:find|find_if|find_if_not|any_of|none_of|contains|count|count_if)\s*\(\s*(?P<arg>[^,()]+?)\s*,"),
+)
+_kQuickRe = re.compile(r"\bVectorUtil::(?:contains|find)|\bstd::(?:ranges::)?(?:find|any_of|none_of|count|contains)")
+
+
+def _findBlockEnd(masked: str, start: int, limit: int) -> int:
+    """`start` 를 감싼 가장 안쪽 블록의 닫는 `}` 위치(`limit` 를 넘으면 `limit`)."""
+    depth = 0
+    for index in range(start, min(limit, len(masked))):
+        char = masked[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            if depth == 0:
+                return index
+            depth -= 1
+    return min(limit, len(masked))
 
 
 def findPushBackAfterCheck(masked: str, listLineStart: list[int]) -> list[tuple[int, int]]:
     """검사 호출마다 (검사 줄, 넣기 줄) — 둘 다 1 부터. 검사 호출 하나에 넣기가 여럿이어도 한 건이다."""
     listFound: list[tuple[int, int]] = []
-    for regex in (_kContainsRe, _kFindRe):
+
+    def lineStartOf(lineIndex: int) -> int:
+        return listLineStart[lineIndex] if lineIndex < len(listLineStart) else len(masked)
+
+    for regex in _kCheckRes:
         for match in regex.finditer(masked):
             argText = re.sub(r"\s+", "", match.group("arg"))
             if not argText:
                 continue
             lineIndex = masked.count("\n", 0, match.start())
-            windowEnd = listLineStart[lineIndex + _kWindowLines] if lineIndex + _kWindowLines < len(listLineStart) else len(masked)
-            window = masked[match.end():windowEnd]
+            windowEnd = lineStartOf(lineIndex + _kWindowLines)
+            blockEnd = _findBlockEnd(masked, match.end(), lineStartOf(lineIndex + _kMaxBlockLines))
+            window = masked[match.end():max(windowEnd, blockEnd)]
             pushRe = re.compile(re.escape(argText) + r"\s*(?:\.|->)\s*(?:push_back|emplace_back)\s*\(")
             pushMatch = pushRe.search(window)
             if pushMatch is None:
@@ -147,11 +173,42 @@ class CheckContainsPushBackGate(BaselineSourceGate):
             },
             "args": ["--files", "Source/Probe/Bad.cpp", "Source/Probe/OkOther.cpp", "Source/Probe/OkSet.cpp", "--whole-files"],
         },
+        {
+            "name": "any_of · ranges · find_if 와 8 줄보다 떨어진 넣기",
+            "expectedViolation": "3  Source/Probe/C.cpp",
+            "files": {
+                "Source/Probe/C.cpp": (
+                    "void f( std::vector<int>& listA, std::vector<int>& listB, std::vector<int>& listC, int item )\n"
+                    "{\n"
+                    "    if ( std::any_of( listA.begin(), listA.end(), [item]( int v ) { return v == item; } ) == false )\n"
+                    "        listA.push_back( item );\n"
+                    "    if ( std::ranges::find( listB, item ) == listB.end() )\n"
+                    "        listB.push_back( item );\n"
+                    "    for ( int i = 0; i < 3; ++i )\n"
+                    "    {\n"
+                    "        const auto it = std::find_if( listC.begin(), listC.end(), [item]( int v ) { return v == item; } );\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        step();\n"
+                    "        if ( it == listC.end() )\n"
+                    "            listC.push_back( item );\n"
+                    "    }\n"
+                    "}\n"
+                ),
+            },
+            "args": ["--baseline", "0"],
+        },
     ]
 
     def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
         masked = source.masked
-        if "VectorUtil::contains" not in masked and "std::find" not in masked:
+        if _kQuickRe.search(masked) is None:
             return []
         listLineStart = [0]
         for index, char in enumerate(masked):

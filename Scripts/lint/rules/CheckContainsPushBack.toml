@@ -19,5 +19,13 @@
 #   상한이 걸린 목록           | AssetHotReload `_listChangedPath`                                                                 | `kMaxTrackedChangedPaths`(256) 가 상한이라 O(256)
 #   프레임 안 · 비워지는 목록   | TransientAttachmentPool · MaterialCache `_listPSOWarmKey` · AutomationLogPolicy · SchemaMigrate    | 프레임 안의 수십, PSO 예열 목록은 프레임마다 비워진다
 #   소유 밖의 진짜 후보        | EditorThumbnailCache `_listPendingID` · `_listFailedID`(Editor/Common/GUI)                        | 폴더에 썸네일 수천 개면 프레임마다 목록을 훑는다. 작업자 보고의 "같은 결함 후보" 에 올렸다
+#
+# 검사 모양을 넓혀(`VectorUtil::containsIf` · `findIf` · `findIndex*` · `std::any_of` · `none_of` · `find_if` · `count*` · `std::ranges::*`, 넣기는 검사가 든 블록 끝까지 최대 40 줄) 새로 잡힌 11 건이다(72 → 83). 읽어서 N 을 가렸다:
+#
+#   묶음                      | 장소                                                                                              | N 의 크기 · 근거
+#   ------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------
+#   작은 목록 (새 모양)        | NetMessageRouter::registerHandler · PairedAnimationComponent · NetSimSampleGame · OwnedHTTPClient · UIDocumentLoader 조각 스택 | 핸들러 범위 수(16 이하) · 역할 수 · 슬롯 수 · 신뢰 호스트 수 · `kMaxFragmentDepth`
+#   모델 · 설정 데이터 (새 모양) | ModelImportAnimation · ModelImportGeometry(모프 타깃 이름) · AutomationLogPolicy(허용 항목)       | 모프 타깃 수십 ~ 100, 허용 항목 수십. 임포트 · 로드 때 한 번
+#   소유 밖의 진짜 후보 (새 모양) | SkeletalAnimatorComponent::accumulateClipCurves(프레임마다 곡선 수² — `_listCurveName` 에 맵을 곁에 둘 것) · SceneCooker 셀 모으기(엔티티 수 × 셀 수) · PrefabAsset 쿠킹 `listWrittenKey`(프리팹 파일 수²) | 쿠킹은 한 번이지만 월드 · 프리팹 수가 늘면 제곱이다. 작업자 보고의 "같은 결함 후보" 에 올렸다
 [baseline]
-total = 72
+total = 83

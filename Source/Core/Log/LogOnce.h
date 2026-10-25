@@ -31,7 +31,11 @@ namespace sw
      */
     struct SW_API LogOnce
     {
-        /** @brief 이번 범위에서 @p kind 의 @p key 를 처음 알리는 것이면 true 이고, 그 키를 알린 것으로 적습니다. 부른 횟수는 `getAttemptCount` 가 센다. */
+        /**
+         * @brief 이번 범위에서 @p kind 의 @p key 를 처음 알리는 것이면 true 이고, 그 키를 알린 것으로 적습니다. 부른 횟수는 `getAttemptCount` 가 센다.
+         * @details 키는 호출자가 이름들의 해시로 만든 값이라 서로 다른 일이 같은 키로 겹치면 두 번째 알림이 사라진다. 그 대가는 알림 한 줄이고 기능은 틀리지 않으므로
+         *          원문 키를 두지 않는다(원문 키는 거절이 쏟아지는 길에서 문자열을 만들어야 한다). 결과를 바꾸는 판정에는 쓰지 않는다.
+         */
         [[nodiscard]] static bool tryClaim( LogOnceKind kind, uint64 key );
         /**
          * @brief `tryClaim` 을 @p kind 로 부른 횟수입니다(처음이 아니라 알리지 않은 것도 셉니다). 거절 · 버림을 세는 지표로 씁니다.

@@ -17,7 +17,7 @@ namespace sw
 
             static inline struct sigaction s_arrPreviousAction[SW_COUNT_OF( kArrHandledSignal )]{};
             static inline struct sigaction s_previousPipeAction{};
-            static inline bool             s_bInstalled{ false };
+            static inline atomic<bool>     s_bInstalled{ false };
             static inline atomic<uint32>   s_interruptCount{ 0 };
 
             /** @brief 신호 처리기 — async-signal-safe 함수만 부른다(원자 연산 · write · _exit). */
@@ -37,7 +37,7 @@ namespace sw
 
     bool ShutdownSignal::install()
     {
-        if ( PosixShutdownSignalInternal::s_bInstalled )
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( true ) ) // 첫 호출 하나만 설치한다
             return true;
         struct sigaction action{};
         action.sa_handler = &PosixShutdownSignalInternal::onSignal;
@@ -52,21 +52,19 @@ namespace sw
         struct sigaction ignore{};
         ignore.sa_handler = SIG_IGN;
         sigemptyset( &ignore.sa_mask );
-        bInstalled                                = sigaction( SIGPIPE, &ignore, &PosixShutdownSignalInternal::s_previousPipeAction ) == 0 && bInstalled;
-        PosixShutdownSignalInternal::s_bInstalled = true;
+        bInstalled = sigaction( SIGPIPE, &ignore, &PosixShutdownSignalInternal::s_previousPipeAction ) == 0 && bInstalled;
         return bInstalled;
     }
 
     void ShutdownSignal::uninstall()
     {
-        if ( PosixShutdownSignalInternal::s_bInstalled == false )
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( false ) == false )
             return;
         for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
         {
             (void)sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &PosixShutdownSignalInternal::s_arrPreviousAction[index], nullptr );
         }
         (void)sigaction( SIGPIPE, &PosixShutdownSignalInternal::s_previousPipeAction, nullptr );
-        PosixShutdownSignalInternal::s_bInstalled = false;
     }
 
     void ShutdownSignal::notifyShutdownComplete()

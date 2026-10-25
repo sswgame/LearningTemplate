@@ -145,7 +145,7 @@ def _parseDeclaration(line: str) -> tuple[str, bool] | None:
 
 def _testsVariable(condition: str, name: str) -> bool:
     """`if` 조건이 변수를 **비었는지 · 만들었는지** 검사하는가 — 다른 값과 견주는 `s_p == pOther` 는 검사가 아니다."""
-    n = re.escape(name)
+    n = r"(?:\w+\s*::\s*)*" + re.escape(name)   # `Internal::s_bTried` 처럼 이름을 한정한 모양도 같은 변수다
     nullWord = r"(?:nullptr|NULL|false|true|0)"
     return re.search(
         rf"\b{n}\s*[=!]=\s*{nullWord}\b|\b{nullWord}\s*[=!]=\s*{n}\b|!\s*{n}\b|"
@@ -194,6 +194,14 @@ class CheckLazyInitStaticFlagGate(BaselineSourceGate):
          "args": ["--baseline", "0"]},
         {"name": "이름에 Lock 이 든 변수는 잠금이 아니다(inline static · 뒤따르는 대입)", "expectedViolation": "1  Source/Probe/I.cpp",
          "files": {"Source/Probe/I.cpp": "namespace\n{\ninline static bool s_bLockReported{ false };\n}\nvoid sync( bool bLockWanted )\n{\n    if ( bLockWanted && s_bLockReported == false )\n        report();\n    s_bLockReported = s_bLockReported || bLockWanted;\n}\n"},
+         "args": ["--baseline", "0"]},
+        {"name": "조기 반환형 — 클래스로 한정한 플래그를 검사하고 반환한 뒤 채운다", "expectedViolation": "1  Source/Probe/J.cpp",
+         "files": {"Source/Probe/J.cpp": "namespace\n{\nstruct Internal\n{\n    inline static bool _s_bTried = false;\n};\n}\nvoid init()\n{\n    if ( Internal::_s_bTried )\n        return;\n    Internal::_s_bTried = true;\n    work();\n}\n"},
+         "args": ["--baseline", "0"]},
+        {"name": "조기 반환형 — 원자 교환은 이미 안전하다", "unexpectedViolation": "Source/Probe/K.cpp",
+         "expectedViolation": "1  Source/Probe/L.cpp",
+         "files": {"Source/Probe/K.cpp": "namespace\n{\nstruct Internal\n{\n    inline static atomic<bool> s_bInstalled{ false };\n};\n}\nvoid init()\n{\n    if ( Internal::s_bInstalled.exchange( true ) )\n        return;\n    work();\n}\n",
+                   "Source/Probe/L.cpp": "namespace\n{\nstruct Internal\n{\n    static inline bool s_bInstalled{ false };\n};\n}\nvoid init()\n{\n    if ( Internal::s_bInstalled )\n        return;\n    work();\n    Internal::s_bInstalled = true;\n}\n"},
          "args": ["--baseline", "0"]},
     ]
 
@@ -246,7 +254,7 @@ class CheckLazyInitStaticFlagGate(BaselineSourceGate):
             parenClose = _matchParen(masked, parenOpen)
             if parenClose < 0:
                 continue
-            condition = masked[parenOpen:parenClose]
+            condition = masked[parenOpen:parenClose + 1]
             listChain = _ancestors(listBlock, ifMatch.start())
             if not listChain:
                 continue
