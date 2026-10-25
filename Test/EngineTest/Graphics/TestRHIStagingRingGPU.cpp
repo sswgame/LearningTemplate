@@ -79,6 +79,71 @@ SW_TEST_CASE( RHIStagingRingGPUTest, OpenGLUploadsWrapTheRingAndReadBackTheLastO
 }
 
 /**
+ * @brief [RHIStagingRingGPUTest] GL 은 링(기본 64 MiB)보다 큰 업로드 · 읽기 한 장을 일회성 버퍼(단독 구간)로 받고, 끝난 뒤 링이 작은 전송을 다시 받는다
+ * @details 4096×4352 RGBA8(68 MiB)은 업로드 링과 되읽기 링을 모두 넘는다 — 둘 다 `Rejected` 가 아니라 링이 빌 때 혼자 들어가야 하고(단독 상한 기본 512 MiB),
+ *          읽은 바이트가 올린 바이트와 같아야 한다. 이어 4 MiB 구간 업로드와 그 텍스처의 읽기가 다시 들어가는지(단독 구간을 돌려받았는지) 본다.
+ *          돌려받지 않았으면 `Busy` 가 시간 초과까지 이어져 실패한다.
+ */
+SW_TEST_CASE( RHIStagingRingGPUTest, OpenGLTransferLargerThanTheRingIsAcceptedAlone )
+{
+    test::RHITestDevice device( sw::RHIBackend::OpenGL );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No OpenGL device for the staging ring test" );
+    SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentStagingRing != SW_FALSE, "OpenGL did not create the persistent staging ring (GL 4.4)" );
+    SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentReadbackRing != SW_FALSE, "OpenGL did not create the persistent readback ring (GL 4.4)" );
+
+    constexpr uint32         kWidth    = 4096;
+    constexpr uint32         kHeight   = 4352;
+    sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+    sw::RHITextureDesc texDesc{};
+    texDesc._width                     = kWidth;
+    texDesc._height                    = kHeight;
+    texDesc._mipLevels                 = 1;
+    texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+    texDesc._bIsShaderResource         = SW_TRUE;
+    const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+    SW_ASSERT_TRUE( texture != 0 );
+
+    sw::vector<uint8> listPixel( static_cast<size_t>( kWidth ) * kHeight * 4, 0 );
+    for ( size_t byteIndex = 0; byteIndex < listPixel.size(); ++byteIndex )
+    {
+        listPixel[byteIndex] = static_cast<uint8>( byteIndex * 29 + 5 );
+    }
+    sw::RHITextureUploadDesc upload{};
+    upload._pData     = listPixel.data();
+    upload._sizeBytes = static_cast<uint32>( listPixel.size() );
+    upload._mipLevels = 1;
+    SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), "an upload larger than the staging ring must be accepted alone" );
+
+    sw::vector<uint8>     readBytes;
+    sw::RHITextureMipSpan layout{};
+    SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, readBytes, layout ),
+                        "a readback larger than the readback ring must be accepted alone" );
+    SW_ASSERT_TRUE( readBytes.size() == listPixel.size() );
+    SW_EXPECT_TRUE_MSG( sw::Memory::compare( readBytes.data(), listPixel.data(), listPixel.size() ) == 0, "the oversized upload did not read back unchanged" );
+
+    // 단독 구간을 돌려받았으면 링 구간(4 MiB 업로드)이 다시 들어간다.
+    constexpr uint32               kRegionHeight = 256;
+    sw::RHITextureRegionUploadDesc region{};
+    region._width     = kWidth;
+    region._height    = kRegionHeight;
+    region._pData     = listPixel.data();
+    region._sizeBytes = kWidth * kRegionHeight * 4;
+    SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, texture, region ), "the staging ring must take uploads again after the single one" );
+
+    sw::RHITextureDesc smallDesc     = texDesc;
+    smallDesc._width                 = 256;
+    smallDesc._height                = 256;
+    const sw::RHITextureHandle small = pResource->createTexture2D( smallDesc );
+    SW_ASSERT_TRUE( small != 0 );
+    SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, small, 0, 0, readBytes, layout ),
+                        "the readback ring must take reads again after the single one" );
+    pResource->destroyTexture( small );
+    pResource->destroyTexture( texture );
+}
+
+/**
  * @brief [RHIStagingRingGPUTest] GL 되읽기는 결과를 가져가거나 버릴 때까지 되읽기 링 구간을 쥔다 — 가져가지 않은 읽기가 링을 채우면 Busy, 가져가거나 버리면 다시 받는다
  * @details 2048² RGBA8(16 MiB) 읽기를 가져가지 않고 Busy 가 날 때까지 낸다(기본 링 64 MiB). 마지막 읽기를 가져가 바이트를 비교한 뒤 다시 내면 Accepted 이고,
  *          나머지를 버리면(`discardTextureReadback`, 아직 Pending 일 수 있다) 펜스가 지난 뒤 구간이 돌아와 읽기를 다시 받는다.

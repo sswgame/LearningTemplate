@@ -183,9 +183,9 @@ namespace sw
             return false;
         }
 
-        if ( initializeStagingRing( desc._stagingRingBytes ) == false )
+        if ( initializeStagingRing( desc._stagingRingBytes, desc._stagingSoloMaxBytes ) == false )
             return false;
-        if ( initializeReadbackRing( desc._readbackRingBytes ) == false )
+        if ( initializeReadbackRing( desc._readbackRingBytes, desc._stagingSoloMaxBytes ) == false )
         {
             shutdownStagingRing(); // _bInitialized 전이라 shutdownInternal 이 링을 지우지 않는다
             return false;
@@ -285,7 +285,7 @@ namespace sw
         return true;
     }
 
-    bool OpenGLRHIDevice::initializeStagingRing( uint64 capacityBytes )
+    bool OpenGLRHIDevice::initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes )
     {
         if ( capacityBytes == 0 )
         {
@@ -309,12 +309,12 @@ namespace sw
         }
 
         _pStagingRingMapped = pMapped;
-        _stagingRing.initialize( capacityBytes, kTransferRingAlignmentBytes );
+        _stagingRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
         return true;
     }
 
-    bool OpenGLRHIDevice::initializeReadbackRing( uint64 capacityBytes )
+    bool OpenGLRHIDevice::initializeReadbackRing( uint64 capacityBytes, uint64 soloMaxBytes )
     {
         if ( capacityBytes == 0 )
         {
@@ -338,7 +338,7 @@ namespace sw
         }
 
         _pReadbackRingMapped = pMapped;
-        _readbackRing.initialize( capacityBytes, kTransferRingAlignmentBytes );
+        _readbackRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_readbackRing ), RHIMemoryKind::Staging, capacityBytes );
         return true;
     }
@@ -369,6 +369,7 @@ namespace sw
         if ( _stagingRingBuffer == 0 )
             return;
         // 매핑된 버퍼를 지우면 매핑도 풀린다. 전송은 waitIdle(종료 2단계)이 모두 끝냈다.
+        deleteSoloBuffer( _stagingSolo );
         GLuint name = _stagingRingBuffer;
         glDeleteBuffers( 1, &name );
         getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_stagingRing ) );
@@ -381,6 +382,7 @@ namespace sw
     {
         if ( _readbackRingBuffer == 0 )
             return;
+        deleteSoloBuffer( _readbackSolo );
         GLuint name = _readbackRingBuffer;
         glDeleteBuffers( 1, &name );
         getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_readbackRing ) );

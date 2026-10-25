@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -209,6 +210,73 @@ namespace sw
             glDeleteSync( static_cast<GLsync>( pSync ) ); // 끝났다고 본 펜스만 온다 — 펜스가 없는 항목은 위에서 끝나지 않는다
             pSync = nullptr;
         } );
+        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다. 버퍼는 컨텍스트가 있어야 지우므로 컨텍스트를 쥔 이곳(프레임 끝 · 제출 · 폴링)에서만 한다.
+        const uint64 watermark = _transferSerials.getWatermark();
+        deleteIdleSoloBuffer( _stagingRing, _stagingSolo, watermark );
+        deleteIdleSoloBuffer( _readbackRing, _readbackSolo, watermark );
+    }
+
+    void OpenGLRHIDevice::deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial )
+    {
+        if ( rSolo._buffer == 0 )
+            return;
+        ring.freeCompleted( completedSerial );
+        if ( ring.hasLiveSolo() )
+            return;
+        deleteSoloBuffer( rSolo );
+    }
+
+    void OpenGLRHIDevice::deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo )
+    {
+        if ( rSolo._buffer == 0 )
+            return;
+        GLuint name = rSolo._buffer;
+        glDeleteBuffers( 1, &name ); // 매핑된 버퍼를 지우면 매핑도 풀린다
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &rSolo ) );
+        rSolo = OpenGLSoloTransferBuffer{};
+    }
+
+    RHISubmitResult OpenGLRHIDevice::attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+                                                       const utf8* pCaller )
+    {
+        // 버퍼를 만드는 동안만 컨텍스트를 빌린다. 바이트 복사(업로드)는 돌아간 뒤 컨텍스트 밖에서 한다.
+        ScopedOpenGLContext contextScope( this );
+        if ( isGraphicsContextCurrent() == false )
+        {
+            ring.free( span );
+            SW_LOG_ERROR( "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
+            return RHISubmitResult::Busy;
+        }
+        deleteSoloBuffer( rSolo ); // 장부가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
+        rSolo._pMapped = createPersistentRingBuffer( span._sizeBytes, mapFlags, rSolo._buffer );
+        if ( rSolo._pMapped == nullptr )
+        {
+            ring.free( span );
+            SW_LOG_ERROR( "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
+            return RHISubmitResult::Rejected;
+        }
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
+        return RHISubmitResult::Accepted;
+    }
+
+    uint8* OpenGLRHIDevice::getStagingBytes( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _stagingSolo._pMapped : _pStagingRingMapped + span._offsetBytes;
+    }
+
+    uint32 OpenGLRHIDevice::getStagingBuffer( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _stagingSolo._buffer : _stagingRingBuffer;
+    }
+
+    const uint8* OpenGLRHIDevice::getReadbackBytes( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _readbackSolo._pMapped : _pReadbackRingMapped + span._offsetBytes;
+    }
+
+    uint32 OpenGLRHIDevice::getReadbackBuffer( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _readbackSolo._buffer : _readbackRingBuffer;
     }
 
     bool OpenGLRHIDevice::tryRetireFinishedTransfers()
@@ -238,14 +306,20 @@ namespace sw
             result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         // 결과 옮기기는 RHITransferSerials 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Busy 가 아니라 Rejected 다(계약 2).
         const RHISubmitResult submitResult = _transferSerials.classifyStagingAllocation( result );
-        if ( submitResult != RHISubmitResult::Rejected )
-            return submitResult;
+        if ( submitResult == RHISubmitResult::Accepted )
+        {
+            if ( outSpan._bSolo == SW_FALSE )
+                return RHISubmitResult::Accepted;
+            return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
+        }
+        if ( submitResult == RHISubmitResult::Busy )
+            return RHISubmitResult::Busy; // 앞선 전송이 끝나면 빈다 — 호출자가 다시 제출한다(계약 2)
         if ( result == RHIStagingAllocateResult::Allocated )
             _stagingRing.free( outSpan );
         if ( result == RHIStagingAllocateResult::TooLarge )
         {
-            SW_LOG_ERROR( "%#: %# bytes do not fit the %#-byte staging ring; raise gv_rhiStagingRingMegabytes to upload it", pCaller, sizeBytes,
-                          _stagingRing.getCapacityBytes() );
+            SW_LOG_ERROR( "%#: %# bytes exceed the %#-byte staging ring and the %#-byte single upload limit; raise gv_rhiStagingSingleMaxMegabytes to upload it", pCaller,
+                          sizeBytes, _stagingRing.getCapacityBytes(), _stagingRing.getSoloMaxBytes() );
         }
         else
         {
@@ -269,7 +343,9 @@ namespace sw
         {
             case RHIStagingAllocateResult::Allocated:
             {
-                return RHISubmitResult::Accepted;
+                if ( outSpan._bSolo == SW_FALSE )
+                    return RHISubmitResult::Accepted;
+                return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, "submitTextureReadback" );
             }
             case RHIStagingAllocateResult::Full:
             {
@@ -277,8 +353,8 @@ namespace sw
             }
             case RHIStagingAllocateResult::TooLarge:
             {
-                SW_LOG_ERROR( "submitTextureReadback: %# bytes do not fit the %#-byte readback ring; raise gv_rhiReadbackRingMegabytes to read it", sizeBytes,
-                              _readbackRing.getCapacityBytes() );
+                SW_LOG_ERROR( "submitTextureReadback: %# bytes exceed the %#-byte readback ring and the %#-byte single readback limit; raise gv_rhiStagingSingleMaxMegabytes to read it",
+                              sizeBytes, _readbackRing.getCapacityBytes(), _readbackRing.getSoloMaxBytes() );
                 return RHISubmitResult::Rejected;
             }
         }
