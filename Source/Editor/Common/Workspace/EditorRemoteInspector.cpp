@@ -70,9 +70,12 @@ namespace sw::editor
                                      tryGetField( line.substr( componentsAt + 1 ), "components=", components );
                 if ( bFields == false )
                     return false;
+                bool bActive{ false };
+                if ( StringUtil::tryParseBool( active, bActive ) == false )
+                    return false;
                 outRow._name       = string( line.substr( idEnd + 1, parentAt - idEnd - 1 ) );
                 outRow._parentName = string( parentName );
-                outRow._bActive    = active == "1";
+                outRow._bActive    = bActive;
                 outRow._components = string( components );
                 return true;
             }

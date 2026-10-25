@@ -112,7 +112,8 @@ namespace sw
             static bool runGod( const vector<string>& listArgument, string& outReply )
             {
                 const bool bExplicit = listArgument.size() == 1;
-                if ( listArgument.size() > 1 || ( bExplicit && listArgument[0] != "on" && listArgument[0] != "off" ) )
+                bool       bArgumentOn{ false };
+                if ( listArgument.size() > 1 || ( bExplicit && StringUtil::tryParseBool( listArgument[0], bArgumentOn ) == false ) )
                     return false;
                 vector<AbilitySystemComponent*> listComponent;
                 if ( collectAbilitySystems( listComponent, outReply ) == false )
@@ -129,7 +130,7 @@ namespace sw
                     ++playerCount;
                     GameplayTagCountContainer& tags     = pComponent->getOwnedTagCounts();
                     const bool                 bCheatOn = tags.getCount( tag ) > 0;
-                    const bool                 bWantOn  = bExplicit ? listArgument[0] == "on" : bCheatOn == false;
+                    const bool                 bWantOn  = bExplicit ? bArgumentOn : bCheatOn == false;
                     if ( bWantOn && bCheatOn == false )
                         tags.updateCount( tag, 1 );
                     else if ( bWantOn == false && bCheatOn )
