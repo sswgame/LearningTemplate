@@ -99,7 +99,8 @@ namespace sw
 
     uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply )
     {
-        SW_ASSERT( _pStore != nullptr );
+        if ( _pStore == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         const uint64 requestID = _pStore->submit( request );
         // 메모리 앞은 맡기는 시점에 답을 큐에 넣지만 꺼내는 것은 다음 pump 다 — 등록이 늦지 않다.
         _mapRequestToReply.emplace( requestID, onReply );

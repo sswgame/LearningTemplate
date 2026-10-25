@@ -1230,7 +1230,8 @@ namespace sw
 
     bool PropertyReadRollback::restoreValueBeforeRead( MutableObjectAddress instance, const SerializeContext& context ) const
     {
-        SW_ASSERT( _pOwnerType != nullptr && _pProperty != nullptr ); // keepValueBeforeRead 를 먼저 부른다
+        if ( _pOwnerType == nullptr || _pProperty == nullptr ) // keepValueBeforeRead 를 먼저 부른다
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         if ( _bOwnedPointerList )
         {
             SW_LOG_ERROR( "%#::%# (%#): the owned pointer list could not be read and is half filled - the object is not read", _pOwnerType->_name.c_str(),

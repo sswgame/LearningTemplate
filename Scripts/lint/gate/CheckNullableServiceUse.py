@@ -107,6 +107,34 @@ def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
 _kListScanRoot = ( "Source/Core", "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
+# 넷째 문: **멤버** 포인터(`_pName` · `_parts`)를 단언만 걸고 역참조하는 것. 지역 변수 선언이 없어 셋째 문이 못 보므로 단언 줄에서 시작한다.
+_kAssertedMemberRe = re.compile(r"^(\s*)(?:SW_ASSERT|SW_LOG_ASSERT|SW_LOW_LEVEL_ASSERT)[A-Z_]*\(\s*(_\w+)\s*!=\s*nullptr\b")
+
+
+def findAssertedMembers(relative: str, lines: list[str]) -> list[str]:
+    """멤버 포인터에 단언만 걸고 확인 없이 역참조하는 곳을 모읍니다."""
+    violations: list[str] = []
+    for index, line in enumerate(lines):
+        match = _kAssertedMemberRe.match(line)
+        if match is None:
+            continue
+        indent, name = match.group(1), match.group(2)
+        checkRe = re.compile(_kCheckTemplate.format(re.escape(name)))
+        derefRe = re.compile(_kDerefTemplate.format(re.escape(name)))
+        for scanIndex in range(index + 1, min(index + 40, len(lines))):
+            current = lines[scanIndex]
+            if current.strip().startswith("}") and (len(current) - len(current.lstrip())) < len(indent):
+                break
+            if _kAssertLineRe.match(current) is not None:
+                continue
+            if checkRe.search(current):
+                break
+            if derefRe.search(current):
+                violations.append(f"[Nullable Service] {relative}:{index + 1}: {line.strip()}")
+                break
+    return violations
+
+
 def findDirectDereferences(source: SourceFile) -> list[str]:
     """파일 하나에서 `findSubsystem<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
     violations: list[str] = []
@@ -116,6 +144,7 @@ def findDirectDereferences(source: SourceFile) -> list[str]:
         if any(regex.search(line) for regex in _kListNullableCallRe):
             violations.append(f"[Nullable Service] {relative}:{lineIndex}: {line.strip()}")
     violations.extend(findUncheckedStores(relative, lines))
+    violations.extend(findAssertedMembers(relative, lines))
     return violations
 
 
@@ -241,6 +270,19 @@ class CheckNullableServiceUseGate(LintGate):
                     "    const Entry* pEntry = _listEntry.find( tick );\n"
                     "    SW_ASSERT( pEntry != nullptr );\n"
                     "    return *pEntry;\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "멤버 포인터에 단언만 걸고 역참조",
+            "expectedViolation": "[Nullable Service] Source/Engine/Probe/ProbeMemberAssert.cpp:3: SW_ASSERT( _pBlock != nullptr );",
+            "files": {
+                "Source/Engine/Probe/ProbeMemberAssert.cpp": (
+                    "AssetLoadState Probe::getState() const\n"
+                    "{\n"
+                    "    SW_ASSERT( _pBlock != nullptr );\n"
+                    "    return _pBlock->getState();\n"
                     "}\n"
                 ),
             },

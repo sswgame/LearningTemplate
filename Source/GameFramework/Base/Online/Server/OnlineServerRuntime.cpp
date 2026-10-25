@@ -463,7 +463,8 @@ namespace sw
 
     OnlineServiceHost& OnlineServerRuntime::getHost()
     {
-        SW_ASSERT( _parts != nullptr );
+        if ( _parts == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return _parts->_host;
     }
 
@@ -490,7 +491,8 @@ namespace sw
 
     const OnlineServerKitContext& OnlineServerRuntime::getContext() const
     {
-        SW_ASSERT( _parts != nullptr );
+        if ( _parts == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return _parts->_context;
     }
 
