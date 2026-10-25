@@ -13,7 +13,7 @@ X11 은 `Convex` · `None` · `Success` · `KeyPress` · `Always` 같은 흔한 
   3) X11 을 include 하는 파일은 감싼 서드파티 헤더(Jolt · Box2D · ACL · RTM · Recast/Detour · Tracy)를 include 하지 않는다 —
      남은 매크로가 그 라이브러리의 식별자를 덮는다.
 
-  4) 엔진 본체(`Source/Engine`, RHI 백엔드 폴더 `Graphics/RHI` 제외)에서 X11 · Wayland · xkbcommon · xcb 헤더를 include 하는 `.cpp` 는
+  4) 서버 빌드에도 들어가는 폴더(`_kListServerBuiltDir` — 엔진 본체 · GameFramework · Games · 엔진 테스트 등, RHI 백엔드 폴더 `Graphics/RHI` 와 에디터 제외)에서 X11 · Wayland · xkbcommon · xcb 헤더를 include 하는 `.cpp` 는
      `SW_WITH_CLIENT_CODE` 로 감싼다. 전용 서버(`SW_TARGET_TYPE=Server`)는 X11 을 링크하지 않아(`Linux.cmake`) 감싸지 않은 .cpp 는 서버 빌드의
      컴파일이나 링크를 세운다. Windows 빌드는 이 결함을 낼 수 없어 소스 모양으로 막는다(계획 DedicatedServerNoRenderer S3).
 
@@ -47,7 +47,8 @@ _kListThirdPartyPrefix = ("Jolt/", "box2d/", "acl/", "rtm/", "Recast", "Detour",
 #: 서버에 없는 창 계층의 시스템 헤더 접두어입니다(4번 규칙). X11 매크로 규칙(1~3)은 `_kListX11SystemPrefix` 만 본다.
 _kListWindowingSystemPrefix = _kListX11SystemPrefix + ("wayland-", "xkbcommon/", "xcb/", "xdg-shell")
 _kClientGuardMacro = "SW_WITH_CLIENT_CODE"
-_kEngineBodyDir = "Source/Engine/"
+#: 전용 서버 빌드에도 들어가는 소스 폴더입니다. 에디터(`Source/Editor` · `Test/EditorTest`)는 `_listTarget: Client` 라 서버에 없어 뺀다.
+_kListServerBuiltDir = ("Source/Engine/", "Source/Core/", "Source/GameFramework/", "Source/Games/", "Source/Server/", "Source/ModuleHost/", "Source/RuntimeAPI/", "Test/EngineTest/", "Test/CoreTest/", "Test/ServerTest/")
 #: RHI 백엔드는 모듈(Dev) 또는 서버에서 빠지는 폴더라 4번 규칙에서 뺀다.
 _kEngineBackendDir = "Source/Engine/Graphics/RHI/"
 
@@ -83,11 +84,11 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
             lastUndefLine = lineNumber
         if includePath.startswith(_kListThirdPartyPrefix):
             listThirdParty.append((lineNumber, includePath))
-    if bTranslationUnit and relative.startswith(_kEngineBodyDir) and relative.startswith(_kEngineBackendDir) is False and _kClientGuardMacro not in text:
+    if bTranslationUnit and relative.startswith(_kListServerBuiltDir) and relative.startswith(_kEngineBackendDir) is False and _kClientGuardMacro not in text:
         for lineNumber, rawInclude in iterIncludes(text):
             includePath = normalizePath(rawInclude)
             if includePath.startswith(_kListWindowingSystemPrefix):
-                listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 창 계층 헤더를 include 하는 엔진 본체 .cpp 는 {_kClientGuardMacro} 로 감쌉니다(전용 서버는 X11 을 링크하지 않습니다)")
+                listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 창 계층 헤더를 include 하는 서버 빌드 .cpp 는 {_kClientGuardMacro} 로 감쌉니다(전용 서버는 X11 을 링크하지 않습니다)")
                 break
     if lastRawX11Line > 0 and lastUndefLine < lastRawX11Line:
         listViolation.append(f"{relative}:{lastRawX11Line}: X11 헤더 뒤에 \"{_kX11MacroUndef}\" 를 다시 include 하지 않았습니다")
@@ -136,8 +137,18 @@ class CheckX11IsolationGate(LintGate):
             "files": {"Source/Engine/Window/Linux/Probe.cpp": "#include \"Core/Common/X11Headers.h\"\n#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
         },
         {
+            "name": "서버에도 들어가는 엔진 테스트 .cpp 가 xcb 헤더를 감싸지 않고 include 한다",
+            "expectedViolation": "Test/EngineTest/Window/Probe.cpp:1: <xcb/xcb.h> -> 창 계층 헤더를 include 하는 서버 빌드 .cpp 는 SW_WITH_CLIENT_CODE 로 감쌉니다",
+            "files": {"Test/EngineTest/Window/Probe.cpp": "#include <xcb/xcb.h>\nint probe() { return 0; }\n"},
+        },
+        {
+            "name": "서버에도 들어가는 GameFramework .cpp 가 xkbcommon 헤더를 감싸지 않고 include 한다",
+            "expectedViolation": "Source/GameFramework/Base/Probe.cpp:1: <xkbcommon/xkbcommon.h> -> 창 계층 헤더를 include 하는 서버 빌드 .cpp 는 SW_WITH_CLIENT_CODE 로 감쌉니다",
+            "files": {"Source/GameFramework/Base/Probe.cpp": "#include <xkbcommon/xkbcommon.h>\nint probe() { return 0; }\n"},
+        },
+        {
             "name": "서버에도 들어가는 엔진 .cpp 가 Wayland 헤더를 감싸지 않고 include 한다",
-            "expectedViolation": "Source/Engine/Window/Linux/Probe.cpp:1: <wayland-client.h> -> 창 계층 헤더를 include 하는 엔진 본체 .cpp 는 SW_WITH_CLIENT_CODE 로 감쌉니다",
+            "expectedViolation": "Source/Engine/Window/Linux/Probe.cpp:1: <wayland-client.h> -> 창 계층 헤더를 include 하는 서버 빌드 .cpp 는 SW_WITH_CLIENT_CODE 로 감쌉니다",
             "files": {"Source/Engine/Window/Linux/Probe.cpp": "#include <wayland-client.h>\nint probe() { return 0; }\n"},
         },
     ]
