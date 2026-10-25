@@ -228,10 +228,20 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
         process = subprocess.Popen([str(appPath), *listArgument], cwd=str(workingDirectory), stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
                                    creationflags=limits.makeCreationFlags(), preexec_fn=limits.makePreexec(), env=mergedEnvironment)
-        jobHandle = limits.attach(process)  # noqa: F841 — 프로세스가 끝날 때까지 쥔다(닫으면 Job 이 자식을 끝낸다)
+        attachment = limits.attach(process)
+        attachment.__enter__()   # Job 핸들은 아래 finally 에서 닫는다(닫으면 Job 이 자식을 끝낸다 — 끝난 뒤에만)
     except (OSError, RuntimeError) as error:
         result.listErrorLine.append(f"cannot launch {appPath}: {error}")
         return result
+    try:
+        return superviseApp(process, appPath, listArgument, result, startSeconds, timeoutSeconds, sampleIntervalSeconds, echo)
+    finally:
+        attachment.__exit__(None, None, None)
+
+
+def superviseApp(process: subprocess.Popen, appPath: Path, listArgument: list[str], result: AppRunResult, startSeconds: float,
+                 timeoutSeconds: float, sampleIntervalSeconds: float, echo: bool) -> AppRunResult:
+    """띄운 프로세스가 끝날 때까지(시간 초과면 죽여서) 출력을 읽고 자원을 재어 @p result 를 채웁니다."""
     result.bLaunched = True
     appendAppStartLine(process.pid, appPath, summarizeAppArguments(listArgument, _kBackendSwitchSet))
 

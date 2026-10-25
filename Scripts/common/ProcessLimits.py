@@ -14,11 +14,12 @@ Windows 는 Job Object 하나에 친화도(`JOB_OBJECT_LIMIT_AFFINITY`)와 프�
 
 from __future__ import annotations
 
+import contextlib
 import os
 import subprocess
 import sys
 from dataclasses import dataclass
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 #: `CREATE_SUSPENDED` — 첫 스레드를 멈춘 채로 만든다(Job 에 넣은 뒤 깨운다).
 _kCreateSuspended = 0x00000004
@@ -26,6 +27,16 @@ _kJobObjectExtendedLimitInformation = 9
 _kJobObjectLimitAffinity = 0x00000010
 _kJobObjectLimitProcessMemory = 0x00000100
 _kJobObjectLimitKillOnJobClose = 0x00002000
+
+
+def closeJobHandle(job: object | None) -> None:
+    """Job 핸들을 닫는다(None 은 건너뜀)."""
+    if job:
+        import ctypes
+        import ctypes.wintypes as wintypes
+        kernel32 = ctypes.WinDLL("kernel32")
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle(wintypes.HANDLE(job))
 
 
 @dataclass(frozen=True)
@@ -63,12 +74,22 @@ class ProcessLimits:
 
         return applyInternal
 
-    def attach(self, process: subprocess.Popen) -> object | None:
+    @contextlib.contextmanager
+    def attach(self, process: subprocess.Popen) -> Iterator[None]:
         """
-        Windows: 멈춘 채로 만든 @p process 를 제한을 건 Job 에 넣고 깨웁니다. 돌려준 Job 핸들은 프로세스가 끝날 때까지 들고 있어야 한다
-        (닫으면 `KILL_ON_JOB_CLOSE` 로 자식이 끝난다 — 스크립트가 죽어도 App 이 남지 않게). 리눅스 · 제한 없음은 None.
+        Windows: 멈춘 채로 만든 @p process 를 제한을 건 Job 에 넣고 깨운 채 `with` 본문을 돈다. Job 핸들은 본문이 끝나는 모든 길
+        (정상 · 예외)에서 여기서 닫는다 — 호출자가 닫기를 잊을 수 없다. 본문 동안은 쥐고 있어야 한다
+        (닫으면 `KILL_ON_JOB_CLOSE` 로 자식이 끝난다 — 스크립트가 죽어도 App 이 남지 않게). 리눅스 · 제한 없음은 아무것도 안 한다.
         실패하면 프로세스를 죽이고 RuntimeError 다(제한 없이 잰 숫자가 제한한 숫자로 읽히면 안 된다).
         """
+        job = self._attachInternal(process)
+        try:
+            yield
+        finally:
+            closeJobHandle(job)
+
+    def _attachInternal(self, process: subprocess.Popen) -> object | None:
+        """Job 을 만들어 프로세스를 넣고 깨운 뒤 핸들을 돌려준다(닫기는 `attach` 몫). 해당 없으면 None."""
         if not self.bActive or sys.platform != "win32":
             return None
         import ctypes
