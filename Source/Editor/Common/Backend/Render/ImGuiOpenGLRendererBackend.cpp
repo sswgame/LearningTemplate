@@ -205,7 +205,14 @@ namespace sw::editor
         // "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 함께 맞는다(아래 Linux 분기와 같다).
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
-            s_MainWindowRC                     = static_cast<HGLRC>( _pRHIDevice->getNativeContext() );
+            // WGL 디바이스의 컨텍스트 칸은 HGLRC 다. 종류 확인과 값 확인은 `queryNativeHandles` 한 곳에서 한다.
+            RHINativeHandles glNative{};
+            if ( _pRHIDevice->queryNativeHandles( RHIBackend::OpenGL, glNative ) == false || glNative._pContext == nullptr )
+            {
+                SW_LOG_ERROR( "The OpenGL device has no WGL render context, so ImGui viewports cannot be enabled" );
+                return false;
+            }
+            s_MainWindowRC                     = static_cast<HGLRC>( glNative._pContext );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
@@ -216,16 +223,17 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
-            // GLX 디바이스의 getNativeDevice 는 컨텍스트를 만든 Display* 다(GlxPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
+            // GLX 디바이스의 디바이스 칸은 컨텍스트를 만든 Display* 다(GlxPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
+            // 종류 확인과 값 확인은 `queryNativeHandles` 한 곳에서 한다(디바이스 칸이 비면 false).
             // 검사는 지역 변수에서 하고 정적 칸에는 값을 한 번만 쓴다 — 검사 뒤 채우기(`lazyFill`) 모양이 아니다.
-            Display* pMainDisplay = static_cast<Display*>( _pRHIDevice->getNativeDevice() );
-            if ( pMainDisplay == nullptr )
+            RHINativeHandles glNative{};
+            if ( _pRHIDevice->queryNativeHandles( RHIBackend::OpenGL, glNative ) == false )
             {
                 SW_LOG_ERROR( "The OpenGL device has no GLX display connection, so ImGui viewports cannot be enabled" );
                 return false;
             }
-            s_MainDisplay                      = pMainDisplay;
-            s_MainContext                      = static_cast<GLXContext>( _pRHIDevice->getNativeContext() );
+            s_MainDisplay                      = static_cast<Display*>( glNative._pDevice );
+            s_MainContext                      = static_cast<GLXContext>( glNative._pContext );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow_GLX;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow_GLX;
@@ -276,7 +284,7 @@ namespace sw::editor
             return nullptr;
 
         // imgui_impl_opengl3 는 ImTextureID 를 GLuint 로 취급한다. GL 디바이스의 네이티브 텍스처 포인터가 그 이름을 포인터 폭으로 넓힌 값이다.
-        void* pTextureID = _pRHIDevice->getNativeTexturePointer( texture );
+        void* pTextureID = _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::OpenGL, texture );
         if ( pTextureID == nullptr )
         {
             SW_LOG_ERROR( "Failed to resolve GL texture for RHI handle %#", texture );

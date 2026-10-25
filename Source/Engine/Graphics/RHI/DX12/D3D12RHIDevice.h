@@ -232,6 +232,8 @@ namespace sw
         /** @brief 백엔드 이름을 반환합니다. */
         const utf8* getBackendName() const override { return "Direct3D 12"; }
 
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
         /** @brief ID3D12Device 포인터를 반환합니다. */
         void* getNativeDevice() const override { return _device.Get(); }
 
@@ -249,6 +251,7 @@ namespace sw
         /** @brief 네이티브 텍스처 포인터(ID3D12Resource*)를 반환합니다. */
         void* getNativeTexturePointer( RHITextureHandle texture ) const override;
 
+    public:
         /** @brief 독립 커맨드 리스트를 만듭니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
 

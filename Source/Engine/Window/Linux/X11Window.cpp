@@ -326,10 +326,10 @@ namespace sw
             if ( _customHandler.isBound() )
             {
                 NativeWindowEvent windowEvent{};
-                windowEvent._pNativeWindow = reinterpret_cast<void*>( static_cast<uintptr_t>( _x11Window ) );
-                windowEvent._message       = NativeWindowEvent::kMessageX11;
-                windowEvent._wParam        = 0;
-                windowEvent._lParam        = reinterpret_cast<intptr_t>( &event );
+                windowEvent.setNativeWindow( NativeSurfaceKind::X11, reinterpret_cast<void*>( static_cast<uintptr_t>( _x11Window ) ) );
+                windowEvent._message = NativeWindowEvent::kMessageX11;
+                windowEvent._wParam  = 0;
+                windowEvent._lParam  = reinterpret_cast<intptr_t>( &event );
                 if ( _customHandler( windowEvent ) )
                     continue;
             }

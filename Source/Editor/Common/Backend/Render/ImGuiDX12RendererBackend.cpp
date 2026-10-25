@@ -48,9 +48,14 @@ namespace sw::editor
         if ( _pRHIDevice == nullptr )
             return false;
 
-        ID3D12Device* pDevice = static_cast<ID3D12Device*>( _pRHIDevice->getNativeDevice() );
-        if ( pDevice == nullptr )
+        // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — D3D12 디바이스인지와 값이 있는지를 `queryNativeHandles` 한 곳에서 확인한다.
+        RHINativeHandles handles{};
+        if ( _pRHIDevice->queryNativeHandles( RHIBackend::DirectX12, handles ) == false )
+        {
+            SW_LOG_ERROR( "The ImGui DX12 renderer needs a D3D12 device" );
             return false;
+        }
+        ID3D12Device* pDevice = static_cast<ID3D12Device*>( handles._pDevice );
 
         SW_LOG_TRACE( "Creating D3D12 Descriptor Heap for ImGui" );
         D3D12_DESCRIPTOR_HEAP_DESC desc = {};
@@ -69,7 +74,7 @@ namespace sw::editor
         // 보조(플로팅) 뷰포트의 스왑체인 버퍼 수 · 프레임 지연 한도도 같은 값이다(ImGui 가 한 값으로 묶는다).
         ImGui_ImplDX12_InitInfo initInfo = {};
         initInfo.Device                  = pDevice;
-        initInfo.CommandQueue            = static_cast<ID3D12CommandQueue*>( _pRHIDevice->getNativeCommandQueue() );
+        initInfo.CommandQueue            = static_cast<ID3D12CommandQueue*>( handles._pGraphicsQueue );
         initInfo.NumFramesInFlight       = kImGuiDrawBufferRingSize;
         initInfo.RTVFormat               = DXGI_FORMAT_R8G8B8A8_UNORM;
         initInfo.SrvDescriptorHeap       = _d3d12SrvHeap.Get();
@@ -114,23 +119,25 @@ namespace sw::editor
 
     void ImGuiDX12RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        ID3D12Device* pDevice = static_cast<ID3D12Device*>( pRHIDevice->getNativeDevice() );
-        if ( pDevice != nullptr )
+        // 컨텍스트 칸은 이번 프레임의 커맨드 리스트라 프레임마다 다시 묻는다.
+        RHINativeHandles handles{};
+        if ( pRHIDevice == nullptr || pRHIDevice->queryNativeHandles( RHIBackend::DirectX12, handles ) == false )
+            return;
+
+        ID3D12Device* pDevice = static_cast<ID3D12Device*>( handles._pDevice );
+        const HRESULT removed = pDevice->GetDeviceRemovedReason();
+        if ( FAILED( removed ) )
         {
-            const HRESULT removed = pDevice->GetDeviceRemovedReason();
-            if ( FAILED( removed ) )
+            // 디바이스 제거는 복구되지 않아 이후 모든 프레임이 여기로 들어온다. 그래서 한 번만 남긴다.
+            if ( _bDeviceRemovedLogged == false )
             {
-                // 디바이스 제거는 복구되지 않아 이후 모든 프레임이 여기로 들어온다. 그래서 한 번만 남긴다.
-                if ( _bDeviceRemovedLogged == false )
-                {
-                    _bDeviceRemovedLogged = true;
-                    SW_LOG_ERROR( "Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
-                }
-                return;
+                _bDeviceRemovedLogged = true;
+                SW_LOG_ERROR( "Device removed before RenderDrawData (hr=%#)", static_cast<uint32>( removed ) );
             }
+            return;
         }
 
-        ID3D12GraphicsCommandList* pCmdList           = static_cast<ID3D12GraphicsCommandList*>( pRHIDevice->getNativeContext() );
+        ID3D12GraphicsCommandList* pCmdList           = static_cast<ID3D12GraphicsCommandList*>( handles._pContext );
         const bool                 bCanRecordDrawData = pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr;
         if ( bCanRecordDrawData )
         {
@@ -146,13 +153,14 @@ namespace sw::editor
         if ( bCannotRegisterTexture )
             return nullptr;
 
-        ID3D12Resource* pResource = static_cast<ID3D12Resource*>( _pRHIDevice->getNativeTexturePointer( texture ) );
+        ID3D12Resource* pResource = static_cast<ID3D12Resource*>( _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::DirectX12, texture ) );
         if ( pResource == nullptr )
             return nullptr;
 
-        ID3D12Device* pDevice = static_cast<ID3D12Device*>( _pRHIDevice->getNativeDevice() );
-        if ( pDevice == nullptr )
+        RHINativeHandles handles{};
+        if ( _pRHIDevice->queryNativeHandles( RHIBackend::DirectX12, handles ) == false )
             return nullptr;
+        ID3D12Device* pDevice = static_cast<ID3D12Device*>( handles._pDevice );
 
         D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};

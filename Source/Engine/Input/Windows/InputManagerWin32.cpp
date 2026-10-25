@@ -9,6 +9,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/Defines.h"
+    #include "Core/Concurrency/atomic.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/String/fixed_string.h"
 
@@ -184,7 +185,7 @@ namespace sw
         }
 
         /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 나타냅니다. TrackMouseEvent 는 이탈을 한 번 알리고 해제됩니다. */
-        bool s_bTrackingLeave{ false };
+        atomic<bool> s_bTrackingLeave{ false };
 
         /** @brief SPI_xxxKEYS 접근성 단축키(고정 키, 토글 키, 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
         STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
@@ -317,16 +318,18 @@ namespace sw
 
                 // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다. 요청하지 않으면
                 // `isPointerInside()` 와 `isPointerOverRect()` 가 늘 false 다.
-                // `s_bTrackingLeave` 는 창 메시지 펌프(창을 만든 메인 스레드, `App::run` → `processMessages`)에서만 닿는다 — 작업 풀 워커에서 오면 검사 뒤 채우기가 겹친다.
+                // `s_bTrackingLeave` 는 창 메시지 펌프(창을 만든 메인 스레드, `App::run` → `processMessages`)에서만 닿는다. 검사와 표시는 `exchange` 한 번이라
+                // 다른 스레드에서 와도 요청이 겹치지 않는다. 요청이 실패하면 표시를 되돌려 다음 이동에서 다시 요청한다.
                 SW_ASSERT( engine::isOnPoolWorker() == false );
-                if ( s_bTrackingLeave == false && event._pNativeWindow != nullptr )
+                const HWND hTrackWnd = static_cast<HWND>( event.tryGetWin32Window() );
+                if ( hTrackWnd != nullptr && s_bTrackingLeave.exchange( true ) == false )
                 {
                     TRACKMOUSEEVENT trackEvent{};
                     trackEvent.cbSize    = sizeof( TRACKMOUSEEVENT );
                     trackEvent.dwFlags   = TME_LEAVE;
-                    trackEvent.hwndTrack = static_cast<HWND>( event._pNativeWindow );
-                    if ( TrackMouseEvent( &trackEvent ) != FALSE )
-                        s_bTrackingLeave = true;
+                    trackEvent.hwndTrack = hTrackWnd;
+                    if ( TrackMouseEvent( &trackEvent ) == FALSE )
+                        s_bTrackingLeave = false;
                     postWindowStateEvent( RawInputEvent::makePointerCrossing( true ) );
                 }
                 postRawEvent( RawInputEvent::makeMouseMove( mouseX, mouseY ) );

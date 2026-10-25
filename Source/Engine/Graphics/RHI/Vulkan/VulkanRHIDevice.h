@@ -256,6 +256,18 @@ namespace sw
         /** @brief 백엔드 버전 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "Vulkan 1.3"; }
 
+        /** @brief 독립 커맨드 리스트를 만듭니다. */
+        unique_ptr<IRHICommandList> createCommandList() override;
+
+        /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
+        void executeCommandList( IRHICommandList* pCmdList ) override;
+        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+
+        /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
+        RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
+
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
         /** @brief 네이티브 VkDevice 핸들을 반환합니다. */
         void* getNativeDevice() const override { return _device; }
 
@@ -268,16 +280,6 @@ namespace sw
 
         /** @brief 네이티브 VkQueue 핸들을 반환합니다. */
         void* getNativeCommandQueue() const override { return _graphicsQueue; }
-
-        /** @brief 독립 커맨드 리스트를 만듭니다. */
-        unique_ptr<IRHICommandList> createCommandList() override;
-
-        /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
-        void executeCommandList( IRHICommandList* pCmdList ) override;
-        void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
-
-        /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
-        RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
         /**
          * @brief ImGui Vulkan 백엔드 초기화에 필요한 핸들(인스턴스, 물리 디바이스, 큐 패밀리, 백버퍼 렌더 패스, 이미지 수)까지 채웁니다.

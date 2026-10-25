@@ -269,10 +269,10 @@ namespace sw
             if ( pThis->_customHandler.isBound() )
             {
                 NativeWindowEvent event{};
-                event._pNativeWindow = hWnd;
-                event._message       = msg;
-                event._wParam        = wParam;
-                event._lParam        = lParam;
+                event.setNativeWindow( NativeSurfaceKind::Win32, hWnd );
+                event._message = msg;
+                event._wParam  = wParam;
+                event._lParam  = lParam;
                 if ( pThis->_customHandler( event ) )
                     return true;
             }

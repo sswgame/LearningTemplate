@@ -475,7 +475,7 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
     device._pNativeDevice = &nativeDeviceStandIn;
 
     sw::RHINativeHandles handles{};
-    SW_EXPECT_TRUE( device.queryNativeHandles( handles ) );
+    SW_EXPECT_TRUE( device.queryNativeHandles( sw::RHIBackend::DirectX12, handles ) );
     SW_EXPECT_TRUE( handles._pDevice == &nativeDeviceStandIn );
     SW_EXPECT_TRUE( handles._backend == device.getBackendType() );
     SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
@@ -486,17 +486,27 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
     otherSize._byteSize = static_cast<uint32>( sizeof( sw::RHINativeHandles ) ) - static_cast<uint32>( sizeof( void* ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "native handle query with another RHINativeHandles layout" );
-        SW_EXPECT_FALSE( device.queryNativeHandles( otherVersion ) );
-        SW_EXPECT_FALSE( device.queryNativeHandles( otherSize ) );
+        SW_EXPECT_FALSE( device.queryNativeHandles( sw::RHIBackend::DirectX12, otherVersion ) );
+        SW_EXPECT_FALSE( device.queryNativeHandles( sw::RHIBackend::DirectX12, otherSize ) );
     }
     SW_EXPECT_TRUE( otherVersion._pDevice == nullptr );
     SW_EXPECT_TRUE( otherSize._pDevice == nullptr );
     SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
 
+    // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — 호출처가 캐스트할 백엔드가 아니면 판이 맞아도 한 칸도 쓰지 않고, 텍스처 포인터도 주지 않는다.
+    sw::RHINativeHandles otherBackend{};
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "native handle query for another backend" );
+        SW_EXPECT_FALSE( device.queryNativeHandles( sw::RHIBackend::Vulkan, otherBackend ) );
+        SW_EXPECT_TRUE( device.tryGetNativeTexturePointer( sw::RHIBackend::DirectX11, 1u ) == nullptr );
+    }
+    SW_EXPECT_TRUE( otherBackend._pDevice == nullptr );
+    SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
+
     // 디바이스가 없는 백엔드는 판이 맞아도 false 다.
     device._pNativeDevice = nullptr;
     sw::RHINativeHandles noDevice{};
-    SW_EXPECT_FALSE( device.queryNativeHandles( noDevice ) );
+    SW_EXPECT_FALSE( device.queryNativeHandles( sw::RHIBackend::DirectX12, noDevice ) );
 }
 
 /**

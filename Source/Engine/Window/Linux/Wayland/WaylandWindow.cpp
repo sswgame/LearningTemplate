@@ -581,9 +581,9 @@ namespace sw
             if ( _customHandler.isBound() == false )
                 break;
             NativeWindowEvent windowEvent{};
-            windowEvent._pNativeWindow = state._pSurface;
-            windowEvent._message       = NativeWindowEvent::kMessageWayland;
-            windowEvent._lParam        = reinterpret_cast<intptr_t>( &input );
+            windowEvent.setNativeWindow( NativeSurfaceKind::Wayland, state._pSurface );
+            windowEvent._message = NativeWindowEvent::kMessageWayland;
+            windowEvent._lParam  = reinterpret_cast<intptr_t>( &input );
             (void)_customHandler( windowEvent ); // 받은 쪽이 먹었는지는 Wayland 에서 할 일을 바꾸지 않는다
         }
 
