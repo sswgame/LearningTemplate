@@ -72,11 +72,13 @@ namespace sw::editor
 
             static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
             {
-                EditorViewportOverlays* pOverlays         = findSceneOverlays();
-                const bool              bSetOverlayFailed = listArgument.size() != 2 || pOverlays == nullptr || pOverlays->setBarVisible( listArgument[0], listArgument[1] != "0" ) == false;
+                EditorViewportOverlays* pOverlays = findSceneOverlays();
+                bool                    bVisible{ false };
+                const bool              bSetOverlayFailed = listArgument.size() != 2 || readOptionalBoolArgument( listArgument, 1, bVisible ) == false || pOverlays == nullptr ||
+                                               pOverlays->setBarVisible( listArgument[0], bVisible ) == false;
                 if ( bSetOverlayFailed )
                     return false;
-                outReply = "overlay " + listArgument[0] + ( listArgument[1] != "0" ? " shown" : " hidden" );
+                outReply = "overlay " + listArgument[0] + ( bVisible ? " shown" : " hidden" );
                 return true;
             }
         };

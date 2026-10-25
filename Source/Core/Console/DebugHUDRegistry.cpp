@@ -15,8 +15,8 @@ namespace sw
     {
         struct DebugHUDRegistryInternal
         {
-            /** @brief 명령 `hud` 의 낱말이라 섹션 이름으로 쓰지 않는 것입니다. */
-            static constexpr const utf8* kArrReservedName[] = { "on", "off", "list", "corner", "opacity", "window" };
+            /** @brief 명령 `hud` 의 낱말이라 섹션 이름으로 쓰지 않는 것입니다(켬 · 끔 철자는 `isReservedName` 이 불리언 표로 따로 막는다). */
+            static constexpr const utf8* kArrReservedName[] = { "list", "corner", "opacity", "window" };
 
             static bool isSeparator( utf8 character ) { return character == ' ' || character == ',' || character == '\t'; }
 
@@ -122,6 +122,9 @@ namespace sw
 
     bool DebugHUDRegistry::isReservedName( string_view name )
     {
+        bool bIgnoredValue{ false };
+        if ( StringUtil::tryParseBool( name, bIgnoredValue ) ) // `hud <낱말>` 의 첫 낱말은 불리언 철자 표(on · off · 1 · true …)로 먼저 읽히므로 섹션 이름이 될 수 없다
+            return true;
         for ( const utf8* pReserved : DebugHUDRegistryInternal::kArrReservedName )
         {
             if ( StringUtil::equals( name, pReserved, true ) )

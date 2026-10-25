@@ -185,6 +185,21 @@ namespace sw
          * @details 엔진 종료 첫머리에 부릅니다(서비스가 아직 있다). @p processName 은 머리말의 프로세스 이름입니다.
          */
         static void finishExitCapture( const FrameProfiler& profiler, string_view processName );
+
+        /** @brief 개발 명령 `profile.trace` 의 첫 낱말이 가리키는 하위 명령입니다. */
+        enum class CommandWord : uint8
+        {
+            Unknown,
+            Save,
+            Record,
+            Merge,
+            Switch, ///< 링 버퍼 기록을 켜고 끈다 — 켬 · 끔은 불리언 철자 표(`StringUtil::tryParseBool`)로 읽는다
+        };
+        /**
+         * @brief `profile.trace` 의 첫 낱말을 가려냅니다(순수 함수). `save` · `record` · `merge` 는 정확히 그 글자이고(대소문자 구분), 그 밖은
+         *        불리언으로 읽히면 `Switch`(값은 @p outRecordingOn), 아니면 `Unknown` 입니다. 하위 명령 철자가 불리언 철자와 겹치지 않는다.
+         */
+        [[nodiscard]] static CommandWord parseCommandWord( string_view word, bool& outRecordingOn );
     };
 } // namespace sw
 

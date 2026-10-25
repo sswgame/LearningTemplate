@@ -40,8 +40,8 @@
    `withRequiredComponent( "컴포넌트 타입 이름" )`(`Reference` · `ReferenceList` 를 그 컴포넌트를 가진 오브젝트로 걸러 보인다 — 등록된 타입이면 파생 컴포넌트도 맞는다, `MeshModifierParamEdit::matchesComponentHint`), `withAssetFilter( 확장자 )`(`AssetPath` 슬롯).
    `getDescription()` 을 재정의하면 추가 메뉴 항목의 툴팁이 된다(영어 한 문장). 열 선언과 stride 가 맞는지는 `TestPanelLogic` 이 등록된 모든 모디파이어에 대해 검사한다.
 
-패널의 추가 메뉴 · 직렬화 · 공용 속성 테스트는 등록 표를 훑으므로 **공용 파일을 고칠 필요가 없다.** 테스트 소스는 `Test/EngineTest/CMakeLists.txt` 가
-`Stack/*.cpp` · `Modifiers/*.cpp` 를 GLOB 로 모으므로 CMake 도 고치지 않는다.
+패널의 추가 메뉴 · 직렬화 · 공용 속성 테스트는 등록 표를 훑으므로 **공용 파일을 고칠 필요가 없다.** 테스트가 컴파일하는 소스는 이 확장의 `CMakeLists.txt` 의
+`sw_addEditorExtensionModel` 이 `Stack/*.cpp` · `Modifiers/*.cpp` 로 모으므로(EngineTest CMake 에는 목록이 없다) CMake 도 고치지 않는다.
 
 ## 등록된 모디파이어 (56 id)
 

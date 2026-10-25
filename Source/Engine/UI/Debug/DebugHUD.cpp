@@ -151,21 +151,6 @@ namespace sw
                 }
             }
 
-            [[nodiscard]] static bool readOnOff( const string& word, bool& outValue )
-            {
-                if ( StringUtil::equals( word, "on", true ) )
-                {
-                    outValue = true;
-                    return true;
-                }
-                if ( StringUtil::equals( word, "off", true ) )
-                {
-                    outValue = false;
-                    return true;
-                }
-                return false;
-            }
-
             static bool runSectionCommand( DebugHUD& hud, const vector<string>& listArgument, string& outReply )
             {
                 const DebugHUDSectionRegistration* pRegistration = DebugHUDRegistry::get().findSection( listArgument[0] );
@@ -176,7 +161,7 @@ namespace sw
                     return false;
                 }
                 bool bShown = DebugHUD::isSectionShown( *pRegistration ) == false;
-                if ( listArgument.size() >= 2 && readOnOff( listArgument[1], bShown ) == false )
+                if ( readOptionalBoolArgument( listArgument, 1, bShown ) == false )
                     return false;
                 (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
                 if ( bShown )
@@ -194,7 +179,7 @@ namespace sw
                     return false;
                 }
                 bool bShown = pHUD->isShown() == false;
-                if ( listArgument.empty() || readOnOff( listArgument[0], bShown ) )
+                if ( readOptionalBoolArgument( listArgument, 0, bShown ) ) // 인자가 없으면 뒤집고, 불리언이 아니면 아래 낱말(list · corner …)로 간다
                 {
                     pHUD->setShown( bShown );
                     outReply = bShown ? "debug HUD on" : "debug HUD off";
