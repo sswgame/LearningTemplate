@@ -39,3 +39,40 @@ SW_TEST_CASE( Utf8UtilTest, BackOffStopsAtCharacterStarts )
     const string garbage( 8, static_cast<utf8>( 0x80 ) );
     SW_EXPECT_EQUAL( StringUtil::floorToUtf8Boundary( garbage, 6 ), size_t{ 3 } );
 }
+
+/**
+ * @brief [Utf8UtilTest] 글자 하나 디코드는 올바른 글자만 true 로 읽고, 정확히 한 글자인 글만 단일로 인정한다
+ */
+SW_TEST_CASE( Utf8UtilTest, DecodeReportsValidityAndSingleCharacters )
+{
+    uint32 codepoint = 0;
+    SW_EXPECT_TRUE( StringUtil::tryDecodeSingleCodepoint( "가", codepoint ) );
+    SW_EXPECT_EQUAL( codepoint, uint32{ 0xAC00 } );
+    SW_EXPECT_TRUE( StringUtil::tryDecodeSingleCodepoint( "😀", codepoint ) );
+    SW_EXPECT_EQUAL( codepoint, uint32{ 0x1F600 } );
+    SW_EXPECT_FALSE( StringUtil::tryDecodeSingleCodepoint( "", codepoint ) );
+    SW_EXPECT_FALSE( StringUtil::tryDecodeSingleCodepoint( "가a", codepoint ) );
+    SW_EXPECT_FALSE( StringUtil::tryDecodeSingleCodepoint( string_view( "\xE3\x81", 2 ), codepoint ) ); // 잘린 3 바이트 글자
+
+    size_t offset = 0;
+    SW_EXPECT_FALSE( StringUtil::tryDecodeUtf8( "\x80z", offset, codepoint ) ); // 선두가 될 수 없는 바이트
+    SW_EXPECT_EQUAL( codepoint, uint32{ 0xFFFD } );
+    SW_EXPECT_EQUAL( offset, size_t{ 1 } );
+    SW_EXPECT_TRUE( StringUtil::tryDecodeUtf8( "\x80z", offset, codepoint ) );
+    SW_EXPECT_EQUAL( codepoint, uint32{ 'z' } );
+}
+
+/**
+ * @brief [Utf8UtilTest] UCS-2 변환은 기본 평면 글자를 그대로 두고, 평면 밖 글자와 잘못된 바이트를 U+FFFD 한 글자로 바꾼다
+ */
+SW_TEST_CASE( Utf8UtilTest, Ucs2ReplacesWhatItCannotHold )
+{
+    vector<uint16> listUnit;
+    StringUtil::utf8ToUcs2( string( "a가😀" ) + string( 1, static_cast<utf8>( 0x80 ) ) + "b", listUnit );
+    SW_ASSERT_EQUAL( listUnit.size(), size_t{ 5 } );
+    SW_EXPECT_EQUAL( listUnit[0], uint16{ 'a' } );
+    SW_EXPECT_EQUAL( listUnit[1], uint16{ 0xAC00 } );
+    SW_EXPECT_EQUAL( listUnit[2], uint16{ 0xFFFD } );
+    SW_EXPECT_EQUAL( listUnit[3], uint16{ 0xFFFD } );
+    SW_EXPECT_EQUAL( listUnit[4], uint16{ 'b' } );
+}

@@ -100,6 +100,18 @@ namespace sw
                 return text.size();
             return Utf8Util::backOffToCharacterStart( text.data(), cut );
         }
+        /**
+         * @brief `decodeUtf8` 와 같게 글자 하나를 읽되, 올바른 UTF-8 이었는지 돌려줍니다(false 면 @p outCodepoint 는 U+FFFD).
+         * @details 오프셋이 끝이면 false 이고 옮기지 않습니다. 잘못된 시퀀스는 `decodeUtf8` 가 정한 길이만큼 넘어간다(글자마다 직접 비트를 풀지 말고 이것을 쓴다).
+         */
+        [[nodiscard]] static bool tryDecodeUtf8( string_view text, size_t& inoutOffset, uint32& outCodepoint );
+        /** @brief @p text 가 올바른 글자 정확히 하나(그 밖의 바이트 없음)이면 그 코드 포인트를 @p outCodepoint 에 담고 true 입니다. 빈 글 · 두 글자 이상 · 잘못된 UTF-8 은 false 입니다. */
+        [[nodiscard]] static bool tryDecodeSingleCodepoint( string_view text, uint32& outCodepoint );
+        /**
+         * @brief UTF-8 글을 UCS-2(16 비트 코드 단위, 기본 다국어 평면)로 바꿉니다. 평면 밖(이모지 등)과 잘못된 바이트는 U+FFFD 한 글자가 됩니다.
+         * @details UCS-2 글꼴만 받는 경로(X11 코어 글꼴의 `XDrawString16`)용이다. 서로게이트 쌍으로 늘리는 `utf8ToUtf16` 와 다르다.
+         */
+        static void utf8ToUcs2( string_view text, vector<uint16>& outListUnit );
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUtf8( string& inoutText, uint32 codepoint );
         /**

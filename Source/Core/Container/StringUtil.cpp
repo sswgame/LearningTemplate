@@ -1190,6 +1190,38 @@ namespace sw
         return decoded._codepoint;
     }
 
+    bool StringUtil::tryDecodeUtf8( string_view text, size_t& inoutOffset, uint32& outCodepoint )
+    {
+        if ( inoutOffset >= text.size() )
+        {
+            outCodepoint = StringUtilInternal::kReplacementCodepoint;
+            return false;
+        }
+        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
+        inoutOffset += decoded._byteCount;
+        outCodepoint = decoded._codepoint;
+        return decoded._bValid;
+    }
+
+    bool StringUtil::tryDecodeSingleCodepoint( string_view text, uint32& outCodepoint )
+    {
+        size_t offset = 0;
+        return tryDecodeUtf8( text, offset, outCodepoint ) && offset == text.size();
+    }
+
+    void StringUtil::utf8ToUcs2( string_view text, vector<uint16>& outListUnit )
+    {
+        constexpr uint32 kMaxUcs2Codepoint = 0xFFFF;
+        outListUnit.clear();
+        size_t offset = 0;
+        while ( offset < text.size() )
+        {
+            uint32     codepoint = 0;
+            const bool bValid    = tryDecodeUtf8( text, offset, codepoint );
+            outListUnit.push_back( static_cast<uint16>( bValid && codepoint <= kMaxUcs2Codepoint ? codepoint : StringUtilInternal::kReplacementCodepoint ) );
+        }
+    }
+
     void StringUtil::appendUtf8( string& inoutText, uint32 codepoint )
     {
         StringUtilInternal::appendUtf8( inoutText, codepoint );

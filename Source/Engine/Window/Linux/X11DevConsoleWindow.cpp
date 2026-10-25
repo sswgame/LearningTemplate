@@ -8,7 +8,7 @@
 
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
 
-    #include "Core/Container/Utf8Util.h"
+    #include "Core/Container/StringUtil.h"
     #include "Core/Log/Logger.h"
 
     #include "Engine/Window/IWindow.h"
@@ -31,47 +31,17 @@ namespace sw
              * @brief UTF-8 글을 UCS-2(`XDrawString16` 의 글자)로 바꿉니다. 기본 다국어 평면 밖(이모지 등)과 잘못된 바이트는 U+FFFD 한 글자가 된다.
              * @details `XDrawString` 은 Latin-1 이라 한글 · 일본어가 깨진다. 글자 모양은 X 서버의 iso10646-1 글꼴이 그 글자를 가진 만큼만 나온다.
              */
-            static void decodeUtf8( const string& text, vector<XChar2b>& outListChar )
+            static void toUcs2Chars( const string& text, vector<XChar2b>& outListChar )
             {
+                vector<uint16> listUnit;
+                StringUtil::utf8ToUcs2( text, listUnit );
                 outListChar.clear();
-                const size_t size = text.size();
-                size_t       at   = 0;
-                while ( at < size )
+                for ( const uint16 unit : listUnit )
                 {
-                    const uint32 lead   = static_cast<uint8>( text[at] );
-                    uint32       length = 1;
-                    uint32       point  = 0xFFFD;
-                    if ( lead < 0x80 )
-                        point = lead;
-                    else if ( lead >= 0xC2 && lead < 0xE0 )
-                    {
-                        length = 2;
-                        point  = lead & 0x1F;
-                    }
-                    else if ( lead >= 0xE0 && lead < 0xF0 )
-                    {
-                        length = 3;
-                        point  = lead & 0x0F;
-                    }
-                    else if ( lead >= 0xF0 && lead < 0xF5 )
-                    {
-                        length = 4;
-                        point  = lead & 0x07;
-                    }
-                    bool bValid = length == 1 ? lead < 0x80 : at + length <= size;
-                    for ( uint32 index = 1; bValid && index < length; ++index )
-                    {
-                        const uint32 next = static_cast<uint8>( text[at + index] );
-                        bValid            = Utf8Util::isContinuation( next );
-                        point             = ( point << 6 ) | ( next & 0x3F );
-                    }
-                    if ( bValid == false || point > 0xFFFF )
-                        point = 0xFFFD;
                     XChar2b character{};
-                    character.byte1 = static_cast<uint8>( point >> 8 );
-                    character.byte2 = static_cast<uint8>( point & 0xFF );
+                    character.byte1 = static_cast<uint8>( unit >> 8 );
+                    character.byte2 = static_cast<uint8>( unit & 0xFF );
                     outListChar.push_back( character );
-                    at += bValid ? length : 1;
                 }
             }
         };
@@ -175,7 +145,7 @@ namespace sw
             for ( size_t index = 0; index < _listLine.size(); ++index )
             {
                 XSetForeground( _pDisplay, _gc, WhitePixel( _pDisplay, screen ) );
-                X11DevConsoleWindowInternal::decodeUtf8( _listLine[index], _listChar );
+                X11DevConsoleWindowInternal::toUcs2Chars( _listLine[index], _listChar );
                 XDrawString16( _pDisplay, _window, _gc, X11DevConsoleWindowInternal::kPadding, lineY, _listChar.data(), static_cast<int32>( _listChar.size() ) );
                 lineY += X11DevConsoleWindowInternal::kLineHeight;
             }
