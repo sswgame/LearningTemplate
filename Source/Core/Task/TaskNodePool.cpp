@@ -113,6 +113,29 @@ namespace sw
         }
     }
 
+    string TaskNodePool::describeFirstUnfinished()
+    {
+#if !defined( SW_SHIPPING )
+        std::scoped_lock<mutex> lock{ _slabMutex };
+        for ( const MemoryBlock& slab : _listSlab )
+        {
+            const TaskNode* pSlab = slab.getAs<TaskNode>();
+            if ( pSlab == nullptr )
+                continue;
+            for ( uint32 index = 0; index < kSlabSize; ++index )
+            {
+                const TaskNode& node        = pSlab[index];
+                const bool      bLive       = node._refCount.load( std::memory_order_acquire ) > 0 && node._pendingChildren.load( std::memory_order_acquire ) > 0;
+                const bool      bHasName    = node._arrName[0] != '\0';
+                const bool      bUnfinished = bLive && bHasName;
+                if ( bUnfinished )
+                    return string( node._arrName );
+            }
+        }
+#endif
+        return string();
+    }
+
     StageNode* TaskNodePool::allocateStage()
     {
         StageNode* pStage{ nullptr };

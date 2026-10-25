@@ -151,24 +151,26 @@ namespace sw
         , _pFallbackDecoder{ nullptr }
         , _streamMinSeconds{ kDefaultStreamMinSeconds }
         , _mutex{}
-        , _pendingDecodeCount{ 0 }
+        , _decodeTracker{}
     {
     }
 
     AudioClipCache::~AudioClipCache()
     {
-        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 태스크는 엔진 서비스가 묶여 있을 때만 띄우므로 같은 태스크 매니저로 기다린다.
-        if ( _pendingDecodeCount.load( std::memory_order_acquire ) == 0 )
+        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 낸 태스크의 핸들만 기다린다(엔진 전체 대기는 남의 영구 태스크까지 기다린다).
+        // 태스크는 엔진 서비스가 묶여 있을 때만 띄우므로, 묶여 있지 않으면 끝낼 일꾼이 없다.
+        const uint32 pendingCount = _decodeTracker.getPendingCount();
+        if ( pendingCount == 0 )
             return;
         if ( engine::areEngineServicesBound() == false )
         {
-            SW_LOG_ERROR( "AudioClipCache destroyed with %# decode task(s) in flight and no task manager to wait on", _pendingDecodeCount.load() );
+            SW_LOG_ERROR( "AudioClipCache destroyed with %# decode task(s) in flight and no task manager to wait on", pendingCount );
             return;
         }
-        constexpr uint32 kWaitSliceMs = 10;
-        while ( _pendingDecodeCount.load( std::memory_order_acquire ) > 0 )
+        // 낸 태스크는 반드시 끝나므로 끝날 때까지 되풀이한다(시간 초과마다 추적기가 오류를 남긴다). 태스크가 이 캐시를 건드린 채 캐시를 지울 수는 없다.
+        constexpr uint32 kReportIntervalMs = 10000;
+        while ( _decodeTracker.waitIdle( kReportIntervalMs, "AudioClipCache::~AudioClipCache" ) == false )
         {
-            (void)engine::getSubsystem<TaskManager>().waitAll( kWaitSliceMs ); // 기다리는 동안 그 태스크를 이 스레드가 돕기도 한다
         }
     }
 
@@ -227,11 +229,10 @@ namespace sw
             storeResult( path, decodeClip( path ) );
             return;
         }
-        _pendingDecodeCount.fetch_add( 1, std::memory_order_acq_rel );
-        engine::getSubsystem<TaskManager>()
-            .emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ),
-                          MakeTaskArgs( string( path.view() ) ) )
-            .submit();
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ),
+                                                                             MakeTaskArgs( string( path.view() ) ) );
+        _decodeTracker.track( handle ); // 올린 뒤에 제출한다 — 소멸자가 제출된 태스크를 놓치지 않는다
+        handle.submit();
     }
 
     bool AudioClipCache::findReadyPath( string_view path, hashed_string& outPath ) const
@@ -359,9 +360,7 @@ namespace sw
     void AudioClipCache::decodeClipTask( const TaskArgs& args )
     {
         const hashed_string path( string_view( args.get<string>( 0 ) ) );
-        storeResult( path, decodeClip( path ) );
-        // 마지막으로 이 캐시를 건드리는 줄이다 — 0 이 되는 순간 소멸자가 진행할 수 있다.
-        _pendingDecodeCount.fetch_sub( 1, std::memory_order_acq_rel );
+        storeResult( path, decodeClip( path ) ); // 마지막으로 이 캐시를 건드리는 줄이다 — 본문이 돌아오면 태스크가 끝나 소멸자가 진행할 수 있다
     }
 
     void AudioClipCache::storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip )

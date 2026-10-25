@@ -12,6 +12,7 @@
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
+#include "Core/Container/string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -206,6 +207,9 @@ namespace sw
          * @return 모든 태스크가 끝났으면 true, 시간이 다 되면 false
          */
         bool waitAll( uint32 timeoutMs = 0 );
+
+        /** @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). `waitAll` 이 시간 초과일 때 원인을 로그에 적는 진단용입니다. */
+        [[nodiscard]] string describeUnfinishedTask();
 
         /** @brief 내부 큐와 스테이지 상태를 강제로 정리합니다. 아무것도 돌고 있지 않을 때만 부르십시오. */
         void clear();

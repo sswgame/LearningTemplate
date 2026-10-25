@@ -269,7 +269,14 @@ namespace sw
 
         BLOCK( "Wait For Active Tasks" )
         {
-            waitAll();
+            // 끝나지 않는 태스크(영구 태스크 · 멈춘 태스크)가 있으면 무제한 대기는 종료를 영영 막는다. 시간 제한을 두고 원인 태스크를 오류로 드러낸 뒤 이어 간다.
+            // 이어 가도 워커 join 은 그 태스크가 끝나기를 기다리지만(스레드를 강제로 끝낼 수 없다), 로그가 멈춘 곳을 알려 준다. 엔진 소스에는 영구 태스크가 없다.
+            constexpr uint32 kShutdownDrainTimeoutMs = 30000;
+            if ( waitAll( kShutdownDrainTimeoutMs ) == false )
+            {
+                SW_LOG_ERROR( "Task manager shutdown waited %# ms but %# task(s) are still running (first unfinished: '%#') - stopping workers anyway", kShutdownDrainTimeoutMs,
+                              getActiveTaskCount(), describeUnfinishedTask() );
+            }
         }
 
         BLOCK( "Stop Worker Threads" )
@@ -991,6 +998,11 @@ namespace sw
                 cancelBroadcastWait();
         }
         return true;
+    }
+
+    string TaskManager::describeUnfinishedTask()
+    {
+        return _nodePool->describeFirstUnfinished();
     }
 
     void TaskManager::parkOnJoin( JoinCounter& join )

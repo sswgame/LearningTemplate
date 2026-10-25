@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/EditorBackgroundTask.h"
@@ -182,17 +183,17 @@ SW_TEST_CASE( EditorBackgroundTaskTest, JobTrackerWaitsOnlyForTrackedJobs )
     const shared_ptr<atomic<bool>> pTrackedRelease = sw::make_shared<atomic<bool>>( false );
     TaskHandle                     tracked         = manager.emplaceTask( "TestTracked", SW_DELEGATE_FUNCTION( TaskArgsDelegate, waitForReleaseTask ), MakeTaskArgs( pTrackedRelease ) );
 
-    EditorBackgroundJobTracker tracker;
+    TaskHandleTracker tracker;
     tracker.track( tracked );
     tracked.submit();
 
     // 올린 잡이 도는 동안은 시간이 다 되어 false 다.
     SW_EXPECT_EQUAL( 1u, tracker.getPendingCount() );
-    SW_EXPECT_FALSE( tracker.waitIdle( 20 ) );
+    SW_EXPECT_FALSE( tracker.waitIdle( 20, "TestTracker" ) );
 
     // 올린 잡이 끝나면, 올리지 않은 태스크가 아직 돌아도 true 다.
     pTrackedRelease->store( true );
-    SW_EXPECT_TRUE( tracker.waitIdle( 5000 ) );
+    SW_EXPECT_TRUE( tracker.waitIdle( 5000, "TestTracker" ) );
     SW_EXPECT_EQUAL( 0u, tracker.getPendingCount() );
     SW_EXPECT_FALSE( foreign.isCompleted() );
 
