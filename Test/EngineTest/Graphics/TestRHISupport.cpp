@@ -568,13 +568,21 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
     SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
 
     // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — 호출처가 캐스트할 백엔드가 아니면 판이 맞아도 한 칸도 쓰지 않고, 텍스처 포인터도 주지 않는다.
+    // 컨텍스트 콜백도 같은 종류 확인을 거친다.
     sw::RHINativeHandles otherBackend{};
+    uint32               contextVisitCount{ 0 };
+    const auto           countVisit = SW_DELEGATE_LAMBDA( sw::RHINativeContextVisitor, [&contextVisitCount]( void* /*pContext*/ )
+              { ++contextVisitCount; } );
     {
         SW_TEST_DEFENSIVE_SCOPE( "native handle query for another backend" );
         SW_EXPECT_FALSE( device.queryNativeHandles( sw::RHIBackend::Vulkan, otherBackend ) );
         SW_EXPECT_TRUE( device.tryGetNativeTexturePointer( sw::RHIBackend::DirectX11, 1u ) == nullptr );
+        SW_EXPECT_FALSE( device.withNativeContext( sw::RHIBackend::OpenGL, countVisit ) );
     }
     SW_EXPECT_TRUE( otherBackend._pDevice == nullptr );
+    SW_EXPECT_EQUAL( 0u, contextVisitCount );
+    SW_EXPECT_TRUE( device.withNativeContext( sw::RHIBackend::DirectX12, countVisit ) );
+    SW_EXPECT_EQUAL( 1u, contextVisitCount );
     SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
 
     // 디바이스가 없는 백엔드는 판이 맞아도 false 다.

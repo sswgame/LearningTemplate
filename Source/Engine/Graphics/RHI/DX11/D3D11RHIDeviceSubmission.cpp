@@ -60,7 +60,8 @@ namespace sw
 
     uint32 D3D11RHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
+        const bool bTimestampsOn = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE;
+        return bTimestampsOn ? constant::kMaxGPUTimestampSlot : 0u;
     }
 
     bool D3D11RHIDevice::readTimestamps( RHITimestampFrame& outFrame )
@@ -106,8 +107,8 @@ namespace sw
 
     void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
     {
-        const bool bCannotWriteTimestamp = pContext == nullptr || _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE ||
-                                           slotIndex >= constant::kMaxGPUTimestampSlot;
+        const bool bCannotWriteTimestamp = pContext == nullptr || _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE ||
+                                           _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
         if ( bCannotWriteTimestamp )
             return;
 
@@ -122,7 +123,8 @@ namespace sw
 
     void D3D11RHIDevice::ensureTimestampResources()
     {
-        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE || _device == nullptr;
+        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE ||
+                                                  _bTimestampReady.load( std::memory_order_relaxed ) != SW_FALSE || _device == nullptr;
         if ( bTimestampResourcesNotNeeded )
             return;
 
@@ -142,15 +144,14 @@ namespace sw
                     return;
             }
         }
-        _bTimestampReady = SW_TRUE;
+        _bTimestampReady.store( SW_TRUE, std::memory_order_release ); // 위에서 만든 쿼리를 기록 워커가 본다
     }
 
     void D3D11RHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
         D3D11TimestampFrame& frame                   = _arrTimestampFrame[_timestampFrameIndex];
-        const bool           bNoTimestampFrameToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || frame._bPending == SW_FALSE ||
-                                             frame._writtenMask == 0;
+        const bool           bNoTimestampFrameToRead = getTimestampSlotCount() == 0 || frame._bPending == SW_FALSE || frame._writtenMask == 0;
         if ( bNoTimestampFrameToRead )
             return;
 
@@ -206,7 +207,7 @@ namespace sw
         ensureTimestampResources();
         collectTimestampsForSlot();
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
-        if ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE )
+        if ( getTimestampSlotCount() != 0 )
         {
             _arrTimestampFrame[_timestampFrameIndex]._writtenMask = 0;
             _timestampWrittenMask.store( 0, std::memory_order_relaxed );

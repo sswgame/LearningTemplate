@@ -23,8 +23,9 @@ namespace sw
      *          같은 즉시 컨텍스트로 나간다. `initialize` 가 `SetMultithreadProtected( TRUE )` 를 켜서 런타임이 호출 하나하나를 임계 구역으로 감싸고,
      *          `lock()` 은 같은 임계 구역(`Enter` · `Leave`)을 잡아 여러 호출과 그것에 딸린 백엔드 상태(전송 큐 · 쿼리 풀 · 프레임 링)를 한 덩어리로 묶는다.
      *          락이 하나뿐이라 렌더 스레드의 호출도 다른 스레드의 덩어리 사이에 끼지 못한다. 임계 구역은 재귀라 같은 스레드가 다시 잡아도 된다.
-     *          가드 없이 꺼내는 길(`getPerCallProtected`)은 `D3D11RHIDevice` 에만 열려 있다 — 프레임 스트림 컨텍스트와 `queryNativeHandles` 의 컨텍스트 칸(ImGui 백엔드)가 쓰고,
-     *          그 호출은 런타임이 하나씩 지킨다. 프레임 스트림만 쓰는 버퍼(루트 상수 CB)의 `Map` · `Unmap` 짝은 사이에 다른 스레드의 호출이 끼어도 괜찮고,
+     *          가드 없이 꺼내는 길(`getPerCallProtected`)은 `D3D11RHIDevice` 에만 열려 있다 — 렌더 스레드의 프레임 스트림 컨텍스트가 쓰고, 그 호출은 런타임이
+     *          하나씩 지킨다. 백엔드 밖(ImGui 백엔드)으로는 `IRHIDevice::withNativeContext` 가 `lock()` 을 쥔 채로만 내준다. 파이프라인 상태(렌더 타깃 · 셰이더)는
+     *          컨텍스트에 하나라 그것을 바꾸는 쪽은 렌더 스레드뿐이다. 프레임 스트림만 쓰는 버퍼(루트 상수 CB)의 `Map` · `Unmap` 짝은 사이에 다른 스레드의 호출이 끼어도 괜찮고,
      *          다른 스레드도 Map 할 수 있는 버퍼(`updateConstantBuffer`)는 프레임 스트림도 `lock()` 으로 묶는다.
      */
     class D3D11ImmediateContext

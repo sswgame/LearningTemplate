@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
 {
@@ -43,7 +44,7 @@ namespace sw
     };
 
     /** @brief `RHINativeHandles` 의 버전 번호입니다. 필드, 순서, 의미가 바뀌면 올립니다. */
-    inline constexpr uint32 kRHINativeHandlesVersion = 2;
+    inline constexpr uint32 kRHINativeHandlesVersion = 3;
 
     /**
      * @struct RHINativeHandles
@@ -51,7 +52,8 @@ namespace sw
      * @details 모듈 경계(EditorModule, Engine, RHI_*)를 넘는 것은 이 POD 하나뿐이다. 구체 디바이스 클래스의 레이아웃이나 vtable 은 넘지 않는다.
      *          호출하는 쪽은 자기가 컴파일된 버전 번호(`_version`)와 크기(`_byteSize`)를 기본값 그대로 실어 보낸다.
      *          `IRHIDevice::queryNativeHandles` 는 이 값이 Engine 의 것과 다르면 채우지 않고 거절한다. 모두 `void*` 라 백엔드 헤더가 필요 없다.
-     *          그 백엔드에 없는 항목은 nullptr 또는 0 이다.
+     *          그 백엔드에 없는 항목은 nullptr 또는 0 이다. 컨텍스트(즉시 컨텍스트 · 프레임 커맨드 리스트)는 담지 않는다 — 잠금 밖으로 나가면 안 되므로
+     *          `IRHIDevice::withNativeContext` 로만 받는다.
      */
     struct RHINativeHandles
     {
@@ -60,7 +62,6 @@ namespace sw
         void*      _pInstance{ nullptr };                   ///< VkInstance(Vulkan)
         void*      _pPhysicalDevice{ nullptr };             ///< VkPhysicalDevice(Vulkan)
         void*      _pDevice{ nullptr };                     ///< `getNativeDevice()` 와 같은 값(VkDevice, ID3D12Device, ID3D11Device, GL 표시 장치)
-        void*      _pContext{ nullptr };                    ///< `getNativeContext()` 와 같은 값
         void*      _pGraphicsQueue{ nullptr };              ///< `getNativeCommandQueue()` 와 같은 값(VkQueue, ID3D12CommandQueue)
         void*      _pRenderPass{ nullptr };                 ///< 백버퍼 렌더 패스(VkRenderPass, Vulkan)
         void*      _pQueueMutex{ nullptr };                 ///< 그래픽스 큐 제출 잠금(`sw::mutex*`, Vulkan). 큐는 외부 동기화 대상이라 외부 라이브러리가 이 큐에 제출하거나 대기할 때 잡아야 한다.
@@ -324,6 +325,16 @@ namespace sw
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
         // ------------------------------------------------------------------------------
         /**
+         * @brief 이 디바이스가 @p expectedBackend 이면 네이티브 컨텍스트(ID3D11DeviceContext, 프레임 커맨드 리스트, VkCommandBuffer, HGLRC 등)를
+         *        그것을 지키는 잠금 안에서 @p visitor 에 넘기고 true 입니다. 다른 백엔드이면 부르지 않고 false 입니다(`queryNativeHandles` 와 같은 종류 확인).
+         * @details 원 포인터를 돌려주는 getter 는 없다. 포인터는 콜백 안에서만 쓴다. DX11 은 즉시 컨텍스트의 임계 구역을 쥔 채 부른다 — 여러 호출이 다른 스레드의 전송과
+         *          섞이지 않는다. DX12 · Vulkan 의 프레임 커맨드 리스트와 GL 컨텍스트는 렌더 스레드만 쓰므로 잡을 잠금이 없고, 렌더 스레드(present 훅)에서 불러야 한다.
+         *          콜백 밖으로 포인터를 들고 나가야 하는 외부 라이브러리(ImGui 백엔드의 Init)는 그 포인터를 쓰는 호출을 렌더 스레드에서만 한다.
+         *          컨텍스트가 없으면(초기화 전, 프레임 밖) nullptr 을 넘긴다.
+         */
+        [[nodiscard]] bool withNativeContext( RHIBackend expectedBackend, const RHINativeContextVisitor& visitor ) const;
+
+        /**
          * @brief 이 디바이스가 @p expectedBackend 이면 외부 라이브러리를 초기화할 때 쓸 네이티브 핸들 묶음을 채웁니다.
          * @details 비가상 함수다. 버전 대조와 종류 확인은 Engine 이 이 한 곳에서 하고, 백엔드는 `queryNativeHandlesInternal` 만 채운다.
          *          핸들은 백엔드마다 뜻이 다른 `void*` 라서(`_pDevice` 는 `ID3D11Device*` · `ID3D12Device*` · `VkDevice` · GL 표시 장치) 종류를 확인하지 않고
@@ -463,7 +474,7 @@ namespace sw
         virtual void detachCommandRecordingInternal() = 0;
         /**
          * @brief 백엔드가 자기 네이티브 핸들을 채웁니다. 버전 대조는 이미 끝났고 `outHandles` 는 기본값(`_backend` 만 채운 상태)입니다.
-         * @details 기본 구현은 `getNativeDevice`, `getNativeContext`, `getNativeCommandQueue` 세 항목을 채우고, 디바이스가 없으면 false 를 반환한다.
+         * @details 기본 구현은 `getNativeDevice`, `getNativeCommandQueue` 두 항목을 채우고, 디바이스가 없으면 false 를 반환한다.
          *          더 내놓을 것이 있는 백엔드(Vulkan 의 인스턴스, 물리 디바이스, 큐 패밀리, 렌더 패스)가 재정의한다.
          */
         [[nodiscard]] virtual bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const;
@@ -474,7 +485,7 @@ namespace sw
          */
         virtual void* getNativeDevice() const = 0;
 
-        /** @brief 네이티브 컨텍스트 포인터(ID3D11DeviceContext, HGLRC, 현재 커맨드 리스트 · 버퍼 등)를 반환합니다. 보호 구역이다(`getNativeDevice` 와 같은 이유). */
+        /** @brief 백엔드 안에서만 쓰는 네이티브 컨텍스트(ID3D11DeviceContext, HGLRC, 현재 커맨드 리스트 · 버퍼 등)입니다. 밖으로는 `withNativeContext` 로만 나갑니다. */
         virtual void* getNativeContext() const = 0;
 
         /** @brief 네이티브 커맨드 큐 포인터를 반환합니다. 보호 구역이다(`getNativeDevice` 와 같은 이유). */
@@ -485,6 +496,11 @@ namespace sw
          * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
          */
         virtual void* getNativeTexturePointer( RHITextureHandle texture ) const = 0;
+        /**
+         * @brief `withNativeContext` 의 백엔드 훅입니다. 기본 구현은 잠글 것이 없는 컨텍스트(렌더 스레드 전용)를 `getNativeContext` 로 꺼내 넘깁니다.
+         * @details 다른 스레드와 같은 컨텍스트를 나눠 쓰는 백엔드(DX11 즉시 컨텍스트)는 재정의해 그 잠금 안에서 부른다.
+         */
+        virtual void withNativeContextInternal( const RHINativeContextVisitor& visitor ) const;
         /**
          * @brief 백엔드가 드라이버의 GPU 메모리 사용량과 예산을 채웁니다. `outBudget` 은 모든 항목이 "모름" 인 기본값으로 전달됩니다.
          * @details 물을 수 없으면(API 나 확장이 없음) false 를 반환한다. 아는 항목만 플래그를 켜고, 모르는 항목은 임의로 채우지 않는다.

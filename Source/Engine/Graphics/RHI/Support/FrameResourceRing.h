@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -39,15 +40,16 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 슬롯과 펜스
         // ------------------------------------------------------------------------------
-        /** @brief 현재 링 슬롯 인덱스를 반환합니다. */
-        uint32 currentIndex() const { return _frameIndex; }
+        /** @brief 현재 링 슬롯 인덱스를 반환합니다. 어느 스레드에서나 읽습니다(업로드 · 상수 버퍼 갱신은 렌더 스레드 밖에서도 온다). */
+        uint32 currentIndex() const { return _frameIndex.load( std::memory_order_acquire ); }
         /** @brief 슬롯의 펜스 값을 반환합니다. */
         uint64 getFenceValue( uint32 index ) const;
         /** @brief 슬롯의 펜스 값을 설정합니다. */
         void setFenceValue( uint32 index, uint64 fenceValue );
 
     private:
-        uint64 _arrFenceValue[constant::kMaxFrameCountInFlight];
-        uint32 _frameIndex;
+        uint64 _arrFenceValue[constant::kMaxFrameCountInFlight]; ///< 렌더 스레드만 읽고 쓴다
+        /// @brief 렌더 스레드만 올리고(`beginFrame`), 다른 스레드도 읽으므로 atomic 입니다.
+        atomic<uint32> _frameIndex;
     };
 } // namespace sw

@@ -119,7 +119,7 @@ namespace sw
         /** @brief 프레임을 닫고 Present 합니다(bPresent=false 면 Present 를 생략합니다). */
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const override;
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
@@ -193,9 +193,6 @@ namespace sw
         /** @brief ID3D11Device 포인터를 반환합니다. */
         void* getNativeDevice() const override { return _device.Get(); }
 
-        /** @brief 즉시 컨텍스트(ID3D11DeviceContext) 포인터를 반환합니다. 런타임의 다중 스레드 보호가 호출 하나씩을 지킵니다(`D3D11ImmediateContext`). */
-        void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
-
         /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
         void* getNativeCommandQueue() const override { return nullptr; }
 
@@ -213,6 +210,12 @@ namespace sw
         void registerCommandList( D3D11RHICommandList* pCmdList );
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D11RHICommandList* pCmdList );
+
+    protected:
+        /** @brief 즉시 컨텍스트의 임계 구역을 쥔 채 @p visitor 를 부릅니다. 그 안의 여러 호출은 다른 스레드의 전송 · 폴링 묶음과 섞이지 않습니다. */
+        void withNativeContextInternal( const RHINativeContextVisitor& visitor ) const override;
+        /** @brief 프레임 스트림과 같은 포인터(호출마다 런타임 보호)입니다. `withNativeContextInternal` 을 재정의하므로 밖으로 나가지 않습니다. */
+        void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
 
     private:
         /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
@@ -476,9 +479,11 @@ namespace sw
         uint32              _timestampFrameIndex;
         /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
         atomic<GPUTimestampSlotMask> _timestampWrittenMask;
-        uint8                        _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
-        uint8                        _bTimestampReady;
-        uint8                        _bTimestampFrameOpen;
+        /// @brief 엔진이 켜기 전에는 쿼리도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있고 기록 워커가 읽으므로 atomic 이다.
+        atomic<uint8> _bTimestampEnabled;
+        /// @brief 쿼리 묶음을 다 만들었다. 렌더 스레드가 만들고(release) 기록 워커의 `writeTimestampSlot` 이 읽는다(acquire).
+        atomic<uint8> _bTimestampReady;
+        uint8         _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력을 판단하는 근거입니다.
         uint8             _bDriverCommandLists;
         RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)

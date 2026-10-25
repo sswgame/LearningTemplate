@@ -170,7 +170,7 @@ namespace sw
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
                  ? constant::kMaxGPUTimestampSlot
                  : 0u;
     }
@@ -226,7 +226,7 @@ namespace sw
 
     void VulkanRHIDevice::ensureTimestampPool()
     {
-        const bool bTimestampPoolNotNeeded = _bTimestampEnabled == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
+        const bool bTimestampPoolNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
                                              _physicalDevice == VK_NULL_HANDLE;
         if ( bTimestampPoolNotNeeded )
             return;
@@ -252,7 +252,7 @@ namespace sw
     void VulkanRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        const bool bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
+        const bool bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
                                          _arrTimestampSubmitted[_currentFrame] == SW_FALSE;
         if ( bNoTimestampsToRead )
             return;
@@ -387,7 +387,7 @@ namespace sw
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
         // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
-        if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGPUTimestampSlot );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
@@ -484,7 +484,7 @@ namespace sw
         const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
         reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
-        if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
 
         if ( bPresent && isDeviceLost() == false )

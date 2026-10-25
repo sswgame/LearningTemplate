@@ -205,14 +205,17 @@ namespace sw::editor
         // "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 함께 맞는다(아래 Linux 분기와 같다).
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
-            // WGL 디바이스의 컨텍스트 칸은 HGLRC 다. 종류 확인과 값 확인은 `queryNativeHandles` 한 곳에서 한다.
-            RHINativeHandles glNative{};
-            if ( _pRHIDevice->queryNativeHandles( RHIBackend::OpenGL, glNative ) == false || glNative._pContext == nullptr )
+            // HGLRC 는 렌더 스레드가 보조 뷰포트를 그린 뒤 메인 창으로 되돌아갈 때(wglMakeCurrent) 쓰는 이름이다. 그 훅은 렌더 스레드에서만 돈다.
+            // 종류 확인은 `withNativeContext` 가 하고, 값 확인은 지역 변수에서 한 뒤 정적 칸에 한 번만 쓴다.
+            HGLRC      hMainRC{ nullptr };
+            const bool bContextVisited = _pRHIDevice->withNativeContext( RHIBackend::OpenGL, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [&hMainRC]( void* pContext )
+            { hMainRC = static_cast<HGLRC>( pContext ); } ) );
+            if ( bContextVisited == false || hMainRC == nullptr )
             {
                 SW_LOG_ERROR( "The OpenGL device has no WGL render context, so ImGui viewports cannot be enabled" );
                 return false;
             }
-            s_MainWindowRC                     = static_cast<HGLRC>( glNative._pContext );
+            s_MainWindowRC                     = hMainRC;
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
@@ -232,8 +235,13 @@ namespace sw::editor
                 SW_LOG_ERROR( "The OpenGL device has no GLX display connection, so ImGui viewports cannot be enabled" );
                 return false;
             }
+            GLXContext mainContext{ nullptr };
+            const bool bContextVisited = _pRHIDevice->withNativeContext( RHIBackend::OpenGL, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [&mainContext]( void* pContext )
+            { mainContext = static_cast<GLXContext>( pContext ); } ) );
+            if ( bContextVisited == false )
+                return false;
             s_MainDisplay                      = static_cast<Display*>( glNative._pDevice );
-            s_MainContext                      = static_cast<GLXContext>( glNative._pContext );
+            s_MainContext                      = mainContext;
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow_GLX;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow_GLX;

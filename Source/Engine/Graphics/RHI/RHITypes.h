@@ -36,6 +36,8 @@ namespace sw
 
     /** @brief GPU 가 다 쓴 뒤에 부르는 자원 해제 콜백입니다(`RHIReleaseQueue`, `IRHIDevice::enqueueGPURelease`). */
     using RHIResourceReleaseDelegate = Delegate<void()>;
+    /** @brief 네이티브 컨텍스트를 그것을 지키는 잠금 안에서 받는 콜백입니다(`IRHIDevice::withNativeContext`). 인자는 콜백 안에서만 씁니다. */
+    using RHINativeContextVisitor = Delegate<void( void* pContext )>;
 
     /**
      * @struct RHIVertex

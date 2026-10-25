@@ -119,7 +119,6 @@ namespace sw::editor
 
     void ImGuiDX12RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        // 컨텍스트 칸은 이번 프레임의 커맨드 리스트라 프레임마다 다시 묻는다.
         RHINativeHandles handles{};
         if ( pRHIDevice == nullptr || pRHIDevice->queryNativeHandles( RHIBackend::DirectX12, handles ) == false )
             return;
@@ -137,14 +136,20 @@ namespace sw::editor
             return;
         }
 
-        ID3D12GraphicsCommandList* pCmdList           = static_cast<ID3D12GraphicsCommandList*>( handles._pContext );
-        const bool                 bCanRecordDrawData = pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr;
-        if ( bCanRecordDrawData )
+        if ( pDrawData == nullptr || _d3d12SrvHeap == nullptr )
+            return;
+        // 프레임 스트림의 활성 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 리스트라 콜백 밖으로 들고 나가지 않는다.
+        // 백엔드는 위 queryNativeHandles 가 확인했다.
+        ID3D12DescriptorHeap* const pSrvHeap = _d3d12SrvHeap.Get();
+        (void)pRHIDevice->withNativeContext( RHIBackend::DirectX12, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData, pSrvHeap]( void* pContext )
         {
-            ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
+            ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pContext );
+            if ( pCmdList == nullptr )
+                return;
+            ID3D12DescriptorHeap* heaps[] = { pSrvHeap };
             pCmdList->SetDescriptorHeaps( 1, heaps );
             ImGui_ImplDX12_RenderDrawData( pDrawData, pCmdList );
-        }
+        } ) );
     }
 
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle texture )

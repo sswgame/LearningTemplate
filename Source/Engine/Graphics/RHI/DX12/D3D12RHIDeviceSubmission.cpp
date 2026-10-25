@@ -36,7 +36,7 @@ namespace sw
         unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
         if ( list->isValid() == false )
         {
-            if ( _bDeviceRemovedLogged == 0 )
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 SW_LOG_ERROR( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
             return nullptr;
         }
@@ -176,7 +176,7 @@ namespace sw
             // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
             // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
             // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
-            slot._resetFence = _fenceValue;
+            slot._resetFence = _fenceValue.load();
             if ( bExecuteNow )
             {
                 ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
@@ -282,14 +282,16 @@ namespace sw
         if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
             return;
 
+        // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
+        UINT64  fenceToWait{ 0 };
+        HRESULT signalHr{ S_OK };
         {
             std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
+            fenceToWait = _fenceValue.load();
+            signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
+            _fenceValue.store( fenceToWait + 1 );
         }
-
-        const UINT64  fenceToWait = _fenceValue;
-        const HRESULT signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
-        _fenceValue++;
 
         if ( FAILED( signalHr ) )
         {
@@ -338,27 +340,34 @@ namespace sw
             return false;
         if ( _fence->GetCompletedValue() >= fenceValue )
             return true;
-        if ( _fenceEvent == nullptr )
+        // 이벤트는 기다리는 호출마다 만든다. 렌더 스레드(링 슬롯 · 이전 프레임)와 다른 스레드(업로드 슬롯의 얼로케이터)가 동시에 기다리는데, 장치의
+        // 자동 리셋 이벤트 하나를 나눠 쓰면 먼저 끝난 쪽의 신호를 다른 쪽이 가져가 아직 오지 않은 펜스를 지났다고 믿고 쓰는 중인 얼로케이터를 Reset 한다.
+        const HANDLE fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
+        if ( fenceEvent == nullptr )
+        {
+            SW_LOG_ERROR( "Fence %# wait failed: CreateEventW returned null (GetLastError=%#)", fenceValue, static_cast<uint32>( GetLastError() ) );
             return false;
-        if ( FAILED( _fence->SetEventOnCompletion( fenceValue, _fenceEvent ) ) )
-            return false;
+        }
         // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
         // 풀거나 재사용한다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        bool   bReached = SUCCEEDED( _fence->SetEventOnCompletion( fenceValue, fenceEvent ) );
         uint32 waitedSeconds{ 0 };
-        while ( WaitForSingleObject( _fenceEvent, 2000 ) != WAIT_OBJECT_0 )
+        while ( bReached && WaitForSingleObject( fenceEvent, 2000 ) != WAIT_OBJECT_0 )
         {
             waitedSeconds += 2;
             if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
             {
                 SW_LOG_ERROR( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
-                return false;
+                bReached = false;
+                break;
             }
             if ( _fence->GetCompletedValue() >= fenceValue )
-                return true;
+                break;
             SW_LOG_WARNING( "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
         }
-        return true;
+        CloseHandle( fenceEvent );
+        return bReached;
     }
 
     void D3D12RHIDevice::signalCurrentFrame()
@@ -369,9 +378,16 @@ namespace sw
         if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
             return;
 
-        const UINT64  fenceToSignal = _fenceValue;
-        const HRESULT signalHr      = _commandQueue->Signal( _fence.Get(), fenceToSignal );
-        _fenceValue++;
+        // Signal 과 올리기를 업로드 락 안에서 한 덩어리로 한다. 다른 스레드의 업로드가 그 사이에 `_fenceValue` 를 읽고 복사를 실행하면
+        // 복사는 Signal 뒤에 나가는데 앞 값을 받아, 그 펜스를 기다린 얼로케이터 Reset 이 아직 도는 복사를 지운다(`_fenceValue` 의 설명).
+        UINT64  fenceToSignal{ 0 };
+        HRESULT signalHr{ S_OK };
+        {
+            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            fenceToSignal = _fenceValue.load();
+            signalHr      = _commandQueue->Signal( _fence.Get(), fenceToSignal );
+            _fenceValue.store( fenceToSignal + 1 );
+        }
         if ( FAILED( signalHr ) )
         {
             SW_LOG_ERROR( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
@@ -412,7 +428,7 @@ namespace sw
         const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
         if ( FAILED( allocHr ) )
         {
-            if ( _bDeviceRemovedLogged == 0 )
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
                               static_cast<uint32>( allocHr ),
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
@@ -425,7 +441,7 @@ namespace sw
                                                            IID_PPV_ARGS( entry._list.GetAddressOf() ) );
         if ( FAILED( listHr ) )
         {
-            if ( _bDeviceRemovedLogged == 0 )
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 SW_LOG_ERROR( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
                               static_cast<uint32>( listHr ),
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ),
@@ -461,7 +477,7 @@ namespace sw
 
     uint32 D3D12RHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
                  ? constant::kMaxGPUTimestampSlot
                  : 0u;
     }
@@ -493,7 +509,8 @@ namespace sw
 
     void D3D12RHIDevice::ensureTimestampResources()
     {
-        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled == SW_FALSE || _timestampHeap != nullptr || _device == nullptr || _commandQueue == nullptr;
+        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampHeap != nullptr || _device == nullptr ||
+                                                  _commandQueue == nullptr;
         if ( bTimestampResourcesNotNeeded )
             return;
 
@@ -632,7 +649,7 @@ namespace sw
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
                 const GPUTimestampSlotMask writtenMask       = _timestampWrittenMask.load( std::memory_order_relaxed );
                 _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
-                const bool bShouldResolveTimestamps          = _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                const bool bShouldResolveTimestamps          = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
                                                       writtenMask != 0;
                 if ( bShouldResolveTimestamps )
                 {
@@ -700,7 +717,7 @@ namespace sw
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
                 // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
                 // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
-                if ( _bDeviceRemovedLogged == 0 )
+                if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
                 {
                     // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
                     SW_LOG_ERROR( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",

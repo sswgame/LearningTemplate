@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -162,9 +163,25 @@ namespace sw
     bool IRHIDevice::queryNativeHandlesInternal( RHINativeHandles& outHandles ) const
     {
         outHandles._pDevice        = getNativeDevice();
-        outHandles._pContext       = getNativeContext();
         outHandles._pGraphicsQueue = getNativeCommandQueue();
         return outHandles._pDevice != nullptr;
+    }
+
+    bool IRHIDevice::withNativeContext( RHIBackend expectedBackend, const RHINativeContextVisitor& visitor ) const
+    {
+        SW_ASSERT( visitor.isBound() );
+        if ( getBackendType() != expectedBackend )
+        {
+            SW_LOG_ERROR( "Native context query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            return false;
+        }
+        withNativeContextInternal( visitor );
+        return true;
+    }
+
+    void IRHIDevice::withNativeContextInternal( const RHINativeContextVisitor& visitor ) const
+    {
+        visitor( getNativeContext() );
     }
 
     void IRHIDevice::refreshGPUMemoryBudget()

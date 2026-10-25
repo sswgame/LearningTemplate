@@ -836,8 +836,8 @@ namespace sw::editor
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
             const std::unique_lock<mutex> queueLock = ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
             ImGui::UpdatePlatformWindows();
-            if ( bRenderThreadContext == false )
-                ImGui::RenderPlatformWindowsDefault();
+            if ( _rendererBackend != nullptr && bRenderThreadContext == false )
+                _rendererBackend->renderPlatformWindows();
         }
 
         const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
@@ -924,7 +924,7 @@ namespace sw::editor
         {
             const ImGuiIO& io = ImGui::GetIO();
             if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-                ImGui::RenderPlatformWindowsDefault();
+                _rendererBackend->renderPlatformWindows();
         }
     }
 

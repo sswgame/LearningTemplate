@@ -306,14 +306,16 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        // 컨텍스트 칸은 이번 프레임의 커맨드 버퍼라 프레임마다 다시 묻는다.
-        RHINativeHandles vkNative{};
-        if ( pRHIDevice == nullptr || pRHIDevice->queryNativeHandles( RHIBackend::Vulkan, vkNative ) == false )
+        if ( pDrawData == nullptr || pRHIDevice == nullptr || _pRHIDevice == nullptr )
             return;
-        VkCommandBuffer cmdBuffer          = static_cast<VkCommandBuffer>( vkNative._pContext );
-        const bool      bCanRenderDrawData = cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr;
-        if ( bCanRenderDrawData )
-            ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
+        // 프레임 스트림의 열린 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 버퍼라 콜백 밖으로 들고 나가지 않는다.
+        // 다른 백엔드이면 withNativeContext 가 로그를 남기고 부르지 않는다.
+        (void)pRHIDevice->withNativeContext( RHIBackend::Vulkan, SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData]( void* pContext )
+        {
+            VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pContext );
+            if ( cmdBuffer != nullptr )
+                ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
+        } ) );
     }
 
     void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )
