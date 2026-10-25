@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
-#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"

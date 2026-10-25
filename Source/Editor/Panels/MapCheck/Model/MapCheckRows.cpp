@@ -4,7 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 
-#include "Editor/Common/Widgets/EditorListFilter.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 namespace sw::editor
 {

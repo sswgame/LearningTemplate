@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"

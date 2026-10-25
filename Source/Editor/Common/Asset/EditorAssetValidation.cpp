@@ -6,9 +6,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/EditorExternalToolJob.h"
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Task/EditorExternalToolJob.h"
 
 #include "Engine/Resource/ResourcePaths.h"
 

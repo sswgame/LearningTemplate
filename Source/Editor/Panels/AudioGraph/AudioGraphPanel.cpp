@@ -3,7 +3,7 @@
 #include "Editor/Panels/AudioGraph/AudioGraphPanel.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
-#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

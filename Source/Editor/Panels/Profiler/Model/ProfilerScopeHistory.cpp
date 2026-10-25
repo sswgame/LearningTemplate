@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/string_splitter.h"
 
-#include "Editor/Common/Widgets/EditorListFilter.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 

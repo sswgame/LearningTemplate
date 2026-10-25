@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"

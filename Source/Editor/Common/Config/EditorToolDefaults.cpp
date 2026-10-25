@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"

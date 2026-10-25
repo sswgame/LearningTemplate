@@ -15,7 +15,7 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
-#include "Editor/Common/EditorBackgroundTask.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 namespace sw
 {

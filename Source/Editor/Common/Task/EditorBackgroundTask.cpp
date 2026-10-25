@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/EditorBackgroundTask.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 #include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskManager.h"

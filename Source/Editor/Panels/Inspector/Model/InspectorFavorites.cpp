@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 

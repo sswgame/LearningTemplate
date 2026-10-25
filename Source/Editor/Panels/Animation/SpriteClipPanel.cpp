@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

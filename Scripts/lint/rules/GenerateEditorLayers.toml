@@ -14,6 +14,7 @@
 Common = 0
 "Common/Backend" = 0
 "Common/Config" = 0
+"Common/Task" = 0
 # UI 없는 도구 — 임포터 · 에셋 검증 · 로컬라이즈 · 버전 관리. 헤드리스 진입점(`App --import-*`)이 에디터 인스턴스 없이 부른다.
 "Common/Asset" = 1
 "Common/Localization" = 1

@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
 

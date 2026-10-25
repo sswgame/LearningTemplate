@@ -47,7 +47,7 @@ cmake = ".cmake CMakeLists.txt"
 # 0 으로 수렴해야 한다. 고친 뒤 `py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --print-baseline` 으로 다시 적는다.
 [baseline]
 "AssetPathLiteral:Source/Editor/Common/Asset/VrmMaterialImporter.cpp" = 1
-"AssetPathLiteral:Source/Editor/Common/EditorPaths.h" = 1
+"AssetPathLiteral:Source/Editor/Common/Config/EditorPaths.h" = 1
 "AssetPathLiteral:Source/Engine/Animation/Facial/LipSync.h" = 1
 "AssetPathLiteral:Source/Engine/Audio/IAudioService.h" = 1
 "AssetPathLiteral:Source/Engine/Automation/AutomationLogPolicy.h" = 1

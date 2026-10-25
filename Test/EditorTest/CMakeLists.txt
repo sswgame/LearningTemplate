@@ -11,7 +11,7 @@ endif()
 
 # 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). `EditorModule` 은 ImGui 를 링크하므로 테스트는 그것을 링크하지 않는다(테스트는 ImGui 없이 돈다).
 #
-# ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)과, 뷰 층(Panels · Viewport)의 `Model` 폴더
+# ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Task · Workspace)과, 뷰 층(Panels · Viewport)의 `Model` 폴더
 # (`Panels/<패널>/Model` · `Viewport/Model`)는 `EditorCore`(Source/Editor/CMakeLists.txt)가 지은 오브젝트를 `sw_linkEditorCore` 로 EditorModule 과
 # **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다). 그 폴더들의 REFLECT 헤더 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
 #
@@ -22,17 +22,12 @@ endif()
 sw_addTestExecutable(EditorTest
 	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/DrawSnapshotHandoff.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorAssetFilter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorBackgroundTask.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorExternalToolJob.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorComponentIcon.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorDocumentPanelCore.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorPaths.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorCurveView.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorNodeGraphRules.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/SelfTest/EditorTestOutputParser.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"

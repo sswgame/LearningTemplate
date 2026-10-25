@@ -6,8 +6,8 @@
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 

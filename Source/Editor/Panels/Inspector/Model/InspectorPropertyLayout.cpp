@@ -35,7 +35,7 @@ namespace sw::editor
     #include "Core/Math/MathUtil.h"
     #include "Core/Container/StringUtil.h"
 
-    #include "Editor/Common/Widgets/EditorListFilter.h"
+    #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 namespace sw::editor
 {

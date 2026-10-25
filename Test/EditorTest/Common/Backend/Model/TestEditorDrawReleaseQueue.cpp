@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Backend/EditorDrawReleaseQueue.h"
+#include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 
 #include "EngineTest/RHIFakeDevice.h"
 

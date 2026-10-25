@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/EditorBackgroundTask.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 namespace sw
 {

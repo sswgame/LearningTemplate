@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/EditorBackgroundTask.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 namespace sw
 {
