@@ -22,8 +22,13 @@ namespace sw::editor
         {
             static TextureCache* findTextureCache()
             {
-                AssetManager* pAssets = editor::findSubsystem<AssetManager>();
-                return pAssets != nullptr ? &pAssets->getAssetCache<TextureCache>() : nullptr;
+                AssetManager* pAssets = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
+                if ( pAssets == nullptr )
+                {
+                    SW_LOG_ERROR( "[ThumbnailCache] AssetManager is missing - no thumbnails are loaded" );
+                    return nullptr;
+                }
+                return &pAssets->getAssetCache<TextureCache>();
             }
 
             static IImGuiRendererBackend* findRendererBackend()

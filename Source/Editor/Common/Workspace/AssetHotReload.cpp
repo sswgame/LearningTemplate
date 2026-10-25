@@ -49,11 +49,11 @@ namespace sw::editor
             /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
             static constexpr int64 kFenceImportTimeoutMilliseconds = 120000;
 
-            /** @brief 에디터가 없으면 nullptr 입니다. */
+            /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(탐침은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr;
+                return pContext != nullptr ? &pContext->getSubsystem<AssetHotReload>() : nullptr;
             }
 
             /** @brief 탐침 `Editor.AssetImportBusy` — 원본 임포트가 돌거나 기다리면 1 입니다. 시나리오가 임포트가 끝나기를 기다린다. */
@@ -92,8 +92,7 @@ namespace sw::editor
             /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 참입니다. 에디터가 없으면 막지 않습니다. */
             static bool isFenceBlocking()
             {
-                EditorContext*  pContext   = EditorContext::get();
-                AssetHotReload* pHotReload = pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr;
+                AssetHotReload* pHotReload = findHotReload(); // 에디터 컨텍스트가 없으면 nullptr — 막지 않는다
                 return pHotReload != nullptr && pHotReload->pollContentWatchFence();
             }
 

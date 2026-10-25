@@ -35,9 +35,12 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )
     {
-        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
         if ( pGvm == nullptr )
+        {
+            SW_LOG_ERROR( "No GlobalVariableManager - the preset '%#' is not saved", filePath.c_str() );
             return false;
+        }
 
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "GlobalVariablesPreset" );
@@ -65,9 +68,12 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
     {
-        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
         if ( pGvm == nullptr )
+        {
+            SW_LOG_ERROR( "No GlobalVariableManager - the preset '%#' is not loaded", filePath.c_str() );
             return false;
+        }
 
         XMLDocument doc;
         if ( doc.loadFile( filePath ) == false )

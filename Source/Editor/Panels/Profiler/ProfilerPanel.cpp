@@ -773,7 +773,7 @@ namespace sw::editor
     const ProfilerTimelineRect* ProfilerPanel::drawTimelineEvents( const vector<ProfilerTimelineThread>& listThread, const TimelineGeometry& geometry, const vector<float32>& listRowTop,
                                                                    const vector<string>* pLoadedSlotName, bool bHovered )
     {
-        const FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        const FrameProfiler* pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         const ImVec2         mouse     = ImGui::GetIO().MousePos;
         ImDrawList*          pDrawList = ImGui::GetWindowDrawList();
         pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
@@ -826,7 +826,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTooltip( const vector<ProfilerTimelineThread>& listThread, const ProfilerTimelineRect& hoveredRect, const vector<string>* pLoadedSlotName )
     {
-        const FrameProfiler*         pProfiler = editor::findSubsystem<FrameProfiler>();
+        const FrameProfiler*         pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         const ProfilerTimelineEvent& event     = listThread[hoveredRect._threadIndex]._listEvent[hoveredRect._eventIndex];
         const utf8*                  pName     = ProfilerPanelInternal::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
@@ -1049,7 +1049,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
+            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>(); // 필수 서비스: 없으면 버그
             if ( pTaskManager != nullptr )
             {
                 ImGui::BulletText( "Worker Threads: %u", pTaskManager->getWorkerCount() );
@@ -1057,6 +1057,7 @@ namespace sw::editor
             }
             else
             {
+                SW_LOG_ERROR( "[Profiler] TaskManager is missing - the task manager section is not drawn" );
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "TaskManagerInactive" ) );
             }
         }
@@ -1317,7 +1318,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
     {
-        const FrameProfiler*    pProfiler = editor::findSubsystem<FrameProfiler>();
+        const FrameProfiler*    pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         const ProfilerCallNode& node      = _listCallNode[nodeIndex];
         const utf8*             pName     = pProfiler != nullptr ? pProfiler->findScopeName( node._slot ) : nullptr;
         ImGui::TableNextRow();

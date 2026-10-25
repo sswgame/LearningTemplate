@@ -166,7 +166,7 @@ namespace sw::editor
 
     void EditorMenuBar::drawStatusArea()
     {
-        IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+        IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
         if ( pCompiler != nullptr )
             notifyLiveCodingResult( *pCompiler );
 

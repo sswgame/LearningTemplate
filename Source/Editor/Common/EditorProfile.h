@@ -21,7 +21,7 @@ namespace sw::editor
         /** @brief 구간 지점을 등록합니다. 프로파일러 서비스가 없으면 아무 데도 쌓이지 않는 지점(빈 슬롯)입니다. */
         static ProfileScopeID registerScope( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
         {
-            FrameProfiler* pProfiler = findSubsystem<FrameProfiler>();
+            FrameProfiler* pProfiler = findSubsystem<FrameProfiler>(); // 선택: 정적 초기화 중에는 서비스가 아직 없다 — 빈 슬롯을 돌려주는 것이 계약이다
             if ( pProfiler != nullptr )
                 return pProfiler->registerScopeSite( pName, pFunction, pFile, line );
             ProfileScopeID emptyID{};

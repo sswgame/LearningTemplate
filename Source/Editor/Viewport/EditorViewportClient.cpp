@@ -223,11 +223,13 @@ namespace sw::editor
             visualizerArgs._pListObject     = &_listSceneObject;
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
-            visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>();
-            visualizerArgs._pObjectManager  = pSnapshotManager;
-            visualizerArgs._bGizmoDragging  = _gizmo.isDragging();
-            visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
-            visualizerArgs._pStats          = &_visualizerStats;
+            visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그 — 시각화기가 큐 없이 건너뛴다
+            if ( visualizerArgs._pDebugDrawQueue == nullptr )
+                SW_LOG_ERROR( "[ViewportClient] DebugDrawQueue is missing - the debug draw visualizers are skipped" );
+            visualizerArgs._pObjectManager = pSnapshotManager;
+            visualizerArgs._bGizmoDragging = _gizmo.isDragging();
+            visualizerArgs._bFlat2D        = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
+            visualizerArgs._pStats         = &_visualizerStats;
             // 마우스 양보는 시각화가 매 프레임 다시 잡아야 유지된다(끄는 중에 토글을 꺼 그리기 함수가 안 돌아도 풀린다). 클릭 선택은 이 그리기 뒤라 같은 프레임의 첫 클릭도 양보를 본다.
             EditorViewportMouseClaim::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles );

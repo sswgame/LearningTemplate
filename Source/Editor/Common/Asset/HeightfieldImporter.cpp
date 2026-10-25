@@ -383,6 +383,6 @@ namespace sw::editor
     AssetImportSummary HeightfieldImporter::importAllHeightfields( string_view resourceRoot, AssetImportMode mode )
     {
         const HeightfieldRawImporter importer;
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 } // namespace sw::editor

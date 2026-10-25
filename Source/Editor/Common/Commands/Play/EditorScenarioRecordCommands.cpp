@@ -64,11 +64,13 @@ namespace sw::editor
                 }
                 ScenarioRecordSettings settings;
                 settings._name                         = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( getState()._outputPath ) ) ); // a.scenario.xml → a
-                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                settings._clientWidth                  = pWindow != nullptr ? pWindow->getWidth() : 0;
-                settings._clientHeight                 = pWindow != nullptr ? pWindow->getHeight() : 0;
-                const ScenarioRecordOutput output      = getState()._recorder.stop( settings );
+                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();                                                                  // 필수 서비스: 없으면 버그
+                if ( pWindowHost == nullptr )
+                    SW_LOG_ERROR( "No MainWindowSubsystem - the recorded scenario has no client size" );
+                const IWindow* pWindow            = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
+                settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
+                const ScenarioRecordOutput output = getState()._recorder.stop( settings );
                 if ( FileUtil::ensureParentDirectoryExists( getState()._outputPath ) == false || FileUtil::writeTextFile( getState()._outputPath, output._xmlText ) == false )
                 {
                     outReply = "could not write '" + getState()._outputPath + "'";
@@ -103,9 +105,11 @@ namespace sw::editor
             {
                 if ( getState()._recorder.isRecording() == false )
                     return;
-                InputManager* pInput = findSubsystem<InputManager>();
+                InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
                 if ( pInput != nullptr )
                     getState()._recorder.update( *pInput, GameTimeScale::getUnscaledDeltaTime() );
+                else
+                    SW_LOG_ERROR( "[ScenarioRecord] InputManager is missing - the input is not recorded" );
             }
         };
     } // namespace

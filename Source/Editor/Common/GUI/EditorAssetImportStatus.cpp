@@ -9,7 +9,7 @@
 
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
-#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include <imgui.h>
 
@@ -19,9 +19,9 @@ namespace sw::editor
     {
         void drawAssetImportStatus()
         {
-            EditorContext*        pContext   = EditorContext::get();
-            const AssetHotReload* pHotReload = pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr;
-            if ( pHotReload == nullptr || pHotReload->isImportBusy() == false )
+            // 상태줄은 에디터 컨텍스트가 활성일 때만 그려지고 AssetHotReload 는 그 범위의 서브시스템이다 — 없으면 버그.
+            const AssetHotReload* pHotReload = &editor::getSubsystem<AssetHotReload>();
+            if ( pHotReload->isImportBusy() == false )
                 return;
             fixed_string<constant::kMaxBuffer128> label;
             formatstring( label.data(), label.capacity(), "Importing assets: %# running, %# queued", static_cast<uint32>( pHotReload->getRunningImportCount() ),

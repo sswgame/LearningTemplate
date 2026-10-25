@@ -540,7 +540,7 @@ namespace sw::editor
     AssetImportSummary TextureImporter::importAllTextures( string_view resourceRoot, const TextureImportConfig& config, AssetImportMode mode )
     {
         // 작업 시스템은 여기(호출 스레드)서 한 번 찾아 값으로 넘긴다 — 임포트는 워커에서 도는데 워커는 에디터 서비스 범위를 읽지 않는다(`findEditorScope`).
-        TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>();
+        TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         const TextureRawImporter importer{ config, pTaskManager };
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
     }

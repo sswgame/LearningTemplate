@@ -377,9 +377,11 @@ namespace sw::editor
 
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
-                GameObjectManager* pManager               = editor::getActiveObjectManager();
-                TypeRegistry*      pRegistry              = editor::findSubsystem<TypeRegistry>();
-                const bool         bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr || pRegistry == nullptr;
+                GameObjectManager* pManager  = editor::getActiveObjectManager();
+                TypeRegistry*      pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
+                if ( pRegistry == nullptr )
+                    SW_LOG_ERROR( "No TypeRegistry - the select-type command is not run" );
+                const bool bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr || pRegistry == nullptr;
                 if ( bInvalidSpawnArguments )
                     return false;
                 const TypeInfo* pType = pRegistry->findType( hashed_string( listArgument[0] ) );
@@ -454,8 +456,10 @@ namespace sw::editor
                     return false;
                 }
                 // 같은 경로를 다시 만들면 캐시의 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽게 한다.
-                if ( AssetManager* pResources = editor::findSubsystem<AssetManager>() )
+                if ( AssetManager* pResources = editor::findSubsystem<AssetManager>() ) // 필수 서비스: 없으면 버그
                     pResources->getAssetCache<PrefabCache>().reload( prefabID, nullptr );
+                else
+                    SW_LOG_ERROR( "No AssetManager - the prefab cache is not reloaded" );
                 pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pObject, prefabID );
                 pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
                 outReply = "created prefab " + absolutePath + " from " + pObject->getName().c_str();
@@ -514,7 +518,9 @@ namespace sw::editor
                 if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], seconds ) == false ) )
                     return false;
                 const CameraComponent* pCamera = EditorCamera::ensure( editor::getActiveScene() );
-                DebugDrawQueue*        pQueue  = editor::findSubsystem<DebugDrawQueue>();
+                DebugDrawQueue*        pQueue  = editor::findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
+                if ( pQueue == nullptr )
+                    SW_LOG_ERROR( "No DebugDrawQueue - the debug draw demo is not drawn" );
                 if ( pCamera == nullptr || pQueue == nullptr )
                     return false;
                 const float4x4 world    = pCamera->getWorldMatrix();
@@ -526,8 +532,10 @@ namespace sw::editor
                 pQueue->drawSphere( center + right * 1.5f, 0.6f, float4{ 0.2f, 0.8f, 1.0f, 1.0f }, duration, "Demo" );
                 pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
-                if ( DebugOverlayState* pOverlay = editor::findSubsystem<DebugOverlayState>() )
+                if ( DebugOverlayState* pOverlay = editor::findSubsystem<DebugOverlayState>() ) // 필수 서비스: 없으면 버그
                     pOverlay->setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
+                else
+                    SW_LOG_ERROR( "No DebugOverlayState - the demo duration is not published" );
                 outReply = "debug draw demo for " + to_string( seconds ) + " s";
                 return true;
             }

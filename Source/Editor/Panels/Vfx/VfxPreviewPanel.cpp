@@ -59,15 +59,7 @@ namespace sw::editor
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VfxPreviewPanel* pPanel = findOpenPanel();
-                GlobalVariableManager* pGvm   = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
-                if ( pGvm == nullptr )
-                    SW_LOG_ERROR( "[VfxPreviewPanel] GlobalVariableManager is missing - the probe asset cannot be read" );
-                const GlobalVariableInfo* pInfo = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
-                if ( pPanel == nullptr || pInfo == nullptr )
-                    return false;
-                const string wanted = pInfo->getValueAsString();
-                outValue            = wanted.empty() == false && pPanel->hasDocument( wanted ) ? 1.0 : 0.0;
-                return true;
+                return pPanel != nullptr && pPanel->readDocumentIsProbeAsset( outValue );
             }
 
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
