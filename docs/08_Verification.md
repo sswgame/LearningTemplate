@@ -235,6 +235,7 @@ cd build/Ninja-Debug/Bin
   셰이더는 차가운 실행 세 번과 컴파일 캐시를 켠 실행 세 번도 서로 같다(줄바꿈은 LF 로 맞춰 견줌 — `cook.stamp` 는 쓸 때 LF, 저장소는 CRLF).
   팩 줄은 항목별 압축 · CRC 를 병렬로 돌리기 전 값이다(2026-10-25 병렬 압축, 결정 기록 5-2). 병렬 뒤 값은 같은 명령의 요약 로그 한 줄로 잰다 — `Pack cook: N packs written or reused ... in X ms - read ..., compress W ms wall / C ms cpu, layout ..., hash ..., write ..., other ...`.
   `compress` 의 벽시계 / CPU 합이 병렬 효과이고, 바뀐 것 없는 실행(1.7 s)은 `hash` 가 거의 전부다(출력 118 MB 해시, 사본 복사를 없앴다). 병렬 뒤 팩 바이트가 직렬과 같음은 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes`(매니페스트 `pack-cook-parallel-tests`)가 지킨다.
+  병렬 뒤 첫 값(2026-10-25 통합 I, Release `SW_GAMES=ALL`, `-cook-all` 한 번씩, 새 워크트리라 기록 · DDC 없음 — 위 표와 데이터가 달라 직접 비교하지 않는다): 새 기록 14 팩 1850 ms(1235 파일 · 28 MB, compress 465 ms 벽시계 / 1183 ms CPU = 2.5 배, hash 201, other 1110), 바뀐 것 없음 988 ms(hash 154, other 833 — 출력 읽기 · DDC). 해시 시간은 `PackCooker`(입력) + `CookStore`(출력)가 잰다.
   읽는 법: 이득은 셰이더 컴파일 캐시(252 → 5 s)와 팩 증분(12 → 1.7 s)에서 나온다. 씬 · 프리팹 · 레지스트리 · 내비메시는 합쳐도 깨끗한 실행 1.4 s 라 DDC 로 줄어든 몫은 0.5 s 안팎이다(이 데이터 크기에서).
 - **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
   GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.
