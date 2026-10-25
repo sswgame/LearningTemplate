@@ -389,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         return ExitCode.Violation
 
     client = GithubClient(None if args.no_cache else Path(tempfile.gettempdir()) / kCacheFolderName)
-    exitCode = 0
+    exitCode = ExitCode.Passed
     try:
         if args.summary:
             runsUrl = (f"{kApiRoot}/repos/{repository}/actions/workflows/{kSummaryWorkflow}/runs"

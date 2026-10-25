@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import AcronymRegistry as registry  # noqa: E402
 from common.CodeText import blankComments  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Constants import kLintTargetRelDirs, kNotOurCodeDirNames, kNotOurDirNames, kShaderSourceExtensions  # noqa: E402
 from common.Parallel import mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -535,18 +536,18 @@ class FormatAcronymSpellingFixer(LintFixer):
         listProblem = registry.checkRegistry()
         if listProblem:
             print("\n".join(f"[{self.tag}] 등록부: {problem}" for problem in listProblem), file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         try:
             acronyms = registry.resolveAcronyms(args.acronym)
         except ValueError as error:
             print(f"[{self.tag}] {error}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         repositoryRoot = getProjectRoot()
 
         if args.rename_folders:
             print("\n".join(buildFolderRenameTable(repositoryRoot, acronyms)))
             print(f"[{self.tag}] 표만 찍었습니다 — 폴더는 옮기지 않았습니다")
-            return 0
+            return ExitCode.Passed
 
         _kState["acronyms"] = acronyms
 
@@ -558,30 +559,30 @@ class FormatAcronymSpellingFixer(LintFixer):
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text("\n".join(listDetail) + "\n", encoding="utf-8")
                 print(f"[{self.tag}] 상세 목록: {args.out}")
-            return 0
+            return ExitCode.Passed
 
         if args.apply_files:
             try:
                 listLine = applyFiles(repositoryRoot, acronyms, args.check)
             except RuntimeError as error:
                 print(f"[{self.tag}] {error}", file=sys.stderr)
-                return 2
+                return ExitCode.CheckInvalid
             print("\n".join(f"[{self.tag}] {line}" for line in listLine) or f"[{self.tag}] 바꿀 파일이 없습니다")
-            return 0
+            return ExitCode.Passed
 
         if args.apply_text:
             listEdit = applyText(repositoryRoot, acronyms, args.check, args.strings)
             print("\n".join(f"[{self.tag}] {line}" for line in formatTextEdits(listEdit, args.strings)))
-            return 0
+            return ExitCode.Passed
 
         listFile = selectFixerTargetFiles(args, repositoryRoot, self.tag, self.fileKind)
         if not listFile:
             print(f"[{self.tag}] 대상 파일이 없습니다.", file=sys.stderr)
-            return 0
+            return ExitCode.Passed
         listMessage = self.processFiles(listFile, checkOnly=args.check)
         for message in listMessage:
             print(message)
-        return 1 if (args.check and listMessage) else 0
+        return ExitCode.Violation if (args.check and listMessage) else ExitCode.Passed
 
 
 main = FormatAcronymSpellingFixer.run

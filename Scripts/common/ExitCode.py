@@ -3,7 +3,7 @@
 
 - 린트(`lint/LintGate.run`)는 통과 · 위반 · 검사 불성립 셋만 낸다.
 - 린트 밖 스크립트도 같은 셋을 쓴다 — `Violation`(1)은 일이 실패했거나 위반이 있다는 것, `CheckInvalid`(2)는 인자 · 전제가 틀려 일을 시작하지 못한 것이다.
-  `main` 과 `sys.exit(f())` 의 `f` 는 숫자 리터럴이 아니라 이 값을 돌려준다(`CheckPythonConventions` 의 `[exitCode]`, `Scripts/` 만).
+  `main` 과 `sys.exit(f())` 의 `f` 는 숫자 리터럴이 아니라 이 값을 돌려준다(`CheckPythonConventions` 의 `[exitCode]`, `Scripts/` 만. `exitCode` · `returnCode` · `resultCode` 변수에 숫자를 담는 것도 같다).
 - `Skipped`(77)는 CTest 의 `SKIP_RETURN_CODE` 다. App 이 "이 기계에서 이 백엔드를 못 돌린다" 로 끝날 때도 같은 값이다.
   App 쪽 정본은 C++ `RHIInitResult.h` 의 `kRHIUnusableHereExitCode` 이고 `common/AppRun.kAppRhiUnusableExitCode` 가 그 줄을 읽는다.
   이 모듈은 헤더를 읽지 않으므로 `TestQaRunners` 가 `Skipped` 와 헤더 값(과 CMake 의 `SKIP_RETURN_CODE`)이 같은지 본다.
