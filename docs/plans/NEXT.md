@@ -239,3 +239,34 @@
 **사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. `D:/w` 바로 아래 작업자 산출물(`e.py`, `kh_*.log`, `vb.bak` 등)은 사용자가 지우거나 허락한다.
 
 **다음 세션의 첫 일**: ① 맨 위 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오 네 백엔드, `netsyncobjects`, host-write-snapshot, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돈다. ② `wt/svcsweep` 을 병합하고 `EditorTest` 를 돈다. ③ 사용자가 push 를 허락했으면 push 하고 그 CI 결과(`py -3 -m Scripts ci-jobs --summary`)를 본다. ④ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문 첫 줄에 "python/py heredoc 편집 금지, `find /` 금지" 를 적는다(`.claude/hooks/GuardCommands.py` 가 막는다).
+
+## 조정자 인계 (2026-10-26 새벽 — 통합 P 진행 중, 새 세션은 이 절부터 읽는다)
+
+**상태.** main = origin/main = `b990d0c49`(사용자가 "빌드가 성공하면 푸시해, 결함은 계속 푸시"를 승인해 push 했다. 위 절의 "push 하지 않았다" 는 옛 문장). main CI 실행 `40199341814`(b990d0c)는 진행 중이었다 — `py -3 -m Scripts ci-jobs --summary` 로 한 번 본다(Linux Shipping 의 `UserSettingsTest` 수정과 Wayland 잡의 wlwin 첫 컴파일이 확인 대상). **통합 P**(`D:/w/integ-p`, `wt/integ-p`, integrator)는 xbowpos · svcsweep · syntaxchk 를 병합하고 `verify-batch` Shipping · Release 한 바퀴(실행 가능 43 항목, 107 항목은 명령 없음)를 돌려 실패를 고치는 중이다. 이 절이 main 에 있으니 **통합 P 는 main 에 fast-forward 하기 전에 main 을 병합한다**. 통합 P 는 끝나면 자기 절을 맨 위에 쓰고 이 절을 흡수한다.
+
+**병합 대기 브랜치**(모두 린트만 통과, 빌드 · 테스트 전. 각 워크트리 `D:/w/<이름>`, 끝 커밋은 `git log -1`). 체인은 앞 브랜치 위에 쌓였다.
+- 문법 검사 도구: `syntaxchk`(56e871a53, 통합 P 에 병합) → `syntaxchk2`(헤더 단독 검사가 빌드 폴더 없는 워크트리에서 건너뛰던 것 · RunBuildWarnings/RunIncludeCost 통합). 이 도구가 main 에 들어가기 전까지 작업자는 `syntax-check` 를 못 쓴다(vkrpcache · netstats · cfgref 가 "없는 명령" 이라 보고).
+- 검증 묶음 시각: `vbtimeline`(dc5e5fede, `timeline.log` · `started_at`) → `vbtimeline2`(건너뜀 · 덮개 시각, 단독 실행 기록, stdout 닫기, runHeadlessTask 기록).
+- 시나리오: `scntitle`(창 제목 `SWEngine — 게임/시나리오 · 백엔드 · 단계 · f프레임` + 단계 전환 로그), `scnrun`(`py -3 -m Scripts scenario <이름>` — `<Launch>` 인자 조립), `scnsplit`(`EveryScenarioPassesOnEveryBackend` 를 시나리오 × 백엔드 케이스로 쪼갬; 맞춰야 할 VerifyBatch 항목 id 는 보고에 있다).
+- 석궁 · 카메라: `xbowpos`(68a6adddf, 통합 P 에 병합 — 벤치 석궁이 데이터 스켈레톤이 없어 `PoseModifierComponent::bindRig`(2ec070baf, 10-22)가 리그를 묶지 않아 발 앞 바닥에 놓이던 결함) → `camframe`(463a5b764, `_framedRigView` 로 보기 값이 바뀌면 다시 맞춤) → `camframe2`(캐릭터 · 머리 · 래그돌 보기도 같은 방식으로).
+- 서버 디버깅: `svcsweep`(f834953e0, 통합 P 에 병합 — 에디터 필수 서비스 약 50곳 치환) 위에 `netstats`(24d1fb6de, `net.stats` 줄 상한 3500 + Sync 탭 질의 시간 초과 `EditorSyncPreferences`) → `linecap`(상한 상수를 Core 한 곳으로).
+- 에디터 서비스: `editctx`(svcsweep 위, `EditorContext::get()` → `find()`/`require()`, 옛 이름 제거; `MultiplayerSyncTab` 은 netstats 와 겹치니 병합 때 충돌 주의).
+- RHI: `vkrpcache`(cbf5f0adc, Vulkan 렌더패스 캐시 락 · GL `allocateReadbackSpan`) → `rhilocks`(`_listLiveCmd` 등 락 없는 벡터 전수 점검).
+- 설정 참조: `cfgref`(dd65f7d81, `ConfigReference.py` 가 다른 헤더 상수를 푼다) → `cfgref2`(기본값 칸의 상수 이름도 풀기).
+- Wayland: `wlwin2`(wlwin 위 — 소수 배율 · 포인터 잠금 · X11 getContentScale). wlwin 본체는 main 에 이미 있다.
+- 기억 압축은 끝났다(`standing-rules.md` + 함정 2 파일).
+작업자 지시문에는 `syntax-check` 가 아직 없는 기반이면 "코드를 꼼꼼히 읽고 보고에 컴파일 확인 필요" 를 쓴다.
+
+**통합이 한 번에 가르는 실험(코드 변경은 임시 로그만, Release, GPU 공유 잠금).** ① 카메라가 기사 머리 코앞에 붙는 화면(시나리오 없이 `-gv_benchRig=1 -gv_benchRigView=2 -gv_screenshotFrame=3|30|200`, `-gv_screenshotSettledFrames=60` 이면 정상) — 원인 미확정. `BenchSceneRig.cpp` `frameRigCameras` 끝과 `BenchScene::update` 의 `refreshFraming()` 직후에 카메라별 이름 · 월드 위치 · 전방 · FOV · 레지스트리 크기 · 활성 게임 카메라 일치를 로그하고, `-gv_benchRigEnabled=0`, `-gv_benchAnimate=0`, `spawnRigCape` · `spawnRigWeapon` 호출을 하나씩 끈 사진 4 장, `-gv_benchCharacters=6` 프레임 3 으로 가른다(두 맞춤이 같은 코드 · 인자인데 결과가 다르면 장면 상태 — 포즈 전 스킨드 메시가 화면을 덮는 — 가 의심이다). 시간 지연 `_cameraRefreshDelay` 는 이유를 모르는 채 없애지 않는다. ② crowd · vfxgl 실험(위 후보 절). ③ DX12 Debug 디버그 레이어(`rhi-transfer-dx12-u5` · `rhi-native-context-guard`), `host-write-snapshot` 실행.
+
+**남은 일(첫 일 순서).**
+1. 통합 P 결과(소요 표, `verify-batch` 결과 표, 경고 · 오류 처리 목록, OnlineLoadBot 크래시, vfxgl 분리) 확인 → 병합 대기 브랜치를 `wt/premerge2` 한 덩어리로 모아 통합 Q(범위를 늘리지 않는다).
+2. `verify-batch` 의 명령 없음 약 74 항목(test 34 · measure 35 · build 4 · golden 1)에 실행 명령을 달거나 사람 눈이 꼭 필요한 항목을 사유와 함께 분리한다. 영역별 작업자로 나누되 `Test/QA/VerifyBatch.json` 항목 id 소유를 나누고 통합 P 가 끝난 뒤에 띄운다. `plans --check` 가 "명령 없는 측정대기" 를 막도록 구조로 닫는다.
+3. 자동화(Automation) 개선: 조사 scout(`a82757130baec3cc3`) 결과 표를 받아 작업자로 띄운다(세션이 끊겼으면 같은 조사를 다시 돌린다 — 후보는 단계 · 탐침 이름 오타의 작성 시 린트, 행 · 타임아웃 처리, 재현 명령 출력, ExpectImage 문턱 데이터화, 처리하지 않은 로그의 시나리오별 현황표).
+4. 에디터 패널 둘(`PreviewWindowsRemaining` · `BehaviorTreeLiveCommander`, 각각 착수 조건이 디자이너 수요 · 쓰는 게임 둘 이상) — editctx 병합 뒤. FeatureQueue 중간 크기(데칼 · SSR · HDR 출력 먼저, 게임플레이 디버거 · 대역폭 프로파일러) 계획 문서 작성.
+5. 작은 확인: `AnimationAdvancedFeatures` 가 `MotionMatching.md` 의 말대로 `Candidates-gameplay.md` 에 없다(문서 연결 끊김), PackedTypes P5 의 C++ 쪽(`MeshAssetFormat` 판 올림) 분리 가능 여부, Shipping 에서 `FolderRootsAndKnownShaderPath` · `MakeSavePathLowercasesRelativeFolders` 가 낱개 `game/` 도메인 폴더를 요구하는데 Shipping 빌드에 `Resource/` 디스크가 있는지.
+6. 메인 작업 트리의 무시 폴더 `Source/graphify-out/` 가 `CheckModuleTargets` · `CheckX11Isolation` 에 걸려 메인에서 커밋이 막힌다(통합 P 가 고치는 중 — 안 되었으면 이어서).
+
+**사용자 결정 대기.** ① `.claude/settings.json` 허용 목록에 `Bash(py -3 -m Scripts syntax-check *)` 를 더할지(권한 설정이라 에이전트가 고치지 않는다). ② 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스. 지우기는 사용자가 허락했다("다 통합하고 빌드 · 검증이 통과하면 지워", 2026-10-26): 통합 P 가 main 에 들어간 뒤 **병합된** `wt/*` 와 그 워크트리, `D:/w` 바로 아래 산출물(`e.py` · `kh_*.log` · `vb.bak` · `integ-p-*.log` 등)을 지운다. 미병합 체인(위 목록)과 `svcsweep` · `premerge` 계열은 병합이 끝나기 전엔 지우지 않는다. 링크가 든 폴더의 재귀 삭제는 훅이 막으니 `Scripts/dev` 정리 스크립트를 쓴다(워크트리 94 개, 기준 4).
+
+**이번 세션의 사용자 지시(새 규칙).** CI 를 기다리지 않는다 · 빌드가 통과하면 push · 시나리오 Warning/Error 는 종료 코드 15(`UnhandledLog`)로 이미 강제되니 **처리 작업자를 배정**한다 · 작업자는 `syntax-check` 로 바뀐 파일만 문법 검사해도 된다(전체 빌드 · 테스트 · 병합 · push 는 여전히 금지) · 보고의 "같은 결함 후보" 는 그 턴에 후속 작업자로 띄운다 · 통합 중에는 범위를 늘리지 않는다 · 측정대기를 쌓지 않는다(실행 명령 있는 매니페스트 항목으로) · 이상한 화면은 창 제목 · 로그 · `timeline.log` 로 시나리오를 알 수 있게 한다(scntitle · vbtimeline). 정본은 메모리 `standing-rules.md`.
