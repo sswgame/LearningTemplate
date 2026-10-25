@@ -348,7 +348,18 @@ namespace sw
 
     void FoliageComponent::releaseCells()
     {
-        _listCell.clear(); // 배치의 소멸자가 레지스트리에서 뺀다
+        // 레지스트리에서 한 번에 빼고(배치마다 소멸자가 빼면 목록을 셀 수만큼 접는다) 놓는다. 이미 빠진 배치의 소멸자는 아무것도 하지 않는다.
+        if ( _pPrimitiveRegistry != nullptr )
+        {
+            vector<ScenePrimitiveBatch*> listBatch;
+            listBatch.reserve( _listCell.size() );
+            for ( Cell& cell : _listCell )
+            {
+                listBatch.push_back( cell._batch.get() );
+            }
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
+        }
+        _listCell.clear();
         _instanceCount = 0;
     }
 
@@ -497,6 +508,16 @@ namespace sw
 
     void FoliageComponent::releaseLayerCells( uint32 layerIndex, const vector<uint8>& listKeep )
     {
+        if ( _pPrimitiveRegistry != nullptr )
+        {
+            vector<ScenePrimitiveBatch*> listRemoved;
+            for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
+            {
+                if ( _listCell[cellIndex]._layerIndex == layerIndex && listKeep[cellIndex] != SW_TRUE )
+                    listRemoved.push_back( _listCell[cellIndex]._batch.get() );
+            }
+            _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listRemoved.data(), listRemoved.size() ) );
+        }
         size_t keptCount{ 0 };
         for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
         {
