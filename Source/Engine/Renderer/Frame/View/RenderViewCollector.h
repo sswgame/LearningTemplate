@@ -31,6 +31,9 @@ namespace sw
      */
     struct SW_API RenderViewCollector
     {
+        /// 자동 렌더 배율을 쓰지 않는 경로(씬 직접 경로 `FrameRenderer::execute`: 테스트 · 초상화 베이크)가 넘기는 값입니다. 프레임 시계가 없고 출력이 결정적이어야 해 배율을 곱하지 않는다.
+        static constexpr float32 kDirectPathAutoScale = 1.0f;
+
         /** @brief 주 시점 카메라의 출력 설정입니다(사각형, 배율, 끌 기능). @p autoScale 은 자동 렌더 배율(`RenderScaleAdjuster`, 꺼졌거나 쓰지 않는 경로는 1)이다. 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
         static RenderViewSettings makeMainSettings( CameraComponent* pMainCamera, float32 autoScale );
         /** @brief 출력 크기와 사각형의 화면 비율입니다(크기를 모르면 16:9). */
@@ -52,6 +55,8 @@ namespace sw
         /**
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
+         *          호스트 타깃은 화면 출력 뷰가 아니다: 이미지가 타깃 크기 그대로 보이고(늘이지 않는다, `HostViewTarget`) Present 의 업샘플이 없으므로
+         *          `gv_renderScale` · 자동 렌더 배율을 곱하지 않는다(`applyScreenRenderScale` 은 화면 출력 뷰 전용). 내부 해상도는 카메라 출력의 `_resolutionScale` 그대로다.
          * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바, `FrameRenderer::getSceneViewMode`).
          */
         static void appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView );

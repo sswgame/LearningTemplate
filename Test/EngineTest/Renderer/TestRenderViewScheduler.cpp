@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -409,6 +410,37 @@ SW_TEST_CASE( RenderViewCollectorTest, AutoRenderScaleFollowsScreenViewsOnly )
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listView.size() ) );
         SW_EXPECT_NEAR_EQUAL( userScale * 0.6f, listView[0]._settings._resolutionScale, 1e-5f );
     }
+}
+
+/**
+ * @brief [RenderViewCollectorTest] 씬 직접 경로(`kDirectPathAutoScale`)와 호스트 뷰는 사용자 렌더 스케일 · 자동 렌더 배율을 곱하지 않는다 — 직접 경로는 결정적이어야 한다
+ * @details 직접 경로는 자동 배율을 곱하지 않고(사용자 스케일만), 호스트 타깃(에디터 씬 뷰)은 타깃 크기 그대로 그려 둘 다 곱하지 않는다.
+ */
+SW_TEST_CASE( RenderViewCollectorTest, DirectPathAndHostViewSkipAutoScale )
+{
+    GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
+    GlobalVariableInfo*    pScale    = variables.findVariable( "gv_renderScale" );
+    SW_ASSERT_TRUE( pScale != nullptr );
+    const string previousScale = pScale->getValueAsString();
+    SW_ASSERT_TRUE( pScale->setValueAsFloat( 0.5f ) );
+
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, RenderViewCollector::kDirectPathAutoScale, 1e-6f );
+    // 직접 경로: 사용자 스케일만(0.5) — 자동 배율이 켜져 0.6 이 되는 일이 없다.
+    SW_EXPECT_NEAR_EQUAL( 0.5f, RenderViewCollector::makeMainSettings( stage._pMainCamera, RenderViewCollector::kDirectPathAutoScale )._resolutionScale, 1e-5f );
+
+    // 호스트 뷰: 사용자 스케일이 0.5 여도 카메라 출력의 배율(1) 그대로다.
+    HostViewTarget target;
+    target._renderTarget = 1;
+    target._width        = 640;
+    target._height       = 360;
+    vector<RenderViewRequest> listView;
+    RenderViewCollector::appendHostView( *stage._pMainCamera, target, RenderViewMode::Lit, listView );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listView.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listView[0]._settings._resolutionScale, 1e-5f );
+
+    (void)pScale->setValueAsString( previousScale );
 }
 
 /**

@@ -25,7 +25,7 @@
 
 ## 3. 착수 조건과 막힌 것
 
-- Q3(자동 렌더 배율)은 들어갔다: `RenderScaleAdjuster`(순수 계산, `RenderScaleAdjusterTest`)를 `RenderPacketBuilder` 가 프레임 델타로 먹여 화면에 나가는 뷰(주 시점 · 화면 사각형, `RenderViewCollector` 의 `autoScale`)의 배율에 곱한다. 렌더 텍스처 뷰는 사용자 렌더 스케일처럼 자기 크기가 데이터라 곱하지 않는다. 씬 직접 경로(`FrameRenderer::execute`, 테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 해 일부러 1 을 넘긴다. 프레임 예산 때문에 해상도를 조용히 낮추는 다른 길은 `Source/Engine/Renderer` 에 없다(뷰 예산은 뷰를 미룰 뿐 해상도를 안 낮춘다). 기본은 꺼짐(`-gv_autoRenderScale=1` 로 켠다, 예산 `gv_autoRenderScaleBudgetMs`, 하한 `gv_autoRenderScaleMin`). 틀린 설정은 오류를 찍고 끈다. 실제 효과는 매니페스트 id `load-auto-render-scale` 이 잰다(모든 프로필이 예산의 1/10 안팎이면 전환이 없으니 예산을 낮춰 강제로 깨 본다). 기본을 켤지는 그 측정 뒤에 정한다.
+- Q3(자동 렌더 배율)은 들어갔다: `RenderScaleAdjuster`(순수 계산, `RenderScaleAdjusterTest`)를 `RenderPacketBuilder` 가 프레임 델타로 먹여 화면에 나가는 뷰(주 시점 · 화면 사각형, `RenderViewCollector` 의 `autoScale`)의 배율에 곱한다. 렌더 텍스처 뷰는 사용자 렌더 스케일처럼 자기 크기가 데이터라 곱하지 않는다. 씬 직접 경로(`FrameRenderer::execute`, 테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 해 일부러 1 을 넘긴다. 호스트 타깃 뷰(`appendHostView`, 에디터 씬 뷰)도 같은 규칙을 어기지 않는다: 이미지를 타깃 크기 그대로 보여 주므로 `gv_renderScale` · 자동 배율을 곱하지 않는다(헤더에 적었고 `DirectPathAndHostViewSkipAutoScale` 이 지킨다), 직접 경로의 1 은 `kDirectPathAutoScale` 상수다. 프레임 예산 때문에 해상도를 조용히 낮추는 다른 길은 `Source/Engine/Renderer` 에 없다(뷰 예산은 뷰를 미룰 뿐 해상도를 안 낮춘다). 기본은 꺼짐(`-gv_autoRenderScale=1` 로 켠다, 예산 `gv_autoRenderScaleBudgetMs`, 하한 `gv_autoRenderScaleMin`). 틀린 설정은 오류를 찍고 끈다. 실제 효과는 매니페스트 id `load-auto-render-scale` 이 잰다(모든 프로필이 예산의 1/10 안팎이면 전환이 없으니 예산을 낮춰 강제로 깨 본다). 기본을 켤지는 그 측정 뒤에 정한다.
 - Q4 는 실제 저사양 기기가 있어야 한다(외부 조건).
 
 ## 4. 사용자 결정
