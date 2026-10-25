@@ -228,7 +228,8 @@ namespace sw
                 return false;
             const size_t index = it->second;
             (void)_mapIndex.erase( pItem ); // 위에서 찾았으므로 반드시 하나를 지운다
-            if ( index + 1 == _listItem.size() )
+            // 순회 중(`forEach`)에는 칸을 지우거나 접지 않고 비우기만 한다 — 순회가 칸 위치로 걷기 때문이다. 끝 칸도 예외가 아니다.
+            if ( _iterationDepth == 0 && index + 1 == _listItem.size() )
             {
                 // 끝 칸은 바로 뺀다. 그 앞에 비워 둔 칸이 이어지면 같이 걷는다.
                 _listItem.pop_back();
@@ -248,12 +249,36 @@ namespace sw
         /** @brief 등록 순서의 원소 전부입니다. 비운 칸은 먼저 접으므로 nullptr 가 없습니다. */
         const vector<T*>& getItems() const
         {
+            SW_ASSERT( _iterationDepth == 0 ); // 순회(`forEach`) 안에서 목록을 접으면 순회 위치가 어긋난다
             compact();
             return _listItem;
+        }
+        /**
+         * @brief 등록 순서대로 원소마다 `fn( index, pItem )` 을 부릅니다. `fn` 이 등록 · 해제를 불러도 안전한 순회입니다(원소 훅이 자기 자신이나 다른 원소를 해제하는 경우).
+         * @details 순회 중 해제는 칸을 비우기만 하고(접지 않음) 순회는 비운 칸을 건너뛴다 — 해제된 원소는 호출되지 않는다. 순회 중 더한 원소는 이번 순회에서 부르지 않는다.
+         *          `index` 는 순회 시작 때 접힌 `getItems()` 의 위치와 같다. 바깥 순회가 끝나면 비운 칸을 접는다. 순회 안에서 `getItems` · `findIndex` 를 부르면 Debug 에서 단언한다.
+         */
+        template <class Fn>
+        void forEach( Fn&& fn )
+        {
+            if ( _iterationDepth == 0 )
+                compact(); // 시작 위치를 `getItems()` 와 맞춘다(바깥 순회 안에서는 접지 않는다)
+            ++_iterationDepth;
+            const size_t count = _listItem.size();
+            for ( size_t index = 0; index < count && index < _listItem.size(); ++index )
+            {
+                T* pItem = _listItem[index]; // 훅이 더해 저장소가 다시 잡혀도 매번 읽는다
+                if ( pItem != nullptr )
+                    fn( static_cast<uint32>( index ), pItem );
+            }
+            --_iterationDepth;
+            if ( _iterationDepth == 0 )
+                compact();
         }
         /** @brief 원소가 `getItems()` 의 몇 번째인지 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findIndex( const T* pItem ) const
         {
+            SW_ASSERT( _iterationDepth == 0 );
             compact();
             const auto it = _mapIndex.find( pItem );
             return it != _mapIndex.end() ? it->second : invalid_index::kUint32;
@@ -289,9 +314,10 @@ namespace sw
 #endif
         }
 
-        mutable vector<T*>                      _listItem;          ///< 등록 순서. 해제한 칸은 nullptr 로 남을 수 있다(`compact` 가 접는다)
-        mutable unordered_map<const T*, uint32> _mapIndex;          ///< 원소 → `_listItem` 안의 위치
-        mutable uint32                          _removedCount{ 0 }; ///< `_listItem` 안의 비운 칸 수
+        mutable vector<T*>                      _listItem;            ///< 등록 순서. 해제한 칸은 nullptr 로 남을 수 있다(`compact` 가 접는다)
+        mutable unordered_map<const T*, uint32> _mapIndex;            ///< 원소 → `_listItem` 안의 위치
+        mutable uint32                          _removedCount{ 0 };   ///< `_listItem` 안의 비운 칸 수
+        uint32                                  _iterationDepth{ 0 }; ///< `forEach` 중첩 깊이(0 보다 크면 해제는 칸만 비우고 접지 않는다)
 #if defined( SW_DEBUG )
         mutable std::atomic<bool> _compacting{ false }; ///< Debug: 접는 중인지(동시 접기 탐지)
 #endif

@@ -622,6 +622,56 @@ SW_TEST_CASE( SkeletalAnimationTest, UnitListKeepsRegistrationOrderAfterBulkRemo
 }
 
 /**
+ * @brief [SkeletalAnimationTest] 목록을 `forEach` 로 도는 동안 훅이 가운데 · 끝 원소를 해제하고 새 원소를 더해도 순회가 어긋나지 않는다
+ * @details 순회 중 해제는 칸만 비우므로 해제된 원소는 건너뛰고(끝 칸도 지우지 않는다), 더한 원소는 이번 순회에서 부르지 않으며, 순회가 끝나면 접힌 등록 순서 · 위치 색인이 맞다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, UnitListSurvivesRegistrationChangesDuringForEach )
+{
+    constexpr uint32               kUnitCount = 9;
+    vector<uint8>                  bytes( kUnitCount, 0 ); // 주소만 쓴다 — 역참조하지 않는다
+    vector<SkeletalMeshComponent*> listFake;
+    for ( uint32 unitIndex = 0; unitIndex < kUnitCount; ++unitIndex )
+    {
+        listFake.push_back( reinterpret_cast<SkeletalMeshComponent*>( &bytes[unitIndex] ) );
+    }
+    AnimationUnitList unitList;
+    for ( uint32 unitIndex = 0; unitIndex < kUnitCount - 1; ++unitIndex ) // 0..7 만 등록, 8 은 순회 중에 더한다
+    {
+        SW_ASSERT_TRUE( unitList.add( listFake[unitIndex] ) );
+    }
+
+    vector<SkeletalMeshComponent*> listVisited;
+    vector<uint32>                 listVisitedIndex;
+    unitList.forEach(
+        [&]( uint32 index, SkeletalMeshComponent* pUnit )
+    {
+        listVisited.push_back( pUnit );
+        listVisitedIndex.push_back( index );
+        if ( pUnit == listFake[0] )
+        {
+            SW_EXPECT_TRUE( unitList.remove( listFake[3] ) ); // 아직 안 만난 가운데 원소
+            SW_EXPECT_TRUE( unitList.remove( listFake[7] ) ); // 아직 안 만난 끝 원소 — 칸을 지우면 안 된다
+            SW_EXPECT_TRUE( unitList.add( listFake[8] ) );    // 새 원소는 이번 순회에서 부르지 않는다
+        }
+        if ( pUnit == listFake[1] )
+            SW_EXPECT_TRUE( unitList.remove( listFake[1] ) ); // 자기 자신을 해제
+    } );
+    const vector<SkeletalMeshComponent*> listExpectedVisited{ listFake[0], listFake[1], listFake[2], listFake[4], listFake[5], listFake[6] };
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpectedVisited, listVisited ) );
+    SW_EXPECT_EQUAL( 4u, listVisitedIndex[3] ); // 위치는 순회 시작 때의 등록 순서 위치다(접지 않는다)
+
+    const vector<SkeletalMeshComponent*> listExpectedAfter{ listFake[0], listFake[2], listFake[4], listFake[5], listFake[6], listFake[8] };
+    SW_EXPECT_EQUAL( static_cast<uint32>( listExpectedAfter.size() ), unitList.getCount() );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpectedAfter, unitList.getItems() ) );
+    bool bIndexMatches = true;
+    for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listExpectedAfter.size() ); ++unitIndex )
+    {
+        bIndexMatches = bIndexMatches && unitList.findIndex( listExpectedAfter[unitIndex] ) == unitIndex;
+    }
+    SW_EXPECT_TRUE( bIndexMatches );
+}
+
+/**
  * @brief [SkeletalAnimationTest] 유닛을 해제해도 레벨은 처음부터 다시 지은 것과 같다 — 외톨이 해제의 지름길 · 의존 유닛 해제의 전체 재구성 (유닛 2 천 개)
  * @details 7 개마다 세 단계 사슬이고 나머지는 외톨이인 유닛을 등록한다. (1) 외톨이만 해제하면 평가 전에 `getLevels` 를 불러도, 평가 뒤에도 해제한 유닛을 뺀 채 새로 지은
  *          시스템과 같은 레벨이다. (2) 사슬의 유닛(위 · 아래)을 해제하면 남은 유닛으로 새로 지은 시스템과 같다.

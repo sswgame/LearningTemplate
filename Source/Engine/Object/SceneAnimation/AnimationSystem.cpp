@@ -212,7 +212,7 @@ namespace sw
         if ( _lodClientList.getCount() == 0 )
             return;
         SW_PROFILE_SCOPE( "GT.Animation.lod" );
-        // 판정 중 클라이언트의 적용 훅이 등록 · 해제를 부르지 않는다(목록을 읽는 동안 고치지 않는다) — 접힌 목록을 한 번 잡는다.
+        // 판정 단계는 훅 없이 읽기만 하므로 접힌 목록을 한 번 잡아 쓴다. 적용 훅(등록 · 해제를 부를 수 있음)은 아래에서 `forEach` 로 부른다.
         const vector<IAnimationLODClient*>& listLODClient = _lodClientList.getItems();
         const size_t                        clientCount   = listLODClient.size();
         // 뷰가 없거나(테스트 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
@@ -221,10 +221,9 @@ namespace sw
             if ( _bLODApplied == SW_TRUE )
             {
                 const AnimationLODState fullState{};
-                for ( IAnimationLODClient* pClient : listLODClient )
-                {
-                    pClient->applyAnimationLOD( fullState );
-                }
+                // 적용 훅이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다(해제된 클라이언트는 건너뛴다).
+                _lodClientList.forEach( [&fullState]( uint32, IAnimationLODClient* pClient )
+                { pClient->applyAnimationLOD( fullState ); } );
             }
             _bLODApplied                    = SW_FALSE;
             _expectedEvaluationMicroseconds = 0.0f;
@@ -285,6 +284,7 @@ namespace sw
                                                                             _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * constant::kMicrosecondsPerMillisecond,
                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
+        // 예산을 칸마다 풀어 두는 단계 — 훅이 없으니 목록이 그대로다. 예산 순번은 여기서만 센다(아래 순회가 해제된 칸을 건너뛰어도 어긋나지 않게).
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
         {
             AnimationLODState& state = _listScratchLODState[clientIndex];
@@ -298,8 +298,11 @@ namespace sw
                     state._bInterpolate = SW_TRUE;
                 state._updateRateDivisor = budgeted;
             }
-            listLODClient[clientIndex]->applyAnimationLOD( state );
         }
+        // 적용 단계 — 훅이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다. 위치는 위 판정과 같고(접지 않는다), 해제된 칸은 건너뛴다.
+        // 위 `listLODClient` 참조는 여기서 쓰지 않는다 — 훅이 더하면 저장소가 다시 잡힌다.
+        _lodClientList.forEach( [this]( uint32 clientIndex, IAnimationLODClient* pClient )
+        { pClient->applyAnimationLOD( _listScratchLODState[clientIndex] ); } );
     }
 
     void AnimationSystem::registerUnit( SkeletalMeshComponent* pUnit )
