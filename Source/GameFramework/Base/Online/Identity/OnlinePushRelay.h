@@ -20,6 +20,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -31,14 +32,17 @@ namespace sw
     struct SW_GF_API OnlinePushRelay
     {
         REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 1; ///< 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
-        PROPERTY( MaxCount = 128 )
+        static constexpr uint32 kBusVersion      = 1;   ///< 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
+        static constexpr int32  kMaxTypeNameSize = 128; ///< `_pushEnum` · `_bodyType` 의 FQN 길이
+        static constexpr int32  kMaxPushNameSize = 64;
+
+        PROPERTY( MaxCount = kMaxTypeNameSize )
         string _pushEnum{}; ///< 알림 열거형의 FQN(`typeFqn<XxxPushName>`)
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = kMaxPushNameSize )
         string _pushName{}; ///< 알림 열거자 이름
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = kMaxTypeNameSize )
         string _bodyType{}; ///< 본문 타입의 FQN
-        PROPERTY( MaxCount = 61440, Min = 0, Max = 255 )
+        PROPERTY( MaxCount = IServerBusTransport::kMaxMessageSize, Min = 0, Max = 255 )
         vector<uint8> _bodyBytes{}; ///< 본문의 A(`MixedBuildCodec::encode`, 본문 타입의 `kBusVersion` 머리)
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };

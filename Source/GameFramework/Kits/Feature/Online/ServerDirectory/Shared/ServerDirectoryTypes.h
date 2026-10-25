@@ -53,7 +53,7 @@ namespace sw
     struct MaintenanceView
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _scope{}; ///< `all` 이거나 서버 종류 이름이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxMessageKeySize )
         string _messageKey{}; ///< 안내 문구의 로컬라이제이션 키이다. 상한은 `ServerDirectoryLimit::kMaxMessageKeySize` 와 같다
@@ -151,7 +151,7 @@ namespace sw
         string _region{};
         PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 0이면 빌드 버전을 따지지 않는다
-        PROPERTY( Min = 1, Max = 64 )
+        PROPERTY( Min = 1, Max = ServerDirectoryLimit::kMaxSeatCount )
         int32 _seatCount{ 1 }; ///< 함께 들어갈 인원이다. 파티가 해당한다. 상한은 `ServerDirectoryLimit::kMaxSeatCount` 와 같다
     };
 } // namespace sw

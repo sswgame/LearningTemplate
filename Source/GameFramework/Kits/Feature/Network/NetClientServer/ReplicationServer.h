@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetInputWindow.h"
@@ -70,13 +71,13 @@ namespace sw
     /**
      * @brief 서버 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `ReplicationServer::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 예전에는 기록 수와 입력 버퍼 크기를 쓸 때 조용히 2 · 1 로 올렸다(폴백 금지 원칙).
-     *          예산의 `Max` 는 리터럴만 받으므로 `NetConnection::kMaxSingleMessageSize` 와 같은 값을 적는다. 경계 값 테스트(`ServerRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
+     *          예산의 `Max` 는 `NetConnection::kMaxSingleMessageSize` 상수 이름이라 연결의 한 메시지 상한과 어긋나지 않는다.
      */
     REFLECT()
     struct SW_KIT_API ReplicationServerConfig
     {
         REFLECT_BODY();
-        PROPERTY( Min = 1, Max = 1024 )
+        PROPERTY( Min = 1, Max = NetConnection::kMaxSingleMessageSize )
         int32 _snapshotBudgetBytes{ 1000 }; ///< 클라이언트 한 명당 틱마다 보내는 스냅샷 메시지의 상한 바이트(1 ~ `NetConnection::kMaxSingleMessageSize`). 종류 바이트, 헤더, 사라진 목록을 포함한다.
                                             ///< 연결 상한에서 나온 할당량(`NetSendBudget::computeTickBudget`)이 더 작으면 그 값을 쓴다
         PROPERTY( Min = 0.001, Units = s )

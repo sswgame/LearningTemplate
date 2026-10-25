@@ -802,7 +802,75 @@ SW_TEST_CASE( ReflectionParserTest, MaxCountReadsANamedIntegerConstant )
 }
 
 /**
- * @brief [ReflectionParserTest] 이름 변경 리다이렉트를 잘못 적으면 생성이 멈춥니다 — 대상 없는 리다이렉트를 말없이 버리지 않습니다
+ * @brief [ReflectionParserTest] `Min` · `Max` 는 C++ 숫자 상수 이름을 받아 그 값을 코덱 · 정규 문자열 · 인스펙터 범위에 넣습니다
+ * @details `MaxCount` 와 같은 이름 찾기(타입 → 바깥 타입 → 네임스페이스)를 씁니다. 앞에 `-` 를 붙일 수 있고 실수 상수도 받습니다.
+ *          `_` 로 시작하는 이름은 상수가 아니라 필드 이름이라 그대로 둡니다. 못 찾은 상수는 생성 오류입니다 — 경계를 조용히 빼면 범위 검사가 사라집니다.
+ */
+SW_TEST_CASE( ReflectionParserTest, MinMaxReadANamedNumericConstant )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "NamedRangeSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tstruct NamedRangeLimit\n"
+                                                       "\t{\n"
+                                                       "\t\tstatic constexpr int32   kMaxLevel = 40;\n"
+                                                       "\t\tstatic constexpr float32 kMaxRatio = 2.5f;\n"
+                                                       "\t};\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct NamedRangeSample\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tstatic constexpr int32 kMinSlot = 3;\n"
+                                                       "\t\tPROPERTY( Min = kMinSlot, Max = NamedRangeLimit::kMaxLevel )\n"
+                                                       "\t\tint32 _level{ 3 };\n"
+                                                       "\t\tPROPERTY( Step = 0.5, Min = -NamedRangeLimit::kMaxRatio, Max = NamedRangeLimit::kMaxRatio )\n"
+                                                       "\t\tfloat32 _offset{ 0.0f };\n"
+                                                       "\t\tPROPERTY( Min = \"_level\", Max = NamedRangeLimit::kMaxLevel )\n"
+                                                       "\t\tint32 _upper{ 3 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string generated = run._listGeneratedCpp[0] + run._listGeneratedHeader[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "F=_level:int32:min=3:max=40:" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( ":min=-2.5:max=2.5:" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_minRange     = 3.0f;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_maxRange     = 40.0f;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata->_minRange     = -2.5f;" ) != sw::string::npos, generated.c_str() );
+    // 필드 이름은 상수로 풀리지 않고 필드를 읽는 함수로 남습니다.
+    SW_EXPECT_TRUE_MSG( generated.find( "F=_upper:int32:min=_level:max=40:" ) != sw::string::npos, generated.c_str() );
+
+#if defined( SW_DEBUG )
+    const ParserRunResult badRun = runParserOnTempHeader( parserExe, "NamedRangeMistakeSample",
+                                                          "#pragma once\n"
+                                                          "#include \"Core/Common/Types.h\"\n"
+                                                          "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                          "namespace sw\n"
+                                                          "{\n"
+                                                          "\tREFLECT()\n"
+                                                          "\tstruct NamedRangeMistakeSample\n"
+                                                          "\t{\n"
+                                                          "\t\tREFLECT_BODY();\n"
+                                                          "\t\tPROPERTY( Min = 0, Max = kMissingLimit )\n"
+                                                          "\t\tint32 _level{ 0 };\n"
+                                                          "\t};\n"
+                                                          "}\n" );
+    SW_EXPECT_TRUE_MSG( badRun._exitCode != 0, badRun._log.c_str() );
+    const bool bMissing = badRun._log.find( "'sw::NamedRangeMistakeSample::_level': Max constant 'kMissingLimit' is not declared" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bMissing, badRun._log.c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 이름 변경 리다이렉트를 잘못 적으면 생성이 멈춥니다— 대상 없는 리다이렉트를 말없이 버리지 않습니다
  * @details 열거자 리다이렉트(`ValueAlias` · `Removed`)는 `옛 이름:대상` 꼴이고, 대상은 지금 열거자, 옛 이름은 지금 없는 이름이며 한 번만 적습니다.
  *          프로퍼티의 옛 이름(`Alias`)은 같은 타입의 지금 필드 이름이나 다른 옛 이름과 겹치지 않습니다. 맞게 적은 리다이렉트는 `_mapRedirectNameToValue` 로 나갑니다.
  */

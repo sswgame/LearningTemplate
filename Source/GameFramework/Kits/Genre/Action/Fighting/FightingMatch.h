@@ -380,7 +380,7 @@ namespace sw
         vector<MoveHitbox>         _listHitboxScratch; ///< 판정에 쓰는 임시 버퍼(상태가 아님)
         PROPERTY( Min = 0 )
         int32 _frame;
-        PROPERTY( Min = -1, Max = 2 )
+        PROPERTY( Min = -1, Max = kDraw )
         int32 _lastRoundWinner; ///< 0, 1, `kDraw`(2), 아직 없으면 −1
     };
 } // namespace sw

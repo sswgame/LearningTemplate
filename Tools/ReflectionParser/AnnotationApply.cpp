@@ -98,18 +98,10 @@ namespace sw
                 return true;
             }
 
-            /**
-             * @brief `MaxCount` 값의 꼴입니다. 1 이상의 32 비트 정수이거나, C++ 정수 상수 이름(`kMaxSlotCount`, `LedgerConstant::kMaxMemoSize`)이어야 합니다.
-             * @details 실수는 읽어 반올림하지 않습니다. 이름이 가리키는 상수가 있는지 · 값이 범위 안인지는 선언을 아는 `AstVisitor` 가 봅니다.
-             */
-            static bool isCountValue( const string_view value )
+            /** @brief 이름 조각을 `::` 하나로만 이은 C++ 이름(`kMaxX`, `Ns::kMaxX`)인지 봅니다. 빈 조각 · 부호 · 공백은 거절합니다. */
+            static bool isQualifiedName( const string_view name )
             {
-                const string_view trimmed = StringUtil::trim( value );
-                uint64            parsed  = 0;
-                if ( StringUtil::parseUint64( trimmed, parsed ) )
-                    return 1 <= parsed && parsed <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
-                // 이름 조각을 `::` 하나로만 잇는다(빈 조각 · 부호 · 공백은 거절).
-                string_view rest = trimmed;
+                string_view rest = name;
                 while ( true )
                 {
                     const size_t      separator   = rest.find( "::" );
@@ -124,8 +116,21 @@ namespace sw
             }
 
             /**
-             * @brief `Min` · `Max` 값의 꼴입니다. 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이어야 합니다.
-             * @details `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절합니다. 조용히 0 이 되지 않게 하려는 것입니다.
+             * @brief `MaxCount` 값의 꼴입니다. 1 이상의 32 비트 정수이거나, C++ 정수 상수 이름(`kMaxSlotCount`, `LedgerConstant::kMaxMemoSize`)이어야 합니다.
+             * @details 실수는 읽어 반올림하지 않습니다. 이름이 가리키는 상수가 있는지 · 값이 범위 안인지는 선언을 아는 `AstVisitor` 가 봅니다.
+             */
+            static bool isCountValue( const string_view value )
+            {
+                const string_view trimmed = StringUtil::trim( value );
+                uint64            parsed  = 0;
+                if ( StringUtil::parseUint64( trimmed, parsed ) )
+                    return 1 <= parsed && parsed <= static_cast<uint64>( std::numeric_limits<uint32>::max() );
+                return isQualifiedName( trimmed );
+            }
+
+            /**
+             * @brief `Min` · `Max` 값의 꼴입니다. 쉼표로 나눈 항마다 숫자이거나 필드 이름(`-_halfSize`)이거나 상수 이름(`kMaxLevel`, `Ns::kMaxLevel`)이어야 합니다.
+             * @details 이름이 필드인지 상수인지는 `_` 로 시작하는지로 갈립니다(`AstVisitor::resolveRangeConstants`). `0.5f` 처럼 C++ 습관의 접미사가 붙은 숫자는 어느 쪽도 아니므로 거절합니다. 조용히 0 이 되지 않게 하려는 것입니다.
              */
             static bool isRangeExpression( const string_view value )
             {
@@ -136,7 +141,8 @@ namespace sw
                 {
                     const string_view term = StringUtil::trim( part );
                     float32           number{ 0.0f };
-                    if ( StringUtil::parseFloat( term, number ) == false && isFieldNameTerm( term ) == false )
+                    const string_view name = term.empty() == false && term.front() == '-' ? term.substr( 1 ) : term;
+                    if ( StringUtil::parseFloat( term, number ) == false && isQualifiedName( name ) == false )
                         return false;
                 }
                 return true;

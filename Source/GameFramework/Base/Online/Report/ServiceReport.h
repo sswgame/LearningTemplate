@@ -16,6 +16,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
@@ -40,9 +41,9 @@ namespace sw
     struct SW_GF_API ServiceReportLine
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
         string _senderName{};
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = ServiceReportConstant::kMaxLineTextSize )
         string _text{};
         PROPERTY()
         AccountID _senderID{ kInvalidAccountID };
@@ -96,6 +97,7 @@ namespace sw
     struct ServiceReportConstant
     {
         static constexpr int32  kMaxLineCount     = 20;
+        static constexpr int32  kMaxLineTextSize  = 512; ///< 문맥 줄의 글. 채팅 메시지(`ChatLimit::kMaxTextSize`)의 상한과 같다
         static constexpr int32  kMaxCategorySize  = 32;
         static constexpr int32  kMaxContextSize   = 48;
         static constexpr int32  kMaxReasonSize    = 64;

@@ -79,7 +79,7 @@ namespace sw
     struct AccountCredentialRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = LoginConstant::kMaxLoginNameWireSize )
         string _loginName{};
         PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
         string _password{};
@@ -93,7 +93,7 @@ namespace sw
     struct AccountLoginRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = LoginConstant::kMaxLoginNameWireSize )
         string _loginName{};
         PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
         string _password{};
@@ -153,7 +153,7 @@ namespace sw
     struct AccountGameTicketRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LoginConstant::kMaxServerIDSize )
         string _serverID{};
     };
 } // namespace sw
@@ -233,7 +233,7 @@ namespace sw
     struct AccountUpdateDetail
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = LoginConstant::kMaxStoreURLSize )
         string _storeURL{};
     };
 } // namespace sw

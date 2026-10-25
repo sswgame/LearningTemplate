@@ -189,7 +189,9 @@ struct MechArenaSnapshot
 - 인스펙터는 같은 타입의 필드 하나를 가리키는 경계(`Min = "-_halfSize"`)를 그 객체의 지금 값으로 막습니다(단계 4-b). 생성기가 그 필드를 읽는 함수(`PropertyMetadata::_pReadMinRange` · `_pReadMaxRange`)를 내므로 이름이 틀리면 생성된 코드가 컴파일되지 않습니다.
   인스펙터와 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 `PropertyMetadata::computeAllowedRange` 하나로 범위를 풀어서 이 함수는 Shipping 에도 있습니다. 바깥 타입의 필드를 가리키는 경계와 성분 목록은 읽기 함수가 없습니다(인스펙터는 바깥 객체를 모르고 벡터 성분에는 범위를 두지 않음).
 
-**한계.** `Min` · `Max` · `Step` 값은 리터럴이나 필드 이름만 받고 C++ 상수는 받지 않습니다. 같은 값이 여러 필드에 반복될 수 있습니다(8.1 위험 4). `MaxCount` 는 상수 이름을 받습니다(3.5).
+**상수 이름.** `Min` · `Max` 는 리터럴과 필드 이름 말고 C++ 숫자 상수 이름도 받습니다(`Max = LockstepSession::kMaxInputDelay`, `Min = -Limit::kMaxRatio`). 생성기가 `MaxCount` 와 같은 함수로(`AstVisitor::findNamedConstant`) 값을 찾아 풀고, 풀린 값이 코덱 · 정규 문자열 · 인스펙터 범위에 들어갑니다.
+`_` 로 시작하지 않는 이름이 상수이고 `_` 로 시작하는 이름은 필드입니다. 못 찾았거나 숫자가 아니면 생성 오류입니다. 같은 값을 숫자로 적던 때와 정규 문자열이 같으므로 리터럴을 상수로 바꿔도 스키마 해시는 바뀌지 않습니다.
+**한계.** `Step` 은 상수를 받지 않습니다. 25 곳 남짓의 양자화 간격은 한 필드의 정밀도 선택이라 다른 상수와 짝인 곳이 없었습니다(8.2). 데이터(카탈로그 크기 등)로 정해지는 범위는 3.10 의 검증 훅에 둡니다.
 데이터(카탈로그 크기 등)로 정해지는 범위는 키로 표현하지 않고 3.10 의 검증 훅에 둡니다.
 
 ### 3.9 엔디언과 정렬
@@ -351,7 +353,7 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 2. **다른 헤더의 중첩 타입**: 생성기는 그 타입의 `PROPERTY` 를 다시 모으지 않고 실행 시간에 코덱 테이블 유무를 확인합니다(3.6).
 3. **의도하지 않은 와이어 변경**: 선언이 없으므로 `REFLECT` 타입의 필드를 정리하거나 순서를 바꾸면 B 형식이 바뀝니다. 롤백 · 스냅샷은 같은 빌드끼리라 영향이 없고, 넷 · 온라인은 해시가 달라져 옛 빌드와의 연결이 거절될 뿐 조용히 잘못 읽지는 않습니다.
    알 수 있는 수단은 거절 로그의 양쪽 해시, `FixedSchemas.gen.txt` 비교, `PROPERTY` 헤더 주석과 Reflection README 의 "선언 순서는 와이어 형식" 문단입니다. 온라인 스키마 해시를 커밋된 기준 파일과 비교하는 테스트는 알림이지 정확성 장치가 아니라 두지 않습니다.
-4. **리터럴 반복**: 3.8 의 범위 키(`Min` · `Max` · `Step`)는 C++ 상수를 참조하지 못해 같은 값이 여러 필드에 반복됩니다. 값이 어긋나도 해시가 바뀌므로 잘못 읽지는 않지만, 의도와 다른 범위가 됩니다.
+4. **리터럴 반복**: 3.8 의 `Min` · `Max` 는 상수 이름을 받으므로 코드의 상수와 짝인 경계는 상수로 적습니다(8.2). 숫자로 남은 경계는 값이 우연히 같은 단순 범위입니다. 어긋나도 해시가 바뀌므로 잘못 읽지는 않지만, 의도와 다른 범위가 됩니다.
    `MaxCount` 는 상수 이름을 받으므로(3.5) 상한을 코드와 두 곳에 적지 않습니다. 남은 숫자 `MaxCount` 중 같은 값의 상수가 있는데 뜻이 같은지 이름만으로 정할 수 없는 것(2026-10-21 기준 약 20 곳, 주로 온라인 키트의 커서 · 문구 길이)은 그 키트를 고칠 때 상수 이름으로 바꿉니다.
 5. **`Min` · `Max` 의 뜻이 강해집니다.** 허용 범위가 와이어 범위가 되므로, 게임 코드가 허용 범위 밖 값을 잠깐 쓰던 곳은 B 쓰기 실패로 드러납니다. 결함이 드러나는 것이므로 의도한 결과입니다.
 6. **해시에 들어가지 않는 의미 변경**: 단위를 미터에서 센티미터로 바꾸는 변경은 해시를 바꾸지 않습니다. 넷은 손 버전 상수를, 온라인은 `kBaseVersion` 을 남겨 이 경우에 올립니다.
@@ -360,6 +362,15 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 ### 8.2 남은 확인
 
 - 없음. `getComponent<` 413 건의 틱 안 비율(옛 단계 0)은 세지 않고 닫았습니다(7.3).
+- 온라인 숫자 `MaxCount` 는 `wt/onlinemax` 에서 모두 상수 이름으로 바꿨습니다(8.1 위험 4). 같은 값이 여러 곳이면 상수 하나로 모았고(`AdminProtocol`, `EconomyProtocol`, `LoginConstant`, `MatchmakingLimit` 등), 서로 다른 키트의 같은 값(관리자 `kMaxMessageKeySize` · 서버 목록 `ServerDirectoryLimit::kMaxMessageKeySize`)은 키트끼리 포함할 수 없어 각자 두었습니다.
+  같은 헤더에 같은 값의 상수가 있으면 알리는 게이트는 두지 않았습니다. 값이 우연히 같은 상수(해시 32 바이트와 이름 32 바이트 등)가 많아 오탐이 진짜 후보보다 많았기 때문입니다. `Min` · `Max` 의 반복 리터럴은 아래 `wt/minmaxconst` 항목에서 다룹니다.
+- 기믹 · 장르 키트와 서버 버스 테스트 타입의 숫자 `MaxCount` 도 `wt/maxkits` 에서 상수 이름으로 바꿨습니다(`MechArenaSnapshot::kMaxListSize`, `HorrorSnapshot::kMaxListSize`, `InputCommandBuffer::kMaxFrameCount`, `RoundSeries::kMaxParticipantCount`, `BusTestLimit`). 채팅의 `ChatLimit::kMaxTextSize` · `kMaxReasonSize` 는 같은 값인 `ServiceReportConstant` 와 `static_assert` 로 맞춥니다(Base 는 키트를 포함할 수 없어 키트 쪽에 둠).
+- `Min` · `Max` 가 상수 이름을 받게 넓혔습니다(`wt/minmaxconst`, 3.8). 소스와 테스트의 숫자 경계는 `Min` 1752 · `Max` 364 · `Step` 27 곳(직접 센 값)이고, 대부분은 `Min = 0` · `Min = 1` · `Max = 1.0` · `Max = 100` 같은 단순 범위로 다른 값과 짝이 없습니다.
+  짝이 있는 곳은 필드 설명이나 클래스 문서가 같은 상수를 가리키는 `Max`(`Max` 는 리터럴만 받으므로 같은 값을 적는다고 쓴 주석 포함) 21 곳이었고 상수 이름으로 바꿨습니다: `NetConnection::kMaxSingleMessageSize`(복제 · MMO 예산), `LockstepSession::kMaxInputDelay`, `RollbackSession::kMaxInputDelay` · `kMaxPrediction`, `PhysicsSettings::kMaxWorkerCount2D`, `LedgerItemInstance::kMaxEnhanceLevel`, 온라인 목록 쪽수(`AdminProtocol`, `MailboxProtocol`, `EconomyProtocol`, `ChatLimit`, `LeaderboardLimit`), `MatchmakingLimit`, `PartyLobbyLimit`, `ServerDirectoryLimit::kMaxSeatCount`, `MonsterCollectorCatalog::kMaxLevel`, `FightingMatch::kDraw`.
+  `Step` 은 짝이 없어 상수를 받게 하지 않았습니다. 값이 우연히 같은 것(`PhysicsSettings::_subStepCount` 의 16 과 `kMaxWorkerCount2D`, `MechArenaSnapshot` · `HorrorSnapshot` 의 인덱스 `Max = 255` 와 목록 길이 `kMaxListSize` 는 인덱스가 1 바이트라는 뜻이고 목록 길이와 별개, `RestaurantCatalog` 의 `Max = 24` 시각 등)은 숫자로 두었습니다.
+  같은 값의 상수가 있는지를 알리는 게이트는 `MaxCount` 때와 같은 이유로 두지 않았습니다. 상수와 짝인 `Max` 가 더 있어도 생성 오류가 아니라 그 값이 해시에 들어가 어긋남이 드러납니다.
+  문서 생성기(`ConfigReference.py`)는 상수를 같은 파일에서만 풉니다. 코드젠이 푼 값은 빌드 때 clang 이 계산해 빌드 폴더의 생성물에만 있고, 문서 생성기는 빌드 없이 소스 글만 읽는 손 실행 스크립트라 그 결과를 재사용하면 문서 생성이 빌드에 묶입니다. 그래서 다른 헤더의 상수는 못 풀고, 그때는 오류 메시지가 같은 파일 한정임을 밝히며 멈춥니다(현재 데이터는 `PhysicsSettings` 뿐). 에디터의 프로젝트 설정 창은 `ConfigReference.json` 에서 `page` · `path` · `type` 만 읽고(`ProjectSettingsCatalog::parseReference`, `.cpp:25-30`) min · max 글은 읽지 않으며, 인스펙터는 생성물의 숫자 `_minRange` · `_maxRange` 를 읽으므로 상수 이름이 숫자 자리로 흘러들 길은 없습니다.
+- 숫자 리터럴 `MaxCount` 를 생성 오류로 거절하는 것은 하지 않았습니다. 리터럴은 문서화된 입력 형식(3.5)이고, 고정 배치형 테스트 타입(`TestFixedLayoutTypes.h`)과 파서 테스트 문자열(`TestReflectionParser.cpp`, 잘못된 값 `2.5` 거절 포함)이 일부러 리터럴 경로를 확인하므로, 거절하면 그 테스트의 모양을 다시 짜야 해 작은 변경이 아닙니다.
 
 ## 9. 단계
 

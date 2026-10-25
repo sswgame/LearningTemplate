@@ -37,7 +37,9 @@ namespace sw
         REFLECT_BODY();
         static constexpr int64 kPermanentMs = 0x7FFFFFFFFFFFFFFFll;
 
-        PROPERTY( MaxCount = 256 )
+        static constexpr int32 kMaxReasonCodeSize = 256; ///< 관리자 프로토콜의 문구 상한(`AdminProtocol::kMaxTextSize`)과 같다
+
+        PROPERTY( MaxCount = kMaxReasonCodeSize )
         string _reasonCode{}; ///< 표시용 사유 코드(로컬라이제이션 키). 가장 최근 것이다
         PROPERTY()
         int64  _arrUntilMs[static_cast<int32>( ServiceSanctionKind::Count )]{}; ///< 0 = 없음

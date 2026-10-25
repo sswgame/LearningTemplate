@@ -311,6 +311,26 @@ def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
     return ", ".join(listItem)
 
 
+def resolveRangeConstantInternal(rangeText: str | None, fileText: str, typeName: str) -> str | None:
+    """`Min` · `Max` 가 C++ 상수 이름(`kMaxWorkerCount2D`, `-Limit::kMax`)이면 같은 파일의 `constexpr` 값으로 바꿉니다.
+
+    에디터가 읽는 메타데이터 JSON 의 min · max 는 숫자 글이어야 하므로 이름이 남으면 안 됩니다(생성기 `AstVisitor::resolveRangeConstants` 와 같은 규칙:
+    `_` 로 시작하는 이름은 필드). 같은 파일에서 찾지 못하면 멈춥니다 — 이름이 그대로 JSON 에 들어가면 에디터가 숫자로 읽지 못합니다.
+    """
+    if not rangeText:
+        return rangeText
+    match = re.fullmatch(r"(-?)\s*((?:\w+::)*)([A-Za-z]\w*)", rangeText.strip())
+    if match is None:
+        return rangeText
+    valueMatch = re.search(r"constexpr\s+[\w:]+\s+" + re.escape(match.group(3)) + r"\s*=\s*(-?\d+(?:\.\d+)?)f?\s*;", fileText)
+    if valueMatch is None:
+        raise ValueError(f"{typeName}: Min/Max 상수 '{rangeText}' 를 같은 파일의 constexpr 숫자 상수에서 찾지 못했습니다(문서 생성기는 다른 헤더의 상수를 풀지 못합니다 — 상수를 설정 구조체와 같은 파일에 두세요)")
+    value = valueMatch.group(1)
+    if match.group(1):
+        value = value[1:] if value.startswith("-") else "-" + value
+    return value
+
+
 def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str]) -> TypeDoc | None:
     """리플렉션 구조체 하나를 읽습니다. 반사 부모의 칸을 앞에 둡니다(`getPropertiesWithBase` 순서)."""
     found = index.mapStruct.get(name)
@@ -361,7 +381,8 @@ def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str])
         typeDoc.listField.append(FieldDoc(
             name=declMatch.group("name"), typeName=re.sub(r"\s+", " ", declMatch.group("type")).strip(),
             defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro),
-            minText=mapMeta.get("Min"), maxText=mapMeta.get("Max"), units=mapMeta.get("Units"),
+            minText=resolveRangeConstantInternal(mapMeta.get("Min"), text, name),
+            maxText=resolveRangeConstantInternal(mapMeta.get("Max"), text, name), units=mapMeta.get("Units"),
             description=description))
     return typeDoc
 

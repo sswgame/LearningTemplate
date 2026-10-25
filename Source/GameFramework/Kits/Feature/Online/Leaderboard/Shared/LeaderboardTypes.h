@@ -160,7 +160,7 @@ namespace sw
     struct LeaderboardStat
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _name{};
         PROPERTY()
         int64 _value{ 0 };
@@ -228,7 +228,7 @@ namespace sw
     struct AchievementProgress
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxIDSize )
         string _achievementID{};
         PROPERTY()
         int64 _progress{ 0 }; ///< 연결된 통계의 지금 값이다. 임계값을 넘을 수 있다

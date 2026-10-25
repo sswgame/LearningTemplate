@@ -35,6 +35,10 @@ namespace sw
         static constexpr int32 kMaxBuildTextSize      = 32;
         static constexpr int32 kMaxPlatformTextSize   = 16;
         static constexpr int32 kMaxReasonCodeSize     = 64;
+        static constexpr int32 kMaxLoginNameWireSize  = kMaxLoginNameSize * 4; ///< 요청이 싣는 이름의 상한(UTF-8 바이트)이다. 규칙 검사는 서버가 해 사유를 돌려준다
+        static constexpr int32 kMaxServerIDSize       = 32;
+        static constexpr int32 kMaxStoreURLSize       = 512;
+        static constexpr int32 kMaxProviderCount      = 32;
     };
 } // namespace sw
 
@@ -129,7 +133,7 @@ namespace sw
         LoginSessionToken _token{};
         PROPERTY( MaxCount = LoginConstant::kMaxReasonCodeSize )
         string _sanctionReasonCode{}; ///< AccountSuspended 일 때의 사유 코드이다
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = LoginConstant::kMaxStoreURLSize )
         string _storeURL{}; ///< UpdateRequired 이거나 업데이트 권장일 때 원격 설정에서 가져온 상점 주소이다
         PROPERTY()
         int64 _expiresAtMs{ 0 }; ///< 세션의 절대 시한이다
@@ -183,7 +187,7 @@ namespace sw
     struct AccountLinkSummary
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = LoginConstant::kMaxProviderCount )
         vector<AccountLinkedProvider> _listProvider{}; ///< 연동한 외부 제공자이다. 이름 순으로 정렬한다
         PROPERTY()
         int64 _deletionDueMs{ 0 }; ///< 탈퇴 예약 시각이다. 0이면 예약이 없다

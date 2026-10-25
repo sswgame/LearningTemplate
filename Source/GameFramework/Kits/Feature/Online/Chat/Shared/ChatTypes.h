@@ -14,6 +14,7 @@
 
 #include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Report/ServiceReport.h"
 #include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -64,6 +65,9 @@ namespace sw
         static constexpr int32 kReportContextCount  = 10; ///< 신고 스냅숏에 담는 메시지 수(신고한 메시지와 그 앞)이다. `ServiceReportConstant::kMaxLineCount` 이하이다
         static constexpr int32 kMaxReasonSize       = 64; ///< 신고 사유 코드의 상한이며 `ServiceReportConstant::kMaxReasonSize` 와 같다
     };
+
+    static_assert( ChatLimit::kMaxTextSize == ServiceReportConstant::kMaxLineTextSize && ChatLimit::kMaxReasonSize == ServiceReportConstant::kMaxReasonSize,
+                   "the chat text limit and the report context line limit, and the chat report reason limit and the report reason limit, are one wire value each" );
 } // namespace sw
 
 namespace sw
