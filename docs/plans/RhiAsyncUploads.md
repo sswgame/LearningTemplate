@@ -52,7 +52,7 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 
 ### 2.2 C. RHI 업로드와 되읽기: 제출 → 티켓 → 폴링
 
-`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 다섯 개로 바꿉니다. 시그니처는 U3 ~ U6 작업자가 U1 을 기다리지 않고 코딩할 수 있게 여기서 고정합니다.
+`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 여섯 개로 바꿉니다. 시그니처는 U3 ~ U6 작업자가 U1 을 기다리지 않고 코딩할 수 있게 여기서 고정합니다.
 
 | 함수 | 뜻 | 대체하는 것 |
 |---|---|---|
@@ -61,26 +61,30 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 | `submitTextureReadback( texture, mip, slice, outLayout )` | 읽기를 요청한다. 행 배치는 바로 채워 준다 | `readbackTexture2D` |
 | `pollTransfer( ticket )` | `Pending`, `Complete`, `Failed` 를 값싸게 돌려준다 | 없음 |
 | `takeTextureReadback( ticket, outBytes )` | 완료된 읽기 결과를 한 번 가져간다 | 없음 |
+| `discardTextureReadback( ticket )` | 가져가지 않을 읽기 결과를 버린다(`Pending` 이어도 된다) | 없음 |
 
-제출 함수는 `RHITransferSubmit` 을 돌려줍니다. 안에는 `RHISubmitResult`(`Accepted`, `Busy`, `Rejected`)와 `RHITransferTicket`(단조 증가하는 64비트 시리얼, 0 은 무효)이 있고 `[[nodiscard]]` 입니다.
+제출 함수는 `RHITransferSubmit` 을 돌려줍니다. 안에는 `RHISubmitResult`(`Accepted`, `Busy`, `Rejected`)와 `RHITransferTicket`(단조 증가하는 64비트 시리얼과 장치 세대, 시리얼 0 은 무효)이 있고 `[[nodiscard]]` 입니다. 티켓은 구조체라 `uint64` 를 티켓 자리에 넘기는 실수는 컴파일에서 막히지만 멤버가 공개라 값을 직접 짓는 코드까지 막지는 못합니다. 그 틈은 백엔드가 막습니다 — 시리얼 0, 다른 장치 세대, 발급한 적 없는 시리얼은 `pollTransfer` 가 오류를 남기고 `Failed` 로 돌려줍니다(`RHITransferSerials::classify`). `accepted( 0, … )` 는 Debug 단언입니다. 장치 세대(`allocateRHIDeviceGeneration`)는 백엔드 인스턴스마다 하나라 백엔드를 바꾼 뒤의 옛 티켓이 새 장치에서 `Complete` 로 보이지 않습니다.
 
-**계약**
+**계약** (정본은 `IRHIResourceFactory.h` 의 전송 절 머리말입니다)
 
 1. 제출 함수는 반환하기 전에 소스 메모리를 복사합니다. 호출자는 바로 버퍼를 재사용합니다.
-2. 제출 함수는 GPU 완료를 기다리지 않습니다. 스테이징이 모자라면 기다리지 않고 `Busy` 를 돌려주며, 호출자가 다음 프레임에 다시 제출합니다. 검사에 걸리면 `Rejected` 이고 이유를 로그로 남깁니다. `Rejected` 는 다시 시도하지 않습니다.
-3. 순서: 제출한 전송은 그 뒤에 제출되는 모든 프레임 커맨드보다 먼저 실행됩니다. 지금 DX12 가 복사 리스트를 프레임 리스트 앞에 끼우는 것과 같은 의미입니다 **[코드]**. 같은 프레임에서 이미 기록한 앞선 드로우가 어느 내용을 보는지는 백엔드마다 달라 정해져 있지 않으므로, 호출자는 업로드를 그리기 기록 전에 제출합니다. 지금 RT 가 셋업 구간에서 하는 것과 같습니다. 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행됩니다.
-4. 티켓의 `Complete` 는 "완료 워터마크 이상"으로 판정합니다. 워터마크는 연속으로 끝난 시리얼의 끝입니다. 그래서 `Complete` 를 본 뒤 같은 티켓을 다시 물어도 `Complete` 이고, 티켓을 해제하는 함수가 필요 없습니다. 큐 안에서 완료 순서가 제출 순서와 다를 수 있는 백엔드(Vulkan)는 연속 구간만 워터마크로 올립니다.
-5. `Failed` 는 장치 손실처럼 끝나지 않을 일입니다. 오류를 로그로 남기고 `Failed` 를 돌려주며 대기하지 않습니다.
-6. 스레드: `RHICapabilities::_bThreadSafeResourceCreation` 이 참인 백엔드(DX11, DX12, Vulkan)는 어느 스레드에서나 제출합니다. 거짓인 GL 은 컨텍스트를 가진 스레드(RT)에서만 제출합니다. `pollTransfer` 는 어느 스레드에서나 부를 수 있어야 합니다. GL 은 컨텍스트를 빌려서 묻습니다(`ScopedOpenGLContext`).
-7. 소비자는 `Complete` 를 본 뒤에야 텍스처를 bindless 에 등록합니다. 등록이 없으면 셰이더가 읽을 SRV 인덱스가 없으므로 "완료 전 사용"은 규칙이 아니라 구조로 막힙니다. 로드 중에 보이는 회색 텍스처는 지금처럼 정해진 데이터입니다([AsyncResourceLoading](AsyncResourceLoading.md) 2절).
+2. 제출 함수는 GPU 완료를 기다리지 않습니다. 결과는 셋입니다. `Accepted` 는 티켓이 유효합니다. `Busy` 는 **다시 시도하면 될 수 있을 때만** 씁니다(스테이징 링이나 단독 버퍼 총량이 지금 차 있지만 GPU 가 진행하면 비는 경우). 호출자가 다음 프레임에 다시 제출합니다. `Rejected` 는 다시 시도해도 안 되는 요청입니다. 검사에 걸린 것, 링이나 단독 버퍼 총량 상한보다 **큰 요청**, 장치 손실이 여기에 들고 이유를 로그로 남깁니다.
+3. 순서는 양방향입니다. 제출한 전송은 **앞서 제출된** 프레임 커맨드 뒤에 실행되고 **뒤에 제출될** 모든 프레임 커맨드 앞에 실행됩니다. 지금 DX12 가 복사 리스트를 프레임 리스트 앞에 끼우는 것과 같은 의미입니다 **[코드]**. 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행되고, 되읽기는 요청 시점까지 제출된 프레임(직전 프레임까지)의 쓰기를 봅니다. 아직 제출하지 않고 기록 중인 리스트가 어느 내용을 보는지는 백엔드마다 달라 정해져 있지 않으므로 호출자는 전송을 그리기 기록 전에 제출합니다. 지금 RT 가 셋업 구간에서 하는 것과 같습니다. **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출합니다.
+4. **스레드.** 제출 함수는 어느 스레드에서나 부를 수 있습니다. DX11, DX12, Vulkan 은 자기 락으로 직렬화합니다. GL 은 제출 함수가 `ScopedOpenGLContext` 로 컨텍스트를 빌립니다(지금 코드가 그렇고, U8 의 동기 `acquire` 가 비 RT 스레드에서 부르기 때문입니다). RT 가 컨텍스트를 쥐고 있으면 프레임 끝에 놓을 때까지 기다리므로 GL 의 비 RT 제출은 프레임 경로 밖에서만 씁니다. `pollTransfer` 도 어느 스레드에서나 부릅니다. **GL 의 `pollTransfer` 는 컨텍스트를 빌리지 않고** 원자 워터마크를 읽으며, 이미 컨텍스트를 가진 스레드일 때만 GL 에 물어 워터마크를 올립니다. 컨텍스트 없는 스레드는 컨텍스트를 가진 쪽(RT 의 `endFrame`, 제출 스레드)이 올린 워터마크를 봅니다 — 그래서 GL 의 비 RT 대기는 RT 가 프레임을 돌리는 동안 진행합니다.
+5. **시리얼과 장치 세대.** 시리얼은 큐에 낸 순서대로 같은 락 안에서 매깁니다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮습니다. 티켓에는 장치 세대가 실려 있어 백엔드를 바꾼 뒤의 옛 티켓은 새 장치에서 `Failed` 입니다.
+6. **파괴.** 전송 중인 텍스처를 파괴하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룹니다(해제 큐).
+7. **진행 보장.** 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 됩니다. 아직 GPU 에 내보내지 않은 일(DX12 의 열린 복사 리스트, GL 의 flush 안 된 명령)은 제출이나 폴링이 내보냅니다.
+8. 티켓의 `Complete` 는 "완료 워터마크 이상"으로 판정합니다. 워터마크는 연속으로 끝난 시리얼의 끝입니다. 그래서 `Complete` 를 본 뒤 같은 티켓을 다시 물어도 `Complete` 이고, 티켓을 해제하는 함수가 필요 없습니다. 큐 안에서 완료 순서가 제출 순서와 다를 수 있는 백엔드(Vulkan)는 연속 구간만 워터마크로 올립니다(`RHITransferFenceQueue` 가 앞에서부터만 올립니다).
+9. `Failed` 는 장치 손실처럼 끝나지 않을 일이거나 잘못된 티켓입니다. 오류를 로그로 남기고 `Failed` 를 돌려주며 대기하지 않습니다.
+10. **소비자는 `Complete` 를 본 뒤에야 텍스처를 bindless 에 등록합니다.** 이것을 주석이 아니라 코드로 막습니다: 백엔드 텍스처 레코드가 마지막 전송 시리얼을 들고, 등록 시 그 시리얼이 워터마크 아래가 아니면 오류를 남기고 `kInvalidDescriptorIndex` 를 돌려줍니다. 로드 중에 보이는 회색 텍스처는 지금처럼 정해진 데이터입니다([AsyncResourceLoading](AsyncResourceLoading.md) 2절).
 
-**동기 변형은 ABI 밖의 헬퍼입니다.** `RHITransferUtil::uploadTexture2DAndWait`, `uploadTexture2DRegionAndWait`, `readbackTexture2DAndWait` 를 Engine 에 둡니다(백엔드가 아니라 Engine 코드라 vtable 에 없습니다). 제출한 뒤 `pollTransfer` 를 짧게 양보하며 되풀이하고, 상한은 DX11 `waitIdle` 의 상한(10 초)과 같게 두며 넘으면 오류입니다. 사용처는 테스트, 도구, 스크린샷, 에디터 캡처, 동기 텍스처 `acquire` 입니다. RT 프레임 셋업 구간에서는 쓰지 않습니다. 백엔드에 두 번째 경로가 생기지 않는 것이 핵심입니다.
+**동기 변형은 ABI 밖의 헬퍼입니다.** `RHITransferUtil::uploadTexture2DAndWait`, `uploadTexture2DRegionAndWait`, `readbackTexture2DAndWait` 를 Engine 에 둡니다(백엔드가 아니라 Engine 코드라 vtable 에 없습니다). 제출한 뒤 `pollTransfer` 를 되풀이하고, 처음 32 번은 `yield`, 그 뒤로는 200 µs 씩 자며 기다립니다. 상한은 DX11 `waitIdle` 의 상한(10 초)과 같게 두며 넘으면 오류입니다. 시간 초과는 `RHITransferWaitResult::TimedOut` 이라 `RHITransferStatus` 의 뜻을 바꿔 쓰지 않습니다(`submitWhileBusy` 는 bool 을 돌려줍니다). 읽기가 시간 초과나 `Failed` 로 끝나면 `RHITransferUtil::PendingReadback`(읽기 티켓의 소유자, 소멸자가 `discardTextureReadback`)이 결과를 버려 백엔드의 스테이징이 새지 않습니다. 사용처는 테스트, 도구, 스크린샷, 에디터 캡처, 동기 텍스처 `acquire` 입니다. RT 프레임 셋업 구간에서는 쓰지 않으며, 그 구간을 `RHITransferUtil::ScopedForbidBlockingTransfer` 로 표시하면 `...AndWait` 가 Debug 에서 단언합니다(표시를 거는 일은 셋업 구간을 소유한 U10 의 몫 — `FrameRenderer::executePacket` 시작부터 `setParallelRecording( true )` 전까지). 백엔드에 두 번째 경로가 생기지 않는 것이 핵심입니다.
 
-**콜백이 아니라 폴링인 이유.** `enqueueGPURelease` 콜백은 완료를 확인하는 스레드에서 불립니다. bindless 등록은 RT 셋업 구간에서만 할 수 있으므로 콜백으로 받아도 결국 RT 의 큐에 넣고 다시 읽게 됩니다. 폴링은 RT 가 셋업 구간에서 직접 읽으므로 스레드 경계가 한 번 줄어듭니다. 해제용 `enqueueGPURelease` 는 그대로 둡니다.
+**콜백이 아니라 폴링인 이유.** `enqueueGPURelease` 콜백은 완료를 확인하는 스레드에서 불립니다. bindless 등록은 RT 셋업 구간에서만 할 수 있으므로 콜백으로 받아도 결국 RT 의 큐에 넣고 다시 읽게 됩니다. 폴링은 RT 가 셋업 구간에서 직접 읽으므로 스레드 경계가 한 번 줄어듭니다. 해제용 `enqueueGPURelease` 는 그대로 둡니다. **버퍼 되읽기는 반대로 콜백을 씁니다**(`createReadbackBuffer` + `readReadbackBuffer`, 결과를 읽는 쪽이 프레임 완료 시점의 콜백 안에서 곧바로 복사해 가고 bindless 등록이 없다). 기준은 두 가지입니다: 결과를 받는 쪽이 RT 셋업 구간에서 상태(bindless 인덱스)를 바꿔야 하면 티켓과 폴링, 프레임에 묶인 읽기 버퍼를 완료 콜백에서 한 번 비우면 끝나면 콜백입니다. 텍스처 업로드와 텍스처 되읽기는 앞의 경우(등록, 다음 프레임 폴링)라 티켓입니다.
 
 **ABI 결정.** `kRHIModuleAbiVersion` 을 33 에서 34 로 높이고 옛 가상 함수 세 개를 지웁니다. 백엔드 DLL 이 엔진과 같은 vtable 을 봐야 로드되므로(`RHIModuleAbi.h`) 이 변경은 한 번에 들어가야 하고 백엔드마다 쪼갤 수 없습니다. 옛 함수를 남기고 새 함수를 그 위에서 구현하는 기본 구현(shim)을 두는 안은 기각합니다. 같은 일을 하는 경로가 둘 남아 폴백 금지 원칙과 부딪히고, 호출자가 어느 쪽을 쓸지 매번 골라야 하기 때문입니다.
 
-**스테이징 링.** 장치마다 고정 용량의 영속 매핑 업로드 링을 둡니다. 구간은 티켓 시리얼로 표시하고 워터마크가 지나면 회수합니다. 기존 `SpanAllocator::freeDeferred` 를 재사용할 수 있는지는 U5 와 U6 이 판단합니다 **[확인 전]**. 시작 용량은 64 MiB 로 두고 `RHIMemoryLedger` 의 Staging 항목으로 보이게 합니다. 이 값은 측정으로 정한 것이 아니라 4096² BC7 텍스처 한 장(밉 포함 약 21 MiB)을 몇 장 동시에 담는 크기로 잡은 추정이며 M1 이 조정합니다. 링보다 큰 요청은 단독 스테이징 버퍼를 만들고 완료 뒤 해제하며, 그 총량에 상한을 둡니다. 상한을 넘으면 `Busy` 입니다.
+**스테이징 링.** 장치마다 고정 용량의 영속 매핑 업로드 링을 둡니다. 구간은 티켓 시리얼로 표시하고 워터마크가 지나면 회수합니다. 기존 `SpanAllocator::freeDeferred` 를 재사용할 수 있는지는 U5 와 U6 이 판단합니다 **[확인 전]**. 시작 용량은 64 MiB 로 두고 `RHIMemoryLedger` 의 Staging 항목으로 보이게 합니다. 이 값은 측정으로 정한 것이 아니라 4096² BC7 텍스처 한 장(밉 포함 약 21 MiB)을 몇 장 동시에 담는 크기로 잡은 추정이며 M1 이 조정합니다. 링보다 큰 요청은 단독 스테이징 버퍼를 만들고 완료 뒤 해제하며, 그 총량에 상한을 둡니다. 총량 상한이 차 있어 지금은 못 받지만 GPU 가 진행하면 비는 요청은 `Busy` 이고, **링이나 단독 버퍼 총량 상한 자체보다 큰 요청은 영원히 못 받으므로 `Rejected`** 입니다.
 
 **전송 큐.** 1단계는 지금처럼 그래픽스 큐 하나입니다. 전용 복사 큐(Vulkan 의 전송 큐 패밀리, DX12 의 COPY 큐)는 큐 소유권 이전, 레이아웃 전이, 큐 사이 동기화가 필요하고 이득은 큰 텍스처를 스트리밍하는 중의 프레임 시간뿐이라 측정 없이 하지 않습니다. 같은 큐에서는 제출 순서가 곧 실행 순서이므로 `Complete` 이전에 사용해도 GPU 는 안전합니다. 그래도 소비자 규칙을 `Complete` 로 두는 것은 나중에 전용 큐를 도입할 때 규칙을 바꾸지 않기 위해서입니다.
 
@@ -89,7 +93,7 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 | 백엔드 | 지금 | 새 계약 구현 | 난이도 |
 |---|---|---|---|
 | DX11 | `UpdateSubresource`(즉시 컨텍스트, 잠금) | 같은 호출 뒤 티켓마다 이벤트 쿼리 하나(풀). `pollTransfer` 가 `GetData` | 낮음. 호출 스레드의 드라이버 복사 비용은 그대로 |
-| GL | `ScopedOpenGLContext` 로 컨텍스트를 빌려 `glTexSubImage2D` | 같은 호출 뒤 `glFenceSync`. `pollTransfer` 는 컨텍스트를 빌려 `glClientWaitSync` | 낮음에서 중간. 워커 제출 불가, 컨텍스트 점유 경합(`GPUUploadQueue.cpp` 주석). PBO 비동기 복사는 이 계획 밖 |
+| GL | `ScopedOpenGLContext` 로 컨텍스트를 빌려 `glTexSubImage2D` | 같은 호출 뒤 `glFenceSync` 와 `glFlush`. `pollTransfer` 는 컨텍스트를 빌리지 않고 원자 워터마크를 읽으며, 컨텍스트를 이미 가진 스레드만 `glClientWaitSync( 0 )` 으로 워터마크를 올린다 | 낮음에서 중간. 비 RT 스레드의 제출은 가능하나 컨텍스트 점유 경합(`GPUUploadQueue.cpp` 주석)이 있어 프레임 경로 밖에서만. PBO 비동기 복사는 이 계획 밖 |
 | DX12 | 프레임 슬롯의 업로드 힙과 복사 리스트가 프레임 리스트 앞에 끼는 구조, 얼로케이터 펜스 대기 | 전용 업로드 링, 복사 리스트와 얼로케이터 풀, 전용 `ID3D12Fence`. 제출은 즉시 `ExecuteCommandLists` 하고 `Signal` | 중간. `_uploadSlotMutex` 가 업로드와 프레임 제출에 같이 걸려 있어 범위를 줄여야 하고, 텍스처 상태 추적 갱신과 RT 기록이 겹치는지 점검해야 한다 |
 | Vulkan | 일회성 커맨드 버퍼를 만들고 `vkQueueWaitIdle` | 업로드 링, 펜스 풀, 제출 뒤에도 살아 있는 전송 작업 객체(펜스 통과 후 회수). 시리얼과 워터마크 | 높음, 이득이 가장 큼. `VulkanOneShotCommands` 가 소멸자에서 커맨드 버퍼를 해제하는 구조를 바꾸고, 레코드의 `_layout` 갱신 시점을 정해야 한다 |
 
@@ -215,7 +219,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 |---|---|---|
 | ABI 34 를 한 번에 맞춰야 한다 | 한 백엔드가 늦으면 번들 전체가 대기 | U2 를 먼저 병합해 Vulkan 이득을 먼저 얻는다. DX11 과 GL 구현은 작다. 번들은 U6 없이 병합하지 않는다 |
 | 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | U1 병합 전에 `design-reviewer` 로 검토하고, DX12 와 Vulkan 작업자가 시그니처로 구현 가능한지 먼저 읽는다 |
-| GL 의 `pollTransfer` 와 블로킹 헬퍼가 컨텍스트 소유 스레드(RT)의 진행에 기대는 점 | 비 RT 스레드의 대기가 RT 가 오래 컨텍스트를 점유하면 시간 초과 | 컨텍스트를 빌려 묻는다. 블로킹 헬퍼의 비 RT 사용은 RT 가 도는 동안에만 허용 **[추정]** |
+| GL 의 `pollTransfer` 가 컨텍스트를 빌리지 않고 컨텍스트 소유 스레드(RT)가 올린 워터마크에 기대는 점 | RT 가 프레임을 돌리지 않으면 컨텍스트 없는 스레드의 대기는 시간 초과 | 제출이 `glFlush` 로 GPU 를 진행시키고 컨텍스트를 가진 스레드의 폴링 · 제출 · `endFrame` 이 워터마크를 올린다. 블로킹 헬퍼의 비 RT 사용은 RT 가 도는 동안에만 허용하고, 시간 초과가 틈을 오류로 드러낸다 **[추정]** |
 | Vulkan 의 완료 순서가 제출 순서와 다를 수 있다 | 워터마크가 앞서 올라가면 미완 자원을 발행 | 연속 구간만 워터마크로 올린다. 테스트(U7)가 지연된 앞 제출 위에서 확인 |
 | 스테이징 메모리 | 큰 텍스처가 몰리면 `Busy` 가 길어지거나 메모리가 튄다 | 링 용량 상수와 단독 버퍼 총량 상한, 장부 표시, M1 이 조정 |
 | DX12 `_uploadSlotMutex` 범위 | 새 제출이 RT 프레임 제출을 막을 수 있음 | U5 가 락 범위를 줄이고 텍스처 상태 추적과의 겹침을 점검 |

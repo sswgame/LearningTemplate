@@ -785,9 +785,11 @@ namespace sw
      */
     enum class RHISubmitResult : uint8
     {
-        Rejected = 0, ///< 검사에 걸렸다(포맷, 범위, 데이터 크기, 잘못된 핸들). 이유는 로그에 있다. 다시 시도하지 않는다.
+        /// 검사에 걸렸거나 이 요청은 어떤 상황에서도 받을 수 없다(포맷, 범위, 데이터 크기, 잘못된 핸들, 스테이징 링과 단독 버퍼 총량 상한보다 큰 요청, 장치 손실). 이유는 로그에 있다. 다시 시도하지 않는다.
+        Rejected = 0,
         Accepted = 1, ///< 받았다. 소스 메모리는 이미 복사됐다. 티켓이 유효하다.
-        Busy     = 2, ///< 스테이징이 모자란다. 기다리지 않고 돌아왔으니 호출자가 다음 프레임에 다시 제출한다. 티켓은 무효다.
+                      /// 지금은 스테이징이 모자라지만 GPU 가 진행하면 받을 수 있다. 기다리지 않고 돌아왔으니 호출자가 다음 프레임에 다시 제출한다. 티켓은 무효다. 다시 시도해도 영원히 안 되는 요청은 `Rejected` 다.
+        Busy = 2,
     };
 
     /**
@@ -796,24 +798,37 @@ namespace sw
      */
     enum class RHITransferStatus : uint8
     {
-        Pending  = 0, ///< GPU 가 아직 끝내지 않았다.
+        Pending  = 0, ///< GPU 가 아직 끝내지 않았다. 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 된다.
         Complete = 1, ///< 끝났다. 같은 티켓을 다시 물어도 Complete 다(완료 워터마크 이상으로 판정한다).
-        Failed   = 2, ///< 장치 손실처럼 끝나지 않을 일이다. 오류는 이미 로그에 남았고 대기하지 않는다. 무효 티켓도 Failed 다.
+        Failed   = 2, ///< 장치 손실처럼 끝나지 않을 일이다. 오류는 이미 로그에 남았고 대기하지 않는다. 무효 티켓, 다른 장치 세대의 티켓, 발급한 적 없는 시리얼도 Failed 다.
     };
 
     /**
+     * @brief 장치(백엔드 인스턴스) 하나에 붙이는 세대 번호를 새로 발급합니다. 0 이 아니고 호출마다 커집니다.
+     * @details 백엔드가 만들어질 때 한 번 받아 자기가 발급하는 모든 티켓에 싣는다(`RHITransferTicket::_deviceGeneration`). 백엔드를 바꾸면 새 장치의 세대가 달라서
+     *          옛 장치의 티켓이 새 장치에서 `Complete` 로 보이지 않는다. 어느 스레드에서나 부를 수 있다.
+     */
+    [[nodiscard]] SW_API uint32 allocateRHIDeviceGeneration();
+
+    /**
      * @struct RHITransferTicket
-     * @brief 제출한 전송 하나를 가리키는 단조 증가 시리얼입니다. 0 은 무효입니다.
-     * @details 정수 별칭이 아니라 구조체라서 임의의 숫자를 티켓으로 넘길 수 없다. 해제 함수가 없다 — 완료 워터마크가 시리얼을 덮는다.
+     * @brief 제출한 전송 하나를 가리키는 단조 증가 시리얼과, 그것을 발급한 장치의 세대입니다. 시리얼 0 은 무효입니다.
+     * @details 정수 별칭이 아니라 구조체라서 `uint64` 를 티켓 자리에 실수로 넘기는 일은 컴파일에서 막힌다. 멤버가 공개라 값을 직접 짓는 코드까지 막지는 못한다 — 그 틈은
+     *          백엔드가 막는다: 시리얼 0, 다른 세대, 발급한 적 없는 시리얼은 `pollTransfer` 가 오류를 남기고 `Failed` 로 돌려준다(`RHITransferSerials::classify`).
+     *          해제 함수가 없다 — 완료 워터마크가 시리얼을 덮는다. 읽기 티켓의 결과는 `takeTextureReadback` 으로 가져가거나 `discardTextureReadback` 으로 버린다.
      */
     struct RHITransferTicket
     {
-        uint64 _serial{ 0 }; ///< 0 이면 무효
+        uint64 _serial{ 0 };           ///< 0 이면 무효
+        uint32 _deviceGeneration{ 0 }; ///< 발급한 장치의 세대(`allocateRHIDeviceGeneration`). 장치가 바뀐 뒤의 옛 티켓을 가려낸다.
 
         /** @brief 제출이 받아들여져 발급된 티켓이면 true 입니다. */
         [[nodiscard]] constexpr bool isValid() const noexcept { return _serial != 0; }
-        friend constexpr bool        operator==( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept { return lhs._serial == rhs._serial; }
-        friend constexpr bool        operator!=( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept { return lhs._serial != rhs._serial; }
+        friend constexpr bool        operator==( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept
+        {
+            return lhs._serial == rhs._serial && lhs._deviceGeneration == rhs._deviceGeneration;
+        }
+        friend constexpr bool operator!=( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept { return ( lhs == rhs ) == false; }
     };
 
     /**
@@ -829,8 +844,17 @@ namespace sw
         /** @brief 받아들여졌고 티켓이 유효하면 true 입니다. */
         [[nodiscard]] constexpr bool isAccepted() const noexcept { return _result == RHISubmitResult::Accepted && _ticket.isValid(); }
 
-        /** @brief 받아들인 제출을 만듭니다. 시리얼이 0 이면 무효 티켓이라 받아들였다고 할 수 없으므로 부르는 쪽(백엔드)이 0 을 넘기지 않는다. */
-        [[nodiscard]] static constexpr RHITransferSubmit accepted( uint64 serial ) noexcept { return RHITransferSubmit{ RHISubmitResult::Accepted, RHITransferTicket{ serial } }; }
+        /**
+         * @brief 받아들인 제출을 만듭니다. 시리얼 0 은 무효 티켓이라 받아들였다고 할 수 없다 — 백엔드가 0 을 넘기면 Debug 에서 단언이 걸린다.
+         * @param deviceGeneration 발급한 장치의 세대입니다(`allocateRHIDeviceGeneration` 이 준 값, 0 이 아니다).
+         */
+        [[nodiscard]] static RHITransferSubmit accepted( uint64 serial, uint32 deviceGeneration ) noexcept
+        {
+            SW_ASSERT( serial != 0 && deviceGeneration != 0 );
+            return RHITransferSubmit{
+                RHISubmitResult::Accepted, RHITransferTicket{ serial, deviceGeneration }
+            };
+        }
         /** @brief 스테이징이 모자라 받지 못한 결과입니다. */
         [[nodiscard]] static constexpr RHITransferSubmit busy() noexcept { return RHITransferSubmit{ RHISubmitResult::Busy, RHITransferTicket{} }; }
         /** @brief 검사에 걸려 거절한 결과입니다. */
