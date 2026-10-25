@@ -176,6 +176,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
   - 텍스처 구간 갱신(`TextureCache::flushRegionUpdates`, `Texture2D::writeCPUBytes`): 등록된 텍스처라 제출만 합니다. `Busy` 가 나면 그 차례의 나머지를 다음 프레임으로 미루고(순서 유지), `Rejected` 는 오류를 남기고 버립니다.
   - 두 함수의 제출 구간은 `ScopedForbidBlockingTransfer` 로 표시해 `...AndWait` 가 다시 들어오면 Debug 단언이 걸립니다. 셋업 구간 전체의 표시는 그 구간을 소유한 U10 의 몫입니다.
   - 남은 대기는 새 텍스처 업로드(`completePendingLoads` · `updateStreaming` · 동기 `acquire`, 프레임당 상한 있음, U8)와 `RenderThread` 렌더 타깃 읽기(요청이 있을 때만, U9)입니다. Vulkan 은 U6 전까지 제출 안에서 펜스를 기다립니다.
+  - 측정(2026-10-25 통합 M, Release, GPU 독점, 전 = B0 만 든 main `ab3b917cb` · 후 = 이 두 비동기화, 번갈아 3 판 중앙값): 새 한글 음절 400 개를 띄우는 판(`-lang=ko -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -gv_profileFrames=600`)에서 `RT.Canvas.Upload` 최악이 DX12 62.9 → 4.2 ms, DX11 93.8 → 1.8 ms, GL 62.5 → 1.0 ms, 프레임 벽시계가 DX12 10.9 → 3.4 ms, DX11 12.5 → 3.4 ms, GL 11.9 → 4.1 ms 로 줄었다(전은 `RT.Canvas.Upload` p99 가 46 ~ 75 ms — 예산으로 나눈 글리프 프레임마다 왕복을 기다렸다). Vulkan 은 5.4 ms 그대로(U6). 글리프가 이미 찬 정적 화면(`-gv_uiDemo=1`, 5 판)과 `perf-compare uiPaintOrder`(바이너리 A/B, 5 판)는 네 백엔드 모두 퍼짐 안이고, `uidemo.scenario.xml` 스크린샷은 전후 픽셀이 같다.
 
 **파일 소유(겹치지 않게).** `Source/Engine/Graphics/RHI/` 아래의 폴더는 하나의 작업자만 맡습니다.
 
@@ -232,7 +233,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 |---|---|---|
 | ABI 34 를 한 번에 맞춰야 한다 | 한 백엔드가 늦으면 번들 전체가 대기 | 번들 B0 가 네 백엔드와 호출처를 한 번에 담는다. Vulkan 은 임시 구현(U6 가 비동기로 바꾼다)이라 B0 는 U6 없이 병합한다. DX11 과 GL 구현은 작다 |
 | 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | `design-reviewer` 검토 결과(단계 1 의 `discardTextureReadback`, 장치 세대, 대기 결과 분리)를 B0 안에서 ABI 34 에 반영했다. B0 병합 뒤의 시그니처 변경은 ABI 를 다시 높인다 |
-| B0 의 프레임 경로 호출처가 `...AndWait` 로 GPU 를 기다린다 | DX11, DX12, GL 에서 로드가 많은 프레임이 느려진다(UI 예제에서 사용자가 확인) | 글리프 아틀라스와 구간 갱신은 제출 → 이후 프레임 폴링으로 바꿨다(`rhi-transfer-u9-canvas-gpu`). 새 텍스처 업로드(U8)와 렌더 타깃 읽기(U9)가 남았다. 측정 질문 2, 4(`rhi-transfer-b0-measure`)가 크기를 본다 |
+| B0 의 프레임 경로 호출처가 `...AndWait` 로 GPU 를 기다린다 | DX11, DX12, GL 에서 로드가 많은 프레임이 느려진다(UI 예제에서 사용자가 확인) | 글리프 아틀라스와 구간 갱신은 제출 → 이후 프레임 폴링으로 바꿨다(`rhi-transfer-u9-canvas-gpu` 통과, 새 글리프가 몰리는 프레임의 최악이 DX11 · DX12 · GL 에서 60 ~ 90 ms → 1 ~ 4 ms — 위 "B0 의 구현 수준과 알려진 비용"). 새 텍스처 업로드(U8)와 렌더 타깃 읽기(U9)가 남았다. 측정 질문 2, 4(`rhi-transfer-b0-measure`)가 크기를 본다 |
 | 새 아틀라스 페이지가 첫 업로드 완료 뒤 프레임부터 그려진다 | 페이지가 새로 생긴 프레임에 그 페이지의 글자가 한두 프레임 빠진다(DX12 는 프레임 지연만큼) | 페이지는 처음 글자와 아틀라스가 넘칠 때만 생긴다. 등록 전 구간은 쌓아 두었다가 등록한 프레임에 낸다. 같은 큐라 등록 뒤의 구간 갱신은 다음 프레임 커맨드 앞에 실행된다(계약 3) — 전용 복사 큐를 들이면 등록된 페이지의 구간 갱신도 다시 정해야 한다 |
 | DX12 폴링이 `_uploadSlotMutex` 를 잡고 열린 복사 리스트를 내보낸다 | 프레임 제출과 같은 락이라 폴링이 잦으면 RT 제출과 겨룸 | 폴링은 아직 내보내지 않은 시리얼일 때만 락을 잡는다. U5 가 락 범위를 줄인다 |
 | GL 의 `pollTransfer` 가 컨텍스트를 빌리지 않고 컨텍스트 소유 스레드(RT)가 올린 워터마크에 기대는 점 | RT 가 프레임을 돌리지 않으면 컨텍스트 없는 스레드의 대기는 시간 초과 | 제출이 `glFlush` 로 GPU 를 진행시키고 컨텍스트를 가진 스레드의 폴링 · 제출 · `endFrame` 이 워터마크를 올린다. 블로킹 헬퍼의 비 RT 사용은 RT 가 도는 동안에만 허용하고, 시간 초과가 틈을 오류로 드러낸다 **[추정]** |

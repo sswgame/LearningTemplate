@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: main 은 통합 K 까지 push 했고, 그 위에 통합 L(브랜치 24 개 + RHI 전송 B0 — 문서 분할, EditorCore, 설정 소유, 캐시 계약, 태스크 대기, 애니메이션 성분 평가)을 검증해 넣었으며 **push 하지 않았다**(사용자 확인 대기, `## 0000000000`). 남은 것은 push 뒤 CI, GPU 확인(`## 000000` 목록 + B0 의 테스트 없는 경로 + `hostgpu` 격리), 아키텍처 이음매 5a 측정이다.
+> 결론: main 은 통합 K 까지 push 했고, 그 위에 통합 L(브랜치 24 개 + RHI 전송 B0)과 통합 M(CI 실패 수정 · 창 핸들 try 접근 `cifixl4`, 글리프 아틀라스 · 구간 갱신 비동기화 `rhiu9`)을 검증해 넣었으며 **push 하지 않았다**(사용자 확인 대기, `## 000000000000` · `## 0000000000`). 남은 것은 push 뒤 CI(리눅스 — 통합 M 의 Wayland · 클립보드 · TSan 포함), GPU 확인(`## 000000` 목록 + B0 의 테스트 없는 경로 + `hostgpu` 격리), 아키텍처 이음매 5a 측정이다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,7 +16,20 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 00000000000. 2026-10-25 아키텍처 이음매 0 단계 — 빌드 · 기동 기준선을 다시 쟀다(문서만, push 안 함) (이것부터 읽는다)
+## 000000000000. 2026-10-25 통합 M — `cifixl4`(CI 실패 수정 + 창 핸들 try 접근)와 `rhiu9`(프레임 경로 전송 대기 제거)가 main 에 들어감(push 안 함) (이것부터 읽는다)
+
+**상태**: `D:/w/integ-m` 에서 `wt/cifixl4`(사슬 cifixl → cifixl4) → `wt/rhiu9` 순으로 병합해 main 에 fast-forward 로 넣었다. **push 하지 않았다**(사용자 확인 대기). 충돌은 `Roadmap.md` 한 줄뿐이었고(양쪽을 합침), 두 브랜치가 커밋 메시지에만 남긴 결정은 [5-3](../decisions/5-3_CorePlatform.md)(창 핸들은 `try...` 로만) · [5-5](../decisions/5-5_GraphicsRHI.md)(프레임 경로 전송은 티켓 + `pollTransfer`)에 옮겼다. 컴파일 오류 0(`-k 0`) — 지시서가 꼽은 위험(`RHISwapChainDesc` 리플렉션 구조체 안의 `[[nodiscard]]` 멤버, `WGL_WindowData`, `const RHITransferSubmit`, `string_view` 인자)은 모두 통과했다. 통합이 고친 것: `uidemo.scenario.xml` 의 임시 문턱을 측정값(`all:0.1710`)으로 옮겨 종료 14(UNCONFIRMED)가 0 이 됐다.
+
+**검증**: Debug `integ-gate`(`-k 0` 경고 0 + `nogpu|lint` 119/119) + `race` 5/5. Shipping `full-build` 경고 0 + `nogpu` 65/65 + `hostgpu` 9/9(QaGoldenImages 건너뜀). Shipping-Server `full-build` 경고 0 + `nogpu` 67/67. Release(`SW_GAMES=ALL`) 네 백엔드 모두 PASS · Warning/Error 0: Empty `shippingframe`, Shooter3D `actions`, NileCity `control`, 에디터 `editor.addcomponent`(`-EnableEditor`), `engine.uidemo`. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(DPI 케이스가 새 `tryGetViewportWin32Handle` 을 지남) 통과. `verify-batch` 의 `rhi-transfer-u9-canvas-gpu` 통과 — 매니페스트 끝남.
+
+**UI 예제 전후**(전 = main `ab3b917cb`, 후 = 통합 M, Release, GPU 독점, 번갈아 잼): 새 글리프가 몰리는 판(한글 음절 400 개)에서 `RT.Canvas.Upload` 최악 DX12 62.9 → 4.2 ms · DX11 93.8 → 1.8 ms · GL 62.5 → 1.0 ms, 프레임 벽시계 DX12 10.9 → 3.4 · DX11 12.5 → 3.4 · GL 11.9 → 4.1 ms. Vulkan 은 5.4 ms 그대로(U6 전까지 제출 안에서 펜스 대기). 글리프가 이미 찬 정적 `-gv_uiDemo` 화면과 `perf-compare uiPaintOrder` 는 퍼짐 안. `uidemo` 스크린샷은 네 백엔드 모두 전후 픽셀이 같다. 자세한 값은 [RhiAsyncUploads](RhiAsyncUploads.md) "B0 의 구현 수준과 알려진 비용".
+
+**리눅스는 로컬에서 돌리지 않았다 — push 뒤 CI 로 본다**: Wayland 스모크 종료 코드 0(`X11DevConsoleWindow` SIGSEGV), `TestWindow` INCR 클립보드, `TestX11DevConsole`(CI 에 `xfonts-base`), `CI-Debug-TSAN` 의 DXC 경쟁(compileDxc 직렬화), 리눅스 컴파일(`X11Window.h` 의 `#if` 재배치, `X11MacroUndef.h` 뒤 `IWindow.h` include 순서, `WaylandWindow` 보호 구역, GLX 뷰포트 훅).
+
+**남은 위험**: 새 아틀라스 페이지는 첫 업로드가 끝난 다음 프레임부터 그려진다(DX12 는 프레임 지연만큼). 에디터 보조 뷰포트(창 밖으로 뺀 패널)의 GL · Vulkan Win32 경로는 시나리오가 지나지 않는다 — 핸들이 없으면 오류를 남기고 그 뷰포트를 만들지 않는 쪽으로 바뀌었다. 남은 프레임 경로 대기는 새 텍스처 업로드(U8)와 렌더 타깃 읽기(U9), Vulkan 제출 안의 펜스(U6)다.
+
+**같은 결함 가능성**: `...AndWait` 를 프레임 경로에서 부르는 곳은 이제 두 함수만 Debug 단언으로 막혀 있다 — 셋업 구간 전체의 `ScopedForbidBlockingTransfer` 는 U10 몫이라 그 전까지 다른 호출처(`completePendingLoads` · `updateStreaming` · 동기 `acquire`)가 같은 왕복을 남긴다. 창 핸들 쪽은 `void*` 를 내주는 다른 접근자(`getNativeDevice` 같은 RHI 쪽)가 같은 모양인지 아직 보지 않았다.
+## 00000000000. 2026-10-25 아키텍처 이음매 0 단계 — 빌드 · 기동 기준선을 다시 쟀다(문서만, push 안 함) (위 절 다음에 읽는다)
 
 **상태**: main `eb2a1fa59` 를 새 워크트리 `arch0` 에서 빌드 칸 독점으로 쟀다(워크트리 · 브랜치는 지웠다). 표는 [08 검증](../08_Verification.md) "아키텍처 이음매 0 단계 기준선". Debug 콜드 풀 빌드 266.5 s(Lean 236.3 s), `.cpp` 증분 2.4 ~ 13.9 s, `FrameRenderer.h` 증분 18.5 s · 27 TU, Dev 기동 중앙값 5.3 s(`ModuleTypes` 2.1 s).
 
@@ -28,7 +41,7 @@
 
 **상태**: `arch1x` → `arch2c` → `fixl` → `fixn` → `arch2a` → `fixp` → `fixi` → `fixk` → `fixq` → `fixj` → `fixo` → `fixt` → `arch3` → `fixv` → `fixw` → `fixu`(+`packed`) → `fixx` → (`fixm` · `fixr` 는 `fixw` 로 이미 들어옴) → `cachec` → `fixs` → `anim1` → `anim2` → `rhiasync2`(+`rhiasync`, 맨 마지막) 순서로 `D:/w/integ-l` 에서 병합해 main 에 fast-forward 로 넣었다. **push 하지 않았다**(사용자 확인 대기). 병합한 워크트리 · 브랜치(`dup31` 포함)는 지웠다. 커밋 메시지가 정본이다.
 
-**CI(실행 `40160506131`, 통합 K)의 남은 실패 둘** — Wayland 의 `TestWindow.cpp:385` INCR 클립보드 · `TestX11DevConsole.cpp:33` X 글꼴, TSan 의 `EngineTest` data race — 은 다른 작업자가 별도 워크트리(`cifixl`)에서 보고 있다. 통합 L 은 건드리지 않았다.
+**CI(실행 `40160506131`, 통합 K)의 남은 실패 둘** — Wayland 의 `TestWindow.cpp:385` INCR 클립보드 · `TestX11DevConsole.cpp:33` X 글꼴, TSan 의 `EngineTest` data race — 은 통합 M(`cifixl4`)에서 고쳐 들어갔다(리눅스 확인은 push 뒤 CI).
 
 **병합 충돌과 푼 방법**: `Test/EngineTest/CMakeLists.txt`(fixl 의 `sw_getEditorExtensionModelSources` + fixp 의 서버 전용 `ImageUtil.cpp`), `CheckMutableStatics.toml`(fixi 가 지운 줄, 옮긴 테스트 경로 하나), `docs/09_Decisions.md`(분할본을 두고 arch3 의 결정은 [5-4](../decisions/5-4_DataConfig.md), cachec 는 [5-3](../decisions/5-3_CorePlatform.md)), `ArchitectureSeams.md`(양쪽), `README.md`(StatusBoard 로 옮긴 쪽 + `status-board --write`), `Test/EditorUITest/CMakeLists.txt`(fixx 쪽, Platform glob 은 `Source/Editor` 가 선언), `Roadmap.md`(rhiasync2 쪽). 커밋 메시지에만 있던 결정(fixn 불리언 인자, 테스트 소스 목록의 주인, 자기 태스크만 기다림 · 시간 제한 abort, EditorCore 폴더 규칙)은 영역 파일 5-2 · 5-3 · 5-11 끝에 한 항목씩 적었다.
 
@@ -40,7 +53,7 @@
 
 **병렬로 띄울 묶음(작업자 여섯 안팎, 파일 소유가 겹치지 않게 — 빌드하지 않고 커밋만)**: B. `Core_objects` 가 `ReflectionParser.exe` 에도 링크돼 Core `.cpp` 하나에 코드젠 64 개가 다시 도는 문제. C. 비동기 로드 `raw this` use-after-free(`RenderPipelineAsset` · `RenderPassAsset::loadFromXMLFileAsync`) + `AsyncFileIO::waitIdle` 워커 교착. D. uint64 해시 단독 키(`ResourcePakReader::_mapEntry`, `GPUMaterialRegistry`, `RenderPSOCache::_mapMaterialPSO`, `GPUSceneBuilder::_mapShaderRepresentative`, `ShaderBindingLayout::_mapKeyToIndex`)와 `UIAnimatedProperty` · `ReflectionInvoke` · `PropertyRoleUtil` 의 `kint8..kfloat64` 위치 가정을 `getBuiltinClass` 로. E. 3.2 래퍼 걷기. F. [RhiAsyncUploads](RhiAsyncUploads.md) U5 · U6 · U7 · U8 · U9 · U11(소유 폴더가 다르다, GPU 확인은 통합). G. `ArchitectureSeams.md` 6 절의 다음 단위(`GameConfig::getActive()` 전달 창구 지우기). H. [Roadmap](Roadmap.md) 의 `[병렬 가능]` 항목.
 
-**동작 변화 · 남은 위험**: fixn — `overlay.show <바> 2` 거절, `profile.trace 1|0|true|false` 수용. fixj — `SceneAudio._emitter` 순회 순서가 보존되지 않음. fixw — 종료 대기 10 · 30 초 뒤 `std::abort()`(Debug `race` 는 통과, 느린 콜백 · TSan 오탐은 CI TSan 에서 본다). fixr — `describeFirstUnfinished` 는 진단 근사. B0 — DX11 · DX12 · GL 프레임 경로에 GPU 왕복이 새로 생겼다(U8 · U9 전까지), `ScopedForbidBlockingTransfer` 는 설치 안 함(U10). 회전 스냅 설정이 라디안이 됐다 — 사용자 `Saved/Editor` 의 옛 도 값(15)은 범위(최대 90°) 밖이라 읽기에서 거절된다. `IRHIDevice.cpp:317` 의 `equals( pSoftwareEnv, "1" )` 손 비교는 `tryParseBool` 로.
+**동작 변화 · 남은 위험**: fixn — `overlay.show <바> 2` 거절, `profile.trace 1|0|true|false` 수용. fixj — `SceneAudio._emitter` 순회 순서가 보존되지 않음. fixw — 종료 대기 10 · 30 초 뒤 `std::abort()`(Debug `race` 는 통과, 느린 콜백 · TSan 오탐은 CI TSan 에서 본다). fixr — `describeFirstUnfinished` 는 진단 근사. B0 — DX11 · DX12 · GL 프레임 경로에 GPU 왕복이 새로 생겼다(글리프 아틀라스 · 구간 갱신은 통합 M 이 걷었고 새 텍스처 업로드 U8 · 렌더 타깃 읽기 U9 가 남음), `ScopedForbidBlockingTransfer` 는 그 두 함수에만 설치(셋업 구간 전체는 U10). 회전 스냅 설정이 라디안이 됐다 — 사용자 `Saved/Editor` 의 옛 도 값(15)은 범위(최대 90°) 밖이라 읽기에서 거절된다. `IRHIDevice.cpp:317` 의 `equals( pSoftwareEnv, "1" )` 손 비교는 `tryParseBool` 로.
 
 **아직 고치지 않은 같은 결함 후보**: `SkeletalAnimatorComponent.cpp:778` `_listRootMotionModifier` contains + push_back, `whenAny` 숨은 간선(`SmallTaskThroughput` 으로 분기 비용 먼저), `TextMeasureCache` 문맥 해시 2^-64 잔여, `GPUUploadQueue` · `AsyncFileIO` · `JoltJobSystem` · `NavTileRebaker` · `MaterialXML` 의 자체 대기 경로, `EditorViewportPreview::applyMaterial` 의 `ensureMeta` 동기 비용, `readNumberList` 를 거치지 않는 다른 숫자 목록 읽기, B0 의 `D3D12RHIDevice::_fenceValue` 락 없는 읽기(U5) · GL `_frameSerial` · DX11 · GL bindless 중복 등록. 정적 등록을 세는 테스트가 무엇이 링크됐는지에 기대는 모양(이번 둘은 고쳤다 — 커맨드 · 패널 레지스트리 테스트는 통과).
 

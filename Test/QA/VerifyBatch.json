@@ -911,10 +911,10 @@
       "source": "docs/plans/RhiAsyncUploads.md 3절 측정", "result_doc": "docs/plans/RhiAsyncUploads.md 3절"
     },
     {
-      "id": "rhi-transfer-u9-canvas-gpu", "title": "글리프 아틀라스 · 텍스처 구간 갱신이 프레임 안에서 기다리지 않아도 글자가 나온다(새 페이지는 첫 업로드 완료 뒤 프레임, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 40,
+      "id": "rhi-transfer-u9-canvas-gpu", "title": "글리프 아틀라스 · 텍스처 구간 갱신이 프레임 안에서 기다리지 않아도 글자가 나온다(새 페이지는 첫 업로드 완료 뒤 프레임, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 40,
       "filter": "RenderPassGPUTest.CanvasDrawsOnEveryBackend,AppUITest.DemoScreenMatchesAcrossBackends,AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"],
       "source": "docs/plans/RhiAsyncUploads.md U8 · U9", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",
-      "note": "로그에 'Glyph atlas page ... not drawn' · 'rejected by the RHI' 오류가 없어야 한다. 느려졌다는 보고의 확인은 App.exe -scenario=engine/automation/uidemo.scenario.xml 을 -dx12 · -dx11 · -gl · -vulkan 으로 B0 만 든 빌드(wt/integ-l)와 이 브랜치에서 돌려 RT.Canvas.Upload 와 프레임 시간을 눈으로 견준다(Vulkan 은 U6 전까지 제출 안에서 펜스를 기다린다)."
+      "note": "로그에 'Glyph atlas page ... not drawn' · 'rejected by the RHI' 오류가 없어야 한다. 전후 비교(새 글리프가 몰리는 프레임의 RT.Canvas.Upload 최악 · 프레임 시간, uidemo 스크린샷)는 2026-10-25 통합 M 에서 재어 result_doc 에 적었다 — 다시 잴 때는 -lang=ko -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -gv_profileFrames=600 을 -dx12 · -dx11 · -gl · -vk 로 두 바이너리에서 번갈아 돌린다."
     },
     {
       "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
