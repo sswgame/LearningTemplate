@@ -12,36 +12,39 @@ namespace sw
     public:
         explicit OpenGLRHIResourceFactory( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice } {}
-        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) override;
-        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = {} ) override;
-        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
-        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
-        void                   destroyRenderPass( RHIRenderPassHandle pass ) override;
-        RHIBufferHandle        createConstantBuffer( uint32 size ) override;
-        void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle        createBuffer( const RHIBufferDesc& desc ) override;
-        RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
-        void                   updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
-        void                   destroyBuffer( RHIBufferHandle buffer ) override;
-        RHIBufferHandle        createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
-        [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
-        RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
-        void                   destroyTexture( RHITextureHandle texture ) override;
-        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
-        [[nodiscard]] bool     uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
-        bool                   readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) override;
-        RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
-        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
-        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
-        void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        RHIPipelineStateHandle          createPipelineState( const RHIPipelineStateDesc& desc ) override;
+        RHIPipelineStateHandle          createComputePipelineState( string_view shaderPath, string_view entryPoint = {} ) override;
+        void                            destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        RHIRenderPassHandle             createRenderPass( const RHIRenderPassDesc& desc ) override;
+        void                            destroyRenderPass( RHIRenderPassHandle pass ) override;
+        RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
+        void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle                 createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+        void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle                 createBuffer( const RHIBufferDesc& desc ) override;
+        RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        void                            updateVertexBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
+        void                            destroyBuffer( RHIBufferHandle buffer ) override;
+        RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
+        [[nodiscard]] bool              readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
+        RHITextureHandle                createTexture2D( const RHITextureDesc& desc ) override;
+        void                            destroyTexture( RHITextureHandle texture ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
+        [[nodiscard]] RHITransferStatus pollTransfer( RHITransferTicket ticket ) override;
+        [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
+        void                            discardTextureReadback( RHITransferTicket ticket ) override;
+        RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
+        RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 프로그램을 링크하고, 실패하면 로그와 함께 지웁니다. 그래픽스와 컴퓨트가 같은 경로를 씁니다. */
