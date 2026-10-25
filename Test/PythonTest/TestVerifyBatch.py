@@ -275,6 +275,7 @@ class TimelineTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "timeline.log"
             with mock.patch.dict("os.environ", {kTimelineEnvName: str(path)}):
+                os.environ.pop(kTimelineItemEnvName, None)   # verify-batch 항목 안에서 돌면 바깥 항목 id 가 물려 온다 — 항목 없음(`-`)을 본다
                 completed = runHeadlessTask(Path(sys.executable), ["-c", "import sys; print('out'); print('err', file=sys.stderr)"], bCapture=True)
             self.assertEqual((0, "out", "err"), (completed.returncode, completed.stdout.strip(), completed.stderr.strip()))
             listLine = path.read_text(encoding="utf-8").splitlines()

@@ -155,14 +155,18 @@ namespace test
                 for ( size_t index = 0; index < listPath.size(); ++index )
                 {
                     const sw::string reportPath = makeStageReportPath( outputBase, index + 1 );
-                    const sw::string result     = AppTestUtil::readReportScalar( reportPath, "result" );
-                    const bool       bHeld      = result == "PASS" || result == "UNCONFIRMED" || result == "SKIP";
+                    // 돌지 못한 단계는 보고가 없다 — 없는 파일을 읽으면 FileUtil 이 Error 를 남기므로 먼저 본다.
+                    const bool       bReported = sw::FileUtil::exists( reportPath );
+                    const sw::string result    = bReported ? AppTestUtil::readReportScalar( reportPath, "result" ) : sw::string{};
+                    const bool       bHeld     = result == "PASS" || result == "UNCONFIRMED" || result == "SKIP";
                     if ( bHeld )
                         continue;
                     ++notPassedCount;
                     text += "  stage " + sw::to_string( static_cast<uint32>( index + 1 ) ) + "/" + sw::to_string( static_cast<uint32>( listPath.size() ) ) + " " + listPath[index] + ": ";
-                    text += result.empty() ? sw::string( "NOT RUN (no report)" ) : result + " (exit " + AppTestUtil::readReportScalar( reportPath, "exitCode" ) + ")";
+                    text += bReported == false ? sw::string( "NOT RUN (no report)" ) : result + " (exit " + AppTestUtil::readReportScalar( reportPath, "exitCode" ) + ")";
                     text += "\n";
+                    if ( bReported == false )
+                        continue;
                     for ( const utf8* pKey : { "failures", "unhandledLogs" } )
                     {
                         for ( const sw::string& line : AppTestUtil::readReportStrings( reportPath, pKey ) )
@@ -425,13 +429,19 @@ namespace test
         if ( result._bLaunched && ( result._bTimedOut || result._exitCode != 0 ) )
         {
             // 보고에 적힌 실패 이유와 처리하지 않은 로그 줄 — 로그 파일을 열지 않고도 무엇이 졌는지 보이게 한다. 체인은 단계(시나리오)별로 나열한다.
+            // 체인은 단계마다 보고(`<base>.<단계>.json`)를 쓰고 `<base>.json` 은 없다 — 없는 파일을 읽으면 FileUtil 이 Error 를 남겨 호스트 스위트 케이스가 진다.
             if ( listStagePath.size() > 1 )
-                detail += AppTestUtilInternal::describeChainStages( outputBase, listStagePath );
-            for ( const utf8* pKey : { "failures", "unhandledLogs" } )
             {
-                for ( const sw::string& line : readReportStrings( outputBase + ".json", pKey ) )
+                detail += AppTestUtilInternal::describeChainStages( outputBase, listStagePath );
+            }
+            else
+            {
+                for ( const utf8* pKey : { "failures", "unhandledLogs" } )
                 {
-                    detail += sw::string( "report " ) + pKey + ": " + line + "\n";
+                    for ( const sw::string& line : readReportStrings( outputBase + ".json", pKey ) )
+                    {
+                        detail += sw::string( "report " ) + pKey + ": " + line + "\n";
+                    }
                 }
             }
         }
