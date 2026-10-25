@@ -192,31 +192,35 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 4u, static_cast<uint32>( config.getRules().size() ) );
 
         // 1. Splash matching
-        TextureImportRule splashRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "editor/textures_raw/splash.png", splashRule ) );
+        const TextureImportRuleMatch splashRuleMatch = config.findMatchingRule( "editor/textures_raw/splash.png" );
+        SW_ASSERT_TRUE( splashRuleMatch._bMatched );
+        const TextureImportRule& splashRule = splashRuleMatch._rule;
         SW_EXPECT_EQUAL( string( "Editor_Splash" ), splashRule._name );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::B8G8R8A8 ), static_cast<uint8>( splashRule._format ) );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( splashRule._swizzle ) );
         SW_EXPECT_EQUAL( SW_FALSE, splashRule._bGenerateMips );
 
         // 2. Normal map matching
-        TextureImportRule normalRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_n.png", normalRule ) );
+        const TextureImportRuleMatch normalRuleMatch = config.findMatchingRule( "characters/hero_n.png" );
+        SW_ASSERT_TRUE( normalRuleMatch._bMatched );
+        const TextureImportRule& normalRule = normalRuleMatch._rule;
         SW_EXPECT_EQUAL( string( "Normal_Maps" ), normalRule._name );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::BC5 ), static_cast<uint8>( normalRule._format ) );
         SW_EXPECT_EQUAL( SW_TRUE, normalRule._bInvertGreen );
         SW_EXPECT_EQUAL( SW_FALSE, normalRule._bSrgb );
 
         // 3. Normal map preview exclusion (falls back to Fallback_Default)
-        TextureImportRule previewRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_preview_n.png", previewRule ) );
+        const TextureImportRuleMatch previewRuleMatch = config.findMatchingRule( "characters/hero_preview_n.png" );
+        SW_ASSERT_TRUE( previewRuleMatch._bMatched );
+        const TextureImportRule& previewRule = previewRuleMatch._rule;
         SW_EXPECT_EQUAL( string( "Fallback_Default" ), previewRule._name );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::BC7 ), static_cast<uint8>( previewRule._format ) );
         SW_EXPECT_EQUAL( SW_TRUE, previewRule._bSrgb );
 
         // 4. UI path matching
-        TextureImportRule uiRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "ui/hud/crosshair.png", uiRule ) );
+        const TextureImportRuleMatch uiRuleMatch = config.findMatchingRule( "ui/hud/crosshair.png" );
+        SW_ASSERT_TRUE( uiRuleMatch._bMatched );
+        const TextureImportRule& uiRule = uiRuleMatch._rule;
         SW_EXPECT_EQUAL( string( "UI_Textures" ), uiRule._name );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureImportFormat::B8G8R8A8 ), static_cast<uint8>( uiRule._format ) );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( uiRule._swizzle ) );
@@ -521,10 +525,10 @@ namespace sw::editor
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] 중간의 조건 없는 규칙은 뒤 규칙을 가린다 — 로드는 되고, 진단이 그 자리를 짚는다
-     * @details 매칭은 "첫 승" 이라 무엇에나 맞는 규칙이 중간에 있으면 그 뒤 규칙은 절대 선택되지 않는다. 형식은 맞으니 오류가 아니라 경고다.
+     * @brief [EditorTexturePipelineTest] 중간의 조건 없는 규칙은 로드 오류다 — 나머지를 받는 규칙은 맨 끝에 하나만 둔다
+     * @details 규칙의 순서는 뜻이 없다(한 원본에 조건 있는 규칙이 둘 맞으면 오류). 조건 없는 규칙이 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 설정째 거절하고, 그 자리를 진단이 짚는다.
      */
-    SW_TEST_CASE( EditorTexturePipelineTest, MidListCatchAllRuleShadowingIsReported )
+    SW_TEST_CASE( EditorTexturePipelineTest, MidListCatchAllRuleIsALoadError )
     {
         const sw::string_view kJSON = R"({
             "rules": [
@@ -536,14 +540,89 @@ namespace sw::editor
 
         test::ScopedLogSuppressor suppressor;
         TextureImportConfig       config;
-        SW_ASSERT_TRUE( config.loadFromJSONString( kJSON ) );
-        SW_ASSERT_EQUAL( size_t( 3 ), config.getRules().size() );
-        SW_EXPECT_TRUE( TextureImportConfig::isCatchAllRule( config.getRules()[1] ) );
-        SW_EXPECT_EQUAL( size_t( 1 ), config.findShadowingRuleIndex() );
+        SW_EXPECT_FALSE( config.loadFromJSONString( kJSON ) );
+        SW_EXPECT_TRUE( config.getRules().empty() );
+    }
 
-        TextureImportRule matched;
-        SW_ASSERT_TRUE( config.findMatchingRule( "ui/button.png", matched ) );
-        SW_EXPECT_EQUAL( sw::string( "Catch_All" ), matched._name );
+    /**
+     * @brief [EditorTexturePipelineTest] 한 원본에 조건 있는 규칙이 둘 이상 맞으면 순서로 고르지 않고 오류다 — 나머지 규칙은 겹침에서 빠지고, `exclude_patterns` 로 풀면 맞는다
+     * @details 패턴은 경로 마디 단위다: `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, OverlappingRulesAreAnErrorNotFirstWins )
+    {
+        const sw::string normal = R"({ "name": "Normal_Maps", "include_patterns": ["*_n.*"] })";
+        const sw::string ui     = R"({ "name": "UI_Textures", "include_paths": ["ui/"] })";
+        const sw::string uiFix  = R"({ "name": "UI_Textures", "include_paths": ["ui/"], "exclude_patterns": ["*_n.*"] })";
+        const sw::string rest   = R"({ "name": "Fallback_Default" })";
+
+        for ( const bool bNormalFirst : { true, false } )
+        {
+            TextureImportConfig config;
+            const sw::string    json = "{ \"rules\": [ " + ( bNormalFirst ? normal + ", " + ui : ui + ", " + normal ) + ", " + rest + " ] }";
+            SW_ASSERT_TRUE( config.loadFromJSONString( json ) );
+            const TextureImportRuleMatch clash = config.findMatchingRule( "ui/kenney/arrow_n.png" );
+            SW_EXPECT_TRUE( clash.hasError() );
+            SW_EXPECT_TRUE( clash._error.find( "'Normal_Maps'" ) != sw::string::npos );
+            SW_EXPECT_TRUE( clash._error.find( "'UI_Textures'" ) != sw::string::npos );
+            SW_EXPECT_EQUAL( sw::string( "UI_Textures" ), config.findMatchingRule( "ui/kenney/arrow.png" )._rule._name );
+            SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), config.findMatchingRule( "characters/hero_n.png" )._rule._name );
+            // 나머지 규칙(조건 없음)은 겹침으로 세지 않고, 조건 있는 규칙이 하나도 맞지 않을 때만 받는다.
+            SW_EXPECT_EQUAL( sw::string( "Fallback_Default" ), config.findMatchingRule( "characters/hero.png" )._rule._name );
+        }
+
+        TextureImportConfig fixedConfig;
+        SW_ASSERT_TRUE( fixedConfig.loadFromJSONString( "{ \"rules\": [ " + normal + ", " + uiFix + ", " + rest + " ] }" ) );
+        const TextureImportRuleMatch fixedMatch = fixedConfig.findMatchingRule( "ui/kenney/arrow_n.png" );
+        SW_EXPECT_FALSE( fixedMatch.hasError() );
+        SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), fixedMatch._rule._name );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 패턴은 경로 마디 단위다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘으며, `/` 없는 패턴은 파일 이름에만 맞는다
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, RulePatternsMatchPathSegments )
+    {
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromJSONString( R"({ "rules": [
+            { "name": "Flat", "include_patterns": ["*/textures_raw/flat/*"] },
+            { "name": "Deep", "include_patterns": ["**/textures_raw/deep/**"] },
+            { "name": "Name", "include_patterns": ["*_mask.*"] }
+        ] })" ) );
+
+        SW_EXPECT_EQUAL( sw::string( "Flat" ), config.findMatchingRule( "engine/textures_raw/flat/a.png" )._rule._name );
+        SW_EXPECT_FALSE( config.findMatchingRule( "engine/textures_raw/flat/sub/a.png" )._bMatched ); // `*` 는 폴더를 넘지 않는다
+        SW_EXPECT_EQUAL( sw::string( "Deep" ), config.findMatchingRule( "game/empty/textures_raw/deep/x/y/a.png" )._rule._name );
+        SW_EXPECT_EQUAL( sw::string( "Deep" ), config.findMatchingRule( "textures_raw/deep/a.png" )._rule._name ); // `**` 는 0 개 이상의 마디
+        SW_EXPECT_EQUAL( sw::string( "Name" ), config.findMatchingRule( "any/dir/Hero_MASK.png" )._rule._name );   // 대소문자 무시, 파일 이름에만
+        SW_EXPECT_FALSE( config.findMatchingRule( "any/dir_mask.x/hero.png" )._bMatched );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 저장소의 모든 텍스처 원본은 조건 있는 규칙 하나에만 맞는다(나머지 규칙은 겹침에서 뺀다)
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, RepositoryRawTexturesMatchAtMostOneRule )
+    {
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Loaded );
+
+        const sw::string       root = FileUtil::normalizeSeparators( sw::ResourcePaths::getRootFolderPath() );
+        sw::vector<sw::string> listFile;
+        SW_ASSERT_TRUE( FileUtil::collectFiles( root, "", listFile, true ) );
+        size_t textureCount = 0;
+        for ( const sw::string& file : listFile )
+        {
+            const sw::string path = FileUtil::normalizeSeparators( file );
+            if ( path.size() <= root.size() + 1 || path.find( "/textures_raw/" ) == sw::string::npos )
+                continue;
+            if ( FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ) == false )
+                continue;
+            const sw::string             resourcePath = sw::string( sw::string_view( path ).substr( root.size() + 1 ) );
+            const TextureImportRuleMatch match        = config.findMatchingRule( resourcePath );
+            SW_EXPECT_FALSE_MSG( match.hasError(), match._error.c_str() );
+            ++textureCount;
+        }
+        SW_EXPECT_TRUE( textureCount > 0 );
     }
 
     /**
@@ -570,12 +649,14 @@ namespace sw::editor
         SW_EXPECT_EQUAL( config.getRules().size(), config.findShadowingRuleIndex() );
 
         // 앞 규칙은 살아 있고, 걸리지 않는 것은 폴백으로 간다 — 이것이 의도된 쓰임이다.
-        TextureImportRule normalRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_n.png", normalRule ) );
+        const TextureImportRuleMatch normalRuleMatch = config.findMatchingRule( "characters/hero_n.png" );
+        SW_ASSERT_TRUE( normalRuleMatch._bMatched );
+        const TextureImportRule& normalRule = normalRuleMatch._rule;
         SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), normalRule._name );
 
-        TextureImportRule otherRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_albedo.png", otherRule ) );
+        const TextureImportRuleMatch otherRuleMatch = config.findMatchingRule( "characters/hero_albedo.png" );
+        SW_ASSERT_TRUE( otherRuleMatch._bMatched );
+        const TextureImportRule& otherRule = otherRuleMatch._rule;
         SW_EXPECT_EQUAL( sw::string( "Fallback_Default" ), otherRule._name );
     }
 

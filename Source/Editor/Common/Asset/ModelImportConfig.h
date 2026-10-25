@@ -109,9 +109,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 모델 규칙 선택의 결과입니다(`ModelImportConfig::findMatchingRule`). */
+    using ModelImportRuleMatch = AssetImportRuleMatch<ModelImportRule>;
+
     /**
      * @class ModelImportConfig
-     * @brief ModelImportConfig.json 의 `rules` 배열을 읽습니다. 첫 매칭이 이깁니다.
+     * @brief ModelImportConfig.json 의 `rules` 배열을 읽습니다. 한 원본에는 규칙이 하나만 맞아야 하고(순서는 뜻이 없다), 둘 이상 맞으면 오류입니다.
      */
     class ModelImportConfig
     {
@@ -125,8 +128,11 @@ namespace sw::editor
         /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 `recenter` 값, 숫자 세 개가 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
-        /** @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 처음으로 맞는 규칙을 반환합니다. 없으면 기본 규칙입니다. */
-        ModelImportRule findMatchingRule( string_view relativePath ) const;
+        /**
+         * @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 맞는 규칙을 반환합니다. 맞는 규칙이 없으면 기본 규칙(`_bMatched` 거짓)입니다.
+         * @details 규칙 둘 이상이 맞으면 순서로 고르지 않고 `_error` 를 채웁니다. 호출부는 오류를 전해야 합니다(`[[nodiscard]]`).
+         */
+        [[nodiscard]] ModelImportRuleMatch findMatchingRule( string_view relativePath ) const;
 
         const vector<ModelImportRule>& getRules() const { return _listRule; }
 

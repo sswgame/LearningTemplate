@@ -394,7 +394,10 @@ namespace sw::editor
             string      makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
             uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
             {
-                return TextureImporter::computeSourceHash( sourcePath, findRule( resourcePath ) );
+                TextureImportRule rule;
+                if ( findRule( resourcePath, rule ) == false )
+                    return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
+                return TextureImporter::computeSourceHash( sourcePath, rule );
             }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
             {
@@ -403,17 +406,24 @@ namespace sw::editor
             }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
-                return TextureImporter::importTexture( sourcePath, importedPath, findRule( resourcePath ), nullptr, _pTaskManager );
+                TextureImportRule rule;
+                if ( findRule( resourcePath, rule ) == false )
+                    return false;
+                return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
 
         private:
-            /** @brief 리소스 루트 기준 경로에 맞는 규칙을 반환합니다. 없으면 기본 규칙입니다. */
-            TextureImportRule findRule( string_view resourcePath ) const
+            /** @brief 리소스 루트 기준 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
+            [[nodiscard]] bool findRule( string_view resourcePath, TextureImportRule& outRule ) const
             {
-                TextureImportRule rule;
-                if ( _config.findMatchingRule( resourcePath, rule ) == false )
-                    rule = TextureImportRule{};
-                return rule;
+                TextureImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                if ( match.hasError() )
+                {
+                    SW_LOG_ERROR( "%#", match._error.c_str() );
+                    return false;
+                }
+                outRule = std::move( match._rule );
+                return true;
             }
 
             const TextureImportConfig& _config;

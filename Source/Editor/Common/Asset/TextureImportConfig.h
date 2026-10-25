@@ -105,9 +105,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 텍스처 규칙 선택의 결과입니다(`TextureImportConfig::findMatchingRule`). */
+    using TextureImportRuleMatch = AssetImportRuleMatch<TextureImportRule>;
+
     /**
      * @class TextureImportConfig
-     * @brief TextureImportConfig.json 을 읽고 프리셋 상속과 패턴 매칭을 담당합니다.
+     * @brief TextureImportConfig.json 을 읽고 프리셋 상속과 패턴 매칭을 담당합니다. 한 원본에는 조건 있는 규칙이 하나만 맞아야 합니다.
      */
     class TextureImportConfig
     {
@@ -122,10 +125,11 @@ namespace sw::editor
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
         /**
-         * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.png")에 처음으로 일치하는 규칙을 찾습니다.
-         * @return 일치하는 규칙을 찾으면 true 입니다.
+         * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.png")에 맞는 규칙을 찾습니다.
+         * @details 조건 있는 규칙은 하나만 맞아야 하고 둘 이상 맞으면 `_error` 를 채웁니다(순서로 고르지 않는다). 조건 있는 규칙이 하나도 맞지 않으면
+         *          조건 없는 규칙(나머지 규칙)이 받고, 그것도 없으면 `_bMatched` 가 거짓이며 기본 규칙입니다.
          */
-        bool findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const;
+        [[nodiscard]] TextureImportRuleMatch findMatchingRule( string_view relativePath ) const;
 
         /** @brief 등록된 프리셋 맵을 반환합니다. */
         const map<string, TextureImportRule>& getPresets() const { return _mapPreset; }
@@ -141,14 +145,10 @@ namespace sw::editor
         static bool isCatchAllRule( const TextureImportRule& rule );
 
         /**
-         * @brief 뒤의 규칙을 모두 가리는 규칙의 인덱스입니다. 없으면 `getRules().size()` 입니다.
+         * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 `getRules().size()` 입니다.
          *
-         * @details `findMatchingRule` 은 첫 매칭이 이기는 방식이다. 그래서 무엇에나 매칭되는 규칙이 목록 중간에 있으면
-         *          그 뒤의 규칙은 절대 선택되지 않는다. 설정을 적은 사람은 규칙을 적어 두었는데 아무 일도 일어나지
-         *          않으니, 조용한 실패다.
-         *
-         *          맨 끝의 캐치올은 정상이고 흔한 쓰임이다(`Fallback_Default`). 그래서 "비어 있다" 만 보지 않고
-         *          "비어 있는데 뒤에 규칙이 더 있다" 를 본다.
+         * @details 조건 없는 규칙은 나머지를 받는 규칙(`Fallback_Default`)이라 맨 끝에 하나만 둡니다. 맨 끝의 캐치올은 정상이고 흔한 쓰임이라
+         *          "비어 있다" 만 보지 않고 "비어 있는데 뒤에 규칙이 더 있다" 를 봅니다. 로드는 이 자리가 있으면 오류로 멈춥니다.
          */
         size_t findShadowingRuleIndex() const;
 

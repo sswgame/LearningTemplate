@@ -47,7 +47,7 @@
     {
       "name": "Pixel_Art",
       "inherits": "Base_Uncompressed",
-      "include_patterns": ["*/textures_raw/pixel/*"],
+      "include_patterns": ["*/textures_raw/pixel/**"],
       "generate_mips": false
     },
     {
@@ -72,7 +72,8 @@
     {
       "name": "UI_Textures",
       "inherits": "Base_UI",
-      "include_paths": ["ui/", "gui/", "icons/"]
+      "include_paths": ["ui/", "gui/", "icons/"],
+      "exclude_patterns": ["*_n.*", "*_normal.*", "*_norm.*"]
     },
     {
       "name": "Palette_Textures",
@@ -100,7 +101,7 @@
     {
       "name": "Vrm_Character_Textures",
       "inherits": "Base_Default",
-      "include_patterns": ["*/textures_raw/avatarsample_d/*"],
+      "include_patterns": ["**/textures_raw/avatarsample_d/**"],
       "format": "BC3_UNORM"
     },
     {

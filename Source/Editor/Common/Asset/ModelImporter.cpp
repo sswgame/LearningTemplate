@@ -642,7 +642,10 @@ namespace sw::editor
             string      makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
             uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
             {
-                return ModelImporter::computeSourceHash( sourcePath, _config.findMatchingRule( resourcePath ) );
+                ModelImportRule rule;
+                if ( findRule( resourcePath, rule ) == false )
+                    return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
+                return ModelImporter::computeSourceHash( sourcePath, rule );
             }
             uint64      computeImportedHash( string_view importedPath ) const override { return ModelImporter::computeImportedHash( importedPath ); }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
@@ -651,13 +654,33 @@ namespace sw::editor
                 return nullptr;
             }
             /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface` 가 `MeshCache` 로 읽는다)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
-            bool               hasOrderDependency( string_view resourcePath ) const override { return _config.findMatchingRule( resourcePath )._bodySurface.empty() == false; }
+            bool hasOrderDependency( string_view resourcePath ) const override
+            {
+                const ModelImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                return match.hasError() == false && match._rule._bodySurface.empty() == false; // 겹침 오류는 importSource 가 전한다
+            }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
-                return ModelImporter::importModel( sourcePath, _config.findMatchingRule( resourcePath ), importedPath );
+                ModelImportRule rule;
+                if ( findRule( resourcePath, rule ) == false )
+                    return false;
+                return ModelImporter::importModel( sourcePath, rule, importedPath );
             }
 
         private:
+            /** @brief 리소스 경로에 맞는 규칙을 @p outRule 에 담습니다. 규칙이 겹치면 오류를 남기고 false 입니다. 맞는 규칙이 없으면 기본 규칙이고 true 입니다. */
+            [[nodiscard]] bool findRule( string_view resourcePath, ModelImportRule& outRule ) const
+            {
+                ModelImportRuleMatch match = _config.findMatchingRule( resourcePath );
+                if ( match.hasError() )
+                {
+                    SW_LOG_ERROR( "%#", match._error.c_str() );
+                    return false;
+                }
+                outRule = std::move( match._rule );
+                return true;
+            }
+
             const ModelImportConfig& _config;
         };
     } // namespace
