@@ -9,6 +9,7 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Service/OnlineDrainGate.h"
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -36,8 +37,15 @@ namespace sw
         /** @brief 등록한 업적마다 진행률입니다. 숨긴 업적은 달성 전에 가려져 옵니다. */
         uint64 requestAchievementProgress( const ReplyDelegate& onReply );
 
-        /** @brief 쌓인 업적 달성 알림을 꺼냅니다. */
-        void drainAchievementUnlocks( vector<AchievementState>& outListAchievement ) { _unlockBuffer.drainTo( outListAchievement ); }
+        /** @brief 업적 달성 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
+        [[nodiscard]] bool claimAchievementUnlocks( OnlineDrainLease& outLease ) { return _unlockGate.claim( outLease ); }
+        /** @brief 쌓인 업적 달성 알림을 꺼냅니다. @p lease 는 `claimAchievementUnlocks` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
+        void drainAchievementUnlocks( const OnlineDrainLease& lease, vector<AchievementState>& outListAchievement )
+        {
+            SW_ASSERT( _unlockGate.isHeldBy( lease ) );
+            if ( _unlockGate.isHeldBy( lease ) )
+                _unlockBuffer.drainTo( outListAchievement );
+        }
 
         // IOnlineClientService
         const OnlineProtocolEntry& getProtocol() const override { return LeaderboardProtocol::kOnlineEntry; }
@@ -46,6 +54,7 @@ namespace sw
     private:
         uint64 send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply );
 
+        OnlineDrainGate               _unlockGate;
         EventBuffer<AchievementState> _unlockBuffer;
     };
 } // namespace sw

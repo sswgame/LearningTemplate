@@ -111,6 +111,9 @@ namespace sw
         LeaderboardClient          _leaderboardClient;
         MatchmakingClient          _matchmakingClient;
         LiveOpsClient              _liveOpsClient;
+        OnlineDrainLease           _chatLease;
+        OnlineDrainLease           _socialLease;
+        OnlineDrainLease           _matchmakingLease;
         GameRandom                 _random;
         vector<Frame>              _listFrame;
         vector<AccountClientReply> _listAccountReply;

@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Service/OnlineDrainGate.h"
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -49,8 +50,15 @@ namespace sw
         const vector<MailView>& getMails() const { return _listMail; }
         int32                   countUnread() const;
         uint32                  getRevision() const { return _revision; }
-        /** @brief 받은 새 우편 알림을 @p outListNewMail 끝에 넘깁니다. */
-        void drainNewMail( vector<MailboxNewMail>& outListNewMail ) { _newMailBuffer.drainTo( outListNewMail ); }
+        /** @brief 새 우편 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
+        [[nodiscard]] bool claimNewMail( OnlineDrainLease& outLease ) { return _newMailGate.claim( outLease ); }
+        /** @brief 받은 새 우편 알림을 @p outListNewMail 끝에 넘깁니다. @p lease 는 `claimNewMail` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
+        void drainNewMail( const OnlineDrainLease& lease, vector<MailboxNewMail>& outListNewMail )
+        {
+            SW_ASSERT( _newMailGate.isHeldBy( lease ) );
+            if ( _newMailGate.isHeldBy( lease ) )
+                _newMailBuffer.drainTo( outListNewMail );
+        }
 
         // IOnlineClientService
         const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
@@ -61,6 +69,7 @@ namespace sw
         void   onCallSucceeded( const Call& call, const MailboxReply& reply ) override;
 
         vector<MailView>            _listMail;
+        OnlineDrainGate             _newMailGate;
         EventBuffer<MailboxNewMail> _newMailBuffer;
         uint32                      _revision;
     };

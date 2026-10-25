@@ -83,7 +83,9 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     leaderboard.start( server );
 
-    LeaderboardClient       leaderboardClient;
+    LeaderboardClient leaderboardClient;
+    OnlineDrainLease  unlockLease;
+    SW_ASSERT_TRUE( leaderboardClient.claimAchievementUnlocks( unlockLease ) );
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &leaderboardClient } );
     leaderboardClient.initialize( &clients.getClient( clientIndex ) );
@@ -127,7 +129,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 60, 0 );
     test::updateAll( { &server }, clients, 60 );
     vector<AchievementState> listUnlock;
-    leaderboardClient.drainAchievementUnlocks( listUnlock );
+    leaderboardClient.drainAchievementUnlocks( unlockLease, listUnlock );
     SW_ASSERT_EQUAL( listUnlock.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( listUnlock[0]._achievementID.c_str(), "first_win" );
     (void)leaderboardClient.requestAchievements( recorder.makeDelegate() );

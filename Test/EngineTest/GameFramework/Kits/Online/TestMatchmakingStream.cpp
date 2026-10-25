@@ -92,8 +92,12 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     registration.setState( ServerState::Open );
     registration.update( 0 );
 
-    MatchmakingClient       clientA;
-    MatchmakingClient       clientB;
+    MatchmakingClient clientA;
+    MatchmakingClient clientB;
+    OnlineDrainLease  leaseA;
+    OnlineDrainLease  leaseB;
+    SW_ASSERT_TRUE( clientA.claimNotifications( leaseA ) );
+    SW_ASSERT_TRUE( clientB.claimNotifications( leaseB ) );
     test::OnlineTestClients clients( network );
     const int32             indexA = clients.connect( server._port, { &clientA } );
     const int32             indexB = clients.connect( server._port, { &clientB } );
@@ -121,7 +125,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     (void)clientA.inviteToParty( 2, recorderA.makeDelegate() );
     test::updateAll( { &server }, clients, 0 );
     vector<PartyInvite> listInvite;
-    clientB.drainInvites( listInvite );
+    clientB.drainInvites( leaseB, listInvite );
     SW_ASSERT_EQUAL( listInvite.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listInvite[0]._partyID, partyID );
     SW_EXPECT_EQUAL( listInvite[0]._inviterID, AccountID( 1 ) );
@@ -163,8 +167,8 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     test::updateAll( { &server }, clients, 1000 );
     vector<MatchAssignment> listMatchA;
     vector<MatchAssignment> listMatchB;
-    clientA.drainMatchResults( listMatchA );
-    clientB.drainMatchResults( listMatchB );
+    clientA.drainMatchResults( leaseA, listMatchA );
+    clientB.drainMatchResults( leaseB, listMatchB );
     SW_ASSERT_EQUAL( listMatchA.size(), size_t( 1 ) );
     SW_ASSERT_EQUAL( listMatchB.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listMatchA[0]._outcome == MatchQueueOutcome::Found );
