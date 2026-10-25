@@ -1010,11 +1010,24 @@ static float Bindless::sampleShadowComparison( uint index, float2 uv, float dept
     #endif // !SW_STAGE_COMPUTE
 
     #if defined( SW_STAGE_COMPUTE )
-// 컴퓨트 RW 텍스처 고정 슬롯 u4..u7 — 엔진이 bindComputeUav( index, SW_SLOT_COMPUTE_TEXUAV0 + 서수 ) 로 건다. index = 서수.
-SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot0, SW_SLOT_COMPUTE_TEXUAV0, SW_GL_IMAGE_UNIT0 );
-SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot1, SW_SLOT_COMPUTE_TEXUAV1, SW_GL_IMAGE_UNIT1 );
-SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot2, SW_SLOT_COMPUTE_TEXUAV2, SW_GL_IMAGE_UNIT2 );
-SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot3, SW_SLOT_COMPUTE_TEXUAV3, SW_GL_IMAGE_UNIT3 );
+        // 컴퓨트 RW 텍스처 고정 슬롯 u4..u7 — 엔진이 bindComputeUav( index, SW_SLOT_COMPUTE_TEXUAV0 + 서수 ) 로 건다. index = 서수.
+        // GL 은 슬롯마다 묶는 텍스처의 포맷을 셰이더가 정한다(common.hlsli 의 SW_DECLARE_RW_TEXTURE2D). 포함하기 전에 SW_RW_SLOT<n>_GL_FORMAT 을 정의하지 않으면 rgba32f 다.
+        #if !defined( SW_RW_SLOT0_GL_FORMAT )
+            #define SW_RW_SLOT0_GL_FORMAT "rgba32f"
+        #endif
+        #if !defined( SW_RW_SLOT1_GL_FORMAT )
+            #define SW_RW_SLOT1_GL_FORMAT "rgba32f"
+        #endif
+        #if !defined( SW_RW_SLOT2_GL_FORMAT )
+            #define SW_RW_SLOT2_GL_FORMAT "rgba32f"
+        #endif
+        #if !defined( SW_RW_SLOT3_GL_FORMAT )
+            #define SW_RW_SLOT3_GL_FORMAT "rgba32f"
+        #endif
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot0, SW_SLOT_COMPUTE_TEXUAV0, SW_GL_IMAGE_UNIT0, SW_RW_SLOT0_GL_FORMAT );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot1, SW_SLOT_COMPUTE_TEXUAV1, SW_GL_IMAGE_UNIT1, SW_RW_SLOT1_GL_FORMAT );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot2, SW_SLOT_COMPUTE_TEXUAV2, SW_GL_IMAGE_UNIT2, SW_RW_SLOT2_GL_FORMAT );
+SW_DECLARE_RW_TEXTURE2D( g_SwRWSlot3, SW_SLOT_COMPUTE_TEXUAV3, SW_GL_IMAGE_UNIT3, SW_RW_SLOT3_GL_FORMAT );
 static void Bindless::storeRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
     if ( index == 0 )

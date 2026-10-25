@@ -1,3 +1,4 @@
+#define SW_RW_SLOT0_GL_FORMAT "r32f" // 슬롯 0 은 R32F 깊이 히스토리다 — GL 은 묶은 포맷과 선언 포맷이 같아야 읽는다
 #include "binding.hlsli"
 #include "lightdata.hlsli"
 #include "vfxsimulate.hlsli"

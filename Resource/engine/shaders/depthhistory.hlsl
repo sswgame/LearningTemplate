@@ -26,9 +26,27 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID )
     return output;
 }
 
+#if defined( OPENGL )
+// GL 의 장면 깊이는 행이 아래부터다(0 행이 화면 아래). 읽는 쪽(vfxsimulate · occlusiontiles)은 D3D 처럼 0 행이 화면 위라고 보고 텍셀을 구하므로
+// 여기서 원본의 행을 뒤집어 히스토리를 D3D 순서로 만든다(GL 에서만 깊이 충돌이 안 닿던 결함 — 입자가 바닥 아래로 떨어져 빛이 사라졌다).
+int findSourceRow( int row )
+{
+    uint sourceWidth;
+    uint sourceHeight;
+    g_SwSlot0.GetDimensions( sourceWidth, sourceHeight );
+    return int( sourceHeight ) - 1 - row;
+}
+#else
+int findSourceRow( int row )
+{
+    return row;
+}
+#endif
+
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    const int3 texel = int3( int2( input._position.xy ), 0 );
+    int3 texel = int3( int2( input._position.xy ), 0 );
+    texel.y    = findSourceRow( texel.y );
 #if defined( SW_NATIVE_BINDLESS )
     const float depth = g_SwBindlessTex2D[NonUniformResourceIndex( Bindless::textureSlot( SW_ROOT( g_DepthHistorySource ) ) )].Load( texel ).r;
 #else

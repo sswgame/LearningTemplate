@@ -3,6 +3,7 @@
 // 스레드 하나가 타일 하나를 맡아 타일의 텍셀을 모두 읽는다(16 x 16 = 256 번). 화면 끝의 남는 타일은 깊이 안쪽 텍셀만 본다.
 // 깊이 히스토리는 RW 텍스처로 읽는다 — 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 못 읽는다(vfxsimulate.hlsl 의 깊이 충돌과 같다).
 // C++: FrameRenderer::recordOcclusionTiles — 깊이 히스토리를 옮긴 직후, 컬링 앞의 컴퓨트 프리패스.
+#define SW_RW_SLOT0_GL_FORMAT "r32f" // 슬롯 0 은 R32F 깊이 히스토리다 — GL 은 묶은 포맷과 선언 포맷이 같아야 읽는다
 #include "binding.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN

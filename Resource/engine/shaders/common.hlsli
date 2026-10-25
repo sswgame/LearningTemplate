@@ -62,11 +62,14 @@
 
 // 컴퓨트 RW 텍스처 슬롯(DX11/GL 에뮬 전용 — binding.hlsli 가 쓴다). GL 은 이미지 유닛이 SSBO 와 다른 이름공간이라
 // 명시 binding(SW_GL_IMAGE_UNIT0 + 서수)을 적는다 — -fvk-u-shift 가 붙으면 유닛 20 같은 값이 나와 GL 한계(8)를 넘는다.
+// GL 의 이미지 유닛은 묶은 텍스처 포맷과 셰이더의 `layout(포맷)` 이 **같아야** 읽는다 — 다르면 imageLoad 가 0 을 준다(R32F 깊이 히스토리를 rgba32f 로
+// 선언한 vfxsimulate · occlusiontiles 가 GL 에서만 깊이를 못 읽던 결함). 그래서 슬롯 선언이 포맷을 받고, 셰이더가 binding.hlsli 를 포함하기 전에
+// `SW_RW_SLOT0_GL_FORMAT "r32f"` 처럼 슬롯별로 정한다(기본 rgba32f). GL 밖은 이 인자를 쓰지 않는다.
 #if defined( OPENGL )
-    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
-        [[vk::binding( glUnit, 0 )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
+    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
+        [[vk::binding( glUnit, 0 )]] [[vk::image_format( glFormat )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
 #else
-    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit ) \
+    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
         RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
 #endif
 

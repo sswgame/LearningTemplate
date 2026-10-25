@@ -28,8 +28,12 @@ namespace sw
         template <typename TConfig>
         [[nodiscard]] static string describeRangeErrors( const TConfig& config )
         {
+            // 타입 레지스트리가 없는 프로세스(엔진 서비스를 세우지 않는 도구)에서는 타입을 못 찾는다. 역참조로 죽지 말고 거절 사유로 돌려 받는 쪽이 이유를 남기고 멈추게 한다.
+            const TypeInfo* const pType = TConfig::StaticType();
+            if ( pType == nullptr )
+                return string( "the reflection type is not registered in this process (no engine type registry), so the ranges cannot be checked" );
             vector<string> listError;
-            SerializerUtil::collectRangeErrors( *TConfig::StaticType(), ObjectAddress{ &config }, string(), listError );
+            SerializerUtil::collectRangeErrors( *pType, ObjectAddress{ &config }, string(), listError );
             string joined;
             for ( const string& rangeError : listError )
             {
