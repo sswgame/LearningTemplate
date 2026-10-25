@@ -37,13 +37,11 @@ namespace sw::editor
         void syncExtensionRegistrations();
 
         /**
-         * @brief (옮기는 중인 옛 창구) 활성 에디터 컨텍스트입니다. 없으면 nullptr 입니다. 호출처를 모두 옮기면 지웁니다.
-         * @details 컨텍스트는 자기 범위에 자신을 등록하므로 서비스 창구가 그대로 찾는다. **컨텍스트가 있어야 도는 곳**(그리기 · 패널 · 팝업 · 메뉴 · 명령 · 셀프테스트)은
-         *          `editor::getSubsystem<EditorContext>()`(참조, 부재면 모든 구성에서 오류 로그 후 멈춤)를 쓴다 — 그곳의 널 확인은 결함을 조용히 건너뛴다.
-         *          **없는 채로 계속하는 정상 경로가 있는 곳**(종료 · 해제 뒤의 정리, 컨텍스트 없이 도는 테스트가 부르는 함수, 탐침)은 `editor::findSubsystem<EditorContext>()` 다.
+         * @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 되고, `editor::findSubsystem<T>()` 가 거기서 찾습니다.
+         * @details 컨텍스트 자신도 이 창구로 찾는다(컨텍스트가 자기 범위에 자신을 등록한다). 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 명령)은
+         *          `editor::getSubsystem<EditorContext>()`(참조, 부재면 모든 구성에서 오류 로그 후 멈춤), 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트 · 탐침)는
+         *          `editor::findSubsystem<EditorContext>()` 다. 옛 `EditorContext::get()` 은 지웠다(결정 5-11).
          */
-        static EditorContext* get();
-        /** @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 되고, `editor::findSubsystem<T>()` 가 거기서 찾습니다. */
         static void setActive( EditorContext* pContext );
 
         /**
