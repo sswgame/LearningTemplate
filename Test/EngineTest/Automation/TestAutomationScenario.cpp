@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationRunner.h"
@@ -740,7 +741,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
             input.endFrame();
         }
         SW_EXPECT_TRUE( result == sw::AutomationOutcome::UnhandledLog );
-        SW_EXPECT_EQUAL( 15, static_cast<int32>( result ) );
+        SW_EXPECT_EQUAL( 15, sw::getAutomationExitCode( result ) );
         SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnhandledLogs().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( sw::AutomationLogPolicy::kAllowListPath ) != sw::string::npos, runner.getFinishReason().c_str() );
     }

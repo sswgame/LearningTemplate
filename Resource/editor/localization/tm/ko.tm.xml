@@ -72,6 +72,8 @@
 		<entry source="Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight."
 		       text="매 프레임 가중치를 정하는 애니메이터 파라미터입니다(0..1 로 자릅니다). 비우면 Weight 를 씁니다." />
 		<entry source="Apply the next recorded frame." text="다음 기록 프레임을 적용합니다." />
+		<entry source="Ask both slots (a server read over a debug channel, or a session client) for their current per-object hashes and list the objects that differ (pause the server near the divergent tick first; the two answers must carry the same tick)"
+		       text="두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)" />
 		<entry source="Ask the selected process for its line and connection numbers"
 		       text="고른 프로세스에 회선 · 연결 수치를 묻습니다" />
 		<entry source="Atlas cell index to paint, 0 to 255." text="칠할 아틀라스 칸 인덱스(0~255)입니다." />
@@ -749,6 +751,7 @@
 		       text="그래프 전체를 예제 대화로 바꿉니다." />
 		<entry source="Replace this binding's key: press a key or pick one from the list that opens."
 		       text="이 바인딩의 키를 바꿉니다. 키를 누르거나 열리는 목록에서 고릅니다." />
+		<entry source="Replication by name (per second)" text="이름별 복제 (초당)" />
 		<entry source="Required by" text="이 모듈에 의존하는 모듈" />
 		<entry source="Reset every global variable to its default value"
 		       text="모든 전역 변수를 기본값으로 되돌립니다" />
@@ -1025,6 +1028,8 @@
 		<entry source="The line the player reads. On a Choice node it is the prompt shown above the options."
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다." />
 		<entry source="The node canvas could not be drawn" text="노드 캔버스를 그리지 못했습니다" />
+		<entry source="The process reports no replication counters (a replication kit raises them with GameNetSession::setReplicaStats)"
+		       text="프로세스가 복제 셈을 보고하지 않습니다(복제 키트가 GameNetSession::setReplicaStats 로 올립니다)" />
 		<entry source="The renderer is not attached yet." text="렌더러가 아직 붙지 않았습니다" />
 		<entry source="The rig is not bound yet (check the rig asset and skeleton)"
 		       text="리그가 아직 바인딩되지 않았습니다(리그 에셋과 스켈레톤을 확인하세요)" />
@@ -1098,6 +1103,8 @@
 		<entry source="Unsaved changes" text="* 저장하지 않은 변경" />
 		<entry source="Unsaved scene edits are not in the new window"
 		       text="저장하지 않은 씬 편집은 새 창에 없습니다" />
+		<entry source="Updates and bytes a replication kit counted per second, from the difference of the last two net.stats reports; the share is of the listed bytes"
+		       text="복제 키트가 센 갱신 수와 바이트를 마지막 두 net.stats 보고의 차로 초당 값으로 보입니다. 비율은 표에 나온 바이트에 대한 몫입니다" />
 		<entry source="Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
 		       text="원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다." />
 		<entry source="User settings are not loaded." text="사용자 설정을 불러오지 않았습니다." />

@@ -50,6 +50,10 @@ namespace sw::editor
             if ( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() )
                 return;
             SW_LOG_ERROR( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
+#if defined( SW_DEBUG )
+            if ( sw::internal::tryCaptureAssert() )
+                return; // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+#endif
             Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
             std::abort();
         }
