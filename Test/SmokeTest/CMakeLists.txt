@@ -16,16 +16,14 @@ endif()
 # (TestSmoke.cpp 도 같은 기준으로 갈라져 있다: 리로드 케이스는 #if !defined(SW_SHIPPING) 안이다.)
 set(swSmokeDevSources "")
 if(NOT SW_SHIPPING_BUILD)
-	set(swSmokeDevSources
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/LiveReloadManager.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleDependencyGraph.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleShadowCopy.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/DeferredImageUnloadQueue.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCallGuard.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleImagePatch.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ShadowCopyName.cpp
-		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCatalogLoader.cpp
-	)
+	# 핫 리로드 파일 목록은 `Source/ModuleHost/CMakeLists.txt` 가 정본이다(배포 제외 정규식과 같은 목록). 손으로 되적지 않는다.
+	# `ModuleHost` 는 `Test` 보다 먼저 추가되므로(루트 CMakeLists) 속성이 이미 있다.
+	get_property(swSmokeDevSources GLOBAL PROPERTY SW_MODULEHOST_HOT_RELOAD_SOURCES)
+	if(NOT swSmokeDevSources)
+		message(FATAL_ERROR "SW_MODULEHOST_HOT_RELOAD_SOURCES 가 비었다 — Source/ModuleHost/CMakeLists.txt 가 먼저 구성돼야 한다")
+	endif()
+	# 카탈로그 로더는 핫 리로드 파일이 아니라 배포 구성에도 들어가는 호스트 소스다(스모크는 Dev 에서만 따로 가져온다).
+	list(APPEND swSmokeDevSources ${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCatalogLoader.cpp)
 endif()
 
 # `ModuleHost` 는 구성과 무관하게 가져온다 — 검사하는 것이 "디바이스가 없을 때의 호스트" 라

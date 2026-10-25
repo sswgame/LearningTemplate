@@ -16,11 +16,12 @@
 sw_getDynamicModules(swEngineTestKit KINDS kit)
 # 부하 테스트 봇(Tools/OnlineLoadBot)은 개발 · Game 타깃에서만 지어진다 — 없는 구성에서는 그 테스트를 뺀다.
 set(swEngineTestTool "")
-set(swEngineTestExclude "")
+# 뺄 파일은 이름이 아니라 include 로 고른다 — 봇 헤더(`OnlineLoadBot/…`)를 쓰는 테스트가 빠진다(`EXCLUDE_INCLUDING`).
+set(swEngineTestExcludeIncluding "")
 if(TARGET OnlineLoadBotCore)
 	list(APPEND swEngineTestTool OnlineLoadBotCore)
 else()
-	list(APPEND swEngineTestExclude "/TestOnlineLoadBot(Load)?\\.cpp$")
+	list(APPEND swEngineTestExcludeIncluding "OnlineLoadBot/")
 endif()
 
 # 에디터 확장의 화면 없는 모델(Admin · Base · MeshModifiers · CharacterEditor · NetSimulation)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.
@@ -39,8 +40,8 @@ list(APPEND swEngineTestExtensionSource
 sw_addTestExecutable(EngineTest
 	EXTRA_SOURCES
 		${swEngineTestExtensionSource}
-	EXCLUDE
-		${swEngineTestExclude}
+	EXCLUDE_INCLUDING
+		${swEngineTestExcludeIncluding}
 	LIBS
 		Engine
 		GameFramework

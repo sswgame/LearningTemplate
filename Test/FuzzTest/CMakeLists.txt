@@ -9,12 +9,14 @@ if(NOT SW_ENABLE_FUZZING)
 	return()
 endif()
 
+# 하네스 기동은 `sw_addTestHostRuntime` 이 정본이다(테스트 실행 파일과 같은 함수). 아래 둘은 EngineTest 폴더의 소스를 가져오는 것으로,
+# 그 폴더는 EngineTest 가 훑는 곳이라 "선언" 이 없다 — 파일 이름 두 개가 이 목록의 유일한 자리이고 없어지면 구성이 멈춘다(add_executable).
 add_executable(LoaderFuzzer
 	LoaderFuzzer.cpp
-	"${CMAKE_SOURCE_DIR}/Test/TestFramework/Harness/TestHostRuntime.cpp"
 	"${CMAKE_SOURCE_DIR}/Test/EngineTest/LoaderFuzzTargets.cpp"
 	"${CMAKE_SOURCE_DIR}/Test/EngineTest/ResourcePakTestUtil.cpp"
 )
+sw_addTestHostRuntime(LoaderFuzzer)
 set_target_properties(LoaderFuzzer PROPERTIES FOLDER "Test")
 add_dependencies(AllTests LoaderFuzzer)
 target_include_directories(LoaderFuzzer PRIVATE "${CMAKE_SOURCE_DIR}/Test")

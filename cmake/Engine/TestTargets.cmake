@@ -415,20 +415,27 @@ function(sw_registerTestPolicy TARGET_NAME)
 	endif()
 endfunction()
 
+# 테스트 하네스의 엔진 기동(TestHostRuntime)은 라이브러리(TestFramework)에 넣지 못해 실행 파일마다 소스로 더한다
+# (GameFramework · 생성 설정 헤더를 쓴다). 테스트 실행 파일과 `Test/FuzzTest` 가 이 함수 하나로 같은 소스를 받는다.
+function(sw_addTestHostRuntime TARGET_NAME)
+	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/Harness/TestHostRuntime.cpp")
+endfunction()
+
 # ------------------------------------------------------------------------------
-# sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
+# sw_addTestExecutable —테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
 #
 #   소스는 **이 폴더를 재귀로 훑는다**(목록이 없다 — 케이스 · 파일을 더해도 CMake 를 고치지 않는다). 폴더 규칙:
 #     - `Dev/` 아래 파일은 개발 구성에서만 짓는다(Shipping 에 없는 기능의 테스트 — 핫 리로드 · 모듈 컴파일러).
 #     - 꺼진 키트의 헤더를 include 하는 파일은 빠진다(`sw_excludeSourcesOfInactiveKits`).
 #   EXTRA_SOURCES 폴더 소스에 더할 소스 — 테스트가 같이 컴파일하는 엔진 밖 소스(에디터 · App 은 링크할 라이브러리가 없다).
 #   EXCLUDE       이 구성에서 짓지 않을 테스트 소스의 정규식(그 도구 타깃이 없는 구성 — "짓지 않는 소스" 로 적힌다).
+#   EXCLUDE_INCLUDING  이 접두의 헤더(예: `OnlineLoadBot/`)를 include 하는 테스트 소스를 뺀다 — 그 도구 타깃이 없는 구성에서 파일 이름 정규식 대신 쓴다.
 #   LIBS · DEFINITIONS  링크할 것 · 정의.
 #   라벨 · 샤드 · 제한 시간 · 호스트 분리 · ASan 옵션은 `Test/TestPolicy.json` 의 같은 이름 줄이 정한다(`sw_registerTestPolicy`).
 #   폴더 이름은 실행 파일 이름과 같다(`Test/<이름>/`).
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "" "" "EXTRA_SOURCES;EXCLUDE;LIBS;DEFINITIONS" ${ARGN})
+	cmake_parse_arguments(ARG "" "" "EXTRA_SOURCES;EXCLUDE;EXCLUDE_INCLUDING;LIBS;DEFINITIONS" ${ARGN})
 	if(ARG_UNPARSED_ARGUMENTS)
 		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): 모르는 인자 ${ARG_UNPARSED_ARGUMENTS} — 라벨 · 샤드 · 시간은 Test/TestPolicy.json 에 둔다")
 	endif()
@@ -447,9 +454,13 @@ function(sw_addTestExecutable TARGET_NAME)
 	if(ARG_EXCLUDE)
 		sw_excludeUnbuiltSources(swSources ${ARG_EXCLUDE})
 	endif()
+	if(ARG_EXCLUDE_INCLUDING)
+		sw_excludeSourcesIncludingPrefix(swSources ${ARG_EXCLUDE_INCLUDING})
+	endif()
 
 	add_executable(${TARGET_NAME} ${swSources} ${ARG_EXTRA_SOURCES})
-	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp" "${CMAKE_SOURCE_DIR}/Test/TestFramework/Harness/TestHostRuntime.cpp")
+	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp")
+	sw_addTestHostRuntime(${TARGET_NAME})
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
 	add_dependencies(AllTests ${TARGET_NAME})
