@@ -760,6 +760,8 @@ SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack 
  */
 SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임의 원본 데이터는 구운 팩에 없다
+
     struct GameFiles
     {
         const utf8* _pSchema;

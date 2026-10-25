@@ -6,7 +6,7 @@
 스위트 이름은 장식이 아니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고(`SW_TEST_REQUIRES_HOST`),
 `--test_filter` 도 스위트 단위로 고른다. 그래서 이름이 흔들리면 그 둘이 흔들린다.
 
-강제 규칙 아홉:
+강제 규칙 열:
 
   1) 스위트 이름은 `XxxTest` — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없다.
      관례가 섞이면 필터가 흔들린다 — `Core` 라는 스위트가 있으면 `--test_filter=Core*` 가 `Core_String` 까지 끌어온다.
@@ -52,6 +52,15 @@
   9) 부하 스위트(`SW_TEST_LOAD_SUITE( 스위트, "이유" );`)는 자기 파일을 혼자 쓰고, 그 폴더의 정책 줄에 `loadSeconds` 가 있다
      (없으면 `<타깃>_Load` 항목이 없어 그 스위트는 어디서도 돌지 않는다).
 
+ 10) 활성이 아닌 게임 팩의 원본을 읽는 일반 케이스는 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한다.
+     Shipping 은 활성 게임(`game/empty`)의 구운 팩만 두고 낱개 원본을 읽지 않는다. 케이스 본문이나 그 케이스가 쓰는 같은 파일의 상수에
+     `game/<다른 게임>/` 리터럴이 있는데 선언이 없으면 CI Linux Shipping 에서 진다 — 사람이 기억하던 것을 이 검사가 기억한다.
+     "다른 게임" 은 `Resource/game/` 에 실제로 있는 폴더에서 `_kPackLiteralAllow`(활성 게임 · 임시 폴더 픽스처)를 뺀 것이다 —
+     디스크에 닿지 않는 순수 문자열 픽스처(`game/prefabs/…`, `game/a/…`)는 걸리지 않는다. 부하 스위트는 보지 않는다.
+
+     shortcut: 문자열 리터럴만 본다 — 경로를 이어 붙이거나(`"game/" + name`) 헤더 · 다른 파일의 상수 · 도우미 함수 안에서 읽는 것은 못 본다.
+     파일 안 상수는 선언부 이름(`이름 = "…game/x/…"`)을 케이스 본문의 단어와 맞춰 쓰는 케이스를 고르고, 이름을 못 찾는 리터럴은 그 파일의 모든 케이스로 번진다.
+
   python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
 """
 from __future__ import annotations
@@ -65,7 +74,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common.CodeText import blankComments  # noqa: E402
+from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
@@ -96,6 +105,33 @@ _kCoreTestFolder = "Test/CoreTest"
 _kCoreTestForbiddenIncludeRe = re.compile(r"^[ \t]*#[ \t]*include[ \t]*[<\"]((?:Engine|GameFramework|Editor|Games|App)/[^>\"]*)[>\"]", re.M)
 _kEngineNamespaceRe = re.compile(r"\bengine::\w+")
 _kDocBlockTagRe = re.compile(r"@brief\s+\[(\w+)\]")
+_kPackRoot = "Resource/game"
+_kSourceResourcesRe = re.compile(r"\bSW_TEST_REQUIRES_FEATURE\(\s*SourceResources\s*\)")
+_kPackLiteralRe = re.compile(r"(?<![\w])game/(\w+)\b")
+_kDeclaredNameRe = re.compile(r"(\w+)\s*(?:\[\s*\])?\s*[={]")
+
+# 규칙 10 에서 `game/<이름>/` 리터럴을 봐도 되는 이름 — 나머지 실제 게임 팩은 `SourceResources` 선언이 있어야 읽는다.
+_kPackLiteralAllow: dict[str, str] = {
+    "empty": "활성 게임 — Shipping 도 구운 팩으로 갖고 있다",
+    "test": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
+    "x": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
+    "demo": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
+    "probe": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
+}
+# 리터럴은 있지만 **경로 문자열만** 다루고 디스크의 팩을 읽지 않는 케이스 — 리터럴만으로는 읽기와 구별되지 않아 케이스 단위로 선언한다.
+# 낡은 줄(케이스가 사라졌거나 리터럴이 없어짐)은 위반이다. 선언을 더하면 Shipping 에서 그 케이스가 건너뛰어져 커버리지를 잃으므로 선언 대신 여기에 둔다.
+_kPackLiteralPathOnlyCases: dict[str, str] = {
+    "AssetHotReloadTest.AudioDataReloadsThroughTheEngineAudioCache": "에디터 에셋 종류 표가 경로 문자열로 다시 읽기 경로를 고른다",
+    "EditorAssetTypeTest.ReloadRouteComesFromTheTable": "에디터 에셋 종류 표가 경로 문자열로 다시 읽기 경로를 고른다",
+    "EditorAssetTypeTest.UIDocumentOpensTheUIPreviewPanel": "경로 문자열의 종류 판정",
+    "EditorWindowTitleTest.SceneNameIsTheLastPathSegment": "창 제목을 경로 문자열에서 만든다",
+    "GamePackDataTest.KindPathComesFromTheRegistration": "팩 경로 조립(문자열)",
+    "GamePackDataTest.MissingRuleIsAnError": "팩 경로 조립(문자열)",
+    "NavMeshBakeTest.CookedAssetRoundTripsTilesByteForByte": "쿠킹 경로 이름 규칙(문자열)",
+    "ResourceDataKindTest.ModulesRegisterTheirCatalogKinds": "데이터 종류의 경로 일치 판정(문자열)",
+    "ResourceHostTargetTest.DedicatedServerDoesNotReadExcludedKinds": "호스트 제외 판정(문자열) — 읽는 쪽은 활성 게임 경로",
+    "ResourcePakTest.CollectResourcesTellsMissingFolderFromFailure": "없는 폴더를 묻는다 — 팩이 있든 없든 FolderMissing",
+}
 
 
 def listTestSourceInternal(rootDir: Path) -> list[Path]:
@@ -318,6 +354,88 @@ def checkTestDocBlocks(rootDir: Path) -> list[str]:
     return errors
 
 
+def listForeignPacks(rootDir: Path) -> set[str]:
+    """`Resource/game/` 의 실제 게임 팩 폴더에서 허용 이름을 뺀 것 — Shipping 의 구운 팩에 없는 원본."""
+    packRoot = rootDir / _kPackRoot
+    if packRoot.is_dir() is False:
+        return set()
+    return {entry.name for entry in packRoot.iterdir() if entry.is_dir()} - set(_kPackLiteralAllow)
+
+
+def findCaseBodies(code: str, maskedCode: str) -> list[tuple[re.Match, int, int]]:
+    """(케이스 머리 매치, 본문 `{` 위치, 본문 끝 위치). 중괄호는 문자열 · 주석을 가린 글(`maskedCode`)로 센다."""
+    out: list[tuple[re.Match, int, int]] = []
+    for match in _kCaseRe.finditer(code):
+        begin = maskedCode.find("{", match.end())
+        if begin < 0:
+            continue
+        depth = 0
+        for index in range(begin, len(maskedCode)):
+            char = maskedCode[index]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    out.append((match, begin, index + 1))
+                    break
+    return out
+
+
+def checkSourceResourcesDeclared(rootDir: Path, loadSuites: set[str], existingCases: set[str]) -> list[str]:
+    """활성이 아닌 게임 팩의 원본을 읽는 일반 케이스가 `SourceResources` 를 선언했는지 봅니다(규칙 10)."""
+    if (rootDir / _kPackRoot).is_dir() is False:
+        return [f"{_kPackRoot}: 폴더가 없습니다 (규칙 10 이 헛돌고 있습니다)"]
+    foreign = listForeignPacks(rootDir)
+    errors: list[str] = []
+    usedPathOnly: set[str] = set()
+    for path in listTestSourceInternal(rootDir):
+        relPath = path.relative_to(rootDir).as_posix()
+        code = blankComments(path.read_text(encoding="utf-8", errors="ignore"))
+        if "game/" not in code:
+            continue
+        bodies = [row for row in findCaseBodies(code, blankCommentsAndLiterals(code)) if row[0].group(1) not in loadSuites]
+        if not bodies:
+            continue
+        # 케이스 밖(상수 · 도우미): 본문을 공백으로 지운 글에서 리터럴과 선언부 이름을 찾는다.
+        outside = list(code)
+        for _, begin, end in bodies:
+            outside[begin:end] = [" " if char != "\n" else "\n" for char in code[begin:end]]
+        outsideCode = "".join(outside)
+        # 케이스 -> {팩: 줄}. 본문에서 직접 보인 것 먼저, 파일 상수는 이름이 본문에 나오는 케이스에 번진다.
+        found: list[dict[str, int]] = [{} for _ in bodies]
+        for index, (_, begin, end) in enumerate(bodies):
+            for literal in _kPackLiteralRe.finditer(code, begin, end):
+                if literal.group(1) in foreign:
+                    found[index].setdefault(literal.group(1), code.count("\n", 0, literal.start()) + 1)
+        for literal in _kPackLiteralRe.finditer(outsideCode):
+            if literal.group(1) not in foreign:
+                continue
+            statementBegin = max(outsideCode.rfind(mark, 0, literal.start()) for mark in (";", "}")) + 1
+            names = _kDeclaredNameRe.findall(outsideCode[statementBegin : literal.start()])
+            line = outsideCode.count("\n", 0, literal.start()) + 1
+            for index, (_, begin, end) in enumerate(bodies):
+                if names and re.search(rf"\b{re.escape(names[-1])}\b", code[begin:end]) is None:
+                    continue
+                found[index].setdefault(literal.group(1), line)
+        for (caseMatch, begin, end), packs in zip(bodies, found):
+            caseKey = f"{caseMatch.group(1)}.{caseMatch.group(2)}"
+            if packs and caseKey in _kPackLiteralPathOnlyCases:
+                usedPathOnly.add(caseKey)
+                continue
+            if not packs or _kSourceResourcesRe.search(code, begin, end) is not None:
+                continue
+            for pack, line in sorted(packs.items()):
+                errors.append(f"{relPath}:{line}: `{caseMatch.group(1)}.{caseMatch.group(2)}` 가 활성이 아닌 게임 팩 `game/{pack}/` 을 읽는데 "
+                              f"`SW_TEST_REQUIRES_FEATURE( SourceResources )` 가 없습니다 — Shipping 은 활성 게임의 구운 팩만 둬서 "
+                              f"CI Linux Shipping 에서 집니다(케이스 맨 앞에 선언하세요. 경로 문자열만 다루면 `_kPackLiteralPathOnlyCases` 에 사유와 함께 두세요)")
+    # 케이스가 있는데 리터럴이 사라졌으면 낡은 줄이다(케이스가 없으면 아무 일도 하지 않는 줄이라 두고, 이름을 바꾼 케이스는 위에서 걸린다).
+    for caseKey in sorted((set(_kPackLiteralPathOnlyCases) & existingCases) - usedPathOnly):
+        errors.append(f"{_kTestRoot}: `_kPackLiteralPathOnlyCases` 의 `{caseKey}` 가 낡았습니다 — 활성이 아닌 팩 리터럴이 더는 없습니다 "
+                      f"(Scripts/lint/gate/CheckTestSuites.py 에서 그 줄을 지우세요)")
+    return errors
+
+
 def check(rootDir: Path) -> tuple[list[str], int, int]:
     cases, missed = collectCases(rootDir)
     errors: list[str] = list(missed)
@@ -431,6 +549,9 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             errors.append(f"{relPath}: 부하 스위트 `{suite}` 가 있는데 {_kPolicyFile} 의 `{executable}` 줄에 `loadSeconds` 가 없습니다 "
                           f"— `<타깃>_Load` 항목이 없어 어디서도 돌지 않습니다")
 
+    # 10) 활성이 아닌 게임 팩의 원본을 읽는 일반 케이스는 SourceResources 를 선언한다
+    errors += checkSourceResourcesDeclared(rootDir, set(loadMarkers), {f"{suite}.{caseName}" for suite, caseName, _ in cases})
+
     return errors, len(homes), len(cases)
 
 
@@ -451,6 +572,8 @@ _kCleanFixture: dict[str, str] = {
         'sw_addTestExecutable(EditorTest\n\tSOURCES\n\t\t"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Probe.cpp"\n)\n'
     ),
     "Source/Editor/Common/Probe.cpp": "int probe() { return 0; }\n",
+    "Resource/game/empty/Probe.xml": "<Probe/>\n",
+    "Resource/game/farmprobe/Probe.xml": "<Probe/>\n",
 }
 
 
@@ -598,6 +721,29 @@ class CheckTestSuitesGate(LintGate):
             "files": {
                 **_kCleanFixture,
                 "Test/EngineTest/TestLoadProbe.cpp": 'SW_TEST_LOAD_SUITE( LoadProbeTest, "measures throughput" );\nSW_TEST_CASE( LoadProbeTest, One )\n{\n}\n',
+            },
+        },
+        {
+            # 활성 게임(empty) · 임시 폴더 픽스처(x) · 디스크에 없는 이름은 허용이라 걸리지 않고, 실제 다른 팩(farmprobe)만 걸린다.
+            "name": "활성이 아닌 게임 팩을 본문에서 읽는데 SourceResources 선언이 없음",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:5: `ProbeTest.One` 가 활성이 아닌 게임 팩 `game/farmprobe/` 을 읽는데",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": (
+                    'SW_TEST_CASE( ProbeTest, One )\n{\n    load( "game/empty/a.xml" );\n    load( "game/x/a.xml" );\n'
+                    '    load( "game/farmprobe/a.xml" );\n}\n'
+                ),
+            },
+        },
+        {
+            "name": "활성이 아닌 게임 팩을 파일 상수로 읽는데 SourceResources 선언이 없음",
+            "expectedViolation": "Test/EngineTest/TestProbe.cpp:3: `ProbeTest.One` 가 활성이 아닌 게임 팩 `game/farmprobe/` 을 읽는데",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestProbe.cpp": (
+                    'namespace\n{\n    constexpr const utf8* kPath = "game/farmprobe/a.xml";\n    constexpr const utf8* kOther = "game/empty/a.xml";\n}\n'
+                    "SW_TEST_CASE( ProbeTest, One )\n{\n    load( kPath );\n}\n"
+                ),
             },
         },
         {

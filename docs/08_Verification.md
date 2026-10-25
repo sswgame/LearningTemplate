@@ -516,6 +516,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **배포 구성(Shipping · Shipping-Server) 빌드 폴더의 `Bin/Packs` 는 활성 게임(empty) 팩만 굽는다** — 오래 쓴 빌드 폴더에는 예전에 구운 다른 게임 팩이 남아 있어,
   다른 게임의 씬 · 프리팹을 읽는 테스트가 그 낡은 팩으로 통과한다. 새 워크트리에서는 진다(2026-10-25 통합 I, `SerializationRoundTripTest` 63 건). 그런 케이스는 맨 앞에
   `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 두고, `SW_TEST_SKIP`(환경 건너뜀)보다 **먼저** 둔다 — 환경 건너뜀이 남은 스위트는 "아무것도 검증 안 함" 으로 실패한다.
+  사람이 기억하지 않도록 `CheckTestSuites` 규칙 10 이 막는다 — 케이스 본문 · 같은 파일 상수에 `game/<활성이 아닌 실제 팩>/` 리터럴이 있고 선언이 없으면 린트가 거절한다(경로 문자열만 다루는 케이스는 게이트 안 데이터로 예외).
 - **통합 검증에서 에디터를 한 번은 실제로 띄운다** — Release `-EnableEditor` 에디터 시나리오 하나 × 네 백엔드와 Debug 에디터 시나리오 하나(dx12). Shipping `hostgpu` 에는 에디터가 없고 Debug `nogpu` 는 ImGui 렌더러 백엔드를 띄우지 않아,
   에디터가 기동하자마자 멈추는 결함 둘(백엔드가 에디터 범위보다 먼저 상태 저장소를 찾음, 워커가 에디터 범위를 읽어 Debug 가드에 걸림)이 두 통합 동안 초록 뒤에 있었다(2026-10-25 통합 J).
   Debug 가드(`assertEditorThread`)의 단언 위치는 크래시 스택이 첫 프레임 뒤를 못 풀면 `CallStackCapture::capture` + `symbolize` 를 그 자리에 잠시 넣어 찾는다.

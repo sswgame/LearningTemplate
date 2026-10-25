@@ -512,6 +512,7 @@ SW_TEST_CASE( AudioServiceTest, OggVorbisDecodesToPcm )
  */
 SW_TEST_CASE( AudioServiceTest, OggWithOutOfPacketCommentLengthsIsRejected )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 디스크의 Resource 원본을 직접 읽고, 활성이 아닌 게임(shooter3d)은 Shipping 의 구운 팩에 없다
     const sw::string  path = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), "game/shooter3d/sounds/footstep_concrete_000.ogg" );
     sw::vector<uint8> originalBytes;
     SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( path, originalBytes ), path.c_str() );
