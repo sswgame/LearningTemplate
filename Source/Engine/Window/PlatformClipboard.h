@@ -24,7 +24,7 @@ namespace sw
         static bool isAvailable();
         /** @brief 클립보드의 글을 @p outText 에 담습니다. 글이 없거나 열지 못하면 false 입니다. */
         [[nodiscard]] static bool readText( string& outText );
-        /** @brief 클립보드에 글을 씁니다. 쓰지 못하면 경고를 남깁니다. */
-        static void writeText( string_view text );
+        /** @brief 클립보드에 글을 씁니다. 쓰지 못하면 경고를 남기고 false 입니다(호출 쪽이 사용자에게 알린다: `UIClipboardService::setText` → 글 입력 칸의 알림). */
+        [[nodiscard]] static bool writeText( string_view text );
     };
 } // namespace sw

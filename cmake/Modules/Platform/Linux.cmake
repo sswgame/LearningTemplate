@@ -31,7 +31,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY} ${SW_X11_XCB_LIBRARY})
 
 	# ------------------------------------------------------------------------------
-	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
+	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · cursor-shape · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
 	# 패키지: libwayland-dev · libxkbcommon-dev · wayland-protocols(.github/actions/setup-build-env 가 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
 	# ------------------------------------------------------------------------------
 	if(SW_ENABLE_WAYLAND)
@@ -44,10 +44,13 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 		find_program(SW_WAYLAND_SCANNER wayland-scanner REQUIRED)
 
 		# 프로토콜 XML 목록(wayland-protocols pkgdatadir 아래 상대 경로). 헤더 이름은 XML 파일 이름에서 정해진다(`<이름>-client-protocol.h`).
-		# fractional-scale 은 staging 이라 wayland-protocols 1.31 이상이 있어야 한다 — 없으면 아래 검사가 구성을 세운다.
+		# fractional-scale · cursor-shape 는 staging 이라 wayland-protocols 1.32 이상이 있어야 한다 — 없으면 아래 검사가 구성을 세운다.
 		set(swWaylandProtocolXmls
 			"stable/xdg-shell/xdg-shell.xml"
 			"staging/fractional-scale/fractional-scale-v1.xml" # 소수 배율(`wp_fractional_scale_v1`)
+			"staging/cursor-shape/cursor-shape-v1.xml" # 커서 모양(`wp_cursor_shape_manager_v1`)
+			# cursor-shape 의 생성 코드가 `zwp_tablet_tool_v2` 인터페이스를 가리켜 링크에 필요하다(쓰지는 않는다).
+			"unstable/tablet/tablet-unstable-v2.xml"
 			"unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" # 포인터 잠금 · 가둠
 			"unstable/relative-pointer/relative-pointer-unstable-v1.xml" # 잠긴 동안의 상대 이동
 		)
@@ -57,7 +60,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 		foreach(swProtocolRelXml IN LISTS swWaylandProtocolXmls)
 			set(swProtocolXml "${SW_WAYLAND_PROTOCOLS_DIR}/${swProtocolRelXml}")
 			if(NOT EXISTS "${swProtocolXml}")
-				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${swProtocolXml} (wayland-protocols 1.31 or newer is required)")
+				message(FATAL_ERROR "SW_ENABLE_WAYLAND: protocol XML not found: ${swProtocolXml} (wayland-protocols 1.32 or newer is required)")
 			endif()
 			get_filename_component(swProtocolName "${swProtocolXml}" NAME_WE)
 			set(swProtocolHeader "${swWaylandGenDir}/${swProtocolName}-client-protocol.h")
@@ -79,7 +82,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 		target_link_libraries(sw_wayland_protocols PUBLIC PkgConfig::SW_WAYLAND)
 		target_link_libraries(sw_platform_linux INTERFACE sw_wayland_protocols)
 		target_compile_definitions(sw_platform_linux INTERFACE SW_WITH_WAYLAND)
-		message(STATUS "[Linux] Wayland window layer enabled (protocols from ${SW_WAYLAND_PROTOCOLS_DIR}: xdg-shell, fractional-scale, pointer-constraints, relative-pointer)")
+		message(STATUS "[Linux] Wayland window layer enabled (protocols from ${SW_WAYLAND_PROTOCOLS_DIR}: xdg-shell, fractional-scale, cursor-shape, tablet, pointer-constraints, relative-pointer)")
 	endif()
 endif()
 

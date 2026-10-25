@@ -12,7 +12,6 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Input/CursorShape.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -23,6 +22,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 #include "Engine/Input/Virtual/VirtualCursor.h"
+#include "Engine/Window/CursorShape.h"
 
 namespace sw
 {

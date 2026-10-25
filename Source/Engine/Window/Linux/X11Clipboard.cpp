@@ -48,22 +48,25 @@ namespace sw
         return window._pX11 != nullptr && window._pX11->readClipboardText( outText );
     }
 
-    void PlatformClipboard::writeText( string_view text )
+    bool PlatformClipboard::writeText( string_view text )
     {
         const ClipboardWindow window = findOwnerWindow();
         if ( window._pWayland != nullptr )
         {
-            if ( window._pWayland->writeClipboardText( text ) == false )
+            const bool bWritten = window._pWayland->writeClipboardText( text );
+            if ( bWritten == false )
                 SW_LOG_WARNING( "Wayland clipboard selection could not be set (no data device, or no key/button input yet to take a serial from) - not written" );
-            return;
+            return bWritten;
         }
         if ( window._pX11 == nullptr )
         {
             SW_LOG_WARNING( "Clipboard write needs an active X11 or Wayland window to own the selection (none) - not written" );
-            return;
+            return false;
         }
-        if ( window._pX11->writeClipboardText( text ) == false )
+        const bool bWritten = window._pX11->writeClipboardText( text );
+        if ( bWritten == false )
             SW_LOG_WARNING( "Clipboard selection could not be owned - not written" );
+        return bWritten;
     }
 } // namespace sw
 #elif defined( SW_PLATFORM_LINUX )
@@ -80,8 +83,9 @@ namespace sw
         return false;
     }
 
-    void PlatformClipboard::writeText( [[maybe_unused]] string_view text )
+    bool PlatformClipboard::writeText( [[maybe_unused]] string_view text )
     {
+        return false;
     }
 } // namespace sw
 #endif
