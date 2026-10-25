@@ -378,8 +378,9 @@ namespace sw
          *          그때 매니저가 사라졌다는 것을 노드마다 고치지 않고 풀 하나가 알린다.
          */
         TaskNodePool* _pPool{ nullptr };
-        TaskNode*     _pParent{ nullptr }; ///< 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다
-        uint32        _clearEpoch{ 0 };    ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
+        /** @brief 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다. 완료 경로가 비우는 동시에 사이클 검사(`runBefore`)가 읽으므로 원자 값이다. */
+        atomic<TaskNode*> _pParent{ nullptr };
+        uint32            _clearEpoch{ 0 }; ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
         /**
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
          * @details 주의: "자식 수" 와 "상태 = 자식 대기" 를 따로 두면, 본문이 상태를 적고 자식 수를 읽는 사이에 마지막 자식이 수를 내리고

@@ -143,6 +143,36 @@ SW_TEST_CASE( HalfTest, EveryBitPatternRoundTrips )
 }
 
 /**
+ * @brief [HalfTest] `toFiniteFloat`(반사 프로브 읽기의 `decodeHalf`) — 65536 개 비트 패턴 모두, 유한값(서브노멀 포함)은 `toFloat` 와 같고 무한대 · NaN 은 부호 있는 float32 최대값이다
+ */
+SW_TEST_CASE( HalfTest, ToFiniteFloatClampsOnlyNonFinite )
+{
+    uint32 finiteMismatch    = 0;
+    uint32 nonFiniteMismatch = 0;
+    uint32 nonFiniteCount    = 0;
+    for ( uint32 bits = 0; bits <= 0xFFFFu; ++bits )
+    {
+        const sw::half source = sw::half::fromBits( static_cast<uint16>( bits ) );
+        const float32  value  = source.toFiniteFloat();
+        if ( source.isFinite() )
+        {
+            if ( sw::BitUtil::floatToBits( value ) != sw::BitUtil::floatToBits( source.toFloat() ) )
+                ++finiteMismatch;
+            continue;
+        }
+        ++nonFiniteCount;
+        const float32 expected = ( bits & 0x8000u ) != 0u ? -sw::MathUtil::kMaxFloat : sw::MathUtil::kMaxFloat;
+        if ( value != expected )
+            ++nonFiniteMismatch;
+    }
+    SW_EXPECT_EQUAL( 0u, finiteMismatch );
+    SW_EXPECT_EQUAL( 0u, nonFiniteMismatch );
+    SW_EXPECT_EQUAL( 2u * 1024u, nonFiniteCount );                                                  // 지수가 모두 1 인 패턴: 부호 2 × 가수 1024 (무한대 2 + NaN 2046)
+    SW_EXPECT_EQUAL( sw::half::kMinSubnormalValue, sw::half::fromBits( 0x0001u ).toFiniteFloat() ); // 가장 작은 서브노멀
+    SW_EXPECT_EQUAL( -sw::half::kMinSubnormalValue, sw::half::fromBits( 0x8001u ).toFiniteFloat() );
+}
+
+/**
  * @brief [HalfTest] 정규수의 상대 오차는 2^-11 이하, 비정규수의 절대 오차는 2^-25 이하다(결정적 난수 표본)
  */
 SW_TEST_CASE( HalfTest, RoundTripErrorIsWithinHalfStep )

@@ -166,9 +166,7 @@ namespace sw
     {
         for ( CookJob* pJob = this; pJob != nullptr; pJob = pJob->_pOuter )
         {
-            const bool bKnown = std::any_of( pJob->_listInput.begin(), pJob->_listInput.end(), [&input]( const CookInput& known )
-            { return known.isSameSource( input ); } );
-            if ( bKnown == false )
+            if ( pJob->_uniqueSetKnownSource.insert( input.makeSourceKey() ).second )
                 pJob->_listInput.push_back( input );
         }
     }

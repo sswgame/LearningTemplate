@@ -15,6 +15,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -40,6 +41,18 @@ namespace sw
         }
         /** @brief 같은 입력(종류 · id · 확장자)이면 true 입니다(해시는 보지 않는다). */
         bool isSameSource( const CookInput& other ) const { return _kind == other._kind && _resourceID == other._resourceID && _extension == other._extension; }
+        /** @brief `isSameSource` 와 같은 동치를 문자열 하나로 만든 키입니다(종류 · id · 확장자를 탭으로 구분 — id 에는 탭이 없다). 해시 집합의 키로 쓴다. */
+        string makeSourceKey() const
+        {
+            string key;
+            key.reserve( _resourceID.size() + _extension.size() + 3 );
+            key.push_back( _kind == CookInputKind::Listing ? 'L' : 'F' );
+            key.push_back( '\t' );
+            key.append( _resourceID );
+            key.push_back( '\t' );
+            key.append( _extension );
+            return key;
+        }
         /** @brief 이 입력의 지금 해시입니다. 파일은 내용 해시(없으면 0), 목록은 지금 목록의 해시입니다. 기록이 새것인지 이 값으로 본다. */
         SW_API uint64 computeCurrentHash() const;
     };
@@ -138,8 +151,9 @@ namespace sw
         static uint64 computeKey( const CookJobDesc& desc, const vector<CookInput>& listInput );
 
     private:
-        CookJobDesc       _desc;
-        vector<CookInput> _listInput;
-        CookJob*          _pOuter;
+        CookJobDesc           _desc;
+        vector<CookInput>     _listInput;            ///< 읽은 순서(기록 파일 순서). 중복 판정은 `_uniqueSetKnownSource` 가 한다 — 입력이 N 개여도 기록 한 번이 O(1) 이다
+        unordered_set<string> _uniqueSetKnownSource; ///< `_listInput` 의 (종류, id, 확장자) 키 집합 — `_listInput` 에 넣는 자리가 `recordInput` 하나뿐이라 어긋나지 않는다
+        CookJob*              _pOuter;
     };
 } // namespace sw

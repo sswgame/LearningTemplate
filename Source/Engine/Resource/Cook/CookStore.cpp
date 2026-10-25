@@ -95,9 +95,8 @@ namespace sw
             SW_LOG_ERROR( "Cook: '%#' was reported written but cannot be read back", outputPath );
             return CookOutcome::Failed;
         }
-        const Stopwatch  makeWatch;
-        const CookRecord record = CookRecord::make( job, bytes ); // 기록의 출력 해시가 거의 전부다
-        _outputHashNanos += makeWatch.getElapsedNanoseconds();
+        // 출력 파일은 쿠커가 쓰므로 다시 읽는 것은 DDC 저장에 어차피 필요하다. 해시는 그 바이트를 한 번만 훑는다(`hashOutput` 이 시간도 잰다).
+        const CookRecord record = CookRecord::make( job, hashOutput( bytes ) );
         if ( _derivedDataCache.store( record._key, bytes ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR( "Cook: could not store '%#' in the DDC or write its record", outputID );

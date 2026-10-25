@@ -14,7 +14,7 @@ namespace sw
             /** @brief 창 닫기에 OS 가 주는 시간(약 5 초)보다 짧게 기다린다 — 넘기면 OS 가 정리 도중에 프로세스를 끝낸다. */
             static constexpr DWORD kCloseWaitMilliseconds = 4500;
 
-            static inline bool           s_bInstalled{ false };
+            static inline atomic<bool>   s_bInstalled{ false };
             static inline atomic<uint32> s_serviceMode{ 0 };
             static inline atomic<uint32> s_interruptCount{ 0 };
 
@@ -77,18 +77,19 @@ namespace sw
 
     bool ShutdownSignal::install()
     {
-        if ( WindowsShutdownSignalInternal::s_bInstalled )
+        // 교환으로 "내가 설치할 차례" 를 한 스레드만 얻는다 — 두 스레드가 동시에 부르면 같은 처리기가 두 번 걸려 첫 Ctrl+C 가 둘째 호출로 세어진다.
+        if ( WindowsShutdownSignalInternal::s_bInstalled.exchange( true, std::memory_order_acq_rel ) )
             return true;
-        const bool bInstalled                       = SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, TRUE ) != FALSE;
-        WindowsShutdownSignalInternal::s_bInstalled = bInstalled;
+        const bool bInstalled = SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, TRUE ) != FALSE;
+        if ( bInstalled == false )
+            WindowsShutdownSignalInternal::s_bInstalled.store( false, std::memory_order_release );
         return bInstalled && WindowsShutdownSignalInternal::completeEvent() != nullptr;
     }
 
     void ShutdownSignal::uninstall()
     {
-        if ( WindowsShutdownSignalInternal::s_bInstalled )
+        if ( WindowsShutdownSignalInternal::s_bInstalled.exchange( false, std::memory_order_acq_rel ) )
             (void)SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, FALSE );
-        WindowsShutdownSignalInternal::s_bInstalled = false;
         // 사건 핸들은 프로세스 끝까지 둔다 — 처리기 스레드가 아직 기다리고 있을 수 있다.
     }
 

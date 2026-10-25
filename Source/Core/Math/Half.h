@@ -97,6 +97,17 @@ namespace sw
             return BitUtil::bitsToFloat( signBits | resultBits );
         }
 
+        /**
+         * @brief 유한값은 `toFloat` 와 같고, 무한대 · NaN 은 부호 있는 float32 최대값으로 풉니다.
+         * @details 무한대 · NaN 이 거르기 · 합산으로 퍼지면 한 픽셀이 화면 전체를 오염시킨다 — 그런 곳(반사 프로브 캡처 읽기)이 쓴다. NaN 의 부호는 부호 비트를 따른다.
+         */
+        [[nodiscard]] constexpr float32 toFiniteFloat() const noexcept
+        {
+            if ( isFinite() )
+                return toFloat();
+            return ( _bits & kSignMask ) != 0u ? -std::numeric_limits<float32>::max() : std::numeric_limits<float32>::max();
+        }
+
         /** @brief 비트 패턴입니다. */
         [[nodiscard]] constexpr uint16 getBits() const noexcept { return _bits; }
         /** @brief NaN 인가(지수가 모두 1 이고 가수가 0 이 아님). */
