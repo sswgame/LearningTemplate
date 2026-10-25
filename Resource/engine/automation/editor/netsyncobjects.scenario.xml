@@ -20,13 +20,14 @@
 		<Expect probe="Editor.NetPlaySyncDifferingObjects" equals="0"/>
 		<DevCommand line="netplay.command client1 state.objectline"/>
 	</At>
-	<At frame="110"><DevCommand line="netplay.sync objects client"/></At>
-	<At frame="111">
+	<!-- 클라이언트의 state.objectline 답은 다른 프로세스에서 비동기로 온다 — 고정 델타 프레임이 빨리 돌아도 답이 도착할 틈(약 110 프레임)을 둔다(GL 에서 19 프레임은 모자랐다) -->
+	<At frame="200"><DevCommand line="netplay.sync objects client"/></At>
+	<At frame="201">
 		<ExpectLog contains="differing object(s)" atLeast="2"/>
 		<Expect probe="Editor.NetPlaySyncObjectsCompared" equals="1"/>
 		<DevCommand line="netplay.stop"/>
 	</At>
-	<At frame="112">
+	<At frame="202">
 		<Expect probe="Editor.NetPlayProcessCount" equals="0"/>
 		<Pass/>
 	</At>
