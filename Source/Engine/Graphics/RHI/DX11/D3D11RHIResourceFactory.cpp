@@ -474,13 +474,18 @@ namespace sw
         }
 
         // 이벤트 쿼리가 복사 뒤를 지났으므로 기다리지 않고 읽는다(DO_NOT_WAIT). 여기서 아직이라고 하면 쿼리 순서가 어긋난 것이라 오류다.
-        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        D3D11_MAPPED_SUBRESOURCE                mapped{};
-        const HRESULT                           hr = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
-        if ( FAILED( hr ) || mapped.pData == nullptr )
+        // 잠금은 Map 과 Unmap 호출에만 잡는다. Map 이 준 포인터는 Unmap 까지 어느 스레드에서 읽어도 되는 CPU 메모리이고, 이 스테이징은 표에서 꺼낸
+        // 이 읽기만 가지므로 사이에 다른 스레드가 내는 즉시 컨텍스트 명령이 건드리지 않는다. 행 복사(4K RGBA16F 면 60 MiB 남짓)가 잠금 밖이라
+        // 렌더 스레드의 ExecuteCommandList · Present 가 그 복사를 기다리지 않는다.
+        D3D11_MAPPED_SUBRESOURCE mapped{};
         {
-            SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
-            return false;
+            const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+            const HRESULT                           hr      = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
+            if ( FAILED( hr ) || mapped.pData == nullptr )
+            {
+                SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
+                return false;
+            }
         }
         outBytes.assign( readback._sizeBytes, 0 );
         const uint32 rowCount = readback._sizeBytes / readback._rowBytes;
@@ -489,7 +494,10 @@ namespace sw
             Memory::copy( outBytes.data() + static_cast<uint64>( row ) * readback._rowBytes,
                           static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, readback._rowBytes );
         }
-        context->Unmap( readback._staging.Get(), 0 );
+        {
+            const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+            context->Unmap( readback._staging.Get(), 0 );
+        }
         if ( readback._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), readback._width * readback._height );
         return true;

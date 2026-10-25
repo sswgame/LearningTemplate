@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
@@ -333,12 +335,12 @@ namespace sw
         return *this;
     }
 
-    void D3D11RHIDevice::UploadStaging::attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture )
+    void D3D11RHIDevice::UploadStaging::attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture, uint64 sourceBytes )
     {
         SW_ASSERT( _pDevice != nullptr && _texture == nullptr && texture != nullptr );
         _texture = std::move( texture );
         // 장부 크기는 소스 바이트(논리 크기)다 — 드라이버가 행 간격을 늘린 실제 할당은 물을 API 가 없다.
-        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _texture.Get() ), RHIMemoryKind::Staging, _bytes );
+        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _texture.Get() ), RHIMemoryKind::Staging, sourceBytes );
     }
 
     void D3D11RHIDevice::UploadStaging::release()
@@ -358,7 +360,9 @@ namespace sw
 
     D3D11RHIDevice::UploadStaging D3D11RHIDevice::allocateUploadStaging( uint64 bytes )
     {
-        SW_ASSERT( bytes <= _uploadStagingBudgetBytes );
+        // 예산보다 큰 업로드 하나는 예산 전부를 잡는다 — 복사 중인 것이 없을 때만 들어가고, 그동안 다른 업로드는 Busy 다.
+        // 한 장을 쪼개 여러 번 내면 앞 조각의 GPU 완료를 제출 안에서 기다려야 해서(계약: 제출은 기다리지 않는다) 혼자 들어가는 쪽을 골랐다.
+        const uint64 reservedBytes = MathUtil::min( bytes, _uploadStagingBudgetBytes );
         // 두 번째 시도는 끝난 전송을 모은 뒤다. 모으는 일은 즉시 컨텍스트 잠금이 필요해 예산이 찼을 때만 한다.
         for ( uint32 attempt = 0; attempt < 2; ++attempt )
         {
@@ -368,10 +372,10 @@ namespace sw
                 retireFinishedTransfers( context );
             }
             uint64 inFlightBytes = _uploadStagingBytesInFlight.load( std::memory_order_acquire );
-            while ( bytes <= _uploadStagingBudgetBytes - inFlightBytes )
+            while ( reservedBytes <= _uploadStagingBudgetBytes - inFlightBytes )
             {
-                if ( _uploadStagingBytesInFlight.compare_exchange_weak( inFlightBytes, inFlightBytes + bytes, std::memory_order_acq_rel, std::memory_order_acquire ) )
-                    return UploadStaging{ *this, bytes };
+                if ( _uploadStagingBytesInFlight.compare_exchange_weak( inFlightBytes, inFlightBytes + reservedBytes, std::memory_order_acq_rel, std::memory_order_acquire ) )
+                    return UploadStaging{ *this, reservedBytes };
             }
         }
         return UploadStaging{};
@@ -385,12 +389,6 @@ namespace sw
         for ( UINT mip = 0; mip < mipCount; ++mip )
         {
             uploadBytes += pArrInitialData[mip].SysMemSlicePitch;
-        }
-        if ( uploadBytes > _uploadStagingBudgetBytes )
-        {
-            SW_LOG_ERROR( "%#: an upload of %# bytes is larger than the whole upload staging budget (%# bytes, gv_rhiStagingRingMegabytes)", pCaller, uploadBytes,
-                          _uploadStagingBudgetBytes );
-            return RHITransferSubmit::rejected();
         }
         UploadStaging staging = allocateUploadStaging( uploadBytes );
         if ( staging.isReserved() == false )
@@ -420,7 +418,7 @@ namespace sw
                           static_cast<uint32>( hr ) );
             return RHITransferSubmit::rejected();
         }
-        staging.attachTexture( std::move( stagingTexture ) );
+        staging.attachTexture( std::move( stagingTexture ), uploadBytes );
 
         // 잠금 안에서는 GPU 복사 명령과 끝을 알리는 쿼리만 낸다. 시리얼은 같은 잠금 안에서 매긴다(계약 5).
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();

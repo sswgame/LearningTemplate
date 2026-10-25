@@ -84,6 +84,55 @@ SW_TEST_CASE( D3D11StagedUploadTest, LargeUploadsPassBusyAndReadBackTheLastOne )
 }
 
 /**
+ * @brief [D3D11StagedUploadTest] 스테이징 예산(기본 64 MiB)보다 큰 업로드 한 장도 받아 그대로 읽힌다
+ * @details 4096×4352 RGBA8(68 MiB)은 예산 전부를 잡고 혼자 들어간다(`Rejected` 가 아니다). 예전 `UpdateSubresource` 가 받던 크기(6K 이상 에디터 뷰 채우기,
+ *          큰 렌더 타깃 미리보기)가 회귀하지 않는지 본다. 이어 작은 스테이징 업로드가 예산을 다시 받는지(놓인 예산이 돌아왔는지)도 본다.
+ */
+SW_TEST_CASE( D3D11StagedUploadTest, UploadLargerThanTheBudgetIsAcceptedAlone )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX11 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No Direct3D 11 device for the staged upload test" );
+
+    constexpr uint32         kWidth    = 4096;
+    constexpr uint32         kHeight   = 4352;
+    sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+    sw::RHITextureDesc texDesc{};
+    texDesc._width                     = kWidth;
+    texDesc._height                    = kHeight;
+    texDesc._mipLevels                 = 1;
+    texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+    texDesc._bIsShaderResource         = SW_TRUE;
+    const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+    SW_ASSERT_TRUE( texture != 0 );
+
+    sw::vector<uint8> pixelBytes( static_cast<size_t>( kWidth ) * kHeight * 4, 0 );
+    fillD3D11StagedUploadPattern( pixelBytes, 5 );
+    sw::RHITextureUploadDesc upload{};
+    upload._pData     = pixelBytes.data();
+    upload._sizeBytes = static_cast<uint32>( pixelBytes.size() );
+    upload._mipLevels = 1;
+    SW_ASSERT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), "an upload larger than the staging budget must be accepted alone" );
+
+    sw::vector<uint8>     readBytes;
+    sw::RHITextureMipSpan layout{};
+    SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, readBytes, layout ) );
+    SW_ASSERT_TRUE( readBytes.size() == pixelBytes.size() );
+    SW_EXPECT_TRUE_MSG( sw::Memory::compare( readBytes.data(), pixelBytes.data(), pixelBytes.size() ) == 0, "the oversized upload did not read back unchanged" );
+
+    // 큰 업로드가 끝나 예산을 돌려줬으면 4 MiB 구간(스테이징 경로)이 다시 들어간다. 돌려주지 않았으면 Busy 가 시간 초과까지 이어져 실패한다.
+    constexpr uint32               kRegionHeight = 256;
+    sw::RHITextureRegionUploadDesc region{};
+    region._width     = kWidth;
+    region._height    = kRegionHeight;
+    region._pData     = pixelBytes.data();
+    region._sizeBytes = kWidth * kRegionHeight * 4;
+    SW_EXPECT_TRUE( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, texture, region ) );
+    pResource->destroyTexture( texture );
+}
+
+/**
  * @brief [D3D11StagedUploadTest] 스테이징으로 올린 밉 체인과 큰 구간이 제 면 · 밉 · 위치에 들어간다
  * @details 2 면 배열의 면 1 에 밉 3 개(5.25 MiB)를 올리고 밉 1 을 읽어 비교한다(서브리소스 = 면 × 밉 수 + 밉). 이어 면 1 밉 0 의 (100, 60) 에 512×256 구간(512 KiB)을
  *          올리고, 구간 안은 구간 바이트, 구간 밖은 앞선 밉 체인 바이트인지 본다.

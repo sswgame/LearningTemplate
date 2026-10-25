@@ -247,8 +247,11 @@ namespace sw
 
             /** @brief 예산을 잡았으면 true 입니다. */
             bool isReserved() const { return _pDevice != nullptr; }
-            /** @brief 만든 스테이징 텍스처를 맡기고 GPU 메모리 장부의 Staging 에 올립니다. `isReserved()` 일 때 한 번만 부릅니다. */
-            void             attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture );
+            /**
+             * @brief 만든 스테이징 텍스처를 맡기고 GPU 메모리 장부의 Staging 에 @p sourceBytes 로 올립니다. `isReserved()` 일 때 한 번만 부릅니다.
+             * @details 예산에서 잡은 바이트와 다를 수 있다 — 예산보다 큰 업로드는 예산 전부를 잡고 장부에는 제 크기로 오른다.
+             */
+            void             attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture, uint64 sourceBytes );
             ID3D11Texture2D* getTexture() const { return _texture.Get(); }
 
         private:
@@ -269,7 +272,9 @@ namespace sw
 
         /**
          * @brief 업로드 스테이징 예산에서 @p bytes 를 잡습니다. 모자라면 끝난 전송을 한 번 모은 뒤(즉시 컨텍스트 잠금을 잠깐 잡는다) 다시 잡습니다.
-         * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다. @p bytes 는 예산 이하여야 합니다(넘는 요청은 부르는 쪽이 `Rejected`).
+         * @details 예산보다 큰 @p bytes 는 예산 전부를 잡는다 — 복사 중인 다른 업로드가 하나도 없을 때만 들어가고, 들어간 동안 다른 업로드는 `Busy` 다.
+         *          그래서 한 장의 크기에 상한이 없고(예전 `UpdateSubresource` 가 받던 크기를 그대로 받는다) 메모리 최고점은 max(예산, 가장 큰 업로드 하나)다.
+         * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다.
          */
         [[nodiscard]] UploadStaging allocateUploadStaging( uint64 bytes );
 
@@ -394,8 +399,8 @@ namespace sw
          *          복사한다(계약 1). 그 뒤 잠금 하나 안에서 스테이징의 밉 i 를 대상의 서브리소스 `firstDestinationSubresource + i` 의 (`destinationX`, `destinationY`) 로
          *          `CopySubresourceRegion` 하고 이벤트 쿼리를 단다. 즉시 컨텍스트 큐에 순서대로 들어가므로 `UpdateSubresource` 와 같은 순서 계약(계약 3)을 지킨다.
          * @param pCaller 로그에 남길 제출 함수 이름입니다.
-         * @param pArrInitialData 스테이징 밉마다 하나(@p mipCount 개)입니다. `SysMemSlicePitch` 의 합이 예산에서 잡는 바이트입니다.
-         * @return 예산보다 큰 업로드와 생성 실패는 `Rejected`(이유는 로그), 예산이 지금 차 있으면 `Busy`, 받으면 `Accepted` 이고 @p record 의 마지막 전송 시리얼을 올립니다.
+         * @param pArrInitialData 스테이징 밉마다 하나(@p mipCount 개)입니다. `SysMemSlicePitch` 의 합이 예산에서 잡는 바이트입니다(예산보다 크면 예산 전부, `allocateUploadStaging`).
+         * @return 생성 실패는 `Rejected`(이유는 로그), 예산이 지금 차 있으면 `Busy`, 받으면 `Accepted` 이고 @p record 의 마지막 전송 시리얼을 올립니다.
          */
         [[nodiscard]] RHITransferSubmit submitStagedUpload( const utf8* pCaller, TextureRecord& record, UINT width, UINT height, UINT mipCount,
                                                             const D3D11_SUBRESOURCE_DATA* pArrInitialData, UINT firstDestinationSubresource, UINT destinationX,
@@ -538,7 +543,7 @@ namespace sw
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
         /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합입니다(`UploadStaging` 이 잡고 놓습니다). `_uploadStagingBudgetBytes` 를 넘지 않습니다.
         atomic<uint64> _uploadStagingBytesInFlight;
-        /// @brief 업로드 스테이징 예산(바이트, `RHISwapChainDesc::_stagingRingBytes`)입니다. 이보다 큰 업로드 하나는 `Rejected` 입니다.
+        /// @brief 업로드 스테이징 예산(바이트, `RHISwapChainDesc::_stagingRingBytes`)입니다. 이보다 큰 업로드 하나는 예산 전부를 잡고 혼자 들어갑니다(`allocateUploadStaging`).
         uint64 _uploadStagingBudgetBytes;
         /// @brief 이 크기(바이트, `RHISwapChainDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
         uint64 _directUploadMaxBytes;
