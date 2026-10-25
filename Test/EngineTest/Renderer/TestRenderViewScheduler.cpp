@@ -444,6 +444,42 @@ SW_TEST_CASE( RenderViewCollectorTest, DirectPathAndHostViewSkipAutoScale )
 }
 
 /**
+ * @brief [RenderViewCollectorTest] Present 업샘플이 없는 뷰(호스트 타깃 · 렌더 텍스처)는 카메라 출력 배율이 1 이 아니면 거절한다 — 조용히 1 로 바꾸지 않는다
+ */
+SW_TEST_CASE( RenderViewCollectorTest, UnscaledViewKindsRejectResolutionScale )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+
+    // 호스트 뷰: 배율 0.5 인 카메라는 더해지지 않는다.
+    CameraRenderOutput mainOutput = stage._pMainCamera->getRenderOutput();
+    mainOutput._resolutionScale   = 0.5f;
+    stage._pMainCamera->setRenderOutput( mainOutput );
+    HostViewTarget target;
+    target._renderTarget = 1;
+    target._width        = 640;
+    target._height       = 360;
+    vector<RenderViewRequest> listHost;
+    RenderViewCollector::appendHostView( *stage._pMainCamera, target, RenderViewMode::Lit, listHost );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listHost.size() ) );
+    mainOutput._resolutionScale = 1.0f;
+    stage._pMainCamera->setRenderOutput( mainOutput );
+    RenderViewCollector::appendHostView( *stage._pMainCamera, target, RenderViewMode::Lit, listHost );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listHost.size() ) );
+
+    // 렌더 텍스처 뷰: 배율 0.5 인 캡처 카메라의 뷰는 목록에 없다.
+    CameraRenderOutput captureOutput = stage._pCapture->getRenderOutput();
+    captureOutput._resolutionScale   = 0.5f;
+    stage._pCapture->setRenderOutput( captureOutput );
+    const float4x4            mainViewProj = stage._pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
+    RenderViewScheduler       scheduler;
+    vector<RenderViewRequest> listView;
+    RenderViewCollector::collectExtraViews( *stage._scene.getObjectManager(), stage._pMainCamera, mainViewProj, stage._pMainCamera->getCameraPosition(), 1280, 720, 1.0f, 0.0,
+                                            RenderViewBudget{}, scheduler, nullptr, listView );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listView.size() ) );
+}
+
+/**
  * @brief [RenderViewSchedulerTest] 출력 사각형이 전체인지의 판정 — 주 시점 Present 가 뷰포트를 걸지(사각형) 말지(전체)를 가른다
  */
 SW_TEST_CASE( RenderViewSchedulerTest, FullRectIsDetected )

@@ -56,7 +56,8 @@ namespace sw
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
          *          호스트 타깃은 화면 출력 뷰가 아니다: 이미지가 타깃 크기 그대로 보이고(늘이지 않는다, `HostViewTarget`) Present 의 업샘플이 없으므로
-         *          `gv_renderScale` · 자동 렌더 배율을 곱하지 않는다(`applyScreenRenderScale` 은 화면 출력 뷰 전용). 내부 해상도는 카메라 출력의 `_resolutionScale` 그대로다.
+         *          `gv_renderScale` · 자동 렌더 배율을 곱하지 않는다(`applyScreenRenderScale` 은 화면 출력 뷰 전용). 내부 해상도는 타깃 크기 그대로(배율 1)다.
+         *          카메라 출력의 `_resolutionScale` 이 1 이 아니면 풀만 작아지고 이미지가 늘어나므로 오류를 남기고 이 뷰를 더하지 않는다(렌더 텍스처 뷰도 같다).
          * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바, `FrameRenderer::getSceneViewMode`).
          */
         static void appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView );
