@@ -254,7 +254,10 @@
 - RHI: `vkrpcache`(cbf5f0adc, Vulkan 렌더패스 캐시 락 · GL `allocateReadbackSpan`) → `rhilocks`(`_listLiveCmd` 등 락 없는 벡터 전수 점검).
 - 설정 참조: `cfgref`(dd65f7d81, `ConfigReference.py` 가 다른 헤더 상수를 푼다) → `cfgref2`(기본값 칸의 상수 이름도 풀기).
 - Wayland: `wlwin2`(wlwin 위 — 소수 배율 · 포인터 잠금 · X11 getContentScale). wlwin 본체는 main 에 이미 있다.
+- 게이트 · 도구 후속: `skipgate`(syntaxchk2 위 — 건너뜀이 통과처럼 보이는 게이트를 `통과 | 건너뜀(사유) | 불성립` 형식으로 올림), `jobhandle`(vbtimeline2 위 — `ProcessLimits.attach` Job 핸들 닫기 + `08_Verification.md` timeline 한 줄), `scntitle2`(scntitle 위 — 에디터 창 제목에도 시나리오 정보). 위 목록의 `scnrun` · `scnsplit` 은 main 위, `scntitle` 은 main 위다.
 - 기억 압축은 끝났다(`standing-rules.md` + 함정 2 파일).
+- 아직 커밋 전인 작업자(워크트리만 있고 새 커밋 없음)가 있을 수 있다 — `git -C D:/w/<이름> log main..HEAD` 가 비어 있으면 아직이거나 빈손이다. 새 세션은 먼저 `git branch --list "wt/*"` 와 각 워크트리 `status` 로 확인하고, 끝나지 않은 작업자는 죽었는지 `ListAgents` 로 본다.
+- 사용자 확인 필요(분류기가 자기 설정 수정으로 막아 에이전트가 못 한다): `.claude/settings.json` 의 `permissions.allow` 에 `"Bash(py -3 -m Scripts syntax-check *)"` · `"Bash(py -3 -m Scripts scenario *)"` 두 줄을 사용자가 직접 추가한다(사용자가 허용했다고 말했다).
 작업자 지시문에는 `syntax-check` 가 아직 없는 기반이면 "코드를 꼼꼼히 읽고 보고에 컴파일 확인 필요" 를 쓴다.
 
 **통합이 한 번에 가르는 실험(코드 변경은 임시 로그만, Release, GPU 공유 잠금).** ① 카메라가 기사 머리 코앞에 붙는 화면(시나리오 없이 `-gv_benchRig=1 -gv_benchRigView=2 -gv_screenshotFrame=3|30|200`, `-gv_screenshotSettledFrames=60` 이면 정상) — 원인 미확정. `BenchSceneRig.cpp` `frameRigCameras` 끝과 `BenchScene::update` 의 `refreshFraming()` 직후에 카메라별 이름 · 월드 위치 · 전방 · FOV · 레지스트리 크기 · 활성 게임 카메라 일치를 로그하고, `-gv_benchRigEnabled=0`, `-gv_benchAnimate=0`, `spawnRigCape` · `spawnRigWeapon` 호출을 하나씩 끈 사진 4 장, `-gv_benchCharacters=6` 프레임 3 으로 가른다(두 맞춤이 같은 코드 · 인자인데 결과가 다르면 장면 상태 — 포즈 전 스킨드 메시가 화면을 덮는 — 가 의심이다). 시간 지연 `_cameraRefreshDelay` 는 이유를 모르는 채 없애지 않는다. ② crowd · vfxgl 실험(위 후보 절). ③ DX12 Debug 디버그 레이어(`rhi-transfer-dx12-u5` · `rhi-native-context-guard`), `host-write-snapshot` 실행.
