@@ -85,14 +85,20 @@ namespace sw::editor
         uint32 _sceneEditHoldCount;
         /** @brief 막는 동안 씬이 바뀐 횟수입니다(`EditorPlaySession::noteSceneEditWhileHeld`). */
         uint32 _heldSceneEditCount;
-        uint8  _bHasSnapshot      : 1;
-        uint8  _bStartQueued      : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼의 RequestPlaySession 대기 요청에 해당)
-        uint8  _bSimulate         : 1; ///< 월드만 실행한다. 게임 모듈 업데이트와 게임 입력이 없고 에디터 카메라를 유지한다(언리얼의 Simulate)
-        uint8  _bStartAtPosition  : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
-        uint8  _bStartMovePending : 1; ///< 시작 위치로 한 번 더 옮긴다. 첫 프레임이 스폰 위치로 되돌린 것을 덮어쓴다
-        uint8  _bOptionsApplied   : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다(`EditorPlayCommands::update`)
-        uint8  _bMaximizedForPlay : 1; ///< Maximize On Play 가 게임 뷰를 최대화했다. 멈추면 배치를 되돌린다
-        uint8  _bEjected          : 1; ///< F8 로 조종을 놓았다. 다시 누르면 조종으로 돌아간다
+        /**
+         * @brief 마지막으로 거절 로그를 남긴 편집 이름입니다(`EditorPlaySession::refuseSceneEdit`). 편집이 다시 허용되면 비웁니다.
+         * @details 기즈모 드래그처럼 매 프레임 같은 편집을 부르는 경로가 플레이 중에 줄마다 경고를 쏟지 않게, 같은 편집과 같은 이유의 연속 거절은 한 번만 남긴다.
+         */
+        string _lastRefusedAction;
+        uint8  _bLastRefusedByHold : 1; ///< `_lastRefusedAction` 을 거절한 이유가 작업의 편집 막기(`holdSceneEdits`)였다
+        uint8  _bHasSnapshot       : 1;
+        uint8  _bStartQueued       : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼의 RequestPlaySession 대기 요청에 해당)
+        uint8  _bSimulate          : 1; ///< 월드만 실행한다. 게임 모듈 업데이트와 게임 입력이 없고 에디터 카메라를 유지한다(언리얼의 Simulate)
+        uint8  _bStartAtPosition   : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
+        uint8  _bStartMovePending  : 1; ///< 시작 위치로 한 번 더 옮긴다. 첫 프레임이 스폰 위치로 되돌린 것을 덮어쓴다
+        uint8  _bOptionsApplied    : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다(`EditorPlayCommands::update`)
+        uint8  _bMaximizedForPlay  : 1; ///< Maximize On Play 가 게임 뷰를 최대화했다. 멈추면 배치를 되돌린다
+        uint8  _bEjected           : 1; ///< F8 로 조종을 놓았다. 다시 누르면 조종으로 돌아간다
 
         PlaySessionData()
             : _listSnapshot{}
@@ -106,6 +112,8 @@ namespace sw::editor
             , _queuedState{ PlaySessionState::Stopped }
             , _sceneEditHoldCount{ 0 }
             , _heldSceneEditCount{ 0 }
+            , _lastRefusedAction{}
+            , _bLastRefusedByHold{ SW_FALSE }
             , _bHasSnapshot{ SW_FALSE }
             , _bStartQueued{ SW_FALSE }
             , _bSimulate{ SW_FALSE }

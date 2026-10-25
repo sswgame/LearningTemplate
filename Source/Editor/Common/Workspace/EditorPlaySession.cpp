@@ -324,9 +324,24 @@ namespace sw::editor
 
     bool EditorPlaySession::refuseSceneEdit( const utf8* pAction )
     {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
         if ( areSceneEditsAllowed() )
+        {
+            if ( pData != nullptr )
+                pData->_lastRefusedAction.clear(); // 다시 허용되면 다음 거절은 새로 남긴다
             return false;
-        const utf8* pReason = areSceneEditsHeld() ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
+        }
+        const bool bHeld = areSceneEditsHeld();
+        // 매 프레임 부르는 경로(기즈모 드래그 등)가 줄마다 경고를 쏟지 않게, 같은 편집이 같은 이유로 연속 거절되면 첫 한 번만 남긴다.
+        if ( pData != nullptr )
+        {
+            const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold != 0 ) == bHeld;
+            if ( bSameAsLast )
+                return true;
+            pData->_lastRefusedAction  = pAction;
+            pData->_bLastRefusedByHold = bHeld ? SW_TRUE : SW_FALSE;
+        }
+        const utf8* pReason = bHeld ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
         SW_LOG_WARNING_ID( "Editor.SceneEditRefused", "%# refused: scene edits are not allowed - %#", pAction, pReason );
         return true;
     }
