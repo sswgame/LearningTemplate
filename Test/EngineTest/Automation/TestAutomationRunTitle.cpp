@@ -12,9 +12,9 @@ namespace
     class FakeTitleTarget final : public sw::IWindowTitleTarget
     {
     public:
-        const sw::utf8*   getCurrentTitle() const override { return _current.c_str(); }
+        const utf8*       getCurrentTitle() const override { return _current.c_str(); }
         const sw::string& getBaseTitle() const override { return _base; }
-        void              applyWindowTitle( const sw::utf8* pTitle ) override
+        void              applyWindowTitle( const utf8* pTitle ) override
         {
             ++_applyCount;
             _current = pTitle;
@@ -33,7 +33,7 @@ namespace
         int32              onFrameEnd( const sw::EngineFrameContext& ) override { return kRunning; }
         int32              onWindowClosed( const sw::EngineFrameContext& ) override { return kRunning; }
         void               onBuildRenderPacket( sw::EngineRenderPacketContext& ) override {}
-        [[nodiscard]] bool tryGetRunStatus( sw::string& outScenarioName, sw::string& outStepKind, sw::uint32& outStepNumber, sw::uint32& outFrame ) const override
+        [[nodiscard]] bool tryGetRunStatus( sw::string& outScenarioName, sw::string& outStepKind, uint32& outStepNumber, uint32& outFrame ) const override
         {
             if ( _bRunning == false )
                 return false;
@@ -44,8 +44,8 @@ namespace
             return true;
         }
 
-        bool       _bRunning{ true };
-        sw::uint32 _stepNumber{ 1 };
+        bool   _bRunning{ true };
+        uint32 _stepNumber{ 1 };
     };
 
     void tickFrames( sw::AutomationRunTitleTracker& tracker, FakeTitleTarget& target, FakeRunObserver& observer, int32 count )

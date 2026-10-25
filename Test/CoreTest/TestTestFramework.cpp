@@ -295,8 +295,8 @@ SW_TEST_CASE( TestFrameworkTest, FailureMessageAcceptsLiteralStringAndNull )
  */
 SW_TEST_CASE( TestFrameworkTest, HostSuitesArgumentSplitsByDeclaration )
 {
-    const test::TestCaseInfo gpuCase{ "GpuProbeTest", "One", {} };
-    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {} };
+    const test::TestCaseInfo gpuCase{ "GpuProbeTest", "One", {}, 0.0, {} };
+    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {}, 0.0, {} };
 
     test::TestRegistry defaultRegistry;
     defaultRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
@@ -871,8 +871,8 @@ SW_TEST_CASE( TestFrameworkTest, FeatureSkippedSuiteIsNotAnEmptySuite )
  */
 SW_TEST_CASE( TestFrameworkTest, LoadSuitesAreLeftOutByDefault )
 {
-    const test::TestCaseInfo loadCase{ "LoadProbeTest", "One", {} };
-    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {} };
+    const test::TestCaseInfo loadCase{ "LoadProbeTest", "One", {}, 0.0, {} };
+    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {}, 0.0, {} };
 
     test::TestRegistry defaultRegistry;
     defaultRegistry.getCatalog().addSuiteKind( "LoadProbeTest", test::SuiteKind::Load, "measures throughput" );

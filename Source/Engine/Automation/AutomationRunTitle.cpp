@@ -111,7 +111,7 @@ namespace sw
                 const string lower = StringUtil::toLower( string{ name }.c_str() );
                 for ( const string_view fragment : kArrSecretFragment )
                 {
-                    if ( lower.find( fragment ) != string::npos )
+                    if ( string_view{ lower }.find( fragment ) != string_view::npos )
                         return true;
                 }
                 return false;
@@ -196,7 +196,7 @@ namespace sw
 
     string AutomationRunTitleUtil::makeBenchSummary( vector<string> listPair )
     {
-        constexpr string_view kPrefix = "gv_bench";
+        static constexpr string_view kPrefix = "gv_bench";
         (void)VectorUtil::removeIf( listPair, []( const string& pair )
         { return string_view{ pair }.substr( 0, kPrefix.size() ) != kPrefix; } ); // 지운 개수는 쓰지 않는다 — 요약에는 남은 쌍만 든다
         std::sort( listPair.begin(), listPair.end() );
