@@ -651,6 +651,7 @@ namespace sw
         void*             _pHWnd;
         void*             _pDisplayHandle;
         NativeSurfaceKind _surfaceKind; ///< 두 핸들의 창 시스템(리눅스 WSI 를 고른다 — X11 이면 xlib · xcb, Wayland 면 wayland)
+        VulkanWsiKind     _wsiKind;     ///< 인스턴스를 만들 때 고른 서피스 확장(`createSurface` 가 이 값으로 만든다). 인스턴스 전에는 None
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
         ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
         uint64 _frameFenceCounter;
@@ -668,7 +669,6 @@ namespace sw
         uint16 _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
         uint16 _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
         uint16 _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16 _linuxWsi                : 2; ///< 0은 없음, 1은 xlib, 2는 xcb, 3은 wayland(Linux 전용)
         uint16 _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
         uint16 _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.

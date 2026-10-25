@@ -57,6 +57,7 @@ namespace sw
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
         , _surfaceKind{ NativeSurfaceKind::Win32 }
+        , _wsiKind{ VulkanWsiKind::None }
         , _frameFenceCounter{ 0 }
         , _width{ 0 }
         , _height{ 0 }
@@ -76,7 +77,6 @@ namespace sw
         , _bDepthHasStencil{ SW_FALSE }
         , _bSwapChainImageHeld{ SW_FALSE }
         , _bMemoryBudget{ SW_FALSE }
-        , _linuxWsi{ 0 }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
@@ -152,7 +152,7 @@ namespace sw
             return false;
         }
 #else
-        _pHWnd = desc._pWindowHandle; // 종류별 읽기는 `createSurface` 의 `_linuxWsi` 가 고른다(`_surfaceKind` 에서 정한다)
+        _pHWnd = desc._pWindowHandle; // 종류별 읽기는 `createSurface` 의 `_wsiKind` 가 고른다(`_surfaceKind` 에서 정한다)
 #endif
         _pDisplayHandle = desc._pWindowDisplay;
         _surfaceKind    = desc._surfaceKind;
@@ -202,7 +202,7 @@ namespace sw
 
             createDebugMessenger();
 
-            if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _linuxWsi ) == false )
+            if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
                 return false;
 
             if ( pickPhysicalDevice( desc._bSoftwareAdapter ) == false )
