@@ -18,13 +18,17 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
+# 같이 컴파일하는 에디터 백엔드 소스는 Source/Editor/CMakeLists.txt 가 선언한다(`SW_EDITOR_UI_TEST_SOURCES`) - 여기 되적지 않는다.
+# `Source/Editor` 는 `Test` 보다 먼저 추가된다(루트 CMakeLists).
+get_property(swEditorUITestSource GLOBAL PROPERTY SW_EDITOR_UI_TEST_SOURCES)
+if(NOT swEditorUITestSource)
+	message(FATAL_ERROR "EditorUITest: SW_EDITOR_UI_TEST_SOURCES 가 비었다 - Source/Editor/CMakeLists.txt 가 먼저 구성돼야 한다")
+endif()
+
 sw_addTestExecutable(EditorUITest
-	# 테스트 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스만 적는다.
+	# 테스트 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스는 위 속성.
 	EXTRA_SOURCES
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiOsInputFilter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiKeyForward.cpp"
+		${swEditorUITestSource}
 	LIBS
 		Engine
 		imgui

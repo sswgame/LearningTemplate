@@ -28,6 +28,12 @@ if(NOT SW_SHIPPING_BUILD)
 	)
 endif()
 
+# App 전용 소스의 목록은 Source/App/CMakeLists.txt 가 선언한다(`Source/App` 은 `Test` 보다 먼저 추가된다).
+get_property(swAppSmokeTestSource GLOBAL PROPERTY SW_APP_SMOKE_TEST_SOURCES)
+if(NOT swAppSmokeTestSource)
+	message(FATAL_ERROR "SmokeTest: SW_APP_SMOKE_TEST_SOURCES 가 비었다 - Source/App/CMakeLists.txt 가 먼저 구성돼야 한다")
+endif()
+
 # `ModuleHost` 는 구성과 무관하게 가져온다 — 검사하는 것이 "디바이스가 없을 때의 호스트" 라
 # 배포 구성에서도 같은 자리를 지나가야 한다(그쪽은 게임이 정적 링크라 경로가 오히려 더 깊다).
 #
@@ -41,7 +47,7 @@ sw_addTestExecutable(SmokeTest
 	EXTRA_SOURCES
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleHost.cpp
 		# App 전용 층(에디터 인스턴스 · RHI 교체 뒤 재초기화)도 같은 테스트가 본다 — App 은 실행 파일이라 소스로 가져온다.
-		${CMAKE_SOURCE_DIR}/Source/App/EditorModuleHost.cpp
+		${swAppSmokeTestSource}
 		# `ModuleCompiler` 는 배포 구성에도 들어간다 — `ModuleHost` 의 소스 규칙과 같다(ModuleHost 는 배포에서
 		# 핫 리로드 파일만 뺀다). `ModuleHost::shutdown` 이 구성과 무관하게 이 심볼을 부른다.
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCompiler.cpp

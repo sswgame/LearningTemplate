@@ -23,6 +23,21 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_D
 # imgui 링크가 없는 부분(`*Model`)이 짓는다. 뷰 층 파일이 ImGui 를 쓰지 않게 되면 `Model` 폴더로 옮긴다(`git mv` + include 경로).
 set(listEditorModelLayer Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl Common/Workspace)
 
+# EditorUITest(ImGui 컨텍스트만 있으면 도는 테스트)가 EditorModule 대신 직접 컴파일하는 에디터 파일. 이 파일들의 주인이 목록을 선언하고 테스트는 속성만 읽는다(`SW_EDITOR_UI_TEST_SOURCES`).
+# 폴더(Common/Backend/Platform)는 폴더째 모아 새 플랫폼 백엔드가 저절로 따라오고(못 지으면 링크 오류로 드러난다), 폴더로 가를 수 없는 최상위 두 파일만 이름을 적는다 -
+# 같은 폴더의 EditorUICapture · DrawSnapshotHandoff 는 엔진 밖 의존을 끌어 EditorUITest 가 받을 수 없고, 이 둘을 가르는 선언이 달리 없다. 이 둘이 이 목록의 유일한 손 입력이며,
+# 없어지면 구성이 멈춘다. `Render/` 는 RHI 디바이스가 필요해 뺀다.
+file(GLOB listEditorUITestSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/Platform/*.cpp")
+list(APPEND listEditorUITestSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiOsInputFilter.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiKeyForward.cpp")
+foreach(source IN LISTS listEditorUITestSource)
+	if(NOT source IN_LIST listEditorAllSource)
+		message(FATAL_ERROR "[EditorUITest] ${source} is not an Editor source (SW_EDITOR_UI_TEST_SOURCES in Source/Editor/CMakeLists.txt)")
+	endif()
+endforeach()
+set_property(GLOBAL PROPERTY SW_EDITOR_UI_TEST_SOURCES "${listEditorUITestSource}")
+
 # 층 하나의 소스(`<OUT>Source`)와 헤더(`<OUT>Header`, Source/Editor 기준 상대 경로). `Common` 은 바로 아래 파일만, `<root>` 는 Source/Editor 바로 아래 파일만.
 function(sw_globEditorLayer LAYER OUT)
 	if(LAYER STREQUAL "<root>")
@@ -177,24 +192,7 @@ foreach(header IN LISTS listEditorAllSource)
 	endif()
 endforeach()
 
-# 코어(EditorCoreReflect)와 EditorModule 은 서로 다른 gen 폴더에 `<이름>.gen.cpp` · `.gen.h` 를 쓰고 둘 다 include 경로에 있다. 같은 이름의 REFLECT 헤더가 양쪽에 하나씩 있으면
-# 각 타깃의 중복 검사(`sw_addReflectionStep`)는 통과하지만 `.gen.h` 가 서로를 가린다 — 두 목록에 걸쳐 이름(확장자 뺀 것) 중복을 구성에서 막는다.
-set(listEditorReflectStem "")
-foreach(header IN LISTS listEditorReflectCore listEditorReflectModule)
-	get_filename_component(stem "${header}" NAME_WE)
-	if(stem IN_LIST listEditorReflectStem)
-		set(listSameStem "")
-		foreach(other IN LISTS listEditorReflectCore listEditorReflectModule)
-			get_filename_component(otherStem "${other}" NAME_WE)
-			if(otherStem STREQUAL stem)
-				list(APPEND listSameStem "  ${other}")
-			endif()
-		endforeach()
-		list(JOIN listSameStem "\n" sameStemText)
-		message(FATAL_ERROR "[Reflection] Editor: two reflected headers share the name '${stem}' (core and EditorModule reflect into separate folders but both are on the include path, so ${stem}.gen.h would shadow). Rename one:\n${sameStemText}")
-	endif()
-	list(APPEND listEditorReflectStem "${stem}")
-endforeach()
+# 코어(EditorCoreReflect)와 EditorModule 의 gen 이름 중복은 `sw_addReflectionStep` 의 전역 stem 레지스트리가 구성에서 막는다(cmake/Engine/ReflectionCodeGen.cmake).
 
 # 코어 부분 하나가 받는 공통 설정. EditorModule 과 같은 정의 · 로그 태그 · 유니티 묶음을 받아 DLL 에 들어가도 달라지지 않는다.
 function(sw_applyEditorCoreSettings TARGET_NAME)

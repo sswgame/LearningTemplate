@@ -5,6 +5,14 @@
 
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
+# SmokeTest 가 실행 파일 App 대신 직접 컴파일하는 App 소스(에디터 인스턴스 · RHI 교체 뒤 재초기화 층). 주인이 선언하고 테스트는 속성(`SW_APP_SMOKE_TEST_SOURCES`)만 읽는다.
+# 전용 서버 타깃은 App 을 짓지 않지만 스모크 테스트는 짓기 때문에 아래 서버 조기 반환보다 앞에 둔다. App 소스 목록에 없는 파일이면 구성을 멈춘다.
+set(swAppSmokeTestSource "${CMAKE_CURRENT_SOURCE_DIR}/EditorModuleHost.cpp")
+if(NOT swAppSmokeTestSource IN_LIST APP_SOURCES)
+	message(FATAL_ERROR "[SmokeTest] ${swAppSmokeTestSource} is not an App source (SW_APP_SMOKE_TEST_SOURCES in Source/App/CMakeLists.txt)")
+endif()
+set_property(GLOBAL PROPERTY SW_APP_SMOKE_TEST_SOURCES "${swAppSmokeTestSource}")
+
 # ------------------------------------------------------------------------------
 # 1) App — 플레이어 실행 파일(창 · 렌더러). 전용 서버 타깃은 짓지 않는다.
 # ------------------------------------------------------------------------------
