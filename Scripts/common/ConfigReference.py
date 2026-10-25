@@ -153,7 +153,11 @@ def findLeadingDocInternal(segment: str) -> str:
 # ------------------------------------------------------------------------------
 @dataclass
 class FieldDoc:
-    """설정 칸 하나입니다."""
+    """설정 칸 하나입니다.
+
+    `MaxCount` 는 문서 칸이 아니다(문서에 나가지 않는다). 칸으로 더하려면 생성기 규칙으로 풀어야 한다 — 양의 32 비트 정수 리터럴 또는 상수 이름 하나(`_` 시작도
+    필드로 보지 않고 상수로 찾는다), 정수 상수만(실수 · 범위 밖은 오류), `Min`/`Max` 와 달리 `-` · 쉼표 목록 · 필드 이름 없음(`AstVisitor::resolveMaxCountName`).
+    """
 
     name: str
     typeName: str

@@ -12,7 +12,7 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common.ConfigReference import resolveRangeConstantInternal  # noqa: E402
+from common.ConfigReference import FieldDoc, resolveRangeConstantInternal  # noqa: E402
 from common.CppConstants import ConstantError, ConstantResolver, formatDoubleInternal, hasConstantName  # noqa: E402
 
 
@@ -148,6 +148,14 @@ class CppConstantsTest(unittest.TestCase):
         resolver = self.makeResolverInternal({"Source/A/Top.h": "constexpr int kMax = 1;\nstruct S { static constexpr int kMax = 2; };"})
         with self.assertRaises(ValueError):
             resolveRangeConstantInternal("kMax", "Source/A/Top.h", resolver, "S")
+
+    def testIntegerConstantsPrintAsIntegersAndMaxCountIsNotADocColumn(self) -> None:
+        resolver = self.makeResolverInternal({"Source/A/Top.h": "constexpr uint32 kMaxSlotCount = 1 << 5;\nconstexpr float32 kRatio = 1.0f;"})
+        header = "Source/A/Top.h"
+        self.assertEqual(resolveRangeConstantInternal("kMaxSlotCount", header, resolver, "T"), "32")   # float32 처리는 정수 상수에 닿지 않는다
+        self.assertEqual(resolveRangeConstantInternal("kRatio", header, resolver, "T"), "1")
+        # MaxCount 는 문서 칸이 아니다 — 칸으로 더하면 이 시험이 막아 `FieldDoc` 독스트링의 생성기 규칙(정수 상수 하나, 필드 · `-` · 쉼표 없음)으로 풀게 한다.
+        self.assertFalse(any("maxcount" in name.lower() for name in FieldDoc.__dataclass_fields__))
 
     def testHasConstantName(self) -> None:
         self.assertFalse(hasConstantName("1.0f"))
