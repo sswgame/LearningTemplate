@@ -217,10 +217,10 @@ namespace sw
         void retireFrameOnGPU();
         /**
          * @brief 방금 낸 전송 뒤에 펜스를 달고(`glFenceSync` + `glFlush`) 시리얼을 발급합니다. GL 컨텍스트를 가진 스레드에서, 전송 명령을 낸 직후에 부릅니다.
-         * @param bGPUPending 거짓이면 이미 끝난 제출(동기로 읽어 둔 되읽기)이라 펜스를 달지 않습니다.
          * @details `glFlush` 가 있어야 프레임을 돌리지 않아도 펜스가 신호한다(계약 7). 시리얼은 컨텍스트를 쥔 채 큐에 낸 순서대로 매긴다.
+         *          모든 전송(업로드 · 되읽기)은 GPU 에서 끝나므로 펜스 없는 제출은 없다. `glFenceSync` 가 펜스를 주지 않으면 오류를 남기고 장치 손실로 둔다.
          */
-        uint64 endTransfer( bool bGPUPending );
+        uint64 endTransfer();
         /** @brief 앞에서부터 끝난 전송의 펜스를 놓고 워터마크를 올립니다. 기다리지 않습니다. GL 컨텍스트를 가진 스레드에서만 부릅니다. */
         void retireFinishedTransfers();
         /**
@@ -463,7 +463,7 @@ namespace sw
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(GL 은 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;
-        /// @brief 제출한 전송마다 펜스(`GLsync`, `void*`)를 제출 순서대로 쌓습니다. 이미 끝난 제출(동기로 읽어 둔 되읽기)은 nullptr 입니다. 앞에서부터 끝난 것만 워터마크를 올립니다.
+        /// @brief 제출한 전송마다 펜스(`GLsync`, `void*`)를 제출 순서대로 쌓습니다(`endTransfer` 만 넣는다). 앞에서부터 끝난 것만 워터마크를 올립니다.
         RHITransferFenceQueue<void*> _transferQueue;
         /// @brief 아직 가져가지 않은 텍스처 읽기가 결과를 받는 되읽기 링 구간입니다. 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이 컨텍스트 밖에서 복사한다.
         RHIPendingReadbackTable<RHIStagingSpan> _readbackTable;
