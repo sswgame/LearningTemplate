@@ -9,6 +9,7 @@ QA 러너의 App 없이 테스트할 수 있는 부분 — 이미지 지표(`Ima
 
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 import unittest
@@ -18,7 +19,8 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from common.BuildTree import BuildTree  # noqa: E402
-from common.AppRun import AppRunResult, computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
+from common.AppRun import AppRunResult, kAppRhiUnusableExitCode, readRhiUnusableExitCode, computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
 from qa.PerfRegression import compareInternal  # noqa: E402
@@ -149,6 +151,24 @@ class PerfCompareTest(unittest.TestCase):
         self.assertEqual(1, len(listRegression))
         _, listNote = compareInternal(baseline, {"GT.Frame": {"p50_us": 500.0, "p99_us": 2000.0}}, tolerance, 150.0)
         self.assertTrue(any("faster" in note for note in listNote))
+
+
+class RhiUnusableExitCodeTest(unittest.TestCase):
+    def testHeaderIsTheSingleSource(self) -> None:
+        """App 의 "백엔드 못 돌림" 종료 코드는 C++ 헤더가 정본이다 — `ExitCode.Skipped` 와 CMake `SKIP_RETURN_CODE` 가 어긋나면 여기서 멈춘다."""
+        self.assertEqual(kAppRhiUnusableExitCode, readRhiUnusableExitCode(kRepositoryRoot / "Source/Engine/Graphics/RHI/RHIInitResult.h"))
+        self.assertEqual(int(ExitCode.Skipped), kAppRhiUnusableExitCode)
+        cmakeText = (kRepositoryRoot / "Test/PythonTest/CMakeLists.txt").read_text(encoding="utf-8")
+        listCode = re.findall(r"SKIP_RETURN_CODE\s+(\d+)", cmakeText)
+        self.assertTrue(listCode)
+        self.assertEqual({str(kAppRhiUnusableExitCode)}, set(listCode))
+
+    def testMissingDefinitionStopsLoudly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            header = Path(temporary) / "RHIInitResult.h"
+            header.write_text("// 정의 없음", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                readRhiUnusableExitCode(header)
 
 
 class GameTableTest(unittest.TestCase):
