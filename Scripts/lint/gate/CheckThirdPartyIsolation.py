@@ -37,8 +37,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import iterIncludes  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
 from lint.SharedRules import kListLibraryRule  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanSet  # noqa: E402
 
 
 _kListSourceRoot = kLintTargetRelDirs
@@ -55,19 +56,16 @@ def isEditorExtensionPath(relative: str) -> bool:
     return relative.startswith("Source/GameFramework/PlugIn/Editor/") or (relative.startswith("Source/Games/") and "/Editor/" in relative)
 
 
-def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
-    """백엔드 폴더 밖에서 감싼 라이브러리 헤더를 include 하는 줄입니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
+def findIncludeViolations(relative: str, text: str) -> list[str]:
+    """백엔드 폴더 밖에서 감싼 라이브러리 헤더를 include 하는 줄입니다(C++ 파일 하나)."""
     listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        for lineNumber, rawInclude in iterIncludes(text):
-            includePath = normalizePath(rawInclude)
-            for rule in kListLibraryRule:
-                if rule.name == "ImGui" and isEditorExtensionPath(relative):
-                    continue  # 키트 · 기반 · 게임의 에디터 확장(`<…>/Editor/`, Dev 전용 모듈)은 에디터와 같은 ImGui 를 쓴다
-                if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.listAllowedRoot) is False:
-                    listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {' · '.join(rule.listAllowedRoot)} 안에서만 include 합니다")
+    for lineNumber, rawInclude in iterIncludes(text):
+        includePath = normalizePath(rawInclude)
+        for rule in kListLibraryRule:
+            if rule.name == "ImGui" and isEditorExtensionPath(relative):
+                continue  # 키트 · 기반 · 게임의 에디터 확장(`<…>/Editor/`, Dev 전용 모듈)은 에디터와 같은 ImGui 를 쓴다
+            if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.listAllowedRoot) is False:
+                listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {' · '.join(rule.listAllowedRoot)} 안에서만 include 합니다")
     return listViolation
 
 
@@ -87,34 +85,30 @@ def stripCmakeComments(text: str) -> str:
     return "\n".join(listLine)
 
 
-def findLinkViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
-    """규칙의 링크 주인 밖에서 감싼 라이브러리 타깃을 링크하는 호출입니다."""
-    listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListCmakeRoot, suffixes=_kCmakeSuffixes,
-                                          fileNames=_kCmakeFileNames)
+def findLinkViolations(relative: str, text: str) -> list[str]:
+    """규칙의 링크 주인 밖에서 감싼 라이브러리 타깃을 링크하는 호출입니다(CMake 파일 하나)."""
     listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith("ThirdParty/"):
-            continue
-        code = stripCmakeComments(text)
-        for callMatch in _kLinkCallRe.finditer(code):
-            # 짝이 맞는 닫는 괄호까지가 인자다.
-            depth = 1
-            cursor = callMatch.end()
-            while cursor < len(code) and depth > 0:
-                if code[cursor] == "(":
-                    depth += 1
-                elif code[cursor] == ")":
-                    depth -= 1
-                cursor += 1
-            listArgument = re.split(r"\s+", code[callMatch.end():cursor - 1].strip())
-            lineNumber = code.count("\n", 0, callMatch.start()) + 1
-            for rule in kListLibraryRule:
-                if relative == rule.cmakeLinkOwner:
-                    continue
-                for target in rule.listCmakeTarget:
-                    if any(argument == target or argument.endswith(f":{target}>") for argument in listArgument):
-                        listViolation.append(f"{relative}:{lineNumber}: target_link_libraries(... {target} ...) -> {rule.name} 는 {rule.cmakeLinkOwner} 에서만 링크합니다")
+    if relative.startswith("ThirdParty/"):
+        return listViolation
+    code = stripCmakeComments(text)
+    for callMatch in _kLinkCallRe.finditer(code):
+        # 짝이 맞는 닫는 괄호까지가 인자다.
+        depth = 1
+        cursor = callMatch.end()
+        while cursor < len(code) and depth > 0:
+            if code[cursor] == "(":
+                depth += 1
+            elif code[cursor] == ")":
+                depth -= 1
+            cursor += 1
+        listArgument = re.split(r"\s+", code[callMatch.end():cursor - 1].strip())
+        lineNumber = code.count("\n", 0, callMatch.start()) + 1
+        for rule in kListLibraryRule:
+            if relative == rule.cmakeLinkOwner:
+                continue
+            for target in rule.listCmakeTarget:
+                if any(argument == target or argument.endswith(f":{target}>") for argument in listArgument):
+                    listViolation.append(f"{relative}:{lineNumber}: target_link_libraries(... {target} ...) -> {rule.name} 는 {rule.cmakeLinkOwner} 에서만 링크합니다")
     return listViolation
 
 
@@ -223,14 +217,29 @@ class CheckThirdPartyIsolationGate(LintGate):
             "expectedViolation": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt:1: target_link_libraries(... unofficial::sqlite3::sqlite3 ...) -> S",
             "files": {"Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt": "target_link_libraries(GF_Server_SQLStore PRIVATE unofficial::sqlite3::sqlite3)\n"},
         },
+        {
+            # 집합 둘: `cmake/` 뿌리는 CMake 집합에만 있어 거기의 `.cmake` 는 링크로 보고, C++ 집합의 백엔드 폴더 파일은 include 가 맞다.
+            "name": "cmake/ 폴더의 .cmake 가 Box2D 를 링크한다(백엔드 폴더의 Jolt include 는 위반이 아니다)",
+            "expectedViolation": "cmake/Modules/Probe.cmake:1: target_link_libraries(... box2d ...) -> Box2D 는 Source/Engine/CMakeLists.txt 에서만 링크합니다",
+            "unexpectedViolation": "Source/Engine/Physics/Jolt/Probe.cpp",
+            "files": {
+                "cmake/Modules/Probe.cmake": "target_link_libraries(Probe PRIVATE box2d)\n",
+                "Source/Engine/Physics/Jolt/Probe.cpp": "#include <Jolt/Jolt.h>\nint probe() { return 0; }\n",
+            },
+        },
     ]
+
+    sourceScanSets = (SourceScanSet("cpp", _kListSourceRoot, _kSourceSuffixes),
+                      SourceScanSet("cmake", _kListCmakeRoot, _kCmakeSuffixes, _kCmakeFileNames))
+    sourceSummary = f"{len(kListLibraryRule)} 라이브러리({' · '.join(rule.name for rule in kListLibraryRule)})의 헤더와 링크가 제자리에 있다"
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation = findIncludeViolations(repositoryRoot, args.files) + findLinkViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary=f"{len(kListLibraryRule)} 라이브러리({' · '.join(rule.name for rule in kListLibraryRule)})의 헤더와 링크가 제자리에 있다")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.setName == "cmake":
+            return FileFindings(listViolation=findLinkViolations(source.relative, source.text))
+        return FileFindings(listViolation=findIncludeViolations(source.relative, source.text))
 
 
 main = CheckThirdPartyIsolationGate.run

@@ -24,27 +24,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.Parallel import flatMapConcurrent  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
-from lint.NamespaceBlockRules import splitNamespaceBlocks  # noqa: E402
-
-
-def findViolations(filePath: Path, repositoryRoot: Path) -> list[str]:
-    """파일 하나의 위반 — 읽기만 한다(고치는 것은 `fixText` · `FormatNamespaceBlocks`)."""
-    relativePath = filePath.relative_to(repositoryRoot).as_posix() if filePath.is_relative_to(repositoryRoot) else str(filePath)
-    try:
-        raw = filePath.read_bytes().decode("utf-8")
-    except (OSError, UnicodeDecodeError) as error:
-        return [f"{relativePath}:1: 읽지 못해 검사할 수 없습니다 ({error}) — 파일을 UTF-8 로 저장하십시오"]
-    _, listSplit = splitNamespaceBlocks(raw)
-    return [f"{relativePath}:{split[3] + 1}: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다 — 정의마다 블록을 나누세요 "
-            f"(`py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files {relativePath}`)" for split in listSplit]
+from lint.LintGate import LintGate  # noqa: E402
+from lint.NamespaceBlockRules import inspectSource  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanSet  # noqa: E402
 
 
 class CheckNamespaceBlocksGate(LintGate):
     """
-    검사만 한다 — 고치는 것은 `fixer/FormatNamespaceBlocks.py`(같은 `splitNamespaceBlocks`)와 그것을 부르는 `FormatModified.py`.
+    검사만 한다 — 고치는 것은 `fixer/FormatNamespaceBlocks.py`(같은 `NamespaceBlockRules.inspectSource` 의 `fixedText`)와 그것을 부르는 `FormatModified.py`.
+    소스 게이트다: 원본 글(`SourceFile.rawText`)의 줄 끝 · BOM 을 지키는 판정이라 정규화한 `text` 가 아니라 원본을 나눈다.
     """
+
+    sourceScanSets = (SourceScanSet("cpp", kLintTargetRelDirs, (".h", ".cpp", ".inl")),)
 
     description = "클래스마다 namespace 블록 검사"
     buildComment = "Checking that each class or struct definition has its own namespace block..."
@@ -53,6 +44,16 @@ class CheckNamespaceBlocksGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "한 namespace 블록에 정의 여럿"
     selfTestCases = [
+        {
+            # 원본(`rawText`)을 나눈다 — BOM 이 있어도 줄 번호가 어긋나지 않는다(이 조각은 임시 트리에 쓸 때 윈도우에서 줄 끝이 CRLF 가 된다).
+            "name": "BOM 이 있어도 한 블록에 클래스 둘",
+            "expectedViolation": "Source/Engine/Probe/ProbeBom.h:9: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
+            "files": {
+                "Source/Engine/Probe/ProbeBom.h": (
+                    "﻿#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n} // namespace sw\n"
+                ),
+            },
+        },
         {
             "name": "한 블록에 클래스 둘",
             "expectedViolation": "Source/Engine/Probe/Probe.h:9: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
@@ -88,10 +89,8 @@ class CheckNamespaceBlocksGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listFile = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=(".h", ".cpp", ".inl"))
-        violations = flatMapConcurrent(lambda path: findViolations(path, repositoryRoot), listFile)
-        return GateResult(listViolation=violations, summary=f"{len(listFile)} files scanned")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return inspectSource(source)
 
 
 main = CheckNamespaceBlocksGate.run

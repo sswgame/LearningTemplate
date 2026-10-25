@@ -45,6 +45,9 @@ class CheckSomethingGate(LintGate):
         return FileFindings(listViolation=[f"{source.relative}: ..." for ... in ...])
 ```
 
+파일 집합이 둘 이상(C++ 와 CMake, 키트 폴더와 게임 폴더)이면 `sourceScanRoots` 대신 `sourceScanSets = ( SourceScanSet( "cpp", roots, suffixes ), SourceScanSet( "cmake", … ) )`
+를 적고 `source.setName` 으로 가른다. 원본의 줄 끝 · BOM 을 지켜야 하면 `source.rawText` · `lineEnding` · `hasBom` · `restore()`, 고칠 수 있으면 `FileFindings.fixedText`.
+
 파일 사이의 관계를 보거나 파일마다가 아닌 일을 하는 게이트는 `scan()` 을 쓴다. 그런 게이트가 파일마다 파이썬 정규식을 오래 돌린다면
 파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
@@ -70,7 +73,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, readTextFiles, resolveFileArguments  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
-from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
+from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, SourceScanSet, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
@@ -209,12 +212,16 @@ class LintGate:
     # (`SourceScan.scanSourceGates`), CTest · CI 린트 잡은 소스 게이트 전부를 `RunSourceGates.py` 한 프로세스로 돌린다(`LintCatalog`).
     # 혼자 돌릴 때(`main = XxxGate.run` · 커밋 훅 `--files`)도 같은 함수를 게이트 하나로 부른다.
     #
-    # - `sourceScanRoots`      : 걸을 뿌리(저장소 기준). **채우면 소스 게이트다.** 확장자(`sourceSuffixes`)도 반드시 함께 적는다.
-    # - `sourceExcludedDirNames`: 내려가지 않을 폴더 이름(기본 `kNotOurDirNames`)
+    # - `sourceScanSets`       : 파일 집합(`SourceScanSet`: 이름 · 뿌리 · 확장자/파일 이름 · 제외)의 목록. **채우면 소스 게이트다.** 파일은 어느 집합에서
+    #                            왔는지(`SourceFile.setName`)와 함께 온다 — C++ 와 CMake, 키트 폴더와 게임 폴더처럼 파일 집합마다 규칙이 다른 게이트용.
+    # - `sourceScanRoots`      : 집합이 하나일 때의 줄임 — 걸을 뿌리(저장소 기준). 확장자(`sourceSuffixes`)도 반드시 함께 적는다.
+    #                            클래스를 만들 때 `sourceScanSets` 한 칸(이름 비움)으로 바뀌므로 읽는 쪽은 `sourceScanSets` 하나만 본다. 둘을 함께 적으면 TypeError.
+    # - `sourceExcludedDirNames`: 줄임 형식에서 내려가지 않을 폴더 이름(기본 `kNotOurDirNames`)
     # - `prepareSourceScan`    : 훑기 전에 한 번 — 저장소 전체를 묻는 확인(집 파일이 있는가)이나 규칙 준비. 성립하지 않으면 `GateError`.
     # - `checkSourceFile`      : 파일 하나 → `FileFindings`(없으면 None). **자식 프로세스에서도 돈다** — 인스턴스에 상태를 쌓지 말고,
     #                            파일 사이에 모을 것은 `FileFindings.value` 로 돌려 `finishSourceScan` 에서 모은다.
     # - `finishSourceScan`     : 파일마다의 결과 → `GateResult`. 기본은 위반 · 참고를 파일 순서대로 잇고 요약은 `sourceSummary`(비우면 본 파일 수)다.
+    sourceScanSets: tuple[SourceScanSet, ...] = ()
     sourceScanRoots: tuple[str, ...] = ()
     sourceSuffixes: tuple[str, ...] = ()
     sourceExcludedDirNames: frozenset[str] = kNotOurDirNames
@@ -234,7 +241,7 @@ class LintGate:
 
     @classmethod
     def isSourceGate(cls) -> bool:
-        return bool(cls.sourceScanRoots)
+        return bool(cls.sourceScanSets)
 
     @classmethod
     def seeExemption(cls, key: str) -> None:
@@ -263,10 +270,18 @@ class LintGate:
             # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다. 부모의 이름을 물려받지 않는다 —
             # 중간 기반(`BaselineSourceGate`)을 상속한 게이트가 기반의 이름으로 규칙 파일을 읽게 된다.
             cls.name = cls.__name__.removesuffix("Gate")
-        if cls.sourceScanRoots and not cls.sourceSuffixes:
-            raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
-        if cls.sourceScanRoots and "scan" in cls.__dict__:
-            raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanRoots)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
+        if any(key in cls.__dict__ for key in ("sourceScanRoots", "sourceSuffixes", "sourceExcludedDirNames")) and cls.sourceScanRoots:
+            if "sourceScanSets" in cls.__dict__:
+                raise TypeError(f"{cls.__name__}: sourceScanSets 와 sourceScanRoots 를 함께 적지 않는다 — 집합이 하나면 줄임만, 여럿이면 sourceScanSets 만")
+            if not cls.sourceSuffixes:
+                raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
+            cls.sourceScanSets = (SourceScanSet("", tuple(cls.sourceScanRoots), tuple(cls.sourceSuffixes), excludedDirNames=cls.sourceExcludedDirNames),)
+        if cls.sourceScanSets:
+            listSetName = [scanSet.name for scanSet in cls.sourceScanSets]
+            if len(set(listSetName)) != len(listSetName):
+                raise TypeError(f"{cls.__name__}: sourceScanSets 의 집합 이름이 겹칩니다 {listSetName} — 이름으로 파일의 집합을 가른다")
+            if "scan" in cls.__dict__:
+                raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanSets)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
         for case in cls.__dict__.get("selfTestCases", []):
             checkSelfTestCase(cls.__name__, case)
         if "mapExemption" not in cls.__dict__:

@@ -22,33 +22,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kCppAllExtensions, kLintTargetRelDirs  # noqa: E402
-from common.Parallel import flatMapConcurrent  # noqa: E402
-from lint.IncludeOrderRules import buildHeaderLookupMap, computeIncludeOrderInternal  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
-
-
-def findViolations(filePath: Path, repositoryRoot: Path,
-                   sourceHeaderMap: dict[str, str] | None = None,
-                   testHeaderMap: dict[str, str] | None = None,
-                   toolsHeaderMap: dict[str, str] | None = None) -> list[str]:
-    """파일 하나의 위반 — 읽기만 한다(고치는 것은 `fixText` · `FormatIncludeOrder`)."""
-    relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
-    try:
-        text = filePath.read_text(encoding="utf-8-sig", errors="strict")
-    except (OSError, UnicodeDecodeError) as error:
-        return [f"[CheckIncludeOrder] 읽기 실패: {relativeFilePath}: {error}"]
-    newText, violationsList = computeIncludeOrderInternal(text, relativeFilePath, sourceHeaderMap, testHeaderMap, toolsHeaderMap)
-    if newText != text:
-        violationsList.append(f"{relativeFilePath}: Include 순서/중복 문제가 발견되었습니다. "
-                              f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {relativeFilePath}` 로 고친다)")
-    return violationsList
+from lint.IncludeOrderRules import buildHeaderLookupMap, inspectSource  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanSet  # noqa: E402
 
 
 class CheckIncludeOrderGate(LintGate):
     """
     검사만 한다(게이트는 고치지 않는다 — 고치는 모드가 있으면 CTest 에 게이트로 등록돼 있어도 실패할 수 없다).
-    고치는 것은 `fixer/FormatIncludeOrder.py`(같은 `computeIncludeOrderInternal`)와 그것을 부르는 `FormatModified.py`.
+    고치는 것은 `fixer/FormatIncludeOrder.py`(같은 `IncludeOrderRules.inspectSource` 의 `fixedText`)와 그것을 부르는 `FormatModified.py`.
+    소스 게이트다: BOM 을 뗀 글(`SourceFile.bodyText`)로 판정하고, 헤더 조회표는 훑기 전에 한 번 만들어 `args` 에 둔다(자식 프로세스로 같이 간다).
     """
+
+    sourceScanSets = (SourceScanSet("cpp", kLintTargetRelDirs, tuple(sorted(kCppAllExtensions))),)
 
     description = "Include 순서 검사"
     buildComment = "Checking Include Order rules..."
@@ -57,6 +43,18 @@ class CheckIncludeOrderGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "Include 순서 규칙 위반"
     selfTestCases = [
+        {
+            # BOM 은 판정에서 떼고(`bodyText`) 고친 글에서 돌려놓는다 — BOM 때문에 첫 줄 `pch.h` 규칙이 어긋나지 않는다.
+            "name": "BOM 이 있는 파일의 Engine 이 Core 보다 앞",
+            "expectedViolation": "Source/Engine/Probe/ProbeBom.cpp: Include 순서/중복 문제가 발견되었습니다.",
+            "files": {
+                "Source/Engine/Probe/ProbeBom.cpp": (
+                    '﻿#include "pch.h"\n\n'
+                    '#include "Engine/Common/EngineServices.h"\n'
+                    '#include "Core/File/FileUtil.h"\n'
+                ),
+            },
+        },
         {
             "name": "Engine 이 Core 보다 앞",
             "expectedViolation": "Source/Engine/Probe/Probe.cpp: Include 순서/중복 문제가 발견되었습니다. (`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files Source/Engine/Probe/Probe",
@@ -91,16 +89,11 @@ class CheckIncludeOrderGate(LintGate):
         parser.add_argument("--files", nargs="*", default=None,
                             help="검사할 파일 (생략 시 전체). 헤더 조회표는 어차피 전체를 봐야 만들어진다")
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        allFiles = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=kCppAllExtensions)
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        args.headerMaps = buildHeaderLookupMap(repositoryRoot)
 
-        sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repositoryRoot)
-
-        violations = flatMapConcurrent(
-            lambda path: findViolations(path, repositoryRoot, sourceHeaderMap, testHeaderMap, toolsHeaderMap),
-            allFiles,
-        )
-        return GateResult(listViolation=violations, summary=f"{len(allFiles)} files scanned")
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return inspectSource(source, args.headerMaps)
 
 
 main = CheckIncludeOrderGate.run

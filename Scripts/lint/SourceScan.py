@@ -9,12 +9,16 @@
 게이트가 만들고 나머지는 나눠 쓴다. 파일들은 코어 수만큼의 프로세스 덩어리로 나눈다(`common.Parallel.flatMapInProcesses` — 파일마다 파이썬
 정규식을 돌리는 일이라 스레드로는 겹치지 않는다).
 
-게이트가 이 길을 타는 법은 `LintGate.sourceScanRoots` 를 채우는 것이다(`LintGate.py` 의 "소스 게이트"). 게이트를 혼자 돌려도
+게이트가 이 길을 타는 법은 `LintGate.sourceScanSets`(파일 집합 `SourceScanSet` 의 목록 — 집합이 하나면 `sourceScanRoots` · `sourceSuffixes` 로 줄여 적는다)를
+채우는 것이다(`LintGate.py` 의 "소스 게이트"). 파일은 집합 이름(`SourceFile.setName`)과 함께 온다. 게이트를 혼자 돌려도
 (`main = XxxGate.run` · 커밋 훅) 같은 함수(`scanSourceGates`)를 게이트 하나로 부른다 — 혼자 돌 때와 함께 돌 때의 파일 고르기 ·
 읽기 · 예외 기록이 갈리지 않는다. 함께 도는 진입점은 `RunSourceGates.py` 다.
 
 **예외 기록.** 게이트는 `XxxGate.seeExemption` · `useExemption`(클래스 집합)을 부른다. 자식 프로세스의 집합은 부모로 오지 않으므로
 파일마다 집합을 비우고 부른 뒤 `FileFindings` 에 담아 돌려주고, 부모가 합쳐 게이트 클래스에 다시 넣는다.
+
+**원본 글 · 고치기.** `SourceFile.text` 는 줄 끝을 맞춘 글이고, 원본(`rawText` · `lineEnding` · `hasBom`)은 따로 남는다. 고칠 수 있는 게이트는
+`FileFindings.fixedText` 에 원본 형식으로 되돌린 완성 글을 담고, 픽서는 같은 판정 함수를 `fixedTextOf` 로 변환 삼는다.
 
 **추가한 줄.** 커밋 훅에서 이번 커밋이 추가한 줄만 세는 게이트는 그 범위를 `LineScope`(`parseAddedLines`)로 받는다 — 덩어리 머리 해석 ·
 병합 커밋 건너뛰기 · 기준선 비교를 게이트마다 베끼지 않는다(`LintGate.BaselineSourceGate`).
@@ -30,10 +34,11 @@ import time
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 
 from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
+from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Parallel import flatMapInProcesses  # noqa: E402
 from common.Search import collectRepositoryFiles, resolveFileArguments  # noqa: E402
 
@@ -51,12 +56,40 @@ class SourceFile:
     - `noComment` : 주석만 가린 글(`blankComments`)
     - `decodeError`: UTF-8 로 읽지 못한 까닭(읽을 수 있으면 빈 글). 그때 `text` 는 못 읽은 바이트를 U+FFFD 로 바꾼 글이다 —
                     엄격히 읽어야 하는 게이트는 이것을 보고 `FileFindings.error` 로 알린다.
+    - `rawText`   : 디코드만 하고 줄 끝 · BOM 을 손대지 않은 글. `text` 는 이것의 줄 끝을 `\\n` 하나로 맞춘 글이다
+    - `lineEnding`: 원본의 줄 끝(`\\r\\n` 이 한 번이라도 있으면 `\\r\\n`, 아니면 `\\n`) · `hasBom`: 원본이 BOM 으로 시작하는가
+    - `bodyText`  : BOM 을 뗀 `text`(BOM 을 따로 다루는 게이트의 판정 글). `restore( 고친 bodyText )` 가 원본의 BOM · 줄 끝으로 되돌린다 —
+                    줄 끝 · BOM 을 지키며 고치는 일을 게이트 · 픽서가 각자 베끼지 않게 한 자리에 둔다
+    - `setName`   : 이 파일이 걸린 `SourceScanSet.name`(드라이버가 게이트마다 채운다 — 한 파일이 게이트마다 다른 집합에서 올 수 있다)
     """
 
     path: Path
     relative: str
     text: str
     decodeError: str = ""
+    rawText: str = ""
+    setName: str = ""
+
+    @classmethod
+    def fromRaw(cls, path: Path, relative: str, rawText: str, decodeError: str = "") -> SourceFile:
+        """디코드한 원본 글에서 만든다 — 줄 끝 정규화는 `read_text` 와 같은 보편 줄바꿈이다."""
+        return cls(path, relative, rawText.replace("\r\n", "\n").replace("\r", "\n"), decodeError, rawText)
+
+    @cached_property
+    def lineEnding(self) -> str:
+        return "\r\n" if "\r\n" in self.rawText else "\n"
+
+    @cached_property
+    def hasBom(self) -> bool:
+        return self.rawText.startswith("﻿")
+
+    @cached_property
+    def bodyText(self) -> str:
+        return self.text.removeprefix("﻿")
+
+    def restore(self, bodyText: str) -> str:
+        """정규화한 글(`bodyText` 모양)을 원본의 BOM · 줄 끝으로 되돌린다."""
+        return ("﻿" if self.hasBom else "") + bodyText.replace("\n", self.lineEnding)
 
     @cached_property
     def masked(self) -> str:
@@ -83,13 +116,17 @@ class FileFindings:
     - `listViolation` · `listNote`: `GateResult` 의 같은 칸에 파일 순서대로 이어 붙는다
     - `value`  : 게이트가 끝맺음(`finishSourceScan`)에서 모을 값(파일 사이의 관계를 보는 게이트) — 피클할 수 있어야 한다
     - `error`  : 검사가 성립하지 않는 까닭(읽을 수 없는 파일). 있으면 그 게이트가 종료 2 로 끝난다(`LintGate.finishSourceScanChecked`)
-    - 예외 기록 · 걸린 초는 훑기가 채운다
+    - `fixedText`: 이 파일을 규칙대로 고친 **완성 글**(원본의 BOM · 줄 끝으로 되돌린 것 — `SourceFile.restore`). 고칠 것이 없으면 None.
+                   판정과 고치기가 한 함수의 두 출력이다: 게이트는 위반을 보고, 픽서는 `fixedText` 를 쓴다(`fixedTextOf`)
+    - 예외 기록 · 걸린 초 · 파일 경로(`relative`)는 훑기가 채운다
     """
 
     listViolation: list[str] = field(default_factory=list)
     listNote: list[str] = field(default_factory=list)
     value: Any = None
+    fixedText: str | None = None
     error: str = ""
+    relative: str = ""
     setSeenExemption: set[str] = field(default_factory=set)
     setUsedExemption: set[str] = field(default_factory=set)
     seconds: float = 0.0
@@ -109,38 +146,75 @@ class SourceScanResult:
 
 
 @dataclass(frozen=True)
+class SourceScanSet:
+    """
+    게이트가 보는 파일 집합 하나 — 뿌리 · 확장자(또는 파일 이름) · 제외 폴더. 게이트는 집합의 목록(`LintGate.sourceScanSets`)을 선언하고,
+    파일이 어느 집합에서 왔는지는 `SourceFile.setName` 으로 안다(C++ 와 CMake 처럼 파일 종류마다 규칙이 다른 게이트, 키트 · 게임 · 기반 폴더마다 규칙이 다른 게이트).
+
+    - `name`  : 집합 이름(게이트 안에서 겹치지 않는다). 집합이 하나뿐인 게이트는 비워도 된다
+    - `roots` : 걸을 뿌리(저장소 기준 폴더, `""` 은 전체)
+    - `suffixes` · `fileNames`: 확장자(대소문자 무시) 또는 파일 이름 — 하나는 적는다
+    - `excludedDirNames`: 내려가지 않을 폴더 이름
+
+    한 파일이 집합 둘에 걸리면 **선언 순서의 첫 집합**이 갖는다(그 게이트에게는 파일이 한 번만 온다) — 좁은 집합을 앞에, 나머지를 거두는 집합을 뒤에 적는다.
+    """
+
+    name: str
+    roots: tuple[str, ...]
+    suffixes: tuple[str, ...] = ()
+    fileNames: tuple[str, ...] = ()
+    excludedDirNames: frozenset[str] = kNotOurDirNames
+
+    def __post_init__(self) -> None:
+        if not self.roots:
+            raise TypeError(f"SourceScanSet '{self.name}': roots 가 비었습니다 — 전체를 걸으려면 ('',) 를 적습니다")
+        if not self.suffixes and not self.fileNames:
+            raise TypeError(f"SourceScanSet '{self.name}': suffixes 나 fileNames 를 적습니다 — 확장자도 이름도 없으면 아무 파일도 고르지 못합니다")
+
+    def accepts(self, path: Path) -> bool:
+        return path.name in self.fileNames or path.suffix.lower() in {suffix.lower() for suffix in self.suffixes}
+
+
+@dataclass(frozen=True)
 class SourceTarget:
-    """읽을 파일 하나와 그 파일을 보는 게이트들(작업 목록의 자리)."""
+    """읽을 파일 하나와 그 파일을 보는 게이트들(작업 목록의 자리) — `tupleSetName[i]` 는 `tupleJobIndex[i]` 번 작업에서 이 파일이 걸린 집합 이름이다."""
 
     path: Path
     relative: str
     tupleJobIndex: tuple[int, ...]
+    tupleSetName: tuple[str, ...]
 
 
-def selectGateFilesInternal(repositoryRoot: Path, gate: Any, args: argparse.Namespace, mapWalk: dict[tuple, list[Path]]) -> list[Path]:
+def selectGateFilesInternal(repositoryRoot: Path, gate: Any, args: argparse.Namespace, mapWalk: dict[tuple, list[Path]]) -> dict[Path, str]:
     """
-    게이트 하나가 볼 파일. `--files` 면 `resolveFileArguments`, 아니면 뿌리 · 제외 폴더가 같은 걷기를 나눠 쓴다 —
+    게이트 하나가 볼 파일(경로 → 걸린 집합 이름, 선언 순서의 첫 집합). `--files` 면 `resolveFileArguments`, 아니면 뿌리 · 제외 폴더가 같은 걷기를 나눠 쓴다 —
     `LintGate.selectTargetFiles` 와 같은 결과다(확장자만 걸은 뒤 거른다). 빈 `--files`(인자 없이 준 것)는 "볼 파일 없음" 이다 — 전체 훑기로 읽지 않는다.
     """
     listFileArgument = getattr(args, "files", None)
-    if listFileArgument is not None:
-        return resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=gate.sourceScanRoots, suffixes=gate.sourceSuffixes,
-                                    excludedDirNames=gate.sourceExcludedDirNames)
-    key = (tuple(gate.sourceScanRoots), frozenset(gate.sourceExcludedDirNames))
-    if key not in mapWalk:
-        mapWalk[key] = collectRepositoryFiles(repositoryRoot, key[0], excludedDirNames=key[1], bAnySuffix=True)
-    setSuffix = {suffix.lower() for suffix in gate.sourceSuffixes}
-    return [path for path in mapWalk[key] if path.suffix.lower() in setSuffix]
+    mapPathToSet: dict[Path, str] = {}
+    for scanSet in gate.sourceScanSets:
+        if listFileArgument is not None:
+            listPath = resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=scanSet.roots, suffixes=scanSet.suffixes,
+                                            fileNames=scanSet.fileNames, excludedDirNames=scanSet.excludedDirNames)
+        else:
+            key = (scanSet.roots, scanSet.excludedDirNames)
+            if key not in mapWalk:
+                mapWalk[key] = collectRepositoryFiles(repositoryRoot, key[0], excludedDirNames=key[1], bAnySuffix=True)
+            listPath = [path for path in mapWalk[key] if scanSet.accepts(path)]
+        for path in listPath:
+            mapPathToSet.setdefault(path, scanSet.name)
+    return mapPathToSet
 
 
 def collectSourceTargets(repositoryRoot: Path, listJob: list[tuple[Any, argparse.Namespace]]) -> list[SourceTarget]:
     """작업마다 볼 파일을 골라, 파일 하나에 그 파일을 보는 작업들을 묶는다. 경로 순서다."""
     mapWalk: dict[tuple, list[Path]] = {}
-    mapPathToJob: dict[Path, list[int]] = {}
+    mapPathToJob: dict[Path, list[tuple[int, str]]] = {}
     for jobIndex, (gate, args) in enumerate(listJob):
-        for path in selectGateFilesInternal(repositoryRoot, gate, args, mapWalk):
-            mapPathToJob.setdefault(path, []).append(jobIndex)
-    return [SourceTarget(path, path.relative_to(repositoryRoot).as_posix(), tuple(listIndex)) for path, listIndex in sorted(mapPathToJob.items())]
+        for path, setName in selectGateFilesInternal(repositoryRoot, gate, args, mapWalk).items():
+            mapPathToJob.setdefault(path, []).append((jobIndex, setName))
+    return [SourceTarget(path, path.relative_to(repositoryRoot).as_posix(), tuple(place[0] for place in listPlace), tuple(place[1] for place in listPlace))
+            for path, listPlace in sorted(mapPathToJob.items())]
 
 
 def checkTargetInternal(listJob: list[tuple[Any, argparse.Namespace]], target: SourceTarget) -> list[tuple[int, FileFindings]]:
@@ -160,11 +234,11 @@ def checkTargetInternal(listJob: list[tuple[Any, argparse.Namespace]], target: S
     except UnicodeDecodeError as exception:
         text = data.decode("utf-8", errors="replace")
         decodeError = f"UTF-8 인코딩 오류: {target.relative}: {exception}"
-    # `read_text` 와 같은 글 — 줄 끝을 `\n` 하나로 맞춘다(보편 줄바꿈).
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    source = SourceFile(target.path, target.relative, text, decodeError)
+    # `read_text` 와 같은 글 — 줄 끝을 `\n` 하나로 맞춘다(보편 줄바꿈). 원본은 `rawText` 에 남는다.
+    source = SourceFile.fromRaw(target.path, target.relative, text, decodeError)
     listResult: list[tuple[int, FileFindings]] = []
-    for jobIndex in target.tupleJobIndex:
+    for jobIndex, setName in zip(target.tupleJobIndex, target.tupleSetName):
+        source.setName = setName
         gate, args = listJob[jobIndex]
         gateClass = type(gate)
         gateClass._setSeenExemption = set()
@@ -172,6 +246,7 @@ def checkTargetInternal(listJob: list[tuple[Any, argparse.Namespace]], target: S
         start = time.perf_counter()
         findings = gate.checkSourceFile(source, args) or FileFindings()
         findings.seconds = time.perf_counter() - start
+        findings.relative = target.relative
         findings.setSeenExemption = gateClass._setSeenExemption
         findings.setUsedExemption = gateClass._setUsedExemption
         listResult.append((jobIndex, findings))
@@ -248,5 +323,17 @@ def joinFindings(listFindings: Iterable[FileFindings]) -> tuple[list[str], list[
     return listViolation, listNote
 
 
-__all__ = ["FileFindings", "LineScope", "SourceFile", "SourceScanResult", "SourceTarget", "collectSourceTargets", "joinFindings", "parseAddedLines",
-           "scanSourceGates"]
+def fixedTextOf(inspect: Callable[[SourceFile], FileFindings], text: str, relativePath: str) -> tuple[str, bool]:
+    """
+    픽서의 변환(`FixPass.transform`)을 게이트가 쓰는 같은 판정 함수로 만든다 — `text` 는 파일에서 `newline=""` 로 읽은 원본 글,
+    `inspect` 는 게이트의 `checkSourceFile` 이 부르는 함수(`SourceFile -> FileFindings`). 판정 · 줄 끝 · BOM 을 지키는 고치기가 한 함수라 둘이 갈리지 않는다.
+    돌려주는 것은 `(고친 글, 바뀌었는가)`.
+    """
+    findings = inspect(SourceFile.fromRaw(Path(relativePath), relativePath, text))
+    if findings.fixedText is None or findings.fixedText == text:
+        return text, False
+    return findings.fixedText, True
+
+
+__all__ = ["FileFindings", "LineScope", "SourceFile", "SourceScanResult", "SourceScanSet", "SourceTarget", "collectSourceTargets", "fixedTextOf",
+           "joinFindings", "parseAddedLines", "scanSourceGates"]

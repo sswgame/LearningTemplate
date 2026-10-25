@@ -4,6 +4,7 @@
 Scripts/lint/fixer/FormatNamespaceBlocks.py
 
 한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다 — 규칙과 판정은 `lint/NamespaceBlockRules.py` 한 자리(게이트 `CheckNamespaceBlocks` 도 읽는다).
+고친 글은 게이트가 쓰는 같은 `inspectSource` 의 `FileFindings.fixedText` 다(`SourceScan.fixedTextOf`) — 판정과 고치기가 갈리지 않는다.
 
   py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files Source/Engine/Scene/Scene.h
 """
@@ -25,7 +26,7 @@ class FormatNamespaceBlocksFixer(LintFixer):
     description = "정의마다 namespace 블록을 나눈다(NamespaceBlockRules 의 규칙)"
     listScopeRelDir = kLintTargetRelDirs   # 게이트가 보는 범위
     listPass = (
-        FixPass(transform=NamespaceBlockRules.fixText, problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
+        FixPass(transform=NamespaceBlockRules.fixText, bNeedsPath=True, samplePath="Source/Engine/Probe/Probe.h", problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
                 badSample=NamespaceBlockRules.kFixBadSample, fixedSample=NamespaceBlockRules.kFixGoodSample, goodSample=NamespaceBlockRules.kFixGoodSample),
     )
 

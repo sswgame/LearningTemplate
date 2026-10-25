@@ -9,7 +9,7 @@
 
 | 필요한 것 | 자리 |
 | --- | --- |
-| 파일마다 따로 보는 C++ · 셰이더 검사 | **소스 게이트** — `LintGate.sourceScanRoots` · `sourceSuffixes` + `checkSourceFile`(+ 필요하면 `finishSourceScan`). 걷기 · 읽기 · 가리기(`SourceFile.masked` · `noComment`)를 함께 도는 게이트와 나눠 쓰고, CTest · CI 는 `CheckSourceFiles` 하나로 돈다 |
+| 파일마다 따로 보는 C++ · 셰이더 검사 | **소스 게이트** — `LintGate.sourceScanRoots` · `sourceSuffixes`(집합 하나) 또는 `sourceScanSets`(`SourceScanSet` 목록 — C++ 와 CMake, 키트 폴더와 게임 폴더처럼 집합마다 규칙이 다르면 `SourceFile.setName` 으로 가른다) + `checkSourceFile`(+ 필요하면 `finishSourceScan`). 걷기 · 읽기 · 가리기(`SourceFile.masked` · `noComment`)를 함께 도는 게이트와 나눠 쓰고, CTest · CI 는 `CheckSourceFiles` 하나로 돈다. 원본의 줄 끝 · BOM 은 `SourceFile.rawText` · `lineEnding` · `hasBom` · `restore()`, 고친 글은 `FileFindings.fixedText`(픽서는 `SourceScan.fixedTextOf` 로 같은 판정 함수를 변환으로 쓴다) |
 | `--files` · 대상 파일 고르기 · 읽기(소스 게이트가 아닐 때) | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` |
 | 파일 전체에 대는 "있기나 한가" 정규식 | `common.CodeText.findFast` — 머리 lookbehind · `\b` 를 뗀 식으로 먼저 거른다(그런 식은 `re` 가 접두 훑기를 못 써 39 MB 에 1 s) |
 | 예외(이유 · 낡음 검사 포함) | `lint/rules/<게이트>.toml` 의 `[exemption]` → `LintGate.mapExemption` · `seeExemption` · `useExemption` |
