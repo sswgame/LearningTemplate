@@ -2,6 +2,7 @@
 
 #include "Editor/Common/EditorBackgroundTask.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -16,7 +17,7 @@ namespace sw::editor
     void EditorBackgroundJobTracker::track( const TaskHandle& handle )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        std::erase_if( _listHandle, []( const TaskHandle& tracked )
+        VectorUtil::removeIf( _listHandle, []( const TaskHandle& tracked )
         { return tracked.isCompleted(); } );
         _listHandle.push_back( handle );
     }

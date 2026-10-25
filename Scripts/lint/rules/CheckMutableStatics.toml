@@ -81,7 +81,6 @@
 "Source/Core/UUID/UUID.cpp" = 1
 # Source/Editor/Common — 이전 대기
 "Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp" = 3
-"Source/Editor/Common/Commands/Scene/EditorViewportPreview.cpp" = 1
 "Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.h" = 1
