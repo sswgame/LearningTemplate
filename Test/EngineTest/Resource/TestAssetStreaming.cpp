@@ -699,3 +699,55 @@ SW_TEST_CASE( AssetStreamingTest, CancelAfterReadFinishedButBeforeUpdateDelivers
     SW_EXPECT_FALSE( queue.isLoaded( assetPath ) );
     queue.shutdown();
 }
+
+/**
+ * @brief [AssetStreamingTest] 종료는 이 큐가 낸 태스크만 기다린다 — 끝나지 않는 다른 태스크가 있어도 멈추지 않는다
+ * @details 엔진 전체 대기(`TaskManager::waitAll`)였을 때는 영구 태스크(오디오 등)가 활성 수에 들면 `shutdown` 이 영영 돌아오지 않았다.
+ */
+SW_TEST_CASE( AssetStreamingTest, ShutdownDoesNotWaitForForeignPermanentTask )
+{
+    sw::TaskManager& tasks = sw::engine::getSubsystem<sw::TaskManager>();
+
+    // 해제를 보장하는 영구 태스크 — 단언이 실패해도 테스트 뒤에 남지 않게 소멸자가 푼다.
+    struct PermanentTask
+    {
+        std::atomic<bool> _bRelease{ false };
+        sw::TaskHandle    _handle;
+        explicit PermanentTask( sw::TaskManager& manager )
+        {
+            _handle = manager.emplaceTask( "TestPermanentTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [this]()
+            {
+                while ( _bRelease.load( std::memory_order_acquire ) == false )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+            } ) );
+            _handle.submit();
+        }
+        ~PermanentTask()
+        {
+            _bRelease.store( true, std::memory_order_release );
+            while ( _handle.isCompleted() == false )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+        }
+    };
+    PermanentTask permanent{ tasks };
+
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+    for ( int32 index = 0; index < 8; ++index )
+    {
+        sw::string path = "Resource/common/shaders/missing_permanent_";
+        path.push_back( static_cast<utf8>( 48 + index ) ); // 숫자 한 글자
+        path += ".hlsl";
+        queue.requestAsset( path, sw::StreamingPriority::Normal );
+    }
+
+    const sw::Stopwatch stopwatch;
+    queue.shutdown();
+    SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 5000, "AssetStreamingQueue::shutdown waited for a task it did not submit" );
+    SW_EXPECT_FALSE( permanent._handle.isCompleted() );
+    SW_EXPECT_EQUAL( size_t( 0 ), queue.getPendingCount() );
+}

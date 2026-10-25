@@ -4,6 +4,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
+#include "Core/Task/TaskHandleTracker.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -158,6 +159,8 @@ namespace sw
          * @details 그 완료 콜백도 이 큐를 부르므로 `shutdown` 이 이것까지 기다린다. 빠뜨리면 큐가 사라진 뒤 완료가 도착한다.
          */
         vector<AsyncReadHandle> _listDetachedIO;
+        /** @brief 이 큐가 낸 태스크(찾기 · 존재 확인)만 든다. `shutdown` 은 엔진 전체(`TaskManager::waitAll`)가 아니라 이것만 기다린다 — 영구 태스크가 종료를 막지 않게. */
+        TaskHandleTracker _taskTracker;
         /**
          * @brief `update` 가 부를 완료 목록입니다. **크기 상한이 없다.** 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
          *        말없이 버린다.

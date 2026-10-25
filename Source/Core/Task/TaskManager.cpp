@@ -245,6 +245,7 @@ namespace sw
         _bStop        = false;
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
+        _runningWorkerCount.store( threadCount, std::memory_order_relaxed ); // 스레드를 시작하기 전에 정한다. 워커는 나갈 때 하나씩 내린다
         // 슬롯을 모두 만든 **뒤에** 스레드를 시작한다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
         _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
@@ -267,9 +268,20 @@ namespace sw
         if ( _bInitialized == false )
             return;
 
+        bool   bDrainTimedOut{ false };
+        string unfinishedTaskName;
         BLOCK( "Wait For Active Tasks" )
         {
-            waitAll();
+            // 끝나지 않는 태스크(영구 태스크 · 멈춘 태스크)가 있으면 무제한 대기는 종료를 영영 막는다. 시간 제한을 두고 원인 태스크를 오류로 드러낸 뒤 워커를 멈추러 간다.
+            // 엔진 소스에는 영구 태스크가 없다.
+            constexpr uint32 kShutdownDrainTimeoutMs = 30000;
+            if ( waitAll( kShutdownDrainTimeoutMs ) == false )
+            {
+                bDrainTimedOut     = true;
+                unfinishedTaskName = describeUnfinishedTask();
+                SW_LOG_ERROR( "Task manager shutdown waited %# ms but %# task(s) are still running (first unfinished: '%#') - stopping workers", kShutdownDrainTimeoutMs,
+                              getActiveTaskCount(), unfinishedTaskName );
+            }
         }
 
         BLOCK( "Stop Worker Threads" )
@@ -277,6 +289,29 @@ namespace sw
             _bStop.store( true, std::memory_order_seq_cst );
             // 잠든 워커는 자기 워드로, 스핀 중인 워커는 세대로 알아챈다. 모두 깨운다.
             wakeSleepingWorkers();
+
+            if ( bDrainTimedOut )
+            {
+                // 시간 초과 뒤에도 그 태스크를 돌리는 워커는 `join` 에서 끝나지 않는다(`std::thread::join` 은 시간 제한이 없고 스레드를 강제로 끝낼 수도 없다).
+                // 정책은 **오류로 멈춤**이다. 분리(detach)해 이어 가면 그 스레드가 곧 해제될 매니저 · 노드 풀을 만지는 정의 안 된 동작이 되고, 폴백 없이
+                // 문제를 숨긴다. 그래서 짧은 유예 안에 워커가 모두 나오지 않으면 막은 태스크 이름을 남기고 프로세스를 끝낸다(크래시 리포트가 멈춘 자리를 보여 준다).
+                constexpr uint32 kShutdownJoinGraceMs = 10000;
+                constexpr uint32 kPollMilliseconds    = 1;
+                const Stopwatch  joinStopwatch;
+                while ( _runningWorkerCount.load( std::memory_order_acquire ) > 0 )
+                {
+                    if ( joinStopwatch.getElapsedMilliseconds() >= static_cast<int64>( kShutdownJoinGraceMs ) )
+                    {
+                        SW_LOG_ERROR( "Task manager shutdown: %# worker(s) did not exit within %# ms after stop - task '%#' blocks the join; aborting instead of hanging",
+                                      _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName );
+                        Logger::flushGlobalForCrash();
+                        std::fprintf( stderr, "[TaskManager] shutdown aborted: task '%s' never finished\n", unfinishedTaskName.c_str() );
+                        std::fflush( stderr );
+                        std::abort();
+                    }
+                    std::this_thread::sleep_for( std::chrono::milliseconds( kPollMilliseconds ) );
+                }
+            }
 
             for ( const unique_ptr<WorkerSlot>& slot : std::as_const( _listWorkerSlot ) )
             {
@@ -993,6 +1028,11 @@ namespace sw
         return true;
     }
 
+    string TaskManager::describeUnfinishedTask()
+    {
+        return _nodePool->describeFirstUnfinished();
+    }
+
     void TaskManager::parkOnJoin( JoinCounter& join )
     {
         const uint32    slotIndex = getCurrentThreadScratchSlot();
@@ -1450,6 +1490,8 @@ namespace sw
         }
 
         t_currentWorkerIndex = -1;
+        // 맨 마지막이다. 이 뒤로 이 스레드는 매니저 멤버를 건드리지 않는다(`shutdown` 이 0 을 보고 매니저를 치워도 된다).
+        _runningWorkerCount.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
 } // namespace sw

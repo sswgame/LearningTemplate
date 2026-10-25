@@ -385,6 +385,12 @@ namespace sw
             {
                 runDelivery( pRequest );
             } ) );
+            if ( handle.isValid() == false )
+            {
+                // 태스크를 낼 수 없다(태스크 매니저가 멈추는 중이거나 이미 멈췄다). 전달을 잃으면 요청이 영영 끝나지 않아 `waitIdle` 이 멈춘다 — 이 스레드에서 전달한다.
+                runDelivery( pRequest );
+                return;
+            }
             handle.setPriority( AsyncFileIOInternal::toTaskPriority( pRequest->_priority ) );
             handle.submit();
             return;
@@ -460,6 +466,13 @@ namespace sw
     {
         std::unique_lock<mutex> lock{ _mutex };
         _cv.wait( lock, [this]()
+        { return _outstandingCount == 0; } );
+    }
+
+    bool AsyncFileIOQueue::waitIdleFor( uint32 timeoutMs ) const
+    {
+        std::unique_lock<mutex> lock{ _mutex };
+        return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]()
         { return _outstandingCount == 0; } );
     }
 
@@ -630,7 +643,16 @@ namespace sw
         // 순서: 새 요청을 막고 큐를 비운다 → OS 에 걸린 것이 끝나면 IO 스레드가 내려간다 → 태스크로 실은 완료 콜백까지 기다린다.
         _queue->requestStop();
         _backend->stop();
-        _queue->waitIdle();
+        // 무제한 대기는 전달 태스크가 영영 안 돌면(멈춘 콜백 · 큐가 비워진 태스크 매니저) 종료를 영영 막는다. 시간 제한을 두고 넘으면 오류로 멈춘다:
+        // 전달 태스크가 큐(`this`)를 쥔 채 남아 있어, 그냥 큐를 지우면 해제된 메모리를 만지는 정의 안 된 동작이 된다. 폴백(그냥 지우고 이어 가기)은 두지 않는다.
+        constexpr uint32 kShutdownDeliveryTimeoutMs = 30000;
+        if ( _queue->waitIdleFor( kShutdownDeliveryTimeoutMs ) == false )
+        {
+            SW_LOG_ERROR( "Async file IO shutdown waited %# ms but %# request(s) never completed their callback - aborting instead of hanging", kShutdownDeliveryTimeoutMs,
+                          _queue->getOutstandingCount() );
+            Logger::flushGlobalForCrash();
+            std::abort();
+        }
         _backend.reset();
         _queue.reset();
     }

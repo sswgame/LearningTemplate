@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -748,4 +749,66 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
     SW_EXPECT_FALSE( sw::FileUtil::exists( "Assets/Scenes/DefaultScene.scene" ) );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneAsyncTest] 비동기 로드 취소와 종료는 이 매니저가 띄운 로드만 기다린다 — 끝나지 않는 다른 태스크가 있어도 멈추지 않는다
+ * @details 엔진 전체 대기(`TaskManager::waitAll`)였을 때는 영구 태스크가 활성 수에 들면 취소가 영영 돌아오지 않았다. 취소된 로드의 약속은
+ *          한 번만 채워져(이중 해제 없음) 기다리던 쪽이 `nullptr` 을 받는다.
+ */
+SW_TEST_CASE( SceneAsyncTest, CancelDoesNotWaitForForeignPermanentTask )
+{
+    sw::TaskManager& tasks = sw::engine::getSubsystem<sw::TaskManager>();
+
+    struct PermanentTask
+    {
+        std::atomic<bool> _bRelease{ false };
+        sw::TaskHandle    _handle;
+        explicit PermanentTask( sw::TaskManager& manager )
+        {
+            _handle = manager.emplaceTask( "TestPermanentTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [this]()
+            {
+                while ( _bRelease.load( std::memory_order_acquire ) == false )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                }
+            } ) );
+            _handle.submit();
+        }
+        ~PermanentTask()
+        {
+            _bRelease.store( true, std::memory_order_release );
+            while ( _handle.isCompleted() == false )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+        }
+    };
+    PermanentTask permanent{ tasks };
+
+    const sw::string xmlPath = test::makeTempPath( "sw_test_cancel_permanent.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_cancel_permanent.scene.bin" );
+    const sw::string xmlStr =
+        "<Scene formatVersion=\"2\" name=\"CancelTown\"><WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities><entity id=\"201\" name=\"E\"/></entities></Scene>";
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) );
+    sw::SceneDocument doc{};
+    doc._name = "CancelTown";
+    sw::SceneDocument::SceneObjectNode ent{};
+    ent._name   = "E";
+    ent._fileID = 21;
+    doc._listSceneObjectNode.push_back( std::move( ent ) );
+    SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
+
+    const sw::Stopwatch stopwatch;
+    manager.cancelPendingAsyncLoads();
+    SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 5000, "cancelPendingAsyncLoads waited for a task it did not submit" );
+    SW_EXPECT_FALSE( manager.isTransitioning() );
+
+    manager.shutdown();
+    SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 5000, "shutdown waited for a task it did not submit" );
+    SW_EXPECT_FALSE( permanent._handle.isCompleted() );
 }

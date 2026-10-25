@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
@@ -51,6 +52,14 @@ namespace sw
         ParallelGroup* allocateGroup();
         /** @brief 병렬 그룹을 돌려줍니다. 풀의 주소면 풀로, 아니면 힙으로 돌려줍니다. */
         void deallocateGroup( ParallelGroup* pGroup );
+
+        /**
+         * @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). 대기 시간 초과 때 원인을 로그에 적는 진단용입니다.
+         * @details 슬랩을 훑어 **제출됐고**(`_bScheduled`) 본문이 안 끝난(`_pendingChildren` > 0) 이름 있는 노드를 찾는다. 만들기만 하고 제출하지 않은 노드는 잡히지 않는다.
+         *          이름은 노드의 참조를 하나 잡은 뒤(`TaskNode::tryRetain`)에 읽는다 — 참조가 있는 동안 노드는 풀로 돌아가 이름이 지워지거나 새 태스크로 쓰이지 않고,
+         *          제출 뒤에는 이름이 바뀌지 않으므로 이름 읽기에 데이터 레이스가 없다. 오류 경로에서만 부른다.
+         */
+        [[nodiscard]] string describeFirstUnfinished();
 
         /** @brief 노드를 낸 매니저입니다. 매니저가 사라졌으면(`detachOwner` 뒤) nullptr 입니다. */
         TaskManager* getOwner() const { return _pOwner; }

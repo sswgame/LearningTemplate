@@ -10,6 +10,8 @@
  */
 #include "pch.h"
 
+#include "Core/Task/TaskHandleTracker.h"
+
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -108,7 +110,8 @@ namespace sw::editor
         constexpr uint32 kWorkerDrainTimeoutMilliseconds = 10000;
         if ( EditorStateStore* pStore = findSubsystem<EditorStateStore>() )
         {
-            if ( pStore->get<EditorBackgroundJobTracker>().waitIdle( kWorkerDrainTimeoutMilliseconds ) == false )
+            // 시간 초과는 추적기가 도는 태스크 이름과 함께 오류로 남긴다.
+            if ( pStore->get<TaskHandleTracker>().waitIdle( kWorkerDrainTimeoutMilliseconds, "EditorContext::shutdown" ) == false )
                 SW_LOG_ERROR( "Editor background jobs are still running %# ms after the editor shutdown began - editor services may be used after they are destroyed", kWorkerDrainTimeoutMilliseconds );
         }
 

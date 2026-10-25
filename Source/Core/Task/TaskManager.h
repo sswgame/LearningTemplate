@@ -12,6 +12,7 @@
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
+#include "Core/Container/string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -206,6 +207,9 @@ namespace sw
          * @return 모든 태스크가 끝났으면 true, 시간이 다 되면 false
          */
         bool waitAll( uint32 timeoutMs = 0 );
+
+        /** @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). `waitAll` 이 시간 초과일 때 원인을 로그에 적는 진단용입니다. */
+        [[nodiscard]] string describeUnfinishedTask();
 
         /** @brief 내부 큐와 스테이지 상태를 강제로 정리합니다. 아무것도 돌고 있지 않을 때만 부르십시오. */
         void clear();
@@ -421,9 +425,11 @@ namespace sw
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
         static constexpr uint32 kMaxWorkerCount = 64;
 
-        bool                           _bInitialized;       ///< 매니저를 초기화했는지 여부
-        std::thread::id                _mainThreadID;       ///< 메인 스레드의 ID
-        atomic<bool>                   _bStop;              ///< 워커 스레드 종료 플래그
+        bool            _bInitialized; ///< 매니저를 초기화했는지 여부
+        std::thread::id _mainThreadID; ///< 메인 스레드의 ID
+        atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그
+        /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
+        atomic<uint32>                 _runningWorkerCount{ 0 };
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 슬롯은 `_helperSlotFreeMask` 로 다시 쓴다)
         atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크

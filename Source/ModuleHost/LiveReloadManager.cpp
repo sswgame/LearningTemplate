@@ -815,11 +815,17 @@ namespace sw
             return true;
         }
 
-        // 엔진 전체 대기가 맞다 — 태스크가 어느 모듈의 코드를 부르는지 기록하지 않아 낸 쪽으로 가를 수 없다(`ModuleHost::drainRenderWorkers` 의 같은 주석).
-        if ( engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().waitAll( kDrainTimeoutMs ) == false )
+        // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`ModuleHost::drainRenderWorkers` 의 같은 주석).
+        if ( engine::areEngineServicesBound() )
         {
-            markGraphBroken( "task drain timeout before unload" );
-            return false;
+            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+            if ( taskManager.waitAll( kDrainTimeoutMs ) == false )
+            {
+                SW_LOG_ERROR( "Task drain timeout (%# ms) before module unload (%# task(s) still running, first unfinished: '%#')", kDrainTimeoutMs, taskManager.getActiveTaskCount(),
+                              taskManager.describeUnfinishedTask() );
+                markGraphBroken( "task drain timeout before unload" );
+                return false;
+            }
         }
         return _bReloadGraphBroken == SW_FALSE;
     }

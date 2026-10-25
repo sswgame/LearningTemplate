@@ -151,6 +151,8 @@ namespace sw
         uint32 getOutstandingCount() const;
         /** @brief 모든 요청이 끝날 때까지 기다립니다. */
         void waitIdle() const;
+        /** @brief 모든 요청이 끝날 때까지 최대 @p timeoutMs 밀리초 기다립니다. 모두 끝났으면 true 입니다(종료 경로용 — 끝없이 기다리지 않는다). */
+        [[nodiscard]] bool waitIdleFor( uint32 timeoutMs ) const;
         /** @brief @p request 가 끝날 때까지 기다립니다. @p timeoutMs 가 0 이면 끝없이. 끝났으면 true 입니다. */
         bool waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const;
 
