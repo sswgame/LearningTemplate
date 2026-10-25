@@ -167,6 +167,13 @@ namespace sw
         _listBenchExtra.push_back( pBall->getHandle() );
     }
 
+    shared_ptr<const Skeleton> BenchScene::createSingleBoneSkeleton()
+    {
+        shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
+        (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{}, float4x4::Identity );
+        return skeleton;
+    }
+
     SkeletalMeshComponent* BenchScene::spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
     {
         // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 루트 본에 묶은 사본으로 그립니다.
@@ -177,6 +184,8 @@ namespace sw
         if ( pWeaponUnit == nullptr || weaponSource == nullptr )
             return pWeaponUnit;
         (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
+        // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다(암묵 스켈레톤이면 묶지 않아 쇠뇌가 손을 따르지 못하고 바닥에 남는다) — 루트 본 하나를 데이터로 준다.
+        pWeaponUnit->setSkeleton( createSingleBoneSkeleton() );
         pWeaponUnit->setMesh( BenchSceneRigInternal::createRigidSkinnedCopy( *weaponSource ) );
         pWeaponUnit->resolveRenderAssets();
         PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
