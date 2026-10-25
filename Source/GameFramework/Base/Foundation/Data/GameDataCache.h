@@ -80,7 +80,7 @@ namespace sw
 
         /**
          * @brief 경로의 표를 반환합니다. 처음이면 읽으며, 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다.
-         * @details 반환한 표는 캐시가 사라질 때(모듈이 내릴 때)까지 산다. 다시 읽거나 비워도 옛 표는 남는다.
+         * @details 다시 읽거나 비워도 옛 표는 `kRetainGenerations` 번 더 다시 읽을 때까지(또는 캐시가 사라질 때까지) 남는다. 그보다 오래 쥐려면 `getReloadCount` 가 바뀔 때 다시 찾아야 한다.
          */
         const TableType* find( string_view path )
         {
@@ -129,11 +129,15 @@ namespace sw
                 return;
             }
             std::scoped_lock<mutex> lock{ _mutex };
-            unique_ptr<TableType>&  slot = _mapTable[key];
+            unique_ptr<TableType>&  slot       = _mapTable[key];
+            const uint32            generation = _reloadCount.load( std::memory_order_relaxed ) + 1; // 이 리로드가 만드는 세대
             if ( slot != nullptr )
-                _listRetired.push_back( std::move( slot ) );
+                _listRetired.push_back( RetiredTable{ std::move( slot ), generation } );
             slot = std::move( fresh );
-            _reloadCount.fetch_add( 1, std::memory_order_release );
+            _reloadCount.store( generation, std::memory_order_release );
+            // 세대가 충분히 지난 옛 표만 놓는다 — 쓰는 쪽은 세대가 바뀌면 정의를 다시 찾으므로 그 사이 한 프레임이면 옛 포인터를 버린다.
+            std::erase_if( _listRetired, [generation]( const RetiredTable& retired )
+            { return generation - retired._generation >= kRetainGenerations; } );
         }
 
         /** @brief 읽어 둔 테이블의 수입니다. 읽지 못한 빈 항목은 세지 않습니다. */
@@ -159,7 +163,7 @@ namespace sw
             for ( auto& [key, table] : _mapTable )
             {
                 if ( table != nullptr )
-                    _listRetired.push_back( std::move( table ) );
+                    _listRetired.push_back( RetiredTable{ std::move( table ), _reloadCount.load( std::memory_order_relaxed ) } );
             }
             _mapTable.clear();
             _stats.recordClear();
@@ -172,8 +176,16 @@ namespace sw
         const utf8*                                  _pKindName;
         mutable mutex                                _mutex;
         unordered_map<string, unique_ptr<TableType>> _mapTable;
-        vector<unique_ptr<TableType>>                _listRetired; ///< 다시 읽거나 비우기 전의 테이블. 원시 포인터로 참조하는 쪽이 있을 수 있어 캐시와 함께 산다
-        atomic<uint32>                               _reloadCount;
-        CacheStatsHandle                             _stats; ///< 이 종류의 계측 칸(`CacheStats`)
+        /// 다시 읽거나 비우기 전의 테이블. 원시 포인터로 참조하는 쪽이 있을 수 있어 `kRetainGenerations` 번 더 다시 읽을 때까지(또는 캐시가 사라질 때까지) 산다.
+        struct RetiredTable
+        {
+            unique_ptr<TableType> _pTable;
+            uint32                _generation; ///< 내려놓을 때의 `_reloadCount`(리로드면 그 리로드의 세대)
+        };
+        static constexpr uint32 kRetainGenerations = 4; ///< 옛 표를 이 횟수만큼의 리로드 동안 둔다. 리로드는 사람 속도라 쓰는 쪽이 그 사이 다시 찾는다
+
+        vector<RetiredTable> _listRetired;
+        atomic<uint32>       _reloadCount;
+        CacheStatsHandle     _stats; ///< 이 종류의 계측 칸(`CacheStats`)
     };
 } // namespace sw

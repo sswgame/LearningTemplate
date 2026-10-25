@@ -39,6 +39,19 @@ namespace sw::editor
         EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
         vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
 
+        /**
+         * @brief 에디터 상태(범위 · 포커스 · 미리보기 선택)를 만지는 스레드가 범위를 등록한 스레드인지 Debug 에서 확인합니다.
+         * @details 이 상태는 락 없이 읽고 쓴다 — 워커가 읽는 동안 종료가 범위를 허물면 해제된 메모리를 본다. 워커 본문은 에디터 상태를 직접 찾지 않고,
+         *          제출 시점(범위를 등록한 스레드)에 서비스를 찾아 값으로 받는다. 어기면 여기서 멈춘다. 범위가 없으면 어느 스레드든 통과한다.
+         */
+        void assertEditorThread()
+        {
+#if defined( SW_DEBUG )
+            const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load();
+            SW_ASSERT( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() );
+#endif
+        }
+
         /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */
         EditorSelection* findMainSceneSelectionInScope()
         {
@@ -59,12 +72,7 @@ namespace sw::editor
 
     SubsystemScope* findEditorScope()
     {
-#if defined( SW_DEBUG )
-        // 범위는 락 없이 읽고 쓴다 — 워커가 읽는 동안 종료가 범위를 허물면 해제된 메모리를 본다. 워커 본문은 범위를 직접 찾지 않고,
-        // 제출 시점(범위를 등록한 스레드)에 서비스를 찾아 값으로 받는다. 어기면 여기서 멈춘다.
-        const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load();
-        SW_ASSERT( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() );
-#endif
+        assertEditorThread();
         return s_editorScope._pScope;
     }
 
@@ -117,16 +125,19 @@ namespace sw::editor
 
     CommandStack* getFocusedCommandStack()
     {
+        assertEditorThread();
         return s_pFocusedCommandStack != nullptr ? s_pFocusedCommandStack : findSubsystem<CommandStack>();
     }
 
     void setFocusedCommandStack( CommandStack* pStack )
     {
+        assertEditorThread();
         s_pFocusedCommandStack = pStack;
     }
 
     EditorSelection* getFocusedSelection()
     {
+        assertEditorThread();
         if ( s_pFocusedSelection != nullptr )
             return s_pFocusedSelection;
         return findMainSceneSelectionInScope();
@@ -134,6 +145,7 @@ namespace sw::editor
 
     void setFocusedSelection( EditorSelection* pSelection )
     {
+        assertEditorThread();
         s_pFocusedSelection = pSelection;
     }
 
@@ -146,6 +158,7 @@ namespace sw::editor
 
     EditorSelection* findSelectionOf( const GameObjectManager& manager )
     {
+        assertEditorThread();
         for ( EditorSelection* pSelection : s_listPreviewSelection )
         {
             const Scene* pScene = pSelection->getScene();
@@ -157,17 +170,20 @@ namespace sw::editor
 
     const vector<EditorSelection*>& getPreviewSelections()
     {
+        assertEditorThread();
         return s_listPreviewSelection;
     }
 
     void registerPreviewSelection( EditorSelection& selection )
     {
+        assertEditorThread();
         if ( VectorUtil::contains( s_listPreviewSelection, &selection ) == false )
             s_listPreviewSelection.push_back( &selection );
     }
 
     void unregisterPreviewSelection( EditorSelection& selection )
     {
+        assertEditorThread();
         VectorUtil::removeValue( s_listPreviewSelection, &selection );
     }
 

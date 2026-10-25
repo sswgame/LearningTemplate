@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Task/TaskManager.h"
+
 #include "Editor/Common/EditorBackgroundTask.h"
 
 #include "TestFramework/TestFramework.h"
@@ -44,6 +46,16 @@ namespace
             publish( _pState, generation, std::move( listResult ) );
         }
     };
+
+    /** @brief 테스트 태스크 본문 — 신호가 서기 전까지 돈다. */
+    void waitForReleaseTask( const TaskArgs& args )
+    {
+        const shared_ptr<atomic<bool>> pRelease = args.get<shared_ptr<atomic<bool>>>( 0 );
+        while ( pRelease->load() == false )
+        {
+            std::this_thread::yield();
+        }
+    }
 } // namespace
 
 /**
@@ -152,4 +164,39 @@ SW_TEST_CASE( EditorBackgroundTaskTest, FinishedResultIsNeverReportedIdle )
     SW_ASSERT_TRUE( job.take( taken ) == EditorTaskPoll::Ready );
     SW_EXPECT_EQUAL( 9, taken[0] );
     SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Idle );
+}
+
+/**
+ * @brief [EditorBackgroundTaskTest] 종료 대기가 에디터가 낸 잡만 기다리는지 검증
+ * @details `TaskManager::waitAll` 은 엔진의 영구 태스크까지 기다려 시간 제한에 걸렸다. 추적기는 올린 핸들만 보므로, 올리지 않은 태스크가 도는 중에도 돌아와야 한다.
+ */
+SW_TEST_CASE( EditorBackgroundTaskTest, JobTrackerWaitsOnlyForTrackedJobs )
+{
+    TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( 2 ) );
+
+    const shared_ptr<atomic<bool>> pForeignRelease = sw::make_shared<atomic<bool>>( false ); // 에디터가 내지 않은 태스크(영구 태스크 흉내)
+    TaskHandle                     foreign         = manager.emplaceTask( "TestForeign", SW_DELEGATE_FUNCTION( TaskArgsDelegate, waitForReleaseTask ), MakeTaskArgs( pForeignRelease ) );
+    foreign.submit();
+
+    const shared_ptr<atomic<bool>> pTrackedRelease = sw::make_shared<atomic<bool>>( false );
+    TaskHandle                     tracked         = manager.emplaceTask( "TestTracked", SW_DELEGATE_FUNCTION( TaskArgsDelegate, waitForReleaseTask ), MakeTaskArgs( pTrackedRelease ) );
+
+    EditorBackgroundJobTracker tracker;
+    tracker.track( tracked );
+    tracked.submit();
+
+    // 올린 잡이 도는 동안은 시간이 다 되어 false 다.
+    SW_EXPECT_EQUAL( 1u, tracker.getPendingCount() );
+    SW_EXPECT_FALSE( tracker.waitIdle( 20 ) );
+
+    // 올린 잡이 끝나면, 올리지 않은 태스크가 아직 돌아도 true 다.
+    pTrackedRelease->store( true );
+    SW_EXPECT_TRUE( tracker.waitIdle( 5000 ) );
+    SW_EXPECT_EQUAL( 0u, tracker.getPendingCount() );
+    SW_EXPECT_FALSE( foreign.isCompleted() );
+
+    pForeignRelease->store( true );
+    (void)manager.waitAll( 5000 );
+    manager.shutdown();
 }
