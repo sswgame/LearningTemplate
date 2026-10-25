@@ -139,6 +139,8 @@ namespace sw::engine
         return parts;
     }
 
+    // 길이를 나누지 않는다: 기동 서브시스템을 순서대로 단계 객체에 등록하는 열이고, 순서와 범위(호스트 · 엔진 · Server 제외)가 곧 뜻이다.
+    // `Engine::initialize` 와 같은 이유다.
     StartupParts addStartupSubsystems( SubsystemScope& startup, StartupSetup&& setup )
     {
         // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).

@@ -647,6 +647,8 @@ namespace sw
         _pActiveFrameList->RSSetScissorRects( 1, &scissorRect );
     }
 
+    // 길이를 나누지 않는다: 닫기 · 타임스탬프 해석 · 제출 · 펜스 · Present 의 프레임 끝 순서가 곧 뜻이고,
+    // 업로드 리스트를 프레임 리스트 앞에 끼우는 규칙이 한곳에 있어야 한다.
     void D3D12RHIDevice::endFrame( bool vsync, bool bPresent )
     {
         if ( bPresent )

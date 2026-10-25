@@ -398,6 +398,7 @@ namespace sw
         processNativeEvent( event );
     }
 
+    // 길이를 나누지 않는다: Win32 짝과 같이 이벤트 종류별로 갈라 주는 `switch` 디스패처다.
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
         if ( event._message == NativeWindowEvent::kMessageWayland && event._lParam != 0 )

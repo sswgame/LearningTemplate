@@ -440,6 +440,7 @@ namespace sw
         return bReadable;
     }
 
+    // 길이를 나누지 않는다: 검사 · 링 복사 · 컨텍스트 빌려 올리기 · 펜스의 순서가 곧 뜻이다(전송 계약 1 · 2 · 4).
     RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
