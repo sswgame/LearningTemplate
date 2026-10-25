@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shooter3D 의 장비 아이템(게임플레이 정의). 외형은 visual 이 가리키는 data/appearance/itemvisuals.xml 의 항목이다 — 아티스트는 이 파일을 건드리지 않는다.
-     블래스터 셋은 플레이어 무기(weapons.xml 의 rifle · shotgun · pistol)의 외형이다 — 무기를 바꾸면 MainHand 칸의 아이템이 바뀐다.
-     같은 무기의 이름이 HUD 의 두 줄(WeaponName · ItemName)에 따로 나오므로 이 셋의 name 은 weapons.xml 의 name 과 같게 둔다(현지화 키도 하나). -->
+     블래스터 셋은 플레이어 무기(weapons.xml 의 rifle · shotgun · pistol)의 외형이다 — weapons.xml 의 item 이 이 id 를 가리키고, 무기를 바꾸면 MainHand 칸의 아이템이 바뀐다.
+     무기의 표시 이름은 여기 name 이 유일한 원본이다(HUD 의 WeaponName · ItemName 두 줄이 모두 이것을 읽는다). -->
 
 <ItemCatalog>
   <Item id="helmet_knight" name="Knight Helmet" category="Armor" slot="Head" visual="helmet_knight" tags="Armor.Heavy,Set.Knight"><Stats armor="3"/></Item>

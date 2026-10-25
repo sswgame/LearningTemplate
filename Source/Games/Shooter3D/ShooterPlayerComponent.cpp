@@ -189,7 +189,6 @@ namespace sw
         , _bodyPrefab{}
         , _listWeaponID{}
         , _listWeaponModel{}
-        , _listWeaponItem{}
         , _eyeHeight{ 1.6f }
         , _maxHealth{ 100.0f }
         , _regenDelay{ 4.0f }
@@ -458,8 +457,8 @@ namespace sw
 
     hashed_string ShooterPlayerComponent::getWeaponItem( int32 weaponIndex ) const
     {
-        const bool bInRange = 0 <= weaponIndex && weaponIndex < static_cast<int32>( _listWeaponItem.size() );
-        return bInRange ? hashed_string( _listWeaponItem[static_cast<size_t>( weaponIndex )] ) : hashed_string{};
+        const bool bInRange = 0 <= weaponIndex && weaponIndex < kWeaponCount;
+        return bInRange ? _arrWeapon[weaponIndex].getDef()._itemID : hashed_string{};
     }
 
     // ------------------------------------------------------------------------------
@@ -474,11 +473,11 @@ namespace sw
             return false;
         }
         const size_t slotCount   = static_cast<size_t>( kWeaponCount );
-        const bool   bSlotsMatch = _listWeaponID.size() == slotCount && _listWeaponModel.size() == slotCount && _listWeaponItem.size() == slotCount;
+        const bool   bSlotsMatch = _listWeaponID.size() == slotCount && _listWeaponModel.size() == slotCount;
         if ( bSlotsMatch == false )
         {
-            SW_LOG_ERROR( "[Shooter] the player needs %# weapon ids, models and items (has %#, %#, %#) - the player cannot be armed", kWeaponCount,
-                          static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ), static_cast<uint32>( _listWeaponItem.size() ) );
+            SW_LOG_ERROR( "[Shooter] the player needs %# weapon ids and models (has %#, %#) - the player cannot be armed", kWeaponCount,
+                          static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ) );
             return false;
         }
         bool bArmed = true;
@@ -489,6 +488,12 @@ namespace sw
             if ( pDef == nullptr )
             {
                 SW_LOG_ERROR( "[Shooter] weapon slot %# names '%#', which is not in the weapon catalog", weaponIndex + 1, weaponID.c_str() );
+                bArmed = false;
+                continue;
+            }
+            if ( pDef->_itemID.empty() )
+            {
+                SW_LOG_ERROR( "[Shooter] weapon '%#' has no item in the weapon catalog - its name and look come from the item", weaponID.c_str() );
                 bArmed = false;
                 continue;
             }
@@ -724,12 +729,14 @@ namespace sw
         pViewModel->setHealth( _vitality.getHealth(), _vitality.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
         pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
-        pViewModel->setWeaponName( weapon.getDef()._name );
-        // 손에 든 장비 아이템(무기의 외형 아이템)의 이름도 아이템 표의 원문이 키다. 아이템 표가 없거나 무기에 아이템이 없으면 이름 줄을 비운다.
+        // 무기의 이름은 무기의 장비 아이템(무기 표의 item)의 이름 하나가 원본이고, 아이템 표의 원문이 현지화 키다. 두 줄(WeaponName · ItemName)이 같은 값을 읽는다.
+        // 아이템 표가 없거나 아이템이 표에 없으면 이름 줄을 비운다.
         const AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         const ItemCatalog*        pItems    = pDatabase != nullptr ? pDatabase->getItemCatalog() : nullptr;
         const ItemDef*            pItem     = pItems != nullptr ? pItems->find( getWeaponItem( _weaponIndex ) ) : nullptr;
-        pViewModel->setItemName( pItem != nullptr ? string_view( pItem->_name ) : string_view{} );
+        const string_view         itemName  = pItem != nullptr ? string_view( pItem->_name ) : string_view{};
+        pViewModel->setWeaponName( itemName );
+        pViewModel->setItemName( itemName );
     }
 
     void ShooterPlayerComponent::resetRound()

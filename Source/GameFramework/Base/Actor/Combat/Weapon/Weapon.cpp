@@ -77,6 +77,8 @@ namespace sw
             }
             const utf8* pAmmoID = node.findAttribute( "ammo" );
             weapon._ammoID      = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
+            const utf8* pItemID = node.findAttribute( "item" );
+            weapon._itemID      = pItemID != nullptr ? hashed_string( pItemID ) : hashed_string{};
             add( weapon );
             ++loadedCount;
         }

@@ -148,6 +148,7 @@ namespace sw
 
     void SceneNavigation::registerSurface( NavMeshSurfaceComponent* pSurface )
     {
+        // 표면은 내비 메시 하나에 하나라 씬에 많아야 수십 개이고 해제(선형)는 언로드 때만 온다 — 색인 구조를 두지 않는다. 등록은 컴포넌트의 onRegister 에서 한 번만 온다.
         if ( pSurface != nullptr )
             _listSurface.push_back( pSurface );
     }

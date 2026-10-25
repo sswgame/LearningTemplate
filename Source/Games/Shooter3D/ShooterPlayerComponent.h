@@ -38,13 +38,13 @@ namespace sw
      *          걷기와 점프는 몸 이동(`ShooterBodyMovementComponent`, 적과 같은 코드)이 한다. 막는 상자와 적 위치는 디렉터가 `PrePhysics` 에서 기록한 것을 읽기만 한다.
      *
      *          **몸**: 플레이가 시작되면 몸 프리팹(`_bodyPrefab`, 스킨드 메시, 애니메이터, 외형, `ShooterAvatarComponent`)을 스폰한다. 몸이 이 컴포넌트의
-     *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(`_listWeaponItem`)이 된다.
+     *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(무기 표의 `item`)이 된다.
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸의 머리 · 머리 장비 · 몸 무기만 숨기고(`ShooterAvatarComponent::setFirstPerson`)
      *          손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
      *
      *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 에 게임의 뷰모델(`ShooterHUDViewModel`)을 걸고 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),
-     *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기 테이블의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
+     *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기의 장비 아이템 표의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
      *          `{bind:필드}` 가 연결한다. 이 컴포넌트는 위젯 이름을 모른다.
      *
      *          **탄도선과 총구 섬광**: 총구(1인칭이면 손에 든 총과 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 위치까지의 상자와
@@ -94,7 +94,7 @@ namespace sw
         const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
         int32              getWeaponIndex() const { return _weaponIndex; }
         GameObjectHandle   getDirector() const { return _director; }
-        /** @brief 무기의 외형 아이템(외형의 MainHand 슬롯)입니다. */
+        /** @brief 무기의 외형 아이템(외형의 MainHand 슬롯)입니다. 무기 표의 `item` 이며, 범위 밖 슬롯이면 빈 이름입니다. */
         hashed_string getWeaponItem( int32 weaponIndex ) const;
         /** @brief 지금 보는 요(라디안, +Z 에서 +X 쪽)입니다. */
         float32 getLookYaw() const { return _lookYaw; }
@@ -147,8 +147,8 @@ namespace sw
 
     private:
         /**
-         * @brief 무기 슬롯 셋을 씬 데이터(`_listWeaponID` · `_listWeaponModel` · `_listWeaponItem`)대로 채웁니다.
-         * @details 목록 길이가 슬롯 수와 다르거나 id 가 무기 카탈로그에 없으면 오류를 남기고 false 다. 다른 무기로 대체하지 않는다.
+         * @brief 무기 슬롯 셋을 씬 데이터(`_listWeaponID` · `_listWeaponModel`)대로 채웁니다.
+         * @details 목록 길이가 슬롯 수와 다르거나 id 가 무기 카탈로그에 없거나 그 무기에 `item` 이 없으면 오류를 남기고 false 다. 다른 무기로 대체하지 않는다.
          */
         [[nodiscard]] bool equipWeapons();
         /** @brief 의도의 무기 버튼(Weapon1..3, SwitchWeapon 과 그 아날로그의 부호로 다음과 이전을 구분)과 Reload 를 무기에 반영합니다. */
@@ -191,8 +191,6 @@ namespace sw
         vector<string> _listWeaponID;
         PROPERTY( Category = "Player", DisplayName = "Weapon Models", Tooltip = "First-person mesh of each weapon slot" )
         vector<string> _listWeaponModel;
-        PROPERTY( Category = "Player", DisplayName = "Weapon Items", Tooltip = "Appearance item of each weapon slot worn in the MainHand slot" )
-        vector<string> _listWeaponItem;
         PROPERTY( Category = "View", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
         float32 _eyeHeight;
         PROPERTY( Category = "Health", DisplayName = "Max Health", Min = 1.0 )
