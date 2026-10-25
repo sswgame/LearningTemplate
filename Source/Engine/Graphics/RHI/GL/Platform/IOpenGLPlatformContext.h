@@ -8,7 +8,7 @@
  *
  *          `Window/Windows|Linux` 와 `Core/File/Windows|Linux` 가 폴더로 나뉜 것과 같은 구조입니다.
  *
- * @note 디바이스는 핸들을 **불투명 `void*`** 로만 보관합니다(`getNativeDevice` 가 HDC 를 반환하는
+ * @note 디바이스는 핸들을 **불투명 `void*`** 로만 보관합니다(`queryNativeHandles` 의 디바이스 칸이 HDC 인
  *       계약 때문). 그래서 이 인터페이스도 `OpenGLContextHandles` 로 값만 넘깁니다. 플랫폼 타입이
  *       디바이스 헤더로 새지 않습니다.
  */

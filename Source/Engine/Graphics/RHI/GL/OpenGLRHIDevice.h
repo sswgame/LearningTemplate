@@ -157,17 +157,8 @@ namespace sw
         /** @brief RHI 텍스처 핸들에 대응하는 GL 텍스처 이름을 반환합니다. 없으면 0 입니다. */
         uint32 getGlTextureName( RHITextureHandle texture ) const;
 
-        /** @brief 네이티브 GL 텍스처 이름을 포인터 폭으로 넓혀 반환합니다. 없으면 nullptr(이름 0)입니다. */
-        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
-
         /** @brief 백엔드 이름 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
-
-        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display*)를 반환합니다. */
-        void* getNativeDevice() const override { return _pHDC; }
-
-        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
-        void* getNativeContext() const override { return _pHRC; }
 
         /** @brief 컨텍스트를 기다리다 포기하는 시간입니다. 렌더 워커는 프레임 끝마다 놓으므로 한 프레임이면 충분합니다. */
         static constexpr uint32 kContextAcquireTimeoutMs = 250;
@@ -192,14 +183,25 @@ namespace sw
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
         void unbindGraphicsContext() override;
 
-        /** @brief OpenGL 에는 커맨드 큐가 없어 nullptr 를 반환합니다. */
-        void* getNativeCommandQueue() const override { return nullptr; }
-
         /** @brief 커맨드 리스트를 만듭니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
 
         /** @brief 커맨드 리스트를 제출합니다. GL 은 기록이 곧 실행이라 즉시 모드에서만 glFlush 합니다. */
         void executeCommandList( IRHICommandList* pCmdList ) override;
+
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
+        /** @brief 네이티브 GL 텍스처 이름을 포인터 폭으로 넓혀 반환합니다. 없으면 nullptr(이름 0)입니다. */
+        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
+
+        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display*)를 반환합니다. */
+        void* getNativeDevice() const override { return _pHDC; }
+
+        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
+        void* getNativeContext() const override { return _pHRC; }
+
+        /** @brief OpenGL 에는 커맨드 큐가 없어 nullptr 를 반환합니다. */
+        void* getNativeCommandQueue() const override { return nullptr; }
 
     private:
         /** @brief makeCurrent 를 한 번 시도하고, 성공하면 가진 스레드와 시각을 기록합니다. */
@@ -406,7 +408,7 @@ namespace sw
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */
         unique_ptr<IOpenGLPlatformContext> _platformContext;
 
-        /** @brief getNativeDevice 계약용 복사본입니다. 실제 소유는 _platformContext 가 합니다. */
+        /** @brief `queryNativeHandles` 의 디바이스 칸에 싣는 복사본입니다. 실제 소유는 _platformContext 가 합니다. */
         void*  _pHDC;
         void*  _pHRC;
         uint32 _width;

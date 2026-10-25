@@ -183,16 +183,18 @@ namespace sw
         /** @brief 백엔드 이름을 반환합니다. */
         const utf8* getBackendName() const override { return "Direct3D 11"; }
 
+        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 다른 스레드와의 직렬화는 `D3D11ImmediateContext` 가 맡습니다. */
+        bool bindGraphicsContext() override;
+        /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
+        void unbindGraphicsContext() override {}
+
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
         /** @brief ID3D11Device 포인터를 반환합니다. */
         void* getNativeDevice() const override { return _device.Get(); }
 
         /** @brief 즉시 컨텍스트(ID3D11DeviceContext) 포인터를 반환합니다. 런타임의 다중 스레드 보호가 호출 하나씩을 지킵니다(`D3D11ImmediateContext`). */
         void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
-
-        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 다른 스레드와의 직렬화는 `D3D11ImmediateContext` 가 맡습니다. */
-        bool bindGraphicsContext() override;
-        /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
-        void unbindGraphicsContext() override {}
 
         /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
         void* getNativeCommandQueue() const override { return nullptr; }
@@ -200,6 +202,7 @@ namespace sw
         /** @brief 네이티브 텍스처 포인터(ID3D11Texture2D*)를 반환합니다. */
         void* getNativeTexturePointer( RHITextureHandle texture ) const override;
 
+    public:
         /** @brief 커맨드 리스트를 만듭니다. 리스트마다 자기 Deferred Context 를 가집니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
 
