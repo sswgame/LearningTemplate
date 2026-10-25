@@ -192,6 +192,7 @@ namespace sw
         : _bInitialized{ false }
         , _mainThreadID{}
         , _bStop{ false }
+        , _runningWorkerCount{ 0 }
         , _listWorkerSlot{}
         , _helperSlotCount{ 0 }
         , _helperSlotFreeMask{ 0 }

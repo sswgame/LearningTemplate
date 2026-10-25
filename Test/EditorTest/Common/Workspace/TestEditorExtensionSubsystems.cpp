@@ -4,6 +4,8 @@
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
+#include "EditorTest/Common/Workspace/EditorExtensionRegistryTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -46,8 +48,9 @@ namespace
  */
 SW_TEST_CASE( EditorExtensionSubsystemsTest, ContributedSubsystemFollowsTheModule )
 {
-    SubsystemScope            scope;
-    EditorExtensionSubsystems extensions( scope );
+    const ScopedEmptyEditorExtensionRegistry<EditorSubsystemRegistration> emptyRegistry; // 링크된 코어 파일의 서브시스템 등록을 가린다
+    SubsystemScope                                                        scope;
+    EditorExtensionSubsystems                                             extensions( scope );
     ProbeExtensionSubsystem::s_liveCount = 0;
     {
         const ProbeRegistrar registrar{ makeProbeRegistration() };
@@ -77,8 +80,9 @@ SW_TEST_CASE( EditorExtensionSubsystemsTest, ContributedSubsystemFollowsTheModul
  */
 SW_TEST_CASE( EditorExtensionSubsystemsTest, ReleaseAllThenSyncRecreates )
 {
-    SubsystemScope            scope;
-    EditorExtensionSubsystems extensions( scope );
+    const ScopedEmptyEditorExtensionRegistry<EditorSubsystemRegistration> emptyRegistry; // 링크된 코어 파일의 서브시스템 등록을 가린다
+    SubsystemScope                                                        scope;
+    EditorExtensionSubsystems                                             extensions( scope );
     ProbeExtensionSubsystem::s_liveCount = 0;
     const ProbeRegistrar registrar{ makeProbeRegistration() };
     extensions.syncWithRegistry();

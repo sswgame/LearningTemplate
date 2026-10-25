@@ -108,6 +108,18 @@ SW_TEST_CASE( ResourceTest, GetResourcePathEmptyWhenMissingUnderDomains )
 }
 
 /**
+ * @brief [ResourceTest] 팩 폴더 자신을 가리키는 id(`game/<팩>`)는 그 폴더로 풀린다
+ * @details 로컬라이즈 프로젝트의 에셋 루트(`game/shooter3d`)가 이 id 다. 빈 키를 "없음" 으로 읽으면 수집이 에셋을 하나도 못 보고 표에서 지운다.
+ */
+SW_TEST_CASE( ResourceTest, PackFolderIDResolvesToTheFolder )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string folder = sw::ResourcePaths::findLooseFile( "game/shooter3d" ).getDiskPath();
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( folder ), folder.c_str() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( "game/no_such_pack_xyz" ).getDiskPath().empty() );
+}
+
+/**
  * @brief [ResourceTest] 저장 경로가 상대 폴더를 소문자화
  */
 SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )

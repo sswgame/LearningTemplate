@@ -1027,72 +1027,72 @@
 		</entry>
 		<entry key="EditorAudioEvents.FieldBus" source="Bus">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldClipCount" source="Clips">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldContainer" source="Container">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldCooldown" source="Cooldown">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldFade" source="Fade">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldLoop" source="Loop">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldMaxInstances" source="Max instances">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldParameterCount" source="Parameter curves">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldPitch" source="Pitch">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldPriority" source="Priority">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldRadius" source="Radius">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldSteal" source="Steal policy">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldVirtual" source="Virtual mode">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.FieldVolume" source="Volume">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.Instances" source="Instances">
@@ -1175,7 +1175,7 @@
 		</entry>
 		<entry key="EditorAudioEvents.RemainingLoop" source="loop">
 			<origins>
-				<item>Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp</item>
+				<item>Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorAudioEvents.SaveEdits" source="Save">

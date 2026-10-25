@@ -69,7 +69,7 @@ namespace sw::editor
         const EditorViewportPreferences& preferences = getPreferences<EditorViewportPreferences>();
         _toolbarSettings._cameraSpeed                = preferences._cameraSpeed;
         _toolbarSettings._gridSnapValue              = preferences._gridSnapValue;
-        _toolbarSettings._rotationSnapValue          = preferences._rotationSnapValue;
+        _toolbarSettings._rotationSnapValue          = MathUtil::toDegree( preferences._rotationSnapValue ); // 도구 막대 · ImGuizmo 는 도, 설정은 라디안
         _toolbarSettings._scaleSnapValue             = preferences._scaleSnapValue;
         _toolbarSettings._bShowHUD                   = preferences._bShowHUD;
         _toolbarSettings._bShowGrid                  = preferences._bShowGrid;

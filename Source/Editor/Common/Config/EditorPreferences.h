@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -41,8 +42,8 @@ namespace sw::editor
         PROPERTY( Min = 0.01, Tooltip = "Translate snap step (m)" )
         float32 _gridSnapValue{ 1.0f };
 
-        PROPERTY( Min = 1.0, Max = 90.0, Tooltip = "Rotate snap step (deg)" )
-        float32 _rotationSnapValue{ 15.0f };
+        PROPERTY( Min = 0.0174533, Max = 1.5707964, Units = rad, Tooltip = "Rotate snap step" )
+        float32 _rotationSnapValue{ MathUtil::toRadian( 15.0f ) };
 
         PROPERTY( Min = 0.01, Tooltip = "Scale snap step" )
         float32 _scaleSnapValue{ 0.1f };

@@ -429,7 +429,7 @@ namespace sw
         std::thread::id _mainThreadID; ///< 메인 스레드의 ID
         atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그
         /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
-        atomic<uint32>                 _runningWorkerCount{ 0 };
+        atomic<uint32>                 _runningWorkerCount;
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 슬롯은 `_helperSlotFreeMask` 로 다시 쓴다)
         atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크

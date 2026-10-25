@@ -8,7 +8,6 @@
 		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
 			<origins>
 				<item>game/shooter3d/data/items.xml</item>
-				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
 		<entry key="Bone Axe" source="Bone Axe" context="Item name">
@@ -39,13 +38,11 @@
 		<entry key="Pistol" source="Pistol" context="Weapon name">
 			<origins>
 				<item>game/shooter3d/data/items.xml</item>
-				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
 			<origins>
 				<item>game/shooter3d/data/items.xml</item>
-				<item>game/shooter3d/data/weapons.xml</item>
 			</origins>
 		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">

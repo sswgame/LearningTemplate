@@ -6,6 +6,8 @@
 
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 
+#include "EditorTest/Common/Workspace/EditorExtensionRegistryTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -60,6 +62,7 @@ SW_TEST_CASE( EditorFrameStepTest, ShellStepOrderKeepsItsMeaning )
  */
 SW_TEST_CASE( EditorFrameStepTest, OrderDecidesRunOrderNotRegistrationOrder )
 {
+    const ScopedEmptyEditorExtensionRegistry<EditorFrameStepRegistration> emptyRegistry; // 링크된 코어 파일의 단계(scenarioRecord 등)를 가린다
     SW_ASSERT_EQUAL( 0u, FrameStepRegistry::getCount() );
     {
         const FrameStepRegistrar panels{
@@ -87,7 +90,8 @@ SW_TEST_CASE( EditorFrameStepTest, OrderDecidesRunOrderNotRegistrationOrder )
  */
 SW_TEST_CASE( EditorFrameStepTest, SecondStepWithSameIDIsRejected )
 {
-    const FrameStepRegistrar first{
+    const ScopedEmptyEditorExtensionRegistry<EditorFrameStepRegistration> emptyRegistry; // 링크된 코어 파일의 단계(scenarioRecord 등)를 가린다
+    const FrameStepRegistrar                                              first{
         EditorFrameStepRegistration{ { "panels", EditorFrameStepOrder::kPanels }, &runFirstStep }
     };
     SW_ASSERT_TRUE( first.isRegistered() );
@@ -110,7 +114,8 @@ SW_TEST_CASE( EditorFrameStepTest, SecondStepWithSameIDIsRejected )
  */
 SW_TEST_CASE( EditorFrameStepTest, ReloadReplacesStepInPlace )
 {
-    const FrameStepRegistrar commands{
+    const ScopedEmptyEditorExtensionRegistry<EditorFrameStepRegistration> emptyRegistry; // 링크된 코어 파일의 단계(scenarioRecord 등)를 가린다
+    const FrameStepRegistrar                                              commands{
         EditorFrameStepRegistration{ { "commands", EditorFrameStepOrder::kCommands }, &runFirstStep }
     };
     const FrameStepRegistrar selfTest{
