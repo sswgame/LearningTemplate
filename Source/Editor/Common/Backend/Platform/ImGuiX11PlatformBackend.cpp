@@ -13,6 +13,8 @@
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "ImGuiX11" );
+
     class ImGuiX11PlatformBackend : public IImGuiPlatformBackend
     {
     public:
@@ -30,10 +32,15 @@ namespace sw::editor
                 return false;
             (void)backendType;
 
-            Display* pDisplay = static_cast<Display*>( pWindow->getNativeDisplay() );
-            Window   window   = static_cast<Window>( reinterpret_cast<uintptr_t>( pWindow->getNativeHandle() ) );
-            if ( pDisplay == nullptr )
+            // 이 백엔드는 X11 전용이다 — Wayland 창의 연결(wl_display)을 Display* 로 읽으면 죽으므로 X11 창이 아니면 오류로 멈춘다.
+            X11SurfaceHandles x11Surface;
+            if ( pWindow->tryGetX11Surface( x11Surface ) == false )
+            {
+                SW_LOG_ERROR( "The ImGui X11 platform backend needs an X11 window with a display connection (a Wayland window is not supported)" );
                 return false;
+            }
+            Display* pDisplay = static_cast<Display*>( x11Surface._pDisplay );
+            Window   window   = static_cast<Window>( x11Surface._window );
 
             _pDisplay   = pDisplay;
             _mainWindow = window;

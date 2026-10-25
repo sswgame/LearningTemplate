@@ -48,6 +48,12 @@ namespace sw
         /** @brief X11 창을 파괴합니다. */
         virtual ~X11Window() override;
 
+        /**
+         * @brief @p pWindow 가 X11 창이면 `X11Window*`, 아니면(nullptr · Wayland · Win32) nullptr 입니다.
+         * @details 엔진은 RTTI 를 끄므로 종류(`getSurfaceKind`) 확인과 캐스트를 이 함수 한 곳에 둔다 — 다른 창 시스템의 창을 `X11Window*` 로 읽는 `static_cast` 를 바깥에 두지 않는다.
+         */
+        static X11Window* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::X11 ? static_cast<X11Window*>( pWindow ) : nullptr; }
+
         /** @brief X11 창을 만듭니다. 화면에 띄우는 것은 showWindow() 입니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         /** @brief X11 창을 파괴합니다. */

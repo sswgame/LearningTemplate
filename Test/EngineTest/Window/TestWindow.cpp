@@ -400,8 +400,12 @@ SW_TEST_CASE( WindowTest, X11ClipboardRoundTripsBetweenWindowsIncludingIncr )
     SW_ASSERT_TRUE( firstBase != nullptr && secondBase != nullptr );
     if ( firstBase->initializeWindow( "ClipboardFirst", 200, 100 ) == false || secondBase->initializeWindow( "ClipboardSecond", 200, 100 ) == false )
         SW_TEST_SKIP( "no X server to open windows on" );
-    sw::X11Window& first  = static_cast<sw::X11Window&>( *firstBase );
-    sw::X11Window& second = static_cast<sw::X11Window&>( *secondBase );
+    sw::X11Window* pFirst  = sw::X11Window::tryCast( firstBase.get() );
+    sw::X11Window* pSecond = sw::X11Window::tryCast( secondBase.get() );
+    if ( pFirst == nullptr || pSecond == nullptr )
+        SW_TEST_SKIP( "the platform window is not an X11 window (the clipboard is X11 only)" );
+    sw::X11Window& first  = *pFirst;
+    sw::X11Window& second = *pSecond;
 
     const sw::string small = "복사 → paste 한글 日本語 end";
     expectClipboardRoundTrip( first, second, small, "small text first -> second" );
