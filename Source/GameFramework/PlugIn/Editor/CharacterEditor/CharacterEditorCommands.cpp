@@ -20,15 +20,15 @@ namespace sw::editor
         {
             static void openCharacterEditorPanel()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<CharacterEditorPanel>( true ) )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<CharacterEditorPanel>( true ) )
                     SW_LOG_INFO( "Character Editor panel opened" );
             }
 
             static void openPairedAnimationPanel()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( PairedAnimationPanel::kPanelID, true ) )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( PairedAnimationPanel::kPanelID, true ) )
                     SW_LOG_INFO( "Paired Animation panel opened" );
             }
         };

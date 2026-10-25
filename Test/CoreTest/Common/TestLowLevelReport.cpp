@@ -267,3 +267,26 @@ SW_TEST_CASE( LowLevelReportTest, OverflowIsMarkedTruncated )
     SW_EXPECT_TRUE_MSG( LowLevelReportTestInternal::endsWith( message, "...[truncated]" ), message.c_str() );
     SW_EXPECT_TRUE( message.compare( 0, 8, "xxxxxxxx" ) == 0 );
 }
+
+/**
+ * @brief [LowLevelReportTest] 필수 서비스 부재 보고는 조회 글을 담은 오류 하나를 stderr 에 먼저 쓰고 멈춘다(Debug 가로채기에서는 세고 반환한다)
+ * @details 모든 구성에서 `abort` 하므로(`SW_ASSERT` 는 Release 에서 사라져 널 역참조가 됐다) 멈춤을 프로세스 안에서 볼 수 있는 구성은 가로채기가 있는 Debug 뿐이다.
+ *          그래서 부르는 것은 그 구성에서만이다. 세 서비스 창구(`SubsystemScope::get` · `engine::getSubsystem` · `game::getSubsystem`)와 에디터 창구가 모두 이 함수 하나를 부른다.
+ */
+SW_TEST_CASE( LowLevelReportTest, MissingRequiredServiceReportsOneErrorBeforeStopping )
+{
+    const ScopedLowLevelCapture capture( &LowLevelReportTestInternal::reporter );
+    test::ScopedAssertCapture   assertCapture;
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a required service is missing" );
+        sw::internal::reportMissingRequiredService( "MissingProbeService" );
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+
+        const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
+        SW_EXPECT_EQUAL( 1u, received._count );
+        SW_EXPECT_TRUE( received._level == sw::internal::LowLevelReportLevel::Error );
+        SW_EXPECT_TRUE_MSG( LowLevelReportTestInternal::contains( received._message, "MissingProbeService" ), received._message.c_str() );
+        SW_EXPECT_TRUE_MSG( received._bStderrHadTextAtCall, "stderr was still empty when the reporter ran" );
+    }
+}

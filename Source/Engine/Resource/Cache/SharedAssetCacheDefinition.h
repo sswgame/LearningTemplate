@@ -144,9 +144,7 @@ namespace sw
     template <typename AssetType>
     SharedAssetTable<AssetType>& SharedAssetCache<AssetType>::getTable()
     {
-        SharedAssetTable<AssetType>* const pTable = s_sharedAssetTableOwner<AssetType>.getOrCreate();
-        SW_ASSERT( pTable != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
-        return *pTable;
+        return s_sharedAssetTableOwner<AssetType>.getRequired(); // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
     }
 } // namespace sw
 

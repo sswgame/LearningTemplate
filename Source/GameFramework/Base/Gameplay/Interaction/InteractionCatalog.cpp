@@ -121,9 +121,7 @@ namespace sw
         /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. */
         GameDataCache<InteractionCatalog>& getSharedCatalogCache()
         {
-            InteractionCatalogCacheHolder* const pHolder = s_sharedCatalogCache.getOrCreate();
-            SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 카탈로그를 읽을 엔진이 없다
-            return pHolder->_cache;
+            return s_sharedCatalogCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 카탈로그를 읽을 엔진이 없다
         }
     } // namespace
 } // namespace sw

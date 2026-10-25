@@ -88,7 +88,7 @@ namespace sw::editor
 
     void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* pRHIDevice )
     {
-        EditorContext*         pContext = EditorContext::get();
+        EditorContext*         pContext = editor::findSubsystem<EditorContext>();
         IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
         IRHIDevice*            pDevice  = pRHIDevice != nullptr ? pRHIDevice : ( pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr );
         if ( _pSnapshotTextureID != nullptr && pBackend != nullptr )
@@ -119,7 +119,7 @@ namespace sw::editor
         if ( _pPreviewTextureID == nullptr )
             return;
 
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         // 컨텍스트가 이미 종료됐으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
         if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
             pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pPreviewTextureID );
@@ -157,10 +157,10 @@ namespace sw::editor
         if ( texture == 0 )
             return;
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( editorContext.getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
             return;
-        _pPreviewTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
+        _pPreviewTextureID = editorContext.getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
         _previewTexture    = ( _pPreviewTextureID != nullptr ) ? texture : 0;
     }
 
@@ -220,9 +220,9 @@ namespace sw::editor
             return;
         _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
 
-        EditorContext* pContext              = EditorContext::get();
-        IRHIDevice*    pDevice               = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
-        const bool     bCannotUploadSnapshot = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr;
+        EditorRenderViews& renderViews           = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        IRHIDevice*        pDevice               = renderViews.getRHIDevice();
+        const bool         bCannotUploadSnapshot = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || renderViews.getRendererBackend() == nullptr;
         if ( bCannotUploadSnapshot )
             return;
 
@@ -248,7 +248,7 @@ namespace sw::editor
             releaseSnapshotTexture( pDevice );
             return;
         }
-        _pSnapshotTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( _snapshotTexture );
+        _pSnapshotTextureID = renderViews.getRendererBackend()->registerTexture( _snapshotTexture );
     }
 
     void RenderTargetPanel::drawToolbar()

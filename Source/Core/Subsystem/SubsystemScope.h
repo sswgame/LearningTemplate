@@ -128,12 +128,13 @@ namespace sw
             return static_cast<T*>( findInScope( getSubsystemTypeHash<std::remove_const_t<T>>() ) );
         }
 
-        /** @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다(소유한 서브시스템을 초기화 뒤에 묻는 자리). */
+        /** @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리). */
         template <class T>
         T& get() const
         {
             T* pFound = find<T>();
-            SW_ASSERT( pFound != nullptr );
+            if ( pFound == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             return *pFound;
         }
 

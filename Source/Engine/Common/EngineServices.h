@@ -118,8 +118,6 @@ namespace sw
         {
             /** @brief 찾아 둔 칸입니다(`EngineServiceIndex` 순서). 바인딩 전이면 모두 nullptr 입니다. 창구 템플릿만 읽는다. */
             SW_API void* const* getServiceSlots();
-            /** @brief `getSubsystem<T>()` 가 빈 칸을 만났을 때 타입 이름을 남기고 멈춥니다. */
-            SW_API void reportUnboundService( const utf8* pTypeName );
         } // namespace internal
 
         // ------------------------------------------------------------------------------
@@ -137,7 +135,7 @@ namespace sw
             static_assert( Slot::kNullable == false, "engine::getSubsystem<T>: this row may be empty - use engine::findSubsystem<T>()" );
             void* const pService = internal::getServiceSlots()[Slot::kIndex];
             if ( pService == nullptr )
-                internal::reportUnboundService( Slot::kTypeName );
+                ::sw::internal::reportMissingRequiredService( Slot::kTypeName ); // 모든 구성에서 멈춘다 — `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 널을 역참조했다
             return *static_cast<typename Slot::Access*>( pService );
         }
 

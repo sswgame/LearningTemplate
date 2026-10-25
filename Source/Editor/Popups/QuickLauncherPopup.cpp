@@ -140,40 +140,33 @@ namespace sw::editor
 
     void QuickLauncherPopup::open()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void QuickLauncherPopup::close()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void QuickLauncherPopup::toggle()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool QuickLauncherPopup::isOpen()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
-        return false;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        return editorContext.getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
     }
 
     bool QuickLauncherPopup::isIndexing()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
-        EditorPopupManager&       popups = pContext->getSubsystem<EditorPopupManager>();
-        const QuickLauncherPopup* pPopup = popups.findPopup<QuickLauncherPopup>( kPopupID );
+        EditorContext&            editorContext = editor::getSubsystem<EditorContext>();
+        EditorPopupManager&       popups        = editorContext.getSubsystem<EditorPopupManager>();
+        const QuickLauncherPopup* pPopup        = popups.findPopup<QuickLauncherPopup>( kPopupID );
         return pPopup != nullptr && popups.isPopupOpen( kPopupID ) && pPopup->_fileIndexJob.isPending();
     }
 

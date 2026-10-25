@@ -220,7 +220,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPreviewRedMinusBlue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();
@@ -235,7 +235,7 @@ namespace sw::editor
             /** @brief 열린 Material 패널입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MaterialPanel* findOpenPanel()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return nullptr;
                 const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();

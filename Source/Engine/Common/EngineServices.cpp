@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "EngineServices" );
-
     namespace
     {
         constexpr uint32 kServiceCount = static_cast<uint32>( EngineServiceIndex::Count );
@@ -128,11 +126,6 @@ namespace sw
             void* const* getServiceSlots()
             {
                 return s_arrService;
-            }
-
-            void reportUnboundService( const utf8* pTypeName )
-            {
-                SW_LOG_ASSERT( false, "%# is not bound", pTypeName );
             }
         } // namespace internal
     } // namespace engine

@@ -35,7 +35,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readSelectedEnumValue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext  = EditorContext::get();
+                EditorContext* pContext  = editor::findSubsystem<EditorContext>();
                 TypeRegistry*  pRegistry = editor::findSubsystem<TypeRegistry>();
                 if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
                 {
@@ -84,7 +84,7 @@ namespace sw::editor
             /** @brief 저장하지 않은 편집이 있는 문서 패널 수입니다(`EditorPanelManager::countDirtyDocuments`). 저장 명령이 패널까지 닿았는지는 이 수가 줄어드는 것으로 본다. */
             [[nodiscard]] static bool readDirtyDocumentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 outValue = static_cast<float64>( pContext->getSubsystem<EditorPanelManager>().countDirtyDocuments() );

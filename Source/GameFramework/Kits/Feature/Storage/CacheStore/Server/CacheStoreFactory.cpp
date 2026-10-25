@@ -27,9 +27,7 @@ namespace sw
 
             static MemoryEphemeralDatabase& getMemoryDatabase()
             {
-                MemoryEphemeralDatabase* const pDatabase = s_memoryDatabase.getOrCreate();
-                SW_ASSERT( pDatabase != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — "memory" 캐시를 쓸 엔진이 없다
-                return *pDatabase;
+                return s_memoryDatabase.getRequired(); // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — "memory" 캐시를 쓸 엔진이 없다
             }
 
             /** @brief RESP 저장소에 주는 운영 시계입니다. 상태가 없어 저장소들이 나눠 쓴다. */

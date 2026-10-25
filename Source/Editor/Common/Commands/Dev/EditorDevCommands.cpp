@@ -67,7 +67,7 @@ namespace sw::editor
 
             static bool runEditorCommand( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
                 if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0] ) == false )
@@ -419,7 +419,7 @@ namespace sw::editor
              */
             static bool runCreatePrefab( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 string         absolutePath;
                 const bool     bInvalidArguments = listArgument.size() != 1 || pContext == nullptr || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false;
                 if ( bInvalidArguments )

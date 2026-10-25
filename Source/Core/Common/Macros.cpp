@@ -4,6 +4,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 
@@ -188,3 +189,18 @@ namespace sw::internal
     }
 } // namespace sw::internal
 #endif
+
+namespace sw::internal
+{
+    void reportMissingRequiredService( const utf8* pLookup ) noexcept
+    {
+        utf8 arrText[kLowLevelMessageCapacity];
+        formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );
+        reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText ); // Error 는 stderr 에 먼저 동기로 쓴다 — 멈추기 전에 남는다
+#if defined( SW_DEBUG )
+        if ( tryCaptureAssert() )
+            return; // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+#endif
+        std::abort();
+    }
+} // namespace sw::internal

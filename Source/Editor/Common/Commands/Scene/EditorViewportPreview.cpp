@@ -36,10 +36,8 @@ namespace sw::editor
         {
             static GameObject* getPrimaryObject()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return nullptr;
-                return pContext->getSubsystem<EditorWorkspace>().getSelectedObject();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                return editorContext.getSubsystem<EditorWorkspace>().getSelectedObject();
             }
 
             static bool matchesAnimationGraphPath( const SpriteAnimatorComponent* pAnimator, string_view graphPath )

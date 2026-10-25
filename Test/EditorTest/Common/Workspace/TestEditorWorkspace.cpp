@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -172,9 +173,24 @@ SW_TEST_CASE( EditorServiceTest, RequiredLookupReturnsServiceAndReportsWhenMissi
         SW_EXPECT_TRUE( &getSubsystem<SceneManager>() == &sceneManager );
     }
 
-    SW_TEST_DEFENSIVE_SCOPE( "a required editor service is missing" );
+    // 없으면 모든 구성에서 오류 로그를 남기고 멈춘다. 멈춤을 가로채 세는 것은 Debug 에만 있어서, 프로세스 안에서 볼 수 있는 구성에서만 부른다.
     test::ScopedAssertCapture assertCapture;
-    editor::internal::reportMissingRequiredService( "test lookup" );
     if ( test::ScopedAssertCapture::kAssertsAreActive )
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a required editor service is missing" );
+        sw::internal::reportMissingRequiredService( "test lookup" ); // 에디터 · 게임 · 엔진 · 범위 조회가 함께 쓰는 Core 의 보고 함수
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+}
+
+/**
+ * @brief [EditorServiceTest] 에디터 컨텍스트가 없는 범위에서 `findSubsystem<EditorContext>()` 는 nullptr 을 돌려준다
+ * @details `getSubsystem<EditorContext>()` 는 같은 상황에서 멈추므로(`reportMissingRequiredService`) 직접 부르지 않는다. 없을 수 있는 쪽(`findSubsystem`)만 이 테스트로 본다.
+ */
+SW_TEST_CASE( EditorServiceTest, EditorContextLookupReturnsNullWithoutContext )
+{
+    SceneManager              sceneManager;
+    ScopedSceneManagerService scopedScene{ sceneManager }; // 컨텍스트 없이 서비스 하나만 건 테스트 범위
+
+    SW_EXPECT_TRUE( findSubsystem<EditorContext>() == nullptr );
 }

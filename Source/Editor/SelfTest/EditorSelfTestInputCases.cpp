@@ -89,9 +89,8 @@ namespace sw::editor
                 ImGui::ClearActiveID(); // 검색 입력란의 입력 상태를 놓는다. 다음 테스트의 키가 이리 오지 않게 한다
                 if ( pHierarchy != nullptr )
                     pHierarchy->setFilterText( "" );
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -100,7 +99,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runHierarchySearchTyping( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
@@ -361,7 +360,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
             {
-                EditorContext*     pContext = EditorContext::get();
+                EditorContext*     pContext = editor::findSubsystem<EditorContext>();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -421,7 +420,7 @@ namespace sw::editor
             {
                 constexpr const utf8* kProbeName       = "EditorSelfTestRowProbe";
                 constexpr uint32      kMaxMarkWaitStep = 10;
-                EditorContext*        pContext         = EditorContext::get();
+                EditorContext*        pContext         = editor::findSubsystem<EditorContext>();
                 GameObjectManager*    pManager         = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;

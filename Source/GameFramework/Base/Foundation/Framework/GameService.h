@@ -46,14 +46,15 @@ namespace sw
         }
 
         /**
-         * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다.
+         * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`sw::internal::reportMissingRequiredService`).
          * @details 서비스가 바인딩된 뒤에만 도는 경로(카탈로그 읽기, 타입 조회)가 쓴다. 없을 수 있는 곳에서는 `findSubsystem<T>()` 를 쓴다.
          */
         template <typename T>
         T& getSubsystem()
         {
             T* pFound = findSubsystem<T>();
-            SW_ASSERT( pFound != nullptr );
+            if ( pFound == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             return *pFound;
         }
 

@@ -200,9 +200,7 @@ namespace sw::editor
 
     void EditorWidgets::drawGizmoOperationControls( bool bVertical )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 값은 `EditorWorkspace` 의 기즈모 조작 번호다. 여기 숫자는 그 표현일 뿐이고, 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
         // 세 엔진 모두 이동 · 회전 · 크기를 아이콘 단추로 둔다 — 글자 라디오는 좁은 뷰포트에서 잘린다.
@@ -223,22 +221,22 @@ namespace sw::editor
             SW_LOCKEY( "EdCommon", "GizmoRotate" ),
             SW_LOCKEY( "EdCommon", "GizmoScale" ),
         };
-        const int32 operation = pContext->getSubsystem<EditorWorkspace>().getGizmoOperation();
+        const int32 operation = editorContext.getSubsystem<EditorWorkspace>().getGizmoOperation();
         for ( int32 index = 0; index < 3; ++index )
         {
             const GizmoButton& button = kArrGizmoButton[index];
             if ( drawIconToggle( button._pID, button._pIcon, operation == index, arrTooltip[index] ) )
-                pContext->getSubsystem<EditorWorkspace>().setGizmoOperation( index );
+                editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
             EditorSelfTestMarks::note( button._pMark );
             if ( bVertical == false )
                 ImGui::SameLine();
         }
 
-        const bool bLocalSpace = pContext->getSubsystem<EditorWorkspace>().isGizmoLocalSpace();
+        const bool bLocalSpace = editorContext.getSubsystem<EditorWorkspace>().isGizmoLocalSpace();
         if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe,
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
-            pContext->getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
+            editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
         EditorSelfTestMarks::note( "gizmo.space" );
     }
 

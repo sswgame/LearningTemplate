@@ -20,7 +20,8 @@ namespace sw
         , _bEmitting{ true }
         , _bWarnedStepLimit{ false }
     {
-        SW_ASSERT( _pDef != nullptr );
+        if ( _pDef == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         SW_ASSERT( _spawnScale >= 0.0f );
         _listBurstFired.resize( _pDef->_listBurst.size(), 0 );
     }

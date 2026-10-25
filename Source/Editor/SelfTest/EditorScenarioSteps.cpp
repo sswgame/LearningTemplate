@@ -655,16 +655,15 @@ namespace sw::editor
                 else
                     pManager->getAllGameObjects( listObject );
 
-                EditorContext* pContext   = EditorContext::get();
-                uint32         foundCount = 0;
-                uint32         pickCount  = 0;
+                uint32 foundCount = 0;
+                uint32 pickCount  = 0;
                 for ( const GameObject* pObj : listObject )
                 {
                     const bool bNameMismatch = pObj == nullptr || pObj->isPendingDestroy() || pObj->getName().isEqual( name, NameCase::CaseSensitive ) == false;
                     if ( bNameMismatch )
                         continue;
                     ++foundCount;
-                    if ( pContext != nullptr && editor::getMainSceneSelection().hasObject( pObj ) )
+                    if ( editor::getMainSceneSelection().hasObject( pObj ) )
                         ++pickCount;
                 }
                 if ( foundCount != expectedCount )
@@ -783,7 +782,7 @@ namespace sw::editor
              *         프로브는 float 값만 돌려 사유를 줄 수 없어 이유를 로그로 남기고 nullptr 를 돌려줍니다. @p pProbe 는 `__func__` 입니다. */
             [[nodiscard]] static EditorContext* getProbeContext( const utf8* pProbe )
             {
-                EditorContext* pContext = EditorContext::get(); // 필수 서비스: 없으면 버그
+                EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 필수 서비스: 없으면 버그
                 if ( pContext == nullptr )
                     SW_LOG_ERROR( "[Probe] EditorContext is missing - %# reads nothing", pProbe );
                 return pContext;
@@ -1079,7 +1078,7 @@ namespace sw::editor
                 uint64         sceneHash = 0;
                 string         selected;
                 string         undoState;
-                EditorContext* pContext  = EditorContext::get();
+                EditorContext* pContext  = editor::findSubsystem<EditorContext>();
                 const bool     bReadable = pContext != nullptr && computeSceneContentHash( sceneHash ) && makeSelectedNames( selected ) && makeUndoState( undoState );
                 if ( bReadable == false )
                 {
@@ -1784,7 +1783,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readHasPanel( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                 {
                     outValue.setText( "no editor context" );

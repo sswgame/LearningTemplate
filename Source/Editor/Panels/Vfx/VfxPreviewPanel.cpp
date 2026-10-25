@@ -38,7 +38,7 @@ namespace sw::editor
             /** @brief 열린 VFX 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const VfxPreviewPanel* findOpenPanel()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return nullptr;
                 const VfxPreviewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<VfxPreviewPanel>();

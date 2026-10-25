@@ -247,6 +247,15 @@ namespace sw::internal
     SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
     /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글). */
     SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
+    /**
+     * @brief 반드시 있어야 하는 서비스 · 서브시스템 조회가 비었을 때 부르는 **유일한** 보고 함수입니다. 모든 구성에서 `Error` 를 stderr 에 먼저 쓰고 로그로 남긴 뒤 `abort` 합니다.
+     *        @p pLookup 은 어느 조회였는지 알리는 글입니다(대개 `SW_FUNCTION_SIGNATURE` 나 타입 이름).
+     * @details `SW_ASSERT` 는 Release 에서 사라져 부른 쪽의 `*pFound` 가 조용한 널 역참조가 되고, `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 이어 가 같은 결과가 된다.
+     *          필수 서비스의 부재는 호출 순서의 결함이라 폴백 없이 모든 구성에서 멈춘다(`SubsystemScope::get` · `engine::getSubsystem` · `game::getSubsystem` · `editor::getSubsystem` 이 모두 이것을 쓴다).
+     *          Debug 에서 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸었을 때만 멈추지 않고 개수를 세고 반환한다 — 가로채기는 Debug 에만 있으므로
+     *          멈춤을 프로세스 안에서 확인하는 테스트는 `ScopedAssertCapture::kAssertsAreActive` 인 구성에서만 부른다. 반환 뒤의 결과는 읽지 않는다.
+     */
+    SW_API void reportMissingRequiredService( const utf8* pLookup ) noexcept;
 } // namespace sw::internal
 
 /**

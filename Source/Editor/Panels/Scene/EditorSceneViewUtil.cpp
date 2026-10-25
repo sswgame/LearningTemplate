@@ -12,10 +12,8 @@ namespace sw::editor
 {
     bool EditorSceneViewUtil::focusOn( const float3& target, float32 radius )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
-        SceneViewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
+        EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
+        SceneViewPanel* pPanel        = editorContext.getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
         if ( pPanel == nullptr )
             return false;
         pPanel->getViewportClient().focusOnPoint( target, radius );

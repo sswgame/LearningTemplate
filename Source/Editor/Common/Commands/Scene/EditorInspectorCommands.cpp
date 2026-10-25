@@ -37,7 +37,7 @@ namespace sw::editor
 
         // 도구나 테스트처럼 에셋 관리자와 에디터 컨텍스트가 없으면 파일만 쓴다. 캐시도 다른 인스턴스도 없기 때문이다.
         AssetManager*  pResources   = editor::findSubsystem<AssetManager>();
-        EditorContext* pContext     = EditorContext::get();
+        EditorContext* pContext     = editor::findSubsystem<EditorContext>();
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.

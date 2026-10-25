@@ -76,15 +76,6 @@ namespace sw::editor
         s_pHostServices = nullptr;
     }
 
-    namespace internal
-    {
-        void reportMissingRequiredService( const utf8* pLookup )
-        {
-            SW_LOG_ERROR( "Required editor service is missing: %#", pLookup );
-            SW_ASSERT( false );
-        }
-    } // namespace internal
-
     SubsystemScope* findEditorScope()
     {
         assertEditorThread();
@@ -165,7 +156,8 @@ namespace sw::editor
     EditorSelection& getMainSceneSelection()
     {
         EditorSelection* pSelection = findMainSceneSelectionInScope();
-        SW_ASSERT( pSelection != nullptr );
+        if ( pSelection == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // Release 에서도 멈춘다
         return *pSelection;
     }
 

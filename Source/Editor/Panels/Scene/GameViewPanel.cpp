@@ -145,7 +145,7 @@ namespace sw::editor
 
     void GameViewPanel::onPanelCollapsed()
     {
-        EditorContext* pClosedContext = EditorContext::get();
+        EditorContext* pClosedContext = editor::findSubsystem<EditorContext>();
         if ( pClosedContext != nullptr )
         {
             pClosedContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
@@ -262,15 +262,12 @@ namespace sw::editor
                                                 "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
             {
                 DebugDrawCanvasUtil::setGameViewOverlayEnabled( bDebugDrawShown == false );
-                EditorContext* pContext = EditorContext::get();
-                const utf8*    pCommand = bDebugDrawShown ? "gv_debugDrawGameView 0" : "gv_debugDrawGameView 1";
-                if ( pContext != nullptr )
+                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                const utf8*           pCommand      = bDebugDrawShown ? "gv_debugDrawGameView 0" : "gv_debugDrawGameView 1";
+                EditorNetPlaySession& session       = editorContext.getSubsystem<EditorNetPlaySession>();
+                for ( int32 processIndex = 0; processIndex < session.getProcessCount(); ++processIndex )
                 {
-                    EditorNetPlaySession& session = pContext->getSubsystem<EditorNetPlaySession>();
-                    for ( int32 processIndex = 0; processIndex < session.getProcessCount(); ++processIndex )
-                    {
-                        (void)session.sendProcessCommand( processIndex, pCommand ); // 끝난 프로세스는 false — 받을 쪽이 없다
-                    }
+                    (void)session.sendProcessCommand( processIndex, pCommand ); // 끝난 프로세스는 false — 받을 쪽이 없다
                 }
             }
             EditorSelfTestMarks::note( "gameView.debugDraw" );

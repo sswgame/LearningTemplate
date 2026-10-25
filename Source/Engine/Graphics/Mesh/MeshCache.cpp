@@ -55,12 +55,10 @@ namespace sw
 
             inline static ScopeOwned<State> s_state{};
 
-            /** @brief 상태입니다. 엔진 수명 범위가 닫힌 뒤의 접근은 부른 쪽의 잘못이라 단언합니다(캐시를 쓸 엔진이 없다). */
+            /** @brief 상태입니다. 엔진 수명 범위가 닫힌 뒤의 접근은 부른 쪽의 잘못이라 모든 구성에서 멈춥니다(캐시를 쓸 엔진이 없다). */
             static State& getState()
             {
-                State* const pState = s_state.getOrCreate();
-                SW_ASSERT( pState != nullptr );
-                return *pState;
+                return s_state.getRequired();
             }
 
             /** @brief 메시 캐시의 계측 칸입니다(`CacheStats`). 상태가 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */

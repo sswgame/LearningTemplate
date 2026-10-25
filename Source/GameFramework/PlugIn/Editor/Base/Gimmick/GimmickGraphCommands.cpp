@@ -17,8 +17,8 @@ namespace sw::editor
     {
         void openGimmickGraphPanel()
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ) )
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+            if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<GimmickGraphPanel>( true ) )
                 SW_LOG_INFO( "Gimmick Graph panel opened" );
         }
     } // namespace

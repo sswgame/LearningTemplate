@@ -21,7 +21,8 @@ namespace sw
             static float32 readOwnBase( const AttributeSet& set, const hashed_string& name )
             {
                 const AttributeData* pData = set.findAttribute( name );
-                SW_ASSERT( pData != nullptr );
+                if ( pData == nullptr )
+                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
                 return pData->_baseValue;
             }
 
@@ -29,7 +30,8 @@ namespace sw
             static float32 readOwnCurrent( const AttributeSet& set, const hashed_string& name )
             {
                 const AttributeData* pData = set.findAttribute( name );
-                SW_ASSERT( pData != nullptr );
+                if ( pData == nullptr )
+                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
                 return pData->_currentValue;
             }
         };

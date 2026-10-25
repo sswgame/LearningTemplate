@@ -76,7 +76,8 @@ namespace sw
             for ( uint32 tick = serverTick + 1u; tick <= _latestTick; ++tick )
             {
                 Entry* pNext = _listEntry.find( tick );
-                SW_ASSERT( pNext != nullptr );
+                if ( pNext == nullptr )
+                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
                 state              = simulate( state, pNext->_input );
                 pNext->_stateAfter = state;
             }

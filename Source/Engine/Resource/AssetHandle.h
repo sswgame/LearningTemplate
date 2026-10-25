@@ -171,7 +171,8 @@ namespace sw
         /** @brief 상태입니다. 요청이 있어야 합니다. */
         AssetLoadState getState() const
         {
-            SW_ASSERT( _pBlock != nullptr );
+            if ( _pBlock == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             return _pBlock->getState();
         }
         /** @brief 쓸 수 있으면 true 입니다(요청이 없으면 false). */
@@ -186,13 +187,15 @@ namespace sw
         /** @brief 실패 이유입니다. 요청이 있어야 합니다. */
         const string& getError() const
         {
-            SW_ASSERT( _pBlock != nullptr );
+            if ( _pBlock == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             return _pBlock->getError();
         }
         /** @brief 요청 경로입니다. 요청이 있어야 합니다. */
         const string& getPath() const
         {
-            SW_ASSERT( _pBlock != nullptr );
+            if ( _pBlock == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             return _pBlock->getPath();
         }
 
@@ -202,7 +205,8 @@ namespace sw
          */
         [[nodiscard]] shared_ptr<AssetType> wait() const
         {
-            SW_ASSERT( _pBlock != nullptr );
+            if ( _pBlock == nullptr )
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             _pBlock->wait();
             return get();
         }

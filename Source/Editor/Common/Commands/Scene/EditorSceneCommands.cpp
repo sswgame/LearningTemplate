@@ -149,7 +149,7 @@ namespace sw::editor
         formatstring( newName.data(), newName.capacity(), "%#_Copy", pSrc->getName().c_str() );
         pNewObj->setName( hashed_string( newName.c_str() ) );
 
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         EditorTransaction::beginTransaction( "Duplicate GameObject" );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {
@@ -351,7 +351,7 @@ namespace sw::editor
         if ( bInvalidRemoveArguments )
             return false;
 
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         if ( pContext != nullptr )
         {
             EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
@@ -376,11 +376,9 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, mode );
+        editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj, mode );
     }
 
     void EditorSceneCommands::collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject )
@@ -419,10 +417,10 @@ namespace sw::editor
 
     uint32 EditorSceneCommands::selectObjects( const vector<GameObject*>& listObject )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || listObject.empty() )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( listObject.empty() )
             return 0;
-        EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& workspace = editorContext.getSubsystem<EditorWorkspace>();
         workspace.selectGameObject( listObject[0], SelectionMode::Replace );
         for ( size_t index = 1; index < listObject.size(); ++index )
         {
@@ -603,7 +601,7 @@ namespace sw::editor
     uint32 EditorSceneCommands::copyObjects( const vector<GameObject*>& listObject )
     {
         vector<ObjectCopyEntry> listCopied;
-        EditorContext*          pContext = EditorContext::get();
+        EditorContext*          pContext = editor::findSubsystem<EditorContext>();
         uint32                  rootCount{ 0 };
         for ( GameObject* pRoot : listObject )
         {
@@ -677,7 +675,7 @@ namespace sw::editor
             }
             return;
         }
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         const string   label    = "Paste " + to_string( listCopy.size() ) + " GameObject(s)";
         EditorTransaction::beginTransaction( label );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )

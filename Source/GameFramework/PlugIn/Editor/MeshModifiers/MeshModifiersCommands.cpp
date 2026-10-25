@@ -17,8 +17,8 @@ namespace sw::editor
     {
         void openMeshModifiersPanel()
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<MeshModifiersPanel>( true ) )
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+            if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<MeshModifiersPanel>( true ) )
                 SW_LOG_INFO( "Mesh Modifiers panel opened" );
         }
     } // namespace

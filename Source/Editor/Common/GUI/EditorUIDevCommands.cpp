@@ -46,7 +46,7 @@ namespace sw::editor
 
             static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*    pContext          = EditorContext::get();
+                EditorContext*    pContext          = editor::findSubsystem<EditorContext>();
                 EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 const bool        bSaveLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false;
                 if ( bSaveLayoutFailed )
@@ -57,7 +57,7 @@ namespace sw::editor
 
             static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*    pContext          = EditorContext::get();
+                EditorContext*    pContext          = editor::findSubsystem<EditorContext>();
                 EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 const bool        bLoadLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false;
                 if ( bLoadLayoutFailed )
@@ -69,7 +69,7 @@ namespace sw::editor
             /** @brief 패널을 열고 그 창을 앞으로 가져옵니다(같은 도크 영역의 탭이면 그 탭이 선택된다). 다음 프레임 시작에 적용됩니다. */
             static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*      pContext = EditorContext::get();
+                EditorContext*      pContext = editor::findSubsystem<EditorContext>();
                 const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
@@ -80,7 +80,7 @@ namespace sw::editor
 
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext          = EditorContext::get();
+                EditorContext* pContext          = editor::findSubsystem<EditorContext>();
                 const bool     bClosePanelFailed = listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false;
                 if ( bClosePanelFailed )
                     return false;
@@ -92,7 +92,7 @@ namespace sw::editor
             /** @brief 핵심(Core)이 아닌 패널(도구 · 커스텀 · 에디터 확장)을 닫고 새 인스턴스로 바꿉니다 — 새 에디터 세션의 패널 상태로 돌립니다(시나리오 체인의 초기화가 쓴다). */
             static bool runPanelResetOptional( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
                 const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
@@ -102,7 +102,7 @@ namespace sw::editor
 
             static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*    pContext = EditorContext::get();
+                EditorContext*    pContext = editor::findSubsystem<EditorContext>();
                 EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 if ( listArgument.empty() == false || pDock == nullptr )
                     return false;

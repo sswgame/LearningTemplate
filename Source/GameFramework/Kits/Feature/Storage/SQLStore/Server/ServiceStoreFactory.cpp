@@ -20,9 +20,7 @@ namespace sw
 
         MemoryServiceDatabase& getMemoryDatabase()
         {
-            MemoryServiceDatabase* const pDatabase = s_memoryDatabase.getOrCreate();
-            SW_ASSERT( pDatabase != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — "memory" 저장소를 쓸 엔진이 없다
-            return *pDatabase;
+            return s_memoryDatabase.getRequired(); // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — "memory" 저장소를 쓸 엔진이 없다
         }
     } // namespace
 } // namespace sw

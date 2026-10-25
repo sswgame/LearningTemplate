@@ -88,9 +88,8 @@ namespace sw::editor
         _bOwnsScene = true;
         (void)spawnEnvironment( *_pScene, environment ); // 환경이 없어도 씬은 그려진다(키 라이트 폴백)
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            _targetID = pContext->getSubsystem<EditorRenderViews>().allocatePreviewTarget();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        _targetID                    = editorContext.getSubsystem<EditorRenderViews>().allocatePreviewTarget();
         return true;
     }
 
@@ -98,18 +97,17 @@ namespace sw::editor
     {
         if ( _pScene != nullptr || sceneKey == kInvalidSceneKey )
             return false;
-        _pScene                 = &scene;
-        _sceneKey               = sceneKey;
-        _bOwnsScene             = false;
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            _targetID = pContext->getSubsystem<EditorRenderViews>().allocatePreviewTarget();
+        _pScene                      = &scene;
+        _sceneKey                    = sceneKey;
+        _bOwnsScene                  = false;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        _targetID                    = editorContext.getSubsystem<EditorRenderViews>().allocatePreviewTarget();
         return true;
     }
 
     void EditorPreviewViewport::shutdown()
     {
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         if ( _targetID != 0 && pContext != nullptr )
             pContext->getSubsystem<EditorRenderViews>().freePreviewTarget( _targetID );
         _targetID = 0;
@@ -126,10 +124,10 @@ namespace sw::editor
 
     uint64 EditorPreviewViewport::getRenderTarget() const
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || _targetID == 0 )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( _targetID == 0 )
             return 0;
-        const EditorPreviewViewTarget* pTarget = pContext->getSubsystem<EditorRenderViews>().findPreviewTarget( _targetID );
+        const EditorPreviewViewTarget* pTarget = editorContext.getSubsystem<EditorRenderViews>().findPreviewTarget( _targetID );
         return pTarget != nullptr ? pTarget->_target._renderTarget : 0;
     }
 
@@ -166,13 +164,13 @@ namespace sw::editor
 
     void EditorPreviewViewport::draw( const float2& size, bool bInputActive )
     {
-        EditorContext* pContext   = EditorContext::get();
-        const bool     bHasSize   = size._x > 1.0f && size._y > 1.0f;
-        const bool     bHasTarget = pContext != nullptr && _targetID != 0;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        const bool     bHasSize      = size._x > 1.0f && size._y > 1.0f;
+        const bool     bHasTarget    = _targetID != 0;
         if ( bHasTarget == false || bHasSize == false )
             return;
 
-        EditorRenderViews&             views        = pContext->getSubsystem<EditorRenderViews>();
+        EditorRenderViews&             views        = editorContext.getSubsystem<EditorRenderViews>();
         const uint32                   targetWidth  = static_cast<uint32>( size._x );
         const uint32                   targetHeight = static_cast<uint32>( size._y );
         const EditorPreviewViewTarget* pTarget      = views.findPreviewTarget( _targetID );

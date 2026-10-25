@@ -41,9 +41,8 @@ namespace sw::editor
             /** @brief 격리 단계를 나갔다고 알립니다. */
             static void notifyExited()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ),
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ),
                                                                               NotificationType::Info );
             }
         };
@@ -67,8 +66,7 @@ namespace sw::editor
 
     PrefabEditorPanel* PrefabEditorPanel::findWindow()
     {
-        EditorContext* pContext = EditorContext::get();
-        return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<PrefabEditorPanel>() : nullptr;
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().findPanel<PrefabEditorPanel>();
     }
 
     PrefabEditorPanel* PrefabEditorPanel::findIsolatingWindow()
@@ -79,17 +77,17 @@ namespace sw::editor
 
     bool PrefabEditorPanel::openWindow( string_view prefabPath )
     {
-        EditorContext*     pContext    = EditorContext::get();
-        PrefabEditorPanel* pWindow     = findWindow();
-        const bool         bCannotOpen = prefabPath.empty() || pContext == nullptr || pWindow == nullptr || EditorPlaySession::isStopped() == false;
+        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+        PrefabEditorPanel* pWindow       = findWindow();
+        const bool         bCannotOpen   = prefabPath.empty() || pWindow == nullptr || EditorPlaySession::isStopped() == false;
         if ( bCannotOpen )
             return false;
 
-        EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& workspace = editorContext.getSubsystem<EditorWorkspace>();
         workspace.setFocusedAssetPath( string{ prefabPath }.c_str() ); // 문서 패널이 다음 그리기에서 문서를 바꾼다
         workspace.requestOpenPanel<PrefabEditorPanel>();
-        pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ),
-                                                                  NotificationType::Info );
+        editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ),
+                                                                      NotificationType::Info );
         return true;
     }
 
@@ -157,14 +155,14 @@ namespace sw::editor
 
     bool PrefabEditorPanel::enterNestedIsolation( string_view prefabPath )
     {
-        GameObjectManager* pManager     = findPreviewManager();
-        EditorContext*     pContext     = EditorContext::get();
-        const bool         bCannotEnter = pManager == nullptr || pContext == nullptr || prefabPath.empty() || _isolation.isActive() == false;
+        GameObjectManager* pManager      = findPreviewManager();
+        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+        const bool         bCannotEnter  = pManager == nullptr || prefabPath.empty() || _isolation.isActive() == false;
         if ( bCannotEnter )
             return false;
 
         GameObject* pUnderRoot = pManager->findGameObjectByID( _isolation.getRootObjectID() );
-        GameObject* pRoot      = EditorPrefabIsolation::findInstance( *pManager, pContext->getSubsystem<EditorWorkspace>(), prefabPath,
+        GameObject* pRoot      = EditorPrefabIsolation::findInstance( *pManager, editorContext.getSubsystem<EditorWorkspace>(), prefabPath,
                                                                       getPreviewSelection().getPrimaryObject(), pUnderRoot );
         bool        bSpawned{ false };
         if ( pRoot == nullptr )

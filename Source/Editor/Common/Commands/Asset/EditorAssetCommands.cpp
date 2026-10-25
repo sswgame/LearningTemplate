@@ -31,16 +31,14 @@ namespace sw::editor
 
     bool EditorAssetCommands::openPath( string_view relativePath )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 전용 도구 패널을 먼저 찾는다(종류 테이블에 패널 제목이 있는 종류). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
         const EditorAssetType panelKind = EditorAssetTypeRegistry::findPanelKindForPath( relativePath );
         if ( panelKind != EditorAssetType::Unknown )
         {
-            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
-            pContext->getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( panelKind );
+            editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
+            editorContext.getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( panelKind );
             return true;
         }
 
@@ -50,10 +48,8 @@ namespace sw::editor
 
     void EditorAssetCommands::focusPath( string_view relativePath )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
     }
 
     GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
@@ -92,9 +88,8 @@ namespace sw::editor
         if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
             SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pSpawned, pPath );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorWorkspace>().setPlacedPrefabPath( *pSpawned, pPath );
 
         SW_LOG_TRACE( "Spawned prefab from %#", pPath );
         return pSpawned;

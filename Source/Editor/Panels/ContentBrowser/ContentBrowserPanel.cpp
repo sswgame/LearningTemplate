@@ -100,7 +100,7 @@ namespace sw::editor
             /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
             static const ContentBrowserPanel* findPanel()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return nullptr;
                 return pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -135,20 +135,16 @@ namespace sw::editor
                 return pPanel != nullptr && pPanel->isWaitingForReferenceIndex();
             }
 
-            /** @brief 에디터가 본 `Resource/` 변경 번호를 꺼냅니다. 에디터 컨텍스트가 없으면 false 입니다. */
-            [[nodiscard]] static bool tryGetContentChangeSerial( uint64& outSerial )
+            /** @brief 에디터가 본 `Resource/` 변경 번호입니다. 패널은 에디터 컨텍스트가 있어야 도므로 컨텍스트와 핫 리로드는 필수입니다. */
+            [[nodiscard]] static uint64 getContentChangeSerial()
             {
-                const EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return false;
-                outSerial = pContext->getSubsystem<AssetHotReload>().getContentChangeSerial();
-                return true;
+                return editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().getContentChangeSerial();
             }
 
             /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
             static bool runContentOpen( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
                 const string folderAbs = ResourcePaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
@@ -329,10 +325,10 @@ namespace sw::editor
 
     string ContentBrowserPanel::describeSourceControlStatus( const AssetEntry& entry )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || entry._bIsDirectory )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( entry._bIsDirectory )
             return {};
-        return pContext->getSubsystem<EditorSourceControl>().describeStatus( entry._absolutePath, entry._bReadOnly );
+        return editorContext.getSubsystem<EditorSourceControl>().describeStatus( entry._absolutePath, entry._bReadOnly );
     }
 
     void ContentBrowserPanel::drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry )
@@ -341,10 +337,10 @@ namespace sw::editor
         if ( statusText.empty() )
             return;
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
-        EditorContext* pContext = EditorContext::get();
-        const bool     bLocked  = pContext != nullptr && pContext->getSubsystem<EditorSourceControl>().findLock( entry._absolutePath ) != nullptr;
-        const ImU32    color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
-        const ImVec2   textSize = ImGui::CalcTextSize( editoricon::kLock );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        const bool     bLocked       = editorContext.getSubsystem<EditorSourceControl>().findLock( entry._absolutePath ) != nullptr;
+        const ImU32    color         = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
+        const ImVec2   textSize      = ImGui::CalcTextSize( editoricon::kLock );
         pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
         if ( ImGui::IsItemHovered() )
             ImGui::SetTooltip( "%s", statusText.c_str() );
@@ -377,10 +373,10 @@ namespace sw::editor
             }
 
             // 버전 관리는 사용자가 선택한 파일만 잠그고 푼다. 공급자가 없으면 메뉴가 꺼져 있다.
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && entry._bIsDirectory == false )
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+            if ( entry._bIsDirectory == false )
             {
-                EditorSourceControl& sourceControl = pContext->getSubsystem<EditorSourceControl>();
+                EditorSourceControl& sourceControl = editorContext.getSubsystem<EditorSourceControl>();
                 const bool           bCanLock      = sourceControl.getProvider().canLock();
                 const bool           bLocked       = sourceControl.findLock( entry._absolutePath ) != nullptr;
                 ImGui::Separator();
@@ -520,10 +516,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::syncWithContentChanges()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        const uint64 serial = pContext->getSubsystem<AssetHotReload>().getContentChangeSerial();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        const uint64   serial        = editorContext.getSubsystem<AssetHotReload>().getContentChangeSerial();
         if ( serial == _seenContentChangeSerial )
             return;
         _seenContentChangeSerial = serial;
@@ -538,19 +532,13 @@ namespace sw::editor
 
     void ContentBrowserPanel::syncReferenceIndex()
     {
-        uint64 serial{ 0 };
-        if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
-        {
-            EditorContext* pContext = EditorContext::get();
-            SW_ASSERT( pContext != nullptr ); // 번호를 꺼냈으니 컨텍스트가 있다. AssetHotReload 도 그 번호의 출처라 필수다
-            _referenceSearch.update( serial, &pContext->getSubsystem<AssetHotReload>() );
-        }
+        AssetHotReload& hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>(); // 번호의 출처이기도 하다
+        _referenceSearch.update( hotReload.getContentChangeSerial(), &hotReload );
     }
 
     bool ContentBrowserPanel::isReferenceIndexCurrent() const
     {
-        uint64 serial{ 0 };
-        return ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) && _referenceSearch.isCurrent( serial );
+        return _referenceSearch.isCurrent( ContentBrowserPanelInternal::getContentChangeSerial() );
     }
 
     bool ContentBrowserPanel::isWaitingForReferenceIndex() const
@@ -576,9 +564,7 @@ namespace sw::editor
         _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
         // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
-        uint64 serial{ 0 };
-        if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
-            _referenceSearch.restartPendingScan( serial );
+        _referenceSearch.restartPendingScan( ContentBrowserPanelInternal::getContentChangeSerial() );
     }
 
     bool ContentBrowserPanel::createNewFolder()
@@ -619,8 +605,7 @@ namespace sw::editor
 
     EditorReferenceIndex* ContentBrowserPanel::findCurrentReferenceIndex()
     {
-        uint64                serial{ 0 };
-        EditorReferenceIndex* pIndex = ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) ? _referenceSearch.findCurrentIndex( serial ) : nullptr;
+        EditorReferenceIndex* pIndex = _referenceSearch.findCurrentIndex( ContentBrowserPanelInternal::getContentChangeSerial() );
         if ( pIndex == nullptr )
             SW_LOG_WARNING( "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
         return pIndex;
@@ -1490,13 +1475,11 @@ namespace sw::editor
 
     void ContentBrowserPanel::selectAsset( const AssetEntry& entry )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         _selectedAssetAbs = entry._absolutePath;
         if ( entry._bIsDirectory == false )
-            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
+            editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
     }
 
     void ContentBrowserPanel::openAsset( const AssetEntry& entry )

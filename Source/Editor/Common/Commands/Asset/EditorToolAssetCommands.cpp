@@ -230,7 +230,7 @@ namespace sw::editor
         outPrefabPath   = string{ prefabPath };
         outInstanceName = pInstance != nullptr ? string{ pInstance->getName().c_str() } : string{};
 
-        EditorContext* pContext             = EditorContext::get();
+        EditorContext* pContext             = editor::findSubsystem<EditorContext>();
         const bool     bCanLookUpPrefabPath = outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr;
         if ( bCanLookUpPrefabPath )
             outPrefabPath = pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pInstance );

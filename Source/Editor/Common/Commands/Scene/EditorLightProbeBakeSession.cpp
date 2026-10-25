@@ -37,17 +37,13 @@ namespace sw::editor
             static void collectVolumes( GameObjectManager& manager, vector<LightProbeVolumeComponent*>& outListVolume )
             {
                 outListVolume.clear();
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
+                vector<GameObject*> listSelected;
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
+                for ( GameObject* pObject : listSelected )
                 {
-                    vector<GameObject*> listSelected;
-                    editor::getMainSceneSelection().getSelectedObjects( listSelected );
-                    for ( GameObject* pObject : listSelected )
-                    {
-                        LightProbeVolumeComponent* pVolume = ( pObject != nullptr ) ? pObject->getComponent<LightProbeVolumeComponent>() : nullptr;
-                        if ( pVolume != nullptr )
-                            outListVolume.push_back( pVolume );
-                    }
+                    LightProbeVolumeComponent* pVolume = ( pObject != nullptr ) ? pObject->getComponent<LightProbeVolumeComponent>() : nullptr;
+                    if ( pVolume != nullptr )
+                        outListVolume.push_back( pVolume );
                 }
                 if ( outListVolume.empty() == false )
                     return;
@@ -256,12 +252,10 @@ namespace sw::editor
         _job        = LightProbeBakeJob{};
         _pOccluders.reset(); // 작업이 빌리던 가림 씬 — 작업을 비운 뒤에 놓는다
         _run.end();
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( _bakedCount > 0 )
-            pContext->getSubsystem<EditorWorkspace>().markSceneDirty(); // 볼륨의 경로가 바뀌었다 — 저장해야 남는다
-        EditorNotificationManager& notification = pContext->getSubsystem<EditorNotificationManager>();
+            editorContext.getSubsystem<EditorWorkspace>().markSceneDirty(); // 볼륨의 경로가 바뀌었다 — 저장해야 남는다
+        EditorNotificationManager& notification = editorContext.getSubsystem<EditorNotificationManager>();
         const uint32               volumeCount  = getVolumeCount();
         utf8                       arrMessage[constant::kMaxBuffer512];
         if ( volumeCount == 0 )

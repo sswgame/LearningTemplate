@@ -78,38 +78,30 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void CommandPalettePopup::open()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void CommandPalettePopup::close()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void CommandPalettePopup::toggle()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool CommandPalettePopup::isOpen()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
+        return editorContext.getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
@@ -125,14 +117,12 @@ namespace sw::editor
 
     void CommandPalettePopup::rebuildDynamicEntries()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& context = editor::getSubsystem<EditorContext>();
 
         _listAllCommand.clear();
 
         // 1) 커맨드 레지스트리에 등록된 커맨드. 메뉴 · 단축키와 같은 정의다
-        for ( const EditorCommandDesc& desc : pContext->getSubsystem<EditorCommandRegistry>().getCommands() )
+        for ( const EditorCommandDesc& desc : context.getSubsystem<EditorCommandRegistry>().getCommands() )
         {
             if ( desc._bPaletteVisible == false )
                 continue;
@@ -142,18 +132,17 @@ namespace sw::editor
             entry._category = desc._category;
             entry._label    = desc._label;
             entry._detail   = desc._detail;
-            // 이 델리게이트는 나중에 불린다. 그때 컨텍스트가 있는지 그 시점에 확인한다.
+            // 이 델리게이트는 나중에 불린다. 바깥의 컨텍스트를 잡지 않고 그 시점에 다시 얻는다(팔레트는 컨텍스트가 있어야 열린다).
             entry._action = [commandID]()
             {
-                EditorContext* pRunContext = EditorContext::get();
-                if ( pRunContext != nullptr )
-                    pRunContext->getSubsystem<EditorCommandRegistry>().execute( commandID );
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorCommandRegistry>().execute( commandID );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
 
         // 2) 등록된 모든 에디터 패널 토글 커맨드
-        for ( const EditorPanelEntry& win : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+        for ( const EditorPanelEntry& win : context.getSubsystem<EditorPanelManager>().getPanels() )
         {
             const string        panelID  = win._id;
             const string        winTitle = win._title;
@@ -163,9 +152,8 @@ namespace sw::editor
             entry._detail   = "Editor Panel";
             entry._action   = [panelID]()
             {
-                EditorContext* pRunContext = EditorContext::get();
-                if ( pRunContext != nullptr )
-                    pRunContext->getSubsystem<EditorPanelManager>().setPanelOpen( panelID.c_str(), true );
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( panelID.c_str(), true );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
@@ -189,8 +177,7 @@ namespace sw::editor
             {
                 GameObjectManager* pCurrentObjects = editor::getActiveObjectManager();
                 GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectByID( objID ) : nullptr;
-                EditorContext*     pRunContext     = EditorContext::get();
-                if ( pFound != nullptr && pRunContext != nullptr )
+                if ( pFound != nullptr )
                     editor::getMainSceneSelection().selectObject( pFound, SelectionMode::Replace );
             };
             _listAllCommand.push_back( std::move( entry ) );

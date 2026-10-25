@@ -40,9 +40,8 @@ namespace sw::editor
             /** @brief 창을 엽니다(명령 표의 실행 함수). */
             static void openPanel()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AudioGraphPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AudioGraphPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
         };
     } // namespace

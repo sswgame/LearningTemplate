@@ -10,6 +10,8 @@
   - `ServiceAccess/RetiredWindow`: 지워진 이름 — `getService<` · `getSceneService<` · `isServiceBound<` · `getBoundEngineServices(`,
     `locateSubsystem<…>( engine::getEngineSubsystems() )`, 그리고 `engine::` 아래의 이름 붙은 접근자(`engine::getTypeRegistry()` 따위).
     `engine::` 아래에 남는 `get*` 은 규칙 데이터의 `allowed_engine_function` 뿐이다. 주석 · 문자열 안의 언급은 보지 않는다.
+    에디터 컨텍스트의 옛 창구 `EditorContext::get()`(null 을 허용해 그리기 안에서도 널 확인이 붙던 이름)도 지워졌다 — 있어야 도는 곳은
+    `editor::getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로는 `editor::findSubsystem<EditorContext>()` 다.
   - `ServiceAccess/Singleton`: 헤더의 `static … getInstance()` 와 `static T& get()`(참조를 돌려주는 인자 없는 `get`), 그리고 **이름이 무엇이든 같은 모양**.
     전역 단일체는 수명과 순서가 숨는다 — 새 서비스는 서브시스템으로 만들어 범위에 넣는다.
     이름만 보면 `instance()` · `shared()` 로 우회하므로 모양을 본다: (가) 클래스 안의 `static T& anything()`(자기 타입의 읽고 쓰는 참조를 돌려주는 인자 없는 정적 멤버),
@@ -71,6 +73,8 @@ _kRetiredWindowRe = (
     (re.compile(r"\bgetBoundEngineServices\s*\("), "engine::getSubsystem<T>() / findSubsystem<T>() 를 쓰십시오"),
     (re.compile(r"\blocateSubsystem\s*<[^;]*?>\s*\(\s*(?:\w+::)*getEngineSubsystems\s*\(\s*\)\s*\)"),
      "engine::findSubsystem<T>() 를 쓰십시오"),
+    (re.compile(r"\bEditorContext\s*::\s*get\s*\(\s*\)"),
+     "editor::getSubsystem<EditorContext>()(있어야 함) 또는 editor::findSubsystem<EditorContext>()(없을 수 있음)를 쓰십시오"),
 )
 _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 
@@ -297,6 +301,13 @@ class CheckServiceAccessGate(LintGate):
             "expectedViolation": "Source/Probe/ProbeService.cpp:3: [ServiceAccess/RetiredWindow] getService<",
             "files": {
                 "Source/Probe/ProbeService.cpp": "void probe()\n{\n    auto* pManager = game::getService<InputManager>();\n}\n",
+            },
+        },
+        {
+            "name": "옛 EditorContext::get 조회",
+            "expectedViolation": "Source/Probe/ProbeContext.cpp:3: [ServiceAccess/RetiredWindow] EditorContext::get(",
+            "files": {
+                "Source/Probe/ProbeContext.cpp": "void probe()\n{\n    EditorContext* pContext = EditorContext::get();\n}\n",
             },
         },
         {

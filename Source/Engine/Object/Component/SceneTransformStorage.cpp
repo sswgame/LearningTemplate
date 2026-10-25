@@ -24,11 +24,8 @@ namespace sw
 
     SceneTransformStorage& SceneTransformStorage::get()
     {
-        SceneTransformStorage* const pStorage = s_sceneTransformStorage.getOrCreate();
-        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 컴포넌트가 엔진보다 오래 살았다. 칸을 줄 저장소가 없으므로 멈춘다(Debug 는 `getOrCreate` 가 먼저 단언한다).
-        if ( pStorage == nullptr )
-            std::abort();
-        return *pStorage;
+        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 컴포넌트가 엔진보다 오래 살았다. 칸을 줄 저장소가 없으므로 모든 구성에서 멈춘다(`getRequired`).
+        return s_sceneTransformStorage.getRequired();
     }
 
     SceneTransformStorage::SceneTransformStorage()

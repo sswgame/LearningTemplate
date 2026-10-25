@@ -18,8 +18,8 @@ namespace sw::editor
         // [doc:command-open]
         void openParkLayoutPanel()
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ) )
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+            if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ParkLayoutPanel>( true ) )
                 SW_LOG_INFO( "Park Layout panel opened" );
         }
         // [/doc:command-open]

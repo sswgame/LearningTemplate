@@ -101,38 +101,30 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void BoneHierarchyPopup::open()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void BoneHierarchyPopup::close()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void BoneHierarchyPopup::toggle()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
+        editorContext.getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool BoneHierarchyPopup::isOpen()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
+        return editorContext.getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
