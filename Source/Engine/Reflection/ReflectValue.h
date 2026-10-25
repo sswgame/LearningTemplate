@@ -6,6 +6,7 @@
  *          (`ReflectTypeOps::_pConvert`). 같은 타입이면 그대로, 숫자끼리는 형 변환, 글이면 그 타입으로 읽습니다.
  */
 #pragma once
+#include "Core/Math/PackedTypesFwd.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -30,7 +31,8 @@ namespace sw
     /**
      * @brief `ReflectBuiltins.xxx` 의 C++ 타입 칸을 값이 실제로 쓰는 타입으로 바꿉니다.
      * @details 문자열 줄의 칸은 `std::string` 이지만 프로퍼티 · 생성 호출기(`args.get<string>`)는 `sw::string` 입니다
-     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다).
+     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다). 압축 타입 줄(`sw::half` · `sw::unorm8x4` …)은 이름만 선언된
+     *          채로 쓰입니다(`PackedTypesFwd.h`) — 값 크기가 필요한 번역 단위는 `Core/Math/PackedTypes.h` 를 include 합니다.
      */
     template <typename T>
     struct ReflectBuiltinCppType
@@ -90,9 +92,23 @@ namespace sw
 {
     struct ReflectValue;
 
+    /**
+     * @brief 내장 타입이 값 하나로 어떻게 읽히는지의 갈래입니다. 숫자 · 글 · 불리언을 가르는 곳(스키마 이주 · UI 바인딩)이 타입 이름 목록 대신 이것만 봅니다.
+     * @details 갈래는 타입에서 한 곳(`ReflectBuiltinClass.h` 의 `ReflectBuiltinClassOf`)이 정한다 — 표에 줄을 더하면 갈래가 따라오고, 압축 타입은 성분이 하나일 때만 Number 다.
+     */
+    enum class ReflectBuiltinClass : uint8
+    {
+        Bool,   ///< bool
+        Number, ///< 정수 · 실수 · 성분이 하나인 압축 타입(half · unorm · snorm)
+        Text,   ///< string · hashed_string
+        Other   ///< 그 밖(벡터 · 쿼터니언 · 행렬 · 핸들 · 성분이 여럿인 압축 타입 · atomic)
+    };
+
     /** @brief 리플렉션 값 · 내장 타입 표를 다루는 도우미입니다. 템플릿이 아닌 몸통은 `ReflectValue.cpp` 에 있습니다. */
     struct SW_API ReflectValueUtil
     {
+        /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 범위 밖 자리는 Other 입니다. */
+        static ReflectBuiltinClass getBuiltinClass( int32 builtinIndex );
         /** @brief 내장 타입 자리의 정규 이름(`int32` · `string` · `float3` …)입니다. */
         static const hashed_string& getBuiltinTypeName( int32 builtinIndex );
         /** @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 -1 입니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다). */

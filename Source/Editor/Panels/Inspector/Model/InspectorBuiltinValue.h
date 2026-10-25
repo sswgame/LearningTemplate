@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/PackedTypesFwd.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -34,18 +35,20 @@ namespace sw::editor
     /** @brief 인스펙터가 내장 값 타입 하나를 그리는 위젯 종류입니다. 프로퍼티와 CallInEditor 인자가 같은 종류를 씁니다. */
     enum class InspectorValueWidget : uint8
     {
-        None,     ///< 위젯이 없다. 내장 타입에는 없어야 한다
-        Number,   ///< 정수와 실수 드래그. 범위, 슬라이더, 단위 메타를 지원한다
-        Checkbox, ///< bool 과 atomic<bool>
-        Text,     ///< string. 애셋 경로 메타가 있으면 드롭 대상이 된다
-        Name,     ///< hashed_string. Enter 로 확정하며 키 입력마다 인턴하지 않는다
-        Vector2,  ///< float2
-        Vector3,  ///< float3. 색 메타가 있으면 색 선택기를 쓴다
-        Vector4,  ///< float4. 색 메타가 있으면 색 선택기를 쓴다
-        Matrix,   ///< float4x4. 행 네 개로 그린다
-        Rotation, ///< quaternion. 오일러 각(도)으로 보여 준다
-        Handle,   ///< SlotHandle, ComponentHandle, GameObjectHandle. id 정수로 보여 준다
-        Tag,      ///< TagID. Enter 로 확정한다
+        None,      ///< 위젯이 없다. 내장 타입에는 없어야 한다
+        Number,    ///< 정수와 실수 드래그. 범위, 슬라이더, 단위 메타를 지원한다
+        Checkbox,  ///< bool 과 atomic<bool>
+        Text,      ///< string. 애셋 경로 메타가 있으면 드롭 대상이 된다
+        Name,      ///< hashed_string. Enter 로 확정하며 키 입력마다 인턴하지 않는다
+        Vector2,   ///< float2
+        Vector3,   ///< float3. 색 메타가 있으면 색 선택기를 쓴다
+        Vector4,   ///< float4. 색 메타가 있으면 색 선택기를 쓴다
+        Matrix,    ///< float4x4. 행 네 개로 그린다
+        Rotation,  ///< quaternion. 오일러 각(도)으로 보여 준다
+        Handle,    ///< SlotHandle, ComponentHandle, GameObjectHandle. id 정수로 보여 준다
+        Tag,       ///< TagID. Enter 로 확정한다
+        Packed,    ///< 저장 전용 압축 타입(half, unorm, snorm, RGB10A2 …). `PackedValueTraits` 의 성분 실수로 편집하고 `fromFloats` 로 다시 담는다. 값은 양자화 한 칸 안에서 되돌려진다
+        Direction, ///< OctahedralNormal. 방향 xyz 로 편집하고 바뀐 때만 다시 인코딩한다(저장된 좌표 u, v 를 매 프레임 다시 담지 않는다)
     };
 
     /**
@@ -89,6 +92,21 @@ namespace sw::editor
     template <> struct InspectorWidgetFor<ComponentHandle>  : InspectorWidgetKind<InspectorValueWidget::Handle> {};
     template <> struct InspectorWidgetFor<GameObjectHandle> : InspectorWidgetKind<InspectorValueWidget::Handle> {};
     template <> struct InspectorWidgetFor<TagID>            : InspectorWidgetKind<InspectorValueWidget::Tag> {};
+    template <> struct InspectorWidgetFor<half>             : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<half2>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<half3>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<half4>            : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<unorm8>           : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<unorm16>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<snorm8>           : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<snorm16>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<unorm8x4>         : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<snorm8x4>         : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<unorm16x2>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<snorm16x2>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<snorm16x4>        : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<RGB10A2>          : InspectorWidgetKind<InspectorValueWidget::Packed> {};
+    template <> struct InspectorWidgetFor<OctahedralNormal> : InspectorWidgetKind<InspectorValueWidget::Direction> {};
     // clang-format on
 } // namespace sw::editor
 

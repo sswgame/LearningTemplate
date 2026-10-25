@@ -46,7 +46,7 @@
 11. **병렬 · 비동기 트랙의 남은 단위**(2026-10-25 통합 I 에서 들어온 설계)
     - `hostgpu` 의 AppBin 잠금 풀기 [HostGpuIsolation](HostGpuIsolation.md) H1 → H4. [단독: H1 은 앱을 돌려 쓰기 위치를 스냅샷한다 — 통합 · gpu-verifier]
     - RHI 비동기 업로드 [RhiAsyncUploads](RhiAsyncUploads.md) — GPU 없이 되는 계약 · 테스트 단위부터. [단독: RHI ABI 버전을 한 번 올려 백엔드 DLL 이 모두 다시 빌드됨]
-    - 저장 전용 압축 타입 [PackedTypes](PackedTypes.md) P3(리플렉션 접점) → P4(G 버퍼 법선). [병렬 가능: P3 은 Core · 리플렉션만, P4 는 셰이더 재베이크라 단독]
+    - 저장 전용 압축 타입 [PackedTypes](PackedTypes.md) P4(G 버퍼 법선 — 설계는 문서에 있고 코드는 GPU 확인과 재쿠킹을 하는 통합이 쓴다) → P5 → P6. [단독: P4 는 셰이더 재베이크]
 
 ## 지금 하지 않는 것
 

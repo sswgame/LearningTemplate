@@ -751,6 +751,12 @@ namespace sw
                         return result;
                     }
                 }
+                // 압축 타입은 인코딩 표 밖이다. 적격이 아닌 것으로 조용히 넘기지 않도록 표시를 달아 코덱 생성기가 오류로 멈추게 한다.
+                if ( session._typeNameMap.isPacked( result->_typeName ) )
+                {
+                    result->_bPacked = SW_TRUE;
+                    return makeIneligibleFixedType( result, "packed type '" + result->_typeName + "' has no fixed layout encoding" );
+                }
                 // `sw::vector` 는 자체 클래스라 정규 이름이 `sw::vector<…>` 입니다(`SW_ENABLE_STL_CONTAINER` 면 `std::vector` 별칭입니다).
                 const bool bVector = StringUtil::startsWith( canonicalSpelling, "std::vector<" ) || StringUtil::startsWith( canonicalSpelling, "sw::vector<" );
                 const bool bArray  = StringUtil::startsWith( canonicalSpelling, "std::array<" ) || StringUtil::startsWith( canonicalSpelling, "sw::array<" );

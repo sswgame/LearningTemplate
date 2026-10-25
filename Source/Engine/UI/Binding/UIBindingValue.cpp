@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -30,23 +31,42 @@ namespace sw
             template <typename NumberType>
             static float64 readNumber( const void* pValue )
             {
-                return static_cast<float64>( *static_cast<const NumberType*>( pValue ) );
+                if constexpr ( kIsPackedValue<NumberType> )
+                    return static_cast<float64>( PackedValueTraits<NumberType>::toFloats( *static_cast<const NumberType*>( pValue ) )._arrValue[0] );
+                else
+                    return static_cast<float64>( *static_cast<const NumberType*>( pValue ) );
             }
 
-            /** @brief 정수는 반올림해 쓰고 실수는 그대로 씁니다. 바뀌었으면 true 입니다. */
+            /** @brief 정수는 반올림해 쓰고 실수는 그대로 씁니다. 압축 타입은 범위로 자르고 NaN · 무한대는 거절합니다. 바뀌었으면 true 입니다. */
             template <typename NumberType>
             [[nodiscard]] static bool writeNumber( void* pValue, float64 number )
             {
-                NumberType value{};
-                if constexpr ( std::is_integral_v<NumberType> )
-                    value = static_cast<NumberType>( MathUtil::round( number ) );
-                else
-                    value = static_cast<NumberType>( number );
                 NumberType& field = *static_cast<NumberType*>( pValue );
-                if ( field == value )
-                    return false;
-                field = value;
-                return true;
+                if constexpr ( kIsPackedValue<NumberType> )
+                {
+                    using Traits = PackedValueTraits<NumberType>;
+                    if ( std::isfinite( number ) == false )
+                        return false;
+                    PackedFloats floats{};
+                    floats._arrValue[0]    = static_cast<float32>( std::clamp( number, static_cast<float64>( Traits::kRangeMin ), static_cast<float64>( Traits::kRangeMax ) ) );
+                    const NumberType value = Traits::fromFloats( floats );
+                    if ( std::memcmp( &field, &value, sizeof( NumberType ) ) == 0 )
+                        return false;
+                    field = value;
+                    return true;
+                }
+                else
+                {
+                    NumberType value{};
+                    if constexpr ( std::is_integral_v<NumberType> )
+                        value = static_cast<NumberType>( MathUtil::round( number ) );
+                    else
+                        value = static_cast<NumberType>( number );
+                    if ( field == value )
+                        return false;
+                    field = value;
+                    return true;
+                }
             }
 
             template <typename NumberType>
@@ -55,15 +75,16 @@ namespace sw
                 return NumberOps{ &readNumber<NumberType>, &writeNumber<NumberType>, std::is_integral_v<NumberType> };
             }
 
-            /** @brief 숫자 내장 타입 표입니다. 줄 순서는 내장 타입 표의 kint8 .. kfloat64 순서와 같다(아래 static_assert 가 확인한다). */
+            /** @brief 내장 타입 표의 줄마다 하나입니다. 숫자 갈래가 아닌 줄은 비어 있습니다(`pRead == nullptr`). */
             static const NumberOps kArrNumberOps[];
 
             /** @brief 내장 숫자 타입의 표 줄입니다. 숫자 타입이 아니면 nullptr 입니다. */
             [[nodiscard]] static const NumberOps* findNumberOps( int32 builtinIndex )
             {
-                if ( builtinIndex < ReflectBuiltinIndex::kint8 || builtinIndex > ReflectBuiltinIndex::kfloat64 )
+                const bool bInTable = 0 <= builtinIndex && builtinIndex < ReflectBuiltinIndex::kCount;
+                if ( bInTable == false || kArrNumberOps[builtinIndex].pRead == nullptr )
                     return nullptr;
-                return &kArrNumberOps[builtinIndex - ReflectBuiltinIndex::kint8];
+                return &kArrNumberOps[builtinIndex];
             }
 
             /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p owner 는 잎 프로퍼티를 가진 객체, @p value 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
@@ -164,25 +185,25 @@ namespace sw
             static constexpr bool areKindRowsInOrder();
         };
 
+        /** @brief 내장 타입 줄 하나의 숫자 읽기 · 쓰기입니다. 숫자 갈래(`ReflectBuiltinClass::Number`)가 아니면 빈 줄입니다. */
+        template <typename T>
+        constexpr UIBindingValueInternal::NumberOps makeRowNumberOps()
+        {
+            if constexpr ( getReflectBuiltinClass<T>() == ReflectBuiltinClass::Number )
+                return UIBindingValueInternal::makeNumberOps<T>();
+            else
+                return UIBindingValueInternal::NumberOps{ nullptr, nullptr, false };
+        }
+
+        // 줄 순서는 ReflectBuiltinIndex 와 같다(같은 파일을 같은 순서로 include). 분류(`classifyType`)가 쓰는 갈래와 이 표가 같은 `getReflectBuiltinClass` 를 본다.
         constexpr UIBindingValueInternal::NumberOps UIBindingValueInternal::kArrNumberOps[] = {
-            UIBindingValueInternal::makeNumberOps<int8>(),
-            UIBindingValueInternal::makeNumberOps<int16>(),
-            UIBindingValueInternal::makeNumberOps<int32>(),
-            UIBindingValueInternal::makeNumberOps<int64>(),
-            UIBindingValueInternal::makeNumberOps<uint8>(),
-            UIBindingValueInternal::makeNumberOps<uint16>(),
-            UIBindingValueInternal::makeNumberOps<uint32>(),
-            UIBindingValueInternal::makeNumberOps<uint64>(),
-            UIBindingValueInternal::makeNumberOps<float32>(),
-            UIBindingValueInternal::makeNumberOps<float64>(),
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... ) makeRowNumberOps<ReflectBuiltinCppTypeT<CppType>>(),
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
         };
-        static_assert( std::size( UIBindingValueInternal::kArrNumberOps ) == ReflectBuiltinIndex::kfloat64 - ReflectBuiltinIndex::kint8 + 1, "number table must cover kint8 .. kfloat64" );
-        static_assert( ReflectBuiltinOf<int8>::kIndex == ReflectBuiltinIndex::kint8 && ReflectBuiltinOf<int16>::kIndex == ReflectBuiltinIndex::kint8 + 1 &&
-                           ReflectBuiltinOf<int32>::kIndex == ReflectBuiltinIndex::kint8 + 2 && ReflectBuiltinOf<int64>::kIndex == ReflectBuiltinIndex::kint8 + 3 &&
-                           ReflectBuiltinOf<uint8>::kIndex == ReflectBuiltinIndex::kint8 + 4 && ReflectBuiltinOf<uint16>::kIndex == ReflectBuiltinIndex::kint8 + 5 &&
-                           ReflectBuiltinOf<uint32>::kIndex == ReflectBuiltinIndex::kint8 + 6 && ReflectBuiltinOf<uint64>::kIndex == ReflectBuiltinIndex::kint8 + 7 &&
-                           ReflectBuiltinOf<float32>::kIndex == ReflectBuiltinIndex::kint8 + 8 && ReflectBuiltinOf<float64>::kIndex == ReflectBuiltinIndex::kint8 + 9,
-                       "number table rows must follow the builtin table order" );
+        static_assert( std::size( UIBindingValueInternal::kArrNumberOps ) == ReflectBuiltinIndex::kCount, "number table must have one row per ReflectBuiltins.xxx type" );
 
         constexpr UIBindingValueInternal::KindOps UIBindingValueInternal::kArrKindOps[] = {
             {  UIBindingValueKind::None,   "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone},
@@ -324,14 +345,19 @@ namespace sw
 {
     UIBindingValueKind UIBindingValueUtil::classifyType( const hashed_string& typeName )
     {
-        const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( typeName );
-        if ( builtinIndex == ReflectBuiltinIndex::kbool )
-            return UIBindingValueKind::Bool;
-        if ( builtinIndex == ReflectBuiltinIndex::kstring || builtinIndex == ReflectBuiltinIndex::khashed_string )
-            return UIBindingValueKind::Text;
-        // 내장 타입 테이블의 숫자 줄은 int8 .. float64 가 이어져 있다(ReflectBuiltins.xxx 의 줄 순서).
-        const bool bNumber = ReflectBuiltinIndex::kint8 <= builtinIndex && builtinIndex <= ReflectBuiltinIndex::kfloat64;
-        return bNumber ? UIBindingValueKind::Number : UIBindingValueKind::Other;
+        // 갈래는 내장 타입 표가 정한다(`ReflectBuiltinClass`) — 숫자 읽기 · 쓰기 표(`kArrNumberOps`)도 같은 갈래로 채워지므로 Number 인데 줄이 없는 타입은 없다.
+        switch ( ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( typeName ) ) )
+        {
+            case ReflectBuiltinClass::Bool:
+                return UIBindingValueKind::Bool;
+            case ReflectBuiltinClass::Number:
+                return UIBindingValueKind::Number;
+            case ReflectBuiltinClass::Text:
+                return UIBindingValueKind::Text;
+            case ReflectBuiltinClass::Other:
+                return UIBindingValueKind::Other;
+        }
+        return UIBindingValueKind::Other;
     }
 
     bool UIBindingValueUtil::canConvert( UIBindingValueKind from, UIBindingValueKind to )

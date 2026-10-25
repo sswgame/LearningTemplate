@@ -8,7 +8,8 @@
  *   (#pragma once 없음. X-macro 파일).
  *
  * SW_REFLECT_BUILTIN_TYPE( Canonical, CppType, TextConvOrNone, NamespaceOr-, aliases... )
- *   TextConv: stoi|stoll|stoul|stoull|stof|stod|none
+ *   TextConv: stoi|stoll|stoul|stoull|stof|stod|packed|none
+ *     none 은 SerializeContext 가 따로 처리기를 등록하는 타입이고, packed 는 `PackedValueTraits` 의 성분 규칙(쉼표로 이은 실수)으로 등록합니다.
  *   별칭이 없으면 마지막에 _ 를 둡니다(빈 __VA_ARGS__ 경고 방지. 로더가 무시합니다).
  * SW_REFLECT_BUILTIN_CONTAINER( Match, Kind, WrapperStem )
  */
@@ -39,6 +40,28 @@ SW_REFLECT_BUILTIN_TYPE( ComponentHandle, sw::ComponentHandle, none, sw, sw::Com
 SW_REFLECT_BUILTIN_TYPE( GameObjectHandle, sw::GameObjectHandle, none, sw, sw::GameObjectHandle )
 SW_REFLECT_BUILTIN_TYPE( atomic_bool, sw::atomic<bool>, none, sw, atomic<bool>, sw::atomic<bool> )
 SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, _ )
+
+// -----------------------------------------------------------------------------
+// 저장 전용 압축 타입(docs/plans/PackedTypes.md P3)
+// C++ 타입 칸에는 별칭(`sw::unorm8x4`)을 적습니다. 템플릿 이름(`NormalizedVector<unorm8, 4>`)의 쉼표가 매크로 인자를 나눕니다.
+// 줄을 더하면 `Core/Math/PackedValueTraits.h` 에 특수화가 있어야 합니다(없으면 SerializeContext 가 컴파일되지 않습니다).
+// 새 타입 줄은 이 묶음 뒤에 더합니다. UIBindingValue 가 숫자 줄(int8 .. float64)이 이어져 있다고 가정하므로 그 사이에 끼우지 않습니다.
+// -----------------------------------------------------------------------------
+SW_REFLECT_BUILTIN_TYPE( half, sw::half, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( half2, sw::half2, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( half3, sw::half3, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( half4, sw::half4, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( unorm8, sw::unorm8, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( unorm16, sw::unorm16, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( snorm8, sw::snorm8, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( snorm16, sw::snorm16, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( unorm8x4, sw::unorm8x4, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( snorm8x4, sw::snorm8x4, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( unorm16x2, sw::unorm16x2, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( snorm16x2, sw::snorm16x2, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( snorm16x4, sw::snorm16x4, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( OctahedralNormal, sw::OctahedralNormal, packed, sw, _ )
+SW_REFLECT_BUILTIN_TYPE( RGB10A2, sw::RGB10A2, packed, sw, _ )
 
 // -----------------------------------------------------------------------------
 // std:: / 서드파티 컨테이너

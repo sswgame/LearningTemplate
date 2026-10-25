@@ -9,11 +9,13 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -66,6 +68,24 @@ namespace sw
                 out._bInteger   = bInteger;
             }
 
+            /**
+             * @brief 실수 하나를 숫자로 읽어 둡니다. 무한대 · NaN 은 숫자로 읽지 않고(정수 변환이 정의되지 않는다), int64 범위 밖의 유한값은 정수가 아닌 숫자로만 둡니다.
+             * @details `static_cast<int64>` 는 범위 밖 · NaN 에서 정의되지 않으므로 변환은 항상 범위 검사 뒤에만 한다. 2^63 은 float64 로 정확히 나타내는 int64 범위의 열린 상한이다.
+             */
+            static void setFloatNumber( SourceValue& out, const float64 value )
+            {
+                constexpr float64 kInt64Bound = 9223372036854775808.0;
+                if ( std::isfinite( value ) == false )
+                    return;
+                if ( value >= -kInt64Bound && value < kInt64Bound )
+                {
+                    const int64 intValue = static_cast<int64>( value );
+                    setNumber( out, value, value == static_cast<float64>( intValue ), intValue );
+                }
+                else
+                    setNumber( out, value, false, 0 );
+            }
+
             /** @brief 내장 타입 값 하나를 숫자 · 글로 읽습니다. 숫자도 글도 아닌 타입(벡터 · 핸들 · 행렬)은 글로만 씁니다. */
             template <typename T>
             static void readSource( const void* pValue, SourceValue& out )
@@ -81,11 +101,7 @@ namespace sw
                 else if constexpr ( std::is_integral_v<T> )
                     setNumber( out, static_cast<float64>( value ), true, static_cast<int64>( value ) );
                 else if constexpr ( std::is_floating_point_v<T> )
-                {
-                    const float64 asDouble  = static_cast<float64>( value );
-                    const bool    bIntegral = asDouble == static_cast<float64>( static_cast<int64>( asDouble ) );
-                    setNumber( out, asDouble, bIntegral, static_cast<int64>( asDouble ) );
-                }
+                    setFloatNumber( out, static_cast<float64>( value ) );
                 else if constexpr ( std::is_same_v<T, string> )
                 {
                     out._text  = value;
@@ -101,6 +117,16 @@ namespace sw
                     out._text  = value.isValid() ? string( value.getString() ) : string();
                     out._bText = true;
                 }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 성분이 하나인 압축 타입(half · unorm · snorm)만 숫자로 읽힌다. 무한대 · NaN 은 정수 변환이 정의되지 않으므로 숫자로 읽지 않는다(인자 변환이 거절).
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                    {
+                        const float32 asFloat = PackedValueTraits<T>::toFloats( value )._arrValue[0];
+                        if ( isPackedFloatsInRange<T>( PackedFloats{ { asFloat } } ) )
+                            setFloatNumber( out, static_cast<float64>( asFloat ) );
+                    }
+                }
             }
 
             /** @brief 글을 숫자로도 읽어 둡니다 — 숫자 인자에 글을 넘기는 길(콘솔 · 기본 인자). */
@@ -113,7 +139,7 @@ namespace sw
                 if ( StringUtil::parseInt64( trimmed, intValue ) )
                     setNumber( source, static_cast<float64>( intValue ), true, intValue );
                 else if ( StringUtil::parseDouble( trimmed, floatValue ) )
-                    setNumber( source, floatValue, floatValue == static_cast<float64>( static_cast<int64>( floatValue ) ), static_cast<int64>( floatValue ) );
+                    setFloatNumber( source, floatValue );
                 else if ( StringUtil::tryParseBool( trimmed, boolValue ) )
                     setNumber( source, boolValue ? 1.0 : 0.0, true, boolValue ? 1 : 0 );
             }
@@ -198,6 +224,27 @@ namespace sw
                     outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
                     return true;
                 }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 압축 타입은 성분 실수로 받는다. 성분이 하나면 숫자도 받고, 여럿이면 벡터처럼 글(`0.5, 1, 0.25`)만 받는다.
+                    // 범위를 넘으면 거절한다 — `fromFloats` 는 자르거나(unorm) 무한대로 보내므로(half) 조용히 다른 값이 되지 않게 한다.
+                    using Traits = PackedValueTraits<T>;
+                    PackedFloats floats{};
+                    if ( Traits::kComponentCount == 1 && source._bNumber )
+                    {
+                        // float32 로 줄이기 전에 float64 에서 거른다(범위를 넘는 float64 를 float32 로 바꾸면 값이 정의되지 않는다).
+                        const bool bInRange = static_cast<float64>( Traits::kRangeMin ) <= source._floatValue && source._floatValue <= static_cast<float64>( Traits::kRangeMax );
+                        if ( bInRange == false )
+                            return false;
+                        floats._arrValue[0] = static_cast<float32>( source._floatValue );
+                    }
+                    else if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, floats._arrValue, Traits::kComponentCount ) == false )
+                        return false;
+                    if ( isPackedFloatsInRange<T>( floats ) == false )
+                        return false;
+                    outValue = TaskValue{ Traits::fromFloats( floats ) };
+                    return true;
+                }
                 else
                 {
                     // 행렬 · 핸들은 같은 타입으로만 받는다(같은 타입은 부르는 쪽이 이미 그대로 넘겼다).
@@ -237,8 +284,24 @@ namespace sw
                     formatstring( buf.data(), buf.capacity(), "%#/%#", value.objectID(), value.componentID() );
                 else if constexpr ( std::is_same_v<T, GameObjectHandle> )
                     formatstring( buf.data(), buf.capacity(), "%#", value.objectID() );
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 저장된 값을 정확히 나타내는 성분 실수입니다(`PackedValueTraits`). 옥타헤드럴 법선은 방향이 아니라 저장된 좌표 (u, v) 입니다.
+                    const PackedFloats floats = PackedValueTraits<T>::toFloats( value );
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                        formatstring( buf.data(), buf.capacity(), "%#", floats._arrValue[0] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 2 )
+                        formatstring( buf.data(), buf.capacity(), "%#, %#", floats._arrValue[0], floats._arrValue[1] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 3 )
+                        formatstring( buf.data(), buf.capacity(), "%#, %#, %#", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2] );
+                    else
+                        formatstring( buf.data(), buf.capacity(), "%#, %#, %#, %#", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2], floats._arrValue[3] );
+                }
                 else
+                {
+                    static_assert( std::is_same_v<T, float4x4>, "ReflectValue: 이 내장 타입의 글 서식이 없다 - formatBuiltin 에 분기를 더한다" );
                     formatstring( buf.data(), buf.capacity(), "<%#>", "float4x4" );
+                }
                 return string( buf.c_str() );
             }
 
@@ -249,15 +312,16 @@ namespace sw
             /** @brief 내장 타입 줄마다 읽기 · 바꾸기 · 쓰기입니다. 순서는 `ReflectBuiltinIndex` 와 같습니다(같은 파일을 같은 순서로 include). */
             struct BuiltinRow
             {
-                ReadSourceFn    _pReadSource;
-                ConvertSourceFn _pConvertSource;
-                FormatFn        _pFormat;
+                ReadSourceFn        _pReadSource;
+                ConvertSourceFn     _pConvertSource;
+                FormatFn            _pFormat;
+                ReflectBuiltinClass _class;
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                               \
     { &readSource<ReflectBuiltinCppTypeT<CppType>>, &convertSource<ReflectBuiltinCppTypeT<CppType>>, \
-      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>> },
+      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -305,6 +369,13 @@ namespace sw
         const auto& listName = ReflectValueInternal::getNameTable();
         SW_ASSERT( 0 <= builtinIndex && static_cast<size_t>( builtinIndex ) < listName.size() );
         return listName[static_cast<size_t>( builtinIndex )];
+    }
+
+    ReflectBuiltinClass ReflectValueUtil::getBuiltinClass( const int32 builtinIndex )
+    {
+        if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
+            return ReflectBuiltinClass::Other;
+        return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._class;
     }
 
     int32 ReflectValueUtil::findBuiltinIndex( const hashed_string& typeName )

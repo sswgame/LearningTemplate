@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Math/PackedTypesFwd.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
@@ -133,11 +134,6 @@ namespace sw
 
 namespace sw
 {
-    using unorm8  = unorm<uint8>;
-    using unorm16 = unorm<uint16>;
-    using snorm8  = snorm<int8>;
-    using snorm16 = snorm<int16>;
-
     /**
      * @struct NormalizedVector
      * @brief 같은 정규화 정수 @p kCount 개의 묶음입니다(`unorm8x4` 등). 성분 순서는 x, y, z, w(색이면 r, g, b, a)이고 메모리에 그 순서로 놓입니다.
@@ -195,12 +191,6 @@ namespace sw
             return float4{ _arrValue[0].toFloat(), _arrValue[1].toFloat(), _arrValue[2].toFloat(), _arrValue[3].toFloat() };
         }
     };
-
-    using unorm8x4  = NormalizedVector<unorm8, 4>;
-    using snorm8x4  = NormalizedVector<snorm8, 4>;
-    using unorm16x2 = NormalizedVector<unorm16, 2>;
-    using snorm16x2 = NormalizedVector<snorm16, 2>;
-    using snorm16x4 = NormalizedVector<snorm16, 4>;
 
     // CPU · GPU 구조체 미러에 쓰이므로 크기 · 정렬을 못 박는다(패딩 없음, 비트 복사 가능).
     static_assert( sizeof( unorm8 ) == 1 && alignof( unorm8 ) == 1, "unorm8 은 1 바이트다" );

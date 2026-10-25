@@ -167,6 +167,8 @@ namespace sw
                     continue;
                 outSession._typeNameMap.registerEntry( listArgument[0], string( ReflectBuiltinsLoaderInternal::getNamespace( listArgument ) ),
                                                        ReflectBuiltinsLoaderInternal::getAliases( listArgument ) );
+                if ( listArgument[2] == builtinmacro::kTextConvPacked )
+                    outSession._typeNameMap.markPacked( listArgument[0] );
                 ++typeCount;
             }
         }

@@ -826,6 +826,14 @@ namespace sw
                     }
                 }
 
+                // 압축 타입(half · unorm · snorm · OctahedralNormal · RGB10A2)은 인코딩 표에 없다. 포인터처럼 적격이 아닌 것과 달리 저장용으로 만든 타입이라
+                // 코덱 없이 등록되면 넷 · 롤백에서야 드러나므로 여기서 멈춘다. 코덱에 실으려면 표(`fixedlayout::kArrMathType`)가 아니라 새 인코딩 종류를 더한다.
+                if ( leaf._bPacked == SW_TRUE )
+                {
+                    reportError( state, prop, "packed type '" + leaf._typeName + "' is not in the fixed layout encoding table - mark the field Transient or add a packed encoding to the generator" );
+                    return;
+                }
+
                 // 2) 적격 판정. 오류가 아닙니다
                 const string reason = findIneligibleReason( type );
                 if ( reason.empty() == false )

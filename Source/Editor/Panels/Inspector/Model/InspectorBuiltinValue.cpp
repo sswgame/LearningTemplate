@@ -7,6 +7,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 
@@ -63,6 +64,24 @@ namespace sw::editor
                     formatstring( pOutBuf, capacity, "object %#", value.objectID() );
                 else if constexpr ( std::is_same_v<T, TagID> )
                     formatstring( pOutBuf, capacity, "%#", value.isValid() ? value.getString() : "(none)" );
+                else if constexpr ( std::is_same_v<T, OctahedralNormal> )
+                {
+                    // 편집 위젯(`Direction`)과 같은 방향으로 보여 준다. 글 직렬화가 쓰는 저장 좌표 (u, v) 는 `ReflectValue` 의 글이다.
+                    const float3 direction = value.toNormal();
+                    formatstring( pOutBuf, capacity, "(%#, %#, %#)", direction._x, direction._y, direction._z );
+                }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    const PackedFloats floats = PackedValueTraits<T>::toFloats( value );
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                        formatstring( pOutBuf, capacity, "%#", floats._arrValue[0] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 2 )
+                        formatstring( pOutBuf, capacity, "(%#, %#)", floats._arrValue[0], floats._arrValue[1] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 3 )
+                        formatstring( pOutBuf, capacity, "(%#, %#, %#)", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2] );
+                    else
+                        formatstring( pOutBuf, capacity, "(%#, %#, %#, %#)", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2], floats._arrValue[3] );
+                }
                 else
                     static_assert( sizeof( T ) == 0, "InspectorBuiltinValue: no text format for this builtin type" );
             }

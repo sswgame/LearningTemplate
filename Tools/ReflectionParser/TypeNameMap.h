@@ -32,6 +32,11 @@ namespace sw
         void registerEntry( const string& canonical, const string& nameSpace,
                             const vector<string>& aliases );
 
+        /** @brief @p canonical 이 `ReflectBuiltins.xxx` 에서 글 처리기 `packed` 로 적힌 압축 타입임을 적습니다(고정 배치형 코덱이 이 타입을 받지 못하는 것을 오류로 알리는 데 씁니다). */
+        void markPacked( const string& canonical );
+        /** @brief 정규 이름 @p canonical 이 압축 타입인지 반환합니다. */
+        bool isPacked( const string& canonical ) const;
+
         /** @brief 정규화 전에 떼어 낼 clang 수식어(`const ` · `class ` …)를 정합니다. parser_config 의 `type_strip_prefixes` 입니다. */
         void setStripPrefixes( const vector<string>& listPrefix ) { _listStripPrefix = listPrefix; }
 
@@ -49,6 +54,7 @@ namespace sw
 
         unordered_map<string, string> _mapAliasToCanonical;
         vector<string>                _listStripPrefix;
+        vector<string>                _listPacked;
         uint8                         _bLoaded  : 1;
         [[maybe_unused]] uint8        _reserved : 7;
     };
