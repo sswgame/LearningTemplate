@@ -16,7 +16,7 @@ namespace sw
 
     uint32 OpenGLRHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
     }
 
     bool OpenGLRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
@@ -41,7 +41,7 @@ namespace sw
 
     void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
     {
-        const bool bCannotWriteTimestamp = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
+        const bool bCannotWriteTimestamp = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
         if ( bCannotWriteTimestamp )
             return;
 
@@ -52,7 +52,7 @@ namespace sw
 
     void OpenGLRHIDevice::ensureTimestampQueries()
     {
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE )
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_relaxed ) != SW_FALSE )
             return;
         // GL 3.3 코어이지만 로더가 채우지 못했을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
         const bool bQueryFunctionsMissing = glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
@@ -64,14 +64,14 @@ namespace sw
         glGenQueries( static_cast<GLsizei>( kQueryCount ), _arrTimestampQuery );
         if ( _arrTimestampQuery[0] == 0 )
             return;
-        _bTimestampReady = SW_TRUE;
+        _bTimestampReady.store( SW_TRUE, std::memory_order_release ); // 위에서 만든 쿼리를 다른 스레드가 본다
     }
 
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
         const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
-        const bool                 bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0;
+        const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask == 0;
         if ( bNoTimestampsToRead )
             return;
 

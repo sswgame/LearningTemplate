@@ -102,7 +102,7 @@ namespace sw
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const override;
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
@@ -421,10 +421,12 @@ namespace sw
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;
 
         // 8바이트보다 작은 필드는 끝에 모은다. 큰 필드 사이에 끼면 필드마다 패딩이 생긴다.
-        uint32                 _computeRootConstantUbo;
-        int8                   _lastVsync;         ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.
-        uint8                  _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
-        uint8                  _bTimestampReady;
+        uint32 _computeRootConstantUbo;
+        int8   _lastVsync; ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.
+        /// @brief 엔진이 켜기 전에는 쿼리도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있고 렌더 스레드가 읽으므로 atomic 이다.
+        atomic<uint8> _bTimestampEnabled;
+        /// @brief 쿼리 묶음을 다 만들었다. 컨텍스트를 쥔 스레드가 만들고(release) 다른 스레드의 `getTimestampSlotCount` 가 읽는다(acquire).
+        atomic<uint8>          _bTimestampReady;
         uint8                  _bInitialized   : 1;
         uint8                  _bNvxMemoryInfo : 1; ///< GL_NVX_gpu_memory_info 가 있다(총량과 남은 양).
         uint8                  _bAtiMemInfo    : 1; ///< GL_ATI_meminfo 가 있다(남은 양).
