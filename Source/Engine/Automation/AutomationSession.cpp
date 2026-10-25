@@ -172,6 +172,18 @@ namespace sw
         return exitCode;
     }
 
+    bool AutomationSession::tryGetRunStatus( string& outScenarioName, string& outStepKind, uint32& outStepNumber, uint32& outFrame ) const
+    {
+        const bool bRunning = _pRunner != nullptr && _pRunner->isActive();
+        if ( bRunning == false )
+            return false;
+        outScenarioName = _pRunner->getScenario().getName();
+        outStepKind     = _pRunner->getCurrentStepKind();
+        outStepNumber   = _pRunner->getCurrentStepNumber();
+        outFrame        = _pRunner->getFrameIndex();
+        return true;
+    }
+
     int32 AutomationSession::onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount )
     {
         const size_t stageIndex = _pChain->getStageIndex();

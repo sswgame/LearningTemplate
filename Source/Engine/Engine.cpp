@@ -138,6 +138,7 @@ namespace sw
         , _pConfigManager{ nullptr }
         , _shellActions{}
         , _listFrameObserver{}
+        , _runTitle{}
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
         , _bQuitRequested{ false }
@@ -793,6 +794,13 @@ namespace sw
                 if ( observerExitCode != IEngineFrameObserver::kRunning )
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
+        }
+        // 캡처한 화면에서 어느 시나리오 · 백엔드 · 단계 · 프레임인지 읽도록 창 제목에 적는다(바뀔 때와 30 프레임마다만 시스템 호출). 벤치 인자만 있어도 적는다.
+        {
+            MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+            const bool                 bBackendUp  = _pRHI != nullptr && _pRHI->hasDevice();
+            const utf8* const          pBackend    = bBackendUp ? RHI::getBackendTypeName( _pRHI->getCommittedBackend() ) : "";
+            _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr, getCommandLineManager(), pBackend, _listFrameObserver );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
 #if defined( SW_WITH_CLIENT_CODE )

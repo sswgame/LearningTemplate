@@ -100,6 +100,10 @@ namespace sw
         void finish( AutomationOutcome result, string_view reason );
 
         bool isActive() const { return _result == AutomationOutcome::Running; }
+        /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
+        const string& getCurrentStepKind() const { return _currentStepKind; }
+        /** @brief 그 단계가 파일에서 몇 번째인지(0 부터)입니다. */
+        uint32 getCurrentStepNumber() const { return _currentStepNumber; }
         /**
          * @brief 끝맺음(요약 줄, 보고, 가상 입력 떼기)까지 마쳤는지 묻습니다.
          * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
@@ -208,13 +212,15 @@ namespace sw
         vector<RememberedValue> _listRemembered;        ///< `<Remember>` 가 남긴 값
         string                  _outputDirectory;
         string                  _finishReason;
+        string                  _currentStepKind;        ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         GameObjectManager*      _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*           _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         float64                 _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         float64                 _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         size_t                  _nextStepIndex;
         uint32                  _frameIndex;
-        uint32                  _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                  _currentStepNumber; ///< `_currentStepKind` 의 파일 순번
+        uint32                  _waitFrameCount;    ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                  _screenshotRequestedCount;
         uint32                  _screenshotCompletedCount;
         uint32                  _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
