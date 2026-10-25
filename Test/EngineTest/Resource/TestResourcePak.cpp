@@ -741,7 +741,7 @@ SW_TEST_CASE( ResourcePakTest, ConcurrentMultiThreadedVfsRead )
 }
 
 // ------------------------------------------------------------------------------
-// Test 8: 경로 캐시 64비트 정수 해시 룩업 및 무효화 (Path Cache Integrity)
+// Test 8: 경로 캐시(원문 키) 룩업 및 무효화 (Path Cache Integrity)
 // ------------------------------------------------------------------------------
 SW_TEST_CASE( ResourcePakTest, PathCacheZeroAllocationAndInvalidation )
 {

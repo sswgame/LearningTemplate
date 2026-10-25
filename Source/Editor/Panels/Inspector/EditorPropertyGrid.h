@@ -165,7 +165,7 @@ namespace sw::editor
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
         fixed_string<constant::kMaxBuffer64>                         _propertyFilter;   ///< 프로퍼티 검색 필터
-        unordered_map<uint64, vector<InspectorMethodArgSlot>>        _mapMethodArgSlot; ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름의 해시
+        unordered_map<string, vector<InspectorMethodArgSlot>>        _mapMethodArgSlot; ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
         fixed_string<constant::kMaxBuffer256>                        _lastInvokeResult;
         unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;  ///< 컨테이너 "추가" 입력란의 텍스트. 키는 그 입력란의 ImGui id
         Delegate<void( const PropertyInfo& )>                        _onEdited;             ///< 지금 대상의 `_onEdited`

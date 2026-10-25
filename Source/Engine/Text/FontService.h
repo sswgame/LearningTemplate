@@ -133,7 +133,7 @@ namespace sw
         /** @brief 폰트 파일 하나를 엽니다. 등록한 메모리 파일, 리소스, 절대 경로 순서로 찾습니다. 같은 (경로, 면 번호)는 한 번만 엽니다. */
         FontFaceID openFontFile( const string& path, uint32 faceIndex, bool bResourcePath );
         /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
-        bool markWarnedOnce( uint64 key );
+        bool markWarnedOnce( const string& key );
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */
         struct OpenedFamilyFace
         {
@@ -150,7 +150,7 @@ namespace sw
         unordered_map<string, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
         unordered_map<string, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
-        unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트).
+        unordered_set<string>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트). 키는 원문입니다.
         const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
         bool                                    _bInitialized;        ///< 기본 패밀리를 열었는지 나타냅니다.
     };

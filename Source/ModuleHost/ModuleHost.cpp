@@ -367,6 +367,9 @@ namespace sw
         onRenderWorkersDrained();
 
         // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
+        // **엔진 전체 대기가 맞다(모듈이 낸 태스크만 기다리지 않는다).** 태스크는 어느 모듈의 코드를 부르는지 기록하지 않고, 엔진이 낸 태스크도
+        // 모듈의 콜백(델리게이트 · 컴포넌트 함수)을 실행할 수 있다. 낸 쪽으로 가르면 옛 이미지에 들어가는 태스크를 놓친다. 그래서 영구 태스크는 두지 않는 것이
+        // 계약이고(오래 사는 일은 TaskManager 밖의 스레드로), 있으면 30 초 뒤 위 오류로 드러난다.
         if ( engine::areEngineServicesBound() )
         {
             TaskManager& taskManager = engine::getSubsystem<TaskManager>();
