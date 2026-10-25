@@ -13,6 +13,7 @@ QA 러너 셋(`Scripts/qa/GoldenImages.py` · `Soak.py` · `PerfRegression.py`)�
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -222,21 +223,22 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
     result = AppRunResult()
     workingDirectory = Path(cwd) if cwd is not None else Path(appPath).resolve().parent
     startSeconds = time.monotonic()
+    limits = limits or ProcessLimits()
+    mergedEnvironment = {**os.environ, **environment} if environment else None
     try:
-        limits = limits or ProcessLimits()
-        mergedEnvironment = {**os.environ, **environment} if environment else None
         process = subprocess.Popen([str(appPath), *listArgument], cwd=str(workingDirectory), stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
                                    creationflags=limits.makeCreationFlags(), preexec_fn=limits.makePreexec(), env=mergedEnvironment)
-        attachment = limits.attach(process)
-        attachment.__enter__()   # Job 핸들은 아래 finally 에서 닫는다(닫으면 Job 이 자식을 끝낸다 — 끝난 뒤에만)
-    except (OSError, RuntimeError) as error:
+    except OSError as error:
         result.listErrorLine.append(f"cannot launch {appPath}: {error}")
         return result
-    try:
+    with contextlib.ExitStack() as stack:   # Job 핸들은 이 블록이 끝나는 모든 길에서 닫는다(Popen 뒤에야 붙일 수 있다)
+        try:
+            stack.enter_context(limits.attach(process))
+        except RuntimeError as error:
+            result.listErrorLine.append(f"cannot launch {appPath}: {error}")
+            return result
         return superviseApp(process, appPath, listArgument, result, startSeconds, timeoutSeconds, sampleIntervalSeconds, echo)
-    finally:
-        attachment.__exit__(None, None, None)
 
 
 def superviseApp(process: subprocess.Popen, appPath: Path, listArgument: list[str], result: AppRunResult, startSeconds: float,
