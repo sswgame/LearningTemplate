@@ -13,6 +13,10 @@ X11 은 `Convex` · `None` · `Success` · `KeyPress` · `Always` 같은 흔한 
   3) X11 을 include 하는 파일은 감싼 서드파티 헤더(Jolt · Box2D · ACL · RTM · Recast/Detour · Tracy)를 include 하지 않는다 —
      남은 매크로가 그 라이브러리의 식별자를 덮는다.
 
+  4) 엔진 본체(`Source/Engine`, RHI 백엔드 폴더 `Graphics/RHI` 제외)에서 X11 · Wayland · xkbcommon · xcb 헤더를 include 하는 `.cpp` 는
+     `SW_WITH_CLIENT_CODE` 로 감싼다. 전용 서버(`SW_TARGET_TYPE=Server`)는 X11 을 링크하지 않아(`Linux.cmake`) 감싸지 않은 .cpp 는 서버 빌드의
+     컴파일이나 링크를 세운다. Windows 빌드는 이 결함을 낼 수 없어 소스 모양으로 막는다(계획 DedicatedServerNoRenderer S3).
+
 유니티 빌드에서 X11 `.cpp` 의 매크로가 이웃 TU 로 새지 않게 하는 것은 CMake(`sw_skipUnityForX11Sources`)가 같은 include 줄을 보고 한다.
 
   python Scripts/lint/gate/CheckX11Isolation.py [--root <repo>] [--files a.cpp b.h]
@@ -39,6 +43,13 @@ _kX11Wrapper = "Core/Common/X11Headers.h"
 _kX11MacroUndef = "Core/Common/X11MacroUndef.h"
 #: X11 을 include 하는 TU 가 함께 include 하면 안 되는 서드파티 헤더 접두어입니다.
 _kListThirdPartyPrefix = ("Jolt/", "box2d/", "acl/", "rtm/", "Recast", "Detour", "DetourCrowd/", "tracy/", "Tracy")
+
+#: 서버에 없는 창 계층의 시스템 헤더 접두어입니다(4번 규칙). X11 매크로 규칙(1~3)은 `_kListX11SystemPrefix` 만 본다.
+_kListWindowingSystemPrefix = _kListX11SystemPrefix + ("wayland-", "xkbcommon/", "xcb/", "xdg-shell")
+_kClientGuardMacro = "SW_WITH_CLIENT_CODE"
+_kEngineBodyDir = "Source/Engine/"
+#: RHI 백엔드는 모듈(Dev) 또는 서버에서 빠지는 폴더라 4번 규칙에서 뺀다.
+_kEngineBackendDir = "Source/Engine/Graphics/RHI/"
 
 _kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
@@ -72,6 +83,12 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
             lastUndefLine = lineNumber
         if includePath.startswith(_kListThirdPartyPrefix):
             listThirdParty.append((lineNumber, includePath))
+    if bTranslationUnit and relative.startswith(_kEngineBodyDir) and relative.startswith(_kEngineBackendDir) is False and _kClientGuardMacro not in text:
+        for lineNumber, rawInclude in iterIncludes(text):
+            includePath = normalizePath(rawInclude)
+            if includePath.startswith(_kListWindowingSystemPrefix):
+                listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 창 계층 헤더를 include 하는 엔진 본체 .cpp 는 {_kClientGuardMacro} 로 감쌉니다(전용 서버는 X11 을 링크하지 않습니다)")
+                break
     if lastRawX11Line > 0 and lastUndefLine < lastRawX11Line:
         listViolation.append(f"{relative}:{lastRawX11Line}: X11 헤더 뒤에 \"{_kX11MacroUndef}\" 를 다시 include 하지 않았습니다")
     if firstX11Line > 0:
@@ -117,6 +134,11 @@ class CheckX11IsolationGate(LintGate):
             "name": "X11 TU 가 Jolt 헤더를 함께 include 한다",
             "expectedViolation": "Source/Engine/Window/Linux/Probe.cpp:2: <Jolt/Jolt.h> -> X11 을 include 하는 파일(줄 1)은 서드파티 헤더를 함께 include 하지 않습니다",
             "files": {"Source/Engine/Window/Linux/Probe.cpp": "#include \"Core/Common/X11Headers.h\"\n#include <Jolt/Jolt.h>\nint probe() { return 0; }\n"},
+        },
+        {
+            "name": "서버에도 들어가는 엔진 .cpp 가 Wayland 헤더를 감싸지 않고 include 한다",
+            "expectedViolation": "Source/Engine/Window/Linux/Probe.cpp:1: <wayland-client.h> -> 창 계층 헤더를 include 하는 엔진 본체 .cpp 는 SW_WITH_CLIENT_CODE 로 감쌉니다",
+            "files": {"Source/Engine/Window/Linux/Probe.cpp": "#include <wayland-client.h>\nint probe() { return 0; }\n"},
         },
     ]
 

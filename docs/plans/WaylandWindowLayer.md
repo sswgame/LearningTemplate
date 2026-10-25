@@ -33,4 +33,6 @@
 
 ## 남은 것
 
+- 2026-10-25 코드로 할 수 있는 몫 점검: W1 코드와 CI 단계는 모두 들어가 있고, 남은 W2 는 push 뒤 CI 첫 실행, W3 은 W2 초록이 조건이라 착수하지 않았다. 서버 빌드에 Wayland 코드가 새지 않게 하는 정적 게이트(`CheckX11Isolation` 4번 규칙)만 더했다.
+
 - W2 의 CI 잡 첫 실행을 보고 실패를 고친다(`py -3 -m Scripts ci-jobs --summary`). 초록이 이어지면 잡의 `reportOnly` 를 지우고 `configureArgs` 를 `Build Linux Debug (Clang)` 로 옮겨 잡을 하나로 합친다(ci.yml 주석). 로그 줄 `Vulkan WSI: VK_KHR_wayland_surface` 는 TRACE 라 스모크가 보지 않는다 — 창 생성 줄과 종료 코드 0 으로 갈음한다. 리스너 구조체를 값 초기화한 뒤 이름으로 채웠다 — 설치된 wayland 헤더의 판이 바인드한 판(자리 5 · xdg_wm_base 1)보다 새로우면 남는 칸은 비어 있고 그 이벤트는 오지 않는다.
