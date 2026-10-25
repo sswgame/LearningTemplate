@@ -9,61 +9,30 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
-# 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 ImGui 를
-# 링크하므로 테스트는 그것을 링크하지 않는다(테스트는 ImGui 없이 돈다).
+# 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). `EditorModule` 은 ImGui 를 링크하므로 테스트는 그것을 링크하지 않는다(테스트는 ImGui 없이 돈다).
 #
-# **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야
-# 하는 것만 적는다. 기계가 대신 고를 수 없어서 목록은 손으로 두되,
+# ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)은 `EditorCore`(Source/Editor/CMakeLists.txt)가
+# 지은 오브젝트를 `sw_linkEditorCore` 로 EditorModule 과 **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다).
+# 코어 층의 REFLECT 헤더의 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
+#
+# 아래 EXTRA_SOURCES 는 코어 밖(Common 바로 아래 · Backend · GUI · Widgets · Viewport · Panels · Popups · SelfTest)에서 **테스트가 실제로 링크해야
+# 하는 것만** 적은 손 목록이다(2b 가 Panels · Viewport 의 헤드리스 파일을 `Model` 폴더로 옮기면 이 목록도 코어로 간다).
 # `CheckTestSuites.py` 가 썩는 두 방향을 막는다: 파일이 옮겨져 경로가 죽는 것과, ImGui 를 include 하는
 # 파일이 섞여 들어오는 것(EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 sw_addTestExecutable(EditorTest
 	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/DrawSnapshotHandoff.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorColliderHandleMath.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportMouseClaim.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorAssetFilter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorDataTableCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetImportJob.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorBackgroundTask.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorExternalToolJob.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorFolderListing.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorReferenceIndex.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorResourceIndex.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorGlobalVariableCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorLogCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorModuleOverrides.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorPrefabIsolation.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorNavigationCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Play/EditorNetConditions.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlayPresetStore.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlaySession.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetProfilerHistory.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorRemoteInspector.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorStateHashCompare.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorMultiEdit.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorSceneCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorShortcutOverrides.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorSiblingOrder.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportRayPick.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorPreviewPick.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorViewportPreview.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorTransformCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Asset/EditorToolAssetCommands.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/Scene/EditorInspectorCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Animation/SequenceTimingUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorComponentIcon.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorDocumentPanelCore.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeConfig.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorSettingsRegistry.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorUserFile.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorPaths.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorCurveView.cpp"
@@ -99,47 +68,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMap/TileMapPaintUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UIPreview/UIPreviewLogic.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ConfigHotReload.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetTypeFocus.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorExtensionSubsystems.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorSceneGenerationSync.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorContext.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorDefaultObjects.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorLayoutStore.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPanelVisibility.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorStateStore.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorTransaction.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWindowTitle.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWorkspace.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/FileWatchDispatcher.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorSelection.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportPathFilter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportStamp.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/EditorAssetValidation.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/HeightfieldImporter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportAnimation.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportConfig.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportGeometry.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportMaterial.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportVrm.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImporter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/OutfitAtlasBaker.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImporter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmAvatarImporter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmMaterialImporter.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmRuntimeAssets.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Localization/LocalizationTools.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/EditorSourceControl.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/SourceControlProvider.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorGridUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorViewTargetUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerToggles.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/TerrainBrush.cpp"
@@ -153,6 +82,10 @@ sw_addTestExecutable(EditorTest
 
 target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 
+# EditorCore 의 오브젝트(와 FlagOps 우산 · gen 폴더). 코어 오브젝트는 RuntimeAPI 를 쓰므로 직접 링크한다.
+sw_linkEditorCore(EditorTest PRIVATE)
+target_link_libraries(EditorTest PRIVATE RuntimeAPI)
+
 # 멀티 프로세스 재생 테스트(EditorNetPlaySessionTest)은 빌드한 Server 를 서버 · 헤드리스 클라이언트로 띄운다 — 테스트보다 먼저 지어 둔다.
 if(TARGET Server)
 	add_dependencies(EditorTest Server)
@@ -162,16 +95,9 @@ if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
 	add_dependencies(EditorTest ${swActiveGameTarget})
 endif()
 
-# EditorConfig·EditorToolDefaults·EditorThemeTokens·EditorNetPlaySettings 는 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을
-# 링크하지 않는 테스트도 그 심볼이 필요하므로 이 헤더들만 따로 코드젠한다.
+# 코어 밖의 REFLECT 헤더(뷰포트 겹침 배치 · 테스트 프로브)만 여기서 코드젠한다. 코어 층의 헤더는 EditorCoreReflect 가 만든다.
 sw_addReflectionStep(EditorTest
 	HEADERS
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.h"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorPreferences.h"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.h"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.h"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlaySettings.h"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPanelVisibility.h"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportOverlayLayout.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES
