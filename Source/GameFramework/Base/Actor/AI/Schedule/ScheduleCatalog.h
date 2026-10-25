@@ -218,6 +218,17 @@ namespace sw
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 또는 1)를 반환합니다. */
         uint32 loadElement( const XMLNode& node, string_view sourceName );
+        /** @brief 원소 종류별 읽기입니다. 잘못된 원소는 오류를 남기고 더하지 않습니다. `loadNpc` 는 NPC 를 더했으면 true 입니다. */
+        void               loadCalendar( const XMLNode& node, string_view sourceName );
+        void               loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID );
+        void               loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID );
+        void               loadInterrupt( const XMLNode& node, string_view sourceName, const utf8* pID );
+        void               loadAppointment( const XMLNode& node, string_view sourceName, const utf8* pID );
+        void               loadArchetype( const XMLNode& node, string_view sourceName, const utf8* pID );
+        [[nodiscard]] bool loadNpc( const XMLNode& node, string_view sourceName, const utf8* pID );
+        void               loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID );
+        /** @brief `Routine` 자식을 모두 읽어 쓸 수 있는 것만 더합니다. 그 밖의 자식은 @p ownerKind 로 경고합니다. */
+        void readRoutineChildren( const XMLNode& node, string_view sourceName, string_view ownerKind, string_view ownerID, vector<ScheduleRoutineDef>& outListRoutine ) const;
         /** @brief 루틴 하나를 읽습니다. id 가 없거나 우선순위 · 조건이 깨졌으면 오류를 남기고 false 입니다(부르는 쪽이 넣지 않는다). */
         [[nodiscard]] bool readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
         /**
