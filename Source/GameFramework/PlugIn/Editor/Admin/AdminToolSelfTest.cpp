@@ -34,7 +34,7 @@ namespace sw::editor
             /** @brief 확장 패널이 등록 목록에 올라 그려지는지 확인합니다. 결속기가 틀리면 확장의 ImGui::Begin 이 다른 컨텍스트로 가서 이 창이 에디터에 없습니다. */
             static EditorSelfTestStep runPanelDraws( EditorSelfTestContext& context )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
