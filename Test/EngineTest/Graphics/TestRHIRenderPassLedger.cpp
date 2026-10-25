@@ -40,11 +40,12 @@ SW_TEST_CASE( RHIRenderPassLedgerTest, ConcurrentAddsNeverShareAHandle )
     sw::vector<std::thread>             listThread;
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        listThread.emplace_back( [&ledger, &listHandle, &desc, threadIndex]()
+        sw::RHIRenderPassHandle* const pHandle = listHandle.data(); // 스레드마다 겹치지 않는 칸에 쓴다 - 벡터 연산자는 쓰기 감시가 같은 벡터의 동시 쓰기로 읽는다
+        listThread.emplace_back( [&ledger, pHandle, &desc, threadIndex]()
         {
             for ( uint32 repeat = 0; repeat < kAddsPerThread; ++repeat )
             {
-                listHandle[static_cast<size_t>( threadIndex ) * kAddsPerThread + repeat] = ledger.add( desc );
+                pHandle[static_cast<size_t>( threadIndex ) * kAddsPerThread + repeat] = ledger.add( desc );
             }
         } );
     }
