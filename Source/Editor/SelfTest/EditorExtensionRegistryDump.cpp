@@ -11,7 +11,7 @@
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 

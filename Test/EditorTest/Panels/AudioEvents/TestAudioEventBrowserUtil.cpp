@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/AudioEvents/AudioEventBrowserUtil.h"
+#include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioSpatial.h"

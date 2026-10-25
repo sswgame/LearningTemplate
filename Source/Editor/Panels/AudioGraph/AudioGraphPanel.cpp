@@ -12,7 +12,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/AudioGraph/AudioGraphEditUtil.h"
+#include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/Graph/AudioGraph.h"

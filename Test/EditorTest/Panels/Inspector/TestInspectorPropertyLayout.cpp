@@ -7,7 +7,7 @@
 #if !defined( SW_SHIPPING )
 
     #include "Editor/Common/Widgets/EditorListFilter.h"
-    #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+    #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
     #include "Engine/Object/Component/2D/SpriteComponent.h"
     #include "Engine/Object/Component/3D/MeshComponent.h"

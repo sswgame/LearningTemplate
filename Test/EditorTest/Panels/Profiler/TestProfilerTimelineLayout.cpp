@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Profiler/ProfilerTimelineLayout.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
 
 #include "TestFramework/TestFramework.h"
 

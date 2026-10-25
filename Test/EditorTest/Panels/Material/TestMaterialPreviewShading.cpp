@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Material/MaterialPreviewShading.h"
+#include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 
 #include "TestFramework/TestFramework.h"
 

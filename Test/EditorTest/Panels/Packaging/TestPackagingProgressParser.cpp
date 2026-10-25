@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Packaging/PackagingProgressParser.h"
+#include "Editor/Panels/Packaging/Model/PackagingProgressParser.h"
 
 #include "TestFramework/TestFramework.h"
 

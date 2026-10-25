@@ -2,7 +2,7 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Panels/UIPreview/UIPreviewLogic.h"
+#include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/InputManager.h"

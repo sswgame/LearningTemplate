@@ -9,7 +9,7 @@
 
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Viewport/EditorVisualizerStats.h"
-#include "Editor/Viewport/EditorVisualizerToggles.h"
+#include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
 struct ImDrawList;
 

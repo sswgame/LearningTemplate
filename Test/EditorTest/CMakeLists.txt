@@ -11,26 +11,21 @@ endif()
 
 # 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). `EditorModule` 은 ImGui 를 링크하므로 테스트는 그것을 링크하지 않는다(테스트는 ImGui 없이 돈다).
 #
-# ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)은 `EditorCore`(Source/Editor/CMakeLists.txt)가
-# 지은 오브젝트를 `sw_linkEditorCore` 로 EditorModule 과 **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다).
-# 코어 층의 REFLECT 헤더의 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
+# ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)과, 뷰 층(Panels · Viewport)의 `Model` 폴더
+# (`Panels/<패널>/Model` · `Viewport/Model`)는 `EditorCore`(Source/Editor/CMakeLists.txt)가 지은 오브젝트를 `sw_linkEditorCore` 로 EditorModule 과
+# **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다). Common 의 여섯 폴더 헤더의 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
 #
-# 아래 EXTRA_SOURCES 는 코어 밖(Common 바로 아래 · Backend · GUI · Widgets · Viewport · Panels · Popups · SelfTest)에서 **테스트가 실제로 링크해야
-# 하는 것만** 적은 손 목록이다(2b 가 Panels · Viewport 의 헤드리스 파일을 `Model` 폴더로 옮기면 이 목록도 코어로 간다).
+# 아래 EXTRA_SOURCES 는 코어 밖(Common 바로 아래 · Backend · GUI · Widgets · Popups · SelfTest)에서 **테스트가 실제로 링크해야
+# 하는 것만** 적은 손 목록이다.
 # `CheckTestSuites.py` 가 썩는 두 방향을 막는다: 파일이 옮겨져 경로가 죽는 것과, ImGui 를 include 하는
 # 파일이 섞여 들어오는 것(EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 sw_addTestExecutable(EditorTest
 	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/DrawSnapshotHandoff.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorColliderHandleMath.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportMouseClaim.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorAssetFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorBackgroundTask.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorExternalToolJob.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportRayPick.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorPreviewPick.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Animation/SequenceTimingUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorComponentIcon.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorDocumentPanelCore.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorPaths.cpp"
@@ -39,39 +34,8 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorNodeGraphRules.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogXMLText.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogDocument.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Catalog/CatalogCurveModel.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Console/ConsoleLogRows.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowser/ContentBrowserFileActions.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowser/ContentBrowserImportQueue.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowser/ContentBrowserLogic.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportOverlayLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorFavorites.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentManager.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentPicker.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/InputMap/InputMapConflicts.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/AudioGraph/AudioGraphEditUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/MapCheck/MapCheckRows.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Material/MaterialPreviewShading.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Packaging/PackagingProgressParser.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerCallTree.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerScopeHistory.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerTimelineLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProjectSettings/ProjectSettingsCatalog.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProjectSettings/ProjectSettingsDocument.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/RenderTarget/RenderTargetViewUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/SelfTest/EditorTestOutputParser.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMap/TileMapPaintUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UIPreview/UIPreviewLogic.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorGridUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerToggles.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/TerrainBrush.cpp"
 	LIBS
 		Engine
 		Microsoft::DirectXTex
@@ -95,10 +59,11 @@ if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
 	add_dependencies(EditorTest ${swActiveGameTarget})
 endif()
 
-# 코어 밖의 REFLECT 헤더(뷰포트 겹침 배치 · 테스트 프로브)만 여기서 코드젠한다. 코어 층의 헤더는 EditorCoreReflect 가 만든다.
+# 코어 밖의 REFLECT 헤더만 여기서 코드젠한다(뷰포트 겹침 배치 — `Viewport/Model` 의 유일한 REFLECT 헤더 — 와 테스트 프로브). Common 코어 폴더의 헤더는
+# EditorCoreReflect 가 만든다(`Model` 폴더의 REFLECT 헤더는 소비자마다 코드젠한다: 층별 정규식으로는 뷰 층 안의 하위 폴더만 골라 담을 수 없다).
 sw_addReflectionStep(EditorTest
 	HEADERS
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportOverlayLayout.h"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES
 		"${CMAKE_SOURCE_DIR}/Source"

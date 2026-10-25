@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/MapCheck/MapCheckRows.h"
+#include "Editor/Panels/MapCheck/Model/MapCheckRows.h"
 
 #include "TestFramework/TestFramework.h"
 

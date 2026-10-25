@@ -43,7 +43,7 @@
 
 ### P2 half 해독 복사본 통합 (끝)
 
-같은 `half` → `float32` 풀이가 세 곳에 따로 있습니다. `Editor/Panels/RenderTarget/RenderTargetViewUtil.cpp` 의 `halfToFloat`, `Engine/Renderer/Capture/ReflectionProbeBaker.cpp` 의 `decodeHalf`, `Engine/Renderer/Frame/FrameRendererUtil.h` 의 `halfToUnorm8` 입니다.
+같은 `half` → `float32` 풀이가 세 곳에 따로 있습니다. `Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.cpp` 의 `halfToFloat`, `Engine/Renderer/Capture/ReflectionProbeBaker.cpp` 의 `decodeHalf`, `Engine/Renderer/Frame/FrameRendererUtil.h` 의 `halfToUnorm8` 입니다.
 `half::fromBits( bits ).toFloat()` 와 `unorm8::fromFloat` 로 바꾸고 복사본을 지웁니다. 렌더 타깃 뷰와 캡처 파일(`RenderTargetImageFile.cpp`)의 기존 테스트가 같은 값을 내는지 봅니다.
 결과: `halfToFloat` 는 `half::toFloat` 로 바뀌었고 복사본은 지웠습니다. 나머지 둘은 옛 동작을 보존하는 얇은 함수만 남았습니다.
 

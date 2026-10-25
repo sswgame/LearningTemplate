@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/ContentBrowser/ContentBrowserLogic.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 
 #include "TestFramework/TestFramework.h"
 

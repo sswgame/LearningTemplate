@@ -10,6 +10,7 @@
 #    유니티 빌드: TU 내부 도우미는 모두 익명 네임스페이스의 *Internal 구조체로 묶여 있다
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE listEditorSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+set(listEditorAllSource ${listEditorSource})
 
 # 에디터 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 층과 티어의 표는 `Scripts/lint/rules/GenerateEditorLayers.toml` 이고
 # configure 가 `EditorLayers.cmake` 로 옮긴다(`Scripts/generate/GenerateEditorLayers.py` — 표와 폴더가 어긋나면 거기서 멈춘다).
@@ -18,7 +19,8 @@ file(GLOB_RECURSE listEditorSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp"
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EditorLayers.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/lint/rules/GenerateEditorLayers.toml")
 
-# ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리 · 작업 공간)은 imgui 링크가 없는 부분(`*Model`)이 짓는다.
+# ImGui 를 모르는 층(모델: 에셋 · 커맨드 · 설정 · 로컬라이즈 · 버전 관리 · 작업 공간)과, 뷰 층(Panels · Viewport)의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는
+# imgui 링크가 없는 부분(`*Model`)이 짓는다. 뷰 층 파일이 ImGui 를 쓰지 않게 되면 `Model` 폴더로 옮긴다(`git mv` + include 경로).
 set(listEditorModelLayer Common/Asset Common/Commands Common/Config Common/Localization Common/SourceControl Common/Workspace)
 
 # 층 하나의 소스(`<OUT>Source`)와 헤더(`<OUT>Header`, Source/Editor 기준 상대 경로). `Common` 은 바로 아래 파일만, `<root>` 는 Source/Editor 바로 아래 파일만.
@@ -52,7 +54,13 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 		elseif(layer IN_LIST listEditorModelLayer)
 			list(APPEND swEditorTierModelSource_${tier} ${swEditorLayer_${layerKey}Source})
 		else()
-			list(APPEND swEditorTierViewSource_${tier} ${swEditorLayer_${layerKey}Source})
+			# 뷰 층 안의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는 ImGui 를 모르는 헤드리스 파일이라 같은 티어의 모델 부분이 짓는다.
+			set(layerModelSource ${swEditorLayer_${layerKey}Source})
+			set(layerViewSource ${swEditorLayer_${layerKey}Source})
+			list(FILTER layerModelSource INCLUDE REGEX "/Source/Editor/${layer}/([^/]+/)*Model/")
+			list(FILTER layerViewSource EXCLUDE REGEX "/Source/Editor/${layer}/([^/]+/)*Model/")
+			list(APPEND swEditorTierModelSource_${tier} ${layerModelSource})
+			list(APPEND swEditorTierViewSource_${tier} ${layerViewSource})
 		endif()
 	endforeach()
 	list(APPEND listEditorPartSource ${swEditorTierModelSource_${tier}} ${swEditorTierViewSource_${tier}})
@@ -63,6 +71,11 @@ if(listEditorUnassignedSource)
 	message(FATAL_ERROR "Editor sources outside every layer in GenerateEditorLayers.toml: ${listEditorUnassignedSource}")
 endif()
 set(listEditorSource ${listEditorRootSource})
+# EditorCore(위 층 표의 모델 층 + 뷰 층의 `Model` 폴더)가 짓는 소스 — 배포는 에디터 모듈을 짓지 않으므로 이것을 뺀 나머지를 "짓지 않는 소스" 로 적는다.
+set(listEditorCoreSource "")
+foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
+	list(APPEND listEditorCoreSource ${swEditorTierModelSource_${tier}})
+endforeach()
 
 
 # ------------------------------------------------------------------------------
@@ -119,7 +132,7 @@ endfunction()
 # 1-1) EditorCore: ImGui 를 모르는 층(`listEditorModelLayer`)의 오브젝트. EditorModule 과 EditorTest 가 **같은 오브젝트**를 받는다.
 #      소스 목록은 위 층 표 한 곳(`swEditorTierModelSource_<N>`)에서 나오고, 테스트는 손으로 나열하지 않는다(폴더에 파일을 더하면 둘 다 받는다).
 #      - 티어마다 부분(`EditorTier<N>Model`)을 따로 짓는다 — 티어 N 부분은 N 보다 위 층 헤더 자리에 `#error` 껍데기가 놓여 층 방향을 컴파일이 지킨다.
-#      - 리플렉션(`EditorCoreReflect`)은 이 층의 REFLECT · ENUM 헤더 전부의 `.gen.cpp` 를 한 번만 짓는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
+#      - 리플렉션(`EditorCoreReflect`)은 `listEditorModelLayer` 폴더의 REFLECT · ENUM 헤더 전부(뷰 층 `Model` 폴더의 REFLECT 헤더는 소비자가 각자 코드젠한다 — 층별 정규식으로 하위 폴더만 담을 수 없다)의 `.gen.cpp` 를 한 번만 짓는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
 #        뺀다(같은 `StaticType()` 이 두 곳에 정의되지 않게). FlagOps 우산과 gen 폴더는 `sw_linkEditorCore` 가 소비자에게 같은 값으로 준다.
 #      - 소비자가 EditorModule(Dev 의 SHARED)이면 오브젝트는 DLL 이미지에 들어가고, EditorTest 면 실행 파일에 들어간다(SW_EDITOR_API 는 둘 다 `SW_EDITOR_EXPORTS`
 #        로 지어져 DLL 에서는 내보내고, 테스트 실행 파일에서는 소비자 TU 의 빈 매크로와 같은 이름으로 그냥 풀린다).
@@ -229,7 +242,11 @@ endif()
 
 # 배포는 에디터를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`). EditorCore(위)는 EditorTest 가 링크해 그대로 지어진다.
 if(SW_SHIPPING_BUILD)
-	sw_declareUnbuiltSources(${listEditorSource})
+	set(listEditorUnbuiltSource ${listEditorAllSource})
+	if(NOT SW_TARGET_TYPE STREQUAL "Server")   # 전용 서버는 코어도 짓지 않는다
+		list(REMOVE_ITEM listEditorUnbuiltSource ${listEditorCoreSource})
+	endif()
+	sw_declareUnbuiltSources(${listEditorUnbuiltSource})
 	return()
 endif()
 

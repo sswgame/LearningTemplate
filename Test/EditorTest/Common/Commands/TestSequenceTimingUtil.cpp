@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Animation/SequenceTimingUtil.h"
+#include "Editor/Panels/Animation/Model/SequenceTimingUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

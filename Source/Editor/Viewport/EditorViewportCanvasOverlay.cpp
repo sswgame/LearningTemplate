@@ -10,10 +10,10 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Viewport/EditorGridUtil.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportRayPick.h"
+#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include <imgui.h>
 

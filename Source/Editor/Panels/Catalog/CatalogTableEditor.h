@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Panels/Catalog/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
 
 namespace sw::editor
 {

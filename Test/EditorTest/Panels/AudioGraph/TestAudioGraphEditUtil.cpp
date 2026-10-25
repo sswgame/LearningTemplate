@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/AudioGraph/AudioGraphEditUtil.h"
+#include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/Graph/AudioGraphDef.h"
 

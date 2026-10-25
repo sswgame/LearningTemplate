@@ -9,7 +9,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Panels/Catalog/CatalogDocument.h"
+#include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>

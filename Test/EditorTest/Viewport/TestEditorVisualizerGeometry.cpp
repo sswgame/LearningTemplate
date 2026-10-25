@@ -4,7 +4,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Editor/Viewport/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"

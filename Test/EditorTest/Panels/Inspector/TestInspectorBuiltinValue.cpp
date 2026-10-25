@@ -7,7 +7,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 

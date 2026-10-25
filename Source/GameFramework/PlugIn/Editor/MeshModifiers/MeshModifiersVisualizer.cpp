@@ -21,10 +21,10 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/LatticeModifier.h"

@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Viewport/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 
 namespace sw::editor
 {

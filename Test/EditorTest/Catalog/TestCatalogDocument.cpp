@@ -1,7 +1,7 @@
 // 카탈로그 표 편집기의 문서 — 원소 이름별 표(행 · 열), 셀 · 행 편집과 되돌리기 · 다시 하기, 저장 표시, 깨진 원문.
 #include "pch.h"
 
-#include "Editor/Panels/Catalog/CatalogDocument.h"
+#include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

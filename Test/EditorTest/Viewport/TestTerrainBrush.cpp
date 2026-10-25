@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Viewport/TerrainBrush.h"
+#include "Editor/Viewport/Model/TerrainBrush.h"
 
 #include "TestFramework/TestFramework.h"
 

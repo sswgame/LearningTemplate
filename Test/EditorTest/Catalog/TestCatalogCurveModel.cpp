@@ -1,8 +1,8 @@
 // 카탈로그 곡선 도우미 — 중첩된 곡선 찾기(모양으로 판정), 색 그래디언트 묶기, 표본, 키 더하기(빈 채널 포함)와 키 칸 편집.
 #include "pch.h"
 
-#include "Editor/Panels/Catalog/CatalogCurveModel.h"
-#include "Editor/Panels/Catalog/CatalogDocument.h"
+#include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

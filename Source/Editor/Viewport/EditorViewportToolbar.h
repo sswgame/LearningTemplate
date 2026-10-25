@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Editor/Viewport/EditorVisualizerToggles.h"
+#include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
 namespace sw
 {

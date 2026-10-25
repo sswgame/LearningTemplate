@@ -2,8 +2,8 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Editor/Panels/ContentBrowser/ContentBrowserFileActions.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserImportQueue.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
 
 #include "TestFramework/TestFramework.h"
 

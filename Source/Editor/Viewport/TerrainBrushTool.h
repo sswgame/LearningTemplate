@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Viewport/TerrainBrush.h"
+#include "Editor/Viewport/Model/TerrainBrush.h"
 
 namespace sw::editor
 {

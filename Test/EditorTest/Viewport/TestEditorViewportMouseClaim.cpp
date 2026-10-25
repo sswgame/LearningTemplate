@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
-#include "Editor/Viewport/EditorViewportMouseClaim.h"
+#include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 
 #include "TestFramework/TestFramework.h"
 

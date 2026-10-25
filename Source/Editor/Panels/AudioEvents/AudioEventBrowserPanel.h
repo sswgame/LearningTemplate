@@ -9,7 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Panels/AudioEvents/AudioEventBrowserUtil.h"
+#include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Audio/AudioEngineState.h"

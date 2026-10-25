@@ -13,9 +13,9 @@
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Panels/Profiler/ProfilerCallTree.h"
-#include "Editor/Panels/Profiler/ProfilerScopeHistory.h"
-#include "Editor/Panels/Profiler/ProfilerTimelineLayout.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
+#include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 

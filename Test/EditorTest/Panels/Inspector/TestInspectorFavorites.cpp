@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Inspector/InspectorFavorites.h"
+#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
