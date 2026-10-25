@@ -62,6 +62,16 @@ namespace sw
             return areEngineServicesBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
         }
 
+        /**
+         * @brief 지금 스레드가 작업 풀의 워커이면 true 입니다(서비스가 없으면 false).
+         * @details "메인 스레드 전용" 정적 칸(창 · 입력 · 에디터 UI 초기화)이 `SW_ASSERT( engine::isOnPoolWorker() == false )` 로 근거를 코드에 둔다.
+         *          창 메시지는 OS 가 창을 만든 스레드에서만 주고, 엔진이 다른 스레드를 만드는 길은 작업 풀뿐이라 이 한 검사가 "동시 첫 호출 없음" 을 지킨다.
+         */
+        inline bool isOnPoolWorker()
+        {
+            return areEngineServicesBound() && getSubsystem<TaskManager>().isWorkerThread();
+        }
+
         /** @brief 지금 스레드의 스크래치 슬롯입니다. 워커면 그 번호, 아니면 그 스레드가 처음 물을 때 받은 고유한 도우미 칸입니다. */
         inline uint32 getParallelScratchSlot()
         {

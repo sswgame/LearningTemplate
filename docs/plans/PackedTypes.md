@@ -53,7 +53,7 @@
 | `ReflectionProbeBaker` `decodeHalf` | Inf · NaN 은 부호 있는 `kMaxFloat`(거르기가 NaN 을 퍼뜨리지 않게) | 유한값은 같고 Inf · NaN 이 다름 | 유한값만 `toFloat`, 비유한은 옛 규칙 유지(숨은 동작 변경 없음) |
 | `FrameRendererUtil` `halfToUnorm8` | 음수 · -0 · 음의 NaN 은 0, 양의 Inf · NaN 은 255, 그 외 `value*255+0.5` 버림 | `unorm8::fromFloat` 와 반올림 규칙이 같다. 다만 NaN 은 0 이 됨 | 부호 · 비유한 분기만 남기고 나머지는 `toFloat` + `unorm8::fromFloat` |
 
-테스트는 두 곳에 옛 함수 사본과 65536 개 비트 패턴을 전부 견주는 단언을 더했습니다(`ReadPixelHalfMatchesLegacyDecode`, `HalfToUnorm8MatchesLegacyDecode`). `decodeHalf` 는 파일 안 비공개라 직접 테스트가 없습니다.
+테스트는 두 곳에 옛 함수 사본과 65536 개 비트 패턴을 전부 견주는 단언을 더했습니다(`ReadPixelHalfMatchesLegacyDecode`, `HalfToUnorm8MatchesLegacyDecode`). `decodeHalf` 의 규칙은 `half::toFiniteFloat` 로 올려 `HalfTest.ToFiniteFloatClampsOnlyNonFinite` 가 65536 비트 패턴을 모두 견줍니다(유한값은 `toFloat` 와 같고 Inf · NaN 은 부호 있는 `kMaxFloat`). HLSL 쪽 f16 해독은 저장소에 없습니다(`f16tof32` · `min16float` 쓰임 0 — 첨부 읽기는 CPU 에서만 합니다).
 읽을 문서: 이 문서 1절. 고칠 문서: 이 문서 단위 절과 `진행`.
 
 ### P3 직렬화 · 리플렉션 연결

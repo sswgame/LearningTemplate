@@ -2,6 +2,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -316,6 +317,8 @@ namespace sw
 
                 // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다. 요청하지 않으면
                 // `isPointerInside()` 와 `isPointerOverRect()` 가 늘 false 다.
+                // `s_bTrackingLeave` 는 창 메시지 펌프(창을 만든 메인 스레드, `App::run` → `processMessages`)에서만 닿는다 — 작업 풀 워커에서 오면 검사 뒤 채우기가 겹친다.
+                SW_ASSERT( engine::isOnPoolWorker() == false );
                 if ( s_bTrackingLeave == false && event._pNativeWindow != nullptr )
                 {
                     TRACKMOUSEEVENT trackEvent{};
@@ -551,6 +554,7 @@ namespace sw
 
     void InputManager::disableWindowsAccessibilityShortcuts()
     {
+        SW_ASSERT( engine::isOnPoolWorker() == false ); // `s_bDisabled` 검사 뒤 채우기 — 입력 설정은 메인 스레드 전용이다(`InputManager` 의 다른 메서드와 같다)
         if ( s_bDisabled == false )
         {
             SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );
@@ -575,6 +579,7 @@ namespace sw
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
+        SW_ASSERT( engine::isOnPoolWorker() == false ); // `disable…` 와 같은 `s_bDisabled` 를 쓴다(`shutdown` 이 부른다)
         if ( s_bDisabled )
         {
             SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );

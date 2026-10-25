@@ -1213,6 +1213,104 @@ SW_TEST_CASE( TaskManagerTest, OppositeEdgesAddedConcurrentlyNeverBothSucceed )
 }
 
 /**
+ * @brief [TaskManagerTest] 본문 안에서 만든 자식을 부모의 후속으로 거는 일(`부모.runBefore( 자식 )`)은 사이클이라 거부된다. 부모는 자식의 완료를 기다리므로 걸면 `waitAll` 이 멈춘다.
+ * @details 자식 → 부모 완료 기다림은 후속 목록의 간선이 아니어서 `_pParent` 사슬로 따로 검사한다. 손자도 같다. 형제끼리의 간선은 사이클이 아니다.
+ */
+SW_TEST_CASE( TaskManagerTest, ParentCannotRunBeforeItsOwnDescendant )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<int32> childRejectedCount{ 0 };
+    sw::atomic<int32> grandchildRejectedCount{ 0 };
+    sw::atomic<int32> siblingLinkedCount{ 0 };
+    sw::atomic<int32> ranCount{ 0 };
+    sw::TaskHandle    parent;
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a parent cannot run before its own child" );
+        parent = manager.emplaceTask( "Parent", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+        {
+            sw::TaskHandle child   = manager.emplaceTask( "Child", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+              {
+                ranCount.fetch_add( 1 );
+            } ) );
+            sw::TaskHandle sibling = manager.emplaceTask( "Sibling", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+            {
+                ranCount.fetch_add( 1 );
+            } ) );
+            // 손자는 자식(`host`)의 본문 안에서 만든다. 부모 본문이 끝나도 도는 본문이라 부모의 지역 변수는 잡지 않는다.
+            sw::TaskHandle host = manager.emplaceTask( "Host", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+            {
+                sw::TaskHandle grandchild = manager.emplaceTask( "Grandchild", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+                {
+                    ranCount.fetch_add( 1 );
+                } ) );
+                if ( parent.runBefore( grandchild ) == false )
+                    grandchildRejectedCount.fetch_add( 1 );
+                grandchild.submit();
+            } ) );
+            if ( parent.runBefore( child ) == false )
+                childRejectedCount.fetch_add( 1 );
+            if ( child.runBefore( sibling ) )
+                siblingLinkedCount.fetch_add( 1 );
+            sibling.submit();
+            child.submit();
+            host.submit();
+        } ) );
+        parent.submit();
+        SW_EXPECT_TRUE_MSG( manager.waitAll( kWaitTimeoutMs ), "부모 → 자식 간선이 걸려 waitAll 이 멈췄습니다" );
+    }
+    SW_EXPECT_EQUAL( 1, childRejectedCount.load() );
+    SW_EXPECT_EQUAL( 1, grandchildRejectedCount.load() );
+    SW_EXPECT_EQUAL( 1, siblingLinkedCount.load() );
+    SW_EXPECT_EQUAL( 3, ranCount.load() );
+    SW_EXPECT_EQUAL( 2u, logs.countWithID( "Task.DependencyCycle" ) );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 서로 다른 `TaskManager`(= 다른 풀)의 태스크끼리는 간선을 걸지 않고 오류로 알린다.
+ * @details 검사와 걸기를 지키는 잠금이 풀마다 하나라서, 다른 풀 사이의 반대 방향 간선을 동시에 걸면 서로를 못 보고 둘 다 통과한다 — 그 동시 정확성을 보증하지 못해 거부한다.
+ */
+SW_TEST_CASE( TaskManagerTest, DependencyAcrossManagersIsRejected )
+{
+    sw::TaskManager firstManager;
+    sw::TaskManager secondManager;
+    SW_ASSERT_TRUE( firstManager.initialize( 1 ) );
+    SW_ASSERT_TRUE( secondManager.initialize( 1 ) );
+
+    sw::atomic<int32> ranCount{ 0 };
+    sw::TaskHandle    firstTask  = firstManager.emplaceTask( "First", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+        { ranCount.fetch_add( 1 ); } ) );
+    sw::TaskHandle    secondTask = secondManager.emplaceTask( "Second", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+       { ranCount.fetch_add( 1 ); } ) );
+    sw::TaskHandle    sameTask   = firstManager.emplaceTask( "Same", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&]()
+         { ranCount.fetch_add( 1 ); } ) );
+
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "dependencies across task managers must be rejected" );
+        SW_EXPECT_FALSE( firstTask.runBefore( secondTask ) );
+        SW_EXPECT_FALSE( secondTask.runBefore( firstTask ) );
+    }
+    SW_EXPECT_EQUAL( 2u, logs.countWithID( "Task.DependencyCrossPool" ) );
+    SW_EXPECT_TRUE( firstTask.runBefore( sameTask ) ); // 같은 매니저끼리는 그대로 걸린다
+
+    firstTask.submit();
+    sameTask.submit();
+    secondTask.submit();
+    SW_EXPECT_TRUE( firstManager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_TRUE( secondManager.waitAll( kWaitTimeoutMs ) );
+    SW_EXPECT_EQUAL( 3, ranCount.load() );
+
+    firstManager.shutdown();
+    secondManager.shutdown();
+}
+
+/**
  * @brief [TaskManagerTest] 취소는 후속에 전파되지 않는다 — 취소된 선행은 본문만 건너뛰고 후속은 돌며, 후속은 `isCancelled` 로 선행의 취소를 안다.
  */
 SW_TEST_CASE( TaskManagerTest, CancelledPrerequisiteStillReleasesItsSuccessor )

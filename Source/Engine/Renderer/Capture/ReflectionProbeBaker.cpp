@@ -53,14 +53,8 @@ namespace sw
                 {float3{ 0.0f, 0.0f, -1.0f }, float3{ 0.0f, 1.0f, 0.0f }},
             };
 
-            /** @brief IEEE 반정밀도 하나를 float32 로 폅니다(RGBA16F 첨부 읽기). */
-            static float32 decodeHalf( uint16 bits )
-            {
-                const half value = half::fromBits( bits );
-                if ( value.isFinite() == false )
-                    return ( bits & 0x8000u ) != 0u ? -MathUtil::kMaxFloat : MathUtil::kMaxFloat; // 무한대 · NaN 은 가장 큰 값으로 — 거르기가 NaN 을 퍼뜨리지 않게
-                return value.toFloat();
-            }
+            /** @brief IEEE 반정밀도 하나를 float32 로 폅니다(RGBA16F 첨부 읽기). 무한대 · NaN 은 가장 큰 값으로 — 거르기가 NaN 을 퍼뜨리지 않게(`half::toFiniteFloat`). */
+            static float32 decodeHalf( uint16 bits ) { return half::fromBits( bits ).toFiniteFloat(); }
 
             static void setError( string* pOutError, const utf8* pMessage )
             {

@@ -132,6 +132,23 @@ namespace sw
                 listPending.pop_back();
             }
         }
+
+        /**
+         * @brief `pNode` 가 `pAncestor` 의 (손자 포함) 자식이면 true 입니다 — 본문 안에서 만든 태스크 사슬을 `_pParent` 로 거슬러 오릅니다.
+         * @details 부모는 자식이 모두 끝나야 완료되므로 "자식 → 부모" 가 후속 목록에 없는 숨은 간선입니다. `부모.runBefore( 자식 )` 은 자식이 부모의 완료를 기다리는데
+         *          부모는 그 자식의 완료를 기다리는 사이클이라 걸면 `waitAll` 이 멈춥니다. 후속 목록으로는 보이지 않아 이 사슬을 따로 봅니다.
+         *          사슬 노드는 자식이 참조를 쥐고 있어(`createTaskNode` 의 `retain`) 자식이 끝나지 않은 동안 살아 있다. 부르는 쪽이 `pNode` 가 아직 끝나지 않았음을 확인한 뒤에 부른다.
+         *          (완료 경로가 `_pParent` 를 비우는 순간과 겹치면 사슬이 거기서 끊기고 "아니다" 로 답한다 — 끝난 노드는 새 간선이 기다림을 만들지 못하므로 맞는 답이다.)
+         */
+        bool isDescendantOf( const TaskNode* pNode, const TaskNode* pAncestor )
+        {
+            for ( const TaskNode* pParent = pNode->_pParent.load( std::memory_order_acquire ); pParent != nullptr; pParent = pParent->_pParent.load( std::memory_order_acquire ) )
+            {
+                if ( pParent == pAncestor )
+                    return true;
+            }
+            return false;
+        }
     } // namespace
 
     bool TaskHandle::runBefore( const TaskHandle& targetTask )
@@ -139,6 +156,15 @@ namespace sw
         TaskNode* const pTargetNode = targetTask.getNode();
         if ( _pNode == nullptr || pTargetNode == nullptr )
             return false;
+
+        // 간선은 한 풀 안에서만 건다. 사이클 검사와 걸기를 지키는 잠금이 풀마다 하나라서, 서로 다른 풀의 태스크끼리 반대로 거는 두 스레드는 서로의 간선을 못 보고
+        // 둘 다 통과한다. 그 동시 정확성을 보증할 수 없으므로 거부한다(한 매니저는 풀이 하나라 다른 매니저의 태스크끼리 거는 경우뿐이다).
+        if ( _pNode->_pPool != pTargetNode->_pPool )
+        {
+            SW_LOG_ERROR_ID( "Task.DependencyCrossPool", "Task '%#' cannot run before '%#': they belong to different task managers, so the dependency was not added.", describeNode( _pNode ),
+                             describeNode( pTargetNode ) );
+            return false;
+        }
 
         bool bCycle{ false };
         bool bAttached{ false };
@@ -151,7 +177,9 @@ namespace sw
             const bool bSelf              = _pNode == pTargetNode;
             const bool bBothPending       = isNodeCompleted( _pNode ) == false && isNodeCompleted( pTargetNode ) == false;
             const bool bTargetReachesThis = bSelf == false && bBothPending && canReachThroughSuccessors( pTargetNode, _pNode );
-            bCycle                        = bSelf || bTargetReachesThis;
+            // 대상이 이 태스크의 본문 안에서 만든 자식이면, 이 태스크는 대상의 완료를 기다리는데 대상은 이 태스크의 완료를 기다리게 된다.
+            const bool bTargetIsDescendant = bSelf == false && bBothPending && isDescendantOf( pTargetNode, _pNode );
+            bCycle                         = bSelf || bTargetReachesThis || bTargetIsDescendant;
             if ( bCycle == false )
             {
                 // 의존 수를 **먼저** 올린다. 목록에 붙인 뒤에 올리면, 그 사이에 이 태스크가 끝나 수를 내려 대상이 너무 일찍 돌 수 있다.

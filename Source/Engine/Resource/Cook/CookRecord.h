@@ -30,6 +30,8 @@ namespace sw
 
         /** @brief 끝난 작업 @p job 과 출력 바이트로 기록을 만듭니다. */
         static CookRecord make( const CookJob& job, const vector<uint8>& outputBytes );
+        /** @brief 출력 해시를 이미 구했을 때의 기록 만들기입니다(`CookStore` 가 시간을 재며 한 번만 해시한다 — 바이트를 다시 훑지 않는다). */
+        static CookRecord make( const CookJob& job, uint64 outputHash );
 
         /** @brief 기록을 글로 씁니다. */
         [[nodiscard]] bool write( string_view absPath ) const;

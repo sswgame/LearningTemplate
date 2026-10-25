@@ -40,9 +40,14 @@ namespace sw
 {
     CookRecord CookRecord::make( const CookJob& job, const vector<uint8>& outputBytes )
     {
+        return make( job, ContentHash::computeBytes( outputBytes ) );
+    }
+
+    CookRecord CookRecord::make( const CookJob& job, uint64 outputHash )
+    {
         CookRecord record;
         record._key        = job.computeKey();
-        record._outputHash = ContentHash::computeBytes( outputBytes );
+        record._outputHash = outputHash;
         record._listInput  = job.getInputs();
         return record;
     }

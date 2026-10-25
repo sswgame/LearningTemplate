@@ -196,10 +196,12 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
-            s_MainDisplay = static_cast<Display*>( _pRHIDevice->getNativeDevice() );
-            s_MainContext = static_cast<GLXContext>( _pRHIDevice->getNativeContext() );
-            if ( s_MainDisplay == nullptr )
-                s_MainDisplay = glXGetCurrentDisplay();
+            // 검사는 지역 변수에서 하고 정적 칸에는 값을 한 번만 쓴다 — 검사 뒤 채우기(`lazyFill`) 모양이 아니다.
+            Display* pMainDisplay = static_cast<Display*>( _pRHIDevice->getNativeDevice() );
+            if ( pMainDisplay == nullptr )
+                pMainDisplay = glXGetCurrentDisplay();
+            s_MainDisplay                      = pMainDisplay;
+            s_MainContext                      = static_cast<GLXContext>( _pRHIDevice->getNativeContext() );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow_GLX;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow_GLX;

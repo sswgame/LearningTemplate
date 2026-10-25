@@ -227,6 +227,7 @@ namespace sw
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
          * @note 반환된 후속이 `listTask` 의 태스크보다 먼저 끝나도록 거는 사이클(`후속.runBefore( 태스크 )`)은 검사가 보지 못합니다 — 트리거 → 후속 연결이 후속 목록의 간선이 아닙니다.
+         *       그 까닭과 피하는 법(반환 핸들을 입력의 선행으로 걸지 않는다)은 `TaskHandle::runBefore` 의 경고에 있습니다.
          */
         TaskHandle whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 

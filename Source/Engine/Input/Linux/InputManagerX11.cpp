@@ -2,6 +2,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -66,6 +67,8 @@ namespace sw
             /** @brief 활성 창에 대한 XIC 를 지연 생성해 반환합니다(실패하면 nullptr). */
             static XIC getOrCreateInputContext()
             {
+                // XIM/XIC 칸은 창 메시지 처리(`postTextInput` ← `processNativeEvent`, 창을 만든 메인 스레드)에서만 닿는다 — 워커에서 오면 검사 뒤 채우기가 겹친다.
+                SW_ASSERT( engine::isOnPoolWorker() == false );
                 MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow == nullptr )
@@ -235,6 +238,8 @@ namespace sw
             /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서" 를 만들어 캐시합니다. */
             static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
             {
+                // 커서 칸은 `setCursorVisiblePlatform` ← `syncMouseLock`(프레임 시작, 메인 스레드)에서만 닿는다 — `PlayerControllerComponent` 는 `_pMouse` 의 플래그만 바꾼다.
+                SW_ASSERT( engine::isOnPoolWorker() == false );
                 // 커서도 Display 소유 리소스다. 다른 Display 에서 그대로 쓰면 잘못된 리소스 id 가 된다.
                 if ( s_invisibleCursor != 0 && s_pCursorDisplay == pDisplay )
                     return s_invisibleCursor;
