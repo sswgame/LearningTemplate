@@ -253,7 +253,7 @@
 # Test/EditorTest — 이전 대기
 "Test/EditorTest/Common/Commands/TestEditorCommandRegistry.cpp" = 2
 "Test/EditorTest/Common/Workspace/TestEditorExtensionSubsystems.cpp" = 1
-"Test/EditorTest/Panels/ContentBrowser/TestContentBrowserLogic.cpp" = 1
+"Test/EditorTest/Panels/ContentBrowser/Model/TestContentBrowserLogic.cpp" = 1
 # Test/EngineTest — 이전 대기
 "Test/EngineTest/Automation/TestAutomationGameplaySteps.cpp" = 3
 "Test/EngineTest/Automation/TestAutomationScenario.cpp" = 8

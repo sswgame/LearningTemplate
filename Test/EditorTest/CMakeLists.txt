@@ -13,7 +13,7 @@ endif()
 #
 # ImGui 를 모르는 층(Editor/Common 의 Asset · Commands · Config · Localization · SourceControl · Workspace)과, 뷰 층(Panels · Viewport)의 `Model` 폴더
 # (`Panels/<패널>/Model` · `Viewport/Model`)는 `EditorCore`(Source/Editor/CMakeLists.txt)가 지은 오브젝트를 `sw_linkEditorCore` 로 EditorModule 과
-# **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다). Common 의 여섯 폴더 헤더의 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
+# **같은 것**으로 받는다 — 그 폴더의 목록은 여기 없다(폴더에 파일을 더하면 자동으로 들어온다). 그 폴더들의 REFLECT 헤더 코드젠도 같은 곳(`EditorCoreReflect`)에서 받는다.
 #
 # 아래 EXTRA_SOURCES 는 코어 밖(Common 바로 아래 · Backend · GUI · Widgets · Popups · SelfTest)에서 **테스트가 실제로 링크해야
 # 하는 것만** 적은 손 목록이다.
@@ -59,11 +59,9 @@ if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
 	add_dependencies(EditorTest ${swActiveGameTarget})
 endif()
 
-# 코어 밖의 REFLECT 헤더만 여기서 코드젠한다(뷰포트 겹침 배치 — `Viewport/Model` 의 유일한 REFLECT 헤더 — 와 테스트 프로브). Common 코어 폴더의 헤더는
-# EditorCoreReflect 가 만든다(`Model` 폴더의 REFLECT 헤더는 소비자마다 코드젠한다: 층별 정규식으로는 뷰 층 안의 하위 폴더만 골라 담을 수 없다).
+# 코어 밖의 REFLECT 헤더(테스트 프로브)만 여기서 코드젠한다. 코어 폴더와 뷰 층 `Model` 폴더(뷰포트 겹침 배치 포함)의 헤더는 EditorCoreReflect 가 만든다.
 sw_addReflectionStep(EditorTest
 	HEADERS
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES
 		"${CMAKE_SOURCE_DIR}/Source"
