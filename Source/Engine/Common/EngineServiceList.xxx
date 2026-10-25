@@ -74,6 +74,10 @@ SW_ENGINE_SERVICE( class, GameNetSession, Required, GameVisible )
 SW_ENGINE_SERVICE_CONST( struct, EngineDefaultAssets, Required, GameVisible )
 // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙, 읽기 전용). 엔진과 에디터가 읽는다 — 게임은 자기 `GameSettings` 를 읽는다.
 SW_ENGINE_SERVICE_CONST( struct, PackEngineSettings, Required, HostOnly )
+// 호스트 설정 둘(읽기 전용) - 소유자는 서브시스템 Config(`ConfigManager`)다. 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다: 표가 둘이면 설정도 둘이고,
+// 다시 읽기는 같은 자리에서 일어나 이 칸의 주소가 바뀌지 않는다. 테스트는 `ScopedEngineServiceOverride` 로 다른 값을 걸어 본다.
+SW_ENGINE_SERVICE_CONST( struct, EngineConfig, Required, HostOnly )
+SW_ENGINE_SERVICE_CONST( struct, GameConfig, Required, GameVisible )
 
 SW_ENGINE_SERVICE_OPT( class, MemoryProfiler, HostOnly )
 // 진단 도구 둘 — 에셋 로드 기록부와 상태 해시 이력. 엔진 루프와 테스트 하네스가 서비스 범위에 넣고, 엔진 범위를 세우지 않는 호스트(도구)는 없다(그때 기록은 꺼진 것과 같다).

@@ -18,7 +18,9 @@
 #include "Engine/Bootstrap/NamePoolSubsystem.h"
 #include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -186,11 +188,14 @@ namespace sw::engine
         }
 #endif
         parts._pInputManager = &startup.addSubsystem( sw::make_unique<InputManager>() );
-        // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다).
+        // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
         {
             SW_MEMORY_SCOPE( EngineMisc );
             parts._pConfigManager = &startup.addSubsystem( sw::make_unique<ConfigManager>() );
         }
+        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
+        (void)startup.bind( &parts._pConfigManager->getHostEngineConfig() ); // 새 범위 - 겹치지 않는다
+        (void)startup.bind( &parts._pConfigManager->getHostGameConfig() );   // 새 범위 - 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Asset );
             startup.addSubsystem( sw::make_unique<AssetManager>() );

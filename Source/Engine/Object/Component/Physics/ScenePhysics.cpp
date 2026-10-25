@@ -4,6 +4,7 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -141,7 +142,7 @@ namespace sw
             return;
         // 고정 스텝의 출처는 엔진 설정 하나다 — 물리는 그 스텝을 서브스텝 수로 나눈다(상한도 같은 배수).
         // 미리보기 씬 정책이 덮어쓰면 그 스텝이다(`setFixedStepOverride`).
-        const EngineConfig& engineConfig = EngineConfig::getActive();
+        const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();
         const uint32        subStepCount = pSettings->_subStepCount;
         const float32       fixedStep    = _fixedStepOverride > 0.0f ? _fixedStepOverride : engineConfig._fixedDeltaTime;
         _accumulator.configure( fixedStep / static_cast<float32>( subStepCount ), engineConfig._maxFixedStepPerFrame * subStepCount );

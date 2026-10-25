@@ -422,20 +422,13 @@ namespace sw
 
     void Engine::onConfigReloaded( const hashed_string& configTypeName )
     {
-        if ( configTypeName == GameConfig::StaticType()->_fullyQualifiedName )
-        {
-            const GameConfig* pGameConfig = _pConfigManager != nullptr ? _pConfigManager->getConfig<GameConfig>() : nullptr;
-            if ( pGameConfig != nullptr )
-                GameConfig::setActive( *pGameConfig );
+        // 엔진 설정 · 게임 프리셋은 Config 가 든 자리(서비스 표가 가리키는 칸)에서 제자리로 바뀌었다 - 읽는 쪽이 다음에 읽을 때 보므로 옮겨 적을 사본이 없다.
+        // 이 알림에서 따로 할 일은 엔진 설정이 바꾼 값을 이미 만들어 둔 장치에 다시 알리는 것뿐이다.
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
             return;
-        }
-        const EngineConfig* pEngineConfig = _pConfigManager != nullptr ? _pConfigManager->getConfig<EngineConfig>() : nullptr;
-        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName || pEngineConfig == nullptr )
-            return;
-        EngineConfig::setActive( *pEngineConfig );
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( _pRHI != nullptr )
-            _pRHI->setPreferredVSync( pEngineConfig->_window._bVSync );
+            _pRHI->setPreferredVSync( engine::getSubsystem<EngineConfig>()._window._bVSync );
     }
 
     bool Engine::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )

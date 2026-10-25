@@ -45,6 +45,5 @@ BehaviorTaskRegistry = "LinkTimeRegistry" # 게임 · 키트 모듈 이미지의
 GameInstanceBase = "Stateless"      # 활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다
 TradeStoreLogic = "Stateless"       # 활성 창구 아님 — getActiveTable 은 "활성 거래 링크" 저장소 표의 이름 상수다(정적 사본이 아니다)
 EditorThemeUtil = "PendingScopeMove" # 에디터가 현재 테마 사본을 정적으로 든다(`getActiveTheme`). 에디터 컨텍스트 소유로 옮기는 일은 에디터 작업자의 몫
-EngineConfig = "PendingScopeMove"   # ConfigManager 소유로 옮기는 중(ArchitectureSeams 3 단계 — 첫 커밋 단위)
-GameConfig = "PendingScopeMove"     # 같은 이전의 둘째 단위
+GameConfig = "PendingScopeMove"     # ConfigManager 소유로 옮기는 중(ArchitectureSeams 3 단계 — 둘째 커밋 단위)
 Render2DSettings = "PendingScopeMove" # 같은 이전의 셋째 단위

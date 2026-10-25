@@ -46,7 +46,8 @@ namespace sw
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
      * @details 이 헤더는 형식(타입 · 범위)만 정하고 값은 모두 그 파일에 있습니다(언리얼 `BaseEngine.ini` 와 같은 바탕 층). 그래서 파일은 모든 키를 적고
      *          (`ConfigFileSchemaTest` 가 빠진 키를 막는다), 빠진 숫자 키는 범위 검사(`Min`)에서 로드 오류가 됩니다. 기동은 파일을 읽은 뒤에만 이 값을 봅니다
-     *          (`getActive`). 파일을 읽기 전에 필요한 리소스 우선순위는 구성 때 베이크한 같은 파일의 사본(`ResourcePaths::getDefaultSearchPriority`)에서 읽습니다.
+     *          (소유자는 `ConfigManager` 이고 읽는 쪽은 `engine::getSubsystem<EngineConfig>()` 다 - 정적 활성본이 없어 표마다 값이 따로 있고, 다시 읽기는 제자리다).
+     *          파일을 읽기 전에 필요한 리소스 우선순위는 구성 때 베이크한 같은 파일의 사본(`ResourcePaths::getDefaultSearchPriority`)에서 읽습니다.
      *          `ConfigBaseLayer` 메타는 프로젝트 설정 창이 이 파일을 "다른 값만" 이 아니라 모든 키로 쓰게 합니다(`ProjectSettingsDocument`).
      */
     REFLECT( Meta = "ConfigBaseLayer" )
@@ -79,10 +80,5 @@ namespace sw
 
         PROPERTY()
         vector<string> _listResourcePriority{}; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
-
-        /** @brief 호스트가 읽은 활성 값을 엔진 안(씬 물리의 고정 스텝 등)에 알립니다. 기동 · 설정 다시 읽기 때 호스트가 부릅니다. */
-        static void setActive( const EngineConfig& config );
-        /** @brief 활성 값입니다. 호스트가 알리기 전에는 빈 형식(0)이므로 설정을 읽은 뒤에만 부릅니다. */
-        static const EngineConfig& getActive();
     };
 } // namespace sw

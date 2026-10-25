@@ -29,9 +29,6 @@ namespace sw
     {
         SW_LOG_CALLER( "ConfigManager" );
 
-        /** @brief 호스트가 알린 표입니다(`ConfigManager::setPrimary`). */
-        ConfigManager* s_pPrimaryConfigManager = nullptr;
-
         /** @brief @p fileObject 의 키마다 두 쪽 값이 같은 JSON 이면 경로를 담습니다. 파일 쪽이 객체면 안으로 들어간다(구조체 칸). */
         void collectEqualMembers( const JSONValue& fileObject, const JSONValue& left, const JSONValue& right, const string& prefix,
                                   vector<string>& outListKey )
@@ -219,20 +216,28 @@ namespace sw
         return ReloadOutcome::NotTracked;
     }
 
-    ConfigManager::~ConfigManager()
+    ConfigManager::ConfigManager()
+        : _pEngineSlot{ make_unique<EngineConfig>() }
+        , _pGameSlot{ make_unique<GameConfig>() }
+        , _pHostEngineConfig{ static_cast<EngineConfig*>( _pEngineSlot.get() ) }
+        , _pHostGameConfig{ static_cast<GameConfig*>( _pGameSlot.get() ) }
     {
-        if ( s_pPrimaryConfigManager == this )
-            s_pPrimaryConfigManager = nullptr;
     }
+
+    ConfigManager::~ConfigManager() = default;
 
     ConfigManager* ConfigManager::findPrimary()
     {
-        return s_pPrimaryConfigManager;
+        return engine::findSubsystem<ConfigManager>();
     }
 
-    void ConfigManager::setPrimary( ConfigManager* pManager )
+    unique_ptr<IConfig>* ConfigManager::findHostSlot( const TypeInfo& type )
     {
-        s_pPrimaryConfigManager = pManager;
+        if ( &type == EngineConfig::StaticType() )
+            return &_pEngineSlot;
+        if ( &type == GameConfig::StaticType() )
+            return &_pGameSlot;
+        return nullptr;
     }
 
 } // namespace sw
@@ -242,7 +247,6 @@ namespace sw
     SubsystemInitResult ConfigManager::initializeSubsystem()
     {
         setRootDirectory( ResourcePaths::getProjectFolderPath() );
-        setPrimary( this ); // 거두는 것은 이 표의 소멸자다
 #if defined( SW_SHIPPING )
         EngineConfig probe;
         if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
@@ -257,14 +261,11 @@ namespace sw
         const ConfigSource engineSource = ConfigSource::disk( config::kFileRuntimeEngineConfig );
         const ConfigSource gameSource   = ConfigSource::disk( GameSelection::getConfigPath() );
 #endif
-        const EngineConfig* pEngineConfig = loadHostConfig<EngineConfig>( engineSource );
-        if ( pEngineConfig == nullptr )
+        // 읽은 값은 호스트 자리(`getHostEngineConfig` · `getHostGameConfig`)에 담긴다 - 서비스 표가 그 주소를 이미 쥐고 있다.
+        if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
             return SubsystemInitResult::Failed;
-        EngineConfig::setActive( *pEngineConfig );
-        const GameConfig* pGameConfig = loadHostConfig<GameConfig>( gameSource );
-        if ( pGameConfig == nullptr )
+        if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
             return SubsystemInitResult::Failed;
-        GameConfig::setActive( *pGameConfig );
         return SubsystemInitResult::Succeeded;
     }
 } // namespace sw

@@ -105,8 +105,6 @@
 "Source/Engine/Common/EngineServices.cpp" = 3
 "Source/Engine/Common/RenderTargetDeclaration.cpp" = 1
 # Source/Engine/Config — 이전 대기
-"Source/Engine/Config/ConfigManager.cpp" = 1
-"Source/Engine/Config/EngineConfig.cpp" = 1
 "Source/Engine/Config/GameAutoplay.cpp" = 1
 "Source/Engine/Config/GameConfig.cpp" = 1
 "Source/Engine/Config/GameSelection.cpp" = 1

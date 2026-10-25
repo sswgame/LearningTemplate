@@ -51,7 +51,7 @@ namespace sw
         RenderDocCapture::initialize( commandLine.isArgumentProvided( CommandLineArgument::RENDERDOC ) );
 
         RHIBackend          commandLineBackend{};
-        const EngineConfig& engineConfig = EngineConfig::getActive();
+        const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();
         if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) == false )
             gv_rhiBackend = engineConfig._window._defaultRHI;
 

@@ -305,7 +305,7 @@ namespace sw
                 bCooking    = ( commandLine.getArgument( argument, bGiven ) && bGiven ) || bCooking;
             }
         }
-        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCooking ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
+        (void)mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, bCooking ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
         return SubsystemInitResult::Succeeded;
     }
 

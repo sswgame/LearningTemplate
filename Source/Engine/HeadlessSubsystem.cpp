@@ -89,7 +89,7 @@ namespace sw
             /** @brief 팩에 담을 셰이더 바이너리 폴더입니다 — 명령줄 백엔드(`-dx12` …), 없으면 엔진 설정의 `_defaultRHI` 입니다. */
             static string resolveShaderFolder( const CommandLineManager& commandLine )
             {
-                RHIBackend backend = EngineConfig::getActive()._window._defaultRHI;
+                RHIBackend backend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
                 RHIBackend commandLineBackend{};
                 if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) )
                     backend = commandLineBackend;
