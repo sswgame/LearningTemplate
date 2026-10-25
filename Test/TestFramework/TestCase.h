@@ -14,6 +14,10 @@ namespace test
         sw::string           _groupName;
         sw::string           _testName;
         sw::Delegate<void()> _func;
+        /** @brief 생성기가 준 예상 비용(초)입니다. 0 이면 모른다. 샤드 배정의 비용표(`--test_costs`)에 이 케이스가 없을 때 쓴다 — 동적 이름은 정책 파일에 적을 수 없다. */
+        float64 _expectedSeconds{ 0.0 };
+        /** @brief 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)의 케이스면 그 매개변수(`-dx12` …), 아니면 빈 글. 도는 동안 `getCurrentCaseParameter` 로 보인다. */
+        sw::string _parameter;
 
         /** @brief `Suite.Test` 전체 이름을 반환합니다. */
         sw::string fullName() const { return _groupName + "." + _testName; }

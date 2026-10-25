@@ -12,6 +12,7 @@ namespace test
     CaseRecord TestRegistry::runCase( const TestCaseInfo& testInfo, uint32 iteration )
     {
         _currentContext.begin( testInfo.fullName() );
+        _currentContext.setParameter( testInfo._parameter );
         for ( ITestRunListener* pListener : _listListener )
         {
             pListener->onCaseStarted( testInfo );
@@ -101,6 +102,7 @@ namespace test
         if ( _options._bInvalidArgument )
             return 1;
 
+        _catalog.expandCaseGenerators(); // 엔진이 선 뒤에야 알 수 있는 목록(시나리오 폴더)으로 케이스를 만든다 — 고르기 · 나열 · 샤드 배정이 모두 이 표를 본다
         if ( _options._bListOnly )
         {
             listTests();

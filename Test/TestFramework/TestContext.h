@@ -42,6 +42,8 @@ namespace test
         void markSeedUsed() { _bSeedUsed = true; }
 
         sw::string                     getTestName() const { return _testName; }
+        void                           setParameter( const sw::string& parameter ) { _parameter = parameter; }
+        const sw::string&              getParameter() const { return _parameter; }
         const sw::vector<TestFailure>& getListFailure() const { return _listFailure; }
         bool                           hasFailed() const { return _listFailure.empty() == false; }
         bool                           isSkipped() const { return _bSkipped; }
@@ -52,6 +54,7 @@ namespace test
 
     private:
         sw::string                       _testName;
+        sw::string                       _parameter;
         sw::vector<TestFailure>          _listFailure;
         sw::vector<SkippedPart>          _listSkippedPart;
         sw::vector<sw::Delegate<void()>> _listCleanup;

@@ -157,7 +157,36 @@ namespace
         return true;
     }
 
+    /**
+     * @brief 기동 · 종료를 확인할 백엔드 스위치(`-dx11` · `-dx12` · `-vk` · `-gl`)입니다 — 케이스 `EveryBackendStartsRendersAndExitsCleanly.<백엔드>` 의 목록이다.
+     * @details **배포본은 백엔드를 하나만 링크한다**(`SW_SHIPPING_RHI_BACKEND`, 윈도우 기본 DX12 — `Source/Engine/CMakeLists.txt`). 없는 백엔드를 요구하면 `RHIBackendRegistry` 가 거절하고
+     *          App 이 0 이 아닌 코드로 끝난다. 그래서 배포본은 스위치 없이 "이 빌드가 가진 것" 하나(케이스 이름 `default`)로 돌린다.
+     *          스위치는 쿠킹 표의 줄마다 명령줄 이름이다 — 백엔드가 늘면 여기도 같이 는다.
+     */
+    sw::vector<sw::string> collectBackendSwitches()
+    {
+#if defined( SW_SHIPPING )
+        return sw::vector<sw::string>{ "" };
+#else
+    #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
+        return sw::vector<sw::string>{ SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
+    #undef SW_APP_SMOKE_BACKEND_SWITCH
+#endif
+    }
+
 #if !defined( SW_SHIPPING )
+    /** @brief 에디터를 켠 기동을 확인할 백엔드 스위치입니다(`EditorModeStartsAndExitsCleanly.<백엔드>`). */
+    sw::vector<sw::string> collectEditorBackendSwitches()
+    {
+        return sw::vector<sw::string>{ "-dx12", "-gl" };
+    }
+
+    /** @brief 백엔드 교체를 걸 시작 백엔드입니다(`BackendSwap*.<시작 백엔드>`) — 시나리오 `swapother` 가 DirectX 12 ↔ 11 로 바꾼다. */
+    sw::vector<sw::string> collectBackendSwapStarts()
+    {
+        return sw::vector<sw::string>{ "-dx12", "-dx11" };
+    }
+
     /**
      * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 입니다.
      * @details 줄 모양: `[Memory]   Editor  15538.7 KB  77.6%  2383 blocks | peak …`. `runApp` 에 표식 `"[Memory]   "` 을 주고 돌린 결과를 넘깁니다.
@@ -404,59 +433,31 @@ SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
 }
 
 /**
- * @brief [AppSmokeTest] 네 백엔드에서 기동 → 프레임 → 종료가 깨끗한가
- * @details 백엔드마다 따로 본다 — 한 판에 묶으면 "어느 백엔드가 깨졌나" 를 로그에서 다시 찾아야 한다.
- *          백엔드는 `-dx12 / -dx11 / -vk / -gl` 스위치로 고른다(쿠킹 표의 별칭과 같은 철자).
+ * @brief [AppSmokeTest] 백엔드에서 기동 → 프레임 → 종료가 깨끗한가 — 백엔드마다 케이스 하나(`.dx12` · `.dx11` · `.vk` · `.gl`)
+ * @details 백엔드마다 따로 본다 — 한 판에 묶으면 "어느 백엔드가 깨졌나" 를 로그에서 다시 찾아야 한다. 백엔드는 `-dx12 / -dx11 / -vk / -gl` 스위치로 고른다(쿠킹 표의 별칭과 같은 철자).
+ *          예상 비용은 옛 한 케이스 14 s 를 넷으로 나눈 값이다.
  */
-SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
+SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly, collectBackendSwitches, 3.5 )
 {
-#if defined( SW_SHIPPING )
-    // **배포본은 백엔드를 하나만 링크한다**(`SW_SHIPPING_RHI_BACKEND`, 윈도우 기본 DX12 —
-    // `Source/Engine/CMakeLists.txt`). 없는 백엔드를 요구하면 `RHIBackendRegistry` 가 거절하고
-    // App 이 0 이 아닌 코드로 끝난다. 그래서 여기서는 스위치 없이 "이 빌드가 가진 것" 으로 돌린다.
-    constexpr const utf8* kArrBackendSwitch[] = { "" };
-#else
-    // 스위치는 쿠킹 표의 줄마다 명령줄 이름이다(`-dx11` · `-dx12` · `-vk` · `-gl`) — 백엔드가 늘면 여기도 같이 는다.
-    #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
-    constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
-    #undef SW_APP_SMOKE_BACKEND_SWITCH
-#endif
-    uint32 checkedCount = 0;
-    for ( const utf8* pSwitch : kArrBackendSwitch )
-    {
-        string arguments{ "-gv_profileFrames=20 " };
-        arguments += pSwitch;
-        if ( expectCleanRun( arguments ) )
-            ++checkedCount;
-    }
-
-    // 하나라도 돌았으면 그것으로 계약을 확인한 것이다. **하나도 못 돌았으면 아무것도 검사하지 않았으므로**
-    // 초록으로 두면 안 된다 — 건너뛴 것으로 남긴다.
-    if ( checkedCount == 0 )
-        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+    string arguments{ "-gv_profileFrames=20 " };
+    arguments += pParameter;
+    // **하나도 못 돌았으면 아무것도 검사하지 않았으므로** 초록으로 두면 안 된다 — 이 백엔드의 케이스를 건너뛴 것으로 남긴다.
+    if ( expectCleanRun( arguments ) == false )
+        SW_TEST_SKIP( "the backend cannot stand up on this machine and is not required (--required_backends) - run where a GPU and driver exist" );
 }
 
 #if !defined( SW_SHIPPING )
 /**
- * @brief [AppSmokeTest] 에디터를 켠 기동도 깨끗한가
+ * @brief [AppSmokeTest] 에디터를 켠 기동도 깨끗한가 — 백엔드마다 케이스 하나(`.dx12` · `.gl`)
  * @details **에디터는 명시적으로 켜야 한다** — `-EnableEditor` 없이 돌린 것은 에디터 OFF 검증이다.
  *          배포본에는 에디터 모듈이 없으므로 이 케이스는 Dev 에만 있다.
  */
-SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
+SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, EditorModeStartsAndExitsCleanly, collectEditorBackendSwitches, 0.0 )
 {
-    constexpr const utf8* kArrBackendSwitch[] = { "-dx12", "-gl" };
-
-    uint32 checkedCount = 0;
-    for ( const utf8* pSwitch : kArrBackendSwitch )
-    {
-        string arguments{ "-gv_profileFrames=20 -EnableEditor " };
-        arguments += pSwitch;
-        if ( expectCleanRun( arguments ) )
-            ++checkedCount;
-    }
-
-    if ( checkedCount == 0 )
-        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+    string arguments{ "-gv_profileFrames=20 -EnableEditor " };
+    arguments += pParameter;
+    if ( expectCleanRun( arguments ) == false )
+        SW_TEST_SKIP( "the backend cannot stand up on this machine and is not required (--required_backends) - run where a GPU and driver exist" );
 }
 
 /**
@@ -578,35 +579,25 @@ SW_TEST_CASE( AppSmokeTest, ScreenshotQuitReportsAnUnwritableShot )
  *          고정 슬롯에 걸므로 합친 배치가 한 머티리얼의 텍스처로 그려진다. 교체 뒤 `Active backend is now` 줄의 두 값이 같아야 한다.
  *          교체는 시나리오 `swapother`(단계 `SwapBackend backend="other"` — DirectX 12 면 DirectX 11, DirectX 11 이면 DirectX 12)가 건다.
  */
-SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
+SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, BackendSwapFollowsTheNewDevice, collectBackendSwapStarts, 5.5 )
 {
-    constexpr const utf8* kArrSwapArgument[] = { "-dx12", "-dx11" };
+    string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " };
+    arguments += pParameter;
+    const AppRunResult result = runApp( arguments, "Active backend is now" );
+    if ( test::hasRunHere( result._outcome ) == false )
+        SW_TEST_SKIP( "this start backend is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
+    SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == 1, arguments.c_str() );
 
-    uint32 checkedCount = 0;
-    for ( const utf8* pSwapArgument : kArrSwapArgument )
-    {
-        string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " };
-        arguments += pSwapArgument;
-        const AppRunResult result = runApp( arguments, "Active backend is now" );
-        if ( test::hasRunHere( result._outcome ) == false )
-            continue;
-        ++checkedCount;
-        SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
-        SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == 1, arguments.c_str() );
-
-        const string&     line          = result._listMarkedLine[0];
-        const string_view kMergeKey     = "across materials ";
-        const string_view kBindlessKey  = "bindless sampling ";
-        const size_t      mergeIndex    = line.find( kMergeKey.data() );
-        const size_t      bindlessIndex = line.find( kBindlessKey.data() );
-        SW_ASSERT_TRUE_MSG( mergeIndex != string::npos && bindlessIndex != string::npos, line.c_str() );
-        const utf8 mergeValue    = line[mergeIndex + kMergeKey.size()];
-        const utf8 bindlessValue = line[bindlessIndex + kBindlessKey.size()];
-        SW_EXPECT_TRUE_MSG( mergeValue == bindlessValue, line.c_str() );
-    }
-
-    if ( checkedCount == 0 )
-        SW_TEST_SKIP( "neither DX12 nor DX11 is usable on this machine" );
+    const string&     line          = result._listMarkedLine[0];
+    const string_view kMergeKey     = "across materials ";
+    const string_view kBindlessKey  = "bindless sampling ";
+    const size_t      mergeIndex    = line.find( kMergeKey.data() );
+    const size_t      bindlessIndex = line.find( kBindlessKey.data() );
+    SW_ASSERT_TRUE_MSG( mergeIndex != string::npos && bindlessIndex != string::npos, line.c_str() );
+    const utf8 mergeValue    = line[mergeIndex + kMergeKey.size()];
+    const utf8 bindlessValue = line[bindlessIndex + kBindlessKey.size()];
+    SW_EXPECT_TRUE_MSG( mergeValue == bindlessValue, line.c_str() );
 }
 
 /**
@@ -614,33 +605,24 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
  * @details 에디터는 게임이 등록한 타입 · 서비스를 보며 선다. 기동은 게임 → 에디터인데 교체 경로만 에디터 → 게임이면 교체 뒤 에디터가 게임 없이
  *          선다. 인스턴스를 세울 때마다 찍는 `Module instance initialized: <모듈>` 줄의 순서를 본다. 교체는 시나리오 `swapother` 가 건다.
  */
-SW_TEST_CASE( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor )
+SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor, collectBackendSwapStarts, 12.5 )
 {
-    constexpr const utf8* kArrSwapArgument[]  = { "-dx12", "-dx11" };
     constexpr const utf8* kArrExpectedLabel[] = { "Module instance initialized: Game", "Module instance initialized: Editor", "Module instance initialized: Game",
                                                   "Module instance initialized: Editor" };
 
-    uint32 checkedCount = 0;
-    for ( const utf8* pSwapArgument : kArrSwapArgument )
+    string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " +
+                      test::AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR ) + " " };
+    arguments += pParameter;
+    const AppRunResult result = runApp( arguments, "Module instance initialized: " );
+    if ( test::hasRunHere( result._outcome ) == false )
+        SW_TEST_SKIP( "this start backend is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
+    SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == std::size( kArrExpectedLabel ), arguments.c_str() );
+    for ( size_t lineIndex = 0; lineIndex < std::size( kArrExpectedLabel ); ++lineIndex )
     {
-        string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " +
-                          test::AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR ) + " " };
-        arguments += pSwapArgument;
-        const AppRunResult result = runApp( arguments, "Module instance initialized: " );
-        if ( test::hasRunHere( result._outcome ) == false )
-            continue;
-        ++checkedCount;
-        SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
-        SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == std::size( kArrExpectedLabel ), arguments.c_str() );
-        for ( size_t lineIndex = 0; lineIndex < std::size( kArrExpectedLabel ); ++lineIndex )
-        {
-            const string& line = result._listMarkedLine[lineIndex];
-            SW_EXPECT_TRUE_MSG( line.find( kArrExpectedLabel[lineIndex] ) != string::npos, line.c_str() );
-        }
+        const string& line = result._listMarkedLine[lineIndex];
+        SW_EXPECT_TRUE_MSG( line.find( kArrExpectedLabel[lineIndex] ) != string::npos, line.c_str() );
     }
-
-    if ( checkedCount == 0 )
-        SW_TEST_SKIP( "neither DX12 nor DX11 is usable on this machine" );
 }
 
 /**
@@ -991,12 +973,12 @@ SW_TEST_CASE( AppSmokeTest, ShutdownReturnsEveryTagToTheBaseline )
 #endif
 
 /**
- * @brief [AppSmokeTest] 벤치 큐브 한 장면이 백엔드마다 골든 이미지와 같다(`Test/AppTest/Golden`)
+ * @brief [AppSmokeTest] 벤치 큐브 한 장면이 백엔드마다 골든 이미지와 같다(`Test/AppTest/Golden`) — 백엔드마다 케이스 하나(`.dx12` …), 케이스 안에서 장면(불투명 · 투명)을 차례로 본다
  * @details `-gv_benchAnimate=0` 이면 프레임이 결정적이라 기준 이미지를 둘 수 있다. 기준은 **백엔드마다** 하나다 — 백엔드끼리 래스터 결과가
  *          조금씩 다를 수 있다(언리얼 · 유니티의 스크린샷 비교도 RHI 별 기준을 둔다). 작은 창(256×144)으로 그려 파일을 작게 둔다.
  *          채널 차이 2 까지는 같다고 본다. 기준을 새로 뜨려면 `SW_UPDATE_GOLDEN=1` 로 이 케이스를 돌린다 — 그 판은 비교 대신 기준을 쓴다.
  */
-SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
+SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, BenchFrameMatchesGoldenImage, collectBackendSwitches, 6.5 )
 {
     constexpr uint32 kChannelTolerance = 2;
 
@@ -1010,35 +992,8 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
         {"transparent", "-gv_benchTransparent=25"},
     };
 
-    struct GoldenBackend
-    {
-        const utf8* _pName;
-        const utf8* _pSwitch;
-    };
-#if defined( SW_SHIPPING )
-    // 배포본은 백엔드를 하나만 링크한다 — 스위치 없이 그 백엔드의 기준과 비교한다.
-    #if defined( SW_RHI_TARGET_DX11 )
-    constexpr GoldenBackend kArrBackend[] = {
-        { "dx11", "" }
-    };
-    #elif defined( SW_RHI_TARGET_VULKAN )
-    constexpr GoldenBackend kArrBackend[] = {
-        { "vk", "" }
-    };
-    #elif defined( SW_RHI_TARGET_OPENGL )
-    constexpr GoldenBackend kArrBackend[] = {
-        { "gl", "" }
-    };
-    #else
-    constexpr GoldenBackend kArrBackend[] = {
-        { "dx12", "" }
-    };
-    #endif
-#else
-    #define SW_APP_GOLDEN_BACKEND( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, "-" CommandLineName },
-    constexpr GoldenBackend kArrBackend[] = { SW_RHI_BACKEND_TABLE( SW_APP_GOLDEN_BACKEND ) };
-    #undef SW_APP_GOLDEN_BACKEND
-#endif
+    // 기준 그림의 백엔드 이름은 케이스 이름의 백엔드 조각(`dx12` …)이다. 배포본은 이 케이스를 건너뛰므로(아래) 스위치 없는 `default` 는 쓰이지 않는다.
+    const string backendName = test::TestCatalog::makeParameterLabel( pParameter );
 
     // 기준은 그 플랫폼의 드라이버가 그린 것이다. 윈도우 밖은 이름에 플랫폼을 붙이고, 아직 뜬 적이 없으면 비교하지 않는다(경고만).
 #if defined( SW_PLATFORM_WINDOWS )
@@ -1064,79 +1019,76 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     const bool  bUpdate = pUpdate != nullptr && pUpdate[0] == '1';
 
     uint32 checkedCount = 0;
-    for ( const GoldenBackend& backend : kArrBackend )
+    for ( const GoldenScene& scene : kArrScene )
     {
-        for ( const GoldenScene& scene : kArrScene )
+        string imageName{ scene._pName };
+        imageName += "_";
+        imageName += backendName;
+        const string screenshotPath = test::makeTempPath( imageName + ".ppm" );
+
+        string arguments{ "-W=256 -H=144 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 " };
+        arguments += scene._pArgument;
+        arguments += " \"-gv_screenshot=";
+        arguments += screenshotPath;
+        arguments += "\" ";
+        arguments += pParameter;
+
+        const AppRunResult result = runApp( arguments );
+        if ( result._outcome != test::AppRunOutcome::Passed )
+            continue; // 실패는 runAppOnBackend 가 기록했고, 요구하지 않은 백엔드가 서지 못한 판은 건너뛴다
+
+        vector<uint8> screenshotBytes;
+        PpmImage      actual{};
+        const bool    bRead = FileUtil::readFile( screenshotPath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
+        SW_EXPECT_TRUE_MSG( bRead, ( "Failed to read the screenshot: " + imageName ).c_str() );
+        if ( bRead == false )
+            continue;
+
+        const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
+        if ( bUpdate )
         {
-            string imageName{ scene._pName };
-            imageName += "_";
-            imageName += backend._pName;
-            const string screenshotPath = test::makeTempPath( imageName + ".ppm" );
-
-            string arguments{ "-W=256 -H=144 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 " };
-            arguments += scene._pArgument;
-            arguments += " \"-gv_screenshot=";
-            arguments += screenshotPath;
-            arguments += "\" ";
-            arguments += backend._pSwitch;
-
-            const AppRunResult result = runApp( arguments );
-            if ( result._outcome != test::AppRunOutcome::Passed )
-                continue; // 실패는 runAppOnBackend 가 기록했고, 요구하지 않은 백엔드가 서지 못한 판은 건너뛴다
-
-            vector<uint8> screenshotBytes;
-            PpmImage      actual{};
-            const bool    bRead = FileUtil::readFile( screenshotPath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
-            SW_EXPECT_TRUE_MSG( bRead, ( "Failed to read the screenshot: " + imageName ).c_str() );
-            if ( bRead == false )
-                continue;
-
-            const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
-            if ( bUpdate )
-            {
-                vector<uint8> goldenBytes;
-                SW_EXPECT_TRUE( CompressionStream::compressBuffer( screenshotBytes.data(), screenshotBytes.size(), goldenBytes, CompressionCodecType::Zlib, 9,
-                                                                   &getGoldenCodecRegistry() ) );
-                SW_EXPECT_TRUE_MSG( FileUtil::writeFile( goldenPath, goldenBytes.data(), goldenBytes.size() ), goldenPath.c_str() );
-                SW_LOG_WARNING( "Golden image updated: %#", goldenPath.c_str() );
-                ++checkedCount;
-                continue;
-            }
-
-            if ( kMissingGoldenFails == false && FileUtil::exists( goldenPath ) == false )
-            {
-                SW_LOG_WARNING( "No golden image for this platform yet - record it with SW_UPDATE_GOLDEN=1: %#", goldenPath.c_str() );
-                continue;
-            }
-
             vector<uint8> goldenBytes;
-            vector<uint8> goldenPpmBytes;
-            PpmImage      expected{};
-            const bool    bGolden = FileUtil::readFile( goldenPath, goldenBytes ) &&
-                                 CompressionStream::decompressBuffer( goldenBytes.data(), goldenBytes.size(), goldenPpmBytes, &getGoldenCodecRegistry() ) &&
-                                 parsePpm( goldenPpmBytes, expected );
-            SW_EXPECT_TRUE_MSG( bGolden, ( "골든 이미지를 읽지 못했습니다(SW_UPDATE_GOLDEN=1 로 뜬다): " + goldenPath ).c_str() );
-            if ( bGolden == false )
-                continue;
-
-            const GoldenDifference difference = compareImage( expected, actual, kChannelTolerance );
-            string                 message    = imageName;
-            message += ": ";
-            message += sw::to_string( difference._pixelOverTolerance );
-            message += " pixel(s) differ by more than the tolerance, max channel difference ";
-            message += sw::to_string( difference._maxChannelDifference );
-            SW_EXPECT_TRUE_MSG( difference._pixelOverTolerance == 0, message.c_str() );
-            if ( difference._pixelOverTolerance != 0 )
-            {
-                // 케이스 임시 폴더는 케이스가 끝나면 지워진다 — 진 그림은 build/<프리셋>/GoldenDiff 에 남겨 열어 볼 수 있게 한다.
-                const string diffDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getCurrentPath() ), "GoldenDiff" );
-                FileUtil::ensureDirectoryExists( diffDirectory );
-                const string keptPath = FileUtil::joinPath( diffDirectory, imageName + ".ppm" );
-                SW_EXPECT_TRUE( FileUtil::writeFile( keptPath, screenshotBytes.data(), screenshotBytes.size() ) );
-                SW_LOG_WARNING( "Golden mismatch kept at %#", keptPath.c_str() );
-            }
+            SW_EXPECT_TRUE( CompressionStream::compressBuffer( screenshotBytes.data(), screenshotBytes.size(), goldenBytes, CompressionCodecType::Zlib, 9,
+                                                               &getGoldenCodecRegistry() ) );
+            SW_EXPECT_TRUE_MSG( FileUtil::writeFile( goldenPath, goldenBytes.data(), goldenBytes.size() ), goldenPath.c_str() );
+            SW_LOG_WARNING( "Golden image updated: %#", goldenPath.c_str() );
             ++checkedCount;
+            continue;
         }
+
+        if ( kMissingGoldenFails == false && FileUtil::exists( goldenPath ) == false )
+        {
+            SW_LOG_WARNING( "No golden image for this platform yet - record it with SW_UPDATE_GOLDEN=1: %#", goldenPath.c_str() );
+            continue;
+        }
+
+        vector<uint8> goldenBytes;
+        vector<uint8> goldenPpmBytes;
+        PpmImage      expected{};
+        const bool    bGolden = FileUtil::readFile( goldenPath, goldenBytes ) &&
+                             CompressionStream::decompressBuffer( goldenBytes.data(), goldenBytes.size(), goldenPpmBytes, &getGoldenCodecRegistry() ) &&
+                             parsePpm( goldenPpmBytes, expected );
+        SW_EXPECT_TRUE_MSG( bGolden, ( "골든 이미지를 읽지 못했습니다(SW_UPDATE_GOLDEN=1 로 뜬다): " + goldenPath ).c_str() );
+        if ( bGolden == false )
+            continue;
+
+        const GoldenDifference difference = compareImage( expected, actual, kChannelTolerance );
+        string                 message    = imageName;
+        message += ": ";
+        message += sw::to_string( difference._pixelOverTolerance );
+        message += " pixel(s) differ by more than the tolerance, max channel difference ";
+        message += sw::to_string( difference._maxChannelDifference );
+        SW_EXPECT_TRUE_MSG( difference._pixelOverTolerance == 0, message.c_str() );
+        if ( difference._pixelOverTolerance != 0 )
+        {
+            // 케이스 임시 폴더는 케이스가 끝나면 지워진다 — 진 그림은 build/<프리셋>/GoldenDiff 에 남겨 열어 볼 수 있게 한다.
+            const string diffDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getCurrentPath() ), "GoldenDiff" );
+            FileUtil::ensureDirectoryExists( diffDirectory );
+            const string keptPath = FileUtil::joinPath( diffDirectory, imageName + ".ppm" );
+            SW_EXPECT_TRUE( FileUtil::writeFile( keptPath, screenshotBytes.data(), screenshotBytes.size() ) );
+            SW_LOG_WARNING( "Golden mismatch kept at %#", keptPath.c_str() );
+        }
+        ++checkedCount;
     }
 
     if ( checkedCount == 0 )

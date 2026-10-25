@@ -114,6 +114,17 @@ namespace
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
     }
+
+    /** @brief 매개변수 묶음 시험의 목록 — 스위치 · 빈 글 · 일반 글. */
+    sw::vector<sw::string> listProbeParameter()
+    {
+        return sw::vector<sw::string>{ "-dx12", "", "plain" };
+    }
+
+    /** @brief 매개변수 묶음 시험의 본문 — 이름만 보므로 하는 일이 없다. */
+    void runProbeParameter( const utf8* )
+    {
+    }
 } // namespace
 
 /**
@@ -354,6 +365,55 @@ SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
     excludeRegistry.getCatalog().addCase( "PlainProbeTest", "One", {} );
     excludeRegistry.getOptions().setFilter( "-PlainProbeTest.*" );
     SW_EXPECT_EQUAL( 0, excludeRegistry.runAllTests() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 케이스 생성기는 실행 시작에 한 번 케이스를 더하고, 만든 이름은 필터로 고를 수 있다
+ * @details 시나리오 폴더 같은 목록이 `Suite.<이름>.<백엔드>` 케이스가 된다. 두 번 돌려도 같은 케이스가 겹쳐 늘지 않아야 한다.
+ */
+SW_TEST_CASE( TestFrameworkTest, CaseGeneratorAddsCasesOnceAndTheyAreFilterable )
+{
+    test::TestRegistry registry;
+    registry.getCatalog().addCaseGenerator( []( test::TestCatalog& catalog )
+    {
+        catalog.addCase( "GeneratedProbeTest", "alpha.dx12", {} );
+        catalog.addCase( "GeneratedProbeTest", "alpha.gl", {} );
+        catalog.addCase( "GeneratedProbeTest", "beta.gl", {} );
+    } );
+    registry.getOptions().setFilter( "GeneratedProbeTest.alpha.*" );
+    SW_EXPECT_EQUAL( 0, registry.runAllTests() );
+    SW_EXPECT_EQUAL( 0, registry.runAllTests() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, registry.getCatalog().getListCase().size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, registry.makeRunOrder( 0 ).size() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 매개변수 묶음은 매개변수마다 `이름.<매개변수>` 케이스를 만들고, 생성기가 준 예상 비용으로 샤드를 나눈다
+ * @details 스위치 `-dx12` 는 `dx12`, 빈 글(배포본)은 `default` 다. 비용표(`--test_costs`)에 적지 못하는 동적 이름이라 예상 비용이 없으면 무거운 케이스가 한 샤드에 다른 케이스와 같이 몰린다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ParameterizedCaseNamesByParameterAndShardsByExpectedCost )
+{
+    test::TestRegistry registry;
+    registry.getCatalog().addParameterizedCase( "ParamProbeTest", "Each", listProbeParameter, runProbeParameter, 2.0 );
+    registry.getCatalog().expandCaseGenerators();
+    const sw::vector<test::TestCaseInfo>& listCase = registry.getCatalog().getListCase();
+    SW_ASSERT_EQUAL( size_t{ 3 }, listCase.size() );
+    SW_EXPECT_STREQ( "Each.dx12", listCase[0]._testName );
+    SW_EXPECT_STREQ( "Each.default", listCase[1]._testName );
+    SW_EXPECT_STREQ( "Each.plain", listCase[2]._testName );
+
+    // 무거운 케이스(10 s) 하나와 2 s 짜리 다섯 — 비용대로 나누면 무거운 케이스 혼자 한 샤드를 받고 나머지가 다른 샤드로 간다(기본 비용이면 셋씩 갈린다).
+    test::TestRegistry shardRegistry;
+    shardRegistry.getCatalog().addCase( "ShardProbeTest", "heavy", {}, 10.0 );
+    for ( const utf8* pName : { "a", "b", "c", "d", "e" } )
+    {
+        shardRegistry.getCatalog().addCase( "ShardProbeTest", pName, {}, 2.0 );
+    }
+    shardRegistry.getOptions()._shardCount = 2;
+    shardRegistry.getOptions()._shardIndex = 0;
+    SW_EXPECT_EQUAL( size_t{ 1 }, shardRegistry.selectCasesForThisShard().size() );
+    shardRegistry.getOptions()._shardIndex = 1;
+    SW_EXPECT_EQUAL( size_t{ 5 }, shardRegistry.selectCasesForThisShard().size() );
 }
 
 /**

@@ -109,7 +109,8 @@ namespace test
         /**
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 판정합니다(`runAppOnBackend` 와 같은 정책).
          * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
-         *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`). 실패 메시지와 건너뜀 로그에는 시나리오 · 백엔드 · 종료 코드 · `[Scenario]` 줄이 든다.
+         *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`). 실패 메시지와 건너뜀 로그에는 시나리오 · 백엔드 · 종료 코드와 그 뜻 · `[Scenario]` 줄 ·
+         *          통과하지 못했을 때 보고의 `failures[]` · `unhandledLogs[]` 줄이 든다(보고는 실행 전에 지우므로 지난 실행의 것을 읽지 않는다).
          *          시나리오가 `<Launch>` 로 `gv_` 개발 변수를 선언했거나 @p extraArguments 에 `-gv_` 가 있는데 이 빌드가 배포본이면 App 을 띄우지 않고
          *          `Skipped` 로 돌려준다(`test::skipPartIfFeatureMissing` 가 케이스 보고에 시나리오와 이유를 남긴다).
          */
@@ -119,6 +120,8 @@ namespace test
          * @brief 시나리오 여럿을 **한 프로세스**에서 차례로 돌립니다(`-scenario=a,b,c`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태를 이어받습니다.
          * @param chainName 로그 · 보고 파일 이름(`Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
          * @return 체인의 판정 — 체인의 종료 코드(전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드)로 정한다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
+         * @details 통과하지 못했으면 실패 메시지에 `chain sub-results:` 로 통과하지 못한 단계(시나리오)마다 결과 · 종료 코드 · 단계 보고의 `failures[]` · `unhandledLogs[]` 를 나열한다
+         *          (단계마다 보고 `<이름>_<백엔드>.<단계>.json` 이 있다 — 한 프로세스의 이점은 두고 어느 시나리오가 졌는지 가린다). 돌지 못한 단계는 `NOT RUN` 이다.
          */
         [[nodiscard]] static AppRunOutcome runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
                                                              sw::string& outScenarioLines, sw::string_view extraArguments = {} );
@@ -129,6 +132,12 @@ namespace test
          * @details 같은 시나리오는 백엔드마다 같은 줄을 내야 한다(게임 상태는 CPU 에서만 정해진다) — `AppScenarioTest` 가 비교한다.
          */
         static sw::vector<sw::string> readReportRecords( const sw::string& reportPath );
+        /** @brief 보고의 글 배열 @p pKey(`failures` · `unhandledLogs` · `records` …)의 줄들입니다. 파일이 없거나 그 항목이 없으면 빈 목록입니다. */
+        static sw::vector<sw::string> readReportStrings( const sw::string& reportPath, const utf8* pKey );
+        /** @brief 보고의 값 하나(`result` · `exitCode` · `name`)의 글입니다 — 문자열은 따옴표 없이, 숫자는 그대로. 파일이 없거나 그 항목이 없으면 빈 글입니다. */
+        static sw::string readReportScalar( const sw::string& reportPath, const utf8* pKey );
+        /** @brief App 종료 코드 @p exitCode 의 뜻입니다(`0 PASS` · `15 UNHANDLED LOG` · `77` RHI 못 섬 · 그 밖은 시나리오 코드가 아님). 실패 메시지에 붙는다. */
+        static sw::string describeExitCode( int32 exitCode );
         /**
          * @brief 프로세스 출력 @p output 에서 로그 게이트가 보는 줄(`[Warning]` · `[Error]`) 가운데 처리하지 않은 것을 돌려줍니다.
          * @details 처리는 `AutomationLogPolicy` 의 전역 목록에서 @p scenarioArgument(경로 하나 또는 쉼표 목록) 시나리오들 범위의 항목과 그 시나리오들의 `<ExpectLog>` 다.

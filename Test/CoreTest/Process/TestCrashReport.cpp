@@ -40,6 +40,31 @@ namespace
         return {};
     }
 
+    /** @brief 자식이 죽을 방식 하나 — 케이스 `EveryCrashKindLeavesAReport.<이름>` 의 매개변수다. */
+    struct CrashCase
+    {
+        sw::CrashTestKind _kind;
+        const utf8*       _pName;
+    };
+    constexpr CrashCase kArrCrashCase[] = {
+        {    sw::CrashTestKind::AccessViolation,      "access-violation"},
+        {      sw::CrashTestKind::StackOverflow,        "stack-overflow"},
+        {sw::CrashTestKind::WorkerStackOverflow, "worker-stack-overflow"},
+        {              sw::CrashTestKind::Abort,                 "abort"},
+        {    sw::CrashTestKind::PureVirtualCall,     "pure-virtual-call"},
+    };
+
+    /** @brief 죽는 방식의 이름들입니다 — 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)의 목록이다. */
+    sw::vector<sw::string> listCrashKindName()
+    {
+        sw::vector<sw::string> listName;
+        for ( const CrashCase& crashCase : kArrCrashCase )
+        {
+            listName.emplace_back( crashCase._pName );
+        }
+        return listName;
+    }
+
     /** @brief 세션 ID 로 만들어지는 리포트 파일 하나를 읽습니다. */
     [[nodiscard]] bool readReportFileInternal( const utf8* pExtension, sw::string& outText )
     {
@@ -252,72 +277,63 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
 }
 
 /**
- * @brief [CrashReportTest] 죽는 방식마다(접근 위반 · 스택 오버플로 · 작업 스레드 스택 오버플로 · abort · 순수 가상 호출) 리포트가 남는다.
+ * @brief [CrashReportTest] 죽는 방식마다(접근 위반 · 스택 오버플로 · 작업 스레드 스택 오버플로 · abort · 순수 가상 호출) 리포트가 남는다 — 방식마다 케이스 하나(`.access-violation` …)
  * @details 자식이 죽은 뒤 리포트 폴더에 콜 스택 파일이 있어야 하고, Windows 는 미니덤프도 비어 있지 않아야 한다. 주의:
  *          - 스택 오버플로: 넘친 스택에서 덤프를 쓰면 다시 넘쳐 덤프가 0 바이트다(Windows). 작업 스레드에도 대체 스택이 있어야 한다(POSIX).
  *          - abort · 순수 가상 호출: CRT 가 `__fastfail` 로 끝내면 필터에 아예 들어오지 않는다(Windows).
+ *          방식마다 자식 프로세스 하나라 독립이다 — 한 방식이 멈춰도 나머지는 돈다. 예상 비용은 옛 한 케이스 3 s 를 다섯으로 나눈 값이다.
  */
-SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
+SW_TEST_CASE_PER_PARAMETER( CrashReportTest, EveryCrashKindLeavesAReport, listCrashKindName, 0.6 )
 {
 #if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
     SW_TEST_REQUIRES_FEATURE( FatalSignalHandling ); // AddressSanitizer owns the fatal signals and pads the frames — it reports these crashes itself
 #endif
 
-    struct CrashCase
+    const CrashCase* pCrashCase = nullptr;
+    for ( const CrashCase& candidate : kArrCrashCase )
     {
-        sw::CrashTestKind _kind;
-        const utf8*       _pName;
-    };
-    const CrashCase arrCase[] = {
-        {    sw::CrashTestKind::AccessViolation,      "access-violation"},
-        {      sw::CrashTestKind::StackOverflow,        "stack-overflow"},
-        {sw::CrashTestKind::WorkerStackOverflow, "worker-stack-overflow"},
-        {              sw::CrashTestKind::Abort,                 "abort"},
-        {    sw::CrashTestKind::PureVirtualCall,     "pure-virtual-call"},
-    };
+        if ( sw::string( candidate._pName ) == pParameter )
+            pCrashCase = &candidate;
+    }
+    SW_ASSERT_TRUE_MSG( pCrashCase != nullptr, pParameter );
 
     constexpr uint32 kCrashChildTimeoutSeconds = 10;
 
-    for ( const CrashCase& crashCase : arrCase )
+    sw::StringBuilder<sw::constant::kMaxBuffer64> folderName;
+    folderName.append( "SwCrashChild_" ).append( pCrashCase->_pName );
+    const sw::string folder = test::makeTempPath( folderName.view() );
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
+    sw::FileUtil::ensureDirectoryExists( folder );
+
+    sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
+    kindText.append( static_cast<int32>( pCrashCase->_kind ) );
+
+    // 자식은 평소 1 초 안에 죽는다. 시한을 넘기면 크래시 경로 어딘가가 멈춘 것이다 — 그 종류와 자식의 마지막 출력을 남긴다
+    // (시한이 없으면 CoreTest 전체가 CTest 시한까지 서 있다 진다).
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
+        {"SW_CRASH_CHILD_FOLDER",           folder}
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, kCrashChildTimeoutSeconds );
+    SW_EXPECT_TRUE_MSG( child._bLaunched, pParameter );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( sw::string( pParameter ) + " 크래시 자식이 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    if ( child._bLaunched == false || child._bTimedOut )
+        return;
+    SW_EXPECT_TRUE_MSG( child._exitCode != 0, pParameter );
+
+    const sw::string stackPath = findReportFileInternal( folder, "stack.txt" );
+    SW_EXPECT_TRUE_MSG( stackPath.empty() == false, pParameter );
+    if ( stackPath.empty() == false )
     {
-        sw::StringBuilder<sw::constant::kMaxBuffer64> folderName;
-        folderName.append( "SwCrashChild_" ).append( crashCase._pName );
-        const sw::string folder = test::makeTempPath( folderName.view() );
-        SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
-        sw::FileUtil::ensureDirectoryExists( folder );
-
-        sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
-        kindText.append( static_cast<int32>( crashCase._kind ) );
-
-        // 자식은 평소 1 초 안에 죽는다. 시한을 넘기면 크래시 경로 어딘가가 멈춘 것이다 — 그 종류와 자식의 마지막 출력을 남기고
-        // 다음으로 간다(시한이 없으면 CoreTest 전체가 CTest 시한까지 서 있다 진다).
-        const test::ChildEnvironmentVariable arrEnvironment[] = {
-            {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
-            {"SW_CRASH_CHILD_FOLDER",           folder}
-        };
-        const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, kCrashChildTimeoutSeconds );
-        SW_EXPECT_TRUE_MSG( child._bLaunched, crashCase._pName );
-        SW_EXPECT_FALSE_MSG( child._bTimedOut, ( sw::string( crashCase._pName ) + " 크래시 자식이 시한 안에 끝나지 않았습니다 — 마지막 출력:" +
-                                                 child.getOutputTail() )
-                                                   .c_str() );
-        if ( child._bLaunched == false || child._bTimedOut )
-            continue;
-        SW_EXPECT_TRUE_MSG( child._exitCode != 0, crashCase._pName );
-
-        const sw::string stackPath = findReportFileInternal( folder, "stack.txt" );
-        SW_EXPECT_TRUE_MSG( stackPath.empty() == false, crashCase._pName );
-        if ( stackPath.empty() == false )
-        {
-            sw::string stackText;
-            SW_EXPECT_TRUE( sw::FileUtil::readTextFile( stackPath, stackText ) );
-            SW_EXPECT_TRUE_MSG( stackText.find( "CRASH" ) != sw::string::npos, crashCase._pName );
-        }
-#if defined( SW_PLATFORM_WINDOWS )
-        const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
-        SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0, crashCase._pName );
-#endif
-        SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( folder ) );
+        sw::string stackText;
+        SW_EXPECT_TRUE( sw::FileUtil::readTextFile( stackPath, stackText ) );
+        SW_EXPECT_TRUE_MSG( stackText.find( "CRASH" ) != sw::string::npos, pParameter );
     }
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::string dumpPath = findReportFileInternal( folder, ".dmp" );
+    SW_EXPECT_TRUE_MSG( dumpPath.empty() == false && sw::FileUtil::getFileSize( dumpPath ) > 0, pParameter );
+#endif
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( folder ) );
 }
 
 /**

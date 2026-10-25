@@ -355,12 +355,13 @@ SW_TEST_CASE( RHIDeviceTest, CapabilityMatrixNativeVsEmulated )
 /**
  * @brief [RHIDeviceTest] 모든 백엔드 디바이스 생성
  */
-SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DeviceCreationAllBackends, test::listRHIBackendParameter, 0.4 )
 {
     for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
         // 이 호스트에 런타임이 없는 백엔드(리눅스의 DX)를 만들면 엔진이 "백엔드 없음" Error 를 남긴다 — `RHITestDevice` 와 같은 거름이다.
-        if ( test::isBackendUnderTest( backend ) == false || sw::RHIAvailability::isAvailable( backend ) == false )
+        const bool bWanted = test::matchesCaseBackend( backend ) && test::isBackendUnderTest( backend );
+        if ( bWanted == false || sw::RHIAvailability::isAvailable( backend ) == false )
             continue;
         sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( backend );
         if ( device != nullptr )
@@ -407,7 +408,7 @@ SW_TEST_CASE( RHIDeviceTest, BackendSweepVisitsEveryBackendThatStandsUp )
  * @details 에디터의 ImGui 렌더러 백엔드는 이 묶음 하나로 초기화한다(구체 디바이스 클래스로 캐스팅하지 않는다). Vulkan 은 인스턴스 · 물리
  *          디바이스 · 백버퍼 렌더 패스 · 스왑체인 이미지 수까지 있어야 `ImGui_ImplVulkan_Init` 이 선다.
  */
-SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, NativeHandlesDescribeTheDevice, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -440,7 +441,7 @@ SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
 /**
  * @brief [RHIDeviceTest] 가용 백엔드에서 RenderPass 생성 + 간단 드로우 커맨드 경로
  */
-SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends, test::listRHIBackendParameter, 0.4 )
 {
     uint32                okCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -493,7 +494,7 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
 /**
  * @brief [RHIDeviceTest] 바인들리스 리소스 수명
  */
-SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, BindlessResourceLifecycle, test::listRHIBackendParameter, 0.4 )
 {
     // 이 호스트에 없는 백엔드(리눅스의 DX)는 `RHITestDevice` 가 창을 띄우기 전에 거른다 — 목록을 플랫폼마다 가를 필요가 없다.
     test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan } );
@@ -538,7 +539,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
  *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸린다. DX11/OpenGL 도 같은 구조(텍스처 표
  *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 무해하다.
  */
-SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -603,7 +604,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
  * @details 바인드 시점 검사(BindlessIndexValidator)는 이 질의 하나로 "셰이더에 넘기는 번호가 살아 있나" 를 본다. 해제 직후(Vulkan 은 해제 대기)
  *          번호가 살아 있다고 답하면 해제한 디스크립터를 읽는 드로우를 놓치고, 발급한 적 없는 번호를 살아 있다고 답해도 마찬가지다.
  */
-SW_TEST_CASE( RHIDeviceTest, BindlessIndexLivenessFollowsRegistration )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, BindlessIndexLivenessFollowsRegistration, test::listRHIBackendParameter, 0.4 )
 {
     // 어느 백엔드도 이만큼 등록하지 않는다(Vulkan 배열 4096 · DX12 힙 32768 보다 크다).
     constexpr sw::RHIDescriptorIndex kNeverIssued = 1000000;
@@ -743,7 +744,7 @@ SW_TEST_CASE( RHIDeviceTest, Dx12BindlessIndexZeroIsNeverHandedOut )
  * @brief [RHIDeviceTest] 텍스처 픽셀 업로드 — 밉 체인 전체, 밉 0 만, 데이터 부족 거부 (4백엔드)
  * @details 읽어 오는 API 가 아직 없어 내용은 검증하지 못한다 — 성공/거부 계약과 디버그 레이어 무오류만 본다.
  */
-SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, UploadTexture2DAllBackends, test::listRHIBackendParameter, 0.4 )
 {
     // 4x4 + 2x2 + 1x1 = 21 픽셀 x RGBA 4바이트. 밉마다 다른 색으로 채운다.
     constexpr uint32 kPixelCount = 16 + 4 + 1;
@@ -806,7 +807,7 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
  * @brief [RHIDeviceTest] 업로드한 바이트가 읽기(readback)로 그대로 돌아오는가 — 비압축 밉 3단 + BC1 밉 2단 + BC6H 블록 하나, 4백엔드
  * @details 비압축은 픽셀, BC1 은 블록을 GPU 가 해석하지 않고 그대로 저장하므로 바이트 단위 일치를 요구할 수 있다.
  */
-SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, TextureReadbackMatchesUpload, test::listRHIBackendParameter, 0.4 )
 {
     // R8G8B8A8 4x4 → 2x2 → 1x1 = 21 픽셀. 픽셀마다 다른 값을 넣어 행/밉 어긋남을 잡는다.
     uint8 arrRgba[21 * 4]{};
@@ -905,7 +906,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
  *          "렌더타깃에 그린 게 읽히는가" 를 백엔드별로 가른다. fullscreentriangle 은 정점색 x MaterialCB 라,
  *          빨강 CB 를 주면 화면 가득 빨강이 나와야 한다.
  */
-SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, OffscreenDrawIsReadable, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -962,7 +963,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
  *          런타임이 리스트 단위로 버저닝하고, DX12 · Vulkan · GL 은 버퍼의 이번 프레임 칸에 쓴다. 기록 밖에서 파랑을 쓰고, 리스트를 연 뒤
  *          빨강으로 갱신하고 그린다 — 화면이 빨강이어야 한다(파랑이면 리스트 갱신이 드로우에 닿지 않았다).
  */
-SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1010,7 +1011,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
  *          그린다(DX11 · GL 은 버퍼 하나다). 빨강을 **한 번** 쓰고 링을 두 바퀴 돌며 매 프레임 그려 읽는다 — 어느 프레임이든 빨강이어야 한다.
  *          그리기는 실제 렌더러처럼 프레임 안에서 리스트로 내고(`executeCommandList`), Present 없이 닫은 뒤 읽는다.
  */
-SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot, test::listRHIBackendParameter, 0.4 )
 {
     uint32                okCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -1087,7 +1088,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
  *          엔진 셰이더의 flat 값(materialIndex)은 배치 안에서 전부 같아 그 한 줄이 실제로 그림을 바꾸는지
  *          볼 수 없다. provokingvertex.hlsl 은 정점마다 다른 값을 실어 FIRST 면 빨강, LAST 면 파랑이 된다.
  */
-SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1239,7 +1240,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
  *          건다 — 빠뜨리면 새 커맨드 리스트에서 이 진입점으로 그릴 때 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이 된다.
  *          instanceslotprobe.hlsl 은 슬롯 1 의 값이 7 이면 초록, 아니면 빨강을 낸다. 다른 드로우는 먼저 부르지 않는다.
  */
-SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1332,7 +1333,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
  *          되돌리므로, 해제한 뒤에 거는 순서로 네 백엔드가 같은 판정을 거치게 한다. 렌더 타깃은 클리어 색 그대로여야 한다.
  *          알림은 백엔드 DLL 마다 처음 `RHIDrawDiagnostics::kMaxReportedDraw` 번만 남으므로 로그는 이 프로세스에서 그 백엔드를 처음 볼 때만 묻는다(--test_repeat).
  */
-SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt, test::listRHIBackendParameter, 0.4 )
 {
     static sw::vector<sw::string> s_listCheckedBackend;
 
@@ -1418,7 +1419,7 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
  * @details 렌더타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다 — Present 는 백버퍼(getBackBufferFormat)와
  *          에디터 뷰 RT(getTextureFormat) 를 오가므로 둘 다 정확해야 Vulkan 렌더패스 호환이 유지된다.
  */
-SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1457,7 +1458,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
 /**
  * @brief [RHIDeviceTest] 커맨드 리스트 생성과 실행
  */
-SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListCreationAndExecution, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL } );
     if ( rhiDevice.isReady() == false )
@@ -1491,7 +1492,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
  *          begin 과 end 가 스레드를 넘어도 되는 구조인데, 그 전제를 여기서 같이 못박는다. GL 은 병렬 기록이 없어(리스트가 스레드를
  *          넘지 않는다) 대상이 아니다.
  */
-SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan } );
     for ( test::RHITestDevice& device : sweep )
@@ -1577,7 +1578,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
  * @details DX12/Vulkan 은 RW 텍스처 배열(g_SwBindlessRWTex2D) 의 등록 인덱스를, DX11/GL 은 u4 슬롯 서수 0 을 루트 상수로 넘긴다
  *          (computetexturewrite.hlsl 의 Bindless::storeRwTexture2D). prepareTextureForUnorderedAccess → dispatch → readback.
  */
-SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeTextureUavWriteIsReadable, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kSize = 8;
 
@@ -1662,7 +1663,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
  * @details 진입점 이름은 쿠킹(바이너리 이름 · DXC -E)과 PSO(Vulkan `pName` · GL `glSpecializeShader`) 두 곳이 같아야 한다. PSO 쪽이 이름을 "CSMain" 으로
  *          고정하면 다른 진입점으로 컴파일한 SPIR-V 에서 진입점을 못 찾아 PSO 가 실패한다(지금 엔진 컴퓨트 셰이더가 모두 CSMain 이라 드러나지 않았다).
  */
-SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kSize = 8;
 
@@ -1744,7 +1745,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
  * @details 타임스탬프는 네 백엔드가 모두 가지고, 컨텍스트 스레드 바인딩은 컨텍스트가 스레드에 묶이는 DX11 · GL 만 가진다.
  *          능력이 없는 디바이스(GPU 없는 목)는 둘 다 nullptr 이다. `requiresExclusiveContextThread` 는 바인딩 능력이 있는지와 같은 답이어야 한다.
  */
-SW_TEST_CASE( RHIDeviceTest, OptionalCapabilitiesMatchTheBackend )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, OptionalCapabilitiesMatchTheBackend, test::listRHIBackendParameter, 0.4 )
 {
     test::FakeRHIDevice fakeDevice;
     SW_EXPECT_TRUE_MSG( fakeDevice.findTimestampProvider() == nullptr, "a device without timestamps must answer nullptr" );
@@ -1775,7 +1776,7 @@ SW_TEST_CASE( RHIDeviceTest, OptionalCapabilitiesMatchTheBackend )
  *          지난 사이클 값이 그대로 남고(쿼리 힙을 리셋하지 않는다), Vulkan·GL 은 "아직 준비 안 됨"
  *          이다. 그걸 가리지 않으면 건너뛴 패스가 0us 로, 혹은 지난 프레임 값으로 보고된다.
  */
-SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends, test::listRHIBackendParameter, 0.4 )
 {
     /// @brief 몇 프레임 늦게 오므로 링 깊이보다 넉넉히 돌린다.
     constexpr uint32 kFrameCount = 12;
@@ -1883,7 +1884,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
  *          틀리면 다른 면의 깊이와 비교해 짝 · 홀이 섞인다. 따로, SRV 만 있는 배열 · 큐브에 면마다 다른 바이트를 올려 그대로 읽히는지 본다. 셰이더 테이블은 아직
  *          Texture2D 만 받으므로 배열 · 큐브의 bindless 등록은 거부되고, 모양이 틀린 서술(정사각형 아닌 큐브 · 면 둘인 2D)은 만들어지지 않는다.
  */
-SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kSize = 16;
     // 홀수 면의 지우기 색 — 면 번호를 초록에 싣는다(면이 섞이면 값이 달라진다).
@@ -2123,7 +2124,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
  *          다르다(DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연) — 어느 쪽이든 `kGPUReleaseFrameLatency` 프레임을 넘기면 불려야 하고,
  *          뒤의 `waitIdle` 이 다시 부르면 안 된다.
  */
-SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -2189,7 +2190,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
  * @details 계약 2(docs/plans/RhiAsyncUploads.md). 제거를 흉내 낼 수 없는 백엔드(`debugRemoveDevice` 가 false)는 건너뛴다. 잃기 전에는 같은 제출이 받아들여지는 것도 본다.
  *          변이: 제출 함수의 진입 검사(`isDeviceLost`)를 빼면 Vulkan 의 이 케이스가 진다 — 손실 표시만으로는 일회성 제출이 막히지 않고 `Accepted` 를 받는다.
  */
-SW_TEST_CASE( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kPixelCount = 4 * 4;
     uint8            arrPixel[kPixelCount * 4]{};
@@ -2251,7 +2252,7 @@ SW_TEST_CASE( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry )
  *          줄어야 한다. destroy 직후에는 아직 GPU 가 쥐고 있을 수 있으므로 그대로이고, 해제 지연(`kGPUReleaseFrameLatency` + 링 깊이)만큼 프레임을 돌린
  *          뒤에 원래 값이다.
  */
-SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease, test::listRHIBackendParameter, 0.4 )
 {
     struct LedgerCase
     {
@@ -2341,7 +2342,7 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
  *          벤더 확장이 있을 때만 알고, 없으면 모든 칸이 꺼진 채 0 이다(지어내지 않는다). 이 프로세스의 사용량을 주는 DX12 · Vulkan 은 64 MB 텍스처를
  *          만든 뒤 사용량이 적어도 그 절반만큼 오른다 — 드라이버 값이 상수가 아니라 실제 할당을 보고 있다는 뜻이다.
  */
-SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -2397,7 +2398,7 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
  * @details 글리프 아틀라스(R8 SDF)가 새 글리프 칸만 올리는 길이다. 먼저 전체를 0 으로 올린 뒤(텍스처가 셰이더 읽기 상태에서 출발 — 실제 아틀라스와 같다)
  *          구간에 (행 × 16 + 열 + 1) 값을 올리고 되읽는다. 구간 밖이 0 이 아니면 좌표 · 행 피치 · 서브리소스가 어긋난 것이다.
  */
-SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend, test::listRHIBackendParameter, 0.4 )
 {
     struct Case
     {
@@ -2519,7 +2520,7 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
 /**
  * @brief [RHIDeviceTest] 영역 업로드는 밖 구간 · 압축 포맷 · 모자란 데이터 · 없는 밉 · 없는 면을 거부한다 — 4백엔드
  */
-SW_TEST_CASE( RHIDeviceTest, RegionUploadRejectsOutOfRange )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, RegionUploadRejectsOutOfRange, test::listRHIBackendParameter, 0.4 )
 {
     uint8 arrByte[64 * 4]{};
 
@@ -2575,7 +2576,7 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadRejectsOutOfRange )
  * @details 파랑 (0,0,1,1) 으로 지운 타깃에 (0.5, 0, 0, 0.5) 를 화면 가득 그린다. 프리멀티플라이(One/InvSrcAlpha)면 R 0.5 · B 0.5, 곧은 알파(SrcAlpha)면 R 0.25 다.
  *          알파는 둘 다 0.5 + 1 × 0.5 = 1 이어야 한다 — GL 이 glBlendFunc 하나로 알파에도 SrcAlpha 를 곱하면 0.75 가 나와 갈린다.
  */
-SW_TEST_CASE( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply, test::listRHIBackendParameter, 0.4 )
 {
     const float32 arrHalfRed[4] = { 0.5f, 0.0f, 0.0f, 0.5f };
 
@@ -2638,7 +2639,7 @@ SW_TEST_CASE( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply )
  * @details 타깃 셋에 빨강을 화면 가득 그린다. (A) 가위 (16,8 20×12) — 그 사각형만 빨강이고 행 · 열이 위 · 왼쪽 원점이다. (B) 같은 리스트에서 A 의 패스를 닫고
  *          setViewport 없이 새 패스를 연 뒤 가위 없이 — 전부 빨강(beginRenderPass 가 가위를 되돌린다 — GL 은 상태가 남는다). (C) 가위를 건 뒤 setViewport — 전부 빨강.
  */
-SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport, test::listRHIBackendParameter, 0.4 )
 {
     const float32            arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
     const sw::RHIScissorRect scissor{ 16, 8, 20, 12 };
@@ -2737,7 +2738,7 @@ SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
  * @details 첫 패스는 지우고 가위 (0,0 16×16) 안만 빨강, 둘째 패스는 같은 타깃을 **Load** 로 열어 가위 (32,32 16×16) 안만 빨강. 두 모서리가 다 빨강이고
  *          나머지는 첫 패스의 클리어 색이어야 한다. Canvas 패스가 Present 가 그린 캡처 텍스처에 이렇게 얹는다.
  */
-SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget, test::listRHIBackendParameter, 0.4 )
 {
     const float32            arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
     const sw::RHIScissorRect arrScissor[2]{
@@ -2819,7 +2820,7 @@ SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
  *          정점 여섯 개를 모두 0(퇴화 삼각형)으로 만들고 뒤 셋에만 화면 가득 삼각형을 쓴다. 뒤 셋을 그리면 빨강이 가득해야 하고(조각이 닿았다),
  *          앞 셋을 그리면 클리어 색만 남아야 한다(조각이 다른 자리를 덮지 않았다). 버퍼를 넘는 조각은 버리고 알린다.
  */
-SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kStride = static_cast<uint32>( sizeof( sw::RHIVertex ) );
     sw::RHIVertex    arrZero[6]{};
@@ -2924,7 +2925,7 @@ SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
  * @details `AsyncBufferReadback`(읽기 버퍼 만들기 + `copyBufferToReadback` + `enqueueGPURelease` 콜백 안의 읽기)을 네 백엔드에서 한 바퀴 돈다.
  *          원본은 구조화 버퍼(SRV 상태)이고, 복사 뒤에 원래 상태로 돌아가 다시 복사할 수 있어야 한다.
  */
-SW_TEST_CASE( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes, test::listRHIBackendParameter, 0.4 )
 {
     const float32         arrValue[4] = { 1.5f, -2.0f, 3.25f, 4096.0f };
     test::RHIBackendSweep sweep;
@@ -2990,7 +2991,7 @@ SW_TEST_CASE( RHIDeviceTest, AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFr
  *          (`AsyncBufferReadbackReturnsTheCopiedBufferAfterTheFrameCompletes` 가 졌던 원인). 읽기는 해제 큐 콜백이 아니라 여기서 직접 해, 대기 자체를 본다.
  *          원본이 16MB 라 복사가 비어 있는 큐에서 곧바로 끝나지 않는다.
  */
-SW_TEST_CASE( RHIDeviceTest, WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kElementCount = 4u * 1024u * 1024u;
     constexpr uint32 kSizeBytes    = kElementCount * sizeof( float32 );
@@ -3036,7 +3037,7 @@ SW_TEST_CASE( RHIDeviceTest, WaitIdleLeavesTheSubmittedCopyReadableOnEveryBacken
  *          Present 를 하지 않는 반복이라 DX11 · GL 이 프레임 수만 세면 GPU 가 뒤처진 채 콜백이 돈다(DX12 · Vulkan 은 펜스라 늘 맞다).
  *          GPU 가 프레임 `kMaxFrameCountInFlight` 개보다 더 뒤처지지 못하게 하는 링 슬롯 대기는, 마지막 프레임을 낸 뒤 `8 - kMaxFrameCountInFlight` 개 이상의 콜백이 불렸는지로 본다.
  */
-SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kElementCount = 2u * 1024u * 1024u;
     constexpr uint32 kSizeBytes    = kElementCount * sizeof( float32 );
@@ -3104,7 +3105,7 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDon
  * @brief [RHIDeviceTest] 계약 — `readReadbackBuffer` 는 읽기 버퍼가 아닌 핸들과 버퍼를 넘는 크기를 거절한다(네 백엔드)
  * @details 인터페이스는 "핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘으면 false" 라고 적었다. 증상: DX11 만 스테이징 버퍼인지 검사하고 나머지는 매핑되는 아무 버퍼나 읽어 줬다.
  */
-SW_TEST_CASE( RHIDeviceTest, ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kReadbackElementCount = 4;
 

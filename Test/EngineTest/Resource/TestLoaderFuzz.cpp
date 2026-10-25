@@ -27,7 +27,8 @@ using namespace sw;
 // 망가진 입력을 거절하는 것이 맞는 동작이다. 변이는 시드 고정이라 CI 에서도 같은 입력이 돈다(실패하면 같은 수로 다시 난다).
 //   SW_FUZZ_ITERATIONS=<n>   대상마다 변이 수(기본 120) — 사냥은 수만으로 돌린다
 //   SW_FUZZ_SEED=<n>         변이 시드(기본 0x5eed) — 다른 입력을 보고 싶을 때
-//   SW_FUZZ_TARGET=<이름>    한 대상만(`LoaderFuzzTargets.cpp` 의 표 이름)
+//   SW_FUZZ_TARGET=<이름>    `LoaderFuzzer`(libFuzzer)가 읽는 대상 이름(`LoaderFuzzTargets.cpp` 의 표 이름). 이 테스트는 대상마다 케이스다 —
+//                            한 대상만은 `--test_filter=LoaderFuzzTest.EveryLoaderSurvivesMutatedInput.<이름>`
 //   SW_FUZZ_TRACE=1          입력마다 대상 · 씨앗 · 회차를 찍고 입력을 임시 폴더 `sw_fuzz_last_<대상>.bin` 에 남긴다 — 죽은 입력을 건질 때
 // 커버리지 안내 퍼징(libFuzzer)은 리눅스 `Test/FuzzTest/LoaderFuzzer` 가 같은 표를 돈다 — `LoaderFuzzTargets.h` 머리말.
 // ------------------------------------------------------------------------------
@@ -245,34 +246,42 @@ namespace
         unique_ptr<ExitProbeRenderResource> _pResource;
     };
     ExitProbe s_exitProbe;
+
+    /** @brief 퍼징 대상의 이름들입니다(`LoaderFuzzTargets.cpp` 의 표) — 변이 케이스 `EveryLoaderSurvivesMutatedInput.<대상>` 의 목록이다. */
+    sw::vector<sw::string> listFuzzTargetName()
+    {
+        sw::vector<sw::string> listName;
+        for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
+        {
+            listName.emplace_back( target._pName );
+        }
+        return listName;
+    }
 } // namespace
 
 /**
- * @brief [LoaderFuzzTest] 모든 로더가 변이한 입력에 죽지도 단언하지도 않는다(씨앗 그대로도 포함)
+ * @brief [LoaderFuzzTest] 로더가 변이한 입력에 죽지도 단언하지도 않는다(씨앗 그대로도 포함) — 대상마다 케이스 하나(`.<대상>`)
  * @details 대상 표는 `LoaderFuzzTargets.cpp` 다. 씨앗을 하나도 못 모은 대상은 테스트가 진다(대상이 아무것도 안 먹은 것이다).
  *          단언은 `ScopedAssertCapture` 로 세고, 걸리면 대상 이름과 회차를 알린다 — 바깥 데이터로 걸리는 단언은 결함이다(입력 검증이 먼저 막아야 한다).
+ *          수열은 대상 이름에서 나오므로 한 대상만 돌려도 같은 입력이 나온다(재현). 예상 비용은 옛 한 케이스 13 s 를 대상 수(약 27)로 나눈 값이다.
  */
-SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
+SW_TEST_CASE_PER_PARAMETER( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput, listFuzzTargetName, 0.5 )
 {
     const uint64              iterationCount = readEnvironmentNumber( "SW_FUZZ_ITERATIONS", 120 );
     const uint64              baseSeed       = readEnvironmentNumber( "SW_FUZZ_SEED", 0x5EED );
-    const utf8*               pOnlyTarget    = std::getenv( "SW_FUZZ_TARGET" );
     const bool                bTrace         = readEnvironmentNumber( "SW_FUZZ_TRACE", 0 ) != 0;
-    uint32                    targetCount    = 0;
     test::ScopedLogSuppressor suppressor;
 
     for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
     {
-        const bool bSkipTarget = pOnlyTarget != nullptr && pOnlyTarget[0] != '\0' && string_view( pOnlyTarget ) != target._pName;
-        if ( bSkipTarget )
+        if ( string_view( pParameter ) != target._pName )
             continue;
-        ++targetCount;
 
         vector<vector<uint8>> listSeed;
         target._pfnCollectSeed( listSeed );
         SW_EXPECT_TRUE_MSG( listSeed.empty() == false, ( string( "no seed for fuzz target " ) + target._pName ).c_str() );
         if ( listSeed.empty() )
-            continue;
+            return;
         if ( target._bText )
         {
             for ( vector<uint8>& seed : listSeed )
@@ -309,8 +318,9 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
                 assertCountBefore = asserts.getCount();
             }
         }
+        return; // 이름이 같은 대상은 하나다
     }
-    SW_EXPECT_TRUE_MSG( targetCount > 0, "SW_FUZZ_TARGET names no target" );
+    SW_EXPECT_TRUE_MSG( false, ( string( "no fuzz target named " ) + pParameter ).c_str() );
 }
 
 /**

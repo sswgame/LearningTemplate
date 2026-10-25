@@ -25,7 +25,7 @@
 제목: 게임 여럿 빌드 · 선택 실행의 네 백엔드 확인
 옛번호: C-25
 왜 필요한가: 게임 여럿을 빌드 한 번에 짓고 실행할 때 고르며 키트는 필요한 것만 싣는 구조입니다(2026-10-13 사용자 확정). 결정은 [결정 기록](../09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md` 입니다.
-남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
+남은 것: 새 호스트 테스트 `AppScenarioTest.<게임>.<시나리오>.<백엔드>`(`--test_filter=AppScenarioTest.<게임>.*`) 를 네 백엔드로 아직 안 돌렸습니다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 실행 대기(통합): 매니페스트 id `game-pack-scenarios`(네 백엔드 DX12 · DX11 · Vulkan · GL). 통과하면 이 절을 지웁니다.
 
 ### NavMeshExtensions

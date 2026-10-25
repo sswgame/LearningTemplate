@@ -97,15 +97,59 @@ namespace test
         return TestCatalogInternal::kArrBuildFeature[static_cast<size_t>( feature )]._pName;
     }
 
+    const utf8* getCurrentCaseParameter()
+    {
+        return TestRegistry::getInstance().getCurrentContext()->getParameter().c_str();
+    }
+
     sw::string getEnvironmentValue( const utf8* pEnvironmentName )
     {
         const utf8* pValue = std::getenv( pEnvironmentName );
         return pValue == nullptr ? sw::string{} : sw::string( pValue );
     }
 
-    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
+    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds, const utf8* pParameter )
     {
-        _listCase.push_back( { pSuiteName, pTestName, func } );
+        _listCase.push_back( { pSuiteName, pTestName, func, expectedSeconds, pParameter } );
+    }
+
+    void TestCatalog::addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds )
+    {
+        _listParameterized.push_back( { pSuiteName, pTestName, listFunc, caseFunc, expectedSeconds } );
+    }
+
+    sw::string TestCatalog::makeParameterLabel( const utf8* pParameter )
+    {
+        if ( pParameter[0] == '\0' )
+            return "default";
+        return pParameter[0] == '-' ? sw::string( pParameter + 1 ) : sw::string( pParameter );
+    }
+
+    void TestCatalog::addCaseGenerator( CaseGenerator generator )
+    {
+        _listGenerator.push_back( generator );
+    }
+
+    void TestCatalog::expandCaseGenerators()
+    {
+        if ( _bGeneratorsExpanded )
+            return;
+        _bGeneratorsExpanded = true;
+        for ( const ParameterizedCase& family : _listParameterized )
+        {
+            for ( const sw::string& parameter : family._listFunc() )
+            {
+                const ParameterCaseFunc caseFunc = family._caseFunc;
+                addCase( family._suiteName.c_str(), ( family._testName + "." + makeParameterLabel( parameter.c_str() ) ).c_str(), [caseFunc, parameter]()
+                {
+                    caseFunc( parameter.c_str() );
+                }, family._expectedSeconds, parameter.c_str() );
+            }
+        }
+        for ( const CaseGenerator generator : _listGenerator )
+        {
+            generator( *this );
+        }
     }
 
     void TestCatalog::addSuiteKind( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason )
@@ -187,6 +231,17 @@ namespace test
     TestRegistrar::TestRegistrar( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
     {
         TestRegistry::getInstance().getCatalog().addCase( pSuiteName, pTestName, func );
+    }
+
+    CaseGeneratorRegistrar::CaseGeneratorRegistrar( TestCatalog::CaseGenerator generator )
+    {
+        TestRegistry::getInstance().getCatalog().addCaseGenerator( generator );
+    }
+
+    ParameterizedCaseRegistrar::ParameterizedCaseRegistrar( const utf8* pSuiteName, const utf8* pTestName, TestCatalog::ParameterListFunc listFunc,
+                                                            TestCatalog::ParameterCaseFunc caseFunc, float64 expectedSeconds )
+    {
+        TestRegistry::getInstance().getCatalog().addParameterizedCase( pSuiteName, pTestName, listFunc, caseFunc, expectedSeconds );
     }
 
     SuiteKindRegistrar::SuiteKindRegistrar( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason )

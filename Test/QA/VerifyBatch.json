@@ -284,8 +284,8 @@
       "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
     },
     {
-      "id": "game-pack-scenarios", "title": "게임 팩 시나리오를 네 백엔드로(EveryGamePackScenarioPassesOnEveryBackend)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "covered": ["AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend"], "covered_by": "app-scenarios-release",
+      "id": "game-pack-scenarios", "title": "게임 팩 시나리오를 네 백엔드로(AppScenarioTest.<게임>.<시나리오>.<백엔드>)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["AppScenarioTest.<게임>.*"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/Candidates-engine.md MultiGamePackVerification", "result_doc": "docs/plans/Candidates-engine.md MultiGamePackVerification 절을 지운다",
       "note": "게임 팩은 Bin/Games 에 있어야 한다(Release -DSW_GAMES=ALL). 팩이 없으면 케이스가 건너뛰므로 로그의 건너뜀 줄을 본다."
     },

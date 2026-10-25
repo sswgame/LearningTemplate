@@ -233,6 +233,25 @@ namespace
         SW_EXPECT_TRUE( run._output.find( "Net session closed (Server)" ) != string::npos );
     }
 
+    /**
+     * @brief 빌드된 게임의 이름들입니다 — 서버 옆 `Games/<이름>/` 폴더를 훑는다(빌드 구성 `SW_GAMES` 가 기준이라 테스트에 이름을 다시 적지 않는다).
+     * @details 케이스 `EveryBuiltGameStartsAsADedicatedServer.<게임>` 의 목록이다. 서버가 없거나 폴더가 없으면(Shipping · `SW_GAMES` 비움) 비어 있고, 그때는 `BuiltGameListIsNotEmpty` 가 건너뜀으로 알린다.
+     */
+    vector<string> listBuiltGameName()
+    {
+        vector<string> listGame;
+        const string   serverPath = findServerPath();
+        if ( serverPath.empty() )
+            return listGame;
+        vector<string> listGameFolder;
+        (void)FileUtil::collectFolders( FileUtil::joinPath( FileUtil::getDirectoryPart( serverPath ), "Games" ), listGameFolder, false ); // 폴더가 없으면 목록이 빈 채로 둔다
+        for ( const string& folder : listGameFolder )
+        {
+            listGame.push_back( FileUtil::getFileNamePart( folder ) );
+        }
+        return listGame;
+    }
+
 #if !defined( SW_SHIPPING ) // 서비스 포트 테스트만 쓴다 — Shipping 은 그 테스트를 건너뛴다
     /** @brief 아무것도 하지 않는 스트림 처리기 — 빈 TCP 포트를 고르려고 잠깐 여는 전송에 준다. */
     struct NullStreamHandler final : IStreamHandler
@@ -286,31 +305,34 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
 }
 
 /**
+ * @brief [ServerBootTest] 빌드된 게임의 목록이 비지 않는다 — 비면 게임별 케이스가 하나도 생기지 않아 아무것도 안 돌고 초록이 된다
+ * @details 서버가 없거나 `Games/` 폴더가 비면(Shipping · `SW_GAMES` 비움) 환경 탓이라 실패가 아니라 건너뜀이다 — 사유가 보고에 남는다. 게임별 케이스는 `EveryBuiltGameStartsAsADedicatedServer.<게임>`.
+ */
+SW_TEST_CASE( ServerBootTest, BuiltGameListIsNotEmpty )
+{
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    if ( listBuiltGameName().empty() )
+        SW_TEST_SKIP( "no game module folders next to Server (SW_GAMES is empty in this build)" );
+}
+
+/**
  * @brief [ServerBootTest] 빌드된 게임마다 전용 서버로 서고 60 틱을 돈 뒤 정상 종료한다 — 게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰면 여기서 진다
  * @details 게임 목록은 산출물 폴더 `Games/<이름>/` 를 훑어 정한다(빌드 구성 `SW_GAMES` 가 기준이라 테스트에 이름을 다시 적지 않는다). 기본 게임은
- *          `StartsTicksAndExitsWithoutWindowOrGPU` 가 본다. 언리얼이 맵마다 서버 기동 자동화 테스트를 두는 것과 같은 자리다.
+ *          `StartsTicksAndExitsWithoutWindowOrGPU` 가 본다. 언리얼이 맵마다 서버 기동 자동화 테스트를 두는 것과 같은 자리다. 게임마다 케이스 하나(`.<게임>`)라
+ *          한 게임이 져도 나머지는 돈다. 예상 비용은 옛 한 케이스 71 s 를 게임 수(약 12)로 나눈 값이다.
  */
-SW_TEST_CASE( ServerBootTest, EveryBuiltGameStartsAsADedicatedServer )
+SW_TEST_CASE_PER_PARAMETER( ServerBootTest, EveryBuiltGameStartsAsADedicatedServer, listBuiltGameName, 6.0 )
 {
-    const string serverPath = findServerPath();
-    if ( serverPath.empty() )
+    if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    vector<string> listGameFolder;
-    (void)FileUtil::collectFolders( FileUtil::joinPath( FileUtil::getDirectoryPart( serverPath ), "Games" ), listGameFolder, false ); // 폴더가 없으면 아래에서 건너뛴다
-    if ( listGameFolder.empty() )
-        SW_TEST_SKIP( "no game module folders next to Server (SW_GAMES is empty in this build)" );
-    for ( const string& folder : listGameFolder )
-    {
-        const string game = FileUtil::getFileNamePart( folder );
-        utf8         arrArgument[constant::kMaxBuffer256];
-        formatstring( arrArgument, constant::kMaxBuffer256, "-game=%# -gv_serverExitAfterTicks=60", game.c_str() );
-        const ServerRun run = runServer( arrArgument, ProcessOptions{}, []( Process& ) {} );
-        utf8            arrMessage[constant::kMaxBuffer1024];
-        formatstring( arrMessage, constant::kMaxBuffer1024, "%#: %#", game.c_str(),
-                      run._firstErrorLine.empty() ? "did not reach ready, stop at the tick limit or exit cleanly" : run._firstErrorLine.c_str() );
-        const bool bCleanRun = run._bReadySeen && run._exitCode == 0 && run._errorCount == 0;
-        SW_EXPECT_TRUE_MSG( bCleanRun && run._output.find( "Dedicated server shutdown requested (TickLimit)" ) != string::npos, arrMessage );
-    }
+    utf8 arrArgument[constant::kMaxBuffer256];
+    formatstring( arrArgument, constant::kMaxBuffer256, "-game=%# -gv_serverExitAfterTicks=60", pParameter );
+    const ServerRun run = runServer( arrArgument, ProcessOptions{}, []( Process& ) {} );
+    utf8            arrMessage[constant::kMaxBuffer1024];
+    formatstring( arrMessage, constant::kMaxBuffer1024, "%#: %#", pParameter, run._firstErrorLine.empty() ? "did not reach ready, stop at the tick limit or exit cleanly" : run._firstErrorLine.c_str() );
+    const bool bCleanRun = run._bReadySeen && run._exitCode == 0 && run._errorCount == 0;
+    SW_EXPECT_TRUE_MSG( bCleanRun && run._output.find( "Dedicated server shutdown requested (TickLimit)" ) != string::npos, arrMessage );
 }
 
 /**

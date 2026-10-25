@@ -28,6 +28,14 @@ namespace test
                                                             sw::RHIBackend::OpenGL };
 
     /**
+     * @brief 백엔드 스위치(`-dx11` · `-dx12` · `-vk` · `-gl`) 네 개 — 백엔드마다 케이스 하나로 가르는 `SW_TEST_CASE_PER_PARAMETER( …, test::listRHIBackendParameter, 비용 )` 의 목록이다.
+     * @details 케이스 안의 `RHIBackendSweep` 은 그 케이스의 백엔드 하나로 범위를 좁힌다(`RHIBackendSweep` 머리말) — 몸통을 고치지 않고 `Suite.이름.<dx12|dx11|vk|gl>` 로 갈린다.
+     */
+    sw::vector<sw::string> listRHIBackendParameter();
+    /** @brief @p backend 가 지금 케이스의 백엔드인가 — 백엔드마다 케이스로 가른 케이스면 그 백엔드 하나만, 그 밖의 케이스는 항상 true 다. 직접 백엔드 루프를 도는 가른 케이스가 쓴다. */
+    bool matchesCaseBackend( sw::RHIBackend backend );
+
+    /**
      * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGPUTest`).
      * @details 창 만들기 · 디바이스 만들기 · 표면 붙이기 · 초기화 · 실패 시 되감기를 한 곳에 모으고, 내리기는 소멸자가 한다.
      *          케이스가 끝의 내리기를 손으로 들면 그 사이의 `SW_ASSERT_*` 가 실패할 때 **내리기에 닿지 않는다** — 디바이스는
@@ -43,7 +51,10 @@ namespace test
         RHITestDevice() = default;
         /** @brief 이 백엔드로 세운다. 실패하면 `isReady()` 가 false 다. */
         explicit RHITestDevice( sw::RHIBackend backend );
-        /** @brief 목록에서 **처음으로 서는** 백엔드로 세운다. 다 실패하면 `isReady()` 가 false 다. */
+        /**
+         * @brief 목록에서 **처음으로 서는** 백엔드로 세운다. 다 실패하면 `isReady()` 가 false 다.
+         * @details 백엔드마다 가른 케이스(`SW_TEST_CASE_PER_PARAMETER( …, listRHIBackendParameter, … )`) 안에서는 목록이 그 케이스의 백엔드 하나로 좁아진다(목록에 없으면 서지 않는다).
+         */
         explicit RHITestDevice( std::initializer_list<sw::RHIBackend> listBackend );
         ~RHITestDevice();
 
@@ -88,6 +99,9 @@ namespace test
      *          하나도 서지 않았으면 `getReadyCount()` 가 0 이다. `SW_TEST_SKIP` 은 케이스 몸통에서만 return 할 수 있으므로 건너뛰기는
      *          케이스가 한다(`if ( sweep.getReadyCount() == 0 ) SW_TEST_SKIP( ... );`). 범위는 한 번만 돈다.
      *          몸통이 도는 동안 `backend=<이름>` 추적(`test::ScopedTrace`)이 걸려, 진 단언과 재현 요약이 어느 백엔드였는지 적는다.
+     *
+     *          **백엔드마다 케이스로 가른 케이스**(`SW_TEST_CASE_PER_PARAMETER( …, listRHIBackendParameter, … )`) 안에서는 어느 생성자로 만들었든 범위가 그 케이스의 백엔드 하나로 좁아진다
+     *          (목록에 없는 백엔드면 비어 `getReadyCount()` 가 0 이다 — 케이스가 건너뛴다). 그 밖의 케이스는 목록 전부를 돈다. 백엔드끼리 결과를 견주는 케이스는 가르지 않는다.
      */
     class RHIBackendSweep
     {
