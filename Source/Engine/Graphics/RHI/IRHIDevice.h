@@ -177,7 +177,7 @@ namespace sw
         /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
         virtual uint32 getPendingReleaseCount() const = 0;
         /**
-         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` 를 처음 본 뒤의 상태로 둔다).
+         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan · DX11 — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` 를 처음 본 뒤의 상태로 둔다. DX11 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
          */
         virtual bool debugRemoveDevice() { return false; }

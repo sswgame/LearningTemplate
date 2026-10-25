@@ -140,6 +140,20 @@ namespace sw
         /** @brief GPU 가 유휴 상태가 될 때까지 기다린 뒤 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /**
+         * @brief 장치 제거를 흉내 냅니다(개발 명령 `rhi.removeDevice`). D3D11 에는 `RemoveDevice` 가 없어 첫 `DXGI_ERROR_DEVICE_REMOVED` 를 본 뒤의 상태(전송 손실 표시)만 만듭니다.
+         * @details 그 뒤의 전송 제출은 진입에서 `Rejected` 이다. GPU 는 실제로 살아 있어 프레임 · 대기는 계속 돈다(Vulkan 과 같은 한계).
+         */
+        bool debugRemoveDevice() override;
+        /**
+         * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
+         * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
+         *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
+         */
+        bool isDeviceRemoved();
+        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
+        bool isDeviceLost();
+
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
@@ -228,6 +242,21 @@ namespace sw
          *          기다리지 않으면 Present 를 하지 않는 반복(오프스크린)에서 GPU 가 얼마든지 뒤처져 "GPU 가 끝난 뒤" 라는 콜백의 약속이 깨진다.
          */
         void retireFrameOnGPU();
+
+        /**
+         * @brief 장치 손실을 전송 시리얼에 표시합니다(`RHITransferSerials::markLost`). 처음 표시한 호출만 원인을 로그로 남긴다 — 손실 뒤의 모든 호출이 같은 줄을 되풀이하지 않게 한다.
+         * @details 실제 손실을 표시하는 자리는 이 함수 하나다(`isDeviceRemoved` · `reportQueryFailure` · Present 실패가 부른다). `debugRemoveDevice` 만 시험용이라 로그를 경고로 남기려 직접 표시한다.
+         */
+        void markDeviceLost( const utf8* pCause, HRESULT hr );
+        /**
+         * @brief `GetData` 가 실패했을 때 부릅니다. 쿼리를 읽지 못하면 GPU 가 어디까지 왔는지 볼 수 없으므로, 제거 이유를 묻고(`isDeviceRemoved`) 제거가 아니어도 손실로 표시합니다.
+         * @details 호출 쪽은 이 쿼리를 "끝남" 으로 취급해 대기 루프를 끝낸다(손실 뒤의 대기는 GPU 를 기다리지 않는다). 표시가 없으면 폴링 쪽 티켓이 `Pending` 으로 남는다.
+         */
+        void reportQueryFailure( HRESULT hr, const utf8* pStage );
+        /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 읽지 못하면(장치 제거 · 손실 표시) true 입니다. */
+        bool isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags );
+        /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났거나 읽지 못했으면 true, 시한을 넘기면 false 입니다. */
+        bool waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds );
 
         /**
          * @class UploadStaging
