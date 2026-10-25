@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
 
 #if !defined( SW_SHIPPING )
@@ -26,8 +27,8 @@ namespace sw
             /** @brief 캡처 파일 경로 템플릿입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙입니다). 작업 폴더 기준입니다. */
             static constexpr const utf8* kCaptureFilePathTemplate = "Saved/RenderDoc/capture";
 
-            inline static RENDERDOC_API_1_6_0* _s_pAPI   = nullptr;
-            inline static bool                 _s_bTried = false;
+            inline static RENDERDOC_API_1_6_0* _s_pAPI = nullptr;
+            inline static atomic<bool>         _s_bTried{ false };
 
             /** @brief 이미 로드된(또는 @p bLoadIfMissing 이면 설치 경로에서 로드한) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr 입니다. */
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
@@ -100,9 +101,8 @@ namespace sw
 #if !defined( SW_SHIPPING )
     void RenderDocCapture::initialize( bool bLoadIfMissing )
     {
-        if ( RenderDocCaptureInternal::_s_bTried )
+        if ( RenderDocCaptureInternal::_s_bTried.exchange( true ) ) // 첫 호출 하나만 초기화한다
             return;
-        RenderDocCaptureInternal::_s_bTried = true;
 
         const pRENDERDOC_GetAPI pfnGetAPI = RenderDocCaptureInternal::findGetAPI( bLoadIfMissing );
         if ( pfnGetAPI == nullptr )

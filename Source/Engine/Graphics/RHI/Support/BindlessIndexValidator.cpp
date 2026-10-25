@@ -16,6 +16,20 @@ namespace sw
 
     namespace
     {
+        /**
+         * @brief 보고한 위치의 키입니다 — 패스 · 필드 이름의 비교 인덱스(`hashed_string` 이 같은 이름을 가리는 값)와 원소 번호를 **그대로** 둡니다.
+         * @details 해시 하나로 접으면 서로 다른 위치가 충돌했을 때 두 번째 위치의 오류가 조용히 사라진다. 해시는 버킷만 고르고 같은 위치인지는 세 값이 가린다.
+         */
+        struct BindlessSiteKey
+        {
+            uint32 _passIndex{ 0 };
+            uint32 _fieldIndex{ 0 };
+            uint32 _element{ 0 };
+
+            [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _passIndex, _fieldIndex, _element ); }
+            [[nodiscard]] bool   operator==( const BindlessSiteKey& other ) const { return _passIndex == other._passIndex && _fieldIndex == other._fieldIndex && _element == other._element; }
+        };
+
         struct BindlessIndexValidatorInternal
         {
             // 검사 수준: 0 끔, 1 죽은 번호(오류), 2 죽은 번호와 "없음(kInvalidDescriptorIndex)" 이 셰이더로 가는 곳(정보).
@@ -33,16 +47,15 @@ namespace sw
                 return ( space == RHIBindlessIndexSpace::Texture ) ? "texture" : "buffer";
             }
 
-            static uint64 makeSiteKey( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
+            static BindlessSiteKey makeSiteKey( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
             {
-                const uint64 siteKey = HashUtil::combine( static_cast<uint64>( passName.getHash() ), static_cast<uint64>( fieldName.getHash() ) );
-                return HashUtil::combine( siteKey, static_cast<uint64>( element ) );
+                return BindlessSiteKey{ passName.getIndex(), fieldName.getIndex(), element };
             }
         };
 
-        mutex                 s_reportMutex;
-        unordered_set<uint64> s_uniqueReportedSite;
-        unordered_set<uint64> s_uniqueAbsentSite;
+        mutex                          s_reportMutex;
+        unordered_set<BindlessSiteKey> s_uniqueReportedSite;
+        unordered_set<BindlessSiteKey> s_uniqueAbsentSite;
     } // namespace
 
     /**
@@ -84,7 +97,7 @@ namespace sw
     bool BindlessIndexValidator::report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName,
                                          const hashed_string& fieldName, uint32 element )
     {
-        const uint64 siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
+        const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
             std::scoped_lock<mutex> lock{ s_reportMutex };
             if ( s_uniqueReportedSite.insert( siteKey ).second == false )
@@ -99,7 +112,7 @@ namespace sw
 
     bool BindlessIndexValidator::noteAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
     {
-        const uint64 siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
+        const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
             std::scoped_lock<mutex> lock{ s_reportMutex };
             if ( s_uniqueAbsentSite.insert( siteKey ).second == false )
