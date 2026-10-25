@@ -37,11 +37,19 @@
   모든 매니저를 만드는 조립 파일(`EditorContextLifecycle.cpp` · `EditorModuleUnloadListener.*`)은 셸 옆 `Source/Editor` 바로 아래에 두어 모델 폴더가 패널 · 팝업 매니저를 include 하지 않습니다.
   정적 라이브러리나 별도 DLL 로 떼지 않습니다. 확장 모듈이 따로 링크하면 정적 상태가 두 벌이 되고 export 가 빠질 수 있습니다.
   vcpkg 가 모든 패키지 헤더를 한 include 자리에 두어 include 자리로는 imgui.h 를 숨길 수 없으므로, `IMGUI_USER_CONFIG` 에 `#error` 헤더를 주어 imgui.h 를 거치는 include 를 컴파일 오류로 만듭니다(린트 게이트가 아님).
-- **패널과 커맨드의 `EditorContext::get()`(62 파일 224 곳)은 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),
+- **패널과 커맨드의 에디터 컨텍스트 조회(옛 `EditorContext::get()`, 62 파일 224 곳)는 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),
   상용 엔진도 에디터 하위 시스템을 전역 창구로 줍니다(언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject`).
   EditorTest 는 UI 매니저 때문에 `EditorContext` 를 만들 수 없으므로 컨텍스트를 인자로 바꿔도 테스트가 늘지 않습니다. 테스트할 판단이 생기면 그 함수만 필요한 서비스 하나(작업 공간, 선택)를 인자로 받습니다.
-  `get()` 은 지금 에디터 범위의 주인을 돌려줍니다(범위의 첫 칸 — 프레임당 57 회 호출에 비교 한 번).
+  컨텍스트는 지금 에디터 범위의 주인입니다(범위의 첫 칸 — 프레임당 57 회 호출에 비교 한 번).
   `editor::findSubsystem<T>()` 는 에디터 범위(컨텍스트의 하위 객체)를 먼저 보고 없으면 호스트(엔진) 표를 봅니다.
+- **에디터 컨텍스트의 조회는 `editor::getSubsystem<EditorContext>()`(있어야 함, 참조) 와 `editor::findSubsystem<EditorContext>()`(없을 수 있음, 포인터) 둘이고, 옛 `EditorContext::get()` 은 지웠습니다**(2026-10-26, `editctx`).
+  `get()` 은 null 을 허용해 그리기 · 패널 · 명령 안에서도 널 확인이 붙었고(조용히 건너뛰어 결함을 가린다), 필수 서비스 조회의 부재 보고는 `SW_ASSERT` 라 Release 에서 사라져 널 역참조가 됐다.
+  판정은 호출 문맥이다: 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 메뉴 · 에디터 UI 에서만 불리는 명령)은 `getSubsystem`(널 확인을 지운다), 없는 채로 계속하는 정상 경로 —
+  컨텍스트 없이 도는 EditorTest 가 부르는 함수(복제 · 붙여넣기 · 핫 리로드 · 트랜잭션), 종료 · 해제 경로(썸네일 캐시 · 미리보기 텍스처 해제), 에디터 없는 호스트에도 등록돼 있는 탐침 · 자동화 시계 조건,
+  실패를 `false` 로 알리는 개발 명령, 컨텍스트가 없으면 `expect` 로 실패를 기록하는 셀프테스트 — 은 `findSubsystem` 이다. 부재 보고(`internal::reportMissingRequiredService`)는 `assertEditorThread` 와 같이 모든 구성에서 오류 로그를 남기고
+  `abort` 하며 Debug 에서 단언 가로채기를 건 테스트만 센다(`EditorContext::getSubsystem` 도 같은 길). 이름을 `find()`/`require()` 짝 멤버로 새로 만들지 않고 이미 있는 한 어휘(결정 5-3 `getSubsystem`/`findSubsystem`)를 쓴 이유:
+  `static EditorContext& require()` 는 `CheckServiceAccess` 가 전역 단일체 창구(자기 타입 참조를 돌려주는 정적 멤버)로 막고, 같은 조회의 두 번째 철자가 생기면 옛 이름처럼 새 코드가 쓰는 길을 가린다. 옛 이름이 다시 생기는 것은
+  `CheckServiceAccess` 의 `RetiredWindow` 가 막는다. 언리얼의 `GEditor->GetEditorSubsystem<T>()` 는 늘 포인터를 돌려주고 호출 지점이 `check` 로 필수를 표시하는 쪽이라, 이름으로 필수와 선택을 가르는 이 어휘가 더 낫다.
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
   쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다(상용 엔진도 에디터 바이너리를 머리 없이 돌립니다).
   `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.

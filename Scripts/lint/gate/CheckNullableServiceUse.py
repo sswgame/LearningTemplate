@@ -8,10 +8,9 @@ nullptr 을 돌려줄 수 있는 조회 함수를 곧바로 `->` 로 따라가�
 종료할 때 결합이 먼저 풀리므로, 그 창에 걸리면 널 역참조다. 같은 파일 안에서 어떤 호출부는 확인하고 어떤 호출부는 확인하지 않는 모양이 되기
 쉬우므로, 사람이 지킬 규칙이 아니라 기계가 본다. (`getSubsystem<T>()` 는 반드시 있는 쪽이라 보지 않는다.)
 
-**같은 함정에 문이 셋이다.**
+**같은 함정에 문이 둘이다.** (에디터 컨텍스트의 옛 창구 `EditorContext::get()` 은 지웠다 — 같은 조회가 `editor::findSubsystem<EditorContext>()` 라 첫 문이 그대로 잡고,
+옛 이름이 다시 생기는 것은 `CheckServiceAccess` 의 `RetiredWindow` 가 막는다.)
   - `findSubsystem<T>()->` — 받자마자 따라간다.
-  - `EditorContext::get()->` — 속으로 `findSubsystem<EditorContext>()` 를 부르므로 이것도 nullptr 이 될 수 있다.
-    이름만 달라 같은 모양을 놓치지 않도록 같이 본다.
   - "받아 두고 확인은 안 하는" 것 — `T* p = findSubsystem<T>();` 는 한 줄짜리 정규식을 통과하지만, 그 뒤에
     확인 없이 `p->` 를 쓰면 결과는 같다. 그래서 선언 뒤를 함수 끝까지 훑어 "확인이 먼저인가
     역참조가 먼저인가" 를 본다 — 확인으로 치는 모양은 아래 `_kCheckTemplate` 에 적혀 있다.
@@ -36,20 +35,17 @@ from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 #
 #   findSubsystem<T>()->     · engine:: / game:: / editor:: 한정 · pContext->findSubsystem<T>()->
 #   scope.find<T>()->        — 범위 객체의 멤버 `find`
-#   EditorContext::get()->   — 속으로 findSubsystem<EditorContext>() 를 부르는 같은 함정의 다른 문
 _kListNullableCallRe = (
     re.compile(r"\bfindSubsystem\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
     re.compile(r"(?:\.|->)\s*find\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
-    re.compile(r"\bEditorContext\s*::\s*get\s*\(\s*\)\s*->"),
 )
 
-# 세 번째 문: 받아 두기만 하고 확인하지 않는 것.
-#   T* pName = findSubsystem<T>();   ·   T* pName = pContext->findSubsystem<T>();   ·   EditorContext* pName = EditorContext::get();
+# 둘째 문: 받아 두기만 하고 확인하지 않는 것.
+#   T* pName = findSubsystem<T>();   ·   T* pName = pContext->findSubsystem<T>();   ·   EditorContext* pName = editor::findSubsystem<EditorContext>();
 _kNullableDeclRe = re.compile(
     r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(p[A-Z]\w*)\s*=\s*"
     r"(?:(?:(?:engine|game|editor)::)?findSubsystem\s*<"
-    r"|[\w\]\)]+\s*(?:\.|->)\s*(?:findSubsystem|find)\s*<"
-    r"|EditorContext\s*::\s*get\s*\()"
+    r"|[\w\]\)]+\s*(?:\.|->)\s*(?:findSubsystem|find)\s*<)"
 )
 
 # 확인으로 치는 모양. 이 중 하나가 역참조보다 먼저 나오면 통과다.
@@ -114,7 +110,7 @@ class CheckNullableServiceUseGate(LintGate):
     sourceSummary = "Engine · Editor · GameFramework · Games 의 서비스 조회 역참조"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
-        "  findSubsystem<T>() 와 EditorContext::get() 은 nullptr 을 돌려줄 수 있습니다.\n"
+        "  findSubsystem<T>()(에디터 컨텍스트를 찾는 findSubsystem<EditorContext>() 포함)는 nullptr 을 돌려줄 수 있습니다.\n"
         "  포인터를 받아 두고 확인한 뒤 쓰십시오:\n"
         "      CommandStack* pStack = editor::findSubsystem<CommandStack>();\n"
         "      if ( pStack == nullptr )\n"
@@ -148,13 +144,13 @@ class CheckNullableServiceUseGate(LintGate):
             },
         },
         {
-            "name": "EditorContext::get() 을 바로 역참조",
-            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeContext.cpp:3: EditorContext::get()->getWorkspace().clearSelection();",
+            "name": "에디터 컨텍스트 조회를 바로 역참조",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeContext.cpp:3: editor::findSubsystem<EditorContext>()->getWorkspace().clearSelection();",
             "files": {
                 "Source/Editor/Probe/ProbeContext.cpp": (
                     "void probe()\n"
                     "{\n"
-                    "    EditorContext::get()->getWorkspace().clearSelection();\n"
+                    "    editor::findSubsystem<EditorContext>()->getWorkspace().clearSelection();\n"
                     "}\n"
                 ),
             },

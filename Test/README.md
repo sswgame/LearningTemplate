@@ -387,7 +387,7 @@ hostgpu 항목(호스트 조각 · 레이스 묶음)은 `--required_backends=<�
   CI 실패 보고(`Scripts/dev/CiFailureReport.py`)는 줄 머리(`[  FAILED  ]` · `  [FAILED]`)로 실패를 고르므로, 머리가 같으면 그 조각의 진짜 실패(새니타이저 보고처럼 표시 줄이 없는 것) 대신 안쪽 줄이 보고됩니다.
 - `EditorTest` 는 Editor 소스를 손으로 나열합니다. 나열한 파일이 실제로 있는지, ImGui를 include하지 않는지는 `CheckTestSuites.py` 가 확인합니다.
   ImGui 를 링크하지 않고 정해 둔 Editor 파일만 링크하므로(`EditorAssetCommands.cpp` 는 빠져 있다) 테스트할 로직은 ImGui 없는 함수로 꺼냅니다.
-  `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy` 가 그 예입니다. `EditorContext::get()` 을 읽는 함수는 테스트할 수 없습니다.
+  `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy` 가 그 예입니다. `editor::getSubsystem<EditorContext>()` 로 컨텍스트를 받는 함수는 테스트할 수 없습니다(컨텍스트가 없으면 모든 구성에서 멈춥니다). 컨텍스트 없이 도는 테스트가 부르는 함수는 `editor::findSubsystem<EditorContext>()` 로 받아 null 을 정상 경로로 둡니다.
   새 소스 파일을 더한 뒤에는 `cmake --preset Ninja-Debug` 로 다시 구성합니다.
 - **CoreTest 는 엔진을 쓰지 않습니다.** include 경로로는 막을 수 없습니다(`TestFramework` 가 Engine 을 PUBLIC 링크하고 `TestFramework.h` 가 `EngineMinimal.h` 를 include 한다).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막습니다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에 둡니다.
