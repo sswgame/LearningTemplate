@@ -142,7 +142,16 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 인스턴스 · 물리 디바이스 · 논리 디바이스 · 스왑체인 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        _pHWnd          = desc._pWindowHandle;
+#if defined( SW_PLATFORM_WINDOWS )
+        // Windows 의 표면은 Win32 `HWND` 다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
+        if ( desc.tryGetWin32Handle( _pHWnd ) == false )
+        {
+            SW_LOG_ERROR( "Vulkan on Windows needs a Win32 surface" );
+            return false;
+        }
+#else
+        _pHWnd = desc._pWindowHandle; // 종류별 읽기는 `createSurface` 의 `_linuxWsi` 가 고른다(`_surfaceKind` 에서 정한다)
+#endif
         _pDisplayHandle = desc._pWindowDisplay;
         _surfaceKind    = desc._surfaceKind;
         _width          = desc._width;

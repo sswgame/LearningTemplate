@@ -4,6 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -833,7 +834,8 @@ namespace sw::editor
                     probe.restorePlatformCallback();
 #if defined( SW_PLATFORM_WINDOWS )
                     // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
-                    HWND hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
+                    HWND hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
+                    (void)context.expect( hWnd != nullptr, "the main viewport has no Win32 window handle" );
                     if ( hWnd != nullptr && GetWindowRect( hWnd, &probe._originalRect ) )
                     {
                         probe._suggestedRect        = probe._originalRect;
@@ -849,7 +851,7 @@ namespace sw::editor
                 if ( stepIndex == kCheckWindowStep )
                 {
 #if defined( SW_PLATFORM_WINDOWS )
-                    HWND           hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
+                    HWND           hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
                     RECT           client{};
                     EditorContext* pContext              = EditorContext::get();
                     const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;

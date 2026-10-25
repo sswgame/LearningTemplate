@@ -57,15 +57,13 @@ namespace sw
         /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기 통보는 이 호출 안의 WM_SIZE 로 옵니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
 
-        /** @brief 네이티브 창 핸들(HWND)을 반환합니다. */
-        void* getNativeHandle() const override { return _hWnd; }
         /** @brief `GetDpiForWindow` / 96 입니다(프로세스가 PerMonitorV2 이며 `WindowsProcess.manifest` 에서 정합니다). 창이 없으면 1 입니다. */
         float32 getContentScale() const override;
 
-        /** @brief Win32 전용 HWND 핸들을 반환합니다. */
-        HWND getHwnd() const { return _hWnd; }
-
     protected:
+        /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `IWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */
+        void* getNativeHandle() const override { return _hWnd; }
+
         /** @brief `GetWindowRect` 로 지금 위치를 담습니다. */
         void captureRestorePosition() override;
         /** @brief 복원 위치를 `CW_USEDEFAULT` 로 되돌립니다. */

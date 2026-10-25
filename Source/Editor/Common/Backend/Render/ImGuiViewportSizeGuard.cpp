@@ -4,6 +4,8 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 
     #include <imgui.h>
@@ -18,7 +20,8 @@ namespace sw::editor
             if ( pViewport == nullptr )
                 return;
 
-            HWND hwnd = static_cast<HWND>( pViewport->PlatformHandleRaw ? pViewport->PlatformHandleRaw : pViewport->PlatformHandle );
+            // Win32 뷰포트 창이 아니거나 핸들이 비어 있으면 잴 창이 없으니 보정을 건너뛴다(다른 핸들로 대신하지 않는다).
+            HWND hwnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( pViewport ) );
             if ( hwnd == nullptr )
                 return;
 

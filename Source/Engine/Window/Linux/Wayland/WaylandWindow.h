@@ -45,13 +45,14 @@ namespace sw
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
 
-        void* getNativeHandle() const override;
-        void* getNativeDisplay() const override;
-
         /** @brief 포인터가 이 창 위에 있을 때 커서를 숨기거나 기본 커서로 되돌립니다(wl_pointer_set_cursor · 커서 테마). */
         void setCursorVisible( bool bVisible );
 
     protected:
+        // 핸들 읽기는 기반의 보호 구역이다 — 바깥은 `getSurfaceHandle` · `getSurfaceDisplay` 를 종류(`getSurfaceKind`)와 함께 읽는다(여기서 다시 public 으로 열지 않는다).
+        void* getNativeHandle() const override;
+        void* getNativeDisplay() const override;
+
         /** @brief Wayland 클라이언트는 창 자리를 모른다 — 할 일이 없다. */
         void captureRestorePosition() override {}
         /** @brief 위와 같다. */

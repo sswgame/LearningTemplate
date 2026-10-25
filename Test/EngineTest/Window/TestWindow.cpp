@@ -225,7 +225,8 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
     SW_ASSERT_TRUE( window->initializeWindow( "NestedResizeTestWindow", 320, 240 ) );
-    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
 
     sw::vector<sw::pair<uint32, uint32>> listResize;
     window->setResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&listResize, hWnd]( uint32 width, uint32 height )
@@ -276,7 +277,8 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
     SW_ASSERT_TRUE( windowHost.adopt( window ) ); // 입력 관리자가 범위에서 주 창을 찾는다
     pWindow->showWindow( true );
 
-    const HWND hWnd = static_cast<sw::Win32Window*>( pWindow )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
     SetForegroundWindow( hWnd );
     (void)pWindow->processMessages();
 
@@ -318,7 +320,8 @@ SW_TEST_CASE( WindowTest, TitleReachesTheOsAsUtf16 )
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
     SW_ASSERT_TRUE( window->initializeWindow( kTitle, 320, 240 ) );
-    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
 
     const auto readTitle = [hWnd]() -> sw::string
     {
