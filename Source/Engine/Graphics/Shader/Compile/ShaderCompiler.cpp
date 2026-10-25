@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
@@ -545,6 +546,15 @@ namespace sw
                     SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
                     return DxcOutcome::NoOutput;
                 }
+
+    #if defined( SW_SANITIZER_THREAD )
+                // libdxcompiler 는 계측되지 않은 서드파티라 TSan 이 그 안의 원자 연산 · 지연 초기화 동기화(ManagedStatic · 락 객체 게시)를 보지 못한다.
+                // 병렬 쿠킹의 컴파일이 겹치면 DXC 안에서 할당한 블록을 다른 스레드가 해제하는 것으로 보여 경쟁 9 건이 난다(2026-10-25 CI TSan).
+                // 억제 목록은 libc 프레임만 남은 보고를 못 맞추고 엔진 콜백의 진짜 경쟁까지 가리므로, 이 구성에서만 DXC 호출을 직렬로 돌려 선후를 TSan 이 보게 한다.
+                // 다른 구성은 그대로 병렬이다. 이 구성에서는 DXC 안쪽의 경쟁을 검사하지 않는다.
+                static mutex            s_mutexDxcSerial;
+                std::scoped_lock<mutex> dxcSerialLock{ s_mutexDxcSerial };
+    #endif
 
                 DxcComPtr<IDxcUtils>     utils;
                 DxcComPtr<IDxcCompiler3> compiler;

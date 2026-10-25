@@ -9,6 +9,7 @@
 "Test/CoreTest/Common/TestLowLevelReport.cpp:_s_bHandled" = "SW_LOW_LEVEL 보고자는 사용자 자료 없는 함수 포인터라 받은 보고를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 직렬로 돈다)"
 "Test/EditorTest/Common/Workspace/TestAssetHotReloadImport.cpp:g_importGate" = "임포트 잡의 임포터는 사용자 자료 없는 함수 포인터(`EditorAssetImportItem::_pfnImport`)라 워커 안 가짜 임포터의 신호를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 reset 하고 직렬로 돈다)"
 "Source/Core/Diagnostics/CacheStats.cpp:s_registry" = "캐시 계측 칸은 함수 정적 캐시(약한 intern 표 등 서비스 범위 밖)와 여러 DLL 이 핸들 포인터로 쥐고 엔진을 다시 세워도 살아야 해서 프로세스에 하나다 — 소멸자가 없는 정적 배열이라 정적 소멸 뒤 기록도 안전하다(언리얼 stat 등록부와 같은 자리)"
+"Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp:s_mutexDxcSerial" = "TSan 구성에서만 있는 DXC 호출 직렬화 뮤텍스다. libdxcompiler 의 전역 상태(ManagedStatic · 락 객체)가 프로세스에 하나이고 그 선후를 TSan 이 못 봐서, 같은 수명(프로세스)의 칸 하나로 그 호출들을 묶는다 — 소유할 서브시스템이 없다(다른 구성에는 없다)"
 
 # [pending] — 이전 대기 표(래칫). 신규 위반부터 막고 기존 위반은 영역별로 소유자 있는 객체로 옮기며 줄여 간다(사용자 결정, 2026-10-25).
 # 키는 파일 경로, 값은 그 파일의 위반 **총수** 상한(범주별이 아니다 — Local 을 Namespace/Member 로 옮기는 우회도 총수라 막힌다).

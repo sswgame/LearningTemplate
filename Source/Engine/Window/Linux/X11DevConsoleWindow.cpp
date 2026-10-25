@@ -199,6 +199,13 @@ namespace sw
 
     unique_ptr<IDevConsoleWindow> IDevConsoleWindow::createPlatform( IWindow& owner )
     {
+        // `getNativeDisplay` 는 창 시스템마다 다른 연결(Wayland 는 wl_display)이라 X11 창이 아닌 것을 Display* 로 읽으면 DefaultScreen 에서 죽는다(CI Wayland 스모크 SIGSEGV).
+        // 이 콘솔은 X11 자식 창이다 — Wayland 창에서는 만들지 않고, 콘솔은 그리지 않은 채 입력만 받는다.
+        if ( owner.getSurfaceKind() != NativeSurfaceKind::X11 )
+        {
+            SW_LOG_INFO( "Dev console: the X11 console window is not created for a non-X11 window - input only" );
+            return nullptr;
+        }
         Display*       pDisplay    = static_cast<Display*>( owner.getNativeDisplay() );
         const ::Window ownerWindow = static_cast<::Window>( reinterpret_cast<uintptr_t>( owner.getNativeHandle() ) );
         if ( pDisplay == nullptr || ownerWindow == 0 )
