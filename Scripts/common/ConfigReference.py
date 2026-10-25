@@ -27,6 +27,7 @@ from typing import Iterator
 from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
+from .CppConstants import ConstantError, ConstantResolver, formatDoubleInternal, hasConstantName
 from .CookContract import kCookContractConfigRelative
 from .PathPattern import matchesPattern
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
@@ -152,7 +153,11 @@ def findLeadingDocInternal(segment: str) -> str:
 # ------------------------------------------------------------------------------
 @dataclass
 class FieldDoc:
-    """설정 칸 하나입니다."""
+    """설정 칸 하나입니다.
+
+    `MaxCount` 는 문서 칸이 아니다(문서에 나가지 않는다). 칸으로 더하려면 생성기 규칙으로 풀어야 한다 — 양의 32 비트 정수 리터럴 또는 상수 이름 하나(`_` 시작도
+    필드로 보지 않고 상수로 찾는다), 정수 상수만(실수 · 범위 밖은 오류), `Min`/`Max` 와 달리 `-` · 쉼표 목록 · 필드 이름 없음(`AstVisitor::resolveMaxCountName`).
+    """
 
     name: str
     typeName: str
@@ -194,6 +199,7 @@ _kDeclRe = re.compile(r"^(?P<type>.+?)\s+(?P<name>_\w+)\s*(?::\s*\d+\s*)?(?P<ini
 class SourceIndex:
     """`Source/` 의 리플렉션 구조체 · enum 자리입니다(이름 → (파일, 글))."""
 
+    resolver: ConstantResolver
     mapStruct: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
     mapEnum: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
 
@@ -256,7 +262,7 @@ class SourceTreeReader:
 
 def buildSourceIndex(reader: SourceTreeReader) -> SourceIndex:
     """`Source/` 의 헤더에서 `REFLECT` 구조체와 `enum class` 자리를 모읍니다. 같은 이름이 둘이면 먼저 본 것(경로 순)을 씁니다."""
-    index = SourceIndex()
+    index = SourceIndex(resolver=ConstantResolver(reader.root, reader.readText))
     for relative, text in reader.iterFiles(("Source",), (".h",)):
         if "REFLECT" not in text and "enum class" not in text:
             continue
@@ -289,8 +295,11 @@ def parseMetaInternal(metaText: str) -> dict[str, str]:
     return mapMeta
 
 
-def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
-    """멤버 초기값을 문서 칸 글로 바꿉니다(`1.0f / 60.0f` → `1.0 / 60.0`, `RHIBackend::X` → `X`, `""` → 빈 글)."""
+def formatDefaultInternal(initText: str, mapMacro: dict[str, str], resolver: ConstantResolver, relative: str) -> str:
+    """멤버 초기값을 문서 칸 글로 바꿉니다(`1.0f / 60.0f` → `1.0 / 60.0`, `RHIBackend::X` → `X`, `""` → 빈 글).
+
+    항목이 `constexpr` 상수의 산식(`kDefaultSize`, `Limit::kMax / 2`)이면 `Min` · `Max` 와 같은 리졸버로 숫자 글을 쓴다(`relative` 헤더에서 본다).
+    enum 값 · 문자열 · 생성자 호출처럼 상수 산식이 아닌 항목은 이름을 그대로 둔다."""
     text = (initText or "").strip()
     if text.startswith("="):
         text = text[1:].strip()
@@ -303,32 +312,51 @@ def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
     text = text.replace("SW_TRUE", "true").replace("SW_FALSE", "false")
     for macro, value in mapMacro.items():
         text = text.replace(macro, value)
-    text = re.sub(r"\b(?:\w+::)+(\w+)", r"\1", text)
-    listItem = splitTopLevelInternal(text)
-    listItem = [item[1:-1] if len(item) >= 2 and item[0] == '"' and item[-1] == '"' else item for item in listItem]
+    listItem = []
+    for item in splitTopLevelInternal(text):
+        resolved = resolver.resolveDefaultExpression(relative, item) if hasConstantName(item) else None
+        item = resolved if resolved is not None else re.sub(r"\b(?:\w+::)+(\w+)", r"\1", item)
+        listItem.append(item[1:-1] if len(item) >= 2 and item[0] == '"' and item[-1] == '"' else item)
     if len(listItem) > 4:
         return ", ".join(listItem[:3]) + f", … ({len(listItem)} 개)"
     return ", ".join(listItem)
 
 
-def resolveRangeConstantInternal(rangeText: str | None, fileText: str, typeName: str) -> str | None:
-    """`Min` · `Max` 가 C++ 상수 이름(`kMaxWorkerCount2D`, `-Limit::kMax`)이면 같은 파일의 `constexpr` 값으로 바꿉니다.
+_kRangeNumberRe = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+_kQualifiedNameRe = re.compile(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*")
 
-    에디터가 읽는 메타데이터 JSON 의 min · max 는 숫자 글이어야 하므로 이름이 남으면 안 됩니다(생성기 `AstVisitor::resolveRangeConstants` 와 같은 규칙:
-    `_` 로 시작하는 이름은 필드). 같은 파일에서 찾지 못하면 멈춥니다 — 이름이 그대로 JSON 에 들어가면 에디터가 숫자로 읽지 못합니다.
+
+def resolveRangeConstantInternal(rangeText: str | None, relative: str, resolver: ConstantResolver, typeName: str) -> str | None:
+    """`Min` · `Max` 의 상수 이름 항(`kMaxWorkerCount2D`, `-Limit::kMax`)을 숫자 글로 바꿉니다.
+
+    규칙의 정본은 생성기 `AstVisitor::resolveRangeConstants` + `AnnotationApply::isRangeExpression` 입니다 — 쉼표로 나눈 항마다 숫자(접미사 없는 것),
+    `_` 로 시작하는 필드 이름(그대로 둠), 상수 이름 하나(앞에 `-` 가능) 중 하나여야 하고 산식 · `0.5f` 는 거절합니다. 문서는 생성기보다 관대하면 안 되기 때문입니다
+    (생성기가 실패할 모양을 문서가 통과시키면 문서가 틀린 약속을 합니다). 값은 생성기처럼 double 의 가장 짧은 글입니다. 상수는 그 헤더와 include 로 닿는 헤더에서
+    찾고(`CppConstants`, 이름 찾기 규칙의 차이는 `resolveRangeConstantValue` 의 shortcut), 못 풀면 멈춥니다.
     """
     if not rangeText:
         return rangeText
-    match = re.fullmatch(r"(-?)\s*((?:\w+::)*)([A-Za-z]\w*)", rangeText.strip())
-    if match is None:
-        return rangeText
-    valueMatch = re.search(r"constexpr\s+[\w:]+\s+" + re.escape(match.group(3)) + r"\s*=\s*(-?\d+(?:\.\d+)?)f?\s*;", fileText)
-    if valueMatch is None:
-        raise ValueError(f"{typeName}: Min/Max 상수 '{rangeText}' 를 같은 파일의 constexpr 숫자 상수에서 찾지 못했습니다(문서 생성기는 다른 헤더의 상수를 풀지 못합니다 — 상수를 설정 구조체와 같은 파일에 두세요)")
-    value = valueMatch.group(1)
-    if match.group(1):
-        value = value[1:] if value.startswith("-") else "-" + value
-    return value
+    listTerm: list[str] = []
+    bChanged = False
+    for part in rangeText.split(","):
+        term = part.strip()
+        if _kRangeNumberRe.fullmatch(term):
+            listTerm.append(term)
+            continue
+        name = term[1:].strip() if term.startswith("-") else term
+        if _kQualifiedNameRe.fullmatch(name) is None:
+            raise ValueError(f"{typeName}: Min/Max '{rangeText}' 의 항 '{term}' 은 숫자도 이름도 아닙니다 — 항은 쉼표로 나누고 숫자(`0.5f` 같은 접미사 없이), "
+                             "필드 이름(`_x`) 또는 상수 이름 하나여야 합니다(산식은 생성기가 받지 않습니다)")
+        if name.startswith("_"):
+            listTerm.append(term)
+            continue
+        try:
+            value = resolver.resolveRangeConstantValue(relative, name)
+        except ConstantError as error:
+            raise ValueError(f"{typeName}: Min/Max '{rangeText}' — {error}") from error
+        listTerm.append(formatDoubleInternal(-value if term.startswith("-") else value))
+        bChanged = True
+    return ", ".join(listTerm) if bChanged else rangeText
 
 
 def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str]) -> TypeDoc | None:
@@ -380,9 +408,9 @@ def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str])
             description = mapMeta["Tooltip"]
         typeDoc.listField.append(FieldDoc(
             name=declMatch.group("name"), typeName=re.sub(r"\s+", " ", declMatch.group("type")).strip(),
-            defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro),
-            minText=resolveRangeConstantInternal(mapMeta.get("Min"), text, name),
-            maxText=resolveRangeConstantInternal(mapMeta.get("Max"), text, name), units=mapMeta.get("Units"),
+            defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro, index.resolver, relative),
+            minText=resolveRangeConstantInternal(mapMeta.get("Min"), relative, index.resolver, name),
+            maxText=resolveRangeConstantInternal(mapMeta.get("Max"), relative, index.resolver, name), units=mapMeta.get("Units"),
             description=description))
     return typeDoc
 
@@ -465,7 +493,7 @@ class GlobalVariableDoc:
     source: str
 
 
-def collectGlobalVariables(reader: SourceTreeReader) -> list[GlobalVariableDoc]:
+def collectGlobalVariables(reader: SourceTreeReader, resolver: ConstantResolver) -> list[GlobalVariableDoc]:
     """`Source/` 의 전역 변수 정의를 모읍니다(이름 순). 매크로 정의 · 주석 안의 예시는 세지 않습니다."""
     listVariable: list[GlobalVariableDoc] = []
     for relative, text in reader.iterFiles(("Source",), (".h", ".cpp", ".inl")):
@@ -486,7 +514,7 @@ def collectGlobalVariables(reader: SourceTreeReader) -> list[GlobalVariableDoc]:
                 description = json.loads(description)
             listVariable.append(GlobalVariableDoc(
                 name=listArgument[1], typeName=listArgument[0].replace("sw::", ""),
-                defaultText=formatDefaultInternal(listArgument[2], {}), kind=_kMapGlobalVariableKind[match.group(1)],
+                defaultText=formatDefaultInternal(listArgument[2], {}, resolver, relative), kind=_kMapGlobalVariableKind[match.group(1)],
                 description=description, source=relative))
     listVariable.sort(key=lambda variable: variable.name.lower())
     return listVariable
@@ -991,7 +1019,7 @@ def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str
         mapOutput[f"{kConfigReferenceDir}/{entry.page}.md"] = makeEntryPage(repositoryRoot, entry, index, mapMacro, metadata)
     mapOutput[f"{kConfigReferenceDir}/UserSettings.md"] = makeUserSettingsPage(collectUserSettings(repositoryRoot),
                                                                                 findUserSettingDefaults(repositoryRoot))
-    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader), metadata)
+    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader, index.resolver), metadata)
     mapOutput[f"{kConfigReferenceDir}/CommandLine.md"] = makeArgumentPage(collectArguments(repositoryRoot), metadata)
     mapOutput[f"{kConfigReferenceDir}/BuildOptions.md"] = makeBuildOptionPage(collectBuildOptions(reader), metadata)
     mapOutput[f"{kConfigReferenceDir}/{kConfigReferenceJson}"] = json.dumps(metadata, ensure_ascii=False, indent=1) + "\n"
